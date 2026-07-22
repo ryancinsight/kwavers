@@ -1,4 +1,4 @@
-# Chapter 18: Inverse Problems and Physics-Informed Neural Networks
+# Chapter 18 — Inverse Problems and Physics-Informed Neural Networks
 
 ## 18.1 Inverse Problem Formulation
 
@@ -429,7 +429,7 @@ kwavers_solver::inverse
 │   ├── elastic_2d::model::ElasticPINN2D<B>      # MLP, tanh, trainable (λ, μ, ρ)
 │   ├── elastic_2d::loss::LossComputer           # PDE + BC + IC + data residuals (Burn autodiff)
 │   ├── elastic_2d::training::PINNOptimizer<B>   # SGD | SGDMomentum | Adam | AdamW
-│   └── geometry::CollocationSampler             # Uniform | LatinHypercube | Sobol | AdaptiveRefinement
+│   └── geometry::CollocationSampler<G>          # Tyche counter | LatinHypercube | Sobol
 └── elastography/                    # ShearWaveInversion (TOF / phase-gradient / direct / volumetric / directional)
                                      #   + nonlinear_methods (harmonic_ratio, least_squares, bayesian)
 
@@ -536,7 +536,8 @@ For a spherical inclusion of radius $a=3$ mm with $\delta c/c_0 = 0.05$ at $f = 
 
 The shipped `ElasticPINN2D` is validated on a 2-D elastic forward/inverse problem with a manufactured
 displacement field:
-- Sobol collocation sampling (`CollocationSampler`) over the interior + boundary/initial sets;
+- Tyche-backed collocation sampling (`CollocationSampler<G>`) over the interior,
+  with domain-owned boundary/initial charts;
 - Adam / AdamW training (`PINNOptimizer`) on a Burn autodiff backend (CPU `ndarray` or `wgpu` GPU);
 - PDE + BC + IC + data losses balanced by `LossWeights`, with the trainable Lamé parameters
   $(\lambda, \mu, \rho)$ recovered in the inverse configuration.

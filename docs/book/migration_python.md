@@ -1,4 +1,4 @@
-# Python Integration: PyO3 and NumPy Boundary
+# Chapter 42 — Python Integration: PyO3 and NumPy Boundary
 
 kwavers exposes its Rust physics as a Python package (`pykwavers`) via PyO3.
 The `numpy` crate bridges `PyArray*` types at the binding boundary.

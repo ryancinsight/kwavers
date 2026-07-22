@@ -1,0 +1,20 @@
+name: Checkout Atlas path dependencies
+description: Materialize the canonical Atlas provider graph for Kwavers CI
+
+inputs:
+  manifest:
+    description: Cargo manifest relative to GITHUB_WORKSPACE
+    required: true
+  destination:
+    description: Provider parent directory relative to GITHUB_WORKSPACE
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Materialize canonical Atlas provider graph
+      uses: ryancinsight/atlas/.github/actions/checkout-path-dependencies@1393fd8838f3bcd548959a83daa8d9375e3b03d9
+      with:
+        manifest: ${{ inputs.manifest }}
+        destination: ${{ inputs.destination }}
+        atlas_ref: 1393fd8838f3bcd548959a83daa8d9375e3b03d9

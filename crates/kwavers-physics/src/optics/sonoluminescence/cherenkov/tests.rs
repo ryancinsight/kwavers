@@ -1,6 +1,6 @@
 use super::model::CherenkovModel;
 use crate::optics::sonoluminescence::spectral::SpectralRange;
-use approx;
+use eunomia;
 use kwavers_core::constants::fundamental::SPEED_OF_LIGHT;
 use std::f64::consts::PI;
 
@@ -17,7 +17,7 @@ fn test_cherenkov_frank_tamm_spectral_distribution() {
     let expected_angle = (1.0f64 / (1.5 * 0.99)).acos(); // cosθ = 1/(nβ)
     let calculated_angle = model.cherenkov_angle(v_relativistic);
 
-    approx::assert_relative_eq!(calculated_angle, expected_angle, epsilon = 1e-6);
+    eunomia::assert_relative_eq!(calculated_angle, expected_angle, epsilon = 1e-6);
 
     // Test spectral intensity scales as ∝ ω (Frank-Tamm: dW/dω ∝ ω)
     let freq1 = 1e15; // Hz
@@ -27,7 +27,7 @@ fn test_cherenkov_frank_tamm_spectral_distribution() {
     let intensity2 = model.spectral_intensity(freq2, v_relativistic, charge);
 
     // Should follow ∝ ω dependence: I(2f)/I(f) = 2
-    approx::assert_relative_eq!(intensity2 / intensity1, 2.0, epsilon = 1e-3);
+    eunomia::assert_relative_eq!(intensity2 / intensity1, 2.0, epsilon = 1e-3);
 }
 
 #[test]
@@ -83,7 +83,7 @@ fn test_cherenkov_refractive_index_update() {
 
     // Critical velocity should update accordingly
     let expected_critical = SPEED_OF_LIGHT / model.refractive_index;
-    approx::assert_relative_eq!(model.critical_velocity, expected_critical, epsilon = 1e-10);
+    eunomia::assert_relative_eq!(model.critical_velocity, expected_critical, epsilon = 1e-10);
 }
 
 #[test]

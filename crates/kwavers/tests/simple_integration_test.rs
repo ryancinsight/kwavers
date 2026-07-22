@@ -94,4 +94,4 @@ fn test_grid_calculations() {
     assert_relative_eq!(volume, 0.1 * 0.1 * 0.1, epsilon = 1e-10);
 }
 
-use approx::assert_relative_eq;
+use eunomia::assert_relative_eq;

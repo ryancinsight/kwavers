@@ -36,7 +36,7 @@ checksum = "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa"
 [[package]]
 name = "aequitas"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/aequitas?rev=be3a1ac91286a17aecf18f0065d2aa6b385eb67b#be3a1ac91286a17aecf18f0065d2aa6b385eb67b"
+source = "git+https://github.com/ryancinsight/aequitas#262b3e09c19d844f57765d3e4ea6ab2336653d6d"
 dependencies = [
  "eunomia",
  "typenum",
@@ -232,7 +232,7 @@ checksum = "7c02d123df017efcdfbd739ef81735b36c5ba83ec3c59c80a9d7ecc718f92e50"
 [[package]]
 name = "asclepius"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/asclepius?rev=794f8c328d72fd020b63e53ae46f6f8fd781d8df#794f8c328d72fd020b63e53ae46f6f8fd781d8df"
+source = "git+https://github.com/ryancinsight/asclepius#38d1c85501ab9deabd0b79e6210c166232ea6631"
 dependencies = [
  "aequitas",
  "eunomia",
@@ -1647,7 +1647,7 @@ dependencies = [
  "libc",
  "option-ext",
  "redox_users",
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -1924,12 +1924,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
 name = "eunomia"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "bytemuck",
  "libm",
@@ -2541,7 +2541,7 @@ dependencies = [
 
 [[package]]
 name = "hermes-simd"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "eunomia",
  "hermes-simd-core",
@@ -2553,7 +2553,7 @@ dependencies = [
 
 [[package]]
 name = "hermes-simd-core"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "bytemuck",
  "eunomia",
@@ -2564,7 +2564,7 @@ dependencies = [
 
 [[package]]
 name = "hermes-simd-intrinsics"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "eunomia",
  "hermes-simd-core",
@@ -2572,7 +2572,7 @@ dependencies = [
 
 [[package]]
 name = "hermes-simd-macros"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2581,7 +2581,7 @@ dependencies = [
 
 [[package]]
 name = "hermes-simd-types"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "hermes-simd-core",
  "hermes-simd-intrinsics",
@@ -2704,6 +2704,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "hyperion"
+version = "0.1.0"
+source = "git+https://github.com/ryancinsight/hyperion#7b4561b9b51949c8ca59ee2d6f4294cd085ca8a4"
+dependencies = [
+ "aequitas",
+ "eunomia",
+ "proteus",
+]
+
+[[package]]
 name = "iana-time-zone"
 version = "0.1.64"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2715,7 +2725,7 @@ dependencies = [
  "js-sys",
  "log",
  "wasm-bindgen",
- "windows-core 0.61.2",
+ "windows-core 0.62.2",
 ]
 
 [[package]]
@@ -2902,7 +2912,7 @@ checksum = "3640c1c38b8e4e43584d8df18be5fc6b0aa314ce6ebf51b53313d4306cca8e46"
 dependencies = [
  "hermit-abi 0.5.2",
  "libc",
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -3196,9 +3206,9 @@ checksum = "e2db585e1d738fc771bf08a151420d3ed193d9d895a36df7f6f8a9456b911ddc"
 name = "kwavers"
 version = "3.0.0"
 dependencies = [
+ "aequitas",
  "anyhow",
  "apollo-fft",
- "approx",
  "bitflags 2.10.0",
  "chrono",
  "coeus-autograd",
@@ -3215,6 +3225,8 @@ dependencies = [
  "flume",
  "gaia",
  "hephaestus-wgpu",
+ "hermes-simd",
+ "hyperion",
  "image",
  "kwavers-analysis",
  "kwavers-boundary",
@@ -3270,7 +3282,6 @@ version = "3.0.0"
 dependencies = [
  "anyhow",
  "apollo-fft",
- "approx",
  "bytemuck",
  "chrono",
  "egui",
@@ -3304,7 +3315,7 @@ dependencies = [
 name = "kwavers-boundary"
 version = "3.0.0"
 dependencies = [
- "approx",
+ "eunomia",
  "kwavers-core",
  "kwavers-grid",
  "kwavers-math",
@@ -3335,7 +3346,6 @@ name = "kwavers-diagnostics"
 version = "3.0.0"
 dependencies = [
  "anyhow",
- "approx",
  "chrono",
  "consus-core 0.1.0 (git+https://github.com/ryancinsight/consus)",
  "consus-hdf5 0.1.0 (git+https://github.com/ryancinsight/consus)",
@@ -3378,7 +3388,7 @@ dependencies = [
 name = "kwavers-field"
 version = "3.0.0"
 dependencies = [
- "approx",
+ "eunomia",
  "kwavers-core",
  "kwavers-grid",
  "kwavers-math",
@@ -3389,8 +3399,8 @@ dependencies = [
 name = "kwavers-gpu"
 version = "5.0.0"
 dependencies = [
- "approx",
  "bytemuck",
+ "eunomia",
  "flume",
  "hephaestus-core",
  "hephaestus-cuda",
@@ -3419,7 +3429,6 @@ dependencies = [
 name = "kwavers-grid"
 version = "3.0.0"
 dependencies = [
- "approx",
  "eunomia",
  "kwavers-core",
  "kwavers-math",
@@ -3427,17 +3436,18 @@ dependencies = [
  "log",
  "moirai-parallel",
  "proptest",
- "rand 0.8.7",
- "rand_chacha 0.3.1",
  "serde",
+ "stats_alloc",
+ "thiserror 2.0.18",
+ "tyche-core",
 ]
 
 [[package]]
 name = "kwavers-imaging"
 version = "3.0.0"
 dependencies = [
- "approx",
  "coeus-core",
+ "eunomia",
  "kwavers-core",
  "kwavers-grid",
  "kwavers-medium",
@@ -3454,7 +3464,6 @@ name = "kwavers-math"
 version = "3.0.0"
 dependencies = [
  "apollo-fft",
- "approx",
  "eunomia",
  "hephaestus-core",
  "hephaestus-wgpu",
@@ -3473,8 +3482,8 @@ name = "kwavers-medium"
 version = "4.0.0"
 dependencies = [
  "aequitas",
- "approx",
  "eunomia",
+ "hyperion",
  "kwavers-core",
  "kwavers-grid",
  "kwavers-math",
@@ -3491,7 +3500,7 @@ dependencies = [
 name = "kwavers-mesh"
 version = "3.0.0"
 dependencies = [
- "approx",
+ "eunomia",
  "gaia",
  "kwavers-core",
  "kwavers-grid",
@@ -3509,7 +3518,7 @@ dependencies = [
 name = "kwavers-phantom"
 version = "3.0.0"
 dependencies = [
- "approx",
+ "eunomia",
  "kwavers-core",
  "kwavers-grid",
  "kwavers-medium",
@@ -3524,10 +3533,10 @@ dependencies = [
  "aequitas",
  "anyhow",
  "apollo-fft",
- "approx",
  "asclepius",
  "consus-npy",
  "eunomia",
+ "hyperion",
  "kwavers-core",
  "kwavers-field",
  "kwavers-grid",
@@ -3546,6 +3555,7 @@ dependencies = [
  "rand_distr 0.4.3",
  "ritk-registration",
  "serde",
+ "thiserror 2.0.18",
 ]
 
 [[package]]
@@ -3587,7 +3597,7 @@ dependencies = [
 name = "kwavers-receiver"
 version = "3.0.0"
 dependencies = [
- "approx",
+ "eunomia",
  "kwavers-core",
  "kwavers-field",
  "kwavers-grid",
@@ -3606,7 +3616,7 @@ version = "3.0.0"
 dependencies = [
  "anyhow",
  "apollo-fft",
- "approx",
+ "eunomia",
  "kwavers-core",
  "kwavers-math",
  "leto",
@@ -3622,7 +3632,7 @@ dependencies = [
 name = "kwavers-simulation"
 version = "3.0.0"
 dependencies = [
- "approx",
+ "eunomia",
  "kwavers-boundary",
  "kwavers-core",
  "kwavers-field",
@@ -3650,9 +3660,9 @@ dependencies = [
 name = "kwavers-solver"
 version = "3.0.0"
 dependencies = [
+ "aequitas",
  "anyhow",
  "apollo-fft",
- "approx",
  "bitflags 2.10.0",
  "coeus-autograd",
  "coeus-core",
@@ -3661,6 +3671,7 @@ dependencies = [
  "coeus-optim",
  "coeus-tensor",
  "eunomia",
+ "hyperion",
  "kwavers-boundary",
  "kwavers-core",
  "kwavers-field",
@@ -3683,6 +3694,7 @@ dependencies = [
  "rand_chacha 0.3.1",
  "serde",
  "serde_json",
+ "stats_alloc",
  "thiserror 2.0.18",
  "tracing",
  "tyche-core",
@@ -3692,7 +3704,6 @@ dependencies = [
 name = "kwavers-source"
 version = "3.0.0"
 dependencies = [
- "approx",
  "eunomia",
  "kwavers-core",
  "kwavers-grid",
@@ -3709,8 +3720,8 @@ name = "kwavers-therapy"
 version = "3.0.0"
 dependencies = [
  "aequitas",
- "approx",
  "asclepius",
+ "eunomia",
  "kwavers-analysis",
  "kwavers-core",
  "kwavers-grid",
@@ -3734,7 +3745,6 @@ dependencies = [
 name = "kwavers-transducer"
 version = "4.1.0"
 dependencies = [
- "approx",
  "eunomia",
  "kwavers-core",
  "kwavers-field",
@@ -3771,7 +3781,7 @@ checksum = "7a79a3332a6609480d7d0c9eab957bca6b455b91bb84e66d19f5ff66294b85b8"
 
 [[package]]
 name = "leto"
-version = "0.39.0"
+version = "0.40.0"
 dependencies = [
  "aequitas",
  "bytemuck",
@@ -3783,7 +3793,7 @@ dependencies = [
 
 [[package]]
 name = "leto-ops"
-version = "0.39.0"
+version = "0.40.0"
 dependencies = [
  "bytemuck",
  "eunomia",
@@ -4410,7 +4420,7 @@ version = "0.50.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5"
 dependencies = [
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -5043,7 +5053,7 @@ dependencies = [
 [[package]]
 name = "proteus"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/proteus?rev=c82f50d908b7f2119a5caa29026fe7ed23b1d44f#c82f50d908b7f2119a5caa29026fe7ed23b1d44f"
+source = "git+https://github.com/ryancinsight/proteus#bb51ac414f74fb47d8001310206c5aea2e3a160c"
 dependencies = [
  "aequitas",
  "eunomia",
@@ -6046,7 +6056,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys 0.11.0",
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -6426,7 +6436,7 @@ dependencies = [
  "cfg-if",
  "libc",
  "psm",
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -6434,6 +6444,12 @@ name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
+
+[[package]]
+name = "stats_alloc"
+version = "0.1.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5c0e04424e733e69714ca1bbb9204c1a57f09f5493439520f9f68c132ad25eec"
 
 [[package]]
 name = "strsim"
@@ -6569,7 +6585,7 @@ dependencies = [
  "getrandom 0.3.4",
  "once_cell",
  "rustix 1.1.2",
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -6588,7 +6604,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "230a1b821ccbd75b185820a1f1ff7b14d21da1e442e22c0863ea5f08771a8874"
 dependencies = [
  "rustix 1.1.2",
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -6907,7 +6923,7 @@ checksum = "d2df906b07856748fa3f6e0ad0cbaa047052d4a7dd609e231c4f72cee8c36f31"
 [[package]]
 name = "tyche-core"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/tyche?rev=2b8fb14267a710e1438102666211494a3d6f179e#2b8fb14267a710e1438102666211494a3d6f179e"
+source = "git+https://github.com/ryancinsight/tyche#640ba37d31dccc9b9ede8c707e5e034d7ce5859a"
 dependencies = [
  "eunomia",
 ]
@@ -7475,7 +7491,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.48.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

@@ -1,4 +1,4 @@
-# Glossary
+# Appendix C — Glossary
 
 ## Atlas Stack Terms
 

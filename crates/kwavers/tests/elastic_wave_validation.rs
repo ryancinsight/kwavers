@@ -9,7 +9,9 @@
 //! - Aki & Richards, "Quantitative Seismology", 2002
 //! - Carcione, "Wave Fields in Real Media", 2007
 
-use approx::assert_relative_eq;
+use aequitas::systems::si::{quantities::ReciprocalLength, units::PerMeter};
+use eunomia::assert_relative_eq;
+use hyperion::coefficient::{InteractionCoefficient, ReducedScattering};
 use kwavers_grid::Grid;
 
 /// Test P-wave velocity in isotropic elastic medium.
@@ -248,15 +250,17 @@ impl ThermalField for TestElasticMedium {
 
 impl MediumOpticalProperties for TestElasticMedium {
     fn optical_absorption_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        0.01 // 1/m
+        0.01
     }
 
-    fn optical_scattering_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        10.0 // 1/m
-    }
-
-    fn refractive_index(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        1.33 // Water
+    fn optical_reduced_scattering_coefficient(
+        &self,
+        _x: f64,
+        _y: f64,
+        _z: f64,
+        _grid: &Grid,
+    ) -> Result<InteractionCoefficient<f64, ReducedScattering>, hyperion::TransportError<f64>> {
+        InteractionCoefficient::new(ReciprocalLength::from_unit::<PerMeter>(10.0))
     }
 }
 

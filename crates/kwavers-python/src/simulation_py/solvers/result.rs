@@ -2,7 +2,6 @@ use kwavers_core::constants::thermodynamic::KELVIN_OFFSET_C;
 use numpy::{PyArray1, PyArray2, PyArray3};
 use pyo3::prelude::*;
 
-
 use crate::breast_fwi_bindings::complex_compat::{leto1_to_nd1, leto2_to_nd2, leto3_to_nd3};
 use crate::simulation_result_py::{SimulationResult, SimulationRunResult};
 
@@ -82,9 +81,13 @@ impl Simulation {
                 (None, None, None, None, None, None, None, None, None)
             };
 
-        let time_arr =
-            PyArray1::from_vec(py, (0..time_steps).map(|i| i as f64 * dt_actual).collect::<Vec<_>>())
-                .into();
+        let time_arr = PyArray1::from_vec(
+            py,
+            (0..time_steps)
+                .map(|i| i as f64 * dt_actual)
+                .collect::<Vec<_>>(),
+        )
+        .into();
 
         // K → °C conversion for thermal outputs at the Python boundary.
         let thermal_temp_py = thermal_temperature.map(|t| {
@@ -100,7 +103,9 @@ impl Simulation {
                 .expect("sensor row 0 must exist")
                 .to_contiguous();
             Ok(SimulationResult {
-                sensor_data_1d: Some(PyArray1::from_owned_array(py, leto1_to_nd1(sensor_1d)).into()),
+                sensor_data_1d: Some(
+                    PyArray1::from_owned_array(py, leto1_to_nd1(sensor_1d)).into(),
+                ),
                 sensor_data_2d: None,
                 time: time_arr,
                 shape,

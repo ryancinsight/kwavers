@@ -1,4 +1,4 @@
-# Chapter 17: Sonogenetics: Acoustic Control of Genetically Encoded Mechanosensitive Systems
+# Chapter 17 — Sonogenetics: Acoustic Control of Mechanosensitive Systems
 
 > **Module ownership**: `kwavers_physics::acoustics::therapy::sonogenetics`,
 > `kwavers_therapy::therapy::therapy_integration`, `kwavers_therapy::therapy::microbubble_dynamics`

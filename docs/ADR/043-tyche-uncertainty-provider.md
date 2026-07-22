@@ -3,6 +3,7 @@
 - Status: Accepted
 - Date: 2026-07-20
 - Change class: [major] [arch]
+- Closed: 2026-07-22
 
 ## Context
 
@@ -21,12 +22,12 @@ correlation screening, and finite-sample conformal calibration. Its corrected
 rank implements the empirical quantile in Section 1 and Theorem 1 of
 [Angelopoulos and Bates](https://arxiv.org/abs/2107.07511):
 `ceil((n+1)(1-alpha))`, capped at `n`. Tyche ADR 0001 records the exchangeable
-rank proof at public revision
-[`2b8fb14`](https://github.com/ryancinsight/tyche/blob/2b8fb14267a710e1438102666211494a3d6f179e/docs/adr/0001-reproducible-study-boundary.md#conformal-coverage).
+rank proof at the integrated public revision
+[`55ef4d0`](https://github.com/ryancinsight/tyche/blob/55ef4d0cf107d30799aece1ee26529d1f8f8e3cb/docs/adr/0001-reproducible-study-boundary.md#conformal-coverage).
 
 ## Decision
 
-Kwavers depends on `tyche-core` at merged revision `2b8fb14`.
+Kwavers depends on `tyche-core` at merged revision `55ef4d0`.
 
 - Analysis computes absolute errors and even medians in prediction-native
   `f32`, then widens the completed score exactly for
@@ -41,14 +42,29 @@ Kwavers depends on `tyche-core` at merged revision `2b8fb14`.
   `ParameterSpace`, deterministic `LatinHypercube`, and
   `CorrelationScreening`. It reports squared correlations by their actual name.
 - The local pseudo-Sobol, bootstrap, and Morris implementations are removed.
-  Genuine Morris and Saltelli/Sobol methods remain a Tyche provider capability
-  gap; Kwavers does not retain mislabeled substitutes.
+  Genuine Morris and Saltelli sensitivity methods remain Tyche provider
+  capability gaps; Kwavers does not retain mislabeled substitutes.
+- `kwavers-grid` owns only the physical transformation from a Tyche unit design
+  into a validated geometric domain. One blanket `DesignSamplingExt`
+  implementation collects counter, Latin-hypercube, and Sobol designs directly
+  into the final Leto matrix. `CollocationSampler<G>` owns strategy selection
+  and monomorphizes over the inline domain type.
+- Rectangular boundary faces are selected with a borrowed Tyche
+  `WeightedCategorical` distribution whose masses are their measures. Disk and
+  ball interiors use inverse-area and inverse-volume radial maps; spherical
+  boundaries use direct angle and uniform-cosine maps. The construction follows
+  the inverse-volume rule in [Goodman, Monte Carlo notes, page
+  19](https://math.nyu.edu/~goodman/teaching/MonteCarlo17/notes/Week1.pdf).
+- Boundary charts remain domain-owned. Applying a Latin hypercube or Sobol unit
+  cube directly to a boundary is undefined without a chart, so the configured
+  collocation design affects the interior only.
 - Undefined pre-calibration distributions and zero-width coverage efficiency
   use `Option`, not fabricated numeric values.
 
 The dependency direction is
-`kwavers-analysis|kwavers-solver -> tyche-core -> eunomia`. Physics, model
-inference, Leto arrays, and uncertainty presentation remain Kwavers-owned.
+`kwavers-grid|kwavers-analysis|kwavers-solver -> tyche-core -> eunomia`.
+Physical transforms, model inference, Leto arrays, and uncertainty presentation
+remain Kwavers-owned.
 
 ## Public migration
 
@@ -68,6 +84,26 @@ inference, Leto arrays, and uncertainty presentation remain Kwavers-owned.
   Tyche `SensitivityReport<f64, PARAMETERS>` from a borrowed
   `ParameterSpace<f64, PARAMETERS>`.
 - `MlUncertaintyConfig` gains `sensitivity_seed: tyche_core::Seed`.
+- `RectangularDomain::{new_1d,new_2d,new_3d}` and
+  `SphericalDomain::{new_2d,new_3d}` return `Result`; their fields become
+  private and borrowed accessors expose validated active coordinates.
+- `GeometricDomain::{sample_interior,sample_boundary}` take a required Tyche
+  `Seed` and return `Result<Array2<f64>, GeometryError>`.
+- `CollocationSampler` becomes `CollocationSampler<G: GeometricDomain>`, stores
+  `G` directly instead of `Box<dyn GeometricDomain>`, and returns typed results.
+  `AdaptiveRefinement` and its collocation-strategy variant are removed; the ML
+  adaptive sampler is the canonical residual-driven implementation.
+- `elastic_2d::ElasticCollocationSamplingStrategy` is removed. Elastic training
+  configuration stores the canonical `CollocationSamplingStrategy` directly,
+  so serialization, dispatch vocabulary, and extension ownership cannot drift.
+- `CollocationSamplingStrategy` and `PinnGeometryInterfaceCondition` become
+  non-exhaustive public enums; downstream matches require a wildcard so future
+  complete design or interface variants do not force another enum-layout break.
+- `MultiRegionDomain::new` returns `Result<_, MultiRegionError>`, validates
+  region, material, interface, and dimension cardinalities, and keeps its
+  collections private behind borrowed accessors. Interface sampling resets its
+  acceptance quota for every adjacent pair and derives a distinct Tyche seed
+  for each pair.
 - `UncertaintyQuantifier::generate_report` borrows
   `&[&dyn UncertaintyResult]`, and `UncertaintyReport` retains that slice
   without requiring caller boxes or collecting a duplicate reference vector.
@@ -97,6 +133,25 @@ No compatibility wrappers or aliases preserve the superseded contracts.
    typed errors. Undefined statistics remain `None`.
 9. Package clippy, Nextest, doctests, Rustdoc, dependency audit, and public
    semver classification run against the delivered revision.
+10. Every non-empty geometry and collocation sample matrix performs one
+    allocation and zero reallocations; fixed-layout domain construction
+    performs none.
+11. Every strategy returns the requested cardinality in one, two, and three
+    dimensions, replays bitwise for a fixed seed, and classifies every mapped
+    point as strict interior. Solver dispatch equals direct Tyche-design
+    collection element for element, while a fixed domain and seed produce the
+    same boundary matrix for every interior strategy.
+12. For a rectangle face `f` with measure `A_f`, selection has probability
+    `A_f / sum(A)` and conditional density `1 / A_f`; their product is the
+    constant surface density `1 / sum(A)`.
+13. For a disk, `r = R sqrt(U)` gives `P(r <= q) = (q/R)^2`. For a ball,
+    `r = R cbrt(U)` gives `P(r <= q) = (q/R)^3`. Uniform angle in two
+    dimensions and uniform azimuth plus `cos(theta)` in three dimensions supply
+    the remaining normalized angular measure.
+14. Invalid bounds, center, radius, unit coordinate, dimension, measure, and
+    design count fail before mutating caller output or allocating an
+    intermediate design matrix. Addressable but unreservable output sizes
+    return a typed allocation error instead of reaching an allocator abort.
 
 ## Rejected alternatives
 
@@ -106,3 +161,21 @@ No compatibility wrappers or aliases preserve the superseded contracts.
   declared `f32` model/scoring precision.
 - Retaining dynamic pseudo-Sobol or Morris APIs behind deprecated aliases keeps
   mathematically false contracts and compatibility debt.
+- Retaining local LHS permutations or Sobol direction numbers duplicates the
+  provider's replay contract and allocates intermediate designs.
+- Rejection sampling a disk or ball has input-dependent work, discards Tyche
+  points, and makes an exact-cardinality low-discrepancy design impossible.
+- Storing collocation domains behind `Box<dyn GeometricDomain>` imposes heap and
+  vtable costs where the caller already knows the concrete domain type.
+- Treating Latin-hypercube or Sobol coordinates as boundary samples either
+  discards almost every point or silently falls back to another distribution;
+  both violate the selected design's contract.
+
+## Closure evidence
+
+PR #304 merged the collocation boundary as `9ad18523d`. Exact candidate head
+`cc382dbc2243678fef55101aa106e9f8d7ad7bbf` passes ordinary CI
+`29875284052`, architecture validation `29875284007`, and legacy audit
+`29875283982`. The benchmark workflow failure on that head came from the
+superseded complete statistical universe and is closed by ADR 045's bounded
+replacement, whose exact head is green.

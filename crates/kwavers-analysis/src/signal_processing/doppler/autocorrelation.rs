@@ -314,7 +314,7 @@ impl AutocorrelationEstimator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use approx::assert_relative_eq;
+    use eunomia::assert_relative_eq;
     use leto::Array3;
     use std::f64::consts::PI;
 

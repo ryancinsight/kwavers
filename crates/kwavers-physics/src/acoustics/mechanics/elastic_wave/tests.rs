@@ -150,7 +150,8 @@ fn elastic_wave_detect_interfaces_marks_density_jump() {
     let grid = Grid::new(nx, ny, nz, 0.001, 0.001, 0.001).unwrap();
     let water = HomogeneousMedium::water(&grid);
     // ρ_water ≈ 1000 kg/m³; inject a 100% jump at the midplane.
-    let mut medium = HeterogeneousMedium::from_homogeneous(&water, &grid);
+    let mut medium = HeterogeneousMedium::from_homogeneous(&water, &grid)
+        .expect("valid water optical properties");
     let jump_i = nx / 2;
     for j in 0..ny {
         for k in 0..nz {

@@ -1,4 +1,4 @@
-# Chapter 12: Therapeutic Ultrasound
+# Chapter 12 — Therapeutic Ultrasound
 
 **Scope.** This chapter derives the physical mechanisms of ultrasound therapy: HIFU-induced
 heating, the Pennes bioheat equation, thermal dose (CEM43), acoustic radiation force,

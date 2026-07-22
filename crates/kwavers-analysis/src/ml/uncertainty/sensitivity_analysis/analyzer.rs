@@ -2,7 +2,9 @@
 
 use super::config::SensitivityConfig;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use tyche_core::{CorrelationScreening, Design, LatinHypercube, ParameterSpace, SensitivityReport};
+use tyche_core::{
+    CorrelationScreening, Design, LatinHypercube, ParameterSpace, SensitivityReport, SplitMix64,
+};
 
 /// Sensitivity analyzer backed by Tyche sampling and statistics.
 #[derive(Debug)]
@@ -41,7 +43,10 @@ impl SensitivityAnalyzer {
         model: impl Fn(&[f64; PARAMETERS]) -> f64,
         space: &ParameterSpace<'_, f64, PARAMETERS>,
     ) -> KwaversResult<SensitivityReport<f64, PARAMETERS>> {
-        let design = LatinHypercube::new(self.config.seed, self.config.sample_count);
+        let design = LatinHypercube::<PARAMETERS, SplitMix64>::new(
+            self.config.seed,
+            self.config.sample_count,
+        );
         let mut screening = CorrelationScreening::new();
         let mut unit = [0.0; PARAMETERS];
         let mut parameters = [0.0; PARAMETERS];

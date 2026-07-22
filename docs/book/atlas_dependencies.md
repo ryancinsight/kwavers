@@ -1,4 +1,4 @@
-# Atlas Crate Dependencies
+# Appendix B — Atlas Crate Dependencies
 
 ## Dependency Graph (kwavers perspective)
 

@@ -1,4 +1,4 @@
-# Concurrency: Moirai for Parallel Execution
+# Chapter 40 — Concurrency: Moirai for Parallel Execution
 
 `moirai` replaces `rayon` and `tokio` as the Atlas concurrency runtime.
 

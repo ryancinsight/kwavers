@@ -1,4 +1,4 @@
-# Chapter 8: Sensors and Measurements
+# Chapter 8 — Sensors and Measurements
 
 ## 8.1 Introduction
 

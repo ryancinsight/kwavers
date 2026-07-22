@@ -25,7 +25,6 @@ hephaestus-wgpu = { workspace = true, optional = true }
 gpu = ["apollo/wgpu", "dep:hephaestus-core", "dep:hephaestus-wgpu"]
 
 [dev-dependencies]
-approx = "0.5"
 
 [lints]
 workspace = true

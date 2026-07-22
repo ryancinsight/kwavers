@@ -82,8 +82,8 @@ pub struct AbsorptionTissueProperties {
     pub gas_diffusion_coefficient: f64,
     /// Optical absorption coefficient at ~800nm [1/m]
     pub optical_absorption_coeff: f64,
-    /// Optical scattering coefficient at ~800nm [1/m]
-    pub optical_scattering_coeff: f64,
+    /// Reduced optical scattering coefficient at ~800 nm [1/m]
+    pub optical_reduced_scattering_coeff: f64,
 }
 
 impl AbsorptionTissueProperties {
@@ -125,18 +125,18 @@ impl AbsorptionTissueProperties {
             gas_diffusion_coefficient: 2e-9,        // Oxygen in tissue [m²/s]
             // Default optical properties for generic soft tissue at ~800nm (NIR)
             // Reference: Jacques (2013) "Optical properties of biological tissues: a review"
-            optical_absorption_coeff: 10.0,    // 0.1 cm⁻¹ = 10 m⁻¹
-            optical_scattering_coeff: 10000.0, // 100 cm⁻¹ = 10000 m⁻¹
+            optical_absorption_coeff: 10.0, // 0.1 cm⁻¹ = 10 m⁻¹
+            optical_reduced_scattering_coeff: 1000.0, // 10 cm⁻¹ = 1000 m⁻¹
         }
     }
 
-    /// Set tissue-specific optical properties (absorption & scattering at ~800nm)
+    /// Set tissue-specific optical absorption and reduced scattering at ~800 nm.
     ///
     /// Values in [1/m]. Reference: Jacques (2013), Cheong et al. (1990)
     #[must_use]
-    fn with_optical(mut self, absorption: f64, scattering: f64) -> Self {
+    fn with_optical(mut self, absorption: f64, reduced_scattering: f64) -> Self {
         self.optical_absorption_coeff = absorption;
-        self.optical_scattering_coeff = scattering;
+        self.optical_reduced_scattering_coeff = reduced_scattering;
         self
     }
 }
@@ -158,7 +158,7 @@ pub fn tissue_properties() -> HashMap<AbsorptionTissueType, AbsorptionTissueProp
             THERMAL_CONDUCTIVITY_WATER,
             SPECIFIC_HEAT_WATER,
         )
-        .with_optical(4.0, 1.0), // Water: μ_a≈0.04 cm⁻¹, μ_s≈0.01 cm⁻¹
+        .with_optical(4.0, 0.1), // Water: μ_a≈0.04 cm⁻¹, μ_s'≈0.001 cm⁻¹
     );
 
     map.insert(
@@ -172,7 +172,7 @@ pub fn tissue_properties() -> HashMap<AbsorptionTissueType, AbsorptionTissueProp
             0.52,
             SPECIFIC_HEAT_BLOOD,
         )
-        .with_optical(230.0, 20000.0), // Blood: μ_a≈2.3 cm⁻¹, μ_s≈200 cm⁻¹
+        .with_optical(230.0, 2000.0), // Blood: μ_a≈2.3 cm⁻¹, μ_s'≈20 cm⁻¹
     );
 
     map.insert(
@@ -186,7 +186,7 @@ pub fn tissue_properties() -> HashMap<AbsorptionTissueType, AbsorptionTissueProp
             0.51,
             SPECIFIC_HEAT_BRAIN,
         )
-        .with_optical(20.0, 10000.0), // Brain: μ_a≈0.2 cm⁻¹, μ_s≈100 cm⁻¹
+        .with_optical(20.0, 1000.0), // Brain: μ_a≈0.2 cm⁻¹, μ_s'≈10 cm⁻¹
     );
 
     map.insert(
@@ -200,7 +200,7 @@ pub fn tissue_properties() -> HashMap<AbsorptionTissueType, AbsorptionTissueProp
             0.21,
             SPECIFIC_HEAT_FAT,
         )
-        .with_optical(40.0, 15000.0), // Fat: μ_a≈0.4 cm⁻¹, μ_s≈150 cm⁻¹
+        .with_optical(40.0, 1500.0), // Fat: μ_a≈0.4 cm⁻¹, μ_s'≈15 cm⁻¹
     );
 
     map.insert(
@@ -214,7 +214,7 @@ pub fn tissue_properties() -> HashMap<AbsorptionTissueType, AbsorptionTissueProp
             0.49,
             SPECIFIC_HEAT_MUSCLE,
         )
-        .with_optical(30.0, 10000.0), // Muscle: μ_a≈0.3 cm⁻¹, μ_s≈100 cm⁻¹
+        .with_optical(30.0, 1000.0), // Muscle: μ_a≈0.3 cm⁻¹, μ_s'≈10 cm⁻¹
     );
 
     map.insert(
@@ -228,7 +228,7 @@ pub fn tissue_properties() -> HashMap<AbsorptionTissueType, AbsorptionTissueProp
             0.52,
             SPECIFIC_HEAT_LIVER,
         )
-        .with_optical(70.0, 10000.0), // Liver: μ_a≈0.7 cm⁻¹, μ_s≈100 cm⁻¹
+        .with_optical(70.0, 1000.0), // Liver: μ_a≈0.7 cm⁻¹, μ_s'≈10 cm⁻¹
     );
 
     map.insert(
@@ -242,7 +242,7 @@ pub fn tissue_properties() -> HashMap<AbsorptionTissueType, AbsorptionTissueProp
             0.53,
             SPECIFIC_HEAT_KIDNEY,
         )
-        .with_optical(50.0, 12000.0), // Kidney: μ_a≈0.5 cm⁻¹, μ_s≈120 cm⁻¹
+        .with_optical(50.0, 1200.0), // Kidney: μ_a≈0.5 cm⁻¹, μ_s'≈12 cm⁻¹
     );
 
     map.insert(
@@ -256,7 +256,7 @@ pub fn tissue_properties() -> HashMap<AbsorptionTissueType, AbsorptionTissueProp
             0.32,
             SPECIFIC_HEAT_BONE,
         )
-        .with_optical(40.0, 35000.0), // Bone: μ_a≈0.4 cm⁻¹, μ_s≈350 cm⁻¹
+        .with_optical(40.0, 3500.0), // Bone: μ_a≈0.4 cm⁻¹, μ_s'≈35 cm⁻¹
     );
 
     map.insert(
@@ -270,7 +270,7 @@ pub fn tissue_properties() -> HashMap<AbsorptionTissueType, AbsorptionTissueProp
             0.39,
             SPECIFIC_HEAT_LUNG,
         )
-        .with_optical(100.0, 25000.0), // Lung: μ_a≈1.0 cm⁻¹, μ_s≈250 cm⁻¹
+        .with_optical(100.0, 2500.0), // Lung: μ_a≈1.0 cm⁻¹, μ_s'≈25 cm⁻¹
     );
 
     map.insert(
@@ -284,7 +284,7 @@ pub fn tissue_properties() -> HashMap<AbsorptionTissueType, AbsorptionTissueProp
             0.37,
             SPECIFIC_HEAT_SKIN,
         )
-        .with_optical(50.0, 20000.0), // Skin: μ_a≈0.5 cm⁻¹, μ_s≈200 cm⁻¹
+        .with_optical(50.0, 2000.0), // Skin: μ_a≈0.5 cm⁻¹, μ_s'≈20 cm⁻¹
     );
 
     map.insert(
@@ -298,7 +298,7 @@ pub fn tissue_properties() -> HashMap<AbsorptionTissueType, AbsorptionTissueProp
             0.21,
             SPECIFIC_HEAT_FAT,
         )
-        .with_optical(40.0, 12000.0), // Breast fat: μ_a≈0.4 cm⁻¹, μ_s≈120 cm⁻¹
+        .with_optical(40.0, 1200.0), // Breast fat: μ_a≈0.4 cm⁻¹, μ_s'≈12 cm⁻¹
     );
 
     map.insert(
@@ -312,7 +312,7 @@ pub fn tissue_properties() -> HashMap<AbsorptionTissueType, AbsorptionTissueProp
             0.48,
             SPECIFIC_HEAT_BREAST_GLAND,
         )
-        .with_optical(60.0, 15000.0), // Breast gland: μ_a≈0.6 cm⁻¹, μ_s≈150 cm⁻¹
+        .with_optical(60.0, 1500.0), // Breast gland: μ_a≈0.6 cm⁻¹, μ_s'≈15 cm⁻¹
     );
 
     map.insert(
@@ -326,7 +326,7 @@ pub fn tissue_properties() -> HashMap<AbsorptionTissueType, AbsorptionTissueProp
             0.50,
             IEC_TISSUE_SPECIFIC_HEAT,
         )
-        .with_optical(10.0, 10000.0), // Generic soft tissue: μ_a≈0.1 cm⁻¹, μ_s≈100 cm⁻¹
+        .with_optical(10.0, 1000.0), // Generic soft tissue: μ_a≈0.1 cm⁻¹, μ_s'≈10 cm⁻¹
     );
 
     map

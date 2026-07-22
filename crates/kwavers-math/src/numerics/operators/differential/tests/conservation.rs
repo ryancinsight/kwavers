@@ -1,7 +1,7 @@
 //! Conservation and staggered grid tests.
 
 use super::super::*;
-use approx::assert_abs_diff_eq;
+use eunomia::assert_abs_diff_eq;
 use kwavers_core::constants::numerical::TWO_PI;
 use leto::Array3;
 

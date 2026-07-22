@@ -71,9 +71,12 @@ impl DiffusionSolver {
                 for k in 0..nz {
                     let props = &optical_properties[[i, j, k]];
 
-                    let mu_a = props.absorption_coefficient;
-                    let mu_s_prime = props.reduced_scattering();
-                    let d_val = 1.0 / (3.0 * (mu_a + mu_s_prime));
+                    let coefficients = props.diffusion_coefficients()?;
+                    let mu_a = props.absorption_coefficient();
+                    let d_val = coefficients
+                        .diffusion_coefficient()?
+                        .into_quantity()
+                        .into_base();
 
                     diffusion_coefficient[[i, j, k]] = d_val;
                     absorption_coefficient[[i, j, k]] = mu_a;

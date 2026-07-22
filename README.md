@@ -56,10 +56,14 @@ nothing.
 | `kwavers` | Thin top-level app/integration crate: binary + cross-cutting tests/examples/benches (no re-exports) |
 | `kwavers-python` | PyO3 bindings (`pykwavers`); depends on the layer crates directly; no domain logic |
 
-Tyche owns reproducible sampling, online moments, correlation screening, and
-finite-sample conformal calibration. Kwavers owns model execution, Leto array
-presentation, and domain-specific score definitions; Analysis and PINN code do
-not carry independent statistical formulas. See
+Tyche owns reproducible counter streams, Latin-hypercube and Sobol designs,
+online moments, correlation screening, and finite-sample conformal
+calibration. Kwavers owns physical-domain transforms, model execution, Leto
+array presentation, and domain-specific score definitions. Geometry maps
+Tyche designs directly into validated rectangles, disks, and balls through one
+single-allocation collector; Analysis and PINN fixed-design code carry no
+independent provider algorithms, while model-residual adaptive refinement
+remains solver-owned. See
 [ADR 043](docs/ADR/043-tyche-uncertainty-provider.md).
 
 Layer crates are at `3.0.0`; the completed split targets `4.0.0` (see
@@ -106,6 +110,16 @@ thermal damage, and independent-insult composition. Kwavers converts stored
 temperatures to Aequitas quantities at its boundaries and retains spatial
 fields, tissue presets, clinical thresholds, and an independent validation
 oracle. See [ADR 044](docs/ADR/044-asclepius-response-ownership.md).
+
+Public [Hyperion](https://github.com/ryancinsight/hyperion) owns photon and
+optical interaction coefficients, reduced scattering, optical depth,
+Beer-Lambert transmission, and the diffusion-derived coefficient laws.
+`kwavers-medium` retains tissue identity, refractive index, presets, and maps;
+`kwavers-physics` and `kwavers-solver` retain spatial transport algorithms and
+photoacoustic coupling. This boundary removes the former `kwavers-optics`
+formula module plus the parallel `DiffusionOpticalProperties` and
+`OpticalAbsorption` models instead of adding a facade around them. See
+[ADR 046](docs/ADR/046-hyperion-optical-transport-ownership.md).
 
 Key architectural decisions:
 - **Layer Separation**: Unidirectional dependencies prevent circular imports

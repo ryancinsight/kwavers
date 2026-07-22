@@ -1,4 +1,4 @@
-# Chapter 5: Cavitation and Bubble Dynamics
+# Chapter 5 — Cavitation and Bubble Dynamics
 
 > **Module ownership.** All physics described in this chapter is implemented in
 > `kwavers_physics::acoustics::bubble_dynamics` (Rayleigh–Plesset, Keller–Miksis,

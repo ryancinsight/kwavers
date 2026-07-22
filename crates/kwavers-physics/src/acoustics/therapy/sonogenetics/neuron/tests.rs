@@ -1,5 +1,5 @@
 use super::*;
-use approx::assert_relative_eq;
+use eunomia::assert_relative_eq;
 
 /// Sub-threshold constant current must not produce spikes.
 ///

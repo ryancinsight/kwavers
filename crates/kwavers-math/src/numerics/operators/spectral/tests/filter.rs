@@ -2,7 +2,7 @@ use crate::fft::Complex64;
 use crate::numerics::operators::spectral::derivative::PseudospectralDerivative;
 use crate::numerics::operators::spectral::filter::{SpectralFilter, SpectralFilterType};
 use crate::numerics::operators::spectral::trait_def::SpectralOperatorTrait;
-use approx::assert_abs_diff_eq;
+use eunomia::assert_abs_diff_eq;
 use kwavers_core::constants::numerical::TWO_PI;
 use leto::Array3;
 

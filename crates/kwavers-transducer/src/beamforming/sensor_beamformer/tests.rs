@@ -1,6 +1,6 @@
 use super::beamformer::SensorBeamformer;
 use super::types::{BeamformerWindowType, SensorProcessingParams};
-use approx::assert_relative_eq;
+use eunomia::assert_relative_eq;
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_receiver::array::{Position, Sensor, SensorArray, SensorArrayGeometry};

@@ -2,7 +2,9 @@
 
 - Status: accepted
 - Date: 2026-07-20
+- Amended: 2026-07-22
 - Change class: patch, architecture
+- Closed: 2026-07-22
 
 ## Context
 
@@ -24,12 +26,46 @@ registered with Criterion's `harness = false`. Forwarding Criterion's
 unrecognized-option error. Prior full-suite runs had silently executed those
 eight auto-discovered targets as zero-test binaries.
 
+Exact-head run `29841101698` completed all four isolated pair jobs and the
+aggregate classifier reported three replicated apparent regressions. The only
+production diff was a line wrap in an unrelated Kalman implementation, but
+base and candidate were compiled from distinct, revision-correlated checkout
+paths on every runner. Reversing execution order does not remove that path
+identity confound.
+
+Exact-head run `29867760523` then demonstrated that the complete statistical
+instrument is not suitable for pull-request latency. Its four pair jobs were
+still running after 157 minutes. The retained
+`linear_swe_wave_propagation` scenario alone estimated 1,951 seconds for one
+100-sample revision measurement. The run was cancelled before classification;
+the historical 249-minute pair duration remained the expected critical path.
+
+Exact-head run `29911114271` completed the bounded four-pair instrument but
+reported replicated `grid_memory/32` and `grid_memory/128` regressions after
+the candidate changed only the supply-chain source policy from the preceding
+green measured head. That change cannot alter a merge-critical benchmark
+executable. Statistical comparison therefore supplied weaker evidence than a
+direct executable-identity check for this revision pair.
+
 ## Decision
 
 PRs that change Rust production, dependency, or benchmark inputs run a
-dedicated workflow. It checks out the PR base and head, overlays the candidate
-`crates/kwavers/benches` tree onto the base checkout, and runs the complete
-plotting-enabled `kwavers` Criterion suite for both revisions.
+dedicated workflow. Python binding packaging and documentation changes do not
+trigger a Rust performance comparison. The workflow checks out the PR base and
+head and overlays the candidate `crates/kwavers/benches` tree onto the base
+checkout. Before each statistical measurement it moves the selected clean
+checkout into one `kwavers-measurement` path, runs the target set, and restores
+the checkout. Both revisions therefore compile from the same canonical path
+inside every pair.
+
+The merge-critical statistical universe is the three canonical production
+instruments `performance_baseline`, `critical_path_benchmarks`, and
+`simd_field_ops`. These cover allocation and field baselines, the FDTD and
+k-space critical paths, and production SIMD field kernels. Their existing
+Criterion workloads and sample counts remain unchanged. A separate candidate
+job executes every plotting-eligible benchmark once in Criterion test mode, so
+every retained end-to-end scenario remains build- and execution-checked without
+repeating multi-second simulations hundreds of times on every PR.
 
 The package disables automatic benchmark discovery and explicitly registers
 all 22 retained benchmark files as Criterion targets. The cleanup deletes
@@ -49,12 +85,21 @@ registered benchmark targets.
 Any unregistered, orphaned, default-harness, or empty-entry-point target fails
 before timing.
 
+The complete smoke job compiles the three merge-critical benchmark executables
+for base and candidate from the same `kwavers-measurement` path after holding
+the candidate harness and provider graph constant. It compares SHA-256 hashes
+by target name. Byte-identical executable sets cannot contain a production-code
+performance difference, so the workflow records that stronger static evidence
+and skips the four statistical pairs. Any differing executable retains the
+full measurement path below; no workload, sample count, confidence level, or
+timeout changes.
+
 The workflow consumes the Atlas-owned regression classifier and provider graph
-pinned at `71cdc54c509d54e10daac1032d328d0b006a2ce5`. Four isolated runners each
+pinned at `1393fd8838f3bcd548959a83daa8d9375e3b03d9`. Four isolated runners each
 execute one complete base/head pair. Two use order `A B` and two use `B A`,
 where `A` is the base revision and `B` is the candidate. Each comparison
 therefore remains within one machine, while the phase-reversed matrix balances
-revision order and samples independent hosted-runner variation. A regression
+revision order and samples separate hosted-runner variation. A regression
 is reported only when all four confidence intervals agree in direction and
 cover the same benchmark universe.
 
@@ -63,15 +108,12 @@ benchmarks. Missing results, benchmark-universe mismatches, malformed
 estimates, and insufficient confidence fail closed. There is no empirical
 percentage threshold.
 
-The 315-minute pair-job budget is specific to this instrumented suite. Exact
-hosted run `29814752294` disproved the earlier target-count model: serialized
-execution reached the job bound during the third of eight full-suite
-measurements. The first complete base/head pair took about 249 minutes,
-including builds, all 19 plotting-eligible Criterion targets, and the full
-sample counts. One matrix member now owns each pair, so the critical path is
-one observed pair instead of four serialized pairs. This preserves all eight
-measurements, targets, samples, and assertions without increasing the bound.
-It does not alter native-test budgets.
+Every smoke, pair, and classifier job has a 30-minute bound. When executable
+hashes differ, four matrix jobs retain two base-first and two candidate-first
+comparisons, so the Atlas classifier still requires replicated, order-balanced
+agreement. The bounded statistical universe makes the PR critical path a
+finite engineering gate rather than a multi-hour batch experiment. It does not
+alter native-test budgets.
 
 ## Rejected alternatives
 
@@ -82,14 +124,56 @@ It does not alter native-test budgets.
 - Run all four pairs serially on one runner: rejected after exact hosted run
   `29814752294` demonstrated an approximately 18-hour schedule against the
   finite 315-minute job bound. Each base/head comparison remains co-located;
-  independent pair runners add an observed replication dimension without
+  isolated pair runners add an observed replication dimension without
   mixing machines inside a confidence interval.
-- Reduce benchmark targets or samples to retain the old timeout: rejected
-  because that changes the measurement instrument.
+- Compile the two revisions from distinct checkout paths: rejected after run
+  `29841101698` reported three replicated apparent regressions without a
+  semantic production delta. Path identity must not remain correlated with
+  revision identity.
+- Always run statistical pairs for byte-identical executables: rejected after
+  run `29911114271` reported two impossible production regressions. Exact
+  executable identity is stronger evidence for that case and avoids four
+  redundant 22–23 minute jobs.
+- Keep the complete statistical suite as a merge gate: rejected because an
+  observed pair takes about 249 minutes and one long-horizon SWE measurement
+  alone requests about 32 minutes per revision.
+- Reduce sample counts across the retained statistical targets: rejected
+  because the bounded critical-target universe already meets the runtime goal
+  without weakening those instruments.
+- Drop non-critical benchmark scenarios: rejected because one-pass candidate
+  execution retains build and runtime coverage for every registered target.
 
 ## Consequences
 
-Benchmark-relevant PRs consume four long, bounded pair jobs followed by one
-short classification job. Documentation-only PRs do not run the instrument.
-The Python gate and its duplicate threshold policy are deleted; Atlas remains
-the single source of truth for statistical classification.
+Benchmark-relevant PRs consume one complete smoke and executable-identity job.
+Differing merge-critical executables additionally consume four bounded pair
+jobs and one short classification job; identical sets terminate with the
+identity proof. Python packaging-only and documentation-only PRs do not run the
+Rust instrument. Atlas remains the single source of truth for statistical
+classification. Report artifacts do not encode source-path provenance, so
+workflow review establishes the same-path precondition that the classifier
+cannot verify. Long-horizon scenarios remain functional benchmark programs,
+but they are not repeated statistically on the merge-critical path.
+
+## Closure evidence
+
+The superseded workflow run `29875283986` at Tyche candidate head
+`cc382dbc2243678fef55101aa106e9f8d7ad7bbf` completed all four pairs before
+classifying 190 cases and reporting 37 replicated regressions. None belongs to
+`performance_baseline`, `critical_path_benchmarks`, or `simd_field_ops`. The
+failure therefore exercises the complete statistical universe rejected above,
+not the bounded decision.
+
+Replacement head `a85aa58e5ad350f5a72483fd541337b95ed0f8de` passes the complete
+candidate smoke, all four bounded AB/BA pair jobs in 21–23 minutes, and the
+aggregate classifier in run `29884797777`. Ordinary CI `29884797767`,
+architecture validation `29884797709`, and legacy audit `29884797739` also
+pass. PR #306 merged the checked workflow as `00d06f00e`.
+
+Exact head `04bced11bfd92cefcf38ccbadd76f1bd203c550a` validates the
+executable-identity branch in run `29913169741`. The complete benchmark smoke
+and same-path base/head builds finish in 11m37s, all three merge-critical
+executables are byte-identical, the pair matrix is skipped, and the explicit
+regression check passes. The complete workflow finishes in 12m12s. Exact-head
+CI `29913169738`, architecture validation `29913169852`, and legacy audit
+`29913169756` also pass.

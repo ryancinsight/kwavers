@@ -306,7 +306,7 @@ pub fn laplacian(
 mod tests {
     use super::*;
     use crate::Grid;
-    use approx::assert_relative_eq;
+    use eunomia::assert_relative_eq;
 
     #[test]
     fn test_laplacian_constant_field() {

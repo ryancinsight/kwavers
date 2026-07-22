@@ -15,7 +15,7 @@ kwavers-optics = { path = "../kwavers-optics" }
 leto = { workspace = true }
 
 [dev-dependencies]
-approx = "0.5"
+eunomia = { workspace = true }
 
 [lints]
 workspace = true

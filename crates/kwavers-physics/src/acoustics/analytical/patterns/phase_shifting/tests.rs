@@ -1,6 +1,6 @@
 use super::core::ShiftingStrategy;
 use super::shifter::PhaseShifter;
-use approx::assert_relative_eq;
+use eunomia::assert_relative_eq;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::numerical::TWO_PI;
 use leto::Array2;

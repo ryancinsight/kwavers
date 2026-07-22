@@ -28,9 +28,9 @@
 
 use anyhow::Result;
 use kwavers_grid::{Grid3D, GridDimensions};
+use kwavers_medium::optical_map::{OpticalPropertyMap, OpticalPropertyMapBuilder};
 use kwavers_medium::properties::OpticalPropertyData;
 use kwavers_phantom::PhantomBuilder;
-use kwavers_physics::optics::map_builder::OpticalPropertyMap;
 use kwavers_physics::optics::monte_carlo::{MonteCarloSolver, PhotonSource, SimulationConfig};
 use kwavers_solver::forward::optical::diffusion::{DiffusionSolver, DiffusionSolverConfig};
 use leto::Array3;
@@ -75,7 +75,7 @@ fn validate_high_scattering() -> Result<()> {
     let grid = Grid3D::new(30, 30, 30, 0.001, 0.001, 0.001)?;
 
     // High scattering tissue: μ_s' >> μ_a
-    let mut builder = kwavers_physics::optics::map_builder::OpticalPropertyMapBuilder::new(dims);
+    let mut builder = OpticalPropertyMapBuilder::new(dims);
     builder.set_background(OpticalPropertyData::soft_tissue()); // μ_a=0.5, μ_s=100, g=0.9
     let optical_map = builder.build();
 
@@ -133,7 +133,7 @@ fn validate_low_scattering() -> Result<()> {
     )
     .map_err(anyhow::Error::msg)?;
 
-    let mut builder = kwavers_physics::optics::map_builder::OpticalPropertyMapBuilder::new(dims);
+    let mut builder = OpticalPropertyMapBuilder::new(dims);
     builder.set_background(low_scatter);
     let optical_map = builder.build();
 
@@ -412,24 +412,7 @@ fn solve_diffusion_fluence(
 }
 
 fn optical_property_map_to_array3(map: &OpticalPropertyMap) -> Array3<OpticalPropertyData> {
-    let nx = map.dimensions.nx;
-    let ny = map.dimensions.ny;
-    let nz = map.dimensions.nz;
-
-    let background = OpticalPropertyData::soft_tissue();
-    let mut out = Array3::from_elem((nx, ny, nz), background);
-
-    for k in 0..nz {
-        for j in 0..ny {
-            for i in 0..nx {
-                if let Some(props) = map.get(i, j, k) {
-                    out[[i, j, k]] = props;
-                }
-            }
-        }
-    }
-
-    out
+    map.properties().clone()
 }
 
 fn flatten_kji(field: &Array3<f64>) -> Vec<f64> {

@@ -1,5 +1,83 @@
 # Backlog / Strategy
 
+## KW-PERF-067 — Stream elastic-FWI adjoint gradient [patch] — done
+
+- Owner: Codex `/root`; last-update: 2026-07-22; scope:
+  `crates/kwavers-solver/src/forward/elastic/swe/core/solver/point_force_drive.rs`,
+  `crates/kwavers-solver/src/inverse/elastography/elastic_fwi/gradient.rs`,
+  focused regressions, and synchronized PM evidence. Forward-history
+  checkpointing, FWI workload or tolerance changes, and public API changes are
+  non-goals.
+- Outcome: accumulate the elastic-FWI shear-modulus gradient while the adjoint
+  propagator runs, retaining one current adjoint field instead of cloning a
+  second complete six-component wave-field history.
+- Acceptance: the streamed gradient and illumination match the full-history
+  reference; the existing 2-D/3-D directional-gradient and reconstruction
+  contracts pass unchanged; the retained-history bound decreases by six
+  `f64` grid volumes per time step; and controlled peak-memory/runtime
+  measurements show no performance regression.
+- Risk/change class: `[patch]`; the time-index reversal and floating-point
+  accumulation order are the primary correctness risks. Verification uses a
+  focused differential regression, existing analytical gradient oracles,
+  configured Nextest budgets, warning-denied Clippy, doctests, and measured
+  process-tree peak memory.
+- Current evidence: the independent full-history oracle is bitwise-equal to the
+  streamed gradient and illumination. The unchanged 3-D directional-gradient
+  case retains 20.44 MiB less wave-field history analytically and measured a
+  median process-tree peak of 266.25 MiB versus 286.41 MiB (−20.16 MiB, −7.0%).
+  Its three-sample median Nextest duration decreased from 1.651 s to 1.216 s
+  (−26.3%). The focused oracle, unchanged 2-D/3-D directional-gradient, and two
+  reconstruction regressions pass 5/5 in 21.486 s; warning-denied Clippy and
+  doctests pass. All repository-owned hosted checks passed on exact
+  implementation head `918cd826`; the external, non-required RecurseML
+  analysis reported an out-of-band service error.
+
+## KW-ARCH-065 — Consolidate optical transport in Hyperion [major] [arch] — in-progress
+
+- Owner: `/root`; scope: published Hyperion integration in `kwavers-medium`,
+  `kwavers-physics`, and `kwavers-solver`; deletion of the named parallel law
+  and coefficient owners; provider-graph pins; ADR 046; consumer regression
+  evidence. General electromagnetic solvers, Monte Carlo ownership,
+  photoacoustic source policy, chromophore spectra, and release are non-goals.
+- Acceptance: Hyperion is the only owner of reduced scattering, coefficient
+  validation, albedo, diffusion, effective attenuation, penetration depth,
+  optical depth, and transmission; all superseded Kwavers owners are absent;
+  direct consumers pass value-semantic, invalid-input, Nextest, Clippy,
+  doctest, Rustdoc, and SemVer gates against the locked published graph.
+- Decision: [ADR 046](docs/ADR/046-hyperion-optical-transport-ownership.md).
+- Current evidence: implementation and lock reconciliation are complete. The
+  affected Clippy gate, six-package doctest gate, focused invalid-input and
+  value-semantic Nextest suites, provider-source uniqueness scan, and normal
+  Rustdoc build pass. Warning-denied Rustdoc passes for `kwavers-medium`,
+  `kwavers-imaging`, and `kwavers-phantom`; `kwavers-physics` retains its tracked
+  KW-DOC-038 baseline (557 warnings in this configuration). The major SemVer
+  gate is attempted but cannot resolve `origin/main`: its pinned Aequitas still
+  requires Eunomia `^0.6.0`, while the canonical Git source now publishes
+  `0.7.0`. The aggregate current-graph check also exposes distinct path and Git
+  Leto identities at the RITK registration boundary. No compatibility adapter
+  is introduced. The integrated workspace Nextest closure passes 6,168/6,168
+  tests with 15 skipped; publication remains.
+
+## KW-PERF-066 — Restore elastic-FWI test budget [patch] — done
+
+- Owner: `/root`; the item blocks the KW-ARCH-065 consumer gate.
+- Scope: the elastic SWE production kernel and Nextest scheduling of internally
+  parallel full-grid solvers. Test workloads, assertions, and timeout expansion
+  are non-goals.
+- Acceptance: `fwi_outperforms_linear_inversion` and
+  `recovers_stiff_inclusion` preserve their current value-semantic coverage and
+  each complete below 30 seconds through production-path optimization.
+- Evidence: the KW-ARCH-065 affected-package Nextest run measured 37.411 seconds
+  and 31.064 seconds respectively on 2026-07-21; both passed but exceeded the
+  committed ordinary-test budget. The production path now selects homogeneous
+  density once, caches separable PML exponentials per time step, and dispatches
+  the three stress/divergence output passes through Moirai's canonical
+  triple-buffer primitive. One full-grid group removes cross-group CPU
+  oversubscription and the obsolete 90-second FWI exception. The exact
+  workspace closure passes 6,168/6,168 tests in 173.986 seconds, with the two
+  regressions at 10.310 and 9.480 seconds; all 13 focused stress/PML tests,
+  warning-denied Solver Clippy, and Solver doctests pass.
+
 ## KW-PYTHON-064 — Python release wheels [patch] — in-progress
 
 - Owner: `/root`; scope: `kwavers-python` distribution metadata and lock, the
@@ -18,29 +96,193 @@
   unused static-link-argument diagnostic; hosted CI and pending-publisher
   registration remain open.
 
-## KW-CI-063 — Install Atlas benchmark oracle [patch] [arch] — review
+## KW-BUILD-065 — Bound debug build artifacts [patch] — done
+
+- Owner: /root; scope: the Kwavers development profile, exact pinned-provider
+  build/test evidence, and shared Atlas target-cache measurement. Non-goals:
+  weaker numerical tests, higher nextest timeouts, a private target directory,
+  release-profile changes, or deletion of source/user data.
+- Acceptance: development dependencies use the lowest optimization level that
+  keeps all four full-grid simulation test binaries within the committed
+  60-second per-test bound; the exact PR head is warning-clean; hosted build
+  duration does not regress; and the generated dependency/artifact footprint
+  decreases without removing line-number backtraces from workspace code.
+- Baseline: `D:\atlas\target\debug\deps` contains 127,468 files and 170.34 GiB,
+  including 43.08 GiB of rlibs and 41.13 GiB of rmeta; `debug\examples`
+  contains 6,031 files and 50.95 GiB. The stack config already uses
+  line-table-only workspace debug information, disables dependency and
+  build-script debug information, and Kwavers already links through LLD.
+- Decision: remove `[profile.dev.package."*"] opt-level = 3` so the broad
+  dependency graph inherits `opt-level = 1`. Cargo documents that dependency
+  optimization levels 2 and 3 prevent reuse/export of shared generic
+  monomorphizations, while level 1 retains basic optimization and sharing.
+  Optimize Kwavers' contiguous FFT spectrum movement instead of retaining
+  `-O3` for Apollo FFT, Leto, or Moirai. Workspace members and every dependency
+  now use the same development optimization level.
+- Local topology: temporary linked worktrees materialize the exact provider
+  commits selected by the Atlas checkout action. The aligned Atlas graph uses
+  Leto 0.40, Hermes 0.4.1, and one Eunomia 0.7 source identity across Coeus,
+  Hephaestus, RITK, and Kwavers. Cargo metadata and all verification below use
+  `--locked`; hosted CI remains the authoritative clean-checkout build and
+  artifact-size oracle.
+- First hosted profile evidence: on run `29888001830`, uncached feature-build
+  steps fell from 622 s to 342 s for `minimal` (-45.0%), 650 s to 453 s for
+  `pinn` (-30.3%), 847 s to 591 s for `full` (-30.2%), and 503 s to 411 s for
+  `plotting` (-18.3%) relative to the exact `-O3` head. The test job completed
+  in 29m57s versus 37m17s: the default library suite passed 5,650 tests in
+  517.008 s and the PINN library suite passed 39 tests in 2.077 s. This first
+  head restored lock-only target caches, so its release/doctest timings and
+  artifact size are not a clean profile comparison.
+- Final-head instrumentation: every CI cache containing `target/` also hashes
+  `Cargo.toml` and `.cargo/config.toml`; the architecture job executes the four
+  unchanged full-grid integration binaries through the committed Nextest
+  profile, then records `target/debug` bytes and file count. Broad cache
+  restore prefixes are removed so profile-incompatible target artifacts cannot
+  enter the measurement.
+- Profile falsification: exact head `1cafb7f67` passed all pre-existing
+  non-coverage CI jobs. The ordinary `-O1` build passed 5,650
+  library tests in 568.365 s, then terminated
+  `test_plane_wave_boundary_injection_pstd` at 60 s. This falsifies broad
+  `-O1` for the solver/FFT path without justifying `-O3` for every dependency.
+  Tarpaulin's ptrace instrumentation separately varied
+  `test_plane_wave_boundary_injection_pstd` from about 315 s on the passing
+  first head to about 350 s, exceeding the unchanged 300-second response
+  timeout. Coverage now uses a dedicated profile inheriting `dev` while
+  optimizing dependencies at level 3. This restores the previously proven
+  instrumented execution regime without changing ordinary debug artifacts,
+  test inputs, assertions, or timeouts.
+- Targeted-provider falsification: exact head `f80822a55` retained `-O3` for
+  `apollo-fft` plus the ineffective workspace-member overrides
+  `kwavers-solver` and `kwavers-math`; Cargo defines wildcard dependency
+  overrides as excluding workspace members. The library suite passed 5,650
+  tests in 389.448 s, but the same PSTD boundary test terminated at 60.010 s.
+  Exact head `73ec35245` then optimized the full non-workspace provider closure
+  and still terminated that test at 60.016 s, falsifying provider profile
+  selection as the root cause.
+- Production fix: the FFT facade now copies contiguous half-spectrum rows and
+  reconstructs Hermitian rows through direct slice indexing instead of a
+  general strided assignment and triple-indexed loop. Under broad `-O1`, the
+  unchanged 64-cubed, 300-step PSTD test passes in 18.099 s alone and 16.781 s
+  in the serialized architecture grid. `kwavers-math` passes 266/266 tests,
+  including reference C2C comparison and R2C/C2R round trips across even, odd,
+  power-of-two, and degenerate shapes. The four architecture binaries pass
+  24/24 in 69.640 s; serializing their internally parallel processes reduces
+  the longest test from 31.563 s under contention to 22.853 s without changing
+  workloads, assertions, or timeouts.
+- Exact hosted evidence: implementation head `905b5efbe` passes every
+  architecture job and the bounded benchmark workflow. Feature-build jobs
+  complete in 7m48s–10m57s, the full architecture job completes in 33m06s,
+  and its unchanged PSTD regression completes in 24.546 s. The clean
+  `target/debug` tree contains 16,771,464,617 bytes across 6,109 files. No
+  comparable clean `-O3` footprint was retained, so this establishes the
+  clean artifact baseline without claiming an unsupported size percentage.
+  The earlier uncached profile comparison remains the build-time oracle.
+- Exact-graph reconciliation: the post-merge provider checkout exposed a stale
+  all-feature lock closure with Eunomia 0.6 and 0.7, producing incompatible
+  `Complex` identities in the hosted benchmark compile. The Atlas gitlinks and
+  Kwavers action pin now select the single-Eunomia graph; locked all-feature
+  metadata and `cargo check -p kwavers-math --all-targets --all-features` pass,
+  and the exact merged graph passes all 266 `kwavers-math` tests in 2.117 s.
+  The benchmark workflow now resolves its smoke and phase-reversed jobs through
+  that same candidate-pinned action; its historical baseline lock is normalized
+  against the held-constant provider graph before measurement.
+- Exact-head run `29911114271` completed every bounded pair in 22m15s–22m41s,
+  then reported two replicated Grid allocation regressions even though the head
+  differed from the preceding green measured revision only in `deny.toml`.
+  The smoke job now builds the three merge-critical base/head executables from
+  the same path and compares their SHA-256 hashes. Byte-identical sets terminate
+  with that stronger proof; differing sets retain the unchanged four-pair
+  statistical instrument. Exact head `04bced11b` passes all 26 hosted checks:
+  CI `29913169738`, architecture `29913169852`, legacy audit `29913169756`,
+  and benchmark run `29913169741`. The benchmark workflow proves executable
+  identity and completes in 12m12s without pair jobs; run `29909003760` retains
+  the exact-head four-pair evidence for differing executables.
+
+## KW-UQ-064 — Integrate Tyche collocation sampling [major] [arch] — done
+
+- Owner: /root; scope: `kwavers-grid::geometry`, PINN collocation sampling,
+  Tyche dependency integration, ADR 043, allocation/value-semantic tests, and
+  synchronized public documentation. Non-goals: ML-owned residual-adaptive
+  sampling and unrelated random consumers.
+- Acceptance: rectangular, disk, and ball domains validate construction and
+  map Tyche unit designs without rejection or cardinality loss; one generic
+  collector serves counter, Latin-hypercube, and Sobol designs; the collocation
+  hot path is statically dispatched; generated matrices allocate once without
+  reallocation; local Latin-hypercube, pseudo-Sobol, and obsolete geometry
+  adaptive implementations have no residue.
+- Evidence target: analytical mapping reference cases, deterministic replay,
+  exact cardinality and domain classification, face-measure sampling law,
+  allocation counts, focused Nextest/Clippy/doctest/Rustdoc gates, dependency
+  residue scans, and public SemVer classification.
+- Decision: extend [`ADR-043`](docs/ADR/043-tyche-uncertainty-provider.md) with
+  the collocation ownership, public migration, transform proofs, and rejected
+  duplicate/rejection alternatives.
+- Exact rebased-head evidence: grid Nextest passes 45/45, including
+  fixed-layout/output allocation and typed reservation-failure contracts;
+  solver geometry/config/allocation selection passes 21/21; Tyche sensitivity
+  passes 9/9; and all-target checks pass for all three affected packages.
+  Changed-file rustfmt, `git diff --check`, grid warning-denied Clippy, all
+  three doctest suites, and grid/solver warning-denied Rustdoc pass. Solver and
+  analysis Clippy stop only at the two pre-existing KW-LINT-047 forward-solver
+  diagnostics; analysis warning-denied Rustdoc exposes its pre-existing
+  cross-module link backlog. SemVer comparison against live main classifies
+  both grid and solver as major. Residue scans retain only the ML-owned
+  `AdaptiveRefinementConfig` and the documented cold heterogeneous
+  multi-region vtable. Exact-head ordinary CI `29875284052`, architecture
+  validation `29875284007`, and legacy audit `29875283982` all pass at
+  `cc382dbc2243678fef55101aa106e9f8d7ad7bbf`. PR #304 merged as `9ad18523d`.
+- Hosted PR #304 first-head evidence: the pinned Atlas checkout confirmed the
+  Gaia `approx` lock entry was stale; Cargo regenerated the one-line closure.
+  The legacy audit now passes after replacing two new `approx::` test imports
+  and one inherited provider-name doc token, without allowlist growth. The
+  inherited rustfmt drift reported by main and the PR is corrected in the
+  exact twelve files emitted by the CI formatter. Replacement run
+  `29864331893` then proved the ordinary workflows still pinned Atlas
+  `71cdc54c` while the committed lock and benchmark workflow used `614914cf`;
+  those Atlas revisions differ at thirteen provider gitlinks. One local
+  composite action now owns the ordinary-workflow provider pin and all sixteen
+  call sites delegate to it. The first exact-graph security audit rejected the
+  registered Iris Git source because the source policy lagged the lock graph;
+  `deny.toml` now admits that exact first-party repository. Exact-head CI rerun
+  pending.
+## KW-CI-063 — Bound Atlas benchmark oracle [patch] [arch] — done
 
 - Owner: /root; scope: benchmark CI, its retired local classifier, ADR 045,
   and synchronized PM evidence.
 - Acceptance: benchmark-relevant PRs compare their exact base and head with
-  the complete candidate Criterion instrument held constant; four isolated
-  pair jobs execute phase-reversed AB/BA replications; Atlas derives
-  family-wise confidence and fails closed on missing, mismatched, or regressed
-  results.
+  the canonical production Criterion targets held constant at one filesystem
+  path; every plotting-eligible target executes once on the candidate; four
+  isolated pair jobs finish within 30 minutes and execute phase-reversed AB/BA
+  replications; Atlas derives family-wise confidence and fails closed on
+  missing, mismatched, or regressed results.
 - Decision: [`ADR-045`](docs/ADR/045-atlas-benchmark-regression-gate.md).
 - Evidence: the single-run same-baseline Python classifier is deleted. The
-  dedicated workflow retains the full plotting-enabled `kwavers` benchmark
-  suite, pins Atlas classifier and provider graph `71cdc54`, and derives its
-  instrument budget from the observed hosted full-suite runtime. Run
+  dedicated workflow pins Atlas classifier and provider graph `614914cf`. Run
   `29797805169` exposed eight auto-discovered libtest targets before
   measurement; automatic discovery is now disabled, all 22 retained Criterion
   targets are explicit, package libtest harnesses are excluded, placeholder
   instruments and unreachable no-op entries are removed, and both revisions
   must match their benchmark source registry. Exact-head run `29814752294`
-  proved that serializing all four independent pairs exceeds the finite job
+  proved that serializing all four isolated pairs exceeds the finite job
   bound; the unchanged pair measurements now execute as four matrix jobs and
-  feed one aggregate classifier.
-  Exact-head hosted execution remains the merge gate.
+  feed one aggregate classifier. Exact-head run `29841101698` completed all
+  four pairs but found three replicated apparent regressions despite no
+  semantic production delta; distinct checkout paths remained correlated with
+  revision. The workflow now moves each revision through one
+  `kwavers-measurement` path. Run `29867760523` remained active after 157
+  minutes; `linear_swe_wave_propagation` alone requested about 32 minutes for
+  one revision measurement. The bounded replacement executes the full
+  candidate suite once, retains unchanged samples for
+  `performance_baseline`, `critical_path_benchmarks`, and `simd_field_ops`,
+  and caps every job at 30 minutes. The superseded exact-head run `29875283986`
+  completed all four pairs but classified all 190 long-horizon and ancillary
+  cases, reporting 37 replicated regressions outside those three canonical
+  targets. That run confirms the already-recorded full-suite scope and latency
+  defect; it does not exercise the bounded workflow. Replacement head
+  `a85aa58e5ad350f5a72483fd541337b95ed0f8de` passes full candidate smoke, all
+  four 21–23 minute AB/BA pair jobs, and aggregate classification in run
+  `29884797777`; ordinary CI `29884797767`, architecture `29884797709`, and
+  legacy audit `29884797739` also pass. PR #306 merged as `00d06f00e`.
 
 ## KW-GPU-062 — GPU PSTD peak-pressure output [major] — review
 
@@ -66,10 +308,11 @@
   unsampled `Source` objects and unsupported velocity-source assembly rather
   than discarding source information. Warning-denied all-feature Clippy passes,
   and the WGPU-featured Nextest lane passes 259/259 tests, including the
-  heterogeneous CPU/GPU contract and real peak-envelope runs. Hosted workflows
-  use the Atlas-owned checkout action and provider graph pinned at `71cdc54`;
-  direct Aequitas and Proteus revisions match that graph, and the lock contains
-  one Aequitas source identity.
+  heterogeneous CPU/GPU contract and real peak-envelope runs. Hosted ordinary
+  workflows use one local action pinned to the Atlas-owned checkout action and
+  provider graph at `614914cf`; direct Aequitas and Proteus revisions match
+  that graph, and the lock contains one Aequitas source identity. A replacement
+  hosted matrix remains the closure gate.
 - External integration requirement: the private full-wave consumer remains
   responsible for its explicit peak-pressure regression. Its inaccessible
   checkout does not widen or block this repository's delivery boundary.

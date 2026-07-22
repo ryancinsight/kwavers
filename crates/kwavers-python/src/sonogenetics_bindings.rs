@@ -31,7 +31,7 @@
 //! - Goodman, J.W. (2005). *Introduction to Fourier Optics*, 3rd ed. §3.3.
 //! - Koch, C. (1999). *Biophysics of Computation*. Oxford University Press.
 
-use crate::array_utils::{leto3_to_pyarray3, vec_to_pyarray1};
+use crate::array_utils::leto3_to_pyarray3;
 use kwavers_physics::acoustics::therapy::sonogenetics::{
     boltzmann_open_probability_from_tension_mn_m, coupled_channel_drive,
     gaussian_beam_pressure_field, lif_response_probability, pressure_threshold_p_open,
@@ -390,14 +390,8 @@ pub fn simulate_lif_neuron_py<'py>(
         .map_err(kwavers_to_py)?;
     let spike_count = trace.spike_times_s.len();
     let dict = PyDict::new(py);
-    dict.set_item(
-        "voltage_v",
-        PyArray1::from_vec(py, trace.voltage_v),
-    )?;
-    dict.set_item(
-        "spike_times_s",
-        PyArray1::from_vec(py, trace.spike_times_s),
-    )?;
+    dict.set_item("voltage_v", PyArray1::from_vec(py, trace.voltage_v))?;
+    dict.set_item("spike_times_s", PyArray1::from_vec(py, trace.spike_times_s))?;
     dict.set_item("spike_count", spike_count)?;
     Ok(dict)
 }
@@ -422,10 +416,7 @@ pub fn lif_response_probability_py<'py>(
         .detach(|| lif_response_probability(spikes, n_samples, dt_s, smoothing_sigma_s, f_max_hz))
         .map_err(kwavers_to_py)?;
     let dict = PyDict::new(py);
-    dict.set_item(
-        "spike_train",
-        PyArray1::from_vec(py, response.spike_train),
-    )?;
+    dict.set_item("spike_train", PyArray1::from_vec(py, response.spike_train))?;
     dict.set_item(
         "response_probability",
         PyArray1::from_vec(py, response.response_probability),

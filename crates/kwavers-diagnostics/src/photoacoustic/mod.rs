@@ -53,6 +53,7 @@
 //! use kwavers_diagnostics::photoacoustic::{
 //!     PhotoacousticOpticalProperties, PhotoacousticParameters
 //! };
+//! # fn main() -> Result<(), String> {
 //!
 //! // Configure PA imaging parameters
 //! let params = PhotoacousticParameters {
@@ -67,10 +68,12 @@
 //!
 //! // Get tissue optical properties (using new API)
 //! // Use canonical domain SSOT types:
-//! let blood_props = PhotoacousticOpticalProperties::blood(532.0); // Oxy-Hb peak -> OpticalPropertyData
-//! let tissue_props = PhotoacousticOpticalProperties::soft_tissue(700.0); // Near-IR window -> OpticalPropertyData
+//! let blood_props = PhotoacousticOpticalProperties::blood(532.0)?; // Oxy-Hb peak -> OpticalPropertyData
+//! let tissue_props = PhotoacousticOpticalProperties::soft_tissue(700.0)?; // Near-IR window -> OpticalPropertyData
 //!
-//! println!("Blood absorption at 532 nm: {} m⁻¹", blood_props.absorption_coefficient);
+//! println!("Blood absorption at 532 nm: {} m⁻¹", blood_props.absorption_coefficient());
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! ## Migration Notice

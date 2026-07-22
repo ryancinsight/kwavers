@@ -421,7 +421,7 @@ mod tests {
 
     #[test]
     fn test_oneil_solution() {
-        use approx::assert_relative_eq;
+        use eunomia::assert_relative_eq;
 
         let bowl = make_bowl(0.064, 0.064, [0.0, 0.0, 0.0], MHZ_TO_HZ, MPA_TO_PA).unwrap();
 

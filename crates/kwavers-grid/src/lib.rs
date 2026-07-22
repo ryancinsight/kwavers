@@ -49,7 +49,10 @@ pub use fft_utils::{fft_shift_2d, get_optimal_fft_size, ifft_shift_2d, is_optima
 pub use kspace::KSpaceCalculator;
 
 /// Geometric-domain primitives
-pub use geometry::{GeometricDomain, PointLocation, RectangularDomain, SphericalDomain};
+pub use geometry::{
+    GeometricDomain, GeometryDimension, GeometryError, PointLocation, RectangularDomain,
+    SphericalDomain,
+};
 
 pub type Grid3D = Grid;
 

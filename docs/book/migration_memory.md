@@ -1,4 +1,4 @@
-# Memory: Mnemosyne and Themis
+# Chapter 39 — Memory: Mnemosyne and Themis
 
 The Atlas memory subsystem replaces ad-hoc `Vec<T>` allocations in hot paths
 with `mnemosyne` (allocator) and `themis` (region/arena strategies).

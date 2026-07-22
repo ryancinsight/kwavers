@@ -1,7 +1,7 @@
 use super::linear::LinearInterpolator;
 use super::traits::Interpolator;
 use super::trilinear::NumericsTrilinearInterpolator;
-use approx::assert_abs_diff_eq;
+use eunomia::assert_abs_diff_eq;
 use leto::{Array1, Array3};
 
 #[test]

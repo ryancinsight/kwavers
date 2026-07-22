@@ -1,7 +1,7 @@
 use super::{
-    ElasticCollocationSamplingStrategy, ElasticPinnActivationFunction, ElasticPinnLrScheduler,
-    ElasticPinnOptimizerType, LossWeights,
+    ElasticPinnActivationFunction, ElasticPinnLrScheduler, ElasticPinnOptimizerType, LossWeights,
 };
+use crate::inverse::pinn::geometry::CollocationSamplingStrategy;
 use serde::{Deserialize, Serialize};
 
 /// Training configuration for 2D Elastic Wave PINN.
@@ -20,7 +20,7 @@ pub struct Config {
     pub n_collocation_interior: usize,
     pub n_collocation_boundary: usize,
     pub n_collocation_initial: usize,
-    pub sampling_strategy: ElasticCollocationSamplingStrategy,
+    pub sampling_strategy: CollocationSamplingStrategy,
     pub adaptive_sampling: bool,
     pub adaptive_threshold: f64,
     // Loss
@@ -60,7 +60,7 @@ impl Default for Config {
             n_collocation_interior: 10000,
             n_collocation_boundary: 1000,
             n_collocation_initial: 1000,
-            sampling_strategy: ElasticCollocationSamplingStrategy::LatinHypercube,
+            sampling_strategy: CollocationSamplingStrategy::LatinHypercube,
             adaptive_sampling: false,
             adaptive_threshold: 2.0,
             loss_weights: LossWeights::default(),

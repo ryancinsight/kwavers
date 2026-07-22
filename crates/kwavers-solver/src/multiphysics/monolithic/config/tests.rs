@@ -41,7 +41,7 @@ fn test_physics_coefficients_default() {
 
     assert!((c.sound_speed - SOUND_SPEED_TISSUE).abs() < 1e-10);
     assert!(c.thermal_diffusivity() > 0.0);
-    assert!(c.optical_diffusion() > 0.0);
+    assert!(c.optical_diffusion().unwrap() > 0.0);
     c.validate().unwrap();
 }
 
@@ -79,12 +79,8 @@ fn test_physics_coefficients_reject_zero_optical_transport() {
     let error = coefficients.validate().unwrap_err();
 
     match error {
-        KwaversError::Validation(ValidationError::InvalidParameter { parameter, reason }) => {
-            assert_eq!(parameter, "PhysicsCoefficients::optical_transport");
-            assert_eq!(
-                reason,
-                "optical_absorption + reduced_scattering must be positive"
-            );
+        KwaversError::Validation(ValidationError::ConstraintViolation { message }) => {
+            assert!(message.contains("absorption plus reduced scattering must be positive"));
         }
         other => panic!("expected optical transport validation error, got {other:?}"),
     }

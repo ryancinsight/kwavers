@@ -25,13 +25,16 @@
 //!    `K_μ(x) = −∫ Σ_ij (∂_i u_j + ∂_j u_i)_fwd (∂_i u_j + ∂_j u_i)_adj dt`
 //!    assembled by a strain cross-correlation imaging condition.
 //!
-//! ## Scope (v1)
+//! ## Scope
 //!
-//! 2-D plane strain (`nz = 1`) and `μ`-only (`ρ`, `λ` held fixed from the medium).
+//! 2-D plane strain (`nz = 1`) and full 3-D, with `μ` as the only inversion
+//! parameter (`ρ` and `λ` remain fixed from the medium).
 //! The forward field history is stored in full (`O(n_steps·N)`): the PML +
 //! velocity-Verlet stepping is **not** time-reversible, so the acoustic
-//! self-adjoint reconstruction trick (ADR 016) does not apply. PyO3 bindings,
-//! optimal checkpointing, joint `λ/ρ`, and 3-D are deferred (ADR 033 increment 5).
+//! self-adjoint reconstruction trick (ADR 016) does not apply. Adjoint states
+//! are consumed by the gradient kernel as they are produced, retaining only
+//! `O(N)` adjoint state. Forward checkpointing and joint `λ/ρ` are deferred; the
+//! PyO3 binding, L-BFGS optimizer, and 3-D kernel are implemented (ADR 033).
 
 pub mod acquisition;
 mod gradient;

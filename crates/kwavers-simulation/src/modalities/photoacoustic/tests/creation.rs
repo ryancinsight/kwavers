@@ -23,21 +23,21 @@ fn test_photoacoustic_creation() {
 
 #[test]
 fn test_optical_properties() {
-    let blood_props = PhotoacousticOpticalProperties::blood(750.0);
-    let tissue_props = PhotoacousticOpticalProperties::soft_tissue(750.0);
-    let tumor_props = PhotoacousticOpticalProperties::tumor(750.0);
+    let blood_props = PhotoacousticOpticalProperties::blood(750.0).unwrap();
+    let tissue_props = PhotoacousticOpticalProperties::soft_tissue(750.0).unwrap();
+    let tumor_props = PhotoacousticOpticalProperties::tumor(750.0).unwrap();
 
     assert!(
-        blood_props.absorption_coefficient > tissue_props.absorption_coefficient,
+        blood_props.absorption_coefficient() > tissue_props.absorption_coefficient(),
         "Blood has higher absorption due to hemoglobin"
     );
     assert!(
-        tumor_props.absorption_coefficient > tissue_props.absorption_coefficient,
+        tumor_props.absorption_coefficient() > tissue_props.absorption_coefficient(),
         "Tumors have higher absorption due to increased vascularity"
     );
-    assert!(blood_props.absorption_coefficient > 0.0);
-    assert!(tissue_props.absorption_coefficient > 0.0);
-    assert!(tumor_props.absorption_coefficient > 0.0);
+    assert!(blood_props.absorption_coefficient() > 0.0);
+    assert!(tissue_props.absorption_coefficient() > 0.0);
+    assert!(tumor_props.absorption_coefficient() > 0.0);
 }
 
 #[test]

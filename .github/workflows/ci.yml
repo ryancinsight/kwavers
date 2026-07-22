@@ -20,11 +20,10 @@ jobs:
           fetch-depth: 0
 
       - name: Checkout Atlas path dependencies
-        uses: ryancinsight/atlas/.github/actions/checkout-path-dependencies@71cdc54c509d54e10daac1032d328d0b006a2ce5
+        uses: ./.github/actions/checkout-atlas-path-dependencies
         with:
           manifest: Cargo.toml
           destination: ..
-          atlas_ref: 71cdc54c509d54e10daac1032d328d0b006a2ce5
 
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
@@ -41,7 +40,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target/
-          key: ${{ runner.os }}-pinn-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-pinn-cargo-${{ hashFiles('**/Cargo.lock', 'Cargo.toml', '.cargo/config.toml') }}
 
       - name: Check PINN feature compilation
         run: cargo check --locked -p kwavers --features pinn --lib
@@ -73,11 +72,10 @@ jobs:
           fetch-depth: 0
 
       - name: Checkout Atlas path dependencies
-        uses: ryancinsight/atlas/.github/actions/checkout-path-dependencies@71cdc54c509d54e10daac1032d328d0b006a2ce5
+        uses: ./.github/actions/checkout-atlas-path-dependencies
         with:
           manifest: Cargo.toml
           destination: ..
-          atlas_ref: 71cdc54c509d54e10daac1032d328d0b006a2ce5
 
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
@@ -94,7 +92,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock', 'Cargo.toml', '.cargo/config.toml') }}
 
       - name: Check formatting
         run: cargo fmt -- --check
@@ -117,11 +115,10 @@ jobs:
           fetch-depth: 0
 
       - name: Checkout Atlas path dependencies
-        uses: ryancinsight/atlas/.github/actions/checkout-path-dependencies@71cdc54c509d54e10daac1032d328d0b006a2ce5
+        uses: ./.github/actions/checkout-atlas-path-dependencies
         with:
           manifest: Cargo.toml
           destination: ..
-          atlas_ref: 71cdc54c509d54e10daac1032d328d0b006a2ce5
 
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
@@ -138,7 +135,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target/
-          key: ${{ runner.os }}-${{ matrix.rust }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-${{ matrix.rust }}-cargo-${{ hashFiles('**/Cargo.lock', 'Cargo.toml', '.cargo/config.toml') }}
 
       - name: Build
         run: cargo build --locked -p kwavers --release --verbose --features="plotting"
@@ -163,11 +160,10 @@ jobs:
           fetch-depth: 0
 
       - name: Checkout Atlas path dependencies
-        uses: ryancinsight/atlas/.github/actions/checkout-path-dependencies@71cdc54c509d54e10daac1032d328d0b006a2ce5
+        uses: ./.github/actions/checkout-atlas-path-dependencies
         with:
           manifest: Cargo.toml
           destination: ..
-          atlas_ref: 71cdc54c509d54e10daac1032d328d0b006a2ce5
 
       - name: Install cargo-deny
         run: cargo install cargo-deny
@@ -184,11 +180,10 @@ jobs:
           fetch-depth: 0
 
       - name: Checkout Atlas path dependencies
-        uses: ryancinsight/atlas/.github/actions/checkout-path-dependencies@71cdc54c509d54e10daac1032d328d0b006a2ce5
+        uses: ./.github/actions/checkout-atlas-path-dependencies
         with:
           manifest: Cargo.toml
           destination: ..
-          atlas_ref: 71cdc54c509d54e10daac1032d328d0b006a2ce5
 
       - name: Install Rust nightly with miri
         uses: dtolnay/rust-toolchain@nightly
@@ -218,11 +213,10 @@ jobs:
           fetch-depth: 0
 
       - name: Checkout Atlas path dependencies
-        uses: ryancinsight/atlas/.github/actions/checkout-path-dependencies@71cdc54c509d54e10daac1032d328d0b006a2ce5
+        uses: ./.github/actions/checkout-atlas-path-dependencies
         with:
           manifest: Cargo.toml
           destination: ..
-          atlas_ref: 71cdc54c509d54e10daac1032d328d0b006a2ce5
 
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
@@ -237,7 +231,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target/
-          key: ${{ runner.os }}-bench-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-bench-cargo-${{ hashFiles('**/Cargo.lock', 'Cargo.toml', '.cargo/config.toml') }}
 
       - name: Execute every plotting-eligible Criterion target once
         run: cargo bench --locked -p kwavers --features plotting --benches -- --test
@@ -253,11 +247,10 @@ jobs:
           fetch-depth: 0
 
       - name: Checkout Atlas path dependencies
-        uses: ryancinsight/atlas/.github/actions/checkout-path-dependencies@71cdc54c509d54e10daac1032d328d0b006a2ce5
+        uses: ./.github/actions/checkout-atlas-path-dependencies
         with:
           manifest: Cargo.toml
           destination: ..
-          atlas_ref: 71cdc54c509d54e10daac1032d328d0b006a2ce5
 
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
@@ -269,7 +262,7 @@ jobs:
         run: cargo install cargo-tarpaulin
 
       - name: Generate coverage report
-        run: cargo tarpaulin --locked -p kwavers --out xml --features="plotting" --timeout 300
+        run: cargo tarpaulin --locked -p kwavers --profile coverage --out xml --features="plotting" --timeout 300
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v7
@@ -289,11 +282,10 @@ jobs:
           fetch-depth: 0
 
       - name: Checkout Atlas path dependencies
-        uses: ryancinsight/atlas/.github/actions/checkout-path-dependencies@71cdc54c509d54e10daac1032d328d0b006a2ce5
+        uses: ./.github/actions/checkout-atlas-path-dependencies
         with:
           manifest: Cargo.toml
           destination: ..
-          atlas_ref: 71cdc54c509d54e10daac1032d328d0b006a2ce5
 
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
@@ -313,7 +305,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target/
-          key: ${{ runner.os }}-pinn-conv-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-pinn-conv-cargo-${{ hashFiles('**/Cargo.lock', 'Cargo.toml', '.cargo/config.toml') }}
 
       - name: Run convergence studies
         run: cargo nextest run --locked -p kwavers --test pinn_convergence_studies --features pinn
@@ -330,11 +322,10 @@ jobs:
           fetch-depth: 0
 
       - name: Checkout Atlas path dependencies
-        uses: ryancinsight/atlas/.github/actions/checkout-path-dependencies@71cdc54c509d54e10daac1032d328d0b006a2ce5
+        uses: ./.github/actions/checkout-atlas-path-dependencies
         with:
           manifest: Cargo.toml
           destination: ..
-          atlas_ref: 71cdc54c509d54e10daac1032d328d0b006a2ce5
 
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
@@ -356,7 +347,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target/
-          key: ${{ runner.os }}-validation-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-validation-cargo-${{ hashFiles('**/Cargo.lock', 'Cargo.toml', '.cargo/config.toml') }}
 
       - name: k-Wave analytical comparison tests
         run: cargo nextest run --locked -p kwavers-solver --lib validation::kwave_comparison

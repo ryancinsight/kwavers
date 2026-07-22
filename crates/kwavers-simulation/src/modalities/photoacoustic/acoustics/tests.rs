@@ -2,7 +2,7 @@
 
 use super::pressure::{compute_initial_pressure, compute_multi_wavelength_pressure};
 use super::propagation::propagate_acoustic_wave;
-use approx::assert_relative_eq;
+use eunomia::assert_relative_eq;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_core::constants::numerical::MPA_TO_PA;
 use kwavers_core::constants::thermodynamic::GRUNEISEN_WATER_20C;

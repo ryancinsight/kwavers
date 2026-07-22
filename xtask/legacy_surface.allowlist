@@ -81,6 +81,7 @@ source:crates/kwavers-physics/src/optics/sonoluminescence/blackbody.rs
 source:crates/kwavers-physics/src/optics/sonoluminescence/cherenkov/tests.rs
 source:crates/kwavers-physics/src/optics/sonoluminescence/emission/orchestrator/dynamics/tests.rs
 source:crates/kwavers-physics/src/optics/sonoluminescence/emission/tests.rs
+source:crates/kwavers-python/src/array_utils.rs
 source:crates/kwavers-receiver/src/point/tests.rs
 source:crates/kwavers-signal/src/analytic.rs
 source:crates/kwavers-simulation/src/modalities/photoacoustic/acoustics/tests.rs

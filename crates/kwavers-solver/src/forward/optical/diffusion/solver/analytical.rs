@@ -5,6 +5,10 @@
 //! (1997), "Photon migration through a turbid slab", *Applied Optics*.
 
 #[cfg(test)]
+use aequitas::systems::si::{quantities::Length, units::PerMeter};
+#[cfg(test)]
+use hyperion::quantity::PathLength;
+#[cfg(test)]
 use kwavers_medium::properties::OpticalPropertyData;
 
 /// Infinite medium Green's function solution.
@@ -20,15 +24,30 @@ pub fn infinite_medium_point_source(
     source_power: f64,
     optical_properties: OpticalPropertyData,
 ) -> f64 {
-    let mu_a = optical_properties.absorption_coefficient;
-    let mu_s_prime = optical_properties.reduced_scattering();
-    let d = 1.0 / (3.0 * (mu_a + mu_s_prime));
-
-    let mu_eff = (3.0 * mu_a * (mu_a + mu_s_prime)).sqrt();
+    let coefficients = optical_properties
+        .diffusion_coefficients()
+        .expect("fixture must define non-degenerate optical transport");
+    let d = coefficients
+        .diffusion_coefficient()
+        .expect("fixture diffusion coefficient must be finite")
+        .into_quantity()
+        .into_base();
+    let attenuation = coefficients
+        .effective_attenuation()
+        .expect("fixture effective attenuation must be finite");
 
     if r < 1e-10 {
         return f64::INFINITY;
     }
 
-    (source_power / (4.0 * std::f64::consts::PI * d * r)) * (-mu_eff * r).exp()
+    let transmission = attenuation
+        .optical_depth(
+            PathLength::new(Length::from_base(r)).expect("fixture distance must be non-negative"),
+        )
+        .expect("fixture optical depth must be finite")
+        .transmission()
+        .into_quantity()
+        .into_base();
+    debug_assert!(attenuation.in_unit::<PerMeter>().is_finite());
+    (source_power / (4.0 * std::f64::consts::PI * d * r)) * transmission
 }

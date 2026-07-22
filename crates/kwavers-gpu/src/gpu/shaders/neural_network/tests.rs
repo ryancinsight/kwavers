@@ -1,5 +1,5 @@
 use super::*;
-use approx::assert_relative_eq;
+use eunomia::assert_relative_eq;
 use hephaestus_core::DevicePreference;
 
 fn create_test_gpu_device() -> Option<GpuDevice> {

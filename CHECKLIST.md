@@ -1,5 +1,46 @@
 # Project Checklist
 
+## Owner: Codex `/root` — Stream elastic-FWI adjoint gradient [patch]
+
+- [x] Measure the current full-adjoint-history runtime and process-tree peak
+      memory on the unchanged 3-D directional-gradient regression.
+- [x] Stream each adjoint state directly into the matching reverse-time forward
+      state while preserving the full forward history required by the
+      non-reversible PML integrator.
+- [x] Add a full-history differential regression that detects time-index or
+      component-association errors without weakening numerical tolerances.
+- [x] Run focused formatting, warning-denied Clippy, configured Nextest,
+      doctests, and controlled post-change memory/runtime measurement.
+- [x] Synchronize PM evidence and deliver only after exact-head hosted checks
+      pass.
+
+## Owner: /root — Consolidate optical transport in Hyperion [major] [arch]
+
+- [x] Record the ownership boundary, dependency direction, deletion ledger,
+      retained Kwavers concerns, and rejected facade in ADR 046.
+- [x] Align the Aequitas, Asclepius, Proteus, Hyperion, and Atlas checkout pins.
+- [x] Delete `kwavers-optics::optical_transport`,
+      `DiffusionOpticalProperties`, and `OpticalAbsorption`.
+- [x] Move material coefficient validity and all named derived laws to direct
+      Hyperion contracts without a compatibility re-export.
+- [x] Close every affected caller under package-scoped checks and tests.
+- [x] Run Clippy, doctest, Rustdoc, residue, and SemVer gates; retain the exact
+      origin-graph SemVer and warning-denied Rustdoc blockers in the backlog.
+- [ ] Publish the exact Kwavers head and record hosted CI evidence.
+
+## Owner: /root — Restore elastic-FWI test budget [patch]
+
+- [x] Reproduce the two elastic-FWI regressions above the ordinary 30-second
+      budget without changing their workloads or assertions.
+- [x] Consolidate internally parallel full-grid tests into one serialized
+      group and remove the 90-second FWI timeout exception.
+- [x] Select homogeneous inverse density once and cache separable PML factors
+      in the reusable step workspace.
+- [x] Replace the three sequential stress/divergence passes with Moirai's
+      canonical triple-buffer chunk primitive.
+- [x] Verify stress and PML value semantics, both FWI regressions, warning-denied
+      Solver Clippy, Solver doctests, and the complete workspace Nextest closure.
+
 ## Owner: /root — Python release wheels [patch]
 
 - [x] Make Cargo the `kwavers-python` distribution version source of truth.
@@ -14,21 +55,84 @@
 - [ ] Pass hosted CI on the exact release-automation head.
 - [ ] Register the PyPI pending trusted publisher.
 
-## Owner: /root — Install Atlas benchmark oracle [patch] [arch]
+## Owner: /root — Bound debug build artifacts [patch]
+
+- [x] Measure the shared Atlas debug artifact count and size by artifact class.
+- [x] Confirm the effective stack debug-information and linker configuration.
+- [x] Recover the runtime reason for the wildcard dependency `-O3` override.
+- [x] Replace wildcard dependency `-O3` with the existing workspace `-O1`
+      policy across the full development dependency graph.
+- [x] Remove the PSTD provider exception by packing three-dimensional FFT
+      half-spectra through contiguous rows and reconstructing Hermitian rows
+      without general strided indexing.
+- [x] Key every CI cache containing `target/` by the development-profile
+      inputs, preventing immutable `-O3` artifacts from contaminating the
+      `-O1` measurement.
+- [x] Add exact hosted execution of the four full-grid integration binaries
+      and record the resulting debug artifact bytes and file count.
+- [x] Isolate ptrace coverage in a dedicated inherited profile after the exact
+      `-O1` head exposed a five-minute instrumented PSTD timeout; keep its
+      existing workload and timeout unchanged.
+- [x] Verify the pinned provider graph locally: `kwavers-math` passes 266/266
+      tests and the serialized four-binary architecture grid passes 24/24 in
+      69.640 s, with its longest test at 22.853 s.
+- [x] Verify the exact implementation head in hosted CI: all feature builds
+      complete in 7m48s–10m57s, the full architecture job completes in
+      33m06s with the PSTD regression at 24.546s, and the clean debug tree is
+      16,771,464,617 bytes across 6,109 files. Record this as the clean
+      footprint baseline because no comparable clean `-O3` footprint was
+      retained.
+- [x] Reconcile the exact Atlas provider graph to Leto 0.40, Hermes 0.4.1, and
+      one Eunomia 0.7 identity; verify locked all-feature metadata and compile,
+      then pass all 266 `kwavers-math` tests on that graph.
+- [x] Route benchmark provider checkout through the candidate's pinned action
+      so smoke and phase-reversed jobs cannot drift to a stale Atlas graph.
+- [x] Add a same-path executable-identity preflight that skips four statistical
+      pairs only when every merge-critical benchmark binary is byte-identical.
+- [x] Verify exact hosted head `04bced11b`: benchmark run `29913169741` proves
+      byte-identical merge-critical executables and completes in 12m12s without
+      launching pair jobs. Retain run `29909003760` as the exact-head evidence
+      for the unchanged differing-artifact branch.
+
+## Owner: /root — Integrate Tyche collocation sampling [major] [arch]
+
+- [x] Extend ADR 043 with the collocation boundary, public migration, mapping
+      proofs, memory contract, and rejected alternatives.
+- [x] Validate fixed-layout rectangular and spherical domains at construction.
+- [x] Add the generic Tyche `Design` collector and domain-separated counter
+      streams in `kwavers-grid`.
+- [x] Replace rectangle, disk, and ball rejection sampling with measure-correct
+      direct transforms and face-measure boundary selection.
+- [x] Replace the PINN sampler's boxed domain, local Latin-hypercube, and
+      pseudo-Sobol implementations with generic Tyche dispatch.
+- [x] Delete the obsolete geometry adaptive sampler and migrate all callers.
+- [x] Prove value semantics, exact cardinality, deterministic replay, mapping
+      laws, and one-allocation output construction with focused tests.
+- [x] Run focused Nextest, warning-denied Clippy, doctests, Rustdoc, dependency
+      and residue audits, plus public SemVer classification.
+- [x] Admit the registered Iris Git source required by the canonical Atlas
+      provider graph through the deny policy and reproduce the source audit.
+- [x] Synchronize README, book references, backlog, checklist, and changelog.
+## Owner: /root — Bound Atlas benchmark oracle [patch] [arch]
 
 - [x] Remove the same-run save/check classifier and its Python implementation.
 - [x] Hold the candidate benchmark instrument constant across base and head.
-- [x] Run the complete suite in phase-reversed ABBA/BAAB order on one runner.
+- [x] Run two base-first and two candidate-first pairs on isolated runners.
+- [x] Materialize both revisions at one filesystem path inside every pair.
 - [x] Derive family-wise confidence and classification from the Atlas SSOT.
-- [x] Bound the instrumented job from observed full-suite runtime without
-      reducing benchmark targets, samples, or assertions.
+- [x] Execute every plotting-eligible benchmark once on the candidate.
+- [x] Retain unchanged statistical workloads for the canonical baseline,
+      critical-path, and SIMD production targets.
+- [x] Bound every benchmark job at 30 minutes and exclude Python
+      packaging-only changes from the Rust performance gate.
 - [x] Disable auto-discovery, register all 22 retained Criterion targets, and
       require source-file/target-registry equality before measurement.
 - [x] Exclude the package library and binary libtest harnesses from benchmark
       target selection.
 - [x] Remove feature-disabled no-op entry points and reject empty benchmark
       mains before measurement.
-- [ ] Verify the exact PR head through the hosted benchmark workflow.
+- [x] Verify the bounded same-path PR head through the hosted benchmark
+      workflow (`29884797777`: smoke, four AB/BA pairs, and classifier pass).
 
 ## Owner: /root — GPU PSTD peak-pressure output [major]
 
@@ -52,9 +156,10 @@
 - [x] Record the private consumer's explicit peak-pressure regression as an
       external integration requirement without exposing its repository.
 - [x] Run GPU-feature Nextest, warning-denied all-feature Clippy, and Rustdoc.
-- [x] Pin every hosted path-dependency checkout to the Atlas-owned action and
-      reconcile `Cargo.lock` against that exact gitlink graph.
-- [x] Align direct Aequitas and Proteus revisions with Atlas `71cdc54` and
+- [x] Route every ordinary hosted path-dependency checkout through one local
+      action pinned to the Atlas-owned action and reconcile `Cargo.lock`
+      against that exact gitlink graph.
+- [x] Align direct Aequitas and Proteus revisions with Atlas `614914cf` and
       resolve one Aequitas source identity across the locked graph.
 - [x] Move grid and homogeneous-medium wall-clock checks out of the
       instrumented native-test lane; retain their Criterion measurements.

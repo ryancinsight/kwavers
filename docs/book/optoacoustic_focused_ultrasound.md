@@ -1,4 +1,4 @@
-# 34. Optically-Generated Focused Ultrasound for Ultrahigh-Precision Neuromodulation
+# Chapter 34 — Optically-Generated Focused Ultrasound for Ultrahigh-Precision Neuromodulation
 
 This chapter develops the physics of **optically-generated focused ultrasound
 (OFUS)** produced by a **soft optoacoustic pad (SOAP)**, following Li et al.,
@@ -59,7 +59,7 @@ p_0 = \Gamma\, \mu_a\, F, \qquad \Gamma = \frac{\beta\, c^2}{C_p}             (3
 where `Γ` is the dimensionless **Grüneisen parameter** (volumetric thermal
 expansion `β`, sound speed `c`, specific heat `C_p`). Equation (34.1) is the
 photoacoustic source law of §10.1; it is implemented in
-`kwavers_optics::optical_transport::initial_pressure` and, for emitter
+`kwavers_physics::photoacoustics::PhotoacousticGoverningEquations::initial_pressure` and, for emitter
 materials, as `OptoacousticEmitter::grueneisen` and `surface_pressure`.
 
 The matrix and the absorber play complementary roles. PDMS supplies the large
@@ -233,7 +233,7 @@ non-cavitational mechanism.
 | f-number ⇄ NA | (34.3) | `…::f_number_from_na`, `…::na_from_f_number` |
 | Focal gain | (34.4) | `…::soap_focal_gain` |
 | Lateral resolution | (34.5) | `…::acoustic_resolution_lateral` |
-| Optoacoustic source `p₀=Γμ_aF` | (34.1) | `kwavers_optics::optical_transport::initial_pressure` |
+| Optoacoustic source `p₀=Γμ_aF` | (34.1) | `kwavers_physics::photoacoustics::PhotoacousticGoverningEquations::initial_pressure` |
 | Absorber materials & sensitivity | (34.6) | `kwavers_medium::properties::optoacoustic::OptoacousticEmitter` |
 | Fiber-tip fluence | (34.7) | `…::optoacoustic::fiber_tip_fluence` |
 | Delay-focused aperture gain | (34.8) | `…::optoacoustic::focused_aperture_gain` |

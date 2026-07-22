@@ -4,12 +4,64 @@
 
 ### Changed
 
+- [patch] Stream elastic-FWI adjoint states directly into the reverse-time
+  shear-strain correlation kernel instead of retaining a second six-component
+  field history. The gradient and illumination remain exact against an
+  independent full-history oracle while retained adjoint state drops from six
+  grid volumes per time step to one current field.
 - [patch] Rename the unreleased Python distribution from `pykwavers` to
   `kwavers-python` while retaining `pykwavers` as the import name. GitHub
   Releases tagged `kwavers-python-v<version>` now build, install, attest, and
   attach one stable-ABI wheel per operating system, then publish the exact wheel
   set to PyPI through OIDC.
 
+### Breaking (2026-07-21) - Hyperion optical transport [major] [arch]
+
+- Replace Kwavers-owned reduced-scattering, attenuation, albedo, diffusion,
+  penetration-depth, optical-depth, and planar-transmission laws with direct
+  Hyperion ownership over Aequitas quantities.
+- Make `OpticalPropertyData` hold private validated coefficient and anisotropy
+  values while retaining Kwavers-owned tissue presets and refractive index.
+  Spatial maps now store that aggregate once per voxel instead of parallel raw
+  arrays that discarded anisotropy. Raw coefficient access is through named
+  methods.
+- Remove `kwavers_optics::optical_transport`, `DiffusionOpticalProperties`,
+  `OpticalAbsorption`, the legacy physics map re-export, and the heuristic
+  default optical-medium constants and reduced-scattering law. The remaining
+  medium trait now exposes validated reduced scattering explicitly; homogeneous,
+  voxel, and tissue media no longer mix raw and reduced coefficients behind one
+  method name.
+  `kwavers-optics` remains the chromophore-spectrum owner. See ADR 046.
+### Breaking (2026-07-21) - Tyche collocation sampling [major] [arch]
+
+- Replace Kwavers' allocated Latin-hypercube permutation and three-dimensional
+  pseudo-Sobol implementation with Tyche's random-access const-generic designs.
+  `CollocationSampler<G>` now stores its geometric domain inline, takes an
+  explicit `tyche_core::Seed`, and returns typed geometry failures for design
+  counts outside Tyche's validated range. Boundary sampling remains owned by
+  each physical domain rather than applying a unit-cube design to an undefined
+  boundary chart.
+- Make rectangular and spherical construction fallible and private-fielded.
+  Their fixed three-coordinate storage allocates nothing, rejects non-finite,
+  unordered, unrepresentable, or non-finite-measure domains, and maps unit
+  points into the strict interior without rejection. Sampling takes a typed
+  `Seed` and returns `Result`.
+- Select rectangular boundary faces in proportion to face measure through a
+  borrowed Tyche weighted categorical distribution. Disk and ball interiors
+  use inverse-area and inverse-volume radial maps; spherical boundaries use
+  direct angular maps. Generated non-empty matrices allocate one exact-capacity
+  buffer with no reallocation or intermediate point matrix; failed exact
+  reservation returns a typed error.
+- Remove the unused geometry `AdaptiveRefinement` implementation and
+  `CollocationSamplingStrategy::AdaptiveRefinement`. The PINN ML
+  `AdaptiveCollocationSampler` remains the single residual-adaptive owner. See
+  ADR 043.
+- Remove the unused duplicate `ElasticCollocationSamplingStrategy`; elastic
+  training configuration now serializes the canonical
+  `CollocationSamplingStrategy` directly.
+- Make `MultiRegionDomain::new` fallible with typed count and dimension errors,
+  expose its validated collections through borrowed accessors, and apply the
+  requested interface-point quota independently to each adjacent region pair.
 ### Breaking (2026-07-20) - Asclepius biological responses [major]
 
 - Replace Kwavers-owned CEM43, Arrhenius damage, and independent-insult
@@ -31,12 +83,58 @@
 
 ### Fixed
 
+- Validate Gaussian body-force parameters before mutating elastic-wave state,
+  replacing silent zero-force substitution with a typed numerical error.
+  Dispatch the absent-body-force regime once per acceleration update so dense
+  point-force propagation performs no coordinate division or optional force
+  selection per cell. Homogeneous media select inverse density once, separable
+  PML exponentials are cached in the reusable step workspace, and the three
+  stress/divergence output passes use Moirai's canonical triple-buffer chunk
+  primitive instead of sequential loops. The unchanged elastic-FWI regressions
+  complete in 10.310 seconds and 9.480 seconds in the full workspace closure.
+- Remove the wildcard dependency `-O3` override from development and test
+  builds. The broad dependency graph now inherits the workspace's `-O1`
+  profile, allowing Rust to share generic monomorphizations across crates.
+  Replace strided three-dimensional half-spectrum copies in the Kwavers FFT
+  facade with contiguous row copies and direct Hermitian reconstruction, so
+  the unchanged PSTD regression remains below 30 seconds without targeted
+  provider exceptions. The stack-level profile continues to keep
+  line-table-only debug information for workspace code and no dependency or
+  build-script debug information.
+- Consolidate all internally parallel full-grid solvers under one serialized
+  Nextest group. This removes cross-group CPU oversubscription and the obsolete
+  90-second FWI exception while preserving every workload, assertion, the
+  ordinary 30-second target, and the 60-second termination contract. The exact
+  workspace closure passes all 6,168 tests with its longest grouped workload
+  at 26.402 seconds.
+- Include `Cargo.toml` and `.cargo/config.toml` in every CI cache key that
+  stores `target/`, preventing immutable caches produced under an older
+  development profile from being restored into a new profile measurement.
+  The architecture gate now runs the four full-grid integration binaries under
+  the unchanged Nextest timeout contract and reports debug artifact bytes and
+  file count in its job summary.
+- Pin hosted path-dependency checkout to the aligned Atlas graph and regenerate
+  the all-feature lock closure around Leto 0.40, Hermes 0.4.1, and one Eunomia
+  0.7 identity. This prevents incompatible provider-owned numeric types from
+  entering locked benchmark and architecture builds.
+- Run ptrace code coverage through a dedicated profile that inherits the
+  development settings but optimizes dependencies for instrumentation. This
+  keeps the broad ordinary dependency profile at `-O1` while preserving the
+  existing coverage workload and finite timeout for FFT-heavy full-grid tests.
 - Replace the tautological single-run benchmark save/check job with the
   Atlas-owned, family-wise Criterion regression gate. Benchmark-relevant PRs
   now compare the exact base and head through two phase-reversed replications
-  while holding the candidate harness constant. Four isolated pair jobs retain
-  every target and Criterion sample, then one aggregate job requires all four
-  confidence intervals to agree.
+  while holding the candidate harness and source path constant. Four isolated
+  pair jobs retain unchanged samples for the canonical baseline, critical-path,
+  and SIMD production targets, then one aggregate job requires all four
+  confidence intervals to agree. A separate 30-minute candidate smoke executes
+  every plotting-eligible benchmark once. Python packaging-only changes do not
+  trigger the Rust performance gate, and no merge-critical benchmark job can
+  run for hours. Both smoke and comparison jobs now materialize providers
+  through the candidate's pinned checkout action, eliminating separate Atlas
+  revisions that could make locked base/head builds incomparable. The smoke job
+  also hashes same-path base/head executables for the three merge-critical
+  targets and skips statistical pairs only when all three are byte-identical.
 - Disable automatic libtest benchmark discovery and register all 22 Criterion
   targets explicitly, so the full suite cannot silently skip benchmark files.
   Exclude the package library and binary from benchmark-harness selection.
@@ -72,9 +170,12 @@
   velocity-source assembly now fail explicitly instead of dropping inputs.
 - Python bindings now resolve crates.io `numpy` 0.29 directly. The obsolete
   vendored 0.27 patch and its migration allowlist entries are removed.
-- Hosted workflows now materialize path dependencies through the pinned
-  Atlas-owned checkout action and exact Atlas gitlink graph. `Cargo.lock`
-  retains that graph instead of inheriting mutable local provider revisions.
+- Hosted workflows now materialize path dependencies through one local
+  composite action pinned to the Atlas-owned checkout action and exact Atlas
+  gitlink graph. `Cargo.lock` retains that graph instead of inheriting mutable
+  local provider revisions, ordinary workflows cannot drift independently,
+  and the supply-chain policy explicitly admits the registered Iris source in
+  that graph.
 - GPU PSTD pressure sources now inject into each split-density field only when
   that axis is spatially active, matching the host's active-axis
   normalization for singleton dimensions.
