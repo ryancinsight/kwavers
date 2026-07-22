@@ -36,9 +36,18 @@ checksum = "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa"
 [[package]]
 name = "aequitas"
 version = "0.1.0"
+source = "git+https://github.com/ryancinsight/aequitas?rev=cf9b2c3debabf0c08a2769fa8246908ad7cf53da#cf9b2c3debabf0c08a2769fa8246908ad7cf53da"
+dependencies = [
+ "eunomia 0.6.0",
+ "typenum",
+]
+
+[[package]]
+name = "aequitas"
+version = "0.1.0"
 source = "git+https://github.com/ryancinsight/aequitas#262b3e09c19d844f57765d3e4ea6ab2336653d6d"
 dependencies = [
- "eunomia",
+ "eunomia 0.7.0",
  "typenum",
 ]
 
@@ -173,7 +182,7 @@ dependencies = [
  "apollo-fft-macros",
  "apollo-leto-interop",
  "bytemuck",
- "eunomia",
+ "eunomia 0.6.0",
  "half",
  "hephaestus-core",
  "hephaestus-wgpu",
@@ -206,6 +215,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "approx"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cab112f0a86d568ea0e627cc1d6be74a1e9cd55214684db5561995f6dad897c6"
+dependencies = [
+ "num-traits",
+]
+
+[[package]]
 name = "ar_archive_writer"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -225,8 +243,8 @@ name = "asclepius"
 version = "0.1.0"
 source = "git+https://github.com/ryancinsight/asclepius#38d1c85501ab9deabd0b79e6210c166232ea6631"
 dependencies = [
- "aequitas",
- "eunomia",
+ "aequitas 0.1.0 (git+https://github.com/ryancinsight/aequitas)",
+ "eunomia 0.7.0",
 ]
 
 [[package]]
@@ -802,7 +820,7 @@ name = "coeus-core"
 version = "0.9.0"
 dependencies = [
  "bytemuck",
- "eunomia",
+ "eunomia 0.6.0",
  "hermes-simd",
  "mnemosyne",
  "moirai",
@@ -841,7 +859,7 @@ dependencies = [
  "coeus-leto",
  "coeus-sparse",
  "coeus-tensor",
- "eunomia",
+ "eunomia 0.6.0",
  "leto-ops",
  "melinoe",
  "smallvec",
@@ -1920,13 +1938,22 @@ dependencies = [
 
 [[package]]
 name = "eunomia"
+version = "0.6.0"
+dependencies = [
+ "bytemuck",
+ "libm",
+ "rkyv 0.7.46",
+]
+
+[[package]]
+name = "eunomia"
 version = "0.7.0"
+source = "git+https://github.com/ryancinsight/eunomia#7021628fe8eb3637c297105f626ee5df78abda84"
 dependencies = [
  "bytemuck",
  "libm",
  "numpy",
  "pyo3",
- "rkyv 0.7.46",
 ]
 
 [[package]]
@@ -2198,7 +2225,8 @@ name = "gaia"
 version = "0.3.0"
 dependencies = [
  "anyhow",
- "eunomia",
+ "approx",
+ "eunomia 0.6.0",
  "geometry-predicates",
  "hashbrown 0.15.5",
  "indexmap 2.12.0",
@@ -2499,7 +2527,7 @@ dependencies = [
  "bytemuck",
  "cuda-oxide",
  "cutile",
- "eunomia",
+ "eunomia 0.6.0",
  "hephaestus-core",
  "leto",
  "leto-ops",
@@ -2514,9 +2542,9 @@ dependencies = [
 name = "hephaestus-wgpu"
 version = "0.18.0"
 dependencies = [
- "aequitas",
+ "aequitas 0.1.0 (git+https://github.com/ryancinsight/aequitas?rev=cf9b2c3debabf0c08a2769fa8246908ad7cf53da)",
  "bytemuck",
- "eunomia",
+ "eunomia 0.6.0",
  "hephaestus-core",
  "leto",
  "leto-ops",
@@ -2531,9 +2559,9 @@ dependencies = [
 
 [[package]]
 name = "hermes-simd"
-version = "0.4.1"
+version = "0.4.0"
 dependencies = [
- "eunomia",
+ "eunomia 0.6.0",
  "hermes-simd-core",
  "hermes-simd-intrinsics",
  "hermes-simd-macros",
@@ -2543,10 +2571,10 @@ dependencies = [
 
 [[package]]
 name = "hermes-simd-core"
-version = "0.4.1"
+version = "0.4.0"
 dependencies = [
  "bytemuck",
- "eunomia",
+ "eunomia 0.6.0",
  "mnemosyne",
  "rkyv 0.7.46",
  "themis",
@@ -2554,15 +2582,15 @@ dependencies = [
 
 [[package]]
 name = "hermes-simd-intrinsics"
-version = "0.4.1"
+version = "0.4.0"
 dependencies = [
- "eunomia",
+ "eunomia 0.6.0",
  "hermes-simd-core",
 ]
 
 [[package]]
 name = "hermes-simd-macros"
-version = "0.4.1"
+version = "0.4.0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2571,7 +2599,7 @@ dependencies = [
 
 [[package]]
 name = "hermes-simd-types"
-version = "0.4.1"
+version = "0.4.0"
 dependencies = [
  "hermes-simd-core",
  "hermes-simd-intrinsics",
@@ -2698,8 +2726,8 @@ name = "hyperion"
 version = "0.1.0"
 source = "git+https://github.com/ryancinsight/hyperion#7b4561b9b51949c8ca59ee2d6f4294cd085ca8a4"
 dependencies = [
- "aequitas",
- "eunomia",
+ "aequitas 0.1.0 (git+https://github.com/ryancinsight/aequitas)",
+ "eunomia 0.7.0",
  "proteus",
 ]
 
@@ -3196,7 +3224,7 @@ checksum = "e2db585e1d738fc771bf08a151420d3ed193d9d895a36df7f6f8a9456b911ddc"
 name = "kwavers"
 version = "3.0.0"
 dependencies = [
- "aequitas",
+ "aequitas 0.1.0 (git+https://github.com/ryancinsight/aequitas)",
  "anyhow",
  "apollo-fft",
  "bitflags 2.10.0",
@@ -3210,7 +3238,7 @@ dependencies = [
  "criterion",
  "egui",
  "env_logger",
- "eunomia",
+ "eunomia 0.7.0",
  "flate2",
  "flume",
  "gaia",
@@ -3275,7 +3303,7 @@ dependencies = [
  "bytemuck",
  "chrono",
  "egui",
- "eunomia",
+ "eunomia 0.7.0",
  "flume",
  "hephaestus-core",
  "hephaestus-wgpu",
@@ -3305,7 +3333,7 @@ dependencies = [
 name = "kwavers-boundary"
 version = "3.0.0"
 dependencies = [
- "eunomia",
+ "eunomia 0.7.0",
  "kwavers-core",
  "kwavers-grid",
  "kwavers-math",
@@ -3340,7 +3368,7 @@ dependencies = [
  "consus-core 0.1.0 (git+https://github.com/ryancinsight/consus)",
  "consus-hdf5 0.1.0 (git+https://github.com/ryancinsight/consus)",
  "consus-io 0.1.0 (git+https://github.com/ryancinsight/consus)",
- "eunomia",
+ "eunomia 0.7.0",
  "flate2",
  "kwavers-analysis",
  "kwavers-boundary",
@@ -3378,7 +3406,7 @@ dependencies = [
 name = "kwavers-field"
 version = "3.0.0"
 dependencies = [
- "eunomia",
+ "eunomia 0.7.0",
  "kwavers-core",
  "kwavers-grid",
  "kwavers-math",
@@ -3390,7 +3418,7 @@ name = "kwavers-gpu"
 version = "5.0.0"
 dependencies = [
  "bytemuck",
- "eunomia",
+ "eunomia 0.7.0",
  "flume",
  "hephaestus-core",
  "hephaestus-cuda",
@@ -3419,7 +3447,7 @@ dependencies = [
 name = "kwavers-grid"
 version = "3.0.0"
 dependencies = [
- "eunomia",
+ "eunomia 0.7.0",
  "kwavers-core",
  "kwavers-math",
  "leto",
@@ -3437,7 +3465,7 @@ name = "kwavers-imaging"
 version = "3.0.0"
 dependencies = [
  "coeus-core",
- "eunomia",
+ "eunomia 0.7.0",
  "kwavers-core",
  "kwavers-grid",
  "kwavers-medium",
@@ -3454,7 +3482,7 @@ name = "kwavers-math"
 version = "3.0.0"
 dependencies = [
  "apollo-fft",
- "eunomia",
+ "eunomia 0.7.0",
  "hephaestus-core",
  "hephaestus-wgpu",
  "hermes-simd",
@@ -3471,8 +3499,8 @@ dependencies = [
 name = "kwavers-medium"
 version = "4.0.0"
 dependencies = [
- "aequitas",
- "eunomia",
+ "aequitas 0.1.0 (git+https://github.com/ryancinsight/aequitas)",
+ "eunomia 0.7.0",
  "hyperion",
  "kwavers-core",
  "kwavers-grid",
@@ -3490,7 +3518,7 @@ dependencies = [
 name = "kwavers-mesh"
 version = "3.0.0"
 dependencies = [
- "eunomia",
+ "eunomia 0.7.0",
  "gaia",
  "kwavers-core",
  "kwavers-grid",
@@ -3508,7 +3536,7 @@ dependencies = [
 name = "kwavers-phantom"
 version = "3.0.0"
 dependencies = [
- "eunomia",
+ "eunomia 0.7.0",
  "kwavers-core",
  "kwavers-grid",
  "kwavers-medium",
@@ -3520,12 +3548,12 @@ dependencies = [
 name = "kwavers-physics"
 version = "3.0.0"
 dependencies = [
- "aequitas",
+ "aequitas 0.1.0 (git+https://github.com/ryancinsight/aequitas)",
  "anyhow",
  "apollo-fft",
  "asclepius",
  "consus-npy",
- "eunomia",
+ "eunomia 0.7.0",
  "hyperion",
  "kwavers-core",
  "kwavers-field",
@@ -3552,11 +3580,11 @@ dependencies = [
 name = "kwavers-python"
 version = "0.1.0"
 dependencies = [
- "aequitas",
+ "aequitas 0.1.0 (git+https://github.com/ryancinsight/aequitas)",
  "anyhow",
  "asclepius",
  "coeus-core",
- "eunomia",
+ "eunomia 0.7.0",
  "kwavers-analysis",
  "kwavers-boundary",
  "kwavers-core",
@@ -3587,7 +3615,7 @@ dependencies = [
 name = "kwavers-receiver"
 version = "3.0.0"
 dependencies = [
- "eunomia",
+ "eunomia 0.7.0",
  "kwavers-core",
  "kwavers-field",
  "kwavers-grid",
@@ -3606,7 +3634,7 @@ version = "3.0.0"
 dependencies = [
  "anyhow",
  "apollo-fft",
- "eunomia",
+ "eunomia 0.7.0",
  "kwavers-core",
  "kwavers-math",
  "leto",
@@ -3622,7 +3650,7 @@ dependencies = [
 name = "kwavers-simulation"
 version = "3.0.0"
 dependencies = [
- "eunomia",
+ "eunomia 0.7.0",
  "kwavers-boundary",
  "kwavers-core",
  "kwavers-field",
@@ -3650,7 +3678,7 @@ dependencies = [
 name = "kwavers-solver"
 version = "3.0.0"
 dependencies = [
- "aequitas",
+ "aequitas 0.1.0 (git+https://github.com/ryancinsight/aequitas)",
  "anyhow",
  "apollo-fft",
  "bitflags 2.10.0",
@@ -3660,7 +3688,7 @@ dependencies = [
  "coeus-ops",
  "coeus-optim",
  "coeus-tensor",
- "eunomia",
+ "eunomia 0.7.0",
  "hyperion",
  "kwavers-boundary",
  "kwavers-core",
@@ -3694,7 +3722,7 @@ dependencies = [
 name = "kwavers-source"
 version = "3.0.0"
 dependencies = [
- "eunomia",
+ "eunomia 0.7.0",
  "kwavers-core",
  "kwavers-grid",
  "kwavers-math",
@@ -3709,9 +3737,9 @@ dependencies = [
 name = "kwavers-therapy"
 version = "3.0.0"
 dependencies = [
- "aequitas",
+ "aequitas 0.1.0 (git+https://github.com/ryancinsight/aequitas)",
  "asclepius",
- "eunomia",
+ "eunomia 0.7.0",
  "kwavers-analysis",
  "kwavers-core",
  "kwavers-grid",
@@ -3735,7 +3763,7 @@ dependencies = [
 name = "kwavers-transducer"
 version = "4.1.0"
 dependencies = [
- "eunomia",
+ "eunomia 0.7.0",
  "kwavers-core",
  "kwavers-field",
  "kwavers-grid",
@@ -3771,11 +3799,11 @@ checksum = "7a79a3332a6609480d7d0c9eab957bca6b455b91bb84e66d19f5ff66294b85b8"
 
 [[package]]
 name = "leto"
-version = "0.40.0"
+version = "0.39.0"
 dependencies = [
- "aequitas",
+ "aequitas 0.1.0 (git+https://github.com/ryancinsight/aequitas?rev=cf9b2c3debabf0c08a2769fa8246908ad7cf53da)",
  "bytemuck",
- "eunomia",
+ "eunomia 0.6.0",
  "mnemosyne",
  "serde",
  "thiserror 2.0.18",
@@ -3783,10 +3811,10 @@ dependencies = [
 
 [[package]]
 name = "leto-ops"
-version = "0.40.0"
+version = "0.39.0"
 dependencies = [
  "bytemuck",
- "eunomia",
+ "eunomia 0.6.0",
  "hermes-simd",
  "leto",
  "moirai",
@@ -4007,7 +4035,7 @@ dependencies = [
 name = "mnemosyne"
 version = "0.5.0"
 dependencies = [
- "eunomia",
+ "eunomia 0.6.0",
  "mnemosyne-arena",
  "mnemosyne-backend",
  "mnemosyne-core",
@@ -4022,7 +4050,7 @@ dependencies = [
 name = "mnemosyne-arena"
 version = "0.3.0"
 dependencies = [
- "eunomia",
+ "eunomia 0.6.0",
  "mnemosyne-backend",
  "mnemosyne-core",
  "themis",
@@ -5045,8 +5073,8 @@ name = "proteus"
 version = "0.1.0"
 source = "git+https://github.com/ryancinsight/proteus#bb51ac414f74fb47d8001310206c5aea2e3a160c"
 dependencies = [
- "aequitas",
- "eunomia",
+ "aequitas 0.1.0 (git+https://github.com/ryancinsight/aequitas)",
+ "eunomia 0.7.0",
 ]
 
 [[package]]
@@ -5594,7 +5622,7 @@ dependencies = [
  "coeus-core",
  "coeus-ops",
  "coeus-tensor",
- "eunomia",
+ "eunomia 0.6.0",
  "gaia",
  "moirai",
  "rand 0.9.2",
@@ -5635,7 +5663,7 @@ dependencies = [
  "coeus-core",
  "coeus-ops",
  "coeus-tensor",
- "eunomia",
+ "eunomia 0.6.0",
  "ritk-core",
  "ritk-image",
  "ritk-spatial",
@@ -5815,7 +5843,7 @@ dependencies = [
  "coeus-ops",
  "coeus-optim",
  "coeus-tensor",
- "eunomia",
+ "eunomia 0.6.0",
  "leto",
  "leto-ops",
  "moirai",
@@ -5882,7 +5910,7 @@ dependencies = [
  "coeus-leto",
  "coeus-ops",
  "coeus-tensor",
- "eunomia",
+ "eunomia 0.6.0",
  "ritk-image",
  "ritk-spatial",
 ]
@@ -6915,7 +6943,7 @@ name = "tyche-core"
 version = "0.1.0"
 source = "git+https://github.com/ryancinsight/tyche#640ba37d31dccc9b9ede8c707e5e034d7ce5859a"
 dependencies = [
- "eunomia",
+ "eunomia 0.7.0",
 ]
 
 [[package]]
