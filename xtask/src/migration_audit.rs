@@ -8,10 +8,8 @@ const BURN_MANIFEST_DEPS: &[&str] = &["burn", "burn-ndarray"];
 const BURN_SOURCE_TOKENS: &[&str] = &[
     "burn::",
     "burn_ndarray",
-    "AutodiffBackend",
     "GradientsParams",
     "TensorData",
-    "Shape::new",
     "Param<",
     "Conv1d",
     "Conv2d",

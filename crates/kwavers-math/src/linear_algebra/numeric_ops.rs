@@ -1,4 +1,4 @@
-//! Atlas-migrated (Phase-1A pilot): `num_traits::{Float, NumCast, Zero}` replaced by
+//! Atlas-migrated (Phase-1A pilot): legacy NumTraits float bounds replaced by
 //! `eunomia::RealField` (re-exported from `eunomia::traits::field`) and the
 //! `NumericElement::ZERO` associated constant.
 //!
@@ -18,7 +18,7 @@
 //! `NumericOps<T>` is the generic numeric primitive layer for kwavers-*. It
 //! supplies reusable reduce / element-wise / safe-divide helpers to every
 //! downstream kwavers Math consumer. Porting it to eunomia's scalar SSOT
-//! removes the last `num_traits::Float` boundary in this file.
+//! removes the last legacy float-trait boundary in this file.
 
 use eunomia::RealField;
 
