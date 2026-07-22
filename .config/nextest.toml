@@ -51,38 +51,34 @@ slow-timeout = { period = "60s", terminate-after = 5, grace-period = "10s" }
 
 [test-groups]
 integration = { max-threads = 2 }
-# Elastic FWI tests run the full PSTD wave equation for each line-search step.
-# Even with parallel speculative evaluation the 64×64 liver grid exceeds 60 s.
-# 90 s per test is the documented upper bound; see nextest.toml for policy.
-elastic-fwi = { max-threads = 1 }
-# Heavy full-grid FDTD/PSTD acoustic simulation tests internally parallelise with
-# rayon across all 24 cores. Under the default num-cpus test concurrency, N such
-# tests run at once × N rayon threads each = severe oversubscription, so each
-# crawls and the heaviest cross the 60 s per-test cap purely from contention (they
-# finish in ~40 s with adequate cores and pass in release). Serialising these
-# processes leaves the internally parallel solver the whole machine, so each
-# stays inside the 30 s performance budget. The timeout and assertions are
-# unchanged.
-heavy-sim = { max-threads = 1 }
+# Full-grid FWI, theranostic, viscoacoustic, FDTD, and PSTD tests internally
+# parallelize through the Moirai or Rayon worker pool. Under default num-cpus
+# test concurrency, multiple CPU-saturating processes oversubscribe the same
+# cores. Serializing these processes leaves the active solver the whole machine,
+# so each stays inside the 30 s performance budget. The timeout and assertions
+# are unchanged.
+full-grid-sim = { max-threads = 1 }
 # WGPU device creation and queue polling are serialized on Windows because
 # concurrent DX12 adapter contexts can trigger a driver access violation even
 # when each test owns an independent Hephaestus device.
 gpu = { max-threads = 1 }
 
-# ── Elastic FWI / theranostic integration tests: full-wave physics, 90 s ceiling ─
-# These tests run the complete elastic PSTD wave equation + theranostic inverse
-# solver over real grid dimensions.  The 60 s default is insufficient; 90 s is
-# the upper bound.  max-threads=1 prevents inter-test rayon oversubscription.
+# Full-wave FWI and theranostic tests share the same CPU-saturating group as the
+# other full-grid solvers. This preserves the ordinary 30 s performance target
+# and 60 s termination contract without cross-group oversubscription.
 [[profile.default.overrides]]
 filter = 'test(abdominal_preprocessing_selects_one_connected_treatment_component) | test(abdominal_theranostic_inverse_recovers_lesion_support) | test(abdominal_preprocessing_keeps_external_skin_between_target_and_aperture) | test(brain_focused_bowl_layout_uses_requested_element_count) | test(recovers_stiff_inclusion) | test(fwi_outperforms_linear_inversion) | test(lbfgs_reconstructs_stiff_inclusion) | test(k_mu_gradient_3d_is_valid_descent_direction)'
-test-group = 'elastic-fwi'
-slow-timeout = { period = "90s", terminate-after = 1, grace-period = "10s" }
+test-group = 'full-grid-sim'
 
-# Heavy full-grid FDTD/PSTD acoustic-simulation binaries → capped concurrency so
-# their rayon-parallel solvers do not oversubscribe the CPU (see heavy-sim above).
+# Heavy full-grid FDTD/PSTD acoustic-simulation binaries use the same capped
+# concurrency so their worker pools do not oversubscribe the CPU.
 [[profile.default.overrides]]
 filter = 'package(kwavers) & (binary(fdtd_pstd_comparison) | binary(property_based_tests) | binary(session2_source_injection_test) | binary(test_plane_wave_injection_fixed))'
-test-group = 'heavy-sim'
+test-group = 'full-grid-sim'
+
+[[profile.default.overrides]]
+filter = 'package(kwavers-solver) & test(/forward::viscoacoustic::tests::/)'
+test-group = 'full-grid-sim'
 
 [[profile.default.overrides]]
 filter = 'package(kwavers-gpu)'
@@ -98,8 +94,7 @@ test-group = 'gpu'
 
 [[profile.ci.overrides]]
 filter = 'test(abdominal_preprocessing_selects_one_connected_treatment_component) | test(abdominal_theranostic_inverse_recovers_lesion_support) | test(abdominal_preprocessing_keeps_external_skin_between_target_and_aperture) | test(brain_focused_bowl_layout_uses_requested_element_count) | test(recovers_stiff_inclusion) | test(fwi_outperforms_linear_inversion) | test(lbfgs_reconstructs_stiff_inclusion) | test(k_mu_gradient_3d_is_valid_descent_direction)'
-test-group = 'elastic-fwi'
-slow-timeout = { period = "90s", terminate-after = 1, grace-period = "10s" }
+test-group = 'full-grid-sim'
 
 [[profile.local.overrides]]
 filter = 'test(/integration/)'

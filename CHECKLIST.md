@@ -9,9 +9,23 @@
       `DiffusionOpticalProperties`, and `OpticalAbsorption`.
 - [x] Move material coefficient validity and all named derived laws to direct
       Hyperion contracts without a compatibility re-export.
-- [ ] Close every affected caller under package-scoped checks and tests.
-- [ ] Run Clippy, doctest, Rustdoc, residue, and SemVer gates.
+- [x] Close every affected caller under package-scoped checks and tests.
+- [x] Run Clippy, doctest, Rustdoc, residue, and SemVer gates; retain the exact
+      origin-graph SemVer and warning-denied Rustdoc blockers in the backlog.
 - [ ] Publish the exact Kwavers head and record hosted CI evidence.
+
+## Owner: /root — Restore elastic-FWI test budget [patch]
+
+- [x] Reproduce the two elastic-FWI regressions above the ordinary 30-second
+      budget without changing their workloads or assertions.
+- [x] Consolidate internally parallel full-grid tests into one serialized
+      group and remove the 90-second FWI timeout exception.
+- [x] Select homogeneous inverse density once and cache separable PML factors
+      in the reusable step workspace.
+- [x] Replace the three sequential stress/divergence passes with Moirai's
+      canonical triple-buffer chunk primitive.
+- [x] Verify stress and PML value semantics, both FWI regressions, warning-denied
+      Solver Clippy, Solver doctests, and the complete workspace Nextest closure.
 
 ## Owner: /root — Python release wheels [patch]
 

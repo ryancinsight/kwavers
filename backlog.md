@@ -23,23 +23,28 @@
   requires Eunomia `^0.6.0`, while the canonical Git source now publishes
   `0.7.0`. The aggregate current-graph check also exposes distinct path and Git
   Leto identities at the RITK registration boundary. No compatibility adapter
-  is introduced. Full Nextest and publication remain.
+  is introduced. The integrated workspace Nextest closure passes 6,168/6,168
+  tests with 15 skipped; publication remains.
 
-## KW-PERF-066 — Restore elastic-FWI test budget [patch] — review
+## KW-PERF-066 — Restore elastic-FWI test budget [patch] — done
 
 - Owner: `/root`; the item blocks the KW-ARCH-065 consumer gate.
-- Scope: `kwavers-solver::inverse::elastography::elastic_fwi` test/runtime
-  behavior only; optical transport and test-budget changes are non-goals.
+- Scope: the elastic SWE production kernel and Nextest scheduling of internally
+  parallel full-grid solvers. Test workloads, assertions, and timeout expansion
+  are non-goals.
 - Acceptance: `fwi_outperforms_linear_inversion` and
   `recovers_stiff_inclusion` preserve their current value-semantic coverage and
   each complete below 30 seconds through production-path optimization.
 - Evidence: the KW-ARCH-065 affected-package Nextest run measured 37.411 seconds
   and 31.064 seconds respectively on 2026-07-21; both passed but exceeded the
-  committed ordinary-test budget. Hoisting the absent-body-force regime outside
-  the dense acceleration loop removes per-cell coordinate division and optional
-  dispatch without changing the solver or test contract. Uncontended focused
-  Nextest runs pass `fwi_outperforms_linear_inversion` in 27.519 seconds and
-  `recovers_stiff_inclusion` in 28.734 seconds.
+  committed ordinary-test budget. The production path now selects homogeneous
+  density once, caches separable PML exponentials per time step, and dispatches
+  the three stress/divergence output passes through Moirai's canonical
+  triple-buffer primitive. One full-grid group removes cross-group CPU
+  oversubscription and the obsolete 90-second FWI exception. The exact
+  workspace closure passes 6,168/6,168 tests in 173.986 seconds, with the two
+  regressions at 10.310 and 9.480 seconds; all 13 focused stress/PML tests,
+  warning-denied Solver Clippy, and Solver doctests pass.
 
 ## KW-PYTHON-064 — Python release wheels [patch] — in-progress
 

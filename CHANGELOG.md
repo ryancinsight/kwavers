@@ -82,8 +82,11 @@
   replacing silent zero-force substitution with a typed numerical error.
   Dispatch the absent-body-force regime once per acceleration update so dense
   point-force propagation performs no coordinate division or optional force
-  selection per cell. The unchanged elastic-FWI regressions complete in
-  27.519 seconds and 28.734 seconds under the 30-second ordinary-test budget.
+  selection per cell. Homogeneous media select inverse density once, separable
+  PML exponentials are cached in the reusable step workspace, and the three
+  stress/divergence output passes use Moirai's canonical triple-buffer chunk
+  primitive instead of sequential loops. The unchanged elastic-FWI regressions
+  complete in 10.310 seconds and 9.480 seconds in the full workspace closure.
 - Remove the wildcard dependency `-O3` override from development and test
   builds. The broad dependency graph now inherits the workspace's `-O1`
   profile, allowing Rust to share generic monomorphizations across crates.
@@ -93,10 +96,12 @@
   provider exceptions. The stack-level profile continues to keep
   line-table-only debug information for workspace code and no dependency or
   build-script debug information.
-- Serialize internally parallel full-grid simulation test processes. This
-  removes CPU oversubscription while preserving every workload, assertion,
-  and the 60-second per-test termination contract; the four-binary
-  architecture grid remains bounded to about 70 seconds locally.
+- Consolidate all internally parallel full-grid solvers under one serialized
+  Nextest group. This removes cross-group CPU oversubscription and the obsolete
+  90-second FWI exception while preserving every workload, assertion, the
+  ordinary 30-second target, and the 60-second termination contract. The exact
+  workspace closure passes all 6,168 tests with its longest grouped workload
+  at 26.402 seconds.
 - Include `Cargo.toml` and `.cargo/config.toml` in every CI cache key that
   stores `target/`, preventing immutable caches produced under an older
   development profile from being restored into a new profile measurement.
