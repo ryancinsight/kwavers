@@ -1,4 +1,4 @@
-# Chapter 10: Photoacoustic Imaging
+# Chapter 10 — Photoacoustic Imaging
 
 ## Overview
 
@@ -381,7 +381,7 @@ The "biological optical window" at 700–1000 nm arises from the combined spectr
 - **Water**: absorbs strongly below 300 nm and above 1300 nm.
 - **Lipids**: prominent absorption at 1210 nm and 1720 nm.
 
-In the window 700–900 nm, tissue $\mu_a \approx 0.1\text{–}1\,\text{cm}^{-1}$ and $\mu_s' \approx 5\text{–}15\,\text{cm}^{-1}$, giving $\mu_{\text{eff}} \approx 0.5\text{–}3\,\text{cm}^{-1}$ and penetration depths of 3–20 mm for diffuse imaging. The hemoglobin database is implemented in `kwavers_optics::chromophores::HemoglobinDatabase`, and the diffusion-approximation transport quantities of this section — `reduced_scattering` ($\mu_s'=\mu_s(1-g)$), `diffusion_coefficient` ($D$), `effective_attenuation` ($\mu_{\text{eff}}$, Theorem 10.5), `penetration_depth` ($\delta=1/\mu_{\text{eff}}$), `planar_fluence_at_depth` ($F(z)=F_0e^{-\mu_{\text{eff}}z}$), and `initial_pressure` ($p_0=\Gamma\mu_a F$) — in `kwavers_optics::optical_transport`.
+In the window 700–900 nm, tissue $\mu_a \approx 0.1\text{–}1\,\text{cm}^{-1}$ and $\mu_s' \approx 5\text{–}15\,\text{cm}^{-1}$, giving $\mu_{\text{eff}} \approx 0.5\text{–}3\,\text{cm}^{-1}$ and penetration depths of 3–20 mm for diffuse imaging. The hemoglobin database is implemented in `kwavers_optics::chromophores::HemoglobinDatabase`. Hyperion owns the diffusion-approximation transport quantities of this section — `reduced_scattering` ($\mu_s'=\mu_s(1-g)$), `diffusion_coefficient` ($D$), `effective_attenuation` ($\mu_{\text{eff}}$, Theorem 10.5), `penetration_depth` ($\delta=1/\mu_{\text{eff}}$), and `transmission` ($F(z)/F_0=e^{-\mu_{\text{eff}}z}$). `kwavers_physics::photoacoustics::PhotoacousticGoverningEquations::initial_pressure` owns the coupled source law $p_0=\Gamma\mu_aF$.
 
 ![Near-IR optical absorption spectra of HbO2 and Hb](figures/ch13/fig01_absorption_spectra.png)
 
@@ -814,7 +814,7 @@ If the observer attributes the full signal to $\mu_a$ (assuming $F = F_0$), the 
 
 ### 10.10.2 Fluence Estimation via Diffusion Equation
 
-Quantitative PA (qPA) imaging requires estimating $F(\mathbf{r})$ independently and dividing out the fluence artifact. The optical fluence satisfies the diffusion equation (10.33). Given an estimate of the optical properties $(\mu_a, \mu_s')$, the fluence can be computed numerically; this is a forward solve in `kwavers_solver::forward::optical::diffusion::DiffusionSolver`. For the homogeneous-medium closed forms, `kwavers_optics::optical_transport` provides `apparent_absorption` (the depth bias of Theorem 10.11) and `compensate_fluence` (the per-step correction $\mu_a = S/(\Gamma F)$).
+Quantitative PA (qPA) imaging requires estimating $F(\mathbf{r})$ independently and dividing out the fluence artifact. The optical fluence satisfies the diffusion equation (10.33). Given an estimate of the optical properties $(\mu_a, \mu_s')$, the fluence can be computed numerically; this is a forward solve in `kwavers_solver::forward::optical::diffusion::DiffusionSolver`. For the homogeneous-medium closed forms, Hyperion owns attenuation and transmission, while `kwavers_physics::photoacoustics::{apparent_absorption, compensate_fluence}` owns the photoacoustic depth bias of Theorem 10.11 and the per-step correction $\mu_a=S/(\Gamma F)$.
 
 In practice, $\mu_a(\mathbf{r})$ is the unknown being sought (chicken-and-egg problem). The iterative approach solves alternately:
 

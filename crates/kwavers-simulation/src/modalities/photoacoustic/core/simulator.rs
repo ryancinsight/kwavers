@@ -155,10 +155,9 @@ impl PhotoacousticSimulator {
         let props_at_center = &self.optical_properties[[center_i, center_j, center_k]];
 
         // Analytical pressure: p = Γ μ_a Φ
-        let analytical_pressure =
-            props_at_center.anisotropy()
-                * props_at_center.absorption_coefficient()
-                * fluence_at_center;
+        let analytical_pressure = props_at_center.anisotropy()
+            * props_at_center.absorption_coefficient()
+            * fluence_at_center;
 
         let error = if analytical_pressure > 0.0 {
             ((computed_pressure - analytical_pressure) / analytical_pressure).abs()

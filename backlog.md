@@ -1,5 +1,20 @@
 # Backlog / Strategy
 
+## KW-ARCH-065 — Consolidate optical transport in Hyperion [major] [arch] — in-progress
+
+- Owner: `/root`; scope: published Hyperion integration in `kwavers-medium`,
+  `kwavers-physics`, and `kwavers-solver`; deletion of the named parallel law
+  and coefficient owners; provider-graph pins; ADR 046; consumer regression
+  evidence. General electromagnetic solvers, Monte Carlo ownership,
+  photoacoustic source policy, chromophore spectra, and release are non-goals.
+- Acceptance: Hyperion is the only owner of reduced scattering, coefficient
+  validation, albedo, diffusion, effective attenuation, penetration depth,
+  optical depth, and transmission; all superseded Kwavers owners are absent;
+  direct consumers pass value-semantic, invalid-input, Nextest, Clippy,
+  doctest, Rustdoc, and SemVer gates against the locked published graph.
+- Decision: [ADR 046](docs/ADR/046-hyperion-optical-transport-ownership.md).
+- Current evidence: implementation and lock reconciliation are in progress.
+
 ## KW-PYTHON-064 — Python release wheels [patch] — in-progress
 
 - Owner: `/root`; scope: `kwavers-python` distribution metadata and lock, the

@@ -1,4 +1,4 @@
-# Chapter 7: Transducer Arrays and Beamforming
+# Chapter 7 — Transducer Arrays and Beamforming
 
 **Scope.** This chapter covers **multi-element beam formation and image formation**: the
 array factor and grating-lobe theorem, transmit/receive focusing and steering,

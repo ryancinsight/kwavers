@@ -10,29 +10,44 @@ pub struct SpectralSample {
 pub struct PhotoacousticMaterialLibrary;
 
 impl PhotoacousticMaterialLibrary {
+    /// Return a soft-tissue spectral sample.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when `wavelength_nm` is outside the optical model's domain.
     #[must_use]
-    pub fn soft_tissue_sample(wavelength_nm: f64) -> SpectralSample {
-        SpectralSample {
+    pub fn soft_tissue_sample(wavelength_nm: f64) -> Result<SpectralSample, String> {
+        Ok(SpectralSample {
             wavelength_nm,
             properties: crate::photoacoustic::PhotoacousticOpticalProperties::soft_tissue(
                 wavelength_nm,
-            ),
-        }
+            )?,
+        })
     }
 
+    /// Return a blood spectral sample.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when `wavelength_nm` is outside the optical model's domain.
     #[must_use]
-    pub fn blood_sample(wavelength_nm: f64) -> SpectralSample {
-        SpectralSample {
+    pub fn blood_sample(wavelength_nm: f64) -> Result<SpectralSample, String> {
+        Ok(SpectralSample {
             wavelength_nm,
-            properties: crate::photoacoustic::PhotoacousticOpticalProperties::blood(wavelength_nm),
-        }
+            properties: crate::photoacoustic::PhotoacousticOpticalProperties::blood(wavelength_nm)?,
+        })
     }
 
+    /// Return a tumor spectral sample.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when `wavelength_nm` is outside the optical model's domain.
     #[must_use]
-    pub fn tumor_sample(wavelength_nm: f64) -> SpectralSample {
-        SpectralSample {
+    pub fn tumor_sample(wavelength_nm: f64) -> Result<SpectralSample, String> {
+        Ok(SpectralSample {
             wavelength_nm,
-            properties: crate::photoacoustic::PhotoacousticOpticalProperties::tumor(wavelength_nm),
-        }
+            properties: crate::photoacoustic::PhotoacousticOpticalProperties::tumor(wavelength_nm)?,
+        })
     }
 }

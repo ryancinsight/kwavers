@@ -1,4 +1,4 @@
-# SIMD: Hermes for Vectorized Operations
+# Chapter 38 — SIMD: Hermes for Vectorized Operations
 
 `kwavers-math` replaces hand-rolled SIMD with `hermes-simd`, the Atlas SIMD
 abstraction that dispatches at runtime (AVX2, NEON, or scalar fallback).

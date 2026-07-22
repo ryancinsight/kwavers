@@ -1,4 +1,4 @@
-# Chapter 13: Theranostics — Combined Imaging and Therapy
+# Chapter 13 — Theranostics: Combined Imaging and Therapy
 
 **Scope.** This chapter covers the physics and engineering of closed-loop ultrasound
 theranostics: systems where diagnostic imaging estimates biological state and acoustic

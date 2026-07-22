@@ -412,25 +412,7 @@ fn solve_diffusion_fluence(
 }
 
 fn optical_property_map_to_array3(map: &OpticalPropertyMap) -> Array3<OpticalPropertyData> {
-    let dimensions = map.dimensions();
-    let nx = dimensions.nx;
-    let ny = dimensions.ny;
-    let nz = dimensions.nz;
-
-    let background = OpticalPropertyData::soft_tissue();
-    let mut out = Array3::from_elem((nx, ny, nz), background);
-
-    for k in 0..nz {
-        for j in 0..ny {
-            for i in 0..nx {
-                if let Some(props) = map.get(i, j, k) {
-                    out[[i, j, k]] = props;
-                }
-            }
-        }
-    }
-
-    out
+    map.properties().clone()
 }
 
 fn flatten_kji(field: &Array3<f64>) -> Vec<f64> {

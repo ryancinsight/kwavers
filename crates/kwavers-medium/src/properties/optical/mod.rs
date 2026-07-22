@@ -42,10 +42,10 @@ mod tests;
 
 use aequitas::systems::si::{quantities::ReciprocalLength, units::PerMeter};
 use hyperion::{
-    TransportError,
     coefficient::{Absorption, InteractionCoefficient, OpticalCoefficients, Scattering},
     quantity::Anisotropy,
-    transport::{DiffusionCoefficients, reduced_scattering},
+    transport::{reduced_scattering, DiffusionCoefficients},
+    TransportError,
 };
 use std::fmt;
 
@@ -94,9 +94,9 @@ impl OpticalPropertyData {
         .map_err(|error| error.to_string())?;
         let coefficients =
             OpticalCoefficients::new(absorption, scattering).map_err(|error| error.to_string())?;
-        let anisotropy = Anisotropy::new(aequitas::systems::si::quantities::Dimensionless::from_base(
-            anisotropy,
-        ))
+        let anisotropy = Anisotropy::new(
+            aequitas::systems::si::quantities::Dimensionless::from_base(anisotropy),
+        )
         .map_err(|error| error.to_string())?;
 
         reduced_scattering(scattering, anisotropy).map_err(|error| error.to_string())?;
@@ -119,7 +119,9 @@ impl OpticalPropertyData {
     /// # Errors
     ///
     /// Returns [`TransportError::DegenerateTransport`] for a vacuum aggregate.
-    pub fn diffusion_coefficients(&self) -> Result<DiffusionCoefficients<f64>, TransportError<f64>> {
+    pub fn diffusion_coefficients(
+        &self,
+    ) -> Result<DiffusionCoefficients<f64>, TransportError<f64>> {
         DiffusionCoefficients::new(
             *self.coefficients.absorption(),
             reduced_scattering(*self.coefficients.scattering(), self.anisotropy)

@@ -1,4 +1,4 @@
-# Chapter 9: Diagnostic Ultrasound Imaging
+# Chapter 9 — Diagnostic Ultrasound Imaging
 
 **Scope.** This chapter covers the diagnostic ultrasound imaging pipeline: B-mode
 pulse-echo, plane-wave coherent compounding, Doppler velocity estimation, contrast-enhanced

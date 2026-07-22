@@ -1,13 +1,13 @@
+use aequitas::systems::si::quantities::ReciprocalLength;
+use hyperion::{
+    coefficient::{Absorption, InteractionCoefficient, ReducedScattering},
+    transport::DiffusionCoefficients,
+    TransportError,
+};
 use kwavers_core::constants::{
     ACOUSTIC_ABSORPTION_TISSUE, DENSITY_WATER_NOMINAL, GRUNEISEN_WATER_37C,
     OPTICAL_ABSORPTION_TISSUE_NIR, REDUCED_SCATTERING_TISSUE_NIR, SOUND_SPEED_TISSUE,
     SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER,
-};
-use aequitas::systems::si::quantities::ReciprocalLength;
-use hyperion::{
-    TransportError,
-    coefficient::{Absorption, InteractionCoefficient, ReducedScattering},
-    transport::DiffusionCoefficients,
 };
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 
@@ -108,9 +108,9 @@ impl PhysicsCoefficients {
     }
 
     fn diffusion_coefficients(&self) -> KwaversResult<DiffusionCoefficients<f64>> {
-        let absorption = InteractionCoefficient::<_, Absorption>::new(
-            ReciprocalLength::from_base(self.optical_absorption),
-        )
+        let absorption = InteractionCoefficient::<_, Absorption>::new(ReciprocalLength::from_base(
+            self.optical_absorption,
+        ))
         .map_err(map_transport_error)?;
         let reduced = InteractionCoefficient::<_, ReducedScattering>::new(
             ReciprocalLength::from_base(self.reduced_scattering),

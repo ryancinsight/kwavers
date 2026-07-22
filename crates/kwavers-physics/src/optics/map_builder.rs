@@ -25,8 +25,6 @@
 //! use kwavers_medium::optical_map::{OpticalPropertyMap, Region};
 //! ```
 
-use leto::Array3;
-
 // Re-export domain types for backwards compatibility
 pub use kwavers_medium::optical_map::{
     Layer, OpticalPropertyMap, OpticalPropertyMapBuilder, Region,
@@ -49,20 +47,33 @@ pub struct PropertyStats {
 }
 
 impl PropertyStats {
-    /// Compute statistics from an array
-    #[must_use]
-    pub fn from_array(array: &Array3<f64>) -> Self {
-        let values: Vec<f64> = array.iter().copied().collect();
-        Self::from_values(&values)
-    }
-
     /// Compute statistics from a slice.
     ///
     /// Returns all-zero stats when `values` is empty.
     #[must_use]
     pub fn from_values(values: &[f64]) -> Self {
-        let n = values.len();
-        if n == 0 {
+        Self::from_iter(values.iter().copied())
+    }
+
+    /// Compute statistics from a stream without allocating an intermediate array.
+    #[must_use]
+    pub fn from_iter(values: impl IntoIterator<Item = f64>) -> Self {
+        let mut count = 0_u64;
+        let mut mean = 0.0;
+        let mut squared_deviation = 0.0;
+        let mut min = f64::INFINITY;
+        let mut max = f64::NEG_INFINITY;
+
+        for value in values {
+            count += 1;
+            let delta = value - mean;
+            mean += delta / count as f64;
+            squared_deviation += delta * (value - mean);
+            min = min.min(value);
+            max = max.max(value);
+        }
+
+        if count == 0 {
             return Self {
                 mean: 0.0,
                 std_dev: 0.0,
@@ -70,15 +81,9 @@ impl PropertyStats {
                 max: 0.0,
             };
         }
-        let n_f = n as f64;
-        let mean = values.iter().sum::<f64>() / n_f;
-        let variance = values.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / n_f;
-        let std_dev = variance.sqrt();
-        let min = values.iter().copied().fold(f64::INFINITY, f64::min);
-        let max = values.iter().copied().fold(f64::NEG_INFINITY, f64::max);
         Self {
             mean,
-            std_dev,
+            std_dev: (squared_deviation / count as f64).sqrt(),
             min,
             max,
         }
@@ -101,15 +106,27 @@ pub trait OpticalPropertyMapAnalysis {
 
 impl OpticalPropertyMapAnalysis for OpticalPropertyMap {
     fn absorption_stats(&self) -> PropertyStats {
-        PropertyStats::from_array(self.absorption_coefficients())
+        PropertyStats::from_iter(
+            self.properties()
+                .iter()
+                .map(|properties| properties.absorption_coefficient()),
+        )
     }
 
     fn scattering_stats(&self) -> PropertyStats {
-        PropertyStats::from_array(self.reduced_scattering_coefficients())
+        PropertyStats::from_iter(
+            self.properties()
+                .iter()
+                .map(|properties| properties.reduced_scattering_coefficient()),
+        )
     }
 
     fn refractive_index_stats(&self) -> PropertyStats {
-        PropertyStats::from_array(self.refractive_indices())
+        PropertyStats::from_iter(
+            self.properties()
+                .iter()
+                .map(|properties| properties.refractive_index()),
+        )
     }
 }
 

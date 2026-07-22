@@ -1,4 +1,4 @@
-# Chapter 26 - Transcranial UST Brain Imaging
+# Chapter 26 — Transcranial UST Brain Imaging
 
 > **Prerequisite:** Chapter 15 (Transcranial Ultrasound), Chapter 18
 > (Inverse Problems and PINNs), Chapter 24 (Transcranial HIFU and BBB

@@ -1,4 +1,4 @@
-# Chapter 4: Media and Tissue Models
+# Chapter 4 — Media and Tissue Models
 
 **Module ownership:** `kwavers_medium`, `kwavers_medium::absorption`,
 `kwavers_medium::heterogeneous`, `kwavers_medium::homogeneous`,

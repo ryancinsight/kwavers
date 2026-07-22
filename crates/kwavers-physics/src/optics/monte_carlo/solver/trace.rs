@@ -38,7 +38,7 @@ impl MonteCarloSolver {
                 }
             };
 
-            let props = match self.optical_map.get(ci, cj, ck) {
+            let props = match self.optical_map.get_properties(ci, cj, ck) {
                 Some(p) => p,
                 None => break,
             };
@@ -81,7 +81,7 @@ impl MonteCarloSolver {
 
                     let albedo = self
                         .optical_map
-                        .get(ci, cj, ck)
+                        .get_properties(ci, cj, ck)
                         .map_or_else(|| scattering_albedo(props), scattering_albedo);
                     let absorbed = photon.weight * (1.0 - albedo);
                     photon.weight -= absorbed;
@@ -107,7 +107,7 @@ impl MonteCarloSolver {
                         if photon.position[2] <= 0.0 && photon.direction[2] < 0.0 {
                             let n_tissue = self
                                 .optical_map
-                                .get(ci, cj, 0)
+                                .get_properties(ci, cj, 0)
                                 .map_or(REFRACTIVE_INDEX_SOFT_TISSUE, |p| p.refractive_index());
                             let cos_i = (-photon.direction[2]).clamp(0.0, 1.0);
                             let r = fresnel_reflectance(n_tissue, 1.0, cos_i);
@@ -133,7 +133,7 @@ impl MonteCarloSolver {
                                 ci = ni;
                                 cj = nj;
                                 ck = nk;
-                                if let Some(np) = self.optical_map.get(ci, cj, ck) {
+                                if let Some(np) = self.optical_map.get_properties(ci, cj, ck) {
                                     let new_mu_t = total_attenuation(np);
                                     if new_mu_t > 1e-12 && mu_t_ref > 1e-12 {
                                         s_remaining *= mu_t_ref / new_mu_t;
@@ -146,7 +146,7 @@ impl MonteCarloSolver {
                         break false;
                     }
                     Some((ni, nj, nk)) => {
-                        if let Some(np) = self.optical_map.get(ni, nj, nk) {
+                        if let Some(np) = self.optical_map.get_properties(ni, nj, nk) {
                             if (np.refractive_index() - props.refractive_index()).abs() > 1e-6 {
                                 let n_hat = self.voxel_boundary_normal(
                                     photon.position,
@@ -189,7 +189,7 @@ impl MonteCarloSolver {
                 }
             }
 
-            if let Some(p) = self.optical_map.get(ci, cj, ck) {
+            if let Some(p) = self.optical_map.get_properties(ci, cj, ck) {
                 scatter_photon(&mut photon, p.anisotropy(), rng);
             }
 

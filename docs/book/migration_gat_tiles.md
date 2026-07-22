@@ -1,4 +1,4 @@
-# GAT Tiling: LendingIterator and Tiles
+# Chapter 43 — GAT Tiling: LendingIterator and Tiles
 
 ## Motivation
 

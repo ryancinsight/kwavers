@@ -1,4 +1,4 @@
-# FFT: Apollo for Spectral Methods
+# Chapter 41 — FFT: Apollo for Spectral Methods
 
 `apollo-fft` replaces `rustfft` as the Atlas FFT engine. The kwavers spectral
 solvers (PSTD, k-space correction, KZK) all route through apollo.

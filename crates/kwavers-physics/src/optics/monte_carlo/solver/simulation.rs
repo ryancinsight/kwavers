@@ -36,7 +36,7 @@ impl MonteCarloSolver {
 
             for _ in start..end {
                 let mut photon = source.launch_photon(&mut rng);
-                if let Some(sp) = self.optical_map.get(0, 0, 0) {
+                if let Some(sp) = self.optical_map.get_properties(0, 0, 0) {
                     let n = sp.refractive_index();
                     if n > 1.0 + 1e-9 {
                         photon.weight *= 1.0 - fresnel_reflectance(1.0, n, 1.0);

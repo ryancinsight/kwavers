@@ -69,8 +69,25 @@ impl PhotoacousticParameters {
 pub struct PhotoacousticOpticalProperties;
 
 impl PhotoacousticOpticalProperties {
+    fn validate_wavelength(wavelength_nm: f64) -> Result<(), String> {
+        if wavelength_nm.is_finite() && wavelength_nm > 0.0 {
+            Ok(())
+        } else {
+            Err(format!(
+                "Optical wavelength must be finite and positive, got {wavelength_nm} nm"
+            ))
+        }
+    }
+
+    /// Evaluate the blood optical-property model at `wavelength_nm`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the wavelength or resulting coefficients are not
+    /// physically valid.
     #[must_use]
-    pub fn blood(wavelength: f64) -> OpticalPropertyData {
+    pub fn blood(wavelength: f64) -> Result<OpticalPropertyData, String> {
+        Self::validate_wavelength(wavelength)?;
         let absorption = if wavelength < 600.0 {
             (wavelength - 400.0).mul_add(0.5, 100.0)
         } else {
@@ -78,32 +95,41 @@ impl PhotoacousticOpticalProperties {
         };
         let absorption = absorption.max(0.0_f64);
 
-        OpticalPropertyData {
-            absorption_coefficient: absorption,
-            scattering_coefficient: 150.0,
-            anisotropy: 0.95,
-            refractive_index: REFRACTIVE_INDEX_SOFT_TISSUE,
-        }
+        OpticalPropertyData::new(absorption, 150.0, 0.95, REFRACTIVE_INDEX_SOFT_TISSUE)
     }
 
+    /// Evaluate the soft-tissue optical-property model at `wavelength_nm`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the wavelength or resulting coefficients are not
+    /// physically valid.
     #[must_use]
-    pub fn soft_tissue(wavelength: f64) -> OpticalPropertyData {
-        OpticalPropertyData {
-            absorption_coefficient: wavelength.mul_add(0.001, 0.1).max(0.0_f64),
-            scattering_coefficient: wavelength.mul_add(0.1, 100.0).max(0.0_f64),
-            anisotropy: 0.8,
-            refractive_index: REFRACTIVE_INDEX_SOFT_TISSUE,
-        }
+    pub fn soft_tissue(wavelength: f64) -> Result<OpticalPropertyData, String> {
+        Self::validate_wavelength(wavelength)?;
+        OpticalPropertyData::new(
+            wavelength.mul_add(0.001, 0.1),
+            wavelength.mul_add(0.1, 100.0),
+            0.8,
+            REFRACTIVE_INDEX_SOFT_TISSUE,
+        )
     }
 
+    /// Evaluate the tumor optical-property model at `wavelength_nm`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the wavelength or resulting coefficients are not
+    /// physically valid.
     #[must_use]
-    pub fn tumor(wavelength: f64) -> OpticalPropertyData {
-        OpticalPropertyData {
-            absorption_coefficient: wavelength.mul_add(0.01, 5.0).max(0.0_f64),
-            scattering_coefficient: wavelength.mul_add(0.15, 120.0).max(0.0_f64),
-            anisotropy: 0.85,
-            refractive_index: REFRACTIVE_INDEX_SOFT_TISSUE,
-        }
+    pub fn tumor(wavelength: f64) -> Result<OpticalPropertyData, String> {
+        Self::validate_wavelength(wavelength)?;
+        OpticalPropertyData::new(
+            wavelength.mul_add(0.01, 5.0),
+            wavelength.mul_add(0.15, 120.0),
+            0.85,
+            REFRACTIVE_INDEX_SOFT_TISSUE,
+        )
     }
 }
 

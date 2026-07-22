@@ -67,10 +67,10 @@
 use super::MultiPhysicsCoupling;
 use aequitas::systems::si::quantities::{Length, ReciprocalLength};
 use hyperion::{
-    TransportError,
     coefficient::{Absorption, InteractionCoefficient, ReducedScattering},
     quantity::PathLength,
     transport::DiffusionCoefficients,
+    TransportError,
 };
 use leto::Array3;
 
@@ -137,18 +137,16 @@ pub trait ElectromagneticAcousticCoupling: MultiPhysicsCoupling {
             return Ok(0.0);
         }
 
-        let absorption = InteractionCoefficient::<_, Absorption>::new(
-            ReciprocalLength::from_base(
+        let absorption =
+            InteractionCoefficient::<_, Absorption>::new(ReciprocalLength::from_base(
                 self.optical_absorption_coefficient(evaluation_position, wavelength),
-            ),
-        )?;
-        let reduced = InteractionCoefficient::<_, ReducedScattering>::new(
-            ReciprocalLength::from_base(
+            ))?;
+        let reduced =
+            InteractionCoefficient::<_, ReducedScattering>::new(ReciprocalLength::from_base(
                 self.reduced_scattering_coefficient(evaluation_position, wavelength),
-            ),
-        )?;
-        let attenuation = DiffusionCoefficients::new(absorption, reduced)?
-            .effective_attenuation()?;
+            ))?;
+        let attenuation =
+            DiffusionCoefficients::new(absorption, reduced)?.effective_attenuation()?;
         let transmission = attenuation
             .optical_depth(PathLength::new(Length::from_base(r))?)?
             .transmission()

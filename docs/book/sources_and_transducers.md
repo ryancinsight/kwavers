@@ -1,4 +1,4 @@
-# Chapter 6: Sources and Transducers
+# Chapter 6 — Sources and Transducers
 
 ## 6.1 Introduction
 

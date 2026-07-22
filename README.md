@@ -111,6 +111,16 @@ temperatures to Aequitas quantities at its boundaries and retains spatial
 fields, tissue presets, clinical thresholds, and an independent validation
 oracle. See [ADR 044](docs/ADR/044-asclepius-response-ownership.md).
 
+Public [Hyperion](https://github.com/ryancinsight/hyperion) owns photon and
+optical interaction coefficients, reduced scattering, optical depth,
+Beer-Lambert transmission, and the diffusion-derived coefficient laws.
+`kwavers-medium` retains tissue identity, refractive index, presets, and maps;
+`kwavers-physics` and `kwavers-solver` retain spatial transport algorithms and
+photoacoustic coupling. This boundary removes the former `kwavers-optics`
+formula module plus the parallel `DiffusionOpticalProperties` and
+`OpticalAbsorption` models instead of adding a facade around them. See
+[ADR 046](docs/ADR/046-hyperion-optical-transport-ownership.md).
+
 Key architectural decisions:
 - **Layer Separation**: Unidirectional dependencies prevent circular imports
 - **Domain Purity**: Core entities remain free of application logic

@@ -33,6 +33,7 @@ anyhow = "1.0"
 ritk-registration = { workspace = true, optional = true }
 eunomia = { workspace = true }
 hyperion = { workspace = true }
+thiserror = { workspace = true }
 
 [features]
 clinical-imaging = [

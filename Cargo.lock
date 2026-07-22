@@ -3543,6 +3543,7 @@ dependencies = [
  "rand_distr 0.4.3",
  "ritk-registration",
  "serde",
+ "thiserror 2.0.18",
 ]
 
 [[package]]
@@ -3647,6 +3648,7 @@ dependencies = [
 name = "kwavers-solver"
 version = "3.0.0"
 dependencies = [
+ "aequitas",
  "anyhow",
  "apollo-fft",
  "bitflags 2.10.0",

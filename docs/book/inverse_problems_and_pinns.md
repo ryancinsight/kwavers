@@ -1,4 +1,4 @@
-# Chapter 18: Inverse Problems and Physics-Informed Neural Networks
+# Chapter 18 — Inverse Problems and Physics-Informed Neural Networks
 
 ## 18.1 Inverse Problem Formulation
 

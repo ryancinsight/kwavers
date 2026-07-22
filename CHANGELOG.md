@@ -9,6 +9,18 @@
   Releases tagged `kwavers-python-v<version>` now build, install, attest, and
   attach one stable-ABI wheel per operating system, then publish the exact wheel
   set to PyPI through OIDC.
+
+### Breaking (2026-07-21) - Hyperion optical transport [major] [arch]
+
+- Replace Kwavers-owned reduced-scattering, attenuation, albedo, diffusion,
+  penetration-depth, optical-depth, and planar-transmission laws with direct
+  Hyperion ownership over Aequitas quantities.
+- Make `OpticalPropertyData` hold private validated coefficient and anisotropy
+  values while retaining Kwavers-owned tissue presets, refractive index, and
+  spatial maps. Raw coefficient access is now through named methods.
+- Remove `kwavers_optics::optical_transport`, `DiffusionOpticalProperties`,
+  `OpticalAbsorption`, and the heuristic default reduced-scattering law.
+  `kwavers-optics` remains the chromophore-spectrum owner. See ADR 046.
 ### Breaking (2026-07-21) - Tyche collocation sampling [major] [arch]
 
 - Replace Kwavers' allocated Latin-hypercube permutation and three-dimensional

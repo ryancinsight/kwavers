@@ -22,6 +22,13 @@ impl OpticalPropertyData {
         )
     }
 
+    /// Vacuum optical properties.
+    #[must_use]
+    pub fn vacuum() -> Self {
+        Self::from_si(0.0, 0.0, 0.0, 1.0)
+            .expect("invariant: vacuum preset satisfies optical constraints")
+    }
+
     /// Water optical properties (visible spectrum, ~550 nm)
     #[must_use]
     pub fn water() -> Self {

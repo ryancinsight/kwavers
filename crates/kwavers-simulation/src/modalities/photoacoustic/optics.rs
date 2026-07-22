@@ -75,7 +75,7 @@ pub fn initialize_optical_properties(
     let (nx, ny, nz) = grid.dimensions();
     let mut properties = Array3::from_elem(
         (nx, ny, nz),
-        kwavers_imaging::photoacoustic::PhotoacousticOpticalProperties::soft_tissue(750.0),
+        kwavers_imaging::photoacoustic::PhotoacousticOpticalProperties::soft_tissue(750.0)?,
     );
 
     // Add blood vessels and tumor regions
@@ -93,7 +93,7 @@ pub fn initialize_optical_properties(
                     properties[[i, j, k]] =
                         kwavers_imaging::photoacoustic::PhotoacousticOpticalProperties::blood(
                             750.0,
-                        );
+                        )?;
                 }
 
                 // Add spherical tumor
@@ -105,7 +105,7 @@ pub fn initialize_optical_properties(
                     properties[[i, j, k]] =
                         kwavers_imaging::photoacoustic::PhotoacousticOpticalProperties::tumor(
                             750.0,
-                        );
+                        )?;
                 }
             }
         }

@@ -3,15 +3,11 @@
 //! This module implements the coupled photoacoustic solver that integrates
 //! electromagnetic (optical) and acoustic physics.
 
+use aequitas::systems::si::{quantities::Length, units::PerMeter};
+use hyperion::{quantity::PathLength, transport::DiffusionCoefficients, TransportError};
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_core::constants::numerical::FOUR_PI;
 use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_C;
-use aequitas::systems::si::{quantities::Length, units::PerMeter};
-use hyperion::{
-    TransportError,
-    quantity::PathLength,
-    transport::DiffusionCoefficients,
-};
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_field::EMFields;
 use kwavers_physics::electromagnetic::equations::{
@@ -168,8 +164,8 @@ impl<T: ElectromagneticWaveEquation> PhotoacousticSolver<T> {
                     // Regularise near singularity (r → 0): clamp to dx/2
                     let r_safe = r.max(dx * 0.5);
 
-                    let path = PathLength::new(Length::from_base(r_safe))
-                        .map_err(map_transport_error)?;
+                    let path =
+                        PathLength::new(Length::from_base(r_safe)).map_err(map_transport_error)?;
                     let transmission = effective_attenuation
                         .optical_depth(path)
                         .map_err(map_transport_error)?
@@ -272,12 +268,11 @@ mod tests {
 
         // Create photoacoustic solver
         let gruneisen = GrueneisenModel::constant(0.5);
-        let optical_props = kwavers_medium::properties::OpticalPropertyData::new(
-            10.0, 500.0, 0.9, 1.4,
-        )
-        .unwrap()
-        .diffusion_coefficients()
-        .unwrap();
+        let optical_props =
+            kwavers_medium::properties::OpticalPropertyData::new(10.0, 500.0, 0.9, 1.4)
+                .unwrap()
+                .diffusion_coefficients()
+                .unwrap();
 
         let mut pa_solver = PhotoacousticSolver::new(em_solver, gruneisen, optical_props);
 

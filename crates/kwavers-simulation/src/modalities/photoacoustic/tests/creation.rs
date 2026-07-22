@@ -23,9 +23,9 @@ fn test_photoacoustic_creation() {
 
 #[test]
 fn test_optical_properties() {
-    let blood_props = PhotoacousticOpticalProperties::blood(750.0);
-    let tissue_props = PhotoacousticOpticalProperties::soft_tissue(750.0);
-    let tumor_props = PhotoacousticOpticalProperties::tumor(750.0);
+    let blood_props = PhotoacousticOpticalProperties::blood(750.0).unwrap();
+    let tissue_props = PhotoacousticOpticalProperties::soft_tissue(750.0).unwrap();
+    let tumor_props = PhotoacousticOpticalProperties::tumor(750.0).unwrap();
 
     assert!(
         blood_props.absorption_coefficient() > tissue_props.absorption_coefficient(),

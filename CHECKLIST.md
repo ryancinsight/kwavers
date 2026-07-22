@@ -1,5 +1,18 @@
 # Project Checklist
 
+## Owner: /root — Consolidate optical transport in Hyperion [major] [arch]
+
+- [x] Record the ownership boundary, dependency direction, deletion ledger,
+      retained Kwavers concerns, and rejected facade in ADR 046.
+- [x] Align the Aequitas, Asclepius, Proteus, Hyperion, and Atlas checkout pins.
+- [x] Delete `kwavers-optics::optical_transport`,
+      `DiffusionOpticalProperties`, and `OpticalAbsorption`.
+- [x] Move material coefficient validity and all named derived laws to direct
+      Hyperion contracts without a compatibility re-export.
+- [ ] Close every affected caller under package-scoped checks and tests.
+- [ ] Run Clippy, doctest, Rustdoc, residue, and SemVer gates.
+- [ ] Publish the exact Kwavers head and record hosted CI evidence.
+
 ## Owner: /root — Python release wheels [patch]
 
 - [x] Make Cargo the `kwavers-python` distribution version source of truth.

@@ -1,22 +1,22 @@
 //! Light diffusion solver implementation
 
-use aequitas::systems::si::units::PerMeter;
 use crate::acoustics::traits::LightDiffusionModelTrait;
 use crate::optics::polarization::LinearPolarization;
 use crate::optics::PolarizationModel as PolarizationModelTrait;
 use crate::wave_propagation::scattering::ScatteringCalculator;
+use aequitas::systems::si::units::PerMeter;
+use hyperion::{
+    transport::{DiffusionCoefficients, OpticalDiffusionCoefficient},
+    TransportError,
+};
 use kwavers_core::constants::fundamental::SPEED_OF_LIGHT;
 use kwavers_core::constants::optical::{
     DEFAULT_POLARIZATION_FACTOR, LAPLACIAN_CENTER_COEFF, VISIBLE_LIGHT_FREQUENCY_HZ,
 };
 use kwavers_field::indices::LIGHT_IDX;
 use kwavers_grid::Grid;
-use kwavers_medium::Medium;
 use kwavers_medium::properties::OpticalPropertyData;
-use hyperion::{
-    TransportError,
-    transport::{DiffusionCoefficients, OpticalDiffusionCoefficient},
-};
+use kwavers_medium::Medium;
 use leto::{Array3, Array4};
 use log::debug;
 use std::time::Instant;
@@ -166,10 +166,7 @@ impl LightDiffusionModelTrait for LightDiffusion {
         // (D is in m, μₐ in m⁻¹, ∇² in m⁻²), so the absolute time scale would
         // be off by a factor of c — a multi-orders-of-magnitude error.
         let diffusion_coefficient = self.diffusion_coefficient.quantity().into_base();
-        let absorption_coeff = self
-            .optical_coefficients
-            .absorption()
-            .in_unit::<PerMeter>();
+        let absorption_coeff = self.optical_coefficients.absorption().in_unit::<PerMeter>();
         let c_medium = SPEED_OF_LIGHT / self.refractive_index;
 
         // Create a temporary array to store the updated values
