@@ -301,8 +301,8 @@ mod tests {
     /// Row-major A[i,j] = data[i*3+j]:
     ///   A = [[1,2,3],[4,5,6]].
     /// Column-major result[j*2+i] = A[i,j]:
-    ///   [0]=A[0,0]=1, [1]=A[1,0]=4, [2]=A[0,1]=2, [3]=A[1,1]=5,
-    ///   [4]=A[0,2]=3, [5]=A[1,2]=6 → [1,4,2,5,3,6].
+    ///   `[0]`=A[0,0]=1, `[1]`=A[1,0]=4, `[2]`=A[0,1]=2, `[3]`=A[1,1]=5,
+    ///   `[4]`=A[0,2]=3, `[5]`=A[1,2]=6 → [1,4,2,5,3,6].
     #[test]
     fn memory_optimizer_transpose_2x3_exact() {
         let optimizer = MemoryOptimizer::default();

@@ -226,7 +226,7 @@ pub fn received_signal_fraction(
     (t_iface * t_iface * one_way * one_way).max(0.0)
 }
 
-/// Inverse of [`crate::acoustics`-style] cavitation lesion energy balance: the
+/// Inverse of `acoustics-style` cavitation lesion energy balance: the
 /// pulse count `N` whose accumulated inertial cavitation dose grows a lesion to
 /// radius `target_radius_m`.
 ///
