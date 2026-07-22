@@ -166,7 +166,7 @@ impl MediumValidator {
 
     /// Validate layered medium configuration
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     fn validate_layered(layers: &[LayerParameters]) -> KwaversResult<()> {
         if layers.is_empty() {

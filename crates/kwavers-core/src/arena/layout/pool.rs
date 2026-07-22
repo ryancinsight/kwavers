@@ -50,7 +50,7 @@ impl FieldPool {
     /// **Postcondition**: $\forall i \in [0, \text{capacity}): \text{slot}_i \text{ is available}$
     /// # Errors
     /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn new(capacity: usize, elements_per_field: usize) -> KwaversResult<Self> {
         if capacity == 0 {

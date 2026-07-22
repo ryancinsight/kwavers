@@ -13,7 +13,7 @@ impl<'a, M: Medium> CylindricalMediumProjection<'a, M> {
     /// 2. `max_sound_speed_2d ≤ max_sound_speed_3d`
     /// 3. All projected values are positive and finite
     /// # Errors
-    /// - Returns [`KwaversError::Config`] if the precondition for a Config-class constraint is violated.
+    /// - Returns `KwaversError::Config` if the precondition for a Config-class constraint is violated.
     ///
     pub fn validate_projection(&self) -> KwaversResult<()> {
         let c_3d_max = self.medium.max_sound_speed();

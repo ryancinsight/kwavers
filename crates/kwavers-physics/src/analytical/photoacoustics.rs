@@ -95,13 +95,13 @@ pub fn gruneisen_parameter_soft_tissue(t_celsius: &[f64]) -> Vec<f64> {
 /// centred at `t_c = r_det/c`:
 ///
 /// # Arguments
-/// * `t_arr` – time array [s]
-/// * `r0_m` – sphere radius [m]
+/// * `t_arr` – time array `s`
+/// * `r0_m` – sphere radius `m`
 /// * `gamma` – Grüneisen parameter (dimensionless)
 /// * `mua_per_m` – absorption coefficient [m⁻¹]
 /// * `c` – sound speed [m/s]
-/// * `r_det_m` – detector distance from sphere centre [m]
-/// * `initial_pressure_pa` – Γ·μ_a·F (pre-computed initial pressure p₀ = Γ·H) [Pa]
+/// * `r_det_m` – detector distance from sphere centre `m`
+/// * `initial_pressure_pa` – Γ·μ_a·F (pre-computed initial pressure p₀ = Γ·H) `Pa`
 ///
 /// # Reference
 /// Xu & Wang (2006), *Rev. Sci. Instrum.* 77, 041101, eq. (13).
@@ -239,11 +239,11 @@ pub fn gaussian_absorber_photoacoustic_profile(
 /// Photoacoustic axial resolution for a bandwidth-limited detector.
 ///
 /// ```text
-/// δz = c / (2·BW)   [m]
+/// δz = c / (2·BW)   `m`
 /// ```
 ///
 /// # Arguments
-/// * `bandwidth_hz` – receiver −6 dB bandwidth [Hz]
+/// * `bandwidth_hz` – receiver −6 dB bandwidth `Hz`
 /// * `c` – sound speed in coupling medium [m/s]
 ///
 /// # Reference
@@ -269,9 +269,9 @@ pub fn pa_axial_resolution(bandwidth_hz: f64, c: f64) -> f64 {
 /// # Arguments
 /// * `spectra_matrix` – extinction matrix A, stored as `n_wav` rows each
 ///   of length `n_chrom`
-/// * `measurements` – absorption measurements b [n_wav]
+/// * `measurements` – absorption measurements b `n_wav`
 ///
-/// Returns concentration vector x [n_chrom].
+/// Returns concentration vector x `n_chrom`.
 ///
 /// # Reference
 /// Beard (2011), *Interface Focus* 1, 602.

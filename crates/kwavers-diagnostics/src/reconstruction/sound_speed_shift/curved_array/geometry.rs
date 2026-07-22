@@ -13,13 +13,13 @@ use super::validation::validate_array;
 /// through [`CurvedArray2d::from_arc_endpoints`].
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct CurvedArray2d {
-    /// Arc center [m].
+    /// Arc center `m`.
     pub center_m: PlanarPoint,
-    /// Arc radius [m].
+    /// Arc radius `m`.
     pub radius_m: f64,
-    /// Angle of the first element [rad].
+    /// Angle of the first element `rad`.
     pub first_angle_rad: f64,
-    /// Angle increment between adjacent elements [rad].
+    /// Angle increment between adjacent elements `rad`.
     pub angular_pitch_rad: f64,
     /// Number of physical array elements.
     pub element_count: usize,
@@ -61,7 +61,7 @@ impl CurvedArray2d {
             .collect())
     }
 
-    /// Total signed angular aperture from first to last element [rad].
+    /// Total signed angular aperture from first to last element `rad`.
     #[must_use]
     pub fn aperture_angle_rad(&self) -> f64 {
         self.angular_pitch_rad * (self.element_count.saturating_sub(1)) as f64

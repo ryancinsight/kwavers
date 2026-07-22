@@ -138,7 +138,7 @@ pub mod grid_properties {
     /// **Property**: Index conversion never panics for valid coordinates
     /// **Safety**: Critical for preventing array bounds violations
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn verify_grid_indexing_safe(grid: &Grid) -> Result<(), String> {
         // Test coordinate bounds

@@ -25,9 +25,9 @@ use eunomia::Complex64;
 /// A generalized Maxwell (Wiechert) viscoelastic solid for the shear channel.
 #[derive(Debug, Clone)]
 pub struct GeneralizedMaxwellModel {
-    /// Equilibrium (relaxed, ω→0) modulus `E_∞` \[Pa].
+    /// Equilibrium (relaxed, ω→0) modulus `E_∞` \`Pa`.
     equilibrium_modulus: f64,
-    /// Relaxation arms `(E_j, τ_j)` — weight \[Pa] and relaxation time \[s].
+    /// Relaxation arms `(E_j, τ_j)` — weight \`Pa` and relaxation time \`s`.
     arms: Vec<(f64, f64)>,
     /// Mass density `ρ` \[kg·m⁻³].
     density: f64,
@@ -57,7 +57,7 @@ impl GeneralizedMaxwellModel {
     ///
     /// `n_arms` relaxation times are placed logarithmically over the band and the
     /// weights set to `E_j ∝ τ_j^{1-y}`, normalised so the total relaxation
-    /// strength `Σ E_j` equals `delta_total` \[Pa] (the modulus rises from
+    /// strength `Σ E_j` equals `delta_total` \`Pa` (the modulus rises from
     /// `equilibrium_modulus` at ω→0 to `equilibrium_modulus + delta_total` at
     /// ω→∞). Returns `None` for invalid bounds (`0 < f_min < f_max`),
     /// `n_arms == 0`, non-positive `E_∞`/`delta_total`/`ρ`, or non-finite `y`.
@@ -113,7 +113,7 @@ impl GeneralizedMaxwellModel {
         Self::new(equilibrium_modulus, arms, density)
     }
 
-    /// Complex shear modulus `G*(ω) = E_∞ + Σ E_j iωτ_j/(1+iωτ_j)` \[Pa].
+    /// Complex shear modulus `G*(ω) = E_∞ + Σ E_j iωτ_j/(1+iωτ_j)` \`Pa`.
     #[must_use]
     pub fn complex_modulus(&self, omega: f64) -> Complex64 {
         let mut g = Complex64::new(self.equilibrium_modulus, 0.0);
@@ -124,7 +124,7 @@ impl GeneralizedMaxwellModel {
         g
     }
 
-    /// Storage modulus `G'(ω) = E_∞ + Σ E_j (ωτ_j)²/(1+(ωτ_j)²)` \[Pa].
+    /// Storage modulus `G'(ω) = E_∞ + Σ E_j (ωτ_j)²/(1+(ωτ_j)²)` \`Pa`.
     #[must_use]
     pub fn storage_modulus(&self, omega: f64) -> f64 {
         let mut g = self.equilibrium_modulus;
@@ -135,7 +135,7 @@ impl GeneralizedMaxwellModel {
         g
     }
 
-    /// Loss modulus `G''(ω) = Σ E_j ωτ_j/(1+(ωτ_j)²)` \[Pa].
+    /// Loss modulus `G''(ω) = Σ E_j ωτ_j/(1+(ωτ_j)²)` \`Pa`.
     #[must_use]
     pub fn loss_modulus(&self, omega: f64) -> f64 {
         let mut g = 0.0;
@@ -184,7 +184,7 @@ impl GeneralizedMaxwellModel {
         (ratio.sqrt() * omega).im.abs()
     }
 
-    /// Equilibrium (relaxed) modulus `E_∞` \[Pa].
+    /// Equilibrium (relaxed) modulus `E_∞` \`Pa`.
     #[must_use]
     pub fn equilibrium_modulus(&self) -> f64 {
         self.equilibrium_modulus

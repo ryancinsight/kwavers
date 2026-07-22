@@ -84,7 +84,7 @@ impl Default for GpuPstdRunConfig {
 /// # Errors
 /// - GPU PSTD requires power-of-2 grid dimensions with each axis ≤ 1,024.
 /// - GPU device acquisition failures bubble up via the selected provider.
-/// - Invalid medium, source, or sensor inputs return [`KwaversError::InvalidInput`].
+/// - Invalid medium, source, or sensor inputs return `KwaversError::InvalidInput`.
 pub fn run_gpu_pstd(
     grid: &Grid,
     medium: &dyn Medium,
@@ -103,7 +103,7 @@ pub fn run_gpu_pstd(
 ///
 /// # Errors
 ///
-/// Returns [`KwaversError::InvalidInput`] for an invalid grid, source, medium,
+/// Returns `KwaversError::InvalidInput` for an invalid grid, source, medium,
 /// sensor mask, configuration, or provider acquisition failure.
 pub fn run_gpu_pstd_with_outputs(
     grid: &Grid,
@@ -129,7 +129,7 @@ pub fn run_gpu_pstd_with_outputs(
 /// # Errors
 /// - GPU PSTD requires power-of-2 grid dimensions with each axis ≤ 1,024.
 /// - GPU device acquisition failures bubble up via the selected provider.
-/// - Invalid medium, source, or sensor inputs return [`KwaversError::InvalidInput`].
+/// - Invalid medium, source, or sensor inputs return `KwaversError::InvalidInput`.
 pub fn run_gpu_pstd_with_provider<P>(
     grid: &Grid,
     medium: &dyn Medium,
@@ -166,7 +166,7 @@ where
 ///
 /// # Errors
 ///
-/// Returns [`KwaversError::InvalidInput`] for an invalid grid, source, medium,
+/// Returns `KwaversError::InvalidInput` for an invalid grid, source, medium,
 /// sensor mask, configuration, or provider acquisition failure.
 pub fn run_gpu_pstd_with_provider_outputs<P>(
     grid: &Grid,

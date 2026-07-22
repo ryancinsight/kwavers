@@ -34,7 +34,7 @@ impl NonlinearWave {
     /// Reference: Hamilton & Blackstock (1998) *Nonlinear Acoustics*, Ch. 3.
     ///
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     pub(crate) fn compute_nonlinear_term(
         &self,
         pressure: &Array3<f64>,

@@ -185,7 +185,7 @@ impl BiotTheory {
     /// the ratio α_slow/α_fast ≈ 1.7 · (3000/700)³ ≈ 134.
     ///
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     pub fn compute_attenuation(&self, frequency: f64) -> KwaversResult<(f64, f64)> {
         let omega = TWO_PI * frequency;
         let phi = self.material.porosity;

@@ -31,14 +31,14 @@ use crate::ritk_image::load_ritk_nifti;
 ///
 /// A `dict` with keys:
 ///
-/// - `body_surface_points_m`: `ndarray (N, 3)` — exterior skin surface [m].
-/// - `organ_surface_points_m`: `ndarray (M, 3)` — organ surface [m].
-/// - `therapy_elements_m`: `ndarray (K, 3)` — bowl element positions [m].
-/// - `beam_start_points_m`: `ndarray (B, 3)` — ray starts (elements) [m].
-/// - `beam_end_points_m`: `ndarray (B, 3)` — ray ends (focus) [m].
-/// - `focus_m`: `(fx, fy, fz)` — organ centroid [m].
-/// - `skin_contact_m`: `(sx, sy, sz)` — nearest skin contact point [m].
-/// - `transducer_radius_m`: `float` — bowl radius / focal length [m].
+/// - `body_surface_points_m`: `ndarray (N, 3)` — exterior skin surface `m`.
+/// - `organ_surface_points_m`: `ndarray (M, 3)` — organ surface `m`.
+/// - `therapy_elements_m`: `ndarray (K, 3)` — bowl element positions `m`.
+/// - `beam_start_points_m`: `ndarray (B, 3)` — ray starts (elements) `m`.
+/// - `beam_end_points_m`: `ndarray (B, 3)` — ray ends (focus) `m`.
+/// - `focus_m`: `(fx, fy, fz)` — organ centroid `m`.
+/// - `skin_contact_m`: `(sx, sy, sz)` — nearest skin contact point `m`.
+/// - `transducer_radius_m`: `float` — bowl radius / focal length `m`.
 /// - `anatomy_label`: `str` — human-readable anatomy name.
 /// - `geometry_model`: `str` — constant label for metrics tracking.
 /// - `element_count`: `int` — number of bowl elements placed.

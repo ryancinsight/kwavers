@@ -19,8 +19,8 @@ impl BayesianFilter {
     /// Position diagonal: σ₀² (`initial_uncertainty²`)
     /// Velocity diagonal: 0.01 m²/s² (modest velocity prior)
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn new(config: &KalmanFilterConfig) -> KwaversResult<Self> {
         config.config.validate()?;
@@ -104,7 +104,7 @@ impl BayesianFilter {
     /// 5. Covariance update (Joseph form):
     ///    P = (I − K·H)·P·(I − K·H)ᵀ + K·R·Kᵀ
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     /// # Panics
     /// - Panics if an internal invariant assumed to hold at this call site is violated.

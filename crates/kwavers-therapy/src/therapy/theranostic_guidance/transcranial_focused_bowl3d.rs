@@ -32,12 +32,12 @@ use super::geometry::{
 use super::nonlinear3d::volume::centroid_float;
 use super::scene::target_index_from_mask_fraction_3d;
 
-/// Default minimum polar angle from the superior vertex [rad].
+/// Default minimum polar angle from the superior vertex `rad`.
 ///
 /// 0.22 rad ≈ 12.6° — avoids element crowding at the superior vertex while
 /// keeping a small central aperture gap.
 const DEFAULT_CAP_MIN_POLAR_RAD: f64 = 0.22;
-/// Default maximum polar angle from the superior vertex [rad].
+/// Default maximum polar angle from the superior vertex `rad`.
 ///
 /// 1.18 rad ≈ 67.6° — covers the calvarium without extending past the
 /// temporoparietal junction.

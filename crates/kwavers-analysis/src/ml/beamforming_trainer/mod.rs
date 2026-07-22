@@ -56,7 +56,7 @@ pub struct BeamformingTrainer {
 impl BeamformingTrainer {
     /// Create new beamforming trainer
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn new(config: PhysicsNNTrainingConfig, physics_loss: PhysicsLoss) -> KwaversResult<Self> {
         config.validate()?;
@@ -93,8 +93,8 @@ impl BeamformingTrainer {
     ///    f. Save checkpoint if improved
     /// 4. Return training history
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn train(
         &mut self,

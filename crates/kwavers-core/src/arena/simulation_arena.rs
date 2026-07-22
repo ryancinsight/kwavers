@@ -72,7 +72,7 @@ pub struct ThreadLocalArena {
 impl ThreadLocalArena {
     /// Create a thread-local arena from the given configuration.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn new(config: ArenaConfig) -> KwaversResult<Self> {
         let arena = Rc::new(RefCell::new(FieldArena::new(config)?));
@@ -83,7 +83,7 @@ impl ThreadLocalArena {
     ///
     /// The slot is released automatically when the guard is dropped.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn allocate_field(&self) -> KwaversResult<ThreadLocalFieldGuard> {
         let field_index = {

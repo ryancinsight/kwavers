@@ -34,7 +34,7 @@ fn calculate_stable_dt(grid: &Grid, medium: &dyn Medium) -> f64 {
 /// Executes the FDTD solver on CPU for the specified number of timesteps.
 /// Returns the final pressure field or an error.
 /// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Propagates any `KwaversError` returned by called functions.
 ///
 fn run_simulation_cpu(
     grid: &Grid,
@@ -94,7 +94,7 @@ fn run_simulation_cpu(
 /// against itself.
 ///
 /// # Errors
-/// - Returns [`KwaversError::System`] until a real FDTD Leto/Hephaestus
+/// - Returns `KwaversError::System` until a real FDTD Leto/Hephaestus
 ///   provider trait implementation is wired into this validation path.
 ///
 fn run_simulation_gpu(
@@ -165,7 +165,7 @@ pub fn validate_gpu_cpu_equivalence(
 ///
 /// Allows specifying custom tolerances for specific validation scenarios.
 /// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Propagates any `KwaversError` returned by called functions.
 ///
 pub fn validate_gpu_cpu_equivalence_with_config(
     grid: &Grid,
@@ -242,7 +242,7 @@ pub fn validate_gpu_cpu_equivalence_with_config(
 ///
 /// Equivalence report or validation error
 /// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Propagates any `KwaversError` returned by called functions.
 ///
 pub fn validate_equivalence_config(
     grid_size: (usize, usize, usize),

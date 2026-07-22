@@ -38,7 +38,7 @@ impl TransducerDesign {
     /// * `aperture` - Total aperture size (m)
     /// * `focal_length` - Optional focal length for focused transducer (m)
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn design_for_application(
         frequency: f64,
@@ -108,7 +108,7 @@ impl TransducerDesign {
 
     /// Validate complete design
     /// # Errors
-    /// - Returns [`KwaversError::Config`] if the precondition for a Config-class constraint is violated.
+    /// - Returns `KwaversError::Config` if the precondition for a Config-class constraint is violated.
     ///
     pub fn validate(&self) -> KwaversResult<()> {
         // Check mode separation

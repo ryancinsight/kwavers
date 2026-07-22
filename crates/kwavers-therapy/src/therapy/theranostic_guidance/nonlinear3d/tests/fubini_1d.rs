@@ -20,15 +20,15 @@
 //! matches** the 3-D recurrence in `update_cells`:
 //!
 //! ```text
-//!   p[n+1, i] = sponge[i] · (2 p[n, i] − p[n−1, i]
+//!   p[n+1, i] = sponge`i` · (2 p[n, i] − p[n−1, i]
 //!                            + (c·dt)² · ∇²p[n, i]
 //!                            + q · ∂²(p²)/∂t²|^n)
 //!   q = β · dt² / (ρ · c²)
-//!   ∂²(p²)/∂t² ≈ 2 p[n] · d²p/dt² + 2 (dp/dt)²   (product rule)
+//!   ∂²(p²)/∂t² ≈ 2 p`N` · d²p/dt² + 2 (dp/dt)²   (product rule)
 //! ```
 //!
 //! The 1-D Laplacian uses the 3-point stencil
-//! `(p[i+1] − 2 p[i] + p[i−1]) / dx²`; everything else is bit-identical to
+//! `(p[i+1] − 2 p`i` + p[i−1]) / dx²`; everything else is bit-identical to
 //! the 3-D `update_cells` algebra.
 //!
 //! # Tier

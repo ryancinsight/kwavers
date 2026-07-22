@@ -74,7 +74,7 @@ impl SensorRecorder {
 
     /// Extract p max.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     #[must_use]
     pub fn extract_p_max(&self) -> Option<Array1<f64>> {
@@ -91,7 +91,7 @@ impl SensorRecorder {
 
     /// Extract p min.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     #[must_use]
     pub fn extract_p_min(&self) -> Option<Array1<f64>> {
@@ -108,7 +108,7 @@ impl SensorRecorder {
 
     /// Extract p rms.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     #[must_use]
     pub fn extract_p_rms(&self) -> Option<Array1<f64>> {
@@ -125,7 +125,7 @@ impl SensorRecorder {
 
     /// Extract p final.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     #[must_use]
     pub fn extract_p_final(&self) -> Option<Array1<f64>> {
@@ -142,7 +142,7 @@ impl SensorRecorder {
 
     /// Extract all stats.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     #[must_use]
     pub fn extract_all_stats(&self) -> Option<SampledStatistics> {

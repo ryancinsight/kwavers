@@ -68,8 +68,8 @@ impl NeuralBeamformingNetwork {
     /// - architecture.len() >= 2 (at least input and output layers)
     /// - All layer sizes > 0
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn new(architecture: &[usize]) -> KwaversResult<Self> {
         if architecture.len() < 2 {
@@ -120,7 +120,7 @@ impl NeuralBeamformingNetwork {
     /// 2. Forward through each layer with tanh activation
     /// 3. Return output (no final activation)
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn forward(
         &self,
@@ -154,7 +154,7 @@ impl NeuralBeamformingNetwork {
     ///
     /// Physics-constrained network output.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     #[cfg(feature = "pinn")]
     pub fn forward_physics_informed(
@@ -178,7 +178,7 @@ impl NeuralBeamformingNetwork {
     /// * `feedback` - Performance metrics and scalar error gradient
     /// * `learning_rate` - Global step size for the feedback update
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn adapt(
         &mut self,
@@ -212,7 +212,7 @@ impl NeuralBeamformingNetwork {
     ///
     /// Input tensor shaped (1, 1, 7) for network processing.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     fn concatenate_features(
         &self,

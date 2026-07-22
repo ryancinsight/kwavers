@@ -30,9 +30,9 @@ mod tests;
 /// ```
 ///
 /// # Arguments
-/// * `t_arr` – time points [s]
-/// * `acoustic_power_w` – absorbed acoustic power in the focal volume [W]
-/// * `focal_volume_m3` – focal volume V [m³]
+/// * `t_arr` – time points `s`
+/// * `acoustic_power_w` – absorbed acoustic power in the focal volume `W`
+/// * `focal_volume_m3` – focal volume V `m³`
 /// * `k_tissue` – tissue thermal conductivity k_t [W/(m·K)]
 /// * `rho_tissue` – tissue density ρ_t [kg/m³]
 /// * `cp_tissue` – tissue specific heat c_t [J/(kg·K)]
@@ -92,8 +92,8 @@ pub fn bioheat_focal_temperature_rise(
 /// `T(x) = T_b + Q x (L - x)/(2 k_t)`.
 ///
 /// # Arguments
-/// * `x_arr` - depth positions [m]
-/// * `slab_thickness_m` - slab thickness `L` [m]
+/// * `x_arr` - depth positions `m`
+/// * `slab_thickness_m` - slab thickness `L` `m`
 /// * `thermal_conductivity` - tissue conductivity `k_t` [W/(m K)]
 /// * `blood_perfusion` - blood perfusion rate `w_b` [1/s]
 /// * `rho_blood` - blood density [kg/m3]
@@ -154,9 +154,9 @@ pub fn pennes_steady_state_temperature_profile(
 /// Using F# = F/D gives G = π·f·D/(4·c·F#).
 ///
 /// # Arguments
-/// * `aperture_m` – transducer aperture diameter D [m]
+/// * `aperture_m` – transducer aperture diameter D `m`
 /// * `f_number` – F-number (focal_length / aperture)
-/// * `freq_hz` – frequency [Hz]
+/// * `freq_hz` – frequency `Hz`
 /// * `c` – sound speed [m/s]
 ///
 /// # Reference
@@ -183,15 +183,15 @@ pub fn hifu_focal_pressure_gain(aperture_m: f64, f_number: f64, freq_hz: f64, c:
 /// Output is a flattened row-major Vec of size `NR × NZ` [W/m³].
 ///
 /// # Arguments
-/// * `r_arr` – radial positions [m]
-/// * `z_arr` – axial positions [m]
-/// * `freq_hz` – frequency [Hz]
-/// * `z_focus_m` – axial focal position [m]
-/// * `p0_pa` – source pressure amplitude [Pa]
+/// * `r_arr` – radial positions `m`
+/// * `z_arr` – axial positions `m`
+/// * `freq_hz` – frequency `Hz`
+/// * `z_focus_m` – axial focal position `m`
+/// * `p0_pa` – source pressure amplitude `Pa`
 /// * `c` – sound speed [m/s]
 /// * `rho` – density [kg/m³]
 /// * `alpha_np_m` – attenuation at fundamental [Np/m]
-/// * `w0_m` – beam waist radius at focus [m]
+/// * `w0_m` – beam waist radius at focus `m`
 ///
 /// # Reference
 /// O'Neil (1949); Soneson (2011), *J. Acoust. Soc. Am.* 130, EL158.
@@ -240,7 +240,7 @@ pub fn gaussian_power_deposition_2d(
 /// amplitude attenuation coefficient α [Np/m] produces intensity attenuation 2α.
 ///
 /// # Arguments
-/// * `z_arr` – depth positions [m], z ≥ 0
+/// * `z_arr` – depth positions `m`, z ≥ 0
 /// * `alpha_np_m` – amplitude attenuation coefficient [Np/m]
 /// * `surface_intensity` – I₀ at z = 0 [W/m² or normalised]
 ///
@@ -267,7 +267,7 @@ pub fn acoustic_intensity_depth_profile(
 /// This is the thermal source term Q entering the Pennes bioheat equation.
 ///
 /// # Arguments
-/// * `z_arr` – depth positions [m], z ≥ 0
+/// * `z_arr` – depth positions `m`, z ≥ 0
 /// * `alpha_np_m` – amplitude attenuation coefficient [Np/m]
 /// * `surface_intensity` – surface intensity I₀ at z = 0 [W/m²]
 ///
@@ -305,12 +305,12 @@ pub fn acoustic_power_deposition_depth_profile(
 /// terms of pressure the factor cancels against the 1/(2) in I = p²/(2ρc).
 ///
 /// The input `p_field` is a **flattened, row-major** slice of the pressure
-/// amplitude array in [Pa]; the output is a `Vec<f64>` of the same length,
+/// amplitude array in `Pa`; the output is a `Vec<f64>` of the same length,
 /// with the same linear index ordering, in [W/m³].  Reshaping to (nx,ny,nz)
 /// is the caller's responsibility.
 ///
 /// # Arguments
-/// * `p_field`    – pressure amplitude field [Pa], arbitrary shape, flattened
+/// * `p_field`    – pressure amplitude field `Pa`, arbitrary shape, flattened
 /// * `alpha_np_m` – amplitude attenuation coefficient [Np/m]
 /// * `rho`        – medium density [kg/m³]
 /// * `c`          – medium speed of sound [m/s]
@@ -341,7 +341,7 @@ pub fn acoustic_heat_source_density(
 /// (ISPTA) for a CW exposure (duty cycle = 1).
 ///
 /// # Arguments
-/// * `p_field` – peak pressure amplitude field [Pa], any shape passed as 1-D
+/// * `p_field` – peak pressure amplitude field `Pa`, any shape passed as 1-D
 /// * `rho` – medium density [kg/m³]
 /// * `c` – speed of sound [m/s]
 ///
@@ -359,7 +359,7 @@ pub fn acoustic_intensity_from_amplitude(p_field: &[f64], rho: f64, c: f64) -> V
 /// Inverts the plane-wave intensity relation used by
 /// [`acoustic_intensity_from_amplitude`]:
 /// ```text
-/// p = sqrt(2 rho c I)   [Pa]
+/// p = sqrt(2 rho c I)   `Pa`
 /// ```
 ///
 /// # Arguments
@@ -399,16 +399,16 @@ pub fn acoustic_pressure_amplitude_from_intensity(
 /// reduces to the adiabatic form:
 ///
 /// ```text
-/// ΔT_i = Q_i · τ_i / (ρ · cₚ)   [K]
+/// ΔT_i = Q_i · τ_i / (ρ · cₚ)   `K`
 /// ```
 ///
 /// This is the first law of thermodynamics applied to a fixed tissue element
 /// of density ρ and specific heat cₚ absorbing volumetric heat source Q [W/m³]
-/// over duration τ [s].
+/// over duration τ `s`.
 ///
 /// # Arguments
 /// * `q_arr` – heat-source density [W/m³], element-wise
-/// * `tau_arr` – pulse durations [s], same length as q_arr
+/// * `tau_arr` – pulse durations `s`, same length as q_arr
 /// * `density` – tissue density ρ [kg/m³]
 /// * `specific_heat` – tissue specific heat cₚ [J/(kg·K)]
 ///
@@ -435,7 +435,7 @@ pub fn adiabatic_temperature_rise_kelvin(
 /// falls as the tissue heats.
 pub const PRFS_COEFFICIENT_PER_C: f64 = -0.0102e-6;
 
-/// MR phase shift [rad] accumulated over echo time `te_s` for a temperature
+/// MR phase shift `rad` accumulated over echo time `te_s` for a temperature
 /// change `dt_c`, by the PRFS method (book §13.3):
 ///
 /// ```text

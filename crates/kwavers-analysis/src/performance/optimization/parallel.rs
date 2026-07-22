@@ -30,7 +30,7 @@ impl ParallelOptimizer {
 
     /// Set the number of threads for parallel execution
     /// # Errors
-    /// - Returns [`KwaversError::System`] if `threads` is zero.
+    /// - Returns `KwaversError::System` if `threads` is zero.
     ///
     pub fn set_num_threads(&mut self, threads: usize) -> KwaversResult<()> {
         if threads == 0 {

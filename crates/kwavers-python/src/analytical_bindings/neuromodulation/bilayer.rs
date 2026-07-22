@@ -7,7 +7,7 @@ use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
-/// Quasi-static leaflet deflection [m] versus acoustic pressure [Pa].
+/// Quasi-static leaflet deflection `m` versus acoustic pressure `Pa`.
 #[pyfunction]
 #[pyo3(signature = (pressure_pa, v_rest_mv = -65.0, cm0_uf_cm2 = 1.0))]
 pub fn bls_deflection_curve(

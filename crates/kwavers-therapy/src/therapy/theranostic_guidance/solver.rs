@@ -78,7 +78,7 @@ pub const THERANOSTIC_INVERSE_MODEL_FAMILY: &str =
 /// not FWI. See `waveform/mod.rs:10` which states "It is not nonlinear wave
 /// propagation and it is not an iterative acoustic full-waveform inversion."
 ///
-/// The elastic-shear channel ([`elastic_shear`]) IS an iterative
+/// The elastic-shear channel (`elastic_shear`) IS an iterative
 /// gradient-descent FWI with line search; that fact is exposed via the
 /// dedicated [`THERANOSTIC_ELASTIC_SHEAR_MODEL`] identifier rather than
 /// being conflated with the acoustic inverse here.
@@ -90,7 +90,7 @@ pub const THERANOSTIC_FULL_WAVE_INVERSION: bool = false;
 /// linear scalar wave equation `p_tt = c² Δp + s` with linear power-law
 /// attenuation. Westervelt / KZK nonlinearity is **not** integrated here;
 /// for second-harmonic / shock-formation modelling use
-/// [`kwavers_physics::acoustics::nonlinear`] instead.
+/// `kwavers_physics::acoustics::nonlinear` instead.
 pub const THERANOSTIC_NONLINEAR_WAVE_PROPAGATION: bool = false;
 
 /// Iterative-elastic-FWI flag.
@@ -98,7 +98,7 @@ pub const THERANOSTIC_NONLINEAR_WAVE_PROPAGATION: bool = false;
 /// `true`: the elastic-shear channel runs `config.elastic_fwi_iterations`
 /// iterations of `migrate-residual → line-search → accept/reject` against
 /// the elastic PSTD forward operator, with a backtracking step-size policy.
-/// See [`elastic_shear::inversion::run_iterative_elastic_fwi`].
+/// See `elastic_shear::inversion::run_iterative_elastic_fwi`.
 pub const THERANOSTIC_ITERATIVE_ELASTIC_FWI: bool = true;
 
 #[derive(Clone, Debug)]

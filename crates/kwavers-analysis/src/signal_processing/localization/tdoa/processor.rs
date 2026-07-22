@@ -13,8 +13,8 @@ pub struct TDOAProcessor {
 impl TDOAProcessor {
     /// Create new TDOA processor
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn new(config: &TDOAConfig) -> KwaversResult<Self> {
         config.config.validate()?;

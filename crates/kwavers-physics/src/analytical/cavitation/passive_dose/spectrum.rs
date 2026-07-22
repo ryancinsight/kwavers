@@ -16,9 +16,9 @@ pub(super) const MAX_EXACT_F64_INTEGER: usize = 1usize << 53;
 /// Single-sided Hann-windowed power spectral density of an emission series.
 ///
 /// ```text
-///   w[j]  = ½·(1 − cos(2πj/(N−1)))                 (Hann window)
-///   X[k]  = Σ_j (x[j] − x̄)·w[j]·exp(−i2πkj/N)
-///   S[k]  = c_k · |X[k]|² · Δt / Σ_j w[j]²          c_k = 1 (DC/Nyquist) else 2
+///   w`J`  = ½·(1 − cos(2πj/(N−1)))                 (Hann window)
+///   X`K`  = Σ_j (x`J` − x̄)·w`J`·exp(−i2πkj/N)
+///   S`K`  = c_k · |X`K`|² · Δt / Σ_j w`J`²          c_k = 1 (DC/Nyquist) else 2
 /// ```
 /// The `Σ w²` normalisation makes `S` a true power-preserving PSD comparable to
 /// the rectangular-window [`super::super::bubble_power_spectrum`]; the band
@@ -27,10 +27,10 @@ pub(super) const MAX_EXACT_F64_INTEGER: usize = 1usize << 53;
 ///
 /// # Arguments
 /// * `signal` – emission time series (e.g. from [`super::bubble_acoustic_emission_pressure`])
-/// * `dt_s`   – uniform sample interval [s]
+/// * `dt_s`   – uniform sample interval `s`
 /// * `n_fft`  – DFT length (≥ `signal.len()`; zero-padded)
 ///
-/// Returns `(f_arr [Hz], psd)` over non-negative frequencies. Returns a pair of
+/// Returns `(f_arr `Hz`, psd)` over non-negative frequencies. Returns a pair of
 /// empty vectors if `n_fft < 2` or `dt_s ≤ 0`.
 ///
 /// # Note
@@ -99,7 +99,7 @@ pub struct PcdBandSignals {
 /// Normalized Keller-Miksis wall-velocity spectrum for Chapter 7 PCD figures.
 #[derive(Debug, Clone, PartialEq)]
 pub struct KellerMiksisPcdSpectrum {
-    /// Single-sided frequency axis [Hz].
+    /// Single-sided frequency axis `Hz`.
     pub frequency_hz: Vec<f64>,
     /// Normalized PSD in decibels relative to the maximum bin.
     pub normalized_psd_db: Vec<f64>,
@@ -114,7 +114,7 @@ pub struct KellerMiksisPcdSpectrum {
 pub struct KellerMiksisPcdControllerTrace {
     /// Pulse indices, one-based.
     pub pulse_index: Vec<f64>,
-    /// Drive pressure applied at each pulse [kPa].
+    /// Drive pressure applied at each pulse `kPa`.
     pub pressure_kpa: Vec<f64>,
     /// Raw subharmonic/fundamental ratios.
     pub stable_signal: Vec<f64>,

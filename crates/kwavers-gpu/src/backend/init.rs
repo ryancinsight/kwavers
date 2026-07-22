@@ -31,7 +31,7 @@ where
     /// 2. Integrated GPU
     /// 3. Provider-specific software or compatibility device when available
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn new() -> KwaversResult<Self> {
         Self::with_features_and_limits(

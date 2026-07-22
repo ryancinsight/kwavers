@@ -102,7 +102,7 @@ impl TargetingSystem {
 
     /// Convert stereotactic to voxel coordinates
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn stereotactic_to_voxel(
         &self,
@@ -127,7 +127,7 @@ impl TargetingSystem {
 
     /// Plan trajectory to target
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn plan_trajectory(
         &self,

@@ -8,12 +8,12 @@ use pyo3::prelude::*;
 /// Compute two-way skull insertion loss using a power-law attenuation model.
 ///
 /// Args:
-///     f_mhz: Frequency array [MHz].
-///     thickness_cm: Skull thickness [cm].
+///     f_mhz: Frequency array `MHz`.
+///     thickness_cm: Skull thickness `cm`.
 ///     alpha0: Attenuation coefficient [dB/(cm·MHz)].
 ///
 /// Returns:
-///     Two-way insertion loss array [dB].
+///     Two-way insertion loss array `dB`.
 #[pyfunction]
 #[pyo3(signature = (f_mhz, thickness_cm, alpha0))]
 pub fn skull_insertion_loss_two_way_db(
@@ -33,11 +33,11 @@ pub fn skull_insertion_loss_two_way_db(
 ///
 /// Args:
 ///     n: Number of phase-screen points.
-///     sigma_phi_rad: Phase standard deviation [rad].
+///     sigma_phi_rad: Phase standard deviation `rad`.
 ///     seed: RNG seed for reproducibility.
 ///
 /// Returns:
-///     Phase array [rad] of length *n*.
+///     Phase array `rad` of length *n*.
 #[pyfunction]
 #[pyo3(signature = (n, sigma_phi_rad, seed))]
 pub fn skull_phase_screen(
@@ -55,7 +55,7 @@ pub fn skull_phase_screen(
 /// S ≈ exp(-sigma_phi²)  (Maréchal approximation)
 ///
 /// Args:
-///     sigma_phi_rad: RMS wavefront error [rad].
+///     sigma_phi_rad: RMS wavefront error `rad`.
 ///
 /// Returns:
 ///     Strehl ratio (0–1).

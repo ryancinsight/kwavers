@@ -19,7 +19,7 @@ fn det3(a: &[f64; 9]) -> f64 {
 ///
 /// Returns `Err` when `|det(A)| < 1e-30` (degenerate).
 /// # Errors
-/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+/// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
 ///
 pub(super) fn invert3(a: &[f64; 9]) -> KwaversResult<[f64; 9]> {
     let d = det3(a);

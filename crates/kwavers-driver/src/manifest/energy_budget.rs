@@ -69,7 +69,7 @@ pub struct EnergyBudgetReport {
     /// surfaces the per-tile choice without forcing the consumer to subtract scalar fields.
     pub per_tile_resistor_w: Vec<f64>,
     /// Per-tile resistor power margin (W) under the chosen footprint's IPC-7351 70 °C rating.
-    /// SIGNED — `footprint_max_w − per_tile_resistor_w[i]` propagates verbatim: positive
+    /// SIGNED — `footprint_max_w − per_tile_resistor_w`i`` propagates verbatim: positive
     /// entry ⇒ headroom above the dissipation; negative entry ⇒ footprint under-rates this
     /// tile by `|margin|` W (the kwavers-side 4th [`crate::validate::Check`] against
     /// `KWVERS_MIN_RESISTOR_MARGIN_W` catches the over-rate case). The

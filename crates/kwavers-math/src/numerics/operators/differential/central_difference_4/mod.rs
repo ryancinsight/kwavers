@@ -132,7 +132,7 @@ impl CentralDifference4 {
     ///
     /// Interior (i ∈ [2, nx−3]):
     /// ```text
-    /// dst[i] = (−f[i+2] + 8f[i+1] − 8f[i−1] + f[i−2]) / (12 Δx)
+    /// dst`i` = (−f[i+2] + 8f[i+1] − 8f[i−1] + f[i−2]) / (12 Δx)
     /// ```
     /// Near-boundary (i = 1, nx−2): O(Δx²) central.
     /// Boundary (i = 0, nx−1): O(Δx) one-sided.

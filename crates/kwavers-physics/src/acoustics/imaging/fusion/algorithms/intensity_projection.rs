@@ -22,7 +22,7 @@ pub(crate) enum ProjectionKind {
 }
 /// Fuse intensity projection.
 /// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Propagates any `KwaversError` returned by called functions.
 ///
 pub(crate) fn fuse_intensity_projection(
     fusion: &MultiModalFusion,

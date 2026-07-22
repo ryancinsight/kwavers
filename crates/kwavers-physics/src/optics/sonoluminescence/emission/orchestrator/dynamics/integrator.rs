@@ -97,7 +97,7 @@ impl IntegratedSonoluminescence {
     ///
     /// Reference: Brenner et al. (2002), "Single-bubble sonoluminescence"
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn simulate_step(
         &mut self,

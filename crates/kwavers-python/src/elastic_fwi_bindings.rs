@@ -24,9 +24,9 @@ fn to_py(err: impl std::fmt::Display) -> PyErr {
 /// Reconstruct the shear modulus `μ` from a known phantom via four-side
 /// transmission elastic FWI (ADR 033).
 ///
-/// `mu_true_pa` is the 2-D phantom shear-modulus map \[Pa] (lesion + background);
+/// `mu_true_pa` is the 2-D phantom shear-modulus map \`Pa` (lesion + background);
 /// `c_shear_m_s` / `c_compression_m_s` set the homogeneous elastic background
-/// (`c_p² ≥ 2 c_s²` required). Returns the recovered `μ` map \[Pa] of the same
+/// (`c_p² ≥ 2 c_s²` required). Returns the recovered `μ` map \`Pa` of the same
 /// shape. The synthetic shear-wave data are generated from `mu_true_pa` and
 /// inverted from a homogeneous start; the GIL is released around the solve.
 #[pyfunction]

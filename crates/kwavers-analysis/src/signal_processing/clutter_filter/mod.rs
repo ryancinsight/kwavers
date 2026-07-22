@@ -57,7 +57,7 @@
 //! 2. Compute SVD: [U, Σ, V] = svd(S)
 //! 3. Threshold singular values: Keep only σₖ₊₁ to σₙ
 //! 4. Reconstruct: S_filtered = U[:,k+1:] * Σ[k+1:,k+1:] * V[:,k+1:]^T
-//! 5. Compute Power Doppler: PD[i] = Σₜ |S_filtered[i,t]|²
+//! 5. Compute Power Doppler: PD`i` = Σₜ |S_filtered[i,t]|²
 //! ```
 //!
 //! **Advantages:**

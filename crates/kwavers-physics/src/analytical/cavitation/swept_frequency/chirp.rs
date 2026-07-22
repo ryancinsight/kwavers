@@ -35,11 +35,11 @@ pub enum SweepProfile {
 /// its derivative for the bubble-dynamics forcing.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct FrequencySweep {
-    /// Frequency at the start of each sweep period [Hz].
+    /// Frequency at the start of each sweep period `Hz`.
     pub f_start_hz: f64,
-    /// Frequency at the turn of each sweep period [Hz].
+    /// Frequency at the turn of each sweep period `Hz`.
     pub f_end_hz: f64,
-    /// Sweep period [s] (one full `Linear` ramp, or one full up-down `Triangular`).
+    /// Sweep period `s` (one full `Linear` ramp, or one full up-down `Triangular`).
     pub period_s: f64,
     /// Ramp shape.
     pub profile: SweepProfile,
@@ -72,7 +72,7 @@ impl FrequencySweep {
         })
     }
 
-    /// Mean frequency over one period [Hz] — `(f_start + f_end)/2` for both
+    /// Mean frequency over one period `Hz` — `(f_start + f_end)/2` for both
     /// profiles (the time-average of a linear ramp and of a symmetric triangle
     /// are equal). One full period advances the phase by `2π·f̄·period`.
     #[must_use]
@@ -81,14 +81,14 @@ impl FrequencySweep {
         0.5 * (self.f_start_hz + self.f_end_hz)
     }
 
-    /// Bandwidth `|f_end − f_start|` [Hz].
+    /// Bandwidth `|f_end − f_start|` `Hz`.
     #[must_use]
     #[inline]
     pub fn bandwidth_hz(&self) -> f64 {
         (self.f_end_hz - self.f_start_hz).abs()
     }
 
-    /// Instantaneous carrier frequency `f(t)` [Hz].
+    /// Instantaneous carrier frequency `f(t)` `Hz`.
     #[must_use]
     pub fn instantaneous_frequency(&self, t_s: f64) -> f64 {
         let phase_frac = (t_s / self.period_s).rem_euclid(1.0); // position in [0,1)
@@ -108,7 +108,7 @@ impl FrequencySweep {
         }
     }
 
-    /// Exact accumulated phase `φ(t) = 2π ∫₀ᵗ f(t') dt'` [rad].
+    /// Exact accumulated phase `φ(t) = 2π ∫₀ᵗ f(t') dt'` `rad`.
     ///
     /// Closed form per profile: `n` complete periods each contribute
     /// `2π·f̄·period`, plus the partial-period integral evaluated analytically.
@@ -147,7 +147,7 @@ impl FrequencySweep {
         }
     }
 
-    /// Drive pressure `p(t) = A·sin φ(t)` [Pa].
+    /// Drive pressure `p(t) = A·sin φ(t)` `Pa`.
     #[must_use]
     #[inline]
     pub fn pressure(&self, t_s: f64, amplitude_pa: f64) -> f64 {

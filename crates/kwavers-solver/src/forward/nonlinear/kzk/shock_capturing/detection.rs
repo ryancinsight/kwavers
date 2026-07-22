@@ -121,7 +121,7 @@ impl ShockCapture {
 
     /// Compute harmonic distortion ratios from FFT spectrum of the axial pressure.
     ///
-    /// IEEE Std 519-2014, §3.1: `P[k] = Σ p\[n\] exp(−i·2π·k·n/N)`.
+    /// IEEE Std 519-2014, §3.1: `P`K` = Σ p\[n\] exp(−i·2π·k·n/N)`.
     /// Fundamental bin: `k₀ = round(f₀ · N · dz)`.
     /// Harmonic ratio: `r_n = |P[n·k₀]| / |P[k₀]|`.
     /// # Errors

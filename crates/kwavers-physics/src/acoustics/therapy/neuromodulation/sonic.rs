@@ -64,21 +64,21 @@ use std::f64::consts::PI;
 pub struct SonicConfig<M: Membrane> {
     /// Membrane model (its baseline capacitance must equal the source's).
     pub membrane: M,
-    /// Resting membrane potential / initial condition [mV].
+    /// Resting membrane potential / initial condition `mV`.
     pub v_rest_mv: f64,
     /// Bilayer-sonophore source (geometry, peak deflection, carrier frequency).
     pub source: BilayerSonophore,
     /// Constant external (bias) current density [µA/cm²].
     pub i_bias_ua_cm2: f64,
-    /// Slow integration step [ms] (millisecond-scale; need not resolve the carrier).
+    /// Slow integration step `ms` (millisecond-scale; need not resolve the carrier).
     pub dt_ms: f64,
     /// Number of samples used to average over one carrier cycle.
     pub cycle_samples: usize,
-    /// Sonication onset [ms].
+    /// Sonication onset `ms`.
     pub onset_ms: f64,
-    /// Sonication offset [ms].
+    /// Sonication offset `ms`.
     pub offset_ms: f64,
-    /// Total simulated duration [ms].
+    /// Total simulated duration `ms`.
     pub t_end_ms: f64,
 }
 

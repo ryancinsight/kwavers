@@ -21,9 +21,9 @@ use moirai_parallel::{for_each_chunk_pair_mut_enumerated_with, Adaptive};
 /// (FSINCOS / `__sincosf`).
 ///
 /// # Arguments
-/// * `x_arr`, `z_arr` – grid coordinates [m]
-/// * `x_f`, `z_f` – focal point [m]
-/// * `freq_hz` – frequency [Hz]
+/// * `x_arr`, `z_arr` – grid coordinates `m`
+/// * `x_f`, `z_f` – focal point `m`
+/// * `freq_hz` – frequency `Hz`
 /// * `c` – sound speed in the coupling medium [m/s]
 ///
 /// # Reference

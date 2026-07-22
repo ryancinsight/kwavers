@@ -11,7 +11,7 @@ use rand_distr::{Distribution, Normal};
 
 /// Sample a signal at evenly spaced time points starting at `t0`.
 /// # Errors
-/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+/// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
 ///
 pub fn sample_signal<S: Signal + ?Sized>(
     signal: &S,
@@ -167,7 +167,7 @@ impl ToneBurstSpec {
 /// ## Reference
 /// `external/k-wave-python/kwave/utils/signals.py::tone_burst`
 /// # Errors
-/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+/// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
 ///
 pub fn tone_burst_series(spec: &ToneBurstSpec) -> KwaversResult<Vec<f64>> {
     let ToneBurstSpec {
@@ -247,7 +247,7 @@ pub fn tone_burst_series(spec: &ToneBurstSpec) -> KwaversResult<Vec<f64>> {
 
 /// Generate a continuous-wave sinusoidal signal.
 /// # Errors
-/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+/// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
 ///
 pub fn create_cw_signal(
     t: &[f64],
@@ -283,8 +283,8 @@ pub fn create_cw_signal(
 
 /// Generate multiple continuous-wave signals with broadcasting of amplitude and phase.
 /// # Errors
-/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
+/// - Propagates any `KwaversError` returned by called functions.
 ///
 pub fn create_cw_signals(
     t: &[f64],
@@ -335,8 +335,8 @@ pub fn create_cw_signals(
 
 /// Add Gaussian noise to a signal at a target SNR (dB).
 /// # Errors
-/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
+/// - Propagates any `KwaversError` returned by called functions.
 ///
 pub fn add_noise(signal: &[f64], snr_db: f64, seed: Option<u64>) -> KwaversResult<Vec<f64>> {
     if signal.is_empty() {

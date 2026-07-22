@@ -53,7 +53,7 @@ impl UltrafastPlaneWave {
     ///
     /// Returns one delay per element.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn transmission_delays(&self, tilt_angle: f64) -> KwaversResult<Array1<f64>> {
         self.require_elements()?;
@@ -72,7 +72,7 @@ impl UltrafastPlaneWave {
     ///
     /// Returns one delay per element.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn reception_delays(&self, x: f64, y: f64, tilt_angle: f64) -> KwaversResult<Array1<f64>> {
         self.require_elements()?;
@@ -92,7 +92,7 @@ impl UltrafastPlaneWave {
     ///
     /// Returns one delay per element.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn beamforming_delays(
         &self,

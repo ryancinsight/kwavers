@@ -4,9 +4,9 @@
 //! that axis (measured in metres from the inner PML face into the absorbing
 //! layer), the profile arrays store:
 //!
-//! - `sigma[i]`  = σ(ξ_i)  [s⁻¹]
-//! - `kappa[i]`  = κ(ξ_i)  [-]
-//! - `alpha[i]`  = α(ξ_i)  [s⁻¹]
+//! - `sigma`i``  = σ(ξ_i)  [s⁻¹]
+//! - `kappa`i``  = κ(ξ_i)  [-]
+//! - `alpha`i``  = α(ξ_i)  [s⁻¹]
 //!
 //! Inner physical-domain nodes carry σ = 0, κ = 1, α = 0. Outside-physical-domain
 //! nodes do not exist (the DG element grid stops at the outer face of the PML).

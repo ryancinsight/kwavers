@@ -7,7 +7,7 @@ impl NeuralNetworkShader {
     /// Perform matrix multiplication on GPU: `Y = W·X + b` with INT8 quantized weights.
     /// # Errors
     /// - Returns [`KwaversError::DimensionMismatch`] if the precondition for mismatched array or grid dimensions is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     // Args are independent data slices and scalar quantization/shape parameters with no cohesive grouping.
     #[allow(clippy::too_many_arguments)]
@@ -229,7 +229,7 @@ impl NeuralNetworkShader {
     }
     /// Validate activation type.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub(super) fn validate_activation_type(activation_type: u32) -> KwaversResult<()> {
         use super::ActivationKind;

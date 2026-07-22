@@ -1,7 +1,7 @@
 //! Sparse exact checkpoints for Westervelt adjoint replay.
 //!
 //! A second-order Westervelt update with the nonlinear term evaluated from
-//! `p[n]`, `p[n-1]`, and `p[n-2]` is restarted exactly when a checkpoint stores
+//! `p`N``, `p[n-1]`, and `p[n-2]` is restarted exactly when a checkpoint stores
 //! those three states. Replaying one interval from that state produces the same
 //! pressure samples as a dense forward history, up to deterministic floating
 //! point operation order.

@@ -121,7 +121,7 @@ impl CentralDifference2 {
 impl CentralDifference2 {
     /// Apply ∂/∂x into a pre-allocated destination — zero heap allocation.
     ///
-    /// Interior: `dst[i] = (f[i+1] − f[i−1]) / (2Δx)` for i ∈ [1, nx−2].
+    /// Interior: `dst`i` = (f[i+1] − f[i−1]) / (2Δx)` for i ∈ [1, nx−2].
     /// Left boundary (i=0): forward difference `(f[1] − f[0]) / Δx`.
     /// Right boundary (i=nx−1): backward difference `(f[nx−1] − f[nx−2]) / Δx`.
     ///
@@ -216,7 +216,7 @@ impl CentralDifference2 {
 
     /// Apply ∂/∂y into a pre-allocated destination — zero heap allocation.
     ///
-    /// Interior: `dst[j] = (f[j+1] − f[j−1]) / (2Δy)` for j ∈ [1, ny−2].
+    /// Interior: `dst`J` = (f[j+1] − f[j−1]) / (2Δy)` for j ∈ [1, ny−2].
     /// Boundaries: first/last-order forward/backward difference.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
@@ -307,7 +307,7 @@ impl CentralDifference2 {
 
     /// Apply ∂/∂z into a pre-allocated destination — zero heap allocation.
     ///
-    /// Interior: `dst[k] = (f[k+1] − f[k−1]) / (2Δz)` for k ∈ [1, nz−2].
+    /// Interior: `dst`K` = (f[k+1] − f[k−1]) / (2Δz)` for k ∈ [1, nz−2].
     /// Boundaries: first/last-order forward/backward difference.
     /// The innermost (contiguous) dimension gives the best autovectorisation here.
     /// # Errors

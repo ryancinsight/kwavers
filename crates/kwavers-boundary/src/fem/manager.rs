@@ -74,7 +74,7 @@ impl FemBoundaryManager {
     /// * `rhs` - Right-hand side load vector (modified in-place)
     /// * `wavenumber` - Wavenumber k for radiation conditions
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn apply_all(
         &self,
@@ -184,9 +184,9 @@ impl FemBoundaryManager {
     /// For Dirichlet conditions u_i = g_i, we modify the system:
     /// - Set diagonal K_ii = 1, zero off-diagonal elements in row i
     /// - Zero mass matrix row i
-    /// - Set RHS[i] = g_i
+    /// - Set RHS`i` = g_i
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     fn apply_dirichlet(
         &self,
@@ -211,7 +211,7 @@ impl FemBoundaryManager {
     /// For Neumann conditions ∂u/∂n = g, the contribution appears
     /// in the load vector: f_i += ∫_∂Ω g φ_i dS
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     fn apply_neumann(
         &self,
@@ -232,7 +232,7 @@ impl FemBoundaryManager {
     /// - Stiffness diagonal: K_ii += α
     /// - Load vector: f_i += g
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     fn apply_robin(
         &self,
@@ -260,7 +260,7 @@ impl FemBoundaryManager {
     ///
     /// The Sommerfeld radiation condition: ∂u/∂n - iku ≈ 0
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     fn apply_radiation(
         &self,

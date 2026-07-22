@@ -44,7 +44,7 @@ fn pressure_buffer_permutation_returns_disjoint_step_roles() {
 ///
 /// The 2nd-order centered stencil:
 /// ```text
-/// ∂²f/∂x² ≈ (f[i+1] - 2f[i] + f[i-1]) / Δx²
+/// ∂²f/∂x² ≈ (f[i+1] - 2f`i` + f[i-1]) / Δx²
 /// ```
 /// maps a constant field to zero exactly (no truncation error).
 #[test]

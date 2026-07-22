@@ -57,9 +57,9 @@ impl EigenspaceMV {
     /// w = P_s R^{-1} a / (a^H R^{-1} P_s a)
     /// ```
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn compute_weights(
         &self,
@@ -173,7 +173,7 @@ impl EigenspaceMV {
     /// a pure subspace-projection map, so it does not require `R` to be invertible.
     ///
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] for a non-square/empty `covariance`,
+    /// - Returns `KwaversError::InvalidInput` for a non-square/empty `covariance`,
     ///   a steering-length mismatch, or `num_sources >= N`.
     /// - Returns [`KwaversError::Numerical`] for non-finite steering input or output.
     /// - Propagates eigendecomposition failures.

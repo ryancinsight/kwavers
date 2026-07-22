@@ -47,7 +47,7 @@ use std::f64::consts::PI;
 /// (PySONIC `rel_Zmin`).
 pub const REL_ZMIN: f64 = -0.49;
 
-/// Leaflet surface area `S(Z) = π(a²+Z²)` [m²].
+/// Leaflet surface area `S(Z) = π(a²+Z²)` `m²`.
 #[inline]
 fn surface(z: f64) -> f64 {
     PI * (A_RADIUS_M * A_RADIUS_M + z * z)
@@ -181,7 +181,7 @@ pub struct BilayerSonophoreDynamic {
     /// Phase-periodic capacitance cycle (shared SSOT source; holds C_m and
     /// dC_m/dt over one carrier cycle plus the interpolation).
     cycle: PhaseCycle,
-    /// Peak leaflet deflection over the steady cycle [m] (the only `Z` datum
+    /// Peak leaflet deflection over the steady cycle `m` (the only `Z` datum
     /// retained; the full `Z(t)` array is not stored).
     peak_deflection_m: f64,
 }
@@ -222,7 +222,7 @@ impl BilayerSonophoreDynamic {
     /// gas-rectification drift settles within this span at the validated
     /// amplitudes).
     const N_SETTLE: usize = 30;
-    /// Deflection error tolerance for adaptive step control [m].
+    /// Deflection error tolerance for adaptive step control `m`.
     const Z_TOL_M: f64 = 2.0e-13;
     /// Samples in the precomputed exact `P_M(Z)` lookup table.
     const N_PM_TABLE: usize = 8192;
@@ -231,8 +231,8 @@ impl BilayerSonophoreDynamic {
     const MAX_STEPS: usize = 200_000;
 
     /// Construct by integrating the leaflet ODE to its steady cycle under an
-    /// acoustic carrier of peak pressure `pressure_amp_pa` [Pa] and frequency
-    /// `freq_mhz` [MHz], with resting charge set by `v_rest_mv` and rest
+    /// acoustic carrier of peak pressure `pressure_amp_pa` `Pa` and frequency
+    /// `freq_mhz` `MHz`, with resting charge set by `v_rest_mv` and rest
     /// capacitance `cm0_uf_cm2` [µF/cm²].
     ///
     /// Uses adaptive step-doubling RK4 (the leaflet ODE is stiff near the steric
@@ -363,7 +363,7 @@ impl BilayerSonophoreDynamic {
         }
     }
 
-    /// Peak leaflet deflection over the steady cycle [m] (validation accessor).
+    /// Peak leaflet deflection over the steady cycle `m` (validation accessor).
     #[inline]
     #[must_use]
     pub fn peak_deflection_m(&self) -> f64 {

@@ -157,7 +157,7 @@ where
 impl CoreGpuContext<WgpuDevice> {
     /// Create a new WGPU context for the current WGSL kernels.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub async fn new() -> KwaversResult<Self> {
         Self::try_new()
@@ -166,7 +166,7 @@ impl CoreGpuContext<WgpuDevice> {
     /// Create a new WGPU context synchronously for the current WGSL kernels.
     ///
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     pub fn try_new() -> KwaversResult<Self> {
         Self::acquire_with_requirements(
             "Kwavers GPU Device",

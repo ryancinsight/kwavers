@@ -25,26 +25,26 @@ use leto::{Array2, ArrayView2};
 /// Polar acquisition geometry: uniformly-spaced beams, uniform range sampling.
 #[derive(Debug, Clone, Copy)]
 pub struct ScanGeometry {
-    /// First beam angle [rad] (from the axial axis; negative = left of center).
+    /// First beam angle `rad` (from the axial axis; negative = left of center).
     pub angle_min: f64,
-    /// Angular spacing between beams [rad].
+    /// Angular spacing between beams `rad`.
     pub angle_step: f64,
-    /// Apex-to-first-sample radius `r₀` [m] (0 for a sector phased array).
+    /// Apex-to-first-sample radius `r₀` `m` (0 for a sector phased array).
     pub radius_offset: f64,
-    /// Range sampling step `Δr` [m].
+    /// Range sampling step `Δr` `m`.
     pub range_step: f64,
 }
 
 /// Output Cartesian raster specification.
 #[derive(Debug, Clone, Copy)]
 pub struct CartesianGrid {
-    /// Image width [pixels] (lateral, `x`).
+    /// Image width `pixels` (lateral, `x`).
     pub width: usize,
-    /// Image height [pixels] (axial, `z`).
+    /// Image height `pixels` (axial, `z`).
     pub height: usize,
-    /// Lateral extent `[x_min, x_max]` [m].
+    /// Lateral extent `[x_min, x_max]` `m`.
     pub x_range: (f64, f64),
-    /// Axial extent `[z_min, z_max]` [m].
+    /// Axial extent `[z_min, z_max]` `m`.
     pub z_range: (f64, f64),
 }
 
@@ -59,7 +59,7 @@ impl ScanConverter {
     /// Create a scan converter.
     ///
     /// # Errors
-    /// Returns [`KwaversError::InvalidInput`] for a non-positive range/angle
+    /// Returns `KwaversError::InvalidInput` for a non-positive range/angle
     /// step or a degenerate output grid.
     pub fn new(geometry: ScanGeometry, grid: CartesianGrid) -> KwaversResult<Self> {
         if geometry.range_step <= 0.0 || geometry.angle_step <= 0.0 {
@@ -100,7 +100,7 @@ impl ScanConverter {
     /// `[height, width]` (row-major, row = axial `z`, column = lateral `x`).
     ///
     /// # Errors
-    /// Returns [`KwaversError::InvalidInput`] when `beam_data` has fewer than two
+    /// Returns `KwaversError::InvalidInput` when `beam_data` has fewer than two
     /// beams or two samples (interpolation needs a 2×2 neighbourhood).
     pub fn convert(&self, beam_data: ArrayView2<f64>) -> KwaversResult<Array2<f64>> {
         let [n_lines, n_samples] = beam_data.shape();

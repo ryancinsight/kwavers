@@ -19,7 +19,7 @@ impl SimulationRunner {
     /// Dispatch and run a simulation based on the request config.
     ///
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] for unsupported solver/config combos.
+    /// - Returns `KwaversError::InvalidInput` for unsupported solver/config combos.
     /// - Propagates solver creation and runtime errors.
     pub fn run(
         req: &SimulationRunRequest<'_>,

@@ -25,7 +25,7 @@ pub struct HifuThermalDose {
     increments: Array3<f64>,
     /// Temperature history [deg C].
     temperature_history: Vec<Array3<f64>>,
-    /// Measurement times [s].
+    /// Measurement times `s`.
     time_points_s: Vec<f64>,
 }
 

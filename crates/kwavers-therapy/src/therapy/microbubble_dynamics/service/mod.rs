@@ -38,7 +38,7 @@ impl MicrobubbleDynamicsService {
 
     /// Create service from microbubble state
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn from_microbubble_state(state: &MicrobubbleState) -> KwaversResult<Self> {
         let params = Self::extract_bubble_parameters(state)?;

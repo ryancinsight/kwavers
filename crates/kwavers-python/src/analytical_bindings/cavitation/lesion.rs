@@ -209,7 +209,7 @@ pub fn histotripsy_pulses_for_lesion_radius(
     ))
 }
 
-/// Histotripsy lesion radius [m] from accumulated inertial cavitation dose via
+/// Histotripsy lesion radius `m` from accumulated inertial cavitation dose via
 /// the cavitation energy-balance model `R_L = R₀·(P₀·icd/σ_y)^(1/3)` (forward
 /// of [`histotripsy_pulses_for_lesion_radius`]).
 ///
@@ -237,7 +237,7 @@ pub fn histotripsy_lesion_radius_m(
 /// Dimensionless, O(1–1000); feeds the lesion energy-balance model.
 ///
 /// Args:
-///     r_arr (radius [m]), rdot_arr (wall velocity [m/s]), r0_m (equilibrium [m]).
+///     r_arr (radius `m`), rdot_arr (wall velocity [m/s]), r0_m (equilibrium `m`).
 #[pyfunction]
 #[pyo3(signature = (r_arr, rdot_arr, r0_m))]
 pub fn inertial_cavitation_dose(

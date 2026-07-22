@@ -14,15 +14,15 @@ use std::f64::consts::PI;
 
 // ─── Insertion loss ───────────────────────────────────────────────────────────
 
-/// Two-way skull insertion loss [dB] using power-law attenuation.
+/// Two-way skull insertion loss `dB` using power-law attenuation.
 ///
 /// ```text
-/// IL(f) = α₀ · f_MHz^1.2 · 2 · d_cm   [dB]
+/// IL(f) = α₀ · f_MHz^1.2 · 2 · d_cm   `dB`
 /// ```
 ///
 /// # Arguments
-/// * `f_mhz` – frequencies [MHz]
-/// * `thickness_cm` – skull thickness [cm]
+/// * `f_mhz` – frequencies `MHz`
+/// * `thickness_cm` – skull thickness `cm`
 /// * `alpha0` – skull attenuation prefactor [dB/(cm·MHz^1.2)]
 ///
 /// # Reference
@@ -44,7 +44,7 @@ pub fn skull_insertion_loss_two_way_db(f_mhz: &[f64], thickness_cm: f64, alpha0:
 ///
 /// # Arguments
 /// * `n` – number of samples
-/// * `sigma_phi_rad` – standard deviation of phase aberration [rad]
+/// * `sigma_phi_rad` – standard deviation of phase aberration `rad`
 /// * `seed` – 64-bit seed for ChaCha8Rng
 ///
 /// # Reference
@@ -65,7 +65,7 @@ pub fn skull_phase_screen(n: usize, sigma_phi_rad: f64, seed: u64) -> Vec<f64> {
 /// c(HU) = 1500 + 0.76·HU   for HU ≥ 0   [m/s]
 /// ```
 ///
-/// Thin batch wrapper over the canonical [`HuAcousticModel`] (the SSOT for the
+/// Thin batch wrapper over the canonical `HuAcousticModel` (the SSOT for the
 /// HU→property fit); the default model *is* the Schneider calibration.
 ///
 /// # Reference
@@ -82,7 +82,7 @@ pub fn hu_to_sound_speed_schneider(hu: &[f64]) -> Vec<f64> {
 /// ρ(HU) = 1000 + 0.96·HU   [kg/m³]
 /// ```
 ///
-/// Thin batch wrapper over the canonical [`HuAcousticModel`].
+/// Thin batch wrapper over the canonical `HuAcousticModel`.
 ///
 /// # Reference
 /// Schneider et al. (1996), *Phys. Med. Biol.* 41, 111.
@@ -101,7 +101,7 @@ pub fn hu_to_density_schneider(hu: &[f64]) -> Vec<f64> {
 /// ```
 ///
 /// # Arguments
-/// * `sigma_phi_rad` – rms phase aberration [rad]
+/// * `sigma_phi_rad` – rms phase aberration `rad`
 ///
 /// # Reference
 /// Maréchal (1947), *Rev. Opt.* 26, 257.
@@ -122,7 +122,7 @@ pub fn strehl_ratio(sigma_phi_rad: f64) -> f64 {
 /// where `α_th = k / (ρ·cₚ)` is the thermal diffusivity [m²/s].
 ///
 /// # Arguments
-/// * `t_arr` – times [s] (t > 0)
+/// * `t_arr` – times `s` (t > 0)
 /// * `heat_flux_w_m2` – surface heat flux q″ [W/m²]
 /// * `k_skull` – thermal conductivity k [W/(m·K)]
 /// * `rho_skull` – skull density [kg/m³]
@@ -164,12 +164,12 @@ pub fn skull_surface_temperature_rise(
 /// `T_p = 2Z₃/(Z₁+Z₃)` as `d → 0`.
 ///
 /// # Arguments
-/// * `f_hz` – frequency [Hz]
+/// * `f_hz` – frequency `Hz`
 /// * `z_water` – acoustic impedance of water [Pa·s/m]
 /// * `z_skull` – acoustic impedance of skull [Pa·s/m]
 /// * `z_brain` – acoustic impedance of brain [Pa·s/m]
 /// * `c_skull` – sound speed in skull [m/s]
-/// * `d_skull_m` – skull thickness [m]
+/// * `d_skull_m` – skull thickness `m`
 ///
 /// # Reference
 /// Brekhovskikh (1980) *Waves in Layered Media*, §1.5;

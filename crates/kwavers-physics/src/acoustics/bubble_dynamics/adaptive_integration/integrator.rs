@@ -56,7 +56,7 @@ where
     /// `t` never advances, `substeps` never increments, and the while condition
     /// `substeps < max_substeps` is never false.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn integrate_adaptive(
         &mut self,
@@ -215,7 +215,7 @@ where
 
     /// Perform a single RK4 step
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     fn step_rk4(
         &self,

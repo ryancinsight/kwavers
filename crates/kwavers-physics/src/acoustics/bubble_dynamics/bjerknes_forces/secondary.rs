@@ -34,7 +34,7 @@ impl BjerknesCalculator {
     /// - Bjerknes V (1906). *Fields of Force*. Columbia UP.
     /// - Leighton TG (1994). *The Acoustic Bubble*. Academic Press. §3.4.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn secondary_bjerknes_force(
         &self,
@@ -117,7 +117,7 @@ impl BjerknesCalculator {
 
     /// Calculate combined primary and secondary Bjerknes forces
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     #[allow(clippy::too_many_arguments)]
     pub fn total_bjerknes_force(

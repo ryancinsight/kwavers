@@ -6,10 +6,10 @@ use pyo3::prelude::*;
 /// Klein–Cook parameter Q = 2π λ₀ L / (n Λ²).
 ///
 /// Args:
-///     optical_wavelength_m: Vacuum optical wavelength λ₀ [m].
-///     interaction_length_m: Sound-column width L [m].
+///     optical_wavelength_m: Vacuum optical wavelength λ₀ `m`.
+///     interaction_length_m: Sound-column width L `m`.
 ///     refractive_index: Medium refractive index n.
-///     acoustic_wavelength_m: Acoustic wavelength Λ [m].
+///     acoustic_wavelength_m: Acoustic wavelength Λ `m`.
 ///
 /// Returns:
 ///     Klein–Cook parameter Q (dimensionless).

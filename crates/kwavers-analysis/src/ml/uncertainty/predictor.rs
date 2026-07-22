@@ -14,7 +14,7 @@ pub trait PinnUncertaintyPredictor {
     /// Predict output values from a two-column `[x, t]` input matrix.
     ///
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] when fewer than two columns are
+    /// - Returns `KwaversError::InvalidInput` when fewer than two columns are
     ///   provided.
     /// - Propagates backend/model prediction failures.
     fn predict_inputs(&self, inputs: &Array2<f32>) -> KwaversResult<Array2<f32>> {

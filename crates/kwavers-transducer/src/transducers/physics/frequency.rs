@@ -60,7 +60,7 @@ impl FrequencyResponse {
     /// * `electrical_q` - Electrical quality factor
     /// * `num_points` - Number of frequency points
     /// # Errors
-    /// - Returns [`KwaversError::Config`] if the precondition for a Config-class constraint is violated.
+    /// - Returns `KwaversError::Config` if the precondition for a Config-class constraint is violated.
     ///
     pub fn from_klm_model(
         center_freq: f64,

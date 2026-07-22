@@ -77,10 +77,10 @@ pub fn mutual_radiation_impedance(
 ///
 /// `positions` are the element centres \[m\] (3-D, for conformal arrays); `areas`
 /// the per-element face areas \[m²\] (must match `positions` in length). Entry
-/// `Z[i][j]` (`i≠j`) is [`mutual_radiation_impedance`]; the **diagonal is zero**
+/// `Z`i``J`` (`i≠j`) is [`mutual_radiation_impedance`]; the **diagonal is zero**
 /// — this is the *cross*-coupling matrix, the self radiation impedance is a
 /// separate single-element property. The matrix is complex-symmetric
-/// (`Z[i][j] = Z[j][i]`, reciprocity).
+/// (`Z`i``J` = Z`J``i``, reciprocity).
 ///
 /// Returns an empty matrix if `positions`/`areas` lengths disagree.
 #[must_use]
@@ -107,7 +107,7 @@ pub fn crosstalk_matrix(
     z
 }
 
-/// Euclidean centre-to-centre distance between two element positions [m].
+/// Euclidean centre-to-centre distance between two element positions `m`.
 #[inline]
 #[must_use]
 fn separation(a: [f64; 3], b: [f64; 3]) -> f64 {

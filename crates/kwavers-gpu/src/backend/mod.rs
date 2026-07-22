@@ -106,7 +106,7 @@ impl GPUBackend<WgpuComputeProvider> {
     ///
     /// Returns error if no suitable backend is available.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn new() -> KwaversResult<Self> {
         WgpuComputeProvider::new().map(Self::from_provider)

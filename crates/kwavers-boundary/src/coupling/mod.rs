@@ -44,7 +44,7 @@
 //! ### Gradient Computation
 //! ```text
 //! Interior: ∂u/∂x ≈ (u[i+1] - u[i-1]) / (2Δx)    [O(Δx²)]
-//! Boundary: ∂u/∂x ≈ (u[i+1] - u[i]) / Δx          [O(Δx)]
+//! Boundary: ∂u/∂x ≈ (u[i+1] - u`i`) / Δx          [O(Δx)]
 //! ```
 //!
 //! ### Energy Conservation

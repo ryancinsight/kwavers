@@ -89,7 +89,7 @@ impl NeuralBeamformingProcessor {
 
     /// Process a frame-major RF volume without copying the input buffer.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub(crate) fn process_volume_view(
         &mut self,

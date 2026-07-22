@@ -20,7 +20,7 @@ impl WaveEquationGpu<WgpuAcousticFieldProvider> {
     /// Create new WGPU wave equation solver.
     ///
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     pub async fn new() -> KwaversResult<Self> {
         Self::try_new()
     }
@@ -28,7 +28,7 @@ impl WaveEquationGpu<WgpuAcousticFieldProvider> {
     /// Create new WGPU wave equation solver synchronously.
     ///
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     pub fn try_new() -> KwaversResult<Self> {
         Ok(Self {
             kernel: AcousticFieldKernel::try_new()?,
@@ -70,8 +70,8 @@ where
     /// performs the same arithmetic in the same order for each interior cell.
     ///
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any `KwaversError` returned by called functions.
     pub fn step(
         &self,
         pressure: &LetoArray3<f32>,

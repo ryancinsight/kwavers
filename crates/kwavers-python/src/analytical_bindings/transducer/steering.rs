@@ -12,12 +12,12 @@ use pyo3::prelude::*;
 /// z ≲ N.
 ///
 /// Args:
-///     aperture_m: Full aperture width D [m].
-///     freq_hz: Frequency [Hz].
+///     aperture_m: Full aperture width D `m`.
+///     freq_hz: Frequency `Hz`.
 ///     c: Sound speed [m/s].
 ///
 /// Returns:
-///     Natural-focus range N [m].
+///     Natural-focus range N `m`.
 #[pyfunction]
 #[pyo3(signature = (aperture_m, freq_hz, c))]
 pub fn near_field_distance(aperture_m: f64, freq_hz: f64, c: f64) -> f64 {
@@ -30,11 +30,11 @@ pub fn near_field_distance(aperture_m: f64, freq_hz: f64, c: f64) -> f64 {
 /// the arc of constant focal range.
 ///
 /// Args:
-///     focal_range_m: Focal range R [m].
-///     steer_rad: Steering angle from the array normal [rad].
+///     focal_range_m: Focal range R `m`.
+///     steer_rad: Steering angle from the array normal `rad`.
 ///
 /// Returns:
-///     (x_f, z_f) — focal point [m].
+///     (x_f, z_f) — focal point `m`.
 #[pyfunction]
 #[pyo3(signature = (focal_range_m, steer_rad))]
 pub fn steering_focus_point(focal_range_m: f64, steer_rad: f64) -> (f64, f64) {
@@ -48,14 +48,14 @@ pub fn steering_focus_point(focal_range_m: f64, steer_rad: f64) -> (f64, f64) {
 /// (`near_field_distance`) to focus around the natural focus.
 ///
 /// Args:
-///     elem_x: Element x-positions [m].
-///     elem_z: Element z-positions [m].
-///     focal_range_m: Focal range R [m].
-///     steer_rad: Steering angle from the array normal [rad].
+///     elem_x: Element x-positions `m`.
+///     elem_z: Element z-positions `m`.
+///     focal_range_m: Focal range R `m`.
+///     steer_rad: Steering angle from the array normal `rad`.
 ///     c: Sound speed [m/s].
 ///
 /// Returns:
-///     Delay array [s], same length as elem_x.
+///     Delay array `s`, same length as elem_x.
 #[pyfunction]
 #[pyo3(signature = (elem_x, elem_z, focal_range_m, steer_rad, c))]
 pub fn delay_law_steer_2d(
@@ -85,12 +85,12 @@ pub fn delay_law_steer_2d(
 ///
 /// Args:
 ///     n: Number of elements (matched to the uniform array).
-///     aperture_m: Full aperture width [m].
+///     aperture_m: Full aperture width `m`.
 ///     jitter_frac: Dither amplitude as a fraction of the element pitch
 ///         (0 reproduces the uniform layout; ~1.0 suppresses grating lobes).
 ///
 /// Returns:
-///     Element x-positions [m], length n, centred at the origin.
+///     Element x-positions `m`, length n, centred at the origin.
 #[pyfunction]
 #[pyo3(signature = (n, aperture_m, jitter_frac))]
 pub fn linear_array_aperiodic_positions(
@@ -113,10 +113,10 @@ pub fn linear_array_aperiodic_positions(
 /// ka_elem. P peaks at theta_s; coherent secondary peaks are grating lobes.
 ///
 /// Args:
-///     elem_x: Element x-positions [m].
-///     obs_theta: Observation angles [rad], from broadside.
+///     elem_x: Element x-positions `m`.
+///     obs_theta: Observation angles `rad`, from broadside.
 ///     k: Wavenumber 2*pi*f/c [rad/m].
-///     steer_theta: Steering angle [rad], from broadside.
+///     steer_theta: Steering angle `rad`, from broadside.
 ///     ka_elem: Element directivity parameter k*a_elem.
 ///
 /// Returns:
@@ -153,12 +153,12 @@ pub fn steered_beam_pattern_1d(
 /// aperiodic aperture keeps G low over a much wider range.
 ///
 /// Args:
-///     elem_x: Element x-positions [m].
-///     steer_theta: Steering-angle grid [rad].
-///     obs_theta: Observation-angle grid [rad] for the lobe search.
+///     elem_x: Element x-positions `m`.
+///     steer_theta: Steering-angle grid `rad`.
+///     obs_theta: Observation-angle grid `rad` for the lobe search.
 ///     k: Wavenumber 2*pi*f/c [rad/m].
 ///     ka_elem: Element directivity parameter k*a_elem.
-///     mainlobe_halfwidth_rad: Half-width of the main-lobe exclusion window [rad].
+///     mainlobe_halfwidth_rad: Half-width of the main-lobe exclusion window `rad`.
 ///
 /// Returns:
 ///     Grating-lobe ratio at each steer_theta.
@@ -198,12 +198,12 @@ pub fn steering_grating_lobe_ratio_1d(
 /// the steering-envelope expansion from sparse activation.
 ///
 /// Args:
-///     steer_theta: Steering-angle grid [rad] (monotonically increasing).
+///     steer_theta: Steering-angle grid `rad` (monotonically increasing).
 ///     glr: Grating-lobe ratio at each steer_theta.
 ///     threshold: Grating-lobe safety threshold (e.g. 0.5).
 ///
 /// Returns:
-///     Safe steering half-angle [rad].
+///     Safe steering half-angle `rad`.
 #[pyfunction]
 #[pyo3(signature = (steer_theta, glr, threshold))]
 pub fn safe_steering_halfangle(
@@ -228,9 +228,9 @@ pub fn safe_steering_halfangle(
 /// (element directivity + projected-aperture loss + grating-lobe roll-off).
 ///
 /// Args:
-///     dr_lat_m: Lateral steering offset from the mechanical focus [m].
-///     dr_ax_m: Axial steering offset from the mechanical focus [m].
-///     f0_hz: Drive frequency [Hz].
+///     dr_lat_m: Lateral steering offset from the mechanical focus `m`.
+///     dr_ax_m: Axial steering offset from the mechanical focus `m`.
+///     f0_hz: Drive frequency `Hz`.
 ///     c_m_s: Medium sound speed [m/s].
 ///     apodized: Whether cos-theta apodization is applied (wider window).
 ///

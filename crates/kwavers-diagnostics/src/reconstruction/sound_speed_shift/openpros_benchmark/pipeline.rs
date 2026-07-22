@@ -17,7 +17,7 @@ use super::types::{
 /// Build the deterministic OpenPros-style limited-view benchmark case.
 ///
 /// # Errors
-/// Returns [`KwaversError`] when the reduced fixture configuration would create
+/// Returns `KwaversError` when the reduced fixture configuration would create
 /// an invalid grid, acquisition, sparse sampling policy, or waveform contract.
 pub fn openpros_shift_benchmark_case(
     config: &OpenProsShiftBenchmarkConfig,
@@ -55,7 +55,7 @@ pub fn openpros_shift_benchmark_case(
 /// both branches use the existing fixed-acquisition reconstruction plan.
 ///
 /// # Errors
-/// Returns [`KwaversError`] when benchmark construction or either
+/// Returns `KwaversError` when benchmark construction or either
 /// reconstruction branch violates the underlying speed-shift contracts.
 pub fn run_openpros_shift_benchmark(
     config: &OpenProsShiftBenchmarkConfig,

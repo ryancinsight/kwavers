@@ -21,7 +21,7 @@ pub struct TreatmentPlanner {
 impl TreatmentPlanner {
     /// Create new treatment planner
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn new(brain_grid: &Grid, skull_ct_data: &Array3<f64>) -> KwaversResult<Self> {
         Ok(Self {
@@ -32,7 +32,7 @@ impl TreatmentPlanner {
 
     /// Generate treatment plan for target volumes
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn generate_plan(
         &self,

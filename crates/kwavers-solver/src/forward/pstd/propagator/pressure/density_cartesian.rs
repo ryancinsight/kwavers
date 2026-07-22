@@ -268,9 +268,9 @@ impl PSTDSolver {
     /// **Fused PML + density update**: when `self.pml_exp` is populated (CPML boundary,
     /// no Dirichlet bypass), the split-field PML is applied inline:
     /// ```text
-    ///   ρ_x^{n+1}[i,j,k] = p[i] · (p[i] · ρ_x^n − Δt · coef · ∂u_x/∂x)
+    ///   ρ_x^{n+1}[i,j,k] = p`i` · (p`i` · ρ_x^n − Δt · coef · ∂u_x/∂x)
     /// ```
-    /// where `p[i] = pml_den_x[i] = exp(-σ_x[i]·Δt/2)`.  This replaces the previous
+    /// where `p`i` = pml_den_x`i` = exp(-σ_x`i`·Δt/2)`.  This replaces the previous
     /// `apply_pml_to_density()` pre/post calls with a single Zip pass per density component,
     /// saving 2 × N element writes per axis per step (6 passes eliminated for 3D).
     ///

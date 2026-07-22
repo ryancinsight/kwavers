@@ -151,11 +151,11 @@ impl PSTDSolver {
     ///
     /// # Equations: split-field PML (Treeby & Cox 2010, Eq. 16)
     /// ```text
-    /// rhox^{n+1}[i,k] = pml_x[i] · (pml_x[i] · rhox^n − Δt · coef · ∂ux/∂x)
-    /// rhoz^{n+1}[i,k] = pml_z[k] · (pml_z[k] · rhoz^n − Δt · coef · (∂ur/∂r + ur/r))
+    /// rhox^{n+1}[i,k] = pml_x`i` · (pml_x`i` · rhox^n − Δt · coef · ∂ux/∂x)
+    /// rhoz^{n+1}[i,k] = pml_z`K` · (pml_z`K` · rhoz^n − Δt · coef · (∂ur/∂r + ur/r))
     /// ```
-    /// where `pml_x[i] = exp(-σ_x[i]·Δt/2)` (collocated sigma) and
-    ///       `pml_z[k] = exp(-σ_z[k]·Δt/2)` (collocated sigma, r-axis mapped to z).
+    /// where `pml_x`i` = exp(-σ_x`i`·Δt/2)` (collocated sigma) and
+    ///       `pml_z`K` = exp(-σ_z`K`·Δt/2)` (collocated sigma, r-axis mapped to z).
     ///
     /// Linear: `coef = ρ₀`.  Nonlinear (Westervelt): `coef = ρ₀ + 2·(ρx + ρz)`.
     ///

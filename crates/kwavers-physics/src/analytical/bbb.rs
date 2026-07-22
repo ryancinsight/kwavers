@@ -20,7 +20,7 @@
 /// P(D) = D^n / (D₅₀^n + D^n)
 /// ```
 ///
-/// D is the cumulative acoustic dose (e.g., MI² × t_on [s]), D₅₀ is the dose
+/// D is the cumulative acoustic dose (e.g., MI² × t_on `s`), D₅₀ is the dose
 /// at half-maximum opening, and n is the Hill coefficient controlling steepness.
 /// Output is normalised to [0, 1] where 1.0 represents maximum permeability
 /// enhancement (~10× baseline Evans-blue extravasation).
@@ -84,8 +84,8 @@ pub fn bbb_inertial_damage_probability(
 /// ```
 ///
 /// # Arguments
-/// * `t_h` – time post-sonication [hours]
-/// * `tau_close` – characteristic closing time constant [hours]
+/// * `t_h` – time post-sonication `hours`
+/// * `tau_close` – characteristic closing time constant `hours`
 /// * `perm_peak` – peak permeability at t = 0 (normalised, ≤ 1.0)
 ///
 /// # Reference
@@ -106,7 +106,7 @@ pub fn bbb_closure_kinetics(t_h: &[f64], tau_close: f64, perm_peak: f64) -> Vec<
 /// Single-scattering model with MB-layer self-attenuation:
 /// ```text
 /// N_V       = c_mb × 10⁹   [m⁻³]   (µL gas/mL → approximate number density)
-/// σ_ext     = 2 · σ_bs      [m²]    (extinction ≈ 2× backscatter, resonant MBs)
+/// σ_ext     = 2 · σ_bs      `m²`    (extinction ≈ 2× backscatter, resonant MBs)
 /// I_bs(c)   = σ_bs · N_V · exp(−2 · σ_ext · N_V · thickness)
 /// ```
 ///
@@ -115,8 +115,8 @@ pub fn bbb_closure_kinetics(t_h: &[f64], tau_close: f64, perm_peak: f64) -> Vec<
 ///
 /// # Arguments
 /// * `c_mb_ul_ml`  – MB gas concentration [µL gas / mL tissue]
-/// * `sigma_bs_m2` – backscatter cross-section per bubble [m²]
-/// * `thickness_m` – tissue layer thickness [m]
+/// * `sigma_bs_m2` – backscatter cross-section per bubble `m²`
+/// * `thickness_m` – tissue layer thickness `m`
 ///
 /// # Reference
 /// de Jong et al. (1991) *Ultrasound Med. Biol.* 17(2), 157–169.

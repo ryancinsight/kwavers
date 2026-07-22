@@ -6,7 +6,7 @@ use super::{AbsorptionStatistics, SpatiallyVaryingAbsorption};
 impl SpatiallyVaryingAbsorption {
     /// Update temperature.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn update_temperature(&mut self, temperature_field: Array3<f64>) -> KwaversResult<()> {
         if temperature_field.shape() != self.alpha_0_field.shape() {
@@ -19,7 +19,7 @@ impl SpatiallyVaryingAbsorption {
     }
     /// Set region.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn set_region(
         &mut self,
@@ -125,7 +125,7 @@ impl SpatiallyVaryingAbsorption {
     }
     /// Validate.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn validate(&self) -> KwaversResult<()> {
         if self

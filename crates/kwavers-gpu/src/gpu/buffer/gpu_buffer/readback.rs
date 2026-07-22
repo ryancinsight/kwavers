@@ -34,8 +34,8 @@ impl GpuBufferData {
     /// Returns `Ok(Vec<T>)` with buffer contents, or an error if read fails.
     ///
     /// # Errors
-    /// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns `KwaversError::System` if the precondition for a System-class constraint is violated.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub async fn read_to_vec<T: bytemuck::Pod>(
         &self,
@@ -153,9 +153,9 @@ impl GpuBufferData {
     /// caller to own an async runtime.
     ///
     /// # Errors
-    /// - Returns [`KwaversError::System`] if the readback preconditions are
+    /// - Returns `KwaversError::System` if the readback preconditions are
     ///   violated.
-    /// - Propagates any [`KwaversError`] returned by GPU readback.
+    /// - Propagates any `KwaversError` returned by GPU readback.
     pub fn read_to_vec_in_context<T: bytemuck::Pod>(
         &self,
         context: &CoreGpuContext,
@@ -167,9 +167,9 @@ impl GpuBufferData {
     /// caller to own an async runtime.
     ///
     /// # Errors
-    /// - Returns [`KwaversError::System`] if the readback preconditions are
+    /// - Returns `KwaversError::System` if the readback preconditions are
     ///   violated.
-    /// - Propagates any [`KwaversError`] returned by GPU readback.
+    /// - Propagates any `KwaversError` returned by GPU readback.
     pub fn read_to_vec_on_device<T: bytemuck::Pod>(
         &self,
         device: &GpuDevice,

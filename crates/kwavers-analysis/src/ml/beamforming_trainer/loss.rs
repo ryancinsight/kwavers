@@ -13,7 +13,7 @@ use leto::SliceArg;
 impl BeamformingTrainer {
     /// Compute loss for entire epoch (simplified implementation)
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub(super) fn compute_epoch_loss(&self, dataset: &TrainingDataset) -> KwaversResult<f64> {
         let mut total_loss = 0.0;

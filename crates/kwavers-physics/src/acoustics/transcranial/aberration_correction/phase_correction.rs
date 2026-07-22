@@ -54,7 +54,7 @@ use log::info;
 pub struct PhaseCorrection {
     /// Correction phases for each transducer element (radians).
     ///
-    /// `phases[i] = −Δφ_i` so that the transmitted signal `A · e^{i·phases[i]}`
+    /// `phases`i` = −Δφ_i` so that the transmitted signal `A · e^{i·phases`i`}`
     /// arrives at the target with zero residual phase aberration.
     pub phases: Vec<f64>,
     /// Element amplitude weights (dimensionless, nominally 1.0).
@@ -113,7 +113,7 @@ impl TranscranialAberrationCorrection {
     /// ## References
     /// - Clement & Hynynen (2002) §II.A. Phase-screen model.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn calculate_correction(
         &self,

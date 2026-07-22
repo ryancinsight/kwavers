@@ -169,7 +169,7 @@ impl SensorBeamformer {
     /// Compute the complex array manifold (steering) matrix.
     ///
     /// Returns an `(n_sensors × n_angles)` matrix. Column `k` is the array manifold
-    /// vector for direction `angles[k] = (θ, φ)`:
+    /// vector for direction `angles`K` = (θ, φ)`:
     /// ```text
     /// v(θ, φ) = [exp(−j kᵀ p₁), …, exp(−j kᵀ p_N)]ᵀ
     /// ```

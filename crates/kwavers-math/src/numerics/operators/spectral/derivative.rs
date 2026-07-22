@@ -68,8 +68,8 @@ impl PseudospectralDerivative {
 
     /// Generate wavenumber vector for FFT.
     ///
-    /// k[i] = 2π·i / (N·d)        for i = 0..N/2
-    /// k[i] = 2π·(i−N) / (N·d)   for i = N/2..N
+    /// k`i` = 2π·i / (N·d)        for i = 0..N/2
+    /// k`i` = 2π·(i−N) / (N·d)   for i = N/2..N
     pub(super) fn wavenumber_vector(n: usize, d: f64) -> Array1<f64> {
         let mut k = Array1::zeros([n]);
         let dk = TWO_PI / ((n as f64) * d);

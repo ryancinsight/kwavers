@@ -9,8 +9,8 @@ use pyo3::prelude::*;
 /// and transverse aperture diameter `D_t` (book Ch34, Li et al. 2022).
 ///
 /// Args:
-///     radius_m: Radius of curvature r [m].
-///     transverse_diameter_m: Transverse aperture diameter D_t [m].
+///     radius_m: Radius of curvature r `m`.
+///     transverse_diameter_m: Transverse aperture diameter D_t `m`.
 ///
 /// Returns:
 ///     Numerical aperture NA (dimensionless).
@@ -38,9 +38,9 @@ pub fn f_number_from_na(na: f64) -> f64 {
 /// source — source-mechanism-agnostic (O'Neil 1949).
 ///
 /// Args:
-///     freq_hz: Acoustic centre frequency f [Hz].
+///     freq_hz: Acoustic centre frequency f `Hz`.
 ///     c0: Ambient sound speed c0 [m/s].
-///     radius_m: Radius of curvature r [m].
+///     radius_m: Radius of curvature r `m`.
 ///     f_number: f-number f_N (dimensionless).
 ///
 /// Returns:
@@ -57,10 +57,10 @@ pub fn soap_focal_gain(freq_hz: f64, c0: f64, radius_m: f64, f_number: f64) -> f
 /// Args:
 ///     sound_speed: Sound speed ν [m/s].
 ///     na: Numerical aperture (dimensionless).
-///     freq_hz: Acoustic centre frequency f [Hz].
+///     freq_hz: Acoustic centre frequency f `Hz`.
 ///
 /// Returns:
-///     Lateral resolution R_L [m].
+///     Lateral resolution R_L `m`.
 #[pyfunction]
 #[pyo3(signature = (sound_speed, na, freq_hz))]
 pub fn acoustic_resolution_lateral(sound_speed: f64, na: f64, freq_hz: f64) -> f64 {

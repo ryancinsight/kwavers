@@ -14,9 +14,9 @@ use rand_chacha::ChaCha8Rng;
 /// series.
 ///
 /// ```text
-///   D[m] = Σ_{i=1..m} ½·(P[i−1] + P[i])·Δt        [emission-power·s]
+///   D`m` = Σ_{i=1..m} ½·(P[i−1] + P`i`)·Δt        [emission-power·s]
 /// ```
-/// `power_arr[k]` is the band emission power measured in the k-th monitoring
+/// `power_arr`K`` is the band emission power measured in the k-th monitoring
 /// window (e.g. the stable emission `sub + ultra`, or the broadband emission)
 /// and `dt_s` is the window duration. The returned array is the running dose,
 /// the same length as `power_arr`, with `D[0] = 0` (no elapsed time yet).
@@ -47,7 +47,7 @@ pub fn cumulative_cavitation_dose(power_arr: &[f64], dt_s: f64) -> Vec<f64> {
 /// Rust-owned dose traces for the Chapter 23 passive-cavitation dose panel.
 #[derive(Clone, Debug, PartialEq)]
 pub struct PassiveCavitationDoseFixture {
-    /// Treatment-time samples [s].
+    /// Treatment-time samples `s`.
     pub time_s: Vec<f64>,
     /// Normalized stable-cavitation cumulative dose.
     pub stable_dose: Vec<f64>,
@@ -376,15 +376,15 @@ fn first_ratio_crossing(
 /// `gain` is the fractional step per burst (e.g. 0.05–0.1).
 ///
 /// # Arguments
-/// * `current_p_pa`     – drive pressure applied on the just-monitored burst [Pa]
+/// * `current_p_pa`     – drive pressure applied on the just-monitored burst `Pa`
 /// * `stable_emission`  – measured sub+ultra-harmonic emission this burst
 /// * `inertial_emission`– measured broadband emission this burst
 /// * `stable_target`    – stable-emission set-point (recruit up to this level)
 /// * `inertial_limit`   – broadband-emission ceiling (never exceed)
 /// * `gain`             – fractional pressure step per burst (≥ 0)
-/// * `p_min_pa`, `p_max_pa` – drive-pressure clamp [Pa]
+/// * `p_min_pa`, `p_max_pa` – drive-pressure clamp `Pa`
 ///
-/// Returns the drive pressure for the next burst [Pa].
+/// Returns the drive pressure for the next burst `Pa`.
 ///
 /// # Reference
 /// McDannold N. et al. (2006) *Phys. Med. Biol.* 51, 793.

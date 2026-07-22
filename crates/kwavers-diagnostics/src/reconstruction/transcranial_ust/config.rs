@@ -33,7 +33,7 @@ pub struct TranscranialUstBornInversionConfig {
     pub linear: LinearBornInversionConfig,
     /// Number of array elements placed on the transcranial focused bowl.
     pub element_count: usize,
-    /// Transcranial focused-bowl radius around the CT volume center [m].
+    /// Transcranial focused-bowl radius around the CT volume center `m`.
     pub radius_m: f64,
     /// Source-domain focused-bowl aperture.
     pub aperture: BowlAngularBounds,

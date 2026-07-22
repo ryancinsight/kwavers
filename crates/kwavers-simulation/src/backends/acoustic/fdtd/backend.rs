@@ -36,7 +36,7 @@ impl FdtdBackend {
     /// Configures the solver with CFL-stable time step, PML absorbing boundaries,
     /// and the specified spatial accuracy order.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn new(
         grid: &Grid,
@@ -102,7 +102,7 @@ impl FdtdBackend {
     /// Samples an 8×8×8 sparse grid for efficiency. Over-estimating c_max
     /// is conservative: it produces a smaller (more stable) dt.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub(crate) fn estimate_max_sound_speed(medium: &dyn Medium, grid: &Grid) -> KwaversResult<f64> {
         const SAMPLE_POINTS: usize = 8;

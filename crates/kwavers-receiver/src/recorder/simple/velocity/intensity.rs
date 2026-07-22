@@ -66,7 +66,7 @@ impl SensorRecorder {
 
     /// Time-averaged x-intensity: `<p * ux>_t`.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     #[must_use]
     pub fn extract_i_avg_x(&self) -> Option<Array1<f64>> {
@@ -85,7 +85,7 @@ impl SensorRecorder {
 
     /// Time-averaged y-intensity: `<p * uy>_t`.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     #[must_use]
     pub fn extract_i_avg_y(&self) -> Option<Array1<f64>> {
@@ -102,7 +102,7 @@ impl SensorRecorder {
 
     /// Time-averaged z-intensity: `<p * uz>_t`.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     #[must_use]
     pub fn extract_i_avg_z(&self) -> Option<Array1<f64>> {

@@ -16,7 +16,7 @@ where
     /// - `channels == nel_x × nel_y × nel_z`.
     /// - `samples ≥ 1`.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub(super) fn validate_input(&self, rf_data: &Array4<f32>) -> KwaversResult<()> {
         let rf_dims = rf_data.shape();
@@ -55,7 +55,7 @@ where
 impl BeamformingProcessor3D {
     /// Validate input RF data dimensions (CPU path — identical contract to GPU version).
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub(super) fn validate_input(&self, rf_data: &Array4<f32>) -> KwaversResult<()> {
         if rf_data.is_empty() {

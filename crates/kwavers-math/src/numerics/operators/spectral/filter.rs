@@ -76,7 +76,7 @@ impl SpectralFilter {
     ///
     /// # Errors
     ///
-    /// Returns [`KwaversError::InvalidInput`] for empty arrays or invalid cutoff
+    /// Returns `KwaversError::InvalidInput` for empty arrays or invalid cutoff
     /// values.
     pub fn apply(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
         let shape = field.shape();
@@ -100,14 +100,14 @@ impl SpectralFilter {
     /// ```text
     /// out ← field
     /// spectrum ← FFT(out)
-    /// spectrum[k] ← H(k) · spectrum[k]
+    /// spectrum`K` ← H(k) · spectrum`K`
     /// out ← IFFT(spectrum)
     /// ```
     ///
     /// # Errors
     ///
     /// Returns [`KwaversError::DimensionMismatch`] when either workspace does
-    /// not match `field.shape()`, and [`KwaversError::InvalidInput`] for invalid
+    /// not match `field.shape()`, and `KwaversError::InvalidInput` for invalid
     /// cutoff values.
     pub fn apply_into(
         &self,

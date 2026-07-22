@@ -31,8 +31,8 @@ impl TetrahedralMesh {
     /// [`MeshBoundaryType::Interior`] because they do not define a mathematical
     /// boundary condition by themselves.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn from_gaia_indexed_mesh(mesh: &IndexedMesh<f64>) -> KwaversResult<Self> {
         validate_gaia_mesh(mesh)?;

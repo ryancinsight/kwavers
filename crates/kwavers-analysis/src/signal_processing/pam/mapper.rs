@@ -19,7 +19,7 @@ pub struct PassiveAcousticMapper {
 impl PassiveAcousticMapper {
     /// New.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn new(config: PAMConfig, geometry: PamArrayGeometry) -> KwaversResult<Self> {
         config.beamforming.validate()?;
@@ -36,8 +36,8 @@ impl PassiveAcousticMapper {
     }
     /// Process.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn process(
         &mut self,
@@ -170,7 +170,7 @@ impl PassiveAcousticMapper {
     }
     /// Set config.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn set_config(&mut self, config: PAMConfig) -> KwaversResult<()> {
         config.beamforming.validate()?;

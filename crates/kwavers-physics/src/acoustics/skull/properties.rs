@@ -44,7 +44,7 @@ impl AcousticSkullProperties {
     ///
     /// * `bone_type` - "cortical", "trabecular", or "suture"
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn from_bone_type(bone_type: &str) -> KwaversResult<Self> {
         match bone_type {

@@ -6,11 +6,11 @@
 //! # Non-staggered velocity interpolation
 //!
 //! **Theorem (half-cell backward shift).**  The staggered velocity field
-//! `u_stag[i]` is defined at half-integer grid positions `(i + ½)·Δx`.  The
+//! `u_stag`i`` is defined at half-integer grid positions `(i + ½)·Δx`.  The
 //! pressure-grid collocated value at integer position `i·Δx` is
 //!
 //! ```text
-//!   u_ns[i] = (u_stag[i-1] + u_stag[i]) / 2,   i ≥ 1
+//!   u_ns`i` = (u_stag[i-1] + u_stag`i`) / 2,   i ≥ 1
 //!   u_ns[0] = u_stag[0] / 2                      (ghost cell = 0)
 //! ```
 //!
@@ -171,7 +171,7 @@ impl SensorRecorder {
 
 /// Sample a staggered velocity component at a pressure-grid position.
 ///
-/// Applies the half-cell backward interpolation `u_ns[i] = (u[i-1] + u[i]) / 2`
+/// Applies the half-cell backward interpolation `u_ns`i` = (u[i-1] + u`i`) / 2`
 /// with ghost cell = 0 at the lower boundary.  Direct sensor-position evaluation
 /// is algebraically identical to materialising the full collocated field and
 /// sampling it, but eliminates the full-grid transient allocation.

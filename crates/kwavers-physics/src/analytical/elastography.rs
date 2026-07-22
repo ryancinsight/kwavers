@@ -19,7 +19,7 @@ use std::f64::consts::PI;
 /// ```
 ///
 /// # Arguments
-/// * `mu_pa` – shear modulus μ [Pa]
+/// * `mu_pa` – shear modulus μ `Pa`
 /// * `rho` – tissue density [kg/m³]
 ///
 /// # Reference
@@ -59,12 +59,12 @@ pub fn pwave_to_swave_velocity_ratio(poisson_ratio: f64) -> f64 {
 /// Voigt–Kelvin complex shear modulus.
 ///
 /// ```text
-/// G*(ω) = μ + iω·η   [Pa]
+/// G*(ω) = μ + iω·η   `Pa`
 /// ```
 ///
 /// # Arguments
 /// * `omega_arr` – angular frequencies [rad/s]
-/// * `mu_pa` – elastic shear modulus μ [Pa]
+/// * `mu_pa` – elastic shear modulus μ `Pa`
 /// * `eta_pa_s` – viscosity η [Pa·s]
 ///
 /// # Reference
@@ -81,12 +81,12 @@ pub fn voigt_complex_modulus(omega_arr: &[f64], mu_pa: f64, eta_pa_s: f64) -> Ve
 ///
 /// Interpolates between elastic (α = 0) and viscous (α = 1) behaviour:
 /// ```text
-/// G*(ω) = G₀·(iω)^α   [Pa]
+/// G*(ω) = G₀·(iω)^α   `Pa`
 /// ```
 ///
 /// # Arguments
 /// * `omega_arr` – angular frequencies [rad/s]
-/// * `g0` – scale modulus G₀ [Pa]
+/// * `g0` – scale modulus G₀ `Pa`
 /// * `alpha_exp` – power-law exponent α ∈ (0, 1)
 ///
 /// # Reference
@@ -113,8 +113,8 @@ pub fn springpot_complex_modulus(omega_arr: &[f64], g0: f64, alpha_exp: f64) -> 
 /// Derived from `c_s(ω) = √(2·(μ² + ω²η²) / (ρ·(μ + √(μ² + ω²η²))))`.
 ///
 /// # Arguments
-/// * `f_arr` – frequencies [Hz]
-/// * `mu_pa` – elastic shear modulus [Pa]
+/// * `f_arr` – frequencies `Hz`
+/// * `mu_pa` – elastic shear modulus `Pa`
 /// * `eta_pa_s` – viscosity [Pa·s]
 /// * `rho` – density [kg/m³]
 ///
@@ -148,12 +148,12 @@ pub fn voigt_shear_wave_dispersion(f_arr: &[f64], mu_pa: f64, eta_pa_s: f64, rho
 /// Output is a flattened row-major Vec of size `NX × NZ`.
 ///
 /// # Arguments
-/// * `x_arr` – lateral positions [m]
-/// * `z_arr` – depth positions [m]
+/// * `x_arr` – lateral positions `m`
+/// * `z_arr` – depth positions `m`
 /// * `shear_speed` – c_s [m/s]
-/// * `freq_hz` – vibration frequency [Hz]
-/// * `amplitude` – displacement amplitude [m]
-/// * `penetration_depth_m` – 1/e decay depth d_pen [m]
+/// * `freq_hz` – vibration frequency `Hz`
+/// * `amplitude` – displacement amplitude `m`
+/// * `penetration_depth_m` – 1/e decay depth d_pen `m`
 ///
 /// # Reference
 /// Muthupillai et al. (1995), *Science* 269, 1854.

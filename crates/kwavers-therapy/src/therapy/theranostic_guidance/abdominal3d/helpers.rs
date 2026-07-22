@@ -135,7 +135,7 @@ pub(crate) fn index_to_point(
     }
 }
 
-/// Euclidean distance between two 3-D points [m].
+/// Euclidean distance between two 3-D points `m`.
 pub(super) fn distance_3d(a: Point3, b: Point3) -> f64 {
     let dx = a.x_m - b.x_m;
     let dy = a.y_m - b.y_m;

@@ -10,8 +10,8 @@ use pyo3::prelude::*;
 /// MI = |p_neg_pa| / (1e6 * sqrt(f_hz / 1e6))
 ///
 /// Args:
-///     p_neg_pa: Peak negative pressure [Pa].
-///     f_hz: Frequency [Hz].
+///     p_neg_pa: Peak negative pressure `Pa`.
+///     f_hz: Frequency `Hz`.
 ///
 /// Returns:
 ///     Mechanical Index (dimensionless).
@@ -23,11 +23,11 @@ pub fn mechanical_index(p_neg_pa: f64, f_hz: f64) -> PyResult<f64> {
 
 /// Compute the Mechanical Index over a pressure field (array variant).
 ///
-/// Applies MI = |p_field[i]| / (1e6 * sqrt(f_hz / 1e6)) element-wise.
+/// Applies MI = |p_field`i`| / (1e6 * sqrt(f_hz / 1e6)) element-wise.
 ///
 /// Args:
-///     p_field: Peak rarefactional pressure field [Pa], passed as 1-D array.
-///     f_hz: Centre frequency [Hz].
+///     p_field: Peak rarefactional pressure field `Pa`, passed as 1-D array.
+///     f_hz: Centre frequency `Hz`.
 ///
 /// Returns:
 ///     MI array, same length as p_field (dimensionless).
@@ -51,8 +51,8 @@ pub fn mechanical_index_field(
 /// Compute the Mechanical Index for one pressure over a frequency sweep.
 ///
 /// Args:
-///     p_neg_pa: Peak rarefactional pressure threshold [Pa].
-///     f_hz: Centre frequencies [Hz], passed as a 1-D array.
+///     p_neg_pa: Peak rarefactional pressure threshold `Pa`.
+///     f_hz: Centre frequencies `Hz`, passed as a 1-D array.
 ///
 /// Returns:
 ///     MI array, same length as `f_hz`.

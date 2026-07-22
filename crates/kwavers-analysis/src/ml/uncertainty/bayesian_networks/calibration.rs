@@ -11,8 +11,8 @@ impl MlBayesianPINN {
     /// Decomposes total MC-dropout uncertainty into equal epistemic (model) and
     /// aleatoric (data-noise) components following the equal-split heuristic.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if `predictions.len() < 2`.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns `KwaversError::InvalidInput` if `predictions.len() < 2`.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn decompose_uncertainty(
         &self,
@@ -43,7 +43,7 @@ impl MlBayesianPINN {
     /// logs it.  Future implementations may apply the factor to scale dropout
     /// masks.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn calibrate_uncertainty(
         &mut self,

@@ -192,7 +192,7 @@ pub struct PointSensor {
 impl PointSensor {
     /// Create new point sensor with precomputed interpolation data.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn new(config: PointSensorConfig, grid: &Grid) -> KwaversResult<Self> {
         config.validate(grid)?;

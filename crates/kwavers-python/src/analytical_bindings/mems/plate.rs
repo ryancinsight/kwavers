@@ -3,7 +3,7 @@
 use kwavers_transducer::mems::plate;
 use pyo3::prelude::*;
 
-/// Clamped circular plate in-vacuo fundamental resonance [Hz].
+/// Clamped circular plate in-vacuo fundamental resonance `Hz`.
 #[pyfunction]
 pub fn mems_clamped_plate_resonance(
     youngs: f64,
@@ -15,7 +15,7 @@ pub fn mems_clamped_plate_resonance(
     plate::vacuum_resonance(youngs, thickness, poisson, density, radius)
 }
 
-/// Lamb fluid-loaded (immersion) resonance [Hz].
+/// Lamb fluid-loaded (immersion) resonance `Hz`.
 #[pyfunction]
 pub fn mems_immersion_resonance(
     vacuum_freq: f64,

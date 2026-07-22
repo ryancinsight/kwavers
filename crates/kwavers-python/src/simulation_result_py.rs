@@ -25,11 +25,11 @@ pub use kwavers_simulation::{extract_full_grid_stats, SimulationRunResult};
 /// Contains sensor recordings and metadata.
 #[pyclass]
 pub struct SimulationResult {
-    /// 1D sensor data (single sensor) [Pa]
+    /// 1D sensor data (single sensor) `Pa`
     pub(crate) sensor_data_1d: Option<Py<PyArray1<f64>>>,
-    /// 2D sensor data (multi-sensor, shape: n_sensors x n_timesteps) [Pa]
+    /// 2D sensor data (multi-sensor, shape: n_sensors x n_timesteps) `Pa`
     pub(crate) sensor_data_2d: Option<Py<PyArray2<f64>>>,
-    /// Time vector [s]
+    /// Time vector `s`
     #[pyo3(get)]
     pub time: Py<PyArray1<f64>>,
     /// Grid shape (nx, ny, nz)
@@ -41,40 +41,40 @@ pub struct SimulationResult {
     /// Number of time steps
     #[pyo3(get)]
     pub time_steps: usize,
-    /// Time step [s]
+    /// Time step `s`
     #[pyo3(get)]
     pub dt: f64,
-    /// Final simulation time [s]
+    /// Final simulation time `s`
     #[pyo3(get)]
     pub final_time: f64,
-    /// Maximum pressure at each sensor position over all time steps [Pa] (None if not recorded)
+    /// Maximum pressure at each sensor position over all time steps `Pa` (None if not recorded)
     #[pyo3(get)]
     pub p_max: Option<Py<PyArray1<f64>>>,
-    /// Minimum pressure at each sensor position over all time steps [Pa] (None if not recorded)
+    /// Minimum pressure at each sensor position over all time steps `Pa` (None if not recorded)
     #[pyo3(get)]
     pub p_min: Option<Py<PyArray1<f64>>>,
-    /// RMS pressure at each sensor position over all time steps [Pa] (None if not recorded)
+    /// RMS pressure at each sensor position over all time steps `Pa` (None if not recorded)
     #[pyo3(get)]
     pub p_rms: Option<Py<PyArray1<f64>>>,
-    /// Final pressure at each sensor position [Pa] (None if not recorded)
+    /// Final pressure at each sensor position `Pa` (None if not recorded)
     #[pyo3(get)]
     pub p_final: Option<Py<PyArray1<f64>>>,
 
-    /// Full-grid peak compressional pressure [Pa] over all time steps —
+    /// Full-grid peak compressional pressure `Pa` over all time steps —
     /// shape `(nx, ny, nz)`. None unless a `p_*` recording mode was set.
     #[pyo3(get)]
     pub p_max_field: Option<Py<PyArray3<f64>>>,
-    /// Full-grid peak rarefactional pressure [Pa] (most-negative
+    /// Full-grid peak rarefactional pressure `Pa` (most-negative
     /// pressure per voxel) over all time steps. Shape `(nx, ny, nz)`.
     /// This is the canonical cavitation-kernel field: feed it through
     /// the Maxwell-2013 erf-CDF to obtain per-voxel intrinsic-threshold
     /// cavitation probability.
     #[pyo3(get)]
     pub p_min_field: Option<Py<PyArray3<f64>>>,
-    /// Full-grid RMS pressure [Pa]. Shape `(nx, ny, nz)`.
+    /// Full-grid RMS pressure `Pa`. Shape `(nx, ny, nz)`.
     #[pyo3(get)]
     pub p_rms_field: Option<Py<PyArray3<f64>>>,
-    /// Full-grid final-time pressure snapshot [Pa]. Shape `(nx, ny, nz)`.
+    /// Full-grid final-time pressure snapshot `Pa`. Shape `(nx, ny, nz)`.
     #[pyo3(get)]
     pub p_final_field: Option<Py<PyArray3<f64>>>,
 

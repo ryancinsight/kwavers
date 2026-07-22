@@ -21,11 +21,11 @@ use eunomia::Complex64;
 /// generalized-Maxwell / fractional models).
 #[derive(Debug, Clone, Copy)]
 pub struct ZenerModel {
-    /// Relaxed (low-frequency, ω→0) shear modulus `G_r` \[Pa].
+    /// Relaxed (low-frequency, ω→0) shear modulus `G_r` \`Pa`.
     relaxed_modulus: f64,
-    /// Unrelaxed (high-frequency, ω→∞) shear modulus `G_u ≥ G_r` \[Pa].
+    /// Unrelaxed (high-frequency, ω→∞) shear modulus `G_u ≥ G_r` \`Pa`.
     unrelaxed_modulus: f64,
-    /// Relaxation time `τ` \[s].
+    /// Relaxation time `τ` \`s`.
     relaxation_time: f64,
     /// Mass density `ρ` \[kg·m⁻³].
     density: f64,
@@ -56,7 +56,7 @@ impl ZenerModel {
         }
     }
 
-    /// Complex shear modulus `G*(ω)` \[Pa].
+    /// Complex shear modulus `G*(ω)` \`Pa`.
     #[must_use]
     pub fn complex_modulus(&self, omega: f64) -> Complex64 {
         let wt = omega * self.relaxation_time;
@@ -65,7 +65,7 @@ impl ZenerModel {
         Complex64::new(self.relaxed_modulus, 0.0) + delta * maxwell
     }
 
-    /// Storage modulus `G'(ω)` \[Pa] — rises monotonically from `G_r` to `G_u`.
+    /// Storage modulus `G'(ω)` \`Pa` — rises monotonically from `G_r` to `G_u`.
     #[must_use]
     pub fn storage_modulus(&self, omega: f64) -> f64 {
         let wt = omega * self.relaxation_time;
@@ -73,14 +73,14 @@ impl ZenerModel {
             + (self.unrelaxed_modulus - self.relaxed_modulus) * (wt * wt) / (1.0 + wt * wt)
     }
 
-    /// Loss modulus `G''(ω)` \[Pa] — Debye peak at `ωτ = 1`.
+    /// Loss modulus `G''(ω)` \`Pa` — Debye peak at `ωτ = 1`.
     #[must_use]
     pub fn loss_modulus(&self, omega: f64) -> f64 {
         let wt = omega * self.relaxation_time;
         (self.unrelaxed_modulus - self.relaxed_modulus) * wt / (1.0 + wt * wt)
     }
 
-    /// Frequency \[Hz] of the loss (`G''`) peak, where `ωτ = 1`.
+    /// Frequency \`Hz` of the loss (`G''`) peak, where `ωτ = 1`.
     #[must_use]
     pub fn loss_peak_frequency(&self) -> f64 {
         1.0 / (core::f64::consts::TAU * self.relaxation_time)
@@ -123,19 +123,19 @@ impl ZenerModel {
         (ratio.sqrt() * omega).im.abs()
     }
 
-    /// Relaxed (low-frequency) shear modulus `G_r` \[Pa].
+    /// Relaxed (low-frequency) shear modulus `G_r` \`Pa`.
     #[must_use]
     pub fn relaxed_modulus(&self) -> f64 {
         self.relaxed_modulus
     }
 
-    /// Unrelaxed (high-frequency) shear modulus `G_u` \[Pa].
+    /// Unrelaxed (high-frequency) shear modulus `G_u` \`Pa`.
     #[must_use]
     pub fn unrelaxed_modulus(&self) -> f64 {
         self.unrelaxed_modulus
     }
 
-    /// Relaxation time `τ` \[s].
+    /// Relaxation time `τ` \`s`.
     #[must_use]
     pub fn relaxation_time(&self) -> f64 {
         self.relaxation_time

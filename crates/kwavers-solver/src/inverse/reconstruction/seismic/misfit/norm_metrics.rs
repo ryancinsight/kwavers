@@ -98,8 +98,8 @@ impl MisfitFunction {
     ///
     /// J = 1 − C where C = (d_obs · d_syn) / (‖d_obs‖ ‖d_syn‖).
     ///
-    /// ∂J/∂d_syn[j] = −∂C/∂d_syn[j]
-    ///               = −obs[j]/(‖obs‖ ‖syn‖) + C · syn[j]/‖syn‖²
+    /// ∂J/∂d_syn`J` = −∂C/∂d_syn`J`
+    ///               = −obs`J`/(‖obs‖ ‖syn‖) + C · syn`J`/‖syn‖²
     ///
     /// This is the positive gradient of the misfit J; the optimizer then applies
     /// a negative step (compute_direction returns −gradient) to minimize J and

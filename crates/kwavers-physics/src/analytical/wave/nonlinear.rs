@@ -44,7 +44,7 @@ pub fn fubini_harmonic_spectrum(n_max: u32, sigma: f64) -> Vec<f64> {
 /// workspace FFT facade.  The returned matrix is row-major with shape
 /// `n_traces × n_harmonics`; column `0` is the fundamental, column `1` is the
 /// second harmonic, and so on.  The amplitude normalization matches the
-/// standard one-sided sinusoid estimate `2·|X[k]| / Σw`.
+/// standard one-sided sinusoid estimate `2·|X`K`| / Σw`.
 ///
 /// # Errors
 /// Returns an error when dimensions are inconsistent, scalar parameters are not
@@ -162,12 +162,12 @@ pub fn sawtooth_harmonic_spectrum(n_max: u32, sigma: f64) -> Vec<f64> {
 /// Shock-formation distance for a sinusoidal plane wave (Fubini–Euler criterion).
 ///
 /// ```text
-/// x_s = ρ₀·c₀³ / (β·p₀·ω)   [m]
+/// x_s = ρ₀·c₀³ / (β·p₀·ω)   `m`
 /// ```
 ///
 /// # Arguments
-/// * `p0_pa` – source pressure amplitude [Pa]
-/// * `f0_hz` – fundamental frequency [Hz]
+/// * `p0_pa` – source pressure amplitude `Pa`
+/// * `f0_hz` – fundamental frequency `Hz`
 /// * `c0` – small-signal sound speed [m/s]
 /// * `rho0` – ambient density [kg/m³]
 /// * `beta` – nonlinearity parameter β = 1 + B/(2A)
@@ -194,9 +194,9 @@ pub fn shock_formation_distance(p0_pa: f64, f0_hz: f64, c0: f64, rho0: f64, beta
 /// where `Bₙ(σ) = 2·Jₙ(n·σ) / (n·σ)` (Fubini 1935, Eq. 3.38).
 ///
 /// # Arguments
-/// * `t_arr` – time sample points [s]
-/// * `p0_pa` – source pressure amplitude [Pa]
-/// * `freq_hz` – fundamental frequency [Hz]
+/// * `t_arr` – time sample points `s`
+/// * `p0_pa` – source pressure amplitude `Pa`
+/// * `freq_hz` – fundamental frequency `Hz`
 /// * `sigma` – Fubini–Euler parameter (0 ≤ σ < 1); clamped to 0.999
 /// * `n_max` – highest harmonic order to include (≥ 1)
 ///
@@ -250,12 +250,12 @@ pub fn fubini_waveform(
 /// σ > 1 → post-shock (Rankine–Hugoniot regime; Fubini series no longer exact).
 ///
 /// # Arguments
-/// * `pnp_pa` – peak negative pressure amplitude [Pa]
-/// * `freq_hz` – fundamental frequency [Hz]
+/// * `pnp_pa` – peak negative pressure amplitude `Pa`
+/// * `freq_hz` – fundamental frequency `Hz`
 /// * `c` – small-signal sound speed [m/s]
 /// * `rho` – ambient density [kg/m³]
 /// * `beta` – nonlinearity parameter β = 1 + B/(2A)
-/// * `tau_arr` – pulse durations [s] (one σ value per τ)
+/// * `tau_arr` – pulse durations `s` (one σ value per τ)
 ///
 /// # Reference
 /// Hamilton & Blackstock (1998) *Nonlinear Acoustics*, §3.3, Eq. 3.37.
@@ -322,8 +322,8 @@ pub fn shock_enhanced_absorption_gain(sigma_arr: &[f64]) -> Vec<f64> {
 /// ```
 ///
 /// # Arguments
-/// * `pnp_pa` – peak negative pressure amplitude |p⁻| [Pa]
-/// * `ppp_pa` – peak positive pressure p⁺ [Pa] (≥ pnp for a shock)
+/// * `pnp_pa` – peak negative pressure amplitude |p⁻| `Pa`
+/// * `ppp_pa` – peak positive pressure p⁺ `Pa` (≥ pnp for a shock)
 /// * `sigma_arr` – Goldberg shock parameters (element-wise)
 ///
 /// # Reference
@@ -353,11 +353,11 @@ pub fn shock_waveform_pressure(pnp_pa: f64, ppp_pa: f64, sigma_arr: &[f64]) -> V
 ///
 /// where:
 /// * `G(σ) = 1 + 9·σ/(σ+1)` is the absorption gain
-/// * `p_eff(σ) = p_eff_arr[i]` is the effective pressure at index i
+/// * `p_eff(σ) = p_eff_arr`i`` is the effective pressure at index i
 /// * `α·p²/(ρ·c) = 2α·I` is the standard linear heat-source density
 ///
 /// # Arguments
-/// * `p_eff_arr` – effective pressure amplitude array [Pa] (element-wise, same length as sigma_arr)
+/// * `p_eff_arr` – effective pressure amplitude array `Pa` (element-wise, same length as sigma_arr)
 /// * `sigma_arr` – Goldberg shock parameters (element-wise)
 /// * `alpha_np_m` – linear attenuation coefficient [Np/m]
 /// * `rho` – density [kg/m³]
@@ -400,11 +400,11 @@ pub fn shock_heat_source_density(
 /// ```
 ///
 /// # Arguments
-/// * `t_arr` – time sample points [s]
-/// * `p0_pa` – peak pressure amplitude [Pa]
-/// * `f0` – fundamental frequency [Hz]
-/// * `duration_s` – pulse duration [s]
-/// * `t_start` – burst start time [s]
+/// * `t_arr` – time sample points `s`
+/// * `p0_pa` – peak pressure amplitude `Pa`
+/// * `f0` – fundamental frequency `Hz`
+/// * `duration_s` – pulse duration `s`
+/// * `t_start` – burst start time `s`
 /// * `sigma` – Fubini–Euler nonlinearity parameter (0 ≤ σ < 1); clamped to 0.999
 /// * `n_max` – highest harmonic order to include
 ///
@@ -453,9 +453,9 @@ pub fn shock_vapor_pulse_waveform(
 /// where σ(z) = z / x_s and α is the absorption at the fundamental.
 ///
 /// # Arguments
-/// * `z_arr` – propagation distances [m]
-/// * `p0` – source pressure [Pa]
-/// * `f0` – fundamental frequency [Hz]
+/// * `z_arr` – propagation distances `m`
+/// * `p0` – source pressure `Pa`
+/// * `f0` – fundamental frequency `Hz`
 /// * `c0` – sound speed [m/s]
 /// * `rho0` – density [kg/m³]
 /// * `beta` – nonlinearity parameter β

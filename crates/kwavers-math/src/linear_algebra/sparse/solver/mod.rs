@@ -68,7 +68,7 @@ impl IterativeSolver {
     /// # Errors
     /// - Returns [`KwaversError::Numerical`] if A is not square.
     /// - Returns [`KwaversError::Numerical`] if the method fails to converge within `max_iterations`.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn conjugate_gradient(
         &self,
@@ -132,7 +132,7 @@ impl IterativeSolver {
 
     /// Solve using BiCGSTAB for non-symmetric matrices.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn bicgstab(
         &self,
@@ -145,7 +145,7 @@ impl IterativeSolver {
 
     /// Solve complex system using BiCGSTAB.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn bicgstab_complex(
         &self,

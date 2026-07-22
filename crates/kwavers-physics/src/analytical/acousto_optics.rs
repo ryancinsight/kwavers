@@ -158,7 +158,7 @@ pub fn diffraction_frequency_shift_hz(order: i32, acoustic_frequency_hz: f64) ->
     order as f64 * acoustic_frequency_hz
 }
 
-/// **Bragg angle** `θ_B = arcsin(λ₀ / (2 n Λ))` \[rad] — the incidence (and
+/// **Bragg angle** `θ_B = arcsin(λ₀ / (2 n Λ))` \`rad` — the incidence (and
 /// diffraction) angle that maximises first-order Bragg efficiency, where the
 /// grating equation and energy/momentum conservation are simultaneously
 /// satisfied. Returns `None` if `λ₀/(2nΛ) > 1` (no Bragg solution) or the

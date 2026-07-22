@@ -46,14 +46,14 @@ pub fn fubini_harmonic_spectrum(
 /// x_s = rho0 * c0^3 / (beta * omega * p0)
 ///
 /// Args:
-///     p0_pa: Source pressure amplitude [Pa].
-///     f0_hz: Fundamental frequency [Hz].
+///     p0_pa: Source pressure amplitude `Pa`.
+///     f0_hz: Fundamental frequency `Hz`.
 ///     c0: Small-signal sound speed [m/s].
 ///     rho0: Ambient density [kg/m³].
 ///     beta: Nonlinearity coefficient (1 + B/(2A)).
 ///
 /// Returns:
-///     Shock formation distance [m].
+///     Shock formation distance `m`.
 #[pyfunction]
 #[pyo3(signature = (p0_pa, f0_hz, c0, rho0, beta))]
 pub fn shock_formation_distance(
@@ -71,13 +71,13 @@ pub fn shock_formation_distance(
 /// p(t) = A · w(t) · sin(2π·f₀·t), where w(t) = ½·(1 − cos(2π·t/τ)),  τ = n_cycles/f₀.
 ///
 /// Args:
-///     t_arr: Time sample points [s].
-///     amplitude_pa: Peak pressure amplitude [Pa].
-///     freq_hz: Carrier frequency [Hz].
+///     t_arr: Time sample points `s`.
+///     amplitude_pa: Peak pressure amplitude `Pa`.
+///     freq_hz: Carrier frequency `Hz`.
 ///     n_cycles: Number of cycles in the burst (positive real).
 ///
 /// Returns:
-///     Pressure waveform [Pa], same length as t_arr.
+///     Pressure waveform `Pa`, same length as t_arr.
 ///
 /// Reference:
 ///     Harris (1978) Proc. IEEE 66, 51; k-Wave tone_burst convention.
@@ -122,14 +122,14 @@ pub fn centered_hann_tone_burst_waveform(
 /// p(t) = sum_k A * w(t - t_k) * sin(2pi*f0*(t-t_k))
 ///
 /// Args:
-///     t_arr: Full time axis [s].
-///     amplitude_pa: Per-burst peak amplitude [Pa].
-///     freq_hz: Carrier frequency [Hz].
+///     t_arr: Full time axis `s`.
+///     amplitude_pa: Per-burst peak amplitude `Pa`.
+///     freq_hz: Carrier frequency `Hz`.
 ///     n_cycles: Cycles per burst.
-///     t_starts: Burst start times [s].
+///     t_starts: Burst start times `s`.
 ///
 /// Returns:
-///     Accumulated pressure waveform [Pa], same length as t_arr.
+///     Accumulated pressure waveform `Pa`, same length as t_arr.
 ///
 /// Reference:
 ///     Harris (1978) Proc. IEEE 66, 51.
@@ -162,12 +162,12 @@ pub fn pulse_train_waveform(
 /// sigma > 1: post-shock (Rankine-Hugoniot required).
 ///
 /// Args:
-///     pnp_pa: Peak negative pressure [Pa].
-///     freq_hz: Fundamental frequency [Hz].
+///     pnp_pa: Peak negative pressure `Pa`.
+///     freq_hz: Fundamental frequency `Hz`.
 ///     c: Sound speed [m/s].
 ///     rho: Density [kg/m3].
 ///     beta: Nonlinearity coefficient 1 + B/(2A).
-///     tau_arr: Pulse durations [s].
+///     tau_arr: Pulse durations `s`.
 ///
 /// Returns:
 ///     Goldberg parameter array, same length as tau_arr.
@@ -224,12 +224,12 @@ pub fn shock_enhanced_absorption_gain(
 /// p_eff(sigma) = pnp * (1 + (ppp/pnp - 1) * sigma / (sigma + 1))
 ///
 /// Args:
-///     pnp_pa: Peak negative pressure |p-| [Pa].
-///     ppp_pa: Peak positive pressure p+ [Pa].
+///     pnp_pa: Peak negative pressure |p-| `Pa`.
+///     ppp_pa: Peak positive pressure p+ `Pa`.
 ///     sigma_arr: Goldberg shock parameters.
 ///
 /// Returns:
-///     Effective pressure array [Pa], same length as sigma_arr.
+///     Effective pressure array `Pa`, same length as sigma_arr.
 ///
 /// Reference:
 ///     Hamilton & Blackstock (1998) Nonlinear Acoustics, S3.3.
@@ -253,7 +253,7 @@ pub fn shock_waveform_pressure(
 /// Q_eff(sigma) = G(sigma) * alpha * p_eff^2 / (rho * c)
 ///
 /// Args:
-///     p_eff_arr: Effective pressure array [Pa].
+///     p_eff_arr: Effective pressure array `Pa`.
 ///     sigma_arr: Goldberg shock parameters (same length as p_eff_arr).
 ///     alpha_np_m: Linear attenuation [Np/m].
 ///     rho: Density [kg/m3].
@@ -287,16 +287,16 @@ pub fn shock_heat_source_density(
 /// Rectangular-envelope Fubini waveform for a shock-formed millisecond pulse.
 ///
 /// Args:
-///     t_arr: Time sample points [s].
-///     p0_pa: Peak pressure amplitude [Pa].
-///     f0: Fundamental frequency [Hz].
-///     duration_s: Pulse duration [s].
-///     t_start: Burst start time [s].
+///     t_arr: Time sample points `s`.
+///     p0_pa: Peak pressure amplitude `Pa`.
+///     f0: Fundamental frequency `Hz`.
+///     duration_s: Pulse duration `s`.
+///     t_start: Burst start time `s`.
 ///     sigma: Fubini-Euler parameter (0 <= sigma < 1).
 ///     n_max: Highest harmonic order.
 ///
 /// Returns:
-///     Pressure waveform [Pa], same length as t_arr.
+///     Pressure waveform `Pa`, same length as t_arr.
 ///
 /// Reference:
 ///     Hamilton & Blackstock (1998) Nonlinear Acoustics, S3.3.
@@ -326,14 +326,14 @@ pub fn shock_vapor_pulse_waveform(
 /// p(t) = p₀ · Σ_{n=1}^{n_max} Bₙ(σ) · sin(n·ω·t),  ω = 2π·f₀
 ///
 /// Args:
-///     t_arr: Time sample points [s].
-///     p0_pa: Source pressure amplitude [Pa].
-///     freq_hz: Fundamental frequency [Hz].
+///     t_arr: Time sample points `s`.
+///     p0_pa: Source pressure amplitude `Pa`.
+///     freq_hz: Fundamental frequency `Hz`.
 ///     sigma: Fubini–Euler nonlinearity parameter (0 ≤ σ < 1).
 ///     n_max: Highest harmonic order to include.
 ///
 /// Returns:
-///     Pressure waveform [Pa], same length as t_arr.
+///     Pressure waveform `Pa`, same length as t_arr.
 ///
 /// Reference:
 ///     Hamilton & Blackstock (1998) Nonlinear Acoustics, §3.3.
@@ -358,8 +358,8 @@ pub fn fubini_waveform(
 ///
 /// Args:
 ///     traces: 2-D pressure trace array with shape (n_traces, n_samples).
-///     dt_s: Sample period [s].
-///     fundamental_hz: Fundamental frequency [Hz].
+///     dt_s: Sample period `s`.
+///     fundamental_hz: Fundamental frequency `Hz`.
 ///     n_harmonics: Number of harmonics to extract.
 ///
 /// Returns:
@@ -393,12 +393,12 @@ pub fn hann_windowed_harmonic_amplitudes(
 /// Compute Westervelt harmonic pressure evolution along a propagation axis.
 ///
 /// Returns a 2-D array of shape (len(z_arr), n_max) containing the pressure
-/// amplitude [Pa] of each harmonic at each axial position.
+/// amplitude `Pa` of each harmonic at each axial position.
 ///
 /// Args:
-///     z_arr: Axial positions [m].
-///     p0: Source pressure amplitude [Pa].
-///     f0: Fundamental frequency [Hz].
+///     z_arr: Axial positions `m`.
+///     p0: Source pressure amplitude `Pa`.
+///     f0: Fundamental frequency `Hz`.
 ///     c0: Sound speed [m/s].
 ///     rho0: Density [kg/m³].
 ///     beta: Nonlinearity coefficient.

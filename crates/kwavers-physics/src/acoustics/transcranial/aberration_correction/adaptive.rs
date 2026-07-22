@@ -4,7 +4,7 @@
 //!
 //! ### Feedback Signal Interpretation
 //!
-//! `feedback_signal[i]` is the unwrapped phase angle φ_received[i] (radians)
+//! `feedback_signal`i`` is the unwrapped phase angle φ_received`i` (radians)
 //! of the received wavefront at element `i`, measured from back-propagation of
 //! the target-focus return signal (time-reversal or cross-correlation of the
 //! transmitted and received waveforms).
@@ -13,23 +13,23 @@
 //!
 //! Minimise the circular phase-mismatch cost:
 //! ```text
-//! L(φ) = Σ_i [1 − cos(φ_i + φ_received[i])]
+//! L(φ) = Σ_i [1 − cos(φ_i + φ_received`i`)]
 //! ```
-//! At the minimum, `φ_i = −φ_received[i]` (phase conjugation), which exactly
+//! At the minimum, `φ_i = −φ_received`i`` (phase conjugation), which exactly
 //! cancels the skull-induced aberration and maximises focal coherence.
 //!
 //! ### Gradient
 //!
 //! ```text
-//! ∂L/∂φ_i = sin(φ_i + φ_received[i])
+//! ∂L/∂φ_i = sin(φ_i + φ_received`i`)
 //! ```
 //!
 //! The update rule (gradient descent, step size η = `learning_rate`):
 //! ```text
-//! φ_i ← φ_i − η · sin(φ_i + φ_received[i])
+//! φ_i ← φ_i − η · sin(φ_i + φ_received`i`)
 //! ```
 //!
-//! Convergence: `sin(φ_i + φ_received[i]) = 0` at `φ_i = −φ_received[i]`,
+//! Convergence: `sin(φ_i + φ_received`i`) = 0` at `φ_i = −φ_received`i``,
 //! i.e., the correction converges to the time-reversal phase conjugate.
 //!
 //! ## References
@@ -44,17 +44,17 @@ impl TranscranialAberrationCorrection {
     /// Iterative adaptive aberration correction via circular phase-mismatch descent.
     ///
     /// Each call performs one gradient-descent step minimising
-    /// `L = Σ_i [1 − cos(φ_i + φ_received[i])]`.
+    /// `L = Σ_i [1 − cos(φ_i + φ_received`i`)]`.
     ///
-    /// The gradient `∂L/∂φ_i = sin(φ_i + φ_received[i])` is bounded to
+    /// The gradient `∂L/∂φ_i = sin(φ_i + φ_received`i`)` is bounded to
     /// `[−1, 1]`, providing unconditional stability for any step size
-    /// `learning_rate ≤ 1`.  At convergence `φ_i → −feedback_signal[i]`
+    /// `learning_rate ≤ 1`.  At convergence `φ_i → −feedback_signal`i``
     /// (time-reversal phase conjugate).
     ///
     /// # Arguments
     ///
     /// * `initial_correction` – current phase correction estimate.
-    /// * `feedback_signal`    – `feedback_signal[i]` = received wavefront phase
+    /// * `feedback_signal`    – `feedback_signal`i`` = received wavefront phase
     ///   at element `i` \[radians\], from back-propagation
     ///   or cross-correlation with the target return.
     /// * `learning_rate`      – gradient-descent step size η > 0 (dimensionless).

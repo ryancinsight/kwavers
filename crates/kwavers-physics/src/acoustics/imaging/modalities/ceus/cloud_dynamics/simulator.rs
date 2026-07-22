@@ -94,7 +94,7 @@ impl CloudDynamics {
 
     /// Simulate cloud dynamics
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn simulate(&mut self) -> KwaversResult<CloudResponse> {
         let n_steps = (self.config.duration / self.config.dt) as usize;
@@ -142,7 +142,7 @@ impl CloudDynamics {
 
     /// Update individual bubble dynamics
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     fn update_bubbles(&mut self) -> KwaversResult<()> {
         if let Some(field) = &self.incident_field {

@@ -1,7 +1,7 @@
 /// Solve a tridiagonal linear system using the Thomas algorithm.
 ///
 /// The coefficient slices define:
-/// `lower[i] * x[i - 1] + diag[i] * x[i] + upper[i] * x[i + 1] = rhs[i]`.
+/// `lower`i` * x[i - 1] + diag`i` * x`i` + upper`i` * x[i + 1] = rhs`i``.
 /// Returns `None` when a pivot is numerically singular.
 pub(super) fn thomas_solve(
     lower: &[f64],

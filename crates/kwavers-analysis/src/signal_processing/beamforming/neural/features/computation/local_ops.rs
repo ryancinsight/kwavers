@@ -8,7 +8,7 @@ use leto::Array3;
 /// # Mathematical Definition
 ///
 /// ```text
-/// σ(x,y) = √[ E[I²] - E[I]² ]
+/// σ(x,y) = √[ E[I²] - E`i`² ]
 /// ```
 ///
 /// # Arguments

@@ -65,7 +65,7 @@ impl Default for MemoryOptimizer {
 impl MemoryOptimizer {
     /// Allocate aligned memory for better cache performance
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn allocate_aligned<T>(&self, count: usize) -> KwaversResult<*mut T> {
         let size = count * std::mem::size_of::<T>();
@@ -317,7 +317,7 @@ mod tests {
 
     /// Transpose of a 3×1 column vector is equivalent to itself in column-major form.
     ///
-    /// rows=3, cols=1: result[0*3+i] = data[i*1+0] → result[i] = data[i].
+    /// rows=3, cols=1: result[0*3+i] = data[i*1+0] → result`i` = data`i`.
     #[test]
     fn memory_optimizer_transpose_column_vector_is_identity() {
         let optimizer = MemoryOptimizer::default();
@@ -328,7 +328,7 @@ mod tests {
 
     /// Transpose of 1×N row vector produces N×1 column vector (same bytes).
     ///
-    /// rows=1, cols=4: result[j*1+0] = data[0*4+j] = data[j] → identical.
+    /// rows=1, cols=4: result[j*1+0] = data[0*4+j] = data`J` → identical.
     #[test]
     fn memory_optimizer_transpose_row_vector_is_identity() {
         let optimizer = MemoryOptimizer::default();

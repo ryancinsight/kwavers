@@ -116,7 +116,7 @@ impl TransmissionSequencer {
     ///
     /// Returns `Err` if the requested PRF exceeds the maximum allowed.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn with_prf(mut self, prf: f64) -> KwaversResult<Self> {
         let prf_max = self.max_prf();
@@ -257,7 +257,7 @@ impl TransmissionSequencer {
     /// # Arguments
     /// * `n_elements` - Number of transducer elements
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn sta_schedule(&self, n_elements: usize) -> KwaversResult<TransmissionSchedule> {
         if n_elements == 0 {

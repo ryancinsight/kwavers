@@ -52,15 +52,15 @@ fn sample_at(samples: &[f64], t: f64, dt: f64) -> f64 {
 /// Kirchhoff diffraction-stack migrator.
 #[derive(Debug, Clone, Copy)]
 pub struct KirchhoffMigrator {
-    /// Trace sample interval `dt` [s].
+    /// Trace sample interval `dt` `s`.
     dt: f64,
 }
 
 impl KirchhoffMigrator {
-    /// Create a migrator with trace sampling interval `dt` [s].
+    /// Create a migrator with trace sampling interval `dt` `s`.
     ///
     /// # Errors
-    /// Returns [`KwaversError::InvalidInput`] when `dt ≤ 0`.
+    /// Returns `KwaversError::InvalidInput` when `dt ≤ 0`.
     pub fn new(dt: f64) -> KwaversResult<Self> {
         if dt <= 0.0 {
             return Err(KwaversError::InvalidInput(
@@ -75,7 +75,7 @@ impl KirchhoffMigrator {
     /// [`super::eikonal::EikonalSolver`]).
     ///
     /// # Errors
-    /// Returns [`KwaversError::InvalidInput`] when the traveltime-table lists are
+    /// Returns `KwaversError::InvalidInput` when the traveltime-table lists are
     /// empty, their shapes disagree, or a trace references a missing table.
     pub fn migrate(
         &self,

@@ -41,7 +41,7 @@ impl MultiPhysicsFieldCoupler {
 
     /// Add coupling between two physics domains
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn add_coupling(
         &mut self,
@@ -68,7 +68,7 @@ impl MultiPhysicsFieldCoupler {
 
     /// Transfer field conservatively between domains
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn transfer_field(
         &mut self,
@@ -109,7 +109,7 @@ impl MultiPhysicsFieldCoupler {
     /// coupling to implement Jacobi-style simultaneous updates (all source fields
     /// are taken from the same snapshot u^k rather than the evolving state).
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn transfer_field_array(
         &mut self,

@@ -256,7 +256,7 @@ impl WgpuFdtd {
     /// Upload a provider-native pressure field to GPU.
     ///
     /// # Errors
-    /// Returns [`KwaversError::InvalidInput`] when the Leto field is not stored
+    /// Returns `KwaversError::InvalidInput` when the Leto field is not stored
     /// as one dense row-major slice.
     pub fn upload_pressure(&self, pressure: &LetoArray3<f32>) -> KwaversResult<()> {
         <Self as FdtdGpuProvider>::upload_pressure(self, pressure)

@@ -137,29 +137,29 @@ pub const FFT_K_SCALING: f64 = 2.0 * std::f64::consts::PI;
 ///
 /// The 3-point backward stencil for ∂²f/∂t² is:
 /// ```text
-/// (f[n] − 2·f[n-1] + f[n-2]) / Δt²
+/// (f`N` − 2·f[n-1] + f[n-2]) / Δt²
 /// ```
 /// The outer coefficients (+1, +1) are unity; only the middle coefficient (−2)
 /// is non-unity and is written as a literal `2.0` at each use site.
-/// `SECOND_ORDER_DIFF_COEFF = 1.0` is the coefficient of `f[n]` and `f[n-2]`.
+/// `SECOND_ORDER_DIFF_COEFF = 1.0` is the coefficient of `f`N`` and `f[n-2]`.
 pub const SECOND_ORDER_DIFF_COEFF: f64 = 1.0;
 
 /// Third-order backward difference interior coefficient.
 ///
 /// The 4-point backward stencil for ∂³f/∂t³ is (Pascal's triangle, 3rd row):
 /// ```text
-/// (f[n] − 3·f[n-1] + 3·f[n-2] − f[n-3]) / Δt³
+/// (f`N` − 3·f[n-1] + 3·f[n-2] − f[n-3]) / Δt³
 /// ```
 /// The interior coefficients ±3 come from `C(3,1) = C(3,2) = 3`.
 /// The outer coefficients (±1) are written as literals at each use site.
 ///
 /// ## Mathematical justification
 ///
-/// The k-th backward finite difference operator `∇^k f[n]` expands as:
-/// `∇^k f[n] = Σ_{j=0}^{k} (−1)^j C(k,j) f[n−j]`
+/// The k-th backward finite difference operator `∇^k f`N`` expands as:
+/// `∇^k f`N` = Σ_{j=0}^{k} (−1)^j C(k,j) f[n−j]`
 ///
-/// For k=3: `∇³f[n] = f[n] − 3f[n-1] + 3f[n-2] − f[n-3]`, with
-/// `∂³f/∂t³ ≈ ∇³f[n] / Δt³ + O(Δt)`.
+/// For k=3: `∇³f`N` = f`N` − 3f[n-1] + 3f[n-2] − f[n-3]`, with
+/// `∂³f/∂t³ ≈ ∇³f`N` / Δt³ + O(Δt)`.
 ///
 /// Reference: LeVeque RJ (2007). Finite Difference Methods. SIAM. §2.14.
 pub const THIRD_ORDER_DIFF_COEFF: f64 = 3.0;

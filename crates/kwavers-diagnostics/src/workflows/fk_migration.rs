@@ -40,7 +40,7 @@ fn ang_bin(bin: usize, n: usize, d: f64) -> f64 {
 /// Stolt f-k migration of zero-angle plane-wave RF data.
 ///
 /// - `data[ix, it]` = `s(x, t)` — receive RF after plane-wave transmit.
-/// - `dx` lateral element pitch \[m]; `dt` time sampling \[s]; `sound_speed` `c` \[m/s].
+/// - `dx` lateral element pitch \`m`; `dt` time sampling \`s`; `sound_speed` `c` \[m/s].
 ///
 /// Returns the migrated image `image[ix, iz]` = `r(x, z)` on the depth grid
 /// `z = (c/2)·t` (same shape as the input). The exploding-reflector velocity

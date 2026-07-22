@@ -18,7 +18,7 @@ use kwavers_math::special::bessel::j1;
 /// Normalised so D(0) = 1.  Uses the L'Hôpital limit at θ = 0.
 ///
 /// # Arguments
-/// * `theta_rad` – observation angles [rad]
+/// * `theta_rad` – observation angles `rad`
 /// * `ka` – wavenumber–radius product k·a (dimensionless)
 ///
 /// # Reference
@@ -50,11 +50,11 @@ pub fn circular_piston_directivity(theta_rad: &[f64], ka: f64) -> Vec<f64> {
 /// Normalised to 1.0 at the steering angle (L'Hôpital limit applied).
 ///
 /// # Arguments
-/// * `theta_rad` – observation angles [rad]
+/// * `theta_rad` – observation angles `rad`
 /// * `k` – wavenumber [rad/m]
-/// * `d_m` – element pitch [m]
+/// * `d_m` – element pitch `m`
 /// * `n` – number of elements
-/// * `steer_rad` – steering angle [rad]
+/// * `steer_rad` – steering angle `rad`
 ///
 /// # Reference
 /// Van Trees (2002) *Optimum Array Processing*, §2.2.
@@ -94,11 +94,11 @@ pub fn linear_array_factor(
 /// across the supplied angle set.
 ///
 /// # Arguments
-/// * `theta_rad` – observation angles [rad]
+/// * `theta_rad` – observation angles `rad`
 /// * `k` – wavenumber [rad/m]
-/// * `d_m` – element pitch [m]
+/// * `d_m` – element pitch `m`
 /// * `n` – number of elements
-/// * `steer_rad` – steering angle [rad]
+/// * `steer_rad` – steering angle `rad`
 /// * `ka_elem` – element directivity parameter k·a_elem (dimensionless)
 ///
 /// # Returns
@@ -140,8 +140,8 @@ pub fn beam_pattern_magnitude(
 ///
 /// # Arguments
 /// * `k` – wavenumber [rad/m]
-/// * `d_m` – element pitch [m]
-/// * `steer_rad` – steering angle [rad]
+/// * `d_m` – element pitch `m`
+/// * `steer_rad` – steering angle `rad`
 #[must_use]
 pub fn grating_lobe_angles(k: f64, d_m: f64, steer_rad: f64) -> Vec<f64> {
     let lambda_over_d = TWO_PI / (k * d_m);

@@ -29,7 +29,7 @@ impl SoAFieldBuffer<f64> {
     /// All fields are zero-initialized. NUMA binding is applied on Linux via
     /// `mbind(2)` when `numa_node` is specified.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn new(config: BatchFieldConfig) -> KwaversResult<Self> {
         config.validate()?;

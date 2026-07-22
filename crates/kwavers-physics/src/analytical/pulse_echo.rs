@@ -14,11 +14,11 @@ use leto::{Array2, ArrayView1, ArrayView2};
 use std::f64::consts::{LN_2, PI};
 
 /// Synthesize per-element channel RF (shape `(n_elem, n_samples)`) from point
-/// scatterers `scat_pos` (`(n_scat, 3)` [m]) with reflectivity `scat_amp` (`(n_scat,)`)
-/// recorded by an array at `elem_pos` (`(n_elem, 3)` [m]).
+/// scatterers `scat_pos` (`(n_scat, 3)` `m`) with reflectivity `scat_amp` (`(n_scat,)`)
+/// recorded by an array at `elem_pos` (`(n_elem, 3)` `m`).
 ///
-/// * `c` — sound speed [m/s]; `fs` — sampling frequency [Hz]; `f0` — imaging centre
-///   frequency [Hz]; `frac_bw` — fractional −6 dB pulse bandwidth (sets the pulse
+/// * `c` — sound speed [m/s]; `fs` — sampling frequency `Hz`; `f0` — imaging centre
+///   frequency `Hz`; `frac_bw` — fractional −6 dB pulse bandwidth (sets the pulse
 ///   length via `σ_t = √(2 ln2)/(π·frac_bw·f0)`); `n_samples` — RF record length.
 #[must_use]
 #[allow(clippy::too_many_arguments)]

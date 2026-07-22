@@ -134,7 +134,7 @@ pub enum ShiftPrior {
 pub struct SoundSpeedShiftConfig {
     /// Reference homogeneous sound speed c0 [m/s].
     pub reference_sound_speed_m_s: f64,
-    /// Square pixel spacing [m].
+    /// Square pixel spacing `m`.
     pub spacing_m: f64,
     /// Iteration count for PCG or proximal gradient.
     pub iterations: usize,

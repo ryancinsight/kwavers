@@ -5,7 +5,7 @@
 //! and absorption. This builder produces a [`HeterogeneousMedium`] whose every
 //! acoustic field — density, sound speed,
 //! absorption prefactor α₀, exponent y, and B/A — is mapped per-voxel from
-//! Hounsfield units via [`HuAcousticModel`], with the non-acoustic fields
+//! Hounsfield units via `HuAcousticModel`, with the non-acoustic fields
 //! (thermal, optical, bubble, elastic, viscous) broadcast from a homogeneous
 //! `background` medium. See book Ch4 §4.5.
 //!
@@ -24,7 +24,7 @@ use leto::Array3;
 /// Builder turning a Hounsfield-unit CT volume into a fully-specified,
 /// tissue-varying [`HeterogeneousMedium`].
 ///
-/// The HU→property calibration ([`HuAcousticModel`]) and the background medium
+/// The HU→property calibration (`HuAcousticModel`) and the background medium
 /// are both overridable; defaults are the Schneider (1996) calibration and a
 /// water background.
 #[derive(Debug)]

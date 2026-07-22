@@ -26,7 +26,7 @@
 //! # Algorithm
 //! For arbitrary `N`, Apollo uses Bluestein's chirp-z transform:
 //! ```text
-//! X[k] = W^{k^2/2} sum_n (x[n] * W^{n^2/2}) * W^{-(k-n)^2/2}
+//! X`K` = W^{k^2/2} sum_n (x`N` * W^{n^2/2}) * W^{-(k-n)^2/2}
 //! ```
 //! where `W = exp(-2*pi*i/N)`. It evaluates this as a length-`M` circular
 //! convolution with `M = next_power_of_two(2N - 1)`, giving `O(N log N)` for

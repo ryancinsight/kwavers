@@ -9,7 +9,7 @@ use leto::Array2;
 /// 2. All entries finite
 /// 3. Hermitian within tolerance 1e-10
 /// # Errors
-/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+/// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
 ///
 pub fn validate_covariance_matrix(covariance: &Array2<Complex64>) -> KwaversResult<()> {
     let [nrows, ncols] = covariance.shape();

@@ -32,7 +32,7 @@ use std::time::Instant;
 /// ```text
 /// x^(k+1) = x^(k) + λ · D_R · Aᵀ · (b − A·x^(k))
 /// ```
-/// requires the diagonal preconditioner `D_R[s] = 1/‖A_row_s‖²` so that each
+/// requires the diagonal preconditioner `D_R`s` = 1/‖A_row_s‖²` so that each
 /// sensor is scaled by its own energy; sensors with large geometric coverage do
 /// not dominate the gradient update.
 ///
@@ -199,7 +199,7 @@ impl RealTimeSirtPipeline {
 
     /// Process one RF measurement frame and return a reconstructed image.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     /// # Panics
     /// - Panics if an internal invariant assumed to hold at this call site is violated.

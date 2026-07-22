@@ -86,7 +86,7 @@ impl SkullAttenuation {
     /// * `exponent` - Frequency power law exponent
     /// * `bone_type` - Type of bone tissue
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn new(alpha_0: f64, exponent: f64, bone_type: BoneType) -> KwaversResult<Self> {
         if alpha_0 < 0.0 {

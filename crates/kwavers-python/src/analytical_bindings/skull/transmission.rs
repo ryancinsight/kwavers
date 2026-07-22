@@ -10,12 +10,12 @@ use pyo3::prelude::*;
 /// using the transfer-matrix method.
 ///
 /// Args:
-///     f_hz: Frequency array [Hz].
+///     f_hz: Frequency array `Hz`.
 ///     z_water: Water impedance [Pa·s/m].
 ///     z_skull: Skull impedance [Pa·s/m].
 ///     z_brain: Brain impedance [Pa·s/m].
 ///     c_skull: Skull sound speed [m/s].
-///     d_skull_m: Skull thickness [m].
+///     d_skull_m: Skull thickness `m`.
 ///
 /// Returns:
 ///     Python complex number T = |T| * exp(i*phi).
@@ -41,12 +41,12 @@ pub fn skull_transfer_matrix_transmission(
 /// Compute the skull transmission spectrum (magnitude and phase).
 ///
 /// Args:
-///     f_hz: Frequency array [Hz].
+///     f_hz: Frequency array `Hz`.
 ///     z_water: Water impedance [Pa·s/m].
 ///     z_skull: Skull impedance [Pa·s/m].
 ///     z_brain: Brain impedance [Pa·s/m].
 ///     c_skull: Skull sound speed [m/s].
-///     d_skull_m: Skull thickness [m].
+///     d_skull_m: Skull thickness `m`.
 ///
 /// Returns:
 ///     (magnitude_array, phase_array_rad) tuple.

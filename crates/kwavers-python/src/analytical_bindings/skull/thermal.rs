@@ -8,7 +8,7 @@ use pyo3::prelude::*;
 /// Compute skull surface temperature rise due to a heat-flux boundary.
 ///
 /// Args:
-///     t_arr: Time array [s].
+///     t_arr: Time array `s`.
 ///     heat_flux: Applied heat flux [W/m²].
 ///     k_skull: Skull thermal conductivity [W/(m·K)].
 ///     rho_skull: Skull density [kg/m³].

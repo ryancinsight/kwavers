@@ -1326,7 +1326,7 @@ fn mechanical_index(p_neg_mpa: f64, f0_mhz: f64) -> f64 {
 ///
 /// From de Jong et al. (2002), Keller-Miksis small-amplitude expansion:
 ///   x₂/x₁ ≈ MI/2  (linear in MI for MI < 0.3)
-///   H₂_bubble [dB] = 20 log₁₀(MI/2) = 20 log₁₀(MI) − 6
+///   H₂_bubble `dB` = 20 log₁₀(MI/2) = 20 log₁₀(MI) − 6
 ///
 /// At MI = 0.15: H₂ = 20 log₁₀(0.15) − 6 = −16.5 − 6 = −22.5 dB
 /// At MI = 0.05: H₂ = 20 log₁₀(0.05) − 6 = −26.0 − 6 = −32.0 dB
@@ -1337,7 +1337,7 @@ fn bubble_second_harmonic_db(mi: f64) -> f64 {
 /// Second harmonic level of tissue (dB re fundamental)
 ///
 /// Tissue nonlinearity follows B/2A ≈ 5 (soft tissue), giving quadratic harmonic:
-///   H₂_tissue [dB] = 40 log₁₀(MI) − 20
+///   H₂_tissue `dB` = 40 log₁₀(MI) − 20
 /// (quadratic pressure scaling; at MI=0.2 → −20 − 28 = −48 dB)
 ///
 /// Reference: Tranquart et al. (1999). "Clinical use of ultrasound tissue harmonic
@@ -1346,7 +1346,7 @@ fn tissue_second_harmonic_db(mi: f64) -> f64 {
     40.0 * mi.log10() - 20.0
 }
 
-/// Contrast-to-Tissue Ratio [dB]
+/// Contrast-to-Tissue Ratio `dB`
 fn ctr_db(mi: f64) -> f64 {
     bubble_second_harmonic_db(mi) - tissue_second_harmonic_db(mi)
 }

@@ -79,15 +79,15 @@ pub struct CorticalNeuron {
     pub g_m_ms_cm2: f64,
     /// Leak conductance ḡ_L [mS/cm²].
     pub g_l_ms_cm2: f64,
-    /// Na⁺ reversal E_Na [mV].
+    /// Na⁺ reversal E_Na `mV`.
     pub e_na_mv: f64,
-    /// K⁺ reversal E_K [mV] (shared by Kd and M).
+    /// K⁺ reversal E_K `mV` (shared by Kd and M).
     pub e_k_mv: f64,
-    /// Leak reversal E_L [mV].
+    /// Leak reversal E_L `mV`.
     pub e_l_mv: f64,
-    /// Spike-threshold adjustment V_T [mV].
+    /// Spike-threshold adjustment V_T `mV`.
     pub v_t_mv: f64,
-    /// Maximal M-current time constant τ_max [ms].
+    /// Maximal M-current time constant τ_max `ms`.
     pub tau_max_ms: f64,
 }
 
@@ -126,9 +126,9 @@ impl CorticalNeuron {
         }
     }
 
-    /// Canonical resting potential for the RS preset [mV].
+    /// Canonical resting potential for the RS preset `mV`.
     pub const V_REST_RS_MV: f64 = -71.9;
-    /// Canonical resting potential for the FS preset [mV].
+    /// Canonical resting potential for the FS preset `mV`.
     pub const V_REST_FS_MV: f64 = -71.4;
 
     #[inline]

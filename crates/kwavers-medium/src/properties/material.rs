@@ -180,7 +180,7 @@ pub fn intensity_transmission_coefficient(z_incident: f64, z_transmitted: f64) -
 }
 
 /// Time-averaged acoustic intensity of a harmonic plane wave (Chapter 1
-/// Theorem 1.6): `I = A² / (2 Z) = p_rms² / Z`, for pressure amplitude `A` \[Pa]
+/// Theorem 1.6): `I = A² / (2 Z) = p_rms² / Z`, for pressure amplitude `A` \`Pa`
 /// and specific acoustic impedance `Z = ρ₀c₀` \[rayl]. Returns 0 for non-positive
 /// impedance.
 #[inline]

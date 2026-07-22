@@ -54,13 +54,13 @@ pub struct IvusVerdict {
     pub cmut_fbw: f64,
     /// PMUT fractional bandwidth.
     pub pmut_fbw: f64,
-    /// CMUT self-heating power \[W].
+    /// CMUT self-heating power \`W`.
     pub cmut_heating: f64,
-    /// PMUT self-heating power \[W].
+    /// PMUT self-heating power \`W`.
     pub pmut_heating: f64,
-    /// CMUT drive voltage (≈0.8·collapse bias) \[V].
+    /// CMUT drive voltage (≈0.8·collapse bias) \`V`.
     pub cmut_drive_voltage: f64,
-    /// PMUT drive voltage \[V].
+    /// PMUT drive voltage \`V`.
     pub pmut_drive_voltage: f64,
     /// Weighted CMUT figure of merit ∈ [0, 1].
     pub cmut_fom: f64,
@@ -136,15 +136,15 @@ pub fn evaluate_ivus(
 /// Computed therapy comparison (output-pressure governed) between a CMUT and PMUT.
 #[derive(Debug, Clone, Copy)]
 pub struct TherapyVerdict {
-    /// CMUT peak output pressure after flex + substrate derating \[Pa].
+    /// CMUT peak output pressure after flex + substrate derating \`Pa`.
     pub cmut_output_pa: f64,
-    /// PMUT peak output pressure after substrate derating \[Pa].
+    /// PMUT peak output pressure after substrate derating \`Pa`.
     pub pmut_output_pa: f64,
     /// CMUT flex-gap derating factor applied (∈ (0, 1]).
     pub cmut_flex_derating: f64,
-    /// CMUT self-heating \[W].
+    /// CMUT self-heating \`W`.
     pub cmut_heating: f64,
-    /// PMUT self-heating \[W].
+    /// PMUT self-heating \`W`.
     pub pmut_heating: f64,
     /// Recommended technology for high-pressure therapy (governed by output).
     pub recommended: MutKind,

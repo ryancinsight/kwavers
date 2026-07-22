@@ -8,8 +8,8 @@ use pyo3::prelude::*;
 /// Compute in-situ spatial-peak time-average intensity (ISPTA).
 ///
 /// Args:
-///     p_pa: Pressure time series [Pa].
-///     dt_s: Sample interval [s].
+///     p_pa: Pressure time series `Pa`.
+///     dt_s: Sample interval `s`.
 ///     rho: Density [kg/m³].
 ///     c: Sound speed [m/s].
 ///

@@ -38,7 +38,7 @@ use std::time::Instant;
 // Grid constants — TRUE 3D (NY = 48, not 2)
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Grid spacing [m].  3 mm gives λ/3.3 resolution at 150 kHz in water.
+/// Grid spacing `m`.  3 mm gives λ/3.3 resolution at 150 kHz in water.
 ///
 /// Reference: Marsac 2017 — mean skull thickness ≈ 7 mm → at least 2 voxels
 /// through bone at 3 mm spacing.

@@ -24,13 +24,13 @@
 /// which matches the RK4 grid the integrator advanced on.
 ///
 /// # Arguments
-/// * `r_arr`    – bubble radius series `R(t)` [m]
+/// * `r_arr`    – bubble radius series `R(t)` `m`
 /// * `rdot_arr` – wall velocity series `Ṙ(t)` [m/s] (same length as `r_arr`)
-/// * `dt_s`     – uniform time step [s]
+/// * `dt_s`     – uniform time step `s`
 /// * `rho`      – liquid density [kg/m³]
-/// * `r_obs_m`  – PCD observation distance from the bubble [m]
+/// * `r_obs_m`  – PCD observation distance from the bubble `m`
 ///
-/// Returns the emitted-pressure series `p_sc(t)` [Pa] with the same length as the
+/// Returns the emitted-pressure series `p_sc(t)` `Pa` with the same length as the
 /// inputs. Returns an empty vector if the inputs are shorter than 2 samples,
 /// of unequal length, or if `dt_s`/`r_obs_m` are non-positive.
 ///

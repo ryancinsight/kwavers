@@ -10,7 +10,7 @@ use pyo3::types::PyDict;
 ///
 /// Args:
 ///     wstp_mw: W_STP — time-averaged power at the surface [mW].
-///     f_mhz: Frequency [MHz].
+///     f_mhz: Frequency `MHz`.
 ///
 /// Returns:
 ///     TIS value.
@@ -24,7 +24,7 @@ pub fn thermal_index_soft_tissue(wstp_mw: f64, f_mhz: f64) -> PyResult<f64> {
 ///
 /// Args:
 ///     w_mw: Beam power at bone surface [mW].
-///     f_mhz: Frequency [MHz].
+///     f_mhz: Frequency `MHz`.
 ///
 /// Returns:
 ///     TIB value.
@@ -40,7 +40,7 @@ pub fn thermal_index_bone(w_mw: f64, f_mhz: f64) -> PyResult<f64> {
 ///
 /// Args:
 ///     w0_mw: Total acoustic power at the transducer face [mW].
-///     aperture_diameter_cm: Equivalent aperture diameter D_eq = sqrt(4·A/pi) [cm].
+///     aperture_diameter_cm: Equivalent aperture diameter D_eq = sqrt(4·A/pi) `cm`.
 ///
 /// Returns:
 ///     TIC value.
@@ -54,7 +54,7 @@ pub fn thermal_index_cranial(w0_mw: f64, aperture_diameter_cm: f64) -> PyResult<
 ///
 /// Args:
 ///     t_celsius: Temperature time series [°C].
-///     dt_s: Time-step [s].
+///     dt_s: Time-step `s`.
 ///
 /// Returns:
 ///     Cumulative CEM43 array [min].

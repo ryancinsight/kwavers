@@ -46,7 +46,7 @@ impl VectorVelocity {
         self.vz.hypot(self.vx)
     }
 
-    /// Flow direction `atan2(v_x, v_z)` [rad], measured from the axial (z) axis.
+    /// Flow direction `atan2(v_x, v_z)` `rad`, measured from the axial (z) axis.
     #[must_use]
     pub fn angle(&self) -> f64 {
         self.vx.atan2(self.vz)
@@ -73,7 +73,7 @@ impl VectorFlowEstimator {
     /// are not collinear.
     ///
     /// # Errors
-    /// Returns [`KwaversError::InvalidInput`] when fewer than two beams are
+    /// Returns `KwaversError::InvalidInput` when fewer than two beams are
     /// given, any beam has zero length, or all beams are collinear (singular
     /// normal matrix).
     pub fn new(beam_directions: &[[f64; 2]]) -> KwaversResult<Self> {
@@ -124,7 +124,7 @@ impl VectorFlowEstimator {
     /// (`v · d̂_i`), in the same order as the configured directions.
     ///
     /// # Errors
-    /// Returns [`KwaversError::InvalidInput`] when `projected.len()` does not
+    /// Returns `KwaversError::InvalidInput` when `projected.len()` does not
     /// match the number of beams.
     pub fn estimate(&self, projected: &[f64]) -> KwaversResult<VectorVelocity> {
         if projected.len() != self.directions.len() {

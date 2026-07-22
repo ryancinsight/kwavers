@@ -8,7 +8,7 @@
 //!
 //! Forward-Euler discretisation:
 //!
-//!   `V[n+1] = V[n] + dt/C_m · (−G_leak · (V[n] − E_leak) + I_ion[n])`
+//!   `V[n+1] = V`N` + dt/C_m · (−G_leak · (V`N` − E_leak) + I_ion`N`)`
 //!
 //! Spike condition: if V[n+1] ≥ V_thresh → emit spike, reset V ← V_reset.
 //! Refractory period: for `refractory_s` seconds after a spike, V is clamped
@@ -206,23 +206,23 @@ impl LifNeuron {
 /// membrane depolarisation → logistic activation probability.
 #[derive(Debug, Clone)]
 pub struct ThermalNeuralParams {
-    /// Membrane time constant τ_v [s].
+    /// Membrane time constant τ_v `s`.
     pub tau_v_s: f64,
     /// Calcium→voltage coupling k_ca [mV/µM].
     pub k_ca_mv_per_um: f64,
-    /// Calcium time constant τ_ca [s].
+    /// Calcium time constant τ_ca `s`.
     pub tau_ca_s: f64,
     /// Temperature→calcium coupling α_T [µM/°C].
     pub alpha_t_um_per_c: f64,
-    /// Resting membrane potential [mV].
+    /// Resting membrane potential `mV`.
     pub v_rest_mv: f64,
-    /// Resting cytosolic calcium [µM].
+    /// Resting cytosolic calcium `µM`.
     pub ca_rest_um: f64,
     /// Reference temperature [°C].
     pub t_ref_c: f64,
-    /// Activation-sigmoid midpoint [mV].
+    /// Activation-sigmoid midpoint `mV`.
     pub v_thresh_mv: f64,
-    /// Activation-sigmoid slope [mV].
+    /// Activation-sigmoid slope `mV`.
     pub v_slope_mv: f64,
 }
 

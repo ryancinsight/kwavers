@@ -66,8 +66,8 @@ pub fn bbb_inertial_damage_probability(
 ///     τ_fast = 0.5·τ_close,  τ_slow = 3.0·τ_close
 ///
 /// Args:
-///     t_h: Time post-sonication [hours].
-///     tau_close: Characteristic closing time constant [hours].
+///     t_h: Time post-sonication `hours`.
+///     tau_close: Characteristic closing time constant `hours`.
 ///     perm_peak: Peak permeability at t=0 (normalised, ≤ 1.0).
 ///
 /// Returns:

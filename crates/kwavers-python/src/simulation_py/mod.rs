@@ -91,7 +91,7 @@ pub struct Simulation {
     /// Optional acoustic→thermal coupling configuration.
     /// When set, PSTD `run()` drives the coupled thermal loop.
     pub(crate) thermal: Option<KwaversThermalConfig>,
-    /// Helmholtz solver frequency override [Hz].
+    /// Helmholtz solver frequency override `Hz`.
     /// When set, the wavenumber `k = 2π·f / cₘₐₓ`; when `None` (default),
     /// the wavenumber is derived from `dt` via `k = 2π / (cₘₐₓ · dt)`.
     /// Only used when `solver_type == SolverType::Helmholtz`.
@@ -622,7 +622,7 @@ impl Simulation {
     /// time_steps : int
     ///     Number of time steps to simulate.
     /// dt : float, optional
-    ///     Time step size [s]. When ``None``, auto-calculated from the CFL
+    ///     Time step size `s`. When ``None``, auto-calculated from the CFL
     ///     condition: ``dt = 0.3 * min(dx,dy,dz) / (c_max * sqrt(3))``.
     /// record_start_index : int, default 1
     ///     Start index for recording (k-Wave convention).

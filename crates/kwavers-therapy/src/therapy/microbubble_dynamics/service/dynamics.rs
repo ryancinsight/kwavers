@@ -31,7 +31,7 @@ impl MicrobubbleDynamicsService {
     /// Keller JB, Miksis M (1980). *J Acoust Soc Am* 68(2):628–633.
     /// # Errors
     /// - Returns [`KwaversError::Physics`] if the precondition for a Physics-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     #[allow(clippy::too_many_arguments)]
     pub fn update_bubble_dynamics(

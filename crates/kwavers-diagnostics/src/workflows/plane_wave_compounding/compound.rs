@@ -44,7 +44,7 @@ pub struct PlaneWaveCompound {
 impl PlaneWaveCompound {
     /// Construct and validate a plane wave compounding processor.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn new(config: PlaneWaveCompoundingConfig) -> KwaversResult<Self> {
         if config.num_angles == 0 {
@@ -102,7 +102,7 @@ impl PlaneWaveCompound {
     /// Field: p(x,z) = A(x) exp(j·k·x·sin(θ)) · exp(j·k·z)
     /// where A(x) is the aperture apodization.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn generate_plane_wave(&self, angle_idx: usize) -> KwaversResult<Array2<Complex<f64>>> {
         if angle_idx >= self.config.num_angles {
@@ -263,8 +263,8 @@ impl PlaneWaveCompound {
     ///
     /// Returns the normalized log-compressed display image.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn process_frame(
         &mut self,

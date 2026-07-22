@@ -9,10 +9,10 @@
 //! sample-volume depth `z` consists of a complex I/Q ensemble:
 //!
 //! ```text
-//! ŝ[n] = A[n] · exp(j·φ[n])   n = 0, 1, …, N−1
+//! ŝ`N` = A`N` · exp(j·φ`N`)   n = 0, 1, …, N−1
 //! ```
 //!
-//! where `A[n]` is the echo amplitude and `φ[n]` is the phase due to scatterer
+//! where `A`N`` is the echo amplitude and `φ`N`` is the phase due to scatterer
 //! motion.  The Doppler frequency shift relates to blood velocity by:
 //!
 //! ```text
@@ -24,10 +24,10 @@
 //!
 //! The velocity spectrum at the sample volume is obtained by:
 //!
-//! 1. Apply Hann window to the ensemble `ŝ[n]·w[n]`
+//! 1. Apply Hann window to the ensemble `ŝ`N`·w`N``
 //! 2. Zero-pad to `fft_size` if the ensemble is shorter
-//! 3. Take the FFT: `Ŝ[k] = FFT(ŝ[n]·w[n])`
-//! 4. The one-sided magnitude spectrum `|Ŝ[k]|` represents the power at each
+//! 3. Take the FFT: `Ŝ`K` = FFT(ŝ`N`·w`N`)`
+//! 4. The one-sided magnitude spectrum `|Ŝ`K`|` represents the power at each
 //!    Doppler frequency (and hence each velocity component)
 //!
 //! Velocity range: `±v_max` where `v_max = f_prf · c / (4 · f₀)`
@@ -90,8 +90,8 @@ impl Default for PWDConfig {
 
 /// Spectral Doppler waveform — one-sided magnitude spectrum
 ///
-/// Index k corresponds to Doppler frequency `f_d[k] = k · f_prf / fft_size`,
-/// or equivalently velocity `v[k] = f_d[k] · c / (2 · f₀ · cos θ)`.
+/// Index k corresponds to Doppler frequency `f_d`K` = k · f_prf / fft_size`,
+/// or equivalently velocity `v`K` = f_d`K` · c / (2 · f₀ · cos θ)`.
 pub type SpectralWaveform = Array1<f64>;
 
 /// Centered, two-sided pulsed-wave Doppler spectrum.
@@ -129,7 +129,7 @@ impl PulsedWaveDoppler {
     /// 1. Subtract ensemble mean (high-pass wall filter — DC clutter removal)
     /// 2. Apply Hann window to suppress spectral leakage
     /// 3. Zero-pad to `config.fft_size` if ensemble is shorter
-    /// 4. FFT → one-sided magnitude spectrum `|Ŝ[k]|`
+    /// 4. FFT → one-sided magnitude spectrum `|Ŝ`K`|`
     ///
     /// # Arguments
     /// * `iq_ensemble` – Complex I/Q samples at the sample volume, one per PW
@@ -168,7 +168,7 @@ impl PulsedWaveDoppler {
     ///
     /// # Errors
     ///
-    /// Returns [`KwaversError::InvalidInput`] for empty or overlong I/Q, invalid
+    /// Returns `KwaversError::InvalidInput` for empty or overlong I/Q, invalid
     /// physical Doppler parameters, or a beam angle perpendicular to flow.
     pub fn signed_spectrum(
         &self,
@@ -206,7 +206,7 @@ impl PulsedWaveDoppler {
 
     /// Velocity axis corresponding to `extract_waveform` output (m/s).
     ///
-    /// Uses the Doppler equation: `v[k] = k·f_prf/fft_size · c / (2·f₀·cos θ)`.
+    /// Uses the Doppler equation: `v`K` = k·f_prf/fft_size · c / (2·f₀·cos θ)`.
     /// Maximum alias-free velocity: `v_max = f_prf·c/(4·f₀·cos θ)`.
     #[must_use]
     pub fn velocity_axis(&self) -> Array1<f64> {
@@ -334,7 +334,7 @@ mod tests {
 
     /// **Test: single-frequency complex exponential peaks at correct Doppler bin**
     ///
-    /// Signal: `s[n] = exp(j 2π f_d n / f_prf)` with `f_d = k₀ · f_prf / fft_size`.
+    /// Signal: `s`N` = exp(j 2π f_d n / f_prf)` with `f_d = k₀ · f_prf / fft_size`.
     /// Expected peak: bin `k₀`.
     /// # Panics
     /// - Panics if an internal invariant assumed to hold at this call site is violated.

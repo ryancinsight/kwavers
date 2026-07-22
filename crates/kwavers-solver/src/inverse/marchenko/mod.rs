@@ -66,7 +66,7 @@ pub struct MarchenkoResult {
     pub center: usize,
 }
 
-/// Causal convolution `(R * f)[i] = Σ_k R[k] f[i−k]` with `R` causal (length
+/// Causal convolution `(R * f)`i` = Σ_k R`K` f[i−k]` with `R` causal (length
 /// `nr`, defined for `k ≥ 0`) and `f` on the full axis (length `L`). Output
 /// length `L`.
 ///
@@ -88,7 +88,7 @@ fn conv_causal(r: &[f64], f: &[f64]) -> Vec<f64> {
     out
 }
 
-/// Causal correlation `(R ⋆ f)[i] = Σ_k R[k] f[i+k]` (R applied time-reversed).
+/// Causal correlation `(R ⋆ f)`i` = Σ_k R`K` f[i+k]` (R applied time-reversed).
 fn corr_causal(r: &[f64], f: &[f64]) -> Vec<f64> {
     let l = f.len();
     let mut out = vec![0.0; l];

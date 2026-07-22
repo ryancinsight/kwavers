@@ -84,8 +84,8 @@ pub fn ifft_shift_2d(spectrum: &mut Array2<Complex64>) {
 /// FFT cache.
 ///
 /// ## Theorem
-/// Let `X[k]` be the discrete Fourier transform of `x[n]`.  For any real
-/// frequency response `H[k]`, the inverse transform of `H[k]X[k]` is the
+/// Let `X`K`` be the discrete Fourier transform of `x`N``.  For any real
+/// frequency response `H`K``, the inverse transform of `H`K`X`K`` is the
 /// discrete linear filter induced by the convolution theorem.
 ///
 /// ## Proof sketch
@@ -127,9 +127,9 @@ where
 /// Compute the discrete analytic signal of a real trace.
 ///
 /// ## Theorem
-/// For a real sequence `x[n]`, the mask `[1, 2, ..., 2, 1, 0, ..., 0]` applied
+/// For a real sequence `x`N``, the mask `[1, 2, ..., 2, 1, 0, ..., 0]` applied
 /// to its discrete spectrum yields the analytic signal whose real part equals
-/// `x[n]` and whose imaginary part is the discrete Hilbert transform.
+/// `x`N`` and whose imaginary part is the discrete Hilbert transform.
 ///
 /// ## Proof sketch
 /// The discrete Hilbert transform suppresses the negative-frequency half of

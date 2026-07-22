@@ -63,7 +63,7 @@ pub struct FocusedPressureMap {
 ///
 /// # Errors
 ///
-/// Returns [`KwaversError::Config`] when scalar inputs or the realized channel
+/// Returns `KwaversError::Config` when scalar inputs or the realized channel
 /// geometry are non-physical.
 pub fn propagate_focused_linear_array(
     spec: &FocusedLinearArrayPropagationSpec,

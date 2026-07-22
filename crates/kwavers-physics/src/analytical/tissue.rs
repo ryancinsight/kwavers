@@ -135,10 +135,10 @@ pub fn tissue_absorption_db_cm(f_mhz: &[f64], tissue: &str) -> Vec<f64> {
 /// Valid for y ≠ 1; at y = 1 the dispersion is zero.
 ///
 /// # Arguments
-/// * `f_hz` – frequencies [Hz]
+/// * `f_hz` – frequencies `Hz`
 /// * `alpha0_np_m_hzy` – attenuation prefactor [Np/m/Hz^y]
 /// * `y` – power-law exponent
-/// * `f_ref_hz` – reference frequency at which c = c_ref [Hz]
+/// * `f_ref_hz` – reference frequency at which c = c_ref `Hz`
 /// * `c_ref` – sound speed at reference frequency [m/s]
 ///
 /// # Reference

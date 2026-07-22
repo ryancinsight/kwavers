@@ -10,7 +10,7 @@ use super::NeuralBeamformer;
 impl NeuralBeamformer {
     /// Process.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn process(
         &mut self,
@@ -38,7 +38,7 @@ impl NeuralBeamformer {
     }
     /// Process neural only.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub(super) fn process_neural_only(
         &self,
@@ -69,7 +69,7 @@ impl NeuralBeamformer {
     }
     /// Process hybrid.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub(super) fn process_hybrid(
         &self,
@@ -101,7 +101,7 @@ impl NeuralBeamformer {
     }
     /// Process adaptive.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub(super) fn process_adaptive(
         &self,

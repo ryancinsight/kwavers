@@ -33,7 +33,7 @@ impl ControlState {
 
     /// Update the value with validation
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn update_value(&mut self, value: ParameterValue) -> KwaversResult<()> {
         let validated =
@@ -80,7 +80,7 @@ impl StateSnapshot {
 
     /// Apply snapshot to states
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn apply_to_states(&self, states: &mut HashMap<String, ControlState>) -> KwaversResult<()> {
         for (name, value) in &self.parameters {
@@ -137,7 +137,7 @@ impl InteractiveControls {
 
     /// Register a parameter
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn register_parameter(&self, definition: ParameterDefinition) -> KwaversResult<()> {
         let mut states = self
@@ -156,7 +156,7 @@ impl InteractiveControls {
 
     /// Update a parameter value
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn update_parameter(&self, name: &str, value: ParameterValue) -> KwaversResult<()> {
         // Update state
@@ -195,7 +195,7 @@ impl InteractiveControls {
 
     /// Get current value of a parameter
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn get_value(&self, name: &str) -> KwaversResult<ParameterValue> {
         let states = self
@@ -213,7 +213,7 @@ impl InteractiveControls {
 
     /// Register an update callback
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn register_callback<F>(&self, name: String, callback: F) -> KwaversResult<()>
     where
@@ -233,7 +233,7 @@ impl InteractiveControls {
 
     /// Save current state to history
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn save_snapshot(&self) -> KwaversResult<()> {
         let states = self
@@ -264,7 +264,7 @@ impl InteractiveControls {
 
     /// Restore a snapshot
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn restore_snapshot(&self, index: usize) -> KwaversResult<()> {
         let history = self
@@ -293,7 +293,7 @@ impl InteractiveControls {
 
     /// Get all current parameter states
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn get_all_states(&self) -> KwaversResult<HashMap<String, ControlState>> {
         let states = self

@@ -84,8 +84,8 @@ impl TranscranialSimulation {
     /// * `model_type` - "sphere", "ellipsoid", or "realistic"
     /// * `parameters` - Model-specific parameters
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn set_analytical_geometry(
         &mut self,
@@ -120,7 +120,7 @@ impl TranscranialSimulation {
     ///
     /// Reference: Aubry et al. (2003) IEEE TUFFC
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn compute_aberration_correction(&self, frequency: f64) -> KwaversResult<Array3<f64>> {
         let heterogeneous = self

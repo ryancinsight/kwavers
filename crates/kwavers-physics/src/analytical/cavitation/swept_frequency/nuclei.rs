@@ -26,7 +26,7 @@ fn standard_normal_cdf(x: f64) -> f64 {
 /// the engaged *fraction*, which is what the engagement model needs.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct NucleiSizeDistribution {
-    /// Median (geometric-mean) equilibrium radius [m].
+    /// Median (geometric-mean) equilibrium radius `m`.
     pub median_radius_m: f64,
     /// Geometric standard deviation `σ_g` (> 1) — multiplicative spread.
     pub geometric_std: f64,
@@ -90,7 +90,7 @@ impl NucleiSizeDistribution {
         (cdf_hi - cdf_lo).clamp(0.0, 1.0)
     }
 
-    /// Equilibrium radius whose Minnaert resonance equals `freq_hz` [m].
+    /// Equilibrium radius whose Minnaert resonance equals `freq_hz` `m`.
     ///
     /// Inverts `f = 1/(2πR)·√(3κP₀/ρ)` ⇒ `R = 1/(2πf)·√(3κP₀/ρ)`. Returns 0 for
     /// non-physical inputs.
@@ -134,7 +134,7 @@ impl NucleiSizeDistribution {
         self.number_fraction_in_radius_band(r_a, r_b)
     }
 
-    /// Minnaert resonance frequency of the median nucleus [Hz].
+    /// Minnaert resonance frequency of the median nucleus `Hz`.
     #[must_use]
     pub fn median_resonance_hz(&self, kappa: f64, p0_pa: f64, rho: f64) -> f64 {
         minnaert_resonance_hz(self.median_radius_m, kappa, p0_pa, rho)

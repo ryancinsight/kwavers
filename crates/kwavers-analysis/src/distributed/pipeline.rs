@@ -29,7 +29,7 @@ impl std::fmt::Debug for PipelineCoordinator {
 impl PipelineCoordinator {
     /// Create a new pipeline coordinator with given number of stages
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn new(num_stages: usize) -> KwaversResult<Self> {
         if num_stages == 0 {
@@ -54,7 +54,7 @@ impl PipelineCoordinator {
 
     /// Submit work to a specific pipeline stage
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn submit_to_stage(
         &self,
@@ -74,7 +74,7 @@ impl PipelineCoordinator {
 
     /// Get metrics for a specific stage
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn stage_metrics(&self, stage_idx: usize) -> KwaversResult<PoolMetrics> {
         if stage_idx >= self.stages.len() {

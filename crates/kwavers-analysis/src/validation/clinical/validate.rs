@@ -13,7 +13,7 @@ use std::collections::HashMap;
 impl ClinicalValidator {
     /// Validate B-mode imaging performance against FDA 510(k) requirements.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn validate_bmode(
         &self,
@@ -214,7 +214,7 @@ impl ClinicalValidator {
 
     /// Validate safety indices against IEC 60601-2-37.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn validate_safety(
         &self,

@@ -10,7 +10,7 @@ use pyo3::prelude::*;
 ///
 /// Args:
 ///     t_celsius: Temperature time series [°C].
-///     dt_s: Time-step [s].
+///     dt_s: Time-step `s`.
 ///     a_per_s: Pre-exponential frequency factor [1/s].
 ///     ea_j_mol: Activation energy [J/mol].
 ///
@@ -38,14 +38,14 @@ pub fn arrhenius_damage_integral(
 /// Compute the cumulative Arrhenius thermal-damage integral Ω(t).
 ///
 /// Returns the running sum Ω(t_k) at each discrete step:
-///   Ω(t_k) = A · Σ_{i=0}^{k} exp(−Ea / (R · T_K[i])) · dt
+///   Ω(t_k) = A · Σ_{i=0}^{k} exp(−Ea / (R · T_K`i`)) · dt
 ///
 /// Output has the same length as t_celsius; element k is the total damage
 /// from t=0 through t=k·dt_s.  Ω ≥ 1 indicates irreversible damage.
 ///
 /// Args:
 ///     t_celsius: Temperature time series [°C].
-///     dt_s: Time-step [s].
+///     dt_s: Time-step `s`.
 ///     a_per_s: Pre-exponential frequency factor [1/s].
 ///     ea_j_mol: Activation energy [J/mol].
 ///
@@ -83,7 +83,7 @@ pub fn arrhenius_cumulative(
 ///
 /// Args:
 ///     t_celsius: Temperature time series [°C].
-///     dt_s: Time-step [s].
+///     dt_s: Time-step `s`.
 ///     a_per_s: Pre-exponential frequency factor [1/s].
 ///     ea_j_mol: Activation energy [J/mol].
 ///
@@ -122,7 +122,7 @@ pub fn arrhenius_kill_probability(
 ///
 /// Args:
 ///     t_celsius: per-voxel steady temperature [°C].
-///     duration_s: exposure duration [s].
+///     duration_s: exposure duration `s`.
 ///     a_per_s: pre-exponential frequency factor [1/s].
 ///     ea_j_mol: activation energy [J/mol].
 ///

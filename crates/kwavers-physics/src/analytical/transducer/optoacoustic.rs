@@ -108,7 +108,7 @@ pub fn soap_focal_gain(freq_hz: f64, c0: f64, radius_m: f64, f_number: f64) -> f
 /// achieves a far tighter focus than a low-NA piezo transducer at the same `f`.
 ///
 /// At the paper's CS-PDMS operating point (`ν = 1500 m/s`, `f = 15 MHz`) this
-/// reduces to the reported empirical fit `R_L[µm] ≈ 71.5 / NA`
+/// reduces to the reported empirical fit `R_L`µM` ≈ 71.5 / NA`
 /// (0.71·1500/15 = 71.0), so the fit and Eq. 1 are the same relation.
 ///
 /// # Reference
@@ -153,7 +153,7 @@ pub fn optoacoustic_center_frequency(pulse_fwhm_s: f64) -> f64 {
 }
 
 /// Optical fluence at the flat tip of a fiber delivering a pulse of energy
-/// `E_pulse` [J] through a core of diameter `d` [m]:
+/// `E_pulse` `J` through a core of diameter `d` `m`:
 ///
 /// ```text
 /// F = E_pulse / A_tip = E_pulse / (π (d/2)²) = 4 E_pulse / (π d²).
@@ -180,8 +180,8 @@ pub fn fiber_tip_fluence(pulse_energy_j: f64, core_diameter_m: f64) -> f64 {
 }
 
 /// Diffraction focal gain of a planar aperture of active radiating area
-/// `A_active` [m²], electronically focused at distance `F_focus` [m] for
-/// acoustic wavelength `λ` [m]:
+/// `A_active` `m²`, electronically focused at distance `F_focus` `m` for
+/// acoustic wavelength `λ` `m`:
 ///
 /// ```text
 /// G_focus = A_active / (λ · F_focus).
@@ -204,8 +204,8 @@ pub fn focused_aperture_gain(active_area_m2: f64, wavelength_m: f64, focal_dista
 }
 
 /// Focal pressure of a coherently-focused optoacoustic matrix array of
-/// `n_elements` fiber tips, each of radiating area `element_area_m2` [m²] and
-/// surface pressure `surface_pressure_pa` [Pa], focused at `focal_distance_m`:
+/// `n_elements` fiber tips, each of radiating area `element_area_m2` `m²` and
+/// surface pressure `surface_pressure_pa` `Pa`, focused at `focal_distance_m`:
 ///
 /// ```text
 /// p_focus = p₀ · G_focus,   G_focus = (n · A_element) / (λ · F_focus).

@@ -39,12 +39,12 @@ use pyo3::prelude::*;
 ///
 /// Parameters
 /// ----------
-/// t_end_s : simulation end time [s].
-/// dt_s : neural time step [s].
-/// membrane_potential_mv_0 : initial membrane potential [mV] (default −70).
-/// calcium_conc_um_0 : initial cytosolic calcium [µM] (default 0.1).
+/// t_end_s : simulation end time `s`.
+/// dt_s : neural time step `s`.
+/// membrane_potential_mv_0 : initial membrane potential `mV` (default −70).
+/// calcium_conc_um_0 : initial cytosolic calcium `µM` (default 0.1).
 /// temperature_c_array : temperature time series [°C]; isothermal at 37 °C if None.
-/// dt_thermal_s : time step of the thermal array [s].
+/// dt_thermal_s : time step of the thermal array `s`.
 ///
 /// Returns
 /// -------

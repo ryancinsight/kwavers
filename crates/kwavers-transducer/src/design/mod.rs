@@ -51,11 +51,11 @@ pub enum ChannelWiring {
 /// `el_x = 1`).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ApertureDesignSpec {
-    /// Overall aperture on the short / elevation axis \[m].
+    /// Overall aperture on the short / elevation axis \`m`.
     pub aperture_x_m: f64,
-    /// Overall aperture on the long / steering axis \[m].
+    /// Overall aperture on the long / steering axis \`m`.
     pub aperture_y_m: f64,
-    /// Operating frequency \[Hz].
+    /// Operating frequency \`Hz`.
     pub frequency_hz: f64,
     /// Medium sound speed \[m/s].
     pub sound_speed_m_s: f64,
@@ -70,7 +70,7 @@ pub struct ApertureDesignSpec {
 }
 
 impl ApertureDesignSpec {
-    /// Wavelength in the medium \[m].
+    /// Wavelength in the medium \`m`.
     #[must_use]
     pub fn wavelength_m(&self) -> f64 {
         self.sound_speed_m_s / self.frequency_hz
@@ -84,19 +84,19 @@ pub struct ArrayDesign {
     pub nx: usize,
     /// Element count on the long / steering axis.
     pub ny: usize,
-    /// Centre-to-centre pitch on `x` \[m] (`≤ max_pitch`).
+    /// Centre-to-centre pitch on `x` \`m` (`≤ max_pitch`).
     pub pitch_x_m: f64,
-    /// Centre-to-centre pitch on `y` \[m] (`≤ max_pitch`).
+    /// Centre-to-centre pitch on `y` \`m` (`≤ max_pitch`).
     pub pitch_y_m: f64,
-    /// Element extent on `x` \[m] (`pitch_x − kerf_x`).
+    /// Element extent on `x` \`m` (`pitch_x − kerf_x`).
     pub element_x_m: f64,
-    /// Element extent on `y` \[m] (`pitch_y − kerf_y`).
+    /// Element extent on `y` \`m` (`pitch_y − kerf_y`).
     pub element_y_m: f64,
-    /// Kerf (inter-element gap) on `x` \[m].
+    /// Kerf (inter-element gap) on `x` \`m`.
     pub kerf_x_m: f64,
-    /// Kerf (inter-element gap) on `y` \[m].
+    /// Kerf (inter-element gap) on `y` \`m`.
     pub kerf_y_m: f64,
-    /// Wavelength used for the design \[m].
+    /// Wavelength used for the design \`m`.
     pub wavelength_m: f64,
     /// Number of independently-driven channels after wiring.
     pub n_channels: usize,
@@ -113,13 +113,13 @@ impl ArrayDesign {
         self.nx * self.ny
     }
 
-    /// Realized aperture on `x` \[m] (`nx · pitch_x`).
+    /// Realized aperture on `x` \`m` (`nx · pitch_x`).
     #[must_use]
     pub fn aperture_x_m(&self) -> f64 {
         self.nx as f64 * self.pitch_x_m
     }
 
-    /// Realized aperture on `y` \[m] (`ny · pitch_y`).
+    /// Realized aperture on `y` \`m` (`ny · pitch_y`).
     #[must_use]
     pub fn aperture_y_m(&self) -> f64 {
         self.ny as f64 * self.pitch_y_m
@@ -147,7 +147,7 @@ impl ArrayDesign {
         }
     }
 
-    /// Element-centre coordinates \[m] for the synthesized layout, centred on
+    /// Element-centre coordinates \`m` for the synthesized layout, centred on
     /// `center`. The array lies in the `x`–`y` plane at constant `z = center[2]`;
     /// element `(i, j)` is at flat index `idx = i·ny + j` (`i ∈ 0..nx` short axis,
     /// `j ∈ 0..ny` long axis), matching [`Self::channel_of_index`]. This is the
@@ -170,7 +170,7 @@ impl ArrayDesign {
         out
     }
 
-    /// Driven-channel centre coordinates \[m] (`n_channels` points): the centroid
+    /// Driven-channel centre coordinates \`m` (`n_channels` points): the centroid
     /// of the elements wired into each channel, indexed as [`Self::channel_of_index`].
     /// For `ColumnsAsChannels` this is a linear array of `ny` points along the long
     /// (`y`) steering axis at the short-axis centre; for `RowsAsChannels`, `nx`
@@ -214,7 +214,7 @@ fn resolve_axis(aperture_m: f64, max_pitch_m: f64) -> (usize, f64) {
 /// Synthesize a complete [`ArrayDesign`] from an [`ApertureDesignSpec`].
 ///
 /// # Errors
-/// [`KwaversError::Config`] if the frequency or sound speed is non-positive, the
+/// `KwaversError::Config` if the frequency or sound speed is non-positive, the
 /// pitch fraction is outside `(0, 2]`, or the kerf fraction is outside `[0, 0.95]`.
 pub fn design_array(spec: &ApertureDesignSpec) -> KwaversResult<ArrayDesign> {
     let invalid = |parameter: &str, value: f64, constraint: &str| {

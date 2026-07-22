@@ -18,8 +18,8 @@ pub struct CartesianTopology {
 impl CartesianTopology {
     /// Create a new Cartesian topology
     /// # Errors
-    /// - Returns [`KwaversError::Config`] if the precondition for a Config-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns `KwaversError::Config` if the precondition for a Config-class constraint is violated.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn new(dimensions: [usize; 3], spacing: [f64; 3], origin: [f64; 3]) -> KwaversResult<Self> {
         if dimensions[0] == 0 || dimensions[1] == 0 || dimensions[2] == 0 {

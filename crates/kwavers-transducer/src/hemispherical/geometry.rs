@@ -22,7 +22,7 @@ pub struct HemisphereGeometry {
 impl HemisphereGeometry {
     /// Create new hemisphere geometry
     /// # Errors
-    /// - Returns [`KwaversError::Config`] if the precondition for a Config-class constraint is violated.
+    /// - Returns `KwaversError::Config` if the precondition for a Config-class constraint is violated.
     ///
     pub fn new(radius: f64) -> KwaversResult<Self> {
         if !radius.is_finite() || radius <= 0.0 {

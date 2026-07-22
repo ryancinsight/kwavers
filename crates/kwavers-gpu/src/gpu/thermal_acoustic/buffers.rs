@@ -31,7 +31,7 @@ where
 impl GpuThermalAcousticBuffers<WgpuThermalAcousticBuffers> {
     /// Allocate WGPU thermal-acoustic buffers.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     pub fn new(
         device: &wgpu::Device,
         queue: &wgpu::Queue,
@@ -42,8 +42,8 @@ impl GpuThermalAcousticBuffers<WgpuThermalAcousticBuffers> {
 
     /// Upload initial conditions to WGPU buffers.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if field dimensions or layout are invalid.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns `KwaversError::InvalidInput` if field dimensions or layout are invalid.
+    /// - Propagates any `KwaversError` returned by called functions.
     pub fn upload_fields(
         &self,
         queue: &wgpu::Queue,
@@ -65,7 +65,7 @@ impl GpuThermalAcousticBuffers<WgpuThermalAcousticBuffers> {
 
     /// Download the current pressure, velocity_x, and temperature fields from WGPU buffers.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     pub async fn download_fields(
         &self,
         device: &wgpu::Device,
@@ -139,7 +139,7 @@ impl ThermalAcousticBufferProvider for WgpuThermalAcousticBuffers {
 impl WgpuThermalAcousticBuffers {
     /// New.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn new(
         device: &wgpu::Device,
@@ -203,8 +203,8 @@ impl WgpuThermalAcousticBuffers {
 
     /// Upload initial conditions to GPU
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn upload_fields(
         &self,
@@ -254,7 +254,7 @@ impl WgpuThermalAcousticBuffers {
 
     /// Download the current pressure, velocity_x, and temperature fields from GPU.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub async fn download_fields(
         &self,

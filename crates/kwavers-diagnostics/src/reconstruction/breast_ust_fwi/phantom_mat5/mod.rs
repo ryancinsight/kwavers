@@ -55,7 +55,7 @@ pub struct BreastUstAliPhantomMat5Config {
     pub mri_variable_name: String,
     /// Output grid shape `(nx, ny, nz)` used for the sound-speed map.
     pub output_shape: [usize; 3],
-    /// Uniform output grid spacing [m].
+    /// Uniform output grid spacing `m`.
     pub grid_spacing_m: f64,
     /// Breast side transform parameters from the published MATLAB function.
     pub breast_side: BreastUstMriBreastSide,

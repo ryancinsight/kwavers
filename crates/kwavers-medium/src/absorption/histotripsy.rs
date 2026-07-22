@@ -19,16 +19,16 @@ use super::tissue::AbsorptionTissueType;
 /// histotripsy treatment planning.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct HistotripsyTissueProperties {
-    /// Tensile yield (failure) stress `σ_y` \[Pa] used in the lesion energy
+    /// Tensile yield (failure) stress `σ_y` \`Pa` used in the lesion energy
     /// balance. Soft tissues: ~1–4 kPa (Vlaisavljevich 2014).
     pub tensile_yield_stress_pa: f64,
-    /// Mean intrinsic cavitation threshold peak-negative pressure at 1 MHz \[Pa]
+    /// Mean intrinsic cavitation threshold peak-negative pressure at 1 MHz \`Pa`
     /// (Maxwell 2013 erf-CDF model). Water-rich soft tissue: ~28 MPa.
     pub intrinsic_threshold_1mhz_pa: f64,
     /// Log-linear frequency slope of the intrinsic threshold [Pa per decade]
     /// (Vlaisavljevich 2015). Liver: ~1.4 MPa/decade over 0.25–3 MHz.
     pub threshold_slope_pa_per_decade: f64,
-    /// Gaussian width `σ_T` of the single-pulse threshold distribution \[Pa].
+    /// Gaussian width `σ_T` of the single-pulse threshold distribution \`Pa`.
     pub threshold_sigma_pa: f64,
 }
 

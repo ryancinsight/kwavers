@@ -31,7 +31,7 @@ pub trait EncapsulatedShellModel {
     /// Bubble/liquid parameters (ambient pressure, density, viscosity, R0, …).
     fn params(&self) -> &BubbleParameters;
 
-    /// Equilibrium gas-pressure reference `p_eq` [Pa]; the internal gas obeys
+    /// Equilibrium gas-pressure reference `p_eq` `Pa`; the internal gas obeys
     /// `p_gas = p_eq·(R0/R)^{3γ}`. Models set this so that the static balance at
     /// `R = R0` matches their reference interfacial tension.
     fn equilibrium_gas_pressure(&self) -> f64;
@@ -41,7 +41,7 @@ pub trait EncapsulatedShellModel {
     /// models (Marmottant, Sarkar) that fold shell elasticity into the tension.
     fn effective_surface_tension(&self, r: f64) -> f64;
 
-    /// Shell-contributed stress `S_shell(R, Ṙ)` [Pa] (elastic restoring + viscous
+    /// Shell-contributed stress `S_shell(R, Ṙ)` `Pa` (elastic restoring + viscous
     /// damping) beyond the standard `2σ/R + 4μ_L Ṙ/R`. Positive resists expansion.
     fn shell_stress(&self, r: f64, v: f64) -> f64;
 

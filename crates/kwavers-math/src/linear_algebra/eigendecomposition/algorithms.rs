@@ -37,7 +37,7 @@ impl EigenSolver {
     /// - Space: O(n²)
     /// # Errors
     /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn qr_algorithm(
         matrix: &Array2<Complex64>,
@@ -144,7 +144,7 @@ impl EigenSolver {
     /// - Space: O(n²)
     /// # Errors
     /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn jacobi_hermitian(
         matrix: &Array2<Complex64>,

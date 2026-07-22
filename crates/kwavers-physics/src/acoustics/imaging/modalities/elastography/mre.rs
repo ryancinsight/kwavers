@@ -14,7 +14,7 @@
 //! # Extraction
 //! For `N` offsets `k = 0..N` over one period, the first temporal-harmonic
 //! coefficient per voxel is the single-bin DFT
-//! `C = (2/N) · Σ_k φ[k] · exp(−i·2π·k/N)`, and the complex displacement is
+//! `C = (2/N) · Σ_k φ`K` · exp(−i·2π·k/N)`, and the complex displacement is
 //! `U = C / κ`. The `2/N` scaling makes `|U|` the displacement amplitude; the DC
 //! (mean phase, bin 0) and higher harmonics do not contaminate the fundamental.
 //!
@@ -30,15 +30,15 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::Complex64;
 use leto::{Array3, Array4};
 
-/// Extract the complex first-harmonic displacement field [m] from an MRE
+/// Extract the complex first-harmonic displacement field `m` from an MRE
 /// motion-encoded phase-offset stack.
 ///
-/// `phase_stack` has shape `(nx, ny, nz, n_offsets)` of MR phase [rad] sampled at
+/// `phase_stack` has shape `(nx, ny, nz, n_offsets)` of MR phase `rad` sampled at
 /// `n_offsets ≥ 2` equally-spaced wave-phase offsets over one actuation period.
 /// `encoding_sensitivity_rad_per_m` is `κ` in `φ = κ·u`.
 ///
 /// # Errors
-/// - [`KwaversError::InvalidInput`] if `n_offsets < 2` or
+/// - `KwaversError::InvalidInput` if `n_offsets < 2` or
 ///   `encoding_sensitivity_rad_per_m` is non-finite/`≤ 0`.
 pub fn extract_first_harmonic(
     phase_stack: &Array4<f64>,
@@ -82,7 +82,7 @@ pub fn extract_first_harmonic(
     Ok(harmonic)
 }
 
-/// Real displacement snapshot `Re{U·e^{iθ}}` [m] at temporal phase `θ` [rad].
+/// Real displacement snapshot `Re{U·e^{iθ}}` `m` at temporal phase `θ` `rad`.
 #[must_use]
 pub fn harmonic_snapshot(harmonic: &Array3<Complex64>, snapshot_phase_rad: f64) -> Array3<f64> {
     let rot = Complex64::new(snapshot_phase_rad.cos(), snapshot_phase_rad.sin());

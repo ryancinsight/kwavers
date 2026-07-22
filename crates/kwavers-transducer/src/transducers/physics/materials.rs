@@ -343,7 +343,7 @@ impl AcousticLens {
     /// to the focus, relative to the lens centre, is
     ///
     /// ```text
-    /// τ(r) = (√(F² + r²) − F) / c_medium       [s],
+    /// τ(r) = (√(F² + r²) − F) / c_medium       `s`,
     /// ```
     ///
     /// which is `0` at the centre, monotone-increasing in `r`, and reduces to the
@@ -365,7 +365,7 @@ impl AcousticLens {
 
     /// Validate lens design
     /// # Errors
-    /// - Returns [`KwaversError::Config`] if the precondition for a Config-class constraint is violated.
+    /// - Returns `KwaversError::Config` if the precondition for a Config-class constraint is violated.
     ///
     pub fn validate(&self) -> KwaversResult<()> {
         if self.center_thickness <= 0.0 {
@@ -400,11 +400,11 @@ impl AcousticLens {
 /// case is identical with `λ = c/f`).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct FresnelZonePlate {
-    /// Primary focal length `F` \[m].
+    /// Primary focal length `F` \`m`.
     pub focal_length: f64,
-    /// Design wavelength `λ = c/f` \[m].
+    /// Design wavelength `λ = c/f` \`m`.
     pub wavelength: f64,
-    /// Outer aperture radius \[m].
+    /// Outer aperture radius \`m`.
     pub aperture_radius: f64,
 }
 
@@ -514,7 +514,7 @@ pub fn corrective_lens_thickness(
 /// θ_y = arcsin(x / F),    T_z = F − √(F² − x²),
 /// ```
 ///
-/// for focal length `F`. Returns `(θ_y [rad], T_z [m])`, or `None` for the
+/// for focal length `F`. Returns `(θ_y `rad`, T_z `m`)`, or `None` for the
 /// unphysical `|x| > F`.
 #[must_use]
 pub fn isoplanatic_steering_pose(x_offset_m: f64, focal_length_m: f64) -> Option<(f64, f64)> {

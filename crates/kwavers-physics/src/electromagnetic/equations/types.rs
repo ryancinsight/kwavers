@@ -29,7 +29,7 @@ pub enum ElectromagneticPolarization {
     Elliptical {
         /// Axial ratio of the polarization ellipse (minor/major axis).
         ratio: f64,
-        /// Phase difference between the orthogonal field components [rad].
+        /// Phase difference between the orthogonal field components `rad`.
         phase_diff: f64,
     },
 }
@@ -52,30 +52,30 @@ pub enum ElectromagneticWaveType {
 pub enum NanoparticleGeometry {
     /// Spherical nanoparticle
     Sphere {
-        /// Sphere radius [m].
+        /// Sphere radius `m`.
         radius: f64,
     },
     /// Ellipsoidal nanoparticle
     Ellipsoid {
-        /// Semi-axis a [m].
+        /// Semi-axis a `m`.
         a: f64,
-        /// Semi-axis b [m].
+        /// Semi-axis b `m`.
         b: f64,
-        /// Semi-axis c [m].
+        /// Semi-axis c `m`.
         c: f64,
     },
     /// Nanorod (cylindrical)
     Nanorod {
-        /// Cylinder radius [m].
+        /// Cylinder radius `m`.
         radius: f64,
-        /// Cylinder length [m].
+        /// Cylinder length `m`.
         length: f64,
     },
     /// Nanoshell (core-shell)
     Nanoshell {
-        /// Dielectric-core radius [m].
+        /// Dielectric-core radius `m`.
         core_radius: f64,
-        /// Metallic-shell thickness [m].
+        /// Metallic-shell thickness `m`.
         shell_thickness: f64,
     },
 }

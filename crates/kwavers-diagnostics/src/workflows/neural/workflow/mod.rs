@@ -114,7 +114,7 @@ impl RealTimeWorkflow {
     ///
     /// Target: <100ms total processing time for real-time operation
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     #[cfg(feature = "pinn")]
     pub fn execute_workflow(

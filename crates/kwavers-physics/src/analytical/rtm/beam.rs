@@ -24,14 +24,14 @@ use std::f64::consts::PI;
 /// Output: two flattened row-major Vecs (real, imag) of size NX × NZ.
 ///
 /// # Arguments
-/// * `x_arr`, `z_arr` – grid coordinates [m]
-/// * `x_f`, `z_f` – focal point [m]
-/// * `freq_hz` – frequency [Hz]
+/// * `x_arr`, `z_arr` – grid coordinates `m`
+/// * `x_f`, `z_f` – focal point `m`
+/// * `freq_hz` – frequency `Hz`
 /// * `c_brain` – sound speed in brain [m/s]
-/// * `w0_m` – beam waist at focus [m]
+/// * `w0_m` – beam waist at focus `m`
 /// * `skull_transmission` – complex transmission coefficient T (from transfer matrix)
 /// * `r_back` – back-wall pressure reflection coefficient (real scalar)
-/// * `z_back` – axial position of the back wall [m]
+/// * `z_back` – axial position of the back wall `m`
 ///
 /// # Reference
 /// Pinton et al. (2012), *IEEE Trans. Ultrason.* 59, 1302;

@@ -43,7 +43,7 @@ impl IqSvdClutterFilter {
     ///
     /// # Errors
     ///
-    /// Returns [`KwaversError::InvalidInput`] when `clutter_rank` is zero.
+    /// Returns `KwaversError::InvalidInput` when `clutter_rank` is zero.
     pub fn new(clutter_rank: usize) -> KwaversResult<Self> {
         if clutter_rank == 0 {
             return Err(KwaversError::InvalidInput(
@@ -57,7 +57,7 @@ impl IqSvdClutterFilter {
     ///
     /// # Errors
     ///
-    /// Returns [`KwaversError::InvalidInput`] when the cube is empty, contains
+    /// Returns `KwaversError::InvalidInput` when the cube is empty, contains
     /// non-finite I/Q, its flattened spatial dimension overflows, or the rank
     /// would remove every available complex singular mode.
     pub fn filter(&self, iq_ensemble: &Array3<Complex64>) -> KwaversResult<Array3<Complex64>> {
@@ -73,7 +73,7 @@ impl IqSvdClutterFilter {
     ///
     /// # Errors
     ///
-    /// Returns [`KwaversError::InvalidInput`] when the cube is empty, contains
+    /// Returns `KwaversError::InvalidInput` when the cube is empty, contains
     /// non-finite I/Q, its flattened spatial dimension overflows, or the rank
     /// would remove every available complex singular mode.
     pub fn filter_with_power(

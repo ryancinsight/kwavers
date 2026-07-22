@@ -283,10 +283,10 @@ impl FdtdSolver {
     /// ## Algorithm (Yee leapfrog, Virieux 1986)
     ///
     /// ```text
-    /// u^{n+½}[i+½] = u^{n-½}[i+½] − (Δt / ρ_avg) · (p^n[i+1] − p^n[i]) / Δx
+    /// u^{n+½}[i+½] = u^{n-½}[i+½] − (Δt / ρ_avg) · (p^n[i+1] − p^n`i`) / Δx
     /// ```
     ///
-    /// Density is linearly averaged at the half-cell interface: `ρ_avg = (ρ[i] + ρ[i+1]) / 2`.
+    /// Density is linearly averaged at the half-cell interface: `ρ_avg = (ρ`i` + ρ[i+1]) / 2`.
     /// The last row/column/layer of each velocity component is zeroed (Dirichlet at domain edge).
     ///
     /// ## Memory layout

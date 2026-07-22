@@ -219,7 +219,7 @@ impl TissuePropertyMap {
     ///
     /// `Ok(())` if all arrays have the same shape, error otherwise.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn validate_shape_consistency(&self) -> Result<(), String> {
         let shape = self.speed_of_sound.shape();

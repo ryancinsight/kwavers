@@ -75,7 +75,7 @@ impl SoAFieldStorage {
     /// - element `field_i[j]` accessible for all `j` in `0..N_elements`
     /// # Errors
     /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn new(num_fields: usize, num_elements: usize) -> KwaversResult<Self> {
         if num_fields == 0 {
@@ -240,7 +240,7 @@ impl SoAFieldStorage {
     ///
     /// # Preconditions
     /// - `sources.len() == self.num_fields`
-    /// - Each `sources[i].len() >= self.num_elements`
+    /// - Each `sources`i`.len() >= self.num_elements`
     /// # Errors
     /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
     ///
@@ -279,7 +279,7 @@ impl SoAFieldStorage {
 
     /// Transfer data from SoA to AoS format
     ///
-    /// Outputs to `dest` where `dest[i]` contains all fields at element i
+    /// Outputs to `dest` where `dest`i`` contains all fields at element i
     /// # Errors
     /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
     ///

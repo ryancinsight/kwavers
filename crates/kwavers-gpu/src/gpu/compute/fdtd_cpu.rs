@@ -107,7 +107,7 @@ impl FdtdCpuReferenceDispatcher {
 
     /// Convenience wrapper — allocates and returns the updated pressure field.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn update_pressure(
         &mut self,

@@ -21,9 +21,9 @@ use kwavers_core::constants::numerical::TWO_PI;
 /// Inputs for a single-bubble adaptive Keller–Miksis emission simulation.
 #[derive(Debug, Clone, Copy)]
 pub struct BubbleDriveConfig {
-    /// Equilibrium radius [m].
+    /// Equilibrium radius `m`.
     pub r0_m: f64,
-    /// Ambient pressure [Pa].
+    /// Ambient pressure `Pa`.
     pub p0_pa: f64,
     /// Liquid density [kg/m³].
     pub rho: f64,
@@ -33,19 +33,19 @@ pub struct BubbleDriveConfig {
     pub mu: f64,
     /// Surface tension [N/m].
     pub sigma: f64,
-    /// Vapour pressure [Pa].
+    /// Vapour pressure `Pa`.
     pub pv: f64,
     /// Gas adiabatic index.
     pub gamma: f64,
-    /// Drive frequency [Hz].
+    /// Drive frequency `Hz`.
     pub drive_freq_hz: f64,
-    /// Peak acoustic drive pressure [Pa].
+    /// Peak acoustic drive pressure `Pa`.
     pub drive_amp_pa: f64,
     /// Number of drive cycles to simulate.
     pub n_cycles: f64,
     /// Output samples (uniform grid over the simulated window).
     pub n_out: usize,
-    /// Observation distance for the far-field emission [m].
+    /// Observation distance for the far-field emission `m`.
     pub r_obs_m: f64,
     /// Enable gas thermodynamics + mass transfer (slower, more physical).
     pub thermal_effects: bool,
@@ -54,13 +54,13 @@ pub struct BubbleDriveConfig {
 /// Result of an adaptive Keller–Miksis emission simulation.
 #[derive(Debug, Clone)]
 pub struct BubbleEmissionTrace {
-    /// Output time grid [s].
+    /// Output time grid `s`.
     pub time: Vec<f64>,
-    /// Bubble radius `R(t)` [m].
+    /// Bubble radius `R(t)` `m`.
     pub radius: Vec<f64>,
     /// Wall velocity `Ṙ(t)` [m/s].
     pub wall_velocity: Vec<f64>,
-    /// Far-field emitted pressure `p_sc(t)` [Pa].
+    /// Far-field emitted pressure `p_sc(t)` `Pa`.
     pub emission: Vec<f64>,
     /// Maximum compression ratio `R₀/R_min` reached.
     pub max_compression: f64,
@@ -192,9 +192,9 @@ pub fn simulate_bubble_emission(cfg: &BubbleDriveConfig) -> BubbleEmissionTrace 
 /// Inputs for a coated (encapsulated) microbubble emission simulation.
 #[derive(Debug, Clone, Copy)]
 pub struct ShellDriveConfig {
-    /// Equilibrium radius [m].
+    /// Equilibrium radius `m`.
     pub r0_m: f64,
-    /// Ambient pressure [Pa].
+    /// Ambient pressure `Pa`.
     pub p0_pa: f64,
     /// Liquid density [kg/m³].
     pub rho: f64,
@@ -204,9 +204,9 @@ pub struct ShellDriveConfig {
     pub mu: f64,
     /// Gas adiabatic index.
     pub gamma: f64,
-    /// Drive frequency [Hz].
+    /// Drive frequency `Hz`.
     pub drive_freq_hz: f64,
-    /// Peak acoustic drive pressure [Pa].
+    /// Peak acoustic drive pressure `Pa`.
     pub drive_amp_pa: f64,
     /// Number of drive cycles to simulate.
     pub n_cycles: f64,
@@ -214,13 +214,13 @@ pub struct ShellDriveConfig {
     pub steps_per_cycle: usize,
     /// Output samples.
     pub n_out: usize,
-    /// Observation distance for the far-field emission [m].
+    /// Observation distance for the far-field emission `m`.
     pub r_obs_m: f64,
     /// Shell elastic compression modulus χ [N/m] (lipid ≈ 0.5–1.0).
     pub chi: f64,
     /// Shell shear viscosity [Pa·s] (lipid ≈ 0.5).
     pub shell_viscosity: f64,
-    /// Shell thickness [m] (lipid ≈ 3 nm).
+    /// Shell thickness `m` (lipid ≈ 3 nm).
     pub shell_thickness: f64,
     /// Initial (unstressed) shell surface tension [N/m].
     pub sigma_initial: f64,

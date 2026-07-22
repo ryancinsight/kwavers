@@ -399,7 +399,7 @@ pub fn finite_window_pstd_born_gradient(
 }
 
 /// Forward PSTD pass that additionally stores the reference-field acceleration
-/// `accel[step][j] = p0[step+1][j] − 2 p0[step][j] + p0[step−1][j]` at
+/// `accel[step]`J` = p0[step+1]`J` − 2 p0[step]`J` + p0[step−1]`J`` at
 /// every time step, needed by the adjoint backward pass.
 ///
 /// Returns `(d_model, accel_history)` where `d_model` is the complex receiver

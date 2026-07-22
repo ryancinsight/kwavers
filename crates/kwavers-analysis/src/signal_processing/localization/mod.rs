@@ -95,7 +95,7 @@ pub trait LocalizationProcessor: Send + Sync {
 
 /// Create a MUSIC-based localization processor
 /// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Propagates any `KwaversError` returned by called functions.
 ///
 pub fn create_music_processor(
     config: &MUSICConfig,
@@ -105,7 +105,7 @@ pub fn create_music_processor(
 
 /// Create a TDOA-based localization processor
 /// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Propagates any `KwaversError` returned by called functions.
 ///
 pub fn create_tdoa_processor(config: &TDOAConfig) -> KwaversResult<Box<dyn LocalizationProcessor>> {
     Ok(Box::new(TDOAProcessor::new(config)?))
@@ -113,7 +113,7 @@ pub fn create_tdoa_processor(config: &TDOAConfig) -> KwaversResult<Box<dyn Local
 
 /// Create a Bayesian filtering localization processor
 /// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Propagates any `KwaversError` returned by called functions.
 ///
 pub fn create_bayesian_processor(
     config: &KalmanFilterConfig,

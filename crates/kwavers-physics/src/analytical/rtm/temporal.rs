@@ -7,10 +7,10 @@
 /// coherent averaging over M frequencies cancels the standing-wave modulation.
 ///
 /// # Arguments
-/// * `f0_hz` – base frequency [Hz]
+/// * `f0_hz` – base frequency `Hz`
 /// * `m_steps` – number of frequencies M
 /// * `c` – sound speed [m/s]
-/// * `d_back_m` – distance to the back-reflecting wall [m]
+/// * `d_back_m` – distance to the back-reflecting wall `m`
 ///
 /// # Reference
 /// Dencks & Schmitz (2005), *Ultrasonics* 43, 183.
@@ -58,7 +58,7 @@ pub fn standing_wave_suppression_gain(r_back: f64) -> f64 {
 /// the standing-wave intensity, and equals 1/(half-wavelength).
 ///
 /// # Arguments
-/// * `freq_hz` – frequency [Hz]
+/// * `freq_hz` – frequency `Hz`
 /// * `c` – sound speed [m/s]
 ///
 /// # Reference
@@ -71,7 +71,7 @@ pub fn standing_wave_spatial_frequency_cycles_m(freq_hz: f64, c: f64) -> f64 {
 
 // ─── Standing-wave period ────────────────────────────────────────────────────
 
-/// Period of one full standing-wave cycle in frequency [Hz].
+/// Period of one full standing-wave cycle in frequency `Hz`.
 ///
 /// For a back-reflector at distance `d_back_m`, the standing-wave pattern
 /// completes one full oscillation cycle when the frequency shifts by:
@@ -82,7 +82,7 @@ pub fn standing_wave_spatial_frequency_cycles_m(freq_hz: f64, c: f64) -> f64 {
 ///
 /// # Arguments
 /// * `c` – sound speed [m/s]
-/// * `d_back_m` – distance from field point to back-reflecting wall [m]
+/// * `d_back_m` – distance from field point to back-reflecting wall `m`
 ///
 /// # Reference
 /// Dencks & Schmitz (2005), *Ultrasonics* 43, 183.
@@ -111,9 +111,9 @@ pub fn standing_wave_modulation_period_hz(c: f64, d_back_m: f64) -> f64 {
 /// spaced modulation steps) converges to `1 + R²` (see `standing_wave_intensity_statistics`).
 ///
 /// # Arguments
-/// * `x_arr` – distances from the back reflector [m]; may include negative or
+/// * `x_arr` – distances from the back reflector `m`; may include negative or
 ///   zero values (evaluated as-is; masking is the caller's responsibility)
-/// * `freq_hz` – frequency [Hz]
+/// * `freq_hz` – frequency `Hz`
 /// * `c` – sound speed [m/s]
 /// * `r_back` – pressure reflection coefficient (|R| ≤ 1)
 ///

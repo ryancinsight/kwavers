@@ -239,7 +239,7 @@ impl PressureFieldStatistics {
 
     /// Fill caller-owned storage with RMS pressure at sensor positions.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn fill_p_rms(
         &self,

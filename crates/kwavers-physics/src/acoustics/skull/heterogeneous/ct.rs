@@ -8,7 +8,7 @@ use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WA
 
 impl HeterogeneousSkull {
     /// Create a heterogeneous skull from CT data using the continuous
-    /// tissue-varying [`HuAcousticModel`] (Schneider 1996) for density and sound
+    /// tissue-varying `HuAcousticModel` (Schneider 1996) for density and sound
     /// speed. Attenuation blends linearly from water (`ALPHA_WATER`) to the
     /// provided bone `props.attenuation_coeff` by bone volume fraction, so every
     /// tissue type maps to distinct properties (no binary bone/soft split).

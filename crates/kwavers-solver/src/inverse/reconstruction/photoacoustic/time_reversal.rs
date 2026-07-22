@@ -201,7 +201,7 @@ impl PhotoacousticTimeReversal {
 
     /// Construct the standard DFT k-vector for `n` points and spacing `dx`.
     ///
-    /// `k[i] = i·(2π/(n·dx))` for `i ≤ n/2`, and `(i−n)·(2π/(n·dx))` otherwise.
+    /// `k`i` = i·(2π/(n·dx))` for `i ≤ n/2`, and `(i−n)·(2π/(n·dx))` otherwise.
     fn k_vector(n: usize, dx: f64) -> Vec<f64> {
         let dk = TWO_PI / (n as f64 * dx);
         (0..n)

@@ -23,7 +23,7 @@ use super::validation::{validate_weighted_average_inputs, WeightedAverageValidat
 /// Registration is performed prior to accumulation; unsupported registration
 /// requests fail explicitly instead of silently changing algorithms.
 /// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Propagates any `KwaversError` returned by called functions.
 ///
 pub(crate) fn fuse_weighted_average(fusion: &MultiModalFusion) -> KwaversResult<FusedImageResult> {
     let _references = WEIGHTED_AVERAGE_FUSION_REFERENCES;

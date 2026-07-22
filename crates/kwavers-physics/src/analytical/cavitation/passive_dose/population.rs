@@ -20,7 +20,7 @@ const MAX_PHYSICAL_EMISSION_PA: f64 = 1.0e7;
 /// Shared liquid and gas parameters for population emission simulation.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct PopulationMedium {
-    /// Ambient pressure [Pa].
+    /// Ambient pressure `Pa`.
     pub p0_pa: f64,
     /// Liquid density [kg/m^3].
     pub rho: f64,
@@ -30,7 +30,7 @@ pub struct PopulationMedium {
     pub mu: f64,
     /// Surface tension for free bubbles [N/m].
     pub sigma: f64,
-    /// Vapour pressure [Pa].
+    /// Vapour pressure `Pa`.
     pub pv: f64,
     /// Gas adiabatic index.
     pub gamma: f64,
@@ -45,7 +45,7 @@ pub struct PopulationShell {
     pub chi: f64,
     /// Shell shear viscosity [Pa s].
     pub shell_viscosity: f64,
-    /// Shell thickness [m].
+    /// Shell thickness `m`.
     pub shell_thickness: f64,
     /// Initial shell surface tension [N/m].
     pub sigma_initial: f64,
@@ -56,15 +56,15 @@ pub struct PopulationShell {
 /// Inputs for one population-level passive-cavitation emission simulation.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct PopulationEmissionInput {
-    /// Acoustic drive pressure [Pa].
+    /// Acoustic drive pressure `Pa`.
     pub drive_pa: f64,
-    /// Fundamental drive frequency [Hz].
+    /// Fundamental drive frequency `Hz`.
     pub f0_hz: f64,
     /// Number of bubbles to draw and simulate.
     pub n_bubbles: usize,
     /// Deterministic RNG seed.
     pub seed: u64,
-    /// Median equilibrium radius of the log-normal population [m].
+    /// Median equilibrium radius of the log-normal population `m`.
     pub r0_median_m: f64,
     /// Natural-log radius standard deviation.
     pub r0_sigma_ln: f64,
@@ -72,7 +72,7 @@ pub struct PopulationEmissionInput {
     pub n_cycles: f64,
     /// Output samples per single-bubble trace.
     pub n_out: usize,
-    /// Observation distance for far-field emission [m].
+    /// Observation distance for far-field emission `m`.
     pub r_obs_m: f64,
     /// Half-width of spectral line windows as a fraction of `f0_hz`.
     pub rel_halfwidth: f64,
@@ -89,7 +89,7 @@ pub struct PopulationEmissionInput {
 /// Population-level passive-cavitation emission result.
 #[derive(Clone, Debug, PartialEq)]
 pub struct PopulationEmission {
-    /// Single-sided frequency axis [Hz].
+    /// Single-sided frequency axis `Hz`.
     pub freqs_hz: Vec<f64>,
     /// Incoherently summed population PSD.
     pub psd: Vec<f64>,
@@ -106,15 +106,15 @@ pub struct PopulationEmission {
 /// Inputs for a population-emission pressure sweep.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct PopulationEmissionSweepInput<'a> {
-    /// Drive-pressure samples [Pa].
+    /// Drive-pressure samples `Pa`.
     pub pressures_pa: &'a [f64],
-    /// Fundamental drive frequency [Hz].
+    /// Fundamental drive frequency `Hz`.
     pub f0_hz: f64,
     /// Number of bubbles to draw and simulate per pressure.
     pub n_bubbles: usize,
     /// Deterministic RNG seed for per-pressure population seeds.
     pub seed: u64,
-    /// Median equilibrium radius of the log-normal population [m].
+    /// Median equilibrium radius of the log-normal population `m`.
     pub r0_median_m: f64,
     /// Natural-log radius standard deviation.
     pub r0_sigma_ln: f64,
@@ -122,7 +122,7 @@ pub struct PopulationEmissionSweepInput<'a> {
     pub n_cycles: f64,
     /// Output samples per single-bubble trace.
     pub n_out: usize,
-    /// Observation distance for far-field emission [m].
+    /// Observation distance for far-field emission `m`.
     pub r_obs_m: f64,
     /// Half-width of spectral line windows as a fraction of `f0_hz`.
     pub rel_halfwidth: f64,

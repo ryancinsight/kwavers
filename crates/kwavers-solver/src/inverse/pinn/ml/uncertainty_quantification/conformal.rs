@@ -35,7 +35,7 @@ where
     ///
     /// # Errors
     ///
-    /// Returns [`KwaversError::InvalidInput`] unless `0 < miscoverage < 1`.
+    /// Returns `KwaversError::InvalidInput` unless `0 < miscoverage < 1`.
     pub fn new(
         model: crate::inverse::pinn::ml::PinnWave2D<B>,
         miscoverage: f32,
@@ -54,7 +54,7 @@ where
     ///
     /// # Errors
     ///
-    /// Returns [`KwaversError::InvalidInput`] for mismatched or empty
+    /// Returns `KwaversError::InvalidInput` for mismatched or empty
     /// calibration data, invalid inputs, or non-finite scores. Propagates model
     /// prediction failures.
     pub fn calibrate(
@@ -86,7 +86,7 @@ where
     ///
     /// # Errors
     ///
-    /// Returns [`KwaversError::InvalidInput`] before calibration or for an
+    /// Returns `KwaversError::InvalidInput` before calibration or for an
     /// invalid coordinate input. Propagates model prediction failures.
     pub fn predict_conformal(&self, input: &[f32]) -> KwaversResult<(f32, f32)> {
         let quantile = self.quantile.ok_or_else(|| {

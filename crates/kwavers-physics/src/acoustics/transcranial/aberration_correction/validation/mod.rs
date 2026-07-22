@@ -52,7 +52,7 @@ pub use types::CorrectionValidation;
 impl TranscranialAberrationCorrection {
     /// Validate correction performance against three metrics.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn validate_correction(
         &self,

@@ -42,7 +42,7 @@ impl MedicalImageBatchLoader {
 
     /// Add file to batch queue
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn add(&mut self, path: &str) -> KwaversResult<()> {
         if !Path::new(path).exists() {
@@ -57,7 +57,7 @@ impl MedicalImageBatchLoader {
 
     /// Load all queued files (fails fast on first error).
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn load_all(&mut self) -> KwaversResult<()> {
         self.images.clear();

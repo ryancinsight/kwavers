@@ -20,7 +20,7 @@ use kwavers_core::error::{KwaversError, KwaversResult, PhysicsError};
 /// * `dp_dt` — constant pressure time-derivative [Pa/s]
 /// # Errors
 /// - Returns [`KwaversError::Physics`] if the precondition for a Physics-class constraint is violated.
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Propagates any `KwaversError` returned by called functions.
 ///
 pub fn integrate_bubble_dynamics_symplectic(
     initial_state: BubbleState,

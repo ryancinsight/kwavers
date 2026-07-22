@@ -8,7 +8,7 @@ use leto::Array3;
 ///
 /// For ensemble [c, c, …, c] (N copies):
 ///   mean = c
-///   filtered[n] = c − c = 0 for every n.
+///   filtered`N` = c − c = 0 for every n.
 #[test]
 fn wall_filter_highpass_constant_ensemble_outputs_zero() {
     let cfg = WallFilterConfig {
@@ -31,7 +31,7 @@ fn wall_filter_highpass_constant_ensemble_outputs_zero() {
 /// Alternating ensemble [+A, −A, +A, −A] has mean = 0, so HighPass preserves it exactly.
 ///
 /// mean = (A − A + A − A) / 4 = 0
-/// filtered[n] = s[n] − 0 = s[n]
+/// filtered`N` = s`N` − 0 = s`N`
 #[test]
 fn wall_filter_highpass_zero_mean_ensemble_is_unchanged() {
     let cfg = WallFilterConfig {
@@ -119,7 +119,7 @@ fn wall_filter_polynomial_constant_ensemble_outputs_zero() {
 
 /// Polynomial order-1 filter zeroes a linear ramp ensemble.
 ///
-/// A linear signal x[n] = a + b·t lies in span{1, t}, so order-1 polynomial
+/// A linear signal x`N` = a + b·t lies in span{1, t}, so order-1 polynomial
 /// regression removes it exactly. This validates that the polynomial filter
 /// actually uses the `order` parameter rather than reducing to DC removal.
 #[test]
@@ -146,7 +146,7 @@ fn wall_filter_polynomial_linear_ramp_outputs_zero() {
 
 /// Polynomial order-2 filter zeroes a quadratic ensemble.
 ///
-/// A quadratic signal x[n] = a + b·t + c·t² lies in span{1, t, t²}, so
+/// A quadratic signal x`N` = a + b·t + c·t² lies in span{1, t, t²}, so
 /// order-2 polynomial regression removes it exactly. Validates that the
 /// projector handles each order correctly.
 #[test]
@@ -199,11 +199,11 @@ fn wall_filter_polynomial_order1_leaves_quadratic_residual() {
 
 /// IIR high-pass: constant DC input produces a transient that decays to zero.
 ///
-/// For x[n] = c and one-pole HPF y[n] = α(y[n-1] + x[n] - x[n-1]) with
+/// For x`N` = c and one-pole HPF y`N` = α(y[n-1] + x`N` - x[n-1]) with
 /// y[-1] = x[-1] = 0:
 ///   y[0] = α·c
 ///   y[1] = α²·c
-///   y[n] = α^(n+1)·c
+///   y`N` = α^(n+1)·c
 /// The steady-state response to DC is zero, but the transient is non-zero
 /// — this is the correct high-pass behavior (Oppenheim & Schafer §8.3).
 #[test]
@@ -235,7 +235,7 @@ fn wall_filter_iir_dc_input_decays_geometrically() {
 
 /// IIR high-pass: alternating Nyquist-frequency input passes through with gain.
 ///
-/// For x[n] = (-1)^n · c, the difference x[n] − x[n-1] alternates with
+/// For x`N` = (-1)^n · c, the difference x`N` − x[n-1] alternates with
 /// magnitude 2|c|, producing a response near the HPF passband.
 #[test]
 fn wall_filter_iir_alternating_input_is_passed() {

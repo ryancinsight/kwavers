@@ -149,7 +149,7 @@ impl WorkQueue {
 
     /// Submit a task with deadline
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn submit_with_deadline(
         &self,
@@ -224,7 +224,7 @@ impl WorkQueue {
 
     /// Shutdown the work queue and wait for threads to finish
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn shutdown(&mut self) -> KwaversResult<()> {
         self.scheduler.shutdown();

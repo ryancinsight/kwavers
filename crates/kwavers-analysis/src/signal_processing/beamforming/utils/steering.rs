@@ -29,7 +29,7 @@ pub struct SteeringVector;
 impl SteeringVector {
     /// Compute plane wave.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn compute_plane_wave(
         direction: [f64; 3],
@@ -57,7 +57,7 @@ impl SteeringVector {
     /// Compute steering vector for given direction and sensor positions
     /// Returns complex-valued steering vector as `Array1<Complex<f64>>`
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn compute(
         method: &SteeringVectorMethod,
@@ -148,7 +148,7 @@ impl SteeringVector {
 
     /// Compute real-valued steering vector (phase-only for delay-and-sum)
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn compute_real(
         method: &SteeringVectorMethod,
@@ -247,7 +247,7 @@ mod tests {
 
     /// Endfire plane wave (direction=[1,0,0]) gives quarter-wave negative phase at d=λ/4.
     ///
-    /// Phase convention: delays[i] = −k·(pos·dir) (standard receive beamforming sign).
+    /// Phase convention: delays`i` = −k·(pos·dir) (standard receive beamforming sign).
     /// Sensors at [0,0,0] and [λ/4, 0, 0]; direction = [1,0,0].
     /// k = 2πf/c; phase[0]=0, phase[1] = −k·λ/4 = −π/2.
     /// a = [exp(j·0), exp(−j·π/2)] = [1+0j, 0−j].

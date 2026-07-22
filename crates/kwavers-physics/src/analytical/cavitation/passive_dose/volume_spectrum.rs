@@ -18,7 +18,7 @@ const MAX_EXACT_F64_INTEGER: usize = 1usize << 53;
 /// Liquid and shell parameters for deterministic V_s spectrum aggregation.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct VolumeSpectrumMedium {
-    /// Ambient pressure [Pa].
+    /// Ambient pressure `Pa`.
     pub p0_pa: f64,
     /// Liquid density [kg/m^3].
     pub rho: f64,
@@ -28,7 +28,7 @@ pub struct VolumeSpectrumMedium {
     pub gamma: f64,
     /// Liquid dynamic viscosity [Pa s].
     pub mu: f64,
-    /// Vapour pressure [Pa].
+    /// Vapour pressure `Pa`.
     pub pv_pa: f64,
     /// Liquid sound speed [m/s].
     pub c_liquid: f64,
@@ -39,11 +39,11 @@ pub struct VolumeSpectrumMedium {
 /// Inputs for one V_s-integrated emission spectrum.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct VolumeEmissionSpectrumInput<'a> {
-    /// Drive pressure [Pa].
+    /// Drive pressure `Pa`.
     pub drive_pa: f64,
-    /// Fundamental frequency [Hz].
+    /// Fundamental frequency `Hz`.
     pub f0_hz: f64,
-    /// Equilibrium radii in the sonication volume [m].
+    /// Equilibrium radii in the sonication volume `m`.
     pub r0_population_m: &'a [f64],
     /// Liquid and shell parameters.
     pub medium: VolumeSpectrumMedium,
@@ -51,7 +51,7 @@ pub struct VolumeEmissionSpectrumInput<'a> {
     pub n_cycles: f64,
     /// Fixed RK4 steps per drive cycle.
     pub steps_per_cycle: usize,
-    /// Observation distance [m].
+    /// Observation distance `m`.
     pub r_obs_m: f64,
     /// Target decimated sample count for the DFT.
     pub n_fft: usize,
@@ -62,7 +62,7 @@ pub struct VolumeEmissionSpectrumInput<'a> {
 /// V_s-integrated emission spectrum.
 #[derive(Clone, Debug, PartialEq)]
 pub struct VolumeEmissionSpectrum {
-    /// Frequency axis [Hz].
+    /// Frequency axis `Hz`.
     pub freqs_hz: Vec<f64>,
     /// Incoherently summed V_s PSD.
     pub psd: Vec<f64>,
@@ -73,11 +73,11 @@ pub struct VolumeEmissionSpectrum {
 /// Inputs for a V_s-integrated pressure sweep.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct VolumeEmissionSweepInput<'a> {
-    /// Drive-pressure samples [Pa].
+    /// Drive-pressure samples `Pa`.
     pub pressures_pa: &'a [f64],
-    /// Fundamental frequency [Hz].
+    /// Fundamental frequency `Hz`.
     pub f0_hz: f64,
-    /// Equilibrium radii in the sonication volume [m].
+    /// Equilibrium radii in the sonication volume `m`.
     pub r0_population_m: &'a [f64],
     /// Liquid and shell parameters.
     pub medium: VolumeSpectrumMedium,
@@ -89,7 +89,7 @@ pub struct VolumeEmissionSweepInput<'a> {
     pub n_cycles: f64,
     /// Fixed RK4 steps per drive cycle.
     pub steps_per_cycle: usize,
-    /// Observation distance [m].
+    /// Observation distance `m`.
     pub r_obs_m: f64,
     /// Target decimated sample count for the DFT.
     pub n_fft: usize,

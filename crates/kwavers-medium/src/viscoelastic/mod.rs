@@ -49,7 +49,7 @@ pub struct DispersionSample {
     pub attenuation: f64,
 }
 
-/// Recover the complex shear modulus `G*(ω)` \[Pa] from a measured phase
+/// Recover the complex shear modulus `G*(ω)` \`Pa` from a measured phase
 /// velocity and attenuation (model-agnostic rheological inversion).
 ///
 /// Inverts the dispersion relation `k = ω√(ρ/G*)` used by the forward models.

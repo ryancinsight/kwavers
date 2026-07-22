@@ -30,8 +30,8 @@ impl TetrahedralMesh {
     /// The grid points are interpreted as FEM vertices, not cell centers. At
     /// least two points in each axis are required to form a 3-D cell.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn from_grid_vertices(grid: &Grid) -> KwaversResult<Self> {
         if grid.nx < 2 || grid.ny < 2 || grid.nz < 2 {

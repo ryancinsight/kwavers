@@ -9,10 +9,10 @@ use kwavers_core::constants::numerical::TWO_PI;
 /// ```
 ///
 /// # Arguments
-/// * `z_arr` – on-axis distances from piston face [m] (must be > 0)
-/// * `radius_m` – piston radius a [m]
-/// * `freq_hz` – frequency [Hz]
-/// * `p0_pa` – surface pressure amplitude [Pa]
+/// * `z_arr` – on-axis distances from piston face `m` (must be > 0)
+/// * `radius_m` – piston radius a `m`
+/// * `freq_hz` – frequency `Hz`
+/// * `p0_pa` – surface pressure amplitude `Pa`
 /// * `c` – sound speed [m/s]
 ///
 /// # Reference
@@ -56,11 +56,11 @@ pub fn circular_piston_onaxis(
 /// no focal peak.
 ///
 /// # Arguments
-/// * `z_arr` – axial positions from the vertex [m] (z > 0, in front of the bowl)
-/// * `bowl_radius_m` – bowl aperture radius a [m] (must satisfy a ≤ F)
-/// * `focal_length_m` – geometric focal length / radius of curvature F [m]
-/// * `freq_hz` – frequency [Hz]
-/// * `p0_pa` – source pressure [Pa]
+/// * `z_arr` – axial positions from the vertex `m` (z > 0, in front of the bowl)
+/// * `bowl_radius_m` – bowl aperture radius a `m` (must satisfy a ≤ F)
+/// * `focal_length_m` – geometric focal length / radius of curvature F `m`
+/// * `freq_hz` – frequency `Hz`
+/// * `p0_pa` – source pressure `Pa`
 /// * `c` – sound speed [m/s]
 ///
 /// # Reference

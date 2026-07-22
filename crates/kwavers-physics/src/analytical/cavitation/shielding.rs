@@ -51,7 +51,7 @@ use crate::acoustics::bubble_dynamics::commander_prosperetti_attenuation;
 /// Drive-frequency program over the exposure.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum DriveFrequency {
-    /// Constant carrier `f₀` [Hz] (the conventional fixed-frequency drive).
+    /// Constant carrier `f₀` `Hz` (the conventional fixed-frequency drive).
     Fixed(f64),
     /// Frequency-swept (chirp) carrier; the instantaneous frequency moves across
     /// the band each sweep period.
@@ -59,7 +59,7 @@ pub enum DriveFrequency {
 }
 
 impl DriveFrequency {
-    /// Instantaneous carrier frequency at time `t_s` [Hz].
+    /// Instantaneous carrier frequency at time `t_s` `Hz`.
     #[must_use]
     #[inline]
     pub fn at(&self, t_s: f64) -> f64 {
@@ -73,9 +73,9 @@ impl DriveFrequency {
 /// ON/OFF pulse gate. `pulse_off_s = 0` is a continuous (CW) drive.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PulseProtocol {
-    /// ON duration per pulse [s] (the millisecond burst).
+    /// ON duration per pulse `s` (the millisecond burst).
     pub pulse_on_s: f64,
-    /// OFF interval between pulses [s] (`0` ⇒ continuous wave).
+    /// OFF interval between pulses `s` (`0` ⇒ continuous wave).
     pub pulse_off_s: f64,
 }
 
@@ -134,9 +134,9 @@ pub struct CavitationProduction {
     pub k_prod_per_s: f64,
     /// Saturation void fraction `β_max` (logistic ceiling).
     pub beta_max: f64,
-    /// Cavitation pressure threshold `p_thr` [Pa]; no production below it.
+    /// Cavitation pressure threshold `p_thr` `Pa`; no production below it.
     pub p_threshold_pa: f64,
-    /// Pressure scale `p_ref` [Pa] normalising the supralinear excess term.
+    /// Pressure scale `p_ref` `Pa` normalising the supralinear excess term.
     pub p_ref_pa: f64,
     /// Supralinearity exponent `n ≥ 1` of the production–pressure law.
     pub supralinearity: f64,
@@ -165,16 +165,16 @@ pub struct ShieldingMedium {
     pub rho_liquid: f64,
     /// Liquid dynamic viscosity `μ` [Pa·s].
     pub mu_liquid: f64,
-    /// Ambient pressure `P₀` [Pa].
+    /// Ambient pressure `P₀` `Pa`.
     pub p0_pa: f64,
     /// Gas polytropic exponent `κ`.
     pub polytropic: f64,
-    /// Representative residual/cloud bubble radius `R₀` [m] (sets both the C–P
+    /// Representative residual/cloud bubble radius `R₀` `m` (sets both the C–P
     /// resonance and the Epstein–Plesset dissolution time).
     pub r0_m: f64,
     /// Tissue power-law attenuation along the path `α_tissue` [Np/m].
     pub alpha_tissue_np_m: f64,
-    /// Proximal→focus path length `L` [m] over which the cloud shields.
+    /// Proximal→focus path length `L` `m` over which the cloud shields.
     pub path_len_m: f64,
     /// Dissolved-gas saturation fraction `f_sat` (`<1` ⇒ residual bubbles
     /// dissolve in the OFF interval; sets `τ_diss`).
@@ -199,7 +199,7 @@ impl ShieldingMedium {
         }
     }
 
-    /// Epstein–Plesset residual dissolution time `τ_diss` [s] for this medium's
+    /// Epstein–Plesset residual dissolution time `τ_diss` `s` for this medium's
     /// residual bubble; `None` (returned as `+∞` to callers) when the gas state
     /// does not dissolve (saturated/supersaturated).
     #[must_use]
@@ -213,20 +213,20 @@ impl ShieldingMedium {
 /// Integration controls for the shielding balance.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ShieldingConfig {
-    /// Total simulated exposure time [s].
+    /// Total simulated exposure time `s`.
     pub total_time_s: f64,
-    /// Integration time step [s] (RK4); resolve the shorter of ON/OFF/`τ_diss`.
+    /// Integration time step `s` (RK4); resolve the shorter of ON/OFF/`τ_diss`.
     pub dt_s: f64,
 }
 
 /// Per-sample trace plus scalar summaries of a shielding-controlled exposure.
 #[derive(Debug, Clone)]
 pub struct ShieldingTrace {
-    /// Sample times [s].
+    /// Sample times `s`.
     pub time_s: Vec<f64>,
     /// Focal void fraction `β(t)`.
     pub void_fraction: Vec<f64>,
-    /// Delivered focal pressure `p_focus(t)` [Pa] (0 while the drive is OFF).
+    /// Delivered focal pressure `p_focus(t)` `Pa` (0 while the drive is OFF).
     pub delivered_pressure_pa: Vec<f64>,
     /// Delivered fraction `p_focus/p_drive` while ON (the instantaneous
     /// transmission through tissue + cloud).

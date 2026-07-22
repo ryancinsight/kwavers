@@ -33,7 +33,7 @@ impl PerDimensionPML {
 
     /// Thickness for a specific dimension (0=x, 1=y, 2=z).
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if `dim > 2`.
+    /// - Returns `KwaversError::InvalidInput` if `dim > 2`.
     ///
     pub fn get(&self, dim: usize) -> KwaversResult<usize> {
         match dim {
@@ -105,7 +105,7 @@ impl PerDimensionAlpha {
 
     /// Alpha for a specific dimension (0=x, 1=y, 2=z).
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if `dim > 2`.
+    /// - Returns `KwaversError::InvalidInput` if `dim > 2`.
     ///
     pub fn get(&self, dim: usize) -> KwaversResult<f64> {
         match dim {

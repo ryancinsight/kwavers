@@ -13,7 +13,7 @@ use crate::manifest::EnergyBudgetReport;
 /// Per-tile thermal state derived from the energy budget + package θ_jc.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ThermalState {
-    /// Per-tile junction temperature rise above ambient (K) = `per_tile_device_total_w[i] × θ_jc`.
+    /// Per-tile junction temperature rise above ambient (K) = `per_tile_device_total_w`i` × θ_jc`.
     pub per_tile_rise_k: Vec<f64>,
     /// Peak tile temperature rise (K) — the thermal-placer's binding constraint.
     pub peak_rise_k: f64,

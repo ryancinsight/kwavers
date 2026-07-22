@@ -67,7 +67,7 @@ impl DivergingWave {
     /// * `z`        - Axial depth of imaging point (m, must be ≥ 0)
     /// * `elem_idx` - Transmitting element index
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn transmit_delay(&self, x: f64, z: f64, elem_idx: usize) -> KwaversResult<f64> {
         self.check_elem(elem_idx)?;
@@ -94,7 +94,7 @@ impl DivergingWave {
     /// * `z`        - Axial depth of imaging point (m)
     /// * `elem_idx` - Receiving element index
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn receive_delay(&self, x: f64, z: f64, elem_idx: usize) -> KwaversResult<f64> {
         self.check_elem(elem_idx)?;
@@ -111,7 +111,7 @@ impl DivergingWave {
     ///   τ_STA(x, z, i, j) = τ_tx(x, z, i) + τ_rx(x, z, j)
     /// ```
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn sta_delay(&self, x: f64, z: f64, tx_idx: usize, rx_idx: usize) -> KwaversResult<f64> {
         Ok(self.transmit_delay(x, z, tx_idx)? + self.receive_delay(x, z, rx_idx)?)
@@ -175,7 +175,7 @@ impl DivergingWave {
     /// For large arrays this is O(N² × N_pixels) in memory.  For real-time systems
     /// consider computing delays on the fly or using the per-point `sta_delay()`.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn sta_delay_table(
         &self,
@@ -227,7 +227,7 @@ impl DivergingWave {
     /// # Returns
     /// Array of shape `[n_elements × (nx · nz)]`.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn transmit_delay_surface(
         &self,

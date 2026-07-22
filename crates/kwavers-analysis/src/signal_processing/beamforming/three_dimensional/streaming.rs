@@ -63,7 +63,7 @@ impl StreamingBuffer {
     /// - `Ok(true)`: Buffer is full (ready for processing)
     /// - `Ok(false)`: Buffer still accumulating frames
     /// # Errors
-    /// Returns [`KwaversError::InvalidInput`] if frame dimensions don't match the buffer configuration.
+    /// Returns `KwaversError::InvalidInput` if frame dimensions don't match the buffer configuration.
     pub fn add_frame(&mut self, frame: &Array3<f32>) -> KwaversResult<bool> {
         let frame_dims = frame.shape();
         let channels = frame_dims[0];

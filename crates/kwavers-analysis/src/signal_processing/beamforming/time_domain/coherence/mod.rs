@@ -4,7 +4,7 @@
 //! (off-axis clutter, reverberation, electronic-noise) energy in DAS images by
 //! measuring how *coherent* the delay-aligned aperture data is at each output
 //! sample. The weight multiplies the DAS output:
-//! `y_cf[j] = CF[j] · y_das[j]`, with `CF[j] ∈ [0, 1]`.
+//! `y_cf`J` = CF`J` · y_das`J``, with `CF`J` ∈ [0, 1]`.
 //!
 //! All estimators consume the **unapodized** delay-aligned aperture matrix from
 //! [`super::das::align_channels`] (shape `(n_elements, n_samples)`): coherence
@@ -149,7 +149,7 @@ fn instantaneous_phase_matrix(aligned: &Array2<f64>) -> Array2<f64> {
 /// extraction); it routes through the same [`phase_coherence_from_phases`] core.
 ///
 /// # Errors
-/// - [`KwaversError::InvalidInput`] on an empty aperture (`n_elements == 0`) or a
+/// - `KwaversError::InvalidInput` on an empty aperture (`n_elements == 0`) or a
 ///   non-finite / `< 0` sensitivity.
 pub fn phase_coherence_from_iq_aperture(
     iq: &Array2<Complex64>,
@@ -176,7 +176,7 @@ pub fn phase_coherence_from_iq_aperture(
 /// Per-output-sample coherence-factor estimator.
 ///
 /// Each variant maps the delay-aligned aperture column `xⱼ = aligned[:, j]` to a
-/// weight `CF[j] ∈ [0, 1]`: `1` for a perfectly coherent aperture, `0` for a
+/// weight `CF`J` ∈ [0, 1]`: `1` for a perfectly coherent aperture, `0` for a
 /// fully incoherent one.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum CoherenceFactor {
@@ -234,7 +234,7 @@ impl CoherenceFactor {
     /// Validate variant parameters.
     ///
     /// # Errors
-    /// - [`KwaversError::InvalidInput`] if `Sign::sensitivity` is non-finite or
+    /// - `KwaversError::InvalidInput` if `Sign::sensitivity` is non-finite or
     ///   `< 1`, or if `Phase::sensitivity` is non-finite or `< 0`.
     pub fn validate(&self) -> KwaversResult<()> {
         match *self {
@@ -338,7 +338,7 @@ impl CoherenceFactor {
     /// [`align_channels`], shape `(n_elements, n_samples)`.
     ///
     /// # Errors
-    /// - [`KwaversError::InvalidInput`] on invalid variant parameters or an
+    /// - `KwaversError::InvalidInput` on invalid variant parameters or an
     ///   empty aperture (`n_elements == 0`).
     pub fn weights(&self, aligned: &Array2<f64>) -> KwaversResult<Array1<f64>> {
         self.validate()?;
@@ -377,10 +377,10 @@ impl CoherenceFactor {
 /// # Returns
 /// `(output, coherence_map)`:
 /// - `output`: coherence-weighted beamformed signal, shape `(1, 1, n_samples)`.
-/// - `coherence_map`: the per-sample `CF[j] ∈ [0, 1]`, length `n_samples`.
+/// - `coherence_map`: the per-sample `CF`J` ∈ [0, 1]`, length `n_samples`.
 ///
 /// # Errors
-/// - [`KwaversError::InvalidInput`] on DAS contract violations (see
+/// - `KwaversError::InvalidInput` on DAS contract violations (see
 ///   [`align_channels`]) or invalid coherence parameters.
 pub fn delay_and_sum_coherence(
     sensor_data: &Array3<f64>,

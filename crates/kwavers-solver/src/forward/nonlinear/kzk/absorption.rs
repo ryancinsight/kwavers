@@ -35,7 +35,7 @@
 //!
 //! Strang splitting calls `apply` four times per z-step: twice with
 //! `step_size = dz/2` and twice with (effectively) `step_size = dz` for the
-//! full nonlinear pass.  The attenuation mask `H[k] = exp(−α(f_k)·Δz)` depends
+//! full nonlinear pass.  The attenuation mask `H`K` = exp(−α(f_k)·Δz)` depends
 //! only on `step_size`; both variants are pre-computed in `new()` and stored
 //! as `h_mask_half` (dz/2) and `h_mask_full` (dz).  The per-call `Vec`
 //! allocation and `powf` re-computation are eliminated on the hot path.
@@ -87,11 +87,11 @@ pub struct KzkAbsorptionOperator {
     power: f64,
     /// Grid/medium configuration
     config: KZKConfig,
-    /// Pre-computed attenuation mask `H[k] = exp(−α(f_k) · dz/2)`.
+    /// Pre-computed attenuation mask `H`K` = exp(−α(f_k) · dz/2)`.
     ///
     /// Length nt.  Applied when `step_size ≈ config.dz / 2`.
     h_mask_half: Vec<f64>,
-    /// Pre-computed attenuation mask `H[k] = exp(−α(f_k) · dz)`.
+    /// Pre-computed attenuation mask `H`K` = exp(−α(f_k) · dz)`.
     ///
     /// Length nt.  Applied when `step_size ≈ config.dz`.
     h_mask_full: Vec<f64>,
@@ -148,7 +148,7 @@ impl KzkAbsorptionOperator {
         }
     }
 
-    /// Build the per-frequency attenuation mask H[k] = exp(−α(f_k) · step_size).
+    /// Build the per-frequency attenuation mask H`K` = exp(−α(f_k) · step_size).
     ///
     /// ## Algorithm
     ///
@@ -182,7 +182,7 @@ impl KzkAbsorptionOperator {
     /// 2. Forward 1D DFT in-place (no normalisation): `w ← FFT(w)`.
     /// 3. For each frequency bin k:
     ///    ```text
-    ///    w[k] *= H_k
+    ///    w`K` *= H_k
     ///    ```
     ///    where `H_k` is taken from the pre-computed mask matching `step_size`.
     /// 4. Inverse 1D DFT in-place with 1/N normalisation: `w ← IFFT(w)`.

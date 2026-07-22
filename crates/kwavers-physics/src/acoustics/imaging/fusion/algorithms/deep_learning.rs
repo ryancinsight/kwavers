@@ -33,8 +33,8 @@ use std::collections::HashMap;
 const MIN_PRIOR: f64 = 1.0e-12;
 /// Fuse deep learning.
 /// # Errors
-/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
+/// - Propagates any `KwaversError` returned by called functions.
 ///
 pub(crate) fn fuse_deep_learning(fusion: &MultiModalFusion) -> KwaversResult<FusedImageResult> {
     let modalities = super::utils::sorted_modalities(fusion)?;

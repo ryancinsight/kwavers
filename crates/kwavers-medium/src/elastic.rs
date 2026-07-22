@@ -7,7 +7,7 @@ use crate::core::{ArrayAccess, CoreMedium};
 use kwavers_grid::Grid;
 use leto::Array3;
 
-/// Convert isotropic-elastic wave speeds to Lamé parameters `(λ, μ)` \[Pa].
+/// Convert isotropic-elastic wave speeds to Lamé parameters `(λ, μ)` \`Pa`.
 ///
 /// `μ = ρ·c_s²` (shear modulus) and `λ = ρ·(c_p² − 2c_s²)`, where `c_p`/`c_s`
 /// are the compressional/shear speeds [m/s] and `ρ` the density [kg/m³].

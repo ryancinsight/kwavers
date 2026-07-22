@@ -3,7 +3,7 @@
 //!
 //! Contrast metrics compare a lesion pixel population `l` against a background
 //! population `b` (Definition 9.10):
-//! - [`contrast_ratio_db`] — `CR = 20·log₁₀(μ_l / μ_b)` \[dB].
+//! - [`contrast_ratio_db`] — `CR = 20·log₁₀(μ_l / μ_b)` \`dB`.
 //! - [`contrast_to_noise_ratio`] — `CNR = |μ_l − μ_b| / √(σ_l² + σ_b²)`.
 //! - [`generalized_cnr`] — `gCNR = 1 − OVL`, where `OVL` is the histogram
 //!   overlap of the two intensity distributions (Rodriguez-Molares et al.,
@@ -31,7 +31,7 @@ fn mean_std(data: &[f64]) -> Option<(f64, f64)> {
     Some((mean, var.sqrt()))
 }
 
-/// Contrast ratio `CR = 20·log₁₀(μ_l / μ_b)` \[dB] (Definition 9.10).
+/// Contrast ratio `CR = 20·log₁₀(μ_l / μ_b)` \`dB` (Definition 9.10).
 ///
 /// Requires strictly-positive lesion and background means (intensities, not
 /// log-compressed values); returns `None` otherwise.

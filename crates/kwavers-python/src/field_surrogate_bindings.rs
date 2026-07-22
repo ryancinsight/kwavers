@@ -37,19 +37,19 @@ impl FocalKernel {
     /// field : ndarray (3D float64)
     ///     Per-voxel peak rarefactional pressure [Pa, positive].
     /// dx_m : float
-    ///     Isotropic grid spacing [m].
+    ///     Isotropic grid spacing `m`.
     /// focus_idx : tuple[int, int, int]
     ///     Grid index of the focal voxel.
     /// f0 : float
-    ///     Source centre frequency [Hz].
+    ///     Source centre frequency `Hz`.
     /// pnp_realised : float
-    ///     Peak rarefactional pressure realised at the focal voxel [Pa].
+    ///     Peak rarefactional pressure realised at the focal voxel `Pa`.
     /// source_pa : float
-    ///     Source drive pressure at the bowl surface [Pa].
+    ///     Source drive pressure at the bowl surface `Pa`.
     /// fwhm_lat_m : float
-    ///     Penttinen 1976 lateral focal FWHM [m].
+    ///     Penttinen 1976 lateral focal FWHM `m`.
     /// fwhm_ax_m : float
-    ///     Penttinen 1976 axial focal FWHM [m].
+    ///     Penttinen 1976 axial focal FWHM `m`.
     #[new]
     #[allow(clippy::too_many_arguments)]
     #[pyo3(signature = (field, dx_m, focus_idx, f0, pnp_realised, source_pa,
@@ -132,7 +132,7 @@ impl FocalKernel {
         (nx, ny, nz)
     }
 
-    /// Peak rarefactional pressure at the focal voxel [Pa].
+    /// Peak rarefactional pressure at the focal voxel `Pa`.
     fn focal_pressure(&self) -> f64 {
         self.inner.focal_pressure()
     }
@@ -184,13 +184,13 @@ impl KernelCube {
         Ok(KernelCube { inner })
     }
 
-    /// Sorted unique `f0` axis values [Hz].
+    /// Sorted unique `f0` axis values `Hz`.
     #[getter]
     fn f0_axis(&self) -> Vec<f64> {
         self.inner.f0_axis().to_vec()
     }
 
-    /// Sorted unique `pnp` axis values [Pa].
+    /// Sorted unique `pnp` axis values `Pa`.
     #[getter]
     fn pnp_axis(&self) -> Vec<f64> {
         self.inner.pnp_axis().to_vec()
@@ -206,10 +206,10 @@ impl KernelCube {
     /// Parameters
     /// ----------
     /// f0 : float
-    ///     Source centre frequency of the query [Hz]. Clamped to the
+    ///     Source centre frequency of the query `Hz`. Clamped to the
     ///     sweep bounds — no extrapolation.
     /// pnp : float
-    ///     Peak rarefactional pressure of the query [Pa]. Accepted for
+    ///     Peak rarefactional pressure of the query `Pa`. Accepted for
     ///     API symmetry but not used to select shape (the linear-water
     ///     regime makes envelope shape amplitude-invariant).
     /// target_shape : tuple[int, int, int]
@@ -217,7 +217,7 @@ impl KernelCube {
     /// target_focus_idx : tuple[int, int, int]
     ///     Index of the focal voxel on the target grid.
     /// target_dx_m : float
-    ///     Target grid spacing [m].
+    ///     Target grid spacing `m`.
     ///
     /// Returns
     /// -------

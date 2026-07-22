@@ -37,11 +37,11 @@ use leto::Array1;
 /// Continuous-wave Doppler configuration.
 #[derive(Debug, Clone, Copy)]
 pub struct CwDopplerConfig {
-    /// Transmit (carrier) frequency `f₀` [Hz].
+    /// Transmit (carrier) frequency `f₀` `Hz`.
     pub center_frequency: f64,
-    /// Receiver sampling rate `f_s` [Hz].
+    /// Receiver sampling rate `f_s` `Hz`.
     pub sampling_rate: f64,
-    /// Baseband (post-demodulation) analysis rate `f_bb` [Hz].
+    /// Baseband (post-demodulation) analysis rate `f_bb` `Hz`.
     ///
     /// The mixed-down signal is decimated to this rate before spectral analysis.
     /// It sets the velocity resolution (`Δv = c·f_bb/(2 f₀ N_bb)`) and the
@@ -51,7 +51,7 @@ pub struct CwDopplerConfig {
     pub baseband_rate: f64,
     /// Speed of sound `c` [m/s].
     pub sound_speed: f64,
-    /// Beam-to-flow angle `θ` [rad].
+    /// Beam-to-flow angle `θ` `rad`.
     pub angle: f64,
 }
 
@@ -75,7 +75,7 @@ impl CwDopplerConfig {
         ((self.sampling_rate / self.baseband_rate).round() as usize).max(1)
     }
 
-    /// Convert a signed Doppler frequency [Hz] to a signed velocity [m/s].
+    /// Convert a signed Doppler frequency `Hz` to a signed velocity [m/s].
     #[must_use]
     pub fn velocity_from_frequency(&self, f_d: f64) -> f64 {
         f_d * self.sound_speed / (2.0 * self.center_frequency * self.angle.cos())
@@ -171,7 +171,7 @@ impl ContinuousWaveDoppler {
     /// Compute the two-sided Doppler velocity spectrum from a received signal.
     ///
     /// # Errors
-    /// Returns [`KwaversError::InvalidInput`] when `rf` is empty.
+    /// Returns `KwaversError::InvalidInput` when `rf` is empty.
     pub fn spectrum(&self, rf: &[f64]) -> KwaversResult<CwSpectrum> {
         if rf.is_empty() {
             return Err(KwaversError::InvalidInput(

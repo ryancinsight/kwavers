@@ -12,7 +12,7 @@ impl AcousticWaveSolver {
     /// Analyzes problem characteristics and selects the optimal numerical backend.
     /// Currently defaults to FDTD for robustness.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn new(grid: &Grid, medium: &dyn Medium) -> KwaversResult<Self> {
         let backend = Self::create_fdtd_backend(grid, medium)?;
@@ -27,7 +27,7 @@ impl AcousticWaveSolver {
 
     /// Create FDTD backend with 2nd-order spatial accuracy and PML boundaries.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     fn create_fdtd_backend(
         grid: &Grid,

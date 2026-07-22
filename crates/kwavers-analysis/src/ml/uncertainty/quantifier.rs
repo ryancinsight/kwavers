@@ -35,7 +35,7 @@ pub struct UncertaintyQuantifier {
 impl UncertaintyQuantifier {
     /// Create new uncertainty quantifier.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn new(config: MlUncertaintyConfig) -> KwaversResult<Self> {
         let bayesian = if matches!(
@@ -107,8 +107,8 @@ impl UncertaintyQuantifier {
 
     /// Quantify uncertainty for PINN predictions.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     #[cfg(feature = "pinn")]
     pub fn quantify_pinn_uncertainty<P: PinnUncertaintyPredictor + ?Sized>(
@@ -172,7 +172,7 @@ impl UncertaintyQuantifier {
     ///
     /// # Errors
     ///
-    /// Returns [`KwaversError::InvalidInput`] when the image cannot support the
+    /// Returns `KwaversError::InvalidInput` when the image cannot support the
     /// four-neighbor stencil, an image value is non-finite, signal quality is
     /// not positive and finite, or uncertainty exceeds `f32` storage.
     pub fn quantify_beamforming_uncertainty(
@@ -244,7 +244,7 @@ impl UncertaintyQuantifier {
 
     /// Perform sensitivity analysis on model parameters.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn sensitivity_analysis<const PARAMETERS: usize>(
         &self,

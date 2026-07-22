@@ -36,7 +36,7 @@ pub struct TrainingDataset {
 impl TrainingDataset {
     /// Create new training dataset
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn new(inputs: Array2<f64>, targets: Array2<f64>) -> KwaversResult<Self> {
         if inputs.shape()[0] != targets.shape()[0] {
@@ -67,7 +67,7 @@ impl TrainingDataset {
 
     /// Split dataset into training and validation sets
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn split(&self, validation_fraction: f64) -> KwaversResult<(Self, Self)> {
         if validation_fraction <= 0.0 || validation_fraction >= 1.0 {
@@ -131,7 +131,7 @@ impl TrainingDataset {
 
     /// Get batch of specified size starting at offset
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn batch(&self, offset: usize, batch_size: usize) -> KwaversResult<Self> {
         let n = self.len();

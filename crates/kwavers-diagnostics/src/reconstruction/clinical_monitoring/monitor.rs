@@ -37,7 +37,7 @@ impl ClinicalMonitor {
 
     /// Record frame quality metrics
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn record_frame_quality(
         &mut self,

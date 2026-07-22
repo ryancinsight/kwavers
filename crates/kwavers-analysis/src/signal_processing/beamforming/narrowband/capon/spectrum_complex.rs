@@ -17,9 +17,9 @@ use leto::Array3;
 /// Snapshot formation is controlled by `cfg.snapshot_selection`. When `None`, a conservative scenario
 /// is auto-derived; on failure the legacy analytic-baseband model is used as a deterministic fallback.
 /// # Errors
-/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+/// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
 /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Propagates any `KwaversError` returned by called functions.
 ///
 pub fn capon_spatial_spectrum_point_complex_baseband(
     sensor_data: &Array3<f64>,

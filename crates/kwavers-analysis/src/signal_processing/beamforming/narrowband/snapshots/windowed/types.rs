@@ -60,7 +60,7 @@ pub struct SnapshotScenario {
 impl SnapshotScenario {
     /// Validate scenario invariants.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn validate(&self) -> KwaversResult<()> {
         if !self.frequency_hz.is_finite() || self.frequency_hz <= 0.0 {
@@ -109,7 +109,7 @@ pub struct StftBinConfig {
 impl StftBinConfig {
     /// Validate invariants.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn validate(&self) -> KwaversResult<()> {
         if !self.sampling_frequency_hz.is_finite() || self.sampling_frequency_hz <= 0.0 {
@@ -177,7 +177,7 @@ pub enum SnapshotSelection {
 impl SnapshotSelection {
     /// Resolve to a concrete snapshot method (deterministic for a given scenario).
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn resolve(&self, n_samples: usize) -> KwaversResult<SnapshotMethod> {
         match self {

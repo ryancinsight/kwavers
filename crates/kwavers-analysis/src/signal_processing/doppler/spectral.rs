@@ -4,23 +4,23 @@
 //!
 //! **Welch's Averaged Modified Periodogram** (Welch 1967):
 //!
-//! Given N real samples `x[n]` with sampling frequency `f_s`:
+//! Given N real samples `x`N`` with sampling frequency `f_s`:
 //!
 //! 1. Divide into K overlapping segments of length M with step `hop = M·(1−overlap)`:
-//!    `x_j[n] = x[j·hop + n]`, `n = 0,…,M−1`
+//!    `x_j`N` = x[j·hop + n]`, `n = 0,…,M−1`
 //!
-//! 2. Apply Hann window `w[n] = ½·(1 − cos(2π n/(M−1)))`:
-//!    `ỹ_j[n] = x_j[n]·w[n]`
+//! 2. Apply Hann window `w`N` = ½·(1 − cos(2π n/(M−1)))`:
+//!    `ỹ_j`N` = x_j`N`·w`N``
 //!
 //! 3. Compute windowed periodogram for segment j:
 //!    ```text
-//!    P_j[k] = (1 / (f_s · M · U)) · |FFT(ỹ_j)[k]|²
+//!    P_j`K` = (1 / (f_s · M · U)) · |FFT(ỹ_j)`K`|²
 //!    ```
-//!    where `U = (1/M) Σ w[n]²` is the normalisation factor for window power.
+//!    where `U = (1/M) Σ w`N`²` is the normalisation factor for window power.
 //!
 //! 4. Average over all K segments:
 //!    ```text
-//!    PSD[k] = (1/K) Σ_j P_j[k],    k = 0,…,M/2
+//!    PSD`K` = (1/K) Σ_j P_j`K`,    k = 0,…,M/2
 //!    ```
 //!
 //! The result is the one-sided PSD in units of [signal_unit²/Hz].
@@ -201,7 +201,7 @@ mod tests {
 
     /// **Test: PSD of a pure tone peaks at the correct frequency bin**
     ///
-    /// Signal: `x[n] = sin(2π f₀ n / f_s)`, expected peak at bin `k = f₀ / Δf`.
+    /// Signal: `x`N` = sin(2π f₀ n / f_s)`, expected peak at bin `k = f₀ / Δf`.
     /// Verification: peak bin index equals `round(f₀ × fft_size / f_s)`.
     /// # Panics
     /// - Panics if an internal invariant assumed to hold at this call site is violated.

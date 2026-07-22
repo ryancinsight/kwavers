@@ -37,7 +37,7 @@ impl HarmonicDetector {
     ///
     /// Harmonic displacement field with all frequency components
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn analyze_harmonics(
         &self,

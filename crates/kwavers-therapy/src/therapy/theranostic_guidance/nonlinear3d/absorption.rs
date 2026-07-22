@@ -6,7 +6,7 @@
 //! The lossless Westervelt recurrence used by `forward::update_cells` is
 //!
 //! ```text
-//!   p[n+1] = sponge · (2 p[n] − p[n−1] + (c·dt)² ∇²p + q · ∂²(p²)/∂t²)
+//!   p[n+1] = sponge · (2 p`N` − p[n−1] + (c·dt)² ∇²p + q · ∂²(p²)/∂t²)
 //! ```
 //!
 //! Tissue absorbs acoustic energy with a power-law frequency dependence
@@ -24,7 +24,7 @@
 //! the FDTD absorption contribution
 //!
 //! ```text
-//!   Δp_abs[n+1] = −dt · τ · ( L_y(p[n]) − L_y(p[n−1]) )
+//!   Δp_abs[n+1] = −dt · τ · ( L_y(p`N`) − L_y(p[n−1]) )
 //!   τ  = 2 α₀ c^(y+1)
 //! ```
 //!
@@ -35,7 +35,7 @@
 //! # Why η is omitted (Kramers-Kronig dispersion)
 //!
 //! Von-Neumann analysis on the Westervelt leapfrog with an explicit
-//! `−dt²·η·L_{y+1}(p[n])` term shows a Nyquist-mode growth factor
+//! `−dt²·η·L_{y+1}(p`N`)` term shows a Nyquist-mode growth factor
 //!
 //! ```text
 //!   |z|² ≈ 1 + dt²·|η|·k_max^(y+1)

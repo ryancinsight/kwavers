@@ -236,7 +236,7 @@ pub fn prepare_abdominal_slice(
 /// Index of the axial (z) slice that contains the most label-2 (tumour) voxels.
 ///
 /// Iterates z-slices via [`Axis`] view and returns the index of the
-/// slice with the maximum label-2 count.  Returns [`KwaversError::InvalidInput`]
+/// slice with the maximum label-2 count.  Returns `KwaversError::InvalidInput`
 /// when no label-2 cell exists in the volume.
 pub(crate) fn largest_target_slice(label: &Array3<i16>) -> KwaversResult<usize> {
     label

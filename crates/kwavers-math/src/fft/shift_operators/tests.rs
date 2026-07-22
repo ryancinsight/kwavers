@@ -34,7 +34,7 @@ fn test_shift_dc_bin_is_zero() {
 ///   conj(shift_pos) = −k·sin θ − i·k·cos θ
 ///   shift_neg = i·k·(cos θ − i·sin θ) = k·sin θ + i·k·cos θ = −conj(shift_pos)
 ///
-/// Therefore: shift_neg[k] = −conj(shift_pos[k])
+/// Therefore: shift_neg`K` = −conj(shift_pos`K`)
 /// # Panics
 /// - Panics if assertion fails: `shift_neg[{idx}] != -conj(shift_pos[{idx}]): diff = {diff}`.
 ///

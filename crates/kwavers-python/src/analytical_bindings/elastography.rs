@@ -18,7 +18,7 @@ pub use thermal_strain::{
 /// c_s = sqrt(mu / rho)
 ///
 /// Args:
-///     mu_pa: Shear modulus [Pa].
+///     mu_pa: Shear modulus `Pa`.
 ///     rho: Density [kg/m³].
 ///
 /// Returns:
@@ -50,11 +50,11 @@ pub fn pwave_to_swave_velocity_ratio(poisson_ratio: f64) -> PyResult<f64> {
 ///
 /// Args:
 ///     omega_arr: Angular frequency array [rad/s].
-///     mu_pa: Elastic modulus [Pa].
+///     mu_pa: Elastic modulus `Pa`.
 ///     eta_pa_s: Viscosity [Pa·s].
 ///
 /// Returns:
-///     (real_part, imag_part) tuple of arrays [Pa].
+///     (real_part, imag_part) tuple of arrays `Pa`.
 #[pyfunction]
 #[pyo3(signature = (omega_arr, mu_pa, eta_pa_s))]
 pub fn voigt_complex_modulus(
@@ -82,7 +82,7 @@ pub fn voigt_complex_modulus(
 ///     alpha_exp: Fractional exponent in [0, 1].
 ///
 /// Returns:
-///     (real_part, imag_part) tuple of arrays [Pa].
+///     (real_part, imag_part) tuple of arrays `Pa`.
 #[pyfunction]
 #[pyo3(signature = (omega_arr, g0, alpha_exp))]
 pub fn springpot_complex_modulus(
@@ -103,8 +103,8 @@ pub fn springpot_complex_modulus(
 /// Compute the Voigt shear-wave phase velocity dispersion curve.
 ///
 /// Args:
-///     f_arr: Frequency array [Hz].
-///     mu_pa: Shear modulus [Pa].
+///     f_arr: Frequency array `Hz`.
+///     mu_pa: Shear modulus `Pa`.
 ///     eta_pa_s: Viscosity [Pa·s].
 ///     rho: Density [kg/m³].
 ///
@@ -129,15 +129,15 @@ pub fn voigt_shear_wave_dispersion(
 /// Compute the 2-D MRE displacement field for a harmonic shear wave.
 ///
 /// Args:
-///     x_arr: Lateral positions [m].
-///     z_arr: Axial positions [m].
+///     x_arr: Lateral positions `m`.
+///     z_arr: Axial positions `m`.
 ///     shear_speed: Shear-wave phase velocity [m/s].
-///     freq_hz: Excitation frequency [Hz].
-///     amplitude: Displacement amplitude [m].
-///     penetration_depth_m: Exponential decay length [m].
+///     freq_hz: Excitation frequency `Hz`.
+///     amplitude: Displacement amplitude `m`.
+///     penetration_depth_m: Exponential decay length `m`.
 ///
 /// Returns:
-///     Displacement field ndarray of shape (len(x_arr), len(z_arr)) [m].
+///     Displacement field ndarray of shape (len(x_arr), len(z_arr)) `m`.
 #[pyfunction]
 #[pyo3(signature = (x_arr, z_arr, shear_speed, freq_hz, amplitude, penetration_depth_m))]
 pub fn mre_displacement_field(

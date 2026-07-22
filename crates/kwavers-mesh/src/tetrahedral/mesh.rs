@@ -67,8 +67,8 @@ impl TetrahedralMesh {
 
     /// Add tetrahedron element
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn add_element(&mut self, nodes: [usize; 4], material_id: usize) -> KwaversResult<usize> {
         // Validate node indices
@@ -117,7 +117,7 @@ impl TetrahedralMesh {
 
     /// Calculate tetrahedron volume using scalar triple product
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     fn calculate_tetrahedron_volume(&self, nodes: [usize; 4]) -> KwaversResult<f64> {
         let p0 = self.nodes[nodes[0]].coordinates;
@@ -154,7 +154,7 @@ impl TetrahedralMesh {
     /// Q = 6√2 * V / (∑_{edges} L_e^2)^{3/2}
     /// where V is volume, L_e are edge lengths.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     fn calculate_element_quality(&self, nodes: [usize; 4]) -> KwaversResult<f64> {
         let volume = self.calculate_tetrahedron_volume(nodes)?;
@@ -189,8 +189,8 @@ impl TetrahedralMesh {
 
     /// Update mesh connectivity information
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     fn update_connectivity(&mut self, element_idx: usize) -> KwaversResult<()> {
         let nodes = self.elements[element_idx].nodes;

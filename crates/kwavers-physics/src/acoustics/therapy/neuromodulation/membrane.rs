@@ -27,7 +27,7 @@ pub type Gates = [f64; 4];
 
 /// A conductance-based point-neuron membrane.
 ///
-/// All quantities use the module's electrophysiology units: `V` [mV], `t` [ms],
+/// All quantities use the module's electrophysiology units: `V` `mV`, `t` `ms`,
 /// `C_m` [µF/cm²], `g` [mS/cm²], current density [µA/cm²].
 pub trait Membrane {
     /// Resting gating state at membrane potential `v_rest_mv` (each gate at its

@@ -8,13 +8,13 @@ use pyo3::prelude::*;
 /// Compute temporal modulation frequencies for transcranial standing-wave suppression.
 ///
 /// Args:
-///     f0_hz: Carrier frequency [Hz].
+///     f0_hz: Carrier frequency `Hz`.
 ///     m_steps: Number of modulation steps.
 ///     c: Sound speed [m/s].
-///     d_back_m: Back-wall distance [m].
+///     d_back_m: Back-wall distance `m`.
 ///
 /// Returns:
-///     Modulation frequency array [Hz].
+///     Modulation frequency array `Hz`.
 #[pyfunction]
 #[pyo3(signature = (f0_hz, m_steps, c, d_back_m))]
 pub fn temporal_modulation_frequencies(
@@ -35,7 +35,7 @@ pub fn temporal_modulation_frequencies(
 /// Used to locate the expected FFT peak in an axial spatial-frequency spectrum.
 ///
 /// Args:
-///     freq_hz: Frequency [Hz].
+///     freq_hz: Frequency `Hz`.
 ///     c: Sound speed [m/s].
 ///
 /// Returns:
@@ -63,16 +63,16 @@ pub fn standing_wave_suppression_gain(r_back: f64) -> PyResult<f64> {
     Ok(rtm_mod::standing_wave_suppression_gain(r_back))
 }
 
-/// Compute the period of one full standing-wave modulation cycle [Hz].
+/// Compute the period of one full standing-wave modulation cycle `Hz`.
 ///
 /// ΔF_period = c / (2 · d_back_m)
 ///
 /// Args:
 ///     c: Sound speed [m/s].
-///     d_back_m: Distance from field point to back-reflecting wall [m].
+///     d_back_m: Distance from field point to back-reflecting wall `m`.
 ///
 /// Returns:
-///     Modulation period in frequency units [Hz].
+///     Modulation period in frequency units `Hz`.
 #[pyfunction]
 #[pyo3(signature = (c, d_back_m))]
 pub fn standing_wave_modulation_period_hz(c: f64, d_back_m: f64) -> PyResult<f64> {
@@ -85,8 +85,8 @@ pub fn standing_wave_modulation_period_hz(c: f64, d_back_m: f64) -> PyResult<f64
 ///   SW²(x) = 1 + R² + 2R·cos(2kx),   k = 2π·f/c
 ///
 /// Args:
-///     x_arr: Distances from the back reflector [m].
-///     freq_hz: Frequency [Hz].
+///     x_arr: Distances from the back reflector `m`.
+///     freq_hz: Frequency `Hz`.
 ///     c: Sound speed [m/s].
 ///     r_back: Pressure reflection coefficient.
 ///

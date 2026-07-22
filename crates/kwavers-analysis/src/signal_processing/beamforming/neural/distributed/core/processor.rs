@@ -74,8 +74,8 @@ impl std::fmt::Debug for DistributedNeuralBeamformingProcessor {
 impl DistributedNeuralBeamformingProcessor {
     /// Create new distributed neural beamforming processor.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn new(
         beamforming_config: PINNBeamformingConfig,
@@ -154,8 +154,8 @@ impl DistributedNeuralBeamformingProcessor {
 
     /// Process RF data using distributed neural beamforming.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     /// # Panics
     /// - Panics if an internal precondition is violated.

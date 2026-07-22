@@ -51,7 +51,7 @@ pub const BLOOD_TEMPERATURE_C: f64 = BODY_TEMPERATURE_C;
 /// Absolute zero in Celsius.
 pub const ABSOLUTE_ZERO_C: f64 = -273.15;
 
-/// Celsius → Kelvin offset (`T[K] = T[°C] + KELVIN_OFFSET_C`).
+/// Celsius → Kelvin offset (`T`K` = T[°C] + KELVIN_OFFSET_C`).
 pub const KELVIN_OFFSET_C: f64 = 273.15;
 
 /// Triple point of water temperature (K).

@@ -14,8 +14,8 @@ pub struct MUSICProcessor {
 impl MUSICProcessor {
     /// Create new MUSIC processor
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn new(config: &MUSICConfig) -> KwaversResult<Self> {
         config.config.validate()?;
@@ -65,7 +65,7 @@ impl MUSICProcessor {
     ///
     /// Returns R = (1/N) ∑ₙ x(n) x(n)^H ∈ ℂ^(M×M) with optional diagonal loading.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn estimate_covariance(
         &self,

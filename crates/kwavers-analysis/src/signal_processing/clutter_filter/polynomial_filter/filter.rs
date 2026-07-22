@@ -130,7 +130,7 @@ impl PolynomialFilter {
     /// Sufficient for typical polynomial orders (1–10); O(n³) per call.
     ///
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the matrix is not square.
+    /// - Returns `KwaversError::InvalidInput` if the matrix is not square.
     /// - Returns [`KwaversError::Numerical`] if the matrix is singular (pivot < 1e-12).
     fn pseudo_inverse(&self, matrix: &Array2<f64>) -> KwaversResult<Array2<f64>> {
         let [n, m] = matrix.shape();

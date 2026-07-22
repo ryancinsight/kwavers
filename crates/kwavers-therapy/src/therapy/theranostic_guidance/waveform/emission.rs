@@ -84,7 +84,7 @@ const BAND_BANDWIDTH_FRACTION: f64 = 0.125;
 /// indexed in the same order as `grid_points`.
 ///
 /// # Errors
-/// Returns [`KwaversError::InvalidInput`] if there are fewer than three
+/// Returns `KwaversError::InvalidInput` if there are fewer than three
 /// receivers, no emission points, no grid points, no bands, a non-positive sound
 /// speed, or a non-positive fundamental frequency.
 // The acquisition geometry, configuration, point sets, and frequency parameters

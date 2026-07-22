@@ -26,7 +26,7 @@ pub struct ChemicalUpdateParams<'a> {
 impl<'a> ChemicalUpdateParams<'a> {
     /// Create new chemical update parameters with validation
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     #[allow(clippy::too_many_arguments)]
     pub fn new(

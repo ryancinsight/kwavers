@@ -74,8 +74,8 @@ impl CovarianceEstimator {
 
     /// Estimate sample covariance matrix (real-valued): `R = (1/N) Σ x_n x_nᵀ`.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn estimate(&self, data: &Array2<f64>) -> KwaversResult<Array2<f64>> {
         let [num_sensors, num_snapshots] = data.shape();
@@ -116,8 +116,8 @@ impl CovarianceEstimator {
     /// Intended for narrowband adaptive processing (MVDR/Capon, MUSIC, ESMV) on complex
     /// baseband snapshots.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn estimate_complex(&self, data: &Array2<Complex64>) -> KwaversResult<Array2<Complex64>> {
         let [num_sensors, num_snapshots] = data.shape();
@@ -252,7 +252,7 @@ impl CovarianceEstimator {
 
     /// Estimate covariance matrix with spatial smoothing for coherent sources (real-valued only).
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn estimate_with_spatial_smoothing(
         &self,
@@ -265,7 +265,7 @@ impl CovarianceEstimator {
 
     /// Estimate covariance matrix with spatial smoothing for coherent sources (complex-valued).
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn estimate_complex_with_spatial_smoothing(
         &self,

@@ -210,7 +210,7 @@ impl AcousticRadiationForce {
     ///
     /// This is the correctness-first replacement for summing scalar “initial displacements”.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn multi_directional_body_forces(
         &self,

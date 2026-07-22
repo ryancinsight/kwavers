@@ -122,9 +122,9 @@ impl KzkNonlinearOperator {
     ///
     /// For each spatial point (i,j):
     /// 1. Fill `w_scratch[t] = Re[pressure[i,j,t]]` as complex input.
-    /// 2. Forward FFT: `W[k] = Σ_t w[t] e^{−2πikt/N}`.
-    /// 3. Multiply: `W[k] ← W[k] · iω[k]`, where
-    ///    `ω[k] = 2πk/(NΔτ)` for `k ≤ N/2`, and `2π(k−N)/(NΔτ)` for `k > N/2`.
+    /// 2. Forward FFT: `W`K` = Σ_t w[t] e^{−2πikt/N}`.
+    /// 3. Multiply: `W`K` ← W`K` · iω`K``, where
+    ///    `ω`K` = 2πk/(NΔτ)` for `k ≤ N/2`, and `2π(k−N)/(NΔτ)` for `k > N/2`.
     ///    The Nyquist bin (`k=N/2` for even N) is set to zero to preserve
     ///    real-valued output.
     /// 4. Inverse FFT (with 1/N normalisation): `∂p/∂τ[t] = Re[IFFT(W)][t]`.

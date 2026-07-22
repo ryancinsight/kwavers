@@ -7,9 +7,9 @@ use kwavers_core::error::KwaversResult;
 /// Frequency-domain filter using ideal (brick-wall) FFT-based frequency responses.
 ///
 /// Provides bandpass, lowpass, and highpass filtering via:
-/// 1. Forward FFT: `X[k] = FFT(x[n])`
-/// 2. Apply response: `Y[k] = X[k] · H[k]` where `H[k] ∈ {0, 1}`
-/// 3. Inverse FFT: `y[n] = IFFT(Y[k])`
+/// 1. Forward FFT: `X`K` = FFT(x`N`)`
+/// 2. Apply response: `Y`K` = X`K` · H`K`` where `H`K` ∈ {0, 1}`
+/// 3. Inverse FFT: `y`N` = IFFT(Y`K`)`
 ///
 /// ## Frequency Resolution
 ///

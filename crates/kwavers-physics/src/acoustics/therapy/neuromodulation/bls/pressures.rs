@@ -50,11 +50,11 @@ use super::capacitance::bls_capacitance;
 use kwavers_core::constants::fundamental::GAS_CONSTANT;
 use std::f64::consts::PI;
 
-/// Sonophore radius a [m].
+/// Sonophore radius a `m`.
 pub const A_RADIUS_M: f64 = 32.0e-9;
-/// Reference (no-charge) inter-leaflet gap Δ* [m].
+/// Reference (no-charge) inter-leaflet gap Δ* `m`.
 pub const DELTA_STAR_M: f64 = 1.4e-9;
-/// Intermolecular pressure coefficient p_Δ [Pa].
+/// Intermolecular pressure coefficient p_Δ `Pa`.
 pub const P_DELTA_PA: f64 = 1.0e5;
 /// Repulsion exponent m.
 pub const M_REPULSION: f64 = 5.0;
@@ -62,7 +62,7 @@ pub const M_REPULSION: f64 = 5.0;
 pub const N_ATTRACTION: f64 = 3.3;
 /// Leaflet area-compression modulus k_A [N/m].
 pub const KA_N_M: f64 = 0.24;
-/// Leaflet thickness δ₀ [m].
+/// Leaflet thickness δ₀ `m`.
 pub const DELTA0_M: f64 = 2.0e-9;
 /// Surrounding fluid density ρ_L [kg/m³].
 pub const RHO_L_KG_M3: f64 = 1075.0;
@@ -74,9 +74,9 @@ pub const MU_L_PA_S: f64 = 7.0e-4;
 pub const EPS0_F_M: f64 = 8.854e-12;
 /// Relative permittivity between the leaflets ε_R [-].
 pub const EPS_R: f64 = 1.0;
-/// Static ambient pressure P₀ [Pa].
+/// Static ambient pressure P₀ `Pa`.
 pub const P0_PA: f64 = 1.0e5;
-/// Membrane temperature T [K].
+/// Membrane temperature T `K`.
 pub const TEMP_K: f64 = 309.15;
 /// Dissolved-gas molar concentration C₀ [mol/m³].
 pub const C0_MOL_M3: f64 = 0.62;
@@ -84,7 +84,7 @@ pub const C0_MOL_M3: f64 = 0.62;
 pub const KH_PA_M3_MOL: f64 = 1.613e5;
 /// Gas diffusivity in fluid D_gl [m²/s].
 pub const DGL_M2_S: f64 = 3.68e-9;
-/// Gas boundary-layer thickness ξ [m].
+/// Gas boundary-layer thickness ξ `m`.
 pub const XI_M: f64 = 0.5e-9;
 
 /// Radius of curvature of the deflected leaflet `R(Z) = (a²+Z²)/(2Z)`
@@ -173,7 +173,7 @@ pub fn elastic_pressure(z: f64) -> f64 {
     }
 }
 
-/// Intramembrane-gas cavity volume `V_a(Z) = πa²Δ·[1 + (Z/3Δ)(Z²/a² + 3)]` [m³].
+/// Intramembrane-gas cavity volume `V_a(Z) = πa²Δ·[1 + (Z/3Δ)(Z²/a² + 3)]` `m³`.
 #[inline]
 #[must_use]
 pub fn cavity_volume(z: f64, delta: f64) -> f64 {
@@ -183,14 +183,14 @@ pub fn cavity_volume(z: f64, delta: f64) -> f64 {
         * (1.0 + (z / (3.0 * delta)) * (z * z / (A_RADIUS_M * A_RADIUS_M) + 3.0))
 }
 
-/// Initial intramembrane gas content `n_g0 = P₀·V_a(0)/(R_g·T)` [mol].
+/// Initial intramembrane gas content `n_g0 = P₀·V_a(0)/(R_g·T)` `mol`.
 #[inline]
 #[must_use]
 pub fn initial_gas_mol(delta: f64) -> f64 {
     P0_PA * cavity_volume(0.0, delta) / (GAS_CONSTANT * TEMP_K)
 }
 
-/// Intramembrane gas pressure `P_in = n_g·R_g·T/V_a(Z)` [Pa].
+/// Intramembrane gas pressure `P_in = n_g·R_g·T/V_a(Z)` `Pa`.
 #[inline]
 #[must_use]
 pub fn gas_pressure(ng_mol: f64, z: f64, delta: f64) -> f64 {
@@ -293,8 +293,8 @@ impl BilayerSonophoreQuasistatic {
     /// Number of phase samples used to precompute the steady cycle.
     const N_PHASE: usize = 360;
 
-    /// Construct from rest capacitance [µF/cm²], carrier frequency [MHz], acoustic
-    /// peak pressure [Pa], and resting potential [mV] (which sets the resting
+    /// Construct from rest capacitance [µF/cm²], carrier frequency `MHz`, acoustic
+    /// peak pressure `Pa`, and resting potential `mV` (which sets the resting
     /// charge for the electrical pressure term). The rest gap `Δ` is solved from
     /// the resting-charge balance.
     #[must_use]

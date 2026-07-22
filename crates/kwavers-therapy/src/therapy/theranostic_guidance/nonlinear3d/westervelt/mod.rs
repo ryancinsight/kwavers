@@ -8,9 +8,9 @@
 //! # Theorem
 //!
 //! For recurrence
-//! `p[n+1] = S * (2p[n] - p[n-1] + N[n] / D[n] + s[n])`, where
-//! `N[n] = c^2 dt^2 Lp[n] + 2 beta (p[n] - p[n-1])^2 / (rho c^2)` and
-//! `D[n] = 1 - 2 beta p[n] / (rho c^2)`, the reverse sweep in `gradient`
+//! `p[n+1] = S * (2p`N` - p[n-1] + N`N` / D`N` + s`N`)`, where
+//! `N`N` = c^2 dt^2 Lp`N` + 2 beta (p`N` - p[n-1])^2 / (rho c^2)` and
+//! `D`N` = 1 - 2 beta p`N` / (rho c^2)`, the reverse sweep in `gradient`
 //! computes the exact derivative of the discrete trace least-squares objective
 //! with respect to the nodal sound speed and nonlinearity coefficient.
 //!
@@ -24,13 +24,13 @@
 //! # Performance contract
 //!
 //! - The forward pressure history is stored as exact sparse checkpoints.
-//!   Each checkpoint contains `p[n-2]`, `p[n-1]`, and `p[n]`; the reverse
+//!   Each checkpoint contains `p[n-2]`, `p[n-1]`, and `p`N``; the reverse
 //!   sweep replays one bounded interval at a time with the same recurrence.
 //!   This preserves dense-history gradients while reducing retained forward
 //!   state from `O(steps * cells)` to `O((steps / interval + interval) *
 //!   cells)`.
 //! - The adjoint variables use four rolling `Vec<f64>` states for
-//!   `lambda[n+1]`, `lambda[n]`, `lambda[n-1]`, and `lambda[n-2]`. This is
+//!   `lambda[n+1]`, `lambda`N``, `lambda[n-1]`, and `lambda[n-2]`. This is
 //!   algebraically equivalent to storing `(steps + 1)` adjoint states because
 //!   the Westervelt recurrence has temporal stencil width three; the reverse
 //!   sweep never reads an adjoint state after it shifts past this window.

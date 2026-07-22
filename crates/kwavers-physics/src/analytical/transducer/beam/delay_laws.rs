@@ -13,13 +13,13 @@ use kwavers_core::constants::numerical::TWO_PI;
 /// ([`near_field_distance`]) implements focusing *around the natural focus*.
 ///
 /// # Arguments
-/// * `elem_x`, `elem_z` – element positions [m]
-/// * `focal_range_m` – focal range R [m]
-/// * `steer_rad` – steering angle from the array normal [rad]
+/// * `elem_x`, `elem_z` – element positions `m`
+/// * `focal_range_m` – focal range R `m`
+/// * `steer_rad` – steering angle from the array normal `rad`
 /// * `c` – sound speed [m/s]
 ///
 /// # Returns
-/// Per-element delay [s], same length as `elem_x`.
+/// Per-element delay `s`, same length as `elem_x`.
 #[must_use]
 pub fn delay_law_steer_2d(
     elem_x: &[f64],
@@ -35,15 +35,15 @@ pub fn delay_law_steer_2d(
 /// Compute time delays for a 2-D focusing delay law.
 ///
 /// ```text
-/// τᵢ = (max_r − rᵢ) / c   [s]
+/// τᵢ = (max_r − rᵢ) / c   `s`
 /// ```
 /// where `rᵢ = sqrt((xᵢ − x_f)² + (zᵢ − z_f)²)` is the distance from
 /// element i to the focal point, and `max_r` is the maximum such distance
 /// (ensures all delays are non-negative).
 ///
 /// # Arguments
-/// * `elem_x`, `elem_z` – element positions [m]
-/// * `x_f`, `z_f` – focal point [m]
+/// * `elem_x`, `elem_z` – element positions `m`
+/// * `x_f`, `z_f` – focal point `m`
 /// * `c` – sound speed [m/s]
 #[must_use]
 pub fn delay_law_focus_2d(elem_x: &[f64], elem_z: &[f64], x_f: f64, z_f: f64, c: f64) -> Vec<f64> {
@@ -259,8 +259,8 @@ pub fn focused_bowl_steered_pressure_profile(
 /// ray-path/delay-to-target description of a multi-spot treatment plan.
 ///
 /// # Arguments
-/// * `elem_x`, `elem_z` – element positions [m]
-/// * `spot_x`, `spot_z` – focal sub-spot positions [m] (equal length)
+/// * `elem_x`, `elem_z` – element positions `m`
+/// * `spot_x`, `spot_z` – focal sub-spot positions `m` (equal length)
 /// * `c` – sound speed [m/s]
 ///
 /// # Panics

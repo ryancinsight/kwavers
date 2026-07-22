@@ -90,7 +90,7 @@ use std::time::Instant;
 // Grid and phantom constants
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Grid spacing [m].  3 mm gives λ/2 resolution at 250 kHz in water.
+/// Grid spacing `m`.  3 mm gives λ/2 resolution at 250 kHz in water.
 const DX: f64 = 3.0e-3;
 /// Grid dimensions (2-D coronal slice embedded in 3-D; ny=2 satisfies FDTD
 /// staggered-stencil minimum while keeping the second y-plane acoustically

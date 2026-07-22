@@ -17,9 +17,9 @@ pub use acoustic::{
 /// Simulate focal temperature rise using the Pennes bioheat model.
 ///
 /// Args:
-///     t_arr: Time array [s].
-///     acoustic_power_w: Absorbed acoustic power [W].
-///     focal_volume_m3: Focal volume [m³].
+///     t_arr: Time array `s`.
+///     acoustic_power_w: Absorbed acoustic power `W`.
+///     focal_volume_m3: Focal volume `m³`.
 ///     k_tissue: Tissue thermal conductivity [W/(m·K)].
 ///     rho_tissue: Tissue density [kg/m³].
 ///     cp_tissue: Tissue specific heat [J/(kg·K)].
@@ -66,8 +66,8 @@ pub fn bioheat_focal_temperature_rise(
 /// One-dimensional steady-state Pennes slab temperature profile.
 ///
 /// Args:
-///     x_arr: Depth positions [m].
-///     slab_thickness_m: Slab thickness [m].
+///     x_arr: Depth positions `m`.
+///     slab_thickness_m: Slab thickness `m`.
 ///     thermal_conductivity: Tissue conductivity [W/(m*K)].
 ///     blood_perfusion: Blood perfusion rate [1/s].
 ///     rho_blood: Blood density [kg/m3].
@@ -159,16 +159,16 @@ pub fn pennes_steady_state_temperature_profile(
 /// Short-pulse limit of the Pennes bioheat equation where conduction and
 /// perfusion are negligible:
 ///
-///     dT_i = Q_i * tau_i / (density * specific_heat)   [K]
+///     dT_i = Q_i * tau_i / (density * specific_heat)   `K`
 ///
 /// Args:
 ///     q_arr: Heat-source density array [W/m3].
-///     tau_arr: Pulse duration array [s], same length as q_arr.
+///     tau_arr: Pulse duration array `s`, same length as q_arr.
 ///     density: Tissue density [kg/m3].
 ///     specific_heat: Tissue specific heat [J/(kg*K)].
 ///
 /// Returns:
-///     Temperature rise array [K], same length as q_arr.
+///     Temperature rise array `K`, same length as q_arr.
 ///
 /// Reference:
 ///     Pennes (1948) J. Appl. Physiol. 1, 93 (no-perfusion limit).

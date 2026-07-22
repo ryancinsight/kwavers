@@ -10,7 +10,7 @@ pub struct ModelOrderEstimator {
 impl ModelOrderEstimator {
     /// Create new model order estimator
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn new(config: ModelOrderConfig) -> KwaversResult<Self> {
         config.validate()?;
@@ -58,7 +58,7 @@ impl ModelOrderEstimator {
     ///
     /// Wax & Kailath (1985), Equations (11)-(13)
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
     ///
     pub fn estimate(&self, eigenvalues: &[f64]) -> KwaversResult<ModelOrderResult> {

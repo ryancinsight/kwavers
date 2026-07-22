@@ -13,7 +13,7 @@ pub struct AmplitudeModulation {
 impl AmplitudeModulation {
     /// Create new AM modulator
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn new(params: ModulationParams) -> KwaversResult<Self> {
         if params.modulation_index < 0.0 || params.modulation_index > super::constants::MAX_AM_INDEX

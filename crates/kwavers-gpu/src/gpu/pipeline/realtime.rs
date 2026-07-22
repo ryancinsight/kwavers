@@ -39,7 +39,7 @@ impl RealtimeImagingPipeline {
     }
     /// Start.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn start(&mut self) -> KwaversResult<()> {
         info!("Starting real-time imaging pipeline...");
@@ -82,7 +82,7 @@ impl RealtimeImagingPipeline {
     }
     /// Submit rf data.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn submit_rf_data(&mut self, rf_data: LetoArray4<f32>) -> KwaversResult<()> {
         if self.state != PipelineState::Running {
@@ -112,7 +112,7 @@ impl RealtimeImagingPipeline {
     }
     /// Process pipeline.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn process_pipeline(&mut self) -> KwaversResult<()> {
         if self.state != PipelineState::Running {

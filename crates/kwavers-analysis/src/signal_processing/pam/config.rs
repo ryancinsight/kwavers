@@ -16,7 +16,7 @@ pub struct PamBeamformingConfig {
 impl PamBeamformingConfig {
     /// Validate.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn validate(&self) -> KwaversResult<()> {
         let (f_min, f_max) = self.frequency_range;

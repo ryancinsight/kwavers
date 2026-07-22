@@ -2,7 +2,7 @@ use kwavers_solver::inverse::same_aperture::PlanarPoint;
 
 pub type Point2 = PlanarPoint;
 
-/// 3-D point in physical space [m].
+/// 3-D point in physical space `m`.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Point3 {
     pub x_m: f64,

@@ -85,7 +85,7 @@ where
 
     /// Update FDTD pressure field
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     // Args are independent field arrays and scalar grid/medium/step parameters with no cohesive grouping.
     #[allow(clippy::too_many_arguments)]
@@ -245,7 +245,7 @@ impl ComputeManager<WgpuDevice> {
 
     /// Create a GPU buffer (error if GPU unavailable)
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn create_buffer(
         &self,
@@ -263,7 +263,7 @@ impl ComputeManager<WgpuDevice> {
 
     /// Write typed data into a GPU buffer (error if GPU unavailable)
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn write_buffer<T: bytemuck::Pod>(
         &self,

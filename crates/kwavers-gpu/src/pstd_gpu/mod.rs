@@ -84,7 +84,7 @@ pub const GPU_PSTD_FFT_WORKGROUP_STORAGE_BYTES: u32 = 12 * 1_024;
 ///
 /// # Errors
 ///
-/// Returns [`KwaversError::InvalidInput`] when an axis is not a power of two or
+/// Returns `KwaversError::InvalidInput` when an axis is not a power of two or
 /// exceeds [`MAX_GPU_PSTD_FFT_AXIS`].
 pub fn validate_gpu_pstd_dimensions(nx: usize, ny: usize, nz: usize) -> KwaversResult<()> {
     if !nx.is_power_of_two() || !ny.is_power_of_two() || !nz.is_power_of_two() {

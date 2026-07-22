@@ -10,10 +10,10 @@
 ///
 /// # Arguments
 /// * `n` – number of elements
-/// * `pitch_m` – inter-element pitch d [m]
+/// * `pitch_m` – inter-element pitch d `m`
 ///
 /// # Returns
-/// `(elem_x, elem_z)` – element coordinates [m], each of length `n`.
+/// `(elem_x, elem_z)` – element coordinates `m`, each of length `n`.
 #[must_use]
 pub fn linear_array_positions(n: usize, pitch_m: f64) -> (Vec<f64>, Vec<f64>) {
     let center = (n as f64 - 1.0) / 2.0;
@@ -36,12 +36,12 @@ pub fn linear_array_positions(n: usize, pitch_m: f64) -> (Vec<f64>, Vec<f64>) {
 /// `z ≲ N` (focusing beyond the natural focus cannot tighten the beam).
 ///
 /// # Arguments
-/// * `aperture_m` – full aperture width D [m]
-/// * `freq_hz` – frequency [Hz]
+/// * `aperture_m` – full aperture width D `m`
+/// * `freq_hz` – frequency `Hz`
 /// * `c` – sound speed [m/s]
 ///
 /// # Returns
-/// Natural-focus (near-field transition) range N [m].
+/// Natural-focus (near-field transition) range N `m`.
 ///
 /// # Reference
 /// Szabo (2014) *Diagnostic Ultrasound Imaging*, §6.5; Cobbold (2007) §6.
@@ -64,11 +64,11 @@ pub fn near_field_distance(aperture_m: f64, freq_hz: f64, c: f64) -> f64 {
 /// the focal range constant while the lateral position changes.
 ///
 /// # Arguments
-/// * `focal_range_m` – focal range R (e.g. the natural focus N) [m]
-/// * `steer_rad` – steering angle from the array normal [rad]
+/// * `focal_range_m` – focal range R (e.g. the natural focus N) `m`
+/// * `steer_rad` – steering angle from the array normal `rad`
 ///
 /// # Returns
-/// `(x_f, z_f)` – focal point [m].
+/// `(x_f, z_f)` – focal point `m`.
 #[must_use]
 pub fn steering_focus_point(focal_range_m: f64, steer_rad: f64) -> (f64, f64) {
     (

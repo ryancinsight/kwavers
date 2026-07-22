@@ -28,8 +28,8 @@ pub(crate) fn sorted_modalities(
 /// Common registered dims.
 /// # Errors
 /// - Returns [`KwaversError::DimensionMismatch`] if the precondition for mismatched array or grid dimensions is violated.
-/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
+/// - Propagates any `KwaversError` returned by called functions.
 ///
 pub(crate) fn common_registered_dims(
     modalities: &[(&str, &RegisteredModality)],

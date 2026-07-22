@@ -56,7 +56,7 @@ impl FusionEngine {
 
     /// Apply transformation to floating image (nearest neighbor interpolation)
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     fn apply_transform(
         &self,

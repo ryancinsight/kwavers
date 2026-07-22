@@ -29,7 +29,7 @@ impl PointSensor {
     /// Get RMS pressure at specific sensor.
     ///
     /// ```text
-    /// p_rms = √(1/N Σᵢ p[i]²)
+    /// p_rms = √(1/N Σᵢ p`i`²)
     /// ```
     #[must_use]
     pub fn rms_pressure(&self, sensor_idx: usize) -> Option<f64> {

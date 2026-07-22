@@ -51,7 +51,7 @@ pub struct VolumeOperator<'a> {
     elem_dist: Vec<f64>,
     /// Element-wise square roots of `elem_dist`.
     ///
-    /// `elem_sqrt_dist[i] = sqrt(elem_dist[i])`.  Stored so the spreading denominator
+    /// `elem_sqrt_dist`i` = sqrt(elem_dist`i`)`.  Stored so the spreading denominator
     /// `sqrt(ds·dr) = sqrt(ds) × sqrt(dr)` requires no sqrt in the hot path.
     elem_sqrt_dist: Vec<f64>,
     n_active: usize,

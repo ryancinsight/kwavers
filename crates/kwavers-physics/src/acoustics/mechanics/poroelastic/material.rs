@@ -98,7 +98,7 @@ impl Default for PoroelasticMaterial {
 impl PoroelasticMaterial {
     /// Create new poroelastic material with validation
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     #[allow(clippy::too_many_arguments)]
     pub fn new(
@@ -153,7 +153,7 @@ impl PoroelasticMaterial {
 
     /// Create from tissue type
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn from_tissue_type(tissue: &str) -> KwaversResult<Self> {
         match tissue {
@@ -215,7 +215,7 @@ impl PoroelasticMaterial {
         (1.0 - self.porosity).mul_add(self.solid_density, self.porosity * self.fluid_density)
     }
 
-    /// Effective bulk modulus of the saturated porous medium [Pa].
+    /// Effective bulk modulus of the saturated porous medium `Pa`.
     ///
     /// ## Theorem (Gassmann 1951 / Reuss–Wood lower bound)
     ///

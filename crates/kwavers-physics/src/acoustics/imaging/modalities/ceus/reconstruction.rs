@@ -64,7 +64,7 @@ impl CEUSReconstruction {
 
     /// Process frame of scattered signals into contrast image
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn process_frame(&self, scattered_signals: &Array3<f64>) -> KwaversResult<ContrastImage> {
         // Apply nonlinear beamforming

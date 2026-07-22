@@ -43,7 +43,7 @@ impl ToneBurst {
     }
     /// Try new.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn try_new(
         center_frequency: f64,

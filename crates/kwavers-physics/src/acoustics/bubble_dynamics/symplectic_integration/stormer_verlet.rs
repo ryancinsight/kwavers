@@ -31,7 +31,7 @@ use kwavers_core::error::{KwaversError, KwaversResult, PhysicsError};
 /// * `r_min_fraction` — hard floor = r_min_fraction · params.r0
 /// # Errors
 /// - Returns [`KwaversError::Physics`] if the precondition for a Physics-class constraint is violated.
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Propagates any `KwaversError` returned by called functions.
 ///
 #[allow(clippy::too_many_arguments)]
 pub fn stormer_verlet_step(

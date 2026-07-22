@@ -179,7 +179,7 @@ where
 
     /// Initiate data transfer between GPUs.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn initiate_transfer(
         &mut self,

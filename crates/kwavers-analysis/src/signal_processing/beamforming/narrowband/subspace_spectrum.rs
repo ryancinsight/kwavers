@@ -40,9 +40,9 @@ pub enum SubspaceMethod {
 /// Configuration for a narrowband subspace spatial spectrum.
 #[derive(Debug, Clone)]
 pub struct SubspaceSpectrumConfig {
-    /// Localization-map evaluation frequency `f` \[Hz] (cavitation-emission band centre).
+    /// Localization-map evaluation frequency `f` \`Hz` (cavitation-emission band centre).
     pub frequency_hz: f64,
-    /// Sampling frequency of the time-domain sensor data \[Hz].
+    /// Sampling frequency of the time-domain sensor data \`Hz`.
     pub sampling_frequency_hz: f64,
     /// Speed of sound used for time-of-flight steering \[m/s].
     pub sound_speed: f64,
@@ -142,7 +142,7 @@ fn validate_inputs(
 /// `b_ES(r_f) = |aᴴ(r_f) P_s a(r_f)|²` (Theorem 22.2).
 ///
 /// # Errors
-/// - [`KwaversError::InvalidInput`] for shape/parameter violations.
+/// - `KwaversError::InvalidInput` for shape/parameter violations.
 /// - Propagates snapshot-extraction, covariance, steering, and eigendecomposition errors.
 pub fn eigenspace_mv_spatial_spectrum_point(
     sensor_data: &Array3<f64>,
@@ -164,7 +164,7 @@ pub fn eigenspace_mv_spatial_spectrum_point(
 /// `P_MUSIC(r_f) = 1 / ‖U_nᴴ a(r_f)‖²` (Theorem 22.2).
 ///
 /// # Errors
-/// - [`KwaversError::InvalidInput`] for shape/parameter violations.
+/// - `KwaversError::InvalidInput` for shape/parameter violations.
 /// - Propagates snapshot-extraction, covariance, steering, and eigendecomposition errors.
 pub fn music_spatial_spectrum_point(
     sensor_data: &Array3<f64>,

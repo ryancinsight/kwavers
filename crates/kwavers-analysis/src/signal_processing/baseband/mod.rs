@@ -1,8 +1,8 @@
 //! Analytic-signal I/Q demodulation for real RF channel data.
 //!
-//! For each real channel `x[n]`, this module forms its analytic signal
-//! `z[n] = x[n] + j H{x}[n]` by one-sided FFT filtering, then translates it to
-//! baseband as `z[n] exp(-j 2π f₀ n / f_s)`. The result retains the input's
+//! For each real channel `x`N``, this module forms its analytic signal
+//! `z`N` = x`N` + j H{x}`N`` by one-sided FFT filtering, then translates it to
+//! baseband as `z`N` exp(-j 2π f₀ n / f_s)`. The result retains the input's
 //! `(channel, sample)` layout and is suitable for coherent complex DAS or
 //! slow-time I/Q processing.
 
@@ -24,7 +24,7 @@ impl IqDemodulationConfig {
     ///
     /// # Errors
     ///
-    /// Returns [`KwaversError::InvalidInput`] unless both frequencies are finite
+    /// Returns `KwaversError::InvalidInput` unless both frequencies are finite
     /// and strictly positive and the carrier lies below the Nyquist frequency.
     pub fn new(sampling_frequency_hz: f64, center_frequency_hz: f64) -> KwaversResult<Self> {
         if !sampling_frequency_hz.is_finite() || sampling_frequency_hz <= 0.0 {
@@ -57,7 +57,7 @@ impl IqDemodulationConfig {
 ///
 /// # Errors
 ///
-/// Returns [`KwaversError::InvalidInput`] for an empty/non-finite RF matrix,
+/// Returns `KwaversError::InvalidInput` for an empty/non-finite RF matrix,
 /// an invalid configuration, an address-space overflow, or allocation failure.
 pub fn demodulate_rf_to_iq(
     rf: ArrayView2<'_, f64>,

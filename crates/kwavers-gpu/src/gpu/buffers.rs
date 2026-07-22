@@ -64,7 +64,7 @@ impl GpuBufferManager {
     /// Returns `Err` if a buffer named `name` already exists.
     /// The new buffer is accessible via [`GpuBufferManager::get`].
     /// # Errors
-    /// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
+    /// - Returns `KwaversError::System` if the precondition for a System-class constraint is violated.
     ///
     pub fn allocate(
         &mut self,

@@ -6,7 +6,7 @@ use leto::Array2;
 /// Batch processing for multiple frames
 /// # Errors
 /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Propagates any `KwaversError` returned by called functions.
 ///
 pub fn process_slsc_batch(
     data: &leto::Array3<Complex64>,

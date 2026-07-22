@@ -44,7 +44,7 @@ pub struct NeuralBeamformer {
 impl NeuralBeamformer {
     /// New.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn new(config: NeuralBeamformingConfig) -> KwaversResult<Self> {
         config.validate()?;
@@ -79,7 +79,7 @@ impl NeuralBeamformer {
     }
     /// Adapt.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn adapt(&mut self, feedback: &BeamformingFeedback) -> KwaversResult<()> {
         if self.config.adaptation_parameters.enable_online_learning {

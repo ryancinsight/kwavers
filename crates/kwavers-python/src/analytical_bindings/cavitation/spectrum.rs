@@ -9,12 +9,12 @@ use pyo3::types::PyDict;
 /// Compute the power spectrum of a bubble radius time series.
 ///
 /// Args:
-///     r_arr: Radius time series [m].
-///     dt_s: Sample interval [s].
+///     r_arr: Radius time series `m`.
+///     dt_s: Sample interval `s`.
 ///     n_fft: FFT length.
 ///
 /// Returns:
-///     (frequencies [Hz], power spectral density) tuple.
+///     (frequencies `Hz`, power spectral density) tuple.
 #[pyfunction]
 #[pyo3(signature = (r_arr, dt_s, n_fft))]
 pub fn bubble_power_spectrum(
@@ -38,11 +38,11 @@ pub fn bubble_power_spectrum(
 ///
 /// Args:
 ///     signal: Emission time series (e.g. from bubble_acoustic_emission_pressure).
-///     dt_s: Sample interval [s].
+///     dt_s: Sample interval `s`.
 ///     n_fft: FFT length (>= signal length; zero-padded).
 ///
 /// Returns:
-///     (frequencies [Hz], PSD) tuple over non-negative frequencies.
+///     (frequencies `Hz`, PSD) tuple over non-negative frequencies.
 ///
 /// Reference:
 ///     Gyongy & Coussios (2010) JASA 128, 2403.
@@ -220,14 +220,14 @@ pub fn keller_miksis_pcd_controller_trace<'py>(
 /// `solve_rayleigh_plesset`. Rddot is obtained by central differences of Rdot.
 ///
 /// Args:
-///     r_arr: Bubble radius series R(t) [m].
+///     r_arr: Bubble radius series R(t) `m`.
 ///     rdot_arr: Wall velocity series Rdot(t) [m/s] (same length as r_arr).
-///     dt_s: Uniform time step [s].
+///     dt_s: Uniform time step `s`.
 ///     rho: Liquid density [kg/m³].
-///     r_obs_m: Observation distance from the bubble [m].
+///     r_obs_m: Observation distance from the bubble `m`.
 ///
 /// Returns:
-///     Emitted-pressure series p_sc(t) [Pa] (same length as r_arr).
+///     Emitted-pressure series p_sc(t) `Pa` (same length as r_arr).
 ///
 /// Reference:
 ///     Leighton (1994) The Acoustic Bubble, §3.2.1; Neppiras (1980) Phys. Rep. 61, 159.
@@ -254,7 +254,7 @@ pub fn bubble_acoustic_emission_pressure(
 /// Coherently superpose a microbubble population's emission series into one
 /// ensemble time series.
 ///
-/// y[t] = sum_i gains[i] * emissions[i][t - delays[i]]. Each of the n_bubbles
+/// y[t] = sum_i gains`i` * emissions`i`[t - delays`i`]. Each of the n_bubbles
 /// per-bubble series (rows of the (n_bubbles, n_samples) matrix) is placed at an
 /// integer sample delay and gain, accumulating into a buffer of length out_len.
 /// Genuine broadband emission is this ensemble effect: a single steady-state
@@ -264,7 +264,7 @@ pub fn bubble_acoustic_emission_pressure(
 ///
 /// Args:
 ///     emissions: (n_bubbles, n_samples) per-bubble emission series.
-///     delays_samples: per-bubble nucleation/arrival delay [samples].
+///     delays_samples: per-bubble nucleation/arrival delay `samples`.
 ///     gains: per-bubble amplitude weight.
 ///     out_len: length of the summed output buffer (>= n_samples + max delay).
 ///
@@ -308,9 +308,9 @@ pub fn ensemble_emission_superposition(
 ///   k odd (>=3) -> ultraharmonic; otherwise -> broadband.
 ///
 /// Args:
-///     freqs: Frequency axis [Hz], uniformly spaced ascending.
+///     freqs: Frequency axis `Hz`, uniformly spaced ascending.
 ///     psd: Power spectral density at each frequency (same length).
-///     f0_hz: Fundamental drive frequency [Hz].
+///     f0_hz: Fundamental drive frequency `Hz`.
 ///     rel_halfwidth: Line half-window as fraction of f0 (clamped to (0, 0.25)).
 ///     noise_floor: Baseline PSD subtracted from every bin (>= 0).
 ///
@@ -343,10 +343,10 @@ pub fn cavitation_emission_bands(
 /// Normalized passive cavitation emission spectrum for stable or inertial regimes.
 ///
 /// Args:
-///     freqs_hz: Frequency axis [Hz].
-///     f0_hz: Fundamental drive frequency [Hz].
+///     freqs_hz: Frequency axis `Hz`.
+///     f0_hz: Fundamental drive frequency `Hz`.
 ///     regime: "stable" or "inertial".
-///     snr_db: Signal-to-noise ratio used to add the finite noise floor [dB].
+///     snr_db: Signal-to-noise ratio used to add the finite noise floor `dB`.
 ///
 /// Returns:
 ///     Linear PSD normalized so its peak bin is 1.0.
@@ -377,14 +377,14 @@ pub fn normalized_cavitation_emission_spectrum(
 
 /// Cumulative cavitation dose: trapezoidal time-integral of an emission-power series.
 ///
-/// D[m] = sum_{i=1..m} 0.5*(P[i-1]+P[i])*dt   [emission-power * s]
+/// D`m` = sum_{i=1..m} 0.5*(P[i-1]+P`i`)*dt   [emission-power * s]
 ///
 /// Feed the stable emission (sub+ultra) for the stable-cavitation dose, or the
 /// broadband emission for the inertial-cavitation dose. Negative samples clamp to 0.
 ///
 /// Args:
 ///     power_arr: Per-window band emission power.
-///     dt_s: Monitoring-window duration [s].
+///     dt_s: Monitoring-window duration `s`.
 ///
 /// Returns:
 ///     Running cumulative dose array (same length; D[0] = 0).

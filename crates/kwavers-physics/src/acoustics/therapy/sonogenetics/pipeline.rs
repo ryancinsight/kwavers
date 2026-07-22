@@ -16,22 +16,22 @@ const DEFAULT_MEMBRANE_THICKNESS_M: f64 = 5.0e-9;
 /// Output of [`gaussian_beam_pressure_field`].
 #[derive(Debug, Clone)]
 pub struct GaussianBeamPressureField {
-    /// X coordinate field [m].
+    /// X coordinate field `m`.
     pub x_m: Array3<f64>,
-    /// Y coordinate field [m].
+    /// Y coordinate field `m`.
     pub y_m: Array3<f64>,
-    /// Z coordinate field [m].
+    /// Z coordinate field `m`.
     pub z_m: Array3<f64>,
-    /// Pressure amplitude field [Pa].
+    /// Pressure amplitude field `Pa`.
     pub pressure_pa: Array3<f64>,
 }
 
 /// Output of [`simulate_lif_trace`].
 #[derive(Debug, Clone, PartialEq)]
 pub struct LifTrace {
-    /// Membrane voltage trace [V].
+    /// Membrane voltage trace `V`.
     pub voltage_v: Vec<f64>,
-    /// Chronological spike times [s].
+    /// Chronological spike times `s`.
     pub spike_times_s: Vec<f64>,
 }
 
@@ -64,7 +64,7 @@ fn validate_positive(parameter: &'static str, value: f64) -> KwaversResult<()> {
     }
 }
 
-/// Convert acoustic pressure samples [Pa] to membrane tension [mN/m].
+/// Convert acoustic pressure samples `Pa` to membrane tension [mN/m].
 ///
 /// Formula: `I = p^2 / (2 rho c)`, then `Delta T = I R / (2 c)`.
 pub fn pressure_to_membrane_tension_mn_m(

@@ -30,7 +30,7 @@ use super::nuclei::NucleiSizeDistribution;
 /// Liquid/medium parameters shared by every bubble in the population.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct CavitationMedium {
-    /// Ambient pressure `P₀` [Pa].
+    /// Ambient pressure `P₀` `Pa`.
     pub p0_pa: f64,
     /// Liquid density `ρ` [kg/m³].
     pub rho: f64,
@@ -40,7 +40,7 @@ pub struct CavitationMedium {
     pub mu: f64,
     /// Polytropic exponent `κ` of the gas.
     pub kappa: f64,
-    /// Saturated vapor pressure `P_v` [Pa].
+    /// Saturated vapor pressure `P_v` `Pa`.
     pub p_v_pa: f64,
     /// Liquid sound speed `c` [m/s].
     pub c_liquid: f64,
@@ -106,7 +106,7 @@ pub struct EngagementResult {
     /// Enhancement factor `swept / mono` (mono floored to avoid division by
     /// zero; ≥ 1 means the sweep engages more of the population).
     pub enhancement_factor: f64,
-    /// Frequency band actually traversed by the sweep within the pulse [Hz].
+    /// Frequency band actually traversed by the sweep within the pulse `Hz`.
     pub covered_band_hz: (f64, f64),
 }
 

@@ -75,7 +75,7 @@ impl ClinicalWorkflowOrchestrator {
 
     /// Execute complete clinical examination workflow.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn execute_examination(
         &mut self,

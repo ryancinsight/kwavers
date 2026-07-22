@@ -2,12 +2,12 @@
 //!
 //! ## Theorem: MVDR (Capon) Beamformer
 //!
-//! Given an M-element receive array, let **x**[n] ∈ ℝ^M be the snapshot of
+//! Given an M-element receive array, let **x**`N` ∈ ℝ^M be the snapshot of
 //! delay-aligned RF samples at time n after applying receive delays for voxel
 //! **r**_v.  The spatial covariance matrix is
 //!
 //! ```text
-//!   R = (1/N) Σ_{n=0}^{N-1} x[n] x[n]^T  ∈ ℝ^{M×M}.
+//!   R = (1/N) Σ_{n=0}^{N-1} x`N` x`N`^T  ∈ ℝ^{M×M}.
 //! ```
 //!
 //! To ensure positive-definiteness under finite data, diagonal loading is applied:
@@ -23,10 +23,10 @@
 //! ```
 //!
 //! where **1** is the all-ones steering vector (the delays have already been
-//! absorbed into **x**[n]).  The MVDR beamformed signal is
+//! absorbed into **x**`N`).  The MVDR beamformed signal is
 //!
 //! ```text
-//!   y[n] = w^T x[n]   with output power   P = 1 / (1^T R_δ^{−1} 1).
+//!   y`N` = w^T x`N`   with output power   P = 1 / (1^T R_δ^{−1} 1).
 //! ```
 //!
 //! ## Proof of Distortionless Response
@@ -75,7 +75,7 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 /// 4. Solve the symmetric positive-definite system R_δ **u** = **1** via
 ///    Cholesky factorisation (O(L³)).
 /// 5. Compute output power P = 1/(1^T **u**) and accumulate the average
-///    beamformed amplitude |P·u^T x̄| where x̄ = (1/N) Σ_n x[n].
+///    beamformed amplitude |P·u^T x̄| where x̄ = (1/N) Σ_n x`N`.
 ///
 /// # Arguments
 /// - `rf_data`        : Shape `[frames, channels, samples, 1]`
@@ -87,8 +87,8 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 /// 3D volume of MVDR output amplitude, shape `config.volume_dims`.
 ///
 /// # Errors
-/// - [`KwaversError::InvalidInput`] if the channel count mismatches the array config.
-/// - [`KwaversError::InvalidInput`] if any subarray dimension exceeds the array size.
+/// - `KwaversError::InvalidInput` if the channel count mismatches the array config.
+/// - `KwaversError::InvalidInput` if any subarray dimension exceeds the array size.
 // Authoritative CPU MVDR kernel: active production path under default features
 // and the test reference. Under `gpu`, its only non-test caller
 // (`processing::algorithms`) is `cfg(not(gpu))`; keep it, silence dead_code on gpu.

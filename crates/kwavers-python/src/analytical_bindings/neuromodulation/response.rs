@@ -19,9 +19,9 @@ type Trace4 = (
 ///
 /// Args:
 ///     i_ext_ua_cm2: External current density [µA/cm²].
-///     dt_ms: Integration step [ms].
-///     t_end_ms: Simulation duration [ms].
-///     v_rest_mv: Resting potential / initial condition [mV] (default −65).
+///     dt_ms: Integration step `ms`.
+///     t_end_ms: Simulation duration `ms`.
+///     v_rest_mv: Resting potential / initial condition `mV` (default −65).
 ///
 /// Returns:
 ///     (time_ms, voltage_mv, spike_times_ms) as numpy arrays.

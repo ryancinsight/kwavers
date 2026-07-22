@@ -29,7 +29,7 @@ use crate::source_py::helpers::{apodization_to_string, parse_apodization_type};
 pub struct TransducerArray2D {
     /// Internal kwavers transducer array
     pub(crate) inner: KwaversTransducerArray2D,
-    /// Amplitude [Pa] (not in kwavers, added for Python API)
+    /// Amplitude `Pa` (not in kwavers, added for Python API)
     pub(crate) amplitude: f64,
     /// Input signal (optional, overrides sinusoidal)
     pub(crate) input_signal: Option<Array1<f64>>,
@@ -44,15 +44,15 @@ impl TransducerArray2D {
     /// number_elements : int
     ///     Number of elements in the array
     /// element_width : float
-    ///     Width of each element [m]
+    ///     Width of each element `m`
     /// element_length : float
-    ///     Length of each element in elevation direction [m]
+    ///     Length of each element in elevation direction `m`
     /// element_spacing : float
-    ///     Spacing between element centers [m]
+    ///     Spacing between element centers `m`
     /// sound_speed : float
     ///     Speed of sound in medium [m/s]
     /// frequency : float
-    ///     Operating frequency [Hz]
+    ///     Operating frequency `Hz`
     ///
     /// Returns
     /// -------
@@ -120,7 +120,7 @@ impl TransducerArray2D {
         })
     }
 
-    /// Set focus distance [m].
+    /// Set focus distance `m`.
     ///
     /// Parameters
     /// ----------
@@ -135,7 +135,7 @@ impl TransducerArray2D {
         Ok(())
     }
 
-    /// Set elevation focus distance [m].
+    /// Set elevation focus distance `m`.
     #[pyo3(signature = (distance))]
     fn set_elevation_focus_distance(&mut self, distance: f64) -> PyResult<()> {
         if distance <= 0.0 && !distance.is_infinite() {
@@ -235,31 +235,31 @@ impl TransducerArray2D {
         self.inner.aperture_width()
     }
 
-    /// Element width [m].
+    /// Element width `m`.
     #[getter]
     fn element_width(&self) -> f64 {
         self.inner.element_width()
     }
 
-    /// Element length (elevation) [m].
+    /// Element length (elevation) `m`.
     #[getter]
     fn element_length(&self) -> f64 {
         self.inner.element_length()
     }
 
-    /// Radius of curvature [m].
+    /// Radius of curvature `m`.
     #[getter]
     fn radius(&self) -> f64 {
         self.inner.radius()
     }
 
-    /// Operating frequency [Hz].
+    /// Operating frequency `Hz`.
     #[getter]
     fn frequency(&self) -> f64 {
         self.inner.frequency()
     }
 
-    /// Focus distance [m].
+    /// Focus distance `m`.
     #[getter]
     fn focus_distance(&self) -> f64 {
         self.inner.focus_distance()
@@ -277,7 +277,7 @@ impl TransducerArray2D {
         apodization_to_string(self.inner.transmit_apodization())
     }
 
-    /// Amplitude [Pa].
+    /// Amplitude `Pa`.
     #[getter]
     fn amplitude(&self) -> f64 {
         self.amplitude

@@ -71,7 +71,7 @@ pub struct CaponSpectrumConfig {
 impl CaponSpectrumConfig {
     /// Validate invariants.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn validate(&self) -> KwaversResult<()> {
         if !self.frequency_hz.is_finite() || self.frequency_hz <= 0.0 {

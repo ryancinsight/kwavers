@@ -46,7 +46,7 @@ impl KernelCube {
     /// `(f0, pnp)` axis values is missing from the input set
     /// (the cube must be Cartesian-complete).
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     /// # Panics
     /// - Panics if an internal invariant assumed to hold at this call site is violated.

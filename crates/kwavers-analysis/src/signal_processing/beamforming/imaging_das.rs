@@ -50,7 +50,7 @@ impl ImagingDasConfig {
     /// Construct a new configuration validating physical positivity.
     ///
     /// # Errors
-    /// Returns [`KwaversError::InvalidInput`] when `sound_speed` or
+    /// Returns `KwaversError::InvalidInput` when `sound_speed` or
     /// `sampling_frequency` is not finite or not strictly positive.
     pub fn new(
         sound_speed: f64,
@@ -82,7 +82,7 @@ impl ImagingDasConfig {
 /// length `grid_points.shape()[0]` matching grid-point row order.
 ///
 /// # Errors
-/// Returns [`KwaversError::InvalidInput`] on any of:
+/// Returns `KwaversError::InvalidInput` on any of:
 /// - shape mismatch between `sensor_data` rows and `sensor_positions` rows;
 /// - `sensor_positions` or `grid_points` lacking 3 columns;
 /// - empty sensor set, empty time axis, or empty grid;
@@ -113,7 +113,7 @@ pub fn beamform_image_das(
 /// `fs · (transmit_delays_s[p] + ‖pixel - sensor‖ / c)`.
 ///
 /// # Errors
-/// Returns [`KwaversError::InvalidInput`] for the [`beamform_image_das`]
+/// Returns `KwaversError::InvalidInput` for the [`beamform_image_das`]
 /// validation failures, a transmit-delay length mismatch, or a non-finite or
 /// negative transmit delay.
 pub fn beamform_image_das_with_transmit_delays(

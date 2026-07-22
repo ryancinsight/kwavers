@@ -43,7 +43,7 @@ impl IntensityTracker {
     /// - `dt`: Time between measurements (seconds)
     ///   - Typical: 10 microseconds (acoustic step)
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn new(max_window_duration: f64, dt: f64) -> KwaversResult<Self> {
         if max_window_duration <= 0.0 || dt <= 0.0 {
@@ -194,7 +194,7 @@ impl IntensityTracker {
     /// - `temperature_field`: 3D temperature field (°C)
     /// - `dt`: Time step duration (seconds)
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn update_thermal_dose(
         &mut self,

@@ -18,7 +18,7 @@ impl IterativeSolver {
     /// BiCGSTAB for real non-symmetric sparse systems.
     /// # Errors
     /// - Returns [`KwaversError::Numerical`] if the method fails to converge.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub(super) fn bicgstab_real(
         &self,
@@ -119,7 +119,7 @@ impl IterativeSolver {
     /// Uses conjugated inner products (r₀ᴴ·r) for correct BiCG orthogonality.
     /// # Errors
     /// - Returns [`KwaversError::Numerical`] if the method fails to converge.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub(super) fn bicgstab_complex_impl(
         &self,

@@ -54,7 +54,7 @@ impl DicomImageLoader {
     /// `dicom_ritk` adapter. Errors (listing available UIDs) when the directory
     /// holds more than one series — use [`Self::load_series_by_uid`] then.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     fn load_series_internal(&mut self, dir_path: &str) -> KwaversResult<Array3<f64>> {
         let volume = super::dicom_ritk::load_series_from_dir(Path::new(dir_path))?;
@@ -68,7 +68,7 @@ impl DicomImageLoader {
     /// method is the explicit-selection counterpart for that multi-series case.
     ///
     /// # Errors
-    /// - Propagates [`KwaversError`] when scanning fails, no series matches
+    /// - Propagates `KwaversError` when scanning fails, no series matches
     ///   `series_uid`, or ritk-io fails to decode the selected series.
     pub fn load_series_by_uid(
         &mut self,

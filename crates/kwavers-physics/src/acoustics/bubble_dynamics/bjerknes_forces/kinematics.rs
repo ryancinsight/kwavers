@@ -23,7 +23,7 @@ impl BjerknesCalculator {
     /// `3·ρ·V` instead of `½·ρ·V`, under-predicting bubble acceleration by 6×.
     ///
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if `bubble_radius` ≤ 0 or `time_step` ≤ 0.
+    /// - Returns `KwaversError::InvalidInput` if `bubble_radius` ≤ 0 or `time_step` ≤ 0.
     pub fn predict_bubble_motion(
         &self,
         bubble_radius: f64,

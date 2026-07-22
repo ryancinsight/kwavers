@@ -53,7 +53,7 @@ impl Default for PhysicsNNTrainingConfig {
 impl PhysicsNNTrainingConfig {
     /// Validate configuration constraints
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn validate(&self) -> KwaversResult<()> {
         if self.num_epochs == 0 {

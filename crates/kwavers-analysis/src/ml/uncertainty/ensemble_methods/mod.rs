@@ -71,7 +71,7 @@ impl EnsembleQuantifier {
 
     /// Quantify uncertainty using ensemble methods
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     #[cfg(feature = "pinn")]
     pub fn quantify_uncertainty<P: PinnUncertaintyPredictor + ?Sized>(
@@ -93,7 +93,7 @@ impl EnsembleQuantifier {
 
     /// Train ensemble models with bootstrap sampling
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn train_ensemble(
         &mut self,
@@ -220,7 +220,7 @@ impl EnsembleQuantifier {
 
     /// Get ensemble result with detailed statistics
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn get_ensemble_result(
         &self,

@@ -120,7 +120,7 @@ impl PoolStats {
 
 /// Allocate memory with 64-byte alignment.
 /// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Propagates any `KwaversError` returned by called functions.
 ///
 pub(super) fn allocate_numa_aware(size: usize) -> KwaversResult<NonNull<u8>> {
     let layout = Layout::from_size_align(size, CACHE_LINE_SIZE).map_err(|_| {

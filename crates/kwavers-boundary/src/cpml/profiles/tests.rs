@@ -57,8 +57,8 @@ fn test_singleton_axis_profiles_are_neutral() {
     assert!(profiles.b_z.iter().all(|&v| v == 1.0));
 }
 
-/// Precomputed PML factors satisfy `pml_vel_*[i] = exp(-sigma_*_sg*[i] * dt/2)`
-/// and `pml_den_*[i] = exp(-sigma_*[i] * dt/2)`.
+/// Precomputed PML factors satisfy `pml_vel_*`i` = exp(-sigma_*_sg*`i` * dt/2)`
+/// and `pml_den_*`i` = exp(-sigma_*`i` * dt/2)`.
 ///
 /// Mathematical derivation: Treeby & Cox (2010) Eq. 17 applies the multiplicative
 /// PML factor `exp(-σ·Δt/2)` twice per step.  The precomputed arrays materialise

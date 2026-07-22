@@ -28,7 +28,7 @@ pub struct PstdPressureSourceSchedule {
 ///
 /// Each nonzero pressure-mask value is retained as a finite-aperture BLI
 /// weight. For source cell `s`, the uploaded drive is
-/// `p_signal[s, t] * p_mask[s] * 2 dt / (N_dim c0[s] dx)`, matching the
+/// `p_signal[s, t] * p_mask`s` * 2 dt / (N_dim c0`s` dx)`, matching the
 /// Treeby--Cox mass-source scaling used by the GPU pressure update. The
 /// local sound speed is read from the same single-precision field uploaded to
 /// the provider, so host schedule assembly cannot use a different medium than
@@ -36,7 +36,7 @@ pub struct PstdPressureSourceSchedule {
 ///
 /// # Errors
 ///
-/// Returns [`KwaversError::InvalidInput`] when the source mask or signal does
+/// Returns `KwaversError::InvalidInput` when the source mask or signal does
 /// not match the grid, a source value is non-finite or not representable by
 /// the GPU payload, a local sound speed is invalid, or the source mode is
 /// unsupported by the GPU update.

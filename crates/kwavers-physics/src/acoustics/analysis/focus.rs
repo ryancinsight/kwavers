@@ -36,7 +36,7 @@ pub fn find_focus(pressure_field: ArrayView3<f64>, grid: &Grid) -> KwaversResult
 
 /// Find focal plane (axial slice with maximum energy)
 /// # Errors
-/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+/// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
 ///
 pub fn find_focal_plane(
     pressure_field: ArrayView3<f64>,
