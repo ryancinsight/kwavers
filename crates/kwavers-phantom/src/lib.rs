@@ -35,19 +35,19 @@ mod tests {
             .add_vein([0.015, 0.015, 0.020], 0.003, 0.65)
             .build();
 
-        assert_eq!(phantom.absorption_coefficients().len(), 27000);
+        assert_eq!(phantom.properties().len(), 27000);
         // Vessels (oxy/deoxy hemoglobin) raise absorption above the background, so
         // the map must span a non-trivial range. Computed inline to keep phantom
         // fixtures free of any physics-layer dependency.
         let max = phantom
-            .absorption_coefficients()
+            .properties()
             .iter()
-            .copied()
+            .map(OpticalPropertyData::absorption_coefficient)
             .fold(f64::MIN, f64::max);
         let min = phantom
-            .absorption_coefficients()
+            .properties()
             .iter()
-            .copied()
+            .map(OpticalPropertyData::absorption_coefficient)
             .fold(f64::MAX, f64::min);
         assert!(max > min);
     }
@@ -63,14 +63,14 @@ mod tests {
             .add_muscle_layer(0.010, 0.040)
             .build();
 
-        assert_eq!(phantom.absorption_coefficients().len(), 16000);
+        assert_eq!(phantom.properties().len(), 16000);
 
         // Check first layer is skin (high absorption)
-        let skin_props = phantom.get(10, 10, 1).unwrap();
+        let skin_props = phantom.get_properties(10, 10, 1).unwrap();
         assert!(skin_props.absorption_coefficient() > 3.0);
 
         // Check second layer is fat (low absorption)
-        let fat_props = phantom.get(10, 10, 6).unwrap();
+        let fat_props = phantom.get_properties(10, 10, 6).unwrap();
         assert!(fat_props.absorption_coefficient() < 1.0);
     }
 
@@ -84,7 +84,7 @@ mod tests {
             .add_tumor([0.0125, 0.0125, 0.0125], 0.003, 0.60)
             .build();
 
-        assert_eq!(phantom.absorption_coefficients().len(), 15625);
+        assert_eq!(phantom.properties().len(), 15625);
     }
 
     #[test]
@@ -96,7 +96,7 @@ mod tests {
             .add_vessel([0.01, 0.01, 0.0], [0.01, 0.01, 0.03], 0.001, 0.95)
             .build();
 
-        assert_eq!(phantom.absorption_coefficients().len(), 12000);
+        assert_eq!(phantom.properties().len(), 12000);
     }
 
     #[test]
@@ -104,14 +104,14 @@ mod tests {
         let dims = GridDimensions::new(30, 30, 30, 0.001, 0.001, 0.001);
         let phantom = ClinicalPhantoms::standard_blood_oxygenation(dims);
 
-        assert_eq!(phantom.absorption_coefficients().len(), 27000);
+        assert_eq!(phantom.properties().len(), 27000);
         // Non-trivial mean absorption (inlined to keep fixtures physics-free).
         let mean = phantom
-            .absorption_coefficients()
+            .properties()
             .iter()
-            .copied()
+            .map(OpticalPropertyData::absorption_coefficient)
             .sum::<f64>()
-            / phantom.absorption_coefficients().len() as f64;
+            / phantom.properties().len() as f64;
         assert!(mean > 0.0);
     }
 
@@ -120,7 +120,7 @@ mod tests {
         let dims = GridDimensions::new(20, 20, 40, 0.001, 0.001, 0.001);
         let phantom = ClinicalPhantoms::skin_tissue(dims);
 
-        assert_eq!(phantom.absorption_coefficients().len(), 16000);
+        assert_eq!(phantom.properties().len(), 16000);
     }
 
     #[test]
@@ -128,7 +128,7 @@ mod tests {
         let dims = GridDimensions::new(30, 30, 30, 0.001, 0.001, 0.001);
         let phantom = ClinicalPhantoms::breast_tumor(dims, [0.015, 0.015, 0.015]);
 
-        assert_eq!(phantom.absorption_coefficients().len(), 27000);
+        assert_eq!(phantom.properties().len(), 27000);
     }
 
     #[test]
@@ -136,6 +136,6 @@ mod tests {
         let dims = GridDimensions::new(25, 25, 30, 0.001, 0.001, 0.001);
         let phantom = ClinicalPhantoms::vascular_network(dims);
 
-        assert_eq!(phantom.absorption_coefficients().len(), 18750);
+        assert_eq!(phantom.properties().len(), 18750);
     }
 }

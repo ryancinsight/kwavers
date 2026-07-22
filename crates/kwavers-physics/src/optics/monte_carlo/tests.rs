@@ -63,7 +63,7 @@ fn test_position_to_voxel() {
     // (3) negative positions reject; (4) positions at/beyond domain extent reject.
     let dims = GridDimensions::new(10, 10, 10, 0.001, 0.001, 0.001);
     let grid = Grid3D::new(10, 10, 10, 0.001, 0.001, 0.001).unwrap();
-    let mut builder = crate::optics::map_builder::OpticalPropertyMapBuilder::new(dims);
+    let mut builder = kwavers_medium::optical_map::OpticalPropertyMapBuilder::new(dims);
     builder.set_background(OpticalPropertyData::soft_tissue());
     let optical_map = builder.build();
 

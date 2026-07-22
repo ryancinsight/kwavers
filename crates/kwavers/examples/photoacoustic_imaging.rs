@@ -205,9 +205,9 @@ fn analyze_simulation_results(
 /// Demonstrate tissue contrast capabilities
 fn demonstrate_tissue_contrast(_simulator: &PhotoacousticSimulator) -> KwaversResult<()> {
     // Compare optical properties of different tissue types
-    let blood_props = OpticalProperties::blood(750.0);
-    let tissue_props = OpticalProperties::soft_tissue(750.0);
-    let tumor_props = OpticalProperties::tumor(750.0);
+    let blood_props = OpticalProperties::blood(750.0)?;
+    let tissue_props = OpticalProperties::soft_tissue(750.0)?;
+    let tumor_props = OpticalProperties::tumor(750.0)?;
 
     println!("   Optical Properties Comparison (750 nm):");
     println!(

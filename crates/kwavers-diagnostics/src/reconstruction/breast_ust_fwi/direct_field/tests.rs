@@ -294,7 +294,7 @@ fn finite_grid_pstd_prediction_matches_homogeneous_dataset() {
 #[test]
 fn pstd_spectral_cbs_matches_homogeneous_finite_grid_modal_prediction() {
     let model = Array3::from_elem((4, 4, 3), SOUND_SPEED_WATER_SIM);
-    let model_leto: leto::Array3<f64> = model.clone().into();
+    let model_leto: leto::Array3<f64> = model.clone();
     let acquisition = BreastUstPstdDatasetConfig {
         spacing_m: 3.2e-3,
         time_step_s: 1.0e-7,

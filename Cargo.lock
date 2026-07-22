@@ -36,7 +36,7 @@ checksum = "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa"
 [[package]]
 name = "aequitas"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/aequitas?rev=cf9b2c3debabf0c08a2769fa8246908ad7cf53da#cf9b2c3debabf0c08a2769fa8246908ad7cf53da"
+source = "git+https://github.com/ryancinsight/aequitas#262b3e09c19d844f57765d3e4ea6ab2336653d6d"
 dependencies = [
  "eunomia",
  "typenum",
@@ -223,7 +223,7 @@ checksum = "7c02d123df017efcdfbd739ef81735b36c5ba83ec3c59c80a9d7ecc718f92e50"
 [[package]]
 name = "asclepius"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/asclepius?rev=e85350d68a4652a80c66e98d55b94cfbdc601850#e85350d68a4652a80c66e98d55b94cfbdc601850"
+source = "git+https://github.com/ryancinsight/asclepius#38d1c85501ab9deabd0b79e6210c166232ea6631"
 dependencies = [
  "aequitas",
  "eunomia",
@@ -1920,7 +1920,7 @@ dependencies = [
 
 [[package]]
 name = "eunomia"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "bytemuck",
  "libm",
@@ -2531,7 +2531,7 @@ dependencies = [
 
 [[package]]
 name = "hermes-simd"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "eunomia",
  "hermes-simd-core",
@@ -2543,7 +2543,7 @@ dependencies = [
 
 [[package]]
 name = "hermes-simd-core"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "bytemuck",
  "eunomia",
@@ -2554,7 +2554,7 @@ dependencies = [
 
 [[package]]
 name = "hermes-simd-intrinsics"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "eunomia",
  "hermes-simd-core",
@@ -2562,7 +2562,7 @@ dependencies = [
 
 [[package]]
 name = "hermes-simd-macros"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2571,7 +2571,7 @@ dependencies = [
 
 [[package]]
 name = "hermes-simd-types"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "hermes-simd-core",
  "hermes-simd-intrinsics",
@@ -2696,7 +2696,7 @@ dependencies = [
 [[package]]
 name = "hyperion"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/hyperion?rev=064a18985b4e24764d45825a06ed4ec86c9e5d28#064a18985b4e24764d45825a06ed4ec86c9e5d28"
+source = "git+https://github.com/ryancinsight/hyperion#7b4561b9b51949c8ca59ee2d6f4294cd085ca8a4"
 dependencies = [
  "aequitas",
  "eunomia",
@@ -3196,6 +3196,7 @@ checksum = "e2db585e1d738fc771bf08a151420d3ed193d9d895a36df7f6f8a9456b911ddc"
 name = "kwavers"
 version = "3.0.0"
 dependencies = [
+ "aequitas",
  "anyhow",
  "apollo-fft",
  "bitflags 2.10.0",
@@ -3215,6 +3216,7 @@ dependencies = [
  "gaia",
  "hephaestus-wgpu",
  "hermes-simd",
+ "hyperion",
  "image",
  "kwavers-analysis",
  "kwavers-boundary",
@@ -3769,7 +3771,7 @@ checksum = "7a79a3332a6609480d7d0c9eab957bca6b455b91bb84e66d19f5ff66294b85b8"
 
 [[package]]
 name = "leto"
-version = "0.39.0"
+version = "0.40.0"
 dependencies = [
  "aequitas",
  "bytemuck",
@@ -3781,7 +3783,7 @@ dependencies = [
 
 [[package]]
 name = "leto-ops"
-version = "0.39.0"
+version = "0.40.0"
 dependencies = [
  "bytemuck",
  "eunomia",
@@ -5041,7 +5043,7 @@ dependencies = [
 [[package]]
 name = "proteus"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/proteus?rev=a61d0e5647503e7b44e7489be373fc2b20f62785#a61d0e5647503e7b44e7489be373fc2b20f62785"
+source = "git+https://github.com/ryancinsight/proteus#bb51ac414f74fb47d8001310206c5aea2e3a160c"
 dependencies = [
  "aequitas",
  "eunomia",
@@ -6911,7 +6913,7 @@ checksum = "d2df906b07856748fa3f6e0ad0cbaa047052d4a7dd609e231c4f72cee8c36f31"
 [[package]]
 name = "tyche-core"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/tyche?rev=55ef4d0cf107d30799aece1ee26529d1f8f8e3cb#55ef4d0cf107d30799aece1ee26529d1f8f8e3cb"
+source = "git+https://github.com/ryancinsight/tyche#640ba37d31dccc9b9ede8c707e5e034d7ce5859a"
 dependencies = [
  "eunomia",
 ]

@@ -115,9 +115,9 @@ fn test_optical_fluence_attenuation() -> KwaversResult<()> {
 #[test]
 fn test_tissue_contrast_ratios() -> KwaversResult<()> {
     // Test optical property contrast ratios
-    let blood_props = OpticalProperties::blood(750.0);
-    let tissue_props = OpticalProperties::soft_tissue(750.0);
-    let tumor_props = OpticalProperties::tumor(750.0);
+    let blood_props = OpticalProperties::blood(750.0)?;
+    let tissue_props = OpticalProperties::soft_tissue(750.0)?;
+    let tumor_props = OpticalProperties::tumor(750.0)?;
 
     // Blood should have much higher absorption than soft tissue
     let blood_tissue_ratio =

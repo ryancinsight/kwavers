@@ -62,9 +62,7 @@ fn main() {
     let center_a = N as f64 / 2.0;
     let center_b = N as f64 / 4.0;
 
-    let p_a: Vec<f64> = (0..N)
-        .map(|i| gauss(i as f64, center_a, sigma))
-        .collect();
+    let p_a: Vec<f64> = (0..N).map(|i| gauss(i as f64, center_a, sigma)).collect();
     let p_b: Vec<f64> = (0..N)
         .map(|i| 0.5 * gauss(i as f64, center_b, sigma))
         .collect();
@@ -197,7 +195,7 @@ fn runtime_backend() -> &'static str {
         if std::is_x86_feature_detected!("avx2") {
             return "AVX2 (4×f64)";
         }
-        return "Scalar fallback";
+        "Scalar fallback"
     }
     #[cfg(target_arch = "aarch64")]
     {

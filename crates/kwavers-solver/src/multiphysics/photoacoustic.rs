@@ -249,6 +249,12 @@ impl<T: ElectromagneticWaveEquation> PhotoacousticCoupling for PhotoacousticSolv
     }
 }
 
+fn map_transport_error(error: TransportError<f64>) -> KwaversError {
+    KwaversError::Validation(ValidationError::ConstraintViolation {
+        message: format!("Hyperion optical transport rejected solver input: {error}"),
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -284,10 +290,4 @@ mod tests {
         assert!(pressure.iter().all(|&p| p > 0.0));
         assert!(pressure.iter().any(|&p| p > 10.0)); // Should be significant pressure
     }
-}
-
-fn map_transport_error(error: TransportError<f64>) -> KwaversError {
-    KwaversError::Validation(ValidationError::ConstraintViolation {
-        message: format!("Hyperion optical transport rejected solver input: {error}"),
-    })
 }

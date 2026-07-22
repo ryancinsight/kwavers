@@ -182,13 +182,13 @@ fn test_feature_extraction_preserves_dimensions() {
     let features = extractor.extract_features(volume.view()).unwrap();
 
     // All features should have same dimensions as input
-    for (_, feature_array) in features.morphological.iter() {
+    for feature_array in features.morphological.values() {
         assert_eq!(feature_array.shape(), [20, 30, 40]);
     }
-    for (_, feature_array) in features.spectral.iter() {
+    for feature_array in features.spectral.values() {
         assert_eq!(feature_array.shape(), [20, 30, 40]);
     }
-    for (_, feature_array) in features.texture.iter() {
+    for feature_array in features.texture.values() {
         assert_eq!(feature_array.shape(), [20, 30, 40]);
     }
 }

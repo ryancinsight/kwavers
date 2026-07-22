@@ -3,11 +3,11 @@ members = ["crates/kwavers", "xtask", "crates/kwavers-python", "crates/kwavers-c
 resolver = "2"
 
 [workspace.dependencies]
-aequitas = { version = "0.1.0", git = "https://github.com/ryancinsight/aequitas", rev = "cf9b2c3debabf0c08a2769fa8246908ad7cf53da", default-features = false, features = ["std"] }
-asclepius = { version = "0.1.0", git = "https://github.com/ryancinsight/asclepius", rev = "e85350d68a4652a80c66e98d55b94cfbdc601850", default-features = false, features = ["std"] }
-hyperion = { version = "0.1.0", git = "https://github.com/ryancinsight/hyperion", rev = "064a18985b4e24764d45825a06ed4ec86c9e5d28" }
-proteus = { version = "0.1.0", git = "https://github.com/ryancinsight/proteus", rev = "a61d0e5647503e7b44e7489be373fc2b20f62785" }
-tyche-core = { version = "0.1.0", git = "https://github.com/ryancinsight/tyche", rev = "55ef4d0cf107d30799aece1ee26529d1f8f8e3cb" }
+aequitas = { version = "0.1.0", git = "https://github.com/ryancinsight/aequitas", default-features = false, features = ["std"] }
+asclepius = { version = "0.1.0", git = "https://github.com/ryancinsight/asclepius", default-features = false, features = ["std"] }
+hyperion = { version = "0.1.0", git = "https://github.com/ryancinsight/hyperion" }
+proteus = { version = "0.1.0", git = "https://github.com/ryancinsight/proteus" }
+tyche-core = { version = "0.1.0", git = "https://github.com/ryancinsight/tyche" }
 # External git submodules replaced by remote git dependencies (always-latest on the
 # default branch; `cargo update -p <crate>` refreshes the pinned commit in Cargo.lock).
 # These repos carry their own [workspace], so Cargo resolves their internal
@@ -32,7 +32,7 @@ hermes-simd = { path = "../hermes/crates/hermes-simd", default-features = false,
 moirai-parallel = { path = "../moirai/moirai-parallel", default-features = false, features = ["parallel"] }
 leto = { git = "https://github.com/ryancinsight/leto.git", default-features = false, features = ["std"] }
 leto-ops = { git = "https://github.com/ryancinsight/leto.git", default-features = false, features = ["std"] }
-eunomia = { git = "https://github.com/ryancinsight/eunomia", default-features = false, features = ["std"] }
+eunomia = { version = "0.7.0", git = "https://github.com/ryancinsight/eunomia", default-features = false, features = ["std"] }
 pyo3 = { version = "0.29", features = ["extension-module", "abi3-py39"] }
 numpy = "0.22"
 

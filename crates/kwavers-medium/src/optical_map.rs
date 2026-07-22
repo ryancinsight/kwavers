@@ -338,13 +338,12 @@ mod tests {
         };
 
         let mut builder = OpticalPropertyMapBuilder::new(dims);
-        builder.set_background(OpticalPropertyData::soft_tissue());
+        let properties = OpticalPropertyData::new(2.0, 80.0, 0.72, 1.41).unwrap();
+        builder.set_background(properties);
 
         let map = builder.build();
         assert_eq!(map.properties().shape(), [10, 10, 10]);
-        assert_eq!(
-            map.get_properties(4, 5, 6),
-            Some(OpticalPropertyData::soft_tissue())
-        );
+        assert_eq!(map.get_properties(4, 5, 6), Some(properties));
+        assert_eq!(map.get_properties(10, 5, 6), None);
     }
 }

@@ -17,7 +17,7 @@
 use crate::heterogeneous::HeterogeneousMedium;
 use crate::HomogeneousMedium;
 use kwavers_core::constants::hu_mapping::HuAcousticModel;
-use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_core::error::{KwaversError, KwaversResult, MediumError};
 use kwavers_grid::Grid;
 use leto::Array3;
 
@@ -81,7 +81,10 @@ impl<'a> CtMediumBuilder<'a> {
         }
 
         let model = &self.model;
-        let mut medium = HeterogeneousMedium::from_homogeneous(&self.background, self.grid);
+        let mut medium = HeterogeneousMedium::from_homogeneous(&self.background, self.grid)
+            .map_err(|error| MediumError::InitializationFailed {
+                reason: format!("invalid background optical properties: {error}"),
+            })?;
 
         // Overwrite every acoustic field with the per-voxel HU mapping. These are
         // exactly the fields the solver's acoustic traits read: `absorption` is

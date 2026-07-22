@@ -13,7 +13,33 @@
   direct consumers pass value-semantic, invalid-input, Nextest, Clippy,
   doctest, Rustdoc, and SemVer gates against the locked published graph.
 - Decision: [ADR 046](docs/ADR/046-hyperion-optical-transport-ownership.md).
-- Current evidence: implementation and lock reconciliation are in progress.
+- Current evidence: implementation and lock reconciliation are complete. The
+  affected Clippy gate, six-package doctest gate, focused invalid-input and
+  value-semantic Nextest suites, provider-source uniqueness scan, and normal
+  Rustdoc build pass. Warning-denied Rustdoc passes for `kwavers-medium`,
+  `kwavers-imaging`, and `kwavers-phantom`; `kwavers-physics` retains its tracked
+  KW-DOC-038 baseline (557 warnings in this configuration). The major SemVer
+  gate is attempted but cannot resolve `origin/main`: its pinned Aequitas still
+  requires Eunomia `^0.6.0`, while the canonical Git source now publishes
+  `0.7.0`. The aggregate current-graph check also exposes distinct path and Git
+  Leto identities at the RITK registration boundary. No compatibility adapter
+  is introduced. Full Nextest and publication remain.
+
+## KW-PERF-066 — Restore elastic-FWI test budget [patch] — review
+
+- Owner: `/root`; the item blocks the KW-ARCH-065 consumer gate.
+- Scope: `kwavers-solver::inverse::elastography::elastic_fwi` test/runtime
+  behavior only; optical transport and test-budget changes are non-goals.
+- Acceptance: `fwi_outperforms_linear_inversion` and
+  `recovers_stiff_inclusion` preserve their current value-semantic coverage and
+  each complete below 30 seconds through production-path optimization.
+- Evidence: the KW-ARCH-065 affected-package Nextest run measured 37.411 seconds
+  and 31.064 seconds respectively on 2026-07-21; both passed but exceeded the
+  committed ordinary-test budget. Hoisting the absent-body-force regime outside
+  the dense acceleration loop removes per-cell coordinate division and optional
+  dispatch without changing the solver or test contract. Uncontended focused
+  Nextest runs pass `fwi_outperforms_linear_inversion` in 27.519 seconds and
+  `recovers_stiff_inclusion` in 28.734 seconds.
 
 ## KW-PYTHON-064 — Python release wheels [patch] — in-progress
 

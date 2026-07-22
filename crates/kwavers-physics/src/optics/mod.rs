@@ -19,11 +19,6 @@ pub mod sonoluminescence;
 // Re-export commonly used types
 pub use diffusion::LightDiffusion;
 
-// Re-export domain types for backwards compatibility
-pub use kwavers_medium::optical_map::{
-    Layer, OpticalPropertyMap, OpticalPropertyMapBuilder, Region,
-};
-
 // Re-export physics-specific analysis types
 pub use map_builder::{OpticalPropertyMapAnalysis, PropertyStats};
 

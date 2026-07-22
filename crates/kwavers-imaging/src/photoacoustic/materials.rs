@@ -15,7 +15,6 @@ impl PhotoacousticMaterialLibrary {
     /// # Errors
     ///
     /// Returns an error when `wavelength_nm` is outside the optical model's domain.
-    #[must_use]
     pub fn soft_tissue_sample(wavelength_nm: f64) -> Result<SpectralSample, String> {
         Ok(SpectralSample {
             wavelength_nm,
@@ -30,7 +29,6 @@ impl PhotoacousticMaterialLibrary {
     /// # Errors
     ///
     /// Returns an error when `wavelength_nm` is outside the optical model's domain.
-    #[must_use]
     pub fn blood_sample(wavelength_nm: f64) -> Result<SpectralSample, String> {
         Ok(SpectralSample {
             wavelength_nm,
@@ -43,7 +41,6 @@ impl PhotoacousticMaterialLibrary {
     /// # Errors
     ///
     /// Returns an error when `wavelength_nm` is outside the optical model's domain.
-    #[must_use]
     pub fn tumor_sample(wavelength_nm: f64) -> Result<SpectralSample, String> {
         Ok(SpectralSample {
             wavelength_nm,

@@ -157,8 +157,7 @@ mod tests {
         let data: Vec<f64> = (0..8).map(|i| i as f64).collect();
         let arr = Array3::from_shape_vec([2, 2, 2], data).expect("shape matches data");
         let view = arr.view();
-        let mut tiles =
-            Tiles::new(view.data(), view.layout(), [1, 1, 1]).expect("non-zero tile");
+        let mut tiles = Tiles::new(view.data(), view.layout(), [1, 1, 1]).expect("non-zero tile");
 
         let mut collected: Vec<f64> = Vec::new();
         while let Some(tile) = tiles.next() {

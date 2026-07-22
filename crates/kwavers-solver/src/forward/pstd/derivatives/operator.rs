@@ -258,7 +258,7 @@ impl SpectralDerivativeOperator {
             return Err(KwaversError::InvalidInput(format!(
                 "Field shape {:?} mismatch grid {:?}",
                 field.shape(),
-                &[self.nx, self.ny, self.nz]
+                [self.nx, self.ny, self.nz]
             )));
         }
         if !field.iter().all(|&x| x.is_finite()) {

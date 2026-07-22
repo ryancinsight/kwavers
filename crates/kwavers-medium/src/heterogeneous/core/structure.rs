@@ -13,6 +13,7 @@ use crate::{
     thermal::{ThermalField, ThermalProperties},
     viscous::ViscousProperties,
 };
+use aequitas::systems::si::units::PerMeter;
 use kwavers_core::constants::REFERENCE_FREQUENCY_HZ;
 use kwavers_grid::Grid;
 use leto::Array3;
@@ -145,7 +146,14 @@ impl HeterogeneousMedium {
     /// Construct a heterogeneous medium by expanding a homogeneous medium
     /// across the provided grid. Scalar properties are broadcast; cached
     /// arrays are copied directly when available.
-    pub fn from_homogeneous(h: &HomogeneousMedium, grid: &Grid) -> Self {
+    /// # Errors
+    ///
+    /// Returns a Hyperion transport error when the homogeneous medium contains
+    /// an invalid reduced-scattering coefficient.
+    pub fn from_homogeneous(
+        h: &HomogeneousMedium,
+        grid: &Grid,
+    ) -> Result<Self, hyperion::TransportError<f64>> {
         let (nx, ny, nz) = grid.dimensions();
         let fill = |val: f64| Array3::from_elem([nx, ny, nz], val);
 
@@ -174,7 +182,9 @@ impl HeterogeneousMedium {
         let alpha_t = h.thermal_expansion(0.0, 0.0, 0.0, grid);
         let gas_diff = h.gas_diffusion_coefficient(0.0, 0.0, 0.0, grid);
         let mu_a = h.optical_absorption_coefficient(0.0, 0.0, 0.0, grid);
-        let mu_sp = h.optical_scattering_coefficient(0.0, 0.0, 0.0, grid);
+        let mu_sp = h
+            .optical_reduced_scattering_coefficient(0.0, 0.0, 0.0, grid)?
+            .in_unit::<PerMeter>();
 
         // Thermal diffusivity approximation: k / (rho * c)
         // Compute per-voxel using arrays
@@ -200,7 +210,7 @@ impl HeterogeneousMedium {
             }
         }
 
-        Self {
+        Ok(Self {
             use_trilinear_interpolation: true,
             density,
             sound_speed,
@@ -239,6 +249,6 @@ impl HeterogeneousMedium {
             lame_mu: lame_mu_arr,
 
             reference_frequency: ref_freq,
-        }
+        })
     }
 }

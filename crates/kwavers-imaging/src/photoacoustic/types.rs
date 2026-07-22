@@ -85,7 +85,6 @@ impl PhotoacousticOpticalProperties {
     ///
     /// Returns an error when the wavelength or resulting coefficients are not
     /// physically valid.
-    #[must_use]
     pub fn blood(wavelength: f64) -> Result<OpticalPropertyData, String> {
         Self::validate_wavelength(wavelength)?;
         let absorption = if wavelength < 600.0 {
@@ -104,7 +103,6 @@ impl PhotoacousticOpticalProperties {
     ///
     /// Returns an error when the wavelength or resulting coefficients are not
     /// physically valid.
-    #[must_use]
     pub fn soft_tissue(wavelength: f64) -> Result<OpticalPropertyData, String> {
         Self::validate_wavelength(wavelength)?;
         OpticalPropertyData::new(
@@ -121,7 +119,6 @@ impl PhotoacousticOpticalProperties {
     ///
     /// Returns an error when the wavelength or resulting coefficients are not
     /// physically valid.
-    #[must_use]
     pub fn tumor(wavelength: f64) -> Result<OpticalPropertyData, String> {
         Self::validate_wavelength(wavelength)?;
         OpticalPropertyData::new(
@@ -166,4 +163,46 @@ pub struct PhotoacousticValidationReport {
     pub total_optical_energy: f64,
     pub max_initial_pressure: f64,
     pub relative_pressure_balance_error: f64,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::PhotoacousticOpticalProperties;
+
+    fn assert_invalid_wavelength(wavelength: f64, display: &str) {
+        let expected = format!("Optical wavelength must be finite and positive, got {display} nm");
+        assert_eq!(
+            PhotoacousticOpticalProperties::blood(wavelength),
+            Err(expected.clone())
+        );
+        assert_eq!(
+            PhotoacousticOpticalProperties::soft_tissue(wavelength),
+            Err(expected.clone())
+        );
+        assert_eq!(
+            PhotoacousticOpticalProperties::tumor(wavelength),
+            Err(expected)
+        );
+    }
+
+    #[test]
+    fn wavelength_models_return_validated_aggregates() {
+        let blood = PhotoacousticOpticalProperties::blood(750.0).unwrap();
+        let tissue = PhotoacousticOpticalProperties::soft_tissue(750.0).unwrap();
+        let tumor = PhotoacousticOpticalProperties::tumor(750.0).unwrap();
+
+        assert!(blood.absorption_coefficient() > tissue.absorption_coefficient());
+        assert!(tumor.absorption_coefficient() > tissue.absorption_coefficient());
+        assert_eq!(blood.anisotropy(), 0.95);
+        assert_eq!(tissue.anisotropy(), 0.8);
+        assert_eq!(tumor.anisotropy(), 0.85);
+    }
+
+    #[test]
+    fn wavelength_models_reject_invalid_inputs() {
+        assert_invalid_wavelength(f64::NAN, "NaN");
+        assert_invalid_wavelength(f64::INFINITY, "inf");
+        assert_invalid_wavelength(0.0, "0");
+        assert_invalid_wavelength(-1.0, "-1");
+    }
 }

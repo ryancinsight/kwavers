@@ -111,6 +111,8 @@ flate2 = { workspace = true }
 
 [dev-dependencies]
 # Minimal dev dependencies for testing only
+aequitas = { workspace = true }
+hyperion = { workspace = true }
 # Enable kwavers-solver's `test-util` feature so cross-crate test helpers
 # (kwavers_solver::plugin::test_support) are available to kwavers' own tests.
 kwavers-solver = { path = "../kwavers-solver", features = ["test-util"] }

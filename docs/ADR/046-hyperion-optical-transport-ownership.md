@@ -21,13 +21,22 @@ would add a package without consolidating code.
 
 ## Decision
 
-Depend directly on published Hyperion `064a189` from every Kwavers crate that
-uses its contract.
+Depend directly on Hyperion's versioned Git contract, locked to published head
+`7b4561b9`, from every Kwavers crate that uses its contract. Kwavers does not
+pin a parallel revision-qualified source identity; `Cargo.lock` records the
+reproducible revision.
 
 - `kwavers-medium::OpticalPropertyData` remains the material aggregate. It
   privately stores Hyperion coefficient values and anisotropy, retains
   refractive index and tissue presets, and exposes explicit raw-SI projections
-  only at consumer boundaries.
+  only at consumer boundaries. `OpticalPropertyMap` stores this validated
+  aggregate once per voxel; it does not maintain parallel coefficient arrays or
+  reconstruct anisotropy from a fixed value.
+- `MediumOpticalProperties` is the narrow diffusion-facing medium seam. It
+  exposes absorption and a fallible reduced-scattering projection only. Full
+  unreduced coefficients, anisotropy, and refractive index remain owned by
+  `OpticalPropertyData`; the medium seam does not reconstruct them from
+  constants.
 - `kwavers-physics` and `kwavers-solver` consume
   `DiffusionCoefficients<f64>`, typed paths, optical depth, and transmission.
   Spatial Green functions, Monte Carlo transport policy, fields, and
@@ -47,9 +56,15 @@ Aequitas + Eunomia -> Hyperion -> kwavers-medium -> kwavers-physics
 
 The migration deletes the complete `kwavers-optics::optical_transport` module,
 `DiffusionOpticalProperties`, `OpticalAbsorption`, the tissue wrapper attached
-to that parallel model, the default `mu_s' = 10 mu_a` heuristic, and consumer
+to that parallel model, the default `mu_s' = 10 mu_a` heuristic, the mixed
+water/tissue constants on `MediumOpticalProperties`, and consumer
 copies of reduced-scattering, diffusion, effective-attenuation, albedo,
 penetration-depth, optical-depth, and transmission formulas.
+The former mixed `optical_scattering_coefficient` method is also removed:
+homogeneous and voxel media already stored reduced scattering, while the
+tissue table is normalized once to that same stored quantity.
+The physics-layer compatibility re-export of medium-owned map types is also
+removed; physics retains only its map-analysis extension trait.
 
 Photoacoustic initial-pressure and fluence-compensation behavior stays in
 Kwavers because it couples optical deposition to acoustic source policy rather

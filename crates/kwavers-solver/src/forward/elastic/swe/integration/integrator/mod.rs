@@ -110,6 +110,9 @@ impl<'a> TimeIntegrator<'a> {
         body_force: Option<&ElasticBodyForceConfig>,
         scratch: &mut ElasticStepScratch,
     ) -> KwaversResult<()> {
+        if let Some(body_force) = body_force {
+            body_force::validate(body_force)?;
+        }
         // a(t): acceleration at current state
         self.compute_acceleration(field, scratch, body_force, field.time)?;
 
@@ -267,6 +270,9 @@ impl<'a> TimeIntegrator<'a> {
         body_forces: &[ElasticBodyForceConfig],
         scratch: &mut ElasticStepScratch,
     ) -> KwaversResult<()> {
+        for body_force in body_forces {
+            body_force::validate(body_force)?;
+        }
         // a(t)
         self.compute_acceleration_with_body_forces(field, scratch, body_forces, field.time)?;
 
@@ -437,7 +443,6 @@ impl<'a> TimeIntegrator<'a> {
         stress_divergence_into(self.grid, self.lambda, self.mu, field, scratch);
 
         {
-            let grid = self.grid;
             let ax_slice = scratch
                 .ax
                 .as_slice_mut()
@@ -466,7 +471,35 @@ impl<'a> TimeIntegrator<'a> {
                 .density
                 .as_slice()
                 .expect("self.density: standard-layout asserted just above; layout matched");
-            let (_nx, ny, nz) = (self.grid.nx, self.grid.ny, self.grid.nz);
+
+            if let Some(body_force) = body_force {
+                let grid = self.grid;
+                let (_nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
+                for_each_chunk_triple_mut_enumerated_with::<Adaptive, _, _, _, _>(
+                    ax_slice,
+                    ay_slice,
+                    az_slice,
+                    INTEGRATOR_CHUNK,
+                    |chunk_idx, ax_chunk, ay_chunk, az_chunk| {
+                        let start = chunk_idx * INTEGRATOR_CHUNK;
+                        for offset in 0..ax_chunk.len() {
+                            let idx = start + offset;
+                            let i = idx / (ny * nz);
+                            let j = (idx / nz) % ny;
+                            let k = idx % nz;
+                            let force = body_force::evaluate(grid, body_force, i, j, k, time);
+                            ax_chunk[offset] = (div_x_slice[idx] + force[0]) / rho_slice[idx];
+                            ay_chunk[offset] = (div_y_slice[idx] + force[1]) / rho_slice[idx];
+                            az_chunk[offset] = (div_z_slice[idx] + force[2]) / rho_slice[idx];
+                        }
+                    },
+                );
+                return Ok(());
+            }
+
+            // Point-force propagation injects velocity before each step and has
+            // no distributed body-force field. Dispatch this regime once so its
+            // dense kernel contains no coordinate division or optional branch.
             for_each_chunk_triple_mut_enumerated_with::<Adaptive, _, _, _, _>(
                 ax_slice,
                 ay_slice,
@@ -476,17 +509,9 @@ impl<'a> TimeIntegrator<'a> {
                     let start = chunk_idx * INTEGRATOR_CHUNK;
                     for offset in 0..ax_chunk.len() {
                         let idx = start + offset;
-                        let i = idx / (ny * nz);
-                        let j = (idx / nz) % ny;
-                        let k = idx % nz;
-                        let force = body_force
-                            .map(|bf| {
-                                body_force::evaluate(grid, bf, i, j, k, time).unwrap_or([0.0; 3])
-                            })
-                            .unwrap_or([0.0; 3]);
-                        ay_chunk[offset] = (div_y_slice[idx] + force[1]) / rho_slice[idx];
-                        az_chunk[offset] = (div_z_slice[idx] + force[2]) / rho_slice[idx];
-                        ax_chunk[offset] = (div_x_slice[idx] + force[0]) / rho_slice[idx];
+                        ax_chunk[offset] = div_x_slice[idx] / rho_slice[idx];
+                        ay_chunk[offset] = div_y_slice[idx] / rho_slice[idx];
+                        az_chunk[offset] = div_z_slice[idx] / rho_slice[idx];
                     }
                 },
             );
@@ -556,8 +581,7 @@ impl<'a> TimeIntegrator<'a> {
                         let k = idx % nz;
                         let mut force = [0.0_f64; 3];
                         for bf in body_forces {
-                            let f =
-                                body_force::evaluate(grid, bf, i, j, k, time).unwrap_or([0.0; 3]);
+                            let f = body_force::evaluate(grid, bf, i, j, k, time);
                             force[0] += f[0];
                             force[1] += f[1];
                             force[2] += f[2];

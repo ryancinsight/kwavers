@@ -16,10 +16,16 @@
   penetration-depth, optical-depth, and planar-transmission laws with direct
   Hyperion ownership over Aequitas quantities.
 - Make `OpticalPropertyData` hold private validated coefficient and anisotropy
-  values while retaining Kwavers-owned tissue presets, refractive index, and
-  spatial maps. Raw coefficient access is now through named methods.
+  values while retaining Kwavers-owned tissue presets and refractive index.
+  Spatial maps now store that aggregate once per voxel instead of parallel raw
+  arrays that discarded anisotropy. Raw coefficient access is through named
+  methods.
 - Remove `kwavers_optics::optical_transport`, `DiffusionOpticalProperties`,
-  `OpticalAbsorption`, and the heuristic default reduced-scattering law.
+  `OpticalAbsorption`, the legacy physics map re-export, and the heuristic
+  default optical-medium constants and reduced-scattering law. The remaining
+  medium trait now exposes validated reduced scattering explicitly; homogeneous,
+  voxel, and tissue media no longer mix raw and reduced coefficients behind one
+  method name.
   `kwavers-optics` remains the chromophore-spectrum owner. See ADR 046.
 ### Breaking (2026-07-21) - Tyche collocation sampling [major] [arch]
 
@@ -72,6 +78,12 @@
 
 ### Fixed
 
+- Validate Gaussian body-force parameters before mutating elastic-wave state,
+  replacing silent zero-force substitution with a typed numerical error.
+  Dispatch the absent-body-force regime once per acceleration update so dense
+  point-force propagation performs no coordinate division or optional force
+  selection per cell. The unchanged elastic-FWI regressions complete in
+  27.519 seconds and 28.734 seconds under the 30-second ordinary-test budget.
 - Replace the tautological single-run benchmark save/check job with the
   Atlas-owned, family-wise Criterion regression gate. Benchmark-relevant PRs
   now compare the exact base and head through two phase-reversed replications

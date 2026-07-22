@@ -2,6 +2,8 @@
 //!
 //! Implements Planck's law for thermal radiation from hot bubble interior
 
+use aequitas::systems::si::quantities::Dimensionless;
+use hyperion::quantity::OpticalDepth;
 use leto::{Array1, Array3};
 use std::f64::consts::PI;
 
@@ -16,15 +18,17 @@ use kwavers_core::constants::optical::WIEN_CONSTANT;
 pub struct BlackbodyModel {
     /// Emissivity factor (0-1)
     pub emissivity: f64,
-    /// Optical thickness correction
-    pub optical_depth: f64,
+    /// Optical thickness correction (validated ≥ 0 via Hyperion)
+    pub optical_depth: OpticalDepth<f64>,
 }
 
 impl Default for BlackbodyModel {
     fn default() -> Self {
         Self {
-            emissivity: 0.1,    // Partial emissivity for bubble
-            optical_depth: 0.1, // Optically thin approximation
+            emissivity: 0.1,
+            // Optically thin approximation (τ = 0.1)
+            optical_depth: OpticalDepth::new(Dimensionless::from_base(0.1))
+                .expect("invariant: default τ = 0.1 is valid"),
         }
     }
 }
@@ -62,8 +66,13 @@ impl BlackbodyModel {
                 / hc_over_lambda_kt.exp_m1()
         };
 
-        // Apply emissivity and optical depth correction
-        self.emissivity * planck * (1.0 - (-self.optical_depth).exp())
+        // Apply emissivity and optical depth correction via Beer-Lambert transmission
+        let transmission = self
+            .optical_depth
+            .transmission()
+            .into_quantity()
+            .into_base();
+        self.emissivity * planck * (1.0 - transmission)
     }
 
     /// Calculate total radiated power using Stefan-Boltzmann law.
@@ -81,7 +90,12 @@ impl BlackbodyModel {
     /// Total radiated power in Watts
     #[must_use]
     pub fn total_power(&self, temperature: f64, surface_area: f64) -> f64 {
-        let depth_factor = 1.0 - (-self.optical_depth).exp();
+        let depth_factor = 1.0
+            - self
+                .optical_depth
+                .transmission()
+                .into_quantity()
+                .into_base();
         self.emissivity * depth_factor * STEFAN_BOLTZMANN * surface_area * temperature.powi(4)
     }
 
@@ -223,7 +237,7 @@ mod tests {
         // reduces to the ideal Stefan-Boltzmann law ε·σ·A·T⁴.
         let model = BlackbodyModel {
             emissivity: 1.0,
-            optical_depth: 100.0,
+            optical_depth: OpticalDepth::new(Dimensionless::from_base(100.0)).unwrap(),
         };
 
         let temp = 1000.0;
@@ -240,7 +254,7 @@ mod tests {
         let tau = 0.1_f64;
         let model = BlackbodyModel {
             emissivity: 1.0,
-            optical_depth: tau,
+            optical_depth: OpticalDepth::new(Dimensionless::from_base(tau)).unwrap(),
         };
         let temp = 1000.0;
         let power = model.total_power(temp, 1.0);

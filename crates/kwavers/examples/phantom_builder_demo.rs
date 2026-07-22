@@ -22,11 +22,10 @@
 
 use anyhow::Result;
 use kwavers_grid::GridDimensions;
+use kwavers_medium::optical_map::{OpticalPropertyMapBuilder, Region};
 use kwavers_medium::properties::OpticalPropertyData;
 use kwavers_phantom::{ClinicalPhantoms, PhantomBuilder};
-use kwavers_physics::optics::map_builder::{
-    OpticalPropertyMapAnalysis, OpticalPropertyMapBuilder, Region,
-};
+use kwavers_physics::optics::OpticalPropertyMapAnalysis;
 
 fn main() -> Result<()> {
     println!("=== Clinical Phantom Builder Demonstration ===\n");
@@ -140,7 +139,7 @@ fn demo_layered_tissue() -> Result<()> {
         (25.0, "Muscle"),
     ] {
         let k = (depth_mm / 1000.0 / dims.dz) as usize;
-        if let Some(props) = phantom.get(dims.nx / 2, dims.ny / 2, k) {
+        if let Some(props) = phantom.get_properties(dims.nx / 2, dims.ny / 2, k) {
             println!(
                 "    {} ({:.1} mm): μ_a = {:.2} m⁻¹, μ_s = {:.1} m⁻¹",
                 layer_name,
