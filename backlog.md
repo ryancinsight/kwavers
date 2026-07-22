@@ -1,5 +1,37 @@
 # Backlog / Strategy
 
+## KW-PERF-067 — Stream elastic-FWI adjoint gradient [patch] — done
+
+- Owner: Codex `/root`; last-update: 2026-07-22; scope:
+  `crates/kwavers-solver/src/forward/elastic/swe/core/solver/point_force_drive.rs`,
+  `crates/kwavers-solver/src/inverse/elastography/elastic_fwi/gradient.rs`,
+  focused regressions, and synchronized PM evidence. Forward-history
+  checkpointing, FWI workload or tolerance changes, and public API changes are
+  non-goals.
+- Outcome: accumulate the elastic-FWI shear-modulus gradient while the adjoint
+  propagator runs, retaining one current adjoint field instead of cloning a
+  second complete six-component wave-field history.
+- Acceptance: the streamed gradient and illumination match the full-history
+  reference; the existing 2-D/3-D directional-gradient and reconstruction
+  contracts pass unchanged; the retained-history bound decreases by six
+  `f64` grid volumes per time step; and controlled peak-memory/runtime
+  measurements show no performance regression.
+- Risk/change class: `[patch]`; the time-index reversal and floating-point
+  accumulation order are the primary correctness risks. Verification uses a
+  focused differential regression, existing analytical gradient oracles,
+  configured Nextest budgets, warning-denied Clippy, doctests, and measured
+  process-tree peak memory.
+- Current evidence: the independent full-history oracle is bitwise-equal to the
+  streamed gradient and illumination. The unchanged 3-D directional-gradient
+  case retains 20.44 MiB less wave-field history analytically and measured a
+  median process-tree peak of 266.25 MiB versus 286.41 MiB (−20.16 MiB, −7.0%).
+  Its three-sample median Nextest duration decreased from 1.651 s to 1.216 s
+  (−26.3%). The focused oracle, unchanged 2-D/3-D directional-gradient, and two
+  reconstruction regressions pass 5/5 in 21.486 s; warning-denied Clippy and
+  doctests pass. All repository-owned hosted checks passed on exact
+  implementation head `918cd826`; the external, non-required RecurseML
+  analysis reported an out-of-band service error.
+
 ## KW-ARCH-065 — Consolidate optical transport in Hyperion [major] [arch] — in-progress
 
 - Owner: `/root`; scope: published Hyperion integration in `kwavers-medium`,

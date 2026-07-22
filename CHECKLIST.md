@@ -1,5 +1,19 @@
 # Project Checklist
 
+## Owner: Codex `/root` — Stream elastic-FWI adjoint gradient [patch]
+
+- [x] Measure the current full-adjoint-history runtime and process-tree peak
+      memory on the unchanged 3-D directional-gradient regression.
+- [x] Stream each adjoint state directly into the matching reverse-time forward
+      state while preserving the full forward history required by the
+      non-reversible PML integrator.
+- [x] Add a full-history differential regression that detects time-index or
+      component-association errors without weakening numerical tolerances.
+- [x] Run focused formatting, warning-denied Clippy, configured Nextest,
+      doctests, and controlled post-change memory/runtime measurement.
+- [x] Synchronize PM evidence and deliver only after exact-head hosted checks
+      pass.
+
 ## Owner: /root — Consolidate optical transport in Hyperion [major] [arch]
 
 - [x] Record the ownership boundary, dependency direction, deletion ledger,
