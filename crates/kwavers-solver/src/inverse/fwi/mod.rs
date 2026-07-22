@@ -4,7 +4,7 @@
 //! discretizations, and adjoint contracts. This module makes that split explicit:
 //!
 //! - `frequency_domain`: Helmholtz-domain complex pressure inversion.
-//!   Forward-operator selection via the [`frequency_domain::HelmholtzForwardOperator`]
+//!   Forward-operator selection via the `frequency_domain::HelmholtzForwardOperator`
 //!   trait (single-scatter Born / dense CBS / spectral CBS today; future impls
 //!   plug in additively).
 //! - `time_domain`: FDTD-driven acoustic full-waveform inversion driver

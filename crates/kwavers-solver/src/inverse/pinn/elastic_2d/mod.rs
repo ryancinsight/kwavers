@@ -127,7 +127,7 @@
 //! use kwavers_grid::geometry::RectangularDomain;
 //!
 //! // Define domain and material properties
-//! let domain = RectangularDomain::new_2d(0.0, 1.0, 0.0, 1.0);
+//! let domain = RectangularDomain::new_2d(0.0, 1.0, 0.0, 1.0)?;
 //! let lambda = 1e9;  // Pa
 //! let mu = 0.5e9;    // Pa
 //! let rho = 1000.0;  // kg/m³
@@ -213,12 +213,12 @@ mod tests;
 pub use adaptive_sampling::{AdaptiveSampler, BatchIterator, ElasticAdaptiveSamplingStrategy};
 
 pub use super::geometry::{
-    AdaptiveRefinement, CollocationSampler, CollocationSamplingStrategy, MultiRegionDomain,
+    CollocationSampler, CollocationSamplingStrategy, MultiRegionDomain, MultiRegionError,
     PinnGeometryInterfaceCondition,
 };
 pub use config::{
-    Config, ElasticCollocationSamplingStrategy, ElasticPinnActivationFunction,
-    ElasticPinnLrScheduler, ElasticPinnOptimizerType, LossWeights,
+    Config, ElasticPinnActivationFunction, ElasticPinnLrScheduler, ElasticPinnOptimizerType,
+    LossWeights,
 };
 
 #[cfg(feature = "pinn")]

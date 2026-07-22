@@ -48,9 +48,9 @@ impl PSTDSolver {
         // Zero-clone: serialize directly from borrowed solver field references.
         // Avoids 6 × Array3<f64>::clone() — for a 256³ grid this saves ~768 MiB
         // of intermediate allocations per checkpoint.
-    let rhox = clone_field(&self.rhox);
-    let rhoy = clone_field(&self.rhoy);
-    let rhoz = clone_field(&self.rhoz);
+        let rhox = clone_field(&self.rhox);
+        let rhoy = clone_field(&self.rhoy);
+        let rhoz = clone_field(&self.rhoz);
         let sensor_data_nd = sensor_data.clone();
         PSTDCheckpoint::save_borrowed(
             path,

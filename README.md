@@ -56,10 +56,14 @@ nothing.
 | `kwavers` | Thin top-level app/integration crate: binary + cross-cutting tests/examples/benches (no re-exports) |
 | `kwavers-python` | PyO3 bindings (`pykwavers`); depends on the layer crates directly; no domain logic |
 
-Tyche owns reproducible sampling, online moments, correlation screening, and
-finite-sample conformal calibration. Kwavers owns model execution, Leto array
-presentation, and domain-specific score definitions; Analysis and PINN code do
-not carry independent statistical formulas. See
+Tyche owns reproducible counter streams, Latin-hypercube and Sobol designs,
+online moments, correlation screening, and finite-sample conformal
+calibration. Kwavers owns physical-domain transforms, model execution, Leto
+array presentation, and domain-specific score definitions. Geometry maps
+Tyche designs directly into validated rectangles, disks, and balls through one
+single-allocation collector; Analysis and PINN fixed-design code carry no
+independent provider algorithms, while model-residual adaptive refinement
+remains solver-owned. See
 [ADR 043](docs/ADR/043-tyche-uncertainty-provider.md).
 
 Layer crates are at `3.0.0`; the completed split targets `4.0.0` (see

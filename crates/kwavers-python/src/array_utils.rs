@@ -1,8 +1,8 @@
 //! PyArray-only helpers for kwavers-python.
 //!
 //! This module centralises the small set of conversions needed between Python
-//! NumPy arrays and the internal leto / Rust-Vec world without ever naming an
-//! `ndarray::Array*` type in source.
+//! NumPy arrays and the internal Leto / Rust `Vec` representation without
+//! exposing the backing array-provider type.
 
 use numpy::{
     Element, PyArray1, PyArray2, PyArray3, PyArrayMethods, PyReadonlyArray1, PyReadonlyArray2,
