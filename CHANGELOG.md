@@ -14,6 +14,9 @@
   Releases tagged `kwavers-python-v<version>` now build, install, attest, and
   attach one stable-ABI wheel per operating system, then publish the exact wheel
   set to PyPI through OIDC.
+- [patch] Keep the Python package importable on its declared Python 3.8 floor
+  by postponing annotation evaluation, and compile the legacy AVX2 module only
+  for x86-64 targets so macOS ARM wheels use the existing NEON/SWAR dispatch.
 
 ### Breaking (2026-07-21) - Hyperion optical transport [major] [arch]
 

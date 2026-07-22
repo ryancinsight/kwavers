@@ -67,6 +67,8 @@ License: MIT
 Repository: https://github.com/ryancinsight/kwavers
 """
 
+from __future__ import annotations
+
 import importlib.machinery
 import importlib.util
 import os
