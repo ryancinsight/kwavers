@@ -20,7 +20,9 @@
   Pin all CI provider checkouts to the same Atlas graph as the release workflow
   so locked verification resolves the committed dependency graph, and compile
   the control-panel rendering surface only when its explicit `egui` feature is
-  enabled instead of shipping a no-op headless method.
+  enabled instead of shipping a no-op headless method. Advance RITK to its
+  Reqwest 0.13.4 transport and remove Kwavers' unused Reqwest declaration so
+  release locks no longer contain the vulnerable rustls-webpki 0.101 line.
 
 ### Breaking (2026-07-21) - Hyperion optical transport [major] [arch]
 
