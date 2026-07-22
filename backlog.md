@@ -64,7 +64,7 @@
   unused static-link-argument diagnostic; hosted CI and pending-publisher
   registration remain open.
 
-## KW-BUILD-065 — Bound debug build artifacts [patch] — in-progress
+## KW-BUILD-065 — Bound debug build artifacts [patch] — done
 
 - Owner: /root; scope: the Kwavers development profile, exact pinned-provider
   build/test evidence, and shared Atlas target-cache measurement. Non-goals:
@@ -135,6 +135,14 @@
   24/24 in 69.640 s; serializing their internally parallel processes reduces
   the longest test from 31.563 s under contention to 22.853 s without changing
   workloads, assertions, or timeouts.
+- Exact hosted evidence: implementation head `905b5efbe` passes every
+  architecture job and the bounded benchmark workflow. Feature-build jobs
+  complete in 7m48s–10m57s, the full architecture job completes in 33m06s,
+  and its unchanged PSTD regression completes in 24.546 s. The clean
+  `target/debug` tree contains 16,771,464,617 bytes across 6,109 files. No
+  comparable clean `-O3` footprint was retained, so this establishes the
+  clean artifact baseline without claiming an unsupported size percentage.
+  The earlier uncached profile comparison remains the build-time oracle.
 
 ## KW-UQ-064 — Integrate Tyche collocation sampling [major] [arch] — done
 

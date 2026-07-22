@@ -62,8 +62,12 @@
 - [x] Verify the pinned provider graph locally: `kwavers-math` passes 266/266
       tests and the serialized four-binary architecture grid passes 24/24 in
       69.640 s, with its longest test at 22.853 s.
-- [ ] Verify hosted build duration and artifact-size delta on the exact PR
-      head.
+- [x] Verify the exact implementation head in hosted CI: all feature builds
+      complete in 7m48s–10m57s, the full architecture job completes in
+      33m06s with the PSTD regression at 24.546s, and the clean debug tree is
+      16,771,464,617 bytes across 6,109 files. Record this as the clean
+      footprint baseline because no comparable clean `-O3` footprint was
+      retained.
 
 ## Owner: /root — Integrate Tyche collocation sampling [major] [arch]
 
