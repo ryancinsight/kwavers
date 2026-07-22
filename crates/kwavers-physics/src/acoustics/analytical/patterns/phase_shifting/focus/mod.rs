@@ -188,7 +188,7 @@ impl DynamicFocusing {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use approx::assert_relative_eq;
+    use eunomia::assert_relative_eq;
     use kwavers_core::constants::numerical::MHZ_TO_HZ;
 
     fn linear_array() -> Array2<f64> {

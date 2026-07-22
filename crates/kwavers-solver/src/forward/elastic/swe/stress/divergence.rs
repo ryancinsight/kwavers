@@ -25,13 +25,18 @@ use super::super::types::ElasticWaveField;
 use super::fd_stencils::{fd1_x, fd1_y, fd1_z};
 use kwavers_grid::Grid;
 use leto::Array3;
+use moirai_parallel::{for_each_chunk_triple_mut_enumerated_with, Adaptive};
+
+// Three output chunks plus the captured displacement/material inputs remain
+// within a 32 KiB L1 working set at 256 f64 elements per chunk.
+const STRESS_CHUNK: usize = 256;
 
 /// Fill `scratch.{sxx,…,syz,div_x,div_y,div_z}` with the elastic stress
 /// tensor divergence ∇·σ, reusing the caller's pre-allocated workspace.
 ///
 /// ## Theorem (operator isolation)
 ///
-/// `stress_divergence_into` is split into three independent Zip passes:
+/// `stress_divergence_into` is split into three independent chunk passes:
 /// - Pass 1a writes `{sxx,syy,szz}` from displacement views (read-only).
 /// - Pass 1b writes `{sxy,sxz,syz}` from displacement views (read-only).
 /// - Pass 2 reads the six stress fields (immutable views taken after Pass 1
@@ -67,31 +72,7 @@ pub fn stress_divergence_into(
     // Theorem (race-freedom): each output element σ[i,j,k] is written exactly
     // once; ux/uy/uz/λ/μ are read-only views captured by the closure.
     //
-    // Migration (Batch #1 slice 7): the original used `Zip::indexed.on 3 view_muts`
-    // for joint `(i,j,k)`-parallel iteration.  After the assert-message
-    // harmonization chore, the verbose `is_c_contiguous()` precondition is
-    // required on EVERY operand (8 here: scratch.{sxx,syy,szz} + ux/uy/uz + λ/μ).
-    //
-    // Note: the phase-1 helper `kwavers_safety::with_zip_standard_layout` does
-    // NOT generalize here because its signature is `1 mut + N immuts`, while
-    // this site has `3 mut + 0 Zip-chain immuts` (with closure-captured
-    // immutable outer-scope operands not represented in the Zip chain).
-    // Helper adoption for 3-mut sites is deferred to a future
-    // `with_zip_standard_layout_3mut` generalization.
-    //
-    // Strategy: keep `Zip::indexed` on `sxx.view_mut()` (still requires the
-    // 3D `(i,j,k)` index for the FD stencils + Array3[[i,j,k]] lookups of the
-    // captured `ux`/`uy`/`uz`/`lambda`/`mu` operands).  Pre-extract the flat
-    // slices for `syy` and `szz`, then write them directly via
-    // `syy_slice[idx]`/`szz_slice[idx]` inside the closure.  This preserves
-    // the joint per-iteration writes (all three outputs updated atomically
-    // per `(i,j,k)`) without requiring Zip::indexed's three-way .and() chain.
-
     {
-        // Native indexed FD stencil writing three co-located outputs per (i,j,k).
-        // leto/moirai has no indexed multi-mutable-output parallel primitive; this
-        // sequential form is correctness-preserving. Reparallelizing this hot
-        // elastic-stress kernel is tracked perf-debt (see kwavers-solver backlog).
         let sxx_slice = scratch
             .sxx
             .as_slice_mut()
@@ -104,34 +85,35 @@ pub fn stress_divergence_into(
             .szz
             .as_slice_mut()
             .expect("szz: standard-layout asserted just above; layout matched");
-        for i in 0..nx {
-            for j in 0..ny {
-                for k in 0..nz {
-                    let idx = i * (ny * nz) + j * nz + k;
+        for_each_chunk_triple_mut_enumerated_with::<Adaptive, _, _, _, _>(
+            sxx_slice,
+            syy_slice,
+            szz_slice,
+            STRESS_CHUNK,
+            |chunk_idx, sxx_chunk, syy_chunk, szz_chunk| {
+                let start = chunk_idx * STRESS_CHUNK;
+                for offset in 0..sxx_chunk.len() {
+                    let idx = start + offset;
+                    let i = idx / (ny * nz);
+                    let j = (idx / nz) % ny;
+                    let k = idx % nz;
                     let exx = fd1_x(ux, i, j, k, nx, dx);
                     let eyy = fd1_y(uy, i, j, k, ny, dy);
                     let ezz = fd1_z(uz, i, j, k, nz, dz);
                     let la = lambda[[i, j, k]];
                     let mv = mu[[i, j, k]];
                     let la2mu = 2.0f64.mul_add(mv, la);
-                    sxx_slice[idx] = la2mu.mul_add(exx, la * (eyy + ezz));
-                    syy_slice[idx] = la2mu.mul_add(eyy, la * (exx + ezz));
-                    szz_slice[idx] = la2mu.mul_add(ezz, la * (exx + eyy));
+                    sxx_chunk[offset] = la2mu.mul_add(exx, la * (eyy + ezz));
+                    syy_chunk[offset] = la2mu.mul_add(eyy, la * (exx + ezz));
+                    szz_chunk[offset] = la2mu.mul_add(ezz, la * (exx + eyy));
                 }
-            }
-        }
+            },
+        );
     }
 
     // --- Pass 1b: off-diagonal stress components {σxy, σxz, σyz} ---
     //
-    // Migration (Batch #1 slice 7): same 3-mut-0-immut Zip::indexed
-    // adaptation pattern as Pass 1a.  7 verbose asserts (3 mut on
-    // scratch.{sxy,sxz,syz} + 4 captured immuts ux/uy/uz/mu; note `lambda`
-    // is unused in this pass).
-
     {
-        // Native indexed FD stencil (see Pass 1a note); sequential pending an
-        // indexed multi-mutable-output parallel primitive.
         let sxy_slice = scratch
             .sxy
             .as_slice_mut()
@@ -144,20 +126,28 @@ pub fn stress_divergence_into(
             .syz
             .as_slice_mut()
             .expect("syz: standard-layout asserted just above; layout matched");
-        for i in 0..nx {
-            for j in 0..ny {
-                for k in 0..nz {
-                    let idx = i * (ny * nz) + j * nz + k;
+        for_each_chunk_triple_mut_enumerated_with::<Adaptive, _, _, _, _>(
+            sxy_slice,
+            sxz_slice,
+            syz_slice,
+            STRESS_CHUNK,
+            |chunk_idx, sxy_chunk, sxz_chunk, syz_chunk| {
+                let start = chunk_idx * STRESS_CHUNK;
+                for offset in 0..sxy_chunk.len() {
+                    let idx = start + offset;
+                    let i = idx / (ny * nz);
+                    let j = (idx / nz) % ny;
+                    let k = idx % nz;
                     let exy_2 = fd1_y(ux, i, j, k, ny, dy) + fd1_x(uy, i, j, k, nx, dx);
                     let exz_2 = fd1_z(ux, i, j, k, nz, dz) + fd1_x(uz, i, j, k, nx, dx);
                     let eyz_2 = fd1_z(uy, i, j, k, nz, dz) + fd1_y(uz, i, j, k, ny, dy);
                     let mv = mu[[i, j, k]];
-                    sxy_slice[idx] = mv * exy_2;
-                    sxz_slice[idx] = mv * exz_2;
-                    syz_slice[idx] = mv * eyz_2;
+                    sxy_chunk[offset] = mv * exy_2;
+                    sxz_chunk[offset] = mv * exz_2;
+                    syz_chunk[offset] = mv * eyz_2;
                 }
-            }
-        }
+            },
+        );
     }
 
     // --- Pass 2: ∇·σ (parallelised over i-j-k) ---
@@ -176,13 +166,7 @@ pub fn stress_divergence_into(
     let sxz_v = scratch.sxz.view();
     let syz_v = scratch.syz.view();
 
-    // Migration (Batch #1 slice 7): same 3-mut Zip::indexed adaptation.  9
-    // verbose asserts (3 mut on scratch.{div_x,div_y,div_z} + 6 captured immut
-    // views sxx_v..syz_v).
-
     {
-        // Native indexed FD divergence (see Pass 1a note); sequential pending an
-        // indexed multi-mutable-output parallel primitive.
         let div_x_slice = scratch
             .div_x
             .as_slice_mut()
@@ -195,22 +179,30 @@ pub fn stress_divergence_into(
             .div_z
             .as_slice_mut()
             .expect("div_z: standard-layout asserted just above; layout matched");
-        for i in 0..nx {
-            for j in 0..ny {
-                for k in 0..nz {
-                    let idx = i * (ny * nz) + j * nz + k;
-                    div_x_slice[idx] = fd1_x(sxx_v, i, j, k, nx, dx)
+        for_each_chunk_triple_mut_enumerated_with::<Adaptive, _, _, _, _>(
+            div_x_slice,
+            div_y_slice,
+            div_z_slice,
+            STRESS_CHUNK,
+            |chunk_idx, div_x_chunk, div_y_chunk, div_z_chunk| {
+                let start = chunk_idx * STRESS_CHUNK;
+                for offset in 0..div_x_chunk.len() {
+                    let idx = start + offset;
+                    let i = idx / (ny * nz);
+                    let j = (idx / nz) % ny;
+                    let k = idx % nz;
+                    div_x_chunk[offset] = fd1_x(sxx_v, i, j, k, nx, dx)
                         + fd1_y(sxy_v, i, j, k, ny, dy)
                         + fd1_z(sxz_v, i, j, k, nz, dz);
-                    div_y_slice[idx] = fd1_x(sxy_v, i, j, k, nx, dx)
+                    div_y_chunk[offset] = fd1_x(sxy_v, i, j, k, nx, dx)
                         + fd1_y(syy_v, i, j, k, ny, dy)
                         + fd1_z(syz_v, i, j, k, nz, dz);
-                    div_z_slice[idx] = fd1_x(sxz_v, i, j, k, nx, dx)
+                    div_z_chunk[offset] = fd1_x(sxz_v, i, j, k, nx, dx)
                         + fd1_y(syz_v, i, j, k, ny, dy)
                         + fd1_z(szz_v, i, j, k, nz, dz);
                 }
-            }
-        }
+            },
+        );
     }
 }
 

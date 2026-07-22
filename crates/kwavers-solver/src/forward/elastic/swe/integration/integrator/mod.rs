@@ -47,6 +47,12 @@ pub struct TimeIntegrator<'a> {
     lambda: &'a leto::Array3<f64>,
     mu: &'a leto::Array3<f64>,
     density: &'a leto::Array3<f64>,
+    /// Reciprocal density when every cell has the same density.
+    ///
+    /// The homogeneous regime is selected once at construction so the dense
+    /// no-body-force acceleration kernel avoids three divisions and one
+    /// density load per cell on every evaluation.
+    uniform_inverse_density: Option<f64>,
     /// Per-axis σ profiles (interior = 0; absorbing layer = power-law).
     sigma_x: Array1<f64>,
     sigma_y: Array1<f64>,
@@ -67,11 +73,20 @@ impl<'a> TimeIntegrator<'a> {
         pml: &ElasticSwePMLBoundary,
     ) -> Self {
         let (sigma_x, sigma_y, sigma_z) = pml.axis_sigma_profiles(grid);
+        let density_values = density
+            .as_slice()
+            .expect("invariant: elastic density uses standard layout");
+        let uniform_inverse_density = density_values.split_first().and_then(|(&first, rest)| {
+            rest.iter()
+                .all(|&value| value == first)
+                .then(|| first.recip())
+        });
         Self {
             grid,
             lambda,
             mu,
             density,
+            uniform_inverse_density,
             sigma_x,
             sigma_y,
             sigma_z,
@@ -110,6 +125,9 @@ impl<'a> TimeIntegrator<'a> {
         body_force: Option<&ElasticBodyForceConfig>,
         scratch: &mut ElasticStepScratch,
     ) -> KwaversResult<()> {
+        if let Some(body_force) = body_force {
+            body_force::validate(body_force)?;
+        }
         // a(t): acceleration at current state
         self.compute_acceleration(field, scratch, body_force, field.time)?;
 
@@ -248,7 +266,7 @@ impl<'a> TimeIntegrator<'a> {
             );
         }
 
-        self.apply_pml_damping(field, dt);
+        self.apply_pml_damping(field, dt, scratch);
 
         Ok(())
     }
@@ -267,6 +285,9 @@ impl<'a> TimeIntegrator<'a> {
         body_forces: &[ElasticBodyForceConfig],
         scratch: &mut ElasticStepScratch,
     ) -> KwaversResult<()> {
+        for body_force in body_forces {
+            body_force::validate(body_force)?;
+        }
         // a(t)
         self.compute_acceleration_with_body_forces(field, scratch, body_forces, field.time)?;
 
@@ -405,7 +426,7 @@ impl<'a> TimeIntegrator<'a> {
             );
         }
 
-        self.apply_pml_damping(field, dt);
+        self.apply_pml_damping(field, dt, scratch);
 
         Ok(())
     }
@@ -437,7 +458,6 @@ impl<'a> TimeIntegrator<'a> {
         stress_divergence_into(self.grid, self.lambda, self.mu, field, scratch);
 
         {
-            let grid = self.grid;
             let ax_slice = scratch
                 .ax
                 .as_slice_mut()
@@ -466,7 +486,54 @@ impl<'a> TimeIntegrator<'a> {
                 .density
                 .as_slice()
                 .expect("self.density: standard-layout asserted just above; layout matched");
-            let (_nx, ny, nz) = (self.grid.nx, self.grid.ny, self.grid.nz);
+
+            if let Some(body_force) = body_force {
+                let grid = self.grid;
+                let (_nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
+                for_each_chunk_triple_mut_enumerated_with::<Adaptive, _, _, _, _>(
+                    ax_slice,
+                    ay_slice,
+                    az_slice,
+                    INTEGRATOR_CHUNK,
+                    |chunk_idx, ax_chunk, ay_chunk, az_chunk| {
+                        let start = chunk_idx * INTEGRATOR_CHUNK;
+                        for offset in 0..ax_chunk.len() {
+                            let idx = start + offset;
+                            let i = idx / (ny * nz);
+                            let j = (idx / nz) % ny;
+                            let k = idx % nz;
+                            let force = body_force::evaluate(grid, body_force, i, j, k, time);
+                            ax_chunk[offset] = (div_x_slice[idx] + force[0]) / rho_slice[idx];
+                            ay_chunk[offset] = (div_y_slice[idx] + force[1]) / rho_slice[idx];
+                            az_chunk[offset] = (div_z_slice[idx] + force[2]) / rho_slice[idx];
+                        }
+                    },
+                );
+                return Ok(());
+            }
+
+            // Point-force propagation injects velocity before each step and has
+            // no distributed body-force field. Dispatch this regime once so its
+            // dense kernel contains no coordinate division or optional branch.
+            if let Some(inverse_density) = self.uniform_inverse_density {
+                for_each_chunk_triple_mut_enumerated_with::<Adaptive, _, _, _, _>(
+                    ax_slice,
+                    ay_slice,
+                    az_slice,
+                    INTEGRATOR_CHUNK,
+                    |chunk_idx, ax_chunk, ay_chunk, az_chunk| {
+                        let start = chunk_idx * INTEGRATOR_CHUNK;
+                        for offset in 0..ax_chunk.len() {
+                            let idx = start + offset;
+                            ax_chunk[offset] = div_x_slice[idx] * inverse_density;
+                            ay_chunk[offset] = div_y_slice[idx] * inverse_density;
+                            az_chunk[offset] = div_z_slice[idx] * inverse_density;
+                        }
+                    },
+                );
+                return Ok(());
+            }
+
             for_each_chunk_triple_mut_enumerated_with::<Adaptive, _, _, _, _>(
                 ax_slice,
                 ay_slice,
@@ -476,17 +543,9 @@ impl<'a> TimeIntegrator<'a> {
                     let start = chunk_idx * INTEGRATOR_CHUNK;
                     for offset in 0..ax_chunk.len() {
                         let idx = start + offset;
-                        let i = idx / (ny * nz);
-                        let j = (idx / nz) % ny;
-                        let k = idx % nz;
-                        let force = body_force
-                            .map(|bf| {
-                                body_force::evaluate(grid, bf, i, j, k, time).unwrap_or([0.0; 3])
-                            })
-                            .unwrap_or([0.0; 3]);
-                        ay_chunk[offset] = (div_y_slice[idx] + force[1]) / rho_slice[idx];
-                        az_chunk[offset] = (div_z_slice[idx] + force[2]) / rho_slice[idx];
-                        ax_chunk[offset] = (div_x_slice[idx] + force[0]) / rho_slice[idx];
+                        ax_chunk[offset] = div_x_slice[idx] / rho_slice[idx];
+                        ay_chunk[offset] = div_y_slice[idx] / rho_slice[idx];
+                        az_chunk[offset] = div_z_slice[idx] / rho_slice[idx];
                     }
                 },
             );
@@ -556,8 +615,7 @@ impl<'a> TimeIntegrator<'a> {
                         let k = idx % nz;
                         let mut force = [0.0_f64; 3];
                         for bf in body_forces {
-                            let f =
-                                body_force::evaluate(grid, bf, i, j, k, time).unwrap_or([0.0; 3]);
+                            let f = body_force::evaluate(grid, bf, i, j, k, time);
                             force[0] += f[0];
                             force[1] += f[1];
                             force[2] += f[2];
@@ -596,20 +654,24 @@ impl<'a> TimeIntegrator<'a> {
     /// All six field components at `(i,j,k)` are multiplied by the same
     /// scalar `d` and are independent of neighbouring cells → race-free.
     ///
-    /// Per-thread closure computes `d` on the fly from the per-axis σ slices,
-    /// avoiding a temporary damping array.
+    /// The reusable step workspace caches the three per-axis exponential
+    /// factors for the active `dt`. The dense passes therefore perform only
+    /// indexed multiplications and allocate no temporary damping array.
     ///
     /// Split into two passes (velocity, then displacement) to keep each
     /// parallel dispatch handling a 3-mut slice pattern.
-    pub(crate) fn apply_pml_damping(&self, field: &mut ElasticWaveField, dt: f64) {
+    pub(crate) fn apply_pml_damping(
+        &self,
+        field: &mut ElasticWaveField,
+        dt: f64,
+        scratch: &mut ElasticStepScratch,
+    ) {
         let [nx, ny, nz] = field.vx.shape();
-        let sx = self.sigma_x.as_slice().expect("sigma_x contiguous");
-        let sy = self.sigma_y.as_slice().expect("sigma_y contiguous");
-        let sz = self.sigma_z.as_slice().expect("sigma_z contiguous");
+        let (dx, dy, dz) = scratch.pml_factors(&self.sigma_x, &self.sigma_y, &self.sigma_z, dt);
 
-        debug_assert_eq!((sx.len()), nx);
-        debug_assert_eq!((sy.len()), ny);
-        debug_assert_eq!((sz.len()), nz);
+        debug_assert_eq!(dx.len(), nx);
+        debug_assert_eq!(dy.len(), ny);
+        debug_assert_eq!(dz.len(), nz);
 
         {
             let vx_slice = field
@@ -636,7 +698,7 @@ impl<'a> TimeIntegrator<'a> {
                         let i = idx / (ny * nz);
                         let j = (idx / nz) % ny;
                         let k = idx % nz;
-                        let d = (-sx[i] * dt).exp() * (-sy[j] * dt).exp() * (-sz[k] * dt).exp();
+                        let d = dx[i] * dy[j] * dz[k];
                         if d < 1.0 {
                             vx_chunk[offset] *= d;
                             vy_chunk[offset] *= d;
@@ -672,7 +734,7 @@ impl<'a> TimeIntegrator<'a> {
                         let i = idx / (ny * nz);
                         let j = (idx / nz) % ny;
                         let k = idx % nz;
-                        let d = (-sx[i] * dt).exp() * (-sy[j] * dt).exp() * (-sz[k] * dt).exp();
+                        let d = dx[i] * dy[j] * dz[k];
                         if d < 1.0 {
                             ux_chunk[offset] *= d;
                             uy_chunk[offset] *= d;

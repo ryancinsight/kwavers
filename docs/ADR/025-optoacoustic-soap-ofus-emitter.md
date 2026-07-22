@@ -54,8 +54,8 @@ that no crate gains a dependency it should not have:
    measured optoacoustic sensitivity S, pulse centre frequency, pulse FWHM).
    Presets `PDMS`, `CS_PDMS`, `CNT_PDMS`, `CNP_PDMS`, `HSM`.
 
-3. **`kwavers-optics`** — the *source amplitude* `p₀ = Γ·μ_a·F` already lives in
-   `optical_transport::initial_pressure`; the emitter's measured sensitivity
+3. **`kwavers-physics`** — the *source amplitude* `p₀ = Γ·μ_a·F` lives in
+   `photoacoustics::PhotoacousticGoverningEquations::initial_pressure`; the emitter's measured sensitivity
    `S` is the load-bearing surface-pressure-per-fluence used for the SOAP source.
 
 The composition law is the single contract that joins the three:

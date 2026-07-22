@@ -3,11 +3,11 @@ members = ["crates/kwavers", "xtask", "crates/kwavers-python", "crates/kwavers-c
 resolver = "2"
 
 [workspace.dependencies]
-num-complex = "0.4"
-aequitas = { version = "0.1.0", git = "https://github.com/ryancinsight/aequitas", rev = "be3a1ac91286a17aecf18f0065d2aa6b385eb67b", default-features = false, features = ["std"] }
-asclepius = { version = "0.1.0", git = "https://github.com/ryancinsight/asclepius", rev = "794f8c328d72fd020b63e53ae46f6f8fd781d8df", default-features = false, features = ["std"] }
-proteus = { version = "0.1.0", git = "https://github.com/ryancinsight/proteus", rev = "c82f50d908b7f2119a5caa29026fe7ed23b1d44f" }
-tyche-core = { version = "0.1.0", git = "https://github.com/ryancinsight/tyche", rev = "2b8fb14267a710e1438102666211494a3d6f179e" }
+aequitas = { version = "0.1.0", git = "https://github.com/ryancinsight/aequitas", default-features = false, features = ["std"] }
+asclepius = { version = "0.1.0", git = "https://github.com/ryancinsight/asclepius", default-features = false, features = ["std"] }
+hyperion = { version = "0.1.0", git = "https://github.com/ryancinsight/hyperion" }
+proteus = { version = "0.1.0", git = "https://github.com/ryancinsight/proteus" }
+tyche-core = { version = "0.1.0", git = "https://github.com/ryancinsight/tyche" }
 # External git submodules replaced by remote git dependencies (always-latest on the
 # default branch; `cargo update -p <crate>` refreshes the pinned commit in Cargo.lock).
 # These repos carry their own [workspace], so Cargo resolves their internal
@@ -32,7 +32,7 @@ hermes-simd = { path = "../hermes/crates/hermes-simd", default-features = false,
 moirai-parallel = { path = "../moirai/moirai-parallel", default-features = false, features = ["parallel"] }
 leto = { git = "https://github.com/ryancinsight/leto.git", default-features = false, features = ["std"] }
 leto-ops = { git = "https://github.com/ryancinsight/leto.git", default-features = false, features = ["std"] }
-eunomia = { git = "https://github.com/ryancinsight/eunomia", default-features = false, features = ["std"] }
+eunomia = { version = "0.7.0", git = "https://github.com/ryancinsight/eunomia", default-features = false, features = ["std"] }
 pyo3 = { version = "0.29", features = ["extension-module", "abi3-py39"] }
 numpy = "0.22"
 
@@ -45,6 +45,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 gaia = { path = "../gaia", default-features = false }
 tempfile = "3.10"
+stats_alloc = "0.1.10"
 proptest = "1.0"
 walkdir = "2.4"
 charls = { version = "0.4", features = ["static"] }
@@ -81,17 +82,13 @@ unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
 # kernels (PSTD phase-velocity, KZK conservation) ~5–10× faster than opt-level=0.
 opt-level = 1
 
-# Optimise *dependencies* (apollo-fft, hermes-simd, and workspace crates like
-# kwavers-solver/kwavers-math when they are dependencies of the crate under test)
-# at -O3 in dev/test builds, while the crate under active development keeps the
-# fast opt-level=1 codegen above. Dependencies are compiled once and cached, so
-# this is a one-time build cost that makes the FFT/stencil-heavy integration
-# tests (fdtd_pstd_comparison, property_based_tests) run at near-release speed,
-# clearing the 60 s per-test nextest cap without weakening any assertion. Uses the
-# default high codegen-units and no LTO, so it adds no build-time memory pressure
-# (unlike [profile.release] below, whose lto=true + codegen-units=1 is for the
-# Python wheel only and is what OOMs when building many test binaries in release).
-[profile.dev.package."*"]
+[profile.coverage]
+inherits = "dev"
+
+[profile.coverage.package."*"]
+# Ptrace instrumentation multiplies the FFT-heavy full-grid runtime. Keep that
+# purpose-specific suite within its existing finite timeout without changing
+# the ordinary development profile, test workload, or timeout contract.
 opt-level = 3
 
 [profile.release]

@@ -65,7 +65,6 @@ impl GenericFdtdSolver<Array3<f64>> {
             ref mut fields,
             ref grid,
             ref materials,
-            source_injection_modes: _,
             ..
         } = self;
 

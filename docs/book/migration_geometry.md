@@ -1,4 +1,4 @@
-# Geometry: Leto for Point, Vector, Isometry
+# Chapter 37 — Geometry: Leto for Point, Vector, Isometry
 
 Replace `nalgebra` geometric primitives with `leto::geometry::*`.
 

@@ -1,5 +1,5 @@
 use super::*;
-use approx::assert_relative_eq;
+use eunomia::assert_relative_eq;
 use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_K;
 use leto::Array3;
 

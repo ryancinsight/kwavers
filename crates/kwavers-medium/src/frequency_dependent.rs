@@ -243,7 +243,7 @@ impl FreqDispersionCorrection {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use approx;
+    use eunomia;
 
     #[test]
     fn test_phase_velocity() {
@@ -267,13 +267,13 @@ mod tests {
         let measured_ratio = c_5mhz / c_1mhz;
 
         // Should match theoretical dispersion within 5% (accounting for relaxation effects)
-        approx::assert_relative_eq!(measured_ratio, theoretical_ratio, epsilon = 0.05);
+        eunomia::assert_relative_eq!(measured_ratio, theoretical_ratio, epsilon = 0.05);
 
         // Should be close to reference at low frequency
         let c_low = props.phase_velocity(1e3);
         // Low frequency should approach c₀ within dispersion-corrected bounds
         let expected_low = props.c0 * (1.0 + props.dispersion_coefficient * 1e3_f64.ln());
-        approx::assert_relative_eq!(c_low, expected_low, epsilon = 0.01);
+        eunomia::assert_relative_eq!(c_low, expected_low, epsilon = 0.01);
     }
 
     #[test]

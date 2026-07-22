@@ -1,6 +1,6 @@
 use super::interpolator::UtilConservativeInterpolator;
 use super::mode::ConservationMode;
-use approx::assert_relative_eq;
+use eunomia::assert_relative_eq;
 use kwavers_grid::Grid;
 use leto::Array3;
 

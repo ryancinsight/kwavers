@@ -1,7 +1,7 @@
 use super::solver::EpsteinPlessetStabilitySolver;
 use super::types::{AmplitudeEvolution, OscillationType};
 use crate::acoustics::bubble_dynamics::bubble_state::BubbleParameters;
-use approx::assert_relative_eq;
+use eunomia::assert_relative_eq;
 use kwavers_core::constants::cavitation::{SURFACE_TENSION_WATER, VISCOSITY_WATER};
 use kwavers_core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL};
 use kwavers_core::constants::numerical::TWO_PI;

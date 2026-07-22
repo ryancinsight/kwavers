@@ -1,4 +1,4 @@
-# Linear Algebra: Leto and Leto-Ops
+# Chapter 36 — Linear Algebra: Leto and Leto-Ops
 
 This chapter covers replacing `nalgebra` dense and sparse linear algebra with
 `leto` arrays and `leto-ops` kernels.

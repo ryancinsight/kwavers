@@ -1,4 +1,4 @@
-# Chapter 15: Transcranial Ultrasound: Physics, Aberration Correction, and Therapeutic Applications
+# Chapter 15 — Transcranial Ultrasound: Physics, Aberration Correction, and Therapy
 
 > **Module ownership**: `kwavers_physics::acoustics::transcranial`,
 > `kwavers_solver::forward`, `kwavers_medium` (heterogeneous medium),

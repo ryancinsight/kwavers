@@ -125,7 +125,7 @@ mod tests {
     //! Comparison strategy:
     //! - `assert_eq!` for integer-summed / integer-squared-then-sqrt cases —
     //!   bit-exact under IEEE 754, the strongest possible detector.
-    //! - `approx::assert_relative_eq!` (epsilon 1e-12) only for the
+    //! - `eunomia::assert_relative_eq!` (epsilon 1e-12) only for the
     //!   transcendental case `l2_norm([1, 2]) = sqrt(5)`.
     //!
     //! # Test scope (Phase-1A regression — not exhaustive)
@@ -134,7 +134,7 @@ mod tests {
     //! Not pinned: safe_divide, add_arrays, scale_array, normalize.
 
     use super::NumericOps;
-    use approx::assert_relative_eq;
+    use eunomia::assert_relative_eq;
 
     // ───── dot_product ───────────────────────────────────────────
 

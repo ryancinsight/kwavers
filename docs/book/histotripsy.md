@@ -1,4 +1,4 @@
-# Chapter 14: Histotripsy — Classical vs Millisecond-Pulse Regimes
+# Chapter 14 — Histotripsy: Classical vs Millisecond-Pulse Regimes
 
 > **Module ownership.** Histotripsy modeling in kwavers is provided by
 > `kwavers_therapy::therapy::{domain_types, clinical_scenarios}` (modality/scenario

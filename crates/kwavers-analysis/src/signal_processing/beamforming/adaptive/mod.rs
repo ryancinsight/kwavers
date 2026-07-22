@@ -288,7 +288,7 @@ impl AdaptiveTimeDomainBeamformer for EigenspaceMV {
 mod tests {
     use super::*;
     use crate::signal_processing::beamforming::test_utilities;
-    use approx::assert_relative_eq;
+    use eunomia::assert_relative_eq;
 
     #[test]
     fn test_adaptive_beamformer_trait() {

@@ -492,7 +492,8 @@ fn stratified_exponent_matches_per_tissue_uniform_operator() {
 
     // Heterogeneous-exponent medium: x < nx/2 → y_a, else y_b (uniform ρ, c, α₀).
     let bg = HomogeneousMedium::new(rho, c, 0.0, 0.0, &grid);
-    let mut het = HeterogeneousMedium::from_homogeneous(&bg, &grid);
+    let mut het = HeterogeneousMedium::from_homogeneous(&bg, &grid)
+        .expect("valid homogeneous optical properties");
     het.use_trilinear_interpolation = false; // piecewise-constant exponent lookup
     het.absorption.fill(alpha0);
     het.alpha0.fill(alpha0);

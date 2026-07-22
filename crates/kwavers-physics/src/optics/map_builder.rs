@@ -1,36 +1,9 @@
-// src/physics/optics/map_builder.rs
-//! Optical Property Map Builder - Physics Analysis Utilities
+//! Optical-property map analysis.
 //!
-//! **ARCHITECTURAL NOTE**: Core types (Region, Layer, OpticalPropertyMap, OpticalPropertyMapBuilder)
-//! have been moved to `domain::medium::optical_map` for clean architecture compliance.
-//!
-//! This module now contains only physics-specific analysis utilities and re-exports domain types
-//! for backwards compatibility.
-//!
-//! # Architecture
-//!
-//! - Domain layer (`domain::medium::optical_map`) defines core types: Region, Layer, OpticalPropertyMap, Builder
-//! - Physics layer (this module) provides analysis tools and physics-specific utilities
-//! - Clinical layer uses domain types directly for clean architecture compliance
-//!
-//! # Migration Guide
-//!
-//! **Old (deprecated)**:
-//! ```rust,ignore
-//! use crate::optics::map_builder::{OpticalPropertyMap, Region};
-//! ```
-//!
-//! **New (recommended)**:
-//! ```rust,ignore
-//! use kwavers_medium::optical_map::{OpticalPropertyMap, Region};
-//! ```
+//! `kwavers-medium` owns the validated spatial aggregate and its builder. This
+//! module adds only physics-facing distribution statistics.
 
-use leto::Array3;
-
-// Re-export domain types for backwards compatibility
-pub use kwavers_medium::optical_map::{
-    Layer, OpticalPropertyMap, OpticalPropertyMapBuilder, Region,
-};
+use kwavers_medium::optical_map::OpticalPropertyMap;
 
 /// Statistical summary of optical property distribution
 ///
@@ -49,20 +22,33 @@ pub struct PropertyStats {
 }
 
 impl PropertyStats {
-    /// Compute statistics from an array
-    #[must_use]
-    pub fn from_array(array: &Array3<f64>) -> Self {
-        let values: Vec<f64> = array.iter().copied().collect();
-        Self::from_values(&values)
-    }
-
     /// Compute statistics from a slice.
     ///
     /// Returns all-zero stats when `values` is empty.
     #[must_use]
     pub fn from_values(values: &[f64]) -> Self {
-        let n = values.len();
-        if n == 0 {
+        Self::from_samples(values.iter().copied())
+    }
+
+    /// Compute statistics from a stream without allocating an intermediate array.
+    #[must_use]
+    pub fn from_samples(values: impl IntoIterator<Item = f64>) -> Self {
+        let mut count = 0.0;
+        let mut mean = 0.0;
+        let mut squared_deviation = 0.0;
+        let mut min = f64::INFINITY;
+        let mut max = f64::NEG_INFINITY;
+
+        for value in values {
+            count += 1.0;
+            let delta = value - mean;
+            mean += delta / count;
+            squared_deviation += delta * (value - mean);
+            min = min.min(value);
+            max = max.max(value);
+        }
+
+        if count == 0.0 {
             return Self {
                 mean: 0.0,
                 std_dev: 0.0,
@@ -70,15 +56,9 @@ impl PropertyStats {
                 max: 0.0,
             };
         }
-        let n_f = n as f64;
-        let mean = values.iter().sum::<f64>() / n_f;
-        let variance = values.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / n_f;
-        let std_dev = variance.sqrt();
-        let min = values.iter().copied().fold(f64::INFINITY, f64::min);
-        let max = values.iter().copied().fold(f64::NEG_INFINITY, f64::max);
         Self {
             mean,
-            std_dev,
+            std_dev: (squared_deviation / count).sqrt(),
             min,
             max,
         }
@@ -88,7 +68,7 @@ impl PropertyStats {
 /// Physics-layer statistical analysis over a domain [`OpticalPropertyMap`].
 ///
 /// Implemented as an extension trait because the map type now lives in the
-/// `kwavers-domain` crate (ADR 011); inherent `impl`s cannot cross crate
+/// `kwavers-medium` crate; inherent `impl`s cannot cross crate
 /// boundaries. Bring this trait into scope to call `*_stats()` on a map.
 pub trait OpticalPropertyMapAnalysis {
     /// Statistics for the absorption-coefficient distribution.
@@ -101,15 +81,27 @@ pub trait OpticalPropertyMapAnalysis {
 
 impl OpticalPropertyMapAnalysis for OpticalPropertyMap {
     fn absorption_stats(&self) -> PropertyStats {
-        PropertyStats::from_array(&self.mu_a)
+        PropertyStats::from_samples(
+            self.properties()
+                .iter()
+                .map(|properties| properties.absorption_coefficient()),
+        )
     }
 
     fn scattering_stats(&self) -> PropertyStats {
-        PropertyStats::from_array(&self.mu_s_prime)
+        PropertyStats::from_samples(
+            self.properties()
+                .iter()
+                .map(|properties| properties.reduced_scattering_coefficient()),
+        )
     }
 
     fn refractive_index_stats(&self) -> PropertyStats {
-        PropertyStats::from_array(&self.refractive_index)
+        PropertyStats::from_samples(
+            self.properties()
+                .iter()
+                .map(|properties| properties.refractive_index()),
+        )
     }
 }
 
@@ -117,6 +109,7 @@ impl OpticalPropertyMapAnalysis for OpticalPropertyMap {
 mod tests {
     use super::*;
     use kwavers_grid::GridDimensions;
+    use kwavers_medium::optical_map::Region;
     use kwavers_medium::properties::OpticalPropertyData;
 
     #[test]
@@ -140,12 +133,19 @@ mod tests {
             dz: 0.001,
         };
 
-        let props = OpticalPropertyData::soft_tissue();
+        let props = OpticalPropertyData::new(2.0, 80.0, 0.72, 1.41).unwrap();
         let map = OpticalPropertyMap::homogeneous(&props, dims);
 
         let absorption_stats = map.absorption_stats();
-        assert!((absorption_stats.mean - props.absorption_coefficient).abs() < 1e-10);
+        assert!((absorption_stats.mean - props.absorption_coefficient()).abs() < 1e-10);
         assert!((absorption_stats.std_dev).abs() < 1e-10); // Should be zero for homogeneous
+
+        let scattering_stats = map.scattering_stats();
+        assert_eq!(
+            scattering_stats.mean,
+            props.reduced_scattering_coefficient()
+        );
+        assert_eq!(scattering_stats.std_dev, 0.0);
     }
 
     #[test]

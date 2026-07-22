@@ -19,7 +19,6 @@ eunomia = { workspace = true }
 serde = { version = "1.0", features = ["derive"] }
 
 [dev-dependencies]
-approx = "0.5"
 
 [lints]
 workspace = true

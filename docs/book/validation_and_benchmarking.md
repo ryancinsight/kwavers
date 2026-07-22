@@ -1,4 +1,4 @@
-# Chapter 19: Validation and Benchmarking
+# Chapter 19 — Validation and Benchmarking
 
 *Systematic Validation of kwavers Against Analytical Solutions, Reference Simulators, and Experimental Data*
 

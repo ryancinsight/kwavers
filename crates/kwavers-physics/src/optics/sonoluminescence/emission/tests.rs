@@ -99,7 +99,7 @@ mod tests {
         let calculated_temp = params.t0 * radius_ratio.powf(adiabatic_exponent);
 
         // Should match the expected adiabatic temperature
-        approx::assert_relative_eq!(calculated_temp, expected_temp, epsilon = 1e-10);
+        eunomia::assert_relative_eq!(calculated_temp, expected_temp, epsilon = 1e-10);
         assert!(calculated_temp > params.t0); // Temperature should increase during compression
     }
 
@@ -126,13 +126,13 @@ mod tests {
         let actual_temp = params.t0 * compression_ratio.powf(1.0 - params.gamma);
         let actual_pressure = params.initial_gas_pressure * compression_ratio.powf(params.gamma);
 
-        approx::assert_relative_eq!(actual_temp, expected_temp, epsilon = 1e-10);
-        approx::assert_relative_eq!(actual_pressure, expected_pressure, epsilon = 1e-10);
+        eunomia::assert_relative_eq!(actual_temp, expected_temp, epsilon = 1e-10);
+        eunomia::assert_relative_eq!(actual_pressure, expected_pressure, epsilon = 1e-10);
 
         // Check that adiabatic invariant is preserved: P V^γ = constant
         let initial_pv_gamma = params.initial_gas_pressure * (params.r0.powi(3)).powf(params.gamma);
         let final_pv_gamma = expected_pressure * (compressed_radius.powi(3)).powf(params.gamma);
-        approx::assert_relative_eq!(initial_pv_gamma, final_pv_gamma, epsilon = 1e-10);
+        eunomia::assert_relative_eq!(initial_pv_gamma, final_pv_gamma, epsilon = 1e-10);
     }
 
     #[test]

@@ -154,7 +154,7 @@ impl BeamSteering {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use approx::assert_relative_eq;
+    use eunomia::assert_relative_eq;
     use kwavers_core::constants::numerical::MHZ_TO_HZ;
 
     use std::f64::consts::PI;

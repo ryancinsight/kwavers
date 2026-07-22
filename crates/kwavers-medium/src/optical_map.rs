@@ -15,34 +15,35 @@ use leto::Array3;
 /// Spatially-resolved optical properties on a regular grid.
 #[derive(Debug, Clone)]
 pub struct OpticalPropertyMap {
-    /// Absorption coefficient map (m⁻¹)
-    pub mu_a: Array3<f64>,
-
-    /// Reduced scattering coefficient map (m⁻¹)
-    pub mu_s_prime: Array3<f64>,
-
-    /// Refractive index map
-    pub refractive_index: Array3<f64>,
+    /// Validated optical aggregate at each voxel.
+    properties: Array3<OpticalPropertyData>,
 
     /// Grid dimensions
-    pub dimensions: GridDimensions,
+    dimensions: GridDimensions,
 }
 
 impl OpticalPropertyMap {
     /// Create a new optical property map
-    #[must_use]
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the array shape differs from `dimensions`.
     pub fn new(
-        mu_a: Array3<f64>,
-        mu_s_prime: Array3<f64>,
-        refractive_index: Array3<f64>,
+        properties: Array3<OpticalPropertyData>,
         dimensions: GridDimensions,
-    ) -> Self {
-        Self {
-            mu_a,
-            mu_s_prime,
-            refractive_index,
-            dimensions,
+    ) -> Result<Self, String> {
+        let shape = [dimensions.nx, dimensions.ny, dimensions.nz];
+        if properties.shape() != shape {
+            return Err(format!(
+                "Optical property map must have shape {shape:?}, got {:?}",
+                properties.shape(),
+            ));
         }
+
+        Ok(Self {
+            properties,
+            dimensions,
+        })
     }
 
     /// Create a homogeneous map with constant properties
@@ -50,9 +51,7 @@ impl OpticalPropertyMap {
     pub fn homogeneous(props: &OpticalPropertyData, dimensions: GridDimensions) -> Self {
         let shape = [dimensions.nx, dimensions.ny, dimensions.nz];
         Self {
-            mu_a: Array3::from_elem(shape, props.absorption_coefficient),
-            mu_s_prime: Array3::from_elem(shape, props.reduced_scattering_coefficient()),
-            refractive_index: Array3::from_elem(shape, props.refractive_index),
+            properties: Array3::from_elem(shape, *props),
             dimensions,
         }
     }
@@ -64,19 +63,7 @@ impl OpticalPropertyMap {
             return None;
         }
 
-        Some(OpticalPropertyData {
-            absorption_coefficient: self.mu_a[[i, j, k]],
-            scattering_coefficient: self.mu_s_prime[[i, j, k]] / (1.0 - 0.9), // Reconstruct from reduced
-            anisotropy: 0.9,                                                  // Default value
-            refractive_index: self.refractive_index[[i, j, k]],
-        })
-    }
-
-    /// Get optical properties at grid coordinates (i, j, k) with bounds checking
-    /// Alias for get_properties for backward compatibility
-    #[must_use]
-    pub fn get(&self, i: usize, j: usize, k: usize) -> Option<OpticalPropertyData> {
-        self.get_properties(i, j, k)
+        Some(self.properties[[i, j, k]])
     }
 
     /// Calculate the physical volume of the domain in cubic meters
@@ -91,6 +78,18 @@ impl OpticalPropertyMap {
             dz,
         } = self.dimensions;
         (nx as f64) * dx * (ny as f64) * dy * (nz as f64) * dz
+    }
+
+    /// Borrow the validated optical-property map.
+    #[must_use]
+    pub const fn properties(&self) -> &Array3<OpticalPropertyData> {
+        &self.properties
+    }
+
+    /// Return the map dimensions.
+    #[must_use]
+    pub const fn dimensions(&self) -> GridDimensions {
+        self.dimensions
     }
 }
 
@@ -236,9 +235,7 @@ impl Layer {
 #[derive(Debug)]
 pub struct OpticalPropertyMapBuilder {
     dimensions: GridDimensions,
-    mu_a: Array3<f64>,
-    mu_s_prime: Array3<f64>,
-    refractive_index: Array3<f64>,
+    properties: Array3<OpticalPropertyData>,
 }
 
 impl OpticalPropertyMapBuilder {
@@ -248,17 +245,13 @@ impl OpticalPropertyMapBuilder {
         let shape = [dimensions.nx, dimensions.ny, dimensions.nz];
         Self {
             dimensions,
-            mu_a: Array3::zeros(shape),
-            mu_s_prime: Array3::zeros(shape),
-            refractive_index: Array3::from_elem(shape, 1.0), // Default: vacuum/air
+            properties: Array3::from_elem(shape, OpticalPropertyData::vacuum()),
         }
     }
 
     /// Set background properties
     pub fn set_background(&mut self, props: OpticalPropertyData) {
-        self.mu_a.fill(props.absorption_coefficient);
-        self.mu_s_prime.fill(props.reduced_scattering_coefficient());
-        self.refractive_index.fill(props.refractive_index);
+        self.properties.fill(props);
     }
 
     /// Add a region with specific properties
@@ -280,9 +273,7 @@ impl OpticalPropertyMapBuilder {
                     let z = k as f64 * dz;
 
                     if region.contains([x, y, z]) {
-                        self.mu_a[[i, j, k]] = props.absorption_coefficient;
-                        self.mu_s_prime[[i, j, k]] = props.reduced_scattering_coefficient();
-                        self.refractive_index[[i, j, k]] = props.refractive_index;
+                        self.properties[[i, j, k]] = props;
                     }
                 }
             }
@@ -299,10 +290,7 @@ impl OpticalPropertyMapBuilder {
                     let z = k as f64 * dz;
 
                     if z >= layer.z_min && z <= layer.z_max {
-                        self.mu_a[[i, j, k]] = layer.properties.absorption_coefficient;
-                        self.mu_s_prime[[i, j, k]] =
-                            layer.properties.reduced_scattering_coefficient();
-                        self.refractive_index[[i, j, k]] = layer.properties.refractive_index;
+                        self.properties[[i, j, k]] = layer.properties;
                     }
                 }
             }
@@ -313,9 +301,7 @@ impl OpticalPropertyMapBuilder {
     #[must_use]
     pub fn build(self) -> OpticalPropertyMap {
         OpticalPropertyMap {
-            mu_a: self.mu_a,
-            mu_s_prime: self.mu_s_prime,
-            refractive_index: self.refractive_index,
+            properties: self.properties,
             dimensions: self.dimensions,
         }
     }
@@ -352,9 +338,12 @@ mod tests {
         };
 
         let mut builder = OpticalPropertyMapBuilder::new(dims);
-        builder.set_background(OpticalPropertyData::soft_tissue());
+        let properties = OpticalPropertyData::new(2.0, 80.0, 0.72, 1.41).unwrap();
+        builder.set_background(properties);
 
         let map = builder.build();
-        assert_eq!(map.mu_a.shape(), [10, 10, 10]);
+        assert_eq!(map.properties().shape(), [10, 10, 10]);
+        assert_eq!(map.get_properties(4, 5, 6), Some(properties));
+        assert_eq!(map.get_properties(10, 5, 6), None);
     }
 }

@@ -1,4 +1,4 @@
-# Chapter 3: Nonlinear Acoustics
+# Chapter 3 — Nonlinear Acoustics
 
 **Scope.** This chapter derives the governing equations for finite-amplitude acoustic wave
 propagation: the Westervelt equation, the Kuznetsov equation, the

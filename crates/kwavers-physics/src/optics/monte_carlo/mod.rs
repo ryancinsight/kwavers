@@ -57,7 +57,7 @@
 //! use kwavers_grid::Grid3D;
 //! use kwavers_grid::GridDimensions;
 //! use kwavers_medium::properties::OpticalPropertyData;
-//! use kwavers_physics::optics::map_builder::OpticalPropertyMapBuilder;
+//! use kwavers_medium::optical_map::OpticalPropertyMapBuilder;
 //!
 //! // Create solver
 //! let grid = Grid3D::new(50, 50, 50, 0.001, 0.001, 0.001)?;

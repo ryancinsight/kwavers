@@ -69,20 +69,23 @@ where `u_fwd` is the forward displacement field and `u_adj` the adjoint
 shear-strain cross-correlation. The gradient w.r.t. the model parameter is
 `g_μ = K_μ` (chain rule through `σ(μ, ε)` is already encoded in the kernel form).
 
-### 3. Adjoint memory scheme — full history (not self-adjoint reconstruction)
+### 3. Memory scheme — forward history, streamed adjoint
 
 The acoustic exact-adjoint engine (ADR 016) reconstructs the forward field backward
 in lockstep using the **lossless leapfrog's exact reversibility** (`O(N)` memory).
 That trick does **not** apply here: the elastic stepping is velocity-Verlet with a
-**lossy PML**, which is not time-reversible. Therefore the first implementation
-stores the forward field history (`O(nt·N)`) — consistent with how the acoustic
-`Solver` (damped) path already stores history. Optimal-checkpointing
-(Griewank–Walther `revolve`) is recorded as a follow-up optimization, not a v1
-requirement.
+**lossy PML**, which is not time-reversible. Therefore the implementation stores
+the forward field history (`O(nt·N)`) — consistent with how the acoustic `Solver`
+(damped) path already stores history. The adjoint propagates forward under a
+time-reversed residual source, so each adjoint state is correlated immediately
+with the matching reverse-time forward state and then discarded. Adjoint
+retention is `O(N)`. Forward checkpointing (Griewank–Walther `revolve`) remains a
+follow-up optimization.
 
 To make this tractable: 2-D first (mirroring `ElasticPINN2D`'s 2-D scope), modest
-grids, μ-only. Memory is `nt · nx · nz · 2` doubles (the two in-plane displacement
-components), which is acceptable for the lesion-monitoring slice sizes in Ch26.
+grids, μ-only. The retained field bound is six forward displacement/velocity
+volumes per time step plus one live six-volume adjoint field, rather than two
+six-volume histories. Streaming removes `6 · (nt − 1) · N` retained doubles.
 
 ### 4. Misfit and regularization — reuse
 
@@ -176,7 +179,7 @@ clamped to a physical `[μ_min, μ_max]`.
    interior loops `1..nz-1` are empty for `nz = 1`). Both fixed with singleton-axis
    guards + regression tests, so shear-wave elastography — conventionally a 2-D
    imaging plane — now inverts correctly in 2-D.
-5. **PARTIAL — PyO3 binding + L-BFGS + 3-D DONE; optimal checkpointing, joint
+5. **PARTIAL — PyO3 binding + L-BFGS + 3-D DONE; forward checkpointing, joint
    `λ/ρ` deferred.**
    - **PyO3 binding**: `pykwavers.elastic_shear_fwi_reconstruct` (thin layer over
      `reconstruct_lesion_transmission`) with a binding-surface pytest; acquisition
@@ -186,12 +189,13 @@ clamped to a physical `[μ_min, μ_max]`.
      `K_μ` + regularization, no preconditioner — the inverse-Hessian subsumes that
      role) for a valid Armijo line search; recovers the inclusion in ~7 s vs the
      steepest-descent ~17–40 s (`lbfgs_reconstructs_stiff_inclusion`).
-   - **3-D**: `k_mu_kernel` generalized to the full 3-D strain cross-correlation
-     (the `zz`/`xz`/`yz` terms; `ddz`; `ForceAxis::Z`; 3-D mute) — it reduces to
-     the 2-D form for `nz = 1`, so the 2-D tests are unchanged. The 3-D gradient is
-     a validated descent direction (`k_mu_gradient_3d_is_valid_descent_direction`,
-     κ > 0 stable). Full 3-D *convergence* to a sharp sphere is slower (≈4.5× more
-     unknowns) and is an iteration-budget matter, not a correctness one.
+   - **3-D**: the streamed `K_μ` accumulator implements the full 3-D strain
+     cross-correlation (the `zz`/`xz`/`yz` terms; `ddz`; `ForceAxis::Z`; 3-D
+     mute) — it reduces to the 2-D form for `nz = 1`, so the 2-D tests are
+     unchanged. The 3-D gradient is a validated descent direction
+     (`k_mu_gradient_3d_is_valid_descent_direction`, κ > 0 stable). Full 3-D
+     *convergence* to a sharp sphere is slower (≈4.5× more unknowns) and is an
+     iteration-budget matter, not a correctness one.
    - **Deferred, with rationale**:
      - *Joint `λ/ρ`* — deferred on **physical** grounds, not just effort: a
        shear wave is insensitive to the bulk modulus, so `λ` is **unobservable**
@@ -201,10 +205,10 @@ clamped to a physical `[μ_min, μ_max]`.
        well-posed, physically correct parameterization for lesion stiffness. (The
        `K_λ = −∫(∇·u_f)(∇·u_a)` and `K_ρ = −∫∂_t u_f·∂_t u_a` kernels of §2 would
        only be well-constrained with *compressional* data, i.e. acoustic FWI.)
-     - *Optimal checkpointing* — the `O(n_t·N)` full-history adjoint is fine at
-       present (2-D + slice / small-3-D) sizes; YAGNI until a memory problem
-       appears (the ADR-016 reconstruction trick is unavailable here — PML +
-       velocity-Verlet are not time-reversible).
+     - *Forward checkpointing* — the remaining `O(n_t·N)` forward history is
+       required because the ADR-016 reconstruction trick is unavailable here:
+       PML + velocity-Verlet are not time-reversible. Apply an exact checkpoint
+       schedule when production grid sizes justify the recomputation cost.
      - *3-D TV regularizer* — the current TV covers the `k = 0` plane only; opt-in
        and default off, so not on the critical path.
 
@@ -215,8 +219,9 @@ at the real module (`inverse::elastography::elastic_fwi`).
 
 - Adds a genuine full-waveform elastic inverse, closing the Ch26 §26 / Ch11 §11.14
   "not implemented" disclosure with real, tested code.
-- Memory cost is `O(nt·N)` in v1 (full history); bounded by 2-D + slice-sized grids,
-  with checkpointing as the documented growth path.
+- Memory cost remains `O(nt·N)` for the non-reversible forward history, while
+  adjoint-state retention is `O(N)`; forward checkpointing is the documented
+  growth path.
 - The linear `ShearWaveInversion` remains the fast, robust default; the FWI is the
   high-resolution refinement, selected explicitly (no silent fallback).
 - No change to existing forward/acoustic-FWI behaviour (all additions are new

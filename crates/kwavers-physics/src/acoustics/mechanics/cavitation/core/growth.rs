@@ -54,7 +54,7 @@ pub fn rectified_diffusion_rate(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use approx::assert_relative_eq;
+    use eunomia::assert_relative_eq;
     use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
     use kwavers_core::constants::numerical::MHZ_TO_HZ;
 

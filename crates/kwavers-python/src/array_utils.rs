@@ -1,8 +1,8 @@
 //! PyArray-only helpers for kwavers-python.
 //!
 //! This module centralises the small set of conversions needed between Python
-//! NumPy arrays and the internal leto / Rust-Vec world without ever naming an
-//! array type from the retired Rust provider.
+//! NumPy arrays and the internal Leto / Rust `Vec` representation without
+//! exposing the backing array-provider type.
 
 use numpy::{
     Element, PyArray1, PyArray2, PyArray3, PyArrayMethods, PyReadonlyArray1, PyReadonlyArray2,
@@ -85,6 +85,7 @@ where
 }
 
 /// Convert a 2-D readonly NumPy array into a leto 2-D array.
+#[allow(dead_code)]
 pub fn pyarray2_to_leto2<'py, T>(array: &PyReadonlyArray2<'py, T>) -> PyResult<leto::Array2<T>>
 where
     T: Element + Copy + Clone,
@@ -155,6 +156,7 @@ where
 }
 
 /// Create a 3-D NumPy array from a flat `Vec` and shape.
+#[allow(dead_code)]
 pub fn vec_to_pyarray3<'py, T>(
     py: Python<'py>,
     shape: [usize; 3],

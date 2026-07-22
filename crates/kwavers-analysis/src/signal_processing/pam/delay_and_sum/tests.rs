@@ -1,6 +1,6 @@
 use super::processor::DelayAndSumPAM;
 use super::types::{ApodizationType, DelayAndSumConfig, PamImagingMode};
-use approx::assert_relative_eq;
+use eunomia::assert_relative_eq;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::numerical::TWO_PI;

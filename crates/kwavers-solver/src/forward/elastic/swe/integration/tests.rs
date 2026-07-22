@@ -76,13 +76,15 @@ fn test_pml_damping() {
 
     let integrator = TimeIntegrator::new(&grid, &lambda, &mu, &density, &pml);
     let mut field = ElasticWaveField::new(32, 32, 32);
+    let mut scratch = ElasticStepScratch::new(32, 32, 32);
 
     // Set vx at the boundary corner (index 0 is inside the PML layer).
     field.vx[[0, 16, 16]] = 1.0;
     let initial_velocity = field.vx[[0, 16, 16]];
 
     let dt = 1e-7;
-    integrator.apply_pml_damping(&mut field, dt);
+    integrator.apply_pml_damping(&mut field, dt, &mut scratch);
+    let first_factor = field.vx[[0, 16, 16]];
 
     // Cell (0,16,16) is in the x-PML: sigma_x[0] > 0, sigma_y[16] = 0,
     // sigma_z[16] = 0 → damping factor = exp(-sigma_x[0]*dt) < 1.
@@ -99,10 +101,22 @@ fn test_pml_damping() {
 
     // Interior cell must be unmodified (d = exp(0)*exp(0)*exp(0) = 1.0).
     field.vx[[16, 16, 16]] = 1.0;
-    integrator.apply_pml_damping(&mut field, dt);
+    integrator.apply_pml_damping(&mut field, dt, &mut scratch);
+    assert_eq!(
+        field.vx[[16, 16, 16]],
+        1.0,
+        "interior cell must be unmodified"
+    );
+
+    // A changed time step must invalidate the cached per-axis factors.
+    field.vx[[0, 16, 16]] = 1.0;
+    integrator.apply_pml_damping(&mut field, 2.0 * dt, &mut scratch);
+    let doubled_dt_factor = field.vx[[0, 16, 16]];
+    let expected = first_factor * first_factor;
+    let rounding_bound = 8.0 * f64::EPSILON * expected.abs().max(1.0);
     assert!(
-        (field.vx[[16, 16, 16]] - 1.0).abs() < 1e-12,
-        "interior cell must be unmodified, got {}",
-        field.vx[[16, 16, 16]]
+        (doubled_dt_factor - expected).abs() <= rounding_bound,
+        "exp(-sigma * 2dt) must equal exp(-sigma * dt)^2 within {rounding_bound:e}: \
+         got {doubled_dt_factor:e}, expected {expected:e}"
     );
 }

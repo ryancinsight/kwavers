@@ -221,11 +221,10 @@ mod tests {
         };
         let mut truth = Array3::from_elem((2, 2, 2), SOUND_SPEED_WATER_SIM);
         truth[[1, 1, 1]] = 1525.0;
-        let truth_leto: leto::Array3<f64> = truth.clone().into();
+        let truth_leto: leto::Array3<f64> = truth.clone();
         let observed = simulate_frequency_observation(&truth_leto, &array, 230_000.0, &config)
             .expect("observed");
-        let observed_nd: leto::Array2<kwavers_math::fft::Complex64> =
-            observed.try_into().expect("contiguous");
+        let observed_nd: leto::Array2<kwavers_math::fft::Complex64> = observed;
         let sliced: leto::Array2<kwavers_math::fft::Complex64> = observed_nd
             .slice_with::<2>(&[
                 leto::SliceArg::Range {

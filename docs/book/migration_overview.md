@@ -1,4 +1,4 @@
-# Migration Overview: ndarray/nalgebra to Leto
+# Chapter 35 — Migration Overview: ndarray/nalgebra → Leto
 
 ## Status: ~98% Complete
 

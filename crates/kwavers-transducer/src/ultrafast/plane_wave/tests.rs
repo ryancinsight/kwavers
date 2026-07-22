@@ -2,7 +2,7 @@
 
 use super::config::UltrafastPlaneWaveConfig;
 use super::processor::UltrafastPlaneWave;
-use approx::assert_relative_eq;
+use eunomia::assert_relative_eq;
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use leto::Array1;
 use std::f64::consts::PI;

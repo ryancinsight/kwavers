@@ -4,7 +4,7 @@ use crate::{
     acoustic::AcousticProperties,
     bubble::{BubbleProperties, BubbleState},
     elastic::{ElasticArrayAccess, ElasticProperties},
-    optical::MediumOpticalProperties,
+    optical::{interaction_from_si, MediumOpticalProperties},
     thermal::{ThermalField, ThermalProperties},
     viscous::ViscousProperties,
 };
@@ -104,8 +104,20 @@ impl MediumOpticalProperties for HomogeneousMedium {
         self.optical_absorption
     }
 
-    fn optical_scattering_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        self.optical_scattering
+    fn optical_reduced_scattering_coefficient(
+        &self,
+        _x: f64,
+        _y: f64,
+        _z: f64,
+        _grid: &Grid,
+    ) -> Result<
+        hyperion::coefficient::InteractionCoefficient<
+            f64,
+            hyperion::coefficient::ReducedScattering,
+        >,
+        hyperion::TransportError<f64>,
+    > {
+        interaction_from_si(self.optical_scattering)
     }
 }
 

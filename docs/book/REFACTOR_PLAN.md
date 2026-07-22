@@ -324,7 +324,8 @@ in Rust where a real computation applies, embedded with a descriptive caption.
      `MisfitType` enum {L2,L1,Envelope,Phase,Correlation,Wasserstein(OT)}; CBS frequency-domain
      FWI (PyO3 `invert_breast_fwi`); `linear_born_inversion` (pcg_invert); PINN
      `elastic_2d::{ElasticPINN2D<B>, LossComputer, PINNOptimizer<B> (SGD/Adam/AdamW)}` +
-     `geometry::CollocationSampler` (Sobol); regularization in
+     `geometry::CollocationSampler<G>` (Tyche counter, Latin-hypercube, or
+     digitally shifted Sobol interior design; domain-owned boundary chart); regularization in
      `kwavers_math::inverse_problems::regularization::ModelRegularizer3D` (Tikhonov/TV-Huber/
      smoothness/L1); elastography `ShearWaveInversion` + nonlinear_methods. **Marked NOT
      implemented / theory-only:** generic `AdjointState<S>`/`GradientComputer<M>` wrappers,

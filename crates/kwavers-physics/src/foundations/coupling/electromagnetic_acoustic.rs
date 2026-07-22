@@ -65,6 +65,13 @@
 //!   Rev. Sci. Instrum. 77(4), 041101. DOI: 10.1063/1.2195024
 
 use super::MultiPhysicsCoupling;
+use aequitas::systems::si::quantities::{Length, ReciprocalLength};
+use hyperion::{
+    coefficient::{Absorption, InteractionCoefficient, ReducedScattering},
+    quantity::PathLength,
+    transport::DiffusionCoefficients,
+    TransportError,
+};
 use leto::Array3;
 
 /// Electromagnetic-acoustic coupling for photoacoustic effects
@@ -105,12 +112,17 @@ pub trait ElectromagneticAcousticCoupling: MultiPhysicsCoupling {
     }
 
     /// Optical diffusion approximation for fluence
+    ///
+    /// # Errors
+    ///
+    /// Returns a Hyperion transport error when a coefficient, path, or derived
+    /// effective attenuation is outside its physical domain.
     fn diffuse_fluence(
         &self,
         source_position: &[f64],
         evaluation_position: &[f64],
         wavelength: f64,
-    ) -> f64 {
+    ) -> Result<f64, TransportError<f64>> {
         let r = (evaluation_position[2] - source_position[2])
             .mul_add(
                 evaluation_position[2] - source_position[2],
@@ -122,12 +134,24 @@ pub trait ElectromagneticAcousticCoupling: MultiPhysicsCoupling {
             .sqrt();
 
         if r == 0.0 {
-            return 0.0;
+            return Ok(0.0);
         }
 
-        let mu_a = self.optical_absorption_coefficient(evaluation_position, wavelength);
-        let mu_s_prime = self.reduced_scattering_coefficient(evaluation_position, wavelength);
-        let mu_eff = (3.0 * mu_a * (mu_a + mu_s_prime)).sqrt();
-        (-mu_eff * r).exp() / r
+        let absorption =
+            InteractionCoefficient::<_, Absorption>::new(ReciprocalLength::from_base(
+                self.optical_absorption_coefficient(evaluation_position, wavelength),
+            ))?;
+        let reduced =
+            InteractionCoefficient::<_, ReducedScattering>::new(ReciprocalLength::from_base(
+                self.reduced_scattering_coefficient(evaluation_position, wavelength),
+            ))?;
+        let attenuation =
+            DiffusionCoefficients::new(absorption, reduced)?.effective_attenuation()?;
+        let transmission = attenuation
+            .optical_depth(PathLength::new(Length::from_base(r))?)?
+            .transmission()
+            .into_quantity()
+            .into_base();
+        Ok(transmission / r)
     }
 }

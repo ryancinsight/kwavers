@@ -1,4 +1,4 @@
-# Chapter 30 — Clinical Theranostic Device Geometries: 3-D Transducer–Patient Integration
+# Chapter 30 — Clinical Theranostic Device Geometries
 
 This chapter develops the formal geometry model for placing focused ultrasound
 therapy arrays on CT-derived patient anatomy in 3-D.  Two focused-bowl

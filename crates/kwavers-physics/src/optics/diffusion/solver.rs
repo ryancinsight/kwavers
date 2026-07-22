@@ -1,16 +1,21 @@
 //! Light diffusion solver implementation
 
-use super::properties::DiffusionOpticalProperties;
 use crate::acoustics::traits::LightDiffusionModelTrait;
 use crate::optics::polarization::LinearPolarization;
 use crate::optics::PolarizationModel as PolarizationModelTrait;
 use crate::wave_propagation::scattering::ScatteringCalculator;
+use aequitas::systems::si::units::PerMeter;
+use hyperion::{
+    transport::{DiffusionCoefficients, OpticalDiffusionCoefficient},
+    TransportError,
+};
 use kwavers_core::constants::fundamental::SPEED_OF_LIGHT;
 use kwavers_core::constants::optical::{
     DEFAULT_POLARIZATION_FACTOR, LAPLACIAN_CENTER_COEFF, VISIBLE_LIGHT_FREQUENCY_HZ,
 };
 use kwavers_field::indices::LIGHT_IDX;
 use kwavers_grid::Grid;
+use kwavers_medium::properties::OpticalPropertyData;
 use kwavers_medium::Medium;
 use leto::{Array3, Array4};
 use log::debug;
@@ -23,8 +28,12 @@ pub struct LightDiffusion {
     pub fluence_rate: Array4<f64>,
     /// Emission spectrum field [photons/(m³·s·Hz)]
     pub emission_spectrum: Array3<f64>,
-    /// Physical optical properties of the medium
-    optical_properties: DiffusionOpticalProperties,
+    /// Hyperion-owned optical transport coefficients.
+    optical_coefficients: DiffusionCoefficients<f64>,
+    /// Hyperion-derived diffusion coefficient cached for the update loop.
+    diffusion_coefficient: OpticalDiffusionCoefficient<f64>,
+    /// Material refractive index retained by Kwavers.
+    refractive_index: f64,
     /// Polarization model (optional)
     _polarization: Option<Box<dyn PolarizationModelTrait>>,
     /// Scattering calculator (optional)
@@ -72,27 +81,39 @@ impl LightDiffusion {
     /// - S is the source term [photons/(m³·s)]
     ///
     /// The diffusion approximation is valid when μₛ' ≫ μₐ (scattering dominates).
+    ///
+    /// # Errors
+    ///
+    /// Returns a Hyperion transport error when the aggregate describes
+    /// degenerate or non-finite diffusion coefficients.
     pub fn new(
         grid: &Grid,
-        optical_properties: DiffusionOpticalProperties,
+        optical_properties: OpticalPropertyData,
         enable_polarization: bool,
         enable_scattering: bool,
-    ) -> Self {
+    ) -> Result<Self, TransportError<f64>> {
         let (nx, ny, nz) = grid.dimensions();
+        let optical_coefficients = optical_properties.diffusion_coefficients()?;
+        let diffusion_coefficient = optical_coefficients.diffusion_coefficient()?;
+        let absorption = optical_coefficients.absorption().in_unit::<PerMeter>();
+        let scattering = optical_coefficients
+            .reduced_scattering()
+            .in_unit::<PerMeter>();
 
         // Validate diffusion approximation
-        if !optical_properties.diffusion_approximation_valid() {
+        if scattering < 10.0 * absorption {
             log::warn!(
                 "Diffusion approximation may not be valid: μₛ'/μₐ = {:.1}, should be ≫ 10",
-                optical_properties.reduced_scattering_coefficient
-                    / optical_properties.absorption_coefficient.max(1e-10)
+                scattering / absorption.max(1e-10)
             );
         }
 
-        Self {
+        Ok(Self {
             fluence_rate: Array4::zeros([1, nx, ny, nz]),
             emission_spectrum: Array3::zeros([nx, ny, nz]),
-            optical_properties,
+            optical_coefficients,
+            diffusion_coefficient,
+            refractive_index: optical_properties.refractive_index(),
             _polarization: if enable_polarization {
                 Some(Box::new(LinearPolarization::new(
                     DEFAULT_POLARIZATION_FACTOR,
@@ -114,7 +135,7 @@ impl LightDiffusion {
             diffusion_time: 0.0,
             effect_time: 0.0,
             call_count: 0,
-        }
+        })
     }
 }
 
@@ -144,9 +165,9 @@ impl LightDiffusionModelTrait for LightDiffusion {
         // Without the factor of c, the RHS has units [φ]/m, not [φ]/s
         // (D is in m, μₐ in m⁻¹, ∇² in m⁻²), so the absolute time scale would
         // be off by a factor of c — a multi-orders-of-magnitude error.
-        let diffusion_coefficient = self.optical_properties.diffusion_coefficient();
-        let absorption_coeff = self.optical_properties.absorption_coefficient;
-        let c_medium = SPEED_OF_LIGHT / self.optical_properties.refractive_index;
+        let diffusion_coefficient = self.diffusion_coefficient.quantity().into_base();
+        let absorption_coeff = self.optical_coefficients.absorption().in_unit::<PerMeter>();
+        let c_medium = SPEED_OF_LIGHT / self.refractive_index;
 
         // Create a temporary array to store the updated values
         let mut updated_field = light_field.to_contiguous();

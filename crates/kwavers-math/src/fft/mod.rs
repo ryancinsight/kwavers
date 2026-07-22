@@ -435,7 +435,23 @@ impl Fft3dInOutExt for Fft3d {
             let full: &mut Array3<Complex64> = &mut borrow;
             assign_real_to_complex_3d(real, full);
             self.forward_complex_inplace(full);
-            half_out.assign(&full.slice(&[(0, nx, 1), (0, ny, 1), (0, nz_c, 1)]).unwrap());
+            if let Some(half_values) = half_out.as_slice_mut() {
+                let full_values = full
+                    .as_slice()
+                    .expect("invariant: thread-local FFT scratch is contiguous");
+                for (full_row, half_row) in full_values
+                    .chunks_exact(nz)
+                    .zip(half_values.chunks_exact_mut(nz_c))
+                {
+                    half_row.copy_from_slice(&full_row[..nz_c]);
+                }
+            } else {
+                half_out.assign(
+                    &full
+                        .slice(&[(0, nx, 1), (0, ny, 1), (0, nz_c, 1)])
+                        .expect("invariant: validated FFT half-spectrum slice"),
+                );
+            }
         });
     }
 
@@ -459,16 +475,38 @@ impl Fft3dInOutExt for Fft3d {
                 *borrow = Array3::<Complex64>::from_elem([nx, ny, nz], Complex64::default());
             }
             let full: &mut Array3<Complex64> = &mut borrow;
-            full.slice_mut(&[(0, nx, 1), (0, ny, 1), (0, nz_c, 1)])
-                .unwrap()
-                .assign(half_in);
-            for k in nz_c..nz {
-                let kk = nz - k;
+            if let Some(half_values) = half_in.as_slice() {
+                let full_values = full
+                    .as_slice_mut()
+                    .expect("invariant: thread-local FFT scratch is contiguous");
                 for i in 0..nx {
                     let ii = if i == 0 { 0 } else { nx - i };
                     for j in 0..ny {
                         let jj = if j == 0 { 0 } else { ny - j };
-                        full[[i, j, k]] = half_in[[ii, jj, kk]].conj();
+                        let full_row_start = (i * ny + j) * nz;
+                        let half_row_start = (i * ny + j) * nz_c;
+                        full_values[full_row_start..full_row_start + nz_c]
+                            .copy_from_slice(&half_values[half_row_start..half_row_start + nz_c]);
+
+                        let mirror_row_start = (ii * ny + jj) * nz_c;
+                        for k in nz_c..nz {
+                            full_values[full_row_start + k] =
+                                half_values[mirror_row_start + nz - k].conj();
+                        }
+                    }
+                }
+            } else {
+                full.slice_mut(&[(0, nx, 1), (0, ny, 1), (0, nz_c, 1)])
+                    .expect("invariant: validated FFT half-spectrum slice")
+                    .assign(half_in);
+                for k in nz_c..nz {
+                    let kk = nz - k;
+                    for i in 0..nx {
+                        let ii = if i == 0 { 0 } else { nx - i };
+                        for j in 0..ny {
+                            let jj = if j == 0 { 0 } else { ny - j };
+                            full[[i, j, k]] = half_in[[ii, jj, kk]].conj();
+                        }
                     }
                 }
             }
@@ -590,7 +628,7 @@ fn assign_complex_slice_real(complex_values: &[Complex64], real_values: &mut [f6
 mod r2c_optimized_tests {
     use super::{fft_3d_complex_inplace, get_fft_for_grid, Fft3dInOutExt};
     use eunomia::Complex64;
-    use leto::Array3;
+    use leto::{Array3, Layout, VecStorage};
 
     fn check_shape(nx: usize, ny: usize, nz: usize) {
         let nz_c = nz / 2 + 1;
@@ -637,5 +675,51 @@ mod r2c_optimized_tests {
         check_shape(7, 5, 9); // odd nz
         check_shape(16, 16, 16); // power-of-two cube
         check_shape(12, 1, 8); // degenerate y (2-D-like)
+    }
+
+    #[test]
+    fn strided_half_spectrum_matches_contiguous_paths() {
+        const NX: usize = 3;
+        const NY: usize = 3;
+        const NZ: usize = 4;
+        const NZ_C: usize = NZ / 2 + 1;
+
+        let fft = get_fft_for_grid(NX, NY, NZ);
+        let real = Array3::from_shape_fn([NX, NY, NZ], |[i, j, k]| {
+            (i * 37 + j * 11 + k * 5) as f64 / 17.0 - 2.0
+        });
+        let mut contiguous_half = Array3::zeros([NX, NY, NZ_C]);
+        fft.forward_r2c_into(&real, &mut contiguous_half);
+
+        // Equal first and second extents let this transposed owned layout retain
+        // the required shape while forcing the general strided fallback.
+        let row_stride = isize::try_from(NZ_C).expect("test dimensions fit isize");
+        let plane_stride = isize::try_from(NY * NZ_C).expect("test dimensions fit isize");
+        let strided_layout = Layout::new([NX, NY, NZ_C], [row_stride, plane_stride, 1], 0);
+        let mut strided_half = Array3::new(
+            strided_layout,
+            VecStorage::fill(NX * NY * NZ_C, Complex64::default()),
+        )
+        .expect("invariant: transposed test layout fits its owned storage");
+        assert!(strided_half.as_slice().is_none());
+
+        fft.forward_r2c_into(&real, &mut strided_half);
+        for (actual, expected) in strided_half.iter().zip(contiguous_half.iter()) {
+            assert_eq!(actual, expected);
+        }
+
+        let mut contiguous_real = Array3::zeros([NX, NY, NZ]);
+        let mut contiguous_scratch = Array3::zeros([NX, NY, NZ_C]);
+        fft.inverse_c2r_into(
+            &contiguous_half,
+            &mut contiguous_real,
+            &mut contiguous_scratch,
+        );
+        let mut strided_real = Array3::zeros([NX, NY, NZ]);
+        let mut strided_scratch = Array3::zeros([NX, NY, NZ_C]);
+        fft.inverse_c2r_into(&strided_half, &mut strided_real, &mut strided_scratch);
+        for (actual, expected) in strided_real.iter().zip(contiguous_real.iter()) {
+            assert_eq!(actual, expected);
+        }
     }
 }

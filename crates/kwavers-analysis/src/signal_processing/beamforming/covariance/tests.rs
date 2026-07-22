@@ -2,7 +2,7 @@ use super::{
     estimate_forward_backward_covariance, estimate_sample_covariance, is_hermitian, trace,
     validate_covariance_matrix,
 };
-use approx::assert_relative_eq;
+use eunomia::assert_relative_eq;
 use eunomia::Complex64;
 use leto::Array2;
 

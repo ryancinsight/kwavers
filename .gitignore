@@ -6,6 +6,7 @@
 debug/
 target/
 target_opt/
+target_isolated/
 external/
 
 # Regenerable caches, reports, and local environments (not version-controlled)

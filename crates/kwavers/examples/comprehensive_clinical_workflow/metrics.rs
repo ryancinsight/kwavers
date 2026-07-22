@@ -10,6 +10,7 @@ impl LiverAssessmentWorkflow {
     pub(super) fn create_liver_tissue_model(grid: &Grid) -> HeterogeneousMedium {
         let base_properties = HomogeneousMedium::new(1000.0, 1540.0, 0.5, 1.1, grid);
         HeterogeneousMedium::from_homogeneous(&base_properties, grid)
+            .expect("invariant: liver reference optical properties are valid")
     }
 
     pub(super) fn calculate_fibrosis_metrics(

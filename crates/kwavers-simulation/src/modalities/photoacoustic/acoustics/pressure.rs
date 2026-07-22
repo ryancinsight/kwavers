@@ -79,7 +79,7 @@ pub fn compute_initial_pressure(
             for k in 0..nz {
                 let props = &optical_properties[[i, j, k]];
                 let local_pressure =
-                    gruneisen_parameter * props.absorption_coefficient * fluence[[i, j, k]];
+                    gruneisen_parameter * props.absorption_coefficient() * fluence[[i, j, k]];
                 pressure[[i, j, k]] = local_pressure;
                 max_pressure = max_pressure.max(local_pressure);
             }

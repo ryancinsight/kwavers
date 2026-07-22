@@ -20,7 +20,7 @@ pub use thresholds::{
 mod tests {
     use super::*;
     use crate::acoustics::analysis::calculate_mechanical_index;
-    use approx::assert_relative_eq;
+    use eunomia::assert_relative_eq;
     use kwavers_core::constants::cavitation::{SURFACE_TENSION_WATER, VAPOR_PRESSURE_WATER};
     use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
     use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};

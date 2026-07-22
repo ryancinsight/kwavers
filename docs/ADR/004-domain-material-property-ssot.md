@@ -1,6 +1,6 @@
 # ADR 004 — Domain material-property SSOT (composition pattern)
 
-- **Status:** Implemented
+- **Status:** Implemented; optical derivations superseded by ADR 046
 - **Date:** 2026-01-12 · **Audited:** 2026-06-03
 - **Change class:** [arch]
 - **Relates:** paths relocated by the crate split ([ADR 011](011-workspace-crate-split.md))
@@ -40,9 +40,12 @@ Canonical structs:
 - plus `StrengthPropertyData` and the composite `AcousticMaterialProperties`
   (`properties/material.rs:55`)
 
-Composition bridges (not duplicates):
-- `DiffusionOpticalProperties::from_domain(OpticalPropertyData)` —
-  `crates/kwavers-physics/src/optics/diffusion/properties.rs:26`
+Composition boundaries:
+- `OpticalPropertyData` retains tissue presets, refractive index, and spatial
+  material aggregation while Hyperion owns its validated interaction
+  coefficients and every derived optical-transport law. The former
+  `DiffusionOpticalProperties` bridge is deleted by
+  [ADR 046](046-hyperion-optical-transport-ownership.md).
 - `TissuePropertyMap::{uniform,water,liver}` over `AcousticPropertyData` —
   `crates/kwavers-therapy/src/therapy/therapy_integration/tissue/mod.rs:62`
 
