@@ -11,7 +11,7 @@
       component-association errors without weakening numerical tolerances.
 - [x] Run focused formatting, warning-denied Clippy, configured Nextest,
       doctests, and controlled post-change memory/runtime measurement.
-- [ ] Synchronize PM evidence and deliver only after exact-head hosted checks
+- [x] Synchronize PM evidence and deliver only after exact-head hosted checks
       pass.
 
 ## Owner: /root — Consolidate optical transport in Hyperion [major] [arch]
