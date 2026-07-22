@@ -58,8 +58,12 @@
   Atlas-owned, family-wise Criterion regression gate. Benchmark-relevant PRs
   now compare the exact base and head through two phase-reversed replications
   while holding the candidate harness and source path constant. Four isolated
-  pair jobs retain every target and Criterion sample, then one aggregate job
-  requires all four confidence intervals to agree.
+  pair jobs retain unchanged samples for the canonical baseline, critical-path,
+  and SIMD production targets, then one aggregate job requires all four
+  confidence intervals to agree. A separate 30-minute candidate smoke executes
+  every plotting-eligible benchmark once. Python packaging-only changes do not
+  trigger the Rust performance gate, and no merge-critical benchmark job can
+  run for hours.
 - Disable automatic libtest benchmark discovery and register all 22 Criterion
   targets explicitly, so the full suite cannot silently skip benchmark files.
   Exclude the package library and binary from benchmark-harness selection.
