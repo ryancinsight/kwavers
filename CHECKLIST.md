@@ -45,22 +45,26 @@
 - [x] Admit the registered Iris Git source required by the canonical Atlas
       provider graph through the deny policy and reproduce the source audit.
 - [x] Synchronize README, book references, backlog, checklist, and changelog.
-## Owner: /root — Install Atlas benchmark oracle [patch] [arch]
+## Owner: /root — Bound Atlas benchmark oracle [patch] [arch]
 
 - [x] Remove the same-run save/check classifier and its Python implementation.
 - [x] Hold the candidate benchmark instrument constant across base and head.
 - [x] Run two base-first and two candidate-first pairs on isolated runners.
 - [x] Materialize both revisions at one filesystem path inside every pair.
 - [x] Derive family-wise confidence and classification from the Atlas SSOT.
-- [x] Bound the instrumented job from observed full-suite runtime without
-      reducing benchmark targets, samples, or assertions.
+- [x] Execute every plotting-eligible benchmark once on the candidate.
+- [x] Retain unchanged statistical workloads for the canonical baseline,
+      critical-path, and SIMD production targets.
+- [x] Bound every benchmark job at 30 minutes and exclude Python
+      packaging-only changes from the Rust performance gate.
 - [x] Disable auto-discovery, register all 22 retained Criterion targets, and
       require source-file/target-registry equality before measurement.
 - [x] Exclude the package library and binary libtest harnesses from benchmark
       target selection.
 - [x] Remove feature-disabled no-op entry points and reject empty benchmark
       mains before measurement.
-- [ ] Verify the same-path PR head through the hosted benchmark workflow.
+- [x] Verify the bounded same-path PR head through the hosted benchmark
+      workflow (`29884797777`: smoke, four AB/BA pairs, and classifier pass).
 
 ## Owner: /root — GPU PSTD peak-pressure output [major]
 

@@ -7,6 +7,7 @@ on:
       - Cargo.toml
       - .cargo/**
       - crates/**
+      - '!crates/kwavers-python/**'
       - .github/workflows/benchmark-regression.yml
 
 permissions:
@@ -17,13 +18,58 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  benchmark-smoke:
+    name: complete benchmark smoke
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      CARGO_TARGET_DIR: ${{ github.workspace }}/target
+    steps:
+      - name: Checkout candidate
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: kwavers-candidate
+          persist-credentials: false
+
+      - name: Checkout Atlas path dependencies
+        uses: ryancinsight/atlas/.github/actions/checkout-path-dependencies@614914cf469f69ebd193e17c8e2c0db7dcb4a23f
+        with:
+          manifest: kwavers-candidate/Cargo.toml
+          destination: .
+          atlas_ref: 614914cf469f69ebd193e17c8e2c0db7dcb4a23f
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@1.97.1
+
+      - name: Cache cargo dependencies
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-kwavers-bench-${{ hashFiles('kwavers-candidate/Cargo.lock') }}
+
+      - name: Execute every benchmark once
+        run: >-
+          cargo bench
+          --manifest-path kwavers-candidate/Cargo.toml
+          --locked
+          --package kwavers
+          --features plotting
+          --benches
+          --
+          --test
+
   benchmark-pair:
     name: benchmark pair (${{ matrix.pair_id }})
     runs-on: ubuntu-24.04
-    # Hosted run 29814752294 measured one complete base/head pair in about
-    # 249 minutes. Each matrix member owns one isolated, co-located pair,
-    # preserving the full instrument below the unchanged 315-minute bound.
-    timeout-minutes: 315
+    # The merge-critical instrument must finish within one 30-minute CI lane.
+    # Full target execution remains covered by benchmark-smoke above.
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -48,6 +94,7 @@ jobs:
       CARGO_TARGET_DIR: ${{ github.workspace }}/target
       FIRST_REVISION: ${{ matrix.first_revision }}
       PAIR_ID: ${{ matrix.pair_id }}
+      PR_BENCH_TARGETS: performance_baseline critical_path_benchmarks simd_field_ops
       REPORT_ROOT: ${{ matrix.report_root }}
       SECOND_REVISION: ${{ matrix.second_revision }}
     steps:
@@ -157,11 +204,23 @@ jobs:
             exit 1
           fi
 
+          for target in $PR_BENCH_TARGETS; do
+            if [[ ! -f "kwavers-candidate/crates/kwavers/benches/$target.rs" ]]; then
+              echo "::error::missing merge-critical benchmark target: $target"
+              exit 1
+            fi
+          done
+
       - name: Measure phase-reversed replications
         shell: bash
         run: |
           set -euo pipefail
           gate_manifest="atlas-tool/tools/criterion-regression/Cargo.toml"
+          read -r -a target_names <<< "$PR_BENCH_TARGETS"
+          target_args=()
+          for target in "${target_names[@]}"; do
+            target_args+=(--bench "$target")
+          done
 
           run_benches() {
             local revision="$1"
@@ -179,7 +238,7 @@ jobs:
               --locked \
               --package kwavers \
               --features plotting \
-              --benches \
+              "${target_args[@]}" \
               -- \
               "$@" || status=$?
             mv kwavers-measurement "$revision"
@@ -220,7 +279,9 @@ jobs:
 
   benchmark-regression:
     name: benchmark regression check
-    needs: benchmark-pair
+    needs:
+      - benchmark-smoke
+      - benchmark-pair
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:

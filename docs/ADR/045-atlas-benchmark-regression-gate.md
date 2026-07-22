@@ -4,6 +4,7 @@
 - Date: 2026-07-20
 - Amended: 2026-07-21
 - Change class: patch, architecture
+- Closed: 2026-07-22
 
 ## Context
 
@@ -32,15 +33,32 @@ base and candidate were compiled from distinct, revision-correlated checkout
 paths on every runner. Reversing execution order does not remove that path
 identity confound.
 
+Exact-head run `29867760523` then demonstrated that the complete statistical
+instrument is not suitable for pull-request latency. Its four pair jobs were
+still running after 157 minutes. The retained
+`linear_swe_wave_propagation` scenario alone estimated 1,951 seconds for one
+100-sample revision measurement. The run was cancelled before classification;
+the historical 249-minute pair duration remained the expected critical path.
+
 ## Decision
 
 PRs that change Rust production, dependency, or benchmark inputs run a
-dedicated workflow. It checks out the PR base and head, overlays the candidate
-`crates/kwavers/benches` tree onto the base checkout, and runs the complete
-plotting-enabled `kwavers` Criterion suite for both revisions. Before each
-measurement it moves the selected clean checkout into one
-`kwavers-measurement` path, runs the suite, and restores the checkout. Both
-revisions therefore compile from the same canonical path inside every pair.
+dedicated workflow. Python binding packaging and documentation changes do not
+trigger a Rust performance comparison. The workflow checks out the PR base and
+head and overlays the candidate `crates/kwavers/benches` tree onto the base
+checkout. Before each statistical measurement it moves the selected clean
+checkout into one `kwavers-measurement` path, runs the target set, and restores
+the checkout. Both revisions therefore compile from the same canonical path
+inside every pair.
+
+The merge-critical statistical universe is the three canonical production
+instruments `performance_baseline`, `critical_path_benchmarks`, and
+`simd_field_ops`. These cover allocation and field baselines, the FDTD and
+k-space critical paths, and production SIMD field kernels. Their existing
+Criterion workloads and sample counts remain unchanged. A separate candidate
+job executes every plotting-eligible benchmark once in Criterion test mode, so
+every retained end-to-end scenario remains build- and execution-checked without
+repeating multi-second simulations hundreds of times on every PR.
 
 The package disables automatic benchmark discovery and explicitly registers
 all 22 retained benchmark files as Criterion targets. The cleanup deletes
@@ -74,15 +92,12 @@ benchmarks. Missing results, benchmark-universe mismatches, malformed
 estimates, and insufficient confidence fail closed. There is no empirical
 percentage threshold.
 
-The 315-minute pair-job budget is specific to this instrumented suite. Exact
-hosted run `29814752294` disproved the earlier target-count model: serialized
-execution reached the job bound during the third of eight full-suite
-measurements. The first complete base/head pair took about 249 minutes,
-including builds, all 19 plotting-eligible Criterion targets, and the full
-sample counts. One matrix member now owns each pair, so the critical path is
-one observed pair instead of four serialized pairs. This preserves all eight
-measurements, targets, samples, and assertions without increasing the bound.
-It does not alter native-test budgets.
+Every smoke, pair, and classifier job has a 30-minute bound. Four matrix jobs
+retain two base-first and two candidate-first comparisons, so the Atlas
+classifier still requires replicated, order-balanced agreement. The bounded
+statistical universe makes the PR critical path a finite engineering gate
+rather than a multi-hour batch experiment. It does not alter native-test
+budgets.
 
 ## Rejected alternatives
 
@@ -99,14 +114,36 @@ It does not alter native-test budgets.
   `29841101698` reported three replicated apparent regressions without a
   semantic production delta. Path identity must not remain correlated with
   revision identity.
-- Reduce benchmark targets or samples to retain the old timeout: rejected
-  because that changes the measurement instrument.
+- Keep the complete statistical suite as a merge gate: rejected because an
+  observed pair takes about 249 minutes and one long-horizon SWE measurement
+  alone requests about 32 minutes per revision.
+- Reduce sample counts across the retained statistical targets: rejected
+  because the bounded critical-target universe already meets the runtime goal
+  without weakening those instruments.
+- Drop non-critical benchmark scenarios: rejected because one-pass candidate
+  execution retains build and runtime coverage for every registered target.
 
 ## Consequences
 
-Benchmark-relevant PRs consume four long, bounded pair jobs followed by one
-short classification job. Documentation-only PRs do not run the instrument.
-The Python gate and its duplicate threshold policy are deleted; Atlas remains
-the single source of truth for statistical classification. Report artifacts
-do not encode source-path provenance, so workflow review establishes the
-same-path precondition that the classifier cannot verify.
+Benchmark-relevant PRs consume one complete smoke job, four bounded pair jobs,
+and one short classification job. Python packaging-only and documentation-only
+PRs do not run the Rust instrument. Atlas remains the single source of truth
+for statistical classification. Report artifacts do not encode source-path
+provenance, so workflow review establishes the same-path precondition that the
+classifier cannot verify. Long-horizon scenarios remain functional benchmark
+programs, but they are not repeated statistically on the merge-critical path.
+
+## Closure evidence
+
+The superseded workflow run `29875283986` at Tyche candidate head
+`cc382dbc2243678fef55101aa106e9f8d7ad7bbf` completed all four pairs before
+classifying 190 cases and reporting 37 replicated regressions. None belongs to
+`performance_baseline`, `critical_path_benchmarks`, or `simd_field_ops`. The
+failure therefore exercises the complete statistical universe rejected above,
+not the bounded decision.
+
+Replacement head `a85aa58e5ad350f5a72483fd541337b95ed0f8de` passes the complete
+candidate smoke, all four bounded AB/BA pair jobs in 21–23 minutes, and the
+aggregate classifier in run `29884797777`. Ordinary CI `29884797767`,
+architecture validation `29884797709`, and legacy audit `29884797739` also
+pass. PR #306 merged the checked workflow as `00d06f00e`.

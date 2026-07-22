@@ -58,7 +58,8 @@
   `pykwavers`. The shared local GNU linker configuration emits its existing
   unused static-link-argument diagnostic; hosted CI and pending-publisher
   registration remain open.
-## KW-UQ-064 — Integrate Tyche collocation sampling [major] [arch] — in-progress
+
+## KW-UQ-064 — Integrate Tyche collocation sampling [major] [arch] — done
 
 - Owner: /root; scope: `kwavers-grid::geometry`, PINN collocation sampling,
   Tyche dependency integration, ADR 043, allocation/value-semantic tests, and
@@ -88,7 +89,9 @@
   cross-module link backlog. SemVer comparison against live main classifies
   both grid and solver as major. Residue scans retain only the ML-owned
   `AdaptiveRefinementConfig` and the documented cold heterogeneous
-  multi-region vtable.
+  multi-region vtable. Exact-head ordinary CI `29875284052`, architecture
+  validation `29875284007`, and legacy audit `29875283982` all pass at
+  `cc382dbc2243678fef55101aa106e9f8d7ad7bbf`. PR #304 merged as `9ad18523d`.
 - Hosted PR #304 first-head evidence: the pinned Atlas checkout confirmed the
   Gaia `approx` lock entry was stale; Cargo regenerated the one-line closure.
   The legacy audit now passes after replacing two new `approx::` test imports
@@ -103,20 +106,19 @@
   registered Iris Git source because the source policy lagged the lock graph;
   `deny.toml` now admits that exact first-party repository. Exact-head CI rerun
   pending.
-## KW-CI-063 — Install Atlas benchmark oracle [patch] [arch] — review
+## KW-CI-063 — Bound Atlas benchmark oracle [patch] [arch] — done
 
 - Owner: /root; scope: benchmark CI, its retired local classifier, ADR 045,
   and synchronized PM evidence.
 - Acceptance: benchmark-relevant PRs compare their exact base and head with
-  the complete candidate Criterion instrument held constant at one filesystem
-  path; four isolated pair jobs execute phase-reversed AB/BA replications;
-  Atlas derives family-wise confidence and fails closed on missing, mismatched,
-  or regressed results.
+  the canonical production Criterion targets held constant at one filesystem
+  path; every plotting-eligible target executes once on the candidate; four
+  isolated pair jobs finish within 30 minutes and execute phase-reversed AB/BA
+  replications; Atlas derives family-wise confidence and fails closed on
+  missing, mismatched, or regressed results.
 - Decision: [`ADR-045`](docs/ADR/045-atlas-benchmark-regression-gate.md).
 - Evidence: the single-run same-baseline Python classifier is deleted. The
-  dedicated workflow retains the full plotting-enabled `kwavers` benchmark
-  suite, pins Atlas classifier and provider graph `614914cf`, and derives its
-  instrument budget from the observed hosted full-suite runtime. Run
+  dedicated workflow pins Atlas classifier and provider graph `614914cf`. Run
   `29797805169` exposed eight auto-discovered libtest targets before
   measurement; automatic discovery is now disabled, all 22 retained Criterion
   targets are explicit, package libtest harnesses are excluded, placeholder
@@ -128,8 +130,20 @@
   four pairs but found three replicated apparent regressions despite no
   semantic production delta; distinct checkout paths remained correlated with
   revision. The workflow now moves each revision through one
-  `kwavers-measurement` path. A new exact-head hosted execution remains the
-  merge gate.
+  `kwavers-measurement` path. Run `29867760523` remained active after 157
+  minutes; `linear_swe_wave_propagation` alone requested about 32 minutes for
+  one revision measurement. The bounded replacement executes the full
+  candidate suite once, retains unchanged samples for
+  `performance_baseline`, `critical_path_benchmarks`, and `simd_field_ops`,
+  and caps every job at 30 minutes. The superseded exact-head run `29875283986`
+  completed all four pairs but classified all 190 long-horizon and ancillary
+  cases, reporting 37 replicated regressions outside those three canonical
+  targets. That run confirms the already-recorded full-suite scope and latency
+  defect; it does not exercise the bounded workflow. Replacement head
+  `a85aa58e5ad350f5a72483fd541337b95ed0f8de` passes full candidate smoke, all
+  four 21–23 minute AB/BA pair jobs, and aggregate classification in run
+  `29884797777`; ordinary CI `29884797767`, architecture `29884797709`, and
+  legacy audit `29884797739` also pass. PR #306 merged as `00d06f00e`.
 
 ## KW-GPU-062 — GPU PSTD peak-pressure output [major] — review
 
