@@ -2,6 +2,9 @@
 
 use super::coefficients::TemperatureCoefficients;
 use super::heating::AcousticHeatingSource;
+use aequitas::systems::si::quantities::{
+    Intensity, ReciprocalLength, Time, VolumetricPowerDensity,
+};
 use kwavers_core::error::KwaversResult;
 use leto::Array3;
 
@@ -20,8 +23,8 @@ impl ThermalAcousticCoupling {
     /// Initialize mathematical coupling framework
     #[must_use]
     pub fn new(
-        absorption_coefficient: f64,
-        intensity: f64,
+        absorption_coefficient: ReciprocalLength<f64>,
+        intensity: Intensity<f64>,
         coefficients: TemperatureCoefficients,
     ) -> Self {
         Self {
@@ -61,19 +64,20 @@ impl ThermalAcousticCoupling {
             for j in 0..ny {
                 for k in 0..nz {
                     let t = temperature[[i, j, k]];
-                    let i_ac = acoustic_intensity[[i, j, k]];
+                    let i_ac = Intensity::from_base(acoustic_intensity[[i, j, k]]);
 
                     // Heat generation from acoustic absorption
                     // Q = 2·α·I where α depends on current local temperature
                     let alpha = self.coefficients.absorption(
-                        self.source.absorption_coefficient,
+                        self.source.absorption_coefficient.into_base(),
                         t,
                         reference_temperature,
                     );
-                    let heat_rate = 2.0 * alpha * i_ac;
+                    let heat_rate: VolumetricPowerDensity<f64> =
+                        ReciprocalLength::from_base(alpha) * i_ac * 2.0;
 
                     // Execute temporal accumulation of transfer power
-                    self.acoustic_heat[[i, j, k]] += heat_rate * dt;
+                    self.acoustic_heat[[i, j, k]] += (heat_rate * Time::from_base(dt)).into_base();
                 }
             }
         }

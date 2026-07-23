@@ -13,17 +13,21 @@ use aequitas::systems::si::quantities::{
 #[derive(Debug, Clone, Copy)]
 pub struct AcousticStreaming {
     /// Acoustic intensity [W/m²]
-    pub intensity: f64,
+    pub intensity: Intensity<f64>,
     /// Sound speed [m/s]
-    pub sound_speed: f64,
+    pub sound_speed: Velocity<f64>,
     /// Fluid density [kg/m³]
-    pub density: f64,
+    pub density: MassDensity<f64>,
 }
 
 impl AcousticStreaming {
     /// Create streaming effect
     #[must_use]
-    pub fn new(intensity: f64, sound_speed: f64, density: f64) -> Self {
+    pub const fn new(
+        intensity: Intensity<f64>,
+        sound_speed: Velocity<f64>,
+        density: MassDensity<f64>,
+    ) -> Self {
         Self {
             intensity,
             sound_speed,
@@ -36,28 +40,18 @@ impl AcousticStreaming {
     /// v_stream ~ I / (ρ·c²)
     /// Derived from radiation body force I/c divided by acoustic impedance ρ·c
     #[must_use]
-    pub fn velocity(&self) -> f64 {
-        let intensity = Intensity::from_base(self.intensity);
-        let sound_speed = Velocity::from_base(self.sound_speed);
-        let density = MassDensity::from_base(self.density);
-        let impedance: AcousticImpedance = density * sound_speed;
-        let radiation_pressure: Pressure = intensity / sound_speed;
-        let streaming_velocity: Velocity = radiation_pressure / impedance;
-        streaming_velocity.into_base()
+    pub fn velocity(&self) -> Velocity<f64> {
+        let impedance: AcousticImpedance<f64> = self.density * self.sound_speed;
+        let radiation_pressure: Pressure<f64> = self.intensity / self.sound_speed;
+        radiation_pressure / impedance
     }
 
     /// Streaming power flux [W/m²]
     ///
     /// P_stream = v_stream · (I/c) = I² / (ρ·c³)
     #[must_use]
-    pub fn power(&self) -> f64 {
-        let intensity = Intensity::from_base(self.intensity);
-        let sound_speed = Velocity::from_base(self.sound_speed);
-        let density = MassDensity::from_base(self.density);
-        let impedance: AcousticImpedance = density * sound_speed;
-        let radiation_pressure: Pressure = intensity / sound_speed;
-        let streaming_velocity: Velocity = radiation_pressure / impedance;
-        let streaming_power: Intensity = streaming_velocity * radiation_pressure;
-        streaming_power.into_base()
+    pub fn power(&self) -> Intensity<f64> {
+        let radiation_pressure: Pressure<f64> = self.intensity / self.sound_speed;
+        self.velocity() * radiation_pressure
     }
 }
