@@ -1,0 +1,108 @@
+name: Crates.io Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      package:
+        description: Workspace package to validate without publishing
+        required: true
+        type: string
+      version:
+        description: Exact Cargo package version
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crates-release-${{ github.event.release.tag_name || inputs.package }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      startsWith(github.event.release.tag_name, 'crate-')
+    name: Validate or publish crate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Check out the release revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.release.tag_name || github.sha }}
+
+      - name: Resolve and validate release identity
+        id: release
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_PACKAGE: ${{ inputs.package }}
+          INPUT_VERSION: ${{ inputs.version }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$EVENT_NAME" == "release" ]]; then
+            if [[ "$RELEASE_TAG" =~ ^crate-(.+)-v([0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?)$ ]]; then
+              package="${BASH_REMATCH[1]}"
+              version="${BASH_REMATCH[2]}"
+            else
+              echo "release tag must be crate-<package>-v<version>" >&2
+              exit 1
+            fi
+          else
+            package="$INPUT_PACKAGE"
+            version="$INPUT_VERSION"
+          fi
+
+          if [[ ! "$package" =~ ^[A-Za-z0-9][A-Za-z0-9_-]*$ ]]; then
+            echo "invalid Cargo package name: $package" >&2
+            exit 1
+          fi
+
+          metadata="$(cargo metadata --locked --no-deps --format-version 1)"
+          matches="$(jq --arg package "$package" '[.packages[] | select(.name == $package)] | length' <<<"$metadata")"
+          if [[ "$matches" != "1" ]]; then
+            echo "expected exactly one workspace package named $package; found $matches" >&2
+            exit 1
+          fi
+
+          manifest_version="$(jq -r --arg package "$package" '.packages[] | select(.name == $package) | .version' <<<"$metadata")"
+          if [[ "$version" != "$manifest_version" ]]; then
+            echo "release version $version does not match Cargo version $manifest_version" >&2
+            exit 1
+          fi
+
+          publishable="$(jq -r --arg package "$package" '.packages[] | select(.name == $package) | (.publish == null or (.publish | index("crates-io") != null))' <<<"$metadata")"
+          if [[ "$publishable" != "true" ]]; then
+            echo "Cargo metadata marks $package as publish = false" >&2
+            exit 1
+          fi
+
+          echo "package=$package" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Validate package without publishing
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: cargo publish --locked --package "${{ steps.release.outputs.package }}" --dry-run
+
+      - name: Request a short-lived crates.io token
+        if: github.event_name == 'release'
+        id: auth
+        uses: rust-lang/crates-io-auth-action@c6f97d42243bad5fab37ca0427f495c86d5b1a18 # v1.0.5
+
+      - name: Package, verify, and publish
+        if: github.event_name == 'release'
+        shell: bash
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+        run: cargo publish --locked --package "${{ steps.release.outputs.package }}"

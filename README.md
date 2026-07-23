@@ -82,6 +82,15 @@ the `kwavers-python` distribution identity and Cargo-owned version, attests and
 attaches the exact artifacts, then publishes that same wheel set to PyPI
 through OIDC Trusted Publishing.
 
+### Rust Crate Releases
+
+The `Crates.io Release` workflow validates a named workspace package on manual
+dispatch. After that package's required first release is published locally and
+its crates.io Trusted Publisher is registered, a GitHub Release tagged
+`crate-<package>-v<version>` packages, verifies, and publishes the matching
+Cargo version with a short-lived OIDC token. The PyO3 and `xtask` packages are
+explicitly non-publishable; all Rust library releases use their package names.
+
 Detailed history lives in [`CHANGELOG.md`](CHANGELOG.md); current work and gaps
 are tracked in [`backlog.md`](backlog.md), [`CHECKLIST.md`](CHECKLIST.md), and
 [`gap_audit.md`](gap_audit.md).
