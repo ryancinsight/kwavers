@@ -12,6 +12,7 @@ use kwavers_core::constants::tissue_thermal::SPECIFIC_HEAT_TISSUE;
 use kwavers_core::constants::{MHZ_TO_HZ, SECONDS_PER_MINUTE};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_physics::acoustics::analysis::calculate_mechanical_index;
+use kwavers_physics::thermal::CumulativeEquivalentMinutes;
 use std::f64::consts::PI;
 
 /// HIFU transducer configuration.
@@ -200,9 +201,14 @@ impl AblationTarget {
 /// Thermal dose in CEM43: CEM43 = R^(43−T)·t, R=0.5 for T>43°C else 0.25.
 #[derive(Debug, Clone)]
 pub struct FocalSpotDoseEstimate {
-    pub cem43: f64,
-    pub peak_temperature_c: f64,
-    pub time_to_dose_s: f64,
+    /// Cumulative equivalent minutes at 43 °C.
+    pub cem43: CumulativeEquivalentMinutes,
+    /// Peak thermodynamic temperature in kelvin.
+    pub peak_temperature: ThermodynamicTemperature<f64>,
+    /// Time required to reach the ablation threshold, when the thermal rate
+    /// can reach it; `None` means the current temperature is below the
+    /// equivalent-dose reference and the model does not predict a finite time.
+    pub time_to_dose: Option<Time<f64>>,
 }
 
 impl FocalSpotDoseEstimate {
@@ -239,17 +245,16 @@ impl FocalSpotDoseEstimate {
         let heating_rate_c_per_s = heating_w_m3 / (DENSITY_WATER_NOMINAL * specific_heat);
         let delta_t = (heating_rate_c_per_s / PERFUSION_RATE)
             * (1.0 - (-PERFUSION_RATE * treatment_duration_s).exp());
-        let peak_temperature_c = BODY_TEMPERATURE_C + delta_t;
-        let law = Cem43::<f64>::canonical();
-        let temperature = ThermodynamicTemperature::from_base(
-            peak_temperature_c + kwavers_core::constants::thermodynamic::KELVIN_OFFSET_C,
+        let peak_temperature = ThermodynamicTemperature::from_base(
+            BODY_TEMPERATURE_C + delta_t + kwavers_core::constants::thermodynamic::KELVIN_OFFSET_C,
         );
+        let law = Cem43::<f64>::canonical();
         let duration = Time::from_base(treatment_duration_s);
-        let dose_rate = law.rate(temperature).map_err(|source| {
+        let dose_rate = law.rate(peak_temperature).map_err(|source| {
             KwaversError::InvalidInput(format!("focal-spot CEM43 rate is invalid: {source}"))
         })?;
         let cem43 = law
-            .increment(temperature, duration)
+            .increment(peak_temperature, duration)
             .map_err(|source| {
                 KwaversError::InvalidInput(format!(
                     "focal-spot CEM43 observation is invalid: {source}"
@@ -258,25 +263,29 @@ impl FocalSpotDoseEstimate {
             .get()
             .into_base()
             / SECONDS_PER_MINUTE;
-        let time_to_dose_s = if temperature >= law.reference() {
-            THERMAL_DOSE_THRESHOLD * SECONDS_PER_MINUTE / dose_rate.into_base()
+        let time_to_dose = if peak_temperature >= law.reference() {
+            Some(Time::from_base(
+                THERMAL_DOSE_THRESHOLD * SECONDS_PER_MINUTE / dose_rate.into_base(),
+            ))
         } else {
-            f64::INFINITY
+            None
         };
         Ok(Self {
-            cem43,
-            peak_temperature_c,
-            time_to_dose_s,
+            cem43: CumulativeEquivalentMinutes::try_from_minutes(cem43)?,
+            peak_temperature,
+            time_to_dose,
         })
     }
 
     #[must_use]
     pub fn is_sufficient_for_ablation(&self) -> bool {
-        self.cem43 >= THERMAL_DOSE_THRESHOLD
+        let threshold = CumulativeEquivalentMinutes::try_from_minutes(THERMAL_DOSE_THRESHOLD)
+            .expect("invariant: canonical CEM43 threshold is finite and non-negative");
+        self.cem43 >= threshold
     }
     #[must_use]
     pub fn margin_to_ablation(&self) -> f64 {
-        THERMAL_DOSE_THRESHOLD - self.cem43
+        THERMAL_DOSE_THRESHOLD - self.cem43.as_minutes()
     }
 }
 

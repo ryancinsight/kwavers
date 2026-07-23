@@ -15,6 +15,7 @@
 pub mod ablation;
 pub mod coupling;
 pub mod diffusion;
+mod equivalent_minutes;
 pub mod perfusion;
 pub mod properties;
 pub(crate) mod response;
@@ -23,6 +24,7 @@ pub mod thermal_dose;
 pub use ablation::{AblationField, AblationKinetics, AblationState};
 pub use coupling::{AcousticHeatingSource, TemperatureCoefficients, ThermalAcousticCoupling};
 pub use diffusion::ThermalDiffusionConfig;
+pub use equivalent_minutes::CumulativeEquivalentMinutes;
 pub use thermal_dose::ThermalCEM43Grid;
 
 // Re-export canonical domain type

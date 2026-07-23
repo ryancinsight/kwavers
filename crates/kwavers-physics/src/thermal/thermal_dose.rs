@@ -10,6 +10,7 @@ use leto::Array3;
 
 use crate::parallel::zip_mut_ref;
 use crate::thermal::response::{checked_cem43_increments, CelsiusStorage};
+use crate::thermal::CumulativeEquivalentMinutes;
 
 /// Thermal dose calculator using cumulative equivalent minutes at 43°C (CEM43)
 #[derive(Debug)]
@@ -39,12 +40,12 @@ impl ThermalCEM43Grid {
     }
 
     /// Update thermal dose based on current temperature field
-    /// dt: time step in seconds
+    /// `dt`: typed time step, stored by Aequitas in base seconds.
     ///
     /// # Errors
     /// Returns [`KwaversError::DimensionMismatch`] when `temperature` does not
     /// have the same shape as this dose grid.
-    pub fn update(&mut self, temperature: &Array3<f64>, dt: f64) -> KwaversResult<()> {
+    pub fn update(&mut self, temperature: &Array3<f64>, dt: Time<f64>) -> KwaversResult<()> {
         let dose_shape = self.dose.shape();
         let temperature_shape = temperature.shape();
         if dose_shape != temperature_shape {
@@ -53,11 +54,10 @@ impl ThermalCEM43Grid {
             )));
         }
 
-        let step = Time::from_base(dt);
         checked_cem43_increments::<CelsiusStorage, _>(
             self.increments.view_mut(),
             temperature.view(),
-            step,
+            dt,
             |_| true,
         )?;
 
@@ -76,21 +76,32 @@ impl ThermalCEM43Grid {
     }
 
     /// Get maximum thermal dose
-    #[must_use]
-    pub fn get_max_dose(&self) -> f64 {
-        self.dose.iter().fold(0.0_f64, |a, &b| a.max(b))
+    pub fn get_max_dose(&self) -> KwaversResult<CumulativeEquivalentMinutes> {
+        CumulativeEquivalentMinutes::try_from_minutes(
+            self.dose.iter().fold(0.0_f64, |a, &b| a.max(b)),
+        )
     }
 
     /// Get thermal dose at specific point
-    #[must_use]
-    pub fn get_dose_at(&self, i: usize, j: usize, k: usize) -> f64 {
-        self.dose[[i, j, k]]
+    pub fn get_dose_at(
+        &self,
+        i: usize,
+        j: usize,
+        k: usize,
+    ) -> KwaversResult<CumulativeEquivalentMinutes> {
+        let value = self.dose.get([i, j, k]).map_err(|source| {
+            KwaversError::InvalidInput(format!(
+                "CEM43 dose index [{i}, {j}, {k}] is outside the grid: {source}"
+            ))
+        })?;
+        CumulativeEquivalentMinutes::try_from_minutes(*value)
     }
 
     /// Check if thermal dose exceeds threshold for tissue damage
     /// Returns fraction of volume exceeding threshold
     #[must_use]
-    pub fn fraction_above_threshold(&self, threshold: f64) -> f64 {
+    pub fn fraction_above_threshold(&self, threshold: CumulativeEquivalentMinutes) -> f64 {
+        let threshold = threshold.as_minutes();
         let count = self.dose.iter().filter(|&&d| d > threshold).count();
         count as f64 / (self.nx * self.ny * self.nz) as f64
     }
@@ -118,10 +129,12 @@ mod tests {
         // At 45°C with R=0.5: CEM43 = 1 min * 0.5^(43−45) = 1 * 4 = 4 minutes
         // Sapareto & Dewey (1984), Table 1.
         let temperature = Array3::from_elem([10, 10, 10], 45.0);
-        dose_calc.update(&temperature, 60.0).unwrap();
+        dose_calc
+            .update(&temperature, Time::from_base(60.0))
+            .unwrap();
 
         let expected = 0.5_f64.powf(43.0 - 45.0); // = 4.0 CEM43 per minute × 1 min
-        let actual = dose_calc.get_dose()[[5, 5, 5]];
+        let actual = dose_calc.get_dose_at(5, 5, 5).unwrap().as_minutes();
         assert!(
             (actual - expected).abs() < 1e-10,
             "45°C dose: expected {expected}, got {actual}"
@@ -135,11 +148,13 @@ mod tests {
         // Sapareto & Dewey (1984) use R=0.25 for T < 43°C, giving non-zero accumulation.
         let mut dose_calc = ThermalCEM43Grid::new(5, 5, 5);
         let temperature = Array3::from_elem([5, 5, 5], 40.0);
-        dose_calc.update(&temperature, 60.0).unwrap(); // 1 minute
+        dose_calc
+            .update(&temperature, Time::from_base(60.0))
+            .unwrap(); // 1 minute
 
         // expected = 0.25^(43 - 40) = 0.25^3 = 0.015625 CEM43
         let expected = 0.25_f64.powf(43.0 - 40.0);
-        let actual = dose_calc.get_dose()[[2, 2, 2]];
+        let actual = dose_calc.get_dose_at(2, 2, 2).unwrap().as_minutes();
         assert!(
             (actual - expected).abs() < 1e-12,
             "40°C mild hyperthermia dose: expected {expected:.6e}, got {actual:.6e}"
@@ -165,9 +180,13 @@ mod tests {
                 }
             }
         }
-        dose_calc.update(&temperature, 600.0).unwrap(); // 10 minutes
+        dose_calc
+            .update(&temperature, Time::from_base(600.0))
+            .unwrap(); // 10 minutes
 
-        let fraction = dose_calc.fraction_above_threshold(100.0);
+        let fraction = dose_calc.fraction_above_threshold(
+            CumulativeEquivalentMinutes::try_from_minutes(100.0).unwrap(),
+        );
         assert!(
             (fraction - 0.5).abs() < 0.05,
             "Expected ~50% above 100 CEM43, got {:.1}%",
@@ -186,10 +205,12 @@ mod tests {
     fn test_dose_resets_to_zero() {
         let mut dose_calc = ThermalCEM43Grid::new(5, 5, 5);
         let temperature = Array3::from_elem([5, 5, 5], 45.0);
-        dose_calc.update(&temperature, 60.0).unwrap();
-        assert!(dose_calc.get_max_dose() > 0.0);
+        dose_calc
+            .update(&temperature, Time::from_base(60.0))
+            .unwrap();
+        assert!(dose_calc.get_max_dose().unwrap().as_minutes() > 0.0);
         dose_calc.reset();
-        assert_eq!(dose_calc.get_max_dose(), 0.0);
+        assert_eq!(dose_calc.get_max_dose().unwrap().as_minutes(), 0.0);
     }
 
     #[test]
@@ -197,7 +218,9 @@ mod tests {
         let mut dose_calc = ThermalCEM43Grid::new(5, 5, 5);
         let temperature = Array3::from_elem([5, 4, 5], 45.0);
 
-        let error = dose_calc.update(&temperature, 60.0).unwrap_err();
+        let error = dose_calc
+            .update(&temperature, Time::from_base(60.0))
+            .unwrap_err();
 
         assert!(
             format!("{error}").contains("thermal dose update requires temperature shape"),
@@ -209,12 +232,12 @@ mod tests {
     fn invalid_temperature_preserves_accumulated_dose() {
         let mut dose_calc = ThermalCEM43Grid::new(2, 1, 1);
         let reference = Array3::from_elem([2, 1, 1], 43.0);
-        dose_calc.update(&reference, 60.0).unwrap();
+        dose_calc.update(&reference, Time::from_base(60.0)).unwrap();
         let before = dose_calc.get_dose().clone();
 
         let mut invalid = Array3::from_elem([2, 1, 1], 44.0);
         invalid[[1, 0, 0]] = f64::NAN;
-        assert!(dose_calc.update(&invalid, 60.0).is_err());
+        assert!(dose_calc.update(&invalid, Time::from_base(60.0)).is_err());
         assert_eq!(dose_calc.get_dose(), &before);
     }
 }

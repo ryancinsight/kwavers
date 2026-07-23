@@ -1,4 +1,5 @@
 use super::*;
+use aequitas::systems::si::quantities::Time;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_grid::Grid;
@@ -94,14 +95,14 @@ fn cem43_reference_temperatures_match_sapareto_dewey() {
     let temperatures = Array3::from_shape_vec(grid.dimensions(), vec![42.0, 43.0, 44.0])
         .expect("test shape matches values");
     thermal_dose
-        .add_temperature_measurement(temperatures.clone(), 0.0)
+        .add_temperature_measurement(temperatures.clone(), Time::from_base(0.0))
         .unwrap();
     thermal_dose
-        .add_temperature_measurement(temperatures, 60.0)
+        .add_temperature_measurement(temperatures, Time::from_base(60.0))
         .unwrap();
-    assert_eq!(thermal_dose.dose_at(0, 0, 0), 0.25);
-    assert_eq!(thermal_dose.dose_at(1, 0, 0), 1.0);
-    assert_eq!(thermal_dose.dose_at(2, 0, 0), 2.0);
+    assert_eq!(thermal_dose.dose_at(0, 0, 0).unwrap().as_minutes(), 0.25);
+    assert_eq!(thermal_dose.dose_at(1, 0, 0).unwrap().as_minutes(), 1.0);
+    assert_eq!(thermal_dose.dose_at(2, 0, 0).unwrap().as_minutes(), 2.0);
 }
 
 #[test]
@@ -110,13 +111,19 @@ fn thermal_dose_uses_seconds_and_detects_ablation_threshold() {
     let mut thermal_dose = HifuThermalDose::new(&grid);
 
     thermal_dose
-        .add_temperature_measurement(Array3::from_elem(grid.dimensions(), 55.0), 0.0)
+        .add_temperature_measurement(
+            Array3::from_elem(grid.dimensions(), 55.0),
+            Time::from_base(0.0),
+        )
         .unwrap();
     thermal_dose
-        .add_temperature_measurement(Array3::from_elem(grid.dimensions(), 55.0), 60.0)
+        .add_temperature_measurement(
+            Array3::from_elem(grid.dimensions(), 55.0),
+            Time::from_base(60.0),
+        )
         .unwrap();
 
-    let dose_center = thermal_dose.dose_at(2, 2, 2);
+    let dose_center = thermal_dose.dose_at(2, 2, 2).unwrap().as_minutes();
     let expected = 4096.0;
     assert!(
         (dose_center - expected).abs() < 1.0e-9,
