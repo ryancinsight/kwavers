@@ -1,6 +1,6 @@
 # Backlog / Strategy
 
-## KW-DOCS-BOOK-PAGES-1 — Publish the source-backed mdBook through GitHub Pages [patch] — in-progress
+## KW-DOCS-BOOK-PAGES-1 — Publish the source-backed mdBook through GitHub Pages [patch] — done
 
 - Owner: Codex `/root`; scope: `.github/workflows/book-pages.yml`,
   `docs/book/book.toml`, `README.md`, and PM artifacts.
@@ -9,7 +9,8 @@
   Pages environment.
 - Acceptance: the workflow builds `docs/book`, uploads `target/book`, deploys
   only from `main`, and `book.toml` declares the `/kwavers/` project-site base
-  path.
+  path. Local evidence: `mdbook v0.5.4` built the book and produced
+  `target/book/index.html`; workflow syntax parsed successfully.
 
 ## KW-CI-068 — Close Moirai admission workaround [patch] — done
 

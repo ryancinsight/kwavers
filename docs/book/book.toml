@@ -16,5 +16,7 @@ create-missing = false
 [output.html]
 no-section-label = false
 mathjax-support = true
+site-url = "/kwavers/"
 git-repository-url = "https://github.com/ryancinsight/kwavers"
+edit-url-template = "https://github.com/ryancinsight/kwavers/edit/main/docs/book/{path}"
 default-theme = "rust"
