@@ -197,8 +197,6 @@ elif os.name == "nt":
     _pkg_dir = str(Path(__file__).parent)
     os.add_dll_directory(_pkg_dir)
 
-# Import Python submodules for comparison and validation
-from . import comparison, kwave_bridge, kwave_python_bridge
 from .parity_targets import PARITY_THRESHOLDS, evaluate_parity
 from ._pykwavers import (
     # Core classes
@@ -763,9 +761,6 @@ __all__ = [
     "ivus_chapter_metrics",
     "simulate_receive_rf",
     # Submodules
-    "comparison",
-    "kwave_python_bridge",
-    "kwave_bridge",
     # Signal generation
     "tone_burst",
     "create_cw_signals",

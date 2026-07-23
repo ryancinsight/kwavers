@@ -10,6 +10,7 @@ Date: 2026-02-04
 Sprint: 217 Session 9 - Phase 2 PyO3 Integration
 """
 
+import subprocess
 import sys
 
 import numpy as np
@@ -37,6 +38,30 @@ def test_grid_creation():
     assert grid.total_points() == 32 * 32 * 32
 
     print(f"  [OK] Grid: {grid}")
+
+
+def test_core_import_leaves_optional_modules_unloaded():
+    """The base wheel must not import comparison-only dependencies."""
+    probe = """
+import sys
+import pykwavers
+
+optional_modules = {
+    "pykwavers.comparison",
+    "pykwavers.kwave_bridge",
+    "pykwavers.kwave_python_bridge",
+}
+loaded = sorted(optional_modules.intersection(sys.modules))
+if loaded:
+    raise AssertionError(f"core import loaded optional modules: {loaded}")
+"""
+    subprocess.run(
+        [sys.executable, "-c", probe],
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
 
 
 def test_medium_creation():

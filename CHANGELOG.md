@@ -24,7 +24,9 @@
   Reqwest 0.13.4 transport and remove Kwavers' unused Reqwest declaration so
   release locks no longer contain the vulnerable rustls-webpki 0.101 line;
   admit the permissive CDLA 2.0 license used by Reqwest's replacement Mozilla
-  root-certificate data.
+  root-certificate data. Keep comparison and k-Wave bridge modules behind
+  explicit submodule imports so a minimal wheel import does not require the
+  optional plotting stack.
 
 ### Breaking (2026-07-21) - Hyperion optical transport [major] [arch]
 
