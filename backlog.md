@@ -1,5 +1,17 @@
 # Backlog / Strategy
 
+## KWAVERS-AEQ-MET-02 — Type pulsed-laser physical metrics [major] — done
+
+- Owner: Codex; scope: `crates/kwavers-physics/src/electromagnetic/photoacoustic.rs`
+  plus this repository's metric PM artifacts.
+- Outcome: `PulsedLaser` and `BeamProfile` use Aequitas physical quantities;
+  typed peak fluence and average-power results preserve the existing optical
+  equations.
+- Acceptance: Gaussian, flat-top, Bessel, and pulse-energy value oracles pass;
+  package check, focused Nextest, warning-denied Clippy, doctests, Rustdoc, and
+  format pass. Existing provider warnings and unrelated Rustdoc link warnings
+  remain explicit residuals.
+
 ## KW-DOCS-BOOK-PAGES-1 — Publish the source-backed mdBook through GitHub Pages [patch] — done
 
 - Owner: Codex `/root`; scope: `.github/workflows/book-pages.yml`,

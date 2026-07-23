@@ -1,5 +1,16 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-02 typed pulsed-laser metrics [major] — done 2026-07-23
+
+- [x] Type pulsed-laser peak power, pulse duration, repetition rate, wavelength,
+      beam radii, peak fluence, and average power with the existing Aequitas
+      SI quantities.
+- [x] Preserve Gaussian, flat-top, and Bessel closed-form equations and add
+      typed pulse-energy/fluence value regressions.
+- [x] Pass `kwavers-physics` check, focused Nextest (2/2), warning-denied
+      package Clippy, doctests, Rustdoc, and format. Existing provider warnings
+      and unrelated Rustdoc link warnings remain outside this slice.
+
 ## Owner: Codex `/root` — Aequitas acoustic dimensional boundaries [patch] — done
 
 - [x] Express acoustic heating through reciprocal-length × intensity and

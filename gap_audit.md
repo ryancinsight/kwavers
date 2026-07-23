@@ -51,7 +51,7 @@ bundles use Proteus/Aequitas quantities internally.
 | ID | Evidence | Remaining implementation | Owner | Status / acceptance oracle |
 |---|---|---|---|---|
 | `KWAVERS-AEQ-MET-01` | `kwavers-physics/src/thermal/thermal_dose.rs` uses Aequitas `Time` for updates but exposes the CEM43 array, maximum, point query, and threshold as `f64`. HIFU planning types/schedules also expose CEM43, temperature, dwell, and time-to-dose scalars. | Add a consumer-owned validated equivalent-time/CEM43 type backed by Aequitas `Time`; type temperature and duration result/configuration fields. Do not label CEM43 as `AbsorbedDose`. | Kwavers | Ready. Sapareto–Dewey CEM43 accumulation and threshold/fraction value tests remain the oracle. |
-| `KWAVERS-AEQ-MET-02` | `kwavers-physics/src/electromagnetic/photoacoustic.rs` stores peak power, pulse duration, repetition rate, wavelength, beam radius, and returns peak fluence/average power as `f64`. | Use existing `Power`, `Time`, `Frequency`, `Length`, and `EnergyPerArea` at the constructor/result boundary. | Kwavers | Ready. Gaussian, top-hat, and Bessel fluence equations plus pulse-energy conservation are the oracles. |
+| `KWAVERS-AEQ-MET-02` | `kwavers-physics/src/electromagnetic/photoacoustic.rs` stored peak power, pulse duration, repetition rate, wavelength, beam radius, and returned peak fluence/average power as `f64`. | Use existing `Power`, `Time`, `Frequency`, `Length`, and `EnergyPerArea` at the constructor/result boundary. | Kwavers | **RESOLVED.** `PulsedLaser` and all `BeamProfile` radii now use Aequitas `Power`/`Time`/`Frequency`/`Length`; peak fluence returns `EnergyPerArea` and average power returns `Power`. Gaussian, top-hat, Bessel, and pulse-energy value oracles pass in `kwavers-physics`. |
 | `KWAVERS-AEQ-MET-03` | `kwavers-transducer/src/transducers/physics/{frequency,geometry,rayleigh,materials}.rs` exposes frequency, bandwidth, lengths, area/volume, range, attenuation, wavelength, and acoustic impedance as raw values. | Migrate the bounded transducer modules to typed constructors/results; retain dimensionless Q, bandwidth fraction, directivity, and reflection coefficients as scalar. | Kwavers | Ready. KLM bandwidth, geometry identities, Rayleigh propagation, and impedance/reflection value tests must remain green. |
 | `KWAVERS-AEQ-MET-04` | `kwavers-therapy/src/therapy/hifu_planning/{types,schedule}.rs` exposes focal dimensions/volumes, power, peak pressure, frequency, dwell, and temperature metrics as suffixed scalar fields. | Type the planning DTOs and derived metrics through the existing Aequitas seam; leave mechanical index and CEM43 as dimensionless/consumer-semantic values. | Kwavers | Ready after `KWAVERS-AEQ-MET-01`; HIFU focal-volume, pressure, thermal-dose, and schedule invariants are the acceptance oracles. |
 | `KWAVERS-AEQ-MET-05` | `kwavers-analysis/src/signal_processing/vasculature/mod.rs` reports diameter and total length as voxel-unit `f64`, and Doppler velocity returns `f64`; spacing is left to the caller. | Make physical voxel spacing an explicit validated `Length` input, then return physical `Length`/`Velocity` instead of caller-applied scalars. | Kwavers | Boundary-dependent. The spacing contract and Doppler equation must be tested before migration. |
@@ -65,10 +65,10 @@ bundles use Proteus/Aequitas quantities internally.
 - Mechanical index, thermal index, cavitation dose, fractional bandwidth,
   directivity, confidence, and material coupling coefficients are
   dimensionless or model-specific and are not Aequitas metric gaps.
-- The next Kwavers slice is `KWAVERS-AEQ-MET-01`, followed by the pulsed-laser
-  and transducer result boundaries. The parent audit must be refreshed after
-  each child slice so the cross-repository ledger does not claim completion from
-  an internal conversion that never reaches the public API.
+- The next Kwavers slice is `KWAVERS-AEQ-MET-01`, followed by the transducer
+  result boundary. The parent audit must be refreshed after each child slice so
+  the cross-repository ledger does not claim completion from an internal
+  conversion that never reaches the public API.
 
 - Review 2026-07-22: Python release run `29967429949` built the stable-ABI
   wheels but the Linux and Windows base-wheel smoke imports failed because
