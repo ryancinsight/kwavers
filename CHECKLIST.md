@@ -1,5 +1,19 @@
 # Project Checklist
 
+## Owner: Codex `/root` — Close Moirai admission workaround [patch]
+
+- [x] Point hosted provider checkout at Atlas graph `c982fe0`.
+- [x] Regenerate `Cargo.lock` through Cargo against merged Moirai PR #83.
+- [x] Delete the default and CI therapy-test serialization overrides.
+- [x] Pass the six unchanged therapy tests under ordinary configured Nextest.
+- [x] Pass warning-denied local static and documentation gates.
+- [x] Pass pre-integration exact-head hosted CI on implementation head
+      `eb80ad2`.
+- [x] Rebase onto merged Python-portability PR #312 at default `1dc60bd` while
+      retaining its exact-head green matrix and replacing only its provisional
+      Atlas pin.
+- [x] Record the complete delivery evidence on the clean delivery branch.
+
 ## Owner: Codex `/root` — Stream elastic-FWI adjoint gradient [patch]
 
 - [x] Measure the current full-adjoint-history runtime and process-tree peak
@@ -52,6 +66,12 @@
       linker retains its existing unused-static-link-argument diagnostic.
 - [x] Create the protected `pypi` environment restricted to
       `kwavers-python-v*` tags.
+- [x] Keep the base wheel import independent of optional comparison and bridge
+      modules while retaining standard explicit submodule imports.
+- [x] Add a fresh-interpreter regression that blocks `matplotlib` and proves
+      the base package imports without loading any optional submodule.
+- [x] Gate pull requests touching the Python distribution with installed base
+      wheels on Linux, Windows, and macOS at the stable Python 3.8 ABI floor.
 - [ ] Pass hosted CI on the exact release-automation head.
 - [ ] Register the PyPI pending trusted publisher.
 

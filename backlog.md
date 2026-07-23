@@ -1,5 +1,35 @@
 # Backlog / Strategy
 
+## KW-CI-068 — Close Moirai admission workaround [patch] — done
+
+- Owner: Codex `/root`; last-update: 2026-07-22; scope: the canonical Atlas
+  checkout revision, Cargo lock, six therapy-test scheduling overrides, and
+  focused value-semantic verification. Solver workloads and assertions are
+  non-goals.
+- Outcome: consume merged Moirai PR #83 and delete serialization that masked
+  bounded-admission failures under ordinary parallel Nextest execution.
+- Acceptance: Cargo records `moirai-core` as a direct `moirai-parallel`
+  dependency, the six tests have no dedicated serialization override, their
+  unchanged values pass under the default profile, and hosted Linux locked
+  resolution succeeds against Atlas `c982fe0` without the inherited Reqwest
+  0.11 TLS advisory chain, and the replacement TLS graph passes the repository
+  license policy.
+- Risk/change class: `[patch]`; evidence is lock provenance, configuration
+  residue scans, focused Nextest values, warning-denied static checks, and
+  exact-head hosted CI.
+- Evidence: implementation head `eb80ad2` passed Architecture Validation run
+  `29964349679`, CI/CD run `29964349756`, legacy-migration run `29964349739`,
+  and benchmark-regression run `29964349692`. The matrix includes locked
+  stable/beta/nightly builds and tests, full native tests and doctests, every
+  feature combination, CUDA, Miri, security, coverage, solver/PINN validation,
+  and both bounded benchmark smokes.
+- Integration: Python-portability head `b04cf397` passed Architecture
+  Validation `29963556227`, CI/CD `29963556297`, legacy-migration
+  `29963556225`, and benchmark-regression `29963556257`, then merged as default
+  `1dc60bd`. This closure rebases on that default, preserves its portability and
+  dependency graph, and replaces only provisional Atlas pin `a534313` with
+  canonical merged graph `c982fe0`.
+
 ## KW-PERF-067 — Stream elastic-FWI adjoint gradient [patch] — done
 
 - Owner: Codex `/root`; last-update: 2026-07-22; scope:
@@ -81,8 +111,9 @@
 ## KW-PYTHON-064 — Python release wheels [patch] — in-progress
 
 - Owner: `/root`; scope: `kwavers-python` distribution metadata and lock, the
-  release workflow, protected GitHub environment, distribution documentation,
-  and PyPI trusted publisher. Python binding behavior is a non-goal.
+  release workflow, protected GitHub environment, base-package import contract,
+  distribution documentation, and PyPI trusted publisher. Numerical Python
+  binding behavior is a non-goal.
 - Acceptance: a GitHub Release tagged `kwavers-python-v<version>` builds one
   locked Python-3.8-compatible stable-ABI wheel for each of Linux, Windows, and
   macOS, installs and imports each wheel as `pykwavers`, validates Cargo-owned
@@ -92,8 +123,20 @@
   are implemented, and GitHub environment `pypi` accepts only
   `kwavers-python-v*` tags. A locked `cp38-abi3` wheel builds as
   `kwavers-python` 0.1.0, installs into an isolated target, and imports as
-  `pykwavers`. The shared local GNU linker configuration emits its existing
-  unused static-link-argument diagnostic; hosted CI and pending-publisher
+  `pykwavers`. Release run `29967429949` then exposed that the package
+  initializer eagerly imported `comparison.py` and made undeclared
+  `matplotlib` mandatory for every base-wheel import. PR #314 removes those
+  eager imports and the optional names from the base `__all__`; standard
+  explicit submodule imports retain their normal dependency errors. A
+  fresh-interpreter regression blocks `matplotlib` and proves the base package
+  does not load any optional submodule. The same oracle now gates installed
+  stable-ABI base wheels on Linux, Windows, and macOS before merge. PR #314
+  head `c191173d` merged as `21fc7119` before its exact-head matrix completed:
+  legacy-migration run `29968431907` passed, while CI/CD `29968431956` and
+  Architecture Validation `29968431955` remained active. PR #313 rebases the
+  provider closure onto that merge; its final combined matrix is authoritative.
+  The shared local GNU linker configuration emits its existing unused-static-
+  link-argument diagnostic; final hosted wheel evidence and pending-publisher
   registration remain open.
 
 ## KW-BUILD-065 — Bound debug build artifacts [patch] — done

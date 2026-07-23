@@ -63,15 +63,20 @@ pip install target/wheels/kwavers_python-*.whl
 ### Optional Dependencies
 
 ```bash
-# For k-Wave comparison (requires MATLAB + k-Wave toolbox)
-pip install matlabengine
+# Plotting and comparison reports
+pip install "kwavers-python[comparison]"
 
-# For visualization and analysis
-pip install matplotlib pandas scipy
+# MATLAB k-Wave bridge
+pip install "kwavers-python[kwave]"
 
 # For development
-pip install pytest pytest-benchmark black ruff mypy
+pip install "kwavers-python[dev]"
 ```
+
+`import pykwavers` loads only the base API. Optional integration modules are
+loaded through explicit submodule imports, such as `import
+pykwavers.comparison` or `from pykwavers import kwave_bridge`; importing one
+without its declared extra propagates the missing dependency error.
 
 ## Releases
 

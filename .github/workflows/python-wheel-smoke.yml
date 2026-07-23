@@ -1,0 +1,74 @@
+name: Python wheel smoke
+
+on:
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - Cargo.lock
+      - Cargo.toml
+      - crates/kwavers-python/**
+      - .github/actions/checkout-atlas-path-dependencies/**
+      - .github/workflows/python-wheel-smoke.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: python-wheel-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  base-wheel:
+    name: Base wheel (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - name: Checkout candidate source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: source
+          persist-credentials: false
+
+      - name: Checkout exact Atlas provider graph
+        uses: ./source/.github/actions/checkout-atlas-path-dependencies
+        with:
+          manifest: source/Cargo.toml
+          destination: .
+
+      - name: Set up Python 3.8
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.8"
+
+      - name: Build stable-ABI wheel
+        uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
+        with:
+          maturin-version: v1.14.1
+          target: ${{ matrix.os == 'macos-latest' && 'universal2-apple-darwin' || 'x86_64' }}
+          manylinux: ${{ matrix.os == 'ubuntu-latest' && '2_17' || 'off' }}
+          sccache: true
+          args: >-
+            --release
+            --locked
+            --compatibility pypi
+            --manifest-path source/crates/kwavers-python/Cargo.toml
+            --out dist
+            -i ${{ matrix.os == 'ubuntu-latest' && 'python3.8' || 'python' }}
+
+      - name: Verify base and optional import contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m venv wheel-smoke
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            smoke_python="wheel-smoke/Scripts/python.exe"
+          else
+            smoke_python="wheel-smoke/bin/python"
+          fi
+          "$smoke_python" -m pip install --disable-pip-version-check dist/*.whl
+          "$smoke_python" source/crates/kwavers-python/tests/optional_submodule_contract.py base
+          "$smoke_python" source/crates/kwavers-python/tests/optional_submodule_contract.py access
