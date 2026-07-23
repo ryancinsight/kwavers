@@ -8,6 +8,7 @@ license = "MIT"
 repository = "https://github.com/ryancinsight/kwavers"
 keywords = ["ultrasound", "simulation", "python", "pyo3", "k-wave"]
 categories = ["science", "simulation", "medical"]
+publish = false
 
 [lib]
 name = "pykwavers"
