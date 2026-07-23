@@ -4,6 +4,11 @@
 
 ### Changed
 
+- **Breaking**: `AcousticHeatingSource` now stores reciprocal length and
+  acoustic intensity as Aequitas quantities and returns typed volumetric power
+  density. `AcousticStreaming` and `ThermalAcousticCoupling` carry typed
+  intensity, velocity, density, and time-integrated heat boundaries.
+
 - Acoustic heating and streaming now compose absorption, intensity, density,
   sound speed, pressure, and impedance through Aequitas SI quantities while
   preserving the existing scalar-facing APIs and closed-form value tests.

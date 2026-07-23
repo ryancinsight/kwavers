@@ -7,6 +7,19 @@
 - [x] Pin the synchronized Aequitas provider revision and preserve the scalar
       public APIs with closed-form value-semantic coupling tests.
 
+## Owner: Codex — Typed acoustic coupling state [major] — verification blocked
+
+- [x] Move acoustic heating and streaming state from raw scalar fields to
+      Aequitas reciprocal-length, intensity, velocity, and density quantities.
+- [x] Return typed volumetric power density, streaming velocity, and streaming
+      power; carry typed time integration through `ThermalAcousticCoupling`.
+- [x] Migrate all in-repository constructors and retain closed-form value tests;
+      no scalar compatibility facade remains.
+- [ ] Run the affected package check, coupling Nextest, and warning-denied
+      Clippy after the peer-owned Leto parser work restores a valid dependency
+      graph. Re-open trigger: `leto-ops/src/application/sparse/lu_numeric.rs`
+      parses cleanly in the canonical checkout.
+
 ## Owner: Codex `/root` — Publish mdBook through GitHub Pages [patch] — done
 
 - [x] Add the Pages build/deploy workflow for `docs/book`.

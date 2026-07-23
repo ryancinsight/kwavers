@@ -1,4 +1,7 @@
 use super::*;
+use aequitas::systems::si::quantities::{
+    Intensity, Length, MassDensity, ReciprocalLength, Velocity,
+};
 use eunomia::assert_relative_eq;
 use kwavers_core::constants::fundamental::{
     DENSITY_TISSUE, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM,
@@ -9,16 +12,18 @@ use leto::Array3;
 
 #[test]
 fn test_acoustic_heating_source() {
-    let source = AcousticHeatingSource::new(0.5, 1e4); // 500 Np/m, 10 kW/m²
-    let power = source.power();
+    let source =
+        AcousticHeatingSource::new(ReciprocalLength::from_base(0.5), Intensity::from_base(1e4)); // 500 Np/m, 10 kW/m²
+    let power = source.power().into_base();
     assert_eq!(power, 10_000.0);
 }
 
 #[test]
 fn test_heating_depth_attenuation() {
-    let source = AcousticHeatingSource::new(0.5, 1e4);
-    let power_0 = source.power_at_depth(0.0);
-    let power_1cm = source.power_at_depth(0.01);
+    let source =
+        AcousticHeatingSource::new(ReciprocalLength::from_base(0.5), Intensity::from_base(1e4));
+    let power_0 = source.power_at_depth(Length::from_base(0.0)).into_base();
+    let power_1cm = source.power_at_depth(Length::from_base(0.01)).into_base();
 
     assert_relative_eq!(power_0, 10_000.0, epsilon = 8.0 * f64::EPSILON);
     let expected_1cm = 10_000.0_f64 * (-0.01_f64).exp();
@@ -56,8 +61,12 @@ fn test_temperature_coefficients_soft_tissue() {
 
 #[test]
 fn test_acoustic_streaming_velocity() {
-    let streaming = AcousticStreaming::new(1e3, SOUND_SPEED_WATER_SIM, DENSITY_TISSUE); // 1 kW/m²
-    let v = streaming.velocity();
+    let streaming = AcousticStreaming::new(
+        Intensity::from_base(1e3),
+        Velocity::from_base(SOUND_SPEED_WATER_SIM),
+        MassDensity::from_base(DENSITY_TISSUE),
+    ); // 1 kW/m²
+    let v = streaming.velocity().into_base();
     let expected_velocity = 1e3_f64 / (DENSITY_TISSUE * SOUND_SPEED_WATER_SIM.powi(2));
     assert_relative_eq!(
         v,
@@ -67,7 +76,7 @@ fn test_acoustic_streaming_velocity() {
 
     let expected_power = 1e3_f64.powi(2) / (DENSITY_TISSUE * SOUND_SPEED_WATER_SIM.powi(3));
     assert_relative_eq!(
-        streaming.power(),
+        streaming.power().into_base(),
         expected_power,
         epsilon = 32.0 * f64::EPSILON * expected_power.abs()
     );
@@ -104,8 +113,11 @@ fn test_nonlinear_regime_detection() {
 
 #[test]
 fn test_thermal_acoustic_coupling() {
-    let mut coupling =
-        ThermalAcousticCoupling::new(0.5, 1e4, TemperatureCoefficients::soft_tissue());
+    let mut coupling = ThermalAcousticCoupling::new(
+        ReciprocalLength::from_base(0.5),
+        Intensity::from_base(1e4),
+        TemperatureCoefficients::soft_tissue(),
+    );
     coupling.initialize((5, 5, 5));
 
     let temperature = Array3::from_elem((5, 5, 5), BODY_TEMPERATURE_C);
@@ -121,7 +133,11 @@ fn test_thermal_acoustic_coupling() {
 
 #[test]
 fn test_coupling_temperature_effects_on_properties() {
-    let coupling = ThermalAcousticCoupling::new(0.5, 1e4, TemperatureCoefficients::soft_tissue());
+    let coupling = ThermalAcousticCoupling::new(
+        ReciprocalLength::from_base(0.5),
+        Intensity::from_base(1e4),
+        TemperatureCoefficients::soft_tissue(),
+    );
 
     let c0 = SOUND_SPEED_TISSUE;
     let c_hot = coupling.sound_speed_at_temperature(c0, 45.0, BODY_TEMPERATURE_C);
@@ -147,12 +163,14 @@ fn test_temperature_coefficient_variants() {
 
 #[test]
 fn test_acoustic_heating_zero_absorption() {
-    let source = AcousticHeatingSource::new(0.0, 1e5);
-    assert_eq!(source.power(), 0.0);
+    let source =
+        AcousticHeatingSource::new(ReciprocalLength::from_base(0.0), Intensity::from_base(1e5));
+    assert_eq!(source.power().into_base(), 0.0);
 }
 
 #[test]
 fn test_acoustic_heating_zero_intensity() {
-    let source = AcousticHeatingSource::new(0.5, 0.0);
-    assert_eq!(source.power(), 0.0);
+    let source =
+        AcousticHeatingSource::new(ReciprocalLength::from_base(0.5), Intensity::from_base(0.0));
+    assert_eq!(source.power().into_base(), 0.0);
 }
