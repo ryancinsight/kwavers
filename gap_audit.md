@@ -29,6 +29,22 @@
 
 # Gap Audit
 
+- Review 2026-07-22: Python release run `29967429949` built the stable-ABI
+  wheels but the Linux and Windows base-wheel smoke imports failed because
+  `pykwavers.__init__` eagerly imported `comparison.py`, whose `matplotlib`
+  dependency belongs only to the `comparison` extra. The initializer now uses
+  standard explicit submodule imports for all optional integrations and keeps
+  those names out of the base `__all__`. A fresh-interpreter regression blocks
+  `matplotlib` and proves that the base package imports without loading any
+  optional submodule, so a future eager import cannot pass merely because
+  development extras are installed. The same oracle now runs against installed
+  Linux, Windows, and macOS stable-ABI wheels on affected pull requests. The
+  already-published release remains untouched; corrected wheel publication
+  requires separate release authority. Minimal-import PR #314 head `c191173d`
+  merged as `21fc7119` while CI/CD run `29968431956` and Architecture run
+  `29968431955` were still active; its legacy-migration run `29968431907`
+  passed. The rebased PR #313 combined-head matrix supersedes those incomplete
+  checks for final integration evidence.
 - Review 2026-07-22: the six-test `kwavers-therapy` serialization override was
   a downstream containment for Moirai bounded-admission failures, not a solver
   resource requirement. Moirai PR #83 now executes rejected indexed chunks on

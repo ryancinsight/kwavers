@@ -66,6 +66,12 @@
       linker retains its existing unused-static-link-argument diagnostic.
 - [x] Create the protected `pypi` environment restricted to
       `kwavers-python-v*` tags.
+- [x] Keep the base wheel import independent of optional comparison and bridge
+      modules while retaining standard explicit submodule imports.
+- [x] Add a fresh-interpreter regression that blocks `matplotlib` and proves
+      the base package imports without loading any optional submodule.
+- [x] Gate pull requests touching the Python distribution with installed base
+      wheels on Linux, Windows, and macOS at the stable Python 3.8 ABI floor.
 - [ ] Pass hosted CI on the exact release-automation head.
 - [ ] Register the PyPI pending trusted publisher.
 
