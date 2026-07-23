@@ -88,8 +88,11 @@ The `Crates.io Release` workflow validates a named workspace package on manual
 dispatch. After that package's required first release is published locally and
 its crates.io Trusted Publisher is registered, a GitHub Release tagged
 `crate-<package>-v<version>` packages, verifies, and publishes the matching
-Cargo version with a short-lived OIDC token. The PyO3 and `xtask` packages are
-explicitly non-publishable; all Rust library releases use their package names.
+Cargo version with a short-lived OIDC token. Validation runs in a separate
+read-only job. The publish job is bound to the GitHub `crates-io` environment;
+register each package's Trusted Publisher with that environment. The PyO3 and
+`xtask` packages are explicitly non-publishable; all Rust library releases use
+their package names.
 
 Detailed history lives in [`CHANGELOG.md`](CHANGELOG.md); current work and gaps
 are tracked in [`backlog.md`](backlog.md), [`CHECKLIST.md`](CHECKLIST.md), and
