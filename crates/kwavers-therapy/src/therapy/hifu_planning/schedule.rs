@@ -1,16 +1,18 @@
 use super::types::{AblationTarget, FocalSpot, FocalSpotDoseEstimate};
 use crate::therapy::domain_types::ClinicalTherapyParameters;
+use aequitas::systems::si::quantities::{ThermodynamicTemperature, Time};
 use kwavers_core::constants::medical::THERMAL_DOSE_THRESHOLD;
 use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_physics::thermal::CumulativeEquivalentMinutes;
 
 /// One planned HIFU focal dwell location.
 #[derive(Debug, Clone)]
 pub struct SonicationSubspot {
     pub index: usize,
     pub location_mm: (f64, f64, f64),
-    pub dwell_time_s: f64,
-    pub expected_cem43: f64,
-    pub peak_temperature_c: f64,
+    pub dwell_time: Time<f64>,
+    pub expected_cem43: CumulativeEquivalentMinutes,
+    pub peak_temperature: ThermodynamicTemperature<f64>,
 }
 
 /// Deterministic subspot schedule for volumetric HIFU ablation.
@@ -20,10 +22,10 @@ pub struct SonicationSchedule {
     pub pitch_mm: (f64, f64, f64),
     pub expanded_target_dimensions_mm: (f64, f64, f64),
     pub coverage_guaranteed: bool,
-    pub per_spot_dwell_time_s: f64,
-    pub total_dwell_time_s: f64,
-    pub minimum_subspot_cem43: f64,
-    pub minimum_peak_temperature_c: f64,
+    pub per_spot_dwell: Time<f64>,
+    pub total_dwell: Time<f64>,
+    pub minimum_subspot_cem43: CumulativeEquivalentMinutes,
+    pub minimum_peak_temperature: ThermodynamicTemperature<f64>,
 }
 
 impl SonicationSchedule {
@@ -70,12 +72,12 @@ impl SonicationSchedule {
         let y = axis_centers(target.location_mm.1, expanded.1, pitch.1);
         let z = axis_centers(target.location_mm.2, expanded.2, pitch.2);
         let n = x.len() * y.len() * z.len();
-        let per_spot_dwell = therapy_params.treatment_duration / n as f64;
+        let per_spot_dwell = Time::from_base(therapy_params.treatment_duration / n as f64);
         let dose = FocalSpotDoseEstimate::estimate_from_focal_spot(
             focal_spot,
             frequency_hz,
             therapy_params.duty_cycle,
-            per_spot_dwell,
+            per_spot_dwell.into_base(),
         )?;
 
         let mut subspots = Vec::with_capacity(n);
@@ -85,9 +87,9 @@ impl SonicationSchedule {
                     subspots.push(SonicationSubspot {
                         index: subspots.len(),
                         location_mm: (x_mm, y_mm, z_mm),
-                        dwell_time_s: per_spot_dwell,
+                        dwell_time: per_spot_dwell,
                         expected_cem43: dose.cem43,
-                        peak_temperature_c: dose.peak_temperature_c,
+                        peak_temperature: dose.peak_temperature,
                     });
                 }
             }
@@ -101,10 +103,10 @@ impl SonicationSchedule {
             pitch_mm: pitch,
             expanded_target_dimensions_mm: expanded,
             coverage_guaranteed,
-            per_spot_dwell_time_s: per_spot_dwell,
-            total_dwell_time_s: therapy_params.treatment_duration,
+            per_spot_dwell,
+            total_dwell: Time::from_base(therapy_params.treatment_duration),
             minimum_subspot_cem43: dose.cem43,
-            minimum_peak_temperature_c: dose.peak_temperature_c,
+            minimum_peak_temperature: dose.peak_temperature,
         })
     }
 
@@ -115,7 +117,9 @@ impl SonicationSchedule {
 
     #[must_use]
     pub fn all_subspots_reach_ablation(&self) -> bool {
-        self.minimum_subspot_cem43 >= THERMAL_DOSE_THRESHOLD
+        let threshold = CumulativeEquivalentMinutes::try_from_minutes(THERMAL_DOSE_THRESHOLD)
+            .expect("invariant: canonical CEM43 threshold is finite and non-negative");
+        self.minimum_subspot_cem43 >= threshold
     }
 }
 

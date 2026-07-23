@@ -62,7 +62,7 @@ impl HIFUPlanner {
         if !feasibility.thermal_dose_achievable {
             feasibility.issues.push(format!(
                 "Minimum subspot thermal dose {:.0} CEM43 below ablation threshold 240",
-                sonication_schedule.minimum_subspot_cem43
+                sonication_schedule.minimum_subspot_cem43.as_minutes()
             ));
         }
         feasibility.access_path_clear = true;

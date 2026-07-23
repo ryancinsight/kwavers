@@ -1,5 +1,18 @@
 # Backlog / Strategy
 
+## KWAVERS-AEQ-MET-01 — Type CEM43 and HIFU planning metrics [major] — done
+
+- Owner: Codex; scope: `kwavers-physics` thermal CEM43/HIFU calculators,
+  `kwavers-therapy` HIFU planning result and schedule carriers, and the child
+  metric PM artifacts.
+- Outcome: validated CEM43 equivalent time is backed by Aequitas `Time`; typed
+  thermal and HIFU planning results preserve the Sapareto–Dewey and focal-dose
+  equations without conflating CEM43 with absorbed dose.
+- Acceptance: default CEM43 tests 15/15, clinical-imaging HIFU tests 2/2,
+  HIFU planning tests 16/16, package checks, warning-denied Clippy, doctests,
+  Rustdoc, and format pass. Existing provider and unrelated documentation
+  warnings remain explicit residuals.
+
 ## KWAVERS-AEQ-MET-02 — Type pulsed-laser physical metrics [major] — done
 
 - Owner: Codex; scope: `crates/kwavers-physics/src/electromagnetic/photoacoustic.rs`

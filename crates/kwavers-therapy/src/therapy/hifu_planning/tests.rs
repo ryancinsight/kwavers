@@ -2,9 +2,9 @@ use super::*;
 use crate::safety::mechanical_index::MechanicalIndexTissueType;
 use crate::therapy::domain_types::ClinicalTherapyParameters;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
-use kwavers_core::constants::medical::THERMAL_DOSE_THRESHOLD;
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_C;
+use kwavers_core::constants::thermodynamic::KELVIN_OFFSET_C;
 use kwavers_core::error::KwaversError;
 use std::f64::consts::PI;
 
@@ -56,8 +56,8 @@ fn test_thermal_dose_calculation() {
         10.0,
     )
     .expect("valid focal dose");
-    assert!(thermal_dose.peak_temperature_c > BODY_TEMPERATURE_C);
-    assert!(thermal_dose.time_to_dose_s.is_finite() || thermal_dose.time_to_dose_s.is_infinite());
+    assert!(thermal_dose.peak_temperature.into_base() - KELVIN_OFFSET_C > BODY_TEMPERATURE_C);
+    assert!(thermal_dose.time_to_dose.is_some());
 }
 
 #[test]
@@ -203,9 +203,12 @@ fn focal_dose_uses_cem43_equivalent_minutes() {
         .expect("zero pressure remains a valid no-heating dose");
 
     let expected = 0.25_f64.powf(43.0 - BODY_TEMPERATURE_C);
-    assert!((dose.cem43 - expected).abs() < 1.0e-15);
-    assert_eq!(dose.peak_temperature_c, BODY_TEMPERATURE_C);
-    assert!(dose.time_to_dose_s.is_infinite());
+    assert!((dose.cem43.as_minutes() - expected).abs() < 1.0e-15);
+    assert_eq!(
+        dose.peak_temperature.into_base() - KELVIN_OFFSET_C,
+        BODY_TEMPERATURE_C
+    );
+    assert!(dose.time_to_dose.is_none());
 }
 
 #[test]
@@ -265,7 +268,7 @@ fn test_sonication_schedule_pitch_proves_target_coverage() {
     assert_eq!(schedule.expanded_target_dimensions_mm, (12.0, 12.0, 12.0));
     assert_eq!(schedule.subspot_count(), 75);
     assert!(schedule.coverage_guaranteed);
-    assert!((schedule.per_spot_dwell_time_s - 1.0).abs() < 1e-12);
+    assert!((schedule.per_spot_dwell.into_base() - 1.0).abs() < 1e-12);
     assert_eq!(schedule.subspots[0].index, 0);
     assert_eq!(schedule.subspots[0].location_mm, (4.0, 14.0, 24.0));
     assert_eq!(schedule.subspots[74].location_mm, (16.0, 26.0, 36.0));
@@ -304,7 +307,7 @@ fn test_hifu_plan_uses_subspot_dose_for_feasibility() {
     assert!(plan.thermal_dose.cem43 > schedule.minimum_subspot_cem43);
     assert_eq!(
         plan.feasibility.thermal_dose_achievable,
-        schedule.minimum_subspot_cem43 >= THERMAL_DOSE_THRESHOLD
+        schedule.all_subspots_reach_ablation()
     );
     if !plan.feasibility.thermal_dose_achievable {
         assert!(plan

@@ -46,6 +46,7 @@
 //! - Sapareto & Dewey 1984; Damianou & Hynynen 1994 — CEM43 / 240 ablation.
 //! - Pennes 1948 — bioheat equation.
 
+use aequitas::systems::si::quantities::Time;
 use kwavers::theranostic::{
     interleave_schedule, lesion, sparse_transmit_subsets, PulseKind, TargetSelection,
 };
@@ -508,7 +509,7 @@ fn main() -> KwaversResult<()> {
                         for _ in 0..THERMAL_SUBSTEPS {
                             bioheat_step(&mut temperature, &q_focal, dts);
                         }
-                        cem43.update(&temperature, THERAPY_PRI_S)?;
+                        cem43.update(&temperature, Time::from_base(THERAPY_PRI_S))?;
                     }
                     lesion::TherapyMode::Cavitation => {
                         // Cumulative (irreversible) fractionation: β grows toward
@@ -582,7 +583,7 @@ fn main() -> KwaversResult<()> {
                     .iter()
                     .copied()
                     .fold(f64::NEG_INFINITY, f64::max);
-                let cem_max = cem43.get_max_dose();
+                let cem_max = cem43.get_max_dose()?.as_minutes();
                 let lesion_vox = match mode {
                     lesion::TherapyMode::Thermal => {
                         lesion::lesion_mask(cem43.get_dose(), lesion::ABLATION_CEM43_THRESHOLD_MIN)

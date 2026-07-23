@@ -4,6 +4,12 @@
 
 ### Changed
 
+- **Breaking**: CEM43 thermal dose and HIFU planning results now use validated
+  `CumulativeEquivalentMinutes` backed by Aequitas `Time`, typed thermal
+  temperatures and dwell times, and `Option<Time>` for unreachable target
+  times. Dense dose fields remain storage arrays; CEM43 is not represented as
+  `AbsorbedDose`. See [ADR 048](docs/ADR/048-cem43-physical-quantities.md).
+
 - **Breaking**: `kwavers-physics::PulsedLaser` and `BeamProfile` now use
   Aequitas `Power`, `Time`, `Frequency`, and `Length`; peak fluence returns
   `EnergyPerArea` and average power returns `Power`. Gaussian, flat-top, and

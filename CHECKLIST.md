@@ -1,5 +1,19 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-01 typed CEM43/HIFU metrics [major] — done 2026-07-23
+
+- [x] Add validated `CumulativeEquivalentMinutes` backed by Aequitas `Time`;
+      retain dense arrays only as the explicit field-storage boundary.
+- [x] Type thermal update intervals, thresholds, maxima, point queries, HIFU
+      peak temperature, dwell, and time-to-dose results; represent unreachable
+      target time as `Option<Time>`.
+- [x] Preserve Sapareto–Dewey and HIFU planning value oracles. Default CEM43
+      tests pass 15/15, clinical-imaging HIFU tests pass 2/2, and HIFU planning
+      tests pass 16/16.
+- [x] Pass package checks, warning-denied Clippy, doctests, Rustdoc, and format;
+      existing provider warnings and one unrelated Rustdoc link warning remain
+      outside the touched source.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-02 typed pulsed-laser metrics [major] — done 2026-07-23
 
 - [x] Type pulsed-laser peak power, pulse duration, repetition rate, wavelength,
