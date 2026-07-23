@@ -1,5 +1,12 @@
 # Project Checklist
 
+## Owner: Codex `/root` — Aequitas acoustic dimensional boundaries [patch] — done
+
+- [x] Express acoustic heating through reciprocal-length × intensity and
+      streaming through density × velocity, pressure, and impedance quantities.
+- [x] Pin the synchronized Aequitas provider revision and preserve the scalar
+      public APIs with closed-form value-semantic coupling tests.
+
 ## Owner: Codex `/root` — Publish mdBook through GitHub Pages [patch] — done
 
 - [x] Add the Pages build/deploy workflow for `docs/book`.

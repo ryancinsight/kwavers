@@ -1,4 +1,5 @@
 use super::*;
+use eunomia::assert_relative_eq;
 use kwavers_core::constants::fundamental::{
     DENSITY_TISSUE, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM,
 };
@@ -10,7 +11,7 @@ use leto::Array3;
 fn test_acoustic_heating_source() {
     let source = AcousticHeatingSource::new(0.5, 1e4); // 500 Np/m, 10 kW/m²
     let power = source.power();
-    assert!(power > 0.0);
+    assert_eq!(power, 10_000.0);
 }
 
 #[test]
@@ -19,7 +20,15 @@ fn test_heating_depth_attenuation() {
     let power_0 = source.power_at_depth(0.0);
     let power_1cm = source.power_at_depth(0.01);
 
-    // Power should decrease with depth
+    assert_relative_eq!(power_0, 10_000.0, epsilon = 8.0 * f64::EPSILON);
+    let expected_1cm = 10_000.0_f64 * (-0.01_f64).exp();
+    // The typed expression performs two products plus exp; 16 ulps bounds the
+    // first-order f64 rounding error without hiding a formula error.
+    assert_relative_eq!(
+        power_1cm,
+        expected_1cm,
+        epsilon = 16.0 * f64::EPSILON * expected_1cm.abs()
+    );
     assert!(power_1cm < power_0);
 }
 
@@ -49,7 +58,19 @@ fn test_temperature_coefficients_soft_tissue() {
 fn test_acoustic_streaming_velocity() {
     let streaming = AcousticStreaming::new(1e3, SOUND_SPEED_WATER_SIM, DENSITY_TISSUE); // 1 kW/m²
     let v = streaming.velocity();
-    assert!(v > 0.0);
+    let expected_velocity = 1e3_f64 / (DENSITY_TISSUE * SOUND_SPEED_WATER_SIM.powi(2));
+    assert_relative_eq!(
+        v,
+        expected_velocity,
+        epsilon = 32.0 * f64::EPSILON * expected_velocity.abs()
+    );
+
+    let expected_power = 1e3_f64.powi(2) / (DENSITY_TISSUE * SOUND_SPEED_WATER_SIM.powi(3));
+    assert_relative_eq!(
+        streaming.power(),
+        expected_power,
+        epsilon = 32.0 * f64::EPSILON * expected_power.abs()
+    );
 }
 
 #[test]

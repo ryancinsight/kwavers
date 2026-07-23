@@ -3,7 +3,7 @@ members = ["crates/kwavers", "xtask", "crates/kwavers-python", "crates/kwavers-c
 resolver = "2"
 
 [workspace.dependencies]
-aequitas = { version = "0.1.0", git = "https://github.com/ryancinsight/aequitas", default-features = false, features = ["std"] }
+aequitas = { version = "0.1.0", git = "https://github.com/ryancinsight/aequitas", rev = "3ae0b6bb07c9d0792d33129dc5e6acd4fb54e508", default-features = false, features = ["std"] }
 asclepius = { version = "0.1.0", git = "https://github.com/ryancinsight/asclepius", default-features = false, features = ["std"] }
 hyperion = { version = "0.1.0", git = "https://github.com/ryancinsight/hyperion" }
 proteus = { version = "0.1.0", git = "https://github.com/ryancinsight/proteus" }
@@ -105,6 +105,11 @@ eunomia = { path = "../eunomia/crates/eunomia" }
 
 [patch."https://github.com/ryancinsight/eunomia.git"]
 eunomia = { path = "../eunomia/crates/eunomia" }
+
+# Keep local stack integration on the checked-out Aequitas provider; the git
+# dependency above remains the release source of truth.
+[patch."https://github.com/ryancinsight/aequitas"]
+aequitas = { path = "../aequitas" }
 
 [patch."https://github.com/ryancinsight/hephaestus.git"]
 hephaestus-core = { path = "../hephaestus/crates/hephaestus-core" }

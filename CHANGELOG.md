@@ -4,6 +4,10 @@
 
 ### Changed
 
+- Acoustic heating and streaming now compose absorption, intensity, density,
+  sound speed, pressure, and impedance through Aequitas SI quantities while
+  preserving the existing scalar-facing APIs and closed-form value tests.
+
 - [patch] Consume Atlas provider graph `c982fe0` and regenerate the locked
   Moirai and RITK dependency sets after PRs #83 and #49. Therapy tests return
   to ordinary Nextest scheduling because saturated indexed work now executes
