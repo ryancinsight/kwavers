@@ -137,5 +137,4 @@ This part documents the migration from ndarray/nalgebra to the Atlas stack crate
 - [A. Migration Quick Reference](migration_quick_reference.md)
 - [B. Atlas Crate Dependencies](atlas_dependencies.md)
 - [C. Glossary](appendix_glossary.md)
-- [D. Parity Artefacts Archive (CI Gate Evidence)](../../../parity_artefacts/INDEX.md)
 

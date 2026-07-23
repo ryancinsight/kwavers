@@ -230,6 +230,7 @@ fn main() {
 
 ### 📖 Documentation
 
+- **[Published Kwavers book](https://ryancinsight.github.io/kwavers/)** - Hosted mdBook site
 - **[API Reference](https://docs.rs/kwavers)** - Generated Rust documentation
 - **[Examples](examples/)** - Basic usage examples
 - **[The Kwavers book](docs/book/)** - Chapters, figures, validation narratives
