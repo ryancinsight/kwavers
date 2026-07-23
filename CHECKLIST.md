@@ -5,7 +5,8 @@
 - [x] Add the Pages build/deploy workflow for `docs/book`.
 - [x] Declare the `/kwavers/` project-site base path and source edit URL.
 - [x] Link the published book from the repository README. Local mdBook build
-      and workflow syntax checks pass.
+      and workflow syntax checks pass; remove the stale external parity-archive
+      Summary entry that failed clean hosted builds.
 
 ## Owner: Codex `/root` — Close Moirai admission workaround [patch]
 

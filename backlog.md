@@ -10,7 +10,8 @@
 - Acceptance: the workflow builds `docs/book`, uploads `target/book`, deploys
   only from `main`, and `book.toml` declares the `/kwavers/` project-site base
   path. Local evidence: `mdbook v0.5.4` built the book and produced
-  `target/book/index.html`; workflow syntax parsed successfully.
+  `target/book/index.html`; workflow syntax parsed successfully; the stale
+  external parity-archive entry was removed so clean checkouts build.
 
 ## KW-CI-068 — Close Moirai admission workaround [patch] — done
 
