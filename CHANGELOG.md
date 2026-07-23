@@ -4,6 +4,11 @@
 
 ### Changed
 
+- **Breaking**: `kwavers-physics::PulsedLaser` and `BeamProfile` now use
+  Aequitas `Power`, `Time`, `Frequency`, and `Length`; peak fluence returns
+  `EnergyPerArea` and average power returns `Power`. Gaussian, flat-top, and
+  Bessel beam equations retain their value semantics. See [ADR 047](docs/ADR/047-pulsed-laser-physical-quantities.md).
+
 - **Breaking**: `AcousticHeatingSource` now stores reciprocal length and
   acoustic intensity as Aequitas quantities and returns typed volumetric power
   density. `AcousticStreaming` and `ThermalAcousticCoupling` carry typed
