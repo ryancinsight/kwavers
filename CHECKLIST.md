@@ -1,5 +1,11 @@
 # Project Checklist
 
+## Owner: Codex `/root` — Publish mdBook through GitHub Pages [patch] — in-progress
+
+- [ ] Add the Pages build/deploy workflow for `docs/book`.
+- [ ] Declare the `/kwavers/` project-site base path and source edit URL.
+- [ ] Link the published book from the repository README.
+
 ## Owner: Codex `/root` — Close Moirai admission workaround [patch]
 
 - [x] Point hosted provider checkout at Atlas graph `c982fe0`.
