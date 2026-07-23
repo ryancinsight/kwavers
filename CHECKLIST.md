@@ -1,5 +1,19 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-03 frequency and geometry metrics [major] — done 2026-07-23
+
+- [x] Add direct Aequitas ownership to `kwavers-transducer` and type element
+      dimensions, pitch, kerf, frequency-response metrics, and sampled
+      frequencies.
+- [x] Return typed area, volume, resonance, pulse-length, axial-resolution, and
+      focal-resolution results while retaining dimensionless model outputs as
+      scalars.
+- [x] Preserve KLM, geometry, and focal-resolution value semantics with typed
+      regressions; the transducer unit suite passes 221/221.
+- [x] Pass package check, warning-denied package Clippy, package formatting, and
+      the full transducer Nextest. Existing provider-workspace warnings remain
+      outside the touched package; Rayleigh/materials are the next residual.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-01 typed CEM43/HIFU metrics [major] — done 2026-07-23
 
 - [x] Add validated `CumulativeEquivalentMinutes` backed by Aequitas `Time`;

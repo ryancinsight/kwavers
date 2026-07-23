@@ -3834,6 +3834,7 @@ dependencies = [
 name = "kwavers-transducer"
 version = "4.1.0"
 dependencies = [
+ "aequitas",
  "eunomia",
  "kwavers-core",
  "kwavers-field",

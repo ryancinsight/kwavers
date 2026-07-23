@@ -4,6 +4,11 @@
 
 ### Changed
 
+- **Breaking**: transducer element geometry and KLM frequency-response
+  boundaries now use Aequitas `Length`, `Velocity`, `Frequency`, `Area`, and
+  `Volume` quantities, including sampled frequency points and focal-resolution
+  results. Dimensionless model metrics remain scalars. See [ADR 049](docs/ADR/049-transducer-frequency-geometry-quantities.md).
+
 - **Breaking**: CEM43 thermal dose and HIFU planning results now use validated
   `CumulativeEquivalentMinutes` backed by Aequitas `Time`, typed thermal
   temperatures and dwell times, and `Option<Time>` for unreachable target
