@@ -6,7 +6,7 @@ use super::{
     BackingLayer, ElementGeometry, FrequencyResponse, MatchingLayer, PiezoMaterial,
     TransducerDirectivityPattern, TransducerSensitivity,
 };
-use aequitas::systems::si::quantities::{Frequency, Length, Velocity};
+use aequitas::systems::si::quantities::{AcousticImpedance, Frequency, Length, Velocity};
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
@@ -61,7 +61,7 @@ impl TransducerDesign {
 
         // Calculate thickness for resonance at desired frequency
         let piezo = PiezoMaterial::pzt_5h();
-        let thickness = Velocity::from_base(piezo.sound_speed) / (frequency * 2.0);
+        let thickness = piezo.sound_speed / (frequency * 2.0);
 
         let geometry = ElementGeometry::new(width, height, thickness, kerf)?;
 
@@ -70,9 +70,9 @@ impl TransducerDesign {
 
         // Design matching layer
         let matching_layer = MatchingLayer::quarter_wave(
-            *frequency.as_base(),
+            frequency,
             piezo.acoustic_impedance,
-            super::TISSUE_IMPEDANCE,
+            AcousticImpedance::from_base(super::TISSUE_IMPEDANCE * 1.0e6),
         );
 
         // Calculate frequency response
@@ -96,7 +96,7 @@ impl TransducerDesign {
         let sensitivity = TransducerSensitivity::from_parameters(
             piezo.coupling_k33,
             *geometry.area().as_base(),
-            piezo.acoustic_impedance * 1e6, // Convert to Pa·s/m
+            piezo.acoustic_impedance.into_base(),
             *frequency.as_base(),
         );
 
@@ -119,7 +119,7 @@ impl TransducerDesign {
         // Check mode separation
         if !self
             .geometry
-            .validate_mode_separation(Velocity::from_base(self.piezo.sound_speed))
+            .validate_mode_separation(self.piezo.sound_speed)
         {
             return Err(KwaversError::Config(ConfigError::InvalidValue {
                 parameter: "mode_separation".to_owned(),

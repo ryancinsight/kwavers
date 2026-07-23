@@ -4,6 +4,11 @@
 
 ### Changed
 
+- **Breaking**: transducer materials, acoustic lenses, Fresnel zone plates,
+  and Rayleigh propagation coefficients now use Aequitas typed physical
+  quantities. Dimensionless/model coefficients and coherent complex pressure
+  remain scalar mathematical values. See [ADR 050](docs/ADR/050-transducer-materials-rayleigh-quantities.md).
+
 - **Breaking**: transducer element geometry and KLM frequency-response
   boundaries now use Aequitas `Length`, `Velocity`, `Frequency`, `Area`, and
   `Volume` quantities, including sampled frequency points and focal-resolution

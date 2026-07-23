@@ -11,6 +11,7 @@
 //! al., *Ultrasonics* 51 (2011), Eq. 1,
 //! <https://doi.org/10.1016/j.ultras.2010.12.011>.
 
+use aequitas::systems::si::quantities::{Length, ReciprocalLength};
 use eunomia::Complex64;
 use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
 use std::f64::consts::{PI, TAU};
@@ -304,9 +305,9 @@ pub struct RayleighIntegralSpec {
 /// One straight-ray propagation segment, ordered outward from the source.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct RayleighLayer {
-    wavenumber_rad_m: f64,
-    attenuation_np_m: f64,
-    thickness_m: Option<f64>,
+    wavenumber: ReciprocalLength,
+    attenuation: ReciprocalLength,
+    thickness: Option<Length>,
 }
 
 /// Validated straight-ray acoustic propagation path.
@@ -330,25 +331,26 @@ impl RayleighLayer {
     /// non-positive wavenumber, negative attenuation, or non-positive finite
     /// thickness.
     pub fn new(
-        wavenumber_rad_m: f64,
-        attenuation_np_m: f64,
-        thickness_m: Option<f64>,
+        wavenumber: ReciprocalLength,
+        attenuation: ReciprocalLength,
+        thickness: Option<Length>,
     ) -> KwaversResult<Self> {
-        validate_positive("wavenumber_rad_m", wavenumber_rad_m)?;
-        if !attenuation_np_m.is_finite() || attenuation_np_m < 0.0 {
+        validate_positive("wavenumber_rad_m", wavenumber.into_base())?;
+        let attenuation_base = attenuation.into_base();
+        if !attenuation_base.is_finite() || attenuation_base < 0.0 {
             return Err(invalid(
                 "attenuation_np_m",
-                attenuation_np_m.to_string(),
+                attenuation_base.to_string(),
                 "finite and >= 0",
             ));
         }
-        if let Some(thickness) = thickness_m {
-            validate_positive("layer_thickness_m", thickness)?;
+        if let Some(thickness) = thickness {
+            validate_positive("layer_thickness_m", thickness.into_base())?;
         }
         Ok(Self {
-            wavenumber_rad_m,
-            attenuation_np_m,
-            thickness_m,
+            wavenumber,
+            attenuation,
+            thickness,
         })
     }
 }
@@ -360,12 +362,11 @@ impl RayleighPropagationPath {
     ///
     /// Returns `KwaversError::Config` unless the wavenumber is finite and
     /// positive and attenuation is finite and non-negative.
-    pub fn homogeneous(wavenumber_rad_m: f64, attenuation_np_m: f64) -> KwaversResult<Self> {
-        Self::layered(vec![RayleighLayer::new(
-            wavenumber_rad_m,
-            attenuation_np_m,
-            None,
-        )?])
+    pub fn homogeneous(
+        wavenumber: ReciprocalLength,
+        attenuation: ReciprocalLength,
+    ) -> KwaversResult<Self> {
+        Self::layered(vec![RayleighLayer::new(wavenumber, attenuation, None)?])
     }
 
     /// Construct an ordered straight-ray layered propagation path.
@@ -381,10 +382,7 @@ impl RayleighPropagationPath {
         if layers.is_empty() {
             return Err(invalid("layers", "0".to_owned(), "at least one layer"));
         }
-        if layers
-            .last()
-            .is_some_and(|layer| layer.thickness_m.is_some())
-        {
+        if layers.last().is_some_and(|layer| layer.thickness.is_some()) {
             return Err(invalid(
                 "layers",
                 "finite final layer".to_owned(),
@@ -393,7 +391,7 @@ impl RayleighPropagationPath {
         }
         if layers[..layers.len() - 1]
             .iter()
-            .any(|layer| layer.thickness_m.is_none())
+            .any(|layer| layer.thickness.is_none())
         {
             return Err(invalid(
                 "layers",
@@ -410,7 +408,8 @@ impl RayleighPropagationPath {
     ///
     /// Returns `KwaversError::Config` when `range_m` is not finite or is
     /// negative.
-    pub fn propagation_terms(&self, range_m: f64) -> KwaversResult<(f64, f64)> {
+    pub fn propagation_terms(&self, range: Length) -> KwaversResult<(f64, f64)> {
+        let range_m = range.into_base();
         if !range_m.is_finite() || range_m < 0.0 {
             return Err(invalid("range_m", range_m.to_string(), "finite and >= 0"));
         }
@@ -419,10 +418,10 @@ impl RayleighPropagationPath {
         let mut attenuation = 0.0;
         for layer in &self.layers {
             let segment = layer
-                .thickness_m
-                .map_or(remaining, |thickness| remaining.min(thickness));
-            phase = layer.wavenumber_rad_m.mul_add(segment, phase);
-            attenuation = layer.attenuation_np_m.mul_add(segment, attenuation);
+                .thickness
+                .map_or(remaining, |thickness| remaining.min(thickness.into_base()));
+            phase = layer.wavenumber.into_base().mul_add(segment, phase);
+            attenuation = layer.attenuation.into_base().mul_add(segment, attenuation);
             remaining -= segment;
             if remaining <= 0.0 {
                 break;
@@ -431,12 +430,12 @@ impl RayleighPropagationPath {
         Ok((phase, attenuation))
     }
 
-    fn wavenumber_rad_m(&self) -> f64 {
-        self.layers[0].wavenumber_rad_m
+    fn wavenumber(&self) -> ReciprocalLength {
+        self.layers[0].wavenumber
     }
 
-    fn attenuation_np_m(&self) -> f64 {
-        self.layers[0].attenuation_np_m
+    fn attenuation(&self) -> ReciprocalLength {
+        self.layers[0].attenuation
     }
 }
 
@@ -452,13 +451,13 @@ impl RayleighIntegralSpec {
     /// positive, attenuation is finite and non-negative, radial order is
     /// positive, and azimuthal order is at least three.
     pub fn new(
-        wavenumber_rad_m: f64,
-        attenuation_np_m: f64,
+        wavenumber: ReciprocalLength,
+        attenuation: ReciprocalLength,
         radial_order: usize,
         azimuthal_order: usize,
     ) -> KwaversResult<Self> {
         Self::from_path(
-            RayleighPropagationPath::homogeneous(wavenumber_rad_m, attenuation_np_m)?,
+            RayleighPropagationPath::homogeneous(wavenumber, attenuation)?,
             radial_order,
             azimuthal_order,
         )
@@ -530,14 +529,14 @@ impl RayleighIntegralSpec {
 
     /// Acoustic wavenumber in radians per metre.
     #[must_use]
-    pub fn wavenumber_rad_m(&self) -> f64 {
-        self.path.wavenumber_rad_m()
+    pub fn wavenumber(&self) -> ReciprocalLength {
+        self.path.wavenumber()
     }
 
     /// Amplitude attenuation coefficient in nepers per metre.
     #[must_use]
-    pub fn attenuation_np_m(&self) -> f64 {
-        self.path.attenuation_np_m()
+    pub fn attenuation(&self) -> ReciprocalLength {
+        self.path.attenuation()
     }
 }
 
@@ -559,7 +558,7 @@ pub fn rayleigh_pressure(
         validate_point("observation_point_m", point)?;
     }
     let radial_rule = gauss_legendre_unit(spec.radial_order)?;
-    let prefactor = Complex64::new(0.0, -spec.wavenumber_rad_m() / TAU);
+    let prefactor = Complex64::new(0.0, -spec.wavenumber().into_base() / TAU);
     let mut pressure = vec![Complex64::new(0.0, 0.0); points_m.len()];
 
     for aperture in apertures {
@@ -596,7 +595,8 @@ pub fn rayleigh_pressure(
                         ),
                     );
                     let range = norm(subtract(point, surface_point));
-                    let (phase, attenuation) = spec.path.propagation_terms(range)?;
+                    let (phase, attenuation) =
+                        spec.path.propagation_terms(Length::from_base(range))?;
                     let amplitude = area_weight * (-attenuation).exp() / range;
                     integral += Complex64::from_polar(amplitude, phase);
                 }
@@ -731,6 +731,14 @@ fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn inverse_m(value: f64) -> ReciprocalLength {
+        ReciprocalLength::from_base(value)
+    }
+
+    fn length_m(value: f64) -> Length {
+        Length::from_base(value)
+    }
     use kwavers_math::special::bessel::j1;
 
     fn piston(radius_m: f64) -> PlanarAperture {
@@ -791,7 +799,8 @@ mod tests {
                 )
             })
             .collect();
-        let spec = RayleighIntegralSpec::new(TAU / 0.7e-3, 0.0, 12, 32).unwrap();
+        let spec =
+            RayleighIntegralSpec::new(inverse_m(TAU / 0.7e-3), inverse_m(0.0), 12, 32).unwrap();
         let point = [[0.0, 0.0, 20.0e-3]];
         let complete_pressure = rayleigh_pressure(&point, &[complete], &spec).unwrap()[0];
         let sector_pressure = rayleigh_pressure(&point, &sectors, &spec).unwrap()[0];
@@ -807,7 +816,7 @@ mod tests {
         let piston = piston(1.2e-3);
         let k = TAU / 0.75e-3;
         let axial_range = 14.0e-3;
-        let spec = RayleighIntegralSpec::new(k, 0.0, 24, 24).unwrap();
+        let spec = RayleighIntegralSpec::new(inverse_m(k), inverse_m(0.0), 24, 24).unwrap();
         let actual = rayleigh_pressure(&[[0.0, 0.0, axial_range]], &[piston], &spec).unwrap()[0];
         let rim_range = axial_range.hypot(piston.outer_radius_m());
         let expected = piston.surface_pressure_pa()
@@ -830,7 +839,7 @@ mod tests {
         let pressure = rayleigh_pressure(
             &points,
             &[piston],
-            &RayleighIntegralSpec::new(k, 0.0, 20, 96).unwrap(),
+            &RayleighIntegralSpec::new(inverse_m(k), inverse_m(0.0), 20, 96).unwrap(),
         )
         .unwrap();
         let argument = k * piston.outer_radius_m() * angle.sin();
@@ -852,7 +861,8 @@ mod tests {
             base.surface_pressure_pa(),
         )
         .unwrap();
-        let spec = RayleighIntegralSpec::new(TAU / 0.8e-3, 3.0, 12, 48).unwrap();
+        let spec =
+            RayleighIntegralSpec::new(inverse_m(TAU / 0.8e-3), inverse_m(3.0), 12, 48).unwrap();
         let along_z = rayleigh_pressure(&[[0.2e-3, 0.0, 30.0e-3]], &[base], &spec).unwrap()[0];
         let along_x = rayleigh_pressure(&[[30.0e-3, 0.0, 0.2e-3]], &[rotated], &spec).unwrap()[0];
         assert!((along_z - along_x).norm() <= 64.0 * f64::EPSILON * along_z.norm());
@@ -863,7 +873,7 @@ mod tests {
         let pressure = rayleigh_pressure(
             &[[0.0, 0.0, -0.01]],
             &[piston(0.5e-3)],
-            &RayleighIntegralSpec::new(TAU / 1.0e-3, 0.0, 4, 12).unwrap(),
+            &RayleighIntegralSpec::new(inverse_m(TAU / 1.0e-3), inverse_m(0.0), 4, 12).unwrap(),
         )
         .unwrap();
         assert_eq!(pressure, vec![Complex64::new(0.0, 0.0)]);
@@ -871,31 +881,33 @@ mod tests {
 
     #[test]
     fn quadrature_work_is_bounded() {
-        let error = RayleighIntegralSpec::new(1.0, 0.0, MAX_SURFACE_SAMPLES, 3)
-            .expect_err("surface sample count exceeds the provider budget");
+        let error =
+            RayleighIntegralSpec::new(inverse_m(1.0), inverse_m(0.0), MAX_SURFACE_SAMPLES, 3)
+                .expect_err("surface sample count exceeds the provider budget");
         assert!(error.to_string().contains("quadrature_surface_samples"));
     }
 
     #[test]
     fn layered_path_integrates_each_segment_exactly() {
         let path = RayleighPropagationPath::layered(vec![
-            RayleighLayer::new(2.0, 3.0, Some(0.25)).unwrap(),
-            RayleighLayer::new(5.0, 7.0, None).unwrap(),
+            RayleighLayer::new(inverse_m(2.0), inverse_m(3.0), Some(length_m(0.25))).unwrap(),
+            RayleighLayer::new(inverse_m(5.0), inverse_m(7.0), None).unwrap(),
         ])
         .unwrap();
-        let (short_phase, short_attenuation) = path.propagation_terms(0.1).unwrap();
+        let (short_phase, short_attenuation) = path.propagation_terms(length_m(0.1)).unwrap();
         assert!((short_phase - 0.2).abs() <= f64::EPSILON * 0.2);
         assert!((short_attenuation - 0.3).abs() <= f64::EPSILON * 0.3);
-        let (long_phase, long_attenuation) = path.propagation_terms(1.0).unwrap();
+        let (long_phase, long_attenuation) = path.propagation_terms(length_m(1.0)).unwrap();
         assert!((long_phase - 4.25).abs() <= 2.0 * f64::EPSILON * 4.25);
         assert!((long_attenuation - 6.0).abs() <= 2.0 * f64::EPSILON * 6.0);
     }
 
     #[test]
     fn layered_path_requires_one_final_half_space() {
-        let finite = RayleighLayer::new(2.0, 0.0, Some(0.25)).unwrap();
-        let half_space = RayleighLayer::new(3.0, 0.0, None).unwrap();
-        let final_half_space = RayleighLayer::new(4.0, 0.0, None).unwrap();
+        let finite =
+            RayleighLayer::new(inverse_m(2.0), inverse_m(0.0), Some(length_m(0.25))).unwrap();
+        let half_space = RayleighLayer::new(inverse_m(3.0), inverse_m(0.0), None).unwrap();
+        let final_half_space = RayleighLayer::new(inverse_m(4.0), inverse_m(0.0), None).unwrap();
         let finite_final = RayleighPropagationPath::layered(vec![finite])
             .expect_err("a finite final layer has no propagation half-space");
         let non_final_half_space =
@@ -930,10 +942,10 @@ mod tests {
 
     #[test]
     fn propagation_terms_reject_invalid_range() {
-        let path = RayleighPropagationPath::homogeneous(1.0, 0.0).unwrap();
+        let path = RayleighPropagationPath::homogeneous(inverse_m(1.0), inverse_m(0.0)).unwrap();
         for range_m in [-1.0, f64::NAN] {
             let error = path
-                .propagation_terms(range_m)
+                .propagation_terms(length_m(range_m))
                 .expect_err("invalid propagation range must be rejected");
             match error {
                 KwaversError::Config(ConfigError::InvalidValue {

@@ -1,5 +1,18 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-03 materials and Rayleigh propagation [major] — done 2026-07-23
+
+- [x] Type piezoelectric, backing, matching-layer, lens, and Fresnel physical
+      fields with Aequitas quantities; retain model coefficients as scalars.
+- [x] Type lens focal/delay/zone/correction results and Rayleigh wavenumber,
+      attenuation, layer thickness, and propagation range.
+- [x] Update Rust design callers and PyO3 lens conversion boundaries without
+      retaining scalar compatibility fields.
+- [x] Preserve material, lens, and Rayleigh analytical oracles; full
+      `kwavers-transducer` Nextest passes 221/221 with one skipped test.
+- [x] Record the remaining Rayleigh aperture-coordinate boundary in ADR 050
+      and the Aequitas gap audit.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-03 frequency and geometry metrics [major] — done 2026-07-23
 
 - [x] Add direct Aequitas ownership to `kwavers-transducer` and type element
