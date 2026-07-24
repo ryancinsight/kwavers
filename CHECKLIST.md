@@ -1,5 +1,16 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-08 typed thermal-diffusion configuration [major] — in progress 2026-07-24
+
+- [ ] Type the thermal-diffusion, Pennes, and Cattaneo configuration carriers
+      with Aequitas quantities while preserving the published equations.
+- [ ] Migrate solver and simulation callers; keep dense temperature fields,
+      finite-difference kernels, and the PyO3 scalar input boundary explicit.
+- [ ] Add value-semantic configuration and equation regressions, then update
+      the child audit, ADR, and changelog.
+- [ ] Run focused package checks, Nextest, warning-denied Clippy, doctests, and
+      Rustdoc; record any dependency-graph blocker without weakening the gate.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-07 typed grid metrics [major] — implementation done, verification blocked 2026-07-24
 
 - [x] Type `kwavers-grid` derived spacing, physical-size, volume, and CFL
