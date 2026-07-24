@@ -73,10 +73,13 @@ fn test_thermal_conductivity_temperature_dependence() {
         .expect("elevated temperature is physical");
     let delta = 313.15 - ROOM_TEMPERATURE_K;
     let expected_factor = (-1.0e-5 * delta).mul_add(delta, 0.002_f64.mul_add(delta, 1.0));
-    let expected = base.conductivity() * expected_factor;
-    assert_eq!(k_ref.to_bits(), base.conductivity().to_bits());
-    assert_eq!(k_hot.to_bits(), expected.to_bits());
-    assert!(k_hot > k_ref);
+    let expected = base.conductivity().into_base() * expected_factor;
+    assert_eq!(
+        k_ref.into_base().to_bits(),
+        base.conductivity().into_base().to_bits()
+    );
+    assert_eq!(k_hot.into_base().to_bits(), expected.to_bits());
+    assert!(k_hot.into_base() > k_ref.into_base());
 }
 
 #[test]

@@ -36,6 +36,9 @@ pub use kwavers_medium::properties::ThermalPropertyData;
 /// For Pennes solver simulations, also specify arterial temperature and metabolic heat
 /// as separate simulation parameters.
 pub mod tissues {
+    use aequitas::systems::si::quantities::{
+        MassDensity, MassDensityRate, SpecificHeatCapacity, ThermalConductivity,
+    };
     use kwavers_core::constants::fundamental::DENSITY_TISSUE;
     use kwavers_core::constants::medical::BLOOD_SPECIFIC_HEAT;
     use kwavers_core::constants::tissue_acoustics::{
@@ -60,11 +63,11 @@ pub mod tissues {
     #[must_use]
     pub fn liver() -> ThermalPropertyData {
         ThermalPropertyData::new(
-            0.52,                // conductivity (W/m/K)
-            SPECIFIC_HEAT_LIVER, // specific_heat (J/kg/K)
-            DENSITY_LIVER,       // density (kg/m³) — SSOT; Duck (1990): ρ_liver ≈ 1060 kg/m³
-            Some(16.7),          // blood_perfusion (kg/m³/s) - high perfusion
-            Some(BLOOD_SPECIFIC_HEAT),
+            ThermalConductivity::from_base(0.52),
+            SpecificHeatCapacity::from_base(SPECIFIC_HEAT_LIVER),
+            MassDensity::from_base(DENSITY_LIVER),
+            Some(MassDensityRate::from_base(16.7)),
+            Some(SpecificHeatCapacity::from_base(BLOOD_SPECIFIC_HEAT)),
         )
         .expect("Liver tissue properties are valid")
     }
@@ -83,11 +86,11 @@ pub mod tissues {
     #[must_use]
     pub fn muscle() -> ThermalPropertyData {
         ThermalPropertyData::new(
-            0.49,                 // conductivity (W/m/K)
-            SPECIFIC_HEAT_MUSCLE, // specific_heat (J/kg/K)
-            DENSITY_MUSCLE,       // density (kg/m³) — SSOT; Duck (1990) upper range / IT'IS
-            Some(0.54),           // blood_perfusion (kg/m³/s)
-            Some(BLOOD_SPECIFIC_HEAT),
+            ThermalConductivity::from_base(0.49),
+            SpecificHeatCapacity::from_base(SPECIFIC_HEAT_MUSCLE),
+            MassDensity::from_base(DENSITY_MUSCLE),
+            Some(MassDensityRate::from_base(0.54)),
+            Some(SpecificHeatCapacity::from_base(BLOOD_SPECIFIC_HEAT)),
         )
         .expect("Muscle tissue properties are valid")
     }
@@ -106,11 +109,11 @@ pub mod tissues {
     #[must_use]
     pub fn fat() -> ThermalPropertyData {
         ThermalPropertyData::new(
-            0.21,               // conductivity (W/m/K)
-            SPECIFIC_HEAT_FAT,  // specific_heat (J/kg/K)
-            DENSITY_BREAST_FAT, // density (kg/m³) — IT'IS Foundation v4.0 breast fat
-            Some(0.3),          // blood_perfusion (kg/m³/s) - low perfusion
-            Some(BLOOD_SPECIFIC_HEAT),
+            ThermalConductivity::from_base(0.21),
+            SpecificHeatCapacity::from_base(SPECIFIC_HEAT_FAT),
+            MassDensity::from_base(DENSITY_BREAST_FAT),
+            Some(MassDensityRate::from_base(0.3)),
+            Some(SpecificHeatCapacity::from_base(BLOOD_SPECIFIC_HEAT)),
         )
         .expect("Fat tissue properties are valid")
     }
@@ -129,11 +132,11 @@ pub mod tissues {
     #[must_use]
     pub fn tumor() -> ThermalPropertyData {
         ThermalPropertyData::new(
-            0.55,                 // conductivity (W/m/K)
-            SPECIFIC_HEAT_TISSUE, // specific_heat (J/kg/K)
-            DENSITY_TISSUE,       // density (kg/m³) — SSOT: fundamental::DENSITY_TISSUE
-            Some(0.2),            // blood_perfusion (kg/m³/s) - poor perfusion
-            Some(BLOOD_SPECIFIC_HEAT),
+            ThermalConductivity::from_base(0.55),
+            SpecificHeatCapacity::from_base(SPECIFIC_HEAT_TISSUE),
+            MassDensity::from_base(DENSITY_TISSUE),
+            Some(MassDensityRate::from_base(0.2)),
+            Some(SpecificHeatCapacity::from_base(BLOOD_SPECIFIC_HEAT)),
         )
         .expect("Tumor tissue properties are valid")
     }
@@ -164,28 +167,28 @@ mod tests {
     #[test]
     fn test_tissue_constructors() {
         let liver = tissues::liver();
-        assert_eq!(liver.conductivity(), 0.52);
-        assert_eq!(liver.density(), DENSITY_LIVER);
+        assert_eq!(liver.conductivity().into_base(), 0.52);
+        assert_eq!(liver.density().into_base(), DENSITY_LIVER);
         assert!(liver.has_bioheat_parameters());
 
         let muscle = tissues::muscle();
-        assert_eq!(muscle.conductivity(), 0.49);
-        assert_eq!(muscle.density(), DENSITY_MUSCLE);
+        assert_eq!(muscle.conductivity().into_base(), 0.49);
+        assert_eq!(muscle.density().into_base(), DENSITY_MUSCLE);
         assert!(muscle.has_bioheat_parameters());
 
         let fat = tissues::fat();
-        assert_eq!(fat.conductivity(), 0.21);
-        assert_eq!(fat.density(), DENSITY_BREAST_FAT);
+        assert_eq!(fat.conductivity().into_base(), 0.21);
+        assert_eq!(fat.density().into_base(), DENSITY_BREAST_FAT);
         assert!(fat.has_bioheat_parameters());
 
         let tumor = tissues::tumor();
-        assert_eq!(tumor.conductivity(), 0.55);
-        assert_eq!(tumor.density(), DENSITY_TISSUE);
+        assert_eq!(tumor.conductivity().into_base(), 0.55);
+        assert_eq!(tumor.density().into_base(), DENSITY_TISSUE);
         assert!(tumor.has_bioheat_parameters());
 
         let soft = tissues::soft_tissue();
-        assert_eq!(soft.conductivity(), 0.5);
-        assert_eq!(soft.density(), DENSITY_TISSUE);
+        assert_eq!(soft.conductivity().into_base(), 0.5);
+        assert_eq!(soft.density().into_base(), DENSITY_TISSUE);
         assert!(soft.has_bioheat_parameters());
     }
 
@@ -195,11 +198,12 @@ mod tests {
         let alpha = liver.thermal_diffusivity();
 
         // α = k / (ρc) = 0.52 / (1060 * 3540) ≈ 1.39e-7 m²/s
-        let expected = liver.conductivity() / (liver.density() * liver.specific_heat());
-        assert!((alpha - expected).abs() < 1e-12);
+        let expected = liver.conductivity().into_base()
+            / (liver.density().into_base() * liver.specific_heat().into_base());
+        assert!((alpha.into_base() - expected).abs() < 1e-12);
 
         // Should be in reasonable range for tissue (10^-8 to 10^-6 m²/s)
-        assert!(alpha > 1e-8 && alpha < 1e-6);
+        assert!(alpha.into_base() > 1e-8 && alpha.into_base() < 1e-6);
     }
 
     #[test]
@@ -210,8 +214,8 @@ mod tests {
         let w_b = tissue.blood_perfusion.unwrap();
         let c_b = tissue.blood_specific_heat.unwrap();
 
-        assert!(w_b > 0.0);
-        assert!(c_b > 0.0);
-        assert_eq!(c_b, BLOOD_SPECIFIC_HEAT);
+        assert!(w_b.into_base() > 0.0);
+        assert!(c_b.into_base() > 0.0);
+        assert_eq!(c_b.into_base(), BLOOD_SPECIFIC_HEAT);
     }
 }

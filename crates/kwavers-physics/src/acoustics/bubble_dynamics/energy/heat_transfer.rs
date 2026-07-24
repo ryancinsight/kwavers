@@ -2,8 +2,8 @@
 
 use aequitas::systems::si::{
     quantities::{
-        Area, Length, Mass, Power, Pressure, SpecificHeatCapacity, ThermodynamicTemperature, Time,
-        Velocity,
+        Area, Length, Mass, Power, Pressure, SpecificHeatCapacity, TemperatureDifference,
+        ThermodynamicTemperature, Time, Velocity,
     },
     units::{
         JoulePerKilogramKelvin, Kelvin, Kilogram, Meter, MeterPerSecond, Pascal, Second,
@@ -145,8 +145,9 @@ impl EnergyBalanceCalculator {
         // ΔT = (dU/dt * dt) / (m * cv)
         let energy_change = energy_rate * dt;
         let mass = Mass::from_unit::<Kilogram>(state.mass());
-        let temperature_change: ThermodynamicTemperature =
-            energy_change / (mass * specific_heat_capacity);
+        let temperature_change = TemperatureDifference::from_base(
+            (energy_change / (mass * specific_heat_capacity)).into_base(),
+        );
         let current_temperature = ThermodynamicTemperature::from_unit::<Kelvin>(state.temperature);
         let temperature = current_temperature + temperature_change;
 

@@ -4,6 +4,17 @@
 
 ### Changed
 
+- **Breaking**: thermal material constructors and accessors now use Aequitas
+  `ThermalConductivity`, `MassDensity`, `SpecificHeatCapacity`, and
+  `ThermalDiffusivity`; Pennes blood perfusion uses provider-owned
+  `MassDensityRate`. Proteus remains the thermophysical source of truth, and
+  scalar conversion occurs only at display, DTO, or numerical-stencil
+  boundaries. See [ADR 051](docs/ADR/051-thermal-perfusion-quantities.md).
+
+- Correct the bubble heat-transfer temperature-change boundary to use
+  Aequitas `TemperatureDifference` rather than absolute thermodynamic
+  temperature.
+
 - **Breaking**: transducer materials, acoustic lenses, Fresnel zone plates,
   and Rayleigh propagation coefficients now use Aequitas typed physical
   quantities. Dimensionless/model coefficients and coherent complex pressure

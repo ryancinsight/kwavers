@@ -44,8 +44,10 @@ Kwavers already routes thermal-acoustic coupling through typed intensity,
 volumetric power density, velocity, density, temperature, and time; the CEM43
 and HIFU planning boundaries now use validated equivalent-time, temperature,
 and duration results; optical attenuation uses typed reciprocal length and
-fluence; and thermal material bundles use Proteus/Aequitas quantities
-internally.
+fluence; and thermal material bundles use Proteus/Aequitas quantities through
+their public accessors. Pennes perfusion is now represented by the
+provider-owned mass-density-rate quantity at the material and solver
+boundaries.
 
 ### Open implementation ledger
 
@@ -56,7 +58,7 @@ internally.
 | `KWAVERS-AEQ-MET-03` | `kwavers-transducer/src/transducers/physics/{frequency,geometry,rayleigh,materials}.rs` exposes frequency, bandwidth, lengths, area/volume, range, attenuation, wavelength, and acoustic impedance as raw values. | Migrate the bounded transducer modules to typed constructors/results; retain dimensionless Q, bandwidth fraction, directivity, reflection coefficients, attenuation coefficients, and coherent phase/pressure accumulations as scalars. | Kwavers | **Resolved for the public transducer/Rayleigh boundary.** `frequency.rs`, `geometry.rs`, `design.rs`, material/lens APIs, and Rayleigh now use Aequitas quantities; aperture radii/areas and centres/observation points use typed `Length`/`Area`/validated `CartesianPosition`. The KWaveArray rasterizer converts once into its scalar grid-coordinate contract. Focused Rayleigh (12/12), planar-rasterizer (1/1), package check, Clippy, and doctest gates pass. See [ADR 050](docs/ADR/050-transducer-materials-rayleigh-quantities.md). |
 | `KWAVERS-AEQ-MET-04` | `kwavers-therapy/src/therapy/hifu_planning/{types,schedule}.rs` exposes focal dimensions/volumes, power, peak pressure, frequency, dwell, and temperature metrics as suffixed scalar fields. | Type the planning DTOs and derived metrics through the existing Aequitas seam; leave mechanical index and CEM43 as dimensionless/consumer-semantic values. | Kwavers | Ready after `KWAVERS-AEQ-MET-01`; HIFU focal-volume, pressure, thermal-dose, and schedule invariants are the acceptance oracles. |
 | `KWAVERS-AEQ-MET-05` | `kwavers-analysis/src/signal_processing/vasculature/mod.rs` reports diameter and total length as voxel-unit `f64`, and Doppler velocity returns `f64`; spacing is left to the caller. | Make physical voxel spacing an explicit validated `Length` input, then return physical `Length`/`Velocity` instead of caller-applied scalars. | Kwavers | Boundary-dependent. The spacing contract and Doppler equation must be tested before migration. |
-| `KWAVERS-AEQ-MET-06` | `kwavers-medium/src/properties/thermal.rs` stores a typed Proteus bundle but returns conductivity, density, specific heat, and diffusivity as raw values; perfusion fields are also raw. | Preserve Proteus as the SSOT and type accessors. Add an Aequitas perfusion-rate quantity only if the public contract requires it; otherwise use a consumer newtype for the biological model parameter. | Kwavers / Proteus | Partial. Provider extension is not yet justified by a stable public rate contract. |
+| `KWAVERS-AEQ-MET-06` | `kwavers-medium/src/properties/thermal.rs` stored a typed Proteus bundle but returned conductivity, density, specific heat, diffusivity, and Pennes perfusion fields as raw values. | Preserve Proteus as the SSOT and type the material accessors and Pennes perfusion contract without duplicating thermophysical laws in Kwavers. | Aequitas, Proteus, Kwavers | **RESOLVED.** Aequitas `MassDensityRate` (`kg/(m³·s)`) merged at `b86a55d`; `ThermalPropertyData` and `TemperatureDependentThermal` now store and return typed conductivity, density, specific heat, diffusivity, and perfusion values. Pennes converts only at its scalar finite-difference kernel boundary. Kwavers-medium Nextest passes 191/191; thermal and bubble-dynamics physics tests pass 361/361; no-default-features checks pass for `kwavers-physics` and `kwavers-solver`; formatting and diff checks pass. See [ADR 051](docs/ADR/051-thermal-perfusion-quantities.md). |
 
 ### Explicit non-gaps and sequencing constraints
 
@@ -69,6 +71,10 @@ internally.
 - `KWAVERS-AEQ-MET-03` is closed for the public transducer/Rayleigh API. The
   KWaveArray rasterizer remains a named scalar grid-coordinate adapter; it is
   not a second public Rayleigh geometry contract.
+- `KWAVERS-AEQ-MET-06` keeps the finite-difference arithmetic scalar because
+  the array kernel is a numerical storage boundary. The material and solver
+  contracts carry Aequitas quantities up to the explicit `into_base()` calls;
+  the scalar kernel is not a second untyped public material API.
 
 - Review 2026-07-22: Python release run `29967429949` built the stable-ABI
   wheels but the Linux and Windows base-wheel smoke imports failed because

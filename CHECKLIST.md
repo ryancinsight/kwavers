@@ -1,5 +1,19 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-06 typed thermal and perfusion metrics [major] — done 2026-07-23
+
+- [x] Add provider-owned Aequitas `MassDensityRate` and prove its dimension
+      law against mass density over time.
+- [x] Type Kwavers thermal material constructors, accessors, temperature-
+      dependent properties, and Pennes perfusion inputs without duplicating
+      the Proteus thermophysical bundle.
+- [x] Keep scalar conversion explicit at display, legacy DTO, and numerical
+      stencil boundaries; correct the bubble heat-transfer temperature change
+      to use `TemperatureDifference`.
+- [x] Pass Kwavers-medium Nextest 191/191, thermal/bubble physics Nextest
+      361/361, no-default-features checks, formatting, and diff checks; update
+      ADR 051, the gap audit, and the changelog.
+
 ## Owner: Codex — KWAVERS-AEQ-RAYLEIGH-POSITION-1 [major] — done 2026-07-24
 
 - [x] Type Rayleigh aperture radii, areas, centres, and observation points
