@@ -9,7 +9,10 @@
 - [x] Add value-semantic configuration and equation regressions, then update
       the child audit, ADR, and changelog.
 - [ ] Run focused package checks, Nextest, warning-denied Clippy, doctests, and
-      Rustdoc; record any dependency-graph blocker without weakening the gate.
+      Rustdoc after the dependency graph is repaired. Current blocker: Cargo
+      stops before source compilation because `coeus-core` requires
+      `hermes-simd ^0.4.1` while the local provider graph offers `0.5.0`.
+      Re-open when resolution reaches Kwavers sources; do not weaken the gate.
 
 ## Owner: Codex — KWAVERS-AEQ-MET-07 typed grid metrics [major] — implementation done, verification blocked 2026-07-24
 
