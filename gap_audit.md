@@ -29,8 +29,8 @@
 
 # Gap Audit
 
-- Review 2026-07-23: `KWAVERS-AEQ-MET-04` is implemented on branch
-  `codex/kwavers-aequitas-vessel-metrics`. `VoxelSpacing` validates positive
+- Review 2026-07-23: `KWAVERS-AEQ-MET-04` is implemented on PR #325 at commit
+  `9f95aa826`. `VoxelSpacing` validates positive
   finite anisotropic Aequitas `Length` components; vessel diameter, centerline,
   and total length return physical `Length<f64>` values; Doppler frequency,
   sound speed, and velocity use typed Aequitas quantities. The child source,
