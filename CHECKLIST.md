@@ -12,6 +12,10 @@
       doctests after peer `coeus-nn` restores a compiling dependency graph.
       Re-open trigger: the current `coeus-nn` normalization API drift is
       repaired in the canonical provider checkout.
+- [ ] Re-run the hosted package, Python, and workspace gates after Coeus
+      publishes the `mnemosyne ^0.6.0` dependency migration compatible with
+      Atlas Mnemosyne `0.6.0`; the provider checkout itself now verifies
+      13 providers and 46 manifests.
 - [x] Repin the hosted provider-checkout action to Atlas graph `45bd370`,
       which contains the merged Aequitas `b86a55d` and Proteus `1b25af1`
       revisions; the prior hosted lock failures were graph drift before
