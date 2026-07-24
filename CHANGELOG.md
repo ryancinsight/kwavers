@@ -4,6 +4,9 @@
 
 ### Changed
 
+- Pin the hosted Atlas provider checkout to graph `f318b9c`, aligning the
+  committed Aequitas and Proteus revisions before locked Kwavers validation.
+
 - **Breaking**: HIFU planning transducer frequency/power/geometry, focal
   pressure/width/volume/location, ablation-target geometry, and sonication
   schedule coordinates now use Aequitas quantities and validated Cartesian
