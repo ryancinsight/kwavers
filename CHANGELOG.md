@@ -4,6 +4,12 @@
 
 ### Changed
 
+- **Breaking**: thermal-diffusion, Pennes, Cattaneo, and coupled thermal
+  configuration carriers now use Aequitas quantities for rates, material
+  properties, temperatures, frequency, heat, and time. Python scalar inputs
+  convert at the binding boundary; dense fields and numerical kernels remain
+  scalar. See [ADR 054](docs/ADR/054-thermal-diffusion-configuration-quantities.md).
+
 - **Breaking**: `kwavers-grid` derived spacing, physical-size, volume, and CFL
   metrics now use Aequitas `Length`, `Volume`, `Velocity`, and `Time`. Scalar
   conversion remains confined to coordinate and numerical-kernel boundaries.

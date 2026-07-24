@@ -39,7 +39,7 @@ pub struct ThermalDiffusionSolver {
 impl ThermalDiffusionSolver {
     pub fn new(config: ThermalDiffusionConfig, grid: &Grid) -> Self {
         let shape = (grid.nx, grid.ny, grid.nz);
-        let temperature = Array3::from_elem(shape, config.arterial_temperature);
+        let temperature = Array3::from_elem(shape, config.arterial_temperature.into_base());
 
         let bioheat_solver = if config.enable_bioheat {
             Some(PennesBioheat::new(BioheatParameters {
@@ -400,7 +400,7 @@ impl ThermalDiffusionSolver {
 
     pub fn reset(&mut self, grid: &Grid) {
         let shape = (grid.nx, grid.ny, grid.nz);
-        self.temperature = Array3::from_elem(shape, self.config.arterial_temperature);
+        self.temperature = Array3::from_elem(shape, self.config.arterial_temperature.into_base());
         self.temperature_prev = None;
         self.laplacian_workspace.fill(0.0);
         self.current_time = 0.0;

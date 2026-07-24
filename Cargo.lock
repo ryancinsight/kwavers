@@ -3723,6 +3723,7 @@ dependencies = [
 name = "kwavers-simulation"
 version = "3.0.0"
 dependencies = [
+ "aequitas",
  "eunomia",
  "kwavers-boundary",
  "kwavers-core",

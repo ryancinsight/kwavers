@@ -52,30 +52,34 @@ pub fn run_with_thermal(
     thermal_cfg: &ThermalConfig,
 ) -> KwaversResult<SimulationRunResult> {
     use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
-    use kwavers_core::constants::thermodynamic::KELVIN_OFFSET_C;
     use kwavers_medium::HomogeneousMedium;
     use kwavers_physics::thermal::diffusion::ThermalDiffusionConfig;
     use kwavers_solver::forward::thermal_diffusion::ThermalDiffusionSolver;
 
     let (mut solver, sim_grid) = prepare_solver(req, sources)?;
 
-    let mut medium =
-        HomogeneousMedium::new(thermal_cfg.density, SOUND_SPEED_TISSUE, 0.0, 0.0, &sim_grid);
+    let mut medium = HomogeneousMedium::new(
+        thermal_cfg.density.into_base(),
+        SOUND_SPEED_TISSUE,
+        0.0,
+        0.0,
+        &sim_grid,
+    );
     medium
-        .set_thermal_properties(thermal_cfg.thermal_conductivity, thermal_cfg.specific_heat)
+        .set_thermal_properties(
+            thermal_cfg.thermal_conductivity.into_base(),
+            thermal_cfg.specific_heat.into_base(),
+        )
         .map_err(|e| KwaversError::InternalError(e.to_string()))?;
-
-    let arterial_temp_k = thermal_cfg.arterial_temperature_c + KELVIN_OFFSET_C;
-    let initial_temp_k = thermal_cfg.initial_temperature_c + KELVIN_OFFSET_C;
 
     let config = ThermalDiffusionConfig {
         enable_bioheat: thermal_cfg.enable_bioheat,
         perfusion_rate: thermal_cfg.perfusion_rate,
         blood_density: thermal_cfg.blood_density,
         blood_specific_heat: thermal_cfg.blood_specific_heat,
-        arterial_temperature: arterial_temp_k,
+        arterial_temperature: thermal_cfg.arterial_temperature,
         enable_hyperbolic: false,
-        relaxation_time: 20.0,
+        relaxation_time: aequitas::systems::si::quantities::Time::from_base(20.0),
         track_thermal_dose: thermal_cfg.track_thermal_dose,
         spatial_order: 2,
     };
@@ -83,15 +87,19 @@ pub fn run_with_thermal(
     let mut thermal_solver = ThermalDiffusionSolver::new(config, &sim_grid);
     thermal_solver.set_temperature(Array3::from_elem(
         (sim_grid.nx, sim_grid.ny, sim_grid.nz),
-        initial_temp_k,
+        thermal_cfg.initial_temperature.into_base(),
     ));
 
-    let omega_c = std::f64::consts::TAU * thermal_cfg.center_frequency_hz;
+    let omega_c = std::f64::consts::TAU * thermal_cfg.center_frequency.into_base();
     let dt_thermal = thermal_cfg
         .dt_thermal
-        .unwrap_or(req.dt * thermal_cfg.n_acoustic_per_thermal as f64);
-    let rho_cp = thermal_cfg.density * thermal_cfg.specific_heat;
-    let background_heat_ks = thermal_cfg.metabolic_heat / rho_cp;
+        .map_or(req.dt * thermal_cfg.n_acoustic_per_thermal as f64, |time| {
+            time.into_base()
+        });
+    let rho_cp = (thermal_cfg.density * thermal_cfg.specific_heat).into_base();
+    let background_heat_ks = (thermal_cfg.metabolic_heat
+        / (thermal_cfg.density * thermal_cfg.specific_heat))
+        .into_base();
 
     solver.run_orchestrated_with_thermal(
         kwavers_solver::forward::pstd::implementation::core::orchestrator::thermal::ThermalOrchestrationInput {

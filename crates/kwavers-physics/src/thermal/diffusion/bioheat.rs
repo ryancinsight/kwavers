@@ -3,6 +3,9 @@
 //! Reference: Pennes, H. H. (1948). "Analysis of tissue and arterial blood temperatures
 //! in the resting human forearm." Journal of Applied Physiology, 1(2), 93-122.
 
+use aequitas::systems::si::quantities::{
+    MassDensity, ReciprocalTime, SpecificHeatCapacity, ThermodynamicTemperature,
+};
 use kwavers_core::constants::medical::{BLOOD_SPECIFIC_HEAT, TISSUE_PERFUSION_RATE};
 use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_K;
 use kwavers_core::constants::tissue_acoustics::DENSITY_BLOOD;
@@ -14,14 +17,14 @@ use leto::{Array3, ArrayView3};
 /// Pennes bioheat equation parameters
 #[derive(Debug, Clone)]
 pub struct BioheatParameters {
-    /// Blood perfusion rate [1/s]
-    pub perfusion_rate: f64,
-    /// Blood density [kg/m³]
-    pub blood_density: f64,
-    /// Blood specific heat [J/(kg·K)]
-    pub blood_specific_heat: f64,
-    /// Arterial blood temperature (K)
-    pub arterial_temperature: f64,
+    /// Blood perfusion rate [1/s].
+    pub perfusion_rate: ReciprocalTime<f64>,
+    /// Blood density [kg/m³].
+    pub blood_density: MassDensity<f64>,
+    /// Blood specific heat [J/(kg·K)].
+    pub blood_specific_heat: SpecificHeatCapacity<f64>,
+    /// Arterial blood temperature [K].
+    pub arterial_temperature: ThermodynamicTemperature<f64>,
 }
 
 impl Default for BioheatParameters {
@@ -29,10 +32,10 @@ impl Default for BioheatParameters {
         Self {
             // TISSUE_PERFUSION_RATE = 5×10⁻⁴ 1/s — generic soft tissue value
             // (Pennes 1948; Duck 1990). See `kwavers_core::constants::medical`.
-            perfusion_rate: TISSUE_PERFUSION_RATE,
-            blood_density: DENSITY_BLOOD,
-            blood_specific_heat: BLOOD_SPECIFIC_HEAT,
-            arterial_temperature: BODY_TEMPERATURE_K,
+            perfusion_rate: ReciprocalTime::from_base(TISSUE_PERFUSION_RATE),
+            blood_density: MassDensity::from_base(DENSITY_BLOOD),
+            blood_specific_heat: SpecificHeatCapacity::from_base(BLOOD_SPECIFIC_HEAT),
+            arterial_temperature: ThermodynamicTemperature::from_base(BODY_TEMPERATURE_K),
         }
     }
 }
@@ -75,12 +78,13 @@ impl PennesBioheat {
                 let rho = kwavers_medium::density_at(medium, x, y, z, grid);
                 let cp = medium.specific_heat(x, y, z, grid);
 
-                let perfusion_coeff = self.params.perfusion_rate
+                let perfusion_coeff = (self.params.perfusion_rate
                     * self.params.blood_density
                     * self.params.blood_specific_heat
-                    / (rho * cp);
+                    / (MassDensity::from_base(rho) * SpecificHeatCapacity::from_base(cp)))
+                .into_base();
 
-                *q = perfusion_coeff * (self.params.arterial_temperature - t);
+                *q = perfusion_coeff * (self.params.arterial_temperature.into_base() - t);
             },
         );
 
@@ -119,11 +123,13 @@ impl PennesBioheat {
                 let rho = kwavers_medium::density_at(medium, x, y, z, grid);
                 let cp = medium.specific_heat(x, y, z, grid);
                 let alpha = medium.thermal_diffusivity(x, y, z, grid);
-                let perfusion = self.params.perfusion_rate
+                let perfusion_coeff = (self.params.perfusion_rate
                     * self.params.blood_density
                     * self.params.blood_specific_heat
-                    * (self.params.arterial_temperature - *t)
-                    / (rho * cp);
+                    / (MassDensity::from_base(rho) * SpecificHeatCapacity::from_base(cp)))
+                .into_base();
+                let perfusion =
+                    perfusion_coeff * (self.params.arterial_temperature.into_base() - *t);
                 let ext_source = external_source.as_ref().map_or(0.0, |s| s[[i, j, k]]);
 
                 *t += dt * (alpha.mul_add(lap, perfusion) + ext_source);
