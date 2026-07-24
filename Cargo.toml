@@ -3,10 +3,10 @@ members = ["crates/kwavers", "xtask", "crates/kwavers-python", "crates/kwavers-c
 resolver = "2"
 
 [workspace.dependencies]
-aequitas = { version = "0.1.0", git = "https://github.com/ryancinsight/aequitas", rev = "ce3ef7a6ea26a025b91df99034cadbbcf9b01330", default-features = false, features = ["std"] }
+aequitas = { version = "0.1.0", git = "https://github.com/ryancinsight/aequitas", rev = "e0fc5f32f07fbf0bde6a7a7086d085983195abad", default-features = false, features = ["std"] }
 asclepius = { version = "0.1.0", git = "https://github.com/ryancinsight/asclepius", default-features = false, features = ["std"] }
 hyperion = { version = "0.1.0", git = "https://github.com/ryancinsight/hyperion" }
-proteus = { version = "0.1.0", git = "https://github.com/ryancinsight/proteus" }
+proteus = { version = "0.1.0", git = "https://github.com/ryancinsight/proteus", rev = "1b25af10636931193457adb00ff8f144d37f6c90" }
 tyche-core = { version = "0.1.0", git = "https://github.com/ryancinsight/tyche" }
 # External git submodules replaced by remote git dependencies (always-latest on the
 # default branch; `cargo update -p <crate>` refreshes the pinned commit in Cargo.lock).

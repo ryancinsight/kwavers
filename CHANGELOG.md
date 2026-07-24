@@ -9,6 +9,10 @@
   quantities. Dimensionless/model coefficients and coherent complex pressure
   remain scalar mathematical values. See [ADR 050](docs/ADR/050-transducer-materials-rayleigh-quantities.md).
 
+- **Breaking**: Rayleigh aperture radii, areas, centres, and observation points
+  now use Aequitas quantities and validated `CartesianPosition`. The KWaveArray
+  rasterizer is the single explicit scalar grid-coordinate adapter.
+
 - **Breaking**: transducer element geometry and KLM frequency-response
   boundaries now use Aequitas `Length`, `Velocity`, `Frequency`, `Area`, and
   `Volume` quantities, including sampled frequency points and focal-resolution

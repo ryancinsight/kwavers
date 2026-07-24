@@ -1,5 +1,14 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-RAYLEIGH-POSITION-1 [major] — done 2026-07-24
+
+- [x] Type Rayleigh aperture radii, areas, centres, and observation points
+      with Aequitas `Length`/`Area` and validated `CartesianPosition`.
+- [x] Keep the KWaveArray rasterizer as the single explicit scalar
+      grid-coordinate adapter without parallel Rayleigh fields.
+- [x] Pass Rayleigh 12/12, planar-rasterizer 1/1, package check,
+      warning-denied package Clippy, doctests, and synchronized ADR/audit gates.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-03 materials and Rayleigh propagation [major] — done 2026-07-23
 
 - [x] Type piezoelectric, backing, matching-layer, lens, and Fresnel physical
@@ -10,8 +19,8 @@
       retaining scalar compatibility fields.
 - [x] Preserve material, lens, and Rayleigh analytical oracles; full
       `kwavers-transducer` Nextest passes 221/221 with one skipped test.
-- [x] Record the remaining Rayleigh aperture-coordinate boundary in ADR 050
-      and the Aequitas gap audit.
+- [x] Record the typed Rayleigh aperture-coordinate boundary and explicit
+      KWaveArray scalar adapter in ADR 050 and the Aequitas gap audit.
 
 ## Owner: Codex — KWAVERS-AEQ-MET-03 frequency and geometry metrics [major] — done 2026-07-23
 

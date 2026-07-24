@@ -24,8 +24,10 @@ reciprocal metres with metres at the public boundary.
   sound speed, and return typed focal lengths, delays, zone radii, and
   corrective-lens thicknesses. Retain f-number, coupling, Q, attenuation
   coefficients, and reflection/transmission coefficients as model scalars.
-- Store Rayleigh wavenumber and attenuation as `ReciprocalLength`, accept layer
-  thickness and propagation range as `Length`, and retain accumulated phase,
+- Store Rayleigh aperture radii and areas as `Length`/`Area`, represent aperture
+  centres and observation points as validated three-component positions of
+  `Length`, and store wavenumber/attenuation as `ReciprocalLength`. Accept layer
+  thickness and propagation range as `Length`; retain accumulated phase,
   attenuation exponent, and coherent complex pressure as scalar mathematical
   values.
 - Convert only at the PyO3 boundary and at legacy rasterizer/model boundaries;
@@ -46,9 +48,10 @@ reciprocal metres with metres at the public boundary.
 
 This is a pre-release public breaking change to the transducer materials and
 Rayleigh propagation APIs. In-repository Rust and PyO3 callers now construct
-typed physical values and convert only when crossing a scalar storage or Python
-array boundary. Material lensmaker, Fresnel, isoplanatic, corrective-phase, and
-Rayleigh propagation value oracles remain unchanged and pass the full
-`kwavers-transducer` library suite (221/221, one skipped). Rayleigh aperture
-geometry coordinates and observation-point arrays remain the next bounded
-transducer boundary; they are tracked separately from this propagation slice.
+typed physical values and convert only when crossing a scalar storage, legacy
+KWaveArray rasterizer, or Python array boundary. Material lensmaker, Fresnel,
+isoplanatic, corrective-phase, and Rayleigh propagation value oracles remain
+unchanged; the focused Rayleigh, planar-rasterizer, package check, Clippy, and
+doctest gates pass. The KWaveArray rasterizer continues to consume scalar grid
+coordinates as an explicit legacy boundary rather than exposing untyped
+Rayleigh geometry.

@@ -11,7 +11,7 @@
 //! al., *Ultrasonics* 51 (2011), Eq. 1,
 //! <https://doi.org/10.1016/j.ultras.2010.12.011>.
 
-use aequitas::systems::si::quantities::{Length, ReciprocalLength};
+use aequitas::systems::si::quantities::{Area, Length, ReciprocalLength};
 use eunomia::Complex64;
 use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
 use std::f64::consts::{PI, TAU};
@@ -20,50 +20,95 @@ const LEGENDRE_ROOT_STEPS: usize = 64;
 const LEGENDRE_ROOT_TOLERANCE: f64 = 8.0 * f64::EPSILON;
 const MAX_SURFACE_SAMPLES: usize = 1 << 16;
 
+/// A validated Cartesian position whose three components carry Aequitas
+/// lengths.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct CartesianPosition {
+    components: [Length; 3],
+}
+
+impl CartesianPosition {
+    /// Construct a position from SI base-unit metres.
+    ///
+    /// # Errors
+    ///
+    /// Returns `KwaversError::Config` when any coordinate is non-finite.
+    pub fn from_base(components: [f64; 3]) -> KwaversResult<Self> {
+        if components.iter().all(|component| component.is_finite()) {
+            Ok(Self {
+                components: components.map(Length::from_base),
+            })
+        } else {
+            Err(invalid(
+                "position",
+                format!("{components:?}"),
+                "all coordinates finite",
+            ))
+        }
+    }
+
+    /// Construct a position from typed length components.
+    ///
+    /// # Errors
+    ///
+    /// Returns `KwaversError::Config` when any coordinate is non-finite.
+    pub fn new(components: [Length; 3]) -> KwaversResult<Self> {
+        Self::from_base(components.map(Length::into_base))
+    }
+
+    /// Return the typed Cartesian components.
+    #[must_use]
+    pub const fn components(self) -> [Length; 3] {
+        self.components
+    }
+
+    /// Convert to the scalar representation required by legacy grid and
+    /// numerical-kernel boundaries.
+    #[must_use]
+    pub fn into_base(self) -> [f64; 3] {
+        self.components.map(Length::into_base)
+    }
+}
+
 /// Radial bounds and angular span of a planar aperture.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum PlanarApertureShape {
-    /// Complete disk from the origin to `radius_m`.
-    Disk { radius_m: f64 },
+    /// Complete disk from the origin to `radius`.
+    Disk { radius: Length },
     /// Annular sector measured counter-clockwise from the aperture's first axis.
     AnnularSector {
-        inner_radius_m: f64,
-        outer_radius_m: f64,
+        inner_radius: Length,
+        outer_radius: Length,
         start_angle_rad: f64,
         span_angle_rad: f64,
     },
 }
 
 impl PlanarApertureShape {
-    pub(crate) fn radial_and_angular_bounds(self) -> (f64, f64, f64, f64) {
+    pub(crate) fn radial_and_angular_bounds(self) -> (Length, Length, f64, f64) {
         match self {
-            Self::Disk { radius_m } => (0.0, radius_m, 0.0, TAU),
+            Self::Disk { radius } => (Length::from_base(0.0), radius, 0.0, TAU),
             Self::AnnularSector {
-                inner_radius_m,
-                outer_radius_m,
+                inner_radius,
+                outer_radius,
                 start_angle_rad,
                 span_angle_rad,
-            } => (
-                inner_radius_m,
-                outer_radius_m,
-                start_angle_rad,
-                span_angle_rad,
-            ),
+            } => (inner_radius, outer_radius, start_angle_rad, span_angle_rad),
         }
     }
 
-    /// Exact planar area in square metres.
+    /// Exact planar area.
     #[must_use]
-    pub fn area_m2(self) -> f64 {
+    pub fn area(self) -> Area {
         let (inner, outer, _, span) = self.radial_and_angular_bounds();
-        0.5 * (outer * outer - inner * inner) * span
+        (outer * outer - inner * inner) * (0.5 * span)
     }
 }
 
 /// Validated position, orientation, and radial/angular bounds of a planar aperture.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PlanarApertureGeometry {
-    center_m: [f64; 3],
+    center: CartesianPosition,
     normal: [f64; 3],
     first_axis: [f64; 3],
     shape: PlanarApertureShape,
@@ -76,14 +121,18 @@ impl PlanarApertureGeometry {
     ///
     /// Returns `KwaversError::Config` for non-finite geometry, a non-positive
     /// radius, or a zero normal.
-    pub fn disk(center_m: [f64; 3], normal: [f64; 3], radius_m: f64) -> KwaversResult<Self> {
+    pub fn disk(
+        center: CartesianPosition,
+        normal: [f64; 3],
+        radius: Length,
+    ) -> KwaversResult<Self> {
         let normal = normalized_normal(normal)?;
         let (first_axis, _) = plane_basis(normal);
         Self::from_validated(
-            center_m,
+            center,
             normal,
             first_axis,
-            PlanarApertureShape::Disk { radius_m },
+            PlanarApertureShape::Disk { radius },
         )
     }
 
@@ -94,7 +143,7 @@ impl PlanarApertureGeometry {
     /// Returns `KwaversError::Config` unless the shape bounds are valid and
     /// the first axis has a nonzero projection into the aperture plane.
     pub fn oriented(
-        center_m: [f64; 3],
+        center: CartesianPosition,
         normal: [f64; 3],
         first_axis: [f64; 3],
         shape: PlanarApertureShape,
@@ -104,35 +153,39 @@ impl PlanarApertureGeometry {
         let planar_axis = subtract(first_axis, scale(normal, dot(first_axis, normal)));
         let axis_norm = norm(planar_axis);
         validate_positive("first_axis_planar_norm", axis_norm)?;
-        Self::from_validated(center_m, normal, scale(planar_axis, 1.0 / axis_norm), shape)
+        Self::from_validated(center, normal, scale(planar_axis, 1.0 / axis_norm), shape)
     }
 
     fn from_validated(
-        center_m: [f64; 3],
+        center: CartesianPosition,
         normal: [f64; 3],
         first_axis: [f64; 3],
         shape: PlanarApertureShape,
     ) -> KwaversResult<Self> {
-        validate_point("center_m", center_m)?;
+        validate_position("center", center)?;
         match shape {
-            PlanarApertureShape::Disk { radius_m } => validate_positive("radius_m", radius_m)?,
+            PlanarApertureShape::Disk { radius } => {
+                validate_positive("radius", radius.into_base())?;
+            }
             PlanarApertureShape::AnnularSector {
-                inner_radius_m,
-                outer_radius_m,
+                inner_radius,
+                outer_radius,
                 start_angle_rad,
                 span_angle_rad,
             } => {
+                let inner_radius_m = inner_radius.into_base();
+                let outer_radius_m = outer_radius.into_base();
                 if !inner_radius_m.is_finite() || inner_radius_m < 0.0 {
                     return Err(invalid(
-                        "inner_radius_m",
+                        "inner_radius",
                         inner_radius_m.to_string(),
                         "finite and >= 0",
                     ));
                 }
-                validate_positive("outer_radius_m", outer_radius_m)?;
+                validate_positive("outer_radius", outer_radius_m)?;
                 if inner_radius_m >= outer_radius_m {
                     return Err(invalid(
-                        "annular_radii_m",
+                        "annular_radii",
                         format!("{inner_radius_m}..{outer_radius_m}"),
                         "inner < outer",
                     ));
@@ -154,17 +207,17 @@ impl PlanarApertureGeometry {
             }
         }
         Ok(Self {
-            center_m,
+            center,
             normal,
             first_axis,
             shape,
         })
     }
 
-    /// Piston centre in metres.
+    /// Piston centre.
     #[must_use]
-    pub const fn center_m(&self) -> [f64; 3] {
-        self.center_m
+    pub const fn center(&self) -> CartesianPosition {
+        self.center
     }
 
     /// Unit normal pointing into the radiating half-space.
@@ -185,9 +238,9 @@ impl PlanarApertureGeometry {
         self.shape
     }
 
-    /// Outer aperture radius in metres.
+    /// Outer aperture radius.
     #[must_use]
-    pub fn outer_radius_m(&self) -> f64 {
+    pub fn outer_radius(&self) -> Length {
         self.shape.radial_and_angular_bounds().1
     }
 }
@@ -206,13 +259,13 @@ impl PlanarAperture {
     ///
     /// Returns `KwaversError::Config` for invalid geometry or pressure.
     pub fn disk(
-        center_m: [f64; 3],
+        center: CartesianPosition,
         normal: [f64; 3],
-        radius_m: f64,
+        radius: Length,
         surface_pressure_pa: Complex64,
     ) -> KwaversResult<Self> {
         Self::new(
-            PlanarApertureGeometry::disk(center_m, normal, radius_m)?,
+            PlanarApertureGeometry::disk(center, normal, radius)?,
             surface_pressure_pa,
         )
     }
@@ -223,14 +276,14 @@ impl PlanarAperture {
     ///
     /// Returns `KwaversError::Config` for invalid geometry or pressure.
     pub fn oriented(
-        center_m: [f64; 3],
+        center: CartesianPosition,
         normal: [f64; 3],
         first_axis: [f64; 3],
         shape: PlanarApertureShape,
         surface_pressure_pa: Complex64,
     ) -> KwaversResult<Self> {
         Self::new(
-            PlanarApertureGeometry::oriented(center_m, normal, first_axis, shape)?,
+            PlanarApertureGeometry::oriented(center, normal, first_axis, shape)?,
             surface_pressure_pa,
         )
     }
@@ -263,10 +316,10 @@ impl PlanarAperture {
         self.geometry
     }
 
-    /// Piston centre in metres.
+    /// Piston centre.
     #[must_use]
-    pub const fn center_m(&self) -> [f64; 3] {
-        self.geometry.center_m()
+    pub const fn center(&self) -> CartesianPosition {
+        self.geometry.center()
     }
 
     /// Unit normal pointing into the radiating half-space.
@@ -281,10 +334,10 @@ impl PlanarAperture {
         self.geometry.shape()
     }
 
-    /// Outer aperture radius in metres.
+    /// Outer aperture radius.
     #[must_use]
-    pub fn outer_radius_m(&self) -> f64 {
-        self.geometry.outer_radius_m()
+    pub fn outer_radius(&self) -> Length {
+        self.geometry.outer_radius()
     }
 
     /// Complex surface-pressure phasor in pascals.
@@ -550,16 +603,16 @@ impl RayleighIntegralSpec {
 /// Returns `KwaversError::Config` if an observation coordinate is non-finite
 /// or the quadrature root solver fails to converge.
 pub fn rayleigh_pressure(
-    points_m: &[[f64; 3]],
+    points: &[CartesianPosition],
     apertures: &[PlanarAperture],
     spec: &RayleighIntegralSpec,
 ) -> KwaversResult<Vec<Complex64>> {
-    for &point in points_m {
-        validate_point("observation_point_m", point)?;
+    for &point in points {
+        validate_position("observation_point", point)?;
     }
     let radial_rule = gauss_legendre_unit(spec.radial_order)?;
     let prefactor = Complex64::new(0.0, -spec.wavenumber().into_base() / TAU);
-    let mut pressure = vec![Complex64::new(0.0, 0.0); points_m.len()];
+    let mut pressure = vec![Complex64::new(0.0, 0.0); points.len()];
 
     for aperture in apertures {
         if aperture.surface_pressure_pa() == Complex64::new(0.0, 0.0) {
@@ -569,10 +622,14 @@ pub fn rayleigh_pressure(
         let bitangent = cross(geometry.normal(), geometry.first_axis());
         let (inner_radius, outer_radius, start_angle, span_angle) =
             geometry.shape().radial_and_angular_bounds();
+        let inner_radius = inner_radius.into_base();
+        let outer_radius = outer_radius.into_base();
+        let center = geometry.center().into_base();
         let squared_radius_span = outer_radius * outer_radius - inner_radius * inner_radius;
         let azimuthal_weight = 0.5 * squared_radius_span * span_angle / spec.azimuthal_order as f64;
-        for (&point, total) in points_m.iter().zip(&mut pressure) {
-            let center_offset = subtract(point, geometry.center_m());
+        for (&point, total) in points.iter().zip(&mut pressure) {
+            let point = point.into_base();
+            let center_offset = subtract(point, center);
             if dot(center_offset, geometry.normal()) <= 0.0 {
                 continue;
             }
@@ -585,7 +642,7 @@ pub fn rayleigh_pressure(
                     let azimuth = start_angle
                         + span_angle * (azimuth_index as f64 + 0.5) / spec.azimuthal_order as f64;
                     let surface_point = add(
-                        geometry.center_m(),
+                        center,
                         scale(
                             add(
                                 scale(geometry.first_axis(), azimuth.cos()),
@@ -694,6 +751,10 @@ fn validate_point(parameter: &str, point: [f64; 3]) -> KwaversResult<()> {
     }
 }
 
+fn validate_position(parameter: &str, position: CartesianPosition) -> KwaversResult<()> {
+    validate_point(parameter, position.into_base())
+}
+
 fn invalid(parameter: &str, value: String, constraint: &str) -> KwaversError {
     KwaversError::Config(ConfigError::InvalidValue {
         parameter: parameter.to_owned(),
@@ -739,13 +800,17 @@ mod tests {
     fn length_m(value: f64) -> Length {
         Length::from_base(value)
     }
+
+    fn position(value: [f64; 3]) -> CartesianPosition {
+        CartesianPosition::from_base(value).unwrap()
+    }
     use kwavers_math::special::bessel::j1;
 
     fn piston(radius_m: f64) -> PlanarAperture {
         PlanarAperture::disk(
-            [0.0; 3],
+            position([0.0; 3]),
             [0.0, 0.0, 1.0],
-            radius_m,
+            length_m(radius_m),
             Complex64::new(2.5e5, 0.0),
         )
         .unwrap()
@@ -763,13 +828,13 @@ mod tests {
     #[test]
     fn annular_sector_area_matches_radial_angular_measure() {
         let shape = PlanarApertureShape::AnnularSector {
-            inner_radius_m: 1.0e-3,
-            outer_radius_m: 3.0e-3,
+            inner_radius: length_m(1.0e-3),
+            outer_radius: length_m(3.0e-3),
             start_angle_rad: 0.3,
             span_angle_rad: std::f64::consts::FRAC_PI_2,
         };
         let expected = std::f64::consts::FRAC_PI_2 * (9.0e-6 - 1.0e-6) / 2.0;
-        assert!((shape.area_m2() - expected).abs() <= 4.0 * f64::EPSILON * expected);
+        assert!((shape.area().into_base() - expected).abs() <= 4.0 * f64::EPSILON * expected);
     }
 
     #[test]
@@ -777,12 +842,12 @@ mod tests {
         let pressure = Complex64::from_polar(1.7e5, 0.4);
         let aperture = |start_angle_rad, span_angle_rad| {
             PlanarAperture::oriented(
-                [0.0; 3],
+                position([0.0; 3]),
                 [0.0, 0.0, 1.0],
                 [1.0, 0.0, 0.0],
                 PlanarApertureShape::AnnularSector {
-                    inner_radius_m: 0.4e-3,
-                    outer_radius_m: 1.2e-3,
+                    inner_radius: length_m(0.4e-3),
+                    outer_radius: length_m(1.2e-3),
                     start_angle_rad,
                     span_angle_rad,
                 },
@@ -801,7 +866,7 @@ mod tests {
             .collect();
         let spec =
             RayleighIntegralSpec::new(inverse_m(TAU / 0.7e-3), inverse_m(0.0), 12, 32).unwrap();
-        let point = [[0.0, 0.0, 20.0e-3]];
+        let point = [position([0.0, 0.0, 20.0e-3])];
         let complete_pressure = rayleigh_pressure(&point, &[complete], &spec).unwrap()[0];
         let sector_pressure = rayleigh_pressure(&point, &sectors, &spec).unwrap()[0];
         assert!(
@@ -817,8 +882,9 @@ mod tests {
         let k = TAU / 0.75e-3;
         let axial_range = 14.0e-3;
         let spec = RayleighIntegralSpec::new(inverse_m(k), inverse_m(0.0), 24, 24).unwrap();
-        let actual = rayleigh_pressure(&[[0.0, 0.0, axial_range]], &[piston], &spec).unwrap()[0];
-        let rim_range = axial_range.hypot(piston.outer_radius_m());
+        let actual =
+            rayleigh_pressure(&[position([0.0, 0.0, axial_range])], &[piston], &spec).unwrap()[0];
+        let rim_range = axial_range.hypot(piston.outer_radius().into_base());
         let expected = piston.surface_pressure_pa()
             * (Complex64::from_polar(1.0, k * axial_range)
                 - Complex64::from_polar(1.0, k * rim_range));
@@ -833,8 +899,8 @@ mod tests {
         let range = 0.4;
         let angle: f64 = 0.17;
         let points = [
-            [0.0, 0.0, range],
-            [range * angle.sin(), 0.0, range * angle.cos()],
+            position([0.0, 0.0, range]),
+            position([range * angle.sin(), 0.0, range * angle.cos()]),
         ];
         let pressure = rayleigh_pressure(
             &points,
@@ -842,7 +908,7 @@ mod tests {
             &RayleighIntegralSpec::new(inverse_m(k), inverse_m(0.0), 20, 96).unwrap(),
         )
         .unwrap();
-        let argument = k * piston.outer_radius_m() * angle.sin();
+        let argument = k * piston.outer_radius().into_base() * angle.sin();
         let expected_ratio = (2.0 * j1(argument) / argument).abs();
         let actual_ratio = pressure[1].norm() / pressure[0].norm();
         assert!(
@@ -855,23 +921,25 @@ mod tests {
     fn rotation_preserves_complex_pressure() {
         let base = piston(0.7e-3);
         let rotated = PlanarAperture::disk(
-            [0.0; 3],
+            position([0.0; 3]),
             [1.0, 0.0, 0.0],
-            base.outer_radius_m(),
+            base.outer_radius(),
             base.surface_pressure_pa(),
         )
         .unwrap();
         let spec =
             RayleighIntegralSpec::new(inverse_m(TAU / 0.8e-3), inverse_m(3.0), 12, 48).unwrap();
-        let along_z = rayleigh_pressure(&[[0.2e-3, 0.0, 30.0e-3]], &[base], &spec).unwrap()[0];
-        let along_x = rayleigh_pressure(&[[30.0e-3, 0.0, 0.2e-3]], &[rotated], &spec).unwrap()[0];
+        let along_z =
+            rayleigh_pressure(&[position([0.2e-3, 0.0, 30.0e-3])], &[base], &spec).unwrap()[0];
+        let along_x =
+            rayleigh_pressure(&[position([30.0e-3, 0.0, 0.2e-3])], &[rotated], &spec).unwrap()[0];
         assert!((along_z - along_x).norm() <= 64.0 * f64::EPSILON * along_z.norm());
     }
 
     #[test]
     fn rigid_baffle_suppresses_back_radiation() {
         let pressure = rayleigh_pressure(
-            &[[0.0, 0.0, -0.01]],
+            &[position([0.0, 0.0, -0.01])],
             &[piston(0.5e-3)],
             &RayleighIntegralSpec::new(inverse_m(TAU / 1.0e-3), inverse_m(0.0), 4, 12).unwrap(),
         )

@@ -875,6 +875,7 @@ dependencies = [
  "coeus-sparse",
  "coeus-tensor",
  "eunomia",
+ "leto",
  "leto-ops",
  "melinoe",
  "smallvec",
@@ -2740,7 +2741,7 @@ source = "git+https://github.com/ryancinsight/hyperion#7b4561b9b51949c8ca59ee2d6
 dependencies = [
  "aequitas",
  "eunomia",
- "proteus",
+ "proteus 0.1.0 (git+https://github.com/ryancinsight/proteus)",
 ]
 
 [[package]]
@@ -3581,7 +3582,7 @@ dependencies = [
  "log",
  "moirai-parallel",
  "proptest",
- "proteus",
+ "proteus 0.1.0 (git+https://github.com/ryancinsight/proteus?rev=1b25af10636931193457adb00ff8f144d37f6c90)",
  "serde",
 ]
 
@@ -3638,7 +3639,7 @@ dependencies = [
  "leto",
  "log",
  "moirai-parallel",
- "proteus",
+ "proteus 0.1.0 (git+https://github.com/ryancinsight/proteus?rev=1b25af10636931193457adb00ff8f144d37f6c90)",
  "rand 0.8.7",
  "rand_chacha 0.3.1",
  "rand_distr 0.4.3",
@@ -4112,7 +4113,7 @@ dependencies = [
 
 [[package]]
 name = "mnemosyne"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "eunomia",
  "mnemosyne-arena",
@@ -4127,7 +4128,7 @@ dependencies = [
 
 [[package]]
 name = "mnemosyne-arena"
-version = "0.3.0"
+version = "0.6.0"
 dependencies = [
  "eunomia",
  "mnemosyne-backend",
@@ -4137,22 +4138,22 @@ dependencies = [
 
 [[package]]
 name = "mnemosyne-backend"
-version = "0.4.0"
+version = "0.6.0"
 dependencies = [
  "mnemosyne-core",
 ]
 
 [[package]]
 name = "mnemosyne-build-util"
-version = "0.2.0"
+version = "0.6.0"
 
 [[package]]
 name = "mnemosyne-core"
-version = "0.2.0"
+version = "0.6.0"
 
 [[package]]
 name = "mnemosyne-decay"
-version = "0.2.0"
+version = "0.6.0"
 dependencies = [
  "mnemosyne-arena",
  "mnemosyne-backend",
@@ -4161,14 +4162,14 @@ dependencies = [
 
 [[package]]
 name = "mnemosyne-hardened"
-version = "0.2.0"
+version = "0.6.0"
 dependencies = [
  "mnemosyne-core",
 ]
 
 [[package]]
 name = "mnemosyne-heap"
-version = "0.2.0"
+version = "0.6.0"
 dependencies = [
  "melinoe",
  "mnemosyne-arena",
@@ -4181,7 +4182,7 @@ dependencies = [
 
 [[package]]
 name = "mnemosyne-local"
-version = "0.2.0"
+version = "0.6.0"
 dependencies = [
  "melinoe",
  "mnemosyne-arena",
@@ -4195,7 +4196,7 @@ dependencies = [
 
 [[package]]
 name = "mnemosyne-prof"
-version = "0.2.0"
+version = "0.6.0"
 dependencies = [
  "backtrace",
  "mnemosyne-build-util",
@@ -5096,7 +5097,16 @@ dependencies = [
 [[package]]
 name = "proteus"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/proteus#bb51ac414f74fb47d8001310206c5aea2e3a160c"
+source = "git+https://github.com/ryancinsight/proteus?rev=1b25af10636931193457adb00ff8f144d37f6c90#1b25af10636931193457adb00ff8f144d37f6c90"
+dependencies = [
+ "aequitas",
+ "eunomia",
+]
+
+[[package]]
+name = "proteus"
+version = "0.1.0"
+source = "git+https://github.com/ryancinsight/proteus#1b25af10636931193457adb00ff8f144d37f6c90"
 dependencies = [
  "aequitas",
  "eunomia",
