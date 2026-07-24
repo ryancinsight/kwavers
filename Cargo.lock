@@ -1251,7 +1251,6 @@ dependencies = [
 [[package]]
 name = "cuda-async"
 version = "0.2.0"
-source = "git+https://github.com/NVlabs/cutile-rs#d2399854fa6b5fa2aa070d5bc3b8769c2646f816"
 dependencies = [
  "anyhow",
  "cuda-core",
@@ -1265,7 +1264,6 @@ dependencies = [
 [[package]]
 name = "cuda-bindings"
 version = "0.2.0"
-source = "git+https://github.com/NVlabs/cutile-rs#d2399854fa6b5fa2aa070d5bc3b8769c2646f816"
 dependencies = [
  "bindgen",
  "libloading",
@@ -1278,7 +1276,6 @@ dependencies = [
 [[package]]
 name = "cuda-core"
 version = "0.2.0"
-source = "git+https://github.com/NVlabs/cutile-rs#d2399854fa6b5fa2aa070d5bc3b8769c2646f816"
 dependencies = [
  "anyhow",
  "cuda-bindings",
@@ -1297,7 +1294,6 @@ dependencies = [
 [[package]]
 name = "cutile"
 version = "0.2.0"
-source = "git+https://github.com/NVlabs/cutile-rs#d2399854fa6b5fa2aa070d5bc3b8769c2646f816"
 dependencies = [
  "anyhow",
  "cuda-async",
@@ -1316,7 +1312,6 @@ dependencies = [
 [[package]]
 name = "cutile-compiler"
 version = "0.2.0"
-source = "git+https://github.com/NVlabs/cutile-rs#d2399854fa6b5fa2aa070d5bc3b8769c2646f816"
 dependencies = [
  "anyhow",
  "cuda-async",
@@ -1336,7 +1331,6 @@ dependencies = [
 [[package]]
 name = "cutile-ir"
 version = "0.2.0"
-source = "git+https://github.com/NVlabs/cutile-rs#d2399854fa6b5fa2aa070d5bc3b8769c2646f816"
 dependencies = [
  "half",
  "indexmap 2.12.0",
@@ -1346,7 +1340,6 @@ dependencies = [
 [[package]]
 name = "cutile-macro"
 version = "0.2.0"
-source = "git+https://github.com/NVlabs/cutile-rs#d2399854fa6b5fa2aa070d5bc3b8769c2646f816"
 dependencies = [
  "convert_case",
  "cutile-compiler",
@@ -2546,7 +2539,7 @@ dependencies = [
 
 [[package]]
 name = "hermes-simd"
-version = "0.5.0"
+version = "0.4.1"
 dependencies = [
  "eunomia",
  "hermes-simd-core",
@@ -2558,7 +2551,7 @@ dependencies = [
 
 [[package]]
 name = "hermes-simd-core"
-version = "0.5.0"
+version = "0.4.1"
 dependencies = [
  "bytemuck",
  "eunomia",
@@ -2569,7 +2562,7 @@ dependencies = [
 
 [[package]]
 name = "hermes-simd-intrinsics"
-version = "0.5.0"
+version = "0.4.1"
 dependencies = [
  "eunomia",
  "hermes-simd-core",
@@ -2577,7 +2570,7 @@ dependencies = [
 
 [[package]]
 name = "hermes-simd-macros"
-version = "0.5.0"
+version = "0.4.1"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2586,7 +2579,7 @@ dependencies = [
 
 [[package]]
 name = "hermes-simd-types"
-version = "0.5.0"
+version = "0.4.1"
 dependencies = [
  "hermes-simd-core",
  "hermes-simd-intrinsics",
@@ -4127,7 +4120,7 @@ dependencies = [
 
 [[package]]
 name = "mnemosyne-arena"
-version = "0.6.0"
+version = "0.3.0"
 dependencies = [
  "eunomia",
  "mnemosyne-backend",
@@ -4137,22 +4130,22 @@ dependencies = [
 
 [[package]]
 name = "mnemosyne-backend"
-version = "0.6.0"
+version = "0.5.0"
 dependencies = [
  "mnemosyne-core",
 ]
 
 [[package]]
 name = "mnemosyne-build-util"
-version = "0.6.0"
+version = "0.2.0"
 
 [[package]]
 name = "mnemosyne-core"
-version = "0.6.0"
+version = "0.2.0"
 
 [[package]]
 name = "mnemosyne-decay"
-version = "0.6.0"
+version = "0.2.0"
 dependencies = [
  "mnemosyne-arena",
  "mnemosyne-backend",
@@ -4161,14 +4154,14 @@ dependencies = [
 
 [[package]]
 name = "mnemosyne-hardened"
-version = "0.6.0"
+version = "0.2.0"
 dependencies = [
  "mnemosyne-core",
 ]
 
 [[package]]
 name = "mnemosyne-heap"
-version = "0.6.0"
+version = "0.3.0"
 dependencies = [
  "melinoe",
  "mnemosyne-arena",
@@ -4181,7 +4174,7 @@ dependencies = [
 
 [[package]]
 name = "mnemosyne-local"
-version = "0.6.0"
+version = "0.3.0"
 dependencies = [
  "melinoe",
  "mnemosyne-arena",
@@ -4195,7 +4188,7 @@ dependencies = [
 
 [[package]]
 name = "mnemosyne-prof"
-version = "0.6.0"
+version = "0.2.0"
 dependencies = [
  "backtrace",
  "mnemosyne-build-util",

@@ -11,7 +11,6 @@
 use kwavers_physics::acoustics::bubble_dynamics::{EpsteinPlessetDissolution, GasDiffusionParams};
 use kwavers_simulation::multi_physics::residual_gas::ResidualGasField;
 use numpy::{PyArray3, PyReadonlyArray3, ToPyArray};
-use crate::array_utils::LetoToPyArray;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 

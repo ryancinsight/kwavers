@@ -119,4 +119,6 @@
 # Appendix
 
 - [A. Glossary](appendix_glossary.md)
+- [B. Atlas Crate Dependency Map](appendix_dependencies.md)
+- [C. Changelog](appendix_changelog.md)
 

@@ -1,19 +1,15 @@
-//! Iterative Solvers for Large-Scale Linear Systems
+//! Iterative solvers - SSOT: leto_ops application linalg iterative.
 //!
-//! This module provides iterative algorithms for solving linear systems,
-//! particularly useful for large sparse matrices.
-//!
-//! **Available Solvers**:
-//! - **LSQR**: Least-squares QR for overdetermined systems (Paige & Saunders 1982)
-//! - **CG**: Conjugate Gradient (implemented in sparse module)
-//! - **BiCGSTAB**: BiConjugate Gradient Stabilized (implemented in sparse module)
-//!
-//! **When to Use Iterative Methods**:
-//! - Matrix is large and sparse (millions of unknowns)
-//! - Direct methods too expensive in memory or time
-//! - Overdetermined or least-squares problems
-//! - Matrix-free applications (only matrix-vector products available)
+//! Re-exported here as the kwavers vocabulary so higher layers depend on one
+//! import path while the implementation lives in leto-ops.
 
-pub mod lsqr;
+pub use leto_ops::{
+    BiCGSTAB, ConjugateGradient, GMRES, LsqrConfig, LsqrResult, LsqrSolver, LsqrStopReason,
+    LinearOperator, LinearSolver, Preconditioner, IterativeLinearSolver, IterativeSolverConfig,
+    IdentityPreconditioner, JacobiPreconditioner, ILUPreconditioner,
+};
 
-pub use lsqr::{LsqrConfig, LsqrResult, LsqrSolver, StopReason};
+/// LSQR solver wrapper preserving the kwavers import path.
+pub mod lsqr {
+    pub use leto_ops::{LsqrConfig, LsqrResult, LsqrSolver, LsqrStopReason};
+}

@@ -20,7 +20,6 @@ use kwavers_diagnostics::reconstruction::breast_ust_fwi::{
     BreastUstSourceScalingPolicy, BreastUstTable1Parity,
 };
 use numpy::{PyArray3, PyReadonlyArray3, ToPyArray};
-use crate::array_utils::LetoToPyArray;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList, PyModule};

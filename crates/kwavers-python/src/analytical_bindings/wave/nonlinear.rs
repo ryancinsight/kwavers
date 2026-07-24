@@ -4,7 +4,6 @@
 
 use kwavers_physics::analytical::wave;
 use numpy::ndarray::Array2;
-use crate::array_utils::LetoToPyArray;
 use numpy::{PyArray1, PyArray2, PyReadonlyArray1, PyReadonlyArray2, ToPyArray};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;

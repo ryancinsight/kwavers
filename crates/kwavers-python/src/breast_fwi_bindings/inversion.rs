@@ -12,7 +12,6 @@ use kwavers_solver::inverse::fwi::frequency_domain::{
     simulate_frequency_observation, FrequencyObservation,
 };
 use numpy::ndarray::Array1;
-use crate::array_utils::LetoToPyArray;
 use numpy::{PyArray1, PyArray2, PyReadonlyArray2, PyReadonlyArray3, ToPyArray};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;

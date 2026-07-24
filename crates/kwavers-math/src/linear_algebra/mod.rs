@@ -1,18 +1,19 @@
 //! Linear algebra operations.
 //!
-//! Submodules:
-//! - `complex`: complex-matrix solve and inversion
-//! - `eigendecomposition`: general eigendecomposition
-//! - `iterative`: iterative solvers (LSQR)
-//! - `norms`: vector norms
-//! - `numeric_ops`: generic float trait (`NumericOps`)
-//! - `ext`: fluent `leto::Array` extension trait (`LinearAlgebraExt`) and `norm_l2`
-//! - `tolerance`: numerical tolerance constants
-//! - `sparse`: sparse matrix operations (CSR, COO)
+//! SSOT: leto-ops application linalg.
 //!
-//! Note: Basic linear algebra operations (solve, inv, LU, QR, Cholesky, symmetric eigen)
-//! are provided by `leto-ops` and should be used directly instead of the deprecated
-//! `basic` and `eigen` modules.
+//! All submodules delegate to leto-ops, providing a kwavers-vocabulary
+//! wrapper that preserves the KwaversError contract.
+//!
+//! Submodules:
+//! - complex: complex-matrix solve and inversion (delegates to leto_ops::complex_solve/complex_inv)
+//! - eigendecomposition: Hermitian eigendecomposition (delegates to leto_ops::hermitian_eigen_*)
+//! - ext: fluent leto::Array extension trait (delegates to leto_ops::solve/inv/eig)
+//! - iterative: iterative solvers (delegates to leto_ops::iterative)
+//! - norms: vector norms (delegates to leto_ops::norm_*)
+//! - numeric_ops: generic float trait (delegates to leto element-wise ops)
+//! - sparse: sparse matrix operations (delegates to leto::CsrMatrix and leto_ops::iterative)
+//! - tolerance: numerical tolerance constants (unique to kwavers)
 
 pub mod complex;
 pub mod eigendecomposition;
@@ -28,6 +29,3 @@ pub use eigendecomposition::{EigenResult, EigenSolver, EigenSolverConfig};
 pub use ext::{norm_l2, LinearAlgebraExt};
 pub use norms::VectorOperations;
 pub use numeric_ops::NumericOps;
-
-#[cfg(test)]
-mod tests;

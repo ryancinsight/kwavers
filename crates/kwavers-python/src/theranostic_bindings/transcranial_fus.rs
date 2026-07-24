@@ -20,7 +20,6 @@ use kwavers_therapy::therapy::theranostic_guidance::{
     transcranial_pennes_thermal_dose, TranscranialFusPlanConfig,
 };
 use numpy::{PyArray1, PyReadonlyArray2, PyReadonlyArray3, ToPyArray};
-use crate::array_utils::LetoToPyArray;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;

@@ -3,7 +3,6 @@
 mod thermal_strain;
 
 use crate::array_utils::vec_to_pyarray1;
-use crate::array_utils::LetoToPyArray;
 use crate::array_utils::vec_to_pyarray2;
 use kwavers_physics::analytical::elastography;
 use numpy::{PyArray1, PyArray2, PyReadonlyArray1};

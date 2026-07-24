@@ -8,7 +8,6 @@ use kwavers_therapy::therapy::theranostic_guidance::{
 };
 use leto::Array3;
 use numpy::ndarray::Array1;
-use crate::array_utils::LetoToPyArray;
 use numpy::ToPyArray;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;

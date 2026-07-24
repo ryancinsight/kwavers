@@ -2,7 +2,6 @@
 
 use kwavers_physics::analytical::acousto_optics;
 use numpy::{PyArray1, ToPyArray};
-use crate::array_utils::LetoToPyArray;
 use pyo3::prelude::*;
 
 /// Raman–Nath (thin-grating) order intensities Iₘ = Jₘ²(ν) for

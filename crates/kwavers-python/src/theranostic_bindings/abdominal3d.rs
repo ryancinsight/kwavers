@@ -9,7 +9,6 @@ use kwavers_therapy::therapy::theranostic_guidance::{
     synthetic::{synthetic_abdominal_kidney_phantom, synthetic_abdominal_liver_phantom},
 };
 use numpy::ToPyArray;
-use crate::array_utils::LetoToPyArray;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use std::path::Path;

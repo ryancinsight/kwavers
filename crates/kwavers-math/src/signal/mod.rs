@@ -1,10 +1,14 @@
-//! Signal-processing mathematical primitives.
+//! Signal-processing mathematical primitives — SSOT: `leto_ops::application::signal`.
 //!
-//! Contains pure mathematical types for signal windowing and apodization,
-//! with no dependencies on domain-specific modules.
+//! Re-exported here as the kwavers vocabulary so higher layers depend on one
+//! import path. Domain-specific types (ApodizationType enum) remain here.
 
-pub mod phase;
-pub mod window;
+pub mod phase {
+    pub use leto_ops::application::signal::phase::wrap_to_pi;
+}
+pub mod window {
+    pub use leto_ops::application::signal::window::{blackman, hamming, hann, tukey};
+}
 pub use phase::wrap_to_pi;
 
 use serde::{Deserialize, Serialize};

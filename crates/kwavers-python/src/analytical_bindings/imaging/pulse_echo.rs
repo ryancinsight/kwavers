@@ -9,7 +9,6 @@ use kwavers_physics::analytical::pulse_echo::{
     delta_bmode_db as core_delta_bmode_db, simulate_receive_rf as core_simulate_receive_rf,
 };
 use numpy::{PyArray1, PyArray2, PyReadonlyArray1, PyReadonlyArray2, ToPyArray};
-use crate::array_utils::LetoToPyArray;
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 

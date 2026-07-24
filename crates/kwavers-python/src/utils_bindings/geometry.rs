@@ -1,5 +1,4 @@
 use crate::array_utils::leto3_to_pyarray3;
-use crate::array_utils::LetoToPyArray;
 use crate::Grid;
 use leto::Array3 as LetoArray3;
 use numpy::PyArray3;

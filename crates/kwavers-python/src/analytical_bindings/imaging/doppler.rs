@@ -5,7 +5,6 @@ use kwavers_analysis::signal_processing::doppler::{
 };
 use kwavers_physics::analytical::imaging::{self, ContrastAgentDopplerConfig};
 use numpy::ndarray::Array2;
-use crate::array_utils::LetoToPyArray;
 use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;

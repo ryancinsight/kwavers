@@ -10,7 +10,6 @@ use kwavers_therapy::therapy::theranostic_guidance::{
 };
 use leto::Array3;
 use numpy::{PyArray1, ToPyArray};
-use crate::array_utils::LetoToPyArray;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use std::path::Path;

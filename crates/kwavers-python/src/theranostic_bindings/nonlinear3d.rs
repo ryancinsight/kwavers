@@ -4,7 +4,6 @@ use kwavers_therapy::therapy::theranostic_guidance::{
     run_theranostic_nonlinear_3d, AnatomyKind, Nonlinear3dConfig,
 };
 use numpy::ToPyArray;
-use crate::array_utils::LetoToPyArray;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList};

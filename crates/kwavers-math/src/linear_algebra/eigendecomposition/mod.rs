@@ -1,51 +1,20 @@
-//! Advanced Eigenvalue Decomposition for Complex Hermitian Matrices
+//! Eigenvalue decomposition for complex Hermitian matrices.
 //!
-//! This module implements state-of-the-art eigenvalue algorithms optimized for:
-//! - Complex Hermitian matrices (covariance matrices in beamforming)
-//! - Signal processing applications (MUSIC, ESPRIT)
-//! - FDA compliance validation
+//! SSOT: leto_ops application linalg eigen and hermitian.
 //!
-//! ## Algorithms Implemented
-//!
-//! ### QR Algorithm with Wilkinson Shift
-//! - Iterative eigenvalue computation with implicit QR iterations
-//! - Wilkinson shift for improved convergence
-//! - Suitable for dense matrices up to ~1000×1000
-//! - O(n³) complexity but with good constant factors
-//!
-//! ### Jacobi Method for Hermitian Matrices
-//! - Jacobi eigenvalue algorithm for complex Hermitian matrices
-//! - Guaranteed convergence with high numerical stability
-//! - O(n³) but often faster for small matrices (n < 100)
-//! - Used as fallback for ill-conditioned problems
-//!
-//! ## Theoretical Foundations
-//!
-//! **Schur Decomposition**: A = Q·T·Q^H where Q is unitary, T is upper triangular
-//!
-//! **Rayleigh Quotient**: R(x) = x^H·A·x / (x^H·x)
-//!
-//! **Condition Number**: κ(A) = λ_max / λ_min
-//!
-//! ## References
-//!
-//! - Golub & Van Loan (2013): "Matrix Computations" (4th ed)
-//! - Parlett (1998): "The Symmetric Eigenvalue Problem"
-//! - Wilkinson (1965): "The Algebraic Eigenvalue Problem"
-
-mod algorithms;
-mod helpers;
-#[cfg(test)]
-mod tests;
+//! This module provides a kwavers-vocabulary wrapper around leto-ops
+//! eigensolvers, preserving the existing API surface while delegating
+//! to the SSOT implementation.
 
 use eunomia::Complex64;
+use kwavers_core::error::KwaversResult;
 use leto::{Array1, Array2};
 
-/// Advanced eigenvalue decomposition with multiple algorithms
+/// Eigenvalue decomposition solver - delegates to leto-ops.
 #[derive(Debug)]
 pub struct EigenSolver;
 
-/// Configuration for eigenvalue solver
+/// Configuration for eigenvalue solver (maps to leto_ops HermitianEigenConfig).
 #[derive(Debug, Clone, Copy)]
 pub struct EigenSolverConfig {
     /// Convergence tolerance (default: 1e-10)
@@ -69,7 +38,18 @@ impl Default for EigenSolverConfig {
     }
 }
 
-/// Result of eigenvalue decomposition with diagnostic information
+impl EigenSolverConfig {
+    fn to_leto_config(self) -> leto_ops::HermitianEigenConfig {
+        leto_ops::HermitianEigenConfig {
+            tolerance: self.tolerance,
+            max_iterations: self.max_iterations,
+            sort_descending: self.sort_descending,
+            estimate_condition: self.estimate_condition,
+        }
+    }
+}
+
+/// Result of eigenvalue decomposition with diagnostic information.
 #[derive(Debug, Clone)]
 pub struct EigenResult {
     /// Eigenvalues (sorted if config.sort_descending = true)
@@ -80,8 +60,46 @@ pub struct EigenResult {
     pub iterations: usize,
     /// Final off-diagonal norm (convergence criterion)
     pub off_diagonal_norm: f64,
-    /// Condition number estimate κ(A) = λ_max / λ_min
+    /// Condition number estimate kappa(A) = lambda_max / lambda_min
     pub condition_number: Option<f64>,
     /// Algorithm used
     pub algorithm: String,
+}
+
+impl EigenSolver {
+    /// QR algorithm with Wilkinson shift for complex Hermitian matrices.
+    /// Delegates to leto_ops::hermitian_eigen_qr.
+    pub fn qr_algorithm(
+        matrix: &Array2<Complex64>,
+        config: EigenSolverConfig,
+    ) -> KwaversResult<EigenResult> {
+        let leto_config = config.to_leto_config();
+        let result = leto_ops::hermitian_eigen_qr(matrix, leto_config)?;
+        Ok(EigenResult {
+            eigenvalues: result.eigenvalues,
+            eigenvectors: result.eigenvectors,
+            iterations: result.iterations,
+            off_diagonal_norm: result.off_diagonal_norm,
+            condition_number: result.condition_number,
+            algorithm: "QR with Wilkinson shift (leto-ops)".to_string(),
+        })
+    }
+
+    /// Jacobi method for complex Hermitian matrices.
+    /// Delegates to leto_ops::hermitian_eigen_jacobi.
+    pub fn jacobi_hermitian(
+        matrix: &Array2<Complex64>,
+        config: EigenSolverConfig,
+    ) -> KwaversResult<EigenResult> {
+        let leto_config = config.to_leto_config();
+        let result = leto_ops::hermitian_eigen_jacobi(matrix, leto_config)?;
+        Ok(EigenResult {
+            eigenvalues: result.eigenvalues,
+            eigenvectors: result.eigenvectors,
+            iterations: result.iterations,
+            off_diagonal_norm: result.off_diagonal_norm,
+            condition_number: result.condition_number,
+            algorithm: "Jacobi (leto-ops)".to_string(),
+        })
+    }
 }
