@@ -4,6 +4,10 @@
 
 ### Changed
 
+- **Breaking**: ultrafast transmission sequencing now carries speed, depth,
+  PRF, frame rate, event time, and plane-wave angles as Aequitas quantities;
+  structural event indices remain scalar. See [ADR 057](docs/ADR/057-ultrafast-sequencer-quantities.md).
+
 - **Breaking**: impedance-boundary targets, medium values, representative
   frequencies, Gaussian bandwidths, and custom frequency samples now use
   Aequitas `AcousticImpedance` and `Frequency`. Dimensionless profile response

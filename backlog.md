@@ -1,5 +1,19 @@
 # Backlog / Strategy
 
+## KWAVERS-AEQ-MET-11 — Type ultrafast sequencer physical metrics [major] — implementation done, verification blocked 2026-07-24
+
+- Owner: Codex; scope: `kwavers-transducer::ultrafast::sequencer`, tests, ADR
+  057, and Aequitas metric PM artifacts.
+- Outcome: transmission configuration and schedule values use Aequitas
+  `Velocity`, `Length`, `Frequency`, `Time`, and `Angle`; structural indices
+  remain `usize` and scalar trigonometric arithmetic stays at the kernel edge.
+- Acceptance: PRF bound, event timing, sequential/interleaved order, flash/STA,
+  and compounded frame-rate tests preserve their analytical value oracles;
+  package gates run when the peer Coeus graph loads.
+- Evidence: direct rustfmt and diff checks pass. Cargo is blocked before
+  Kwavers source compilation by the missing peer path
+  `D:\atlas\worktrees\coeus\coeus-autograd\Cargo.toml`.
+
 ## KWAVERS-AEQ-MET-03b — Type transducer materials and Rayleigh propagation [major] — done 2026-07-23
 
 - Owner: Codex; scope: `kwavers-transducer` materials/lens APIs, Rayleigh

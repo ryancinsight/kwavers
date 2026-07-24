@@ -1,5 +1,16 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-11 typed ultrafast sequencer metrics [major] — implementation done, verification blocked 2026-07-24
+
+- [x] Type sequencer sound speed, imaging depth, PRF, frame rate, event time,
+      and plane-wave angle with Aequitas quantities.
+- [x] Migrate sequential, interleaved, flash, STA, and analytical timing tests;
+      preserve the PRF bound and event-order value semantics.
+- [x] Synchronize the child gap audit, ADR 057, and changelog.
+- [ ] Run package checks, Nextest, warning-denied Clippy, doctests, and Rustdoc
+      after the peer Coeus dependency graph is restored. Current blocker:
+      Cargo cannot load `D:\atlas\worktrees\coeus\coeus-autograd\Cargo.toml`.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-10 typed impedance-boundary metrics [major] — implementation done, verification blocked 2026-07-24
 
 - [x] Type `ImpedanceBoundary` target/medium impedance and frequency-profile
