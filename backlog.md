@@ -1,5 +1,19 @@
 # Backlog / Strategy
 
+## KW-AEQ-MET-04 — Type functional-ultrasound vessel metrics [major] [arch] — in-progress
+
+- Owner: Codex; scope: `crates/kwavers-analysis/src/signal_processing/vasculature/**`,
+  `backlog.md`, `CHECKLIST.md`, and `gap_audit.md`.
+- Outcome: require explicit Aequitas voxel spacing at vessel segmentation and
+  return typed `Length<f64>` diameter/length/centerline values plus typed
+  `Velocity<f64>` Doppler results.
+- Acceptance: anisotropic spacing scales each centerline axis and equivalent
+  diameter consistently; Doppler preserves `v = f_d c / (2 f_0 cos(theta))`;
+  invalid spacing and Doppler inputs return typed errors; all affected tests,
+  focused Nextest, Clippy, doctest, Rustdoc, and format gates pass.
+- Non-goals: Doppler field storage, dimensionless confidence/orientation, and
+  the unrelated transducer PR #324 residuals.
+
 ## KW-DOCS-BOOK-PAGES-1 — Publish the source-backed mdBook through GitHub Pages [patch] — done
 
 - Owner: Codex `/root`; scope: `.github/workflows/book-pages.yml`,

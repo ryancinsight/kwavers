@@ -1,5 +1,15 @@
 # Project Checklist
 
+## Owner: Codex — KW-AEQ-MET-04 vessel physical metrics [major] [arch] — in progress
+
+- [ ] Add validated Aequitas voxel spacing to vessel segmentation and preserve
+      anisotropic physical scaling in diameter, total length, and centerline.
+- [ ] Return Aequitas `Length<f64>` and `Velocity<f64>` at the public vessel
+      boundary without changing dimensionless confidence/orientation semantics.
+- [ ] Add value-semantic spacing/Doppler regressions and synchronize the child
+      and Atlas gap audits.
+- [ ] Run focused format, Nextest, Clippy, doctest, Rustdoc, and package gates.
+
 ## Owner: Codex `/root` — Aequitas acoustic dimensional boundaries [patch] — done
 
 - [x] Express acoustic heating through reciprocal-length × intensity and
