@@ -29,7 +29,7 @@
 
 # Gap Audit
 
-## Aequitas metric gap audit (2026-07-23)
+## Aequitas metric gap audit (2026-07-24)
 
 The Kwavers inventory covers public configuration/result surfaces in physics,
 therapy, transducer, and analysis crates. Dense pressure/temperature fields,
@@ -43,20 +43,27 @@ surface is migrated.
 Kwavers already routes thermal-acoustic coupling through typed intensity,
 volumetric power density, velocity, density, temperature, and time; the CEM43
 and HIFU planning boundaries now use validated equivalent-time, temperature,
-and duration results; optical attenuation uses typed reciprocal length and
-fluence; and thermal material bundles use Proteus/Aequitas quantities
-internally.
+and duration results; HIFU planning geometry, power, pressure, frequency,
+volume, and schedule coordinates now use typed physical quantities; optical attenuation uses typed reciprocal length and
+fluence; and thermal material bundles use Proteus/Aequitas quantities through
+their public accessors. Pennes perfusion is now represented by the
+provider-owned mass-density-rate quantity at the material and solver
+boundaries.
 
 ### Open implementation ledger
 
 | ID | Evidence | Remaining implementation | Owner | Status / acceptance oracle |
 |---|---|---|---|---|
+| `KWAVERS-AEQ-MET-10` | `kwavers-boundary/src/coupling/impedance/{mod,types}.rs` exposed target/medium acoustic impedance, representative frequency, Gaussian center/bandwidth, and custom profile sample frequencies as raw `f64` values documented in Rayl or Hz. The existing implementation already computes dimensionless impedance ratios and reflection coefficients from those inputs. | Type the physical boundary with Aequitas `AcousticImpedance` and `Frequency`; keep profile response, impedance ratio, and reflection coefficient dimensionless. | Kwavers | **IMPLEMENTED in this increment; verification blocked before source compilation by the peer Coeus graph.** `ImpedanceBoundary` and `FrequencyProfile` now carry typed impedance/frequency inputs; all in-tree callers and analytical boundary/profile tests use the typed contract, and duplicate profile interpolation was removed. Rustfmt passes. Package check, Nextest, warning-denied Clippy, doctests, and Rustdoc are pending until `D:\atlas\worktrees\coeus\coeus-autograd\Cargo.toml` is restored. See [ADR 056](docs/ADR/056-impedance-boundary-quantities.md). |
 | `KWAVERS-AEQ-MET-01` | `kwavers-physics/src/thermal/thermal_dose.rs` and HIFU planning types/schedules used raw CEM43, temperature, dwell, and time-to-dose result fields. | Add a consumer-owned validated equivalent-time/CEM43 type backed by Aequitas `Time`; type temperature and duration result/configuration fields. Do not label CEM43 as `AbsorbedDose`. | Kwavers | **RESOLVED in this increment.** `CumulativeEquivalentMinutes` is backed by Aequitas `Time`; thermal calculators return typed maxima/point queries, accept typed intervals/thresholds, and HIFU planning returns typed temperature/dwell/time-to-dose values with `Option<Time>` for unreachable targets. Sapareto–Dewey thermal tests pass 15/15, clinical-imaging HIFU tests 2/2, and HIFU planning tests 16/16; package checks, warning-denied Clippy, doctests, Rustdoc, format, and diff gates pass. |
 | `KWAVERS-AEQ-MET-02` | `kwavers-physics/src/electromagnetic/photoacoustic.rs` stored peak power, pulse duration, repetition rate, wavelength, beam radius, and returned peak fluence/average power as `f64`. | Use existing `Power`, `Time`, `Frequency`, `Length`, and `EnergyPerArea` at the constructor/result boundary. | Kwavers | **RESOLVED.** `PulsedLaser` and all `BeamProfile` radii now use Aequitas `Power`/`Time`/`Frequency`/`Length`; peak fluence returns `EnergyPerArea` and average power returns `Power`. Gaussian, top-hat, Bessel, and pulse-energy value oracles pass in `kwavers-physics`. |
-| `KWAVERS-AEQ-MET-03` | `kwavers-transducer/src/transducers/physics/{frequency,geometry,rayleigh,materials}.rs` exposes frequency, bandwidth, lengths, area/volume, range, attenuation, wavelength, and acoustic impedance as raw values. | Migrate the bounded transducer modules to typed constructors/results; retain dimensionless Q, bandwidth fraction, directivity, and reflection coefficients as scalar. | Kwavers | Ready. KLM bandwidth, geometry identities, Rayleigh propagation, and impedance/reflection value tests must remain green. |
-| `KWAVERS-AEQ-MET-04` | `kwavers-therapy/src/therapy/hifu_planning/{types,schedule}.rs` exposes focal dimensions/volumes, power, peak pressure, frequency, dwell, and temperature metrics as suffixed scalar fields. | Type the planning DTOs and derived metrics through the existing Aequitas seam; leave mechanical index and CEM43 as dimensionless/consumer-semantic values. | Kwavers | Ready after `KWAVERS-AEQ-MET-01`; HIFU focal-volume, pressure, thermal-dose, and schedule invariants are the acceptance oracles. |
-| `KWAVERS-AEQ-MET-05` | `kwavers-analysis/src/signal_processing/vasculature/mod.rs` reports diameter and total length as voxel-unit `f64`, and Doppler velocity returns `f64`; spacing is left to the caller. | Make physical voxel spacing an explicit validated `Length` input, then return physical `Length`/`Velocity` instead of caller-applied scalars. | Kwavers | Boundary-dependent. The spacing contract and Doppler equation must be tested before migration. |
-| `KWAVERS-AEQ-MET-06` | `kwavers-medium/src/properties/thermal.rs` stores a typed Proteus bundle but returns conductivity, density, specific heat, and diffusivity as raw values; perfusion fields are also raw. | Preserve Proteus as the SSOT and type accessors. Add an Aequitas perfusion-rate quantity only if the public contract requires it; otherwise use a consumer newtype for the biological model parameter. | Kwavers / Proteus | Partial. Provider extension is not yet justified by a stable public rate contract. |
+| `KWAVERS-AEQ-MET-03` | `kwavers-transducer/src/transducers/physics/{frequency,geometry,rayleigh,materials}.rs` exposes frequency, bandwidth, lengths, area/volume, range, attenuation, wavelength, and acoustic impedance as raw values. | Migrate the bounded transducer modules to typed constructors/results; retain dimensionless Q, bandwidth fraction, directivity, reflection coefficients, attenuation coefficients, and coherent phase/pressure accumulations as scalars. | Kwavers | **Resolved for the public transducer/Rayleigh boundary.** `frequency.rs`, `geometry.rs`, `design.rs`, material/lens APIs, and Rayleigh now use Aequitas quantities; aperture radii/areas and centres/observation points use typed `Length`/`Area`/validated `CartesianPosition`. The KWaveArray rasterizer converts once into its scalar grid-coordinate contract. Focused Rayleigh (12/12), planar-rasterizer (1/1), package check, Clippy, and doctest gates pass. See [ADR 050](docs/ADR/050-transducer-materials-rayleigh-quantities.md). |
+| `KWAVERS-AEQ-MET-04` | `kwavers-therapy/src/therapy/hifu_planning/{types,schedule}.rs` exposed focal dimensions/volumes, power, peak pressure, frequency, dwell, and temperature metrics as suffixed scalar fields. | Type the planning DTOs and derived metrics through the existing Aequitas seam; leave mechanical index and CEM43 as dimensionless/consumer-semantic values. | Kwavers | **IMPLEMENTED in `a5c101a4c`; verification blocked.** HIFU transducer frequency/power/geometry, focal pressure/width/volume/location, ablation-target geometry, and sonication schedule coordinates now use Aequitas `Frequency`, `Power`, `Length`, `Pressure`, `Volume`, and validated `CartesianPosition`; dwell and temperatures remain typed. Scalar conversion is confined to closed-form model arithmetic. Rustfmt, metadata, diff, and source audit pass; HIFU planning value/formula tests, package Clippy, and doctests remain pending because the package check is blocked before Kwavers sources by peer `coeus-nn` API drift. The hosted checkout action pins Atlas graph `45bd370` and verifies 13 providers/46 manifests; Cargo then fails because Coeus `a6dfb2d` requires Mnemosyne `^0.5.0` while the graph supplies `0.6.0`. See ADR 052. |
+| `KWAVERS-AEQ-MET-05` | `kwavers-analysis/src/signal_processing/vasculature/mod.rs` reports diameter and total length as voxel-unit `f64`, and Doppler velocity returns `f64`; spacing is left to the caller. | Make physical voxel spacing an explicit validated `Length` input, then return physical `Length`/`Velocity` instead of caller-applied scalars. | Kwavers | **IMPLEMENTED; PR #325 OPEN.** Commit `9f95aa826` adds validated anisotropic `VoxelSpacing`, physical `Length<f64>` geometry, typed Doppler `Frequency`/`Velocity` boundaries, value-semantic spacing/Doppler/geometry regressions, ADR 047, and synchronized child PM. Focused compilation is blocked before Kwavers sources by peer `mnemosyne-heap` API drift; format, diff, and metadata checks pass. |
+| `KWAVERS-AEQ-MET-06` | `kwavers-medium/src/properties/thermal.rs` stored a typed Proteus bundle but returned conductivity, density, specific heat, diffusivity, and Pennes perfusion fields as raw values. | Preserve Proteus as the SSOT and type the material accessors and Pennes perfusion contract without duplicating thermophysical laws in Kwavers. | Aequitas, Proteus, Kwavers | **RESOLVED.** Aequitas `MassDensityRate` (`kg/(m³·s)`) merged at `b86a55d`; `ThermalPropertyData` and `TemperatureDependentThermal` now store and return typed conductivity, density, specific heat, diffusivity, and perfusion values. Pennes converts only at its scalar finite-difference kernel boundary. Kwavers-medium Nextest passes 191/191; thermal and bubble-dynamics physics tests pass 361/361; no-default-features checks pass for `kwavers-physics` and `kwavers-solver`; formatting and diff checks pass. See [ADR 051](docs/ADR/051-thermal-perfusion-quantities.md). |
+| `KWAVERS-AEQ-MET-07` | `kwavers-grid/src/lib.rs` exposed derived spacing, physical size, volume, and CFL timestep values as raw scalars. | Type public derived grid metrics with Aequitas `Length`, `Volume`, `Velocity`, and `Time`; convert only at coordinate and stability-kernel boundaries. | Kwavers | **IMPLEMENTED in this increment; verification blocked by the hosted provider graph.** `min_spacing`, `max_spacing`, `physical_size`, `volume`, `cell_volume`, and `cfl_timestep` now carry SI quantities, with direct value tests and migrated callers. Raw `Grid` storage and coordinate arrays remain numerical kernel boundaries. See [ADR 053](docs/ADR/053-grid-derived-quantities.md). |
+| `KWAVERS-AEQ-MET-08` | `kwavers-physics` thermal-diffusion/Pennes/Cattaneo configs and `kwavers-simulation::ThermalConfig` exposed perfusion, blood properties, temperature, relaxation, conductivity, frequency, heat, and thermal-step values as raw scalars. | Carry the configuration contracts with Aequitas quantities; compose the typed Pennes coefficient before converting at the numerical kernel boundary; retain Python scalar arguments as the explicit conversion boundary. | Kwavers | **IMPLEMENTED in this increment; verification blocked by the hosted provider graph.** `ReciprocalTime`, `MassDensity`, `SpecificHeatCapacity`, `ThermodynamicTemperature`, `ThermalConductivity`, `VolumetricPowerDensity`, `Frequency`, and `Time` now cross the Rust configuration and solver seams. The coupled-config SI serialization round-trip and existing numerical callers are migrated. See [ADR 054](docs/ADR/054-thermal-diffusion-configuration-quantities.md). |
+| `KWAVERS-AEQ-MET-09` | `kwavers-transducer/src/basic/piston.rs` exposed piston centre, diameter/radius, and Gaussian sigma as raw scalar geometry while the adjacent Rayleigh aperture API already used Aequitas `Length` and `CartesianPosition`. | Type the piston geometry and apodization length scale; convert once at the grid/source-kernel boundary and retain raw coordinates only for the `Source` trait contract. | Kwavers | **IMPLEMENTED in this increment; verification pending the hosted provider graph.** `PistonConfig`, `PistonBuilder`, accessors, factory construction, Gaussian apodization, and a typed geometry regression now use Aequitas. See [ADR 055](docs/ADR/055-piston-geometry-quantities.md). |
 
 ### Explicit non-gaps and sequencing constraints
 
@@ -66,10 +73,24 @@ internally.
 - Mechanical index, thermal index, cavitation dose, fractional bandwidth,
   directivity, confidence, and material coupling coefficients are
   dimensionless or model-specific and are not Aequitas metric gaps.
-- The next Kwavers slice is `KWAVERS-AEQ-MET-03`, the transducer result
-  boundary. The parent audit must be refreshed after each child slice so the
-  cross-repository ledger does not claim completion from an internal
-  conversion that never reaches the public API.
+- `KWAVERS-AEQ-MET-03` is closed for the public transducer/Rayleigh API. The
+  KWaveArray rasterizer remains a named scalar grid-coordinate adapter; it is
+  not a second public Rayleigh geometry contract.
+- `KWAVERS-AEQ-MET-06` keeps the finite-difference arithmetic scalar because
+  the array kernel is a numerical storage boundary. The material and solver
+  contracts carry Aequitas quantities up to the explicit `into_base()` calls;
+  the scalar kernel is not a second untyped public material API.
+- `KWAVERS-AEQ-MET-07` keeps `Grid`'s raw `dx`/`dy`/`dz` storage and coordinate
+  arrays unchanged in this slice. Those values feed numerical kernels and are
+  not duplicated derived metric outputs; the public derived metric methods are
+  the typed boundary. A full field-descriptor migration would be a separate
+  architecture item.
+- `KWAVERS-AEQ-MET-08` keeps Python constructor arguments and dense thermal
+  fields scalar: PyO3 is the unit-facing conversion boundary, while the Rust
+  physics and simulation configuration carriers are typed. The Pennes
+  diffusion path intentionally uses `ReciprocalTime` for its documented
+  `ω_b` parameter and composes blood density into the typed equation; the
+  material-owned Pennes path continues to use `MassDensityRate`.
 
 - Review 2026-07-22: Python release run `29967429949` built the stable-ABI
   wheels but the Linux and Windows base-wheel smoke imports failed because
@@ -126,6 +147,15 @@ internally.
   every provider from Atlas merge `05b7f5d`; direct Aequitas and Proteus pins
   match that graph, `Cargo.lock` resolves one Aequitas source identity, and the
   consumer-local moving-`main` checkout action remains deleted.
+
+- Review 2026-07-24: the hosted Kwavers matrix at PR #324 head `c739c7b38`
+  failed before compilation because the checkout action materialized Atlas
+  graph `806c6e7` while the branch pinned merged Aequitas and Proteus revisions.
+  Atlas now records the merged graph at `45bd370`, and this branch pins that
+  exact graph. The replacement checkout verifies 13 providers/46 manifests,
+  then Cargo resolution fails on the peer Coeus `mnemosyne ^0.5.0` versus Atlas
+  Mnemosyne `0.6.0` mismatch; local `cargo metadata --offline --locked` remains
+  green for the consumer workspace before provider materialization.
 
 - Review 2026-07-20: Tarpaulin instrumentation made the test-suite
   `test_grid_creation_performance` wall-clock assertion exceed its empirical

@@ -30,7 +30,9 @@
 //! - Gachouch, O. et al. (2025). A novel ultrasound thermometry method based on
 //!   thermal strain and short and constant acoustic bursts. *Sensors*, 25(2), 385.
 
-use aequitas::systems::si::quantities::{ReciprocalTemperature, ThermodynamicTemperature};
+use aequitas::systems::si::quantities::{
+    MassDensityRate, ReciprocalTemperature, ThermodynamicTemperature,
+};
 use kwavers_core::constants::thermodynamic::{
     BODY_TEMPERATURE_C, BODY_TEMPERATURE_K, KELVIN_OFFSET_C,
 };
@@ -54,8 +56,12 @@ use proteus::{ConstantResponse, ConstitutiveLaw, LinearResponse, ResponseSet, Te
 /// * `w_b0` - Base blood perfusion rate (kg/m³/s)
 /// * `temperature` - Current temperature (°C)
 #[must_use]
-pub fn perfusion_vs_temperature(w_b0: f64, temperature: f64) -> f64 {
-    if temperature < BODY_TEMPERATURE_C {
+pub fn perfusion_vs_temperature(
+    w_b0: MassDensityRate<f64>,
+    temperature: f64,
+) -> MassDensityRate<f64> {
+    let w_b0 = w_b0.into_base();
+    let perfusion = if temperature < BODY_TEMPERATURE_C {
         // Reduced perfusion when cold
         w_b0 * (0.5 + 0.5 * temperature / BODY_TEMPERATURE_C)
     } else if temperature < 42.0 {
@@ -67,7 +73,8 @@ pub fn perfusion_vs_temperature(w_b0: f64, temperature: f64) -> f64 {
     } else {
         // Vascular shutdown
         0.0
-    }
+    };
+    MassDensityRate::from_base(perfusion)
 }
 
 /// Update thermal properties based on temperature
@@ -179,10 +186,10 @@ mod tests {
         let props_45 = update_properties(&base, 45.0).expect("45 °C produces physical properties");
 
         // Conductivity should increase
-        assert!(props_45.conductivity() > base.conductivity());
+        assert!(props_45.conductivity().into_base() > base.conductivity().into_base());
 
         // Specific heat should increase slightly
-        assert!(props_45.specific_heat() > base.specific_heat());
+        assert!(props_45.specific_heat().into_base() > base.specific_heat().into_base());
 
         // Perfusion should decrease (approaching shutdown)
         let base_perfusion = base.blood_perfusion.expect("soft tissue defines perfusion");
@@ -226,16 +233,19 @@ mod tests {
     #[test]
     fn test_conductivity_increases_with_temperature() {
         let base = ThermalPropertyData::soft_tissue();
-        let k0 = base.conductivity();
+        let k0 = base.conductivity().into_base();
         let k_37 = update_properties(&base, BODY_TEMPERATURE_C)
             .expect("body temperature is physical")
-            .conductivity();
+            .conductivity()
+            .into_base();
         let k_45 = update_properties(&base, 45.0)
             .expect("45 °C is physical")
-            .conductivity();
+            .conductivity()
+            .into_base();
         let k_30 = update_properties(&base, 30.0)
             .expect("30 °C is physical")
-            .conductivity();
+            .conductivity()
+            .into_base();
 
         assert_eq!(k_37, k0);
         assert_eq!(k_45, k0 * (1.0 + THERMAL_CONDUCTIVITY_COEFF_PER_C * 8.0));
@@ -245,7 +255,7 @@ mod tests {
 
     #[test]
     fn test_perfusion_shutdown() {
-        let w_b0 = 1.0;
+        let w_b0 = MassDensityRate::from_base(1.0);
 
         // Normal temperature
         let w_37 = perfusion_vs_temperature(w_b0, BODY_TEMPERATURE_C);
@@ -253,11 +263,11 @@ mod tests {
 
         // Mild hyperthermia - increased perfusion
         let w_40 = perfusion_vs_temperature(w_b0, 40.0);
-        assert!(w_40 > w_b0);
+        assert!(w_40.into_base() > w_b0.into_base());
 
         // High temperature - shutdown
         let w_55 = perfusion_vs_temperature(w_b0, 55.0);
-        assert_eq!(w_55, 0.0);
+        assert_eq!(w_55.into_base(), 0.0);
     }
 
     #[test]
@@ -311,8 +321,8 @@ mod tests {
         let elevated = update_properties(&base, 45.0).expect("45 °C produces physical properties");
 
         // Verify changes
-        assert!(elevated.conductivity() > base.conductivity());
-        assert!(elevated.specific_heat() > base.specific_heat());
+        assert!(elevated.conductivity().into_base() > base.conductivity().into_base());
+        assert!(elevated.specific_heat().into_base() > base.specific_heat().into_base());
 
         // Update back to reference temperature
         let back_to_ref = update_properties(&base, BODY_TEMPERATURE_C)
@@ -324,16 +334,29 @@ mod tests {
         let ref_again = update_properties(&base, BODY_TEMPERATURE_C)
             .expect("body temperature produces reference properties");
 
-        assert!((back_to_ref.conductivity() - ref_again.conductivity()).abs() < 1e-10);
-        assert!((back_to_ref.specific_heat() - ref_again.specific_heat()).abs() < 1e-10);
-        assert!((ref_again.conductivity() - base.conductivity()).abs() < 1e-10);
-        assert!((ref_again.specific_heat() - base.specific_heat()).abs() < 1e-10);
+        assert!(
+            (back_to_ref.conductivity().into_base() - ref_again.conductivity().into_base()).abs()
+                < 1e-10
+        );
+        assert!(
+            (back_to_ref.specific_heat().into_base() - ref_again.specific_heat().into_base()).abs()
+                < 1e-10
+        );
+        assert!(
+            (ref_again.conductivity().into_base() - base.conductivity().into_base()).abs() < 1e-10
+        );
+        assert!(
+            (ref_again.specific_heat().into_base() - base.specific_heat().into_base()).abs()
+                < 1e-10
+        );
 
         // Verify that elevated temperature actually changed the properties
         let conductivity_change =
-            (elevated.conductivity() - base.conductivity()).abs() / base.conductivity();
+            (elevated.conductivity().into_base() - base.conductivity().into_base()).abs()
+                / base.conductivity().into_base();
         let specific_heat_change =
-            (elevated.specific_heat() - base.specific_heat()).abs() / base.specific_heat();
+            (elevated.specific_heat().into_base() - base.specific_heat().into_base()).abs()
+                / base.specific_heat().into_base();
 
         assert!(
             conductivity_change > 0.01,

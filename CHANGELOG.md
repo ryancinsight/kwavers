@@ -4,6 +4,62 @@
 
 ### Changed
 
+- **Breaking**: impedance-boundary targets, medium values, representative
+  frequencies, Gaussian bandwidths, and custom frequency samples now use
+  Aequitas `AcousticImpedance` and `Frequency`. Dimensionless profile response
+  and reflection coefficients remain scalar model outputs. See
+  [ADR 056](docs/ADR/056-impedance-boundary-quantities.md).
+
+- **Breaking**: basic piston source geometry now uses Aequitas `Length` and the
+  shared validated `CartesianPosition`; Gaussian apodization sigma is typed as
+  `Length`, with scalar conversion confined to the source/grid kernel boundary.
+  See [ADR 055](docs/ADR/055-piston-geometry-quantities.md).
+
+- **Breaking**: thermal-diffusion, Pennes, Cattaneo, and coupled thermal
+  configuration carriers now use Aequitas quantities for rates, material
+  properties, temperatures, frequency, heat, and time. Python scalar inputs
+  convert at the binding boundary; dense fields and numerical kernels remain
+  scalar. See [ADR 054](docs/ADR/054-thermal-diffusion-configuration-quantities.md).
+
+- **Breaking**: `kwavers-grid` derived spacing, physical-size, volume, and CFL
+  metrics now use Aequitas `Length`, `Volume`, `Velocity`, and `Time`. Scalar
+  conversion remains confined to coordinate and numerical-kernel boundaries.
+  See [ADR 053](docs/ADR/053-grid-derived-quantities.md).
+
+- Pin the hosted Atlas provider checkout to graph `45bd370`, aligning the
+  committed Aequitas and Proteus revisions before locked Kwavers validation.
+
+- **Breaking**: HIFU planning transducer frequency/power/geometry, focal
+  pressure/width/volume/location, ablation-target geometry, and sonication
+  schedule coordinates now use Aequitas quantities and validated Cartesian
+  positions. Focal-dose and schedule kernels convert explicitly at their
+  scalar arithmetic boundaries. See [ADR 052](docs/ADR/052-hifu-planning-quantities.md).
+
+- **Breaking**: thermal material constructors and accessors now use Aequitas
+  `ThermalConductivity`, `MassDensity`, `SpecificHeatCapacity`, and
+  `ThermalDiffusivity`; Pennes blood perfusion uses provider-owned
+  `MassDensityRate`. Proteus remains the thermophysical source of truth, and
+  scalar conversion occurs only at display, DTO, or numerical-stencil
+  boundaries. See [ADR 051](docs/ADR/051-thermal-perfusion-quantities.md).
+
+- Correct the bubble heat-transfer temperature-change boundary to use
+  Aequitas `TemperatureDifference` rather than absolute thermodynamic
+  temperature.
+
+- **Breaking**: transducer materials, acoustic lenses, Fresnel zone plates,
+  and Rayleigh propagation coefficients now use Aequitas typed physical
+  quantities. Dimensionless/model coefficients and coherent complex pressure
+  remain scalar mathematical values. See [ADR 050](docs/ADR/050-transducer-materials-rayleigh-quantities.md).
+
+- **Breaking**: Rayleigh aperture radii, areas, centres, and observation points
+  now use Aequitas quantities and validated `CartesianPosition`. The KWaveArray
+  rasterizer is the single explicit scalar grid-coordinate adapter.
+
+- **Breaking**: transducer element geometry and KLM frequency-response
+  boundaries now use Aequitas `Length`, `Velocity`, `Frequency`, `Area`, and
+  `Volume` quantities, including sampled frequency points and focal-resolution
+  results. Dimensionless model metrics remain scalars. See [ADR 049](docs/ADR/049-transducer-frequency-geometry-quantities.md).
+
 - **Breaking**: CEM43 thermal dose and HIFU planning results now use validated
   `CumulativeEquivalentMinutes` backed by Aequitas `Time`, typed thermal
   temperatures and dwell times, and `Option<Time>` for unreachable target

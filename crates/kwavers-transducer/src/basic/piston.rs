@@ -3,6 +3,7 @@
 //! This source models a planar piston transducer that generates
 //! acoustic waves from a flat surface.
 
+use aequitas::systems::si::quantities::Length;
 use kwavers_grid::Grid;
 use kwavers_signal::Signal;
 use kwavers_source::{Source, SourceField};
@@ -11,13 +12,15 @@ use std::f64::consts::PI;
 use std::fmt::Debug;
 use std::sync::Arc;
 
+use crate::transducers::physics::CartesianPosition;
+
 /// Piston source configuration
 #[derive(Debug, Clone)]
 pub struct PistonConfig {
-    /// Center position of the piston [x, y, z] in meters
-    pub center: (f64, f64, f64),
-    /// Diameter of the piston in meters
-    pub diameter: f64,
+    /// Center position of the piston in SI metres.
+    pub center: CartesianPosition,
+    /// Diameter of the piston.
+    pub diameter: Length,
     /// Normal direction (unit vector pointing outward)
     pub normal: (f64, f64, f64),
     /// Source field type
@@ -29,9 +32,10 @@ pub struct PistonConfig {
 impl Default for PistonConfig {
     fn default() -> Self {
         Self {
-            center: (0.0, 0.0, 0.0),
-            diameter: 10.0e-3,       // 10mm diameter
-            normal: (0.0, 0.0, 1.0), // Default: z-direction
+            center: CartesianPosition::from_base([0.0, 0.0, 0.0])
+                .expect("invariant: default piston center is finite"),
+            diameter: Length::from_base(10.0e-3), // 10mm diameter
+            normal: (0.0, 0.0, 1.0),              // Default: z-direction
             source_type: SourceField::Pressure,
             apodization: PistonApodization::Uniform,
         }
@@ -45,7 +49,7 @@ pub enum PistonApodization {
     #[default]
     Uniform,
     /// Gaussian apodization
-    Gaussian { sigma: f64 },
+    Gaussian { sigma: Length },
     /// Cosine apodization (edge tapering)
     Cosine,
     /// Custom apodization function
@@ -65,7 +69,7 @@ pub struct PistonSource {
 impl PistonSource {
     /// Create a new piston source
     pub fn new(config: PistonConfig, signal: Arc<dyn Signal>) -> Self {
-        let radius = config.diameter / 2.0;
+        let radius = config.diameter.into_base() / 2.0;
         Self {
             config,
             signal,
@@ -80,28 +84,29 @@ impl PistonSource {
 
     /// Get the piston radius
     #[must_use]
-    pub fn radius(&self) -> f64 {
-        self.radius
+    pub fn radius(&self) -> Length {
+        Length::from_base(self.radius)
     }
 
     /// Get the piston diameter
     #[must_use]
-    pub fn diameter(&self) -> f64 {
+    pub fn diameter(&self) -> Length {
         self.config.diameter
     }
 
     /// Get the piston center position
     #[must_use]
-    pub fn center(&self) -> (f64, f64, f64) {
+    pub fn center(&self) -> CartesianPosition {
         self.config.center
     }
 
     /// Calculate apodization weight at a given position
     fn apodization_weight(&self, x: f64, y: f64, z: f64) -> f64 {
         // Calculate distance from center in the piston plane
-        let dx = x - self.config.center.0;
-        let dy = y - self.config.center.1;
-        let dz = z - self.config.center.2;
+        let [center_x, center_y, center_z] = self.config.center.into_base();
+        let dx = x - center_x;
+        let dy = y - center_y;
+        let dz = z - center_z;
 
         // Project onto the piston plane (perpendicular to normal)
         let radial_distance = match self.config.normal {
@@ -128,6 +133,7 @@ impl PistonSource {
                 }
             }
             PistonApodization::Gaussian { sigma } => {
+                let sigma = sigma.into_base();
                 if radial_distance <= self.radius {
                     (-radial_distance.powi(2) / (2.0 * sigma.powi(2))).exp()
                 } else {
@@ -141,14 +147,9 @@ impl PistonSource {
                     0.0
                 }
             }
-            PistonApodization::Custom { function } => function(
-                x,
-                y,
-                z,
-                self.config.center.0,
-                self.config.center.1,
-                self.config.center.2,
-            ),
+            PistonApodization::Custom { function } => {
+                function(x, y, z, center_x, center_y, center_z)
+            }
         }
     }
 }
@@ -190,7 +191,8 @@ impl Source for PistonSource {
 
     fn positions(&self) -> Vec<(f64, f64, f64)> {
         // Return the center position
-        vec![self.config.center]
+        let [x, y, z] = self.config.center.into_base();
+        vec![(x, y, z)]
     }
 
     fn signal(&self) -> &dyn Signal {
@@ -220,13 +222,13 @@ impl PistonBuilder {
     }
 
     #[must_use]
-    pub fn center(mut self, center: (f64, f64, f64)) -> Self {
+    pub fn center(mut self, center: CartesianPosition) -> Self {
         self.config.center = center;
         self
     }
 
     #[must_use]
-    pub fn diameter(mut self, diameter: f64) -> Self {
+    pub fn diameter(mut self, diameter: Length) -> Self {
         self.config.diameter = diameter;
         self
     }
@@ -251,5 +253,29 @@ impl PistonBuilder {
 
     pub fn build(self, signal: Arc<dyn Signal>) -> PistonSource {
         PistonSource::new(self.config, signal)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use kwavers_signal::NullSignal;
+
+    #[test]
+    fn typed_geometry_preserves_si_values() {
+        let center =
+            CartesianPosition::from_base([1.0e-3, -2.0e-3, 3.0e-3]).expect("finite test position");
+        let source = PistonBuilder::new()
+            .center(center)
+            .diameter(Length::from_base(4.0e-3))
+            .apodization(PistonApodization::Gaussian {
+                sigma: Length::from_base(1.0e-3),
+            })
+            .build(Arc::new(NullSignal));
+
+        assert_eq!(source.center().into_base(), [1.0e-3, -2.0e-3, 3.0e-3]);
+        assert_eq!(source.diameter().into_base(), 4.0e-3);
+        assert_eq!(source.radius().into_base(), 2.0e-3);
+        assert_eq!(source.apodization_weight(1.0e-3, -2.0e-3, 3.0e-3), 1.0);
     }
 }

@@ -11,6 +11,8 @@ mod tests;
 
 use crate::basic::{LinearArray, MatrixArray, PistonApodization, PistonConfig, PistonSource};
 use crate::transducers::focused::FocusedSource;
+use crate::transducers::physics::CartesianPosition;
+use aequitas::systems::si::quantities::Length;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::error::{ConfigError, KwaversResult};
 use kwavers_grid::Grid;
@@ -116,8 +118,8 @@ impl SourceFactory {
             }
             SourceModel::Piston => {
                 let piston_config = PistonConfig {
-                    center: position,
-                    diameter: config.radius * 2.0,
+                    center: CartesianPosition::from_base([position.0, position.1, position.2])?,
+                    diameter: Length::from_base(config.radius * 2.0),
                     normal: direction,
                     source_type: config.source_field,
                     apodization: PistonApodization::Uniform,

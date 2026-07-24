@@ -1,5 +1,6 @@
 use aequitas::systems::si::quantities::{
-    ReciprocalTemperature, ReciprocalTemperatureSquared, ThermodynamicTemperature,
+    MassDensity, MassDensityRate, ReciprocalTemperature, ReciprocalTemperatureSquared,
+    SpecificHeatCapacity, ThermalConductivity, ThermalDiffusivity, ThermodynamicTemperature,
 };
 use kwavers_core::constants::thermodynamic::{BODY_TEMPERATURE_K, ROOM_TEMPERATURE_K};
 use proteus::{
@@ -22,8 +23,8 @@ type ThermalLaw = TemperatureLaw<f64, ThermalResponses>;
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct TemperatureDependentThermal {
     law: ThermalLaw,
-    blood_perfusion: Option<f64>,
-    blood_specific_heat: Option<f64>,
+    blood_perfusion: Option<MassDensityRate<f64>>,
+    blood_specific_heat: Option<SpecificHeatCapacity<f64>>,
 }
 
 impl TemperatureDependentThermal {
@@ -92,7 +93,7 @@ impl TemperatureDependentThermal {
     pub(super) fn properties_with_density(
         &self,
         temperature: f64,
-        density: f64,
+        density: MassDensity<f64>,
     ) -> Result<ThermalPropertyData, String> {
         let properties = self.properties(temperature)?;
         ThermalPropertyData::new(
@@ -109,7 +110,7 @@ impl TemperatureDependentThermal {
     /// # Errors
     ///
     /// Returns an error for a non-physical temperature or response factor.
-    pub fn conductivity(&self, temperature: f64) -> Result<f64, String> {
+    pub fn conductivity(&self, temperature: f64) -> Result<ThermalConductivity<f64>, String> {
         self.properties(temperature)
             .map(|properties| properties.conductivity())
     }
@@ -119,7 +120,7 @@ impl TemperatureDependentThermal {
     /// # Errors
     ///
     /// Returns an error for a non-physical temperature or response factor.
-    pub fn specific_heat(&self, temperature: f64) -> Result<f64, String> {
+    pub fn specific_heat(&self, temperature: f64) -> Result<SpecificHeatCapacity<f64>, String> {
         self.properties(temperature)
             .map(|properties| properties.specific_heat())
     }
@@ -133,7 +134,11 @@ impl TemperatureDependentThermal {
     ///
     /// Returns an error for a non-physical temperature, response factor, or
     /// acoustic density.
-    pub fn thermal_diffusivity(&self, temperature: f64, density: f64) -> Result<f64, String> {
+    pub fn thermal_diffusivity(
+        &self,
+        temperature: f64,
+        density: MassDensity<f64>,
+    ) -> Result<ThermalDiffusivity<f64>, String> {
         self.properties_with_density(temperature, density)
             .map(|properties| properties.thermal_diffusivity())
     }

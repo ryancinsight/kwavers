@@ -29,6 +29,11 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyAny;
 
+use aequitas::systems::si::quantities::{
+    Frequency, MassDensity, ReciprocalTime, SpecificHeatCapacity, ThermalConductivity,
+    ThermodynamicTemperature, Time, VolumetricPowerDensity,
+};
+use kwavers_core::constants::thermodynamic::KELVIN_OFFSET_C;
 use kwavers_simulation::{
     HelmholtzConfig as KwaversHelmholtzConfig, NonlinearConfig as KwaversNonlinearConfig,
     PmlConfig as KwaversPmlConfig, PoroelasticConfig as KwaversPoroelasticConfig,
@@ -374,20 +379,24 @@ impl Simulation {
             ));
         }
         self.thermal = Some(KwaversThermalConfig {
-            thermal_conductivity,
-            density,
-            specific_heat,
+            thermal_conductivity: ThermalConductivity::from_base(thermal_conductivity),
+            density: MassDensity::from_base(density),
+            specific_heat: SpecificHeatCapacity::from_base(specific_heat),
             enable_bioheat,
-            perfusion_rate,
-            blood_density,
-            blood_specific_heat,
-            arterial_temperature_c: arterial_temperature,
-            metabolic_heat,
-            initial_temperature_c: initial_temperature,
+            perfusion_rate: ReciprocalTime::from_base(perfusion_rate),
+            blood_density: MassDensity::from_base(blood_density),
+            blood_specific_heat: SpecificHeatCapacity::from_base(blood_specific_heat),
+            arterial_temperature: ThermodynamicTemperature::from_base(
+                arterial_temperature + KELVIN_OFFSET_C,
+            ),
+            metabolic_heat: VolumetricPowerDensity::from_base(metabolic_heat),
+            initial_temperature: ThermodynamicTemperature::from_base(
+                initial_temperature + KELVIN_OFFSET_C,
+            ),
             track_thermal_dose,
-            center_frequency_hz: center_frequency,
+            center_frequency: Frequency::from_base(center_frequency),
             n_acoustic_per_thermal,
-            dt_thermal,
+            dt_thermal: dt_thermal.map(Time::from_base),
         });
         Ok(())
     }

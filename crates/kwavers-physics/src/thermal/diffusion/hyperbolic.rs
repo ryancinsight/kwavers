@@ -3,6 +3,7 @@
 //! Reference: Cattaneo, C. (1958). "A form of heat conduction equation which eliminates
 //! the paradox of instantaneous propagation." Comptes Rendus, 247, 431-433.
 
+use aequitas::systems::si::quantities::Time;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
@@ -22,13 +23,13 @@ use std::ops::Range;
 #[derive(Debug, Clone)]
 pub struct HyperbolicParameters {
     /// Thermal relaxation time `τ` `s`.
-    pub relaxation_time: f64,
+    pub relaxation_time: Time<f64>,
 }
 
 impl Default for HyperbolicParameters {
     fn default() -> Self {
         Self {
-            relaxation_time: 20.0,
+            relaxation_time: Time::from_base(20.0),
         }
     }
 }
@@ -76,7 +77,7 @@ impl CattaneoVernotte {
         grid: &Grid,
         dt: f64,
     ) -> KwaversResult<()> {
-        let tau = self.params.relaxation_time;
+        let tau = self.params.relaxation_time.into_base();
 
         Self::update_flux_axis::<0>(&mut self.heat_flux_x, temperature, medium, grid, dt, tau);
         Self::update_flux_axis::<1>(&mut self.heat_flux_y, temperature, medium, grid, dt, tau);
@@ -282,7 +283,7 @@ mod tests {
         let medium = homogeneous_unit_medium(&grid);
         let mut solver = CattaneoVernotte::new(
             HyperbolicParameters {
-                relaxation_time: 1.0,
+                relaxation_time: Time::from_base(1.0),
             },
             &grid,
         );
@@ -291,7 +292,7 @@ mod tests {
             Array3::from_shape_fn([grid.nx, grid.ny, grid.nz], |[i, _, _]| (i * i) as f64);
         let center_before = temperature[[2, 0, 0]];
         let dt = 0.1;
-        let relax = dt / solver.params.relaxation_time;
+        let relax = dt / solver.params.relaxation_time.into_base();
         let expected_center_after_one_step = center_before + dt * (2.0 * relax / (1.0 + relax));
 
         solver

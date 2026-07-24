@@ -3,6 +3,8 @@
 //! This module provides the common type definitions and trait re-exports
 //! used across all coupling boundary condition implementations.
 
+use aequitas::systems::si::quantities::Frequency;
+
 // Re-export commonly used types for public API
 pub use crate::traits::BoundaryDirections;
 
@@ -81,12 +83,12 @@ pub enum FrequencyProfile {
     /// Gaussian frequency profile (peaked at center frequency)
     Gaussian {
         /// Center frequency (Hz)
-        center_freq: f64,
+        center_freq: Frequency,
         /// Bandwidth (Hz)
-        bandwidth: f64,
+        bandwidth: Frequency,
     },
     /// Custom frequency profile (user-defined function)
-    Custom(Vec<(f64, f64)>), // (frequency, value) pairs
+    Custom(Vec<(Frequency, f64)>), // (frequency, value) pairs
 }
 
 /// Transmission condition for domain decomposition
@@ -120,15 +122,16 @@ impl FrequencyProfile {
     /// - Panics if an internal invariant assumed to hold at this call site is violated.
     ///
     #[must_use]
-    pub fn evaluate(&self, frequency: f64) -> f64 {
+    pub fn evaluate(&self, frequency: Frequency) -> f64 {
+        let frequency_base = *frequency.as_base();
         match self {
             Self::Flat => 1.0,
             Self::Gaussian {
                 center_freq,
                 bandwidth,
             } => {
-                let df = frequency - center_freq;
-                let sigma = bandwidth / (2.0 * (2.0_f64.ln()).sqrt());
+                let df = frequency_base - center_freq.into_base();
+                let sigma = bandwidth.into_base() / (2.0 * (2.0_f64.ln()).sqrt());
                 (-df * df / (2.0 * sigma * sigma)).exp()
             }
             Self::Custom(points) => {
@@ -136,16 +139,16 @@ impl FrequencyProfile {
                 if points.is_empty() {
                     return 1.0;
                 }
-                if frequency <= points[0].0 {
+                if frequency_base <= *points[0].0.as_base() {
                     return points[0].1;
                 }
-                if frequency >= points[points.len() - 1].0 {
+                if frequency_base >= *points[points.len() - 1].0.as_base() {
                     return points[points.len() - 1].1;
                 }
 
                 // Binary search for interpolation interval
                 let idx = points
-                    .binary_search_by(|p| p.0.total_cmp(&frequency))
+                    .binary_search_by(|p| p.0.as_base().total_cmp(&frequency_base))
                     .unwrap_or_else(|i| i);
 
                 if idx == 0 {
@@ -154,7 +157,7 @@ impl FrequencyProfile {
 
                 let (f0, v0) = points[idx - 1];
                 let (f1, v1) = points[idx];
-                let t = (frequency - f0) / (f1 - f0);
+                let t = (frequency_base - f0.into_base()) / (f1.into_base() - f0.into_base());
                 t.mul_add(v1 - v0, v0)
             }
         }
@@ -166,55 +169,59 @@ mod tests {
     use super::*;
     use kwavers_core::constants::numerical::MHZ_TO_HZ;
 
+    fn frequency(value: f64) -> Frequency {
+        Frequency::from_base(value)
+    }
+
     #[test]
     fn test_frequency_profile_flat() {
         let profile = FrequencyProfile::Flat;
-        assert_eq!(profile.evaluate(0.0), 1.0);
-        assert_eq!(profile.evaluate(MHZ_TO_HZ), 1.0);
+        assert_eq!(profile.evaluate(frequency(0.0)), 1.0);
+        assert_eq!(profile.evaluate(frequency(MHZ_TO_HZ)), 1.0);
     }
 
     #[test]
     fn test_frequency_profile_gaussian() {
         let profile = FrequencyProfile::Gaussian {
-            center_freq: MHZ_TO_HZ,
-            bandwidth: 0.5 * MHZ_TO_HZ,
+            center_freq: frequency(MHZ_TO_HZ),
+            bandwidth: frequency(0.5 * MHZ_TO_HZ),
         };
 
         // Peak at center frequency
-        assert!((profile.evaluate(MHZ_TO_HZ) - 1.0).abs() < 1e-10);
+        assert!((profile.evaluate(frequency(MHZ_TO_HZ)) - 1.0).abs() < 1e-10);
 
         // Lower at off-center frequencies
-        assert!(profile.evaluate(0.5 * MHZ_TO_HZ) < 1.0);
-        assert!(profile.evaluate(1.5 * MHZ_TO_HZ) < 1.0);
+        assert!(profile.evaluate(frequency(0.5 * MHZ_TO_HZ)) < 1.0);
+        assert!(profile.evaluate(frequency(1.5 * MHZ_TO_HZ)) < 1.0);
 
         // Symmetric
-        let v1 = profile.evaluate(0.8 * MHZ_TO_HZ);
-        let v2 = profile.evaluate(1.2 * MHZ_TO_HZ);
+        let v1 = profile.evaluate(frequency(0.8 * MHZ_TO_HZ));
+        let v2 = profile.evaluate(frequency(1.2 * MHZ_TO_HZ));
         assert!((v1 - v2).abs() < 1e-10);
     }
 
     #[test]
     fn test_frequency_profile_custom() {
         let profile = FrequencyProfile::Custom(vec![
-            (0.0, 0.0),
-            (MHZ_TO_HZ, 1.0),
-            (2.0 * MHZ_TO_HZ, 0.5),
-            (3.0 * MHZ_TO_HZ, 0.0),
+            (frequency(0.0), 0.0),
+            (frequency(MHZ_TO_HZ), 1.0),
+            (frequency(2.0 * MHZ_TO_HZ), 0.5),
+            (frequency(3.0 * MHZ_TO_HZ), 0.0),
         ]);
 
         // Exact points
-        assert_eq!(profile.evaluate(0.0), 0.0);
-        assert_eq!(profile.evaluate(MHZ_TO_HZ), 1.0);
-        assert_eq!(profile.evaluate(2.0 * MHZ_TO_HZ), 0.5);
-        assert_eq!(profile.evaluate(3.0 * MHZ_TO_HZ), 0.0);
+        assert_eq!(profile.evaluate(frequency(0.0)), 0.0);
+        assert_eq!(profile.evaluate(frequency(MHZ_TO_HZ)), 1.0);
+        assert_eq!(profile.evaluate(frequency(2.0 * MHZ_TO_HZ)), 0.5);
+        assert_eq!(profile.evaluate(frequency(3.0 * MHZ_TO_HZ)), 0.0);
 
         // Interpolation
-        assert!((profile.evaluate(0.5 * MHZ_TO_HZ) - 0.5).abs() < 1e-10);
-        assert!((profile.evaluate(1.5 * MHZ_TO_HZ) - 0.75).abs() < 1e-10);
+        assert!((profile.evaluate(frequency(0.5 * MHZ_TO_HZ)) - 0.5).abs() < 1e-10);
+        assert!((profile.evaluate(frequency(1.5 * MHZ_TO_HZ)) - 0.75).abs() < 1e-10);
 
         // Extrapolation (clamp to edges)
-        assert_eq!(profile.evaluate(-1.0), 0.0);
-        assert_eq!(profile.evaluate(4.0 * MHZ_TO_HZ), 0.0);
+        assert_eq!(profile.evaluate(frequency(-1.0)), 0.0);
+        assert_eq!(profile.evaluate(frequency(4.0 * MHZ_TO_HZ)), 0.0);
     }
 
     #[test]

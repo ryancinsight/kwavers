@@ -4,6 +4,8 @@ use numpy::{PyArray1, PyReadonlyArray1};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
+use aequitas::systems::si::quantities::{Frequency, Length, Velocity};
+
 /// Static acoustic-lens focusing delay profile τ(r) across the aperture.
 ///
 /// A silicone refractive lens designed for `focal_length_m` imposes the same
@@ -30,8 +32,20 @@ pub fn acoustic_lens_delay_profile(
     let radii = radii_m
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-    let lens = AcousticLens::silicone(focal_length_m, aperture_m);
-    let tau = lens.aperture_delay_profile(radii, medium_sound_speed);
+    let radii = radii
+        .iter()
+        .copied()
+        .map(Length::from_base)
+        .collect::<Vec<_>>();
+    let lens = AcousticLens::silicone(
+        Length::from_base(focal_length_m),
+        Length::from_base(aperture_m),
+    );
+    let tau = lens
+        .aperture_delay_profile(&radii, Velocity::from_base(medium_sound_speed))
+        .into_iter()
+        .map(|value| value.into_base())
+        .collect();
     Ok(PyArray1::from_vec(py, tau).unbind())
 }
 
@@ -55,8 +69,17 @@ pub fn fresnel_zone_radii(
     aperture_radius_m: f64,
 ) -> PyResult<Py<PyArray1<f64>>> {
     use kwavers_transducer::transducers::physics::materials::FresnelZonePlate;
-    let zp = FresnelZonePlate::new(focal_length_m, wavelength_m, aperture_radius_m);
-    Ok(PyArray1::from_vec(py, zp.zone_radii()).unbind())
+    let zp = FresnelZonePlate::new(
+        Length::from_base(focal_length_m),
+        Length::from_base(wavelength_m),
+        Length::from_base(aperture_radius_m),
+    );
+    let radii = zp
+        .zone_radii()
+        .into_iter()
+        .map(|value| value.into_base())
+        .collect();
+    Ok(PyArray1::from_vec(py, radii).unbind())
 }
 
 /// Isoplanatic mechanical-steering pose curve for a single-element corrective
@@ -82,10 +105,10 @@ pub fn isoplanatic_steering_curve(
     let mut thetas = Vec::with_capacity(xs.len());
     let mut tzs = Vec::with_capacity(xs.len());
     for &x in xs {
-        match isoplanatic_steering_pose(x, focal_length_m) {
+        match isoplanatic_steering_pose(Length::from_base(x), Length::from_base(focal_length_m)) {
             Some((th, tz)) => {
                 thetas.push(th);
-                tzs.push(tz);
+                tzs.push(tz.into_base());
             }
             None => {
                 thetas.push(f64::NAN);
@@ -125,6 +148,15 @@ pub fn corrective_lens_thickness(
     let phase = phase_rad
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-    let p = clt(phase, frequency_hz, c_water, c_lens, min_thickness_m);
+    let p = clt(
+        phase,
+        Frequency::from_base(frequency_hz),
+        Velocity::from_base(c_water),
+        Velocity::from_base(c_lens),
+        Length::from_base(min_thickness_m),
+    )
+    .into_iter()
+    .map(|value| value.into_base())
+    .collect();
     Ok(PyArray1::from_vec(py, p).unbind())
 }

@@ -6,7 +6,12 @@
 //! thermal coupling) so the solver dispatch can accept a small number of
 //! well-typed config objects instead of 20+ loose parameters.
 
-use serde::{Deserialize, Serialize};
+use aequitas::systems::si::quantities::{
+    Frequency, MassDensity, ReciprocalTime, SpecificHeatCapacity, ThermalConductivity,
+    ThermodynamicTemperature, Time, VolumetricPowerDensity,
+};
+use serde::ser::SerializeStruct;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 // ============================================================================
 // PmlConfig — PML absorbing boundary configuration
@@ -295,55 +300,128 @@ impl PoroelasticConfig {
 /// | `perfusion_rate` | 5e-3 | 1/s |
 /// | `blood_density` | 1050.0 | kg/m³ |
 /// | `blood_specific_heat` | 3840.0 | J/(kg·K) |
-/// | `arterial_temperature_c` | 37.0 | °C |
-/// | `initial_temperature_c` | 37.0 | °C |
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+/// | `arterial_temperature` | 310.15 | K |
+/// | `initial_temperature` | 310.15 | K |
+#[derive(Debug, Clone, PartialEq)]
 pub struct ThermalConfig {
     /// Thermal conductivity k [W/(m·K)].
-    pub thermal_conductivity: f64,
+    pub thermal_conductivity: ThermalConductivity<f64>,
     /// Tissue density ρ [kg/m³].
-    pub density: f64,
+    pub density: MassDensity<f64>,
     /// Tissue specific heat capacity cp [J/(kg·K)].
-    pub specific_heat: f64,
+    pub specific_heat: SpecificHeatCapacity<f64>,
     /// Enable Pennes bioheat (perfusion + metabolic) terms.
     pub enable_bioheat: bool,
     /// Blood perfusion rate w_b [1/s].
-    pub perfusion_rate: f64,
+    pub perfusion_rate: ReciprocalTime<f64>,
     /// Blood density ρ_b [kg/m³].
-    pub blood_density: f64,
+    pub blood_density: MassDensity<f64>,
     /// Blood specific heat c_b [J/(kg·K)].
-    pub blood_specific_heat: f64,
-    /// Arterial blood temperature [°C].
-    pub arterial_temperature_c: f64,
+    pub blood_specific_heat: SpecificHeatCapacity<f64>,
+    /// Arterial blood temperature [K].
+    pub arterial_temperature: ThermodynamicTemperature<f64>,
     /// Metabolic heat generation Q_m [W/m³].
-    pub metabolic_heat: f64,
-    /// Initial tissue temperature [°C].
-    pub initial_temperature_c: f64,
+    pub metabolic_heat: VolumetricPowerDensity<f64>,
+    /// Initial tissue temperature [K].
+    pub initial_temperature: ThermodynamicTemperature<f64>,
     /// Track CEM43 thermal dose field.
     pub track_thermal_dose: bool,
     /// Center frequency in hertz for α(ω_c) computation.
-    pub center_frequency_hz: f64,
+    pub center_frequency: Frequency<f64>,
     /// Acoustic steps per thermal update (≥ 1).
     pub n_acoustic_per_thermal: usize,
     /// Thermal time step in seconds. `None` uses `n_acoustic_per_thermal * dt_acoustic`.
-    pub dt_thermal: Option<f64>,
+    pub dt_thermal: Option<Time<f64>>,
+}
+
+#[derive(Deserialize)]
+struct ThermalConfigRepr {
+    thermal_conductivity: f64,
+    density: f64,
+    specific_heat: f64,
+    enable_bioheat: bool,
+    perfusion_rate: f64,
+    blood_density: f64,
+    blood_specific_heat: f64,
+    arterial_temperature: f64,
+    metabolic_heat: f64,
+    initial_temperature: f64,
+    track_thermal_dose: bool,
+    center_frequency: f64,
+    n_acoustic_per_thermal: usize,
+    dt_thermal: Option<f64>,
+}
+
+impl Serialize for ThermalConfig {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut state = serializer.serialize_struct("ThermalConfig", 14)?;
+        state.serialize_field(
+            "thermal_conductivity",
+            &self.thermal_conductivity.into_base(),
+        )?;
+        state.serialize_field("density", &self.density.into_base())?;
+        state.serialize_field("specific_heat", &self.specific_heat.into_base())?;
+        state.serialize_field("enable_bioheat", &self.enable_bioheat)?;
+        state.serialize_field("perfusion_rate", &self.perfusion_rate.into_base())?;
+        state.serialize_field("blood_density", &self.blood_density.into_base())?;
+        state.serialize_field("blood_specific_heat", &self.blood_specific_heat.into_base())?;
+        state.serialize_field(
+            "arterial_temperature",
+            &self.arterial_temperature.into_base(),
+        )?;
+        state.serialize_field("metabolic_heat", &self.metabolic_heat.into_base())?;
+        state.serialize_field("initial_temperature", &self.initial_temperature.into_base())?;
+        state.serialize_field("track_thermal_dose", &self.track_thermal_dose)?;
+        state.serialize_field("center_frequency", &self.center_frequency.into_base())?;
+        state.serialize_field("n_acoustic_per_thermal", &self.n_acoustic_per_thermal)?;
+        state.serialize_field("dt_thermal", &self.dt_thermal.map(|time| time.into_base()))?;
+        state.end()
+    }
+}
+
+impl<'de> Deserialize<'de> for ThermalConfig {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let repr = ThermalConfigRepr::deserialize(deserializer)?;
+        Ok(Self {
+            thermal_conductivity: ThermalConductivity::from_base(repr.thermal_conductivity),
+            density: MassDensity::from_base(repr.density),
+            specific_heat: SpecificHeatCapacity::from_base(repr.specific_heat),
+            enable_bioheat: repr.enable_bioheat,
+            perfusion_rate: ReciprocalTime::from_base(repr.perfusion_rate),
+            blood_density: MassDensity::from_base(repr.blood_density),
+            blood_specific_heat: SpecificHeatCapacity::from_base(repr.blood_specific_heat),
+            arterial_temperature: ThermodynamicTemperature::from_base(repr.arterial_temperature),
+            metabolic_heat: VolumetricPowerDensity::from_base(repr.metabolic_heat),
+            initial_temperature: ThermodynamicTemperature::from_base(repr.initial_temperature),
+            track_thermal_dose: repr.track_thermal_dose,
+            center_frequency: Frequency::from_base(repr.center_frequency),
+            n_acoustic_per_thermal: repr.n_acoustic_per_thermal,
+            dt_thermal: repr.dt_thermal.map(Time::from_base),
+        })
+    }
 }
 
 impl Default for ThermalConfig {
     fn default() -> Self {
         Self {
-            thermal_conductivity: 0.5,
-            density: 1000.0,
-            specific_heat: 3600.0,
+            thermal_conductivity: ThermalConductivity::from_base(0.5),
+            density: MassDensity::from_base(1000.0),
+            specific_heat: SpecificHeatCapacity::from_base(3600.0),
             enable_bioheat: false,
-            perfusion_rate: 5e-3,
-            blood_density: 1050.0,
-            blood_specific_heat: 3840.0,
-            arterial_temperature_c: 37.0,
-            metabolic_heat: 0.0,
-            initial_temperature_c: 37.0,
+            perfusion_rate: ReciprocalTime::from_base(5e-3),
+            blood_density: MassDensity::from_base(1050.0),
+            blood_specific_heat: SpecificHeatCapacity::from_base(3840.0),
+            arterial_temperature: ThermodynamicTemperature::from_base(310.15),
+            metabolic_heat: VolumetricPowerDensity::from_base(0.0),
+            initial_temperature: ThermodynamicTemperature::from_base(310.15),
             track_thermal_dose: true,
-            center_frequency_hz: 1.0e6,
+            center_frequency: Frequency::from_base(1.0e6),
             n_acoustic_per_thermal: 1,
             dt_thermal: None,
         }
@@ -353,8 +431,8 @@ impl Default for ThermalConfig {
 impl ThermalConfig {
     /// Builder: set the center frequency for absorption evaluation.
     #[must_use]
-    pub fn with_center_frequency(mut self, freq_hz: f64) -> Self {
-        self.center_frequency_hz = freq_hz;
+    pub fn with_center_frequency(mut self, frequency: Frequency<f64>) -> Self {
+        self.center_frequency = frequency;
         self
     }
 
@@ -367,10 +445,15 @@ impl ThermalConfig {
 
     /// Builder: set thermal material properties.
     #[must_use]
-    pub fn with_material(mut self, k: f64, rho: f64, cp: f64) -> Self {
-        self.thermal_conductivity = k;
-        self.density = rho;
-        self.specific_heat = cp;
+    pub fn with_material(
+        mut self,
+        conductivity: ThermalConductivity<f64>,
+        density: MassDensity<f64>,
+        specific_heat: SpecificHeatCapacity<f64>,
+    ) -> Self {
+        self.thermal_conductivity = conductivity;
+        self.density = density;
+        self.specific_heat = specific_heat;
         self
     }
 
@@ -425,10 +508,24 @@ mod tests {
     #[test]
     fn thermal_config_defaults_match_icru_44_soft_tissue() {
         let cfg = ThermalConfig::default();
-        assert!((cfg.thermal_conductivity - 0.5).abs() < 1e-12);
-        assert!((cfg.density - 1000.0).abs() < 1e-12);
-        assert!((cfg.specific_heat - 3600.0).abs() < 1e-12);
-        assert!((cfg.arterial_temperature_c - 37.0).abs() < 1e-12);
+        assert!((cfg.thermal_conductivity.into_base() - 0.5).abs() < 1e-12);
+        assert!((cfg.density.into_base() - 1000.0).abs() < 1e-12);
+        assert!((cfg.specific_heat.into_base() - 3600.0).abs() < 1e-12);
+        assert!((cfg.arterial_temperature.into_base() - 310.15).abs() < 1e-12);
+    }
+
+    #[test]
+    fn thermal_config_serializes_si_values_at_the_boundary() {
+        let cfg = ThermalConfig::default()
+            .with_center_frequency(Frequency::from_base(2.0e6))
+            .with_material(
+                ThermalConductivity::from_base(0.6),
+                MassDensity::from_base(1020.0),
+                SpecificHeatCapacity::from_base(3500.0),
+            );
+        let encoded = toml::to_string(&cfg).expect("typed config serializes");
+        let decoded: ThermalConfig = toml::from_str(&encoded).expect("typed config deserializes");
+        assert_eq!(decoded, cfg);
     }
 
     #[test]

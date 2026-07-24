@@ -1,5 +1,38 @@
 # Backlog / Strategy
 
+## KWAVERS-AEQ-MET-03b — Type transducer materials and Rayleigh propagation [major] — done 2026-07-23
+
+- Owner: Codex; scope: `kwavers-transducer` materials/lens APIs, Rayleigh
+  propagation path, Rust design callers, PyO3 lens conversion, ADR 050, and
+  metric PM artifacts.
+- Outcome: material and lens dimensions, impedance, density, sound speed,
+  temperature, frequency, delay, wavelength, and correction thickness use
+  Aequitas quantities; Rayleigh wavenumber, attenuation, layer thickness, and
+  range are typed.
+- Acceptance: material/lens closed-form oracles and Rayleigh propagation
+  invariants pass the full `kwavers-transducer` library suite; dimensionless
+  model coefficients and complex pressure remain scalar by contract; residual
+  aperture coordinate arrays are explicitly recorded in the parent audit.
+- Evidence: `cargo check --offline -p kwavers-transducer --lib --tests` and
+  `cargo nextest run --offline -p kwavers-transducer --lib` pass 221/221 with
+  one skipped test; `kwavers-python` library check passes. Decision: [ADR 050](docs/ADR/050-transducer-materials-rayleigh-quantities.md).
+
+## KWAVERS-AEQ-MET-03 — Type transducer frequency and geometry metrics [major] — partial parent / increment done
+
+- Owner: Codex; scope: `kwavers-transducer` direct Aequitas dependency,
+  `transducers/physics/{frequency,geometry,design}.rs`, and child metric PM
+  artifacts.
+- Outcome: element dimensions, pitch, kerf, frequency-response metrics,
+  sampled frequencies, area, volume, resonance, pulse-resolution, and focal
+  resolution cross the public design boundary with Aequitas quantities.
+- Acceptance: KLM, geometry, focal-resolution, and existing transducer value
+  oracles pass; package check, warning-denied Clippy, formatting, and full
+  transducer Nextest pass (221/221). Parent row remains open for Rayleigh and
+  materials.
+- Evidence: `cargo check --offline -p kwavers-transducer --lib --tests`,
+  `cargo nextest run --offline -p kwavers-transducer --lib` (221/221),
+  `cargo clippy --offline -p kwavers-transducer --lib --tests --no-deps -- -D warnings`.
+
 ## KWAVERS-AEQ-MET-01 — Type CEM43 and HIFU planning metrics [major] — done
 
 - Owner: Codex; scope: `kwavers-physics` thermal CEM43/HIFU calculators,

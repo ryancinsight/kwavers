@@ -6,6 +6,7 @@ use super::{
     BackingLayer, ElementGeometry, FrequencyResponse, MatchingLayer, PiezoMaterial,
     TransducerDirectivityPattern, TransducerSensitivity,
 };
+use aequitas::systems::si::quantities::{AcousticImpedance, Frequency, Length, Velocity};
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
@@ -41,10 +42,10 @@ impl TransducerDesign {
     /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn design_for_application(
-        frequency: f64,
+        frequency: Frequency,
         num_elements: usize,
-        aperture: f64,
-        focal_length: Option<f64>,
+        aperture: Length,
+        focal_length: Option<Length>,
     ) -> KwaversResult<Self> {
         // Calculate element dimensions
         let pitch = aperture / num_elements as f64;
@@ -60,7 +61,7 @@ impl TransducerDesign {
 
         // Calculate thickness for resonance at desired frequency
         let piezo = PiezoMaterial::pzt_5h();
-        let thickness = piezo.sound_speed / (2.0 * frequency);
+        let thickness = piezo.sound_speed / (frequency * 2.0);
 
         let geometry = ElementGeometry::new(width, height, thickness, kerf)?;
 
@@ -71,7 +72,7 @@ impl TransducerDesign {
         let matching_layer = MatchingLayer::quarter_wave(
             frequency,
             piezo.acoustic_impedance,
-            super::TISSUE_IMPEDANCE,
+            AcousticImpedance::from_base(super::TISSUE_IMPEDANCE * 1.0e6),
         );
 
         // Calculate frequency response
@@ -84,15 +85,19 @@ impl TransducerDesign {
         )?;
 
         // Calculate directivity pattern
-        let directivity =
-            TransducerDirectivityPattern::rectangular_element(width, height, frequency, 180);
+        let directivity = TransducerDirectivityPattern::rectangular_element(
+            *width.as_base(),
+            *height.as_base(),
+            *frequency.as_base(),
+            180,
+        );
 
         // Calculate sensitivity
         let sensitivity = TransducerSensitivity::from_parameters(
             piezo.coupling_k33,
-            geometry.area(),
-            piezo.acoustic_impedance * 1e6, // Convert to Pa·s/m
-            frequency,
+            *geometry.area().as_base(),
+            piezo.acoustic_impedance.into_base(),
+            *frequency.as_base(),
         );
 
         Ok(Self {
@@ -146,18 +151,20 @@ impl TransducerDesign {
 
     /// Calculate focal characteristics (if focused)
     #[must_use]
-    pub fn focal_characteristics(&self, focal_length: f64) -> (f64, f64, f64) {
-        let wavelength = SOUND_SPEED_TISSUE / self.frequency_response.center_frequency;
+    pub fn focal_characteristics(&self, focal_length: Length) -> (Length, Length, f64) {
+        let wavelength =
+            Velocity::from_base(SOUND_SPEED_TISSUE) / self.frequency_response.center_frequency;
         let aperture = self.geometry.width * 64.0; // Assume 64 element array
 
         // Focal zone length (depth of field)
-        let focal_zone = 7.0 * wavelength * (focal_length / aperture).powi(2);
+        let focal_ratio = *focal_length.as_base() / *aperture.as_base();
+        let focal_zone = wavelength * (7.0 * focal_ratio.powi(2));
 
         // Lateral resolution at focus
-        let lateral_resolution = 1.22 * wavelength * focal_length / aperture;
+        let lateral_resolution = wavelength * (1.22 * focal_ratio);
 
         // F-number
-        let f_number = focal_length / aperture;
+        let f_number = focal_ratio;
 
         (focal_zone, lateral_resolution, f_number)
     }
@@ -177,11 +184,11 @@ impl TransducerDesign {
             Beamwidth: {:.1}°\n\
             Sensitivity: {:.1} Pa/V at 1m\n\
             Efficiency: {:.1}%",
-            self.frequency_response.center_frequency / MHZ_TO_HZ,
+            *self.frequency_response.center_frequency.as_base() / MHZ_TO_HZ,
             self.frequency_response.fractional_bandwidth,
-            self.geometry.width * 1e3,
-            self.geometry.height * 1e3,
-            self.geometry.thickness * 1e3,
+            *self.geometry.width.as_base() * 1e3,
+            *self.geometry.height.as_base() * 1e3,
+            *self.geometry.thickness.as_base() * 1e3,
             self.piezo.material_type,
             self.piezo.coupling_k33,
             self.directivity.beamwidth_3db,

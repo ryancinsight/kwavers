@@ -403,7 +403,9 @@ impl KWaveArray {
         F: FnMut([f64; 3], f64),
     {
         let (inner, outer, start, span) = geometry.shape().radial_and_angular_bounds();
-        let area = geometry.shape().area_m2();
+        let inner = inner.into_base();
+        let outer = outer.into_base();
+        let area = geometry.shape().area().into_base();
         let grid_area = grid.dx * grid.dy;
         let mass = area / grid_area;
         let target = (mass * DISC_SAMPLE_UPSAMPLING_RATE).ceil().max(1.0) as usize;
@@ -419,7 +421,7 @@ impl KWaveArray {
         let sample_count = radial_count * angular_count;
         let scale = mass / sample_count as f64;
         let squared_span = outer * outer - inner * inner;
-        let center = geometry.center_m();
+        let center = geometry.center().into_base();
         let first = geometry.first_axis();
         let normal = geometry.normal();
         let second = [

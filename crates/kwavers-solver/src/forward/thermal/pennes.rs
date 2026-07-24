@@ -63,7 +63,7 @@ impl PennesSolver {
             );
         }
 
-        let alpha = properties.thermal_diffusivity();
+        let alpha = properties.thermal_diffusivity().into_base();
         let stability = alpha * dt * (1.0 / (dx * dx) + 1.0 / (dy * dy) + 1.0 / (dz * dz));
 
         if stability > 0.5 {
@@ -98,7 +98,7 @@ impl PennesSolver {
     /// - Panics if `blood_specific_heat validated in constructor`.
     ///
     pub fn step(&mut self, heat_source: &Array3<f64>) {
-        let alpha = self.properties.thermal_diffusivity();
+        let alpha = self.properties.thermal_diffusivity().into_base();
 
         let w_b = self
             .properties
@@ -109,7 +109,7 @@ impl PennesSolver {
             .blood_specific_heat
             .expect("blood_specific_heat validated in constructor");
         let perfusion_term =
-            w_b * c_b / (self.properties.density() * self.properties.specific_heat());
+            (w_b * c_b / (self.properties.density() * self.properties.specific_heat())).into_base();
 
         self.temperature_prev.assign(&self.temperature);
 
@@ -141,9 +141,11 @@ impl PennesSolver {
                         laplacian,
                         -(perfusion_term * (t - self.arterial_temperature)),
                     ) + self.metabolic_heat
-                        / (self.properties.density() * self.properties.specific_heat())
+                        / (self.properties.density().into_base()
+                            * self.properties.specific_heat().into_base())
                         + heat_source[[i, j, k]]
-                            / (self.properties.density() * self.properties.specific_heat());
+                            / (self.properties.density().into_base()
+                                * self.properties.specific_heat().into_base());
 
                     self.temperature[[i, j, k]] = self.dt.mul_add(dt_dt, t);
                 }

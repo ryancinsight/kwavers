@@ -41,7 +41,9 @@
 //! - `blood_perfusion ≥ 0` (if present)
 //! - `blood_specific_heat > 0` (if present)
 
-use aequitas::systems::si::quantities::{MassDensity, SpecificHeatCapacity, ThermalConductivity};
+use aequitas::systems::si::quantities::{
+    MassDensity, MassDensityRate, SpecificHeatCapacity, ThermalConductivity, ThermalDiffusivity,
+};
 use kwavers_core::constants::acoustic_parameters::BONE_DENSITY;
 use kwavers_core::constants::fundamental::{DENSITY_TISSUE, DENSITY_WATER};
 use kwavers_core::constants::medical::BLOOD_SPECIFIC_HEAT;
@@ -59,13 +61,13 @@ pub struct ThermalPropertyData {
     ///
     /// Optional: Only for biological tissue in bio-heat equation.
     /// Typical range: 0.5-10 kg/m³/s
-    pub blood_perfusion: Option<f64>,
+    pub blood_perfusion: Option<MassDensityRate<f64>>,
 
     /// Blood specific heat c_b (J/kg/K)
     ///
     /// Optional: Only for biological tissue in bio-heat equation.
     /// Typical value: ~3617 J/kg/K
-    pub blood_specific_heat: Option<f64>,
+    pub blood_specific_heat: Option<SpecificHeatCapacity<f64>>,
 }
 
 impl ThermalPropertyData {
@@ -74,18 +76,15 @@ impl ThermalPropertyData {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn new(
-        conductivity: f64,
-        specific_heat: f64,
-        density: f64,
-        blood_perfusion: Option<f64>,
-        blood_specific_heat: Option<f64>,
+        conductivity: ThermalConductivity<f64>,
+        specific_heat: SpecificHeatCapacity<f64>,
+        density: MassDensity<f64>,
+        blood_perfusion: Option<MassDensityRate<f64>>,
+        blood_specific_heat: Option<SpecificHeatCapacity<f64>>,
     ) -> Result<Self, String> {
-        let thermophysical = ThermophysicalProperties::try_from_quantities(
-            MassDensity::from_base(density),
-            SpecificHeatCapacity::from_base(specific_heat),
-            ThermalConductivity::from_base(conductivity),
-        )
-        .map_err(|error| error.to_string())?;
+        let thermophysical =
+            ThermophysicalProperties::try_from_quantities(density, specific_heat, conductivity)
+                .map_err(|error| error.to_string())?;
 
         Self::from_thermophysical(thermophysical, blood_perfusion, blood_specific_heat)
     }
@@ -98,20 +97,26 @@ impl ThermalPropertyData {
     /// parameter violates its physical domain.
     pub fn from_thermophysical(
         thermophysical: ThermophysicalProperties<f64>,
-        blood_perfusion: Option<f64>,
-        blood_specific_heat: Option<f64>,
+        blood_perfusion: Option<MassDensityRate<f64>>,
+        blood_specific_heat: Option<SpecificHeatCapacity<f64>>,
     ) -> Result<Self, String> {
-        if thermophysical.thermal_conductivity().quantity().into_base() == 0.0 {
+        if thermophysical.thermal_conductivity().quantity().as_base() == &0.0 {
             return Err("Thermal conductivity must be positive, got 0".to_owned());
         }
         if let Some(w_b) = blood_perfusion {
-            if w_b < 0.0 {
-                return Err(format!("Blood perfusion must be non-negative, got {}", w_b));
+            if w_b.into_base() < 0.0 {
+                return Err(format!(
+                    "Blood perfusion must be non-negative, got {}",
+                    w_b.into_base()
+                ));
             }
         }
         if let Some(c_b) = blood_specific_heat {
-            if c_b <= 0.0 {
-                return Err(format!("Blood specific heat must be positive, got {}", c_b));
+            if c_b.into_base() <= 0.0 {
+                return Err(format!(
+                    "Blood specific heat must be positive, got {}",
+                    c_b.into_base()
+                ));
             }
         }
 
@@ -130,33 +135,27 @@ impl ThermalPropertyData {
 
     /// Thermal conductivity k (W/m/K).
     #[must_use]
-    pub fn conductivity(&self) -> f64 {
-        self.thermophysical
-            .thermal_conductivity()
-            .quantity()
-            .into_base()
+    pub fn conductivity(&self) -> ThermalConductivity<f64> {
+        *self.thermophysical.thermal_conductivity().quantity()
     }
 
     /// Specific heat capacity c (J/kg/K).
     #[must_use]
-    pub fn specific_heat(&self) -> f64 {
-        self.thermophysical
-            .specific_heat_capacity()
-            .quantity()
-            .into_base()
+    pub fn specific_heat(&self) -> SpecificHeatCapacity<f64> {
+        *self.thermophysical.specific_heat_capacity().quantity()
     }
 
     /// Density rho (kg/m3).
     #[must_use]
-    pub fn density(&self) -> f64 {
-        self.thermophysical.density().quantity().into_base()
+    pub fn density(&self) -> MassDensity<f64> {
+        *self.thermophysical.density().quantity()
     }
 
     /// Thermal diffusivity α = k/(ρc) (m²/s)
     #[inline]
     #[must_use]
-    pub fn thermal_diffusivity(&self) -> f64 {
-        self.thermophysical.thermal_diffusivity().into_base()
+    pub fn thermal_diffusivity(&self) -> ThermalDiffusivity<f64> {
+        self.thermophysical.thermal_diffusivity()
     }
 
     /// Check if bio-heat parameters are present
@@ -170,9 +169,9 @@ impl ThermalPropertyData {
     #[must_use]
     pub fn water() -> Self {
         Self::new(
-            THERMAL_CONDUCTIVITY_WATER,
-            SPECIFIC_HEAT_WATER,
-            DENSITY_WATER,
+            ThermalConductivity::from_base(THERMAL_CONDUCTIVITY_WATER),
+            SpecificHeatCapacity::from_base(SPECIFIC_HEAT_WATER),
+            MassDensity::from_base(DENSITY_WATER),
             None,
             None,
         )
@@ -183,11 +182,11 @@ impl ThermalPropertyData {
     #[must_use]
     pub fn soft_tissue() -> Self {
         Self::new(
-            0.5,
-            SPECIFIC_HEAT_TISSUE,
-            DENSITY_TISSUE,
-            Some(0.5),
-            Some(BLOOD_SPECIFIC_HEAT),
+            ThermalConductivity::from_base(0.5),
+            SpecificHeatCapacity::from_base(SPECIFIC_HEAT_TISSUE),
+            MassDensity::from_base(DENSITY_TISSUE),
+            Some(MassDensityRate::from_base(0.5)),
+            Some(SpecificHeatCapacity::from_base(BLOOD_SPECIFIC_HEAT)),
         )
         .expect("soft-tissue catalog properties satisfy the Proteus contract")
     }
@@ -199,9 +198,9 @@ impl ThermalPropertyData {
     #[must_use]
     pub fn bone() -> Self {
         Self::new(
-            0.32,
-            SPECIFIC_HEAT_BONE, // 1313 J/(kg·K) (Duck 1990 Table 9.1)
-            BONE_DENSITY,       // 1900 kg/m³ (Duck 1990)
+            ThermalConductivity::from_base(0.32),
+            SpecificHeatCapacity::from_base(SPECIFIC_HEAT_BONE), // 1313 J/(kg·K) (Duck 1990 Table 9.1)
+            MassDensity::from_base(BONE_DENSITY),                // 1900 kg/m³ (Duck 1990)
             None,
             None,
         )
@@ -214,10 +213,10 @@ impl fmt::Display for ThermalPropertyData {
         write!(
             f,
             "Thermal(k={:.2} W/m/K, c={:.0} J/kg/K, ρ={:.0} kg/m³, α={:.2e} m²/s",
-            self.conductivity(),
-            self.specific_heat(),
-            self.density(),
-            self.thermal_diffusivity()
+            self.conductivity().into_base(),
+            self.specific_heat().into_base(),
+            self.density().into_base(),
+            self.thermal_diffusivity().into_base()
         )?;
         if self.has_bioheat_parameters() {
             write!(f, ", bio-heat enabled")?;
@@ -236,7 +235,7 @@ mod tests {
         let water = ThermalPropertyData::water();
         let alpha = water.thermal_diffusivity();
         let expected = THERMAL_CONDUCTIVITY_WATER / (DENSITY_WATER * SPECIFIC_HEAT_WATER);
-        assert!((alpha - expected).abs() < 1e-10);
+        assert!((alpha.into_base() - expected).abs() < 1e-10);
     }
 
     #[test]
@@ -253,20 +252,24 @@ mod tests {
         use kwavers_core::constants::medical::BLOOD_SPECIFIC_HEAT;
         use kwavers_core::constants::tissue_thermal::SPECIFIC_HEAT_TISSUE;
         // Negative conductivity should fail
-        assert!(
-            ThermalPropertyData::new(-0.5, SPECIFIC_HEAT_TISSUE, DENSITY_TISSUE, None, None)
-                .is_err()
-        );
+        assert!(ThermalPropertyData::new(
+            ThermalConductivity::from_base(-0.5),
+            SpecificHeatCapacity::from_base(SPECIFIC_HEAT_TISSUE),
+            MassDensity::from_base(DENSITY_TISSUE),
+            None,
+            None,
+        )
+        .is_err());
 
         // Valid parameters should succeed
         let tp = ThermalPropertyData::new(
-            0.5,
-            SPECIFIC_HEAT_TISSUE,
-            DENSITY_TISSUE,
-            Some(0.5),
-            Some(BLOOD_SPECIFIC_HEAT),
+            ThermalConductivity::from_base(0.5),
+            SpecificHeatCapacity::from_base(SPECIFIC_HEAT_TISSUE),
+            MassDensity::from_base(DENSITY_TISSUE),
+            Some(MassDensityRate::from_base(0.5)),
+            Some(SpecificHeatCapacity::from_base(BLOOD_SPECIFIC_HEAT)),
         )
         .unwrap();
-        assert_eq!(tp.conductivity(), 0.5);
+        assert_eq!(tp.conductivity().into_base(), 0.5);
     }
 }

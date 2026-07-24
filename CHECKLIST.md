@@ -1,5 +1,135 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-10 typed impedance-boundary metrics [major] — implementation done, verification blocked 2026-07-24
+
+- [x] Type `ImpedanceBoundary` target/medium impedance and frequency-profile
+      inputs with Aequitas `AcousticImpedance` and `Frequency`; retain the
+      profile response and reflection coefficient as dimensionless scalars.
+- [x] Migrate all in-repository constructors, profiles, tests, and examples;
+      preserve the analytical reflection-coefficient and Gaussian-profile
+      value semantics without a scalar compatibility facade.
+- [x] Synchronize the child gap audit, ADR, and changelog.
+- [ ] Run focused format/check, Nextest, warning-denied Clippy, doctest, and
+      Rustdoc gates. Current blocker: Cargo stops before source compilation at
+      the missing peer path `D:\atlas\worktrees\coeus\coeus-autograd\Cargo.toml`.
+      Re-open when the provider graph loads `kwavers-boundary` sources.
+
+## Owner: Codex — KWAVERS-AEQ-MET-08 typed thermal-diffusion configuration [major] — implementation done, verification blocked 2026-07-24
+
+- [x] Type the thermal-diffusion, Pennes, and Cattaneo configuration carriers
+      with Aequitas quantities while preserving the published equations.
+- [x] Migrate solver and simulation callers; keep dense temperature fields,
+      finite-difference kernels, and the PyO3 scalar input boundary explicit.
+- [x] Add value-semantic configuration and equation regressions, then update
+      the child audit, ADR, and changelog.
+- [ ] Run focused package checks, Nextest, warning-denied Clippy, doctests, and
+      Rustdoc after the dependency graph is repaired. Current blocker: Cargo
+      stops before source compilation because `coeus-core` requires
+      `hermes-simd ^0.4.1` while the local provider graph offers `0.5.0`.
+      Re-open when resolution reaches Kwavers sources; do not weaken the gate.
+
+## Owner: Codex — KWAVERS-AEQ-MET-07 typed grid metrics [major] — implementation done, verification blocked 2026-07-24
+
+- [x] Type `kwavers-grid` derived spacing, physical-size, volume, and CFL
+      metrics with Aequitas quantities; keep scalar extraction at coordinate
+      and stability-kernel boundaries.
+- [x] Add value-semantic grid metric coverage and migrate all direct callers,
+      examples, benchmarks, and physics tests to the typed contract.
+- [x] Synchronize the gap audit, changelog, and ADR 053.
+- [x] Confirm that vasculature remains owned by peer PR #325 rather than
+      duplicating its implementation in this PR.
+- [ ] Run package Nextest, warning-denied Clippy, doctests, and Rustdoc after
+      the peer Coeus/Mnemosyne dependency graph is repaired. Re-open trigger:
+      hosted and local Cargo resolution reaches Kwavers sources instead of
+      failing on `coeus-core` requiring Mnemosyne `^0.5.0`.
+
+## Owner: Codex — KWAVERS-AEQ-MET-09 typed piston geometry [major] — implementation done, local value gates pass, provider verification blocked 2026-07-24
+
+- [x] Type piston centre, diameter/radius, and Gaussian sigma with the existing
+      Aequitas `CartesianPosition`/`Length` seam.
+- [x] Migrate the source factory and scalar conversion boundary; add a
+      value-semantic geometry and apodization regression.
+- [x] Synchronize the gap audit, changelog, and ADR 055.
+- [x] Offline `cargo check -p kwavers-transducer` passes; focused Nextest passes
+      222/222 with 1 skipped, including the typed piston regression; doctests
+      pass 1/1 with 6 intentionally ignored.
+- [ ] Warning-denied Clippy is blocked before source compilation because the
+      peer local graph references the missing
+      `D:\atlas\worktrees\coeus\coeus-autograd\Cargo.toml`. Hosted PR #324
+      independently fails before Kwavers compilation because Coeus requires
+      Mnemosyne `^0.5.0` while the graph supplies `0.6.0`.
+
+## Owner: Codex — KWAVERS-AEQ-MET-04 typed HIFU planning metrics [major] — in progress 2026-07-24
+
+- [x] Type HIFU transducer frequency/power/geometry, focal pressure/width/
+      volume/location, ablation-target geometry, and sonication schedule
+      coordinates with Aequitas quantities and validated positions.
+- [x] Keep focal-dose and schedule arithmetic in explicit scalar kernel
+      boundaries while passing typed frequency and time values through the
+      planning API.
+- [ ] Run the package value tests, Nextest, warning-denied Clippy, and
+      doctests after peer `coeus-nn` restores a compiling dependency graph.
+      Re-open trigger: the current `coeus-nn` normalization API drift is
+      repaired in the canonical provider checkout.
+- [ ] Re-run the hosted package, Python, and workspace gates after Coeus
+      publishes the `mnemosyne ^0.6.0` dependency migration compatible with
+      Atlas Mnemosyne `0.6.0`; the provider checkout itself now verifies
+      13 providers and 46 manifests.
+- [x] Repin the hosted provider-checkout action to Atlas graph `45bd370`,
+      which contains the merged Aequitas `b86a55d` and Proteus `1b25af1`
+      revisions; the prior hosted lock failures were graph drift before
+      compilation, not HIFU metric failures.
+
+## Owner: Codex — KWAVERS-AEQ-MET-06 typed thermal and perfusion metrics [major] — done 2026-07-23
+
+- [x] Add provider-owned Aequitas `MassDensityRate` and prove its dimension
+      law against mass density over time.
+- [x] Type Kwavers thermal material constructors, accessors, temperature-
+      dependent properties, and Pennes perfusion inputs without duplicating
+      the Proteus thermophysical bundle.
+- [x] Keep scalar conversion explicit at display, legacy DTO, and numerical
+      stencil boundaries; correct the bubble heat-transfer temperature change
+      to use `TemperatureDifference`.
+- [x] Pass Kwavers-medium Nextest 191/191, thermal/bubble physics Nextest
+      361/361, no-default-features checks, formatting, and diff checks; update
+      ADR 051, the gap audit, and the changelog.
+
+## Owner: Codex — KWAVERS-AEQ-RAYLEIGH-POSITION-1 [major] — done 2026-07-24
+
+- [x] Type Rayleigh aperture radii, areas, centres, and observation points
+      with Aequitas `Length`/`Area` and validated `CartesianPosition`.
+- [x] Keep the KWaveArray rasterizer as the single explicit scalar
+      grid-coordinate adapter without parallel Rayleigh fields.
+- [x] Pass Rayleigh 12/12, planar-rasterizer 1/1, package check,
+      warning-denied package Clippy, doctests, and synchronized ADR/audit gates.
+
+## Owner: Codex — KWAVERS-AEQ-MET-03 materials and Rayleigh propagation [major] — done 2026-07-23
+
+- [x] Type piezoelectric, backing, matching-layer, lens, and Fresnel physical
+      fields with Aequitas quantities; retain model coefficients as scalars.
+- [x] Type lens focal/delay/zone/correction results and Rayleigh wavenumber,
+      attenuation, layer thickness, and propagation range.
+- [x] Update Rust design callers and PyO3 lens conversion boundaries without
+      retaining scalar compatibility fields.
+- [x] Preserve material, lens, and Rayleigh analytical oracles; full
+      `kwavers-transducer` Nextest passes 221/221 with one skipped test.
+- [x] Record the typed Rayleigh aperture-coordinate boundary and explicit
+      KWaveArray scalar adapter in ADR 050 and the Aequitas gap audit.
+
+## Owner: Codex — KWAVERS-AEQ-MET-03 frequency and geometry metrics [major] — done 2026-07-23
+
+- [x] Add direct Aequitas ownership to `kwavers-transducer` and type element
+      dimensions, pitch, kerf, frequency-response metrics, and sampled
+      frequencies.
+- [x] Return typed area, volume, resonance, pulse-length, axial-resolution, and
+      focal-resolution results while retaining dimensionless model outputs as
+      scalars.
+- [x] Preserve KLM, geometry, and focal-resolution value semantics with typed
+      regressions; the transducer unit suite passes 221/221.
+- [x] Pass package check, warning-denied package Clippy, package formatting, and
+      the full transducer Nextest. Existing provider-workspace warnings remain
+      outside the touched package; Rayleigh/materials are the next residual.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-01 typed CEM43/HIFU metrics [major] — done 2026-07-23
 
 - [x] Add validated `CumulativeEquivalentMinutes` backed by Aequitas `Time`;

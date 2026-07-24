@@ -1,7 +1,7 @@
 //! Annulus, bowl, and per-element source tests for [`KWaveArray`].
 
 use super::super::{DiscSourceProfile, KWaveArray};
-use crate::transducers::physics::{PlanarApertureGeometry, PlanarApertureShape};
+use crate::transducers::physics::{CartesianPosition, PlanarApertureGeometry, PlanarApertureShape};
 
 /// Annulus has strictly fewer active cells than the full bowl of the same
 /// outer diameter, and the surface-area formula satisfies the closed form:
@@ -257,12 +257,12 @@ fn planar_quadrants_conserve_area_and_keep_signals_independent() {
     let mut array = KWaveArray::new();
     for quadrant in 0..4 {
         let geometry = PlanarApertureGeometry::oriented(
-            center,
+            CartesianPosition::from_base(center).expect("finite test position"),
             [0.0, 0.0, 1.0],
             [1.0, 0.0, 0.0],
             PlanarApertureShape::AnnularSector {
-                inner_radius_m: inner,
-                outer_radius_m: outer,
+                inner_radius: aequitas::systems::si::quantities::Length::from_base(inner),
+                outer_radius: aequitas::systems::si::quantities::Length::from_base(outer),
                 start_angle_rad: quadrant as f64 * span,
                 span_angle_rad: span,
             },

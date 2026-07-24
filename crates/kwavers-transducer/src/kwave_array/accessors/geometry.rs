@@ -15,7 +15,7 @@ impl KWaveArray {
             .map(|e| {
                 let local = match e {
                     KWaveElement::PlanarAperture(geometry) => {
-                        let [x, y, z] = geometry.center_m();
+                        let [x, y, z] = geometry.center().into_base();
                         (x, y, z)
                     }
                     KWaveElement::Shape(shape) => match shape {
@@ -42,7 +42,7 @@ impl KWaveArray {
         self.elements
             .iter()
             .map(|e| match e {
-                KWaveElement::PlanarAperture(geometry) => geometry.shape().area_m2(),
+                KWaveElement::PlanarAperture(geometry) => geometry.shape().area().into_base(),
                 KWaveElement::Shape(e) => match e {
                     ElementShape::Bowl {
                         radius: r,

@@ -12,6 +12,8 @@
 //! - Szabo, T.L. (2004) "Diagnostic Ultrasound Imaging", Elsevier.
 //! - Bamber, J.C. & Hill, C.R. (1979) Ultrasound Med Biol 5(2):149-157.
 
+use aequitas::systems::si::quantities::MassDensity;
+
 mod acoustic;
 #[cfg(test)]
 mod tests;
@@ -63,15 +65,17 @@ impl TemperatureDependentMaterial {
         temperature: f64,
     ) -> Result<MaterialPropertiesAtT, String> {
         let density = self.acoustic.density(temperature);
-        let thermal = self.thermal.properties_with_density(temperature, density)?;
+        let thermal = self
+            .thermal
+            .properties_with_density(temperature, MassDensity::from_base(density))?;
         Ok(MaterialPropertiesAtT {
             temperature,
             sound_speed: self.acoustic.sound_speed(temperature),
             density,
             impedance: self.acoustic.impedance(temperature),
-            thermal_conductivity: thermal.conductivity(),
-            specific_heat: thermal.specific_heat(),
-            thermal_diffusivity: thermal.thermal_diffusivity(),
+            thermal_conductivity: thermal.conductivity().into_base(),
+            specific_heat: thermal.specific_heat().into_base(),
+            thermal_diffusivity: thermal.thermal_diffusivity().into_base(),
         })
     }
 }
