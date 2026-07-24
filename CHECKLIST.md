@@ -1,5 +1,19 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-10 typed impedance-boundary metrics [major] — implementation done, verification blocked 2026-07-24
+
+- [x] Type `ImpedanceBoundary` target/medium impedance and frequency-profile
+      inputs with Aequitas `AcousticImpedance` and `Frequency`; retain the
+      profile response and reflection coefficient as dimensionless scalars.
+- [x] Migrate all in-repository constructors, profiles, tests, and examples;
+      preserve the analytical reflection-coefficient and Gaussian-profile
+      value semantics without a scalar compatibility facade.
+- [x] Synchronize the child gap audit, ADR, and changelog.
+- [ ] Run focused format/check, Nextest, warning-denied Clippy, doctest, and
+      Rustdoc gates. Current blocker: Cargo stops before source compilation at
+      the missing peer path `D:\atlas\worktrees\coeus\coeus-autograd\Cargo.toml`.
+      Re-open when the provider graph loads `kwavers-boundary` sources.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-08 typed thermal-diffusion configuration [major] — implementation done, verification blocked 2026-07-24
 
 - [x] Type the thermal-diffusion, Pennes, and Cattaneo configuration carriers

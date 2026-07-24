@@ -1,75 +1,102 @@
 use super::*;
+use aequitas::systems::si::quantities::{AcousticImpedance, Frequency};
 use kwavers_core::constants::fundamental::ACOUSTIC_IMPEDANCE_WATER_NOMINAL;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 
+fn impedance(value: f64) -> AcousticImpedance {
+    AcousticImpedance::from_base(value)
+}
+
+fn frequency(value: f64) -> Frequency {
+    Frequency::from_base(value)
+}
+
 #[test]
 fn test_impedance_boundary() {
-    let boundary =
-        ImpedanceBoundary::new(ACOUSTIC_IMPEDANCE_WATER_NOMINAL, BoundaryDirections::all());
+    let boundary = ImpedanceBoundary::new(
+        impedance(ACOUSTIC_IMPEDANCE_WATER_NOMINAL),
+        BoundaryDirections::all(),
+    );
 
     // Test reflection coefficient
-    let r = boundary.reflection_coefficient(MHZ_TO_HZ, ACOUSTIC_IMPEDANCE_WATER_NOMINAL); // Matched impedance
+    let r = boundary.reflection_coefficient(
+        frequency(MHZ_TO_HZ),
+        impedance(ACOUSTIC_IMPEDANCE_WATER_NOMINAL),
+    ); // Matched impedance
     assert!(r.abs() < 1e-10); // Perfect match, no reflection
 
-    let r = boundary.reflection_coefficient(MHZ_TO_HZ, 3.0e6); // Mismatched
+    let r = boundary.reflection_coefficient(frequency(MHZ_TO_HZ), impedance(3.0e6)); // Mismatched
     assert!(r.abs() > 0.0); // Some reflection
 }
 
 #[test]
 fn test_impedance_boundary_gaussian_profile() {
-    let boundary =
-        ImpedanceBoundary::new(ACOUSTIC_IMPEDANCE_WATER_NOMINAL, BoundaryDirections::all())
-            .with_gaussian_profile(MHZ_TO_HZ, 0.5 * MHZ_TO_HZ);
+    let boundary = ImpedanceBoundary::new(
+        impedance(ACOUSTIC_IMPEDANCE_WATER_NOMINAL),
+        BoundaryDirections::all(),
+    )
+    .with_gaussian_profile(frequency(MHZ_TO_HZ), frequency(0.5 * MHZ_TO_HZ));
 
-    let medium_impedance = ACOUSTIC_IMPEDANCE_WATER_NOMINAL;
+    let medium_impedance = impedance(ACOUSTIC_IMPEDANCE_WATER_NOMINAL);
 
     // At center frequency, should have maximum effect
-    let z_ratio_center = boundary.impedance_ratio(MHZ_TO_HZ, medium_impedance);
+    let z_ratio_center = boundary.impedance_ratio(frequency(MHZ_TO_HZ), medium_impedance);
     assert!((z_ratio_center - 1.0).abs() < 1e-10);
 
     // Off center, should be attenuated by Gaussian
-    let z_ratio_off = boundary.impedance_ratio(0.5 * MHZ_TO_HZ, medium_impedance);
+    let z_ratio_off = boundary.impedance_ratio(frequency(0.5 * MHZ_TO_HZ), medium_impedance);
     assert!(z_ratio_off < z_ratio_center);
 }
 
 #[test]
 fn test_impedance_reflection_coefficient() {
-    let boundary = ImpedanceBoundary::new(2.0e6, BoundaryDirections::all());
+    let boundary = ImpedanceBoundary::new(impedance(2.0e6), BoundaryDirections::all());
 
     // Z_target = 2.0 MRayl, Z_medium = 1.0 MRayl
     // z_ratio = 2.0
     // R = (2.0 - 1.0) / (2.0 + 1.0) = 1/3 ≈ 0.333
-    let r = boundary.reflection_coefficient(MHZ_TO_HZ, 1.0e6);
+    let r = boundary.reflection_coefficient(frequency(MHZ_TO_HZ), impedance(1.0e6));
     assert!((r - 1.0 / 3.0).abs() < 1e-10);
 }
 
 #[test]
 fn test_impedance_matched() {
-    let boundary =
-        ImpedanceBoundary::new(ACOUSTIC_IMPEDANCE_WATER_NOMINAL, BoundaryDirections::all());
+    let boundary = ImpedanceBoundary::new(
+        impedance(ACOUSTIC_IMPEDANCE_WATER_NOMINAL),
+        BoundaryDirections::all(),
+    );
 
     // Matched impedances should give zero reflection
-    let r = boundary.reflection_coefficient(MHZ_TO_HZ, ACOUSTIC_IMPEDANCE_WATER_NOMINAL);
+    let r = boundary.reflection_coefficient(
+        frequency(MHZ_TO_HZ),
+        impedance(ACOUSTIC_IMPEDANCE_WATER_NOMINAL),
+    );
     assert!(r.abs() < 1e-12);
 }
 
 #[test]
 fn test_impedance_perfect_reflector() {
-    let boundary = ImpedanceBoundary::new(1e12, BoundaryDirections::all());
+    let boundary = ImpedanceBoundary::new(impedance(1e12), BoundaryDirections::all());
 
     // Very high target impedance (rigid wall)
     // R → +1 as Z_target → ∞
-    let r = boundary.reflection_coefficient(MHZ_TO_HZ, ACOUSTIC_IMPEDANCE_WATER_NOMINAL);
+    let r = boundary.reflection_coefficient(
+        frequency(MHZ_TO_HZ),
+        impedance(ACOUSTIC_IMPEDANCE_WATER_NOMINAL),
+    );
     assert!(r > 0.999, "Rigid wall should have R ≈ 1, got {}", r);
 }
 
 #[test]
 fn test_impedance_zero_reflector() {
-    let boundary = ImpedanceBoundary::new(1.0, BoundaryDirections::all());
+    let boundary = ImpedanceBoundary::new(impedance(1.0), BoundaryDirections::all());
 
     // Very low target impedance (pressure release)
     // R → -1 as Z_target → 0
-    let r = boundary.reflection_coefficient(MHZ_TO_HZ, ACOUSTIC_IMPEDANCE_WATER_NOMINAL);
+    let r = boundary.reflection_coefficient(
+        frequency(MHZ_TO_HZ),
+        impedance(ACOUSTIC_IMPEDANCE_WATER_NOMINAL),
+    );
     assert!(r < -0.999, "Pressure release should have R ≈ -1, got {}", r);
 }
 
@@ -80,9 +107,11 @@ fn test_impedance_boundary_spatial_apply_matched_zeros_face() {
     use leto::Array3;
 
     let grid = Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).unwrap();
-    let mut boundary =
-        ImpedanceBoundary::new(ACOUSTIC_IMPEDANCE_WATER_NOMINAL, BoundaryDirections::all())
-            .with_medium_impedance(ACOUSTIC_IMPEDANCE_WATER_NOMINAL);
+    let mut boundary = ImpedanceBoundary::new(
+        impedance(ACOUSTIC_IMPEDANCE_WATER_NOMINAL),
+        BoundaryDirections::all(),
+    )
+    .with_medium_impedance(impedance(ACOUSTIC_IMPEDANCE_WATER_NOMINAL));
 
     let mut field = Array3::<f64>::from_elem((8, 8, 8), 1.0);
     boundary
@@ -107,8 +136,8 @@ fn test_impedance_boundary_spatial_apply_rigid_mirrors_face() {
     use leto::Array3;
 
     let grid = Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).unwrap();
-    let mut boundary = ImpedanceBoundary::new(1e15, BoundaryDirections::all())
-        .with_medium_impedance(ACOUSTIC_IMPEDANCE_WATER_NOMINAL);
+    let mut boundary = ImpedanceBoundary::new(impedance(1e15), BoundaryDirections::all())
+        .with_medium_impedance(impedance(ACOUSTIC_IMPEDANCE_WATER_NOMINAL));
 
     let mut field = Array3::<f64>::zeros((8, 8, 8));
     field[[1, 4, 4]] = 3.5; // interior next to x_min face
@@ -138,8 +167,9 @@ fn test_impedance_boundary_spatial_respects_directions() {
         z_min: false,
         z_max: false,
     };
-    let mut boundary = ImpedanceBoundary::new(ACOUSTIC_IMPEDANCE_WATER_NOMINAL, directions)
-        .with_medium_impedance(ACOUSTIC_IMPEDANCE_WATER_NOMINAL);
+    let mut boundary =
+        ImpedanceBoundary::new(impedance(ACOUSTIC_IMPEDANCE_WATER_NOMINAL), directions)
+            .with_medium_impedance(impedance(ACOUSTIC_IMPEDANCE_WATER_NOMINAL));
 
     let mut field = Array3::<f64>::from_elem((6, 6, 6), 7.0);
     boundary

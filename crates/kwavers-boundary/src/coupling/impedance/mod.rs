@@ -3,6 +3,8 @@
 //! Frequency-dependent absorption based on acoustic impedance matching.
 //! Particularly useful for ultrasound transducers and tissue interfaces.
 
+use aequitas::systems::si::quantities::{AcousticImpedance, Frequency};
+
 use crate::traits::BoundaryCondition;
 use kwavers_core::constants::fundamental::ACOUSTIC_IMPEDANCE_WATER_NOMINAL;
 use kwavers_core::error::KwaversResult;
@@ -42,27 +44,31 @@ mod tests;
 /// # Example
 ///
 /// ```no_run
+/// use aequitas::systems::si::quantities::{AcousticImpedance, Frequency};
 /// use kwavers_boundary::coupling::ImpedanceBoundary;
 /// use kwavers_boundary::traits::BoundaryDirections;
 ///
 /// // Create impedance boundary matching water-tissue interface
 /// let boundary = ImpedanceBoundary::new(
-///     1.5e6,  // Target impedance (1.5 MRayl)
+///     AcousticImpedance::from_base(1.5e6),  // Target impedance (1.5 MRayl)
 ///     BoundaryDirections::all(),
 /// );
 ///
 /// // Add Gaussian frequency profile centered at 1 MHz with 0.5 MHz bandwidth
-/// let boundary = boundary.with_gaussian_profile(1e6, 0.5e6);
+/// let boundary = boundary.with_gaussian_profile(
+///     Frequency::from_base(1e6),
+///     Frequency::from_base(0.5e6),
+/// );
 /// ```
 #[derive(Debug, Clone)]
 pub struct ImpedanceBoundary {
     /// Target impedance Z_target (kg/m²s)
-    pub target_impedance: f64,
+    pub target_impedance: AcousticImpedance,
     /// Medium impedance Z_medium (kg/m²s) — defaults to water.
-    pub medium_impedance: f64,
+    pub medium_impedance: AcousticImpedance,
     /// Representative frequency for spatial-domain reflection coefficient (Hz).
     /// Defaults to the Gaussian center frequency when set, else 1 MHz.
-    pub representative_frequency_hz: f64,
+    pub representative_frequency: Frequency,
     /// Frequency-dependent profile
     pub frequency_profile: FrequencyProfile,
     /// Boundary directions
@@ -81,11 +87,11 @@ impl ImpedanceBoundary {
     ///
     /// New `ImpedanceBoundary` with flat frequency response
     #[must_use]
-    pub fn new(target_impedance: f64, directions: BoundaryDirections) -> Self {
+    pub fn new(target_impedance: AcousticImpedance, directions: BoundaryDirections) -> Self {
         Self {
             target_impedance,
-            medium_impedance: ACOUSTIC_IMPEDANCE_WATER_NOMINAL,
-            representative_frequency_hz: 1.0e6,
+            medium_impedance: AcousticImpedance::from_base(ACOUSTIC_IMPEDANCE_WATER_NOMINAL),
+            representative_frequency: Frequency::from_base(1.0e6),
             frequency_profile: FrequencyProfile::Flat,
             directions,
         }
@@ -95,7 +101,7 @@ impl ImpedanceBoundary {
     ///
     /// Defaults to `ACOUSTIC_IMPEDANCE_WATER_NOMINAL` (1.5e6 Rayl) when not set.
     #[must_use]
-    pub fn with_medium_impedance(mut self, medium_impedance: f64) -> Self {
+    pub fn with_medium_impedance(mut self, medium_impedance: AcousticImpedance) -> Self {
         self.medium_impedance = medium_impedance;
         self
     }
@@ -111,12 +117,12 @@ impl ImpedanceBoundary {
     ///
     /// Self with Gaussian profile applied; representative frequency is set to `center_freq`.
     #[must_use]
-    pub fn with_gaussian_profile(mut self, center_freq: f64, bandwidth: f64) -> Self {
+    pub fn with_gaussian_profile(mut self, center_freq: Frequency, bandwidth: Frequency) -> Self {
         self.frequency_profile = FrequencyProfile::Gaussian {
             center_freq,
             bandwidth,
         };
-        self.representative_frequency_hz = center_freq;
+        self.representative_frequency = center_freq;
         self
     }
 
@@ -134,44 +140,14 @@ impl ImpedanceBoundary {
     /// - Panics if an internal invariant assumed to hold at this call site is violated.
     ///
     #[must_use]
-    pub fn impedance_ratio(&self, frequency: f64, medium_impedance: f64) -> f64 {
-        let z_ratio = self.target_impedance / medium_impedance;
+    pub fn impedance_ratio(
+        &self,
+        frequency: Frequency,
+        medium_impedance: AcousticImpedance,
+    ) -> f64 {
+        let z_ratio = self.target_impedance.into_base() / medium_impedance.into_base();
 
-        match &self.frequency_profile {
-            FrequencyProfile::Flat => z_ratio,
-            FrequencyProfile::Gaussian {
-                center_freq,
-                bandwidth,
-            } => {
-                let sigma = bandwidth / (2.0 * (2.0 * std::f64::consts::LN_2).sqrt()); // Convert FWHM to sigma
-                let gaussian = (-0.5 * ((frequency - center_freq) / sigma).powi(2)).exp();
-                z_ratio * gaussian
-            }
-            FrequencyProfile::Custom(pairs) => {
-                // Simple linear interpolation
-                if pairs.is_empty() {
-                    z_ratio
-                } else if frequency <= pairs[0].0 {
-                    pairs[0].1 * z_ratio
-                } else if frequency >= pairs.last().unwrap().0 {
-                    pairs.last().unwrap().1 * z_ratio
-                } else {
-                    // Find interval and interpolate
-                    for i in 0..pairs.len() - 1 {
-                        if frequency >= pairs[i].0 && frequency <= pairs[i + 1].0 {
-                            let f1 = pairs[i].0;
-                            let f2 = pairs[i + 1].0;
-                            let z1 = pairs[i].1;
-                            let z2 = pairs[i + 1].1;
-
-                            let ratio = z1 + (z2 - z1) * (frequency - f1) / (f2 - f1);
-                            return ratio * z_ratio;
-                        }
-                    }
-                    z_ratio
-                }
-            }
-        }
+        z_ratio * self.frequency_profile.evaluate(frequency)
     }
 
     /// Compute reflection coefficient from impedance mismatch
@@ -185,7 +161,11 @@ impl ImpedanceBoundary {
     ///
     /// Reflection coefficient R = (Z_target - Z_medium) / (Z_target + Z_medium)
     #[must_use]
-    pub fn reflection_coefficient(&self, frequency: f64, medium_impedance: f64) -> f64 {
+    pub fn reflection_coefficient(
+        &self,
+        frequency: Frequency,
+        medium_impedance: AcousticImpedance,
+    ) -> f64 {
         let z_ratio = self.impedance_ratio(frequency, medium_impedance);
         (z_ratio - 1.0) / (z_ratio + 1.0)
     }
@@ -216,9 +196,8 @@ impl BoundaryCondition for ImpedanceBoundary {
         //
         // For Flat frequency profile the coefficient is exact and frequency-
         // independent. For Gaussian/Custom profiles the coefficient is
-        // evaluated at `representative_frequency_hz` (the spectral peak).
-        let r =
-            self.reflection_coefficient(self.representative_frequency_hz, self.medium_impedance);
+        // evaluated at `representative_frequency` (the spectral peak).
+        let r = self.reflection_coefficient(self.representative_frequency, self.medium_impedance);
         let dims = grid.dimensions();
         let (nx, ny, nz) = (dims[0], dims[1], dims[2]);
         if nx < 2 || ny < 2 || nz < 2 {
@@ -285,8 +264,7 @@ impl BoundaryCondition for ImpedanceBoundary {
         // frequency. Frequency-bin-dependent profiles require k → ω mapping
         // (k = ω/c) which depends on the medium's sound speed and is therefore
         // applied at the model level where c is known, not here.
-        let r =
-            self.reflection_coefficient(self.representative_frequency_hz, self.medium_impedance);
+        let r = self.reflection_coefficient(self.representative_frequency, self.medium_impedance);
         let r_complex = kwavers_math::fft::Complex64::new(r, 0.0);
         let dims = grid.dimensions();
         let (nx, ny, nz) = (dims[0], dims[1], dims[2]);

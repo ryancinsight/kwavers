@@ -4,6 +4,12 @@
 
 ### Changed
 
+- **Breaking**: impedance-boundary targets, medium values, representative
+  frequencies, Gaussian bandwidths, and custom frequency samples now use
+  Aequitas `AcousticImpedance` and `Frequency`. Dimensionless profile response
+  and reflection coefficients remain scalar model outputs. See
+  [ADR 056](docs/ADR/056-impedance-boundary-quantities.md).
+
 - **Breaking**: basic piston source geometry now uses Aequitas `Length` and the
   shared validated `CartesianPosition`; Gaussian apodization sigma is typed as
   `Length`, with scalar conversion confined to the source/grid kernel boundary.
