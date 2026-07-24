@@ -1,5 +1,18 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-04 typed HIFU planning metrics [major] — in progress 2026-07-24
+
+- [x] Type HIFU transducer frequency/power/geometry, focal pressure/width/
+      volume/location, ablation-target geometry, and sonication schedule
+      coordinates with Aequitas quantities and validated positions.
+- [x] Keep focal-dose and schedule arithmetic in explicit scalar kernel
+      boundaries while passing typed frequency and time values through the
+      planning API.
+- [ ] Run the package value tests, Nextest, warning-denied Clippy, and
+      doctests after peer `coeus-nn` restores a compiling dependency graph.
+      Re-open trigger: the current `coeus-nn` normalization API drift is
+      repaired in the canonical provider checkout.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-06 typed thermal and perfusion metrics [major] — done 2026-07-23
 
 - [x] Add provider-owned Aequitas `MassDensityRate` and prove its dimension

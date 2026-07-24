@@ -4,6 +4,12 @@
 
 ### Changed
 
+- **Breaking**: HIFU planning transducer frequency/power/geometry, focal
+  pressure/width/volume/location, ablation-target geometry, and sonication
+  schedule coordinates now use Aequitas quantities and validated Cartesian
+  positions. Focal-dose and schedule kernels convert explicitly at their
+  scalar arithmetic boundaries. See [ADR 052](docs/ADR/052-hifu-planning-quantities.md).
+
 - **Breaking**: thermal material constructors and accessors now use Aequitas
   `ThermalConductivity`, `MassDensity`, `SpecificHeatCapacity`, and
   `ThermalDiffusivity`; Pennes blood perfusion uses provider-owned

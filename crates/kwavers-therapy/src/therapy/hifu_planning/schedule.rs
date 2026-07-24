@@ -1,15 +1,16 @@
 use super::types::{AblationTarget, FocalSpot, FocalSpotDoseEstimate};
 use crate::therapy::domain_types::ClinicalTherapyParameters;
-use aequitas::systems::si::quantities::{ThermodynamicTemperature, Time};
+use aequitas::systems::si::quantities::{Frequency, Length, ThermodynamicTemperature, Time};
 use kwavers_core::constants::medical::THERMAL_DOSE_THRESHOLD;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_physics::thermal::CumulativeEquivalentMinutes;
+use kwavers_transducer::transducers::physics::CartesianPosition;
 
 /// One planned HIFU focal dwell location.
 #[derive(Debug, Clone)]
 pub struct SonicationSubspot {
     pub index: usize,
-    pub location_mm: (f64, f64, f64),
+    pub location: CartesianPosition,
     pub dwell_time: Time<f64>,
     pub expected_cem43: CumulativeEquivalentMinutes,
     pub peak_temperature: ThermodynamicTemperature<f64>,
@@ -19,8 +20,8 @@ pub struct SonicationSubspot {
 #[derive(Debug, Clone)]
 pub struct SonicationSchedule {
     pub subspots: Vec<SonicationSubspot>,
-    pub pitch_mm: (f64, f64, f64),
-    pub expanded_target_dimensions_mm: (f64, f64, f64),
+    pub pitch: [Length<f64>; 3],
+    pub expanded_target_dimensions: [Length<f64>; 3],
     pub coverage_guaranteed: bool,
     pub per_spot_dwell: Time<f64>,
     pub total_dwell: Time<f64>,
@@ -43,50 +44,60 @@ impl SonicationSchedule {
         target: &AblationTarget,
         focal_spot: &FocalSpot,
         therapy_params: &ClinicalTherapyParameters,
-        frequency_hz: f64,
+        frequency: Frequency<f64>,
     ) -> KwaversResult<Self> {
-        validate_positive_finite("target.dimensions_mm.0", target.dimensions_mm.0)?;
-        validate_positive_finite("target.dimensions_mm.1", target.dimensions_mm.1)?;
-        validate_positive_finite("target.dimensions_mm.2", target.dimensions_mm.2)?;
-        validate_positive_finite("target.safety_margin_mm", target.safety_margin_mm)?;
-        validate_positive_finite("focal_spot.lateral_width_mm", focal_spot.lateral_width_mm)?;
-        validate_positive_finite("focal_spot.axial_width_mm", focal_spot.axial_width_mm)?;
+        for (index, dimension) in target.dimensions.iter().enumerate() {
+            validate_positive_finite(
+                &format!("target.dimensions[{index}]"),
+                dimension.into_base(),
+            )?;
+        }
+        validate_positive_finite("target.safety_margin", target.safety_margin.into_base())?;
+        validate_positive_finite(
+            "focal_spot.lateral_width",
+            focal_spot.lateral_width.into_base(),
+        )?;
+        validate_positive_finite("focal_spot.axial_width", focal_spot.axial_width.into_base())?;
         validate_positive_finite(
             "therapy_params.treatment_duration",
             therapy_params.treatment_duration,
         )?;
 
         let sqrt3 = 3.0_f64.sqrt();
-        let pitch = (
-            focal_spot.lateral_width_mm / sqrt3,
-            focal_spot.lateral_width_mm / sqrt3,
-            focal_spot.axial_width_mm / sqrt3,
-        );
-        let expanded = (
-            target.dimensions_mm.0 + 2.0 * target.safety_margin_mm,
-            target.dimensions_mm.1 + 2.0 * target.safety_margin_mm,
-            target.dimensions_mm.2 + 2.0 * target.safety_margin_mm,
-        );
+        let pitch = [
+            Length::from_base(focal_spot.lateral_width.into_base() / sqrt3),
+            Length::from_base(focal_spot.lateral_width.into_base() / sqrt3),
+            Length::from_base(focal_spot.axial_width.into_base() / sqrt3),
+        ];
+        let margin = target.safety_margin.into_base();
+        let expanded = target
+            .dimensions
+            .map(|dimension| Length::from_base(2.0f64.mul_add(margin, dimension.into_base())));
+        let target_location = target.location.into_base();
 
-        let x = axis_centers(target.location_mm.0, expanded.0, pitch.0);
-        let y = axis_centers(target.location_mm.1, expanded.1, pitch.1);
-        let z = axis_centers(target.location_mm.2, expanded.2, pitch.2);
+        let x = axis_centers(Length::from_base(target_location[0]), expanded[0], pitch[0]);
+        let y = axis_centers(Length::from_base(target_location[1]), expanded[1], pitch[1]);
+        let z = axis_centers(Length::from_base(target_location[2]), expanded[2], pitch[2]);
         let n = x.len() * y.len() * z.len();
         let per_spot_dwell = Time::from_base(therapy_params.treatment_duration / n as f64);
         let dose = FocalSpotDoseEstimate::estimate_from_focal_spot(
             focal_spot,
-            frequency_hz,
+            frequency,
             therapy_params.duty_cycle,
-            per_spot_dwell.into_base(),
+            per_spot_dwell,
         )?;
 
         let mut subspots = Vec::with_capacity(n);
-        for &x_mm in &x {
-            for &y_mm in &y {
-                for &z_mm in &z {
+        for &x_position in &x {
+            for &y_position in &y {
+                for &z_position in &z {
                     subspots.push(SonicationSubspot {
                         index: subspots.len(),
-                        location_mm: (x_mm, y_mm, z_mm),
+                        location: CartesianPosition::from_base([
+                            x_position.into_base(),
+                            y_position.into_base(),
+                            z_position.into_base(),
+                        ])?,
                         dwell_time: per_spot_dwell,
                         expected_cem43: dose.cem43,
                         peak_temperature: dose.peak_temperature,
@@ -100,8 +111,8 @@ impl SonicationSchedule {
 
         Ok(Self {
             subspots,
-            pitch_mm: pitch,
-            expanded_target_dimensions_mm: expanded,
+            pitch,
+            expanded_target_dimensions: expanded,
             coverage_guaranteed,
             per_spot_dwell,
             total_dwell: Time::from_base(therapy_params.treatment_duration),
@@ -133,41 +144,50 @@ fn validate_positive_finite(name: &str, value: f64) -> KwaversResult<()> {
     }
 }
 
-fn axis_centers(center: f64, extent: f64, max_pitch: f64) -> Vec<f64> {
+fn axis_centers(
+    center: Length<f64>,
+    extent: Length<f64>,
+    max_pitch: Length<f64>,
+) -> Vec<Length<f64>> {
+    let center = center.into_base();
+    let extent = extent.into_base();
+    let max_pitch = max_pitch.into_base();
     let count = if extent <= max_pitch {
         1
     } else {
         (extent / max_pitch).ceil() as usize + 1
     };
     if count == 1 {
-        return vec![center];
+        return vec![Length::from_base(center)];
     }
     let start = center - 0.5 * extent;
     let step = extent / (count - 1) as f64;
-    (0..count).map(|idx| start + idx as f64 * step).collect()
+    (0..count)
+        .map(|idx| Length::from_base(start + idx as f64 * step))
+        .collect()
 }
 
 fn coverage_corner_bound(
-    x: &[f64],
-    y: &[f64],
-    z: &[f64],
-    expanded: (f64, f64, f64),
+    x: &[Length<f64>],
+    y: &[Length<f64>],
+    z: &[Length<f64>],
+    expanded: [Length<f64>; 3],
     focal_spot: &FocalSpot,
 ) -> f64 {
-    let hx = 0.5 * max_cell_width(x, expanded.0);
-    let hy = 0.5 * max_cell_width(y, expanded.1);
-    let hz = 0.5 * max_cell_width(z, expanded.2);
-    let lateral_semi = 0.5 * focal_spot.lateral_width_mm;
-    let axial_semi = 0.5 * focal_spot.axial_width_mm;
+    let hx = 0.5 * max_cell_width(x, expanded[0].into_base());
+    let hy = 0.5 * max_cell_width(y, expanded[1].into_base());
+    let hz = 0.5 * max_cell_width(z, expanded[2].into_base());
+    let lateral_semi = 0.5 * focal_spot.lateral_width.into_base();
+    let axial_semi = 0.5 * focal_spot.axial_width.into_base();
     (hx / lateral_semi).powi(2) + (hy / lateral_semi).powi(2) + (hz / axial_semi).powi(2)
 }
 
-fn max_cell_width(axis: &[f64], extent: f64) -> f64 {
+fn max_cell_width(axis: &[Length<f64>], extent: f64) -> f64 {
     if axis.len() <= 1 {
         extent
     } else {
         axis.windows(2)
-            .map(|pair| pair[1] - pair[0])
+            .map(|pair| pair[1].into_base() - pair[0].into_base())
             .fold(0.0, f64::max)
     }
 }
