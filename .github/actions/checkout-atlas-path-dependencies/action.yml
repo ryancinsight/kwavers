@@ -13,8 +13,8 @@ runs:
   using: composite
   steps:
     - name: Materialize canonical Atlas provider graph
-      uses: ryancinsight/atlas/.github/actions/checkout-path-dependencies@68f3f31fed7ec4313054c6a550dafadfb0b89b87
+      uses: ryancinsight/atlas/.github/actions/checkout-path-dependencies@03a639c04104ea2b83347c73c29e1021938d5c95
       with:
         manifest: ${{ inputs.manifest }}
         destination: ${{ inputs.destination }}
-        atlas_ref: 68f3f31fed7ec4313054c6a550dafadfb0b89b87
+        atlas_ref: 03a639c04104ea2b83347c73c29e1021938d5c95

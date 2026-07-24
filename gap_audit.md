@@ -136,7 +136,7 @@ boundaries.
 - Review 2026-07-24: the hosted Kwavers matrix at PR #324 head `c739c7b38`
   failed before compilation because the checkout action materialized Atlas
   graph `806c6e7` while the branch pinned merged Aequitas and Proteus revisions.
-  Atlas now records the merged graph at `68f3f31`, and this branch pins that
+  Atlas now records the merged graph at `03a639c`, and this branch pins that
   exact graph. The next hosted run is the acceptance oracle for the repair;
   local `cargo metadata --offline --locked` already passes.
 

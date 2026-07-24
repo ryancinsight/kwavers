@@ -12,7 +12,7 @@
       doctests after peer `coeus-nn` restores a compiling dependency graph.
       Re-open trigger: the current `coeus-nn` normalization API drift is
       repaired in the canonical provider checkout.
-- [x] Repin the hosted provider-checkout action to Atlas graph `68f3f31`,
+- [x] Repin the hosted provider-checkout action to Atlas graph `03a639c`,
       which contains the merged Aequitas `b86a55d` and Proteus `1b25af1`
       revisions; the prior hosted lock failures were graph drift before
       compilation, not HIFU metric failures.

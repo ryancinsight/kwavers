@@ -4,7 +4,7 @@
 
 ### Changed
 
-- Pin the hosted Atlas provider checkout to graph `68f3f31`, aligning the
+- Pin the hosted Atlas provider checkout to graph `03a639c`, aligning the
   committed Aequitas and Proteus revisions before locked Kwavers validation.
 
 - **Breaking**: HIFU planning transducer frequency/power/geometry, focal
