@@ -10,7 +10,9 @@
 - Acceptance: anisotropic spacing scales each centerline axis and equivalent
   diameter consistently; Doppler preserves `v = f_d c / (2 f_0 cos(theta))`;
   invalid spacing and Doppler inputs return typed errors; all affected tests,
-  focused Nextest, Clippy, doctest, Rustdoc, and format gates pass.
+  focused Nextest, Clippy, doctest, Rustdoc, and format gates pass. Source,
+  tests, docs, and PM synchronization are implemented; the affected package
+  gates are blocked before Kwavers compilation by peer `mnemosyne-heap`.
 - Non-goals: Doppler field storage, dimensionless confidence/orientation, and
   the unrelated transducer PR #324 residuals.
 

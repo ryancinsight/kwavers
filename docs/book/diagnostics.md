@@ -661,7 +661,7 @@ reparameterization by the change-of-variables theorem. □
 | ULM tracking | `kwavers_analysis::signal_processing::ulm` | `HungarianTracker` |
 | ULM super-resolution | `kwavers_analysis::signal_processing::ulm` | `SuperResReconstructor` |
 | ULM velocity mapping | `kwavers_analysis::signal_processing::ulm` | `VelocityMapper` |
-| Vasculature segmentation | `kwavers_analysis::signal_processing::vasculature` | `VesselSegmentation::segment` (Frangi vesselness) |
+| Vasculature segmentation | `kwavers_analysis::signal_processing::vasculature` | `VesselSegmentation::segment(image, voxel_spacing)` (Frangi vesselness with typed physical geometry) |
 | Speed-of-sound shift | `kwavers_diagnostics::reconstruction::sound_speed_shift` | `reconstruct_sound_speed_shift()` |
 | OpenPros shift benchmark | `kwavers_diagnostics::reconstruction::sound_speed_shift` | `run_openpros_shift_benchmark()` |
 | Image-quality metrics (§9.8) | `kwavers_analysis::signal_processing::image_quality` | `contrast_ratio_db` / `contrast_to_noise_ratio` / `generalized_cnr` / `fwhm` |

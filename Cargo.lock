@@ -3369,6 +3369,7 @@ dependencies = [
 name = "kwavers-analysis"
 version = "3.0.0"
 dependencies = [
+ "aequitas",
  "anyhow",
  "apollo-fft",
  "bytemuck",

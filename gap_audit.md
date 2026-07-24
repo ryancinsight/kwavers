@@ -29,14 +29,16 @@
 
 # Gap Audit
 
-- Review 2026-07-23: `KWAVERS-AEQ-MET-04` is claimed for the next vertical
-  boundary. Functional-ultrasound vessel analysis currently exposes diameter,
-  voxel-count length, centerline coordinates, and Doppler velocity as raw
-  `f64`; segmentation has no explicit voxel-spacing contract. The slice will
-  validate anisotropic `Length` spacing, return typed physical lengths and
-  velocity, preserve dimensionless classification/orientation, and retain the
-  Doppler analytical oracle. This is independent of open PR #324 and Aequitas
-  PR #7.
+- Review 2026-07-23: `KWAVERS-AEQ-MET-04` is implemented on branch
+  `codex/kwavers-aequitas-vessel-metrics`. `VoxelSpacing` validates positive
+  finite anisotropic Aequitas `Length` components; vessel diameter, centerline,
+  and total length return physical `Length<f64>` values; Doppler frequency,
+  sound speed, and velocity use typed Aequitas quantities. The child source,
+  diagnostics caller, ADR 047, changelog, tests, and API documentation are
+  synchronized. Formatting and metadata validation pass; focused compilation
+  is blocked before Kwavers sources by peer `mnemosyne-heap` errors for the
+  unhandled `TierSelection::Hbm` and `TierSelection::Gddr` variants in three
+  matches. This is independent of open PR #324 and Aequitas PR #7.
 
 - Review 2026-07-22: Python release run `29967429949` built the stable-ABI
   wheels but the Linux and Windows base-wheel smoke imports failed because

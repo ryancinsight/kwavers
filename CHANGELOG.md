@@ -4,6 +4,12 @@
 
 ### Changed
 
+- [major] [arch] Functional-ultrasound vessel segmentation now requires
+  validated Aequitas voxel spacing and returns typed `Length<f64>` geometry
+  plus typed `Velocity<f64>` Doppler results. Frequency, sound speed, diameter,
+  centerline, and total-length boundaries are dimensioned; masks, orientation,
+  and confidence remain representation or dimensionless values. See ADR 047.
+
 - Acoustic heating and streaming now compose absorption, intensity, density,
   sound speed, pressure, and impedance through Aequitas SI quantities while
   preserving the existing scalar-facing APIs and closed-form value tests.
