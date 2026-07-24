@@ -34,7 +34,7 @@ fn test_fdtd_backend_cfl_condition() {
     let backend = FdtdBackend::new(&grid, &medium, AcousticSpatialOrder::Second).unwrap();
 
     let dt = backend.get_dt();
-    let dx = grid.min_spacing();
+    let dx = grid.min_spacing().into_base();
     let c_max = SOUND_SPEED_WATER_SIM;
     let cfl = c_max * dt / dx;
     let cfl_limit = 1.0 / 3.0_f64.sqrt();

@@ -12,6 +12,7 @@ pub mod coordinates;
 pub mod error;
 pub mod geometry;
 // field_ops moved to domain/field/operations.rs
+use aequitas::systems::si::quantities::{Length, Time, Velocity, Volume};
 use kwavers_math::fft::kspace;
 pub mod operators;
 pub mod simple_config;
@@ -106,49 +107,50 @@ impl GridDimensions {
 
 // Extension methods for Grid
 impl Grid {
-    /// Get minimum spacing
+    /// Return the minimum grid spacing as an SI length.
     #[inline]
     #[must_use]
-    pub fn min_spacing(&self) -> f64 {
-        self.dx.min(self.dy).min(self.dz)
+    pub fn min_spacing(&self) -> Length<f64> {
+        Length::from_base(self.dx.min(self.dy).min(self.dz))
     }
 
-    /// Get maximum spacing
+    /// Return the maximum grid spacing as an SI length.
     #[inline]
     #[must_use]
-    pub fn max_spacing(&self) -> f64 {
-        self.dx.max(self.dy).max(self.dz)
+    pub fn max_spacing(&self) -> Length<f64> {
+        Length::from_base(self.dx.max(self.dy).max(self.dz))
     }
 
-    /// Get physical dimensions of the domain
+    /// Return the physical domain dimensions as SI lengths.
     #[inline]
-    pub fn physical_size(&self) -> (f64, f64, f64) {
+    pub fn physical_size(&self) -> (Length<f64>, Length<f64>, Length<f64>) {
         (
-            self.nx as f64 * self.dx,
-            self.ny as f64 * self.dy,
-            self.nz as f64 * self.dz,
+            Length::from_base(self.nx as f64 * self.dx),
+            Length::from_base(self.ny as f64 * self.dy),
+            Length::from_base(self.nz as f64 * self.dz),
         )
     }
 
-    /// Get grid volume
+    /// Return the physical grid volume in SI units.
     #[inline]
     #[must_use]
-    pub fn volume(&self) -> f64 {
+    pub fn volume(&self) -> Volume<f64> {
         let (lx, ly, lz) = self.physical_size();
         lx * ly * lz
     }
 
-    /// Get cell volume
+    /// Return the volume of one grid cell in SI units.
     #[inline]
     #[must_use]
-    pub fn cell_volume(&self) -> f64 {
-        self.dx * self.dy * self.dz
+    pub fn cell_volume(&self) -> Volume<f64> {
+        Length::from_base(self.dx) * Length::from_base(self.dy) * Length::from_base(self.dz)
     }
 
     /// Check if a point is inside the grid
     #[inline]
     pub fn contains_point(&self, x: f64, y: f64, z: f64) -> bool {
         let (lx, ly, lz) = self.physical_size();
+        let (lx, ly, lz) = (lx.into_base(), ly.into_base(), lz.into_base());
         x >= 0.0 && x <= lx && y >= 0.0 && y <= ly && z >= 0.0 && z <= lz
     }
 
@@ -156,7 +158,10 @@ impl Grid {
     #[inline]
     pub fn bounds(&self) -> Bounds {
         let (lx, ly, lz) = self.physical_size();
-        Bounds::new([0.0, 0.0, 0.0], [lx, ly, lz])
+        Bounds::new(
+            [0.0, 0.0, 0.0],
+            [lx.into_base(), ly.into_base(), lz.into_base()],
+        )
     }
 
     /// Convert coordinates to indices (nearest neighbor)
@@ -190,13 +195,18 @@ impl Grid {
         KSpaceCalculator::generate_k_vector(self.nz, self.dz)
     }
 
-    /// Calculate CFL timestep for given sound speed
+    /// Calculate the CFL timestep for a given sound speed.
     ///
-    /// Uses FDTD stability condition with safety factor
+    /// Uses the FDTD stability condition with a safety factor. The input and
+    /// output carry their SI dimensions at this public boundary; the scalar
+    /// stability kernel remains dimensionless internally.
     #[inline]
     #[must_use]
-    pub fn cfl_timestep(&self, max_sound_speed: f64) -> f64 {
-        stability::StabilityCalculator::cfl_timestep_fdtd(self, max_sound_speed)
+    pub fn cfl_timestep(&self, max_sound_speed: Velocity<f64>) -> Time<f64> {
+        Time::from_base(stability::StabilityCalculator::cfl_timestep_fdtd(
+            self,
+            max_sound_speed.into_base(),
+        ))
     }
 
     /// Get x coordinates (compatibility)
@@ -221,5 +231,33 @@ impl Grid {
     #[inline]
     pub fn k_max(&self) -> f64 {
         self.k_max
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Grid;
+    use aequitas::systems::si::quantities::Velocity;
+
+    #[test]
+    fn derived_metrics_preserve_si_values() {
+        let grid = Grid::new(4, 5, 6, 0.2, 0.3, 0.4).expect("valid grid dimensions");
+
+        assert_eq!(grid.min_spacing().into_base(), 0.2);
+        assert_eq!(grid.max_spacing().into_base(), 0.4);
+
+        let (length_x, length_y, length_z) = grid.physical_size();
+        assert_eq!(length_x.into_base(), 0.8);
+        assert_eq!(length_y.into_base(), 1.5);
+        assert_eq!(length_z.into_base(), 2.4);
+
+        let expected_cell_volume = 0.2 * 0.3 * 0.4;
+        let expected_volume = 0.8 * 1.5 * 2.4;
+        assert_eq!(grid.cell_volume().into_base(), expected_cell_volume);
+        assert_eq!(grid.volume().into_base(), expected_volume);
+
+        let timestep = grid.cfl_timestep(Velocity::from_base(1500.0));
+        assert!(timestep.into_base().is_sign_positive());
+        assert!(timestep.into_base().is_finite());
     }
 }

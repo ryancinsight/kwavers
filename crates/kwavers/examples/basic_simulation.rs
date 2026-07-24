@@ -2,6 +2,7 @@
 //!
 //! This example shows the simplest way to set up and run a simulation.
 
+use aequitas::systems::si::quantities::Velocity;
 use kwavers_core::error::KwaversResult;
 use kwavers_core::time::Time;
 use kwavers_grid::Grid;
@@ -38,7 +39,7 @@ fn main() -> KwaversResult<()> {
     println!("Medium: water (density=1000 kg/m³, c=1500 m/s)");
 
     // 3. Create time parameters
-    let dt = grid.cfl_timestep(1500.0); // CFL-based time step
+    let dt = grid.cfl_timestep(Velocity::from_base(1500.0)).into_base(); // CFL-based time step
     let num_steps = 100;
     let time = Time::new(dt, num_steps);
 

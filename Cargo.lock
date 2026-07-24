@@ -3519,6 +3519,7 @@ dependencies = [
 name = "kwavers-grid"
 version = "3.0.0"
 dependencies = [
+ "aequitas",
  "eunomia",
  "kwavers-core",
  "kwavers-math",

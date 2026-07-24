@@ -200,7 +200,7 @@ fn test_cfl_stability_condition() {
     let dt_cfl = kwavers_grid::stability::StabilityCalculator::cfl_timestep_fdtd(&grid, c_max);
 
     // For 3D FDTD: dt <= dx / (c * sqrt(3))
-    let dx_min = grid.min_spacing();
+    let dx_min = grid.min_spacing().into_base();
     let dt_theoretical = dx_min / (c_max * 3.0_f64.sqrt());
 
     // CFL timestep should be conservative (smaller than theoretical)

@@ -1,5 +1,20 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-07 typed grid metrics [major] — implementation done, verification blocked 2026-07-24
+
+- [x] Type `kwavers-grid` derived spacing, physical-size, volume, and CFL
+      metrics with Aequitas quantities; keep scalar extraction at coordinate
+      and stability-kernel boundaries.
+- [x] Add value-semantic grid metric coverage and migrate all direct callers,
+      examples, benchmarks, and physics tests to the typed contract.
+- [x] Synchronize the gap audit, changelog, and ADR 053.
+- [x] Confirm that vasculature remains owned by peer PR #325 rather than
+      duplicating its implementation in this PR.
+- [ ] Run package Nextest, warning-denied Clippy, doctests, and Rustdoc after
+      the peer Coeus/Mnemosyne dependency graph is repaired. Re-open trigger:
+      hosted and local Cargo resolution reaches Kwavers sources instead of
+      failing on `coeus-core` requiring Mnemosyne `^0.5.0`.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-04 typed HIFU planning metrics [major] — in progress 2026-07-24
 
 - [x] Type HIFU transducer frequency/power/geometry, focal pressure/width/

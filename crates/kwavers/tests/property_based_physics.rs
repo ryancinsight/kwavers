@@ -295,8 +295,8 @@ proptest! {
         let grid = Grid::new(nx, ny, nz, dx, dy, dz)
             .expect("Grid creation should succeed");
 
-        let cell_vol = grid.cell_volume();
-        let total_vol = grid.volume();
+        let cell_vol = grid.cell_volume().into_base();
+        let total_vol = grid.volume().into_base();
         let expected_total = (nx * ny * nz) as f64 * cell_vol;
 
         prop_assert!(cell_vol > 0.0 && cell_vol.is_finite(),
@@ -403,6 +403,7 @@ proptest! {
 
         // Coordinates must be within physical domain
         let (lx, ly, lz) = grid.physical_size();
+        let (lx, ly, lz) = (lx.into_base(), ly.into_base(), lz.into_base());
         prop_assert!(x >= 0.0 && x <= lx,
             "X coordinate must be within [0, {}], got {}", lx, x);
         prop_assert!(y >= 0.0 && y <= ly,
@@ -423,8 +424,8 @@ proptest! {
         let grid = Grid::new(nx, ny, nz, dx, dy, dz)
             .expect("Grid creation should succeed");
 
-        let min_spacing = grid.min_spacing();
-        let max_spacing = grid.max_spacing();
+        let min_spacing = grid.min_spacing().into_base();
+        let max_spacing = grid.max_spacing().into_base();
 
         prop_assert!(min_spacing > 0.0 && min_spacing.is_finite(),
             "Minimum spacing must be positive and finite");

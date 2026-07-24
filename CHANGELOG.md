@@ -4,6 +4,11 @@
 
 ### Changed
 
+- **Breaking**: `kwavers-grid` derived spacing, physical-size, volume, and CFL
+  metrics now use Aequitas `Length`, `Volume`, `Velocity`, and `Time`. Scalar
+  conversion remains confined to coordinate and numerical-kernel boundaries.
+  See [ADR 053](docs/ADR/053-grid-derived-quantities.md).
+
 - Pin the hosted Atlas provider checkout to graph `45bd370`, aligning the
   committed Aequitas and Proteus revisions before locked Kwavers validation.
 

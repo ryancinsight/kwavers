@@ -68,6 +68,7 @@ impl ShockWaveGenerator {
         // Bipolar shock: positive core with broader negative phase ring.
         let mut field = Array3::zeros(grid.dimensions());
         let (lx, ly, lz) = grid.physical_size();
+        let (lx, ly, lz) = (lx.into_base(), ly.into_base(), lz.into_base());
         let (cx, cy, cz) = (lx / 2.0, ly / 2.0, lz / 2.0);
         let sigma_pos = self.parameters.focal_spot_diameter / 2.355; // FWHM to sigma
         let sigma_neg = sigma_pos * 2.0;
