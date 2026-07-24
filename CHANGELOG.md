@@ -4,6 +4,11 @@
 
 ### Changed
 
+- **Breaking**: basic piston source geometry now uses Aequitas `Length` and the
+  shared validated `CartesianPosition`; Gaussian apodization sigma is typed as
+  `Length`, with scalar conversion confined to the source/grid kernel boundary.
+  See [ADR 055](docs/ADR/055-piston-geometry-quantities.md).
+
 - **Breaking**: thermal-diffusion, Pennes, Cattaneo, and coupled thermal
   configuration carriers now use Aequitas quantities for rates, material
   properties, temperatures, frequency, heat, and time. Python scalar inputs

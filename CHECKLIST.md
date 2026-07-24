@@ -29,6 +29,22 @@
       hosted and local Cargo resolution reaches Kwavers sources instead of
       failing on `coeus-core` requiring Mnemosyne `^0.5.0`.
 
+## Owner: Codex — KWAVERS-AEQ-MET-09 typed piston geometry [major] — implementation done, local value gates pass, provider verification blocked 2026-07-24
+
+- [x] Type piston centre, diameter/radius, and Gaussian sigma with the existing
+      Aequitas `CartesianPosition`/`Length` seam.
+- [x] Migrate the source factory and scalar conversion boundary; add a
+      value-semantic geometry and apodization regression.
+- [x] Synchronize the gap audit, changelog, and ADR 055.
+- [x] Offline `cargo check -p kwavers-transducer` passes; focused Nextest passes
+      222/222 with 1 skipped, including the typed piston regression; doctests
+      pass 1/1 with 6 intentionally ignored.
+- [ ] Warning-denied Clippy is blocked before source compilation because the
+      peer local graph references the missing
+      `D:\atlas\worktrees\coeus\coeus-autograd\Cargo.toml`. Hosted PR #324
+      independently fails before Kwavers compilation because Coeus requires
+      Mnemosyne `^0.5.0` while the graph supplies `0.6.0`.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-04 typed HIFU planning metrics [major] — in progress 2026-07-24
 
 - [x] Type HIFU transducer frequency/power/geometry, focal pressure/width/
