@@ -10,6 +10,7 @@ use kwavers_physics::field_surrogate::{
     FocalKernel as KwaversFocalKernel, KernelCube as KwaversKernelCube,
 };
 use numpy::{PyArray3, PyReadonlyArray3, ToPyArray};
+use crate::array_utils::LetoToPyArray;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;

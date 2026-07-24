@@ -875,6 +875,7 @@ dependencies = [
  "coeus-sparse",
  "coeus-tensor",
  "eunomia",
+ "leto",
  "leto-ops",
  "melinoe",
  "smallvec",
@@ -2545,7 +2546,7 @@ dependencies = [
 
 [[package]]
 name = "hermes-simd"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "eunomia",
  "hermes-simd-core",
@@ -2557,7 +2558,7 @@ dependencies = [
 
 [[package]]
 name = "hermes-simd-core"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "bytemuck",
  "eunomia",
@@ -2568,7 +2569,7 @@ dependencies = [
 
 [[package]]
 name = "hermes-simd-intrinsics"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "eunomia",
  "hermes-simd-core",
@@ -2576,7 +2577,7 @@ dependencies = [
 
 [[package]]
 name = "hermes-simd-macros"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2585,7 +2586,7 @@ dependencies = [
 
 [[package]]
 name = "hermes-simd-types"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "hermes-simd-core",
  "hermes-simd-intrinsics",
@@ -3889,6 +3890,7 @@ dependencies = [
  "hermes-simd",
  "leto",
  "moirai",
+ "serde",
  "themis",
  "thiserror 2.0.18",
 ]
@@ -4110,7 +4112,7 @@ dependencies = [
 
 [[package]]
 name = "mnemosyne"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "eunomia",
  "mnemosyne-arena",
@@ -4125,7 +4127,7 @@ dependencies = [
 
 [[package]]
 name = "mnemosyne-arena"
-version = "0.3.0"
+version = "0.6.0"
 dependencies = [
  "eunomia",
  "mnemosyne-backend",
@@ -4135,22 +4137,22 @@ dependencies = [
 
 [[package]]
 name = "mnemosyne-backend"
-version = "0.4.0"
+version = "0.6.0"
 dependencies = [
  "mnemosyne-core",
 ]
 
 [[package]]
 name = "mnemosyne-build-util"
-version = "0.2.0"
+version = "0.6.0"
 
 [[package]]
 name = "mnemosyne-core"
-version = "0.2.0"
+version = "0.6.0"
 
 [[package]]
 name = "mnemosyne-decay"
-version = "0.2.0"
+version = "0.6.0"
 dependencies = [
  "mnemosyne-arena",
  "mnemosyne-backend",
@@ -4159,14 +4161,14 @@ dependencies = [
 
 [[package]]
 name = "mnemosyne-hardened"
-version = "0.2.0"
+version = "0.6.0"
 dependencies = [
  "mnemosyne-core",
 ]
 
 [[package]]
 name = "mnemosyne-heap"
-version = "0.2.0"
+version = "0.6.0"
 dependencies = [
  "melinoe",
  "mnemosyne-arena",
@@ -4179,7 +4181,7 @@ dependencies = [
 
 [[package]]
 name = "mnemosyne-local"
-version = "0.2.0"
+version = "0.6.0"
 dependencies = [
  "melinoe",
  "mnemosyne-arena",
@@ -4193,7 +4195,7 @@ dependencies = [
 
 [[package]]
 name = "mnemosyne-prof"
-version = "0.2.0"
+version = "0.6.0"
 dependencies = [
  "backtrace",
  "mnemosyne-build-util",
@@ -5094,7 +5096,6 @@ dependencies = [
 [[package]]
 name = "proteus"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/proteus#bb51ac414f74fb47d8001310206c5aea2e3a160c"
 dependencies = [
  "aequitas",
  "eunomia",

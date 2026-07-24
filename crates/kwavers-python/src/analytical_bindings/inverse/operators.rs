@@ -3,6 +3,7 @@
 use super::arrays::{array2_from_flat, flatten_array2};
 use kwavers_physics::analytical::inverse as inverse_mod;
 use numpy::{PyArray1, PyArray2, PyReadonlyArray1, PyReadonlyArray2, ToPyArray};
+use crate::array_utils::LetoToPyArray;
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 

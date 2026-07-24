@@ -1,6 +1,7 @@
 //! Passive cavitation receive and coherence PyO3 wrappers.
 
 use crate::array_utils::{
+    LetoToPyArray,
     copy_pyarray1_to_vec, copy_pyarray2_to_vec, vec_to_pyarray1, vec_to_pyarray2,
 };
 use kwavers_physics::analytical::cavitation;

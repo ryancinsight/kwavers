@@ -8,6 +8,7 @@ use kwavers_diagnostics::reconstruction::breast_ust_fwi::{
     BreastUstMriBreastSide, BreastUstPhantomStorageOrder, BreastUstSoundSpeedUnit,
 };
 use numpy::ToPyArray;
+use crate::array_utils::LetoToPyArray;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;

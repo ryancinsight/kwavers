@@ -178,10 +178,8 @@ fn passive_acoustic_map_das<'py>(
         ));
     }
 
-    let sensors: Vec<[f64; 3]> = sensor_positions
-        .rows()
-        .into_iter()
-        .map(|row| [row[0], row[1], row[2]])
+    let sensors: Vec<[f64; 3]> = (0..sensor_positions.nrows())
+        .map(|i| [sensor_positions[[i, 0]], sensor_positions[[i, 1]], sensor_positions[[i, 2]]])
         .collect();
     let config = DelayAndSumConfig {
         sound_speed,

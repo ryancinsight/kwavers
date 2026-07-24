@@ -5,6 +5,7 @@ use kwavers_diagnostics::reconstruction::transcranial_ust::{
 };
 use kwavers_solver::inverse::linear_born_inversion::LinearBornInversionConfig;
 use numpy::ndarray::Array1;
+use crate::array_utils::LetoToPyArray;
 use numpy::ToPyArray;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;

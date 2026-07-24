@@ -15,6 +15,7 @@
   - [Example: DG Acoustic Convergence Plot](examples/dg_acoustic_convergence_plot.md)
   - [Example: DG Acoustic Timestep Sweep](examples/dg_acoustic_timestep_sweep.md)
   - [Example: DG Advection Diagnostics](examples/dg_advection_diagnostics.md)
+  - [Example: Tiled K-Space Processing](examples/tiled_kspace_processing.md)
 - [3. Nonlinear Acoustics](nonlinear_acoustics.md)
   - [Example: Sonoluminescence](examples/single_bubble_sonoluminescence.md)
   - [Example: Multiphysics Sonoluminescence](examples/multiphysics_sonoluminescence.md)
@@ -27,6 +28,7 @@
   - [Example: Focused Ultrasound Water Tank](examples/focused_ultrasound_water_tank.md)
   - [Example: Phantom Builder Demo](examples/phantom_builder_demo.md)
   - [Example: Boundary Smoothing](examples/boundary_smoothing.md)
+  - [Example: SIMD Wave Kernel](examples/simd_wave_kernel.md)
 
 # Part II — Imaging and Sensing
 
@@ -114,27 +116,7 @@
 
 ---
 
-# Part VI — Atlas Stack Integration (Migration Reference)
-
-This part documents the migration from ndarray/nalgebra to the Atlas stack crates:
-
-- [37. Migration Overview: ndarray/nalgebra → Leto](migration_overview.md)
-- [38. Linear Algebra: Leto and Leto-Ops](migration_linalg.md)
-- [39. Geometry: Leto for Point, Vector, Isometry](migration_geometry.md)
-- [40. SIMD: Hermes for Vectorized Operations](migration_simd.md)
-  - [Example: SIMD Wave Kernel](examples/simd_wave_kernel.md)
-- [41. Memory: Mnemosyne and Themis](migration_memory.md)
-- [42. Concurrency: Moirai for Parallel Execution](migration_concurrency.md)
-- [43. FFT: Apollo for Spectral Methods](migration_fft.md)
-- [44. Python Integration: PyO3 and NumPy Boundary](migration_python.md)
-- [45. GAT Tiling: LendingIterator and Tiles](migration_gat_tiles.md)
-  - [Example: Tiled K-Space Processing](examples/tiled_kspace_processing.md)
-
----
-
 # Appendix
 
-- [A. Migration Quick Reference](migration_quick_reference.md)
-- [B. Atlas Crate Dependencies](atlas_dependencies.md)
-- [C. Glossary](appendix_glossary.md)
+- [A. Glossary](appendix_glossary.md)
 

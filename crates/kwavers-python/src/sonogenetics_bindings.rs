@@ -32,6 +32,7 @@
 //! - Koch, C. (1999). *Biophysics of Computation*. Oxford University Press.
 
 use crate::array_utils::leto3_to_pyarray3;
+use crate::array_utils::LetoToPyArray;
 use kwavers_physics::acoustics::therapy::sonogenetics::{
     boltzmann_open_probability_from_tension_mn_m, coupled_channel_drive,
     gaussian_beam_pressure_field, lif_response_probability, pressure_threshold_p_open,

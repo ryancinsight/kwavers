@@ -5,6 +5,7 @@ use kwavers_physics::acoustics::therapy::neuromodulation::{
     BilayerSonophoreQuasistatic, CorticalNeuron, HhParams, NiceConfig, SonicConfig,
 };
 use numpy::{PyArray1, ToPyArray};
+use crate::array_utils::LetoToPyArray;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 

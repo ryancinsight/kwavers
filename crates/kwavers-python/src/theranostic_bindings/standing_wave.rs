@@ -5,6 +5,7 @@ use kwavers_therapy::therapy::theranostic_guidance::{
     run_standing_wave_suppression, StandingWaveOptConfig,
 };
 use numpy::PyArray1;
+use crate::array_utils::LetoToPyArray;
 use numpy::ToPyArray;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;

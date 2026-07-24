@@ -12,6 +12,7 @@
 //! Gilmore, F. R. (1952), Caltech Hydrodynamics Lab Report 26-4.
 
 use crate::array_utils::vec_to_pyarray1;
+use crate::array_utils::LetoToPyArray;
 use kwavers_physics::acoustics::bubble_dynamics::gilmore::GilmoreSolver;
 use kwavers_physics::acoustics::bubble_dynamics::{BubbleParameters, BubbleState};
 use numpy::PyArray1;

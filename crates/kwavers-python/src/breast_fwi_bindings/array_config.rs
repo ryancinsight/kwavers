@@ -2,6 +2,7 @@
 
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
 use numpy::{PyArray2, ToPyArray};
+use crate::array_utils::LetoToPyArray;
 use pyo3::prelude::*;
 
 use super::helpers::{kwavers_to_py, points_to_array};

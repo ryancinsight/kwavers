@@ -11,6 +11,7 @@
 //! - Rayleigh (1917) Phil. Mag. 34:94; Plesset (1949) J. Appl. Mech. 16:277.
 
 use crate::array_utils::vec_to_pyarray1;
+use crate::array_utils::LetoToPyArray;
 use numpy::PyArray1;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;

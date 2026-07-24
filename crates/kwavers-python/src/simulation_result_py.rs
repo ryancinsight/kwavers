@@ -5,6 +5,7 @@
 //! import them from here while they are gradually migrated.
 
 use crate::array_utils::{
+    LetoToPyArray,
     leto1_to_pyarray1, leto2_to_pyarray2, leto3_to_pyarray3, linspace_vec, vec_to_pyarray1,
 };
 use kwavers_grid::Grid as KwaversGrid;

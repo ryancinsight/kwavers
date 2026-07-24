@@ -2,6 +2,7 @@
 
 use kwavers_physics::analytical::cavitation;
 use numpy::{PyArray1, PyReadonlyArray1, PyReadonlyArray2, ToPyArray};
+use crate::array_utils::LetoToPyArray;
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 

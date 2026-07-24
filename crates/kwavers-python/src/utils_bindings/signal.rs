@@ -1,4 +1,5 @@
 use crate::array_utils::vec_to_pyarray2;
+use crate::array_utils::LetoToPyArray;
 use numpy::{PyArray1, PyArray2, PyReadonlyArray1};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;

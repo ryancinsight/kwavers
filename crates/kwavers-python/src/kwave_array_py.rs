@@ -1,4 +1,5 @@
 use crate::array_utils::leto3_to_pyarray3;
+use crate::array_utils::LetoToPyArray;
 use numpy::PyArray3;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;

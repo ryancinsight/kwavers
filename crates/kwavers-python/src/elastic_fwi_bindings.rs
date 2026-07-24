@@ -13,6 +13,7 @@ use kwavers_solver::inverse::elastography::elastic_fwi::{
 };
 use leto::Array3;
 use numpy::ndarray::Array2;
+use crate::array_utils::LetoToPyArray;
 use numpy::{PyArray2, PyReadonlyArray2, ToPyArray};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;

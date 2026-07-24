@@ -286,13 +286,10 @@ pub(crate) fn time_reversal_reconstruction_impl(
     )?;
 
     let mut p_mask = Array3::<f64>::zeros((expanded_grid.nx, expanded_grid.ny, expanded_grid.nz));
-    for row in sensor_positions
-        .rows()
-        .expect("sensor_positions is a dense 2-D array")
-    {
-        let x = row[[0]] + expand_x as f64 * grid.dx;
-        let y = row[[1]] + expand_y as f64 * grid.dy;
-        let z = row[[2]] + expand_z as f64 * grid.dz;
+    for sensor_idx in 0..sensor_positions.shape()[0] {
+        let x = sensor_positions[[sensor_idx, 0]] + expand_x as f64 * grid.dx;
+        let y = sensor_positions[[sensor_idx, 1]] + expand_y as f64 * grid.dy;
+        let z = sensor_positions[[sensor_idx, 2]] + expand_z as f64 * grid.dz;
         let i = (x / grid.dx).round() as isize;
         let j = (y / grid.dy).round() as isize;
         let k = (z / grid.dz).round() as isize;

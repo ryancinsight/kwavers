@@ -24,6 +24,7 @@
 use crate::breast_fwi_bindings::complex_compat::{leto2_to_nd2, leto3_to_nd3, nd_to_leto3};
 use leto::{Array2, Array3};
 use numpy::{PyArray1, PyArray2, PyArray3, PyReadonlyArray3, ToPyArray};
+use crate::array_utils::LetoToPyArray;
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 

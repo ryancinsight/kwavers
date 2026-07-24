@@ -1,6 +1,7 @@
 //! IVUS phantom construction bindings.
 
 use crate::array_utils::vec_to_pyarray2;
+use crate::array_utils::LetoToPyArray;
 use kwavers_physics::analytical::imaging;
 use numpy::Element;
 use pyo3::exceptions::PyValueError;

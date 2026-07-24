@@ -9,6 +9,7 @@ use kwavers_solver::inverse::fwi::frequency_domain::{
     simulate_pstd_finite_window_born_second_order_observation, PstdFiniteWindowBornConfig,
 };
 use numpy::{PyArray2, PyReadonlyArray3, ToPyArray};
+use crate::array_utils::LetoToPyArray;
 use pyo3::prelude::*;
 use pyo3::types::PyModule;
 

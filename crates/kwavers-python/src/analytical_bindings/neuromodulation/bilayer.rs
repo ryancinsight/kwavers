@@ -4,6 +4,7 @@ use kwavers_physics::acoustics::therapy::neuromodulation::{
     bls_capacitance, quasistatic_deflection, rest_gap,
 };
 use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
+use crate::array_utils::LetoToPyArray;
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 

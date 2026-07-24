@@ -6,6 +6,7 @@
 //! return f64.
 
 use crate::array_utils::{
+    LetoToPyArray,
     copy_pyarray1_to_vec, leto1_to_pyarray1, leto3_to_pyarray3, pyarray1_to_leto1,
     pyarray3_to_leto3, vec_to_pyarray1,
 };

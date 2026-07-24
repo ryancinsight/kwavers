@@ -3,6 +3,7 @@
 use coeus_core::SequentialBackend;
 use leto::Array3;
 use numpy::{PyArray3, ToPyArray};
+use crate::array_utils::LetoToPyArray;
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 use ritk_io::ImageReader;

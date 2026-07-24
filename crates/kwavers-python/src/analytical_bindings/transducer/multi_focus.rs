@@ -2,6 +2,7 @@
 
 use kwavers_physics::analytical::transducer;
 use numpy::ndarray::Array2;
+use crate::array_utils::LetoToPyArray;
 use numpy::{PyArray2, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;

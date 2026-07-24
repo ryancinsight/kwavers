@@ -180,3 +180,53 @@ pub fn linspace_vec(start: f64, end: f64, n: usize) -> Vec<f64> {
     let step = (end - start) / (n - 1) as f64;
     (0..n).map(|i| start + i as f64 * step).collect()
 }
+
+/// Extension trait that provides  for leto arrays, mirroring the
+///  trait from the  crate but implemented for leto types.
+pub trait LetoToPyArray {
+    fn to_pyarray(&self, py: Python<'_>) -> PyResult<Py<PyArray1<f64>>>;
+}
+
+impl LetoToPyArray for leto::Array1<f64> {
+    fn to_pyarray(&self, py: Python<'_>) -> PyResult<Py<PyArray1<f64>>> {
+        let data = self.as_slice().expect("contiguous").to_vec();
+        Ok(PyArray1::from_vec(py, data).unbind())
+    }
+}
+
+impl LetoToPyArray for leto::Array2<f64> {
+    fn to_pyarray(&self, py: Python<'_>) -> PyResult<Py<PyArray1<f64>>> {
+        // Return as flat 1-D array — callers that need 2-D should use
+        // `vec_to_pyarray2` / `leto2_to_pyarray2` directly.
+        let data = self.as_slice().expect("contiguous").to_vec();
+        Ok(PyArray1::from_vec(py, data).unbind())
+    }
+}
+
+impl LetoToPyArray for leto::Array3<f64> {
+    fn to_pyarray(&self, py: Python<'_>) -> PyResult<Py<PyArray1<f64>>> {
+        let data = self.as_slice().expect("contiguous").to_vec();
+        Ok(PyArray1::from_vec(py, data).unbind())
+    }
+}
+
+impl LetoToPyArray for leto::Array1<f32> {
+    fn to_pyarray(&self, py: Python<'_>) -> PyResult<Py<PyArray1<f64>>> {
+        let data: Vec<f64> = self.as_slice().expect("contiguous").iter().map(|&v| v as f64).collect();
+        Ok(PyArray1::from_vec(py, data).unbind())
+    }
+}
+
+impl LetoToPyArray for leto::Array2<f32> {
+    fn to_pyarray(&self, py: Python<'_>) -> PyResult<Py<PyArray1<f64>>> {
+        let data: Vec<f64> = self.as_slice().expect("contiguous").iter().map(|&v| v as f64).collect();
+        Ok(PyArray1::from_vec(py, data).unbind())
+    }
+}
+
+impl LetoToPyArray for leto::Array3<f32> {
+    fn to_pyarray(&self, py: Python<'_>) -> PyResult<Py<PyArray1<f64>>> {
+        let data: Vec<f64> = self.as_slice().expect("contiguous").iter().map(|&v| v as f64).collect();
+        Ok(PyArray1::from_vec(py, data).unbind())
+    }
+}
