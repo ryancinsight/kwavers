@@ -180,4 +180,3 @@ pub fn linspace_vec(start: f64, end: f64, n: usize) -> Vec<f64> {
     let step = (end - start) / (n - 1) as f64;
     (0..n).map(|i| start + i as f64 * step).collect()
 }
-}

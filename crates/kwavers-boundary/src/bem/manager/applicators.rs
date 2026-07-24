@@ -46,7 +46,7 @@ impl BemBoundaryManager {
         node_conditions: &[(usize, f64, Complex64)],
     ) -> KwaversResult<()> {
         for &(node_idx, alpha, g_value) in node_conditions {
-            h_matrix.set_diagonal(node_idx, Complex64::new(alpha, 0.0));
+            h_matrix.add_value(node_idx, node_idx, Complex64::new(alpha, 0.0));
             boundary_values[node_idx] = g_value;
         }
         Ok(())
@@ -62,7 +62,7 @@ impl BemBoundaryManager {
     ) -> KwaversResult<()> {
         let radiation_term = Complex64::new(0.0, -wavenumber);
         for &node_idx in nodes {
-            h_matrix.set_diagonal(node_idx, radiation_term);
+            h_matrix.add_value(node_idx, node_idx, radiation_term);
         }
         Ok(())
     }

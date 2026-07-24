@@ -1,6 +1,6 @@
 //! Thermal-strain elastography bindings.
 
-use crate::array_utils::{leto3_to_pyarray3, pyarray3_to_leto3, LetoToPyArray};
+use crate::array_utils::{leto3_to_pyarray3, pyarray3_to_leto3};
 use kwavers_physics::acoustics::imaging::modalities::elastography::thermal_strain::TrackingParams;
 use kwavers_physics::acoustics::imaging::modalities::elastography::{
     ThermalStrainConfig, ThermalStrainImager,

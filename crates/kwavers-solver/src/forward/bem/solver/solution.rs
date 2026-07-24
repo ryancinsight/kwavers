@@ -69,24 +69,33 @@ impl BemSolver {
         let g_mat = self.g_matrix.as_ref().unwrap();
         let alpha = self.config.coupling_alpha;
 
+        // Extract CSR arrays via methods to build the combined system.
+        let g_values = g_mat.values();
+        let g_col_indices = g_mat.col_indices();
+        let g_row_ptrs = g_mat.row_pointers();
+
         let mut rhs = vec![Complex64::new(0.0, 0.0); n];
-        for (rhs_elem, window) in rhs.iter_mut().zip(g_mat.row_pointers.windows(2)) {
+        for (rhs_elem, window) in rhs.iter_mut().zip(g_row_ptrs.windows(2)) {
             let (row_start, row_end) = (window[0], window[1]);
             for ptr in row_start..row_end {
-                let j = g_mat.col_indices[ptr];
-                if j < (dp_inc_dn.len()) {
-                    *rhs_elem += g_mat.values[ptr] * dp_inc_dn[j];
+                let j = g_col_indices[ptr];
+                if j < dp_inc_dn.len() {
+                    *rhs_elem += g_values[ptr] * dp_inc_dn[j];
                 }
             }
         }
 
-        let mut a_values = h_mat.values.clone();
+        let h_values = h_mat.values();
+        let h_col_indices = h_mat.col_indices();
+        let h_row_ptrs = h_mat.row_pointers();
+
+        let mut a_values = h_values.clone();
         for i in 0..n {
-            let diag_ptr = h_mat.row_pointers[i];
-            let row_end = h_mat.row_pointers[i + 1];
+            let diag_ptr = h_row_ptrs[i];
+            let row_end = h_row_ptrs[i + 1];
             for (a_val, &col_idx) in a_values[diag_ptr..row_end]
                 .iter_mut()
-                .zip(&h_mat.col_indices[diag_ptr..row_end])
+                .zip(&h_col_indices[diag_ptr..row_end])
             {
                 if col_idx == i {
                     *a_val += alpha * Complex64::new(0.5, 0.0);
@@ -95,14 +104,13 @@ impl BemSolver {
             }
         }
 
-        let a_matrix = CompressedSparseRowMatrix {
-            rows: h_mat.rows,
-            cols: h_mat.cols,
-            values: a_values,
-            col_indices: h_mat.col_indices.clone(),
-            row_pointers: h_mat.row_pointers.clone(),
-            nnz: h_mat.nnz,
-        };
+        let a_matrix = CompressedSparseRowMatrix::from_parts(
+            h_mat.rows,
+            h_mat.cols,
+            a_values,
+            h_col_indices,
+            h_row_ptrs,
+        );
 
         let rhs_arr =
             Array1::from_vec(rhs.len(), rhs).expect("invariant: BEM RHS vector length well-formed");
@@ -112,7 +120,7 @@ impl BemSolver {
             preconditioner: SparsePreconditioner::None,
             verbose: false,
         };
-        let solver = kwavers_math::linear_algebra::sparse::IterativeSolver::create(solver_config);
+        let solver = kwavers_math::linear_algebra::sparse::solver::IterativeSolver::create(solver_config);
         let p_scat = solver.bicgstab_complex(&a_matrix, rhs_arr.view(), None)?;
 
         let p_total: Vec<Complex64> = p_inc

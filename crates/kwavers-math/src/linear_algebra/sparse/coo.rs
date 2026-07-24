@@ -1,6 +1,8 @@
 //! Coordinate (COO) sparse matrix format
 
-use super::csr::{CompressedSparseRowMatrix, CsrScalar};
+use super::csr::CompressedSparseRowMatrix;
+use eunomia::ComplexField;
+use std::ops::Add;
 
 /// Coordinate format sparse matrix (triplet format)
 #[derive(Debug, Clone)]
@@ -19,7 +21,7 @@ pub struct CoordinateMatrix<T = f64> {
 
 impl<T> CoordinateMatrix<T>
 where
-    T: CsrScalar,
+    T: Copy + Default + PartialOrd + Add<Output = T> + ComplexField,
 {
     /// Create coordinate matrix
     #[must_use]
@@ -33,9 +35,12 @@ where
         }
     }
 
-    /// Add triplet (row, col, value)
+    /// Add triplet (row, col, value) — drops near-zero entries.
     pub fn add_triplet(&mut self, row: usize, col: usize, value: T) {
-        if row < self.rows && col < self.cols && value.magnitude() > 1e-14 {
+        if row < self.rows
+            && col < self.cols
+            && <T::RealPart as eunomia::NumericElement>::to_f64(value.modulus()) > 1e-14
+        {
             self.row_indices.push(row);
             self.col_indices.push(col);
             self.values.push(value);
@@ -45,7 +50,6 @@ where
     /// Convert to CSR format
     #[must_use]
     pub fn to_csr(&self) -> CompressedSparseRowMatrix<T> {
-        // Sort by row, then column
         let mut triplets: Vec<(usize, usize, T)> = self
             .row_indices
             .iter()
@@ -56,7 +60,6 @@ where
 
         triplets.sort_by_key(|&(r, c, _)| (r, c));
 
-        // Build CSR
         let mut values = Vec::new();
         let mut col_indices = Vec::new();
         let mut row_pointers = vec![0; self.rows + 1];
@@ -76,15 +79,7 @@ where
             row_pointers[current_row] = values.len();
         }
 
-        let nnz = values.len();
-        CompressedSparseRowMatrix {
-            rows: self.rows,
-            cols: self.cols,
-            values,
-            col_indices,
-            row_pointers,
-            nnz,
-        }
+        CompressedSparseRowMatrix::from_parts(self.rows, self.cols, values, col_indices, row_pointers)
     }
 
     /// Get number of non-zeros

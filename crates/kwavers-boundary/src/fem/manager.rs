@@ -249,7 +249,7 @@ impl FemBoundaryManager {
                     "Robin coefficient must be finite",
                 ));
             }
-            stiffness.set_diagonal(node_idx, Complex64::new(alpha, 0.0));
+            stiffness.add_value(node_idx, node_idx, Complex64::new(alpha, 0.0));
             rhs[node_idx] += g_value;
         }
 
@@ -272,7 +272,7 @@ impl FemBoundaryManager {
 
         for &node_idx in nodes {
             Self::validate_node(node_idx, stiffness.rows)?;
-            stiffness.set_diagonal(node_idx, radiation_term);
+            stiffness.add_value(node_idx, node_idx, radiation_term);
         }
 
         Ok(())

@@ -67,23 +67,21 @@ impl BemSolver {
             row_pointers.push(i * n);
         }
 
-        self.h_matrix = Some(CompressedSparseRowMatrix {
-            rows: n,
-            cols: n,
-            values: h_values,
-            col_indices: col_indices.clone(),
-            row_pointers: row_pointers.clone(),
-            nnz: n * n,
-        });
+        self.h_matrix = Some(CompressedSparseRowMatrix::from_parts(
+            n,
+            n,
+            h_values,
+            col_indices.clone(),
+            row_pointers.clone(),
+        ));
 
-        self.g_matrix = Some(CompressedSparseRowMatrix {
-            rows: n,
-            cols: n,
-            values: g_values,
+        self.g_matrix = Some(CompressedSparseRowMatrix::from_parts(
+            n,
+            n,
+            g_values,
             col_indices,
             row_pointers,
-            nnz: n * n,
-        });
+        ));
 
         Ok(())
     }

@@ -50,16 +50,8 @@ impl FemHelmholtzSolver {
 
         let k_sq = Complex64::from(self.config.wavenumber.powi(2));
 
-        if (k_global.values.len()) != (m_global.values.len()) {
-            return Err(KwaversError::Numerical(NumericalError::Instability {
-                operation: "matrix_combination".to_owned(),
-                condition: 0.0,
-            }));
-        }
-
-        for (val_k, val_m) in k_global.values.iter_mut().zip(m_global.values.iter()) {
-            *val_k -= k_sq * val_m;
-        }
+        // K ← K − k²·M in-place using subtract_scaled (avoids copying values).
+        k_global.subtract_scaled(&m_global, k_sq);
 
         self.system_matrix = k_global;
         self.rhs = rhs_global;

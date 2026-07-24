@@ -940,10 +940,9 @@ dependencies = [
 [[package]]
 name = "consus-compression"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9#ec386e3e14241343f9a1beca6921463f2b2f0fc9"
 dependencies = [
  "byteorder",
- "consus-core 0.1.0 (git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9)",
+ "consus-core 0.1.0",
 ]
 
 [[package]]
@@ -958,7 +957,6 @@ dependencies = [
 [[package]]
 name = "consus-core"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9#ec386e3e14241343f9a1beca6921463f2b2f0fc9"
 dependencies = [
  "byteorder",
  "smallvec",
@@ -978,12 +976,11 @@ dependencies = [
 [[package]]
 name = "consus-hdf5"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9#ec386e3e14241343f9a1beca6921463f2b2f0fc9"
 dependencies = [
  "byteorder",
- "consus-compression 0.1.0 (git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9)",
- "consus-core 0.1.0 (git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9)",
- "consus-io 0.1.0 (git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9)",
+ "consus-compression 0.1.0",
+ "consus-core 0.1.0",
+ "consus-io 0.1.0",
 ]
 
 [[package]]
@@ -1000,9 +997,8 @@ dependencies = [
 [[package]]
 name = "consus-io"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9#ec386e3e14241343f9a1beca6921463f2b2f0fc9"
 dependencies = [
- "consus-core 0.1.0 (git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9)",
+ "consus-core 0.1.0",
 ]
 
 [[package]]
@@ -1026,7 +1022,6 @@ dependencies = [
 [[package]]
 name = "consus-onnx"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9#ec386e3e14241343f9a1beca6921463f2b2f0fc9"
 
 [[package]]
 name = "convert_case"
@@ -1251,6 +1246,7 @@ dependencies = [
 [[package]]
 name = "cuda-async"
 version = "0.2.0"
+source = "git+https://github.com/NVlabs/cutile-rs#b253102c37d7e58b089fc50a7ddf7798eb715c38"
 dependencies = [
  "anyhow",
  "cuda-core",
@@ -1264,6 +1260,7 @@ dependencies = [
 [[package]]
 name = "cuda-bindings"
 version = "0.2.0"
+source = "git+https://github.com/NVlabs/cutile-rs#b253102c37d7e58b089fc50a7ddf7798eb715c38"
 dependencies = [
  "bindgen",
  "libloading",
@@ -1276,6 +1273,7 @@ dependencies = [
 [[package]]
 name = "cuda-core"
 version = "0.2.0"
+source = "git+https://github.com/NVlabs/cutile-rs#b253102c37d7e58b089fc50a7ddf7798eb715c38"
 dependencies = [
  "anyhow",
  "cuda-bindings",
@@ -1294,6 +1292,7 @@ dependencies = [
 [[package]]
 name = "cutile"
 version = "0.2.0"
+source = "git+https://github.com/NVlabs/cutile-rs#b253102c37d7e58b089fc50a7ddf7798eb715c38"
 dependencies = [
  "anyhow",
  "cuda-async",
@@ -1312,6 +1311,7 @@ dependencies = [
 [[package]]
 name = "cutile-compiler"
 version = "0.2.0"
+source = "git+https://github.com/NVlabs/cutile-rs#b253102c37d7e58b089fc50a7ddf7798eb715c38"
 dependencies = [
  "anyhow",
  "cuda-async",
@@ -1331,6 +1331,7 @@ dependencies = [
 [[package]]
 name = "cutile-ir"
 version = "0.2.0"
+source = "git+https://github.com/NVlabs/cutile-rs#b253102c37d7e58b089fc50a7ddf7798eb715c38"
 dependencies = [
  "half",
  "indexmap 2.12.0",
@@ -1340,6 +1341,7 @@ dependencies = [
 [[package]]
 name = "cutile-macro"
 version = "0.2.0"
+source = "git+https://github.com/NVlabs/cutile-rs#b253102c37d7e58b089fc50a7ddf7798eb715c38"
 dependencies = [
  "convert_case",
  "cutile-compiler",
@@ -2926,7 +2928,6 @@ checksum = "469fb0b9cefa57e3ef31275ee7cacb78f2fdca44e4765491884a2b119d4eb130"
 [[package]]
 name = "iris"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/iris?rev=e2edd47615454111b4b0df2e68dc6076161ba457#e2edd47615454111b4b0df2e68dc6076161ba457"
 
 [[package]]
 name = "is-terminal"
@@ -5776,9 +5777,9 @@ dependencies = [
  "arrayvec",
  "coeus-core",
  "coeus-tensor",
- "consus-core 0.1.0 (git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9)",
- "consus-hdf5 0.1.0 (git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9)",
- "consus-io 0.1.0 (git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9)",
+ "consus-core 0.1.0",
+ "consus-hdf5 0.1.0",
+ "consus-io 0.1.0",
  "dicom",
  "dicom-core",
  "dicom-pixeldata",
@@ -5844,7 +5845,7 @@ version = "0.2.0"
 dependencies = [
  "anyhow",
  "coeus-core",
- "consus-io 0.1.0 (git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9)",
+ "consus-io 0.1.0",
  "flate2",
  "ritk-image",
  "ritk-spatial",
@@ -5857,9 +5858,9 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "coeus-core",
- "consus-core 0.1.0 (git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9)",
- "consus-hdf5 0.1.0 (git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9)",
- "consus-io 0.1.0 (git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9)",
+ "consus-core 0.1.0",
+ "consus-hdf5 0.1.0",
+ "consus-io 0.1.0",
  "ritk-core",
  "ritk-image",
  "ritk-spatial",
@@ -5877,7 +5878,7 @@ dependencies = [
  "coeus-ops",
  "coeus-optim",
  "coeus-tensor",
- "consus-io 0.1.0 (git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9)",
+ "consus-io 0.1.0",
  "consus-onnx",
  "onnx-ir",
  "reqwest",
@@ -6048,7 +6049,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "coeus-core",
- "consus-io 0.1.0 (git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9)",
+ "consus-io 0.1.0",
  "gaia",
  "iris",
  "ritk-image",
