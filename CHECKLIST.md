@@ -46,7 +46,7 @@
 - [x] Run full workspace check, transducer/boundary Nextest 318/318 (1 skipped),
       warning-denied Clippy, and doctests after correcting the Coeus paths.
 
-## Owner: Codex — KWAVERS-AEQ-MET-08 typed thermal-diffusion configuration [major] — implementation done, verification blocked 2026-07-24
+## Owner: Codex — KWAVERS-AEQ-MET-08 typed thermal-diffusion configuration [major] — verified 2026-07-25
 
 - [x] Type the thermal-diffusion, Pennes, and Cattaneo configuration carriers
       with Aequitas quantities while preserving the published equations.
@@ -54,13 +54,11 @@
       finite-difference kernels, and the PyO3 scalar input boundary explicit.
 - [x] Add value-semantic configuration and equation regressions, then update
       the child audit, ADR, and changelog.
-- [ ] Run focused package checks, Nextest, warning-denied Clippy, doctests, and
-      Rustdoc after the dependency graph is repaired. Current blocker: Cargo
-      stops before source compilation because `coeus-core` requires
-      `hermes-simd ^0.4.1` while the local provider graph offers `0.5.0`.
-      Re-open when resolution reaches Kwavers sources; do not weaken the gate.
+- [x] Run the affected-package checks, Nextest, warning-denied Clippy, and
+      doctests after correcting the local Coeus `crates/*` paths. The five-
+      package Nextest run passes 2,913/2,913 with two intentional skips.
 
-## Owner: Codex — KWAVERS-AEQ-MET-07 typed grid metrics [major] — implementation done, verification blocked 2026-07-24
+## Owner: Codex — KWAVERS-AEQ-MET-07 typed grid metrics [major] — verified 2026-07-25
 
 - [x] Type `kwavers-grid` derived spacing, physical-size, volume, and CFL
       metrics with Aequitas quantities; keep scalar extraction at coordinate
@@ -70,28 +68,29 @@
 - [x] Synchronize the gap audit, changelog, and ADR 053.
 - [x] Confirm that vasculature remains owned by peer PR #325 rather than
       duplicating its implementation in this PR.
-- [ ] Run package Nextest, warning-denied Clippy, doctests, and Rustdoc after
-      the peer Coeus/Mnemosyne dependency graph is repaired. Re-open trigger:
-      hosted and local Cargo resolution reaches Kwavers sources instead of
-      failing on `coeus-core` requiring Mnemosyne `^0.5.0`.
+- [x] Run package check, Nextest, warning-denied Clippy, and doctests after
+      correcting the local Coeus `crates/*` paths; derived-value tests use the
+      analytically derived `4 * f64::EPSILON` rounding bound.
 
-## Owner: Codex — KWAVERS-AEQ-MET-09 typed piston geometry [major] — implementation done, local value gates pass, provider verification blocked 2026-07-24
+## Owner: Codex — KWAVERS-AEQ-MET-09 typed piston geometry [major] — verified 2026-07-25
 
 - [x] Type piston centre, diameter/radius, and Gaussian sigma with the existing
       Aequitas `CartesianPosition`/`Length` seam.
 - [x] Migrate the source factory and scalar conversion boundary; add a
       value-semantic geometry and apodization regression.
 - [x] Synchronize the gap audit, changelog, and ADR 055.
-- [x] Offline `cargo check -p kwavers-transducer` passes; focused Nextest passes
-      222/222 with 1 skipped, including the typed piston regression; doctests
-      pass 1/1 with 6 intentionally ignored.
-- [ ] Warning-denied Clippy is blocked before source compilation because the
-      peer local graph references the missing
-      `D:\atlas\worktrees\coeus\coeus-autograd\Cargo.toml`. Hosted PR #324
-      independently fails before Kwavers compilation because Coeus requires
-      Mnemosyne `^0.5.0` while the graph supplies `0.6.0`.
+- [x] Transducer/boundary Nextest passes 318/318 with one skip, including the
+      typed piston regression; warning-denied Clippy and doctests pass after
+      correcting the local Coeus `crates/*` paths.
 
-## Owner: Codex — KWAVERS-AEQ-MET-04 typed HIFU planning metrics [major] — in progress 2026-07-24
+## Owner: Codex — KWAVERS-AEQ-MET-05 typed vasculature metrics [major] — verified 2026-07-25
+
+- [x] Use validated anisotropic `VoxelSpacing` and typed physical
+      `Length`/`Velocity` boundaries for vasculature and Doppler metrics.
+- [x] Run the five-package check, Nextest, warning-denied Clippy, and doctest
+      gates; the broader Nextest run passes 2,913/2,913 with two skips.
+
+## Owner: Codex — KWAVERS-AEQ-MET-04 typed HIFU planning metrics [major] — verified 2026-07-25
 
 - [x] Type HIFU transducer frequency/power/geometry, focal pressure/width/
       volume/location, ablation-target geometry, and sonication schedule
@@ -99,14 +98,10 @@
 - [x] Keep focal-dose and schedule arithmetic in explicit scalar kernel
       boundaries while passing typed frequency and time values through the
       planning API.
-- [ ] Run the package value tests, Nextest, warning-denied Clippy, and
-      doctests after peer `coeus-nn` restores a compiling dependency graph.
-      Re-open trigger: the current `coeus-nn` normalization API drift is
-      repaired in the canonical provider checkout.
-- [ ] Re-run the hosted package, Python, and workspace gates after Coeus
-      publishes the `mnemosyne ^0.6.0` dependency migration compatible with
-      Atlas Mnemosyne `0.6.0`; the provider checkout itself now verifies
-      13 providers and 46 manifests.
+- [x] Run the affected-package check, full five-package Nextest, warning-denied
+      Clippy, and doctests after correcting the local Coeus `crates/*` paths.
+      HIFU planning endpoint assertions use the analytically derived
+      `4 * f64::EPSILON` rounding bound.
 - [x] Repin the hosted provider-checkout action to Atlas graph `45bd370`,
       which contains the merged Aequitas `b86a55d` and Proteus `1b25af1`
       revisions; the prior hosted lock failures were graph drift before

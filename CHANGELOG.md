@@ -4,6 +4,14 @@
 
 ### Changed
 
+- Reconcile the Aequitas metric audit after the local Coeus `crates/*` path
+  repair: grid, HIFU, vasculature/Doppler, thermal-configuration, and piston
+  metrics now have passing consumer gates. Replace exact floating-point
+  comparisons in grid and HIFU endpoint regressions with bounds derived from
+  the two-operation rounding depth, add the missing Cartesian-position test
+  import, and remove the redundant `must_use` attribute from a `Result`
+  constructor.
+
 - Fixed the local Coeus workspace paths to the checked-out `crates/*` layout;
   the full workspace now resolves and compiles under `--locked`.
 

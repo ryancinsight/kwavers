@@ -160,7 +160,6 @@ pub struct AblationTarget {
 }
 
 impl AblationTarget {
-    #[must_use]
     pub fn new(
         name: String,
         location: [Length<f64>; 3],

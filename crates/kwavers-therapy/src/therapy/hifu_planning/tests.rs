@@ -2,11 +2,13 @@ use super::*;
 use crate::safety::mechanical_index::MechanicalIndexTissueType;
 use crate::therapy::domain_types::ClinicalTherapyParameters;
 use aequitas::systems::si::quantities::{Frequency, Length, Power, Pressure, Time, Volume};
+use eunomia::assert_relative_eq;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use kwavers_core::constants::thermodynamic::KELVIN_OFFSET_C;
 use kwavers_core::error::KwaversError;
+use kwavers_transducer::transducers::physics::CartesianPosition;
 use std::f64::consts::PI;
 
 #[test]
@@ -301,14 +303,25 @@ fn test_sonication_schedule_pitch_proves_target_coverage() {
     assert!(schedule.coverage_guaranteed);
     assert!((schedule.per_spot_dwell.into_base() - 1.0).abs() < 1e-12);
     assert_eq!(schedule.subspots[0].index, 0);
-    assert_eq!(
-        schedule.subspots[0].location.into_base(),
-        [4.0e-3, 14.0e-3, 24.0e-3]
-    );
-    assert_eq!(
-        schedule.subspots[74].location.into_base(),
-        [16.0e-3, 26.0e-3, 36.0e-3]
-    );
+    // The axis centers use f64 division and multiplication; four machine
+    // epsilons bound the first-order rounding error at these coordinates.
+    const ROUNDING_BOUND: f64 = 4.0 * f64::EPSILON;
+    for (actual, expected) in schedule.subspots[0]
+        .location
+        .into_base()
+        .into_iter()
+        .zip([4.0e-3, 14.0e-3, 24.0e-3])
+    {
+        assert_relative_eq!(actual, expected, epsilon = ROUNDING_BOUND);
+    }
+    for (actual, expected) in schedule.subspots[74]
+        .location
+        .into_base()
+        .into_iter()
+        .zip([16.0e-3, 26.0e-3, 36.0e-3])
+    {
+        assert_relative_eq!(actual, expected, epsilon = ROUNDING_BOUND);
+    }
 }
 
 #[test]

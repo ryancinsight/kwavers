@@ -238,6 +238,7 @@ impl Grid {
 mod tests {
     use super::Grid;
     use aequitas::systems::si::quantities::Velocity;
+    use eunomia::assert_relative_eq;
 
     #[test]
     fn derived_metrics_preserve_si_values() {
@@ -247,14 +248,25 @@ mod tests {
         assert_eq!(grid.max_spacing().into_base(), 0.4);
 
         let (length_x, length_y, length_z) = grid.physical_size();
-        assert_eq!(length_x.into_base(), 0.8);
-        assert_eq!(length_y.into_base(), 1.5);
-        assert_eq!(length_z.into_base(), 2.4);
+        // Each derived value uses at most two f64 multiplications; four machine
+        // epsilons bound the first-order rounding error for these magnitudes.
+        const ROUNDING_BOUND: f64 = 4.0 * f64::EPSILON;
+        assert_relative_eq!(length_x.into_base(), 0.8, epsilon = ROUNDING_BOUND);
+        assert_relative_eq!(length_y.into_base(), 1.5, epsilon = ROUNDING_BOUND);
+        assert_relative_eq!(length_z.into_base(), 2.4, epsilon = ROUNDING_BOUND);
 
         let expected_cell_volume = 0.2 * 0.3 * 0.4;
         let expected_volume = 0.8 * 1.5 * 2.4;
-        assert_eq!(grid.cell_volume().into_base(), expected_cell_volume);
-        assert_eq!(grid.volume().into_base(), expected_volume);
+        assert_relative_eq!(
+            grid.cell_volume().into_base(),
+            expected_cell_volume,
+            epsilon = ROUNDING_BOUND
+        );
+        assert_relative_eq!(
+            grid.volume().into_base(),
+            expected_volume,
+            epsilon = ROUNDING_BOUND
+        );
 
         let timestep = grid.cfl_timestep(Velocity::from_base(1500.0));
         assert!(timestep.into_base().is_sign_positive());

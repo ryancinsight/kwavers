@@ -1,6 +1,6 @@
 # Backlog / Strategy
 
-## KWAVERS-AEQ-MET-13 — Type driver beam/result metrics [major] — implementation complete; verification blocked 2026-07-24
+## KWAVERS-AEQ-MET-13 — Type driver beam/result metrics [major] — verified 2026-07-25
 
 - Owner: Codex; scope: `kwavers-driver` beam-step, acoustic result, and
   aggregate experiment metric DTOs plus in-tree callers, ADR 059, and
@@ -12,11 +12,11 @@
 - Acceptance: existing beam/experiment value oracles preserve their results;
   scalar conversion occurs only at text, numerical, and check-report
   boundaries; no duplicate unit formulas or compatibility facade remains.
-- Evidence: direct rustfmt and diff checks pass. Cargo cannot load the
-  workspace before compiling `kwavers-driver` because
-  `D:\atlas\worktrees\coeus\coeus-autograd\Cargo.toml` is missing.
+- Evidence: the corrected local Coeus `crates/*` paths allow the full workspace
+  check, driver Nextest 487/487, warning-denied Clippy, and driver doctests to
+  pass. Direct rustfmt and diff checks also pass.
 
-## KWAVERS-AEQ-MET-12 — Type transducer design and propagation metrics [major] — implementation done, verification blocked 2026-07-24
+## KWAVERS-AEQ-MET-12 — Type transducer design and propagation metrics [major] — verified 2026-07-25
 
 - Owner: Codex; scope: `kwavers-transducer::design`, focused propagation
   callers, ADR 058, and synchronized Aequitas metric PM artifacts. Driver
@@ -27,11 +27,11 @@
 - Acceptance: design geometry and focused propagation value oracles preserve
   the existing analytical results; raw scalar extraction remains only at the
   numerical/source-coordinate boundary; provider and consumer audits agree.
-- Evidence: direct rustfmt and diff checks pass. Cargo gates cannot load the
-  workspace because `D:\atlas\worktrees\coeus\coeus-autograd\Cargo.toml` is
-  missing; the provider gate is queued behind the shared Atlas build lock.
+- Evidence: transducer/boundary Nextest passes 318/318 with one skip,
+  warning-denied Clippy and doctests pass, and the corrected local Coeus
+  `crates/*` paths allow the package check to complete.
 
-## KWAVERS-AEQ-MET-11 — Type ultrafast sequencer physical metrics [major] — implementation done, verification blocked 2026-07-24
+## KWAVERS-AEQ-MET-11 — Type ultrafast sequencer physical metrics [major] — verified 2026-07-25
 
 - Owner: Codex; scope: `kwavers-transducer::ultrafast::sequencer`, tests, ADR
   057, and Aequitas metric PM artifacts.
@@ -41,9 +41,57 @@
 - Acceptance: PRF bound, event timing, sequential/interleaved order, flash/STA,
   and compounded frame-rate tests preserve their analytical value oracles;
   package gates run when the peer Coeus graph loads.
-- Evidence: direct rustfmt and diff checks pass. Cargo is blocked before
-  Kwavers source compilation by the missing peer path
-  `D:\atlas\worktrees\coeus\coeus-autograd\Cargo.toml`.
+- Evidence: transducer/boundary Nextest passes 318/318 with one skip,
+  warning-denied Clippy and doctests pass, and the corrected local Coeus
+  `crates/*` paths allow the package check to complete.
+
+## KWAVERS-AEQ-MET-05 — Type vasculature and Doppler metrics [major] — verified 2026-07-25
+
+- Owner: Codex; scope: `kwavers-analysis` vasculature and Doppler boundaries,
+  typed spacing regressions, and synchronized metric PM artifacts.
+- Outcome: validated anisotropic voxel spacing and physical geometry use
+  Aequitas `Length`; Doppler frequency and velocity cross typed boundaries.
+- Evidence: the affected-package check, Nextest, warning-denied Clippy, and
+  doctest gates pass; the broader Nextest run passes 2,913/2,913 with two
+  intentional skips.
+
+## KWAVERS-AEQ-MET-04 — Type HIFU planning metrics [major] — verified 2026-07-25
+
+- Owner: Codex; scope: HIFU planning DTOs, typed endpoint regressions, ADR 052,
+  and synchronized metric PM artifacts.
+- Outcome: HIFU geometry, frequency, power, pressure, volume, position, dwell,
+  and temperature metrics use Aequitas quantities at the public boundary.
+- Evidence: the affected-package check, 2,913/2,913 Nextest, warning-denied
+  Clippy, and doctest gates pass. Endpoint assertions use the derived
+  `4 * f64::EPSILON` bound for f64 division/multiplication.
+
+## KWAVERS-AEQ-MET-07 — Type grid metrics [major] — verified 2026-07-25
+
+- Owner: Codex; scope: `kwavers-grid` derived spacing, physical-size, volume,
+  and CFL metrics plus value-semantic tests.
+- Outcome: public derived metrics use Aequitas `Length`, `Volume`, `Velocity`,
+  and `Time`; raw grid storage remains the numerical-kernel boundary.
+- Evidence: affected-package check, 2,913/2,913 Nextest, warning-denied
+  Clippy, and doctests pass. Derived-value assertions use the analyzed
+  `4 * f64::EPSILON` rounding bound.
+
+## KWAVERS-AEQ-MET-08 — Type thermal configuration metrics [major] — verified 2026-07-25
+
+- Owner: Codex; scope: thermal-diffusion, Pennes, Cattaneo, and coupled
+  simulation configuration carriers and their typed equation boundaries.
+- Outcome: rates, material properties, temperatures, heat, frequency, and time
+  use Aequitas quantities; Python scalar conversion remains explicit.
+- Evidence: affected-package check, 2,913/2,913 Nextest, warning-denied
+  Clippy, and doctests pass.
+
+## KWAVERS-AEQ-MET-09 — Type piston geometry [major] — verified 2026-07-25
+
+- Owner: Codex; scope: basic piston geometry and Gaussian apodization boundary.
+- Outcome: piston positions, dimensions, and sigma use Aequitas `Length` and
+  validated `CartesianPosition`; scalar conversion remains at the source/grid
+  boundary.
+- Evidence: transducer/boundary Nextest passes 318/318 with one skip,
+  warning-denied Clippy and doctests pass.
 
 ## KWAVERS-AEQ-MET-03b — Type transducer materials and Rayleigh propagation [major] — done 2026-07-23
 
