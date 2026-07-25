@@ -76,22 +76,31 @@ impl IterativeSolver {
         } else {
             vec![Complex64::new(0.0, 0.0); n]
         };
+
+        // r = b - A*x
         let mut r = b_vec.clone();
-        a.matvec(&x, &mut r);
+        let mut ax = vec![Complex64::new(0.0, 0.0); n];
+        a.matvec(&x, &mut ax);
         for i in 0..n {
-            r[i] = b_vec[i] - r[i];
+            r[i] = b_vec[i] - ax[i];
         }
 
         let r_hat = r.clone();
-        let mut p = r.clone();
-        let mut x_out = x.clone();
+        // Standard BiCGSTAB initialization: p₀ = 0, v₀ = 0 so that
+        // p₁ = r₀ + β*(0 − ω*0) = r₀ on the first iteration.
+        let mut p = vec![Complex64::new(0.0, 0.0); n];
 
         let mut rho_old = Complex64::new(1.0, 0.0);
         let mut alpha = Complex64::new(1.0, 0.0);
         let mut omega = Complex64::new(1.0, 0.0);
 
-        let b_norm = complex_norm(&b_vec);
-        let tol = if b_norm > 0.0 { self.config.tolerance * b_norm } else { self.config.tolerance };
+        // Normalise tolerance against the initial residual ‖r₀‖ rather than
+        // ‖b‖.  The penalty method produces ‖b‖ ≈ penalty (very large), which
+        // makes a ‖b‖-relative tolerance immediately satisfied before any
+        // interior DOF is updated.  Using ‖r₀‖ avoids the false-convergence
+        // while still providing a meaningful stopping criterion.
+        let r0_norm = complex_norm(&r);
+        let tol = if r0_norm > 0.0 { self.config.tolerance * r0_norm } else { self.config.tolerance };
 
         for _ in 0..self.config.max_iterations {
             let r_norm = complex_norm(&r);
@@ -99,54 +108,60 @@ impl IterativeSolver {
                 break;
             }
 
-            let mut ap = vec![Complex64::new(0.0, 0.0); n];
-            a.matvec(&p, &mut ap);
-
-            let r_hat_dot_r = complex_dot(&r_hat, &r);
-            if r_hat_dot_r.norm() < 1e-30 {
-                break;
-            }
-
-            alpha = r_hat_dot_r / complex_dot(&r_hat, &ap);
-
-            for i in 0..n {
-                x_out[i] = x[i] + alpha * p[i];
-            }
-
-            for i in 0..n {
-                r[i] = r[i] - alpha * ap[i];
-            }
-
-            let r_norm_new = complex_norm(&r);
-            if r_norm_new < tol {
-                x = x_out.clone();
-                break;
-            }
-
+            // Compute rho = (r̂, r)
             let rho_new = complex_dot(&r_hat, &r);
+            if rho_old.norm_sqr() < 1e-60 {
+                break;
+            }
             let beta = (rho_new / rho_old) * (alpha / omega);
 
+            // p = r + beta * (p - omega * Ap)  [for iteration > 1]
+            // On first iter rho_old=1, alpha=1, omega=1 and p = r already.
+            let mut ap = vec![Complex64::new(0.0, 0.0); n];
+            a.matvec(&p, &mut ap);
             for i in 0..n {
                 p[i] = r[i] + beta * (p[i] - omega * ap[i]);
             }
+            a.matvec(&p, &mut ap);
 
-            let mut ap2 = vec![Complex64::new(0.0, 0.0); n];
-            a.matvec(&p, &mut ap2);
-
-            let omega_num = complex_dot(&ap2, &r);
-            let omega_den = complex_dot(&ap2, &ap2);
-            if omega_den.norm() < 1e-30 {
+            let r_hat_dot_ap = complex_dot(&r_hat, &ap);
+            if r_hat_dot_ap.norm_sqr() < 1e-60 {
                 break;
             }
-            omega = omega_num / omega_den;
+            alpha = rho_new / r_hat_dot_ap;
 
+            // s = r - alpha * Ap
+            let mut s = r.clone();
             for i in 0..n {
-                x[i] = x[i] + alpha * p[i];
-                x[i] = x[i] + omega * (x_out[i] - x[i]);
+                s[i] = r[i] - alpha * ap[i];
             }
 
+            let s_norm = complex_norm(&s);
+            if s_norm < tol {
+                for i in 0..n {
+                    x[i] = x[i] + alpha * p[i];
+                }
+                break;
+            }
+
+            // t = A*s
+            let mut t = vec![Complex64::new(0.0, 0.0); n];
+            a.matvec(&s, &mut t);
+
+            let t_dot_t = complex_dot(&t, &t);
+            if t_dot_t.norm_sqr() < 1e-60 {
+                break;
+            }
+            omega = complex_dot(&t, &s) / t_dot_t;
+
+            // x = x + alpha*p + omega*s
             for i in 0..n {
-                r[i] = r[i] - omega * ap2[i];
+                x[i] = x[i] + alpha * p[i] + omega * s[i];
+            }
+
+            // r = s - omega*t
+            for i in 0..n {
+                r[i] = s[i] - omega * t[i];
             }
 
             rho_old = rho_new;

@@ -2541,7 +2541,7 @@ dependencies = [
 
 [[package]]
 name = "hermes-simd"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "eunomia",
  "hermes-simd-core",
@@ -2553,7 +2553,7 @@ dependencies = [
 
 [[package]]
 name = "hermes-simd-core"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "bytemuck",
  "eunomia",
@@ -2564,7 +2564,7 @@ dependencies = [
 
 [[package]]
 name = "hermes-simd-intrinsics"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "eunomia",
  "hermes-simd-core",
@@ -2572,7 +2572,7 @@ dependencies = [
 
 [[package]]
 name = "hermes-simd-macros"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2581,7 +2581,7 @@ dependencies = [
 
 [[package]]
 name = "hermes-simd-types"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "hermes-simd-core",
  "hermes-simd-intrinsics",
