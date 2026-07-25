@@ -4,6 +4,12 @@
 
 ### Changed
 
+- **Breaking**: aperture design and focused propagation now use Aequitas
+  `Length`, `Frequency`, `Velocity`, `Pressure`, `Intensity`, acoustic
+  impedance, current, and pressure-per-current quantities. Scalar extraction
+  remains at source-coordinate and closed-form kernel boundaries. See
+  [ADR 058](docs/ADR/058-transducer-design-propagation-quantities.md).
+
 - **Breaking**: ultrafast transmission sequencing now carries speed, depth,
   PRF, frame rate, event time, and plane-wave angles as Aequitas quantities;
   structural event indices remain scalar. See [ADR 057](docs/ADR/057-ultrafast-sequencer-quantities.md).

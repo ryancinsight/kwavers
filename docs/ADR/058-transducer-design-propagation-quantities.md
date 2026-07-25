@@ -1,6 +1,6 @@
 # ADR 058: Type Transducer Design and Propagation Physical Metrics
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-07-24
 - Scope: `kwavers-transducer::design`
 
@@ -38,5 +38,5 @@ contracts.
 Preserve the existing aperture sizing and focused-pressure analytical value
 oracles, including pressure-current scaling, intensity scaling, focal extents,
 and dimensionless far-field/grating-lobe flags. Provider dimension laws and
-consumer tests must pass; full workspace gates remain subject to the peer Coeus
-graph loading successfully.
+consumer tests must pass. Direct rustfmt and diff checks pass; full workspace
+gates remain subject to the peer Coeus graph loading successfully.

@@ -364,7 +364,12 @@ fn kwavers_array_design_realizes_manifest_lane_span() {
 #[cfg(feature = "kwavers")]
 #[test]
 fn kwavers_sim_report_uses_realized_geometry_and_tile_current() {
-    use kwavers_transducer::{propagate_focused_linear_array, FocusedLinearArrayPropagationSpec};
+    use aequitas::systems::si::quantities::{
+        AcousticImpedance, ElectricCurrent, Frequency, PressurePerElectricCurrent, Velocity,
+    };
+    use kwavers_transducer::{
+        propagate_focused_linear_array, CartesianPosition, FocusedLinearArrayPropagationSpec,
+    };
 
     let manifest = v2_manifest();
     let budget = v2_budget(&manifest);
@@ -378,27 +383,32 @@ fn kwavers_sim_report_uses_realized_geometry_and_tile_current() {
     let design = super::acoustic::array_design_from_step(&report.record.step).unwrap();
     let expected = propagate_focused_linear_array(&FocusedLinearArrayPropagationSpec {
         design,
-        center_m: [0.0, 0.0, 0.0],
-        focus_m: [0.0, 0.0, report.record.step.focal_m],
-        frequency_hz: report.record.step.frequency_hz,
-        sound_speed_m_s: report.record.step.sound_speed_m_s,
-        per_channel_peak_current_a: budget.peak_i_a / CHANNELS_PER_TILE_V2 as f64,
-        pressure_per_amp_pa: KWVERS_ARTICLE_FOCAL_PRESSURE_PER_AMP_PA,
-        acoustic_impedance_rayl: PHYSICS_WATER_Z0_RAYL,
+        center: CartesianPosition::from_base([0.0, 0.0, 0.0]).unwrap(),
+        focus: CartesianPosition::from_base([0.0, 0.0, report.record.step.focal_m]).unwrap(),
+        frequency: Frequency::from_base(report.record.step.frequency_hz),
+        sound_speed: Velocity::from_base(report.record.step.sound_speed_m_s),
+        per_channel_peak_current: ElectricCurrent::from_base(
+            budget.peak_i_a / CHANNELS_PER_TILE_V2 as f64,
+        ),
+        pressure_per_current: PressurePerElectricCurrent::from_base(
+            KWVERS_ARTICLE_FOCAL_PRESSURE_PER_AMP_PA,
+        ),
+        acoustic_impedance: AcousticImpedance::from_base(PHYSICS_WATER_Z0_RAYL),
     })
     .unwrap();
     assert!(
-        (report.record.metrics.focal_pressure_pa - expected.focal_pressure_pa).abs()
-            <= expected.focal_pressure_pa * 1.0e-12,
+        (report.record.metrics.focal_pressure_pa - expected.focal_pressure.into_base()).abs()
+            <= expected.focal_pressure.into_base() * 1.0e-12,
         "focal pressure must come from kwavers-transducer focused propagation"
     );
     assert!(
-        (report.record.metrics.lateral_extent_mm - expected.lateral_extent_mm).abs()
-            <= expected.lateral_extent_mm * 1.0e-12
+        (report.record.metrics.lateral_extent_mm - expected.lateral_extent.into_base() * 1.0e3)
+            .abs()
+            <= expected.lateral_extent.into_base() * 1.0e3 * 1.0e-12
     );
     assert!(
-        (report.record.metrics.axial_extent_mm - expected.axial_extent_mm).abs()
-            <= expected.axial_extent_mm * 1.0e-12
+        (report.record.metrics.axial_extent_mm - expected.axial_extent.into_base() * 1.0e3).abs()
+            <= expected.axial_extent.into_base() * 1.0e3 * 1.0e-12
     );
     assert_eq!(
         report.record.metrics.grating_lobe_free,
