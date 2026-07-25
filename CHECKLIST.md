@@ -1,5 +1,17 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-12 typed transducer design and propagation metrics [major] — in progress 2026-07-24
+
+- [ ] Add the provider-owned pressure-per-current dimension and quantity.
+- [ ] Type aperture design geometry, acoustic inputs, propagation gain, and
+      impedance at the public `kwavers-transducer` boundary.
+- [ ] Type focused pressure, intensity, and focal extents; retain dimensionless
+      flags and model coefficients as scalars.
+- [ ] Migrate all in-tree callers and analytical tests without a scalar facade.
+- [ ] Synchronize the child gap audit, ADR 058, and changelog.
+- [ ] Run provider and consumer format/check/Nextest/Clippy/doctest/Rustdoc
+      gates; record the peer-graph blocker if Cargo cannot load the workspace.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-11 typed ultrafast sequencer metrics [major] — implementation done, verification blocked 2026-07-24
 
 - [x] Type sequencer sound speed, imaging depth, PRF, frame rate, event time,

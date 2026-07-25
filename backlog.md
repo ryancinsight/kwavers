@@ -1,5 +1,18 @@
 # Backlog / Strategy
 
+## KWAVERS-AEQ-MET-12 — Type transducer design and propagation metrics [major] — implementation in progress 2026-07-24
+
+- Owner: Codex; scope: `kwavers-transducer::design`, focused propagation
+  callers, ADR 058, and synchronized Aequitas metric PM artifacts. Driver
+  manifest and beam-step serialization remain an explicit follow-up boundary.
+- Outcome: aperture geometry, acoustic frequency/speed, current-to-pressure
+  gain, acoustic impedance, and focused pressure/intensity/extents cross the
+  public design and propagation APIs as Aequitas quantities.
+- Acceptance: design geometry and focused propagation value oracles preserve
+  the existing analytical results; raw scalar extraction remains only at the
+  numerical/source-coordinate boundary; provider and consumer audits agree.
+- Evidence: implementation and focused gates are pending on this claim.
+
 ## KWAVERS-AEQ-MET-11 — Type ultrafast sequencer physical metrics [major] — implementation done, verification blocked 2026-07-24
 
 - Owner: Codex; scope: `kwavers-transducer::ultrafast::sequencer`, tests, ADR
