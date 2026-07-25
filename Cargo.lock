@@ -940,10 +940,9 @@ dependencies = [
 [[package]]
 name = "consus-compression"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9#ec386e3e14241343f9a1beca6921463f2b2f0fc9"
 dependencies = [
  "byteorder",
- "consus-core 0.1.0 (git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9)",
+ "consus-core 0.1.0",
 ]
 
 [[package]]
@@ -958,7 +957,6 @@ dependencies = [
 [[package]]
 name = "consus-core"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9#ec386e3e14241343f9a1beca6921463f2b2f0fc9"
 dependencies = [
  "byteorder",
  "smallvec",
@@ -978,12 +976,11 @@ dependencies = [
 [[package]]
 name = "consus-hdf5"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9#ec386e3e14241343f9a1beca6921463f2b2f0fc9"
 dependencies = [
  "byteorder",
- "consus-compression 0.1.0 (git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9)",
- "consus-core 0.1.0 (git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9)",
- "consus-io 0.1.0 (git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9)",
+ "consus-compression 0.1.0",
+ "consus-core 0.1.0",
+ "consus-io 0.1.0",
 ]
 
 [[package]]
@@ -1000,9 +997,8 @@ dependencies = [
 [[package]]
 name = "consus-io"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9#ec386e3e14241343f9a1beca6921463f2b2f0fc9"
 dependencies = [
- "consus-core 0.1.0 (git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9)",
+ "consus-core 0.1.0",
 ]
 
 [[package]]
@@ -1026,7 +1022,6 @@ dependencies = [
 [[package]]
 name = "consus-onnx"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9#ec386e3e14241343f9a1beca6921463f2b2f0fc9"
 
 [[package]]
 name = "convert_case"
@@ -2546,7 +2541,7 @@ dependencies = [
 
 [[package]]
 name = "hermes-simd"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "eunomia",
  "hermes-simd-core",
@@ -2558,7 +2553,7 @@ dependencies = [
 
 [[package]]
 name = "hermes-simd-core"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "bytemuck",
  "eunomia",
@@ -2569,7 +2564,7 @@ dependencies = [
 
 [[package]]
 name = "hermes-simd-intrinsics"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "eunomia",
  "hermes-simd-core",
@@ -2577,7 +2572,7 @@ dependencies = [
 
 [[package]]
 name = "hermes-simd-macros"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2586,7 +2581,7 @@ dependencies = [
 
 [[package]]
 name = "hermes-simd-types"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "hermes-simd-core",
  "hermes-simd-intrinsics",
@@ -2933,7 +2928,6 @@ checksum = "469fb0b9cefa57e3ef31275ee7cacb78f2fdca44e4765491884a2b119d4eb130"
 [[package]]
 name = "iris"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/iris?rev=e2edd47615454111b4b0df2e68dc6076161ba457#e2edd47615454111b4b0df2e68dc6076161ba457"
 
 [[package]]
 name = "is-terminal"
@@ -3405,6 +3399,7 @@ dependencies = [
 name = "kwavers-boundary"
 version = "3.0.0"
 dependencies = [
+ "aequitas",
  "eunomia",
  "kwavers-core",
  "kwavers-grid",
@@ -3470,6 +3465,7 @@ dependencies = [
 name = "kwavers-driver"
 version = "0.3.13"
 dependencies = [
+ "aequitas",
  "kwavers-transducer",
  "thiserror 1.0.69",
 ]
@@ -4130,7 +4126,7 @@ dependencies = [
 
 [[package]]
 name = "mnemosyne-arena"
-version = "0.6.0"
+version = "0.3.0"
 dependencies = [
  "eunomia",
  "mnemosyne-backend",
@@ -4140,22 +4136,22 @@ dependencies = [
 
 [[package]]
 name = "mnemosyne-backend"
-version = "0.6.0"
+version = "0.5.0"
 dependencies = [
  "mnemosyne-core",
 ]
 
 [[package]]
 name = "mnemosyne-build-util"
-version = "0.6.0"
+version = "0.2.0"
 
 [[package]]
 name = "mnemosyne-core"
-version = "0.6.0"
+version = "0.2.0"
 
 [[package]]
 name = "mnemosyne-decay"
-version = "0.6.0"
+version = "0.2.0"
 dependencies = [
  "mnemosyne-arena",
  "mnemosyne-backend",
@@ -4164,14 +4160,14 @@ dependencies = [
 
 [[package]]
 name = "mnemosyne-hardened"
-version = "0.6.0"
+version = "0.2.0"
 dependencies = [
  "mnemosyne-core",
 ]
 
 [[package]]
 name = "mnemosyne-heap"
-version = "0.6.0"
+version = "0.3.0"
 dependencies = [
  "melinoe",
  "mnemosyne-arena",
@@ -4184,7 +4180,7 @@ dependencies = [
 
 [[package]]
 name = "mnemosyne-local"
-version = "0.6.0"
+version = "0.3.0"
 dependencies = [
  "melinoe",
  "mnemosyne-arena",
@@ -4198,7 +4194,7 @@ dependencies = [
 
 [[package]]
 name = "mnemosyne-prof"
-version = "0.6.0"
+version = "0.2.0"
 dependencies = [
  "backtrace",
  "mnemosyne-build-util",
@@ -5796,9 +5792,9 @@ dependencies = [
  "arrayvec",
  "coeus-core",
  "coeus-tensor",
- "consus-core 0.1.0 (git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9)",
- "consus-hdf5 0.1.0 (git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9)",
- "consus-io 0.1.0 (git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9)",
+ "consus-core 0.1.0",
+ "consus-hdf5 0.1.0",
+ "consus-io 0.1.0",
  "dicom",
  "dicom-core",
  "dicom-pixeldata",
@@ -5864,7 +5860,7 @@ version = "0.2.0"
 dependencies = [
  "anyhow",
  "coeus-core",
- "consus-io 0.1.0 (git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9)",
+ "consus-io 0.1.0",
  "flate2",
  "ritk-image",
  "ritk-spatial",
@@ -5877,9 +5873,9 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "coeus-core",
- "consus-core 0.1.0 (git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9)",
- "consus-hdf5 0.1.0 (git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9)",
- "consus-io 0.1.0 (git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9)",
+ "consus-core 0.1.0",
+ "consus-hdf5 0.1.0",
+ "consus-io 0.1.0",
  "ritk-core",
  "ritk-image",
  "ritk-spatial",
@@ -5897,7 +5893,7 @@ dependencies = [
  "coeus-ops",
  "coeus-optim",
  "coeus-tensor",
- "consus-io 0.1.0 (git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9)",
+ "consus-io 0.1.0",
  "consus-onnx",
  "onnx-ir",
  "reqwest",
@@ -6068,7 +6064,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "coeus-core",
- "consus-io 0.1.0 (git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9)",
+ "consus-io 0.1.0",
  "gaia",
  "iris",
  "ritk-image",

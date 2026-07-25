@@ -1,6 +1,6 @@
 # Project Checklist
 
-## Owner: Codex — KWAVERS-AEQ-MET-13 typed driver beam/result metrics [major] — implementation complete; verification blocked 2026-07-24
+## Owner: Codex — KWAVERS-AEQ-MET-13 typed driver beam/result metrics [major] — verified 2026-07-25
 
 - [x] Type `KwaversBeamStep` geometry/timing fields with Aequitas quantities.
 - [x] Type `KwaversBeamValidation`, `PressureMap`, and `ExperimentMetrics`
@@ -8,12 +8,11 @@
       coefficients as scalars.
 - [x] Migrate all in-tree driver callers and explicit scalar boundaries.
 - [x] Synchronize gap audit, ADR 059, changelog, and acceptance evidence.
-- [ ] Run focused formatting/check/Nextest/Clippy/doctest/Rustdoc gates; record
-      the peer Coeus graph blocker if it persists. **Blocked before source
-      compilation: `D:\atlas\worktrees\coeus\coeus-autograd\Cargo.toml` is
-      missing.**
+- [x] Correct the local Coeus workspace paths to `../coeus/crates/*`.
+- [x] Run full workspace check, driver Nextest 487/487, warning-denied Clippy,
+      and driver doctests.
 
-## Owner: Codex — KWAVERS-AEQ-MET-12 typed transducer design and propagation metrics [major] — implementation done, verification blocked 2026-07-24
+## Owner: Codex — KWAVERS-AEQ-MET-12 typed transducer design and propagation metrics [major] — verified 2026-07-25
 
 - [x] Add the provider-owned pressure-per-current dimension and quantity.
 - [x] Type aperture design geometry, acoustic inputs, propagation gain, and
@@ -22,23 +21,20 @@
       flags and model coefficients as scalars.
 - [x] Migrate all in-tree callers and analytical tests without a scalar facade.
 - [x] Synchronize the child gap audit, ADR 058, and changelog.
-- [ ] Run provider and consumer format/check/Nextest/Clippy/doctest/Rustdoc
-      gates. Consumer blocker: Cargo cannot load the peer path
-      `D:\atlas\worktrees\coeus\coeus-autograd\Cargo.toml`; provider Nextest
-      is queued behind the shared target lock.
+- [x] Run full workspace check, transducer/boundary Nextest 318/318 (1 skipped),
+      warning-denied Clippy, and doctests after correcting the Coeus paths.
 
-## Owner: Codex — KWAVERS-AEQ-MET-11 typed ultrafast sequencer metrics [major] — implementation done, verification blocked 2026-07-24
+## Owner: Codex — KWAVERS-AEQ-MET-11 typed ultrafast sequencer metrics [major] — verified 2026-07-25
 
 - [x] Type sequencer sound speed, imaging depth, PRF, frame rate, event time,
       and plane-wave angle with Aequitas quantities.
 - [x] Migrate sequential, interleaved, flash, STA, and analytical timing tests;
       preserve the PRF bound and event-order value semantics.
 - [x] Synchronize the child gap audit, ADR 057, and changelog.
-- [ ] Run package checks, Nextest, warning-denied Clippy, doctests, and Rustdoc
-      after the peer Coeus dependency graph is restored. Current blocker:
-      Cargo cannot load `D:\atlas\worktrees\coeus\coeus-autograd\Cargo.toml`.
+- [x] Run full workspace check, transducer/boundary Nextest 318/318 (1 skipped),
+      warning-denied Clippy, and doctests after correcting the Coeus paths.
 
-## Owner: Codex — KWAVERS-AEQ-MET-10 typed impedance-boundary metrics [major] — implementation done, verification blocked 2026-07-24
+## Owner: Codex — KWAVERS-AEQ-MET-10 typed impedance-boundary metrics [major] — verified 2026-07-25
 
 - [x] Type `ImpedanceBoundary` target/medium impedance and frequency-profile
       inputs with Aequitas `AcousticImpedance` and `Frequency`; retain the
@@ -47,10 +43,8 @@
       preserve the analytical reflection-coefficient and Gaussian-profile
       value semantics without a scalar compatibility facade.
 - [x] Synchronize the child gap audit, ADR, and changelog.
-- [ ] Run focused format/check, Nextest, warning-denied Clippy, doctest, and
-      Rustdoc gates. Current blocker: Cargo stops before source compilation at
-      the missing peer path `D:\atlas\worktrees\coeus\coeus-autograd\Cargo.toml`.
-      Re-open when the provider graph loads `kwavers-boundary` sources.
+- [x] Run full workspace check, transducer/boundary Nextest 318/318 (1 skipped),
+      warning-denied Clippy, and doctests after correcting the Coeus paths.
 
 ## Owner: Codex — KWAVERS-AEQ-MET-08 typed thermal-diffusion configuration [major] — implementation done, verification blocked 2026-07-24
 

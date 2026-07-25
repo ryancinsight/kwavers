@@ -4,6 +4,9 @@
 
 ### Changed
 
+- Fixed the local Coeus workspace paths to the checked-out `crates/*` layout;
+  the full workspace now resolves and compiles under `--locked`.
+
 - **Breaking**: `kwavers-driver` beam-step and acoustic/aggregate result DTOs
   now carry Aequitas geometry, timing, pressure, intensity, extent, and
   thermal quantities. Manifest text and numerical/check-report boundaries
