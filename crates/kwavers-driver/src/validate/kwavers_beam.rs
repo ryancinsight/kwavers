@@ -1,8 +1,9 @@
 //! The driver→transducer beam-propagation pre-step adapter — the typed seam the downstream
 //! `crates/kwavers-transducer` simulator consumes.
 //!
-//! [`KwaversBeamStep`] is the *typed pre-step contract*: every field is a scalar this crate already
-//! computes. With the `kwavers` feature enabled, [`validate_against_budget`] sends that contract
+//! [`KwaversBeamStep`] is the *typed pre-step contract*: physical fields are
+//! Aequitas quantities and model flags remain scalars. With the `kwavers`
+//! feature enabled, [`validate_against_budget`] sends that contract
 //! into `kwavers-transducer` focused propagation. Without the feature, the same validation surface
 //! remains available through the in-crate analytical fallback. Kwavers safety bounds, `Check` names,
 //! water Z₀, and SI-prefix scalars live in [`crate::ssot`] (the SSOT ratchet locks each at its
@@ -17,12 +18,15 @@ use crate::physics::acoustic::{
 #[cfg(feature = "kwavers")]
 use crate::physics::acoustic::{f_number, pitch_from_aperture_m, wavelength_m};
 use crate::ssot::*;
+use aequitas::systems::si::quantities::{
+    Frequency, Intensity, Length, Power, Pressure, Time, Velocity,
+};
 
 use super::check::{Check, PhysicsReport};
 
-/// Driver pre-step that kwavers-transducer consumes. Every field is a scalar
-/// this crate already computes; conversion into Aequitas quantities occurs at
-/// the transducer call boundary. The pre-step does NOT
+/// Driver pre-step that kwavers-transducer consumes. Physical fields remain
+/// Aequitas quantities through this public contract; scalar conversion occurs
+/// at the manifest/numerical boundaries. The pre-step does NOT
 /// duplicate the per-tile protocol-load proxy (that's [`EnergyBudgetReport`])
 /// — kwavers consumers pull it from there.
 ///
@@ -33,24 +37,24 @@ use super::check::{Check, PhysicsReport};
 pub struct KwaversBeamStep {
     /// Total transducer channels (96 for full-stack v2 = 4 tiles × 24 ch).
     pub lanes: usize,
-    /// Aperture (m) — first-to-last element centre span.
-    pub aperture_m: f64,
-    /// Drive frequency (Hz).
-    pub frequency_hz: f64,
-    /// Medium sound speed (m/s).
-    pub sound_speed_m_s: f64,
-    /// Nominal focal depth (m).
-    pub focal_m: f64,
-    /// Hardware timing quantum (s).
-    pub timing_step_s: f64,
-    /// Centre-to-centre element pitch (m) = `aperture_m / (lanes - 1)`.
-    pub pitch_m: f64,
-    /// Acoustic wavelength (m) = `sound_speed_m_s / frequency_hz`.
-    pub wavelength_m: f64,
+    /// Aperture — first-to-last element centre span.
+    pub aperture: Length,
+    /// Drive frequency.
+    pub frequency: Frequency,
+    /// Medium sound speed.
+    pub sound_speed: Velocity,
+    /// Nominal focal depth.
+    pub focal: Length,
+    /// Hardware timing quantum.
+    pub timing_step: Time,
+    /// Centre-to-centre element pitch.
+    pub pitch: Length,
+    /// Acoustic wavelength.
+    pub wavelength: Length,
     /// f-number of the focused aperture = `focal_m / aperture_m`.
     pub f_number: f64,
     /// Per-tile resistor power margin (W) under the chosen footprint's IPC-7351 70 °C rating.
-    /// Mirrored verbatim from [`crate::manifest::EnergyBudgetReport::per_tile_resistor_margin_w`]
+    /// Converted from [`crate::manifest::EnergyBudgetReport::per_tile_resistor_margin_w`]
     /// — SIGNED after the inline rejection gate was lifted out of `validate_v2_energy_budget`:
     /// positive entry ⇒ headroom above the dissipation (`chosen_max_w − dissipation_i`),
     /// negative entry ⇒ footprint under-rates this tile by `|margin|` W. The kwavers-side
@@ -59,9 +63,9 @@ pub struct KwaversBeamStep {
     /// signed magnitude AND the headroom to plan footprint bumps (`Smd2512 ⇒ Smd4527`)
     /// on a per-tile basis, or matching-cap tightening, without re-deriving
     /// `per_tile_resistor_w`i``. The constraint remains
-    /// `new_footprint_max_w ≥ dissipation_i`; `resistor_margin_w`i`` quantifies the
+    /// `new_footprint_max_w ≥ dissipation_i`; `resistor_margin` quantifies the
     /// signed slack on it (negative entries are an explicit actionable signal).
-    pub resistor_margin_w: Vec<f64>,
+    pub resistor_margin: Vec<Power>,
 }
 
 /// Build the typed pre-step from a verified full-stack v2 manifest + its
@@ -106,15 +110,20 @@ pub fn manifest_to_kwavers_beam_step(
     }
     Ok(KwaversBeamStep {
         lanes,
-        aperture_m: manifest.aperture_m,
-        frequency_hz: manifest.frequency_hz,
-        sound_speed_m_s: manifest.sound_speed_m_s,
-        focal_m: manifest.focal_m,
-        timing_step_s: manifest.timing_step_s,
-        pitch_m: pitch,
-        wavelength_m: lambda,
+        aperture: Length::from_base(manifest.aperture_m),
+        frequency: Frequency::from_base(manifest.frequency_hz),
+        sound_speed: Velocity::from_base(manifest.sound_speed_m_s),
+        focal: Length::from_base(manifest.focal_m),
+        timing_step: Time::from_base(manifest.timing_step_s),
+        pitch: Length::from_base(pitch),
+        wavelength: Length::from_base(lambda),
         f_number: f_num,
-        resistor_margin_w: budget.per_tile_resistor_margin_w.clone(),
+        resistor_margin: budget
+            .per_tile_resistor_margin_w
+            .iter()
+            .copied()
+            .map(Power::from_base)
+            .collect(),
     })
 }
 
@@ -134,7 +143,7 @@ pub struct KwaversBeamValidation {
     /// Estimated focal pressure (Pa) — coherent `N`-fold sum × per-element
     /// current × article-anchored acoustic sensitivity in the fallback path;
     /// feature-enabled builds use the propagated pressure at the focus.
-    pub focal_pressure_pa: f64,
+    pub focal_pressure: Pressure,
     /// True iff the element pitch is grating-lobe-free over the full ±90°
     /// steering range (`max_grating_free_steer_deg ≥ 89°`). Article-class
     /// half-wavelength pitch ⇒ 90°.
@@ -143,23 +152,23 @@ pub struct KwaversBeamValidation {
     /// regime). Information-only: focused-beam operation typically runs in
     /// the near-field (`focal_m < N`) and that is not a defect.
     pub in_far_field: bool,
-    /// Spatial-peak pulse-average intensity (W/cm²) at the focus.
-    pub isppa_w_cm2: f64,
+    /// Spatial-peak pulse-average intensity at the focus.
+    pub isppa: Intensity,
     /// Mechanical Index at the focus = `p_focal_mpa / √f_mhz`.
     pub mechanical_index: f64,
-    /// 6 dB axial extent (mm) proxy = `2 · f_number · λ` — the focused-beam
+    /// 6 dB axial extent proxy = `2 · f_number · λ` — the focused-beam
     /// axial intensity half-width on a uniform-illumination model.
-    pub axial_extent_mm: f64,
-    /// 6 dB lateral extent (mm) proxy = `λ · f_number` — upper-bound
+    pub axial_extent: Length,
+    /// 6 dB lateral extent proxy = `λ · f_number` — upper-bound
     /// analytical single-element × full-array projection.
-    pub lateral_extent_mm: f64,
-    /// Per-tile resistor power margin (W). Mirrors [`KwaversBeamStep::resistor_margin_w`] —
+    pub lateral_extent: Length,
+    /// Per-tile resistor power margin. Mirrors [`KwaversBeamStep::resistor_margin`] —
     /// a duplicate field is intentional so the kwavers consumer can read the margins off
     /// the validation report (which carries the [`crate::physics::acoustic`] predictions) without
     /// having to walk the [`Self::step`] field again. SIGNED (see the `step` mirror's
     /// doc for full semantics); the 4th [`crate::validate::Check`] against
     /// `KWVERS_MIN_RESISTOR_MARGIN_W` is the sole gatekeeper.
-    pub resistor_margin_w: Vec<f64>,
+    pub resistor_margin: Vec<Power>,
     /// All kwavers-derivable physics checks aggregated as a [`PhysicsReport`].
     pub report: PhysicsReport,
 }
@@ -174,13 +183,13 @@ fn per_element_peak_i_a(budget: &EnergyBudgetReport) -> f64 {
 
 #[derive(Debug, Clone, PartialEq)]
 struct BeamPropagationScalars {
-    focal_pressure_pa: f64,
+    focal_pressure: Pressure,
     grating_lobe_free: bool,
     in_far_field: bool,
-    isppa_w_cm2: f64,
+    isppa: Intensity,
     mechanical_index: f64,
-    axial_extent_mm: f64,
-    lateral_extent_mm: f64,
+    axial_extent: Length,
+    lateral_extent: Length,
 }
 
 /// Estimated focal pressure (Pa) at the v2 stack's focus. Documented as:
@@ -202,23 +211,23 @@ fn propagate_beam_step(
     budget: &EnergyBudgetReport,
 ) -> Result<BeamPropagationScalars, String> {
     let focal_pressure_pa = estimate_focal_pressure_pa(budget, step.lanes);
-    let isppa_w_cm2 =
-        acoustic_intensity_w_per_m2(focal_pressure_pa, PHYSICS_WATER_Z0_RAYL) / UNIT_W_CM2_PER_W_M2;
+    let isppa_w_m2 = acoustic_intensity_w_per_m2(focal_pressure_pa, PHYSICS_WATER_Z0_RAYL);
     let mi = mechanical_index(
         focal_pressure_pa / UNIT_PA_PER_MPA,
-        step.frequency_hz / UNIT_MHZ_PER_HZ,
+        step.frequency.into_base() / UNIT_MHZ_PER_HZ,
     );
-    let grating_lobe_free = max_grating_free_steer_deg(step.pitch_m, step.wavelength_m)
-        >= KWVERS_MIN_GRATING_FREE_STEER_DEG;
-    let n_far = near_field_distance_m(step.aperture_m, step.wavelength_m);
+    let grating_lobe_free =
+        max_grating_free_steer_deg(step.pitch.into_base(), step.wavelength.into_base())
+            >= KWVERS_MIN_GRATING_FREE_STEER_DEG;
+    let n_far = near_field_distance_m(step.aperture.into_base(), step.wavelength.into_base());
     Ok(BeamPropagationScalars {
-        focal_pressure_pa,
+        focal_pressure: Pressure::from_base(focal_pressure_pa),
         grating_lobe_free,
-        in_far_field: step.focal_m >= n_far,
-        isppa_w_cm2,
+        in_far_field: step.focal.into_base() >= n_far,
+        isppa: Intensity::from_base(isppa_w_m2),
         mechanical_index: mi,
-        axial_extent_mm: 2.0 * step.f_number * step.wavelength_m * UNIT_MM_PER_M,
-        lateral_extent_mm: step.wavelength_m * step.f_number * UNIT_MM_PER_M,
+        axial_extent: Length::from_base(2.0 * step.f_number * step.wavelength.into_base()),
+        lateral_extent: Length::from_base(step.wavelength.into_base() * step.f_number),
     })
 }
 
@@ -228,19 +237,19 @@ fn propagate_beam_step(
     budget: &EnergyBudgetReport,
 ) -> Result<BeamPropagationScalars, String> {
     use aequitas::systems::si::quantities::{
-        AcousticImpedance, ElectricCurrent, Frequency, Length, PressurePerElectricCurrent, Velocity,
+        AcousticImpedance, ElectricCurrent, Length, PressurePerElectricCurrent,
     };
     use kwavers_transducer::{
-        design_array, propagate_focused_linear_array, ApertureDesignSpec, CartesianPosition,
-        ChannelWiring, FocusedLinearArrayPropagationSpec, DEFAULT_KERF_FRACTION,
+        ApertureDesignSpec, CartesianPosition, ChannelWiring, DEFAULT_KERF_FRACTION,
+        FocusedLinearArrayPropagationSpec, design_array, propagate_focused_linear_array,
     };
 
-    let pitch_fraction = (step.pitch_m / step.wavelength_m).clamp(1e-9, 2.0);
+    let pitch_fraction = (step.pitch.into_base() / step.wavelength.into_base()).clamp(1e-9, 2.0);
     let design = design_array(&ApertureDesignSpec {
         aperture_x: Length::from_base(0.0),
-        aperture_y: Length::from_base(step.aperture_m + step.pitch_m),
-        frequency: Frequency::from_base(step.frequency_hz),
-        sound_speed: Velocity::from_base(step.sound_speed_m_s),
+        aperture_y: Length::from_base(step.aperture.into_base() + step.pitch.into_base()),
+        frequency: step.frequency,
+        sound_speed: step.sound_speed,
         max_pitch_fraction: pitch_fraction,
         kerf_fraction: DEFAULT_KERF_FRACTION,
         wiring: ChannelWiring::ColumnsAsChannels,
@@ -250,10 +259,10 @@ fn propagate_beam_step(
         design,
         center: CartesianPosition::from_base([0.0, 0.0, 0.0])
             .map_err(|e| format!("CartesianPosition center: {e}"))?,
-        focus: CartesianPosition::from_base([0.0, 0.0, step.focal_m])
+        focus: CartesianPosition::from_base([0.0, 0.0, step.focal.into_base()])
             .map_err(|e| format!("CartesianPosition focus: {e}"))?,
-        frequency: Frequency::from_base(step.frequency_hz),
-        sound_speed: Velocity::from_base(step.sound_speed_m_s),
+        frequency: step.frequency,
+        sound_speed: step.sound_speed,
         per_channel_peak_current: ElectricCurrent::from_base(per_element_peak_i_a(budget)),
         pressure_per_current: PressurePerElectricCurrent::from_base(
             KWVERS_ARTICLE_FOCAL_PRESSURE_PER_AMP_PA,
@@ -262,13 +271,13 @@ fn propagate_beam_step(
     })
     .map_err(|e| format!("kwavers-transducer propagation: {e}"))?;
     Ok(BeamPropagationScalars {
-        focal_pressure_pa: map.focal_pressure.into_base(),
+        focal_pressure: map.focal_pressure,
         grating_lobe_free: map.grating_lobe_free,
         in_far_field: map.in_far_field,
-        isppa_w_cm2: map.isppa.into_base() / UNIT_W_CM2_PER_W_M2,
+        isppa: map.isppa,
         mechanical_index: map.mechanical_index,
-        axial_extent_mm: map.axial_extent.into_base() * UNIT_MM_PER_M,
-        lateral_extent_mm: map.lateral_extent.into_base() * UNIT_MM_PER_M,
+        axial_extent: map.axial_extent,
+        lateral_extent: map.lateral_extent,
     })
 }
 
@@ -299,7 +308,11 @@ pub fn validate_against_budget(
             "validate_against_budget requires full-stack v2 manifest (got {} lanes, {} tiles, stim={})",
             manifest.tx_nets.len(),
             manifest.tile_profiles.len(),
-            if manifest.stimulation.is_some() { "Some" } else { "None" }
+            if manifest.stimulation.is_some() {
+                "Some"
+            } else {
+                "None"
+            }
         ));
     }
 
@@ -317,22 +330,22 @@ pub fn validate_against_budget(
     // `manifest_to_kwavers_beam_step` already preclude an empty margin vector under any
     // reachable execution today, but the fallback keeps the lower-bound comparison
     // well-defined if a future contributor relaxes those gates for a non-standard stack shape.
-    let min_resistor_margin_w = step
-        .resistor_margin_w
+    let min_resistor_margin = step
+        .resistor_margin
         .iter()
-        .copied()
+        .map(|margin| margin.into_base())
         .fold(f64::INFINITY, f64::min);
-    let min_resistor_margin_w = if min_resistor_margin_w == f64::INFINITY {
-        0.0
+    let min_resistor_margin = if min_resistor_margin == f64::INFINITY {
+        Power::from_base(0.0)
     } else {
-        min_resistor_margin_w
+        Power::from_base(min_resistor_margin)
     };
 
     // 4. Physics checks against article-grade AND safety limits.
     let report = PhysicsReport::new(vec![
         Check::lower(
             CHECK_FOCAL_PRESSURE_NAME,
-            propagated.focal_pressure_pa,
+            propagated.focal_pressure.into_base(),
             KWVERS_MIN_FOCAL_PRESSURE_1MPA_IN_PA,
             "Pa",
         ),
@@ -358,27 +371,27 @@ pub fn validate_against_budget(
         // upstream rejection gate is caught at this Check.
         Check::lower(
             CHECK_RESISTOR_MARGIN_NAME,
-            min_resistor_margin_w,
+            min_resistor_margin.into_base(),
             KWVERS_MIN_RESISTOR_MARGIN_W,
             "W",
         ),
     ]);
 
     // Clone the per-tile margin out of `step` before the struct-literal move consumes `step`.
-    // The Vec is duplicated onto `KwaversBeamValidation::resistor_margin_w` so the kwavers
+    // The Vec is duplicated onto `KwaversBeamValidation::resistor_margin` so the kwavers
     // consumer can read the margin off the validation report directly, without walking the
-    // nested `validation.step.resistor_margin_w` field.
-    let step_resistor_margin_w = step.resistor_margin_w.clone();
+    // nested `validation.step.resistor_margin` field.
+    let step_resistor_margin = step.resistor_margin.clone();
     Ok(KwaversBeamValidation {
         step,
-        focal_pressure_pa: propagated.focal_pressure_pa,
+        focal_pressure: propagated.focal_pressure,
         grating_lobe_free: propagated.grating_lobe_free,
         in_far_field: propagated.in_far_field,
-        isppa_w_cm2: propagated.isppa_w_cm2,
+        isppa: propagated.isppa,
         mechanical_index: propagated.mechanical_index,
-        axial_extent_mm: propagated.axial_extent_mm,
-        lateral_extent_mm: propagated.lateral_extent_mm,
-        resistor_margin_w: step_resistor_margin_w,
+        axial_extent: propagated.axial_extent,
+        lateral_extent: propagated.lateral_extent,
+        resistor_margin: step_resistor_margin,
         report,
     })
 }

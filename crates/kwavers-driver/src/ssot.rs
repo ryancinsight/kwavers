@@ -71,7 +71,7 @@ pub const KWVERS_MI_CAVITATION_CEILING: f64 = 12.5;
 pub const KWVERS_MIN_GRATING_FREE_STEER_DEG: f64 = 89.0;
 
 /// Min per-tile resistor power margin (W) the kwavers pre-step enforces via the 4th `Check::lower`
-/// against the per-tile min of `KwaversBeamStep::resistor_margin_w`. The inline rejection gate was
+/// against the per-tile min of `KwaversBeamStep::resistor_margin`. The inline rejection gate was
 /// lifted out of `validate_v2_energy_budget` so this constant is the SOLE gatekeeper.
 ///
 /// **Slack floor: `0.05 W` (50 mW).** Enforces a real headroom BUDGET above the IPC-7351 70 °C

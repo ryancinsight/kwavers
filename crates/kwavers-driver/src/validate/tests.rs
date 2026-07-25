@@ -160,7 +160,7 @@ fn worst_ampacity_margin_flags_undersized_track() {
     let mut b = Board::new(spec());
     let pwr = b.add_net("PWR", NetClassKind::Power);
     b.tracks.push(track(pwr, 1.0, 1.0, 6.0, 1.0, 0.1)); // narrow 0.1 mm
-                                                        // 2 A at 10 °C rise on 1 oz needs far more than 0.1 mm ⇒ negative margin.
+    // 2 A at 10 °C rise on 1 oz needs far more than 0.1 mm ⇒ negative margin.
     let margin = worst_ampacity_margin_mm(&b, |n| if n == pwr { 2.0 } else { 0.0 }, 10.0, 1.0);
     assert!(
         margin < 0.0,
@@ -234,10 +234,10 @@ fn beam_step_built_from_full_stack_v2_has_derived_geometry() {
     let step = manifest_to_kwavers_beam_step(&m, &budget).expect("v2 pre-step");
     assert_eq!(step.lanes, 96);
     // wavelength = c/f; f_number = focal/aperture; pitch = aperture/(lanes-1).
-    assert!((step.wavelength_m - 1540.0 / 2.0e6).abs() < 1e-12);
+    assert!((step.wavelength.into_base() - 1540.0 / 2.0e6).abs() < 1e-12);
     assert!((step.f_number - m.focal_m / m.aperture_m).abs() < 1e-9);
-    assert!((step.pitch_m - m.aperture_m / 95.0).abs() < 1e-9);
-    assert_eq!(step.resistor_margin_w.len(), 4, "one margin per HV tile");
+    assert!((step.pitch.into_base() - m.aperture_m / 95.0).abs() < 1e-9);
+    assert_eq!(step.resistor_margin.len(), 4, "one margin per HV tile");
 }
 
 #[test]
@@ -254,15 +254,18 @@ fn validate_against_budget_produces_full_report_for_v2() {
     let budget = v2_budget(&m);
     let v = validate_against_budget(&m, &budget).expect("v2 validation");
     assert_eq!(v.step.lanes, 96);
-    assert!(v.focal_pressure_pa > 0.0, "positive focal pressure");
+    assert!(
+        v.focal_pressure.into_base() > 0.0,
+        "positive focal pressure"
+    );
     assert!(v.mechanical_index >= 0.0);
-    assert!(v.isppa_w_cm2 > 0.0);
-    assert!(v.axial_extent_mm > 0.0 && v.lateral_extent_mm > 0.0);
+    assert!(v.isppa.into_base() > 0.0);
+    assert!(v.axial_extent.into_base() > 0.0 && v.lateral_extent.into_base() > 0.0);
     // Article-class ~half-wavelength pitch ⇒ grating-lobe-free over ±90°.
     assert!(v.grating_lobe_free);
     // Four kwavers safety checks aggregated; margin vector mirrors the 4 tiles.
     assert_eq!(v.report.checks.len(), 4);
-    assert_eq!(v.resistor_margin_w.len(), 4);
+    assert_eq!(v.resistor_margin.len(), 4);
 }
 
 #[test]

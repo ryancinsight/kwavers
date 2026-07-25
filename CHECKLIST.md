@@ -1,5 +1,18 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-13 typed driver beam/result metrics [major] — implementation complete; verification blocked 2026-07-24
+
+- [x] Type `KwaversBeamStep` geometry/timing fields with Aequitas quantities.
+- [x] Type `KwaversBeamValidation`, `PressureMap`, and `ExperimentMetrics`
+      physical result fields; retain dimensionless flags/indices and model
+      coefficients as scalars.
+- [x] Migrate all in-tree driver callers and explicit scalar boundaries.
+- [x] Synchronize gap audit, ADR 059, changelog, and acceptance evidence.
+- [ ] Run focused formatting/check/Nextest/Clippy/doctest/Rustdoc gates; record
+      the peer Coeus graph blocker if it persists. **Blocked before source
+      compilation: `D:\atlas\worktrees\coeus\coeus-autograd\Cargo.toml` is
+      missing.**
+
 ## Owner: Codex — KWAVERS-AEQ-MET-12 typed transducer design and propagation metrics [major] — implementation done, verification blocked 2026-07-24
 
 - [x] Add the provider-owned pressure-per-current dimension and quantity.

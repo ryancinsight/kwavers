@@ -8,10 +8,11 @@ use crate::manifest::{
     DriverManifest, EnergyBudgetInputs, ResistorPackage, TileStimulationProfile,
 };
 use crate::ssot::*;
+use aequitas::systems::si::quantities::Power;
 
 use super::acoustic::{AcousticSimulator, InCrateAcousticSim};
 use super::dispatch::TileDispatch;
-use super::metrics::{build_beam_report, ExperimentMetrics};
+use super::metrics::{ExperimentMetrics, build_beam_report};
 use super::recorder::artifact_key;
 use super::runner::run_experiment;
 use super::stimulus::{DefaultStimulus, Stimulus};
@@ -131,12 +132,13 @@ fn thermal_propagation_rise_equals_power_times_theta() {
     let theta = 40.0_f64; // K/W
     let dt_max = 30.0_f64;
     let ts = propagate_thermal(&b, theta, dt_max);
-    assert_eq!(ts.per_tile_rise_k.len(), 4);
-    for (i, &rise) in ts.per_tile_rise_k.iter().enumerate() {
+    assert_eq!(ts.per_tile_rise.len(), 4);
+    for (i, &rise) in ts.per_tile_rise.iter().enumerate() {
         let expected = b.per_tile_device_total_w[i] * theta;
         assert!(
-            (rise - expected).abs() < 1e-10,
-            "tile {i}: rise {rise} != {expected}"
+            (rise.into_base() - expected).abs() < 1e-10,
+            "tile {i}: rise {} != {expected}",
+            rise.into_base()
         );
     }
     let expected_peak = b
@@ -145,8 +147,8 @@ fn thermal_propagation_rise_equals_power_times_theta() {
         .copied()
         .fold(0.0_f64, f64::max)
         * theta;
-    assert!((ts.peak_rise_k - expected_peak).abs() < 1e-10);
-    assert!((ts.headroom_k - (dt_max - expected_peak)).abs() < 1e-10);
+    assert!((ts.peak_rise.into_base() - expected_peak).abs() < 1e-10);
+    assert!((ts.headroom.into_base() - (dt_max - expected_peak)).abs() < 1e-10);
 }
 
 #[test]
@@ -154,7 +156,10 @@ fn thermal_headroom_negative_when_over_budget() {
     let m = v2_manifest();
     let b = v2_budget(&m);
     let ts = propagate_thermal(&b, 40.0, 0.0); // dt_max = 0 ⇒ always over budget
-    assert!(ts.headroom_k <= 0.0, "headroom must be ≤ 0 when dt_max=0");
+    assert!(
+        ts.headroom.into_base() <= 0.0,
+        "headroom must be ≤ 0 when dt_max=0"
+    );
 }
 
 // ── acoustic (InCrateAcousticSim) ────────────────────────────────────────────────────────────────
@@ -167,9 +172,9 @@ fn in_crate_sim_focal_pressure_above_1mpa() {
     let map = InCrateAcousticSim.simulate(&step, &b).unwrap();
     // Article-class 96-element stack yields ~10–15 MPa; must be at least 1 MPa.
     assert!(
-        map.focal_pressure_pa >= KWVERS_MIN_FOCAL_PRESSURE_1MPA_IN_PA,
+        map.focal_pressure.into_base() >= KWVERS_MIN_FOCAL_PRESSURE_1MPA_IN_PA,
         "focal pressure {:.3e} Pa below 1 MPa floor",
-        map.focal_pressure_pa
+        map.focal_pressure.into_base()
     );
 }
 
@@ -204,11 +209,11 @@ fn in_crate_sim_all_scalars_finite() {
     let b = v2_budget(&m);
     let step = crate::validate::manifest_to_kwavers_beam_step(&m, &b).unwrap();
     let map = InCrateAcousticSim.simulate(&step, &b).unwrap();
-    assert!(map.focal_pressure_pa.is_finite(), "focal_pressure_pa");
+    assert!(map.focal_pressure.into_base().is_finite(), "focal_pressure");
     assert!(map.mechanical_index.is_finite(), "mechanical_index");
-    assert!(map.isppa_w_cm2.is_finite(), "isppa_w_cm2");
-    assert!(map.axial_extent_mm.is_finite(), "axial_extent_mm");
-    assert!(map.lateral_extent_mm.is_finite(), "lateral_extent_mm");
+    assert!(map.isppa.into_base().is_finite(), "isppa");
+    assert!(map.axial_extent.into_base().is_finite(), "axial_extent");
+    assert!(map.lateral_extent.into_base().is_finite(), "lateral_extent");
 }
 
 // ── metrics + beam_report ─────────────────────────────────────────────────────────────────────────
@@ -221,9 +226,11 @@ fn experiment_metrics_mirrors_pressure_and_thermal() {
     let pressure = InCrateAcousticSim.simulate(&step, &b).unwrap();
     let thermal = propagate_thermal(&b, 40.0, 30.0);
     let metrics = ExperimentMetrics::from_parts(&pressure, &thermal);
-    assert!((metrics.focal_pressure_pa - pressure.focal_pressure_pa).abs() < 1e-9);
-    assert!((metrics.peak_thermal_rise_k - thermal.peak_rise_k).abs() < 1e-9);
-    assert!((metrics.thermal_headroom_k - thermal.headroom_k).abs() < 1e-9);
+    assert!(
+        (metrics.focal_pressure.into_base() - pressure.focal_pressure.into_base()).abs() < 1e-9
+    );
+    assert!((metrics.peak_thermal_rise.into_base() - thermal.peak_rise.into_base()).abs() < 1e-9);
+    assert!((metrics.thermal_headroom.into_base() - thermal.headroom.into_base()).abs() < 1e-9);
     assert_eq!(metrics.grating_lobe_free, pressure.grating_lobe_free);
 }
 
@@ -234,14 +241,14 @@ fn beam_report_all_pass_for_article_class() {
     let step = crate::validate::manifest_to_kwavers_beam_step(&m, &b).unwrap();
     let pressure = InCrateAcousticSim.simulate(&step, &b).unwrap();
     let min_margin = step
-        .resistor_margin_w
+        .resistor_margin
         .iter()
         .copied()
-        .fold(f64::INFINITY, f64::min);
-    let min_margin = if min_margin.is_finite() {
+        .min_by(|lhs, rhs| lhs.into_base().total_cmp(&rhs.into_base()));
+    let min_margin = if let Some(min_margin) = min_margin {
         min_margin
     } else {
-        0.0
+        Power::from_base(0.0)
     };
     let report = build_beam_report(&pressure, &step, min_margin);
     assert!(
@@ -285,10 +292,10 @@ fn run_experiment_returns_valid_report_for_article_class() {
     );
     // Thermal gate: dt_max=30 K; rise from article-class dissipation should have headroom.
     assert!(
-        report.record.metrics.focal_pressure_pa >= KWVERS_MIN_FOCAL_PRESSURE_1MPA_IN_PA,
+        report.record.metrics.focal_pressure.into_base() >= KWVERS_MIN_FOCAL_PRESSURE_1MPA_IN_PA,
         "focal pressure below 1 MPa floor"
     );
-    assert_eq!(report.thermal.per_tile_rise_k.len(), 4);
+    assert_eq!(report.thermal.per_tile_rise.len(), 4);
 }
 
 #[test]
@@ -318,11 +325,13 @@ fn run_experiment_thermal_headroom_tracks_theta_jc() {
     let r_low = run_experiment(&m, &b, &InCrateAcousticSim, 10.0, 30.0).unwrap();
     let r_high = run_experiment(&m, &b, &InCrateAcousticSim, 80.0, 30.0).unwrap();
     assert!(
-        r_low.record.metrics.peak_thermal_rise_k < r_high.record.metrics.peak_thermal_rise_k,
+        r_low.record.metrics.peak_thermal_rise.into_base()
+            < r_high.record.metrics.peak_thermal_rise.into_base(),
         "higher θ_jc must yield higher peak rise"
     );
     assert!(
-        r_low.record.metrics.thermal_headroom_k > r_high.record.metrics.thermal_headroom_k,
+        r_low.record.metrics.thermal_headroom.into_base()
+            > r_high.record.metrics.thermal_headroom.into_base(),
         "higher θ_jc must yield less headroom"
     );
 }
@@ -351,9 +360,9 @@ fn kwavers_array_design_realizes_manifest_lane_span() {
         .fold(f64::NEG_INFINITY, f64::max);
     let realized_center_span_m = y_max - y_min;
     assert!(
-        (realized_center_span_m - step.aperture_m).abs() < 1.0e-12,
+        (realized_center_span_m - step.aperture.into_base()).abs() < 1.0e-12,
         "channel centers span the driver manifest aperture: realized={realized_center_span_m:.16e} expected={:.16e}",
-        step.aperture_m
+        step.aperture.into_base()
     );
     assert!(
         design.grating_lobe_free,
@@ -368,7 +377,7 @@ fn kwavers_sim_report_uses_realized_geometry_and_tile_current() {
         AcousticImpedance, ElectricCurrent, Frequency, PressurePerElectricCurrent, Velocity,
     };
     use kwavers_transducer::{
-        propagate_focused_linear_array, CartesianPosition, FocusedLinearArrayPropagationSpec,
+        CartesianPosition, FocusedLinearArrayPropagationSpec, propagate_focused_linear_array,
     };
 
     let manifest = v2_manifest();
@@ -384,9 +393,10 @@ fn kwavers_sim_report_uses_realized_geometry_and_tile_current() {
     let expected = propagate_focused_linear_array(&FocusedLinearArrayPropagationSpec {
         design,
         center: CartesianPosition::from_base([0.0, 0.0, 0.0]).unwrap(),
-        focus: CartesianPosition::from_base([0.0, 0.0, report.record.step.focal_m]).unwrap(),
-        frequency: Frequency::from_base(report.record.step.frequency_hz),
-        sound_speed: Velocity::from_base(report.record.step.sound_speed_m_s),
+        focus: CartesianPosition::from_base([0.0, 0.0, report.record.step.focal.into_base()])
+            .unwrap(),
+        frequency: report.record.step.frequency,
+        sound_speed: report.record.step.sound_speed,
         per_channel_peak_current: ElectricCurrent::from_base(
             budget.peak_i_a / CHANNELS_PER_TILE_V2 as f64,
         ),
@@ -397,17 +407,18 @@ fn kwavers_sim_report_uses_realized_geometry_and_tile_current() {
     })
     .unwrap();
     assert!(
-        (report.record.metrics.focal_pressure_pa - expected.focal_pressure.into_base()).abs()
+        (report.record.metrics.focal_pressure.into_base() - expected.focal_pressure.into_base())
+            .abs()
             <= expected.focal_pressure.into_base() * 1.0e-12,
         "focal pressure must come from kwavers-transducer focused propagation"
     );
     assert!(
-        (report.record.metrics.lateral_extent_mm - expected.lateral_extent.into_base() * 1.0e3)
+        (report.record.metrics.lateral_extent.into_base() - expected.lateral_extent.into_base())
             .abs()
             <= expected.lateral_extent.into_base() * 1.0e3 * 1.0e-12
     );
     assert!(
-        (report.record.metrics.axial_extent_mm - expected.axial_extent.into_base() * 1.0e3).abs()
+        (report.record.metrics.axial_extent.into_base() - expected.axial_extent.into_base()).abs()
             <= expected.axial_extent.into_base() * 1.0e3 * 1.0e-12
     );
     assert_eq!(

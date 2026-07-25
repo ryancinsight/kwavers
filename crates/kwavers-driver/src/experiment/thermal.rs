@@ -9,17 +9,18 @@
 //! struct shape is the boundary between the thermal and experiment layers.
 
 use crate::manifest::EnergyBudgetReport;
+use aequitas::systems::si::quantities::TemperatureDifference;
 
 /// Per-tile thermal state derived from the energy budget + package θ_jc.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ThermalState {
     /// Per-tile junction temperature rise above ambient (K) = `per_tile_device_total_w`i` × θ_jc`.
-    pub per_tile_rise_k: Vec<f64>,
+    pub per_tile_rise: Vec<TemperatureDifference>,
     /// Peak tile temperature rise (K) — the thermal-placer's binding constraint.
-    pub peak_rise_k: f64,
+    pub peak_rise: TemperatureDifference,
     /// Thermal headroom (K) = `dt_max_k − peak_rise_k`.
     /// Negative ⇒ over the design thermal budget.
-    pub headroom_k: f64,
+    pub headroom: TemperatureDifference,
 }
 
 /// Propagate device dissipation from `budget` through package θ_jc (K/W) to a [`ThermalState`].
@@ -45,8 +46,11 @@ pub fn propagate_thermal(
         .collect();
     let peak_rise_k = per_tile_rise_k.iter().copied().fold(0.0_f64, f64::max);
     ThermalState {
-        per_tile_rise_k,
-        peak_rise_k,
-        headroom_k: dt_max_k - peak_rise_k,
+        per_tile_rise: per_tile_rise_k
+            .into_iter()
+            .map(TemperatureDifference::from_base)
+            .collect(),
+        peak_rise: TemperatureDifference::from_base(peak_rise_k),
+        headroom: TemperatureDifference::from_base(dt_max_k - peak_rise_k),
     }
 }

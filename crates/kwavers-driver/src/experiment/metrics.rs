@@ -12,6 +12,9 @@
 
 use crate::ssot::*;
 use crate::validate::{Check, KwaversBeamStep, PhysicsReport};
+use aequitas::systems::si::quantities::{
+    Intensity, Length, Power, Pressure, TemperatureDifference,
+};
 
 use super::acoustic::PressureMap;
 use super::thermal::ThermalState;
@@ -22,23 +25,23 @@ use super::thermal::ThermalState;
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExperimentMetrics {
     /// Coherent focal pressure (Pa).
-    pub focal_pressure_pa: f64,
+    pub focal_pressure: Pressure,
     /// Mechanical Index at the focus (dimensionless).
     pub mechanical_index: f64,
     /// Spatial-peak pulse-average intensity (W/cm²).
-    pub isppa_w_cm2: f64,
+    pub isppa: Intensity,
     /// 6 dB axial extent proxy (mm).
-    pub axial_extent_mm: f64,
+    pub axial_extent: Length,
     /// 6 dB lateral extent proxy (mm).
-    pub lateral_extent_mm: f64,
+    pub lateral_extent: Length,
     /// True iff grating-lobe-free over ±90°.
     pub grating_lobe_free: bool,
     /// True iff focus is in the far field (information-only).
     pub in_far_field: bool,
     /// Peak tile junction temperature rise (K).
-    pub peak_thermal_rise_k: f64,
-    /// Thermal headroom (K) = `dt_max_k − peak_thermal_rise_k`.
-    pub thermal_headroom_k: f64,
+    pub peak_thermal_rise: TemperatureDifference,
+    /// Thermal headroom = `dt_max − peak_thermal_rise`.
+    pub thermal_headroom: TemperatureDifference,
 }
 
 impl ExperimentMetrics {
@@ -46,15 +49,15 @@ impl ExperimentMetrics {
     #[must_use]
     pub fn from_parts(pressure: &PressureMap, thermal: &ThermalState) -> Self {
         Self {
-            focal_pressure_pa: pressure.focal_pressure_pa,
+            focal_pressure: pressure.focal_pressure,
             mechanical_index: pressure.mechanical_index,
-            isppa_w_cm2: pressure.isppa_w_cm2,
-            axial_extent_mm: pressure.axial_extent_mm,
-            lateral_extent_mm: pressure.lateral_extent_mm,
+            isppa: pressure.isppa,
+            axial_extent: pressure.axial_extent,
+            lateral_extent: pressure.lateral_extent,
             grating_lobe_free: pressure.grating_lobe_free,
             in_far_field: pressure.in_far_field,
-            peak_thermal_rise_k: thermal.peak_rise_k,
-            thermal_headroom_k: thermal.headroom_k,
+            peak_thermal_rise: thermal.peak_rise,
+            thermal_headroom: thermal.headroom,
         }
     }
 }
@@ -69,12 +72,12 @@ impl ExperimentMetrics {
 pub fn build_beam_report(
     map: &PressureMap,
     _step: &KwaversBeamStep,
-    min_resistor_margin_w: f64,
+    min_resistor_margin: Power,
 ) -> PhysicsReport {
     PhysicsReport::new(vec![
         Check::lower(
             CHECK_FOCAL_PRESSURE_NAME,
-            map.focal_pressure_pa,
+            map.focal_pressure.into_base(),
             KWVERS_MIN_FOCAL_PRESSURE_1MPA_IN_PA,
             "Pa",
         ),
@@ -92,7 +95,7 @@ pub fn build_beam_report(
         ),
         Check::lower(
             CHECK_RESISTOR_MARGIN_NAME,
-            min_resistor_margin_w,
+            min_resistor_margin.into_base(),
             KWVERS_MIN_RESISTOR_MARGIN_W,
             "W",
         ),

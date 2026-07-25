@@ -1,5 +1,21 @@
 # Backlog / Strategy
 
+## KWAVERS-AEQ-MET-13 — Type driver beam/result metrics [major] — implementation complete; verification blocked 2026-07-24
+
+- Owner: Codex; scope: `kwavers-driver` beam-step, acoustic result, and
+  aggregate experiment metric DTOs plus in-tree callers, ADR 059, and
+  synchronized Aequitas metric PM artifacts. Text manifest serialization and
+  dimensionless/model coefficients remain explicit scalar boundaries.
+- Outcome: driver-facing aperture, frequency, speed, focal depth, timing,
+  pitch, wavelength, pressure, intensity, axial/lateral extent, and thermal
+  rise/headroom values retain Aequitas types through public DTOs.
+- Acceptance: existing beam/experiment value oracles preserve their results;
+  scalar conversion occurs only at text, numerical, and check-report
+  boundaries; no duplicate unit formulas or compatibility facade remains.
+- Evidence: direct rustfmt and diff checks pass. Cargo cannot load the
+  workspace before compiling `kwavers-driver` because
+  `D:\atlas\worktrees\coeus\coeus-autograd\Cargo.toml` is missing.
+
 ## KWAVERS-AEQ-MET-12 — Type transducer design and propagation metrics [major] — implementation done, verification blocked 2026-07-24
 
 - Owner: Codex; scope: `kwavers-transducer::design`, focused propagation

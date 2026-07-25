@@ -18,22 +18,23 @@ use crate::physics::acoustic::{
 };
 use crate::ssot::*;
 use crate::validate::KwaversBeamStep;
+use aequitas::systems::si::quantities::{Intensity, Length, Pressure};
 
 /// Acoustic pressure-field output — every scalar the in-crate model and kwavers backend emit.
 ///
 /// `PartialEq` is derived for test assertions; `f64` fields preclude `Eq` (NaN ≠ NaN).
 #[derive(Debug, Clone, PartialEq)]
 pub struct PressureMap {
-    /// Coherent focal pressure (Pa) — `N`-fold sum × per-element current × article sensitivity.
-    pub focal_pressure_pa: f64,
+    /// Coherent focal pressure — `N`-fold sum × per-element current × article sensitivity.
+    pub focal_pressure: Pressure,
     /// Mechanical Index at the focus = `p_mpa / √f_mhz` (FDA Track-3 dimensionless).
     pub mechanical_index: f64,
-    /// Spatial-peak pulse-average intensity (W/cm²) at the focus.
-    pub isppa_w_cm2: f64,
-    /// 6 dB axial intensity half-width proxy (mm) = `2 · f# · λ`.
-    pub axial_extent_mm: f64,
-    /// 6 dB lateral intensity half-width proxy (mm) = `λ · f#`.
-    pub lateral_extent_mm: f64,
+    /// Spatial-peak pulse-average intensity at the focus.
+    pub isppa: Intensity,
+    /// 6 dB axial intensity half-width proxy = `2 · f# · λ`.
+    pub axial_extent: Length,
+    /// 6 dB lateral intensity half-width proxy = `λ · f#`.
+    pub lateral_extent: Length,
     /// True iff the element pitch is grating-lobe-free over the full ±90° steering range.
     pub grating_lobe_free: bool,
     /// True iff the focus lies beyond the near-field (Fraunhofer) distance. Information-only:
@@ -80,25 +81,25 @@ impl AcousticSimulator for InCrateAcousticSim {
         if !focal_pressure_pa.is_finite() {
             return Err(ExperimentError::NonFiniteTransient { step: 0, t_s: 0.0 }.into());
         }
-        let isppa_w_cm2 = acoustic_intensity_w_per_m2(focal_pressure_pa, PHYSICS_WATER_Z0_RAYL)
-            / UNIT_W_CM2_PER_W_M2;
+        let isppa_w_m2 = acoustic_intensity_w_per_m2(focal_pressure_pa, PHYSICS_WATER_Z0_RAYL);
         let mi = mechanical_index(
             focal_pressure_pa / UNIT_PA_PER_MPA,
-            step.frequency_hz / UNIT_MHZ_PER_HZ,
+            step.frequency.into_base() / UNIT_MHZ_PER_HZ,
         );
-        let grating_lobe_free = max_grating_free_steer_deg(step.pitch_m, step.wavelength_m)
-            >= KWVERS_MIN_GRATING_FREE_STEER_DEG;
-        let n_far = near_field_distance_m(step.aperture_m, step.wavelength_m);
-        let in_far_field = step.focal_m >= n_far;
+        let grating_lobe_free =
+            max_grating_free_steer_deg(step.pitch.into_base(), step.wavelength.into_base())
+                >= KWVERS_MIN_GRATING_FREE_STEER_DEG;
+        let n_far = near_field_distance_m(step.aperture.into_base(), step.wavelength.into_base());
+        let in_far_field = step.focal.into_base() >= n_far;
         // 6 dB half-widths from uniform-illumination analytical model; kwavers refines these.
-        let axial_extent_mm = 2.0 * step.f_number * step.wavelength_m * UNIT_MM_PER_M;
-        let lateral_extent_mm = step.wavelength_m * step.f_number * UNIT_MM_PER_M;
+        let axial_extent = Length::from_base(2.0 * step.f_number * step.wavelength.into_base());
+        let lateral_extent = Length::from_base(step.wavelength.into_base() * step.f_number);
         Ok(PressureMap {
-            focal_pressure_pa,
+            focal_pressure: Pressure::from_base(focal_pressure_pa),
             mechanical_index: mi,
-            isppa_w_cm2,
-            axial_extent_mm,
-            lateral_extent_mm,
+            isppa: Intensity::from_base(isppa_w_m2),
+            axial_extent,
+            lateral_extent,
             grating_lobe_free,
             in_far_field,
         })
@@ -116,15 +117,15 @@ impl AcousticSimulator for InCrateAcousticSim {
 ///   test on the realized pitch after quantization) rather than the driver-side
 ///   `max_grating_free_steer_deg` approximation.
 /// * `in_far_field` — from `design.aperture_y()` (realized aperture after integer element
-///   count) rather than `step.aperture_m` (requested aperture, pre-quantization).
-/// * `focal_pressure_pa`, `mechanical_index`, `isppa_w_cm2`, and beam extents — from
+///   count) rather than `step.aperture` (requested aperture, pre-quantization).
+/// * `focal_pressure`, `mechanical_index`, `isppa`, and beam extents — from
 ///   `kwavers-transducer` propagation, not rederived in this crate.
 #[cfg(feature = "kwavers")]
 pub struct KwaversSim;
 
 /// Synthesize the kwavers-transducer array geometry for a driver pre-step.
 ///
-/// [`KwaversBeamStep::aperture_m`] is the first-to-last channel-centre span. In
+/// [`KwaversBeamStep::aperture`] is the first-to-last channel-centre span. In
 /// `kwavers-transducer`, [`kwavers_transducer::ApertureDesignSpec::aperture_y`] is the
 /// pitch-cell span. The adapter therefore adds one channel pitch before calling
 /// [`kwavers_transducer::design_array`], so the realized channel count remains equal to the
@@ -140,20 +141,20 @@ pub(crate) fn array_design_from_step(
     step: &KwaversBeamStep,
 ) -> Result<kwavers_transducer::ArrayDesign, crate::Error> {
     use crate::error::Validate;
-    use aequitas::systems::si::quantities::{Frequency, Length, Velocity};
+    use aequitas::systems::si::quantities::Length;
     use kwavers_transducer::{
-        design_array, ApertureDesignSpec, ChannelWiring, DEFAULT_KERF_FRACTION,
+        ApertureDesignSpec, ChannelWiring, DEFAULT_KERF_FRACTION, design_array,
     };
 
     // 1-D linear array: elevation axis collapsed (aperture_x = 0 -> nx = 1 element),
     // steering along aperture_y. ColumnsAsChannels wires the single elevation row
     // into n_channels = ny independently-driven linear channels.
-    let pitch_fraction = (step.pitch_m / step.wavelength_m).clamp(1e-9, 2.0);
+    let pitch_fraction = (step.pitch.into_base() / step.wavelength.into_base()).clamp(1e-9, 2.0);
     let spec = ApertureDesignSpec {
         aperture_x: Length::from_base(0.0),
-        aperture_y: Length::from_base(step.aperture_m + step.pitch_m),
-        frequency: Frequency::from_base(step.frequency_hz),
-        sound_speed: Velocity::from_base(step.sound_speed_m_s),
+        aperture_y: Length::from_base(step.aperture.into_base() + step.pitch.into_base()),
+        frequency: step.frequency,
+        sound_speed: step.sound_speed,
         max_pitch_fraction: pitch_fraction,
         kerf_fraction: DEFAULT_KERF_FRACTION,
         wiring: ChannelWiring::ColumnsAsChannels,
@@ -176,10 +177,10 @@ pub(crate) fn kwavers_pressure_map_from_step(
 ) -> Result<PressureMap, crate::Error> {
     use crate::error::Validate;
     use aequitas::systems::si::quantities::{
-        AcousticImpedance, ElectricCurrent, Frequency, PressurePerElectricCurrent, Velocity,
+        AcousticImpedance, ElectricCurrent, PressurePerElectricCurrent,
     };
     use kwavers_transducer::{
-        propagate_focused_linear_array, CartesianPosition, FocusedLinearArrayPropagationSpec,
+        CartesianPosition, FocusedLinearArrayPropagationSpec, propagate_focused_linear_array,
     };
 
     let design = array_design_from_step(step)?;
@@ -188,10 +189,10 @@ pub(crate) fn kwavers_pressure_map_from_step(
         design,
         center: CartesianPosition::from_base([0.0, 0.0, 0.0])
             .map_err(|e| format!("CartesianPosition center: {e}"))?,
-        focus: CartesianPosition::from_base([0.0, 0.0, step.focal_m])
+        focus: CartesianPosition::from_base([0.0, 0.0, step.focal.into_base()])
             .map_err(|e| format!("CartesianPosition focus: {e}"))?,
-        frequency: Frequency::from_base(step.frequency_hz),
-        sound_speed: Velocity::from_base(step.sound_speed_m_s),
+        frequency: step.frequency,
+        sound_speed: step.sound_speed,
         per_channel_peak_current: ElectricCurrent::from_base(per_element_i_a),
         pressure_per_current: PressurePerElectricCurrent::from_base(
             KWVERS_ARTICLE_FOCAL_PRESSURE_PER_AMP_PA,
@@ -203,11 +204,11 @@ pub(crate) fn kwavers_pressure_map_from_step(
     })?;
 
     Ok(PressureMap {
-        focal_pressure_pa: map.focal_pressure.into_base(),
+        focal_pressure: map.focal_pressure,
         mechanical_index: map.mechanical_index,
-        isppa_w_cm2: map.isppa.into_base() / UNIT_W_CM2_PER_W_M2,
-        axial_extent_mm: map.axial_extent.into_base() * UNIT_MM_PER_M,
-        lateral_extent_mm: map.lateral_extent.into_base() * UNIT_MM_PER_M,
+        isppa: map.isppa,
+        axial_extent: map.axial_extent,
+        lateral_extent: map.lateral_extent,
         grating_lobe_free: map.grating_lobe_free,
         in_far_field: map.in_far_field,
     })

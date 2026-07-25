@@ -78,8 +78,9 @@ pub struct EnergyBudgetReport {
     /// the over-rate magnitude (for matching-cap tightening) without re-deriving the
     /// dissipation. Small ≳ 0 ⇒ tile is at the package limit (cannot absorb further
     /// dissipation on the chosen footprint); deeply negative ⇒ consumer must act.
-    /// Mirrors [`crate::validate::KwaversBeamStep::resistor_margin_w`] and
-    /// [`crate::validate::KwaversBeamValidation::resistor_margin_w`].
+    /// Converts into [`crate::validate::KwaversBeamStep::resistor_margin`] and
+    /// [`crate::validate::KwaversBeamValidation::resistor_margin`] at the
+    /// driver boundary.
     pub per_tile_resistor_margin_w: Vec<f64>,
     /// Routed-board ampacity headroom (A) supplied by the caller.
     pub ampacity_headroom_a: f64,
@@ -174,7 +175,11 @@ impl DriverManifest {
         if headroom_margin_a < 0.0 {
             return Err(format!(
                 "routed ampacity {:.3} A cannot supply peak {:.3} A (frame duty {} from {} tiles × {} ch)",
-                inputs.ampacity_headroom_a, peak_duty_weighted_i_a, max_duty, 4, CHANNELS_PER_TILE_V2
+                inputs.ampacity_headroom_a,
+                peak_duty_weighted_i_a,
+                max_duty,
+                4,
+                CHANNELS_PER_TILE_V2
             ));
         }
         // Per-tile resistor power margin (W) under the chosen footprint's

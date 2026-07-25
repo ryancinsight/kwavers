@@ -4,6 +4,12 @@
 
 ### Changed
 
+- **Breaking**: `kwavers-driver` beam-step and acoustic/aggregate result DTOs
+  now carry Aequitas geometry, timing, pressure, intensity, extent, and
+  thermal quantities. Manifest text and numerical/check-report boundaries
+  remain explicit scalar adapters. See
+  [ADR 059](docs/ADR/059-driver-beam-result-quantities.md).
+
 - **Breaking**: aperture design and focused propagation now use Aequitas
   `Length`, `Frequency`, `Velocity`, `Pressure`, `Intensity`, acoustic
   impedance, current, and pressure-per-current quantities. Scalar extraction

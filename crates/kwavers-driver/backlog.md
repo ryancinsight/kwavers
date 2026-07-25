@@ -126,10 +126,10 @@ Change-class tags per SemVer. Sprint target: 0.1.0 (Foundation).
       `validate_v2_energy_budget` (ampacity gate first, then per-tile rating so a single
       design-fix pass addresses both). Per-tile margin is propagated to the kwavers
       consumer: `EnergyBudgetReport::per_tile_resistor_margin_w` →
-      `KwaversBeamStep::resistor_margin_w` →
-      `KwaversBeamValidation::resistor_margin_w`, and a 4th kwavers-side safety check
+      `KwaversBeamStep::resistor_margin` →
+      `KwaversBeamValidation::resistor_margin`, and a 4th kwavers-side safety check
       `resistor margin (per-tile min) ≥ 0 W` locks the post-rejection invariant at the
-      seam. The propagated kwavers path reads `step.resistor_margin_w[i]` to plan footprint bumps
+      seam. The propagated kwavers path reads `step.resistor_margin[i]` to plan footprint bumps
       (`      Smd2512 -> Smd4527`) and matching-cap tightening without re-deriving
       `pulser_dissipation`. Smd4527 covers the article-class envelope (50 pF / 150 V /
       +50 Hz per-tile PRF stagger: tile[0] ~0.98 W, tile[3] ~1.13 W, Smd4527

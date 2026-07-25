@@ -15,11 +15,12 @@
 use crate::error::validate::Validate;
 use crate::manifest::{DriverManifest, EnergyBudgetReport};
 use crate::validate::manifest_to_kwavers_beam_step;
+use aequitas::systems::si::quantities::Power;
 
 use super::acoustic::AcousticSimulator;
-use super::metrics::{build_beam_report, ExperimentMetrics};
+use super::metrics::{ExperimentMetrics, build_beam_report};
 use super::recorder::ExperimentRecord;
-use super::thermal::{propagate_thermal, ThermalState};
+use super::thermal::{ThermalState, propagate_thermal};
 
 /// Full output of one [`run_experiment`] call.
 #[derive(Debug, Clone)]
@@ -66,17 +67,17 @@ pub fn run_experiment<S: AcousticSimulator>(
     // 4. Build the 4-check beam report from the simulated scalars (not from the analytical
     //    estimate in validate_against_budget). The per-tile min resistor margin is sourced
     //    from the budget (already gated at validate_v2_energy_budget time).
-    let min_resistor_margin_w = step
-        .resistor_margin_w
+    let min_resistor_margin = step
+        .resistor_margin
         .iter()
         .copied()
-        .fold(f64::INFINITY, f64::min);
-    let min_resistor_margin_w = if min_resistor_margin_w.is_finite() {
-        min_resistor_margin_w
+        .min_by(|lhs, rhs| lhs.into_base().total_cmp(&rhs.into_base()));
+    let min_resistor_margin = if let Some(margin) = min_resistor_margin {
+        margin
     } else {
-        0.0
+        Power::from_base(0.0)
     };
-    let beam_report = build_beam_report(&pressure_map, &step, min_resistor_margin_w);
+    let beam_report = build_beam_report(&pressure_map, &step, min_resistor_margin);
 
     // 5. Assemble.
     let metrics = ExperimentMetrics::from_parts(&pressure_map, &thermal);
