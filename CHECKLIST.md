@@ -1,5 +1,18 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-03 typed transducer physical metrics [major] — in progress 2026-07-26
+
+- [ ] Add ADR 049 and migrate frequency, geometry, material, and Rayleigh
+      public boundaries to Aequitas quantities without a scalar compatibility
+      facade.
+- [ ] Update all in-repository design, k-Wave, Python, and test callers; keep
+      raw extraction confined to numerical kernels and preserve dimensionless
+      response metrics.
+- [ ] Run touched-package format, check, warning-denied Clippy, configured
+      Nextest, doctests, and Rustdoc; record exact evidence in the audit.
+- [ ] Refresh `gap_audit.md`, `backlog.md`, `CHECKLIST.md`, and `CHANGELOG.md`,
+      then commit and push the verified increment.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-01 typed CEM43/HIFU metrics [major] — done 2026-07-23
 
 - [x] Add validated `CumulativeEquivalentMinutes` backed by Aequitas `Time`;

@@ -1,5 +1,20 @@
 # Backlog / Strategy
 
+## KWAVERS-AEQ-MET-03 — Type transducer physical metrics [major] — in progress
+
+- Owner: Codex; claimed 2026-07-26; scope: `kwavers-transducer` physics
+  frequency, geometry, material, and Rayleigh public boundaries, their
+  in-repository callers, ADR 049, and synchronized metric PM artifacts.
+- Outcome: carry frequency, length, area, volume, velocity, acoustic
+  impedance, wavelength, and amplitude attenuation as Aequitas quantities;
+  retain dimensionless response, phase, Q, directivity, and reflection values.
+- Acceptance: unchanged KLM, geometry, Rayleigh, material, and design
+  value-semantic tests pass through configured Nextest; package check,
+  warning-denied Clippy, doctests, Rustdoc, and format checks pass for the
+  touched package. No compatibility scalar facade remains.
+- Risk/change class: `[major]`; public constructors, fields, and result types
+  change. Raw extraction is permitted only at validated numerical kernels.
+
 ## KWAVERS-AEQ-MET-01 — Type CEM43 and HIFU planning metrics [major] — done
 
 - Owner: Codex; scope: `kwavers-physics` thermal CEM43/HIFU calculators,
