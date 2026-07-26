@@ -3,21 +3,25 @@
 //! Models the frequency-dependent behavior of transducers including
 //! bandwidth, sensitivity, and impedance characteristics.
 
+use aequitas::systems::si::quantities::{Frequency, Length, Velocity};
 use eunomia::Complex64;
 use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
 use leto::Array1;
 
-fn linspace(start: f64, end: f64, num_points: usize) -> Array1<f64> {
+fn linspace(start: Frequency, end: Frequency, num_points: usize) -> Array1<Frequency> {
     if num_points == 0 {
         return Array1::zeros([0]);
     }
     if num_points == 1 {
         return Array1::from_vec([1], vec![start]).expect("linspace shape must match");
     }
-    let step = (end - start) / (num_points - 1) as f64;
+    let start_hz = start.into_base();
+    let step_hz = (end.into_base() - start_hz) / (num_points - 1) as f64;
     Array1::from_vec(
         [num_points],
-        (0..num_points).map(|i| start + step * i as f64).collect(),
+        (0..num_points)
+            .map(|i| Frequency::from_base(start_hz + step_hz * i as f64))
+            .collect(),
     )
     .expect("linspace shape must match")
 }
@@ -31,17 +35,17 @@ fn linspace(start: f64, end: f64, num_points: usize) -> Array1<f64> {
 #[derive(Debug, Clone)]
 pub struct FrequencyResponse {
     /// Center frequency (Hz)
-    pub center_frequency: f64,
+    pub center_frequency: Frequency,
     /// -3 dB bandwidth (Hz)
-    pub bandwidth_3db: f64,
+    pub bandwidth_3db: Frequency,
     /// -6 dB bandwidth (Hz)
-    pub bandwidth_6db: f64,
+    pub bandwidth_6db: Frequency,
     /// Fractional bandwidth (%)
     pub fractional_bandwidth: f64,
     /// Quality factor
     pub quality_factor: f64,
     /// Frequency vector (Hz)
-    pub frequencies: Array1<f64>,
+    pub frequencies: Array1<Frequency>,
     /// Magnitude response (normalized)
     pub magnitude: Array1<f64>,
     /// Phase response (radians)
@@ -63,23 +67,24 @@ impl FrequencyResponse {
     /// - Returns `KwaversError::Config` if the precondition for a Config-class constraint is violated.
     ///
     pub fn from_klm_model(
-        center_freq: f64,
+        center_freq: Frequency,
         coupling: f64,
         mechanical_q: f64,
         electrical_q: f64,
         num_points: usize,
     ) -> KwaversResult<Self> {
-        if center_freq <= 0.0 {
+        let center_freq_hz = center_freq.into_base();
+        if center_freq_hz <= 0.0 {
             return Err(KwaversError::Config(ConfigError::InvalidValue {
                 parameter: "center_frequency".to_owned(),
-                value: center_freq.to_string(),
+                value: center_freq_hz.to_string(),
                 constraint: "Center frequency must be positive".to_owned(),
             }));
         }
 
         // Create frequency vector (0.5 to 1.5 times center frequency)
-        let freq_min = 0.5 * center_freq;
-        let freq_max = 1.5 * center_freq;
+        let freq_min = Frequency::from_base(0.5 * center_freq_hz);
+        let freq_max = Frequency::from_base(1.5 * center_freq_hz);
         let frequencies = linspace(freq_min, freq_max, num_points);
 
         // Calculate normalized frequency
@@ -91,7 +96,7 @@ impl FrequencyResponse {
         let _bandwidth_factor = coupling.powi(2) / mechanical_q.sqrt();
 
         for (i, &freq) in frequencies.iter().enumerate() {
-            let normalized_freq = freq / center_freq;
+            let normalized_freq = freq.into_base() / center_freq_hz;
             let delta = normalized_freq - 1.0;
 
             // Mason model response
@@ -122,8 +127,8 @@ impl FrequencyResponse {
 
         // Find bandwidth points
         let (bandwidth_3db, bandwidth_6db) = Self::find_bandwidth_points(&frequencies, &magnitude);
-        let fractional_bandwidth = 100.0 * bandwidth_3db / center_freq;
-        let quality_factor = center_freq / bandwidth_3db;
+        let fractional_bandwidth = 100.0 * bandwidth_3db.into_base() / center_freq_hz;
+        let quality_factor = center_freq_hz / bandwidth_3db.into_base();
 
         Ok(Self {
             center_frequency: center_freq,
@@ -139,7 +144,10 @@ impl FrequencyResponse {
     }
 
     /// Find -3dB and -6dB bandwidth points
-    fn find_bandwidth_points(frequencies: &Array1<f64>, magnitude: &Array1<f64>) -> (f64, f64) {
+    fn find_bandwidth_points(
+        frequencies: &Array1<Frequency>,
+        magnitude: &Array1<f64>,
+    ) -> (Frequency, Frequency) {
         let threshold_3db = 1.0 / 2.0_f64.sqrt(); // -3 dB
         let threshold_6db = 0.5; // -6 dB
 
@@ -185,8 +193,10 @@ impl FrequencyResponse {
             }
         }
 
-        let bandwidth_3db = freq_high_3db - freq_low_3db;
-        let bandwidth_6db = freq_high_6db - freq_low_6db;
+        let bandwidth_3db =
+            Frequency::from_base(freq_high_3db.into_base() - freq_low_3db.into_base());
+        let bandwidth_6db =
+            Frequency::from_base(freq_high_6db.into_base() - freq_low_6db.into_base());
 
         (bandwidth_3db, bandwidth_6db)
     }
@@ -195,22 +205,25 @@ impl FrequencyResponse {
     ///
     /// Returns (pulse length, axial resolution) in meters
     #[must_use]
-    pub fn pulse_characteristics(&self, sound_speed: f64) -> (f64, f64) {
+    pub fn pulse_characteristics(&self, sound_speed: Velocity) -> (Length, Length) {
         // Pulse length ≈ (cycles * wavelength)
         // For typical transducers: 2-3 cycles
         let cycles = 2.5;
-        let wavelength = sound_speed / self.center_frequency;
+        let wavelength = sound_speed.into_base() / self.center_frequency.into_base();
         let pulse_length = cycles * wavelength;
 
         // Axial resolution ≈ pulse_length / 2
         let axial_resolution = pulse_length / 2.0;
 
-        (pulse_length, axial_resolution)
+        (
+            Length::from_base(pulse_length),
+            Length::from_base(axial_resolution),
+        )
     }
 
     /// Calculate sensitivity roll-off at a given frequency
     #[must_use]
-    pub fn sensitivity_at_frequency(&self, frequency: f64) -> f64 {
+    pub fn sensitivity_at_frequency(&self, frequency: Frequency) -> f64 {
         // Linear interpolation in the magnitude response
         let idx = self
             .frequencies
@@ -224,12 +237,12 @@ impl FrequencyResponse {
             self.magnitude[self.frequencies.len() - 1]
         } else {
             // Linear interpolation
-            let f1 = self.frequencies[idx - 1];
-            let f2 = self.frequencies[idx];
+            let f1 = self.frequencies[idx - 1].into_base();
+            let f2 = self.frequencies[idx].into_base();
             let m1 = self.magnitude[idx - 1];
             let m2 = self.magnitude[idx];
 
-            let t = (frequency - f1) / (f2 - f1);
+            let t = (frequency.into_base() - f1) / (f2 - f1);
             m1.mul_add(1.0 - t, m2 * t)
         }
     }

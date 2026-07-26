@@ -26,12 +26,12 @@ pub use directivity::TransducerDirectivityPattern;
 pub use frequency::FrequencyResponse;
 pub use geometry::ElementGeometry;
 pub use materials::{
-    corrective_lens_thickness, isoplanatic_steering_pose, AcousticLens, BackingLayer,
-    BackingMaterial, FresnelZonePlate, LensMaterial, MatchingLayer, PiezoMaterial, PiezoType,
+    AcousticLens, BackingLayer, BackingMaterial, FresnelZonePlate, LensMaterial, MatchingLayer,
+    PiezoMaterial, PiezoType, corrective_lens_thickness, isoplanatic_steering_pose,
 };
 pub use rayleigh::{
-    rayleigh_pressure, PlanarAperture, PlanarApertureGeometry, PlanarApertureShape,
-    RayleighIntegralSpec, RayleighLayer, RayleighPropagationPath,
+    PlanarAperture, PlanarApertureGeometry, PlanarApertureShape, RayleighIntegralSpec,
+    RayleighLayer, RayleighPropagationPath, rayleigh_pressure,
 };
 pub use sensitivity::TransducerSensitivity;
 
@@ -45,18 +45,20 @@ pub const MECHANICAL_Q: f64 = 80.0;
 /// Typical electrical quality factor  
 pub const ELECTRICAL_Q: f64 = 50.0;
 
-/// Standard acoustic impedance of PZT (`MRayl`)
-pub const PZT_IMPEDANCE: f64 = 30.0;
+/// Standard acoustic impedance of PZT (`Pa·s/m`).
+pub const PZT_IMPEDANCE: aequitas::systems::si::quantities::AcousticImpedance =
+    aequitas::systems::si::quantities::AcousticImpedance::from_base(30.0e6);
 
 /// Nominal soft-tissue/water *load* impedance for transducer matching-layer
-/// design (`MRayl`).
+/// design (`Pa·s/m`).
 ///
 /// This is a fixed manufacturing target: the quarter-wave matching layer is cut
 /// for `Z_match = √(Z_pzt · Z_load)` against this nominal load (Szabo 2014 §5;
 /// Cobbold 2007 §6). It is NOT the per-voxel propagation medium — a patient CT
 /// does not change a manufactured matching layer, so this constant is correctly
 /// frequency-/scan-independent and must not be replaced by a CT-derived value.
-pub const TISSUE_IMPEDANCE: f64 = 1.5;
+pub const TISSUE_IMPEDANCE: aequitas::systems::si::quantities::AcousticImpedance =
+    aequitas::systems::si::quantities::AcousticImpedance::from_base(1.5e6);
 
 /// Minimum kerf width as fraction of element width
 pub const MIN_KERF_RATIO: f64 = 0.05;
@@ -79,8 +81,9 @@ pub const MAX_ASPECT_RATIO: f64 = 10.0;
 /// Typical dielectric constant for PZT
 pub const PZT_DIELECTRIC_CONSTANT: f64 = 3400.0;
 
-/// Speed of sound in PZT (m/s)
-pub const PZT_SOUND_SPEED: f64 = 4600.0;
+/// Speed of sound in PZT.
+pub const PZT_SOUND_SPEED: aequitas::systems::si::quantities::Velocity =
+    aequitas::systems::si::quantities::Velocity::from_base(4600.0);
 
 /// Typical lens curvature radius factor
 pub const LENS_CURVATURE_FACTOR: f64 = 0.7;

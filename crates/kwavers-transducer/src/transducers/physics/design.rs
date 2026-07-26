@@ -6,6 +6,7 @@ use super::{
     BackingLayer, ElementGeometry, FrequencyResponse, MatchingLayer, PiezoMaterial,
     TransducerDirectivityPattern, TransducerSensitivity,
 };
+use aequitas::systems::si::quantities::{Frequency, Length};
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
@@ -33,39 +34,45 @@ impl TransducerDesign {
     /// Design transducer for specific application
     ///
     /// # Arguments
-    /// * `frequency` - Operating frequency (Hz)
+    /// * `frequency` - Operating frequency
     /// * `num_elements` - Number of array elements
-    /// * `aperture` - Total aperture size (m)
-    /// * `focal_length` - Optional focal length for focused transducer (m)
+    /// * `aperture` - Total aperture size
+    /// * `focal_length` - Optional focal length for focused transducer
     /// # Errors
     /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn design_for_application(
-        frequency: f64,
+        frequency: Frequency,
         num_elements: usize,
-        aperture: f64,
-        focal_length: Option<f64>,
+        aperture: Length,
+        focal_length: Option<Length>,
     ) -> KwaversResult<Self> {
         // Calculate element dimensions
-        let pitch = aperture / num_elements as f64;
-        let kerf = pitch * 0.1; // 10% kerf
-        let width = pitch - kerf;
+        let aperture_m = aperture.into_base();
+        let pitch_m = aperture_m / num_elements as f64;
+        let kerf_m = pitch_m * 0.1; // 10% kerf
+        let width_m = pitch_m - kerf_m;
 
         // Height depends on focusing
         let height = if focal_length.is_some() {
-            aperture / 4.0 // Smaller for focused
+            aperture_m / 4.0 // Smaller for focused
         } else {
-            aperture / 2.0 // Larger for unfocused
+            aperture_m / 2.0 // Larger for unfocused
         };
 
         // Calculate thickness for resonance at desired frequency
         let piezo = PiezoMaterial::pzt_5h();
-        let thickness = piezo.sound_speed / (2.0 * frequency);
+        let thickness_m = piezo.sound_speed.into_base() / (2.0 * frequency.into_base());
 
-        let geometry = ElementGeometry::new(width, height, thickness, kerf)?;
+        let geometry = ElementGeometry::new(
+            Length::from_base(width_m),
+            Length::from_base(height),
+            Length::from_base(thickness_m),
+            Length::from_base(kerf_m),
+        )?;
 
         // Design backing for broadband response
-        let backing = BackingLayer::tungsten_epoxy(5e-3);
+        let backing = BackingLayer::tungsten_epoxy(Length::from_base(5e-3));
 
         // Design matching layer
         let matching_layer = MatchingLayer::quarter_wave(
@@ -84,15 +91,19 @@ impl TransducerDesign {
         )?;
 
         // Calculate directivity pattern
-        let directivity =
-            TransducerDirectivityPattern::rectangular_element(width, height, frequency, 180);
+        let directivity = TransducerDirectivityPattern::rectangular_element(
+            width_m,
+            height,
+            frequency.into_base(),
+            180,
+        );
 
         // Calculate sensitivity
         let sensitivity = TransducerSensitivity::from_parameters(
             piezo.coupling_k33,
-            geometry.area(),
-            piezo.acoustic_impedance * 1e6, // Convert to Pa·s/m
-            frequency,
+            geometry.area().into_base(),
+            piezo.acoustic_impedance.into_base(),
+            frequency.into_base(),
         );
 
         Ok(Self {
@@ -146,20 +157,26 @@ impl TransducerDesign {
 
     /// Calculate focal characteristics (if focused)
     #[must_use]
-    pub fn focal_characteristics(&self, focal_length: f64) -> (f64, f64, f64) {
-        let wavelength = SOUND_SPEED_TISSUE / self.frequency_response.center_frequency;
-        let aperture = self.geometry.width * 64.0; // Assume 64 element array
+    pub fn focal_characteristics(&self, focal_length: Length) -> (Length, Length, f64) {
+        let wavelength_m =
+            SOUND_SPEED_TISSUE / self.frequency_response.center_frequency.into_base();
+        let aperture_m = self.geometry.width.into_base() * 64.0; // Assume 64 element array
+        let focal_length_m = focal_length.into_base();
 
         // Focal zone length (depth of field)
-        let focal_zone = 7.0 * wavelength * (focal_length / aperture).powi(2);
+        let focal_zone_m = 7.0 * wavelength_m * (focal_length_m / aperture_m).powi(2);
 
         // Lateral resolution at focus
-        let lateral_resolution = 1.22 * wavelength * focal_length / aperture;
+        let lateral_resolution_m = 1.22 * wavelength_m * focal_length_m / aperture_m;
 
         // F-number
-        let f_number = focal_length / aperture;
+        let f_number = focal_length_m / aperture_m;
 
-        (focal_zone, lateral_resolution, f_number)
+        (
+            Length::from_base(focal_zone_m),
+            Length::from_base(lateral_resolution_m),
+            f_number,
+        )
     }
 
     /// Generate design report
@@ -177,11 +194,11 @@ impl TransducerDesign {
             Beamwidth: {:.1}°\n\
             Sensitivity: {:.1} Pa/V at 1m\n\
             Efficiency: {:.1}%",
-            self.frequency_response.center_frequency / MHZ_TO_HZ,
+            self.frequency_response.center_frequency.into_base() / MHZ_TO_HZ,
             self.frequency_response.fractional_bandwidth,
-            self.geometry.width * 1e3,
-            self.geometry.height * 1e3,
-            self.geometry.thickness * 1e3,
+            self.geometry.width.into_base() * 1e3,
+            self.geometry.height.into_base() * 1e3,
+            self.geometry.thickness.into_base() * 1e3,
             self.piezo.material_type,
             self.piezo.coupling_k33,
             self.directivity.beamwidth_3db,
