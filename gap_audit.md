@@ -31,7 +31,7 @@
 
 ## Aequitas metric gap audit (2026-07-24)
 
-### Verification refresh (2026-07-25)
+### Verification refresh (2026-07-26)
 
 The Coeus checkout now resolves through its `crates/*` layout, so the former
 pre-source provider-graph blocker is cleared for the consumer packages in this
@@ -40,6 +40,10 @@ warning-denied Clippy, and doctests. The broader Nextest run passes 2,913/2,913
 tests with two intentional skips. The remaining diagnostics are provider-side
 unused-`Result` warnings and Windows linker/build-script warnings; neither is
 emitted by the touched Kwavers packages.
+
+Commit `c57b9c799` refreshes the lockfile's six git-package entries and provider
+edges; locked metadata and `cargo check -p kwavers-transducer --offline --locked`
+pass against that exact head.
 
 The Kwavers inventory covers public configuration/result surfaces in physics,
 therapy, transducer, and analysis crates. Dense pressure/temperature fields,
