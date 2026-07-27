@@ -4,6 +4,13 @@
 
 ### Changed
 
+- **Breaking**: Thermal material constructors and accessors now use Aequitas
+  `ThermalConductivity`, `MassDensity`, `SpecificHeatCapacity`, and
+  `ThermalDiffusivity`; blood perfusion and blood specific heat use typed
+  quantities. Proteus remains the thermophysical source of truth, and scalar
+  conversion is limited to display, DTO, and numerical-stencil boundaries.
+  See [ADR 051](docs/ADR/051-thermal-perfusion-quantities.md).
+
 - **Breaking**: Vasculature segmentation now requires validated physical voxel
   spacing, reports typed `Length` geometry and centerline coordinates, and
   returns typed Doppler `Velocity` from Aequitas frequency, speed, and angle

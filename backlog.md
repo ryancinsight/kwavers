@@ -1,6 +1,6 @@
 # Backlog / Strategy
 
-## KWAVERS-AEQ-MET-06 — Type thermal and perfusion metrics [major] — in progress
+## KWAVERS-AEQ-MET-06 — Type thermal and perfusion metrics [major] — done
 
 - Owner: Codex; claimed 2026-07-27; scope: `kwavers-medium` thermal property
   accessors, in-repository thermal/perfusion callers and tests, Aequitas or
@@ -12,10 +12,14 @@
 - Acceptance: source audit identifies every public accessor and perfusion
   boundary; typed value-semantic regressions cover positive, invalid, and
   unit-sensitive cases; locked package checks and focused Nextest pass; the
-  child and Atlas audits record the final contract and residuals.
+  child and Atlas audits record the final contract and residuals. Met.
 - Risk/change class: `[major]`; public thermal/perfusion signatures may change.
 - Dependencies: Aequitas provider quantities and Proteus thermal bundle
   source must be verified against the live trees before implementation.
+- Evidence: `kwavers-medium` locked check and Nextest pass 191/191;
+  `kwavers-physics` locked check and thermal/bubble Nextest pass 361/361;
+  `kwavers-simulation` locked check passes. Clippy remains blocked only by
+  three pre-existing `kwavers-math` findings outside this scope.
 
 ## KWAVERS-AEQ-MET-05 — Type vasculature physical metrics [major] — done
 

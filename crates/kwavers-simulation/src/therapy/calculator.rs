@@ -1,6 +1,9 @@
 //! Therapy calculator orchestration
 
 use crate::parallel::zip_indexed_mut_ref3;
+use aequitas::systems::si::quantities::{
+    MassDensity, MassDensityRate, SpecificHeatCapacity, ThermalConductivity,
+};
 use kwavers_core::constants::fundamental::DENSITY_TISSUE;
 use kwavers_core::constants::medical::{BLOOD_SPECIFIC_HEAT, TISSUE_PERFUSION_RATE};
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
@@ -45,11 +48,11 @@ impl TherapyCalculator {
         // Initialize components based on modality
         let thermal = if modality.has_thermal_effects() {
             let properties = ThermalPropertyData::new(
-                0.5,                         // conductivity (W/m/K)
-                SPECIFIC_HEAT_TISSUE,        // specific_heat (J/kg/K)
-                DENSITY_TISSUE,              // density (kg/m³)
-                Some(TISSUE_PERFUSION_RATE), // blood_perfusion (1/s)
-                Some(BLOOD_SPECIFIC_HEAT),   // blood_specific_heat (J/kg/K)
+                ThermalConductivity::from_base(0.5),
+                SpecificHeatCapacity::from_base(SPECIFIC_HEAT_TISSUE),
+                MassDensity::from_base(DENSITY_TISSUE),
+                Some(MassDensityRate::from_base(TISSUE_PERFUSION_RATE)),
+                Some(SpecificHeatCapacity::from_base(BLOOD_SPECIFIC_HEAT)),
             )
             .expect("Valid thermal properties");
             let arterial_temperature = BODY_TEMPERATURE_C;
