@@ -3,9 +3,8 @@
 // Import config from domain layer (single source of truth for configuration)
 use crate::beamforming::BeamformingConfig;
 use kwavers_core::error::KwaversResult;
-use kwavers_math::linear_algebra::LinearAlgebraExt;
 use leto::{Array1, Array2, Array3};
-use leto_ops::inv;
+use leto_ops::{inv, solve, symmetric_eigen_jacobi};
 
 /// Beamforming processor for array algorithms
 #[derive(Debug)]
@@ -44,7 +43,7 @@ impl BeamformingProcessor {
         &self.sensor_positions
     }
 
-    /// Compute eigendecomposition of a matrix
+    /// Compute eigendecomposition of a matrix via leto-ops SSOT.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
@@ -52,10 +51,11 @@ impl BeamformingProcessor {
         &self,
         matrix: &Array2<f64>,
     ) -> KwaversResult<(leto::Array1<f64>, Array2<f64>)> {
-        matrix.eig()
+        let result = symmetric_eigen_jacobi(&matrix.view())?;
+        Ok((result.eigenvalues.into(), result.eigenvectors))
     }
 
-    /// Compute matrix inverse
+    /// Compute matrix inverse via leto-ops SSOT.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///

@@ -47,13 +47,10 @@ fn assert_insufficient_grid_points<T>(
 
 #[test]
 fn test_constructor_valid() {
-    use crate::numerics::operators::differential::DifferentialOperator;
-
     let op = StaggeredGridOperator::new(0.1, 0.2, 0.4).unwrap();
     assert_eq!(op.order(), 2);
     assert_eq!(op.stencil_width(), 2);
     assert!(op.is_conservative());
-    assert!(op.is_adjoint_consistent());
 }
 
 #[test]
@@ -148,12 +145,10 @@ fn test_insufficient_grid_points() {
 
 #[test]
 fn test_properties() {
-    use crate::numerics::operators::differential::DifferentialOperator;
     let op = StaggeredGridOperator::new(0.1, 0.1, 0.1).unwrap();
     assert_eq!(op.order(), 2);
     assert_eq!(op.stencil_width(), 2);
     assert!(op.is_conservative());
-    assert!(op.is_adjoint_consistent());
 }
 
 #[test]

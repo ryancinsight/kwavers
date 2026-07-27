@@ -3,7 +3,7 @@
 use std::f64::consts::PI;
 
 use super::constants::{H_PLANCK, KB};
-use super::special::bessel_k0;
+use leto_ops::application::special::bessel_k0;
 
 /// Frequency- and temperature-dependent free-free Gaunt factor.
 ///

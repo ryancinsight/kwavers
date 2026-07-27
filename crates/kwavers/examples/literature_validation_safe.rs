@@ -530,9 +530,9 @@ fn propagate_fresnel_safe(
     Ok(output)
 }
 
-/// Bessel J₁(x) — delegated to workspace SSOT.
+/// Bessel J₁(x) — delegated to SSOT.
 fn bessel_j1(x: f64) -> f64 {
-    kwavers_math::special::bessel::j1(x)
+    leto_ops::application::special::j1(x)
 }
 
 /// Test 3: Lloyd's Mirror Interference

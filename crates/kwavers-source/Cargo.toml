@@ -9,6 +9,7 @@ repository = "https://github.com/ryancinsight/kwavers"
 
 [dependencies]
 leto = { workspace = true }
+leto-ops = { workspace = true }
 kwavers-core = { path = "../kwavers-core" }
 kwavers-math = { path = "../kwavers-math" }
 kwavers-grid = { path = "../kwavers-grid" }

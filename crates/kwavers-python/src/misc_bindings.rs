@@ -18,7 +18,7 @@ use crate::grid_py::Grid;
 // PID Controller
 // ============================================================================
 
-#[pyclass(name = "PIDController")]
+#[pyclass(name = "PIDController", skip_from_py_object)]
 pub struct PyPIDController {
     inner: kwavers_physics::acoustics::bubble_dynamics::cavitation_control::pid_controller::PIDController,
 }
@@ -376,7 +376,7 @@ pub(crate) fn time_reversal_reconstruction_impl(
 // Bubble Field
 // ============================================================================
 
-#[pyclass(name = "BubbleField")]
+#[pyclass(name = "BubbleField", skip_from_py_object)]
 pub struct PyBubbleField {
     inner: kwavers_physics::acoustics::bubble_dynamics::bubble_field::BubbleField,
 }

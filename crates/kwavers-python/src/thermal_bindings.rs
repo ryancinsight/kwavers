@@ -46,7 +46,7 @@ const DEFAULT_TA_C: f64 = BODY_TEMPERATURE_C; // arterial temperature [°C]
 // ── Result ───────────────────────────────────────────────────────────────────
 
 /// Result of a `ThermalSimulation::run()` call.
-#[pyclass]
+#[pyclass(skip_from_py_object)]
 pub struct ThermalResult {
     /// Final temperature field (nx, ny, nz) [°C]
     #[pyo3(get)]
@@ -96,7 +96,7 @@ impl ThermalResult {
 /// )
 /// result = sim.run(time_steps=200, dt=0.1)
 /// ```
-#[pyclass]
+#[pyclass(skip_from_py_object)]
 pub struct ThermalSimulation {
     nx: usize,
     ny: usize,

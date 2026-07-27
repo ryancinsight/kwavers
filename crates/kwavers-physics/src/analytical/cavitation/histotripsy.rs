@@ -1,4 +1,4 @@
-use kwavers_math::special::erf;
+use leto_ops::application::special::erf;
 
 /// Single-pulse intrinsic-threshold cavitation probability (Gaussian erf-CDF model).
 ///

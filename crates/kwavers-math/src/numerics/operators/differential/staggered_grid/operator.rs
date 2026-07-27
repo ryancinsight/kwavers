@@ -1,8 +1,7 @@
-//! `StaggeredGridOperator` struct, constructor, and `DifferentialOperator` impl.
+//! `StaggeredGridOperator` struct and constructor.
 //!
 //! SRP: changes when the operator contract or the trait surface changes.
 
-use super::super::DifferentialOperator;
 use kwavers_core::error::{KwaversResult, NumericalError};
 use leto::{Array3, ArrayView3};
 
@@ -35,23 +34,19 @@ impl StaggeredGridOperator {
     }
 }
 
-impl DifferentialOperator for StaggeredGridOperator {
-    fn apply_x(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
-        self.apply_forward_x(field)
-    }
-    fn apply_y(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
-        self.apply_forward_y(field)
-    }
-    fn apply_z(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
-        self.apply_forward_z(field)
-    }
-    fn order(&self) -> usize {
+impl StaggeredGridOperator {
+    /// Order of the staggered scheme (2nd-order accurate).
+    pub fn order(&self) -> usize {
         2
     }
-    fn stencil_width(&self) -> usize {
+
+    /// Stencil width of the staggered scheme (2 points).
+    pub fn stencil_width(&self) -> usize {
         2
     }
-    fn is_conservative(&self) -> bool {
+
+    /// Whether the scheme is conservative.
+    pub fn is_conservative(&self) -> bool {
         true
     }
 }

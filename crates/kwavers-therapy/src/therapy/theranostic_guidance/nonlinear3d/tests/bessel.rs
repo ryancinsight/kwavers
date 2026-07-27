@@ -1,7 +1,6 @@
 //! Analytical Bessel J₂ helper for Fubini-absolute literature tests.
 //!
-//! `J_1` is delegated to the workspace SSOT (`kwavers_math::special::bessel::j1`).
-//! `J_2` is a test helper that uses the recurrence relation.
+//! `J_1` and `J_2` are delegated to the SSOT (`leto_ops::application::special::j1`).
 
 /// Bessel function `J_2(x)` via the recurrence `J_2(x) = (2/x)·J_1(x) − J_0(x)`
 /// with `J_0` and `J_1` from their power series.
@@ -20,7 +19,7 @@ pub(super) fn bessel_j2(x: f64) -> f64 {
         }
         sum
     };
-    let j1 = kwavers_math::special::bessel::j1(x);
+    let j1 = leto_ops::application::special::j1(x);
     if x.abs() < 1.0e-12 {
         return 0.0;
     }

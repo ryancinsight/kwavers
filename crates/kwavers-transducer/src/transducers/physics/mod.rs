@@ -16,6 +16,7 @@ pub mod directivity;
 pub mod frequency;
 pub mod geometry;
 pub mod materials;
+pub mod position;
 pub mod rayleigh;
 pub mod sensitivity;
 
@@ -29,6 +30,7 @@ pub use materials::{
     AcousticLens, BackingLayer, BackingMaterial, FresnelZonePlate, LensMaterial, MatchingLayer,
     PiezoMaterial, PiezoType, corrective_lens_thickness, isoplanatic_steering_pose,
 };
+pub use position::CartesianPosition;
 pub use rayleigh::{
     PlanarAperture, PlanarApertureGeometry, PlanarApertureShape, RayleighIntegralSpec,
     RayleighLayer, RayleighPropagationPath, rayleigh_pressure,

@@ -37,7 +37,7 @@
 //! the 30 s nextest budget, so it executes by default in CI.
 
 use super::bessel::bessel_j2;
-use kwavers_math::special::bessel::j1 as bessel_j1;
+use leto_ops::application::special::j1 as bessel_j1;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 

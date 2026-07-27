@@ -35,7 +35,7 @@ pub fn fubini_harmonic_amplitude(n: u32, sigma: f64) -> f64 {
     } else if sigma < 1.0 {
         // Pre-shock: Fubini Bessel series.
         let arg = n as f64 * sigma;
-        2.0 * bessel_j(n, arg) / arg
+        2.0 * bessel_j(n as usize, arg) / arg
     } else {
         // Post-shock: Fay sawtooth, B_n = 2/(n(1+sigma)) (Blackstock 1966);
         // matches analytical::wave::sawtooth_harmonic_amplitude.

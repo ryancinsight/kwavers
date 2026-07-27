@@ -23,7 +23,7 @@ pub use kwavers_simulation::{extract_full_grid_stats, SimulationRunResult};
 /// Results from acoustic simulation.
 ///
 /// Contains sensor recordings and metadata.
-#[pyclass]
+#[pyclass(skip_from_py_object)]
 pub struct SimulationResult {
     /// 1D sensor data (single sensor) `Pa`
     pub(crate) sensor_data_1d: Option<Py<PyArray1<f64>>>,

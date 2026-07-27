@@ -8,7 +8,7 @@
 //! number-weighted fraction of nuclei in a radius (or, via the inverse Minnaert
 //! map, a frequency) band is the quantity the swept-engagement model integrates.
 
-use kwavers_math::special::erf;
+use leto_ops::application::special::erf;
 
 use super::super::dynamics::minnaert_resonance_hz;
 

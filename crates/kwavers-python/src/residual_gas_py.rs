@@ -23,7 +23,7 @@ use crate::breast_fwi_bindings::complex_compat::{leto3_to_nd3, nd_to_leto3};
 /// Epstein–Plesset kinetics so `β` decays as `(R(t)/R₀)³`. `sound_speed_field` and
 /// `attenuation_field` return the Wood / Commander–Prosperetti acoustic properties
 /// of the gas-laden medium for the next pulse.
-#[pyclass(name = "ResidualGasField")]
+#[pyclass(name = "ResidualGasField", skip_from_py_object)]
 pub struct PyResidualGasField {
     inner: ResidualGasField,
     shape: (usize, usize, usize),

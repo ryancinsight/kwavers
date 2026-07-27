@@ -18,5 +18,5 @@ mod tests;
 
 /// Canonical Bessel Jₙ (workspace SSOT) re-exported for the Fubini harmonic
 /// coefficients in `solution` and the harmonic-amplitude tests.
-pub(crate) use kwavers_math::special::bessel::jn as bessel_j;
+pub(crate) use leto_ops::application::special::jn as bessel_j;
 pub use solution::{burgers_equation, fubini_harmonic_amplitude};

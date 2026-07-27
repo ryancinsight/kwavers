@@ -740,7 +740,7 @@ fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kwavers_math::special::bessel::j1;
+    use leto_ops::application::special::j1;
 
     fn length(value: f64) -> Length {
         Length::from_base(value)

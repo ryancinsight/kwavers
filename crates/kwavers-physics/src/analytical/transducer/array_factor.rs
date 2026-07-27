@@ -6,7 +6,7 @@
 use apollo::fft_1d_leto;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_math::signal::ApodizationType;
-use kwavers_math::special::bessel::j1;
+use leto_ops::application::special::j1;
 
 // ─── Directivity ──────────────────────────────────────────────────────────────
 

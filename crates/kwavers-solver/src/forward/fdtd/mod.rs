@@ -136,7 +136,7 @@ mod tests {
         // At 32 ppw (nx=32, dx=1.0, k=2π/32≈0.196): truncation error < 2e-6 per point.
         //
         // Analytical reference: Fornberg (1988) Tables of FD weights.
-        use kwavers_math::numerics::operators::{CentralDifference4, DifferentialOperator};
+        use leto_ops::{FiniteDifference3D, FiniteDifference3DScheme};
         use leto::Array3;
         use std::f64::consts::PI;
 
@@ -144,7 +144,8 @@ mod tests {
         let dx = 1.0_f64;
         let k = 2.0 * PI / (nx as f64 * dx); // 1 full period across domain
 
-        let op = CentralDifference4::new(dx, dx, dx).unwrap();
+        let op = FiniteDifference3D::new(FiniteDifference3DScheme::CentralFourthOrder, dx, dx, dx)
+            .expect("Valid grid spacing");
 
         // Build f(x) = sin(k·x) on a 1D-embedded 3D array (ny=nz=1)
         let mut field = Array3::<f64>::zeros((nx, 1, 1));
@@ -152,7 +153,8 @@ mod tests {
             field[[i, 0, 0]] = (k * i as f64 * dx).sin();
         }
 
-        let deriv = op.apply_x(field.view()).unwrap();
+        let mut deriv = Array3::<f64>::zeros([nx, 1, 1]);
+        op.apply_x_into(field.view(), &mut deriv).unwrap();
 
         // Compute RMS error at interior points [2, nx-3] against k·cos(k·x)
         let mut rms_sq = 0.0_f64;
@@ -178,7 +180,11 @@ mod tests {
             5,
             "4th-order stencil must be 5 points wide"
         );
-        assert_eq!(op.order(), 4, "operator order must be 4");
+        assert_eq!(
+            op.scheme(),
+            FiniteDifference3DScheme::CentralFourthOrder,
+            "operator scheme must be CentralFourthOrder"
+        );
     }
 
     #[test]

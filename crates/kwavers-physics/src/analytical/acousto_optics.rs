@@ -34,7 +34,7 @@
 
 use core::f64::consts::{PI, TAU};
 use eunomia::Complex64;
-use kwavers_math::special::bessel::jn;
+use leto_ops::application::special::jn;
 
 /// Acousto-optic diffraction regime selected by the Klein–Cook parameter `Q`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -107,7 +107,7 @@ pub fn raman_nath_order_intensities(nu: f64, max_order: u32) -> Vec<f64> {
     let span = 2 * max_order as usize + 1;
     let mut out = vec![0.0; span];
     for m in 0..=max_order {
-        let jm = jn(m, nu);
+        let jm = jn(m as usize, nu);
         let i_m = jm * jm;
         out[(max_order + m) as usize] = i_m; // +m
         out[(max_order - m) as usize] = i_m; // −m (symmetric)
@@ -297,7 +297,7 @@ mod tests {
 
         // Symmetry I₋ₘ = Iₘ and exact Bessel values.
         for m in 0..=max {
-            let jm = jn(m, nu);
+            let jm = jn(m as usize, nu);
             assert!((i[(max + m) as usize] - jm * jm).abs() < 1e-12);
             assert!((i[(max - m) as usize] - i[(max + m) as usize]).abs() < 1e-15);
         }
@@ -346,7 +346,7 @@ mod tests {
         );
         for m in 0..=6u32 {
             let analytic = {
-                let j = jn(m, nu);
+                let j = jn(m as usize, nu);
                 j * j
             };
             assert!(

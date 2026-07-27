@@ -8370,7 +8370,7 @@ dependencies = [
 ]
 
 [[patch.unused]]
-name = "consus-zarr"
+name = "athena-core"
 version = "0.1.0"
 
 [[patch.unused]]
@@ -8386,5 +8386,5 @@ name = "consus-zarr"
 version = "0.1.0"
 
 [[patch.unused]]
-name = "athena-core"
+name = "consus-zarr"
 version = "0.1.0"

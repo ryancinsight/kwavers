@@ -1,14 +1,10 @@
 //! Special mathematical functions (workspace SSOT).
 //!
-//! `sinc`, `erf`, and Bessel functions are re-exported from the
-//! [`leto_ops`] SSOT.  Legendre polynomials remain kwavers-specific.
+//! All functions are re-exported from the [`leto_ops`] SSOT:
+//! `sinc`, `erf`, `j0`, `j1`, `jn`, `legendre_poly`, `legendre_poly_and_deriv`.
 
-pub mod bessel;
-mod error_function;
-pub mod legendre;
-
-pub use error_function::erf;
-pub use leto_ops::sinc;
+pub use leto_ops::application::special::{erf, j0, j1, jn, sinc};
+pub use leto_ops::application::special_legendre::{legendre_poly, legendre_poly_and_deriv};
 
 #[cfg(test)]
 mod tests {

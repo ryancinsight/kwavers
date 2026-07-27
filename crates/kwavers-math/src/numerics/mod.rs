@@ -57,7 +57,7 @@ pub mod symplectic;
 // pub mod transforms;
 
 // Re-export commonly used traits for convenience
-pub use operators::{DifferentialOperator, Interpolator, SpectralOperatorTrait};
+pub use operators::{Interpolator, SpectralOperatorTrait};
 pub use symplectic::{stormer_verlet_step, yoshida4_step};
 
 #[cfg(test)]
@@ -67,7 +67,6 @@ mod tests {
     #[test]
     fn test_module_structure() {
         let _ = (
-            std::any::TypeId::of::<dyn DifferentialOperator>(),
             std::any::TypeId::of::<dyn Interpolator>(),
             std::any::TypeId::of::<dyn SpectralOperatorTrait>(),
         );

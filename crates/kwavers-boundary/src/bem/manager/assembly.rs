@@ -40,7 +40,6 @@ impl BemBoundaryManager {
         let mut a_col_indices = Vec::new();
         let mut a_row_pointers = vec![0; n + 1];
         let mut b = Array1::from_elem([n], Complex64::default());
-        let mut a_nnz = 0;
 
         for i in 0..n {
             a_row_pointers[i] = a_values.len();
@@ -92,7 +91,6 @@ impl BemBoundaryManager {
                 } else {
                     a_values.push(val);
                     a_col_indices.push(col);
-                    a_nnz += 1;
                 }
             }
         }

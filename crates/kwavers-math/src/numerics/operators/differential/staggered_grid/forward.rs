@@ -42,13 +42,12 @@ impl StaggeredGridOperator {
         let dx = self.dx;
         if field.is_c_contiguous() {
             if let Some(field_values) = field.as_slice() {
-                if traversal::try_fill_standard_layout(dst, |i, j, k| {
+                traversal::write_standard_layout(dst, |i, j, k| {
                     (field_values[traversal::row_major_index(i + 1, j, k, ny, nz)]
                         - field_values[traversal::row_major_index(i, j, k, ny, nz)])
                         / dx
-                }) {
-                    return Ok(());
-                }
+                });
+                return Ok(());
             }
         }
         let mut dst_slice = dst
@@ -98,13 +97,12 @@ impl StaggeredGridOperator {
         let dy = self.dy;
         if field.is_c_contiguous() {
             if let Some(field_values) = field.as_slice() {
-                if traversal::try_fill_standard_layout(dst, |i, j, k| {
+                traversal::write_standard_layout(dst, |i, j, k| {
                     (field_values[traversal::row_major_index(i, j + 1, k, ny, nz)]
                         - field_values[traversal::row_major_index(i, j, k, ny, nz)])
                         / dy
-                }) {
-                    return Ok(());
-                }
+                });
+                return Ok(());
             }
         }
         let mut dst_slice = dst
@@ -154,13 +152,12 @@ impl StaggeredGridOperator {
         let dz = self.dz;
         if field.is_c_contiguous() {
             if let Some(field_values) = field.as_slice() {
-                if traversal::try_fill_standard_layout(dst, |i, j, k| {
+                traversal::write_standard_layout(dst, |i, j, k| {
                     (field_values[traversal::row_major_index(i, j, k + 1, ny, nz)]
                         - field_values[traversal::row_major_index(i, j, k, ny, nz)])
                         / dz
-                }) {
-                    return Ok(());
-                }
+                });
+                return Ok(());
             }
         }
         let mut dst_slice = dst
