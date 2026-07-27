@@ -214,6 +214,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "arbitrary"
+version = "1.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c3d036a3c4ab069c7b410a2ce876bd74808d2d0888a82667669f8e783a898bf1"
+dependencies = [
+ "derive_arbitrary",
+]
+
+[[package]]
 name = "arrayvec"
 version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -222,7 +231,6 @@ checksum = "7c02d123df017efcdfbd739ef81735b36c5ba83ec3c59c80a9d7ecc718f92e50"
 [[package]]
 name = "asclepius"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/asclepius#38d1c85501ab9deabd0b79e6210c166232ea6631"
 dependencies = [
  "aequitas",
  "eunomia",
@@ -940,35 +948,14 @@ dependencies = [
 [[package]]
 name = "consus-compression"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9#ec386e3e14241343f9a1beca6921463f2b2f0fc9"
 dependencies = [
  "byteorder",
- "consus-core 0.1.0 (git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9)",
-]
-
-[[package]]
-name = "consus-compression"
-version = "0.1.0"
-source = "git+https://github.com/ryancinsight/consus#0106b709212033823a22782b0c491603e8ce1229"
-dependencies = [
- "byteorder",
- "consus-core 0.1.0 (git+https://github.com/ryancinsight/consus)",
+ "consus-core",
 ]
 
 [[package]]
 name = "consus-core"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9#ec386e3e14241343f9a1beca6921463f2b2f0fc9"
-dependencies = [
- "byteorder",
- "smallvec",
- "zerocopy",
-]
-
-[[package]]
-name = "consus-core"
-version = "0.1.0"
-source = "git+https://github.com/ryancinsight/consus#0106b709212033823a22782b0c491603e8ce1229"
 dependencies = [
  "byteorder",
  "smallvec",
@@ -978,47 +965,26 @@ dependencies = [
 [[package]]
 name = "consus-hdf5"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9#ec386e3e14241343f9a1beca6921463f2b2f0fc9"
 dependencies = [
  "byteorder",
- "consus-compression 0.1.0 (git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9)",
- "consus-core 0.1.0 (git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9)",
- "consus-io 0.1.0 (git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9)",
-]
-
-[[package]]
-name = "consus-hdf5"
-version = "0.1.0"
-source = "git+https://github.com/ryancinsight/consus#0106b709212033823a22782b0c491603e8ce1229"
-dependencies = [
- "byteorder",
- "consus-compression 0.1.0 (git+https://github.com/ryancinsight/consus)",
- "consus-core 0.1.0 (git+https://github.com/ryancinsight/consus)",
- "consus-io 0.1.0 (git+https://github.com/ryancinsight/consus)",
+ "consus-compression",
+ "consus-core",
+ "consus-io",
 ]
 
 [[package]]
 name = "consus-io"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9#ec386e3e14241343f9a1beca6921463f2b2f0fc9"
 dependencies = [
- "consus-core 0.1.0 (git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9)",
-]
-
-[[package]]
-name = "consus-io"
-version = "0.1.0"
-source = "git+https://github.com/ryancinsight/consus#0106b709212033823a22782b0c491603e8ce1229"
-dependencies = [
- "consus-core 0.1.0 (git+https://github.com/ryancinsight/consus)",
+ "consus-core",
 ]
 
 [[package]]
 name = "consus-npy"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/consus?branch=codex%2Fconsus-npy-provider#464f20b4099382e831ec56a875f932871b314b2c"
 dependencies = [
  "byteorder",
+ "consus-io",
  "thiserror 2.0.18",
  "zip",
 ]
@@ -1026,7 +992,6 @@ dependencies = [
 [[package]]
 name = "consus-onnx"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9#ec386e3e14241343f9a1beca6921463f2b2f0fc9"
 
 [[package]]
 name = "convert_case"
@@ -1457,6 +1422,17 @@ name = "derive-new"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2cdc8d50f426189eef89dac62fabfa0abb27d5cc008f25bf4156a0203325becc"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.118",
+]
+
+[[package]]
+name = "derive_arbitrary"
+version = "1.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1e567bd82dcff979e4b03460c307b3cdc9e96fde3d73bed1496d2bc75d9dd62a"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2013,6 +1989,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bfe33edd8e85a12a67454e37f8c75e730830d83e313556ab9ebf9ee7fbeb3bfb"
 dependencies = [
  "crc32fast",
+ "libz-rs-sys",
  "miniz_oxide",
 ]
 
@@ -2739,7 +2716,6 @@ dependencies = [
 [[package]]
 name = "hyperion"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/hyperion#7b4561b9b51949c8ca59ee2d6f4294cd085ca8a4"
 dependencies = [
  "aequitas",
  "eunomia",
@@ -2935,7 +2911,6 @@ checksum = "469fb0b9cefa57e3ef31275ee7cacb78f2fdca44e4765491884a2b119d4eb130"
 [[package]]
 name = "iris"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/iris?rev=e2edd47615454111b4b0df2e68dc6076161ba457#e2edd47615454111b4b0df2e68dc6076161ba457"
 
 [[package]]
 name = "is-terminal"
@@ -3306,9 +3281,9 @@ dependencies = [
  "coeus-autograd",
  "coeus-core",
  "coeus-tensor",
- "consus-core 0.1.0 (git+https://github.com/ryancinsight/consus)",
- "consus-hdf5 0.1.0 (git+https://github.com/ryancinsight/consus)",
- "consus-io 0.1.0 (git+https://github.com/ryancinsight/consus)",
+ "consus-core",
+ "consus-hdf5",
+ "consus-io",
  "criterion",
  "egui",
  "env_logger",
@@ -3441,9 +3416,9 @@ dependencies = [
  "aequitas",
  "anyhow",
  "chrono",
- "consus-core 0.1.0 (git+https://github.com/ryancinsight/consus)",
- "consus-hdf5 0.1.0 (git+https://github.com/ryancinsight/consus)",
- "consus-io 0.1.0 (git+https://github.com/ryancinsight/consus)",
+ "consus-core",
+ "consus-hdf5",
+ "consus-io",
  "eunomia",
  "flate2",
  "kwavers-analysis",
@@ -3641,6 +3616,7 @@ dependencies = [
  "kwavers-source",
  "kwavers-transducer",
  "leto",
+ "leto-ops",
  "log",
  "moirai-parallel",
  "proteus",
@@ -3806,6 +3782,7 @@ dependencies = [
  "kwavers-medium",
  "kwavers-signal",
  "leto",
+ "leto-ops",
  "moirai-parallel",
  "serde",
 ]
@@ -3931,6 +3908,15 @@ checksum = "416f7e718bdb06000964960ffa43b4335ad4012ae8b99060261aa4a8088d5ccb"
 dependencies = [
  "bitflags 2.13.1",
  "libc",
+]
+
+[[package]]
+name = "libz-rs-sys"
+version = "0.5.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c10501e7805cee23da17c7790e59df2870c0d4043ec6d03f67d31e2b53e77415"
+dependencies = [
+ "zlib-rs",
 ]
 
 [[package]]
@@ -5789,9 +5775,9 @@ dependencies = [
  "arrayvec",
  "coeus-core",
  "coeus-tensor",
- "consus-core 0.1.0 (git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9)",
- "consus-hdf5 0.1.0 (git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9)",
- "consus-io 0.1.0 (git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9)",
+ "consus-core",
+ "consus-hdf5",
+ "consus-io",
  "dicom",
  "dicom-core",
  "dicom-pixeldata",
@@ -5857,7 +5843,7 @@ version = "0.2.0"
 dependencies = [
  "anyhow",
  "coeus-core",
- "consus-io 0.1.0 (git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9)",
+ "consus-io",
  "flate2",
  "ritk-image",
  "ritk-spatial",
@@ -5870,9 +5856,9 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "coeus-core",
- "consus-core 0.1.0 (git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9)",
- "consus-hdf5 0.1.0 (git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9)",
- "consus-io 0.1.0 (git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9)",
+ "consus-core",
+ "consus-hdf5",
+ "consus-io",
  "ritk-core",
  "ritk-image",
  "ritk-spatial",
@@ -5890,7 +5876,7 @@ dependencies = [
  "coeus-ops",
  "coeus-optim",
  "coeus-tensor",
- "consus-io 0.1.0 (git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9)",
+ "consus-io",
  "consus-onnx",
  "onnx-ir",
  "reqwest",
@@ -6061,7 +6047,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "coeus-core",
- "consus-io 0.1.0 (git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9)",
+ "consus-io",
  "gaia",
  "iris",
  "ritk-image",
@@ -7147,7 +7133,6 @@ checksum = "d2df906b07856748fa3f6e0ad0cbaa047052d4a7dd609e231c4f72cee8c36f31"
 [[package]]
 name = "tyche-core"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/tyche#640ba37d31dccc9b9ede8c707e5e034d7ce5859a"
 dependencies = [
  "eunomia",
 ]
@@ -8343,15 +8328,22 @@ dependencies = [
 
 [[package]]
 name = "zip"
-version = "0.6.6"
+version = "6.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "760394e246e4c28189f19d488c058bf16f564016aefac5d32bb1f3b51d5e9261"
+checksum = "eb2a05c7c36fde6c09b08576c9f7fb4cda705990f73b58fe011abf7dfb24168b"
 dependencies = [
- "byteorder",
+ "arbitrary",
  "crc32fast",
- "crossbeam-utils",
  "flate2",
+ "indexmap 2.12.0",
+ "memchr",
 ]
+
+[[package]]
+name = "zlib-rs"
+version = "0.5.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "40990edd51aae2c2b6907af74ffb635029d5788228222c4bb811e9351c0caad3"
 
 [[package]]
 name = "zune-core"
@@ -8376,3 +8368,23 @@ checksum = "cba11ecd07cc23351500e840ae03841b7e4997923ec8e4832ee3ae199ea0b6b4"
 dependencies = [
  "zune-core",
 ]
+
+[[patch.unused]]
+name = "consus-zarr"
+version = "0.1.0"
+
+[[patch.unused]]
+name = "asclepius-coeus"
+version = "0.1.0"
+
+[[patch.unused]]
+name = "horae"
+version = "0.1.0"
+
+[[patch.unused]]
+name = "consus-zarr"
+version = "0.1.0"
+
+[[patch.unused]]
+name = "athena-core"
+version = "0.1.0"

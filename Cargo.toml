@@ -91,67 +91,12 @@ lto = true
 codegen-units = 1
 strip = true  # Strip symbols for smaller Python wheels
 
-[patch."https://github.com/ryancinsight/leto.git"]
-leto = { path = "../leto/crates/leto" }
-leto-ops = { path = "../leto/crates/leto-ops" }
-
-[patch."https://github.com/ryancinsight/eunomia"]
-eunomia = { path = "../eunomia/crates/eunomia" }
-
-[patch."https://github.com/ryancinsight/eunomia.git"]
-eunomia = { path = "../eunomia/crates/eunomia" }
-
-# Keep local stack integration on the checked-out Aequitas provider; the git
-# dependency above remains the release source of truth.
-[patch."https://github.com/ryancinsight/aequitas"]
-aequitas = { path = "../aequitas" }
-
-[patch."https://github.com/ryancinsight/hephaestus.git"]
-hephaestus-core = { path = "../hephaestus/crates/hephaestus-core" }
-hephaestus-wgpu = { path = "../hephaestus/crates/hephaestus-wgpu" }
-hephaestus-cuda = { path = "../hephaestus/crates/hephaestus-cuda" }
-
-[patch."https://github.com/ryancinsight/apollo.git"]
-apollo-fft = { path = "../apollo/crates/apollo-fft" }
-apollo-fft-macros = { path = "../apollo/crates/apollo-fft-macros" }
-apollo-leto-interop = { path = "../apollo/crates/apollo-leto-interop" }
-
-[patch."https://github.com/ryancinsight/Mnemosyne.git"]
-mnemosyne = { path = "../mnemosyne/crates/mnemosyne" }
-mnemosyne-arena = { path = "../mnemosyne/crates/mnemosyne-arena" }
-mnemosyne-backend = { path = "../mnemosyne/crates/mnemosyne-backend" }
-mnemosyne-core = { path = "../mnemosyne/crates/mnemosyne-core" }
-mnemosyne-decay = { path = "../mnemosyne/crates/mnemosyne-decay" }
-mnemosyne-hardened = { path = "../mnemosyne/crates/mnemosyne-hardened" }
-mnemosyne-heap = { path = "../mnemosyne/crates/mnemosyne-heap" }
-mnemosyne-local = { path = "../mnemosyne/crates/mnemosyne-local" }
-mnemosyne-prof = { path = "../mnemosyne/crates/mnemosyne-prof" }
-
-[patch."https://github.com/ryancinsight/Moirai.git"]
-moirai = { path = "../moirai/moirai" }
-moirai-async = { path = "../moirai/moirai-async" }
-moirai-core = { path = "../moirai/moirai-core" }
-moirai-executor = { path = "../moirai/moirai-executor" }
-moirai-gpu = { path = "../moirai/moirai-gpu" }
-moirai-iter = { path = "../moirai/moirai-iter" }
-moirai-pal = { path = "../moirai/moirai-pal" }
-moirai-parallel = { path = "../moirai/moirai-parallel" }
-moirai-scheduler = { path = "../moirai/moirai-scheduler" }
-moirai-sync = { path = "../moirai/moirai-sync" }
-moirai-utils = { path = "../moirai/moirai-utils" }
-
-[patch."https://github.com/ryancinsight/themis"]
-themis = { path = "../themis" }
-
-[patch."https://github.com/ryancinsight/hermes.git"]
-hermes-simd = { path = "../hermes/crates/hermes-simd" }
-hermes-simd-core = { path = "../hermes/crates/hermes-simd-core" }
-
-[patch."https://github.com/ryancinsight/melinoe.git"]
-melinoe = { path = "../melinoe" }
-
-[patch."https://github.com/ryancinsight/proteus"]
-proteus = { path = "../proteus" }
-
 [patch.crates-io]
 melinoe = { path = "../melinoe" }
+
+# ATLAS-PATH-DEP-AUDIT-2 round-2 (2026-07-27): targeted catalog-driven
+# [patch] blocks per per-consumer audit-format residual. Each URL-suffix
+# appears once with the FULL subkey set for the sibling's workspace
+# members; cargo treats unused subkeys as warnings only.
+
+# ATLAS-PATH-DEP-AUDIT-2 round-4 closure
