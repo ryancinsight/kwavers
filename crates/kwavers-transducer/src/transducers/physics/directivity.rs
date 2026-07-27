@@ -5,7 +5,6 @@
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::constants::numerical::{FOUR_PI, TWO_PI};
 use leto::Array1;
-use std::f64::consts::PI;
 
 fn linspace(start: f64, end: f64, num_points: usize) -> Array1<f64> {
     if num_points == 0 {
@@ -174,18 +173,9 @@ impl TransducerDirectivityPattern {
         }
     }
 
-    /// Bessel function of first kind, order 1 (approximation)
+    /// Bessel function of first kind, order 1 — delegated to workspace SSOT.
     fn bessel_j1(x: f64) -> f64 {
-        if x.abs() < 3.0 {
-            // Series expansion for small x
-            let x2 = x * x;
-            x / 2.0 * (1.0 - x2 / 8.0 + x2 * x2 / 192.0)
-        } else {
-            // Asymptotic expansion for large x
-            let inv_x = 1.0 / x;
-            let phase = x - 3.0 * PI / 4.0;
-            (2.0 / (PI * x)).sqrt() * phase.cos() * (0.1875 * inv_x).mul_add(-inv_x, 1.0)
-        }
+        kwavers_math::special::bessel::j1(x)
     }
 
     /// Calculate beam divergence angle

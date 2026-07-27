@@ -1,25 +1,14 @@
 //! Special mathematical functions (workspace SSOT).
+//!
+//! `sinc`, `erf`, and Bessel functions are re-exported from the
+//! [`leto_ops`] SSOT.  Legendre polynomials remain kwavers-specific.
 
 pub mod bessel;
 mod error_function;
 pub mod legendre;
 
 pub use error_function::erf;
-
-/// Unnormalized cardinal sine `sinc(x) = sin(x)/x`, with the removable
-/// singularity defined as `sinc(0) = 1` (guarded for `|x| ≤ ε`).
-///
-/// Note: this is the *unnormalized* convention; for the signal-processing
-/// `sin(πx)/(πx)` form, pass `π·x`.
-#[inline]
-#[must_use]
-pub fn sinc(x: f64) -> f64 {
-    if x.abs() <= f64::EPSILON {
-        1.0
-    } else {
-        x.sin() / x
-    }
-}
+pub use leto_ops::sinc;
 
 #[cfg(test)]
 mod tests {
@@ -28,9 +17,8 @@ mod tests {
     #[test]
     fn sinc_values() {
         assert_eq!(sinc(0.0), 1.0);
-        assert!((sinc(std::f64::consts::PI) - 0.0).abs() < 1e-15); // sin(π)/π = 0
+        assert!((sinc(std::f64::consts::PI) - 0.0).abs() < 1e-15);
         assert!((sinc(1.0) - 1.0_f64.sin()).abs() < 1e-15);
-        // Even function.
         assert_eq!(sinc(-0.7), sinc(0.7));
     }
 }

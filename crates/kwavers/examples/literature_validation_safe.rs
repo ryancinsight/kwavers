@@ -530,22 +530,9 @@ fn propagate_fresnel_safe(
     Ok(output)
 }
 
-/// Approximate Bessel function J₁(x) using series expansion
+/// Bessel J₁(x) — delegated to workspace SSOT.
 fn bessel_j1(x: f64) -> f64 {
-    if x.abs() < 1e-8 {
-        return x / 2.0;
-    }
-
-    // Use series expansion for moderate values
-    if x.abs() < 10.0 {
-        let x2 = x * x;
-        let x_half = x / 2.0;
-        x_half * (1.0 - x2 / 8.0 + x2 * x2 / 192.0 - x2 * x2 * x2 / 9216.0)
-    } else {
-        // Asymptotic form for large x
-        let sqrt_2_pi_x = (2.0 / (PI * x)).sqrt();
-        sqrt_2_pi_x * (x - 3.0 * PI / 4.0).sin()
-    }
+    kwavers_math::special::bessel::j1(x)
 }
 
 /// Test 3: Lloyd's Mirror Interference
