@@ -70,17 +70,14 @@ impl crate::plugin::Plugin for ThermalDiffusionPlugin {
         _context: &mut PluginContext<'_>,
     ) -> KwaversResult<()> {
         if let Some(ref mut solver) = self.solver {
-            let heat_source = if fields.shape()[0] > UnifiedFieldType::Temperature as usize + 1 {
-                Some(
-                    fields
-                        .index_axis::<3>(0, UnifiedFieldType::Temperature as usize + 1)
-                        .expect("invariant: heat source field axis index in range"),
-                )
-            } else {
-                None
-            };
-
-            solver.update(medium, grid, dt, heat_source)?;
+            // No external deposition is available through this plugin. The
+            // previous `Temperature as usize + 1` index resolves to
+            // `UnifiedFieldType::BubbleRadius` (index 2), so the plugin was
+            // feeding a bubble-radius field in metres to a heat-source slot.
+            // `UnifiedFieldType` has no volumetric-heat-source variant; adding
+            // one is tracked as its own item, and until then this path runs
+            // diffusion and perfusion only rather than a wrong source.
+            solver.update(medium, grid, dt, None)?;
 
             let temp_idx = UnifiedFieldType::Temperature as usize;
             if fields.shape()[0] > temp_idx {

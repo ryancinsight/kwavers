@@ -24,7 +24,6 @@
 //!
 //! ```rust,ignore
 //! let omega_c = TWO_PI * 1.0e6;
-//! let rho_cp = 1000.0 * 3600.0; // kg/m³ × J/(kg·K)
 //! solver.run_orchestrated_with_thermal(ThermalOrchestrationInput {
 //!     acoustic_steps: time_steps,
 //!     thermal: &mut thermal_solver,
@@ -32,8 +31,7 @@
 //!     omega_c,
 //!     dt_thermal,
 //!     n_acoustic_per_thermal,
-//!     rho_cp,
-//!     background_heat_ks: 0.0,
+//!     background_heat_wm3: 0.0,
 //! })?;
 //! ```
 
@@ -43,6 +41,7 @@ use kwavers_core::error::KwaversResult;
 use kwavers_medium::Medium;
 use kwavers_physics::acoustics::conservation::acoustic_heat_source;
 use kwavers_physics::acoustics::mechanics::absorption::AbsorptionMode;
+use kwavers_physics::thermal::VolumetricHeatSource;
 use leto::{Array2, Array3};
 use moirai_parallel::{enumerate_mut_with, Adaptive};
 use std::{fmt, sync::Arc};
@@ -90,10 +89,10 @@ pub struct ThermalOrchestrationInput<'a> {
     pub dt_thermal: f64,
     /// Acoustic steps between thermal updates. Must be at least one.
     pub n_acoustic_per_thermal: usize,
-    /// Volumetric heat capacity `rho * cp` [J/(m^3 K)].
-    pub rho_cp: f64,
-    /// Uniform background heat rate [K/s] added at each thermal update.
-    pub background_heat_ks: f64,
+    /// Uniform background volumetric power [W/m^3] added at each thermal
+    /// update. The thermal solver divides by the local `rho * cp`, so this
+    /// stays a deposition quantity rather than a temperature rate.
+    pub background_heat_wm3: f64,
 }
 
 impl fmt::Debug for ThermalOrchestrationInput<'_> {
@@ -105,8 +104,7 @@ impl fmt::Debug for ThermalOrchestrationInput<'_> {
             .field("omega_c", &self.omega_c)
             .field("dt_thermal", &self.dt_thermal)
             .field("n_acoustic_per_thermal", &self.n_acoustic_per_thermal)
-            .field("rho_cp", &self.rho_cp)
-            .field("background_heat_ks", &self.background_heat_ks)
+            .field("background_heat_wm3", &self.background_heat_wm3)
             .finish()
     }
 }
@@ -220,10 +218,10 @@ impl PSTDSolver {
     ///   `n_acoustic_per_thermal * dt_acoustic`.
     /// - `n_acoustic_per_thermal`: number of acoustic steps between thermal updates.
     ///   Must be ≥ 1.
-    /// - `rho_cp`: volumetric heat capacity ρ·cp [J/(m³·K)] of the thermal medium;
-    ///   converts Q [W/m³] → K/s for the thermal solver.
-    /// - `background_heat_ks`: uniform background heat rate [K/s] added at every thermal
-    ///   step (e.g. metabolic heat Q_m/(ρ·cp)). Pass `0.0` for acoustic-only heating.
+    /// - `background_heat_wm3`: uniform background volumetric power [W/m³] added at
+    ///   every thermal step (e.g. metabolic heat Q_m). Pass `0.0` for
+    ///   acoustic-only heating. The thermal solver divides by the local ρ·cp,
+    ///   so no caller-side volumetric heat capacity is needed.
     ///
     /// ## Returns
     ///
@@ -253,14 +251,16 @@ impl PSTDSolver {
             self.step_forward()?;
 
             if (i + 1) % input.n_acoustic_per_thermal == 0 {
-                let q_wm3 = self.compute_acoustic_heat_source();
-                // Q [W/m³] → K/s; add uniform background (metabolic heat etc.).
-                let q_ks = q_wm3.mapv(|v| v / input.rho_cp + input.background_heat_ks);
+                let q_wm3 = self
+                    .compute_acoustic_heat_source()
+                    .mapv(|v| v + input.background_heat_wm3);
                 input.thermal.update(
                     input.thermal_medium,
                     &grid,
                     input.dt_thermal,
-                    Some(q_ks.view()),
+                    Some(VolumetricHeatSource::from_watts_per_cubic_meter(
+                        q_wm3.view(),
+                    )),
                 )?;
             }
         }

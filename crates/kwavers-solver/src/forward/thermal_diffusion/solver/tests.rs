@@ -2,6 +2,7 @@ use super::*;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_core::error::KwaversError;
 use kwavers_medium::HomogeneousMedium;
+use kwavers_physics::thermal::VolumetricHeatSource;
 
 fn config(spatial_order: usize) -> ThermalDiffusionConfig {
     ThermalDiffusionConfig {
@@ -80,13 +81,22 @@ fn standard_update_consumes_borrowed_source_view_without_source_clone() {
     let mut solver = ThermalDiffusionSolver::new(config(2), &grid);
     solver.set_temperature(Array3::from_elem([3, 3, 1], 310.0));
     let mut source = Array3::zeros((3, 3, 1));
-    source[[1, 1, 0]] = 5.0;
+    // A deposition of q W/m³ raises temperature at q/(ρ c_p) K/s, so choose q
+    // that reproduces the 5 K/s this test asserts.
+    source[[1, 1, 0]] = deposition_for_heating_rate(&medium, &grid, 5.0);
 
     solver
-        .update(&medium, &grid, 2.0, Some(source.view()))
+        .update(
+            &medium,
+            &grid,
+            2.0,
+            Some(VolumetricHeatSource::from_watts_per_cubic_meter(
+                source.view(),
+            )),
+        )
         .unwrap();
 
-    assert_eq!(solver.temperature()[[1, 1, 0]], 320.0);
+    assert_heated_to(solver.temperature()[[1, 1, 0]], 320.0);
     assert_eq!(solver.temperature()[[0, 0, 0]], 310.0);
 }
 
@@ -98,17 +108,24 @@ fn standard_update_consumes_noncontiguous_source_view() {
     let mut solver = ThermalDiffusionSolver::new(config(2), &grid);
     solver.set_temperature(Array3::from_elem([3, 3, 1], 310.0));
     let mut source = Array3::zeros((3, 3, 1));
-    source[[1, 1, 0]] = 5.0;
+    source[[1, 1, 0]] = deposition_for_heating_rate(&medium, &grid, 5.0);
     let source_view = source
         .slice_with(&s![.., ..;-1, ..])
         .expect("invariant: reversed slice within bounds");
     assert_eq!(source_view.as_slice(), None);
 
     solver
-        .update(&medium, &grid, 2.0, Some(source_view))
+        .update(
+            &medium,
+            &grid,
+            2.0,
+            Some(VolumetricHeatSource::from_watts_per_cubic_meter(
+                source_view,
+            )),
+        )
         .unwrap();
 
-    assert_eq!(solver.temperature()[[1, 1, 0]], 320.0);
+    assert_heated_to(solver.temperature()[[1, 1, 0]], 320.0);
     assert_eq!(solver.temperature()[[0, 0, 0]], 310.0);
 }
 
@@ -122,7 +139,14 @@ fn standard_update_rejects_mismatched_source_shape_without_mutation() {
     let source = Array3::zeros((2, 3, 1));
 
     let err = solver
-        .update(&medium, &grid, 2.0, Some(source.view()))
+        .update(
+            &medium,
+            &grid,
+            2.0,
+            Some(VolumetricHeatSource::from_watts_per_cubic_meter(
+                source.view(),
+            )),
+        )
         .unwrap_err();
 
     match err {
@@ -133,4 +157,22 @@ fn standard_update_rejects_mismatched_source_shape_without_mutation() {
         other => panic!("expected source dimension mismatch, got {other:?}"),
     }
     assert_eq!(solver.temperature()[[1, 1, 0]], 310.0);
+}
+
+/// Volumetric power `q` that heats this medium at `rate` kelvin per second:
+/// `q = rate · ρ · c_p`.
+fn deposition_for_heating_rate(medium: &dyn Medium, grid: &Grid, rate: f64) -> f64 {
+    let rho = kwavers_medium::density_at(medium, 1.0, 1.0, 0.0, grid);
+    let cp = medium.specific_heat(1.0, 1.0, 0.0, grid);
+    rate * rho * cp
+}
+
+/// The deposition round trip multiplies then divides by `ρ c_p`, so the result
+/// carries at most two roundings. Four machine epsilons bounds that.
+fn assert_heated_to(actual: f64, expected: f64) {
+    let tolerance = expected.abs() * 4.0 * f64::EPSILON;
+    assert!(
+        (actual - expected).abs() <= tolerance,
+        "temperature {actual} is not within {tolerance} of {expected}"
+    );
 }

@@ -16,7 +16,8 @@
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use leto::{Array3, ArrayView3};
+use kwavers_physics::thermal::VolumetricHeatSource;
+use leto::Array3;
 use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
 
 use kwavers_physics::thermal::diffusion::{
@@ -259,7 +260,7 @@ impl ThermalDiffusionSolver {
         medium: &dyn Medium,
         grid: &Grid,
         dt: f64,
-        external_source: Option<ArrayView3<'_, f64>>,
+        external_source: Option<VolumetricHeatSource<'_>>,
     ) -> KwaversResult<()> {
         if self.temperature_prev.is_none() {
             self.temperature_prev = Some(Array3::zeros(self.temperature.shape()));
@@ -301,17 +302,17 @@ impl ThermalDiffusionSolver {
 
     fn update_standard_diffusion(
         &mut self,
-        external_source: Option<ArrayView3<'_, f64>>,
+        external_source: Option<VolumetricHeatSource<'_>>,
         medium: &dyn Medium,
         grid: &Grid,
         dt: f64,
     ) -> KwaversResult<()> {
         let shape = self.temperature.shape();
         if let Some(source) = external_source.as_ref() {
-            if source.shape() != shape {
+            if source.as_view().shape() != shape {
                 return Err(KwaversError::DimensionMismatch(format!(
                     "thermal diffusion source shape {:?} does not match temperature shape {:?}",
-                    source.shape(),
+                    source.as_view().shape(),
                     shape
                 )));
             }
@@ -321,17 +322,27 @@ impl ThermalDiffusionSolver {
         let slab_len = ny * nz;
         let source_slice = external_source
             .as_ref()
-            .and_then(|source| source.as_slice());
+            .and_then(|source| source.as_view().as_slice());
 
-        let update_cell = |i: usize, j: usize, k: usize, temp: &mut f64, lap: f64, source: f64| {
-            let x = i as f64 * grid.dx;
-            let y = j as f64 * grid.dy;
-            let z = k as f64 * grid.dz;
+        // `deposition` is W/m³; dividing by the local ρ c_p here keeps the
+        // conversion in one place instead of at each producer (ADR 0032 §5).
+        let update_cell =
+            |i: usize, j: usize, k: usize, temp: &mut f64, lap: f64, deposition: f64| {
+                let x = i as f64 * grid.dx;
+                let y = j as f64 * grid.dy;
+                let z = k as f64 * grid.dz;
 
-            let alpha = medium.thermal_diffusivity(x, y, z, grid);
+                let alpha = medium.thermal_diffusivity(x, y, z, grid);
+                let heating = if deposition == 0.0 {
+                    0.0
+                } else {
+                    let rho = kwavers_medium::density_at(medium, x, y, z, grid);
+                    let cp = medium.specific_heat(x, y, z, grid);
+                    deposition / (rho * cp)
+                };
 
-            *temp += dt * alpha.mul_add(lap, source);
-        };
+                *temp += dt * alpha.mul_add(lap, heating);
+            };
 
         let source_is_contiguous = external_source.is_none() || source_slice.is_some();
 
@@ -360,8 +371,10 @@ impl ThermalDiffusionSolver {
                 .expect("invariant: contiguous owned temperature array")
                 .for_each(|([i, j, k], temp)| {
                     let lap = laplacian_workspace[[i, j, k]];
-                    let source = external_source.as_ref().map_or(0.0, |s| s[[i, j, k]]);
-                    update_cell(i, j, k, temp, lap, source);
+                    let deposition = external_source
+                        .as_ref()
+                        .map_or(0.0, |s| s.as_view()[[i, j, k]]);
+                    update_cell(i, j, k, temp, lap, deposition);
                 });
         }
 

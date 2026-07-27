@@ -3,6 +3,7 @@
 //! Reference: Pennes, H. H. (1948). "Analysis of tissue and arterial blood temperatures
 //! in the resting human forearm." Journal of Applied Physiology, 1(2), 93-122.
 
+use crate::thermal::source::VolumetricHeatSource;
 use aequitas::systems::si::quantities::{
     MassDensity, ReciprocalTime, SpecificHeatCapacity, ThermodynamicTemperature,
 };
@@ -15,7 +16,7 @@ use kwavers_core::constants::tissue_acoustics::DENSITY_BLOOD;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use leto::{Array3, ArrayView3};
+use leto::Array3;
 
 /// Pennes bioheat equation parameters.
 ///
@@ -171,6 +172,12 @@ impl PennesBioheat {
     /// and external heating. This preserves the explicit Euler equation while
     /// removing one `Array3<f64>` allocation per bioheat step.
     ///
+    /// `external_source` is a volumetric power density `Q` in `W/m³`. It is
+    /// divided by the *local* `ρ c_p` here, alongside the perfusion term, so
+    /// deposition and perfusion always reference the same material state. A
+    /// caller that pre-divides by a uniform `ρ c_p` silently disagrees with
+    /// perfusion wherever the medium is heterogeneous.
+    ///
     /// # Errors
     /// - Propagates any `KwaversError` returned by called functions.
     ///
@@ -178,7 +185,7 @@ impl PennesBioheat {
         &self,
         temperature: &mut Array3<f64>,
         laplacian: &Array3<f64>,
-        external_source: Option<ArrayView3<'_, f64>>,
+        external_source: Option<VolumetricHeatSource<'_>>,
         medium: &dyn Medium,
         grid: &Grid,
         dt: f64,
@@ -197,10 +204,15 @@ impl PennesBioheat {
                 let rho = kwavers_medium::density_at(medium, x, y, z, grid);
                 let cp = medium.specific_heat(x, y, z, grid);
                 let alpha = medium.thermal_diffusivity(x, y, z, grid);
-                let perfusion = blood_coefficient * (arterial_temperature - *t) / (rho * cp);
-                let ext_source = external_source.as_ref().map_or(0.0, |s| s[[i, j, k]]);
+                let deposition = external_source
+                    .as_ref()
+                    .map_or(0.0, |source| source.as_view()[[i, j, k]]);
+                // Both terms divide by the same local ρ c_p, so a heterogeneous
+                // medium cannot make deposition and perfusion disagree.
+                let heating =
+                    blood_coefficient.mul_add(arterial_temperature - *t, deposition) / (rho * cp);
 
-                *t += dt * (alpha.mul_add(lap, perfusion) + ext_source);
+                *t += dt * alpha.mul_add(lap, heating);
             },
         );
 

@@ -32,6 +32,7 @@ use kwavers_core::constants::thermodynamic::{BODY_TEMPERATURE_C, KELVIN_OFFSET_C
 use kwavers_grid::Grid as KwaversGrid;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_physics::thermal::diffusion::ThermalDiffusionConfig;
+use kwavers_physics::thermal::VolumetricHeatSource;
 use kwavers_solver::forward::thermal_diffusion::ThermalDiffusionSolver;
 
 // ── Defaults (soft tissue, ICRU Report 44) ──────────────────────────────────
@@ -277,10 +278,10 @@ impl ThermalSimulation {
         // Override the default arterial-temperature IC with the user's initial_temperature.
         solver.set_temperature(Array3::from_elem((nx, ny, nz), initial_temp_k));
 
-        // ── Prepare external source in K/s = (Q_acou + Q_m) / (ρ·cp) ─────────
-        // ThermalDiffusionSolver::update expects external_source in K/s.
-        let rho_cp = self.density * self.specific_heat;
-        let q_ks: Option<Array3<f64>> = match heat_source {
+        // ── Prepare external source as volumetric power Q [W/m³] ─────────────
+        // ThermalDiffusionSolver::update divides by the local ρ·cp itself, so
+        // the deposition quantity crosses the boundary intact.
+        let q_wm3: Option<Array3<f64>> = match heat_source {
             Some(qs) => {
                 let arr = qs.as_array();
                 if arr.shape() != [nx, ny, nz] {
@@ -289,13 +290,12 @@ impl ThermalSimulation {
                         arr.shape()
                     )));
                 }
-                let uniform_m = self.metabolic_heat / rho_cp;
-                Some(nd_to_leto3(arr.mapv(|q| q / rho_cp + uniform_m)))
+                let uniform_m = self.metabolic_heat;
+                Some(nd_to_leto3(arr.mapv(|q| q + uniform_m)))
             }
             None => {
                 if self.metabolic_heat != 0.0 {
-                    let val = self.metabolic_heat / rho_cp;
-                    Some(Array3::from_elem((nx, ny, nz), val))
+                    Some(Array3::from_elem((nx, ny, nz), self.metabolic_heat))
                 } else {
                     None
                 }
@@ -341,7 +341,14 @@ impl ThermalSimulation {
             }
 
             solver
-                .update(&medium, &kgrid, dt, q_ks.as_ref().map(|a| a.view()))
+                .update(
+                    &medium,
+                    &kgrid,
+                    dt,
+                    q_wm3
+                        .as_ref()
+                        .map(|a| VolumetricHeatSource::from_watts_per_cubic_meter(a.view())),
+                )
                 .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
         }
 

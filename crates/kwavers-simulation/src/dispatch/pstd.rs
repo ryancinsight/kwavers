@@ -90,8 +90,9 @@ pub fn run_with_thermal(
     let dt_thermal = thermal_cfg
         .dt_thermal
         .unwrap_or(req.dt * thermal_cfg.n_acoustic_per_thermal as f64);
-    let rho_cp = thermal_cfg.density * thermal_cfg.specific_heat;
-    let background_heat_ks = thermal_cfg.metabolic_heat / rho_cp;
+    // Metabolic heat is already a volumetric power; the thermal solver divides
+    // by the local rho*cp, so no caller-side conversion remains.
+    let background_heat_wm3 = thermal_cfg.metabolic_heat;
 
     solver.run_orchestrated_with_thermal(
         kwavers_solver::forward::pstd::implementation::core::orchestrator::thermal::ThermalOrchestrationInput {
@@ -101,8 +102,7 @@ pub fn run_with_thermal(
             omega_c,
             dt_thermal,
             n_acoustic_per_thermal: thermal_cfg.n_acoustic_per_thermal,
-            rho_cp,
-            background_heat_ks,
+            background_heat_wm3,
         },
     )?;
 
