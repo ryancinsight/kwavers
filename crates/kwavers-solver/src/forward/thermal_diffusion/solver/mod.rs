@@ -42,12 +42,12 @@ impl ThermalDiffusionSolver {
         let temperature = Array3::from_elem(shape, config.arterial_temperature);
 
         let bioheat_solver = if config.enable_bioheat {
-            Some(PennesBioheat::new(BioheatParameters {
-                perfusion_rate: config.perfusion_rate,
-                blood_density: config.blood_density,
-                blood_specific_heat: config.blood_specific_heat,
-                arterial_temperature: config.arterial_temperature,
-            }))
+            Some(PennesBioheat::new(BioheatParameters::from_si(
+                config.perfusion_rate,
+                config.blood_density,
+                config.blood_specific_heat,
+                config.arterial_temperature,
+            )))
         } else {
             None
         };
