@@ -1,5 +1,22 @@
 # Backlog / Strategy
 
+## KWAVERS-AEQ-MET-06 — Type thermal and perfusion metrics [major] — in progress
+
+- Owner: Codex; claimed 2026-07-27; scope: `kwavers-medium` thermal property
+  accessors, in-repository thermal/perfusion callers and tests, Aequitas or
+  consumer-owned perfusion contract, ADR, and synchronized audit artifacts.
+  Dense field storage and unrelated thermal solver rewrites are non-goals.
+- Outcome: expose physical thermal properties through the existing Proteus
+  SSOT and resolve whether perfusion is a stable physical rate contract or a
+  model-specific consumer parameter, with no scalar compatibility facade.
+- Acceptance: source audit identifies every public accessor and perfusion
+  boundary; typed value-semantic regressions cover positive, invalid, and
+  unit-sensitive cases; locked package checks and focused Nextest pass; the
+  child and Atlas audits record the final contract and residuals.
+- Risk/change class: `[major]`; public thermal/perfusion signatures may change.
+- Dependencies: Aequitas provider quantities and Proteus thermal bundle
+  source must be verified against the live trees before implementation.
+
 ## KWAVERS-AEQ-MET-05 — Type vasculature physical metrics [major] — done
 
 - Owner: Codex; claimed 2026-07-26; scope: `kwavers-analysis` vasculature

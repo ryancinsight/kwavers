@@ -1,5 +1,17 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-06 typed thermal and perfusion metrics [major] — in progress 2026-07-27
+
+- [ ] Audit the live Proteus thermal bundle, Aequitas quantities, and every
+      Kwavers public accessor/caller before choosing the perfusion contract.
+- [ ] Migrate validated thermal property accessors and the justified perfusion
+      boundary without a compatibility facade; update all callers.
+- [ ] Add positive, invalid, and unit-sensitive value-semantic regressions.
+- [ ] Add/update ADR, child gap audit, changelog, and Atlas audit.
+- [ ] Run locked package checks, focused/full Nextest, doctests, Rustdoc,
+      format, and warning-denied Clippy; record external blockers exactly.
+- [ ] Commit and push the verified increment, preserving peer-owned dirt.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-05 typed vasculature physical metrics [major] — done 2026-07-26
 
 - [x] Audit the current public segmentation, classification, centerline, and
