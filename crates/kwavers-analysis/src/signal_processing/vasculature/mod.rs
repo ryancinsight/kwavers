@@ -13,6 +13,7 @@
 //! - Kirbas & Quek (2004). "A review of vessel extraction techniques". CSUR.
 //! - Jensen (1996). *Estimation of Blood Velocities Using Ultrasound*.
 
+use aequitas::systems::si::quantities::{Angle, Frequency, Length, Velocity};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array3;
 
@@ -43,8 +44,8 @@ pub struct VesselClassification {
     pub vessel_type: VascularVesselType,
     /// Classification confidence ∈ [0, 0.95].
     pub confidence: f64,
-    /// Estimated vessel diameter \[μm\] (voxel units; caller applies spacing).
-    pub diameter: f64,
+    /// Estimated physical vessel diameter.
+    pub diameter: Length,
     /// Principal axis direction (unit vector).
     pub orientation: [f64; 3],
     /// Estimated flow direction for arteries; `None` for veins or unknown.
@@ -62,14 +63,16 @@ pub struct VesselSegmentation {
     pub classification: VesselClassification,
     /// Number of 6-connected vessel segments.
     pub num_segments: usize,
-    /// Total vessel voxel count (scale by voxel spacing for physical length).
-    pub total_length: f64,
+    /// Estimated physical vessel length.
+    pub total_length: Length,
+    /// Physical voxel spacing along the image axes.
+    pub voxel_spacing: [Length; 3],
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
 impl VesselSegmentation {
-    /// Segment vasculature from a 3-D fUS image.
+    /// Segment vasculature from a 3-D fUS image with physical voxel spacing.
     ///
     /// Steps:
     /// 1. Compute multi-scale Frangi vesselness response.
@@ -78,8 +81,10 @@ impl VesselSegmentation {
     /// 4. Count 6-connected components.
     ///
     /// # Errors
-    /// Returns `InvalidInput` when any image dimension is < 3.
-    pub fn segment(image: &Array3<f64>) -> KwaversResult<Self> {
+    /// Returns `InvalidInput` when any image dimension is < 3 or voxel spacing
+    /// is non-finite or non-positive.
+    pub fn segment(image: &Array3<f64>, voxel_spacing: [Length; 3]) -> KwaversResult<Self> {
+        validate_voxel_spacing(voxel_spacing)?;
         let [nx, ny, nz] = image.shape();
         if nx < 3 || ny < 3 || nz < 3 {
             return Err(KwaversError::InvalidInput(
@@ -91,30 +96,39 @@ impl VesselSegmentation {
         let threshold = analysis::otsu_threshold(&response);
         let mask = response.mapv(|v| if v > threshold { 1.0 } else { 0.0 });
 
-        let classification = classify::classify_vessels(image, &mask)?;
-        let (num_segments, vessel_voxels) = analysis::count_connected_components(&mask);
+        let classification = classify::classify_vessels(image, &mask, voxel_spacing)?;
+        let (num_segments, _) = analysis::count_connected_components(&mask);
+        let points = classify::masked_points(&mask);
+        let total_length = classify::physical_length(&mask, &points, voxel_spacing);
 
         Ok(Self {
             mask,
             response,
             classification,
             num_segments,
-            total_length: vessel_voxels as f64,
+            total_length,
+            voxel_spacing,
         })
     }
 
-    /// Extract the vessel centerline as physical voxel coordinates.
+    /// Extract the vessel centerline as physical coordinates in metres.
     ///
     /// Returns voxels that are local maxima in the 6-neighbour topology —
     /// a deterministic one-pass medial-axis approximation for thin Frangi masks.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub fn extract_centerline(&self) -> KwaversResult<Vec<[f64; 3]>> {
+    pub fn extract_centerline(&self) -> KwaversResult<Vec<[Length; 3]>> {
         Ok(
             classify::centerline_from_points(&self.mask, &classify::masked_points(&self.mask))
                 .into_iter()
-                .map(|[i, j, k]| [i as f64, j as f64, k as f64])
+                .map(|[i, j, k]| {
+                    [
+                        Length::from_base(i as f64 * self.voxel_spacing[0].into_base()),
+                        Length::from_base(j as f64 * self.voxel_spacing[1].into_base()),
+                        Length::from_base(k as f64 * self.voxel_spacing[2].into_base()),
+                    ]
+                })
                 .collect(),
         )
     }
@@ -129,15 +143,22 @@ impl VesselSegmentation {
     ///   v = f_d · c / (2 f₀ · cos(θ))
     /// ```
     ///
+    /// Frequencies are in hertz, sound speed and the returned value are in
+    /// metres per second, and the angle is in radians.
+    ///
     /// # Errors
     /// - `InvalidInput` when any argument is non-finite or out of range.
     /// - `InvalidInput` when `cos(θ) < 1e-6` (beam nearly perpendicular).
     pub fn estimate_flow_velocity_from_doppler(
-        doppler_shift_hz: f64,
-        transmit_frequency_hz: f64,
-        sound_speed_m_s: f64,
-        beam_angle_rad: f64,
-    ) -> KwaversResult<f64> {
+        doppler_shift: Frequency,
+        transmit_frequency: Frequency,
+        sound_speed: Velocity,
+        beam_angle: Angle,
+    ) -> KwaversResult<Velocity> {
+        let doppler_shift_hz = doppler_shift.into_base();
+        let transmit_frequency_hz = transmit_frequency.into_base();
+        let sound_speed_m_s = sound_speed.into_base();
+        let beam_angle_rad = beam_angle.into_base();
         if !doppler_shift_hz.is_finite()
             || !transmit_frequency_hz.is_finite()
             || transmit_frequency_hz <= 0.0
@@ -158,7 +179,9 @@ impl VesselSegmentation {
             ));
         }
 
-        Ok(doppler_shift_hz * sound_speed_m_s / (2.0 * transmit_frequency_hz * cos_theta))
+        Ok(Velocity::from_base(
+            doppler_shift_hz * sound_speed_m_s / (2.0 * transmit_frequency_hz * cos_theta),
+        ))
     }
 
     /// Static segmentation does not carry Doppler or tracking data.
@@ -168,9 +191,23 @@ impl VesselSegmentation {
     /// # Errors
     /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
-    pub fn estimate_flow_velocity(&self) -> KwaversResult<f64> {
+    pub fn estimate_flow_velocity(&self) -> KwaversResult<Velocity> {
         Err(KwaversError::InvalidInput(
             "static vessel segmentation does not contain Doppler or tracking data".to_owned(),
+        ))
+    }
+}
+
+fn validate_voxel_spacing(voxel_spacing: [Length; 3]) -> KwaversResult<()> {
+    if voxel_spacing
+        .iter()
+        .map(|spacing| spacing.into_base())
+        .all(|spacing| spacing.is_finite() && spacing > 0.0)
+    {
+        Ok(())
+    } else {
+        Err(KwaversError::InvalidInput(
+            "voxel spacing must contain finite positive lengths".to_owned(),
         ))
     }
 }

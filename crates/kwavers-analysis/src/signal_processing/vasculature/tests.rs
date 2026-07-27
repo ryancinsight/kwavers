@@ -2,20 +2,21 @@ use super::analysis::count_connected_components;
 use super::classify::{classify_vessels, principal_axis, vessel_neighbor_count};
 use super::frangi::{compute_frangi_response, symmetric_3x3_eigenvalues};
 use super::*;
+use aequitas::systems::si::quantities::{Angle, Frequency, Length, Velocity};
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 
 #[test]
 fn test_vessel_segmentation_creation() {
     let image = Array3::ones((10, 10, 10));
-    let seg = VesselSegmentation::segment(&image).unwrap();
+    let seg = VesselSegmentation::segment(&image, spacing(1.0)).unwrap();
     assert_eq!(seg.mask.shape(), [10, 10, 10]);
 }
 
 #[test]
 fn test_vessel_segmentation_rejects_small_image() {
     let image = Array3::ones((2, 2, 2));
-    let result = VesselSegmentation::segment(&image);
+    let result = VesselSegmentation::segment(&image, spacing(1.0));
     assert!(result.is_err());
 }
 
@@ -29,7 +30,7 @@ fn test_vessel_classification_uses_static_contrast_and_geometry() {
         mask[[i, 5, 5]] = 1.0;
     }
 
-    let classification = classify_vessels(&image, &mask).unwrap();
+    let classification = classify_vessels(&image, &mask, spacing(1.0)).unwrap();
     assert_eq!(classification.vessel_type, VascularVesselType::Artery);
     assert!(
         classification.confidence > 0.9,
@@ -37,9 +38,9 @@ fn test_vessel_classification_uses_static_contrast_and_geometry() {
         classification.confidence
     );
     assert!(
-        classification.diameter > 1.0,
+        classification.diameter.into_base() > 1.0,
         "diameter = {}",
-        classification.diameter
+        classification.diameter.into_base()
     );
     // Principal axis must be predominantly along x
     assert!(
@@ -77,12 +78,13 @@ fn test_centerline_extracts_thin_vessel_axis() {
         classification: VesselClassification {
             vessel_type: VascularVesselType::Artery,
             confidence: 1.0,
-            diameter: 1.0,
+            diameter: Length::from_base(1.0),
             orientation: [1.0, 0.0, 0.0],
             flow_direction: Some([1.0, 0.0, 0.0]),
         },
         num_segments: 1,
-        total_length: 6.0,
+        total_length: Length::from_base(6.0),
+        voxel_spacing: spacing(1.0),
     };
 
     let centerline = segmentation.extract_centerline().unwrap();
@@ -94,8 +96,8 @@ fn test_centerline_extracts_thin_vessel_axis() {
     );
     // Sorted by flood-fill order; all points lie on the axial line
     for pt in &centerline {
-        assert_eq!(pt[1], 5.0);
-        assert_eq!(pt[2], 5.0);
+        assert_eq!(pt[1].into_base(), 5.0);
+        assert_eq!(pt[2].into_base(), 5.0);
     }
 }
 
@@ -105,15 +107,16 @@ fn test_doppler_velocity_formula() {
     //   = 3_080_000 / 10_000_000 = 0.308 m/s
     let expected_v = 2_000.0 * SOUND_SPEED_TISSUE / (2.0 * 5.0 * MHZ_TO_HZ);
     let v = VesselSegmentation::estimate_flow_velocity_from_doppler(
-        2_000.0,
-        5.0 * MHZ_TO_HZ,
-        SOUND_SPEED_TISSUE,
-        0.0,
+        Frequency::from_base(2_000.0),
+        Frequency::from_base(5.0 * MHZ_TO_HZ),
+        Velocity::from_base(SOUND_SPEED_TISSUE),
+        Angle::from_base(0.0),
     )
     .unwrap();
     assert!(
-        (v - expected_v).abs() < 1e-12,
-        "expected {expected_v} m/s, got {v}"
+        (v.into_base() - expected_v).abs() < 1e-12,
+        "expected {expected_v} m/s, got {}",
+        v.into_base()
     );
 }
 
@@ -121,18 +124,18 @@ fn test_doppler_velocity_formula() {
 fn test_doppler_velocity_invalid_inputs() {
     // Perpendicular beam
     assert!(VesselSegmentation::estimate_flow_velocity_from_doppler(
-        2000.0,
-        5.0 * MHZ_TO_HZ,
-        SOUND_SPEED_TISSUE,
-        std::f64::consts::FRAC_PI_2
+        Frequency::from_base(2000.0),
+        Frequency::from_base(5.0 * MHZ_TO_HZ),
+        Velocity::from_base(SOUND_SPEED_TISSUE),
+        Angle::from_base(std::f64::consts::FRAC_PI_2)
     )
     .is_err());
     // Negative frequency
     assert!(VesselSegmentation::estimate_flow_velocity_from_doppler(
-        2000.0,
-        -5.0 * MHZ_TO_HZ,
-        SOUND_SPEED_TISSUE,
-        0.0
+        Frequency::from_base(2000.0),
+        Frequency::from_base(-5.0 * MHZ_TO_HZ),
+        Velocity::from_base(SOUND_SPEED_TISSUE),
+        Angle::from_base(0.0)
     )
     .is_err());
 }
@@ -145,12 +148,13 @@ fn test_static_flow_velocity_is_error() {
         classification: VesselClassification {
             vessel_type: VascularVesselType::Unknown,
             confidence: 0.0,
-            diameter: 0.0,
+            diameter: Length::from_base(0.0),
             orientation: [0.0, 0.0, 0.0],
             flow_direction: None,
         },
         num_segments: 0,
-        total_length: 0.0,
+        total_length: Length::from_base(0.0),
+        voxel_spacing: spacing(1.0),
     };
     assert!(seg.estimate_flow_velocity().is_err());
 }
@@ -319,7 +323,7 @@ fn vessel_neighbor_count_chain_middle_is_two() {
 #[test]
 fn principal_axis_x_aligned_points_returns_x_unit_vector() {
     let points: Vec<[usize; 3]> = (0..5).map(|k| [k, 1, 1]).collect();
-    let axis = principal_axis(&points);
+    let axis = principal_axis(&points, spacing(1.0));
     assert!(
         axis[0].abs() > 0.999,
         "x-aligned chain: expected |axis[0]| ≈ 1, got {axis:?}"
@@ -332,4 +336,35 @@ fn principal_axis_x_aligned_points_returns_x_unit_vector() {
         axis[2].abs() < 1e-10,
         "x-aligned chain: expected axis[2] ≈ 0, got {axis:?}"
     );
+}
+
+#[test]
+fn physical_vessel_metrics_use_anisotropic_voxel_spacing() {
+    let mut mask = Array3::zeros((10, 3, 3));
+    for i in 2..8 {
+        mask[[i, 1, 1]] = 1.0;
+    }
+    let spacing = [
+        Length::from_base(2.0),
+        Length::from_base(1.0),
+        Length::from_base(1.0),
+    ];
+    let points = super::classify::masked_points(&mask);
+    let length = super::classify::physical_length(&mask, &points, spacing);
+
+    assert_eq!(length.into_base(), 12.0);
+    let classification = classify_vessels(&mask, &mask, spacing).unwrap();
+    assert!(
+        (classification.diameter.into_base() - (4.0 / std::f64::consts::PI).sqrt()).abs() < 1e-12
+    );
+}
+
+#[test]
+fn segmentation_rejects_nonphysical_voxel_spacing() {
+    let image = Array3::ones((3, 3, 3));
+    assert!(VesselSegmentation::segment(&image, [Length::from_base(0.0); 3]).is_err());
+}
+
+fn spacing(value: f64) -> [Length; 3] {
+    [Length::from_base(value); 3]
 }

@@ -3372,6 +3372,7 @@ dependencies = [
 name = "kwavers-analysis"
 version = "3.0.0"
 dependencies = [
+ "aequitas",
  "anyhow",
  "apollo-fft",
  "bytemuck",
@@ -3437,6 +3438,7 @@ dependencies = [
 name = "kwavers-diagnostics"
 version = "3.0.0"
 dependencies = [
+ "aequitas",
  "anyhow",
  "chrono",
  "consus-core 0.1.0 (git+https://github.com/ryancinsight/consus)",

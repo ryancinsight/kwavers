@@ -6,11 +6,11 @@
 //! principal component of masked voxel coordinates is the least-squares
 //! vessel axis (power-iteration approximation, 12 iterations).
 //!
-//! The equivalent circular diameter follows from
-//! `volume = Σ 1 = N_voxels` and `area = volume / length`:
+//! The equivalent circular diameter follows from the physical voxel volume
+//! `V = N_voxels · Δx · Δy · Δz` and `area = volume / length`:
 //!
 //! ```text
-//!   A = N / L,   d = sqrt(4A / π)
+//!   A = V / L,   d = sqrt(4A / π)
 //! ```
 //!
 //! The artery/vein label is derived from static intensity contrast:
@@ -29,6 +29,7 @@
 //! centerline candidates (thin medial axis).  This is exact for 6-connected
 //! linear segments and a conservative approximation for branching vessels.
 
+use aequitas::systems::si::quantities::Length;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array3;
 
@@ -43,6 +44,7 @@ use super::{VascularVesselType, VesselClassification};
 pub(super) fn classify_vessels(
     image: &Array3<f64>,
     mask: &Array3<f64>,
+    voxel_spacing: [Length; 3],
 ) -> KwaversResult<VesselClassification> {
     if image.shape() != mask.shape() {
         return Err(KwaversError::InvalidInput(
@@ -55,16 +57,21 @@ pub(super) fn classify_vessels(
         return Ok(VesselClassification {
             vessel_type: VascularVesselType::Unknown,
             confidence: 0.0,
-            diameter: 0.0,
+            diameter: Length::from_base(0.0),
             orientation: [0.0, 0.0, 0.0],
             flow_direction: None,
         });
     }
 
-    let orientation = principal_axis(&points);
-    let centerline = centerline_from_points(mask, &points);
-    let length = centerline.len().max(1) as f64;
-    let diameter = (4.0 * points.len() as f64 / (std::f64::consts::PI * length)).sqrt();
+    let orientation = principal_axis(&points, voxel_spacing);
+    let length = physical_length(mask, &points, voxel_spacing).into_base();
+    let voxel_volume = voxel_spacing
+        .iter()
+        .map(|spacing| spacing.into_base())
+        .product::<f64>();
+    let diameter = Length::from_base(
+        (4.0 * points.len() as f64 * voxel_volume / (std::f64::consts::PI * length)).sqrt(),
+    );
 
     // Compute vessel vs background intensity means.
     let mut vessel_sum = 0.0_f64;
@@ -105,6 +112,53 @@ pub(super) fn classify_vessels(
     })
 }
 
+/// Estimate the physical axial extent of a segmented vessel.
+///
+/// The extent is the principal-axis projection span plus one voxel projected
+/// onto that axis. This keeps a one-voxel vessel's length physical and avoids
+/// treating an index count as a length.
+pub(super) fn physical_length(
+    mask: &Array3<f64>,
+    points: &[[usize; 3]],
+    voxel_spacing: [Length; 3],
+) -> Length {
+    if points.is_empty() {
+        return Length::from_base(0.0);
+    }
+
+    let axis = principal_axis(points, voxel_spacing);
+    let spacing = voxel_spacing.map(|value| value.into_base());
+    let mut min_projection = f64::INFINITY;
+    let mut max_projection = f64::NEG_INFINITY;
+    for point in points {
+        let position = [
+            point[0] as f64 * spacing[0],
+            point[1] as f64 * spacing[1],
+            point[2] as f64 * spacing[2],
+        ];
+        let projection = axis[0].mul_add(
+            position[0],
+            axis[1].mul_add(position[1], axis[2] * position[2]),
+        );
+        min_projection = min_projection.min(projection);
+        max_projection = max_projection.max(projection);
+    }
+
+    let voxel_projection = axis[0].abs().mul_add(
+        spacing[0],
+        axis[1]
+            .abs()
+            .mul_add(spacing[1], axis[2].abs() * spacing[2]),
+    );
+    let centerline = centerline_from_points(mask, points);
+    let extent = if centerline.is_empty() {
+        voxel_projection
+    } else {
+        (max_projection - min_projection + voxel_projection).max(voxel_projection)
+    };
+    Length::from_base(extent)
+}
+
 /// Return indices of all voxels where `mask > 0`.
 pub(super) fn masked_points(mask: &Array3<f64>) -> Vec<[usize; 3]> {
     mask.indexed_iter()
@@ -136,17 +190,19 @@ pub(super) fn vessel_neighbor_count(mask: &Array3<f64>, point: &[usize; 3]) -> u
         + usize::from(k + 1 < nz && mask[[i, j, k + 1]] > 0.0)
 }
 
-/// Estimate the vessel principal axis by power iteration (12 steps).
+/// Estimate the vessel principal axis by power iteration (12 steps) in
+/// physical coordinates.
 ///
 /// Returns a unit vector aligned with the direction of largest variance of the
 /// masked voxel coordinates.
-pub(super) fn principal_axis(points: &[[usize; 3]]) -> [f64; 3] {
+pub(super) fn principal_axis(points: &[[usize; 3]], voxel_spacing: [Length; 3]) -> [f64; 3] {
     let n = points.len() as f64;
+    let spacing = voxel_spacing.map(|value| value.into_base());
     let mean = {
         let sum = points.iter().fold([0.0; 3], |mut acc, p| {
-            acc[0] += p[0] as f64;
-            acc[1] += p[1] as f64;
-            acc[2] += p[2] as f64;
+            acc[0] += p[0] as f64 * spacing[0];
+            acc[1] += p[1] as f64 * spacing[1];
+            acc[2] += p[2] as f64 * spacing[2];
             acc
         });
         [sum[0] / n, sum[1] / n, sum[2] / n]
@@ -157,9 +213,9 @@ pub(super) fn principal_axis(points: &[[usize; 3]]) -> [f64; 3] {
         let mut next = [0.0; 3];
         for point in points {
             let d = [
-                point[0] as f64 - mean[0],
-                point[1] as f64 - mean[1],
-                point[2] as f64 - mean[2],
+                point[0] as f64 * spacing[0] - mean[0],
+                point[1] as f64 * spacing[1] - mean[1],
+                point[2] as f64 * spacing[2] - mean[2],
             ];
             let proj = d[2].mul_add(axis[2], d[0].mul_add(axis[0], d[1] * axis[1]));
             next[0] += proj * d[0];

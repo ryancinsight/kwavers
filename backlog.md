@@ -1,19 +1,27 @@
 # Backlog / Strategy
 
-## KWAVERS-AEQ-MET-05 — Type vasculature physical metrics [major] — in progress
+## KWAVERS-AEQ-MET-05 — Type vasculature physical metrics [major] — done
 
 - Owner: Codex; claimed 2026-07-26; scope: `kwavers-analysis` vasculature
-  segmentation/classification and its focused value-semantic tests. Other
-  Doppler map storage arrays and dense fields are non-goals.
+  segmentation/classification, `kwavers-diagnostics` GPS integration, and
+  focused value-semantic tests. Other Doppler map storage arrays and dense
+  fields are non-goals.
 - Outcome: require validated `[Length; 3]` voxel spacing, report physical
-  diameter/length/centerline coordinates, and return typed Doppler `Velocity`
-  from typed frequency, sound-speed, and angle inputs.
+  diameter/length/centerline coordinates, return typed Doppler `Velocity`
+  from typed frequency, sound-speed, and angle inputs, and pass grid spacing
+  through the diagnostics caller.
 - Acceptance: anisotropic-spacing geometry oracle, invalid-spacing rejection,
-  Doppler formula and negative-input tests, package check, warning-denied
-  Clippy, configured Nextest, doctests, Rustdoc, and format pass. No scalar
-  compatibility facade remains.
+  Doppler formula and negative-input tests, locked analysis package check,
+  focused Nextest, and no scalar compatibility facade. Full locked package
+  suites pass analysis 724/724 and diagnostics 191/191; doctests and Rustdoc
+  exit 0. Clippy remains blocked only by three pre-existing `kwavers-math`
+  findings outside this scope.
 - Risk/change class: `[major]`; segmentation and Doppler public signatures
   change. Scalar extraction is limited to image storage and formula kernels.
+- Evidence: analysis locked check passes; vasculature Nextest passes 22/22;
+  full analysis and diagnostics Nextest pass 724/724 and 191/191; both
+  doctest lanes pass 1/1, both Rustdoc commands exit 0, and all in-repository
+  `VesselSegmentation::segment` callers are migrated.
 
 ## KWAVERS-AEQ-MET-03 — Type transducer physical metrics [major] — done
 

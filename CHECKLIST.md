@@ -1,6 +1,6 @@
 # Project Checklist
 
-## Owner: Codex — KWAVERS-AEQ-MET-05 typed vasculature physical metrics [major] — in progress 2026-07-26
+## Owner: Codex — KWAVERS-AEQ-MET-05 typed vasculature physical metrics [major] — done 2026-07-26
 
 - [x] Audit the current public segmentation, classification, centerline, and
       Doppler contracts against the Aequitas surface.
@@ -8,9 +8,12 @@
       axis, diameter, length, and centerline calculations.
 - [x] Type Doppler frequencies, sound speed, beam angle, and returned velocity.
 - [x] Add anisotropic-spacing, invalid-spacing, and typed Doppler value oracles.
-- [ ] Run package check, warning-denied Clippy, configured Nextest, doctests,
-      Rustdoc, and format; synchronize the audit and changelog, then commit and
-      push the verified increment.
+- [x] Run the locked analysis package check and focused Nextest (22/22),
+      migrate the diagnostics caller, synchronize the audit, ADR, and
+      changelog, then commit and push the verified increment. Full package
+      Nextest passes analysis 724/724 and diagnostics 191/191; both doctest
+      lanes pass 1/1 and both Rustdoc commands exit 0. Clippy remains blocked
+      only by three pre-existing `kwavers-math` findings outside scope.
 
 ## Owner: Codex — KWAVERS-AEQ-MET-03 typed transducer physical metrics [major] — done 2026-07-26
 

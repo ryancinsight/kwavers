@@ -48,10 +48,25 @@ pre-existing broken link in `design/mod.rs`.
 
 `KWAVERS-AEQ-MET-04` is reconciled as resolved by the earlier CEM43/HIFU typed
 planning slice (`KWAVERS-AEQ-MET-01`); it is not a second implementation track.
-The remaining audit rows are `KWAVERS-AEQ-MET-05` (voxel-spacing-dependent
-vasculature metrics) and `KWAVERS-AEQ-MET-06` (thermal accessors/perfusion
-ownership). They remain open until their public contracts and independent
-value oracles are migrated.
+`KWAVERS-AEQ-MET-05` is now resolved. Vasculature segmentation validates and
+stores physical `[Length; 3]` voxel spacing, computes physical diameter and
+axial length, returns typed centerline coordinates, and exposes typed Doppler
+frequency/sound-speed/angle inputs and velocity output. The diagnostics GPS
+caller captures the construction grid spacing and passes it to analysis, so
+no caller-applied voxel-scale convention remains. The anisotropic geometry,
+invalid-spacing, Doppler formula, and negative-input regressions pass; the
+focused vasculature Nextest lane passes 22/22; the full locked analysis and
+diagnostics package suites pass 724/724 and 191/191 respectively. Analysis and
+diagnostics doctests pass 1/1 each, exact touched-file rustfmt checks pass, and
+both package Rustdoc commands exit 0. Warning-denied Clippy remains blocked by
+three pre-existing `kwavers-math/src/linear_algebra/sparse/solver.rs`
+findings (`assign_op_pattern` twice and `needless_range_loop`), outside this
+slice; the former `mnemosyne-local` page-module blocker is resolved in the
+current shared dependency graph.
+
+The only remaining Kwavers audit row is `KWAVERS-AEQ-MET-06` (thermal
+accessors/perfusion ownership), which remains partial until its public
+perfusion contract and independent value oracles are migrated.
 
 The Kwavers inventory covers public configuration/result surfaces in physics,
 therapy, transducer, and analysis crates. Dense pressure/temperature fields,
@@ -77,7 +92,7 @@ internally.
 | `KWAVERS-AEQ-MET-02` | `kwavers-physics/src/electromagnetic/photoacoustic.rs` stored peak power, pulse duration, repetition rate, wavelength, beam radius, and returned peak fluence/average power as `f64`. | Use existing `Power`, `Time`, `Frequency`, `Length`, and `EnergyPerArea` at the constructor/result boundary. | Kwavers | **RESOLVED.** `PulsedLaser` and all `BeamProfile` radii now use Aequitas `Power`/`Time`/`Frequency`/`Length`; peak fluence returns `EnergyPerArea` and average power returns `Power`. Gaussian, top-hat, Bessel, and pulse-energy value oracles pass in `kwavers-physics`. |
 | `KWAVERS-AEQ-MET-03` | `kwavers-transducer/src/transducers/physics/{frequency,geometry,rayleigh,materials}.rs` exposed frequency, bandwidth, lengths, area/volume, range, attenuation, wavelength, and acoustic impedance as raw values; `PiezoMaterial::curie_temperature` also crossed the public boundary as Celsius `f64`. | Migrate the bounded transducer modules to typed constructors/results; retain dimensionless Q, bandwidth fraction, directivity, and reflection coefficients as scalar. | Kwavers | **RESOLVED.** ADR 049 and commit `52a487932` type the named transducer boundaries; the follow-up Curie-point regression closes `ThermodynamicTemperature`. Locked check and Nextest pass 218/218 with one skip; doctests pass 1/1 with 6 ignored; Rustdoc exits 0 with one pre-existing broken link; Clippy remains blocked by three pre-existing `kwavers-math` findings outside scope. |
 | `KWAVERS-AEQ-MET-04` | `kwavers-therapy/src/therapy/hifu_planning/{types,schedule}.rs` exposed focal dimensions/volumes, power, peak pressure, frequency, dwell, and temperature metrics as suffixed scalar fields. | Type the planning DTOs and derived metrics through the existing Aequitas seam; leave mechanical index and CEM43 as dimensionless/consumer-semantic values. | Kwavers | **RESOLVED by `KWAVERS-AEQ-MET-01`.** The typed CEM43/HIFU slice already carries focal geometry, power, pressure, frequency, dwell, and temperature through the established seam; this row is retained only as audit history, not a duplicate implementation. |
-| `KWAVERS-AEQ-MET-05` | `kwavers-analysis/src/signal_processing/vasculature/mod.rs` reports diameter and total length as voxel-unit `f64`, and Doppler velocity returns `f64`; spacing is left to the caller. | Make physical voxel spacing an explicit validated `Length` input, then return physical `Length`/`Velocity` instead of caller-applied scalars. | Kwavers | Boundary-dependent. The spacing contract and Doppler equation must be tested before migration. |
+| `KWAVERS-AEQ-MET-05` | `kwavers-analysis/src/signal_processing/vasculature/mod.rs` reported diameter and total length as voxel-unit `f64`, and Doppler velocity returned `f64`; spacing was left to the caller. | Make physical voxel spacing an explicit validated `Length` input, then return physical `Length`/`Velocity` instead of caller-applied scalars. | Kwavers | **RESOLVED.** `VesselSegmentation` carries validated spacing, physical geometry, and typed Doppler quantities; `kwavers-diagnostics` forwards grid spacing. Analysis locked check and focused Nextest pass 22/22; full package suites pass analysis 724/724 and diagnostics 191/191; doctests and Rustdoc exit 0. Clippy remains blocked only by the three pre-existing `kwavers-math` findings recorded above. |
 | `KWAVERS-AEQ-MET-06` | `kwavers-medium/src/properties/thermal.rs` stores a typed Proteus bundle but returns conductivity, density, specific heat, and diffusivity as raw values; perfusion fields are also raw. | Preserve Proteus as the SSOT and type accessors. Add an Aequitas perfusion-rate quantity only if the public contract requires it; otherwise use a consumer newtype for the biological model parameter. | Kwavers / Proteus | Partial. Provider extension is not yet justified by a stable public rate contract. |
 
 ### Explicit non-gaps and sequencing constraints
@@ -88,10 +103,9 @@ internally.
 - Mechanical index, thermal index, cavitation dose, fractional bandwidth,
   directivity, confidence, and material coupling coefficients are
   dimensionless or model-specific and are not Aequitas metric gaps.
-- `KWAVERS-AEQ-MET-03` is the active transducer result boundary. The parent
-  audit must be refreshed after this child slice so the cross-repository ledger
-  does not claim completion from an internal conversion that never reaches the
-  public API.
+- `KWAVERS-AEQ-MET-05` reaches the public diagnostics caller and its full
+  package evidence is recorded above; no cross-repository metric gap remains
+  for this slice.
 
 - Review 2026-07-22: Python release run `29967429949` built the stable-ABI
   wheels but the Linux and Windows base-wheel smoke imports failed because

@@ -4,6 +4,12 @@
 
 ### Changed
 
+- **Breaking**: Vasculature segmentation now requires validated physical voxel
+  spacing, reports typed `Length` geometry and centerline coordinates, and
+  returns typed Doppler `Velocity` from Aequitas frequency, speed, and angle
+  inputs. The functional-ultrasound diagnostics caller forwards its grid
+  spacing; no caller-applied voxel-unit convention remains. See [ADR 050](docs/ADR/050-typed-vasculature-physical-quantities.md).
+
 - **Breaking**: `PiezoMaterial::curie_temperature` now carries Aequitas
   `ThermodynamicTemperature` in kelvin. PZT catalog constructors preserve their
   published Celsius values through the explicit Celsius-to-Kelvin boundary;

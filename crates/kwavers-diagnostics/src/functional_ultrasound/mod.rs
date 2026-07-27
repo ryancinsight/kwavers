@@ -31,6 +31,7 @@ pub mod tracking;
 // ULM super-resolution and vessel-filtering algorithms moved to the `analysis`
 // layer (`kwavers_analysis::signal_processing::{ulm,vasculature}`); the
 // neuronavigation workflow imports the vessel types it needs from there.
+use aequitas::systems::si::quantities::Length;
 use kwavers_analysis::signal_processing::vasculature::{VesselClassification, VesselSegmentation};
 
 pub use atlas::BrainAtlas;
@@ -102,6 +103,9 @@ pub struct FunctionalUltrasoundGPS {
 
     /// Continuous tracking filter
     tracking: TrackingFilter,
+
+    /// Physical voxel spacing captured from the registered image grid.
+    voxel_spacing: [Length; 3],
 }
 
 impl FunctionalUltrasoundGPS {
@@ -109,7 +113,7 @@ impl FunctionalUltrasoundGPS {
     /// # Errors
     /// - Propagates any `KwaversError` returned by called functions.
     ///
-    pub fn new(_grid: &Grid) -> KwaversResult<Self> {
+    pub fn new(grid: &Grid) -> KwaversResult<Self> {
         let registration = ImageRegistration::default();
         let atlas = BrainAtlas::load_default()?;
         let targeting = TargetingSystem::new(&atlas)?;
@@ -121,6 +125,11 @@ impl FunctionalUltrasoundGPS {
             atlas,
             targeting,
             tracking,
+            voxel_spacing: [
+                Length::from_base(grid.dx),
+                Length::from_base(grid.dy),
+                Length::from_base(grid.dz),
+            ],
         })
     }
 
@@ -154,11 +163,14 @@ impl FunctionalUltrasoundGPS {
     }
 
     /// Segment vasculature from registered image
+    ///
+    /// The physical spacing captured from the construction grid is passed to
+    /// the analysis boundary so reported vessel geometry remains dimensional.
     /// # Errors
     /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn segment_vasculature(&mut self, registered_image: &LetoArray3<f64>) -> KwaversResult<()> {
-        let segmentation = VesselSegmentation::segment(registered_image)?;
+        let segmentation = VesselSegmentation::segment(registered_image, self.voxel_spacing)?;
         self.vasculature = Some(segmentation);
         Ok(())
     }
