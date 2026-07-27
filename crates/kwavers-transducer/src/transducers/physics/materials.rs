@@ -5,9 +5,10 @@
 
 use super::{PZT_DIELECTRIC_CONSTANT, PZT_SOUND_SPEED};
 use aequitas::systems::si::quantities::{
-    AcousticImpedance, Angle, Frequency, Length, MassDensity, ReciprocalLength, Time, Velocity,
+    AcousticImpedance, Angle, Frequency, Length, MassDensity, ReciprocalLength,
+    ThermodynamicTemperature, Time, Velocity,
 };
-use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
+use kwavers_core::constants::{fundamental::SOUND_SPEED_TISSUE, thermodynamic::KELVIN_OFFSET_C};
 use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
 
 const DB_AMPLITUDE_TO_NEPER: f64 = std::f64::consts::LN_10 / 20.0;
@@ -39,8 +40,8 @@ pub struct PiezoMaterial {
     pub sound_speed: Velocity,
     /// Acoustic impedance (`Pa·s/m`)
     pub acoustic_impedance: AcousticImpedance,
-    /// Curie temperature (°C)
-    pub curie_temperature: f64,
+    /// Curie temperature, stored in kelvin.
+    pub curie_temperature: ThermodynamicTemperature,
 }
 
 /// Common piezoelectric material types
@@ -75,7 +76,7 @@ impl PiezoMaterial {
             density: MassDensity::from_base(7500.0),
             sound_speed: PZT_SOUND_SPEED,
             acoustic_impedance: AcousticImpedance::from_base(34.5e6),
-            curie_temperature: 193.0,
+            curie_temperature: ThermodynamicTemperature::from_base(193.0 + KELVIN_OFFSET_C),
         }
     }
 
@@ -91,7 +92,7 @@ impl PiezoMaterial {
             density: MassDensity::from_base(7500.0),
             sound_speed: PZT_SOUND_SPEED,
             acoustic_impedance: AcousticImpedance::from_base(34.5e6),
-            curie_temperature: 328.0,
+            curie_temperature: ThermodynamicTemperature::from_base(328.0 + KELVIN_OFFSET_C),
         }
     }
 
@@ -107,7 +108,7 @@ impl PiezoMaterial {
             density: MassDensity::from_base(8100.0),
             sound_speed: Velocity::from_base(4500.0),
             acoustic_impedance: AcousticImpedance::from_base(36.5e6),
-            curie_temperature: 130.0,
+            curie_temperature: ThermodynamicTemperature::from_base(130.0 + KELVIN_OFFSET_C),
         }
     }
 
@@ -123,7 +124,7 @@ impl PiezoMaterial {
             density: MassDensity::from_base(1780.0),
             sound_speed: Velocity::from_base(2200.0),
             acoustic_impedance: AcousticImpedance::from_base(3.9e6),
-            curie_temperature: 100.0,
+            curie_temperature: ThermodynamicTemperature::from_base(100.0 + KELVIN_OFFSET_C),
         }
     }
 
@@ -139,6 +140,23 @@ impl PiezoMaterial {
     #[must_use]
     pub fn bandwidth_estimate(&self) -> f64 {
         self.effective_coupling() / self.mechanical_q.sqrt() * 100.0
+    }
+}
+
+#[cfg(test)]
+mod piezo_tests {
+    use super::*;
+
+    #[test]
+    fn catalog_curie_points_are_stored_as_absolute_temperature() {
+        let pzt_5h = PiezoMaterial::pzt_5h();
+        let pzt_4 = PiezoMaterial::pzt_4();
+
+        assert_eq!(
+            pzt_5h.curie_temperature.into_base(),
+            193.0 + KELVIN_OFFSET_C
+        );
+        assert_eq!(pzt_4.curie_temperature.into_base(), 328.0 + KELVIN_OFFSET_C);
     }
 }
 
@@ -743,7 +761,7 @@ mod lens_tests {
     #[test]
     fn isoplanatic_steering_pose_matches_maimbourg_table() {
         let f = length(61.0e-3); // 61 mm focal length (H101 transducer)
-        // On-axis: no rotation, no pullback.
+                                 // On-axis: no rotation, no pullback.
         let (th0, tz0) = isoplanatic_steering_pose(length(0.0), f).expect("on-axis");
         assert!(th0.into_base().abs() < 1e-15 && tz0.into_base().abs() < 1e-15);
 

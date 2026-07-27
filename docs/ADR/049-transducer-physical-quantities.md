@@ -19,6 +19,8 @@ accessors.
   areas and volumes as `Area` and `Volume`.
 - Store acoustic speeds as `Velocity` and acoustic impedances as
   `AcousticImpedance`.
+- Store piezoelectric Curie points as `ThermodynamicTemperature` in kelvin;
+  catalog values documented in Celsius convert at the constructor boundary.
 - Store Rayleigh wavenumber and amplitude attenuation in `ReciprocalLength`;
   integrate them over typed `Length` ranges before the scalar exponential and
   phase kernels.

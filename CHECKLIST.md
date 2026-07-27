@@ -1,17 +1,21 @@
 # Project Checklist
 
-## Owner: Codex — KWAVERS-AEQ-MET-03 typed transducer physical metrics [major] — in progress 2026-07-26
+## Owner: Codex — KWAVERS-AEQ-MET-03 typed transducer physical metrics [major] — done 2026-07-26
 
-- [ ] Add ADR 049 and migrate frequency, geometry, material, and Rayleigh
+- [x] Add ADR 049 and migrate frequency, geometry, material, and Rayleigh
       public boundaries to Aequitas quantities without a scalar compatibility
       facade.
-- [ ] Update all in-repository design, k-Wave, Python, and test callers; keep
+- [x] Update all in-repository design, k-Wave, Python, and test callers; keep
       raw extraction confined to numerical kernels and preserve dimensionless
       response metrics.
-- [ ] Run touched-package format, check, warning-denied Clippy, configured
-      Nextest, doctests, and Rustdoc; record exact evidence in the audit.
-- [ ] Refresh `gap_audit.md`, `backlog.md`, `CHECKLIST.md`, and `CHANGELOG.md`,
-      then commit and push the verified increment.
+- [x] Close the remaining piezoelectric Curie-point scalar as Aequitas
+      `ThermodynamicTemperature` in kelvin and add its value regression.
+- [x] Run touched-package check, configured Nextest (218/218, one skipped),
+      doctests (1/1, 6 ignored), and Rustdoc (exit 0). The package Clippy gate
+      remains blocked by three pre-existing `kwavers-math` findings outside
+      this scope; the workspace format gate also reports pre-existing dirty
+      transducer files outside this item.
+- [x] Refresh `gap_audit.md`, `backlog.md`, `CHECKLIST.md`, and `CHANGELOG.md`.
 
 ## Owner: Codex — KWAVERS-AEQ-MET-01 typed CEM43/HIFU metrics [major] — done 2026-07-23
 

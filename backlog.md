@@ -1,6 +1,6 @@
 # Backlog / Strategy
 
-## KWAVERS-AEQ-MET-03 — Type transducer physical metrics [major] — in progress
+## KWAVERS-AEQ-MET-03 — Type transducer physical metrics [major] — done
 
 - Owner: Codex; claimed 2026-07-26; scope: `kwavers-transducer` physics
   frequency, geometry, material, and Rayleigh public boundaries, their
@@ -14,6 +14,14 @@
   touched package. No compatibility scalar facade remains.
 - Risk/change class: `[major]`; public constructors, fields, and result types
   change. Raw extraction is permitted only at validated numerical kernels.
+- Evidence: commit `52a487932` typed the frequency, geometry, material, design,
+  and Rayleigh public boundaries. Follow-up commit closes the remaining
+  `PiezoMaterial::curie_temperature` scalar as Aequitas
+  `ThermodynamicTemperature` in kelvin. Locked package check and Nextest pass
+  218/218 with one skip; the new Curie-point value regression passes. Doctests
+  pass 1/1 with 6 ignored. Rustdoc exits 0 with one pre-existing broken link;
+  warning-denied Clippy remains blocked by three pre-existing `kwavers-math`
+  findings outside this scope.
 
 ## KWAVERS-AEQ-MET-01 — Type CEM43 and HIFU planning metrics [major] — done
 

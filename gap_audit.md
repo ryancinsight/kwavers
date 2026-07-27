@@ -31,6 +31,28 @@
 
 ## Aequitas metric gap audit (2026-07-23)
 
+### Verification refresh (2026-07-26)
+
+`KWAVERS-AEQ-MET-03` is resolved. Commit `52a487932` carries frequency,
+geometry, wavelength, attenuation, acoustic impedance, area, volume, velocity,
+and typed Rayleigh propagation contracts through the public transducer physics
+boundary. This increment closes the remaining public material scalar:
+`PiezoMaterial::curie_temperature` is now Aequitas
+`ThermodynamicTemperature` stored in kelvin, with the Celsius catalog values
+converted at construction. Locked `kwavers-transducer` check passes; its
+configured Nextest lane passes 218/218 with one skip; the Curie-point regression
+passes; doctests pass 1/1 with 6 ignored; and Rustdoc exits 0. Warning-denied
+Clippy remains blocked by three pre-existing `kwavers-math` findings in
+`linear_algebra/sparse/solver.rs`, outside this scope. Rustdoc retains one
+pre-existing broken link in `design/mod.rs`.
+
+`KWAVERS-AEQ-MET-04` is reconciled as resolved by the earlier CEM43/HIFU typed
+planning slice (`KWAVERS-AEQ-MET-01`); it is not a second implementation track.
+The remaining audit rows are `KWAVERS-AEQ-MET-05` (voxel-spacing-dependent
+vasculature metrics) and `KWAVERS-AEQ-MET-06` (thermal accessors/perfusion
+ownership). They remain open until their public contracts and independent
+value oracles are migrated.
+
 The Kwavers inventory covers public configuration/result surfaces in physics,
 therapy, transducer, and analysis crates. Dense pressure/temperature fields,
 dimensionless indices, probabilities, material-fit coefficients, and model
@@ -53,8 +75,8 @@ internally.
 |---|---|---|---|---|
 | `KWAVERS-AEQ-MET-01` | `kwavers-physics/src/thermal/thermal_dose.rs` and HIFU planning types/schedules used raw CEM43, temperature, dwell, and time-to-dose result fields. | Add a consumer-owned validated equivalent-time/CEM43 type backed by Aequitas `Time`; type temperature and duration result/configuration fields. Do not label CEM43 as `AbsorbedDose`. | Kwavers | **RESOLVED in this increment.** `CumulativeEquivalentMinutes` is backed by Aequitas `Time`; thermal calculators return typed maxima/point queries, accept typed intervals/thresholds, and HIFU planning returns typed temperature/dwell/time-to-dose values with `Option<Time>` for unreachable targets. Sapareto–Dewey thermal tests pass 15/15, clinical-imaging HIFU tests 2/2, and HIFU planning tests 16/16; package checks, warning-denied Clippy, doctests, Rustdoc, format, and diff gates pass. |
 | `KWAVERS-AEQ-MET-02` | `kwavers-physics/src/electromagnetic/photoacoustic.rs` stored peak power, pulse duration, repetition rate, wavelength, beam radius, and returned peak fluence/average power as `f64`. | Use existing `Power`, `Time`, `Frequency`, `Length`, and `EnergyPerArea` at the constructor/result boundary. | Kwavers | **RESOLVED.** `PulsedLaser` and all `BeamProfile` radii now use Aequitas `Power`/`Time`/`Frequency`/`Length`; peak fluence returns `EnergyPerArea` and average power returns `Power`. Gaussian, top-hat, Bessel, and pulse-energy value oracles pass in `kwavers-physics`. |
-| `KWAVERS-AEQ-MET-03` | `kwavers-transducer/src/transducers/physics/{frequency,geometry,rayleigh,materials}.rs` exposes frequency, bandwidth, lengths, area/volume, range, attenuation, wavelength, and acoustic impedance as raw values. | Migrate the bounded transducer modules to typed constructors/results; retain dimensionless Q, bandwidth fraction, directivity, and reflection coefficients as scalar. | Kwavers | **IN PROGRESS.** ADR 049 defines the public breaking boundary; KLM bandwidth, geometry identities, Rayleigh propagation, and impedance/reflection value tests remain the acceptance oracles. |
-| `KWAVERS-AEQ-MET-04` | `kwavers-therapy/src/therapy/hifu_planning/{types,schedule}.rs` exposes focal dimensions/volumes, power, peak pressure, frequency, dwell, and temperature metrics as suffixed scalar fields. | Type the planning DTOs and derived metrics through the existing Aequitas seam; leave mechanical index and CEM43 as dimensionless/consumer-semantic values. | Kwavers | Ready after `KWAVERS-AEQ-MET-01`; HIFU focal-volume, pressure, thermal-dose, and schedule invariants are the acceptance oracles. |
+| `KWAVERS-AEQ-MET-03` | `kwavers-transducer/src/transducers/physics/{frequency,geometry,rayleigh,materials}.rs` exposed frequency, bandwidth, lengths, area/volume, range, attenuation, wavelength, and acoustic impedance as raw values; `PiezoMaterial::curie_temperature` also crossed the public boundary as Celsius `f64`. | Migrate the bounded transducer modules to typed constructors/results; retain dimensionless Q, bandwidth fraction, directivity, and reflection coefficients as scalar. | Kwavers | **RESOLVED.** ADR 049 and commit `52a487932` type the named transducer boundaries; the follow-up Curie-point regression closes `ThermodynamicTemperature`. Locked check and Nextest pass 218/218 with one skip; doctests pass 1/1 with 6 ignored; Rustdoc exits 0 with one pre-existing broken link; Clippy remains blocked by three pre-existing `kwavers-math` findings outside scope. |
+| `KWAVERS-AEQ-MET-04` | `kwavers-therapy/src/therapy/hifu_planning/{types,schedule}.rs` exposed focal dimensions/volumes, power, peak pressure, frequency, dwell, and temperature metrics as suffixed scalar fields. | Type the planning DTOs and derived metrics through the existing Aequitas seam; leave mechanical index and CEM43 as dimensionless/consumer-semantic values. | Kwavers | **RESOLVED by `KWAVERS-AEQ-MET-01`.** The typed CEM43/HIFU slice already carries focal geometry, power, pressure, frequency, dwell, and temperature through the established seam; this row is retained only as audit history, not a duplicate implementation. |
 | `KWAVERS-AEQ-MET-05` | `kwavers-analysis/src/signal_processing/vasculature/mod.rs` reports diameter and total length as voxel-unit `f64`, and Doppler velocity returns `f64`; spacing is left to the caller. | Make physical voxel spacing an explicit validated `Length` input, then return physical `Length`/`Velocity` instead of caller-applied scalars. | Kwavers | Boundary-dependent. The spacing contract and Doppler equation must be tested before migration. |
 | `KWAVERS-AEQ-MET-06` | `kwavers-medium/src/properties/thermal.rs` stores a typed Proteus bundle but returns conductivity, density, specific heat, and diffusivity as raw values; perfusion fields are also raw. | Preserve Proteus as the SSOT and type accessors. Add an Aequitas perfusion-rate quantity only if the public contract requires it; otherwise use a consumer newtype for the biological model parameter. | Kwavers / Proteus | Partial. Provider extension is not yet justified by a stable public rate contract. |
 

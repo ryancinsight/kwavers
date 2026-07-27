@@ -4,6 +4,12 @@
 
 ### Changed
 
+- **Breaking**: `PiezoMaterial::curie_temperature` now carries Aequitas
+  `ThermodynamicTemperature` in kelvin. PZT catalog constructors preserve their
+  published Celsius values through the explicit Celsius-to-Kelvin boundary;
+  the transducer physics metric audit now has no untyped public material
+  temperature.
+
 - **Breaking**: CEM43 thermal dose and HIFU planning results now use validated
   `CumulativeEquivalentMinutes` backed by Aequitas `Time`, typed thermal
   temperatures and dwell times, and `Option<Time>` for unreachable target
