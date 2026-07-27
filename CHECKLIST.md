@@ -1,5 +1,17 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-05 typed vasculature physical metrics [major] — in progress 2026-07-26
+
+- [x] Audit the current public segmentation, classification, centerline, and
+      Doppler contracts against the Aequitas surface.
+- [x] Add validated `[Length; 3]` voxel spacing and carry physical spacing into
+      axis, diameter, length, and centerline calculations.
+- [x] Type Doppler frequencies, sound speed, beam angle, and returned velocity.
+- [x] Add anisotropic-spacing, invalid-spacing, and typed Doppler value oracles.
+- [ ] Run package check, warning-denied Clippy, configured Nextest, doctests,
+      Rustdoc, and format; synchronize the audit and changelog, then commit and
+      push the verified increment.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-03 typed transducer physical metrics [major] — done 2026-07-26
 
 - [x] Add ADR 049 and migrate frequency, geometry, material, and Rayleigh
