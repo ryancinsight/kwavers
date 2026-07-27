@@ -29,6 +29,30 @@
 
 # Gap Audit
 
+## Live Aequitas metric refresh — 2026-07-27
+
+The prior `KWAVERS-AEQ-MET-01` closure was stale on this branch: the typed
+HIFU implementation existed in non-ancestor commit `a5c101a4`, while the live
+`kwavers-therapy/src/therapy/hifu_planning` sources still exposed raw
+unit-suffixed `f64` fields and schedule coordinates. `KWAVERS-AEQ-MET-14`
+restores that provider-first implementation on the current branch.
+
+- `ClinicalHIFUTransducer` now carries `Frequency`, `Length`, and `Power`.
+- `FocalSpot` now carries `Length`, `Pressure`, and `Volume`; mechanical index
+  remains dimensionless.
+- `AblationTarget` and `SonicationSubspot` use the existing validated
+  `CartesianPosition`; target dimensions, safety margin, and schedule pitch
+  use `Length`.
+- `SonicationSchedule::plan` and focal-dose estimation accept `Frequency` and
+  preserve typed `Time`/temperature results. Scalar extraction remains inside
+  SI closed-form equations and axis-grid arithmetic only.
+
+The current source, focused rustfmt, package check, warning-denied Clippy,
+HIFU/focal/sonication Nextest filter, and therapy doctest commands complete
+against the shared offline graph. Cargo emits only the existing unused local
+patch warnings from the dirty provider graph; peer-owned math/physics edits,
+lockfile, and manifests remain outside this slice.
+
 ## Aequitas metric gap audit (2026-07-23)
 
 ### Verification refresh (2026-07-27)
@@ -77,7 +101,8 @@ checks for `kwavers-medium`, `kwavers-physics`, and `kwavers-simulation`;
 passes 361/361. The Aequitas provider already supplies the required rate
 dimension; no new consumer-owned wrapper or provider dimension was added.
 
-No remaining Kwavers audit row is open. Warning-denied Clippy remains blocked
+No remaining Kwavers Aequitas metric row is open after MET-14 restoration.
+Warning-denied Clippy remains blocked
 by the three pre-existing `kwavers-math` findings recorded in the MET-05
 refresh; this is verification debt, not an Aequitas metric gap.
 

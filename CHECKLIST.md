@@ -1,14 +1,14 @@
 # Project Checklist
 
-## Owner: Codex — KWAVERS-AEQ-MET-14 restore typed HIFU planning [arch] [major] — in progress
+## Owner: Codex — KWAVERS-AEQ-MET-14 restore typed HIFU planning [arch] [major] — done
 
 - [x] Confirm the typed HIFU implementation commit is not an ancestor of the
       current branch and that live public planning contracts are raw scalars.
-- [ ] Restore the provider-first HIFU contracts and migrate all current tests
+- [x] Restore the provider-first HIFU contracts and migrate all current tests
       and callers without a scalar compatibility facade.
-- [ ] Run focused format, check, Clippy, Nextest, doctest, and audit checks;
+- [x] Run focused format, check, Clippy, Nextest, doctest, and audit checks;
       preserve the active peer math/physics work.
-- [ ] Commit and push the verified correction.
+- [x] Commit and push the verified correction.
 
 ## Owner: Codex — KWAVERS-AEQ-MET-06 typed thermal and perfusion metrics [major] — done 2026-07-27
 

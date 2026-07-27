@@ -4,7 +4,7 @@
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KWAVERS-AEQ-MET-14 | Restore the omitted typed HIFU planning implementation on the current branch. Carry transducer frequency, dimensions, power, focal pressure/geometry, target geometry, and sonication schedule positions/pitches as Aequitas quantities; migrate current callers and synchronize the audit. | [arch] [major] | in-progress | Codex | `crates/kwavers-therapy/src/therapy/hifu_planning/**`, `docs/ADR/052-hifu-planning-quantities.md`, PM artifacts |
+| KWAVERS-AEQ-MET-14 | Restore the omitted typed HIFU planning implementation on the current branch. Carry transducer frequency, dimensions, power, focal pressure/geometry, target geometry, and sonication schedule positions/pitches as Aequitas quantities; migrate current callers and synchronize the audit. | [arch] [major] | done | Codex | `crates/kwavers-therapy/src/therapy/hifu_planning/**`, `docs/ADR/052-hifu-planning-quantities.md`, PM artifacts |
 
 ## KWAVERS-AEQ-MET-06 — Type thermal and perfusion metrics [major] — done
 

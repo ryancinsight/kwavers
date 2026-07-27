@@ -4,6 +4,11 @@
 
 ### Changed
 
+- **Breaking**: HIFU planning now carries transducer frequency, dimensions,
+  power, focal pressure/geometry, target geometry, and sonication positions as
+  Aequitas quantities. Scalar extraction is confined to the SI formulas and
+  axis-grid kernel; mechanical index remains dimensionless. See [ADR 052](docs/ADR/052-hifu-planning-quantities.md).
+
 - **Breaking**: Rayleigh annular-sector geometry now carries Aequitas `Angle`
   values for its public start and span fields. Radians are extracted only at
   the quadrature trigonometric boundary; area and coherent-pressure equations
