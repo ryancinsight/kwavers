@@ -32,7 +32,7 @@
 
 - [x] Add ADR 049 and migrate frequency, geometry, material, and Rayleigh
       public boundaries to Aequitas quantities without a scalar compatibility
-      facade.
+      facade, including annular-sector start/span `Angle` fields.
 - [x] Update all in-repository design, k-Wave, Python, and test callers; keep
       raw extraction confined to numerical kernels and preserve dimensionless
       response metrics.

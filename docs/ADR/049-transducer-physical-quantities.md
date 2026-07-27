@@ -24,6 +24,8 @@ accessors.
 - Store Rayleigh wavenumber and amplitude attenuation in `ReciprocalLength`;
   integrate them over typed `Length` ranges before the scalar exponential and
   phase kernels.
+- Store annular-sector start and span angles as Aequitas `Angle`; extract
+  radians only at the Rayleigh quadrature trigonometric boundary.
 - Keep normalized magnitude, phase, quality factor, fractional bandwidth,
   directivity, reflection, and insertion-loss results dimensionless. Complex
   surface-pressure phasors remain an explicit numerical-boundary value because
@@ -46,8 +48,8 @@ accessors.
 
 This is a pre-release public breaking change. Transducer-design, Rayleigh,
 k-Wave, Python, and test callers construct typed physical inputs and receive
-typed physical results. The numerical kernels retain the same equations and
-scalar layout after explicit boundary extraction.
+typed physical results, including annular-sector angles. The numerical kernels
+retain the same equations and scalar layout after explicit boundary extraction.
 
 ## Verification
 

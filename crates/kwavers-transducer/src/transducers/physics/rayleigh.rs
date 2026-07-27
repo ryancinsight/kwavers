@@ -11,7 +11,7 @@
 //! al., *Ultrasonics* 51 (2011), Eq. 1,
 //! <https://doi.org/10.1016/j.ultras.2010.12.011>.
 
-use aequitas::systems::si::quantities::{Area, Length, ReciprocalLength};
+use aequitas::systems::si::quantities::{Angle, Area, Length, ReciprocalLength};
 use eunomia::Complex64;
 use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
 use std::f64::consts::{PI, TAU};
@@ -29,8 +29,8 @@ pub enum PlanarApertureShape {
     AnnularSector {
         inner_radius_m: Length,
         outer_radius_m: Length,
-        start_angle_rad: f64,
-        span_angle_rad: f64,
+        start_angle: Angle,
+        span_angle: Angle,
     },
 }
 
@@ -41,13 +41,13 @@ impl PlanarApertureShape {
             Self::AnnularSector {
                 inner_radius_m,
                 outer_radius_m,
-                start_angle_rad,
-                span_angle_rad,
+                start_angle,
+                span_angle,
             } => (
                 inner_radius_m.into_base(),
                 outer_radius_m.into_base(),
-                start_angle_rad,
-                span_angle_rad,
+                start_angle.into_base(),
+                span_angle.into_base(),
             ),
         }
     }
@@ -121,11 +121,13 @@ impl PlanarApertureGeometry {
             PlanarApertureShape::AnnularSector {
                 inner_radius_m,
                 outer_radius_m,
-                start_angle_rad,
-                span_angle_rad,
+                start_angle,
+                span_angle,
             } => {
                 let inner_radius_m = inner_radius_m.into_base();
                 let outer_radius_m = outer_radius_m.into_base();
+                let start_angle_rad = start_angle.into_base();
+                let span_angle_rad = span_angle.into_base();
                 if !inner_radius_m.is_finite() || inner_radius_m < 0.0 {
                     return Err(invalid(
                         "inner_radius_m",
@@ -776,8 +778,8 @@ mod tests {
         let shape = PlanarApertureShape::AnnularSector {
             inner_radius_m: length(1.0e-3),
             outer_radius_m: length(3.0e-3),
-            start_angle_rad: 0.3,
-            span_angle_rad: std::f64::consts::FRAC_PI_2,
+            start_angle: Angle::from_base(0.3),
+            span_angle: Angle::from_base(std::f64::consts::FRAC_PI_2),
         };
         let expected = std::f64::consts::FRAC_PI_2 * (9.0e-6 - 1.0e-6) / 2.0;
         assert!((shape.area().into_base() - expected).abs() <= 4.0 * f64::EPSILON * expected);
@@ -786,7 +788,7 @@ mod tests {
     #[test]
     fn independently_driven_sectors_superpose_to_complete_annulus_on_axis() {
         let pressure = Complex64::from_polar(1.7e5, 0.4);
-        let aperture = |start_angle_rad, span_angle_rad| {
+        let aperture = |start_angle: Angle, span_angle: Angle| {
             PlanarAperture::oriented(
                 [length(0.0); 3],
                 [0.0, 0.0, 1.0],
@@ -794,19 +796,19 @@ mod tests {
                 PlanarApertureShape::AnnularSector {
                     inner_radius_m: length(0.4e-3),
                     outer_radius_m: length(1.2e-3),
-                    start_angle_rad,
-                    span_angle_rad,
+                    start_angle,
+                    span_angle,
                 },
                 pressure,
             )
             .unwrap()
         };
-        let complete = aperture(0.0, TAU);
+        let complete = aperture(Angle::from_base(0.0), Angle::from_base(TAU));
         let sectors: Vec<_> = (0..4)
             .map(|sector| {
                 aperture(
-                    sector as f64 * std::f64::consts::FRAC_PI_2,
-                    std::f64::consts::FRAC_PI_2,
+                    Angle::from_base(sector as f64 * std::f64::consts::FRAC_PI_2),
+                    Angle::from_base(std::f64::consts::FRAC_PI_2),
                 )
             })
             .collect();

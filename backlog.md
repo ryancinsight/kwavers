@@ -50,7 +50,8 @@
   frequency, geometry, material, and Rayleigh public boundaries, their
   in-repository callers, ADR 049, and synchronized metric PM artifacts.
 - Outcome: carry frequency, length, area, volume, velocity, acoustic
-  impedance, wavelength, and amplitude attenuation as Aequitas quantities;
+  impedance, wavelength, amplitude attenuation, and annular-sector angles as
+  Aequitas quantities;
   retain dimensionless response, phase, Q, directivity, and reflection values.
 - Acceptance: unchanged KLM, geometry, Rayleigh, material, and design
   value-semantic tests pass through configured Nextest; package check,
@@ -59,8 +60,10 @@
 - Risk/change class: `[major]`; public constructors, fields, and result types
   change. Raw extraction is permitted only at validated numerical kernels.
 - Evidence: commit `52a487932` typed the frequency, geometry, material, design,
-  and Rayleigh public boundaries. Follow-up commit closes the remaining
-  `PiezoMaterial::curie_temperature` scalar as Aequitas
+  and Rayleigh public boundaries. This increment closes the remaining public
+  annular-sector angle scalars as Aequitas `Angle`; the Rayleigh and KWaveArray
+  area/superposition regressions remain value-semantic. Follow-up commit closes
+  the remaining `PiezoMaterial::curie_temperature` scalar as Aequitas
   `ThermodynamicTemperature` in kelvin. Locked package check and Nextest pass
   218/218 with one skip; the new Curie-point value regression passes. Doctests
   pass 1/1 with 6 ignored. Rustdoc exits 0 with one pre-existing broken link;

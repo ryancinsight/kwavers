@@ -2,7 +2,7 @@
 
 use super::super::{DiscSourceProfile, KWaveArray};
 use crate::transducers::physics::{PlanarApertureGeometry, PlanarApertureShape};
-use aequitas::systems::si::quantities::Length;
+use aequitas::systems::si::quantities::{Angle, Length};
 
 /// Annulus has strictly fewer active cells than the full bowl of the same
 /// outer diameter, and the surface-area formula satisfies the closed form:
@@ -264,8 +264,8 @@ fn planar_quadrants_conserve_area_and_keep_signals_independent() {
             PlanarApertureShape::AnnularSector {
                 inner_radius_m: Length::from_base(inner),
                 outer_radius_m: Length::from_base(outer),
-                start_angle_rad: quadrant as f64 * span,
-                span_angle_rad: span,
+                start_angle: Angle::from_base(quadrant as f64 * span),
+                span_angle: Angle::from_base(span),
             },
         )
         .expect("valid quadrant");

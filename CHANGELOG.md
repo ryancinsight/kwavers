@@ -4,6 +4,11 @@
 
 ### Changed
 
+- **Breaking**: Rayleigh annular-sector geometry now carries Aequitas `Angle`
+  values for its public start and span fields. Radians are extracted only at
+  the quadrature trigonometric boundary; area and coherent-pressure equations
+  are unchanged.
+
 - **Breaking**: Thermal material constructors and accessors now use Aequitas
   `ThermalConductivity`, `MassDensity`, `SpecificHeatCapacity`, and
   `ThermalDiffusivity`; blood perfusion and blood specific heat use typed
