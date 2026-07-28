@@ -54,6 +54,31 @@ coefficients, and complex numerical intermediates remain formula/storage
 boundaries and are not relabeled as physical quantities. See
 [ADR 069](docs/ADR/069-complex-quantities.md).
 
+## Live unified-field deposition refresh — 2026-07-28
+
+The Aequitas metric audit found no missing physical quantity in this slice;
+the remaining defect was a storage-contract gap at the plugin boundary.
+`UnifiedFieldType` now owns an appended `VolumetricHeatSource` slot at index
+17 (`W/m³`) and `COUNT` is 18, preserving every existing field index. The
+thermal plugin declares that field as required, wraps its borrowed `ArrayView3`
+in the typed `VolumetricHeatSource` contract, and passes it to the diffusion
+solver. The former `Temperature + 1` lookup, which read `BubbleRadius` in
+metres, is deleted. Short field arrays now return a dimension error instead
+of silently skipping the update.
+
+The direct reverse lookup now follows the unified enum layout, so registered
+fields round-trip through their actual storage indices. Dense `Array4<f64>`
+storage remains a deliberate formula/storage boundary; units enter the typed
+thermal solver at the view boundary. Complex values are not involved, so the
+Eunomia complex-scaling contract remains unchanged.
+
+Evidence: commit `5aef5f551`; targeted `cargo check --offline -p
+kwavers-field -p kwavers-solver --tests` passed; rustfmt and `git diff --check`
+passed; nextest run `106a11a9-ba01-401d-b23b-1904c7e48144` passed 5/5 with 865
+tests skipped by the bounded expression; warning-denied Clippy passed for both
+touched packages. Peer-owned resolver warnings about unused stack overlay
+patches remain outside this increment.
+
 ## Live MEMS metric inventory — 2026-07-28
 
 The scan identified one residual family outside the complex increment:

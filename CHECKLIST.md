@@ -7882,3 +7882,19 @@ into caller-owned scratch storage and mutates accumulated state only after the
 complete evaluation succeeds. Therefore an invalid observation leaves the
 prior state unchanged, while valid increments inherit Asclepius non-negativity
 and make cumulative response monotone.
+
+## Unified-field deposition refresh — 2026-07-28
+
+- [x] [patch] Add the typed `UnifiedFieldType::VolumetricHeatSource` slot at
+      index 17, update the field count and reverse mapping, and expose typed
+      accessors.
+- [x] Route `ThermalDiffusionPlugin` through the borrowed
+      `VolumetricHeatSource` contract instead of the deleted `Temperature + 1`
+      alias to `BubbleRadius`; reject undersized field arrays with a typed
+      dimension error.
+- [x] Add the analytical plugin regression (`5 K/s × 2 s = 10 K`) and mapping
+      round-trip tests. Check, rustfmt, diff check, and targeted nextest 5/5
+      pass at Kwavers commit `5aef5f551`.
+- [x] Warning-denied Clippy passes for `kwavers-field` and `kwavers-solver`;
+      resolver warnings about unused stack overlay patches are peer-owned and
+      remain outside this increment.
