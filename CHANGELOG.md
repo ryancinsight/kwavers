@@ -10,10 +10,9 @@
   and focal depth uses `Length`. Dense Leto fields remain scalar storage
   boundaries. See [ADR 055](docs/ADR/055-acoustic-solver-quantities.md).
 
-- **Breaking**: The remaining intensity-tracker convenience accessors are
-  being replaced by canonical Aequitas `Intensity` results; W/cm² conversion
-  remains an explicit presentation boundary. See
-  [ADR 056](docs/ADR/056-typed-intensity-tracker-accessors.md).
+- **Breaking**: Intensity-tracker convenience accessors now return canonical
+  Aequitas `Intensity` results; W/cm² conversion remains an explicit
+  presentation boundary. See [ADR 056](docs/ADR/056-typed-intensity-tracker-accessors.md).
 
 - **Breaking**: Therapy-integration configuration, session and safety timing,
   acoustic therapy frequency/pressure/geometry, intensity results, thermal

@@ -144,11 +144,10 @@ checks for `kwavers-medium`, `kwavers-physics`, and `kwavers-simulation`;
 passes 361/361. The Aequitas provider already supplies the required rate
 dimension; no new consumer-owned wrapper or provider dimension was added.
 
-MET-15, MET-16, and MET-17 are closed. The remaining raw unit-suffixed
-therapy-integration metric accessors are tracked as `KWAVERS-AEQ-MET-18`
-below. The shared-overlay duplicate Aequitas worktree-package collision can
-still block a main-tree Clippy invocation before compilation; it is topology
-verification debt, not a metric-gap result.
+MET-15 through MET-18 are closed. The shared-overlay duplicate Aequitas
+worktree-package collision can still block a main-tree Clippy invocation
+before compilation; it is topology verification debt, not a metric-gap
+result.
 
 The Kwavers inventory covers public configuration/result surfaces in physics,
 therapy, transducer, and analysis crates. Dense pressure/temperature fields,
@@ -180,7 +179,7 @@ provider-owned mass-density-rate quantity up to the scalar numerical boundary.
 | `KWAVERS-AEQ-MET-15` | `kwavers-physics/src/acoustics/bubble_dynamics/cavitation_control/**` exposed detector frequencies, controller response time/carrier frequency, safety pressure/temperature, and pulse timing as unit-documented `f64` values. | Type the public contracts with existing Aequitas dimensions; keep detector levels, duty cycles, amplitudes, control scores, and frequency shifts dimensionless and scalar extraction at numerical boundaries. | Kwavers, Aequitas | **RESOLVED in `9bb64b638`, `693daecc9`, `1b61313a8`, `831251a85`, `9dea173b8`, and `e9f1f339e`.** `Frequency`, `Time`, `Pressure`, and `ThermodynamicTemperature` now cross detector, controller, safety, pulse-sequence, and therapy boundaries; the unused `PowerModulator` sample-rate argument is removed and frequency modulation reports the shifted carrier. Physics warning-denied Clippy passes after the follow-up lint fixes. Therapy Clippy is blocked before compilation by the exact duplicate Aequitas worktree-package collision in the shared overlay; no metric failure is indicated. See [ADR 053](docs/ADR/053-cavitation-control-quantities.md). |
 | `KWAVERS-AEQ-MET-16` | `kwavers-therapy/src/therapy/therapy_integration/{config,state,safety_controller,intensity_tracker,orchestrator}` exposed therapy duration, acoustic frequency/pressure/geometry, timestamps, intensities, temperature, and CEM43 as raw scalars. | Type the public contracts with existing Aequitas quantities and preserve scalar extraction only at mesh, formula, and explicit unit-conversion boundaries. | Kwavers, Aequitas | **RESOLVED in `3433d36ba` and `26c18bb24`.** Configuration, session state, safety-controller timing, intensity metrics, and thermal dose now use typed quantities; CEM43 uses the existing provider contract. Clean linked-lane package check passes; focused Nextest passes 349/349 with one skip and four slow tests. See [ADR 054](docs/ADR/054-therapy-integration-quantities.md). |
 | `KWAVERS-AEQ-MET-17` | `kwavers-therapy/src/therapy/therapy_integration/acoustic/{fields,stepping}.rs` returns public simulation time, pressure, and SPTA intensity as unit-documented scalar values; acoustic safety/heating helpers also accept raw physical intervals. | Type `Time`, `Pressure`, and `Intensity` at the public acoustic-solver boundary and carry `Time` through public safety/heating helper inputs; keep dense fields and formula/mesh scalars at explicit boundaries. | Kwavers, Aequitas | **RESOLVED in `328a46f03`.** Package check passes; focused Nextest passes 349/349 with one skip and two slow tests in 37.399 seconds; doctests pass 8/8 with one ignored; warning-denied Clippy and Rustdoc pass. See [ADR 055](docs/ADR/055-acoustic-solver-quantities.md). |
-| `KWAVERS-AEQ-MET-18` | `kwavers-therapy/src/therapy/therapy_integration/intensity_tracker/tracker.rs` still exposes `spta_w_cm2()` and `peak_intensity_w_cm2()` as unit-suffixed raw `f64` accessors after the underlying metrics became typed `Intensity`. | Replace the raw unit-suffixed accessors with canonical typed intensity accessors, migrate in-repository tests/callers, and retain W/cm² conversion only at explicit presentation or unit-conversion boundaries. | Kwavers, Aequitas | **IN PROGRESS.** Acceptance is no raw unit-suffixed tracker accessor, typed value-semantic regressions, and the focused package gates. |
+| `KWAVERS-AEQ-MET-18` | `kwavers-therapy/src/therapy/therapy_integration/intensity_tracker/tracker.rs` exposed `spta_w_cm2()` and `peak_intensity_w_cm2()` as unit-suffixed raw `f64` accessors after the underlying metrics became typed `Intensity`. | Replace the raw unit-suffixed accessors with canonical typed intensity accessors, migrate in-repository tests/callers, and retain W/cm² conversion only at explicit presentation or unit-conversion boundaries. | Kwavers, Aequitas | **RESOLVED in `596ae06a7`.** `spta()` and `peak_intensity()` return canonical SI `Intensity`; the legacy accessor scan is empty, and W/cm² conversion remains only in the explicit unit-conversion test boundary. Focused Nextest passes 349/349 with one skip and three slow tests; doctests pass 8/8 with one ignored; warning-denied Clippy and Rustdoc pass. See [ADR 056](docs/ADR/056-typed-intensity-tracker-accessors.md). |
 
 ### Explicit non-gaps and sequencing constraints
 
@@ -192,9 +191,9 @@ provider-owned mass-density-rate quantity up to the scalar numerical boundary.
   dimensionless or model-specific and are not Aequitas metric gaps.
 - `KWAVERS-AEQ-MET-05` reaches the public diagnostics caller and
   `KWAVERS-AEQ-MET-06` reaches the therapy/Pennes material consumers; their
-  full package evidence is recorded above. The remaining tracker accessor gap
-  is recorded as `KWAVERS-AEQ-MET-18`; no other cross-repository metric gap is
-  open in the current Kwavers ledger.
+  full package evidence is recorded above. `KWAVERS-AEQ-MET-18` closes the
+  remaining tracker accessor gap in the current ledger. No other
+  cross-repository metric gap is open in the current Kwavers ledger.
 
 - Review 2026-07-22: Python release run `29967429949` built the stable-ABI
   wheels but the Linux and Windows base-wheel smoke imports failed because

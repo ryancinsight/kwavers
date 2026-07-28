@@ -49,15 +49,17 @@ Aequitas metric failure.
       Nextest 349/349 (one skipped, two slow), doctests 8/8 (one ignored),
       Clippy, and Rustdoc.
 
-## Owner: Codex — KWAVERS-AEQ-MET-18 typed intensity-tracker accessors [major]
+## Owner: Codex — KWAVERS-AEQ-MET-18 typed intensity-tracker accessors [major] — done 2026-07-27
 
-- [ ] Replace `spta_w_cm2()` and `peak_intensity_w_cm2()` with canonical
+- [x] Replace `spta_w_cm2()` and `peak_intensity_w_cm2()` with canonical
       typed `Intensity` accessors; keep W/cm² conversion at explicit
       presentation/unit-conversion boundaries.
-- [ ] Migrate all in-repository callers and tests without a scalar facade.
-- [ ] Add ADR 056 and synchronize the child and Atlas audit, backlog,
+- [x] Migrate all in-repository callers and tests without a scalar facade.
+- [x] Add ADR 056 and synchronize the child and Atlas audit, backlog,
       checklist, and changelog.
-- [ ] Run the focused package gates, commit, and push the verified increment.
+- [x] Run the focused package gates, commit, and push the verified increment.
+      Commit `596ae06a7` passes focused Nextest 349/349 (one skipped, three
+      slow), doctests 8/8 (one ignored), Clippy, and Rustdoc.
 
 ## Owner: Codex — KWAVERS-AEQ-MET-14 restore typed HIFU planning [arch] [major] — done
 
