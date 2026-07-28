@@ -7,8 +7,9 @@
 - **Breaking**: MEMS fluid-crosstalk APIs now accept Aequitas area, length,
   frequency, fluid-density, and sound-speed quantities and return complex
   `AcousticImpedance`; scalar extraction remains inside the baffled-monopole
-  formula. CMUT/PMUT and sensitivity metrics remain in the active MET-32
-  increment. See [ADR 070](docs/ADR/070-mems-quantity-contracts.md).
+  formula. CMUT/PMUT geometry, material, fluid, drive, resonance, pressure,
+  capacitance, damping, and sensitivity metrics now use Aequitas quantities as
+  well. See [ADR 070](docs/ADR/070-mems-quantity-contracts.md).
 
 - **Breaking**: Rayleigh complex pressure, electrical impedance, loaded
   acoustic impedance, and reflection-coefficient contracts now use

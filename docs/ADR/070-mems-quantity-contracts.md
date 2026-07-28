@@ -2,28 +2,32 @@
 
 ## Status
 
-Accepted; implemented incrementally under `KWAVERS-AEQ-MET-32`.
+Accepted and implemented under `KWAVERS-AEQ-MET-32` by commits `1afd09768`
+and `6d15b5850`.
 
 ## Context
 
-The MEMS transducer modules exposed physical geometry, fluid properties, drive
-frequency, and acoustic crosstalk as raw `f64` values. This allowed metres,
-millimetres, hertz, density, and sound speed to be mixed at public call sites.
-The crosstalk result is a complex phasor, but its imaginary component is
-quadrature data rather than an independent physical unit.
+The MEMS transducer modules exposed physical geometry, material, fluid, drive,
+resonance, pressure, capacitance, damping, and sensitivity values as raw
+`f64` values. This allowed metres, millimetres, hertz, density, sound speed,
+voltage, and pressure to be mixed at public call sites. The crosstalk result is
+a complex phasor, but its imaginary component is quadrature data rather than
+an independent physical unit.
 
 ## Decision
 
 The crosstalk boundary uses Aequitas `Area`, `Length`, `Frequency`,
 `MassDensity`, and `Velocity` inputs and returns
-`AcousticImpedance<eunomia::Complex64>`. The `Complex64` value is extracted only
-inside the closed-form monopole calculation and the distance helper. The
-matrix stores typed acoustic impedances, including its zero diagonal.
+`AcousticImpedance<eunomia::Complex64>`. CMUT/PMUT cells and plate helpers use
+typed geometry, material, fluid, drive, resonance, pressure, capacitance,
+power, spring-stiffness, and damping quantities. Sensitivity uses typed
+pressure-per-potential, potential-per-pressure, and length-per-potential
+contracts. The `Complex64` value is extracted only inside closed-form formulas
+and distance helpers. The matrix stores typed acoustic impedances, including
+its zero diagonal.
 
-CMUT/PMUT cell fields, plate stiffness/damping quantities, and sensitivity
-contracts remain in the same vertical migration item. Dimensionless coupling,
-quality, bandwidth, and empirical coefficients stay scalar because they do not
-carry SI dimensions.
+Dimensionless coupling, quality, bandwidth, and empirical coefficients stay
+scalar because they do not carry SI dimensions.
 
 ## Alternatives rejected
 
@@ -38,5 +42,9 @@ carry SI dimensions.
 
 The typed crosstalk tests preserve the closed-form magnitude and phase oracle,
 reciprocity, inverse-distance scaling, zero diagonal, and invalid-length
-behavior. The remaining MET-32 surfaces are not claimed complete until their
-public contracts are migrated and the transducer suite is rerun.
+behavior. CMUT, PMUT, plate, flexible-apodization, comparison, and sensitivity
+tests preserve the corresponding closed-form scaling and ordering oracles.
+`cargo check -p kwavers-transducer --tests` and
+`cargo nextest run -p kwavers-transducer` pass with 219/219 tests and one
+declared skip. Full-target Clippy remains blocked only by the peer-owned
+`crates/kwavers-math/src/simd/mod.rs:6` `doc_overindented_list_items` error.

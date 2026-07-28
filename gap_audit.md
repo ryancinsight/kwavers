@@ -56,17 +56,21 @@ boundaries and are not relabeled as physical quantities. See
 
 ## Live MEMS metric inventory — 2026-07-28
 
-The same public-boundary scan found one residual family outside the complex
-increment: `kwavers-transducer::mems` still exposes CMUT/PMUT geometry,
-Young's-modulus and density inputs, fluid density/sound-speed inputs, drive
-voltage/frequency, capacitance, resonance, output pressure, and crosstalk
-impedance as raw scalars. These are physical public contracts, not dense field
-storage or dimensionless model coefficients. `KWAVERS-AEQ-MET-32` is now
-in-progress: the public crosstalk API uses Aequitas `Area`, `Length`,
-`Frequency`, `MassDensity`, `Velocity`, and complex `AcousticImpedance`, with
-scalar extraction confined to the monopole formula. CMUT/PMUT cell fields and
-the sensitivity contract remain open in the same item; the complex-quantity
-decisions do not justify leaving those surfaces untyped.
+The scan identified one residual family outside the complex increment:
+`kwavers-transducer::mems` exposed CMUT/PMUT geometry, material, fluid, drive,
+resonance, pressure, capacitance, damping, and sensitivity contracts as raw
+scalars. `KWAVERS-AEQ-MET-32` is now closed by `1afd09768` and `6d15b5850`.
+The public contracts use Aequitas `Length`, `Area`, `Pressure`, `MassDensity`,
+`Velocity`, `Frequency`, `ElectricPotential`, `Capacitance`, `Power`,
+`SpringStiffness`, `DampingCoefficient`, `PressurePerElectricPotential`,
+`ElectricPotentialPerPressure`, `LengthPerElectricPotential`, and
+`SurfaceChargeDensity`; complex crosstalk remains
+`AcousticImpedance<Complex64>`. Scalar extraction is confined to formula,
+normalisation, and storage boundaries. The audit's missing metrics—flexural
+rigidity, modal mass/stiffness, fluid loading, squeeze-film damping, output
+pressure, and voltage/pressure sensitivity—are implemented and covered by the
+full transducer suite (219/219, one declared skip). Dimensionless coupling,
+quality, bandwidth, and empirical coefficients remain scalar by contract.
 
 ## Live Aequitas refresh — 2026-07-28
 
