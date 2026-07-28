@@ -1,5 +1,20 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-28 typed lithotripsy quantities [major] — done 2026-07-27
+
+- [x] Type lithotripsy peak pressure, pulse duration, and repetition rate with
+      Aequitas; retain the future shock-wave/fracture/bioeffects solver work as
+      a separate non-metric boundary.
+- [x] Migrate the default value test, add ADR 066, and synchronize gap-audit,
+      backlog, checklist, and changelog.
+- [x] Run the physics package check, focused Nextest, warning-denied Clippy,
+      doctests, Rustdoc, rustfmt, and diff checks; preserve peer dirt.
+
+Evidence: `kwavers-physics` test-target check passes; the package's focused
+therapy test filter passes; warning-denied Clippy, doctests, and Rustdoc pass;
+touched-file rustfmt and `git diff --check` pass. Existing shared provider-
+patch, linker, and peer-dirty warnings remain outside this item.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-27 typed therapeutic cavitation quantities [major] — done 2026-07-27
 
 - [x] Type detector frequency, nucleus radius, Blake threshold, Minnaert

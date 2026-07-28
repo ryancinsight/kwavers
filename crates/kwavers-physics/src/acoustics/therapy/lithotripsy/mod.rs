@@ -16,7 +16,7 @@
 //! - Cavitation cloud dynamics
 //! - Bioeffects assessment and safety monitoring
 
-// Not yet implemented:
+// Solver and bioeffects components remain separate implementation work:
 // - Shock wave generation and nonlinear propagation (KZK/Westervelt solver integration)
 // - Stone fracture mechanics: σ > σ_critical (Coleman et al. 1987 J Urol)
 // - Cavitation cloud dynamics with bubble-bubble interactions
@@ -27,23 +27,25 @@
 // - Cleveland RO et al. (2007) J Acoust Soc Am 122(5):2672-2682. (lithotripsy acoustics)
 // - Szabo TL (2004) Diagnostic Ultrasound Imaging. §14 (shock wave therapy)
 
-/// Placeholder for lithotripsy configuration
+use aequitas::systems::si::quantities::{Frequency, Pressure, Time};
+
+/// Lithotripsy shock-wave configuration.
 #[derive(Debug, Clone)]
 pub struct LithotripsyConfig {
-    /// Shock wave peak pressure (Pa)
-    pub peak_pressure: f64,
-    /// Shock wave pulse duration (s)
-    pub pulse_duration: f64,
-    /// Repetition rate (Hz)
-    pub repetition_rate: f64,
+    /// Shock-wave peak pressure.
+    pub peak_pressure: Pressure<f64>,
+    /// Shock-wave pulse duration.
+    pub pulse_duration: Time<f64>,
+    /// Shock-wave repetition rate.
+    pub repetition_rate: Frequency<f64>,
 }
 
 impl Default for LithotripsyConfig {
     fn default() -> Self {
         Self {
-            peak_pressure: 50e6,  // 50 MPa typical
-            pulse_duration: 1e-6, // 1 µs typical
-            repetition_rate: 1.0, // 1 Hz typical
+            peak_pressure: Pressure::from_base(50e6),
+            pulse_duration: Time::from_base(1e-6),
+            repetition_rate: Frequency::from_base(1.0),
         }
     }
 }
@@ -55,8 +57,8 @@ mod tests {
     #[test]
     fn test_lithotripsy_config_default() {
         let config = LithotripsyConfig::default();
-        assert!(config.peak_pressure > 0.0);
-        assert!(config.pulse_duration > 0.0);
-        assert!(config.repetition_rate > 0.0);
+        assert!(config.peak_pressure.into_base() > 0.0);
+        assert!(config.pulse_duration.into_base() > 0.0);
+        assert!(config.repetition_rate.into_base() > 0.0);
     }
 }

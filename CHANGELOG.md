@@ -4,6 +4,11 @@
 
 ### Changed
 
+- **Breaking**: Lithotripsy shock-wave peak pressure, pulse duration, and
+  repetition-rate configuration now use Aequitas `Pressure`, `Time`, and
+  `Frequency`. Future solver components remain separate implementation work.
+  See [ADR 066](docs/ADR/066-lithotripsy-quantities.md).
+
 - **Breaking**: Therapeutic cavitation detector frequency, nucleus radius,
   Blake threshold, Minnaert result, and pressure inputs now use Aequitas
   `Frequency`, `Length`, and `Pressure`; cavitation index/probability and dense

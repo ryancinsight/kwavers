@@ -18,6 +18,7 @@
 | KWAVERS-AEQ-MET-25 | Type the public HIFU imaging transducer, treatment-plan, geometry, protocol, safety, and monitoring metrics with Aequitas; preserve CEM43/model scalars and focused-field formula boundaries. | [major] | done | Codex | `crates/kwavers-imaging/src/ultrasound/hifu.rs`, focused HIFU caller/tests, ADR 063, PM artifacts |
 | KWAVERS-AEQ-MET-26 | Type the public hemispherical-array geometry, element, steering, validation, constants, and metric contracts with Aequitas; preserve dimensionless controls and Source/mesh/formula boundaries and make the source waveform honor configured frequency. | [major] | done | Codex | `crates/kwavers-transducer/src/hemispherical/**`, ADR 064, PM artifacts |
 | KWAVERS-AEQ-MET-27 | Type the therapeutic cavitation detector frequency, nucleus radius, Blake threshold, Minnaert result, and pressure-input contracts with Aequitas; preserve cavitation index/probability and pressure-field storage boundaries. | [major] | done | Codex | `crates/kwavers-physics/src/acoustics/therapy/cavitation/**`, ADR 065, PM artifacts |
+| KWAVERS-AEQ-MET-28 | Type the public lithotripsy shock-wave peak pressure, pulse duration, and repetition-rate configuration with Aequitas; preserve future solver implementation boundaries. | [major] | done | Codex | `crates/kwavers-physics/src/acoustics/therapy/lithotripsy/mod.rs`, ADR 066, PM artifacts |
 
 ## KWAVERS-AEQ-MET-06 — Type thermal and perfusion metrics [major] — done
 
