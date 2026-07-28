@@ -277,14 +277,14 @@ impl IntensityTracker {
         self.thermal_dose
     }
 
-    /// Get SPTA in clinically relevant units (W/cm²)
-    pub fn spta_w_cm2(&self) -> f64 {
-        self.current_metrics.spta.into_base() / 1e4
+    /// Get the current SPTA intensity in SI base units (W/m²).
+    pub fn spta(&self) -> Intensity<f64> {
+        self.current_metrics.spta
     }
 
-    /// Get peak intensity ever recorded (W/cm²)
-    pub fn peak_intensity_w_cm2(&self) -> f64 {
-        self.peak_intensity.into_base() / 1e4
+    /// Get the peak intensity ever recorded in SI base units (W/m²).
+    pub fn peak_intensity(&self) -> Intensity<f64> {
+        self.peak_intensity
     }
 
     /// Check if thermal safety threshold exceeded

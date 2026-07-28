@@ -37,15 +37,27 @@ Aequitas metric failure.
 
 ## Owner: Codex — KWAVERS-AEQ-MET-17 typed acoustic-solver metrics [major]
 
-- [ ] Type public simulation time, pressure, SPTA intensity, and public helper
+- [x] Type public simulation time, pressure, SPTA intensity, and public helper
       intervals with existing Aequitas quantities; keep dense arrays and
       formula/mesh scalar boundaries explicit.
-- [ ] Migrate all in-repository callers, tests, and documentation without a
+- [x] Migrate all in-repository callers, tests, and documentation without a
       scalar compatibility facade.
-- [ ] Add ADR 055 and synchronize the child and Atlas audit, backlog, checklist,
+- [x] Add ADR 055 and synchronize the child and Atlas audit, backlog, checklist,
       and changelog.
-- [ ] Run focused check, Nextest, doctest, Rustdoc, Clippy, and format gates;
-      commit and push the verified increment.
+- [x] Run focused check, Nextest, doctest, Rustdoc, Clippy, and format gates;
+      commit the verified increment. Commit `328a46f03` passes package check,
+      Nextest 349/349 (one skipped, two slow), doctests 8/8 (one ignored),
+      Clippy, and Rustdoc.
+
+## Owner: Codex — KWAVERS-AEQ-MET-18 typed intensity-tracker accessors [major]
+
+- [ ] Replace `spta_w_cm2()` and `peak_intensity_w_cm2()` with canonical
+      typed `Intensity` accessors; keep W/cm² conversion at explicit
+      presentation/unit-conversion boundaries.
+- [ ] Migrate all in-repository callers and tests without a scalar facade.
+- [ ] Add ADR 056 and synchronize the child and Atlas audit, backlog,
+      checklist, and changelog.
+- [ ] Run the focused package gates, commit, and push the verified increment.
 
 ## Owner: Codex — KWAVERS-AEQ-MET-14 restore typed HIFU planning [arch] [major] — done
 

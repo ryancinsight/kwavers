@@ -8,7 +8,7 @@ use leto::Array3;
 fn test_tracker_creation() {
     let tracker = IntensityTracker::new(Time::from_base(0.1), Time::from_base(1e-6)).unwrap();
     assert_eq!(tracker.sample_count(), 0);
-    assert_eq!(tracker.peak_intensity_w_cm2(), 0.0);
+    assert_eq!(tracker.peak_intensity(), Intensity::from_base(0.0));
 }
 
 #[test]
@@ -47,14 +47,14 @@ fn test_peak_tracking() {
     tracker
         .record_intensity(&pressure, &impedance, Time::from_base(0.0))
         .unwrap();
-    let peak1 = tracker.peak_intensity_w_cm2();
+    let peak1 = tracker.peak_intensity();
 
     // Increase pressure
     let pressure2 = Array3::from_elem([4, 4, 4], 2.0 * MPA_TO_PA);
     tracker
         .record_intensity(&pressure2, &impedance, Time::from_base(1e-6))
         .unwrap();
-    let peak2 = tracker.peak_intensity_w_cm2();
+    let peak2 = tracker.peak_intensity();
 
     assert!(peak2 > peak1);
 }
@@ -93,8 +93,8 @@ fn test_spta_units() {
         .record_intensity(&pressure, &impedance, Time::from_base(0.0))
         .unwrap();
 
-    let spta_wm2 = tracker.metrics().spta;
-    let spta_wcm2 = tracker.spta_w_cm2();
+    let spta_wm2 = tracker.spta();
+    let spta_wcm2 = spta_wm2.into_base() / 1e4;
 
     // 1 W/cm² = 1e4 W/m²
     assert!((spta_wcm2 - spta_wm2.into_base() / 1e4).abs() < 0.01);
@@ -114,6 +114,6 @@ fn test_reset() {
 
     tracker.reset();
     assert_eq!(tracker.sample_count(), 0);
-    assert_eq!(tracker.peak_intensity_w_cm2(), 0.0);
+    assert_eq!(tracker.peak_intensity(), Intensity::from_base(0.0));
     assert_eq!(tracker.thermal_dose().cem43.as_minutes(), 0.0);
 }
