@@ -70,6 +70,18 @@ updated from the removed peer solver method `solve_leto` to `solve`, because
 the concurrent optical diffusion migration had already changed the solver
 contract. The peer-owned solver edits remain un-staged.
 
+## Live therapy-integration refresh — 2026-07-27
+
+`KWAVERS-AEQ-MET-16` is implemented in commits `3433d36ba` and
+`26c18bb24`. The public therapy-integration configuration, session state,
+safety controller, and intensity tracker now carry Aequitas `Time`,
+`Frequency`, `Pressure`, `Length`, `Volume`, `Intensity`,
+`ThermodynamicTemperature`, and `TemperatureDifference` values. CEM43 uses
+the existing `CumulativeEquivalentMinutes` contract. Scalar extraction is
+limited to mesh arrays, numerical formulas, unit-conversion helpers, and the
+existing microbubble kernel boundary. The clean linked lane package check
+passes and focused Nextest passes 349/349 with one skip and four slow tests.
+
 ## Aequitas metric gap audit (2026-07-23)
 
 ### Verification refresh (2026-07-27)
@@ -118,12 +130,13 @@ checks for `kwavers-medium`, `kwavers-physics`, and `kwavers-simulation`;
 passes 361/361. The Aequitas provider already supplies the required rate
 dimension; no new consumer-owned wrapper or provider dimension was added.
 
-No remaining Kwavers Aequitas metric row is open after MET-15 closure. The
-remaining raw scalars in the audited cavitation-control scope are numerical
-kernel state or dimensionless model values, not public physical contracts.
-Warning-denied Clippy remains blocked
-by the three pre-existing `kwavers-math` findings recorded in the MET-05
-refresh; this is verification debt, not an Aequitas metric gap.
+MET-15 and MET-16 are closed. The remaining raw scalars identified by the live
+therapy-integration audit are concentrated in the acoustic solver's public
+time/pressure/intensity methods and the associated safety/heating helper
+intervals; they are tracked as `KWAVERS-AEQ-MET-17` below. The shared-overlay
+duplicate Aequitas worktree-package collision can still block a main-tree
+Clippy invocation before compilation; it is topology verification debt, not a
+metric-gap result.
 
 The Kwavers inventory covers public configuration/result surfaces in physics,
 therapy, transducer, and analysis crates. Dense pressure/temperature fields,
@@ -152,7 +165,9 @@ provider-owned mass-density-rate quantity up to the scalar numerical boundary.
 | `KWAVERS-AEQ-MET-04` | `kwavers-therapy/src/therapy/hifu_planning/{types,schedule}.rs` exposed focal dimensions/volumes, power, peak pressure, frequency, dwell, and temperature metrics as suffixed scalar fields. | Type the planning DTOs and derived metrics through the existing Aequitas seam; leave mechanical index and CEM43 as dimensionless/consumer-semantic values. | Kwavers | **RESOLVED by `KWAVERS-AEQ-MET-01`.** The typed CEM43/HIFU slice already carries focal geometry, power, pressure, frequency, dwell, and temperature through the established seam; this row is retained only as audit history, not a duplicate implementation. |
 | `KWAVERS-AEQ-MET-05` | `kwavers-analysis/src/signal_processing/vasculature/mod.rs` reported diameter and total length as voxel-unit `f64`, and Doppler velocity returned `f64`; spacing was left to the caller. | Make physical voxel spacing an explicit validated `Length` input, then return physical `Length`/`Velocity` instead of caller-applied scalars. | Kwavers | **RESOLVED.** `VesselSegmentation` carries validated spacing, physical geometry, and typed Doppler quantities; `kwavers-diagnostics` forwards grid spacing. Analysis locked check and focused Nextest pass 22/22; full package suites pass analysis 724/724 and diagnostics 191/191; doctests and Rustdoc exit 0. Clippy remains blocked only by the three pre-existing `kwavers-math` findings recorded above. |
 | `KWAVERS-AEQ-MET-06` | `kwavers-medium/src/properties/thermal.rs` stored a typed Proteus bundle but returned conductivity, density, specific heat, diffusivity, and perfusion fields as raw values. | Preserve Proteus as the SSOT and type the material accessors and perfusion contract without duplicating thermophysical laws in Kwavers. | Aequitas, Proteus, Kwavers | **RESOLVED.** Aequitas `MassDensityRate` supplies `kg/(m³·s)`; `ThermalPropertyData` and `TemperatureDependentThermal` now store and return typed thermal properties and perfusion values. Therapy construction and the Pennes material consumer are migrated; scalar extraction is explicit at numerical boundaries. Kwavers-medium Nextest passes 191/191 and thermal/bubble physics passes 361/361. See [ADR 051](docs/ADR/051-thermal-perfusion-quantities.md). |
-| `KWAVERS-AEQ-MET-15` | `kwavers-physics/src/acoustics/bubble_dynamics/cavitation_control/**` exposed detector frequencies, controller response time/carrier frequency, safety pressure/temperature, and pulse timing as unit-documented `f64` values. | Type the public contracts with existing Aequitas dimensions; keep detector levels, duty cycles, amplitudes, control scores, and frequency shifts dimensionless and scalar extraction at numerical boundaries. | Kwavers, Aequitas | **RESOLVED in this increment.** `Frequency`, `Time`, `Pressure`, and `ThermodynamicTemperature` now cross detector, controller, safety, pulse-sequence, and therapy boundaries; the unused `PowerModulator` sample-rate argument is removed and frequency modulation reports the shifted carrier. Exact check, focused Nextest, doctest, Rustdoc, Clippy, and format evidence is recorded for the delivery commit. See [ADR 053](docs/ADR/053-cavitation-control-quantities.md). |
+| `KWAVERS-AEQ-MET-15` | `kwavers-physics/src/acoustics/bubble_dynamics/cavitation_control/**` exposed detector frequencies, controller response time/carrier frequency, safety pressure/temperature, and pulse timing as unit-documented `f64` values. | Type the public contracts with existing Aequitas dimensions; keep detector levels, duty cycles, amplitudes, control scores, and frequency shifts dimensionless and scalar extraction at numerical boundaries. | Kwavers, Aequitas | **RESOLVED in `9bb64b638`, `693daecc9`, `1b61313a8`, `831251a85`, `9dea173b8`, and `e9f1f339e`.** `Frequency`, `Time`, `Pressure`, and `ThermodynamicTemperature` now cross detector, controller, safety, pulse-sequence, and therapy boundaries; the unused `PowerModulator` sample-rate argument is removed and frequency modulation reports the shifted carrier. Physics warning-denied Clippy passes after the follow-up lint fixes. Therapy Clippy is blocked before compilation by the exact duplicate Aequitas worktree-package collision in the shared overlay; no metric failure is indicated. See [ADR 053](docs/ADR/053-cavitation-control-quantities.md). |
+| `KWAVERS-AEQ-MET-16` | `kwavers-therapy/src/therapy/therapy_integration/{config,state,safety_controller,intensity_tracker,orchestrator}` exposed therapy duration, acoustic frequency/pressure/geometry, timestamps, intensities, temperature, and CEM43 as raw scalars. | Type the public contracts with existing Aequitas quantities and preserve scalar extraction only at mesh, formula, and explicit unit-conversion boundaries. | Kwavers, Aequitas | **RESOLVED in `3433d36ba` and `26c18bb24`.** Configuration, session state, safety-controller timing, intensity metrics, and thermal dose now use typed quantities; CEM43 uses the existing provider contract. Clean linked-lane package check passes; focused Nextest passes 349/349 with one skip and four slow tests. See [ADR 054](docs/ADR/054-therapy-integration-quantities.md). |
+| `KWAVERS-AEQ-MET-17` | `kwavers-therapy/src/therapy/therapy_integration/acoustic/{fields,stepping}.rs` returns public simulation time, pressure, and SPTA intensity as unit-documented scalar values; acoustic safety/heating helpers also accept raw physical intervals. | Type `Time`, `Pressure`, and `Intensity` at the public acoustic-solver boundary and carry `Time` through public safety/heating helper inputs; keep dense fields and formula/mesh scalars at explicit boundaries. | Kwavers, Aequitas | **IN PROGRESS.** Acceptance is migrated callers/tests, typed value-semantic regressions, and clean package/Nextest/doctest/Rustdoc/Clippy evidence. |
 
 ### Explicit non-gaps and sequencing constraints
 

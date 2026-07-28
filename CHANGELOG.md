@@ -4,6 +4,12 @@
 
 ### Changed
 
+- **Breaking**: Therapy-integration configuration, session and safety timing,
+  acoustic therapy frequency/pressure/geometry, intensity results, thermal
+  temperature, and CEM43 now use Aequitas quantities. Scalar extraction stays
+  at mesh, numerical-formula, and explicit unit-conversion boundaries. See
+  [ADR 054](docs/ADR/054-therapy-integration-quantities.md).
+
 - **Breaking**: Cavitation-control detector frequencies, controller response
   time and carrier frequency, safety pressure/temperature limits, and pulse
   duration/delay/frequency now use Aequitas quantities. Frequency modulation

@@ -15,8 +15,37 @@
 
 Evidence: `kwavers-physics` check and the cavitation-control Nextest lane pass;
 the therapy package check passes after the photoacoustic caller follows the
-peer solver migration from `solve_leto` to `solve`. Final doctest, Rustdoc,
-Clippy, format, commit, and push results are recorded below after execution.
+peer solver migration from `solve_leto` to `solve`. Physics warning-denied
+Clippy passes after the follow-up lint fixes. Therapy Clippy remains blocked
+before compilation by the duplicate Aequitas worktree-package collision in
+the shared overlay; this is recorded as topology verification debt, not an
+Aequitas metric failure.
+
+## Owner: Codex — KWAVERS-AEQ-MET-16 typed therapy-integration metrics [major]
+
+- [x] Type therapy configuration, session timing, safety-controller timing,
+      intensity results, temperature results, and thermal dose with existing
+      Aequitas quantities; preserve explicit mesh and formula boundaries.
+- [x] Migrate all current therapy-integration callers, tests, and doctests
+      without a scalar compatibility facade.
+- [x] Add the ADR, child gap-audit row, backlog row, and changelog entry.
+- [x] Pass rustfmt, package check, staged-diff validation, and focused Nextest
+      (349/349 passed, one skipped, four slow).
+- [x] Record doctest (8 passed, 1 ignored), Rustdoc (exit 0), and warning-denied
+      Clippy (exit 0 in a clean linked lane); preserve the peer-owned Cargo.lock
+      and shared overlay.
+
+## Owner: Codex — KWAVERS-AEQ-MET-17 typed acoustic-solver metrics [major]
+
+- [ ] Type public simulation time, pressure, SPTA intensity, and public helper
+      intervals with existing Aequitas quantities; keep dense arrays and
+      formula/mesh scalar boundaries explicit.
+- [ ] Migrate all in-repository callers, tests, and documentation without a
+      scalar compatibility facade.
+- [ ] Add ADR 055 and synchronize the child and Atlas audit, backlog, checklist,
+      and changelog.
+- [ ] Run focused check, Nextest, doctest, Rustdoc, Clippy, and format gates;
+      commit and push the verified increment.
 
 ## Owner: Codex — KWAVERS-AEQ-MET-14 restore typed HIFU planning [arch] [major] — done
 
