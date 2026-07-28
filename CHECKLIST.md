@@ -9,9 +9,10 @@
 - [x] Add value-semantic spacing/Doppler regressions and synchronize the child
       and Atlas gap audits.
 - [x] Pin the PR checkout action to the immutable Atlas graph
-      `77e3ebe76fcbb042b9a8e378006f5ee7dd6e223f`, which advances Mnemosyne to
+      `53ae7516bf3383009affd2197f2d1619edd8e7d2`, which advances Mnemosyne to
       merged PR #31 at `fd873df55568a30ce5cd68ca61275d47f741286a` and Coeus
-      to the `crates/` provider layout required by the PR.
+      to the `crates/` provider layout required by the PR and advances RITK to
+      the matching consumer paths.
 - [x] Correct the six stale Coeus paths from the retired root layout to
       `../coeus/crates/*` and update only the four Mnemosyne lock packages.
 - [ ] Run focused format, Nextest, Clippy, doctest, Rustdoc, and package gates;

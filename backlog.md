@@ -12,11 +12,11 @@
   invalid spacing and Doppler inputs return typed errors; all affected tests,
   focused Nextest, Clippy, doctest, Rustdoc, and format gates pass. Source,
   tests, docs, and PM synchronization are implemented. The PR now pins the
-  immutable Atlas graph `77e3ebe76fcbb042b9a8e378006f5ee7dd6e223f`, which
+  immutable Atlas graph `53ae7516bf3383009affd2197f2d1619edd8e7d2`, which
   advances Mnemosyne to merged PR #31 at
-  `fd873df55568a30ce5cd68ca61275d47f741286a` and Coeus to its current
-  `crates/` layout; the lockfile carries the four corresponding Mnemosyne
-  version transitions. Exact-head hosted gates are running; local full-
+  `fd873df55568a30ce5cd68ca61275d47f741286a`, Coeus to its current
+  `crates/` layout, and RITK to the matching consumer paths; the lockfile
+  carries the four corresponding Mnemosyne version transitions. Exact-head hosted gates are running; local full-
   workspace compilation is not graph-authoritative because mutable sibling
   checkouts diverge from the pinned Atlas graph.
 - Non-goals: Doppler field storage, dimensionless confidence/orientation, and
