@@ -29,6 +29,24 @@
 
 # Gap Audit
 
+## Live Aequitas refresh — 2026-07-28
+
+`KWAVERS-AEQ-MET-29` and `KWAVERS-AEQ-MET-30` remain closed. Commit
+`215d8915b` repairs five CEUS test constructors to pass typed
+`NumberDensity<f64>` and `Length<f64>` values; commit `58d1750c1` removes
+three duplicate interpolation kernels and delegates to the provider-owned
+`leto_ops` SSOT. The affected `kwavers-math`, `kwavers-medium`, and
+`kwavers-physics` lane passes 1,861/1,861 Nextest tests with one declared
+skip. No new physical metric crosses a public boundary as an untyped scalar.
+
+The standalone provider-source blockers found during the audit are fixed and
+pushed: Tyche `1527964` uses portable Eunomia git sources, and Asclepius
+`bbf3840` uses portable Aequitas/Eunomia git sources. The shared Atlas overlay
+still has a dirty, peer-owned lock graph with duplicate provider source
+identities; a no-overlay lock refresh must be integrated separately before a
+locked standalone package gate can be claimed. This is dependency-resolution
+debt, not an open Aequitas metric row.
+
 ## Live CEUS refresh — 2026-07-27
 
 `KWAVERS-AEQ-MET-29` closes the public contrast-enhanced ultrasound (CEUS)
