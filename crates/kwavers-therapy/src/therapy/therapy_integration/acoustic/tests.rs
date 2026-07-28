@@ -1,4 +1,5 @@
 use super::AcousticWaveSolver;
+use aequitas::systems::si::quantities::{Intensity, Pressure, Time};
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
@@ -24,8 +25,8 @@ fn test_acoustic_solver_creation() {
 
     let solver = AcousticWaveSolver::new(&grid, &medium).unwrap();
     assert_eq!(solver.grid_dimensions(), (32, 32, 32));
-    assert!(solver.timestep() > 0.0);
-    assert_eq!(solver.current_time(), 0.0);
+    assert!(solver.timestep() > Time::from_base(0.0));
+    assert_eq!(solver.current_time(), Time::from_base(0.0));
 }
 
 #[test]
@@ -38,10 +39,15 @@ fn test_acoustic_solver_time_stepping() {
     let dt = solver.timestep();
 
     solver.step().expect("Step failed");
-    assert!((solver.current_time() - dt).abs() < 1e-15);
+    assert!((solver.current_time() - dt).into_base().abs() < 1e-15);
 
     solver.step().expect("Second step failed");
-    assert!((solver.current_time() - 2.0 * dt).abs() < 1e-14);
+    assert!(
+        (solver.current_time() - Time::from_base(2.0 * dt.into_base()))
+            .into_base()
+            .abs()
+            < 1e-14
+    );
 }
 
 #[test]
@@ -51,7 +57,7 @@ fn test_acoustic_solver_advance() {
 
     let mut solver = AcousticWaveSolver::new(&grid, &medium).unwrap();
 
-    let duration = 1e-6;
+    let duration = Time::from_base(1e-6);
     solver.advance(duration).expect("Advance failed");
 
     assert!(solver.current_time() >= duration);
@@ -85,7 +91,7 @@ fn test_acoustic_solver_max_pressure() {
     let solver = AcousticWaveSolver::new(&grid, &medium).unwrap();
 
     let p_max = solver.max_pressure();
-    assert_eq!(p_max, 0.0);
+    assert_eq!(p_max, Pressure::from_base(0.0));
 }
 
 #[test]
@@ -95,8 +101,10 @@ fn test_acoustic_solver_spta_intensity() {
 
     let solver = AcousticWaveSolver::new(&grid, &medium).unwrap();
 
-    let i_spta = solver.spta_intensity(1e-3).expect("SPTA failed");
-    assert_eq!(i_spta, 0.0);
+    let i_spta = solver
+        .spta_intensity(Time::from_base(1e-3))
+        .expect("SPTA failed");
+    assert_eq!(i_spta, Intensity::from_base(0.0));
 }
 
 #[test]
@@ -106,7 +114,7 @@ fn test_advance_negative_duration() {
 
     let mut solver = AcousticWaveSolver::new(&grid, &medium).unwrap();
 
-    let result = solver.advance(-1e-6);
+    let result = solver.advance(Time::from_base(-1e-6));
     assert!(result.is_err());
 }
 
@@ -117,8 +125,10 @@ fn test_advance_zero_duration() {
 
     let mut solver = AcousticWaveSolver::new(&grid, &medium).unwrap();
 
-    solver.advance(0.0).expect("Zero advance failed");
-    assert_eq!(solver.current_time(), 0.0);
+    solver
+        .advance(Time::from_base(0.0))
+        .expect("Zero advance failed");
+    assert_eq!(solver.current_time(), Time::from_base(0.0));
 }
 
 #[test]
@@ -127,12 +137,12 @@ fn test_spta_intensity_validation() {
     let medium = create_water_medium(&grid);
     let solver = AcousticWaveSolver::new(&grid, &medium).unwrap();
 
-    solver.spta_intensity(-1.0).unwrap_err();
-    solver.spta_intensity(0.0).unwrap_err();
+    solver.spta_intensity(Time::from_base(-1.0)).unwrap_err();
+    solver.spta_intensity(Time::from_base(0.0)).unwrap_err();
 
     assert_eq!(
-        solver.spta_intensity(1.0).unwrap(),
-        0.0,
+        solver.spta_intensity(Time::from_base(1.0)).unwrap(),
+        Intensity::from_base(0.0),
         "zero-field SPTA intensity must be 0.0"
     );
 }

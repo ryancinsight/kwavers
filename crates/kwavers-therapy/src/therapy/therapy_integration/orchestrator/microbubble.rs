@@ -55,11 +55,12 @@
 //! - Konofagou et al. (2012): "Focused ultrasound-mediated brain drug delivery"
 
 use crate::therapy::microbubble_dynamics::{
-    sample_acoustic_field_at_position, MicrobubbleDynamicsService,
+    MicrobubbleDynamicsService, sample_acoustic_field_at_position,
 };
 use kwavers_core::error::KwaversResult;
 
 use crate::therapy::microbubble_dynamics::{DrugLoadingMode, DrugPayload};
+use aequitas::systems::si::quantities::Time;
 use kwavers_physics::therapy::microbubble::{
     MarmottantShellProperties, MicrobubbleState, Position3D,
 };
@@ -149,8 +150,9 @@ use super::super::state::AcousticField;
 pub fn update_microbubble_dynamics(
     ceus_system: &mut ContrastEnhancedUltrasound,
     acoustic_field: &AcousticField,
-    dt: f64,
+    dt: Time<f64>,
 ) -> KwaversResult<Option<Array3<f64>>> {
+    let dt_seconds = dt.into_base();
     // Get grid dimensions
     let [nx, ny, nz] = acoustic_field.pressure.shape();
 
@@ -194,7 +196,7 @@ pub fn update_microbubble_dynamics(
     // without driving the integrator out of its convergence domain.
     // Ref: Prosperetti (1977): "Thermal effects and damping mechanisms in the
     // forced radial oscillations of gas bubbles in liquids."
-    let dt_bub = dt.min(1e-6);
+    let dt_bub = dt_seconds.min(1e-6);
     service.update_bubble_dynamics(
         &mut bubble,
         &mut shell,
@@ -254,9 +256,10 @@ mod tests {
         let mut ceus = ContrastEnhancedUltrasound::new(&grid, &medium, MHZ_TO_HZ, 2.5).unwrap();
         let acoustic_field = create_test_acoustic_field();
 
-        let concentration = update_microbubble_dynamics(&mut ceus, &acoustic_field, 1e-6)
-            .unwrap()
-            .unwrap();
+        let concentration =
+            update_microbubble_dynamics(&mut ceus, &acoustic_field, Time::from_base(1e-6))
+                .unwrap()
+                .unwrap();
         assert!(!concentration.is_empty());
     }
 
@@ -268,9 +271,10 @@ mod tests {
         let mut ceus = ContrastEnhancedUltrasound::new(&grid, &medium, MHZ_TO_HZ, 2.5).unwrap();
         let acoustic_field = create_test_acoustic_field();
 
-        let concentration = update_microbubble_dynamics(&mut ceus, &acoustic_field, 1e-6)
-            .unwrap()
-            .unwrap();
+        let concentration =
+            update_microbubble_dynamics(&mut ceus, &acoustic_field, Time::from_base(1e-6))
+                .unwrap()
+                .unwrap();
 
         assert_eq!(concentration.shape(), [8, 8, 8]);
         // Concentration should be positive
@@ -303,7 +307,8 @@ mod tests {
         };
 
         // Verify microbubble dynamics handles pressure gradients correctly
-        let result = update_microbubble_dynamics(&mut ceus, &acoustic_field, 1e-6).unwrap();
+        let result =
+            update_microbubble_dynamics(&mut ceus, &acoustic_field, Time::from_base(1e-6)).unwrap();
         // Verify concentration field is returned and all values are positive
         if let Some(concentration) = result {
             assert_eq!(concentration.shape(), [8, 8, 8]);
@@ -320,10 +325,10 @@ mod tests {
         let acoustic_field = create_test_acoustic_field();
 
         // Valid timestep
-        update_microbubble_dynamics(&mut ceus, &acoustic_field, 1e-6).unwrap();
+        update_microbubble_dynamics(&mut ceus, &acoustic_field, Time::from_base(1e-6)).unwrap();
 
         // Zero timestep should work (no evolution)
-        let result = update_microbubble_dynamics(&mut ceus, &acoustic_field, 0.0);
+        let result = update_microbubble_dynamics(&mut ceus, &acoustic_field, Time::from_base(0.0));
         assert!(result.is_err()); // Service validates dt > 0
     }
 
@@ -337,9 +342,10 @@ mod tests {
 
         // Simulate multiple timesteps
         for _ in 0..10 {
-            let concentration = update_microbubble_dynamics(&mut ceus, &acoustic_field, 1e-6)
-                .unwrap()
-                .unwrap();
+            let concentration =
+                update_microbubble_dynamics(&mut ceus, &acoustic_field, Time::from_base(1e-6))
+                    .unwrap()
+                    .unwrap();
 
             // All concentrations should remain positive
             assert!(concentration.iter().all(|&c| c >= 0.0));

@@ -34,7 +34,7 @@ fn test_thermal_index_calculation() {
         &mut safety_metrics,
         &acoustic_field,
         &acoustic_params,
-        0.01,
+        Time::from_base(0.01),
         None,
     )
     .unwrap();
@@ -76,7 +76,7 @@ fn test_mechanical_index_calculation() {
         &mut safety_metrics,
         &acoustic_field,
         &acoustic_params,
-        0.01,
+        Time::from_base(0.01),
         None,
     )
     .unwrap();
@@ -120,7 +120,7 @@ fn test_cavitation_dose_accumulation() {
         &mut safety_metrics,
         &acoustic_field,
         &acoustic_params,
-        dt,
+        Time::from_base(dt),
         Some(&cavitation_activity),
     )
     .unwrap();
@@ -133,7 +133,7 @@ fn test_cavitation_dose_accumulation() {
         &mut safety_metrics,
         &acoustic_field,
         &acoustic_params,
-        dt,
+        Time::from_base(dt),
         Some(&cavitation_activity),
     )
     .unwrap();

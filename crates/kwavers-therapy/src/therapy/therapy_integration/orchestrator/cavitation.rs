@@ -22,6 +22,7 @@
 //! - Xu et al. (2016): "Oncotripsy: targeted cancer therapy using tumor-specific cavitation"
 //! - Maxwell et al. (2013): "Cavitation clouds in tissue: replication and translation"
 
+use aequitas::systems::si::quantities::Time;
 use kwavers_core::error::KwaversResult;
 use kwavers_physics::cavitation_control::FeedbackController;
 use leto::Array3;
@@ -78,7 +79,7 @@ pub fn update_cavitation_control(
     cavitation_controller: &mut FeedbackController,
     acoustic_field: &AcousticField,
     acoustic_params: &AcousticTherapyParams,
-    _dt: f64,
+    _dt: Time<f64>,
 ) -> KwaversResult<Array3<f64>> {
     // Process the acoustic signal through the feedback controller
     // Use pressure field as the input signal for cavitation detection and control
@@ -158,9 +159,13 @@ mod tests {
         };
 
         // Update cavitation control
-        let activity =
-            update_cavitation_control(&mut controller, &acoustic_field, &acoustic_params, 0.001)
-                .unwrap();
+        let activity = update_cavitation_control(
+            &mut controller,
+            &acoustic_field,
+            &acoustic_params,
+            Time::from_base(0.001),
+        )
+        .unwrap();
 
         // Activity should be zero (pressure below threshold)
         assert!(activity.iter().all(|&a| a == 0.0));
@@ -203,9 +208,13 @@ mod tests {
         };
 
         // Update cavitation control
-        let activity =
-            update_cavitation_control(&mut controller, &acoustic_field, &acoustic_params, 0.001)
-                .unwrap();
+        let activity = update_cavitation_control(
+            &mut controller,
+            &acoustic_field,
+            &acoustic_params,
+            Time::from_base(0.001),
+        )
+        .unwrap();
 
         // Activity should be non-zero (pressure above threshold)
         assert!(activity.iter().any(|&a| a > 0.0));
@@ -266,9 +275,13 @@ mod tests {
         };
 
         // Update cavitation control
-        let activity =
-            update_cavitation_control(&mut controller, &acoustic_field, &acoustic_params, 0.001)
-                .unwrap();
+        let activity = update_cavitation_control(
+            &mut controller,
+            &acoustic_field,
+            &acoustic_params,
+            Time::from_base(0.001),
+        )
+        .unwrap();
 
         // Center should have higher activity than edges
         let center_activity = activity[[5, 5, 5]];

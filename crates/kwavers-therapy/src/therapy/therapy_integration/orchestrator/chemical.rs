@@ -19,6 +19,7 @@
 //! - Suslick (1990): "Sonochemistry" - Science
 //! - Mason (1999): "Sonochemistry and sonoluminescence"
 
+use aequitas::systems::si::quantities::Time;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE};
 use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_K;
 use kwavers_core::error::KwaversResult;
@@ -88,8 +89,9 @@ pub fn update_chemical_reactions(
     acoustic_params: &AcousticTherapyParams,
     grid: &Grid,
     medium: &dyn Medium,
-    dt: f64,
+    dt: Time<f64>,
 ) -> KwaversResult<HashMap<String, Array3<f64>>> {
+    let dt_seconds = dt.into_base();
     // Extract cavitation activity for chemical reaction rates
     let cavitation_activity = cavitation_activity
         .cloned()
@@ -106,7 +108,7 @@ pub fn update_chemical_reactions(
     let bubble_radius = cavitation_activity.mapv(|activity| {
         // Base bubble radius of 1 micron (typical for sonochemistry)
         let base_radius = 1e-6; // 1 μm
-                                // Radius decreases with activity (higher activity = more violent collapse)
+        // Radius decreases with activity (higher activity = more violent collapse)
         base_radius * (1.0 - activity * 0.5).max(0.1) // Min 10% of base radius
     });
 
@@ -122,7 +124,7 @@ pub fn update_chemical_reactions(
         &bubble_radius,
         &temperature,
         grid,
-        dt,
+        dt_seconds,
         medium,
         acoustic_params.frequency.into_base(),
     );
@@ -169,7 +171,7 @@ fn calculate_temperature_field(
     acoustic_field: &AcousticField,
     grid: &Grid,
     acoustic_params: &AcousticTherapyParams,
-    dt: f64,
+    dt: Time<f64>,
 ) -> Array3<f64> {
     let ambient_temp = BODY_TEMPERATURE_K; // 37°C = 310.15 K
     let mut temperature = Array3::from_elem(acoustic_field.pressure.shape(), ambient_temp);
@@ -195,7 +197,7 @@ fn calculate_temperature_field(
 
         // Temperature rise decreases with distance from focus
         let distance_factor = (-r / 0.01).exp(); // 1cm characteristic length
-        let temp_rise = heating * distance_factor * dt * 1e-6; // Convert to temperature rise
+        let temp_rise = heating * distance_factor * dt.into_base() * 1e-6; // Convert to temperature rise
 
         temperature[index] = ambient_temp + temp_rise;
     }
@@ -231,8 +233,12 @@ mod tests {
             use_nonlinear_field: false,
         };
 
-        let temperature =
-            calculate_temperature_field(&acoustic_field, &grid, &acoustic_params, 0.01);
+        let temperature = calculate_temperature_field(
+            &acoustic_field,
+            &grid,
+            &acoustic_params,
+            Time::from_base(0.01),
+        );
 
         // All temperatures should be at or above ambient (310 K)
         assert!(temperature.iter().all(|&t| t >= BODY_TEMPERATURE_K));
@@ -264,8 +270,12 @@ mod tests {
             use_nonlinear_field: false,
         };
 
-        let temperature =
-            calculate_temperature_field(&acoustic_field, &grid, &acoustic_params, 0.1);
+        let temperature = calculate_temperature_field(
+            &acoustic_field,
+            &grid,
+            &acoustic_params,
+            Time::from_base(0.1),
+        );
 
         // All temperatures should be at or above ambient
         assert!(temperature.iter().all(|&t| t >= BODY_TEMPERATURE_K));

@@ -78,7 +78,7 @@ pub fn update_safety_metrics(
     safety_metrics: &mut SafetyMetrics,
     acoustic_field: &AcousticField,
     acoustic_params: &AcousticTherapyParams,
-    dt: f64,
+    dt: Time<f64>,
     cavitation_activity: Option<&leto::Array3<f64>>,
 ) -> KwaversResult<()> {
     // Calculate thermal index (IEC 62359 compliant).
@@ -98,7 +98,7 @@ pub fn update_safety_metrics(
 
     // Update cavitation dose (time-integrated cavitation activity)
     if let Some(cavitation) = cavitation_activity {
-        let current_dose = cavitation.iter().sum::<f64>() * dt;
+        let current_dose = cavitation.iter().sum::<f64>() * dt.into_base();
         safety_metrics.cavitation_dose += current_dose;
     }
 

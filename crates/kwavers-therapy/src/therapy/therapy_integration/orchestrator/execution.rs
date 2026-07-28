@@ -25,6 +25,7 @@
 //! - Pennes (1948): "Analysis of tissue and arterial blood temperatures"
 //! - Nyborg (1981): "Heat generation by ultrasound in a relaxing medium"
 
+use aequitas::systems::si::quantities::{Length, Time};
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE};
 use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use kwavers_core::constants::tissue_thermal::SPECIFIC_HEAT_TISSUE;
@@ -371,8 +372,8 @@ fn generate_kzk_collimated(
 pub fn calculate_acoustic_heating(
     acoustic_field: &AcousticField,
     grid: &Grid,
-    dt: f64,
-    focal_depth: f64,
+    dt: Time<f64>,
+    focal_depth: Length<f64>,
 ) -> Array3<f64> {
     // Tissue constants for soft tissue (Nyborg 1981).
     const ALPHA_NP_M: f64 = 0.5; // absorption coefficient (Np/m)
@@ -383,7 +384,7 @@ pub fn calculate_acoustic_heating(
 
     // Q = α p² / (ρ₀ c₀); ΔT = Q dt / (ρ₀ c_p)
     // Combined: ΔT = α p² dt / (ρ₀² c₀ c_p)
-    let heating_scale = ALPHA_NP_M * dt / (RHO * RHO * C0 * c_p);
+    let heating_scale = ALPHA_NP_M * dt.into_base() / (RHO * RHO * C0 * c_p);
 
     let dx = grid.dx;
     let dy = grid.dy;
@@ -397,7 +398,7 @@ pub fn calculate_acoustic_heating(
         acoustic_field.pressure.view(),
         |(i, j, k), t, &p| {
             // Radial distance from focal point (on the x-axis).
-            let x = i as f64 * dx - focal_depth;
+            let x = i as f64 * dx - focal_depth.into_base();
             let y = j as f64 * dy;
             let z = k as f64 * dz;
             let r = (x * x + y * y + z * z).sqrt();

@@ -1,5 +1,5 @@
 use super::AcousticWaveSolver;
-use kwavers_core::constants::numerical::MPA_TO_PA;
+use aequitas::systems::si::quantities::{Intensity, Pressure, Time};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_source::Source;
 use leto::Array3;
@@ -35,25 +35,26 @@ impl AcousticWaveSolver {
         self.backend.get_intensity_field()
     }
 
-    /// Get maximum pressure magnitude (MPa).
+    /// Get maximum pressure magnitude as an SI pressure.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub fn max_pressure(&self) -> f64 {
+    pub fn max_pressure(&self) -> Pressure<f64> {
         let p = self.pressure_field();
         let p_max = p.iter().cloned().fold(0.0_f64, |a, b| a.max(b.abs()));
-        p_max / MPA_TO_PA // Pa → MPa
+        Pressure::from_base(p_max)
     }
 
-    /// Get spatial peak temporal average intensity (W/cm²).
+    /// Get spatial peak temporal average intensity in SI units (W/m²).
     ///
     /// Computes I_spta = max[(1/T_avg) ∫ p²/Z dt] over the field.
     ///
     /// # Errors
     ///
     /// Returns error if `averaging_time` ≤ 0 or if impedance field computation fails.
-    pub fn spta_intensity(&self, averaging_time: f64) -> KwaversResult<f64> {
-        if averaging_time <= 0.0 {
+    pub fn spta_intensity(&self, averaging_time: Time<f64>) -> KwaversResult<Intensity<f64>> {
+        let averaging_time_seconds = averaging_time.into_base();
+        if averaging_time_seconds <= 0.0 {
             return Err(KwaversError::InvalidInput(
                 "Averaging time must be positive".into(),
             ));
@@ -61,7 +62,7 @@ impl AcousticWaveSolver {
 
         let impedance = self.backend.get_impedance_field()?;
         let dt = self.backend.get_dt();
-        let normalization = dt / averaging_time;
+        let normalization = dt / averaging_time_seconds;
 
         let i_spta = self
             .accumulated_p_squared
@@ -76,7 +77,7 @@ impl AcousticWaveSolver {
                 }
             });
 
-        Ok(i_spta / 1e4)
+        Ok(Intensity::from_base(i_spta))
     }
 
     /// Register an acoustic source evaluated at each time step.

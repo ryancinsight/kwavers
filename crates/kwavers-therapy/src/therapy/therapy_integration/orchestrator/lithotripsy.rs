@@ -21,6 +21,7 @@
 //! - Bailey et al. (2005): "Cavitation detection during lithotripsy"
 
 use crate::therapy::lithotripsy::LithotripsySimulator;
+use aequitas::systems::si::quantities::Time;
 use kwavers_core::error::KwaversResult;
 
 use super::super::state::AcousticField;
@@ -67,10 +68,10 @@ use super::super::state::AcousticField;
 pub fn execute_lithotripsy_step(
     lithotripsy_simulator: &mut LithotripsySimulator,
     _acoustic_field: &AcousticField,
-    dt: f64,
+    dt: Time<f64>,
 ) -> KwaversResult<f64> {
     // Advance lithotripsy simulation
-    lithotripsy_simulator.advance(dt)?;
+    lithotripsy_simulator.advance(dt.into_base())?;
 
     // Calculate treatment progress
     let state = lithotripsy_simulator.current_state();
@@ -83,8 +84,8 @@ pub fn execute_lithotripsy_step(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::therapy::lithotripsy::stone_fracture::StoneMaterial;
     use crate::therapy::lithotripsy::LithotripsyParameters;
+    use crate::therapy::lithotripsy::stone_fracture::StoneMaterial;
     use kwavers_core::constants::numerical::MPA_TO_PA;
     use kwavers_grid::Grid;
     use leto::Array3;
@@ -119,12 +120,16 @@ mod tests {
         };
 
         // Execute first step
-        let progress1 = execute_lithotripsy_step(&mut simulator, &acoustic_field, 1.0).unwrap();
+        let progress1 =
+            execute_lithotripsy_step(&mut simulator, &acoustic_field, Time::from_base(1.0))
+                .unwrap();
         assert!(progress1 > 0.0);
         assert!(progress1 <= 1.0);
 
         // Execute second step
-        let progress2 = execute_lithotripsy_step(&mut simulator, &acoustic_field, 1.0).unwrap();
+        let progress2 =
+            execute_lithotripsy_step(&mut simulator, &acoustic_field, Time::from_base(1.0))
+                .unwrap();
         assert!(progress2 > progress1); // Progress should increase
         assert!(progress2 <= 1.0);
     }
@@ -159,7 +164,9 @@ mod tests {
         // Execute multiple steps and verify progress increases
         let mut last_progress = 0.0;
         for _ in 0..5 {
-            let progress = execute_lithotripsy_step(&mut simulator, &acoustic_field, 0.1).unwrap();
+            let progress =
+                execute_lithotripsy_step(&mut simulator, &acoustic_field, Time::from_base(0.1))
+                    .unwrap();
             assert!(progress >= last_progress); // Progress should never decrease
             assert!(progress <= 1.0); // Progress should not exceed 100%
             last_progress = progress;
@@ -195,12 +202,14 @@ mod tests {
 
         // Execute enough steps to deliver all shocks
         for _ in 0..10 {
-            let _ = execute_lithotripsy_step(&mut simulator, &acoustic_field, 0.01);
+            let _ =
+                execute_lithotripsy_step(&mut simulator, &acoustic_field, Time::from_base(0.01));
         }
 
         // Final progress should be close to or at 100%
         let final_progress =
-            execute_lithotripsy_step(&mut simulator, &acoustic_field, 0.01).unwrap();
+            execute_lithotripsy_step(&mut simulator, &acoustic_field, Time::from_base(0.01))
+                .unwrap();
         assert!(final_progress >= 0.8); // Should be at least 80% complete
     }
 }

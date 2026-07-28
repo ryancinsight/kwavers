@@ -216,8 +216,8 @@ impl TherapyIntegrationOrchestrator {
         let temperature_field = execution::calculate_acoustic_heating(
             &corrected_field,
             &self.grid,
-            dt_seconds,
-            self.config.acoustic_params.focal_depth.into_base(),
+            dt,
+            self.config.acoustic_params.focal_depth,
         );
 
         self.intensity_tracker
@@ -261,7 +261,7 @@ impl TherapyIntegrationOrchestrator {
 
         if let Some(ref mut ceus) = self.ceus_system {
             let concentration =
-                microbubble::update_microbubble_dynamics(ceus, &corrected_field, dt.into_base())?;
+                microbubble::update_microbubble_dynamics(ceus, &corrected_field, dt)?;
             self.session_state.microbubble_concentration = concentration;
         }
 
@@ -270,7 +270,7 @@ impl TherapyIntegrationOrchestrator {
                 controller,
                 &corrected_field,
                 &self.config.acoustic_params,
-                dt_seconds,
+                dt,
             )?;
             self.session_state.cavitation_activity = Some(cavitation_activity.clone());
 
@@ -288,14 +288,13 @@ impl TherapyIntegrationOrchestrator {
                 &self.config.acoustic_params,
                 &self.grid,
                 &*self.medium,
-                dt_seconds,
+                dt,
             )?;
             self.session_state.chemical_concentrations = Some(chemical_concentrations);
         }
 
         if let Some(ref mut simulator) = self.lithotripsy_simulator {
-            let progress =
-                lithotripsy::execute_lithotripsy_step(simulator, &corrected_field, dt_seconds)?;
+            let progress = lithotripsy::execute_lithotripsy_step(simulator, &corrected_field, dt)?;
             self.session_state.progress = progress;
         }
 
