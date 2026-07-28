@@ -1,4 +1,5 @@
 use super::*;
+use aequitas::systems::si::quantities::{Frequency, Pressure};
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 
 const REL_TOL: f64 = 1.0e-6;
@@ -10,16 +11,16 @@ fn approx_eq(a: f64, b: f64, tol: f64) -> bool {
 #[test]
 fn intrinsic_threshold_at_1mhz_matches_maxwell_2013() {
     // Maxwell 2013 Table II liver fit: p_t = 28.2 MPa at 1 MHz.
-    let pt = intrinsic_threshold_pa(MHZ_TO_HZ);
+    let pt = intrinsic_threshold(Frequency::from_base(MHZ_TO_HZ)).into_base();
     assert!(approx_eq(pt, 28.2 * MPA_TO_PA, REL_TOL));
 }
 
 #[test]
 fn intrinsic_threshold_is_monotone_in_frequency() {
     // Vlaisavljevich 2015 reports a weak monotone increase with frequency.
-    let lo = intrinsic_threshold_pa(0.5 * MHZ_TO_HZ);
-    let mid = intrinsic_threshold_pa(MHZ_TO_HZ);
-    let hi = intrinsic_threshold_pa(3.0 * MHZ_TO_HZ);
+    let lo = intrinsic_threshold(Frequency::from_base(0.5 * MHZ_TO_HZ)).into_base();
+    let mid = intrinsic_threshold(Frequency::from_base(MHZ_TO_HZ)).into_base();
+    let hi = intrinsic_threshold(Frequency::from_base(3.0 * MHZ_TO_HZ)).into_base();
     assert!(lo < mid);
     assert!(mid < hi);
     // Slope is ~1.4 MPa/decade — verify mid/hi spread is bounded.
@@ -62,15 +63,19 @@ fn boiling_histotripsy_duty_cycle_is_one_percent() {
     // ShockFormed pattern has no PRF; explicit construction used in
     // Khokhlova 2014/2019 gives 10 ms / 1 s = 1%. We verify by composing
     // the canonical clinical pattern manually.
-    let on = s.pulse.pulse_on_time_s(s.frequency_hz);
+    let on = s.pulse.pulse_on_time(s.frequency).into_base();
     assert!(approx_eq(on, 10.0e-3, 1.0e-9));
 }
 
 #[test]
 fn dual_prf_pattern_has_correct_duty_cycle() {
     let s = HistotripsyScenario::intrinsic_threshold_dual_prf_1mhz();
-    let on = s.pulse.pulse_on_time_s(s.frequency_hz);
-    let prf = s.pulse.average_prf_hz();
+    let on = s.pulse.pulse_on_time(s.frequency).into_base();
+    let prf = s
+        .pulse
+        .average_prf()
+        .expect("dual PRF pattern has a PRF")
+        .into_base();
     let duty = s.duty_cycle();
     // 5 micro-pulses at 1 kHz, 2 cycles each at 1 MHz → on-time 4 ms+2us
     assert!(prf > 0.0);
@@ -110,13 +115,13 @@ fn cavitation_probability_is_monotone_in_pnp() {
     let mut last = -1.0;
     for pnp_mpa in [20.0, 24.0, 27.0, 28.2, 30.0, 35.0_f64] {
         let mut s = base;
-        s.peak_negative_pressure_pa = -pnp_mpa * MPA_TO_PA;
+        s.peak_negative_pressure = Pressure::from_base(-pnp_mpa * MPA_TO_PA);
         let p = s.cavitation_probability();
         assert!(p >= last - 1.0e-12, "non-monotone: {} < {}", p, last);
         last = p;
     }
     // Anchor: at p_t exactly, P_cav = 0.5.
     let mut s = base;
-    s.peak_negative_pressure_pa = -intrinsic_threshold_pa(s.frequency_hz);
+    s.peak_negative_pressure = Pressure::from_base(-intrinsic_threshold(s.frequency).into_base());
     assert!(approx_eq(s.cavitation_probability(), 0.5, 1.0e-6));
 }

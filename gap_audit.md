@@ -144,10 +144,11 @@ checks for `kwavers-medium`, `kwavers-physics`, and `kwavers-simulation`;
 passes 361/361. The Aequitas provider already supplies the required rate
 dimension; no new consumer-owned wrapper or provider dimension was added.
 
-MET-15 through MET-18 are closed. The shared-overlay duplicate Aequitas
-worktree-package collision can still block a main-tree Clippy invocation
-before compilation; it is topology verification debt, not a metric-gap
-result.
+MET-15 through MET-19 are closed. The next public unit-bearing scenario gap
+is tracked by the next re-audit after this increment. The shared-overlay duplicate
+Aequitas worktree-package collision can still block a main-tree Clippy
+invocation before compilation; it is topology verification debt, not a
+metric-gap result.
 
 The Kwavers inventory covers public configuration/result surfaces in physics,
 therapy, transducer, and analysis crates. Dense pressure/temperature fields,
@@ -180,6 +181,7 @@ provider-owned mass-density-rate quantity up to the scalar numerical boundary.
 | `KWAVERS-AEQ-MET-16` | `kwavers-therapy/src/therapy/therapy_integration/{config,state,safety_controller,intensity_tracker,orchestrator}` exposed therapy duration, acoustic frequency/pressure/geometry, timestamps, intensities, temperature, and CEM43 as raw scalars. | Type the public contracts with existing Aequitas quantities and preserve scalar extraction only at mesh, formula, and explicit unit-conversion boundaries. | Kwavers, Aequitas | **RESOLVED in `3433d36ba` and `26c18bb24`.** Configuration, session state, safety-controller timing, intensity metrics, and thermal dose now use typed quantities; CEM43 uses the existing provider contract. Clean linked-lane package check passes; focused Nextest passes 349/349 with one skip and four slow tests. See [ADR 054](docs/ADR/054-therapy-integration-quantities.md). |
 | `KWAVERS-AEQ-MET-17` | `kwavers-therapy/src/therapy/therapy_integration/acoustic/{fields,stepping}.rs` returns public simulation time, pressure, and SPTA intensity as unit-documented scalar values; acoustic safety/heating helpers also accept raw physical intervals. | Type `Time`, `Pressure`, and `Intensity` at the public acoustic-solver boundary and carry `Time` through public safety/heating helper inputs; keep dense fields and formula/mesh scalars at explicit boundaries. | Kwavers, Aequitas | **RESOLVED in `328a46f03`.** Package check passes; focused Nextest passes 349/349 with one skip and two slow tests in 37.399 seconds; doctests pass 8/8 with one ignored; warning-denied Clippy and Rustdoc pass. See [ADR 055](docs/ADR/055-acoustic-solver-quantities.md). |
 | `KWAVERS-AEQ-MET-18` | `kwavers-therapy/src/therapy/therapy_integration/intensity_tracker/tracker.rs` exposed `spta_w_cm2()` and `peak_intensity_w_cm2()` as unit-suffixed raw `f64` accessors after the underlying metrics became typed `Intensity`. | Replace the raw unit-suffixed accessors with canonical typed intensity accessors, migrate in-repository tests/callers, and retain W/cm² conversion only at explicit presentation or unit-conversion boundaries. | Kwavers, Aequitas | **RESOLVED in `596ae06a7`.** `spta()` and `peak_intensity()` return canonical SI `Intensity`; the legacy accessor scan is empty, and W/cm² conversion remains only in the explicit unit-conversion test boundary. Focused Nextest passes 349/349 with one skip and three slow tests; doctests pass 8/8 with one ignored; warning-denied Clippy and Rustdoc pass. See [ADR 056](docs/ADR/056-typed-intensity-tracker-accessors.md). |
+| `KWAVERS-AEQ-MET-19` | `kwavers-therapy/src/therapy/clinical_scenarios/{scenario,pulse}.rs` exposed scenario frequency, peak pressures, treatment duration, focal volume, pulse timing, PRF, and pulse-average intensity as unit-suffixed scalar fields/results. | Type the public scenario and pulse contracts with Aequitas `Frequency`, `Pressure`, `Time`, `Volume`, and `Intensity`; keep mechanical index, duty cycle, and cavitation probability dimensionless and extract scalars only inside their formulas. | Kwavers, Aequitas | **RESOLVED in this increment.** `HistotripsyScenario` and `PulsePattern` now expose typed physical quantities; patterns without PRF return `None`; formula boundaries alone extract SI scalars. Focused package check passes; Nextest passes 349/349 with one skip and four slow tests; doctests pass 8/8 with one ignored; warning-denied Clippy and Rustdoc pass. See [ADR 057](docs/ADR/057-clinical-scenario-quantities.md). |
 
 ### Explicit non-gaps and sequencing constraints
 
@@ -192,8 +194,9 @@ provider-owned mass-density-rate quantity up to the scalar numerical boundary.
 - `KWAVERS-AEQ-MET-05` reaches the public diagnostics caller and
   `KWAVERS-AEQ-MET-06` reaches the therapy/Pennes material consumers; their
   full package evidence is recorded above. `KWAVERS-AEQ-MET-18` closes the
-  remaining tracker accessor gap in the current ledger. No other
-  cross-repository metric gap is open in the current Kwavers ledger.
+  tracker accessor gap and `KWAVERS-AEQ-MET-19` closes the clinical scenario
+  gap. No additional gap is inferred until the public unit-bearing inventory
+  is re-audited after this increment.
 
 - Review 2026-07-22: Python release run `29967429949` built the stable-ABI
   wheels but the Linux and Windows base-wheel smoke imports failed because

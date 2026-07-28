@@ -1,3 +1,4 @@
+use aequitas::systems::si::quantities::{Frequency, Pressure};
 use kwavers_core::constants::numerical::MPA_TO_PA;
 use kwavers_core::constants::REFERENCE_FREQUENCY_HZ;
 /// Baseline intrinsic-threshold magnitude at 1 MHz in water-rich soft tissue
@@ -18,15 +19,16 @@ pub struct BenefitDetriment {
 }
 
 /// Intrinsic-threshold pressure magnitude `p_t(f)` for water-rich soft
-/// tissue at frequency `f` (Hz), in pascals. Returns a positive number;
+/// tissue at the supplied carrier frequency. Returns a positive pressure;
 /// callers comparing with peak-negative pressure should use
-/// `|p^-_min| >= intrinsic_threshold_pa(f)`.
+/// `|p^-_min| >= intrinsic_threshold(f)`.
 /// # Panics
 /// - Panics if an internal precondition is violated.
 ///
 #[must_use]
-pub fn intrinsic_threshold_pa(frequency_hz: f64) -> f64 {
+pub fn intrinsic_threshold(frequency: Frequency<f64>) -> Pressure<f64> {
+    let frequency_hz = frequency.into_base();
     debug_assert!(frequency_hz > 0.0);
     let log_ratio = (frequency_hz / REFERENCE_FREQUENCY_HZ).log10();
-    PT_SLOPE_PA_PER_DECADE.mul_add(log_ratio, PT0_PA)
+    Pressure::from_base(PT_SLOPE_PA_PER_DECADE.mul_add(log_ratio, PT0_PA))
 }

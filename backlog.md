@@ -9,6 +9,7 @@
 | KWAVERS-AEQ-MET-16 | Type therapy-integration configuration, session timing, safety-controller timing, intensity, thermal-temperature, and CEM43 contracts with Aequitas; keep mesh arrays and numerical-kernel scalars at explicit boundaries. | [major] | done | Codex | `crates/kwavers-therapy/src/therapy/therapy_integration/{config,state,safety_controller,intensity_tracker,orchestrator/**}`, ADR 054, PM artifacts |
 | KWAVERS-AEQ-MET-17 | Type the public therapy acoustic-solver time, pressure, and SPTA intensity results and carry typed time through acoustic safety/heating helper intervals; keep dense arrays and numerical formula boundaries explicit. | [major] | done | Codex | `crates/kwavers-therapy/src/therapy/therapy_integration/acoustic/{fields,stepping}.rs`, associated helper callers/tests, ADR 055, PM artifacts |
 | KWAVERS-AEQ-MET-18 | Replace the remaining unit-suffixed raw intensity-tracker accessors with canonical Aequitas `Intensity` results and migrate all in-repository callers/tests. | [major] | done | Codex | `crates/kwavers-therapy/src/therapy/therapy_integration/intensity_tracker/{tracker,tests}.rs`, ADR 056, PM artifacts |
+| KWAVERS-AEQ-MET-19 | Type the public clinical histotripsy scenario and pulse frequency, pressure, duration, volume, PRF, and intensity contracts with Aequitas; preserve dimensionless safety formulas and model probabilities. | [major] | done | Codex | `crates/kwavers-therapy/src/therapy/clinical_scenarios/**`, ADR 057, PM artifacts |
 
 ## KWAVERS-AEQ-MET-06 — Type thermal and perfusion metrics [major] — done
 

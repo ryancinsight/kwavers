@@ -21,12 +21,12 @@
 //! - Smolock A. et al. (2018) UMB 44(9) — clinical liver histotripsy dosing.
 //!
 //! All thresholds are quoted as positive magnitudes; peak negative pressure
-//! values use the sign convention `peak_negative_pressure_pa < 0`.
+//! values use the sign convention `peak_negative_pressure < 0`.
 
 mod scenario;
 
 pub use scenario::{
-    intrinsic_threshold_pa, BenefitDetriment, HistotripsyRegime, HistotripsyScenario, PulsePattern,
+    intrinsic_threshold, BenefitDetriment, HistotripsyRegime, HistotripsyScenario, PulsePattern,
 };
 
 #[cfg(test)]

@@ -61,6 +61,21 @@ Aequitas metric failure.
       Commit `596ae06a7` passes focused Nextest 349/349 (one skipped, three
       slow), doctests 8/8 (one ignored), Clippy, and Rustdoc.
 
+## Owner: Codex — KWAVERS-AEQ-MET-19 typed clinical scenario quantities [major] — done 2026-07-27
+
+- [x] Type public histotripsy scenario frequency, peak pressures, treatment
+      duration, focal volume, pulse timing, PRF, and pulse-average intensity
+      with Aequitas; preserve dimensionless MI, duty cycle, and probability
+      formulas.
+- [x] Rename unit-suffixed public fields/methods and migrate all callers and
+      value-semantic tests without a scalar compatibility facade.
+- [x] Add ADR 057 and synchronize the child audit, backlog, checklist, and
+      changelog after the implementation is verified.
+- [x] Run focused check, Nextest, doctests, Clippy, Rustdoc, formatting, and
+      diff gates; commit and push the verified increment. Nextest 349/349
+      (one skipped, four slow), doctests 8/8 (one ignored), Clippy, and
+      Rustdoc pass.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-14 restore typed HIFU planning [arch] [major] — done
 
 - [x] Confirm the typed HIFU implementation commit is not an ancestor of the

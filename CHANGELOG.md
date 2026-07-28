@@ -4,6 +4,11 @@
 
 ### Changed
 
+- **Breaking**: Clinical histotripsy scenario and pulse contracts now use
+  Aequitas `Frequency`, `Pressure`, `Time`, `Volume`, and `Intensity`; patterns
+  without a PRF return `None`, while mechanical index, duty cycle, and
+  probability remain dimensionless formula outputs. See [ADR 057](docs/ADR/057-clinical-scenario-quantities.md).
+
 - **Breaking**: Therapy acoustic-solver durations, time steps, current time,
   maximum pressure, and SPTA intensity now use Aequitas `Time`, `Pressure`,
   and `Intensity`; acoustic safety/heating helper intervals use typed `Time`

@@ -20,28 +20,30 @@ mod benefit;
 mod pulse;
 mod regime;
 
+use aequitas::systems::si::quantities::{Frequency, Intensity, Pressure, Time, Volume};
+use aequitas::systems::si::units::{CubicMillimeter, Megahertz, Megapascal};
 use kwavers_core::constants::fundamental::ACOUSTIC_IMPEDANCE_TISSUE_NOMINAL;
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use leto_ops::application::special::erf;
 
-pub use benefit::{intrinsic_threshold_pa, BenefitDetriment};
+pub use benefit::{intrinsic_threshold, BenefitDetriment};
 pub use pulse::PulsePattern;
 pub use regime::HistotripsyRegime;
 
 /// Histotripsy exposure scenario.
 ///
 /// Combines the regime, transducer drive parameters, pulse pattern, and a
-/// short literature-derived benefit/detriment list. All pressures are in
-/// pascals; PNP is stored as a negative number, PPP as positive.
+/// short literature-derived benefit/detriment list. PNP is stored as a
+/// negative pressure, PPP as positive.
 #[derive(Debug, Clone, Copy)]
 pub struct HistotripsyScenario {
     pub regime: HistotripsyRegime,
-    pub frequency_hz: f64,
-    pub peak_negative_pressure_pa: f64,
-    pub peak_positive_pressure_pa: f64,
+    pub frequency: Frequency<f64>,
+    pub peak_negative_pressure: Pressure<f64>,
+    pub peak_positive_pressure: Pressure<f64>,
     pub pulse: PulsePattern,
-    pub treatment_duration_s: f64,
-    pub focal_volume_mm3: f64,
+    pub treatment_duration: Time<f64>,
+    pub focal_volume: Volume<f64>,
     pub bd: BenefitDetriment,
 }
 
@@ -49,34 +51,31 @@ impl HistotripsyScenario {
     /// Mechanical Index `MI = |p^-_min(MPa)| / sqrt(f0(MHz))` (AIUM/NEMA).
     #[must_use]
     pub fn mechanical_index(&self) -> f64 {
-        let pnp_mpa = self.peak_negative_pressure_pa.abs() / MPA_TO_PA;
-        let f0_mhz = self.frequency_hz / MHZ_TO_HZ;
+        let pnp_mpa = self.peak_negative_pressure.into_base().abs() / MPA_TO_PA;
+        let f0_mhz = self.frequency.into_base() / MHZ_TO_HZ;
         pnp_mpa / f0_mhz.sqrt()
     }
 
     /// Average duty cycle (dimensionless, in [0, 1]).
     #[must_use]
     pub fn duty_cycle(&self) -> f64 {
-        let on = self.pulse.pulse_on_time_s(self.frequency_hz);
-        let prf = self.pulse.average_prf_hz();
-        if prf.is_finite() && prf > 0.0 {
-            on * prf
-        } else {
-            f64::NAN
-        }
+        let Some(prf) = self.pulse.average_prf() else {
+            return f64::NAN;
+        };
+        self.pulse.pulse_on_time(self.frequency).into_base() * prf.into_base()
     }
 
     /// Intrinsic-threshold pressure magnitude at the carrier frequency.
     #[must_use]
-    pub fn intrinsic_threshold_pa(&self) -> f64 {
-        intrinsic_threshold_pa(self.frequency_hz)
+    pub fn intrinsic_threshold(&self) -> Pressure<f64> {
+        intrinsic_threshold(self.frequency)
     }
 
     /// Whether the focal PNP magnitude exceeds the soft-tissue intrinsic
     /// threshold at the carrier frequency.
     #[must_use]
     pub fn exceeds_intrinsic_threshold(&self) -> bool {
-        self.peak_negative_pressure_pa.abs() >= self.intrinsic_threshold_pa()
+        self.peak_negative_pressure.into_base().abs() >= self.intrinsic_threshold().into_base()
     }
 
     /// Single-pulse cavitation probability `P_cav` from the Maxwell 2013
@@ -85,21 +84,22 @@ impl HistotripsyScenario {
     #[must_use]
     pub fn cavitation_probability(&self) -> f64 {
         const SIGMA_T_PA: f64 = 0.96 * MPA_TO_PA;
-        let pnp_abs = self.peak_negative_pressure_pa.abs();
-        let pt = self.intrinsic_threshold_pa();
+        let pnp_abs = self.peak_negative_pressure.into_base().abs();
+        let pt = self.intrinsic_threshold().into_base();
         let arg = (pnp_abs - pt) / (SIGMA_T_PA * std::f64::consts::SQRT_2);
         0.5 * (1.0 + erf(arg))
     }
 
-    /// In-situ spatial-peak pulse-average intensity (W m⁻²) at the focus,
+    /// In-situ spatial-peak pulse-average intensity at the focus,
     /// computed under the plane-wave approximation `I = p^2 / (2 ρ c)`
     /// using the peak-positive pressure as the worst-case envelope.
     #[must_use]
-    pub fn pulse_average_intensity_w_m2(&self) -> f64 {
+    pub fn pulse_average_intensity(&self) -> Intensity<f64> {
         let p = self
-            .peak_positive_pressure_pa
-            .max(self.peak_negative_pressure_pa.abs());
-        p * p / (2.0 * ACOUSTIC_IMPEDANCE_TISSUE_NOMINAL)
+            .peak_positive_pressure
+            .into_base()
+            .max(self.peak_negative_pressure.into_base().abs());
+        Intensity::from_base(p * p / (2.0 * ACOUSTIC_IMPEDANCE_TISSUE_NOMINAL))
     }
 
     // ---------------------- Library scenarios ----------------------
@@ -110,12 +110,12 @@ impl HistotripsyScenario {
     pub fn intrinsic_threshold_liver_1mhz() -> Self {
         Self {
             regime: HistotripsyRegime::IntrinsicThreshold,
-            frequency_hz: MHZ_TO_HZ, // 1 MHz
-            peak_negative_pressure_pa: -30.0 * MPA_TO_PA,
-            peak_positive_pressure_pa: 80.0 * MPA_TO_PA,
+            frequency: Frequency::from_unit::<Megahertz>(1.0),
+            peak_negative_pressure: Pressure::from_unit::<Megapascal>(-30.0),
+            peak_positive_pressure: Pressure::from_unit::<Megapascal>(80.0),
             pulse: PulsePattern::ToneBurst { cycles: 2 },
-            treatment_duration_s: 600.0,
-            focal_volume_mm3: 7.0,
+            treatment_duration: Time::from_base(600.0),
+            focal_volume: Volume::from_unit::<CubicMillimeter>(7.0),
             bd: BenefitDetriment {
                 benefits: &[
                     "Sharp sub-cellular lesion boundary (~1 cell)",
@@ -140,12 +140,12 @@ impl HistotripsyScenario {
     pub fn shock_scattering_1mhz() -> Self {
         Self {
             regime: HistotripsyRegime::ShockScattering,
-            frequency_hz: MHZ_TO_HZ, // 1 MHz
-            peak_negative_pressure_pa: -20.0 * MPA_TO_PA,
-            peak_positive_pressure_pa: 90.0 * MPA_TO_PA,
+            frequency: Frequency::from_unit::<Megahertz>(1.0),
+            peak_negative_pressure: Pressure::from_unit::<Megapascal>(-20.0),
+            peak_positive_pressure: Pressure::from_unit::<Megapascal>(90.0),
             pulse: PulsePattern::ToneBurst { cycles: 5 },
-            treatment_duration_s: 600.0,
-            focal_volume_mm3: 8.0,
+            treatment_duration: Time::from_base(600.0),
+            focal_volume: Volume::from_unit::<CubicMillimeter>(8.0),
             bd: BenefitDetriment {
                 benefits: &[
                     "Lower PNP requirement than intrinsic-threshold regime",
@@ -167,14 +167,14 @@ impl HistotripsyScenario {
     pub fn boiling_histotripsy_liver_1mhz() -> Self {
         Self {
             regime: HistotripsyRegime::Boiling,
-            frequency_hz: MHZ_TO_HZ, // 1 MHz
-            peak_negative_pressure_pa: -15.0 * MPA_TO_PA,
-            peak_positive_pressure_pa: 85.0 * MPA_TO_PA,
+            frequency: Frequency::from_unit::<Megahertz>(1.0),
+            peak_negative_pressure: Pressure::from_unit::<Megapascal>(-15.0),
+            peak_positive_pressure: Pressure::from_unit::<Megapascal>(85.0),
             pulse: PulsePattern::ShockFormed {
-                duration_s: 10.0e-3,
+                duration: Time::from_base(10.0e-3),
             },
-            treatment_duration_s: 1200.0,
-            focal_volume_mm3: 30.0,
+            treatment_duration: Time::from_base(1200.0),
+            focal_volume: Volume::from_unit::<CubicMillimeter>(30.0),
             bd: BenefitDetriment {
                 benefits: &[
                     "Lower PNP than intrinsic-threshold (skull/aberration tolerant)",
@@ -198,12 +198,14 @@ impl HistotripsyScenario {
     pub fn millisecond_cavitation_500khz() -> Self {
         Self {
             regime: HistotripsyRegime::MillisecondCavitation,
-            frequency_hz: 0.5 * MHZ_TO_HZ,
-            peak_negative_pressure_pa: -18.0 * MPA_TO_PA,
-            peak_positive_pressure_pa: 35.0 * MPA_TO_PA,
-            pulse: PulsePattern::ShockFormed { duration_s: 5.0e-3 },
-            treatment_duration_s: 1800.0,
-            focal_volume_mm3: 25.0,
+            frequency: Frequency::from_unit::<Megahertz>(0.5),
+            peak_negative_pressure: Pressure::from_unit::<Megapascal>(-18.0),
+            peak_positive_pressure: Pressure::from_unit::<Megapascal>(35.0),
+            pulse: PulsePattern::ShockFormed {
+                duration: Time::from_base(5.0e-3),
+            },
+            treatment_duration: Time::from_base(1800.0),
+            focal_volume: Volume::from_unit::<CubicMillimeter>(25.0),
             bd: BenefitDetriment {
                 benefits: &[
                     "PNP well below 28 MPa — usable through transcranial windows",
@@ -225,12 +227,12 @@ impl HistotripsyScenario {
     pub fn thrombolysis_1_5mhz() -> Self {
         Self {
             regime: HistotripsyRegime::IntrinsicThreshold,
-            frequency_hz: 1.5 * MHZ_TO_HZ,
-            peak_negative_pressure_pa: -32.0 * MPA_TO_PA,
-            peak_positive_pressure_pa: 70.0 * MPA_TO_PA,
+            frequency: Frequency::from_unit::<Megahertz>(1.5),
+            peak_negative_pressure: Pressure::from_unit::<Megapascal>(-32.0),
+            peak_positive_pressure: Pressure::from_unit::<Megapascal>(70.0),
             pulse: PulsePattern::ToneBurst { cycles: 3 },
-            treatment_duration_s: 300.0,
-            focal_volume_mm3: 4.0,
+            treatment_duration: Time::from_base(300.0),
+            focal_volume: Volume::from_unit::<CubicMillimeter>(4.0),
             bd: BenefitDetriment {
                 benefits: &[
                     "Drug-free clot fractionation",
@@ -251,8 +253,8 @@ impl HistotripsyScenario {
     pub fn intrinsic_threshold_dual_prf_1mhz() -> Self {
         let mut s = Self::intrinsic_threshold_liver_1mhz();
         s.pulse = PulsePattern::DualPrf {
-            fast_prf_hz: 1000.0,
-            slow_prf_hz: 50.0,
+            fast_prf: Frequency::from_base(1000.0),
+            slow_prf: Frequency::from_base(50.0),
             fast_pulses: 5,
             cycles_per_pulse: 2,
         };
@@ -265,7 +267,7 @@ impl HistotripsyScenario {
     pub fn intrinsic_threshold_dithered_prf_1mhz() -> Self {
         let mut s = Self::intrinsic_threshold_liver_1mhz();
         s.pulse = PulsePattern::DitheredPrf {
-            mean_prf_hz: 200.0,
+            mean_prf: Frequency::from_base(200.0),
             jitter_frac: 0.3,
             cycles_per_pulse: 2,
         };
