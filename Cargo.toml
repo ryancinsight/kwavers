@@ -27,7 +27,7 @@ hermes-simd = { path = "../hermes/crates/hermes-simd", default-features = false,
 moirai-parallel = { path = "../moirai/moirai-parallel", default-features = false, features = ["parallel"] }
 leto = { path = "../leto/crates/leto", default-features = false, features = ["std"] }
 leto-ops = { path = "../leto/crates/leto-ops", default-features = false, features = ["std"] }
-eunomia = { path = "../eunomia/crates/eunomia", default-features = false, features = ["std"] }
+eunomia = { version = "0.7.0", git = "https://github.com/ryancinsight/eunomia", default-features = false, features = ["std"] }
 pyo3 = { version = "0.29", features = ["extension-module", "abi3-py39"] }
 numpy = "0.22"
 
