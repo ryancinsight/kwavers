@@ -41,14 +41,19 @@ mod tests;
 
 pub use types::{CavitationDetectionMethod, TherapyCavitationDetector};
 
+use aequitas::systems::si::quantities::{Frequency, Length, Pressure};
+
 impl TherapyCavitationDetector {
-    /// Create a cavitation detector for `frequency` (Hz) using a 1 µm reference nucleus.
+    /// Create a cavitation detector for `frequency` using a 1 µm reference nucleus.
     #[must_use]
-    pub fn new(frequency: f64, _peak_negative_pressure: f64) -> Self {
-        Self::new_with_radius(frequency, constants::DEFAULT_NUCLEUS_RADIUS)
+    pub fn new(frequency: Frequency<f64>) -> Self {
+        Self::new_with_radius(
+            frequency,
+            Length::from_base(constants::DEFAULT_NUCLEUS_RADIUS),
+        )
     }
 
-    /// Create a cavitation detector for `frequency` (Hz) and nucleus radius `r0` (m).
+    /// Create a cavitation detector for `frequency` and nucleus radius `r0`.
     ///
     /// ## Theorem (Blake threshold, Apfel 1981 eq. 7)
     ///
@@ -58,8 +63,8 @@ impl TherapyCavitationDetector {
     /// ```
     /// For R₀ = 1 µm: P_Blake ≈ 41 935 Pa.
     #[must_use]
-    pub fn new_with_radius(frequency: f64, r0: f64) -> Self {
-        let blake_threshold = constants::blake_threshold(r0);
+    pub fn new_with_radius(frequency: Frequency<f64>, r0: Length<f64>) -> Self {
+        let blake_threshold = Pressure::from_base(constants::blake_threshold(r0.into_base()));
         Self {
             frequency,
             blake_threshold,

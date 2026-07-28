@@ -4,6 +4,12 @@
 
 ### Changed
 
+- **Breaking**: Therapeutic cavitation detector frequency, nucleus radius,
+  Blake threshold, Minnaert result, and pressure inputs now use Aequitas
+  `Frequency`, `Length`, and `Pressure`; cavitation index/probability and dense
+  pressure fields remain explicit scalar boundaries. The unused constructor
+  pressure argument is removed. See [ADR 065](docs/ADR/065-cavitation-quantities.md).
+
 - **Breaking**: Hemispherical-array geometry, element, steering, physical
   constants, focal-metric, and validation contracts now use Aequitas `Length`,
   `Angle`, `Frequency`, `Velocity`, `Time`, `Pressure`, and `Volume`; the Source

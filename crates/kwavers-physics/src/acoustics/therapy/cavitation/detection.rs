@@ -1,5 +1,6 @@
 use super::constants::{BUBBLE_Q_FACTOR, DEFAULT_NUCLEUS_RADIUS};
 use super::{CavitationDetectionMethod, TherapyCavitationDetector};
+use aequitas::systems::si::quantities::{Length, Pressure};
 use leto::Array3;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
 
@@ -24,7 +25,7 @@ impl TherapyCavitationDetector {
 
     /// Per-voxel Blake threshold detection: cavitates iff `−p > P_Blake`.
     fn detect_by_threshold(&self, pressure: &Array3<f64>, cavitation: &mut Array3<bool>) {
-        mark_cavitation(pressure, cavitation, self.blake_threshold);
+        mark_cavitation(pressure, cavitation, self.blake_threshold.into_base());
     }
 
     /// Per-voxel resonance-enhanced threshold detection.
@@ -40,14 +41,15 @@ impl TherapyCavitationDetector {
     ///
     /// Away from resonance E = 1 and this reduces to Blake threshold detection.
     fn detect_by_spectral(&self, pressure: &Array3<f64>, cavitation: &mut Array3<bool>) {
-        let effective_threshold = self.resonance_effective_threshold(DEFAULT_NUCLEUS_RADIUS);
+        let effective_threshold =
+            self.resonance_effective_threshold(Length::from_base(DEFAULT_NUCLEUS_RADIUS));
 
-        mark_cavitation(pressure, cavitation, effective_threshold);
+        mark_cavitation(pressure, cavitation, effective_threshold.into_base());
     }
 
-    pub(super) fn resonance_effective_threshold(&self, r0: f64) -> f64 {
+    pub(super) fn resonance_effective_threshold(&self, r0: Length<f64>) -> Pressure<f64> {
         let f0 = self.minnaert_frequency(r0);
-        let f_over_f0 = self.frequency / f0;
+        let f_over_f0 = self.frequency.into_base() / f0.into_base();
         let detuning = f_over_f0.mul_add(-f_over_f0, 1.0);
         let dissipation = f_over_f0 / BUBBLE_Q_FACTOR;
         let denominator = detuning.hypot(dissipation);
@@ -56,7 +58,7 @@ impl TherapyCavitationDetector {
         } else {
             1.0
         };
-        self.blake_threshold / enhancement
+        Pressure::from_base(self.blake_threshold.into_base() / enhancement)
     }
 }
 

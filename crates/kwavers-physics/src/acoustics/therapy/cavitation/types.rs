@@ -17,9 +17,9 @@ pub enum CavitationDetectionMethod {
 #[derive(Debug)]
 pub struct TherapyCavitationDetector {
     /// Driving frequency (Hz).
-    pub(crate) frequency: f64,
+    pub(crate) frequency: aequitas::systems::si::quantities::Frequency<f64>,
     /// Blake threshold pressure magnitude (Pa), stored as a positive value.
-    pub blake_threshold: f64,
+    pub blake_threshold: aequitas::systems::si::quantities::Pressure<f64>,
     /// Detection method.
     pub(crate) method: CavitationDetectionMethod,
 }

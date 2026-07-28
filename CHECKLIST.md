@@ -1,5 +1,22 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-27 typed therapeutic cavitation quantities [major] — done 2026-07-27
+
+- [x] Type detector frequency, nucleus radius, Blake threshold, Minnaert
+      result, and pressure-input contracts with Aequitas; retain scalar
+      extraction at cavitation formulas and dense pressure-field boundaries.
+- [x] Remove the unused constructor pressure argument, migrate value tests,
+      add ADR 065, and synchronize gap-audit, backlog, checklist, and changelog.
+- [x] Run the physics package check, cavitation-filtered Nextest, warning-denied
+      Clippy, doctests, Rustdoc, rustfmt, and diff checks; preserve peer dirt.
+
+Evidence: `kwavers-physics` test-target check passes; the cavitation-filtered
+Nextest run passes 259/259 with 1,298 tests skipped; doctests pass 8/8 with 4
+ignored; warning-denied Clippy passes; Rustdoc exits 0 with two pre-existing
+private/broken-link warnings; touched-file rustfmt and `git diff --check` pass.
+Existing shared provider-patch, linker, and peer-dirty warnings remain outside
+this item.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-26 typed hemispherical-array quantities [major] — done 2026-07-27
 
 - [x] Type hemispherical geometry, element placement/phase, steering inputs,

@@ -1,11 +1,16 @@
 use super::*;
+use aequitas::systems::si::quantities::{Frequency, Length, Pressure};
 use kwavers_core::constants::cavitation::{SURFACE_TENSION_WATER, VAPOR_PRESSURE_WATER};
 use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use leto::Array3;
 
 fn detector() -> TherapyCavitationDetector {
-    TherapyCavitationDetector::new(MHZ_TO_HZ, 0.0)
+    TherapyCavitationDetector::new(Frequency::from_base(MHZ_TO_HZ))
+}
+
+fn pressure(value: f64) -> Pressure<f64> {
+    Pressure::from_base(value)
 }
 
 #[test]
@@ -20,9 +25,9 @@ fn test_blake_threshold_1um_value() {
         VAPOR_PRESSURE_WATER,
     );
     assert!(
-        (det.blake_threshold - expected).abs() < 1.0,
+        (det.blake_threshold.into_base() - expected).abs() < 1.0,
         "Blake threshold {:.1} Pa ≠ rigorous SSOT value {expected:.1} Pa",
-        det.blake_threshold
+        det.blake_threshold.into_base()
     );
 }
 
@@ -30,9 +35,9 @@ fn test_blake_threshold_1um_value() {
 fn test_blake_threshold_positive() {
     let det = detector();
     assert!(
-        det.blake_threshold > 0.0,
+        det.blake_threshold.into_base() > 0.0,
         "Blake threshold must be positive; got {}",
-        det.blake_threshold
+        det.blake_threshold.into_base()
     );
 }
 
@@ -41,34 +46,40 @@ fn test_blake_threshold_smaller_nucleus_higher_pressure() {
     // Smaller nuclei are more strongly surface-tension-stabilised (2σ/R larger),
     // so the Blake acoustic-amplitude threshold DECREASES monotonically with R₀
     // (Blake 1949). A 1 µm nucleus therefore has a higher threshold than 10 µm.
-    let det_1um = TherapyCavitationDetector::new_with_radius(MHZ_TO_HZ, 1e-6);
-    let det_10um = TherapyCavitationDetector::new_with_radius(MHZ_TO_HZ, 10e-6);
+    let det_1um = TherapyCavitationDetector::new_with_radius(
+        Frequency::from_base(MHZ_TO_HZ),
+        Length::from_base(1e-6),
+    );
+    let det_10um = TherapyCavitationDetector::new_with_radius(
+        Frequency::from_base(MHZ_TO_HZ),
+        Length::from_base(10e-6),
+    );
     assert!(
         det_1um.blake_threshold > det_10um.blake_threshold,
         "1 µm nucleus should have higher Blake threshold than 10 µm \
          (more surface-tension-stabilised): got 1µm={:.1} Pa, 10µm={:.1} Pa",
-        det_1um.blake_threshold,
-        det_10um.blake_threshold
+        det_1um.blake_threshold.into_base(),
+        det_10um.blake_threshold.into_base()
     );
 }
 
 #[test]
 fn test_minnaert_frequency_1um() {
     let det = detector();
-    let f0 = det.minnaert_frequency(1e-6);
+    let f0 = det.minnaert_frequency(Length::from_base(1e-6));
     assert!(
-        (f0 - 3.26e6).abs() / 3.26e6 < 0.05,
+        (f0.into_base() - 3.26e6).abs() / 3.26e6 < 0.05,
         "Minnaert f₀(1µm) = {:.3e} Hz, expected ~3.26 MHz",
-        f0
+        f0.into_base()
     );
 }
 
 #[test]
 fn test_minnaert_frequency_scales_inversely_with_radius() {
     let det = detector();
-    let f1 = det.minnaert_frequency(1e-6);
-    let f2 = det.minnaert_frequency(2e-6);
-    let ratio = f1 / f2;
+    let f1 = det.minnaert_frequency(Length::from_base(1e-6));
+    let f2 = det.minnaert_frequency(Length::from_base(2e-6));
+    let ratio = f1.into_base() / f2.into_base();
     assert!(
         (ratio - 2.0).abs() < 1e-10,
         "f₀(R) should scale as 1/R: f(1µm)/f(2µm) = {ratio:.6}, expected 2.0"
@@ -78,7 +89,7 @@ fn test_minnaert_frequency_scales_inversely_with_radius() {
 #[test]
 fn test_threshold_detection_no_cavitation_below_threshold() {
     let det = detector();
-    let p = Array3::from_elem((4, 4, 4), -0.5 * det.blake_threshold);
+    let p = Array3::from_elem((4, 4, 4), -0.5 * det.blake_threshold.into_base());
     let cav = det.detect(&p);
     assert!(
         cav.iter().all(|&c| !c),
@@ -89,7 +100,7 @@ fn test_threshold_detection_no_cavitation_below_threshold() {
 #[test]
 fn test_threshold_detection_cavitation_above_threshold() {
     let det = detector();
-    let p = Array3::from_elem((4, 4, 4), -2.0 * det.blake_threshold);
+    let p = Array3::from_elem((4, 4, 4), -2.0 * det.blake_threshold.into_base());
     let cav = det.detect(&p);
     assert!(
         cav.iter().all(|&c| c),
@@ -100,8 +111,8 @@ fn test_threshold_detection_cavitation_above_threshold() {
 #[test]
 fn test_threshold_detection_spatial_heterogeneity() {
     let det = detector();
-    let p_high = -2.0 * det.blake_threshold;
-    let p_low = -0.1 * det.blake_threshold;
+    let p_high = -2.0 * det.blake_threshold.into_base();
+    let p_low = -0.1 * det.blake_threshold.into_base();
     let mut p = Array3::from_elem((2, 2, 2), p_low);
     p[[0, 0, 0]] = p_high;
     p[[1, 1, 1]] = p_high;
@@ -113,7 +124,7 @@ fn test_threshold_detection_spatial_heterogeneity() {
 
 #[test]
 fn test_spectral_detection_zero_pressure_no_cavitation() {
-    let mut det = TherapyCavitationDetector::new(3.26 * MHZ_TO_HZ, 0.0);
+    let mut det = TherapyCavitationDetector::new(Frequency::from_base(3.26 * MHZ_TO_HZ));
     det.method = CavitationDetectionMethod::Spectral;
     let p = Array3::zeros([4, 4, 4]);
     let cav = det.detect(&p);
@@ -125,11 +136,11 @@ fn test_spectral_detection_zero_pressure_no_cavitation() {
 
 #[test]
 fn test_spectral_detection_resonance_lowers_threshold() {
-    let det_far = TherapyCavitationDetector::new(100e3, 0.0);
-    let mut det_near = TherapyCavitationDetector::new(3.26 * MHZ_TO_HZ, 0.0);
+    let det_far = TherapyCavitationDetector::new(Frequency::from_base(100e3));
+    let mut det_near = TherapyCavitationDetector::new(Frequency::from_base(3.26 * MHZ_TO_HZ));
     det_near.method = CavitationDetectionMethod::Spectral;
 
-    let p_test = -0.80 * det_near.blake_threshold;
+    let p_test = -0.80 * det_near.blake_threshold.into_base();
     let p = Array3::from_elem((4, 4, 4), p_test);
 
     let cav_far = det_far.detect(&p);
@@ -158,29 +169,29 @@ fn test_cavitation_index_at_threshold_is_one() {
 #[test]
 fn test_cavitation_index_zero_pressure_is_zero() {
     let det = detector();
-    assert_eq!(det.cavitation_index(0.0), 0.0);
+    assert_eq!(det.cavitation_index(pressure(0.0)), 0.0);
 }
 
 #[test]
 fn test_stable_cavitation_in_correct_range() {
     let det = detector();
-    assert!(det.is_stable_cavitation(0.7 * det.blake_threshold));
-    assert!(!det.is_stable_cavitation(0.4 * det.blake_threshold));
-    assert!(!det.is_stable_cavitation(1.1 * det.blake_threshold));
+    assert!(det.is_stable_cavitation(pressure(0.7 * det.blake_threshold.into_base())));
+    assert!(!det.is_stable_cavitation(pressure(0.4 * det.blake_threshold.into_base())));
+    assert!(!det.is_stable_cavitation(pressure(1.1 * det.blake_threshold.into_base())));
 }
 
 #[test]
 fn test_inertial_cavitation_above_threshold() {
     let det = detector();
     assert!(det.is_inertial_cavitation(det.blake_threshold));
-    assert!(det.is_inertial_cavitation(2.0 * det.blake_threshold));
-    assert!(!det.is_inertial_cavitation(0.9 * det.blake_threshold));
+    assert!(det.is_inertial_cavitation(pressure(2.0 * det.blake_threshold.into_base())));
+    assert!(!det.is_inertial_cavitation(pressure(0.9 * det.blake_threshold.into_base())));
 }
 
 #[test]
 fn test_cavitation_probability_at_threshold_is_half() {
     let det = detector();
-    let p = det.cavitation_probability(det.blake_threshold);
+    let p = det.cavitation_probability(pressure(det.blake_threshold.into_base()));
     assert!(
         (p - 0.5).abs() < 1e-10,
         "probability at CI=1 must be 0.5; got {p:.6e}"
@@ -190,9 +201,9 @@ fn test_cavitation_probability_at_threshold_is_half() {
 #[test]
 fn test_cavitation_probability_monotone() {
     let det = detector();
-    let p1 = det.cavitation_probability(0.5 * det.blake_threshold);
-    let p2 = det.cavitation_probability(1.0 * det.blake_threshold);
-    let p3 = det.cavitation_probability(2.0 * det.blake_threshold);
+    let p1 = det.cavitation_probability(pressure(0.5 * det.blake_threshold.into_base()));
+    let p2 = det.cavitation_probability(pressure(det.blake_threshold.into_base()));
+    let p3 = det.cavitation_probability(pressure(2.0 * det.blake_threshold.into_base()));
     assert!(
         p1 < p2 && p2 < p3,
         "probability must increase with pressure"
