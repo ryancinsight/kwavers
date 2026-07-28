@@ -49,6 +49,9 @@
 //!   *Neuromodulation* 28, 444-454 (theta-burst protocol).
 
 use crate::analytical::safety::{fda_isppa_limit_w_cm2, fda_ispta_limit_mw_cm2};
+use aequitas::systems::si::quantities::{
+    Frequency, Intensity, MassDensity, Pressure, TemperatureDifference, Time, Velocity,
+};
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE};
 use kwavers_core::constants::medical::MI_LIMIT_SOFT_TISSUE;
 
@@ -61,15 +64,15 @@ const W_CM2_TO_MW_CM2: f64 = 1.0e3;
 #[derive(Debug, Clone, Copy)]
 pub struct PulseTrainProtocol {
     /// Carrier (fundamental) frequency f `Hz`.
-    pub carrier_freq_hz: f64,
+    pub carrier_frequency: Frequency<f64>,
     /// Pulse length PL (a.k.a. pulse duration) `s`.
-    pub pulse_length_s: f64,
+    pub pulse_length: Time<f64>,
     /// Pulse repetition frequency PRF `Hz`.
-    pub pulse_repetition_freq_hz: f64,
+    pub pulse_repetition_frequency: Frequency<f64>,
     /// Burst duration BD `s` (window over which pulses repeat at PRF).
-    pub burst_duration_s: f64,
+    pub burst_duration: Time<f64>,
     /// Burst interval BI `s` (off time between consecutive bursts).
-    pub burst_interval_s: f64,
+    pub burst_interval: Time<f64>,
     /// Number of bursts N.
     pub num_bursts: u32,
 }
@@ -80,34 +83,41 @@ impl PulseTrainProtocol {
     /// (`PL ≤ 1/PRF`), positive burst duration, non-negative interval, `N ≥ 1`.
     #[must_use]
     pub fn is_valid(&self) -> bool {
-        self.carrier_freq_hz > 0.0
-            && self.pulse_length_s > 0.0
-            && self.pulse_repetition_freq_hz > 0.0
-            && self.pulse_length_s <= 1.0 / self.pulse_repetition_freq_hz + 1e-15
-            && self.burst_duration_s > 0.0
-            && self.burst_interval_s >= 0.0
+        let carrier_frequency = self.carrier_frequency.into_base();
+        let pulse_length = self.pulse_length.into_base();
+        let pulse_repetition_frequency = self.pulse_repetition_frequency.into_base();
+        let burst_duration = self.burst_duration.into_base();
+        let burst_interval = self.burst_interval.into_base();
+        carrier_frequency > 0.0
+            && pulse_length > 0.0
+            && pulse_repetition_frequency > 0.0
+            && pulse_length <= 1.0 / pulse_repetition_frequency + 1e-15
+            && burst_duration > 0.0
+            && burst_interval >= 0.0
             && self.num_bursts >= 1
     }
 
     /// Pulse repetition period 1/PRF `s`.
     #[inline]
     #[must_use]
-    pub fn pulse_period_s(&self) -> f64 {
-        1.0 / self.pulse_repetition_freq_hz
+    pub fn pulse_period(&self) -> Time<f64> {
+        Time::from_base(1.0 / self.pulse_repetition_frequency.into_base())
     }
 
     /// Burst duty cycle BDC = PL · PRF (fraction of the burst with carrier on).
     #[inline]
     #[must_use]
     pub fn burst_duty_cycle(&self) -> f64 {
-        self.pulse_length_s * self.pulse_repetition_freq_hz
+        self.pulse_length.into_base() * self.pulse_repetition_frequency.into_base()
     }
 
     /// Burst-on fraction BD / (BD + BI).
     #[inline]
     #[must_use]
     pub fn burst_on_fraction(&self) -> f64 {
-        self.burst_duration_s / (self.burst_duration_s + self.burst_interval_s)
+        let burst_duration = self.burst_duration.into_base();
+        let burst_interval = self.burst_interval.into_base();
+        burst_duration / (burst_duration + burst_interval)
     }
 
     /// Total duty cycle TDC = BDC · BD / (BD + BI).
@@ -120,34 +130,41 @@ impl PulseTrainProtocol {
     /// Burst repetition frequency BRF = 1 / (BD + BI) `Hz`.
     #[inline]
     #[must_use]
-    pub fn burst_repetition_freq_hz(&self) -> f64 {
-        1.0 / (self.burst_duration_s + self.burst_interval_s)
+    pub fn burst_repetition_frequency(&self) -> Frequency<f64> {
+        Frequency::from_base(
+            1.0 / (self.burst_duration.into_base() + self.burst_interval.into_base()),
+        )
     }
 
     /// Total experiment time TT = N · (BD + BI) `s`.
     #[inline]
     #[must_use]
-    pub fn total_time_s(&self) -> f64 {
-        f64::from(self.num_bursts) * (self.burst_duration_s + self.burst_interval_s)
+    pub fn total_time(&self) -> Time<f64> {
+        Time::from_base(
+            f64::from(self.num_bursts)
+                * (self.burst_duration.into_base() + self.burst_interval.into_base()),
+        )
     }
 
-    /// Whether the carrier is active (a pulse is on) at absolute time `t_s`.
+    /// Whether the carrier is active (a pulse is on) at absolute `time`.
     ///
     /// `true` inside a burst (`t mod (BD+BI) < BD`) and inside a pulse within
     /// that burst (`τ mod (1/PRF) < PL`); `false` during pulse-off, burst
     /// intervals, and after the final burst.
     #[must_use]
-    pub fn pulse_active(&self, t_s: f64) -> bool {
-        if t_s < 0.0 || t_s >= self.total_time_s() {
+    pub fn pulse_active(&self, time: Time<f64>) -> bool {
+        let time_s = time.into_base();
+        if time_s < 0.0 || time_s >= self.total_time().into_base() {
             return false;
         }
-        let burst_period = self.burst_duration_s + self.burst_interval_s;
-        let phase_in_burst = t_s % burst_period;
-        if phase_in_burst >= self.burst_duration_s {
+        let burst_duration = self.burst_duration.into_base();
+        let burst_period = burst_duration + self.burst_interval.into_base();
+        let phase_in_burst = time_s % burst_period;
+        if phase_in_burst >= burst_duration {
             return false; // in the burst interval
         }
-        let phase_in_pulse = phase_in_burst % self.pulse_period_s();
-        phase_in_pulse < self.pulse_length_s
+        let phase_in_pulse = phase_in_burst % self.pulse_period().into_base();
+        phase_in_pulse < self.pulse_length.into_base()
     }
 
     /// Compute spatial-peak dosimetry from the carrier peak pressure.
@@ -157,34 +174,37 @@ impl PulseTrainProtocol {
     /// [`crate::acoustics::analysis::calculate_mechanical_index`]).
     ///
     /// # Arguments
-    /// * `peak_pressure_pa` — carrier peak pressure amplitude `Pa`
-    /// * `density_kg_m3` — medium density ρ [kg/m³]
-    /// * `sound_speed_m_s` — medium sound speed c [m/s]
+    /// * `peak_pressure` — carrier peak pressure amplitude
+    /// * `density` — medium density ρ
+    /// * `sound_speed` — medium sound speed c
     #[must_use]
     pub fn dosimetry(
         &self,
-        peak_pressure_pa: f64,
-        density_kg_m3: f64,
-        sound_speed_m_s: f64,
+        peak_pressure: Pressure<f64>,
+        density: MassDensity<f64>,
+        sound_speed: Velocity<f64>,
     ) -> PulseTrainDosimetry {
+        let peak_pressure_pa = peak_pressure.into_base();
+        let density_kg_m3 = density.into_base();
+        let sound_speed_m_s = sound_speed.into_base();
         let z = density_kg_m3 * sound_speed_m_s;
-        let isppa_w_cm2 = if z > 0.0 {
-            (peak_pressure_pa * peak_pressure_pa) / (2.0 * z) * W_M2_TO_W_CM2
+        let isppa_w_m2 = if z > 0.0 {
+            (peak_pressure_pa * peak_pressure_pa) / (2.0 * z)
         } else {
             0.0
         };
         let bdc = self.burst_duty_cycle();
         let tdc = self.total_duty_cycle();
         PulseTrainDosimetry {
-            isppa_w_cm2,
-            ispba_w_cm2: isppa_w_cm2 * bdc,
-            ispta_w_cm2: isppa_w_cm2 * tdc,
+            isppa: Intensity::from_base(isppa_w_m2),
+            ispba: Intensity::from_base(isppa_w_m2 * bdc),
+            ispta: Intensity::from_base(isppa_w_m2 * tdc),
             mechanical_index: crate::acoustics::analysis::calculate_mechanical_index(
                 peak_pressure_pa,
-                self.carrier_freq_hz,
+                self.carrier_frequency.into_base(),
             ),
             total_duty_cycle: tdc,
-            total_time_s: self.total_time_s(),
+            total_time: self.total_time(),
         }
     }
 
@@ -195,23 +215,24 @@ impl PulseTrainProtocol {
     /// # Examples
     ///
     /// ```
+    /// use aequitas::systems::si::quantities::Pressure;
     /// use kwavers_physics::acoustics::therapy::neuromodulation::{
     ///     tissue_dosimetry, PulseTrainProtocol,
     /// };
     /// let p = PulseTrainProtocol::theta_burst_atkinson_2025();
     /// assert!((p.total_duty_cycle() - 0.10).abs() < 1e-9);
     /// // I_SPTA = I_SPPA · duty cycle.
-    /// let d = tissue_dosimetry(&p, 300.0e3);
-    /// assert!((d.ispta_w_cm2 / d.isppa_w_cm2 - 0.10).abs() < 1e-9);
+    /// let d = tissue_dosimetry(&p, Pressure::from_base(300.0e3));
+    /// assert!((d.ispta.into_base() / d.isppa.into_base() - 0.10).abs() < 1e-9);
     /// ```
     #[must_use]
     pub fn theta_burst_atkinson_2025() -> Self {
         Self {
-            carrier_freq_hz: 500.0e3,
-            pulse_length_s: 20.0e-3,
-            pulse_repetition_freq_hz: 5.0,
-            burst_duration_s: 80.0,
-            burst_interval_s: 0.0,
+            carrier_frequency: Frequency::from_base(500.0e3),
+            pulse_length: Time::from_base(20.0e-3),
+            pulse_repetition_frequency: Frequency::from_base(5.0),
+            burst_duration: Time::from_base(80.0),
+            burst_interval: Time::from_base(0.0),
             num_bursts: 1,
         }
     }
@@ -220,18 +241,18 @@ impl PulseTrainProtocol {
 /// Spatial-peak dosimetry derived from a [`PulseTrainProtocol`] and peak pressure.
 #[derive(Debug, Clone, Copy)]
 pub struct PulseTrainDosimetry {
-    /// Spatial-peak pulse-averaged intensity I_SPPA [W/cm²].
-    pub isppa_w_cm2: f64,
-    /// Spatial-peak burst-averaged intensity I_SPBA [W/cm²].
-    pub ispba_w_cm2: f64,
-    /// Spatial-peak temporal-averaged intensity I_SPTA [W/cm²].
-    pub ispta_w_cm2: f64,
+    /// Spatial-peak pulse-averaged intensity I_SPPA in canonical SI units.
+    pub isppa: Intensity<f64>,
+    /// Spatial-peak burst-averaged intensity I_SPBA in canonical SI units.
+    pub ispba: Intensity<f64>,
+    /// Spatial-peak temporal-averaged intensity I_SPTA in canonical SI units.
+    pub ispta: Intensity<f64>,
     /// Mechanical index MI [-].
     pub mechanical_index: f64,
     /// Total duty cycle TDC [-].
     pub total_duty_cycle: f64,
     /// Total experiment time TT `s`.
-    pub total_time_s: f64,
+    pub total_time: Time<f64>,
 }
 
 impl PulseTrainDosimetry {
@@ -240,8 +261,8 @@ impl PulseTrainDosimetry {
     /// guidelines): `I_SPTA ≤ 720 mW/cm²`, `I_SPPA ≤ 190 W/cm²`, `MI ≤ 1.9`.
     #[must_use]
     pub fn within_fda_limits(&self) -> bool {
-        self.ispta_w_cm2 * W_CM2_TO_MW_CM2 <= fda_ispta_limit_mw_cm2()
-            && self.isppa_w_cm2 <= fda_isppa_limit_w_cm2()
+        self.ispta.into_base() * W_M2_TO_W_CM2 * W_CM2_TO_MW_CM2 <= fda_ispta_limit_mw_cm2()
+            && self.isppa.into_base() * W_M2_TO_W_CM2 <= fda_isppa_limit_w_cm2()
             && self.mechanical_index <= MI_LIMIT_SOFT_TISSUE
     }
 }
@@ -281,17 +302,17 @@ pub struct ItrusstAssessment {
 ///
 /// # Arguments
 /// * `mechanical_index` — peak MI [-]
-/// * `peak_temp_rise_c` — peak focal temperature rise ΔT [°C]
+/// * `peak_temperature_rise` — peak focal temperature rise ΔT
 /// * `cem43_brain_min` — cumulative brain thermal dose [CEM43 min]
 #[must_use]
 pub fn itrusst_assess(
     mechanical_index: f64,
-    peak_temp_rise_c: f64,
+    peak_temperature_rise: TemperatureDifference<f64>,
     cem43_brain_min: f64,
 ) -> ItrusstAssessment {
     let mechanical_ok = mechanical_index <= ITRUSST_MI_LIMIT;
-    let thermal_ok =
-        peak_temp_rise_c <= ITRUSST_TEMP_RISE_LIMIT_C || cem43_brain_min <= ITRUSST_CEM43_BRAIN;
+    let thermal_ok = peak_temperature_rise.into_base() <= ITRUSST_TEMP_RISE_LIMIT_C
+        || cem43_brain_min <= ITRUSST_CEM43_BRAIN;
     ItrusstAssessment {
         mechanical_ok,
         thermal_ok,
@@ -304,7 +325,11 @@ pub fn itrusst_assess(
 #[must_use]
 pub fn tissue_dosimetry(
     protocol: &PulseTrainProtocol,
-    peak_pressure_pa: f64,
+    peak_pressure: Pressure<f64>,
 ) -> PulseTrainDosimetry {
-    protocol.dosimetry(peak_pressure_pa, DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE)
+    protocol.dosimetry(
+        peak_pressure,
+        MassDensity::from_base(DENSITY_WATER_NOMINAL),
+        Velocity::from_base(SOUND_SPEED_TISSUE),
+    )
 }

@@ -4,6 +4,10 @@
 
 ### Changed
 
+- **Breaking**: Neuromodulation pulse-train and dosimetry contracts now use
+  typed Aequitas frequency, time, pressure, medium, intensity, and
+  temperature-difference quantities. See [ADR 058](docs/ADR/058-neuromodulation-protocol-quantities.md).
+
 - **Breaking**: Clinical histotripsy scenario and pulse contracts now use
   Aequitas `Frequency`, `Pressure`, `Time`, `Volume`, and `Intensity`; patterns
   without a PRF return `None`, while mechanical index, duty cycle, and

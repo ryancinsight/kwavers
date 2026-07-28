@@ -76,6 +76,22 @@ Aequitas metric failure.
       (one skipped, four slow), doctests 8/8 (one ignored), Clippy, and
       Rustdoc pass.
 
+## Owner: Codex — KWAVERS-AEQ-MET-20 typed neuromodulation protocol metrics [major] — done 2026-07-27
+
+- [x] Type pulse-train frequency, pulse/burst timing, pressure, medium density,
+      sound speed, dosimetry intensity, total time, and ITRUSST temperature-rise
+      contracts with Aequitas; keep MI, duty cycle, safety booleans, and CEM43
+      model thresholds at their dimensionless/consumer-semantic boundaries.
+- [x] Rename unit-suffixed public fields/methods and migrate all callers,
+      tests, and doctest examples without a scalar compatibility facade.
+- [x] Add ADR 058 and synchronize the child audit, backlog, checklist, and
+      changelog after verification.
+- [x] Run focused physics check, Nextest, doctests, Clippy, Rustdoc, formatting,
+      and diff gates; commit and push the verified increment. Nextest passes
+      1556/1556 with one skip and one leaky test; doctests pass 8/8 with four
+      ignored; Clippy passes with `-D warnings`; Rustdoc builds with two
+      pre-existing link warnings.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-14 restore typed HIFU planning [arch] [major] — done
 
 - [x] Confirm the typed HIFU implementation commit is not an ancestor of the
