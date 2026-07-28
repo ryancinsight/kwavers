@@ -124,7 +124,7 @@ pub fn update_chemical_reactions(
         grid,
         dt,
         medium,
-        acoustic_params.frequency,
+        acoustic_params.frequency.into_base(),
     );
 
     // Return chemical reaction products for monitoring
@@ -188,7 +188,7 @@ fn calculate_temperature_field(
 
         // Apply distance-based spreading from focal point
         let [i, j, k] = index;
-        let x = i as f64 * grid.dx - acoustic_params.focal_depth;
+        let x = i as f64 * grid.dx - acoustic_params.focal_depth.into_base();
         let y = j as f64 * grid.dy;
         let z = k as f64 * grid.dz;
         let r = (x * x + y * y + z * z).sqrt();
@@ -206,6 +206,7 @@ fn calculate_temperature_field(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use aequitas::systems::si::quantities::{Frequency, Length, Pressure, Volume};
     use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 
     #[test]
@@ -221,12 +222,12 @@ mod tests {
         let grid = Grid::new(10, 10, 10, 0.001, 0.001, 0.001).unwrap();
 
         let acoustic_params = crate::therapy::therapy_integration::config::AcousticTherapyParams {
-            frequency: MHZ_TO_HZ,
-            pnp: MPA_TO_PA,
-            prf: 100.0,
+            frequency: Frequency::from_base(MHZ_TO_HZ),
+            pnp: Pressure::from_base(MPA_TO_PA),
+            prf: Frequency::from_base(100.0),
             duty_cycle: 0.1,
-            focal_depth: 0.005, // 5mm
-            treatment_volume: 1.0,
+            focal_depth: Length::from_base(0.005), // 5mm
+            treatment_volume: Volume::from_base(1.0e-6),
             use_nonlinear_field: false,
         };
 
@@ -254,12 +255,12 @@ mod tests {
         let grid = Grid::new(20, 20, 20, 0.001, 0.001, 0.001).unwrap();
 
         let acoustic_params = crate::therapy::therapy_integration::config::AcousticTherapyParams {
-            frequency: MHZ_TO_HZ,
-            pnp: 2.0 * MPA_TO_PA,
-            prf: 100.0,
+            frequency: Frequency::from_base(MHZ_TO_HZ),
+            pnp: Pressure::from_base(2.0 * MPA_TO_PA),
+            prf: Frequency::from_base(100.0),
             duty_cycle: 0.1,
-            focal_depth: 0.01, // 10mm (center of grid)
-            treatment_volume: 1.0,
+            focal_depth: Length::from_base(0.01), // 10mm (center of grid)
+            treatment_volume: Volume::from_base(1.0e-6),
             use_nonlinear_field: false,
         };
 

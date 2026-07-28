@@ -88,21 +88,21 @@
 //! let config = TherapySessionConfig {
 //!     primary_modality: TherapyIntegrationModality::Histotripsy,
 //!     secondary_modalities: vec![],
-//!     duration: 60.0,
+//!     duration: aequitas::systems::si::quantities::Time::from_base(60.0),
 //!     acoustic_params: AcousticTherapyParams {
-//!         frequency: 1e6,
-//!         pnp: 10e6,
-//!         prf: 100.0,
+//!         frequency: aequitas::systems::si::quantities::Frequency::from_base(1e6),
+//!         pnp: aequitas::systems::si::quantities::Pressure::from_base(10e6),
+//!         prf: aequitas::systems::si::quantities::Frequency::from_base(100.0),
 //!         duty_cycle: 0.01,
-//!         focal_depth: 0.05,
-//!         treatment_volume: 1.0,
+//!         focal_depth: aequitas::systems::si::quantities::Length::from_base(0.05),
+//!         treatment_volume: aequitas::systems::si::quantities::Volume::from_base(1.0e-6),
 //!         use_nonlinear_field: false,
 //!     },
 //!     safety_limits: TherapyIntegrationSafetyLimits {
 //!         thermal_index_max: 6.0,
 //!         mechanical_index_max: 1.9,
 //!         cavitation_dose_max: 1000.0,
-//!         max_treatment_time: 300.0,
+//!         max_treatment_time: aequitas::systems::si::quantities::Time::from_base(300.0),
 //!     },
 //!     patient_params: PatientParameters {
 //!         skull_thickness: None,
@@ -130,7 +130,9 @@
 //!
 //! // Execute therapy steps
 //! for _ in 0..10 {
-//!     orchestrator.execute_therapy_step(0.1).unwrap();
+//!     orchestrator
+//!         .execute_therapy_step(aequitas::systems::si::quantities::Time::from_base(0.1))
+//!         .unwrap();
 //!
 //!     // Check safety limits
 //!     let status = orchestrator.check_safety_limits();

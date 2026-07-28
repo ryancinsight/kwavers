@@ -55,9 +55,10 @@ pub fn init_lithotripsy_simulator(
         shock_parameters: Default::default(),
         cloud_parameters: Default::default(),
         bioeffects_parameters: Default::default(),
-        treatment_frequency: config.acoustic_params.prf,
-        num_shock_waves: (config.duration * config.acoustic_params.prf) as usize,
-        interpulse_delay: 1.0 / config.acoustic_params.prf,
+        treatment_frequency: config.acoustic_params.prf.into_base(),
+        num_shock_waves: (config.duration.into_base() * config.acoustic_params.prf.into_base())
+            as usize,
+        interpulse_delay: 1.0 / config.acoustic_params.prf.into_base(),
         stone_geometry,
     };
     LithotripsySimulator::new(lithotripsy_params, grid.clone())

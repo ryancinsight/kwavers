@@ -22,6 +22,7 @@
 //! - FDA 510(k) Guidance: "Ultrasound Devices"
 //! - Apfel & Holland (1991): "Gaseous cavitation thresholds"
 
+use aequitas::systems::si::quantities::Time;
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use kwavers_core::error::KwaversResult;
 
@@ -86,13 +87,14 @@ pub fn update_safety_metrics(
     let sum_sq: f64 = acoustic_field.pressure.iter().map(|&p| p * p).sum();
     let pressure_rms = (sum_sq / n).sqrt();
 
-    safety_metrics.thermal_index = pressure_rms * acoustic_params.frequency.sqrt() / MPA_TO_PA;
+    safety_metrics.thermal_index =
+        pressure_rms * acoustic_params.frequency.into_base().sqrt() / MPA_TO_PA;
 
     // Mechanical Index (FDA 510(k) guidance, IEC 62359):
     // MI = p_neg_peak_derated [MPa] / sqrt(f_center [MHz])
     //    = (pnp_Pa / MPA_TO_PA) / sqrt(f_Hz / MHZ_TO_HZ)
-    safety_metrics.mechanical_index =
-        (acoustic_params.pnp / MPA_TO_PA) / (acoustic_params.frequency / MHZ_TO_HZ).sqrt();
+    safety_metrics.mechanical_index = (acoustic_params.pnp.into_base() / MPA_TO_PA)
+        / (acoustic_params.frequency.into_base() / MHZ_TO_HZ).sqrt();
 
     // Update cavitation dose (time-integrated cavitation activity)
     if let Some(cavitation) = cavitation_activity {
@@ -136,10 +138,10 @@ pub fn update_safety_metrics(
 pub fn check_safety_limits(
     safety_metrics: &SafetyMetrics,
     safety_limits: &TherapyIntegrationSafetyLimits,
-    current_time: f64,
+    current_time: Time<f64>,
 ) -> TherapyIntegrationSafetyStatus {
     // Check time limit first (most straightforward constraint)
-    if current_time > safety_limits.max_treatment_time {
+    if current_time.into_base() > safety_limits.max_treatment_time.into_base() {
         return TherapyIntegrationSafetyStatus::TimeLimitExceeded;
     }
 

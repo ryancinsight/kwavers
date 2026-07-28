@@ -96,7 +96,8 @@ pub fn update_cavitation_control(
 
     // Map control output to cavitation activity based on detected intensity
     // High intensity indicates active cavitation, use threshold-based mapping
-    let cavitation_threshold = acoustic_params.pnp * 0.1; // 10% of peak pressure
+    let peak_negative_pressure = acoustic_params.pnp.into_base();
+    let cavitation_threshold = peak_negative_pressure * 0.1; // 10% of peak pressure
 
     for ([i, j, k], pressure_val) in acoustic_field.pressure.indexed_iter() {
         // Calculate cavitation activity based on pressure amplitude and control feedback
@@ -104,7 +105,7 @@ pub fn update_cavitation_control(
         if pressure_amplitude > cavitation_threshold {
             // Scale activity based on pressure relative to threshold and control intensity
             let activity_level = ((pressure_amplitude - cavitation_threshold)
-                / (acoustic_params.pnp - cavitation_threshold))
+                / (peak_negative_pressure - cavitation_threshold))
                 .clamp(0.0, 1.0);
             cavitation_activity[[i, j, k]] = activity_level * control_output.cavitation_intensity;
         }
@@ -116,7 +117,7 @@ pub fn update_cavitation_control(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use aequitas::systems::si::quantities::{Frequency, Time};
+    use aequitas::systems::si::quantities::{Frequency, Length, Pressure, Time, Volume};
     use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
     use kwavers_physics::cavitation_control::{ControlStrategy, FeedbackConfig};
 
@@ -147,12 +148,12 @@ mod tests {
         };
 
         let acoustic_params = AcousticTherapyParams {
-            frequency: MHZ_TO_HZ,
-            pnp: MPA_TO_PA, // 1 MPa, threshold = 0.1 MPa
-            prf: 100.0,
+            frequency: Frequency::from_base(MHZ_TO_HZ),
+            pnp: Pressure::from_base(MPA_TO_PA), // 1 MPa, threshold = 0.1 MPa
+            prf: Frequency::from_base(100.0),
             duty_cycle: 0.01,
-            focal_depth: 0.05,
-            treatment_volume: 1.0,
+            focal_depth: Length::from_base(0.05),
+            treatment_volume: Volume::from_base(1.0e-6),
             use_nonlinear_field: false,
         };
 
@@ -192,12 +193,12 @@ mod tests {
         };
 
         let acoustic_params = AcousticTherapyParams {
-            frequency: MHZ_TO_HZ,
-            pnp: MPA_TO_PA, // 1 MPa, threshold = 0.1 MPa
-            prf: 100.0,
+            frequency: Frequency::from_base(MHZ_TO_HZ),
+            pnp: Pressure::from_base(MPA_TO_PA), // 1 MPa, threshold = 0.1 MPa
+            prf: Frequency::from_base(100.0),
             duty_cycle: 0.01,
-            focal_depth: 0.05,
-            treatment_volume: 1.0,
+            focal_depth: Length::from_base(0.05),
+            treatment_volume: Volume::from_base(1.0e-6),
             use_nonlinear_field: false,
         };
 
@@ -255,12 +256,12 @@ mod tests {
         };
 
         let acoustic_params = AcousticTherapyParams {
-            frequency: MHZ_TO_HZ,
-            pnp: MPA_TO_PA,
-            prf: 100.0,
+            frequency: Frequency::from_base(MHZ_TO_HZ),
+            pnp: Pressure::from_base(MPA_TO_PA),
+            prf: Frequency::from_base(100.0),
             duty_cycle: 0.01,
-            focal_depth: 0.05,
-            treatment_volume: 1.0,
+            focal_depth: Length::from_base(0.05),
+            treatment_volume: Volume::from_base(1.0e-6),
             use_nonlinear_field: false,
         };
 

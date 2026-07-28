@@ -5,6 +5,7 @@ pub(super) use crate::therapy::therapy_integration::config::{
 };
 pub(super) use crate::therapy::therapy_integration::state::TherapyIntegrationSafetyStatus;
 pub(super) use crate::therapy::therapy_integration::tissue::TissuePropertyMap;
+pub(super) use aequitas::systems::si::quantities::{Frequency, Length, Pressure, Time, Volume};
 pub(super) use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 pub(super) use kwavers_medium::homogeneous::HomogeneousMedium;
 

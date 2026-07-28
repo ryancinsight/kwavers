@@ -95,13 +95,13 @@ pub fn generate_acoustic_field(
 
     // Gaussian beam approximation: P(r) = P₀ · exp(−r²/w²)
     // Focal point is along the x-axis at the configured focal depth.
-    let focal_x = acoustic_params.focal_depth;
+    let focal_x = acoustic_params.focal_depth.into_base();
     let beam_width_sq = 0.005_f64 * 0.005; // (5 mm)²
 
     let dx = grid.dx;
     let dy = grid.dy;
     let dz = grid.dz;
-    let pnp = acoustic_params.pnp;
+    let pnp = acoustic_params.pnp.into_base();
 
     for_each_indexed_mut(pressure.view_mut(), |(i, j, k), p| {
         let x = i as f64 * dx - focal_x;
@@ -211,7 +211,7 @@ pub fn generate_kzk_acoustic_field(
     let alpha_power = medium.alpha_power(0.0, 0.0, 0.0, grid);
 
     // KZK time discretisation: 20 samples per fundamental period, CFL-safe.
-    let frequency = acoustic_params.frequency;
+    let frequency = acoustic_params.frequency.into_base();
     // dt limited by both CFL (c0·dt/dz < 0.5) and harmonic Nyquist (dt < 1/(2·10·f₀)).
     let dt_cfl = 0.3 * grid.dx / c0;
     let dt_nyquist = 1.0 / (2.0 * 10.0 * frequency);
@@ -260,7 +260,7 @@ pub fn generate_kzk_acoustic_field(
     // Build the focused source plane (transverse amplitude map).
     let dx_kzk = grid.dy;
     let mut source = Array2::<f64>::zeros((ny, nz));
-    let pnp = acoustic_params.pnp;
+    let pnp = acoustic_params.pnp.into_base();
     for j in 0..nz {
         for i in 0..ny {
             let x = (i as f64 - ny as f64 / 2.0) * dx_kzk;
@@ -269,7 +269,7 @@ pub fn generate_kzk_acoustic_field(
             source[[i, j]] = pnp * (-r2 / beam_width_sq).exp();
         }
     }
-    solver.set_focused_source(source, frequency, acoustic_params.focal_depth);
+    solver.set_focused_source(source, frequency, acoustic_params.focal_depth.into_base());
 
     // Propagate step-by-step, capturing RMS pressure at each axial plane.
     let mut volume = Array3::<f64>::zeros((nx, ny, nz));
@@ -312,7 +312,7 @@ fn generate_kzk_collimated(
 
     let (nx, ny, nz) = grid.dimensions();
     let beam_width_sq = 0.005_f64 * 0.005;
-    let max_frequency = acoustic_params.frequency * 10.0;
+    let max_frequency = acoustic_params.frequency.into_base() * 10.0;
     const NUM_HARMONICS: usize = 10;
 
     let mut kzk = KzkSolverPlugin::new();
@@ -324,7 +324,7 @@ fn generate_kzk_collimated(
             let x = i as f64 * grid.dx;
             let y = j as f64 * grid.dy;
             let r_sq = x * x + y * y;
-            source[[i, j, 0]] = acoustic_params.pnp * (-r_sq / beam_width_sq).exp();
+            source[[i, j, 0]] = acoustic_params.pnp.into_base() * (-r_sq / beam_width_sq).exp();
         }
     }
 

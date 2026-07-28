@@ -1,4 +1,5 @@
 use super::*;
+use aequitas::systems::si::quantities::{Frequency, Length, Pressure, Time, Volume};
 use kwavers_core::constants::medical::TI_LIMIT_SOFT_TISSUE;
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use leto::Array3;
@@ -13,12 +14,12 @@ fn test_thermal_index_calculation() {
     };
 
     let acoustic_params = AcousticTherapyParams {
-        frequency: MHZ_TO_HZ,  // 1 MHz
-        pnp: MPA_TO_PA,        // 1 MPa
-        prf: 100.0,            // 100 Hz
-        duty_cycle: 0.1,       // 10%
-        focal_depth: 0.05,     // 5 cm
-        treatment_volume: 1.0, // 1 cm³
+        frequency: Frequency::from_base(MHZ_TO_HZ),  // 1 MHz
+        pnp: Pressure::from_base(MPA_TO_PA),         // 1 MPa
+        prf: Frequency::from_base(100.0),            // 100 Hz
+        duty_cycle: 0.1,                             // 10%
+        focal_depth: Length::from_base(0.05),        // 5 cm
+        treatment_volume: Volume::from_base(1.0e-6), // 1 cm³
         use_nonlinear_field: false,
     };
 
@@ -55,12 +56,12 @@ fn test_mechanical_index_calculation() {
     };
 
     let acoustic_params = AcousticTherapyParams {
-        frequency: MHZ_TO_HZ, // 1 MHz
-        pnp: 0.5 * MPA_TO_PA, // 0.5 MPa
-        prf: 100.0,
+        frequency: Frequency::from_base(MHZ_TO_HZ), // 1 MHz
+        pnp: Pressure::from_base(0.5 * MPA_TO_PA),  // 0.5 MPa
+        prf: Frequency::from_base(100.0),
         duty_cycle: 0.1,
-        focal_depth: 0.03,
-        treatment_volume: 0.5,
+        focal_depth: Length::from_base(0.03),
+        treatment_volume: Volume::from_base(0.5e-6),
         use_nonlinear_field: false,
     };
 
@@ -95,12 +96,12 @@ fn test_cavitation_dose_accumulation() {
     };
 
     let acoustic_params = AcousticTherapyParams {
-        frequency: MHZ_TO_HZ,
-        pnp: MPA_TO_PA,
-        prf: 100.0,
+        frequency: Frequency::from_base(MHZ_TO_HZ),
+        pnp: Pressure::from_base(MPA_TO_PA),
+        prf: Frequency::from_base(100.0),
         duty_cycle: 0.1,
-        focal_depth: 0.05,
-        treatment_volume: 1.0,
+        focal_depth: Length::from_base(0.05),
+        treatment_volume: Volume::from_base(1.0e-6),
         use_nonlinear_field: false,
     };
 
@@ -154,10 +155,10 @@ fn test_safety_limit_checking_all_safe() {
         thermal_index_max: TI_LIMIT_SOFT_TISSUE,
         mechanical_index_max: 1.9,
         cavitation_dose_max: 1000.0,
-        max_treatment_time: 300.0,
+        max_treatment_time: Time::from_base(300.0),
     };
 
-    let status = check_safety_limits(&safety_metrics, &safety_limits, 60.0);
+    let status = check_safety_limits(&safety_metrics, &safety_limits, Time::from_base(60.0));
     assert_eq!(status, TherapyIntegrationSafetyStatus::Safe);
 }
 
@@ -174,10 +175,10 @@ fn test_safety_limit_thermal_exceeded() {
         thermal_index_max: TI_LIMIT_SOFT_TISSUE,
         mechanical_index_max: 1.9,
         cavitation_dose_max: 1000.0,
-        max_treatment_time: 300.0,
+        max_treatment_time: Time::from_base(300.0),
     };
 
-    let status = check_safety_limits(&safety_metrics, &safety_limits, 60.0);
+    let status = check_safety_limits(&safety_metrics, &safety_limits, Time::from_base(60.0));
     assert_eq!(status, TherapyIntegrationSafetyStatus::ThermalLimitExceeded);
 }
 
@@ -194,10 +195,10 @@ fn test_safety_limit_mechanical_exceeded() {
         thermal_index_max: TI_LIMIT_SOFT_TISSUE,
         mechanical_index_max: 1.9,
         cavitation_dose_max: 1000.0,
-        max_treatment_time: 300.0,
+        max_treatment_time: Time::from_base(300.0),
     };
 
-    let status = check_safety_limits(&safety_metrics, &safety_limits, 60.0);
+    let status = check_safety_limits(&safety_metrics, &safety_limits, Time::from_base(60.0));
     assert_eq!(
         status,
         TherapyIntegrationSafetyStatus::MechanicalLimitExceeded
@@ -217,9 +218,9 @@ fn test_safety_limit_time_exceeded() {
         thermal_index_max: TI_LIMIT_SOFT_TISSUE,
         mechanical_index_max: 1.9,
         cavitation_dose_max: 1000.0,
-        max_treatment_time: 300.0,
+        max_treatment_time: Time::from_base(300.0),
     };
 
-    let status = check_safety_limits(&safety_metrics, &safety_limits, 301.0); // Over time limit
+    let status = check_safety_limits(&safety_metrics, &safety_limits, Time::from_base(301.0)); // Over time limit
     assert_eq!(status, TherapyIntegrationSafetyStatus::TimeLimitExceeded);
 }

@@ -8,21 +8,21 @@ fn test_therapy_orchestrator_creation() {
     let config = TherapySessionConfig {
         primary_modality: TherapyIntegrationModality::Histotripsy,
         secondary_modalities: vec![TherapyIntegrationModality::Microbubble],
-        duration: 60.0,
+        duration: Time::from_base(60.0),
         acoustic_params: AcousticTherapyParams {
-            frequency: MHZ_TO_HZ,
-            pnp: 10.0 * MPA_TO_PA,
-            prf: 100.0,
+            frequency: Frequency::from_base(MHZ_TO_HZ),
+            pnp: Pressure::from_base(10.0 * MPA_TO_PA),
+            prf: Frequency::from_base(100.0),
             duty_cycle: 0.01,
-            focal_depth: 0.05,
-            treatment_volume: 1.0,
+            focal_depth: Length::from_base(0.05),
+            treatment_volume: Volume::from_base(1.0e-6),
             use_nonlinear_field: false,
         },
         safety_limits: TherapyIntegrationSafetyLimits {
             thermal_index_max: TI_LIMIT_SOFT_TISSUE,
             mechanical_index_max: 1.9,
             cavitation_dose_max: 1000.0,
-            max_treatment_time: 300.0,
+            max_treatment_time: Time::from_base(300.0),
         },
         patient_params: PatientParameters {
             skull_thickness: None,
@@ -46,5 +46,5 @@ fn test_therapy_orchestrator_creation() {
         orchestrator.config().primary_modality,
         TherapyIntegrationModality::Histotripsy
     );
-    assert!(orchestrator.session_state().current_time < 1e-6);
+    assert!(orchestrator.session_state().current_time.into_base() < 1e-6);
 }

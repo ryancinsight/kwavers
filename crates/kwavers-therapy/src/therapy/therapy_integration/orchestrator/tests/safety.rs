@@ -8,21 +8,21 @@ fn test_safety_limit_checking() {
         primary_modality: TherapyIntegrationModality::Transcranial,
         secondary_modalities: vec![],
         imaging_data_path: None,
-        duration: 10.0,
+        duration: Time::from_base(10.0),
         acoustic_params: AcousticTherapyParams {
-            frequency: 0.5 * MHZ_TO_HZ,
-            pnp: 0.5 * MPA_TO_PA,
-            prf: 1.0,
+            frequency: Frequency::from_base(0.5 * MHZ_TO_HZ),
+            pnp: Pressure::from_base(0.5 * MPA_TO_PA),
+            prf: Frequency::from_base(1.0),
             duty_cycle: 0.1,
-            focal_depth: 0.05,
-            treatment_volume: 1.0,
+            focal_depth: Length::from_base(0.05),
+            treatment_volume: Volume::from_base(1.0e-6),
             use_nonlinear_field: false,
         },
         safety_limits: TherapyIntegrationSafetyLimits {
             thermal_index_max: 0.5,
             mechanical_index_max: 1.9,
             cavitation_dose_max: 1000.0,
-            max_treatment_time: 300.0,
+            max_treatment_time: Time::from_base(300.0),
         },
         patient_params: PatientParameters {
             skull_thickness: None,
@@ -42,7 +42,9 @@ fn test_safety_limit_checking() {
     let mut orchestrator =
         TherapyIntegrationOrchestrator::new(config, grid, Box::new(medium.clone())).unwrap();
 
-    orchestrator.execute_therapy_step(1.0).unwrap();
+    orchestrator
+        .execute_therapy_step(Time::from_base(1.0))
+        .unwrap();
 
     let safety_status = orchestrator.check_safety_limits();
     assert_eq!(safety_status, TherapyIntegrationSafetyStatus::Safe);
@@ -54,21 +56,21 @@ fn test_safety_controller_integration() {
         primary_modality: TherapyIntegrationModality::HIFU,
         secondary_modalities: vec![],
         imaging_data_path: None,
-        duration: 30.0,
+        duration: Time::from_base(30.0),
         acoustic_params: AcousticTherapyParams {
-            frequency: MHZ_TO_HZ,
-            pnp: 5.0 * MPA_TO_PA,
-            prf: 100.0,
+            frequency: Frequency::from_base(MHZ_TO_HZ),
+            pnp: Pressure::from_base(5.0 * MPA_TO_PA),
+            prf: Frequency::from_base(100.0),
             duty_cycle: 0.05,
-            focal_depth: 0.04,
-            treatment_volume: 0.8,
+            focal_depth: Length::from_base(0.04),
+            treatment_volume: Volume::from_base(0.8e-6),
             use_nonlinear_field: false,
         },
         safety_limits: TherapyIntegrationSafetyLimits {
             thermal_index_max: 2.0,
             mechanical_index_max: 1.5,
             cavitation_dose_max: 100.0,
-            max_treatment_time: 60.0,
+            max_treatment_time: Time::from_base(60.0),
         },
         patient_params: PatientParameters {
             skull_thickness: None,
@@ -102,11 +104,11 @@ fn test_safety_controller_integration() {
 
     for step in 0..max_steps {
         orchestrator
-            .execute_therapy_step(dt)
+            .execute_therapy_step(Time::from_base(dt))
             .unwrap_or_else(|e| panic!("Step {step} failed: {e:?}"));
 
         let state = orchestrator.session_state();
-        assert!(state.current_time > 0.0);
+        assert!(state.current_time.into_base() > 0.0);
         assert!(!state.acoustic_field.as_ref().unwrap().pressure.is_empty());
 
         if orchestrator.should_stop() {

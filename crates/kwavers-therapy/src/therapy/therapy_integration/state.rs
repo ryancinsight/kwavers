@@ -16,6 +16,7 @@
 //! - FDA 510(k) Guidance: "Ultrasound Devices"
 //! - Apfel & Holland (1991): "Gaseous cavitation thresholds"
 
+use aequitas::systems::si::quantities::Time;
 use leto::Array3;
 use std::collections::HashMap;
 
@@ -27,7 +28,7 @@ use std::collections::HashMap;
 #[derive(Debug, Clone)]
 pub struct TherapySessionState {
     /// Current time in session (s)
-    pub current_time: f64,
+    pub current_time: Time<f64>,
 
     /// Treatment progress (0-1)
     ///

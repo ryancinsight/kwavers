@@ -1,6 +1,7 @@
 //! SafetyController implementation.
 
 use super::types::TherapyAction;
+use aequitas::systems::si::quantities::Time;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use std::collections::HashMap;
 
@@ -23,7 +24,7 @@ pub struct SafetyController {
     /// Maximum allowed dose per organ
     organ_max_doses: HashMap<String, f64>,
     /// Treatment start time (seconds)
-    treatment_start_time: f64,
+    treatment_start_time: Time<f64>,
     /// Whether a violation has occurred (sticky flag)
     violation_detected: bool,
     /// Last action taken
@@ -52,7 +53,7 @@ impl SafetyController {
             current_metrics: SafetyMetrics::default(),
             organ_doses: HashMap::new(),
             organ_max_doses: organ_limits.unwrap_or_default(),
-            treatment_start_time: 0.0,
+            treatment_start_time: Time::from_base(0.0),
             violation_detected: false,
             last_action: TherapyAction::Continue,
             warning_count: 0,
@@ -64,7 +65,7 @@ impl SafetyController {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub fn start_monitoring(&mut self, current_time: f64) {
+    pub fn start_monitoring(&mut self, current_time: Time<f64>) {
         self.treatment_start_time = current_time;
         self.violation_detected = false;
         self.warning_count = 0;
@@ -78,7 +79,7 @@ impl SafetyController {
     pub fn evaluate_safety(
         &mut self,
         metrics: SafetyMetrics,
-        current_time: f64,
+        current_time: Time<f64>,
     ) -> KwaversResult<TherapyAction> {
         self.current_metrics = metrics;
 
@@ -163,10 +164,10 @@ impl SafetyController {
         }
     }
 
-    fn check_limits(&self, current_time: f64) -> TherapyAction {
-        let elapsed = current_time - self.treatment_start_time;
+    fn check_limits(&self, current_time: Time<f64>) -> TherapyAction {
+        let elapsed = current_time.into_base() - self.treatment_start_time.into_base();
         // ≥ not > : at exactly max_treatment_time the session must stop.
-        if elapsed >= self.limits.max_treatment_time {
+        if elapsed >= self.limits.max_treatment_time.into_base() {
             return TherapyAction::Stop;
         }
 
@@ -175,7 +176,7 @@ impl SafetyController {
             .get("treatment_time")
             .copied()
             .unwrap_or(0.9);
-        if elapsed > self.limits.max_treatment_time * time_margin {
+        if elapsed > self.limits.max_treatment_time.into_base() * time_margin {
             return TherapyAction::ReducePower;
         }
 

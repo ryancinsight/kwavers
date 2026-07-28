@@ -16,6 +16,7 @@ use super::{
     cavitation, chemical, execution, initialization, lithotripsy, microbubble, safety,
     TherapyIntegrationOrchestrator,
 };
+use aequitas::systems::si::quantities::Time;
 
 impl TherapyIntegrationOrchestrator {
     /// Create new therapy integration orchestrator
@@ -91,7 +92,7 @@ impl TherapyIntegrationOrchestrator {
         };
 
         let session_state = TherapySessionState {
-            current_time: 0.0,
+            current_time: Time::from_base(0.0),
             progress: 0.0,
             acoustic_field: None,
             microbubble_concentration: None,
@@ -106,10 +107,10 @@ impl TherapyIntegrationOrchestrator {
         };
 
         let mut safety_controller = SafetyController::new(config.safety_limits.clone(), None);
-        safety_controller.start_monitoring(0.0);
+        safety_controller.start_monitoring(Time::from_base(0.0));
 
         // 0.1 s averaging window; 10 µs acoustic time step.
-        let intensity_tracker = IntensityTracker::new(0.1, 1e-5)?;
+        let intensity_tracker = IntensityTracker::new(Time::from_base(0.1), Time::from_base(1e-5))?;
 
         Ok(Self {
             config,
@@ -150,9 +151,12 @@ impl TherapyIntegrationOrchestrator {
     /// # Errors
     ///
     /// Returns error if any physics subsystem fails
-    pub fn execute_therapy_step(&mut self, dt: f64) -> KwaversResult<()> {
-        self.session_state.current_time += dt;
-        self.session_state.progress = self.session_state.current_time / self.config.duration;
+    pub fn execute_therapy_step(&mut self, dt: Time<f64>) -> KwaversResult<()> {
+        let dt_seconds = dt.into_base();
+        self.session_state.current_time =
+            Time::from_base(self.session_state.current_time.into_base() + dt_seconds);
+        self.session_state.progress =
+            self.session_state.current_time.into_base() / self.config.duration.into_base();
 
         let mut acoustic_field = if self.config.primary_modality == TherapyIntegrationModality::HIFU
             && self.config.acoustic_params.use_nonlinear_field
@@ -212,8 +216,8 @@ impl TherapyIntegrationOrchestrator {
         let temperature_field = execution::calculate_acoustic_heating(
             &corrected_field,
             &self.grid,
-            dt,
-            self.config.acoustic_params.focal_depth,
+            dt_seconds,
+            self.config.acoustic_params.focal_depth.into_base(),
         );
 
         self.intensity_tracker
@@ -233,8 +237,9 @@ impl TherapyIntegrationOrchestrator {
         // MI = p_neg_peak_derated (MPa) / sqrt(f_center (MHz))
         //    = (pnp_Pa / 1e6) / sqrt(f_Hz / 1e6)
         //    = pnp_Pa / (1e3 × sqrt(f_Hz))
-        self.session_state.safety_metrics.mechanical_index = self.config.acoustic_params.pnp
-            / (1e3 * (self.config.acoustic_params.frequency).sqrt());
+        self.session_state.safety_metrics.mechanical_index =
+            self.config.acoustic_params.pnp.into_base()
+                / (1e3 * self.config.acoustic_params.frequency.into_base().sqrt());
         self.session_state.safety_metrics.temperature_rise = temperature_field.clone();
 
         let safety_action = self.safety_controller.evaluate_safety(
@@ -265,13 +270,14 @@ impl TherapyIntegrationOrchestrator {
                 controller,
                 &corrected_field,
                 &self.config.acoustic_params,
-                dt,
+                dt_seconds,
             )?;
             self.session_state.cavitation_activity = Some(cavitation_activity.clone());
 
             let total_cavitation_activity: f64 =
                 cavitation_activity.iter().sum::<f64>() / cavitation_activity.len() as f64;
-            self.session_state.safety_metrics.cavitation_dose += total_cavitation_activity * dt;
+            self.session_state.safety_metrics.cavitation_dose +=
+                total_cavitation_activity * dt_seconds;
         }
 
         if let Some(ref mut chemistry) = self.chemical_model {
@@ -282,13 +288,14 @@ impl TherapyIntegrationOrchestrator {
                 &self.config.acoustic_params,
                 &self.grid,
                 &*self.medium,
-                dt,
+                dt_seconds,
             )?;
             self.session_state.chemical_concentrations = Some(chemical_concentrations);
         }
 
         if let Some(ref mut simulator) = self.lithotripsy_simulator {
-            let progress = lithotripsy::execute_lithotripsy_step(simulator, &corrected_field, dt)?;
+            let progress =
+                lithotripsy::execute_lithotripsy_step(simulator, &corrected_field, dt_seconds)?;
             self.session_state.progress = progress;
         }
 

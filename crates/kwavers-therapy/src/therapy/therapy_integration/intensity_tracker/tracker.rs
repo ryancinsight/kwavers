@@ -1,11 +1,12 @@
 //! IntensityTracker implementation.
 
 use super::types::{InstantaneousIntensity, IntensityTrackerDose, TemporalIntensityMetrics};
-use aequitas::systems::si::quantities::{ThermodynamicTemperature, Time};
+use aequitas::systems::si::quantities::{Intensity, ThermodynamicTemperature, Time};
 use asclepius::response::thermal::Cem43;
 use kwavers_core::constants::numerical::SECONDS_PER_MINUTE;
 use kwavers_core::constants::thermodynamic::{BODY_TEMPERATURE_C, KELVIN_OFFSET_C};
 use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_physics::thermal::CumulativeEquivalentMinutes;
 use leto::Array3;
 
 /// Real-time acoustic intensity tracker
@@ -15,7 +16,7 @@ use leto::Array3;
 #[derive(Debug, Clone)]
 pub struct IntensityTracker {
     /// Maximum window size (seconds) for temporal averaging
-    max_window_duration: f64,
+    max_window_duration: Time<f64>,
 
     /// History of instantaneous intensity measurements
     intensity_history: Vec<InstantaneousIntensity>,
@@ -27,10 +28,10 @@ pub struct IntensityTracker {
     thermal_dose: IntensityTrackerDose,
 
     /// Peak intensity ever measured (W/m²)
-    peak_intensity: f64,
+    peak_intensity: Intensity<f64>,
 
     /// Current simulation time (seconds)
-    current_time: f64,
+    current_time: Time<f64>,
 }
 
 impl IntensityTracker {
@@ -45,14 +46,16 @@ impl IntensityTracker {
     /// # Errors
     /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
-    pub fn new(max_window_duration: f64, dt: f64) -> KwaversResult<Self> {
-        if max_window_duration <= 0.0 || dt <= 0.0 {
+    pub fn new(max_window_duration: Time<f64>, dt: Time<f64>) -> KwaversResult<Self> {
+        let max_window_seconds = max_window_duration.into_base();
+        let dt_seconds = dt.into_base();
+        if max_window_seconds <= 0.0 || dt_seconds <= 0.0 {
             return Err(KwaversError::InvalidInput(
                 "Window duration and time step must be positive".into(),
             ));
         }
 
-        if dt > max_window_duration {
+        if dt_seconds > max_window_seconds {
             return Err(KwaversError::InvalidInput(
                 "Time step cannot exceed window duration".into(),
             ));
@@ -63,8 +66,8 @@ impl IntensityTracker {
             intensity_history: Vec::new(),
             current_metrics: TemporalIntensityMetrics::default(),
             thermal_dose: IntensityTrackerDose::default(),
-            peak_intensity: 0.0,
-            current_time: 0.0,
+            peak_intensity: Intensity::from_base(0.0),
+            current_time: Time::from_base(0.0),
         })
     }
 
@@ -86,7 +89,7 @@ impl IntensityTracker {
         &mut self,
         pressure_field: &Array3<f64>,
         impedance_field: &Array3<f64>,
-        timestamp: f64,
+        timestamp: Time<f64>,
     ) -> KwaversResult<TemporalIntensityMetrics> {
         // Compute intensity field: I = p²/Z
         let p_squared = pressure_field.mapv(|p| p * p);
@@ -101,14 +104,15 @@ impl IntensityTracker {
 
         // Create measurement
         let measurement = InstantaneousIntensity {
-            isppa: spatial_peak,
-            spatial_peak,
-            spatial_average,
+            isppa: Intensity::from_base(spatial_peak),
+            spatial_peak: Intensity::from_base(spatial_peak),
+            spatial_average: Intensity::from_base(spatial_average),
             timestamp,
         };
 
         // Update peak tracking
-        self.peak_intensity = self.peak_intensity.max(spatial_peak);
+        self.peak_intensity =
+            Intensity::from_base(self.peak_intensity.into_base().max(spatial_peak));
         self.current_time = timestamp;
 
         // Add to history
@@ -131,13 +135,13 @@ impl IntensityTracker {
         }
 
         // Get window bounds
-        let window_start = self.current_time - self.max_window_duration;
+        let window_start = self.current_time.into_base() - self.max_window_duration.into_base();
 
         // Find measurements within window
         let window_measurements: Vec<_> = self
             .intensity_history
             .iter()
-            .filter(|m| m.timestamp >= window_start)
+            .filter(|m| m.timestamp.into_base() >= window_start)
             .collect();
 
         if window_measurements.is_empty() {
@@ -151,29 +155,35 @@ impl IntensityTracker {
         // (assumes uniform Δt so the per-sample dt cancels with the sum length).
         // Ref: IEC 62359:2010 §5.2, FDA 510(k) Guidance §IV.
         let n = window_measurements.len() as f64;
-        let total_spta: f64 = window_measurements.iter().map(|m| m.isppa).sum();
-        let spta = total_spta / n;
+        let total_spta: f64 = window_measurements
+            .iter()
+            .map(|m| m.isppa.into_base())
+            .sum();
+        let spta = Intensity::from_base(total_spta / n);
 
         // Compute TAS (Temporal Average Spatial) in W/m².
-        let total_tas: f64 = window_measurements.iter().map(|m| m.spatial_average).sum();
-        let tas = total_tas / n;
+        let total_tas: f64 = window_measurements
+            .iter()
+            .map(|m| m.spatial_average.into_base())
+            .sum();
+        let tas = Intensity::from_base(total_tas / n);
 
         // Track peak SPTA
         let peak_spta = window_measurements
             .iter()
-            .map(|m| m.isppa)
+            .map(|m| m.isppa.into_base())
             .fold(0.0_f64, f64::max);
 
         let min_spta = window_measurements
             .iter()
-            .map(|m| m.isppa)
+            .map(|m| m.isppa.into_base())
             .fold(f64::MAX, f64::min);
 
         self.current_metrics = TemporalIntensityMetrics {
             spta,
             tas,
-            peak_spta,
-            min_spta: min_spta.min(self.current_metrics.min_spta),
+            peak_spta: Intensity::from_base(peak_spta),
+            min_spta: Intensity::from_base(min_spta.min(self.current_metrics.min_spta.into_base())),
             sample_count: window_measurements.len(),
         };
     }
@@ -183,8 +193,9 @@ impl IntensityTracker {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     fn trim_history(&mut self) {
-        let cutoff = self.current_time - self.max_window_duration * 2.0; // Keep 2x window for safety
-        self.intensity_history.retain(|m| m.timestamp > cutoff);
+        let cutoff = self.current_time.into_base() - self.max_window_duration.into_base() * 2.0;
+        self.intensity_history
+            .retain(|m| m.timestamp.into_base() > cutoff);
     }
 
     /// Update thermal dose accumulation
@@ -199,7 +210,7 @@ impl IntensityTracker {
     pub fn update_thermal_dose(
         &mut self,
         temperature_field: &Array3<f64>,
-        dt: f64,
+        dt: Time<f64>,
     ) -> KwaversResult<()> {
         // Find maximum temperature in field
         let max_temp = temperature_field
@@ -216,7 +227,7 @@ impl IntensityTracker {
         let increment = Cem43::canonical()
             .increment(
                 ThermodynamicTemperature::from_base(max_temp + KELVIN_OFFSET_C),
-                Time::from_base(dt),
+                dt,
             )
             .map_err(|source| {
                 KwaversError::InvalidInput(format!(
@@ -228,12 +239,29 @@ impl IntensityTracker {
             / SECONDS_PER_MINUTE;
 
         // Commit only after the response observation is fully validated.
-        self.thermal_dose.max_temperature = self.thermal_dose.max_temperature.max(max_temp);
-        self.thermal_dose.current_temperature = max_temp;
-        self.thermal_dose.temperature_rise = (max_temp - BODY_TEMPERATURE_C).max(0.0);
+        let max_temperature = ThermodynamicTemperature::from_base(max_temp + KELVIN_OFFSET_C);
+        self.thermal_dose.max_temperature = ThermodynamicTemperature::from_base(
+            self.thermal_dose
+                .max_temperature
+                .into_base()
+                .max(max_temperature.into_base()),
+        );
+        self.thermal_dose.current_temperature = max_temperature;
+        self.thermal_dose.temperature_rise =
+            aequitas::systems::si::quantities::TemperatureDifference::from_base(
+                (max_temp - BODY_TEMPERATURE_C).max(0.0),
+            );
 
         if max_temp > BODY_TEMPERATURE_C {
-            self.thermal_dose.cem43 += increment;
+            let next_dose = CumulativeEquivalentMinutes::try_from_minutes(
+                self.thermal_dose.cem43.as_minutes() + increment,
+            )
+            .map_err(|source| {
+                KwaversError::InvalidInput(format!(
+                    "intensity-tracker CEM43 accumulation is invalid: {source}"
+                ))
+            })?;
+            self.thermal_dose.cem43 = next_dose;
         }
 
         Ok(())
@@ -251,18 +279,18 @@ impl IntensityTracker {
 
     /// Get SPTA in clinically relevant units (W/cm²)
     pub fn spta_w_cm2(&self) -> f64 {
-        self.current_metrics.spta / 1e4
+        self.current_metrics.spta.into_base() / 1e4
     }
 
     /// Get peak intensity ever recorded (W/cm²)
     pub fn peak_intensity_w_cm2(&self) -> f64 {
-        self.peak_intensity / 1e4
+        self.peak_intensity.into_base() / 1e4
     }
 
     /// Check if thermal safety threshold exceeded
     /// CEM43 should remain < 240 minutes for safe treatment
     pub fn is_thermal_safe(&self) -> bool {
-        self.thermal_dose.cem43 < 240.0
+        self.thermal_dose.cem43.as_minutes() < 240.0
     }
 
     /// Get number of measurements in current window
@@ -275,7 +303,7 @@ impl IntensityTracker {
         self.intensity_history.clear();
         self.current_metrics = TemporalIntensityMetrics::default();
         self.thermal_dose = IntensityTrackerDose::default();
-        self.peak_intensity = 0.0;
-        self.current_time = 0.0;
+        self.peak_intensity = Intensity::from_base(0.0);
+        self.current_time = Time::from_base(0.0);
     }
 }

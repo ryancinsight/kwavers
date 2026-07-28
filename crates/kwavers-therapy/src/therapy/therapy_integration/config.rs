@@ -11,6 +11,7 @@
 //! - FDA Guidance: "510(k) Submissions for Ultrasound Devices"
 
 use super::tissue::TissuePropertyMap;
+use aequitas::systems::si::quantities::{Frequency, Length, Pressure, Time, Volume};
 
 /// Unified therapy session configuration
 ///
@@ -50,7 +51,7 @@ pub struct TherapySessionConfig {
     /// Total duration of the therapy session. Should be determined based on
     /// clinical protocol, treatment volume, and patient tolerance.
     /// Must comply with safety limits and ALARA principles.
-    pub duration: f64,
+    pub duration: Time<f64>,
 
     /// Acoustic parameters
     ///
@@ -157,19 +158,19 @@ pub struct AcousticTherapyParams {
     ///
     /// Primary frequency of ultrasound exposure.
     /// Typical range: 0.5-3 MHz for therapy, 0.25-1 MHz for transcranial
-    pub frequency: f64,
+    pub frequency: Frequency<f64>,
 
     /// Peak negative pressure (Pa)
     ///
     /// Maximum negative pressure amplitude.
     /// Critical for mechanical index calculations and cavitation prediction.
-    pub pnp: f64,
+    pub pnp: Pressure<f64>,
 
     /// Pulse repetition frequency (Hz)
     ///
     /// Rate at which ultrasound pulses are delivered.
     /// Affects duty cycle and thermal effects.
-    pub prf: f64,
+    pub prf: Frequency<f64>,
 
     /// Duty cycle (0-1)
     ///
@@ -181,13 +182,13 @@ pub struct AcousticTherapyParams {
     ///
     /// Distance from transducer to acoustic focus.
     /// Critical for treatment planning and targeting.
-    pub focal_depth: f64,
+    pub focal_depth: Length<f64>,
 
     /// Treatment volume (cm³)
     ///
     /// Volume of tissue to be treated.
     /// Used for dose calculations and treatment time estimation.
-    pub treatment_volume: f64,
+    pub treatment_volume: Volume<f64>,
 
     /// Enable nonlinear acoustic field solver (KZK)
     ///
@@ -232,7 +233,7 @@ pub struct TherapyIntegrationSafetyLimits {
     /// Maximum treatment time (s)
     ///
     /// Total duration limit based on patient tolerance and ALARA principles.
-    pub max_treatment_time: f64,
+    pub max_treatment_time: Time<f64>,
 }
 
 /// Patient-specific parameters

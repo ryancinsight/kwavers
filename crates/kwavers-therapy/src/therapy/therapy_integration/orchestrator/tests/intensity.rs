@@ -11,21 +11,21 @@ fn test_intensity_tracker_integration() {
         primary_modality: TherapyIntegrationModality::HIFU,
         secondary_modalities: vec![],
         imaging_data_path: None,
-        duration: 10.0,
+        duration: Time::from_base(10.0),
         acoustic_params: AcousticTherapyParams {
-            frequency: 2.0 * MHZ_TO_HZ,
-            pnp: 2.0 * MPA_TO_PA,
-            prf: 50.0,
+            frequency: Frequency::from_base(2.0 * MHZ_TO_HZ),
+            pnp: Pressure::from_base(2.0 * MPA_TO_PA),
+            prf: Frequency::from_base(50.0),
             duty_cycle: 0.02,
-            focal_depth: 0.03,
-            treatment_volume: 0.5,
+            focal_depth: Length::from_base(0.03),
+            treatment_volume: Volume::from_base(0.5e-6),
             use_nonlinear_field: false,
         },
         safety_limits: TherapyIntegrationSafetyLimits {
             thermal_index_max: TI_LIMIT_SOFT_TISSUE,
             mechanical_index_max: 1.9,
             cavitation_dose_max: 1000.0,
-            max_treatment_time: 300.0,
+            max_treatment_time: Time::from_base(300.0),
         },
         patient_params: PatientParameters {
             skull_thickness: None,
@@ -72,7 +72,7 @@ fn test_intensity_tracker_integration() {
 
     for step in 0..5usize {
         orchestrator
-            .execute_therapy_step(DT)
+            .execute_therapy_step(Time::from_base(DT))
             .unwrap_or_else(|e| panic!("Step {step} failed: {e:?}"));
 
         let state = orchestrator.session_state();
@@ -116,9 +116,9 @@ fn test_intensity_tracker_integration() {
 
         let expected_time = (step + 1) as f64 * DT;
         assert!(
-            (state.current_time - expected_time).abs() < 1e-10,
+            (state.current_time.into_base() - expected_time).abs() < 1e-10,
             "step {step}: current_time={} expected={}",
-            state.current_time,
+            state.current_time.into_base(),
             expected_time
         );
     }
@@ -126,9 +126,9 @@ fn test_intensity_tracker_integration() {
     let final_state = orchestrator.session_state();
     let expected_final_time = 5.0 * DT;
     assert!(
-        (final_state.current_time - expected_final_time).abs() < 1e-10,
+        (final_state.current_time.into_base() - expected_final_time).abs() < 1e-10,
         "current_time={} expected={expected_final_time}",
-        final_state.current_time
+        final_state.current_time.into_base()
     );
     assert!(
         (final_state.progress - expected_final_time / duration).abs() < 1e-10,
