@@ -1,5 +1,22 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-25 typed HIFU imaging quantities [major] — done 2026-07-27
+
+- [x] Type HIFU transducer, treatment target/protocol, safety, avoidance-zone,
+      and monitoring physical contracts with Aequitas; preserve CEM43 and
+      model/dense-field scalar boundaries.
+- [x] Migrate the focused HIFU field caller and value-semantic tests; add ADR
+      063 and synchronize gap-audit, backlog, checklist, and changelog.
+- [x] Run the imaging/physics package checks, HIFU Nextest, doctests, Clippy,
+      Rustdoc, rustfmt, and diff gates; preserve peer-owned dirt.
+
+Evidence: imaging/physics package check passes; focused HIFU Nextest passes
+10/10 with 1,704 tests skipped; doctests pass 4/4 for imaging and 8/8 for
+physics with 6 ignored; warning-denied Clippy passes; Rustdoc exits 0 with one
+pre-existing private intra-doc-link warning; touched-file rustfmt and
+`git diff --check` pass. Existing shared provider-patch, linker, and peer-dirty
+warnings remain outside this item.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-24 typed grid stability quantities [major] — done 2026-07-27
 
 - [x] Type CFL, diffusion, nonlinear, recommended-step, Courant, and FDTD

@@ -29,6 +29,22 @@
 
 # Gap Audit
 
+## Live HIFU-imaging refresh — 2026-07-27
+
+`KWAVERS-AEQ-MET-25` closes the live public HIFU imaging contract gap in
+`kwavers-imaging`. Transducer frequency, acoustic power, focal/aperture
+geometry, target dimensions and positions, protocol durations and PRF, phase
+power/offsets, safety intensity and absolute temperature, avoidance-zone
+geometry, and monitoring points now use Aequitas `Frequency`, `Power`,
+`Length`, `Time`, `Intensity`, `ThermodynamicTemperature`, and
+`TemperatureDifference`. CEM43 remains a consumer dose-model scalar.
+
+Absolute temperature is stored in kelvin (`85 °C = 358.15 K`); the legacy
+`1000 W/cm²` safety ceiling is stored as `10^7 W/m²`. Scalar extraction is
+confined to the focused-field formula and validation boundaries. The focused
+HIFU value tests cover geometric focus, lateral symmetry, the pressure-to-
+intensity identity, and SI safety-limit rejection. See [ADR 063](docs/ADR/063-imaging-hifu-quantities.md).
+
 ## Live ultrafast-transducer refresh — 2026-07-27
 
 `KWAVERS-AEQ-MET-22` corrected a stale closure claim: the live ultrafast
@@ -244,6 +260,7 @@ provider-owned mass-density-rate quantity up to the scalar numerical boundary.
 | `KWAVERS-AEQ-MET-21` | `kwavers-transducer/src/design/{mod.rs,propagation.rs}` exposed array geometry, wavelength, frequency, sound speed, drive current, pressure-per-current, acoustic impedance, focal pressure, intensity, and beam extents as unit-documented raw values. | Type the public design and focused-propagation contracts with Aequitas; migrate driver callers and retain scalar extraction only at formula, width-search, validation, and explicit report-conversion boundaries. | Kwavers, Aequitas | **RESOLVED in this increment.** Design/propagation contracts and channel positions are typed; unit-suffixed names are removed and driver report conversion is explicit. Transducer Nextest passes 218/218 with one skip, doctests pass 2/2 with six ignored, and warning-denied Clippy/Rustdoc pass. Driver `kwavers`-feature Nextest passes 489/489; its doctest target has no tests, and warning-denied Clippy/Rustdoc pass. See [ADR 059](docs/ADR/059-transducer-design-quantities.md). |
 
 | `KWAVERS-AEQ-MET-22` | `kwavers-transducer/src/ultrafast/{sequencer,plane_wave,diverging_wave}` still exposed transmission angles, frequencies/PRF, sound speed, depths, positions, delays, and durations as raw physical scalars after the prior audit marked the ultrafast family closed. | Type the complete ultrafast public stack with Aequitas; retain scalar extraction only at delay-table, numerical-kernel, and presentation boundaries. | Kwavers, Aequitas | **RESOLVED in this increment.** Sequencer events/schedules, plane-wave and diverging-wave configurations, typed delay APIs, and typed frame-rate APIs now use Aequitas quantities. Transducer check, Nextest 218/218 with one skip, doctests 2/2 with six ignored, warning-denied Clippy, Rustdoc, rustfmt, and diff checks pass. See [ADR 060](docs/ADR/060-ultrafast-quantities.md). |
+| `KWAVERS-AEQ-MET-25` | `kwavers-imaging/src/ultrasound/hifu.rs` exposed HIFU transducer, treatment-plan, geometry, protocol, safety, avoidance-zone, and monitoring metrics as unit-documented raw scalars. | Type physical public contracts with Aequitas; preserve CEM43/model scalars and focused-field numerical boundaries. | Kwavers, Aequitas | **RESOLVED in this increment.** HIFU public contracts and focused-field callers/tests use typed SI quantities; Celsius and W/cm² defaults are converted explicitly to kelvin and W/m². Package check, focused HIFU tests, doctests, warning-denied Clippy, Rustdoc, rustfmt, and diff checks are the acceptance gates. See [ADR 063](docs/ADR/063-imaging-hifu-quantities.md). |
 | `KWAVERS-AEQ-MET-24` | `kwavers-grid/src/stability.rs` and `Grid::cfl_timestep` exposed CFL, diffusion, nonlinear, and recommended timesteps plus sound speed and diffusivity as raw physical scalars. | Type the public stability inputs/results with Aequitas; keep Courant number, nonlinearity, mesh spacing, and dense numerical boundaries scalar. | Kwavers, Aequitas | **RESOLVED in this increment.** Stability APIs return `Time`, accept `Velocity`/`ThermalDiffusivity`, and all affected callers are migrated. Value-semantic stability tests, affected-package Nextest, warning-denied Clippy, doctests, Rustdoc, rustfmt, and diff checks pass. See [ADR 062](docs/ADR/062-grid-stability-quantities.md). |
 
 ### Explicit non-gaps and sequencing constraints
@@ -259,8 +276,9 @@ provider-owned mass-density-rate quantity up to the scalar numerical boundary.
   full package evidence is recorded above. `KWAVERS-AEQ-MET-18` closes the
   tracker accessor gap, `KWAVERS-AEQ-MET-19` closes the clinical scenario
   gap, `KWAVERS-AEQ-MET-20` closes the neuromodulation protocol gap,
-  `KWAVERS-AEQ-MET-21` closes the transducer design/propagation gap, and
-  `KWAVERS-AEQ-MET-22` closes the ultrafast transducer gap. The next public
+  `KWAVERS-AEQ-MET-21` closes the transducer design/propagation gap,
+  `KWAVERS-AEQ-MET-22` closes the ultrafast transducer gap, and
+  `KWAVERS-AEQ-MET-25` closes the HIFU imaging gap. The next public
   inventory re-audit remains required before declaring the consumer-wide
   metric ledger empty.
 

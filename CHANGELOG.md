@@ -4,6 +4,11 @@
 
 ### Changed
 
+- **Breaking**: HIFU imaging transducer, treatment-plan, geometry, protocol,
+  safety, avoidance-zone, and monitoring metrics now use Aequitas SI
+  quantities; CEM43 and focused-field numerical arrays remain at their
+  model/storage boundaries. See [ADR 063](docs/ADR/063-imaging-hifu-quantities.md).
+
 - **Breaking**: Grid CFL, diffusion, nonlinear, and recommended timestep
   contracts now use Aequitas `Time`, `Velocity`, and `ThermalDiffusivity`;
   Courant and mesh/formula scalar boundaries remain explicit. See [ADR 062](docs/ADR/062-grid-stability-quantities.md).

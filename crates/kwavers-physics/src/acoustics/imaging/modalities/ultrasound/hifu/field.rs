@@ -54,7 +54,10 @@ pub fn compute_pressure_field(
     medium: &dyn Medium,
 ) -> KwaversResult<Array3<f64>> {
     let scale = validate_field_inputs(transducer, grid, medium)?;
-    let aperture = aperture_samples(transducer.aperture_radius, transducer.focal_length);
+    let aperture = aperture_samples(
+        transducer.aperture_radius.into_base(),
+        transducer.focal_length.into_base(),
+    );
     let (nx, ny, nz) = grid.dimensions();
     let mut pressure = Array3::zeros([nx, ny, nz]);
     let min_distance = 0.5 * grid.dx.min(grid.dy).min(grid.dz);
@@ -109,20 +112,24 @@ fn validate_field_inputs(
     grid: &Grid,
     medium: &dyn Medium,
 ) -> KwaversResult<FieldScale> {
-    validate_positive("frequency", transducer.frequency)?;
-    validate_positive("acoustic_power", transducer.acoustic_power)?;
-    validate_positive("focal_length", transducer.focal_length)?;
-    validate_positive("aperture_radius", transducer.aperture_radius)?;
+    let frequency = transducer.frequency.into_base();
+    let acoustic_power = transducer.acoustic_power.into_base();
+    let focal_length = transducer.focal_length.into_base();
+    let aperture_radius = transducer.aperture_radius.into_base();
+    validate_positive("frequency", frequency)?;
+    validate_positive("acoustic_power", acoustic_power)?;
+    validate_positive("focal_length", focal_length)?;
+    validate_positive("aperture_radius", aperture_radius)?;
 
     let density = medium.density(grid.nx / 2, grid.ny / 2, 0);
     let sound_speed = medium.sound_speed(grid.nx / 2, grid.ny / 2, 0);
     validate_positive("reference_density", density)?;
     validate_positive("reference_sound_speed", sound_speed)?;
 
-    let aperture_area = PI * transducer.aperture_radius.powi(2);
+    let aperture_area = PI * aperture_radius.powi(2);
     let velocity_amplitude =
-        (2.0 * transducer.acoustic_power / (density * sound_speed * aperture_area)).sqrt();
-    let wavenumber = TWO_PI * transducer.frequency / sound_speed;
+        (2.0 * acoustic_power / (density * sound_speed * aperture_area)).sqrt();
+    let wavenumber = TWO_PI * frequency / sound_speed;
     let source_pressure_factor = density * sound_speed * wavenumber * velocity_amplitude / (TWO_PI);
 
     Ok(FieldScale {

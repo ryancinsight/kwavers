@@ -1,7 +1,10 @@
 use super::*;
-use aequitas::systems::si::quantities::Time;
+use aequitas::systems::si::quantities::{
+    Frequency, Intensity, Length, Power, ThermodynamicTemperature, Time,
+};
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
+use kwavers_core::error::{KwaversError, ValidationError};
 use kwavers_grid::Grid;
 use kwavers_imaging::ultrasound::hifu::{
     DomainHIFUTransducer, DomainHIFUTreatmentPlan, HifuTargetShape, HifuTreatmentProtocol,
@@ -21,7 +24,12 @@ fn hifu_pressure_field_is_centered_at_geometric_focus_depth(
         1.0,
         &grid,
     );
-    let transducer = DomainHIFUTransducer::new_single_element(MHZ_TO_HZ, 50.0, 0.010, 0.004);
+    let transducer = DomainHIFUTransducer::new_single_element(
+        Frequency::from_base(MHZ_TO_HZ),
+        Power::from_base(50.0),
+        Length::from_base(0.010),
+        Length::from_base(0.004),
+    );
 
     let pressure = compute_pressure_field(&transducer, &grid, &medium)?;
     let center = (grid.nx / 2, grid.ny / 2, 10);
@@ -50,7 +58,12 @@ fn hifu_pressure_field_is_laterally_symmetric() -> kwavers_core::error::KwaversR
         1.0,
         &grid,
     );
-    let transducer = DomainHIFUTransducer::new_single_element(MHZ_TO_HZ, 25.0, 0.008, 0.004);
+    let transducer = DomainHIFUTransducer::new_single_element(
+        Frequency::from_base(MHZ_TO_HZ),
+        Power::from_base(25.0),
+        Length::from_base(0.008),
+        Length::from_base(0.004),
+    );
 
     let pressure = compute_pressure_field(&transducer, &grid, &medium)?;
     let left = pressure[[2, 4, 8]];
@@ -74,7 +87,12 @@ fn hifu_intensity_uses_peak_pressure_half_impedance_formula(
         1.0,
         &grid,
     );
-    let transducer = DomainHIFUTransducer::new_single_element(MHZ_TO_HZ, 10.0, 0.006, 0.003);
+    let transducer = DomainHIFUTransducer::new_single_element(
+        Frequency::from_base(MHZ_TO_HZ),
+        Power::from_base(10.0),
+        Length::from_base(0.006),
+        Length::from_base(0.003),
+    );
 
     let pressure = compute_pressure_field(&transducer, &grid, &medium)?;
     let intensity = compute_intensity_field(&transducer, &grid, &medium)?;
@@ -136,26 +154,105 @@ fn thermal_dose_uses_seconds_and_detects_ablation_threshold() {
 fn treatment_plan_validation_accepts_target_inside_focal_access_region(
 ) -> kwavers_core::error::KwaversResult<()> {
     let target = TreatmentTarget {
-        center: [0.0, 0.0, 0.08],
-        dimensions: [0.01, 0.01, 0.01],
+        center: [
+            Length::from_base(0.0),
+            Length::from_base(0.0),
+            Length::from_base(0.08),
+        ],
+        dimensions: [
+            Length::from_base(0.01),
+            Length::from_base(0.01),
+            Length::from_base(0.01),
+        ],
         shape: HifuTargetShape::Sphere,
     };
     let protocol = HifuTreatmentProtocol {
-        total_duration: 30.0,
-        pulse_duration: 5.0,
-        prf: 1.0,
-        cooling_period: 10.0,
+        total_duration: Time::from_base(30.0),
+        pulse_duration: Time::from_base(5.0),
+        prf: Frequency::from_base(1.0),
+        cooling_period: Time::from_base(10.0),
         phases: vec![TreatmentPhase {
             name: "Heating".to_string(),
-            duration: 20.0,
-            power: 50.0,
-            focus_offset: [0.0, 0.0, 0.0],
+            duration: Time::from_base(20.0),
+            power: Power::from_base(50.0),
+            focus_offset: [
+                Length::from_base(0.0),
+                Length::from_base(0.0),
+                Length::from_base(0.0),
+            ],
         }],
     };
 
     let plan = DomainHIFUTreatmentPlan::new(target, protocol);
-    let transducer = DomainHIFUTransducer::new_single_element(MHZ_TO_HZ, 50.0, 0.08, 0.04);
+    let transducer = DomainHIFUTransducer::new_single_element(
+        Frequency::from_base(MHZ_TO_HZ),
+        Power::from_base(50.0),
+        Length::from_base(0.08),
+        Length::from_base(0.04),
+    );
 
     plan.validate(&transducer)?;
+    Ok(())
+}
+
+#[test]
+fn treatment_plan_validation_applies_si_temperature_and_intensity_limits(
+) -> kwavers_core::error::KwaversResult<()> {
+    let target = TreatmentTarget {
+        center: [
+            Length::from_base(0.0),
+            Length::from_base(0.0),
+            Length::from_base(0.08),
+        ],
+        dimensions: [
+            Length::from_base(0.01),
+            Length::from_base(0.01),
+            Length::from_base(0.01),
+        ],
+        shape: HifuTargetShape::Sphere,
+    };
+    let protocol = HifuTreatmentProtocol {
+        total_duration: Time::from_base(30.0),
+        pulse_duration: Time::from_base(5.0),
+        prf: Frequency::from_base(1.0),
+        cooling_period: Time::from_base(10.0),
+        phases: Vec::new(),
+    };
+    let transducer = DomainHIFUTransducer::new_single_element(
+        Frequency::from_base(MHZ_TO_HZ),
+        Power::from_base(50.0),
+        Length::from_base(0.08),
+        Length::from_base(0.04),
+    );
+
+    let mut temperature_plan = DomainHIFUTreatmentPlan::new(target.clone(), protocol.clone());
+    temperature_plan.safety.max_temperature = ThermodynamicTemperature::from_base(373.16);
+    let temperature_error = temperature_plan
+        .validate(&transducer)
+        .expect_err("temperature above the SI safety limit must be rejected");
+    match temperature_error {
+        KwaversError::Validation(ValidationError::InvalidValue {
+            parameter, value, ..
+        }) => {
+            assert_eq!(parameter, "safety.max_temperature");
+            assert_eq!(value, 373.16);
+        }
+        other => panic!("unexpected validation error: {other:?}"),
+    }
+
+    let mut intensity_plan = DomainHIFUTreatmentPlan::new(target, protocol);
+    intensity_plan.safety.max_intensity = Intensity::from_base(1.0e7 + 1.0);
+    let intensity_error = intensity_plan
+        .validate(&transducer)
+        .expect_err("intensity above the SI safety limit must be rejected");
+    match intensity_error {
+        KwaversError::Validation(ValidationError::InvalidValue {
+            parameter, value, ..
+        }) => {
+            assert_eq!(parameter, "safety.max_intensity");
+            assert_eq!(value, 1.0e7 + 1.0);
+        }
+        other => panic!("unexpected validation error: {other:?}"),
+    }
     Ok(())
 }
