@@ -61,9 +61,12 @@ increment: `kwavers-transducer::mems` still exposes CMUT/PMUT geometry,
 Young's-modulus and density inputs, fluid density/sound-speed inputs, drive
 voltage/frequency, capacitance, resonance, output pressure, and crosstalk
 impedance as raw scalars. These are physical public contracts, not dense field
-storage or dimensionless model coefficients. They remain the next implementation
-item `KWAVERS-AEQ-MET-32`; the complex-quantity decisions do not justify leaving
-this family untyped.
+storage or dimensionless model coefficients. `KWAVERS-AEQ-MET-32` is now
+in-progress: the public crosstalk API uses Aequitas `Area`, `Length`,
+`Frequency`, `MassDensity`, `Velocity`, and complex `AcousticImpedance`, with
+scalar extraction confined to the monopole formula. CMUT/PMUT cell fields and
+the sensitivity contract remain open in the same item; the complex-quantity
+decisions do not justify leaving those surfaces untyped.
 
 ## Live Aequitas refresh — 2026-07-28
 
