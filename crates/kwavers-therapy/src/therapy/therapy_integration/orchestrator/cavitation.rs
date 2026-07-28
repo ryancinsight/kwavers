@@ -22,7 +22,6 @@
 //! - Xu et al. (2016): "Oncotripsy: targeted cancer therapy using tumor-specific cavitation"
 //! - Maxwell et al. (2013): "Cavitation clouds in tissue: replication and translation"
 
-use aequitas::systems::si::quantities::{Frequency, Time};
 use kwavers_core::error::KwaversResult;
 use kwavers_physics::cavitation_control::FeedbackController;
 use leto::Array3;
@@ -117,6 +116,7 @@ pub fn update_cavitation_control(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use aequitas::systems::si::quantities::{Frequency, Time};
     use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
     use kwavers_physics::cavitation_control::{ControlStrategy, FeedbackConfig};
 
