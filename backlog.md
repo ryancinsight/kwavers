@@ -11,8 +11,14 @@
   diameter consistently; Doppler preserves `v = f_d c / (2 f_0 cos(theta))`;
   invalid spacing and Doppler inputs return typed errors; all affected tests,
   focused Nextest, Clippy, doctest, Rustdoc, and format gates pass. Source,
-  tests, docs, and PM synchronization are implemented; the affected package
-  gates are blocked before Kwavers compilation by peer `mnemosyne-heap`.
+  tests, docs, and PM synchronization are implemented. The PR now pins the
+  immutable Atlas graph `77e3ebe76fcbb042b9a8e378006f5ee7dd6e223f`, which
+  advances Mnemosyne to merged PR #31 at
+  `fd873df55568a30ce5cd68ca61275d47f741286a` and Coeus to its current
+  `crates/` layout; the lockfile carries the four corresponding Mnemosyne
+  version transitions. Exact-head hosted gates are running; local full-
+  workspace compilation is not graph-authoritative because mutable sibling
+  checkouts diverge from the pinned Atlas graph.
 - Non-goals: Doppler field storage, dimensionless confidence/orientation, and
   the unrelated transducer PR #324 residuals.
 
