@@ -25,7 +25,7 @@ jobs:
       distribution: kwavers-python
       import-name: pykwavers
       manifest-path: crates/kwavers-python/Cargo.toml
-      atlas-ref: ef22776f38cd33dbf66940541e33c04bbc6dc128
+      atlas-ref: ca7fa622241e81e06bf41759b9fd46e094900696
       tag-prefix: kwavers-python-v
       abi3: true
       abi3-python: "3.8"
