@@ -7,9 +7,9 @@
 use crate::{Source, SourceField};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_grid::Grid;
-use leto_ops::application::special::jn;
 use kwavers_signal::Signal;
 use leto::Array3;
+use leto_ops::application::special::jn;
 use std::fmt::Debug;
 use std::sync::Arc;
 
@@ -123,7 +123,7 @@ impl BesselSource {
 
         // Bessel function value (argument k_r·r), via the leto-ops SSOT.
         let bessel_value = jn(
-            self.config.order as usize,
+            self.config.order,
             self.config.radial_wavenumber * radial_distance,
         );
 
