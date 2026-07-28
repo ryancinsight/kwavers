@@ -1,5 +1,17 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-15 typed cavitation-control metrics [major] — in progress 2026-07-27
+
+- [ ] Type public detector frequencies, controller response time, safety
+      pressure/temperature, and pulse duration/delay/frequency with Aequitas;
+      preserve dimensionless control quantities and numerical scalar kernels.
+- [ ] Migrate all in-repository callers and update the detection doctest,
+      value-semantic tests, ADR, child audit, backlog, checklist, and changelog.
+- [ ] Run locked package checks, focused Nextest, doctests, Rustdoc, Clippy,
+      and touched-file formatting; preserve peer-owned dirty paths.
+- [ ] Commit and push the verified increment, then advance the Atlas gitlink
+      and root Aequitas audit.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-14 restore typed HIFU planning [arch] [major] — done
 
 - [x] Confirm the typed HIFU implementation commit is not an ancestor of the
