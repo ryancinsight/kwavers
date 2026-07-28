@@ -1,3 +1,17 @@
+## Review 2026-07-28 — KW-AEQ-MET-04 provider-graph repair
+
+PR #325 now pins Atlas graph `ef22776f38cd33dbf66940541e33c04bbc6dc128`.
+The graph advances Mnemosyne to merged PR #31 (`fd873df55568a30ce5cd68ca61275d47f741286a`),
+publishes the Coeus `crates/` layout, RITK's matching consumer paths, and Moirai
+main (`6c39fd81c4d940ac7b96e5e4e50787177bcf8223`) with
+`mnemosyne = 0.6.0`. The first hosted rerun verified all 13 provider checkouts
+and 46 dependency manifests; the remaining failure was the stale Moirai
+`mnemosyne = ^0.5.0` requirement. The graph has been advanced to the published
+Moirai repair and the focused vessel gate is rerunning against the exact PR
+head. The four Mnemosyne package-version transitions remain the only lockfile
+changes for this repair. Local full-workspace resolution is not authoritative
+because mutable sibling checkouts do not reproduce the immutable hosted graph.
+
 ## State refresh (2026-07-16) — kwavers Batch #1 closure: Rayon → Moirai migration complete
 
 - **KW-GPU-060 — backend kernel ownership CLOSED [major] (2026-07-17).**
@@ -28,6 +42,15 @@
     Kwavers' full facade build; it no longer blocks compilation.
 
 # Gap Audit
+
+- Review 2026-07-28: PR #325's original provider blocker is repaired through
+  Mnemosyne PR #31. The immutable Atlas graph now reaches Mnemosyne
+  `fd873df`, Coeus `cdaf769b`, RITK `65035908`, and Moirai `6c39fd81`; the
+  RITK object is published at `codex/ritk-atlas-coeus-paths`. Hosted checkout
+  rerun `30395548277` verified all 13 providers and 46 manifests before Cargo
+  resolution exposed Moirai's stale `mnemosyne ^0.5.0` requirement. The next
+  exact-head rerun is the acceptance oracle for the vessel physical-metrics
+  tests; no Kwavers source integration defect has been established yet.
 
 - Review 2026-07-23: `KWAVERS-AEQ-MET-04` is implemented on PR #325 at commit
   `9f95aa826`. `VoxelSpacing` validates positive
