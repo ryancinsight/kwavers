@@ -3,6 +3,7 @@
 use super::constants::{MIN_SPECTRAL_POWER, SUBHARMONIC_THRESHOLD};
 use super::traits::{CavitationDetector, DetectorParameters};
 use super::types::{CavitationDetectionState, CavitationMetrics, DetectionMethod};
+use aequitas::systems::si::quantities::Frequency;
 use apollo::fft_1d_leto;
 use leto::{Array1, ArrayView1};
 
@@ -25,10 +26,10 @@ impl std::fmt::Debug for SubharmonicDetector {
 
 impl SubharmonicDetector {
     #[must_use]
-    pub fn new(fundamental_freq: f64, sample_rate: f64) -> Self {
+    pub fn new(fundamental_freq: Frequency<f64>, sample_rate: Frequency<f64>) -> Self {
         Self {
-            fundamental_freq,
-            sample_rate,
+            fundamental_freq: fundamental_freq.into_base(),
+            sample_rate: sample_rate.into_base(),
             sensitivity: 1.0,
         }
     }
@@ -129,8 +130,8 @@ impl CavitationDetector for SubharmonicDetector {
     }
 
     fn update_parameters(&mut self, params: DetectorParameters) {
-        self.fundamental_freq = params.fundamental_freq;
-        self.sample_rate = params.sample_rate;
+        self.fundamental_freq = params.fundamental_freq.into_base();
+        self.sample_rate = params.sample_rate.into_base();
         self.sensitivity = params.sensitivity;
     }
 }

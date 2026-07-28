@@ -46,13 +46,15 @@ impl AdaptiveController {
 
             // If performance is degrading, adjust response time
             if recent_avg > old_avg * 1.1 {
-                config.response_time *= 0.95; // Faster response
+                config.response_time = config.response_time * 0.95; // Faster response
             } else if recent_avg < old_avg * 0.9 {
-                config.response_time *= 1.05; // Slower response for stability
+                config.response_time = config.response_time * 1.05; // Slower response for stability
             }
 
             // Clamp response time
-            config.response_time = config.response_time.clamp(0.01, 1.0);
+            config.response_time = aequitas::systems::si::quantities::Time::from_base(
+                config.response_time.into_base().clamp(0.01, 1.0),
+            );
         }
     }
 

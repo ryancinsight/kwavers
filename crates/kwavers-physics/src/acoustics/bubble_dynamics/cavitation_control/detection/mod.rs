@@ -10,10 +10,14 @@
 //! # Example
 //!
 //! ```rust
+//! use aequitas::systems::si::quantities::Frequency;
 //! use kwavers_physics::cavitation_control::{CavitationDetector, SpectralDetector};
 //! use leto::Array1;
 //!
-//! let mut detector = SpectralDetector::new(1e6, 10e6);
+//! let mut detector = SpectralDetector::new(
+//!     Frequency::from_base(1e6),
+//!     Frequency::from_base(10e6),
+//! );
 //! let signal = Array1::<f64>::zeros(1024);
 //! let metrics = detector.detect(&signal.view());
 //! let _ = metrics;

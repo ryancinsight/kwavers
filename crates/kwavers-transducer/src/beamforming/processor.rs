@@ -4,7 +4,7 @@
 use crate::beamforming::BeamformingConfig;
 use kwavers_core::error::KwaversResult;
 use leto::{Array1, Array2, Array3};
-use leto_ops::{inv, solve, symmetric_eigen_jacobi};
+use leto_ops::{inv, symmetric_eigen_jacobi};
 
 /// Beamforming processor for array algorithms
 #[derive(Debug)]

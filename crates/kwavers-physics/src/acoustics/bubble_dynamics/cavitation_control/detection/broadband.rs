@@ -3,6 +3,7 @@
 use super::constants::{BROADBAND_THRESHOLD_DB, MIN_SPECTRAL_POWER, TEMPORAL_SMOOTHING};
 use super::traits::{CavitationDetector, DetectorParameters};
 use super::types::{CavitationDetectionState, CavitationMetrics, DetectionMethod, HistoryBuffer};
+use aequitas::systems::si::quantities::Frequency;
 use leto::ArrayView1;
 
 /// Broadband detector for inertial cavitation
@@ -26,9 +27,9 @@ impl std::fmt::Debug for BroadbandDetector {
 
 impl BroadbandDetector {
     #[must_use]
-    pub fn new(sample_rate: f64) -> Self {
+    pub fn new(sample_rate: Frequency<f64>) -> Self {
         Self {
-            sample_rate,
+            sample_rate: sample_rate.into_base(),
             baseline_energy: None,
             history: HistoryBuffer::new(20),
             sensitivity: 1.0,
@@ -132,7 +133,7 @@ impl CavitationDetector for BroadbandDetector {
     }
 
     fn update_parameters(&mut self, params: DetectorParameters) {
-        self.sample_rate = params.sample_rate;
+        self.sample_rate = params.sample_rate.into_base();
         self.sensitivity = params.sensitivity;
     }
 }
@@ -142,6 +143,7 @@ mod tests {
     use super::BroadbandDetector;
     use crate::acoustics::bubble_dynamics::cavitation_control::detection::traits::CavitationDetector;
     use crate::acoustics::bubble_dynamics::cavitation_control::detection::types::CavitationDetectionState;
+    use aequitas::systems::si::quantities::Frequency;
     use kwavers_core::constants::numerical::MHZ_TO_HZ;
     use leto::Array1;
 
@@ -152,7 +154,7 @@ mod tests {
 
     #[test]
     fn broadband_detector_rejects_empty_and_nonfinite_signals() {
-        let mut detector = BroadbandDetector::new(MHZ_TO_HZ);
+        let mut detector = BroadbandDetector::new(Frequency::from_base(MHZ_TO_HZ));
 
         let empty = Array1::<f64>::zeros([0]);
         let empty_metrics = detector.detect(&empty.view());
@@ -174,7 +176,7 @@ mod tests {
 
     #[test]
     fn broadband_detector_recovers_after_invalid_signal() {
-        let mut detector = BroadbandDetector::new(MHZ_TO_HZ);
+        let mut detector = BroadbandDetector::new(Frequency::from_base(MHZ_TO_HZ));
         let invalid = vec_to_array1(vec![f64::INFINITY]);
         assert_eq!(detector.detect(&invalid.view()).confidence, 0.0);
         assert!(detector.baseline_energy.is_none());

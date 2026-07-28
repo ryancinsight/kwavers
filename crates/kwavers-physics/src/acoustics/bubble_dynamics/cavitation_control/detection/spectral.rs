@@ -3,6 +3,7 @@
 use super::constants::{BROADBAND_THRESHOLD_DB, MIN_SPECTRAL_POWER, SPECTRAL_WINDOW_SIZE};
 use super::traits::{CavitationDetector, DetectorParameters};
 use super::types::{CavitationDetectionState, CavitationMetrics, DetectionMethod, HistoryBuffer};
+use aequitas::systems::si::quantities::Frequency;
 use apollo::fft_1d_leto;
 use kwavers_core::constants::numerical::TWO_PI;
 use leto::application::reduction::{mean_all, std_all, sum_all};
@@ -33,12 +34,12 @@ impl std::fmt::Debug for SpectralDetector {
 
 impl SpectralDetector {
     #[must_use]
-    pub fn new(fundamental_freq: f64, sample_rate: f64) -> Self {
+    pub fn new(fundamental_freq: Frequency<f64>, sample_rate: Frequency<f64>) -> Self {
         let window = Self::create_hann_window(SPECTRAL_WINDOW_SIZE);
 
         Self {
-            fundamental_freq,
-            sample_rate,
+            fundamental_freq: fundamental_freq.into_base(),
+            sample_rate: sample_rate.into_base(),
             window,
             history: HistoryBuffer::new(10),
             baseline_spectrum: None,
@@ -281,8 +282,8 @@ impl CavitationDetector for SpectralDetector {
     }
 
     fn update_parameters(&mut self, params: DetectorParameters) {
-        self.fundamental_freq = params.fundamental_freq;
-        self.sample_rate = params.sample_rate;
+        self.fundamental_freq = params.fundamental_freq.into_base();
+        self.sample_rate = params.sample_rate.into_base();
         // Recreate window if size changes
         self.window = Self::create_hann_window(SPECTRAL_WINDOW_SIZE);
     }

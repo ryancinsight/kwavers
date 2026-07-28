@@ -54,7 +54,7 @@
 //!
 //! This module enforces **Single Source of Truth** for numerical operations:
 //!
-//! - ❌ **NO local matrix inversion** - use `math::linear_algebra::ComplexLinearAlgebra`
+//! - ❌ **NO local matrix inversion** - use `leto_ops::complex_solve` / `leto_ops::complex_inv`
 //! - ❌ **NO silent fallbacks** - return `Err(...)` on numerical failure
 //! - ❌ **NO error masking** - all failures are explicit
 //! - ❌ **NO dummy weights** - never return steering vector as disguised fallback

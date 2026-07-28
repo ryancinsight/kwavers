@@ -1,6 +1,7 @@
 //! Cavitation detector trait definition
 
 use super::types::CavitationMetrics;
+use aequitas::systems::si::quantities::Frequency;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use leto::ArrayView1;
 
@@ -23,9 +24,9 @@ pub trait CavitationDetector: Send + Sync {
 #[derive(Debug, Clone)]
 pub struct DetectorParameters {
     /// Fundamental (drive) frequency \[Hz\].
-    pub fundamental_freq: f64,
+    pub fundamental_freq: Frequency<f64>,
     /// Sampling rate for `signal` \[Hz\].
-    pub sample_rate: f64,
+    pub sample_rate: Frequency<f64>,
     /// Dimensionless scaling applied to detector thresholds.
     pub sensitivity: f64,
     /// Enable temporal averaging of detector outputs when supported.
@@ -37,8 +38,8 @@ pub struct DetectorParameters {
 impl Default for DetectorParameters {
     fn default() -> Self {
         Self {
-            fundamental_freq: MHZ_TO_HZ,   // 1 MHz
-            sample_rate: 10.0 * MHZ_TO_HZ, // 10 MHz
+            fundamental_freq: Frequency::from_base(MHZ_TO_HZ),
+            sample_rate: Frequency::from_base(10.0 * MHZ_TO_HZ),
             sensitivity: 1.0,
             temporal_averaging: true,
             adaptive_threshold: false,
@@ -55,10 +56,10 @@ mod tests {
     fn default_detector_parameters_nyquist_satisfied() {
         let p = DetectorParameters::default();
         assert!(
-            p.sample_rate > 2.0 * p.fundamental_freq,
+            p.sample_rate.into_base() > 2.0 * p.fundamental_freq.into_base(),
             "sample_rate ({}) must exceed 2·fundamental_freq ({})",
-            p.sample_rate,
-            p.fundamental_freq
+            p.sample_rate.into_base(),
+            p.fundamental_freq.into_base()
         );
     }
 
@@ -76,8 +77,8 @@ mod tests {
     fn detector_parameters_clone_equal() {
         let p = DetectorParameters::default();
         let c = p.clone();
-        assert!((p.fundamental_freq - c.fundamental_freq).abs() < 1e-15);
-        assert!((p.sample_rate - c.sample_rate).abs() < 1e-15);
+        assert_eq!(p.fundamental_freq, c.fundamental_freq);
+        assert_eq!(p.sample_rate, c.sample_rate);
         assert!((p.sensitivity - c.sensitivity).abs() < 1e-15);
     }
 }

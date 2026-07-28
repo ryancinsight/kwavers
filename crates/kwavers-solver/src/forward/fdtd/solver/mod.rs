@@ -86,7 +86,7 @@ pub use gpu_accelerator::FdtdGpuAccelerator;
 
 use kwavers_boundary::cpml::CPMLBoundary;
 use kwavers_grid::Grid;
-use kwavers_math::numerics::operators::StaggeredGridOperator;
+use kwavers_math::numerics::operators::FiniteDifference3D;
 use kwavers_physics::acoustics::mechanics::acoustic_wave::AcousticSpatialOrder;
 use kwavers_source::{Source, SourceInjectionMode};
 use leto::Array3;
@@ -116,7 +116,7 @@ pub struct GenericFdtdSolver<T> {
     /// Grid reference
     pub(crate) grid: Grid,
     pub(crate) central_operator: CentralDifferenceOperator,
-    pub(crate) staggered_operator: StaggeredGridOperator,
+    pub(crate) staggered_operator: FiniteDifference3D<f64>,
     /// Performance metrics
     pub(crate) metrics: FdtdMetrics,
     /// C-PML boundary (if enabled)

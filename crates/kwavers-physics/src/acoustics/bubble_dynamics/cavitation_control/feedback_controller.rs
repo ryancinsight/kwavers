@@ -6,6 +6,7 @@
 use super::control::{
     AdaptiveController, CavitationSafetyLimits, CavitationSafetyMonitor, StateEstimator,
 };
+use aequitas::systems::si::quantities::Frequency;
 // Import types that will be re-exported
 pub use super::control::{ControlOutput, ControlStrategy, FeedbackConfig};
 pub use super::detection::CavitationMetrics;
@@ -16,6 +17,7 @@ use leto::ArrayView1;
 /// Main feedback controller
 pub struct FeedbackController {
     config: FeedbackConfig,
+    fundamental_frequency: Frequency<f64>,
     detector: Box<dyn CavitationDetector>,
     pid_controller: PIDController,
     state_estimator: StateEstimator,
@@ -36,7 +38,11 @@ impl std::fmt::Debug for FeedbackController {
 impl FeedbackController {
     /// Create new feedback controller
     #[must_use]
-    pub fn new(config: FeedbackConfig, fundamental_freq: f64, sample_rate: f64) -> Self {
+    pub fn new(
+        config: FeedbackConfig,
+        fundamental_frequency: Frequency<f64>,
+        sample_rate: Frequency<f64>,
+    ) -> Self {
         // Initialize PID controller
         let pid_config = PIDConfig {
             gains: PIDGains {
@@ -44,7 +50,7 @@ impl FeedbackController {
                 ki: 0.1,
                 kd: 0.01,
             },
-            sample_time: 1.0 / sample_rate,
+            sample_time: 1.0 / sample_rate.into_base(),
             output_min: config.min_amplitude,
             output_max: config.max_amplitude,
             ..Default::default()
@@ -55,7 +61,8 @@ impl FeedbackController {
 
         Self {
             config,
-            detector: Box::new(SpectralDetector::new(fundamental_freq, sample_rate)),
+            fundamental_frequency,
+            detector: Box::new(SpectralDetector::new(fundamental_frequency, sample_rate)),
             pid_controller,
             state_estimator: StateEstimator::new(),
             safety_monitor: CavitationSafetyMonitor::new(CavitationSafetyLimits::default()),
@@ -84,7 +91,7 @@ impl FeedbackController {
         let mut output = match self.config.strategy {
             ControlStrategy::AmplitudeOnly => ControlOutput {
                 amplitude: pid_output.control_signal,
-                frequency: 0.0,
+                frequency: self.fundamental_frequency,
                 pulse_width: 1.0,
                 phase: 0.0,
                 modulation_index: 0.0,
@@ -98,7 +105,7 @@ impl FeedbackController {
                 let duty_cycle = (1.0 - error / self.config.target_intensity).clamp(0.0, 1.0);
                 ControlOutput {
                     amplitude: self.config.max_amplitude,
-                    frequency: 0.0,
+                    frequency: self.fundamental_frequency,
                     pulse_width: duty_cycle,
                     phase: 0.0,
                     modulation_index: duty_cycle,
@@ -112,7 +119,7 @@ impl FeedbackController {
                 let freq_shift = pid_output.control_signal * 0.1; // ±10% frequency
                 ControlOutput {
                     amplitude: self.config.max_amplitude,
-                    frequency: freq_shift,
+                    frequency: self.fundamental_frequency * (1.0 + freq_shift),
                     pulse_width: 1.0,
                     phase: 0.0,
                     modulation_index: freq_shift,
@@ -127,7 +134,7 @@ impl FeedbackController {
                 let duty_cycle = (1.0 - error / self.config.target_intensity).clamp(0.0, 1.0);
                 ControlOutput {
                     amplitude: pid_output.control_signal,
-                    frequency: 0.0,
+                    frequency: self.fundamental_frequency,
                     pulse_width: duty_cycle,
                     phase: 0.0,
                     modulation_index: duty_cycle,
@@ -182,17 +189,26 @@ mod tests {
     #[test]
     fn test_feedback_controller_creation() {
         let config = FeedbackConfig::default();
-        let controller = FeedbackController::new(config, MHZ_TO_HZ, 10.0 * MHZ_TO_HZ);
+        let controller = FeedbackController::new(
+            config,
+            Frequency::from_base(MHZ_TO_HZ),
+            Frequency::from_base(10.0 * MHZ_TO_HZ),
+        );
         assert_eq!(controller.config().target_intensity, 0.5);
     }
 
     #[test]
     fn test_control_output() {
         let config = FeedbackConfig::default();
-        let mut controller = FeedbackController::new(config, MHZ_TO_HZ, 10.0 * MHZ_TO_HZ);
+        let mut controller = FeedbackController::new(
+            config,
+            Frequency::from_base(MHZ_TO_HZ),
+            Frequency::from_base(10.0 * MHZ_TO_HZ),
+        );
         let signal = Array1::zeros(1024);
         let output = controller.process(&signal.view());
         assert!(output.amplitude >= 0.0);
         assert!(output.amplitude <= 1.0);
+        assert_eq!(output.frequency, Frequency::from_base(MHZ_TO_HZ));
     }
 }

@@ -9,16 +9,19 @@ pub use super::detection::{
     BroadbandDetector, CavitationDetectionState, CavitationDetector, CavitationMetrics,
     DetectionMethod, DetectorParameters, SpectralDetector, SubharmonicDetector,
 };
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use aequitas::systems::si::quantities::Frequency;
     use kwavers_core::constants::numerical::MHZ_TO_HZ;
     use leto::Array1;
 
     #[test]
     fn test_spectral_detector() {
-        let mut detector = SpectralDetector::new(MHZ_TO_HZ, 10.0 * MHZ_TO_HZ);
+        let mut detector = SpectralDetector::new(
+            Frequency::from_base(MHZ_TO_HZ),
+            Frequency::from_base(10.0 * MHZ_TO_HZ),
+        );
         let signal = Array1::zeros(1024);
         let metrics = detector.detect(&signal.view());
         assert_eq!(metrics.state, CavitationDetectionState::None);
@@ -26,7 +29,7 @@ mod tests {
 
     #[test]
     fn test_broadband_detector() {
-        let mut detector = BroadbandDetector::new(10.0 * MHZ_TO_HZ);
+        let mut detector = BroadbandDetector::new(Frequency::from_base(10.0 * MHZ_TO_HZ));
         let signal = Array1::zeros(1024);
         let metrics = detector.detect(&signal.view());
         assert_eq!(metrics.state, CavitationDetectionState::None);
@@ -34,7 +37,10 @@ mod tests {
 
     #[test]
     fn test_subharmonic_detector() {
-        let mut detector = SubharmonicDetector::new(MHZ_TO_HZ, 10.0 * MHZ_TO_HZ);
+        let mut detector = SubharmonicDetector::new(
+            Frequency::from_base(MHZ_TO_HZ),
+            Frequency::from_base(10.0 * MHZ_TO_HZ),
+        );
         let signal = Array1::zeros(1024);
         let metrics = detector.detect(&signal.view());
         assert_eq!(metrics.state, CavitationDetectionState::None);

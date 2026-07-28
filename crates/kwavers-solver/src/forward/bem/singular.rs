@@ -54,23 +54,10 @@
 //! - `test_duffy_nonsingular_cancellation`: Duffy and non-Duffy agree away from singularity.
 
 use kwavers_math::fft::Complex64;
+use leto_ops::{GL3_NODES_UNIT as GL3_NODES, GL3_WEIGHTS_UNIT as GL3_WEIGHTS};
 
 use super::green::green_helmholtz;
 use kwavers_core::constants::numerical::TWO_PI;
-
-// ─── 3×3 Gauss-Legendre quadrature on [0, 1]^2 ─────────────────────────────
-
-/// 3-point Gauss-Legendre nodes and weights on [0, 1].
-const GL3_NODES: [f64; 3] = [
-    0.112701665379258, // (1 - sqrt(3/5)) / 2
-    0.500000000000000, // 1/2
-    0.887298334620742, // (1 + sqrt(3/5)) / 2
-];
-const GL3_WEIGHTS: [f64; 3] = [
-    0.277777777777778, // 5/18
-    0.444444444444444, // 4/9
-    0.277777777777778, // 5/18
-];
 
 /// Compute the BEM singular integrals for the case where the source node
 /// is one of the element vertices.

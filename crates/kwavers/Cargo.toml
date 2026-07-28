@@ -118,6 +118,7 @@ hyperion = { workspace = true }
 kwavers-solver = { path = "../kwavers-solver", features = ["test-util"] }
 # SIMD dispatch facade — used by the simd_wave_kernel example (Part VI).
 hermes-simd = { workspace = true }
+leto-ops = { workspace = true }
 criterion = "0.4"
 # GIF animation support for example outputs (e.g. liver_theranostic_reconstruction)
 image = { version = "0.24", default-features = false, features = ["gif"] }

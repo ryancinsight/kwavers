@@ -11,7 +11,7 @@
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use kwavers_grid::Grid;
-use leto_ops::{FiniteDifference3D, FiniteDifference3DScheme};
+use kwavers_math::numerics::operators::{FiniteDifference3D, FiniteDifference3DScheme};
 use kwavers_medium::{CoreMedium, HomogeneousMedium};
 use leto::Array3;
 
@@ -43,7 +43,8 @@ fn bench_fdtd_derivatives(c: &mut Criterion) {
                 &size,
                 |b, _| {
                     b.iter(|| {
-                        let deriv = op.apply_x(field.view()).expect("Derivative computation");
+                        let mut deriv = Array3::<f64>::zeros(field.shape());
+                        op.apply_x_into(field.view(), &mut deriv).expect("Derivative computation");
                         black_box(deriv)
                     })
                 },

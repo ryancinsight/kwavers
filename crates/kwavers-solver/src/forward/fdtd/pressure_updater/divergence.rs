@@ -17,11 +17,11 @@ impl FdtdSolver {
     ///
     pub(crate) fn compute_divergence_staggered(&mut self) -> KwaversResult<()> {
         self.staggered_operator
-            .apply_backward_x_into(self.fields.ux.view(), &mut self.dvx_scratch)?;
+            .apply_x_into(self.fields.ux.view(), &mut self.dvx_scratch)?;
         self.staggered_operator
-            .apply_backward_y_into(self.fields.uy.view(), &mut self.dvy_scratch)?;
+            .apply_y_into(self.fields.uy.view(), &mut self.dvy_scratch)?;
         self.staggered_operator
-            .apply_backward_z_into(self.fields.uz.view(), &mut self.divergence_scratch)?;
+            .apply_z_into(self.fields.uz.view(), &mut self.divergence_scratch)?;
 
         if self.config.geometry == SolverGeometry::CylindricalAS {
             let dz = self.grid.dz;

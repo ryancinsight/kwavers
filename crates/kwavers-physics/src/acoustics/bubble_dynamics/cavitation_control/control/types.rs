@@ -1,7 +1,8 @@
 //! Control system types and enums
 
+use aequitas::systems::si::quantities::{Frequency, Pressure, ThermodynamicTemperature, Time};
 use kwavers_core::constants::medical::THERMAL_SAFETY_TEMPERATURE_LIMIT_C;
-use kwavers_core::constants::numerical::MPA_TO_PA;
+use kwavers_core::constants::{numerical::MPA_TO_PA, thermodynamic::KELVIN_OFFSET_C};
 
 /// Control strategy for cavitation feedback
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -19,7 +20,7 @@ pub struct FeedbackConfig {
     pub target_intensity: f64,
     pub max_amplitude: f64,
     pub min_amplitude: f64,
-    pub response_time: f64,
+    pub response_time: Time<f64>,
     pub safety_factor: f64,
     pub enable_adaptive: bool,
 }
@@ -31,7 +32,7 @@ impl Default for FeedbackConfig {
             target_intensity: 0.5,
             max_amplitude: 1.0,
             min_amplitude: 0.0,
-            response_time: 0.1,
+            response_time: Time::from_base(0.1),
             safety_factor: 0.8,
             enable_adaptive: false,
         }
@@ -42,7 +43,7 @@ impl Default for FeedbackConfig {
 #[derive(Debug, Clone)]
 pub struct ControlOutput {
     pub amplitude: f64,
-    pub frequency: f64,
+    pub frequency: Frequency<f64>,
     pub pulse_width: f64,
     pub phase: f64,
     pub modulation_index: f64,
@@ -56,8 +57,8 @@ pub struct ControlOutput {
 #[derive(Debug, Clone)]
 pub struct CavitationSafetyLimits {
     pub max_intensity: f64,
-    pub max_temperature: f64,
-    pub max_pressure: f64,
+    pub max_temperature: ThermodynamicTemperature<f64>,
+    pub max_pressure: Pressure<f64>,
     pub emergency_stop_threshold: f64,
 }
 
@@ -65,8 +66,10 @@ impl Default for CavitationSafetyLimits {
     fn default() -> Self {
         Self {
             max_intensity: 0.9,
-            max_temperature: THERMAL_SAFETY_TEMPERATURE_LIMIT_C, // °C
-            max_pressure: 10.0 * MPA_TO_PA,                      // Pa
+            max_temperature: ThermodynamicTemperature::from_base(
+                THERMAL_SAFETY_TEMPERATURE_LIMIT_C + KELVIN_OFFSET_C,
+            ),
+            max_pressure: Pressure::from_base(10.0 * MPA_TO_PA),
             emergency_stop_threshold: 0.95,
         }
     }
@@ -100,9 +103,9 @@ mod tests {
             lim.emergency_stop_threshold
         );
         assert!(
-            lim.max_temperature > BODY_TEMPERATURE_C,
+            lim.max_temperature.into_base() > BODY_TEMPERATURE_C + KELVIN_OFFSET_C,
             "max temperature ({}) must be above body temperature (37°C)",
-            lim.max_temperature
+            lim.max_temperature.into_base()
         );
     }
 

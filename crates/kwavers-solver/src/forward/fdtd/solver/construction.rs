@@ -16,7 +16,7 @@ use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
 use kwavers_field::wave::WaveFields;
 use kwavers_grid::Grid;
-use kwavers_math::numerics::operators::StaggeredGridOperator;
+use kwavers_math::numerics::operators::FiniteDifference3D;
 use kwavers_medium::{material_fields::GenericMaterialFields, Medium};
 use kwavers_physics::acoustics::mechanics::acoustic_wave::AcousticSpatialOrder;
 use kwavers_receiver::recorder::simple::SensorRecorder;
@@ -120,7 +120,7 @@ impl GenericFdtdSolver<Array3<f64>> {
 
         let central_operator =
             CentralDifferenceOperator::new(config.spatial_order, grid.dx, grid.dy, grid.dz)?;
-        let staggered_operator = StaggeredGridOperator::new(grid.dx, grid.dy, grid.dz)?;
+        let staggered_operator = FiniteDifference3D::staggered_backward(grid.dx, grid.dy, grid.dz)?;
 
         let source_handler = SourceHandler::new(source, grid)?;
         let sensor_recorder = SensorRecorder::new(

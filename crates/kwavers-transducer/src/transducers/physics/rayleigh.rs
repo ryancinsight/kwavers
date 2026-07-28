@@ -705,6 +705,7 @@ fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
 mod tests {
     use super::*;
     use leto_ops::application::special::j1;
+    use std::f64::consts::PI;
 
     fn length(value: f64) -> Length {
         Length::from_base(value)

@@ -7,6 +7,7 @@ use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use kwavers_core::constants::thermodynamic::KELVIN_OFFSET_C;
 use kwavers_core::error::KwaversError;
+use kwavers_transducer::transducers::physics::CartesianPosition;
 use std::f64::consts::PI;
 
 #[test]
@@ -301,14 +302,26 @@ fn test_sonication_schedule_pitch_proves_target_coverage() {
     assert!(schedule.coverage_guaranteed);
     assert!((schedule.per_spot_dwell.into_base() - 1.0).abs() < 1e-12);
     assert_eq!(schedule.subspots[0].index, 0);
-    assert_eq!(
-        schedule.subspots[0].location.into_base(),
-        [4.0e-3, 14.0e-3, 24.0e-3]
-    );
-    assert_eq!(
-        schedule.subspots[74].location.into_base(),
-        [16.0e-3, 26.0e-3, 36.0e-3]
-    );
+    let first = schedule.subspots[0].location.into_base();
+    let expected_first = [4.0e-3, 14.0e-3, 24.0e-3];
+    for i in 0..3 {
+        assert!(
+            (first[i] - expected_first[i]).abs() < 1e-12,
+            "subspots[0][{i}]: {} != {}",
+            first[i],
+            expected_first[i]
+        );
+    }
+    let last = schedule.subspots[74].location.into_base();
+    let expected_last = [16.0e-3, 26.0e-3, 36.0e-3];
+    for i in 0..3 {
+        assert!(
+            (last[i] - expected_last[i]).abs() < 1e-12,
+            "subspots[74][{i}]: {} != {}",
+            last[i],
+            expected_last[i]
+        );
+    }
 }
 
 #[test]

@@ -22,6 +22,7 @@
 //! - Xu et al. (2016): "Oncotripsy: targeted cancer therapy using tumor-specific cavitation"
 //! - Maxwell et al. (2013): "Cavitation clouds in tissue: replication and translation"
 
+use aequitas::systems::si::quantities::{Frequency, Time};
 use kwavers_core::error::KwaversResult;
 use kwavers_physics::cavitation_control::FeedbackController;
 use leto::Array3;
@@ -127,11 +128,15 @@ mod tests {
             target_intensity: 0.8,
             max_amplitude: 1.0,
             min_amplitude: 0.0,
-            response_time: 0.001,
+            response_time: Time::from_base(0.001),
             safety_factor: 0.5,
             enable_adaptive: true,
         };
-        let mut controller = FeedbackController::new(config, MHZ_TO_HZ, 1000.0);
+        let mut controller = FeedbackController::new(
+            config,
+            Frequency::from_base(MHZ_TO_HZ),
+            Frequency::from_base(1000.0),
+        );
 
         // Create acoustic field with pressure below cavitation threshold
         let acoustic_field = AcousticField {
@@ -168,11 +173,15 @@ mod tests {
             target_intensity: 0.8,
             max_amplitude: 1.0,
             min_amplitude: 0.0,
-            response_time: 0.001,
+            response_time: Time::from_base(0.001),
             safety_factor: 0.5,
             enable_adaptive: true,
         };
-        let mut controller = FeedbackController::new(config, MHZ_TO_HZ, 1000.0);
+        let mut controller = FeedbackController::new(
+            config,
+            Frequency::from_base(MHZ_TO_HZ),
+            Frequency::from_base(1000.0),
+        );
 
         // Create acoustic field with pressure above cavitation threshold
         let acoustic_field = AcousticField {
@@ -212,11 +221,15 @@ mod tests {
             target_intensity: 0.6,
             max_amplitude: 1.0,
             min_amplitude: 0.0,
-            response_time: 0.002,
+            response_time: Time::from_base(0.002),
             safety_factor: 0.7,
             enable_adaptive: true,
         };
-        let mut controller = FeedbackController::new(config, MHZ_TO_HZ, 1000.0);
+        let mut controller = FeedbackController::new(
+            config,
+            Frequency::from_base(MHZ_TO_HZ),
+            Frequency::from_base(1000.0),
+        );
 
         // Create acoustic field with spatial variation
         let mut pressure = Array3::zeros((10, 10, 10));

@@ -1,5 +1,6 @@
 //! Modality-specific initialization for CEUS, transcranial, chemical, and cavitation subsystems.
 
+use aequitas::systems::si::quantities::{Frequency, Time};
 use kwavers_core::constants::REFERENCE_FREQUENCY_HZ;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
@@ -88,7 +89,7 @@ pub fn init_cavitation_controller(
             target_intensity: 0.8,
             max_amplitude: 1.0,
             min_amplitude: 0.0,
-            response_time: 0.001,
+            response_time: Time::from_base(0.001),
             safety_factor: 0.5,
             enable_adaptive: true,
         },
@@ -97,7 +98,7 @@ pub fn init_cavitation_controller(
             target_intensity: 0.6,
             max_amplitude: 1.0,
             min_amplitude: 0.0,
-            response_time: 0.002,
+            response_time: Time::from_base(0.002),
             safety_factor: 0.7,
             enable_adaptive: true,
         },
@@ -105,7 +106,7 @@ pub fn init_cavitation_controller(
     };
     Ok(FeedbackController::new(
         feedback_config,
-        REFERENCE_FREQUENCY_HZ,
-        1000.0,
+        Frequency::from_base(REFERENCE_FREQUENCY_HZ),
+        Frequency::from_base(1000.0),
     ))
 }

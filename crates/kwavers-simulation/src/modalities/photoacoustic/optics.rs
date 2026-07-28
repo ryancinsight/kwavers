@@ -186,7 +186,7 @@ pub fn compute_fluence_at_wavelength(
     }
 
     // Solve diffusion equation
-    Ok(solver.solve_leto(&source)?)
+    Ok(solver.solve(&source)?)
 }
 
 /// Compute fluence for all wavelengths in parallel

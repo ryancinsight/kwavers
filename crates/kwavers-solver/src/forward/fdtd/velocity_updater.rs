@@ -301,9 +301,9 @@ impl FdtdSolver {
     fn update_velocity_staggered(&mut self, dt: f64) -> KwaversResult<()> {
         let shape = self.fields.p.shape();
         let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
-        let dx = self.staggered_operator.dx;
-        let dy = self.staggered_operator.dy;
-        let dz = self.staggered_operator.dz;
+        let dx = self.grid.dx;
+        let dy = self.grid.dy;
+        let dz = self.grid.dz;
         let pressure = self.fields.p.view();
 
         if nx > 1 {

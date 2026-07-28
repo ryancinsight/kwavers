@@ -1,16 +1,18 @@
 //! Pulse sequence generation for power modulation
 
+use aequitas::systems::si::quantities::{Frequency, Time};
+
 /// Descriptor for a single pulse in a sequence
 #[derive(Debug, Clone)]
 pub struct PulseDescriptor {
     /// Pulse amplitude (0-1)
     pub amplitude: f64,
     /// Pulse duration (seconds)
-    pub duration: f64,
+    pub duration: Time<f64>,
     /// Delay after pulse (seconds)
-    pub delay: f64,
+    pub delay: Time<f64>,
     /// Frequency (Hz)
-    pub frequency: f64,
+    pub frequency: Frequency<f64>,
 }
 
 /// Pulse sequence generator for complex modulation patterns
@@ -18,7 +20,7 @@ pub struct PulseDescriptor {
 pub struct PulseSequenceGenerator {
     sequence: Vec<PulseDescriptor>,
     current_index: usize,
-    current_time: f64,
+    current_time: Time<f64>,
     repeat: bool,
 }
 
@@ -35,7 +37,7 @@ impl PulseSequenceGenerator {
         Self {
             sequence: Vec::new(),
             current_index: 0,
-            current_time: 0.0,
+            current_time: Time::from_base(0.0),
             repeat: true,
         }
     }
@@ -49,10 +51,10 @@ impl PulseSequenceGenerator {
     #[must_use]
     pub fn create_burst_sequence(
         num_pulses: usize,
-        pulse_duration: f64,
-        pulse_delay: f64,
+        pulse_duration: Time<f64>,
+        pulse_delay: Time<f64>,
         amplitude: f64,
-        frequency: f64,
+        frequency: Frequency<f64>,
     ) -> Self {
         let mut generator = Self::new();
 
@@ -69,7 +71,7 @@ impl PulseSequenceGenerator {
     }
 
     /// Get current pulse parameters
-    pub fn get_current_pulse(&mut self, dt: f64) -> Option<&PulseDescriptor> {
+    pub fn get_current_pulse(&mut self, dt: Time<f64>) -> Option<&PulseDescriptor> {
         if self.sequence.is_empty() {
             return None;
         }
@@ -101,7 +103,7 @@ impl PulseSequenceGenerator {
     /// Reset sequence to beginning
     pub fn reset(&mut self) {
         self.current_index = 0;
-        self.current_time = 0.0;
+        self.current_time = Time::from_base(0.0);
     }
 
     /// Set repeat mode
@@ -117,8 +119,11 @@ impl PulseSequenceGenerator {
 
     /// Get total sequence duration
     #[must_use]
-    pub fn total_duration(&self) -> f64 {
-        self.sequence.iter().map(|p| p.duration + p.delay).sum()
+    pub fn total_duration(&self) -> Time<f64> {
+        self.sequence
+            .iter()
+            .map(|p| p.duration + p.delay)
+            .fold(Time::from_base(0.0), |total, duration| total + duration)
     }
 }
 
@@ -130,13 +135,19 @@ mod tests {
     /// create_burst_sequence produces exactly num_pulses pulses.
     #[test]
     fn burst_sequence_has_correct_pulse_count() {
-        let g = PulseSequenceGenerator::create_burst_sequence(5, 0.01, 0.005, 0.8, MHZ_TO_HZ);
+        let g = PulseSequenceGenerator::create_burst_sequence(
+            5,
+            Time::from_base(0.01),
+            Time::from_base(0.005),
+            0.8,
+            Frequency::from_base(MHZ_TO_HZ),
+        );
         // total_duration = 5 * (0.01 + 0.005) = 0.075
         let expected = 5.0 * (0.01 + 0.005);
         assert!(
-            (g.total_duration() - expected).abs() < 1e-14,
+            (g.total_duration().into_base() - expected).abs() < 1e-14,
             "total_duration must be {expected:.4}; got {}",
-            g.total_duration()
+            g.total_duration().into_base()
         );
     }
 
@@ -145,7 +156,7 @@ mod tests {
     fn empty_sequence_returns_none() {
         let mut g = PulseSequenceGenerator::new();
         assert!(
-            g.get_current_pulse(0.001).is_none(),
+            g.get_current_pulse(Time::from_base(0.001)).is_none(),
             "empty sequence must return None"
         );
     }
@@ -156,12 +167,14 @@ mod tests {
         let mut g = PulseSequenceGenerator::new();
         g.add_pulse(PulseDescriptor {
             amplitude: 0.7,
-            duration: 1.0,
-            delay: 0.5,
-            frequency: MHZ_TO_HZ,
+            duration: Time::from_base(1.0),
+            delay: Time::from_base(0.5),
+            frequency: Frequency::from_base(MHZ_TO_HZ),
         });
         // dt=0.1 < duration+delay=1.5 → still on pulse 0
-        let pulse = g.get_current_pulse(0.1).expect("must return pulse");
+        let pulse = g
+            .get_current_pulse(Time::from_base(0.1))
+            .expect("must return pulse");
         assert!(
             (pulse.amplitude - 0.7).abs() < 1e-15,
             "must return first pulse; got amplitude={}",
@@ -172,11 +185,17 @@ mod tests {
     /// reset restores index and time to zero.
     #[test]
     fn reset_restores_initial_state() {
-        let mut g = PulseSequenceGenerator::create_burst_sequence(3, 0.01, 0.005, 0.5, MHZ_TO_HZ);
-        g.get_current_pulse(0.1); // advance time
+        let mut g = PulseSequenceGenerator::create_burst_sequence(
+            3,
+            Time::from_base(0.01),
+            Time::from_base(0.005),
+            0.5,
+            Frequency::from_base(MHZ_TO_HZ),
+        );
+        g.get_current_pulse(Time::from_base(0.1)); // advance time
         g.reset();
         // After reset, total_duration is unaffected, but internal time is zero
         let expected = 3.0 * (0.01 + 0.005);
-        assert!((g.total_duration() - expected).abs() < 1e-14);
+        assert!((g.total_duration().into_base() - expected).abs() < 1e-14);
     }
 }

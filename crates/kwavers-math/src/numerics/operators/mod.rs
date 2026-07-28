@@ -8,9 +8,8 @@
 //!
 //! The operators module defines three core trait families:
 //!
-//! - **`DifferentialOperator`**: Backward-compat shim for the Yee staggered
-//!   half pending the staggered SSOT sweep (ADR 0018). New code should prefer
-//!   the leto-side `FiniteDifference3D` provider directly.
+//! - **`FiniteDifference3D` / `FiniteDifference3DScheme`**: provider-SSOT
+//!   finite-difference stencils in `leto-ops`, re-exported here for convenience.
 //! - **`SpectralOperatorTrait`**: FFT-based operations in k-space
 //! - **`Interpolator`**: Spatial interpolation for heterogeneous media
 //!
@@ -33,15 +32,15 @@
 //! use leto::Array3;
 //! // SSOT shim pattern: kwavers callers import through the kwavers-side
 //! // re-export rather than reaching into leto-ops directly. The re-export
-//! // resolves to the same leto types (ADR 0018). The names `FiniteDifference3D`
-//! // and `FiniteDifference3DScheme` are in scope here because of the
-//! // `pub use differential::{...}` line below.
+//! // resolves to the same leto types (ADR 0018 / ADR 0033). The names
+//! // `FiniteDifference3D` and `FiniteDifference3DScheme` are in scope here
+//! // because of the `pub use differential::{...}` line below.
 //! let dx = 0.001; // 1 mm grid spacing
 //!
-//! // Provider-SSOT (ADR 0018): the central-difference kernels live in leto-ops.
-//! // The kwavers-side differential module re-exports the same types so callers
-//! // can keep using `kwavers_math::numerics::operators::FiniteDifference3D`.
-//! let dx = 0.001; // 1 mm grid spacing
+//! // Provider-SSOT (ADR 0018 / ADR 0033): all 3-D finite-difference kernels
+//! // live in leto-ops. The kwavers-side differential module re-exports the
+//! // same types so callers can keep using
+//! // `kwavers_math::numerics::operators::FiniteDifference3D`.
 //! let op = match FiniteDifference3D::new(
 //!     FiniteDifference3DScheme::CentralSecondOrder,
 //!     dx, dx, dx,
@@ -68,14 +67,13 @@ pub mod interpolation;
 pub mod spectral;
 
 // Re-export main traits for convenience
-pub use differential::{FiniteDifference3D, FiniteDifference3DScheme, StaggeredGridOperator};
+pub use differential::{FiniteDifference3D, FiniteDifference3DScheme};
 pub use interpolation::Interpolator;
 pub use spectral::SpectralOperatorTrait;
 
 // Re-export common implementations
-// Central-difference kernels (2nd/4th/6th order) are provider-SSOT in leto-ops
-// (ADR 0018). The Yee staggered operator remains here pending the staggered
-// half SSOT sweep.
+// All 3-D finite-difference kernels are provider-SSOT in leto-ops
+// (ADR 0018 / ADR 0033).
 pub use interpolation::{LinearInterpolator, NumericsTrilinearInterpolator};
 pub use spectral::PseudospectralDerivative;
 

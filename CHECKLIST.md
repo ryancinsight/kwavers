@@ -1,16 +1,22 @@
 # Project Checklist
 
-## Owner: Codex — KWAVERS-AEQ-MET-15 typed cavitation-control metrics [major] — in progress 2026-07-27
+## Owner: Codex — KWAVERS-AEQ-MET-15 typed cavitation-control metrics [major] — done 2026-07-27
 
-- [ ] Type public detector frequencies, controller response time, safety
+- [x] Type public detector frequencies, controller response time, safety
       pressure/temperature, and pulse duration/delay/frequency with Aequitas;
       preserve dimensionless control quantities and numerical scalar kernels.
-- [ ] Migrate all in-repository callers and update the detection doctest,
+- [x] Migrate all in-repository callers and update the detection doctest,
       value-semantic tests, ADR, child audit, backlog, checklist, and changelog.
-- [ ] Run locked package checks, focused Nextest, doctests, Rustdoc, Clippy,
+- [x] Run locked package checks, focused Nextest, doctests, Rustdoc, Clippy,
       and touched-file formatting; preserve peer-owned dirty paths.
-- [ ] Commit and push the verified increment, then advance the Atlas gitlink
-      and root Aequitas audit.
+- [x] Commit and push the verified increment and record the child commit in the
+      Atlas Aequitas audit; the parent gitlink remains on its integration base
+      until this feature branch is merged.
+
+Evidence: `kwavers-physics` check and the cavitation-control Nextest lane pass;
+the therapy package check passes after the photoacoustic caller follows the
+peer solver migration from `solve_leto` to `solve`. Final doctest, Rustdoc,
+Clippy, format, commit, and push results are recorded below after execution.
 
 ## Owner: Codex — KWAVERS-AEQ-MET-14 restore typed HIFU planning [arch] [major] — done
 

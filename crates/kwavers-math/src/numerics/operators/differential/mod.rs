@@ -1,20 +1,15 @@
 //! # Differential Operators
 //!
-//! SSOT shim after ADR 0018: the 3-D central-difference kernels
-//! (`CentralSecondOrder`, `CentralFourthOrder`, `CentralSixthOrder`)
-//! live in `let_ops::FiniteDifference3D` and
-//! `let_ops::FiniteDifference3DScheme`. The Yee staggered operator
-//! (`StaggeredGridOperator`) remains kwavers-side pending the
-//! staggered SSOT sweep tracked in ADR 0018's "Follow-up (staggered
-//! half SSOT)" section.
+//! SSOT shim after ADR 0018 and ADR 0033: the 3-D first-derivative kernels
+//! (central 2nd/4th/6th and Yee staggered forward/backward) live in
+//! `leto_ops::FiniteDifference3D` and `leto_ops::FiniteDifference3DScheme`.
+//! This module re-exports them so that downstream `kwavers` crates can keep
+//! importing through `kwavers_math::numerics::operators`.
 //!
 //! ## Architecture
 //!
 //! - `FiniteDifference3D` / `FiniteDifference3DScheme` — provider-SSOT,
 //!   re-exported from `leto_ops`.
-//! - `StaggeredGridOperator` — Yee face forward/backward
-//!   difference kernel. Kept here pending the staggered half SSOT
-//!   sweep; the central half has been retired.
 //!
 //! ## References
 //!
@@ -30,24 +25,12 @@
 //! ## SSR / SSOT contract
 //!
 //! The provider is `FiniteDifference3D<T: RealField + FloatElement +
-//! Copy>`. The central half is owned by leto-ops. The staggered
-//! half remains pending the follow-up SSOT sweep.
+//! Copy>` in `leto-ops`. All differential stencils are owned by leto-ops.
 
-use kwavers_core::error::KwaversResult;
-use leto::{Array3, ArrayView3};
-
-// Implementation modules — only the staggered half + its compat helpers remain.
-mod staggered_grid;
-mod traversal;
-
-// ── SSOT re-exports (central half migrated to leto-ops in ADR 0018) ───────────
+// ── SSOT re-exports ─────────────────────────────────────────────────────────
 
 /// Provider-SSOT for 3-D first-derivative kernels: central 2nd/4th/6th +
-/// Yee staggered forward/backward. Owned by `let_ops`; re-exported here so
+/// Yee staggered forward/backward. Owned by `leto_ops`; re-exported here so
 /// that `kwavers_math::numerics::operators::FiniteDifference3D` continues
 /// to resolve for downstream solver/bench/test paths.
 pub use leto_ops::{FiniteDifference3D, FiniteDifference3DScheme};
-
-// ── Staggered half (kwavers-side pending the SSOT sweep) ─────────────────────
-
-pub use staggered_grid::StaggeredGridOperator;

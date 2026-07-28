@@ -21,7 +21,7 @@ pub struct PowerModulator {
 impl PowerModulator {
     /// Create new power modulator
     #[must_use]
-    pub fn new(scheme: ModulationScheme, _sample_rate: f64) -> Self {
+    pub fn new(scheme: ModulationScheme) -> Self {
         Self {
             scheme,
             control: PowerControl::default(),

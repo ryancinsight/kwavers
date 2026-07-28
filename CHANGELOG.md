@@ -4,6 +4,13 @@
 
 ### Changed
 
+- **Breaking**: Cavitation-control detector frequencies, controller response
+  time and carrier frequency, safety pressure/temperature limits, and pulse
+  duration/delay/frequency now use Aequitas quantities. Frequency modulation
+  reports the shifted carrier, and the unused `PowerModulator` sample-rate
+  argument is removed. Dimensionless detector levels, duty cycles, amplitudes,
+  and control scores remain scalar. See [ADR 053](docs/ADR/053-cavitation-control-quantities.md).
+
 - **Breaking**: HIFU planning now carries transducer frequency, dimensions,
   power, focal pressure/geometry, target geometry, and sonication positions as
   Aequitas quantities. Scalar extraction is confined to the SI formulas and

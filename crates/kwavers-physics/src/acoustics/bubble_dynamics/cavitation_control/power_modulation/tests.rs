@@ -3,6 +3,8 @@
 #[cfg(test)]
 use super::*;
 #[cfg(test)]
+use aequitas::systems::si::quantities::{Frequency, Time};
+#[cfg(test)]
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 #[cfg(test)]
 use kwavers_core::constants::{MAX_DUTY_CYCLE, MIN_DUTY_CYCLE};
@@ -51,15 +53,15 @@ fn test_safety_limiter() {
 #[test]
 fn test_pulse_sequence() {
     let mut generator = PulseSequenceGenerator::create_burst_sequence(
-        3,         // num_pulses
-        0.001,     // pulse_duration
-        0.001,     // pulse_delay
-        1.0,       // amplitude
-        MHZ_TO_HZ, // frequency
+        3,                               // num_pulses
+        Time::from_base(0.001),          // pulse_duration
+        Time::from_base(0.001),          // pulse_delay
+        1.0,                             // amplitude
+        Frequency::from_base(MHZ_TO_HZ), // frequency
     );
 
-    assert_eq!(generator.total_duration(), 3.0 * 0.002);
+    assert_eq!(generator.total_duration().into_base(), 3.0 * 0.002);
 
-    let pulse = generator.get_current_pulse(0.0).unwrap();
+    let pulse = generator.get_current_pulse(Time::from_base(0.0)).unwrap();
     assert!(pulse.amplitude > 0.0);
 }

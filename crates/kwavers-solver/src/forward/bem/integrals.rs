@@ -56,6 +56,7 @@ use kwavers_math::fft::Complex64;
 use super::geometry::{add, barycentric_coords, cross, norm_sq, scale, sub, triangle_area_normal};
 use super::green::green_helmholtz;
 use kwavers_core::constants::numerical::FOUR_PI;
+use leto_ops::{GL3_NODES_UNIT, GL3_WEIGHTS_UNIT};
 
 /// Compute boundary integrals for a near-field element using adaptive subdivision.
 ///
@@ -298,17 +299,11 @@ pub(crate) fn compute_singular_integrals(
     let c = cross(v10, v21);
     let area = 0.5 * norm_sq(c).sqrt();
 
-    // 3×3 Gauss-Legendre quadrature on [0,1]²
-    let gauss_1d = [
-        (0.1127016653792583, 0.2777777777777778),
-        (0.5, 0.4444444444444444),
-        (0.8872983346207417, 0.2777777777777778),
-    ];
-
+    // 3×3 Gauss-Legendre quadrature on [0,1]² — use leto_ops SSOT constants.
     let mut g_res_reordered = [Complex64::new(0.0, 0.0); 3];
 
-    for (u, wu) in &gauss_1d {
-        for (v, wv) in &gauss_1d {
+    for (&u, &wu) in GL3_NODES_UNIT.iter().zip(GL3_WEIGHTS_UNIT.iter()) {
+        for (&v, &wv) in GL3_NODES_UNIT.iter().zip(GL3_WEIGHTS_UNIT.iter()) {
             let dir_x = v10[0] + v * v21[0];
             let dir_y = v10[1] + v * v21[1];
             let dir_z = v10[2] + v * v21[2];

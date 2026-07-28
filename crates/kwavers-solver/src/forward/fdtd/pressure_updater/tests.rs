@@ -193,17 +193,17 @@ fn test_staggered_divergence_uses_scratch_buffer() {
 
     solver.compute_divergence_staggered().unwrap();
 
-    let dvx = solver
-        .staggered_operator
-        .apply_backward_x(solver.fields.ux.view())
+    let mut dvx = Array3::zeros(solver.fields.ux.shape());
+    let mut dvy = Array3::zeros(solver.fields.uy.shape());
+    let mut dvz = Array3::zeros(solver.fields.uz.shape());
+    solver.staggered_operator
+        .apply_x_into(solver.fields.ux.view(), &mut dvx)
         .unwrap();
-    let dvy = solver
-        .staggered_operator
-        .apply_backward_y(solver.fields.uy.view())
+    solver.staggered_operator
+        .apply_y_into(solver.fields.uy.view(), &mut dvy)
         .unwrap();
-    let dvz = solver
-        .staggered_operator
-        .apply_backward_z(solver.fields.uz.view())
+    solver.staggered_operator
+        .apply_z_into(solver.fields.uz.view(), &mut dvz)
         .unwrap();
 
     let mut expected = dvz.clone();
