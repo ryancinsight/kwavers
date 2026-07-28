@@ -4,6 +4,13 @@
 
 ### Changed
 
+- **Breaking**: Rayleigh complex pressure, electrical impedance, loaded
+  acoustic impedance, and reflection-coefficient contracts now use
+  Aequitas quantities over Eunomia `Complex64`. Real and imaginary components
+  share the physical unit; dense complex arrays and formula intermediates
+  remain explicit numerical boundaries. See
+  [ADR 069](docs/ADR/069-complex-quantities.md).
+
 - **Breaking**: Sonogenetics membrane, channel, ion-current, and LIF public
   contracts now use Aequitas geometry, pressure, electrical, and temporal
   quantities. Dense fields, probabilities, channel counts, and

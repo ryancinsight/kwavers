@@ -146,8 +146,7 @@ impl EnergyBalanceCalculator {
         let energy_change = energy_rate * dt;
         let mass = Mass::from_unit::<Kilogram>(state.mass());
         // Result of division has base semantics; extract the raw Kelvin value
-        let delta_t_kelvin: f64 =
-            (energy_change / (mass * specific_heat_capacity)).into_base();
+        let delta_t_kelvin: f64 = (energy_change / (mass * specific_heat_capacity)).into_base();
         let temperature_change = TemperatureDifference::from_unit::<Kelvin>(delta_t_kelvin);
         let current_temperature = ThermodynamicTemperature::from_unit::<Kelvin>(state.temperature);
         let temperature = current_temperature + temperature_change;

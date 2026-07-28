@@ -3,7 +3,7 @@
 //! Models the frequency-dependent behavior of transducers including
 //! bandwidth, sensitivity, and impedance characteristics.
 
-use aequitas::systems::si::quantities::{Frequency, Length, Velocity};
+use aequitas::systems::si::quantities::{ElectricalImpedance, Frequency, Length, Velocity};
 use eunomia::Complex64;
 use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
 use leto::Array1;
@@ -51,7 +51,7 @@ pub struct FrequencyResponse {
     /// Phase response (radians)
     pub phase: Array1<f64>,
     /// Electrical impedance (complex)
-    pub impedance: Array1<Complex64>,
+    pub impedance: Array1<ElectricalImpedance<Complex64>>,
 }
 
 impl FrequencyResponse {
@@ -90,7 +90,10 @@ impl FrequencyResponse {
         // Calculate normalized frequency
         let mut magnitude = Array1::zeros([num_points]);
         let mut phase = Array1::zeros([num_points]);
-        let mut impedance = Array1::zeros([num_points]);
+        let mut impedance = Array1::from_elem(
+            [num_points],
+            ElectricalImpedance::from_base(Complex64::new(0.0, 0.0)),
+        );
 
         // Effective bandwidth factor
         let _bandwidth_factor = coupling.powi(2) / mechanical_q.sqrt();
@@ -114,7 +117,7 @@ impl FrequencyResponse {
             // Per Kinsler et al. (2000) "Fundamentals of Acoustics" Ch. 10
             // Nominal 50Ω reference impedance standard for RF systems
             let z0 = 50.0; // Nominal impedance
-            impedance[i] = z0 * electrical_term;
+            impedance[i] = ElectricalImpedance::from_base(z0 * electrical_term);
         }
 
         // Normalize magnitude
@@ -261,7 +264,7 @@ impl FrequencyResponse {
         // Per IEEE Std 177: "Standard Definitions and Methods of Measurement"
         let z0 = 50.0; // Reference impedance
         let center_idx = self.frequencies.len() / 2;
-        let z = self.impedance[center_idx];
+        let z = self.impedance[center_idx].into_base();
 
         let reflection_coeff = (z - z0) / (z + z0);
         let transmission: f64 = reflection_coeff

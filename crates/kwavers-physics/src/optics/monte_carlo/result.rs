@@ -1,5 +1,13 @@
+use aequitas::systems::si::dimensions;
+use kwavers_core::units::DimensionedField;
 use kwavers_grid::GridDimensions;
 use std::fmt;
+
+/// Absorbed energy density samples, in `J/m3`.
+pub type AbsorbedEnergyField<'a> = DimensionedField<&'a [f64], dimensions::EnergyPerVolume>;
+
+/// Energy-fluence samples, in `J/m2`.
+pub type EnergyFluenceField<'a> = DimensionedField<&'a [f64], dimensions::EnergyPerArea>;
 
 /// Monte Carlo simulation result
 #[derive(Debug)]
@@ -17,16 +25,19 @@ pub struct MCResult {
 }
 
 impl MCResult {
-    /// Get absorbed energy map (J/m³)
+    /// Absorbed energy density per voxel.
+    ///
+    /// The dimension tag is what distinguishes this from [`Self::fluence`];
+    /// both were bare `&[f64]` with the unit stated only in this comment.
     #[must_use]
-    pub fn absorbed_energy(&self) -> &[f64] {
-        &self.absorbed_energy
+    pub fn absorbed_energy(&self) -> AbsorbedEnergyField<'_> {
+        AbsorbedEnergyField::from_base(&self.absorbed_energy)
     }
 
-    /// Get fluence map (J/m²)
+    /// Energy fluence per voxel.
     #[must_use]
-    pub fn fluence(&self) -> &[f64] {
-        &self.fluence
+    pub fn fluence(&self) -> EnergyFluenceField<'_> {
+        EnergyFluenceField::from_base(&self.fluence)
     }
 
     /// Get total absorbed energy (J)

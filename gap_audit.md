@@ -29,6 +29,42 @@
 
 # Gap Audit
 
+## Live complex-quantity refresh — 2026-07-28
+
+The Eunomia compatibility audit found no imaginary unit type: Eunomia's
+`Complex<T>` is the canonical real-plus-quadrature value and `ComplexField`
+defines its real-or-complex operations. CFDrs uses complex values only inside
+Womersley/spectral formulas and exposes real physical quantities; Helios has no
+complex public contract. Neither consumer has an Aequitas complex-unit gap.
+
+Kwavers had public unit-bearing complex contracts that were still raw:
+`PlanarAperture` surface-pressure phasors in pascals, electrical impedance
+results in ohms, and loaded acoustic impedance results in Rayls. Aequitas now
+supplies one Eunomia-backed conversion seam plus the
+`ElectricalImpedance`/`Ohm` and `AcousticImpedance` contracts. Kwavers uses
+`Pressure<Complex64>` for Rayleigh aperture/result phasors,
+`ElectricalImpedance<Complex64>` for frequency-response and bulk-piezo
+electrical impedance, `AcousticImpedance<Complex64>` for loaded acoustic
+impedance, and `Dimensionless<Complex64>` for reflection coefficients. The
+imaginary component is scaled with the real component; it is not modeled as a
+separate dimension.
+
+Dense spectral arrays, complex I/Q signals, dimensionless reflection
+coefficients, and complex numerical intermediates remain formula/storage
+boundaries and are not relabeled as physical quantities. See
+[ADR 069](docs/ADR/069-complex-quantities.md).
+
+## Live MEMS metric inventory — 2026-07-28
+
+The same public-boundary scan found one residual family outside the complex
+increment: `kwavers-transducer::mems` still exposes CMUT/PMUT geometry,
+Young's-modulus and density inputs, fluid density/sound-speed inputs, drive
+voltage/frequency, capacitance, resonance, output pressure, and crosstalk
+impedance as raw scalars. These are physical public contracts, not dense field
+storage or dimensionless model coefficients. They remain the next implementation
+item `KWAVERS-AEQ-MET-32`; the complex-quantity decisions do not justify leaving
+this family untyped.
+
 ## Live Aequitas refresh — 2026-07-28
 
 `KWAVERS-AEQ-MET-29` and `KWAVERS-AEQ-MET-30` remain closed. Commit

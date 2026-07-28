@@ -1,6 +1,6 @@
 //! Value-semantic regression tests for the diffusion solver.
 
-use super::{analytical, DiffusionSolver, DiffusionSolverConfig};
+use super::{analytical, DiffusionSolver, DiffusionSolverConfig, OpticalSourceField};
 use anyhow::Result;
 use kwavers_grid::Grid;
 use kwavers_medium::properties::OpticalPropertyData;
@@ -45,7 +45,8 @@ fn test_solver_uniform_medium() -> Result<()> {
     let mut source = Array3::zeros((nx, ny, nz));
     source[[nx / 2, ny / 2, nz / 2]] = 1e6;
 
-    let fluence = solver.solve(&source)?;
+    let fluence = solver.solve(&OpticalSourceField::from_base(source))?;
+    let fluence = fluence.into_samples();
 
     assert!(
         fluence.iter().all(|&x| x >= 0.0),
@@ -92,7 +93,8 @@ fn test_solver_symmetry() -> Result<()> {
     let center = (nx / 2, ny / 2, nz / 2);
     source[[center.0, center.1, center.2]] = 1e6;
 
-    let fluence = solver.solve(&source)?;
+    let fluence = solver.solve(&OpticalSourceField::from_base(source))?;
+    let fluence = fluence.into_samples();
 
     let r_test = 5;
     let test_points = [
@@ -164,7 +166,8 @@ fn test_heterogeneous_medium() -> Result<()> {
     let mut source = Array3::zeros((nx, ny, nz));
     source[[center.0, center.1, center.2]] = 1e6;
 
-    let fluence = solver.solve(&source)?;
+    let fluence = solver.solve(&OpticalSourceField::from_base(source))?;
+    let fluence = fluence.into_samples();
 
     assert!(fluence[[center.0, center.1, center.2]] > 0.0);
     assert!(fluence.iter().all(|&x| x >= 0.0));

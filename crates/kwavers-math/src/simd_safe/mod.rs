@@ -1,18 +1,15 @@
-//! Safe, portable SIMD operations with architecture-conditional compilation
+//! Safe, portable SIMD field operations backed by `hermes-simd` runtime dispatch.
 //!
-//! This module provides SIMD acceleration with:
-//! - Architecture-specific optimizations (`x86_64`, aarch64)
-//! - SWAR (SIMD Within A Register) fallback for unsupported architectures
-//! - Runtime auto-detection and dispatching
-//! - Zero unsafe blocks in public API
-//! - Compile-time feature detection
+//! All unsafe intrinsics are encapsulated inside `hermes_simd_intrinsics`.
+//! This module exposes only safe, architecture-agnostic wrappers.
+//!
+//! # Module layout
+//!
+//! - [`auto_detect`] — CPU-capability detection helpers (`SimdAuto`, `SimdCapability`)
+//! - [`operations`] — `SimdOps` — field-level convenience operations
 
 pub mod auto_detect;
-#[cfg(target_arch = "x86_64")]
-pub mod avx2;
-pub mod neon;
 pub mod operations;
-pub mod swar;
 
 pub use auto_detect::{SimdAuto, SimdCapability};
 pub use operations::SimdOps;

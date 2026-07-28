@@ -214,7 +214,7 @@ impl ShieldingMedium {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ShieldingConfig {
     /// Total simulated exposure time `s`.
-    pub total_time_s: f64,
+    pub total_time: f64,
     /// Integration time step `s` (RK4); resolve the shorter of ON/OFF/`τ_diss`.
     pub dt_s: f64,
 }
@@ -339,8 +339,8 @@ pub fn simulate_shielding(
 ) -> ShieldingTrace {
     let dt = cfg.dt_s;
     let n_steps =
-        if dt.is_finite() && dt > 0.0 && cfg.total_time_s.is_finite() && cfg.total_time_s > 0.0 {
-            (cfg.total_time_s / dt).round() as usize
+        if dt.is_finite() && dt > 0.0 && cfg.total_time.is_finite() && cfg.total_time > 0.0 {
+            (cfg.total_time / dt).round() as usize
         } else {
             0
         };

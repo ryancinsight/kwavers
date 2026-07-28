@@ -124,7 +124,7 @@ fn test_lateral_symmetry() {
     let x = 0.005; // off-axis
     for i in 0..n / 2 {
         let j = n - 1 - i; // mirror element
-        // Symmetric test: transmit from i with query x, vs from j with query -x
+                           // Symmetric test: transmit from i with query x, vs from j with query -x
         let tau_i = dw
             .transmit_delay(Length::from_base(x), Length::from_base(z), i)
             .unwrap();
@@ -198,9 +198,9 @@ fn test_hann_apodization_center_is_one() {
 fn test_hann_apodization_out_of_aperture_is_zero() {
     let dw = uniform_array(8, 3.0e-4);
     let z = 0.001; // Very shallow → narrow aperture cone
-    // All elements are outside the D_half = (z+F)/(2*f_num) = (0.001+0.010)/3.0 = 3.67 mm
-    // Element 0 is at x ≈ −1.05 mm, which is within the cone
-    // Use an extreme lateral point that must be outside
+                   // All elements are outside the D_half = (z+F)/(2*f_num) = (0.001+0.010)/3.0 = 3.67 mm
+                   // Element 0 is at x ≈ −1.05 mm, which is within the cone
+                   // Use an extreme lateral point that must be outside
     let x_far = 0.020; // 20 mm lateral, far from any element
     for elem in 0..dw.n_elements() {
         let xj = dw.config.element_positions[elem].into_base();
@@ -302,16 +302,13 @@ fn test_monostatic_sta_delay_equals_round_trip() {
 #[test]
 fn test_out_of_range_index_errors() {
     let dw = uniform_array(4, 3.0e-4);
-    assert!(
-        dw.transmit_delay(Length::from_base(0.0), Length::from_base(0.01), 10)
-            .is_err()
-    );
-    assert!(
-        dw.receive_delay(Length::from_base(0.0), Length::from_base(0.01), 10)
-            .is_err()
-    );
-    assert!(
-        dw.sta_delay(Length::from_base(0.0), Length::from_base(0.01), 0, 10)
-            .is_err()
-    );
+    assert!(dw
+        .transmit_delay(Length::from_base(0.0), Length::from_base(0.01), 10)
+        .is_err());
+    assert!(dw
+        .receive_delay(Length::from_base(0.0), Length::from_base(0.01), 10)
+        .is_err());
+    assert!(dw
+        .sta_delay(Length::from_base(0.0), Length::from_base(0.01), 0, 10)
+        .is_err());
 }

@@ -38,7 +38,8 @@ use kwavers_grid::Grid;
 use kwavers_medium::properties::OpticalPropertyData;
 use kwavers_medium::Medium;
 use kwavers_solver::forward::optical::diffusion::{
-    DiffusionBoundaryCondition, DiffusionBoundaryConditions, DiffusionSolver, DiffusionSolverConfig,
+    DiffusionBoundaryCondition, DiffusionBoundaryConditions, DiffusionSolver,
+    DiffusionSolverConfig, OpticalSourceField,
 };
 use leto::Array3 as LetoArray3;
 use leto::Array3;
@@ -186,7 +187,9 @@ pub fn compute_fluence_at_wavelength(
     }
 
     // Solve diffusion equation
-    Ok(solver.solve(&source)?)
+    Ok(solver
+        .solve(&OpticalSourceField::from_base(source))?
+        .into_samples())
 }
 
 /// Compute fluence for all wavelengths in parallel

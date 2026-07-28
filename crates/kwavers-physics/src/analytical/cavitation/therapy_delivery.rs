@@ -13,6 +13,7 @@ use crate::analytical::wave::{shock_formation_distance, shock_heat_source_densit
 use rand::{RngCore, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use rand_distr::{Distribution, LogNormal};
+use aequitas::systems::si::quantities::Time;
 
 const MAX_EXACT_F64_INTEGER: usize = 1usize << 53;
 
@@ -304,7 +305,7 @@ pub struct ClosedLoopCavitationSonicationInput<'a> {
     /// Number of controller bursts.
     pub n_bursts: usize,
     /// Burst duration used for trapezoidal dose integration `s`.
-    pub burst_duration_s: f64,
+    pub burst_duration: Time<f64>,
     /// Initial controller pressure `Pa`.
     pub p_start_pa: f64,
     /// Stable-emission target for the controller.
@@ -648,8 +649,8 @@ pub fn closed_loop_cavitation_sonication(
     validate_pressure_power_sweep(input.pressures_pa, input.stable_power)?;
     validate_pressure_power_sweep(input.pressures_pa, input.inertial_power)?;
     if input.n_bursts == 0
-        || !(input.burst_duration_s.is_finite()
-            && input.burst_duration_s > 0.0
+        || !(input.burst_duration.into_base().is_finite()
+            && input.burst_duration.into_base() > 0.0
             && input.p_start_pa.is_finite()
             && input.p_start_pa >= 0.0
             && input.stable_target.is_finite()
@@ -689,8 +690,8 @@ pub fn closed_loop_cavitation_sonication(
         );
     }
 
-    let stable_dose = super::cumulative_cavitation_dose(&stable, input.burst_duration_s);
-    let inertial_dose = super::cumulative_cavitation_dose(&inertial, input.burst_duration_s);
+    let stable_dose = super::cumulative_cavitation_dose(&stable, input.burst_duration.into_base());
+    let inertial_dose = super::cumulative_cavitation_dose(&inertial, input.burst_duration.into_base());
     Some(ClosedLoopCavitationSonicationTrace {
         pressure_pa: pressure,
         stable_emission: stable,

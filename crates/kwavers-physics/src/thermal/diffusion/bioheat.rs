@@ -206,7 +206,7 @@ impl PennesBioheat {
                 let alpha = medium.thermal_diffusivity(x, y, z, grid);
                 let deposition = external_source
                     .as_ref()
-                    .map_or(0.0, |source| source.as_view()[[i, j, k]]);
+                    .map_or(0.0, |source| source.samples()[[i, j, k]]);
                 // Both terms divide by the same local ρ c_p, so a heterogeneous
                 // medium cannot make deposition and perfusion disagree.
                 let heating =

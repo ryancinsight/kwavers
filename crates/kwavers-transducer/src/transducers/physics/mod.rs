@@ -27,13 +27,13 @@ pub use directivity::TransducerDirectivityPattern;
 pub use frequency::FrequencyResponse;
 pub use geometry::ElementGeometry;
 pub use materials::{
-    AcousticLens, BackingLayer, BackingMaterial, FresnelZonePlate, LensMaterial, MatchingLayer,
-    PiezoMaterial, PiezoType, corrective_lens_thickness, isoplanatic_steering_pose,
+    corrective_lens_thickness, isoplanatic_steering_pose, AcousticLens, BackingLayer,
+    BackingMaterial, FresnelZonePlate, LensMaterial, MatchingLayer, PiezoMaterial, PiezoType,
 };
 pub use position::CartesianPosition;
 pub use rayleigh::{
-    PlanarAperture, PlanarApertureGeometry, PlanarApertureShape, RayleighIntegralSpec,
-    RayleighLayer, RayleighPropagationPath, rayleigh_pressure,
+    rayleigh_pressure, PlanarAperture, PlanarApertureGeometry, PlanarApertureShape,
+    RayleighIntegralSpec, RayleighLayer, RayleighPropagationPath,
 };
 pub use sensitivity::TransducerSensitivity;
 

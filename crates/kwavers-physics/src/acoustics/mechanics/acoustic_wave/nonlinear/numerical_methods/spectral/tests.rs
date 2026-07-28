@@ -205,6 +205,7 @@ fn apply_k_space_correction_zero_field_returns_zero() {
     let medium = HomogeneousMedium::water(&grid);
     let mut w = NonlinearWave::new(&grid, 1e-7);
     w.precompute_k_squared(&grid);
+    w.precompute_k_space_correction(&medium, &grid);
 
     let pressure = Array3::<f64>::zeros((8, 8, 8));
     let corrected = w
@@ -216,6 +217,61 @@ fn apply_k_space_correction_zero_field_returns_zero() {
         assert!(
             v.abs() < tol,
             "k-space correction of zero field must be zero (got {v:.3e})"
+        );
+    }
+}
+
+/// Optimised (precomputed correction + in-place FFT) path must produce the same
+/// result as the explicit allocating reference.
+///
+/// Verification: compare `apply_k_space_correction` (optimised) against
+/// `apply_k_space_correction_test` (reference path that computes correction on
+/// the fly). Both compute the same `sinc(c·|k|·dt/2)·cos(c·|k|·dt)` factor, so
+/// results must agree within floating-point rounding of the FFT.
+#[test]
+fn apply_k_space_correction_cached_matches_uncached() {
+    let n = 8_usize;
+    let grid = Grid::new(n, n, n, 0.001, 0.001, 0.001).unwrap();
+    let medium = HomogeneousMedium::water(&grid);
+
+    // Reference path (allocating, on-the-fly correction)
+    let mut w_ref = NonlinearWave::new(&grid, 1e-7);
+    w_ref.precompute_k_squared(&grid);
+
+    // Optimised path (precomputed correction + in-place FFT)
+    let mut w_opt = NonlinearWave::new(&grid, 1e-7);
+    w_opt.precompute_k_squared(&grid);
+    w_opt.precompute_k_space_correction(&medium, &grid);
+    assert!(w_opt.k_space_correction.is_some(), "correction must be cached");
+    assert!(w_opt.k_buf.is_some(), "k_buf must be initialised");
+    assert!(w_opt.k_out.is_some(), "k_out must be initialised");
+
+    // Non-trivial pressure field (sum of low-frequency sinusoids)
+    let mut pressure = Array3::<f64>::zeros((n, n, n));
+    for i in 0..n {
+        for j in 0..n {
+            for k in 0..n {
+                pressure[[i, j, k]] = (0.1 * i as f64).sin() + (0.2 * j as f64).cos();
+            }
+        }
+    }
+
+    let result_ref = w_ref
+        .apply_k_space_correction_test(&pressure, &medium, &grid)
+        .unwrap();
+    let result_opt = w_opt
+        .apply_k_space_correction(&pressure, &medium, &grid)
+        .unwrap();
+
+    let tol = 1e-10;
+    for idx in 0..(n * n * n) {
+        let i = idx / (n * n);
+        let j = (idx / n) % n;
+        let k = idx % n;
+        let diff = (result_ref[[i, j, k]] - result_opt[[i, j, k]]).abs();
+        assert!(
+            diff < tol,
+            "reference vs optimised mismatch at [{i},{j},{k}]: {diff:.3e}"
         );
     }
 }

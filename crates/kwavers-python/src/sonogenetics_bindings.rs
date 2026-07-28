@@ -31,6 +31,9 @@
 //! - Goodman, J.W. (2005). *Introduction to Fourier Optics*, 3rd ed. §3.3.
 //! - Koch, C. (1999). *Biophysics of Computation*. Oxford University Press.
 
+use aequitas::systems::si::quantities::{
+    Capacitance, ElectricConductance, ElectricPotential, Frequency, Pressure, Time,
+};
 use crate::array_utils::leto3_to_pyarray3;
 use kwavers_physics::acoustics::therapy::sonogenetics::{
     boltzmann_open_probability_from_tension_mn_m, coupled_channel_drive,
@@ -38,7 +41,7 @@ use kwavers_physics::acoustics::therapy::sonogenetics::{
     pressure_to_membrane_tension_mn_m, simulate_lif_trace, LifParams, PressureThresholdParams,
 };
 use leto::Array3;
-use numpy::{PyArray1, PyReadonlyArray1};
+use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
@@ -162,8 +165,8 @@ pub fn boltzmann_open_probability_py<'py>(
 /// # Arguments
 ///
 /// - `radiation_pressure_pa`: 1-D acoustic radiation pressure `Pa`
-/// - `half_pressure_pa`: half-activation radiation pressure P_half `Pa`
-/// - `steepness_pa`: positive sigmoid steepness s `Pa`
+/// - `half_pressure`: half-activation radiation pressure P_half `Pa`
+/// - `steepness`: positive sigmoid steepness s `Pa`
 ///
 /// # Returns
 ///
@@ -172,17 +175,17 @@ pub fn boltzmann_open_probability_py<'py>(
 pub fn pressure_threshold_open_probability_py<'py>(
     py: Python<'py>,
     radiation_pressure_pa: PyReadonlyArray1<'py, f64>,
-    half_pressure_pa: f64,
-    steepness_pa: f64,
+    half_pressure: f64,
+    steepness: f64,
 ) -> PyResult<Bound<'py, numpy::PyArray1<f64>>> {
     let pressure = radiation_pressure_pa.as_slice()?;
     let field = Array3::from_shape_vec((pressure.len(), 1, 1), pressure.to_vec())
         .map_err(|err| pyo3::exceptions::PyValueError::new_err(err.to_string()))?;
     let params = PressureThresholdParams {
-        half_pressure_pa,
-        steepness_pa,
-        single_channel_conductance_s: 0.0,
-        reversal_potential_v: 0.0,
+        half_pressure: Pressure::from_base(half_pressure),
+        steepness: Pressure::from_base(steepness),
+        single_channel_conductance: ElectricConductance::from_base(0.0),
+        reversal_potential: ElectricPotential::from_base(0.0),
     };
     let p_open = py
         .detach(|| pressure_threshold_p_open(&field, &params))
@@ -374,24 +377,25 @@ pub fn simulate_lif_neuron_py<'py>(
     reset_v: f64,
     refractory_s: f64,
 ) -> PyResult<Bound<'py, PyDict>> {
-    let current = i_ion_a.as_slice()?;
     let trace = py
         .detach(|| {
+            let current = i_ion_a.as_slice()?;
             let params = LifParams {
-                capacitance_f,
-                leak_conductance_s,
-                leak_reversal_v,
-                threshold_v,
-                reset_v,
-                refractory_s,
+                capacitance: Capacitance::from_base(capacitance_f),
+                leak_conductance: ElectricConductance::from_base(leak_conductance_s),
+                leak_reversal: ElectricPotential::from_base(leak_reversal_v),
+                threshold: ElectricPotential::from_base(threshold_v),
+                reset: ElectricPotential::from_base(reset_v),
+                refractory: Time::from_base(refractory_s),
             };
-            simulate_lif_trace(current, dt_s, params)
+            simulate_lif_trace(current, Time::from_base(dt_s), params)
         })
         .map_err(kwavers_to_py)?;
-    let spike_count = trace.spike_times_s.len();
+    let trace = trace?;
+    let spike_count = trace.spike_times.len();
     let dict = PyDict::new(py);
-    dict.set_item("voltage_v", PyArray1::from_vec(py, trace.voltage_v))?;
-    dict.set_item("spike_times_s", PyArray1::from_vec(py, trace.spike_times_s))?;
+    dict.set_item("voltage_v", PyArray1::from_vec(py, trace.voltage.iter().map(|v| v.into_base()).collect()))?;
+    dict.set_item("spike_times_s", PyArray1::from_vec(py, trace.spike_times.iter().map(|t| t.into_base()).collect()))?;
     dict.set_item("spike_count", spike_count)?;
     Ok(dict)
 }
@@ -411,9 +415,12 @@ pub fn lif_response_probability_py<'py>(
     smoothing_sigma_s: f64,
     f_max_hz: f64,
 ) -> PyResult<Bound<'py, PyDict>> {
-    let spikes = spike_times_s.as_slice()?;
+    let spikes: Vec<Time<f64>> = spike_times_s.as_slice()?
+        .iter()
+        .map(|&t| Time::from_base(t))
+        .collect();
     let response = py
-        .detach(|| lif_response_probability(spikes, n_samples, dt_s, smoothing_sigma_s, f_max_hz))
+        .detach(|| lif_response_probability(&spikes, n_samples, Time::from_base(dt_s), Time::from_base(smoothing_sigma_s), Frequency::from_base(f_max_hz)))
         .map_err(kwavers_to_py)?;
     let dict = PyDict::new(py);
     dict.set_item("spike_train", PyArray1::from_vec(py, response.spike_train))?;

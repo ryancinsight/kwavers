@@ -629,7 +629,7 @@ pub fn register_book(m: &Bound<'_, PyModule>) -> PyResult<()> {
         sonogenetics::acoustic_streaming_velocity,
         m
     )?)?;
-    m.add_function(wrap_pyfunction!(sonogenetics::ispta_w_cm2, m)?)?;
+    m.add_function(wrap_pyfunction!(sonogenetics::ispta, m)?)?;
     // neuromodulation (Hodgkin–Huxley + NICE intramembrane cavitation)
     m.add_function(wrap_pyfunction!(
         neuromodulation::hodgkin_huxley_response,

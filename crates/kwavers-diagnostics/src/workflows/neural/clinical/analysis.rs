@@ -1,4 +1,6 @@
-use super::super::types::{ClinicalAnalysis, FeatureMap, LesionDetection, TissueClassification};
+use super::super::types::{
+    ClinicalAnalysis, FeatureMap, LesionDetection, TissueClass, TissueClassification,
+};
 use super::NeuralClinicalDecisionSupport;
 use kwavers_core::error::KwaversResult;
 use leto::{Array3, ArrayView3};
@@ -44,7 +46,7 @@ impl NeuralClinicalDecisionSupport {
         let [nx, ny, nz] = volume.shape();
 
         let mut probabilities = HashMap::new();
-        let mut dominant_tissue = Array3::<String>::from_elem((nx, ny, nz), "Unknown".to_owned());
+        let mut dominant_tissue = Array3::<TissueClass>::from_elem((nx, ny, nz), TissueClass::Unknown);
         let mut boundary_confidence = Array3::<f32>::zeros((nx, ny, nz));
 
         probabilities.insert("Fat".to_owned(), Array3::from_elem((nx, ny, nz), 0.33));
@@ -61,14 +63,14 @@ impl NeuralClinicalDecisionSupport {
                         .map_or(0.5, |arr| arr[[x, y, z]]);
 
                     let tissue_type = if intensity < 0.7 && speckle_var > 0.8 {
-                        "Blood"
+                        TissueClass::Blood
                     } else if intensity > 1.2 && speckle_var < 0.4 {
-                        "Fat"
+                        TissueClass::Fat
                     } else {
-                        "Muscle"
+                        TissueClass::Muscle
                     };
 
-                    dominant_tissue[[x, y, z]] = tissue_type.to_owned();
+                    dominant_tissue[[x, y, z]] = tissue_type;
 
                     let grad_x = if x > 0 && x < nx - 1 {
                         (volume[[x + 1, y, z]] - volume[[x - 1, y, z]]) / 2.0

@@ -80,6 +80,7 @@
 //! - Hamilton & Blackstock 1998 §3.6 (Stokes-Kirchhoff limit `y = 2`).
 //! - Connor & Hynynen 2002 (skull `y ≈ 1.9 – 2.0`).
 
+use kwavers_math::fft::Complex64;
 use leto::Array3;
 
 mod apply;
@@ -100,7 +101,13 @@ pub(super) struct FractionalLaplacianAbsorption {
     k_pow_y: Array3<f64>,
     /// Cached `L_y(p[n-1])` from the previous step.  Empty until the
     /// solver primes it after the first absorption application.
-    prev_l_y: Option<Vec<f64>>,
+    prev_l_y: Option<Array3<f64>>,
+    /// Persistent real-space scratch buffer for `spectral_filter_into`.
+    /// Reused every step — zero per-step allocation.
+    spatial_buf: Array3<f64>,
+    /// Persistent complex-spectrum scratch buffer for `spectral_filter_into`.
+    /// Reused every step — zero per-step allocation.
+    spectrum_buf: Array3<Complex64>,
 }
 
 /// Inputs for constructing a fractional-Laplacian absorption operator.

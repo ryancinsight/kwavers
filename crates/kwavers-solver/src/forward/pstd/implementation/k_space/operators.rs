@@ -87,22 +87,6 @@ fn apply_spectral_axis_multiplier(
     }
 }
 
-fn leto_complex_field(field: &Array3<Complex64>) -> LetoArray3<Complex64> {
-    let [nx, ny, nz] = field.shape();
-    LetoArray3::from_shape_vec([nx, ny, nz], field.iter().copied().collect())
-        .expect("PSTD complex field length must match Leto field shape")
-}
-
-fn leto_real_field(field: LetoArray3<f64>) -> Array3<f64> {
-    let [nx, ny, nz] = field.shape();
-    Array3::from_shape_vec([nx, ny, nz], field.into_vec())
-        .expect("Leto real field length must match PSTD field shape")
-}
-
-fn clone_complex_field(field: LetoArray3<Complex64>) -> Array3<Complex64> {
-    field.to_contiguous()
-}
-
 /// k-Space operators for PSTD spectral computations
 #[derive(Debug, Clone)]
 pub struct PSTDKSOperators {
@@ -115,13 +99,22 @@ pub struct PSTDKSOperators {
     /// Exact homogeneous wave-propagation coefficient `2·cos(c_ref·|k|·Δt)` over the
     /// full spectrum, lazily built on the first FullKSpace step (needs `c_ref·Δt`).
     pub wave_coeff: Option<Array3<f64>>,
+    /// Persistent full-spectrum complex workspace for the forward FFT.
+    /// Allocated once in `ensure_buffers`, reused every timestep via
+    /// `fft_processor.forward_into` — zero per-timestep allocation for the
+    /// FullKSpace hot path.
+    pub spectral_buf: Option<Array3<Complex64>>,
+    /// Persistent complex scratch buffer for the inverse FFT.
+    /// Used as the temporary copy target in `inverse_into`, resized on shape
+    /// change, then reused.
+    pub spectral_scratch: Option<Array3<Complex64>>,
+    /// Persistent real buffer holding pⁿ so the leapfrog recurrence can
+    /// store pⁿ⁻¹ without a fresh allocation every timestep.
+    pub p_scratch: Option<Array3<f64>>,
 }
 
 impl PSTDKSOperators {
     /// New.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new(k_grid: PSTDKSGrid) -> Self {
         let (nx, ny, nz) = k_grid.dimensions();
@@ -130,7 +123,30 @@ impl PSTDKSOperators {
             fft_processor: std::sync::Arc::new(Fft3d::new(Shape3D { nx, ny, nz })),
             p_prev: None,
             wave_coeff: None,
+            spectral_buf: None,
+            spectral_scratch: None,
+            p_scratch: None,
         }
+    }
+
+    /// Ensure persistent buffers match `shape`. Re-allocates only on shape
+    /// change — zero allocation for fixed-grid timestepping.
+    pub fn ensure_buffers(&mut self, shape: [usize; 3]) {
+        let grow = |buf: &mut Option<Array3<Complex64>>, s: [usize; 3]| {
+            match buf {
+                Some(ref arr) if arr.shape() == s => {}
+                _ => *buf = Some(Array3::zeros(s)),
+            }
+        };
+        let grow_real = |buf: &mut Option<Array3<f64>>, s: [usize; 3]| {
+            match buf {
+                Some(ref arr) if arr.shape() == s => {}
+                _ => *buf = Some(Array3::zeros(s)),
+            }
+        };
+        grow(&mut self.spectral_buf, shape);
+        grow(&mut self.spectral_scratch, shape);
+        grow_real(&mut self.p_scratch, shape);
     }
 
     /// Build (or return) the exact second-order propagation coefficient
@@ -167,17 +183,15 @@ impl PSTDKSOperators {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub fn forward_fft_3d(&self, input: &LetoArray3<f64>) -> KwaversResult<Array3<Complex64>> {
-        let output = self.fft_processor.forward(input);
-        Ok(clone_complex_field(output))
+    pub fn forward_fft_3d(&self, input: &Array3<f64>) -> KwaversResult<Array3<Complex64>> {
+        Ok(self.fft_processor.forward(input))
     }
     /// Inverse fft 3d.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn inverse_fft_3d(&self, input: &Array3<Complex64>) -> KwaversResult<Array3<f64>> {
-        let output = self.fft_processor.inverse(&leto_complex_field(input));
-        Ok(leto_real_field(output))
+        Ok(self.fft_processor.inverse(input))
     }
 
     // ── Spectral gradient operators ──────────────────────────────────────────

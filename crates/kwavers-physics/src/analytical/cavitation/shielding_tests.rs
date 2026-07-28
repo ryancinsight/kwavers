@@ -86,7 +86,7 @@ fn no_production_gives_tissue_only_transmission_and_zero_shielding() {
     prod.k_prod_per_s = 0.0; // disable cavitation production ⇒ β stays 0
     let medium = medium();
     let cfg = ShieldingConfig {
-        total_time_s: 0.2,
+        total_time: 0.2,
         dt_s: 1.0e-4,
     };
     let trace = simulate_shielding(
@@ -115,7 +115,7 @@ fn shielding_builds_up_under_cw_drive() {
         &production(),
         &medium(),
         &ShieldingConfig {
-            total_time_s: 1.0,
+            total_time: 1.0,
             dt_s: 5.0e-4,
         },
     );
@@ -137,7 +137,7 @@ fn sweeping_reduces_shielding_versus_on_resonance_tone() {
         &production(),
         &medium(),
         &ShieldingConfig {
-            total_time_s: 2.0,
+            total_time: 2.0,
             dt_s: 5.0e-4,
         },
     );
@@ -198,7 +198,7 @@ fn off_interval_dissolves_residual_cloud() {
         &production(),
         &medium(),
         &ShieldingConfig {
-            total_time_s: 0.4,
+            total_time: 0.4,
             dt_s: 2.0e-4,
         },
     );

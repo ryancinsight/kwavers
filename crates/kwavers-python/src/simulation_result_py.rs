@@ -9,7 +9,7 @@ use crate::array_utils::{
 };
 use kwavers_grid::Grid as KwaversGrid;
 use kwavers_simulation::SimulationRunResult as KwaversSimulationRunResult;
-use numpy::{PyArray1, PyArray2, PyArray3};
+use numpy::{PyArray1, PyArray2, PyArray3, ToPyArray};
 use pyo3::prelude::*;
 use pyo3::types::PyAny;
 

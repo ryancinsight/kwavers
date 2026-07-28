@@ -61,7 +61,7 @@ pub use linear_algebra::sparse;
 
 /// SIMD acceleration interfaces
 pub use simd::{
-    FdtdSimdOps, FftSimdOps, InterpolationSimdOps, MathSimdLevel, SimdConfig, SimdPerformance,
+    FdtdSimdOps, InterpolationSimdOps, MathSimdLevel, SimdConfig, SimdPerformance,
 };
 
 /// Safe SIMD operations with runtime feature detection

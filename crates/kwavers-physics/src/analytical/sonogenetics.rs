@@ -228,7 +228,7 @@ pub fn acoustic_streaming_velocity(
 /// # Reference
 /// NCRP Report 74 (1983), §4.
 #[must_use]
-pub fn ispta_w_cm2(p_pa: &[f64], dt_s: f64, rho: f64, c: f64) -> f64 {
+pub fn ispta(p_pa: &[f64], dt_s: f64, rho: f64, c: f64) -> f64 {
     if p_pa.is_empty() || !positive_finite(dt_s) || !positive_finite(rho) || !positive_finite(c) {
         return 0.0;
     }
@@ -485,7 +485,7 @@ mod tests {
         let n = 1000;
         let dt = 1e-7_f64;
         let p = vec![p0; n];
-        let ispta = ispta_w_cm2(&p, dt, rho, c);
+        let ispta = ispta(&p, dt, rho, c);
         let expected = p0 * p0 / (rho * c) * 1e-4;
         assert!(
             (ispta - expected).abs() / expected < 1e-10,
@@ -498,20 +498,20 @@ mod tests {
     #[test]
     fn ispta_rejects_empty_invalid_and_nonfinite_domains() {
         assert_eq!(
-            ispta_w_cm2(&[], 1e-7, DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM),
+            ispta(&[], 1e-7, DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM),
             0.0
         );
         assert_eq!(
-            ispta_w_cm2(&[1.0], 0.0, DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM),
+            ispta(&[1.0], 0.0, DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM),
             0.0
         );
-        assert_eq!(ispta_w_cm2(&[1.0], 1e-7, 0.0, SOUND_SPEED_WATER_SIM), 0.0);
+        assert_eq!(ispta(&[1.0], 1e-7, 0.0, SOUND_SPEED_WATER_SIM), 0.0);
         assert_eq!(
-            ispta_w_cm2(&[1.0], 1e-7, DENSITY_WATER_NOMINAL, -SOUND_SPEED_WATER_SIM),
+            ispta(&[1.0], 1e-7, DENSITY_WATER_NOMINAL, -SOUND_SPEED_WATER_SIM),
             0.0
         );
 
-        let ispta = ispta_w_cm2(&[1.0, f64::NAN, 1.0], 1.0, 1.0, 1.0);
+        let ispta = ispta(&[1.0, f64::NAN, 1.0], 1.0, 1.0, 1.0);
         assert!((ispta - (2.0 / 3.0) * 1e-4).abs() < 1e-16);
     }
 

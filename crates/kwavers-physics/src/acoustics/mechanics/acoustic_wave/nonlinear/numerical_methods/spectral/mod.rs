@@ -1,13 +1,21 @@
-use kwavers_core::constants::numerical;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_math::fft::Complex64 as Complex;
-use kwavers_math::fft::{fft_3d_array, ifft_3d_array};
+use kwavers_math::fft::{fft_3d_array_into, ifft_3d_array_into};
 use kwavers_medium::Medium;
 use leto::Array3 as LetoArray3;
 use leto::Array3;
 
+use crate::parallel::for_each_indexed_mut;
 use super::super::wave_model::NonlinearWave;
+
+/// Spectral derivative utilities used only by tests.
+///
+/// `compute_spectral_gradient` and `compute_spectral_laplacian` verify the
+/// underlying spectral differentiation formulas in isolation. Production code
+/// uses the inlined, dealiased path in `compute_nonlinear_term`.
+#[cfg(test)]
+use kwavers_math::fft::{fft_3d_array, ifft_3d_array};
 
 impl NonlinearWave {
     /// Applies the 2/3-rule anti-aliasing filter to a 3-D spectral field in-place.
@@ -53,39 +61,65 @@ impl NonlinearWave {
 impl NonlinearWave {
     /// Applies k-space correction for the linear wave propagation.
     ///
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
+    /// Precomputes FFT(pressure), applies the correction factor as a pointwise
+    /// complex multiply (parallelised), and inverse-FFTs into a persistent output
+    /// buffer — zero heap allocations per timestep.
     ///
     /// # Panics
-    /// - Panics if `kx contiguous`.
-    /// - Panics if `ky contiguous`.
-    /// - Panics if `kz contiguous`.
+    /// Panics if `k_space_correction`, `k_buf`, or `k_out` are not initialised
+    /// (call `precompute_k_space_correction` first).
     ///
     pub(crate) fn apply_k_space_correction(
+        &mut self,
+        pressure: &Array3<f64>,
+        _medium: &dyn Medium,
+        _grid: &Grid,
+    ) -> KwaversResult<Array3<f64>> {
+        let correction = self
+            .k_space_correction
+            .as_ref()
+            .expect("k_space_correction must be precomputed");
+        let k_buf = self
+            .k_buf
+            .as_mut()
+            .expect("k_buf must be initialised");
+        let k_out = self
+            .k_out
+            .as_mut()
+            .expect("k_out must be initialised");
+
+        // FFT pressure into persistent buffer: zero-alloc.
+        fft_3d_array_into(pressure, k_buf);
+
+        // In-place pointwise complex multiply (parallelised).
+        for_each_indexed_mut(k_buf.view_mut(), |(i, j, k), val| {
+            *val = *val * correction[[i, j, k]];
+        });
+
+        // IFFT into persistent output buffer (uses k_buf as scratch): zero-alloc.
+        ifft_3d_array_into(k_buf, k_out);
+
+        Ok(k_out.clone())
+    }
+}
+
+#[cfg(test)]
+impl NonlinearWave {
+    pub(crate) fn apply_k_space_correction_test(
         &self,
         pressure: &Array3<f64>,
         medium: &dyn Medium,
         grid: &Grid,
     ) -> KwaversResult<Array3<f64>> {
+        use kwavers_core::constants::numerical;
+        use kwavers_math::fft::{fft_3d_array, ifft_3d_array};
+
         let pressure_k = fft_3d_array(pressure);
         let [nx, ny, nz] = pressure_k.shape();
-
-        let kx = grid.compute_kx();
-        let ky = grid.compute_ky();
-        let kz = grid.compute_kz();
-
-        let c_array = medium.sound_speed_array();
-        let mut c_sum = 0.0;
-        let mut c_count = 0usize;
-        for &value in c_array.iter() {
-            c_sum += value;
-            c_count += 1;
-        }
-        let c = if c_count > 0 {
-            c_sum / c_count as f64
-        } else {
-            self.max_sound_speed
-        };
+        let c = medium
+            .sound_speed_array()
+            .iter()
+            .fold(0.0f64, |acc, &v| acc.max(v));
         let mut result_k = LetoArray3::<Complex>::zeros([nx, ny, nz]);
         let dt = self.dt;
 
@@ -94,8 +128,7 @@ impl NonlinearWave {
                 for j in 0..ny {
                     for k in 0..nz {
                         let p = pressure_k[[i, j, k]];
-                        let k2 = k_squared[[i, j, k]];
-                        let k_mag = k2.sqrt();
+                        let k_mag = k_squared[[i, j, k]].sqrt();
                         let sinc_factor = if k_mag > numerical::EPSILON {
                             (c * k_mag * dt / 2.0).sin() / (c * k_mag * dt / 2.0)
                         } else {
@@ -107,6 +140,9 @@ impl NonlinearWave {
                 }
             }
         } else {
+            let kx = grid.compute_kx();
+            let ky = grid.compute_ky();
+            let kz = grid.compute_kz();
             let kx_s = kx.as_slice().expect("kx contiguous");
             let ky_s = ky.as_slice().expect("ky contiguous");
             let kz_s = kz.as_slice().expect("kz contiguous");
@@ -114,8 +150,10 @@ impl NonlinearWave {
                 for j in 0..ny {
                     for k in 0..nz {
                         let pk = pressure_k[[i, j, k]];
-                        let k_mag_sq =
-                            kz_s[k].mul_add(kz_s[k], kx_s[i].mul_add(kx_s[i], ky_s[j] * ky_s[j]));
+                        let k_mag_sq = kz_s[k].mul_add(
+                            kz_s[k],
+                            kx_s[i].mul_add(kx_s[i], ky_s[j] * ky_s[j]),
+                        );
                         let k_mag = k_mag_sq.sqrt();
                         let sinc_factor = if k_mag > numerical::EPSILON {
                             (c * k_mag * dt / 2.0).sin() / (c * k_mag * dt / 2.0)

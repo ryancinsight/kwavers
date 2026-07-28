@@ -63,6 +63,7 @@ mod construction;
 mod operator;
 mod preconditioner;
 mod solve;
+pub use solve::{FluenceRateField, OpticalSourceField};
 
 #[cfg(test)]
 mod tests;

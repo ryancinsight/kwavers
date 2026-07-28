@@ -5,6 +5,7 @@
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, PRESSURE_LIMIT};
 use kwavers_grid::Grid;
+use kwavers_math::fft::Complex64 as Complex;
 use kwavers_medium::Medium;
 
 use crate::parallel::for_each_indexed_mut;
@@ -65,6 +66,16 @@ pub struct NonlinearWave {
     // Precomputed arrays
     /// Precomputed k-squared values (square of wavenumber magnitudes) for the grid, used to speed up calculations.
     pub(crate) k_squared: Option<Array3<f64>>,
+    /// Precomputed k-space correction factor: `sinc(c·|k|·dt/2) · exp(j·c·|k|·dt)`.
+    /// Invariant for a given medium/grid/dt; cached to eliminate O(N³) transcendental
+    /// evaluations per timestep.
+    pub(crate) k_space_correction: Option<Array3<Complex>>,
+
+    // Reusable workspace buffers (allocated once, reused every timestep)
+    /// Persistent k-space FFT buffer: holds FFT(pressure) for in-place correction.
+    pub(crate) k_buf: Option<Array3<Complex>>,
+    /// Persistent output buffer: holds the IFFT result (linear term).
+    pub(crate) k_out: Option<Array3<f64>>,
 
     // Stability parameters
     /// Maximum absolute pressure value allowed in the simulation to prevent numerical instability.
@@ -114,6 +125,11 @@ impl NonlinearWave {
 
             // Precomputed arrays
             k_squared: None,
+            k_space_correction: None,
+
+            // Reusable workspace buffers
+            k_buf: None,
+            k_out: None,
 
             // Stability parameters
             max_pressure: PRESSURE_LIMIT,
@@ -156,6 +172,52 @@ impl NonlinearWave {
         });
 
         self.k_squared = Some(k_squared);
+    }
+
+    /// Precomputes the k-space correction factor for the entire grid.
+    ///
+    /// The correction factor `sinc(c·|k|·dt/2) · exp(j·c·|k|·dt)` depends only on
+    /// wavenumber magnitudes, sound speed, and time step — all invariant across
+    /// timesteps. Precomputing once eliminates O(N³) transcendental evaluations per
+    /// timestep, replacing them with a pointwise complex multiply.
+    ///
+    /// # Panics
+    /// Panics if `k_squared` is not yet precomputed.
+    pub fn precompute_k_space_correction(&mut self, medium: &dyn Medium, grid: &Grid) {
+        let k_squared = self
+            .k_squared
+            .as_ref()
+            .expect("k_squared must be precomputed before k_space_correction");
+
+        let c = medium
+            .sound_speed_array()
+            .iter()
+            .fold(0.0f64, |acc, &v| acc.max(v));
+        let dt = self.dt;
+
+        let mut correction = Array3::<Complex>::zeros([grid.nx, grid.ny, grid.nz]);
+        let eps = 1e-12_f64;
+
+        for_each_indexed_mut(correction.view_mut(), |(i, j, k), val| {
+            let k_mag = k_squared[[i, j, k]].sqrt();
+            let ck = c * k_mag;
+
+            let sinc_factor = if ck > eps {
+                (ck * dt * 0.5).sin() / (ck * dt * 0.5)
+            } else {
+                1.0
+            };
+
+            let cos_factor = (ck * dt).cos();
+
+            *val = Complex::new(sinc_factor * cos_factor, 0.0);
+        });
+
+        self.k_space_correction = Some(correction);
+
+        // Allocate persistent workspace buffers for zero-allocation k-space correction.
+        self.k_buf = Some(Array3::zeros([grid.nx, grid.ny, grid.nz]));
+        self.k_out = Some(Array3::zeros([grid.nx, grid.ny, grid.nz]));
     }
 
     /// Checks if the current configuration is stable.
@@ -239,6 +301,9 @@ mod tests {
         assert_eq!(w.nonlinear_time, 0.0);
         assert_eq!(w.nonlinearity_scaling, 1.0);
         assert!(w.k_squared.is_none());
+        assert!(w.k_space_correction.is_none());
+        assert!(w.k_buf.is_none());
+        assert!(w.k_out.is_none());
     }
 
     /// DC bin of precomputed k² must be exactly zero; all values must be ≥ 0.

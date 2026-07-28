@@ -1,4 +1,4 @@
-use numpy::{PyReadonlyArray2, PyReadonlyArray3};
+use numpy::{PyReadonlyArray2, PyReadonlyArray3, ToPyArray};
 // Only referenced by the `#[cfg(not(feature = "gpu"))]` "feature not enabled" branches.
 #[cfg(not(feature = "gpu"))]
 use pyo3::exceptions::PyRuntimeError;

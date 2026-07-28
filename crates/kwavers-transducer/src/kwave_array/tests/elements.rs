@@ -275,7 +275,11 @@ fn planar_quadrants_conserve_area_and_keep_signals_independent() {
     let signals = Array2::<f64>::from_shape_fn(
         (4, 4),
         |[row, column]| {
-            if row == column { 1.0 } else { 0.0 }
+            if row == column {
+                1.0
+            } else {
+                0.0
+            }
         },
     );
     let (_, per_cell) = array

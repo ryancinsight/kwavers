@@ -347,7 +347,7 @@ impl ThermalSimulation {
                     dt,
                     q_wm3
                         .as_ref()
-                        .map(|a| VolumetricHeatSource::from_watts_per_cubic_meter(a.view())),
+                        .map(|a| VolumetricHeatSource::from_base(a.view())),
                 )
                 .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
         }

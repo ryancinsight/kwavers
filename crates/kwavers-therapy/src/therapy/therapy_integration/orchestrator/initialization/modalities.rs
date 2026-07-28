@@ -1,6 +1,6 @@
 //! Modality-specific initialization for CEUS, transcranial, chemical, and cavitation subsystems.
 
-use aequitas::systems::si::quantities::{Frequency, Time};
+use aequitas::systems::si::quantities::{Frequency, Length, NumberDensity, Time};
 use kwavers_core::constants::REFERENCE_FREQUENCY_HZ;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
@@ -28,8 +28,8 @@ pub fn init_ceus_system(
     grid: &Grid,
     medium: &dyn Medium,
 ) -> KwaversResult<ContrastEnhancedUltrasound> {
-    let bubble_concentration = 1e6; // 1 million bubbles/mL (typical clinical dose)
-    let bubble_size = 2.5; // 2.5 μm mean diameter (typical for clinical contrast agents)
+    let bubble_concentration = NumberDensity::from_base(1e6);
+    let bubble_size = Length::from_base(2.5e-6);
     ContrastEnhancedUltrasound::new(grid, medium, bubble_concentration, bubble_size)
 }
 

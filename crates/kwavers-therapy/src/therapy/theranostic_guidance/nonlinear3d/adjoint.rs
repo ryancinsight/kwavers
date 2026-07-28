@@ -47,7 +47,7 @@ pub(super) fn gradient(input: GradientInput<'_>) -> ParameterGradient {
         .collect::<Vec<_>>();
     let steps = input.history.steps();
     let sponge_weights = sponge(input.n);
-    let absorption = build_absorption_for_adjoint(&input);
+    let mut absorption = build_absorption_for_adjoint(&input);
     let mut grad = ParameterGradient {
         sound_speed: vec![0.0; cells],
         beta: vec![0.0; cells],
@@ -95,7 +95,7 @@ pub(super) fn gradient(input: GradientInput<'_>) -> ParameterGradient {
             } else {
                 curr
             };
-            if let Some(op) = absorption.as_ref() {
+            if let Some(op) = absorption.as_mut() {
                 op.apply_transpose(&adj_next, &mut adj_curr, &mut adj_prev);
             }
             accumulate_step(AccumulateInput {

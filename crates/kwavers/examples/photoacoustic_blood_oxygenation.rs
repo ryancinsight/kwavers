@@ -26,7 +26,9 @@ use kwavers_diagnostics::workflows::blood_oxygenation::{estimate_oxygenation, Ox
 use kwavers_grid::Grid;
 use kwavers_medium::properties::OpticalPropertyData;
 use kwavers_optics::chromophores::HemoglobinDatabase;
-use kwavers_solver::forward::optical::diffusion::{DiffusionSolver, DiffusionSolverConfig};
+use kwavers_solver::forward::optical::diffusion::{
+    DiffusionSolver, DiffusionSolverConfig, OpticalSourceField,
+};
 use leto::Array3;
 use std::time::Instant;
 
@@ -202,7 +204,9 @@ fn main() -> Result<()> {
             }
         }
 
-        let fluence = solver.solve(&source)?;
+        let fluence = solver
+            .solve(&OpticalSourceField::from_base(source))?
+            .into_samples();
 
         // Extract absorption map (μₐ·Φ for photoacoustic signal)
         let mut absorption = Array3::zeros((nx, ny, nz));

@@ -1,4 +1,4 @@
-use numpy::{PyReadonlyArray1, PyReadonlyArray2, PyReadonlyArray3};
+use numpy::{PyReadonlyArray1, PyReadonlyArray2, PyReadonlyArray3, ToPyArray};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 

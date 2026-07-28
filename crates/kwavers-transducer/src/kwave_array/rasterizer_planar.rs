@@ -20,7 +20,7 @@
 //! occupancy (binary) or a constant BLI weight (weighted), so that the total
 //! discrete mass equals `A / dx²` up to round-off.
 
-use super::math::{DISC_SAMPLE_UPSAMPLING_RATE, apply_matrix, euler_xyz_rotation_matrix};
+use super::math::{apply_matrix, euler_xyz_rotation_matrix, DISC_SAMPLE_UPSAMPLING_RATE};
 use super::{DiscSourceProfile, ElementShape, KWaveArray, KWaveElement};
 use crate::transducers::physics::PlanarApertureGeometry;
 use kwavers_core::constants::numerical::TWO_PI;

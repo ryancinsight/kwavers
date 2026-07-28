@@ -32,7 +32,9 @@ use kwavers_medium::optical_map::{OpticalPropertyMap, OpticalPropertyMapBuilder}
 use kwavers_medium::properties::OpticalPropertyData;
 use kwavers_phantom::PhantomBuilder;
 use kwavers_physics::optics::monte_carlo::{MonteCarloSolver, PhotonSource, SimulationConfig};
-use kwavers_solver::forward::optical::diffusion::{DiffusionSolver, DiffusionSolverConfig};
+use kwavers_solver::forward::optical::diffusion::{
+    DiffusionSolver, DiffusionSolverConfig, OpticalSourceField,
+};
 use leto::Array3;
 use std::time::Instant;
 
@@ -407,7 +409,9 @@ fn solve_diffusion_fluence(
         source[[i, j, k]] = 1e6;
     }
 
-    let fluence = solver.solve(&source)?;
+    let fluence = solver
+        .solve(&OpticalSourceField::from_base(source))?
+        .into_samples();
     Ok(flatten_kji(&fluence))
 }
 

@@ -41,5 +41,5 @@ pub use workflow::RealTimeWorkflow;
 pub mod types;
 pub use types::{
     AIBeamformingConfig, AIBeamformingResult, AiBeamformingMetrics, ClinicalAnalysis,
-    ClinicalThresholds, FeatureMap, LesionDetection, TissueClassification,
+    ClinicalThresholds, FeatureMap, LesionDetection, TissueClass, TissueClassification,
 };

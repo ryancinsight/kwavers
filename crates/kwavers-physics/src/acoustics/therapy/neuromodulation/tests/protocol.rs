@@ -91,12 +91,12 @@ fn theta_burst_atkinson_dosimetry_matches_paper() {
     let z = 1000.0 * 1540.0;
     let p_peak = (2.0 * z * 54.51e4_f64).sqrt(); // 54.51 W/cm² = 54.51e4 W/m²
     let dose = tissue_dosimetry(&p, Pressure::from_base(p_peak));
-    let isppa_w_cm2 = dose.isppa.into_base() * 1.0e-4;
-    let ispta_w_cm2 = dose.ispta.into_base() * 1.0e-4;
-    assert!((isppa_w_cm2 - 54.51).abs() < 1e-2, "ISPPA {}", isppa_w_cm2);
-    assert!((ispta_w_cm2 - 5.451).abs() < 1e-2, "ISPTA {}", ispta_w_cm2);
+    let isppa = dose.isppa.into_base() * 1.0e-4;
+    let ispta = dose.ispta.into_base() * 1.0e-4;
+    assert!((isppa - 54.51).abs() < 1e-2, "ISPPA {}", isppa);
+    assert!((ispta - 5.451).abs() < 1e-2, "ISPTA {}", ispta);
     assert!(
-        (ispta_w_cm2 / isppa_w_cm2 - 0.10).abs() < 1e-9,
+        (ispta / isppa - 0.10).abs() < 1e-9,
         "ISPTA/ISPPA must equal duty cycle"
     );
 }

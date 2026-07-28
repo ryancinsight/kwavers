@@ -90,9 +90,7 @@ fn standard_update_consumes_borrowed_source_view_without_source_clone() {
             &medium,
             &grid,
             2.0,
-            Some(VolumetricHeatSource::from_watts_per_cubic_meter(
-                source.view(),
-            )),
+            Some(VolumetricHeatSource::from_base(source.view())),
         )
         .unwrap();
 
@@ -119,9 +117,7 @@ fn standard_update_consumes_noncontiguous_source_view() {
             &medium,
             &grid,
             2.0,
-            Some(VolumetricHeatSource::from_watts_per_cubic_meter(
-                source_view,
-            )),
+            Some(VolumetricHeatSource::from_base(source_view)),
         )
         .unwrap();
 
@@ -143,9 +139,7 @@ fn standard_update_rejects_mismatched_source_shape_without_mutation() {
             &medium,
             &grid,
             2.0,
-            Some(VolumetricHeatSource::from_watts_per_cubic_meter(
-                source.view(),
-            )),
+            Some(VolumetricHeatSource::from_base(source.view())),
         )
         .unwrap_err();
 

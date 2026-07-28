@@ -1,49 +1,19 @@
-//! SIMD (Single Instruction, Multiple Data) Optimizations
-//!
-//! This module provides SIMD-accelerated implementations for performance-critical
-//! mathematical operations in acoustic wave simulations.
-//!
-//! ## Supported Architectures
-//!
-//! - **x86_64**: AVX2, AVX-512 (when available)
-//! - **ARM**: NEON
-//! - **Portable SIMD**: Rust's std::simd (nightly feature)
-//!
-//! ## Performance Optimizations
-//!
-//! ### FDTD Updates
-//! - Stencil operations for pressure and velocity updates
-//! - Boundary condition applications
-//! - Medium property interpolations
-//!
-//! ### FFT Operations
-//! - Complex arithmetic in frequency domain
-//! - Convolution operations
-//! - Spectral filtering
-//!
-//! ### Linear Algebra
-//! - Matrix-vector multiplications
-//! - Vector field operations
-//! - Interpolation kernels
-//!
-//! ## Safety and Portability
-//!
-//! - **Runtime Detection**: Automatic SIMD level detection
-//! - **Fallback**: Scalar implementations when SIMD unavailable
-//! - **Alignment**: Proper memory alignment for SIMD operations
-//! - **Bounds Checking**: Safe SIMD operations with bounds validation
+//! SIMD-accelerated operations for kwavers field kernels.
 //!
 //! ## Module layout
 //!
-//! - `config`: `SimdConfig`, `MathSimdLevel` enum, runtime CPU-feature detection.
-//! - `fdtd_ops`: `FdtdSimdOps` — SIMD pressure/velocity update kernels.
-//! - `fft_ops`: `FftSimdOps` — SIMD complex multiplication for spectral kernels.
-//! - `interpolation_ops`: `InterpolationSimdOps` — SIMD trilinear interpolation.
-//! - `metrics`: `SimdPerformance`, `SimdMetrics` — speedup estimation.
+//! - `config`  — `SimdConfig`, `MathSimdLevel` enum, runtime CPU-feature detection.
+//!              Used by `kwavers-solver`'s FDTD dispatch layer.
+//! - `fdtd_ops` — `FdtdSimdOps` — hermes-backed pressure/velocity update kernels.
+//! - `interpolation_ops` — `InterpolationSimdOps` — trilinear interpolation helpers.
+//! - `metrics` — `SimdPerformance`, `SimdMetrics` — speedup estimation.
+//!
+//! **FFT / complex-multiply** operations are owned by `apollo` (the Atlas SSOT for
+//! spectral math).  `kwavers-math/fft` re-exports the Apollo API; there is no
+//! separate FFT SIMD type in this module.
 
 mod config;
 mod fdtd_ops;
-mod fft_ops;
 mod interpolation_ops;
 mod metrics;
 
@@ -52,6 +22,5 @@ mod tests;
 
 pub use config::{MathSimdLevel, SimdConfig};
 pub use fdtd_ops::FdtdSimdOps;
-pub use fft_ops::FftSimdOps;
 pub use interpolation_ops::InterpolationSimdOps;
 pub use metrics::{SimdMetrics, SimdPerformance};

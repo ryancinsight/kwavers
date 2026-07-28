@@ -11,7 +11,7 @@
 //! al., *Ultrasonics* 51 (2011), Eq. 1,
 //! <https://doi.org/10.1016/j.ultras.2010.12.011>.
 
-use aequitas::systems::si::quantities::{Angle, Area, Length, ReciprocalLength};
+use aequitas::systems::si::quantities::{Angle, Area, Length, Pressure, ReciprocalLength};
 use eunomia::Complex64;
 use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
 use leto_ops::gauss_legendre_nodes_weights;
@@ -201,7 +201,7 @@ impl PlanarApertureGeometry {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PlanarAperture {
     geometry: PlanarApertureGeometry,
-    surface_pressure_pa: Complex64,
+    surface_pressure_pa: Pressure<Complex64>,
 }
 
 impl PlanarAperture {
@@ -214,7 +214,7 @@ impl PlanarAperture {
         center_m: [Length; 3],
         normal: [f64; 3],
         radius_m: Length,
-        surface_pressure_pa: Complex64,
+        surface_pressure_pa: Pressure<Complex64>,
     ) -> KwaversResult<Self> {
         Self::new(
             PlanarApertureGeometry::disk(center_m, normal, radius_m)?,
@@ -232,7 +232,7 @@ impl PlanarAperture {
         normal: [f64; 3],
         first_axis: [f64; 3],
         shape: PlanarApertureShape,
-        surface_pressure_pa: Complex64,
+        surface_pressure_pa: Pressure<Complex64>,
     ) -> KwaversResult<Self> {
         Self::new(
             PlanarApertureGeometry::oriented(center_m, normal, first_axis, shape)?,
@@ -247,12 +247,13 @@ impl PlanarAperture {
     /// Returns `KwaversError::Config` when either phasor component is non-finite.
     pub fn new(
         geometry: PlanarApertureGeometry,
-        surface_pressure_pa: Complex64,
+        surface_pressure_pa: Pressure<Complex64>,
     ) -> KwaversResult<Self> {
-        if !surface_pressure_pa.re.is_finite() || !surface_pressure_pa.im.is_finite() {
+        let pressure = *surface_pressure_pa.as_base();
+        if !pressure.re.is_finite() || !pressure.im.is_finite() {
             return Err(invalid(
                 "surface_pressure_pa",
-                format!("{surface_pressure_pa:?}"),
+                format!("{pressure:?}"),
                 "finite",
             ));
         }
@@ -294,7 +295,7 @@ impl PlanarAperture {
 
     /// Complex surface-pressure phasor in pascals.
     #[must_use]
-    pub const fn surface_pressure_pa(&self) -> Complex64 {
+    pub const fn surface_pressure_pa(&self) -> Pressure<Complex64> {
         self.surface_pressure_pa
     }
 }
@@ -558,16 +559,17 @@ pub fn rayleigh_pressure(
     points: &[[Length; 3]],
     apertures: &[PlanarAperture],
     spec: &RayleighIntegralSpec,
-) -> KwaversResult<Vec<Complex64>> {
+) -> KwaversResult<Vec<Pressure<Complex64>>> {
     for &point in points {
         validate_point("observation_point", point.map(Length::into_base))?;
     }
     let radial_rule = gauss_legendre_unit(spec.radial_order)?;
     let prefactor = Complex64::new(0.0, -spec.wavenumber().into_base() / TAU);
-    let mut pressure = vec![Complex64::new(0.0, 0.0); points.len()];
+    let mut pressure = vec![Pressure::from_base(Complex64::new(0.0, 0.0)); points.len()];
 
     for aperture in apertures {
-        if aperture.surface_pressure_pa() == Complex64::new(0.0, 0.0) {
+        let surface_pressure = aperture.surface_pressure_pa().into_base();
+        if surface_pressure == Complex64::new(0.0, 0.0) {
             continue;
         }
         let geometry = aperture.geometry();
@@ -609,7 +611,7 @@ pub fn rayleigh_pressure(
                     integral += Complex64::from_polar(amplitude, phase);
                 }
             }
-            *total += prefactor * aperture.surface_pressure_pa() * integral;
+            *total += Pressure::from_base(prefactor * surface_pressure * integral);
         }
     }
     Ok(pressure)
@@ -724,7 +726,7 @@ mod tests {
             [length(0.0); 3],
             [0.0, 0.0, 1.0],
             length(radius_m),
-            Complex64::new(2.5e5, 0.0),
+            Pressure::from_base(Complex64::new(2.5e5, 0.0)),
         )
         .unwrap()
     }
@@ -752,7 +754,7 @@ mod tests {
 
     #[test]
     fn independently_driven_sectors_superpose_to_complete_annulus_on_axis() {
-        let pressure = Complex64::from_polar(1.7e5, 0.4);
+        let pressure = Pressure::from_base(Complex64::from_polar(1.7e5, 0.4));
         let aperture = |start_angle: Angle, span_angle: Angle| {
             PlanarAperture::oriented(
                 [length(0.0); 3],
@@ -787,6 +789,8 @@ mod tests {
         let point = [point(0.0, 0.0, 20.0e-3)];
         let complete_pressure = rayleigh_pressure(&point, &[complete], &spec).unwrap()[0];
         let sector_pressure = rayleigh_pressure(&point, &sectors, &spec).unwrap()[0];
+        let complete_pressure = complete_pressure.into_base();
+        let sector_pressure = sector_pressure.into_base();
         assert!(
             (complete_pressure - sector_pressure).norm()
                 <= 32.0 * f64::EPSILON * complete_pressure.norm(),
@@ -805,10 +809,10 @@ mod tests {
         let actual =
             rayleigh_pressure(&[point(0.0, 0.0, axial_range)], &[piston], &spec).unwrap()[0];
         let rim_range = axial_range.hypot(piston.outer_radius().into_base());
-        let expected = piston.surface_pressure_pa()
+        let expected = piston.surface_pressure_pa().into_base()
             * (Complex64::from_polar(1.0, k * axial_range)
                 - Complex64::from_polar(1.0, k * rim_range));
-        let relative = (actual - expected).norm() / expected.norm();
+        let relative = (actual.into_base() - expected).norm() / expected.norm();
         assert!(relative <= 2.0e-12, "relative complex error {relative:e}");
     }
 
@@ -831,7 +835,7 @@ mod tests {
         .unwrap();
         let argument = k * piston.outer_radius().into_base() * angle.sin();
         let expected_ratio = (2.0 * j1(argument) / argument).abs();
-        let actual_ratio = pressure[1].norm() / pressure[0].norm();
+        let actual_ratio = pressure[1].into_base().norm() / pressure[0].into_base().norm();
         assert!(
             (actual_ratio - expected_ratio).abs() <= 2.0e-4,
             "ratio {actual_ratio:e}, far-field oracle {expected_ratio:e}"
@@ -858,6 +862,8 @@ mod tests {
         let along_z = rayleigh_pressure(&[point(0.2e-3, 0.0, 30.0e-3)], &[base], &spec).unwrap()[0];
         let along_x =
             rayleigh_pressure(&[point(30.0e-3, 0.0, 0.2e-3)], &[rotated], &spec).unwrap()[0];
+        let along_z = along_z.into_base();
+        let along_x = along_x.into_base();
         assert!((along_z - along_x).norm() <= 64.0 * f64::EPSILON * along_z.norm());
     }
 
@@ -875,7 +881,10 @@ mod tests {
             .unwrap(),
         )
         .unwrap();
-        assert_eq!(pressure, vec![Complex64::new(0.0, 0.0)]);
+        assert_eq!(
+            pressure,
+            vec![Pressure::from_base(Complex64::new(0.0, 0.0))]
+        );
     }
 
     #[test]

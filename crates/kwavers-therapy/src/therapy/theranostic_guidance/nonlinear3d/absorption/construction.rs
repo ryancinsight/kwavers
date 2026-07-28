@@ -5,6 +5,8 @@
 
 use kwavers_core::constants::fundamental::SOUND_SPEED_AIR;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
+use kwavers_math::fft::Complex64;
+use leto::Array3;
 use moirai_parallel::{map_collect_index_with, Adaptive};
 
 use super::spectrum::build_k_power_spectrum;
@@ -98,6 +100,8 @@ impl FractionalLaplacianAbsorption {
             dt_tau,
             k_pow_y,
             prev_l_y: None,
+            spatial_buf: Array3::zeros([n, n, n]),
+            spectrum_buf: Array3::from_elem([n, n, n], Complex64::default()),
         }
     }
 }

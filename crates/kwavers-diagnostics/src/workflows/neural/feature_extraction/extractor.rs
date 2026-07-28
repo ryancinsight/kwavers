@@ -229,8 +229,9 @@ impl FeatureExtractor {
         for z in 1..nz - 1 {
             for y in 1..ny - 1 {
                 for x in 1..nx - 1 {
-                    // Extract 3×3×3 window
-                    let mut window = Vec::with_capacity(27);
+                    let mut sum = 0.0f32;
+                    let mut sum_sq = 0.0f32;
+                    let mut count = 0.0f32;
                     for dz in -1..=1 {
                         for dy in -1..=1 {
                             for dx in -1..=1 {
@@ -238,18 +239,18 @@ impl FeatureExtractor {
                                 let yi = (y as isize + dy) as usize;
                                 let zi = (z as isize + dz) as usize;
                                 if xi < nx && yi < ny && zi < nz {
-                                    window.push(volume[[xi, yi, zi]]);
+                                    let v = volume[[xi, yi, zi]];
+                                    sum += v;
+                                    sum_sq += v * v;
+                                    count += 1.0;
                                 }
                             }
                         }
                     }
 
-                    // Compute local variance
-                    let mean = window.iter().sum::<f32>() / window.len() as f32;
-                    let variance = window.iter().map(|&v| (v - mean).powi(2)).sum::<f32>()
-                        / window.len() as f32;
+                    let mean = sum / count;
+                    let variance = sum_sq / count - mean * mean;
 
-                    // Use standard deviation as frequency proxy
                     result[[x, y, z]] = variance.sqrt();
                 }
             }
@@ -284,26 +285,26 @@ impl FeatureExtractor {
         for z in half_window..nz.saturating_sub(half_window) {
             for y in half_window..ny.saturating_sub(half_window) {
                 for x in half_window..nx.saturating_sub(half_window) {
-                    let mut window_values = Vec::new();
+                    let mut sum = 0.0f32;
+                    let mut sum_sq = 0.0f32;
+                    let mut count = 0.0f32;
 
                     // Extract local window
                     for wz in z.saturating_sub(half_window)..=(z + half_window).min(nz - 1) {
                         for wy in y.saturating_sub(half_window)..=(y + half_window).min(ny - 1) {
                             for wx in x.saturating_sub(half_window)..=(x + half_window).min(nx - 1)
                             {
-                                window_values.push(volume[[wx, wy, wz]]);
+                                let v = volume[[wx, wy, wz]];
+                                sum += v;
+                                sum_sq += v * v;
+                                count += 1.0;
                             }
                         }
                     }
 
-                    if !window_values.is_empty() {
-                        let mean = window_values.iter().sum::<f32>() / window_values.len() as f32;
-                        let variance = window_values
-                            .iter()
-                            .map(|&v| (v - mean).powi(2))
-                            .sum::<f32>()
-                            / window_values.len() as f32;
-
+                    if count > 0.0 {
+                        let mean = sum / count;
+                        let variance = sum_sq / count - mean * mean;
                         result[[x, y, z]] = variance;
                     }
                 }

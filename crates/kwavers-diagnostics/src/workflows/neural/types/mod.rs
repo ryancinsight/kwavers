@@ -95,6 +95,42 @@ impl LesionDetection {
     }
 }
 
+/// Compact tissue type discriminator stored per-voxel.
+///
+/// Replaces `Array3<String>` with a 1-byte discriminant (~64× memory reduction at 256³).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+#[repr(u8)]
+pub enum TissueClass {
+    /// No classification assigned.
+    #[default]
+    Unknown = 0,
+    /// Blood / fluid.
+    Blood = 1,
+    /// Adipose tissue.
+    Fat = 2,
+    /// Muscle tissue.
+    Muscle = 3,
+}
+
+impl TissueClass {
+    /// Human-readable label for display and serialization.
+    #[must_use]
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Unknown => "Unknown",
+            Self::Blood => "Blood",
+            Self::Fat => "Fat",
+            Self::Muscle => "Muscle",
+        }
+    }
+}
+
+impl std::fmt::Display for TissueClass {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
 /// Tissue type probabilities, dominant tissue per region, and boundary confidence.
 #[derive(Debug)]
 pub struct TissueClassification {
@@ -102,7 +138,7 @@ pub struct TissueClassification {
     pub probabilities: HashMap<String, Array3<f32>>,
 
     /// Dominant tissue type per region [x, y, z].
-    pub dominant_tissue: Array3<String>,
+    pub dominant_tissue: Array3<TissueClass>,
 
     /// Tissue boundary confidence [x, y, z].
     pub boundary_confidence: Array3<f32>,
@@ -114,7 +150,7 @@ impl TissueClassification {
     pub fn empty() -> Self {
         Self {
             probabilities: HashMap::new(),
-            dominant_tissue: Array3::from_elem((1, 1, 1), String::new()),
+            dominant_tissue: Array3::from_elem((1, 1, 1), TissueClass::Unknown),
             boundary_confidence: Array3::zeros((1, 1, 1)),
         }
     }

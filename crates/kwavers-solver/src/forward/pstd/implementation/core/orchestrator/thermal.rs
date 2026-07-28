@@ -258,9 +258,7 @@ impl PSTDSolver {
                     input.thermal_medium,
                     &grid,
                     input.dt_thermal,
-                    Some(VolumetricHeatSource::from_watts_per_cubic_meter(
-                        q_wm3.view(),
-                    )),
+                    Some(VolumetricHeatSource::from_base(q_wm3.view())),
                 )?;
             }
         }

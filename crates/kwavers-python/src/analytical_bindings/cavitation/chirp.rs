@@ -416,7 +416,7 @@ fn shielding_production(
 #[allow(clippy::too_many_arguments)]
 #[pyo3(signature = (
     drive_pressure_pa, freq_mode, f_fixed_hz, f_start_hz, f_end_hz, sweep_period_s,
-    profile, pulse_on_s, pulse_off_s, total_time_s, dt_s,
+    profile, pulse_on_s, pulse_off_s, total_time, dt_s,
     k_prod_per_s=50.0, beta_max=1.0e-2, p_threshold_pa=1.0e6, p_ref_pa=1.0e6,
     supralinearity=3.0, c_liquid=1540.0, rho_liquid=1050.0, mu_liquid=1.5e-3,
     p0_pa=101_325.0, polytropic=1.4, r0_m=2.0e-6, alpha_tissue_np_m=5.0,
@@ -433,7 +433,7 @@ pub fn simulate_shielding_trace(
     profile: &str,
     pulse_on_s: f64,
     pulse_off_s: f64,
-    total_time_s: f64,
+    total_time: f64,
     dt_s: f64,
     k_prod_per_s: f64,
     beta_max: f64,
@@ -498,7 +498,7 @@ pub fn simulate_shielding_trace(
         path_len_m,
         saturation_fraction,
     );
-    let cfg = cavitation::ShieldingConfig { total_time_s, dt_s };
+    let cfg = cavitation::ShieldingConfig { total_time, dt_s };
     let t =
         cavitation::simulate_shielding(drive_pressure_pa, &freq, &protocol, &prod, &medium, &cfg);
     Ok((
@@ -530,7 +530,7 @@ pub fn simulate_shielding_trace(
 #[allow(clippy::too_many_arguments)]
 #[pyo3(signature = (
     drive_pressure_pa, f_start_hz, f_end_hz, sweep_period_s, profile,
-    pulse_on_s, pulse_off_s, total_time_s, dt_s,
+    pulse_on_s, pulse_off_s, total_time, dt_s,
     k_prod_per_s=50.0, beta_max=1.0e-2, p_threshold_pa=1.0e6, p_ref_pa=1.0e6,
     supralinearity=3.0, c_liquid=1540.0, rho_liquid=1050.0, mu_liquid=1.5e-3,
     p0_pa=101_325.0, polytropic=1.4, r0_m=2.0e-6, alpha_tissue_np_m=5.0,
@@ -544,7 +544,7 @@ pub fn compare_shielding_control(
     profile: &str,
     pulse_on_s: f64,
     pulse_off_s: f64,
-    total_time_s: f64,
+    total_time: f64,
     dt_s: f64,
     k_prod_per_s: f64,
     beta_max: f64,
@@ -587,7 +587,7 @@ pub fn compare_shielding_control(
         path_len_m,
         saturation_fraction,
     );
-    let cfg = cavitation::ShieldingConfig { total_time_s, dt_s };
+    let cfg = cavitation::ShieldingConfig { total_time, dt_s };
     let c = cavitation::compare_shielding_control(
         drive_pressure_pa,
         &sweep,

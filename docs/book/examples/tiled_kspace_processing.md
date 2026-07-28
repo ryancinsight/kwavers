@@ -90,5 +90,5 @@ window/tile iterators.
 
 ## See also
 
-- [`migration_gat_tiles.md`](../migration_gat_tiles.md) — full GAT tiling chapter
+- [Leto: GAT-Based Tiling](../../../../helios/docs/book/migration_gat_tiles.md) — full GAT tiling chapter
 - [`pstd_fdtd_comparison.rs`](pstd_fdtd_comparison.md) — PSTD solver comparison using the same grid setup

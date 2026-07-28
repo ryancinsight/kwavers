@@ -1,10 +1,18 @@
 //! Preconditioned conjugate-gradient driver loop for the diffusion system
 //! `A Φ = S` produced by [`super::operator`] / [`super::preconditioner`].
 
+use aequitas::systems::si::dimensions;
 use anyhow::Result;
+use kwavers_core::units::DimensionedField;
 use leto::Array3;
 
 use super::DiffusionSolver;
+
+/// Isotropic optical source samples `S(r)`, in `W/m3`.
+pub type OpticalSourceField = DimensionedField<Array3<f64>, dimensions::VolumetricPowerDensity>;
+
+/// Optical fluence-rate samples `Phi(r)`, in `W/m2`.
+pub type FluenceRateField = DimensionedField<Array3<f64>, dimensions::Intensity>;
 
 impl DiffusionSolver {
     /// Solve steady-state diffusion equation for given source distribution.
@@ -27,8 +35,9 @@ impl DiffusionSolver {
     /// # Errors
     /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
-    pub fn solve(&self, source: &Array3<f64>) -> Result<Array3<f64>> {
+    pub fn solve(&self, source: &OpticalSourceField) -> Result<FluenceRateField> {
         let (nx, ny, nz) = self.grid.dimensions();
+        let source = source.samples();
 
         if source.shape() != [nx, ny, nz] {
             anyhow::bail!(
@@ -95,7 +104,7 @@ impl DiffusionSolver {
                         relative_residual
                     );
                 }
-                return Ok(fluence);
+                return Ok(FluenceRateField::from_base(fluence));
             }
 
             preconditioned_residual = Self::mul_elementwise(&residual, &preconditioner);

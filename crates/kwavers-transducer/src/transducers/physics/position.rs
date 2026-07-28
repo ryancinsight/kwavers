@@ -146,7 +146,9 @@ impl CartesianPosition {
             return Err(KwaversError::Config(ConfigError::InvalidValue {
                 parameter: format!("CartesianPosition::{name}"),
                 value: value.to_string(),
-                constraint: format!("coordinate must be within ±{MAX_COORD_M} m for medical-ultrasound geometry"),
+                constraint: format!(
+                    "coordinate must be within ±{MAX_COORD_M} m for medical-ultrasound geometry"
+                ),
             }));
         }
         Ok(())

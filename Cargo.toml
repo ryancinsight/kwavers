@@ -107,3 +107,37 @@ melinoe = { path = "../melinoe" }
 [patch."https://github.com/ryancinsight/leto.git"]
 leto = { path = "../leto/crates/leto" }
 leto-ops = { path = "../leto/crates/leto-ops" }
+
+# Redirect apollo's git-based eunomia dep to the workspace-local path
+# so all crates share a single eunomia instance (eliminates the
+# `eunomia::Complex` vs `Complex` type mismatch).
+[patch."https://github.com/ryancinsight/eunomia"]
+eunomia = { path = "../eunomia/crates/eunomia" }
+
+# Redirect the git aequitas dep to the workspace-local clone so that
+# all consumers see the same aequitas version (including ElectricalImpedance,
+# NumberDensity, and other quantities added locally before upstream push).
+[patch."https://github.com/ryancinsight/aequitas"]
+aequitas = { path = "../aequitas" }
+
+# Redirect git asclepius/hyperion/proteus/tyche to local clones — they
+# evolve together with aequitas and other atlas crates; having local versions
+# ensures all consumers share a single compiled instance.
+[patch."https://github.com/ryancinsight/asclepius"]
+asclepius = { path = "../asclepius/crates/asclepius" }
+
+[patch."https://github.com/ryancinsight/hyperion"]
+hyperion = { path = "../hyperion" }
+
+[patch."https://github.com/ryancinsight/proteus"]
+proteus = { path = "../proteus" }
+
+[patch."https://github.com/ryancinsight/tyche"]
+tyche-core = { path = "../tyche/crates/tyche-core" }
+
+[patch."https://github.com/ryancinsight/consus"]
+consus-core        = { path = "../consus/crates/consus-core" }
+consus-compression = { path = "../consus/crates/consus-compression" }
+consus-hdf5        = { path = "../consus/crates/consus-hdf5" }
+consus-io          = { path = "../consus/crates/consus-io" }
+consus-npy         = { path = "../consus/crates/consus-npy" }

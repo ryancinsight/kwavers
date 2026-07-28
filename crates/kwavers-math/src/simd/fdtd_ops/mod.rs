@@ -1,28 +1,28 @@
 //! SIMD-accelerated FDTD pressure / velocity update kernels.
-
-use super::config::{MathSimdLevel, SimdConfig};
+//!
+//! `FdtdSimdOps` is a thin dispatcher that forwards to hermes-backed
+//! kernels in the `pressure` and `velocity` sub-modules.  Runtime ISA
+//! selection (AVX-512 / AVX2 / NEON / scalar) is performed inside
+//! `hermes_simd_intrinsics` — no manual dispatch is needed here.
 
 mod pressure;
 mod velocity;
 
-/// SIMD-accelerated FDTD operations
-#[derive(Debug)]
-pub struct FdtdSimdOps {
-    pub(super) config: SimdConfig,
-}
+/// SIMD-accelerated FDTD operations backed by `hermes-simd`.
+#[derive(Debug, Default)]
+pub struct FdtdSimdOps;
 
 impl FdtdSimdOps {
-    /// Create new FDTD SIMD operations
+    /// Create a new `FdtdSimdOps` dispatcher.
     #[must_use]
     pub fn new() -> Self {
-        Self {
-            config: SimdConfig::detect(),
-        }
+        Self
     }
 
-    /// SIMD-accelerated pressure update (3D FDTD)
+    /// Hermes-dispatched 3-D pressure update.
     ///
-    /// Updates pressure field using: p^{n+1} = 2p^n - p^{n-1} + c²Δt²∇²p
+    /// Computes `p^{n+1} = 2·p^n − p^{n−1} + c²Δt²·∇²p^n` for interior
+    /// points `(i, j, k)` with `1 ≤ i < nx−1`, `1 ≤ j < ny−1`, `1 ≤ k < nz−1`.
     #[allow(clippy::too_many_arguments)]
     pub fn update_pressure_3d(
         &self,
@@ -34,46 +34,20 @@ impl FdtdSimdOps {
         ny: usize,
         nz: usize,
     ) {
-        match self.config.level {
-            #[cfg(target_arch = "x86_64")]
-            #[allow(unsafe_code)]
-            MathSimdLevel::Avx2 => unsafe {
-                self.update_pressure_avx2(
-                    pressure,
-                    pressure_prev,
-                    laplacian,
-                    c_squared_dt_squared,
-                    nx,
-                    ny,
-                    nz,
-                );
-            },
-            #[cfg(target_arch = "x86_64")]
-            #[allow(unsafe_code)]
-            MathSimdLevel::Avx512 => unsafe {
-                self.update_pressure_avx512(
-                    pressure,
-                    pressure_prev,
-                    laplacian,
-                    c_squared_dt_squared,
-                    nx,
-                    ny,
-                    nz,
-                );
-            },
-            _ => self.update_pressure_scalar(
-                pressure,
-                pressure_prev,
-                laplacian,
-                c_squared_dt_squared,
-                nx,
-                ny,
-                nz,
-            ),
-        }
+        self.update_pressure_hermes(
+            pressure,
+            pressure_prev,
+            laplacian,
+            c_squared_dt_squared,
+            nx,
+            ny,
+            nz,
+        );
     }
 
-    /// SIMD-accelerated velocity update (3D FDTD)
+    /// Hermes-dispatched 3-D velocity update.
+    ///
+    /// Computes `v^{n+1} = v^n − (Δt/ρ)·∇p^n` for interior points.
     #[allow(clippy::too_many_arguments)]
     pub fn update_velocity_3d(
         &self,
@@ -85,37 +59,14 @@ impl FdtdSimdOps {
         ny: usize,
         nz: usize,
     ) {
-        match self.config.level {
-            #[cfg(target_arch = "x86_64")]
-            MathSimdLevel::Avx2 => {
-                #[allow(unsafe_code)]
-                unsafe {
-                    self.update_velocity_avx2(
-                        velocity,
-                        velocity_prev,
-                        pressure_gradient,
-                        dt_over_rho,
-                        nx,
-                        ny,
-                        nz,
-                    );
-                }
-            }
-            _ => self.update_velocity_scalar(
-                velocity,
-                velocity_prev,
-                pressure_gradient,
-                dt_over_rho,
-                nx,
-                ny,
-                nz,
-            ),
-        }
-    }
-}
-
-impl Default for FdtdSimdOps {
-    fn default() -> Self {
-        Self::new()
+        self.update_velocity_hermes(
+            velocity,
+            velocity_prev,
+            pressure_gradient,
+            dt_over_rho,
+            nx,
+            ny,
+            nz,
+        );
     }
 }

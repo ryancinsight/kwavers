@@ -23,6 +23,7 @@
 //! - Kino, G. S. (1987). *Acoustic Waves: Devices, Imaging, and Analog Signal
 //!   Processing*, §1.3 (thickness-mode transducers).
 
+use aequitas::systems::si::quantities::{AcousticImpedance, Dimensionless, ElectricalImpedance};
 use core::f64::consts::PI;
 use eunomia::Complex64;
 use kwavers_core::constants::fundamental::VACUUM_PERMITTIVITY;
@@ -119,8 +120,8 @@ impl BulkPiezoResonator {
     /// Specific acoustic impedance `Z = ρ·c_D` \[Rayl = Pa·s·m⁻¹] of the plate,
     /// used to design quarter-wave matching layers (`Z_match = √(Z·Z_load)`).
     #[must_use]
-    pub fn acoustic_impedance(&self) -> f64 {
-        self.density * self.sound_speed()
+    pub fn acoustic_impedance(&self) -> AcousticImpedance {
+        AcousticImpedance::from_base(self.density * self.sound_speed())
     }
 
     /// Free (constant-stress) capacitance `C^T = C₀/(1 − k_t²)` \[F] — the
@@ -147,9 +148,9 @@ impl BulkPiezoResonator {
     /// Air-loaded both faces is the open-circuit limit; matching/backing layers
     /// are modelled by the loaded acoustic transmission line ([`AcousticLayer`]).
     #[must_use]
-    pub fn electrical_impedance(&self, frequency: f64) -> Complex64 {
+    pub fn electrical_impedance(&self, frequency: f64) -> ElectricalImpedance<Complex64> {
         if frequency <= 0.0 {
-            return Complex64::new(0.0, 0.0);
+            return ElectricalImpedance::from_base(Complex64::new(0.0, 0.0));
         }
         let f_p = self.antiresonance_frequency();
         let omega = 2.0 * PI * frequency;
@@ -159,7 +160,7 @@ impl BulkPiezoResonator {
         let tanx_over_x = if x.abs() < 1e-12 { 1.0 } else { x.tan() / x };
         let bracket = 1.0 - self.coupling_kt2 * tanx_over_x;
         // 1/(jωC₀) = −i/(ωC₀); the lossless plate gives a purely reactive Z_e.
-        Complex64::new(0.0, -1.0 / (omega * c0)) * bracket
+        ElectricalImpedance::from_base(Complex64::new(0.0, -1.0 / (omega * c0)) * bracket)
     }
 
     /// Design a quarter-wave **matching layer** coupling this plate's acoustic
@@ -172,7 +173,7 @@ impl BulkPiezoResonator {
     #[must_use]
     pub fn quarter_wave_matching_layer(
         &self,
-        z_load: f64,
+        z_load: AcousticImpedance,
         layer_sound_speed: f64,
     ) -> AcousticLayer {
         let impedance = quarter_wave_match_impedance(self.acoustic_impedance(), z_load);
@@ -187,8 +188,11 @@ impl BulkPiezoResonator {
 /// frequency, presents `Z_in = Z_source` to the source — zero reflection
 /// (the acoustic analogue of the λ/4 transmission-line transformer).
 #[must_use]
-pub fn quarter_wave_match_impedance(z_source: f64, z_load: f64) -> f64 {
-    (z_source * z_load).sqrt()
+pub fn quarter_wave_match_impedance(
+    z_source: AcousticImpedance,
+    z_load: AcousticImpedance,
+) -> AcousticImpedance {
+    AcousticImpedance::from_base((z_source.into_base() * z_load.into_base()).sqrt())
 }
 
 /// A single lossless acoustic layer (matching layer or backing) in a 1-D
@@ -196,7 +200,7 @@ pub fn quarter_wave_match_impedance(z_source: f64, z_load: f64) -> f64 {
 #[derive(Debug, Clone, Copy)]
 pub struct AcousticLayer {
     /// Specific acoustic impedance `Z = ρ·c` \[Rayl].
-    pub impedance: f64,
+    pub impedance: AcousticImpedance,
     /// Layer thickness `d` \`m`.
     pub thickness: f64,
     /// Layer longitudinal sound speed `c` \[m·s⁻¹].
@@ -207,7 +211,7 @@ impl AcousticLayer {
     /// Construct a layer one quarter-wavelength thick at `frequency`
     /// (`d = c/(4f)`).
     #[must_use]
-    pub fn quarter_wave(impedance: f64, sound_speed: f64, frequency: f64) -> Self {
+    pub fn quarter_wave(impedance: AcousticImpedance, sound_speed: f64, frequency: f64) -> Self {
         Self {
             impedance,
             sound_speed,
@@ -226,11 +230,16 @@ impl AcousticLayer {
     /// half-wave (`kd = π`) ⇒ `Z_in = Z_load` (pass-through); a matched layer
     /// (`Z = Z_load`) ⇒ `Z_in = Z` at any thickness.
     #[must_use]
-    pub fn input_impedance(&self, z_load: Complex64, frequency: f64) -> Complex64 {
+    pub fn input_impedance(
+        &self,
+        z_load: AcousticImpedance<Complex64>,
+        frequency: f64,
+    ) -> AcousticImpedance<Complex64> {
         let kd = 2.0 * PI * frequency / self.sound_speed * self.thickness;
-        let z = Complex64::new(self.impedance, 0.0);
+        let z = Complex64::new(self.impedance.into_base(), 0.0);
+        let z_load = z_load.into_base();
         let jt = Complex64::new(0.0, kd.tan());
-        z * (z_load + z * jt) / (z + z_load * jt)
+        AcousticImpedance::from_base(z * (z_load + z * jt) / (z + z_load * jt))
     }
 
     /// Pressure reflection coefficient `Γ = (Z_in − Z_source)/(Z_in + Z_source)`
@@ -239,13 +248,14 @@ impl AcousticLayer {
     #[must_use]
     pub fn reflection_coefficient(
         &self,
-        z_source: f64,
-        z_load: Complex64,
+        z_source: AcousticImpedance<Complex64>,
+        z_load: AcousticImpedance<Complex64>,
         frequency: f64,
-    ) -> Complex64 {
+    ) -> Dimensionless<Complex64> {
         let z_in = self.input_impedance(z_load, frequency);
-        let zs = Complex64::new(z_source, 0.0);
-        (z_in - zs) / (z_in + zs)
+        let z_in = z_in.into_base();
+        let zs = z_source.into_base();
+        Dimensionless::from_base((z_in - zs) / (z_in + zs))
     }
 }
 
@@ -307,7 +317,7 @@ mod tests {
     #[test]
     fn acoustic_impedance_and_free_capacitance() {
         let p = therapy_pzt();
-        assert!((p.acoustic_impedance() - 7500.0 * p.sound_speed()).abs() < 1e-6);
+        assert!((p.acoustic_impedance().into_base() - 7500.0 * p.sound_speed()).abs() < 1e-6);
         // C^T = C₀/(1−k_t²) > C₀.
         let expected = p.clamped_capacitance() / (1.0 - p.coupling_kt2);
         assert!((p.free_capacitance() - expected).abs() / expected < 1e-12);
@@ -320,7 +330,7 @@ mod tests {
         // Lossless free plate ⇒ Re{Z_e} = 0 at every frequency.
         for &f in &[1e3, 1e5, 0.5e6, 0.9e6] {
             assert_eq!(
-                p.electrical_impedance(f).re,
+                p.electrical_impedance(f).into_base().re,
                 0.0,
                 "Z_e must be purely reactive at {f} Hz"
             );
@@ -328,7 +338,7 @@ mod tests {
         // f → 0: Z_e.im → −1/(ω·C^T) (free capacitance).
         let f = p.antiresonance_frequency() / 1.0e4;
         let omega = 2.0 * PI * f;
-        let z = p.electrical_impedance(f);
+        let z = p.electrical_impedance(f).into_base();
         let expected_im = -1.0 / (omega * p.free_capacitance());
         assert!(
             (z.im - expected_im).abs() / expected_im.abs() < 1e-3,
@@ -343,8 +353,8 @@ mod tests {
         // the IEEE series resonance, so |Z_e(f_s)| must be far below the midband.
         let p = therapy_pzt();
         let f_s = p.resonance_frequency();
-        let z_res = p.electrical_impedance(f_s).norm();
-        let z_mid = p.electrical_impedance(0.5 * f_s).norm();
+        let z_res = p.electrical_impedance(f_s).into_base().norm();
+        let z_mid = p.electrical_impedance(0.5 * f_s).into_base().norm();
         assert!(
             z_res < 1e-3 * z_mid,
             "|Z_e(f_s)|={z_res} should be ≪ midband |Z_e|={z_mid}"
@@ -356,8 +366,8 @@ mod tests {
         let p = therapy_pzt();
         let f_p = p.antiresonance_frequency();
         // Approach f_p closely: tan(X)→∞ at X=π/2 dominates the 1/ω scaling.
-        let z_near = p.electrical_impedance(0.9999 * f_p).norm();
-        let z_mid = p.electrical_impedance(0.5 * f_p).norm();
+        let z_near = p.electrical_impedance(0.9999 * f_p).into_base().norm();
+        let z_mid = p.electrical_impedance(0.5 * f_p).into_base().norm();
         assert!(
             z_near > 100.0 * z_mid,
             "|Z_e| must blow up near f_p: {z_near} vs {z_mid}"
@@ -366,12 +376,13 @@ mod tests {
 
     // ── Loaded matching/backing transmission line (COV-6 follow-up) ──────────
 
-    const Z_WATER: f64 = 1.5e6; // ≈ 1.5 MRayl
+    const Z_WATER: AcousticImpedance = AcousticImpedance::from_base(1.5e6); // ≈ 1.5 MRayl
 
     #[test]
     fn match_impedance_is_geometric_mean() {
-        let z = quarter_wave_match_impedance(30.0e6, Z_WATER); // PZT ~30 MRayl → water
-        assert!((z - (30.0e6_f64 * Z_WATER).sqrt()).abs() / z < 1e-12);
+        let z =
+            quarter_wave_match_impedance(AcousticImpedance::from_base(30.0e6), Z_WATER).into_base(); // PZT ~30 MRayl → water
+        assert!((z - (30.0e6_f64 * Z_WATER.into_base()).sqrt()).abs() / z < 1e-12);
     }
 
     #[test]
@@ -380,27 +391,30 @@ mod tests {
         let f = 1.0e6;
         let c = 2000.0;
         let layer = AcousticLayer {
-            impedance: 5.0e6,
+            impedance: AcousticImpedance::from_base(5.0e6),
             sound_speed: c,
             thickness: c / (2.0 * f), // λ/2
         };
-        let z_load = Complex64::new(Z_WATER, 0.0);
-        let z_in = layer.input_impedance(z_load, f);
+        let z_load = AcousticImpedance::from_base(Complex64::new(Z_WATER.into_base(), 0.0));
+        let z_in = layer.input_impedance(z_load, f).into_base();
         assert!(
-            (z_in.re - Z_WATER).abs() / Z_WATER < 1e-6,
+            (z_in.re - Z_WATER.into_base()).abs() / Z_WATER.into_base() < 1e-6,
             "half-wave Re {z_in}"
         );
-        assert!(z_in.im.abs() / Z_WATER < 1e-6, "half-wave Im {z_in}");
+        assert!(
+            z_in.im.abs() / Z_WATER.into_base() < 1e-6,
+            "half-wave Im {z_in}"
+        );
     }
 
     #[test]
     fn quarter_wave_layer_inverts_impedance() {
         // kd = π/2 ⇒ Z_in = Z²/Z_load.
         let f = 1.0e6;
-        let layer = AcousticLayer::quarter_wave(5.0e6, 2000.0, f);
-        let z_load = Complex64::new(Z_WATER, 0.0);
-        let z_in = layer.input_impedance(z_load, f);
-        let expected = 5.0e6_f64 * 5.0e6 / Z_WATER;
+        let layer = AcousticLayer::quarter_wave(AcousticImpedance::from_base(5.0e6), 2000.0, f);
+        let z_load = AcousticImpedance::from_base(Complex64::new(Z_WATER.into_base(), 0.0));
+        let z_in = layer.input_impedance(z_load, f).into_base();
+        let expected = 5.0e6_f64 * 5.0e6 / Z_WATER.into_base();
         assert!(
             (z_in.re - expected).abs() / expected < 1e-6,
             "λ/4 invert Re {z_in}"
@@ -418,12 +432,20 @@ mod tests {
                 sound_speed: 2000.0,
                 thickness: d_frac * 2000.0 / f,
             };
-            let z_in = layer.input_impedance(Complex64::new(Z_WATER, 0.0), f);
+            let z_in = layer
+                .input_impedance(
+                    AcousticImpedance::from_base(Complex64::new(Z_WATER.into_base(), 0.0)),
+                    f,
+                )
+                .into_base();
             assert!(
-                (z_in.re - Z_WATER).abs() / Z_WATER < 1e-9,
+                (z_in.re - Z_WATER.into_base()).abs() / Z_WATER.into_base() < 1e-9,
                 "matched Re at d={d_frac}"
             );
-            assert!(z_in.im.abs() / Z_WATER < 1e-9, "matched Im at d={d_frac}");
+            assert!(
+                z_in.im.abs() / Z_WATER.into_base() < 1e-9,
+                "matched Im at d={d_frac}"
+            );
         }
     }
 
@@ -436,13 +458,30 @@ mod tests {
         let z_plate = p.acoustic_impedance();
         let layer = p.quarter_wave_matching_layer(Z_WATER, 2000.0);
         // Designed impedance is the geometric mean.
-        assert!((layer.impedance - (z_plate * Z_WATER).sqrt()).abs() / layer.impedance < 1e-12);
-        let z_in = layer.input_impedance(Complex64::new(Z_WATER, 0.0), f_p);
+        let layer_impedance = layer.impedance.into_base();
         assert!(
-            (z_in.re - z_plate).abs() / z_plate < 1e-6,
-            "matched Z_in {z_in} vs Z_plate {z_plate}"
+            (layer_impedance - (z_plate.into_base() * Z_WATER.into_base()).sqrt()).abs()
+                / layer_impedance
+                < 1e-12
         );
-        let gamma = layer.reflection_coefficient(z_plate, Complex64::new(Z_WATER, 0.0), f_p);
+        let z_in = layer
+            .input_impedance(
+                AcousticImpedance::from_base(Complex64::new(Z_WATER.into_base(), 0.0)),
+                f_p,
+            )
+            .into_base();
+        assert!(
+            (z_in.re - z_plate.into_base()).abs() / z_plate.into_base() < 1e-6,
+            "matched Z_in {z_in} vs Z_plate {}",
+            z_plate.into_base()
+        );
+        let gamma = layer
+            .reflection_coefficient(
+                AcousticImpedance::from_base(Complex64::new(z_plate.into_base(), 0.0)),
+                AcousticImpedance::from_base(Complex64::new(Z_WATER.into_base(), 0.0)),
+                f_p,
+            )
+            .into_base();
         assert!(
             gamma.norm() < 1e-6,
             "matched reflection |Γ|={}",
@@ -456,7 +495,8 @@ mod tests {
         // Direct interface Γ = (Z_water − Z_plate)/(Z_water + Z_plate).
         let p = therapy_pzt();
         let z_plate = p.acoustic_impedance();
-        let gamma_direct = (Z_WATER - z_plate) / (Z_WATER + z_plate);
+        let gamma_direct = (Z_WATER.into_base() - z_plate.into_base())
+            / (Z_WATER.into_base() + z_plate.into_base());
         assert!(
             gamma_direct.abs() > 0.8,
             "bare PZT↔water mismatch should reflect >80%: |Γ|={}",

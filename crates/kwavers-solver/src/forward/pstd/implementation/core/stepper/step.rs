@@ -5,6 +5,7 @@ use super::ops::{add_gradient_source_term, add_masked_source_term};
 use crate::forward::pstd::config::KSpaceMethod;
 use crate::forward::pstd::implementation::k_space::PSTDKSOperators;
 use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_math::fft::Fft3dInOutExt;
 use kwavers_source::{SourceField, SourceInjectionMode};
 use leto::Array3;
 use tracing::{enabled, trace, warn, Level};
@@ -224,43 +225,61 @@ impl PSTDSolver {
     ) -> KwaversResult<()> {
         let c_ref = self.c_ref;
         kspace_ops.ensure_wave_coeff(c_ref, dt);
+        let shape = self.fields.p.shape();
+        kspace_ops.ensure_buffers(shape);
+
         let p_prev_old = kspace_ops.p_prev.take(); // pⁿ⁻¹ (None on the first step)
         let is_first = p_prev_old.is_none();
 
-        let mut p_hat = kspace_ops.forward_fft_3d(&self.fields.p)?;
-        {
-            let coeff = kspace_ops
-                .wave_coeff
-                .as_ref()
-                .expect("invariant: ensure_wave_coeff populated wave_coeff");
-            let factor = if is_first { 0.5 } else { 1.0 };
-            for (value, &coef) in p_hat.iter_mut().zip(coeff.iter()) {
-                *value *= factor * coef;
-            }
-        }
-        let mut new_p = kspace_ops.inverse_fft_3d(&p_hat)?;
+        // 1. Forward FFT of pⁿ directly into the persistent spectral buffer.
+        let spectral_buf = kspace_ops
+            .spectral_buf
+            .as_mut()
+            .expect("invariant: ensure_buffers populated spectral_buf");
+        kspace_ops
+            .fft_processor
+            .forward_into(&self.fields.p, spectral_buf);
 
+        // 2. Apply the exact second-order k-space propagation coefficient.
+        let coeff = kspace_ops
+            .wave_coeff
+            .as_ref()
+            .expect("invariant: ensure_wave_coeff populated wave_coeff");
+        let factor = if is_first { 0.5 } else { 1.0 };
+        for (value, &coef) in spectral_buf.iter_mut().zip(coeff.iter()) {
+            *value *= factor * coef;
+        }
+
+        // 3. Inverse FFT into the persistent propagation buffer.
+        let mut propagated = kspace_ops
+            .p_scratch
+            .take()
+            .expect("invariant: ensure_buffers populated p_scratch");
+        let spectral_scratch = kspace_ops
+            .spectral_scratch
+            .as_mut()
+            .expect("invariant: ensure_buffers populated spectral_scratch");
+        kspace_ops
+            .fft_processor
+            .inverse_into(spectral_buf, &mut propagated, spectral_scratch);
+
+        // 4. Add the source term (and subtract pⁿ⁻¹ for the leapfrog recurrence).
         if let Some(prev) = &p_prev_old {
-            for ((dst, &old), &source) in new_p.iter_mut().zip(prev.iter()).zip(source_term.iter())
+            for ((dst, &old), &source) in
+                propagated.iter_mut().zip(prev.iter()).zip(source_term.iter())
             {
                 *dst += source - old;
             }
         } else {
-            for (dst, &source) in new_p.iter_mut().zip(source_term.iter()) {
+            for (dst, &source) in propagated.iter_mut().zip(source_term.iter()) {
                 *dst += source;
             }
         }
 
-        // pⁿ becomes pⁿ⁻¹ for the next step; new_p becomes the current pressure.
-        let shape = self.fields.p.shape();
-        let mut old_p = leto::Array3::zeros((shape[0], shape[1], shape[2]));
-        for (dst, src) in old_p.iter_mut().zip(self.fields.p.iter()) {
-            *dst = *src;
-        }
-        for (dst, src) in self.fields.p.iter_mut().zip(new_p.iter()) {
-            *dst = *src;
-        }
-        kspace_ops.p_prev = Some(old_p);
+        // 5. O(1) pointer swap: fields.p becomes the new pressure; the buffer
+        //    that held it becomes pⁿ⁻¹ for the next step — no per-step allocation.
+        std::mem::swap(&mut self.fields.p, &mut propagated);
+        kspace_ops.p_prev = Some(propagated);
         Ok(())
     }
 }

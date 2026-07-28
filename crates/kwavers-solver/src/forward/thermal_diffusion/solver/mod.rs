@@ -309,10 +309,10 @@ impl ThermalDiffusionSolver {
     ) -> KwaversResult<()> {
         let shape = self.temperature.shape();
         if let Some(source) = external_source.as_ref() {
-            if source.as_view().shape() != shape {
+            if source.samples().shape() != shape {
                 return Err(KwaversError::DimensionMismatch(format!(
                     "thermal diffusion source shape {:?} does not match temperature shape {:?}",
-                    source.as_view().shape(),
+                    source.samples().shape(),
                     shape
                 )));
             }
@@ -322,7 +322,7 @@ impl ThermalDiffusionSolver {
         let slab_len = ny * nz;
         let source_slice = external_source
             .as_ref()
-            .and_then(|source| source.as_view().as_slice());
+            .and_then(|source| source.samples().as_slice());
 
         // `deposition` is W/m³; dividing by the local ρ c_p here keeps the
         // conversion in one place instead of at each producer (ADR 0032 §5).
@@ -373,7 +373,7 @@ impl ThermalDiffusionSolver {
                     let lap = laplacian_workspace[[i, j, k]];
                     let deposition = external_source
                         .as_ref()
-                        .map_or(0.0, |s| s.as_view()[[i, j, k]]);
+                        .map_or(0.0, |s| s.samples()[[i, j, k]]);
                     update_cell(i, j, k, temp, lap, deposition);
                 });
         }

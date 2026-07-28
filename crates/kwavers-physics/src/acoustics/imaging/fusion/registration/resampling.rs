@@ -68,5 +68,5 @@ pub(super) fn trilinear_interpolate(
     coords: [f64; 3],
     _shape: [usize; 3],
 ) -> f64 {
-    trilinear_index_space(input, coords[0], coords[1], coords[2])
+    trilinear_index_space(input.view(), coords[0], coords[1], coords[2])
 }

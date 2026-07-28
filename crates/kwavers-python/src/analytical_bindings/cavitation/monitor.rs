@@ -1,5 +1,6 @@
 //! Passive cavitation monitoring and closed-loop control PyO3 wrappers.
 
+use aequitas::systems::si::quantities::Time;
 use kwavers_physics::analytical::cavitation;
 use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::PyRuntimeError;
@@ -190,14 +191,14 @@ pub fn simulated_population_monitor_timeseries(
 /// inertial_dose)`. The Rust core performs pressure-curve interpolation,
 /// controller stepping, and stable/inertial dose accumulation.
 #[pyfunction]
-#[pyo3(signature = (pressures_pa, stable_power, inertial_power, n_bursts, burst_duration_s, p_start_pa, stable_target, inertial_limit, gain=0.08))]
+#[pyo3(signature = (pressures_pa, stable_power, inertial_power, n_bursts, burst_duration, p_start_pa, stable_target, inertial_limit, gain=0.08))]
 pub fn closed_loop_cavitation_sonication(
     py: Python<'_>,
     pressures_pa: PyReadonlyArray1<f64>,
     stable_power: PyReadonlyArray1<f64>,
     inertial_power: PyReadonlyArray1<f64>,
     n_bursts: usize,
-    burst_duration_s: f64,
+    burst_duration: f64,
     p_start_pa: f64,
     stable_target: f64,
     inertial_limit: f64,
@@ -224,7 +225,7 @@ pub fn closed_loop_cavitation_sonication(
             stable_power: stable,
             inertial_power: inertial,
             n_bursts,
-            burst_duration_s,
+            burst_duration: Time::from_base(burst_duration),
             p_start_pa,
             stable_target,
             inertial_limit,

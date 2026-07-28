@@ -1,157 +1,105 @@
-//! Main SIMD operations structure with architecture dispatch
+//! Portable SIMD field operations backed by `hermes-simd` runtime dispatch.
+//!
+//! Each method extracts a contiguous slice from the `Array3` and forwards to
+//! the corresponding `hermes_simd` free function, which selects AVX-512,
+//! AVX2, NEON, or scalar at runtime.  All unsafe intrinsics are encapsulated
+//! inside `hermes_simd_intrinsics`; this module stays `#[forbid(unsafe_code)]`.
 
+use hermes_simd::{axpy, dot, elementwise_add, elementwise_mul, elementwise_sub, scale};
 use leto::Array3;
 
-/// SIMD lane width for f64, selected at compile time per target ISA.
-///
-/// - x86_64 AVX2: 256 bits / 64 bits = 4 lanes
-/// - AArch64 NEON: 128 bits / 64 bits = 2 lanes
-/// - Scalar fallback: 1 lane
-///
-/// Runtime feature detection (`is_x86_feature_detected!` / `is_aarch64_feature_detected!`)
-/// selects the actual code path; this constant records the expected maximum width for
-/// each architecture so it can be referenced in loop-unroll and tiling decisions.
+/// Informational: expected maximum SIMD lane count for `f64` on this target.
 #[cfg(target_arch = "x86_64")]
-pub const SIMD_WIDTH: usize = 4;
+pub const SIMD_WIDTH: usize = 4; // AVX2 256-bit / 64-bit = 4 lanes
 
 #[cfg(target_arch = "aarch64")]
-pub const SIMD_WIDTH: usize = 2;
+pub const SIMD_WIDTH: usize = 2; // NEON 128-bit / 64-bit = 2 lanes
 
 #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
 pub const SIMD_WIDTH: usize = 1;
 
-/// Portable SIMD operations
+/// Portable SIMD field operations.
+///
+/// All methods delegate to `hermes_simd` for AVX-512 / AVX2 / NEON / scalar
+/// runtime dispatch.
 #[derive(Debug)]
 pub struct SimdOps;
 
 impl SimdOps {
-    /// Add two fields element-wise using SIMD
+    /// Add two 3-D fields element-wise.
     #[inline]
     #[must_use]
     pub fn add_fields(a: &Array3<f64>, b: &Array3<f64>) -> Array3<f64> {
         let shape = a.shape();
         let mut result = Array3::zeros(shape);
-
-        #[cfg(target_arch = "x86_64")]
+        if let (Some(a_s), Some(b_s), Some(out)) =
+            (a.as_slice(), b.as_slice(), result.as_slice_mut())
         {
-            if is_x86_feature_detected!("avx2") {
-                super::avx2::add_fields_avx2(a, b, &mut result);
-                return result;
-            }
+            elementwise_add(a_s, b_s, out).expect("add_fields: shape mismatch");
         }
-
-        #[cfg(target_arch = "aarch64")]
-        {
-            if std::arch::is_aarch64_feature_detected!("neon") {
-                super::neon::add_fields_neon(a, b, &mut result);
-                return result;
-            }
-        }
-
-        super::swar::add_fields_swar(a, b, &mut result);
         result
     }
 
-    /// Scale field by scalar using SIMD
+    /// Scale a 3-D field by a scalar, returning a new owned array.
     #[inline]
     #[must_use]
     pub fn scale_field(field: &Array3<f64>, scalar: f64) -> Array3<f64> {
         let shape = field.shape();
         let mut result = Array3::zeros(shape);
-
-        #[cfg(target_arch = "x86_64")]
-        {
-            if is_x86_feature_detected!("avx2") {
-                super::avx2::scale_field_avx2(field, scalar, &mut result);
-                return result;
-            }
+        if let (Some(src), Some(out)) = (field.as_slice(), result.as_slice_mut()) {
+            out.copy_from_slice(src);
+            scale(out, scalar);
         }
-
-        #[cfg(target_arch = "aarch64")]
-        {
-            if std::arch::is_aarch64_feature_detected!("neon") {
-                super::neon::scale_field_neon(field, scalar, &mut result);
-                return result;
-            }
-        }
-
-        super::swar::scale_field_swar(field, scalar, &mut result);
         result
     }
 
-    /// Compute L2 norm using SIMD
+    /// L2 norm of a 3-D field: `√(Σ xᵢ²)`.
     #[inline]
     #[must_use]
     pub fn norm(field: &Array3<f64>) -> f64 {
-        #[cfg(target_arch = "x86_64")]
-        {
-            if is_x86_feature_detected!("avx2") {
-                return super::avx2::norm_avx2(field);
-            }
-        }
-
-        #[cfg(target_arch = "aarch64")]
-        {
-            if std::arch::is_aarch64_feature_detected!("neon") {
-                return super::neon::norm_neon(field);
-            }
-        }
-
-        super::swar::norm_swar(field)
+        field
+            .as_slice()
+            .and_then(|s| dot(s, s).ok())
+            .map(f64::sqrt)
+            .unwrap_or(0.0)
     }
 
-    /// Multiply two fields element-wise using SIMD
+    /// Multiply two 3-D fields element-wise.
     #[inline]
     #[must_use]
     pub fn multiply_fields(a: &Array3<f64>, b: &Array3<f64>) -> Array3<f64> {
         let shape = a.shape();
         let mut result = Array3::zeros(shape);
-
-        #[cfg(target_arch = "x86_64")]
+        if let (Some(a_s), Some(b_s), Some(out)) =
+            (a.as_slice(), b.as_slice(), result.as_slice_mut())
         {
-            if is_x86_feature_detected!("avx2") {
-                super::avx2::multiply_fields_avx2(a, b, &mut result);
-                return result;
-            }
+            elementwise_mul(a_s, b_s, out).expect("multiply_fields: shape mismatch");
         }
-
-        #[cfg(target_arch = "aarch64")]
-        {
-            if std::arch::is_aarch64_feature_detected!("neon") {
-                super::neon::multiply_fields_neon(a, b, &mut result);
-                return result;
-            }
-        }
-
-        super::swar::multiply_fields_swar(a, b, &mut result);
         result
     }
 
-    /// Subtract two fields element-wise using SIMD
+    /// Subtract two 3-D fields element-wise (`a − b`).
     #[inline]
     #[must_use]
     pub fn subtract_fields(a: &Array3<f64>, b: &Array3<f64>) -> Array3<f64> {
         let shape = a.shape();
         let mut result = Array3::zeros(shape);
-
-        #[cfg(target_arch = "x86_64")]
+        if let (Some(a_s), Some(b_s), Some(out)) =
+            (a.as_slice(), b.as_slice(), result.as_slice_mut())
         {
-            if is_x86_feature_detected!("avx2") {
-                super::avx2::subtract_fields_avx2(a, b, &mut result);
-                return result;
-            }
+            elementwise_sub(a_s, b_s, out).expect("subtract_fields: shape mismatch");
         }
-
-        #[cfg(target_arch = "aarch64")]
-        {
-            if std::arch::is_aarch64_feature_detected!("neon") {
-                super::neon::subtract_fields_neon(a, b, &mut result);
-                return result;
-            }
-        }
-
-        super::swar::subtract_fields_swar(a, b, &mut result);
         result
+    }
+
+    /// Compute `y += alpha * x` on 3-D fields in-place.
+    ///
+    /// Convenience wrapper around `hermes_simd::axpy` for field operations.
+    #[inline]
+    pub fn axpy_fields(alpha: f64, x: &Array3<f64>, y: &mut Array3<f64>) {
+        if let (Some(x_s), Some(y_s)) = (x.as_slice(), y.as_slice_mut()) {
+            axpy(alpha, x_s, y_s).expect("axpy_fields: shape mismatch");
+        }
     }
 }
 
