@@ -44,6 +44,12 @@ impl<'a> FieldAccessor<'a> {
     pub fn density(&self) -> ArrayView3<'a, f64> {
         self.get(UnifiedFieldType::Density)
     }
+
+    /// Get the volumetric heat-source field in watts per cubic metre.
+    #[must_use]
+    pub fn volumetric_heat_source(&self) -> ArrayView3<'a, f64> {
+        self.get(UnifiedFieldType::VolumetricHeatSource)
+    }
 }
 
 /// Type-safe mutable field accessor
@@ -79,6 +85,11 @@ impl<'a> FieldAccessorMut<'a> {
     pub fn density_mut(&mut self) -> ArrayViewMut3<'_, f64> {
         self.get_mut(UnifiedFieldType::Density)
     }
+
+    /// Get the volumetric heat-source field mutably.
+    pub fn volumetric_heat_source_mut(&mut self) -> ArrayViewMut3<'_, f64> {
+        self.get_mut(UnifiedFieldType::VolumetricHeatSource)
+    }
 }
 
 // Migration helper removed - composable module has been deprecated and removed
@@ -112,6 +123,7 @@ mod tests {
         assert_eq!(UnifiedFieldType::BubbleVelocity.index(), 3);
         assert_eq!(UnifiedFieldType::Density.index(), 4);
         assert_eq!(UnifiedFieldType::SoundSpeed.index(), 5);
+        assert_eq!(UnifiedFieldType::VolumetricHeatSource.index(), 17);
     }
 
     #[test]
@@ -124,6 +136,10 @@ mod tests {
             UnifiedFieldType::from_index(1),
             Some(UnifiedFieldType::Temperature)
         );
+        assert_eq!(
+            UnifiedFieldType::from_index(17),
+            Some(UnifiedFieldType::VolumetricHeatSource)
+        );
         assert_eq!(UnifiedFieldType::from_index(100), None);
     }
 
@@ -134,6 +150,10 @@ mod tests {
             (UnifiedFieldType::Temperature, "Temperature (K)"),
             (UnifiedFieldType::LightFluence, "Light Fluence (J/m²)"),
             (UnifiedFieldType::BubbleRadius, "Bubble Radius (m)"),
+            (
+                UnifiedFieldType::VolumetricHeatSource,
+                "Volumetric Heat Source (W/m³)",
+            ),
         ];
 
         for (field_type, expected_display) in test_cases {

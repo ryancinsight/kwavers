@@ -1,9 +1,9 @@
 use crate::plugin::{PluginContext, PluginMetadata, PluginState};
-use kwavers_core::error::KwaversResult;
+use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use kwavers_physics::thermal::diffusion::ThermalDiffusionConfig;
+use kwavers_physics::thermal::{VolumetricHeatSource, diffusion::ThermalDiffusionConfig};
 use leto::Array4;
 
 use super::solver::ThermalDiffusionSolver;
@@ -47,7 +47,7 @@ impl crate::plugin::Plugin for ThermalDiffusionPlugin {
     }
 
     fn required_fields(&self) -> Vec<UnifiedFieldType> {
-        vec![]
+        vec![UnifiedFieldType::VolumetricHeatSource]
     }
 
     fn provided_fields(&self) -> Vec<UnifiedFieldType> {
@@ -70,22 +70,36 @@ impl crate::plugin::Plugin for ThermalDiffusionPlugin {
         _context: &mut PluginContext<'_>,
     ) -> KwaversResult<()> {
         if let Some(ref mut solver) = self.solver {
-            // No external deposition is available through this plugin. The
-            // previous `Temperature as usize + 1` index resolves to
-            // `UnifiedFieldType::BubbleRadius` (index 2), so the plugin was
-            // feeding a bubble-radius field in metres to a heat-source slot.
-            // `UnifiedFieldType` has no volumetric-heat-source variant; adding
-            // one is tracked as its own item, and until then this path runs
-            // diffusion and perfusion only rather than a wrong source.
-            solver.update(medium, grid, dt, None)?;
+            let source_field = fields
+                .index_axis::<3>(0, UnifiedFieldType::VolumetricHeatSource.index())
+                .map_err(|_| {
+                    KwaversError::DimensionMismatch(format!(
+                        "thermal diffusion plugin requires field axis index {} but fields has {} axes",
+                        UnifiedFieldType::VolumetricHeatSource.index(),
+                        fields.shape()[0]
+                    ))
+                })?;
 
-            let temp_idx = UnifiedFieldType::Temperature as usize;
-            if fields.shape()[0] > temp_idx {
-                let mut temp_field = fields
-                    .index_axis_mut::<3>(0, temp_idx)
-                    .expect("invariant: temperature field axis index in range");
-                temp_field.assign(solver.temperature());
-            }
+            // Keep the borrowed field view inside this scope so the mutable
+            // temperature write below cannot alias the deposition input.
+            solver.update(
+                medium,
+                grid,
+                dt,
+                Some(VolumetricHeatSource::from_base(source_field)),
+            )?;
+
+            let field_count = fields.shape()[0];
+            let mut temp_field = fields
+                .index_axis_mut::<3>(0, UnifiedFieldType::Temperature.index())
+                .map_err(|_| {
+                    KwaversError::DimensionMismatch(format!(
+                        "thermal diffusion plugin requires field axis index {} but fields has {} axes",
+                        UnifiedFieldType::Temperature.index(),
+                        field_count
+                    ))
+                })?;
+            temp_field.assign(solver.temperature());
         }
 
         Ok(())
@@ -112,10 +126,12 @@ impl crate::plugin::Plugin for ThermalDiffusionPlugin {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::plugin::Plugin;
+    use crate::plugin::test_support::{NullBoundary, make_context, null_plugin_fields};
     use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
     use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_K;
-    use kwavers_medium::HomogeneousMedium;
-    use leto::Array3;
+    use kwavers_medium::{HomogeneousMedium, ThermalProperties};
+    use leto::{Array3, Array4};
 
     #[test]
     fn test_thermal_diffusion_creation() {
@@ -150,5 +166,47 @@ mod tests {
         let final_temp = solver.temperature();
         assert!(final_temp[[8, 8, 8]] < 320.0);
         assert!(final_temp[[7, 8, 8]] > BODY_TEMPERATURE_K);
+    }
+
+    #[test]
+    fn plugin_consumes_volumetric_heat_source_field() {
+        let grid = Grid::new(3, 3, 1, 1.0, 1.0, 1.0).unwrap();
+        let medium =
+            HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, &grid);
+        let config = ThermalDiffusionConfig {
+            arterial_temperature: 310.0,
+            enable_bioheat: false,
+            enable_hyperbolic: false,
+            ..Default::default()
+        };
+        let mut plugin = ThermalDiffusionPlugin::new(config);
+        plugin.initialize(&grid, &medium).unwrap();
+
+        assert_eq!(
+            plugin.required_fields(),
+            vec![UnifiedFieldType::VolumetricHeatSource]
+        );
+
+        let mut fields = Array4::zeros((UnifiedFieldType::COUNT, grid.nx, grid.ny, grid.nz));
+        let rho = kwavers_medium::density_at(&medium, 1.0, 1.0, 0.0, &grid);
+        let cp = medium.specific_heat(1.0, 1.0, 0.0, &grid);
+        let heating_rate = 5.0;
+        fields[[UnifiedFieldType::VolumetricHeatSource.index(), 1, 1, 0]] = heating_rate * rho * cp;
+
+        let extra_fields = null_plugin_fields(&grid);
+        let mut boundary = NullBoundary;
+        let mut context = make_context(&extra_fields, &mut boundary);
+        plugin
+            .update(&mut fields, &grid, &medium, 2.0, 0.0, &mut context)
+            .unwrap();
+
+        let expected = 310.0 + heating_rate * 2.0;
+        let actual = fields[[UnifiedFieldType::Temperature.index(), 1, 1, 0]];
+        let tolerance = expected.abs() * 4.0 * f64::EPSILON;
+        assert!((actual - expected).abs() <= tolerance);
+        assert_eq!(
+            fields[[UnifiedFieldType::Temperature.index(), 0, 0, 0]],
+            310.0
+        );
     }
 }

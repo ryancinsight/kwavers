@@ -29,11 +29,13 @@ pub enum UnifiedFieldType {
     StressYZ = 14,
     LightFluence = 15,
     ChemicalConcentration = 16,
+    /// Volumetric thermal deposition in watts per cubic metre.
+    VolumetricHeatSource = 17,
 }
 
 impl UnifiedFieldType {
     /// Total number of field types - used for sizing arrays
-    pub const COUNT: usize = 17;
+    pub const COUNT: usize = 18;
 
     /// Get the array index for this field type
     /// Now simply returns the enum's numeric value for O(1) access
@@ -63,6 +65,9 @@ impl UnifiedFieldType {
             Self::StressYZ => field_indices::STRESS_YZ_IDX,
             Self::LightFluence => field_indices::LIGHT_IDX,
             Self::ChemicalConcentration => field_indices::CHEMICAL_IDX,
+            // This field was added to the unified layout and has no slot in
+            // the historical field-index table.
+            Self::VolumetricHeatSource => Self::VolumetricHeatSource.index(),
         }
     }
 
@@ -87,6 +92,7 @@ impl UnifiedFieldType {
             Self::StressYZ => "Stress YZ",
             Self::LightFluence => "Light Fluence",
             Self::ChemicalConcentration => "Chemical Concentration",
+            Self::VolumetricHeatSource => "Volumetric Heat Source",
         }
     }
 
@@ -109,6 +115,7 @@ impl UnifiedFieldType {
             | Self::StressYZ => "Pa",
             Self::LightFluence => "J/m²",
             Self::ChemicalConcentration => "mol/m³",
+            Self::VolumetricHeatSource => "W/m³",
         }
     }
 
@@ -133,6 +140,7 @@ impl UnifiedFieldType {
             Self::StressYZ,
             Self::LightFluence,
             Self::ChemicalConcentration,
+            Self::VolumetricHeatSource,
         ]
     }
 
@@ -140,23 +148,24 @@ impl UnifiedFieldType {
     #[must_use]
     pub fn from_index(index: usize) -> Option<Self> {
         match index {
-            field_indices::PRESSURE_IDX => Some(Self::Pressure),
-            field_indices::TEMPERATURE_IDX => Some(Self::Temperature),
-            field_indices::BUBBLE_RADIUS_IDX => Some(Self::BubbleRadius),
-            field_indices::BUBBLE_VELOCITY_IDX => Some(Self::BubbleVelocity),
-            field_indices::DENSITY_IDX => Some(Self::Density),
-            field_indices::SOUND_SPEED_IDX => Some(Self::SoundSpeed),
-            field_indices::VX_IDX => Some(Self::VelocityX),
-            field_indices::VY_IDX => Some(Self::VelocityY),
-            field_indices::VZ_IDX => Some(Self::VelocityZ),
-            field_indices::STRESS_XX_IDX => Some(Self::StressXX),
-            field_indices::STRESS_YY_IDX => Some(Self::StressYY),
-            field_indices::STRESS_ZZ_IDX => Some(Self::StressZZ),
-            field_indices::STRESS_XY_IDX => Some(Self::StressXY),
-            field_indices::STRESS_XZ_IDX => Some(Self::StressXZ),
-            field_indices::STRESS_YZ_IDX => Some(Self::StressYZ),
-            field_indices::LIGHT_IDX => Some(Self::LightFluence),
-            field_indices::CHEMICAL_IDX => Some(Self::ChemicalConcentration),
+            0 => Some(Self::Pressure),
+            1 => Some(Self::Temperature),
+            2 => Some(Self::BubbleRadius),
+            3 => Some(Self::BubbleVelocity),
+            4 => Some(Self::Density),
+            5 => Some(Self::SoundSpeed),
+            6 => Some(Self::VelocityX),
+            7 => Some(Self::VelocityY),
+            8 => Some(Self::VelocityZ),
+            9 => Some(Self::StressXX),
+            10 => Some(Self::StressYY),
+            11 => Some(Self::StressZZ),
+            12 => Some(Self::StressXY),
+            13 => Some(Self::StressXZ),
+            14 => Some(Self::StressYZ),
+            15 => Some(Self::LightFluence),
+            16 => Some(Self::ChemicalConcentration),
+            17 => Some(Self::VolumetricHeatSource),
             _ => None,
         }
     }
