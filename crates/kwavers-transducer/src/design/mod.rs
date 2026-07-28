@@ -19,6 +19,7 @@ pub use propagation::{
     propagate_focused_linear_array, FocusedLinearArrayPropagationSpec, FocusedPressureMap,
 };
 
+use aequitas::systems::si::quantities::{Frequency, Length, Velocity};
 use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
 
 /// Pitch fraction of wavelength below which a steered array is grating-lobe-free
@@ -45,20 +46,20 @@ pub enum ChannelWiring {
 
 /// Constraints for synthesizing an array design from an aperture + frequency.
 ///
-/// `aperture_x_m` is the short / elevation axis, `aperture_y_m` the long /
+/// `aperture_x` is the short / elevation axis, `aperture_y` the long /
 /// steering axis. Set an aperture to `0` to collapse that axis to a single
-/// element (e.g. a 1-D linear array is `aperture_x_m = element height`,
+/// element (e.g. a 1-D linear array is `aperture_x = element height`,
 /// `el_x = 1`).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ApertureDesignSpec {
     /// Overall aperture on the short / elevation axis \`m`.
-    pub aperture_x_m: f64,
+    pub aperture_x: Length,
     /// Overall aperture on the long / steering axis \`m`.
-    pub aperture_y_m: f64,
+    pub aperture_y: Length,
     /// Operating frequency \`Hz`.
-    pub frequency_hz: f64,
+    pub frequency: Frequency,
     /// Medium sound speed \[m/s].
-    pub sound_speed_m_s: f64,
+    pub sound_speed: Velocity,
     /// Maximum centre-to-centre pitch as a fraction of wavelength. `0.5` (λ/2)
     /// is grating-lobe-free over the full steering range; `1.0` (λ) is lobe-free
     /// only near broadside but halves the channel count.
@@ -72,8 +73,8 @@ pub struct ApertureDesignSpec {
 impl ApertureDesignSpec {
     /// Wavelength in the medium \`m`.
     #[must_use]
-    pub fn wavelength_m(&self) -> f64 {
-        self.sound_speed_m_s / self.frequency_hz
+    pub fn wavelength(&self) -> Length {
+        Length::from_base(self.sound_speed.into_base() / self.frequency.into_base())
     }
 }
 
@@ -85,19 +86,19 @@ pub struct ArrayDesign {
     /// Element count on the long / steering axis.
     pub ny: usize,
     /// Centre-to-centre pitch on `x` \`m` (`≤ max_pitch`).
-    pub pitch_x_m: f64,
+    pub pitch_x: Length,
     /// Centre-to-centre pitch on `y` \`m` (`≤ max_pitch`).
-    pub pitch_y_m: f64,
+    pub pitch_y: Length,
     /// Element extent on `x` \`m` (`pitch_x − kerf_x`).
-    pub element_x_m: f64,
+    pub element_x: Length,
     /// Element extent on `y` \`m` (`pitch_y − kerf_y`).
-    pub element_y_m: f64,
+    pub element_y: Length,
     /// Kerf (inter-element gap) on `x` \`m`.
-    pub kerf_x_m: f64,
+    pub kerf_x: Length,
     /// Kerf (inter-element gap) on `y` \`m`.
-    pub kerf_y_m: f64,
+    pub kerf_y: Length,
     /// Wavelength used for the design \`m`.
-    pub wavelength_m: f64,
+    pub wavelength: Length,
     /// Number of independently-driven channels after wiring.
     pub n_channels: usize,
     /// Wiring used.
@@ -115,22 +116,22 @@ impl ArrayDesign {
 
     /// Realized aperture on `x` \`m` (`nx · pitch_x`).
     #[must_use]
-    pub fn aperture_x_m(&self) -> f64 {
-        self.nx as f64 * self.pitch_x_m
+    pub fn aperture_x(&self) -> Length {
+        Length::from_base(self.nx as f64 * self.pitch_x.into_base())
     }
 
     /// Realized aperture on `y` \`m` (`ny · pitch_y`).
     #[must_use]
-    pub fn aperture_y_m(&self) -> f64 {
-        self.ny as f64 * self.pitch_y_m
+    pub fn aperture_y(&self) -> Length {
+        Length::from_base(self.ny as f64 * self.pitch_y.into_base())
     }
 
     /// Areal fill factor (active element area / pitch cell area).
     #[must_use]
     pub fn fill_factor(&self) -> f64 {
-        let cell = self.pitch_x_m * self.pitch_y_m;
+        let cell = self.pitch_x.into_base() * self.pitch_y.into_base();
         if cell > 0.0 {
-            (self.element_x_m * self.element_y_m) / cell
+            (self.element_x.into_base() * self.element_y.into_base()) / cell
         } else {
             0.0
         }
@@ -148,21 +149,22 @@ impl ArrayDesign {
     }
 
     /// Element-centre coordinates \`m` for the synthesized layout, centred on
-    /// `center`. The array lies in the `x`–`y` plane at constant `z = center[2]`;
+    /// `center`. The array lies in the `x`–`y` plane at constant z equal to the
+    /// z-coordinate of `center`;
     /// element `(i, j)` is at flat index `idx = i·ny + j` (`i ∈ 0..nx` short axis,
     /// `j ∈ 0..ny` long axis), matching [`Self::channel_of_index`]. This is the
     /// bridge from an abstract design to the concrete geometry consumed by the
     /// source factory, beamformer (`&[[f64; 3]]`), and `KWaveArray`.
     #[must_use]
-    pub fn element_positions(&self, center: [f64; 3]) -> Vec<[f64; 3]> {
-        let x0 = center[0] - 0.5 * (self.nx as f64 - 1.0) * self.pitch_x_m;
-        let y0 = center[1] - 0.5 * (self.ny as f64 - 1.0) * self.pitch_y_m;
+    pub fn element_positions(&self, center: [Length; 3]) -> Vec<[Length; 3]> {
+        let x0 = center[0].into_base() - 0.5 * (self.nx as f64 - 1.0) * self.pitch_x.into_base();
+        let y0 = center[1].into_base() - 0.5 * (self.ny as f64 - 1.0) * self.pitch_y.into_base();
         let mut out = Vec::with_capacity(self.n_elements());
         for i in 0..self.nx {
             for j in 0..self.ny {
                 out.push([
-                    (i as f64).mul_add(self.pitch_x_m, x0),
-                    (j as f64).mul_add(self.pitch_y_m, y0),
+                    Length::from_base((i as f64).mul_add(self.pitch_x.into_base(), x0)),
+                    Length::from_base((j as f64).mul_add(self.pitch_y.into_base(), y0)),
                     center[2],
                 ]);
             }
@@ -176,18 +178,30 @@ impl ArrayDesign {
     /// (`y`) steering axis at the short-axis centre; for `RowsAsChannels`, `nx`
     /// points along `x`; for `PerElement` it equals [`Self::element_positions`].
     #[must_use]
-    pub fn channel_positions(&self, center: [f64; 3]) -> Vec<[f64; 3]> {
-        let x0 = center[0] - 0.5 * (self.nx as f64 - 1.0) * self.pitch_x_m;
-        let y0 = center[1] - 0.5 * (self.ny as f64 - 1.0) * self.pitch_y_m;
+    pub fn channel_positions(&self, center: [Length; 3]) -> Vec<[Length; 3]> {
+        let x0 = center[0].into_base() - 0.5 * (self.nx as f64 - 1.0) * self.pitch_x.into_base();
+        let y0 = center[1].into_base() - 0.5 * (self.ny as f64 - 1.0) * self.pitch_y.into_base();
         match self.wiring {
             ChannelWiring::PerElement => self.element_positions(center),
             // One channel per long-axis position j; centroid over the short axis is
             // the array centre in x.
             ChannelWiring::ColumnsAsChannels => (0..self.ny)
-                .map(|j| [center[0], (j as f64).mul_add(self.pitch_y_m, y0), center[2]])
+                .map(|j| {
+                    [
+                        center[0],
+                        Length::from_base((j as f64).mul_add(self.pitch_y.into_base(), y0)),
+                        center[2],
+                    ]
+                })
                 .collect(),
             ChannelWiring::RowsAsChannels => (0..self.nx)
-                .map(|i| [(i as f64).mul_add(self.pitch_x_m, x0), center[1], center[2]])
+                .map(|i| {
+                    [
+                        Length::from_base((i as f64).mul_add(self.pitch_x.into_base(), x0)),
+                        center[1],
+                        center[2],
+                    ]
+                })
                 .collect(),
         }
     }
@@ -196,8 +210,8 @@ impl ArrayDesign {
 /// Whether a centre-to-centre `pitch` is grating-lobe-free at `wavelength`
 /// (the λ/2 spatial-Nyquist criterion).
 #[must_use]
-pub fn is_grating_lobe_free(pitch_m: f64, wavelength_m: f64) -> bool {
-    pitch_m <= NYQUIST_PITCH_FRACTION * wavelength_m
+pub fn is_grating_lobe_free(pitch: Length, wavelength: Length) -> bool {
+    pitch.into_base() <= NYQUIST_PITCH_FRACTION * wavelength.into_base()
 }
 
 /// Element count and realized pitch on one axis: the smallest `n ≥ 1` whose
@@ -225,11 +239,13 @@ pub fn design_array(spec: &ApertureDesignSpec) -> KwaversResult<ArrayDesign> {
         })
     };
     // `!is_finite() || <= 0` rejects NaN/±inf as well as non-positive values.
-    if !spec.frequency_hz.is_finite() || spec.frequency_hz <= 0.0 {
-        return Err(invalid("frequency_hz", spec.frequency_hz, "> 0"));
+    let frequency = spec.frequency.into_base();
+    let sound_speed = spec.sound_speed.into_base();
+    if !frequency.is_finite() || frequency <= 0.0 {
+        return Err(invalid("frequency", frequency, "> 0"));
     }
-    if !spec.sound_speed_m_s.is_finite() || spec.sound_speed_m_s <= 0.0 {
-        return Err(invalid("sound_speed_m_s", spec.sound_speed_m_s, "> 0"));
+    if !sound_speed.is_finite() || sound_speed <= 0.0 {
+        return Err(invalid("sound_speed", sound_speed, "> 0"));
     }
     if !(spec.max_pitch_fraction > 0.0 && spec.max_pitch_fraction <= 2.0) {
         return Err(invalid(
@@ -242,10 +258,11 @@ pub fn design_array(spec: &ApertureDesignSpec) -> KwaversResult<ArrayDesign> {
         return Err(invalid("kerf_fraction", spec.kerf_fraction, "in [0, 0.95]"));
     }
 
-    let wavelength_m = spec.wavelength_m();
+    let wavelength = spec.wavelength();
+    let wavelength_m = wavelength.into_base();
     let max_pitch_m = spec.max_pitch_fraction * wavelength_m;
-    let (nx, pitch_x_m) = resolve_axis(spec.aperture_x_m, max_pitch_m);
-    let (ny, pitch_y_m) = resolve_axis(spec.aperture_y_m, max_pitch_m);
+    let (nx, pitch_x_m) = resolve_axis(spec.aperture_x.into_base(), max_pitch_m);
+    let (ny, pitch_y_m) = resolve_axis(spec.aperture_y.into_base(), max_pitch_m);
     let kerf_x_m = spec.kerf_fraction * pitch_x_m;
     let kerf_y_m = spec.kerf_fraction * pitch_y_m;
 
@@ -265,29 +282,30 @@ pub fn design_array(spec: &ApertureDesignSpec) -> KwaversResult<ArrayDesign> {
     Ok(ArrayDesign {
         nx,
         ny,
-        pitch_x_m,
-        pitch_y_m,
-        element_x_m: pitch_x_m - kerf_x_m,
-        element_y_m: pitch_y_m - kerf_y_m,
-        kerf_x_m,
-        kerf_y_m,
-        wavelength_m,
+        pitch_x: Length::from_base(pitch_x_m),
+        pitch_y: Length::from_base(pitch_y_m),
+        element_x: Length::from_base(pitch_x_m - kerf_x_m),
+        element_y: Length::from_base(pitch_y_m - kerf_y_m),
+        kerf_x: Length::from_base(kerf_x_m),
+        kerf_y: Length::from_base(kerf_y_m),
+        wavelength,
         n_channels,
         wiring: spec.wiring,
-        grating_lobe_free: is_grating_lobe_free(steered_pitch_m, wavelength_m),
+        grating_lobe_free: is_grating_lobe_free(Length::from_base(steered_pitch_m), wavelength),
     })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use aequitas::systems::si::quantities::{Frequency, Length, Velocity};
 
     fn brain_spec() -> ApertureDesignSpec {
         ApertureDesignSpec {
-            aperture_x_m: 5.0e-3,  // 5 mm elevation
-            aperture_y_m: 20.0e-3, // 20 mm long axis
-            frequency_hz: 4.0e6,
-            sound_speed_m_s: 1560.0, // brain
+            aperture_x: Length::from_base(5.0e-3),  // 5 mm elevation
+            aperture_y: Length::from_base(20.0e-3), // 20 mm long axis
+            frequency: Frequency::from_base(4.0e6),
+            sound_speed: Velocity::from_base(1560.0), // brain
             max_pitch_fraction: NYQUIST_PITCH_FRACTION,
             kerf_fraction: DEFAULT_KERF_FRACTION,
             wiring: ChannelWiring::ColumnsAsChannels,
@@ -300,15 +318,15 @@ mod tests {
         let lambda: f64 = 1560.0 / 4.0e6; // 390 µm
         let max_pitch = 0.5 * lambda; // 195 µm
                                       // Pitch never exceeds the λ/2 budget and is grating-lobe-free.
-        assert!(d.pitch_y_m <= max_pitch + 1e-12, "pitch_y {}", d.pitch_y_m);
-        assert!(d.pitch_x_m <= max_pitch + 1e-12);
+        assert!(d.pitch_y.into_base() <= max_pitch + 1e-12);
+        assert!(d.pitch_x.into_base() <= max_pitch + 1e-12);
         assert!(d.grating_lobe_free);
         // ny = ceil(20mm / 195µm) = 103; the realized aperture matches.
         assert_eq!(d.ny, (20.0e-3 / max_pitch).ceil() as usize);
-        assert!((d.aperture_y_m() - 20.0e-3).abs() < 1e-9);
+        assert!((d.aperture_y().into_base() - 20.0e-3).abs() < 1e-9);
         // Kerf is 10% of pitch; element = pitch − kerf.
-        assert!((d.kerf_y_m - 0.1 * d.pitch_y_m).abs() < 1e-15);
-        assert!((d.element_y_m - 0.9 * d.pitch_y_m).abs() < 1e-15);
+        assert!((d.kerf_y.into_base() - 0.1 * d.pitch_y.into_base()).abs() < 1e-15);
+        assert!((d.element_y.into_base() - 0.9 * d.pitch_y.into_base()).abs() < 1e-15);
         assert!((d.fill_factor() - 0.81).abs() < 1e-9); // 0.9 × 0.9
     }
 
@@ -336,7 +354,7 @@ mod tests {
     #[test]
     fn zero_aperture_axis_collapses_to_single_element() {
         let mut s = brain_spec();
-        s.aperture_x_m = 0.0; // 1-D linear
+        s.aperture_x = Length::from_base(0.0); // 1-D linear
         let d = design_array(&s).unwrap();
         assert_eq!(d.nx, 1);
     }
@@ -344,7 +362,11 @@ mod tests {
     #[test]
     fn element_positions_span_aperture_and_match_pitch() {
         let d = design_array(&brain_spec()).unwrap();
-        let center = [0.0, 0.0, 0.030];
+        let center = [
+            Length::from_base(0.0),
+            Length::from_base(0.0),
+            Length::from_base(0.030),
+        ];
         let pos = d.element_positions(center);
         assert_eq!(pos.len(), d.n_elements());
 
@@ -352,43 +374,47 @@ mod tests {
         let (mut xmin, mut xmax) = (f64::INFINITY, f64::NEG_INFINITY);
         let (mut ymin, mut ymax) = (f64::INFINITY, f64::NEG_INFINITY);
         for p in &pos {
-            assert!((p[2] - center[2]).abs() < 1e-15, "elements lie at z=center");
-            xmin = xmin.min(p[0]);
-            xmax = xmax.max(p[0]);
-            ymin = ymin.min(p[1]);
-            ymax = ymax.max(p[1]);
+            assert!((p[2].into_base() - center[2].into_base()).abs() < 1e-15);
+            xmin = xmin.min(p[0].into_base());
+            xmax = xmax.max(p[0].into_base());
+            ymin = ymin.min(p[1].into_base());
+            ymax = ymax.max(p[1].into_base());
         }
-        assert!((0.5 * (xmin + xmax) - center[0]).abs() < 1e-12);
-        assert!((0.5 * (ymin + ymax) - center[1]).abs() < 1e-12);
-        assert!((xmax - xmin - (d.nx as f64 - 1.0) * d.pitch_x_m).abs() < 1e-12);
-        assert!((ymax - ymin - (d.ny as f64 - 1.0) * d.pitch_y_m).abs() < 1e-12);
+        assert!((0.5 * (xmin + xmax) - center[0].into_base()).abs() < 1e-12);
+        assert!((0.5 * (ymin + ymax) - center[1].into_base()).abs() < 1e-12);
+        assert!((xmax - xmin - (d.nx as f64 - 1.0) * d.pitch_x.into_base()).abs() < 1e-12);
+        assert!((ymax - ymin - (d.ny as f64 - 1.0) * d.pitch_y.into_base()).abs() < 1e-12);
 
         // Adjacent long-axis neighbours (idx and idx+1) are one pitch_y apart.
-        let step = pos[1][1] - pos[0][1];
-        assert!((step - d.pitch_y_m).abs() < 1e-12);
+        let step = pos[1][1].into_base() - pos[0][1].into_base();
+        assert!((step - d.pitch_y.into_base()).abs() < 1e-12);
     }
 
     #[test]
     fn channel_positions_collapse_columns_to_a_linear_array() {
         let d = design_array(&brain_spec()).unwrap(); // ColumnsAsChannels
-        let center = [0.0, 0.0, 0.030];
+        let center = [
+            Length::from_base(0.0),
+            Length::from_base(0.0),
+            Length::from_base(0.030),
+        ];
         let chan = d.channel_positions(center);
         assert_eq!(chan.len(), d.n_channels);
         assert_eq!(chan.len(), d.ny);
 
         // All channels sit at the short-axis centre (x = center) and step by pitch_y.
         for c in &chan {
-            assert!((c[0] - center[0]).abs() < 1e-12, "channel x == center x");
+            assert!((c[0].into_base() - center[0].into_base()).abs() < 1e-12);
         }
-        let step = chan[1][1] - chan[0][1];
-        assert!((step - d.pitch_y_m).abs() < 1e-12);
+        let step = chan[1][1].into_base() - chan[0][1].into_base();
+        assert!((step - d.pitch_y.into_base()).abs() < 1e-12);
 
         // Each channel centroid equals the mean of its member elements' positions.
         let elems = d.element_positions(center);
         for (idx, e) in elems.iter().enumerate() {
             let c = d.channel_of_index(idx);
             assert!(
-                (e[1] - chan[c][1]).abs() < 1e-12,
+                (e[1].into_base() - chan[c][1].into_base()).abs() < 1e-12,
                 "element y matches its channel"
             );
         }
@@ -397,7 +423,7 @@ mod tests {
     #[test]
     fn rejects_bad_inputs() {
         let mut s = brain_spec();
-        s.frequency_hz = 0.0;
+        s.frequency = Frequency::from_base(0.0);
         assert!(design_array(&s).is_err());
         let mut s = brain_spec();
         s.kerf_fraction = 1.5;

@@ -227,6 +227,9 @@ fn propagate_beam_step(
     step: &KwaversBeamStep,
     budget: &EnergyBudgetReport,
 ) -> Result<BeamPropagationScalars, String> {
+    use aequitas::systems::si::quantities::{
+        AcousticImpedance, ElectricCurrent, Frequency, Length, PressurePerElectricCurrent, Velocity,
+    };
     use kwavers_transducer::{
         design_array, propagate_focused_linear_array, ApertureDesignSpec, ChannelWiring,
         FocusedLinearArrayPropagationSpec, DEFAULT_KERF_FRACTION,
@@ -234,10 +237,10 @@ fn propagate_beam_step(
 
     let pitch_fraction = (step.pitch_m / step.wavelength_m).clamp(1e-9, 2.0);
     let design = design_array(&ApertureDesignSpec {
-        aperture_x_m: 0.0,
-        aperture_y_m: step.aperture_m + step.pitch_m,
-        frequency_hz: step.frequency_hz,
-        sound_speed_m_s: step.sound_speed_m_s,
+        aperture_x: Length::from_base(0.0),
+        aperture_y: Length::from_base(step.aperture_m + step.pitch_m),
+        frequency: Frequency::from_base(step.frequency_hz),
+        sound_speed: Velocity::from_base(step.sound_speed_m_s),
         max_pitch_fraction: pitch_fraction,
         kerf_fraction: DEFAULT_KERF_FRACTION,
         wiring: ChannelWiring::ColumnsAsChannels,
@@ -245,23 +248,33 @@ fn propagate_beam_step(
     .map_err(|e| format!("kwavers-transducer design_array: {e}"))?;
     let map = propagate_focused_linear_array(&FocusedLinearArrayPropagationSpec {
         design,
-        center_m: [0.0, 0.0, 0.0],
-        focus_m: [0.0, 0.0, step.focal_m],
-        frequency_hz: step.frequency_hz,
-        sound_speed_m_s: step.sound_speed_m_s,
-        per_channel_peak_current_a: per_element_peak_i_a(budget),
-        pressure_per_amp_pa: KWVERS_ARTICLE_FOCAL_PRESSURE_PER_AMP_PA,
-        acoustic_impedance_rayl: PHYSICS_WATER_Z0_RAYL,
+        center: [
+            Length::from_base(0.0),
+            Length::from_base(0.0),
+            Length::from_base(0.0),
+        ],
+        focus: [
+            Length::from_base(0.0),
+            Length::from_base(0.0),
+            Length::from_base(step.focal_m),
+        ],
+        frequency: Frequency::from_base(step.frequency_hz),
+        sound_speed: Velocity::from_base(step.sound_speed_m_s),
+        per_channel_peak_current: ElectricCurrent::from_base(per_element_peak_i_a(budget)),
+        pressure_per_current: PressurePerElectricCurrent::from_base(
+            KWVERS_ARTICLE_FOCAL_PRESSURE_PER_AMP_PA,
+        ),
+        acoustic_impedance: AcousticImpedance::from_base(PHYSICS_WATER_Z0_RAYL),
     })
     .map_err(|e| format!("kwavers-transducer propagation: {e}"))?;
     Ok(BeamPropagationScalars {
-        focal_pressure_pa: map.focal_pressure_pa,
+        focal_pressure_pa: map.focal_pressure.into_base(),
         grating_lobe_free: map.grating_lobe_free,
         in_far_field: map.in_far_field,
-        isppa_w_cm2: map.isppa_w_cm2,
+        isppa_w_cm2: map.isppa.into_base() / UNIT_W_CM2_PER_W_M2,
         mechanical_index: map.mechanical_index,
-        axial_extent_mm: map.axial_extent_mm,
-        lateral_extent_mm: map.lateral_extent_mm,
+        axial_extent_mm: map.axial_extent.into_base() * UNIT_MM_PER_M,
+        lateral_extent_mm: map.lateral_extent.into_base() * UNIT_MM_PER_M,
     })
 }
 

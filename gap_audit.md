@@ -134,6 +134,18 @@ findings (`assign_op_pattern` twice and `needless_range_loop`), outside this
 slice; the former `mnemosyne-local` page-module blocker is resolved in the
 current shared dependency graph.
 
+`KWAVERS-AEQ-MET-21` is implemented on the current branch. The public
+transducer array-design and focused-propagation boundaries now carry Aequitas
+`Length`, `Frequency`, `Velocity`, `ElectricCurrent`,
+`PressurePerElectricCurrent`, `AcousticImpedance`, `Pressure`, and `Intensity`.
+Array positions remain typed through propagation; scalar extraction is limited
+to wavelength/phase/formula calculations, width searches, validation, and the
+driver's explicit report conversion. The transducer package check passes;
+Nextest passes 218/218 with one skip; doctests pass 2/2 with six ignored;
+warning-denied Clippy and Rustdoc pass. The driver `kwavers` feature check and
+Nextest pass 489/489; its doctest target has no tests, and its warning-denied
+Clippy/Rustdoc gates pass. See [ADR 059](docs/ADR/059-transducer-design-quantities.md).
+
 `KWAVERS-AEQ-MET-06` is now resolved. Thermal material constructors,
 accessors, temperature-dependent properties, therapy construction, and the
 Pennes material consumer use Aequitas thermal quantities; `MassDensityRate`
@@ -144,7 +156,7 @@ checks for `kwavers-medium`, `kwavers-physics`, and `kwavers-simulation`;
 passes 361/361. The Aequitas provider already supplies the required rate
 dimension; no new consumer-owned wrapper or provider dimension was added.
 
-MET-15 through MET-20 are closed. The next public inventory re-audit will
+MET-15 through MET-21 are closed. The next public inventory re-audit will
 determine whether another unit-bearing consumer contract remains. The
 shared-overlay duplicate
 Aequitas worktree-package collision can still block a main-tree Clippy
@@ -184,6 +196,7 @@ provider-owned mass-density-rate quantity up to the scalar numerical boundary.
 | `KWAVERS-AEQ-MET-18` | `kwavers-therapy/src/therapy/therapy_integration/intensity_tracker/tracker.rs` exposed `spta_w_cm2()` and `peak_intensity_w_cm2()` as unit-suffixed raw `f64` accessors after the underlying metrics became typed `Intensity`. | Replace the raw unit-suffixed accessors with canonical typed intensity accessors, migrate in-repository tests/callers, and retain W/cm² conversion only at explicit presentation or unit-conversion boundaries. | Kwavers, Aequitas | **RESOLVED in `596ae06a7`.** `spta()` and `peak_intensity()` return canonical SI `Intensity`; the legacy accessor scan is empty, and W/cm² conversion remains only in the explicit unit-conversion test boundary. Focused Nextest passes 349/349 with one skip and three slow tests; doctests pass 8/8 with one ignored; warning-denied Clippy and Rustdoc pass. See [ADR 056](docs/ADR/056-typed-intensity-tracker-accessors.md). |
 | `KWAVERS-AEQ-MET-19` | `kwavers-therapy/src/therapy/clinical_scenarios/{scenario,pulse}.rs` exposed scenario frequency, peak pressures, treatment duration, focal volume, pulse timing, PRF, and pulse-average intensity as unit-suffixed scalar fields/results. | Type the public scenario and pulse contracts with Aequitas `Frequency`, `Pressure`, `Time`, `Volume`, and `Intensity`; keep mechanical index, duty cycle, and cavitation probability dimensionless and extract scalars only inside their formulas. | Kwavers, Aequitas | **RESOLVED in this increment.** `HistotripsyScenario` and `PulsePattern` now expose typed physical quantities; patterns without PRF return `None`; formula boundaries alone extract SI scalars. Focused package check passes; Nextest passes 349/349 with one skip and four slow tests; doctests pass 8/8 with one ignored; warning-denied Clippy and Rustdoc pass. See [ADR 057](docs/ADR/057-clinical-scenario-quantities.md). |
 | `KWAVERS-AEQ-MET-20` | `kwavers-physics/src/acoustics/therapy/neuromodulation/protocol.rs` exposed pulse-train frequency, duration, pressure, density, sound speed, dosimetry intensities, total time, and ITRUSST temperature rise as unit-documented scalars. | Type public protocol and dosimetry contracts with Aequitas `Frequency`, `Time`, `Pressure`, `MassDensity`, `Velocity`, `Intensity`, and `TemperatureDifference`; keep MI, duty cycle, safety booleans, and CEM43 model thresholds dimensionless/consumer-semantic and extract scalars only at FDA and numerical formula boundaries. | Kwavers, Aequitas | **RESOLVED in `feat(kwavers-physics): Type neuromodulation metrics`.** Public fields/results and formula inputs are typed; unit-suffixed protocol names are removed; formula-only scalar extraction preserves the Blackmore, FDA, and ITRUSST semantics. Physics check passes; Nextest passes 1556/1556 with one skip and one leaky test; doctests pass 8/8 with four ignored; warning-denied Clippy passes; Rustdoc builds with two pre-existing link warnings; touched-leaf rustfmt and diff checks pass. See [ADR 058](docs/ADR/058-neuromodulation-protocol-quantities.md). |
+| `KWAVERS-AEQ-MET-21` | `kwavers-transducer/src/design/{mod.rs,propagation.rs}` exposed array geometry, wavelength, frequency, sound speed, drive current, pressure-per-current, acoustic impedance, focal pressure, intensity, and beam extents as unit-documented raw values. | Type the public design and focused-propagation contracts with Aequitas; migrate driver callers and retain scalar extraction only at formula, width-search, validation, and explicit report-conversion boundaries. | Kwavers, Aequitas | **RESOLVED in this increment.** Design/propagation contracts and channel positions are typed; unit-suffixed names are removed and driver report conversion is explicit. Transducer Nextest passes 218/218 with one skip, doctests pass 2/2 with six ignored, and warning-denied Clippy/Rustdoc pass. Driver `kwavers`-feature Nextest passes 489/489; its doctest target has no tests, and warning-denied Clippy/Rustdoc pass. See [ADR 059](docs/ADR/059-transducer-design-quantities.md). |
 
 ### Explicit non-gaps and sequencing constraints
 
@@ -197,7 +210,8 @@ provider-owned mass-density-rate quantity up to the scalar numerical boundary.
   `KWAVERS-AEQ-MET-06` reaches the therapy/Pennes material consumers; their
   full package evidence is recorded above. `KWAVERS-AEQ-MET-18` closes the
   tracker accessor gap, `KWAVERS-AEQ-MET-19` closes the clinical scenario
-  gap, and `KWAVERS-AEQ-MET-20` closes the neuromodulation protocol gap. No
+  gap, `KWAVERS-AEQ-MET-20` closes the neuromodulation protocol gap, and
+  `KWAVERS-AEQ-MET-21` closes the transducer design/propagation gap. No
   additional gap is inferred until the next public inventory re-audit.
 
 - Review 2026-07-22: Python release run `29967429949` built the stable-ABI

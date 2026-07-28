@@ -1,5 +1,23 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-21 typed transducer design and propagation quantities [major] — done 2026-07-27
+
+- [x] Type array-design and focused-propagation public geometry, frequency,
+      sound-speed, current, pressure, impedance, intensity, and extent
+      contracts with Aequitas; preserve formula and report scalar boundaries.
+- [x] Migrate all driver callers and value-semantic tests; remove the
+      superseded unit-suffixed names and add ADR 059 plus synchronized PM state.
+- [x] Run transducer and driver package checks, Nextest, doctests, Clippy,
+      Rustdoc, formatting, and diff gates; preserve peer-owned dirty paths.
+- [x] Commit and push the verified increment and record the child commit in
+      the Atlas Aequitas audit; the parent gitlink remains on its integration
+      base until this feature branch is merged.
+
+Evidence: `kwavers-transducer` Nextest passes 218/218 with one skip; its
+doctests pass 2/2 with six ignored. The `kwavers-driver` `kwavers` feature
+Nextest passes 489/489; its doctest target has no tests. Both packages pass
+warning-denied Clippy and Rustdoc after the design-doc link correction.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-15 typed cavitation-control metrics [major] — done 2026-07-27
 
 - [x] Type public detector frequencies, controller response time, safety

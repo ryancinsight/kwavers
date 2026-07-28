@@ -4,6 +4,11 @@
 
 ### Changed
 
+- **Breaking**: Transducer array-design and focused-propagation contracts now
+  use Aequitas `Length`, `Frequency`, `Velocity`, `ElectricCurrent`,
+  `PressurePerElectricCurrent`, `AcousticImpedance`, `Pressure`, and
+  `Intensity`; driver report conversion remains explicit. See [ADR 059](docs/ADR/059-transducer-design-quantities.md).
+
 - **Breaking**: Neuromodulation pulse-train and dosimetry contracts now use
   typed Aequitas frequency, time, pressure, medium, intensity, and
   temperature-difference quantities. See [ADR 058](docs/ADR/058-neuromodulation-protocol-quantities.md).
