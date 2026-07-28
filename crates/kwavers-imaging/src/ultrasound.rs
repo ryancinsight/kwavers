@@ -6,6 +6,8 @@
 //! - Elastography: Tissue stiffness imaging
 //! - Harmonic: Nonlinear response imaging
 
+use aequitas::systems::si::quantities::Frequency;
+
 pub mod ceus;
 pub mod elastography;
 pub mod hifu;
@@ -28,10 +30,10 @@ pub enum UltrasoundMode {
 pub struct UltrasoundConfig {
     /// Imaging mode
     pub mode: UltrasoundMode,
-    /// Center frequency (Hz)
-    pub frequency: f64,
-    /// Sampling frequency (Hz)
-    pub sampling_frequency: f64,
+    /// Center frequency.
+    pub frequency: Frequency,
+    /// Sampling frequency.
+    pub sampling_frequency: Frequency,
     /// Dynamic range (dB)
     pub dynamic_range: f64,
     /// Time gain compensation
@@ -43,10 +45,23 @@ impl Default for UltrasoundConfig {
         use kwavers_core::constants::numerical::MHZ_TO_HZ;
         Self {
             mode: UltrasoundMode::BMode,
-            frequency: 5.0 * MHZ_TO_HZ,
-            sampling_frequency: 40.0 * MHZ_TO_HZ,
+            frequency: Frequency::from_base(5.0 * MHZ_TO_HZ),
+            sampling_frequency: Frequency::from_base(40.0 * MHZ_TO_HZ),
             dynamic_range: 60.0,
             tgc_enabled: true,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_ultrasound_frequencies_are_typed() {
+        let config = UltrasoundConfig::default();
+        assert_eq!(config.frequency.into_base(), 5.0e6);
+        assert_eq!(config.sampling_frequency.into_base(), 40.0e6);
+        assert_eq!(config.dynamic_range, 60.0);
     }
 }

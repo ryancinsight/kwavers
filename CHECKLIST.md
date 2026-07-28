@@ -1,5 +1,19 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-23 typed core-time and ultrasound quantities [major] — done 2026-07-27
+
+- [x] Type `kwavers-core` time, stability, grid, wave-speed, and thermal
+      diffusivity contracts and `kwavers-imaging` ultrasound frequencies with
+      Aequitas; preserve dimensionless and numerical-array boundaries.
+- [x] Migrate tests without a scalar compatibility facade and add ADR 061 plus
+      synchronized gap-audit, backlog, checklist, and changelog entries.
+- [x] Run package check, 133-test Nextest suite, doctests, warning-denied
+      Clippy, Rustdoc, rustfmt, and diff checks; preserve peer-owned dirt.
+
+Evidence: `kwavers-core` and `kwavers-imaging` Nextest passes 133/133;
+doctests pass 3/3 and 4/4; warning-denied Clippy and Rustdoc pass. Shared
+provider-patch and linker warnings remain outside this slice.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-22 typed ultrafast transducer quantities [major] — done 2026-07-27
 
 - [x] Type sequencer event/schedule/configuration contracts and plane-wave /

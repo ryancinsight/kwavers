@@ -4,6 +4,11 @@
 
 ### Changed
 
+- **Breaking**: Core time/stability contracts now use Aequitas `Time`,
+  `Length`, `Velocity`, and `ThermalDiffusivity`; imaging center and sampling
+  frequencies use Aequitas `Frequency`. CFL, dimensionless, and numerical-array
+  scalar boundaries remain explicit. See [ADR 061](docs/ADR/061-core-time-ultrasound-quantities.md).
+
 - **Breaking**: Ultrafast transducer sequencer, plane-wave, and diverging-wave
   public contracts now use Aequitas `Angle`, `Frequency`, `Length`, `Time`, and
   `Velocity`; dense delay tables remain explicit numerical-array boundaries.

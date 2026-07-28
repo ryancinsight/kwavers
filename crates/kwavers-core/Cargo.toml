@@ -12,6 +12,7 @@ repository = "https://github.com/ryancinsight/kwavers"
 # crate) are optional + feature-gated so the foundation stays a clean leaf; the
 # `kwavers` facade enables the features it needs (see features below).
 [dependencies]
+aequitas = { workspace = true }
 moirai-parallel = { workspace = true }
 leto = { workspace = true }
 serde = { version = "1.0", features = ["derive"] }

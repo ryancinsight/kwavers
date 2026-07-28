@@ -45,6 +45,21 @@ The transducer package check, full Nextest (218 passed, one skipped), doctests
 pass on the current branch. Existing shared-graph unused-patch and linker
 warnings remain outside this slice.
 
+## Live core-time and ultrasound refresh — 2026-07-27
+
+`KWAVERS-AEQ-MET-23` closes the next public inventory findings. The core
+`Time`/`StabilityConstraints` contracts now use Aequitas `Time`, `Length`,
+`Velocity`, and `ThermalDiffusivity`; `UltrasoundConfig` now uses Aequitas
+`Frequency` for center and sampling frequency. CFL numbers, dynamic range,
+and dense numerical time vectors remain scalar at their dimensionless,
+formula, and numerical-array boundaries. No scalar compatibility facade was
+added. See [ADR 061](docs/ADR/061-core-time-ultrasound-quantities.md).
+
+The affected package suite passes 133/133 Nextest tests, core doctests pass
+3/3, imaging doctests pass 4/4, warning-denied Clippy passes, Rustdoc passes,
+and touched-file rustfmt plus `git diff --check` pass. Shared provider-patch,
+linker, and peer-dirty-file warnings remain outside this increment.
+
 ## Live Aequitas metric refresh — 2026-07-27
 
 The prior `KWAVERS-AEQ-MET-01` closure was stale on this branch: the typed
