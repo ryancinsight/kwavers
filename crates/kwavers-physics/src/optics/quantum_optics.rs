@@ -37,7 +37,6 @@ mod constants;
 mod corrections;
 mod einstein;
 mod gaunt;
-mod special;
 
 #[cfg(test)]
 mod tests;
