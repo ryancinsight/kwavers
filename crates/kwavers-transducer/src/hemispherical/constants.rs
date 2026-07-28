@@ -5,16 +5,17 @@
 
 #![allow(dead_code)] // Clinical configuration constants for library users
 
-use kwavers_core::constants::numerical::MHZ_TO_HZ;
+use aequitas::systems::si::quantities::{Angle, Frequency, Length, Velocity};
+use kwavers_core::constants::fundamental::SOUND_SPEED_WATER;
 
 /// Typical radius for clinical hemispherical arrays (m)
-pub const HEMISPHERE_RADIUS_DEFAULT: f64 = 0.15; // 150 mm clinical radius
+pub const HEMISPHERE_RADIUS_DEFAULT: Length<f64> = Length::from_base(0.15);
 
 /// Half-wavelength element spacing for improved steering (m)
-pub const HALF_WAVELENGTH_SPACING: f64 = 1.15e-3; // λ/2 at 650 kHz
+pub const HALF_WAVELENGTH_SPACING: Length<f64> = Length::from_base(1.15e-3);
 
 /// Maximum steering angle from geometric focus (radians)
-pub const MAX_STEERING_ANGLE_RAD: f64 = std::f64::consts::PI / 6.0; // 30 degrees (π/6)
+pub const MAX_STEERING_ANGLE: Angle<f64> = Angle::from_base(std::f64::consts::PI / 6.0);
 
 /// Minimum element density for sparse arrays (elements per m²)
 pub const MIN_ELEMENT_DENSITY: f64 = 5000.0; // 0.5 per cm²
@@ -38,8 +39,11 @@ pub const MIN_F_NUMBER: f64 = 0.8;
 pub const MAX_F_NUMBER: f64 = 1.2;
 
 /// Clinical frequency range (Hz)
-pub const CLINICAL_FREQ_MIN: f64 = 200e3; // 200 kHz
-pub const CLINICAL_FREQ_MAX: f64 = 2.0 * MHZ_TO_HZ; // 2 MHz
+pub const CLINICAL_FREQ_MIN: Frequency<f64> = Frequency::from_base(200e3);
+pub const CLINICAL_FREQ_MAX: Frequency<f64> = Frequency::from_base(2.0e6);
+
+/// Nominal sound speed used by the hemispherical-array source model (m/s).
+pub const SOUND_SPEED_WATER_NOMINAL: Velocity<f64> = Velocity::from_base(SOUND_SPEED_WATER);
 
 /// Skull attenuation coefficient [Np/(m·MHz)] — Marsac et al. 2017 porosity model upper bound.
 ///

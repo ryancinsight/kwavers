@@ -4,6 +4,12 @@
 
 ### Changed
 
+- **Breaking**: Hemispherical-array geometry, element, steering, physical
+  constants, focal-metric, and validation contracts now use Aequitas `Length`,
+  `Angle`, `Frequency`, `Velocity`, `Time`, `Pressure`, and `Volume`; the Source
+  waveform honors configured frequency, while dimensionless controls and
+  mesh/source/formula boundaries remain explicit. See [ADR 064](docs/ADR/064-hemispherical-quantities.md).
+
 - **Breaking**: HIFU imaging transducer, treatment-plan, geometry, protocol,
   safety, avoidance-zone, and monitoring metrics now use Aequitas SI
   quantities; CEM43 and focused-field numerical arrays remain at their

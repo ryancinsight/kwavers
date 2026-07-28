@@ -1,5 +1,24 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-26 typed hemispherical-array quantities [major] — done 2026-07-27
+
+- [x] Type hemispherical geometry, element placement/phase, steering inputs,
+      physical constants, focal metrics, and validation pressure with Aequitas;
+      preserve dimensionless controls and formula/mesh/source/Signal boundaries.
+- [x] Make the Source waveform use its configured frequency and cover that
+      behavior with a value-sensitive regression test.
+- [x] Migrate the brain theranostic example and value-semantic hemispherical
+      tests; add ADR 064 and synchronize gap-audit, backlog, checklist, and
+      changelog.
+- [x] Run the transducer/example checks, full transducer Nextest, warning-denied
+      Clippy, doctests, Rustdoc, rustfmt, and diff checks; preserve peer dirt.
+
+Evidence: transducer and example package checks pass; full transducer Nextest
+passes 219/219 with one skipped test; doctests pass 2/2 with 6 ignored;
+warning-denied Clippy passes for the transducer and example; Rustdoc exits 0;
+touched-file rustfmt and `git diff --check` pass. Existing shared provider-patch,
+linker, and peer-dirty warnings remain outside this item.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-25 typed HIFU imaging quantities [major] — done 2026-07-27
 
 - [x] Type HIFU transducer, treatment target/protocol, safety, avoidance-zone,

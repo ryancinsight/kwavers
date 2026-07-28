@@ -12,6 +12,7 @@
 //! - Hertzberg et al. (2010): "Ultrasound focusing using magnetic resonance acoustic radiation force imaging"
 //! - Jones et al. (2019): "Transcranial MR-guided focused ultrasound: A review of the technology"
 
+use aequitas::systems::si::quantities::{Frequency, Length};
 use kwavers_core::constants::numerical::TWO_PI;
 mod constants;
 mod element;
@@ -20,10 +21,8 @@ mod sparse;
 mod steering;
 mod validation;
 
-// Physical constants needed for array calculations
-pub use kwavers_core::constants::C_WATER;
-
 // Explicit re-exports of hemispherical array components
+pub use constants::SOUND_SPEED_WATER_NOMINAL;
 pub use element::{ElementConfiguration, ElementState};
 pub use geometry::{ElementPlacement, HemisphereGeometry};
 pub use sparse::{ElementSelection, SparseArrayOptimizer};
@@ -44,6 +43,7 @@ pub struct HemisphericalArray {
     steering: SteeringController,
     sparse_optimizer: Option<SparseArrayOptimizer>,
     signal: Arc<dyn Signal>,
+    frequency: Frequency<f64>,
 }
 
 impl HemisphericalArray {
@@ -51,17 +51,22 @@ impl HemisphericalArray {
     /// # Errors
     /// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
     ///
-    pub fn new(radius: f64, num_elements: usize, frequency: f64) -> KwaversResult<Self> {
+    pub fn new(
+        radius: Length<f64>,
+        num_elements: usize,
+        frequency: Frequency<f64>,
+    ) -> KwaversResult<Self> {
         let geometry = HemisphereGeometry::new(radius)?;
         let elements = ElementPlacement::generate_elements(&geometry, num_elements)?;
         let steering = SteeringController::new(frequency);
-        let signal = Arc::new(SineWave::new(frequency, 1.0, 0.0));
+        let signal = Arc::new(SineWave::new(frequency.into_base(), 1.0, 0.0));
 
         Ok(Self {
             elements,
             steering,
             sparse_optimizer: None,
             signal,
+            frequency,
         })
     }
 
@@ -110,11 +115,9 @@ impl Source for HemisphericalArray {
             }
 
             // Convert element position to grid indices
-            if let Some((i, j, k)) = grid.position_to_indices(
-                element.position[0],
-                element.position[1],
-                element.position[2],
-            ) {
+            let position = element.position.map(Length::into_base);
+            if let Some((i, j, k)) = grid.position_to_indices(position[0], position[1], position[2])
+            {
                 if i < grid.nx && j < grid.ny && k < grid.nz {
                     mask[[i, j, k]] = element.amplitude;
                 }
@@ -124,18 +127,41 @@ impl Source for HemisphericalArray {
 
     fn amplitude(&self, t: f64) -> f64 {
         // Return base amplitude, phase is handled in mask
-        (TWO_PI * 650e3 * t).sin()
+        (TWO_PI * self.frequency.into_base() * t).sin()
     }
 
     fn positions(&self) -> Vec<(f64, f64, f64)> {
         self.elements
             .iter()
             .filter(|e| e.is_active())
-            .map(|e| (e.position[0], e.position[1], e.position[2]))
+            .map(|e| {
+                (
+                    e.position[0].into_base(),
+                    e.position[1].into_base(),
+                    e.position[2].into_base(),
+                )
+            })
             .collect()
     }
 
     fn signal(&self) -> &dyn Signal {
         self.signal.as_ref()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn source_amplitude_uses_configured_frequency() {
+        let array =
+            HemisphericalArray::new(Length::from_base(0.15), 1, Frequency::from_base(1.0e6))
+                .expect("valid hemispherical array configuration");
+
+        let quarter_period = 0.25e-6;
+        let amplitude = Source::amplitude(&array, quarter_period);
+
+        assert!((amplitude - 1.0).abs() < 1.0e-12);
     }
 }

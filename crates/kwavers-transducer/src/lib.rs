@@ -55,7 +55,7 @@ pub use flexible::{
 // Hemispherical arrays
 pub use hemispherical::{
     ArrayValidator, ElementConfiguration, ElementState, FocalPoint, HemisphereGeometry,
-    HemisphericalArray, SparseArrayOptimizer, SteeringController,
+    HemisphericalArray, HemisphericalArrayMetrics, SparseArrayOptimizer, SteeringController,
 };
 
 // k-Wave array compatibility

@@ -16,6 +16,7 @@
 | KWAVERS-AEQ-MET-23 | Type the core time/stability and imaging ultrasound frequency contracts with Aequitas; retain scalar extraction only at CFL, diffusion, dimensionless, and numerical-array boundaries. | [major] | done | Codex | `crates/kwavers-core/src/time/**`, `crates/kwavers-imaging/src/ultrasound.rs`, ADR 061, PM artifacts |
 | KWAVERS-AEQ-MET-24 | Type the public grid stability inputs/results with Aequitas `Velocity`, `ThermalDiffusivity`, and `Time`; preserve scalar Courant/nonlinearity and mesh/formula boundaries. | [major] | done | Codex | `crates/kwavers-grid/src/stability.rs`, `Grid::cfl_timestep`, migrated callers, ADR 062, PM artifacts |
 | KWAVERS-AEQ-MET-25 | Type the public HIFU imaging transducer, treatment-plan, geometry, protocol, safety, and monitoring metrics with Aequitas; preserve CEM43/model scalars and focused-field formula boundaries. | [major] | done | Codex | `crates/kwavers-imaging/src/ultrasound/hifu.rs`, focused HIFU caller/tests, ADR 063, PM artifacts |
+| KWAVERS-AEQ-MET-26 | Type the public hemispherical-array geometry, element, steering, validation, constants, and metric contracts with Aequitas; preserve dimensionless controls and Source/mesh/formula boundaries and make the source waveform honor configured frequency. | [major] | done | Codex | `crates/kwavers-transducer/src/hemispherical/**`, ADR 064, PM artifacts |
 
 ## KWAVERS-AEQ-MET-06 — Type thermal and perfusion metrics [major] — done
 
