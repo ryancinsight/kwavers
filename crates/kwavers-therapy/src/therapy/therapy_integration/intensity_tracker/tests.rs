@@ -1,5 +1,5 @@
 use super::tracker::IntensityTracker;
-use aequitas::systems::si::quantities::Time;
+use aequitas::systems::si::quantities::{Intensity, Time};
 use kwavers_core::constants::fundamental::ACOUSTIC_IMPEDANCE_WATER_NOMINAL;
 use kwavers_core::constants::numerical::MPA_TO_PA;
 use leto::Array3;
@@ -33,8 +33,8 @@ fn test_intensity_recording() {
 
     // I = p²/Z = (1e6)² / 1.5e6 = 666,666 W/m² ≈ 666.7 kW/m²
     // spta is stored in W/m² (SI); 600_000 < 666,666 < 700_000
-    assert!(metrics.spta > 6e5);
-    assert!(metrics.spta < 7e5);
+    assert!(metrics.spta > Intensity::from_base(6e5));
+    assert!(metrics.spta < Intensity::from_base(7e5));
 }
 
 #[test]
@@ -97,7 +97,7 @@ fn test_spta_units() {
     let spta_wcm2 = tracker.spta_w_cm2();
 
     // 1 W/cm² = 1e4 W/m²
-    assert!((spta_wcm2 - spta_wm2 / 1e4).abs() < 0.01);
+    assert!((spta_wcm2 - spta_wm2.into_base() / 1e4).abs() < 0.01);
 }
 
 #[test]

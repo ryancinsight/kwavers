@@ -13,8 +13,8 @@ use leto::Array3;
 
 use super::super::config::TherapySessionConfig;
 use super::{
-    cavitation, chemical, execution, initialization, lithotripsy, microbubble, safety,
-    TherapyIntegrationOrchestrator,
+    TherapyIntegrationOrchestrator, cavitation, chemical, execution, initialization, lithotripsy,
+    microbubble, safety,
 };
 use aequitas::systems::si::quantities::Time;
 
@@ -261,7 +261,7 @@ impl TherapyIntegrationOrchestrator {
 
         if let Some(ref mut ceus) = self.ceus_system {
             let concentration =
-                microbubble::update_microbubble_dynamics(ceus, &corrected_field, dt)?;
+                microbubble::update_microbubble_dynamics(ceus, &corrected_field, dt.into_base())?;
             self.session_state.microbubble_concentration = concentration;
         }
 
