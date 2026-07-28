@@ -3891,7 +3891,6 @@ dependencies = [
  "hermes-simd",
  "leto",
  "moirai",
- "serde",
  "themis",
  "thiserror 2.0.18",
 ]
