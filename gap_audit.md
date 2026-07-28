@@ -46,6 +46,22 @@ Nextest tests with one repository-declared skip; warning-denied Clippy,
 doctests, targeted rustfmt, and `git diff --check` pass. Rustdoc exits 0 with
 one pre-existing private intra-doc-link warning. See [ADR 067](docs/ADR/067-ceus-quantities.md).
 
+## Live sonogenetics refresh — 2026-07-27
+
+`KWAVERS-AEQ-MET-30` closes the remaining named-consumer metric gap. Aequitas
+now provides `ElectricCharge`, `ElectricPotential`, `ElectricConductance`, and
+`Capacitance` with coherent Coulomb, Volt, Siemens, and Farad units. Sonogenetics
+membrane geometry, channel gating parameters, ion-current contracts, and LIF
+parameters/state now carry typed `Length`, `Area`, `SurfaceTension`, `Pressure`,
+`ElectricConductance`, `ElectricPotential`, `ElectricCurrent`, `Capacitance`,
+`Time`, and `Frequency` values. Dense fields, probabilities, channel counts,
+and phenomenological thermal-coupling coefficients remain explicit numerical or
+model-specific boundaries.
+
+The `kwavers-physics` package passes 1,556/1,556 Nextest tests with one
+repository-declared skip; package check, warning-denied Clippy, doctests,
+targeted rustfmt, `git diff --check`, and Rustdoc pass. See [ADR 068](docs/ADR/068-sonogenetics-quantities.md).
+
 ## Live lithotripsy refresh — 2026-07-27
 
 `KWAVERS-AEQ-MET-28` closes the isolated public lithotripsy configuration gap.
@@ -322,7 +338,7 @@ provider-owned mass-density-rate quantity up to the scalar numerical boundary.
 | `KWAVERS-AEQ-MET-27` | `kwavers-physics/src/acoustics/therapy/cavitation/**` exposed detector frequency, nucleus radius, Blake threshold, Minnaert result, and pressure inputs as raw physical scalars; `TherapyCavitationDetector::new` ignored a pressure argument. | Type the public cavitation detector contracts; retain dimensionless/boolean outputs and dense pressure-field storage boundaries; remove the ignored argument. | Kwavers, Aequitas | **RESOLVED in this increment.** Detector contracts use typed `Frequency`, `Length`, and `Pressure`; the unused argument is removed and all callers/tests migrate. Physics check, cavitation-filtered Nextest 259/259, doctests, warning-denied Clippy, Rustdoc, rustfmt, and diff checks pass. See [ADR 065](docs/ADR/065-cavitation-quantities.md). |
 | `KWAVERS-AEQ-MET-28` | `kwavers-physics/src/acoustics/therapy/lithotripsy/mod.rs` exposed shock-wave peak pressure, pulse duration, and repetition rate as raw scalar configuration fields. | Type the public configuration with Aequitas; keep future solver implementation work separate. | Kwavers, Aequitas | **RESOLVED in this increment.** `LithotripsyConfig` uses `Pressure`, `Time`, and `Frequency`; the default value test and focused physics gates pass. See [ADR 066](docs/ADR/066-lithotripsy-quantities.md). |
 | `KWAVERS-AEQ-MET-29` | `kwavers-imaging/src/ultrasound/ceus/**`, `kwavers-physics/src/acoustics/imaging/modalities/ceus/**`, and `kwavers-simulation/src/imaging/ceus.rs` exposed CEUS frequencies, frame rates, geometry, bubble shell properties, concentrations, resonance/scattering inputs, and cloud-dynamics quantities as raw physical scalars. | Type the public CEUS contracts with Aequitas; remove hidden unit conversions; retain dense perfusion fields, dimensionless model outputs, and numerical-array storage at explicit boundaries. | Kwavers, Aequitas | **RESOLVED in this increment.** CEUS imaging, microbubble, population, cloud, dynamics, scattering, reconstruction, and simulation contracts use typed Aequitas quantities. The three affected packages pass 1,862/1,862 Nextest tests with one skip, warning-denied Clippy, doctests, targeted rustfmt, and diff checks; Rustdoc exits 0 with one pre-existing private-link warning. See [ADR 067](docs/ADR/067-ceus-quantities.md). |
-| `KWAVERS-AEQ-MET-30` | `kwavers-physics/src/acoustics/therapy/sonogenetics/**` still exposes membrane geometry and LIF/channel electrical quantities as raw metres, farads, siemens, volts, and seconds. Aequitas currently lacks the required capacitance, conductance, potential, and charge dimensions. | Add the missing electrical dimensions upstream in Aequitas, then type sonogenetics public contracts and migrate callers/tests without consumer wrappers; retain dimensionless gating, probabilities, and dense fields at their formula/storage boundaries. | Aequitas, Kwavers | **OPEN — provider increment required.** The missing Aequitas dimensions are the Definition-of-Ready dependency for the next consumer slice. |
+| `KWAVERS-AEQ-MET-30` | `kwavers-physics/src/acoustics/therapy/sonogenetics/**` exposed membrane geometry and LIF/channel electrical quantities as raw metres, farads, siemens, volts, and seconds. Aequitas lacked the required capacitance, conductance, potential, and charge dimensions. | Add the missing electrical dimensions upstream in Aequitas, then type sonogenetics public contracts and migrate callers/tests without consumer wrappers; retain dimensionless gating, probabilities, and dense fields at their formula/storage boundaries. | Aequitas, Kwavers | **RESOLVED in this increment.** Aequitas provides the four electrical dimensions and coherent SI units; sonogenetics public membrane, channel, ion-current, and LIF contracts use typed quantities. `kwavers-physics` Nextest passes 1,556/1,556 with one skip; package check, warning-denied Clippy, doctests, targeted rustfmt, and diff checks pass. See [ADR 068](docs/ADR/068-sonogenetics-quantities.md). |
 | `KWAVERS-AEQ-MET-24` | `kwavers-grid/src/stability.rs` and `Grid::cfl_timestep` exposed CFL, diffusion, nonlinear, and recommended timesteps plus sound speed and diffusivity as raw physical scalars. | Type the public stability inputs/results with Aequitas; keep Courant number, nonlinearity, mesh spacing, and dense numerical boundaries scalar. | Kwavers, Aequitas | **RESOLVED in this increment.** Stability APIs return `Time`, accept `Velocity`/`ThermalDiffusivity`, and all affected callers are migrated. Value-semantic stability tests, affected-package Nextest, warning-denied Clippy, doctests, Rustdoc, rustfmt, and diff checks pass. See [ADR 062](docs/ADR/062-grid-stability-quantities.md). |
 
 ### Explicit non-gaps and sequencing constraints
@@ -344,10 +360,11 @@ provider-owned mass-density-rate quantity up to the scalar numerical boundary.
   `KWAVERS-AEQ-MET-26` closes the hemispherical-array gap, and
   `KWAVERS-AEQ-MET-27` closes the therapeutic-cavitation gap, and
   `KWAVERS-AEQ-MET-28` closes the lithotripsy configuration gap, and
-  `KWAVERS-AEQ-MET-29` closes the CEUS imaging gap. `KWAVERS-AEQ-MET-30`
-  remains open pending the provider-owned electrical dimensions described in
-  the ledger. The next public inventory re-audit remains required before
-  declaring the consumer-wide metric ledger empty.
+  `KWAVERS-AEQ-MET-29` closes the CEUS imaging gap, and
+  `KWAVERS-AEQ-MET-30` closes the sonogenetics electrical-contract gap. The
+  named CFDrs, Helios, and Kwavers consumer metric ledger is empty; the next
+  public inventory re-audit remains required after a new provider or consumer
+  surface is introduced.
 
 - Review 2026-07-22: Python release run `29967429949` built the stable-ABI
   wheels but the Linux and Windows base-wheel smoke imports failed because

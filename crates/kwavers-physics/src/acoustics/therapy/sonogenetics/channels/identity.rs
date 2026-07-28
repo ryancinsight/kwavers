@@ -1,6 +1,9 @@
 //! Channel identities and canonical literature-backed parameters.
 
 use super::params::{BoltzmannGatingParams, GatingModel, PressureThresholdParams};
+use aequitas::systems::si::quantities::{
+    Area, ElectricConductance, ElectricPotential, Pressure, SurfaceTension,
+};
 
 /// Mechanosensitive ion channel identity.
 ///
@@ -78,40 +81,40 @@ impl MechanoChannel {
     pub fn canonical_params(&self) -> GatingModel {
         match self {
             Self::MscLG22S => GatingModel::Boltzmann(BoltzmannGatingParams {
-                gating_area_m2: 6.5e-18,
-                half_tension_n_per_m: 4.7e-3,
-                single_channel_conductance_s: 3.0e-9,
-                reversal_potential_v: 0.0,
+                gating_area: Area::from_base(6.5e-18),
+                half_tension: SurfaceTension::from_base(4.7e-3),
+                single_channel_conductance: ElectricConductance::from_base(3.0e-9),
+                reversal_potential: ElectricPotential::from_base(0.0),
             }),
             Self::MscLG22N => GatingModel::Boltzmann(BoltzmannGatingParams {
-                gating_area_m2: 6.5e-18,
-                half_tension_n_per_m: 2.35e-3,
-                single_channel_conductance_s: 3.0e-9,
-                reversal_potential_v: 0.0,
+                gating_area: Area::from_base(6.5e-18),
+                half_tension: SurfaceTension::from_base(2.35e-3),
+                single_channel_conductance: ElectricConductance::from_base(3.0e-9),
+                reversal_potential: ElectricPotential::from_base(0.0),
             }),
             Self::MscS => GatingModel::Boltzmann(BoltzmannGatingParams {
-                gating_area_m2: 1.2e-18,
-                half_tension_n_per_m: 5.5e-3,
-                single_channel_conductance_s: 1.0e-9,
-                reversal_potential_v: 0.0,
+                gating_area: Area::from_base(1.2e-18),
+                half_tension: SurfaceTension::from_base(5.5e-3),
+                single_channel_conductance: ElectricConductance::from_base(1.0e-9),
+                reversal_potential: ElectricPotential::from_base(0.0),
             }),
             Self::Piezo1 => GatingModel::Boltzmann(BoltzmannGatingParams {
-                gating_area_m2: 20.0e-18,
-                half_tension_n_per_m: 2.5e-3,
-                single_channel_conductance_s: 35.0e-12,
-                reversal_potential_v: 0.0,
+                gating_area: Area::from_base(20.0e-18),
+                half_tension: SurfaceTension::from_base(2.5e-3),
+                single_channel_conductance: ElectricConductance::from_base(35.0e-12),
+                reversal_potential: ElectricPotential::from_base(0.0),
             }),
             Self::Trpc6 => GatingModel::Boltzmann(BoltzmannGatingParams {
-                gating_area_m2: 4.5e-18,
-                half_tension_n_per_m: 5.0e-3,
-                single_channel_conductance_s: 28.0e-12,
-                reversal_potential_v: 5.0e-3,
+                gating_area: Area::from_base(4.5e-18),
+                half_tension: SurfaceTension::from_base(5.0e-3),
+                single_channel_conductance: ElectricConductance::from_base(28.0e-12),
+                reversal_potential: ElectricPotential::from_base(5.0e-3),
             }),
             Self::HsTrpa1 => GatingModel::PressureThreshold(PressureThresholdParams {
-                half_pressure_pa: 35.6,
-                steepness_pa: 10.0,
-                single_channel_conductance_s: 60.0e-12,
-                reversal_potential_v: 0.0,
+                half_pressure: Pressure::from_base(35.6),
+                steepness: Pressure::from_base(10.0),
+                single_channel_conductance: ElectricConductance::from_base(60.0e-12),
+                reversal_potential: ElectricPotential::from_base(0.0),
             }),
         }
     }

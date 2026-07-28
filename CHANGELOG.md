@@ -4,6 +4,11 @@
 
 ### Changed
 
+- **Breaking**: Sonogenetics membrane, channel, ion-current, and LIF public
+  contracts now use Aequitas geometry, pressure, electrical, and temporal
+  quantities. Dense fields, probabilities, channel counts, and
+  phenomenological thermal-coupling coefficients remain explicit numerical or
+  model-specific boundaries. See [ADR 068](docs/ADR/068-sonogenetics-quantities.md).
 - **Breaking**: CEUS imaging parameters, microbubble shell properties,
   population concentration, cloud dynamics, scattering, reconstruction, and
   simulation contracts now use Aequitas physical quantities. Hidden

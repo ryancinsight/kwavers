@@ -40,6 +40,7 @@
 //! - Duque, M. et al. (2023). Sonogenetic control via MscL-G22S. *Science*, 380, 1084-1090.
 
 use crate::parallel::zip_mut_two_refs;
+use aequitas::systems::si::quantities::Length;
 use leto::Array3;
 
 /// Cell geometry and membrane parameters for the Laplace tension model.
@@ -47,10 +48,10 @@ use leto::Array3;
 /// Units are SI throughout.
 #[derive(Debug, Clone)]
 pub struct CellMembraneParams {
-    /// Cell soma radius R (m).
-    pub radius_m: f64,
-    /// Lipid bilayer thickness h (m).
-    pub thickness_m: f64,
+    /// Cell soma radius R.
+    pub radius: Length<f64>,
+    /// Lipid bilayer thickness h.
+    pub thickness: Length<f64>,
 }
 
 impl Default for CellMembraneParams {
@@ -59,8 +60,8 @@ impl Default for CellMembraneParams {
     /// R = 10 μm, h = 5 nm.
     fn default() -> Self {
         Self {
-            radius_m: 10.0e-6,   // 10 μm
-            thickness_m: 5.0e-9, // 5 nm
+            radius: Length::from_base(10.0e-6),   // 10 μm
+            thickness: Length::from_base(5.0e-9), // 5 nm
         }
     }
 }
@@ -69,7 +70,7 @@ impl CellMembraneParams {
     /// Returns `true` if radius and thickness are both strictly positive.
     #[must_use]
     pub fn is_valid(&self) -> bool {
-        self.radius_m > 0.0 && self.thickness_m > 0.0
+        self.radius.into_base() > 0.0 && self.thickness.into_base() > 0.0
     }
 }
 
@@ -131,7 +132,7 @@ pub fn compute_membrane_tension(
         params.is_valid(),
         "CellMembraneParams must have positive radius and thickness"
     );
-    let r = params.radius_m;
+    let r = params.radius.into_base();
     let mut out = Array3::<f64>::zeros(intensity.shape());
     zip_mut_two_refs(
         out.view_mut(),
@@ -161,8 +162,8 @@ mod tests {
         let intensity = Array3::from_elem((nx, ny, nz), 1.0e5_f64);
         let sound_speed = Array3::from_elem((nx, ny, nz), SOUND_SPEED_WATER_SIM);
         let params = CellMembraneParams {
-            radius_m: 10.0e-6,
-            thickness_m: 5.0e-9,
+            radius: Length::from_base(10.0e-6),
+            thickness: Length::from_base(5.0e-9),
         };
 
         let tension = compute_membrane_tension(&intensity, &sound_speed, &params);

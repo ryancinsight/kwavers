@@ -11,7 +11,7 @@
 //!   `V[n+1] = V`N` + dt/C_m · (−G_leak · (V`N` − E_leak) + I_ion`N`)`
 //!
 //! Spike condition: if V[n+1] ≥ V_thresh → emit spike, reset V ← V_reset.
-//! Refractory period: for `refractory_s` seconds after a spike, V is clamped
+//! Refractory period: for `refractory` seconds after a spike, V is clamped
 //! to V_reset and no further spikes can occur.
 //!
 //! # Canonical mammalian neuron parameters (Koch 1999)
@@ -37,23 +37,26 @@
 #[cfg(test)]
 mod tests;
 
+use aequitas::systems::si::quantities::{
+    Capacitance, ElectricConductance, ElectricCurrent, ElectricPotential, Frequency, Time,
+};
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 
-/// Leaky integrate-and-fire neuron parameters (SI units: F, S, V, s).
+/// Leaky integrate-and-fire neuron parameters.
 #[derive(Debug, Clone)]
 pub struct LifParams {
-    /// Membrane capacitance C_m (F).
-    pub capacitance_f: f64,
-    /// Leak conductance G_leak (S).
-    pub leak_conductance_s: f64,
-    /// Leak reversal potential E_leak (V).
-    pub leak_reversal_v: f64,
-    /// Spike threshold V_thresh (V).
-    pub threshold_v: f64,
-    /// Reset voltage V_reset (V).
-    pub reset_v: f64,
-    /// Absolute refractory period (s).
-    pub refractory_s: f64,
+    /// Membrane capacitance C_m.
+    pub capacitance: Capacitance<f64>,
+    /// Leak conductance G_leak.
+    pub leak_conductance: ElectricConductance<f64>,
+    /// Leak reversal potential E_leak.
+    pub leak_reversal: ElectricPotential<f64>,
+    /// Spike threshold V_thresh.
+    pub threshold: ElectricPotential<f64>,
+    /// Reset voltage V_reset.
+    pub reset: ElectricPotential<f64>,
+    /// Absolute refractory period.
+    pub refractory: Time<f64>,
 }
 
 impl Default for LifParams {
@@ -62,22 +65,22 @@ impl Default for LifParams {
     /// τ_m = C_m / G_leak = 100e-12 / 10e-9 = 10 ms.
     fn default() -> Self {
         Self {
-            capacitance_f: 100.0e-12,
-            leak_conductance_s: 10.0e-9,
-            leak_reversal_v: -65.0e-3,
-            threshold_v: -55.0e-3,
-            reset_v: -65.0e-3,
-            refractory_s: 2.0e-3,
+            capacitance: Capacitance::from_base(100.0e-12),
+            leak_conductance: ElectricConductance::from_base(10.0e-9),
+            leak_reversal: ElectricPotential::from_base(-65.0e-3),
+            threshold: ElectricPotential::from_base(-55.0e-3),
+            reset: ElectricPotential::from_base(-65.0e-3),
+            refractory: Time::from_base(2.0e-3),
         }
     }
 }
 
 impl LifParams {
-    /// Membrane time constant τ_m = C_m / G_leak (s).
+    /// Membrane time constant τ_m = C_m / G_leak.
     #[inline]
     #[must_use]
-    pub fn time_constant_s(&self) -> f64 {
-        self.capacitance_f / self.leak_conductance_s
+    pub fn time_constant(&self) -> Time<f64> {
+        self.capacitance / self.leak_conductance
     }
 
     /// Returns `true` if all parameters are physically consistent.
@@ -85,10 +88,10 @@ impl LifParams {
     /// Invariants: C_m > 0, G_leak > 0, V_reset < V_thresh, refractory ≥ 0.
     #[must_use]
     pub fn is_valid(&self) -> bool {
-        self.capacitance_f > 0.0
-            && self.leak_conductance_s > 0.0
-            && self.reset_v < self.threshold_v
-            && self.refractory_s >= 0.0
+        self.capacitance.into_base() > 0.0
+            && self.leak_conductance.into_base() > 0.0
+            && self.reset.into_base() < self.threshold.into_base()
+            && self.refractory.into_base() >= 0.0
     }
 }
 
@@ -100,11 +103,11 @@ impl LifParams {
 pub struct LifNeuron {
     params: LifParams,
     /// Current membrane voltage (V).
-    membrane_voltage_v: f64,
-    /// Time elapsed since last spike (s). Starts at `+∞` to allow immediate spiking.
-    time_since_spike_s: f64,
-    /// Chronological spike times (s).
-    spike_times_s: Vec<f64>,
+    membrane_voltage: ElectricPotential<f64>,
+    /// Time elapsed since last spike. Starts at `+∞` to allow immediate spiking.
+    time_since_spike: Time<f64>,
+    /// Chronological spike times.
+    spike_times: Vec<Time<f64>>,
 }
 
 impl LifNeuron {
@@ -116,12 +119,12 @@ impl LifNeuron {
     #[must_use]
     pub fn new(params: LifParams) -> Self {
         debug_assert!(params.is_valid(), "LifParams failed validity check");
-        let v0 = params.leak_reversal_v;
+        let v0 = params.leak_reversal;
         Self {
             params,
-            membrane_voltage_v: v0,
-            time_since_spike_s: f64::INFINITY,
-            spike_times_s: Vec::new(),
+            membrane_voltage: v0,
+            time_since_spike: Time::from_base(f64::INFINITY),
+            spike_times: Vec::new(),
         }
     }
 
@@ -132,72 +135,78 @@ impl LifNeuron {
     /// # Errors
     ///
     /// Returns `Err` if `dt ≤ 0`.
-    pub fn step(&mut self, i_ion: f64, dt: f64, t_now: f64) -> KwaversResult<bool> {
-        if dt <= 0.0 {
+    pub fn step(
+        &mut self,
+        i_ion: ElectricCurrent<f64>,
+        dt: Time<f64>,
+        t_now: Time<f64>,
+    ) -> KwaversResult<bool> {
+        if dt.into_base() <= 0.0 {
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
                 parameter: "dt".to_owned(),
-                value: dt,
+                value: dt.into_base(),
                 reason: "time step must be strictly positive".to_owned(),
             }));
         }
-        self.time_since_spike_s += dt;
+        self.time_since_spike += dt;
 
-        if self.time_since_spike_s < self.params.refractory_s {
-            self.membrane_voltage_v = self.params.reset_v;
+        if self.time_since_spike.into_base() < self.params.refractory.into_base() {
+            self.membrane_voltage = self.params.reset;
             return Ok(false);
         }
 
         let p = &self.params;
-        let dv = (dt / p.capacitance_f)
-            * (-p.leak_conductance_s).mul_add(self.membrane_voltage_v - p.leak_reversal_v, i_ion);
-        self.membrane_voltage_v += dv;
+        let membrane_current =
+            (-p.leak_conductance) * (self.membrane_voltage - p.leak_reversal) + i_ion;
+        let dv: ElectricPotential<f64> = (dt / p.capacitance) * membrane_current;
+        self.membrane_voltage += dv;
 
-        if self.membrane_voltage_v >= self.params.threshold_v {
-            self.membrane_voltage_v = self.params.reset_v;
-            self.time_since_spike_s = 0.0;
-            self.spike_times_s.push(t_now);
+        if self.membrane_voltage.into_base() >= self.params.threshold.into_base() {
+            self.membrane_voltage = self.params.reset;
+            self.time_since_spike = Time::from_base(0.0);
+            self.spike_times.push(t_now);
             Ok(true)
         } else {
             Ok(false)
         }
     }
 
-    /// Current membrane voltage (V).
+    /// Current membrane voltage.
     #[inline]
     #[must_use]
-    pub fn membrane_voltage(&self) -> f64 {
-        self.membrane_voltage_v
+    pub fn membrane_voltage(&self) -> ElectricPotential<f64> {
+        self.membrane_voltage
     }
 
-    /// Recorded spike times in chronological order (s).
+    /// Recorded spike times in chronological order.
     #[inline]
     #[must_use]
-    pub fn spike_times(&self) -> &[f64] {
-        &self.spike_times_s
+    pub fn spike_times(&self) -> &[Time<f64>] {
+        &self.spike_times
     }
 
     /// Total number of spikes emitted.
     #[inline]
     #[must_use]
     pub fn spike_count(&self) -> usize {
-        self.spike_times_s.len()
+        self.spike_times.len()
     }
 
-    /// Mean firing rate over `duration_s` seconds (Hz). Returns 0.0 for invalid input.
+    /// Mean firing rate over `duration` (Hz). Returns zero for invalid input.
     #[must_use]
-    pub fn mean_firing_rate(&self, duration_s: f64) -> f64 {
-        if duration_s <= 0.0 || self.spike_times_s.is_empty() {
-            0.0
+    pub fn mean_firing_rate(&self, duration: Time<f64>) -> Frequency<f64> {
+        if duration.into_base() <= 0.0 || self.spike_times.is_empty() {
+            Frequency::from_base(0.0)
         } else {
-            self.spike_times_s.len() as f64 / duration_s
+            Frequency::from_base(self.spike_times.len() as f64 / duration.into_base())
         }
     }
 
-    /// Membrane time constant τ_m = C_m / G_leak (s).
+    /// Membrane time constant τ_m = C_m / G_leak.
     #[inline]
     #[must_use]
-    pub fn time_constant_s(&self) -> f64 {
-        self.params.time_constant_s()
+    pub fn time_constant(&self) -> Time<f64> {
+        self.params.time_constant()
     }
 }
 

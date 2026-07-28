@@ -1,5 +1,9 @@
 //! Vector sonogenetics pipelines shared by Rust callers and PyO3 bindings.
 
+use aequitas::systems::si::quantities::{
+    Area, ElectricConductance, ElectricCurrent, Frequency, Length, SurfaceTension,
+    ThermodynamicTemperature, Time,
+};
 use kwavers_core::constants::fundamental::BOLTZMANN as K_B;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use leto::{Array1, Array3};
@@ -30,9 +34,9 @@ pub struct GaussianBeamPressureField {
 #[derive(Debug, Clone, PartialEq)]
 pub struct LifTrace {
     /// Membrane voltage trace `V`.
-    pub voltage_v: Vec<f64>,
-    /// Chronological spike times `s`.
-    pub spike_times_s: Vec<f64>,
+    pub voltage: Vec<aequitas::systems::si::quantities::ElectricPotential<f64>>,
+    /// Chronological spike times.
+    pub spike_times: Vec<Time<f64>>,
 }
 
 /// Output of [`lif_response_probability`].
@@ -93,8 +97,8 @@ pub fn pressure_to_membrane_tension_mn_m(
         .expect("1-D-to-(N,1,1) reshape is infallible");
     let sound_speed_3d = Array3::from_elem([n, 1, 1], sound_speed_m_s);
     let params = CellMembraneParams {
-        radius_m: cell_radius_m,
-        thickness_m: DEFAULT_MEMBRANE_THICKNESS_M,
+        radius: Length::from_base(cell_radius_m),
+        thickness: Length::from_base(DEFAULT_MEMBRANE_THICKNESS_M),
     };
     Ok(
         compute_membrane_tension(&intensity_3d, &sound_speed_3d, &params)
@@ -124,10 +128,12 @@ pub fn boltzmann_open_probability_from_tension_mn_m(
     let n = tension_mn_m.len();
     let gating_area_m2 = K_B * temperature_k / (slope_mn_m * MEMBRANE_TENSION_MN_PER_M_TO_N_PER_M);
     let params = BoltzmannGatingParams {
-        gating_area_m2,
-        half_tension_n_per_m: half_tension_mn_m * MEMBRANE_TENSION_MN_PER_M_TO_N_PER_M,
-        single_channel_conductance_s: 0.0,
-        reversal_potential_v: 0.0,
+        gating_area: Area::from_base(gating_area_m2),
+        half_tension: SurfaceTension::from_base(
+            half_tension_mn_m * MEMBRANE_TENSION_MN_PER_M_TO_N_PER_M,
+        ),
+        single_channel_conductance: ElectricConductance::from_base(0.0),
+        reversal_potential: aequitas::systems::si::quantities::ElectricPotential::from_base(0.0),
     };
     let tension_3d = Array1::from_iter(
         tension_mn_m
@@ -136,10 +142,14 @@ pub fn boltzmann_open_probability_from_tension_mn_m(
     )
     .into_shape::<3>([n, 1, 1])
     .expect("1-D-to-(N,1,1) reshape is infallible");
-    Ok(boltzmann_p_open(&tension_3d, &params, temperature_k)?
-        .into_shape::<1>([n])
-        .expect("(N,1,1)-to-1-D reshape is infallible")
-        .into_vec())
+    Ok(boltzmann_p_open(
+        &tension_3d,
+        &params,
+        ThermodynamicTemperature::from_base(temperature_k),
+    )?
+    .into_shape::<1>([n])
+    .expect("(N,1,1)-to-1-D reshape is infallible")
+    .into_vec())
 }
 
 /// Compute normalized coupled mechanochemical channel drive from acoustic pressure.
@@ -254,10 +264,10 @@ pub fn gaussian_beam_pressure_field(
 /// Simulate a LIF neuron driven by an ion-current trace.
 pub fn simulate_lif_trace(
     i_ion_a: &[f64],
-    dt_s: f64,
+    dt: Time<f64>,
     params: LifParams,
 ) -> KwaversResult<LifTrace> {
-    validate_positive("dt_s", dt_s)?;
+    validate_positive("dt", dt.into_base())?;
     if !params.is_valid() {
         return Err(KwaversError::InvalidInput(
             "LifParams are not physically valid".to_owned(),
@@ -270,14 +280,18 @@ pub fn simulate_lif_trace(
     }
 
     let mut neuron = LifNeuron::new(params);
-    let mut voltage_v = Vec::with_capacity(i_ion_a.len());
+    let mut voltage = Vec::with_capacity(i_ion_a.len());
     for (index, &current) in i_ion_a.iter().enumerate() {
-        neuron.step(current, dt_s, index as f64 * dt_s)?;
-        voltage_v.push(neuron.membrane_voltage());
+        neuron.step(
+            ElectricCurrent::from_base(current),
+            dt,
+            Time::from_base(index as f64 * dt.into_base()),
+        )?;
+        voltage.push(neuron.membrane_voltage());
     }
     Ok(LifTrace {
-        voltage_v,
-        spike_times_s: neuron.spike_times().to_vec(),
+        voltage,
+        spike_times: neuron.spike_times().to_vec(),
     })
 }
 
@@ -290,29 +304,32 @@ pub fn simulate_lif_trace(
 /// Returns an error when the sample count is zero, `dt_s`, `smoothing_sigma_s`,
 /// or `f_max_hz` is nonpositive/nonfinite, or any spike time is nonfinite.
 pub fn lif_response_probability(
-    spike_times_s: &[f64],
+    spike_times: &[Time<f64>],
     n_samples: usize,
-    dt_s: f64,
-    smoothing_sigma_s: f64,
-    f_max_hz: f64,
+    dt: Time<f64>,
+    smoothing_sigma: Time<f64>,
+    f_max: Frequency<f64>,
 ) -> KwaversResult<LifResponseProbability> {
     if n_samples == 0 {
         return Err(KwaversError::InvalidInput(
             "n_samples must be greater than zero".to_owned(),
         ));
     }
-    validate_positive("dt_s", dt_s)?;
-    validate_positive("smoothing_sigma_s", smoothing_sigma_s)?;
-    validate_positive("f_max_hz", f_max_hz)?;
-    if spike_times_s.iter().any(|value| !value.is_finite()) {
+    validate_positive("dt", dt.into_base())?;
+    validate_positive("smoothing_sigma", smoothing_sigma.into_base())?;
+    validate_positive("f_max", f_max.into_base())?;
+    if spike_times
+        .iter()
+        .any(|value| !value.into_base().is_finite())
+    {
         return Err(KwaversError::InvalidInput(
-            "spike_times_s contains non-finite values".to_owned(),
+            "spike_times contains non-finite values".to_owned(),
         ));
     }
 
     let mut spike_train = vec![0.0; n_samples];
-    for &spike_time_s in spike_times_s {
-        let index = (spike_time_s / dt_s).round();
+    for &spike_time in spike_times {
+        let index = (spike_time.into_base() / dt.into_base()).round();
         if index >= 0.0 {
             let index = index as usize;
             if index < n_samples {
@@ -321,7 +338,7 @@ pub fn lif_response_probability(
         }
     }
 
-    let sigma_samples = smoothing_sigma_s / dt_s;
+    let sigma_samples = smoothing_sigma.into_base() / dt.into_base();
     let radius = (4.0 * sigma_samples).ceil() as isize;
     let mut kernel = Vec::with_capacity((2 * radius + 1) as usize);
     let mut kernel_sum = 0.0;
@@ -342,10 +359,10 @@ pub fn lif_response_probability(
             let offset = kernel_index as isize - radius;
             let source = sample as isize + offset;
             if (0..n_samples as isize).contains(&source) {
-                spike_density_hz += spike_train[source as usize] * weight / dt_s;
+                spike_density_hz += spike_train[source as usize] * weight / dt.into_base();
             }
         }
-        *output = (spike_density_hz / f_max_hz).clamp(0.0, 1.0);
+        *output = (spike_density_hz / f_max.into_base()).clamp(0.0, 1.0);
     }
 
     Ok(LifResponseProbability {
@@ -395,16 +412,34 @@ mod tests {
 
     #[test]
     fn lif_trace_delegates_spike_state() {
-        let trace =
-            simulate_lif_trace(&vec![200.0e-12; 2000], 0.05e-3, LifParams::default()).unwrap();
-        assert_eq!(trace.voltage_v.len(), 2000);
-        assert!(!trace.spike_times_s.is_empty());
+        let trace = simulate_lif_trace(
+            &vec![200.0e-12; 2000],
+            Time::from_base(0.05e-3),
+            LifParams::default(),
+        )
+        .unwrap();
+        assert_eq!(trace.voltage.len(), 2000);
+        assert!(!trace.spike_times.is_empty());
     }
 
     #[test]
     fn lif_response_probability_is_bounded_and_input_sensitive() {
-        let empty = lif_response_probability(&[], 101, 0.001, 0.01, 100.0).unwrap();
-        let active = lif_response_probability(&[0.05], 101, 0.001, 0.01, 100.0).unwrap();
+        let empty = lif_response_probability(
+            &[],
+            101,
+            Time::from_base(0.001),
+            Time::from_base(0.01),
+            Frequency::from_base(100.0),
+        )
+        .unwrap();
+        let active = lif_response_probability(
+            &[Time::from_base(0.05)],
+            101,
+            Time::from_base(0.001),
+            Time::from_base(0.01),
+            Frequency::from_base(100.0),
+        )
+        .unwrap();
 
         assert_eq!(active.spike_train.len(), 101);
         assert_eq!(active.response_probability.len(), 101);
@@ -421,8 +456,29 @@ mod tests {
 
     #[test]
     fn lif_response_probability_rejects_invalid_domains() {
-        assert!(lif_response_probability(&[0.0], 0, 0.001, 0.01, 100.0).is_err());
-        assert!(lif_response_probability(&[0.0], 10, 0.0, 0.01, 100.0).is_err());
-        assert!(lif_response_probability(&[f64::NAN], 10, 0.001, 0.01, 100.0).is_err());
+        assert!(lif_response_probability(
+            &[Time::from_base(0.0)],
+            0,
+            Time::from_base(0.001),
+            Time::from_base(0.01),
+            Frequency::from_base(100.0),
+        )
+        .is_err());
+        assert!(lif_response_probability(
+            &[Time::from_base(0.0)],
+            10,
+            Time::from_base(0.0),
+            Time::from_base(0.01),
+            Frequency::from_base(100.0),
+        )
+        .is_err());
+        assert!(lif_response_probability(
+            &[Time::from_base(f64::NAN)],
+            10,
+            Time::from_base(0.001),
+            Time::from_base(0.01),
+            Frequency::from_base(100.0),
+        )
+        .is_err());
     }
 }

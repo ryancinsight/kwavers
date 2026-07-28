@@ -1,4 +1,5 @@
 use super::*;
+use aequitas::systems::si::quantities::{Capacitance, ElectricCurrent, ElectricPotential, Time};
 use eunomia::assert_relative_eq;
 
 /// Sub-threshold constant current must not produce spikes.
@@ -11,25 +12,31 @@ use eunomia::assert_relative_eq;
 fn test_subthreshold_no_spike() {
     let params = LifParams::default();
     let mut neuron = LifNeuron::new(params.clone());
-    let i_ion = 50.0e-12_f64;
-    let dt = 0.1e-3_f64;
+    let i_ion = ElectricCurrent::from_base(50.0e-12_f64);
+    let dt = Time::from_base(0.1e-3_f64);
     let n_steps = 500;
-    let mut t = 0.0;
+    let mut t = Time::from_base(0.0);
     for _ in 0..n_steps {
         let spiked = neuron.step(i_ion, dt, t).unwrap();
         assert!(
             !spiked,
-            "no spike expected for sub-threshold current at t={t:.3e}"
+            "no spike expected for sub-threshold current at t={:.3e}",
+            t.into_base()
         );
         t += dt;
     }
-    let v_ss = params.leak_reversal_v + i_ion / params.leak_conductance_s;
+    let v_ss: ElectricPotential<f64> = params.leak_reversal + i_ion / params.leak_conductance;
     assert!(
-        v_ss < params.threshold_v,
-        "steady-state voltage {v_ss:.4e} must be below threshold {:.4e}",
-        params.threshold_v
+        v_ss.into_base() < params.threshold.into_base(),
+        "steady-state voltage {:.4e} must be below threshold {:.4e}",
+        v_ss.into_base(),
+        params.threshold.into_base()
     );
-    assert_relative_eq!(neuron.membrane_voltage(), v_ss, max_relative = 1e-3);
+    assert_relative_eq!(
+        neuron.membrane_voltage().into_base(),
+        v_ss.into_base(),
+        max_relative = 1e-3
+    );
     assert_eq!(neuron.spike_count(), 0);
 }
 
@@ -40,11 +47,11 @@ fn test_subthreshold_no_spike() {
 fn test_suprathreshold_produces_spikes() {
     let params = LifParams::default();
     let mut neuron = LifNeuron::new(params);
-    let i_ion = 200.0e-12_f64;
-    let dt = 0.05e-3_f64;
-    let duration = 100.0e-3_f64;
-    let n_steps = (duration / dt) as usize;
-    let mut t = 0.0;
+    let i_ion = ElectricCurrent::from_base(200.0e-12_f64);
+    let dt = Time::from_base(0.05e-3_f64);
+    let duration = Time::from_base(100.0e-3_f64);
+    let n_steps = (duration.into_base() / dt.into_base()) as usize;
+    let mut t = Time::from_base(0.0);
     for _ in 0..n_steps {
         let _ = neuron.step(i_ion, dt, t).unwrap();
         t += dt;
@@ -61,9 +68,9 @@ fn test_suprathreshold_produces_spikes() {
 fn test_refractory_clamp() {
     let params = LifParams::default();
     let mut neuron = LifNeuron::new(params.clone());
-    let i_large = 1.0e-9_f64;
-    let dt = 0.1e-3_f64;
-    let mut t = 0.0;
+    let i_large = ElectricCurrent::from_base(1.0e-9_f64);
+    let dt = Time::from_base(0.1e-3_f64);
+    let mut t = Time::from_base(0.0);
     let mut spiked_once = false;
     for _ in 0..200 {
         let spiked = neuron.step(i_large, dt, t).unwrap();
@@ -71,8 +78,8 @@ fn test_refractory_clamp() {
         if spiked {
             spiked_once = true;
             assert_relative_eq!(
-                neuron.membrane_voltage(),
-                params.reset_v,
+                neuron.membrane_voltage().into_base(),
+                params.reset.into_base(),
                 max_relative = 1e-9
             );
             break;
@@ -88,8 +95,20 @@ fn test_refractory_clamp() {
 #[test]
 fn test_zero_dt_is_error() {
     let mut neuron = LifNeuron::new(LifParams::default());
-    assert!(neuron.step(0.0, 0.0, 0.0).is_err());
-    assert!(neuron.step(0.0, -1e-6, 0.0).is_err());
+    assert!(neuron
+        .step(
+            ElectricCurrent::from_base(0.0),
+            Time::from_base(0.0),
+            Time::from_base(0.0),
+        )
+        .is_err());
+    assert!(neuron
+        .step(
+            ElectricCurrent::from_base(0.0),
+            Time::from_base(-1e-6),
+            Time::from_base(0.0),
+        )
+        .is_err());
 }
 
 /// Mean firing rate is spike_count / duration.
@@ -97,28 +116,34 @@ fn test_zero_dt_is_error() {
 fn test_mean_firing_rate() {
     let params = LifParams::default();
     let mut neuron = LifNeuron::new(params);
-    let i_ion = 200.0e-12_f64;
-    let dt = 0.05e-3_f64;
-    let duration = 100.0e-3_f64;
-    let n_steps = (duration / dt) as usize;
-    let mut t = 0.0;
+    let i_ion = ElectricCurrent::from_base(200.0e-12_f64);
+    let dt = Time::from_base(0.05e-3_f64);
+    let duration = Time::from_base(100.0e-3_f64);
+    let n_steps = (duration.into_base() / dt.into_base()) as usize;
+    let mut t = Time::from_base(0.0);
     for _ in 0..n_steps {
         let _ = neuron.step(i_ion, dt, t).unwrap();
         t += dt;
     }
     let rate = neuron.mean_firing_rate(duration);
-    let expected = neuron.spike_count() as f64 / duration;
-    assert_relative_eq!(rate, expected, max_relative = 1e-12);
-    assert_eq!(neuron.mean_firing_rate(0.0), 0.0);
-    assert_eq!(neuron.mean_firing_rate(-1.0), 0.0);
+    let expected = neuron.spike_count() as f64 / duration.into_base();
+    assert_relative_eq!(rate.into_base(), expected, max_relative = 1e-12);
+    assert_eq!(
+        neuron.mean_firing_rate(Time::from_base(0.0)).into_base(),
+        0.0
+    );
+    assert_eq!(
+        neuron.mean_firing_rate(Time::from_base(-1.0)).into_base(),
+        0.0
+    );
 }
 
 /// Membrane time constant equals C_m / G_leak.
 #[test]
 fn test_time_constant() {
     let params = LifParams::default();
-    let tau = params.time_constant_s();
-    assert_relative_eq!(tau, 10.0e-3, max_relative = 1e-12);
+    let tau = params.time_constant();
+    assert_relative_eq!(tau.into_base(), 10.0e-3, max_relative = 1e-12);
 }
 
 /// LifParams validity check.
@@ -127,11 +152,11 @@ fn test_params_validity() {
     let valid = LifParams::default();
     assert!(valid.is_valid());
     let bad = LifParams {
-        capacitance_f: 0.0,
+        capacitance: Capacitance::from_base(0.0),
         ..Default::default()
     };
     assert!(!bad.is_valid());
     let mut bad2 = LifParams::default();
-    bad2.threshold_v = bad2.reset_v - 1e-3;
+    bad2.threshold = bad2.reset - ElectricPotential::from_base(1e-3);
     assert!(!bad2.is_valid());
 }

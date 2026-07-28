@@ -1,5 +1,6 @@
 //! Ion-current equation for opened mechanosensitive channels.
 
+use aequitas::systems::si::quantities::{ElectricConductance, ElectricCurrent, ElectricPotential};
 use leto::Array3;
 
 /// Compute per-voxel ion current from channel open probability.
@@ -17,11 +18,12 @@ use leto::Array3;
 #[must_use]
 pub fn ion_current(
     p_open: &Array3<f64>,
-    g_single: f64,
+    g_single: ElectricConductance<f64>,
     n_channels: f64,
-    v_membrane: f64,
-    e_rev: f64,
+    v_membrane: ElectricPotential<f64>,
+    e_rev: ElectricPotential<f64>,
 ) -> Array3<f64> {
-    let scale = g_single * n_channels * (e_rev - v_membrane);
+    let current: ElectricCurrent<f64> = g_single * (e_rev - v_membrane) * n_channels;
+    let scale = current.into_base();
     p_open.mapv(|p| p * scale)
 }

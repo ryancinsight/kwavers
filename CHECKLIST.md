@@ -18,13 +18,19 @@ Clippy and doctests pass. Rustdoc exits 0 with one pre-existing private
 intra-doc-link warning. Shared provider-patch, linker, and peer-dirty warnings
 remain outside this item.
 
-## Owner: Codex — KWAVERS-AEQ-MET-30 upstream electrical dimensions [major] — ready
+## Owner: Codex — KWAVERS-AEQ-MET-30 upstream electrical dimensions [major] — done 2026-07-27
 
-- [ ] Add the missing Aequitas capacitance, conductance, potential, and charge
+- [x] Add the missing Aequitas capacitance, conductance, potential, and charge
       dimensions and units with provider-level tests and documentation.
-- [ ] Type sonogenetics membrane and LIF/channel electrical public contracts;
+- [x] Type sonogenetics membrane and LIF/channel electrical public contracts;
       preserve formula/storage boundaries and migrate value-semantic tests.
-- [ ] Re-run the full sonogenetics package gates and synchronize PM artifacts.
+- [x] Re-run the full sonogenetics package gates and synchronize PM artifacts.
+
+Evidence: the Aequitas provider electrical increment and the Kwavers
+sonogenetics consumer increment are committed and pushed. `kwavers-physics`
+passes 1,556/1,556 Nextest tests with one repository-declared skip;
+warning-denied Clippy, doctests, and Rustdoc pass. Shared-overlay and
+third-party linker warnings remain outside this item.
 
 ## Owner: Codex — KWAVERS-AEQ-MET-28 typed lithotripsy quantities [major] — done 2026-07-27
 

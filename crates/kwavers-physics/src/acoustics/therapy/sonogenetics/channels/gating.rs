@@ -3,6 +3,8 @@
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use leto::Array3;
 
+use aequitas::systems::si::quantities::ThermodynamicTemperature;
+
 use super::constants::K_B;
 use super::params::{BoltzmannGatingParams, GatingModel, PressureThresholdParams};
 use crate::parallel::zip_mut_ref;
@@ -22,22 +24,22 @@ use crate::parallel::zip_mut_ref;
 ///
 /// # Errors
 ///
-/// Returns `Err` if `temperature_k <= 0`.
+/// Returns `Err` if the absolute temperature is not strictly positive.
 pub fn boltzmann_p_open(
     membrane_tension: &Array3<f64>,
     params: &BoltzmannGatingParams,
-    temperature_k: f64,
+    temperature: ThermodynamicTemperature<f64>,
 ) -> KwaversResult<Array3<f64>> {
-    if temperature_k <= 0.0 {
+    if temperature.into_base() <= 0.0 {
         return Err(KwaversError::Validation(ValidationError::InvalidValue {
-            parameter: "temperature_k".to_owned(),
-            value: temperature_k,
+            parameter: "temperature".to_owned(),
+            value: temperature.into_base(),
             reason: "absolute temperature must be strictly positive".to_owned(),
         }));
     }
-    let kbt = K_B * temperature_k;
-    let a = params.gating_area_m2;
-    let t_half = params.half_tension_n_per_m;
+    let kbt = K_B * temperature.into_base();
+    let a = params.gating_area.into_base();
+    let t_half = params.half_tension.into_base();
     let mut out = Array3::<f64>::zeros(membrane_tension.shape());
     zip_mut_ref(
         out.view_mut(),
@@ -58,20 +60,20 @@ pub fn boltzmann_p_open(
 ///
 /// # Errors
 ///
-/// Returns `Err` if `steepness_pa <= 0`.
+/// Returns `Err` if the sigmoid steepness is not strictly positive.
 pub fn pressure_threshold_p_open(
     radiation_pressure: &Array3<f64>,
     params: &PressureThresholdParams,
 ) -> KwaversResult<Array3<f64>> {
-    if params.steepness_pa <= 0.0 {
+    if params.steepness.into_base() <= 0.0 {
         return Err(KwaversError::Validation(ValidationError::InvalidValue {
-            parameter: "steepness_pa".to_owned(),
-            value: params.steepness_pa,
+            parameter: "steepness".to_owned(),
+            value: params.steepness.into_base(),
             reason: "sigmoid steepness must be strictly positive".to_owned(),
         }));
     }
-    let p_half = params.half_pressure_pa;
-    let s = params.steepness_pa;
+    let p_half = params.half_pressure.into_base();
+    let s = params.steepness.into_base();
     let mut out = Array3::<f64>::zeros(radiation_pressure.shape());
     zip_mut_ref(
         out.view_mut(),
@@ -95,10 +97,10 @@ pub fn compute_p_open(
     model: &GatingModel,
     membrane_tension: &Array3<f64>,
     radiation_pressure: &Array3<f64>,
-    temperature_k: f64,
+    temperature: ThermodynamicTemperature<f64>,
 ) -> KwaversResult<Array3<f64>> {
     match model {
-        GatingModel::Boltzmann(params) => boltzmann_p_open(membrane_tension, params, temperature_k),
+        GatingModel::Boltzmann(params) => boltzmann_p_open(membrane_tension, params, temperature),
         GatingModel::PressureThreshold(params) => {
             pressure_threshold_p_open(radiation_pressure, params)
         }
