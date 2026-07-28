@@ -210,7 +210,7 @@ pub fn update_microbubble_dynamics(
 
     // Create concentration field (simplified: uniform concentration)
     // Future: Track spatial distribution of bubble population
-    let base_concentration = ceus_system.get_concentration();
+    let base_concentration = ceus_system.get_concentration().into_base();
     let mut concentration_field = Array3::from_elem((nx, ny, nz), base_concentration);
 
     // If bubble has cavitated or ruptured, reduce local concentration
@@ -230,10 +230,19 @@ pub fn update_microbubble_dynamics(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use aequitas::systems::si::{quantities::{Length, NumberDensity}, units::{Meter, PerCubicMeter}};
     use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE};
-    use kwavers_core::constants::numerical::MHZ_TO_HZ;
     use kwavers_grid::Grid;
     use kwavers_medium::homogeneous::HomogeneousMedium;
+
+    /// Representative SonoVue microbubble concentration (~1e8 bubbles/mL = 1e14/m³).
+    fn test_bubble_concentration() -> NumberDensity<f64> {
+        NumberDensity::from_unit::<PerCubicMeter>(1e14)
+    }
+    /// Representative SonoVue bubble radius (~2.5 µm).
+    fn test_bubble_radius() -> Length<f64> {
+        Length::from_base(2.5e-6)
+    }
 
     fn create_test_grid() -> Grid {
         Grid::new(8, 8, 8, 0.001, 0.001, 0.001).unwrap()
@@ -253,7 +262,7 @@ mod tests {
         let grid = create_test_grid();
         let medium =
             HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE, 0.5, 1.0, &grid);
-        let mut ceus = ContrastEnhancedUltrasound::new(&grid, &medium, MHZ_TO_HZ, 2.5).unwrap();
+        let mut ceus = ContrastEnhancedUltrasound::new(&grid, &medium, test_bubble_concentration(), test_bubble_radius()).unwrap();
         let acoustic_field = create_test_acoustic_field();
 
         let concentration =
@@ -268,7 +277,7 @@ mod tests {
         let grid = create_test_grid();
         let medium =
             HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE, 0.5, 1.0, &grid);
-        let mut ceus = ContrastEnhancedUltrasound::new(&grid, &medium, MHZ_TO_HZ, 2.5).unwrap();
+        let mut ceus = ContrastEnhancedUltrasound::new(&grid, &medium, test_bubble_concentration(), test_bubble_radius()).unwrap();
         let acoustic_field = create_test_acoustic_field();
 
         let concentration =
@@ -286,7 +295,7 @@ mod tests {
         let grid = create_test_grid();
         let medium =
             HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE, 0.5, 1.0, &grid);
-        let mut ceus = ContrastEnhancedUltrasound::new(&grid, &medium, MHZ_TO_HZ, 2.5).unwrap();
+        let mut ceus = ContrastEnhancedUltrasound::new(&grid, &medium, test_bubble_concentration(), test_bubble_radius()).unwrap();
 
         // Create pressure field with gradient
         let mut pressure = Array3::from_elem((8, 8, 8), 1e5);
@@ -321,7 +330,7 @@ mod tests {
         let grid = create_test_grid();
         let medium =
             HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE, 0.5, 1.0, &grid);
-        let mut ceus = ContrastEnhancedUltrasound::new(&grid, &medium, MHZ_TO_HZ, 2.5).unwrap();
+        let mut ceus = ContrastEnhancedUltrasound::new(&grid, &medium, test_bubble_concentration(), test_bubble_radius()).unwrap();
         let acoustic_field = create_test_acoustic_field();
 
         // Valid timestep
@@ -337,7 +346,7 @@ mod tests {
         let grid = create_test_grid();
         let medium =
             HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE, 0.5, 1.0, &grid);
-        let mut ceus = ContrastEnhancedUltrasound::new(&grid, &medium, MHZ_TO_HZ, 2.5).unwrap();
+        let mut ceus = ContrastEnhancedUltrasound::new(&grid, &medium, test_bubble_concentration(), test_bubble_radius()).unwrap();
         let acoustic_field = create_test_acoustic_field();
 
         // Simulate multiple timesteps
