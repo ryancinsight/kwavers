@@ -17,7 +17,6 @@
 use super::traits::Interpolator;
 use kwavers_core::error::{KwaversResult, NumericalError};
 use leto::{Array1, Array3, ArrayView1, ArrayView3};
-
 /// Trilinear interpolator (C⁰, order 1, monotonicity-preserving).
 #[derive(Debug, Clone)]
 pub struct NumericsTrilinearInterpolator {
@@ -98,34 +97,11 @@ impl NumericsTrilinearInterpolator {
 
 /// Trilinear interpolation at fractional array indices.
 ///
-/// `x`, `y`, `z` are fractional indices into the first, second, and third
-/// dimensions of `input`. Out-of-bounds coordinates are clamped to the nearest
-/// boundary sample so the function is defined on the closed domain
-/// `[0, nx−1] × [0, ny−1] × [0, nz−1]`.
-///
-/// Used as the single authoritative implementation for all index-space trilinear
-/// interpolation in the codebase (resampling kernels, ray-integral attenuation,
-/// CT preprocessing). Physical-coordinate callers should use the domain
-/// medium trilinear interpolator instead.
+/// Delegates to `leto_ops::trilinear_index_space` (SSOT).
 #[must_use]
+#[inline]
 pub fn trilinear_index_space(input: &Array3<f64>, x: f64, y: f64, z: f64) -> f64 {
-    let [nx, ny, nz] = input.shape();
-    let x0 = x.floor().clamp(0.0, (nx - 1) as f64) as usize;
-    let y0 = y.floor().clamp(0.0, (ny - 1) as f64) as usize;
-    let z0 = z.floor().clamp(0.0, (nz - 1) as f64) as usize;
-    let x1 = (x0 + 1).min(nx - 1);
-    let y1 = (y0 + 1).min(ny - 1);
-    let z1 = (z0 + 1).min(nz - 1);
-    let tx = (x - x0 as f64).clamp(0.0, 1.0);
-    let ty = (y - y0 as f64).clamp(0.0, 1.0);
-    let tz = (z - z0 as f64).clamp(0.0, 1.0);
-    let c00 = input[[x0, y0, z0]].mul_add(1.0 - tx, input[[x1, y0, z0]] * tx);
-    let c10 = input[[x0, y1, z0]].mul_add(1.0 - tx, input[[x1, y1, z0]] * tx);
-    let c01 = input[[x0, y0, z1]].mul_add(1.0 - tx, input[[x1, y0, z1]] * tx);
-    let c11 = input[[x0, y1, z1]].mul_add(1.0 - tx, input[[x1, y1, z1]] * tx);
-    let c0 = c00 * (1.0 - ty) + c10 * ty;
-    let c1 = c01 * (1.0 - ty) + c11 * ty;
-    c0 * (1.0 - tz) + c1 * tz
+    leto_ops::trilinear_index_space(input.view(), x, y, z)
 }
 
 impl Interpolator for NumericsTrilinearInterpolator {

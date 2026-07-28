@@ -1,4 +1,5 @@
 use leto::Array3;
+use leto_ops::trilinear_index_space;
 
 use super::transforms::apply_inverse_transform;
 
@@ -42,7 +43,7 @@ pub fn resample_to_target_grid(
 
                 // Trilinear interpolation
                 let value = trilinear_index_space(
-                    source_image,
+                    source_image.view(),
                     source_coords[0],
                     source_coords[1],
                     source_coords[2],
@@ -68,24 +69,4 @@ pub(super) fn trilinear_interpolate(
     _shape: [usize; 3],
 ) -> f64 {
     trilinear_index_space(input, coords[0], coords[1], coords[2])
-}
-
-fn trilinear_index_space(input: &Array3<f64>, x: f64, y: f64, z: f64) -> f64 {
-    let [nx, ny, nz] = input.shape();
-    let x0 = x.floor().clamp(0.0, (nx - 1) as f64) as usize;
-    let y0 = y.floor().clamp(0.0, (ny - 1) as f64) as usize;
-    let z0 = z.floor().clamp(0.0, (nz - 1) as f64) as usize;
-    let x1 = (x0 + 1).min(nx - 1);
-    let y1 = (y0 + 1).min(ny - 1);
-    let z1 = (z0 + 1).min(nz - 1);
-    let tx = (x - x0 as f64).clamp(0.0, 1.0);
-    let ty = (y - y0 as f64).clamp(0.0, 1.0);
-    let tz = (z - z0 as f64).clamp(0.0, 1.0);
-    let c00 = input[[x0, y0, z0]].mul_add(1.0 - tx, input[[x1, y0, z0]] * tx);
-    let c10 = input[[x0, y1, z0]].mul_add(1.0 - tx, input[[x1, y1, z0]] * tx);
-    let c01 = input[[x0, y0, z1]].mul_add(1.0 - tx, input[[x1, y0, z1]] * tx);
-    let c11 = input[[x0, y1, z1]].mul_add(1.0 - tx, input[[x1, y1, z1]] * tx);
-    let c0 = c00 * (1.0 - ty) + c10 * ty;
-    let c1 = c01 * (1.0 - ty) + c11 * ty;
-    c0 * (1.0 - tz) + c1 * tz
 }
