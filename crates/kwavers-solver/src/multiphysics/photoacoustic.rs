@@ -3,8 +3,15 @@
 //! This module implements the coupled photoacoustic solver that integrates
 //! electromagnetic (optical) and acoustic physics.
 
-use aequitas::systems::si::{quantities::Length, units::PerMeter};
-use hyperion::{quantity::PathLength, transport::DiffusionCoefficients, TransportError};
+use aequitas::systems::si::{
+    quantities::{EnergyPerArea, Length},
+    units::{JoulePerCubicMeter, JoulePerSquareMeter, PerMeter},
+};
+use hyperion::{
+    quantity::{EnergyFluence, PathLength},
+    transport::{absorbed_energy_density, DiffusionCoefficients},
+    TransportError,
+};
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_core::constants::numerical::FOUR_PI;
 use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_C;
@@ -62,10 +69,21 @@ impl<T: ElectromagneticWaveEquation> PhotoacousticSolver<T> {
         fluence: &ArrayD<f64, VecStorage<f64>>,
     ) -> KwaversResult<ArrayD<f64, VecStorage<f64>>> {
         let gamma = self.gruneisen.evaluate(BODY_TEMPERATURE_C);
-        let mu_a = self.optical_properties.absorption().in_unit::<PerMeter>();
+        let absorption = *self.optical_properties.absorption();
 
-        // p₀ = Γ μ_a Φ
-        let mapped: Vec<f64> = fluence.iter().map(|&phi| gamma * mu_a * phi).collect();
+        // p₀ = Γ q. The deposition q = μ_a Φ is Hyperion's law, so this solver
+        // composes the Grüneisen step onto it rather than repeating the product.
+        let mapped: Vec<f64> = fluence
+            .iter()
+            .map(|&phi| {
+                let incident =
+                    EnergyFluence::new(EnergyPerArea::from_unit::<JoulePerSquareMeter>(phi))
+                        .map_err(map_transport_error)?;
+                let deposition =
+                    absorbed_energy_density(absorption, incident).map_err(map_transport_error)?;
+                Ok(gamma * deposition.in_unit::<JoulePerCubicMeter>())
+            })
+            .collect::<KwaversResult<Vec<f64>>>()?;
         let pressure = ArrayD::from_shape_vec(fluence.shape(), mapped)
             .expect("invariant: mapped data preserves fluence shape");
 
