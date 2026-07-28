@@ -62,9 +62,10 @@ The `kwavers-physics` package passes 1,556/1,556 Nextest tests with one
 repository-declared skip; package check, warning-denied Clippy, doctests,
 targeted rustfmt, `git diff --check`, and Rustdoc pass. The workspace Aequitas
 pin now tracks provider commit `f91bf02`, and the four newly typed workspace
-edges are recorded in `Cargo.lock`. `cargo metadata --locked --no-deps` passes
-outside the Atlas overlay; the no-overlay package check is blocked offline by
-the external `consus` branch `codex/consus-npy-provider`, while the overlay
+edges are recorded in `Cargo.lock`. The obsolete Consus NPY branch selector is
+removed, and `cargo metadata --locked --no-deps` passes outside the Atlas
+overlay. The no-overlay package check now reaches Tyche and is blocked by
+Tyche `main`'s nonportable sibling `../eunomia` path dependency; the overlay
 package gate passes. See [ADR 068](docs/ADR/068-sonogenetics-quantities.md).
 
 ## Live lithotripsy refresh — 2026-07-27
