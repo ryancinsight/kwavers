@@ -3399,6 +3399,7 @@ dependencies = [
 name = "kwavers-core"
 version = "3.0.0"
 dependencies = [
+ "aequitas",
  "anyhow",
  "flume",
  "leto",
@@ -3450,6 +3451,7 @@ dependencies = [
 name = "kwavers-driver"
 version = "0.3.13"
 dependencies = [
+ "aequitas",
  "kwavers-transducer",
  "thiserror 1.0.69",
 ]
@@ -3499,6 +3501,7 @@ dependencies = [
 name = "kwavers-grid"
 version = "3.0.0"
 dependencies = [
+ "aequitas",
  "eunomia",
  "kwavers-core",
  "kwavers-math",
@@ -3516,6 +3519,7 @@ dependencies = [
 name = "kwavers-imaging"
 version = "3.0.0"
 dependencies = [
+ "aequitas",
  "coeus-core",
  "eunomia",
  "kwavers-core",

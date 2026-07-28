@@ -3,7 +3,7 @@ members = ["crates/kwavers", "xtask", "crates/kwavers-python", "crates/kwavers-c
 resolver = "2"
 
 [workspace.dependencies]
-aequitas = { version = "0.1.0", git = "https://github.com/ryancinsight/aequitas", rev = "ce3ef7a6ea26a025b91df99034cadbbcf9b01330", default-features = false, features = ["std"] }
+aequitas = { version = "0.1.0", git = "https://github.com/ryancinsight/aequitas", rev = "f91bf0243ce69c89e912d4dc771b174eb54e68cd", default-features = false, features = ["std"] }
 asclepius = { version = "0.1.0", git = "https://github.com/ryancinsight/asclepius", default-features = false, features = ["std"] }
 hyperion = { version = "0.1.0", git = "https://github.com/ryancinsight/hyperion" }
 proteus = { version = "0.1.0", git = "https://github.com/ryancinsight/proteus" }
