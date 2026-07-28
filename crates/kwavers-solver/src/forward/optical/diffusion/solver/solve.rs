@@ -2,10 +2,9 @@
 //! `A Φ = S` produced by [`super::operator`] / [`super::preconditioner`].
 
 use anyhow::Result;
-use leto::Array3 as LetoArray3;
 use leto::Array3;
 
-use super::{DiffusionSolver, DiffusionVolume};
+use super::DiffusionSolver;
 
 impl DiffusionSolver {
     /// Solve steady-state diffusion equation for given source distribution.
@@ -29,28 +28,12 @@ impl DiffusionSolver {
     /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn solve(&self, source: &Array3<f64>) -> Result<Array3<f64>> {
-        self.solve_volume(source)
-    }
-
-    /// Solve steady-state diffusion equation for a Leto source distribution.
-    ///
-    /// # Errors
-    /// - Returns [`Err`] if the source shape differs from the solver grid or
-    ///   if the PCG iteration does not converge within `max_iterations`.
-    pub fn solve_leto(&self, source: &LetoArray3<f64>) -> Result<LetoArray3<f64>> {
-        self.solve_volume(source)
-    }
-
-    fn solve_volume<V>(&self, source: &V) -> Result<V>
-    where
-        V: DiffusionVolume,
-    {
         let (nx, ny, nz) = self.grid.dimensions();
 
-        if source.shape3() != [nx, ny, nz] {
+        if source.shape() != [nx, ny, nz] {
             anyhow::bail!(
                 "Source dimensions {:?} do not match grid dimensions ({}, {}, {})",
-                source.shape3(),
+                source.shape(),
                 nx,
                 ny,
                 nz
@@ -58,10 +41,10 @@ impl DiffusionSolver {
         }
 
         let shape = [nx, ny, nz];
-        let mut fluence = V::zeros(shape);
+        let mut fluence = Array3::zeros(shape);
         let mut residual = source.clone();
 
-        let preconditioner = self.compute_preconditioner_volume::<V>();
+        let preconditioner = self.compute_preconditioner();
         let mut preconditioned_residual = Self::mul_elementwise(&residual, &preconditioner);
         let mut search_direction = preconditioned_residual.clone();
 
@@ -76,7 +59,7 @@ impl DiffusionSolver {
         }
 
         for iter in 0..self.config.max_iterations {
-            let a_times_p = self.apply_operator_volume(&search_direction);
+            let a_times_p = self.apply_operator(&search_direction);
             let p_dot_ap = Self::dot(&search_direction, &a_times_p);
 
             if p_dot_ap.abs() < 1e-30 {
@@ -130,66 +113,54 @@ impl DiffusionSolver {
         )
     }
 
-    fn dot<V>(left: &V, right: &V) -> f64
-    where
-        V: DiffusionVolume,
-    {
-        let [nx, ny, nz] = left.shape3();
+    fn dot(left: &Array3<f64>, right: &Array3<f64>) -> f64 {
+        let [nx, ny, nz] = left.shape();
         let mut sum = 0.0;
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
                     let index = [i, j, k];
-                    sum += left.value(index) * right.value(index);
+                    sum += left[index] * right[index];
                 }
             }
         }
         sum
     }
 
-    fn mul_elementwise<V>(left: &V, right: &V) -> V
-    where
-        V: DiffusionVolume,
-    {
-        let [nx, ny, nz] = left.shape3();
-        let mut result = V::zeros([nx, ny, nz]);
+    fn mul_elementwise(left: &Array3<f64>, right: &Array3<f64>) -> Array3<f64> {
+        let [nx, ny, nz] = left.shape();
+        let mut result = Array3::zeros([nx, ny, nz]);
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
                     let index = [i, j, k];
-                    result.set_value(index, left.value(index) * right.value(index));
+                    result[index] = left[index] * right[index];
                 }
             }
         }
         result
     }
 
-    fn add_scaled_in_place<V>(target: &mut V, source: &V, scale: f64)
-    where
-        V: DiffusionVolume,
-    {
-        let [nx, ny, nz] = target.shape3();
+    fn add_scaled_in_place(target: &mut Array3<f64>, source: &Array3<f64>, scale: f64) {
+        let [nx, ny, nz] = target.shape();
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
                     let index = [i, j, k];
-                    target.set_value(index, target.value(index) + scale * source.value(index));
+                    target[index] = target[index] + scale * source[index];
                 }
             }
         }
     }
 
-    fn combine<V>(left: &V, right: &V, right_scale: f64) -> V
-    where
-        V: DiffusionVolume,
-    {
-        let [nx, ny, nz] = left.shape3();
-        let mut result = V::zeros([nx, ny, nz]);
+    fn combine(left: &Array3<f64>, right: &Array3<f64>, right_scale: f64) -> Array3<f64> {
+        let [nx, ny, nz] = left.shape();
+        let mut result = Array3::zeros([nx, ny, nz]);
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
                     let index = [i, j, k];
-                    result.set_value(index, left.value(index) + right_scale * right.value(index));
+                    result[index] = left[index] + right_scale * right[index];
                 }
             }
         }

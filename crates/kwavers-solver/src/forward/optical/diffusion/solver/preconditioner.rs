@@ -2,15 +2,13 @@
 //! `A = ∇·(D∇·) − μₐ·`. Used by the conjugate-gradient driver in `solve.rs`
 //! to accelerate convergence on heterogeneous media.
 
-use super::{DiffusionSolver, DiffusionVolume};
+use super::DiffusionSolver;
+use leto::Array3;
 
 impl DiffusionSolver {
-    pub(super) fn compute_preconditioner_volume<V>(&self) -> V
-    where
-        V: DiffusionVolume,
-    {
+    pub(super) fn compute_preconditioner(&self) -> Array3<f64> {
         let (nx, ny, nz) = self.grid.dimensions();
-        let mut preconditioner = V::zeros([nx, ny, nz]);
+        let mut preconditioner = Array3::zeros([nx, ny, nz]);
 
         let bc = self.boundary_conditions();
         let dx2_inv = 1.0 / (self.grid.dx * self.grid.dx);
@@ -71,7 +69,7 @@ impl DiffusionSolver {
                     } else {
                         1.0
                     };
-                    preconditioner.set_value([i, j, k], value);
+                    preconditioner[[i, j, k]] = value;
                 }
             }
         }
