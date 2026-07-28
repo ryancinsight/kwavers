@@ -3,7 +3,7 @@ members = ["crates/kwavers", "xtask", "crates/kwavers-python", "crates/kwavers-c
 resolver = "2"
 
 [workspace.dependencies]
-aequitas = { version = "0.1.0", git = "https://github.com/ryancinsight/aequitas", rev = "f91bf0243ce69c89e912d4dc771b174eb54e68cd", default-features = false, features = ["std"] }
+aequitas = { version = "0.1.0", git = "https://github.com/ryancinsight/aequitas", default-features = false, features = ["std"] }
 asclepius = { version = "0.1.0", git = "https://github.com/ryancinsight/asclepius", default-features = false, features = ["std"] }
 hyperion = { version = "0.1.0", git = "https://github.com/ryancinsight/hyperion" }
 proteus = { version = "0.1.0", git = "https://github.com/ryancinsight/proteus" }
@@ -100,3 +100,10 @@ melinoe = { path = "../melinoe" }
 # members; cargo treats unused subkeys as warnings only.
 
 # ATLAS-PATH-DEP-AUDIT-2 round-4 closure
+
+# Redirect apollo's git-based leto/leto-ops deps to the workspace-local path
+# so all crates share a single compiled instance (eliminates the
+# `leto::Array` vs `Array` type mismatch at the apollo/kwavers boundary).
+[patch."https://github.com/ryancinsight/leto.git"]
+leto = { path = "../leto/crates/leto" }
+leto-ops = { path = "../leto/crates/leto-ops" }
