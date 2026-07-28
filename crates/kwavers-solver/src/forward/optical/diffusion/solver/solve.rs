@@ -147,7 +147,7 @@ impl DiffusionSolver {
             for j in 0..ny {
                 for k in 0..nz {
                     let index = [i, j, k];
-                    target[index] = target[index] + scale * source[index];
+                    target[index] += scale * source[index];
                 }
             }
         }
