@@ -35,17 +35,29 @@
 `215d8915b` repairs five CEUS test constructors to pass typed
 `NumberDensity<f64>` and `Length<f64>` values; commit `58d1750c1` removes
 three duplicate interpolation kernels and delegates to the provider-owned
-`leto_ops` SSOT. The affected `kwavers-math`, `kwavers-medium`, and
-`kwavers-physics` lane passes 1,861/1,861 Nextest tests with one declared
-skip. No new physical metric crosses a public boundary as an untyped scalar.
+`leto_ops` SSOT. The delivered Aequitas lane evidence remains
+`kwavers-math`, `kwavers-medium`, and `kwavers-physics` Nextest 1,861/1,861
+with one declared skip. No new physical metric crosses a public boundary as
+an untyped scalar.
 
 The standalone provider-source blockers found during the audit are fixed and
 pushed: Tyche `1527964` uses portable Eunomia git sources, and Asclepius
-`bbf3840` uses portable Aequitas/Eunomia git sources. The shared Atlas overlay
-still has a dirty, peer-owned lock graph with duplicate provider source
-identities; a no-overlay lock refresh must be integrated separately before a
-locked standalone package gate can be claimed. This is dependency-resolution
-debt, not an open Aequitas metric row.
+`bbf3840` uses portable Aequitas/Eunomia git sources. Atlas overlay commit
+`69a8dba` now maps Aequitas and Eunomia to canonical `repos/` trees, the
+overlay generator check is green, and the current `cargo tree --duplicates`
+scan reports one local identity for each provider. The local-overlay
+`kwavers-physics` all-target check passes; a locked check still cannot be
+claimed because the shared peer-dirty provider manifests and lockfile require
+Cargo to rewrite the lock under the overlay. This is dependency-resolution
+verification debt, not an open Aequitas metric row.
+
+The current Kwavers working tree also contains peer edits in the nonlinear
+wave path. A refreshed three-package Nextest run stops at 802/1,862 after two
+failures in the peer-edited integration tests
+`update_wave_inner_increments_call_count` and
+`update_wave_inner_output_shape_matches_grid`; those files are outside this
+metric slice and remain untouched. The failures are recorded as peer-WIP
+verification state, not attributed to the committed Aequitas closures.
 
 ## Live CEUS refresh — 2026-07-27
 
