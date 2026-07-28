@@ -67,7 +67,7 @@ impl IterativeSolver {
                     operation: "bicgstab_complex".to_string(),
                     expected: format!("{n}"),
                     actual: format!("{}", b_vec.len()),
-                }
+                },
             ));
         }
 
@@ -100,7 +100,11 @@ impl IterativeSolver {
         // interior DOF is updated.  Using ‖r₀‖ avoids the false-convergence
         // while still providing a meaningful stopping criterion.
         let r0_norm = complex_norm(&r);
-        let tol = if r0_norm > 0.0 { self.config.tolerance * r0_norm } else { self.config.tolerance };
+        let tol = if r0_norm > 0.0 {
+            self.config.tolerance * r0_norm
+        } else {
+            self.config.tolerance
+        };
 
         for _ in 0..self.config.max_iterations {
             let r_norm = complex_norm(&r);
@@ -139,7 +143,7 @@ impl IterativeSolver {
             let s_norm = complex_norm(&s);
             if s_norm < tol {
                 for i in 0..n {
-                    x[i] = x[i] + alpha * p[i];
+                    x[i] += alpha * p[i];
                 }
                 break;
             }
@@ -193,11 +197,14 @@ pub trait MatVec {
 
 impl MatVec for crate::linear_algebra::sparse::CompressedSparseRowMatrix<Complex64> {
     fn matvec(&self, x: &[Complex64], y: &mut [Complex64]) {
-        for i in 0..self.rows {
-            y[i] = Complex64::new(0.0, 0.0);
-            for (col, val) in &self.data[i] {
+        for (i, row) in self.data.iter().enumerate() {
+            let output = y
+                .get_mut(i)
+                .expect("invariant: output has one slot per matrix row");
+            *output = Complex64::new(0.0, 0.0);
+            for (col, val) in row {
                 if *col < x.len() {
-                    y[i] = y[i] + *val * x[*col];
+                    *output += *val * x[*col];
                 }
             }
         }
