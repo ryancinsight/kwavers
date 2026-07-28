@@ -29,6 +29,22 @@
 
 # Gap Audit
 
+## Live ultrafast-transducer refresh — 2026-07-27
+
+`KWAVERS-AEQ-MET-22` corrected a stale closure claim: the live ultrafast
+transducer stack still exposed raw physical scalars in the transmission
+sequencer, plane-wave configuration/processor, and diverging-wave
+configuration/processor. The public contracts now carry Aequitas `Angle`,
+`Frequency`, `Length`, `Time`, and `Velocity` values. Delay tables and other
+dense numerical arrays remain scalar because they are explicit mesh/formula
+boundaries; scalar extraction is confined to those kernels and presentation
+helpers. No compatibility scalar facade remains.
+
+The transducer package check, full Nextest (218 passed, one skipped), doctests
+(2 passed, 6 ignored), warning-denied Clippy, Rustdoc, rustfmt, and diff checks
+pass on the current branch. Existing shared-graph unused-patch and linker
+warnings remain outside this slice.
+
 ## Live Aequitas metric refresh — 2026-07-27
 
 The prior `KWAVERS-AEQ-MET-01` closure was stale on this branch: the typed
@@ -198,6 +214,8 @@ provider-owned mass-density-rate quantity up to the scalar numerical boundary.
 | `KWAVERS-AEQ-MET-20` | `kwavers-physics/src/acoustics/therapy/neuromodulation/protocol.rs` exposed pulse-train frequency, duration, pressure, density, sound speed, dosimetry intensities, total time, and ITRUSST temperature rise as unit-documented scalars. | Type public protocol and dosimetry contracts with Aequitas `Frequency`, `Time`, `Pressure`, `MassDensity`, `Velocity`, `Intensity`, and `TemperatureDifference`; keep MI, duty cycle, safety booleans, and CEM43 model thresholds dimensionless/consumer-semantic and extract scalars only at FDA and numerical formula boundaries. | Kwavers, Aequitas | **RESOLVED in `feat(kwavers-physics): Type neuromodulation metrics`.** Public fields/results and formula inputs are typed; unit-suffixed protocol names are removed; formula-only scalar extraction preserves the Blackmore, FDA, and ITRUSST semantics. Physics check passes; Nextest passes 1556/1556 with one skip and one leaky test; doctests pass 8/8 with four ignored; warning-denied Clippy passes; Rustdoc builds with two pre-existing link warnings; touched-leaf rustfmt and diff checks pass. See [ADR 058](docs/ADR/058-neuromodulation-protocol-quantities.md). |
 | `KWAVERS-AEQ-MET-21` | `kwavers-transducer/src/design/{mod.rs,propagation.rs}` exposed array geometry, wavelength, frequency, sound speed, drive current, pressure-per-current, acoustic impedance, focal pressure, intensity, and beam extents as unit-documented raw values. | Type the public design and focused-propagation contracts with Aequitas; migrate driver callers and retain scalar extraction only at formula, width-search, validation, and explicit report-conversion boundaries. | Kwavers, Aequitas | **RESOLVED in this increment.** Design/propagation contracts and channel positions are typed; unit-suffixed names are removed and driver report conversion is explicit. Transducer Nextest passes 218/218 with one skip, doctests pass 2/2 with six ignored, and warning-denied Clippy/Rustdoc pass. Driver `kwavers`-feature Nextest passes 489/489; its doctest target has no tests, and warning-denied Clippy/Rustdoc pass. See [ADR 059](docs/ADR/059-transducer-design-quantities.md). |
 
+| `KWAVERS-AEQ-MET-22` | `kwavers-transducer/src/ultrafast/{sequencer,plane_wave,diverging_wave}` still exposed transmission angles, frequencies/PRF, sound speed, depths, positions, delays, and durations as raw physical scalars after the prior audit marked the ultrafast family closed. | Type the complete ultrafast public stack with Aequitas; retain scalar extraction only at delay-table, numerical-kernel, and presentation boundaries. | Kwavers, Aequitas | **RESOLVED in this increment.** Sequencer events/schedules, plane-wave and diverging-wave configurations, typed delay APIs, and typed frame-rate APIs now use Aequitas quantities. Transducer check, Nextest 218/218 with one skip, doctests 2/2 with six ignored, warning-denied Clippy, Rustdoc, rustfmt, and diff checks pass. See [ADR 060](docs/ADR/060-ultrafast-quantities.md). |
+
 ### Explicit non-gaps and sequencing constraints
 
 - Pressure, temperature, velocity, and other dense `Array3`/Leto field values
@@ -210,9 +228,11 @@ provider-owned mass-density-rate quantity up to the scalar numerical boundary.
   `KWAVERS-AEQ-MET-06` reaches the therapy/Pennes material consumers; their
   full package evidence is recorded above. `KWAVERS-AEQ-MET-18` closes the
   tracker accessor gap, `KWAVERS-AEQ-MET-19` closes the clinical scenario
-  gap, `KWAVERS-AEQ-MET-20` closes the neuromodulation protocol gap, and
-  `KWAVERS-AEQ-MET-21` closes the transducer design/propagation gap. No
-  additional gap is inferred until the next public inventory re-audit.
+  gap, `KWAVERS-AEQ-MET-20` closes the neuromodulation protocol gap,
+  `KWAVERS-AEQ-MET-21` closes the transducer design/propagation gap, and
+  `KWAVERS-AEQ-MET-22` closes the ultrafast transducer gap. The next public
+  inventory re-audit remains required before declaring the consumer-wide
+  metric ledger empty.
 
 - Review 2026-07-22: Python release run `29967429949` built the stable-ABI
   wheels but the Linux and Windows base-wheel smoke imports failed because

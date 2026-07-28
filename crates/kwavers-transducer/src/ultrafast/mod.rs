@@ -147,7 +147,7 @@ mod tests {
     fn test_ultrafast_module() {
         let config = UltrafastPlaneWaveConfig::default();
         assert_eq!(config.tilt_angles.len(), 11);
-        assert!(config.sound_speed > 0.0);
+        assert!(config.sound_speed.into_base() > 0.0);
         assert_eq!(config.f_number.unwrap(), 1.5);
     }
 }

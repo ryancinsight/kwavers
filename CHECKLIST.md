@@ -1,5 +1,23 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-22 typed ultrafast transducer quantities [major] — done 2026-07-27
+
+- [x] Type sequencer event/schedule/configuration contracts and plane-wave /
+      diverging-wave public metrics with Aequitas; preserve numerical-array
+      and formula scalar boundaries.
+- [x] Migrate ultrafast tests and remove raw physical scalar contracts without
+      adding compatibility facades; add ADR 060 and synchronize PM state.
+- [x] Run package check, full Nextest, doctests, warning-denied Clippy,
+      Rustdoc, rustfmt, and diff checks; preserve peer-owned dirty paths.
+- [x] Commit and push the verified increment and record the child commit in
+      the Atlas Aequitas audit; the parent gitlink remains on its integration
+      base until this feature branch is merged.
+
+Evidence: `kwavers-transducer` check passes; Nextest passes 218/218 with one
+skip; doctests pass 2/2 with six ignored; warning-denied Clippy and Rustdoc
+pass; touched-file rustfmt and diff checks pass. Shared-graph patch and linker
+warnings remain outside this slice.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-21 typed transducer design and propagation quantities [major] — done 2026-07-27
 
 - [x] Type array-design and focused-propagation public geometry, frequency,

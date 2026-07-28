@@ -4,6 +4,11 @@
 
 ### Changed
 
+- **Breaking**: Ultrafast transducer sequencer, plane-wave, and diverging-wave
+  public contracts now use Aequitas `Angle`, `Frequency`, `Length`, `Time`, and
+  `Velocity`; dense delay tables remain explicit numerical-array boundaries.
+  See [ADR 060](docs/ADR/060-ultrafast-quantities.md).
+
 - **Breaking**: Transducer array-design and focused-propagation contracts now
   use Aequitas `Length`, `Frequency`, `Velocity`, `ElectricCurrent`,
   `PressurePerElectricCurrent`, `AcousticImpedance`, `Pressure`, and
