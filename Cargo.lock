@@ -4252,7 +4252,6 @@ dependencies = [
  "libc",
  "mnemosyne",
  "moirai-utils",
- "static_assertions",
 ]
 
 [[package]]
@@ -4333,7 +4332,6 @@ dependencies = [
  "libc",
  "moirai-core",
  "moirai-utils",
- "static_assertions",
 ]
 
 [[package]]
