@@ -6,7 +6,7 @@ use super::{
     BackingLayer, ElementGeometry, FrequencyResponse, MatchingLayer, PiezoMaterial,
     TransducerDirectivityPattern, TransducerSensitivity,
 };
-use aequitas::systems::si::quantities::{Frequency, Length};
+use aequitas::systems::si::quantities::{Dimensionless, Frequency, Length};
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
@@ -100,10 +100,10 @@ impl TransducerDesign {
 
         // Calculate sensitivity
         let sensitivity = TransducerSensitivity::from_parameters(
-            piezo.coupling_k33,
-            geometry.area().into_base(),
-            piezo.acoustic_impedance.into_base(),
-            frequency.into_base(),
+            Dimensionless::from_base(piezo.coupling_k33),
+            geometry.area(),
+            piezo.acoustic_impedance,
+            frequency,
         );
 
         Ok(Self {
@@ -202,7 +202,7 @@ impl TransducerDesign {
             self.piezo.material_type,
             self.piezo.coupling_k33,
             self.directivity.beamwidth_3db,
-            self.sensitivity.transmit_sensitivity,
+            self.sensitivity.transmit_sensitivity.into_base(),
             self.sensitivity.efficiency,
         )
     }

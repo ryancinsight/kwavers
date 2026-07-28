@@ -16,6 +16,7 @@
 //! - Khuri-Yakub & Oralkan (2011), CMUT flex-derating (`CmutCell::flex_gap_derating`).
 
 use super::super::mems::CmutCell;
+use aequitas::systems::si::quantities::ReciprocalLength;
 use leto::ArrayView2;
 
 /// Conformal **delay-and-sum focusing** delays \`s` for a (possibly deformed)
@@ -126,7 +127,7 @@ pub fn per_element_curvature(positions: &ArrayView2<f64>) -> Vec<f64> {
 pub fn cmut_flex_apodization(curvatures: &[f64], cell: &CmutCell) -> Vec<f64> {
     curvatures
         .iter()
-        .map(|&k| cell.flex_gap_derating(k))
+        .map(|&k| cell.flex_gap_derating(ReciprocalLength::from_base(k)))
         .collect()
 }
 
@@ -273,7 +274,12 @@ mod tests {
     /// are derated (< 1) and tighter-gap cells are derated more.
     #[test]
     fn cmut_flex_apodization_derates_curved_elements() {
-        let cell = CmutCell::silicon(60e-6, 2.0e-6, 0.2e-6).unwrap();
+        let cell = CmutCell::silicon(
+            aequitas::systems::si::quantities::Length::from_base(60e-6),
+            aequitas::systems::si::quantities::Length::from_base(2.0e-6),
+            aequitas::systems::si::quantities::Length::from_base(0.2e-6),
+        )
+        .unwrap();
         let curvatures = [0.0, 1.0 / 2.0e-3, 1.0 / 1.0e-3]; // flat, 2 mm, 1 mm radius
         let w = cmut_flex_apodization(&curvatures, &cell);
         assert!((w[0] - 1.0).abs() < 1e-12, "flat element keeps full weight");
@@ -284,7 +290,12 @@ mod tests {
         assert!(w.iter().all(|&x| x > 0.0 && x <= 1.0));
 
         // A tighter-gap cell loses more output at the same curvature.
-        let tight = CmutCell::silicon(60e-6, 2.0e-6, 0.1e-6).unwrap();
+        let tight = CmutCell::silicon(
+            aequitas::systems::si::quantities::Length::from_base(60e-6),
+            aequitas::systems::si::quantities::Length::from_base(2.0e-6),
+            aequitas::systems::si::quantities::Length::from_base(0.1e-6),
+        )
+        .unwrap();
         let wt = cmut_flex_apodization(&curvatures, &tight);
         assert!(wt[2] < w[2], "tighter gap ⇒ more flex derating");
     }
