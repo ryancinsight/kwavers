@@ -45,6 +45,20 @@ The transducer package check, full Nextest (218 passed, one skipped), doctests
 pass on the current branch. Existing shared-graph unused-patch and linker
 warnings remain outside this slice.
 
+## Live grid-stability refresh — 2026-07-27
+
+`KWAVERS-AEQ-MET-24` closes the public numerical-stability inventory finding.
+`kwavers-grid` now accepts Aequitas `Velocity` and `ThermalDiffusivity` inputs
+and returns Aequitas `Time` for CFL, diffusion, nonlinear, and recommended
+timestep calculations. Courant number and the nonlinearity coefficient remain
+dimensionless scalars. Grid spacing remains scalar mesh storage; extraction is
+confined to the stability formulas and legacy numerical integration maps. All
+affected callers, examples, and tests use the typed contract. The affected
+package suite passes 3,484/3,484 Nextest tests with 13 skipped and 12 slow;
+doctests pass 15/15 with 20 ignored; warning-denied Clippy passes; Rustdoc
+exits 0 with two pre-existing private-link warnings; and touched-file rustfmt
+plus `git diff --check` pass. See [ADR 062](docs/ADR/062-grid-stability-quantities.md).
+
 ## Live core-time and ultrasound refresh — 2026-07-27
 
 `KWAVERS-AEQ-MET-23` closes the next public inventory findings. The core
@@ -230,6 +244,7 @@ provider-owned mass-density-rate quantity up to the scalar numerical boundary.
 | `KWAVERS-AEQ-MET-21` | `kwavers-transducer/src/design/{mod.rs,propagation.rs}` exposed array geometry, wavelength, frequency, sound speed, drive current, pressure-per-current, acoustic impedance, focal pressure, intensity, and beam extents as unit-documented raw values. | Type the public design and focused-propagation contracts with Aequitas; migrate driver callers and retain scalar extraction only at formula, width-search, validation, and explicit report-conversion boundaries. | Kwavers, Aequitas | **RESOLVED in this increment.** Design/propagation contracts and channel positions are typed; unit-suffixed names are removed and driver report conversion is explicit. Transducer Nextest passes 218/218 with one skip, doctests pass 2/2 with six ignored, and warning-denied Clippy/Rustdoc pass. Driver `kwavers`-feature Nextest passes 489/489; its doctest target has no tests, and warning-denied Clippy/Rustdoc pass. See [ADR 059](docs/ADR/059-transducer-design-quantities.md). |
 
 | `KWAVERS-AEQ-MET-22` | `kwavers-transducer/src/ultrafast/{sequencer,plane_wave,diverging_wave}` still exposed transmission angles, frequencies/PRF, sound speed, depths, positions, delays, and durations as raw physical scalars after the prior audit marked the ultrafast family closed. | Type the complete ultrafast public stack with Aequitas; retain scalar extraction only at delay-table, numerical-kernel, and presentation boundaries. | Kwavers, Aequitas | **RESOLVED in this increment.** Sequencer events/schedules, plane-wave and diverging-wave configurations, typed delay APIs, and typed frame-rate APIs now use Aequitas quantities. Transducer check, Nextest 218/218 with one skip, doctests 2/2 with six ignored, warning-denied Clippy, Rustdoc, rustfmt, and diff checks pass. See [ADR 060](docs/ADR/060-ultrafast-quantities.md). |
+| `KWAVERS-AEQ-MET-24` | `kwavers-grid/src/stability.rs` and `Grid::cfl_timestep` exposed CFL, diffusion, nonlinear, and recommended timesteps plus sound speed and diffusivity as raw physical scalars. | Type the public stability inputs/results with Aequitas; keep Courant number, nonlinearity, mesh spacing, and dense numerical boundaries scalar. | Kwavers, Aequitas | **RESOLVED in this increment.** Stability APIs return `Time`, accept `Velocity`/`ThermalDiffusivity`, and all affected callers are migrated. Value-semantic stability tests, affected-package Nextest, warning-denied Clippy, doctests, Rustdoc, rustfmt, and diff checks pass. See [ADR 062](docs/ADR/062-grid-stability-quantities.md). |
 
 ### Explicit non-gaps and sequencing constraints
 

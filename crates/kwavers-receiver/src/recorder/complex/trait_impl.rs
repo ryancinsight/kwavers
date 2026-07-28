@@ -29,7 +29,7 @@ impl RecorderTrait for Recorder {
             }
         }
 
-        let expected_steps = (self.time.duration() / self.time.dt) as usize;
+        let expected_steps = (self.time.duration() / self.time.dt).into_base() as usize;
         let expected_snapshots = expected_steps / self.snapshot_interval;
 
         self.fields_snapshots.reserve(expected_snapshots);
@@ -49,7 +49,7 @@ impl RecorderTrait for Recorder {
     }
 
     fn record(&mut self, fields: &Array4<f64>, step: usize) -> KwaversResult<()> {
-        let time = step as f64 * self.time.dt;
+        let time = step as f64 * self.time.dt.into_base();
         self.recorded_steps.push(time);
 
         if self.record_pressure {

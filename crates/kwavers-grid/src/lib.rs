@@ -195,7 +195,10 @@ impl Grid {
     /// Uses FDTD stability condition with safety factor
     #[inline]
     #[must_use]
-    pub fn cfl_timestep(&self, max_sound_speed: f64) -> f64 {
+    pub fn cfl_timestep(
+        &self,
+        max_sound_speed: aequitas::systems::si::quantities::Velocity,
+    ) -> aequitas::systems::si::quantities::Time {
         stability::StabilityCalculator::cfl_timestep_fdtd(self, max_sound_speed)
     }
 

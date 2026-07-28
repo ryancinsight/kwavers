@@ -25,7 +25,7 @@ pub fn compute_bmode_image(rf_data: &Array2<f64>, config: &UltrasoundConfig) -> 
         let rf_line = rf_data.index_axis(1, line_idx).expect("valid axis index");
         let envelope = compute_envelope(&rf_line.to_contiguous());
         let compensated = if config.tgc_enabled {
-            apply_tgc(&envelope, config.frequency)
+            apply_tgc(&envelope, config.frequency.into_base())
         } else {
             envelope
         };

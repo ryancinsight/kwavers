@@ -159,11 +159,13 @@ impl MultiRateTimeIntegrator {
                 let constraints = component.stability_constraints();
                 let mut constraint_map = std::collections::HashMap::new();
                 if let Some(max_wave_speed) = constraints.max_wave_speed {
-                    constraint_map.insert("max_wave_speed".to_owned(), max_wave_speed);
+                    constraint_map.insert("max_wave_speed".to_owned(), max_wave_speed.into_base());
                 }
                 if let Some(diffusion_coefficient) = constraints.diffusion_coefficient {
-                    constraint_map
-                        .insert("diffusion_coefficient".to_owned(), diffusion_coefficient);
+                    constraint_map.insert(
+                        "diffusion_coefficient".to_owned(),
+                        diffusion_coefficient.into_base(),
+                    );
                 }
 
                 // Compute CFL-limited time step
@@ -187,7 +189,7 @@ impl MultiRateTimeIntegrator {
                 }
 
                 if let Some(max_dt_limit) = constraints.max_dt {
-                    max_dt = max_dt.min(max_dt_limit);
+                    max_dt = max_dt.min(max_dt_limit.into_base());
                 }
 
                 Ok((name.clone(), max_dt * self.cfl_safety_factor))

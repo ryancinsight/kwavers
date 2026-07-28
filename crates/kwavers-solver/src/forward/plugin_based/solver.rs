@@ -199,7 +199,7 @@ impl PluginBasedSolver {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn run_for_duration(&mut self, duration: f64) -> KwaversResult<()> {
-        let steps = (duration / self.time.dt) as usize;
+        let steps = (duration / self.time.dt.into_base()) as usize;
         self.run_for_steps(steps)
     }
 
@@ -239,7 +239,7 @@ impl PluginBasedSolver {
     /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn step(&mut self) -> KwaversResult<()> {
-        let t = self.current_step as f64 * self.time.dt;
+        let t = self.current_step as f64 * self.time.dt.into_base();
 
         // Apply sources
         for (source, mask) in self.sources.iter().zip(self.source_masks.iter()) {
@@ -272,7 +272,7 @@ impl PluginBasedSolver {
                 self.medium.as_ref(),
                 &self.sources,
                 self.boundary.as_mut(),
-                self.time.dt,
+                self.time.dt.into_base(),
                 t,
             );
 
@@ -355,7 +355,10 @@ mod tests {
     #[test]
     fn test_solver_creation() {
         let grid = Grid::new(10, 10, 10, 1.0, 1.0, 1.0).unwrap();
-        let time = Time::new(0.001, 100);
+        let time = Time::new(
+            aequitas::systems::si::quantities::Time::from_base(0.001),
+            100,
+        );
         let medium = Arc::new(HomogeneousMedium::from_minimal(
             SOUND_SPEED_WATER_SIM,
             1000.0,

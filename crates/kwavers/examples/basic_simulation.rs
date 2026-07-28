@@ -38,13 +38,20 @@ fn main() -> KwaversResult<()> {
     println!("Medium: water (density=1000 kg/m³, c=1500 m/s)");
 
     // 3. Create time parameters
-    let dt = grid.cfl_timestep(1500.0); // CFL-based time step
+    let dt = grid.cfl_timestep(aequitas::systems::si::quantities::Velocity::from_base(
+        1500.0,
+    ));
+    // CFL-based time step
     let num_steps = 100;
     let time = Time::new(dt, num_steps);
+    let dt_seconds = dt.into_base();
 
-    println!("Time step: {:.2e} s", time.dt);
+    println!("Time step: {:.2e} s", time.dt.into_base());
     println!("Total steps: {}", num_steps);
-    println!("Simulation duration: {:.2} ms", time.t_max * 1000.0);
+    println!(
+        "Simulation duration: {:.2} ms",
+        time.t_max.into_base() * 1000.0
+    );
 
     // 4. Run a simple test
     println!("\nRunning basic test...");
@@ -52,7 +59,7 @@ fn main() -> KwaversResult<()> {
 
     // Just demonstrate the grid and time stepping
     for step in 0..10 {
-        let current_time = step as f64 * dt;
+        let current_time = step as f64 * dt_seconds;
         println!("Step {}: t = {:.3} ms", step, current_time * 1000.0);
     }
 
@@ -61,7 +68,7 @@ fn main() -> KwaversResult<()> {
 
     // 5. Show some grid properties
     println!("\nGrid properties:");
-    println!("  CFL timestep: {:.2e} s", dt);
+    println!("  CFL timestep: {:.2e} s", dt_seconds);
     println!("  Grid points: {}", grid.nx * grid.ny * grid.nz);
     println!(
         "  Memory estimate: {:.1} MB",

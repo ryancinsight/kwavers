@@ -4,6 +4,10 @@
 
 ### Changed
 
+- **Breaking**: Grid CFL, diffusion, nonlinear, and recommended timestep
+  contracts now use Aequitas `Time`, `Velocity`, and `ThermalDiffusivity`;
+  Courant and mesh/formula scalar boundaries remain explicit. See [ADR 062](docs/ADR/062-grid-stability-quantities.md).
+
 - **Breaking**: Core time/stability contracts now use Aequitas `Time`,
   `Length`, `Velocity`, and `ThermalDiffusivity`; imaging center and sampling
   frequencies use Aequitas `Frequency`. CFL, dimensionless, and numerical-array

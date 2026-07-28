@@ -31,7 +31,10 @@ fn test_point_source_propagation() {
     );
 
     // Create time settings
-    let time = Time::new(1e-7, 100); // Small timestep, 100 steps
+    let time = Time::new(
+        aequitas::systems::si::quantities::Time::from_base(1e-7),
+        100,
+    ); // Small timestep, 100 steps
 
     // Create solver
     let mut solver = PluginBasedSolver::new(

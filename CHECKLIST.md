@@ -1,5 +1,21 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-24 typed grid stability quantities [major] — done 2026-07-27
+
+- [x] Type CFL, diffusion, nonlinear, recommended-step, Courant, and FDTD
+      stability contracts with Aequitas; preserve dimensionless and mesh
+      storage boundaries.
+- [x] Migrate affected callers, examples, and tests without a scalar facade;
+      add ADR 062 and synchronize gap-audit, backlog, checklist, and changelog.
+- [x] Run affected package check, Nextest, warning-denied Clippy, doctests,
+      Rustdoc, rustfmt, and diff checks; preserve peer-owned dirt.
+
+Evidence: affected-package Nextest passes 3,484/3,484 with 13 skipped and 12
+slow tests; doctests pass 15/15 with 20 ignored; warning-denied Clippy passes;
+Rustdoc exits 0 with two pre-existing private-link warnings; touched-file
+rustfmt and `git diff --check` pass. Existing shared provider-patch, linker,
+and peer-dirty-file warnings remain outside this item.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-23 typed core-time and ultrasound quantities [major] — done 2026-07-27
 
 - [x] Type `kwavers-core` time, stability, grid, wave-speed, and thermal

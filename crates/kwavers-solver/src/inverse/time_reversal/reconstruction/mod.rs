@@ -68,7 +68,7 @@ impl TimeReversalReconstructor {
             pressure_data,
             sensor_indices,
             grid,
-            solver.time().dt,
+            solver.time().dt.into_base(),
             &medium,
             frequency,
         )?;
@@ -221,8 +221,11 @@ impl TimeReversalReconstructor {
                 let position_indices = (i, j, k);
 
                 // Create time-varying source with reversed signal
-                let source =
-                    TimeVaryingSource::new(position_indices, signal.clone(), solver.time().dt);
+                let source = TimeVaryingSource::new(
+                    position_indices,
+                    signal.clone(),
+                    solver.time().dt.into_base(),
+                );
                 sources.push(Box::new(source));
 
                 debug!(

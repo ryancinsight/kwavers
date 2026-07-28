@@ -269,7 +269,7 @@ impl Recorder {
             };
 
             let initial_radius = bubble_states.radius.clone();
-            let dt = self.time.dt;
+            let dt = self.time.dt.into_base();
             let events = detector.detect_events(
                 &bubble_states,
                 &bubble_states.pressure,

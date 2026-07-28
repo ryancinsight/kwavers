@@ -14,6 +14,7 @@
 | KWAVERS-AEQ-MET-21 | Type the public transducer array-design and focused-propagation geometry, frequency, sound-speed, drive, pressure, impedance, intensity, and extent contracts with Aequitas; preserve scalar extraction only at formula, width-search, validation, and explicit report boundaries. | [major] | done | Codex | `crates/kwavers-transducer/src/design/**`, `crates/kwavers-driver/src/{experiment,validate}/**`, ADR 059, PM artifacts |
 | KWAVERS-AEQ-MET-22 | Type the complete ultrafast transducer public stack: sequencer events/schedules, plane-wave and diverging-wave configurations, positions, angles, frequencies, depths, sound speed, delays, and frame rates; keep scalar extraction at numerical-array and formula boundaries. | [major] | done | Codex | `crates/kwavers-transducer/src/ultrafast/**`, ADR 060, PM artifacts |
 | KWAVERS-AEQ-MET-23 | Type the core time/stability and imaging ultrasound frequency contracts with Aequitas; retain scalar extraction only at CFL, diffusion, dimensionless, and numerical-array boundaries. | [major] | done | Codex | `crates/kwavers-core/src/time/**`, `crates/kwavers-imaging/src/ultrasound.rs`, ADR 061, PM artifacts |
+| KWAVERS-AEQ-MET-24 | Type the public grid stability inputs/results with Aequitas `Velocity`, `ThermalDiffusivity`, and `Time`; preserve scalar Courant/nonlinearity and mesh/formula boundaries. | [major] | done | Codex | `crates/kwavers-grid/src/stability.rs`, `Grid::cfl_timestep`, migrated callers, ADR 062, PM artifacts |
 
 ## KWAVERS-AEQ-MET-06 — Type thermal and perfusion metrics [major] — done
 

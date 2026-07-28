@@ -1,6 +1,7 @@
 //! Ultrasound data acquisition for the clinical workflow orchestrator.
 
 use super::ClinicalWorkflowOrchestrator;
+use aequitas::systems::si::quantities::Frequency;
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::error::KwaversResult;
@@ -36,8 +37,8 @@ impl ClinicalWorkflowOrchestrator {
 
             let config = UltrasoundConfig {
                 mode: UltrasoundMode::BMode,
-                frequency: 5.0 * MHZ_TO_HZ,
-                sampling_frequency: 40.0 * MHZ_TO_HZ,
+                frequency: Frequency::from_base(5.0 * MHZ_TO_HZ),
+                sampling_frequency: Frequency::from_base(40.0 * MHZ_TO_HZ),
                 dynamic_range: 60.0,
                 tgc_enabled: true,
             };
@@ -95,8 +96,8 @@ impl ClinicalWorkflowOrchestrator {
         {
             let config = UltrasoundConfig {
                 mode: UltrasoundMode::BMode,
-                frequency: 5.0 * MHZ_TO_HZ,
-                sampling_frequency: 40.0 * MHZ_TO_HZ,
+                frequency: Frequency::from_base(5.0 * MHZ_TO_HZ),
+                sampling_frequency: Frequency::from_base(40.0 * MHZ_TO_HZ),
                 dynamic_range: 60.0,
                 tgc_enabled: true,
             };
@@ -110,8 +111,8 @@ impl ClinicalWorkflowOrchestrator {
             let rf_data = generate_realistic_rf_volume(
                 volume_dims,
                 SOUND_SPEED_TISSUE,
-                config.sampling_frequency,
-                config.frequency,
+                config.sampling_frequency.into_base(),
+                config.frequency.into_base(),
             );
             let mut bmode_volume = Array3::zeros([volume_dims.0, volume_dims.1, volume_dims.2]);
 

@@ -194,23 +194,26 @@ fn test_thermal_diffusion_in_bubble() {
 #[test]
 fn test_cfl_stability_condition() {
     let grid = Grid::new(100, 100, 100, 1e-3, 1e-3, 1e-3).unwrap();
-    let c_max = 1500.0; // Maximum sound speed
+    let c_max = aequitas::systems::si::quantities::Velocity::from_base(1500.0);
 
     // Calculate CFL timestep
     let dt_cfl = kwavers_grid::stability::StabilityCalculator::cfl_timestep_fdtd(&grid, c_max);
 
     // For 3D FDTD: dt <= dx / (c * sqrt(3))
     let dx_min = grid.min_spacing();
-    let dt_theoretical = dx_min / (c_max * 3.0_f64.sqrt());
+    let dt_theoretical = dx_min / (c_max.into_base() * 3.0_f64.sqrt());
 
     // CFL timestep should be conservative (smaller than theoretical)
-    assert!(dt_cfl <= dt_theoretical, "CFL timestep not conservative");
-    assert!(dt_cfl > 0.0, "Invalid CFL timestep");
+    assert!(
+        dt_cfl.into_base() <= dt_theoretical,
+        "CFL timestep not conservative"
+    );
+    assert!(dt_cfl.into_base() > 0.0, "Invalid CFL timestep");
 
     // Verify stability with actual simulation
     // The solver construction would validate stability
     assert!(
-        dt_cfl > 0.0 && dt_cfl < 1e-3,
+        dt_cfl.into_base() > 0.0 && dt_cfl.into_base() < 1e-3,
         "CFL timestep out of expected range"
     );
 }
