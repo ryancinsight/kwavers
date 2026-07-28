@@ -1,5 +1,18 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-33 typed plasmonics quantities [major] — in progress 2026-07-28
+
+- [ ] Add the provider-owned Aequitas polarizability dimension and coherent
+      unit, including complex-value conversion coverage through Eunomia.
+- [ ] Type plasmonic particle radii, wavelengths, positions, concentration,
+      cross-sections, polarizability, and array spacing without compatibility
+      wrappers; keep relative dielectric functions and enhancement factors
+      dimensionless.
+- [ ] Migrate all in-repository callers and add value-semantic unit and
+      complex-phasor regressions.
+- [ ] Synchronize ADR 071, `gap_audit.md`, backlog, checklist, and changelog;
+      run focused package gates and preserve peer-owned changes.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-29 typed CEUS quantities [major] — done 2026-07-27
 
 - [x] Type CEUS imaging parameters, microbubble shell properties, resonance and
