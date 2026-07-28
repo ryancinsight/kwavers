@@ -4,6 +4,13 @@
 
 ### Changed
 
+- **Breaking**: CEUS imaging parameters, microbubble shell properties,
+  population concentration, cloud dynamics, scattering, reconstruction, and
+  simulation contracts now use Aequitas physical quantities. Hidden
+  micrometre, kilopascal, and bubbles-per-millilitre conversions are removed;
+  dense arrays and dimensionless model outputs remain explicit boundaries. See
+  [ADR 067](docs/ADR/067-ceus-quantities.md).
+
 - **Breaking**: Lithotripsy shock-wave peak pressure, pulse duration, and
   repetition-rate configuration now use Aequitas `Pressure`, `Time`, and
   `Frequency`. Future solver components remain separate implementation work.

@@ -19,6 +19,7 @@
 use super::config::CloudBubble;
 use super::simulator::CloudDynamics;
 use crate::acoustics::imaging::modalities::ceus::microbubble::BubbleResponse;
+use aequitas::systems::si::quantities::Length;
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use kwavers_core::constants::numerical::{FOUR_PI, TWO_PI};
 use kwavers_core::error::KwaversResult;
@@ -99,7 +100,7 @@ impl CloudDynamics {
         self.bubbles[i].current_radius = new_radius;
         self.bubbles[i].velocity = new_velocity;
         self.bubbles[i].position = new_position;
-        self.bubbles[i].properties.radius_eq = new_radius;
+        self.bubbles[i].properties.radius_eq = Length::from_base(new_radius);
 
         // Deactivate bubble j
         self.bubbles[j].active = false;

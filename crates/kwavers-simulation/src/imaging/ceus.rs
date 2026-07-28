@@ -1,5 +1,8 @@
 //! CEUS Simulation Orchestrator
 
+use aequitas::systems::si::quantities::{
+    Frequency, Length, NumberDensity, Pressure, ReciprocalLength, Time,
+};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
@@ -38,8 +41,8 @@ impl ContrastEnhancedUltrasound {
     pub fn new(
         grid: &Grid,
         medium: &dyn Medium,
-        bubble_concentration: f64,
-        bubble_size: f64,
+        bubble_concentration: NumberDensity<f64>,
+        bubble_size: Length<f64>,
     ) -> KwaversResult<Self> {
         let microbubbles = MicrobubblePopulation::new(bubble_concentration, bubble_size)?;
         let scattering = NonlinearScattering::new()?;
@@ -59,7 +62,7 @@ impl ContrastEnhancedUltrasound {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub fn get_concentration(&self) -> f64 {
+    pub fn get_concentration(&self) -> NumberDensity<f64> {
         self.microbubbles.get_concentration()
     }
     /// Simulate imaging sequence.
@@ -69,11 +72,13 @@ impl ContrastEnhancedUltrasound {
     pub fn simulate_imaging_sequence(
         &mut self,
         injection_rate: f64,
-        total_time: f64,
-        frame_rate: f64,
-        acoustic_pressure: f64,
-        frequency: f64,
+        total_time: Time<f64>,
+        frame_rate: Frequency<f64>,
+        acoustic_pressure: Pressure<f64>,
+        frequency: Frequency<f64>,
     ) -> KwaversResult<Vec<ContrastImage>> {
+        let total_time = total_time.into_base();
+        let frame_rate = frame_rate.into_base();
         let n_frames = (total_time * frame_rate) as usize;
         let dt = 1.0 / frame_rate;
         let mut images = Vec::with_capacity(n_frames);
@@ -234,25 +239,28 @@ impl ContrastEnhancedUltrasound {
 
     fn simulate_acoustic_response(
         &self,
-        acoustic_pressure: f64,
-        frequency: f64,
+        acoustic_pressure: Pressure<f64>,
+        frequency: Frequency<f64>,
         time: f64,
     ) -> KwaversResult<Array3<f64>> {
         let (nx, ny, nz) = self.grid.dimensions();
         let mut scattered_signals = Array3::zeros((nx, ny, nz));
+        let acoustic_pressure = acoustic_pressure.into_base();
+        let frequency = frequency.into_base();
 
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
                     let concentration = self.perfusion.concentration(i, j, k);
                     let local_pressure = acoustic_pressure * (TWO_PI * frequency * time).cos();
-                    let scattering_response = self.scattering.compute_scattering(
-                        &self.microbubbles,
-                        concentration,
-                        local_pressure,
-                        frequency,
-                    )?;
-                    scattered_signals[[i, j, k]] = scattering_response;
+                    let scattering_response: ReciprocalLength<f64> =
+                        self.scattering.compute_scattering(
+                            &self.microbubbles,
+                            NumberDensity::from_base(concentration),
+                            Pressure::from_base(local_pressure),
+                            Frequency::from_base(frequency),
+                        )?;
+                    scattered_signals[[i, j, k]] = scattering_response.into_base();
                 }
             }
         }
@@ -299,7 +307,11 @@ impl kwavers_imaging::CEUSOrchestrator for ContrastEnhancedUltrasound {
             .unwrap_or(1.0);
 
         let frequency = kwavers_core::constants::numerical::MHZ_TO_HZ; // Default 1 MHz
-        self.simulate_acoustic_response(max_pressure, frequency, _time)
+        self.simulate_acoustic_response(
+            Pressure::from_base(max_pressure),
+            Frequency::from_base(frequency),
+            _time,
+        )
     }
 
     fn get_perfusion_data(&self) -> KwaversResult<leto::Array3<f64>> {
@@ -321,7 +333,7 @@ impl kwavers_imaging::CEUSOrchestrator for ContrastEnhancedUltrasound {
     fn get_concentration_map(&self) -> KwaversResult<leto::Array3<f64>> {
         // Return microbubble concentration map
         let (nx, ny, nz) = self.grid.dimensions();
-        let concentration = self.get_concentration();
+        let concentration = self.get_concentration().into_base();
         Ok(leto::Array3::from_elem([nx, ny, nz], concentration))
     }
 

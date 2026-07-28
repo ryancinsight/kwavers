@@ -4,6 +4,9 @@
 //! acoustic scattering from microbubble contrast agents.
 
 use super::microbubble::MicrobubblePopulation;
+use aequitas::systems::si::quantities::{
+    DynamicViscosity, Frequency, MassDensity, NumberDensity, Pressure, ReciprocalLength, Velocity,
+};
 use kwavers_core::constants::cavitation::VISCOSITY_WATER;
 use kwavers_core::constants::fundamental::{
     ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM,
@@ -47,29 +50,37 @@ impl NonlinearScattering {
     pub fn compute_scattering(
         &self,
         population: &MicrobubblePopulation,
-        concentration: f64,
-        acoustic_pressure: f64,
-        frequency: f64,
-    ) -> KwaversResult<f64> {
-        if concentration <= 0.0 {
-            return Ok(0.0);
+        concentration: NumberDensity<f64>,
+        acoustic_pressure: Pressure<f64>,
+        frequency: Frequency<f64>,
+    ) -> KwaversResult<ReciprocalLength<f64>> {
+        if concentration.into_base() <= 0.0 {
+            return Ok(ReciprocalLength::from_base(0.0));
         }
 
-        let linear_scattering = population.effective_scattering(
-            frequency,
-            ATMOSPHERIC_PRESSURE,
-            DENSITY_WATER_NOMINAL,
-            SOUND_SPEED_WATER_SIM,
-            VISCOSITY_WATER,
-        )?;
+        let linear_scattering = population
+            .effective_scattering(
+                frequency,
+                Pressure::from_base(ATMOSPHERIC_PRESSURE),
+                MassDensity::from_base(DENSITY_WATER_NOMINAL),
+                Velocity::from_base(SOUND_SPEED_WATER_SIM),
+                DynamicViscosity::from_base(VISCOSITY_WATER),
+            )?
+            .into_base();
 
         // Nonlinear enhancement based on acoustic pressure
-        let pressure_factor = (acoustic_pressure / 100_000.0).min(1.0); // Normalize to 100 kPa
+        let pressure_factor = (acoustic_pressure.into_base() / 100_000.0).min(1.0); // Normalize to 100 kPa
 
         // Resonance enhancement
         let resonance_freq = population
             .reference_bubble
-            .resonance_frequency(ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL);
+            .resonance_frequency(
+                Pressure::from_base(ATMOSPHERIC_PRESSURE),
+                MassDensity::from_base(DENSITY_WATER_NOMINAL),
+            )
+            .into_base();
+        let frequency = frequency.into_base();
+        let concentration = concentration.into_base();
         let freq_ratio = frequency / resonance_freq;
         let resonance_factor = 1.0 / (freq_ratio - 1.0).mul_add(freq_ratio - 1.0, 1.0);
 
@@ -79,7 +90,7 @@ impl NonlinearScattering {
             * self.harmonic_efficiency.mul_add(pressure_factor, 1.0)
             * resonance_factor;
 
-        Ok(nonlinear_scattering)
+        Ok(ReciprocalLength::from_base(nonlinear_scattering))
     }
 }
 
@@ -87,7 +98,7 @@ impl NonlinearScattering {
 #[derive(Debug)]
 pub struct HarmonicImaging {
     /// Harmonic frequencies to extract
-    harmonic_frequencies: Vec<f64>,
+    harmonic_frequencies: Vec<Frequency<f64>>,
     /// Imaging parameters
     pub parameters: HarmonicImagingParameters,
 }
@@ -95,42 +106,44 @@ pub struct HarmonicImaging {
 #[derive(Debug, Clone)]
 pub struct HarmonicImagingParameters {
     /// Transmit frequency (Hz)
-    pub transmit_freq: f64,
+    pub transmit_freq: Frequency<f64>,
     /// Receive bandwidth (Hz)
-    pub bandwidth: f64,
+    pub bandwidth: Frequency<f64>,
     /// Mechanical index
     pub mechanical_index: f64,
     /// Frame rate (Hz)
-    pub frame_rate: f64,
+    pub frame_rate: Frequency<f64>,
 }
 
 impl HarmonicImaging {
     /// Create new harmonic imaging system
     #[must_use]
-    pub fn new(fundamental_freq: f64) -> Self {
+    pub fn new(fundamental_freq: Frequency<f64>) -> Self {
+        let fundamental_freq = fundamental_freq.into_base();
         let harmonic_frequencies = vec![
-            fundamental_freq * 2.0, // Second harmonic
-            fundamental_freq * 1.5, // Ultraharmonic
-            fundamental_freq * 0.5, // Subharmonic
+            Frequency::from_base(fundamental_freq * 2.0), // Second harmonic
+            Frequency::from_base(fundamental_freq * 1.5), // Ultraharmonic
+            Frequency::from_base(fundamental_freq * 0.5), // Subharmonic
         ];
 
         Self {
             harmonic_frequencies,
             parameters: HarmonicImagingParameters {
-                transmit_freq: fundamental_freq,
-                bandwidth: fundamental_freq * 0.5,
+                transmit_freq: Frequency::from_base(fundamental_freq),
+                bandwidth: Frequency::from_base(fundamental_freq * 0.5),
                 mechanical_index: 0.1,
-                frame_rate: 15.0,
+                frame_rate: Frequency::from_base(15.0),
             },
         }
     }
 
     /// Extract harmonic components from scattered signal
     #[must_use]
-    pub fn extract_harmonics(&self, signal: &[f64], sample_rate: f64) -> Vec<f64> {
+    pub fn extract_harmonics(&self, signal: &[f64], sample_rate: Frequency<f64>) -> Vec<f64> {
+        let sample_rate = sample_rate.into_base();
         self.harmonic_frequencies
             .iter()
-            .map(|&freq| self.extract_single_frequency(signal, freq, sample_rate))
+            .map(|freq| self.extract_single_frequency(signal, freq.into_base(), sample_rate))
             .collect()
     }
 

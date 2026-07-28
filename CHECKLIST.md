@@ -1,5 +1,31 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-29 typed CEUS quantities [major] — done 2026-07-27
+
+- [x] Type CEUS imaging parameters, microbubble shell properties, resonance and
+      scattering contracts, population concentration, cloud dynamics, and
+      simulation inputs/results with Aequitas; retain dense arrays and
+      dimensionless model outputs at explicit boundaries.
+- [x] Remove hidden micrometre, kilopascal, and bubbles-per-millilitre
+      conversions; migrate callers/tests, add ADR 067, and synchronize the
+      gap-audit, backlog, checklist, and changelog.
+- [x] Run the affected package Nextest, warning-denied Clippy, doctests,
+      Rustdoc, targeted rustfmt, and diff checks; preserve peer dirt.
+
+Evidence: `kwavers-imaging`, `kwavers-physics`, and `kwavers-simulation`
+Nextest passes 1,862/1,862 with one repository-declared skip; warning-denied
+Clippy and doctests pass. Rustdoc exits 0 with one pre-existing private
+intra-doc-link warning. Shared provider-patch, linker, and peer-dirty warnings
+remain outside this item.
+
+## Owner: Codex — KWAVERS-AEQ-MET-30 upstream electrical dimensions [major] — ready
+
+- [ ] Add the missing Aequitas capacitance, conductance, potential, and charge
+      dimensions and units with provider-level tests and documentation.
+- [ ] Type sonogenetics membrane and LIF/channel electrical public contracts;
+      preserve formula/storage boundaries and migrate value-semantic tests.
+- [ ] Re-run the full sonogenetics package gates and synchronize PM artifacts.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-28 typed lithotripsy quantities [major] — done 2026-07-27
 
 - [x] Type lithotripsy peak pressure, pulse duration, and repetition rate with

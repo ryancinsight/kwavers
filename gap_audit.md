@@ -29,6 +29,23 @@
 
 # Gap Audit
 
+## Live CEUS refresh — 2026-07-27
+
+`KWAVERS-AEQ-MET-29` closes the public contrast-enhanced ultrasound (CEUS)
+metric gap. Imaging parameters, microbubble geometry and shell properties,
+resonance/scattering inputs and results, population concentration, and cloud
+dynamics boundaries now use Aequitas `Frequency`, `Length`, `Pressure`,
+`MassDensity`, `DynamicViscosity`, `SurfaceTension`, `Area`, `NumberDensity`,
+and `ReciprocalLength`. Hidden micrometre, kilopascal, and bubbles-per-millilitre
+conversions were removed from typed constructors. Dense perfusion fields,
+dimensionless model outputs, and numerical arrays remain explicit formula or
+storage boundaries.
+
+The affected imaging, physics, and simulation packages pass 1,862/1,862
+Nextest tests with one repository-declared skip; warning-denied Clippy,
+doctests, targeted rustfmt, and `git diff --check` pass. Rustdoc exits 0 with
+one pre-existing private intra-doc-link warning. See [ADR 067](docs/ADR/067-ceus-quantities.md).
+
 ## Live lithotripsy refresh — 2026-07-27
 
 `KWAVERS-AEQ-MET-28` closes the isolated public lithotripsy configuration gap.
@@ -304,6 +321,8 @@ provider-owned mass-density-rate quantity up to the scalar numerical boundary.
 | `KWAVERS-AEQ-MET-26` | `kwavers-transducer/src/hemispherical/**` exposed array geometry, element placement, steering inputs, focal metrics, validation pressure, constants, and a source waveform that ignored its configured frequency. | Type the public hemispherical-array contracts with Aequitas; preserve dimensionless controls and scalar extraction at formula, mesh/source, Signal, and logging boundaries; make source behavior use the configured frequency. | Kwavers, Aequitas | **RESOLVED in this increment.** Geometry, elements, steering, focal metrics, validation, physical constants, and source frequency use typed/input-sensitive contracts. The transducer package and example check, full transducer Nextest 219/219 with one skip, doctests 2/2 with six ignored, warning-denied Clippy, Rustdoc, rustfmt, and diff checks pass. See [ADR 064](docs/ADR/064-hemispherical-quantities.md). |
 | `KWAVERS-AEQ-MET-27` | `kwavers-physics/src/acoustics/therapy/cavitation/**` exposed detector frequency, nucleus radius, Blake threshold, Minnaert result, and pressure inputs as raw physical scalars; `TherapyCavitationDetector::new` ignored a pressure argument. | Type the public cavitation detector contracts; retain dimensionless/boolean outputs and dense pressure-field storage boundaries; remove the ignored argument. | Kwavers, Aequitas | **RESOLVED in this increment.** Detector contracts use typed `Frequency`, `Length`, and `Pressure`; the unused argument is removed and all callers/tests migrate. Physics check, cavitation-filtered Nextest 259/259, doctests, warning-denied Clippy, Rustdoc, rustfmt, and diff checks pass. See [ADR 065](docs/ADR/065-cavitation-quantities.md). |
 | `KWAVERS-AEQ-MET-28` | `kwavers-physics/src/acoustics/therapy/lithotripsy/mod.rs` exposed shock-wave peak pressure, pulse duration, and repetition rate as raw scalar configuration fields. | Type the public configuration with Aequitas; keep future solver implementation work separate. | Kwavers, Aequitas | **RESOLVED in this increment.** `LithotripsyConfig` uses `Pressure`, `Time`, and `Frequency`; the default value test and focused physics gates pass. See [ADR 066](docs/ADR/066-lithotripsy-quantities.md). |
+| `KWAVERS-AEQ-MET-29` | `kwavers-imaging/src/ultrasound/ceus/**`, `kwavers-physics/src/acoustics/imaging/modalities/ceus/**`, and `kwavers-simulation/src/imaging/ceus.rs` exposed CEUS frequencies, frame rates, geometry, bubble shell properties, concentrations, resonance/scattering inputs, and cloud-dynamics quantities as raw physical scalars. | Type the public CEUS contracts with Aequitas; remove hidden unit conversions; retain dense perfusion fields, dimensionless model outputs, and numerical-array storage at explicit boundaries. | Kwavers, Aequitas | **RESOLVED in this increment.** CEUS imaging, microbubble, population, cloud, dynamics, scattering, reconstruction, and simulation contracts use typed Aequitas quantities. The three affected packages pass 1,862/1,862 Nextest tests with one skip, warning-denied Clippy, doctests, targeted rustfmt, and diff checks; Rustdoc exits 0 with one pre-existing private-link warning. See [ADR 067](docs/ADR/067-ceus-quantities.md). |
+| `KWAVERS-AEQ-MET-30` | `kwavers-physics/src/acoustics/therapy/sonogenetics/**` still exposes membrane geometry and LIF/channel electrical quantities as raw metres, farads, siemens, volts, and seconds. Aequitas currently lacks the required capacitance, conductance, potential, and charge dimensions. | Add the missing electrical dimensions upstream in Aequitas, then type sonogenetics public contracts and migrate callers/tests without consumer wrappers; retain dimensionless gating, probabilities, and dense fields at their formula/storage boundaries. | Aequitas, Kwavers | **OPEN — provider increment required.** The missing Aequitas dimensions are the Definition-of-Ready dependency for the next consumer slice. |
 | `KWAVERS-AEQ-MET-24` | `kwavers-grid/src/stability.rs` and `Grid::cfl_timestep` exposed CFL, diffusion, nonlinear, and recommended timesteps plus sound speed and diffusivity as raw physical scalars. | Type the public stability inputs/results with Aequitas; keep Courant number, nonlinearity, mesh spacing, and dense numerical boundaries scalar. | Kwavers, Aequitas | **RESOLVED in this increment.** Stability APIs return `Time`, accept `Velocity`/`ThermalDiffusivity`, and all affected callers are migrated. Value-semantic stability tests, affected-package Nextest, warning-denied Clippy, doctests, Rustdoc, rustfmt, and diff checks pass. See [ADR 062](docs/ADR/062-grid-stability-quantities.md). |
 
 ### Explicit non-gaps and sequencing constraints
@@ -324,9 +343,11 @@ provider-owned mass-density-rate quantity up to the scalar numerical boundary.
   `KWAVERS-AEQ-MET-25` closes the HIFU imaging gap, and
   `KWAVERS-AEQ-MET-26` closes the hemispherical-array gap, and
   `KWAVERS-AEQ-MET-27` closes the therapeutic-cavitation gap, and
-  `KWAVERS-AEQ-MET-28` closes the lithotripsy configuration gap. The next public
-  inventory re-audit remains required before declaring the consumer-wide
-  metric ledger empty.
+  `KWAVERS-AEQ-MET-28` closes the lithotripsy configuration gap, and
+  `KWAVERS-AEQ-MET-29` closes the CEUS imaging gap. `KWAVERS-AEQ-MET-30`
+  remains open pending the provider-owned electrical dimensions described in
+  the ledger. The next public inventory re-audit remains required before
+  declaring the consumer-wide metric ledger empty.
 
 - Review 2026-07-22: Python release run `29967429949` built the stable-ABI
   wheels but the Linux and Windows base-wheel smoke imports failed because

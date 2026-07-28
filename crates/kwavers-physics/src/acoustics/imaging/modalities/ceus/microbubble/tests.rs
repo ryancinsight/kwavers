@@ -4,6 +4,9 @@
 //! `mod.rs`, so an inner `mod tests { ... }` would be redundant nesting.
 
 use super::dynamics::BubbleDynamics;
+use aequitas::systems::si::quantities::{
+    DynamicViscosity, Frequency, Length, MassDensity, NumberDensity, Pressure, SurfaceTension, Time,
+};
 use kwavers_core::constants::cavitation::SURFACE_TENSION_WATER;
 use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
@@ -13,27 +16,35 @@ use kwavers_imaging::ultrasound::ceus::{Microbubble, MicrobubblePopulation};
 fn test_microbubble_creation() {
     let bubble = Microbubble::sono_vue();
 
-    assert!((bubble.radius_eq - 1.5e-6).abs() < 1e-9);
-    assert!(bubble.shell_elasticity > 0.0);
+    assert!((bubble.radius_eq.into_base() - 1.5e-6).abs() < 1e-9);
+    assert!(bubble.shell_elasticity.into_base() > 0.0);
     bubble.validate().unwrap();
 }
 
 #[test]
 fn test_resonance_frequency() {
-    let bubble = Microbubble::new(2.0, 1.0, 0.5); // 2 μm radius
-    let freq = bubble.resonance_frequency(ATMOSPHERIC_PRESSURE, 1000.0);
+    let bubble = Microbubble::new(
+        Length::from_base(2.0e-6),
+        Pressure::from_base(1_000.0),
+        DynamicViscosity::from_base(0.5),
+    );
+    let freq = bubble.resonance_frequency(
+        Pressure::from_base(ATMOSPHERIC_PRESSURE),
+        MassDensity::from_base(1000.0),
+    );
 
     // Typical resonance frequency for 2 μm bubble should be around 2-5 MHz
-    assert!(freq > MHZ_TO_HZ && freq < 10.0 * MHZ_TO_HZ);
+    assert!(freq.into_base() > MHZ_TO_HZ && freq.into_base() < 10.0 * MHZ_TO_HZ);
 }
 
 #[test]
 fn test_population_creation() {
-    let population = MicrobubblePopulation::new(1e6, 2.5).unwrap();
+    let population =
+        MicrobubblePopulation::new(NumberDensity::from_base(1e12), Length::from_base(2.5e-6))
+            .unwrap();
 
-    // 1e6 bubbles/mL = 1e6 * 1e6 = 1e12 bubbles/m³
-    assert!((population.concentration - 1e12).abs() < 1e10);
-    assert!(population.reference_bubble.radius_eq > 0.0);
+    assert!((population.concentration.into_base() - 1e12).abs() < 1e10);
+    assert!(population.reference_bubble.radius_eq.into_base() > 0.0);
 }
 
 #[test]
@@ -44,9 +55,9 @@ fn test_bubble_dynamics() {
     let response = dynamics
         .simulate_oscillation(
             &bubble,
-            50_000.0,        // 50 kPa
-            2.0 * MHZ_TO_HZ, // 2 MHz
-            1e-6,            // 1 μs
+            Pressure::from_base(50_000.0),
+            Frequency::from_base(2.0 * MHZ_TO_HZ),
+            Time::from_base(1e-6),
         )
         .unwrap();
 
@@ -73,7 +84,6 @@ fn test_bubble_dynamics() {
 /// # Panics
 /// - Panics if assertion fails: `η_NL must be non-negative, got {eff_nominal}`.
 /// - Panics if assertion fails: `η_NL at resonance ({eff_res:.3}) should exceed far off-resonance ({eff_off:.3})`.
-///
 #[test]
 fn test_nonlinear_scattering() {
     let dynamics = BubbleDynamics::new();
@@ -82,8 +92,8 @@ fn test_nonlinear_scattering() {
     // 1. Non-negative at typical CEUS drive (100 kPa, 3 MHz)
     let eff_nominal = dynamics.nonlinear_scattering_efficiency(
         &bubble,
-        100_000.0,       // 100 kPa
-        3.0 * MHZ_TO_HZ, // 3 MHz
+        Pressure::from_base(100_000.0),
+        Frequency::from_base(3.0 * MHZ_TO_HZ),
     );
     assert!(
         eff_nominal >= 0.0,
@@ -93,8 +103,8 @@ fn test_nonlinear_scattering() {
     // 2. Linear scaling with pressure amplitude (perturbation regime)
     let eff_double = dynamics.nonlinear_scattering_efficiency(
         &bubble,
-        200_000.0, // 200 kPa (2× drive)
-        3.0 * MHZ_TO_HZ,
+        Pressure::from_base(200_000.0),
+        Frequency::from_base(3.0 * MHZ_TO_HZ),
     );
     let ratio = eff_double / eff_nominal.max(f64::EPSILON);
     assert!(
@@ -103,15 +113,17 @@ fn test_nonlinear_scattering() {
     );
 
     // 3. Resonance gives higher efficiency than far off-resonance (Ω=10)
-    // Off-resonance: f = 10 × f_res — Lorentzian ≈ 1/Ω² → much smaller
-    let f_res = bubble.resonance_frequency(ATMOSPHERIC_PRESSURE, 1000.0);
+    let f_res = bubble.resonance_frequency(
+        Pressure::from_base(ATMOSPHERIC_PRESSURE),
+        MassDensity::from_base(1000.0),
+    );
     let eff_off = dynamics.nonlinear_scattering_efficiency(
         &bubble,
-        100_000.0,
-        f_res * 10.0, // Ω = 10 >> 1
+        Pressure::from_base(100_000.0),
+        Frequency::from_base(f_res.into_base() * 10.0),
     );
-    let eff_res = dynamics
-        .nonlinear_scattering_efficiency(&bubble, 100_000.0, f_res /* Ω = 1 (resonance) */);
+    let eff_res =
+        dynamics.nonlinear_scattering_efficiency(&bubble, Pressure::from_base(100_000.0), f_res);
     assert!(
         eff_res > eff_off,
         "η_NL at resonance ({eff_res:.3}) should exceed far off-resonance ({eff_off:.3})"
@@ -121,12 +133,12 @@ fn test_nonlinear_scattering() {
 #[test]
 fn test_invalid_microbubble() {
     let bubble = Microbubble {
-        radius_eq: -1.0, // Invalid
-        shell_thickness: 0.1e-6,
-        shell_elasticity: 1000.0,
-        shell_viscosity: 0.5,
+        radius_eq: Length::from_base(-1.0),
+        shell_thickness: Length::from_base(0.1e-6),
+        shell_elasticity: Pressure::from_base(1000.0),
+        shell_viscosity: DynamicViscosity::from_base(0.5),
         polytropic_index: 1.07,
-        surface_tension: SURFACE_TENSION_WATER,
+        surface_tension: SurfaceTension::from_base(SURFACE_TENSION_WATER),
     };
 
     assert!(bubble.validate().is_err());

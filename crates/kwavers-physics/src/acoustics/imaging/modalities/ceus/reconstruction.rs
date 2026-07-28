@@ -49,11 +49,12 @@ impl CEUSReconstruction {
     ///
     pub fn new(_grid: &Grid) -> KwaversResult<Self> {
         let parameters = CEUSImagingParameters::default();
+        let frequency = parameters.frequency.into_base();
 
         // Create harmonic filters for different frequencies
         let harmonic_filters = vec![
-            HarmonicFilter::new(parameters.frequency * 2.0, 0.1), // 2nd harmonic
-            HarmonicFilter::new(parameters.frequency * 1.5, 0.1), // Ultraharmonic
+            HarmonicFilter::new(frequency * 2.0, 0.1), // 2nd harmonic
+            HarmonicFilter::new(frequency * 1.5, 0.1), // Ultraharmonic
         ];
 
         Ok(Self {

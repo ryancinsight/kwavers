@@ -5,6 +5,7 @@
 use super::config::{CloudBubble, CloudConfig};
 use super::incident_field::{CloudResponse, CloudState, IncidentField};
 use crate::acoustics::imaging::modalities::ceus::microbubble::{BubbleDynamics, Microbubble};
+use aequitas::systems::si::quantities::{Frequency, Pressure, Time};
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
@@ -66,8 +67,10 @@ impl CloudDynamics {
 
             let mut properties = Microbubble::sono_vue();
             let size_factor = 0.5 + rand::random::<f64>();
-            properties.radius_eq *= size_factor;
-            let current_radius = properties.radius_eq;
+            properties.radius_eq = aequitas::systems::si::quantities::Length::from_base(
+                properties.radius_eq.into_base() * size_factor,
+            );
+            let current_radius = properties.radius_eq.into_base();
 
             let bubble = CloudBubble {
                 properties,
@@ -156,9 +159,9 @@ impl CloudDynamics {
 
                 let response = self.bubble_solver.simulate_oscillation(
                     &bubble.properties,
-                    pressure,
-                    field.frequency,
-                    self.config.dt,
+                    Pressure::from_base(pressure),
+                    Frequency::from_base(field.frequency),
+                    Time::from_base(self.config.dt),
                 )?;
 
                 bubble_data.push((bubble.id, response));

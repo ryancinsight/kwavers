@@ -1,6 +1,9 @@
 //! `MicrobubblePopulation` — bubble population with size distribution and scattering.
 
 use super::microbubble::{CeusSizeDistribution, Microbubble};
+use aequitas::systems::si::quantities::{
+    Area, DynamicViscosity, Frequency, Length, MassDensity, NumberDensity, Pressure, Velocity,
+};
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::numerical::{FOUR_PI, TWO_PI};
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
@@ -13,7 +16,7 @@ pub struct MicrobubblePopulation {
     /// Size distribution parameters (log-normal)
     pub size_distribution: CeusSizeDistribution,
     /// Initial concentration (bubbles/m³)
-    pub concentration: f64,
+    pub concentration: NumberDensity<f64>,
 }
 
 impl MicrobubblePopulation {
@@ -21,19 +24,26 @@ impl MicrobubblePopulation {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub fn new(concentration: f64, mean_diameter: f64) -> KwaversResult<Self> {
-        let reference_bubble = Microbubble::new(mean_diameter / 2.0, 1.5, 0.8);
+    pub fn new(
+        concentration: NumberDensity<f64>,
+        mean_diameter: Length<f64>,
+    ) -> KwaversResult<Self> {
+        let reference_bubble = Microbubble::new(
+            Length::from_base(mean_diameter.into_base() / 2.0),
+            Pressure::from_base(1_500.0),
+            DynamicViscosity::from_base(0.8),
+        );
 
         // Typical log-normal distribution for contrast agents
         let size_distribution = CeusSizeDistribution {
             mean_radius: reference_bubble.radius_eq,
-            std_dev: reference_bubble.radius_eq * 0.3, // 30% coefficient of variation
+            std_dev: Length::from_base(reference_bubble.radius_eq.into_base() * 0.3), // 30% coefficient of variation
         };
 
         Ok(Self {
             reference_bubble,
             size_distribution,
-            concentration: concentration * 1e6, // Convert bubbles/mL to bubbles/m³
+            concentration,
         })
     }
 
@@ -42,7 +52,7 @@ impl MicrobubblePopulation {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     #[must_use]
-    pub fn get_concentration(&self) -> f64 {
+    pub fn get_concentration(&self) -> NumberDensity<f64> {
         self.concentration
     }
     /// Effective scattering.
@@ -52,12 +62,17 @@ impl MicrobubblePopulation {
     ///
     pub fn effective_scattering(
         &self,
-        frequency: f64,
-        ambient_pressure: f64,
-        liquid_density: f64,
-        sound_speed: f64,
-        liquid_viscosity: f64,
-    ) -> KwaversResult<f64> {
+        frequency: Frequency<f64>,
+        ambient_pressure: Pressure<f64>,
+        liquid_density: MassDensity<f64>,
+        sound_speed: Velocity<f64>,
+        liquid_viscosity: DynamicViscosity<f64>,
+    ) -> KwaversResult<Area<f64>> {
+        let frequency = frequency.into_base();
+        let ambient_pressure = ambient_pressure.into_base();
+        let liquid_density = liquid_density.into_base();
+        let sound_speed = sound_speed.into_base();
+        let liquid_viscosity = liquid_viscosity.into_base();
         if !frequency.is_finite() || frequency <= 0.0 {
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
                 parameter: "frequency".to_owned(),
@@ -94,8 +109,8 @@ impl MicrobubblePopulation {
             }));
         }
 
-        let mean_radius = self.size_distribution.mean_radius;
-        let std_dev = self.size_distribution.std_dev;
+        let mean_radius = self.size_distribution.mean_radius.into_base();
+        let std_dev = self.size_distribution.std_dev.into_base();
         if !mean_radius.is_finite() || mean_radius <= 0.0 {
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
                 parameter: "mean_radius".to_owned(),
@@ -111,8 +126,8 @@ impl MicrobubblePopulation {
             }));
         }
 
-        let shell_elasticity = self.reference_bubble.shell_elasticity;
-        let shell_viscosity = self.reference_bubble.shell_viscosity;
+        let shell_elasticity = self.reference_bubble.shell_elasticity.into_base();
+        let shell_viscosity = self.reference_bubble.shell_viscosity.into_base();
 
         let scattering_at_radius = |radius_eq: f64| -> KwaversResult<f64> {
             if !radius_eq.is_finite() || radius_eq <= 0.0 {
@@ -169,14 +184,14 @@ impl MicrobubblePopulation {
         };
 
         if std_dev == 0.0 {
-            return scattering_at_radius(mean_radius);
+            return scattering_at_radius(mean_radius).map(Area::from_base);
         }
 
         let variance = std_dev * std_dev;
         let sigma2_ln = (variance / (mean_radius * mean_radius)).ln_1p();
         let sigma_ln = sigma2_ln.sqrt();
         if !sigma_ln.is_finite() || sigma_ln <= 0.0 {
-            return scattering_at_radius(mean_radius);
+            return scattering_at_radius(mean_radius).map(Area::from_base);
         }
         let mu_ln = 0.5f64.mul_add(-sigma2_ln, mean_radius.ln());
 
@@ -212,6 +227,6 @@ impl MicrobubblePopulation {
             }));
         }
 
-        Ok(result)
+        Ok(Area::from_base(result))
     }
 }

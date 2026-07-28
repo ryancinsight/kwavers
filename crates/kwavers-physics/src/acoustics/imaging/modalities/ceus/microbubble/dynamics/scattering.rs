@@ -1,6 +1,7 @@
 //! Nonlinear scattering efficiency for CEUS microbubbles.
 
 use super::BubbleDynamics;
+use aequitas::systems::si::quantities::{Frequency, Pressure};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_imaging::ultrasound::ceus::Microbubble;
 
@@ -10,16 +11,20 @@ impl BubbleDynamics {
     pub fn nonlinear_scattering_efficiency(
         &self,
         bubble: &Microbubble,
-        pressure_amplitude: f64,
-        frequency: f64,
+        pressure_amplitude: Pressure<f64>,
+        frequency: Frequency<f64>,
     ) -> f64 {
-        let r0 = bubble.radius_eq.max(1e-12);
+        let pressure_amplitude = pressure_amplitude.into_base();
+        let frequency = frequency.into_base();
+        let r0 = bubble.radius_eq.into_base().max(1e-12);
         let resonance_freq = bubble
             .resonance_frequency(self.ambient_pressure, self.liquid_density)
+            .into_base()
             .max(1.0);
         let omega_ratio = frequency / resonance_freq;
         let omega_res = TWO_PI * resonance_freq;
-        let epsilon = pressure_amplitude / (self.liquid_density * r0 * r0 * omega_res * omega_res);
+        let epsilon = pressure_amplitude
+            / (self.liquid_density.into_base() * r0 * r0 * omega_res * omega_res);
         let delta = self.damping_coefficient;
         let omega_sq = omega_ratio * omega_ratio;
         let denom_sq = (delta * omega_ratio).mul_add(delta * omega_ratio, (1.0 - omega_sq).powi(2));
