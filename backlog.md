@@ -11,15 +11,20 @@
   diameter consistently; Doppler preserves `v = f_d c / (2 f_0 cos(theta))`;
   invalid spacing and Doppler inputs return typed errors; all affected tests,
   focused Nextest, Clippy, doctest, Rustdoc, and format gates pass. Source,
-  tests, docs, and PM synchronization are implemented. The PR now pins the
-  immutable Atlas graph `ef22776f38cd33dbf66940541e33c04bbc6dc128`, which
-  advances Mnemosyne to merged PR #31 at
-  `fd873df55568a30ce5cd68ca61275d47f741286a`, Coeus to its current
-  `crates/` layout, RITK to the matching consumer paths, and Moirai to its
-  published `mnemosyne = 0.6.0` requirement at `6c39fd81`; the lockfile
-  carries the four corresponding Mnemosyne version transitions. Exact-head hosted gates are running; local full-
-  workspace compilation is not graph-authoritative because mutable sibling
-  checkouts diverge from the pinned Atlas graph.
+  tests, docs, and PM synchronization are implemented. The PR pins immutable
+  Atlas graph `303bb513b47e8f096b0f0fd41db3302d4d071979`: Coeus
+  `cdaf769b1a1c16a6932b9cdc31a6bc0665085b87`, Hermes
+  `1234f8ca1d3740138a24b373e1971179c2f5af9b`, Leto
+  `d94e3ba98e583468d7c8c86090027008b4b2e020`, Mnemosyne PR #31
+  `fd873df55568a30ce5cd68ca61275d47f741286a`, Moirai
+  `6c39fd81c4d940ac7b96e5e4e50787177bcf8223`, and RITK
+  `650359082c146564d475f2fa378120d38cbe8252`. The lockfile synchronizes
+  Mnemosyne 0.5→0.6, backend 0.4→0.5, heap 0.2→0.3, local 0.2→0.3,
+  Hermes 0.4.1→0.5.0, and the Coeus/Leto provider API edges. Hosted exact-head
+  vessel tests pass on `a8c68b6f5`; corrected benchmark graph normalization
+  passes on `640470d48`. Local full-workspace compilation is not
+  graph-authoritative because mutable sibling checkouts diverge from the
+  pinned Atlas graph.
 - Non-goals: Doppler field storage, dimensionless confidence/orientation, and
   the unrelated transducer PR #324 residuals.
 

@@ -1,16 +1,36 @@
-## Review 2026-07-28 — KW-AEQ-MET-04 provider-graph repair
+## Review 2026-07-28 — KW-AEQ-MET-04 provider-graph repair and benchmark closure
 
-PR #325 now pins Atlas graph `ef22776f38cd33dbf66940541e33c04bbc6dc128`.
-The graph advances Mnemosyne to merged PR #31 (`fd873df55568a30ce5cd68ca61275d47f741286a`),
-publishes the Coeus `crates/` layout, RITK's matching consumer paths, and Moirai
-main (`6c39fd81c4d940ac7b96e5e4e50787177bcf8223`) with
-`mnemosyne = 0.6.0`. The first hosted rerun verified all 13 provider checkouts
-and 46 dependency manifests; the remaining failure was the stale Moirai
-`mnemosyne = ^0.5.0` requirement. The graph has been advanced to the published
-Moirai repair and the focused vessel gate is rerunning against the exact PR
-head. The four Mnemosyne package-version transitions remain the only lockfile
-changes for this repair. Local full-workspace resolution is not authoritative
-because mutable sibling checkouts do not reproduce the immutable hosted graph.
+PR #325 is prepared at `640470d48` with Atlas graph
+`303bb513b47e8f096b0f0fd41db3302d4d071979`: Coeus
+`cdaf769b1a1c16a6932b9cdc31a6bc0665085b87`, Hermes
+`1234f8ca1d3740138a24b373e1971179c2f5af9b`, Leto
+`d94e3ba98e583468d7c8c86090027008b4b2e020`, Mnemosyne PR #31
+`fd873df55568a30ce5cd68ca61275d47f741286a`, Moirai
+`6c39fd81c4d940ac7b96e5e4e50787177bcf8223`, and RITK
+`650359082c146564d475f2fa378120d38cbe8252`. The original Coeus/Leto
+missing-symbol blocker and the Mnemosyne `TierSelection::Hbm`/`Gddr` compile
+blocker are closed by the immutable provider graph; no local fallback or
+adapter was added.
+
+The first corrected benchmark rerun (`30406033235`, attempt 2) completed all
+four pair measurements but classified `fdtd_derivatives/order_2/64` as a
+replicated regression: first `+1.92%/-1.11%`, second `+4.81%/-1.42%`. The
+source diff did not touch FDTD or benchmark code. Root cause was incomplete
+historical-baseline normalization: the workflow copied only the root manifest
+and lock while the PR changed package manifests. Commit `640470d48` now copies
+every tracked package `Cargo.toml` and `Cargo.lock` before baseline metadata.
+The corrected run `30411366697` passed smoke in 11m31s, produced byte-identical
+merge-critical benchmark executables, and passed the regression check in 3s
+with `MEASUREMENTS_REQUIRED=false`; the four pair jobs were skipped by the
+byte-identity gate. This closes the benchmark integration defect without
+weakening the instrument.
+
+Exact-head Architecture Validation `30406033266` / Test Suite Coverage job
+`90431548177` passed primary Nextest 5,652/5,652, PINN Nextest 39/39, bounded
+simulations 24/24, doctests, and all listed vasculature physical-metrics tests
+(PASS sequence 728–747). Local full-workspace resolution remains
+non-authoritative because mutable sibling checkouts do not reproduce the
+immutable Atlas graph.
 
 ## State refresh (2026-07-16) — kwavers Batch #1 closure: Rayon → Moirai migration complete
 
@@ -43,14 +63,10 @@ because mutable sibling checkouts do not reproduce the immutable hosted graph.
 
 # Gap Audit
 
-- Review 2026-07-28: PR #325's original provider blocker is repaired through
-  Mnemosyne PR #31. The immutable Atlas graph now reaches Mnemosyne
-  `fd873df`, Coeus `cdaf769b`, RITK `65035908`, and Moirai `6c39fd81`; the
-  RITK object is published at `codex/ritk-atlas-coeus-paths`. Hosted checkout
-  rerun `30395548277` verified all 13 providers and 46 manifests before Cargo
-  resolution exposed Moirai's stale `mnemosyne ^0.5.0` requirement. The next
-  exact-head rerun is the acceptance oracle for the vessel physical-metrics
-  tests; no Kwavers source integration defect has been established yet.
+- Review 2026-07-28: PR #325's original provider blocker is closed through
+  Mnemosyne PR #31 and the synchronized Atlas graph above. The immutable graph
+  checkout and exact-head hosted vessel tests are green; the benchmark graph
+  normalization defect is also closed by `640470d48` and run `30411366697`.
 
 - Review 2026-07-23: `KWAVERS-AEQ-MET-04` is implemented on PR #325 at commit
   `9f95aa826`. `VoxelSpacing` validates positive
