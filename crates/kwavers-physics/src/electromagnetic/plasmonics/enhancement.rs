@@ -51,6 +51,7 @@
 
 use super::mie_theory::MieTheory;
 use super::types::CouplingModel;
+use aequitas::systems::si::quantities::{Dimensionless, Length, NumberDensity};
 use eunomia::Complex;
 use kwavers_core::constants::fundamental::VACUUM_PERMITTIVITY;
 use kwavers_core::constants::numerical::FOUR_PI;
@@ -61,8 +62,8 @@ use std::f64::consts::PI;
 pub struct PlasmonicEnhancementCalculator {
     /// Mie theory calculator describing the individual nanoparticles
     pub mie_theory: MieTheory,
-    /// Nanoparticle concentration (particles/m³)
-    pub concentration: f64,
+    /// Nanoparticle concentration.
+    pub concentration: NumberDensity,
     /// Inter-particle coupling model for dense media
     pub coupling_model: CouplingModel,
 }
@@ -70,7 +71,7 @@ pub struct PlasmonicEnhancementCalculator {
 impl PlasmonicEnhancementCalculator {
     /// Create new plasmonic enhancement calculator
     #[must_use]
-    pub fn new(mie_theory: MieTheory, concentration: f64) -> Self {
+    pub fn new(mie_theory: MieTheory, concentration: NumberDensity) -> Self {
         Self {
             mie_theory,
             concentration,
@@ -81,42 +82,52 @@ impl PlasmonicEnhancementCalculator {
     /// Compute local electromagnetic field enhancement factor at a specific position
     /// relative to the nanoparticle center.
     #[must_use]
-    pub fn field_enhancement_factor(&self, wavelength: f64, position: &[f64; 3]) -> f64 {
+    pub fn field_enhancement_factor(
+        &self,
+        wavelength: Length,
+        position: &[Length; 3],
+    ) -> Dimensionless {
         // For single particle, enhancement is approximately |E_local|/|E_incident| ≈ 1 + α/(4π ε₀ r³)
         // where r is distance from particle center
 
         let distance_from_center = position[2]
+            .into_base()
             .mul_add(
-                position[2],
-                position[1].mul_add(position[1], position[0].powi(2)),
+                position[2].into_base(),
+                position[1]
+                    .into_base()
+                    .mul_add(position[1].into_base(), position[0].into_base().powi(2)),
             )
             .sqrt();
-        let min_distance = self.mie_theory.radius * 1.1; // Just outside particle boundary
+        let min_distance = self.mie_theory.radius.into_base() * 1.1; // Just outside particle boundary
         let effective_distance = distance_from_center.max(min_distance);
 
-        let alpha = self.mie_theory.polarizability(wavelength);
+        let alpha = self.mie_theory.polarizability(wavelength).into_base();
 
         // Dipole field enhancement computation
         let enhancement =
             1.0 + alpha / (FOUR_PI * VACUUM_PERMITTIVITY * effective_distance.powi(3));
-        enhancement.norm() // Magnitude of complex enhancement vector
+        Dimensionless::from_base(enhancement.norm()) // Magnitude of complex enhancement vector
     }
 
     /// Compute effective medium dielectric function incorporating plasmonic nanoparticles
     #[must_use]
     pub fn effective_dielectric(
         &self,
-        wavelength: f64,
-        host_dielectric: f64,
-    ) -> eunomia::Complex64 {
-        let volume_fraction =
-            self.concentration * (4.0 / 3.0) * PI * self.mie_theory.radius.powi(3);
+        wavelength: Length,
+        host_dielectric: Dimensionless,
+    ) -> Dimensionless<eunomia::Complex64> {
+        let volume_fraction = self.concentration.into_base()
+            * (4.0 / 3.0)
+            * PI
+            * self.mie_theory.radius.into_base().powi(3);
+        let host_dielectric = host_dielectric.into_base();
         let host = Complex::new(host_dielectric, 0.0);
 
-        match self.coupling_model {
+        let effective = match self.coupling_model {
             CouplingModel::None => {
                 // Maxwell-Garnett closed form for dilute spherical inclusions.
-                let eps_particle = (self.mie_theory.particle_dielectric)(wavelength);
+                let eps_particle = (self.mie_theory.particle_dielectric)(wavelength).into_base();
                 maxwell_garnett_effective_dielectric(eps_particle, host, volume_fraction)
             }
             CouplingModel::DipoleDipole => {
@@ -130,7 +141,7 @@ impl PlasmonicEnhancementCalculator {
                 //
                 // Previous code used 3 ε_h / (eps_p + 2 ε_h) as the Lorentz factor,
                 // which is the wrong numerator (should be eps_p − eps_h, not ε_h).
-                let eps_particle = (self.mie_theory.particle_dielectric)(wavelength);
+                let eps_particle = (self.mie_theory.particle_dielectric)(wavelength).into_base();
                 let contrast = eps_particle - Complex::new(host_dielectric, 0.0);
                 let lorentz_factor = 3.0 * contrast / (eps_particle + 2.0 * host_dielectric);
 
@@ -138,24 +149,27 @@ impl PlasmonicEnhancementCalculator {
             }
             CouplingModel::QuasiStatic => {
                 // Bruggeman symmetric effective-medium solution for dense mixtures.
-                let eps_particle = (self.mie_theory.particle_dielectric)(wavelength);
+                let eps_particle = (self.mie_theory.particle_dielectric)(wavelength).into_base();
                 bruggeman_effective_dielectric(eps_particle, host, volume_fraction)
             }
-        }
+        };
+        Dimensionless::from_base(effective)
     }
 
     /// Compute specific surface plasmon resonance enhancement spectral profile
     #[must_use]
-    pub fn surface_plasmon_enhancement(&self, wavelength: f64) -> f64 {
+    pub fn surface_plasmon_enhancement(&self, wavelength: Length) -> Dimensionless {
         if let Some(resonance_wavelength) = self.mie_theory.plasmon_resonance_wavelength() {
             // Lorentzian enhancement line shape profile
             let delta_lambda = 50e-9; // FWHM spectral width ≈ 50 nm
-            let detuning = wavelength - resonance_wavelength;
+            let detuning = wavelength.into_base() - resonance_wavelength.into_base();
 
             // Modeled peak near-field enhancement of 11x
-            1.0 + 10.0 / (detuning / delta_lambda).mul_add(detuning / delta_lambda, 1.0)
+            Dimensionless::from_base(
+                1.0 + 10.0 / (detuning / delta_lambda).mul_add(detuning / delta_lambda, 1.0),
+            )
         } else {
-            1.0 // Base transmission (no enhancement)
+            Dimensionless::from_base(1.0) // Base transmission (no enhancement)
         }
     }
 }

@@ -33,7 +33,8 @@
 //! - Polyanskiy, M.N. (2024). Refractiveindex.info database of optical
 //!   constants. *Scientific Data*, 11, 94.
 
-use eunomia::Complex;
+use aequitas::systems::si::quantities::{Area, Dimensionless, Length, Polarizability};
+use eunomia::{Complex, Complex64};
 use kwavers_core::constants::fundamental::VACUUM_PERMITTIVITY;
 use kwavers_core::constants::numerical::{FOUR_PI, TWO_PI};
 use std::f64::consts::PI;
@@ -93,12 +94,14 @@ const JOHNSON_CHRISTY_GOLD: &[(f64, f64, f64)] = &[
 
 /// Mie theory calculator for spherical plasmonic nanoparticles
 pub struct MieTheory {
-    /// Nanoparticle radius (m)
-    pub radius: f64,
-    /// Dielectric function of nanoparticle ε_particle(ω)
-    pub particle_dielectric: Box<dyn Fn(f64) -> eunomia::Complex64>,
-    /// Dielectric function of surrounding medium ε_medium
-    pub medium_dielectric: f64,
+    /// Nanoparticle radius.
+    pub radius: Length,
+    /// Dimensionless dielectric function of the nanoparticle ε_particle(λ).
+    // The callback is a cold material-model selection boundary; numerical
+    // kernels operate on the returned value without per-element dispatch.
+    pub particle_dielectric: Box<dyn Fn(Length) -> Dimensionless<Complex64>>,
+    /// Dimensionless dielectric function of the surrounding medium ε_medium.
+    pub medium_dielectric: Dimensionless,
 }
 
 impl std::fmt::Debug for MieTheory {
@@ -116,74 +119,77 @@ impl MieTheory {
     /// Uses Johnson-Christy tabulated gold optical constants with affine
     /// interpolation in wavelength and `eps=(n+ik)^2`.
     #[must_use]
-    pub fn gold_in_water(radius: f64) -> Self {
+    pub fn gold_in_water(radius: Length) -> Self {
         Self {
             radius,
             particle_dielectric: Box::new(gold_dielectric_johnson_christy),
             // Water at optical frequencies
-            medium_dielectric: 1.77,
+            medium_dielectric: Dimensionless::from_base(1.77),
         }
     }
 
     /// Compute polarizability (α) using Mie theory
     #[must_use]
-    pub fn polarizability(&self, wavelength: f64) -> eunomia::Complex64 {
-        let eps_particle = (self.particle_dielectric)(wavelength);
-        let eps_medium = self.medium_dielectric;
+    pub fn polarizability(&self, wavelength: Length) -> Polarizability<Complex64> {
+        let eps_particle = (self.particle_dielectric)(wavelength).into_base();
+        let eps_medium = self.medium_dielectric.into_base();
 
         // Mie polarizability (quasistatic limit): α = 4π ε₀ ε_m R³ (ε - ε_m)/(ε + 2ε_m)
         let eps_ratio = eps_particle / eps_medium;
         let numerator = eps_ratio - eunomia::Complex::new(1.0, 0.0);
         let denominator = eps_ratio + eunomia::Complex::new(2.0, 0.0);
 
-        let alpha_dimensionless = self.radius * self.radius * self.radius * numerator / denominator;
+        let radius = self.radius.into_base();
+        let alpha_dimensionless = radius * radius * radius * numerator / denominator;
 
         // Convert to SI units (include 4π ε₀ ε_m factor)
-        alpha_dimensionless * FOUR_PI * VACUUM_PERMITTIVITY * eps_medium
+        Polarizability::from_base(alpha_dimensionless * FOUR_PI * VACUUM_PERMITTIVITY * eps_medium)
     }
 
     /// Compute scattering cross-section (σ_scat)
     #[must_use]
-    pub fn scattering_cross_section(&self, wavelength: f64) -> f64 {
-        let alpha_si = self.polarizability(wavelength);
+    pub fn scattering_cross_section(&self, wavelength: Length) -> Area {
+        let alpha_si = self.polarizability(wavelength).into_base();
         // Convert SI polarizability to polarizability volume α_vol = R³·K [m³]
-        let alpha_vol = alpha_si / (FOUR_PI * VACUUM_PERMITTIVITY * self.medium_dielectric);
-        let n_medium = self.medium_dielectric.sqrt();
-        let k = TWO_PI * n_medium / wavelength; // medium wavenumber k_m = n_m·ω/c
+        let alpha_vol =
+            alpha_si / (FOUR_PI * VACUUM_PERMITTIVITY * self.medium_dielectric.into_base());
+        let n_medium = self.medium_dielectric.into_base().sqrt();
+        let k = TWO_PI * n_medium / wavelength.into_base(); // medium wavenumber k_m = n_m·ω/c
 
         // σ_scat = (8π/3) k_m⁴ |α_vol|² (quasistatic Mie; Bohren & Huffman 4.61)
-        (8.0 * PI / 3.0) * k.powi(4) * alpha_vol.norm_sqr()
+        Area::from_base((8.0 * PI / 3.0) * k.powi(4) * alpha_vol.norm_sqr())
     }
 
     /// Compute absorption cross-section (σ_abs)
     #[must_use]
-    pub fn absorption_cross_section(&self, wavelength: f64) -> f64 {
-        let alpha_si = self.polarizability(wavelength);
+    pub fn absorption_cross_section(&self, wavelength: Length) -> Area {
+        let alpha_si = self.polarizability(wavelength).into_base();
         // Convert SI polarizability to polarizability volume α_vol = R³·K [m³]
-        let alpha_vol = alpha_si / (FOUR_PI * VACUUM_PERMITTIVITY * self.medium_dielectric);
-        let n_medium = self.medium_dielectric.sqrt();
-        let k = TWO_PI * n_medium / wavelength; // medium wavenumber k_m = n_m·ω/c
+        let alpha_vol =
+            alpha_si / (FOUR_PI * VACUUM_PERMITTIVITY * self.medium_dielectric.into_base());
+        let n_medium = self.medium_dielectric.into_base().sqrt();
+        let k = TWO_PI * n_medium / wavelength.into_base(); // medium wavenumber k_m = n_m·ω/c
 
         // σ_abs = 4π k_m Im(α_vol) (quasistatic Mie; van de Hulst / Bohren & Huffman)
-        FOUR_PI * k * alpha_vol.im
+        Area::from_base(FOUR_PI * k * alpha_vol.im)
     }
 
     /// Compute extinction cross-section (σ_ext = σ_scat + σ_abs)
     #[must_use]
-    pub fn extinction_cross_section(&self, wavelength: f64) -> f64 {
+    pub fn extinction_cross_section(&self, wavelength: Length) -> Area {
         self.scattering_cross_section(wavelength) + self.absorption_cross_section(wavelength)
     }
 
     /// Find plasmon resonance wavelength by minimizing the denominator Re(ε_particle + 2ε_medium)
     #[must_use]
-    pub fn plasmon_resonance_wavelength(&self) -> Option<f64> {
+    pub fn plasmon_resonance_wavelength(&self) -> Option<Length> {
         // Simple grid search
-        let wavelengths = (400..900).map(|nm| f64::from(nm) * 1e-9); // 400-900 nm
+        let wavelengths = (400..900).map(|nm| Length::from_base(f64::from(nm) * 1e-9));
 
         for wavelength in wavelengths {
-            let eps_particle = (self.particle_dielectric)(wavelength);
+            let eps_particle = (self.particle_dielectric)(wavelength).into_base();
             let denominator =
-                eps_particle + eunomia::Complex::new(2.0 * self.medium_dielectric, 0.0);
+                eps_particle + Complex::new(2.0 * self.medium_dielectric.into_base(), 0.0);
 
             if denominator.re.abs() < 0.1 {
                 // Close to resonance
@@ -196,10 +202,10 @@ impl MieTheory {
 }
 
 #[must_use]
-pub(crate) fn gold_dielectric_johnson_christy(wavelength_m: f64) -> Complex<f64> {
-    let wavelength_um = wavelength_m * 1.0e6;
+pub(crate) fn gold_dielectric_johnson_christy(wavelength: Length) -> Dimensionless<Complex64> {
+    let wavelength_um = wavelength.into_base() * 1.0e6;
     let (n, k) = interpolate_gold_nk(wavelength_um);
-    Complex::new(n.mul_add(n, -(k * k)), 2.0 * n * k)
+    Dimensionless::from_base(Complex::new(n.mul_add(n, -(k * k)), 2.0 * n * k))
 }
 
 #[must_use]

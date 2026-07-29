@@ -1,3 +1,24 @@
+## Live plasmonics closure — 2026-08-02
+
+`KWAVERS-AEQ-MET-33` is now implemented on the current Kwavers integration
+head. Public Mie, enhancement, nanoparticle-array, and electromagnetic
+equation APIs use Aequitas `Length`, `NumberDensity`, `Area`, `Frequency`,
+`Polarizability`, and `ReciprocalVolume`; relative dielectric functions,
+volume fractions, and enhancement factors remain dimensionless.
+
+`Polarizability<eunomia::Complex64>` keeps real and quadrature components under
+one `FaradSquareMeter` unit. No imaginary physical unit or consumer wrapper is
+introduced. Scalar extraction is limited to dielectric interpolation,
+cross-section, coupling, and array formulas. Existing analytical plasmonics
+tests and the provider complex-unit law are the value-semantic acceptance
+oracles; the final result requires package checks, warning-denied Clippy,
+Rustfmt, and a raw-public-signature residue scan.
+
+The CFDrs and Helios re-audits remain clean: no missing Aequitas physical
+metric was found in their current public boundaries. Their complex values are
+Eunomia representation data at existing dimensions and reduce to real
+observables at formula or reporting boundaries.
+
 ## Review 2026-07-29 — PR #325 unresolved blocker closeout
 
 Three non-outdated review threads remained valid at `fc3ac0308`. The repository

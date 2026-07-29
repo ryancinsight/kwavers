@@ -12,6 +12,12 @@
 - [patch] Complete the Leto tuple-producer cutover, propagate fallible Coeus
   module and optimizer operations through Kwavers errors, and validate RITK's
   structured temporal-synchronization result at the consumer boundary.
+- **Breaking:** Plasmonics particle geometry, wavelengths, concentration,
+  cross-sections, near-field coupling, resonance frequency, and complex Mie
+  polarizability now use Aequitas quantities. Eunomia `Complex64` remains the
+  real-plus-quadrature provider; both components share the polarizability unit
+  and no imaginary physical unit is introduced. See [ADR
+  071](docs/ADR/071-plasmonics-quantities.md).
 
 - **Breaking:** Therapeutic microbubble state, shell, radiation-force,
   pressure-gradient, streaming-velocity, dynamics-service, and sampling
