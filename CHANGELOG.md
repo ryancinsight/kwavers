@@ -4,6 +4,13 @@
 
 ### Changed
 
+- **Breaking:** Plasmonics particle geometry, wavelengths, concentration,
+  cross-sections, near-field coupling, resonance frequency, and complex Mie
+  polarizability now use Aequitas quantities. Eunomia `Complex64` remains the
+  real-plus-quadrature provider; both components share the polarizability unit
+  and no imaginary physical unit is introduced. See [ADR
+  071](docs/ADR/071-plasmonics-quantities.md).
+
 - **Breaking:** Therapeutic microbubble state, shell, radiation-force,
   pressure-gradient, streaming-velocity, dynamics-service, and sampling
   contracts now use Aequitas physical quantities. Aequitas adds coherent
