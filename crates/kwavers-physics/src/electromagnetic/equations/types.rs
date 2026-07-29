@@ -3,6 +3,8 @@
 //! This module defines the fundamental types used throughout the electromagnetic
 //! physics implementation.
 
+use aequitas::systems::si::quantities::Length;
+
 /// Spatial dimension for electromagnetic problems
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EMDimension {
@@ -29,7 +31,7 @@ pub enum ElectromagneticPolarization {
     Elliptical {
         /// Axial ratio of the polarization ellipse (minor/major axis).
         ratio: f64,
-        /// Phase difference between the orthogonal field components `rad`.
+        /// Phase difference between the orthogonal field components.
         phase_diff: f64,
     },
 }
@@ -52,31 +54,31 @@ pub enum ElectromagneticWaveType {
 pub enum NanoparticleGeometry {
     /// Spherical nanoparticle
     Sphere {
-        /// Sphere radius `m`.
-        radius: f64,
+        /// Sphere radius.
+        radius: Length,
     },
     /// Ellipsoidal nanoparticle
     Ellipsoid {
-        /// Semi-axis a `m`.
-        a: f64,
-        /// Semi-axis b `m`.
-        b: f64,
-        /// Semi-axis c `m`.
-        c: f64,
+        /// Semi-axis a.
+        a: Length,
+        /// Semi-axis b.
+        b: Length,
+        /// Semi-axis c.
+        c: Length,
     },
     /// Nanorod (cylindrical)
     Nanorod {
-        /// Cylinder radius `m`.
-        radius: f64,
-        /// Cylinder length `m`.
-        length: f64,
+        /// Cylinder radius.
+        radius: Length,
+        /// Cylinder length.
+        length: Length,
     },
     /// Nanoshell (core-shell)
     Nanoshell {
-        /// Dielectric-core radius `m`.
-        core_radius: f64,
-        /// Metallic-shell thickness `m`.
-        shell_thickness: f64,
+        /// Dielectric-core radius.
+        core_radius: Length,
+        /// Metallic-shell thickness.
+        shell_thickness: Length,
     },
 }
 
@@ -111,23 +113,27 @@ mod tests {
 
     #[test]
     fn test_nanoparticle_geometry() {
-        let sphere = NanoparticleGeometry::Sphere { radius: 15e-9 };
+        let sphere = NanoparticleGeometry::Sphere {
+            radius: Length::from_base(15e-9),
+        };
         let ellipsoid = NanoparticleGeometry::Ellipsoid {
-            a: 10e-9,
-            b: 15e-9,
-            c: 20e-9,
+            a: Length::from_base(10e-9),
+            b: Length::from_base(15e-9),
+            c: Length::from_base(20e-9),
         };
 
         match sphere {
-            NanoparticleGeometry::Sphere { radius } => assert_eq!(radius, 15e-9),
+            NanoparticleGeometry::Sphere { radius } => {
+                assert_eq!(radius.into_base(), 15e-9)
+            }
             _ => panic!("Expected sphere"),
         }
 
         match ellipsoid {
             NanoparticleGeometry::Ellipsoid { a, b, c } => {
-                assert_eq!(a, 10e-9);
-                assert_eq!(b, 15e-9);
-                assert_eq!(c, 20e-9);
+                assert_eq!(a.into_base(), 10e-9);
+                assert_eq!(b.into_base(), 15e-9);
+                assert_eq!(c.into_base(), 20e-9);
             }
             _ => panic!("Expected ellipsoid"),
         }

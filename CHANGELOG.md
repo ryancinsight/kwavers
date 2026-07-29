@@ -4,6 +4,13 @@
 
 ### Changed
 
+- **Breaking**: Plasmonics particle geometry, wavelengths, concentration,
+  cross-sections, near-field coupling, resonance frequency, and complex Mie
+  polarizability now use Aequitas quantities. Eunomia `Complex64` remains the
+  real-plus-quadrature provider; the imaginary component shares the physical
+  unit and is not modeled as a separate dimension. See [ADR
+  071](docs/ADR/071-plasmonics-quantities.md).
+
 - **Breaking**: MEMS fluid-crosstalk APIs now accept Aequitas area, length,
   frequency, fluid-density, and sound-speed quantities and return complex
   `AcousticImpedance`; scalar extraction remains inside the baffled-monopole
