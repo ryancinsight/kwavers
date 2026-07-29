@@ -100,8 +100,15 @@ pub(super) struct FractionalLaplacianAbsorption {
     /// Half-spectrum `|k|^y` weights for `L_y` (`n × n × (n/2+1)`).
     k_pow_y: Array3<f64>,
     /// Cached `L_y(p[n-1])` from the previous step.  Empty until the
-    /// solver primes it after the first absorption application.
+    /// solver primes it after the first absorption application.  Stored
+    /// as an `Array3` so the same storage is swapped between fields on
+    /// each step — zero per-step allocation once primed.
     prev_l_y: Option<Array3<f64>>,
+    /// Persistent output buffer for the current step's `L_y(p`N`)`.
+    /// On each `apply` call the spectral-filter result is written here,
+    /// then swapped into `prev_l_y` at the end so the buffer storage is
+    /// recycled across steps — zero per-step allocation.
+    l_y_curr_buf: Array3<f64>,
     /// Persistent real-space scratch buffer for `spectral_filter_into`.
     /// Reused every step — zero per-step allocation.
     spatial_buf: Array3<f64>,

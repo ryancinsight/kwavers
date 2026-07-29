@@ -1,5 +1,6 @@
 //! Binding-layer parsing and geometry validation helpers for MEMS wrappers.
 
+use aequitas::systems::si::quantities::Length;
 use kwavers_transducer::mems::{
     cmut::CmutCell,
     pmut::{PiezoFilm, PmutCell},
@@ -8,13 +9,22 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
 pub(super) fn cmut(radius: f64, thickness: f64, gap: f64) -> PyResult<CmutCell> {
-    CmutCell::silicon(radius, thickness, gap)
-        .ok_or_else(|| PyValueError::new_err("invalid CMUT geometry (all dimensions must be > 0)"))
+    CmutCell::silicon(
+        Length::from_base(radius),
+        Length::from_base(thickness),
+        Length::from_base(gap),
+    )
+    .ok_or_else(|| PyValueError::new_err("invalid CMUT geometry (all dimensions must be > 0)"))
 }
 
 pub(super) fn pmut(film: &str, radius: f64, t_p: f64, t_s: f64) -> PyResult<PmutCell> {
-    PmutCell::new(radius, t_p, t_s, parse_film(film)?)
-        .ok_or_else(|| PyValueError::new_err("invalid PMUT geometry (all dimensions must be > 0)"))
+    PmutCell::new(
+        Length::from_base(radius),
+        Length::from_base(t_p),
+        Length::from_base(t_s),
+        parse_film(film)?,
+    )
+    .ok_or_else(|| PyValueError::new_err("invalid PMUT geometry (all dimensions must be > 0)"))
 }
 
 fn parse_film(name: &str) -> PyResult<PiezoFilm> {

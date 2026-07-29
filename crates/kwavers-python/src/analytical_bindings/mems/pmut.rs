@@ -1,5 +1,6 @@
 //! PMUT scalar model bindings.
 
+use aequitas::systems::si::quantities::{ElectricPotential, Frequency, MassDensity, Velocity};
 use super::helpers::pmut;
 use pyo3::prelude::*;
 
@@ -12,7 +13,7 @@ pub fn pmut_resonance_immersion(
     t_s: f64,
     density_fluid: f64,
 ) -> PyResult<f64> {
-    Ok(pmut(film, radius, t_p, t_s)?.immersion_resonance(density_fluid))
+    Ok(pmut(film, radius, t_p, t_s)?.immersion_resonance(MassDensity::from_base(density_fluid)).into_base())
 }
 
 /// PMUT effective electromechanical coupling k² [-].
@@ -31,7 +32,9 @@ pub fn pmut_self_heating(
     v_ac: f64,
     freq: f64,
 ) -> PyResult<f64> {
-    Ok(pmut(film, radius, t_p, t_s)?.self_heating_power(v_ac, freq))
+    Ok(pmut(film, radius, t_p, t_s)?
+        .self_heating_power(ElectricPotential::from_base(v_ac), Frequency::from_base(freq))
+        .into_base())
 }
 
 /// PMUT fractional bandwidth from fluid loading [-].
@@ -43,7 +46,7 @@ pub fn pmut_fractional_bandwidth(
     t_s: f64,
     density_fluid: f64,
 ) -> PyResult<f64> {
-    Ok(pmut(film, radius, t_p, t_s)?.fractional_bandwidth(density_fluid))
+    Ok(pmut(film, radius, t_p, t_s)?.fractional_bandwidth(MassDensity::from_base(density_fluid)))
 }
 
 /// PMUT drive-scaled peak output pressure `Pa` (film = "aln" | "pzt").
@@ -57,9 +60,11 @@ pub fn pmut_max_output_pressure(
     density_fluid: f64,
     sound_speed_fluid: f64,
 ) -> PyResult<f64> {
-    Ok(pmut(film, radius, t_p, t_s)?.max_output_pressure(
-        drive_voltage,
-        density_fluid,
-        sound_speed_fluid,
-    ))
+    Ok(pmut(film, radius, t_p, t_s)?
+        .max_output_pressure(
+            ElectricPotential::from_base(drive_voltage),
+            MassDensity::from_base(density_fluid),
+            Velocity::from_base(sound_speed_fluid),
+        )
+        .into_base())
 }

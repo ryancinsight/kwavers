@@ -106,9 +106,7 @@ mod tests {
     fn spectral_filter_into_round_trips_with_unit_weights() {
         let n = 8;
         let cells = n * n * n;
-        let field: Vec<f64> = (0..cells)
-            .map(|i| ((i * 17) as f64 * 0.1).sin())
-            .collect();
+        let field: Vec<f64> = (0..cells).map(|i| ((i * 17) as f64 * 0.1).sin()).collect();
         let weights = build_k_power_spectrum(n, 1.0e-4, 0.0);
         let mut out = Array3::zeros((n, n, n));
         let mut spatial_buf = Array3::zeros((n, n, n));

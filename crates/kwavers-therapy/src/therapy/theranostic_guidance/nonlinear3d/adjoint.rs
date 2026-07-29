@@ -95,7 +95,7 @@ pub(super) fn gradient(input: GradientInput<'_>) -> ParameterGradient {
             } else {
                 curr
             };
-            if let Some(op) = absorption.as_mut() {
+            if let Some(op) = absorption.as_ref() {
                 op.apply_transpose(&adj_next, &mut adj_curr, &mut adj_prev);
             }
             accumulate_step(AccumulateInput {

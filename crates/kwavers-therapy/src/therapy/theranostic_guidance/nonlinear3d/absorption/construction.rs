@@ -100,6 +100,7 @@ impl FractionalLaplacianAbsorption {
             dt_tau,
             k_pow_y,
             prev_l_y: None,
+            l_y_curr_buf: Array3::zeros([n, n, n]),
             spatial_buf: Array3::zeros([n, n, n]),
             spectrum_buf: Array3::from_elem([n, n, n], Complex64::default()),
         }

@@ -377,21 +377,20 @@ pub fn simulate_lif_neuron_py<'py>(
     reset_v: f64,
     refractory_s: f64,
 ) -> PyResult<Bound<'py, PyDict>> {
+    // Extract the slice while holding the GIL; only the pure-Rust ODE step
+    // runs inside detach() (GIL released for parallelism safety).
+    let current = i_ion_a.as_slice()?.to_vec();
+    let params = LifParams {
+        capacitance: Capacitance::from_base(capacitance_f),
+        leak_conductance: ElectricConductance::from_base(leak_conductance_s),
+        leak_reversal: ElectricPotential::from_base(leak_reversal_v),
+        threshold: ElectricPotential::from_base(threshold_v),
+        reset: ElectricPotential::from_base(reset_v),
+        refractory: Time::from_base(refractory_s),
+    };
     let trace = py
-        .detach(|| {
-            let current = i_ion_a.as_slice()?;
-            let params = LifParams {
-                capacitance: Capacitance::from_base(capacitance_f),
-                leak_conductance: ElectricConductance::from_base(leak_conductance_s),
-                leak_reversal: ElectricPotential::from_base(leak_reversal_v),
-                threshold: ElectricPotential::from_base(threshold_v),
-                reset: ElectricPotential::from_base(reset_v),
-                refractory: Time::from_base(refractory_s),
-            };
-            simulate_lif_trace(current, Time::from_base(dt_s), params)
-        })
+        .detach(|| simulate_lif_trace(&current, Time::from_base(dt_s), params))
         .map_err(kwavers_to_py)?;
-    let trace = trace?;
     let spike_count = trace.spike_times.len();
     let dict = PyDict::new(py);
     dict.set_item("voltage_v", PyArray1::from_vec(py, trace.voltage.iter().map(|v| v.into_base()).collect()))?;

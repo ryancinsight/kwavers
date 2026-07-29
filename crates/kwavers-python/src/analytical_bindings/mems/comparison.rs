@@ -1,5 +1,6 @@
 //! CMUT/PMUT comparison figure-of-merit bindings.
 
+use aequitas::systems::si::quantities::{ElectricPotential, MassDensity, ReciprocalLength, Velocity};
 use super::helpers::{cmut, pmut};
 use kwavers_transducer::mems::comparison;
 use pyo3::prelude::*;
@@ -29,11 +30,11 @@ pub fn therapy_figure_of_merit(
     let v = comparison::evaluate_therapy(
         &c,
         &p,
-        fluid_density,
-        fluid_sound_speed,
+        MassDensity::from_base(fluid_density),
+        Velocity::from_base(fluid_sound_speed),
         cmut_swing_fraction,
-        pmut_drive_voltage,
-        curvature,
+        ElectricPotential::from_base(pmut_drive_voltage),
+        ReciprocalLength::from_base(curvature),
         substrate_output_factor,
     );
     let recommended = if v.recommended == comparison::MutKind::Cmut {
@@ -42,11 +43,11 @@ pub fn therapy_figure_of_merit(
         1.0
     };
     Ok(vec![
-        v.cmut_output_pa,
-        v.pmut_output_pa,
+        v.cmut_output_pa.into_base(),
+        v.pmut_output_pa.into_base(),
         v.cmut_flex_derating,
-        v.cmut_heating,
-        v.pmut_heating,
+        v.cmut_heating.into_base(),
+        v.pmut_heating.into_base(),
         recommended,
     ])
 }
@@ -74,8 +75,8 @@ pub fn ivus_figure_of_merit(
     let v = comparison::evaluate_ivus(
         &c,
         &p,
-        fluid_density,
-        pmut_drive_voltage,
+        MassDensity::from_base(fluid_density),
+        ElectricPotential::from_base(pmut_drive_voltage),
         comparison::IvusWeights::default(),
     );
     let recommended = if v.recommended == comparison::MutKind::Cmut {
@@ -86,10 +87,10 @@ pub fn ivus_figure_of_merit(
     Ok(vec![
         v.cmut_fbw,
         v.pmut_fbw,
-        v.cmut_heating,
-        v.pmut_heating,
-        v.cmut_drive_voltage,
-        v.pmut_drive_voltage,
+        v.cmut_heating.into_base(),
+        v.pmut_heating.into_base(),
+        v.cmut_drive_voltage.into_base(),
+        v.pmut_drive_voltage.into_base(),
         v.cmut_fom,
         v.pmut_fom,
         recommended,
