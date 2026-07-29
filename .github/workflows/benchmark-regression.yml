@@ -66,7 +66,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cp kwavers-candidate/Cargo.toml kwavers-baseline/Cargo.toml
+          while IFS= read -r manifest; do
+            mkdir -p "kwavers-baseline/$(dirname "$manifest")"
+            cp "kwavers-candidate/$manifest" "kwavers-baseline/$manifest"
+          done < <(
+            git -C kwavers-candidate ls-files -- 'Cargo.toml' '**/Cargo.toml'
+          )
           cp kwavers-candidate/Cargo.lock kwavers-baseline/Cargo.lock
           cargo metadata \
             --manifest-path kwavers-baseline/Cargo.toml \
@@ -258,7 +263,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cp kwavers-candidate/Cargo.toml kwavers-baseline/Cargo.toml
+          while IFS= read -r manifest; do
+            mkdir -p "kwavers-baseline/$(dirname "$manifest")"
+            cp "kwavers-candidate/$manifest" "kwavers-baseline/$manifest"
+          done < <(
+            git -C kwavers-candidate ls-files -- 'Cargo.toml' '**/Cargo.toml'
+          )
           cp kwavers-candidate/Cargo.lock kwavers-baseline/Cargo.lock
           cargo metadata \
             --manifest-path kwavers-baseline/Cargo.toml \
