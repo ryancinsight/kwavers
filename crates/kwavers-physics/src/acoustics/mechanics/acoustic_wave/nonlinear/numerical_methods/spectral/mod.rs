@@ -6,8 +6,8 @@ use kwavers_medium::Medium;
 use leto::Array3 as LetoArray3;
 use leto::Array3;
 
-use crate::parallel::for_each_indexed_mut;
 use super::super::wave_model::NonlinearWave;
+use crate::parallel::for_each_indexed_mut;
 
 /// Spectral derivative utilities used only by tests.
 ///
@@ -79,21 +79,15 @@ impl NonlinearWave {
             .k_space_correction
             .as_ref()
             .expect("k_space_correction must be precomputed");
-        let k_buf = self
-            .k_buf
-            .as_mut()
-            .expect("k_buf must be initialised");
-        let k_out = self
-            .k_out
-            .as_mut()
-            .expect("k_out must be initialised");
+        let k_buf = self.k_buf.as_mut().expect("k_buf must be initialised");
+        let k_out = self.k_out.as_mut().expect("k_out must be initialised");
 
         // FFT pressure into persistent buffer: zero-alloc.
         fft_3d_array_into(pressure, k_buf);
 
         // In-place pointwise complex multiply (parallelised).
         for_each_indexed_mut(k_buf.view_mut(), |(i, j, k), val| {
-            *val = *val * correction[[i, j, k]];
+            *val *= correction[[i, j, k]];
         });
 
         // IFFT into persistent output buffer (uses k_buf as scratch): zero-alloc.
@@ -150,10 +144,8 @@ impl NonlinearWave {
                 for j in 0..ny {
                     for k in 0..nz {
                         let pk = pressure_k[[i, j, k]];
-                        let k_mag_sq = kz_s[k].mul_add(
-                            kz_s[k],
-                            kx_s[i].mul_add(kx_s[i], ky_s[j] * ky_s[j]),
-                        );
+                        let k_mag_sq =
+                            kz_s[k].mul_add(kz_s[k], kx_s[i].mul_add(kx_s[i], ky_s[j] * ky_s[j]));
                         let k_mag = k_mag_sq.sqrt();
                         let sinc_factor = if k_mag > numerical::EPSILON {
                             (c * k_mag * dt / 2.0).sin() / (c * k_mag * dt / 2.0)
