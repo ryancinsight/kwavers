@@ -50,4 +50,6 @@ dimension registration. Kwavers plasmonics tests retain the Johnson-Christy
 interpolation, cross-section conservation, enhancement, effective-medium
 closed forms, and coherent hot-spot oracles after the typed migration. The
 package check, warning-denied Clippy, targeted rustfmt, and residue scans are
-run against the delivered revision.
+The Aequitas provider check and focused complex-unit nextest pass. The delivered
+Kwavers revision passes package check, focused nextest (10/10), warning-denied
+Clippy, targeted rustfmt, and the raw-signature residue scan.
