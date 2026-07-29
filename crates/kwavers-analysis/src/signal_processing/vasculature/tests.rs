@@ -153,6 +153,20 @@ fn test_anisotropic_spacing_scales_vessel_diameter_and_length() {
 }
 
 #[test]
+fn test_nonempty_mask_without_centerline_is_rejected() {
+    let image = Array3::ones((3, 3, 3));
+    let mask = Array3::ones((3, 3, 3));
+
+    let result = classify_vessels(&image, &mask, spacing(0.002, 0.001, 0.001));
+
+    assert!(matches!(
+        result,
+        Err(kwavers_core::error::KwaversError::InvalidInput(message))
+            if message == "non-empty vessel mask has no usable centerline"
+    ));
+}
+
+#[test]
 fn test_doppler_velocity_formula() {
     // v = f_d · c / (2 f₀ · cos θ) = 2000 * SOUND_SPEED_TISSUE / (2 * 5e6 * 1.0)
     //   = 3_080_000 / 10_000_000 = 0.308 m/s

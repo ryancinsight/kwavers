@@ -28,8 +28,13 @@
       manifest and `Cargo.lock`; corrected run `30411366697` passes smoke in
       11m31s, proves merge-critical executables byte-identical, and passes the
       regression check in 3s with measurement correctly skipped.
-- [x] Prepare the pushed PR head `640470d48`; merge remains a separate delivery
-      transition.
+- [x] Remove the repository-local Aequitas path override and retain one
+      canonical Git source pinned by `Cargo.lock` at `ce3ef7a6`.
+- [x] Reject non-empty masks without a usable centerline and pin the exact typed
+      error with a focused value-semantic regression.
+- [x] Require `--locked` in both historical-baseline metadata checks after all
+      26 tracked package manifests and `Cargo.lock` are copied.
+- [ ] Push the blocker-closeout head and collect its exact hosted gate evidence.
 
 ## Owner: Codex `/root` — Aequitas acoustic dimensional boundaries [patch] — done
 

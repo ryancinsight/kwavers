@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-07-23
+- Revised: 2026-07-29 — reject non-empty masks without a usable centerline
 - Class: [major] [arch]
 
 ## Context
@@ -24,6 +25,8 @@ variance-like image values remain dimensionless or representation data.
 `VoxelSpacing` is owned by `kwavers-analysis` because it validates the image
 geometry consumed by segmentation. The diagnostics GPS workflow accepts that
 validated value and passes it through without reconstructing or converting it.
+Classification rejects a non-empty mask when the centerline extractor finds no
+usable axis. A zero or heuristic diameter would fabricate physical geometry.
 
 ## Rejected alternative
 
@@ -36,6 +39,8 @@ as three unrelated scalars would permit partial or non-positive geometry.
 - Invalid spacing rejects zero, negative, and non-finite components.
 - Anisotropic spacing scales centerline coordinates, physical length, and
   equivalent diameter against the closed-form volume/length relation.
+- A dense non-empty mask with no usable centerline returns the exact typed
+  invalid-input contract instead of producing a non-finite diameter.
 - Doppler velocity matches `f_d c / (2 f_0 cos(theta))` with typed inputs and
   preserves invalid-angle/frequency rejection.
 - Affected analysis and diagnostics package gates were attempted on the exact

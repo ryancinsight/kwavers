@@ -8,7 +8,9 @@
   validated Aequitas voxel spacing and returns typed `Length<f64>` geometry
   plus typed `Velocity<f64>` Doppler results. Frequency, sound speed, diameter,
   centerline, and total-length boundaries are dimensioned; masks, orientation,
-  and confidence remain representation or dimensionless values. See ADR 047.
+  and confidence remain representation or dimensionless values. Non-empty
+  masks without a usable centerline now return a typed error instead of a
+  non-finite diameter. See ADR 047.
 
 - Acoustic heating and streaming now compose absorption, intensity, density,
   sound speed, pressure, and impedance through Aequitas SI quantities while
@@ -17,7 +19,9 @@
 - [patch] Consume Atlas graph `303bb513b47e8f096b0f0fd41db3302d4d071979`
   with Mnemosyne PR #31's HBM/GDDR `TierSelection` repair, synchronized
   Coeus/Leto/Hermes provider APIs, and complete package-manifest/lock
-  normalization for the merge-critical benchmark gate.
+  normalization for the merge-critical benchmark gate. Clean checkouts resolve
+  Aequitas from the canonical Git source, and historical-baseline metadata is
+  locked after every tracked package manifest is copied.
 
 - [patch] Consume Atlas provider graph `c982fe0` and regenerate the locked
   Moirai and RITK dependency sets after PRs #83 and #49. Therapy tests return

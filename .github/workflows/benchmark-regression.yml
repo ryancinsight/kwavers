@@ -75,6 +75,7 @@ jobs:
           cp kwavers-candidate/Cargo.lock kwavers-baseline/Cargo.lock
           cargo metadata \
             --manifest-path kwavers-baseline/Cargo.toml \
+            --locked \
             --format-version 1 \
             --all-features \
             > /dev/null
@@ -272,6 +273,7 @@ jobs:
           cp kwavers-candidate/Cargo.lock kwavers-baseline/Cargo.lock
           cargo metadata \
             --manifest-path kwavers-baseline/Cargo.toml \
+            --locked \
             --format-version 1 \
             --all-features \
             > /dev/null

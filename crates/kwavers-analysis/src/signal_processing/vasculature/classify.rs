@@ -40,7 +40,8 @@ use super::{VascularVesselType, VesselClassification, VoxelSpacing};
 /// See module-level docs for the mathematical specification.
 ///
 /// # Errors
-/// `InvalidInput` when `image` and `mask` shapes differ.
+/// `InvalidInput` when `image` and `mask` shapes differ or a non-empty mask
+/// contains no usable centerline from which to derive physical diameter.
 pub(super) fn classify_vessels(
     image: &Array3<f64>,
     mask: &Array3<f64>,
@@ -70,9 +71,12 @@ pub(super) fn classify_vessels(
         .collect::<Vec<_>>();
     let orientation = principal_axis_values(&physical_points);
     let centerline = centerline_from_points(mask, &points);
-    let length = centerline_length(&centerline, orientation, spacing)
-        .into_base()
-        .max(f64::MIN_POSITIVE);
+    if centerline.is_empty() {
+        return Err(KwaversError::InvalidInput(
+            "non-empty vessel mask has no usable centerline".to_owned(),
+        ));
+    }
+    let length = centerline_length(&centerline, orientation, spacing).into_base();
     let voxel_volume = sx * sy * sz;
     let diameter = Length::from_base(
         (4.0 * points.len() as f64 * voxel_volume / (std::f64::consts::PI * length)).sqrt(),

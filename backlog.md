@@ -9,9 +9,10 @@
   `Velocity<f64>` Doppler results.
 - Acceptance: anisotropic spacing scales each centerline axis and equivalent
   diameter consistently; Doppler preserves `v = f_d c / (2 f_0 cos(theta))`;
-  invalid spacing and Doppler inputs return typed errors; all affected tests,
-  focused Nextest, Clippy, doctest, Rustdoc, and format gates pass. Source,
-  tests, docs, and PM synchronization are implemented. The PR pins immutable
+  invalid spacing, Doppler inputs, and masks without a usable centerline return
+  typed errors; all affected tests, focused Nextest, Clippy, doctest, Rustdoc,
+  and format gates pass. Source, tests, docs, and PM synchronization are
+  implemented. The PR pins immutable
   Atlas graph `303bb513b47e8f096b0f0fd41db3302d4d071979`: Coeus
   `cdaf769b1a1c16a6932b9cdc31a6bc0665085b87`, Hermes
   `1234f8ca1d3740138a24b373e1971179c2f5af9b`, Leto
@@ -22,9 +23,12 @@
   Mnemosyne 0.5→0.6, backend 0.4→0.5, heap 0.2→0.3, local 0.2→0.3,
   Hermes 0.4.1→0.5.0, and the Coeus/Leto provider API edges. Hosted exact-head
   vessel tests pass on `a8c68b6f5`; corrected benchmark graph normalization
-  passes on `640470d48`. Local full-workspace compilation is not
-  graph-authoritative because mutable sibling checkouts diverge from the
-  pinned Atlas graph.
+  passes on `640470d48`. The review-blocker closeout removes the local Aequitas
+  override, pins its canonical Git source in `Cargo.lock`, rejects unusable
+  centerlines, and locks both aligned-baseline metadata checks; exact-head
+  hosted evidence remains the closure gate. Local full-workspace compilation
+  is not graph-authoritative because mutable sibling checkouts diverge from
+  the pinned Atlas graph.
 - Non-goals: Doppler field storage, dimensionless confidence/orientation, and
   the unrelated transducer PR #324 residuals.
 

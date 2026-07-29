@@ -1,3 +1,20 @@
+## Review 2026-07-29 — PR #325 unresolved blocker closeout
+
+Three non-outdated review threads remained valid at `fc3ac0308`. The repository
+manifest overrode Aequitas with a required `../aequitas` checkout; dense
+non-empty vessel masks could produce no centerline and divide by
+`f64::MIN_POSITIVE`; and both historical-baseline metadata checks omitted
+`--locked` after manifest alignment.
+
+The closeout removes the Aequitas path patch and records one canonical Git
+source at `ce3ef7a6` in `Cargo.lock`, rejects a non-empty mask with no usable
+centerline through an exact typed error regression, and adds `--locked` to both
+metadata checks. Both benchmark jobs copy all 26 tracked package manifests plus
+`Cargo.lock`. No source fallback, compatibility adapter, or fabricated diameter
+path is present. Exact-head hosted gates remain the final closure evidence
+because the mutable local Atlas overlay has an unrelated Apollo dual-path
+collision and does not reproduce the pinned CI provider graph.
+
 ## Review 2026-07-28 — KW-AEQ-MET-04 provider-graph repair and benchmark closure
 
 PR #325 is prepared at `640470d48` with Atlas graph
