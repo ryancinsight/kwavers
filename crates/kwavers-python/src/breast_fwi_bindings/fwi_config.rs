@@ -7,7 +7,7 @@ use kwavers_solver::inverse::fwi::frequency_domain::{
 use pyo3::prelude::*;
 use std::sync::Arc;
 
-use super::helpers::{absorbing_boundary_from_thickness, make_config, parse_forward_operator};
+use super::py_convert::{absorbing_boundary_from_thickness, make_config, parse_forward_operator};
 
 #[pyclass(name = "FrequencyDomainFwiConfig", from_py_object)]
 #[derive(Clone)]
@@ -206,3 +206,4 @@ impl PyFrequencyDomainFwiConfig {
         self.inner.forward_operator.model_id()
     }
 }
+

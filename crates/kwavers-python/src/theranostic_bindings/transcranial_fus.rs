@@ -25,7 +25,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use std::path::Path;
 
-use super::helpers::kwavers_to_py;
+use super::py_convert::kwavers_to_py;
 use crate::breast_fwi_bindings::complex_compat::{
     leto2_to_nd2, leto3_to_nd3, nd_to_leto2, nd_to_leto3,
 };
@@ -542,3 +542,4 @@ fn brain_centroid(brain_mask: &leto::Array3<bool>) -> [usize; 3] {
         (sz / n as f64).round() as usize,
     ]
 }
+

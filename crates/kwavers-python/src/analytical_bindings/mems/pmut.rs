@@ -1,7 +1,7 @@
 //! PMUT scalar model bindings.
 
 use aequitas::systems::si::quantities::{ElectricPotential, Frequency, MassDensity, Velocity};
-use super::helpers::pmut;
+use super::py_convert::pmut;
 use pyo3::prelude::*;
 
 /// PMUT immersion resonance `Hz` (film = "aln" | "pzt").
@@ -68,3 +68,4 @@ pub fn pmut_max_output_pressure(
         )
         .into_base())
 }
+

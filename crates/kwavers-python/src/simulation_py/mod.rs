@@ -1,7 +1,7 @@
 mod checkpoint;
 mod config;
 pub(crate) mod gpu;
-pub(crate) mod helpers;
+pub(crate) mod py_convert;
 mod run;
 mod solvers;
 mod tests;
@@ -783,3 +783,4 @@ impl Simulation {
         Python::attach(|py| build_simulation_result(py, &result, &self.grid.inner, time_steps, dt))
     }
 }
+

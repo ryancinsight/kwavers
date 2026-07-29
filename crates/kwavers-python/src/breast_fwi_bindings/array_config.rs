@@ -4,7 +4,7 @@ use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domai
 use numpy::{PyArray2, ToPyArray};
 use pyo3::prelude::*;
 
-use super::helpers::{kwavers_to_py, points_to_array};
+use super::py_convert::{kwavers_to_py, points_to_array};
 
 #[pyclass(name = "MultiRowRingArray", from_py_object)]
 #[derive(Clone)]
@@ -78,3 +78,4 @@ impl PyMultiRowRingArray {
             .into()
     }
 }
+

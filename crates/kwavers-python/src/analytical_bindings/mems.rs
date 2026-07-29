@@ -5,7 +5,7 @@
 
 mod cmut;
 mod comparison;
-mod helpers;
+mod py_convert;
 mod plate;
 mod pmut;
 

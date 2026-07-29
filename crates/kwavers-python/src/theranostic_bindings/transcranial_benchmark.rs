@@ -14,7 +14,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use std::path::Path;
 
-use super::helpers::kwavers_to_py;
+use super::py_convert::kwavers_to_py;
 use crate::ritk_image::load_ritk_nifti;
 
 #[pyfunction]
@@ -274,3 +274,4 @@ fn brain_centroid(brain_mask: &Array3<bool>) -> [usize; 3] {
         (sz / n as f64).round() as usize,
     ]
 }
+

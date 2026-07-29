@@ -1,7 +1,7 @@
 //! PyO3 wrapper for PSTD breast-FWI dataset generation.
 
 use super::complex_compat::{leto3_to_nd3, nd_to_leto3};
-use super::helpers::kwavers_to_py;
+use super::py_convert::kwavers_to_py;
 use super::PyMultiRowRingArray;
 use kwavers_diagnostics::reconstruction::breast_ust_fwi::{
     generate_breast_ust_pstd_frequency_dataset, BreastUstPstdDatasetConfig,
@@ -126,3 +126,4 @@ pub fn generate_breast_fwi_pstd_dataset<'py>(
     out.set_item("model_family", dataset.model_family)?;
     Ok(out)
 }
+

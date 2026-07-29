@@ -18,7 +18,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use std::path::Path;
 
-use super::super::helpers::{kwavers_to_py, labels_from_volume};
+use super::super::py_convert::{kwavers_to_py, labels_from_volume};
 use super::result_serializer::{brain_target_index, resampled_crop_index_xy, result_to_dict};
 use crate::ritk_image::load_ritk_nifti;
 

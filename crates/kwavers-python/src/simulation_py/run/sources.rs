@@ -12,7 +12,7 @@ use std::sync::Arc;
 
 use crate::grid_py::Grid;
 
-use super::super::helpers::SineSignal;
+use super::super::py_convert::SineSignal;
 
 /// Process one [`Source`] into the `GridSource` / `dynamic_sources` accumulators.
 ///

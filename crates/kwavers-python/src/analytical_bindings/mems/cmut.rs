@@ -1,7 +1,7 @@
 //! CMUT scalar model bindings.
 
 use aequitas::systems::si::quantities::{ElectricPotential, Frequency, MassDensity, Pressure, ReciprocalLength, Velocity};
-use super::helpers::cmut;
+use super::py_convert::cmut;
 use pyo3::prelude::*;
 
 /// CMUT (Si) immersion resonance `Hz`.
@@ -105,3 +105,4 @@ pub fn cmut_pressure_output(
 ) -> PyResult<f64> {
     cmut_max_output_pressure(radius, thickness, gap, density_fluid, sound_speed_fluid, swing_fraction)
 }
+

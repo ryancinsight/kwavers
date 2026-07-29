@@ -9,7 +9,7 @@ use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList};
 use std::path::Path;
 
-use super::helpers::{kwavers_to_py, labels_from_volume, metric3d_dict, points3_to_array};
+use super::py_convert::{kwavers_to_py, labels_from_volume, metric3d_dict, points3_to_array};
 use crate::breast_fwi_bindings::complex_compat::leto3_to_nd3;
 use crate::ritk_image::load_ritk_nifti;
 
@@ -375,3 +375,4 @@ pub(super) fn nonlinear3d_result_to_dict<'py>(
     out.set_item("metrics", metrics)?;
     Ok(out)
 }
+

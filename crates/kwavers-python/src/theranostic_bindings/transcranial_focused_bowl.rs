@@ -12,7 +12,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use std::path::Path;
 
-use super::helpers::{kwavers_to_py, points3_to_array};
+use super::py_convert::{kwavers_to_py, points3_to_array};
 use crate::ritk_image::load_ritk_nifti;
 
 #[pyfunction]
@@ -123,3 +123,4 @@ pub fn plan_transcranial_focused_bowl_placement_from_ritk_ct<'py>(
     out.set_item("cap_max_polar_rad", cap_max_polar_rad.unwrap_or(1.18_f64))?;
     Ok(out)
 }
+

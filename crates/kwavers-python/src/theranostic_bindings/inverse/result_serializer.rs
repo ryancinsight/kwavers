@@ -12,7 +12,7 @@ use numpy::ToPyArray;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
-use super::super::helpers::{
+use super::super::py_convert::{
     metric_dict, placement_context_skin_gap, placement_dict, point_axis, points3_to_array,
 };
 use crate::breast_fwi_bindings::complex_compat::leto2_to_nd2;
