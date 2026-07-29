@@ -86,7 +86,7 @@ pub mod photon;
 pub mod result;
 pub mod solver;
 pub mod source;
-pub mod utils;
+pub mod scattering;
 
 #[cfg(test)]
 mod tests;
@@ -96,3 +96,4 @@ pub use interfaces::{fresnel_reflectance, InterfaceOutcome};
 pub use result::MCResult;
 pub use solver::MonteCarloSolver;
 pub use source::PhotonSource;
+

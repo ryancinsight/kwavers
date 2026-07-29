@@ -8,7 +8,7 @@ pub mod presets;
 pub mod scatterers;
 pub mod shepp_logan;
 pub mod types;
-pub mod utils;
+pub mod optical_properties;
 
 pub use builder::{
     BloodOxygenationPhantomBuilder, LayeredTissuePhantomBuilder, PhantomBuilder,
@@ -139,3 +139,4 @@ mod tests {
         assert_eq!(phantom.properties().len(), 18750);
     }
 }
+

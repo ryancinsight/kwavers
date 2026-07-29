@@ -1,5 +1,5 @@
 use crate::optics::monte_carlo::photon::Photon;
-use crate::optics::monte_carlo::utils::{get_perpendicular, normalize, sample_isotropic_direction};
+use crate::optics::monte_carlo::scattering::{get_perpendicular, normalize, sample_isotropic_direction};
 use kwavers_core::constants::numerical::TWO_PI;
 use rand::Rng;
 
@@ -67,7 +67,7 @@ impl PhotonSource {
                 // Perpendicular directions to beam
                 let dir_norm = normalize(*direction);
                 let perp1 = get_perpendicular(dir_norm);
-                let perp2 = crate::optics::monte_carlo::utils::cross(dir_norm, perp1);
+                let perp2 = crate::optics::monte_carlo::scattering::cross(dir_norm, perp1);
 
                 let offset = [
                     (r * theta.cos()).mul_add(perp1[0], r * theta.sin() * perp2[0]),

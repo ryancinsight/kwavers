@@ -28,8 +28,8 @@ pub(crate) fn fuse_intensity_projection(
     fusion: &MultiModalFusion,
     kind: ProjectionKind,
 ) -> KwaversResult<FusedImageResult> {
-    let modalities = super::utils::sorted_modalities(fusion)?;
-    let dims = super::utils::common_registered_dims(&modalities, "Intensity projection")?;
+    let modalities = super::fusion_ops::sorted_modalities(fusion)?;
+    let dims = super::fusion_ops::common_registered_dims(&modalities, "Intensity projection")?;
 
     let mut intensity_image = Array3::<f64>::zeros(dims);
     let mut confidence_map = Array3::<f64>::zeros(dims);
@@ -73,8 +73,9 @@ pub(crate) fn fuse_intensity_projection(
         tissue_properties: HashMap::new(),
         confidence_map,
         uncertainty_map,
-        registration_transforms: super::utils::identity_registration_transforms(&modalities),
-        modality_quality: super::utils::modality_quality_map(&modalities),
+        registration_transforms: super::fusion_ops::identity_registration_transforms(&modalities),
+        modality_quality: super::fusion_ops::modality_quality_map(&modalities),
         coordinates: generate_coordinate_arrays(dims, fusion.config.output_resolution),
     })
 }
+

@@ -1,6 +1,6 @@
 //! Plane wave analytical solutions for validation
 
-use super::utils::DISPERSION_CORRECTION_SECOND_ORDER;
+use super::physics_validation::DISPERSION_CORRECTION_SECOND_ORDER;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_grid::Grid;
 use leto::Array3;
@@ -82,7 +82,7 @@ impl PlaneWaveSolution {
         time_elapsed: f64,
         tolerance: f64,
     ) -> bool {
-        use super::utils::PhysicsTestUtils;
+        use super::physics_validation::PhysicsTestUtils;
 
         let (actual_speed, correlation) = PhysicsTestUtils::detect_wave_propagation_subgrid(
             initial_field,
@@ -281,3 +281,4 @@ mod tests {
         );
     }
 }
+

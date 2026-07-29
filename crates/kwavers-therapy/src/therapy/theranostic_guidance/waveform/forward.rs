@@ -7,7 +7,7 @@ use moirai_parallel::{
 };
 
 use super::types::{AcousticGrid, CheckpointSchedule, WavefieldRun};
-use super::utils::{linear, ricker};
+use super::waveform_ops::{linear, ricker};
 
 const WAVEFORM_FIELD_CHUNK: usize = 1024;
 
@@ -317,3 +317,4 @@ mod tests {
         }
     }
 }
+

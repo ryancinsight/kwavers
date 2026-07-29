@@ -13,7 +13,7 @@
 pub mod config;
 pub mod processing;
 pub mod reconstruction;
-pub mod utils;
+pub mod time_reversal_ops;
 pub mod validation;
 
 // Re-export main types for convenience
@@ -158,3 +158,4 @@ mod tests {
         assert!(invalid_neg_freq.validate().is_err());
     }
 }
+

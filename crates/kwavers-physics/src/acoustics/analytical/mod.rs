@@ -7,7 +7,8 @@ pub mod dispersion;
 pub mod patterns;
 pub mod plane_wave;
 pub mod propagation;
-pub mod utils;
+pub mod physics_validation;
 
 // Re-export main test utilities
-pub use utils::PhysicsTestUtils;
+pub use physics_validation::PhysicsTestUtils;
+

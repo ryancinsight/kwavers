@@ -75,7 +75,7 @@ fn test_energy_density_calculation() {
     let pressure = 1000.0;
     let velocity = (0.1, 0.0, 0.0);
 
-    let energy_density = helpers::acoustic_energy_density(pressure, velocity, density, sound_speed);
+    let energy_density = energy::acoustic_energy_density(pressure, velocity, density, sound_speed);
 
     let kinetic = 0.5 * density * 0.1_f64.powi(2);
     let potential = pressure.powi(2) / (2.0 * density * sound_speed.powi(2));
@@ -105,7 +105,7 @@ fn test_field_integration() {
     let dy = 0.1;
     let dz = 0.1;
 
-    let integral = helpers::integrate_field(&field, dx, dy, dz);
+    let integral = energy::integrate_field(&field, dx, dy, dz);
     let expected = 10.0 * 10.0 * 10.0 * 0.1 * 0.1 * 0.1;
 
     assert!((integral - expected).abs() < 1e-10);
@@ -115,6 +115,7 @@ fn test_field_integration() {
 fn test_field_rms() {
     use leto::Array3;
     let field = Array3::<f64>::from_elem([5, 5, 5], 2.0);
-    let rms = helpers::field_rms(&field);
+    let rms = energy::field_rms(&field);
     assert!((rms - 2.0).abs() < 1e-10);
 }
+

@@ -6,7 +6,7 @@
 //! - `interpolation`: `interpolate_staggered_to_collocated` — half-cell shift.
 
 mod accumulator;
-mod helpers;
+mod stats_ops;
 mod interpolation;
 mod sampled;
 
@@ -16,3 +16,4 @@ mod tests;
 pub use accumulator::{VelocityArray3Access, VelocityComponentStats};
 pub use interpolation::interpolate_staggered_to_collocated;
 pub use sampled::SampledVelocityStats;
+

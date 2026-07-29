@@ -22,9 +22,10 @@ mod line;
 mod primitives;
 #[cfg(test)]
 mod tests;
-mod utils;
+mod vec3;
 
 pub use circle::make_circle;
 pub use line::make_line;
 pub use primitives::{make_ball, make_disc, make_sphere};
-pub use utils::{distance3, normalize3, orthogonal_basis_from_normal3};
+pub use vec3::{distance3, normalize3, orthogonal_basis_from_normal3};
+
