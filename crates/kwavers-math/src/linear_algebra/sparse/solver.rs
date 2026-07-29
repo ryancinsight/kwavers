@@ -40,21 +40,32 @@ pub trait SparsePreconditionerTrait {
 /// Iterative solver for sparse systems, delegating to leto-ops.
 pub struct IterativeSolver {
     pub config: SolverConfig,
+    ap: Vec<Complex64>,
+    s: Vec<Complex64>,
+    t: Vec<Complex64>,
 }
 
 impl IterativeSolver {
     /// Create a new iterative solver with the given configuration.
     pub fn create(config: SolverConfig) -> Self {
-        Self { config }
+        Self {
+            config,
+            ap: Vec::new(),
+            s: Vec::new(),
+            t: Vec::new(),
+        }
     }
 
-    /// Solve a complex sparse system using BiCGSTAB.
+    /// Solve a complex sparse system using BiCGSTAB with persistent scratch buffers.
     ///
     /// This is a self-contained complex BiCGSTAB implementation that operates
     /// on the kwavers CompressedSparseRowMatrix<Complex64> type, providing
     /// the kwavers-vocabulary API while using leto-ops for norm computations.
+    ///
+    /// Scratch buffers (`ap`, `s`, `t`) are reused across calls, growing on
+    /// demand so larger systems trigger at most one reallocation per buffer.
     pub fn bicgstab_complex(
-        &self,
+        &mut self,
         a: &crate::linear_algebra::sparse::CompressedSparseRowMatrix<Complex64>,
         b: ArrayView1<Complex64>,
         initial_guess: Option<ArrayView1<Complex64>>,
@@ -94,6 +105,11 @@ impl IterativeSolver {
         let mut alpha = Complex64::new(1.0, 0.0);
         let mut omega = Complex64::new(1.0, 0.0);
 
+        // Ensure scratch buffers are large enough.
+        self.ap.resize(n, Complex64::new(0.0, 0.0));
+        self.s.resize(n, Complex64::new(0.0, 0.0));
+        self.t.resize(n, Complex64::new(0.0, 0.0));
+
         // Normalise tolerance against the initial residual ‖r₀‖ rather than
         // ‖b‖.  The penalty method produces ‖b‖ ≈ penalty (very large), which
         // makes a ‖b‖-relative tolerance immediately satisfied before any
@@ -121,26 +137,25 @@ impl IterativeSolver {
 
             // p = r + beta * (p - omega * Ap)  [for iteration > 1]
             // On first iter rho_old=1, alpha=1, omega=1 and p = r already.
-            let mut ap = vec![Complex64::new(0.0, 0.0); n];
-            a.matvec(&p, &mut ap);
+            a.matvec(&p, &mut self.ap);
             for i in 0..n {
-                p[i] = r[i] + beta * (p[i] - omega * ap[i]);
+                p[i] = r[i] + beta * (p[i] - omega * self.ap[i]);
             }
-            a.matvec(&p, &mut ap);
+            a.matvec(&p, &mut self.ap);
 
-            let r_hat_dot_ap = complex_dot(&r_hat, &ap);
+            let r_hat_dot_ap = complex_dot(&r_hat, &self.ap);
             if r_hat_dot_ap.norm_sqr() < 1e-60 {
                 break;
             }
             alpha = rho_new / r_hat_dot_ap;
 
             // s = r - alpha * Ap
-            let mut s = r.clone();
+            self.s.copy_from_slice(&r);
             for i in 0..n {
-                s[i] = r[i] - alpha * ap[i];
+                self.s[i] = r[i] - alpha * self.ap[i];
             }
 
-            let s_norm = complex_norm(&s);
+            let s_norm = complex_norm(&self.s);
             if s_norm < tol {
                 for i in 0..n {
                     x[i] += alpha * p[i];
@@ -149,23 +164,22 @@ impl IterativeSolver {
             }
 
             // t = A*s
-            let mut t = vec![Complex64::new(0.0, 0.0); n];
-            a.matvec(&s, &mut t);
+            a.matvec(&self.s, &mut self.t);
 
-            let t_dot_t = complex_dot(&t, &t);
+            let t_dot_t = complex_dot(&self.t, &self.t);
             if t_dot_t.norm_sqr() < 1e-60 {
                 break;
             }
-            omega = complex_dot(&t, &s) / t_dot_t;
+            omega = complex_dot(&self.t, &self.s) / t_dot_t;
 
             // x = x + alpha*p + omega*s
             for i in 0..n {
-                x[i] = x[i] + alpha * p[i] + omega * s[i];
+                x[i] = x[i] + alpha * p[i] + omega * self.s[i];
             }
 
             // r = s - omega*t
             for i in 0..n {
-                r[i] = s[i] - omega * t[i];
+                r[i] = self.s[i] - omega * self.t[i];
             }
 
             rho_old = rho_new;

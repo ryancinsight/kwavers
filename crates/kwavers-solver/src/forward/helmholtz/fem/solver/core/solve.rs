@@ -34,7 +34,7 @@ impl FemHelmholtzSolver {
             verbose: false,
         };
 
-        let solver = IterativeSolver::create(config);
+        let mut solver = IterativeSolver::create(config);
         let x0 = if self.solution.iter().any(|c| c.norm() > 0.0) {
             Some(self.solution.view())
         } else {

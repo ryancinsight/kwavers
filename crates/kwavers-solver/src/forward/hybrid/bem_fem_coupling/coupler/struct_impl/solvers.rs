@@ -168,7 +168,7 @@ impl BemFemCoupler {
             preconditioner: SparsePreconditioner::None,
             verbose: false,
         };
-        let solver = IterativeSolver::create(config);
+        let mut solver = IterativeSolver::create(config);
 
         let guess_values: Vec<_> = fem_field.to_vec();
         let initial_guess = Array1::from_vec([guess_values.len()], guess_values)

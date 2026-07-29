@@ -1,6 +1,6 @@
 //! Hephaestus WGPU implementation of the backend operation contracts.
 
-use super::shared::{
+use super::contract::{
     dense_slice, dense_slice_mut, limit_bytes_to_usize, map_hephaestus_error,
     validate_elementwise_shapes, validate_non_empty_shape,
 };
@@ -290,3 +290,4 @@ mod tests {
         );
     }
 }
+

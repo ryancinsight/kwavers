@@ -2,7 +2,7 @@
 //!
 //! Routes `SolverType::Nonlinear` to the Westervelt FDTD solver.
 
-use crate::dispatch::shared::trim_initial_recorder_sample;
+use crate::dispatch::recording::trim_initial_recorder_sample;
 use crate::types::{SimulationRunRequest, SimulationRunResult};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;

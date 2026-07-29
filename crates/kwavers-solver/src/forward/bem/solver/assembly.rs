@@ -101,7 +101,7 @@ impl BemSolver {
             preconditioner: SparsePreconditioner::None,
             verbose: false,
         };
-        let solver = IterativeSolver::create(solver_config);
+        let mut solver = IterativeSolver::create(solver_config);
         solver.bicgstab_complex(a_matrix, b_vector.view(), None)
     }
 }
