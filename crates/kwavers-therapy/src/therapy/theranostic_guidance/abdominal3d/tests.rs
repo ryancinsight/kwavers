@@ -1,6 +1,6 @@
 use super::super::geometry::Point3;
 use super::bowl::bowl_elements;
-use super::helpers::{distance_3d, keep_largest_connected_component_3d};
+use super::placement::{distance_3d, keep_largest_connected_component_3d};
 use super::placement::plan_abdominal_array_placement;
 use leto::Array3;
 
@@ -334,3 +334,4 @@ fn focus_is_inside_body_mask() {
         "focus x should be near organ centroid, got {focus_x:.4} m"
     );
 }
+

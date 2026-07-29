@@ -9,7 +9,7 @@
 #[cfg(test)]
 mod amr;
 #[cfg(test)]
-pub(crate) mod helpers;
+pub(crate) mod laplacian;
 #[cfg(test)]
 mod mms;
 #[cfg(test)]
@@ -18,3 +18,4 @@ mod pstd;
 mod shock;
 #[cfg(test)]
 mod time_integration;
+

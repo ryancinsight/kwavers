@@ -4,7 +4,7 @@
 //! (Nocedal & Wright 2006, §10.3; Rénier 2008).
 
 use super::super::config::NonlinearInversionConfig;
-use super::helpers::{
+use super::rheology::{
     a_landau, ba_from_beta_s, beta_s_from_amplitudes, forward_model, forward_model_derivative,
     shear_modulus,
 };
@@ -109,3 +109,4 @@ pub(super) fn nonlinear_least_squares_inversion(
         estimation_quality,
     })
 }
+

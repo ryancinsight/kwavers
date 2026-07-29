@@ -9,7 +9,7 @@
 //! norm of the discrete operator.
 
 mod forward;
-mod helpers;
+mod field_ops;
 mod passive_inverse;
 
 use leto::Array3;
@@ -20,7 +20,7 @@ use super::types::{
 };
 
 use forward::cavitation_source;
-use helpers::{active_indices, normalize, unflatten};
+use field_ops::{active_indices, normalize, unflatten};
 use passive_inverse::{solve_projected_tikhonov, PassiveOperator};
 
 #[derive(Clone, Debug)]
@@ -67,3 +67,4 @@ pub(crate) fn run_cavitation_inverse(
         metrics: metrics_from_score(&score, &target_mask, &body),
     }
 }
+

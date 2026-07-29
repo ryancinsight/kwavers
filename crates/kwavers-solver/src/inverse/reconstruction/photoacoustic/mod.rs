@@ -23,7 +23,7 @@ mod iterative;
 mod line_reconstruction;
 mod linear_algebra;
 mod time_reversal;
-mod utils;
+mod reconstruction_ops;
 
 pub use algorithms::{PhotoacousticAlgorithm, PhotoacousticReconstructor};
 pub use config::ReconstructionPhotoacousticConfig;
@@ -155,3 +155,4 @@ mod tests {
         result.unwrap();
     }
 }
+

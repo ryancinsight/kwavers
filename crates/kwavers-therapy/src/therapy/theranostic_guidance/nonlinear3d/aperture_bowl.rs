@@ -7,7 +7,7 @@ use leto::Array3;
 use kwavers_core::error::{KwaversError, KwaversResult};
 
 use super::super::abdominal3d::bowl::{bowl_elements, BOWL_THETA_MAX_RAD};
-use super::super::abdominal3d::helpers::{exterior_air_mask, nearest_exterior_skin_point};
+use super::super::abdominal3d::coord_convert::{exterior_air_mask, nearest_exterior_skin_point};
 use super::super::Point3;
 use super::types::{grid_point_m, GridIndex, Nonlinear3dVolume};
 
@@ -266,3 +266,4 @@ mod tests {
         }
     }
 }
+

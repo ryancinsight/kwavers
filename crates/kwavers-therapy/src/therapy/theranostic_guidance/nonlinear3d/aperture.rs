@@ -4,7 +4,7 @@ use std::f64::consts::PI;
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 
-use super::super::abdominal3d::helpers::exterior_air_mask;
+use super::super::abdominal3d::coord_convert::exterior_air_mask;
 use super::super::AnatomyKind;
 use super::super::Point3;
 use super::aperture_bowl::abdominal_bowl_candidates;
@@ -350,3 +350,4 @@ mod tests {
         );
     }
 }
+

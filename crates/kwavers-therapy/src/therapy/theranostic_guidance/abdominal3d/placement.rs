@@ -56,7 +56,7 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 use super::super::geometry::{active_bounds_3d, Point3};
 use super::super::nonlinear3d::volume::centroid_float;
 use super::bowl::{bowl_elements, BOWL_THETA_MAX_RAD};
-use super::helpers::{
+use super::coord_convert::{
     distance_3d, exterior_air_mask, exterior_body_surface_points, index_to_point,
     keep_largest_connected_component_3d, nearest_exterior_skin_point, surface_points_3d,
 };

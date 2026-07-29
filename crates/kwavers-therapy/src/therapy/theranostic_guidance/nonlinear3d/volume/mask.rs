@@ -9,7 +9,7 @@ use kwavers_core::constants::ct_acoustics::{
 };
 use kwavers_core::error::{KwaversError, KwaversResult};
 
-use super::super::super::abdominal3d::helpers::exterior_air_mask;
+use super::super::super::abdominal3d::coord_convert::exterior_air_mask;
 use super::super::super::medium::{largest_connected_target_component, largest_target_slice};
 use super::super::super::scene::target_index_from_mask_fraction_3d;
 use super::super::super::AnatomyKind;
@@ -311,3 +311,4 @@ mod tests {
         );
     }
 }
+
