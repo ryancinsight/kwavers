@@ -1,7 +1,7 @@
 //! Test A — Minnaert period accuracy (Störmer-Verlet, O(h²) error).
 
 use super::super::{BubbleSymplecticIntegrator, SymplecticConfig};
-use super::helpers::{make_model, make_params};
+use super::bubble_fixtures::{make_model, make_params};
 use crate::acoustics::bubble_dynamics::bubble_state::BubbleState;
 use kwavers_core::constants::numerical::TWO_PI;
 use std::sync::Arc;
@@ -106,3 +106,4 @@ fn test_minnaert_period() {
         t_period
     );
 }
+

@@ -1,4 +1,4 @@
-use super::helpers::{autodiff_gradient_x, autodiff_gradient_y};
+use super::grad_fixtures::{autodiff_gradient_x, autodiff_gradient_y};
 use crate::inverse::elastic_2d::Config;
 use crate::inverse::pinn::elastic_2d::model::ElasticPINN2D;
 use coeus_autograd::Var;
@@ -141,3 +141,4 @@ fn test_gradient_symmetry_property() {
         y1, x1, grad_x_at_yx, grad_y_at_yx
     );
 }
+

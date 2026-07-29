@@ -4,7 +4,7 @@ use super::super::{
     capon::{capon_spatial_spectrum_point, CaponSpectrumConfig},
     snapshots::{SnapshotScenario, SnapshotSelection},
 };
-use super::helpers::{generate_plane_wave_data, generate_ula_positions, PlaneWaveDataSpec};
+use super::test_data::{generate_plane_wave_data, generate_ula_positions, PlaneWaveDataSpec};
 use crate::signal_processing::beamforming::{
     covariance::{CovarianceEstimator, CovariancePostProcess},
     utils::steering::SteeringVectorMethod,
@@ -93,3 +93,4 @@ fn pipeline_is_invariant_to_global_time_shift() {
         rel_diff
     );
 }
+

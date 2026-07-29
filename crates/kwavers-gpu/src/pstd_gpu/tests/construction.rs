@@ -9,7 +9,7 @@ use super::super::{
     validate_gpu_pstd_dimensions, AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays,
     SolverParams, WgpuPstdStateProvider, GPU_PSTD_FFT_WORKGROUP_STORAGE_BYTES,
 };
-use super::helpers::pstd_test_provider;
+use super::solver_setup::pstd_test_provider;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 
 #[test]
@@ -137,3 +137,4 @@ fn test_gpu_pstd_solver_new() {
     );
     eprintln!("GpuPstdSolver constructed successfully");
 }
+

@@ -1,7 +1,7 @@
 //! Test B — Hamiltonian non-drift over 1000 periods (Störmer-Verlet).
 
 use super::super::{BubbleSymplecticIntegrator, SymplecticConfig};
-use super::helpers::{bubble_hamiltonian, make_model, make_params};
+use super::bubble_fixtures::{bubble_hamiltonian, make_model, make_params};
 use crate::acoustics::bubble_dynamics::bubble_state::BubbleState;
 use kwavers_core::constants::numerical::TWO_PI;
 use std::sync::Arc;
@@ -96,3 +96,4 @@ fn test_hamiltonian_no_drift() {
         h0
     );
 }
+

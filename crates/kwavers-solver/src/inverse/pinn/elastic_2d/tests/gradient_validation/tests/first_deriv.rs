@@ -1,4 +1,4 @@
-use super::helpers::{autodiff_gradient_x, central_difference_x, central_difference_y};
+use super::grad_fixtures::{autodiff_gradient_x, central_difference_x, central_difference_y};
 use super::{FD_H_FIRST, REL_TOL_FIRST};
 use crate::inverse::elastic_2d::Config;
 use crate::inverse::pinn::elastic_2d::model::ElasticPINN2D;
@@ -111,3 +111,4 @@ fn test_first_derivative_y_vs_finite_difference() {
         }
     }
 }
+

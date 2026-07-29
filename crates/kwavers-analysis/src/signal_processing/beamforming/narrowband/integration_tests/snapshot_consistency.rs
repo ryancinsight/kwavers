@@ -1,7 +1,7 @@
 //! Cross-method snapshot consistency tests.
 
 use super::super::snapshots::{extract_narrowband_snapshots, SnapshotScenario, SnapshotSelection};
-use super::helpers::{compute_sample_covariance, generate_plane_wave_data, PlaneWaveDataSpec};
+use super::test_data::{compute_sample_covariance, generate_plane_wave_data, PlaneWaveDataSpec};
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 
@@ -77,3 +77,4 @@ fn snapshot_methods_produce_consistent_covariance_rank() {
         assert!(cov_time_res[[i, i]].re >= 0.0);
     }
 }
+

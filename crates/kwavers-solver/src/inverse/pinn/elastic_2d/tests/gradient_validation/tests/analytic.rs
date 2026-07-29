@@ -1,4 +1,4 @@
-use super::helpers::{autodiff_gradient_x, autodiff_gradient_y};
+use super::grad_fixtures::{autodiff_gradient_x, autodiff_gradient_y};
 use crate::inverse::elastic_2d::Config;
 use crate::inverse::pinn::elastic_2d::model::ElasticPINN2D;
 
@@ -64,3 +64,4 @@ fn test_analytic_plane_wave_gradient() {
         x, y, t, grad_x, grad_y
     );
 }
+

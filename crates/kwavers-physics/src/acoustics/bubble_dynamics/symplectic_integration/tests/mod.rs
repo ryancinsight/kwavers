@@ -8,6 +8,7 @@
 
 mod equilibrium;
 mod hamiltonian;
-mod helpers;
+mod bubble_fixtures;
 mod period;
 mod yoshida_order;
+

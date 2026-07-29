@@ -4,7 +4,7 @@ use super::super::{
     capon::{capon_spatial_spectrum_point, CaponSpectrumConfig},
     snapshots::{extract_narrowband_snapshots, SnapshotScenario, SnapshotSelection},
 };
-use super::helpers::{generate_plane_wave_data, generate_ula_positions, PlaneWaveDataSpec};
+use super::test_data::{generate_plane_wave_data, generate_ula_positions, PlaneWaveDataSpec};
 use crate::signal_processing::beamforming::{
     covariance::{CovarianceEstimator, CovariancePostProcess},
     utils::steering::SteeringVectorMethod,
@@ -239,3 +239,4 @@ fn diagonal_loading_prevents_covariance_singularity() {
         "Diagonal loading should produce positive spectrum"
     );
 }
+

@@ -1,6 +1,6 @@
 mod analytic;
 mod first_deriv;
-mod helpers;
+mod grad_fixtures;
 mod property;
 mod second_deriv;
 
@@ -14,3 +14,4 @@ pub(super) const FD_H_SECOND: f64 = 1e-4;
 pub(super) const REL_TOL_FIRST: f64 = 1e-3;
 /// Relative tolerance for second derivative comparison
 pub(super) const REL_TOL_SECOND: f64 = 1e-2;
+

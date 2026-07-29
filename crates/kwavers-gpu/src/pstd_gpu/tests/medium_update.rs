@@ -1,6 +1,6 @@
 //! Medium variable update and source-correction tests.
 
-use super::helpers::{make_small_test_solver, read_buffer};
+use super::solver_setup::{make_small_test_solver, read_buffer};
 
 /// Regression guard: variable-only medium updates must preserve static
 /// absorption/nonlinearity buffers, and source-kappa disablement must write
@@ -73,3 +73,4 @@ fn test_medium_variable_update_preserves_static_buffers_and_disables_source_corr
         .iter()
         .all(|&v| (v - unity_expected).abs() < tol));
 }
+

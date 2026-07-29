@@ -7,7 +7,7 @@ use super::super::{
     TheranosticInverseConfig, WaveformMisfit, THERANOSTIC_ELASTIC_SHEAR_MODEL,
     THERANOSTIC_INVERSE_MODEL_FAMILY, THERANOSTIC_WAVEFORM_MODEL,
 };
-use super::helpers::{
+use super::fixtures::{
     connected_mask_components, distance_2d, nearest_mask_distance_m, skin_normal_projection_2d,
     skin_normal_projection_3d,
 };
@@ -467,3 +467,4 @@ fn abdominal_placement_context_uses_uncropped_patient_slice() {
         "abdominal aperture must remain outside the local skin tangent plane: projection={max_aperture_skin_projection_m}"
     );
 }
+

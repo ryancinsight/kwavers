@@ -1,7 +1,8 @@
 //! GPU PSTD solver test suite.
 
 mod construction;
-mod helpers;
+mod solver_setup;
 mod medium_update;
 mod run;
 mod shader;
+
