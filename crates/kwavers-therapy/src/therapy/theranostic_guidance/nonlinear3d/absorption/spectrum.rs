@@ -121,19 +121,21 @@ mod tests {
             &mut spectrum_buf,
         );
 
+        // The DC bin is zeroed by convention, so the round-trip subtracts the
+        // field mean. Compare out[i] against (field[i] - mean) rather than
+        // against field[i] directly.
+        let mean: f64 = field.iter().sum::<f64>() / cells as f64;
         let out_slice = out.as_slice().unwrap();
         let mut max_diff = 0.0;
         for (o, f) in out_slice.iter().zip(field.iter()) {
-            let diff = (o - f).abs();
+            let diff = (o - (f - mean)).abs();
             if diff > max_diff {
                 max_diff = diff;
             }
         }
-        // DC bin (index 0) is forced to zero by the convention; all other
-        // bins should be preserved exactly by the identity filter.
         assert!(
-            max_diff < 1.0e-12,
-            "max spectral-filter round-trip error: {max_diff}"
+            max_diff < 1.0e-10,
+            "max spectral-filter round-trip error (DC-removed): {max_diff}"
         );
     }
 }

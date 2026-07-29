@@ -129,6 +129,7 @@ mod tests {
         let medium = HomogeneousMedium::water(&grid);
         let mut w = NonlinearWave::new(&grid, 1e-7);
         w.precompute_k_squared(&grid);
+        w.precompute_k_space_correction(&medium, &grid);
 
         let pressure = Array3::<f64>::zeros((4, 4, 4));
         let source = Array3::<f64>::zeros((4, 4, 4));
@@ -149,6 +150,7 @@ mod tests {
         let medium = HomogeneousMedium::water(&grid);
         let mut w = NonlinearWave::new(&grid, 1e-7);
         w.precompute_k_squared(&grid);
+        w.precompute_k_space_correction(&medium, &grid);
 
         let pressure = Array3::<f64>::zeros((4, 4, 4));
         let source = Array3::<f64>::zeros((4, 4, 4));
