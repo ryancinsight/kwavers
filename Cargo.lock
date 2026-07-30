@@ -8316,18 +8316,6 @@ dependencies = [
 ]
 
 [[patch.unused]]
-name = "hephaestus-metal"
-version = "0.18.0"
-
-[[patch.unused]]
-name = "hephaestus-rocm"
-version = "0.18.0"
-
-[[patch.unused]]
-name = "consus-zarr"
-version = "0.1.0"
-
-[[patch.unused]]
 name = "moirai-http"
 version = "0.4.0"
 
@@ -8336,12 +8324,20 @@ name = "horae"
 version = "0.1.0"
 
 [[patch.unused]]
-name = "athena-core"
+name = "consus-zarr"
 version = "0.1.0"
 
 [[patch.unused]]
 name = "apollo-nufft"
 version = "0.7.0"
+
+[[patch.unused]]
+name = "athena-core"
+version = "0.1.0"
+
+[[patch.unused]]
+name = "athena-leto"
+version = "0.1.0"
 
 [[patch.unused]]
 name = "asclepius-coeus"
