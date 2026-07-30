@@ -295,7 +295,7 @@ fn clear_fd_halo(field: &mut [f32], nx: usize, ny: usize) {
 #[cfg(test)]
 mod tests {
     use super::clear_fd_halo;
-    use crate::therapy::theranostic_guidance::waveform::utils::linear;
+    use crate::therapy::theranostic_guidance::waveform::waveform_ops::linear;
 
     #[test]
     fn clear_fd_halo_preserves_interior_cells_only() {

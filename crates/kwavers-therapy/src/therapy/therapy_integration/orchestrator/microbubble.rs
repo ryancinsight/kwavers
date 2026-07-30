@@ -230,7 +230,7 @@ pub fn update_microbubble_dynamics(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use aequitas::systems::si::{quantities::{Length, NumberDensity}, units::{Meter, PerCubicMeter}};
+    use aequitas::systems::si::{quantities::{Length, NumberDensity}, units::PerCubicMeter};
     use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE};
     use kwavers_grid::Grid;
     use kwavers_medium::homogeneous::HomogeneousMedium;

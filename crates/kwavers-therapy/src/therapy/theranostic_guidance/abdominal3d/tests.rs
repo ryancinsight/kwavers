@@ -1,6 +1,6 @@
 use super::super::geometry::Point3;
 use super::bowl::bowl_elements;
-use super::placement::{distance_3d, keep_largest_connected_component_3d};
+use super::coord_convert::{distance_3d, keep_largest_connected_component_3d};
 use super::placement::plan_abdominal_array_placement;
 use leto::Array3;
 
