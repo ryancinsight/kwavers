@@ -89,9 +89,18 @@ mod tests {
     #[test]
     fn test_power_law_db_cm_to_np_omega_m_matches_kwave_reference() {
         let got = power_law_db_cm_to_np_omega_m(0.75, 1.5);
-        let expected = 5.482_481_235_081_536e-10;
+        // Exact value of 0.75 · (ln10/20) · 100 · (1/(2π·10⁶))^1.5 evaluated at
+        // 40-digit precision with the crate's DB_TO_NP literal:
+        // 5.4824812350815369…e-10 (matches k-Wave's db2neper).
+        let expected = 5.482_481_235_081_537e-10;
+        // Tolerance derivation: the three multiplies/divides are correctly
+        // rounded (≤0.5 ULP each; ULP ≈ 1.2e-25 at this magnitude), but
+        // `powf` has no precision guarantee — measured up to ~8 ULP drift
+        // between rustc std implementations (1.95 vs 1.97 gnu). Bound at
+        // 32 ULP ≈ 4e-24 to cover platform `powf` variance; anything larger
+        // indicates a real conversion defect, not rounding.
         assert!(
-            (got - expected).abs() < 1e-24,
+            (got - expected).abs() < 4e-24,
             "conversion mismatch: got {got}, expected {expected}"
         );
     }
