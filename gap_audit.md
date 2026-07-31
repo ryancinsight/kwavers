@@ -29,6 +29,22 @@
 
 # Gap Audit
 
+## Open plane-wave-compounding refresh — 2026-07-31
+
+`KWAVERS-AEQ-MET-42` identifies the next remaining public diagnostics metric
+family in `workflows::plane_wave_compounding`: angle sweep, transmit
+frequency, sound speed, aperture and sampling geometry, log-compression
+dynamic range, and frame-rate estimates are raw scalars. Internal wavelength,
+wave number, angular frequency, and generated angles are also untyped.
+
+The planned closure uses Aequitas `Angle`, `Frequency`, `Velocity`, `Length`,
+and `Dimensionless`, with scalar extraction limited to phase/math formulas,
+mesh/solver configuration, and display/report boundaries. The coherent image
+arrays remain Eunomia `Complex` numerical storage and do not require an
+imaginary physical unit.
+
+Implementation and focused value-semantic verification remain pending.
+
 ## Live stereotactic-targeting refresh — 2026-07-31
 
 `KWAVERS-AEQ-MET-41` found a public functional-ultrasound targeting family
