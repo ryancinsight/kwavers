@@ -4,6 +4,14 @@
 
 ### Changed
 
+- **Breaking:** Real-time SIRT frame timestamps, computation budgets, elapsed
+  computation time, throughput, convergence error, and quality ratios now use
+  Aequitas `Time`, `Frequency`, and `Dimensionless` contracts. RF/image arrays,
+  grid-point smoothing, and raw amplitude thresholds remain explicit
+  numerical boundaries. The real-valued workflow introduces no complex or
+  imaginary physical unit. See [ADR
+  085](docs/ADR/085-real-time-sirt-quantities.md).
+
 - **Breaking:** Clinical monitoring now uses Aequitas `Time`, `Frequency`,
   `Length`, `TemperatureDifference`, `ThermodynamicTemperature`, and
   `Dimensionless` contracts for public timing, rate, resolution, safety, and

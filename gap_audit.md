@@ -29,6 +29,27 @@
 
 # Gap Audit
 
+## Live real-time SIRT refresh — 2026-07-31
+
+`KWAVERS-AEQ-MET-46` found raw frame timestamps, computation budgets,
+per-frame elapsed time, average frame rate, convergence error, and quality
+ratios in `reconstruction::real_time_sirt`. The public contract now uses
+Aequitas `Time`, `Frequency`, and `Dimensionless`, with unit suffixes removed
+from public names.
+
+RF/image arrays remain numerical storage boundaries. Smoothing sigma is in grid
+points and intensity thresholds remain in the image's unspecified numerical
+amplitude domain, so no physical unit is invented for either. SNR is a
+dimensionless logarithmic ratio. The real-valued SIRT path has no physical
+phasor, so Eunomia compatibility requires no imaginary physical unit. See
+[`Kwavers ADR 085`](docs/ADR/085-real-time-sirt-quantities.md).
+
+Verification: diagnostics test-target check passes; focused real-time-SIRT
+Nextest passes 14/14 with 185 skipped; warning-denied all-target Clippy,
+doctests, RustDoc, package formatting, diff, and public-contract scan pass.
+Workspace-wide rustfmt remains Windows filename-length blocked; package
+formatting passes.
+
 ## Live clinical-monitoring refresh — 2026-07-31
 
 `KWAVERS-AEQ-MET-45` found raw processing time, frame rate, spatial

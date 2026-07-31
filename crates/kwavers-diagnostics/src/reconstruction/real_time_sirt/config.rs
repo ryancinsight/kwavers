@@ -4,6 +4,8 @@
 //! or postprocessing options change.
 
 use super::super::acoustic_projection::AcousticProjectionGeometry;
+use aequitas::systems::si::quantities::{Frequency, Time};
+use aequitas::systems::si::units::{Hertz, Millisecond};
 use kwavers_solver::inverse::reconstruction::unified_sirt::SirtConfig;
 
 /// Real-time SIRT reconstruction pipeline configuration.
@@ -11,10 +13,10 @@ use kwavers_solver::inverse::reconstruction::unified_sirt::SirtConfig;
 pub struct RealTimeSirtConfig {
     /// Base SIRT algorithm parameters.
     pub sirt_config: SirtConfig,
-    /// Target frame rate (fps).
-    pub target_frame_rate: f64,
-    /// Maximum computation budget per frame (ms).
-    pub max_frame_time_ms: f64,
+    /// Target frame rate.
+    pub target_frame_rate: Frequency,
+    /// Maximum computation budget per frame.
+    pub max_frame_time: Time,
     /// Enable RF data normalization before reconstruction.
     pub enable_preprocessing: bool,
     /// Gaussian smoothing sigma applied to each output frame (grid points).
@@ -41,8 +43,8 @@ impl Default for RealTimeSirtConfig {
             sirt_config: SirtConfig::default()
                 .with_iterations(10)
                 .with_relaxation(0.5),
-            target_frame_rate: 10.0,
-            max_frame_time_ms: 100.0,
+            target_frame_rate: Frequency::from_unit::<Hertz>(10.0),
+            max_frame_time: Time::from_unit::<Millisecond>(100.0),
             enable_preprocessing: true,
             output_smoothing_sigma: Some(0.5),
             intensity_threshold: None,
@@ -59,8 +61,8 @@ impl RealTimeSirtConfig {
     #[must_use]
     pub fn diagnostic_quality(mut self) -> Self {
         self.sirt_config = self.sirt_config.with_iterations(20).with_relaxation(0.4);
-        self.max_frame_time_ms = 200.0;
-        self.target_frame_rate = 5.0;
+        self.max_frame_time = Time::from_unit::<Millisecond>(200.0);
+        self.target_frame_rate = Frequency::from_unit::<Hertz>(5.0);
         self
     }
 
@@ -68,8 +70,8 @@ impl RealTimeSirtConfig {
     #[must_use]
     pub fn fast_streaming(mut self) -> Self {
         self.sirt_config = self.sirt_config.with_iterations(5).with_relaxation(0.6);
-        self.max_frame_time_ms = 50.0;
-        self.target_frame_rate = 20.0;
+        self.max_frame_time = Time::from_unit::<Millisecond>(50.0);
+        self.target_frame_rate = Frequency::from_unit::<Hertz>(20.0);
         self
     }
 

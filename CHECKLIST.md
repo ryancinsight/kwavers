@@ -1,18 +1,26 @@
 # Project Checklist
 
-## Owner: Codex — KWAVERS-AEQ-MET-46 typed real-time SIRT metrics [major] — in progress
+## Owner: Codex — KWAVERS-AEQ-MET-46 typed real-time SIRT metrics [major] — done 2026-07-31
 
-- [ ] Type frame timestamps, computation budgets, elapsed computation time,
+- [x] Type frame timestamps, computation budgets, elapsed computation time,
       and throughput with Aequitas `Time` and `Frequency`.
-- [ ] Type convergence and ratio-based quality metrics with Aequitas
+- [x] Type convergence and ratio-based quality metrics with Aequitas
       `Dimensionless`; document raw image/RF and grid-point boundaries.
-- [ ] Migrate all callers/tests and synchronize ADR 085, gap-audit, backlog,
+- [x] Migrate all callers/tests and synchronize ADR 085, gap-audit, backlog,
       checklist, changelog, and the Atlas cross-repository audit.
 
 Acceptance: no unit-bearing raw scalar remains in the public real-time SIRT
 contract; RF/image arrays, grid-point smoothing, and raw intensity thresholds
 remain explicit numerical boundaries, and no complex or imaginary physical
-unit is introduced.
+unit is introduced. Met.
+
+Evidence: diagnostics test-target check passes; focused real-time-SIRT
+Nextest run `4b47f3d4-45c5-4ac3-9ca5-7745296e063e` passes 14/14 with 185
+skipped; warning-denied all-target Clippy, doctests (1 executable, 5
+ignored), RustDoc, package formatting, diff, and public-contract scan pass.
+The workspace-wide `cargo fmt --all -- --check` invocation remains blocked on
+Windows by the repository's filename-length limit (`os error 206`); the
+affected package format gate passes.
 
 ## Owner: Codex — KWAVERS-AEQ-MET-45 typed clinical monitoring quantities [major] — done 2026-07-31
 

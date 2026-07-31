@@ -1,6 +1,6 @@
 # ADR 085 — Aequitas real-time SIRT quantities
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-07-31
 - Owner: `KWAVERS-AEQ-MET-46`
 
@@ -39,8 +39,11 @@ requires no imaginary physical unit.
 
 ## Verification
 
-The implementation will pass the diagnostics test-target check, focused
-real-time-SIRT Nextest, warning-denied all-target Clippy, doctests, RustDoc,
-formatting, diff checks, and a public-contract scan for remaining unit-bearing
-raw scalars. Value-semantic tests will cover typed defaults, configuration
-profiles, frame timing/rate values, convergence error, and quality metrics.
+The implementation passes the diagnostics test-target check and focused
+real-time-SIRT Nextest run `4b47f3d4-45c5-4ac3-9ca5-7745296e063e`:
+14/14 tests passed with 185 skipped. Warning-denied all-target Clippy,
+diagnostics doctests (1 executable, 5 ignored), RustDoc, package formatting,
+and diff checks pass. The public-contract scan finds no unit-bearing raw
+scalar in the real-time SIRT public configuration, frame, or quality fields.
+Value-semantic tests cover typed defaults, configuration profiles, frame
+timing/rate values, convergence error, and quality metrics.

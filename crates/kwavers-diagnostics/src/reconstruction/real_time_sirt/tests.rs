@@ -3,6 +3,8 @@ use super::pipeline::RealTimeSirtPipeline;
 use crate::reconstruction::acoustic_projection::{
     backproject_acoustic, project_acoustic, AcousticProjectionGeometry,
 };
+use aequitas::systems::si::quantities::{Dimensionless, Frequency, Time};
+use aequitas::systems::si::units::{Hertz, Millisecond};
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use kwavers_solver::inverse::reconstruction::unified_sirt::SirtConfig;
@@ -11,23 +13,26 @@ use leto::{Array1, Array3};
 #[test]
 fn test_config_default() {
     let config = RealTimeSirtConfig::default();
-    assert_eq!(config.target_frame_rate, 10.0);
-    assert_eq!(config.max_frame_time_ms, 100.0);
+    assert_eq!(
+        config.target_frame_rate,
+        Frequency::from_unit::<Hertz>(10.0)
+    );
+    assert_eq!(config.max_frame_time, Time::from_unit::<Millisecond>(100.0));
     assert!(config.streaming_mode);
 }
 
 #[test]
 fn test_config_diagnostic() {
     let config = RealTimeSirtConfig::default().diagnostic_quality();
-    assert!(config.max_frame_time_ms > 100.0);
-    assert!(config.target_frame_rate < 10.0);
+    assert!(config.max_frame_time > Time::from_unit::<Millisecond>(100.0));
+    assert!(config.target_frame_rate < Frequency::from_unit::<Hertz>(10.0));
 }
 
 #[test]
 fn test_config_fast_streaming() {
     let config = RealTimeSirtConfig::default().fast_streaming();
-    assert!(config.max_frame_time_ms < 100.0);
-    assert!(config.target_frame_rate > 10.0);
+    assert!(config.max_frame_time < Time::from_unit::<Millisecond>(100.0));
+    assert!(config.target_frame_rate > Frequency::from_unit::<Hertz>(10.0));
 }
 
 #[test]
@@ -56,6 +61,10 @@ fn test_input_validation_valid() {
     });
     let frame = pipeline.process_frame(&valid, (4, 4, 1)).unwrap();
     assert_eq!(frame.image.shape(), [4, 4, 1]);
+    assert!(frame.timestamp >= Time::from_base(0.0));
+    assert!(frame.computation_time >= Time::from_base(0.0));
+    assert!(frame.convergence_error >= Dimensionless::from_base(0.0));
+    assert!(pipeline.avg_frame_rate() >= Frequency::from_base(0.0));
 }
 
 #[test]
@@ -90,8 +99,8 @@ fn test_frame_quality_assessment() {
     let data = Array1::from_elem(16, 0.5_f64);
     let frame = pipeline.process_frame(&data, (4, 4, 4)).unwrap();
     let q = frame.quality_metrics.unwrap();
-    assert!(q.snr_estimate >= 0.0);
-    assert!(q.dynamic_range >= 0.0);
+    assert!(q.snr_estimate >= Dimensionless::from_base(0.0));
+    assert!(q.dynamic_range >= Dimensionless::from_base(0.0));
 }
 
 /// SIRT convergence: ‖r‖/‖b‖ must fall below 1.0 after 20 iterations.
@@ -119,23 +128,25 @@ fn test_sirt_convergence_tracking() {
     let rf_data = Array1::from_shape_fn(64, |[i]| (i as f64 + 1.0) / 64.0);
 
     let frame1 = pipeline.process_frame(&rf_data, (8, 8, 8)).unwrap();
+    let frame1_error = frame1.convergence_error.into_base();
     assert!(
-        frame1.convergence_error >= 0.0,
+        frame1_error >= 0.0,
         "convergence_error must be non-negative, got {:.6}",
-        frame1.convergence_error
+        frame1_error
     );
     assert!(
-        frame1.convergence_error < 1.0,
+        frame1_error < 1.0,
         "convergence_error must decrease from 1.0; got {:.6}",
-        frame1.convergence_error
+        frame1_error
     );
 
     let frame2 = pipeline.process_frame(&rf_data, (8, 8, 8)).unwrap();
+    let frame2_error = frame2.convergence_error.into_base();
     assert!(
-        frame2.convergence_error <= frame1.convergence_error + 1e-10,
+        frame2_error <= frame1_error + 1e-10,
         "Residual must not increase: frame1={:.6}, frame2={:.6}",
-        frame1.convergence_error,
-        frame2.convergence_error
+        frame1_error,
+        frame2_error
     );
 }
 
@@ -158,10 +169,11 @@ fn test_sirt_zero_measurement_converges_immediately() {
     let mut pipeline = RealTimeSirtPipeline::new(config);
     let rf_data = Array1::<f64>::zeros(64);
     let frame = pipeline.process_frame(&rf_data, (8, 8, 8)).unwrap();
+    let convergence_error = frame.convergence_error.into_base();
     assert!(
-        frame.convergence_error < 1e-10,
+        convergence_error < 1e-10,
         "Zero input should give zero convergence error, got {:.3e}",
-        frame.convergence_error
+        convergence_error
     );
 }
 
@@ -296,10 +308,11 @@ fn test_acoustic_sirt_converges_on_point_phantom() {
     };
     let mut pipeline = RealTimeSirtPipeline::new(config);
     let frame = pipeline.process_frame(&rf_data, (4, 4, 4)).unwrap();
+    let convergence_error = frame.convergence_error.into_base();
     assert!(
-        frame.convergence_error < 1.0,
+        convergence_error < 1.0,
         "Acoustic SIRT residual not reduced: {:.4}",
-        frame.convergence_error
+        convergence_error
     );
-    assert!(frame.convergence_error >= 0.0);
+    assert!(convergence_error >= 0.0);
 }

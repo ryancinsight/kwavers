@@ -19,6 +19,7 @@ use super::types::{FrameQuality, ReconstructionFrame};
 use crate::reconstruction::acoustic_projection::{
     backproject_acoustic, project_acoustic, AcousticProjectionGeometry,
 };
+use aequitas::systems::si::quantities::{Dimensionless, Frequency, Time};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::{Array1, Array3};
 use moirai_parallel::{for_each_chunk_mut_enumerated_with, map_collect_index_with, Adaptive};
@@ -323,11 +324,11 @@ impl RealTimeSirtPipeline {
         };
 
         let frame = ReconstructionFrame {
-            timestamp: self.start_time.elapsed().as_secs_f64(),
+            timestamp: Time::from_base(self.start_time.elapsed().as_secs_f64()),
             image: output,
             iterations: self.config.sirt_config.max_iterations,
-            computation_time_ms: frame_start.elapsed().as_secs_f64() * 1000.0,
-            convergence_error,
+            computation_time: Time::from_base(frame_start.elapsed().as_secs_f64()),
+            convergence_error: Dimensionless::from_base(convergence_error),
             quality_metrics: quality,
         };
         self.frame_history.push(frame.clone());
@@ -424,10 +425,10 @@ impl RealTimeSirtPipeline {
             0.0
         };
         FrameQuality {
-            snr_estimate: snr,
-            artifact_level: 0.0,
-            spatial_smoothness: 0.0,
-            dynamic_range: max_val - min_val,
+            snr_estimate: Dimensionless::from_base(snr),
+            artifact_level: Dimensionless::from_base(0.0),
+            spatial_smoothness: Dimensionless::from_base(0.0),
+            dynamic_range: Dimensionless::from_base(max_val - min_val),
             converged: true,
         }
     }
@@ -438,17 +439,17 @@ impl RealTimeSirtPipeline {
         &self.frame_history
     }
 
-    /// Average throughput since pipeline creation (fps).
+    /// Average throughput since pipeline creation.
     #[must_use]
-    pub fn avg_frame_rate(&self) -> f64 {
+    pub fn avg_frame_rate(&self) -> Frequency {
         if self.frame_count == 0 {
-            return 0.0;
+            return Frequency::from_base(0.0);
         }
         let elapsed = self.start_time.elapsed().as_secs_f64();
         if elapsed > 0.0 {
-            self.frame_count as f64 / elapsed
+            Frequency::from_base(self.frame_count as f64 / elapsed)
         } else {
-            0.0
+            Frequency::from_base(0.0)
         }
     }
 

@@ -92,4 +92,4 @@
 | [082](082-blood-oxygenation-quantities.md) | Aequitas blood-oxygenation quantities | Accepted |
 | [083](083-fk-migration-quantities.md) | Aequitas f-k migration quantities | Accepted |
 | [084](084-clinical-monitoring-quantities.md) | Aequitas clinical monitoring quantities | Accepted |
-| [085](085-real-time-sirt-quantities.md) | Aequitas real-time SIRT quantities | Proposed |
+| [085](085-real-time-sirt-quantities.md) | Aequitas real-time SIRT quantities | Accepted |
