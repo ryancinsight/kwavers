@@ -1,5 +1,20 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-45 typed clinical monitoring quantities [major] — in progress
+
+- [ ] Type public monitoring temperature, processing-time, frame-rate,
+      resolution, quality, and safety metrics with Aequitas quantities.
+- [ ] Use a typed mixed-metric safety-event contract and return logging errors
+      from safety checks instead of discarding them.
+- [ ] Preserve `SystemTime`, counters, and numerical formula boundaries;
+      document dimensionless logarithmic SNR and real-valued Eunomia semantics.
+- [ ] Synchronize ADR 084, gap-audit, backlog, checklist, changelog, and the
+      Atlas cross-repository audit; run focused package gates.
+
+Acceptance: no unit-bearing raw scalar remains in the public clinical
+monitoring contract; timestamps and counters remain infrastructure values,
+and no complex or imaginary physical unit is introduced.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-44 typed f-k migration quantities [major] — done 2026-07-31
 
 - [x] Type migration spacing, sample interval, and sound speed with Aequitas;
