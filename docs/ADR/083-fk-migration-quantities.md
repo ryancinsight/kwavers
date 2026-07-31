@@ -1,6 +1,6 @@
 # ADR 083: Aequitas f-k migration quantities
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-07-31
 - **Decision owner:** `KWAVERS-AEQ-MET-44`
 - **Scope:** `kwavers-diagnostics::workflows::fk_migration`
@@ -42,3 +42,11 @@ is introduced and Eunomia complex-unit behavior is unchanged.
 - Run warning-denied Clippy, doctests, RustDoc, formatting, and diff checks.
 - Scan the public signature and document the real/complex boundary.
 
+## Verification
+
+The diagnostics test-target check passes. The focused f-k migration Nextest
+filter passes 3/3 tests with 196 unrelated tests skipped, including reflector
+depth, point-scatterer focusing, and invalid-input regressions. Warning-denied
+all-target Clippy, doctests (1 executable, 5 ignored), RustDoc, formatting, and
+diff checks pass on 2026-07-31. The public signature contains no raw physical
+scalar; RF arrays and internal complex FFT values remain numerical boundaries.

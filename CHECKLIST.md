@@ -1,17 +1,21 @@
 # Project Checklist
 
-## Owner: Codex — KWAVERS-AEQ-MET-44 typed f-k migration quantities [major] — in progress
+## Owner: Codex — KWAVERS-AEQ-MET-44 typed f-k migration quantities [major] — done 2026-07-31
 
-- [ ] Type migration spacing, sample interval, and sound speed with Aequitas;
+- [x] Type migration spacing, sample interval, and sound speed with Aequitas;
       keep RF arrays and FFT scalar bins at explicit numerical boundaries.
-- [ ] Make non-finite and non-positive typed inputs return a typed error;
+- [x] Make non-finite and non-positive typed inputs return a typed error;
       migrate co-located tests and preserve migration value semantics.
-- [ ] Synchronize ADR 083, gap-audit, backlog, checklist, changelog, and the
+- [x] Synchronize ADR 083, gap-audit, backlog, checklist, changelog, and the
       Atlas cross-repository audit; run focused package gates.
 
 Acceptance: no raw physical scalar remains in the public f-k migration
 signature; invalid physical inputs fail through `KwaversResult`, and no
 complex or imaginary physical unit is introduced for this real-valued workflow.
+
+Evidence: diagnostics test-target check passes; focused Nextest passes 3/3 with
+196 skipped; warning-denied Clippy, doctests, RustDoc, formatting, and diff
+checks pass. The final public signature scan finds only typed physical inputs.
 
 ## Owner: Codex — KWAVERS-AEQ-MET-43 typed blood-oxygenation quantities [major] — done 2026-07-31
 

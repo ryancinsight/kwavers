@@ -4,6 +4,12 @@
 
 ### Changed
 
+- **Breaking:** Stolt f-k migration now accepts Aequitas `Length`, `Time`, and
+  `Velocity` inputs and returns typed errors for invalid physical sampling
+  parameters. RF arrays and internal complex FFT values remain numerical
+  boundaries; no imaginary physical unit is introduced. See [ADR
+  083](docs/ADR/083-fk-migration-quantities.md).
+
 - **Breaking:** Blood-oxygenation wavelengths, hemoglobin thresholds, and
   absorption-reference coefficients now use Aequitas `Length`,
   `MolarConcentration`, and `ReciprocalLength`. Dense Leto maps remain the

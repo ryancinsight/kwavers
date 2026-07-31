@@ -29,6 +29,23 @@
 
 # Gap Audit
 
+## Live f-k migration refresh — 2026-07-31
+
+`KWAVERS-AEQ-MET-44` found raw lateral spacing, temporal sample interval, and
+sound speed in the public Stolt f-k migration entrypoint. The contract now
+uses Aequitas `Length`, `Time`, and `Velocity`, extracts coherent SI scalars
+only inside the FFT and dispersion formulas, and returns `KwaversResult` for
+non-finite or non-positive physical inputs. RF arrays, complex FFT storage,
+and FFT-bin scalars remain explicit numerical boundaries.
+
+The workflow is real-valued: internal complex FFT values are numerical
+representation, not physical phasors, so no imaginary physical unit is
+introduced. Value-semantic tests cover flat-reflector depth, point-scatterer
+focus, and invalid spacing. Verification: diagnostics test-target check
+passes; focused f-k migration Nextest passes 3/3 with 196 skipped;
+warning-denied all-target Clippy, doctests, RustDoc, formatting, and diff
+checks pass. No raw physical scalar remains in the public signature.
+
 ## Live blood-oxygenation refresh — 2026-07-31
 
 `KWAVERS-AEQ-MET-43` found a remaining public diagnostics family in

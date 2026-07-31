@@ -18,6 +18,8 @@
 //! - Garcia, D., et al. (2013). "Stolt's f-k migration for plane wave ultrasound
 //!   imaging." *IEEE TUFFC*, 60(9), 1853–1867.
 
+use aequitas::systems::si::quantities::{Length, Time, Velocity};
+use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::Complex64;
 use kwavers_math::fft::{fft_2d_complex, ifft_2d_complex};
 use leto::Array2 as LetoArray2;
@@ -40,19 +42,49 @@ fn ang_bin(bin: usize, n: usize, d: f64) -> f64 {
 /// Stolt f-k migration of zero-angle plane-wave RF data.
 ///
 /// - `data[ix, it]` = `s(x, t)` — receive RF after plane-wave transmit.
-/// - `dx` lateral element pitch \`m`; `dt` time sampling \`s`; `sound_speed` `c` \[m/s].
+/// - `dx` lateral sample spacing.
+/// - `dt` temporal sample interval.
+/// - `sound_speed` propagation speed.
 ///
 /// Returns the migrated image `image[ix, iz]` = `r(x, z)` on the depth grid
 /// `z = (c/2)·t` (same shape as the input). The exploding-reflector velocity
 /// `v = c/2` accounts for the round trip.
-#[must_use]
-pub fn fk_stolt_migration(data: &Array2<f64>, dx: f64, dt: f64, sound_speed: f64) -> Array2<f64> {
+///
+/// # Errors
+///
+/// Returns [`KwaversError::InvalidInput`] when a physical input is non-finite
+/// or non-positive.
+pub fn fk_stolt_migration(
+    data: &Array2<f64>,
+    dx: Length,
+    dt: Time,
+    sound_speed: Velocity,
+) -> KwaversResult<Array2<f64>> {
+    let dx_m = dx.into_base();
+    let dt_s = dt.into_base();
+    let sound_speed_m_s = sound_speed.into_base();
+    if !dx_m.is_finite() || dx_m <= 0.0 {
+        return Err(KwaversError::InvalidInput(
+            "f-k migration spacing must be finite and positive".to_owned(),
+        ));
+    }
+    if !dt_s.is_finite() || dt_s <= 0.0 {
+        return Err(KwaversError::InvalidInput(
+            "f-k migration sample interval must be finite and positive".to_owned(),
+        ));
+    }
+    if !sound_speed_m_s.is_finite() || sound_speed_m_s <= 0.0 {
+        return Err(KwaversError::InvalidInput(
+            "f-k migration sound speed must be finite and positive".to_owned(),
+        ));
+    }
+
     let [nx, nt] = data.shape();
     if nx == 0 || nt == 0 {
-        return Array2::zeros((nx, nt));
+        return Ok(Array2::zeros((nx, nt)));
     }
-    let v = 0.5 * sound_speed;
-    let dz = v * dt;
+    let v = 0.5 * sound_speed_m_s;
+    let dz = v * dt_s;
 
     // real RF → complex, then 2-D FFT over (x, t) → S(k_x, ω)
     let mut s0 = Array2::<Complex64>::zeros((nx, nt));
@@ -61,8 +93,8 @@ pub fn fk_stolt_migration(data: &Array2<f64>, dx: f64, dt: f64, sound_speed: f64
     }
     let s = fft_2d_complex(&s0);
 
-    let kx: Vec<f64> = (0..nx).map(|i| ang_bin(i, nx, dx)).collect();
-    let omega_bin_scale = (nt as f64) * dt / TAU; // ω → continuous bin index
+    let kx: Vec<f64> = (0..nx).map(|i| ang_bin(i, nx, dx_m)).collect();
+    let omega_bin_scale = (nt as f64) * dt_s / TAU; // ω → continuous bin index
 
     // remap onto the image spectrum R(k_x, k_z)
     let mut r: LetoArray2<Complex64> = Array2::<Complex64>::zeros((nx, nt));
@@ -93,18 +125,19 @@ pub fn fk_stolt_migration(data: &Array2<f64>, dx: f64, dt: f64, sound_speed: f64
     let img = ifft_2d_complex(&r);
     let img = img.mapv(|c| c.re);
     let [nx, nt] = img.shape();
-    Array2::from_shape_vec(
+    Ok(Array2::from_shape_vec(
         (nx, nt),
         img.as_slice()
             .expect("IFFT image must be densely stored")
             .to_vec(),
     )
-    .expect("IFFT image shape must match its flattened length")
+    .expect("IFFT image shape must match its flattened length"))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use aequitas::systems::si::units::{MeterPerSecond, Microsecond, Millimeter};
 
     fn argmax2(a: &Array2<f64>) -> (usize, usize) {
         let mut best = (0usize, 0usize);
@@ -123,16 +156,17 @@ mod tests {
     #[test]
     fn flat_reflector_maps_to_correct_depth() {
         let (nx, nt) = (32, 256);
-        let c = 1540.0;
-        let dx = 3.0e-4;
-        let dt = 1.0 / 20.0e6; // 20 MHz sampling
-        let v = 0.5 * c;
-        let dz = v * dt;
+        let c = Velocity::from_unit::<MeterPerSecond>(1540.0);
+        let dx = Length::from_unit::<Millimeter>(0.3);
+        let dt = Time::from_unit::<Microsecond>(0.05); // 20 MHz sampling
+        let v = 0.5 * c.into_base();
+        let dt_s = dt.into_base();
+        let dz = v * dt.into_base();
 
         // reflector depth and the flat arrival time
         let z0: f64 = 60.0 * dz; // 60 samples deep
         let t0: f64 = z0 / v; // = 2 z0 / c
-        let j0 = (t0 / dt).round() as usize;
+        let j0 = (t0 / dt_s).round() as usize;
 
         // flat event: a short Gaussian pulse at t0, identical for every x
         let mut data = Array2::<f64>::zeros((nx, nt));
@@ -144,7 +178,7 @@ mod tests {
             }
         }
 
-        let img = fk_stolt_migration(&data, dx, dt, c);
+        let img = fk_stolt_migration(&data, dx, dt, c).expect("valid migration inputs");
         // energy per depth row (kx=0 dominated); find the peak depth
         let mut depth_energy = vec![0.0; nt];
         for j in 0..nt {
@@ -172,30 +206,32 @@ mod tests {
     #[test]
     fn point_scatterer_focuses_and_sharpens() {
         let (nx, nt) = (48, 384);
-        let c = 1540.0;
-        let dx = 3.0e-4;
-        let dt = 1.0 / 20.0e6;
-        let v = 0.5 * c;
-        let dz = v * dt;
+        let c = Velocity::from_unit::<MeterPerSecond>(1540.0);
+        let dx = Length::from_unit::<Millimeter>(0.3);
+        let dt = Time::from_unit::<Microsecond>(0.05);
+        let v = 0.5 * c.into_base();
+        let dx_m = dx.into_base();
+        let dt_s = dt.into_base();
+        let dz = v * dt.into_base();
 
         let ix0 = nx / 2;
-        let x0 = ix0 as f64 * dx;
+        let x0 = ix0 as f64 * dx_m;
         let z0 = 120.0 * dz;
 
         // hyperbolic moveout: t(x) = (1/v)·√((x−x0)² + z0²), Gaussian pulse on it
         let mut data = Array2::<f64>::zeros((nx, nt));
         let sigma = 1.5;
         for i in 0..nx {
-            let x = i as f64 * dx;
+            let x = i as f64 * dx_m;
             let t = ((x - x0).powi(2) + z0 * z0).sqrt() / v;
-            let jc = t / dt;
+            let jc = t / dt_s;
             for j in 0..nt {
                 let dj = j as f64 - jc;
                 data[[i, j]] += (-(dj * dj) / (2.0 * sigma * sigma)).exp();
             }
         }
 
-        let img = fk_stolt_migration(&data, dx, dt, c);
+        let img = fk_stolt_migration(&data, dx, dt, c).expect("valid migration inputs");
         let (pi, pj) = argmax2(&img);
         let expected_z = (z0 / dz).round() as usize;
         assert!(
@@ -218,5 +254,21 @@ mod tests {
             peak / total,
             raw_peak / raw_total
         );
+    }
+
+    #[test]
+    fn rejects_nonphysical_sampling_inputs() {
+        let data = Array2::<f64>::zeros((2, 2));
+        let result = fk_stolt_migration(
+            &data,
+            Length::from_base(0.0),
+            Time::from_unit::<Microsecond>(0.05),
+            Velocity::from_unit::<MeterPerSecond>(1540.0),
+        );
+
+        assert!(matches!(
+            result,
+            Err(KwaversError::InvalidInput(message)) if message.contains("spacing")
+        ));
     }
 }

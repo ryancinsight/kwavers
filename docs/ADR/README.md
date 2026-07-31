@@ -90,4 +90,4 @@
 | [080](080-stereotactic-targeting-quantities.md) | ADR 080 — Aequitas stereotactic targeting quantities | Accepted |
 | [081](081-plane-wave-compounding-quantities.md) | Aequitas plane-wave compounding quantities | Accepted |
 | [082](082-blood-oxygenation-quantities.md) | Aequitas blood-oxygenation quantities | Accepted |
-| [083](083-fk-migration-quantities.md) | Aequitas f-k migration quantities | Proposed |
+| [083](083-fk-migration-quantities.md) | Aequitas f-k migration quantities | Accepted |
