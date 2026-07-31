@@ -27,7 +27,7 @@ use leto::Array2;
 use moirai_parallel::{map_collect_with, Adaptive};
 
 use super::config::StandingWaveOptConfig;
-use crate::parallel::{zip_mut_four_refs, zip_mut_ref, zip_two_mut_ref};
+use crate::parallel::{zip_mut_with, zip_two_mut_ref};
 
 /// Five-point Laplacian with edge-replication (Neumann) boundary.
 ///
@@ -94,13 +94,10 @@ pub(super) fn compute_green_function(
 
         // Second-order leapfrog update
         let mut p_next = Array2::<f64>::zeros((nx, ny));
-        zip_mut_four_refs(
+        zip_mut_with(
             p_next.view_mut(),
-            p_curr.view(),
-            p_prev.view(),
-            c2.view(),
-            lap.view(),
-            |pn, &pc, &pp, &c2, &l| {
+            (&p_curr.view(), &p_prev.view(), &c2.view(), &lap.view()),
+            |pn, (&pc, &pp, &c2, &l)| {
                 *pn = 2.0 * pc - pp + dt2 * c2 * l;
             },
         );
@@ -109,7 +106,7 @@ pub(super) fn compute_green_function(
         p_next[[config.source_x, element_y]] += (omega * t).sin();
 
         // PML absorption
-        zip_mut_ref(p_next.view_mut(), damp.view(), |pn, &d| *pn *= d);
+        zip_mut_with(p_next.view_mut(), &damp.view(), |pn, &d| *pn *= d);
 
         // Lock-in accumulation: G(x,y) += p(x,y,t) × exp(−iωt)
         if step >= accum_start {

@@ -80,10 +80,7 @@ use kwavers_core::constants::tissue_thermal::{
 };
 use kwavers_core::error::{KwaversError, KwaversResult};
 
-use crate::parallel::{
-    zip_mut_five_refs, zip_mut_ref, zip_mut_three_refs, zip_three_mut_three_refs,
-    zip_two_mut_two_refs,
-};
+use crate::parallel::{zip_mut_with, zip_three_mut_three_refs, zip_two_mut_two_refs};
 
 // ── Material constants (IT'IS v4.1 / ICRU-44 / Duck 1990) ────────────────────
 
@@ -225,23 +222,25 @@ pub fn transcranial_pennes_thermal_dose(
 
         // dT/dt = kappa*∇²T - perf_c*(T-T_a) + heat_rcp
         let mut new_temp = Array3::<f64>::zeros((nx, ny, nz));
-        zip_mut_five_refs(
+        zip_mut_with(
             new_temp.view_mut(),
-            temp.view(),
-            lap.view(),
-            kappa.view(),
-            perf_c.view(),
-            heat_rcp.view(),
-            |nt, &t, &l, &kap, &pc, &hr| {
+            (
+                &temp.view(),
+                &lap.view(),
+                &kappa.view(),
+                &perf_c.view(),
+                &heat_rcp.view(),
+            ),
+            |nt, (&t, &l, &kap, &pc, &hr)| {
                 *nt = t + dt_s * (kap.mul_add(l, hr) - pc * (t - baseline_c));
             },
         );
         let law = Cem43::<f64>::canonical();
         let step = Time::from_base(dt_s);
         let failure = Mutex::new(None);
-        zip_mut_ref(
+        zip_mut_with(
             cem43_increment.view_mut(),
-            new_temp.view(),
+            &new_temp.view(),
             |increment, &temperature_c| match law.increment(
                 ThermodynamicTemperature::from_base(temperature_c + KELVIN_OFFSET_C),
                 step,
@@ -289,12 +288,10 @@ pub fn transcranial_pennes_thermal_dose(
 
     // Lesion mask: CEM43 >= 240 min AND in brain AND not in skull.
     let mut lesion_mask = Array3::<bool>::from_elem((nx, ny, nz), false);
-    zip_mut_three_refs(
+    zip_mut_with(
         lesion_mask.view_mut(),
-        cem43.view(),
-        brain_mask.view(),
-        skull_mask.view(),
-        |b, &c, &is_brain, &is_skull| {
+        (&cem43.view(), &brain_mask.view(), &skull_mask.view()),
+        |b, (&c, &is_brain, &is_skull)| {
             *b = c >= CEM43_LESION_THRESHOLD && is_brain && !is_skull;
         },
     );
