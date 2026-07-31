@@ -29,19 +29,25 @@
 
 # Gap Audit
 
-## Active sound-speed-shift curved-array/frequency audit — 2026-07-31
+## Live sound-speed-shift curved-array/frequency refresh — 2026-07-31
 
-`KWAVERS-AEQ-MET-49` is the next bounded gap: public curved-array radius and
-angle fields/results and OpenPros waveform peak frequency remain raw scalars
-despite the surrounding Aequitas spatial-scale contract. The planned boundary
-uses `Length`, `Angle`, and `Frequency`, with base extraction only for
-trigonometry, validation, and derived wavelength.
+`KWAVERS-AEQ-MET-49` is closed. Public curved-array radius, first angle,
+angular pitch, aperture, and OpenPros waveform peak frequency now use
+Aequitas `Length`, `Angle`, and `Frequency`; base extraction is restricted to
+trigonometry, validation, and derived wavelength. Retained raw values are
+solver-owned `PlanarPoint` coordinates, dense Leto image storage, and
+benchmark error-metric storage, which are explicit numerical/storage
+boundaries for the next audit slice.
 
-Solver-owned `PlanarPoint` coordinates, dense Leto images, and benchmark
-error-metric storage remain explicit boundaries for later slices. The path is
-real-valued and has no physical phasor, so Eunomia compatibility requires no
-imaginary physical unit. See
+The path is real-valued and has no physical phasor, so Eunomia compatibility
+requires no imaginary physical unit. See
 [`Kwavers ADR 088`](docs/ADR/088-sound-speed-curved-array-frequency-quantities.md).
+
+Verification: diagnostics test-target check passes; focused sound-speed-shift
+Nextest run `9544d32a-ea02-4c1f-b57a-1e4944a68a30` passes 34/34 with 165
+skipped; warning-denied all-target Clippy, doctests, RustDoc, package
+formatting, diff checks, and the public-contract scan pass. Workspace-wide
+rustfmt remains Windows filename-length blocked; package formatting passes.
 
 ## Live sound-speed-shift spatial-scale refresh — 2026-07-31
 

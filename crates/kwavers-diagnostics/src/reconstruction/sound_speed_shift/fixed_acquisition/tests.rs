@@ -1,6 +1,6 @@
 use std::f64::consts::TAU;
 
-use aequitas::systems::si::quantities::{Length, Time};
+use aequitas::systems::si::quantities::{Angle, Length, Time};
 use leto::Array2;
 
 use super::SoundSpeedShiftPlan;
@@ -76,9 +76,9 @@ fn curved_array_plan_reuses_operator_across_repeated_frames() {
     truth[[2, 3]] = 9.0;
     let array = CurvedArray2d {
         center_m: PlanarPoint { x_m: 0.0, y_m: 0.0 },
-        radius_m: 0.004,
-        first_angle_rad: 0.0,
-        angular_pitch_rad: TAU / 8.0,
+        radius: Length::from_base(0.004),
+        first_angle: Angle::from_base(0.0),
+        angular_pitch: Angle::from_base(TAU / 8.0),
         element_count: 8,
     };
     let scan = CurvedArrayShiftScan::new(array, vec![3, 4]);

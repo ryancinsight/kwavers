@@ -11,24 +11,28 @@ use super::sampling::CurvedArrayShiftScan;
 pub(super) fn validate_array(array: &CurvedArray2d) -> KwaversResult<()> {
     validate_finite("curved-array center x", array.center_m.x_m)?;
     validate_finite("curved-array center y", array.center_m.y_m)?;
-    validate_positive("curved-array radius", array.radius_m)?;
-    validate_finite("curved-array first angle", array.first_angle_rad)?;
-    validate_finite("curved-array angular pitch", array.angular_pitch_rad)?;
+    validate_positive("curved-array radius", array.radius.into_base())?;
+    validate_finite("curved-array first angle", array.first_angle.into_base())?;
+    validate_finite(
+        "curved-array angular pitch",
+        array.angular_pitch.into_base(),
+    )?;
     if array.element_count < 2 {
         return Err(KwaversError::InvalidInput(format!(
             "curved-array element_count must be at least 2, got {}",
             array.element_count
         )));
     }
-    if array.angular_pitch_rad.abs() <= f64::EPSILON {
+    if array.angular_pitch.into_base().abs() <= f64::EPSILON {
         return Err(KwaversError::InvalidInput(
             "curved-array angular pitch must be nonzero".to_owned(),
         ));
     }
-    if array.aperture_angle_rad().abs() >= TAU {
+    let aperture_angle = array.aperture_angle().into_base();
+    if aperture_angle.abs() >= TAU {
         return Err(KwaversError::InvalidInput(format!(
             "curved-array endpoint arc must be open and less than 2*pi rad, got {}",
-            array.aperture_angle_rad()
+            aperture_angle
         )));
     }
     Ok(())

@@ -1,6 +1,6 @@
 # ADR 088 — Aequitas curved-array and benchmark frequency quantities
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-07-31
 - Owner: `KWAVERS-AEQ-MET-49`
 
@@ -33,7 +33,11 @@ for Eunomia compatibility.
 
 ## Verification
 
-The implementation will pass the diagnostics test-target check, focused
-sound-speed-shift Nextest, warning-denied all-target Clippy, doctests, RustDoc,
-formatting, diff checks, and a public-contract scan for raw curved-array and
-waveform frequency values.
+The diagnostics test-target check passes. Focused sound-speed-shift Nextest
+run `9544d32a-ea02-4c1f-b57a-1e4944a68a30` passes 34/34 tests with 165
+skipped; warning-denied all-target Clippy, doctests, RustDoc, package
+formatting, diff checks, and the public-contract scan pass. The remaining raw
+values are solver-owned coordinates, dense Leto storage, and benchmark
+error-metric storage, each retained as an explicit numerical/storage boundary.
+Workspace-wide rustfmt remains blocked by the Windows filename-length limit;
+package formatting passes.

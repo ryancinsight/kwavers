@@ -1,5 +1,6 @@
 //! Circular-arc element coordinates for 2-D curved arrays.
 
+use aequitas::systems::si::quantities::{Angle, Length};
 use kwavers_core::error::KwaversResult;
 use kwavers_solver::inverse::same_aperture::PlanarPoint;
 
@@ -15,12 +16,12 @@ use super::validation::validate_array;
 pub struct CurvedArray2d {
     /// Arc center `m`.
     pub center_m: PlanarPoint,
-    /// Arc radius `m`.
-    pub radius_m: f64,
-    /// Angle of the first element `rad`.
-    pub first_angle_rad: f64,
-    /// Angle increment between adjacent elements `rad`.
-    pub angular_pitch_rad: f64,
+    /// Arc radius.
+    pub radius: Length,
+    /// Angle of the first element.
+    pub first_angle: Angle,
+    /// Angle increment between adjacent elements.
+    pub angular_pitch: Angle,
     /// Number of physical array elements.
     pub element_count: usize,
 }
@@ -30,21 +31,23 @@ impl CurvedArray2d {
     #[must_use]
     pub fn from_arc_endpoints(
         center_m: PlanarPoint,
-        radius_m: f64,
-        start_angle_rad: f64,
-        end_angle_rad: f64,
+        radius: Length,
+        start_angle: Angle,
+        end_angle: Angle,
         element_count: usize,
     ) -> Self {
-        let angular_pitch_rad = if element_count > 1 {
-            (end_angle_rad - start_angle_rad) / (element_count - 1) as f64
+        let angular_pitch = if element_count > 1 {
+            Angle::from_base(
+                (end_angle.into_base() - start_angle.into_base()) / (element_count - 1) as f64,
+            )
         } else {
-            0.0
+            Angle::from_base(0.0)
         };
         Self {
             center_m,
-            radius_m,
-            first_angle_rad: start_angle_rad,
-            angular_pitch_rad,
+            radius,
+            first_angle: start_angle,
+            angular_pitch,
             element_count,
         }
     }
@@ -61,17 +64,20 @@ impl CurvedArray2d {
             .collect())
     }
 
-    /// Total signed angular aperture from first to last element `rad`.
+    /// Total signed angular aperture from first to last element.
     #[must_use]
-    pub fn aperture_angle_rad(&self) -> f64 {
-        self.angular_pitch_rad * (self.element_count.saturating_sub(1)) as f64
+    pub fn aperture_angle(&self) -> Angle {
+        Angle::from_base(
+            self.angular_pitch.into_base() * (self.element_count.saturating_sub(1)) as f64,
+        )
     }
 
     pub(super) fn element(&self, index: usize) -> PlanarPoint {
-        let angle = self.first_angle_rad + index as f64 * self.angular_pitch_rad;
+        let angle = self.first_angle.into_base() + index as f64 * self.angular_pitch.into_base();
+        let radius = self.radius.into_base();
         PlanarPoint {
-            x_m: self.center_m.x_m + self.radius_m * angle.cos(),
-            y_m: self.center_m.y_m + self.radius_m * angle.sin(),
+            x_m: self.center_m.x_m + radius * angle.cos(),
+            y_m: self.center_m.y_m + radius * angle.sin(),
         }
     }
 }

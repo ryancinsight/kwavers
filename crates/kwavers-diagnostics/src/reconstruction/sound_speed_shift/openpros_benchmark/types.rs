@@ -1,6 +1,6 @@
 //! OpenPros benchmark data contracts.
 
-use aequitas::systems::si::quantities::{Length, Time};
+use aequitas::systems::si::quantities::{Frequency, Length, Time};
 use leto::Array2;
 
 use super::super::{SoundSpeedShiftConfig, SoundSpeedShiftImage, SoundSpeedShiftSample};
@@ -74,7 +74,7 @@ impl OpenProsShiftBenchmarkConfig {
             source_channels: 4 * self.source_count_per_probe,
             receivers_per_channel: self.receiver_count_per_probe,
             time_steps: REFERENCE_TIME_STEPS,
-            peak_frequency_hz: REFERENCE_PEAK_FREQUENCY_HZ,
+            peak_frequency: Frequency::from_base(REFERENCE_PEAK_FREQUENCY_HZ),
             absorbing_boundary_points: REFERENCE_ABSORBING_BOUNDARY_POINTS,
             grid_spacing: spacing,
             sos_shape: shape,
@@ -93,7 +93,7 @@ pub struct OpenProsWaveformExpectation {
     pub source_channels: usize,
     pub receivers_per_channel: usize,
     pub time_steps: usize,
-    pub peak_frequency_hz: f64,
+    pub peak_frequency: Frequency,
     pub absorbing_boundary_points: usize,
     pub grid_spacing: Length,
     pub sos_shape: (usize, usize),

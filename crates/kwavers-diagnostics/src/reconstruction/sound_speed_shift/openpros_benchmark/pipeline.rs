@@ -101,7 +101,8 @@ fn reconstruction_config(
 ) -> SoundSpeedShiftConfig {
     let reference_sound_speed = Velocity::from_base(SOUND_SPEED_TISSUE);
     let wavelength = Length::from_base(
-        reference_sound_speed.into_base() / config.waveform_expectation().peak_frequency_hz,
+        reference_sound_speed.into_base()
+            / config.waveform_expectation().peak_frequency.into_base(),
     );
     SoundSpeedShiftConfig {
         reference_sound_speed,

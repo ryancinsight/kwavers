@@ -1,18 +1,24 @@
 # Project Checklist
 
-## Owner: Codex — KWAVERS-AEQ-MET-49 typed curved-array and benchmark frequency [major] — in progress
+## Owner: Codex — KWAVERS-AEQ-MET-49 typed curved-array and benchmark frequency [major] — done 2026-07-31
 
-- [ ] Type curved-array radius and angular fields/results with Aequitas
+- [x] Type curved-array radius and angular fields/results with Aequitas
       `Length` and `Angle`, including all constructors and callers.
-- [ ] Type OpenPros waveform peak frequency with Aequitas `Frequency`; extract
+- [x] Type OpenPros waveform peak frequency with Aequitas `Frequency`; extract
       base scalars only at coordinate trigonometry and derived wavelength.
-- [ ] Preserve solver-owned `PlanarPoint`, dense image, and benchmark error
+- [x] Preserve solver-owned `PlanarPoint`, dense image, and benchmark error
       metric storage boundaries; synchronize ADR 088, gap-audit, backlog,
       checklist, changelog, and the Atlas cross-repository audit.
 
 Acceptance: no public curved-array geometry angle/length or benchmark waveform
 frequency remains a unit-suffixed raw scalar in the migrated contracts; no
 complex or imaginary physical unit is introduced.
+
+Evidence: diagnostics test-target check passes; focused sound-speed-shift
+Nextest run `9544d32a-ea02-4c1f-b57a-1e4944a68a30` passes 34/34 with 165
+skipped; warning-denied all-target Clippy, doctests, RustDoc, package
+formatting, diff checks, and the public-contract scan pass. Workspace-wide
+rustfmt remains Windows filename-length blocked; package formatting passes.
 
 ## Owner: Codex — KWAVERS-AEQ-MET-48 typed sound-speed-shift spatial scales [major] — done 2026-07-31
 

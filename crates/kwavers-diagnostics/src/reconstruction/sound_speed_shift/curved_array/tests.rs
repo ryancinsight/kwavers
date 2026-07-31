@@ -1,6 +1,6 @@
 use std::f64::consts::{FRAC_PI_2, PI, TAU};
 
-use aequitas::systems::si::quantities::{Length, Time};
+use aequitas::systems::si::quantities::{Angle, Length, Time};
 use leto::Array2;
 
 use super::{CurvedArray2d, CurvedArrayShiftScan};
@@ -11,8 +11,13 @@ use kwavers_solver::inverse::same_aperture::PlanarPoint;
 
 #[test]
 fn endpoint_arc_places_elements_on_declared_circle() {
-    let array =
-        CurvedArray2d::from_arc_endpoints(PlanarPoint { x_m: 0.0, y_m: 0.0 }, 0.02, PI, 0.0, 3);
+    let array = CurvedArray2d::from_arc_endpoints(
+        PlanarPoint { x_m: 0.0, y_m: 0.0 },
+        Length::from_base(0.02),
+        Angle::from_base(PI),
+        Angle::from_base(0.0),
+        3,
+    );
 
     let elements = array.elements().unwrap();
 
@@ -23,16 +28,16 @@ fn endpoint_arc_places_elements_on_declared_circle() {
     assert_close(elements[1].y_m, 0.02);
     assert_close(elements[2].x_m, 0.02);
     assert_close(elements[2].y_m, 0.0);
-    assert_close(array.aperture_angle_rad(), -PI);
+    assert_close(array.aperture_angle().into_base(), -PI);
 }
 
 #[test]
 fn pitch_catch_rows_are_transmitter_major_and_offset_minor() {
     let array = CurvedArray2d {
         center_m: PlanarPoint { x_m: 0.0, y_m: 0.0 },
-        radius_m: 1.0,
-        first_angle_rad: 0.0,
-        angular_pitch_rad: FRAC_PI_2,
+        radius: Length::from_base(1.0),
+        first_angle: Angle::from_base(0.0),
+        angular_pitch: Angle::from_base(FRAC_PI_2),
         element_count: 4,
     };
     let scan = CurvedArrayShiftScan::new(array, vec![1, 2]);
@@ -57,8 +62,13 @@ fn pitch_catch_rows_are_transmitter_major_and_offset_minor() {
 
 #[test]
 fn invalid_curved_scan_contract_is_rejected() {
-    let array =
-        CurvedArray2d::from_arc_endpoints(PlanarPoint { x_m: 0.0, y_m: 0.0 }, 0.01, PI, 0.0, 4);
+    let array = CurvedArray2d::from_arc_endpoints(
+        PlanarPoint { x_m: 0.0, y_m: 0.0 },
+        Length::from_base(0.01),
+        Angle::from_base(PI),
+        Angle::from_base(0.0),
+        4,
+    );
 
     let zero_offset = CurvedArrayShiftScan::new(array, vec![0]);
     let duplicate_offset = CurvedArrayShiftScan::new(array, vec![1, 1]);
@@ -88,9 +98,9 @@ fn curved_array_samples_drive_straight_ray_shift_prediction() {
     shift.fill(12.0);
     let array = CurvedArray2d {
         center_m: PlanarPoint { x_m: 0.0, y_m: 0.0 },
-        radius_m: 0.004,
-        first_angle_rad: 0.0,
-        angular_pitch_rad: TAU / 8.0,
+        radius: Length::from_base(0.004),
+        first_angle: Angle::from_base(0.0),
+        angular_pitch: Angle::from_base(TAU / 8.0),
         element_count: 8,
     };
     let scan = CurvedArrayShiftScan::new(array, vec![4]);
