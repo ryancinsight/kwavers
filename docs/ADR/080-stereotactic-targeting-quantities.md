@@ -1,6 +1,6 @@
 # ADR 080 — Aequitas stereotactic targeting quantities
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-07-31
 - Board item: `KWAVERS-AEQ-MET-41`
 
@@ -41,12 +41,13 @@ only in comments and permit accidental mixing with SI `Length`. Adding a
 forwarding raw-scalar constructor would retain the same ambiguity and violate
 the repository's no-compatibility-facade migration rule.
 
-## Verification plan
+## Verification
 
-- compile-time migration of all in-repository targeting callers and tests;
-- value-semantic coordinate, trajectory, boundary, confidence, and 3-4-5
-  distance regressions;
-- package test-target check, focused Nextest, warning-denied Clippy, doctests,
-  RustDoc, rustfmt, and diff checks;
-- source audit proving scalar extraction is limited to atlas/formula or
-  explicit serialization boundaries.
+All in-repository targeting callers and tests compile with the typed contract.
+The package test-target check passes; focused targeting Nextest passes 10/10
+with 184 skipped; warning-denied all-target Clippy passes; doctests pass with 1
+executable and 5 ignored; RustDoc, formatting, and diff checks pass. The
+residue audit finds no raw public coordinate, confidence, distance, or Bregma
+field; scalar extraction is limited to the atlas millimetre boundary and
+value-semantic tests. Shared unused-provider-patch and linker warnings remain
+outside this decision.

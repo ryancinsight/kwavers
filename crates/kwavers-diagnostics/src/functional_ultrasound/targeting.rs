@@ -4,39 +4,48 @@
 //! with anatomical validation.
 
 use super::atlas::BrainAtlas;
+use aequitas::systems::si::{
+    quantities::{Dimensionless, Length},
+    units::Millimeter,
+};
 use kwavers_core::error::{KwaversError, KwaversResult};
+
+#[inline]
+fn length_from_millimeters(value: f64) -> Length<f64> {
+    Length::from_unit::<Millimeter>(value)
+}
 
 /// Stereotactic coordinates (based on Bregma reference)
 #[derive(Debug, Clone, Copy)]
 pub struct StereotacticCoordinates {
-    /// Anterior-Posterior (relative to Bregma) (mm)
-    pub ap: f64,
+    /// Anterior-Posterior relative to Bregma, represented as an SI `Length`.
+    pub ap: Length<f64>,
 
-    /// Medial-Lateral (relative to midline) (mm)
-    pub ml: f64,
+    /// Medial-Lateral relative to the midline, represented as an SI `Length`.
+    pub ml: Length<f64>,
 
-    /// Dorsal-Ventral (from brain surface) (mm)
-    pub dv: f64,
+    /// Dorsal-Ventral from the brain surface, represented as an SI `Length`.
+    pub dv: Length<f64>,
 
-    /// Confidence in coordinates (0.0-1.0)
-    pub confidence: f64,
+    /// Dimensionless confidence in the coordinates (0.0-1.0).
+    pub confidence: Dimensionless<f64>,
 }
 
 impl StereotacticCoordinates {
     /// Create new stereotactic coordinates
     #[must_use]
-    pub fn new(ap: f64, ml: f64, dv: f64) -> Self {
+    pub fn new(ap: Length<f64>, ml: Length<f64>, dv: Length<f64>) -> Self {
         Self {
             ap,
             ml,
             dv,
-            confidence: 1.0,
+            confidence: Dimensionless::from_base(1.0),
         }
     }
 
-    /// Convert to [x, y, z] array
+    /// Convert to a canonical-SI `[x, y, z]` array.
     #[must_use]
-    pub fn to_array(&self) -> [f64; 3] {
+    pub fn to_array(&self) -> [Length<f64>; 3] {
         [self.ap, self.ml, self.dv]
     }
 
@@ -44,27 +53,29 @@ impl StereotacticCoordinates {
     #[must_use]
     pub fn is_valid(&self) -> bool {
         // Standard mouse brain bounds (relative to Bregma)
-        self.ap >= -4.0
-            && self.ap <= 3.0
-            && self.ml >= -4.5
-            && self.ml <= 4.5
-            && self.dv >= 0.0
-            && self.dv <= 8.0
+        self.ap >= length_from_millimeters(-4.0)
+            && self.ap <= length_from_millimeters(3.0)
+            && self.ml >= length_from_millimeters(-4.5)
+            && self.ml <= length_from_millimeters(4.5)
+            && self.dv >= length_from_millimeters(0.0)
+            && self.dv <= length_from_millimeters(8.0)
     }
 
     /// Check if coordinates are in safe region (away from ventricles/major vessels)
     #[must_use]
     pub fn is_safe(&self) -> bool {
         // Simplified safety check
-        self.is_valid() && self.dv > 0.5 && self.dv < 7.5
+        self.is_valid()
+            && self.dv > length_from_millimeters(0.5)
+            && self.dv < length_from_millimeters(7.5)
     }
 }
 
 /// Stereotactic targeting system
 #[derive(Debug)]
 pub struct TargetingSystem {
-    /// Bregma reference point in atlas coordinates (mm)
-    bregma: [f64; 3],
+    /// Bregma reference point in atlas coordinates, represented as SI lengths.
+    bregma: [Length<f64>; 3],
 }
 
 impl TargetingSystem {
@@ -73,7 +84,7 @@ impl TargetingSystem {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn new(atlas: &BrainAtlas) -> KwaversResult<Self> {
-        let bregma = atlas.brain_center();
+        let bregma = atlas.brain_center().map(length_from_millimeters);
 
         Ok(Self { bregma })
     }
@@ -88,14 +99,17 @@ impl TargetingSystem {
         atlas: &BrainAtlas,
     ) -> KwaversResult<StereotacticCoordinates> {
         // Convert voxel to mm in atlas space
-        let mm = atlas.voxel_to_mm(&[voxel[0], voxel[1], voxel[2]]);
+        let coordinates = atlas
+            .voxel_to_mm(&[voxel[0], voxel[1], voxel[2]])
+            .map(length_from_millimeters);
 
         // Convert to Bregma-relative stereotactic coordinates
-        let ap = mm[0] - self.bregma[0];
-        let ml = mm[1] - self.bregma[1];
-        let dv = self.bregma[2] - mm[2]; // DV is measured downward from surface
-
-        let coords = StereotacticCoordinates::new(ap, ml, dv);
+        let [ap, ml, dv] = coordinates;
+        let coords = StereotacticCoordinates::new(
+            ap - self.bregma[0],
+            ml - self.bregma[1],
+            self.bregma[2] - dv, // DV is measured downward from surface
+        );
 
         Ok(coords)
     }
@@ -116,11 +130,10 @@ impl TargetingSystem {
         }
 
         // Convert to atlas mm coordinates
-        let mm = [
-            self.bregma[0] + coords.ap,
-            self.bregma[1] + coords.ml,
-            self.bregma[2] - coords.dv,
-        ];
+        let [bregma_ap, bregma_ml, bregma_dv] =
+            self.bregma.map(|value| value.in_unit::<Millimeter>());
+        let [ap, ml, dv] = coords.to_array().map(|value| value.in_unit::<Millimeter>());
+        let mm = [bregma_ap + ap, bregma_ml + ml, bregma_dv - dv];
 
         atlas.mm_to_voxel(&mm)
     }
@@ -146,9 +159,9 @@ impl TargetingSystem {
         for i in 0..num_waypoints {
             let t = i as f64 / (num_waypoints - 1).max(1) as f64;
 
-            let ap = start.ap + t * (target.ap - start.ap);
-            let ml = start.ml + t * (target.ml - start.ml);
-            let dv = start.dv + t * (target.dv - start.dv);
+            let ap = start.ap + (target.ap - start.ap) * t;
+            let ml = start.ml + (target.ml - start.ml) * t;
+            let dv = start.dv + (target.dv - start.dv) * t;
 
             trajectory.push(StereotacticCoordinates::new(ap, ml, dv));
         }
@@ -156,19 +169,23 @@ impl TargetingSystem {
         Ok(trajectory)
     }
 
-    /// Get distance between two coordinates (mm)
+    /// Return Euclidean distance as a typed `Length`.
     #[must_use]
-    pub fn distance(&self, from: &StereotacticCoordinates, to: &StereotacticCoordinates) -> f64 {
-        let dx = to.ap - from.ap;
-        let dy = to.ml - from.ml;
-        let dz = to.dv - from.dv;
+    pub fn distance(
+        &self,
+        from: &StereotacticCoordinates,
+        to: &StereotacticCoordinates,
+    ) -> Length<f64> {
+        let dx = (to.ap - from.ap).into_base();
+        let dy = (to.ml - from.ml).into_base();
+        let dz = (to.dv - from.dv).into_base();
 
-        dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt()
+        Length::from_base(dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt())
     }
 
     /// Get Bregma coordinates
     #[must_use]
-    pub fn bregma(&self) -> [f64; 3] {
+    pub fn bregma(&self) -> [Length<f64>; 3] {
         self.bregma
     }
 }
@@ -177,21 +194,29 @@ impl TargetingSystem {
 mod tests {
     use super::*;
 
+    fn millimeters(value: f64) -> Length<f64> {
+        Length::from_unit::<Millimeter>(value)
+    }
+
     #[test]
     fn test_stereotactic_coordinates_creation() {
-        let coords = StereotacticCoordinates::new(0.5, 1.0, 2.5);
-        assert_eq!(coords.ap, 0.5);
-        assert_eq!(coords.ml, 1.0);
-        assert_eq!(coords.dv, 2.5);
+        let coords =
+            StereotacticCoordinates::new(millimeters(0.5), millimeters(1.0), millimeters(2.5));
+        assert_eq!(coords.ap, millimeters(0.5));
+        assert_eq!(coords.ml, millimeters(1.0));
+        assert_eq!(coords.dv, millimeters(2.5));
+        assert_eq!(coords.confidence, Dimensionless::from_base(1.0));
     }
 
     #[test]
     fn test_stereotactic_validation() {
-        let valid = StereotacticCoordinates::new(0.0, 0.0, 3.0);
+        let valid =
+            StereotacticCoordinates::new(millimeters(0.0), millimeters(0.0), millimeters(3.0));
         assert!(valid.is_valid());
         assert!(valid.is_safe());
 
-        let invalid = StereotacticCoordinates::new(10.0, 0.0, 3.0);
+        let invalid =
+            StereotacticCoordinates::new(millimeters(10.0), millimeters(0.0), millimeters(3.0));
         assert!(!invalid.is_valid());
     }
 
@@ -202,12 +227,38 @@ mod tests {
     }
 
     #[test]
+    fn atlas_conversion_preserves_typed_millimetre_semantics() {
+        let atlas = BrainAtlas::load_default().unwrap();
+        let targeting = TargetingSystem::new(&atlas).unwrap();
+
+        let voxel = [40, 50, 20];
+        let coordinate = targeting.voxel_to_stereotactic(&voxel, &atlas).unwrap();
+        assert_eq!(coordinate.ap.in_unit::<Millimeter>(), 0.0);
+        assert_eq!(coordinate.ml.in_unit::<Millimeter>(), 0.0);
+        assert_eq!(coordinate.dv.in_unit::<Millimeter>(), 2.0);
+
+        let bregma = targeting.bregma();
+        assert_eq!(
+            bregma.map(|value| value.in_unit::<Millimeter>()),
+            [4.0, 5.0, 4.0]
+        );
+        assert_eq!(
+            targeting
+                .stereotactic_to_voxel(&coordinate, &atlas)
+                .unwrap(),
+            voxel
+        );
+    }
+
+    #[test]
     fn test_trajectory_planning() {
         let atlas = BrainAtlas::load_default().unwrap();
         let targeting = TargetingSystem::new(&atlas).unwrap();
 
-        let start = StereotacticCoordinates::new(0.0, 0.0, 1.0);
-        let target = StereotacticCoordinates::new(1.0, 1.0, 3.0);
+        let start =
+            StereotacticCoordinates::new(millimeters(0.0), millimeters(0.0), millimeters(1.0));
+        let target =
+            StereotacticCoordinates::new(millimeters(1.0), millimeters(1.0), millimeters(3.0));
 
         let trajectory = targeting.plan_trajectory(&start, &target, 5).unwrap();
         assert_eq!(trajectory.len(), 5);
@@ -218,11 +269,11 @@ mod tests {
         let atlas = BrainAtlas::load_default().unwrap();
         let targeting = TargetingSystem::new(&atlas).unwrap();
 
-        let p1 = StereotacticCoordinates::new(0.0, 0.0, 0.0);
-        let p2 = StereotacticCoordinates::new(3.0, 4.0, 0.0);
+        let p1 = StereotacticCoordinates::new(millimeters(0.0), millimeters(0.0), millimeters(0.0));
+        let p2 = StereotacticCoordinates::new(millimeters(3.0), millimeters(4.0), millimeters(0.0));
 
         let dist = targeting.distance(&p1, &p2);
-        assert!((dist - 5.0).abs() < 0.01); // 3-4-5 triangle
+        assert!((dist.in_unit::<Millimeter>() - 5.0).abs() < 0.01); // 3-4-5 triangle
     }
 
     // ─── Exact value-semantic tests ───────────────────────────────────────────
@@ -234,12 +285,13 @@ mod tests {
     fn targeting_distance_three_four_five_exact() {
         let atlas = BrainAtlas::load_default().unwrap();
         let targeting = TargetingSystem::new(&atlas).unwrap();
-        let p1 = StereotacticCoordinates::new(0.0, 0.0, 0.0);
-        let p2 = StereotacticCoordinates::new(3.0, 4.0, 0.0);
+        let p1 = StereotacticCoordinates::new(millimeters(0.0), millimeters(0.0), millimeters(0.0));
+        let p2 = StereotacticCoordinates::new(millimeters(3.0), millimeters(4.0), millimeters(0.0));
         let dist = targeting.distance(&p1, &p2);
         assert!(
-            (dist - 5.0).abs() < 1e-12,
-            "3-4-5 distance should be exactly 5.0, got {dist}"
+            (dist.in_unit::<Millimeter>() - 5.0).abs() < 1e-12,
+            "3-4-5 distance should be exactly 5.0 mm, got {} mm",
+            dist.in_unit::<Millimeter>()
         );
     }
 
@@ -251,36 +303,19 @@ mod tests {
     fn targeting_trajectory_endpoints_match_start_and_target() {
         let atlas = BrainAtlas::load_default().unwrap();
         let targeting = TargetingSystem::new(&atlas).unwrap();
-        let start = StereotacticCoordinates::new(-1.0, 0.5, 1.0);
-        let target = StereotacticCoordinates::new(1.0, -0.5, 4.0);
+        let start =
+            StereotacticCoordinates::new(millimeters(-1.0), millimeters(0.5), millimeters(1.0));
+        let target =
+            StereotacticCoordinates::new(millimeters(1.0), millimeters(-0.5), millimeters(4.0));
         let traj = targeting.plan_trajectory(&start, &target, 5).unwrap();
         assert_eq!(traj.len(), 5, "expected 5 waypoints");
         // t=0 → start
-        assert!(
-            (traj[0].ap - start.ap).abs() < 1e-12,
-            "first waypoint ap mismatch: {} vs {}",
-            traj[0].ap,
-            start.ap
-        );
-        assert!(
-            (traj[0].ml - start.ml).abs() < 1e-12,
-            "first waypoint ml mismatch"
-        );
-        assert!(
-            (traj[0].dv - start.dv).abs() < 1e-12,
-            "first waypoint dv mismatch"
-        );
+        assert_eq!(traj[0].ap, start.ap, "first waypoint ap mismatch");
+        assert_eq!(traj[0].ml, start.ml, "first waypoint ml mismatch");
+        assert_eq!(traj[0].dv, start.dv, "first waypoint dv mismatch");
         // t=1 → target
-        assert!(
-            (traj[4].ap - target.ap).abs() < 1e-12,
-            "last waypoint ap mismatch: {} vs {}",
-            traj[4].ap,
-            target.ap
-        );
-        assert!(
-            (traj[4].dv - target.dv).abs() < 1e-12,
-            "last waypoint dv mismatch"
-        );
+        assert_eq!(traj[4].ap, target.ap, "last waypoint ap mismatch");
+        assert_eq!(traj[4].dv, target.dv, "last waypoint dv mismatch");
     }
 
     /// Trajectory midpoint (waypoint[2] of 5) is the exact midpoint of start and target.
@@ -290,26 +325,25 @@ mod tests {
     fn targeting_trajectory_midpoint_is_linear_interpolation() {
         let atlas = BrainAtlas::load_default().unwrap();
         let targeting = TargetingSystem::new(&atlas).unwrap();
-        let start = StereotacticCoordinates::new(-2.0, 1.0, 1.0);
-        let target = StereotacticCoordinates::new(0.0, -1.0, 3.0);
+        let start =
+            StereotacticCoordinates::new(millimeters(-2.0), millimeters(1.0), millimeters(1.0));
+        let target =
+            StereotacticCoordinates::new(millimeters(0.0), millimeters(-1.0), millimeters(3.0));
         let traj = targeting.plan_trajectory(&start, &target, 5).unwrap();
-        let ap_mid = (start.ap + target.ap) * 0.5;
-        let ml_mid = (start.ml + target.ml) * 0.5;
-        let dv_mid = (start.dv + target.dv) * 0.5;
+        let ap_mid = start.ap + (target.ap - start.ap) * 0.5;
+        let ml_mid = start.ml + (target.ml - start.ml) * 0.5;
+        let dv_mid = start.dv + (target.dv - start.dv) * 0.5;
         assert!(
-            (traj[2].ap - ap_mid).abs() < 1e-12,
-            "midpoint ap: expected {ap_mid}, got {}",
-            traj[2].ap
+            (traj[2].ap.in_unit::<Millimeter>() - ap_mid.in_unit::<Millimeter>()).abs() < 1e-12,
+            "midpoint ap differs"
         );
         assert!(
-            (traj[2].ml - ml_mid).abs() < 1e-12,
-            "midpoint ml: expected {ml_mid}, got {}",
-            traj[2].ml
+            (traj[2].ml.in_unit::<Millimeter>() - ml_mid.in_unit::<Millimeter>()).abs() < 1e-12,
+            "midpoint ml differs"
         );
         assert!(
-            (traj[2].dv - dv_mid).abs() < 1e-12,
-            "midpoint dv: expected {dv_mid}, got {}",
-            traj[2].dv
+            (traj[2].dv.in_unit::<Millimeter>() - dv_mid.in_unit::<Millimeter>()).abs() < 1e-12,
+            "midpoint dv differs"
         );
     }
 
@@ -319,12 +353,17 @@ mod tests {
     /// Corner point (−4, −4.5, 0) is on the boundary → `is_valid() == true`.
     #[test]
     fn stereotactic_boundary_coordinates_are_valid() {
-        let corner = StereotacticCoordinates::new(-4.0, -4.5, 0.0);
+        let corner =
+            StereotacticCoordinates::new(millimeters(-4.0), millimeters(-4.5), millimeters(0.0));
         assert!(
             corner.is_valid(),
             "boundary corner must be valid: {corner:?}"
         );
-        let just_outside = StereotacticCoordinates::new(-4.0 - 1e-9, -4.5, 0.0);
+        let just_outside = StereotacticCoordinates::new(
+            millimeters(-4.0 - 1e-9),
+            millimeters(-4.5),
+            millimeters(0.0),
+        );
         assert!(!just_outside.is_valid(), "just outside must be invalid");
     }
 }

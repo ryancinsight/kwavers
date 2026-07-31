@@ -4,6 +4,12 @@
 
 ### Changed
 
+- **Breaking**: Functional-ultrasound stereotactic AP/ML/DV coordinates,
+  Bregma, confidence, and targeting distance now use Aequitas `Length` and
+  `Dimensionless` contracts. Millimetre conversion remains explicit at the
+  atlas boundary; no complex or imaginary physical unit is involved. See [ADR
+  080](docs/ADR/080-stereotactic-targeting-quantities.md).
+
 - **Breaking**: Clinical workflow latency, acquisition/processing durations,
   total and per-stage timing, confidence, and optional GPU utilization now use
   Aequitas `Time` and `Dimensionless` contracts. Synthetic telemetry is

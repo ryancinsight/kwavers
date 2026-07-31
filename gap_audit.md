@@ -29,6 +29,29 @@
 
 # Gap Audit
 
+## Live stereotactic-targeting refresh — 2026-07-31
+
+`KWAVERS-AEQ-MET-41` found a public functional-ultrasound targeting family
+that represented AP/ML/DV coordinates, Bregma, Euclidean distance, and
+confidence as raw millimetre/fraction scalars. The public contracts now use
+Aequitas `Length<f64>` and `Dimensionless<f64>`, with scalar extraction limited
+to the existing millimetre-based atlas conversion boundary. The new typed
+round-trip regression verifies voxel-to-stereotactic and inverse conversion,
+and the existing trajectory, bounds, safety, confidence, and 3-4-5 distance
+oracles remain value-semantic.
+
+The family is real-valued under Eunomia. It has no phasor, spectral, or
+imaginary component, so no complex physical unit is introduced. Future
+coherent imaging data remains at the existing Eunomia-backed complex formula
+or dense-storage boundary.
+
+See [ADR 080](docs/ADR/080-stereotactic-targeting-quantities.md).
+
+Verification: package test-target check passes; focused targeting Nextest
+passes 10/10 with 184 skipped; warning-denied all-target Clippy, doctests (1
+executable, 5 ignored), RustDoc, formatting, and diff checks pass. Shared
+unused-provider-patch and linker warnings remain outside this metric family.
+
 ## Live clinical-workflow refresh — 2026-07-31
 
 `KWAVERS-AEQ-MET-40` found a remaining orchestration metric family in
