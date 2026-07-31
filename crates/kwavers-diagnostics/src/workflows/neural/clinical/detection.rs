@@ -36,10 +36,14 @@ impl NeuralClinicalDecisionSupport {
                         .get("speckle_variance")
                         .map_or(0.0, |arr| arr[[x, y, z]]);
 
-                    let is_high_contrast = vol_val > self.config.contrast_abnormality_threshold;
-                    let is_high_confidence = conf_val > self.config.lesion_confidence_threshold;
-                    let is_low_uncertainty = uncert_val < self.config.tissue_uncertainty_threshold;
-                    let is_anomalous_speckle = speckle_var > self.config.speckle_anomaly_threshold;
+                    let is_high_contrast =
+                        vol_val > *self.config.contrast_abnormality_threshold.as_base();
+                    let is_high_confidence =
+                        conf_val > *self.config.lesion_confidence_threshold.as_base();
+                    let is_low_uncertainty =
+                        uncert_val < *self.config.tissue_uncertainty_threshold.as_base();
+                    let is_anomalous_speckle =
+                        speckle_var > *self.config.speckle_anomaly_threshold.as_base();
                     let is_strong_boundary = gradient_mag > 0.5;
 
                     if is_high_contrast
@@ -50,8 +54,10 @@ impl NeuralClinicalDecisionSupport {
                     {
                         lesions.push(LesionDetection {
                             center: (x, y, z),
-                            size_mm: self.estimate_lesion_size(volume, features, x, y, z),
-                            confidence: conf_val,
+                            size: self.estimate_lesion_size(volume, features, x, y, z),
+                            confidence: aequitas::systems::si::quantities::Dimensionless::from_base(
+                                conf_val,
+                            ),
                             lesion_type: self.classify_lesion_type(vol_val, features, x, y, z),
                             clinical_significance: self
                                 .assess_clinical_significance(conf_val, vol_val),
@@ -78,11 +84,11 @@ impl NeuralClinicalDecisionSupport {
         seed_x: usize,
         seed_y: usize,
         seed_z: usize,
-    ) -> f32 {
+    ) -> aequitas::systems::si::quantities::Length<f32> {
         let [dim_x, dim_y, dim_z] = volume.shape();
 
         let local_mean = self.compute_local_statistics(&volume, seed_x, seed_y, seed_z);
-        let threshold = 2.0f32.mul_add(self.config.segmentation_sensitivity, local_mean);
+        let threshold = 2.0f32.mul_add(*self.config.segmentation_sensitivity.as_base(), local_mean);
 
         let mut visited = Array3::<bool>::from_elem((dim_x, dim_y, dim_z), false);
         let mut component_voxels = Vec::new();
@@ -146,10 +152,11 @@ impl NeuralClinicalDecisionSupport {
             }
         }
 
-        let voxel_volume_mm3 = self.config.voxel_size_mm.powi(3);
-        let lesion_volume_mm3 = component_voxels.len() as f32 * voxel_volume_mm3;
-        let equivalent_radius_mm = (3.0 * lesion_volume_mm3 / (4.0 * std::f32::consts::PI)).cbrt();
-        2.0 * equivalent_radius_mm
+        let voxel_size_m = *self.config.voxel_size.as_base();
+        let voxel_volume_m3 = voxel_size_m.powi(3);
+        let lesion_volume_m3 = component_voxels.len() as f32 * voxel_volume_m3;
+        let equivalent_radius_m = (3.0 * lesion_volume_m3 / (4.0 * std::f32::consts::PI)).cbrt();
+        aequitas::systems::si::quantities::Length::from_base(2.0 * equivalent_radius_m)
     }
 
     /// Compute local mean intensity in a 5×5×5 window for adaptive thresholding.
@@ -219,9 +226,15 @@ impl NeuralClinicalDecisionSupport {
     }
 
     /// Compute clinical significance score [0, 1] from detection confidence and intensity.
-    pub(super) fn assess_clinical_significance(&self, confidence: f32, intensity: f32) -> f32 {
+    pub(super) fn assess_clinical_significance(
+        &self,
+        confidence: f32,
+        intensity: f32,
+    ) -> aequitas::systems::si::quantities::Dimensionless<f32> {
         let confidence_score = confidence;
         let intensity_score = intensity.abs().min(1.0);
-        (confidence_score + intensity_score) / 2.0
+        aequitas::systems::si::quantities::Dimensionless::from_base(
+            (confidence_score + intensity_score) / 2.0,
+        )
     }
 }

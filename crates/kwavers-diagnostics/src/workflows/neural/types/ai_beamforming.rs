@@ -1,5 +1,7 @@
 //! AI-enhanced beamforming configuration, result, and supporting types.
 
+use aequitas::systems::si::quantities::{Dimensionless, Length, Time};
+use aequitas::systems::si::units::{Millimeter, Millisecond};
 use kwavers_analysis::signal_processing::beamforming::neural::config::FeatureConfig;
 use kwavers_transducer::beamforming::BeamformingConfig;
 use leto::Array3;
@@ -54,33 +56,33 @@ impl Default for FeatureMap {
 #[derive(Debug, Clone)]
 pub struct ClinicalThresholds {
     /// Lesion detection confidence threshold.
-    pub lesion_confidence_threshold: f32,
+    pub lesion_confidence_threshold: Dimensionless<f32>,
 
     /// Contrast abnormality threshold.
-    pub contrast_abnormality_threshold: f32,
+    pub contrast_abnormality_threshold: Dimensionless<f32>,
 
     /// Tissue uncertainty threshold.
-    pub tissue_uncertainty_threshold: f32,
+    pub tissue_uncertainty_threshold: Dimensionless<f32>,
 
     /// Speckle anomaly threshold.
-    pub speckle_anomaly_threshold: f32,
+    pub speckle_anomaly_threshold: Dimensionless<f32>,
 
     /// Segmentation sensitivity.
-    pub segmentation_sensitivity: f32,
+    pub segmentation_sensitivity: Dimensionless<f32>,
 
-    /// Voxel size in mm.
-    pub voxel_size_mm: f32,
+    /// Isotropic voxel edge length as an Aequitas length quantity.
+    pub voxel_size: Length<f32>,
 }
 
 impl Default for ClinicalThresholds {
     fn default() -> Self {
         Self {
-            lesion_confidence_threshold: 0.85,
-            contrast_abnormality_threshold: 2.0,
-            tissue_uncertainty_threshold: 0.3,
-            speckle_anomaly_threshold: 0.7,
-            segmentation_sensitivity: 0.5,
-            voxel_size_mm: 0.5,
+            lesion_confidence_threshold: Dimensionless::from_base(0.85),
+            contrast_abnormality_threshold: Dimensionless::from_base(2.0),
+            tissue_uncertainty_threshold: Dimensionless::from_base(0.3),
+            speckle_anomaly_threshold: Dimensionless::from_base(0.7),
+            segmentation_sensitivity: Dimensionless::from_base(0.5),
+            voxel_size: Length::from_unit::<Millimeter>(0.5),
         }
     }
 }
@@ -90,12 +92,12 @@ impl ClinicalThresholds {
     #[must_use]
     pub fn high_sensitivity() -> Self {
         Self {
-            lesion_confidence_threshold: 0.7,
-            contrast_abnormality_threshold: 1.5,
-            tissue_uncertainty_threshold: 0.4,
-            speckle_anomaly_threshold: 0.6,
-            segmentation_sensitivity: 0.4,
-            voxel_size_mm: 0.5,
+            lesion_confidence_threshold: Dimensionless::from_base(0.7),
+            contrast_abnormality_threshold: Dimensionless::from_base(1.5),
+            tissue_uncertainty_threshold: Dimensionless::from_base(0.4),
+            speckle_anomaly_threshold: Dimensionless::from_base(0.6),
+            segmentation_sensitivity: Dimensionless::from_base(0.4),
+            voxel_size: Length::from_unit::<Millimeter>(0.5),
         }
     }
 
@@ -103,12 +105,12 @@ impl ClinicalThresholds {
     #[must_use]
     pub fn high_specificity() -> Self {
         Self {
-            lesion_confidence_threshold: 0.95,
-            contrast_abnormality_threshold: 2.5,
-            tissue_uncertainty_threshold: 0.2,
-            speckle_anomaly_threshold: 0.8,
-            segmentation_sensitivity: 0.6,
-            voxel_size_mm: 0.5,
+            lesion_confidence_threshold: Dimensionless::from_base(0.95),
+            contrast_abnormality_threshold: Dimensionless::from_base(2.5),
+            tissue_uncertainty_threshold: Dimensionless::from_base(0.2),
+            speckle_anomaly_threshold: Dimensionless::from_base(0.8),
+            segmentation_sensitivity: Dimensionless::from_base(0.6),
+            voxel_size: Length::from_unit::<Millimeter>(0.5),
         }
     }
 
@@ -117,16 +119,16 @@ impl ClinicalThresholds {
     /// - Returns [`Err`] with a description if any threshold is out of range.
     ///
     pub fn validate(&self) -> Result<(), String> {
-        if !(0.0..=1.0).contains(&self.lesion_confidence_threshold) {
+        if !(0.0..=1.0).contains(self.lesion_confidence_threshold.as_base()) {
             return Err("Lesion confidence threshold must be in [0, 1]".to_owned());
         }
-        if self.contrast_abnormality_threshold < 0.0 {
+        if *self.contrast_abnormality_threshold.as_base() < 0.0 {
             return Err("Contrast abnormality threshold must be positive".to_owned());
         }
-        if !(0.0..=1.0).contains(&self.tissue_uncertainty_threshold) {
+        if !(0.0..=1.0).contains(self.tissue_uncertainty_threshold.as_base()) {
             return Err("Tissue uncertainty threshold must be in [0, 1]".to_owned());
         }
-        if self.voxel_size_mm <= 0.0 {
+        if *self.voxel_size.as_base() <= 0.0 {
             return Err("Voxel size must be positive".to_owned());
         }
         Ok(())
@@ -149,8 +151,8 @@ pub struct AIBeamformingConfig {
     /// Enable real-time PINN inference.
     pub enable_realtime_pinn: bool,
 
-    /// Performance target in milliseconds.
-    pub performance_target_ms: f64,
+    /// Maximum processing time as an Aequitas time quantity.
+    pub performance_target: Time<f64>,
 }
 
 impl Default for AIBeamformingConfig {
@@ -160,7 +162,7 @@ impl Default for AIBeamformingConfig {
             feature_config: FeatureConfig::default(),
             clinical_thresholds: ClinicalThresholds::default(),
             enable_realtime_pinn: true,
-            performance_target_ms: 100.0,
+            performance_target: Time::from_unit::<Millisecond>(100.0),
         }
     }
 }
@@ -174,7 +176,7 @@ impl AIBeamformingConfig {
         self.feature_config.validate()?;
         self.clinical_thresholds.validate()?;
 
-        if self.performance_target_ms <= 0.0 {
+        if *self.performance_target.as_base() <= 0.0 {
             return Err("Performance target must be positive".to_owned());
         }
 
@@ -207,24 +209,24 @@ pub struct AIBeamformingResult {
 /// Execution time and resource usage for each AI beamforming stage.
 #[derive(Debug, Clone)]
 pub struct AiBeamformingMetrics {
-    /// Total processing time in milliseconds.
-    pub total_time_ms: f64,
+    /// Total processing time as an Aequitas time quantity.
+    pub total_time: Time<f64>,
 
-    /// Beamforming stage time in milliseconds.
-    pub beamforming_time_ms: f64,
+    /// Beamforming stage time as an Aequitas time quantity.
+    pub beamforming_time: Time<f64>,
 
-    /// Feature extraction time in milliseconds.
-    pub feature_extraction_time_ms: f64,
+    /// Feature extraction time as an Aequitas time quantity.
+    pub feature_extraction_time: Time<f64>,
 
-    /// PINN inference time in milliseconds.
-    pub pinn_inference_time_ms: f64,
+    /// PINN inference time as an Aequitas time quantity.
+    pub pinn_inference_time: Time<f64>,
 
-    /// Clinical analysis time in milliseconds.
-    pub clinical_analysis_time_ms: f64,
+    /// Clinical analysis time as an Aequitas time quantity.
+    pub clinical_analysis_time: Time<f64>,
 
-    /// Estimated memory usage in megabytes.
-    pub memory_usage_mb: f64,
+    /// Estimated memory usage in bytes at the storage-instrumentation boundary.
+    pub memory_usage_bytes: u64,
 
-    /// GPU utilization percentage [0, 100].
-    pub gpu_utilization_percent: f64,
+    /// GPU utilization as a dimensionless percentage value [0, 100].
+    pub gpu_utilization: Option<Dimensionless<f64>>,
 }

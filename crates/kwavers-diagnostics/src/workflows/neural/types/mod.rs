@@ -5,6 +5,7 @@
 
 pub mod ai_beamforming;
 
+use aequitas::systems::si::quantities::{Dimensionless, Length};
 use leto::Array3;
 use std::collections::HashMap;
 
@@ -27,8 +28,8 @@ pub struct ClinicalAnalysis {
     /// Clinical recommendations.
     pub recommendations: Vec<String>,
 
-    /// Overall diagnostic confidence [0, 1].
-    pub diagnostic_confidence: f32,
+    /// Overall diagnostic confidence as a dimensionless fraction in [0, 1].
+    pub diagnostic_confidence: Dimensionless<f32>,
 }
 
 impl ClinicalAnalysis {
@@ -39,7 +40,7 @@ impl ClinicalAnalysis {
             lesions: Vec::new(),
             tissue_classification: TissueClassification::empty(),
             recommendations: Vec::new(),
-            diagnostic_confidence: 0.0,
+            diagnostic_confidence: Dimensionless::from_base(0.0),
         }
     }
 
@@ -52,7 +53,10 @@ impl ClinicalAnalysis {
     /// Count high-confidence lesions (confidence > 0.9).
     #[must_use]
     pub fn high_confidence_lesion_count(&self) -> usize {
-        self.lesions.iter().filter(|l| l.confidence > 0.9).count()
+        self.lesions
+            .iter()
+            .filter(|l| *l.confidence.as_base() > 0.9)
+            .count()
     }
 }
 
@@ -62,32 +66,32 @@ pub struct LesionDetection {
     /// Lesion center coordinates (x, y, z) in voxel space.
     pub center: (usize, usize, usize),
 
-    /// Lesion size (diameter in mm).
-    pub size_mm: f32,
+    /// Lesion diameter as an Aequitas length quantity.
+    pub size: Length<f32>,
 
-    /// Detection confidence [0, 1].
-    pub confidence: f32,
+    /// Detection confidence as a dimensionless fraction in [0, 1].
+    pub confidence: Dimensionless<f32>,
 
     /// Lesion type classification.
     pub lesion_type: String,
 
-    /// Clinical significance score [0, 1].
-    pub clinical_significance: f32,
+    /// Clinical significance as a dimensionless fraction in [0, 1].
+    pub clinical_significance: Dimensionless<f32>,
 }
 
 impl LesionDetection {
     /// Return true if lesion requires immediate clinical attention.
     #[must_use]
     pub fn requires_urgent_attention(&self) -> bool {
-        self.clinical_significance > 0.8 || self.size_mm > 10.0
+        *self.clinical_significance.as_base() > 0.8 || *self.size.as_base() > 0.01
     }
 
     /// Risk category: "HIGH", "MODERATE", or "LOW".
     #[must_use]
     pub fn risk_category(&self) -> &str {
-        if self.clinical_significance > 0.7 || self.size_mm > 10.0 {
+        if *self.clinical_significance.as_base() > 0.7 || *self.size.as_base() > 0.01 {
             "HIGH"
-        } else if self.clinical_significance > 0.4 || self.size_mm > 5.0 {
+        } else if *self.clinical_significance.as_base() > 0.4 || *self.size.as_base() > 0.005 {
             "MODERATE"
         } else {
             "LOW"

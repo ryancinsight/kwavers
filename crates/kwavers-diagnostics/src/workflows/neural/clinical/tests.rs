@@ -1,12 +1,37 @@
 use super::super::types::{ClinicalThresholds, FeatureMap, LesionDetection, TissueClassification};
 use super::NeuralClinicalDecisionSupport;
+use aequitas::systems::si::quantities::{Dimensionless, Length};
+use aequitas::systems::si::units::Millimeter;
 use leto::Array3;
+
+fn dimensionless(value: f32) -> Dimensionless<f32> {
+    Dimensionless::from_base(value)
+}
+
+fn length_mm(value: f32) -> Length<f32> {
+    Length::from_unit::<Millimeter>(value)
+}
 
 #[test]
 fn test_clinical_decision_support_creation() {
     let thresholds = ClinicalThresholds::default();
     let support = NeuralClinicalDecisionSupport::new(thresholds);
-    assert!(support.config.lesion_confidence_threshold > 0.0);
+    assert!(*support.config.lesion_confidence_threshold.as_base() > 0.0);
+    assert_eq!(support.config.voxel_size.in_unit::<Millimeter>(), 0.5);
+}
+
+#[test]
+fn test_lesion_size_unit_boundary() {
+    let lesion = LesionDetection {
+        center: (0, 0, 0),
+        size: length_mm(10.1),
+        confidence: dimensionless(0.5),
+        lesion_type: "Solid".to_owned(),
+        clinical_significance: dimensionless(0.2),
+    };
+
+    assert!(lesion.requires_urgent_attention());
+    assert_eq!(lesion.risk_category(), "HIGH");
 }
 
 #[test]
@@ -29,10 +54,10 @@ fn test_clinical_significance_assessment() {
     let support = NeuralClinicalDecisionSupport::new(ClinicalThresholds::default());
 
     let high_sig = support.assess_clinical_significance(0.9, 0.8);
-    assert!(high_sig > 0.8);
+    assert!(*high_sig.as_base() > 0.8);
 
     let low_sig = support.assess_clinical_significance(0.3, 0.2);
-    assert!(low_sig < 0.3);
+    assert!(*low_sig.as_base() < 0.3);
 }
 
 #[test]
@@ -52,17 +77,17 @@ fn test_recommendations_with_lesions() {
     let lesions = vec![
         LesionDetection {
             center: (10, 10, 10),
-            size_mm: 5.0,
-            confidence: 0.95,
+            size: length_mm(5.0),
+            confidence: dimensionless(0.95),
             lesion_type: "Solid".to_string(),
-            clinical_significance: 0.85,
+            clinical_significance: dimensionless(0.85),
         },
         LesionDetection {
             center: (20, 20, 20),
-            size_mm: 3.0,
-            confidence: 0.75,
+            size: length_mm(3.0),
+            confidence: dimensionless(0.75),
             lesion_type: "Cyst".to_string(),
-            clinical_significance: 0.60,
+            clinical_significance: dimensionless(0.60),
         },
     ];
     let classification = TissueClassification::empty();
@@ -87,10 +112,10 @@ fn test_diagnostic_confidence_with_lesions() {
     let support = NeuralClinicalDecisionSupport::new(ClinicalThresholds::default());
     let lesions = vec![LesionDetection {
         center: (5, 5, 5),
-        size_mm: 4.0,
-        confidence: 0.9,
+        size: length_mm(4.0),
+        confidence: dimensionless(0.9),
         lesion_type: "Solid".to_string(),
-        clinical_significance: 0.8,
+        clinical_significance: dimensionless(0.8),
     }];
     let confidence = Array3::from_elem((10, 10, 10), 0.85);
 
@@ -128,5 +153,5 @@ fn test_lesion_size_estimation() {
 
     let features = FeatureMap::new();
     let size_mm = support.estimate_lesion_size(volume.view(), &features, 15, 15, 15);
-    assert!(size_mm > 0.0);
+    assert!(*size_mm.as_base() > 0.0);
 }

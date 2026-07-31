@@ -4,6 +4,13 @@
 
 ### Changed
 
+- **Breaking**: Neural diagnostic lesion geometry, voxel spacing, beamforming
+  targets, stage timings, confidence, significance, and optional GPU
+  utilization now use Aequitas `Length`, `Time`, and `Dimensionless` contracts.
+  Memory accounting is an explicit byte-count boundary and unavailable GPU
+  telemetry is represented as `None` rather than `NaN`. See [ADR
+  077](docs/ADR/077-neural-diagnostics-quantities.md).
+
 - **Breaking**: Visualization frame-rate, render/transfer timing, simulation
   frame time, stream latency, pipeline budgets, quality, and drop-rate metrics
   now use Aequitas `Frequency`, `Time`, and `Dimensionless` quantities. Byte

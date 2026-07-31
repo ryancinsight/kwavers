@@ -1,4 +1,6 @@
 use super::*;
+use aequitas::systems::si::quantities::Time;
+use aequitas::systems::si::units::Millisecond;
 
 #[test]
 fn test_workflow_creation() {
@@ -28,9 +30,13 @@ fn test_performance_stats() {
     let mut workflow = RealTimeWorkflow::new();
 
     // Add performance data
-    workflow
-        .performance_history
-        .extend_from_slice(&[50.0, 60.0, 55.0, 65.0, 70.0]);
+    workflow.performance_history.extend_from_slice(&[
+        Time::from_unit::<Millisecond>(50.0),
+        Time::from_unit::<Millisecond>(60.0),
+        Time::from_unit::<Millisecond>(55.0),
+        Time::from_unit::<Millisecond>(65.0),
+        Time::from_unit::<Millisecond>(70.0),
+    ]);
     workflow
         .quality_metrics
         .insert("avg_processing_time".to_string(), 60.0);
@@ -51,13 +57,19 @@ fn test_rolling_window() {
 
     // Add 150 measurements
     for i in 0..150 {
-        workflow.record_processing_time_ms(i as f64);
+        workflow.record_processing_time(Time::from_unit::<Millisecond>(i as f64));
     }
 
     // Should maintain only last 100
     assert_eq!(workflow.performance_history.len(), 100);
-    assert_eq!(workflow.performance_history[0], 50.0); // First element is 50th measurement
-    assert_eq!(workflow.performance_history[99], 149.0); // Last element is 149th measurement
+    assert_eq!(
+        workflow.performance_history[0].in_unit::<Millisecond>(),
+        50.0
+    ); // First element is 50th measurement
+    assert_eq!(
+        workflow.performance_history[99].in_unit::<Millisecond>(),
+        149.0
+    ); // Last element is 149th measurement
 }
 
 #[test]
@@ -122,7 +134,9 @@ fn test_health_status() {
 fn test_reset() {
     let mut workflow = RealTimeWorkflow::new();
 
-    workflow.performance_history.push(50.0);
+    workflow
+        .performance_history
+        .push(Time::from_unit::<Millisecond>(50.0));
     workflow
         .quality_metrics
         .insert("avg_time".to_string(), 50.0);
@@ -138,8 +152,10 @@ fn test_execution_count() {
     let mut workflow = RealTimeWorkflow::new();
     assert_eq!(workflow.execution_count(), 0);
 
-    workflow
-        .performance_history
-        .extend_from_slice(&[50.0, 60.0, 70.0]);
+    workflow.performance_history.extend_from_slice(&[
+        Time::from_unit::<Millisecond>(50.0),
+        Time::from_unit::<Millisecond>(60.0),
+        Time::from_unit::<Millisecond>(70.0),
+    ]);
     assert_eq!(workflow.execution_count(), 3);
 }

@@ -1,5 +1,6 @@
 //! AIEnhancedBeamformingProcessor struct and impl.
 
+use aequitas::systems::si::quantities::Time;
 use leto::{Array3, ArrayView4};
 use std::time::Instant;
 
@@ -116,11 +117,13 @@ impl AIEnhancedBeamformingProcessor {
 
         let total_time = start_time.elapsed().as_secs_f64() * 1000.0;
 
-        if total_time > self.config.performance_target_ms {
+        if total_time > *self.config.performance_target.as_base() {
             log::warn!(
                 "Neural beamforming exceeded performance target: {:.2}ms > {:.2}ms",
                 total_time,
-                self.config.performance_target_ms
+                self.config
+                    .performance_target
+                    .in_unit::<aequitas::systems::si::units::Millisecond>()
             );
         }
 
@@ -131,13 +134,13 @@ impl AIEnhancedBeamformingProcessor {
             features,
             clinical_analysis,
             performance: AiBeamformingMetrics {
-                total_time_ms: total_time,
-                beamforming_time_ms: beamforming_time,
-                feature_extraction_time_ms: feature_time,
-                pinn_inference_time_ms: pinn_time,
-                clinical_analysis_time_ms: clinical_time,
-                memory_usage_mb: self.estimate_memory_usage(),
-                gpu_utilization_percent: f64::NAN,
+                total_time: Time::from_base(total_time),
+                beamforming_time: Time::from_base(beamforming_time),
+                feature_extraction_time: Time::from_base(feature_time),
+                pinn_inference_time: Time::from_base(pinn_time),
+                clinical_analysis_time: Time::from_base(clinical_time),
+                memory_usage_bytes: self.estimate_memory_usage_bytes(),
+                gpu_utilization: None,
             },
         })
     }
@@ -247,11 +250,11 @@ impl AIEnhancedBeamformingProcessor {
     }
 
     /// Estimate memory usage in megabytes.
-    pub(super) fn estimate_memory_usage(&self) -> f64 {
+    pub(super) fn estimate_memory_usage_bytes(&self) -> u64 {
         let volume_size = 64 * 64 * 100 * 4;
         let feature_size = volume_size * 3;
         let buffer_size = volume_size * 2;
-        (volume_size + feature_size + buffer_size) as f64 / (1024.0 * 1024.0)
+        (volume_size + feature_size + buffer_size) as u64
     }
 
     /// Get current configuration.

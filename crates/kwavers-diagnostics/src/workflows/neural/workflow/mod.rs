@@ -24,6 +24,8 @@
 #[cfg(test)]
 mod tests;
 
+use aequitas::systems::si::quantities::Time;
+use aequitas::systems::si::units::Millisecond;
 use std::collections::HashMap;
 
 #[cfg(feature = "pinn")]
@@ -61,7 +63,7 @@ use leto::ArrayView4;
 #[derive(Debug)]
 pub struct RealTimeWorkflow {
     /// Performance monitoring history (rolling window)
-    pub performance_history: Vec<f64>,
+    pub performance_history: Vec<Time<f64>>,
 
     /// Quality metrics tracking
     pub quality_metrics: HashMap<String, f64>,
@@ -79,8 +81,9 @@ impl RealTimeWorkflow {
         }
     }
 
-    pub fn record_processing_time_ms(&mut self, time_ms: f64) {
-        self.performance_history.push(time_ms);
+    /// Record one processing duration in the rolling time history.
+    pub fn record_processing_time(&mut self, time: Time<f64>) {
+        self.performance_history.push(time);
         if self.performance_history.len() > 100 {
             let drain_end = self.performance_history.len() - 100;
             self.performance_history.drain(0..drain_end);
@@ -126,17 +129,21 @@ impl RealTimeWorkflow {
         let result = processor.process_ai_enhanced(rf_data, angles)?;
 
         // Update performance history
-        self.record_processing_time_ms(result.performance.total_time_ms);
+        self.record_processing_time(result.performance.total_time);
 
         // Update quality metrics
         self.quality_metrics.insert(
             "avg_processing_time".to_string(),
-            self.performance_history.iter().sum::<f64>() / self.performance_history.len() as f64,
+            self.performance_history
+                .iter()
+                .map(|time| time.in_unit::<Millisecond>())
+                .sum::<f64>()
+                / self.performance_history.len() as f64,
         );
 
         self.quality_metrics.insert(
             "diagnostic_confidence".to_string(),
-            result.clinical_analysis.diagnostic_confidence as f64,
+            f64::from(*result.clinical_analysis.diagnostic_confidence.as_base()),
         );
 
         self.quality_metrics.insert(
@@ -163,7 +170,11 @@ impl RealTimeWorkflow {
         let mut stats = self.quality_metrics.clone();
 
         if !self.performance_history.is_empty() {
-            let times = &self.performance_history;
+            let times: Vec<f64> = self
+                .performance_history
+                .iter()
+                .map(|time| time.in_unit::<Millisecond>())
+                .collect();
             stats.insert(
                 "min_time".to_owned(),
                 times.iter().copied().fold(f64::INFINITY, f64::min),
@@ -172,7 +183,7 @@ impl RealTimeWorkflow {
                 "max_time".to_owned(),
                 times.iter().copied().fold(f64::NEG_INFINITY, f64::max),
             );
-            stats.insert("median_time".to_owned(), self.compute_median(times));
+            stats.insert("median_time".to_owned(), self.compute_median(&times));
         }
 
         stats

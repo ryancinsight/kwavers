@@ -1,5 +1,21 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-39 typed neural diagnostics quantities [major] — done 2026-07-31
+
+- [x] Type neural diagnostic lesion geometry, voxel spacing, beamforming
+      targets, stage timings, and dimensionless confidence/utilization metrics;
+      keep dense Leto arrays and memory bytes at explicit boundaries.
+- [x] Migrate all neural callers/tests, remove unit-suffixed public names, and
+      represent unavailable GPU telemetry as absence rather than `NaN`.
+- [x] Synchronize ADR 077, gap-audit, backlog, checklist, changelog, and the
+      Atlas cross-repository audit; verify the diagnostics package with the
+      committed test/check gates and preserve peer-owned changes.
+
+Evidence: diagnostics test-target check passes offline; focused neural Nextest
+passes 40/40 with 151 skipped; warning-denied all-target Clippy, doctests,
+Rustdoc, formatting, and diff checks pass. Shared unused-provider-patch and
+linker warnings remain outside this item.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-33 typed plasmonics quantities [major] — in progress 2026-07-28
 
 - [ ] Add the provider-owned Aequitas polarizability dimension and coherent

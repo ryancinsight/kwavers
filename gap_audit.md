@@ -29,6 +29,35 @@
 
 # Gap Audit
 
+## Live neural-diagnostics refresh — 2026-07-31
+
+`KWAVERS-AEQ-MET-39` found a remaining public metric family in
+`kwavers-diagnostics::workflows::neural`: lesion diameter and voxel spacing
+were millimetre scalars, beamforming targets and stage timings were
+millisecond scalars, and confidence/significance/utilization values were
+untyped fractions. The public contracts now use Aequitas `Length`, `Time`, and
+`Dimensionless`; the rolling workflow history stores typed `Time` values and
+scalar extraction is limited to formulas, comparisons, and report formatting.
+
+The previous GPU utilization `NaN` sentinel is now `None`, so unavailable
+telemetry is represented as absence. Memory remains `memory_usage_bytes` at an
+explicit storage-instrumentation boundary because Aequitas has no information
+dimension. Dense Leto confidence/uncertainty arrays remain numerical storage
+boundaries rather than pretending each element is an independent Aequitas
+quantity.
+
+Eunomia compatibility is real-only for this family. Neural clinical metrics do
+not carry phasor or imaginary components, so no complex unit is introduced;
+future coherent imaging outputs must use the existing Eunomia-backed complex
+quantity support at their formula/storage boundary. See [ADR
+077](docs/ADR/077-neural-diagnostics-quantities.md).
+
+Diagnostics test-target compilation passes offline. The focused neural
+Nextest filter passes 40/40 tests with 151 unrelated tests skipped;
+warning-denied all-target Clippy, doctests, Rustdoc, formatting, and diff
+checks pass. Shared unused-provider-patch and linker warnings remain outside
+this metric closure.
+
 ## Live visualization telemetry refresh — 2026-07-31
 
 `KWAVERS-AEQ-MET-38` found a separate visualization performance family that

@@ -28,7 +28,9 @@ impl NeuralClinicalDecisionSupport {
             lesions,
             tissue_classification,
             recommendations,
-            diagnostic_confidence,
+            diagnostic_confidence: aequitas::systems::si::quantities::Dimensionless::from_base(
+                diagnostic_confidence,
+            ),
         })
     }
 
@@ -119,7 +121,10 @@ impl NeuralClinicalDecisionSupport {
                 lesions.len()
             ));
 
-            let high_confidence_lesions = lesions.iter().filter(|l| l.confidence > 0.9).count();
+            let high_confidence_lesions = lesions
+                .iter()
+                .filter(|l| *l.confidence.as_base() > 0.9)
+                .count();
             if high_confidence_lesions > 0 {
                 recommendations.push(format!(
                     "{} high-confidence lesion(s) identified. Urgent clinical evaluation recommended.",
@@ -146,7 +151,7 @@ impl NeuralClinicalDecisionSupport {
         let lesion_confidence = if lesions.is_empty() {
             0.9
         } else {
-            lesions.iter().map(|l| l.confidence).sum::<f32>() / lesions.len() as f32
+            lesions.iter().map(|l| *l.confidence.as_base()).sum::<f32>() / lesions.len() as f32
         };
 
         let image_confidence = confidence.iter().sum::<f32>() / confidence.size() as f32;

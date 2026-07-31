@@ -107,7 +107,7 @@ impl DiagnosisAlgorithm {
     ) -> KwaversResult<String> {
         let lesion_count = clinical_data.lesions.len();
         let high_confidence_count = clinical_data.high_confidence_lesion_count();
-        let diagnostic_confidence = clinical_data.diagnostic_confidence;
+        let diagnostic_confidence = *clinical_data.diagnostic_confidence.as_base();
 
         let diagnosis = if lesion_count == 0 {
             if diagnostic_confidence > 0.85 {
@@ -158,13 +158,13 @@ impl DiagnosisAlgorithm {
         let has_high_significance = clinical_data
             .lesions
             .iter()
-            .any(|l| l.clinical_significance > 0.8);
+            .any(|l| *l.clinical_significance.as_base() > 0.8);
 
         if high_confidence_count > 0 || has_high_significance {
             "URGENT".to_owned()
         } else if !clinical_data.lesions.is_empty() {
             "HIGH".to_owned()
-        } else if clinical_data.diagnostic_confidence < 0.7 {
+        } else if *clinical_data.diagnostic_confidence.as_base() < 0.7 {
             "ROUTINE".to_owned()
         } else {
             "NEGATIVE".to_owned()
@@ -197,7 +197,7 @@ impl DiagnosisAlgorithm {
         );
         report.insert(
             "diagnostic_confidence".to_owned(),
-            format!("{:.2}", clinical_data.diagnostic_confidence),
+            format!("{:.2}", clinical_data.diagnostic_confidence.as_base()),
         );
         report.insert("priority".to_owned(), self.assess_priority(clinical_data));
 
@@ -214,8 +214,10 @@ impl DiagnosisAlgorithm {
                         lesion.center.0,
                         lesion.center.1,
                         lesion.center.2,
-                        lesion.size_mm,
-                        lesion.confidence
+                        lesion
+                            .size
+                            .in_unit::<aequitas::systems::si::units::Millimeter>(),
+                        lesion.confidence.as_base()
                     )
                 })
                 .collect();
