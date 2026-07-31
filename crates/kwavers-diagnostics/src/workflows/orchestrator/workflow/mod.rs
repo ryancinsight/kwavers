@@ -20,12 +20,22 @@ use super::super::simulation::{
 use super::super::state::WorkflowState;
 use super::monitor::WorkflowPerformanceMonitor;
 use crate::photoacoustic::{PhotoacousticResult, PressureFieldSeries};
+use aequitas::systems::si::quantities::Time;
+use aequitas::systems::si::units::Millisecond;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_imaging::fusion::{FusedImageResult, FusionConfig};
 use kwavers_imaging::ultrasound::elastography::ElasticityMap;
 use kwavers_physics::acoustics::imaging::fusion::MultiModalFusion;
 use std::collections::HashMap;
-use std::time::{Duration, Instant};
+use std::time::Instant;
+
+fn elapsed_time(start: Instant) -> Time<f64> {
+    Time::from_base(start.elapsed().as_secs_f64())
+}
+
+fn latency_share(latency: Time<f64>) -> Time<f64> {
+    Time::from_base(*latency.as_base() / 3.0)
+}
 
 /// Real-time clinical workflow orchestrator.
 #[derive(Debug)]
@@ -85,31 +95,35 @@ impl ClinicalWorkflowOrchestrator {
         self.performance_monitor.start_monitoring();
 
         self.state = WorkflowState::Acquiring;
+        let stage_start = Instant::now();
         let acquisition_result = self.acquire_multimodal_data()?;
         self.performance_monitor
-            .record_stage("acquisition", start_time.elapsed());
+            .record_stage("acquisition", elapsed_time(stage_start));
 
         self.state = WorkflowState::Processing;
+        let stage_start = Instant::now();
         let _processing_result = self.process_realtime_data(acquisition_result)?;
         self.performance_monitor
-            .record_stage("processing", start_time.elapsed());
+            .record_stage("processing", elapsed_time(stage_start));
 
         self.state = WorkflowState::Fusing;
+        let stage_start = Instant::now();
         let fused_result = self.fusion_processor.fuse()?;
         self.performance_monitor
-            .record_stage("fusion", start_time.elapsed());
+            .record_stage("fusion", elapsed_time(stage_start));
 
         self.state = WorkflowState::Analyzing;
+        let stage_start = Instant::now();
         let analysis_result = self.perform_ai_analysis(&fused_result)?;
         self.performance_monitor
-            .record_stage("analysis", start_time.elapsed());
+            .record_stage("analysis", elapsed_time(stage_start));
 
         self.state = WorkflowState::Reporting;
         let clinical_result = self.generate_clinical_report(
             patient_id,
             fused_result,
             analysis_result,
-            start_time.elapsed(),
+            elapsed_time(start_time),
         )?;
 
         self.state = WorkflowState::Completed;
@@ -123,15 +137,15 @@ impl ClinicalWorkflowOrchestrator {
         let pa_result = self.acquire_photoacoustic_data()?;
         let elastography_result = self.acquire_elastography_data()?;
 
-        let acquisition_time = acquisition_start.elapsed();
+        let acquisition_time = elapsed_time(acquisition_start);
         if self.config.real_time_enabled
-            && acquisition_time > Duration::from_millis(self.config.max_latency_ms / 3)
+            && acquisition_time > latency_share(self.config.max_latency)
         {
             return Err(KwaversError::Validation(
                 kwavers_core::error::ValidationError::ConstraintViolation {
                     message: format!(
                         "Acquisition time {}ms exceeds real-time constraint",
-                        acquisition_time.as_millis()
+                        acquisition_time.in_unit::<Millisecond>()
                     ),
                 },
             ));
@@ -160,15 +174,14 @@ impl ClinicalWorkflowOrchestrator {
 
         let quality_metrics = self.perform_quality_assessment(&acquisition)?;
 
-        let processing_time = processing_start.elapsed();
-        if self.config.real_time_enabled
-            && processing_time > Duration::from_millis(self.config.max_latency_ms / 3)
+        let processing_time = elapsed_time(processing_start);
+        if self.config.real_time_enabled && processing_time > latency_share(self.config.max_latency)
         {
             return Err(KwaversError::Validation(
                 kwavers_core::error::ValidationError::ConstraintViolation {
                     message: format!(
                         "Processing time {}ms exceeds real-time constraint",
-                        processing_time.as_millis()
+                        processing_time.in_unit::<Millisecond>()
                     ),
                 },
             ));
@@ -191,11 +204,6 @@ impl ClinicalWorkflowOrchestrator {
         let recommendations = generate_diagnostic_recommendations(&tissue_properties)?;
 
         let confidence_score = calculate_confidence_score(fused_result, &tissue_properties);
-        let confidence_score = if confidence_score.is_nan() || confidence_score.is_infinite() {
-            75.0
-        } else {
-            confidence_score
-        };
 
         Ok(AnalysisResult {
             tissue_properties,
@@ -209,14 +217,14 @@ impl ClinicalWorkflowOrchestrator {
         patient_id: &str,
         fused_result: FusedImageResult,
         analysis: AnalysisResult,
-        total_time: Duration,
+        total_time: Time<f64>,
     ) -> KwaversResult<ClinicalExaminationResult> {
         let performance_metrics = WorkflowTimingMetrics {
             total_time,
             stage_times: self.performance_monitor.get_stage_times(),
             gpu_utilization: self.performance_monitor.get_gpu_utilization(),
-            memory_usage_mb: self.performance_monitor.get_memory_usage(),
-            real_time_satisfied: total_time < Duration::from_millis(self.config.max_latency_ms),
+            memory_usage_bytes: self.performance_monitor.get_memory_usage_bytes(),
+            real_time_satisfied: total_time < self.config.max_latency,
         };
 
         Ok(ClinicalExaminationResult {
@@ -304,6 +312,6 @@ impl ClinicalWorkflowOrchestrator {
             return true;
         }
         let total_time = self.performance_monitor.get_total_time();
-        total_time < Duration::from_millis(self.config.max_latency_ms)
+        total_time < self.config.max_latency
     }
 }

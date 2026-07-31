@@ -60,14 +60,15 @@ mod tests {
 
         let result = workflow.execute_examination("patient_001").unwrap();
         assert_eq!(result.patient_id, "patient_001");
-        assert!(result.confidence_score >= 0.0 && result.confidence_score <= 100.0);
+        assert!(*result.confidence_score.as_base() >= 0.0);
+        assert!(*result.confidence_score.as_base() <= 100.0);
         assert!(!result.diagnostic_recommendations.is_empty());
     }
 
     #[test]
     fn test_realtime_performance_check() {
         let config = ClinicalWorkflowConfig {
-            max_latency_ms: 1000,
+            max_latency: aequitas::systems::si::quantities::Time::from_base(1.0),
             real_time_enabled: true,
             ..Default::default()
         };

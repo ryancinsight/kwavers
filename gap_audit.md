@@ -29,6 +29,31 @@
 
 # Gap Audit
 
+## Live clinical-workflow refresh — 2026-07-31
+
+`KWAVERS-AEQ-MET-40` found a remaining orchestration metric family in
+`kwavers-diagnostics::workflows`: latency configuration, acquisition and
+processing durations, stage timing, total workflow time, confidence, GPU
+utilization, and memory usage were exposed as raw millisecond/percentage/MB
+scalars. The monitor also generated GPU and memory samples from trigonometric
+functions instead of measuring a provider, and stage values were cumulative
+workflow elapsed times rather than individual intervals.
+
+The public contracts now use Aequitas `Time` for latency and durations and
+`Dimensionless` for confidence/utilization. GPU utilization and memory are
+optional until real telemetry is connected; bytes remain an explicit storage
+boundary because Aequitas has no information dimension. Stage timing records
+the interval for each stage. The neural beamforming timing conversion now
+stores SI seconds, matching its Aequitas `Time` target, while presentation
+still converts explicitly to milliseconds.
+
+Eunomia compatibility is real-only for this workflow family. No clinical
+workflow metric carries a complex or imaginary component, so no complex unit
+is introduced. Future coherent imaging results use the existing Eunomia-backed
+complex support at their formula or dense-storage boundary.
+
+See [ADR 078](docs/ADR/078-clinical-workflow-quantities.md).
+
 ## Live neural-diagnostics refresh — 2026-07-31
 
 `KWAVERS-AEQ-MET-39` found a remaining public metric family in

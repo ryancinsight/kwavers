@@ -1,4 +1,5 @@
 use super::results::{DiagnosticRecommendation, DiagnosticUrgency};
+use aequitas::systems::si::quantities::Dimensionless;
 use kwavers_core::error::KwaversResult;
 use kwavers_imaging::fusion::FusedImageResult;
 use leto::Array3;
@@ -106,7 +107,7 @@ pub fn generate_diagnostic_recommendations(
         recommendations.push(DiagnosticRecommendation {
             finding: "High suspicion of tissue abnormality requiring immediate attention"
                 .to_owned(),
-            confidence: f64::min(75.0 + diagnostic_score * 0.5, 98.0),
+            confidence: Dimensionless::from_base(f64::min(75.0 + diagnostic_score * 0.5, 98.0)),
             recommendations: vec![
                 "Urgent biopsy recommended within 1-2 weeks".to_owned(),
                 "Consider MRI or PET-CT for staging".to_owned(),
@@ -121,7 +122,7 @@ pub fn generate_diagnostic_recommendations(
         // Moderate suspicion case
         recommendations.push(DiagnosticRecommendation {
             finding: "Moderate tissue abnormalities detected - requires monitoring".to_owned(),
-            confidence: f64::min(65.0 + diagnostic_score * 0.75, 85.0),
+            confidence: Dimensionless::from_base(f64::min(65.0 + diagnostic_score * 0.75, 85.0)),
             recommendations: vec![
                 "Biopsy recommended within 4-6 weeks".to_owned(),
                 "Schedule follow-up imaging in 3 months".to_owned(),
@@ -135,7 +136,7 @@ pub fn generate_diagnostic_recommendations(
         // Low suspicion case
         recommendations.push(DiagnosticRecommendation {
             finding: "Minor tissue variations detected - low suspicion".to_owned(),
-            confidence: f64::min(80.0 + diagnostic_score, 92.0),
+            confidence: Dimensionless::from_base(f64::min(80.0 + diagnostic_score, 92.0)),
             recommendations: vec![
                 "Continue routine screening schedule".to_owned(),
                 "Annual follow-up imaging recommended".to_owned(),
@@ -148,7 +149,7 @@ pub fn generate_diagnostic_recommendations(
         // Normal case
         recommendations.push(DiagnosticRecommendation {
             finding: "No significant abnormalities detected - normal findings".to_owned(),
-            confidence: 95.0,
+            confidence: Dimensionless::from_base(95.0),
             recommendations: vec![
                 "Continue routine screening schedule".to_owned(),
                 "Annual follow-up as per standard protocol".to_owned(),
@@ -169,7 +170,7 @@ pub fn generate_diagnostic_recommendations(
 pub fn calculate_confidence_score(
     fused_result: &FusedImageResult,
     tissue_properties: &HashMap<String, Array3<f64>>,
-) -> f64 {
+) -> Dimensionless<f64> {
     // Calculate overall confidence based on multiple factors
     let mut confidence = 80.0; // Base confidence
 
@@ -196,5 +197,5 @@ pub fn calculate_confidence_score(
         confidence += 5.0; // Bonus for having tissue classification
     }
 
-    confidence.clamp(0.0, 100.0)
+    Dimensionless::from_base(confidence.clamp(0.0, 100.0))
 }

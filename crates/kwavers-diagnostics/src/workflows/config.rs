@@ -1,4 +1,6 @@
 // Simple config structs for clinical workflows
+use aequitas::systems::si::quantities::Time;
+
 #[derive(Debug, Clone)]
 pub struct ClinicalPhotoacousticConfig {
     pub _wavelength: f64,
@@ -33,8 +35,8 @@ pub struct ClinicalWorkflowConfig {
     pub quality_preference: QualityPreference,
     /// Enable real-time processing
     pub real_time_enabled: bool,
-    /// Maximum acceptable latency (ms)
-    pub max_latency_ms: u64,
+    /// Maximum acceptable workflow latency as an SI time quantity.
+    pub max_latency: Time<f64>,
     /// Enable AI decision support
     pub ai_decision_support: bool,
     /// Clinical protocol to follow
@@ -48,7 +50,7 @@ impl Default for ClinicalWorkflowConfig {
             priority: WorkflowPriority::Standard,
             quality_preference: QualityPreference::Balanced,
             real_time_enabled: true,
-            max_latency_ms: 500, // 500ms max latency
+            max_latency: Time::from_base(0.5),
             ai_decision_support: true,
             protocol: ClinicalProtocol::Standard,
         }

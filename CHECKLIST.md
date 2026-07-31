@@ -1,5 +1,16 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-40 typed clinical workflow quantities [major] — in progress 2026-07-31
+
+- [ ] Type workflow latency configuration, acquisition/processing durations,
+      total and per-stage timing, confidence, and optional GPU telemetry with
+      Aequitas; preserve bytes at the explicit storage boundary.
+- [ ] Remove synthetic GPU/memory samples and record individual stage intervals;
+      migrate callers/tests and correct the neural timing base-unit conversion.
+- [ ] Synchronize ADR 078, `gap_audit.md`, backlog, checklist, changelog, and
+      the Atlas cross-repository audit; run focused package gates and preserve
+      peer-owned changes.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-39 typed neural diagnostics quantities [major] — done 2026-07-31
 
 - [x] Type neural diagnostic lesion geometry, voxel spacing, beamforming

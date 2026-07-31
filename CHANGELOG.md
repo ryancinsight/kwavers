@@ -4,6 +4,13 @@
 
 ### Changed
 
+- **Breaking**: Clinical workflow latency, acquisition/processing durations,
+  total and per-stage timing, confidence, and optional GPU utilization now use
+  Aequitas `Time` and `Dimensionless` contracts. Synthetic telemetry is
+  removed; memory remains an optional byte-count storage boundary and stage
+  measurements are individual intervals. See [ADR
+  078](docs/ADR/078-clinical-workflow-quantities.md).
+
 - **Breaking**: Neural diagnostic lesion geometry, voxel spacing, beamforming
   targets, stage timings, confidence, significance, and optional GPU
   utilization now use Aequitas `Length`, `Time`, and `Dimensionless` contracts.

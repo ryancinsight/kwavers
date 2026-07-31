@@ -85,3 +85,4 @@
 | [075](075-mems-verdict-pressure-names.md) | Remove unit suffixes from typed MEMS verdict pressure fields | Accepted and implemented under `KWAVERS-AEQ-MET-37`. |
 | [076](076-visualization-telemetry-quantities.md) | Aequitas contracts for visualization telemetry and temporal metrics | Accepted and implemented under `KWAVERS-AEQ-MET-38`. |
 | [077](077-neural-diagnostics-quantities.md) | Aequitas contracts for neural diagnostic geometry and timing metrics | Accepted — 2026-07-31 |
+| [078](078-clinical-workflow-quantities.md) | Type clinical workflow orchestration quantities | Accepted — 2026-07-31 |

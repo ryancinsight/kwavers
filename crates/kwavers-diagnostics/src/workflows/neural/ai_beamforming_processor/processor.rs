@@ -96,15 +96,15 @@ impl AIEnhancedBeamformingProcessor {
 
         let beamforming_start = Instant::now();
         let volume = self.perform_beamforming(rf_data, angles)?;
-        let beamforming_time = beamforming_start.elapsed().as_secs_f64() * 1000.0;
+        let beamforming_time = Time::from_base(beamforming_start.elapsed().as_secs_f64());
 
         let feature_start = Instant::now();
         let features = self.feature_extractor.extract_features(volume.view())?;
-        let feature_time = feature_start.elapsed().as_secs_f64() * 1000.0;
+        let feature_time = Time::from_base(feature_start.elapsed().as_secs_f64());
 
         let pinn_start = Instant::now();
         let (uncertainty, confidence) = self.perform_pinn_inference(&volume, &features)?;
-        let pinn_time = pinn_start.elapsed().as_secs_f64() * 1000.0;
+        let pinn_time = Time::from_base(pinn_start.elapsed().as_secs_f64());
 
         let clinical_start = Instant::now();
         let clinical_analysis = self.clinical_support.analyze_clinical(
@@ -113,14 +113,14 @@ impl AIEnhancedBeamformingProcessor {
             uncertainty.view(),
             confidence.view(),
         )?;
-        let clinical_time = clinical_start.elapsed().as_secs_f64() * 1000.0;
+        let clinical_time = Time::from_base(clinical_start.elapsed().as_secs_f64());
 
-        let total_time = start_time.elapsed().as_secs_f64() * 1000.0;
+        let total_time = Time::from_base(start_time.elapsed().as_secs_f64());
 
-        if total_time > *self.config.performance_target.as_base() {
+        if total_time > self.config.performance_target {
             log::warn!(
                 "Neural beamforming exceeded performance target: {:.2}ms > {:.2}ms",
-                total_time,
+                total_time.in_unit::<aequitas::systems::si::units::Millisecond>(),
                 self.config
                     .performance_target
                     .in_unit::<aequitas::systems::si::units::Millisecond>()
@@ -134,11 +134,11 @@ impl AIEnhancedBeamformingProcessor {
             features,
             clinical_analysis,
             performance: AiBeamformingMetrics {
-                total_time: Time::from_base(total_time),
-                beamforming_time: Time::from_base(beamforming_time),
-                feature_extraction_time: Time::from_base(feature_time),
-                pinn_inference_time: Time::from_base(pinn_time),
-                clinical_analysis_time: Time::from_base(clinical_time),
+                total_time,
+                beamforming_time,
+                feature_extraction_time: feature_time,
+                pinn_inference_time: pinn_time,
+                clinical_analysis_time: clinical_time,
                 memory_usage_bytes: self.estimate_memory_usage_bytes(),
                 gpu_utilization: None,
             },
