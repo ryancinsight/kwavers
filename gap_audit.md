@@ -29,6 +29,20 @@
 
 # Gap Audit
 
+## Active sound-speed-shift error-metric audit — 2026-07-31
+
+`KWAVERS-AEQ-MET-50` is the next bounded gap: OpenPros mean absolute and root
+mean square sound-speed errors remain unit-suffixed raw public scalars. The
+planned boundary uses Aequitas `Velocity`, with base extraction confined to
+the numerical image-comparison formula.
+
+Normalized error and Pearson correlation are dimensionless; objective values
+and regularization weights belong to the solver's numerical contract; dense
+Leto image arrays remain a provider-storage boundary. The path is real-valued
+and has no physical phasor, so Eunomia compatibility requires no imaginary
+physical unit. See
+[`Kwavers ADR 089`](docs/ADR/089-sound-speed-error-quantities.md).
+
 ## Live sound-speed-shift curved-array/frequency refresh — 2026-07-31
 
 `KWAVERS-AEQ-MET-49` is closed. Public curved-array radius, first angle,

@@ -4,6 +4,13 @@
 
 ### Changed
 
+- **Breaking:** OpenPros mean absolute and root mean square sound-speed error
+  metrics now use Aequitas `Velocity` at the public contract. Normalized,
+  correlation, objective, weight, and dense image storage values remain
+  explicit numerical/provider boundaries; no complex or imaginary physical
+  unit is introduced. See [ADR
+  089](docs/ADR/089-sound-speed-error-quantities.md).
+
 - **Breaking:** Sound-speed-shift curved-array radius/angle contracts and
   OpenPros waveform peak frequency now use Aequitas `Length`, `Angle`, and
   `Frequency`. Solver-owned coordinates, dense images, and benchmark error
