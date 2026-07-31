@@ -196,9 +196,13 @@ impl KernelCube {
         // provider; the per-element fused multiply-add is the inner loop.
         let mut blend = env_lo;
         let inv_alpha = 1.0 - alpha;
-        crate::parallel::for_each_indexed_pair_mut(blend.view_mut(), env_hi.view(), |_, lo, hi| {
-            *lo = (*lo).mul_add(inv_alpha, *hi * alpha);
-        });
+        kwavers_core::utils::iterators::for_each_indexed_mut_with(
+            blend.view_mut(),
+            &env_hi.view(),
+            |_, lo, hi| {
+                *lo = (*lo).mul_add(inv_alpha, *hi * alpha);
+            },
+        );
         let peak = blend.iter().copied().fold(f64::NEG_INFINITY, f64::max);
         if peak > 0.0 {
             for v in blend.iter_mut() {

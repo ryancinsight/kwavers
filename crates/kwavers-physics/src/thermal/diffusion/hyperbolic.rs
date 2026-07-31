@@ -128,9 +128,9 @@ impl CattaneoVernotte {
             &mut self.divergence,
         );
 
-        crate::parallel::for_each_indexed_pair_mut(
+        kwavers_core::utils::iterators::for_each_indexed_mut_with(
             temperature.view_mut(),
-            self.divergence.view(),
+            &self.divergence.view(),
             |(i, j, k), t, &div| {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;

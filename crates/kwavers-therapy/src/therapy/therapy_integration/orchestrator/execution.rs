@@ -30,7 +30,7 @@ use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_TI
 use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use kwavers_core::constants::tissue_thermal::SPECIFIC_HEAT_TISSUE;
 use kwavers_core::error::KwaversResult;
-use kwavers_core::utils::iterators::{for_each_indexed_mut, for_each_indexed_pair_mut};
+use kwavers_core::utils::iterators::{for_each_indexed_mut, for_each_indexed_mut_with};
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use leto::Array2;
@@ -393,9 +393,9 @@ pub fn calculate_acoustic_heating(
     let mut temperature =
         Array3::<f64>::from_elem(acoustic_field.pressure.shape(), BODY_TEMPERATURE_C);
 
-    for_each_indexed_pair_mut(
+    for_each_indexed_mut_with(
         temperature.view_mut(),
-        acoustic_field.pressure.view(),
+        &acoustic_field.pressure.view(),
         |(i, j, k), t, &p| {
             // Radial distance from focal point (on the x-axis).
             let x = i as f64 * dx - focal_depth.into_base();

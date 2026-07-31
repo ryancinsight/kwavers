@@ -145,9 +145,9 @@ impl PennesBioheat {
         let blood_coefficient = self.params.perfusion_heat_transfer_coefficient();
         let arterial_temperature = self.params.arterial_temperature.into_base();
 
-        crate::parallel::for_each_indexed_pair_mut(
+        kwavers_core::utils::iterators::for_each_indexed_mut_with(
             source.view_mut(),
-            temperature.view(),
+            &temperature.view(),
             |(i, j, k), q, &t| {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
@@ -193,9 +193,9 @@ impl PennesBioheat {
         let blood_coefficient = self.params.perfusion_heat_transfer_coefficient();
         let arterial_temperature = self.params.arterial_temperature.into_base();
 
-        crate::parallel::for_each_indexed_pair_mut(
+        kwavers_core::utils::iterators::for_each_indexed_mut_with(
             temperature.view_mut(),
-            laplacian.view(),
+            &laplacian.view(),
             |(i, j, k), t, &lap| {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;

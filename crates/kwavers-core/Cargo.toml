@@ -15,6 +15,7 @@ repository = "https://github.com/ryancinsight/kwavers"
 aequitas = { workspace = true }
 moirai-parallel = { workspace = true }
 leto = { workspace = true }
+leto-ops = { workspace = true }
 serde = { version = "1.0", features = ["derive"] }
 thiserror = "1.0"
 # `std` feature so `log::SetLoggerError` implements `std::error::Error`

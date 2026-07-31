@@ -4,7 +4,7 @@ use kwavers_medium::Medium;
 use leto::Array3;
 use log::debug;
 
-use crate::parallel::for_each_indexed_mut_four_refs;
+use kwavers_core::utils::iterators::for_each_indexed_mut_with;
 
 #[derive(Debug, Clone)]
 pub struct PhotochemicalEffects {
@@ -32,13 +32,15 @@ impl PhotochemicalEffects {
     ) {
         debug!("Updating photochemical effects");
 
-        for_each_indexed_mut_four_refs(
+        for_each_indexed_mut_with(
             self.reactive_oxygen_species.view_mut(),
-            light.view(),
-            emission_spectrum.view(),
-            bubble_radius.view(),
-            temperature.view(),
-            |(i, j, k), ros, &light_val, &spec_val, &r_val, &t| {
+            (
+                &light.view(),
+                &emission_spectrum.view(),
+                &bubble_radius.view(),
+                &temperature.view(),
+            ),
+            |(i, j, k), ros, (&light_val, &spec_val, &r_val, &t)| {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;

@@ -53,7 +53,7 @@ use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use leto::Array3;
 
-use crate::parallel::for_each_indexed_pair_mut;
+use kwavers_core::utils::iterators::for_each_indexed_mut_with;
 
 /// Eckart steady-streaming velocity field driven by acoustic absorption.
 #[derive(Debug)]
@@ -89,9 +89,9 @@ impl StreamingModel {
         dt: f64,
     ) {
         let length_scale_sq = grid.dx.min(grid.dy).min(grid.dz).powi(2);
-        for_each_indexed_pair_mut(
+        for_each_indexed_mut_with(
             self.velocity.view_mut(),
-            pressure.view(),
+            &pressure.view(),
             |(i, j, k), v, &p| {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;

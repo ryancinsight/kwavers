@@ -1,12 +1,17 @@
 //! Gradient operations module
 
-use super::coefficients::{FDCoefficients, FdAccuracyOrder};
+use super::coefficients::FdAccuracyOrder;
+use super::gradient_optimized::gradient_optimized;
 use crate::Grid;
 use eunomia::FloatElement;
 use kwavers_core::error::KwaversResult;
 use leto::{Array3, ArrayView3};
 
-/// Compute the gradient of a 3D field
+/// Compute the gradient of a 3D field without a coefficient cache.
+///
+/// The kernel is shared with [`gradient_optimized`]; this entry point keeps
+/// the uncached convenience contract while avoiding a second implementation
+/// of the centered finite-difference stencil.
 /// # Errors
 /// - Returns [`Err`] if an internal constraint is violated.
 ///
@@ -21,70 +26,5 @@ pub fn gradient<T>(
 where
     T: FloatElement + Clone + Send + Sync + Default,
 {
-    let shape = field.shape();
-    let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
-
-    // Validate grid compatibility
-    if (nx, ny, nz) != (grid.nx, grid.ny, grid.nz) {
-        return Err(kwavers_core::error::KwaversError::Grid(
-            kwavers_core::error::GridError::DimensionMismatch {
-                expected: format!("({}, {}, {})", grid.nx, grid.ny, grid.nz),
-                actual: format!("({}, {}, {})", nx, ny, nz),
-            },
-        ));
-    }
-
-    let mut grad_x = Array3::<T>::zeros([nx, ny, nz]);
-    let mut grad_y = Array3::<T>::zeros([nx, ny, nz]);
-    let mut grad_z = Array3::<T>::zeros([nx, ny, nz]);
-
-    let coeffs = FDCoefficients::first_derivative::<T>(order);
-    let stencil_radius = coeffs.len();
-
-    // X-direction gradient
-    let dx_inv = T::from_f64(1.0) / T::from_f64(grid.dx);
-    for i in stencil_radius..nx - stencil_radius {
-        for j in 0..ny {
-            for k in 0..nz {
-                let mut grad_val = T::from_f64(0.0);
-                for (n, &coeff) in coeffs.iter().enumerate() {
-                    let offset = n + 1;
-                    grad_val += coeff * (field[[i + offset, j, k]] - field[[i - offset, j, k]]);
-                }
-                grad_x[[i, j, k]] = grad_val * dx_inv;
-            }
-        }
-    }
-
-    // Y-direction gradient
-    let dy_inv = T::from_f64(1.0) / T::from_f64(grid.dy);
-    for i in 0..nx {
-        for j in stencil_radius..ny - stencil_radius {
-            for k in 0..nz {
-                let mut grad_val = T::from_f64(0.0);
-                for (n, &coeff) in coeffs.iter().enumerate() {
-                    let offset = n + 1;
-                    grad_val += coeff * (field[[i, j + offset, k]] - field[[i, j - offset, k]]);
-                }
-                grad_y[[i, j, k]] = grad_val * dy_inv;
-            }
-        }
-    }
-
-    // Z-direction gradient
-    let dz_inv = T::from_f64(1.0) / T::from_f64(grid.dz);
-    for i in 0..nx {
-        for j in 0..ny {
-            for k in stencil_radius..nz - stencil_radius {
-                let mut grad_val = T::from_f64(0.0);
-                for (n, &coeff) in coeffs.iter().enumerate() {
-                    let offset = n + 1;
-                    grad_val += coeff * (field[[i, j, k + offset]] - field[[i, j, k - offset]]);
-                }
-                grad_z[[i, j, k]] = grad_val * dz_inv;
-            }
-        }
-    }
-
-    Ok((grad_x, grad_y, grad_z))
+    gradient_optimized(field, grid, order, None)
 }

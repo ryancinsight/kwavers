@@ -1,7 +1,7 @@
 //! `ElasticSwePMLBoundary` — pre-computed PML attenuation field and damping application.
 
 use super::config::SwePmlConfig;
-use kwavers_core::utils::iterators::{for_each_indexed_mut, for_each_indexed_pair_mut};
+use kwavers_core::utils::iterators::{for_each_indexed_mut, for_each_indexed_mut_with};
 use kwavers_grid::Grid;
 use leto::{Array1, Array3};
 use moirai_parallel::{for_each_chunk_triple_mut_enumerated_with, Adaptive};
@@ -156,7 +156,7 @@ impl ElasticSwePMLBoundary {
     pub fn get_mask(&self) -> Array3<f64> {
         let [nx, ny, nz] = self.sigma.shape();
         let mut mask = Array3::<f64>::zeros((nx, ny, nz));
-        for_each_indexed_pair_mut(mask.view_mut(), self.sigma.view(), |_idx, m, &s| {
+        for_each_indexed_mut_with(mask.view_mut(), &self.sigma.view(), |_idx, m, &s| {
             if s > 0.0 {
                 *m = 1.0;
             }

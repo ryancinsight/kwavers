@@ -8,7 +8,10 @@ use eunomia::FloatElement;
 use kwavers_core::error::KwaversResult;
 use leto::{Array3, ArrayView3};
 
-/// Optimized gradient computation with caching and parallelization
+/// Centered finite-difference gradient kernel with optional cached coefficients.
+///
+/// [`crate::operators::gradient`] delegates here with no cache, so this is the
+/// single implementation of the uncached centered-stencil path.
 /// # Errors
 /// - Returns [`Err`] if an internal constraint is violated.
 ///

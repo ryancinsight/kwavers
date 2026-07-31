@@ -5,7 +5,7 @@ use kwavers_medium::Medium;
 use leto::Array3;
 use log::debug;
 
-use crate::parallel::for_each_indexed_mut_three_refs;
+use kwavers_core::utils::iterators::for_each_indexed_mut_with;
 
 #[derive(Debug, Clone)]
 pub struct RadicalInitiation {
@@ -33,12 +33,10 @@ impl RadicalInitiation {
     ) {
         debug!("Updating radical initiation from cavitation and light");
 
-        for_each_indexed_mut_three_refs(
+        for_each_indexed_mut_with(
             self.radical_concentration.view_mut(),
-            p.view(),
-            light.view(),
-            bubble_radius.view(),
-            |(i, j, k), conc, &p_val, &light_val, &r_val| {
+            (&p.view(), &light.view(), &bubble_radius.view()),
+            |(i, j, k), conc, (&p_val, &light_val, &r_val)| {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
