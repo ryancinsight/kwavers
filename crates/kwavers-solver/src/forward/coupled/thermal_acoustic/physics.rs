@@ -98,12 +98,10 @@ impl ThermalAcousticCoupler {
             return;
         }
 
-        leto_ops::zip3_mut_with(
+        leto_ops::zip_mut_with(
             &mut acoustic_heating.view_mut(),
-            &pressure_prev.view(),
-            &density.view(),
-            &sound_speed.view(),
-            |q, p, rho, c| {
+            (&pressure_prev.view(), &density.view(), &sound_speed.view()),
+            |q, (p, rho, c)| {
                 if *rho > 0.0 && *c > 0.0 {
                     *q = 2.0 * alpha_ac * (*p * *p) / (*rho * *c);
                 } else {

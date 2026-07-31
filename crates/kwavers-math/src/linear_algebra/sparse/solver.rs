@@ -178,8 +178,9 @@ impl IterativeSolver {
             }
 
             // r = s - omega*t
-            for i in 0..n {
-                r[i] = self.s[i] - omega * self.t[i];
+            for (r_value, (s_value, t_value)) in r.iter_mut().zip(self.s.iter().zip(self.t.iter()))
+            {
+                *r_value = *s_value - omega * *t_value;
             }
 
             rho_old = rho_new;

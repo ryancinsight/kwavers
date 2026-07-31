@@ -102,11 +102,10 @@ impl RtmProcessor {
                 *img += source[index] * receiver[index];
             });
         } else {
-            leto_ops::zip2_mut_with(
+            leto_ops::zip_mut_with(
                 &mut image.view_mut(),
-                &source_wavefield.view(),
-                &receiver_wavefield.view(),
-                |img, src, rcv| {
+                (&source_wavefield.view(), &receiver_wavefield.view()),
+                |img, (src, rcv)| {
                     *img += *src * *rcv;
                 },
             )
@@ -166,11 +165,10 @@ impl RtmProcessor {
                 };
             });
         } else {
-            leto_ops::zip2_mut_with(
+            leto_ops::zip_mut_with(
                 &mut image.view_mut(),
-                &source_wavefield.view(),
-                &receiver_wavefield.view(),
-                |img, src, rcv| {
+                (&source_wavefield.view(), &receiver_wavefield.view()),
+                |img, (src, rcv)| {
                     let phi = *src * *src;
                     *img = if phi > f64::EPSILON {
                         *src * *rcv / phi
