@@ -29,6 +29,36 @@
 
 # Gap Audit
 
+## Live bulk-piezo refresh — 2026-07-31
+
+`KWAVERS-AEQ-MET-36` found the remaining untyped public physical contract in
+`kwavers-transducer::bulk_piezo`: resonator geometry and material properties,
+resonance and electrical-frequency inputs/results, capacitance, sound speed,
+and matching-layer thickness/sound speed were raw `f64` values. This was a
+real metric gap distinct from the already-closed complex impedance support in
+MET-31.
+
+The closure uses Aequitas `Length`, `Area`, `MassDensity`, `Pressure`,
+`Velocity`, `Frequency`, `Capacitance`, and `Dimensionless` at the public
+boundary. Scalar extraction is confined to the IEEE/Kino formula boundaries,
+the bisection arithmetic, and complex transmission-line calculations.
+Unit-bearing suffixes are not used as a compatibility surface; all
+in-repository callers and analytical tests use the typed contracts.
+
+Eunomia compatibility is explicit: electrical impedance, loaded acoustic
+impedance, and reflection coefficients retain `Complex64` where the model is
+phasor-valued. The real and quadrature components share the Aequitas physical
+unit; no imaginary-unit dimension is introduced. Resonator telemetry and
+material values remain real-valued.
+
+Package check, full transducer Nextest, warning-denied Clippy, doctests,
+rustfmt, and diff checks pass. The transducer Nextest result is 219/219 with
+one configured skip; doctests pass 2/2 with six ignored. The shared workspace
+still emits existing provider/linker warnings, but no warning-denied lint is
+reported in the touched package.
+
+See [ADR 074](docs/ADR/074-bulk-piezo-quantities.md).
+
 ## Live GPU telemetry refresh — 2026-07-31
 
 `KWAVERS-AEQ-MET-35` found a public temporal-metric gap in

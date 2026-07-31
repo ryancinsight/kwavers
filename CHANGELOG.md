@@ -4,6 +4,13 @@
 
 ### Changed
 
+- **Breaking**: Bulk piezoelectric resonator and acoustic matching-layer
+  geometry, material, frequency, capacitance, velocity, and impedance inputs
+  and results now use Aequitas quantities. Eunomia `Complex64` remains for
+  shared-unit electrical/acoustic phasors and dimensionless reflection
+  coefficients; no imaginary-unit physical dimension is introduced. See
+  [ADR 074](docs/ADR/074-bulk-piezo-quantities.md).
+
 - **Breaking**: GPU realtime budgets, step/kernel/transfer/I/O durations,
   percentile metrics, throughput, and realtime-loop simulation times now use
   Aequitas `Time`, `Frequency`, and `Dimensionless` quantities. Unit-suffixed

@@ -23,7 +23,10 @@
 //! - Kino, G. S. (1987). *Acoustic Waves: Devices, Imaging, and Analog Signal
 //!   Processing*, §1.3 (thickness-mode transducers).
 
-use aequitas::systems::si::quantities::{AcousticImpedance, Dimensionless, ElectricalImpedance};
+use aequitas::systems::si::quantities::{
+    AcousticImpedance, Area, Capacitance, Dimensionless, ElectricalImpedance, Frequency, Length,
+    MassDensity, Pressure, Velocity,
+};
 use core::f64::consts::PI;
 use eunomia::Complex64;
 use kwavers_core::constants::fundamental::VACUUM_PERMITTIVITY;
@@ -32,31 +35,31 @@ use kwavers_core::constants::fundamental::VACUUM_PERMITTIVITY;
 #[derive(Debug, Clone, Copy)]
 pub struct BulkPiezoResonator {
     /// Plate thickness `t` \`m`.
-    pub thickness: f64,
+    pub thickness: Length,
     /// Electrode area `A` \`m²`.
-    pub area: f64,
+    pub area: Area,
     /// Density `ρ` \[kg·m⁻³].
-    pub density: f64,
+    pub density: MassDensity,
     /// Stiffened (open-circuit) elastic constant `c₃₃^D` \`Pa`.
-    pub stiffened_modulus: f64,
+    pub stiffened_modulus: Pressure,
     /// Clamped relative permittivity `ε₃₃^S / ε₀`.
-    pub clamped_rel_permittivity: f64,
+    pub clamped_rel_permittivity: Dimensionless,
     /// Thickness electromechanical coupling `k_t²` ∈ (0, 1).
-    pub coupling_kt2: f64,
+    pub coupling_kt2: Dimensionless,
 }
 
 impl BulkPiezoResonator {
     /// PZT-5H thickness-mode preset (therapy-grade soft PZT).
     #[must_use]
-    pub fn pzt5h(thickness: f64, area: f64) -> Option<Self> {
-        if thickness > 0.0 && area > 0.0 {
+    pub fn pzt5h(thickness: Length, area: Area) -> Option<Self> {
+        if thickness.into_base() > 0.0 && area.into_base() > 0.0 {
             Some(Self {
                 thickness,
                 area,
-                density: 7500.0,
-                stiffened_modulus: 15.7e10, // c₃₃^D → c_D ≈ 4575 m/s
-                clamped_rel_permittivity: 1470.0,
-                coupling_kt2: 0.23, // k_t ≈ 0.48
+                density: MassDensity::from_base(7500.0),
+                stiffened_modulus: Pressure::from_base(15.7e10), // c₃₃^D → c_D ≈ 4575 m/s
+                clamped_rel_permittivity: Dimensionless::from_base(1470.0),
+                coupling_kt2: Dimensionless::from_base(0.23), // k_t ≈ 0.48
             })
         } else {
             None
@@ -65,70 +68,79 @@ impl BulkPiezoResonator {
 
     /// Stiffened (open-circuit) thickness sound speed `c_D = √(c₃₃^D/ρ)` \[m·s⁻¹].
     #[must_use]
-    pub fn sound_speed(&self) -> f64 {
-        (self.stiffened_modulus / self.density).sqrt()
+    pub fn sound_speed(&self) -> Velocity {
+        Velocity::from_base((self.stiffened_modulus.into_base() / self.density.into_base()).sqrt())
     }
 
     /// Antiresonance (parallel, open-circuit) frequency `f_p = c_D/(2t)` \`Hz`.
     #[must_use]
-    pub fn antiresonance_frequency(&self) -> f64 {
-        self.sound_speed() / (2.0 * self.thickness)
+    pub fn antiresonance_frequency(&self) -> Frequency {
+        Frequency::from_base(self.sound_speed().into_base() / (2.0 * self.thickness.into_base()))
     }
 
     /// Clamped capacitance `C₀ = ε₀ ε₃₃^S A / t` \[F].
     #[must_use]
-    pub fn clamped_capacitance(&self) -> f64 {
-        VACUUM_PERMITTIVITY * self.clamped_rel_permittivity * self.area / self.thickness
+    pub fn clamped_capacitance(&self) -> Capacitance {
+        Capacitance::from_base(
+            VACUUM_PERMITTIVITY * self.clamped_rel_permittivity.into_base() * self.area.into_base()
+                / self.thickness.into_base(),
+        )
     }
 
     /// Thickness coupling `k_t²` from a `(f_s, f_p)` pair (IEEE relation).
     #[must_use]
-    pub fn coupling_from_frequencies(f_s: f64, f_p: f64) -> f64 {
+    pub fn coupling_from_frequencies(f_s: Frequency, f_p: Frequency) -> Dimensionless {
+        let (f_s, f_p) = (f_s.into_base(), f_p.into_base());
         if f_p <= 0.0 || f_s <= 0.0 || f_s >= f_p {
-            return 0.0;
+            return Dimensionless::from_base(0.0);
         }
-        (PI * f_s / (2.0 * f_p)) * (PI * (f_p - f_s) / (2.0 * f_p)).tan()
+        Dimensionless::from_base((PI * f_s / (2.0 * f_p)) * (PI * (f_p - f_s) / (2.0 * f_p)).tan())
     }
 
     /// Series resonance `f_s` \`Hz` for the configured `k_t²` and antiresonance,
     /// by bisection of the IEEE relation (`k_t²` decreases monotonically with `f_s`).
     #[must_use]
-    pub fn resonance_frequency(&self) -> f64 {
+    pub fn resonance_frequency(&self) -> Frequency {
         let f_p = self.antiresonance_frequency();
-        let target = self.coupling_kt2;
+        let target = self.coupling_kt2.into_base();
         // kt²(f_s): →1 as f_s→0, →0 as f_s→f_p ; monotone decreasing.
-        let (mut lo, mut hi) = (1e-6 * f_p, f_p * (1.0 - 1e-9));
+        let f_p_base = f_p.into_base();
+        let (mut lo, mut hi) = (1e-6 * f_p_base, f_p_base * (1.0 - 1e-9));
         for _ in 0..80 {
             let mid = 0.5 * (lo + hi);
-            let k2 = Self::coupling_from_frequencies(mid, f_p);
+            let k2 = Self::coupling_from_frequencies(Frequency::from_base(mid), f_p).into_base();
             if k2 > target {
                 lo = mid; // need a higher f_s (smaller k²)
             } else {
                 hi = mid;
             }
         }
-        0.5 * (lo + hi)
+        Frequency::from_base(0.5 * (lo + hi))
     }
 
     /// Effective fractional gap `(f_p − f_s)/f_p` — a coupling indicator.
     #[must_use]
-    pub fn resonance_gap(&self) -> f64 {
+    pub fn resonance_gap(&self) -> Dimensionless {
         let f_p = self.antiresonance_frequency();
-        (f_p - self.resonance_frequency()) / f_p
+        Dimensionless::from_base(
+            (f_p.into_base() - self.resonance_frequency().into_base()) / f_p.into_base(),
+        )
     }
 
     /// Specific acoustic impedance `Z = ρ·c_D` \[Rayl = Pa·s·m⁻¹] of the plate,
     /// used to design quarter-wave matching layers (`Z_match = √(Z·Z_load)`).
     #[must_use]
     pub fn acoustic_impedance(&self) -> AcousticImpedance {
-        AcousticImpedance::from_base(self.density * self.sound_speed())
+        AcousticImpedance::from_base(self.density.into_base() * self.sound_speed().into_base())
     }
 
     /// Free (constant-stress) capacitance `C^T = C₀/(1 − k_t²)` \[F] — the
     /// low-frequency electrical capacitance, larger than the clamped `C₀`.
     #[must_use]
-    pub fn free_capacitance(&self) -> f64 {
-        self.clamped_capacitance() / (1.0 - self.coupling_kt2)
+    pub fn free_capacitance(&self) -> Capacitance {
+        Capacitance::from_base(
+            self.clamped_capacitance().into_base() / (1.0 - self.coupling_kt2.into_base()),
+        )
     }
 
     /// Electrical input impedance \[Ω] of the free (air-loaded both faces)
@@ -148,17 +160,18 @@ impl BulkPiezoResonator {
     /// Air-loaded both faces is the open-circuit limit; matching/backing layers
     /// are modelled by the loaded acoustic transmission line ([`AcousticLayer`]).
     #[must_use]
-    pub fn electrical_impedance(&self, frequency: f64) -> ElectricalImpedance<Complex64> {
-        if frequency <= 0.0 {
+    pub fn electrical_impedance(&self, frequency: Frequency) -> ElectricalImpedance<Complex64> {
+        if frequency.into_base() <= 0.0 {
             return ElectricalImpedance::from_base(Complex64::new(0.0, 0.0));
         }
         let f_p = self.antiresonance_frequency();
+        let frequency = frequency.into_base();
         let omega = 2.0 * PI * frequency;
-        let c0 = self.clamped_capacitance();
-        let x = PI * frequency / (2.0 * f_p);
+        let c0 = self.clamped_capacitance().into_base();
+        let x = PI * frequency / (2.0 * f_p.into_base());
         // tan(X)/X → 1 as X → 0 (removable singularity).
         let tanx_over_x = if x.abs() < 1e-12 { 1.0 } else { x.tan() / x };
-        let bracket = 1.0 - self.coupling_kt2 * tanx_over_x;
+        let bracket = 1.0 - self.coupling_kt2.into_base() * tanx_over_x;
         // 1/(jωC₀) = −i/(ωC₀); the lossless plate gives a purely reactive Z_e.
         ElectricalImpedance::from_base(Complex64::new(0.0, -1.0 / (omega * c0)) * bracket)
     }
@@ -174,7 +187,7 @@ impl BulkPiezoResonator {
     pub fn quarter_wave_matching_layer(
         &self,
         z_load: AcousticImpedance,
-        layer_sound_speed: f64,
+        layer_sound_speed: Velocity,
     ) -> AcousticLayer {
         let impedance = quarter_wave_match_impedance(self.acoustic_impedance(), z_load);
         AcousticLayer::quarter_wave(impedance, layer_sound_speed, self.antiresonance_frequency())
@@ -202,20 +215,24 @@ pub struct AcousticLayer {
     /// Specific acoustic impedance `Z = ρ·c` \[Rayl].
     pub impedance: AcousticImpedance,
     /// Layer thickness `d` \`m`.
-    pub thickness: f64,
+    pub thickness: Length,
     /// Layer longitudinal sound speed `c` \[m·s⁻¹].
-    pub sound_speed: f64,
+    pub sound_speed: Velocity,
 }
 
 impl AcousticLayer {
     /// Construct a layer one quarter-wavelength thick at `frequency`
     /// (`d = c/(4f)`).
     #[must_use]
-    pub fn quarter_wave(impedance: AcousticImpedance, sound_speed: f64, frequency: f64) -> Self {
+    pub fn quarter_wave(
+        impedance: AcousticImpedance,
+        sound_speed: Velocity,
+        frequency: Frequency,
+    ) -> Self {
         Self {
             impedance,
             sound_speed,
-            thickness: sound_speed / (4.0 * frequency),
+            thickness: Length::from_base(sound_speed.into_base() / (4.0 * frequency.into_base())),
         }
     }
 
@@ -233,9 +250,10 @@ impl AcousticLayer {
     pub fn input_impedance(
         &self,
         z_load: AcousticImpedance<Complex64>,
-        frequency: f64,
+        frequency: Frequency,
     ) -> AcousticImpedance<Complex64> {
-        let kd = 2.0 * PI * frequency / self.sound_speed * self.thickness;
+        let kd = 2.0 * PI * frequency.into_base() / self.sound_speed.into_base()
+            * self.thickness.into_base();
         let z = Complex64::new(self.impedance.into_base(), 0.0);
         let z_load = z_load.into_base();
         let jt = Complex64::new(0.0, kd.tan());
@@ -250,7 +268,7 @@ impl AcousticLayer {
         &self,
         z_source: AcousticImpedance<Complex64>,
         z_load: AcousticImpedance<Complex64>,
-        frequency: f64,
+        frequency: Frequency,
     ) -> Dimensionless<Complex64> {
         let z_in = self.input_impedance(z_load, frequency);
         let z_in = z_in.into_base();
@@ -265,25 +283,34 @@ mod tests {
 
     // 1 MHz-class therapy PZT: f_p = c_D/(2t) ≈ 1 MHz → t ≈ 2.29 mm.
     fn therapy_pzt() -> BulkPiezoResonator {
-        BulkPiezoResonator::pzt5h(2.29e-3, 1.0e-4).unwrap()
+        BulkPiezoResonator::pzt5h(Length::from_base(2.29e-3), Area::from_base(1.0e-4))
+            .expect("invariant: positive therapy PZT geometry")
     }
 
     #[test]
     fn antiresonance_scales_inverse_thickness() {
-        let a = BulkPiezoResonator::pzt5h(2.0e-3, 1e-4).unwrap();
-        let b = BulkPiezoResonator::pzt5h(1.0e-3, 1e-4).unwrap(); // half thickness
-        assert!((b.antiresonance_frequency() / a.antiresonance_frequency() - 2.0).abs() < 1e-9);
+        let a = BulkPiezoResonator::pzt5h(Length::from_base(2.0e-3), Area::from_base(1e-4))
+            .expect("invariant: positive geometry");
+        let b = BulkPiezoResonator::pzt5h(Length::from_base(1.0e-3), Area::from_base(1e-4))
+            .expect("invariant: positive geometry"); // half thickness
+        assert!(
+            (b.antiresonance_frequency().into_base() / a.antiresonance_frequency().into_base()
+                - 2.0)
+                .abs()
+                < 1e-9
+        );
         // therapy-band resonance
-        assert!(therapy_pzt().antiresonance_frequency() > 0.8e6);
-        assert!(therapy_pzt().antiresonance_frequency() < 1.2e6);
+        assert!(therapy_pzt().antiresonance_frequency().into_base() > 0.8e6);
+        assert!(therapy_pzt().antiresonance_frequency().into_base() < 1.2e6);
     }
 
     #[test]
     fn sound_speed_and_capacitance_formulas() {
         let p = therapy_pzt();
-        assert!((p.sound_speed() - (15.7e10_f64 / 7500.0).sqrt()).abs() < 1e-6);
-        let expected_c = VACUUM_PERMITTIVITY * 1470.0 * p.area / p.thickness;
-        assert!((p.clamped_capacitance() - expected_c).abs() / expected_c < 1e-12);
+        assert!((p.sound_speed().into_base() - (15.7e10_f64 / 7500.0).sqrt()).abs() < 1e-6);
+        let expected_c =
+            VACUUM_PERMITTIVITY * 1470.0 * p.area.into_base() / p.thickness.into_base();
+        assert!((p.clamped_capacitance().into_base() - expected_c).abs() / expected_c < 1e-12);
     }
 
     #[test]
@@ -291,37 +318,46 @@ mod tests {
         let p = therapy_pzt();
         let f_p = p.antiresonance_frequency();
         let f_s = p.resonance_frequency();
-        assert!(f_s < f_p, "f_s {f_s} must be below f_p {f_p}");
+        assert!(
+            f_s.into_base() < f_p.into_base(),
+            "f_s {} must be below f_p {}",
+            f_s.into_base(),
+            f_p.into_base()
+        );
         // recompute kt² from the recovered (f_s, f_p) → matches the configured value
         let kt2 = BulkPiezoResonator::coupling_from_frequencies(f_s, f_p);
         assert!(
-            (kt2 - p.coupling_kt2).abs() < 1e-4,
-            "round-trip kt² {kt2} vs {}",
-            p.coupling_kt2
+            (kt2.into_base() - p.coupling_kt2.into_base()).abs() < 1e-4,
+            "round-trip kt² {} vs {}",
+            kt2.into_base(),
+            p.coupling_kt2.into_base()
         );
     }
 
     #[test]
     fn stronger_coupling_widens_the_resonance_gap() {
         let mut weak = therapy_pzt();
-        weak.coupling_kt2 = 0.1;
+        weak.coupling_kt2 = Dimensionless::from_base(0.1);
         let mut strong = therapy_pzt();
-        strong.coupling_kt2 = 0.45;
-        assert!(strong.resonance_gap() > weak.resonance_gap());
+        strong.coupling_kt2 = Dimensionless::from_base(0.45);
+        assert!(strong.resonance_gap().into_base() > weak.resonance_gap().into_base());
         // zero coupling → f_s ≈ f_p (no gap)
         let mut none = therapy_pzt();
-        none.coupling_kt2 = 1e-9;
-        assert!(none.resonance_gap() < 1e-3);
+        none.coupling_kt2 = Dimensionless::from_base(1e-9);
+        assert!(none.resonance_gap().into_base() < 1e-3);
     }
 
     #[test]
     fn acoustic_impedance_and_free_capacitance() {
         let p = therapy_pzt();
-        assert!((p.acoustic_impedance().into_base() - 7500.0 * p.sound_speed()).abs() < 1e-6);
+        assert!(
+            (p.acoustic_impedance().into_base() - 7500.0 * p.sound_speed().into_base()).abs()
+                < 1e-6
+        );
         // C^T = C₀/(1−k_t²) > C₀.
-        let expected = p.clamped_capacitance() / (1.0 - p.coupling_kt2);
-        assert!((p.free_capacitance() - expected).abs() / expected < 1e-12);
-        assert!(p.free_capacitance() > p.clamped_capacitance());
+        let expected = p.clamped_capacitance().into_base() / (1.0 - p.coupling_kt2.into_base());
+        assert!((p.free_capacitance().into_base() - expected).abs() / expected < 1e-12);
+        assert!(p.free_capacitance().into_base() > p.clamped_capacitance().into_base());
     }
 
     #[test]
@@ -329,17 +365,19 @@ mod tests {
         let p = therapy_pzt();
         // Lossless free plate ⇒ Re{Z_e} = 0 at every frequency.
         for &f in &[1e3, 1e5, 0.5e6, 0.9e6] {
+            let f = Frequency::from_base(f);
             assert_eq!(
                 p.electrical_impedance(f).into_base().re,
                 0.0,
-                "Z_e must be purely reactive at {f} Hz"
+                "Z_e must be purely reactive at {} Hz",
+                f.into_base()
             );
         }
         // f → 0: Z_e.im → −1/(ω·C^T) (free capacitance).
-        let f = p.antiresonance_frequency() / 1.0e4;
-        let omega = 2.0 * PI * f;
+        let f = Frequency::from_base(p.antiresonance_frequency().into_base() / 1.0e4);
+        let omega = 2.0 * PI * f.into_base();
         let z = p.electrical_impedance(f).into_base();
-        let expected_im = -1.0 / (omega * p.free_capacitance());
+        let expected_im = -1.0 / (omega * p.free_capacitance().into_base());
         assert!(
             (z.im - expected_im).abs() / expected_im.abs() < 1e-3,
             "low-freq reactance {} vs free-cap {expected_im}",
@@ -354,7 +392,10 @@ mod tests {
         let p = therapy_pzt();
         let f_s = p.resonance_frequency();
         let z_res = p.electrical_impedance(f_s).into_base().norm();
-        let z_mid = p.electrical_impedance(0.5 * f_s).into_base().norm();
+        let z_mid = p
+            .electrical_impedance(Frequency::from_base(0.5 * f_s.into_base()))
+            .into_base()
+            .norm();
         assert!(
             z_res < 1e-3 * z_mid,
             "|Z_e(f_s)|={z_res} should be ≪ midband |Z_e|={z_mid}"
@@ -366,8 +407,14 @@ mod tests {
         let p = therapy_pzt();
         let f_p = p.antiresonance_frequency();
         // Approach f_p closely: tan(X)→∞ at X=π/2 dominates the 1/ω scaling.
-        let z_near = p.electrical_impedance(0.9999 * f_p).into_base().norm();
-        let z_mid = p.electrical_impedance(0.5 * f_p).into_base().norm();
+        let z_near = p
+            .electrical_impedance(Frequency::from_base(0.9999 * f_p.into_base()))
+            .into_base()
+            .norm();
+        let z_mid = p
+            .electrical_impedance(Frequency::from_base(0.5 * f_p.into_base()))
+            .into_base()
+            .norm();
         assert!(
             z_near > 100.0 * z_mid,
             "|Z_e| must blow up near f_p: {z_near} vs {z_mid}"
@@ -388,12 +435,12 @@ mod tests {
     #[test]
     fn half_wave_layer_is_a_passthrough() {
         // kd = π ⇒ tan = 0 ⇒ Z_in = Z_load, independent of the layer impedance.
-        let f = 1.0e6;
-        let c = 2000.0;
+        let f = Frequency::from_base(1.0e6);
+        let c = Velocity::from_base(2000.0);
         let layer = AcousticLayer {
             impedance: AcousticImpedance::from_base(5.0e6),
             sound_speed: c,
-            thickness: c / (2.0 * f), // λ/2
+            thickness: Length::from_base(c.into_base() / (2.0 * f.into_base())), // λ/2
         };
         let z_load = AcousticImpedance::from_base(Complex64::new(Z_WATER.into_base(), 0.0));
         let z_in = layer.input_impedance(z_load, f).into_base();
@@ -410,8 +457,12 @@ mod tests {
     #[test]
     fn quarter_wave_layer_inverts_impedance() {
         // kd = π/2 ⇒ Z_in = Z²/Z_load.
-        let f = 1.0e6;
-        let layer = AcousticLayer::quarter_wave(AcousticImpedance::from_base(5.0e6), 2000.0, f);
+        let f = Frequency::from_base(1.0e6);
+        let layer = AcousticLayer::quarter_wave(
+            AcousticImpedance::from_base(5.0e6),
+            Velocity::from_base(2000.0),
+            f,
+        );
         let z_load = AcousticImpedance::from_base(Complex64::new(Z_WATER.into_base(), 0.0));
         let z_in = layer.input_impedance(z_load, f).into_base();
         let expected = 5.0e6_f64 * 5.0e6 / Z_WATER.into_base();
@@ -425,12 +476,12 @@ mod tests {
     #[test]
     fn matched_layer_transforms_to_its_own_impedance_at_any_thickness() {
         // Z = Z_load ⇒ no internal reflection ⇒ Z_in = Z for every kd.
-        let f = 1.0e6;
+        let f = Frequency::from_base(1.0e6);
         for &d_frac in &[0.1, 0.37, 0.5, 0.83] {
             let layer = AcousticLayer {
                 impedance: Z_WATER,
-                sound_speed: 2000.0,
-                thickness: d_frac * 2000.0 / f,
+                sound_speed: Velocity::from_base(2000.0),
+                thickness: Length::from_base(d_frac * 2000.0 / f.into_base()),
             };
             let z_in = layer
                 .input_impedance(
@@ -456,7 +507,7 @@ mod tests {
         let p = therapy_pzt();
         let f_p = p.antiresonance_frequency();
         let z_plate = p.acoustic_impedance();
-        let layer = p.quarter_wave_matching_layer(Z_WATER, 2000.0);
+        let layer = p.quarter_wave_matching_layer(Z_WATER, Velocity::from_base(2000.0));
         // Designed impedance is the geometric mean.
         let layer_impedance = layer.impedance.into_base();
         assert!(
