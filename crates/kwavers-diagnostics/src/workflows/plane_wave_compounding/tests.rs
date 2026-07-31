@@ -1,15 +1,21 @@
 use super::compound::PlaneWaveCompound;
 use super::config::PlaneWaveCompoundingConfig;
+use aequitas::systems::si::quantities::{Angle, Dimensionless, Frequency, Length, Velocity};
 use eunomia::Complex;
-use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use kwavers_core::constants::fundamental::{SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM};
+use kwavers_core::constants::numerical::MHZ_TO_HZ;
+use kwavers_core::error::KwaversError;
 use leto::Array2;
 
 #[test]
 fn test_plane_wave_config_default() {
     let config = PlaneWaveCompoundingConfig::default();
     assert_eq!(config.num_angles, 11);
-    assert!(config.angle_range > 0.0);
-    assert!(config.frequency > 0.0);
+    assert_eq!(config.angle_range, Angle::from_base(30.0_f64.to_radians()));
+    assert_eq!(config.frequency, Frequency::from_base(5.0 * MHZ_TO_HZ));
+    assert_eq!(config.sound_speed, Velocity::from_base(SOUND_SPEED_TISSUE));
+    assert_eq!(config.aperture_size, Length::from_base(0.04));
+    assert_eq!(config.dynamic_range, Dimensionless::from_base(40.0));
 }
 
 #[test]
@@ -31,13 +37,13 @@ fn test_angle_generation() {
     // First angle negative, last positive (symmetric sweep)
     if num_angles > 1 {
         assert!(
-            angles[0] < 0.0,
-            "First angle {} should be negative",
+            angles[0].into_base() < 0.0,
+            "First angle {:?} should be negative",
             angles[0]
         );
         assert!(
-            angles[num_angles - 1] > 0.0,
-            "Last angle {} should be positive",
+            angles[num_angles - 1].into_base() > 0.0,
+            "Last angle {:?} should be positive",
             angles[num_angles - 1]
         );
     }
@@ -93,8 +99,12 @@ fn test_frame_rate_estimate() {
     let compounding = PlaneWaveCompound::new(config).unwrap();
     let (speedup, fps) = compounding.frame_rate_estimate();
 
-    assert_eq!(speedup, num_angles as f64);
-    assert!(fps > 30.0, "fps {fps} should exceed focused-beam baseline");
+    assert_eq!(speedup.into_base(), num_angles as f64);
+    assert!(
+        fps.into_base() > 30.0,
+        "fps {:?} should exceed focused-beam baseline",
+        fps
+    );
 }
 
 #[test]
@@ -125,12 +135,12 @@ fn test_process_frame() {
 #[test]
 fn test_thermal_acoustic_config_uses_plane_wave_geometry() {
     let plane_wave = PlaneWaveCompoundingConfig {
-        sound_speed: SOUND_SPEED_WATER_SIM,
-        aperture_size: 0.012,
-        lateral_step: 0.001,
-        element_spacing: 0.0005,
-        depth: 0.020,
-        axial_step: 0.002,
+        sound_speed: Velocity::from_base(SOUND_SPEED_WATER_SIM),
+        aperture_size: Length::from_base(0.012),
+        lateral_step: Length::from_base(0.001),
+        element_spacing: Length::from_base(0.0005),
+        depth: Length::from_base(0.020),
+        axial_step: Length::from_base(0.002),
         ..Default::default()
     };
     let compounding = PlaneWaveCompound::new(plane_wave.clone()).unwrap();
@@ -140,12 +150,25 @@ fn test_thermal_acoustic_config_uses_plane_wave_geometry() {
     assert_eq!(thermal.nx, 12);
     assert_eq!(thermal.ny, 1);
     assert_eq!(thermal.nz, 10);
-    assert_eq!(thermal.dx, plane_wave.lateral_step);
-    assert_eq!(thermal.dy, plane_wave.element_spacing);
-    assert_eq!(thermal.dz, plane_wave.axial_step);
-    assert_eq!(thermal.c_ref, plane_wave.sound_speed);
+    assert_eq!(thermal.dx, plane_wave.lateral_step.into_base());
+    assert_eq!(thermal.dy, plane_wave.element_spacing.into_base());
+    assert_eq!(thermal.dz, plane_wave.axial_step.into_base());
+    assert_eq!(thermal.c_ref, plane_wave.sound_speed.into_base());
     assert_eq!(
         thermal.dt,
-        0.3 * plane_wave.element_spacing / plane_wave.sound_speed
+        0.3 * plane_wave.element_spacing.into_base() / plane_wave.sound_speed.into_base()
     );
+}
+
+#[test]
+fn test_plane_wave_rejects_invalid_typed_geometry() {
+    let config = PlaneWaveCompoundingConfig {
+        depth: Length::from_base(0.0),
+        ..Default::default()
+    };
+
+    let Err(KwaversError::InvalidInput(message)) = PlaneWaveCompound::new(config) else {
+        panic!("zero depth must be rejected");
+    };
+    assert!(message.contains("positive"));
 }

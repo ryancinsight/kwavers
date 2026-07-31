@@ -1,18 +1,24 @@
 # Project Checklist
 
-## Owner: Codex — KWAVERS-AEQ-MET-42 typed plane-wave compounding quantities [major] — in progress 2026-07-31
+## Owner: Codex — KWAVERS-AEQ-MET-42 typed plane-wave compounding quantities [major] — done 2026-07-31
 
-- [ ] Type public plane-wave angles, frequency, sound speed, geometry,
+- [x] Type public plane-wave angles, frequency, sound speed, geometry,
       sampling lengths, dynamic range, and frame-rate estimates with Aequitas.
-- [ ] Type internal wavelength, wave number, angular frequency, and generated
+- [x] Type internal wavelength, wave number, angular frequency, and generated
       angles; preserve scalar extraction only at formula, mesh, and display
       boundaries.
-- [ ] Migrate tests and synchronize ADR 081, gap-audit, backlog, checklist,
+- [x] Migrate tests and synchronize ADR 081, gap-audit, backlog, checklist,
       changelog, and the Atlas cross-repository audit; preserve peer dirt.
 
 Acceptance: no raw public physical metric field remains in the plane-wave
 compounding contract; coherent image arrays remain Eunomia numerical
 boundaries; no complex physical unit is introduced.
+
+Evidence: `cargo check -p kwavers-diagnostics --tests --offline` passes;
+focused plane-wave Nextest passes 10/10 with 185 skipped; warning-denied
+all-target Clippy, doctests (1 executable, 5 ignored), RustDoc, formatting, and
+diff checks pass. Shared unused-provider-patch and linker warnings remain
+outside this item.
 
 ## Owner: Codex — KWAVERS-AEQ-MET-40 typed clinical workflow quantities [major] — done 2026-07-31
 

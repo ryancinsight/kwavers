@@ -88,4 +88,4 @@
 | [078](078-clinical-workflow-quantities.md) | Type clinical workflow orchestration quantities | Accepted — 2026-07-31 |
 | [079](079-monomorphized-indexed-traversal.md) | Monomorphized indexed traversal and gradient entrypoints | Accepted — 2026-07-31 |
 | [080](080-stereotactic-targeting-quantities.md) | ADR 080 — Aequitas stereotactic targeting quantities | Accepted |
-| [081](081-plane-wave-compounding-quantities.md) | Aequitas plane-wave compounding quantities | Proposed |
+| [081](081-plane-wave-compounding-quantities.md) | Aequitas plane-wave compounding quantities | Accepted |

@@ -1,6 +1,6 @@
 # ADR 081: Aequitas plane-wave compounding quantities
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-07-31
 - **Decision owner:** `KWAVERS-AEQ-MET-42`
 - **Scope:** `kwavers-diagnostics::workflows::plane_wave_compounding`
@@ -41,3 +41,13 @@ values at the coherent-image storage and phase-formula boundaries.
 - Scan the workflow for remaining raw public physical metric fields and verify
   that complex storage remains at the Eunomia boundary.
 
+## Verification
+
+The package test-target check passes with `cargo check -p
+kwavers-diagnostics --tests --offline`. The focused Nextest filter passes
+10/10 tests with 185 unrelated tests skipped. Warning-denied all-target
+Clippy, doctests (1 executable, 5 ignored), RustDoc, formatting, and diff
+checks pass. The source scan finds no raw public physical metric fields in the
+plane-wave contract; scalar extraction is confined to formula, mesh/solver,
+and display/report boundaries. Shared unused-provider-patch and linker
+warnings remain outside this metric family.

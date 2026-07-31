@@ -5,9 +5,10 @@
 ### Changed
 
 - **Breaking:** Plane-wave compounding angles, frequency, sound speed,
-  geometry, sampling lengths, dynamic range, and frame-rate estimates are
-  being migrated to Aequitas quantities. Eunomia coherent images remain
-  complex numerical arrays without an imaginary physical unit. See [ADR
+  geometry, sampling lengths, dynamic range, and frame-rate estimates now use
+  Aequitas quantities. Internal wave-derived values are typed, while Eunomia
+  coherent images remain complex numerical arrays without an imaginary
+  physical unit. See [ADR
   081](docs/ADR/081-plane-wave-compounding-quantities.md).
 
 - **Breaking**: Functional-ultrasound stereotactic AP/ML/DV coordinates,

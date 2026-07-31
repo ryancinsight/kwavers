@@ -15,6 +15,9 @@
 //!   *IEEE UFFC*, 56(3), 489–506.
 
 use super::config::PlaneWaveCompoundingConfig;
+use aequitas::systems::si::quantities::{
+    Angle, Dimensionless, Frequency, Length, ReciprocalLength,
+};
 use eunomia::Complex;
 use kwavers_core::constants::numerical::{FOUR_PI, TWO_PI};
 use kwavers_core::error::{KwaversError, KwaversResult};
@@ -25,7 +28,7 @@ use leto::Array2;
 pub struct PlaneWaveCompound {
     pub(super) config: PlaneWaveCompoundingConfig,
     /// Plane wave angles (radians).
-    pub(super) angles: Vec<f64>,
+    pub(super) angles: Vec<Angle>,
     /// Beamformed complex images per angle.
     pub(super) angle_images: Vec<Array2<Complex<f64>>>,
     /// Coherently compounded complex image.
@@ -36,9 +39,9 @@ pub struct PlaneWaveCompound {
     pub(super) num_lateral: usize,
     /// Number of axial image rows.
     pub(super) num_axial: usize,
-    _wavelength: f64,
-    pub(super) wavenumber: f64,
-    _omega: f64,
+    _wavelength: Length,
+    pub(super) wavenumber: ReciprocalLength,
+    _omega: Frequency,
 }
 
 impl PlaneWaveCompound {
@@ -52,32 +55,67 @@ impl PlaneWaveCompound {
                 "num_angles must be > 0".to_owned(),
             ));
         }
-        if config.sound_speed <= 0.0 || config.frequency <= 0.0 {
+        let sound_speed = config.sound_speed.into_base();
+        let frequency = config.frequency.into_base();
+        let aperture_size = config.aperture_size.into_base();
+        let element_spacing = config.element_spacing.into_base();
+        let depth = config.depth.into_base();
+        let axial_step = config.axial_step.into_base();
+        let lateral_step = config.lateral_step.into_base();
+        let dynamic_range = config.dynamic_range.into_base();
+        let angle_range = config.angle_range.into_base();
+
+        if !sound_speed.is_finite()
+            || !frequency.is_finite()
+            || !aperture_size.is_finite()
+            || !element_spacing.is_finite()
+            || !depth.is_finite()
+            || !axial_step.is_finite()
+            || !lateral_step.is_finite()
+            || !dynamic_range.is_finite()
+            || !angle_range.is_finite()
+        {
+            return Err(KwaversError::InvalidInput(
+                "plane-wave physical quantities must be finite".to_owned(),
+            ));
+        }
+        if sound_speed <= 0.0 || frequency <= 0.0 {
             return Err(KwaversError::InvalidInput(
                 "sound_speed and frequency must be positive".to_owned(),
             ));
         }
-        if config.depth <= 0.0 || config.axial_step <= 0.0 || config.lateral_step <= 0.0 {
+        if aperture_size <= 0.0
+            || element_spacing <= 0.0
+            || depth <= 0.0
+            || axial_step <= 0.0
+            || lateral_step <= 0.0
+            || dynamic_range <= 0.0
+        {
             return Err(KwaversError::InvalidInput(
-                "depth and steps must be positive".to_owned(),
+                "plane-wave geometry, steps, and dynamic range must be positive".to_owned(),
+            ));
+        }
+        if config.num_elements < 2 {
+            return Err(KwaversError::InvalidInput(
+                "num_elements must be at least 2".to_owned(),
             ));
         }
 
-        let wavelength = config.sound_speed / config.frequency;
-        let wavenumber = TWO_PI / wavelength;
-        let omega = TWO_PI * config.frequency;
+        let wavelength = Length::from_base(sound_speed / frequency);
+        let wavenumber = ReciprocalLength::from_base(TWO_PI / wavelength.into_base());
+        let omega = Frequency::from_base(TWO_PI * frequency);
 
-        let num_axial = (config.depth / config.axial_step).ceil() as usize;
-        let num_lateral = (config.aperture_size / config.lateral_step).ceil() as usize;
+        let num_axial = (depth / axial_step).ceil() as usize;
+        let num_lateral = (aperture_size / lateral_step).ceil() as usize;
 
         let mut angles = Vec::with_capacity(config.num_angles);
         if config.num_angles == 1 {
-            angles.push(0.0);
+            angles.push(Angle::from_base(0.0));
         } else {
             for i in 0..config.num_angles {
-                let angle_deg = -config.angle_range
-                    + (2.0 * config.angle_range) * i as f64 / (config.num_angles - 1) as f64;
-                angles.push(angle_deg.to_radians());
+                let angle =
+                    -angle_range + (2.0 * angle_range) * i as f64 / (config.num_angles - 1) as f64;
+                angles.push(Angle::from_base(angle));
             }
         }
 
@@ -112,7 +150,10 @@ impl PlaneWaveCompound {
             )));
         }
 
-        let angle = self.angles[angle_idx];
+        let angle = self.angles[angle_idx].into_base();
+        let lateral_step = self.config.lateral_step.into_base();
+        let axial_step = self.config.axial_step.into_base();
+        let wavenumber = self.wavenumber.into_base();
         let mut field = Array2::zeros((self.num_axial, self.num_lateral));
         let apod = self.compute_apodization();
 
@@ -120,10 +161,10 @@ impl PlaneWaveCompound {
             .indexed_iter_mut()
             .expect("plane-wave field is contiguously stored")
         {
-            let x = lateral_idx as f64 * self.config.lateral_step;
-            let z = axial_idx as f64 * self.config.axial_step;
+            let x = lateral_idx as f64 * lateral_step;
+            let z = axial_idx as f64 * axial_step;
 
-            let phase = self.wavenumber * x * angle.sin();
+            let phase = wavenumber * x * angle.sin();
             let amplitude = if lateral_idx < apod.len() {
                 apod[lateral_idx]
             } else {
@@ -133,7 +174,7 @@ impl PlaneWaveCompound {
             *elem = Complex::new(amplitude * phase.cos(), amplitude * phase.sin());
 
             if z > 0.0 {
-                let prop_phase = self.wavenumber * z;
+                let prop_phase = wavenumber * z;
                 let prop = Complex::new(prop_phase.cos(), prop_phase.sin());
                 *elem *= prop;
             }
@@ -196,7 +237,10 @@ impl PlaneWaveCompound {
         angle_idx: usize,
         received_field: &Array2<Complex<f64>>,
     ) -> KwaversResult<Array2<Complex<f64>>> {
-        let angle = self.angles[angle_idx];
+        let angle = self.angles[angle_idx].into_base();
+        let lateral_step = self.config.lateral_step.into_base();
+        let axial_step = self.config.axial_step.into_base();
+        let wavenumber = self.wavenumber.into_base();
         let mut beamformed = Array2::zeros((self.num_axial, self.num_lateral));
 
         for ([ai, li], elem) in beamformed
@@ -208,14 +252,14 @@ impl PlaneWaveCompound {
             }
 
             let signal = received_field[[ai, li]];
-            let z = ai as f64 * self.config.axial_step;
-            let x = li as f64 * self.config.lateral_step;
+            let z = ai as f64 * axial_step;
+            let x = li as f64 * lateral_step;
 
-            let phase_corr = -self.wavenumber * x * angle.sin();
+            let phase_corr = -wavenumber * x * angle.sin();
             let corr = Complex::new(phase_corr.cos(), phase_corr.sin());
 
             *elem = if z > 0.0 {
-                let dp = -self.wavenumber * z;
+                let dp = -wavenumber * z;
                 signal * corr * Complex::new(dp.cos(), dp.sin())
             } else {
                 signal * corr
@@ -245,6 +289,7 @@ impl PlaneWaveCompound {
             }
         }
 
+        let dynamic_range = self.config.dynamic_range.into_base();
         for ([i, j], elem) in self.compounded_image.indexed_iter() {
             let intensity = elem.norm_sqr();
             let db = if intensity > 1e-12 {
@@ -252,8 +297,7 @@ impl PlaneWaveCompound {
             } else {
                 -120.0
             };
-            self.display_image[[i, j]] =
-                ((db + self.config.dynamic_range) / self.config.dynamic_range).clamp(0.0, 1.0);
+            self.display_image[[i, j]] = ((db + dynamic_range) / dynamic_range).clamp(0.0, 1.0);
         }
 
         Ok(())
@@ -299,10 +343,10 @@ impl PlaneWaveCompound {
         thermal.nx = self.num_lateral;
         thermal.ny = 1;
         thermal.nz = self.num_axial;
-        thermal.dx = self.config.lateral_step;
-        thermal.dy = self.config.element_spacing;
-        thermal.dz = self.config.axial_step;
-        thermal.c_ref = self.config.sound_speed;
+        thermal.dx = self.config.lateral_step.into_base();
+        thermal.dy = self.config.element_spacing.into_base();
+        thermal.dz = self.config.axial_step.into_base();
+        thermal.c_ref = self.config.sound_speed.into_base();
         thermal.dt = 0.3 * thermal.dx.min(thermal.dy).min(thermal.dz) / thermal.c_ref;
         thermal
     }
@@ -313,10 +357,10 @@ impl PlaneWaveCompound {
         self.config.num_angles
     }
 
-    /// Plane wave angles in degrees.
+    /// Plane wave angles in radians.
     #[must_use]
-    pub fn get_angles(&self) -> Vec<f64> {
-        self.angles.iter().map(|&a| a.to_degrees()).collect()
+    pub fn get_angles(&self) -> Vec<Angle> {
+        self.angles.clone()
     }
 
     /// Log-compressed display image (values in \[0,1\]).
@@ -337,13 +381,16 @@ impl PlaneWaveCompound {
         (self.num_axial, self.num_lateral)
     }
 
-    /// Estimated frame rate: `(speedup_factor, practical_fps)`.
+    /// Estimated frame rate: `(speedup_factor, practical_frame_rate)`.
     ///
     /// Reference: 30 fps focused beam; speedup = N_angles.
     #[must_use]
-    pub fn frame_rate_estimate(&self) -> (f64, f64) {
-        let focused_fps = 30.0;
-        let speedup = self.config.num_angles as f64;
-        (speedup, focused_fps * speedup)
+    pub fn frame_rate_estimate(&self) -> (Dimensionless, Frequency) {
+        let speedup = Dimensionless::from_base(self.config.num_angles as f64);
+        let focused_frame_rate = Frequency::from_base(30.0);
+        (
+            speedup,
+            Frequency::from_base(focused_frame_rate.into_base() * speedup.into_base()),
+        )
     }
 }

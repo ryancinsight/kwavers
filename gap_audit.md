@@ -29,21 +29,29 @@
 
 # Gap Audit
 
-## Open plane-wave-compounding refresh — 2026-07-31
+## Live plane-wave-compounding refresh — 2026-07-31
 
-`KWAVERS-AEQ-MET-42` identifies the next remaining public diagnostics metric
+`KWAVERS-AEQ-MET-42` found a remaining public diagnostics metric
 family in `workflows::plane_wave_compounding`: angle sweep, transmit
 frequency, sound speed, aperture and sampling geometry, log-compression
 dynamic range, and frame-rate estimates are raw scalars. Internal wavelength,
 wave number, angular frequency, and generated angles are also untyped.
 
-The planned closure uses Aequitas `Angle`, `Frequency`, `Velocity`, `Length`,
-and `Dimensionless`, with scalar extraction limited to phase/math formulas,
+The closure now uses Aequitas `Angle`, `Frequency`, `Velocity`, `Length`, and
+`Dimensionless` in the public configuration, frame-rate result, and internal
+wave-derived values. Scalar extraction is limited to phase/math formulas,
 mesh/solver configuration, and display/report boundaries. The coherent image
 arrays remain Eunomia `Complex` numerical storage and do not require an
-imaginary physical unit.
+imaginary physical unit. Invalid non-finite and non-positive physical
+configuration values are rejected before allocation.
 
-Implementation and focused value-semantic verification remain pending.
+Value-semantic tests cover typed defaults, angle symmetry, invalid geometry,
+field generation, beamforming, frame-rate units, coherent display bounds, and
+the thermal mesh boundary. Verification: package test-target check passes;
+focused plane-wave Nextest passes 10/10 with 185 skipped; warning-denied
+all-target Clippy, doctests (1 executable, 5 ignored), RustDoc, formatting, and
+diff checks pass. Shared unused-provider-patch and linker warnings remain
+outside this metric family.
 
 ## Live stereotactic-targeting refresh — 2026-07-31
 
