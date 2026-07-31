@@ -3,7 +3,7 @@
 //! ## Module layout
 //!
 //! - `config`  — `SimdConfig`, `MathSimdLevel` enum, runtime CPU-feature detection.
-//!              Used by `kwavers-solver`'s FDTD dispatch layer.
+//!   Used by `kwavers-solver`'s FDTD dispatch layer.
 //! - `fdtd_ops` — `FdtdSimdOps` — hermes-backed pressure/velocity update kernels.
 //! - `interpolation_ops` — `InterpolationSimdOps` — trilinear interpolation helpers.
 //! - `metrics` — `SimdPerformance`, `SimdMetrics` — speedup estimation.

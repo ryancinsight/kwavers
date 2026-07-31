@@ -138,8 +138,8 @@ impl IterativeSolver {
             // p = r + beta * (p - omega * Ap)  [for iteration > 1]
             // On first iter rho_old=1, alpha=1, omega=1 and p = r already.
             a.matvec(&p, &mut self.ap);
-            for i in 0..n {
-                p[i] = r[i] + beta * (p[i] - omega * self.ap[i]);
+            for ((p_i, &r_i), &ap_i) in p.iter_mut().zip(&r).zip(&self.ap) {
+                *p_i = r_i + beta * (*p_i - omega * ap_i);
             }
             a.matvec(&p, &mut self.ap);
 
@@ -151,8 +151,8 @@ impl IterativeSolver {
 
             // s = r - alpha * Ap
             self.s.copy_from_slice(&r);
-            for i in 0..n {
-                self.s[i] = r[i] - alpha * self.ap[i];
+            for ((s_i, &r_i), &ap_i) in self.s.iter_mut().zip(&r).zip(&self.ap) {
+                *s_i = r_i - alpha * ap_i;
             }
 
             let s_norm = complex_norm(&self.s);
