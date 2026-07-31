@@ -1149,8 +1149,8 @@
   field traversal plus heterogeneous skull-mask property assignment through the
   crate-local Moirai-backed `parallel` traversal SSOT instead of direct
   ndarray/Rayon `Zip::par_for_each` or duplicate one-input helper calls. Added
-  `zip_mut_with` and `zip_two_mut_with` so one-input updates and ARF's
-  intensity/body-force update share the traversal SSOT. Verification: `rustup
+  `zip_mut_with` tuple outputs so one-input updates and ARF's intensity/body-
+  force update share the traversal SSOT. Verification: `rustup
   run nightly cargo fmt -p kwavers-physics --check` passed; `rustup run nightly
   cargo check -p kwavers-solver --lib` passed; `rustup run nightly cargo clippy
   -p kwavers-solver --lib --no-deps -- -D warnings` passed; `rustup run nightly

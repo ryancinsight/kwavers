@@ -41,7 +41,7 @@
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use leto::Array3;
 
-use crate::parallel::{zip_mut_with, zip_two_mut_with};
+use crate::parallel::zip_mut_with;
 
 /// Volumetric ARF field accumulator and body-force extractor.
 ///
@@ -143,16 +143,15 @@ impl VolumetricArfField {
             }));
         }
         let scale = 1.0 / self.n_samples as f64;
-        zip_two_mut_with(
-            self.intensity.view_mut(),
-            self.arf_density.view_mut(),
+        zip_mut_with(
+            (self.intensity.view_mut(), self.arf_density.view_mut()),
             (
                 &self.p_sq_sum.view(),
                 &absorption.view(),
                 &sound_speed.view(),
                 &density.view(),
             ),
-            |intensity, arf, (&p_sq, &alpha, &c, &rho)| {
+            |(intensity, arf), (&p_sq, &alpha, &c, &rho)| {
                 let p_sq_mean = p_sq * scale;
                 if c > 0.0 && rho > 0.0 {
                     // I(x) = ⟨p²⟩ / (ρ·c)  [W/m²]

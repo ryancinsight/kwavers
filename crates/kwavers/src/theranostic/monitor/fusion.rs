@@ -21,7 +21,7 @@
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array2;
 
-use crate::parallel::zip_two_mut_with;
+use crate::parallel::zip_mut_with;
 
 /// Relative trust placed in each modality when forming the union channel.
 #[derive(Clone, Copy, Debug)]
@@ -99,11 +99,10 @@ pub fn fuse_lesion_map(
 
     let mut agreement = Array2::zeros(q.shape());
     let mut union = Array2::zeros(q.shape());
-    zip_two_mut_with(
-        agreement.view_mut(),
-        union.view_mut(),
+    zip_mut_with(
+        (agreement.view_mut(), union.view_mut()),
         (&q.view(), &p.view()),
-        |a, u, (&qv, &pv)| {
+        |(a, u), (&qv, &pv)| {
             *a = (qv * pv).sqrt();
             *u = (wq * qv).max(wp * pv) / w_max;
         },

@@ -1441,7 +1441,7 @@ Mnemosyne 0.4, Hephaestus 0.13, and Apollo FFT 0.15.
       loops plus heterogeneous skull-mask property assignment through the
       crate-local Moirai-backed `parallel` traversal SSOT instead of direct
       ndarray/Rayon `Zip::par_for_each` or duplicate one-input helper calls.
-      Add the missing `zip_mut_with` and `zip_two_mut_with` arities to
+      Add tuple-output support to `zip_mut_with` in
       `crates/kwavers-physics/src/parallel.rs` so one-input updates and ARF's
       fused intensity/body-force output pass share the traversal SSOT.
       Completion condition: the sonogenetics cone has no direct
@@ -2580,8 +2580,8 @@ Mnemosyne 0.4, Hephaestus 0.13, and Apollo FFT 0.15.
       no direct Rayon or ndarray-parallel hits under
       `crates/kwavers-physics/src/field_surrogate`.
       Follow-up 2026-07-04: added the reusable
-      `crate::parallel::zip_two_mut_with` dense traversal adapter backed
-      by Moirai chunk-pair scheduling, then routed
+      the tuple-output form of `crate::parallel::zip_mut_with` backed by
+      Moirai chunk-pair scheduling, then routed
       `chemistry::reaction_kinetics::update_reactions` through it instead of
       ndarray/Rayon `Zip::par_for_each`. Verification: `rustup run nightly
       cargo fmt -p kwavers-physics` applied formatting, `rustup run nightly

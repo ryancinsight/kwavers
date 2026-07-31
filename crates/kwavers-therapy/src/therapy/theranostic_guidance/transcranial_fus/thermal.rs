@@ -80,7 +80,7 @@ use kwavers_core::constants::tissue_thermal::{
 };
 use kwavers_core::error::{KwaversError, KwaversResult};
 
-use crate::parallel::{zip_mut_with, zip_three_mut_with, zip_two_mut_with};
+use crate::parallel::zip_mut_with;
 
 // ── Material constants (IT'IS v4.1 / ICRU-44 / Duck 1990) ────────────────────
 
@@ -172,16 +172,14 @@ pub fn transcranial_pennes_thermal_dose(
     let mut perf_c = Array3::<f64>::zeros((nx, ny, nz));
     let mut heat_rcp = Array3::<f64>::zeros((nx, ny, nz));
 
-    zip_three_mut_with(
-        kappa.view_mut(),
-        perf_c.view_mut(),
-        heat_rcp.view_mut(),
+    zip_mut_with(
+        (kappa.view_mut(), perf_c.view_mut(), heat_rcp.view_mut()),
         (
             &skull_mask.view(),
             &brain_mask.view(),
             &intensity_w_m2.view(),
         ),
-        |kap, pc, hr, (&is_skull, &is_brain, &i_val)| {
+        |(kap, pc, hr), (&is_skull, &is_brain, &i_val)| {
             let (rho, cp, k, perf, alpha) = if is_skull {
                 (SKULL_RHO, SKULL_CP, SKULL_K, SKULL_PERF, alpha_skull)
             } else if is_brain {
@@ -274,11 +272,10 @@ pub fn transcranial_pennes_thermal_dose(
         temp = new_temp;
 
         // Update peak temperature and accumulate CEM43.
-        zip_two_mut_with(
-            peak.view_mut(),
-            cem43.view_mut(),
+        zip_mut_with(
+            (peak.view_mut(), cem43.view_mut()),
             (&temp.view(), &cem43_increment.view()),
-            |p, c, (&t, &increment)| {
+            |(p, c), (&t, &increment)| {
                 if t > *p {
                     *p = t;
                 }

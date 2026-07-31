@@ -1329,8 +1329,8 @@ volumetric ARF field traversal through the crate-local Moirai-backed
 `parallel` SSOT instead of direct ndarray/Rayon `Zip::par_for_each`, and routed
 heterogeneous skull-mask property assignment through the same one-input helper
 instead of duplicating the mask argument through a two-input traversal. Added
-the missing `zip_mut_with` and `zip_two_mut_with` traversal arities so
-one-input updates and ARF finalization share the traversal SSOT while ARF still
+the tuple-output form of `zip_mut_with` so one-input updates and ARF
+finalization share the traversal SSOT while ARF still
 computes intensity and body-force outputs in one fused pass over the four input
 fields.
 
@@ -2145,9 +2145,9 @@ ndarray-parallel, or `Zip` source hits.
 
 Follow-up 2026-07-04: `chemistry::reaction_kinetics` now routes its hydroxyl
 and hydrogen-peroxide update through the reusable
-`crate::parallel::zip_two_mut_with` adapter, backed by Moirai chunk-pair
-scheduling for dense standard-layout arrays and sequential ndarray traversal
-only for non-standard views. Evidence tier: static source audit plus
+the tuple-output form of `crate::parallel::zip_mut_with`, backed by Moirai
+chunk-pair scheduling for dense standard-layout arrays and sequential ndarray
+traversal only for non-standard views. Evidence tier: static source audit plus
 compile-time/lint and focused empirical validation; `kwavers-physics` check
 and lib clippy pass, focused `reaction_kinetics` nextest passes 1/1, and the
 edited reaction file has no direct Rayon or ndarray-parallel source hits.
