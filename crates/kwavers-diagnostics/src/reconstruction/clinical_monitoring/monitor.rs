@@ -1,7 +1,11 @@
 use super::types::{
-    ClinicalMonitoringConfig, FrameQualityRecord, MonitoringFrameMetrics, MonitoringReport,
-    MonitoringSafetyEventType, SafetyEvent, SafetySeverity,
+    ClinicalMonitoringConfig, FrameQualityRecord, MonitoringFrameMetrics, MonitoringMetric,
+    MonitoringReport, MonitoringSafetyEventType, SafetyEvent, SafetySeverity,
 };
+use aequitas::systems::si::quantities::{
+    Dimensionless, Frequency, Length, TemperatureDifference, ThermodynamicTemperature, Time,
+};
+use aequitas::systems::si::units::Kelvin;
 use kwavers_core::error::KwaversResult;
 use std::collections::VecDeque;
 use std::time::{Instant, SystemTime};
@@ -42,52 +46,65 @@ impl ClinicalMonitor {
     pub fn record_frame_quality(
         &mut self,
         frame_number: usize,
-        processing_time_ms: f64,
-        snr_db: f64,
-        contrast: f64,
-        spatial_resolution_mm: f64,
-        artifact_level: f64,
+        processing_time: Time,
+        snr: Dimensionless,
+        contrast: Dimensionless,
+        spatial_resolution: Length,
+        artifact_level: Dimensionless,
     ) -> KwaversResult<()> {
-        let quality_score = self.compute_quality_score(snr_db, contrast, artifact_level);
+        let quality_score = self.compute_quality_score(snr, contrast, artifact_level);
 
         let record = FrameQualityRecord {
             frame_number,
             timestamp: SystemTime::now(),
-            processing_time_ms,
-            snr_db,
+            processing_time,
+            snr,
             contrast,
-            spatial_resolution_mm,
+            spatial_resolution,
             artifact_level,
             quality_score,
         };
 
         self.performance_metrics.total_frames += 1;
-        self.performance_metrics.avg_processing_time_ms =
-            self.performance_metrics.avg_processing_time_ms.mul_add(
-                (self.performance_metrics.total_frames - 1) as f64,
-                processing_time_ms,
-            ) / self.performance_metrics.total_frames as f64;
-        self.performance_metrics.max_processing_time_ms = self
+        let previous_frames = (self.performance_metrics.total_frames - 1) as f64;
+        let processing_time_s = processing_time.into_base();
+        let avg_processing_time_s = self
             .performance_metrics
-            .max_processing_time_ms
-            .max(processing_time_ms);
-        self.performance_metrics.min_processing_time_ms =
-            if self.performance_metrics.total_frames == 1 {
-                processing_time_ms
+            .avg_processing_time
+            .into_base()
+            .mul_add(previous_frames, processing_time_s)
+            / self.performance_metrics.total_frames as f64;
+        self.performance_metrics.avg_processing_time = Time::from_base(avg_processing_time_s);
+        if processing_time.into_base() > self.performance_metrics.max_processing_time.into_base() {
+            self.performance_metrics.max_processing_time = processing_time;
+        }
+        self.performance_metrics.min_processing_time = if self.performance_metrics.total_frames == 1
+        {
+            processing_time
+        } else {
+            if processing_time.into_base()
+                < self.performance_metrics.min_processing_time.into_base()
+            {
+                processing_time
             } else {
-                self.performance_metrics
-                    .min_processing_time_ms
-                    .min(processing_time_ms)
-            };
+                self.performance_metrics.min_processing_time
+            }
+        };
 
-        if quality_score < self.config.quality_alert_threshold * 100.0 {
+        let quality_limit = self.config.quality_alert_threshold.into_base() * 100.0;
+        if quality_score.into_base() < quality_limit {
             self.log_safety_event(SafetyEvent {
                 timestamp: SystemTime::now(),
                 event_type: MonitoringSafetyEventType::QualityDegradation,
-                parameter_value: quality_score,
-                safety_limit: self.config.quality_alert_threshold * 100.0,
+                parameter_value: MonitoringMetric::Dimensionless(quality_score),
+                safety_limit: MonitoringMetric::Dimensionless(Dimensionless::from_base(
+                    quality_limit,
+                )),
                 severity: SafetySeverity::Warning,
-                message: format!("Frame quality score {:.1} below threshold", quality_score),
+                message: format!(
+                    "Frame quality score {:.1} below threshold",
+                    quality_score.into_base()
+                ),
             })?;
         }
 
@@ -114,63 +131,79 @@ impl ClinicalMonitor {
     }
 
     /// Check temperature safety
-    pub fn check_temperature(&mut self, current_temperature_c: f64, baseline_temp_c: f64) {
-        let temp_rise = current_temperature_c - baseline_temp_c;
+    pub fn check_temperature(
+        &mut self,
+        current_temperature: ThermodynamicTemperature,
+        baseline_temperature: ThermodynamicTemperature,
+    ) -> KwaversResult<()> {
+        let temp_rise = TemperatureDifference::from_base(
+            current_temperature.into_base() - baseline_temperature.into_base(),
+        );
+        let temp_rise_c = temp_rise.in_unit::<Kelvin>();
+        let limit_c = self.config.max_temperature_rise.in_unit::<Kelvin>();
 
-        if temp_rise > self.config.max_temperature_rise_c {
-            let _ = self.log_safety_event(SafetyEvent {
+        if temp_rise > self.config.max_temperature_rise {
+            self.log_safety_event(SafetyEvent {
                 timestamp: SystemTime::now(),
                 event_type: MonitoringSafetyEventType::TemperatureExceeded,
-                parameter_value: temp_rise,
-                safety_limit: self.config.max_temperature_rise_c,
+                parameter_value: MonitoringMetric::TemperatureRise(temp_rise),
+                safety_limit: MonitoringMetric::TemperatureRise(self.config.max_temperature_rise),
                 severity: SafetySeverity::Critical,
                 message: format!(
                     "Temperature rise {:.1}°C exceeds limit {:.1}°C",
-                    temp_rise, self.config.max_temperature_rise_c
+                    temp_rise_c, limit_c
                 ),
-            });
-        } else if temp_rise > self.config.max_temperature_rise_c * 0.8 {
-            let _ = self.log_safety_event(SafetyEvent {
+            })?;
+        } else if temp_rise
+            > TemperatureDifference::from_base(self.config.max_temperature_rise.into_base() * 0.8)
+        {
+            self.log_safety_event(SafetyEvent {
                 timestamp: SystemTime::now(),
                 event_type: MonitoringSafetyEventType::TemperatureExceeded,
-                parameter_value: temp_rise,
-                safety_limit: self.config.max_temperature_rise_c,
+                parameter_value: MonitoringMetric::TemperatureRise(temp_rise),
+                safety_limit: MonitoringMetric::TemperatureRise(self.config.max_temperature_rise),
                 severity: SafetySeverity::Urgent,
                 message: format!(
                     "Temperature rise {:.1}°C approaching limit {:.1}°C",
-                    temp_rise, self.config.max_temperature_rise_c
+                    temp_rise_c, limit_c
                 ),
-            });
+            })?;
         }
+        Ok(())
     }
 
     /// Check mechanical index safety
-    pub fn check_mechanical_index(&mut self, mechanical_index: f64) {
+    pub fn check_mechanical_index(&mut self, mechanical_index: Dimensionless) -> KwaversResult<()> {
         if mechanical_index > self.config.max_mechanical_index {
-            let _ = self.log_safety_event(SafetyEvent {
+            self.log_safety_event(SafetyEvent {
                 timestamp: SystemTime::now(),
                 event_type: MonitoringSafetyEventType::MechanicalIndexExceeded,
-                parameter_value: mechanical_index,
-                safety_limit: self.config.max_mechanical_index,
+                parameter_value: MonitoringMetric::MechanicalIndex(mechanical_index),
+                safety_limit: MonitoringMetric::MechanicalIndex(self.config.max_mechanical_index),
                 severity: SafetySeverity::Critical,
                 message: format!(
                     "MI {:.2} exceeds safety limit {:.2}",
-                    mechanical_index, self.config.max_mechanical_index
+                    mechanical_index.into_base(),
+                    self.config.max_mechanical_index.into_base()
                 ),
-            });
-        } else if mechanical_index > self.config.max_mechanical_index * 0.8 {
-            let _ = self.log_safety_event(SafetyEvent {
+            })?;
+        } else if mechanical_index
+            > Dimensionless::from_base(self.config.max_mechanical_index.into_base() * 0.8)
+        {
+            self.log_safety_event(SafetyEvent {
                 timestamp: SystemTime::now(),
                 event_type: MonitoringSafetyEventType::MechanicalIndexExceeded,
-                parameter_value: mechanical_index,
-                safety_limit: self.config.max_mechanical_index,
+                parameter_value: MonitoringMetric::MechanicalIndex(mechanical_index),
+                safety_limit: MonitoringMetric::MechanicalIndex(self.config.max_mechanical_index),
                 severity: SafetySeverity::Urgent,
                 message: format!(
                     "MI {:.2} approaching safety limit {:.2}",
-                    mechanical_index, self.config.max_mechanical_index
+                    mechanical_index.into_base(),
+                    self.config.max_mechanical_index.into_base()
                 ),
-            });
+            })?;
         }
+        Ok(())
     }
 
     /// Compute quality score (0-100) from metrics
@@ -180,14 +213,16 @@ impl ClinicalMonitor {
     /// - Artifact: 0 → 100%, 1.0 → 0% (weight 20%)
     pub(super) fn compute_quality_score(
         &self,
-        snr_db: f64,
-        contrast: f64,
-        artifact_level: f64,
-    ) -> f64 {
-        let snr_score = (snr_db / 30.0 * 100.0).clamp(0.0, 100.0);
-        let contrast_score = (contrast * 100.0).clamp(0.0, 100.0);
-        let artifact_score = ((1.0 - artifact_level) * 100.0).clamp(0.0, 100.0);
-        (snr_score * 0.4 + contrast_score * 0.4 + artifact_score * 0.2).round()
+        snr: Dimensionless,
+        contrast: Dimensionless,
+        artifact_level: Dimensionless,
+    ) -> Dimensionless {
+        let snr_score = (snr.into_base() / 30.0 * 100.0).clamp(0.0, 100.0);
+        let contrast_score = (contrast.into_base() * 100.0).clamp(0.0, 100.0);
+        let artifact_score = ((1.0 - artifact_level.into_base()) * 100.0).clamp(0.0, 100.0);
+        Dimensionless::from_base(
+            (snr_score * 0.4 + contrast_score * 0.4 + artifact_score * 0.2).round(),
+        )
     }
 
     /// Get frame quality history
@@ -211,12 +246,12 @@ impl ClinicalMonitor {
     /// Get session summary report
     #[must_use]
     pub fn generate_report(&self) -> MonitoringReport {
-        let uptime = self.start_time.elapsed().as_secs_f64();
+        let uptime = Time::from_base(self.start_time.elapsed().as_secs_f64());
 
         let avg_quality = if !self.frame_history.is_empty() {
             self.frame_history
                 .iter()
-                .map(|r| r.quality_score)
+                .map(|r| r.quality_score.into_base())
                 .sum::<f64>()
                 / self.frame_history.len() as f64
         } else {
@@ -245,12 +280,14 @@ impl ClinicalMonitor {
             .count();
 
         MonitoringReport {
-            uptime_seconds: uptime,
+            uptime,
             total_frames_processed: self.performance_metrics.total_frames,
             error_frames: self.performance_metrics.error_frames,
-            avg_frame_rate_fps: self.performance_metrics.total_frames as f64 / uptime.max(1.0),
-            avg_quality_score: avg_quality,
-            avg_processing_time_ms: self.performance_metrics.avg_processing_time_ms,
+            avg_frame_rate: Frequency::from_base(
+                self.performance_metrics.total_frames as f64 / uptime.into_base().max(1.0),
+            ),
+            avg_quality_score: Dimensionless::from_base(avg_quality),
+            avg_processing_time: self.performance_metrics.avg_processing_time,
             info_events: info_count,
             warning_events: warning_count,
             urgent_events: urgent_count,

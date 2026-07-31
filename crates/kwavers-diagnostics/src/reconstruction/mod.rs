@@ -29,8 +29,8 @@ pub use breast_ust_fwi::{
     BREAST_UST_PSTD_DATASET_MODEL,
 };
 pub use clinical_monitoring::{
-    ClinicalMonitor, ClinicalMonitoringConfig, MonitoringReport, MonitoringSafetyEventType,
-    SafetyEvent, SafetySeverity,
+    ClinicalMonitor, ClinicalMonitoringConfig, MonitoringMetric, MonitoringReport,
+    MonitoringSafetyEventType, SafetyEvent, SafetySeverity,
 };
 pub use real_time_sirt::{
     FrameQuality, RealTimeSirtConfig, RealTimeSirtPipeline, ReconstructionFrame,

@@ -1,6 +1,6 @@
 # ADR 084 — Aequitas clinical monitoring quantities
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-07-31
 - Owner: `KWAVERS-AEQ-MET-45`
 
@@ -46,9 +46,11 @@ real Aequitas dimension.
 
 ## Verification
 
-The implementation will pass the diagnostics test-target check, focused
-clinical-monitoring Nextest, warning-denied all-target Clippy, doctests,
-RustDoc, formatting, diff checks, and a public-contract scan for remaining
-unit-bearing raw scalars. Value-semantic tests cover typed defaults, safety
-events, temperature and mechanical-index alerts, quality scoring, and running
-processing-time averages.
+The implementation passes the diagnostics test-target check and focused
+clinical-monitoring Nextest run `b4da788a-cbf6-4f1c-bcac-4da36ddade63`:
+13/13 tests passed with 186 skipped. Warning-denied all-target Clippy,
+diagnostics doctests (1 executable, 5 ignored), RustDoc, package formatting,
+and diff checks pass. The public-contract scan finds no unit-bearing raw
+scalar in the clinical-monitoring public types or methods. Value-semantic
+tests cover typed defaults, safety events, temperature and mechanical-index
+alerts, quality scoring, and running processing-time averages.

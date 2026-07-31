@@ -1,19 +1,27 @@
 # Project Checklist
 
-## Owner: Codex — KWAVERS-AEQ-MET-45 typed clinical monitoring quantities [major] — in progress
+## Owner: Codex — KWAVERS-AEQ-MET-45 typed clinical monitoring quantities [major] — done 2026-07-31
 
-- [ ] Type public monitoring temperature, processing-time, frame-rate,
+- [x] Type public monitoring temperature, processing-time, frame-rate,
       resolution, quality, and safety metrics with Aequitas quantities.
-- [ ] Use a typed mixed-metric safety-event contract and return logging errors
+- [x] Use a typed mixed-metric safety-event contract and return logging errors
       from safety checks instead of discarding them.
-- [ ] Preserve `SystemTime`, counters, and numerical formula boundaries;
+- [x] Preserve `SystemTime`, counters, and numerical formula boundaries;
       document dimensionless logarithmic SNR and real-valued Eunomia semantics.
-- [ ] Synchronize ADR 084, gap-audit, backlog, checklist, changelog, and the
+- [x] Synchronize ADR 084, gap-audit, backlog, checklist, changelog, and the
       Atlas cross-repository audit; run focused package gates.
 
 Acceptance: no unit-bearing raw scalar remains in the public clinical
 monitoring contract; timestamps and counters remain infrastructure values,
-and no complex or imaginary physical unit is introduced.
+and no complex or imaginary physical unit is introduced. Met.
+
+Evidence: diagnostics test-target check passes; focused Nextest run
+`b4da788a-cbf6-4f1c-bcac-4da36ddade63` passes 13/13 with 186 skipped;
+warning-denied all-target Clippy, doctests (1 executable, 5 ignored),
+RustDoc, package formatting, diff, and public-contract scan pass. The
+workspace-wide `cargo fmt --all -- --check` invocation is blocked on Windows
+by the repository's filename-length limit (`os error 206`); the affected
+package format gate passes.
 
 ## Owner: Codex — KWAVERS-AEQ-MET-44 typed f-k migration quantities [major] — done 2026-07-31
 

@@ -4,6 +4,16 @@
 
 ### Changed
 
+- **Breaking:** Clinical monitoring now uses Aequitas `Time`, `Frequency`,
+  `Length`, `TemperatureDifference`, `ThermodynamicTemperature`, and
+  `Dimensionless` contracts for public timing, rate, resolution, safety, and
+  quality metrics. Heterogeneous safety values carry their physical meaning
+  through `MonitoringMetric`, and safety-log failures propagate as typed
+  errors. SNR remains a dimensionless logarithmic ratio; timestamps, counters,
+  and numerical storage remain explicit boundaries. No complex or imaginary
+  physical unit is introduced. See [ADR
+  084](docs/ADR/084-clinical-monitoring-quantities.md).
+
 - **Breaking:** Stolt f-k migration now accepts Aequitas `Length`, `Time`, and
   `Velocity` inputs and returns typed errors for invalid physical sampling
   parameters. RF arrays and internal complex FFT values remain numerical

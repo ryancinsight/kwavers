@@ -1,3 +1,7 @@
+use aequitas::systems::si::quantities::{
+    Dimensionless, Frequency, Length, TemperatureDifference, Time,
+};
+use aequitas::systems::si::units::Kelvin;
 use kwavers_core::constants::medical::MI_LIMIT_SOFT_TISSUE;
 use std::time::SystemTime;
 
@@ -13,13 +17,13 @@ pub struct ClinicalMonitoringConfig {
     /// History window size (frames)
     pub history_window: usize,
     /// Alert threshold for quality metrics
-    pub quality_alert_threshold: f64,
+    pub quality_alert_threshold: Dimensionless,
     /// Alert threshold for safety parameters
-    pub safety_alert_threshold: f64,
-    /// Maximum allowed temperature rise (°C)
-    pub max_temperature_rise_c: f64,
+    pub safety_alert_threshold: Dimensionless,
+    /// Maximum allowed temperature rise.
+    pub max_temperature_rise: TemperatureDifference,
     /// Maximum allowed mechanical index
-    pub max_mechanical_index: f64,
+    pub max_mechanical_index: Dimensionless,
 }
 
 impl Default for ClinicalMonitoringConfig {
@@ -29,10 +33,10 @@ impl Default for ClinicalMonitoringConfig {
             enable_safety_logging: true,
             enable_performance_profiling: true,
             history_window: 100,
-            quality_alert_threshold: 0.7,
-            safety_alert_threshold: 0.9,
-            max_temperature_rise_c: 5.0,
-            max_mechanical_index: MI_LIMIT_SOFT_TISSUE,
+            quality_alert_threshold: Dimensionless::from_base(0.7),
+            safety_alert_threshold: Dimensionless::from_base(0.9),
+            max_temperature_rise: TemperatureDifference::from_unit::<Kelvin>(5.0),
+            max_mechanical_index: Dimensionless::from_base(MI_LIMIT_SOFT_TISSUE),
         }
     }
 }
@@ -44,18 +48,29 @@ pub struct FrameQualityRecord {
     pub frame_number: usize,
     /// Timestamp of frame capture
     pub timestamp: SystemTime,
-    /// Processing time for this frame (ms)
-    pub processing_time_ms: f64,
-    /// Signal-to-noise ratio (dB)
-    pub snr_db: f64,
-    /// Contrast (ratio of signal to background)
-    pub contrast: f64,
-    /// Spatial resolution estimate (mm)
-    pub spatial_resolution_mm: f64,
-    /// Artifact level (0-1, 0=clean, 1=severe)
-    pub artifact_level: f64,
-    /// Overall quality score (0-100)
-    pub quality_score: f64,
+    /// Processing time for this frame.
+    pub processing_time: Time,
+    /// Signal-to-noise ratio, represented as a dimensionless logarithmic ratio.
+    pub snr: Dimensionless,
+    /// Contrast (ratio of signal to background).
+    pub contrast: Dimensionless,
+    /// Spatial resolution estimate.
+    pub spatial_resolution: Length,
+    /// Artifact level (0-1, 0=clean, 1=severe).
+    pub artifact_level: Dimensionless,
+    /// Overall quality score (0-100).
+    pub quality_score: Dimensionless,
+}
+
+/// Physical or dimensionless value carried by a safety event.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum MonitoringMetric {
+    /// Temperature rise above the baseline.
+    TemperatureRise(TemperatureDifference),
+    /// Mechanical index.
+    MechanicalIndex(Dimensionless),
+    /// Quality or resource metric.
+    Dimensionless(Dimensionless),
 }
 
 /// Safety event log entry
@@ -65,10 +80,10 @@ pub struct SafetyEvent {
     pub timestamp: SystemTime,
     /// Event type
     pub event_type: MonitoringSafetyEventType,
-    /// Parameter value
-    pub parameter_value: f64,
-    /// Safety limit
-    pub safety_limit: f64,
+    /// Parameter value with its physical meaning.
+    pub parameter_value: MonitoringMetric,
+    /// Safety limit with the same physical meaning as `parameter_value`.
+    pub safety_limit: MonitoringMetric,
     /// Severity level
     pub severity: SafetySeverity,
     /// Human-readable description
@@ -133,33 +148,33 @@ pub struct MonitoringFrameMetrics {
     pub total_frames: usize,
     /// Frames with errors
     pub error_frames: usize,
-    /// Average processing time (ms)
-    pub avg_processing_time_ms: f64,
-    /// Maximum processing time (ms)
-    pub max_processing_time_ms: f64,
-    /// Minimum processing time (ms)
-    pub min_processing_time_ms: f64,
-    /// Average frame rate (fps)
-    pub avg_frame_rate_fps: f64,
-    /// Uptime (seconds)
-    pub uptime_seconds: f64,
+    /// Average processing time.
+    pub avg_processing_time: Time,
+    /// Maximum processing time.
+    pub max_processing_time: Time,
+    /// Minimum processing time.
+    pub min_processing_time: Time,
+    /// Average frame rate.
+    pub avg_frame_rate: Frequency,
+    /// Uptime.
+    pub uptime: Time,
 }
 
 /// Monitoring report
 #[derive(Debug, Clone)]
 pub struct MonitoringReport {
-    /// Total uptime (seconds)
-    pub uptime_seconds: f64,
+    /// Total uptime.
+    pub uptime: Time,
     /// Total frames processed
     pub total_frames_processed: usize,
     /// Frames with errors
     pub error_frames: usize,
-    /// Average frame rate (fps)
-    pub avg_frame_rate_fps: f64,
-    /// Average quality score (0-100)
-    pub avg_quality_score: f64,
-    /// Average processing time (ms)
-    pub avg_processing_time_ms: f64,
+    /// Average frame rate.
+    pub avg_frame_rate: Frequency,
+    /// Average quality score (0-100).
+    pub avg_quality_score: Dimensionless,
+    /// Average processing time.
+    pub avg_processing_time: Time,
     /// Information events logged
     pub info_events: usize,
     /// Warning events logged

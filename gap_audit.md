@@ -29,6 +29,29 @@
 
 # Gap Audit
 
+## Live clinical-monitoring refresh — 2026-07-31
+
+`KWAVERS-AEQ-MET-45` found raw processing time, frame rate, spatial
+resolution, temperature rise, mechanical index, quality, and safety-event
+values in `reconstruction::clinical_monitoring`. The public contract now uses
+Aequitas `Time`, `Frequency`, `Length`, `TemperatureDifference`,
+`ThermodynamicTemperature`, and `Dimensionless`. Heterogeneous safety values
+use `MonitoringMetric`, and temperature/mechanical-index checks propagate
+event-log failures instead of discarding them.
+
+`SystemTime`, frame/error counters, and numerical formula/storage boundaries
+remain intentionally untyped infrastructure values. SNR is a dimensionless
+logarithmic ratio because this contract has no decibel unit. The workflow is
+real-valued: Eunomia compatibility does not require an imaginary physical
+unit, and no complex metric is manufactured. See
+[`Kwavers ADR 084`](docs/ADR/084-clinical-monitoring-quantities.md).
+
+Verification: diagnostics test-target check passes; focused clinical-monitoring
+Nextest passes 13/13 with 186 skipped; warning-denied all-target Clippy,
+doctests, RustDoc, package formatting, diff, and public-contract scan pass.
+The workspace-wide rustfmt command remains Windows filename-length blocked;
+the affected package format gate passes.
+
 ## Live f-k migration refresh — 2026-07-31
 
 `KWAVERS-AEQ-MET-44` found raw lateral spacing, temporal sample interval, and
