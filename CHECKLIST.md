@@ -1,5 +1,19 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-48 typed sound-speed-shift spatial scales [major] — in progress
+
+- [ ] Type reference sound speed and grid spacing with Aequitas `Velocity` and
+      `Length` in the public reconstruction configuration.
+- [ ] Type curved-path sagitta and finite-frequency wavelength/support scales;
+      extract base scalars only at ray, validation, and solver formulas.
+- [ ] Preserve solver-owned `PlanarPoint` coordinates and dense image storage
+      as explicit boundaries; synchronize ADR 087, gap-audit, backlog,
+      checklist, changelog, and the Atlas cross-repository audit.
+
+Acceptance: no public sound-speed-shift physical length or velocity remains a
+unit-suffixed raw scalar in the migrated configuration/path contracts; no
+complex or imaginary physical unit is introduced.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-47 typed sound-speed-shift time samples [major] — done 2026-07-31
 
 - [x] Type measured time-shift samples and public prediction/curved-array

@@ -29,6 +29,20 @@
 
 # Gap Audit
 
+## Active sound-speed-shift spatial-scale audit — 2026-07-31
+
+`KWAVERS-AEQ-MET-48` is the next bounded gap: reference sound speed, grid
+spacing, curved-path sagitta, and finite-frequency wavelength/support scales
+remain raw unit-suffixed values in the sound-speed-shift configuration and ray
+contracts. The planned boundary uses Aequitas `Velocity` and `Length`, with
+base scalar extraction restricted to ray, propagation, validation, and solver
+formulas.
+
+Solver-owned `PlanarPoint` coordinates and dense Leto image storage remain
+explicit numerical boundaries for later slices. The path is real-valued and
+has no physical phasor, so Eunomia compatibility requires no imaginary
+physical unit. See [`Kwavers ADR 087`](docs/ADR/087-sound-speed-shift-spatial-quantities.md).
+
 ## Live sound-speed-shift refresh — 2026-07-31
 
 `KWAVERS-AEQ-MET-47` found measured travel-time shifts crossing the

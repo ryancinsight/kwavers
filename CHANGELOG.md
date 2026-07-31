@@ -4,6 +4,13 @@
 
 ### Changed
 
+- **Breaking:** Sound-speed-shift reference sound speed, grid spacing,
+  curved-path sagitta, and finite-frequency length scales now use Aequitas
+  `Velocity` and `Length` contracts. Solver-owned coordinates and dense image
+  storage remain explicit numerical boundaries; no complex or imaginary
+  physical unit is introduced. See [ADR
+  087](docs/ADR/087-sound-speed-shift-spatial-quantities.md).
+
 - **Breaking:** Sound-speed-shift measured travel-time samples and prediction,
   curved-array, fixed-acquisition, and batch time-shift APIs now use Aequitas
   `Time`. Seconds are extracted only at numerical operators; velocity, grid,

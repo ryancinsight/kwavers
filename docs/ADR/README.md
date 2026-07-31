@@ -94,3 +94,4 @@
 | [084](084-clinical-monitoring-quantities.md) | Aequitas clinical monitoring quantities | Accepted |
 | [085](085-real-time-sirt-quantities.md) | Aequitas real-time SIRT quantities | Accepted |
 | [086](086-sound-speed-shift-time-quantities.md) | Aequitas sound-speed-shift time quantities | Accepted |
+| [087](087-sound-speed-shift-spatial-quantities.md) | Aequitas sound-speed-shift spatial quantities | Proposed |
