@@ -1,6 +1,6 @@
 # ADR 089 — Aequitas sound-speed error quantities
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-07-31
 - Owner: `KWAVERS-AEQ-MET-50`
 
@@ -36,6 +36,8 @@ numerical fields, but is not applicable to a real sound-speed error metric.
 
 ## Verification
 
-The diagnostics test-target check, focused sound-speed-shift Nextest,
-warning-denied all-target Clippy, doctests, RustDoc, formatting, diff checks,
-and a public-contract scan will pass before acceptance.
+The diagnostics test-target check passes. Focused sound-speed-shift Nextest run
+`3e751b01-2aef-4c94-8109-ac41c91cf390` passes 34/34 tests with 165 skipped;
+warning-denied all-target Clippy, doctests, RustDoc, package formatting, diff
+checks, and the public-contract scan pass. Workspace-wide rustfmt remains
+blocked by the Windows filename-length limit; package formatting passes.

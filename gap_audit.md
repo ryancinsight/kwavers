@@ -29,19 +29,23 @@
 
 # Gap Audit
 
-## Active sound-speed-shift error-metric audit — 2026-07-31
+## Live sound-speed-shift error-metric refresh — 2026-07-31
 
-`KWAVERS-AEQ-MET-50` is the next bounded gap: OpenPros mean absolute and root
-mean square sound-speed errors remain unit-suffixed raw public scalars. The
-planned boundary uses Aequitas `Velocity`, with base extraction confined to
-the numerical image-comparison formula.
+`KWAVERS-AEQ-MET-50` is closed. OpenPros mean absolute and root mean square
+sound-speed errors now use Aequitas `Velocity`; base extraction is confined
+to the numerical image-comparison formula. Normalized error and Pearson
+correlation are dimensionless; objective values, regularization weights, and
+dense Leto image arrays remain explicit numerical/provider boundaries.
 
-Normalized error and Pearson correlation are dimensionless; objective values
-and regularization weights belong to the solver's numerical contract; dense
-Leto image arrays remain a provider-storage boundary. The path is real-valued
-and has no physical phasor, so Eunomia compatibility requires no imaginary
-physical unit. See
+The path is real-valued and has no physical phasor, so Eunomia compatibility
+requires no imaginary physical unit. See
 [`Kwavers ADR 089`](docs/ADR/089-sound-speed-error-quantities.md).
+
+Verification: diagnostics test-target check passes; focused sound-speed-shift
+Nextest run `3e751b01-2aef-4c94-8109-ac41c91cf390` passes 34/34 with 165
+skipped; warning-denied all-target Clippy, doctests, RustDoc, package
+formatting, diff checks, and the public-contract scan pass. Workspace-wide
+rustfmt remains Windows filename-length blocked; package formatting passes.
 
 ## Live sound-speed-shift curved-array/frequency refresh — 2026-07-31
 

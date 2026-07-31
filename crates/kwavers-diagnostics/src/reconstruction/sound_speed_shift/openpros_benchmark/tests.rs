@@ -82,6 +82,36 @@ fn openpros_benchmark_runs_dense_and_sparse_reconstructions() {
     );
     assert!(result.dense_metrics.stored_weight_count > result.dense_metrics.rows_used);
     assert!(result.sparse_metrics.stored_weight_count > result.sparse_metrics.rows_used);
+    assert!(result
+        .dense_metrics
+        .mean_absolute_error
+        .into_base()
+        .is_finite());
+    assert!(result
+        .dense_metrics
+        .root_mean_square_error
+        .into_base()
+        .is_finite());
+    assert!(result
+        .sparse_metrics
+        .mean_absolute_error
+        .into_base()
+        .is_finite());
+    assert!(result
+        .sparse_metrics
+        .root_mean_square_error
+        .into_base()
+        .is_finite());
+    assert!(
+        result.dense_metrics.root_mean_square_error.into_base()
+            >= result.dense_metrics.mean_absolute_error.into_base()
+    );
+    assert!(
+        result.sparse_metrics.root_mean_square_error.into_base()
+            >= result.sparse_metrics.mean_absolute_error.into_base()
+    );
+    assert!(result.dense_metrics.root_mean_square_error.into_base() >= 0.0);
+    assert!(result.sparse_metrics.root_mean_square_error.into_base() >= 0.0);
     // Value-semantic recovery quality (measured: dense pearson≈0.74, nrmse≈0.61,
     // obj-reduction≈0.9999; sparse pearson≈0.58, nrmse≈0.74). Thresholds bound the
     // recovered shift well above a broken reconstruction (pearson≈0, nrmse≈1) yet

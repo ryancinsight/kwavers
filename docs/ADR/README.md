@@ -96,4 +96,4 @@
 | [086](086-sound-speed-shift-time-quantities.md) | Aequitas sound-speed-shift time quantities | Accepted |
 | [087](087-sound-speed-shift-spatial-quantities.md) | Aequitas sound-speed-shift spatial quantities | Accepted |
 | [088](088-sound-speed-curved-array-frequency-quantities.md) | Aequitas curved-array and benchmark frequency quantities | Accepted |
-| [089](089-sound-speed-error-quantities.md) | Aequitas sound-speed error quantities | Proposed |
+| [089](089-sound-speed-error-quantities.md) | Aequitas sound-speed error quantities | Accepted |

@@ -1,6 +1,6 @@
 //! OpenPros benchmark data contracts.
 
-use aequitas::systems::si::quantities::{Frequency, Length, Time};
+use aequitas::systems::si::quantities::{Frequency, Length, Time, Velocity};
 use leto::Array2;
 
 use super::super::{SoundSpeedShiftConfig, SoundSpeedShiftImage, SoundSpeedShiftSample};
@@ -119,8 +119,8 @@ pub struct OpenProsShiftReconstructionMetrics {
     pub rows_used: usize,
     pub active_voxels: usize,
     pub stored_weight_count: usize,
-    pub mean_absolute_error_m_s: f64,
-    pub root_mean_square_error_m_s: f64,
+    pub mean_absolute_error: Velocity,
+    pub root_mean_square_error: Velocity,
     pub normalized_root_mean_square_error: f64,
     pub pearson_correlation: f64,
     pub objective_initial: f64,

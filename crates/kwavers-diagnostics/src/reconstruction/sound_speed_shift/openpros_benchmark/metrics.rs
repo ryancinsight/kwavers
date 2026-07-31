@@ -1,5 +1,6 @@
 //! Reconstruction comparison metrics.
 
+use aequitas::systems::si::quantities::Velocity;
 use leto::Array2;
 
 use super::super::{SoundSpeedShiftImage, SoundSpeedShiftPlan};
@@ -26,8 +27,8 @@ pub(super) fn metrics_for(
         rows_used: plan.rows_used(),
         active_voxels: plan.active_voxels(),
         stored_weight_count: plan.stored_weight_count(),
-        mean_absolute_error_m_s: mae,
-        root_mean_square_error_m_s: rmse,
+        mean_absolute_error: Velocity::from_base(mae),
+        root_mean_square_error: Velocity::from_base(rmse),
         normalized_root_mean_square_error: nrmse,
         pearson_correlation: pearson,
         objective_initial,

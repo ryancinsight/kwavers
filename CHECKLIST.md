@@ -1,10 +1,10 @@
 # Project Checklist
 
-## Owner: Codex — KWAVERS-AEQ-MET-50 typed sound-speed error metrics [major] — in progress
+## Owner: Codex — KWAVERS-AEQ-MET-50 typed sound-speed error metrics [major] — done 2026-07-31
 
-- [ ] Type OpenPros mean absolute and root mean square sound-speed errors
+- [x] Type OpenPros mean absolute and root mean square sound-speed errors
       with Aequitas `Velocity` and remove unit-suffixed public fields.
-- [ ] Keep NRMSE, Pearson correlation, objective values, regularization
+- [x] Keep NRMSE, Pearson correlation, objective values, regularization
       weights, and Leto image arrays at their explicit numerical/provider
       boundaries; synchronize ADR 089, gap-audit, backlog, checklist,
       changelog, and the Atlas cross-repository audit.
@@ -12,6 +12,12 @@
 Acceptance: public MAE and RMSE fields carry Aequitas `Velocity`; numerical
 comparison extracts base scalars only inside its formula; no complex or
 imaginary physical unit is introduced.
+
+Evidence: diagnostics test-target check passes; focused sound-speed-shift
+Nextest run `3e751b01-2aef-4c94-8109-ac41c91cf390` passes 34/34 with 165
+skipped; warning-denied all-target Clippy, doctests, RustDoc, package
+formatting, diff checks, and the public-contract scan pass. Workspace-wide
+rustfmt remains Windows filename-length blocked; package formatting passes.
 
 ## Owner: Codex — KWAVERS-AEQ-MET-49 typed curved-array and benchmark frequency [major] — done 2026-07-31
 
