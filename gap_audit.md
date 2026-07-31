@@ -54,6 +54,12 @@ complex support at their formula or dense-storage boundary.
 
 See [ADR 078](docs/ADR/078-clinical-workflow-quantities.md).
 
+Verification: `cargo check -p kwavers-diagnostics --tests --offline` passes;
+focused workflow Nextest passes 57/57 with 136 skipped; warning-denied
+all-target Clippy, doctests (1 executable, 5 ignored), RustDoc, formatting, and
+diff checks pass. Shared unused-provider-patch and linker warnings are outside
+this metric family.
+
 ## Live neural-diagnostics refresh — 2026-07-31
 
 `KWAVERS-AEQ-MET-39` found a remaining public metric family in

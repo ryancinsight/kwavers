@@ -1,20 +1,21 @@
 # Project Checklist
 
-## Owner: Codex — KWAVERS-AEQ-MET-40 typed clinical workflow quantities [major] — in progress 2026-07-31
+## Owner: Codex — KWAVERS-AEQ-MET-40 typed clinical workflow quantities [major] — done 2026-07-31
 
 - [x] Type workflow latency configuration, acquisition/processing durations,
       total and per-stage timing, confidence, and optional GPU telemetry with
       Aequitas; preserve bytes at the explicit storage boundary.
 - [x] Remove synthetic GPU/memory samples and record individual stage intervals;
       migrate callers/tests and correct the neural timing base-unit conversion.
-- [ ] Synchronize ADR 078, `gap_audit.md`, backlog, checklist, changelog, and
+- [x] Synchronize ADR 078, `gap_audit.md`, backlog, checklist, changelog, and
       the Atlas cross-repository audit; run focused package gates and preserve
       peer-owned changes.
 
-Implementation evidence: package test-target check and warning-denied library
-Clippy pass; formatting and diff checks pass. Focused Nextest/doctest collection
-is blocked by peer-owned `ritk-mgh` (`SINGLE_FRAME`, `DecodedMgh::data`) and
-`kwavers-grid` (`Array3`) compile failures while the shared target is occupied.
+Evidence: `cargo check -p kwavers-diagnostics --tests --offline` passes;
+focused workflow Nextest passes 57/57 with 136 skipped; warning-denied
+all-target Clippy, doctests (1 executable, 5 ignored), Rustdoc, formatting, and
+diff checks pass. Shared unused-provider-patch and linker warnings remain
+outside this item.
 
 ## Owner: Codex — KWAVERS-AEQ-MET-39 typed neural diagnostics quantities [major] — done 2026-07-31
 

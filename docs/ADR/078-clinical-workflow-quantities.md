@@ -39,8 +39,8 @@ dimensionally incorrect.
 
 ## Verification
 
-The focused workflow Nextest, package check, warning-denied Clippy, doctest,
-Rustdoc, formatting, and diff gates are recorded in the linked backlog item
-after execution against the delivered revision. The existing shared target
-was concurrently occupied by unrelated workspace/provider builds during
-implementation; those diagnostics are not attributed to this change.
+Against the delivered revision, `cargo check -p kwavers-diagnostics --tests
+--offline` passes; focused workflow Nextest passes 57/57 with 136 skipped;
+warning-denied all-target Clippy passes; doctests pass with 1 executable and 5
+ignored; RustDoc, formatting, and diff checks pass. Shared unused-provider-patch
+and linker warnings remain outside this decision.
