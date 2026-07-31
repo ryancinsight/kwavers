@@ -494,4 +494,3 @@ pub(super) fn adjoint_image(
         image[linear(ix, iy, grid.ny)]
     })
 }
-

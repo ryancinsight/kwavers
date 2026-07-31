@@ -79,7 +79,13 @@ where
             row_pointers[current_row] = values.len();
         }
 
-        CompressedSparseRowMatrix::from_parts(self.rows, self.cols, values, col_indices, row_pointers)
+        CompressedSparseRowMatrix::from_parts(
+            self.rows,
+            self.cols,
+            values,
+            col_indices,
+            row_pointers,
+        )
     }
 
     /// Get number of non-zeros

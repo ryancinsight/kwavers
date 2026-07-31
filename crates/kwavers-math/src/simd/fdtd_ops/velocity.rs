@@ -9,8 +9,8 @@
 //! which is an AXPY operation: `y += α·x` with α = −Δt/ρ and y initialised
 //! from `v^n`.  All unsafe intrinsics are in `hermes_simd_intrinsics`.
 
-use hermes_simd::axpy;
 use super::FdtdSimdOps;
+use hermes_simd::axpy;
 
 impl FdtdSimdOps {
     /// Hermes-dispatched 3-D FDTD velocity update.
@@ -37,8 +37,7 @@ impl FdtdSimdOps {
                 let row_end = row_start + row_len;
 
                 // v[row] = v_prev[row]
-                velocity[row_start..row_end]
-                    .copy_from_slice(&velocity_prev[row_start..row_end]);
+                velocity[row_start..row_end].copy_from_slice(&velocity_prev[row_start..row_end]);
 
                 // v[row] += −(Δt/ρ) · ∇p[row]
                 axpy(

@@ -158,4 +158,3 @@ mod tests {
         assert!(invalid_neg_freq.validate().is_err());
     }
 }
-

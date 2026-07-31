@@ -8,8 +8,8 @@
 //! support by projected gradient descent with step bounded by the Frobenius
 //! norm of the discrete operator.
 
-mod forward;
 mod field_ops;
+mod forward;
 mod passive_inverse;
 
 use leto::Array3;
@@ -19,8 +19,8 @@ use super::types::{
     Nonlinear3dAperture, Nonlinear3dConfig, Nonlinear3dVolume, VolumeReconstructionMetrics,
 };
 
-use forward::cavitation_source;
 use field_ops::{active_indices, normalize, unflatten};
+use forward::cavitation_source;
 use passive_inverse::{solve_projected_tikhonov, PassiveOperator};
 
 #[derive(Clone, Debug)]
@@ -67,4 +67,3 @@ pub(crate) fn run_cavitation_inverse(
         metrics: metrics_from_score(&score, &target_mask, &body),
     }
 }
-

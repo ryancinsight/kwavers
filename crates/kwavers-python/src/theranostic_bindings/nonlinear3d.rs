@@ -375,4 +375,3 @@ pub(super) fn nonlinear3d_result_to_dict<'py>(
     out.set_item("metrics", metrics)?;
     Ok(out)
 }
-

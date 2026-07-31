@@ -106,4 +106,3 @@ fn test_minnaert_period() {
         t_period
     );
 }
-

@@ -96,13 +96,8 @@ impl BemBoundaryManager {
         }
         a_row_pointers[n] = a_values.len();
 
-        let a_matrix = CompressedSparseRowMatrix::from_parts(
-            n,
-            n,
-            a_values,
-            a_col_indices,
-            a_row_pointers,
-        );
+        let a_matrix =
+            CompressedSparseRowMatrix::from_parts(n, n, a_values, a_col_indices, a_row_pointers);
 
         Ok((a_matrix, b))
     }

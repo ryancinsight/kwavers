@@ -7,7 +7,7 @@ use kwavers_physics::acoustics::imaging::modalities::elastography::{
 };
 use kwavers_physics::analytical::elastography;
 use leto::Array3;
-use numpy::{PyArray3, PyReadonlyArray3, ToPyArray};
+use numpy::{PyArray3, PyReadonlyArray3};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 

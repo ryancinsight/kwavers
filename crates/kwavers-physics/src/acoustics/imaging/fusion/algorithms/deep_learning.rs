@@ -167,4 +167,3 @@ fn attention_uncertainty(scores: &[f64], denominator: f64) -> f64 {
         .sum::<f64>();
     entropy / (scores.len() as f64).ln()
 }
-

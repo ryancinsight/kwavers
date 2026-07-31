@@ -84,8 +84,8 @@ pub fn execute_lithotripsy_step(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::therapy::lithotripsy::LithotripsyParameters;
     use crate::therapy::lithotripsy::stone_fracture::StoneMaterial;
+    use crate::therapy::lithotripsy::LithotripsyParameters;
     use kwavers_core::constants::numerical::MPA_TO_PA;
     use kwavers_grid::Grid;
     use leto::Array3;

@@ -98,4 +98,3 @@ pub(super) fn bayesian_inversion(
         estimation_quality,
     })
 }
-

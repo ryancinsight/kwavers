@@ -242,4 +242,3 @@ pub(crate) fn fuse_feature_based(fusion: &MultiModalFusion) -> KwaversResult<Fus
         ),
     })
 }
-

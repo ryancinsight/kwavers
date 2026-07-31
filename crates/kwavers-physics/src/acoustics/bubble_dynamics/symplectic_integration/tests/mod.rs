@@ -6,9 +6,8 @@
 //! - `test_yoshida4_order`: Convergence order 4.0 ± 30% on SHO
 //! - `test_equilibrium_preserved`: |R−R₀|/R₀ < 1e-12 at exact equilibrium
 
+mod bubble_fixtures;
 mod equilibrium;
 mod hamiltonian;
-mod bubble_fixtures;
 mod period;
 mod yoshida_order;
-

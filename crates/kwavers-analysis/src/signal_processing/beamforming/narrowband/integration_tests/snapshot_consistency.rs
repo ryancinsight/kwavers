@@ -77,4 +77,3 @@ fn snapshot_methods_produce_consistent_covariance_rank() {
         assert!(cov_time_res[[i, i]].re >= 0.0);
     }
 }
-

@@ -1,12 +1,12 @@
 use super::super::config::NonlinearInversionConfig;
 use super::bayesian::bayesian_inversion;
 use super::harmonic_ratio::harmonic_ratio_inversion;
+use super::least_squares::nonlinear_least_squares_inversion;
+use super::processor::NonlinearInversion;
 use super::rheology::{
     a_landau, ba_from_beta_s, beta_s_from_amplitudes, forward_model, forward_model_derivative,
     shear_modulus,
 };
-use super::least_squares::nonlinear_least_squares_inversion;
-use super::processor::NonlinearInversion;
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_imaging::ultrasound::elastography::NonlinearInversionMethod;
@@ -243,4 +243,3 @@ fn test_shear_modulus_default() {
         "shear_modulus should be {expected}, got {mu}"
     );
 }
-

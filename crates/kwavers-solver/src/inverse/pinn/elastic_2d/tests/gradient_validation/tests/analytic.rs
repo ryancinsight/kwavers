@@ -64,4 +64,3 @@ fn test_analytic_plane_wave_gradient() {
         x, y, t, grad_x, grad_y
     );
 }
-

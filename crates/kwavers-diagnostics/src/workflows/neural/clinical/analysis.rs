@@ -46,7 +46,8 @@ impl NeuralClinicalDecisionSupport {
         let [nx, ny, nz] = volume.shape();
 
         let mut probabilities = HashMap::new();
-        let mut dominant_tissue = Array3::<TissueClass>::from_elem((nx, ny, nz), TissueClass::Unknown);
+        let mut dominant_tissue =
+            Array3::<TissueClass>::from_elem((nx, ny, nz), TissueClass::Unknown);
         let mut boundary_confidence = Array3::<f32>::zeros((nx, ny, nz));
 
         probabilities.insert("Fat".to_owned(), Array3::from_elem((nx, ny, nz), 0.33));

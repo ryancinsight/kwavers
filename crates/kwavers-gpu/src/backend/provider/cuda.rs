@@ -147,4 +147,3 @@ impl ElementWiseMultiplyProvider for CudaElementWiseProvider {
             .map_err(|error| map_hephaestus_error("cuda elementwise readback", error))
     }
 }
-

@@ -265,8 +265,10 @@ impl PSTDSolver {
 
         // 4. Add the source term (and subtract pⁿ⁻¹ for the leapfrog recurrence).
         if let Some(prev) = &p_prev_old {
-            for ((dst, &old), &source) in
-                propagated.iter_mut().zip(prev.iter()).zip(source_term.iter())
+            for ((dst, &old), &source) in propagated
+                .iter_mut()
+                .zip(prev.iter())
+                .zip(source_term.iter())
             {
                 *dst += source - old;
             }

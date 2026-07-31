@@ -6,4 +6,3 @@ mod constants;
 mod fixtures;
 mod standing_wave;
 mod transmit_schedule;
-

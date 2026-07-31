@@ -467,4 +467,3 @@ fn abdominal_placement_context_uses_uncropped_patient_slice() {
         "abdominal aperture must remain outside the local skin tangent plane: projection={max_aperture_skin_projection_m}"
     );
 }
-

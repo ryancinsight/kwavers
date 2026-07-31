@@ -2,7 +2,7 @@
 
 use super::arrays::{array2_from_flat, flatten_array2};
 use kwavers_physics::analytical::rtm as rtm_mod;
-use numpy::{PyArray2, PyReadonlyArray2, PyUntypedArrayMethods, ToPyArray};
+use numpy::{PyArray2, PyReadonlyArray2, PyUntypedArrayMethods};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 

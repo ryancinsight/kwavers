@@ -132,17 +132,13 @@ impl PSTDKSOperators {
     /// Ensure persistent buffers match `shape`. Re-allocates only on shape
     /// change — zero allocation for fixed-grid timestepping.
     pub fn ensure_buffers(&mut self, shape: [usize; 3]) {
-        let grow = |buf: &mut Option<Array3<Complex64>>, s: [usize; 3]| {
-            match buf {
-                Some(ref arr) if arr.shape() == s => {}
-                _ => *buf = Some(Array3::zeros(s)),
-            }
+        let grow = |buf: &mut Option<Array3<Complex64>>, s: [usize; 3]| match buf {
+            Some(ref arr) if arr.shape() == s => {}
+            _ => *buf = Some(Array3::zeros(s)),
         };
-        let grow_real = |buf: &mut Option<Array3<f64>>, s: [usize; 3]| {
-            match buf {
-                Some(ref arr) if arr.shape() == s => {}
-                _ => *buf = Some(Array3::zeros(s)),
-            }
+        let grow_real = |buf: &mut Option<Array3<f64>>, s: [usize; 3]| match buf {
+            Some(ref arr) if arr.shape() == s => {}
+            _ => *buf = Some(Array3::zeros(s)),
         };
         grow(&mut self.spectral_buf, shape);
         grow(&mut self.spectral_scratch, shape);

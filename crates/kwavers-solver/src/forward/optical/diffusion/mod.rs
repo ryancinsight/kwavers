@@ -7,6 +7,6 @@
 mod solver;
 
 pub use solver::{
-    DiffusionBoundaryCondition, DiffusionBoundaryConditions, DiffusionSolver, DiffusionSolverConfig,
-    FluenceRateField, OpticalSourceField,
+    DiffusionBoundaryCondition, DiffusionBoundaryConditions, DiffusionSolver,
+    DiffusionSolverConfig, FluenceRateField, OpticalSourceField,
 };

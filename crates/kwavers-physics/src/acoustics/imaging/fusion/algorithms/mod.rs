@@ -31,11 +31,11 @@
 
 mod deep_learning;
 mod feature_based;
+pub(crate) mod fusion_ops;
 mod intensity_projection;
 mod maximum_likelihood;
 mod pca;
 mod probabilistic;
-pub(crate) mod fusion_ops;
 pub(crate) mod weighted_average;
 
 use super::config::{FusionConfig, ImagingFusionMethod};
@@ -254,4 +254,3 @@ impl MultiModalFusion {
 
 #[cfg(test)]
 mod tests;
-

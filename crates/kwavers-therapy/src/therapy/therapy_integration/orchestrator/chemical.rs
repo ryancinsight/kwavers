@@ -108,7 +108,7 @@ pub fn update_chemical_reactions(
     let bubble_radius = cavitation_activity.mapv(|activity| {
         // Base bubble radius of 1 micron (typical for sonochemistry)
         let base_radius = 1e-6; // 1 μm
-        // Radius decreases with activity (higher activity = more violent collapse)
+                                // Radius decreases with activity (higher activity = more violent collapse)
         base_radius * (1.0 - activity * 0.5).max(0.1) // Min 10% of base radius
     });
 

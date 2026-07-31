@@ -1,7 +1,7 @@
 //! PyO3 wrappers for static acoustic-lens helpers.
 
 use aequitas::systems::si::quantities::{Angle, Frequency, Length, Time, Velocity};
-use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
+use numpy::{PyArray1, PyReadonlyArray1};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -32,7 +32,10 @@ pub fn acoustic_lens_delay_profile(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let radii_typed: Vec<Length> = radii_raw.iter().map(|&r| Length::from_base(r)).collect();
-    let lens = AcousticLens::silicone(Length::from_base(focal_length_m), Length::from_base(aperture_m));
+    let lens = AcousticLens::silicone(
+        Length::from_base(focal_length_m),
+        Length::from_base(aperture_m),
+    );
     let tau: Vec<f64> = lens
         .aperture_delay_profile(&radii_typed, Velocity::from_base(medium_sound_speed))
         .into_iter()
@@ -61,7 +64,11 @@ pub fn fresnel_zone_radii(
     aperture_radius_m: f64,
 ) -> PyResult<Py<PyArray1<f64>>> {
     use kwavers_transducer::transducers::physics::materials::FresnelZonePlate;
-    let zp = FresnelZonePlate::new(Length::from_base(focal_length_m), Length::from_base(wavelength_m), Length::from_base(aperture_radius_m));
+    let zp = FresnelZonePlate::new(
+        Length::from_base(focal_length_m),
+        Length::from_base(wavelength_m),
+        Length::from_base(aperture_radius_m),
+    );
     let radii: Vec<f64> = zp.zone_radii().into_iter().map(Length::into_base).collect();
     Ok(PyArray1::from_vec(py, radii).unbind())
 }

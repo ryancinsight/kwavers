@@ -39,4 +39,3 @@ mod tests;
 
 /// Utility functions for gradient manipulation
 pub mod gradient_clipping;
-

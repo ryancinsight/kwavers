@@ -61,8 +61,8 @@
 //! - Kopriva (2009). *Implementing Spectral Methods*. Springer. §4.
 
 use kwavers_core::error::KwaversResult;
-use leto_ops::application::special_legendre::legendre_poly;
 use leto::{Array1, Array2};
+use leto_ops::application::special_legendre::legendre_poly;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BasisType {

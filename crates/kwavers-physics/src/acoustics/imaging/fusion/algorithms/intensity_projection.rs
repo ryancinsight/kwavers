@@ -78,4 +78,3 @@ pub(crate) fn fuse_intensity_projection(
         coordinates: generate_coordinate_arrays(dims, fusion.config.output_resolution),
     })
 }
-

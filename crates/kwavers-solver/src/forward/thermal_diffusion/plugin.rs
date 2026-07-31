@@ -3,7 +3,7 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use kwavers_physics::thermal::{VolumetricHeatSource, diffusion::ThermalDiffusionConfig};
+use kwavers_physics::thermal::{diffusion::ThermalDiffusionConfig, VolumetricHeatSource};
 use leto::Array4;
 
 use super::solver::ThermalDiffusionSolver;
@@ -126,8 +126,8 @@ impl crate::plugin::Plugin for ThermalDiffusionPlugin {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::plugin::test_support::{make_context, null_plugin_fields, NullBoundary};
     use crate::plugin::Plugin;
-    use crate::plugin::test_support::{NullBoundary, make_context, null_plugin_fields};
     use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
     use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_K;
     use kwavers_medium::{HomogeneousMedium, ThermalProperties};

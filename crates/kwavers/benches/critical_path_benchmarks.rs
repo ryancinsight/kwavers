@@ -30,8 +30,7 @@ fn bench_fdtd_derivatives(c: &mut Criterion) {
             6 => FiniteDifference3DScheme::CentralSixthOrder,
             _ => panic!("Invalid spatial order"),
         };
-        let op = FiniteDifference3D::new(scheme, 0.001, 0.001, 0.001)
-            .expect("Valid grid spacing");
+        let op = FiniteDifference3D::new(scheme, 0.001, 0.001, 0.001).expect("Valid grid spacing");
 
         // Test different grid sizes (small, medium, large)
         for size in [32, 64, 128] {
@@ -44,7 +43,8 @@ fn bench_fdtd_derivatives(c: &mut Criterion) {
                 |b, _| {
                     b.iter(|| {
                         let mut deriv = Array3::<f64>::zeros(field.shape());
-                        op.apply_x_into(field.view(), &mut deriv).expect("Derivative computation");
+                        op.apply_x_into(field.view(), &mut deriv)
+                            .expect("Derivative computation");
                         black_box(deriv)
                     })
                 },

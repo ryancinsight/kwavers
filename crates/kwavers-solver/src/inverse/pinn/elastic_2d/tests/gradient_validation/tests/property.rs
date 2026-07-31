@@ -141,4 +141,3 @@ fn test_gradient_symmetry_property() {
         y1, x1, grad_x_at_yx, grad_y_at_yx
     );
 }
-

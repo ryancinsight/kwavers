@@ -64,4 +64,3 @@ fn test_equilibrium_preserved() {
         v_err
     );
 }
-

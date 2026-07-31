@@ -10,8 +10,8 @@
 //! `hermes_simd::axpy`, which select AVX-512 / AVX2 / NEON / scalar at
 //! runtime.  All unsafe intrinsics are in `hermes_simd_intrinsics`.
 
-use hermes_simd::{axpy, scale};
 use super::FdtdSimdOps;
+use hermes_simd::{axpy, scale};
 
 impl FdtdSimdOps {
     /// Hermes-dispatched 3-D FDTD pressure update.

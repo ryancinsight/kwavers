@@ -136,8 +136,8 @@ mod tests {
         // At 32 ppw (nx=32, dx=1.0, k=2π/32≈0.196): truncation error < 2e-6 per point.
         //
         // Analytical reference: Fornberg (1988) Tables of FD weights.
-        use leto_ops::{FiniteDifference3D, FiniteDifference3DScheme};
         use leto::Array3;
+        use leto_ops::{FiniteDifference3D, FiniteDifference3DScheme};
         use std::f64::consts::PI;
 
         let nx = 32usize;

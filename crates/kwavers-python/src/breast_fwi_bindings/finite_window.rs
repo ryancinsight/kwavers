@@ -125,4 +125,3 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     )?)?;
     Ok(())
 }
-

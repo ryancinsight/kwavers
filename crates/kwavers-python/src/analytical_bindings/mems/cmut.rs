@@ -1,7 +1,9 @@
 //! CMUT scalar model bindings.
 
-use aequitas::systems::si::quantities::{ElectricPotential, Frequency, MassDensity, Pressure, ReciprocalLength, Velocity};
 use super::py_convert::cmut;
+use aequitas::systems::si::quantities::{
+    ElectricPotential, Frequency, MassDensity, ReciprocalLength, Velocity,
+};
 use pyo3::prelude::*;
 
 /// CMUT (Si) immersion resonance `Hz`.
@@ -12,7 +14,9 @@ pub fn cmut_resonance_immersion(
     gap: f64,
     density_fluid: f64,
 ) -> PyResult<f64> {
-    Ok(cmut(radius, thickness, gap)?.immersion_resonance(MassDensity::from_base(density_fluid)).into_base())
+    Ok(cmut(radius, thickness, gap)?
+        .immersion_resonance(MassDensity::from_base(density_fluid))
+        .into_base())
 }
 
 /// CMUT collapse (pull-in) voltage `V`.
@@ -37,7 +41,10 @@ pub fn cmut_self_heating(
     freq: f64,
 ) -> PyResult<f64> {
     Ok(cmut(radius, thickness, gap)?
-        .self_heating_power(ElectricPotential::from_base(v_ac), Frequency::from_base(freq))
+        .self_heating_power(
+            ElectricPotential::from_base(v_ac),
+            Frequency::from_base(freq),
+        )
         .into_base())
 }
 
@@ -45,7 +52,10 @@ pub fn cmut_self_heating(
 #[pyfunction]
 pub fn cmut_fractional_bandwidth(radius: f64, thickness: f64, density_fluid: f64) -> PyResult<f64> {
     // gap does not affect bandwidth; use a nominal value for construction
-    Ok(cmut(radius, thickness, 0.1e-6)?.fractional_bandwidth(MassDensity::from_base(density_fluid)))
+    Ok(
+        cmut(radius, thickness, 0.1e-6)?
+            .fractional_bandwidth(MassDensity::from_base(density_fluid)),
+    )
 }
 
 /// CMUT gap-limited peak output pressure `Pa` (swing_fraction ≈ 1/3 conventional).
@@ -103,6 +113,12 @@ pub fn cmut_pressure_output(
     sound_speed_fluid: f64,
     swing_fraction: f64,
 ) -> PyResult<f64> {
-    cmut_max_output_pressure(radius, thickness, gap, density_fluid, sound_speed_fluid, swing_fraction)
+    cmut_max_output_pressure(
+        radius,
+        thickness,
+        gap,
+        density_fluid,
+        sound_speed_fluid,
+        swing_fraction,
+    )
 }
-

@@ -93,4 +93,3 @@ fn pipeline_is_invariant_to_global_time_shift() {
         rel_diff
     );
 }
-

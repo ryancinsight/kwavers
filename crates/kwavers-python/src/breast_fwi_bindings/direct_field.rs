@@ -130,4 +130,3 @@ fn direct_field_metrics_to_dict<'py>(
     )?;
     Ok(out)
 }
-

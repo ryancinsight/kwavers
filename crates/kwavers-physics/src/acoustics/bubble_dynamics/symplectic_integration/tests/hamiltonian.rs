@@ -96,4 +96,3 @@ fn test_hamiltonian_no_drift() {
         h0
     );
 }
-

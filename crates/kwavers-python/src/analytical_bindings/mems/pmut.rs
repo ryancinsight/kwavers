@@ -1,7 +1,7 @@
 //! PMUT scalar model bindings.
 
-use aequitas::systems::si::quantities::{ElectricPotential, Frequency, MassDensity, Velocity};
 use super::py_convert::pmut;
+use aequitas::systems::si::quantities::{ElectricPotential, Frequency, MassDensity, Velocity};
 use pyo3::prelude::*;
 
 /// PMUT immersion resonance `Hz` (film = "aln" | "pzt").
@@ -13,7 +13,9 @@ pub fn pmut_resonance_immersion(
     t_s: f64,
     density_fluid: f64,
 ) -> PyResult<f64> {
-    Ok(pmut(film, radius, t_p, t_s)?.immersion_resonance(MassDensity::from_base(density_fluid)).into_base())
+    Ok(pmut(film, radius, t_p, t_s)?
+        .immersion_resonance(MassDensity::from_base(density_fluid))
+        .into_base())
 }
 
 /// PMUT effective electromechanical coupling k² [-].
@@ -33,7 +35,10 @@ pub fn pmut_self_heating(
     freq: f64,
 ) -> PyResult<f64> {
     Ok(pmut(film, radius, t_p, t_s)?
-        .self_heating_power(ElectricPotential::from_base(v_ac), Frequency::from_base(freq))
+        .self_heating_power(
+            ElectricPotential::from_base(v_ac),
+            Frequency::from_base(freq),
+        )
         .into_base())
 }
 
@@ -68,4 +73,3 @@ pub fn pmut_max_output_pressure(
         )
         .into_base())
 }
-

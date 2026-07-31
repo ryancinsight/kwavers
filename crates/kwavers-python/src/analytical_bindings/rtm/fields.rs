@@ -3,7 +3,7 @@
 use super::arrays::complex_field_arrays;
 use eunomia::Complex64;
 use kwavers_physics::analytical::rtm as rtm_mod;
-use numpy::{PyArray2, PyReadonlyArray1, ToPyArray};
+use numpy::{PyArray2, PyReadonlyArray1};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 

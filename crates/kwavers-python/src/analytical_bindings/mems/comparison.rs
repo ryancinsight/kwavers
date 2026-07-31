@@ -1,7 +1,9 @@
 //! CMUT/PMUT comparison figure-of-merit bindings.
 
-use aequitas::systems::si::quantities::{ElectricPotential, MassDensity, ReciprocalLength, Velocity};
 use super::py_convert::{cmut, pmut};
+use aequitas::systems::si::quantities::{
+    ElectricPotential, MassDensity, ReciprocalLength, Velocity,
+};
 use kwavers_transducer::mems::comparison;
 use pyo3::prelude::*;
 
@@ -96,4 +98,3 @@ pub fn ivus_figure_of_merit(
         recommended,
     ])
 }
-

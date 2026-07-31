@@ -723,4 +723,3 @@ mod r2c_optimized_tests {
         }
     }
 }
-

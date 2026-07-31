@@ -1182,26 +1182,32 @@ fn validate_temporal_synchronization_multi_modal() {
         [n_samples],
         (0..n_samples)
             .map(|i| {
-                (2.0 * std::f64::consts::PI * i as f64 / 100.0 + std::f64::consts::PI / 4.0).sin()
+                (2.0 * std::f64::consts::PI * i as f64 / 100.0 + std::f64::consts::PI / 8.0).sin()
             })
             .collect(),
     )
     .unwrap();
 
-    let (phase_offset, quality) = registration
+    let sync = registration
         .temporal_synchronization(&ref_signal, &target_signal)
         .unwrap();
 
-    // Validate synchronization quality
+    // A pi/8 phase offset over a 100-sample period is 6.25 frames (inside
+    // the synchronizer's default ±10-frame search range); the three-point
+    // fractional peak refinement resolves sub-sample shifts, so half a frame
+    // bounds the estimate.
     assert!(
-        phase_offset.abs() < std::f64::consts::PI * 2.0,
-        "Phase offset should be reasonable"
+        (sync.shift_frames().abs() - 6.25).abs() < 0.5,
+        "expected a ~6.25-frame shift, got {}",
+        sync.shift_frames()
     );
-
-    // Quality metrics should be computed
-    assert!(quality.rms_timing_error >= 0.0);
-    assert!(quality.phase_lock_stability >= 0.0);
-    assert!(quality.phase_lock_stability <= 1.0);
-    assert!(quality.sync_success_rate >= 0.0);
-    assert!(quality.sync_success_rate <= 1.0);
+    // Identical sinusoids differ only by the shift, so the overlap-normalized
+    // peak correlation is near unity.
+    assert!(
+        sync.peak_correlation() > 0.9,
+        "expected near-unity correlation, got {}",
+        sync.peak_correlation()
+    );
+    assert!(sync.overlap_samples() > 0);
+    assert!(sync.residual_rms() >= 0.0);
 }

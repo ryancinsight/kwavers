@@ -137,4 +137,3 @@ fn test_gpu_pstd_solver_new() {
     );
     eprintln!("GpuPstdSolver constructed successfully");
 }
-

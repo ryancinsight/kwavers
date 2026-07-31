@@ -123,4 +123,3 @@ pub fn plan_transcranial_focused_bowl_placement_from_ritk_ct<'py>(
     out.set_item("cap_max_polar_rad", cap_max_polar_rad.unwrap_or(1.18_f64))?;
     Ok(out)
 }
-

@@ -71,4 +71,3 @@ struct RowContext {
     attenuation_model: bool,
     k: f64,
 }
-

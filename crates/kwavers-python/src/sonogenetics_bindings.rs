@@ -31,17 +31,17 @@
 //! - Goodman, J.W. (2005). *Introduction to Fourier Optics*, 3rd ed. §3.3.
 //! - Koch, C. (1999). *Biophysics of Computation*. Oxford University Press.
 
+use crate::array_utils::leto3_to_pyarray3;
 use aequitas::systems::si::quantities::{
     Capacitance, ElectricConductance, ElectricPotential, Frequency, Pressure, Time,
 };
-use crate::array_utils::leto3_to_pyarray3;
 use kwavers_physics::acoustics::therapy::sonogenetics::{
     boltzmann_open_probability_from_tension_mn_m, coupled_channel_drive,
     gaussian_beam_pressure_field, lif_response_probability, pressure_threshold_p_open,
     pressure_to_membrane_tension_mn_m, simulate_lif_trace, LifParams, PressureThresholdParams,
 };
 use leto::Array3;
-use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
+use numpy::{PyArray1, PyReadonlyArray1};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
@@ -393,8 +393,17 @@ pub fn simulate_lif_neuron_py<'py>(
         .map_err(kwavers_to_py)?;
     let spike_count = trace.spike_times.len();
     let dict = PyDict::new(py);
-    dict.set_item("voltage_v", PyArray1::from_vec(py, trace.voltage.iter().map(|v| v.into_base()).collect()))?;
-    dict.set_item("spike_times_s", PyArray1::from_vec(py, trace.spike_times.iter().map(|t| t.into_base()).collect()))?;
+    dict.set_item(
+        "voltage_v",
+        PyArray1::from_vec(py, trace.voltage.iter().map(|v| v.into_base()).collect()),
+    )?;
+    dict.set_item(
+        "spike_times_s",
+        PyArray1::from_vec(
+            py,
+            trace.spike_times.iter().map(|t| t.into_base()).collect(),
+        ),
+    )?;
     dict.set_item("spike_count", spike_count)?;
     Ok(dict)
 }
@@ -414,12 +423,21 @@ pub fn lif_response_probability_py<'py>(
     smoothing_sigma_s: f64,
     f_max_hz: f64,
 ) -> PyResult<Bound<'py, PyDict>> {
-    let spikes: Vec<Time<f64>> = spike_times_s.as_slice()?
+    let spikes: Vec<Time<f64>> = spike_times_s
+        .as_slice()?
         .iter()
         .map(|&t| Time::from_base(t))
         .collect();
     let response = py
-        .detach(|| lif_response_probability(&spikes, n_samples, Time::from_base(dt_s), Time::from_base(smoothing_sigma_s), Frequency::from_base(f_max_hz)))
+        .detach(|| {
+            lif_response_probability(
+                &spikes,
+                n_samples,
+                Time::from_base(dt_s),
+                Time::from_base(smoothing_sigma_s),
+                Frequency::from_base(f_max_hz),
+            )
+        })
         .map_err(kwavers_to_py)?;
     let dict = PyDict::new(py);
     dict.set_item("spike_train", PyArray1::from_vec(py, response.spike_train))?;

@@ -242,7 +242,10 @@ fn apply_k_space_correction_cached_matches_uncached() {
     let mut w_opt = NonlinearWave::new(&grid, 1e-7);
     w_opt.precompute_k_squared(&grid);
     w_opt.precompute_k_space_correction(&medium, &grid);
-    assert!(w_opt.k_space_correction.is_some(), "correction must be cached");
+    assert!(
+        w_opt.k_space_correction.is_some(),
+        "correction must be cached"
+    );
     assert!(w_opt.k_buf.is_some(), "k_buf must be initialised");
     assert!(w_opt.k_out.is_some(), "k_out must be initialised");
 

@@ -122,4 +122,3 @@ pub(super) fn downsample_max(
         }
     })
 }
-

@@ -109,4 +109,3 @@ pub(super) fn nonlinear_least_squares_inversion(
         estimation_quality,
     })
 }
-

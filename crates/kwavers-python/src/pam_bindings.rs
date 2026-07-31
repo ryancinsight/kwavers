@@ -17,7 +17,7 @@ use kwavers_analysis::signal_processing::pam::{
 use kwavers_math::fft::Complex64 as KwComplex;
 use kwavers_math::linear_algebra::eigendecomposition::{EigenSolver, EigenSolverConfig};
 use leto::{Array1, Array2};
-use numpy::{PyArray1, PyReadonlyArray1, PyReadonlyArray2, ToPyArray};
+use numpy::{PyArray1, PyReadonlyArray1, PyReadonlyArray2};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
@@ -179,7 +179,13 @@ fn passive_acoustic_map_das<'py>(
     }
 
     let sensors: Vec<[f64; 3]> = (0..sensor_positions.nrows())
-        .map(|i| [sensor_positions[[i, 0]], sensor_positions[[i, 1]], sensor_positions[[i, 2]]])
+        .map(|i| {
+            [
+                sensor_positions[[i, 0]],
+                sensor_positions[[i, 1]],
+                sensor_positions[[i, 2]],
+            ]
+        })
         .collect();
     let config = DelayAndSumConfig {
         sound_speed,

@@ -783,4 +783,3 @@ impl Simulation {
         Python::attach(|py| build_simulation_result(py, &result, &self.grid.inner, time_steps, dt))
     }
 }
-

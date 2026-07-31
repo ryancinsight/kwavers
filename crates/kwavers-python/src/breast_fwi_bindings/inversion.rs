@@ -126,4 +126,3 @@ pub fn invert_breast_fwi<'py>(
     out.set_item("solver_model_family", result.solver_model_family)?;
     Ok(out)
 }
-

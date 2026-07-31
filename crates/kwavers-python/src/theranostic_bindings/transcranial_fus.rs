@@ -542,4 +542,3 @@ fn brain_centroid(brain_mask: &leto::Array3<bool>) -> [usize; 3] {
         (sz / n as f64).round() as usize,
     ]
 }
-

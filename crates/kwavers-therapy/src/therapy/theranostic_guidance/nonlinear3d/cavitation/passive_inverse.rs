@@ -349,4 +349,3 @@ mod tests {
         assert_eq!(result.objective_history, vec![0.0, 0.0, 0.0]);
     }
 }
-

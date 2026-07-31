@@ -120,4 +120,3 @@ fn parse_storage_order(order: &str) -> PyResult<BreastUstPhantomStorageOrder> {
         ))),
     }
 }
-

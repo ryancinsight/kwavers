@@ -274,4 +274,3 @@ fn brain_centroid(brain_mask: &Array3<bool>) -> [usize; 3] {
         (sz / n as f64).round() as usize,
     ]
 }
-

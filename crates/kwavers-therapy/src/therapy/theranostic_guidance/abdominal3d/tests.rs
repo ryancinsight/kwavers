@@ -334,4 +334,3 @@ fn focus_is_inside_body_mask() {
         "focus x should be near organ centroid, got {focus_x:.4} m"
     );
 }
-

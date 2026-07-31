@@ -473,10 +473,9 @@ mod tests {
 
         // Collapsed (V ≥ V_c) ⇒ no stable equilibrium.
         assert!(c.bias_pulldown_fraction(vc).is_none());
-        assert!(
-            c.bias_pulldown_fraction(voltage(1.5 * vc.into_base()))
-                .is_none()
-        );
+        assert!(c
+            .bias_pulldown_fraction(voltage(1.5 * vc.into_base()))
+            .is_none());
     }
 
     #[test]
@@ -538,7 +537,7 @@ mod tests {
     fn cmut_is_wide_band_in_blood() {
         let c = ivus_cmut();
         let fbw = c.fractional_bandwidth(density(1060.0)); // blood
-        // CMUTs are fluid-coupling dominated → broad fractional bandwidth (>60%)
+                                                           // CMUTs are fluid-coupling dominated → broad fractional bandwidth (>60%)
         assert!(fbw > 0.6, "CMUT FBW {fbw} should be wide");
     }
 
@@ -564,7 +563,7 @@ mod tests {
         let c = cell(20e-6, 0.5e-6, 0.2e-6);
         let c2a = cell(40e-6, 0.5e-6, 0.2e-6); // 2× radius
         let c2g = cell(20e-6, 0.5e-6, 0.4e-6); // 2× gap
-        // c ∝ a⁴ → ×16 ; c ∝ 1/g³ → ÷8
+                                               // c ∝ a⁴ → ×16 ; c ∝ 1/g³ → ÷8
         assert!(
             (c2a.squeeze_film_damping(viscosity(AIR_VISC)).into_base()
                 / c.squeeze_film_damping(viscosity(AIR_VISC)).into_base()

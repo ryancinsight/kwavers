@@ -35,4 +35,3 @@ fn steering_vector_has_unit_magnitude_for_all_sensors() {
         }
     }
 }
-

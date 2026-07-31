@@ -206,4 +206,3 @@ impl PyFrequencyDomainFwiConfig {
         self.inner.forward_operator.model_id()
     }
 }
-

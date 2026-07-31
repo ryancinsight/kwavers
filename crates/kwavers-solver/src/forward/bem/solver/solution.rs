@@ -120,7 +120,8 @@ impl BemSolver {
             preconditioner: SparsePreconditioner::None,
             verbose: false,
         };
-        let mut solver = kwavers_math::linear_algebra::sparse::solver::IterativeSolver::create(solver_config);
+        let mut solver =
+            kwavers_math::linear_algebra::sparse::solver::IterativeSolver::create(solver_config);
         let p_scat = solver.bicgstab_complex(&a_matrix, rhs_arr.view(), None)?;
 
         let p_total: Vec<Complex64> = p_inc

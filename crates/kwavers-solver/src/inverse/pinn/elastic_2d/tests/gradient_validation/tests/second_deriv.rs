@@ -81,4 +81,3 @@ fn test_analytic_polynomial_second_derivative() {
         );
     }
 }
-

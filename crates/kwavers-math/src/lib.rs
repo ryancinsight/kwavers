@@ -60,9 +60,7 @@ pub use geometry::{
 pub use linear_algebra::sparse;
 
 /// SIMD acceleration interfaces
-pub use simd::{
-    FdtdSimdOps, InterpolationSimdOps, MathSimdLevel, SimdConfig, SimdPerformance,
-};
+pub use simd::{FdtdSimdOps, InterpolationSimdOps, MathSimdLevel, SimdConfig, SimdPerformance};
 
 /// Safe SIMD operations with runtime feature detection
 pub use simd_safe::SimdOps;

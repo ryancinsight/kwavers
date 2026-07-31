@@ -38,7 +38,9 @@ impl<T: Copy + Default + PartialOrd + Add<Output = T>> CompressedSparseRowMatrix
             rows,
             cols,
             nnz,
-            data: (0..rows).map(|_| Vec::with_capacity(nnz / rows.max(1) + 1)).collect(),
+            data: (0..rows)
+                .map(|_| Vec::with_capacity(nnz / rows.max(1) + 1))
+                .collect(),
         }
     }
 
@@ -62,7 +64,12 @@ impl<T: Copy + Default + PartialOrd + Add<Output = T>> CompressedSparseRowMatrix
                 data[row].push((col_indices[idx], values[idx]));
             }
         }
-        Self { rows, cols, nnz, data }
+        Self {
+            rows,
+            cols,
+            nnz,
+            data,
+        }
     }
 
     /// Get the flat values array (CSR format).

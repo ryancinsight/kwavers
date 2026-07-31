@@ -60,9 +60,8 @@ mod tests {
             field[[ix, 0, 0]] = ix as f64;
         }
         for ix in 0..grid.nx {
-            let v = HetTrilinearInterpolator::interpolate(
-                &field, ix as f64 * grid.dx, 0.0, 0.0, &grid,
-            );
+            let v =
+                HetTrilinearInterpolator::interpolate(&field, ix as f64 * grid.dx, 0.0, 0.0, &grid);
             assert!((v - ix as f64).abs() < 1e-12, "ix={ix} got {v}");
         }
         let v = HetTrilinearInterpolator::interpolate(&field, 0.5 * grid.dx, 0.0, 0.0, &grid);
@@ -79,9 +78,8 @@ mod tests {
                 field[[ix, iy, 0]] = ix as f64 + 2.0 * iy as f64;
             }
         }
-        let v = HetTrilinearInterpolator::interpolate(
-            &field, 1.5 * grid.dx, 1.5 * grid.dy, 0.0, &grid,
-        );
+        let v =
+            HetTrilinearInterpolator::interpolate(&field, 1.5 * grid.dx, 1.5 * grid.dy, 0.0, &grid);
         assert!((v - 4.5).abs() < 1e-12, "quasi-2D: got {v}");
     }
 }

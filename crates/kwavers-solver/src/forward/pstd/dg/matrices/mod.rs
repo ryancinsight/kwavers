@@ -49,8 +49,8 @@
 use super::basis::{fourier_theta, validate_fourier_nodes, BasisType};
 use kwavers_core::error::KwaversResult;
 use kwavers_core::error::{KwaversError, NumericalError};
-use leto_ops::application::special_legendre::legendre_poly_and_deriv;
 use leto::{Array1, Array2};
+use leto_ops::application::special_legendre::legendre_poly_and_deriv;
 
 /// Compute mass matrix using quadrature
 /// M_ij = integral(phi_i * phi_j)

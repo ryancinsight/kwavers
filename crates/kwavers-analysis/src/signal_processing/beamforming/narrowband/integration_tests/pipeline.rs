@@ -239,4 +239,3 @@ fn diagonal_loading_prevents_covariance_singularity() {
         "Diagonal loading should produce positive spectrum"
     );
 }
-

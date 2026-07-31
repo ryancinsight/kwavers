@@ -111,4 +111,3 @@ fn test_first_derivative_y_vs_finite_difference() {
         }
     }
 }
-

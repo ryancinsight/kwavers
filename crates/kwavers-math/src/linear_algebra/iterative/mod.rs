@@ -4,9 +4,9 @@
 //! import path while the implementation lives in leto-ops.
 
 pub use leto_ops::{
-    BiCGSTAB, ConjugateGradient, GMRES, LsqrConfig, LsqrResult, LsqrSolver, LsqrStopReason,
-    LinearOperator, LinearSolver, Preconditioner, IterativeLinearSolver, IterativeSolverConfig,
-    IdentityPreconditioner, JacobiPreconditioner, ILUPreconditioner,
+    BiCGSTAB, ConjugateGradient, ILUPreconditioner, IdentityPreconditioner, IterativeLinearSolver,
+    IterativeSolverConfig, JacobiPreconditioner, LinearOperator, LinearSolver, LsqrConfig,
+    LsqrResult, LsqrSolver, LsqrStopReason, Preconditioner, GMRES,
 };
 
 /// LSQR solver wrapper preserving the kwavers import path.
@@ -68,11 +68,7 @@ pub mod lsqr {
             fn ncols(&self) -> usize {
                 self.0.cols()
             }
-            fn apply_transpose(
-                &self,
-                x: &Array1<f64>,
-                y: &mut Array1<f64>,
-            ) -> leto::Result<()> {
+            fn apply_transpose(&self, x: &Array1<f64>, y: &mut Array1<f64>) -> leto::Result<()> {
                 let xs = x.as_slice().expect("contiguous Array1");
                 let ys = y.as_slice_mut().expect("contiguous Array1");
                 self.0.t_matvec(xs, ys);
@@ -88,8 +84,7 @@ pub mod lsqr {
             config: &LsqrConfig,
         ) -> MatFreeResult {
             let solver = LsqrSolver::new(*config);
-            let b_array =
-                Array1::from_vec(b.len(), b.to_vec()).expect("b slice fits Array1 shape");
+            let b_array = Array1::from_vec(b.len(), b.to_vec()).expect("b slice fits Array1 shape");
             let adapter = MatFreeAdapter(op);
             let result = solver.solve(&adapter, &b_array);
             MatFreeResult {

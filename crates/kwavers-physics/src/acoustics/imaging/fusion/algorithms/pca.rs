@@ -175,4 +175,3 @@ fn weighted_quality(weights: &[f64], modalities: &[(&str, &RegisteredModality)])
         .map(|(weight, (_, modality))| weight * modality.quality_score)
         .sum()
 }
-

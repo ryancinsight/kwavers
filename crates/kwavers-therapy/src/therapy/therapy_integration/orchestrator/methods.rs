@@ -13,8 +13,8 @@ use leto::Array3;
 
 use super::super::config::TherapySessionConfig;
 use super::{
-    TherapyIntegrationOrchestrator, cavitation, chemical, execution, initialization, lithotripsy,
-    microbubble, safety,
+    cavitation, chemical, execution, initialization, lithotripsy, microbubble, safety,
+    TherapyIntegrationOrchestrator,
 };
 use aequitas::systems::si::quantities::Time;
 

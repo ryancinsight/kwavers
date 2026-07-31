@@ -276,4 +276,3 @@ impl VelocityComponentStats {
         self.shape
     }
 }
-

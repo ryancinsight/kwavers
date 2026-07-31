@@ -12,7 +12,8 @@ fn legendre_derivative_endpoint_limits_are_finite() {
     ];
 
     for (degree, node, expected_value, expected_derivative) in endpoint_cases {
-        let (value, derivative) = leto_ops::application::special_legendre::legendre_poly_and_deriv(degree, node);
+        let (value, derivative) =
+            leto_ops::application::special_legendre::legendre_poly_and_deriv(degree, node);
         assert_eq!(value, expected_value);
         assert_eq!(derivative, expected_derivative);
         assert!(value.is_finite());

@@ -10,10 +10,10 @@ use super::{
 };
 use crate::analytical::transducer::electronic_steering_efficiency;
 use crate::analytical::wave::{shock_formation_distance, shock_heat_source_density};
+use aequitas::systems::si::quantities::Time;
 use rand::{RngCore, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use rand_distr::{Distribution, LogNormal};
-use aequitas::systems::si::quantities::Time;
 
 const MAX_EXACT_F64_INTEGER: usize = 1usize << 53;
 
@@ -691,7 +691,8 @@ pub fn closed_loop_cavitation_sonication(
     }
 
     let stable_dose = super::cumulative_cavitation_dose(&stable, input.burst_duration.into_base());
-    let inertial_dose = super::cumulative_cavitation_dose(&inertial, input.burst_duration.into_base());
+    let inertial_dose =
+        super::cumulative_cavitation_dose(&inertial, input.burst_duration.into_base());
     Some(ClosedLoopCavitationSonicationTrace {
         pressure_pa: pressure,
         stable_emission: stable,

@@ -651,4 +651,3 @@ fn build_padded_alpha_field(
     }
     out
 }
-

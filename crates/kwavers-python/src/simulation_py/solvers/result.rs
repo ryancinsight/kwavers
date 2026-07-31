@@ -1,5 +1,5 @@
 use kwavers_core::constants::thermodynamic::KELVIN_OFFSET_C;
-use numpy::{PyArray1, PyArray2, PyArray3, ToPyArray};
+use numpy::{PyArray1, PyArray2, PyArray3};
 use pyo3::prelude::*;
 
 use crate::breast_fwi_bindings::complex_compat::{leto1_to_nd1, leto2_to_nd2, leto3_to_nd3};

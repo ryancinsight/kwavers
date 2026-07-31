@@ -121,4 +121,3 @@ fn second_harmonic_scale(
         / (config.nonlinear_beta * omega * source_pressure_pa);
     0.25 / shock_distance_m
 }
-

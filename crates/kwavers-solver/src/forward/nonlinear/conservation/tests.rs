@@ -118,4 +118,3 @@ fn test_field_rms() {
     let rms = energy::field_rms(&field);
     assert!((rms - 2.0).abs() < 1e-10);
 }
-
