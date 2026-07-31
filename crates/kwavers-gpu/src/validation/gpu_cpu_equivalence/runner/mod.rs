@@ -1,4 +1,5 @@
 use super::{EquivalenceReport, EquivalenceValidator};
+use aequitas::systems::si::quantities::Time;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::error::{KwaversError, SystemError, ValidationError};
 use kwavers_grid::Grid;
@@ -193,7 +194,7 @@ pub fn validate_gpu_cpu_equivalence_with_config(
     // Run CPU simulation
     let cpu_start = std::time::Instant::now();
     let cpu_result = run_simulation_cpu(grid, medium, nt, &config);
-    let cpu_time_ms = cpu_start.elapsed().as_secs_f64() * 1000.0;
+    let cpu_time = Time::from_base(cpu_start.elapsed().as_secs_f64());
 
     let cpu_pressure = cpu_result.map_err(|e| ValidationError::ConstraintViolation {
         message: format!("CPU solver failed: {}", e),
@@ -202,7 +203,7 @@ pub fn validate_gpu_cpu_equivalence_with_config(
     // Run GPU simulation
     let gpu_start = std::time::Instant::now();
     let gpu_result = run_simulation_gpu(grid, medium, nt, &config);
-    let gpu_time_ms = gpu_start.elapsed().as_secs_f64() * 1000.0;
+    let gpu_time = Time::from_base(gpu_start.elapsed().as_secs_f64());
 
     let gpu_pressure = match gpu_result {
         Ok(p) => p,
@@ -210,7 +211,7 @@ pub fn validate_gpu_cpu_equivalence_with_config(
             // GPU not available, create failure report
             let mut report =
                 EquivalenceReport::new(validator.tolerance_relative, grid.nx * grid.ny * grid.nz);
-            report.cpu_time_ms = cpu_time_ms;
+            report.cpu_time = cpu_time;
             report.failure_reason = Some(format!("GPU unavailable: {}", e));
             report.passed = false;
             return Ok(report);
@@ -218,7 +219,7 @@ pub fn validate_gpu_cpu_equivalence_with_config(
     };
 
     // Compare results
-    validator.validate_arrays(&cpu_pressure, &gpu_pressure, cpu_time_ms, gpu_time_ms)
+    validator.validate_arrays(&cpu_pressure, &gpu_pressure, cpu_time, gpu_time)
 }
 
 /// Validate equivalence for a specific test configuration (Test Matrix entry point)

@@ -4,6 +4,13 @@
 
 ### Changed
 
+- **Breaking**: GPU/CPU equivalence reports and validator tolerances now use
+  Aequitas `Pressure`, `Time`, and `Dimensionless` quantities. Dense Leto
+  pressure arrays remain at the numerical-storage boundary; summary formatting
+  converts canonical seconds to milliseconds only for display. The real-valued
+  validator has no complex or imaginary physical-unit path. See [ADR
+  072](docs/ADR/072-gpu-equivalence-quantities.md).
+
 - **Breaking**: Plasmonics particle geometry, wavelengths, concentration,
   cross-sections, near-field coupling, resonance frequency, and complex Mie
   polarizability now use Aequitas quantities. Eunomia `Complex64` remains the

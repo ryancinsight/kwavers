@@ -2,6 +2,7 @@ use super::{
     EquivalenceReport, DEFAULT_ABSOLUTE_TOLERANCE, DEFAULT_RELATIVE_TOLERANCE, MEASUREMENT_STEPS,
     WARMUP_STEPS,
 };
+use aequitas::systems::si::quantities::{Dimensionless, Pressure, Time};
 use kwavers_core::error::ValidationError;
 use leto::Array3 as LetoArray3;
 
@@ -12,10 +13,10 @@ use leto::Array3 as LetoArray3;
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct EquivalenceValidator {
     /// Absolute error tolerance for comparisons
-    pub tolerance_absolute: f64,
+    pub tolerance_absolute: Pressure<f64>,
 
     /// Relative error tolerance for comparisons
-    pub tolerance_relative: f64,
+    pub tolerance_relative: Dimensionless<f64>,
 
     /// Require exact bitwise equality (for deterministic operations)
     pub require_bitwise: bool,
@@ -33,8 +34,8 @@ pub struct EquivalenceValidator {
 impl Default for EquivalenceValidator {
     fn default() -> Self {
         Self {
-            tolerance_absolute: DEFAULT_ABSOLUTE_TOLERANCE,
-            tolerance_relative: DEFAULT_RELATIVE_TOLERANCE,
+            tolerance_absolute: Pressure::from_base(DEFAULT_ABSOLUTE_TOLERANCE),
+            tolerance_relative: Dimensionless::from_base(DEFAULT_RELATIVE_TOLERANCE),
             require_bitwise: false, // Allow for parallel reduction differences
             warmup_steps: WARMUP_STEPS,
             measurement_steps: MEASUREMENT_STEPS,
@@ -50,8 +51,8 @@ impl EquivalenceValidator {
     /// is guaranteed to be identical between GPU and CPU.
     pub fn strict() -> Self {
         Self {
-            tolerance_absolute: 0.0,
-            tolerance_relative: 0.0,
+            tolerance_absolute: Pressure::from_base(0.0),
+            tolerance_relative: Dimensionless::from_base(0.0),
             require_bitwise: true,
             ..Default::default()
         }
@@ -60,9 +61,13 @@ impl EquivalenceValidator {
     /// Create a validator with relaxed tolerances for parallel reductions
     ///
     /// Use this when operation ordering differs (e.g., parallel sums).
-    pub fn relaxed(allowed_relative_error: f64) -> Self {
+    pub fn relaxed(allowed_relative_error: Dimensionless<f64>) -> Self {
         Self {
-            tolerance_relative: allowed_relative_error.max(DEFAULT_RELATIVE_TOLERANCE),
+            tolerance_relative: Dimensionless::from_base(
+                allowed_relative_error
+                    .into_base()
+                    .max(DEFAULT_RELATIVE_TOLERANCE),
+            ),
             require_bitwise: false,
             ..Default::default()
         }
@@ -78,8 +83,8 @@ impl EquivalenceValidator {
         &self,
         cpu_result: &LetoArray3<f64>,
         gpu_result: &LetoArray3<f64>,
-        cpu_time_ms: f64,
-        gpu_time_ms: f64,
+        cpu_time: Time<f64>,
+        gpu_time: Time<f64>,
     ) -> Result<EquivalenceReport, ValidationError> {
         // Check dimensions match
         if cpu_result.shape() != gpu_result.shape() {
@@ -93,14 +98,16 @@ impl EquivalenceValidator {
         let mut report = EquivalenceReport::new(self.tolerance_relative, total_points);
 
         // Compute peak pressures
-        report.cpu_peak_pressure = cpu_result.iter().map(|&v| v.abs()).fold(0.0_f64, f64::max);
-        report.gpu_peak_pressure = gpu_result.iter().map(|&v| v.abs()).fold(0.0_f64, f64::max);
+        report.cpu_peak_pressure =
+            Pressure::from_base(cpu_result.iter().map(|&v| v.abs()).fold(0.0_f64, f64::max));
+        report.gpu_peak_pressure =
+            Pressure::from_base(gpu_result.iter().map(|&v| v.abs()).fold(0.0_f64, f64::max));
 
         // Compute error metrics
         let mut max_abs_error: f64 = 0.0;
         let mut max_rel_error: f64 = 0.0;
         let mut divergent_count: usize = 0;
-        let min_threshold = self.tolerance_absolute.max(1e-300);
+        let min_threshold = self.tolerance_absolute.into_base().max(1e-300);
 
         for (&cpu_val, &gpu_val) in cpu_result.iter().zip(gpu_result.iter()) {
             let abs_error = (gpu_val - cpu_val).abs();
@@ -115,29 +122,32 @@ impl EquivalenceValidator {
 
             max_rel_error = max_rel_error.max(rel_error);
 
-            if rel_error > self.tolerance_relative {
+            if rel_error > self.tolerance_relative.into_base() {
                 divergent_count += 1;
             }
         }
 
-        report.max_absolute_error = max_abs_error;
-        report.max_relative_error = max_rel_error;
+        report.max_absolute_error = Pressure::from_base(max_abs_error);
+        report.max_relative_error = Dimensionless::from_base(max_rel_error);
         report.divergent_points = divergent_count;
-        report.cpu_time_ms = cpu_time_ms;
-        report.gpu_time_ms = gpu_time_ms;
-        report.speedup = if gpu_time_ms > 0.0 {
-            cpu_time_ms / gpu_time_ms
+        report.cpu_time = cpu_time;
+        report.gpu_time = gpu_time;
+        report.speedup = Dimensionless::from_base(if gpu_time.into_base() > 0.0 {
+            cpu_time.into_base() / gpu_time.into_base()
         } else {
             0.0
-        };
+        });
 
         // Determine pass/fail
-        report.passed = max_rel_error <= self.tolerance_relative && divergent_count == 0;
+        report.passed =
+            max_rel_error <= self.tolerance_relative.into_base() && divergent_count == 0;
 
         if !report.passed {
             report.failure_reason = Some(format!(
                 "Max relative error {:.6e} exceeds threshold {:.6e}, or {} divergent points detected",
-                max_rel_error, self.tolerance_relative, divergent_count
+                max_rel_error,
+                self.tolerance_relative.into_base(),
+                divergent_count
             ));
         }
 
@@ -157,8 +167,16 @@ mod tests {
     fn test_validator_strict() {
         let strict = EquivalenceValidator::strict();
         assert!(strict.require_bitwise, "Strict mode requires bitwise");
-        assert_eq!(strict.tolerance_absolute, 0.0, "Strict mode: zero absolute");
-        assert_eq!(strict.tolerance_relative, 0.0, "Strict mode: zero relative");
+        assert_eq!(
+            strict.tolerance_absolute,
+            Pressure::from_base(0.0),
+            "Strict mode: zero absolute"
+        );
+        assert_eq!(
+            strict.tolerance_relative,
+            Dimensionless::from_base(0.0),
+            "Strict mode: zero relative"
+        );
     }
 
     /// Test validator relaxed mode
@@ -167,9 +185,13 @@ mod tests {
     ///
     #[test]
     fn test_validator_relaxed() {
-        let relaxed = EquivalenceValidator::relaxed(1e-10);
+        let relaxed = EquivalenceValidator::relaxed(Dimensionless::from_base(1e-10));
         assert!(!relaxed.require_bitwise, "Relaxed mode allows non-bitwise");
-        assert_eq!(relaxed.tolerance_relative, 1e-10, "Custom tolerance set");
+        assert_eq!(
+            relaxed.tolerance_relative,
+            Dimensionless::from_base(1e-10),
+            "Custom tolerance set"
+        );
     }
 
     /// Test validator default values
@@ -179,8 +201,14 @@ mod tests {
     #[test]
     fn test_validator_default() {
         let default = EquivalenceValidator::default();
-        assert_eq!(default.tolerance_relative, DEFAULT_RELATIVE_TOLERANCE);
-        assert_eq!(default.tolerance_absolute, DEFAULT_ABSOLUTE_TOLERANCE);
+        assert_eq!(
+            default.tolerance_relative,
+            Dimensionless::from_base(DEFAULT_RELATIVE_TOLERANCE)
+        );
+        assert_eq!(
+            default.tolerance_absolute,
+            Pressure::from_base(DEFAULT_ABSOLUTE_TOLERANCE)
+        );
         assert_eq!(default.warmup_steps, WARMUP_STEPS);
         assert_eq!(default.measurement_steps, MEASUREMENT_STEPS);
     }
@@ -197,16 +225,21 @@ mod tests {
 
         let validator = EquivalenceValidator::strict();
         let report = validator
-            .validate_arrays(&cpu, &gpu, 1.0, 0.5)
+            .validate_arrays(&cpu, &gpu, Time::from_base(1.0), Time::from_base(0.5))
             .expect("Validation should succeed");
 
         assert!(
             report.passed(),
             "Identical arrays should pass strict validation"
         );
-        assert_eq!(report.max_absolute_error, 0.0, "Zero error expected");
         assert_eq!(
-            report.max_relative_error, 0.0,
+            report.max_absolute_error,
+            Pressure::from_base(0.0),
+            "Zero error expected"
+        );
+        assert_eq!(
+            report.max_relative_error,
+            Dimensionless::from_base(0.0),
             "Zero relative error expected"
         );
     }
@@ -226,7 +259,7 @@ mod tests {
 
         let validator = EquivalenceValidator::strict();
         let report = validator
-            .validate_arrays(&cpu, &gpu, 1.0, 1.0)
+            .validate_arrays(&cpu, &gpu, Time::from_base(1.0), Time::from_base(1.0))
             .expect("Validation should complete");
 
         // Should fail strict validation
@@ -235,7 +268,7 @@ mod tests {
             "Should detect 1 ULP difference in strict mode"
         );
         assert!(
-            report.max_absolute_error > 0.0,
+            report.max_absolute_error.into_base() > 0.0,
             "Should detect non-zero error"
         );
     }
@@ -250,7 +283,8 @@ mod tests {
         let gpu = LetoArray3::zeros([10, 10, 11]);
 
         let validator = EquivalenceValidator::default();
-        let result = validator.validate_arrays(&cpu, &gpu, 1.0, 1.0);
+        let result =
+            validator.validate_arrays(&cpu, &gpu, Time::from_base(1.0), Time::from_base(1.0));
 
         assert!(result.is_err(), "Should error on dimension mismatch");
     }
@@ -267,11 +301,11 @@ mod tests {
 
         let validator = EquivalenceValidator::default();
         let report = validator
-            .validate_arrays(&cpu, &gpu, 0.0, 0.0)
+            .validate_arrays(&cpu, &gpu, Time::from_base(0.0), Time::from_base(0.0))
             .expect("Validation should handle zeros");
 
         assert!(report.passed(), "Zero arrays should be equivalent");
-        assert_eq!(report.max_absolute_error, 0.0);
+        assert_eq!(report.max_absolute_error, Pressure::from_base(0.0));
     }
 
     /// Test error symmetry for deterministic operations
@@ -286,13 +320,13 @@ mod tests {
 
         let validator1 = EquivalenceValidator::default();
         let report1 = validator1
-            .validate_arrays(&cpu, &gpu, 1.0, 0.5)
+            .validate_arrays(&cpu, &gpu, Time::from_base(1.0), Time::from_base(0.5))
             .expect("Validation should succeed");
 
         // Swap order
         let validator2 = EquivalenceValidator::default();
         let report2 = validator2
-            .validate_arrays(&gpu, &cpu, 0.5, 1.0)
+            .validate_arrays(&gpu, &cpu, Time::from_base(0.5), Time::from_base(1.0))
             .expect("Validation should succeed");
 
         // Symmetric error: max_absolute_error should be same
@@ -312,15 +346,17 @@ mod tests {
         let validator = EquivalenceValidator::strict();
 
         let report = validator
-            .validate_arrays(&array, &array, 1.0, 1.0)
+            .validate_arrays(&array, &array, Time::from_base(1.0), Time::from_base(1.0))
             .expect("Validation should succeed");
 
         assert_eq!(
-            report.max_absolute_error, 0.0,
+            report.max_absolute_error,
+            Pressure::from_base(0.0),
             "Identical arrays: zero error"
         );
         assert_eq!(
-            report.max_relative_error, 0.0,
+            report.max_relative_error,
+            Dimensionless::from_base(0.0),
             "Identical arrays: zero relative error"
         );
     }

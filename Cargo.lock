@@ -3341,6 +3341,7 @@ dependencies = [
 name = "kwavers-gpu"
 version = "5.0.0"
 dependencies = [
+ "aequitas",
  "bytemuck",
  "eunomia",
  "flume",
@@ -5653,7 +5654,6 @@ version = "0.2.0"
 dependencies = [
  "anyhow",
  "coeus-core",
- "consus-io",
  "flate2",
  "ritk-image",
  "ritk-spatial",
@@ -8002,16 +8002,16 @@ dependencies = [
 ]
 
 [[patch.unused]]
-name = "asclepius-coeus"
-version = "0.1.0"
-
-[[patch.unused]]
-name = "horae"
+name = "consus-zarr"
 version = "0.1.0"
 
 [[patch.unused]]
 name = "apollo-nufft"
 version = "0.7.0"
+
+[[patch.unused]]
+name = "horae"
+version = "0.1.0"
 
 [[patch.unused]]
 name = "athena-core"
@@ -8026,5 +8026,5 @@ name = "moirai-http"
 version = "0.4.0"
 
 [[patch.unused]]
-name = "consus-zarr"
+name = "asclepius-coeus"
 version = "0.1.0"

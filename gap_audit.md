@@ -29,6 +29,32 @@
 
 # Gap Audit
 
+## Live GPU equivalence refresh — 2026-07-31
+
+`KWAVERS-AEQ-MET-34` found raw physical and temporal metrics in
+`kwavers-gpu::validation::gpu_cpu_equivalence::EquivalenceReport` and
+`EquivalenceValidator`: absolute error and peak CPU/GPU pressure were `f64`,
+and execution duration was represented by unit-suffixed millisecond fields.
+The dense `LetoArray3<f64>` samples remain a deliberate numerical-storage
+boundary, not a missing per-element Aequitas contract.
+
+The closure uses Aequitas `Pressure<f64>` for absolute error and peak values,
+`Time<f64>` stored canonically in seconds for CPU/GPU duration, and
+`Dimensionless<f64>` for relative error, thresholds, divergent fraction, and
+speedup. Milliseconds exist only in the human-readable summary through the
+Aequitas `Millisecond` unit. Eunomia compatibility is real-only through the
+`UnitScalar` implementation; this validator compares real time-domain fields,
+so no imaginary unit or complex physical quantity is introduced.
+
+Verification on the metric change: feature-enabled Kwavers Nextest passed
+162/162 with 5 provider skips, targeted rustfmt passed, and Kwavers-local
+warning-denied Clippy passed with `--no-deps`. A package-wide warning-denied
+Clippy collection remains externally blocked by peer-owned dirty Leto changes:
+`leto-ops` currently fails on the missing `zip2_mut_with` import, an
+`ArrayView` GAT lifetime bound, and private `ArrayView::data` access. The
+blocking source is outside this metric scope and was not modified. See
+[ADR 072](docs/ADR/072-gpu-equivalence-quantities.md).
+
 ## Live plasmonics refresh — 2026-07-28
 
 `KWAVERS-AEQ-MET-33` found a remaining public electromagnetic metric family in

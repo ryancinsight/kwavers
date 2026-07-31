@@ -22,6 +22,7 @@ kwavers-signal = { path = "../kwavers-signal" }
 kwavers-physics = { path = "../kwavers-physics" }
 kwavers-solver = { path = "../kwavers-solver" }
 kwavers-analysis = { path = "../kwavers-analysis", features = ["gpu"], optional = true }
+aequitas = { workspace = true }
 
 leto = { workspace = true }
 tracing = { workspace = true }
