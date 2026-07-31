@@ -61,7 +61,7 @@ feature all-target check and feature Clippy pass. The focused feature
 visualization lane passes 17/17 tests, and the feature doctest gate passes 1
 executable test with 21 ignored examples. The complete feature Nextest lane
 exceeds the 60-second native-test budget during execution; it is recorded as
-a pre-existing suite-budget residual, not attributed to this metric change.
+a broader suite-budget residual outside this metric change.
 
 See [ADR 076](docs/ADR/076-visualization-telemetry-quantities.md).
 
