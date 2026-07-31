@@ -4,6 +4,10 @@
 
 ### Changed
 
+- **Breaking**: MEMS therapy verdict pressure fields no longer encode `Pa` in
+  their public names; `cmut_output` and `pmut_output` carry Aequitas `Pressure`
+  directly. See [ADR 075](docs/ADR/075-mems-verdict-pressure-names.md).
+
 - **Breaking**: Bulk piezoelectric resonator and acoustic matching-layer
   geometry, material, frequency, capacitance, velocity, and impedance inputs
   and results now use Aequitas quantities. Eunomia `Complex64` remains for

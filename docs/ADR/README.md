@@ -82,3 +82,4 @@
 | [072](072-gpu-equivalence-quantities.md) | Aequitas contracts for GPU/CPU equivalence metrics | Accepted and implemented under `KWAVERS-AEQ-MET-34`. |
 | [073](073-gpu-performance-time-quantities.md) | Aequitas contracts for GPU performance time metrics | Accepted and implemented under `KWAVERS-AEQ-MET-35`. |
 | [074](074-bulk-piezo-quantities.md) | Aequitas contracts for bulk piezoelectric and matching-layer metrics | Accepted and implemented under `KWAVERS-AEQ-MET-36`. |
+| [075](075-mems-verdict-pressure-names.md) | Remove unit suffixes from typed MEMS verdict pressure fields | Accepted and implemented under `KWAVERS-AEQ-MET-37`. |

@@ -29,6 +29,26 @@
 
 # Gap Audit
 
+## Live MEMS verdict naming refresh — 2026-07-31
+
+`KWAVERS-AEQ-MET-37` found two residual public names,
+`cmut_output_pa` and `pmut_output_pa`, in `kwavers-transducer::mems` after
+their values had already been migrated to Aequitas `Pressure`. The names
+continued to encode a unit-specific scalar API and could reintroduce the
+unit-suffix pattern the prior MEMS closure removed elsewhere.
+
+The fields are now `cmut_output` and `pmut_output`; their types remain
+Aequitas `Pressure`, and scalar extraction remains limited to the comparison
+formula. All repository callers and tests are migrated with no forwarding
+aliases or compatibility facades. This is a naming/contract residual, not a
+new physical dimension.
+
+The transducer package check, Nextest (219/219 with one skip), warning-denied
+Clippy, doctests, rustfmt, and diff checks pass. No Eunomia complex path is
+involved.
+
+See [ADR 075](docs/ADR/075-mems-verdict-pressure-names.md).
+
 ## Live bulk-piezo refresh — 2026-07-31
 
 `KWAVERS-AEQ-MET-36` found the remaining untyped public physical contract in

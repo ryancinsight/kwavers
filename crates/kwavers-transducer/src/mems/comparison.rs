@@ -142,9 +142,9 @@ pub fn evaluate_ivus(
 #[derive(Debug, Clone, Copy)]
 pub struct TherapyVerdict {
     /// CMUT peak output pressure after flex + substrate derating \`Pa`.
-    pub cmut_output_pa: Pressure,
+    pub cmut_output: Pressure,
     /// PMUT peak output pressure after substrate derating \`Pa`.
-    pub pmut_output_pa: Pressure,
+    pub pmut_output: Pressure,
     /// CMUT flex-gap derating factor applied (∈ (0, 1]).
     pub cmut_flex_derating: f64,
     /// CMUT self-heating \`W`.
@@ -195,8 +195,8 @@ pub fn evaluate_therapy(
     let pmut_heating = pmut.self_heating_power(pmut_drive_voltage, pmut_f);
 
     TherapyVerdict {
-        cmut_output_pa: cmut_output,
-        pmut_output_pa: pmut_output,
+        cmut_output,
+        pmut_output,
         cmut_flex_derating: cmut_flex,
         cmut_heating,
         pmut_heating,
@@ -310,10 +310,10 @@ mod tests {
         );
         // PMUT delivers more pressure for therapy (CMUT is gap-limited)
         assert!(
-            flat.pmut_output_pa.into_base() > flat.cmut_output_pa.into_base(),
+            flat.pmut_output.into_base() > flat.cmut_output.into_base(),
             "PMUT {:?} > CMUT {:?}",
-            flat.pmut_output_pa,
-            flat.cmut_output_pa
+            flat.pmut_output,
+            flat.cmut_output
         );
         assert_eq!(flat.recommended, MutKind::Pmut);
 
@@ -333,10 +333,10 @@ mod tests {
             "flexing must derate the CMUT"
         );
         assert!(
-            wrapped.cmut_output_pa.into_base() < flat.cmut_output_pa.into_base(),
+            wrapped.cmut_output.into_base() < flat.cmut_output.into_base(),
             "flexed CMUT output {:?} < flat {:?}",
-            wrapped.cmut_output_pa,
-            flat.cmut_output_pa
+            wrapped.cmut_output,
+            flat.cmut_output
         );
         assert_eq!(wrapped.recommended, MutKind::Pmut);
     }
