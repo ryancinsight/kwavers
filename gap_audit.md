@@ -29,6 +29,30 @@
 
 # Gap Audit
 
+## Live blood-oxygenation refresh — 2026-07-31
+
+`KWAVERS-AEQ-MET-43` found a remaining public diagnostics family in
+`workflows::blood_oxygenation`: optical wavelengths, minimum hemoglobin
+concentration, and absorption-reference coefficients crossed the API as raw
+scalars. The provider gap was closed first in Aequitas ADR 0010 with semantic
+`MolarConcentration`, `MolePerLiter`, `MicromolePerLiter`, and `Nanometer`.
+
+Kwavers now exposes `Length` wavelengths, a typed
+`MolarConcentration` threshold, and `ReciprocalLength` reference absorption
+values. Scalar extraction is limited to the existing optical database and
+spectral-unmixer APIs, the explicit `mol/L` numerical comparison boundary, and
+example presentation. Dense Leto maps remain raw numerical storage by
+contract. The photoacoustic example uses the same typed public configuration.
+
+The workflow is real-valued. Eunomia complex values remain at coherent formula
+or storage boundaries, and no imaginary physical unit is introduced. Value
+semantic tests cover typed defaults, unit conversion, reference absorption,
+and invalid wavelength rejection. Verification: diagnostics test-target check
+and example check pass; focused blood-oxygenation Nextest passes 3/3 with 195
+skipped; warning-denied all-target Clippy, doctests, RustDoc, formatting, and
+diff checks pass. No raw public wavelength, molar concentration, or absorption
+coefficient scalar remains.
+
 ## Live plane-wave-compounding refresh — 2026-07-31
 
 `KWAVERS-AEQ-MET-42` found a remaining public diagnostics metric

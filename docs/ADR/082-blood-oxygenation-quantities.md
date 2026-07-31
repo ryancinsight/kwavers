@@ -1,6 +1,6 @@
 # ADR 082: Aequitas blood-oxygenation quantities
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-07-31
 - **Decision owner:** `KWAVERS-AEQ-MET-43`
 - **Scope:** `kwavers-diagnostics::workflows::blood_oxygenation` and its
@@ -20,9 +20,9 @@ Use Aequitas `Length` with `Nanometer` for wavelengths,
 `MolarConcentration` with `MicromolePerLiter` for thresholds, and
 `ReciprocalLength` for absorption-reference coefficients. Convert to raw
 nanometres only when calling the existing optical database and spectral
-unmixer APIs, and convert the threshold to coherent SI concentration only at
-the dense numerical comparison boundary. Keep dense Leto concentration and
-absorption maps as raw numerical arrays because their element type is the
+unmixer APIs, and convert the threshold to the solver's explicit `mol/L`
+numerical boundary with Aequitas `MolePerLiter`. Keep dense Leto concentration
+and absorption maps as raw numerical arrays because their element type is the
 solver/storage contract.
 
 The workflow is real-valued. Eunomia complex values remain confined to any
@@ -51,3 +51,12 @@ physical unit is introduced.
 - Scan the workflow for raw public physical metric fields and verify the
   Eunomia real/complex boundary.
 
+## Verification
+
+The provider Aequitas ADR 0010 and units are accepted and pushed. Kwavers
+diagnostics test-target check and the photoacoustic example check pass. The
+focused blood-oxygenation Nextest filter passes 3/3 tests with 195 unrelated
+tests skipped. Warning-denied all-target Clippy, doctests (1 executable, 5
+ignored), RustDoc, formatting, and diff checks pass on 2026-07-31. The only
+remaining raw `f64` fields are dense Leto numerical maps; public wavelength,
+concentration, and absorption-reference contracts are typed.

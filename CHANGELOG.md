@@ -4,6 +4,12 @@
 
 ### Changed
 
+- **Breaking:** Blood-oxygenation wavelengths, hemoglobin thresholds, and
+  absorption-reference coefficients now use Aequitas `Length`,
+  `MolarConcentration`, and `ReciprocalLength`. Dense Leto maps remain the
+  explicit numerical storage boundary; the real-valued workflow introduces no
+  imaginary physical unit. See [ADR 082](docs/ADR/082-blood-oxygenation-quantities.md).
+
 - **Breaking:** Plane-wave compounding angles, frequency, sound speed,
   geometry, sampling lengths, dynamic range, and frame-rate estimates now use
   Aequitas quantities. Internal wave-derived values are typed, while Eunomia

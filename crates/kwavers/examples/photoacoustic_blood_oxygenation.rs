@@ -20,6 +20,8 @@
 //! - Tissue viability monitoring (wound healing, transplant)
 //! - Brain functional imaging (hemodynamic response)
 
+use aequitas::systems::si::quantities::{Length, MolarConcentration};
+use aequitas::systems::si::units::{MicromolePerLiter, MolePerLiter, Nanometer};
 use anyhow::Result;
 use kwavers_analysis::signal_processing::spectroscopy::SpectralUnmixingConfig;
 use kwavers_diagnostics::workflows::blood_oxygenation::{estimate_oxygenation, OxygenationConfig};
@@ -43,12 +45,16 @@ fn main() -> Result<()> {
 
     // Wavelength selection (optimized for hemoglobin spectroscopy)
     let wavelengths = vec![
-        532.0, // Green (Nd:YAG doubled) - strong Hb absorption
-        700.0, // Red edge - near isosbestic point
-        800.0, // NIR window - HbO₂ peak
-        850.0, // NIR window - balanced penetration
+        Length::from_unit::<Nanometer>(532.0), // Green (Nd:YAG doubled) - strong Hb absorption
+        Length::from_unit::<Nanometer>(700.0), // Red edge - near isosbestic point
+        Length::from_unit::<Nanometer>(800.0), // NIR window - HbO₂ peak
+        Length::from_unit::<Nanometer>(850.0), // NIR window - balanced penetration
     ];
-    println!("Wavelengths: {:?} nm", wavelengths);
+    let wavelengths_nm: Vec<f64> = wavelengths
+        .iter()
+        .map(|wavelength| wavelength.in_unit::<Nanometer>())
+        .collect();
+    println!("Wavelengths: {:?} nm", wavelengths_nm);
 
     // Computational grid (5mm × 5mm × 5mm at 0.2mm resolution)
     let grid = Grid::new(25, 25, 25, 0.2e-3, 0.2e-3, 0.2e-3)?;
@@ -122,17 +128,19 @@ fn main() -> Result<()> {
         verbose: false,
     };
 
-    for (wl_idx, &wavelength) in wavelengths.iter().enumerate() {
+    for (wl_idx, wavelength) in wavelengths.iter().enumerate() {
+        let wavelength_nm = wavelength.in_unit::<Nanometer>();
         let start = Instant::now();
-        println!("Wavelength {}: {:.0} nm", wl_idx + 1, wavelength);
+        println!("Wavelength {}: {:.0} nm", wl_idx + 1, wavelength_nm);
 
         // Create optical property map for this wavelength
         let mut optical_map = Array3::from_elem((nx, ny, nz), background);
 
         // Get wavelength-dependent absorption for blood
-        let arterial_mu_a = hb_db.absorption_coefficient(wavelength, arterial_hbo2, arterial_hb)?;
-        let venous_mu_a = hb_db.absorption_coefficient(wavelength, venous_hbo2, venous_hb)?;
-        let tumor_mu_a = hb_db.absorption_coefficient(wavelength, tumor_hbo2, tumor_hb)?;
+        let arterial_mu_a =
+            hb_db.absorption_coefficient(wavelength_nm, arterial_hbo2, arterial_hb)?;
+        let venous_mu_a = hb_db.absorption_coefficient(wavelength_nm, venous_hbo2, venous_hb)?;
+        let tumor_mu_a = hb_db.absorption_coefficient(wavelength_nm, tumor_hbo2, tumor_hb)?;
 
         // Insert structures into phantom
         for i in 0..nx {
@@ -248,7 +256,7 @@ fn main() -> Result<()> {
             non_negative: true,
             min_condition_number: 1e-10,
         },
-        min_total_hb: 1e-5, // 10 μM threshold
+        min_total_hb: MolarConcentration::from_unit::<MicromolePerLiter>(10.0),
     };
 
     let oxygenation_result = estimate_oxygenation(&absorption_maps, &oxygenation_config)?;
@@ -276,6 +284,8 @@ fn main() -> Result<()> {
     let mut venous_so2_samples = Vec::new();
     let mut tumor_so2_samples = Vec::new();
 
+    let report_min_total_hb =
+        MolarConcentration::from_unit::<MicromolePerLiter>(100.0).in_unit::<MolePerLiter>();
     for i in 0..nx {
         for j in 0..ny {
             for k in 0..nz {
@@ -287,7 +297,7 @@ fn main() -> Result<()> {
                 let total_hb = oxygenation_result.total_hb_concentration[[i, j, k]];
 
                 // Only consider voxels with sufficient hemoglobin
-                if total_hb < 1e-4 {
+                if total_hb < report_min_total_hb {
                     continue;
                 }
 
