@@ -17,6 +17,21 @@ all-target Clippy, doctests (1 executable, 5 ignored), Rustdoc, formatting, and
 diff checks pass. Shared unused-provider-patch and linker warnings remain
 outside this item.
 
+## Owner: Codex — KWAVERS-AEQ-MET-41 typed stereotactic targeting quantities [major] — in progress 2026-07-31
+
+- [ ] Type AP/ML/DV stereotactic coordinates, Bregma, confidence, and targeting
+      distance with Aequitas; preserve the atlas millimetre conversion boundary.
+- [ ] Migrate targeting callers/tests and add value-semantic coordinate,
+      trajectory, validation, distance, and confidence regressions.
+- [ ] Synchronize ADR 080, `gap_audit.md`, backlog, checklist, changelog, and
+      the Atlas cross-repository audit; run focused package gates and preserve
+      peer-owned changes.
+
+Acceptance: no raw physical coordinate or confidence field remains in the
+targeting public contract; scalar extraction occurs only when calling the
+millimetre-based atlas API or serializing an explicit coordinate array. The
+family is real-valued under Eunomia; no complex unit is introduced.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-39 typed neural diagnostics quantities [major] — done 2026-07-31
 
 - [x] Type neural diagnostic lesion geometry, voxel spacing, beamforming
