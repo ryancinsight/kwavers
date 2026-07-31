@@ -46,13 +46,15 @@ Aequitas `Millisecond` unit. Eunomia compatibility is real-only through the
 `UnitScalar` implementation; this validator compares real time-domain fields,
 so no imaginary unit or complex physical quantity is introduced.
 
-Verification on the metric change: feature-enabled Kwavers Nextest passed
-162/162 with 5 provider skips, targeted rustfmt passed, and Kwavers-local
-warning-denied Clippy passed with `--no-deps`. A package-wide warning-denied
-Clippy collection remains externally blocked by peer-owned dirty Leto changes:
+Verification on the metric change before the final local lint-only cleanup:
+feature-enabled Kwavers Nextest passed 162/162 with 5 provider skips, targeted
+rustfmt passed, and Kwavers-local warning-denied Clippy passed with
+`--no-deps`. The post-delivery feature-test recollection cannot rebuild the
+provider and is externally blocked by peer-owned dirty Leto changes:
 `leto-ops` currently fails on the missing `zip2_mut_with` import, an
 `ArrayView` GAT lifetime bound, and private `ArrayView::data` access. The
-blocking source is outside this metric scope and was not modified. See
+collection emits 47 lifetime/private-field errors in the current peer tree.
+The blocking source is outside this metric scope and was not modified. See
 [ADR 072](docs/ADR/072-gpu-equivalence-quantities.md).
 
 ## Live plasmonics refresh — 2026-07-28
