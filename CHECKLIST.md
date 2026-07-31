@@ -1,5 +1,19 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-46 typed real-time SIRT metrics [major] — in progress
+
+- [ ] Type frame timestamps, computation budgets, elapsed computation time,
+      and throughput with Aequitas `Time` and `Frequency`.
+- [ ] Type convergence and ratio-based quality metrics with Aequitas
+      `Dimensionless`; document raw image/RF and grid-point boundaries.
+- [ ] Migrate all callers/tests and synchronize ADR 085, gap-audit, backlog,
+      checklist, changelog, and the Atlas cross-repository audit.
+
+Acceptance: no unit-bearing raw scalar remains in the public real-time SIRT
+contract; RF/image arrays, grid-point smoothing, and raw intensity thresholds
+remain explicit numerical boundaries, and no complex or imaginary physical
+unit is introduced.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-45 typed clinical monitoring quantities [major] — done 2026-07-31
 
 - [x] Type public monitoring temperature, processing-time, frame-rate,
