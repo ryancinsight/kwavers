@@ -2,14 +2,14 @@
 //!
 //! Provides configuration structures for visualization and rendering.
 
+use aequitas::systems::si::quantities::Frequency;
 use kwavers_core::error::KwaversResult;
 
 // Constants for visualization
-pub const DEFAULT_TARGET_FPS: f64 = 60.0;
-pub const LOW_TARGET_FPS: f64 = 30.0;
+pub const DEFAULT_TARGET_FRAME_RATE: Frequency = Frequency::from_base(60.0);
+pub const LOW_TARGET_FRAME_RATE: Frequency = Frequency::from_base(30.0);
 pub const DEFAULT_MAX_TEXTURE_SIZE: usize = 512;
 pub const MEDIUM_GRID_SIZE: usize = 128;
-pub const MILLISECONDS_PER_SECOND: f64 = 1000.0;
 
 /// Color mapping schemes for scientific visualization
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -51,7 +51,7 @@ pub enum RenderQuality {
 #[derive(Debug, Clone)]
 pub struct VisualizationConfig {
     /// Target frames per second
-    pub target_fps: f64,
+    pub target_frame_rate: Frequency,
     /// Render quality setting
     pub quality: RenderQuality,
     /// Render quality setting (alias for backwards compatibility)
@@ -73,7 +73,7 @@ pub struct VisualizationConfig {
 impl Default for VisualizationConfig {
     fn default() -> Self {
         Self {
-            target_fps: DEFAULT_TARGET_FPS,
+            target_frame_rate: DEFAULT_TARGET_FRAME_RATE,
             quality: RenderQuality::Medium,
             render_quality: RenderQuality::Medium,
             color_scheme: ColorScheme::Viridis,
@@ -90,7 +90,7 @@ impl VisualizationConfig {
     /// Create a configuration optimized for performance
     pub fn performance() -> Self {
         Self {
-            target_fps: DEFAULT_TARGET_FPS,
+            target_frame_rate: DEFAULT_TARGET_FRAME_RATE,
             quality: RenderQuality::Low,
             render_quality: RenderQuality::Low,
             color_scheme: ColorScheme::Grayscale,
@@ -105,7 +105,7 @@ impl VisualizationConfig {
     /// Create a configuration optimized for quality
     pub fn quality() -> Self {
         Self {
-            target_fps: LOW_TARGET_FPS,
+            target_frame_rate: LOW_TARGET_FRAME_RATE,
             quality: RenderQuality::High,
             render_quality: RenderQuality::High,
             color_scheme: ColorScheme::Viridis,
@@ -123,7 +123,7 @@ impl VisualizationConfig {
     ///
     pub fn debug() -> Self {
         Self {
-            target_fps: LOW_TARGET_FPS,
+            target_frame_rate: LOW_TARGET_FRAME_RATE,
             quality: RenderQuality::Low,
             render_quality: RenderQuality::Low,
             color_scheme: ColorScheme::Turbo,
@@ -140,10 +140,10 @@ impl VisualizationConfig {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn validate(&self) -> KwaversResult<()> {
-        if self.target_fps <= 0.0 {
+        if self.target_frame_rate.into_base() <= 0.0 {
             return Err(kwavers_core::error::KwaversError::Validation(
                 kwavers_core::error::ValidationError::OutOfRange {
-                    value: self.target_fps,
+                    value: self.target_frame_rate.into_base(),
                     min: 0.0,
                     max: f64::INFINITY,
                 },

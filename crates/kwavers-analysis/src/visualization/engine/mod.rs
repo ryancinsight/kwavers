@@ -2,6 +2,7 @@
 //!
 //! Core engine for managing visualization pipeline.
 
+use aequitas::systems::si::quantities::Time;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_field::UnifiedFieldType;
@@ -16,9 +17,6 @@ use super::{
     config::{RenderQuality, VisualizationConfig},
     metrics::{MetricsTracker, VisualizationMetrics},
 };
-
-#[cfg(feature = "gpu-visualization")]
-use super::config::MILLISECONDS_PER_SECOND;
 
 #[cfg(feature = "gpu-visualization")]
 use super::{controls, data_pipeline, renderer};
@@ -53,7 +51,7 @@ impl VisualizationEngine {
 
         info!(
             "Creating visualization engine with target FPS: {}",
-            config.target_fps
+            config.target_frame_rate.into_base()
         );
 
         let mut parameters = HashMap::new();
@@ -116,21 +114,21 @@ impl VisualizationEngine {
                 // Transfer field data to GPU
                 let transfer_start = Instant::now();
                 pipeline.upload_field(field, field_type).await?;
-                let transfer_time =
-                    transfer_start.elapsed().as_secs_f32() * MILLISECONDS_PER_SECOND as f32;
+                let transfer_time = Time::from_base(transfer_start.elapsed().as_secs_f64());
 
                 // Render the field
                 let render_start = Instant::now();
                 renderer.render_volume(field, field_type, grid).await?;
-                let render_time =
-                    render_start.elapsed().as_secs_f32() * MILLISECONDS_PER_SECOND as f32;
+                let render_time = Time::from_base(render_start.elapsed().as_secs_f64());
 
                 // Update metrics
                 self.metrics.update(render_time, transfer_time);
 
                 debug!(
                     "Rendered {:?} field: {:.2}ms render, {:.2}ms transfer",
-                    field_type, render_time, transfer_time
+                    field_type,
+                    render_time.into_base() * 1_000.0,
+                    transfer_time.into_base() * 1_000.0
                 );
             } else {
                 warn!("GPU visualization not initialized. Call initialize_gpu() first.");
@@ -170,15 +168,13 @@ impl VisualizationEngine {
                         pipeline.upload_field(&field, field_type).await?;
                     }
                 }
-                let transfer_time =
-                    transfer_start.elapsed().as_secs_f32() * MILLISECONDS_PER_SECOND as f32;
+                let transfer_time = Time::from_base(transfer_start.elapsed().as_secs_f64());
 
                 // Render all fields with transparency blending
                 let render_start = Instant::now();
                 // Future: Gather actual field data for multi-field rendering (Sprint 127+)
                 renderer.render_multi_volume(vec![], grid).await?;
-                let render_time =
-                    render_start.elapsed().as_secs_f32() * MILLISECONDS_PER_SECOND as f32;
+                let render_time = Time::from_base(render_start.elapsed().as_secs_f64());
 
                 // Update metrics
                 self.metrics.update(render_time, transfer_time);
@@ -186,8 +182,8 @@ impl VisualizationEngine {
                 info!(
                     "Rendered {} fields: {:.2}ms render, {:.2}ms transfer",
                     field_types.len(),
-                    render_time,
-                    transfer_time
+                    render_time.into_base() * 1_000.0,
+                    transfer_time.into_base() * 1_000.0
                 );
             }
         }
@@ -228,7 +224,7 @@ impl VisualizationEngine {
 
     /// Check if meeting performance targets
     pub fn meets_performance_targets(&self) -> bool {
-        self.metrics.meets_target(self.config.target_fps)
+        self.metrics.meets_target(self.config.target_frame_rate)
     }
 
     /// Adjust quality based on performance
@@ -237,10 +233,10 @@ impl VisualizationEngine {
             return;
         }
 
-        let current_fps = self.metrics.current().fps;
-        let target_fps = self.config.target_fps;
+        let current_frame_rate = self.metrics.current().frame_rate.into_base();
+        let target_frame_rate = self.config.target_frame_rate.into_base();
 
-        if current_fps < target_fps * 0.8 {
+        if current_frame_rate < target_frame_rate * 0.8 {
             // Downgrade quality if performance is poor
             self.config.quality = match self.config.quality {
                 RenderQuality::Publication => RenderQuality::Production,
@@ -251,7 +247,7 @@ impl VisualizationEngine {
                 RenderQuality::Draft => RenderQuality::Draft,
             };
             debug!("Downgraded render quality to {:?}", self.config.quality);
-        } else if current_fps > target_fps * 1.2 {
+        } else if current_frame_rate > target_frame_rate * 1.2 {
             // Upgrade quality if performance is good
             self.config.quality = match self.config.quality {
                 RenderQuality::Draft => RenderQuality::Low,

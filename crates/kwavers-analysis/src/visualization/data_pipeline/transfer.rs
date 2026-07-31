@@ -233,7 +233,10 @@ impl DataPipeline {
         debug!("Field transfer completed in {:?}", elapsed);
 
         if let Ok(mut stats) = self.transfer_stats.lock() {
-            stats.record_transfer(bytes, elapsed.as_secs_f32() * 1000.0);
+            stats.record_transfer(
+                bytes,
+                aequitas::systems::si::quantities::Time::from_base(elapsed.as_secs_f64()),
+            );
         }
 
         Ok(())

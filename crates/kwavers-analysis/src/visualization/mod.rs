@@ -76,7 +76,7 @@ mod tests {
     #[test]
     fn test_visualization_config_default() {
         let config = VisualizationConfig::default();
-        assert_eq!(config.target_fps, config::DEFAULT_TARGET_FPS);
+        assert_eq!(config.target_frame_rate, config::DEFAULT_TARGET_FRAME_RATE);
         assert_eq!(config.quality, RenderQuality::Medium);
         assert_eq!(config.color_scheme, ColorScheme::Viridis);
         assert!(config.enable_transparency);
@@ -103,10 +103,19 @@ mod tests {
     #[test]
     fn test_metrics_default() {
         let metrics = VisualizationMetrics::default();
-        assert_eq!(metrics.fps, 0.0);
+        assert_eq!(
+            metrics.frame_rate,
+            aequitas::systems::si::quantities::Frequency::from_base(0.0)
+        );
         assert_eq!(metrics.gpu_memory_usage, 0);
-        assert_eq!(metrics.render_time_ms, 0.0);
-        assert_eq!(metrics.transfer_time_ms, 0.0);
+        assert_eq!(
+            metrics.render_time,
+            aequitas::systems::si::quantities::Time::from_base(0.0)
+        );
+        assert_eq!(
+            metrics.transfer_time,
+            aequitas::systems::si::quantities::Time::from_base(0.0)
+        );
         assert_eq!(metrics.rendered_primitives, 0);
     }
 
@@ -115,14 +124,23 @@ mod tests {
         let mut tracker = MetricsTracker::new();
 
         // Update with some measurements
-        tracker.update(16.0, 2.0);
-        tracker.update(15.0, 3.0);
-        tracker.update(17.0, 2.5);
+        tracker.update(
+            aequitas::systems::si::quantities::Time::from_base(16.0e-3),
+            aequitas::systems::si::quantities::Time::from_base(2.0e-3),
+        );
+        tracker.update(
+            aequitas::systems::si::quantities::Time::from_base(15.0e-3),
+            aequitas::systems::si::quantities::Time::from_base(3.0e-3),
+        );
+        tracker.update(
+            aequitas::systems::si::quantities::Time::from_base(17.0e-3),
+            aequitas::systems::si::quantities::Time::from_base(2.5e-3),
+        );
 
         let metrics = tracker.current();
-        assert!(metrics.fps > 0.0);
-        assert!(metrics.render_time_ms > 0.0);
-        assert!(metrics.transfer_time_ms > 0.0);
+        assert!(metrics.frame_rate.into_base() > 0.0);
+        assert!(metrics.render_time.into_base() > 0.0);
+        assert!(metrics.transfer_time.into_base() > 0.0);
     }
 
     #[test]
@@ -131,11 +149,22 @@ mod tests {
 
         // Simulate good performance
         for _ in 0..10 {
-            tracker.update(10.0, 2.0); // 12ms total = ~83 FPS
+            tracker.update(
+                aequitas::systems::si::quantities::Time::from_base(10.0e-3),
+                aequitas::systems::si::quantities::Time::from_base(2.0e-3),
+            ); // 12 ms total = ~83 FPS
         }
 
-        assert!(tracker.meets_target(60.0)); // Should meet 60 FPS target
-        assert!(!tracker.meets_target(100.0)); // Should not meet 100 FPS target
+        assert!(
+            tracker.meets_target(aequitas::systems::si::quantities::Frequency::from_base(
+                60.0
+            ))
+        );
+        assert!(
+            !tracker.meets_target(aequitas::systems::si::quantities::Frequency::from_base(
+                100.0
+            ))
+        );
     }
 
     #[test]
@@ -193,9 +222,9 @@ mod tests {
         let valid_config = VisualizationConfig::default();
         valid_config.validate().unwrap();
 
-        // Invalid target_fps
+        // Invalid target frame rate
         let invalid_config = VisualizationConfig {
-            target_fps: 0.0,
+            target_frame_rate: aequitas::systems::si::quantities::Frequency::from_base(0.0),
             ..Default::default()
         };
         assert!(invalid_config.validate().is_err());
@@ -211,7 +240,10 @@ mod tests {
     #[test]
     fn test_metrics_summary() {
         let mut tracker = MetricsTracker::new();
-        tracker.update(16.0, 2.0);
+        tracker.update(
+            aequitas::systems::si::quantities::Time::from_base(16.0e-3),
+            aequitas::systems::si::quantities::Time::from_base(2.0e-3),
+        );
         tracker.update_memory(1_048_576);
 
         let summary = tracker.summary();
@@ -220,29 +252,4 @@ mod tests {
         assert!(summary.contains("Transfer"));
         assert!(summary.contains("GPU Memory"));
     }
-
-    // **ARCHITECTURAL NOTE**: Test disabled - metrics field encapsulation prevents external updates
-    // Rationale: PerformanceTracker's metrics field is intentionally private to maintain
-    // internal consistency. Quality adjustment is validated through integration tests
-    // that exercise actual rendering pipeline.
-    // See: tests/infrastructure_test.rs for complete performance tracking validation
-    /*
-    #[test]
-    fn test_auto_quality_adjustment() {
-        let mut config = VisualizationConfig::default();
-        config.enable_profiling = true;
-        config.quality = RenderQuality::High;
-
-        let mut engine = VisualizationEngine::create(config).unwrap();
-
-        // Simulate poor performance
-        for _ in 0..10 {
-            engine.metrics.update(50.0, 10.0); // 60ms = ~16 FPS
-        }
-
-        engine.auto_adjust_quality();
-        // Quality should be downgraded due to poor performance
-        // (would need to expose config to test this properly)
-    }
-    */
 }

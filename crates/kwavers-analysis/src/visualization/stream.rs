@@ -4,6 +4,7 @@
 //! bounded channels and Leto frame buffers so visualization does not introduce
 //! new ndarray-facing APIs.
 
+use aequitas::systems::si::quantities::{Dimensionless, Frequency, Time};
 use kwavers_grid::Grid;
 use leto::Array3 as LetoArray3;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -29,11 +30,11 @@ pub struct FrameMetadata {
     /// Monotonic frame identifier.
     pub id: FrameId,
     /// Simulation time represented by the frame, in seconds.
-    pub simulation_time: f64,
+    pub simulation_time: Time,
     /// Grid associated with the frame.
     pub grid: Grid,
     /// Quality scaling factor used when producing the frame.
-    pub quality_factor: f64,
+    pub quality_factor: Dimensionless,
     /// Caller-defined labels.
     pub tags: Vec<String>,
 }
@@ -81,7 +82,7 @@ pub enum BufferPolicy {
     /// Drop the oldest buffered frame to make room.
     DropOldest(usize),
     /// Drop newest frames once measured latency exceeds this target.
-    AdaptiveLatency(f64),
+    AdaptiveLatency(Time),
 }
 
 impl BufferPolicy {
@@ -103,7 +104,7 @@ pub struct StreamStatistics {
     /// Frames dropped by buffering policy.
     pub frames_dropped: u64,
     /// Exponential moving average of frame age at receive time.
-    pub avg_latency_ms: f64,
+    pub avg_latency: Time,
 }
 
 #[derive(Debug)]
@@ -143,8 +144,8 @@ impl VizStreamInner {
                 }
             },
             BufferPolicy::DropOldest(_) => self.send_drop_oldest(frame),
-            BufferPolicy::AdaptiveLatency(target_ms) => {
-                if self.statistics().avg_latency_ms > target_ms && self.tx.is_full() {
+            BufferPolicy::AdaptiveLatency(target_latency) => {
+                if self.statistics().avg_latency > target_latency && self.tx.is_full() {
                     self.record_dropped();
                     Ok(())
                 } else {
@@ -183,8 +184,8 @@ impl VizStreamInner {
                 }
             },
             BufferPolicy::DropOldest(_) => self.send_drop_oldest(frame),
-            BufferPolicy::AdaptiveLatency(target_ms) => {
-                if self.statistics().avg_latency_ms > target_ms && self.tx.is_full() {
+            BufferPolicy::AdaptiveLatency(target_latency) => {
+                if self.statistics().avg_latency > target_latency && self.tx.is_full() {
                     self.record_dropped();
                     Ok(())
                 } else {
@@ -261,7 +262,10 @@ impl VizStreamInner {
     fn record_consumed(&self, latency: Duration) {
         let mut stats = self.stats.lock().expect("invariant: stream stats lock");
         stats.frames_consumed += 1;
-        update_ema(&mut stats.avg_latency_ms, latency.as_secs_f64() * 1_000.0);
+        update_ema(
+            &mut stats.avg_latency,
+            Time::from_base(latency.as_secs_f64()),
+        );
     }
 
     fn record_dropped(&self) {
@@ -489,14 +493,14 @@ pub struct SyncStatistics {
     pub frames_rendered: u64,
     /// Dropped frame count.
     pub frames_dropped: u64,
-    /// Current average latency in milliseconds.
-    pub latency_ms: f64,
+    /// Current average frame latency.
+    pub latency: Time,
     /// Target frame rate.
-    pub target_fps: f64,
+    pub target_frame_rate: Frequency,
     /// Current quality factor.
-    pub quality_level: f64,
+    pub quality_level: Dimensionless,
     /// Percentage of total frames dropped.
-    pub drop_rate_percent: f64,
+    pub drop_rate: Dimensionless,
 }
 
 impl Default for SyncStatistics {
@@ -504,10 +508,10 @@ impl Default for SyncStatistics {
         Self {
             frames_rendered: 0,
             frames_dropped: 0,
-            latency_ms: 0.0,
-            target_fps: 0.0,
-            quality_level: 1.0,
-            drop_rate_percent: 0.0,
+            latency: Time::from_base(0.0),
+            target_frame_rate: Frequency::from_base(0.0),
+            quality_level: Dimensionless::from_base(1.0),
+            drop_rate: Dimensionless::from_base(0.0),
         }
     }
 }
@@ -521,20 +525,20 @@ struct SyncState {
 /// Coordinates frame pacing and adaptive quality.
 #[derive(Debug, Clone)]
 pub struct SyncCoordinator {
-    target_fps: f64,
+    target_frame_rate: Frequency,
     paused: Arc<AtomicBool>,
     state: Arc<Mutex<SyncState>>,
 }
 
 impl SyncCoordinator {
     /// Construct a synchronization coordinator.
-    pub fn new(target_fps: f64) -> Self {
+    pub fn new(target_frame_rate: Frequency) -> Self {
         Self {
-            target_fps,
+            target_frame_rate,
             paused: Arc::new(AtomicBool::new(false)),
             state: Arc::new(Mutex::new(SyncState {
                 stats: SyncStatistics {
-                    target_fps,
+                    target_frame_rate,
                     ..SyncStatistics::default()
                 },
                 quality: QualityLevel::Maximum,
@@ -558,7 +562,7 @@ impl SyncCoordinator {
     }
 
     /// Return the current quality factor.
-    pub fn quality_factor(&self) -> f64 {
+    pub fn quality_factor(&self) -> Dimensionless {
         self.state
             .lock()
             .expect("invariant: sync state lock")
@@ -574,15 +578,15 @@ impl SyncCoordinator {
     }
 
     /// Record one completed frame.
-    pub fn complete_frame(&self, latency: Duration, _simulation_time: f64) {
+    pub fn complete_frame(&self, latency: Time, _simulation_time: Time) {
         let mut state = self.state.lock().expect("invariant: sync state lock");
         state.stats.frames_rendered += 1;
-        update_ema(&mut state.stats.latency_ms, latency.as_secs_f64() * 1_000.0);
+        update_ema(&mut state.stats.latency, latency);
 
-        let budget_ms = 1_000.0 / self.target_fps.max(f64::EPSILON);
-        if state.stats.latency_ms > budget_ms * 1.15 {
+        let budget = Time::from_base(1.0 / self.target_frame_rate.into_base().max(f64::EPSILON));
+        if state.stats.latency > Time::from_base(budget.into_base() * 1.15) {
             state.quality = state.quality.downgrade();
-        } else if state.stats.latency_ms < budget_ms * 0.65 {
+        } else if state.stats.latency < Time::from_base(budget.into_base() * 0.65) {
             state.quality = state.quality.upgrade();
         }
         state.stats.quality_level = state.quality.factor();
@@ -608,41 +612,43 @@ impl SyncCoordinator {
 
 /// Stage-pipeline configuration.
 pub mod pipeline {
+    use aequitas::systems::si::quantities::{Frequency, Time};
+
     /// Visualization pipeline timing and buffering configuration.
     #[derive(Debug, Clone, PartialEq)]
     pub struct PipelineConfig {
         /// Target presentation frame rate.
-        pub target_fps: f64,
+        pub target_frame_rate: Frequency,
         /// Bounded input channel capacity.
         pub channel_capacity: usize,
         /// Whether independent stages may execute in parallel.
         pub parallel_execution: bool,
         /// Whether quality adapts to measured latency.
         pub adaptive_quality: bool,
-        /// Latency threshold in milliseconds.
-        pub latency_threshold_ms: f64,
+        /// Latency threshold.
+        pub latency_threshold: Time,
     }
 
     impl PipelineConfig {
-        /// Return the frame budget in milliseconds.
-        pub fn frame_budget_ms(&self) -> f64 {
-            1_000.0 / self.target_fps.max(f64::EPSILON)
+        /// Return the frame budget.
+        pub fn frame_budget(&self) -> Time {
+            Time::from_base(1.0 / self.target_frame_rate.into_base().max(f64::EPSILON))
         }
 
-        /// Return the per-stage budget in milliseconds.
-        pub fn stage_budget_ms(&self, stages: usize) -> f64 {
-            self.frame_budget_ms() / stages.max(1) as f64
+        /// Return the per-stage budget.
+        pub fn stage_budget(&self, stages: usize) -> Time {
+            Time::from_base(self.frame_budget().into_base() / stages.max(1) as f64)
         }
     }
 
     impl Default for PipelineConfig {
         fn default() -> Self {
             Self {
-                target_fps: 30.0,
+                target_frame_rate: Frequency::from_base(30.0),
                 channel_capacity: 16,
                 parallel_execution: false,
                 adaptive_quality: true,
-                latency_threshold_ms: 35.0,
+                latency_threshold: Time::from_base(35.0e-3),
             }
         }
     }
@@ -651,6 +657,7 @@ pub mod pipeline {
 /// Synchronization quality controls.
 pub mod sync {
     use super::SyncStatistics;
+    use aequitas::systems::si::quantities::Dimensionless;
 
     /// Adaptive visualization quality level.
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -689,14 +696,14 @@ pub mod sync {
         }
 
         /// Return the scalar quality factor.
-        pub fn factor(self) -> f64 {
-            match self {
+        pub fn factor(self) -> Dimensionless {
+            Dimensionless::from_base(match self {
                 Self::Minimal => 0.1,
                 Self::Low => 0.3,
                 Self::Medium => 0.5,
                 Self::High => 0.8,
                 Self::Maximum => 1.0,
-            }
+            })
         }
     }
 
@@ -706,8 +713,8 @@ pub mod sync {
             "visualization sync: rendered={} dropped={} latency_ms={:.3} drop_rate={:.3}%",
             stats.frames_rendered,
             stats.frames_dropped,
-            stats.latency_ms,
-            stats.drop_rate_percent
+            stats.latency.into_base() * 1_000.0,
+            stats.drop_rate.into_base() * 100.0
         );
     }
 }
@@ -729,10 +736,10 @@ pub struct PipelineStageMetrics {
 pub struct PipelineMetrics {
     /// Stage-level metrics.
     pub stages: Vec<PipelineStageMetrics>,
-    /// Total end-to-end latency in milliseconds.
-    pub total_latency_ms: f64,
+    /// Total end-to-end latency.
+    pub total_latency: Time,
     /// Dropped-frame percentage.
-    pub drop_rate_percent: f64,
+    pub drop_rate: Dimensionless,
 }
 
 /// Bounded asynchronous visualization pipeline.
@@ -767,20 +774,20 @@ impl StagePipeline {
                     frames_processed: 0,
                 },
             ],
-            total_latency_ms: 0.0,
-            drop_rate_percent: 0.0,
+            total_latency: Time::from_base(0.0),
+            drop_rate: Dimensionless::from_base(0.0),
         }));
         let worker_metrics = Arc::clone(&metrics);
         let worker = std::thread::spawn(move || {
             while let Ok(frame) = rx.recv() {
-                let latency_ms = frame.age().as_secs_f64() * 1_000.0;
+                let latency = Time::from_base(frame.age().as_secs_f64());
                 let mut metrics = worker_metrics
                     .lock()
                     .expect("invariant: pipeline metrics lock");
                 for stage in &mut metrics.stages {
                     stage.frames_processed += 1;
                 }
-                update_ema(&mut metrics.total_latency_ms, latency_ms);
+                update_ema(&mut metrics.total_latency, latency);
             }
         });
 
@@ -825,19 +832,19 @@ impl PipelineInputSender {
     }
 }
 
-fn update_ema(current: &mut f64, sample: f64) {
-    if *current == 0.0 {
+fn update_ema(current: &mut Time, sample: Time) {
+    if current.into_base() == 0.0 {
         *current = sample;
     } else {
-        *current = *current * 0.8 + sample * 0.2;
+        *current = Time::from_base(current.into_base() * 0.8 + sample.into_base() * 0.2);
     }
 }
 
 fn refresh_drop_rate(stats: &mut SyncStatistics) {
     let total = stats.frames_rendered + stats.frames_dropped;
-    stats.drop_rate_percent = if total == 0 {
-        0.0
+    stats.drop_rate = if total == 0 {
+        Dimensionless::from_base(0.0)
     } else {
-        stats.frames_dropped as f64 / total as f64 * 100.0
+        Dimensionless::from_base(stats.frames_dropped as f64 / total as f64)
     };
 }

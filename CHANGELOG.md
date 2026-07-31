@@ -4,6 +4,12 @@
 
 ### Changed
 
+- **Breaking**: Visualization frame-rate, render/transfer timing, simulation
+  frame time, stream latency, pipeline budgets, quality, and drop-rate metrics
+  now use Aequitas `Frequency`, `Time`, and `Dimensionless` quantities. Byte
+  bandwidth remains an explicit non-SI storage-rate boundary. See [ADR
+  076](docs/ADR/076-visualization-telemetry-quantities.md).
+
 - **Breaking**: MEMS therapy verdict pressure fields no longer encode `Pa` in
   their public names; `cmut_output` and `pmut_output` carry Aequitas `Pressure`
   directly. See [ADR 075](docs/ADR/075-mems-verdict-pressure-names.md).

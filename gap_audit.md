@@ -29,6 +29,42 @@
 
 # Gap Audit
 
+## Live visualization telemetry refresh — 2026-07-31
+
+`KWAVERS-AEQ-MET-38` found a separate visualization performance family that
+still exposed target frame rates, render/transfer durations, simulation-frame
+time, stream latency, pipeline budgets, quality factors, and drop rates as
+raw scalars or unit-suffixed fields. This family was outside the earlier GPU
+solver telemetry closures because it is owned by `kwavers-analysis`.
+
+The closure carries frame rates through Aequitas `Frequency`, durations and
+latency through `Time`, and quality/drop fractions through `Dimensionless`.
+`VisualizationConfig`, `MetricsTracker`, the visualization engine, bounded
+frame stream, synchronization coordinator, and stage pipeline now use the
+typed contracts. Scalar extraction remains at comparisons and human-readable
+logging. The old unit-bearing public names and aliases are removed.
+
+`TransferStatistics` also carries transfer duration as `Time`. Its derived
+GiB/s byte-bandwidth field remains an explicit storage-rate instrumentation
+boundary because Aequitas currently has no justified information-rate
+dimension; it is not a physical SI quantity and is not converted to an
+incorrect frequency or volumetric-flow unit.
+
+Eunomia compatibility is real-only: frame timing and quality metrics do not
+carry complex values or imaginary units. No complex physical dimension is
+introduced.
+
+The default `kwavers-analysis` all-target package check, formatting, and
+warning-denied Clippy pass. Default Nextest passes 724/724 tests in 4.223 s;
+the doctest gate passes 1 executable test with 21 ignored examples. The GPU
+feature all-target check and feature Clippy pass. The focused feature
+visualization lane passes 17/17 tests, and the feature doctest gate passes 1
+executable test with 21 ignored examples. The complete feature Nextest lane
+exceeds the 60-second native-test budget during execution; it is recorded as
+a pre-existing suite-budget residual, not attributed to this metric change.
+
+See [ADR 076](docs/ADR/076-visualization-telemetry-quantities.md).
+
 ## Live MEMS verdict naming refresh — 2026-07-31
 
 `KWAVERS-AEQ-MET-37` found two residual public names,
