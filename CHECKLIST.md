@@ -1,5 +1,19 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-47 typed sound-speed-shift time samples [major] — in progress
+
+- [ ] Type measured time-shift samples and public prediction/curved-array
+      time-shift vectors with Aequitas `Time`.
+- [ ] Migrate fixed-acquisition and batch reconstruction APIs without keeping
+      scalar compatibility paths; extract seconds only at numerical operators.
+- [ ] Preserve velocity/grid configuration and dense image storage boundaries;
+      synchronize ADR 086, gap-audit, backlog, checklist, changelog, and the
+      Atlas cross-repository audit.
+
+Acceptance: no public measured travel-time shift remains a unit-suffixed raw
+scalar in the migrated sound-speed-shift APIs; no complex or imaginary physical
+unit is introduced.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-46 typed real-time SIRT metrics [major] — done 2026-07-31
 
 - [x] Type frame timestamps, computation budgets, elapsed computation time,
