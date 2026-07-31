@@ -1,5 +1,17 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-51 typed sound-speed field [major] — in progress
+
+- [ ] Add `SoundSpeedShiftField` with Aequitas `Velocity` iteration and an
+      explicit Leto storage boundary.
+- [ ] Migrate reconstruction images, views, batch frames, benchmark truth,
+      callers, and tests; synchronize ADR 090, gap-audit, backlog, checklist,
+      changelog, and the Atlas cross-repository audit.
+
+Acceptance: no public sound-speed-shift result field exposes a unit-suffixed
+`Array2<f64>`; solver/provider extraction remains explicit; no complex or
+imaginary physical unit is introduced.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-50 typed sound-speed error metrics [major] — done 2026-07-31
 
 - [x] Type OpenPros mean absolute and root mean square sound-speed errors

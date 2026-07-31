@@ -29,6 +29,18 @@
 
 # Gap Audit
 
+## Active sound-speed-shift field audit — 2026-07-31
+
+`KWAVERS-AEQ-MET-51` is the next bounded gap: public reconstruction images,
+streaming views, batch frames, and OpenPros truth still expose unit-suffixed
+Leto `Array2<f64>` storage. The planned `SoundSpeedShiftField` owns that
+provider storage, exposes Aequitas `Velocity` iteration, and restricts raw
+storage extraction to solver/provider boundaries.
+
+The field is real-valued and has no physical phasor, so Eunomia compatibility
+requires no imaginary physical unit. See
+[`Kwavers ADR 090`](docs/ADR/090-sound-speed-field-quantity.md).
+
 ## Live sound-speed-shift error-metric refresh — 2026-07-31
 
 `KWAVERS-AEQ-MET-50` is closed. OpenPros mean absolute and root mean square

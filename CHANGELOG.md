@@ -4,6 +4,12 @@
 
 ### Changed
 
+- **Breaking:** Public sound-speed-shift reconstruction images, streaming
+  views, batch frames, and OpenPros truth now use a typed
+  `SoundSpeedShiftField` with Aequitas `Velocity` iteration and an explicit
+  Leto storage boundary. No complex or imaginary physical unit is introduced.
+  See [ADR 090](docs/ADR/090-sound-speed-field-quantity.md).
+
 - **Breaking:** OpenPros mean absolute and root mean square sound-speed error
   metrics now use Aequitas `Velocity` at the public contract. Normalized,
   correlation, objective, weight, and dense image storage values remain
