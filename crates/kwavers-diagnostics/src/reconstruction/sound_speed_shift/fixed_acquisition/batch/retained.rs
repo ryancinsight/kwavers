@@ -1,5 +1,6 @@
 //! Retained fixed-acquisition batch reconstruction.
 
+use aequitas::systems::si::quantities::Time;
 use kwavers_core::error::KwaversResult;
 use leto::Array2;
 
@@ -17,7 +18,7 @@ use super::summary::{objective_summary, retained_batch};
 impl SoundSpeedShiftPlan {
     /// Reconstruct a batch with a temporary workspace and compact summaries.
     ///
-    /// `frame_time_shifts_s[frame][row]` is indexed by original acquisition
+    /// `frame_time_shifts[frame][row]` is indexed by original acquisition
     /// row, before sparse sampling is applied by the cached operator.
     ///
     /// # Errors
@@ -25,10 +26,10 @@ impl SoundSpeedShiftPlan {
     /// any frame violates the fixed acquisition row contract.
     pub fn reconstruct_frames(
         &self,
-        frame_time_shifts_s: &[&[f64]],
+        frame_time_shifts: &[&[Time]],
     ) -> KwaversResult<SoundSpeedShiftBatch> {
         let mut workspace = SoundSpeedShiftPlanWorkspace::new();
-        self.reconstruct_frames_with_plan_workspace(frame_time_shifts_s, &mut workspace)
+        self.reconstruct_frames_with_plan_workspace(frame_time_shifts, &mut workspace)
     }
 
     /// Reconstruct a batch with caller-owned solver scratch buffers.
@@ -43,11 +44,11 @@ impl SoundSpeedShiftPlan {
     /// any frame violates the fixed acquisition row contract.
     pub fn reconstruct_frames_with_workspace(
         &self,
-        frame_time_shifts_s: &[&[f64]],
+        frame_time_shifts: &[&[Time]],
         workspace: &mut SoundSpeedShiftWorkspace,
     ) -> KwaversResult<SoundSpeedShiftBatch> {
         self.reconstruct_frames_with_options(
-            frame_time_shifts_s,
+            frame_time_shifts,
             SoundSpeedShiftBatchConfig::default(),
             workspace,
         )
@@ -60,12 +61,12 @@ impl SoundSpeedShiftPlan {
     /// any frame violates the fixed acquisition row contract.
     pub fn reconstruct_frames_with_options(
         &self,
-        frame_time_shifts_s: &[&[f64]],
+        frame_time_shifts: &[&[Time]],
         batch_config: SoundSpeedShiftBatchConfig,
         workspace: &mut SoundSpeedShiftWorkspace,
     ) -> KwaversResult<SoundSpeedShiftBatch> {
         let mut data = vec![0.0; self.operator.rows()];
-        self.reconstruct_frames_core(frame_time_shifts_s, batch_config, &mut data, workspace)
+        self.reconstruct_frames_core(frame_time_shifts, batch_config, &mut data, workspace)
     }
 
     /// Reconstruct a batch with caller-owned sampled-RHS and solver buffers.
@@ -78,11 +79,11 @@ impl SoundSpeedShiftPlan {
     /// any frame violates the fixed acquisition row contract.
     pub fn reconstruct_frames_with_plan_workspace(
         &self,
-        frame_time_shifts_s: &[&[f64]],
+        frame_time_shifts: &[&[Time]],
         workspace: &mut SoundSpeedShiftPlanWorkspace,
     ) -> KwaversResult<SoundSpeedShiftBatch> {
         self.reconstruct_frames_with_plan_workspace_and_options(
-            frame_time_shifts_s,
+            frame_time_shifts,
             SoundSpeedShiftBatchConfig::default(),
             workspace,
         )
@@ -95,12 +96,12 @@ impl SoundSpeedShiftPlan {
     /// any frame violates the fixed acquisition row contract.
     pub fn reconstruct_frames_with_plan_workspace_and_options(
         &self,
-        frame_time_shifts_s: &[&[f64]],
+        frame_time_shifts: &[&[Time]],
         batch_config: SoundSpeedShiftBatchConfig,
         workspace: &mut SoundSpeedShiftPlanWorkspace,
     ) -> KwaversResult<SoundSpeedShiftBatch> {
         self.reconstruct_frames_core(
-            frame_time_shifts_s,
+            frame_time_shifts,
             batch_config,
             &mut workspace.sampled_rhs,
             &mut workspace.solver,
@@ -109,21 +110,21 @@ impl SoundSpeedShiftPlan {
 
     fn reconstruct_frames_core(
         &self,
-        frame_time_shifts_s: &[&[f64]],
+        frame_time_shifts: &[&[Time]],
         batch_config: SoundSpeedShiftBatchConfig,
         sampled_rhs: &mut Vec<f64>,
         workspace: &mut SoundSpeedShiftWorkspace,
     ) -> KwaversResult<SoundSpeedShiftBatch> {
-        validate_frame_batch(frame_time_shifts_s, self.samples.len())?;
+        validate_frame_batch(frame_time_shifts, self.samples.len())?;
         sampled_rhs.resize(self.operator.rows(), 0.0);
         let mut output_image = match batch_config.image_retention {
             SoundSpeedShiftBatchImageRetention::Retain => Some(Array2::<f64>::zeros(self.shape)),
             SoundSpeedShiftBatchImageRetention::Discard => None,
         };
-        let mut frames = Vec::with_capacity(frame_time_shifts_s.len());
+        let mut frames = Vec::with_capacity(frame_time_shifts.len());
 
-        for (frame_index, time_shifts_s) in frame_time_shifts_s.iter().enumerate() {
-            solve_batch_frame(self, time_shifts_s, sampled_rhs, workspace);
+        for (frame_index, time_shifts) in frame_time_shifts.iter().enumerate() {
+            solve_batch_frame(self, time_shifts, sampled_rhs, workspace);
             let summary = objective_summary(frame_index, &workspace.objective_history)?;
             let objective_history = match batch_config.objective_history {
                 SoundSpeedShiftObjectiveHistoryPolicy::Compact => Vec::new(),

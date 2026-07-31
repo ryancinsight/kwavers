@@ -1,3 +1,5 @@
+use aequitas::systems::si::quantities::Time;
+
 use super::*;
 use kwavers_core::error::KwaversError;
 
@@ -16,7 +18,10 @@ fn batch_streaming_reuses_image_view_without_retaining_frames() {
         ..Default::default()
     };
     let frame = predict_sound_speed_time_shifts(&truth, &samples, &mask, config).unwrap();
-    let scaled_frame = frame.iter().map(|value| 0.5 * *value).collect::<Vec<_>>();
+    let scaled_frame = frame
+        .iter()
+        .map(|value| Time::from_base(0.5 * value.into_base()))
+        .collect::<Vec<_>>();
     let frame_refs = [&frame[..], &scaled_frame[..]];
     let plan = SoundSpeedShiftPlan::new(samples, &mask, config).unwrap();
     let expected = vec![
@@ -99,7 +104,10 @@ fn batch_streaming_propagates_callback_error_and_stops() {
         ..Default::default()
     };
     let frame = predict_sound_speed_time_shifts(&truth, &samples, &mask, config).unwrap();
-    let scaled_frame = frame.iter().map(|value| 0.25 * *value).collect::<Vec<_>>();
+    let scaled_frame = frame
+        .iter()
+        .map(|value| Time::from_base(0.25 * value.into_base()))
+        .collect::<Vec<_>>();
     let frame_refs = [&frame[..], &scaled_frame[..]];
     let plan = SoundSpeedShiftPlan::new(samples, &mask, config).unwrap();
     let mut seen = 0usize;

@@ -13,7 +13,7 @@ use super::types::SoundSpeedShiftPlan;
 impl SoundSpeedShiftPlan {
     /// Build a plan from fixed transmit/receive geometry.
     ///
-    /// The `time_shift_s` values already present in `samples` are ignored
+    /// The `time_shift` values already present in `samples` are ignored
     /// during reconstruction; callers provide each frame through
     /// [`SoundSpeedShiftPlan::reconstruct_with_workspace`].
     ///

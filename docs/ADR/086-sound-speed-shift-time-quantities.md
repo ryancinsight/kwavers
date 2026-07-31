@@ -1,6 +1,6 @@
 # ADR 086 — Aequitas sound-speed-shift time quantities
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-07-31
 - Owner: `KWAVERS-AEQ-MET-47`
 
@@ -36,8 +36,9 @@ no imaginary physical unit.
 
 ## Verification
 
-The implementation will pass the diagnostics test-target check, focused
-sound-speed-shift Nextest, warning-denied all-target Clippy, doctests, RustDoc,
-formatting, diff checks, and a public-contract scan for unit-suffixed raw time
-shifts. Value-semantic tests will cover sample construction, curved-array row
-ordering, prediction, fixed-acquisition reconstruction, and batch streaming.
+The diagnostics test-target check passes. Focused sound-speed-shift Nextest run
+`2a1acd7a-63f6-40a1-8742-1840913fac1d` passes 34/34 with 165 skipped;
+warning-denied all-target Clippy, one executable doctest with five ignored,
+RustDoc, package formatting, diff checks, and the public-contract scan pass.
+Value-semantic tests cover sample construction, curved-array row ordering,
+prediction, fixed-acquisition reconstruction, and batch streaming.

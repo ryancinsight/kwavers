@@ -29,6 +29,27 @@
 
 # Gap Audit
 
+## Live sound-speed-shift refresh — 2026-07-31
+
+`KWAVERS-AEQ-MET-47` found measured travel-time shifts crossing the
+`reconstruction::sound_speed_shift` sample, prediction, curved-array,
+fixed-acquisition, and batch APIs as raw seconds. The public contracts now
+use Aequitas `Time`, with seconds extracted only inside the path-integral
+operator and validation formulas; unit-suffixed time-shift names and scalar
+compatibility paths were removed.
+
+Reference velocity, grid spacing, curved-array geometry, and dense speed-shift
+image arrays remain explicit numerical boundaries for the next slice. The
+workflow is real-valued and contains no physical phasor, so Eunomia
+compatibility requires no imaginary physical unit. See
+[`Kwavers ADR 086`](docs/ADR/086-sound-speed-shift-time-quantities.md).
+
+Verification: diagnostics test-target check passes; focused sound-speed-shift
+Nextest run `2a1acd7a-63f6-40a1-8742-1840913fac1d` passes 34/34 with 165
+skipped; warning-denied all-target Clippy, doctests, RustDoc, package
+formatting, diff checks, and the public-contract scan pass. Workspace-wide
+rustfmt remains Windows filename-length blocked; package formatting passes.
+
 ## Live real-time SIRT refresh — 2026-07-31
 
 `KWAVERS-AEQ-MET-46` found raw frame timestamps, computation budgets,

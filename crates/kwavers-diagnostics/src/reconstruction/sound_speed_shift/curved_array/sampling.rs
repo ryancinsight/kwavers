@@ -1,5 +1,6 @@
 //! Pitch-catch row generation for curved-array speed-shift scans.
 
+use aequitas::systems::si::quantities::Time;
 use kwavers_core::error::{KwaversError, KwaversResult};
 
 use super::super::types::SoundSpeedShiftSample;
@@ -53,13 +54,13 @@ impl CurvedArrayShiftScan {
     /// Returns [`kwavers_core::error::KwaversError`] when the geometry or
     /// receiver-offset set is invalid.
     pub fn samples(&self) -> KwaversResult<Vec<SoundSpeedShiftSample>> {
-        let shifts = vec![0.0; self.row_count()];
+        let shifts = vec![Time::from_base(0.0); self.row_count()];
         self.samples_with_time_shifts(&shifts)
     }
 
     /// Build measured shift samples in deterministic row order.
     ///
-    /// `time_shifts_s[row]` must use the same row order as this scan:
+    /// `time_shifts[row]` must use the same row order as this scan:
     /// transmitter-major, then receiver-offset-minor.
     ///
     /// # Errors
@@ -68,23 +69,24 @@ impl CurvedArrayShiftScan {
     /// contract.
     pub fn samples_with_time_shifts(
         &self,
-        time_shifts_s: &[f64],
+        time_shifts: &[Time],
     ) -> KwaversResult<Vec<SoundSpeedShiftSample>> {
         validate_scan(self)?;
-        if time_shifts_s.len() != self.row_count() {
+        if time_shifts.len() != self.row_count() {
             return Err(KwaversError::DimensionMismatch(format!(
                 "curved-array shift scan expected {} time shifts, got {}",
                 self.row_count(),
-                time_shifts_s.len()
+                time_shifts.len()
             )));
         }
-        if let Some((idx, value)) = time_shifts_s
+        if let Some((idx, value)) = time_shifts
             .iter()
             .enumerate()
-            .find(|(_, value)| !value.is_finite())
+            .find(|(_, value)| !value.into_base().is_finite())
         {
             return Err(KwaversError::InvalidInput(format!(
-                "curved-array shift row {idx} has nonfinite time shift {value}"
+                "curved-array shift row {idx} has nonfinite time shift {}",
+                value.into_base()
             )));
         }
 
@@ -97,7 +99,7 @@ impl CurvedArrayShiftScan {
                 samples.push(SoundSpeedShiftSample::new(
                     elements[tx_idx],
                     elements[rx_idx],
-                    time_shifts_s[row],
+                    time_shifts[row],
                 ));
             }
         }

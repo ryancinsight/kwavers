@@ -1,5 +1,6 @@
 //! Repeated-frame reconstruction through a cached operator.
 
+use aequitas::systems::si::quantities::Time;
 use kwavers_core::error::KwaversResult;
 
 use super::super::reconstruct_from_operator;
@@ -11,30 +12,30 @@ impl SoundSpeedShiftPlan {
     /// Reconstruct one frame using a temporary workspace.
     ///
     /// # Errors
-    /// Returns [`kwavers_core::error::KwaversError`] when `time_shifts_s` does
+    /// Returns [`kwavers_core::error::KwaversError`] when `time_shifts` does
     /// not match the fixed acquisition row contract.
-    pub fn reconstruct(&self, time_shifts_s: &[f64]) -> KwaversResult<SoundSpeedShiftImage> {
+    pub fn reconstruct(&self, time_shifts: &[Time]) -> KwaversResult<SoundSpeedShiftImage> {
         let mut workspace = SoundSpeedShiftWorkspace::new();
-        self.reconstruct_with_workspace(time_shifts_s, &mut workspace)
+        self.reconstruct_with_workspace(time_shifts, &mut workspace)
     }
 
     /// Reconstruct one frame using caller-owned solver scratch buffers.
     ///
-    /// `time_shifts_s` is indexed by the original acquisition rows, before any
+    /// `time_shifts` is indexed by the original acquisition rows, before any
     /// sparse sampling policy is applied.
     ///
     /// # Errors
-    /// Returns [`kwavers_core::error::KwaversError`] when `time_shifts_s` does
+    /// Returns [`kwavers_core::error::KwaversError`] when `time_shifts` does
     /// not match the fixed acquisition row contract.
     pub fn reconstruct_with_workspace(
         &self,
-        time_shifts_s: &[f64],
+        time_shifts: &[Time],
         workspace: &mut SoundSpeedShiftWorkspace,
     ) -> KwaversResult<SoundSpeedShiftImage> {
-        validate_frame_time_shifts(time_shifts_s, self.samples.len())?;
+        validate_frame_time_shifts(time_shifts, self.samples.len())?;
         let data = self
             .operator
-            .rhs_from_time_shift_values(time_shifts_s, self.config.reference_sound_speed_m_s);
+            .rhs_from_time_shift_values(time_shifts, self.config.reference_sound_speed_m_s);
         Ok(reconstruct_from_operator(
             &self.operator,
             &data,

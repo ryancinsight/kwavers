@@ -1,3 +1,4 @@
+use aequitas::systems::si::quantities::Time;
 use leto::Array2;
 
 use super::{path, row_entries};
@@ -17,7 +18,7 @@ fn circular_arc_path_is_longer_than_its_chord() {
             x_m: 0.002,
             y_m: 0.0,
         },
-        0.0,
+        Time::from_base(0.0),
     );
 
     let path = path::build_path(
@@ -48,7 +49,7 @@ fn finite_frequency_entries_conserve_segment_length_on_full_mask() {
             x_m: 0.002,
             y_m: 0.0,
         },
-        0.0,
+        Time::from_base(0.0),
     );
     let config = SoundSpeedShiftConfig {
         spacing_m: 0.001,

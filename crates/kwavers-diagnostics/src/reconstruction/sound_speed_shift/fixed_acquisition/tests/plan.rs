@@ -1,5 +1,4 @@
-use std::f64::consts::TAU;
-
+use aequitas::systems::si::quantities::Time;
 use super::*;
 
 #[test]
@@ -110,7 +109,7 @@ fn fixed_plan_rejects_invalid_frame_shift_vectors() {
         .reconstruct_with_workspace(&[], &mut workspace)
         .unwrap_err();
     let nonfinite = plan
-        .reconstruct_with_workspace(&[f64::NAN], &mut workspace)
+        .reconstruct_with_workspace(&[Time::from_base(f64::NAN)], &mut workspace)
         .unwrap_err();
     let plan_workspace_short = plan
         .reconstruct_with_plan_workspace(&[], &mut plan_workspace)
@@ -159,7 +158,10 @@ fn curved_array_plan_reuses_operator_across_repeated_frames() {
     };
     let plan = SoundSpeedShiftPlan::from_curved_array_scan(&scan, &mask, config).unwrap();
     let frame = plan.predict_time_shifts(&truth).unwrap();
-    let scaled_frame = frame.iter().map(|value| 0.5 * *value).collect::<Vec<_>>();
+    let scaled_frame = frame
+        .iter()
+        .map(|value| Time::from_base(0.5 * value.into_base()))
+        .collect::<Vec<_>>();
     let mut workspace = SoundSpeedShiftWorkspace::new();
 
     let first = plan

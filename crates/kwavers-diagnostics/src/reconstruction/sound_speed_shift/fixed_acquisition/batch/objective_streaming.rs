@@ -1,5 +1,6 @@
 //! Objective-only streaming for fixed-acquisition batch reconstruction.
 
+use aequitas::systems::si::quantities::Time;
 use kwavers_core::error::KwaversResult;
 
 use super::super::types::{
@@ -24,7 +25,7 @@ impl SoundSpeedShiftPlan {
     /// returns an error.
     pub fn reconstruct_frames_streaming_objectives<F>(
         &self,
-        frame_time_shifts_s: &[&[f64]],
+        frame_time_shifts: &[&[Time]],
         on_frame: F,
     ) -> KwaversResult<SoundSpeedShiftBatchStreamSummary>
     where
@@ -32,7 +33,7 @@ impl SoundSpeedShiftPlan {
     {
         let mut workspace = SoundSpeedShiftPlanWorkspace::new();
         self.reconstruct_frames_streaming_objectives_with_plan_workspace(
-            frame_time_shifts_s,
+            frame_time_shifts,
             &mut workspace,
             on_frame,
         )
@@ -50,20 +51,20 @@ impl SoundSpeedShiftPlan {
     /// returns an error.
     pub fn reconstruct_frames_streaming_objectives_with_plan_workspace<F>(
         &self,
-        frame_time_shifts_s: &[&[f64]],
+        frame_time_shifts: &[&[Time]],
         workspace: &mut SoundSpeedShiftPlanWorkspace,
         mut on_frame: F,
     ) -> KwaversResult<SoundSpeedShiftBatchStreamSummary>
     where
         F: for<'frame> FnMut(SoundSpeedShiftFrameSummary, &'frame [f64]) -> KwaversResult<()>,
     {
-        validate_frame_batch(frame_time_shifts_s, self.samples.len())?;
+        validate_frame_batch(frame_time_shifts, self.samples.len())?;
         workspace.sampled_rhs.resize(self.operator.rows(), 0.0);
 
-        for (frame_index, time_shifts_s) in frame_time_shifts_s.iter().enumerate() {
+        for (frame_index, time_shifts) in frame_time_shifts.iter().enumerate() {
             solve_batch_frame(
                 self,
-                time_shifts_s,
+                time_shifts,
                 &mut workspace.sampled_rhs,
                 &mut workspace.solver,
             );
@@ -71,6 +72,6 @@ impl SoundSpeedShiftPlan {
             on_frame(summary, &workspace.solver.objective_history)?;
         }
 
-        Ok(stream_summary(self, frame_time_shifts_s.len()))
+        Ok(stream_summary(self, frame_time_shifts.len()))
     }
 }

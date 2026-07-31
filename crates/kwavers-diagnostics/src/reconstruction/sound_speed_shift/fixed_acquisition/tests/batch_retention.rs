@@ -1,3 +1,5 @@
+use aequitas::systems::si::quantities::Time;
+
 use super::*;
 
 #[test]
@@ -14,7 +16,10 @@ fn batch_discard_image_policy_retains_summaries_without_images() {
         ..Default::default()
     };
     let frame = predict_sound_speed_time_shifts(&truth, &samples, &mask, config).unwrap();
-    let scaled_frame = frame.iter().map(|value| 0.5 * *value).collect::<Vec<_>>();
+    let scaled_frame = frame
+        .iter()
+        .map(|value| Time::from_base(0.5 * value.into_base()))
+        .collect::<Vec<_>>();
     let frame_refs = [&frame[..], &scaled_frame[..]];
     let plan = SoundSpeedShiftPlan::new(samples, &mask, config).unwrap();
     let options = SoundSpeedShiftBatchConfig::default()

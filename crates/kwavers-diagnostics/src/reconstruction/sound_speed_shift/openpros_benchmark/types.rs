@@ -1,5 +1,6 @@
 //! OpenPros benchmark data contracts.
 
+use aequitas::systems::si::quantities::Time;
 use leto::Array2;
 
 use super::super::{SoundSpeedShiftConfig, SoundSpeedShiftImage, SoundSpeedShiftSample};
@@ -101,7 +102,7 @@ pub struct OpenProsShiftBenchmarkCase {
     pub active_mask: Array2<bool>,
     pub truth_shift_m_s: Array2<f64>,
     pub samples: Vec<SoundSpeedShiftSample>,
-    pub frame_time_shifts_s: Vec<f64>,
+    pub frame_time_shifts: Vec<Time>,
     pub dense_config: SoundSpeedShiftConfig,
     pub sparse_config: SoundSpeedShiftConfig,
     pub waveform: OpenProsWaveformExpectation,

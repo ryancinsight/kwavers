@@ -1,5 +1,6 @@
 use std::f64::consts::TAU;
 
+use aequitas::systems::si::quantities::Time;
 use leto::Array2;
 
 use super::SoundSpeedShiftPlan;
@@ -60,7 +61,7 @@ fn fixed_plan_rejects_invalid_frame_shift_vectors() {
         .reconstruct_with_workspace(&[], &mut workspace)
         .unwrap_err();
     let nonfinite = plan
-        .reconstruct_with_workspace(&[f64::NAN], &mut workspace)
+        .reconstruct_with_workspace(&[Time::from_base(f64::NAN)], &mut workspace)
         .unwrap_err();
 
     assert!(short.to_string().contains("expected 1 frame time shifts"));
@@ -97,7 +98,10 @@ fn curved_array_plan_reuses_operator_across_repeated_frames() {
     };
     let plan = SoundSpeedShiftPlan::from_curved_array_scan(&scan, &mask, config).unwrap();
     let frame = plan.predict_time_shifts(&truth).unwrap();
-    let scaled_frame = frame.iter().map(|value| 0.5 * *value).collect::<Vec<_>>();
+    let scaled_frame = frame
+        .iter()
+        .map(|value| Time::from_base(0.5 * value.into_base()))
+        .collect::<Vec<_>>();
     let mut workspace = SoundSpeedShiftWorkspace::new();
 
     let first = plan
@@ -145,7 +149,10 @@ fn batch_reconstruction_uses_compact_summaries_by_default() {
         ..Default::default()
     };
     let frame = predict_sound_speed_time_shifts(&truth, &samples, &mask, config).unwrap();
-    let scaled_frame = frame.iter().map(|value| 0.25 * *value).collect::<Vec<_>>();
+    let scaled_frame = frame
+        .iter()
+        .map(|value| Time::from_base(0.25 * value.into_base()))
+        .collect::<Vec<_>>();
     let frame_refs = [&frame[..], &scaled_frame[..]];
     let plan = SoundSpeedShiftPlan::new(samples, &mask, config).unwrap();
     let mut workspace = SoundSpeedShiftWorkspace::new();
@@ -224,9 +231,9 @@ fn batch_reconstruction_rejects_invalid_frame_batches() {
     };
     let plan = SoundSpeedShiftPlan::new(samples, &mask, config).unwrap();
     let mut workspace = SoundSpeedShiftWorkspace::new();
-    let empty: [&[f64]; 0] = [];
+    let empty: [&[Time]; 0] = [];
     let short = [&[][..]];
-    let nonfinite = [&[f64::NAN][..]];
+    let nonfinite = [&[Time::from_base(f64::NAN)][..]];
 
     let empty_err = plan
         .reconstruct_frames_with_workspace(&empty, &mut workspace)
@@ -255,19 +262,19 @@ fn horizontal_sample(y_m: f64) -> SoundSpeedShiftSample {
     SoundSpeedShiftSample::new(
         PlanarPoint { x_m: -0.004, y_m },
         PlanarPoint { x_m: 0.004, y_m },
-        0.0,
+        Time::from_base(0.0),
     )
 }
 
 fn attach_time_shifts(
     samples: &[SoundSpeedShiftSample],
-    time_shifts: &[f64],
+    time_shifts: &[Time],
 ) -> Vec<SoundSpeedShiftSample> {
     samples
         .iter()
         .zip(time_shifts.iter())
-        .map(|(sample, time_shift_s)| SoundSpeedShiftSample {
-            time_shift_s: *time_shift_s,
+        .map(|(sample, time_shift)| SoundSpeedShiftSample {
+            time_shift: *time_shift,
             ..*sample
         })
         .collect()

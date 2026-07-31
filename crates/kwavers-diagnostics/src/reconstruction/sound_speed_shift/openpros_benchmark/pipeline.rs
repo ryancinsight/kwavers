@@ -27,7 +27,7 @@ pub fn openpros_shift_benchmark_case(
     let truth_shift_m_s = phantom::shift_phantom(config);
     let samples = acquisition::samples(config);
     let dense_config = reconstruction_config(config, ShiftSampling::Dense, ShiftPrior::Dense);
-    let frame_time_shifts_s =
+    let frame_time_shifts =
         predict_sound_speed_time_shifts(&truth_shift_m_s, &samples, &active_mask, dense_config)?;
     let sparse_config = reconstruction_config(
         config,
@@ -42,7 +42,7 @@ pub fn openpros_shift_benchmark_case(
         active_mask,
         truth_shift_m_s,
         samples,
-        frame_time_shifts_s,
+        frame_time_shifts,
         dense_config,
         sparse_config,
         waveform: config.waveform_expectation(),
@@ -68,9 +68,9 @@ pub fn run_openpros_shift_benchmark(
     let mut dense_workspace = SoundSpeedShiftWorkspace::new();
     let mut sparse_workspace = SoundSpeedShiftWorkspace::new();
     let dense_reconstruction =
-        dense_plan.reconstruct_with_workspace(&case.frame_time_shifts_s, &mut dense_workspace)?;
+        dense_plan.reconstruct_with_workspace(&case.frame_time_shifts, &mut dense_workspace)?;
     let sparse_reconstruction =
-        sparse_plan.reconstruct_with_workspace(&case.frame_time_shifts_s, &mut sparse_workspace)?;
+        sparse_plan.reconstruct_with_workspace(&case.frame_time_shifts, &mut sparse_workspace)?;
     let dense_metrics = metrics_for(
         &dense_reconstruction,
         &case.truth_shift_m_s,

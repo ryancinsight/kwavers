@@ -19,6 +19,7 @@ use super::{
     ShiftSensitivity, SoundSpeedShiftConfig, SoundSpeedShiftSample, SoundSpeedShiftWorkspace,
     SOUND_SPEED_SHIFT_MODEL,
 };
+use aequitas::systems::si::quantities::Time;
 use kwavers_solver::inverse::same_aperture::PlanarPoint;
 
 pub(super) fn horizontal_samples(y_values: &[f64]) -> Vec<SoundSpeedShiftSample> {
@@ -29,7 +30,7 @@ pub(super) fn horizontal_sample(y_m: f64) -> SoundSpeedShiftSample {
     SoundSpeedShiftSample::new(
         PlanarPoint { x_m: -0.004, y_m },
         PlanarPoint { x_m: 0.004, y_m },
-        0.0,
+        Time::from_base(0.0),
     )
 }
 
@@ -37,19 +38,19 @@ pub(super) fn vertical_sample(x_m: f64) -> SoundSpeedShiftSample {
     SoundSpeedShiftSample::new(
         PlanarPoint { x_m, y_m: -0.004 },
         PlanarPoint { x_m, y_m: 0.004 },
-        0.0,
+        Time::from_base(0.0),
     )
 }
 
 pub(super) fn attach_time_shifts(
     samples: &[SoundSpeedShiftSample],
-    time_shifts: &[f64],
+    time_shifts: &[Time],
 ) -> Vec<SoundSpeedShiftSample> {
     samples
         .iter()
         .zip(time_shifts.iter())
-        .map(|(sample, time_shift_s)| SoundSpeedShiftSample {
-            time_shift_s: *time_shift_s,
+        .map(|(sample, time_shift)| SoundSpeedShiftSample {
+            time_shift: *time_shift,
             ..*sample
         })
         .collect()

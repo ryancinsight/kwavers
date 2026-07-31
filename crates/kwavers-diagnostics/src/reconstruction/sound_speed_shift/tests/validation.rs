@@ -1,5 +1,6 @@
 //! Operator geometry, sensitivity model, and invalid configuration rejection tests.
 
+use aequitas::systems::si::quantities::Time;
 use leto::Array2;
 
 use super::{
@@ -23,7 +24,7 @@ fn operator_stores_only_crossed_ray_segments() {
             x_m: 0.024,
             y_m: 0.024,
         },
-        0.0,
+        Time::from_base(0.0),
     )];
     let config = SoundSpeedShiftConfig {
         spacing_m: 0.001,
@@ -62,7 +63,7 @@ fn curved_ray_prediction_has_longer_uniform_path_than_straight_chord() {
             x_m: 0.002,
             y_m: 0.0,
         },
-        0.0,
+        Time::from_base(0.0),
     )];
     let straight = SoundSpeedShiftConfig {
         spacing_m: 0.001,
@@ -80,8 +81,8 @@ fn curved_ray_prediction_has_longer_uniform_path_than_straight_chord() {
         predict_sound_speed_time_shifts(&shift, &samples, &mask, straight).unwrap();
     let curved_shift = predict_sound_speed_time_shifts(&shift, &samples, &mask, curved).unwrap();
 
-    assert!(straight_shift[0] < 0.0);
-    assert!(curved_shift[0] < straight_shift[0]);
+    assert!(straight_shift[0].into_base() < 0.0);
+    assert!(curved_shift[0].into_base() < straight_shift[0].into_base());
 }
 
 /// Finite-frequency sensitivity assigns weight to an off-axis cell that
@@ -100,7 +101,7 @@ fn finite_frequency_sensitivity_detects_off_axis_shift() {
             x_m: 0.002,
             y_m: 0.0,
         },
-        0.0,
+        Time::from_base(0.0),
     )];
     let geometric = SoundSpeedShiftConfig {
         spacing_m: 0.001,
@@ -118,9 +119,9 @@ fn finite_frequency_sensitivity_detects_off_axis_shift() {
         predict_sound_speed_time_shifts(&shift, &samples, &mask, geometric).unwrap();
     let finite_shift = predict_sound_speed_time_shifts(&shift, &samples, &mask, finite).unwrap();
 
-    assert_eq!(geometric_shift[0], 0.0);
+    assert_eq!(geometric_shift[0].into_base(), 0.0);
     assert!(
-        finite_shift[0] < 0.0,
+        finite_shift[0].into_base() < 0.0,
         "finite-frequency tube should assign sensitivity to the off-axis cell"
     );
 }

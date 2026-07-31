@@ -1,3 +1,5 @@
+use aequitas::systems::si::quantities::Time;
+
 use super::*;
 
 #[test]
@@ -14,7 +16,10 @@ fn batch_reconstruction_uses_compact_summaries_by_default() {
         ..Default::default()
     };
     let frame = predict_sound_speed_time_shifts(&truth, &samples, &mask, config).unwrap();
-    let scaled_frame = frame.iter().map(|value| 0.25 * *value).collect::<Vec<_>>();
+    let scaled_frame = frame
+        .iter()
+        .map(|value| Time::from_base(0.25 * value.into_base()))
+        .collect::<Vec<_>>();
     let frame_refs = [&frame[..], &scaled_frame[..]];
     let plan = SoundSpeedShiftPlan::new(samples, &mask, config).unwrap();
     let mut workspace = SoundSpeedShiftWorkspace::new();
@@ -91,9 +96,9 @@ fn batch_reconstruction_rejects_invalid_frame_batches() {
     };
     let plan = SoundSpeedShiftPlan::new(samples, &mask, config).unwrap();
     let mut workspace = SoundSpeedShiftWorkspace::new();
-    let empty: [&[f64]; 0] = [];
+    let empty: [&[Time]; 0] = [];
     let short = [&[][..]];
-    let nonfinite = [&[f64::NAN][..]];
+    let nonfinite = [&[Time::from_base(f64::NAN)][..]];
 
     let empty_err = plan
         .reconstruct_frames_with_workspace(&empty, &mut workspace)

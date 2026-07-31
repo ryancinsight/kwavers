@@ -28,6 +28,7 @@ mod types;
 
 use leto::Array2;
 
+use aequitas::systems::si::quantities::Time;
 use kwavers_core::error::KwaversResult;
 
 pub use curved_array::{CurvedArray2d, CurvedArrayShiftScan};
@@ -101,7 +102,7 @@ pub fn predict_sound_speed_time_shifts(
     samples: &[SoundSpeedShiftSample],
     active_mask: &Array2<bool>,
     config: SoundSpeedShiftConfig,
-) -> KwaversResult<Vec<f64>> {
+) -> KwaversResult<Vec<Time>> {
     if sound_speed_shift_m_s.shape() != active_mask.shape() {
         return Err(kwavers_core::error::KwaversError::DimensionMismatch(
             format!(
@@ -125,7 +126,7 @@ pub fn predict_sound_speed_time_shifts(
 
     Ok(path_integrals
         .into_iter()
-        .map(|value| -value / c0_sq)
+        .map(|value| Time::from_base(-value / c0_sq))
         .collect())
 }
 

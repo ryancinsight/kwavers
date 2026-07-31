@@ -1,5 +1,6 @@
 //! Limited-view top/bottom probe acquisition rows.
 
+use aequitas::systems::si::quantities::Time;
 use kwavers_solver::inverse::same_aperture::PlanarPoint;
 
 use super::super::SoundSpeedShiftSample;
@@ -37,7 +38,11 @@ fn append_probe_pair(
 ) {
     for transmitter in transmitters {
         for receiver in receivers {
-            out.push(SoundSpeedShiftSample::new(*transmitter, *receiver, 0.0));
+            out.push(SoundSpeedShiftSample::new(
+                *transmitter,
+                *receiver,
+                Time::from_base(0.0),
+            ));
         }
     }
 }

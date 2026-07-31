@@ -210,7 +210,7 @@ fn lsqr_workspace_capacity_preserved_across_calls() {
 #[test]
 fn lsqr_zero_rhs_returns_zero_solution() {
     let mask = Array2::from_elem((3, 3), true);
-    // All time_shift_s = 0 ⟹ b = −c₀²·0 = 0
+    // All time_shift = 0 ⟹ b = −c₀²·0 = 0
     let samples = horizontal_samples(&[-0.001, 0.0, 0.001]);
     let config = SoundSpeedShiftConfig {
         spacing_m: 0.001,

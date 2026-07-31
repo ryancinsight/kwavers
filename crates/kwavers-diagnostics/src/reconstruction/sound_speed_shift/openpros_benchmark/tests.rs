@@ -20,7 +20,7 @@ fn openpros_case_matches_limited_view_waveform_structure() {
     assert_eq!(case.waveform.absorbing_boundary_points, 120);
     assert_eq!(case.waveform.sos_shape, (41, 17));
     assert_eq!(case.samples.len(), 40 * 17);
-    assert_eq!(case.frame_time_shifts_s.len(), case.samples.len());
+    assert_eq!(case.frame_time_shifts.len(), case.samples.len());
     assert!(case.truth_shift_m_s.iter().any(|value| *value > 100.0));
     assert!(case.truth_shift_m_s.iter().any(|value| *value < -20.0));
     assert_eq!(case.dense_config.prior, ShiftPrior::Dense);

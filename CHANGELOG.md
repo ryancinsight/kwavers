@@ -4,6 +4,13 @@
 
 ### Changed
 
+- **Breaking:** Sound-speed-shift measured travel-time samples and prediction,
+  curved-array, fixed-acquisition, and batch time-shift APIs now use Aequitas
+  `Time`. Seconds are extracted only at numerical operators; velocity, grid,
+  and dense image storage remain explicit boundaries. The real-valued workflow
+  introduces no complex or imaginary physical unit. See [ADR
+  086](docs/ADR/086-sound-speed-shift-time-quantities.md).
+
 - **Breaking:** Real-time SIRT frame timestamps, computation budgets, elapsed
   computation time, throughput, convergence error, and quality ratios now use
   Aequitas `Time`, `Frequency`, and `Dimensionless` contracts. RF/image arrays,

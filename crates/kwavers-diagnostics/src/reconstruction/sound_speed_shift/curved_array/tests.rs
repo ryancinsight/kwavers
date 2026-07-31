@@ -1,5 +1,6 @@
 use std::f64::consts::{FRAC_PI_2, PI, TAU};
 
+use aequitas::systems::si::quantities::Time;
 use leto::Array2;
 
 use super::{CurvedArray2d, CurvedArrayShiftScan};
@@ -36,7 +37,7 @@ fn pitch_catch_rows_are_transmitter_major_and_offset_minor() {
     };
     let scan = CurvedArrayShiftScan::new(array, vec![1, 2]);
     let shifts = (0..scan.row_count())
-        .map(|idx| idx as f64 * 1.0e-9)
+        .map(|idx| Time::from_base(idx as f64 * 1.0e-9))
         .collect::<Vec<_>>();
 
     let elements = scan.elements().unwrap();
@@ -45,13 +46,13 @@ fn pitch_catch_rows_are_transmitter_major_and_offset_minor() {
     assert_eq!(samples.len(), 8);
     assert_point(samples[0].transmitter, elements[0]);
     assert_point(samples[0].receiver, elements[1]);
-    assert_eq!(samples[0].time_shift_s, 0.0);
+    assert_eq!(samples[0].time_shift.into_base(), 0.0);
     assert_point(samples[1].transmitter, elements[0]);
     assert_point(samples[1].receiver, elements[2]);
-    assert_eq!(samples[1].time_shift_s, 1.0e-9);
+    assert_eq!(samples[1].time_shift.into_base(), 1.0e-9);
     assert_point(samples[2].transmitter, elements[1]);
     assert_point(samples[2].receiver, elements[2]);
-    assert_eq!(samples[2].time_shift_s, 2.0e-9);
+    assert_eq!(samples[2].time_shift.into_base(), 2.0e-9);
 }
 
 #[test]
@@ -102,10 +103,14 @@ fn curved_array_samples_drive_straight_ray_shift_prediction() {
     let predicted = predict_sound_speed_time_shifts(&shift, &samples, &mask, config).unwrap();
 
     assert_eq!(predicted.len(), scan.row_count());
-    assert!(predicted.iter().all(|value| value.is_finite()));
-    assert!(predicted.iter().any(|value| *value < 0.0));
+    assert!(predicted.iter().all(|value| value.into_base().is_finite()));
+    assert!(predicted.iter().any(|value| value.into_base() < 0.0));
     assert!(
-        predicted.iter().map(|value| value.abs()).sum::<f64>() > 0.0,
+        predicted
+            .iter()
+            .map(|value| value.into_base().abs())
+            .sum::<f64>()
+            > 0.0,
         "curved-array straight-ray rows must intersect the active mask"
     );
 }

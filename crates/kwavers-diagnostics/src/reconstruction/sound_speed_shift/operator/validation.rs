@@ -51,7 +51,7 @@ pub(super) fn validate_inputs(
             sample.transmitter.y_m,
         )?;
         validate_point("receiver", idx, sample.receiver.x_m, sample.receiver.y_m)?;
-        if !sample.time_shift_s.is_finite() {
+        if !sample.time_shift.into_base().is_finite() {
             return Err(KwaversError::InvalidInput(format!(
                 "Speed-shift sample {idx} has nonfinite time shift"
             )));

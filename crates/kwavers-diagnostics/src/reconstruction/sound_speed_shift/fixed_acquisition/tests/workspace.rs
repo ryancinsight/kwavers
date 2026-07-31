@@ -60,7 +60,7 @@ fn fixed_plan_reconstruct_into_image_reuses_output_allocation() {
     let predicted = predict_sound_speed_time_shifts(&truth, &samples, &mask, config).unwrap();
     let scaled = predicted
         .iter()
-        .map(|value| 0.5 * *value)
+        .map(|value| Time::from_base(0.5 * value.into_base()))
         .collect::<Vec<_>>();
     let plan = SoundSpeedShiftPlan::new(samples, &mask, config).unwrap();
     let direct = plan.reconstruct(&predicted).unwrap();
