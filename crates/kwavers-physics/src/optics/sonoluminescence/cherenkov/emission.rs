@@ -61,13 +61,15 @@ pub fn calculate_cherenkov_emission(
     let n_base = model.refractive_index_base;
     let coherence = model.coherence_factor;
 
-    crate::parallel::zip_mut_four_refs(
+    crate::parallel::zip_mut_with(
         emission.view_mut(),
-        velocity_field.view(),
-        charge_density_field.view(),
-        temperature_field.view(),
-        compression_field.view(),
-        |e, &v, &charge_density, &temp, &comp| {
+        (
+            &velocity_field.view(),
+            &charge_density_field.view(),
+            &temperature_field.view(),
+            &compression_field.view(),
+        ),
+        |e, (&v, &charge_density, &temp, &comp)| {
             let charge_density = charge_density.max(0.0);
             let temp = temp.max(0.0);
             let comp = comp.max(0.0);

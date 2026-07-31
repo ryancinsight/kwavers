@@ -4,7 +4,7 @@ use eunomia::Complex;
 use kwavers_core::constants::numerical::TWO_PI;
 use leto::Array3;
 
-use crate::parallel::zip_mut_ref;
+use crate::parallel::zip_mut_with;
 
 /// Fractional Laplacian model for absorption
 ///
@@ -44,7 +44,7 @@ impl FractionalLaplacian {
     ) {
         let omega = TWO_PI * frequency;
 
-        zip_mut_ref(spectrum, k_squared, |s, &k2| {
+        zip_mut_with(spectrum.view_mut(), &k_squared.view(), |s, &k2| {
             if k2 > 0.0 {
                 // Fractional Laplacian operator: (-k²)^(y/2)
                 let fractional_term = k2.powf(self.y / 2.0);

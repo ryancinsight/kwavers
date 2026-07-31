@@ -1,6 +1,6 @@
 //! Provider-owned traversal adapters for therapy kernels.
 
-use leto::{ArrayView, ArrayViewMut};
+use leto::ArrayViewMut;
 use leto_ops::ZipSources;
 use moirai_parallel::{
     for_each_chunk_mut_enumerated_with, for_each_chunk_pair_mut_enumerated_with,
@@ -61,48 +61,52 @@ pub(crate) fn zip_mut_with<T, S, F, const N: usize>(
         _ => {
             let shape = out.shape();
             let mut index = [0usize; N];
-            let steps = sources.steps();
-            let mut offsets = sources
-                .offsets_at(index)
-                .expect("invariant: validated therapy zip offsets are representable");
             for _ in 0..out.size() {
                 let value = out.get_mut(index).expect("invariant: index in bounds");
+                let offsets = sources
+                    .offsets_at(index)
+                    .expect("invariant: validated therapy zip offsets are representable");
                 f(&mut *value, sources.values(offsets));
-                sources.advance(&mut offsets, steps);
                 next_index(&mut index, &shape);
             }
         }
     }
 }
 
-pub(crate) fn zip_two_mut_ref<T, U, V, const N: usize, F>(
+/// Mutably map two outputs with one or more statically typed source views.
+///
+/// The two mutable outputs are traversed in one adaptive chunk pass. Source
+/// arity and element types are supplied through [`ZipSources`], so each use
+/// monomorphizes without allocation or dynamic dispatch.
+pub(crate) fn zip_two_mut_with<T, U, S, F, const N: usize>(
     mut first_out: ArrayViewMut<'_, T, N>,
     mut second_out: ArrayViewMut<'_, U, N>,
-    input: ArrayView<'_, V, N>,
+    sources: S,
     f: F,
 ) where
     T: Send,
     U: Send,
-    V: Sync,
-    F: Fn(&mut T, &mut U, &V) + Send + Sync,
+    S: ZipSources<N>,
+    S::Values: Send,
+    S::Contiguous: Sync,
+    F: Fn(&mut T, &mut U, S::Values) + Send + Sync,
 {
     assert_eq!(
         first_out.shape(),
         second_out.shape(),
         "invariant: therapy traversal output shapes must match"
     );
-    assert_eq!(
-        first_out.shape(),
-        input.shape(),
-        "invariant: therapy traversal output shape must match input shape"
-    );
+
+    sources
+        .validate(first_out.shape())
+        .expect("invariant: therapy zip source shapes and storage must match outputs");
 
     match (
         first_out.as_mut_slice(),
         second_out.as_mut_slice(),
-        input.as_slice(),
+        sources.contiguous(),
     ) {
-        (Some(first_out), Some(second_out), Some(input)) => {
+        (Some(first_out), Some(second_out), Some(source_slices)) => {
             let f_ref = &f;
             for_each_chunk_pair_mut_enumerated_with::<Adaptive, _, _, _>(
                 first_out,
@@ -115,7 +119,11 @@ pub(crate) fn zip_two_mut_ref<T, U, V, const N: usize, F>(
                         .zip(second_chunk.iter_mut())
                         .enumerate()
                     {
-                        f_ref(first_value, second_value, &input[base + lane]);
+                        f_ref(
+                            first_value,
+                            second_value,
+                            S::contiguous_values(source_slices, base + lane),
+                        );
                     }
                 },
             );
@@ -130,107 +138,35 @@ pub(crate) fn zip_two_mut_ref<T, U, V, const N: usize, F>(
                 let second_value = second_out
                     .get_mut(index)
                     .expect("invariant: index in bounds");
-                f(
-                    first_value,
-                    second_value,
-                    input.get(index).expect("invariant: index in bounds"),
-                );
+                let offsets = sources
+                    .offsets_at(index)
+                    .expect("invariant: validated therapy zip offsets are representable");
+                f(first_value, second_value, sources.values(offsets));
                 next_index(&mut index, &shape);
             }
         }
     }
 }
 
-pub(crate) fn zip_two_mut_two_refs<T, U, V, W, const N: usize, F>(
-    mut first_out: ArrayViewMut<'_, T, N>,
-    mut second_out: ArrayViewMut<'_, U, N>,
-    first: ArrayView<'_, V, N>,
-    second: ArrayView<'_, W, N>,
-    f: F,
-) where
-    T: Send,
-    U: Send,
-    V: Sync,
-    W: Sync,
-    F: Fn(&mut T, &mut U, &V, &W) + Send + Sync,
-{
-    assert_eq!(
-        first_out.shape(),
-        second_out.shape(),
-        "invariant: therapy traversal output shapes must match"
-    );
-    assert_eq!(
-        first_out.shape(),
-        first.shape(),
-        "invariant: therapy traversal output shape must match first input shape"
-    );
-    assert_eq!(
-        first_out.shape(),
-        second.shape(),
-        "invariant: therapy traversal output shape must match second input shape"
-    );
-
-    match (
-        first_out.as_mut_slice(),
-        second_out.as_mut_slice(),
-        first.as_slice(),
-        second.as_slice(),
-    ) {
-        (Some(first_out), Some(second_out), Some(first), Some(second)) => {
-            let f_ref = &f;
-            for_each_chunk_pair_mut_enumerated_with::<Adaptive, _, _, _>(
-                first_out,
-                second_out,
-                THERAPY_CHUNK_SIZE,
-                |chunk_index, first_chunk, second_chunk| {
-                    let base = chunk_index * THERAPY_CHUNK_SIZE;
-                    for (lane, (first_value, second_value)) in first_chunk
-                        .iter_mut()
-                        .zip(second_chunk.iter_mut())
-                        .enumerate()
-                    {
-                        let index = base + lane;
-                        f_ref(first_value, second_value, &first[index], &second[index]);
-                    }
-                },
-            );
-        }
-        _ => {
-            let shape = first_out.shape();
-            let mut index = [0usize; N];
-            for _ in 0..first_out.size() {
-                let first_value = first_out
-                    .get_mut(index)
-                    .expect("invariant: index in bounds");
-                let second_value = second_out
-                    .get_mut(index)
-                    .expect("invariant: index in bounds");
-                f(
-                    first_value,
-                    second_value,
-                    first.get(index).expect("invariant: index in bounds"),
-                    second.get(index).expect("invariant: index in bounds"),
-                );
-                next_index(&mut index, &shape);
-            }
-        }
-    }
-}
-
-pub(crate) fn zip_three_mut_two_refs<T, U, V, W, X, const N: usize, F>(
+/// Mutably map three outputs with one or more statically typed source views.
+///
+/// The three mutable outputs are traversed in one adaptive chunk pass. Source
+/// arity and element types are supplied through [`ZipSources`], so each use
+/// monomorphizes without allocation or dynamic dispatch.
+pub(crate) fn zip_three_mut_with<T, U, V, S, F, const N: usize>(
     mut first_out: ArrayViewMut<'_, T, N>,
     mut second_out: ArrayViewMut<'_, U, N>,
     mut third_out: ArrayViewMut<'_, V, N>,
-    first: ArrayView<'_, W, N>,
-    second: ArrayView<'_, X, N>,
+    sources: S,
     f: F,
 ) where
     T: Send,
     U: Send,
     V: Send,
-    W: Sync,
-    X: Sync,
-    F: Fn(&mut T, &mut U, &mut V, &W, &X) + Send + Sync,
+    S: ZipSources<N>,
+    S::Values: Send,
+    S::Contiguous: Sync,
+    F: Fn(&mut T, &mut U, &mut V, S::Values) + Send + Sync,
 {
     assert_eq!(
         first_out.shape(),
@@ -242,25 +178,17 @@ pub(crate) fn zip_three_mut_two_refs<T, U, V, W, X, const N: usize, F>(
         third_out.shape(),
         "invariant: therapy traversal first and third output shapes must match"
     );
-    assert_eq!(
-        first_out.shape(),
-        first.shape(),
-        "invariant: therapy traversal output shape must match first input shape"
-    );
-    assert_eq!(
-        first_out.shape(),
-        second.shape(),
-        "invariant: therapy traversal output shape must match second input shape"
-    );
+    sources
+        .validate(first_out.shape())
+        .expect("invariant: therapy zip source shapes and storage must match outputs");
 
     match (
         first_out.as_mut_slice(),
         second_out.as_mut_slice(),
         third_out.as_mut_slice(),
-        first.as_slice(),
-        second.as_slice(),
+        sources.contiguous(),
     ) {
-        (Some(first_out), Some(second_out), Some(third_out), Some(first), Some(second)) => {
+        (Some(first_out), Some(second_out), Some(third_out), Some(source_slices)) => {
             let f_ref = &f;
             for_each_chunk_triple_mut_enumerated_with::<Adaptive, _, _, _, _>(
                 first_out,
@@ -275,13 +203,11 @@ pub(crate) fn zip_three_mut_two_refs<T, U, V, W, X, const N: usize, F>(
                         .zip(third_chunk.iter_mut())
                         .enumerate()
                     {
-                        let index = base + lane;
                         f_ref(
                             first_value,
                             second_value,
                             third_value,
-                            &first[index],
-                            &second[index],
+                            S::contiguous_values(source_slices, base + lane),
                         );
                     }
                 },
@@ -300,233 +226,14 @@ pub(crate) fn zip_three_mut_two_refs<T, U, V, W, X, const N: usize, F>(
                 let third_value = third_out
                     .get_mut(index)
                     .expect("invariant: index in bounds");
+                let offsets = sources
+                    .offsets_at(index)
+                    .expect("invariant: validated therapy zip offsets are representable");
                 f(
                     first_value,
                     second_value,
                     third_value,
-                    first.get(index).expect("invariant: index in bounds"),
-                    second.get(index).expect("invariant: index in bounds"),
-                );
-                next_index(&mut index, &shape);
-            }
-        }
-    }
-}
-
-pub(crate) fn zip_three_mut_three_refs<T, U, V, W, X, Y, const N: usize, F>(
-    mut first_out: ArrayViewMut<'_, T, N>,
-    mut second_out: ArrayViewMut<'_, U, N>,
-    mut third_out: ArrayViewMut<'_, V, N>,
-    first: ArrayView<'_, W, N>,
-    second: ArrayView<'_, X, N>,
-    third: ArrayView<'_, Y, N>,
-    f: F,
-) where
-    T: Send,
-    U: Send,
-    V: Send,
-    W: Sync,
-    X: Sync,
-    Y: Sync,
-    F: Fn(&mut T, &mut U, &mut V, &W, &X, &Y) + Send + Sync,
-{
-    assert_eq!(
-        first_out.shape(),
-        second_out.shape(),
-        "invariant: therapy traversal first and second output shapes must match"
-    );
-    assert_eq!(
-        first_out.shape(),
-        third_out.shape(),
-        "invariant: therapy traversal first and third output shapes must match"
-    );
-    assert_eq!(
-        first_out.shape(),
-        first.shape(),
-        "invariant: therapy traversal output shape must match first input shape"
-    );
-    assert_eq!(
-        first_out.shape(),
-        second.shape(),
-        "invariant: therapy traversal output shape must match second input shape"
-    );
-    assert_eq!(
-        first_out.shape(),
-        third.shape(),
-        "invariant: therapy traversal output shape must match third input shape"
-    );
-
-    match (
-        first_out.as_mut_slice(),
-        second_out.as_mut_slice(),
-        third_out.as_mut_slice(),
-        first.as_slice(),
-        second.as_slice(),
-        third.as_slice(),
-    ) {
-        (
-            Some(first_out),
-            Some(second_out),
-            Some(third_out),
-            Some(first),
-            Some(second),
-            Some(third),
-        ) => {
-            let f_ref = &f;
-            for_each_chunk_triple_mut_enumerated_with::<Adaptive, _, _, _, _>(
-                first_out,
-                second_out,
-                third_out,
-                THERAPY_CHUNK_SIZE,
-                |chunk_index, first_chunk, second_chunk, third_chunk| {
-                    let base = chunk_index * THERAPY_CHUNK_SIZE;
-                    for (lane, ((first_value, second_value), third_value)) in first_chunk
-                        .iter_mut()
-                        .zip(second_chunk.iter_mut())
-                        .zip(third_chunk.iter_mut())
-                        .enumerate()
-                    {
-                        let index = base + lane;
-                        f_ref(
-                            first_value,
-                            second_value,
-                            third_value,
-                            &first[index],
-                            &second[index],
-                            &third[index],
-                        );
-                    }
-                },
-            );
-        }
-        _ => {
-            let shape = first_out.shape();
-            let mut index = [0usize; N];
-            for _ in 0..first_out.size() {
-                let first_value = first_out
-                    .get_mut(index)
-                    .expect("invariant: index in bounds");
-                let second_value = second_out
-                    .get_mut(index)
-                    .expect("invariant: index in bounds");
-                let third_value = third_out
-                    .get_mut(index)
-                    .expect("invariant: index in bounds");
-                f(
-                    first_value,
-                    second_value,
-                    third_value,
-                    first.get(index).expect("invariant: index in bounds"),
-                    second.get(index).expect("invariant: index in bounds"),
-                    third.get(index).expect("invariant: index in bounds"),
-                );
-                next_index(&mut index, &shape);
-            }
-        }
-    }
-}
-
-pub(crate) fn zip_two_mut_four_refs<T, U, V, W, X, Y, const N: usize, F>(
-    mut first_out: ArrayViewMut<'_, T, N>,
-    mut second_out: ArrayViewMut<'_, U, N>,
-    first: ArrayView<'_, V, N>,
-    second: ArrayView<'_, W, N>,
-    third: ArrayView<'_, X, N>,
-    fourth: ArrayView<'_, Y, N>,
-    f: F,
-) where
-    T: Send,
-    U: Send,
-    V: Sync,
-    W: Sync,
-    X: Sync,
-    Y: Sync,
-    F: Fn(&mut T, &mut U, &V, &W, &X, &Y) + Send + Sync,
-{
-    assert_eq!(
-        first_out.shape(),
-        second_out.shape(),
-        "invariant: therapy traversal output shapes must match"
-    );
-    assert_eq!(
-        first_out.shape(),
-        first.shape(),
-        "invariant: therapy traversal output shape must match first input shape"
-    );
-    assert_eq!(
-        first_out.shape(),
-        second.shape(),
-        "invariant: therapy traversal output shape must match second input shape"
-    );
-    assert_eq!(
-        first_out.shape(),
-        third.shape(),
-        "invariant: therapy traversal output shape must match third input shape"
-    );
-    assert_eq!(
-        first_out.shape(),
-        fourth.shape(),
-        "invariant: therapy traversal output shape must match fourth input shape"
-    );
-
-    match (
-        first_out.as_mut_slice(),
-        second_out.as_mut_slice(),
-        first.as_slice(),
-        second.as_slice(),
-        third.as_slice(),
-        fourth.as_slice(),
-    ) {
-        (
-            Some(first_out),
-            Some(second_out),
-            Some(first),
-            Some(second),
-            Some(third),
-            Some(fourth),
-        ) => {
-            let f_ref = &f;
-            for_each_chunk_pair_mut_enumerated_with::<Adaptive, _, _, _>(
-                first_out,
-                second_out,
-                THERAPY_CHUNK_SIZE,
-                |chunk_index, first_chunk, second_chunk| {
-                    let base = chunk_index * THERAPY_CHUNK_SIZE;
-                    for (lane, (first_value, second_value)) in first_chunk
-                        .iter_mut()
-                        .zip(second_chunk.iter_mut())
-                        .enumerate()
-                    {
-                        let index = base + lane;
-                        f_ref(
-                            first_value,
-                            second_value,
-                            &first[index],
-                            &second[index],
-                            &third[index],
-                            &fourth[index],
-                        );
-                    }
-                },
-            );
-        }
-        _ => {
-            let shape = first_out.shape();
-            let mut index = [0usize; N];
-            for _ in 0..first_out.size() {
-                let first_value = first_out
-                    .get_mut(index)
-                    .expect("invariant: index in bounds");
-                let second_value = second_out
-                    .get_mut(index)
-                    .expect("invariant: index in bounds");
-                f(
-                    first_value,
-                    second_value,
-                    first.get(index).expect("invariant: index in bounds"),
-                    second.get(index).expect("invariant: index in bounds"),
-                    third.get(index).expect("invariant: index in bounds"),
-                    fourth.get(index).expect("invariant: index in bounds"),
+                    sources.values(offsets),
                 );
                 next_index(&mut index, &shape);
             }
@@ -538,10 +245,7 @@ pub(crate) fn zip_two_mut_four_refs<T, U, V, W, X, Y, const N: usize, F>(
 mod tests {
     use leto::{Array2, SliceArg};
 
-    use super::{
-        zip_mut_with, zip_three_mut_three_refs, zip_three_mut_two_refs, zip_two_mut_four_refs,
-        zip_two_mut_ref, zip_two_mut_two_refs,
-    };
+    use super::{zip_mut_with, zip_three_mut_with, zip_two_mut_with};
 
     /// `s![..;2, ..]` in leto slice-argument form.
     fn every_other_row() -> [SliceArg; 2] {
@@ -680,15 +384,15 @@ mod tests {
     }
 
     #[test]
-    fn zip_two_mut_ref_updates_both_outputs() {
+    fn zip_two_mut_with_updates_both_outputs() {
         let input = Array2::from_shape_fn((2, 3), |[i, j]| (i + j) as i32);
         let mut first_out = Array2::zeros((2, 3));
         let mut second_out = Array2::zeros((2, 3));
 
-        zip_two_mut_ref(
+        zip_two_mut_with(
             first_out.view_mut(),
             second_out.view_mut(),
-            input.view(),
+            &input.view(),
             |first_out, second_out, input| {
                 *first_out = *input;
                 *second_out = -*input;
@@ -700,18 +404,17 @@ mod tests {
     }
 
     #[test]
-    fn zip_two_mut_two_refs_updates_both_outputs() {
+    fn zip_two_mut_with_updates_two_sources() {
         let first = Array2::from_shape_fn((2, 3), |[i, j]| (i + j) as i32);
         let second = Array2::from_shape_fn((2, 3), |[i, j]| (i * 2 + j) as i32);
         let mut first_out = Array2::zeros((2, 3));
         let mut second_out = Array2::zeros((2, 3));
 
-        zip_two_mut_two_refs(
+        zip_two_mut_with(
             first_out.view_mut(),
             second_out.view_mut(),
-            first.view(),
-            second.view(),
-            |first_out, second_out, first, second| {
+            (&first.view(), &second.view()),
+            |first_out, second_out, (first, second)| {
                 *first_out = first + second;
                 *second_out = first - second;
             },
@@ -728,20 +431,55 @@ mod tests {
     }
 
     #[test]
-    fn zip_three_mut_two_refs_updates_all_outputs() {
+    fn zip_two_mut_with_updates_strided_views() {
+        let first = Array2::from_shape_fn((4, 3), |[i, j]| (i + j) as i32);
+        let second = Array2::from_shape_fn((4, 3), |[i, j]| (i * 2 + j) as i32);
+        let mut first_out = Array2::zeros((4, 3));
+        let mut second_out = Array2::zeros((4, 3));
+
+        zip_two_mut_with(
+            first_out.slice_with_mut::<2>(&every_other_row()).unwrap(),
+            second_out.slice_with_mut::<2>(&every_other_row()).unwrap(),
+            (
+                &first.slice_with::<2>(&every_other_row()).unwrap(),
+                &second.slice_with::<2>(&every_other_row()).unwrap(),
+            ),
+            |first_out, second_out, (first, second)| {
+                *first_out = first + second;
+                *second_out = first - second;
+            },
+        );
+
+        assert_eq!(
+            first_out
+                .slice_with::<2>(&every_other_row())
+                .unwrap()
+                .to_contiguous(),
+            Array2::from_shape_fn((2, 3), |[i, j]| { (i * 2 + j) as i32 + (i * 4 + j) as i32 })
+        );
+        assert_eq!(
+            second_out
+                .slice_with::<2>(&every_other_row())
+                .unwrap()
+                .to_contiguous(),
+            Array2::from_shape_fn((2, 3), |[i, j]| { (i * 2 + j) as i32 - (i * 4 + j) as i32 })
+        );
+    }
+
+    #[test]
+    fn zip_three_mut_with_updates_two_sources() {
         let first = Array2::from_shape_fn((2, 3), |[i, j]| (i + j) as i32);
         let second = Array2::from_shape_fn((2, 3), |[i, j]| (i * 2 + j) as i32);
         let mut first_out = Array2::zeros((2, 3));
         let mut second_out = Array2::zeros((2, 3));
         let mut third_out = Array2::zeros((2, 3));
 
-        zip_three_mut_two_refs(
+        zip_three_mut_with(
             first_out.view_mut(),
             second_out.view_mut(),
             third_out.view_mut(),
-            first.view(),
-            second.view(),
-            |first_out, second_out, third_out, first, second| {
+            (&first.view(), &second.view()),
+            |first_out, second_out, third_out, (first, second)| {
                 *first_out = first + second;
                 *second_out = first - second;
                 *third_out = first * second;
@@ -763,7 +501,7 @@ mod tests {
     }
 
     #[test]
-    fn zip_three_mut_three_refs_updates_all_outputs() {
+    fn zip_three_mut_with_updates_three_sources() {
         let first = Array2::from_shape_fn((2, 3), |[i, j]| (i + j) as i32);
         let second = Array2::from_shape_fn((2, 3), |[i, j]| (i * 2 + j) as i32);
         let third = Array2::from_shape_fn((2, 3), |[i, j]| (i + j * 2) as i32);
@@ -771,14 +509,12 @@ mod tests {
         let mut second_out = Array2::zeros((2, 3));
         let mut third_out = Array2::zeros((2, 3));
 
-        zip_three_mut_three_refs(
+        zip_three_mut_with(
             first_out.view_mut(),
             second_out.view_mut(),
             third_out.view_mut(),
-            first.view(),
-            second.view(),
-            third.view(),
-            |first_out, second_out, third_out, first, second, third| {
+            (&first.view(), &second.view(), &third.view()),
+            |first_out, second_out, third_out, (first, second, third)| {
                 *first_out = first + second + third;
                 *second_out = first - second + third;
                 *third_out = first * second - third;
@@ -806,7 +542,7 @@ mod tests {
     }
 
     #[test]
-    fn zip_two_mut_four_refs_updates_both_outputs() {
+    fn zip_two_mut_with_updates_four_sources() {
         let first = Array2::from_shape_fn((2, 3), |[i, j]| (i + j) as i32);
         let second = Array2::from_shape_fn((2, 3), |[i, j]| (i * 2 + j) as i32);
         let third = Array2::from_shape_fn((2, 3), |[i, j]| (i + j * 2) as i32);
@@ -814,14 +550,11 @@ mod tests {
         let mut first_out = Array2::zeros((2, 3));
         let mut second_out = Array2::zeros((2, 3));
 
-        zip_two_mut_four_refs(
+        zip_two_mut_with(
             first_out.view_mut(),
             second_out.view_mut(),
-            first.view(),
-            second.view(),
-            third.view(),
-            fourth.view(),
-            |first_out, second_out, first, second, third, fourth| {
+            (&first.view(), &second.view(), &third.view(), &fourth.view()),
+            |first_out, second_out, (first, second, third, fourth)| {
                 *first_out = first + second + third + fourth;
                 *second_out = first - second + third - fourth;
             },

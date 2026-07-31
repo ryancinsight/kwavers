@@ -14,12 +14,14 @@ pub fn calculate_bremsstrahlung_emission(
 ) -> Array3<f64> {
     let mut emission_field = Array3::zeros(temperature_field.shape());
 
-    crate::parallel::zip_mut_three_refs(
+    crate::parallel::zip_mut_with(
         emission_field.view_mut(),
-        temperature_field.view(),
-        electron_density_field.view(),
-        ion_density_field.view(),
-        |out, &temp, &n_electron, &n_ion| {
+        (
+            &temperature_field.view(),
+            &electron_density_field.view(),
+            &ion_density_field.view(),
+        ),
+        |out, (&temp, &n_electron, &n_ion)| {
             if n_electron > 0.0 && n_ion > 0.0 && temp > 0.0 {
                 *out = model.total_power(temp, n_electron, n_ion, 1.0);
             }

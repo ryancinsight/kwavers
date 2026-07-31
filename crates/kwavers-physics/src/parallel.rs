@@ -1,6 +1,7 @@
 //! Atlas parallel-provider adapters for physics field traversal.
 
 use leto::{ArrayView3, ArrayViewMut3};
+use leto_ops::ZipSources;
 use moirai_parallel::{
     enumerate_mut_with, for_each_chunk_pair_mut_enumerated_with,
     for_each_chunk_triple_mut_enumerated_with, Adaptive,
@@ -292,125 +293,73 @@ pub(crate) fn for_each_indexed_three_mut<T, U, V, F>(
     }
 }
 
-/// Apply an unindexed mutation over one mutable and one immutable 3-D view.
+/// Apply an unindexed mutation over one mutable 3-D view and one or more
+/// statically typed immutable views.
 #[inline]
-pub(crate) fn zip_mut_ref<T, U, F>(mut values: ArrayViewMut3<'_, T>, input: ArrayView3<'_, U>, f: F)
+pub(crate) fn zip_mut_with<T, S, F>(mut values: ArrayViewMut3<'_, T>, sources: S, f: F)
 where
     T: Send,
-    U: Sync,
-    F: Fn(&mut T, &U) + Send + Sync,
+    S: ZipSources<3>,
+    S::Values: Send,
+    S::Contiguous: Sync,
+    F: Fn(&mut T, S::Values) + Send + Sync,
 {
-    assert_eq!(
-        values.shape(),
-        input.shape(),
-        "invariant: physics zip input shape mismatch"
-    );
+    sources
+        .validate(values.shape())
+        .expect("invariant: physics zip source shapes and storage must match output");
 
-    match (
-        values.as_mut_slice_memory_order(),
-        input.as_slice_memory_order(),
-    ) {
-        (Some(values), Some(input)) => {
+    match (values.as_mut_slice_memory_order(), sources.contiguous()) {
+        (Some(values), Some(source_slices)) => {
+            let f_ref = &f;
             enumerate_mut_with::<Adaptive, _, _>(values, |idx, value| {
-                f(value, &input[idx]);
+                f_ref(value, S::contiguous_values(source_slices, idx));
             });
         }
         _ => {
             if let Ok(iter) = values.indexed_iter_mut() {
-                for (idx, value) in iter {
-                    f(value, &input[[idx[0], idx[1], idx[2]]]);
+                for (index, value) in iter {
+                    let offsets = sources
+                        .offsets_at(index)
+                        .expect("invariant: validated physics zip offsets are representable");
+                    f(value, sources.values(offsets));
                 }
             }
         }
     }
 }
 
-/// Apply an unindexed mutation over one mutable and two immutable 3-D views.
+/// Apply an unindexed mutation over two mutable 3-D views and one or more
+/// statically typed immutable views.
 #[inline]
-pub(crate) fn zip_mut_two_refs<T, U, V, F>(
-    mut values: ArrayViewMut3<'_, T>,
-    first: ArrayView3<'_, U>,
-    second: ArrayView3<'_, V>,
-    f: F,
-) where
-    T: Send,
-    U: Sync,
-    V: Sync,
-    F: Fn(&mut T, &U, &V) + Send + Sync,
-{
-    assert_eq!(
-        values.shape(),
-        first.shape(),
-        "invariant: physics zip first shape mismatch"
-    );
-    assert_eq!(
-        values.shape(),
-        second.shape(),
-        "invariant: physics zip second shape mismatch"
-    );
-
-    match (
-        values.as_mut_slice_memory_order(),
-        first.as_slice_memory_order(),
-        second.as_slice_memory_order(),
-    ) {
-        (Some(values), Some(first), Some(second)) => {
-            enumerate_mut_with::<Adaptive, _, _>(values, |idx, value| {
-                f(value, &first[idx], &second[idx]);
-            });
-        }
-        _ => {
-            if let Ok(iter) = values.indexed_iter_mut() {
-                for (idx, value) in iter {
-                    f(
-                        value,
-                        &first[[idx[0], idx[1], idx[2]]],
-                        &second[[idx[0], idx[1], idx[2]]],
-                    );
-                }
-            }
-        }
-    }
-}
-
-/// Apply an unindexed mutation over two mutable and two immutable 3-D views.
-#[inline]
-pub(crate) fn zip_two_mut_two_refs<T, U, V, W, F>(
+pub(crate) fn zip_two_mut_with<T, U, S, F>(
     mut first_out: ArrayViewMut3<'_, T>,
     mut second_out: ArrayViewMut3<'_, U>,
-    first: ArrayView3<'_, V>,
-    second: ArrayView3<'_, W>,
+    sources: S,
     f: F,
 ) where
     T: Send,
     U: Send,
-    V: Sync,
-    W: Sync,
-    F: Fn(&mut T, &mut U, &V, &W) + Send + Sync,
+    S: ZipSources<3>,
+    S::Values: Send,
+    S::Contiguous: Sync,
+    F: Fn(&mut T, &mut U, S::Values) + Send + Sync,
 {
     assert_eq!(
         first_out.shape(),
         second_out.shape(),
         "invariant: physics zip output shape mismatch"
     );
-    assert_eq!(
-        first_out.shape(),
-        first.shape(),
-        "invariant: physics zip first input shape mismatch"
-    );
-    assert_eq!(
-        first_out.shape(),
-        second.shape(),
-        "invariant: physics zip second input shape mismatch"
-    );
+    sources
+        .validate(first_out.shape())
+        .expect("invariant: physics zip source shapes and storage must match outputs");
 
     match (
         first_out.as_mut_slice_memory_order(),
         second_out.as_mut_slice_memory_order(),
-        first.as_slice_memory_order(),
-        second.as_slice_memory_order(),
+        sources.contiguous(),
     ) {
-        (Some(first_out), Some(second_out), Some(first), Some(second)) => {
+        (Some(first_out), Some(second_out), Some(source_slices)) => {
+            let f_ref = &f;
             for_each_chunk_pair_mut_enumerated_with::<Adaptive, _, _, _>(
                 first_out,
                 second_out,
@@ -422,108 +371,10 @@ pub(crate) fn zip_two_mut_two_refs<T, U, V, W, F>(
                         .zip(second_chunk.iter_mut())
                         .enumerate()
                     {
-                        let idx = start + offset;
-                        f(first_value, second_value, &first[idx], &second[idx]);
-                    }
-                },
-            );
-        }
-        _ => {
-            if let Ok(iter) = first_out.indexed_iter_mut() {
-                for (idx, value) in iter {
-                    let [i, j, k] = idx;
-                    f(
-                        value,
-                        &mut second_out[[i, j, k]],
-                        &first[[i, j, k]],
-                        &second[[i, j, k]],
-                    );
-                }
-            }
-        }
-    }
-}
-
-/// Apply an unindexed mutation over two mutable and four immutable 3-D views.
-#[inline]
-pub(crate) fn zip_two_mut_four_refs<T, U, V, W, X, Y, F>(
-    mut first_out: ArrayViewMut3<'_, T>,
-    mut second_out: ArrayViewMut3<'_, U>,
-    first: ArrayView3<'_, V>,
-    second: ArrayView3<'_, W>,
-    third: ArrayView3<'_, X>,
-    fourth: ArrayView3<'_, Y>,
-    f: F,
-) where
-    T: Send,
-    U: Send,
-    V: Sync,
-    W: Sync,
-    X: Sync,
-    Y: Sync,
-    F: Fn(&mut T, &mut U, &V, &W, &X, &Y) + Send + Sync,
-{
-    assert_eq!(
-        first_out.shape(),
-        second_out.shape(),
-        "invariant: physics zip output shape mismatch"
-    );
-    assert_eq!(
-        first_out.shape(),
-        first.shape(),
-        "invariant: physics zip first input shape mismatch"
-    );
-    assert_eq!(
-        first_out.shape(),
-        second.shape(),
-        "invariant: physics zip second input shape mismatch"
-    );
-    assert_eq!(
-        first_out.shape(),
-        third.shape(),
-        "invariant: physics zip third input shape mismatch"
-    );
-    assert_eq!(
-        first_out.shape(),
-        fourth.shape(),
-        "invariant: physics zip fourth input shape mismatch"
-    );
-
-    match (
-        first_out.as_mut_slice_memory_order(),
-        second_out.as_mut_slice_memory_order(),
-        first.as_slice_memory_order(),
-        second.as_slice_memory_order(),
-        third.as_slice_memory_order(),
-        fourth.as_slice_memory_order(),
-    ) {
-        (
-            Some(first_out),
-            Some(second_out),
-            Some(first),
-            Some(second),
-            Some(third),
-            Some(fourth),
-        ) => {
-            for_each_chunk_pair_mut_enumerated_with::<Adaptive, _, _, _>(
-                first_out,
-                second_out,
-                FIELD_CHUNK_SIZE,
-                |chunk_index, first_chunk, second_chunk| {
-                    let start = chunk_index * FIELD_CHUNK_SIZE;
-                    for (offset, (first_value, second_value)) in first_chunk
-                        .iter_mut()
-                        .zip(second_chunk.iter_mut())
-                        .enumerate()
-                    {
-                        let idx = start + offset;
-                        f(
+                        f_ref(
                             first_value,
                             second_value,
-                            &first[idx],
-                            &second[idx],
-                            &third[idx],
-                            &fourth[idx],
+                            S::contiguous_values(source_slices, start + offset),
                         );
                     }
                 },
@@ -531,141 +382,12 @@ pub(crate) fn zip_two_mut_four_refs<T, U, V, W, X, Y, F>(
         }
         _ => {
             if let Ok(iter) = first_out.indexed_iter_mut() {
-                for (idx, value) in iter {
-                    let [i, j, k] = idx;
-                    f(
-                        value,
-                        &mut second_out[[i, j, k]],
-                        &first[[i, j, k]],
-                        &second[[i, j, k]],
-                        &third[[i, j, k]],
-                        &fourth[[i, j, k]],
-                    );
-                }
-            }
-        }
-    }
-}
-
-/// Apply an unindexed mutation over one mutable and three immutable 3-D views.
-#[inline]
-pub(crate) fn zip_mut_three_refs<T, U, V, W, F>(
-    mut values: ArrayViewMut3<'_, T>,
-    first: ArrayView3<'_, U>,
-    second: ArrayView3<'_, V>,
-    third: ArrayView3<'_, W>,
-    f: F,
-) where
-    T: Send,
-    U: Sync,
-    V: Sync,
-    W: Sync,
-    F: Fn(&mut T, &U, &V, &W) + Send + Sync,
-{
-    assert_eq!(
-        values.shape(),
-        first.shape(),
-        "invariant: physics zip first shape mismatch"
-    );
-    assert_eq!(
-        values.shape(),
-        second.shape(),
-        "invariant: physics zip second shape mismatch"
-    );
-    assert_eq!(
-        values.shape(),
-        third.shape(),
-        "invariant: physics zip third shape mismatch"
-    );
-
-    match (
-        values.as_mut_slice_memory_order(),
-        first.as_slice_memory_order(),
-        second.as_slice_memory_order(),
-        third.as_slice_memory_order(),
-    ) {
-        (Some(values), Some(first), Some(second), Some(third)) => {
-            enumerate_mut_with::<Adaptive, _, _>(values, |idx, value| {
-                f(value, &first[idx], &second[idx], &third[idx]);
-            });
-        }
-        _ => {
-            if let Ok(iter) = values.indexed_iter_mut() {
-                for (idx, value) in iter {
-                    let [i, j, k] = idx;
-                    f(
-                        value,
-                        &first[[i, j, k]],
-                        &second[[i, j, k]],
-                        &third[[i, j, k]],
-                    );
-                }
-            }
-        }
-    }
-}
-
-/// Apply an unindexed mutation over one mutable and four immutable 3-D views.
-#[inline]
-pub(crate) fn zip_mut_four_refs<T, U, V, W, X, F>(
-    mut values: ArrayViewMut3<'_, T>,
-    first: ArrayView3<'_, U>,
-    second: ArrayView3<'_, V>,
-    third: ArrayView3<'_, W>,
-    fourth: ArrayView3<'_, X>,
-    f: F,
-) where
-    T: Send,
-    U: Sync,
-    V: Sync,
-    W: Sync,
-    X: Sync,
-    F: Fn(&mut T, &U, &V, &W, &X) + Send + Sync,
-{
-    assert_eq!(
-        values.shape(),
-        first.shape(),
-        "invariant: physics zip first shape mismatch"
-    );
-    assert_eq!(
-        values.shape(),
-        second.shape(),
-        "invariant: physics zip second shape mismatch"
-    );
-    assert_eq!(
-        values.shape(),
-        third.shape(),
-        "invariant: physics zip third shape mismatch"
-    );
-    assert_eq!(
-        values.shape(),
-        fourth.shape(),
-        "invariant: physics zip fourth shape mismatch"
-    );
-
-    match (
-        values.as_mut_slice_memory_order(),
-        first.as_slice_memory_order(),
-        second.as_slice_memory_order(),
-        third.as_slice_memory_order(),
-        fourth.as_slice_memory_order(),
-    ) {
-        (Some(values), Some(first), Some(second), Some(third), Some(fourth)) => {
-            enumerate_mut_with::<Adaptive, _, _>(values, |idx, value| {
-                f(value, &first[idx], &second[idx], &third[idx], &fourth[idx]);
-            });
-        }
-        _ => {
-            if let Ok(iter) = values.indexed_iter_mut() {
-                for (idx, value) in iter {
-                    let [i, j, k] = idx;
-                    f(
-                        value,
-                        &first[[i, j, k]],
-                        &second[[i, j, k]],
-                        &third[[i, j, k]],
-                        &fourth[[i, j, k]],
-                    );
+                for (index, value) in iter {
+                    let [i, j, k] = index;
+                    let offsets = sources
+                        .offsets_at(index)
+                        .expect("invariant: validated physics zip offsets are representable");
+                    f(value, &mut second_out[[i, j, k]], sources.values(offsets));
                 }
             }
         }

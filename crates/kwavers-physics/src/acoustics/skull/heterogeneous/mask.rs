@@ -1,5 +1,5 @@
 use crate::acoustics::skull::AcousticSkullProperties;
-use crate::parallel::zip_mut_ref;
+use crate::parallel::zip_mut_with;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use leto::Array3;
@@ -30,19 +30,19 @@ impl HeterogeneousSkull {
         let mut density = Array3::from_elem(mask.shape(), water_rho);
         let mut attenuation = Array3::from_elem(mask.shape(), ALPHA_WATER);
 
-        zip_mut_ref(sound_speed.view_mut(), mask.view(), |c, &m| {
+        zip_mut_with(sound_speed.view_mut(), &mask.view(), |c, &m| {
             if m > 0.5 {
                 *c = props.sound_speed;
             }
         });
 
-        zip_mut_ref(density.view_mut(), mask.view(), |rho, &m| {
+        zip_mut_with(density.view_mut(), &mask.view(), |rho, &m| {
             if m > 0.5 {
                 *rho = props.density;
             }
         });
 
-        zip_mut_ref(attenuation.view_mut(), mask.view(), |atten, &m| {
+        zip_mut_with(attenuation.view_mut(), &mask.view(), |atten, &m| {
             if m > 0.5 {
                 *atten = props.attenuation_coeff;
             }

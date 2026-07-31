@@ -32,7 +32,7 @@ use kwavers_physics::thermal::TemperatureCoefficients;
 use leto::Array3 as LetoArray3;
 use leto::Array3;
 
-use crate::parallel::zip_mut_ref;
+use crate::parallel::zip_mut_with;
 
 /// CEM43 thermal dose [equivalent minutes at 43 °C] at which soft tissue is
 /// taken as coagulated/ablated.
@@ -122,7 +122,7 @@ pub fn cavitation_perturbed_sound_speed(
         "invariant: cavitation lesion perturbation requires matching base and void-fraction shapes"
     );
     let mut out = base_c.clone();
-    zip_mut_ref(out.view_mut(), void_fraction.view(), |c, &beta| {
+    zip_mut_with(out.view_mut(), &void_fraction.view(), |c, &beta| {
         *c = wood_sound_speed(beta, *c, RHO_LIQUID_DEFAULT, C_GAS_DEFAULT, RHO_GAS_DEFAULT);
     });
     out

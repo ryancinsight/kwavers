@@ -46,6 +46,7 @@ kwavers-gpu = { path = "../kwavers-gpu" }
 # Essential numerical computing
 moirai-parallel = { workspace = true }
 leto = { workspace = true }
+leto-ops = { workspace = true }
 eunomia = { workspace = true }
 apollo = { workspace = true }
 gaia = { workspace = true }

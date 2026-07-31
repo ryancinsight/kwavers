@@ -23,7 +23,7 @@ use kwavers_core::constants::tissue_acoustics::{SOUND_SPEED_KIDNEY, SOUND_SPEED_
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::{Array2, Array3, SliceArg};
 
-use crate::parallel::{zip_three_mut_two_refs, zip_two_mut_four_refs};
+use crate::parallel::{zip_three_mut_with, zip_two_mut_with};
 
 /// Abdominal acoustic-property maps: `(sound speed, attenuation, body mask,
 /// organ mask, target mask)`, all sharing the input CT shape.
@@ -330,27 +330,23 @@ fn abdominal_properties(
     let mut organ = Array2::<bool>::from_elem((nx, ny), false);
     let mut target = Array2::<bool>::from_elem((nx, ny), false);
     // Pass 1: classify each voxel into anatomical masks.
-    zip_three_mut_two_refs(
+    zip_three_mut_with(
         body.view_mut(),
         organ.view_mut(),
         target.view_mut(),
-        body_support.view(),
-        label.view(),
-        |bod, org, tgt, &support, &lab| {
+        (&body_support.view(), &label.view()),
+        |bod, org, tgt, (&support, &lab)| {
             *org = lab == 1 || lab == 2;
             *tgt = lab == 2;
             *bod = support || *org || *tgt;
         },
     );
     // Pass 2: map masks + HU to acoustic properties.
-    zip_two_mut_four_refs(
+    zip_two_mut_with(
         speed.view_mut(),
         attenuation.view_mut(),
-        body.view(),
-        organ.view(),
-        target.view(),
-        ct.view(),
-        |spd, att, &bod, &org, &tgt, &hu| {
+        (&body.view(), &organ.view(), &target.view(), &ct.view()),
+        |spd, att, (&bod, &org, &tgt, &hu)| {
             if bod {
                 *spd = SOFT_TISSUE_HU_BASE_SPEED_M_S
                     + ABDOM_BG_SPEED_SLOPE_M_S_PER_HU

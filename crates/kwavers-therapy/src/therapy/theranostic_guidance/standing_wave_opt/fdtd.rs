@@ -27,7 +27,7 @@ use leto::Array2;
 use moirai_parallel::{map_collect_with, Adaptive};
 
 use super::config::StandingWaveOptConfig;
-use crate::parallel::{zip_mut_with, zip_two_mut_ref};
+use crate::parallel::{zip_mut_with, zip_two_mut_with};
 
 /// Five-point Laplacian with edge-replication (Neumann) boundary.
 ///
@@ -112,10 +112,10 @@ pub(super) fn compute_green_function(
         if step >= accum_start {
             let cos_t = (omega * t).cos();
             let sin_t = (omega * t).sin();
-            zip_two_mut_ref(
+            zip_two_mut_with(
                 acc_re.view_mut(),
                 acc_im.view_mut(),
-                p_next.view(),
+                &p_next.view(),
                 |re, im, &p| {
                     *re += p * cos_t;
                     *im -= p * sin_t;

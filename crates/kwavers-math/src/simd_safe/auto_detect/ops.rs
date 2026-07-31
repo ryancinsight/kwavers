@@ -3,7 +3,7 @@
 use leto::Array3;
 use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
 
-use crate::parallel::zip_mut_two_refs;
+use crate::parallel::zip_mut_with;
 
 const SIMD_SAFE_CHUNK_LEN: usize = 4096;
 
@@ -29,7 +29,7 @@ pub(in crate::simd_safe::auto_detect) fn add_arrays(
         return;
     }
 
-    zip_mut_two_refs(out.view_mut(), a.view(), b.view(), |out, &a, &b| {
+    zip_mut_with(out.view_mut(), (&a.view(), &b.view()), |out, (&a, &b)| {
         *out = a + b;
     });
 }
@@ -77,7 +77,7 @@ pub(in crate::simd_safe::auto_detect) fn fma_arrays(
         return;
     }
 
-    zip_mut_two_refs(c.view_mut(), a.view(), b.view(), |c, &a, &b| {
+    zip_mut_with(c.view_mut(), (&a.view(), &b.view()), |c, (&a, &b)| {
         *c += multiplier * a * b;
     });
 }

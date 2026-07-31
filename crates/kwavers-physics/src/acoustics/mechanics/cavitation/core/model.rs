@@ -15,7 +15,7 @@ use super::state::{CavitationDose, CavitationMechanicsState};
 use super::thresholds::{blake_threshold, flynn_threshold, neppiras_threshold, ThresholdModel};
 use crate::acoustics::analysis::calculate_mechanical_index;
 use crate::acoustics::bubble_dynamics::BubbleParameters;
-use crate::parallel::zip_mut_ref;
+use crate::parallel::zip_mut_with;
 use kwavers_core::error::KwaversResult;
 use leto::Array3;
 
@@ -152,9 +152,9 @@ impl CavitationModel {
         let threshold = self.compute_threshold();
         let ambient_pressure = self.params.p0;
 
-        zip_mut_ref(
+        zip_mut_with(
             self.states.view_mut(),
-            pressure_field.view(),
+            &pressure_field.view(),
             |state, &p| {
                 // Check for cavitation
                 let was_cavitating = state.is_cavitating;
@@ -198,9 +198,9 @@ impl CavitationCore for CavitationModel {
         let threshold = self.compute_threshold();
         let ambient_pressure = self.params.p0;
 
-        zip_mut_ref(
+        zip_mut_with(
             self.states.view_mut(),
-            pressure_field.view(),
+            &pressure_field.view(),
             |state, &pressure| {
                 if pressure < -threshold {
                     if !state.is_cavitating {

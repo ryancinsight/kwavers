@@ -1,7 +1,7 @@
 //! Tissue property caching utilities
 
 use crate::absorption::{AbsorptionTissueType, TISSUE_PROPERTIES};
-use crate::parallel::zip_mut_ref;
+use crate::parallel::zip_mut_with;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use leto::Array3;
 use std::collections::HashMap;
@@ -67,7 +67,7 @@ impl TissuePropertyCache {
         }
 
         let density_cache = &self.density_cache;
-        zip_mut_ref(output, tissue_map, |out, &tissue| {
+        zip_mut_with(output.view_mut(), &tissue_map.view(), |out, &tissue| {
             *out = density_cache
                 .get(&tissue)
                 .copied()
@@ -92,7 +92,7 @@ impl TissuePropertyCache {
         }
 
         let sound_speed_cache = &self.sound_speed_cache;
-        zip_mut_ref(output, tissue_map, |out, &tissue| {
+        zip_mut_with(output.view_mut(), &tissue_map.view(), |out, &tissue| {
             *out = sound_speed_cache
                 .get(&tissue)
                 .copied()

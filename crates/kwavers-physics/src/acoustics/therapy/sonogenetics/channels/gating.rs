@@ -7,7 +7,7 @@ use aequitas::systems::si::quantities::ThermodynamicTemperature;
 
 use super::constants::K_B;
 use super::params::{BoltzmannGatingParams, GatingModel, PressureThresholdParams};
-use crate::parallel::zip_mut_ref;
+use crate::parallel::zip_mut_with;
 
 /// Compute per-voxel open probability using the Boltzmann two-state model.
 ///
@@ -41,9 +41,9 @@ pub fn boltzmann_p_open(
     let a = params.gating_area.into_base();
     let t_half = params.half_tension.into_base();
     let mut out = Array3::<f64>::zeros(membrane_tension.shape());
-    zip_mut_ref(
+    zip_mut_with(
         out.view_mut(),
-        membrane_tension.view(),
+        &membrane_tension.view(),
         |p: &mut f64, &dt: &f64| {
             let exponent = -a * (dt - t_half) / kbt;
             *p = 1.0 / (1.0 + exponent.exp());
@@ -75,9 +75,9 @@ pub fn pressure_threshold_p_open(
     let p_half = params.half_pressure.into_base();
     let s = params.steepness.into_base();
     let mut out = Array3::<f64>::zeros(radiation_pressure.shape());
-    zip_mut_ref(
+    zip_mut_with(
         out.view_mut(),
-        radiation_pressure.view(),
+        &radiation_pressure.view(),
         |p: &mut f64, &p_rad: &f64| {
             *p = 1.0 / (1.0 + (-(p_rad - p_half) / s).exp());
         },

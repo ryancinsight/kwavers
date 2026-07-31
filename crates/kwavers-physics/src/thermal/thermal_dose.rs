@@ -8,7 +8,7 @@ use aequitas::systems::si::quantities::Time;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array3;
 
-use crate::parallel::zip_mut_ref;
+use crate::parallel::zip_mut_with;
 use crate::thermal::response::{checked_cem43_increments, CelsiusStorage};
 use crate::thermal::CumulativeEquivalentMinutes;
 
@@ -61,9 +61,9 @@ impl ThermalCEM43Grid {
             |_| true,
         )?;
 
-        zip_mut_ref(
+        zip_mut_with(
             self.dose.view_mut(),
-            self.increments.view(),
+            &self.increments.view(),
             |dose, &increment| *dose += increment,
         );
         Ok(())

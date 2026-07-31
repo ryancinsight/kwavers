@@ -26,7 +26,7 @@
 use leto::Array2;
 
 use super::config::StandingWaveOptConfig;
-use crate::parallel::zip_two_mut_two_refs;
+use crate::parallel::zip_two_mut_with;
 use kwavers_core::constants::numerical::TWO_PI;
 
 // ---------------------------------------------------------------------------
@@ -51,12 +51,11 @@ pub(super) fn superpose(
     for ((&phi, gre), gim) in phases.iter().zip(g_re).zip(g_im) {
         let c = phi.cos();
         let s = phi.sin();
-        zip_two_mut_two_refs(
+        zip_two_mut_with(
             p_re.view_mut(),
             p_im.view_mut(),
-            gre.view(),
-            gim.view(),
-            |pr, pi, &gr, &gi| {
+            (&gre.view(), &gim.view()),
+            |pr, pi, (&gr, &gi)| {
                 *pr += c * gr - s * gi;
                 *pi += s * gr + c * gi;
             },

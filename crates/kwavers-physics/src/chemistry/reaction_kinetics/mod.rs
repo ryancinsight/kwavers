@@ -29,12 +29,11 @@ impl ReactionKinetics {
     ) {
         debug!("Updating reaction kinetics");
 
-        crate::parallel::zip_two_mut_two_refs(
+        crate::parallel::zip_two_mut_with(
             self.hydroxyl_concentration.view_mut(),
             self.hydrogen_peroxide.view_mut(),
-            radical_init.view(),
-            temperature.view(),
-            |oh, h2o2, &r_init, &t| {
+            (&radical_init.view(), &temperature.view()),
+            |oh, h2o2, (&r_init, &t)| {
                 use kwavers_core::constants::thermodynamic::{
                     REACTION_REFERENCE_TEMPERATURE, SECONDARY_REACTION_RATE,
                     SONOCHEMISTRY_ACTIVATION_TEMPERATURE, SONOCHEMISTRY_BASE_RATE,

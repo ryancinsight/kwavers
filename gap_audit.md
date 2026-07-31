@@ -1417,7 +1417,7 @@ do not assert an unconfirmed physics error.
   plus heterogeneous skull-mask property assignment now route through the
   crate-local Moirai-backed `parallel` traversal SSOT instead of direct
   ndarray/Rayon `Zip::par_for_each` or duplicate one-input helper calls.
-  `parallel.rs` now owns the missing `zip_mut_ref` and `zip_two_mut_four_refs`
+  `parallel.rs` now owns the missing `zip_mut_with` and `zip_two_mut_with`
   arities so one-input updates and ARF's intensity/body-force update share the
   traversal SSOT.
   Evidence tier:
@@ -2152,7 +2152,7 @@ do not assert an unconfirmed physics error.
   `crates/kwavers-physics/src/field_surrogate`.
   Follow-up reaction-kinetics evidence on 2026-07-04:
   `chemistry::reaction_kinetics` now routes the hydroxyl and hydrogen-peroxide
-  field update through the reusable `crate::parallel::zip_two_mut_two_refs`
+  field update through the reusable `crate::parallel::zip_two_mut_with`
   adapter instead of ndarray/Rayon `Zip::par_for_each`. The regression
   `update_reactions_matches_arrhenius_and_recombination_formula` checks
   Arrhenius OH generation and H2O2 recombination values. `rustup run nightly

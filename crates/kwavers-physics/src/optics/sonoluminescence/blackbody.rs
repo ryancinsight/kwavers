@@ -167,11 +167,10 @@ pub fn calculate_blackbody_emission(
 ) -> Array3<f64> {
     let mut emission_field = Array3::zeros(temperature_field.shape());
 
-    crate::parallel::zip_mut_two_refs(
+    crate::parallel::zip_mut_with(
         emission_field.view_mut(),
-        temperature_field.view(),
-        bubble_radius_field.view(),
-        |out, &temp, &radius| {
+        (&temperature_field.view(), &bubble_radius_field.view()),
+        |out, (&temp, &radius)| {
             if radius > 0.0 && temp > 0.0 {
                 // Surface area of bubble
                 let surface_area = FOUR_PI * radius * radius;

@@ -9,7 +9,7 @@ use kwavers_core::{
 use leto::{ArrayView3, ArrayViewMut3};
 use std::sync::Mutex;
 
-use crate::parallel::zip_mut_ref;
+use crate::parallel::zip_mut_with;
 
 pub(crate) trait StoredTemperatureScale: Send + Sync {
     fn absolute(value: f64) -> ThermodynamicTemperature<f64>;
@@ -56,7 +56,7 @@ where
 
     let law = Cem43::<f64>::canonical();
     let failure = Mutex::new(None);
-    zip_mut_ref(increments, temperature, |increment, &stored| {
+    zip_mut_with(increments, &temperature, |increment, &stored| {
         match law.increment(S::absolute(stored), step) {
             Ok(exposure) => {
                 *increment = if include(stored) {
