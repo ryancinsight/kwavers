@@ -1,5 +1,23 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-43 typed blood-oxygenation quantities [major] — in progress
+
+- [ ] Type public optical wavelengths, molar concentration thresholds, and
+      absorption-reference coefficients with Aequitas.
+- [ ] Preserve dense Leto maps and scalar extraction only at optical database,
+      solver, and presentation boundaries; migrate the runnable example.
+- [ ] Add value-semantic regressions and synchronize ADR 082, gap-audit,
+      backlog, checklist, changelog, and the Atlas cross-repository audit.
+
+Acceptance: no raw public wavelength, molar concentration, or absorption
+coefficient contract remains in the blood-oxygenation workflow; coherent or
+complex numerical values remain at Eunomia formula/storage boundaries and no
+imaginary physical unit is introduced.
+
+Evidence target: provider Aequitas ADR 0010 is accepted and pushed; Kwavers
+diagnostics package checks, focused Nextest, warning-denied Clippy, doctests,
+RustDoc, formatting, and example compilation pass.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-42 typed plane-wave compounding quantities [major] — done 2026-07-31
 
 - [x] Type public plane-wave angles, frequency, sound speed, geometry,
