@@ -2,6 +2,8 @@
 
 use std::collections::HashMap;
 
+use aequitas::systems::si::quantities::{Dimensionless, Time};
+use aequitas::systems::si::units::Millisecond;
 use leto::Array3 as LetoArray3;
 
 use crate::backend::physics_kernels::{
@@ -16,9 +18,9 @@ use super::types::{RealtimeConfig, StepResult};
 #[test]
 fn test_config_default() {
     let config = RealtimeConfig::default();
-    assert_eq!(config.budget_ms, 10.0);
+    assert_eq!(config.budget.in_unit::<Millisecond>(), 10.0);
     assert!(config.adaptive_timestepping);
-    assert_eq!(config.cfl_safety_factor, 0.9);
+    assert_eq!(config.cfl_safety_factor, Dimensionless::from_base(0.9));
 }
 
 #[test]
@@ -34,21 +36,21 @@ fn test_orchestrator_creation() -> KwaversResult<()> {
 #[test]
 fn test_step_result_creation() {
     let result = StepResult {
-        dt: 1e-6,
-        time: 1e-5,
-        wall_time_ms: 5.0,
+        dt: Time::from_base(1e-6),
+        time: Time::from_base(1e-5),
+        wall_time: Time::from_unit::<Millisecond>(5.0),
         within_budget: true,
         kernels_executed: 3,
     };
 
-    assert_eq!(result.dt, 1e-6);
+    assert_eq!(result.dt, Time::from_base(1e-6));
     assert!(result.within_budget);
 }
 
 #[test]
 fn test_budget_enforcement() -> KwaversResult<()> {
     let config = RealtimeConfig {
-        budget_ms: 5.0,
+        budget: Time::from_unit::<Millisecond>(5.0),
         ..Default::default()
     };
     let registry = PhysicsKernelRegistry::new();
@@ -57,10 +59,15 @@ fn test_budget_enforcement() -> KwaversResult<()> {
     let mut fields = HashMap::new();
     let grid = Grid::new(64, 64, 64, 0.1, 0.1, 0.1)?;
 
-    let result = orchestrator.step(&mut fields, 1e-6, 0.0, &grid)?;
+    let result = orchestrator.step(
+        &mut fields,
+        Time::from_base(1e-6),
+        Time::from_base(0.0),
+        &grid,
+    )?;
 
     assert_eq!(result.kernels_executed, 0);
-    assert!(result.time == 0.0);
+    assert_eq!(result.time, Time::from_base(0.0));
     assert_eq!(orchestrator.step_count(), 1);
 
     Ok(())
@@ -75,7 +82,12 @@ fn test_nonempty_fields_require_registered_kernel() -> KwaversResult<()> {
     let mut fields = HashMap::from([("pressure".to_string(), LetoArray3::zeros([4, 4, 4]))]);
 
     let error = orchestrator
-        .step(&mut fields, 1e-6, 0.0, &grid)
+        .step(
+            &mut fields,
+            Time::from_base(1e-6),
+            Time::from_base(0.0),
+            &grid,
+        )
         .unwrap_err();
 
     assert!(format!("{error}").contains("requires at least one registered physics kernel"));
@@ -97,13 +109,18 @@ fn test_registered_kernel_step_records_execution_metadata() -> KwaversResult<()>
     let grid = Grid::new(4, 4, 4, 0.1, 0.1, 0.1)?;
     let mut fields = HashMap::from([("pressure".to_string(), LetoArray3::zeros([4, 4, 4]))]);
 
-    let result = orchestrator.step(&mut fields, 1e-6, 1e-5, &grid)?;
+    let result = orchestrator.step(
+        &mut fields,
+        Time::from_base(1e-6),
+        Time::from_base(1e-5),
+        &grid,
+    )?;
     let metrics = orchestrator.get_metrics();
 
     assert_eq!(result.kernels_executed, 1);
-    assert_eq!(result.dt, 1e-6);
-    assert_eq!(result.time, 1e-5);
-    assert!(metrics.avg_step_time_ms >= 0.0);
+    assert_eq!(result.dt, Time::from_base(1e-6));
+    assert_eq!(result.time, Time::from_base(1e-5));
+    assert!(metrics.avg_step_time.into_base() >= 0.0);
     assert_eq!(orchestrator.step_count(), 1);
     Ok(())
 }
@@ -111,17 +128,17 @@ fn test_registered_kernel_step_records_execution_metadata() -> KwaversResult<()>
 #[test]
 fn test_timestep_adjustment() -> KwaversResult<()> {
     let config = RealtimeConfig {
-        cfl_safety_factor: 0.8,
+        cfl_safety_factor: Dimensionless::from_base(0.8),
         ..Default::default()
     };
     let registry = PhysicsKernelRegistry::new();
     let orchestrator = RealtimeSimulationOrchestrator::new(config, registry)?;
 
-    let dt = 1e-5;
-    let adjusted = orchestrator.adjust_timestep(dt, 0.0, 1.0);
+    let dt = Time::from_base(1e-5);
+    let adjusted = orchestrator.adjust_timestep(dt, Time::from_base(0.0), Time::from_base(1.0));
 
-    assert!(adjusted <= dt);
-    assert!((adjusted - dt * 0.8).abs() < 1e-15);
+    assert!(adjusted.into_base() <= dt.into_base());
+    assert!((adjusted.into_base() - dt.into_base() * 0.8).abs() < 1e-15);
 
     Ok(())
 }

@@ -4,6 +4,14 @@
 
 ### Changed
 
+- **Breaking**: GPU realtime budgets, step/kernel/transfer/I/O durations,
+  percentile metrics, throughput, and realtime-loop simulation times now use
+  Aequitas `Time`, `Frequency`, and `Dimensionless` quantities. Unit-suffixed
+  public fields and methods are removed; scalar extraction remains at
+  comparison and presentation boundaries. The real-valued telemetry contract
+  has no complex or imaginary physical-unit path. See [ADR
+  073](docs/ADR/073-gpu-performance-time-quantities.md).
+
 - **Breaking**: GPU/CPU equivalence reports and validator tolerances now use
   Aequitas `Pressure`, `Time`, and `Dimensionless` quantities. Dense Leto
   pressure arrays remain at the numerical-storage boundary; summary formatting

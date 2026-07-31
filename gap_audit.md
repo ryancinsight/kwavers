@@ -29,6 +29,40 @@
 
 # Gap Audit
 
+## Live GPU telemetry refresh — 2026-07-31
+
+`KWAVERS-AEQ-MET-35` found a public temporal-metric gap in
+`kwavers-gpu::backend`: realtime budgets, step/kernel/transfer/I/O durations,
+percentile durations, throughput, and realtime-loop simulation times were raw
+millisecond/second `f64` values or unit-suffixed fields. These were distinct
+from the already-closed GPU/CPU equivalence report in MET-34.
+
+The closure carries durations and budgets as Aequitas `Time<f64>`, throughput
+as `Frequency<f64>`, and utilization, overhead, satisfaction, CFL safety, and
+budget overage as `Dimensionless<f64>`. `PhysicsKernel::estimate_time` and
+`estimate_total_time` now return typed durations; realtime configuration,
+step results, and aggregate statistics use canonical typed temporal fields.
+Scalar extraction is limited to comparisons, arithmetic, and human-readable
+boundaries. Unit-suffixed public names are removed without compatibility
+facades.
+
+Eunomia compatibility is real-only. GPU telemetry records elapsed wall time
+and real simulation time; no complex value or imaginary-unit physical
+dimension is applicable. Complex Eunomia values remain outside this metric
+contract.
+
+The default-feature package check and Nextest pass (`9/9`); the feature
+package check passed after the local implementation fixes. The feature
+Nextest collection reached all 162 tests: the initial run had 161 passes and
+one incorrect test oracle, which was corrected to the analytical
+`25_000_000 / 10_000_000_000_000 = 2.5e-6 s` value. Recollection after that
+correction is blocked by the live peer Leto attention changes, which currently
+fail at five `NumericElement::ZERO` inference sites in
+`leto-ops/application/attention/{forward,backward}.rs`; those files are
+outside this scope and were not modified.
+
+See [ADR 073](docs/ADR/073-gpu-performance-time-quantities.md).
+
 ## Live GPU equivalence refresh — 2026-07-31
 
 `KWAVERS-AEQ-MET-34` found raw physical and temporal metrics in

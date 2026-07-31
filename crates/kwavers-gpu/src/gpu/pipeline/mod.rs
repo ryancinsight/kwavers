@@ -13,10 +13,6 @@ mod streaming;
 #[cfg(test)]
 mod tests;
 
-#[expect(
-    clippy::missing_const_for_thread_local,
-    reason = "thread_local! already uses a const initializer; current Clippy reports the macro expansion"
-)]
 thread_local! {
     pub(super) static HILBERT_SPECTRUM: RefCell<Vec<Complex64>> = const { RefCell::new(Vec::new()) };
 }

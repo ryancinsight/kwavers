@@ -64,6 +64,7 @@ pub mod physics_kernels;
 pub mod provider;
 pub mod realtime_loop;
 
+use aequitas::systems::si::quantities::Time;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_solver::backend::traits::{
     BackendCapabilities, BackendType, ComputeBackend, ComputeDevice,
@@ -241,7 +242,8 @@ where
     ///
     /// # Arguments
     ///
-    /// * `config` - Real-time configuration (budget_ms, adaptive timestepping, CFL safety)
+    /// * `config` - Real-time configuration (typed time budget, adaptive
+    ///   timestepping, and dimensionless CFL safety)
     ///
     /// # Returns
     ///
@@ -252,9 +254,9 @@ where
     /// ```ignore
     /// let mut backend = GPUBackend::new()?;
     /// let config = RealtimeConfig {
-    ///     budget_ms: 10.0,
+    ///     budget: aequitas::systems::si::quantities::Time::from_base(0.010),
     ///     adaptive_timestepping: true,
-    ///     cfl_safety_factor: 0.9,
+    ///     cfl_safety_factor: aequitas::systems::si::quantities::Dimensionless::from_base(0.9),
     ///     ..Default::default()
     /// };
     /// let mut orchestrator = backend.create_realtime_orchestrator(config)?;
@@ -295,8 +297,8 @@ where
     pub fn multiphysics_step(
         &self,
         fields: &mut HashMap<String, LetoArray3<f64>>,
-        dt: f64,
-        time: f64,
+        dt: Time<f64>,
+        time: Time<f64>,
         grid: &kwavers_grid::Grid,
         orchestrator: &mut RealtimeSimulationOrchestrator,
     ) -> KwaversResult<StepResult> {

@@ -3,6 +3,7 @@
 //! Manages compilation, configuration, and dispatch of GPU compute kernels
 //! for multiphysics simulations (acoustic, elastic, optical, thermal).
 
+use aequitas::systems::si::quantities::Time;
 use kwavers_core::error::KwaversResult;
 use std::collections::HashMap;
 
@@ -118,10 +119,10 @@ impl PhysicsKernel {
     /// Uses: time = (grid_elements × flops_per_element) / gpu_bandwidth
     /// Typical GPU: 10 TFLOP/s = 10e12 FLOP/s
     #[must_use]
-    pub fn estimate_time_ms(&self, num_elements: usize) -> f64 {
+    pub fn estimate_time(&self, num_elements: usize) -> Time<f64> {
         let total_flops = (num_elements as u64) * self.flops_per_element;
         let gpu_flops_per_sec = 10e12; // Typical modern GPU
-        (total_flops as f64 / gpu_flops_per_sec) * 1000.0
+        Time::from_base(total_flops as f64 / gpu_flops_per_sec)
     }
 }
 
@@ -183,11 +184,13 @@ impl PhysicsKernelRegistry {
 
     /// Estimate total execution time for all kernels
     #[must_use]
-    pub fn estimate_total_time_ms(&self, num_elements: usize) -> f64 {
-        self.kernels
+    pub fn estimate_total_time(&self, num_elements: usize) -> Time<f64> {
+        let total_seconds = self
+            .kernels
             .values()
-            .map(|k| k.estimate_time_ms(num_elements))
-            .sum()
+            .map(|kernel| kernel.estimate_time(num_elements).into_base())
+            .sum();
+        Time::from_base(total_seconds)
     }
 
     /// List all registered kernels
@@ -264,9 +267,9 @@ mod tests {
             WorkgroupConfig::new(64, 64, 64),
         );
 
-        let time_ms = kernel.estimate_time_ms(1_000_000);
-        // 1M elements × 25 FLOP/element / 10e12 FLOP/s × 1000 = 0.0025 ms
-        assert!(time_ms < 1.0); // Should be very fast
+        let time = kernel.estimate_time(1_000_000);
+        // 1M elements × 25 FLOP/element / 10e12 FLOP/s = 0.0025 ms.
+        assert_eq!(time, Time::from_base(2.5e-6));
     }
 
     #[test]
@@ -293,6 +296,10 @@ mod tests {
         assert!(registry
             .get_kernel(GpuKernelPhysicsDomain::Absorption)
             .is_none());
+        assert_eq!(
+            registry.estimate_total_time(1_000_000),
+            Time::from_base(2.5e-6)
+        );
     }
 
     #[test]

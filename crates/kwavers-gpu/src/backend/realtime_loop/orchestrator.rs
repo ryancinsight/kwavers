@@ -2,6 +2,7 @@
 
 use crate::backend::performance_monitor::{BudgetAnalysis, GpuPerformanceMonitor, GpuStepMetrics};
 use crate::backend::physics_kernels::PhysicsKernelRegistry;
+use aequitas::systems::si::quantities::Time;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 use leto::Array3 as LetoArray3;
@@ -31,7 +32,7 @@ impl RealtimeSimulationOrchestrator {
         kernel_registry: PhysicsKernelRegistry,
     ) -> KwaversResult<Self> {
         Ok(Self {
-            monitor: GpuPerformanceMonitor::new(config.budget_ms, 100),
+            monitor: GpuPerformanceMonitor::new(config.budget, 100),
             config,
             kernel_registry,
             step_count: 0,
@@ -56,18 +57,20 @@ impl RealtimeSimulationOrchestrator {
     pub fn step(
         &mut self,
         fields: &mut HashMap<String, LetoArray3<f64>>,
-        dt: f64,
-        time: f64,
+        dt: Time<f64>,
+        time: Time<f64>,
         grid: &Grid,
     ) -> KwaversResult<StepResult> {
-        if !dt.is_finite() || dt <= 0.0 {
+        if !dt.into_base().is_finite() || dt.into_base() <= 0.0 {
             return Err(KwaversError::InvalidInput(format!(
-                "Realtime GPU timestep must be finite and positive; got {dt}"
+                "Realtime GPU timestep must be finite and positive; got {} s",
+                dt.into_base()
             )));
         }
-        if !time.is_finite() {
+        if !time.into_base().is_finite() {
             return Err(KwaversError::InvalidInput(format!(
-                "Realtime GPU simulation time must be finite; got {time}"
+                "Realtime GPU simulation time must be finite; got {} s",
+                time.into_base()
             )));
         }
 
@@ -88,20 +91,20 @@ impl RealtimeSimulationOrchestrator {
             if let Some(kernel) = self.kernel_registry.get_kernel(*domain) {
                 self.monitor.record_kernel(
                     domain.name().to_string(),
-                    kernel.estimate_time_ms(num_elements),
+                    kernel.estimate_time(num_elements),
                 );
             }
         }
 
-        let wall_time_ms = step_start.elapsed().as_secs_f64() * 1000.0;
-        self.monitor.record_step(wall_time_ms);
+        let wall_time = Time::from_base(step_start.elapsed().as_secs_f64());
+        self.monitor.record_step(wall_time);
         self.step_count += 1;
 
         Ok(StepResult {
             dt,
             time,
-            wall_time_ms,
-            within_budget: wall_time_ms <= self.config.budget_ms,
+            wall_time,
+            within_budget: wall_time.into_base() <= self.config.budget.into_base(),
             kernels_executed: kernels.len(),
         })
     }
@@ -122,9 +125,9 @@ impl RealtimeSimulationOrchestrator {
     pub fn simulate(
         &mut self,
         fields: &mut HashMap<String, LetoArray3<f64>>,
-        t_start: f64,
-        t_end: f64,
-        mut dt: f64,
+        t_start: Time<f64>,
+        t_end: Time<f64>,
+        mut dt: Time<f64>,
         grid: &Grid,
     ) -> KwaversResult<GpuRealtimeSimulationStatistics> {
         self.start_time = Some(Instant::now());
@@ -132,30 +135,35 @@ impl RealtimeSimulationOrchestrator {
         let mut t = t_start;
         let mut step = 0u64;
 
-        while t < t_end {
+        while t.into_base() < t_end.into_base() {
             if self.config.adaptive_timestepping {
                 dt = self.adjust_timestep(dt, t, t_end);
             }
 
             let result = self.step(fields, dt, t, grid)?;
 
-            t += result.dt;
+            t = Time::from_base(t.into_base() + result.dt.into_base());
             step += 1;
 
             if step.is_multiple_of(self.config.checkpoint_interval as u64)
                 && self.config.enable_async_io
                 && self.config.verbose
             {
-                debug!("Checkpoint at step {} (time={:.3e})", step, t);
+                debug!("Checkpoint at step {} (time={:.3e} s)", step, t.into_base());
             }
         }
 
-        let elapsed = self.start_time.take().unwrap().elapsed().as_secs_f64();
+        let elapsed = self
+            .start_time
+            .take()
+            .expect("invariant: simulate initializes start_time before measuring")
+            .elapsed()
+            .as_secs_f64();
         let metrics = self.monitor.get_metrics();
 
         Ok(GpuRealtimeSimulationStatistics {
-            total_wall_time_seconds: elapsed,
-            total_simulation_time_seconds: t - t_start,
+            total_wall_time: Time::from_base(elapsed),
+            total_simulation_time: Time::from_base(t.into_base() - t_start.into_base()),
             num_steps: step,
             budget_violations: self.monitor.budget_violations(),
             metrics,
@@ -178,9 +186,15 @@ impl RealtimeSimulationOrchestrator {
     }
 
     /// Adjust timestep for CFL stability and end-time constraint.
-    pub(crate) fn adjust_timestep(&self, current_dt: f64, _t: f64, t_end: f64) -> f64 {
-        let max_dt = (t_end - _t).max(current_dt);
-        let safe_dt = current_dt * self.config.cfl_safety_factor;
-        safe_dt.min(max_dt)
+    pub(crate) fn adjust_timestep(
+        &self,
+        current_dt: Time<f64>,
+        time: Time<f64>,
+        t_end: Time<f64>,
+    ) -> Time<f64> {
+        let current_dt_seconds = current_dt.into_base();
+        let max_dt = (t_end.into_base() - time.into_base()).max(current_dt_seconds);
+        let safe_dt = current_dt_seconds * self.config.cfl_safety_factor.into_base();
+        Time::from_base(safe_dt.min(max_dt))
     }
 }

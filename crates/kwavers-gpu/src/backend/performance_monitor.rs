@@ -6,32 +6,34 @@
 use std::collections::HashMap;
 use std::collections::VecDeque;
 
+use aequitas::systems::si::quantities::{Dimensionless, Frequency, Time};
+
 /// Performance metrics for real-time simulation
 #[derive(Debug, Clone)]
 pub struct GpuStepMetrics {
-    /// Average step execution time (milliseconds)
-    pub avg_step_time_ms: f64,
+    /// Average step execution time.
+    pub avg_step_time: Time<f64>,
 
-    /// 95th percentile step time (milliseconds)
-    pub p95_step_time_ms: f64,
+    /// 95th percentile step time.
+    pub p95_step_time: Time<f64>,
 
-    /// 99th percentile step time (milliseconds)
-    pub p99_step_time_ms: f64,
+    /// 99th percentile step time.
+    pub p99_step_time: Time<f64>,
 
-    /// GPU utilization percentage (0-100)
-    pub gpu_utilization: f64,
+    /// GPU utilization percentage (0-100), represented as dimensionless data.
+    pub gpu_utilization: Dimensionless<f64>,
 
-    /// Data transfer overhead percentage
-    pub transfer_overhead_percent: f64,
+    /// Data transfer overhead percentage, represented as dimensionless data.
+    pub transfer_overhead: Dimensionless<f64>,
 
-    /// I/O operation overhead percentage
-    pub io_overhead_percent: f64,
+    /// I/O operation overhead percentage, represented as dimensionless data.
+    pub io_overhead: Dimensionless<f64>,
 
-    /// Percentage of steps within budget
-    pub budget_satisfaction: f64,
+    /// Percentage of steps within budget, represented as dimensionless data.
+    pub budget_satisfaction: Dimensionless<f64>,
 
-    /// Estimated throughput (steps per second)
-    pub throughput_steps_per_sec: f64,
+    /// Estimated throughput in steps per second.
+    pub throughput: Frequency<f64>,
 }
 
 /// Bottleneck analysis for real-time performance
@@ -59,8 +61,8 @@ pub struct BudgetAnalysis {
     /// Whether currently within budget
     pub within_budget: bool,
 
-    /// Percentage over budget (0 if within)
-    pub overage_percent: f64,
+    /// Percentage over budget (0 if within), represented as dimensionless data.
+    pub overage: Dimensionless<f64>,
 
     /// Identified bottleneck
     pub bottleneck: BottleneckType,
@@ -72,20 +74,20 @@ pub struct BudgetAnalysis {
 /// Real-time performance monitor
 #[derive(Debug)]
 pub struct GpuPerformanceMonitor {
-    /// Step execution times (milliseconds)
-    step_times: VecDeque<f64>,
+    /// Step execution times.
+    step_times: VecDeque<Time<f64>>,
 
     /// Kernel execution times per type
-    kernel_times: HashMap<String, VecDeque<f64>>,
+    kernel_times: HashMap<String, VecDeque<Time<f64>>>,
 
-    /// Data transfer times (milliseconds)
-    transfer_times: VecDeque<f64>,
+    /// Data transfer times.
+    transfer_times: VecDeque<Time<f64>>,
 
-    /// I/O operation times (milliseconds)
-    io_times: VecDeque<f64>,
+    /// I/O operation times.
+    io_times: VecDeque<Time<f64>>,
 
-    /// Real-time budget (milliseconds)
-    budget_ms: f64,
+    /// Real-time budget.
+    budget: Time<f64>,
 
     /// History window size
     window_size: usize,
@@ -99,13 +101,13 @@ pub struct GpuPerformanceMonitor {
 
 impl GpuPerformanceMonitor {
     /// Create new performance monitor
-    pub fn new(budget_ms: f64, window_size: usize) -> Self {
+    pub fn new(budget: Time<f64>, window_size: usize) -> Self {
         Self {
             step_times: VecDeque::with_capacity(window_size),
             kernel_times: HashMap::new(),
             transfer_times: VecDeque::with_capacity(window_size),
             io_times: VecDeque::with_capacity(window_size),
-            budget_ms,
+            budget,
             window_size,
             total_steps: 0,
             budget_violations: 0,
@@ -113,24 +115,24 @@ impl GpuPerformanceMonitor {
     }
 
     /// Record a step execution time
-    pub fn record_step(&mut self, time_ms: f64) {
-        self.step_times.push_back(time_ms);
+    pub fn record_step(&mut self, time: Time<f64>) {
+        self.step_times.push_back(time);
         if self.step_times.len() > self.window_size {
             self.step_times.pop_front();
         }
 
         self.total_steps += 1;
-        if time_ms > self.budget_ms {
+        if time.into_base() > self.budget.into_base() {
             self.budget_violations += 1;
         }
     }
 
     /// Record kernel execution time
-    pub fn record_kernel(&mut self, name: String, time_ms: f64) {
+    pub fn record_kernel(&mut self, name: String, time: Time<f64>) {
         self.kernel_times
             .entry(name.clone())
             .or_insert_with(|| VecDeque::with_capacity(self.window_size))
-            .push_back(time_ms);
+            .push_back(time);
 
         // Trim to window size
         if let Some(times) = self.kernel_times.get_mut(&name) {
@@ -141,16 +143,16 @@ impl GpuPerformanceMonitor {
     }
 
     /// Record data transfer time
-    pub fn record_transfer(&mut self, time_ms: f64) {
-        self.transfer_times.push_back(time_ms);
+    pub fn record_transfer(&mut self, time: Time<f64>) {
+        self.transfer_times.push_back(time);
         if self.transfer_times.len() > self.window_size {
             self.transfer_times.pop_front();
         }
     }
 
     /// Record I/O operation time
-    pub fn record_io(&mut self, time_ms: f64) {
-        self.io_times.push_back(time_ms);
+    pub fn record_io(&mut self, time: Time<f64>) {
+        self.io_times.push_back(time);
         if self.io_times.len() > self.window_size {
             self.io_times.pop_front();
         }
@@ -164,41 +166,43 @@ impl GpuPerformanceMonitor {
 
         let avg_transfer = self.calculate_average(&self.transfer_times);
         let avg_io = self.calculate_average(&self.io_times);
-        let _total_overhead = avg_transfer + avg_io;
 
-        let transfer_overhead_percent = if avg_step > 0.0 {
-            (avg_transfer / avg_step) * 100.0
+        let transfer_overhead = if avg_step.into_base() > 0.0 {
+            Dimensionless::from_base((avg_transfer.into_base() / avg_step.into_base()) * 100.0)
         } else {
-            0.0
+            Dimensionless::from_base(0.0)
         };
 
-        let io_overhead_percent = if avg_step > 0.0 {
-            (avg_io / avg_step) * 100.0
+        let io_overhead = if avg_step.into_base() > 0.0 {
+            Dimensionless::from_base((avg_io.into_base() / avg_step.into_base()) * 100.0)
         } else {
-            0.0
+            Dimensionless::from_base(0.0)
         };
 
         let budget_satisfaction = if self.total_steps > 0 {
-            ((self.total_steps - self.budget_violations) as f64 / self.total_steps as f64) * 100.0
+            Dimensionless::from_base(
+                ((self.total_steps - self.budget_violations) as f64 / self.total_steps as f64)
+                    * 100.0,
+            )
         } else {
-            100.0
+            Dimensionless::from_base(100.0)
         };
 
-        let throughput_steps_per_sec = if avg_step > 0.0 {
-            1000.0 / avg_step
+        let throughput = if avg_step.into_base() > 0.0 {
+            Frequency::from_base(1.0 / avg_step.into_base())
         } else {
-            0.0
+            Frequency::from_base(0.0)
         };
 
         GpuStepMetrics {
-            avg_step_time_ms: avg_step,
-            p95_step_time_ms: p95_step,
-            p99_step_time_ms: p99_step,
-            gpu_utilization: 100.0 - transfer_overhead_percent,
-            transfer_overhead_percent,
-            io_overhead_percent,
+            avg_step_time: avg_step,
+            p95_step_time: p95_step,
+            p99_step_time: p99_step,
+            gpu_utilization: Dimensionless::from_base(100.0 - transfer_overhead.into_base()),
+            transfer_overhead,
+            io_overhead,
             budget_satisfaction,
-            throughput_steps_per_sec,
+            throughput,
         }
     }
 
@@ -206,19 +210,24 @@ impl GpuPerformanceMonitor {
     pub fn analyze_budget(&self) -> BudgetAnalysis {
         let metrics = self.get_metrics();
 
-        let (within_budget, overage) = if metrics.avg_step_time_ms <= self.budget_ms {
-            (true, 0.0)
-        } else {
-            let overage_percent =
-                ((metrics.avg_step_time_ms - self.budget_ms) / self.budget_ms) * 100.0;
-            (false, overage_percent)
-        };
+        let (within_budget, overage) =
+            if metrics.avg_step_time.into_base() <= self.budget.into_base() {
+                (true, Dimensionless::from_base(0.0))
+            } else {
+                let overage = Dimensionless::from_base(
+                    ((metrics.avg_step_time.into_base() - self.budget.into_base())
+                        / self.budget.into_base())
+                        * 100.0,
+                );
+                (false, overage)
+            };
 
-        let bottleneck = if metrics.transfer_overhead_percent > metrics.io_overhead_percent {
+        let bottleneck = if metrics.transfer_overhead.into_base() > metrics.io_overhead.into_base()
+        {
             BottleneckType::DataTransfer
-        } else if metrics.io_overhead_percent > 5.0 {
+        } else if metrics.io_overhead.into_base() > 5.0 {
             BottleneckType::IO
-        } else if metrics.gpu_utilization < 70.0 {
+        } else if metrics.gpu_utilization.into_base() < 70.0 {
             BottleneckType::CPUPreprocessing
         } else {
             BottleneckType::GPUCompute
@@ -246,7 +255,7 @@ impl GpuPerformanceMonitor {
 
         BudgetAnalysis {
             within_budget,
-            overage_percent: overage,
+            overage,
             bottleneck,
             recommendation,
         }
@@ -255,7 +264,7 @@ impl GpuPerformanceMonitor {
     /// Check if currently within budget
     pub fn is_within_budget(&self) -> bool {
         if let Some(&last_time) = self.step_times.back() {
-            last_time <= self.budget_ms
+            last_time.into_base() <= self.budget.into_base()
         } else {
             true
         }
@@ -269,80 +278,87 @@ impl GpuPerformanceMonitor {
 
     /// Get estimated remaining budget for next step
     #[must_use]
-    pub fn estimated_remaining_budget(&self) -> f64 {
+    pub fn estimated_remaining_budget(&self) -> Time<f64> {
         let avg_time = self.calculate_average(&self.step_times);
-        (self.budget_ms - avg_time).max(0.0)
+        Time::from_base((self.budget.into_base() - avg_time.into_base()).max(0.0))
     }
 
     // ========== Private Methods ==========
 
-    fn calculate_average(&self, values: &VecDeque<f64>) -> f64 {
+    fn calculate_average(&self, values: &VecDeque<Time<f64>>) -> Time<f64> {
         if values.is_empty() {
-            return 0.0;
+            return Time::from_base(0.0);
         }
-        values.iter().sum::<f64>() / values.len() as f64
+        Time::from_base(
+            values.iter().map(|value| value.into_base()).sum::<f64>() / values.len() as f64,
+        )
     }
 
-    fn calculate_percentile(&self, values: &VecDeque<f64>, percentile: f64) -> f64 {
+    fn calculate_percentile(&self, values: &VecDeque<Time<f64>>, percentile: f64) -> Time<f64> {
         if values.is_empty() {
-            return 0.0;
+            return Time::from_base(0.0);
         }
 
-        let mut sorted: Vec<f64> = values.iter().copied().collect();
+        let mut sorted: Vec<f64> = values.iter().map(|value| value.into_base()).collect();
         sorted.sort_by(|a, b| a.total_cmp(b));
 
         let index = ((percentile * (sorted.len() as f64)) as usize).min(sorted.len() - 1);
-        sorted[index]
+        Time::from_base(sorted[index])
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use aequitas::systems::si::units::Millisecond;
+
+    fn milliseconds(value: f64) -> Time<f64> {
+        Time::from_unit::<Millisecond>(value)
+    }
 
     #[test]
     fn test_monitor_creation() {
-        let monitor = GpuPerformanceMonitor::new(10.0, 100);
-        assert_eq!(monitor.budget_ms, 10.0);
+        let monitor = GpuPerformanceMonitor::new(milliseconds(10.0), 100);
+        assert_eq!(monitor.budget, milliseconds(10.0));
         assert_eq!(monitor.total_steps, 0);
     }
 
     #[test]
     fn test_step_recording() {
-        let mut monitor = GpuPerformanceMonitor::new(10.0, 10);
+        let mut monitor = GpuPerformanceMonitor::new(milliseconds(10.0), 10);
 
-        monitor.record_step(5.0);
-        monitor.record_step(8.0);
-        monitor.record_step(6.0);
+        monitor.record_step(milliseconds(5.0));
+        monitor.record_step(milliseconds(8.0));
+        monitor.record_step(milliseconds(6.0));
 
         assert_eq!(monitor.total_steps, 3);
         assert_eq!(monitor.budget_violations, 0);
 
         let metrics = monitor.get_metrics();
-        assert!((metrics.avg_step_time_ms - 6.333).abs() < 0.01);
+        assert!((metrics.avg_step_time.in_unit::<Millisecond>() - 6.333).abs() < 0.01);
     }
 
     #[test]
     fn test_budget_violation_detection() {
-        let mut monitor = GpuPerformanceMonitor::new(10.0, 10);
+        let mut monitor = GpuPerformanceMonitor::new(milliseconds(10.0), 10);
 
-        monitor.record_step(8.0);
-        monitor.record_step(12.0); // Exceeds budget
-        monitor.record_step(9.0);
+        monitor.record_step(milliseconds(8.0));
+        monitor.record_step(milliseconds(12.0)); // Exceeds budget
+        monitor.record_step(milliseconds(9.0));
 
         assert_eq!(monitor.budget_violations, 1);
         let metrics = monitor.get_metrics();
-        assert!(metrics.budget_satisfaction < 100.0);
+        assert!(metrics.budget_satisfaction.into_base() < 100.0);
     }
 
     #[test]
     fn test_bottleneck_detection() {
-        let mut monitor = GpuPerformanceMonitor::new(10.0, 10);
+        let mut monitor = GpuPerformanceMonitor::new(milliseconds(10.0), 10);
 
         // Simulate high transfer overhead
         for _ in 0..5 {
-            monitor.record_step(10.0);
-            monitor.record_transfer(6.0);
+            monitor.record_step(milliseconds(10.0));
+            monitor.record_transfer(milliseconds(6.0));
         }
 
         let analysis = monitor.analyze_budget();
@@ -351,14 +367,14 @@ mod tests {
 
     #[test]
     fn test_percentile_calculation() {
-        let mut monitor = GpuPerformanceMonitor::new(100.0, 100);
+        let mut monitor = GpuPerformanceMonitor::new(milliseconds(100.0), 100);
 
         for i in 1..=100 {
-            monitor.record_step(i as f64);
+            monitor.record_step(milliseconds(i as f64));
         }
 
         let metrics = monitor.get_metrics();
-        assert!((metrics.p95_step_time_ms - 95.0).abs() < 2.0);
-        assert!((metrics.p99_step_time_ms - 99.0).abs() < 2.0);
+        assert!((metrics.p95_step_time.in_unit::<Millisecond>() - 95.0).abs() < 2.0);
+        assert!((metrics.p99_step_time.in_unit::<Millisecond>() - 99.0).abs() < 2.0);
     }
 }
