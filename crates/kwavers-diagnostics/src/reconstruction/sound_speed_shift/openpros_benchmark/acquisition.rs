@@ -8,7 +8,7 @@ use super::types::OpenProsShiftBenchmarkConfig;
 
 pub(super) fn samples(config: &OpenProsShiftBenchmarkConfig) -> Vec<SoundSpeedShiftSample> {
     let shape = config.shape();
-    let spacing_m = config.spacing_m();
+    let spacing_m = config.spacing().into_base();
     let axial_extent_m = shape.0 as f64 * spacing_m;
     let lateral_extent_m = shape.1 as f64 * spacing_m;
     let body_x_m = -0.5 * axial_extent_m;

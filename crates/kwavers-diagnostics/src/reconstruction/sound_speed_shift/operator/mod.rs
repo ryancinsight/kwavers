@@ -8,7 +8,7 @@ mod validation;
 
 use leto::Array2;
 
-use aequitas::systems::si::quantities::Time;
+use aequitas::systems::si::quantities::{Time, Velocity};
 use kwavers_solver::inverse::same_aperture::ActiveGrid;
 
 use row_storage::RayRowStorage;
@@ -44,8 +44,9 @@ impl SoundSpeedShiftOperator {
     pub(super) fn rhs_from_sample_time_shifts(
         &self,
         samples: &[SoundSpeedShiftSample],
-        reference_sound_speed_m_s: f64,
+        reference_sound_speed: Velocity,
     ) -> Vec<f64> {
+        let reference_sound_speed_m_s = reference_sound_speed.into_base();
         let c0_sq = reference_sound_speed_m_s * reference_sound_speed_m_s;
         (0..self.rows.row_count())
             .map(|row| -samples[self.rows.sample_index(row)].time_shift.into_base() * c0_sq)
@@ -56,20 +57,21 @@ impl SoundSpeedShiftOperator {
     pub(super) fn rhs_from_time_shift_values(
         &self,
         time_shifts: &[Time],
-        reference_sound_speed_m_s: f64,
+        reference_sound_speed: Velocity,
     ) -> Vec<f64> {
         let mut out = vec![0.0; self.rows.row_count()];
-        self.rhs_from_time_shift_values_into(time_shifts, reference_sound_speed_m_s, &mut out);
+        self.rhs_from_time_shift_values_into(time_shifts, reference_sound_speed, &mut out);
         out
     }
 
     pub(super) fn rhs_from_time_shift_values_into(
         &self,
         time_shifts: &[Time],
-        reference_sound_speed_m_s: f64,
+        reference_sound_speed: Velocity,
         out: &mut [f64],
     ) {
         debug_assert_eq!(out.len(), self.rows.row_count());
+        let reference_sound_speed_m_s = reference_sound_speed.into_base();
         let c0_sq = reference_sound_speed_m_s * reference_sound_speed_m_s;
         for (row, value) in out.iter_mut().enumerate() {
             *value = -time_shifts[self.rows.sample_index(row)].into_base() * c0_sq;

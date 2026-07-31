@@ -1,6 +1,6 @@
 # ADR 087 — Aequitas sound-speed-shift spatial quantities
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-07-31
 - Owner: `KWAVERS-AEQ-MET-48`
 
@@ -35,7 +35,9 @@ physical unit for Eunomia compatibility.
 
 ## Verification
 
-The implementation will pass the diagnostics test-target check, focused
-sound-speed-shift Nextest, warning-denied all-target Clippy, doctests, RustDoc,
-formatting, diff checks, and a public-contract scan for unit-suffixed raw
-spatial configuration values.
+The diagnostics test-target check passes. Focused sound-speed-shift Nextest run
+`963e5434-b270-4e26-9e42-abec4c4b646f` passes 34/34 with 165 skipped;
+warning-denied all-target Clippy, one executable doctest with five ignored,
+RustDoc, package formatting, diff checks, and the public-contract scan pass.
+The scan leaves only declared solver-coordinate, dense image, and benchmark
+error-metric storage boundaries.

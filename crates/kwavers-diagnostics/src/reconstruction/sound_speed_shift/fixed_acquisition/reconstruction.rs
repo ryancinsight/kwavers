@@ -35,7 +35,7 @@ impl SoundSpeedShiftPlan {
         validate_frame_time_shifts(time_shifts, self.samples.len())?;
         let data = self
             .operator
-            .rhs_from_time_shift_values(time_shifts, self.config.reference_sound_speed_m_s);
+            .rhs_from_time_shift_values(time_shifts, self.config.reference_sound_speed);
         Ok(reconstruct_from_operator(
             &self.operator,
             &data,

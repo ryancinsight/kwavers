@@ -79,7 +79,7 @@ pub fn reconstruct_sound_speed_shift_with_workspace(
     workspace: &mut SoundSpeedShiftWorkspace,
 ) -> KwaversResult<SoundSpeedShiftImage> {
     let operator = SoundSpeedShiftOperator::new(samples, active_mask, config)?;
-    let data = operator.rhs_from_sample_time_shifts(samples, config.reference_sound_speed_m_s);
+    let data = operator.rhs_from_sample_time_shifts(samples, config.reference_sound_speed);
     Ok(reconstruct_from_operator(
         &operator,
         &data,
@@ -122,7 +122,8 @@ pub fn predict_sound_speed_time_shifts(
     let model = operator.model_from_image(sound_speed_shift_m_s);
     let mut path_integrals = vec![0.0; operator.rows()];
     operator.matvec(&model, &mut path_integrals);
-    let c0_sq = config.reference_sound_speed_m_s * config.reference_sound_speed_m_s;
+    let reference_sound_speed_m_s = config.reference_sound_speed.into_base();
+    let c0_sq = reference_sound_speed_m_s * reference_sound_speed_m_s;
 
     Ok(path_integrals
         .into_iter()

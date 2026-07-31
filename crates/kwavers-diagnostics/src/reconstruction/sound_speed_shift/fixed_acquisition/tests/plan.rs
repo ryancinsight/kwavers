@@ -8,7 +8,7 @@ fn fixed_plan_reconstruction_matches_direct_reconstruction() {
     truth.fill(20.0);
     let samples = horizontal_samples(&[-0.001, 0.0, 0.001]);
     let config = SoundSpeedShiftConfig {
-        spacing_m: 0.001,
+        spacing: Length::from_base(0.001),
         iterations: 32,
         tikhonov_weight: 0.0,
         smoothness_weight: 0.0,
@@ -40,7 +40,7 @@ fn fixed_plan_caches_dense_normal_diagonal() {
     let mask = Array2::from_elem((3, 3), true);
     let samples = horizontal_samples(&[-0.001, 0.0, 0.001]);
     let config = SoundSpeedShiftConfig {
-        spacing_m: 0.001,
+        spacing: Length::from_base(0.001),
         ..Default::default()
     };
 
@@ -62,7 +62,7 @@ fn sparse_plan_caches_lipschitz_and_matches_direct_reconstruction() {
         vertical_sample(-0.002),
     ];
     let config = SoundSpeedShiftConfig {
-        spacing_m: 0.001,
+        spacing: Length::from_base(0.001),
         iterations: 80,
         tikhonov_weight: 0.0,
         smoothness_weight: 0.0,
@@ -97,7 +97,7 @@ fn fixed_plan_rejects_invalid_frame_shift_vectors() {
     let mask = Array2::from_elem((3, 1), true);
     let samples = vec![horizontal_sample(0.0)];
     let config = SoundSpeedShiftConfig {
-        spacing_m: 0.001,
+        spacing: Length::from_base(0.001),
         ..Default::default()
     };
     let plan = SoundSpeedShiftPlan::new(samples, &mask, config).unwrap();
@@ -143,16 +143,16 @@ fn curved_array_plan_reuses_operator_across_repeated_frames() {
     };
     let scan = CurvedArrayShiftScan::new(array, vec![3, 4]);
     let config = SoundSpeedShiftConfig {
-        spacing_m: 0.001,
+        spacing: Length::from_base(0.001),
         iterations: 8,
         tikhonov_weight: 1.0e-8,
         propagation: ShiftPropagation::CircularArc {
-            sagitta_m: 0.0005,
+            sagitta: Length::from_base(0.0005),
             segments: 8,
         },
         sensitivity: ShiftSensitivity::FiniteFrequency {
-            wavelength_m: 0.001,
-            support_radius_m: 0.002,
+            wavelength: Length::from_base(0.001),
+            support_radius: Length::from_base(0.002),
         },
         ..Default::default()
     };

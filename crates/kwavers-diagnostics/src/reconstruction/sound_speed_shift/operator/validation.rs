@@ -15,8 +15,11 @@ pub(super) fn validate_inputs(
         .sampling
         .validate()
         .map_err(KwaversError::InvalidInput)?;
-    validate_positive_finite("reference sound speed", config.reference_sound_speed_m_s)?;
-    validate_positive_finite("spacing", config.spacing_m)?;
+    validate_positive_finite(
+        "reference sound speed",
+        config.reference_sound_speed.into_base(),
+    )?;
+    validate_positive_finite("spacing", config.spacing.into_base())?;
     validate_nonnegative_finite("Tikhonov weight", config.tikhonov_weight)?;
     validate_nonnegative_finite("smoothness weight", config.smoothness_weight)?;
     validate_nonnegative_finite("sparsity weight", config.sparsity_weight)?;
@@ -26,7 +29,7 @@ pub(super) fn validate_inputs(
         .map_err(KwaversError::InvalidInput)?;
     config
         .sensitivity
-        .validate(config.spacing_m)
+        .validate(config.spacing)
         .map_err(KwaversError::InvalidInput)?;
     if config.iterations == 0 {
         return Err(KwaversError::InvalidInput(

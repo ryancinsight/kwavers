@@ -19,7 +19,7 @@ impl SoundSpeedShiftOperator {
         config: SoundSpeedShiftConfig,
     ) -> KwaversResult<Self> {
         validate_inputs(samples, active_mask, config)?;
-        let active = active_grid(active_mask, config.spacing_m);
+        let active = active_grid(active_mask, config.spacing.into_base());
         let shape = {
             let [rows, cols] = active_mask.shape();
             (rows, cols)

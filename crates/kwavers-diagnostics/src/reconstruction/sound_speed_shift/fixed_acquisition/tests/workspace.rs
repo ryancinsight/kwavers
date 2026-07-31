@@ -7,7 +7,7 @@ fn fixed_plan_workspace_reuses_sampled_rhs_and_solver_buffers() {
     truth.fill(18.0);
     let samples = horizontal_samples(&[-0.001, 0.0, 0.001]);
     let config = SoundSpeedShiftConfig {
-        spacing_m: 0.001,
+        spacing: Length::from_base(0.001),
         iterations: 24,
         tikhonov_weight: 0.0,
         smoothness_weight: 0.0,
@@ -51,7 +51,7 @@ fn fixed_plan_reconstruct_into_image_reuses_output_allocation() {
     truth.fill(14.0);
     let samples = horizontal_samples(&[-0.001, 0.0, 0.001]);
     let config = SoundSpeedShiftConfig {
-        spacing_m: 0.001,
+        spacing: Length::from_base(0.001),
         iterations: 24,
         tikhonov_weight: 0.0,
         smoothness_weight: 0.0,

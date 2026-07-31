@@ -17,18 +17,18 @@ pub(super) fn row_entries(
     let path = path::build_path(sample, config.propagation);
     let mut entries = match config.sensitivity {
         ShiftSensitivity::GeometricRay => {
-            geometric::entries(&path, active_lookup, shape, config.spacing_m)
+            geometric::entries(&path, active_lookup, shape, config.spacing.into_base())
         }
         ShiftSensitivity::FiniteFrequency {
-            wavelength_m,
-            support_radius_m,
+            wavelength,
+            support_radius,
         } => finite_frequency::entries(
             &path,
             active_lookup,
             shape,
-            config.spacing_m,
-            wavelength_m,
-            support_radius_m,
+            config.spacing.into_base(),
+            wavelength.into_base(),
+            support_radius.into_base(),
         ),
     };
     merge_by_column(&mut entries);

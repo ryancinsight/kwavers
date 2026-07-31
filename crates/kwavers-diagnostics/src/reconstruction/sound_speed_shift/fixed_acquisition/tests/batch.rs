@@ -9,7 +9,7 @@ fn batch_reconstruction_uses_compact_summaries_by_default() {
     truth.fill(16.0);
     let samples = horizontal_samples(&[-0.001, 0.0, 0.001]);
     let config = SoundSpeedShiftConfig {
-        spacing_m: 0.001,
+        spacing: Length::from_base(0.001),
         iterations: 20,
         tikhonov_weight: 0.0,
         smoothness_weight: 0.0,
@@ -52,7 +52,7 @@ fn batch_reconstruction_retains_full_histories_when_requested() {
     truth.fill(10.0);
     let samples = horizontal_samples(&[-0.001, 0.0, 0.001]);
     let config = SoundSpeedShiftConfig {
-        spacing_m: 0.001,
+        spacing: Length::from_base(0.001),
         iterations: 12,
         tikhonov_weight: 0.0,
         smoothness_weight: 0.0,
@@ -91,7 +91,7 @@ fn batch_reconstruction_rejects_invalid_frame_batches() {
     let mask = Array2::from_elem((3, 1), true);
     let samples = vec![horizontal_sample(0.0)];
     let config = SoundSpeedShiftConfig {
-        spacing_m: 0.001,
+        spacing: Length::from_base(0.001),
         ..Default::default()
     };
     let plan = SoundSpeedShiftPlan::new(samples, &mask, config).unwrap();

@@ -20,10 +20,12 @@ pub(super) fn build_path(
 ) -> Vec<PathSegment> {
     match propagation {
         ShiftPropagation::StraightRay => straight_segment(sample.transmitter, sample.receiver),
-        ShiftPropagation::CircularArc {
-            sagitta_m,
+        ShiftPropagation::CircularArc { sagitta, segments } => circular_arc_segments(
+            sample.transmitter,
+            sample.receiver,
+            sagitta.into_base(),
             segments,
-        } => circular_arc_segments(sample.transmitter, sample.receiver, sagitta_m, segments),
+        ),
     }
 }
 

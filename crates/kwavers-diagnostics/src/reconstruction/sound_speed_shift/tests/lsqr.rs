@@ -4,6 +4,7 @@
 //! public [`reconstruct_sound_speed_shift`] / [`reconstruct_sound_speed_shift_with_workspace`]
 //! APIs.
 
+use aequitas::systems::si::quantities::Length;
 use leto::Array2;
 
 use super::{
@@ -26,7 +27,7 @@ fn lsqr_prior_recovers_uniform_sound_speed_shift() {
     truth.fill(20.0);
     let samples = horizontal_samples(&[-0.001, 0.0, 0.001]);
     let config = SoundSpeedShiftConfig {
-        spacing_m: 0.001,
+        spacing: Length::from_base(0.001),
         iterations: 64,
         prior: ShiftPrior::Lsqr { damping: 0.0 },
         tikhonov_weight: 0.0,
@@ -61,7 +62,7 @@ fn lsqr_higher_damping_reduces_solution_norm() {
     truth.fill(20.0);
     let samples = horizontal_samples(&[-0.001, 0.0, 0.001]);
     let base_config = SoundSpeedShiftConfig {
-        spacing_m: 0.001,
+        spacing: Length::from_base(0.001),
         iterations: 128,
         tikhonov_weight: 0.0,
         smoothness_weight: 0.0,
@@ -124,7 +125,7 @@ fn lsqr_objective_history_is_non_increasing() {
     truth.fill(20.0);
     let samples = horizontal_samples(&[-0.001, 0.0, 0.001]);
     let config = SoundSpeedShiftConfig {
-        spacing_m: 0.001,
+        spacing: Length::from_base(0.001),
         iterations: 16,
         prior: ShiftPrior::Lsqr { damping: 0.0 },
         tikhonov_weight: 0.0,
@@ -160,7 +161,7 @@ fn lsqr_workspace_capacity_preserved_across_calls() {
     truth.fill(20.0);
     let samples = horizontal_samples(&[-0.001, 0.0, 0.001]);
     let config = SoundSpeedShiftConfig {
-        spacing_m: 0.001,
+        spacing: Length::from_base(0.001),
         iterations: 32,
         prior: ShiftPrior::Lsqr { damping: 1.0e-4 },
         tikhonov_weight: 0.0,
@@ -213,7 +214,7 @@ fn lsqr_zero_rhs_returns_zero_solution() {
     // All time_shift = 0 ⟹ b = −c₀²·0 = 0
     let samples = horizontal_samples(&[-0.001, 0.0, 0.001]);
     let config = SoundSpeedShiftConfig {
-        spacing_m: 0.001,
+        spacing: Length::from_base(0.001),
         iterations: 32,
         prior: ShiftPrior::Lsqr { damping: 0.0 },
         tikhonov_weight: 0.0,

@@ -1,5 +1,6 @@
 //! OpenPros-style benchmark construction and execution.
 
+use aequitas::systems::si::quantities::{Length, Velocity};
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::error::{KwaversError, KwaversResult};
 
@@ -98,11 +99,13 @@ fn reconstruction_config(
     sampling: ShiftSampling,
     prior: ShiftPrior,
 ) -> SoundSpeedShiftConfig {
-    let reference_sound_speed_m_s = SOUND_SPEED_TISSUE;
-    let wavelength_m = reference_sound_speed_m_s / config.waveform_expectation().peak_frequency_hz;
+    let reference_sound_speed = Velocity::from_base(SOUND_SPEED_TISSUE);
+    let wavelength = Length::from_base(
+        reference_sound_speed.into_base() / config.waveform_expectation().peak_frequency_hz,
+    );
     SoundSpeedShiftConfig {
-        reference_sound_speed_m_s,
-        spacing_m: config.spacing_m(),
+        reference_sound_speed,
+        spacing: config.spacing(),
         iterations: match prior {
             ShiftPrior::Dense | ShiftPrior::Lsqr { .. } => config.dense_iterations,
             ShiftPrior::Sparse => config.sparse_iterations,
@@ -117,8 +120,8 @@ fn reconstruction_config(
         prior,
         propagation: ShiftPropagation::StraightRay,
         sensitivity: ShiftSensitivity::FiniteFrequency {
-            wavelength_m,
-            support_radius_m: config.spacing_m(),
+            wavelength,
+            support_radius: config.spacing(),
         },
     }
 }

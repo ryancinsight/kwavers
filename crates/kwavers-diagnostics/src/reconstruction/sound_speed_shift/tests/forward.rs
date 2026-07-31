@@ -1,6 +1,6 @@
 //! Forward prediction sign contract.
 
-use aequitas::systems::si::quantities::Time;
+use aequitas::systems::si::quantities::{Length, Time};
 use leto::Array2;
 
 use super::{predict_sound_speed_time_shifts, SoundSpeedShiftConfig, SoundSpeedShiftSample};
@@ -34,13 +34,13 @@ fn forward_model_has_linearized_speed_shift_sign() {
         Time::from_base(0.0),
     )];
     let config = SoundSpeedShiftConfig {
-        spacing_m: 0.001,
+        spacing: Length::from_base(0.001),
         ..Default::default()
     };
 
     let predicted = predict_sound_speed_time_shifts(&shift, &samples, &mask, config).unwrap();
     let expected = -(3.0 * 0.001 * 20.0)
-        / (config.reference_sound_speed_m_s * config.reference_sound_speed_m_s);
+        / (config.reference_sound_speed.into_base() * config.reference_sound_speed.into_base());
 
     assert_eq!(predicted.len(), 1);
     let predicted_seconds = predicted[0].into_base();

@@ -10,7 +10,7 @@ fn batch_objective_streaming_reports_histories_without_images() {
     truth.fill(8.0);
     let samples = horizontal_samples(&[-0.001, 0.0, 0.001]);
     let config = SoundSpeedShiftConfig {
-        spacing_m: 0.001,
+        spacing: Length::from_base(0.001),
         iterations: 12,
         tikhonov_weight: 0.0,
         smoothness_weight: 0.0,
@@ -84,7 +84,7 @@ fn batch_objective_streaming_propagates_callback_error_and_stops() {
     truth.fill(6.0);
     let samples = horizontal_samples(&[-0.001, 0.0, 0.001]);
     let config = SoundSpeedShiftConfig {
-        spacing_m: 0.001,
+        spacing: Length::from_base(0.001),
         iterations: 8,
         tikhonov_weight: 0.0,
         smoothness_weight: 0.0,

@@ -13,7 +13,7 @@ pub(super) fn solve_batch_frame(
 ) {
     plan.operator.rhs_from_time_shift_values_into(
         time_shifts,
-        plan.config.reference_sound_speed_m_s,
+        plan.config.reference_sound_speed,
         sampled_rhs,
     );
     solve_operator_frame_with_metrics(

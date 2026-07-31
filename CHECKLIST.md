@@ -1,18 +1,25 @@
 # Project Checklist
 
-## Owner: Codex — KWAVERS-AEQ-MET-48 typed sound-speed-shift spatial scales [major] — in progress
+## Owner: Codex — KWAVERS-AEQ-MET-48 typed sound-speed-shift spatial scales [major] — done 2026-07-31
 
-- [ ] Type reference sound speed and grid spacing with Aequitas `Velocity` and
+- [x] Type reference sound speed and grid spacing with Aequitas `Velocity` and
       `Length` in the public reconstruction configuration.
-- [ ] Type curved-path sagitta and finite-frequency wavelength/support scales;
+- [x] Type curved-path sagitta and finite-frequency wavelength/support scales;
       extract base scalars only at ray, validation, and solver formulas.
-- [ ] Preserve solver-owned `PlanarPoint` coordinates and dense image storage
+- [x] Preserve solver-owned `PlanarPoint` coordinates and dense image storage
       as explicit boundaries; synchronize ADR 087, gap-audit, backlog,
       checklist, changelog, and the Atlas cross-repository audit.
 
 Acceptance: no public sound-speed-shift physical length or velocity remains a
 unit-suffixed raw scalar in the migrated configuration/path contracts; no
 complex or imaginary physical unit is introduced.
+
+Evidence: diagnostics test-target check passes; focused sound-speed-shift
+Nextest run `963e5434-b270-4e26-9e42-abec4c4b646f` passes 34/34 with 165
+skipped; warning-denied all-target Clippy, doctests (1 executable, 5 ignored),
+RustDoc, package formatting, diff, and public-contract scan pass. The
+workspace-wide `cargo fmt --all -- --check` command remains subject to the
+repository's Windows filename-length limitation; package formatting passes.
 
 ## Owner: Codex — KWAVERS-AEQ-MET-47 typed sound-speed-shift time samples [major] — done 2026-07-31
 

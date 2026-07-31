@@ -32,7 +32,8 @@ impl SoundSpeedShiftPlan {
         let model = self.operator.model_from_image(sound_speed_shift_m_s);
         let mut path_integrals = vec![0.0; self.operator.rows()];
         self.operator.matvec(&model, &mut path_integrals);
-        let c0_sq = self.config.reference_sound_speed_m_s * self.config.reference_sound_speed_m_s;
+        let reference_sound_speed_m_s = self.config.reference_sound_speed.into_base();
+        let c0_sq = reference_sound_speed_m_s * reference_sound_speed_m_s;
 
         Ok(path_integrals
             .into_iter()

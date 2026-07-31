@@ -1,6 +1,6 @@
 //! OpenPros benchmark data contracts.
 
-use aequitas::systems::si::quantities::Time;
+use aequitas::systems::si::quantities::{Length, Time};
 use leto::Array2;
 
 use super::super::{SoundSpeedShiftConfig, SoundSpeedShiftImage, SoundSpeedShiftSample};
@@ -52,8 +52,8 @@ impl Default for OpenProsShiftBenchmarkConfig {
 
 impl OpenProsShiftBenchmarkConfig {
     #[must_use]
-    pub fn spacing_m(&self) -> f64 {
-        REFERENCE_SPACING_M * self.spatial_decimation as f64
+    pub fn spacing(&self) -> Length {
+        Length::from_base(REFERENCE_SPACING_M * self.spatial_decimation as f64)
     }
 
     #[must_use]
@@ -67,7 +67,8 @@ impl OpenProsShiftBenchmarkConfig {
     #[must_use]
     pub fn waveform_expectation(&self) -> OpenProsWaveformExpectation {
         let shape = self.shape();
-        let spacing_m = self.spacing_m();
+        let spacing = self.spacing();
+        let spacing_m = spacing.into_base();
         OpenProsWaveformExpectation {
             paper_id: OPENPROS_PAPER_ID,
             source_channels: 4 * self.source_count_per_probe,
@@ -75,9 +76,12 @@ impl OpenProsShiftBenchmarkConfig {
             time_steps: REFERENCE_TIME_STEPS,
             peak_frequency_hz: REFERENCE_PEAK_FREQUENCY_HZ,
             absorbing_boundary_points: REFERENCE_ABSORBING_BOUNDARY_POINTS,
-            grid_spacing_m: spacing_m,
+            grid_spacing: spacing,
             sos_shape: shape,
-            field_of_view_m: (shape.0 as f64 * spacing_m, shape.1 as f64 * spacing_m),
+            field_of_view: (
+                Length::from_base(shape.0 as f64 * spacing_m),
+                Length::from_base(shape.1 as f64 * spacing_m),
+            ),
         }
     }
 }
@@ -91,9 +95,9 @@ pub struct OpenProsWaveformExpectation {
     pub time_steps: usize,
     pub peak_frequency_hz: f64,
     pub absorbing_boundary_points: usize,
-    pub grid_spacing_m: f64,
+    pub grid_spacing: Length,
     pub sos_shape: (usize, usize),
-    pub field_of_view_m: (f64, f64),
+    pub field_of_view: (Length, Length),
 }
 
 /// Deterministic OpenPros-style benchmark case.

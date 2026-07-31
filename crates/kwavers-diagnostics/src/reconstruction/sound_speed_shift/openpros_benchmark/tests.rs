@@ -5,6 +5,7 @@ use super::{
     openpros_shift_benchmark_case, run_openpros_shift_benchmark, OpenProsShiftBenchmarkConfig,
     OPENPROS_PAPER_ID,
 };
+use aequitas::systems::si::quantities::Length;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 
 #[test]
@@ -19,6 +20,11 @@ fn openpros_case_matches_limited_view_waveform_structure() {
     assert_eq!(case.waveform.peak_frequency_hz, MHZ_TO_HZ);
     assert_eq!(case.waveform.absorbing_boundary_points, 120);
     assert_eq!(case.waveform.sos_shape, (41, 17));
+    assert_eq!(case.waveform.grid_spacing, Length::from_base(0.003_75));
+    assert_eq!(
+        case.waveform.field_of_view,
+        (Length::from_base(0.153_75), Length::from_base(0.063_75))
+    );
     assert_eq!(case.samples.len(), 40 * 17);
     assert_eq!(case.frame_time_shifts.len(), case.samples.len());
     assert!(case.truth_shift_m_s.iter().any(|value| *value > 100.0));

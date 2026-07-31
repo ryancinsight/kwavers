@@ -1,4 +1,4 @@
-use aequitas::systems::si::quantities::Time;
+use aequitas::systems::si::quantities::{Length, Time};
 use leto::Array2;
 
 use super::{path, row_entries};
@@ -24,7 +24,7 @@ fn circular_arc_path_is_longer_than_its_chord() {
     let path = path::build_path(
         &sample,
         ShiftPropagation::CircularArc {
-            sagitta_m: 0.001,
+            sagitta: Length::from_base(0.001),
             segments: 16,
         },
     );
@@ -52,10 +52,10 @@ fn finite_frequency_entries_conserve_segment_length_on_full_mask() {
         Time::from_base(0.0),
     );
     let config = SoundSpeedShiftConfig {
-        spacing_m: 0.001,
+        spacing: Length::from_base(0.001),
         sensitivity: ShiftSensitivity::FiniteFrequency {
-            wavelength_m: 0.001,
-            support_radius_m: 0.002,
+            wavelength: Length::from_base(0.001),
+            support_radius: Length::from_base(0.002),
         },
         ..Default::default()
     };

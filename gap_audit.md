@@ -29,19 +29,25 @@
 
 # Gap Audit
 
-## Active sound-speed-shift spatial-scale audit — 2026-07-31
+## Live sound-speed-shift spatial-scale refresh — 2026-07-31
 
-`KWAVERS-AEQ-MET-48` is the next bounded gap: reference sound speed, grid
-spacing, curved-path sagitta, and finite-frequency wavelength/support scales
-remain raw unit-suffixed values in the sound-speed-shift configuration and ray
-contracts. The planned boundary uses Aequitas `Velocity` and `Length`, with
-base scalar extraction restricted to ray, propagation, validation, and solver
-formulas.
+`KWAVERS-AEQ-MET-48` found reference sound speed, grid spacing, curved-path
+sagitta, finite-frequency wavelength/support scales, and benchmark waveform
+spatial extents crossing public boundaries as raw unit-suffixed values. The
+contract now uses Aequitas `Velocity` and `Length`; base scalar extraction is
+restricted to ray, propagation, validation, coordinate, and solver formulas.
 
-Solver-owned `PlanarPoint` coordinates and dense Leto image storage remain
-explicit numerical boundaries for later slices. The path is real-valued and
-has no physical phasor, so Eunomia compatibility requires no imaginary
-physical unit. See [`Kwavers ADR 087`](docs/ADR/087-sound-speed-shift-spatial-quantities.md).
+Solver-owned `PlanarPoint` coordinates, dense Leto image storage, and
+benchmark error metrics remain explicit numerical/storage boundaries for later
+slices. The path is real-valued and has no physical phasor, so Eunomia
+compatibility requires no imaginary physical unit. See
+[`Kwavers ADR 087`](docs/ADR/087-sound-speed-shift-spatial-quantities.md).
+
+Verification: diagnostics test-target check passes; focused sound-speed-shift
+Nextest run `963e5434-b270-4e26-9e42-abec4c4b646f` passes 34/34 with 165
+skipped; warning-denied all-target Clippy, doctests, RustDoc, package
+formatting, diff checks, and the public-contract scan pass. Workspace-wide
+rustfmt remains Windows filename-length blocked; package formatting passes.
 
 ## Live sound-speed-shift refresh — 2026-07-31
 

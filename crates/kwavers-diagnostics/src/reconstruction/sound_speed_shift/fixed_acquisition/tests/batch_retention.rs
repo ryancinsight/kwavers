@@ -9,7 +9,7 @@ fn batch_discard_image_policy_retains_summaries_without_images() {
     truth.fill(12.0);
     let samples = horizontal_samples(&[-0.001, 0.0, 0.001]);
     let config = SoundSpeedShiftConfig {
-        spacing_m: 0.001,
+        spacing: Length::from_base(0.001),
         iterations: 16,
         tikhonov_weight: 0.0,
         smoothness_weight: 0.0,
@@ -67,7 +67,7 @@ fn batch_retain_policy_writes_images_through_plan_workspace() {
     truth.fill(11.0);
     let samples = horizontal_samples(&[-0.001, 0.0, 0.001]);
     let config = SoundSpeedShiftConfig {
-        spacing_m: 0.001,
+        spacing: Length::from_base(0.001),
         iterations: 16,
         tikhonov_weight: 0.0,
         smoothness_weight: 0.0,

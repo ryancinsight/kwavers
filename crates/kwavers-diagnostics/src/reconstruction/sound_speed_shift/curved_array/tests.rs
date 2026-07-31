@@ -1,6 +1,6 @@
 use std::f64::consts::{FRAC_PI_2, PI, TAU};
 
-use aequitas::systems::si::quantities::Time;
+use aequitas::systems::si::quantities::{Length, Time};
 use leto::Array2;
 
 use super::{CurvedArray2d, CurvedArrayShiftScan};
@@ -96,7 +96,7 @@ fn curved_array_samples_drive_straight_ray_shift_prediction() {
     let scan = CurvedArrayShiftScan::new(array, vec![4]);
     let samples = scan.samples().unwrap();
     let config = SoundSpeedShiftConfig {
-        spacing_m: 0.001,
+        spacing: Length::from_base(0.001),
         ..Default::default()
     };
 

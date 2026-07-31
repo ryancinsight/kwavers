@@ -1,6 +1,6 @@
 //! Operator geometry, sensitivity model, and invalid configuration rejection tests.
 
-use aequitas::systems::si::quantities::Time;
+use aequitas::systems::si::quantities::{Length, Time};
 use leto::Array2;
 
 use super::{
@@ -27,7 +27,7 @@ fn operator_stores_only_crossed_ray_segments() {
         Time::from_base(0.0),
     )];
     let config = SoundSpeedShiftConfig {
-        spacing_m: 0.001,
+        spacing: Length::from_base(0.001),
         ..Default::default()
     };
 
@@ -66,12 +66,12 @@ fn curved_ray_prediction_has_longer_uniform_path_than_straight_chord() {
         Time::from_base(0.0),
     )];
     let straight = SoundSpeedShiftConfig {
-        spacing_m: 0.001,
+        spacing: Length::from_base(0.001),
         ..Default::default()
     };
     let curved = SoundSpeedShiftConfig {
         propagation: ShiftPropagation::CircularArc {
-            sagitta_m: 0.001,
+            sagitta: Length::from_base(0.001),
             segments: 16,
         },
         ..straight
@@ -104,13 +104,13 @@ fn finite_frequency_sensitivity_detects_off_axis_shift() {
         Time::from_base(0.0),
     )];
     let geometric = SoundSpeedShiftConfig {
-        spacing_m: 0.001,
+        spacing: Length::from_base(0.001),
         ..Default::default()
     };
     let finite = SoundSpeedShiftConfig {
         sensitivity: ShiftSensitivity::FiniteFrequency {
-            wavelength_m: 0.001,
-            support_radius_m: 0.002,
+            wavelength: Length::from_base(0.001),
+            support_radius: Length::from_base(0.002),
         },
         ..geometric
     };
@@ -133,18 +133,18 @@ fn invalid_curved_ray_and_finite_frequency_config_are_rejected() {
     let mask = Array2::from_elem((3, 3), true);
     let samples = vec![horizontal_sample(0.0)];
     let invalid_arc = SoundSpeedShiftConfig {
-        spacing_m: 0.001,
+        spacing: Length::from_base(0.001),
         propagation: ShiftPropagation::CircularArc {
-            sagitta_m: 0.0,
+            sagitta: Length::from_base(0.0),
             segments: 1,
         },
         ..Default::default()
     };
     let invalid_frequency = SoundSpeedShiftConfig {
-        spacing_m: 0.001,
+        spacing: Length::from_base(0.001),
         sensitivity: ShiftSensitivity::FiniteFrequency {
-            wavelength_m: 0.0,
-            support_radius_m: 0.002,
+            wavelength: Length::from_base(0.0),
+            support_radius: Length::from_base(0.002),
         },
         ..Default::default()
     };

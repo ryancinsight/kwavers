@@ -1,5 +1,7 @@
 //! Speed-shift reconstruction configuration and model identifiers.
 
+use aequitas::systems::si::quantities::{Length, Velocity};
+
 /// Linearized straight-ray speed-of-sound shift model identifier.
 pub const SOUND_SPEED_SHIFT_MODEL: &str = "straight_ray_sound_speed_shift_tomography";
 /// Curved-ray speed-of-sound shift model identifier.
@@ -15,20 +17,18 @@ pub enum ShiftPropagation {
     StraightRay,
     /// Circular arc through the transmitter and receiver.
     ///
-    /// `sagitta_m` is the signed midpoint displacement from the chord along
+    /// `sagitta` is the signed midpoint displacement from the chord along
     /// the chord-left normal. `segments` is the number of exact straight
     /// subsegments used to represent the circular arc in the voxelized model.
-    CircularArc { sagitta_m: f64, segments: usize },
+    CircularArc { sagitta: Length, segments: usize },
 }
 
 impl ShiftPropagation {
     pub(in super::super) fn validate(self) -> Result<(), String> {
         match self {
             Self::StraightRay => Ok(()),
-            Self::CircularArc {
-                sagitta_m,
-                segments,
-            } => {
+            Self::CircularArc { sagitta, segments } => {
+                let sagitta_m = sagitta.into_base();
                 if !sagitta_m.is_finite() || sagitta_m.abs() <= f64::EPSILON {
                     return Err(format!(
                         "Circular-arc propagation requires finite nonzero sagitta, got {sagitta_m}"
@@ -52,22 +52,25 @@ pub enum ShiftSensitivity {
     GeometricRay,
     /// Compact finite-frequency Fresnel tube around the propagation path.
     ///
-    /// `wavelength_m` defines the local first-Fresnel-zone scale and
-    /// `support_radius_m` truncates the transverse kernel.
+    /// `wavelength` defines the local first-Fresnel-zone scale and
+    /// `support_radius` truncates the transverse kernel.
     FiniteFrequency {
-        wavelength_m: f64,
-        support_radius_m: f64,
+        wavelength: Length,
+        support_radius: Length,
     },
 }
 
 impl ShiftSensitivity {
-    pub(in super::super) fn validate(self, spacing_m: f64) -> Result<(), String> {
+    pub(in super::super) fn validate(self, spacing: Length) -> Result<(), String> {
         match self {
             Self::GeometricRay => Ok(()),
             Self::FiniteFrequency {
-                wavelength_m,
-                support_radius_m,
+                wavelength,
+                support_radius,
             } => {
+                let wavelength_m = wavelength.into_base();
+                let support_radius_m = support_radius.into_base();
+                let spacing_m = spacing.into_base();
                 if !wavelength_m.is_finite() || wavelength_m <= 0.0 {
                     return Err(format!(
                         "Finite-frequency sensitivity requires positive wavelength, got {wavelength_m}"
@@ -132,10 +135,10 @@ pub enum ShiftPrior {
 /// Configuration for speed-of-sound shift reconstruction.
 #[derive(Clone, Copy, Debug)]
 pub struct SoundSpeedShiftConfig {
-    /// Reference homogeneous sound speed c0 [m/s].
-    pub reference_sound_speed_m_s: f64,
-    /// Square pixel spacing `m`.
-    pub spacing_m: f64,
+    /// Reference homogeneous sound speed c0.
+    pub reference_sound_speed: Velocity,
+    /// Square pixel spacing.
+    pub spacing: Length,
     /// Iteration count for PCG or proximal gradient.
     pub iterations: usize,
     /// L2 Tikhonov weight on the speed shift [squared path units].
@@ -157,8 +160,10 @@ pub struct SoundSpeedShiftConfig {
 impl Default for SoundSpeedShiftConfig {
     fn default() -> Self {
         Self {
-            reference_sound_speed_m_s: kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE,
-            spacing_m: 5.0e-4,
+            reference_sound_speed: Velocity::from_base(
+                kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE,
+            ),
+            spacing: Length::from_base(5.0e-4),
             iterations: 64,
             tikhonov_weight: 1.0e-8,
             smoothness_weight: 0.0,
