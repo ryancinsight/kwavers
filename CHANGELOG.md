@@ -4,6 +4,13 @@
 
 ### Changed
 
+- **Breaking:** Sound-speed-shift curved-array radius/angle contracts and
+  OpenPros waveform peak frequency now use Aequitas `Length`, `Angle`, and
+  `Frequency`. Solver-owned coordinates, dense images, and benchmark error
+  metrics remain explicit numerical/storage boundaries; no complex or
+  imaginary physical unit is introduced. See [ADR
+  088](docs/ADR/088-sound-speed-curved-array-frequency-quantities.md).
+
 - **Breaking:** Sound-speed-shift reference sound speed, grid spacing,
   curved-path sagitta, and finite-frequency length scales now use Aequitas
   `Velocity` and `Length` contracts. Solver-owned coordinates and dense image

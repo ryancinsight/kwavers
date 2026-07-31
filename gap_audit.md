@@ -29,6 +29,20 @@
 
 # Gap Audit
 
+## Active sound-speed-shift curved-array/frequency audit — 2026-07-31
+
+`KWAVERS-AEQ-MET-49` is the next bounded gap: public curved-array radius and
+angle fields/results and OpenPros waveform peak frequency remain raw scalars
+despite the surrounding Aequitas spatial-scale contract. The planned boundary
+uses `Length`, `Angle`, and `Frequency`, with base extraction only for
+trigonometry, validation, and derived wavelength.
+
+Solver-owned `PlanarPoint` coordinates, dense Leto images, and benchmark
+error-metric storage remain explicit boundaries for later slices. The path is
+real-valued and has no physical phasor, so Eunomia compatibility requires no
+imaginary physical unit. See
+[`Kwavers ADR 088`](docs/ADR/088-sound-speed-curved-array-frequency-quantities.md).
+
 ## Live sound-speed-shift spatial-scale refresh — 2026-07-31
 
 `KWAVERS-AEQ-MET-48` found reference sound speed, grid spacing, curved-path

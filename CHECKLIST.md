@@ -1,5 +1,19 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-49 typed curved-array and benchmark frequency [major] — in progress
+
+- [ ] Type curved-array radius and angular fields/results with Aequitas
+      `Length` and `Angle`, including all constructors and callers.
+- [ ] Type OpenPros waveform peak frequency with Aequitas `Frequency`; extract
+      base scalars only at coordinate trigonometry and derived wavelength.
+- [ ] Preserve solver-owned `PlanarPoint`, dense image, and benchmark error
+      metric storage boundaries; synchronize ADR 088, gap-audit, backlog,
+      checklist, changelog, and the Atlas cross-repository audit.
+
+Acceptance: no public curved-array geometry angle/length or benchmark waveform
+frequency remains a unit-suffixed raw scalar in the migrated contracts; no
+complex or imaginary physical unit is introduced.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-48 typed sound-speed-shift spatial scales [major] — done 2026-07-31
 
 - [x] Type reference sound speed and grid spacing with Aequitas `Velocity` and
