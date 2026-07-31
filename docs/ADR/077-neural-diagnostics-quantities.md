@@ -42,7 +42,7 @@ to be a measured result.
 ## Verification
 
 The diagnostics test target compiles with `cargo check -p kwavers-diagnostics
---tests --offline`. The focused neural Nextest filter passes 40/40 tests with
+--tests --offline`. The focused neural Nextest filter passes 41/41 tests with
 151 unrelated diagnostics tests skipped. Warning-denied all-target Clippy,
 doctests (1 executable and 5 ignored), Rustdoc, formatting, and diff checks
 pass. The shared stack emits unused-provider-patch and linker warning

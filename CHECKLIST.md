@@ -12,7 +12,7 @@
       committed test/check gates and preserve peer-owned changes.
 
 Evidence: diagnostics test-target check passes offline; focused neural Nextest
-passes 40/40 with 151 skipped; warning-denied all-target Clippy, doctests,
+passes 41/41 with 151 skipped; warning-denied all-target Clippy, doctests,
 Rustdoc, formatting, and diff checks pass. Shared unused-provider-patch and
 linker warnings remain outside this item.
 

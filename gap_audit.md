@@ -53,7 +53,7 @@ quantity support at their formula/storage boundary. See [ADR
 077](docs/ADR/077-neural-diagnostics-quantities.md).
 
 Diagnostics test-target compilation passes offline. The focused neural
-Nextest filter passes 40/40 tests with 151 unrelated tests skipped;
+Nextest filter passes 41/41 tests with 151 unrelated tests skipped;
 warning-denied all-target Clippy, doctests, Rustdoc, formatting, and diff
 checks pass. Shared unused-provider-patch and linker warnings remain outside
 this metric closure.
