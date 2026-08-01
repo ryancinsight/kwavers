@@ -33,8 +33,12 @@
       edges, with no stale provider package identity or dependency edge.
 - [x] Advance direct provider lock entries to the Atlas graph and fix the
       resulting Aequitas temperature-difference and Leto 0.40 zip API errors.
-- [x] Verify the provider-compatible graph with Kwavers math 266/266 and solver
-      854/854 Nextest suites, plus locked physics and solver package checks.
+- [x] Propagate Coeus forward/backward failures through PINN networks,
+      residuals, autodiff, losses, and trainers; remove zero-gradient fallback
+      paths and complete Leto mutable-view API cleanup.
+- [x] Verify the provider-compatible graph with exact-graph workspace check,
+      solver clippy at `-D warnings`, Rustfmt, 422/422 PINN Nextest tests,
+      and 4/4 solver doctests.
 
 Acceptance: named public microbubble metrics are Aequitas-typed, provider
 vocabulary owns acceleration and pressure rate, formula/storage boundaries
@@ -42,16 +46,13 @@ remain explicit, and no compatibility wrapper or imaginary physical unit is
 introduced. Met.
 
 Evidence: provider Aequitas Nextest passes 47/47 and the pressure-rate law
-filter passes 1/1; Kwavers physics microbubble Nextest passes 38/38; Kwavers
-math Nextest passes 266/266; Kwavers solver Nextest passes 854/854 with four
-skipped tests; locked physics, math, and solver checks pass offline outside the
-Atlas overlay; exact-file formatting and diff checks pass. The therapy
-microbubble Nextest lane is environment-blocked by
-shared-cache compilation of unrelated `ritk-jpeg` without a Rust diagnostic;
-the bounded single-job retry timed out without output. PR #328 source head
-`ddef71529` is pending hosted matrix evidence after the
-stale provider and lock-graph failures on superseded heads. The exact current
-Atlas graph is locally metadata-verified.
+filter passes 1/1; Kwavers physics microbubble Nextest passes 38/38; the
+preceding math slice passes 266/266; the current exact-graph workspace check,
+locked metadata, solver clippy at `-D warnings`, 79-file Rustfmt, PINN Nextest
+422/422, and solver doctests 4/4 pass offline outside the Atlas overlay. The
+workspace check reports only the existing `principal_axis` dead-code warning
+and external provider linker warnings. PR #328 source head `2299c33d3` is
+pending hosted matrix evidence.
 
 ## Owner: Codex — KW-AEQ-MET-04 vessel physical metrics [major] [arch] — done
 

@@ -29,7 +29,11 @@
 - Outcome: public SI contracts use Aequitas `Length`, `Velocity`,
   `Acceleration`, `Pressure`, `PressureRate`, `Time`, `Force`, `Energy`, and
   related quantities; numerical and storage scalar extraction remains explicit.
-- Integration: PR #328 is at `ddef71529`. The checkout action and Python
+- Implementation commit: `2299c33d3` propagates fallible Coeus forward and
+  backward errors through PINN networks, residuals, autodiff utilities, loss
+  functions, and trainers; zero-gradient fallbacks are removed. It also
+  completes the Leto mutable-view API cleanup required by the locked graph.
+- Integration: PR #328 is at `2299c33d3`. The checkout action and Python
   release workflow pin Atlas `777cf325fad3114299b44a99a48145997f93a5b0`, the
   current Coeus/Leto-compatible provider graph containing Aequitas `8cc90b2`
   and Eunomia `18459875`.
@@ -41,18 +45,20 @@
 - Compatibility closure: lock entries now use the Atlas-pinned Asclepius,
   Hyperion, Proteus, and Tyche revisions; Kwavers uses Aequitas temperature
   differences explicitly and Leto 0.40's tuple-source `zip_mut_with` API.
-  Math 266/266 and solver 854/854 Nextest suites pass; no wrapper or fallback
-  path was introduced.
+  Math 266/266 remains green from the preceding provider slice; the current
+  PINN-targeted solver suite passes 422/422 with 848 tests skipped. No wrapper
+  or fallback path was introduced.
 - Eunomia boundary: the current contracts are real-valued. Genuine complex
   phasors remain representation data at existing dimensions and reduce to a
   real observable before force, energy, or state metrics; no imaginary unit is
   introduced.
 - Evidence: provider 47/47 plus pressure-rate 1/1; Kwavers physics
-  microbubble 38/38; physics and therapy test-target checks pass offline;
-  exact-file formatting and diff checks pass. Therapy Nextest remains
-  environment-blocked by unrelated `ritk-jpeg` compilation without a Rust
-  diagnostic. The prior hosted wheel/benchmark run failed at the stale
-  Eunomia provider pin; the corrected hosted matrix is pending.
+  microbubble 38/38; exact-graph workspace check, locked metadata, solver
+  clippy at `-D warnings`, 79-file Rustfmt, PINN Nextest 422/422, and solver
+  doctests 4/4 pass offline. The workspace check reports only the existing
+  `kwavers-analysis::principal_axis` dead-code warning and external provider
+  linker warnings. The corrected hosted wheel and benchmark matrix remains
+  pending on PR #328.
 
 ## KW-AEQ-MET-04 — Type functional-ultrasound vessel metrics [major] [arch] — done
 

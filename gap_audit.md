@@ -107,7 +107,11 @@ metrics. Complex representation is not a new physical dimension.
 See [`Kwavers ADR 092`](docs/ADR/092-therapeutic-microbubble-quantities.md)
 and [`Aequitas ADR 0013`](../aequitas/docs/adr/0013-acceleration-quantity.md).
 
-The current integration head is `ddef71529` on PR #328. The superseded
+The current implementation head is `2299c33d3` on PR #328. It propagates
+fallible Coeus forward and backward errors through PINN networks, residuals,
+autodiff utilities, loss functions, and trainers; zero-gradient fallback paths
+are removed. The same increment completes the Leto mutable-view API cleanup
+required by the locked provider graph. The superseded
 `f37896521` wheel matrix failed before compiling Kwavers because the pinned
 Atlas checkout materialized Eunomia before `UnitScalar`; the benchmark smoke
 failure was downstream of that same provider error. The Kwavers checkout
@@ -130,14 +134,13 @@ bubble heat-transfer formula, and all Kwavers `zip2_mut_with`/
 
 Verification: Aequitas provider Nextest previously passed 47/47 and the
 pressure-rate dimensional-law filter passed 1/1; Kwavers physics microbubble
-Nextest passed 38/38; Kwavers math Nextest passed 266/266; Kwavers solver
-Nextest passed 854/854 with four skipped tests; locked metadata, physics,
-math, and solver checks passed offline outside the Atlas overlay; exact-file
-formatting and diff checks pass. The therapy microbubble Nextest
-lane remains blocked by the shared target-cache compile of unrelated
-`ritk-jpeg`, which terminated without a Rust diagnostic; a bounded
-`CARGO_BUILD_JOBS=1` retry timed out without output. This is an
-environment/contention residual, not a source diagnostic from the typed slice.
+Nextest passed 38/38; the preceding math slice passed 266/266; the current
+exact-graph workspace check, locked metadata, solver clippy at `-D warnings`,
+79-file Rustfmt, PINN Nextest passed 422/422 with 848 skipped, and solver
+doctests passed 4/4. The workspace check reports only the existing
+`kwavers-analysis::principal_axis` dead-code warning and external provider
+linker warnings. The corrected hosted wheel and benchmark matrix remains the
+integration residual on PR #328.
 
 ## Review 2026-07-31 — KW-AEQ-MET-04 source-level closure
 

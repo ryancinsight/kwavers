@@ -32,6 +32,11 @@
   updates, and migrate Kwavers multi-input traversals to Leto 0.40's tuple
   source `zip_mut_with` API.
 
+- [patch] Propagate Coeus forward and backward errors through PINN networks,
+  residuals, autodiff utilities, loss functions, and trainers; remove
+  zero-gradient fallback paths and complete the Leto mutable-view API cleanup
+  required by the exact provider graph.
+
 - [major] [arch] Functional-ultrasound vessel segmentation now requires
   validated Aequitas voxel spacing and returns typed `Length<f64>` geometry
   plus typed `Velocity<f64>` Doppler results. Frequency, sound speed, diameter,
