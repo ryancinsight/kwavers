@@ -4,6 +4,15 @@
 
 ### Changed
 
+- **Breaking:** Therapeutic microbubble state, shell, radiation-force,
+  pressure-gradient, streaming-velocity, dynamics-service, and sampling
+  contracts now use Aequitas physical quantities. Aequitas adds coherent
+  `Acceleration` (`m/s²`) and `PressureRate` (`Pa/s`) vocabulary. Keller–Miksis,
+  Marmottant, Leto storage, and numerical formula boundaries retain explicit
+  scalar extraction. The real-valued contracts introduce no imaginary physical
+  unit; future Eunomia complex phasors must reduce to real observables at the
+  numerical boundary. See [ADR 092](docs/ADR/092-therapeutic-microbubble-quantities.md).
+
 - **Breaking:** Electromagnetic material conductivity now uses Aequitas
   `ElectricalConductivity`; Kwavers exposes typed volumetric power-density and
   specific-absorption-rate deposition from `σ·|E|²/ρ`. Dense real Leto arrays

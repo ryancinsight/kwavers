@@ -27,6 +27,10 @@
 //! - Marmottant et al. (2005): "A model for large amplitude oscillations of coated bubbles"
 //! - De Jong et al. (2002): "Ultrasound scattering properties of microbubbles"
 
+use aequitas::systems::si::quantities::{
+    Acceleration, AmountOfSubstance, DynamicViscosity, Length, Mass, MassDensity, Pressure,
+    SurfaceTension, ThermodynamicTemperature, Time, Velocity,
+};
 use kwavers_core::constants::cavitation::SURFACE_TENSION_WATER;
 use kwavers_core::constants::fundamental::{ATMOSPHERIC_PRESSURE, GAS_CONSTANT};
 use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_K;
@@ -40,88 +44,89 @@ mod tests;
 /// Position in 3D space (Cartesian coordinates) — value object (m).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Position3D {
-    pub x: f64,
-    pub y: f64,
-    pub z: f64,
+    pub x: Length<f64>,
+    pub y: Length<f64>,
+    pub z: Length<f64>,
 }
 
 impl Position3D {
     #[must_use]
-    pub fn new(x: f64, y: f64, z: f64) -> Self {
+    pub fn new(x: Length<f64>, y: Length<f64>, z: Length<f64>) -> Self {
         Self { x, y, z }
     }
 
     #[must_use]
     pub fn zero() -> Self {
         Self {
-            x: 0.0,
-            y: 0.0,
-            z: 0.0,
+            x: Length::from_base(0.0),
+            y: Length::from_base(0.0),
+            z: Length::from_base(0.0),
         }
     }
 
     #[must_use]
-    pub fn distance_to(&self, other: &Self) -> f64 {
-        let dx = self.x - other.x;
-        let dy = self.y - other.y;
-        let dz = self.z - other.z;
-        dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt()
+    pub fn distance_to(&self, other: &Self) -> Length<f64> {
+        let dx = self.x.into_base() - other.x.into_base();
+        let dy = self.y.into_base() - other.y.into_base();
+        let dz = self.z.into_base() - other.z.into_base();
+        Length::from_base(dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt())
     }
 }
 
 /// Velocity in 3D space — value object (m/s).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Velocity3D {
-    pub vx: f64,
-    pub vy: f64,
-    pub vz: f64,
+    pub vx: Velocity<f64>,
+    pub vy: Velocity<f64>,
+    pub vz: Velocity<f64>,
 }
 
 impl Velocity3D {
     #[must_use]
-    pub fn new(vx: f64, vy: f64, vz: f64) -> Self {
+    pub fn new(vx: Velocity<f64>, vy: Velocity<f64>, vz: Velocity<f64>) -> Self {
         Self { vx, vy, vz }
     }
 
     #[must_use]
     pub fn zero() -> Self {
         Self {
-            vx: 0.0,
-            vy: 0.0,
-            vz: 0.0,
+            vx: Velocity::from_base(0.0),
+            vy: Velocity::from_base(0.0),
+            vz: Velocity::from_base(0.0),
         }
     }
 
     #[must_use]
-    pub fn magnitude(&self) -> f64 {
-        self.vz
-            .mul_add(self.vz, self.vx.mul_add(self.vx, self.vy * self.vy))
-            .sqrt()
+    pub fn magnitude(&self) -> Velocity<f64> {
+        let vx = self.vx.into_base();
+        let vy = self.vy.into_base();
+        let vz = self.vz.into_base();
+        Velocity::from_base(vz.mul_add(vz, vx.mul_add(vx, vy * vy)).sqrt())
     }
 }
 
 /// Complete microbubble state for therapeutic ultrasound simulation.
 #[derive(Debug, Clone, PartialEq)]
 pub struct MicrobubbleState {
-    pub radius: f64,
-    pub radius_equilibrium: f64,
-    pub wall_velocity: f64,
-    pub wall_acceleration: f64,
+    pub radius: Length<f64>,
+    pub radius_equilibrium: Length<f64>,
+    pub wall_velocity: Velocity<f64>,
+    pub wall_acceleration: Acceleration<f64>,
     pub position: Position3D,
     pub velocity: Velocity3D,
-    pub temperature: f64,
-    pub pressure_internal: f64,
-    pub pressure_liquid: f64,
-    pub gas_moles: f64,
-    pub vapor_moles: f64,
-    pub shell_elasticity: f64,
-    pub shell_viscosity: f64,
-    pub shell_radius_buckling: f64,
-    pub shell_radius_rupture: f64,
-    pub surface_tension: f64,
-    pub drug_concentration: f64,
-    pub drug_released_total: f64,
-    pub time: f64,
+    pub temperature: ThermodynamicTemperature<f64>,
+    pub pressure_internal: Pressure<f64>,
+    pub pressure_liquid: Pressure<f64>,
+    pub gas_moles: AmountOfSubstance<f64>,
+    pub vapor_moles: AmountOfSubstance<f64>,
+    pub shell_elasticity: SurfaceTension<f64>,
+    pub shell_viscosity: DynamicViscosity<f64>,
+    pub shell_radius_buckling: Length<f64>,
+    pub shell_radius_rupture: Length<f64>,
+    pub surface_tension: SurfaceTension<f64>,
+    pub drug_concentration: MassDensity<f64>,
+    pub drug_released_total: Mass<f64>,
+    pub time: Time<f64>,
     pub has_cavitated: bool,
     pub shell_is_ruptured: bool,
 }
@@ -132,37 +137,42 @@ impl MicrobubbleState {
     /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
     ///
     pub fn new(
-        radius_equilibrium: f64,
-        shell_elasticity: f64,
-        shell_viscosity: f64,
-        drug_concentration: f64,
+        radius_equilibrium: Length<f64>,
+        shell_elasticity: SurfaceTension<f64>,
+        shell_viscosity: DynamicViscosity<f64>,
+        drug_concentration: MassDensity<f64>,
         position: Position3D,
     ) -> KwaversResult<Self> {
-        if radius_equilibrium <= 0.0 {
+        let radius_equilibrium_value = radius_equilibrium.into_base();
+        let shell_elasticity_value = shell_elasticity.into_base();
+        let shell_viscosity_value = shell_viscosity.into_base();
+        let drug_concentration_value = drug_concentration.into_base();
+
+        if radius_equilibrium_value <= 0.0 {
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
                 parameter: "radius_equilibrium".to_owned(),
-                value: radius_equilibrium,
+                value: radius_equilibrium_value,
                 reason: "must be positive".to_owned(),
             }));
         }
-        if shell_elasticity < 0.0 {
+        if shell_elasticity_value < 0.0 {
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
                 parameter: "shell_elasticity".to_owned(),
-                value: shell_elasticity,
+                value: shell_elasticity_value,
                 reason: "must be non-negative".to_owned(),
             }));
         }
-        if shell_viscosity < 0.0 {
+        if shell_viscosity_value < 0.0 {
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
                 parameter: "shell_viscosity".to_owned(),
-                value: shell_viscosity,
+                value: shell_viscosity_value,
                 reason: "must be non-negative".to_owned(),
             }));
         }
-        if drug_concentration < 0.0 {
+        if drug_concentration_value < 0.0 {
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
                 parameter: "drug_concentration".to_owned(),
-                value: drug_concentration,
+                value: drug_concentration_value,
                 reason: "must be non-negative".to_owned(),
             }));
         }
@@ -171,31 +181,31 @@ impl MicrobubbleState {
         let body_temperature = BODY_TEMPERATURE_K;
         // SURFACE_TENSION_WATER = 0.0728 N/m at 20°C (cavitation::SSOT).
 
-        let shell_radius_buckling = radius_equilibrium * 0.9;
-        let shell_radius_rupture = radius_equilibrium * 1.5;
-        let volume = (4.0 / 3.0) * std::f64::consts::PI * radius_equilibrium.powi(3);
+        let shell_radius_buckling = radius_equilibrium_value * 0.9;
+        let shell_radius_rupture = radius_equilibrium_value * 1.5;
+        let volume = (4.0 / 3.0) * std::f64::consts::PI * radius_equilibrium_value.powi(3);
         let gas_moles = (ATMOSPHERIC_PRESSURE * volume) / (GAS_CONSTANT * body_temperature);
 
         Ok(Self {
-            radius: radius_equilibrium,
+            radius: Length::from_base(radius_equilibrium_value),
             radius_equilibrium,
-            wall_velocity: 0.0,
-            wall_acceleration: 0.0,
+            wall_velocity: Velocity::from_base(0.0),
+            wall_acceleration: Acceleration::from_base(0.0),
             position,
             velocity: Velocity3D::zero(),
-            temperature: body_temperature,
-            pressure_internal: ATMOSPHERIC_PRESSURE,
-            pressure_liquid: ATMOSPHERIC_PRESSURE,
-            gas_moles,
-            vapor_moles: 0.0,
+            temperature: ThermodynamicTemperature::from_base(body_temperature),
+            pressure_internal: Pressure::from_base(ATMOSPHERIC_PRESSURE),
+            pressure_liquid: Pressure::from_base(ATMOSPHERIC_PRESSURE),
+            gas_moles: AmountOfSubstance::from_base(gas_moles),
+            vapor_moles: AmountOfSubstance::from_base(0.0),
             shell_elasticity,
             shell_viscosity,
-            shell_radius_buckling,
-            shell_radius_rupture,
-            surface_tension: SURFACE_TENSION_WATER,
+            shell_radius_buckling: Length::from_base(shell_radius_buckling),
+            shell_radius_rupture: Length::from_base(shell_radius_rupture),
+            surface_tension: SurfaceTension::from_base(SURFACE_TENSION_WATER),
             drug_concentration,
-            drug_released_total: 0.0,
-            time: 0.0,
+            drug_released_total: Mass::from_base(0.0),
+            time: Time::from_base(0.0),
             has_cavitated: false,
             shell_is_ruptured: false,
         })
@@ -206,7 +216,13 @@ impl MicrobubbleState {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn sono_vue(position: Position3D) -> KwaversResult<Self> {
-        Self::new(1.25e-6, 0.5, 0.8e-9, 0.0, position)
+        Self::new(
+            Length::from_base(1.25e-6),
+            SurfaceTension::from_base(0.5),
+            DynamicViscosity::from_base(0.8e-9),
+            MassDensity::from_base(0.0),
+            position,
+        )
     }
 
     /// Definity-like microbubble: 1.5 μm radius, lipid bilayer, C3F8 gas.
@@ -214,7 +230,13 @@ impl MicrobubbleState {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn definity(position: Position3D) -> KwaversResult<Self> {
-        Self::new(1.5e-6, 1.0, 1.2e-9, 0.0, position)
+        Self::new(
+            Length::from_base(1.5e-6),
+            SurfaceTension::from_base(1.0),
+            DynamicViscosity::from_base(1.2e-9),
+            MassDensity::from_base(0.0),
+            position,
+        )
     }
 
     /// Drug-loaded therapeutic microbubble with weaker shell for easier rupture.
@@ -222,15 +244,15 @@ impl MicrobubbleState {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn drug_loaded(
-        radius_um: f64,
-        drug_concentration_kg_m3: f64,
+        radius: Length<f64>,
+        drug_concentration: MassDensity<f64>,
         position: Position3D,
     ) -> KwaversResult<Self> {
         Self::new(
-            radius_um * 1e-6,
-            0.3,
-            0.5e-9,
-            drug_concentration_kg_m3,
+            radius,
+            SurfaceTension::from_base(0.3),
+            DynamicViscosity::from_base(0.5e-9),
+            drug_concentration,
             position,
         )
     }
@@ -241,13 +263,13 @@ impl fmt::Display for MicrobubbleState {
         write!(
             f,
             "Microbubble(R={:.2}μm, R₀={:.2}μm, Ṙ={:.2}m/s, T={:.1}K, pos=({:.3},{:.3},{:.3})m)",
-            self.radius * 1e6,
-            self.radius_equilibrium * 1e6,
-            self.wall_velocity,
-            self.temperature,
-            self.position.x,
-            self.position.y,
-            self.position.z
+            self.radius.into_base() * 1e6,
+            self.radius_equilibrium.into_base() * 1e6,
+            self.wall_velocity.into_base(),
+            self.temperature.into_base(),
+            self.position.x.into_base(),
+            self.position.y.into_base(),
+            self.position.z.into_base()
         )
     }
 }

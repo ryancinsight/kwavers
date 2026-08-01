@@ -60,7 +60,7 @@ use crate::therapy::microbubble_dynamics::{
 use kwavers_core::error::KwaversResult;
 
 use crate::therapy::microbubble_dynamics::{DrugLoadingMode, DrugPayload};
-use aequitas::systems::si::quantities::Time;
+use aequitas::systems::si::quantities::{Length, PressureRate, Time};
 use kwavers_physics::therapy::microbubble::{
     MarmottantShellProperties, MicrobubbleState, Position3D,
 };
@@ -159,9 +159,9 @@ pub fn update_microbubble_dynamics(
     // Create representative microbubble at domain center
     // Future enhancement: Track full population with spatial distribution
     let center_position = Position3D::new(
-        (nx / 2) as f64 * 0.001, // Assume 1mm grid spacing
-        (ny / 2) as f64 * 0.001,
-        (nz / 2) as f64 * 0.001,
+        Length::from_base((nx / 2) as f64 * 0.001), // Assume 1mm grid spacing
+        Length::from_base((ny / 2) as f64 * 0.001),
+        Length::from_base((nz / 2) as f64 * 0.001),
     );
 
     // Create typical SonoVue-like microbubble (common clinical contrast agent)
@@ -172,14 +172,18 @@ pub fn update_microbubble_dynamics(
 
     // Create drug payload (assume no drug for pure imaging agent)
     // For drug delivery applications, use DrugPayload::doxorubicin() or similar
-    let volume = bubble.volume();
+    let volume = bubble.volume().into_base();
     let mut drug = DrugPayload::new(0.0, volume, DrugLoadingMode::ShellEmbedded, 0.0)?;
 
     // Create dynamics service
     let service = MicrobubbleDynamicsService::from_microbubble_state(&bubble)?;
 
     // Sample acoustic field at bubble position
-    let grid_spacing = (0.001, 0.001, 0.001); // Assume 1mm grid spacing
+    let grid_spacing = (
+        Length::from_base(0.001),
+        Length::from_base(0.001),
+        Length::from_base(0.001),
+    ); // Assume 1mm grid spacing
     let (acoustic_pressure, pressure_gradient) = sample_acoustic_field_at_position(
         &bubble.position,
         &acoustic_field.pressure,
@@ -196,15 +200,15 @@ pub fn update_microbubble_dynamics(
     // without driving the integrator out of its convergence domain.
     // Ref: Prosperetti (1977): "Thermal effects and damping mechanisms in the
     // forced radial oscillations of gas bubbles in liquids."
-    let dt_bub = dt_seconds.min(1e-6);
+    let dt_bub = Time::from_base(dt_seconds.min(1e-6));
     service.update_bubble_dynamics(
         &mut bubble,
         &mut shell,
         &mut drug,
         acoustic_pressure,
         pressure_gradient,
-        0.0, // dP_ac/dt [Pa/s] — slowly-varying approximation
-        0.0, // time (could track cumulative time)
+        PressureRate::from_base(0.0), // slowly-varying approximation
+        Time::from_base(0.0),         // time (could track cumulative time)
         dt_bub,
     )?;
 
@@ -215,9 +219,9 @@ pub fn update_microbubble_dynamics(
 
     // If bubble has cavitated or ruptured, reduce local concentration
     if bubble.has_cavitated || shell.is_ruptured() {
-        let ix = (bubble.position.x / grid_spacing.0).round() as usize;
-        let iy = (bubble.position.y / grid_spacing.1).round() as usize;
-        let iz = (bubble.position.z / grid_spacing.2).round() as usize;
+        let ix = (bubble.position.x.into_base() / grid_spacing.0.into_base()).round() as usize;
+        let iy = (bubble.position.y.into_base() / grid_spacing.1.into_base()).round() as usize;
+        let iz = (bubble.position.z.into_base() / grid_spacing.2.into_base()).round() as usize;
 
         if ix < nx && iy < ny && iz < nz {
             concentration_field[[ix, iy, iz]] *= 0.5; // Reduce concentration after cavitation

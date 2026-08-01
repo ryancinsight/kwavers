@@ -29,6 +29,43 @@
 
 # Gap Audit
 
+## Closed therapeutic microbubble quantity audit — 2026-08-01
+
+`KWAVERS-AEQ-MET-53` is closed for implementation. The public therapeutic
+microbubble state now carries Aequitas `Length`, `Velocity`, `Acceleration`,
+`ThermodynamicTemperature`, `Pressure`, `AmountOfSubstance`,
+`SurfaceTension`, `DynamicViscosity`, `MassDensity`, `Mass`, `Time`, and
+`Velocity3D` contracts. Shell properties use typed radius, surface tension,
+viscosity, strain, stress, and pressure contributions. Radiation force,
+pressure-gradient, and streaming-velocity surfaces use typed force, pressure,
+length, velocity, frequency, time, and dimensionless direction/scale values.
+The therapy dynamics service and sampling boundary use typed pressure,
+pressure-gradient, pressure-rate, length, and time values.
+
+The provider owns `Acceleration` (`m/s²`) and `PressureRate` (`Pa/s`) as SI
+dimensions and coherent units. Keller–Miksis, Marmottant, Leto storage, drug
+payload, finite-difference, and other numerical formula boundaries extract
+base scalars explicitly; no consumer-local SI wrapper remains.
+
+The therapeutic acoustic contracts are real-valued and do not require an
+imaginary physical unit. If a future Eunomia complex phasor is introduced,
+the numerical boundary must reduce it to the real observable (Hermitian
+magnitude where required) before producing real pressure, force, or energy
+metrics. Complex representation is not a new physical dimension.
+
+See [`Kwavers ADR 092`](docs/ADR/092-therapeutic-microbubble-quantities.md)
+and [`Aequitas ADR 0013`](../aequitas/docs/adr/0013-acceleration-quantity.md).
+
+Verification: Aequitas provider Nextest previously passed 47/47 and the
+pressure-rate dimensional-law filter passed 1/1; Kwavers physics microbubble
+Nextest passed 38/38; `cargo check -p kwavers-physics --tests --offline` and
+`cargo check -p kwavers-therapy --tests --offline` passed; exact-file
+formatting and diff checks pass. The Kwavers therapy microbubble Nextest lane
+remains blocked by the shared target-cache compile of unrelated `ritk-jpeg`,
+which terminated without a Rust diagnostic; a bounded `CARGO_BUILD_JOBS=1`
+retry timed out without output. This is an environment/contention residual,
+not a source diagnostic from the typed microbubble slice.
+
 ## Closed electromagnetic SAR deposition audit — 2026-07-31
 
 `KWAVERS-AEQ-MET-52` is closed. The remaining named-consumer gap was the

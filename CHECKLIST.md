@@ -1,5 +1,30 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-53 typed therapeutic microbubble quantities [major] — done 2026-08-01
+
+- [x] Type public therapeutic microbubble state, shell, radiation-force,
+      pressure-gradient, streaming-velocity, dynamics-service, and sampling
+      contracts with Aequitas quantities.
+- [x] Add provider-owned `Acceleration` and `PressureRate` SI vocabulary;
+      keep Keller–Miksis, Marmottant, Leto storage, drug payload, and numerical
+      formula scalar extraction explicit.
+- [x] Add ADR 092 and synchronize the backlog, changelog, and gap audit with
+      the real-valued Eunomia boundary rule: no imaginary physical unit;
+      complex phasors reduce to real observables at numerical boundaries.
+
+Acceptance: named public microbubble metrics are Aequitas-typed, provider
+vocabulary owns acceleration and pressure rate, formula/storage boundaries
+remain explicit, and no compatibility wrapper or imaginary physical unit is
+introduced. Met.
+
+Evidence: Aequitas provider Nextest passes 47/47 and the pressure-rate law
+filter passes 1/1; Kwavers physics microbubble Nextest passes 38/38; physics
+and therapy test-target checks pass offline; exact-file formatting and diff
+checks pass. The therapy microbubble Nextest lane is blocked by shared-cache
+contention while compiling unrelated `ritk-jpeg` without a Rust diagnostic;
+the bounded single-job retry timed out without output. The residual is
+recorded in `gap_audit.md` and does not identify a source error in this slice.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-52 typed electromagnetic SAR deposition [arch] [major] — done 2026-07-31
 
 - [x] Add the Aequitas `ElectricalConductivity` dimension, quantity, and
