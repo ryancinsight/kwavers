@@ -28,6 +28,9 @@
 - [x] Align `deny.toml` with the locked transitive RITK graph by allowing the
       Gaia provider and deleting the unused cutile-rs source entry; local
       `cargo deny check sources` passes.
+- [x] Regenerate the lock from the exact Atlas `777cf` provider graph with the
+      hosted Linux platform filter; locked metadata and source policy checks
+      pass without a lock rewrite.
 
 Acceptance: named public microbubble metrics are Aequitas-typed, provider
 vocabulary owns acceleration and pressure rate, formula/storage boundaries
@@ -41,7 +44,7 @@ locked metadata, solver clippy at `-D warnings`, 79-file Rustfmt, PINN Nextest
 422/422, solver doctests 4/4, and `cargo deny check sources` pass offline
 outside the Atlas overlay. The workspace check reports only the existing
 `principal_axis` dead-code warning and external provider linker warnings. PR
-#328 source head `2bedc44bf` is pending hosted matrix evidence.
+#328 source head `c8549096e` is pending hosted matrix evidence.
 
 ## Owner: Codex — KW-AEQ-MET-04 vessel physical metrics [major] [arch] — done
 
