@@ -5807,7 +5807,6 @@ dependencies = [
  "coeus-core 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
  "flate2",
  "ritk-codecs",
- "ritk-diffusion-scheme",
  "ritk-image",
  "ritk-spatial",
 ]
