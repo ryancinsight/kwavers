@@ -5535,7 +5535,6 @@ dependencies = [
  "dicom",
  "dicom-pixeldata",
  "ritk-codecs",
- "ritk-spatial",
 ]
 
 [[package]]
@@ -5810,7 +5809,6 @@ version = "0.1.0"
 dependencies = [
  "leto",
  "serde",
- "thiserror 2.0.18",
 ]
 
 [[package]]
