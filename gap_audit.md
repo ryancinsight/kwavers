@@ -93,8 +93,9 @@ invalid-input behavior.
 The re-audit still finds no missing Aequitas metric dimension in the named
 CFDrs, Helios, or Kwavers consumer boundaries. Public complex values remain
 Eunomia-backed formula/storage values; none of the audited physical contracts
-requires a separate imaginary unit. Exact-head hosted checks for this fix are
-the delivery gate after push.
+requires a separate imaginary unit. PR #325 merged as Kwavers main
+`cc5c9c4dd`; exact-head Code Coverage passed in 39m33s and Test Suite Coverage
+passed in 32m45s, with the remaining required matrix checks also green.
 
 - Review 2026-07-28: PR #325's original provider blocker is closed through
   Mnemosyne PR #31 and the synchronized Atlas graph above. The immutable graph

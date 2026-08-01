@@ -1,6 +1,6 @@
 # Backlog / Strategy
 
-## KW-AEQ-MET-04 — Type functional-ultrasound vessel metrics [major] [arch] — in-progress
+## KW-AEQ-MET-04 — Type functional-ultrasound vessel metrics [major] [arch] — done
 
 - Owner: Codex; scope: `crates/kwavers-analysis/src/signal_processing/vasculature/**`,
   `backlog.md`, `CHECKLIST.md`, and `gap_audit.md`.
@@ -31,6 +31,10 @@
   the pinned Atlas graph.
 - Non-goals: Doppler field storage, dimensionless confidence/orientation, and
   the unrelated transducer PR #324 residuals.
+- Delivery: PR #325 merged as Kwavers main `cc5c9c4dd` after the exact-head
+  hosted matrix passed. The final source-level review fix reuses the validated
+  centerline for total length, eliminating the duplicate mask and medial-axis
+  traversal without changing the typed contracts.
 
 ## KW-DOCS-BOOK-PAGES-1 — Publish the source-backed mdBook through GitHub Pages [patch] — done
 
