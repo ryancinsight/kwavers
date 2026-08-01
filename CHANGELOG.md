@@ -44,6 +44,10 @@
   hosted Linux target so locked documentation and test commands do not rewrite
   platform-specific `wgpu` dependency entries.
 
+- [patch] Normalize direct Consus dependencies to the canonical `.git` source
+  URL used by RITK and align the locked HDF5/IO packages with Atlas Consus
+  `f0c28690`, eliminating duplicate git-source identities around `consus-onnx`.
+
 - [major] [arch] Functional-ultrasound vessel segmentation now requires
   validated Aequitas voxel spacing and returns typed `Length<f64>` geometry
   plus typed `Velocity<f64>` Doppler results. Frequency, sound speed, diameter,

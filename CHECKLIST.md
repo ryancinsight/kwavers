@@ -45,6 +45,10 @@
 - [x] Regenerate the lock from the exact Atlas `777cf` provider graph with the
       hosted Linux platform filter; locked metadata and source policy checks
       pass without a lock rewrite.
+- [x] Normalize direct Consus dependencies to RITK's canonical `.git` source
+      URL and align the locked Consus packages with Atlas head `f0c28690`,
+      eliminating duplicate git-source identities while retaining the
+      separate `consus-npy` provider branch.
 
 Acceptance: named public microbubble metrics are Aequitas-typed, provider
 vocabulary owns acceleration and pressure rate, formula/storage boundaries

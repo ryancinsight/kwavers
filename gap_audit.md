@@ -126,8 +126,13 @@ the `ritk-diffusion-scheme` package and edges owned by that graph. Locked
 refreshed run exposed six Windows-target `wgpu` dependency entries that made
 hosted Linux `--locked` commands try to rewrite `Cargo.lock`; regeneration
 against the exact `777cf` graph with `x86_64-unknown-linux-gnu` selected removes
-that platform-specific resolver drift. The refreshed hosted matrix is the
-remaining integration gate.
+that platform-specific resolver drift. The hosted run then exposed a second
+provider-source defect: Kwavers' direct Consus edges used the URL without
+`.git`, while RITK's `consus-onnx` edge used the canonical `.git` URL. Direct
+edges now use the canonical URL, and the lock aligns all shared Consus packages
+with Atlas head `f0c28690`; only the separately required `consus-npy` branch
+remains distinct. The refreshed hosted matrix is the remaining integration
+gate.
 
 Advancing the lock to the Atlas-pinned Asclepius, Hyperion, Proteus, and Tyche
 revisions exposed two additional compatibility defects that are now resolved:
