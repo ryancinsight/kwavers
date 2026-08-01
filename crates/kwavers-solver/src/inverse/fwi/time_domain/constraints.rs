@@ -43,7 +43,7 @@ fn pressure_second_derivative_views_into(
             },
         );
     } else {
-        leto_ops::zip_mut_with(dst.view_mut(), (&p0, &p1, &p2), |d, (v0, v1, v2)| {
+        leto_ops::zip_mut_with(&mut dst.view_mut(), (&p0, &p1, &p2), |d, (v0, v1, v2)| {
             *d = (2.0f64.mul_add(-*v1, *v0) + *v2) * inv_dt_sq;
         })
         .expect("invariant: dst, p0, p1, p2 shapes asserted equal above");

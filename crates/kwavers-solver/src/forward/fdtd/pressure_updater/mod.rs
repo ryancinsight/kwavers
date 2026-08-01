@@ -35,7 +35,7 @@ pub(super) fn accumulate_two_fields(target: &mut Array3<f64>, x: &Array3<f64>, y
         });
     } else {
         leto_ops::zip_mut_with(
-            target.view_mut(),
+            &mut target.view_mut(),
             (&x.view(), &y.view()),
             |target_value, (x_value, y_value)| *target_value += *x_value + *y_value,
         )

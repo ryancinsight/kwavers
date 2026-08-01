@@ -103,7 +103,7 @@ impl RtmProcessor {
             });
         } else {
             leto_ops::zip_mut_with(
-                image.view_mut(),
+                &mut image.view_mut(),
                 (&source_wavefield.view(), &receiver_wavefield.view()),
                 |img, (src, rcv)| {
                     *img += *src * *rcv;
@@ -166,7 +166,7 @@ impl RtmProcessor {
             });
         } else {
             leto_ops::zip_mut_with(
-                image.view_mut(),
+                &mut image.view_mut(),
                 (&source_wavefield.view(), &receiver_wavefield.view()),
                 |img, (src, rcv)| {
                     let phi = *src * *src;

@@ -29,9 +29,17 @@
 - Outcome: public SI contracts use Aequitas `Length`, `Velocity`,
   `Acceleration`, `Pressure`, `PressureRate`, `Time`, `Force`, `Energy`, and
   related quantities; numerical and storage scalar extraction remains explicit.
-- Integration: PR #328 is at `4fa612197`. The checkout action and Python
+- Integration: PR #328 is at `abbe79d4a`. The checkout action and Python
   release workflow pin Atlas `8573cc5d43eb3334be6673b1d45c404b6dc0a185` so
   Aequitas `8cc90b2` resolves against Eunomia `18459875`.
+- Lock graph: refreshed `Cargo.lock` from the standalone integration manifest;
+  `cargo metadata --locked --all-features` passes outside the Atlas development
+  overlay. The corrected hosted wheel and benchmark jobs remain pending.
+- Compatibility closure: lock entries now use the Atlas-pinned Asclepius,
+  Hyperion, Proteus, and Tyche revisions; Kwavers uses Aequitas temperature
+  differences explicitly and Leto 0.40's tuple-source `zip_mut_with` API.
+  Math 266/266 and solver 854/854 Nextest suites pass; no wrapper or fallback
+  path was introduced.
 - Eunomia boundary: the current contracts are real-valued. Genuine complex
   phasors remain representation data at existing dimensions and reduce to a
   real observable before force, energy, or state metrics; no imaginary unit is
