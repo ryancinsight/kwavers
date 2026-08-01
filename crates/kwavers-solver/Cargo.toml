@@ -79,7 +79,7 @@ name = "elastic_shear_fwi_lesion"
 required-features = ["clinical-imaging"]
 
 [dev-dependencies]
-stats_alloc = { workspace = true }
+kwavers-alloc-probe = { path = "../kwavers-alloc-probe" }
 
 [[test]]
 name = "collocation_allocation"

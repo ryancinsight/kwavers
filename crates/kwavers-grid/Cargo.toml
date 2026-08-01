@@ -21,7 +21,7 @@ log = "0.4"
 
 [dev-dependencies]
 proptest = "1.2"
-stats_alloc = { workspace = true }
+kwavers-alloc-probe = { path = "../kwavers-alloc-probe" }
 
 [lints]
 workspace = true
