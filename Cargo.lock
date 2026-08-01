@@ -36,7 +36,7 @@ checksum = "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa"
 [[package]]
 name = "aequitas"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/aequitas#262b3e09c19d844f57765d3e4ea6ab2336653d6d"
+source = "git+https://github.com/ryancinsight/aequitas#ce3ef7a6ea26a025b91df99034cadbbcf9b01330"
 dependencies = [
  "eunomia",
  "typenum",
@@ -876,6 +876,7 @@ dependencies = [
  "coeus-sparse",
  "coeus-tensor",
  "eunomia",
+ "leto",
  "leto-ops",
  "melinoe",
  "smallvec",
@@ -2546,7 +2547,7 @@ dependencies = [
 
 [[package]]
 name = "hermes-simd"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "eunomia",
  "hermes-simd-core",
@@ -2558,7 +2559,7 @@ dependencies = [
 
 [[package]]
 name = "hermes-simd-core"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "bytemuck",
  "eunomia",
@@ -2569,7 +2570,7 @@ dependencies = [
 
 [[package]]
 name = "hermes-simd-intrinsics"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "eunomia",
  "hermes-simd-core",
@@ -2577,7 +2578,7 @@ dependencies = [
 
 [[package]]
 name = "hermes-simd-macros"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2586,7 +2587,7 @@ dependencies = [
 
 [[package]]
 name = "hermes-simd-types"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "hermes-simd-core",
  "hermes-simd-intrinsics",
@@ -3370,6 +3371,7 @@ dependencies = [
 name = "kwavers-analysis"
 version = "3.0.0"
 dependencies = [
+ "aequitas",
  "anyhow",
  "apollo-fft",
  "bytemuck",
@@ -3890,6 +3892,7 @@ dependencies = [
  "hermes-simd",
  "leto",
  "moirai",
+ "serde",
  "themis",
  "thiserror 2.0.18",
 ]
@@ -4111,7 +4114,7 @@ dependencies = [
 
 [[package]]
 name = "mnemosyne"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "eunomia",
  "mnemosyne-arena",
@@ -4136,7 +4139,7 @@ dependencies = [
 
 [[package]]
 name = "mnemosyne-backend"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "mnemosyne-core",
 ]
@@ -4167,7 +4170,7 @@ dependencies = [
 
 [[package]]
 name = "mnemosyne-heap"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "melinoe",
  "mnemosyne-arena",
@@ -4180,7 +4183,7 @@ dependencies = [
 
 [[package]]
 name = "mnemosyne-local"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "melinoe",
  "mnemosyne-arena",

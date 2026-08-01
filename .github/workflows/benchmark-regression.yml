@@ -62,13 +62,23 @@ jobs:
             ~/.cargo/git
           key: ${{ runner.os }}-kwavers-bench-${{ hashFiles('kwavers-candidate/Cargo.lock') }}
 
-      - name: Normalize historical baseline lock
-        run: >-
-          cargo metadata
-          --manifest-path kwavers-baseline/Cargo.toml
-          --format-version 1
-          --all-features
-          > /dev/null
+      - name: Align historical baseline workspace graph
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r manifest; do
+            mkdir -p "kwavers-baseline/$(dirname "$manifest")"
+            cp "kwavers-candidate/$manifest" "kwavers-baseline/$manifest"
+          done < <(
+            git -C kwavers-candidate ls-files -- 'Cargo.toml' '**/Cargo.toml'
+          )
+          cp kwavers-candidate/Cargo.lock kwavers-baseline/Cargo.lock
+          cargo metadata \
+            --manifest-path kwavers-baseline/Cargo.toml \
+            --locked \
+            --format-version 1 \
+            --all-features \
+            > /dev/null
 
       - name: Hold the candidate benchmark instrument constant
         shell: bash
@@ -250,13 +260,23 @@ jobs:
             ~/.cargo/git
           key: ${{ runner.os }}-kwavers-bench-${{ hashFiles('kwavers-candidate/Cargo.lock') }}
 
-      - name: Normalize historical baseline lock
-        run: >-
-          cargo metadata
-          --manifest-path kwavers-baseline/Cargo.toml
-          --format-version 1
-          --all-features
-          > /dev/null
+      - name: Align historical baseline workspace graph
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r manifest; do
+            mkdir -p "kwavers-baseline/$(dirname "$manifest")"
+            cp "kwavers-candidate/$manifest" "kwavers-baseline/$manifest"
+          done < <(
+            git -C kwavers-candidate ls-files -- 'Cargo.toml' '**/Cargo.toml'
+          )
+          cp kwavers-candidate/Cargo.lock kwavers-baseline/Cargo.lock
+          cargo metadata \
+            --manifest-path kwavers-baseline/Cargo.toml \
+            --locked \
+            --format-version 1 \
+            --all-features \
+            > /dev/null
 
       - name: Hold the candidate benchmark instrument constant
         shell: bash

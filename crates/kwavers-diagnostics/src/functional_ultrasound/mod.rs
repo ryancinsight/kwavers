@@ -31,7 +31,9 @@ pub mod tracking;
 // ULM super-resolution and vessel-filtering algorithms moved to the `analysis`
 // layer (`kwavers_analysis::signal_processing::{ulm,vasculature}`); the
 // neuronavigation workflow imports the vessel types it needs from there.
-use kwavers_analysis::signal_processing::vasculature::{VesselClassification, VesselSegmentation};
+use kwavers_analysis::signal_processing::vasculature::{
+    VesselClassification, VesselSegmentation, VoxelSpacing,
+};
 
 pub use atlas::BrainAtlas;
 pub use targeting::{StereotacticCoordinates, TargetingSystem};
@@ -157,8 +159,12 @@ impl FunctionalUltrasoundGPS {
     /// # Errors
     /// - Propagates any `KwaversError` returned by called functions.
     ///
-    pub fn segment_vasculature(&mut self, registered_image: &LetoArray3<f64>) -> KwaversResult<()> {
-        let segmentation = VesselSegmentation::segment(registered_image)?;
+    pub fn segment_vasculature(
+        &mut self,
+        registered_image: &LetoArray3<f64>,
+        voxel_spacing: VoxelSpacing,
+    ) -> KwaversResult<()> {
+        let segmentation = VesselSegmentation::segment(registered_image, voxel_spacing)?;
         self.vasculature = Some(segmentation);
         Ok(())
     }

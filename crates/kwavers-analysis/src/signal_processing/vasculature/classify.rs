@@ -6,11 +6,11 @@
 //! principal component of masked voxel coordinates is the least-squares
 //! vessel axis (power-iteration approximation, 12 iterations).
 //!
-//! The equivalent circular diameter follows from
-//! `volume = Σ 1 = N_voxels` and `area = volume / length`:
+//! With voxel spacing `(s_x, s_y, s_z)`, the equivalent circular diameter
+//! follows from `V = N_voxels s_x s_y s_z`, `A = V / L`, and:
 //!
 //! ```text
-//!   A = N / L,   d = sqrt(4A / π)
+//!   A = V / L,   d = sqrt(4A / π)
 //! ```
 //!
 //! The artery/vein label is derived from static intensity contrast:
@@ -29,21 +29,32 @@
 //! centerline candidates (thin medial axis).  This is exact for 6-connected
 //! linear segments and a conservative approximation for branching vessels.
 
+use aequitas::systems::si::quantities::Length;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array3;
 
-use super::{VascularVesselType, VesselClassification};
+use super::{VascularVesselType, VesselClassification, VoxelSpacing};
+
+/// Classification and geometry derived from one validated vessel mask.
+pub(super) struct ClassifiedVessel {
+    /// Static vessel label and physical diameter.
+    pub(super) classification: VesselClassification,
+    /// Medial-axis candidates reused for total-length computation.
+    pub(super) centerline: Vec<[usize; 3]>,
+}
 
 /// Classify vessels from a static fUS image and its binary mask.
 ///
 /// See module-level docs for the mathematical specification.
 ///
 /// # Errors
-/// `InvalidInput` when `image` and `mask` shapes differ.
+/// `InvalidInput` when `image` and `mask` shapes differ or a non-empty mask
+/// contains no usable centerline from which to derive physical diameter.
 pub(super) fn classify_vessels(
     image: &Array3<f64>,
     mask: &Array3<f64>,
-) -> KwaversResult<VesselClassification> {
+    spacing: VoxelSpacing,
+) -> KwaversResult<ClassifiedVessel> {
     if image.shape() != mask.shape() {
         return Err(KwaversError::InvalidInput(
             "vessel image and mask shapes must match".to_owned(),
@@ -52,19 +63,35 @@ pub(super) fn classify_vessels(
 
     let points = masked_points(mask);
     if points.is_empty() {
-        return Ok(VesselClassification {
-            vessel_type: VascularVesselType::Unknown,
-            confidence: 0.0,
-            diameter: 0.0,
-            orientation: [0.0, 0.0, 0.0],
-            flow_direction: None,
+        return Ok(ClassifiedVessel {
+            classification: VesselClassification {
+                vessel_type: VascularVesselType::Unknown,
+                confidence: 0.0,
+                diameter: Length::from_base(0.0),
+                orientation: [0.0, 0.0, 0.0],
+                flow_direction: None,
+            },
+            centerline: Vec::new(),
         });
     }
 
-    let orientation = principal_axis(&points);
+    let [sx, sy, sz] = spacing.base_values();
+    let physical_points = points
+        .iter()
+        .map(|&[i, j, k]| [i as f64 * sx, j as f64 * sy, k as f64 * sz])
+        .collect::<Vec<_>>();
+    let orientation = principal_axis_values(&physical_points);
     let centerline = centerline_from_points(mask, &points);
-    let length = centerline.len().max(1) as f64;
-    let diameter = (4.0 * points.len() as f64 / (std::f64::consts::PI * length)).sqrt();
+    if centerline.is_empty() {
+        return Err(KwaversError::InvalidInput(
+            "non-empty vessel mask has no usable centerline".to_owned(),
+        ));
+    }
+    let length = centerline_length(&centerline, orientation, spacing).into_base();
+    let voxel_volume = sx * sy * sz;
+    let diameter = Length::from_base(
+        (4.0 * points.len() as f64 * voxel_volume / (std::f64::consts::PI * length)).sqrt(),
+    );
 
     // Compute vessel vs background intensity means.
     let mut vessel_sum = 0.0_f64;
@@ -96,12 +123,15 @@ pub(super) fn classify_vessels(
         VascularVesselType::Vein
     };
 
-    Ok(VesselClassification {
-        vessel_type,
-        confidence,
-        diameter,
-        orientation,
-        flow_direction: (vessel_type == VascularVesselType::Artery).then_some(orientation),
+    Ok(ClassifiedVessel {
+        classification: VesselClassification {
+            vessel_type,
+            confidence,
+            diameter,
+            orientation,
+            flow_direction: (vessel_type == VascularVesselType::Artery).then_some(orientation),
+        },
+        centerline,
     })
 }
 
@@ -124,6 +154,21 @@ pub(super) fn centerline_from_points(mask: &Array3<f64>, points: &[[usize; 3]]) 
         .collect()
 }
 
+/// Estimate the physical length of the centerline using the principal-axis
+/// voxel step. The segmentation algorithm returns an unordered medial-axis
+/// point set, so this preserves its existing point-count estimator while
+/// applying anisotropic spacing in metres.
+pub(super) fn centerline_length(
+    points: &[[usize; 3]],
+    orientation: [f64; 3],
+    spacing: VoxelSpacing,
+) -> Length<f64> {
+    if points.is_empty() {
+        return Length::from_base(0.0);
+    }
+    Length::from_base(points.len() as f64 * spacing.step_along(orientation))
+}
+
 /// Count the number of 6-adjacent vessel-class neighbours of `point`.
 pub(super) fn vessel_neighbor_count(mask: &Array3<f64>, point: &[usize; 3]) -> usize {
     let [nx, ny, nz] = mask.shape();
@@ -141,12 +186,20 @@ pub(super) fn vessel_neighbor_count(mask: &Array3<f64>, point: &[usize; 3]) -> u
 /// Returns a unit vector aligned with the direction of largest variance of the
 /// masked voxel coordinates.
 pub(super) fn principal_axis(points: &[[usize; 3]]) -> [f64; 3] {
+    let values = points
+        .iter()
+        .map(|&[i, j, k]| [i as f64, j as f64, k as f64])
+        .collect::<Vec<_>>();
+    principal_axis_values(&values)
+}
+
+fn principal_axis_values(points: &[[f64; 3]]) -> [f64; 3] {
     let n = points.len() as f64;
     let mean = {
         let sum = points.iter().fold([0.0; 3], |mut acc, p| {
-            acc[0] += p[0] as f64;
-            acc[1] += p[1] as f64;
-            acc[2] += p[2] as f64;
+            acc[0] += p[0];
+            acc[1] += p[1];
+            acc[2] += p[2];
             acc
         });
         [sum[0] / n, sum[1] / n, sum[2] / n]
@@ -156,11 +209,7 @@ pub(super) fn principal_axis(points: &[[usize; 3]]) -> [f64; 3] {
     for _ in 0..12 {
         let mut next = [0.0; 3];
         for point in points {
-            let d = [
-                point[0] as f64 - mean[0],
-                point[1] as f64 - mean[1],
-                point[2] as f64 - mean[2],
-            ];
+            let d = [point[0] - mean[0], point[1] - mean[1], point[2] - mean[2]];
             let proj = d[2].mul_add(axis[2], d[0].mul_add(axis[0], d[1] * axis[1]));
             next[0] += proj * d[0];
             next[1] += proj * d[1];

@@ -1,3 +1,54 @@
+## Review 2026-07-29 — PR #325 unresolved blocker closeout
+
+Three non-outdated review threads remained valid at `fc3ac0308`. The repository
+manifest overrode Aequitas with a required `../aequitas` checkout; dense
+non-empty vessel masks could produce no centerline and divide by
+`f64::MIN_POSITIVE`; and both historical-baseline metadata checks omitted
+`--locked` after manifest alignment.
+
+The closeout removes the Aequitas path patch and records one canonical Git
+source at `ce3ef7a6` in `Cargo.lock`, rejects a non-empty mask with no usable
+centerline through an exact typed error regression, and adds `--locked` to both
+metadata checks. Both benchmark jobs copy all 26 tracked package manifests plus
+`Cargo.lock`. No source fallback, compatibility adapter, or fabricated diameter
+path is present. Exact-head hosted gates remain the final closure evidence
+because the mutable local Atlas overlay has an unrelated Apollo dual-path
+collision and does not reproduce the pinned CI provider graph.
+
+## Review 2026-07-28 — KW-AEQ-MET-04 provider-graph repair and benchmark closure
+
+PR #325 is prepared at `640470d48` with Atlas graph
+`303bb513b47e8f096b0f0fd41db3302d4d071979`: Coeus
+`cdaf769b1a1c16a6932b9cdc31a6bc0665085b87`, Hermes
+`1234f8ca1d3740138a24b373e1971179c2f5af9b`, Leto
+`d94e3ba98e583468d7c8c86090027008b4b2e020`, Mnemosyne PR #31
+`fd873df55568a30ce5cd68ca61275d47f741286a`, Moirai
+`6c39fd81c4d940ac7b96e5e4e50787177bcf8223`, and RITK
+`650359082c146564d475f2fa378120d38cbe8252`. The original Coeus/Leto
+missing-symbol blocker and the Mnemosyne `TierSelection::Hbm`/`Gddr` compile
+blocker are closed by the immutable provider graph; no local fallback or
+adapter was added.
+
+The first corrected benchmark rerun (`30406033235`, attempt 2) completed all
+four pair measurements but classified `fdtd_derivatives/order_2/64` as a
+replicated regression: first `+1.92%/-1.11%`, second `+4.81%/-1.42%`. The
+source diff did not touch FDTD or benchmark code. Root cause was incomplete
+historical-baseline normalization: the workflow copied only the root manifest
+and lock while the PR changed package manifests. Commit `640470d48` now copies
+every tracked package `Cargo.toml` and `Cargo.lock` before baseline metadata.
+The corrected run `30411366697` passed smoke in 11m31s, produced byte-identical
+merge-critical benchmark executables, and passed the regression check in 3s
+with `MEASUREMENTS_REQUIRED=false`; the four pair jobs were skipped by the
+byte-identity gate. This closes the benchmark integration defect without
+weakening the instrument.
+
+Exact-head Architecture Validation `30406033266` / Test Suite Coverage job
+`90431548177` passed primary Nextest 5,652/5,652, PINN Nextest 39/39, bounded
+simulations 24/24, doctests, and all listed vasculature physical-metrics tests
+(PASS sequence 728–747). Local full-workspace resolution remains
+non-authoritative because mutable sibling checkouts do not reproduce the
+immutable Atlas graph.
+
 ## State refresh (2026-07-16) — kwavers Batch #1 closure: Rayon → Moirai migration complete
 
 - **KW-GPU-060 — backend kernel ownership CLOSED [major] (2026-07-17).**
@@ -28,6 +79,38 @@
     Kwavers' full facade build; it no longer blocks compilation.
 
 # Gap Audit
+
+## Review 2026-07-31 — KW-AEQ-MET-04 source-level closure
+
+The only current review finding on the vessel-metrics slice was redundant
+centerline extraction in `VesselSegmentation::segment`: classification already
+derived the validated centerline used for the physical diameter. The classifier
+now returns that centerline with the classification, and segmentation reuses it
+for physical total length. This removes one mask traversal and one medial-axis
+pass without changing the Aequitas `Length`/`Velocity` contracts or the
+invalid-input behavior.
+
+The re-audit still finds no missing Aequitas metric dimension in the named
+CFDrs, Helios, or Kwavers consumer boundaries. Public complex values remain
+Eunomia-backed formula/storage values; none of the audited physical contracts
+requires a separate imaginary unit. Exact-head hosted checks for this fix are
+the delivery gate after push.
+
+- Review 2026-07-28: PR #325's original provider blocker is closed through
+  Mnemosyne PR #31 and the synchronized Atlas graph above. The immutable graph
+  checkout and exact-head hosted vessel tests are green; the benchmark graph
+  normalization defect is also closed by `640470d48` and run `30411366697`.
+
+- Review 2026-07-23: `KWAVERS-AEQ-MET-04` is implemented on PR #325 at commit
+  `9f95aa826`. `VoxelSpacing` validates positive
+  finite anisotropic Aequitas `Length` components; vessel diameter, centerline,
+  and total length return physical `Length<f64>` values; Doppler frequency,
+  sound speed, and velocity use typed Aequitas quantities. The child source,
+  diagnostics caller, ADR 047, changelog, tests, and API documentation are
+  synchronized. Formatting and metadata validation pass; focused compilation
+  is blocked before Kwavers sources by peer `mnemosyne-heap` errors for the
+  unhandled `TierSelection::Hbm` and `TierSelection::Gddr` variants in three
+  matches. This is independent of open PR #324 and Aequitas PR #7.
 
 - Review 2026-07-22: Python release run `29967429949` built the stable-ABI
   wheels but the Linux and Windows base-wheel smoke imports failed because

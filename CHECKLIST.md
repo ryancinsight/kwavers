@@ -1,5 +1,50 @@
 # Project Checklist
 
+## Owner: Codex — KW-AEQ-MET-04 vessel physical metrics [major] [arch] — in progress
+
+- [x] Add validated Aequitas voxel spacing to vessel segmentation and preserve
+      anisotropic physical scaling in diameter, total length, and centerline.
+- [x] Return Aequitas `Length<f64>` and `Velocity<f64>` at the public vessel
+      boundary without changing dimensionless confidence/orientation semantics.
+- [x] Add value-semantic spacing/Doppler regressions and synchronize the child
+      and Atlas gap audits.
+- [x] Pin the PR checkout action and release workflow to Atlas graph
+      `303bb513b47e8f096b0f0fd41db3302d4d071979`, including Coeus
+      `cdaf769b1a1c16a6932b9cdc31a6bc0665085b87`, Hermes
+      `1234f8ca1d3740138a24b373e1971179c2f5af9b`, Leto
+      `d94e3ba98e583468d7c8c86090027008b4b2e020`, Mnemosyne PR #31
+      `fd873df55568a30ce5cd68ca61275d47f741286a`, Moirai
+      `6c39fd81c4d940ac7b96e5e4e50787177bcf8223`, and RITK
+      `650359082c146564d475f2fa378120d38cbe8252`.
+- [x] Correct the six stale Coeus paths from the retired root layout to
+      `../coeus/crates/*` and synchronize the lockfile's four Mnemosyne and
+      five Hermes package transitions plus the Coeus/Leto provider edges.
+- [x] Pass the exact-head hosted vessel physical-metrics suite on
+      Architecture Validation `30406033266`, Test Suite Coverage job
+      `90431548177`: primary Nextest 5,652/5,652, PINN 39/39, bounded
+      simulations 24/24, doctests pass, and the vasculature PASS sequence is
+      log lines 728–747.
+- [x] Fix benchmark baseline graph normalization to copy every tracked package
+      manifest and `Cargo.lock`; corrected run `30411366697` passes smoke in
+      11m31s, proves merge-critical executables byte-identical, and passes the
+      regression check in 3s with measurement correctly skipped.
+- [x] Remove the repository-local Aequitas path override and retain one
+      canonical Git source pinned by `Cargo.lock` at `ce3ef7a6`.
+- [x] Reject non-empty masks without a usable centerline and pin the exact typed
+      error with a focused value-semantic regression.
+- [x] Require `--locked` in both historical-baseline metadata checks after all
+      26 tracked package manifests and `Cargo.lock` are copied.
+- [x] Reuse the classifier's validated centerline for physical total length
+      instead of traversing the vessel mask and medial axis twice.
+- [ ] Push the blocker-closeout head and collect its exact hosted gate evidence.
+
+## Owner: Codex `/root` — Aequitas acoustic dimensional boundaries [patch] — done
+
+- [x] Express acoustic heating through reciprocal-length × intensity and
+      streaming through density × velocity, pressure, and impedance quantities.
+- [x] Pin the synchronized Aequitas provider revision and preserve the scalar
+      public APIs with closed-form value-semantic coupling tests.
+
 ## Owner: Codex `/root` — Publish mdBook through GitHub Pages [patch] — done
 
 - [x] Add the Pages build/deploy workflow for `docs/book`.
