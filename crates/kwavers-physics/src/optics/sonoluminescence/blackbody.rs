@@ -167,7 +167,7 @@ pub fn calculate_blackbody_emission(
 ) -> Array3<f64> {
     let mut emission_field = Array3::zeros(temperature_field.shape());
 
-    crate::parallel::zip_mut_with(
+    leto_ops::zip_mut_with(
         emission_field.view_mut(),
         (&temperature_field.view(), &bubble_radius_field.view()),
         |out, (&temp, &radius)| {
@@ -189,7 +189,8 @@ pub fn calculate_blackbody_emission(
                 }
             }
         },
-    );
+    )
+    .expect("invariant: blackbody input and emission fields have matching shapes");
 
     emission_field
 }

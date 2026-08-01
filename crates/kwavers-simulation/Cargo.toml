@@ -24,6 +24,7 @@ kwavers-signal = { path = "../kwavers-signal" }
 kwavers-physics = { path = "../kwavers-physics", features = ["clinical-imaging"] }
 kwavers-solver = { path = "../kwavers-solver", features = ["clinical-imaging"] }
 leto = { workspace = true }
+leto-ops = { workspace = true }
 # Concrete GPU backend (the GPU-PSTD adapter routes through it). Optional —
 # only pulled by the `gpu` feature.
 kwavers-gpu = { path = "../kwavers-gpu", optional = true }

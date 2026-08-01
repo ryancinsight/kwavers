@@ -61,7 +61,7 @@ pub fn calculate_cherenkov_emission(
     let n_base = model.refractive_index_base;
     let coherence = model.coherence_factor;
 
-    crate::parallel::zip_mut_with(
+    leto_ops::zip_mut_with(
         emission.view_mut(),
         (
             &velocity_field.view(),
@@ -91,6 +91,7 @@ pub fn calculate_cherenkov_emission(
             // Frank–Tamm emission per cell
             *e = coherence * charge_density * threshold_term;
         },
-    );
+    )
+    .expect("invariant: Cherenkov input and emission fields have matching shapes");
     emission
 }

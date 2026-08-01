@@ -55,7 +55,8 @@ impl DispersionAnalysis {
             DispersionMethod::None => 1.0,
         };
 
-        crate::parallel::for_each_indexed_mut(field.view_mut(), |_, v| *v *= correction_factor);
+        leto_ops::indexed_map_inplace(&mut field.view_mut(), |_, v| *v *= correction_factor)
+            .expect("invariant: dispersion correction field view is valid");
     }
 
     /// Apply dispersion correction to a field using full 3D analysis
@@ -87,7 +88,8 @@ impl DispersionAnalysis {
             DispersionMethod::None => 1.0,
         };
 
-        crate::parallel::for_each_indexed_mut(field.view_mut(), |_, v| *v *= correction_factor);
+        leto_ops::indexed_map_inplace(&mut field.view_mut(), |_, v| *v *= correction_factor)
+            .expect("invariant: dispersion correction field view is valid");
     }
 }
 

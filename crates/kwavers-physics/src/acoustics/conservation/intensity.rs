@@ -3,7 +3,7 @@
 use kwavers_grid::Grid;
 use leto::Array3;
 
-use crate::parallel::zip_mut_with;
+use leto_ops::zip_mut_with;
 
 /// Compute acoustic intensity vector field `I = p v` [W/m^2].
 #[must_use]
@@ -23,21 +23,24 @@ pub fn acoustic_intensity(
         |ix, (&p, &vx)| {
             *ix = p * vx;
         },
-    );
+    )
+    .expect("invariant: pressure and velocity fields have matching shapes");
     zip_mut_with(
         iy.view_mut(),
         (&pressure.view(), &velocity_y.view()),
         |iy, (&p, &vy)| {
             *iy = p * vy;
         },
-    );
+    )
+    .expect("invariant: pressure and velocity fields have matching shapes");
     zip_mut_with(
         iz.view_mut(),
         (&pressure.view(), &velocity_z.view()),
         |iz, (&p, &vz)| {
             *iz = p * vz;
         },
-    );
+    )
+    .expect("invariant: pressure and velocity fields have matching shapes");
 
     (ix, iy, iz)
 }

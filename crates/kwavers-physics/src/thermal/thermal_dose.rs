@@ -8,9 +8,9 @@ use aequitas::systems::si::quantities::Time;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array3;
 
-use crate::parallel::zip_mut_with;
 use crate::thermal::response::{checked_cem43_increments, CelsiusStorage};
 use crate::thermal::CumulativeEquivalentMinutes;
+use leto_ops::zip_mut_with;
 
 /// Thermal dose calculator using cumulative equivalent minutes at 43°C (CEM43)
 #[derive(Debug)]
@@ -65,7 +65,8 @@ impl ThermalCEM43Grid {
             self.dose.view_mut(),
             &self.increments.view(),
             |dose, &increment| *dose += increment,
-        );
+        )
+        .expect("invariant: dose and increment fields have matching shapes");
         Ok(())
     }
 

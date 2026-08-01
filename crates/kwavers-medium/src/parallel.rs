@@ -1,7 +1,6 @@
 //! Atlas parallel-provider adapters for medium field traversal.
 
-use leto::{Array3, ArrayViewMut};
-use leto_ops::{zip_mut_with as provider_zip_mut_with, ZipSources};
+use leto::Array3;
 use moirai_parallel::{for_each_chunk_mut_enumerated_with, for_each_chunk_mut_with, Adaptive};
 
 pub(crate) const FIELD_CHUNK_SIZE: usize = 4096;
@@ -75,13 +74,4 @@ where
             }
         }
     }
-}
-
-pub(crate) fn zip_mut_with<T, S, F>(mut out: ArrayViewMut<'_, T, 3>, sources: S, f: F)
-where
-    S: ZipSources<3>,
-    F: Fn(&mut T, S::Values),
-{
-    provider_zip_mut_with(&mut out, sources, f)
-        .expect("invariant: medium zip source shapes and storage must match output");
 }

@@ -7,7 +7,6 @@ use leto::Array3 as LetoArray3;
 use leto::Array3;
 
 use super::super::wave_model::NonlinearWave;
-use crate::parallel::for_each_indexed_mut;
 
 /// Spectral derivative utilities used only by tests.
 ///
@@ -86,9 +85,10 @@ impl NonlinearWave {
         fft_3d_array_into(pressure, k_buf);
 
         // In-place pointwise complex multiply (parallelised).
-        for_each_indexed_mut(k_buf.view_mut(), |(i, j, k), val| {
+        leto_ops::indexed_map_inplace(&mut k_buf.view_mut(), |[i, j, k], val| {
             *val *= correction[[i, j, k]];
-        });
+        })
+        .expect("invariant: spectral buffer view is valid");
 
         // IFFT into persistent output buffer (uses k_buf as scratch): zero-alloc.
         ifft_3d_array_into(k_buf, k_out);

@@ -3,7 +3,7 @@
 use leto::Array3;
 use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
 
-use crate::parallel::zip_mut_with;
+use leto_ops::zip_mut_with;
 
 const SIMD_SAFE_CHUNK_LEN: usize = 4096;
 
@@ -31,7 +31,8 @@ pub(in crate::simd_safe::auto_detect) fn add_arrays(
 
     zip_mut_with(out.view_mut(), (&a.view(), &b.view()), |out, (&a, &b)| {
         *out = a + b;
-    });
+    })
+    .expect("invariant: SIMD-safe addition fields have matching shapes");
 }
 
 pub(in crate::simd_safe::auto_detect) fn scale_array(array: &mut Array3<f64>, scalar: f64) {
@@ -79,5 +80,6 @@ pub(in crate::simd_safe::auto_detect) fn fma_arrays(
 
     zip_mut_with(c.view_mut(), (&a.view(), &b.view()), |c, (&a, &b)| {
         *c += multiplier * a * b;
-    });
+    })
+    .expect("invariant: SIMD-safe fused fields have matching shapes");
 }

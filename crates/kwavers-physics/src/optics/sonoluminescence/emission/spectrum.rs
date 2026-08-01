@@ -1,8 +1,6 @@
 use kwavers_core::constants::optical::REFRACTIVE_INDEX_SOFT_TISSUE;
 use leto::{Array1, Array3, Array4};
 
-use crate::parallel::for_each_indexed_three_mut;
-
 /// Parameters for sonoluminescence emission
 #[derive(Debug, Clone)]
 pub struct EmissionParameters {
@@ -113,11 +111,15 @@ impl SpectralField {
         let n_wavelengths = wavelengths.len();
         let contiguous_intensities = intensities.as_slice_memory_order();
 
-        for_each_indexed_three_mut(
-            total_intensity.view_mut(),
-            peak_wavelength.view_mut(),
-            color_temperature.view_mut(),
-            |idx, total, peak, color_temp| {
+        leto_ops::indexed_zip_mut_with(
+            (
+                total_intensity.view_mut(),
+                peak_wavelength.view_mut(),
+                color_temperature.view_mut(),
+            ),
+            (),
+            |[i, j, k], (total, peak, color_temp), ()| {
+                let idx = (i * ny + j) * nz + k;
                 let quantities = if let Some(intensities) = contiguous_intensities {
                     let start = idx * n_wavelengths;
                     let end = start + n_wavelengths;
@@ -136,7 +138,8 @@ impl SpectralField {
                 *peak = quantities.peak_wavelength;
                 *color_temp = quantities.color_temperature;
             },
-        );
+        )
+        .expect("invariant: sonoluminescence output fields have matching shapes");
     }
 
     /// Get spectrum at a specific point

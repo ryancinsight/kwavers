@@ -4,7 +4,7 @@ use eunomia::Complex;
 use kwavers_core::constants::numerical::TWO_PI;
 use leto::Array3;
 
-use crate::parallel::zip_mut_with;
+use leto_ops::zip_mut_with;
 
 /// Fractional Laplacian model for absorption
 ///
@@ -55,7 +55,8 @@ impl FractionalLaplacian {
                 // Apply as exponential decay
                 *s *= absorption.exp();
             }
-        });
+        })
+        .expect("invariant: fractional absorption fields have matching shapes");
     }
 }
 

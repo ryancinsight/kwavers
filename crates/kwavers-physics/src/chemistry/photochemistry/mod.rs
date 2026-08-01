@@ -4,8 +4,6 @@ use kwavers_medium::Medium;
 use leto::Array3;
 use log::debug;
 
-use kwavers_core::utils::iterators::for_each_indexed_mut_with;
-
 #[derive(Debug, Clone)]
 pub struct PhotochemicalEffects {
     pub reactive_oxygen_species: Array3<f64>, // ROS like singlet oxygen (¹O₂), superoxide (O₂•⁻)
@@ -32,7 +30,7 @@ impl PhotochemicalEffects {
     ) {
         debug!("Updating photochemical effects");
 
-        for_each_indexed_mut_with(
+        leto_ops::indexed_zip_mut_with(
             self.reactive_oxygen_species.view_mut(),
             (
                 &light.view(),
@@ -40,7 +38,7 @@ impl PhotochemicalEffects {
                 &bubble_radius.view(),
                 &temperature.view(),
             ),
-            |(i, j, k), ros, (&light_val, &spec_val, &r_val, &t)| {
+            |[i, j, k], ros, (&light_val, &spec_val, &r_val, &t)| {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
@@ -55,7 +53,8 @@ impl PhotochemicalEffects {
                 *ros += ros_rate * dt * (1.0 + r_val / 1e-6); // Bubble amplification
                 *ros = ros.max(0.0);
             },
-        );
+        )
+        .expect("invariant: photochemical and source fields have matching shapes");
     }
 
     #[must_use]

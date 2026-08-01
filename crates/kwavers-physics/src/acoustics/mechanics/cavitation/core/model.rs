@@ -15,9 +15,9 @@ use super::state::{CavitationDose, CavitationMechanicsState};
 use super::thresholds::{blake_threshold, flynn_threshold, neppiras_threshold, ThresholdModel};
 use crate::acoustics::analysis::calculate_mechanical_index;
 use crate::acoustics::bubble_dynamics::BubbleParameters;
-use crate::parallel::zip_mut_with;
 use kwavers_core::error::KwaversResult;
 use leto::Array3;
+use leto_ops::zip_mut_with;
 
 /// Mechanical Index (MI) threshold for the onset of inertial cavitation in water
 /// at 1 MHz, based on the Apfel-Holland theoretical framework.
@@ -172,7 +172,8 @@ impl CavitationModel {
                     state.intensity = 0.0;
                 }
             },
-        );
+        )
+        .expect("invariant: cavitation state and pressure fields have matching shapes");
 
         // Update dose with average intensity across cavitating points
         if let Some(avg_intensity) = self.cavitating_average_intensity() {
@@ -217,7 +218,8 @@ impl CavitationCore for CavitationModel {
                     state.intensity = 0.0;
                 }
             },
-        );
+        )
+        .expect("invariant: cavitation state and pressure fields have matching shapes");
 
         // Fix: divide by cavitating count, not total grid size
         if let Some(avg_intensity) = self.cavitating_average_intensity() {

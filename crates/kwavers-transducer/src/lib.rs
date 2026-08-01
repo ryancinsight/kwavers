@@ -18,7 +18,6 @@ pub mod flexible;
 pub mod hemispherical;
 pub mod kwave_array;
 pub mod mems;
-mod parallel;
 pub mod passive_acoustic_mapping;
 pub mod transducers;
 pub mod ultrafast;

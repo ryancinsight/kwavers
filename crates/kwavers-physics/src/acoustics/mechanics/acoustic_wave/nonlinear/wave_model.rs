@@ -8,7 +8,6 @@ use kwavers_grid::Grid;
 use kwavers_math::fft::Complex64 as Complex;
 use kwavers_medium::Medium;
 
-use crate::parallel::for_each_indexed_mut;
 use leto::Array3;
 use std::f64;
 
@@ -167,9 +166,10 @@ impl NonlinearWave {
         let kx_s = kx.as_slice().expect("kx contiguous");
         let ky_s = ky.as_slice().expect("ky contiguous");
         let kz_s = kz.as_slice().expect("kz contiguous");
-        for_each_indexed_mut(k_squared.view_mut(), |(i, j, k), val| {
+        leto_ops::indexed_map_inplace(&mut k_squared.view_mut(), |[i, j, k], val| {
             *val = kz_s[k].mul_add(kz_s[k], kx_s[i].mul_add(kx_s[i], ky_s[j] * ky_s[j]));
-        });
+        })
+        .expect("invariant: wavenumber-squared view is valid");
 
         self.k_squared = Some(k_squared);
     }
@@ -198,7 +198,7 @@ impl NonlinearWave {
         let mut correction = Array3::<Complex>::zeros([grid.nx, grid.ny, grid.nz]);
         let eps = 1e-12_f64;
 
-        for_each_indexed_mut(correction.view_mut(), |(i, j, k), val| {
+        leto_ops::indexed_map_inplace(&mut correction.view_mut(), |[i, j, k], val| {
             let k_mag = k_squared[[i, j, k]].sqrt();
             let ck = c * k_mag;
 
@@ -211,7 +211,8 @@ impl NonlinearWave {
             let cos_factor = (ck * dt).cos();
 
             *val = Complex::new(sinc_factor * cos_factor, 0.0);
-        });
+        })
+        .expect("invariant: spectral correction view is valid");
 
         self.k_space_correction = Some(correction);
 

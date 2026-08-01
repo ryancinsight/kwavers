@@ -7,7 +7,7 @@ use aequitas::systems::si::quantities::ThermodynamicTemperature;
 
 use super::constants::K_B;
 use super::params::{BoltzmannGatingParams, GatingModel, PressureThresholdParams};
-use crate::parallel::zip_mut_with;
+use leto_ops::zip_mut_with;
 
 /// Compute per-voxel open probability using the Boltzmann two-state model.
 ///
@@ -48,7 +48,8 @@ pub fn boltzmann_p_open(
             let exponent = -a * (dt - t_half) / kbt;
             *p = 1.0 / (1.0 + exponent.exp());
         },
-    );
+    )
+    .expect("invariant: membrane-tension and gating fields have matching shapes");
     Ok(out)
 }
 
@@ -81,7 +82,8 @@ pub fn pressure_threshold_p_open(
         |p: &mut f64, &p_rad: &f64| {
             *p = 1.0 / (1.0 + (-(p_rad - p_half) / s).exp());
         },
-    );
+    )
+    .expect("invariant: radiation-pressure and gating fields have matching shapes");
     Ok(out)
 }
 

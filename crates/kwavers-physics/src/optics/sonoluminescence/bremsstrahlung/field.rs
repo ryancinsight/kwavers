@@ -14,7 +14,7 @@ pub fn calculate_bremsstrahlung_emission(
 ) -> Array3<f64> {
     let mut emission_field = Array3::zeros(temperature_field.shape());
 
-    crate::parallel::zip_mut_with(
+    leto_ops::zip_mut_with(
         emission_field.view_mut(),
         (
             &temperature_field.view(),
@@ -26,7 +26,8 @@ pub fn calculate_bremsstrahlung_emission(
                 *out = model.total_power(temp, n_electron, n_ion, 1.0);
             }
         },
-    );
+    )
+    .expect("invariant: bremsstrahlung input and emission fields have matching shapes");
 
     emission_field
 }

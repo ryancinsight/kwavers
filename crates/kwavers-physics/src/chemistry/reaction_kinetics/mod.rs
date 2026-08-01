@@ -2,6 +2,7 @@
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use leto::Array3;
+use leto_ops::zip_mut_with;
 use log::debug;
 
 #[derive(Debug, Clone)]
@@ -29,7 +30,7 @@ impl ReactionKinetics {
     ) {
         debug!("Updating reaction kinetics");
 
-        crate::parallel::zip_mut_with(
+        zip_mut_with(
             (
                 self.hydroxyl_concentration.view_mut(),
                 self.hydrogen_peroxide.view_mut(),
@@ -61,7 +62,8 @@ impl ReactionKinetics {
                 *h2o2 = h2o2.max(0.0);
                 *oh = oh.max(0.0);
             },
-        );
+        )
+        .expect("invariant: reaction state and source fields have matching shapes");
     }
 
     #[must_use]

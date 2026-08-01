@@ -58,7 +58,7 @@ pub fn resample_trilinear(kernel: &FocalKernel, target_dx_m: f64) -> FocalKernel
 
     // Each output voxel reads eight immutable input voxels and writes one
     // disjoint output voxel, so the traversal is race-free under Moirai.
-    crate::parallel::for_each_indexed_mut(out.view_mut(), |(io, jo, ko), out_val| {
+    leto_ops::indexed_map_inplace(&mut out.view_mut(), |[io, jo, ko], out_val| {
         let xi = (io as f64) * inv_zoom;
         let x0 = xi.floor() as isize;
         let fx = xi - (x0 as f64);
@@ -94,7 +94,8 @@ pub fn resample_trilinear(kernel: &FocalKernel, target_dx_m: f64) -> FocalKernel
         let c0 = c00 * (1.0 - fy) + c10 * fy;
         let c1 = c01 * (1.0 - fy) + c11 * fy;
         *out_val = c0 * (1.0 - fz) + c1 * fz;
-    });
+    })
+    .expect("invariant: resampling output view is valid");
 
     let new_focus = (
         ((kernel.focus_idx.0 as f64) * zoom)

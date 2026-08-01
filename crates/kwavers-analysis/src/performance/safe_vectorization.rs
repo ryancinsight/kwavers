@@ -9,7 +9,7 @@
 //! - Portable across all architectures
 //! - Moirai-backed traversal for large standard-layout arrays
 
-use kwavers_core::utils::iterators::{apply_inplace, for_each_indexed_mut_with};
+use kwavers_core::utils::iterators::apply_inplace;
 use leto::Array3;
 
 /// Safe vectorization operations using iterator combinators
@@ -40,9 +40,10 @@ impl SafeVectorOps {
     pub fn add_arrays_parallel(a: &Array3<f64>, b: &Array3<f64>) -> Array3<f64> {
         debug_assert_eq!(a.shape(), b.shape(), "Array dimensions must match");
         let mut result = Array3::<f64>::zeros(a.shape());
-        for_each_indexed_mut_with(result.view_mut(), &a.view(), |idx, r, &av| {
-            *r = av + b[[idx.0, idx.1, idx.2]];
-        });
+        leto_ops::indexed_zip_mut_with(result.view_mut(), &a.view(), |[i, j, k], r, &av| {
+            *r = av + b[[i, j, k]]
+        })
+        .expect("invariant: vectorized addition fields have matching shapes");
         result
     }
 
@@ -123,9 +124,10 @@ impl SafeVectorOps {
             }
         } else {
             // Non-contiguous fallback keeps ndarray's indexed stride semantics.
-            for_each_indexed_mut_with(result.view_mut(), &a.view(), |idx, r, &av| {
-                *r = av + b[[idx.0, idx.1, idx.2]];
-            });
+            leto_ops::indexed_zip_mut_with(result.view_mut(), &a.view(), |[i, j, k], r, &av| {
+                *r = av + b[[i, j, k]]
+            })
+            .expect("invariant: vectorized addition fields have matching shapes");
         }
 
         result

@@ -80,7 +80,7 @@ use kwavers_core::constants::tissue_thermal::{
 };
 use kwavers_core::error::{KwaversError, KwaversResult};
 
-use crate::parallel::zip_mut_with;
+use leto_ops::zip_mut_with;
 
 // ── Material constants (IT'IS v4.1 / ICRU-44 / Duck 1990) ────────────────────
 
@@ -204,7 +204,8 @@ pub fn transcranial_pennes_thermal_dose(
             *pc = perf * DENSITY_BLOOD * SPECIFIC_HEAT_BLOOD_PLASMA / rho_cp;
             *hr = 2.0 * alpha * f64::from(i_val) / rho_cp;
         },
-    );
+    )
+    .expect("invariant: transcranial thermal material fields have matching shapes");
 
     // Explicit Euler time loop.
     let mut temp = Array3::<f64>::from_elem((nx, ny, nz), baseline_c);
@@ -234,7 +235,8 @@ pub fn transcranial_pennes_thermal_dose(
             |nt, (&t, &l, &kap, &pc, &hr)| {
                 *nt = t + dt_s * (kap.mul_add(l, hr) - pc * (t - baseline_c));
             },
-        );
+        )
+        .expect("invariant: transcranial thermal update fields have matching shapes");
         let law = Cem43::<f64>::canonical();
         let step = Time::from_base(dt_s);
         let failure = Mutex::new(None);
@@ -258,7 +260,8 @@ pub fn transcranial_pennes_thermal_dose(
                     }
                 }
             },
-        );
+        )
+        .expect("invariant: transcranial CEM43 fields have matching shapes");
         if let Some(source) = failure
             .into_inner()
             .map_err(|_| KwaversError::ConcurrencyError {
@@ -281,7 +284,8 @@ pub fn transcranial_pennes_thermal_dose(
                 }
                 *c += increment;
             },
-        );
+        )
+        .expect("invariant: transcranial peak and dose fields have matching shapes");
     }
 
     // Lesion mask: CEM43 >= 240 min AND in brain AND not in skull.
@@ -292,7 +296,8 @@ pub fn transcranial_pennes_thermal_dose(
         |b, (&c, &is_brain, &is_skull)| {
             *b = c >= CEM43_LESION_THRESHOLD && is_brain && !is_skull;
         },
-    );
+    )
+    .expect("invariant: transcranial lesion-mask fields have matching shapes");
 
     Ok(TranscranialThermalResult {
         peak_temperature_c: peak.mapv(|v| v as f32),

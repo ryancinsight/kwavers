@@ -39,9 +39,9 @@
 //!   *Curr. Med. Imaging Rev.*, 6(1), 15-25.
 //! - Duque, M. et al. (2023). Sonogenetic control via MscL-G22S. *Science*, 380, 1084-1090.
 
-use crate::parallel::zip_mut_with;
 use aequitas::systems::si::quantities::Length;
 use leto::Array3;
+use leto_ops::zip_mut_with;
 
 /// Cell geometry and membrane parameters for the Laplace tension model.
 ///
@@ -100,7 +100,8 @@ pub fn compute_radiation_pressure(
         |p_rad, (&i, &c)| {
             *p_rad = if c > 0.0 { i / c } else { 0.0 };
         },
-    );
+    )
+    .expect("invariant: intensity and membrane pressure fields have matching shapes");
     out
 }
 
@@ -139,7 +140,8 @@ pub fn compute_membrane_tension(
         |t, (&i, &c)| {
             *t = if c > 0.0 { i * r / (2.0 * c) } else { 0.0 };
         },
-    );
+    )
+    .expect("invariant: intensity and membrane temperature fields have matching shapes");
     out
 }
 

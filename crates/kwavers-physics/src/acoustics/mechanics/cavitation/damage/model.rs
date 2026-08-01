@@ -2,9 +2,9 @@
 
 use super::material::{CavitationDamageMaterialProperties, DamageParameters};
 use crate::bubble_dynamics::bubble_field::BubbleStateFields;
-use crate::parallel::zip_mut_with;
 use kwavers_core::constants::cavitation::{IMPACT_ENERGY_COEFFICIENT, MATERIAL_REMOVAL_EFFICIENCY};
 use leto::Array3;
+use leto_ops::zip_mut_with;
 use std::f64::consts::PI;
 
 /// Cavitation damage model
@@ -167,7 +167,8 @@ impl CavitationDamage {
             if rate > 0.0 {
                 *out = rate * time / density;
             }
-        });
+        })
+        .expect("invariant: erosion output and rate fields have matching shapes");
 
         depth
     }

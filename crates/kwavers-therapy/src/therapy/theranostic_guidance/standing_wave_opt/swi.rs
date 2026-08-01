@@ -26,8 +26,8 @@
 use leto::Array2;
 
 use super::config::StandingWaveOptConfig;
-use crate::parallel::zip_mut_with;
 use kwavers_core::constants::numerical::TWO_PI;
+use leto_ops::zip_mut_with;
 
 // ---------------------------------------------------------------------------
 // Complex field superposition
@@ -58,7 +58,8 @@ pub(super) fn superpose(
                 *pr += c * gr - s * gi;
                 *pi += s * gr + c * gi;
             },
-        );
+        )
+        .expect("invariant: standing-wave phase fields have matching shapes");
     }
     (p_re, p_im)
 }

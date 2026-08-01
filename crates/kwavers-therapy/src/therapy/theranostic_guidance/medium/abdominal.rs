@@ -23,7 +23,7 @@ use kwavers_core::constants::tissue_acoustics::{SOUND_SPEED_KIDNEY, SOUND_SPEED_
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::{Array2, Array3, SliceArg};
 
-use crate::parallel::zip_mut_with;
+use leto_ops::zip_mut_with;
 
 /// Abdominal acoustic-property maps: `(sound speed, attenuation, body mask,
 /// organ mask, target mask)`, all sharing the input CT shape.
@@ -338,7 +338,8 @@ fn abdominal_properties(
             *tgt = lab == 2;
             *bod = support || *org || *tgt;
         },
-    );
+    )
+    .expect("invariant: abdominal masks have matching shapes");
     // Pass 2: map masks + HU to acoustic properties.
     zip_mut_with(
         (speed.view_mut(), attenuation.view_mut()),
@@ -370,7 +371,8 @@ fn abdominal_properties(
                 *att = ABDOM_CALC_ATTENUATION_DB_CM_MHZ;
             }
         },
-    );
+    )
+    .expect("invariant: abdominal property fields have matching shapes");
     (speed, attenuation, body, organ, target)
 }
 

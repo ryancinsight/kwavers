@@ -5,8 +5,6 @@ use kwavers_medium::Medium;
 use leto::Array3;
 use log::debug;
 
-use kwavers_core::utils::iterators::for_each_indexed_mut_with;
-
 #[derive(Debug, Clone)]
 pub struct RadicalInitiation {
     pub radical_concentration: Array3<f64>, // General radical concentration (e.g., H•, OH• precursors)
@@ -33,10 +31,10 @@ impl RadicalInitiation {
     ) {
         debug!("Updating radical initiation from cavitation and light");
 
-        for_each_indexed_mut_with(
+        leto_ops::indexed_zip_mut_with(
             self.radical_concentration.view_mut(),
             (&p.view(), &light.view(), &bubble_radius.view()),
-            |(i, j, k), conc, (&p_val, &light_val, &r_val)| {
+            |[i, j, k], conc, (&p_val, &light_val, &r_val)| {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
@@ -62,6 +60,7 @@ impl RadicalInitiation {
                 }
                 *conc = conc.max(0.0);
             },
-        );
+        )
+        .expect("invariant: radical and source fields have matching shapes");
     }
 }

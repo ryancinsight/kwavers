@@ -44,7 +44,6 @@
 
 use std::collections::HashMap;
 
-mod parallel;
 pub mod theranostic;
 
 /// Initialize logging for the kwavers application.

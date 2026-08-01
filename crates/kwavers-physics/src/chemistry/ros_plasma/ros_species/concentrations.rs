@@ -103,7 +103,8 @@ impl ROSConcentrations {
             let decay_factor = (-dt * decay_rate).exp();
 
             // Exponential decay: C(t+dt) = C(t) * exp(-dt/τ)
-            crate::parallel::for_each_indexed_mut(conc.view_mut(), |_, c| *c *= decay_factor);
+            leto_ops::indexed_map_inplace(&mut conc.view_mut(), |_, c| *c *= decay_factor)
+                .expect("invariant: ROS concentration view is valid");
         }
     }
 }

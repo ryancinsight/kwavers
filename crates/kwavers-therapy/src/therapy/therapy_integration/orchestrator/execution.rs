@@ -30,7 +30,6 @@ use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_TI
 use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use kwavers_core::constants::tissue_thermal::SPECIFIC_HEAT_TISSUE;
 use kwavers_core::error::KwaversResult;
-use kwavers_core::utils::iterators::{for_each_indexed_mut, for_each_indexed_mut_with};
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use leto::Array2;
@@ -104,14 +103,15 @@ pub fn generate_acoustic_field(
     let dz = grid.dz;
     let pnp = acoustic_params.pnp.into_base();
 
-    for_each_indexed_mut(pressure.view_mut(), |(i, j, k), p| {
+    leto_ops::indexed_map_inplace(&mut pressure.view_mut(), |[i, j, k], p| {
         let x = i as f64 * dx - focal_x;
         let y = j as f64 * dy;
         let z = k as f64 * dz;
         let r_sq = x * x + y * y + z * z;
         let beam_profile = (-r_sq / beam_width_sq).exp();
         *p = pnp * beam_profile;
-    });
+    })
+    .expect("invariant: therapy pressure field view is valid");
 
     // Plane-wave approximation for the axial velocity component:
     // v_x = p / (ρ₀·c₀).  Transverse components are zero.
@@ -393,10 +393,10 @@ pub fn calculate_acoustic_heating(
     let mut temperature =
         Array3::<f64>::from_elem(acoustic_field.pressure.shape(), BODY_TEMPERATURE_C);
 
-    for_each_indexed_mut_with(
+    leto_ops::indexed_zip_mut_with(
         temperature.view_mut(),
         &acoustic_field.pressure.view(),
-        |(i, j, k), t, &p| {
+        |[i, j, k], t, &p| {
             // Radial distance from focal point (on the x-axis).
             let x = i as f64 * dx - focal_depth.into_base();
             let y = j as f64 * dy;
@@ -405,7 +405,8 @@ pub fn calculate_acoustic_heating(
             let distance_factor = (-r / L_FOCAL).exp();
             *t = BODY_TEMPERATURE_C + heating_scale * p * p * distance_factor;
         },
-    );
+    )
+    .expect("invariant: therapy temperature and pressure fields have matching shapes");
 
     temperature
 }

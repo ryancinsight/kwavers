@@ -14,8 +14,8 @@
 //! unconstrained minimiser onto the box, and projected gradient descent converges
 //! to it.
 
-use crate::parallel::zip_mut_with;
 use leto::Array3;
+use leto_ops::zip_mut_with;
 
 /// Pointwise box constraints `lower ≤ m(r) ≤ upper` on a model field.
 #[derive(Debug, Clone, Copy)]
@@ -103,7 +103,8 @@ where
     constraints.project(&mut model); // start feasible
     for _ in 0..iterations {
         let grad = gradient(&model);
-        zip_mut_with(model.view_mut(), &grad.view(), |m, &g| *m -= step * g);
+        zip_mut_with(model.view_mut(), &grad.view(), |m, &g| *m -= step * g)
+            .expect("invariant: model and gradient fields have matching shapes");
         constraints.project(&mut model);
     }
     model

@@ -221,7 +221,7 @@ impl FreqDispersionCorrection {
         k_vec: &Array3<f64>,
         dt: f64,
     ) -> KwaversResult<()> {
-        crate::parallel::zip_mut_with(spectrum.view_mut(), &k_vec.view(), |s, &k_mag| {
+        leto_ops::zip_mut_with(spectrum.view_mut(), &k_vec.view(), |s, &k_mag| {
             if k_mag > 0.0 {
                 // Frequency from wavenumber
                 let freq = k_mag * self.properties.c0 / (TWO_PI);
@@ -234,7 +234,8 @@ impl FreqDispersionCorrection {
                 let correction = Complex64::new(phase_shift.cos(), phase_shift.sin());
                 *s *= correction;
             }
-        });
+        })
+        .expect("invariant: spectrum and wavenumber fields have matching shapes");
 
         Ok(())
     }

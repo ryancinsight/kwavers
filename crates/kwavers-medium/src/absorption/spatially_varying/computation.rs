@@ -2,7 +2,7 @@ use eunomia::Complex;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array3;
 
-use crate::parallel::zip_mut_with;
+use leto_ops::zip_mut_with;
 
 use super::SpatiallyVaryingAbsorption;
 use kwavers_core::constants::numerical::TWO_PI;
@@ -38,7 +38,8 @@ impl SpatiallyVaryingAbsorption {
             |alpha, (&alpha_0, &gamma)| {
                 *alpha = alpha_0 * freq_ratio.powf(gamma);
             },
-        );
+        )
+        .expect("invariant: spatial absorption fields have matching shapes");
 
         if let Some(ref temp_field) = self.temperature_field {
             let ref_temp = self.reference_temperature;
@@ -50,7 +51,8 @@ impl SpatiallyVaryingAbsorption {
                     let delta_t = temp - ref_temp;
                     *alpha *= temp_coeff.mul_add(delta_t, 1.0);
                 },
-            );
+            )
+            .expect("invariant: absorption and temperature fields have matching shapes");
         }
 
         alpha_field
@@ -76,7 +78,8 @@ impl SpatiallyVaryingAbsorption {
         zip_mut_with(field.view_mut(), &alpha_field.view(), |f, &alpha| {
             let attenuation = (-alpha * dx).exp();
             *f *= attenuation;
-        });
+        })
+        .expect("invariant: field and absorption fields have matching shapes");
 
         Ok(())
     }
@@ -103,7 +106,8 @@ impl SpatiallyVaryingAbsorption {
         zip_mut_with(field.view_mut(), &alpha_field.view(), |f, &alpha| {
             let attenuation = (-alpha * ds / 3.0_f64.sqrt()).exp();
             *f *= attenuation;
-        });
+        })
+        .expect("invariant: field and absorption fields have matching shapes");
 
         Ok(())
     }
@@ -143,7 +147,8 @@ impl SpatiallyVaryingAbsorption {
                 let dispersion_factor = (alpha_0 * tan_term).mul_add(omega.powf(gamma - 1.0), 1.0);
                 *c = c0 / dispersion_factor;
             },
-        );
+        )
+        .expect("invariant: dispersion material fields have matching shapes");
 
         Ok(c_field)
     }

@@ -4,7 +4,7 @@ use eunomia::Complex;
 use kwavers_core::constants::numerical::TWO_PI;
 use leto::Array3;
 
-use crate::parallel::zip_mut_with;
+use leto_ops::zip_mut_with;
 
 /// Dispersion model for frequency-dependent phase velocity
 #[derive(Debug, Clone)]
@@ -125,7 +125,8 @@ impl AbsorptionDispersionCorrection {
                 // Apply phase correction
                 *s *= Complex::from_polar(1.0, phase_shift);
             }
-        });
+        })
+        .expect("invariant: dispersion spectrum fields have matching shapes");
     }
 
     /// Calculate dispersion relation k(ω)

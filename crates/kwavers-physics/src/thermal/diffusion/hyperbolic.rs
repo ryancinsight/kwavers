@@ -128,10 +128,10 @@ impl CattaneoVernotte {
             &mut self.divergence,
         );
 
-        kwavers_core::utils::iterators::for_each_indexed_mut_with(
+        leto_ops::indexed_zip_mut_with(
             temperature.view_mut(),
             &self.divergence.view(),
-            |(i, j, k), t, &div| {
+            |[i, j, k], t, &div| {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
@@ -141,7 +141,8 @@ impl CattaneoVernotte {
 
                 *t -= dt * div / (rho * cp);
             },
-        );
+        )
+        .expect("invariant: temperature and divergence fields have matching shapes");
 
         Ok(())
     }
@@ -158,7 +159,7 @@ impl CattaneoVernotte {
         let relax = dt / tau;
         let denominator = 1.0 + relax;
 
-        crate::parallel::for_each_indexed_mut(flux.view_mut(), |(i, j, k), q| {
+        leto_ops::indexed_map_inplace(&mut flux.view_mut(), |[i, j, k], q| {
             if !Self::has_centered_neighbor::<AXIS>(i, j, k, grid) {
                 *q = 0.0;
                 return;
@@ -173,7 +174,8 @@ impl CattaneoVernotte {
 
             // Backward Euler: τ·∂q/∂t + q = −k·∇T  ⟹  q^{n+1} = (q^n − relax·k·∇T) / (1 + relax)
             *q = (q_previous - relax * k_thermal * grad_t) / denominator;
-        });
+        })
+        .expect("invariant: heat-flux view is valid");
     }
 
     fn fill_heat_flux_divergence(
@@ -187,7 +189,7 @@ impl CattaneoVernotte {
         let y_range = Self::centered_axis_range(grid.ny);
         let z_range = Self::centered_axis_range(grid.nz);
 
-        crate::parallel::for_each_indexed_mut(divergence.view_mut(), |(i, j, k), div| {
+        leto_ops::indexed_map_inplace(&mut divergence.view_mut(), |[i, j, k], div| {
             if !x_range.contains(&i) || !y_range.contains(&j) || !z_range.contains(&k) {
                 *div = 0.0;
                 return;
@@ -198,7 +200,8 @@ impl CattaneoVernotte {
             let div_z = Self::divergence_component::<2>(flux_z, i, j, k, grid);
 
             *div = div_x + div_y + div_z;
-        });
+        })
+        .expect("invariant: heat-flux divergence view is valid");
     }
 
     #[inline]
@@ -315,15 +318,18 @@ mod tests {
         let grid = Grid::new(5, 5, 5, 1.0, 1.0, 1.0).expect("valid grid");
         let mut solver = CattaneoVernotte::new(HyperbolicParameters::default(), &grid);
 
-        crate::parallel::for_each_indexed_mut(solver.heat_flux_x.view_mut(), |(i, _, _), q| {
+        leto_ops::indexed_map_inplace(&mut solver.heat_flux_x.view_mut(), |[i, _, _], q| {
             *q = i as f64;
-        });
-        crate::parallel::for_each_indexed_mut(solver.heat_flux_y.view_mut(), |(_, j, _), q| {
+        })
+        .expect("invariant: x heat-flux view is valid");
+        leto_ops::indexed_map_inplace(&mut solver.heat_flux_y.view_mut(), |[_, j, _], q| {
             *q = (2 * j) as f64;
-        });
-        crate::parallel::for_each_indexed_mut(solver.heat_flux_z.view_mut(), |(_, _, k), q| {
+        })
+        .expect("invariant: y heat-flux view is valid");
+        leto_ops::indexed_map_inplace(&mut solver.heat_flux_z.view_mut(), |[_, _, k], q| {
             *q = (3 * k) as f64;
-        });
+        })
+        .expect("invariant: z heat-flux view is valid");
 
         let owned = solver.heat_flux_divergence(&grid);
         CattaneoVernotte::fill_heat_flux_divergence(

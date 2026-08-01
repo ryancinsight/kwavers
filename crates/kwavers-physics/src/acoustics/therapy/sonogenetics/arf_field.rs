@@ -41,7 +41,7 @@
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use leto::Array3;
 
-use crate::parallel::zip_mut_with;
+use leto_ops::zip_mut_with;
 
 /// Volumetric ARF field accumulator and body-force extractor.
 ///
@@ -106,7 +106,8 @@ impl VolumetricArfField {
             |acc: &mut f64, &p: &f64| {
                 *acc += p * p;
             },
-        );
+        )
+        .expect("invariant: pressure and ARF accumulator fields have matching shapes");
         self.n_samples += 1;
     }
 
@@ -163,7 +164,8 @@ impl VolumetricArfField {
                     *arf = 0.0;
                 }
             },
-        );
+        )
+        .expect("invariant: finalized ARF fields have matching shapes");
         Ok(())
     }
 

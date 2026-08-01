@@ -145,10 +145,10 @@ impl PennesBioheat {
         let blood_coefficient = self.params.perfusion_heat_transfer_coefficient();
         let arterial_temperature = self.params.arterial_temperature.into_base();
 
-        kwavers_core::utils::iterators::for_each_indexed_mut_with(
+        leto_ops::indexed_zip_mut_with(
             source.view_mut(),
             &temperature.view(),
-            |(i, j, k), q, &t| {
+            |[i, j, k], q, &t| {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
@@ -158,7 +158,8 @@ impl PennesBioheat {
 
                 *q = blood_coefficient * (arterial_temperature - t) / (rho * cp);
             },
-        );
+        )
+        .expect("invariant: perfusion source and temperature fields have matching shapes");
 
         Ok(source)
     }
@@ -193,10 +194,10 @@ impl PennesBioheat {
         let blood_coefficient = self.params.perfusion_heat_transfer_coefficient();
         let arterial_temperature = self.params.arterial_temperature.into_base();
 
-        kwavers_core::utils::iterators::for_each_indexed_mut_with(
+        leto_ops::indexed_zip_mut_with(
             temperature.view_mut(),
             &laplacian.view(),
-            |(i, j, k), t, &lap| {
+            |[i, j, k], t, &lap| {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
@@ -214,7 +215,8 @@ impl PennesBioheat {
 
                 *t += dt * alpha.mul_add(lap, heating);
             },
-        );
+        )
+        .expect("invariant: bioheat and laplacian fields have matching shapes");
 
         Ok(())
     }

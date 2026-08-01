@@ -9,7 +9,7 @@ use kwavers_core::{
 use leto::{ArrayView3, ArrayViewMut3};
 use std::sync::Mutex;
 
-use crate::parallel::zip_mut_with;
+use leto_ops::zip_mut_with;
 
 pub(crate) trait StoredTemperatureScale: Send + Sync {
     fn absolute(value: f64) -> ThermodynamicTemperature<f64>;
@@ -75,7 +75,8 @@ where
                 }
             }
         }
-    });
+    })
+    .expect("invariant: CEM43 increment and temperature fields have matching shapes");
 
     if let Some(source) = failure
         .into_inner()

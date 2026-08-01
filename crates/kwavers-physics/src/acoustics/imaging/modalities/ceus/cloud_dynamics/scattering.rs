@@ -101,9 +101,10 @@ impl CloudDynamics {
         }
 
         let bubble_count = self.bubbles.len().max(1) as f64;
-        crate::parallel::for_each_indexed_mut(scattered_pressure.view_mut(), |_, x| {
+        leto_ops::indexed_map_inplace(&mut scattered_pressure.view_mut(), |_, x| {
             *x /= bubble_count
-        });
+        })
+        .expect("invariant: scattered-pressure field view is valid");
 
         Ok(ScatteredField {
             fundamental: scattered_pressure,

@@ -4,76 +4,7 @@
 //! Uses leto view types for efficient physics simulations.
 
 use leto::{ArrayView3, ArrayViewMut3};
-use leto_ops::ZipSources;
-use moirai_parallel::{enumerate_mut_with, for_each_index_with, for_each_mut_with, Adaptive};
-
-/// Apply an indexed mutation over a 3-D leto view.
-pub fn for_each_indexed_mut<T, F>(mut values: ArrayViewMut3<'_, T>, f: F)
-where
-    T: Send,
-    F: Fn((usize, usize, usize), &mut T) + Send + Sync,
-{
-    let shape = values.shape();
-    let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
-    if let Some(slice) = values.as_mut_slice() {
-        let f_ref = &f;
-        enumerate_mut_with::<Adaptive, _, _>(slice, |idx, value| {
-            let plane = ny * nz;
-            let i = idx / plane;
-            let rem = idx % plane;
-            f_ref((i, rem / nz, rem % nz), value);
-        });
-    } else {
-        for i in 0..nx {
-            for j in 0..ny {
-                for k in 0..nz {
-                    f((i, j, k), &mut values[[i, j, k]]);
-                }
-            }
-        }
-    }
-}
-
-/// Apply an indexed mutation over one mutable 3-D view and any statically
-/// typed set of immutable 3-D views.
-#[inline]
-pub fn for_each_indexed_mut_with<T, S, F>(mut values: ArrayViewMut3<'_, T>, sources: S, f: F)
-where
-    T: Send,
-    S: ZipSources<3>,
-    S::Values: Send,
-    S::Contiguous: Sync,
-    F: Fn((usize, usize, usize), &mut T, S::Values) + Send + Sync,
-{
-    sources
-        .validate(values.shape())
-        .expect("invariant: indexed zip source shapes and storage must match output");
-
-    let [_nx, ny, nz] = values.shape();
-    match (values.as_mut_slice(), sources.contiguous()) {
-        (Some(values), Some(source_slices)) => {
-            let f_ref = &f;
-            enumerate_mut_with::<Adaptive, _, _>(values, |idx, value| {
-                f_ref(
-                    (idx / (ny * nz), (idx % (ny * nz)) / nz, idx % nz),
-                    value,
-                    S::contiguous_values(source_slices, idx),
-                );
-            });
-        }
-        _ => {
-            if let Ok(iter) = values.indexed_iter_mut() {
-                for (idx, value) in iter {
-                    let index = (idx[0], idx[1], idx[2]);
-                    let offsets = sources
-                        .offsets_at(idx)
-                        .expect("invariant: validated zip offsets are representable");
-                    f(index, value, sources.values(offsets));
-                }
-            }
-        }
-    }
-}
+use moirai_parallel::{for_each_index_with, for_each_mut_with, Adaptive};
 
 /// Apply a scalar value transform to a leto array in place.
 pub fn apply_inplace<T, F>(values: &mut leto::Array3<T>, f: F)
@@ -275,40 +206,6 @@ mod tests {
         apply_inplace(&mut data, |value| value * value);
         let values: Vec<i32> = data.iter().copied().collect();
         assert_eq!(values, vec![1, 4, 9, 16, 25, 36]);
-    }
-
-    #[test]
-    fn indexed_mut_with_updates_single_source() {
-        let input =
-            Array3::from_vec([2, 2, 2], (0i32..8).collect()).expect("shape matches source data");
-        let mut output = Array3::zeros([2, 2, 2]);
-
-        for_each_indexed_mut_with(
-            output.view_mut(),
-            &input.view(),
-            |(i, j, k), value, &source| {
-                *value = source + (i + j + k) as i32;
-            },
-        );
-
-        assert_eq!(output[[0, 0, 0]], 0);
-        assert_eq!(output[[0, 1, 1]], 3 + 2);
-        assert_eq!(output[[1, 1, 1]], 7 + 3);
-    }
-
-    #[test]
-    fn indexed_mut_with_updates_tuple_sources() {
-        let first = Array3::from_elem([2, 2, 2], 2i32);
-        let second = Array3::from_elem([2, 2, 2], 3i32);
-        let mut output = Array3::zeros([2, 2, 2]);
-
-        for_each_indexed_mut_with(
-            output.view_mut(),
-            (&first.view(), &second.view()),
-            |_, value, (&first, &second)| *value = first * second,
-        );
-
-        assert!(output.iter().all(|&value| value == 6));
     }
 
     #[test]

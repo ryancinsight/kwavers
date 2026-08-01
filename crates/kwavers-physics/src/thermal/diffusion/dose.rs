@@ -9,8 +9,8 @@ use kwavers_core::constants::thermodynamic::KELVIN_OFFSET_C;
 use kwavers_core::error::KwaversResult;
 use leto::Array3;
 
-use crate::parallel::zip_mut_with;
 use crate::thermal::response::{checked_cem43_increments, KelvinStorage};
+use leto_ops::zip_mut_with;
 
 /// Kwavers-owned thermal-dose policy thresholds.
 pub mod thresholds {
@@ -73,7 +73,8 @@ impl ThermalDoseCalculator {
             self.cumulative_dose.view_mut(),
             &self.increments.view(),
             |dose, &increment| *dose += increment,
-        );
+        )
+        .expect("invariant: dose and increment fields have matching shapes");
 
         let updated_max = self.cumulative_dose.iter().copied().fold(0.0_f64, f64::max);
         if updated_max > self.max_dose {

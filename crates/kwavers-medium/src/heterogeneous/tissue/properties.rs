@@ -1,9 +1,9 @@
 //! Tissue property caching utilities
 
 use crate::absorption::{AbsorptionTissueType, TISSUE_PROPERTIES};
-use crate::parallel::zip_mut_with;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use leto::Array3;
+use leto_ops::zip_mut_with;
 use std::collections::HashMap;
 
 /// Cache for tissue properties to avoid repeated lookups
@@ -72,7 +72,8 @@ impl TissuePropertyCache {
                 .get(&tissue)
                 .copied()
                 .unwrap_or(DENSITY_WATER_NOMINAL);
-        });
+        })
+        .expect("invariant: density and tissue-map fields have matching shapes");
     }
 
     /// Populate array with cached sound speed values
@@ -97,7 +98,8 @@ impl TissuePropertyCache {
                 .get(&tissue)
                 .copied()
                 .unwrap_or(SOUND_SPEED_WATER_SIM);
-        });
+        })
+        .expect("invariant: sound-speed and tissue-map fields have matching shapes");
     }
 }
 

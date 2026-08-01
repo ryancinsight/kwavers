@@ -1,8 +1,8 @@
 use crate::acoustics::skull::AcousticSkullProperties;
-use crate::parallel::zip_mut_with;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use leto::Array3;
+use leto_ops::zip_mut_with;
 
 use super::constants::ALPHA_WATER;
 use super::model::HeterogeneousSkull;
@@ -34,19 +34,22 @@ impl HeterogeneousSkull {
             if m > 0.5 {
                 *c = props.sound_speed;
             }
-        });
+        })
+        .expect("invariant: sound-speed and skull-mask fields have matching shapes");
 
         zip_mut_with(density.view_mut(), &mask.view(), |rho, &m| {
             if m > 0.5 {
                 *rho = props.density;
             }
-        });
+        })
+        .expect("invariant: density and skull-mask fields have matching shapes");
 
         zip_mut_with(attenuation.view_mut(), &mask.view(), |atten, &m| {
             if m > 0.5 {
                 *atten = props.attenuation_coeff;
             }
-        });
+        })
+        .expect("invariant: attenuation and skull-mask fields have matching shapes");
 
         Ok(Self {
             sound_speed,

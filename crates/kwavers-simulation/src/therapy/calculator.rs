@@ -1,6 +1,5 @@
 //! Therapy calculator orchestration
 
-use crate::parallel::zip_indexed_mut_ref3;
 use aequitas::systems::si::quantities::{
     MassDensity, MassDensityRate, SpecificHeatCapacity, ThermalConductivity,
 };
@@ -131,10 +130,10 @@ impl TherapyCalculator {
         let mut heat_source = Array3::zeros(self.grid_shape);
 
         // Q = 2 * α * I, where I = p²/(2*ρ*c)
-        zip_indexed_mut_ref3(
+        leto_ops::indexed_zip_mut_with(
             heat_source.view_mut(),
-            pressure.view(),
-            |(i, j, k), q, &p| {
+            &pressure.view(),
+            |[i, j, k], q, &p| {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
@@ -156,7 +155,8 @@ impl TherapyCalculator {
                 // Heat generation rate [W/m³]
                 *q = 2.0 * alpha * intensity;
             },
-        );
+        )
+        .expect("invariant: heat-source and pressure fields have matching shapes");
 
         Ok(heat_source)
     }

@@ -41,31 +41,29 @@ impl BubbleInteractions {
     ) -> Array3<f64> {
         let mut interaction_field = Array3::zeros(grid_shape);
 
-        crate::parallel::for_each_indexed_mut(
-            interaction_field.view_mut(),
-            |(i, j, k), field_val| {
-                let total_interaction = bubbles
-                    .iter()
-                    .filter(|((bi, bj, bk), _)| !(i == *bi && j == *bj && k == *bk)) // Skip self-interaction
-                    .filter_map(|((bi, bj, bk), state)| {
-                        // Calculate distance
-                        let dx = (i as f64 - *bi as f64) * grid_spacing.0;
-                        let dy = (j as f64 - *bj as f64) * grid_spacing.1;
-                        let dz = (k as f64 - *bk as f64) * grid_spacing.2;
-                        let distance = dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt();
+        leto_ops::indexed_map_inplace(&mut interaction_field.view_mut(), |[i, j, k], field_val| {
+            let total_interaction = bubbles
+                .iter()
+                .filter(|((bi, bj, bk), _)| !(i == *bi && j == *bj && k == *bk)) // Skip self-interaction
+                .filter_map(|((bi, bj, bk), state)| {
+                    // Calculate distance
+                    let dx = (i as f64 - *bi as f64) * grid_spacing.0;
+                    let dy = (j as f64 - *bj as f64) * grid_spacing.1;
+                    let dz = (k as f64 - *bk as f64) * grid_spacing.2;
+                    let distance = dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt();
 
-                        if distance < self.cutoff_distance && distance > 0.0 {
-                            // Bjerknes force contribution
-                            Some(self.calculate_bjerknes_contribution(state, distance))
-                        } else {
-                            None
-                        }
-                    })
-                    .sum::<f64>();
+                    if distance < self.cutoff_distance && distance > 0.0 {
+                        // Bjerknes force contribution
+                        Some(self.calculate_bjerknes_contribution(state, distance))
+                    } else {
+                        None
+                    }
+                })
+                .sum::<f64>();
 
-                *field_val = total_interaction * self.interaction_strength;
-            },
-        );
+            *field_val = total_interaction * self.interaction_strength;
+        })
+        .expect("invariant: bubble interaction field view is valid");
 
         interaction_field
     }

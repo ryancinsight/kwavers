@@ -49,7 +49,6 @@
 //! elastography." IEEE Trans. Med. Imaging, 32(5), 863–874.
 //! DOI: 10.1109/TMI.2013.2239671
 
-use kwavers_core::utils::iterators::for_each_indexed_mut;
 use leto::Array3;
 
 use super::super::wave_field::NonlinearElasticWaveField;
@@ -76,12 +75,13 @@ impl NonlinearElasticWaveSolver {
         let harmonic_factor = (beta * 1e-6).min(1e-8);
         {
             let u_fund_v = field.u_fundamental.view();
-            for_each_indexed_mut(field.u_second.view_mut(), |(i, j, k), u2| {
+            leto_ops::indexed_map_inplace(&mut field.u_second.view_mut(), |[i, j, k], u2| {
                 if i >= 1 && i < nx - 1 && j >= 1 && j < ny - 1 && k >= 1 && k < nz - 1 {
                     let u1 = u_fund_v[[i, j, k]];
                     *u2 += harmonic_factor * u1 * u1.abs() * dt;
                 }
-            });
+            })
+            .expect("invariant: second-harmonic field view is valid");
         }
 
         // --- Loop 2: third harmonic via cascading ---
@@ -100,7 +100,7 @@ impl NonlinearElasticWaveSolver {
                 let sound_speed_sq = self.config.sound_speed().powi(2);
 
                 let mut d = Array3::<f64>::zeros((nx, ny, nz));
-                for_each_indexed_mut(d.view_mut(), |(i, j, k), di| {
+                leto_ops::indexed_map_inplace(&mut d.view_mut(), |[i, j, k], di| {
                     if i >= 1 && i < nx - 1 && j >= 1 && j < ny - 1 && k >= 1 && k < nz - 1 {
                         let u1 = u_fund[[i, j, k]];
                         let u2 = u_second[[i, j, k]];
@@ -118,7 +118,8 @@ impl NonlinearElasticWaveSolver {
                             sound_speed_sq.mul_add(laplacian_u3, third_harmonic_source);
                         *di = dt * dt * acceleration_u3;
                     }
-                });
+                })
+                .expect("invariant: third-harmonic delta view is valid");
                 d
             };
             // Apply delta after all RHS evaluations complete (Jacobi apply pass).
@@ -158,7 +159,7 @@ impl NonlinearElasticWaveSolver {
                 let sound_speed_sq = self.config.sound_speed().powi(2);
 
                 let mut d = Array3::<f64>::zeros((nx, ny, nz));
-                for_each_indexed_mut(d.view_mut(), |(i, j, k), di| {
+                leto_ops::indexed_map_inplace(&mut d.view_mut(), |[i, j, k], di| {
                     if i >= 1 && i < nx - 1 && j >= 1 && j < ny - 1 && k >= 1 && k < nz - 1 {
                         let u1 = u_fund[[i, j, k]];
                         let u_pv = u_prev[[i, j, k]];
@@ -170,7 +171,8 @@ impl NonlinearElasticWaveSolver {
                         let accel = sound_speed_sq.mul_add(lap_u_n, source);
                         *di = dt * dt * accel;
                     }
-                });
+                })
+                .expect("invariant: higher-harmonic delta view is valid");
                 d
             };
             // Jacobi apply: uₙ updated using only its pre-step values.

@@ -1,7 +1,6 @@
 //! `ElasticSwePMLBoundary` — pre-computed PML attenuation field and damping application.
 
 use super::config::SwePmlConfig;
-use kwavers_core::utils::iterators::{for_each_indexed_mut, for_each_indexed_mut_with};
 use kwavers_grid::Grid;
 use leto::{Array1, Array3};
 use moirai_parallel::{for_each_chunk_triple_mut_enumerated_with, Adaptive};
@@ -156,11 +155,12 @@ impl ElasticSwePMLBoundary {
     pub fn get_mask(&self) -> Array3<f64> {
         let [nx, ny, nz] = self.sigma.shape();
         let mut mask = Array3::<f64>::zeros((nx, ny, nz));
-        for_each_indexed_mut_with(mask.view_mut(), &self.sigma.view(), |_idx, m, &s| {
+        leto_ops::indexed_zip_mut_with(mask.view_mut(), &self.sigma.view(), |_, m, &s| {
             if s > 0.0 {
                 *m = 1.0;
             }
-        });
+        })
+        .expect("invariant: PML mask and sigma fields have matching shapes");
         mask
     }
 
@@ -200,7 +200,7 @@ impl ElasticSwePMLBoundary {
         let pml_y = ny > 1;
         let pml_z = nz > 1;
 
-        for_each_indexed_mut(sigma.view_mut(), |(i, j, k), s| {
+        leto_ops::indexed_map_inplace(&mut sigma.view_mut(), |[i, j, k], s| {
             let mut max_sigma = 0.0_f64;
 
             // X-direction PML (left and right faces)
@@ -237,7 +237,8 @@ impl ElasticSwePMLBoundary {
             }
 
             *s = max_sigma;
-        });
+        })
+        .expect("invariant: PML sigma view is valid");
 
         sigma
     }
