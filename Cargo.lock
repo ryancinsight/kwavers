@@ -5593,7 +5593,6 @@ dependencies = [
  "dicom",
  "dicom-pixeldata",
  "ritk-codecs",
- "ritk-spatial",
 ]
 
 [[package]]
