@@ -15,7 +15,8 @@
   `1fd08058f` updates the temporal synchronization validation test to RITK's
   typed `TemporalSyncResult` contract after the hosted compiler exposed the
   stale tuple destructure.
-- Integration: PR #328 is at `1fd08058f`. The checkout action and Python
+- Integration: PR #328 head is `14e923b69` (source fix `1fd08058f`). The
+  checkout action and Python
   release workflow pin Atlas `777cf325fad3114299b44a99a48145997f93a5b0`, the
   current Coeus/Leto-compatible provider graph containing Aequitas `8cc90b2`
   and Eunomia `18459875`.
