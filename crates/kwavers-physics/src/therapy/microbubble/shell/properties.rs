@@ -1,4 +1,7 @@
 use super::state::ShellState;
+use aequitas::systems::si::quantities::{
+    Dimensionless, DynamicViscosity, Length, Pressure, SurfaceTension,
+};
 use kwavers_core::constants::cavitation::SURFACE_TENSION_WATER;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use std::fmt;
@@ -18,17 +21,17 @@ use std::fmt;
 #[derive(Debug, Clone)]
 pub struct MarmottantShellProperties {
     /// Equilibrium radius (m)
-    pub radius_equilibrium: f64,
+    pub radius_equilibrium: Length<f64>,
     /// Buckling radius (m)
-    pub radius_buckling: f64,
+    pub radius_buckling: Length<f64>,
     /// Rupture radius (m)
-    pub radius_rupture: f64,
+    pub radius_rupture: Length<f64>,
     /// Shell elastic modulus κ_s [N/m]
-    pub elasticity: f64,
+    pub elasticity: SurfaceTension<f64>,
     /// Shell viscosity μ_shell [Pa·s]
-    pub viscosity: f64,
+    pub viscosity: DynamicViscosity<f64>,
     /// Water surface tension (ruptured state) [N/m]
-    pub surface_tension_water: f64,
+    pub surface_tension_water: SurfaceTension<f64>,
     /// Current shell state
     pub state: ShellState,
     /// Whether rupture has occurred (irreversible)
@@ -41,30 +44,34 @@ impl MarmottantShellProperties {
     /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
     ///
     pub fn new(
-        radius_equilibrium: f64,
-        elasticity: f64,
-        viscosity: f64,
+        radius_equilibrium: Length<f64>,
+        elasticity: SurfaceTension<f64>,
+        viscosity: DynamicViscosity<f64>,
         buckling_ratio: f64,
         rupture_ratio: f64,
     ) -> KwaversResult<Self> {
-        if radius_equilibrium <= 0.0 {
+        let radius_equilibrium_value = radius_equilibrium.into_base();
+        let elasticity_value = elasticity.into_base();
+        let viscosity_value = viscosity.into_base();
+
+        if radius_equilibrium_value <= 0.0 {
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
                 parameter: "radius_equilibrium".to_owned(),
-                value: radius_equilibrium,
+                value: radius_equilibrium_value,
                 reason: "must be positive".to_owned(),
             }));
         }
-        if elasticity < 0.0 {
+        if elasticity_value < 0.0 {
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
                 parameter: "elasticity".to_owned(),
-                value: elasticity,
+                value: elasticity_value,
                 reason: "must be non-negative".to_owned(),
             }));
         }
-        if viscosity < 0.0 {
+        if viscosity_value < 0.0 {
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
                 parameter: "viscosity".to_owned(),
-                value: viscosity,
+                value: viscosity_value,
                 reason: "must be non-negative".to_owned(),
             }));
         }
@@ -83,16 +90,16 @@ impl MarmottantShellProperties {
             }));
         }
 
-        let radius_buckling = radius_equilibrium * buckling_ratio;
-        let radius_rupture = radius_equilibrium * rupture_ratio;
+        let radius_buckling = radius_equilibrium_value * buckling_ratio;
+        let radius_rupture = radius_equilibrium_value * rupture_ratio;
 
         Ok(Self {
             radius_equilibrium,
-            radius_buckling,
-            radius_rupture,
+            radius_buckling: Length::from_base(radius_buckling),
+            radius_rupture: Length::from_base(radius_rupture),
             elasticity,
             viscosity,
-            surface_tension_water: SURFACE_TENSION_WATER,
+            surface_tension_water: SurfaceTension::from_base(SURFACE_TENSION_WATER),
             state: ShellState::Elastic,
             has_ruptured: false,
         })
@@ -102,24 +109,42 @@ impl MarmottantShellProperties {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub fn sono_vue(radius_equilibrium: f64) -> KwaversResult<Self> {
-        Self::new(radius_equilibrium, 0.5, 0.8e-9, 0.85, 1.6)
+    pub fn sono_vue(radius_equilibrium: Length<f64>) -> KwaversResult<Self> {
+        Self::new(
+            radius_equilibrium,
+            SurfaceTension::from_base(0.5),
+            DynamicViscosity::from_base(0.8e-9),
+            0.85,
+            1.6,
+        )
     }
 
     /// Create typical Definity-like shell.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub fn definity(radius_equilibrium: f64) -> KwaversResult<Self> {
-        Self::new(radius_equilibrium, 1.0, 1.2e-9, 0.90, 1.8)
+    pub fn definity(radius_equilibrium: Length<f64>) -> KwaversResult<Self> {
+        Self::new(
+            radius_equilibrium,
+            SurfaceTension::from_base(1.0),
+            DynamicViscosity::from_base(1.2e-9),
+            0.90,
+            1.8,
+        )
     }
 
     /// Create drug-delivery shell (weaker for easier rupture).
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub fn drug_delivery(radius_equilibrium: f64) -> KwaversResult<Self> {
-        Self::new(radius_equilibrium, 0.3, 0.5e-9, 0.80, 1.4)
+    pub fn drug_delivery(radius_equilibrium: Length<f64>) -> KwaversResult<Self> {
+        Self::new(
+            radius_equilibrium,
+            SurfaceTension::from_base(0.3),
+            DynamicViscosity::from_base(0.5e-9),
+            0.80,
+            1.4,
+        )
     }
 
     /// Calculate surface tension χ(R) (Marmottant 2005, eq. 1).
@@ -137,13 +162,16 @@ impl MarmottantShellProperties {
     /// `R ∈ [R_buckling, R₀)`; this matches the canonical
     /// `bubble_dynamics::encapsulated::MarmottantModel`.)
     #[must_use]
-    pub fn surface_tension(&self, radius: f64) -> f64 {
+    pub fn surface_tension(&self, radius: Length<f64>) -> SurfaceTension<f64> {
+        let radius_value = radius.into_base();
+        let radius_buckling = self.radius_buckling.into_base();
+        let radius_rupture = self.radius_rupture.into_base();
         if radius < self.radius_buckling {
-            0.0
-        } else if radius <= self.radius_rupture {
-            let r_b_sq = self.radius_buckling * self.radius_buckling;
-            let r_sq = radius * radius;
-            self.elasticity * (r_sq / r_b_sq - 1.0)
+            SurfaceTension::from_base(0.0)
+        } else if radius_value <= radius_rupture {
+            let r_b_sq = radius_buckling * radius_buckling;
+            let r_sq = radius_value * radius_value;
+            SurfaceTension::from_base(self.elasticity.into_base() * (r_sq / r_b_sq - 1.0))
         } else {
             self.surface_tension_water
         }
@@ -154,14 +182,16 @@ impl MarmottantShellProperties {
     /// Elastic regime: d(χ)/dR = 2κ_s·R/R_buckling² (referenced to R_buckling
     /// per Marmottant 2005, consistent with [`Self::surface_tension`]).
     #[must_use]
-    pub fn surface_tension_derivative(&self, radius: f64) -> f64 {
-        if radius < self.radius_buckling {
-            0.0
-        } else if radius <= self.radius_rupture {
-            let r_b_sq = self.radius_buckling * self.radius_buckling;
-            2.0 * self.elasticity * radius / r_b_sq
+    pub fn surface_tension_derivative(&self, radius: Length<f64>) -> Pressure<f64> {
+        let radius_value = radius.into_base();
+        let radius_buckling = self.radius_buckling.into_base();
+        if radius_value < radius_buckling {
+            Pressure::from_base(0.0)
+        } else if radius_value <= self.radius_rupture.into_base() {
+            let r_b_sq = radius_buckling * radius_buckling;
+            Pressure::from_base(2.0 * self.elasticity.into_base() * radius_value / r_b_sq)
         } else {
-            0.0
+            Pressure::from_base(0.0)
         }
     }
 
@@ -169,20 +199,26 @@ impl MarmottantShellProperties {
     ///
     /// P_shell = 2χ(R)/R + 4μ_shell·(Ṙ/R)
     #[must_use]
-    pub fn pressure_contribution(&self, radius: f64, wall_velocity: f64) -> f64 {
-        if radius <= 0.0 {
-            return 0.0;
+    pub fn pressure_contribution(
+        &self,
+        radius: Length<f64>,
+        wall_velocity: aequitas::systems::si::quantities::Velocity<f64>,
+    ) -> Pressure<f64> {
+        let radius_value = radius.into_base();
+        if radius_value <= 0.0 {
+            return Pressure::from_base(0.0);
         }
-        let chi = self.surface_tension(radius);
-        let elastic_term = 2.0 * chi / radius;
-        let viscous_term = 4.0 * self.viscosity * wall_velocity / radius;
-        elastic_term + viscous_term
+        let chi = self.surface_tension(radius).into_base();
+        let elastic_term = 2.0 * chi / radius_value;
+        let viscous_term =
+            4.0 * self.viscosity.into_base() * wall_velocity.into_base() / radius_value;
+        Pressure::from_base(elastic_term + viscous_term)
     }
 
     /// Update shell state based on current radius.
     ///
     /// Rupture is irreversible.
-    pub fn update_state(&mut self, radius: f64) {
+    pub fn update_state(&mut self, radius: Length<f64>) {
         if self.has_ruptured {
             self.state = ShellState::Ruptured;
             return;
@@ -220,8 +256,8 @@ impl MarmottantShellProperties {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     #[must_use]
-    pub fn strain(&self, radius: f64) -> f64 {
-        radius / self.radius_equilibrium - 1.0
+    pub fn strain(&self, radius: Length<f64>) -> Dimensionless<f64> {
+        Dimensionless::from_base(radius.into_base() / self.radius_equilibrium.into_base() - 1.0)
     }
 
     /// Calculate shell stress (approximately χ(R)).
@@ -229,7 +265,7 @@ impl MarmottantShellProperties {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     #[must_use]
-    pub fn stress(&self, radius: f64) -> f64 {
+    pub fn stress(&self, radius: Length<f64>) -> SurfaceTension<f64> {
         self.surface_tension(radius)
     }
 
@@ -238,31 +274,31 @@ impl MarmottantShellProperties {
     /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
     ///
     pub fn validate(&self) -> KwaversResult<()> {
-        if self.radius_equilibrium <= 0.0 {
+        if self.radius_equilibrium.into_base() <= 0.0 {
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
                 parameter: "radius_equilibrium".to_owned(),
-                value: self.radius_equilibrium,
+                value: self.radius_equilibrium.into_base(),
                 reason: "must be positive".to_owned(),
             }));
         }
         if self.radius_buckling >= self.radius_equilibrium {
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
                 parameter: "radius_buckling".to_owned(),
-                value: self.radius_buckling,
+                value: self.radius_buckling.into_base(),
                 reason: "must be < radius_equilibrium".to_owned(),
             }));
         }
         if self.radius_rupture <= self.radius_equilibrium {
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
                 parameter: "radius_rupture".to_owned(),
-                value: self.radius_rupture,
+                value: self.radius_rupture.into_base(),
                 reason: "must be > radius_equilibrium".to_owned(),
             }));
         }
-        if self.elasticity < 0.0 {
+        if self.elasticity.into_base() < 0.0 {
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
                 parameter: "elasticity".to_owned(),
-                value: self.elasticity,
+                value: self.elasticity.into_base(),
                 reason: "must be non-negative".to_owned(),
             }));
         }
@@ -275,9 +311,9 @@ impl fmt::Display for MarmottantShellProperties {
         write!(
             f,
             "MarmottantShell(κ_s={:.2}N/m, μ={:.2e}Pa·s, R₀={:.2}μm, state={})",
-            self.elasticity,
-            self.viscosity,
-            self.radius_equilibrium * 1e6,
+            self.elasticity.into_base(),
+            self.viscosity.into_base(),
+            self.radius_equilibrium.into_base() * 1e6,
             self.state
         )
     }

@@ -9,8 +9,8 @@ pub mod microbubble;
 pub mod types;
 
 pub use microbubble::{
-    calculate_primary_bjerknes_force, MarmottantShellProperties, MicrobubbleState, Position3D,
-    RadiationForce, ShellState, Velocity3D,
+    calculate_primary_bjerknes_force, Direction3D, MarmottantShellProperties, MicrobubbleState,
+    Position3D, PressureGradient3D, RadiationForce, ShellState, Velocity3D,
 };
 pub use types::{
     DomainTherapyMechanism, DomainTherapyModality, DomainTherapyParameters, DomainTreatmentMetrics,

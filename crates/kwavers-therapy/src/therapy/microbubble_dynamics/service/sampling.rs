@@ -1,7 +1,8 @@
 use leto::Array3;
 
+use aequitas::systems::si::quantities::{Length, Pressure, PressureGradient};
 use kwavers_core::error::{KwaversError, KwaversResult, PhysicsError};
-use kwavers_physics::therapy::microbubble::Position3D;
+use kwavers_physics::therapy::microbubble::{Position3D, PressureGradient3D};
 
 /// Sample acoustic field at bubble position
 ///
@@ -11,21 +12,25 @@ use kwavers_physics::therapy::microbubble::Position3D;
 /// # Returns
 ///
 /// - `pressure`: Local pressure (Pa)
-/// - `pressure_gradient`: (∂P/∂x, ∂P/∂y, ∂P/∂z) [Pa/m]
+/// - `pressure_gradient`: Cartesian pressure gradient [Pa/m]
 /// # Errors
 /// - Returns [`KwaversError::Physics`] if the precondition for a Physics-class constraint is violated.
 ///
 pub fn sample_acoustic_field_at_position(
     position: &Position3D,
     pressure_field: &Array3<f64>,
-    grid_spacing: (f64, f64, f64),
-) -> KwaversResult<(f64, (f64, f64, f64))> {
+    grid_spacing: (Length<f64>, Length<f64>, Length<f64>),
+) -> KwaversResult<(Pressure<f64>, PressureGradient3D)> {
     let [nx, ny, nz] = pressure_field.shape();
-    let (dx, dy, dz) = grid_spacing;
+    let (dx, dy, dz) = (
+        grid_spacing.0.into_base(),
+        grid_spacing.1.into_base(),
+        grid_spacing.2.into_base(),
+    );
 
-    let ix = (position.x / dx).round() as usize;
-    let iy = (position.y / dy).round() as usize;
-    let iz = (position.z / dz).round() as usize;
+    let ix = (position.x.into_base() / dx).round() as usize;
+    let iy = (position.y.into_base() / dy).round() as usize;
+    let iz = (position.z.into_base() / dz).round() as usize;
 
     if ix >= nx || iy >= ny || iz >= nz {
         return Err(KwaversError::Physics(PhysicsError::InvalidParameter {
@@ -55,5 +60,12 @@ pub fn sample_acoustic_field_at_position(
         0.0
     };
 
-    Ok((pressure, (grad_x, grad_y, grad_z)))
+    Ok((
+        Pressure::from_base(pressure),
+        PressureGradient3D::new(
+            PressureGradient::from_base(grad_x),
+            PressureGradient::from_base(grad_y),
+            PressureGradient::from_base(grad_z),
+        ),
+    ))
 }

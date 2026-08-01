@@ -88,22 +88,38 @@
 //!     MicrobubbleDynamicsService, DrugPayload, DrugLoadingMode,
 //! };
 //! use kwavers_physics::therapy::microbubble::{
-//!     MicrobubbleState, MarmottantShellProperties, Position3D,
+//!     MicrobubbleState, MarmottantShellProperties, Position3D, PressureGradient3D,
+//! };
+//! use aequitas::systems::si::quantities::{
+//!     Length, MassDensity, Pressure, PressureGradient, PressureRate, Time,
 //! };
 //!
 //! // Create microbubble with drug payload
-//! let position = Position3D::new(0.01, 0.02, 0.03);
-//! let mut bubble = MicrobubbleState::drug_loaded(2.0, 50.0, position).unwrap();
+//! let position = Position3D::new(
+//!     Length::from_base(0.01),
+//!     Length::from_base(0.02),
+//!     Length::from_base(0.03),
+//! );
+//! let mut bubble = MicrobubbleState::drug_loaded(
+//!     Length::from_base(2.0e-6),
+//!     MassDensity::from_base(50.0),
+//!     position,
+//! )
+//! .unwrap();
 //! let mut shell = MarmottantShellProperties::drug_delivery(bubble.radius_equilibrium).unwrap();
-//! let mut drug = DrugPayload::doxorubicin(bubble.volume()).unwrap();
+//! let mut drug = DrugPayload::doxorubicin(bubble.volume().into_base()).unwrap();
 //!
 //! // Create dynamics service
 //! let service = MicrobubbleDynamicsService::from_microbubble_state(&bubble).unwrap();
 //!
 //! // Simulate dynamics
-//! let acoustic_pressure = 1e5; // 100 kPa
-//! let pressure_gradient = (1e5, 0.0, 0.0); // Pressure gradient [Pa/m]
-//! let dt = 1e-6; // 1 microsecond timestep
+//! let acoustic_pressure = Pressure::from_base(1.0e5); // 100 kPa
+//! let pressure_gradient = PressureGradient3D::new(
+//!     PressureGradient::from_base(1.0e5),
+//!     PressureGradient::from_base(0.0),
+//!     PressureGradient::from_base(0.0),
+//! );
+//! let dt = Time::from_base(1.0e-6); // 1 microsecond timestep
 //!
 //! service.update_bubble_dynamics(
 //!     &mut bubble,
@@ -111,12 +127,12 @@
 //!     &mut drug,
 //!     acoustic_pressure,
 //!     pressure_gradient,
-//!     0.0, // dP_ac/dt [Pa/s] — pass 0.0 when waveform is slowly varying
-//!     0.0, // time `s`
+//!     PressureRate::from_base(0.0), // slowly-varying approximation
+//!     Time::from_base(0.0),         // time `s`
 //!     dt,
 //! ).unwrap();
 //!
-//! println!("Bubble radius: {:.2} μm", bubble.radius * 1e6);
+//! println!("Bubble radius: {:.2} μm", bubble.radius.into_base() * 1e6);
 //! println!("Drug released: {:.1}%", drug.release_fraction() * 100.0);
 //! ```
 //!

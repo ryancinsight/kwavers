@@ -5,6 +5,7 @@ use crate::therapy::therapy_integration::safety_controller::{SafetyController, T
 use crate::therapy::therapy_integration::state::{
     SafetyMetrics, TherapyIntegrationSafetyStatus, TherapySessionState,
 };
+use aequitas::systems::si::quantities::Time;
 use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
@@ -255,8 +256,11 @@ impl TherapyIntegrationOrchestrator {
         }
 
         if let Some(ref mut ceus) = self.ceus_system {
-            let concentration =
-                microbubble::update_microbubble_dynamics(ceus, &corrected_field, dt)?;
+            let concentration = microbubble::update_microbubble_dynamics(
+                ceus,
+                &corrected_field,
+                Time::from_base(dt),
+            )?;
             self.session_state.microbubble_concentration = concentration;
         }
 
