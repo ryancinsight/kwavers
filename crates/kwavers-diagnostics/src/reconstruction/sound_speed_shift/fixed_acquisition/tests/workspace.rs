@@ -3,8 +3,8 @@ use super::*;
 #[test]
 fn fixed_plan_workspace_reuses_sampled_rhs_and_solver_buffers() {
     let mask = Array2::from_elem((3, 3), true);
-    let mut truth = Array2::zeros((3, 3));
-    truth.fill(18.0);
+    let mut truth = SoundSpeedShiftField::from_storage(Array2::zeros((3, 3)));
+    truth.storage_mut().fill(18.0);
     let samples = horizontal_samples(&[-0.001, 0.0, 0.001]);
     let config = SoundSpeedShiftConfig {
         spacing: Length::from_base(0.001),
@@ -34,11 +34,11 @@ fn fixed_plan_workspace_reuses_sampled_rhs_and_solver_buffers() {
     assert_eq!(workspace.allocated_slots(), retained_slots);
     assert_eq!(workspace.memory_bytes(), retained_bytes);
     assert_image_close(
-        &first.sound_speed_shift_m_s,
-        &direct.sound_speed_shift_m_s,
+        first.sound_speed_shift.storage(),
+        direct.sound_speed_shift.storage(),
         1.0e-12,
     );
-    assert_eq!(first.sound_speed_shift_m_s, second.sound_speed_shift_m_s);
+    assert_eq!(first.sound_speed_shift, second.sound_speed_shift);
     workspace.clear();
     assert_eq!(workspace.sampled_rhs_capacity(), rhs_capacity);
 }
@@ -47,8 +47,8 @@ fn fixed_plan_workspace_reuses_sampled_rhs_and_solver_buffers() {
 fn fixed_plan_reconstruct_into_image_reuses_output_allocation() {
     let mut mask = Array2::from_elem((3, 3), true);
     mask[[0, 0]] = false;
-    let mut truth = Array2::zeros((3, 3));
-    truth.fill(14.0);
+    let mut truth = SoundSpeedShiftField::from_storage(Array2::zeros((3, 3)));
+    truth.storage_mut().fill(14.0);
     let samples = horizontal_samples(&[-0.001, 0.0, 0.001]);
     let config = SoundSpeedShiftConfig {
         spacing: Length::from_base(0.001),
@@ -73,16 +73,16 @@ fn fixed_plan_reconstruct_into_image_reuses_output_allocation() {
             .reconstruct_into_image(&predicted, &mut workspace, &mut output)
             .unwrap();
 
-        assert_eq!(first.sound_speed_shift_m_s.shape(), mask.shape());
+        assert_eq!(first.sound_speed_shift.shape(), mask.shape());
         assert!(!first.objective_history.is_empty());
         assert_eq!(first.rows_used, plan.rows_used());
         assert_eq!(first.rows_available, plan.rows_available());
         assert_eq!(first.active_voxels, plan.active_voxels());
         assert_eq!(first.model_family, SOUND_SPEED_SHIFT_MODEL);
-        assert_eq!(first.sound_speed_shift_m_s[[0, 0]], 0.0);
+        assert_eq!(first.sound_speed_shift.storage()[[0, 0]], 0.0);
         assert_image_close(
-            first.sound_speed_shift_m_s,
-            &direct.sound_speed_shift_m_s,
+            first.sound_speed_shift.storage(),
+            direct.sound_speed_shift.storage(),
             1.0e-12,
         );
     }
@@ -97,16 +97,17 @@ fn fixed_plan_reconstruct_into_image_reuses_output_allocation() {
 
         assert_eq!(
             second
-                .sound_speed_shift_m_s
+                .sound_speed_shift
+                .storage()
                 .as_slice_memory_order()
                 .unwrap()
                 .as_ptr(),
             retained_ptr
         );
-        assert_eq!(second.sound_speed_shift_m_s[[0, 0]], 0.0);
+        assert_eq!(second.sound_speed_shift.storage()[[0, 0]], 0.0);
         assert_image_close(
-            second.sound_speed_shift_m_s,
-            &scaled_direct.sound_speed_shift_m_s,
+            second.sound_speed_shift.storage(),
+            scaled_direct.sound_speed_shift.storage(),
             1.0e-12,
         );
     }

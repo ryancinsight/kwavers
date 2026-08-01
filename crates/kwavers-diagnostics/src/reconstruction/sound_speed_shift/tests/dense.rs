@@ -6,7 +6,8 @@ use leto::Array2;
 use super::{
     attach_time_shifts, horizontal_samples, predict_sound_speed_time_shifts,
     reconstruct_sound_speed_shift, reconstruct_sound_speed_shift_with_workspace, ShiftPrior,
-    ShiftSampling, SoundSpeedShiftConfig, SoundSpeedShiftWorkspace, SOUND_SPEED_SHIFT_MODEL,
+    ShiftSampling, SoundSpeedShiftConfig, SoundSpeedShiftField, SoundSpeedShiftWorkspace,
+    SOUND_SPEED_SHIFT_MODEL,
 };
 
 /// Dense PCG recovers a uniform 20 m/s shift on a fully-observed 3×3 grid.
@@ -17,8 +18,8 @@ use super::{
 #[test]
 fn dense_prior_recovers_uniform_sound_speed_shift() {
     let mask = Array2::from_elem((3, 3), true);
-    let mut truth = Array2::zeros((3, 3));
-    truth.fill(20.0);
+    let mut truth = SoundSpeedShiftField::from_storage(Array2::zeros((3, 3)));
+    truth.storage_mut().fill(20.0);
     let samples = horizontal_samples(&[-0.001, 0.0, 0.001]);
     let mut config = SoundSpeedShiftConfig {
         spacing: Length::from_base(0.001),
@@ -38,10 +39,11 @@ fn dense_prior_recovers_uniform_sound_speed_shift() {
     assert_eq!(image.model_family, SOUND_SPEED_SHIFT_MODEL);
     assert_eq!(image.rows_used, 3);
     assert_eq!(image.active_voxels, 9);
-    for value in image.sound_speed_shift_m_s.iter() {
+    for value in image.sound_speed_shift.iter() {
+        let value_m_s = value.into_base();
         assert!(
-            (*value - 20.0).abs() <= 1.0e-4,
-            "dense reconstruction value {value} differs from 20 m/s"
+            (value_m_s - 20.0).abs() <= 1.0e-4,
+            "dense reconstruction value {value_m_s} differs from 20 m/s"
         );
     }
     assert!(
@@ -55,8 +57,8 @@ fn dense_prior_recovers_uniform_sound_speed_shift() {
 #[test]
 fn reconstruction_workspace_reuses_solver_buffers() {
     let mask = Array2::from_elem((3, 3), true);
-    let mut truth = Array2::zeros((3, 3));
-    truth.fill(20.0);
+    let mut truth = SoundSpeedShiftField::from_storage(Array2::zeros((3, 3)));
+    truth.storage_mut().fill(20.0);
     let samples = horizontal_samples(&[-0.001, 0.0, 0.001]);
     let config = SoundSpeedShiftConfig {
         spacing: Length::from_base(0.001),
@@ -83,7 +85,7 @@ fn reconstruction_workspace_reuses_solver_buffers() {
     assert!(retained_slots > 0);
     assert_eq!(workspace.allocated_slots(), retained_slots);
     assert_eq!(workspace.memory_bytes(), retained_bytes);
-    assert_eq!(first.sound_speed_shift_m_s, second.sound_speed_shift_m_s);
+    assert_eq!(first.sound_speed_shift, second.sound_speed_shift);
     workspace.clear();
     assert_eq!(workspace.allocated_slots(), retained_slots);
 }

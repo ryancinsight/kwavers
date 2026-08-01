@@ -7,8 +7,8 @@ use kwavers_core::error::KwaversError;
 fn batch_streaming_reuses_image_view_without_retaining_frames() {
     let mut mask = Array2::from_elem((3, 3), true);
     mask[[0, 0]] = false;
-    let mut truth = Array2::zeros((3, 3));
-    truth.fill(9.0);
+    let mut truth = SoundSpeedShiftField::from_storage(Array2::zeros((3, 3)));
+    truth.storage_mut().fill(9.0);
     let samples = horizontal_samples(&[-0.001, 0.0, 0.001]);
     let config = SoundSpeedShiftConfig {
         spacing: Length::from_base(0.001),
@@ -25,10 +25,10 @@ fn batch_streaming_reuses_image_view_without_retaining_frames() {
     let frame_refs = [&frame[..], &scaled_frame[..]];
     let plan = SoundSpeedShiftPlan::new(samples, &mask, config).unwrap();
     let expected = vec![
-        plan.reconstruct(&frame).unwrap().sound_speed_shift_m_s,
+        plan.reconstruct(&frame).unwrap().sound_speed_shift,
         plan.reconstruct(&scaled_frame)
             .unwrap()
-            .sound_speed_shift_m_s,
+            .sound_speed_shift,
     ];
     let rows_used = plan.rows_used();
     let rows_available = plan.rows_available();
@@ -48,11 +48,16 @@ fn batch_streaming_reuses_image_view_without_retaining_frames() {
                 assert_eq!(view.rows_available, rows_available);
                 assert_eq!(view.active_voxels, active_voxels);
                 assert_eq!(view.model_family, SOUND_SPEED_SHIFT_MODEL);
-                assert_eq!(view.sound_speed_shift_m_s[[0, 0]], 0.0);
+                assert_eq!(view.sound_speed_shift.storage()[[0, 0]], 0.0);
                 assert!(!view.objective_history.is_empty());
-                assert_image_close(view.sound_speed_shift_m_s, &expected[frame_index], 1.0e-12);
+                assert_image_close(
+                    view.sound_speed_shift.storage(),
+                    expected[frame_index].storage(),
+                    1.0e-12,
+                );
                 image_ptrs.push(
-                    view.sound_speed_shift_m_s
+                    view.sound_speed_shift
+                        .storage()
                         .as_slice_memory_order()
                         .unwrap()
                         .as_ptr() as usize,
@@ -93,8 +98,8 @@ fn batch_streaming_reuses_image_view_without_retaining_frames() {
 #[test]
 fn batch_streaming_propagates_callback_error_and_stops() {
     let mask = Array2::from_elem((3, 3), true);
-    let mut truth = Array2::zeros((3, 3));
-    truth.fill(7.0);
+    let mut truth = SoundSpeedShiftField::from_storage(Array2::zeros((3, 3)));
+    truth.storage_mut().fill(7.0);
     let samples = horizontal_samples(&[-0.001, 0.0, 0.001]);
     let config = SoundSpeedShiftConfig {
         spacing: Length::from_base(0.001),

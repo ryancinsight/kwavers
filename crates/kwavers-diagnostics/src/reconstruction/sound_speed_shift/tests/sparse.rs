@@ -6,7 +6,7 @@ use leto::Array2;
 use super::{
     attach_time_shifts, horizontal_sample, predict_sound_speed_time_shifts,
     reconstruct_sound_speed_shift, vertical_sample, ShiftPrior, ShiftSampling,
-    SoundSpeedShiftConfig,
+    SoundSpeedShiftConfig, SoundSpeedShiftField,
 };
 
 /// Sparse sampling selects every-other row; L1 prior concentrates the
@@ -15,8 +15,8 @@ use super::{
 #[test]
 fn sparse_sampling_and_prior_localize_crossing_shift() {
     let mask = Array2::from_elem((5, 5), true);
-    let mut truth = Array2::zeros((5, 5));
-    truth[[2, 2]] = 60.0;
+    let mut truth = SoundSpeedShiftField::from_storage(Array2::zeros((5, 5)));
+    truth.storage_mut()[[2, 2]] = 60.0;
     let samples = vec![
         horizontal_sample(0.0),
         horizontal_sample(-0.002),
@@ -40,8 +40,9 @@ fn sparse_sampling_and_prior_localize_crossing_shift() {
     let measured = attach_time_shifts(&samples, &predicted);
 
     let image = reconstruct_sound_speed_shift(&measured, &mask, config).unwrap();
-    let center = image.sound_speed_shift_m_s[[2, 2]];
-    let neighbor = image.sound_speed_shift_m_s[[2, 1]].max(image.sound_speed_shift_m_s[[1, 2]]);
+    let center = image.sound_speed_shift.storage()[[2, 2]];
+    let neighbor =
+        image.sound_speed_shift.storage()[[2, 1]].max(image.sound_speed_shift.storage()[[1, 2]]);
 
     assert_eq!(image.rows_available, 4);
     assert_eq!(image.rows_used, 2);

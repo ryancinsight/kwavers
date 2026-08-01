@@ -45,7 +45,7 @@ use operator::SoundSpeedShiftOperator;
 use solver::{solve_shift, solve_shift_with_metrics, SoundSpeedShiftSolverMetrics};
 pub use types::{
     ShiftPrior, ShiftPropagation, ShiftSampling, ShiftSensitivity, SoundSpeedShiftConfig,
-    SoundSpeedShiftImage, SoundSpeedShiftSample, SoundSpeedShiftWorkspace,
+    SoundSpeedShiftField, SoundSpeedShiftImage, SoundSpeedShiftSample, SoundSpeedShiftWorkspace,
     CURVED_RAY_SOUND_SPEED_SHIFT_MODEL, FINITE_FREQUENCY_SOUND_SPEED_SHIFT_MODEL,
     SOUND_SPEED_SHIFT_MODEL,
 };
@@ -98,16 +98,16 @@ pub fn reconstruct_sound_speed_shift_with_workspace(
 /// Returns [`kwavers_core::error::KwaversError`] when input geometry or the
 /// supplied image/mask shapes are invalid.
 pub fn predict_sound_speed_time_shifts(
-    sound_speed_shift_m_s: &Array2<f64>,
+    sound_speed_shift: &SoundSpeedShiftField,
     samples: &[SoundSpeedShiftSample],
     active_mask: &Array2<bool>,
     config: SoundSpeedShiftConfig,
 ) -> KwaversResult<Vec<Time>> {
-    if sound_speed_shift_m_s.shape() != active_mask.shape() {
+    if sound_speed_shift.shape() != active_mask.shape() {
         return Err(kwavers_core::error::KwaversError::DimensionMismatch(
             format!(
                 "speed-shift image shape {:?} does not match active-mask shape {:?}",
-                sound_speed_shift_m_s.shape(),
+                sound_speed_shift.shape(),
                 active_mask.shape()
             ),
         ));
@@ -119,7 +119,7 @@ pub fn predict_sound_speed_time_shifts(
         ..config
     };
     let operator = SoundSpeedShiftOperator::new(samples, active_mask, dense_config)?;
-    let model = operator.model_from_image(sound_speed_shift_m_s);
+    let model = operator.model_from_image(sound_speed_shift.storage());
     let mut path_integrals = vec![0.0; operator.rows()];
     operator.matvec(&model, &mut path_integrals);
     let reference_sound_speed_m_s = config.reference_sound_speed.into_base();
@@ -141,7 +141,9 @@ fn reconstruct_from_operator(
     solve_operator_frame(operator, data, config, workspace);
 
     SoundSpeedShiftImage {
-        sound_speed_shift_m_s: solved_image_from_operator(operator, workspace),
+        sound_speed_shift: SoundSpeedShiftField::from_storage(solved_image_from_operator(
+            operator, workspace,
+        )),
         objective_history: workspace.objective_history.clone(),
         rows_used: operator.rows(),
         rows_available,

@@ -5,7 +5,8 @@ use leto::Array2;
 
 use super::{
     horizontal_sample, predict_sound_speed_time_shifts, reconstruct_sound_speed_shift,
-    ShiftPropagation, ShiftSensitivity, SoundSpeedShiftConfig, SoundSpeedShiftSample,
+    ShiftPropagation, ShiftSensitivity, SoundSpeedShiftConfig, SoundSpeedShiftField,
+    SoundSpeedShiftSample,
 };
 use crate::reconstruction::sound_speed_shift::operator::SoundSpeedShiftOperator;
 use kwavers_solver::inverse::same_aperture::PlanarPoint;
@@ -52,8 +53,8 @@ fn operator_stores_only_crossed_ray_segments() {
 #[test]
 fn curved_ray_prediction_has_longer_uniform_path_than_straight_chord() {
     let mask = Array2::from_elem((9, 9), true);
-    let mut shift = Array2::zeros((9, 9));
-    shift.fill(10.0);
+    let mut shift = SoundSpeedShiftField::from_storage(Array2::zeros((9, 9)));
+    shift.storage_mut().fill(10.0);
     let samples = vec![SoundSpeedShiftSample::new(
         PlanarPoint {
             x_m: -0.002,
@@ -90,8 +91,8 @@ fn curved_ray_prediction_has_longer_uniform_path_than_straight_chord() {
 #[test]
 fn finite_frequency_sensitivity_detects_off_axis_shift() {
     let mask = Array2::from_elem((7, 7), true);
-    let mut shift = Array2::zeros((7, 7));
-    shift[[3, 4]] = 80.0;
+    let mut shift = SoundSpeedShiftField::from_storage(Array2::zeros((7, 7)));
+    shift.storage_mut()[[3, 4]] = 80.0;
     let samples = vec![SoundSpeedShiftSample::new(
         PlanarPoint {
             x_m: -0.002,

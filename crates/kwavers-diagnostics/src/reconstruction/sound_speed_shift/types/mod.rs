@@ -10,6 +10,6 @@ pub use config::{
     CURVED_RAY_SOUND_SPEED_SHIFT_MODEL, FINITE_FREQUENCY_SOUND_SPEED_SHIFT_MODEL,
     SOUND_SPEED_SHIFT_MODEL,
 };
-pub use image::{SoundSpeedShiftImage, SoundSpeedShiftImageView};
+pub use image::{SoundSpeedShiftField, SoundSpeedShiftImage, SoundSpeedShiftImageView};
 pub use sample::SoundSpeedShiftSample;
 pub use workspace::SoundSpeedShiftWorkspace;

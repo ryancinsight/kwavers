@@ -41,6 +41,15 @@ The field is real-valued and has no physical phasor, so Eunomia compatibility
 requires no imaginary physical unit. See
 [`Kwavers ADR 090`](docs/ADR/090-sound-speed-field-quantity.md).
 
+Source migration and package formatting are complete. The focused diagnostics
+check cannot currently reach Kwavers because the shared local `leto-ops`
+provider is dirty on peer branch `codex/leto-mutable-zip-provider` and fails
+first in `crates/leto-ops/src/application/zip.rs` with `E0057` callback-arity
+errors and `E0507` moves from mutable output references. This is an external
+provider-scope blocker; no provider files are part of this item. Nextest,
+Clippy, doctests, RustDoc, and value-semantic tests remain pending until the
+provider compiles.
+
 ## Live sound-speed-shift error-metric refresh — 2026-07-31
 
 `KWAVERS-AEQ-MET-50` is closed. OpenPros mean absolute and root mean square

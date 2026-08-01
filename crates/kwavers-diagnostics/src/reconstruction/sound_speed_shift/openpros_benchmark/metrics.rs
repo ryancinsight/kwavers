@@ -3,17 +3,20 @@
 use aequitas::systems::si::quantities::Velocity;
 use leto::Array2;
 
-use super::super::{SoundSpeedShiftImage, SoundSpeedShiftPlan};
+use super::super::{SoundSpeedShiftField, SoundSpeedShiftImage, SoundSpeedShiftPlan};
 use super::types::OpenProsShiftReconstructionMetrics;
 
 pub(super) fn metrics_for(
     image: &SoundSpeedShiftImage,
-    truth_shift_m_s: &Array2<f64>,
+    truth_shift: &SoundSpeedShiftField,
     active_mask: &Array2<bool>,
     plan: &SoundSpeedShiftPlan,
 ) -> OpenProsShiftReconstructionMetrics {
-    let (mae, rmse, nrmse, pearson) =
-        image_error_metrics(&image.sound_speed_shift_m_s, truth_shift_m_s, active_mask);
+    let (mae, rmse, nrmse, pearson) = image_error_metrics(
+        image.sound_speed_shift.storage(),
+        truth_shift.storage(),
+        active_mask,
+    );
     let objective_initial = *image.objective_history.first().unwrap_or(&0.0);
     let objective_final = *image.objective_history.last().unwrap_or(&objective_initial);
     let objective_reduction_fraction = if objective_initial > f64::EPSILON {

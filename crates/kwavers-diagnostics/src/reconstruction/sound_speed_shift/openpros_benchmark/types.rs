@@ -3,7 +3,9 @@
 use aequitas::systems::si::quantities::{Frequency, Length, Time, Velocity};
 use leto::Array2;
 
-use super::super::{SoundSpeedShiftConfig, SoundSpeedShiftImage, SoundSpeedShiftSample};
+use super::super::{
+    SoundSpeedShiftConfig, SoundSpeedShiftField, SoundSpeedShiftImage, SoundSpeedShiftSample,
+};
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 
 /// Hugging Face and arXiv identifier for the OpenPros structural reference.
@@ -104,7 +106,7 @@ pub struct OpenProsWaveformExpectation {
 #[derive(Clone, Debug)]
 pub struct OpenProsShiftBenchmarkCase {
     pub active_mask: Array2<bool>,
-    pub truth_shift_m_s: Array2<f64>,
+    pub truth_shift: SoundSpeedShiftField,
     pub samples: Vec<SoundSpeedShiftSample>,
     pub frame_time_shifts: Vec<Time>,
     pub dense_config: SoundSpeedShiftConfig,

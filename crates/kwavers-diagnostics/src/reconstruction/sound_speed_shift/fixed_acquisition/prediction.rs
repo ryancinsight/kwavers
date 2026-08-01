@@ -1,10 +1,9 @@
 //! Forward prediction through a cached fixed-acquisition operator.
 
 use aequitas::systems::si::quantities::Time;
-use leto::Array2;
-
 use kwavers_core::error::{KwaversError, KwaversResult};
 
+use super::super::types::SoundSpeedShiftField;
 use super::types::SoundSpeedShiftPlan;
 
 impl SoundSpeedShiftPlan {
@@ -19,17 +18,17 @@ impl SoundSpeedShiftPlan {
     /// not match the plan's active-mask shape.
     pub fn predict_time_shifts(
         &self,
-        sound_speed_shift_m_s: &Array2<f64>,
+        sound_speed_shift: &SoundSpeedShiftField,
     ) -> KwaversResult<Vec<Time>> {
-        if sound_speed_shift_m_s.shape() != [self.shape.0, self.shape.1] {
+        if sound_speed_shift.shape() != [self.shape.0, self.shape.1] {
             return Err(KwaversError::DimensionMismatch(format!(
                 "speed-shift image shape {:?} does not match fixed plan shape {:?}",
-                sound_speed_shift_m_s.shape(),
+                sound_speed_shift.shape(),
                 self.shape
             )));
         }
 
-        let model = self.operator.model_from_image(sound_speed_shift_m_s);
+        let model = self.operator.model_from_image(sound_speed_shift.storage());
         let mut path_integrals = vec![0.0; self.operator.rows()];
         self.operator.matvec(&model, &mut path_integrals);
         let reference_sound_speed_m_s = self.config.reference_sound_speed.into_base();

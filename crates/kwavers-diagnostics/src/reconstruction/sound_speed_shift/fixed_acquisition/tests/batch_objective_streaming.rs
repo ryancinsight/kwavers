@@ -6,8 +6,8 @@ use kwavers_core::error::KwaversError;
 #[test]
 fn batch_objective_streaming_reports_histories_without_images() {
     let mask = Array2::from_elem((3, 3), true);
-    let mut truth = Array2::zeros((3, 3));
-    truth.fill(8.0);
+    let mut truth = SoundSpeedShiftField::from_storage(Array2::zeros((3, 3)));
+    truth.storage_mut().fill(8.0);
     let samples = horizontal_samples(&[-0.001, 0.0, 0.001]);
     let config = SoundSpeedShiftConfig {
         spacing: Length::from_base(0.001),
@@ -80,8 +80,8 @@ fn batch_objective_streaming_reports_histories_without_images() {
 #[test]
 fn batch_objective_streaming_propagates_callback_error_and_stops() {
     let mask = Array2::from_elem((3, 3), true);
-    let mut truth = Array2::zeros((3, 3));
-    truth.fill(6.0);
+    let mut truth = SoundSpeedShiftField::from_storage(Array2::zeros((3, 3)));
+    truth.storage_mut().fill(6.0);
     let samples = horizontal_samples(&[-0.001, 0.0, 0.001]);
     let config = SoundSpeedShiftConfig {
         spacing: Length::from_base(0.001),

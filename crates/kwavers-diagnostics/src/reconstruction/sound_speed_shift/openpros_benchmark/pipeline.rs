@@ -6,7 +6,7 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 
 use super::super::{
     predict_sound_speed_time_shifts, ShiftPrior, ShiftPropagation, ShiftSampling, ShiftSensitivity,
-    SoundSpeedShiftConfig, SoundSpeedShiftPlan, SoundSpeedShiftWorkspace,
+    SoundSpeedShiftConfig, SoundSpeedShiftField, SoundSpeedShiftPlan, SoundSpeedShiftWorkspace,
 };
 use super::acquisition;
 use super::metrics::metrics_for;
@@ -25,11 +25,11 @@ pub fn openpros_shift_benchmark_case(
 ) -> KwaversResult<OpenProsShiftBenchmarkCase> {
     validate_config(config)?;
     let active_mask = phantom::active_mask(config);
-    let truth_shift_m_s = phantom::shift_phantom(config);
+    let truth_shift = SoundSpeedShiftField::from_storage(phantom::shift_phantom(config));
     let samples = acquisition::samples(config);
     let dense_config = reconstruction_config(config, ShiftSampling::Dense, ShiftPrior::Dense);
     let frame_time_shifts =
-        predict_sound_speed_time_shifts(&truth_shift_m_s, &samples, &active_mask, dense_config)?;
+        predict_sound_speed_time_shifts(&truth_shift, &samples, &active_mask, dense_config)?;
     let sparse_config = reconstruction_config(
         config,
         ShiftSampling::Sparse {
@@ -41,7 +41,7 @@ pub fn openpros_shift_benchmark_case(
 
     Ok(OpenProsShiftBenchmarkCase {
         active_mask,
-        truth_shift_m_s,
+        truth_shift,
         samples,
         frame_time_shifts,
         dense_config,
@@ -74,13 +74,13 @@ pub fn run_openpros_shift_benchmark(
         sparse_plan.reconstruct_with_workspace(&case.frame_time_shifts, &mut sparse_workspace)?;
     let dense_metrics = metrics_for(
         &dense_reconstruction,
-        &case.truth_shift_m_s,
+        &case.truth_shift,
         &case.active_mask,
         &dense_plan,
     );
     let sparse_metrics = metrics_for(
         &sparse_reconstruction,
-        &case.truth_shift_m_s,
+        &case.truth_shift,
         &case.active_mask,
         &sparse_plan,
     );

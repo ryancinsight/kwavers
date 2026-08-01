@@ -5,8 +5,8 @@ use super::*;
 #[test]
 fn batch_discard_image_policy_retains_summaries_without_images() {
     let mask = Array2::from_elem((3, 3), true);
-    let mut truth = Array2::zeros((3, 3));
-    truth.fill(12.0);
+    let mut truth = SoundSpeedShiftField::from_storage(Array2::zeros((3, 3)));
+    truth.storage_mut().fill(12.0);
     let samples = horizontal_samples(&[-0.001, 0.0, 0.001]);
     let config = SoundSpeedShiftConfig {
         spacing: Length::from_base(0.001),
@@ -44,7 +44,7 @@ fn batch_discard_image_policy_retains_summaries_without_images() {
     assert!(batch
         .frames
         .iter()
-        .all(|frame| frame.sound_speed_shift_m_s.is_none()));
+        .all(|frame| frame.sound_speed_shift.is_none()));
     assert!(batch
         .frames
         .iter()
@@ -56,15 +56,15 @@ fn batch_discard_image_policy_retains_summaries_without_images() {
     assert_eq!(workspace.sampled_rhs_capacity(), rhs_capacity);
     assert_eq!(workspace.allocated_slots(), retained_slots);
     assert_eq!(repeated.frames[0].summary, batch.frames[0].summary);
-    assert!(repeated.frames[0].sound_speed_shift_m_s.is_none());
+    assert!(repeated.frames[0].sound_speed_shift.is_none());
 }
 
 #[test]
 fn batch_retain_policy_writes_images_through_plan_workspace() {
     let mut mask = Array2::from_elem((3, 3), true);
     mask[[0, 0]] = false;
-    let mut truth = Array2::zeros((3, 3));
-    truth.fill(11.0);
+    let mut truth = SoundSpeedShiftField::from_storage(Array2::zeros((3, 3)));
+    truth.storage_mut().fill(11.0);
     let samples = horizontal_samples(&[-0.001, 0.0, 0.001]);
     let config = SoundSpeedShiftConfig {
         spacing: Length::from_base(0.001),
@@ -83,8 +83,8 @@ fn batch_retain_policy_writes_images_through_plan_workspace() {
         .reconstruct_frames_with_plan_workspace(&frame_refs, &mut workspace)
         .unwrap();
 
-    let retained = batch.frames[0].sound_speed_shift_m_s.as_ref().unwrap();
-    assert_eq!(retained[[0, 0]], 0.0);
-    assert_image_close(retained, &direct.sound_speed_shift_m_s, 1.0e-12);
+    let retained = batch.frames[0].sound_speed_shift.as_ref().unwrap();
+    assert_eq!(retained.storage()[[0, 0]], 0.0);
+    assert_image_close(retained.storage(), direct.sound_speed_shift.storage(), 1.0e-12);
     assert!(workspace.sampled_rhs_capacity() >= plan.rows_used());
 }

@@ -1,11 +1,7 @@
 //! Borrowed-image streaming for fixed-acquisition batch reconstruction.
 
-use aequitas::systems::si::quantities::Time;
-use kwavers_core::error::KwaversResult;
-use leto::Array2;
-
 use super::super::super::solved_image_from_operator_into;
-use super::super::super::types::SoundSpeedShiftImageView;
+use super::super::super::types::{SoundSpeedShiftField, SoundSpeedShiftImageView};
 use super::super::types::{
     SoundSpeedShiftBatchStreamSummary, SoundSpeedShiftFrameSummary, SoundSpeedShiftPlan,
     SoundSpeedShiftPlanWorkspace,
@@ -13,6 +9,8 @@ use super::super::types::{
 use super::super::validation::validate_frame_batch;
 use super::solve::solve_batch_frame;
 use super::summary::{objective_summary, stream_summary};
+use aequitas::systems::si::quantities::Time;
+use kwavers_core::error::KwaversResult;
 
 impl SoundSpeedShiftPlan {
     /// Reconstruct a batch and stream borrowed image views to a callback.
@@ -67,7 +65,8 @@ impl SoundSpeedShiftPlan {
     {
         validate_frame_batch(frame_time_shifts, self.samples.len())?;
         workspace.sampled_rhs.resize(self.operator.rows(), 0.0);
-        let mut output_image = Array2::<f64>::zeros(self.shape);
+        let mut output_image =
+            SoundSpeedShiftField::from_storage(leto::Array2::<f64>::zeros(self.shape));
 
         for (frame_index, time_shifts) in frame_time_shifts.iter().enumerate() {
             solve_batch_frame(
@@ -77,9 +76,13 @@ impl SoundSpeedShiftPlan {
                 &mut workspace.solver,
             );
             let summary = objective_summary(frame_index, &workspace.solver.objective_history)?;
-            solved_image_from_operator_into(&self.operator, &workspace.solver, &mut output_image);
+            solved_image_from_operator_into(
+                &self.operator,
+                &workspace.solver,
+                output_image.storage_mut(),
+            );
             let view = SoundSpeedShiftImageView {
-                sound_speed_shift_m_s: &output_image,
+                sound_speed_shift: &output_image,
                 objective_history: &workspace.solver.objective_history,
                 rows_used: self.operator.rows(),
                 rows_available: self.samples.len(),

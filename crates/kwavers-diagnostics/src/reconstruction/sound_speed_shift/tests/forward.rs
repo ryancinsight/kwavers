@@ -3,7 +3,10 @@
 use aequitas::systems::si::quantities::{Length, Time};
 use leto::Array2;
 
-use super::{predict_sound_speed_time_shifts, SoundSpeedShiftConfig, SoundSpeedShiftSample};
+use super::{
+    predict_sound_speed_time_shifts, SoundSpeedShiftConfig, SoundSpeedShiftField,
+    SoundSpeedShiftSample,
+};
 use kwavers_solver::inverse::same_aperture::PlanarPoint;
 
 /// Linearized straight-ray sign contract:
@@ -20,8 +23,8 @@ use kwavers_solver::inverse::same_aperture::PlanarPoint;
 #[test]
 fn forward_model_has_linearized_speed_shift_sign() {
     let mask = Array2::from_elem((3, 1), true);
-    let mut shift = Array2::zeros((3, 1));
-    shift.fill(20.0);
+    let mut shift = SoundSpeedShiftField::from_storage(Array2::zeros((3, 1)));
+    shift.storage_mut().fill(20.0);
     let samples = vec![SoundSpeedShiftSample::new(
         PlanarPoint {
             x_m: -0.002,

@@ -4,8 +4,8 @@ use super::*;
 #[test]
 fn fixed_plan_reconstruction_matches_direct_reconstruction() {
     let mask = Array2::from_elem((3, 3), true);
-    let mut truth = Array2::zeros((3, 3));
-    truth.fill(20.0);
+    let mut truth = SoundSpeedShiftField::from_storage(Array2::zeros((3, 3)));
+    truth.storage_mut().fill(20.0);
     let samples = horizontal_samples(&[-0.001, 0.0, 0.001]);
     let config = SoundSpeedShiftConfig {
         spacing: Length::from_base(0.001),
@@ -29,8 +29,8 @@ fn fixed_plan_reconstruction_matches_direct_reconstruction() {
     assert_eq!(plan.active_voxels(), 9);
     assert!(plan.stored_weight_count() > 0);
     assert_image_close(
-        &planned.sound_speed_shift_m_s,
-        &direct.sound_speed_shift_m_s,
+        planned.sound_speed_shift.storage(),
+        direct.sound_speed_shift.storage(),
         1.0e-12,
     );
 }
@@ -53,8 +53,8 @@ fn fixed_plan_caches_dense_normal_diagonal() {
 #[test]
 fn sparse_plan_caches_lipschitz_and_matches_direct_reconstruction() {
     let mask = Array2::from_elem((5, 5), true);
-    let mut truth = Array2::zeros((5, 5));
-    truth[[2, 2]] = 60.0;
+    let mut truth = SoundSpeedShiftField::from_storage(Array2::zeros((5, 5)));
+    truth.storage_mut()[[2, 2]] = 60.0;
     let samples = vec![
         horizontal_sample(0.0),
         horizontal_sample(-0.002),
@@ -86,8 +86,8 @@ fn sparse_plan_caches_lipschitz_and_matches_direct_reconstruction() {
         .cached_sparse_lipschitz()
         .is_some_and(|value| value.is_finite() && value > 0.0));
     assert_image_close(
-        &planned.sound_speed_shift_m_s,
-        &direct.sound_speed_shift_m_s,
+        planned.sound_speed_shift.storage(),
+        direct.sound_speed_shift.storage(),
         1.0e-12,
     );
 }
@@ -131,9 +131,9 @@ fn fixed_plan_rejects_invalid_frame_shift_vectors() {
 #[test]
 fn curved_array_plan_reuses_operator_across_repeated_frames() {
     let mask = Array2::from_elem((5, 5), true);
-    let mut truth = Array2::zeros((5, 5));
-    truth[[2, 2]] = 18.0;
-    truth[[2, 3]] = 9.0;
+    let mut truth = SoundSpeedShiftField::from_storage(Array2::zeros((5, 5)));
+    truth.storage_mut()[[2, 2]] = 18.0;
+    truth.storage_mut()[[2, 3]] = 9.0;
     let array = CurvedArray2d {
         center_m: PlanarPoint { x_m: 0.0, y_m: 0.0 },
         radius: Length::from_base(0.004),
@@ -185,12 +185,12 @@ fn curved_array_plan_reuses_operator_across_repeated_frames() {
     assert_eq!(plan.stored_weight_count(), retained_weights);
     assert!(
         first
-            .sound_speed_shift_m_s
+            .sound_speed_shift
             .iter()
-            .all(|value| value.is_finite())
+            .all(|value| value.into_base().is_finite())
             && second
-                .sound_speed_shift_m_s
+                .sound_speed_shift
                 .iter()
-                .all(|value| value.is_finite())
+                .all(|value| value.into_base().is_finite())
     );
 }

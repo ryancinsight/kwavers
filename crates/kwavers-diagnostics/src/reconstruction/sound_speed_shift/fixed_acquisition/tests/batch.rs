@@ -5,8 +5,8 @@ use super::*;
 #[test]
 fn batch_reconstruction_uses_compact_summaries_by_default() {
     let mask = Array2::from_elem((3, 3), true);
-    let mut truth = Array2::zeros((3, 3));
-    truth.fill(16.0);
+    let mut truth = SoundSpeedShiftField::from_storage(Array2::zeros((3, 3)));
+    truth.storage_mut().fill(16.0);
     let samples = horizontal_samples(&[-0.001, 0.0, 0.001]);
     let config = SoundSpeedShiftConfig {
         spacing: Length::from_base(0.001),
@@ -39,8 +39,12 @@ fn batch_reconstruction_uses_compact_summaries_by_default() {
     assert!(batch.frames[0].summary.objective_iterations > 0);
     assert!(batch.frames[0].summary.objective_final <= batch.frames[0].summary.objective_initial);
     assert_image_close(
-        batch.frames[0].sound_speed_shift_m_s.as_ref().unwrap(),
-        &direct.sound_speed_shift_m_s,
+        batch.frames[0]
+            .sound_speed_shift
+            .as_ref()
+            .unwrap()
+            .storage(),
+        direct.sound_speed_shift.storage(),
         1.0e-12,
     );
 }
@@ -48,8 +52,8 @@ fn batch_reconstruction_uses_compact_summaries_by_default() {
 #[test]
 fn batch_reconstruction_retains_full_histories_when_requested() {
     let mask = Array2::from_elem((3, 3), true);
-    let mut truth = Array2::zeros((3, 3));
-    truth.fill(10.0);
+    let mut truth = SoundSpeedShiftField::from_storage(Array2::zeros((3, 3)));
+    truth.storage_mut().fill(10.0);
     let samples = horizontal_samples(&[-0.001, 0.0, 0.001]);
     let config = SoundSpeedShiftConfig {
         spacing: Length::from_base(0.001),
@@ -83,7 +87,7 @@ fn batch_reconstruction_retains_full_histories_when_requested() {
         batch.frames[0].summary.objective_iterations,
         batch.frames[0].objective_history.len() - 1
     );
-    assert!(batch.frames[0].sound_speed_shift_m_s.is_some());
+    assert!(batch.frames[0].sound_speed_shift.is_some());
 }
 
 #[test]

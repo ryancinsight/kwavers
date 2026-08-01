@@ -12,6 +12,13 @@ Acceptance: no public sound-speed-shift result field exposes a unit-suffixed
 `Array2<f64>`; solver/provider extraction remains explicit; no complex or
 imaginary physical unit is introduced.
 
+Current verification state: source migration, package formatting, diff checks,
+and the public-contract scan pass. The diagnostics check is blocked before
+Kwavers compilation by peer-owned `leto-ops` errors (`E0057` and `E0507`) in
+`crates/leto-ops/src/application/zip.rs` on branch
+`codex/leto-mutable-zip-provider`; the remaining native and documentation gates
+are pending that provider repair.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-50 typed sound-speed error metrics [major] — done 2026-07-31
 
 - [x] Type OpenPros mean absolute and root mean square sound-speed errors

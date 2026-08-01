@@ -1,8 +1,6 @@
 //! Fixed-acquisition batch result types.
 
-use leto::Array2;
-
-use super::super::super::types::{ShiftPrior, ShiftSampling};
+use super::super::super::types::{ShiftPrior, ShiftSampling, SoundSpeedShiftField};
 
 /// Compact objective summary for one batch frame.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -20,8 +18,8 @@ pub struct SoundSpeedShiftFrameSummary {
 /// Reconstructed image and objective evidence for one batch frame.
 #[derive(Clone, Debug)]
 pub struct SoundSpeedShiftBatchFrame {
-    /// Estimated `delta c = c - c0` [m/s] for this frame when retained.
-    pub sound_speed_shift_m_s: Option<Array2<f64>>,
+    /// Estimated `delta c = c - c0` for this frame when retained.
+    pub sound_speed_shift: Option<SoundSpeedShiftField>,
     /// Compact objective summary.
     pub summary: SoundSpeedShiftFrameSummary,
     /// Full objective history when requested by

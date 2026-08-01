@@ -7,16 +7,17 @@ use super::SoundSpeedShiftPlan;
 use crate::reconstruction::sound_speed_shift::{
     predict_sound_speed_time_shifts, reconstruct_sound_speed_shift, CurvedArray2d,
     CurvedArrayShiftScan, ShiftPropagation, ShiftSensitivity, SoundSpeedShiftBatchConfig,
-    SoundSpeedShiftConfig, SoundSpeedShiftObjectiveHistoryPolicy, SoundSpeedShiftSample,
-    SoundSpeedShiftWorkspace, FINITE_FREQUENCY_SOUND_SPEED_SHIFT_MODEL, SOUND_SPEED_SHIFT_MODEL,
+    SoundSpeedShiftConfig, SoundSpeedShiftField, SoundSpeedShiftObjectiveHistoryPolicy,
+    SoundSpeedShiftSample, SoundSpeedShiftWorkspace, FINITE_FREQUENCY_SOUND_SPEED_SHIFT_MODEL,
+    SOUND_SPEED_SHIFT_MODEL,
 };
 use kwavers_solver::inverse::same_aperture::PlanarPoint;
 
 #[test]
 fn fixed_plan_reconstruction_matches_direct_reconstruction() {
     let mask = Array2::from_elem((3, 3), true);
-    let mut truth = Array2::zeros((3, 3));
-    truth.fill(20.0);
+    let mut truth = SoundSpeedShiftField::from_storage(Array2::zeros((3, 3)));
+    truth.storage_mut().fill(20.0);
     let samples = horizontal_samples(&[-0.001, 0.0, 0.001]);
     let config = SoundSpeedShiftConfig {
         spacing: Length::from_base(0.001),
@@ -40,8 +41,8 @@ fn fixed_plan_reconstruction_matches_direct_reconstruction() {
     assert_eq!(plan.active_voxels(), 9);
     assert!(plan.stored_weight_count() > 0);
     assert_image_close(
-        &planned.sound_speed_shift_m_s,
-        &direct.sound_speed_shift_m_s,
+        planned.sound_speed_shift.storage(),
+        direct.sound_speed_shift.storage(),
         1.0e-12,
     );
 }
@@ -71,9 +72,9 @@ fn fixed_plan_rejects_invalid_frame_shift_vectors() {
 #[test]
 fn curved_array_plan_reuses_operator_across_repeated_frames() {
     let mask = Array2::from_elem((5, 5), true);
-    let mut truth = Array2::zeros((5, 5));
-    truth[[2, 2]] = 18.0;
-    truth[[2, 3]] = 9.0;
+    let mut truth = SoundSpeedShiftField::from_storage(Array2::zeros((5, 5)));
+    truth.storage_mut()[[2, 2]] = 18.0;
+    truth.storage_mut()[[2, 3]] = 9.0;
     let array = CurvedArray2d {
         center_m: PlanarPoint { x_m: 0.0, y_m: 0.0 },
         radius: Length::from_base(0.004),
@@ -125,21 +126,21 @@ fn curved_array_plan_reuses_operator_across_repeated_frames() {
     assert_eq!(plan.stored_weight_count(), retained_weights);
     assert!(
         first
-            .sound_speed_shift_m_s
+            .sound_speed_shift
             .iter()
-            .all(|value| value.is_finite())
+            .all(|value| value.into_base().is_finite())
             && second
-                .sound_speed_shift_m_s
+                .sound_speed_shift
                 .iter()
-                .all(|value| value.is_finite())
+                .all(|value| value.into_base().is_finite())
     );
 }
 
 #[test]
 fn batch_reconstruction_uses_compact_summaries_by_default() {
     let mask = Array2::from_elem((3, 3), true);
-    let mut truth = Array2::zeros((3, 3));
-    truth.fill(16.0);
+    let mut truth = SoundSpeedShiftField::from_storage(Array2::zeros((3, 3)));
+    truth.storage_mut().fill(16.0);
     let samples = horizontal_samples(&[-0.001, 0.0, 0.001]);
     let config = SoundSpeedShiftConfig {
         spacing: Length::from_base(0.001),
@@ -173,10 +174,11 @@ fn batch_reconstruction_uses_compact_summaries_by_default() {
     assert!(batch.frames[0].summary.objective_final <= batch.frames[0].summary.objective_initial);
     assert_image_close(
         batch.frames[0]
-            .sound_speed_shift_m_s
+            .sound_speed_shift
             .as_ref()
-            .expect("default batch retention must retain reconstructed image"),
-        &direct.sound_speed_shift_m_s,
+            .expect("default batch retention must retain reconstructed image")
+            .storage(),
+        direct.sound_speed_shift.storage(),
         1.0e-12,
     );
 }
@@ -184,8 +186,8 @@ fn batch_reconstruction_uses_compact_summaries_by_default() {
 #[test]
 fn batch_reconstruction_retains_full_histories_when_requested() {
     let mask = Array2::from_elem((3, 3), true);
-    let mut truth = Array2::zeros((3, 3));
-    truth.fill(10.0);
+    let mut truth = SoundSpeedShiftField::from_storage(Array2::zeros((3, 3)));
+    truth.storage_mut().fill(10.0);
     let samples = horizontal_samples(&[-0.001, 0.0, 0.001]);
     let config = SoundSpeedShiftConfig {
         spacing: Length::from_base(0.001),

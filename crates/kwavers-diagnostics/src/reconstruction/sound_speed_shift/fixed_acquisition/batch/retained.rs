@@ -5,7 +5,7 @@ use kwavers_core::error::KwaversResult;
 use leto::Array2;
 
 use super::super::super::solved_image_from_operator_into;
-use super::super::super::types::SoundSpeedShiftWorkspace;
+use super::super::super::types::{SoundSpeedShiftField, SoundSpeedShiftWorkspace};
 use super::super::types::{
     SoundSpeedShiftBatch, SoundSpeedShiftBatchConfig, SoundSpeedShiftBatchFrame,
     SoundSpeedShiftBatchImageRetention, SoundSpeedShiftObjectiveHistoryPolicy, SoundSpeedShiftPlan,
@@ -130,12 +130,12 @@ impl SoundSpeedShiftPlan {
                 SoundSpeedShiftObjectiveHistoryPolicy::Compact => Vec::new(),
                 SoundSpeedShiftObjectiveHistoryPolicy::Full => workspace.objective_history.clone(),
             };
-            let sound_speed_shift_m_s = output_image.as_mut().map(|image| {
+            let sound_speed_shift = output_image.as_mut().map(|image| {
                 solved_image_from_operator_into(&self.operator, workspace, image);
-                image.clone()
+                SoundSpeedShiftField::from_storage(image.clone())
             });
             frames.push(SoundSpeedShiftBatchFrame {
-                sound_speed_shift_m_s,
+                sound_speed_shift,
                 summary,
                 objective_history,
             });

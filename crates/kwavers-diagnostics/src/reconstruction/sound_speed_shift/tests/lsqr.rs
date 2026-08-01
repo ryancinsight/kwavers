@@ -10,7 +10,7 @@ use leto::Array2;
 use super::{
     attach_time_shifts, horizontal_samples, predict_sound_speed_time_shifts,
     reconstruct_sound_speed_shift, reconstruct_sound_speed_shift_with_workspace, ShiftPrior,
-    SoundSpeedShiftConfig, SoundSpeedShiftWorkspace,
+    SoundSpeedShiftConfig, SoundSpeedShiftField, SoundSpeedShiftWorkspace,
 };
 
 /// Straight-ray consistent system: 3×3 all-active grid, 3 horizontal rays,
@@ -23,8 +23,8 @@ use super::{
 #[test]
 fn lsqr_prior_recovers_uniform_sound_speed_shift() {
     let mask = Array2::from_elem((3, 3), true);
-    let mut truth = Array2::zeros((3, 3));
-    truth.fill(20.0);
+    let mut truth = SoundSpeedShiftField::from_storage(Array2::zeros((3, 3)));
+    truth.storage_mut().fill(20.0);
     let samples = horizontal_samples(&[-0.001, 0.0, 0.001]);
     let config = SoundSpeedShiftConfig {
         spacing: Length::from_base(0.001),
@@ -41,10 +41,11 @@ fn lsqr_prior_recovers_uniform_sound_speed_shift() {
 
     assert_eq!(image.active_voxels, 9);
     assert_eq!(image.rows_used, 3);
-    for value in image.sound_speed_shift_m_s.iter() {
+    for value in image.sound_speed_shift.iter() {
+        let value_m_s = value.into_base();
         assert!(
-            (*value - 20.0).abs() <= 1.0e-3,
-            "LSQR reconstruction value {value:.6} differs from 20 m/s by more than 1e-3"
+            (value_m_s - 20.0).abs() <= 1.0e-3,
+            "LSQR reconstruction value {value_m_s:.6} differs from 20 m/s by more than 1e-3"
         );
     }
 }
@@ -58,8 +59,8 @@ fn lsqr_prior_recovers_uniform_sound_speed_shift() {
 #[test]
 fn lsqr_higher_damping_reduces_solution_norm() {
     let mask = Array2::from_elem((3, 3), true);
-    let mut truth = Array2::zeros((3, 3));
-    truth.fill(20.0);
+    let mut truth = SoundSpeedShiftField::from_storage(Array2::zeros((3, 3)));
+    truth.storage_mut().fill(20.0);
     let samples = horizontal_samples(&[-0.001, 0.0, 0.001]);
     let base_config = SoundSpeedShiftConfig {
         spacing: Length::from_base(0.001),
@@ -91,14 +92,16 @@ fn lsqr_higher_damping_reduces_solution_norm() {
     .unwrap();
 
     let norm_low = low_damping_image
-        .sound_speed_shift_m_s
+        .sound_speed_shift
         .iter()
+        .map(|v| v.into_base())
         .map(|v| v * v)
         .sum::<f64>()
         .sqrt();
     let norm_high = high_damping_image
-        .sound_speed_shift_m_s
+        .sound_speed_shift
         .iter()
+        .map(|v| v.into_base())
         .map(|v| v * v)
         .sum::<f64>()
         .sqrt();
@@ -121,8 +124,8 @@ fn lsqr_higher_damping_reduces_solution_norm() {
 #[test]
 fn lsqr_objective_history_is_non_increasing() {
     let mask = Array2::from_elem((3, 3), true);
-    let mut truth = Array2::zeros((3, 3));
-    truth.fill(20.0);
+    let mut truth = SoundSpeedShiftField::from_storage(Array2::zeros((3, 3)));
+    truth.storage_mut().fill(20.0);
     let samples = horizontal_samples(&[-0.001, 0.0, 0.001]);
     let config = SoundSpeedShiftConfig {
         spacing: Length::from_base(0.001),
@@ -157,8 +160,8 @@ fn lsqr_objective_history_is_non_increasing() {
 #[test]
 fn lsqr_workspace_capacity_preserved_across_calls() {
     let mask = Array2::from_elem((3, 3), true);
-    let mut truth = Array2::zeros((3, 3));
-    truth.fill(20.0);
+    let mut truth = SoundSpeedShiftField::from_storage(Array2::zeros((3, 3)));
+    truth.storage_mut().fill(20.0);
     let samples = horizontal_samples(&[-0.001, 0.0, 0.001]);
     let config = SoundSpeedShiftConfig {
         spacing: Length::from_base(0.001),
@@ -198,7 +201,7 @@ fn lsqr_workspace_capacity_preserved_across_calls() {
         "workspace byte footprint changed between calls"
     );
     assert_eq!(
-        first.sound_speed_shift_m_s, second.sound_speed_shift_m_s,
+        first.sound_speed_shift, second.sound_speed_shift,
         "LSQR solutions differ between identical successive calls"
     );
 }
@@ -228,9 +231,9 @@ fn lsqr_zero_rhs_returns_zero_solution() {
         image.active_voxels, 9,
         "active voxel count must be 9 even for zero RHS"
     );
-    for value in image.sound_speed_shift_m_s.iter() {
+    for value in image.sound_speed_shift.iter() {
         assert!(
-            value.abs() < 1.0e-12,
+            value.into_base().abs() < 1.0e-12,
             "zero RHS must yield zero solution, got {value:.3e}"
         );
     }

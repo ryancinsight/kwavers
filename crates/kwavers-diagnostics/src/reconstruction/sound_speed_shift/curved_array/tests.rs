@@ -5,7 +5,7 @@ use leto::Array2;
 
 use super::{CurvedArray2d, CurvedArrayShiftScan};
 use crate::reconstruction::sound_speed_shift::{
-    predict_sound_speed_time_shifts, SoundSpeedShiftConfig,
+    predict_sound_speed_time_shifts, SoundSpeedShiftConfig, SoundSpeedShiftField,
 };
 use kwavers_solver::inverse::same_aperture::PlanarPoint;
 
@@ -94,8 +94,8 @@ fn invalid_curved_scan_contract_is_rejected() {
 #[test]
 fn curved_array_samples_drive_straight_ray_shift_prediction() {
     let mask = Array2::from_elem((5, 5), true);
-    let mut shift = Array2::zeros((5, 5));
-    shift.fill(12.0);
+    let mut shift = SoundSpeedShiftField::from_storage(Array2::zeros((5, 5)));
+    shift.storage_mut().fill(12.0);
     let array = CurvedArray2d {
         center_m: PlanarPoint { x_m: 0.0, y_m: 0.0 },
         radius: Length::from_base(0.004),

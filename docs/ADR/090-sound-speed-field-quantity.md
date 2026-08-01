@@ -15,11 +15,11 @@ of exposing a dimensionless array.
 ## Decision
 
 Introduce the public `SoundSpeedShiftField` value type. It owns the Leto
-`Array2<f64>` storage, exposes provider storage only through an explicit
-storage accessor, and exposes velocity-valued iteration through Aequitas
-`Velocity`. Reconstruction images, streaming views, batch frames, and OpenPros
-truth fields use this type and unit-free field names. Solver kernels extract
-the provider array only at their Leto boundary.
+`Array2<f64>` storage, keeps provider construction and storage access crate
+private, and exposes velocity-valued iteration through Aequitas `Velocity`.
+Reconstruction images, streaming views, batch frames, and OpenPros truth fields
+use this type and unit-free field names. Solver kernels extract the provider
+array only at their Leto boundary.
 
 The field is real-valued. Eunomia complex scalar support remains available to
 numerical providers that carry complex data, but a real sound-speed shift has
@@ -34,6 +34,10 @@ no imaginary physical component and does not receive a complex unit.
 
 ## Verification
 
-The diagnostics test-target check, focused sound-speed-shift Nextest,
-warning-denied all-target Clippy, doctests, RustDoc, formatting, diff checks,
-and a public-contract scan will pass before acceptance.
+Source migration, package formatting, diff checks, and the public-contract scan
+pass. The diagnostics test-target check currently cannot reach Kwavers because
+peer-owned dirty `leto-ops` code on branch
+`codex/leto-mutable-zip-provider` fails first in
+`crates/leto-ops/src/application/zip.rs` with `E0057` and `E0507`. Focused
+Nextest, warning-denied Clippy, doctests, and RustDoc remain pending that
+provider repair; this ADR stays Proposed until those gates run.
