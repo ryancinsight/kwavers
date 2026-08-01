@@ -1,7 +1,7 @@
 //! Provider-owned traversal adapters for math kernels.
 
 use leto::{ArrayView, ArrayViewMut};
-use leto_ops::{zip2_mut_with, zip_mut_with};
+use leto_ops::zip_mut_with;
 use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
 
 const MATH_CHUNK_SIZE: usize = 4096;
@@ -76,7 +76,10 @@ pub(crate) fn zip_mut_two_refs<T, U, V, const N: usize, F>(
                 },
             );
         }
-        _ => zip2_mut_with(&mut out, &first, &second, f).unwrap(),
+        _ => zip_mut_with(&mut out, (&first, &second), |out, (first, second)| {
+            f(out, first, second)
+        })
+        .unwrap(),
     }
 }
 

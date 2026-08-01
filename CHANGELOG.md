@@ -17,6 +17,11 @@
   the provider graph containing Eunomia `UnitScalar` and Aequitas `8cc90b2`,
   so real and complex quantity scaling resolve from one compatible graph.
 
+- [patch] Refresh `Cargo.lock` to the Atlas-pinned Asclepius, Hyperion, Proteus,
+  and Tyche revisions, use Aequitas `TemperatureDifference` for bubble energy
+  updates, and migrate Kwavers multi-input traversals to Leto 0.40's tuple
+  source `zip_mut_with` API.
+
 - [major] [arch] Functional-ultrasound vessel segmentation now requires
   validated Aequitas voxel spacing and returns typed `Length<f64>` geometry
   plus typed `Velocity<f64>` Doppler results. Frequency, sound speed, diameter,

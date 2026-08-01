@@ -107,18 +107,31 @@ metrics. Complex representation is not a new physical dimension.
 See [`Kwavers ADR 092`](docs/ADR/092-therapeutic-microbubble-quantities.md)
 and [`Aequitas ADR 0013`](../aequitas/docs/adr/0013-acceleration-quantity.md).
 
-The current integration head is `4fa612197` on PR #328. The superseded
+The current integration head is `abbe79d4a` on PR #328. The superseded
 `f37896521` wheel matrix failed before compiling Kwavers because the pinned
 Atlas checkout materialized Eunomia before `UnitScalar`; the benchmark smoke
 failure was downstream of that same provider error. The Kwavers checkout
 action and Python-release workflow now pin Atlas `8573cc5d` so Eunomia
-`18459875` and Aequitas `8cc90b2` resolve together. The corrected hosted
-matrix is the remaining integration gate.
+`18459875` and Aequitas `8cc90b2` resolve together. The hosted wheel and
+benchmark jobs then exposed a stale lock graph. `Cargo.lock` now records the
+standalone CI graph, including the current provider revisions and the required
+git package identities; clean `cargo metadata --locked --all-features` passes
+outside the Atlas development overlay. The refreshed hosted matrix is the
+remaining integration gate.
+
+Advancing the lock to the Atlas-pinned Asclepius, Hyperion, Proteus, and Tyche
+revisions exposed two additional compatibility defects that are now resolved:
+the new Aequitas temperature-difference semantics are used explicitly in the
+bubble heat-transfer formula, and all Kwavers `zip2_mut_with`/
+`zip3_mut_with` calls are native tuple-source `zip_mut_with` calls for Leto
+0.40. No compatibility wrapper or fallback path was added.
 
 Verification: Aequitas provider Nextest previously passed 47/47 and the
 pressure-rate dimensional-law filter passed 1/1; Kwavers physics microbubble
-Nextest passed 38/38; physics and therapy test-target checks passed offline;
-exact-file formatting and diff checks pass. The therapy microbubble Nextest
+Nextest passed 38/38; Kwavers math Nextest passed 266/266; Kwavers solver
+Nextest passed 854/854 with four skipped tests; locked metadata, physics,
+math, and solver checks passed offline outside the Atlas overlay; exact-file
+formatting and diff checks pass. The therapy microbubble Nextest
 lane remains blocked by the shared target-cache compile of unrelated
 `ritk-jpeg`, which terminated without a Rust diagnostic; a bounded
 `CARGO_BUILD_JOBS=1` retry timed out without output. This is an

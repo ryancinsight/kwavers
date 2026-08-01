@@ -13,6 +13,13 @@
       complex phasors reduce to real observables at numerical boundaries.
 - [x] Refresh the Kwavers Atlas checkout-action and Python-release pins after
       the superseded matrix exposed an Eunomia `UnitScalar` graph mismatch.
+- [x] Refresh `Cargo.lock` from the standalone CI manifest after the corrected
+      matrix exposed stale provider package identities; clean locked metadata
+      now passes outside the Atlas development overlay.
+- [x] Advance direct provider lock entries to the Atlas graph and fix the
+      resulting Aequitas temperature-difference and Leto 0.40 zip API errors.
+- [x] Verify the provider-compatible graph with Kwavers math 266/266 and solver
+      854/854 Nextest suites, plus locked physics and solver package checks.
 
 Acceptance: named public microbubble metrics are Aequitas-typed, provider
 vocabulary owns acceleration and pressure rate, formula/storage boundaries
@@ -20,13 +27,15 @@ remain explicit, and no compatibility wrapper or imaginary physical unit is
 introduced. Met.
 
 Evidence: provider Aequitas Nextest passes 47/47 and the pressure-rate law
-filter passes 1/1; Kwavers physics microbubble Nextest passes 38/38; physics
-and therapy test-target checks pass offline; exact-file formatting and diff
-checks pass. The therapy microbubble Nextest lane is environment-blocked by
+filter passes 1/1; Kwavers physics microbubble Nextest passes 38/38; Kwavers
+math Nextest passes 266/266; Kwavers solver Nextest passes 854/854 with four
+skipped tests; locked physics, math, and solver checks pass offline outside the
+Atlas overlay; exact-file formatting and diff checks pass. The therapy
+microbubble Nextest lane is environment-blocked by
 shared-cache compilation of unrelated `ritk-jpeg` without a Rust diagnostic;
-the bounded single-job retry timed out without output. PR #328 is at
-`4fa612197`; its corrected hosted matrix is pending after the stale-provider
-failure on the superseded head.
+the bounded single-job retry timed out without output. PR #328's corrected
+source head is pending hosted matrix evidence after the stale provider and
+lock-graph failures on superseded heads.
 
 ## Owner: Codex — KW-AEQ-MET-04 vessel physical metrics [major] [arch] — done
 

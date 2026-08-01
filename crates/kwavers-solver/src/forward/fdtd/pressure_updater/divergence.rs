@@ -44,7 +44,7 @@ impl FdtdSolver {
                     .divergence_scratch
                     .slice_mut(&[(0, nx, 1), (0, 1, 1), (k, k + 1, 1)])
                     .unwrap();
-                leto_ops::zip2_mut_with(&mut dvz_k, &uz_k, &uz_km1, |d, uk, ukm1| {
+                leto_ops::zip_mut_with(&mut dvz_k, (&uz_k, &uz_km1), |d, (uk, ukm1)| {
                     *d += (*uk + *ukm1) / (2.0 * r_center);
                 })
                 .expect("invariant: cylindrical divergence slice shapes match");

@@ -33,12 +33,10 @@ fn build_arm(delta_m: &Array3<f64>, tau: &Array3<f64>, dt: f64) -> Arm {
     let decay = tau.mapv(|t| (-dt / t).exp());
     let inv_tau = tau.mapv(|t| 1.0 / t);
     let mut gain = Array3::<f64>::zeros(delta_m.shape());
-    leto_ops::zip3_mut_with(
+    leto_ops::zip_mut_with(
         &mut gain.view_mut(),
-        &delta_m.view(),
-        &tau.view(),
-        &decay.view(),
-        |g, &dm, &t, &dc| *g = -dm * t * (1.0 - dc),
+        (&delta_m.view(), &tau.view(), &decay.view()),
+        |g, (&dm, &t, &dc)| *g = -dm * t * (1.0 - dc),
     )
     .expect("invariant: build_arm operands share grid shape");
     Arm {
@@ -272,12 +270,10 @@ impl ViscoacousticMemorySolver {
         // M_U(x) = M_∞(x) + Σ ΔMₗ(x); recover ΔMₗ = −gain / (τ(1−decay)) = −gain·inv_tau/(1−decay).
         let mut m_u = m_inf.clone();
         for arm in &arms {
-            leto_ops::zip3_mut_with(
+            leto_ops::zip_mut_with(
                 &mut m_u.view_mut(),
-                &arm.gain.view(),
-                &arm.decay.view(),
-                &arm.inv_tau.view(),
-                |mu, &gain, &decay, &inv_tau| {
+                (&arm.gain.view(), &arm.decay.view(), &arm.inv_tau.view()),
+                |mu, (&gain, &decay, &inv_tau)| {
                     *mu += -gain * inv_tau / (1.0 - decay);
                 },
             )
@@ -473,12 +469,10 @@ impl ViscoacousticMemorySolver {
         let omega_ref = TWO_PI * f_ref;
         let m_inf = rho.zip_map(c, |r, cc| r * cc * cc);
         let mut scale = Array3::<f64>::zeros((nx, ny, nz));
-        leto_ops::zip3_mut_with(
+        leto_ops::zip_mut_with(
             &mut scale.view_mut(),
-            &rho.view(),
-            &m_inf.view(),
-            &alpha_np_m.view(),
-            |sc, &r, &mi, &a_target| {
+            (&rho.view(), &m_inf.view(), &alpha_np_m.view()),
+            |sc, (&r, &mi, &a_target)| {
                 // α for unit total strength (weights = `base`, summing to 1 Pa).
                 let a_unit = relaxation_attenuation(omega_ref, r, mi, &base, &taus);
                 *sc = if a_unit > 0.0 && a_target > 0.0 {
@@ -698,25 +692,22 @@ impl ViscoacousticMemorySolver {
             &mut self.cbuf,
             &mut self.gz,
         );
-        leto_ops::zip2_mut_with(
+        leto_ops::zip_mut_with(
             &mut self.vx.view_mut(),
-            &self.gx.view(),
-            &self.inv_rho.view(),
-            |v, &g, &ir| *v += -dt * ir * g,
+            (&self.gx.view(), &self.inv_rho.view()),
+            |v, (&g, &ir)| *v += -dt * ir * g,
         )
         .expect("invariant: velocity-x update fields share grid shape");
-        leto_ops::zip2_mut_with(
+        leto_ops::zip_mut_with(
             &mut self.vy.view_mut(),
-            &self.gy.view(),
-            &self.inv_rho.view(),
-            |v, &g, &ir| *v += -dt * ir * g,
+            (&self.gy.view(), &self.inv_rho.view()),
+            |v, (&g, &ir)| *v += -dt * ir * g,
         )
         .expect("invariant: velocity-y update fields share grid shape");
-        leto_ops::zip2_mut_with(
+        leto_ops::zip_mut_with(
             &mut self.vz.view_mut(),
-            &self.gz.view(),
-            &self.inv_rho.view(),
-            |v, &g, &ir| *v += -dt * ir * g,
+            (&self.gz.view(), &self.inv_rho.view()),
+            |v, (&g, &ir)| *v += -dt * ir * g,
         )
         .expect("invariant: velocity-z update fields share grid shape");
 
@@ -746,11 +737,10 @@ impl ViscoacousticMemorySolver {
             &mut self.gz,
         );
         // gx = ∂vx/∂x + ∂vy/∂y + ∂vz/∂z
-        leto_ops::zip2_mut_with(
+        leto_ops::zip_mut_with(
             &mut self.gx.view_mut(),
-            &self.gy.view(),
-            &self.gz.view(),
-            |d, &y, &z| *d += y + z,
+            (&self.gy.view(), &self.gz.view()),
+            |d, (&y, &z)| *d += y + z,
         )
         .expect("invariant: divergence components share grid shape");
 
@@ -794,12 +784,10 @@ impl ViscoacousticMemorySolver {
         }
 
         // 4. Pressure update: p += -Δt (M_U(x) D + Σ_l ½(σ_l+σ_l^new)/τ_l(x)).
-        leto_ops::zip3_mut_with(
+        leto_ops::zip_mut_with(
             &mut self.p.view_mut(),
-            &self.gx.view(),
-            &self.gy.view(),
-            &self.m_u.view(),
-            |p, &d, &relax, &mu| *p -= dt * (mu * d + relax),
+            (&self.gx.view(), &self.gy.view(), &self.m_u.view()),
+            |p, (&d, &relax, &mu)| *p -= dt * (mu * d + relax),
         )
         .expect("invariant: pressure update fields share grid shape");
 
