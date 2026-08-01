@@ -35,6 +35,8 @@
       URL and align the locked Consus packages with Atlas head `f0c28690`,
       eliminating duplicate git-source identities while retaining the
       separate `consus-npy` provider branch.
+- [x] Update the temporal synchronization validation test for RITK's typed
+      `TemporalSyncResult` contract and assert its value-semantic metrics.
 
 Acceptance: named public microbubble metrics are Aequitas-typed, provider
 vocabulary owns acceleration and pressure rate, formula/storage boundaries
@@ -47,8 +49,9 @@ preceding math slice passes 266/266; the current exact-graph workspace check,
 locked metadata, solver clippy at `-D warnings`, 79-file Rustfmt, PINN Nextest
 422/422, solver doctests 4/4, and `cargo deny check sources` pass offline
 outside the Atlas overlay. The workspace check reports only the existing
-`principal_axis` dead-code warning and external provider linker warnings. PR
-#328 source head `c8549096e` is pending hosted matrix evidence.
+`principal_axis` dead-code warning and external provider linker warnings. The
+exact pinned graph compiles the corrected temporal synchronization validation
+target. PR #328 source head `1fd08058f` is pending hosted matrix evidence.
 
 ## Owner: Codex — KW-AEQ-MET-04 vessel physical metrics [major] [arch] — done
 
