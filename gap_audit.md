@@ -107,7 +107,7 @@ metrics. Complex representation is not a new physical dimension.
 See [`Kwavers ADR 092`](docs/ADR/092-therapeutic-microbubble-quantities.md)
 and [`Aequitas ADR 0013`](../aequitas/docs/adr/0013-acceleration-quantity.md).
 
-The current integration head is `f1cdeb4b8` on PR #328. The superseded
+The current integration head is `84a645458` on PR #328. The superseded
 `f37896521` wheel matrix failed before compiling Kwavers because the pinned
 Atlas checkout materialized Eunomia before `UnitScalar`; the benchmark smoke
 failure was downstream of that same provider error. The Kwavers checkout
@@ -115,8 +115,10 @@ action and Python-release workflow now pin Atlas `8573cc5d` so Eunomia
 `18459875` and Aequitas `8cc90b2` resolve together. The hosted wheel and
 benchmark jobs then exposed a stale lock graph. `Cargo.lock` now records the
 standalone CI graph, including the current provider revisions and the required
-git package identities; clean `cargo metadata --locked --all-features` passes
-outside the Atlas development overlay. The refreshed hosted matrix is the
+git package identities; the stale `ritk-diffusion-scheme` edge from the newer
+local RITK tree is removed so the lock matches the Atlas-pinned RITK gitlink.
+Clean `cargo metadata --locked --all-features` passes outside the Atlas
+development overlay. The refreshed hosted matrix is the
 remaining integration gate.
 
 Advancing the lock to the Atlas-pinned Asclepius, Hyperion, Proteus, and Tyche

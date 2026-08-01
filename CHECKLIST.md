@@ -15,7 +15,8 @@
       the superseded matrix exposed an Eunomia `UnitScalar` graph mismatch.
 - [x] Refresh `Cargo.lock` from the standalone CI manifest after the corrected
       matrix exposed stale provider package identities; clean locked metadata
-      now passes outside the Atlas development overlay.
+      now passes outside the Atlas development overlay, and remove the RITK
+      diffusion-scheme edge absent from the Atlas-pinned gitlink.
 - [x] Advance direct provider lock entries to the Atlas graph and fix the
       resulting Aequitas temperature-difference and Leto 0.40 zip API errors.
 - [x] Verify the provider-compatible graph with Kwavers math 266/266 and solver
@@ -34,7 +35,8 @@ Atlas overlay; exact-file formatting and diff checks pass. The therapy
 microbubble Nextest lane is environment-blocked by
 shared-cache compilation of unrelated `ritk-jpeg` without a Rust diagnostic;
 the bounded single-job retry timed out without output. PR #328's corrected
-source head is pending hosted matrix evidence after the stale provider and
+PR #328 source head `84a645458` is pending hosted matrix evidence after the
+stale provider and
 lock-graph failures on superseded heads.
 
 ## Owner: Codex — KW-AEQ-MET-04 vessel physical metrics [major] [arch] — done
