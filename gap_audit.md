@@ -29,26 +29,24 @@
 
 # Gap Audit
 
-## Active sound-speed-shift field audit — 2026-07-31
+## Closed sound-speed-shift field audit — 2026-07-31
 
-`KWAVERS-AEQ-MET-51` is the next bounded gap: public reconstruction images,
-streaming views, batch frames, and OpenPros truth still expose unit-suffixed
-Leto `Array2<f64>` storage. The planned `SoundSpeedShiftField` owns that
-provider storage, exposes Aequitas `Velocity` iteration, and restricts raw
+`KWAVERS-AEQ-MET-51` is closed. Public reconstruction images, streaming views,
+batch frames, and OpenPros truth now use `SoundSpeedShiftField`, which owns the
+Leto provider storage, exposes Aequitas `Velocity` iteration, and restricts raw
 storage extraction to solver/provider boundaries.
 
 The field is real-valued and has no physical phasor, so Eunomia compatibility
 requires no imaginary physical unit. See
 [`Kwavers ADR 090`](docs/ADR/090-sound-speed-field-quantity.md).
 
-Source migration and package formatting are complete. The focused diagnostics
-check cannot currently reach Kwavers because the shared local `leto-ops`
-provider is dirty on peer branch `codex/leto-mutable-zip-provider` and fails
-first in `crates/leto-ops/src/application/zip.rs` with `E0057` callback-arity
-errors and `E0507` moves from mutable output references. This is an external
-provider-scope blocker; no provider files are part of this item. Nextest,
-Clippy, doctests, RustDoc, and value-semantic tests remain pending until the
-provider compiles.
+Verification: diagnostics test-target check passes; focused Nextest passes
+199/199; warning-denied Clippy passes after aligning the current mutable-view
+call sites; the executable doctest passes with 5 ignored examples; RustDoc,
+package formatting, and diff checks pass. The test compilation initially
+found five stale test-module imports and one typed-quantity formatting
+assertion; both were corrected at the scalar/test boundary. No provider files
+were changed for this closure.
 
 ## Live sound-speed-shift error-metric refresh — 2026-07-31
 

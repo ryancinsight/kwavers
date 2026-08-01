@@ -4,9 +4,9 @@ use aequitas::systems::si::quantities::{Length, Time};
 use leto::Array2;
 
 use super::{
-    horizontal_sample, predict_sound_speed_time_shifts, reconstruct_sound_speed_shift,
     ShiftPropagation, ShiftSensitivity, SoundSpeedShiftConfig, SoundSpeedShiftField,
-    SoundSpeedShiftSample,
+    SoundSpeedShiftSample, horizontal_sample, predict_sound_speed_time_shifts,
+    reconstruct_sound_speed_shift,
 };
 use crate::reconstruction::sound_speed_shift::operator::SoundSpeedShiftOperator;
 use kwavers_solver::inverse::same_aperture::PlanarPoint;
@@ -150,10 +150,12 @@ fn invalid_curved_ray_and_finite_frequency_config_are_rejected() {
         ..Default::default()
     };
 
-    assert!(reconstruct_sound_speed_shift(&samples, &mask, invalid_arc)
-        .unwrap_err()
-        .to_string()
-        .contains("Circular-arc propagation"));
+    assert!(
+        reconstruct_sound_speed_shift(&samples, &mask, invalid_arc)
+            .unwrap_err()
+            .to_string()
+            .contains("Circular-arc propagation")
+    );
     assert!(
         reconstruct_sound_speed_shift(&samples, &mask, invalid_frequency)
             .unwrap_err()

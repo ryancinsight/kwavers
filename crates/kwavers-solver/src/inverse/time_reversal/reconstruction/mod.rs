@@ -16,7 +16,7 @@ use std::sync::Arc;
 
 use super::{
     config::TimeReversalConfig,
-    processing::{apply_spatial_window, AmplitudeCorrector, FrequencyFilter},
+    processing::{AmplitudeCorrector, FrequencyFilter, apply_spatial_window},
     validation::InputValidator,
 };
 
@@ -93,7 +93,7 @@ impl TimeReversalReconstructor {
 
             // Accumulate reconstruction
             leto_ops::zip_mut_with(
-                &mut reconstruction.view_mut(),
+                reconstruction.view_mut(),
                 &iteration_result.view(),
                 |a, b| *a += *b,
             )

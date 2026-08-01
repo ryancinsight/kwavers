@@ -4,9 +4,9 @@ use aequitas::systems::si::quantities::Length;
 use leto::Array2;
 
 use super::{
-    attach_time_shifts, horizontal_sample, predict_sound_speed_time_shifts,
-    reconstruct_sound_speed_shift, vertical_sample, ShiftPrior, ShiftSampling,
-    SoundSpeedShiftConfig, SoundSpeedShiftField,
+    ShiftPrior, ShiftSampling, SoundSpeedShiftConfig, SoundSpeedShiftField, attach_time_shifts,
+    horizontal_sample, predict_sound_speed_time_shifts, reconstruct_sound_speed_shift,
+    vertical_sample,
 };
 
 /// Sparse sampling selects every-other row; L1 prior concentrates the

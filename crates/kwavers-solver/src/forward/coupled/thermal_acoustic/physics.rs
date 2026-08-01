@@ -1,7 +1,7 @@
 use super::ThermalAcousticCoupler;
 use kwavers_core::constants::RHO_C_SOFT_TISSUE;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use moirai_parallel::{enumerate_mut_with, for_each_chunk_pair_mut_enumerated_with, Adaptive};
+use moirai_parallel::{Adaptive, enumerate_mut_with, for_each_chunk_pair_mut_enumerated_with};
 impl ThermalAcousticCoupler {
     #[inline]
     pub(super) fn cell_indices(index: usize, ny: usize, nz: usize) -> (usize, usize, usize) {
@@ -51,12 +51,12 @@ impl ThermalAcousticCoupler {
             return;
         }
 
-        leto_ops::zip_mut_with(&mut sound_speed.view_mut(), &temperature.view(), |c, t| {
+        leto_ops::zip_mut_with(sound_speed.view_mut(), &temperature.view(), |c, t| {
             let d_t = *t - d_t_offset;
             *c = dc_dt.mul_add(d_t, c_ref);
         })
         .expect("invariant: material property field shapes asserted equal");
-        leto_ops::zip_mut_with(&mut density.view_mut(), &temperature.view(), |rho, t| {
+        leto_ops::zip_mut_with(density.view_mut(), &temperature.view(), |rho, t| {
             let d_t = *t - d_t_offset;
             *rho = drho_dt.mul_add(d_t, rho_ref);
         })
@@ -99,7 +99,7 @@ impl ThermalAcousticCoupler {
         }
 
         leto_ops::zip_mut_with(
-            &mut acoustic_heating.view_mut(),
+            acoustic_heating.view_mut(),
             (&pressure_prev.view(), &density.view(), &sound_speed.view()),
             |q, (p, rho, c)| {
                 if *rho > 0.0 && *c > 0.0 {

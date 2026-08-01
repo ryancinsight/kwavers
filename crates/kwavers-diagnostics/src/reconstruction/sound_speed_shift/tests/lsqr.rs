@@ -8,9 +8,9 @@ use aequitas::systems::si::quantities::Length;
 use leto::Array2;
 
 use super::{
+    ShiftPrior, SoundSpeedShiftConfig, SoundSpeedShiftField, SoundSpeedShiftWorkspace,
     attach_time_shifts, horizontal_samples, predict_sound_speed_time_shifts,
-    reconstruct_sound_speed_shift, reconstruct_sound_speed_shift_with_workspace, ShiftPrior,
-    SoundSpeedShiftConfig, SoundSpeedShiftField, SoundSpeedShiftWorkspace,
+    reconstruct_sound_speed_shift, reconstruct_sound_speed_shift_with_workspace,
 };
 
 /// Straight-ray consistent system: 3×3 all-active grid, 3 horizontal rays,
@@ -232,9 +232,10 @@ fn lsqr_zero_rhs_returns_zero_solution() {
         "active voxel count must be 9 even for zero RHS"
     );
     for value in image.sound_speed_shift.iter() {
+        let value_m_s = value.into_base();
         assert!(
-            value.into_base().abs() < 1.0e-12,
-            "zero RHS must yield zero solution, got {value:.3e}"
+            value_m_s.abs() < 1.0e-12,
+            "zero RHS must yield zero solution, got {value_m_s:.3e}"
         );
     }
 }

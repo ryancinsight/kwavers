@@ -8,7 +8,7 @@ use super::config::{ShiftPrior, ShiftSampling};
 /// Dense sound-speed shift field backed by Leto storage.
 ///
 /// The provider array stores real base-unit values for solver interoperability.
-/// Use [`Self::iter`] for velocity-typed values; use [`Self::storage`] only at
+/// Use [`Self::iter`] for velocity-typed values; use the provider storage only at
 /// an explicit Leto/provider boundary.
 #[derive(Clone, Debug, PartialEq)]
 pub struct SoundSpeedShiftField {

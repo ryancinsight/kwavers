@@ -4,7 +4,7 @@ use super::FwiProcessor;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
 use leto::{Array3, Array4, ArrayView3};
-use moirai_parallel::{for_each_chunk_mut_enumerated_with, for_each_chunk_mut_with, Adaptive};
+use moirai_parallel::{Adaptive, for_each_chunk_mut_enumerated_with, for_each_chunk_mut_with};
 
 fn pressure_second_derivative_views_into(
     dst: &mut Array3<f64>,
@@ -43,7 +43,7 @@ fn pressure_second_derivative_views_into(
             },
         );
     } else {
-        leto_ops::zip_mut_with(&mut dst.view_mut(), (&p0, &p1, &p2), |d, (v0, v1, v2)| {
+        leto_ops::zip_mut_with(dst.view_mut(), (&p0, &p1, &p2), |d, (v0, v1, v2)| {
             *d = (2.0f64.mul_add(-*v1, *v0) + *v2) * inv_dt_sq;
         })
         .expect("invariant: dst, p0, p1, p2 shapes asserted equal above");

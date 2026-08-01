@@ -4,7 +4,7 @@
 use kwavers_core::error::{KwaversResult, NumericalError};
 use leto::Array3;
 
-use super::{l2_misfit, sample_receivers, ElasticFwi, ReceiverTraces};
+use super::{ElasticFwi, ReceiverTraces, l2_misfit, sample_receivers};
 use crate::forward::elastic::swe::{ElasticPointForce, ElasticWaveField, ElasticWaveSolver};
 
 impl ElasticFwi {
@@ -63,7 +63,7 @@ impl ElasticFwi {
         let wmax = illum.iter().fold(0.0_f64, |m, &v| m.max(v));
         if wmax > 0.0 {
             let floor = self.config.precond_eps * wmax;
-            leto_ops::zip_mut_with(&mut grad.view_mut(), &illum.view(), |g, w| {
+            leto_ops::zip_mut_with(grad.view_mut(), &illum.view(), |g, w| {
                 *g /= *w + floor;
             })
             .expect("invariant: gradient and illumination field shapes asserted equal");

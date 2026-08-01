@@ -1,6 +1,6 @@
 # ADR 090 — Aequitas sound-speed field quantity
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-07-31
 - Owner: `KWAVERS-AEQ-MET-51`
 
@@ -34,10 +34,9 @@ no imaginary physical component and does not receive a complex unit.
 
 ## Verification
 
-Source migration, package formatting, diff checks, and the public-contract scan
-pass. The diagnostics test-target check currently cannot reach Kwavers because
-peer-owned dirty `leto-ops` code on branch
-`codex/leto-mutable-zip-provider` fails first in
-`crates/leto-ops/src/application/zip.rs` with `E0057` and `E0507`. Focused
-Nextest, warning-denied Clippy, doctests, and RustDoc remain pending that
-provider repair; this ADR stays Proposed until those gates run.
+Source migration, package formatting, and diff checks pass. The diagnostics
+test-target check passes, focused Nextest passes 199/199, warning-denied
+Clippy passes, the executable doctest passes with five ignored examples, and
+RustDoc completes without crate-local warnings. The provider-facing borrow
+cleanup required by the current Leto Ops API is limited to explicit mutable
+view boundaries; no complex or imaginary physical unit is introduced.

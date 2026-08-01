@@ -7,7 +7,7 @@ use super::parameters::{ImagingCondition, RtmSettings};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use leto::Array3;
-use moirai_parallel::{enumerate_mut_with, Adaptive};
+use moirai_parallel::{Adaptive, enumerate_mut_with};
 
 /// Reverse Time Migration processor
 /// Follows Single Responsibility Principle - only handles RTM computations
@@ -103,7 +103,7 @@ impl RtmProcessor {
             });
         } else {
             leto_ops::zip_mut_with(
-                &mut image.view_mut(),
+                image.view_mut(),
                 (&source_wavefield.view(), &receiver_wavefield.view()),
                 |img, (src, rcv)| {
                     *img += *src * *rcv;
@@ -166,7 +166,7 @@ impl RtmProcessor {
             });
         } else {
             leto_ops::zip_mut_with(
-                &mut image.view_mut(),
+                image.view_mut(),
                 (&source_wavefield.view(), &receiver_wavefield.view()),
                 |img, (src, rcv)| {
                     let phi = *src * *src;

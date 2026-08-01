@@ -7,7 +7,7 @@
 
 use leto::Array3 as LetoArray3;
 use leto::{Array3, ArrayView3};
-use moirai_parallel::{enumerate_mut_with, Adaptive};
+use moirai_parallel::{Adaptive, enumerate_mut_with};
 
 pub mod divergence;
 pub mod nonlinear;
@@ -35,7 +35,7 @@ pub(super) fn accumulate_two_fields(target: &mut Array3<f64>, x: &Array3<f64>, y
         });
     } else {
         leto_ops::zip_mut_with(
-            &mut target.view_mut(),
+            target.view_mut(),
             (&x.view(), &y.view()),
             |target_value, (x_value, y_value)| *target_value += *x_value + *y_value,
         )

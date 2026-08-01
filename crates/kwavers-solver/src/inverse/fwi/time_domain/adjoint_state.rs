@@ -2,7 +2,7 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use leto::{Array2, Array3, ArrayView3};
-use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
+use moirai_parallel::{Adaptive, for_each_chunk_mut_enumerated_with};
 
 fn validate_pair_shapes(
     observed: &Array2<f64>,
@@ -126,13 +126,9 @@ pub fn accumulate_signed_correlation(
             },
         );
     } else {
-        leto_ops::zip_mut_with(
-            &mut gradient.view_mut(),
-            (&forward, &adjoint),
-            |g, (f, a)| {
-                *g += scale * *f * *a;
-            },
-        )
+        leto_ops::zip_mut_with(gradient.view_mut(), (&forward, &adjoint), |g, (f, a)| {
+            *g += scale * *f * *a;
+        })
         .expect("invariant: gradient, forward, adjoint shapes asserted equal above");
     }
 

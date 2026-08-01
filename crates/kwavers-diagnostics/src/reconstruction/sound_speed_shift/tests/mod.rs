@@ -14,10 +14,10 @@ mod sparse;
 mod validation;
 
 use super::{
+    SOUND_SPEED_SHIFT_MODEL, ShiftPrior, ShiftPropagation, ShiftSampling, ShiftSensitivity,
+    SoundSpeedShiftConfig, SoundSpeedShiftField, SoundSpeedShiftSample, SoundSpeedShiftWorkspace,
     predict_sound_speed_time_shifts, reconstruct_sound_speed_shift,
-    reconstruct_sound_speed_shift_with_workspace, ShiftPrior, ShiftPropagation, ShiftSampling,
-    ShiftSensitivity, SoundSpeedShiftConfig, SoundSpeedShiftSample, SoundSpeedShiftWorkspace,
-    SOUND_SPEED_SHIFT_MODEL,
+    reconstruct_sound_speed_shift_with_workspace,
 };
 use aequitas::systems::si::quantities::Time;
 use kwavers_solver::inverse::same_aperture::PlanarPoint;

@@ -1,10 +1,10 @@
 # Project Checklist
 
-## Owner: Codex — KWAVERS-AEQ-MET-51 typed sound-speed field [major] — in progress
+## Owner: Codex — KWAVERS-AEQ-MET-51 typed sound-speed field [major] — done 2026-07-31
 
-- [ ] Add `SoundSpeedShiftField` with Aequitas `Velocity` iteration and an
+- [x] Add `SoundSpeedShiftField` with Aequitas `Velocity` iteration and an
       explicit Leto storage boundary.
-- [ ] Migrate reconstruction images, views, batch frames, benchmark truth,
+- [x] Migrate reconstruction images, views, batch frames, benchmark truth,
       callers, and tests; synchronize ADR 090, gap-audit, backlog, checklist,
       changelog, and the Atlas cross-repository audit.
 
@@ -12,12 +12,13 @@ Acceptance: no public sound-speed-shift result field exposes a unit-suffixed
 `Array2<f64>`; solver/provider extraction remains explicit; no complex or
 imaginary physical unit is introduced.
 
-Current verification state: source migration, package formatting, diff checks,
-and the public-contract scan pass. The diagnostics check is blocked before
-Kwavers compilation by peer-owned `leto-ops` errors (`E0057` and `E0507`) in
-`crates/leto-ops/src/application/zip.rs` on branch
-`codex/leto-mutable-zip-provider`; the remaining native and documentation gates
-are pending that provider repair.
+Evidence: `cargo check -p kwavers-diagnostics --tests --offline` passes;
+`cargo nextest run -p kwavers-diagnostics --offline` passes 199/199;
+warning-denied Clippy passes; `cargo test --doc -p kwavers-diagnostics
+--offline` passes 1 executable doctest with 5 ignored; RustDoc, formatting,
+and diff checks pass. The real-valued field introduces no complex or imaginary
+physical unit. The current Leto mutable-view API is used directly at provider
+boundaries.
 
 ## Owner: Codex — KWAVERS-AEQ-MET-50 typed sound-speed error metrics [major] — done 2026-07-31
 
