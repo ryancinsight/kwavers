@@ -29,11 +29,14 @@
 - Outcome: public SI contracts use Aequitas `Length`, `Velocity`,
   `Acceleration`, `Pressure`, `PressureRate`, `Time`, `Force`, `Energy`, and
   related quantities; numerical and storage scalar extraction remains explicit.
-- Implementation commit: `2299c33d3` propagates fallible Coeus forward and
+- Implementation commits: `2299c33d3` propagates fallible Coeus forward and
   backward errors through PINN networks, residuals, autodiff utilities, loss
   functions, and trainers; zero-gradient fallbacks are removed. It also
   completes the Leto mutable-view API cleanup required by the locked graph.
-- Integration: PR #328 is at `c8549096e`. The checkout action and Python
+  `1fd08058f` updates the temporal synchronization validation test to RITK's
+  typed `TemporalSyncResult` contract after the hosted compiler exposed the
+  stale tuple destructure.
+- Integration: PR #328 is at `1fd08058f`. The checkout action and Python
   release workflow pin Atlas `777cf325fad3114299b44a99a48145997f93a5b0`, the
   current Coeus/Leto-compatible provider graph containing Aequitas `8cc90b2`
   and Eunomia `18459875`.
@@ -67,8 +70,9 @@
   admits the transitive RITK Gaia provider and removes an unused cutile-rs
   entry. The workspace check reports only the existing
   `kwavers-analysis::principal_axis` dead-code warning and external provider
-  linker warnings. The corrected hosted wheel and benchmark matrix remains
-  pending on PR #328.
+  linker warnings. The exact pinned graph compiles the corrected temporal
+  synchronization validation target. The corrected hosted wheel, benchmark,
+  and validation matrix remains pending on PR #328.
 
 ## KW-AEQ-MET-04 — Type functional-ultrasound vessel metrics [major] [arch] — done
 
