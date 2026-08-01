@@ -9,6 +9,7 @@ use coeus_autograd::Var;
 use super::second_order::{compute_gradient_of_divergence_2d, compute_laplacian_2d};
 use super::spatial::compute_spatial_gradient_2d;
 use super::time::compute_second_time_derivative;
+use super::ForwardOutput;
 
 /// 2D infinitesimal strain components `(ε_xx, ε_yy, ε_xy)`, each `[batch, 1]`.
 ///
@@ -48,14 +49,15 @@ type ElasticResidual2D<B> = (Var<f32, B>, Var<f32, B>);
 /// ```
 /// # Errors
 /// - Propagates any [`crate::KwaversError`] returned by called functions.
-pub fn compute_strain_tensor_2d<B, F>(
+pub fn compute_strain_tensor_2d<B, F, O>(
     forward_fn: F,
     input: &coeus_tensor::Tensor<f32, B>,
 ) -> Result<StrainTensor2D<B>, kwavers_core::error::KwaversError>
 where
     B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default,
     B::DeviceBuffer<f32>: coeus_core::CpuAddressableStorage<f32>,
-    F: Fn(&Var<f32, B>) -> Var<f32, B> + Clone,
+    F: Fn(&Var<f32, B>) -> O + Clone,
+    O: ForwardOutput<B>,
 {
     let (du_x_dx, du_x_dy) = compute_spatial_gradient_2d(forward_fn.clone(), input, 0)?;
     let (du_y_dx, du_y_dy) = compute_spatial_gradient_2d(forward_fn, input, 1)?;
@@ -96,7 +98,7 @@ where
 /// `R = 0` ⟺ u satisfies the governing equation.
 /// # Errors
 /// - Propagates any [`crate::KwaversError`] returned by called functions.
-pub fn compute_elastic_wave_residual_2d<B, F>(
+pub fn compute_elastic_wave_residual_2d<B, F, O>(
     forward_fn: F,
     input: &coeus_tensor::Tensor<f32, B>,
     rho: f64,
@@ -106,7 +108,8 @@ pub fn compute_elastic_wave_residual_2d<B, F>(
 where
     B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default,
     B::DeviceBuffer<f32>: coeus_core::CpuAddressableStorage<f32>,
-    F: Fn(&Var<f32, B>) -> Var<f32, B> + Clone,
+    F: Fn(&Var<f32, B>) -> O + Clone,
+    O: ForwardOutput<B>,
 {
     let rho = rho as f32;
     let p_wave_coeff = (lambda + 2.0 * mu) as f32;

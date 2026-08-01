@@ -50,18 +50,21 @@ impl Boundary for CPMLBoundary {
         let sigma_x = &self.profiles.sigma_x;
         let sigma_y = &self.profiles.sigma_y;
         let sigma_z = &self.profiles.sigma_z;
-        leto_ops::indexed_map_inplace(&mut field.view_mut(), |[i, j, k], val| {
-            let s_x = sigma_x[i];
-            let s_y = sigma_y[j];
-            let s_z = sigma_z[k];
-            let sigma_total = s_x + s_y + s_z;
+        leto_ops::indexed_map_inplace(
+            &mut field.view_mut(),
+            |[i, j, k], val: &mut kwavers_math::fft::Complex64| {
+                let s_x = sigma_x[i];
+                let s_y = sigma_y[j];
+                let s_z = sigma_z[k];
+                let sigma_total = s_x + s_y + s_z;
 
-            if sigma_total > 0.0 {
-                let decay = (-sigma_total * dt * 0.5).exp();
-                val.re *= decay;
-                val.im *= decay;
-            }
-        })
+                if sigma_total > 0.0 {
+                    let decay = (-sigma_total * dt * 0.5).exp();
+                    val.re *= decay;
+                    val.im *= decay;
+                }
+            },
+        )
         .expect("invariant: valid frequency-domain CPML field layout");
 
         Ok(())

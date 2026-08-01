@@ -25,7 +25,9 @@ fn test_pde_residual_computation() {
     let x = var2(&[0.5], &backend);
     let t = var2(&[0.1], &backend);
 
-    let residual = pinn.compute_pde_residual(&x, &t, 343.0);
+    let residual = pinn
+        .compute_pde_residual(&x, &t, 343.0)
+        .expect("1D PDE residual");
 
     assert_eq!(residual.tensor.shape(), &[1, 1]);
     assert!(residual.tensor.as_slice()[0].is_finite());
@@ -43,7 +45,9 @@ fn test_pde_residual_batch() {
     let x = var2(&[0.0, 0.5, 1.0], &backend);
     let t = var2(&[0.0, 0.1, 0.2], &backend);
 
-    let residual = pinn.compute_pde_residual(&x, &t, 343.0);
+    let residual = pinn
+        .compute_pde_residual(&x, &t, 343.0)
+        .expect("1D PDE residual");
 
     assert_eq!(residual.tensor.shape(), &[3, 1]);
     for &val in residual.tensor.as_slice() {
@@ -71,18 +75,20 @@ fn test_physics_loss_computation() {
     let t_bc = var2(&[0.0, 0.0], &backend);
     let u_bc = var2(&[0.0, 0.0], &backend);
 
-    let (total, data, pde, bc) = pinn.compute_physics_loss(
-        &x_data,
-        &t_data,
-        &u_data,
-        &x_colloc,
-        &t_colloc,
-        &x_bc,
-        &t_bc,
-        &u_bc,
-        343.0,
-        LossWeights::default(),
-    );
+    let (total, data, pde, bc) = pinn
+        .compute_physics_loss(
+            &x_data,
+            &t_data,
+            &u_data,
+            &x_colloc,
+            &t_colloc,
+            &x_bc,
+            &t_bc,
+            &u_bc,
+            343.0,
+            LossWeights::default(),
+        )
+        .expect("1D physics loss");
 
     assert_eq!(total.tensor.shape(), &[1]);
     assert_eq!(data.tensor.shape(), &[1]);
@@ -133,31 +139,35 @@ fn test_physics_loss_weighting() {
         boundary: 1.0,
     };
 
-    let (total_balanced, _, _, _) = pinn.compute_physics_loss(
-        &x_data,
-        &t_data,
-        &u_data,
-        &x_colloc,
-        &t_colloc,
-        &x_bc,
-        &t_bc,
-        &u_bc,
-        343.0,
-        weights_balanced,
-    );
+    let (total_balanced, _, _, _) = pinn
+        .compute_physics_loss(
+            &x_data,
+            &t_data,
+            &u_data,
+            &x_colloc,
+            &t_colloc,
+            &x_bc,
+            &t_bc,
+            &u_bc,
+            343.0,
+            weights_balanced,
+        )
+        .expect("1D balanced physics loss");
 
-    let (total_data_heavy, _, _, _) = pinn.compute_physics_loss(
-        &x_data,
-        &t_data,
-        &u_data,
-        &x_colloc,
-        &t_colloc,
-        &x_bc,
-        &t_bc,
-        &u_bc,
-        343.0,
-        weights_data_heavy,
-    );
+    let (total_data_heavy, _, _, _) = pinn
+        .compute_physics_loss(
+            &x_data,
+            &t_data,
+            &u_data,
+            &x_colloc,
+            &t_colloc,
+            &x_bc,
+            &t_bc,
+            &u_bc,
+            343.0,
+            weights_data_heavy,
+        )
+        .expect("1D weighted physics loss");
 
     let balanced_val = total_balanced.tensor.as_slice()[0];
     let data_heavy_val = total_data_heavy.tensor.as_slice()[0];
@@ -178,8 +188,12 @@ fn test_pde_residual_different_wave_speeds() {
     let x = var2(&[0.5], &backend);
     let t = var2(&[0.1], &backend);
 
-    let residual_343 = pinn.compute_pde_residual(&x, &t, 343.0);
-    let residual_1500 = pinn.compute_pde_residual(&x, &t, SOUND_SPEED_WATER_SIM);
+    let residual_343 = pinn
+        .compute_pde_residual(&x, &t, 343.0)
+        .expect("1D PDE residual");
+    let residual_1500 = pinn
+        .compute_pde_residual(&x, &t, SOUND_SPEED_WATER_SIM)
+        .expect("1D PDE residual");
 
     assert!(residual_343.tensor.as_slice()[0].is_finite());
     assert!(residual_1500.tensor.as_slice()[0].is_finite());
@@ -205,18 +219,20 @@ fn test_loss_components_non_negative() {
     let t_bc = var2(&[0.0], &backend);
     let u_bc = var2(&[0.0], &backend);
 
-    let (total, data, pde, bc) = pinn.compute_physics_loss(
-        &x_data,
-        &t_data,
-        &u_data,
-        &x_colloc,
-        &t_colloc,
-        &x_bc,
-        &t_bc,
-        &u_bc,
-        343.0,
-        LossWeights::default(),
-    );
+    let (total, data, pde, bc) = pinn
+        .compute_physics_loss(
+            &x_data,
+            &t_data,
+            &u_data,
+            &x_colloc,
+            &t_colloc,
+            &x_bc,
+            &t_bc,
+            &u_bc,
+            343.0,
+            LossWeights::default(),
+        )
+        .expect("1D physics loss");
 
     assert!(total.tensor.as_slice()[0] >= 0.0);
     assert!(data.tensor.as_slice()[0] >= 0.0);
@@ -244,20 +260,22 @@ fn test_backward_compatibility_with_autodiff() {
     let t_bc = var2(&[0.0], &backend);
     let u_bc = var2(&[0.0], &backend);
 
-    let (total, _, _, _) = pinn.compute_physics_loss(
-        &x_data,
-        &t_data,
-        &u_data,
-        &x_colloc,
-        &t_colloc,
-        &x_bc,
-        &t_bc,
-        &u_bc,
-        343.0,
-        LossWeights::default(),
-    );
+    let (total, _, _, _) = pinn
+        .compute_physics_loss(
+            &x_data,
+            &t_data,
+            &u_data,
+            &x_colloc,
+            &t_colloc,
+            &x_bc,
+            &t_bc,
+            &u_bc,
+            343.0,
+            LossWeights::default(),
+        )
+        .expect("1D physics loss");
 
-    total.backward();
+    total.backward().expect("1D physics loss backward");
 }
 
 #[test]
@@ -276,7 +294,9 @@ fn test_large_batch_stability() {
     let x = var2(&x_vals, &backend);
     let t = var2(&t_vals, &backend);
 
-    let residual = pinn.compute_pde_residual(&x, &t, 343.0);
+    let residual = pinn
+        .compute_pde_residual(&x, &t, 343.0)
+        .expect("1D PDE residual");
 
     assert_eq!(residual.tensor.shape(), &[n, 1]);
     for &val in residual.tensor.as_slice() {
@@ -297,7 +317,7 @@ fn test_zero_boundary_conditions() {
     let t_bc = var2(&[0.0, 0.0], &backend);
     let u_bc = var2(&[0.0, 0.0], &backend);
 
-    let u_pred = pinn.forward(&x_bc, &t_bc);
+    let u_pred = pinn.forward(&x_bc, &t_bc).expect("1D boundary forward");
     let diff = coeus_autograd::sub(&u_pred, &u_bc);
     let bc_loss = coeus_autograd::mean(&coeus_autograd::mul(&diff, &diff));
 

@@ -770,25 +770,10 @@ name = "coeus-autograd"
 version = "0.9.0"
 dependencies = [
  "apollo-fft",
- "coeus-core 0.9.0",
- "coeus-ops 0.9.0",
- "coeus-sparse 0.9.0",
- "coeus-tensor 0.9.0",
- "leto-ops",
- "smallvec",
- "thiserror 2.0.18",
-]
-
-[[package]]
-name = "coeus-autograd"
-version = "0.9.0"
-source = "git+https://github.com/ryancinsight/Coeus.git#747a27ff5030d9fbf5de7b9e5fcc0ef7c85c27cc"
-dependencies = [
- "apollo-fft",
- "coeus-core 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
- "coeus-ops 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
- "coeus-sparse 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
- "coeus-tensor 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
+ "coeus-core",
+ "coeus-ops",
+ "coeus-sparse",
+ "coeus-tensor",
  "leto-ops",
  "smallvec",
  "thiserror 2.0.18",
@@ -808,34 +793,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "coeus-core"
-version = "0.9.0"
-source = "git+https://github.com/ryancinsight/Coeus.git#747a27ff5030d9fbf5de7b9e5fcc0ef7c85c27cc"
-dependencies = [
- "bytemuck",
- "eunomia",
- "hermes-simd",
- "mnemosyne",
- "moirai",
- "smallvec",
- "thiserror 2.0.18",
-]
-
-[[package]]
 name = "coeus-leto"
 version = "0.9.0"
 dependencies = [
- "coeus-core 0.9.0",
- "leto",
- "leto-ops",
-]
-
-[[package]]
-name = "coeus-leto"
-version = "0.9.0"
-source = "git+https://github.com/ryancinsight/Coeus.git#747a27ff5030d9fbf5de7b9e5fcc0ef7c85c27cc"
-dependencies = [
- "coeus-core 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
+ "coeus-core",
  "leto",
  "leto-ops",
 ]
@@ -844,25 +805,11 @@ dependencies = [
 name = "coeus-nn"
 version = "0.9.0"
 dependencies = [
- "coeus-autograd 0.9.0",
- "coeus-core 0.9.0",
- "coeus-leto 0.9.0",
- "coeus-ops 0.9.0",
- "coeus-tensor 0.9.0",
- "smallvec",
- "thiserror 2.0.18",
-]
-
-[[package]]
-name = "coeus-nn"
-version = "0.9.0"
-source = "git+https://github.com/ryancinsight/Coeus.git#747a27ff5030d9fbf5de7b9e5fcc0ef7c85c27cc"
-dependencies = [
- "coeus-autograd 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
- "coeus-core 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
- "coeus-leto 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
- "coeus-ops 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
- "coeus-tensor 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
+ "coeus-autograd",
+ "coeus-core",
+ "coeus-leto",
+ "coeus-ops",
+ "coeus-tensor",
  "smallvec",
  "thiserror 2.0.18",
 ]
@@ -872,28 +819,10 @@ name = "coeus-ops"
 version = "0.9.0"
 dependencies = [
  "bytemuck",
- "coeus-core 0.9.0",
- "coeus-leto 0.9.0",
- "coeus-sparse 0.9.0",
- "coeus-tensor 0.9.0",
- "eunomia",
- "leto",
- "leto-ops",
- "melinoe",
- "smallvec",
- "thiserror 2.0.18",
-]
-
-[[package]]
-name = "coeus-ops"
-version = "0.9.0"
-source = "git+https://github.com/ryancinsight/Coeus.git#747a27ff5030d9fbf5de7b9e5fcc0ef7c85c27cc"
-dependencies = [
- "bytemuck",
- "coeus-core 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
- "coeus-leto 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
- "coeus-sparse 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
- "coeus-tensor 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
+ "coeus-core",
+ "coeus-leto",
+ "coeus-sparse",
+ "coeus-tensor",
  "eunomia",
  "leto",
  "leto-ops",
@@ -906,24 +835,10 @@ dependencies = [
 name = "coeus-optim"
 version = "0.9.0"
 dependencies = [
- "coeus-autograd 0.9.0",
- "coeus-core 0.9.0",
- "coeus-ops 0.9.0",
- "coeus-tensor 0.9.0",
- "leto",
- "leto-ops",
- "thiserror 2.0.18",
-]
-
-[[package]]
-name = "coeus-optim"
-version = "0.9.0"
-source = "git+https://github.com/ryancinsight/Coeus.git#747a27ff5030d9fbf5de7b9e5fcc0ef7c85c27cc"
-dependencies = [
- "coeus-autograd 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
- "coeus-core 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
- "coeus-ops 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
- "coeus-tensor 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
+ "coeus-autograd",
+ "coeus-core",
+ "coeus-ops",
+ "coeus-tensor",
  "leto",
  "leto-ops",
  "thiserror 2.0.18",
@@ -933,19 +848,8 @@ dependencies = [
 name = "coeus-sparse"
 version = "0.9.0"
 dependencies = [
- "coeus-core 0.9.0",
- "coeus-tensor 0.9.0",
- "smallvec",
- "thiserror 2.0.18",
-]
-
-[[package]]
-name = "coeus-sparse"
-version = "0.9.0"
-source = "git+https://github.com/ryancinsight/Coeus.git#747a27ff5030d9fbf5de7b9e5fcc0ef7c85c27cc"
-dependencies = [
- "coeus-core 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
- "coeus-tensor 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
+ "coeus-core",
+ "coeus-tensor",
  "smallvec",
  "thiserror 2.0.18",
 ]
@@ -955,21 +859,8 @@ name = "coeus-tensor"
 version = "0.9.0"
 dependencies = [
  "bytemuck",
- "coeus-core 0.9.0",
- "coeus-leto 0.9.0",
- "rkyv 0.8.17",
- "smallvec",
- "thiserror 2.0.18",
-]
-
-[[package]]
-name = "coeus-tensor"
-version = "0.9.0"
-source = "git+https://github.com/ryancinsight/Coeus.git#747a27ff5030d9fbf5de7b9e5fcc0ef7c85c27cc"
-dependencies = [
- "bytemuck",
- "coeus-core 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
- "coeus-leto 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
+ "coeus-core",
+ "coeus-leto",
  "rkyv 0.8.17",
  "smallvec",
  "thiserror 2.0.18",
@@ -3208,9 +3099,9 @@ dependencies = [
  "apollo-fft",
  "bitflags 2.13.1",
  "chrono",
- "coeus-autograd 0.9.0",
- "coeus-core 0.9.0",
- "coeus-tensor 0.9.0",
+ "coeus-autograd",
+ "coeus-core",
+ "coeus-tensor",
  "consus-core",
  "consus-hdf5",
  "consus-io",
@@ -3444,7 +3335,7 @@ dependencies = [
 name = "kwavers-imaging"
 version = "3.0.0"
 dependencies = [
- "coeus-core 0.9.0",
+ "coeus-core",
  "eunomia",
  "kwavers-core",
  "kwavers-grid",
@@ -3563,7 +3454,7 @@ dependencies = [
  "aequitas",
  "anyhow",
  "asclepius",
- "coeus-core 0.9.0",
+ "coeus-core",
  "eunomia",
  "kwavers-analysis",
  "kwavers-boundary",
@@ -3662,12 +3553,12 @@ dependencies = [
  "anyhow",
  "apollo-fft",
  "bitflags 2.13.1",
- "coeus-autograd 0.9.0",
- "coeus-core 0.9.0",
- "coeus-nn 0.9.0",
- "coeus-ops 0.9.0",
- "coeus-optim 0.9.0",
- "coeus-tensor 0.9.0",
+ "coeus-autograd",
+ "coeus-core",
+ "coeus-nn",
+ "coeus-ops",
+ "coeus-optim",
+ "coeus-tensor",
  "eunomia",
  "hyperion",
  "kwavers-boundary",
@@ -5487,7 +5378,7 @@ name = "ritk-analyze"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "coeus-core 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
+ "coeus-core",
  "ritk-core",
  "ritk-image",
  "ritk-spatial",
@@ -5516,8 +5407,8 @@ dependencies = [
 name = "ritk-core"
 version = "0.9.0"
 dependencies = [
- "coeus-core 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
- "coeus-tensor 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
+ "coeus-core",
+ "coeus-tensor",
  "ritk-annotation",
  "ritk-image",
  "ritk-morphology",
@@ -5554,9 +5445,9 @@ version = "0.2.60"
 dependencies = [
  "anyhow",
  "apollo-fft",
- "coeus-core 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
- "coeus-ops 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
- "coeus-tensor 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
+ "coeus-core",
+ "coeus-ops",
+ "coeus-tensor",
  "eunomia",
  "gaia 0.3.0 (git+https://github.com/ryancinsight/gaia)",
  "moirai",
@@ -5579,12 +5470,12 @@ name = "ritk-image"
 version = "0.2.0"
 dependencies = [
  "anyhow",
- "coeus-autograd 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
- "coeus-core 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
- "coeus-nn 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
- "coeus-ops 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
- "coeus-optim 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
- "coeus-tensor 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
+ "coeus-autograd",
+ "coeus-core",
+ "coeus-nn",
+ "coeus-ops",
+ "coeus-optim",
+ "coeus-tensor",
  "rand 0.9.2",
  "ritk-spatial",
  "ritk-wgpu-compat",
@@ -5595,9 +5486,9 @@ name = "ritk-interpolation"
 version = "0.4.0"
 dependencies = [
  "anyhow",
- "coeus-core 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
- "coeus-ops 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
- "coeus-tensor 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
+ "coeus-core",
+ "coeus-ops",
+ "coeus-tensor",
  "eunomia",
  "ritk-core",
  "ritk-image",
@@ -5613,8 +5504,8 @@ version = "0.2.0"
 dependencies = [
  "anyhow",
  "arrayvec",
- "coeus-core 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
- "coeus-tensor 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
+ "coeus-core",
+ "coeus-tensor",
  "consus-core",
  "consus-hdf5",
  "consus-io",
@@ -5657,7 +5548,7 @@ name = "ritk-jpeg"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "coeus-core 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
+ "coeus-core",
  "image",
  "ritk-image",
  "ritk-spatial",
@@ -5670,7 +5561,7 @@ version = "0.1.1"
 dependencies = [
  "anyhow",
  "bytemuck",
- "coeus-core 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
+ "coeus-core",
  "flate2",
  "ritk-codecs",
  "ritk-image",
@@ -5682,7 +5573,7 @@ name = "ritk-mgh"
 version = "0.2.0"
 dependencies = [
  "anyhow",
- "coeus-core 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
+ "coeus-core",
  "flate2",
  "ritk-image",
  "ritk-spatial",
@@ -5694,7 +5585,7 @@ name = "ritk-minc"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "coeus-core 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
+ "coeus-core",
  "consus-core",
  "consus-hdf5",
  "consus-io",
@@ -5708,13 +5599,13 @@ name = "ritk-model"
 version = "0.1.0"
 dependencies = [
  "bytemuck",
- "coeus-autograd 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
- "coeus-core 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
- "coeus-leto 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
- "coeus-nn 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
- "coeus-ops 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
- "coeus-optim 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
- "coeus-tensor 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
+ "coeus-autograd",
+ "coeus-core",
+ "coeus-leto",
+ "coeus-nn",
+ "coeus-ops",
+ "coeus-optim",
+ "coeus-tensor",
  "consus-io",
  "consus-onnx",
  "onnx-ir",
@@ -5734,7 +5625,7 @@ name = "ritk-nifti"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "coeus-core 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
+ "coeus-core",
  "flate2",
  "ritk-image",
  "ritk-spatial",
@@ -5747,7 +5638,7 @@ version = "0.1.1"
 dependencies = [
  "anyhow",
  "bytemuck",
- "coeus-core 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
+ "coeus-core",
  "flate2",
  "ritk-codecs",
  "ritk-diffusion-scheme",
@@ -5760,7 +5651,7 @@ name = "ritk-png"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "coeus-core 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
+ "coeus-core",
  "image",
  "ritk-image",
  "ritk-spatial",
@@ -5772,12 +5663,12 @@ version = "0.53.0"
 dependencies = [
  "anyhow",
  "bytemuck",
- "coeus-autograd 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
- "coeus-core 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
- "coeus-nn 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
- "coeus-ops 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
- "coeus-optim 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
- "coeus-tensor 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
+ "coeus-autograd",
+ "coeus-core",
+ "coeus-nn",
+ "coeus-ops",
+ "coeus-optim",
+ "coeus-tensor",
  "eunomia",
  "leto",
  "leto-ops",
@@ -5803,8 +5694,8 @@ name = "ritk-segmentation"
 version = "0.2.0"
 dependencies = [
  "anyhow",
- "coeus-core 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
- "coeus-tensor 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
+ "coeus-core",
+ "coeus-tensor",
  "leto",
  "leto-ops",
  "moirai",
@@ -5829,8 +5720,8 @@ name = "ritk-statistics"
 version = "0.3.0"
 dependencies = [
  "anyhow",
- "coeus-core 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
- "coeus-tensor 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
+ "coeus-core",
+ "coeus-tensor",
  "moirai",
  "ritk-image",
  "ritk-spatial",
@@ -5843,10 +5734,10 @@ name = "ritk-tensor-ops"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "coeus-core 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
- "coeus-leto 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
- "coeus-ops 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
- "coeus-tensor 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
+ "coeus-core",
+ "coeus-leto",
+ "coeus-ops",
+ "coeus-tensor",
  "eunomia",
  "ritk-image",
  "ritk-spatial",
@@ -5857,7 +5748,7 @@ name = "ritk-tiff"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "coeus-core 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
+ "coeus-core",
  "ritk-image",
  "ritk-spatial",
  "tiff",
@@ -5867,11 +5758,11 @@ dependencies = [
 name = "ritk-transform"
 version = "0.1.0"
 dependencies = [
- "coeus-autograd 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
- "coeus-core 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
- "coeus-nn 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
- "coeus-ops 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
- "coeus-tensor 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
+ "coeus-autograd",
+ "coeus-core",
+ "coeus-nn",
+ "coeus-ops",
+ "coeus-tensor",
  "ritk-core",
  "ritk-image",
  "ritk-interpolation",
@@ -5888,7 +5779,7 @@ name = "ritk-vtk"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "coeus-core 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
+ "coeus-core",
  "consus-io",
  "gaia 0.3.0 (git+https://github.com/ryancinsight/gaia)",
  "iris",

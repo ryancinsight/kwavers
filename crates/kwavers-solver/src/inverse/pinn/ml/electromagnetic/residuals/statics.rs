@@ -3,6 +3,7 @@ use super::sources::{compute_charge_density, compute_current_density_z};
 use crate::inverse::pinn::ml::physics::PinnDomainPhysicsParameters;
 use crate::inverse::pinn::ml::PinnWave2D;
 use coeus_autograd::{add, scalar_add, scalar_mul, scalar_sub, sub, Var};
+use kwavers_core::error::KwaversResult;
 
 /// Compute electrostatic residual: ∇·(ε∇φ) = -ρ
 pub fn electrostatic_residual<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
@@ -11,7 +12,7 @@ pub fn electrostatic_residual<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBack
     y: &Var<f32, B>,
     eps: f64,
     physics_params: &PinnDomainPhysicsParameters,
-) -> Var<f32, B>
+) -> KwaversResult<Var<f32, B>>
 where
     B::DeviceBuffer<f32>:
         coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
@@ -26,15 +27,15 @@ where
     // Gauss's law: ∇·D = ρ_free, D = -ε∇φ
     let d_x_plus = scalar_mul(
         &sub(
-            &model.forward(&scalar_add(x, eps_fd), y, &zero),
-            &model.forward(&scalar_sub(x, eps_fd), y, &zero),
+            &model.forward(&scalar_add(x, eps_fd), y, &zero)?,
+            &model.forward(&scalar_sub(x, eps_fd), y, &zero)?,
         ),
         -(eps as f32) / (2.0 * eps_fd),
     );
     let d_x_minus = scalar_mul(
         &sub(
-            &model.forward(&scalar_sub(x, eps_fd), y, &zero),
-            &model.forward(&scalar_add(x, eps_fd), y, &zero),
+            &model.forward(&scalar_sub(x, eps_fd), y, &zero)?,
+            &model.forward(&scalar_add(x, eps_fd), y, &zero)?,
         ),
         -(eps as f32) / (2.0 * eps_fd),
     );
@@ -42,15 +43,15 @@ where
 
     let d_y_plus = scalar_mul(
         &sub(
-            &model.forward(x, &scalar_add(y, eps_fd), &zero),
-            &model.forward(x, &scalar_sub(y, eps_fd), &zero),
+            &model.forward(x, &scalar_add(y, eps_fd), &zero)?,
+            &model.forward(x, &scalar_sub(y, eps_fd), &zero)?,
         ),
         -(eps as f32) / (2.0 * eps_fd),
     );
     let d_y_minus = scalar_mul(
         &sub(
-            &model.forward(x, &scalar_sub(y, eps_fd), &zero),
-            &model.forward(x, &scalar_add(y, eps_fd), &zero),
+            &model.forward(x, &scalar_sub(y, eps_fd), &zero)?,
+            &model.forward(x, &scalar_add(y, eps_fd), &zero)?,
         ),
         -(eps as f32) / (2.0 * eps_fd),
     );
@@ -60,7 +61,7 @@ where
 
     let rho = compute_charge_density(x, y, physics_params);
 
-    add(&gauss_residual, &rho)
+    Ok(add(&gauss_residual, &rho))
 }
 
 /// Compute magnetostatic residual: ∇×(ν∇×A) = μ₀J
@@ -70,7 +71,7 @@ pub fn magnetostatic_residual<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBack
     y: &Var<f32, B>,
     mu: f64,
     physics_params: &PinnDomainPhysicsParameters,
-) -> Var<f32, B>
+) -> KwaversResult<Var<f32, B>>
 where
     B::DeviceBuffer<f32>:
         coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
@@ -85,15 +86,15 @@ where
     // ∇×H: ∂Hy/∂x
     let h_y_x_plus = scalar_mul(
         &sub(
-            &model.forward(&scalar_add(x, eps_fd), y, &zero),
-            &model.forward(&scalar_sub(x, eps_fd), y, &zero),
+            &model.forward(&scalar_add(x, eps_fd), y, &zero)?,
+            &model.forward(&scalar_sub(x, eps_fd), y, &zero)?,
         ),
         1.0 / (2.0 * eps_fd * mu as f32),
     );
     let h_y_x_minus = scalar_mul(
         &sub(
-            &model.forward(&scalar_sub(x, eps_fd), y, &zero),
-            &model.forward(&scalar_add(x, eps_fd), y, &zero),
+            &model.forward(&scalar_sub(x, eps_fd), y, &zero)?,
+            &model.forward(&scalar_add(x, eps_fd), y, &zero)?,
         ),
         1.0 / (2.0 * eps_fd * mu as f32),
     );
@@ -102,15 +103,15 @@ where
     // -∂Hx/∂y
     let h_x_y_plus = scalar_mul(
         &sub(
-            &model.forward(x, &scalar_add(y, eps_fd), &zero),
-            &model.forward(x, &scalar_sub(y, eps_fd), &zero),
+            &model.forward(x, &scalar_add(y, eps_fd), &zero)?,
+            &model.forward(x, &scalar_sub(y, eps_fd), &zero)?,
         ),
         -1.0 / (2.0 * eps_fd * mu as f32),
     );
     let h_x_y_minus = scalar_mul(
         &sub(
-            &model.forward(x, &scalar_sub(y, eps_fd), &zero),
-            &model.forward(x, &scalar_add(y, eps_fd), &zero),
+            &model.forward(x, &scalar_sub(y, eps_fd), &zero)?,
+            &model.forward(x, &scalar_add(y, eps_fd), &zero)?,
         ),
         -1.0 / (2.0 * eps_fd * mu as f32),
     );
@@ -120,7 +121,7 @@ where
 
     let j_z = compute_current_density_z(x, y, physics_params);
 
-    sub(&curl_h_z, &j_z)
+    Ok(sub(&curl_h_z, &j_z))
 }
 
 /// Compute quasi-static residual
@@ -136,7 +137,7 @@ pub fn quasi_static_residual<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBacke
     mu: f64,
     sigma: f64,
     physics_params: &PinnDomainPhysicsParameters,
-) -> Var<f32, B>
+) -> KwaversResult<Var<f32, B>>
 where
     B::DeviceBuffer<f32>:
         coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
@@ -149,21 +150,21 @@ where
     let two = 2.0_f32;
 
     // Center point
-    let u = model.forward(x, y, t);
+    let u = model.forward(x, y, t)?;
 
     // 1. Compute Laplacian ∇²u = ∂²u/∂x² + ∂²u/∂y²
 
     // ∂²u/∂x²
-    let u_x_plus = model.forward(&scalar_add(x, eps_fd), y, t);
-    let u_x_minus = model.forward(&scalar_sub(x, eps_fd), y, t);
+    let u_x_plus = model.forward(&scalar_add(x, eps_fd), y, t)?;
+    let u_x_minus = model.forward(&scalar_sub(x, eps_fd), y, t)?;
     let u_xx = scalar_mul(
         &sub(&add(&u_x_plus, &u_x_minus), &scalar_mul(&u, two)),
         1.0 / (eps_fd * eps_fd),
     );
 
     // ∂²u/∂y²
-    let u_y_plus = model.forward(x, &scalar_add(y, eps_fd), t);
-    let u_y_minus = model.forward(x, &scalar_sub(y, eps_fd), t);
+    let u_y_plus = model.forward(x, &scalar_add(y, eps_fd), t)?;
+    let u_y_minus = model.forward(x, &scalar_sub(y, eps_fd), t)?;
     let u_yy = scalar_mul(
         &sub(&add(&u_y_plus, &u_y_minus), &scalar_mul(&u, two)),
         1.0 / (eps_fd * eps_fd),
@@ -174,8 +175,8 @@ where
     // 2. Compute time derivatives
 
     // ∂u/∂t
-    let u_t_plus = model.forward(x, y, &scalar_add(t, eps_fd));
-    let u_t_minus = model.forward(x, y, &scalar_sub(t, eps_fd));
+    let u_t_plus = model.forward(x, y, &scalar_add(t, eps_fd))?;
+    let u_t_minus = model.forward(x, y, &scalar_sub(t, eps_fd))?;
     let u_t = scalar_mul(&sub(&u_t_plus, &u_t_minus), 1.0 / (two * eps_fd));
 
     // ∂²u/∂t²
@@ -196,5 +197,5 @@ where
     let j_z = compute_current_density_z(x, y, physics_params);
     let source_term = scalar_mul(&j_z, mu as f32);
 
-    add(&lhs, &source_term)
+    Ok(add(&lhs, &source_term))
 }

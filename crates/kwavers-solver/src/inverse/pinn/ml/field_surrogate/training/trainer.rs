@@ -83,12 +83,12 @@ where
     /// Returns the data, Helmholtz, and total loss for the batch.
     /// Mutates `self.network` in place by consuming and replacing it
     /// with the updated network from the optimiser.
-    pub fn step(&mut self, batch: TrainingBatch<B>) -> StepMetrics {
+    pub fn step(&mut self, batch: TrainingBatch<B>) -> KwaversResult<StepMetrics> {
         for p in self.network.parameters() {
             p.zero_grad();
         }
 
-        let pred = self.network.forward(&batch.inputs);
+        let pred = self.network.forward(&batch.inputs)?;
         let diff = coeus_autograd::sub(&pred, &batch.targets);
         let data_loss = coeus_autograd::mean(&coeus_autograd::mul(&diff, &diff));
         let data_loss_w = coeus_autograd::scalar_mul(&data_loss, self.config.data_weight);
@@ -167,7 +167,7 @@ where
                 &batch,
                 self.config.helmholtz_eps_m,
                 self.config.c0_m_per_s,
-            );
+            )?;
             let helm = coeus_autograd::mean(&coeus_autograd::mul(&r, &r));
             let helm_w = coeus_autograd::scalar_mul(&helm, self.config.helmholtz_weight);
             total = coeus_autograd::add(&total, &helm_w);
@@ -179,7 +179,11 @@ where
         let data_value: f32 = data_loss.tensor.as_slice()[0] * self.config.data_weight;
         let total_value: f32 = total.tensor.as_slice()[0];
 
-        total.backward();
+        total.backward().map_err(|error| {
+            kwavers_core::error::KwaversError::InternalError(format!(
+                "field-surrogate training backward: {error}"
+            ))
+        })?;
 
         let lr = if let Some(schedule) = self.lr_schedule.as_ref() {
             let lr = schedule.lr(self.config.learning_rate as f64, self.step_count);
@@ -198,28 +202,32 @@ where
             .collect::<Vec<_>>();
         self.network.load_parameters(&updated_parameters);
 
-        StepMetrics {
+        Ok(StepMetrics {
             data: data_value,
             helmholtz: helm_value,
             peak_prominence: prom_value,
             total: total_value,
-        }
+        })
     }
 
     /// Run `n_steps` training iterations, calling `make_batch(step)`
     /// each iteration to produce the batch. Returns the running
     /// per-epoch metrics across the entire run.
-    pub fn run<F>(&mut self, n_steps: usize, mut make_batch: F) -> SurrogateTrainingMetrics
+    pub fn run<F>(
+        &mut self,
+        n_steps: usize,
+        mut make_batch: F,
+    ) -> KwaversResult<SurrogateTrainingMetrics>
     where
         F: FnMut(usize) -> TrainingBatch<B>,
     {
         let mut metrics = SurrogateTrainingMetrics::default();
         for step in 0..n_steps {
             let batch = make_batch(step);
-            let m = self.step(batch);
+            let m = self.step(batch)?;
             metrics.accumulate(m);
         }
-        metrics
+        Ok(metrics)
     }
 
     /// Detach the network from any further training state — coeus has

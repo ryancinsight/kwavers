@@ -2,6 +2,9 @@
 
 use coeus_autograd::Var;
 use coeus_nn::{LayerNorm, Linear, Module};
+use kwavers_core::error::KwaversResult;
+
+use crate::inverse::pinn::ml::coeus_forward::map_forward;
 
 /// Residual block for PINN architectures with skip connections.
 pub struct ResidualBlock<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> {
@@ -74,14 +77,14 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> ResidualBl
     /// Forward pass through residual block.
     ///
     /// `out = x + LayerNorm(linear2(GELU(LayerNorm(linear1(x)))))`
-    pub fn forward(&self, x: &Var<f32, B>) -> Var<f32, B> {
-        let out = self.linear1.forward(x);
-        let out = self.norm1.forward(&out);
+    pub fn forward(&self, x: &Var<f32, B>) -> KwaversResult<Var<f32, B>> {
+        let out = map_forward(self.linear1.forward(x), "PINN residual linear layer")?;
+        let out = map_forward(self.norm1.forward(&out), "PINN residual normalization")?;
         let out = coeus_autograd::gelu(&out);
 
-        let out = self.linear2.forward(&out);
-        let out = self.norm2.forward(&out);
+        let out = map_forward(self.linear2.forward(&out), "PINN residual linear layer")?;
+        let out = map_forward(self.norm2.forward(&out), "PINN residual normalization")?;
 
-        coeus_autograd::add(&out, x)
+        Ok(coeus_autograd::add(&out, x))
     }
 }

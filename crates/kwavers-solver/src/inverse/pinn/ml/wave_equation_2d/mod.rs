@@ -125,7 +125,7 @@ mod tests {
             false,
         );
 
-        let output = pinn.forward(&x, &y, &t);
+        let output = pinn.forward(&x, &y, &t).expect("2D forward");
         assert_eq!(output.tensor.shape(), &[2, 1]);
     }
 }

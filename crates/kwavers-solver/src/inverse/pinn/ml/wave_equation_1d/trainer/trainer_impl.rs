@@ -165,7 +165,7 @@ where
                 &u_bc_var,
                 wave_speed,
                 self.config.loss_weights,
-            );
+            )?;
 
             let total_val = total_loss.tensor.as_slice()[0] as f64;
             let data_val = data_loss.tensor.as_slice()[0] as f64;
@@ -190,7 +190,9 @@ where
 
             metrics.record_epoch(total_val, data_val, pde_val, bc_val);
 
-            total_loss.backward();
+            total_loss.backward().map_err(|error| {
+                KwaversError::InternalError(format!("1D wave PINN backward: {error}"))
+            })?;
             self.pinn = self.optimizer.step(self.pinn.clone());
 
             if epoch % 100 == 0 || epoch == epochs - 1 {

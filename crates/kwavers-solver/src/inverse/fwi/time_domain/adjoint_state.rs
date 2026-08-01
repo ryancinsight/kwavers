@@ -126,13 +126,9 @@ pub fn accumulate_signed_correlation(
             },
         );
     } else {
-        leto_ops::zip_mut_with(
-            &mut gradient.view_mut(),
-            (&forward, &adjoint),
-            |g, (f, a)| {
-                *g += scale * *f * *a;
-            },
-        )
+        leto_ops::zip_mut_with(gradient.view_mut(), (&forward, &adjoint), |g, (f, a)| {
+            *g += scale * *f * *a;
+        })
         .expect("invariant: gradient, forward, adjoint shapes asserted equal above");
     }
 

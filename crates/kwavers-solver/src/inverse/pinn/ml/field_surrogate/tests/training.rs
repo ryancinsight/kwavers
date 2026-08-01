@@ -87,7 +87,7 @@ fn test_trainer_step_returns_finite_metrics() {
     };
     let mut trainer = ParamFieldPINNTrainer::<B>::new(net, train_cfg).unwrap();
     let batch = make_synthetic_batch(&backend, 0, 64);
-    let m = trainer.step(batch);
+    let m = trainer.step(batch).expect("field surrogate training step");
     assert!(
         m.data.is_finite() && m.data >= 0.0,
         "data loss = {}",
@@ -118,7 +118,12 @@ fn test_trainer_data_loss_decreases_over_50_steps() {
     let mut history = Vec::with_capacity(n_steps);
     for step in 0..n_steps {
         let batch = make_synthetic_batch(&backend, step as u64, 128);
-        history.push(trainer.step(batch).data);
+        history.push(
+            trainer
+                .step(batch)
+                .expect("field surrogate training step")
+                .data,
+        );
     }
     let first_avg: f32 = history[..5].iter().sum::<f32>() / 5.0;
     let last_avg: f32 = history[n_steps - 5..].iter().sum::<f32>() / 5.0;
@@ -157,7 +162,7 @@ fn test_trainer_with_peak_prominence_weight_runs_finite_and_propagates_gradient(
     let mut last_prom = 0.0_f32;
     for step in 0..30 {
         let batch = make_synthetic_batch(&backend, step as u64, 128);
-        let m = trainer.step(batch);
+        let m = trainer.step(batch).expect("field surrogate training step");
         assert!(m.data.is_finite(), "data loss not finite at step {step}");
         assert!(
             m.peak_prominence.is_finite() && m.peak_prominence >= 0.0,
@@ -200,7 +205,7 @@ fn test_trainer_with_helmholtz_weight_runs_finite() {
     let mut trainer = ParamFieldPINNTrainer::<B>::new(net, train_cfg).unwrap();
     for step in 0..5 {
         let batch = make_synthetic_batch(&backend, step as u64, 32);
-        let m = trainer.step(batch);
+        let m = trainer.step(batch).expect("field surrogate training step");
         assert!(m.data.is_finite(), "data loss not finite at step {step}");
         assert!(
             m.helmholtz.is_finite(),

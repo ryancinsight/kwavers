@@ -12,6 +12,7 @@ use kwavers_core::error::KwaversResult;
 
 use super::config::{ParamFieldPINNConfig, INPUT_DIM, OUTPUT_DIM};
 use super::dynamic_tanh::DynamicTanh;
+use crate::inverse::pinn::ml::coeus_forward::map_forward;
 
 /// Parameterised field-surrogate PINN network.
 ///
@@ -159,15 +160,23 @@ where
     /// Forward pass on a batch of pre-concatenated inputs.
     ///
     /// `input` shape `[batch, 5]`, output shape `[batch, 3]`.
-    pub fn forward(&self, input: &Var<f32, B>) -> Var<f32, B> {
-        let mut h = self.input_act.forward(&self.input_layer.forward(input));
+    pub fn forward(&self, input: &Var<f32, B>) -> KwaversResult<Var<f32, B>> {
+        let input_projection = map_forward(
+            self.input_layer.forward(input),
+            "field-surrogate input layer",
+        )?;
+        let mut h = self.input_act.forward(&input_projection);
         for (layer, act) in self.hidden_layers.iter().zip(self.hidden_acts.iter()) {
-            h = act.forward(&layer.forward(&h));
+            let projection = map_forward(layer.forward(&h), "field-surrogate hidden layer")?;
+            h = act.forward(&projection);
         }
         // Linear output (no activation): regression head; caller maps
         // the [-1, 1]-normalised output back to physical units using
         // the per-channel scale factors stored alongside the model.
-        self.output_layer.forward(&h)
+        map_forward(
+            self.output_layer.forward(&h),
+            "field-surrogate output layer",
+        )
     }
 
     /// Convenience overload accepting the five input columns
@@ -179,7 +188,7 @@ where
         z: &Var<f32, B>,
         f0: &Var<f32, B>,
         pnp: &Var<f32, B>,
-    ) -> Var<f32, B> {
+    ) -> KwaversResult<Var<f32, B>> {
         let input = coeus_autograd::cat(&[x, y, z, f0, pnp], 1);
         self.forward(&input)
     }

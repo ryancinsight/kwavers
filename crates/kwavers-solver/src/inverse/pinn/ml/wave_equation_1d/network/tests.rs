@@ -45,7 +45,7 @@ fn test_pinn_forward_pass() {
         false,
     );
 
-    let u = pinn.forward(&x, &t);
+    let u = pinn.forward(&x, &t).expect("1D forward");
 
     assert_eq!(u.tensor.shape(), &[1, 1]);
     let u_val = u.tensor.as_slice()[0];
@@ -70,7 +70,7 @@ fn test_pinn_forward_pass_batch() {
         false,
     );
 
-    let u = pinn.forward(&x, &t);
+    let u = pinn.forward(&x, &t).expect("1D batch forward");
     assert_eq!(u.tensor.shape(), &[3, 1]);
 
     for &val in u.tensor.as_slice() {

@@ -81,9 +81,13 @@ fn test_first_derivative_y_vs_finite_difference() {
             );
             let t_t = var_point(t);
 
-            let u = model_autodiff.forward(&x_t, &y_t, &t_t);
+            let u = model_autodiff
+                .forward(&x_t, &y_t, &t_t)
+                .expect("elastic derivative forward");
             let u_component = coeus_autograd::slice(&u, &[(0, 1), (component, component + 1)]);
-            coeus_autograd::sum(&u_component).backward();
+            coeus_autograd::sum(&u_component)
+                .backward()
+                .expect("elastic y-gradient backward");
 
             let du_dy = y_t.grad().expect("Gradient ∂u/∂y should exist");
             let autodiff_grad = du_dy.as_slice()[0] as f64;

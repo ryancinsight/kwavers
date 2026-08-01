@@ -121,7 +121,7 @@ where
             false,
         );
 
-        let u_pred = self.pinn.forward(&x_var, &y_var, &z_var, &t_var);
+        let u_pred = self.pinn.forward(&x_var, &y_var, &z_var, &t_var)?;
         Self::extract_column_vec(&u_pred)
     }
 

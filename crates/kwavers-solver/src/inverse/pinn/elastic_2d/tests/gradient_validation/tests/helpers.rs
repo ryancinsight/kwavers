@@ -31,8 +31,12 @@ pub(super) fn central_difference_x(
 ) -> f64 {
     let y_t = var_point(y);
     let t_t = var_point(t);
-    let u_plus = model.forward(&var_point(x + h), &y_t, &t_t);
-    let u_minus = model.forward(&var_point(x - h), &y_t, &t_t);
+    let u_plus = model
+        .forward(&var_point(x + h), &y_t, &t_t)
+        .expect("elastic finite-difference forward");
+    let u_minus = model
+        .forward(&var_point(x - h), &y_t, &t_t)
+        .expect("elastic finite-difference forward");
 
     let u_plus_val = u_plus.tensor.as_slice()[component] as f64;
     let u_minus_val = u_minus.tensor.as_slice()[component] as f64;
@@ -51,8 +55,12 @@ pub(super) fn central_difference_y(
 ) -> f64 {
     let x_t = var_point(x);
     let t_t = var_point(t);
-    let u_plus = model.forward(&x_t, &var_point(y + h), &t_t);
-    let u_minus = model.forward(&x_t, &var_point(y - h), &t_t);
+    let u_plus = model
+        .forward(&x_t, &var_point(y + h), &t_t)
+        .expect("elastic finite-difference forward");
+    let u_minus = model
+        .forward(&x_t, &var_point(y - h), &t_t)
+        .expect("elastic finite-difference forward");
 
     let u_plus_val = u_plus.tensor.as_slice()[component] as f64;
     let u_minus_val = u_minus.tensor.as_slice()[component] as f64;
@@ -78,9 +86,15 @@ pub(super) fn second_difference_xx(
     let y_t = var_point(y);
     let t_t = var_point(t);
 
-    let u_plus = model.forward(&var_point(x + h), &y_t, &t_t);
-    let u_center = model.forward(&var_point(x), &y_t, &t_t);
-    let u_minus = model.forward(&var_point(x - h), &y_t, &t_t);
+    let u_plus = model
+        .forward(&var_point(x + h), &y_t, &t_t)
+        .expect("elastic finite-difference forward");
+    let u_center = model
+        .forward(&var_point(x), &y_t, &t_t)
+        .expect("elastic finite-difference forward");
+    let u_minus = model
+        .forward(&var_point(x - h), &y_t, &t_t)
+        .expect("elastic finite-difference forward");
 
     let u_plus_val = u_plus.tensor.as_slice()[component] as f64;
     let u_center_val = u_center.tensor.as_slice()[component] as f64;
@@ -103,9 +117,17 @@ pub(super) fn autodiff_gradient_x(
     let y_t = var_point(y);
     let t_t = var_point(t);
 
-    let u = model.forward(&x_t, &y_t, &t_t);
+    let u = model
+        .forward(&x_t, &y_t, &t_t)
+        .expect("elastic autodiff forward");
     let u_component = coeus_autograd::slice(&u, &[(0, 1), (component, component + 1)]);
-    coeus_autograd::sum(&u_component).backward();
+    coeus_autograd::sum(&u_component)
+        .backward()
+        .map_err(|error| {
+            kwavers_core::error::KwaversError::InternalError(format!(
+                "elastic x-gradient backward: {error}"
+            ))
+        })?;
 
     let du_dx = x_t.grad().expect("Gradient should exist");
     Ok(du_dx.as_slice()[0] as f64)
@@ -125,9 +147,17 @@ pub(super) fn autodiff_gradient_y(
     let y_t = Var::new(x_leaf(y), true);
     let t_t = var_point(t);
 
-    let u = model.forward(&x_t, &y_t, &t_t);
+    let u = model
+        .forward(&x_t, &y_t, &t_t)
+        .expect("elastic autodiff forward");
     let u_component = coeus_autograd::slice(&u, &[(0, 1), (component, component + 1)]);
-    coeus_autograd::sum(&u_component).backward();
+    coeus_autograd::sum(&u_component)
+        .backward()
+        .map_err(|error| {
+            kwavers_core::error::KwaversError::InternalError(format!(
+                "elastic y-gradient backward: {error}"
+            ))
+        })?;
 
     let du_dy = y_t.grad().expect("Gradient should exist");
     Ok(du_dy.as_slice()[0] as f64)
@@ -163,7 +193,9 @@ pub(super) fn autodiff_second_derivative_xx(
         let t = coeus_autograd::slice(combined, &[(0, n), (0, 1)]);
         let x = coeus_autograd::slice(combined, &[(0, n), (1, 2)]);
         let y = coeus_autograd::slice(combined, &[(0, n), (2, 3)]);
-        model.forward(&x, &y, &t)
+        model
+            .forward(&x, &y, &t)
+            .expect("elastic second-derivative forward")
     };
     let d2u_dx2 = compute_second_derivative_2d(forward, &input, component, 1)?;
     Ok(d2u_dx2.tensor.as_slice()[0] as f64)

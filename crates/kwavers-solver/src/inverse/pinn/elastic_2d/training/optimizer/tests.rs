@@ -67,14 +67,16 @@ fn adam_and_adamw_reduce_loss_and_update_parameters() {
     );
 
     let mse = |model: &ElasticPINN2D<B>| -> f32 {
-        let pred = model.forward(&x, &y, &t);
+        let pred = model
+            .forward(&x, &y, &t)
+            .expect("elastic optimizer forward");
         let diff = coeus_autograd::sub(&pred, &target);
         coeus_autograd::mean(&coeus_autograd::mul(&diff, &diff))
             .tensor
             .as_slice()[0]
     };
     let probe = |model: &ElasticPINN2D<B>| -> f32 {
-        coeus_autograd::sum(&model.forward(&x, &y, &t))
+        coeus_autograd::sum(&model.forward(&x, &y, &t).expect("elastic probe forward"))
             .tensor
             .as_slice()[0]
     };
@@ -98,10 +100,12 @@ fn adam_and_adamw_reduce_loss_and_update_parameters() {
             for p in model.parameters() {
                 p.zero_grad();
             }
-            let pred = model.forward(&x, &y, &t);
+            let pred = model
+                .forward(&x, &y, &t)
+                .expect("elastic optimizer forward");
             let diff = coeus_autograd::sub(&pred, &target);
             let loss = coeus_autograd::mean(&coeus_autograd::mul(&diff, &diff));
-            loss.backward();
+            loss.backward().expect("elastic optimizer backward");
             optimizer.step(&mut model);
         }
 

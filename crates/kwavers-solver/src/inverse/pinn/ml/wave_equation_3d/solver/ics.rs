@@ -26,15 +26,18 @@ where
         y: &Var<f32, B>,
         z: &Var<f32, B>,
         t: &Var<f32, B>,
-    ) -> Var<f32, B> {
+    ) -> KwaversResult<Var<f32, B>> {
         let eps = 1e-3_f32;
 
-        let u_t0 = self.pinn.forward(x, y, z, t);
+        let u_t0 = self.pinn.forward(x, y, z, t)?;
 
         let t_eps = coeus_autograd::scalar_add(t, eps);
-        let u_t_eps = self.pinn.forward(x, y, z, &t_eps);
+        let u_t_eps = self.pinn.forward(x, y, z, &t_eps)?;
 
-        coeus_autograd::scalar_mul(&coeus_autograd::sub(&u_t_eps, &u_t0), 1.0 / eps)
+        Ok(coeus_autograd::scalar_mul(
+            &coeus_autograd::sub(&u_t_eps, &u_t0),
+            1.0 / eps,
+        ))
     }
 
     /// Extract velocity initial condition tensor from training data

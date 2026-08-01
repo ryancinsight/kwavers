@@ -8,6 +8,8 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::{Array1, Array2};
 use std::sync::Arc;
 
+use crate::inverse::pinn::ml::coeus_forward::map_forward;
+
 /// Decomposed physics-informed loss components returned by
 /// [`PinnWave2D::compute_physics_loss`]:
 /// `(total, data, pde, boundary, initial)` scalar losses.
@@ -100,14 +102,24 @@ where
     }
 
     /// Forward pass through the network.
-    pub fn forward(&self, x: &Var<f32, B>, y: &Var<f32, B>, t: &Var<f32, B>) -> Var<f32, B> {
+    ///
+    /// # Errors
+    ///
+    /// Returns a solver error when a Coeus module rejects the input or the
+    /// backend cannot evaluate a layer.
+    pub fn forward(
+        &self,
+        x: &Var<f32, B>,
+        y: &Var<f32, B>,
+        t: &Var<f32, B>,
+    ) -> KwaversResult<Var<f32, B>> {
         let input = coeus_autograd::cat(&[x, y, t], 1);
-        let mut h = self.input_layer.forward(&input);
+        let mut h = map_forward(self.input_layer.forward(&input), "PINN 2D input layer")?;
         for layer in &self.hidden_layers {
-            h = layer.forward(&h);
+            h = map_forward(layer.forward(&h), "PINN 2D hidden layer")?;
             h = coeus_autograd::tanh(&h);
         }
-        self.output_layer.forward(&h)
+        map_forward(self.output_layer.forward(&h), "PINN 2D output layer")
     }
 
     /// Get wave speed at a specific location, using a default value if no function is provided.
@@ -204,23 +216,24 @@ where
             false,
         );
 
-        let u_var = self.forward(&x_var, &y_var, &t_var);
+        let u_var = self.forward(&x_var, &y_var, &t_var)?;
         let u_vec: Vec<f64> = u_var.tensor.as_slice().iter().map(|&v| v as f64).collect();
 
         Ok(Array2::from_shape_vec([n, 1], u_vec).unwrap())
     }
 
     /// Compute PDE residual using finite differences.
-    /// # Panics
-    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    /// # Errors
     ///
+    /// Returns a solver error when a Coeus module rejects a finite-difference
+    /// sample or the configured backend cannot evaluate it.
     pub fn compute_pde_residual(
         &self,
         x: &Var<f32, B>,
         y: &Var<f32, B>,
         t: &Var<f32, B>,
         wave_speed: f64,
-    ) -> Var<f32, B> {
+    ) -> KwaversResult<Var<f32, B>> {
         let base_eps = (f32::EPSILON).sqrt();
         let scale_factor = 1e-2_f32;
         let eps = base_eps * scale_factor;
@@ -232,28 +245,28 @@ where
         let t_plus = coeus_autograd::scalar_add(t, eps);
         let t_minus = coeus_autograd::scalar_add(t, -eps);
 
-        let u = self.forward(x, y, t);
+        let u = self.forward(x, y, t)?;
         let two_u = coeus_autograd::scalar_mul(&u, 2.0);
 
         let u_xx = {
-            let u_x_plus = self.forward(&x_plus, y, t);
-            let u_x_minus = self.forward(&x_minus, y, t);
+            let u_x_plus = self.forward(&x_plus, y, t)?;
+            let u_x_minus = self.forward(&x_minus, y, t)?;
             let sum = coeus_autograd::add(&u_x_plus, &u_x_minus);
             let diff = coeus_autograd::sub(&sum, &two_u);
             coeus_autograd::scalar_mul(&diff, 1.0 / (eps * eps))
         };
 
         let u_yy = {
-            let u_y_plus = self.forward(x, &y_plus, t);
-            let u_y_minus = self.forward(x, &y_minus, t);
+            let u_y_plus = self.forward(x, &y_plus, t)?;
+            let u_y_minus = self.forward(x, &y_minus, t)?;
             let sum = coeus_autograd::add(&u_y_plus, &u_y_minus);
             let diff = coeus_autograd::sub(&sum, &two_u);
             coeus_autograd::scalar_mul(&diff, 1.0 / (eps * eps))
         };
 
         let u_tt = {
-            let u_t_plus = self.forward(x, y, &t_plus);
-            let u_t_minus = self.forward(x, y, &t_minus);
+            let u_t_plus = self.forward(x, y, &t_plus)?;
+            let u_t_minus = self.forward(x, y, &t_minus)?;
             let sum = coeus_autograd::add(&u_t_plus, &u_t_minus);
             let diff = coeus_autograd::sub(&sum, &two_u);
             coeus_autograd::scalar_mul(&diff, 1.0 / (eps * eps))
@@ -274,7 +287,10 @@ where
         let c_var = Var::new(c_tensor, false);
         let c_squared = coeus_autograd::mul(&c_var, &c_var);
 
-        coeus_autograd::sub(&u_tt, &coeus_autograd::mul(&laplacian, &c_squared))
+        Ok(coeus_autograd::sub(
+            &u_tt,
+            &coeus_autograd::mul(&laplacian, &c_squared),
+        ))
     }
 
     /// Compute physics-informed loss function.
@@ -301,21 +317,21 @@ where
         u_initial: &Var<f32, B>,
         wave_speed: f64,
         loss_weights: LossWeights2D,
-    ) -> PhysicsLossComponents<B> {
-        let u_pred_data = self.forward(x_data, y_data, t_data);
+    ) -> KwaversResult<PhysicsLossComponents<B>> {
+        let u_pred_data = self.forward(x_data, y_data, t_data)?;
         let data_diff = coeus_autograd::sub(&u_pred_data, u_data);
         let data_loss = coeus_autograd::mean(&coeus_autograd::mul(&data_diff, &data_diff));
 
         let residual =
-            self.compute_pde_residual(x_collocation, y_collocation, t_collocation, wave_speed);
+            self.compute_pde_residual(x_collocation, y_collocation, t_collocation, wave_speed)?;
         let pde_loss_raw = coeus_autograd::mean(&coeus_autograd::mul(&residual, &residual));
         let pde_loss = coeus_autograd::scalar_mul(&pde_loss_raw, 1e-12);
 
-        let u_pred_boundary = self.forward(x_boundary, y_boundary, t_boundary);
+        let u_pred_boundary = self.forward(x_boundary, y_boundary, t_boundary)?;
         let bc_diff = coeus_autograd::sub(&u_pred_boundary, u_boundary);
         let bc_loss = coeus_autograd::mean(&coeus_autograd::mul(&bc_diff, &bc_diff));
 
-        let u_pred_initial = self.forward(x_initial, y_initial, t_initial);
+        let u_pred_initial = self.forward(x_initial, y_initial, t_initial)?;
         let ic_diff = coeus_autograd::sub(&u_pred_initial, u_initial);
         let ic_loss = coeus_autograd::mean(&coeus_autograd::mul(&ic_diff, &ic_diff));
 
@@ -330,6 +346,6 @@ where
             ),
         );
 
-        (total_loss, data_loss, pde_loss, bc_loss, ic_loss)
+        Ok((total_loss, data_loss, pde_loss, bc_loss, ic_loss))
     }
 }

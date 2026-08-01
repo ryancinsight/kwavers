@@ -100,6 +100,20 @@ strip = true  # Strip symbols for smaller Python wheels
 leto = { path = "../leto/crates/leto" }
 leto-ops = { path = "../leto/crates/leto-ops" }
 
+# RITK keeps Coeus Git-sourced for standalone consumers. The CI checkout
+# action materializes the same Atlas Coeus gitlink beside this workspace, so
+# unify RITK's remote edges with Kwavers' sibling path packages before Cargo
+# constructs backend trait identities.
+[patch."https://github.com/ryancinsight/Coeus.git"]
+coeus-autograd = { path = "../coeus/crates/coeus-autograd" }
+coeus-core = { path = "../coeus/crates/coeus-core" }
+coeus-leto = { path = "../coeus/crates/coeus-leto" }
+coeus-nn = { path = "../coeus/crates/coeus-nn" }
+coeus-ops = { path = "../coeus/crates/coeus-ops" }
+coeus-optim = { path = "../coeus/crates/coeus-optim" }
+coeus-sparse = { path = "../coeus/crates/coeus-sparse" }
+coeus-tensor = { path = "../coeus/crates/coeus-tensor" }
+
 [patch."https://github.com/ryancinsight/eunomia"]
 eunomia = { path = "../eunomia/crates/eunomia" }
 

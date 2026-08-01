@@ -3,6 +3,7 @@ use super::sources::compute_current_density_z;
 use crate::inverse::pinn::ml::physics::PinnDomainPhysicsParameters;
 use crate::inverse::pinn::ml::PinnWave2D;
 use coeus_autograd::{add, scalar_add, scalar_mul, scalar_sub, sub, Var};
+use kwavers_core::error::KwaversResult;
 
 #[cfg(test)]
 mod tests;
@@ -30,7 +31,7 @@ pub fn tm_mode_faraday_x_residual<B: coeus_ops::BackendOps<f32> + coeus_ops::Cpu
     y: &Var<f32, B>,
     t: &Var<f32, B>,
     mu: f64,
-) -> Var<f32, B>
+) -> KwaversResult<Var<f32, B>>
 where
     B::DeviceBuffer<f32>:
         coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
@@ -38,16 +39,16 @@ where
     let h = EPS_FD_F32;
 
     // μ ∂Hx/∂t
-    let hx_tp = model_hx.forward(x, y, &scalar_add(t, h));
-    let hx_tm = model_hx.forward(x, y, &scalar_sub(t, h));
+    let hx_tp = model_hx.forward(x, y, &scalar_add(t, h))?;
+    let hx_tm = model_hx.forward(x, y, &scalar_sub(t, h))?;
     let dhx_dt = scalar_mul(&sub(&hx_tp, &hx_tm), 1.0 / (2.0 * h));
 
     // ∂Ez/∂y
-    let ez_yp = model_ez.forward(x, &scalar_add(y, h), t);
-    let ez_ym = model_ez.forward(x, &scalar_sub(y, h), t);
+    let ez_yp = model_ez.forward(x, &scalar_add(y, h), t)?;
+    let ez_ym = model_ez.forward(x, &scalar_sub(y, h), t)?;
     let dez_dy = scalar_mul(&sub(&ez_yp, &ez_ym), 1.0 / (2.0 * h));
 
-    add(&scalar_mul(&dhx_dt, mu as f32), &dez_dy)
+    Ok(add(&scalar_mul(&dhx_dt, mu as f32), &dez_dy))
 }
 
 /// TM-mode Faraday-y residual: R_{Fy} = μ ∂Hy/∂t − ∂Ez/∂x
@@ -71,7 +72,7 @@ pub fn tm_mode_faraday_y_residual<B: coeus_ops::BackendOps<f32> + coeus_ops::Cpu
     y: &Var<f32, B>,
     t: &Var<f32, B>,
     mu: f64,
-) -> Var<f32, B>
+) -> KwaversResult<Var<f32, B>>
 where
     B::DeviceBuffer<f32>:
         coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
@@ -79,16 +80,16 @@ where
     let h = EPS_FD_F32;
 
     // μ ∂Hy/∂t
-    let hy_tp = model_hy.forward(x, y, &scalar_add(t, h));
-    let hy_tm = model_hy.forward(x, y, &scalar_sub(t, h));
+    let hy_tp = model_hy.forward(x, y, &scalar_add(t, h))?;
+    let hy_tm = model_hy.forward(x, y, &scalar_sub(t, h))?;
     let dhy_dt = scalar_mul(&sub(&hy_tp, &hy_tm), 1.0 / (2.0 * h));
 
     // ∂Ez/∂x
-    let ez_xp = model_ez.forward(&scalar_add(x, h), y, t);
-    let ez_xm = model_ez.forward(&scalar_sub(x, h), y, t);
+    let ez_xp = model_ez.forward(&scalar_add(x, h), y, t)?;
+    let ez_xm = model_ez.forward(&scalar_sub(x, h), y, t)?;
     let dez_dx = scalar_mul(&sub(&ez_xp, &ez_xm), 1.0 / (2.0 * h));
 
-    sub(&scalar_mul(&dhy_dt, mu as f32), &dez_dx)
+    Ok(sub(&scalar_mul(&dhy_dt, mu as f32), &dez_dx))
 }
 
 /// TM-mode Ampère-z residual: R_{Az} = ε ∂Ez/∂t − ∂Hy/∂x + ∂Hx/∂y + σ Ez + Jz
@@ -125,7 +126,7 @@ pub fn tm_mode_ampere_z_residual<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuB
     eps: f64,
     sigma: f64,
     physics_params: &PinnDomainPhysicsParameters,
-) -> Var<f32, B>
+) -> KwaversResult<Var<f32, B>>
 where
     B::DeviceBuffer<f32>:
         coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
@@ -133,22 +134,22 @@ where
     let h = EPS_FD_F32;
 
     // ε ∂Ez/∂t
-    let ez_tp = model_ez.forward(x, y, &scalar_add(t, h));
-    let ez_tm = model_ez.forward(x, y, &scalar_sub(t, h));
+    let ez_tp = model_ez.forward(x, y, &scalar_add(t, h))?;
+    let ez_tm = model_ez.forward(x, y, &scalar_sub(t, h))?;
     let dez_dt = scalar_mul(&sub(&ez_tp, &ez_tm), 1.0 / (2.0 * h));
 
     // −∂Hy/∂x
-    let hy_xp = model_hy.forward(&scalar_add(x, h), y, t);
-    let hy_xm = model_hy.forward(&scalar_sub(x, h), y, t);
+    let hy_xp = model_hy.forward(&scalar_add(x, h), y, t)?;
+    let hy_xm = model_hy.forward(&scalar_sub(x, h), y, t)?;
     let dhy_dx = scalar_mul(&sub(&hy_xp, &hy_xm), 1.0 / (2.0 * h));
 
     // +∂Hx/∂y
-    let hx_yp = model_hx.forward(x, &scalar_add(y, h), t);
-    let hx_ym = model_hx.forward(x, &scalar_sub(y, h), t);
+    let hx_yp = model_hx.forward(x, &scalar_add(y, h), t)?;
+    let hx_ym = model_hx.forward(x, &scalar_sub(y, h), t)?;
     let dhx_dy = scalar_mul(&sub(&hx_yp, &hx_ym), 1.0 / (2.0 * h));
 
     // σ Ez
-    let ez = model_ez.forward(x, y, t);
+    let ez = model_ez.forward(x, y, t)?;
 
     // J_ext,z
     let j_z = compute_current_density_z(x, y, physics_params);
@@ -157,5 +158,5 @@ where
     residual = sub(&residual, &dhy_dx);
     residual = add(&residual, &dhx_dy);
     residual = add(&residual, &scalar_mul(&ez, sigma as f32));
-    add(&residual, &j_z)
+    Ok(add(&residual, &j_z))
 }

@@ -78,7 +78,7 @@ impl SubgridAveraging {
 
         // Apply smoothing at boundary cells (where geometry is between 0 and 1)
         indexed_zip_mut_with(
-            &mut smoothed.view_mut(),
+            smoothed.view_mut(),
             &geometry.view(),
             |[i, j, k], smooth, &vol_frac| {
                 // Only smooth cells near boundary (partial volume fraction)

@@ -98,7 +98,7 @@ where
             &training_data.boundary.x,
             &training_data.boundary.y,
             &training_data.boundary.t,
-        );
+        )?;
         let bc_loss = loss_computer.boundary_loss::<B>(&out_bc, &training_data.boundary.values);
 
         // ── Initial condition loss ────────────────────────────────────────────
@@ -107,7 +107,7 @@ where
             coeus_tensor::Tensor::zeros_on(training_data.initial.x.tensor.shape(), &backend),
             false,
         );
-        let out_ic = model.forward(&training_data.initial.x, &training_data.initial.y, &zero_t);
+        let out_ic = model.forward(&training_data.initial.x, &training_data.initial.y, &zero_t)?;
         // velocity target: zero (quiescent start assumed when none provided)
         let zero_vel = Var::new(
             coeus_tensor::Tensor::zeros_on(
@@ -124,10 +124,15 @@ where
         );
 
         // ── Optional data loss from observations ─────────────────────────────
-        let data_loss_opt = training_data.observations.as_ref().map(|obs| {
-            let out_obs = model.forward(&obs.x, &obs.y, &obs.t);
-            loss_computer.data_loss::<B>(&out_obs, &obs.displacement)
-        });
+        let data_loss_opt = training_data
+            .observations
+            .as_ref()
+            .map(|obs| {
+                model
+                    .forward(&obs.x, &obs.y, &obs.t)
+                    .map(|out_obs| loss_computer.data_loss::<B>(&out_obs, &obs.displacement))
+            })
+            .transpose()?;
 
         // ── Total weighted loss ───────────────────────────────────────────────
         let total_loss =
@@ -159,7 +164,9 @@ where
         }
 
         // ── Backward + optimizer step ─────────────────────────────────────────
-        total_loss.backward();
+        total_loss.backward().map_err(|error| {
+            KwaversError::InternalError(format!("elastic PINN backward: {error}"))
+        })?;
         optimizer.step(model);
 
         // ── LR scheduler ─────────────────────────────────────────────────────

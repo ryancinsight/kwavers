@@ -52,9 +52,13 @@ where
             &u_ic,
             task.physics_params.wave_speed,
             LossWeights2D::default(),
-        );
+        )?;
 
-        total_loss.backward();
+        total_loss.backward().map_err(|error| {
+            kwavers_core::error::KwaversError::InternalError(format!(
+                "meta-learning backward: {error}"
+            ))
+        })?;
 
         let grads: Vec<Option<Vec<f32>>> = model
             .parameters()
