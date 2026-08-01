@@ -34,6 +34,8 @@
       error with a focused value-semantic regression.
 - [x] Require `--locked` in both historical-baseline metadata checks after all
       26 tracked package manifests and `Cargo.lock` are copied.
+- [x] Reuse the classifier's validated centerline for physical total length
+      instead of traversing the vessel mask and medial axis twice.
 - [ ] Push the blocker-closeout head and collect its exact hosted gate evidence.
 
 ## Owner: Codex `/root` — Aequitas acoustic dimensional boundaries [patch] — done

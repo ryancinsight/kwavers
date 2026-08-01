@@ -59,7 +59,9 @@ fn test_vessel_classification_uses_static_contrast_and_geometry() {
         mask[[i, 5, 5]] = 1.0;
     }
 
-    let classification = classify_vessels(&image, &mask, spacing(1.0, 1.0, 1.0)).unwrap();
+    let classification = classify_vessels(&image, &mask, spacing(1.0, 1.0, 1.0))
+        .unwrap()
+        .classification;
     assert_eq!(classification.vessel_type, VascularVesselType::Artery);
     assert!(
         classification.confidence > 0.9,
@@ -142,7 +144,9 @@ fn test_anisotropic_spacing_scales_vessel_diameter_and_length() {
     }
 
     let spacing = spacing(0.002, 0.001, 0.001);
-    let classification = classify_vessels(&image, &mask, spacing).unwrap();
+    let classification = classify_vessels(&image, &mask, spacing)
+        .unwrap()
+        .classification;
     let expected_diameter = (4.0 * 6.0 * 2.0e-9 / (std::f64::consts::PI * 0.012)).sqrt();
 
     assert_eq!(classification.diameter.into_base(), expected_diameter);

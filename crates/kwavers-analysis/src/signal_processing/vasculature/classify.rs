@@ -35,6 +35,14 @@ use leto::Array3;
 
 use super::{VascularVesselType, VesselClassification, VoxelSpacing};
 
+/// Classification and geometry derived from one validated vessel mask.
+pub(super) struct ClassifiedVessel {
+    /// Static vessel label and physical diameter.
+    pub(super) classification: VesselClassification,
+    /// Medial-axis candidates reused for total-length computation.
+    pub(super) centerline: Vec<[usize; 3]>,
+}
+
 /// Classify vessels from a static fUS image and its binary mask.
 ///
 /// See module-level docs for the mathematical specification.
@@ -46,7 +54,7 @@ pub(super) fn classify_vessels(
     image: &Array3<f64>,
     mask: &Array3<f64>,
     spacing: VoxelSpacing,
-) -> KwaversResult<VesselClassification> {
+) -> KwaversResult<ClassifiedVessel> {
     if image.shape() != mask.shape() {
         return Err(KwaversError::InvalidInput(
             "vessel image and mask shapes must match".to_owned(),
@@ -55,12 +63,15 @@ pub(super) fn classify_vessels(
 
     let points = masked_points(mask);
     if points.is_empty() {
-        return Ok(VesselClassification {
-            vessel_type: VascularVesselType::Unknown,
-            confidence: 0.0,
-            diameter: Length::from_base(0.0),
-            orientation: [0.0, 0.0, 0.0],
-            flow_direction: None,
+        return Ok(ClassifiedVessel {
+            classification: VesselClassification {
+                vessel_type: VascularVesselType::Unknown,
+                confidence: 0.0,
+                diameter: Length::from_base(0.0),
+                orientation: [0.0, 0.0, 0.0],
+                flow_direction: None,
+            },
+            centerline: Vec::new(),
         });
     }
 
@@ -112,12 +123,15 @@ pub(super) fn classify_vessels(
         VascularVesselType::Vein
     };
 
-    Ok(VesselClassification {
-        vessel_type,
-        confidence,
-        diameter,
-        orientation,
-        flow_direction: (vessel_type == VascularVesselType::Artery).then_some(orientation),
+    Ok(ClassifiedVessel {
+        classification: VesselClassification {
+            vessel_type,
+            confidence,
+            diameter,
+            orientation,
+            flow_direction: (vessel_type == VascularVesselType::Artery).then_some(orientation),
+        },
+        centerline,
     })
 }
 

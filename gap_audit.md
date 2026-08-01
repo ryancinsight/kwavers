@@ -80,6 +80,22 @@ immutable Atlas graph.
 
 # Gap Audit
 
+## Review 2026-07-31 — KW-AEQ-MET-04 source-level closure
+
+The only current review finding on the vessel-metrics slice was redundant
+centerline extraction in `VesselSegmentation::segment`: classification already
+derived the validated centerline used for the physical diameter. The classifier
+now returns that centerline with the classification, and segmentation reuses it
+for physical total length. This removes one mask traversal and one medial-axis
+pass without changing the Aequitas `Length`/`Velocity` contracts or the
+invalid-input behavior.
+
+The re-audit still finds no missing Aequitas metric dimension in the named
+CFDrs, Helios, or Kwavers consumer boundaries. Public complex values remain
+Eunomia-backed formula/storage values; none of the audited physical contracts
+requires a separate imaginary unit. Exact-head hosted checks for this fix are
+the delivery gate after push.
+
 - Review 2026-07-28: PR #325's original provider blocker is closed through
   Mnemosyne PR #31 and the synchronized Atlas graph above. The immutable graph
   checkout and exact-head hosted vessel tests are green; the benchmark graph

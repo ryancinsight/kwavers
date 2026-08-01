@@ -146,16 +146,18 @@ impl VesselSegmentation {
         let threshold = analysis::otsu_threshold(&response);
         let mask = response.mapv(|v| if v > threshold { 1.0 } else { 0.0 });
 
-        let classification = classify::classify_vessels(image, &mask, voxel_spacing)?;
+        let classified = classify::classify_vessels(image, &mask, voxel_spacing)?;
         let (num_segments, vessel_voxels) = analysis::count_connected_components(&mask);
-        let centerline = classify::centerline_from_points(&mask, &classify::masked_points(&mask));
-        let total_length =
-            classify::centerline_length(&centerline, classification.orientation, voxel_spacing);
+        let total_length = classify::centerline_length(
+            &classified.centerline,
+            classified.classification.orientation,
+            voxel_spacing,
+        );
 
         Ok(Self {
             mask,
             response,
-            classification,
+            classification: classified.classification,
             num_segments,
             total_length: if vessel_voxels == 0 {
                 Length::from_base(0.0)
