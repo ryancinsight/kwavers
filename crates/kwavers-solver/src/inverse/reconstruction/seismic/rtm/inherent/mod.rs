@@ -97,7 +97,7 @@ impl ReverseTimeMigration {
         // result = image − 0.1·∇²image, single native pass (leto has no array operators)
         let mut result = Array3::<f64>::zeros(image.shape());
         leto_ops::zip_mut_with(
-            &mut result.view_mut(),
+            result.view_mut(),
             (&image.view(), &laplacian.view()),
             |r, (img, lap)| *r = *img - 0.1_f64 * *lap,
         )

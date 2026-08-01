@@ -34,7 +34,7 @@ fn build_arm(delta_m: &Array3<f64>, tau: &Array3<f64>, dt: f64) -> Arm {
     let inv_tau = tau.mapv(|t| 1.0 / t);
     let mut gain = Array3::<f64>::zeros(delta_m.shape());
     leto_ops::zip_mut_with(
-        &mut gain.view_mut(),
+        gain.view_mut(),
         (&delta_m.view(), &tau.view(), &decay.view()),
         |g, (&dm, &t, &dc)| *g = -dm * t * (1.0 - dc),
     )
@@ -271,7 +271,7 @@ impl ViscoacousticMemorySolver {
         let mut m_u = m_inf.clone();
         for arm in &arms {
             leto_ops::zip_mut_with(
-                &mut m_u.view_mut(),
+                m_u.view_mut(),
                 (&arm.gain.view(), &arm.decay.view(), &arm.inv_tau.view()),
                 |mu, (&gain, &decay, &inv_tau)| {
                     *mu += -gain * inv_tau / (1.0 - decay);
@@ -470,7 +470,7 @@ impl ViscoacousticMemorySolver {
         let m_inf = rho.zip_map(c, |r, cc| r * cc * cc);
         let mut scale = Array3::<f64>::zeros((nx, ny, nz));
         leto_ops::zip_mut_with(
-            &mut scale.view_mut(),
+            scale.view_mut(),
             (&rho.view(), &m_inf.view(), &alpha_np_m.view()),
             |sc, (&r, &mi, &a_target)| {
                 // α for unit total strength (weights = `base`, summing to 1 Pa).
@@ -693,19 +693,19 @@ impl ViscoacousticMemorySolver {
             &mut self.gz,
         );
         leto_ops::zip_mut_with(
-            &mut self.vx.view_mut(),
+            self.vx.view_mut(),
             (&self.gx.view(), &self.inv_rho.view()),
             |v, (&g, &ir)| *v += -dt * ir * g,
         )
         .expect("invariant: velocity-x update fields share grid shape");
         leto_ops::zip_mut_with(
-            &mut self.vy.view_mut(),
+            self.vy.view_mut(),
             (&self.gy.view(), &self.inv_rho.view()),
             |v, (&g, &ir)| *v += -dt * ir * g,
         )
         .expect("invariant: velocity-y update fields share grid shape");
         leto_ops::zip_mut_with(
-            &mut self.vz.view_mut(),
+            self.vz.view_mut(),
             (&self.gz.view(), &self.inv_rho.view()),
             |v, (&g, &ir)| *v += -dt * ir * g,
         )
@@ -738,7 +738,7 @@ impl ViscoacousticMemorySolver {
         );
         // gx = ∂vx/∂x + ∂vy/∂y + ∂vz/∂z
         leto_ops::zip_mut_with(
-            &mut self.gx.view_mut(),
+            self.gx.view_mut(),
             (&self.gy.view(), &self.gz.view()),
             |d, (&y, &z)| *d += y + z,
         )
@@ -785,7 +785,7 @@ impl ViscoacousticMemorySolver {
 
         // 4. Pressure update: p += -Δt (M_U(x) D + Σ_l ½(σ_l+σ_l^new)/τ_l(x)).
         leto_ops::zip_mut_with(
-            &mut self.p.view_mut(),
+            self.p.view_mut(),
             (&self.gx.view(), &self.gy.view(), &self.m_u.view()),
             |p, (&d, &relax, &mu)| *p -= dt * (mu * d + relax),
         )
