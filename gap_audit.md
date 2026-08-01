@@ -107,7 +107,7 @@ metrics. Complex representation is not a new physical dimension.
 See [`Kwavers ADR 092`](docs/ADR/092-therapeutic-microbubble-quantities.md)
 and [`Aequitas ADR 0013`](../aequitas/docs/adr/0013-acceleration-quantity.md).
 
-The current implementation head is `2bedc44bf` on PR #328. It propagates
+The current implementation head is `c8549096e` on PR #328. It propagates
 fallible Coeus forward and backward errors through PINN networks, residuals,
 autodiff utilities, loss functions, and trainers; zero-gradient fallback paths
 are removed. The same increment completes the Leto mutable-view API cleanup
@@ -122,8 +122,12 @@ hosted wheel and benchmark jobs then exposed a stale lock graph. `Cargo.lock`
 now exactly matches a disposable checkout of the pinned Atlas graph,
 including the current provider revisions, required git package identities, and
 the `ritk-diffusion-scheme` package and edges owned by that graph. Locked
-`cargo metadata --all-features` passes against the same exact graph. The
-refreshed hosted matrix is the remaining integration gate.
+`cargo metadata --all-features` passes against the same exact graph. The first
+refreshed run exposed six Windows-target `wgpu` dependency entries that made
+hosted Linux `--locked` commands try to rewrite `Cargo.lock`; regeneration
+against the exact `777cf` graph with `x86_64-unknown-linux-gnu` selected removes
+that platform-specific resolver drift. The refreshed hosted matrix is the
+remaining integration gate.
 
 Advancing the lock to the Atlas-pinned Asclepius, Hyperion, Proteus, and Tyche
 revisions exposed two additional compatibility defects that are now resolved:
@@ -137,7 +141,7 @@ pressure-rate dimensional-law filter passed 1/1; Kwavers physics microbubble
 Nextest passed 38/38; the preceding math slice passed 266/266; the current
 exact-graph workspace check, locked metadata, solver clippy at `-D warnings`,
 79-file Rustfmt, PINN Nextest passed 422/422 with 848 skipped, solver doctests
-passed 4/4, and `cargo deny check sources` passed. The deny source policy now
+passed 4/4, and exact-graph `cargo deny check sources` passed. The deny source policy now
 admits the transitive RITK Gaia provider and contains no unused cutile-rs entry.
 The workspace check reports only the existing `kwavers-analysis::principal_axis`
 dead-code warning and external provider linker warnings. The corrected hosted

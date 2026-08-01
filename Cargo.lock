@@ -7261,16 +7261,12 @@ dependencies = [
  "cfg_aliases",
  "document-features",
  "hashbrown 0.17.1",
- "js-sys",
  "log",
  "portable-atomic",
  "profiling",
  "raw-window-handle",
  "smallvec",
  "static_assertions",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
  "wgpu-core 30.0.0",
  "wgpu-hal 30.0.0",
  "wgpu-types 30.0.0",
@@ -7508,12 +7504,10 @@ checksum = "1a9c93c2b35edde326df60ffdee4c0f5864eac3011d6768b70d43f028ad93565"
 dependencies = [
  "bitflags 2.13.1",
  "bytemuck",
- "js-sys",
  "log",
  "naga-types",
  "raw-window-handle",
  "static_assertions",
- "web-sys",
 ]
 
 [[package]]

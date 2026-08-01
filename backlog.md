@@ -33,7 +33,7 @@
   backward errors through PINN networks, residuals, autodiff utilities, loss
   functions, and trainers; zero-gradient fallbacks are removed. It also
   completes the Leto mutable-view API cleanup required by the locked graph.
-- Integration: PR #328 is at `2bedc44bf`. The checkout action and Python
+- Integration: PR #328 is at `c8549096e`. The checkout action and Python
   release workflow pin Atlas `777cf325fad3114299b44a99a48145997f93a5b0`, the
   current Coeus/Leto-compatible provider graph containing Aequitas `8cc90b2`
   and Eunomia `18459875`.
@@ -41,7 +41,9 @@
   the pinned Atlas graph; the lock includes the current RITK
   `ritk-diffusion-scheme` package and edges and has no stale package identity
   or dependency edges. Exact-graph `cargo metadata --locked --all-features`
-  passes. The fresh hosted wheel and benchmark jobs remain pending.
+  passes for the hosted Linux target, and the lock does not require a rewrite
+  under the pinned graph. The fresh hosted wheel and benchmark jobs remain
+  pending.
 - Compatibility closure: lock entries now use the Atlas-pinned Asclepius,
   Hyperion, Proteus, and Tyche revisions; Kwavers uses Aequitas temperature
   differences explicitly and Leto 0.40's tuple-source `zip_mut_with` API.
