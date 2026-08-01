@@ -8,15 +8,15 @@
 - Outcome: public SI contracts use Aequitas `Length`, `Velocity`,
   `Acceleration`, `Pressure`, `PressureRate`, `Time`, `Force`, `Energy`, and
   related quantities; numerical and storage scalar extraction remains explicit.
-- Integration: PR #328 is at `dc1be58e8`. The checkout action and Python
-  release workflow pin Atlas `8573cc5d43eb3334be6673b1d45c404b6dc0a185` so
-  Aequitas `8cc90b2` resolves against Eunomia `18459875`.
-- Lock graph: refreshed `Cargo.lock` from the standalone integration manifest;
-  removed the RITK diffusion-scheme edges from `ritk-dicom` and `ritk-nrrd`,
-  plus the newer `ritk-dicom` spatial and `ritk-spatial` thiserror edges absent
-  from the Atlas-pinned RITK gitlink; exact-graph `cargo metadata --locked
-  --all-features` passes. The corrected hosted wheel and benchmark jobs remain
-  pending.
+- Integration: PR #328 is at `ddef71529`. The checkout action and Python
+  release workflow pin Atlas `777cf325fad3114299b44a99a48145997f93a5b0`, the
+  current Coeus/Leto-compatible provider graph containing Aequitas `8cc90b2`
+  and Eunomia `18459875`.
+- Lock graph: regenerated `Cargo.lock` from an exact disposable checkout of
+  the pinned Atlas graph; the lock includes the current RITK
+  `ritk-diffusion-scheme` package and edges and has no stale package identity
+  or dependency edges. Exact-graph `cargo metadata --locked --all-features`
+  passes. The fresh hosted wheel and benchmark jobs remain pending.
 - Compatibility closure: lock entries now use the Atlas-pinned Asclepius,
   Hyperion, Proteus, and Tyche revisions; Kwavers uses Aequitas temperature
   differences explicitly and Leto 0.40's tuple-source `zip_mut_with` API.

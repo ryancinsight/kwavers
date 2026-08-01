@@ -11,13 +11,12 @@
 - [x] Add ADR 092 and synchronize the backlog, changelog, and gap audit with
       the real-valued Eunomia boundary rule: no imaginary physical unit;
       complex phasors reduce to real observables at numerical boundaries.
-- [x] Refresh the Kwavers Atlas checkout-action and Python-release pins after
-      the superseded matrix exposed an Eunomia `UnitScalar` graph mismatch.
-- [x] Refresh `Cargo.lock` from the standalone CI manifest after the corrected
-      matrix exposed stale provider package identities; clean locked metadata
-      now passes outside the Atlas development overlay, and remove the RITK
-      diffusion-scheme, spatial, and thiserror edges absent from the
-      Atlas-pinned gitlink.
+- [x] Refresh the Kwavers Atlas checkout-action and Python-release pins to the
+      current Coeus/Leto-compatible Atlas graph after the superseded matrix
+      exposed an Eunomia `UnitScalar` graph mismatch.
+- [x] Regenerate `Cargo.lock` from an exact disposable checkout of that Atlas
+      graph; the lock includes the current RITK diffusion-scheme package and
+      edges, with no stale provider package identity or dependency edge.
 - [x] Advance direct provider lock entries to the Atlas graph and fix the
       resulting Aequitas temperature-difference and Leto 0.40 zip API errors.
 - [x] Verify the provider-compatible graph with Kwavers math 266/266 and solver
@@ -35,10 +34,10 @@ skipped tests; locked physics, math, and solver checks pass offline outside the
 Atlas overlay; exact-file formatting and diff checks pass. The therapy
 microbubble Nextest lane is environment-blocked by
 shared-cache compilation of unrelated `ritk-jpeg` without a Rust diagnostic;
-the bounded single-job retry timed out without output. PR #328's corrected
-PR #328 source head `dc1be58e8` is pending hosted matrix evidence after the
-stale provider and
-lock-graph failures on superseded heads.
+the bounded single-job retry timed out without output. PR #328 source head
+`ddef71529` is pending hosted matrix evidence after the
+stale provider and lock-graph failures on superseded heads. The exact current
+Atlas graph is locally metadata-verified.
 
 ## Owner: Codex — KW-AEQ-MET-04 vessel physical metrics [major] [arch] — done
 
