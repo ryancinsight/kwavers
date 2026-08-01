@@ -8,7 +8,7 @@ use kwavers_transducer::mems::comparison;
 use pyo3::prelude::*;
 
 /// Therapy comparison. Returns
-/// `[cmut_output_pa, pmut_output_pa, cmut_flex_derating, cmut_heating,
+/// `[cmut_output, pmut_output, cmut_flex_derating, cmut_heating,
 /// pmut_heating, recommended]` (recommended 0=CMUT, 1=PMUT).
 #[pyfunction]
 #[allow(clippy::too_many_arguments)]
@@ -45,8 +45,8 @@ pub fn therapy_figure_of_merit(
         1.0
     };
     Ok(vec![
-        v.cmut_output_pa.into_base(),
-        v.pmut_output_pa.into_base(),
+        v.cmut_output.into_base(),
+        v.pmut_output.into_base(),
         v.cmut_flex_derating,
         v.cmut_heating.into_base(),
         v.pmut_heating.into_base(),
