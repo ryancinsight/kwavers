@@ -107,7 +107,7 @@ metrics. Complex representation is not a new physical dimension.
 See [`Kwavers ADR 092`](docs/ADR/092-therapeutic-microbubble-quantities.md)
 and [`Aequitas ADR 0013`](../aequitas/docs/adr/0013-acceleration-quantity.md).
 
-The current integration head is `abbe79d4a` on PR #328. The superseded
+The current integration head is `f1cdeb4b8` on PR #328. The superseded
 `f37896521` wheel matrix failed before compiling Kwavers because the pinned
 Atlas checkout materialized Eunomia before `UnitScalar`; the benchmark smoke
 failure was downstream of that same provider error. The Kwavers checkout
