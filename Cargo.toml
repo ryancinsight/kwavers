@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/kwavers", "xtask", "crates/kwavers-python", "crates/kwavers-core", "crates/kwavers-math", "crates/kwavers-signal", "crates/kwavers-grid", "crates/kwavers-field", "crates/kwavers-optics", "crates/kwavers-medium", "crates/kwavers-mesh", "crates/kwavers-phantom", "crates/kwavers-boundary", "crates/kwavers-source", "crates/kwavers-receiver", "crates/kwavers-transducer", "crates/kwavers-imaging", "crates/kwavers-physics", "crates/kwavers-solver", "crates/kwavers-analysis", "crates/kwavers-simulation", "crates/kwavers-diagnostics", "crates/kwavers-therapy", "crates/kwavers-gpu", "crates/kwavers-driver"]
+members = ["crates/kwavers", "xtask", "crates/kwavers-python", "crates/kwavers-core", "crates/kwavers-math", "crates/kwavers-signal", "crates/kwavers-grid", "crates/kwavers-alloc-probe", "crates/kwavers-field", "crates/kwavers-optics", "crates/kwavers-medium", "crates/kwavers-mesh", "crates/kwavers-phantom", "crates/kwavers-boundary", "crates/kwavers-source", "crates/kwavers-receiver", "crates/kwavers-transducer", "crates/kwavers-imaging", "crates/kwavers-physics", "crates/kwavers-solver", "crates/kwavers-analysis", "crates/kwavers-simulation", "crates/kwavers-diagnostics", "crates/kwavers-therapy", "crates/kwavers-gpu", "crates/kwavers-driver"]
 resolver = "2"
 
 [workspace.dependencies]
@@ -45,7 +45,6 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 gaia = { version = "0.3.0", git = "https://github.com/ryancinsight/gaia.git", default-features = false }
 tempfile = "3.10"
-stats_alloc = "0.1.10"
 proptest = "1.0"
 walkdir = "2.4"
 charls = { version = "0.4", features = ["static"] }
@@ -95,3 +94,4 @@ opt-level = 3
 lto = true
 codegen-units = 1
 strip = true  # Strip symbols for smaller Python wheels
+
