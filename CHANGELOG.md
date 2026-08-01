@@ -13,6 +13,19 @@
   module and optimizer operations through Kwavers errors, and validate RITK's
   structured temporal-synchronization result at the consumer boundary.
 
+- **Breaking:** Therapeutic microbubble state, shell, radiation-force,
+  pressure-gradient, streaming-velocity, dynamics-service, and sampling
+  contracts now use Aequitas physical quantities. Aequitas adds coherent
+  `Acceleration` (`m/s²`) and `PressureRate` (`Pa/s`) vocabulary. Keller–Miksis,
+  Marmottant, Leto storage, and numerical formula boundaries retain explicit
+  scalar extraction. The real-valued contracts introduce no imaginary physical
+  unit; future Eunomia complex phasors must reduce to real observables at the
+  numerical boundary. See [ADR 092](docs/ADR/092-therapeutic-microbubble-quantities.md).
+
+- [patch] Refresh the Kwavers Atlas checkout-action and Python-release pins to
+  the provider graph containing Eunomia `UnitScalar` and Aequitas `8cc90b2`,
+  so real and complex quantity scaling resolve from one compatible graph.
+
 - [major] [arch] Functional-ultrasound vessel segmentation now requires
   validated Aequitas voxel spacing and returns typed `Length<f64>` geometry
   plus typed `Velocity<f64>` Doppler results. Frequency, sound speed, diameter,

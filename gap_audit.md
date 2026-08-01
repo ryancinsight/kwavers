@@ -80,6 +80,50 @@ immutable Atlas graph.
 
 # Gap Audit
 
+## Closed therapeutic microbubble quantity audit — 2026-08-01
+
+`KWAVERS-AEQ-MET-53` is closed for implementation. The public therapeutic
+microbubble state now carries Aequitas `Length`, `Velocity`, `Acceleration`,
+`ThermodynamicTemperature`, `Pressure`, `AmountOfSubstance`,
+`SurfaceTension`, `DynamicViscosity`, `MassDensity`, `Mass`, `Time`, and
+`Velocity3D` contracts. Shell properties use typed radius, surface tension,
+viscosity, strain, stress, and pressure contributions. Radiation force,
+pressure-gradient, and streaming-velocity surfaces use typed force, pressure,
+length, velocity, frequency, time, and dimensionless direction/scale values.
+The therapy dynamics service and sampling boundary use typed pressure,
+pressure-gradient, pressure-rate, length, and time values.
+
+The provider owns `Acceleration` (`m/s²`) and `PressureRate` (`Pa/s`) as SI
+dimensions and coherent units. Keller–Miksis, Marmottant, Leto storage, drug
+payload, finite-difference, and other numerical formula boundaries extract
+base scalars explicitly; no consumer-local SI wrapper remains.
+
+The therapeutic acoustic contracts are real-valued and do not require an
+imaginary physical unit. If a future Eunomia complex phasor is introduced,
+the numerical boundary must reduce it to the real observable (Hermitian
+magnitude where required) before producing real pressure, force, or energy
+metrics. Complex representation is not a new physical dimension.
+
+See [`Kwavers ADR 092`](docs/ADR/092-therapeutic-microbubble-quantities.md)
+and [`Aequitas ADR 0013`](../aequitas/docs/adr/0013-acceleration-quantity.md).
+
+The current integration head is `4fa612197` on PR #328. The superseded
+`f37896521` wheel matrix failed before compiling Kwavers because the pinned
+Atlas checkout materialized Eunomia before `UnitScalar`; the benchmark smoke
+failure was downstream of that same provider error. The Kwavers checkout
+action and Python-release workflow now pin Atlas `8573cc5d` so Eunomia
+`18459875` and Aequitas `8cc90b2` resolve together. The corrected hosted
+matrix is the remaining integration gate.
+
+Verification: Aequitas provider Nextest previously passed 47/47 and the
+pressure-rate dimensional-law filter passed 1/1; Kwavers physics microbubble
+Nextest passed 38/38; physics and therapy test-target checks passed offline;
+exact-file formatting and diff checks pass. The therapy microbubble Nextest
+lane remains blocked by the shared target-cache compile of unrelated
+`ritk-jpeg`, which terminated without a Rust diagnostic; a bounded
+`CARGO_BUILD_JOBS=1` retry timed out without output. This is an
+environment/contention residual, not a source diagnostic from the typed slice.
+
 ## Review 2026-07-31 — KW-AEQ-MET-04 source-level closure
 
 The only current review finding on the vessel-metrics slice was redundant

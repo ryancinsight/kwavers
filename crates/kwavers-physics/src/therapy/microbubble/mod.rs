@@ -11,7 +11,8 @@ pub mod state;
 
 pub use forces::{
     calculate_acoustic_streaming_velocity, calculate_drag_force, calculate_primary_bjerknes_force,
-    calculate_primary_bjerknes_force_averaged, RadiationForce, StreamingVelocity,
+    calculate_primary_bjerknes_force_averaged, Direction3D, PressureGradient3D, RadiationForce,
+    StreamingVelocity,
 };
 pub use shell::{MarmottantShellProperties, ShellState};
 pub use state::{MicrobubbleState, Position3D, Velocity3D};

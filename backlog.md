@@ -21,6 +21,28 @@
   `.github/workflows/rust-release.yml` in the `crates-io` environment; and every
   package version has a matching GitHub Release.
 
+## KWAVERS-AEQ-MET-53 — Type therapeutic microbubble quantities [major] — implementation done; integration pending
+
+- Owner: Codex; scope: public therapeutic microbubble state, shell, force,
+  streaming, dynamics, sampling, Aequitas provider vocabulary, ADR 092, and
+  synchronized PM artifacts.
+- Outcome: public SI contracts use Aequitas `Length`, `Velocity`,
+  `Acceleration`, `Pressure`, `PressureRate`, `Time`, `Force`, `Energy`, and
+  related quantities; numerical and storage scalar extraction remains explicit.
+- Integration: PR #328 is at `4fa612197`. The checkout action and Python
+  release workflow pin Atlas `8573cc5d43eb3334be6673b1d45c404b6dc0a185` so
+  Aequitas `8cc90b2` resolves against Eunomia `18459875`.
+- Eunomia boundary: the current contracts are real-valued. Genuine complex
+  phasors remain representation data at existing dimensions and reduce to a
+  real observable before force, energy, or state metrics; no imaginary unit is
+  introduced.
+- Evidence: provider 47/47 plus pressure-rate 1/1; Kwavers physics
+  microbubble 38/38; physics and therapy test-target checks pass offline;
+  exact-file formatting and diff checks pass. Therapy Nextest remains
+  environment-blocked by unrelated `ritk-jpeg` compilation without a Rust
+  diagnostic. The prior hosted wheel/benchmark run failed at the stale
+  Eunomia provider pin; the corrected hosted matrix is pending.
+
 ## KW-AEQ-MET-04 — Type functional-ultrasound vessel metrics [major] [arch] — done
 
 - Owner: Codex; scope: `crates/kwavers-analysis/src/signal_processing/vasculature/**`,
