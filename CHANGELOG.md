@@ -23,8 +23,9 @@
   numerical boundary. See [ADR 092](docs/ADR/092-therapeutic-microbubble-quantities.md).
 
 - [patch] Refresh the Kwavers Atlas checkout-action and Python-release pins to
-  the provider graph containing Eunomia `UnitScalar` and Aequitas `8cc90b2`,
-  so real and complex quantity scaling resolve from one compatible graph.
+  Atlas `777cf325fad3114299b44a99a48145997f93a5b0`, the provider graph
+  containing Eunomia `UnitScalar` and Aequitas `8cc90b2`, so real and complex
+  quantity scaling resolve from one compatible Coeus/Leto graph.
 
 - [patch] Refresh `Cargo.lock` to the Atlas-pinned Asclepius, Hyperion, Proteus,
   and Tyche revisions, use Aequitas `TemperatureDifference` for bubble energy
