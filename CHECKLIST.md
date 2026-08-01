@@ -1,6 +1,6 @@
 # Project Checklist
 
-## Owner: Codex — KW-AEQ-MET-04 vessel physical metrics [major] [arch] — in progress
+## Owner: Codex — KW-AEQ-MET-04 vessel physical metrics [major] [arch] — done
 
 - [x] Add validated Aequitas voxel spacing to vessel segmentation and preserve
       anisotropic physical scaling in diameter, total length, and centerline.
@@ -36,7 +36,11 @@
       26 tracked package manifests and `Cargo.lock` are copied.
 - [x] Reuse the classifier's validated centerline for physical total length
       instead of traversing the vessel mask and medial axis twice.
-- [ ] Push the blocker-closeout head and collect its exact hosted gate evidence.
+- [x] Push the blocker-closeout head and collect its exact hosted gate evidence.
+      PR #325 merged as Kwavers main `cc5c9c4dd`; the exact-head matrix passes
+      Code Coverage 39m33s, Test Suite Coverage 32m45s, all feature/build
+      combinations, solver/PINN validation, security, Miri, wheels, docs,
+      migrations, and benchmark smoke/regression.
 
 ## Owner: Codex `/root` — Aequitas acoustic dimensional boundaries [patch] — done
 
