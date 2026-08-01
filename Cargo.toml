@@ -64,10 +64,10 @@ onnx-ir = "0.20.1"
 openjpeg-sys = "1.0"
 openjp2 = { version = "0.6.1", default-features = false, features = ["std"] }
 jpeg2k = { version = "0.10.1", default-features = false, features = ["openjp2"] }
-consus-hdf5 = { git = "https://github.com/ryancinsight/consus", features = ["std"] }
-consus-core = { git = "https://github.com/ryancinsight/consus", features = ["std"] }
-consus-compression = { git = "https://github.com/ryancinsight/consus", features = ["std", "deflate"] }
-consus-io = { git = "https://github.com/ryancinsight/consus", features = ["std"] }
+consus-hdf5 = { git = "https://github.com/ryancinsight/consus.git", features = ["std"] }
+consus-core = { git = "https://github.com/ryancinsight/consus.git", features = ["std"] }
+consus-compression = { git = "https://github.com/ryancinsight/consus.git", features = ["std", "deflate"] }
+consus-io = { git = "https://github.com/ryancinsight/consus.git", features = ["std"] }
 consus-npy = { git = "https://github.com/ryancinsight/consus", branch = "codex/consus-npy-provider" }
 rand = "0.9"
 criterion = "0.5"

@@ -891,7 +891,7 @@ dependencies = [
 [[package]]
 name = "consus-compression"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/consus#0106b709212033823a22782b0c491603e8ce1229"
+source = "git+https://github.com/ryancinsight/consus.git#f0c28690f867bb1d892102e9ffa2e18a91ef7451"
 dependencies = [
  "byteorder",
  "consus-core",
@@ -900,7 +900,7 @@ dependencies = [
 [[package]]
 name = "consus-core"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/consus#0106b709212033823a22782b0c491603e8ce1229"
+source = "git+https://github.com/ryancinsight/consus.git#f0c28690f867bb1d892102e9ffa2e18a91ef7451"
 dependencies = [
  "byteorder",
  "smallvec",
@@ -910,7 +910,7 @@ dependencies = [
 [[package]]
 name = "consus-hdf5"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/consus#0106b709212033823a22782b0c491603e8ce1229"
+source = "git+https://github.com/ryancinsight/consus.git#f0c28690f867bb1d892102e9ffa2e18a91ef7451"
 dependencies = [
  "byteorder",
  "consus-compression",
@@ -921,7 +921,7 @@ dependencies = [
 [[package]]
 name = "consus-io"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/consus#0106b709212033823a22782b0c491603e8ce1229"
+source = "git+https://github.com/ryancinsight/consus.git#f0c28690f867bb1d892102e9ffa2e18a91ef7451"
 dependencies = [
  "consus-core",
 ]
@@ -939,7 +939,7 @@ dependencies = [
 [[package]]
 name = "consus-onnx"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/consus#f0c28690f867bb1d892102e9ffa2e18a91ef7451"
+source = "git+https://github.com/ryancinsight/consus.git#f0c28690f867bb1d892102e9ffa2e18a91ef7451"
 
 [[package]]
 name = "core-foundation"

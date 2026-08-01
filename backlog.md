@@ -23,6 +23,12 @@
   passes for the hosted Linux target, and the lock does not require a rewrite
   under the pinned graph. The fresh hosted wheel and benchmark jobs remain
   pending.
+- Provider-source closure: Kwavers' direct Consus dependencies now use the
+  canonical `.git` URL used by RITK. Their lock entries align with the Atlas
+  Consus `f0c28690` package source, so `consus-onnx` and the HDF5/IO packages
+  no longer resolve through duplicate URL identities. The separate
+  `consus-npy` provider branch remains explicit because it contains the
+  required NPY implementation.
 - Compatibility closure: lock entries now use the Atlas-pinned Asclepius,
   Hyperion, Proteus, and Tyche revisions; Kwavers uses Aequitas temperature
   differences explicitly and Leto 0.40's tuple-source `zip_mut_with` API.
