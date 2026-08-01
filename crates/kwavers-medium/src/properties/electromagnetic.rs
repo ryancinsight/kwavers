@@ -31,6 +31,7 @@
 //! - `permeability ≥ 1.0` (most materials)
 //! - `conductivity ≥ 0.0`
 
+use aequitas::systems::si::{quantities::ElectricalConductivity, units::SiemensPerMeter};
 use kwavers_core::constants::fundamental::{SPEED_OF_LIGHT, VACUUM_IMPEDANCE, VACUUM_PERMEABILITY};
 use kwavers_core::constants::numerical::TWO_PI;
 use std::fmt;
@@ -45,7 +46,7 @@ pub struct ElectromagneticPropertyData {
     pub permeability: f64,
 
     /// Electrical conductivity σ (S/m)
-    pub conductivity: f64,
+    pub conductivity: ElectricalConductivity,
 
     /// Dielectric relaxation time τ (s)
     pub relaxation_time: Option<f64>,
@@ -59,7 +60,7 @@ impl ElectromagneticPropertyData {
     pub fn new(
         permittivity: f64,
         permeability: f64,
-        conductivity: f64,
+        conductivity: ElectricalConductivity,
         relaxation_time: Option<f64>,
     ) -> Result<Self, String> {
         if permittivity < 1.0 {
@@ -74,10 +75,10 @@ impl ElectromagneticPropertyData {
                 permeability
             ));
         }
-        if conductivity < 0.0 {
+        if conductivity.into_base() < 0.0 {
             return Err(format!(
                 "Conductivity must be non-negative, got {}",
-                conductivity
+                conductivity.into_base()
             ));
         }
         if let Some(tau) = relaxation_time {
@@ -118,12 +119,12 @@ impl ElectromagneticPropertyData {
     /// Skin depth δ = √(2/(ωμσ)) at angular frequency ω
     #[must_use]
     pub fn skin_depth(&self, frequency_hz: f64) -> f64 {
-        if self.conductivity == 0.0 {
+        if self.conductivity.into_base() == 0.0 {
             return f64::INFINITY;
         }
         let omega = TWO_PI * frequency_hz;
         let mu = VACUUM_PERMEABILITY * self.permeability;
-        (2.0 / (omega * mu * self.conductivity)).sqrt()
+        (2.0 / (omega * mu * self.conductivity.into_base())).sqrt()
     }
 
     /// Vacuum properties
@@ -132,7 +133,7 @@ impl ElectromagneticPropertyData {
         Self {
             permittivity: 1.0,
             permeability: 1.0,
-            conductivity: 0.0,
+            conductivity: ElectricalConductivity::from_unit::<SiemensPerMeter>(0.0),
             relaxation_time: None,
         }
     }
@@ -143,7 +144,7 @@ impl ElectromagneticPropertyData {
         Self {
             permittivity: 80.0,
             permeability: 1.0,
-            conductivity: 0.005,
+            conductivity: ElectricalConductivity::from_unit::<SiemensPerMeter>(0.005),
             relaxation_time: Some(8.3e-12),
         }
     }
@@ -157,7 +158,7 @@ impl ElectromagneticPropertyData {
         Self {
             permittivity: 50.0,
             permeability: 1.0,
-            conductivity: 0.5,
+            conductivity: ElectricalConductivity::from_unit::<SiemensPerMeter>(0.5),
             relaxation_time: Some(10e-12),
         }
     }
@@ -170,7 +171,7 @@ impl fmt::Display for ElectromagneticPropertyData {
             "EM(ε_r={:.1}, μ_r={:.1}, σ={:.3} S/m, c={:.2e} m/s, n={:.2})",
             self.permittivity,
             self.permeability,
-            self.conductivity,
+            self.conductivity.in_unit::<SiemensPerMeter>(),
             self.wave_speed(),
             self.refractive_index()
         )
@@ -203,9 +204,27 @@ mod tests {
 
     #[test]
     fn test_em_validation() {
-        assert!(ElectromagneticPropertyData::new(0.5, 1.0, 0.0, None).is_err());
-        assert!(ElectromagneticPropertyData::new(1.0, 1.0, -1.0, None).is_err());
-        let em = ElectromagneticPropertyData::new(1.0, 1.0, 0.0, None).unwrap();
+        assert!(ElectromagneticPropertyData::new(
+            0.5,
+            1.0,
+            ElectricalConductivity::from_unit::<SiemensPerMeter>(0.0),
+            None,
+        )
+        .is_err());
+        assert!(ElectromagneticPropertyData::new(
+            1.0,
+            1.0,
+            ElectricalConductivity::from_unit::<SiemensPerMeter>(-1.0),
+            None,
+        )
+        .is_err());
+        let em = ElectromagneticPropertyData::new(
+            1.0,
+            1.0,
+            ElectricalConductivity::from_unit::<SiemensPerMeter>(0.0),
+            None,
+        )
+        .unwrap();
         assert!(em.permittivity > 0.0);
     }
 }

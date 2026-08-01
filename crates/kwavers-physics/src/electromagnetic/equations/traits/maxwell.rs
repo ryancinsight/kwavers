@@ -46,7 +46,7 @@ pub trait ElectromagneticWaveEquation: Send + Sync {
         let vals: Vec<f64> = props
             .permeability
             .iter()
-            .zip(props.conductivity.iter())
+            .zip(props.conductivity.samples().iter())
             .map(|(&mu_r, &sigma)| {
                 let mu = mu_r * VACUUM_PERMEABILITY;
                 if sigma > 0.0 {

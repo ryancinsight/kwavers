@@ -14,7 +14,7 @@
 //!
 //! The operator is applied matrix-free through a caller-supplied closure, so
 //! the Krylov basis holds full 3-D fields. Every basis vector and scratch
-//! field is therefore retained in [`Workspace`] across solves: a Newton loop
+//! field is therefore retained in the workspace across solves: a Newton loop
 //! calls this solver once per outer iteration, and reallocating `m + 1` fields
 //! per restart dominated the solve for the default `krylov_dim = 30`.
 //!

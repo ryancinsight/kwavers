@@ -1,5 +1,35 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-52 typed electromagnetic SAR deposition [arch] [major] — done 2026-07-31
+
+- [x] Add the Aequitas `ElectricalConductivity` dimension, quantity, and
+      `SiemensPerMeter` unit; record the dimensional and Eunomia boundary
+      decision in the provider ADR.
+- [x] Type canonical electromagnetic conductivity and its distributed field
+      storage without changing the numerical array representation.
+- [x] Add the Kwavers SAR result and volumetric deposition conversion using
+      `σ·|E|²/ρ`, with validation for shape, finiteness, and positive density.
+- [x] Add value-semantic analytical tests for zero conductivity, uniform
+      fields, heterogeneous material/density, and invalid inputs.
+- [x] Run provider and consumer checks, Nextest, Clippy, doctests, RustDoc,
+      formatting, and raw-public-contract scans; synchronize ADR, backlog,
+      CHANGELOG, and `gap_audit.md`.
+
+Acceptance: public electromagnetic conductivity is Aequitas-typed; SAR and
+volumetric deposition results carry Aequitas dimensions; `σ·|E|²/ρ` is tested
+against its analytical value; raw arrays remain only at provider/formula
+boundaries; no imaginary or complex physical unit is assigned to real SAR.
+
+Evidence: provider Aequitas Nextest passes 45/45 at `edf746d`; Kwavers
+electromagnetic physics Nextest passes 26/26; medium electromagnetic Nextest
+passes 4/4; solver electromagnetic Nextest passes 4/4; the phase-3d trigger
+passes 14/14. Warning-denied Clippy passes for `kwavers-medium`,
+`kwavers-physics`, and `kwavers-solver`; package doctests pass 3/1/4
+executable examples with ignored examples; RustDoc and exact-file rustfmt
+checks pass. The combined doctest command exceeded the shell wall limit after
+reporting zero failures, so package-scoped doctest runs are the authoritative
+evidence.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-51 typed sound-speed field [major] — done 2026-07-31
 
 - [x] Add `SoundSpeedShiftField` with Aequitas `Velocity` iteration and an

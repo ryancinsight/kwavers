@@ -49,11 +49,17 @@ pub mod equations; // Electromagnetic wave equation specifications
                    // pub mod optics; // Moved to physics::optics
 pub mod photoacoustic;
 pub mod plasmonics;
+pub mod sar;
 
 // Re-export physics implementations
 // Optics exports moved to physics::optics
 pub use photoacoustic::GrueneisenModel;
 pub use plasmonics::{MieTheory, NanoparticleArray, PlasmonicEnhancementCalculator};
+pub use sar::{
+    compute_electromagnetic_deposition, compute_specific_absorption_rate,
+    ElectromagneticDeposition, SpecificAbsorptionRateError, SpecificAbsorptionRateField,
+    VolumetricPowerDensityField,
+};
 
 // Re-export electromagnetic equation specifications for convenience
 // Note: PhysicsEMSource and related types are now in domain::source::electromagnetic

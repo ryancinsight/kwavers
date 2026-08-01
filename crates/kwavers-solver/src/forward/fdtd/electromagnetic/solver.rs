@@ -146,6 +146,7 @@ impl ElectromagneticFdtdSolver {
     pub(super) fn conductivity_at(&self, i: usize, j: usize, k: usize) -> f64 {
         self.materials
             .conductivity
+            .samples()
             .get(&[i, j, k])
             .copied()
             .unwrap_or(0.0)

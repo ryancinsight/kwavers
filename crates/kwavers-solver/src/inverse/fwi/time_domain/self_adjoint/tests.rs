@@ -121,7 +121,7 @@ fn self_adjoint_gradient_matches_finite_difference_kappa_one() {
     // misfit and gradient are non-trivial.
     let dir_a = make_dir(0);
     let mut true_model = Array3::from_elem(dims, c0);
-    leto_ops::zip_mut_with(&mut true_model.view_mut(), &dir_a.view(), |c, d| {
+    leto_ops::zip_mut_with(true_model.view_mut(), &dir_a.view(), |c, d| {
         *c += 100.0 * *d
     })
     .expect("invariant: FWI field shapes match");
@@ -154,10 +154,8 @@ fn self_adjoint_gradient_matches_finite_difference_kappa_one() {
     // Objective along an arbitrary direction, evaluated by the SAME forward map.
     let objective_at = |dir: &Array3<f64>, scale: f64| -> f64 {
         let mut perturbed = model.clone();
-        leto_ops::zip_mut_with(&mut perturbed.view_mut(), &dir.view(), |c, d| {
-            *c += scale * *d
-        })
-        .expect("invariant: FWI field shapes match");
+        leto_ops::zip_mut_with(perturbed.view_mut(), &dir.view(), |c, d| *c += scale * *d)
+            .expect("invariant: FWI field shapes match");
         let synth = forward_sensor_only(perturbed.view(), density.view(), &grid, &cfg, &acq, None)
             .expect("fd");
         0.5 * cfg.dt
@@ -241,10 +239,8 @@ fn self_adjoint_gradient_kappa_one_with_sponge() {
         }
     }
     let mut true_model = Array3::from_elem(dims, c0);
-    leto_ops::zip_mut_with(&mut true_model.view_mut(), &dir.view(), |c, d| {
-        *c += 100.0 * *d
-    })
-    .expect("invariant: FWI field shapes match");
+    leto_ops::zip_mut_with(true_model.view_mut(), &dir.view(), |c, d| *c += 100.0 * *d)
+        .expect("invariant: FWI field shapes match");
     let model = Array3::from_elem(dims, c0);
 
     let observed = forward_sensor_only(true_model.view(), density.view(), &grid, &cfg, &acq, damp)
@@ -272,10 +268,8 @@ fn self_adjoint_gradient_kappa_one_with_sponge() {
 
     let objective_at = |scale: f64| -> f64 {
         let mut perturbed = model.clone();
-        leto_ops::zip_mut_with(&mut perturbed.view_mut(), &dir.view(), |c, d| {
-            *c += scale * *d
-        })
-        .expect("invariant: FWI field shapes match");
+        leto_ops::zip_mut_with(perturbed.view_mut(), &dir.view(), |c, d| *c += scale * *d)
+            .expect("invariant: FWI field shapes match");
         let synth = forward_sensor_only(perturbed.view(), density.view(), &grid, &cfg, &acq, damp)
             .expect("fd");
         0.5 * cfg.dt

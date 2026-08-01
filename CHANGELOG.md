@@ -4,6 +4,13 @@
 
 ### Changed
 
+- **Breaking:** Electromagnetic material conductivity now uses Aequitas
+  `ElectricalConductivity`; Kwavers exposes typed volumetric power-density and
+  specific-absorption-rate deposition from `σ·|E|²/ρ`. Dense real Leto arrays
+  remain provider storage boundaries, and future Eunomia complex phasors must
+  reduce to a Hermitian magnitude before this real-power formula. See [ADR
+  091](docs/ADR/091-electromagnetic-sar-quantities.md).
+
 - **Breaking:** Public sound-speed-shift reconstruction images, streaming
   views, batch frames, and OpenPros truth now use a typed
   `SoundSpeedShiftField` with Aequitas `Velocity` iteration and an explicit

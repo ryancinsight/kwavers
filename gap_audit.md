@@ -29,6 +29,35 @@
 
 # Gap Audit
 
+## Closed electromagnetic SAR deposition audit — 2026-07-31
+
+`KWAVERS-AEQ-MET-52` is closed. The remaining named-consumer gap was the
+electromagnetic deposition path: Aequitas now owns `ElectricalConductivity`
+and `SiemensPerMeter` (provider commit `edf746d`), Kwavers canonical material
+data stores conductivity in an Aequitas-tagged field, and the public
+electromagnetic deposition result carries typed volumetric power density and
+specific absorption rate. The implementation validates shape, finiteness,
+conductivity, and positive density before evaluating
+`q = σ·|E|²` and `SAR = q/ρ`.
+
+The current Kwavers electromagnetic field is real-valued. Eunomia compatibility
+therefore requires no imaginary physical unit. A future complex-phasor path
+must take the Hermitian magnitude at the numerical formula boundary; SAR and
+volumetric deposition remain real power metrics. Raw Leto arrays and scalar
+base values remain only at provider storage and numerical formula boundaries.
+See [`Kwavers ADR 091`](docs/ADR/091-electromagnetic-sar-quantities.md) and
+the provider [`Aequitas ADR 0011`](../aequitas/docs/adr/0011-electrical-conductivity-quantity.md).
+
+Verification: Aequitas Nextest 45/45; Kwavers electromagnetic physics 26/26;
+medium electromagnetic 4/4; solver electromagnetic 4/4; phase-3d
+thermal/optical re-open trigger 14/14; warning-denied Clippy for all affected
+packages; package doctests; RustDoc; exact-file rustfmt; and the raw public
+contract scan. The combined three-package doctest command exceeded the shell
+wall limit after reporting zero failures, so the three package-scoped runs are
+the authoritative doctest evidence. The only RustDoc warning is the existing
+private `Workspace` intra-doc link in the GMRES module and is outside this
+metric slice.
+
 ## Closed sound-speed-shift field audit — 2026-07-31
 
 `KWAVERS-AEQ-MET-51` is closed. Public reconstruction images, streaming views,

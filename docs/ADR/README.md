@@ -98,3 +98,4 @@
 | [088](088-sound-speed-curved-array-frequency-quantities.md) | Aequitas curved-array and benchmark frequency quantities | Accepted |
 | [089](089-sound-speed-error-quantities.md) | Aequitas sound-speed error quantities | Accepted |
 | [090](090-sound-speed-field-quantity.md) | Aequitas sound-speed field quantity | Accepted |
+| [091](091-electromagnetic-sar-quantities.md) | Aequitas electromagnetic SAR quantities | Accepted |

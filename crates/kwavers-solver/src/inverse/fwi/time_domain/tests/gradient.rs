@@ -245,7 +245,7 @@ fn test_fwi_adjoint_gradient_is_valid_descent_direction() {
     // "True" model carries the slab; the starting model is homogeneous, so the
     // data misfit — and therefore the gradient — is non-trivial at `m`.
     let mut true_model = Array3::from_elem(dims, c0);
-    leto_ops::zip_mut_with(&mut true_model.view_mut(), &delta_m.view(), |c, d| {
+    leto_ops::zip_mut_with(true_model.view_mut(), &delta_m.view(), |c, d| {
         *c += 100.0 * *d
     })
     .expect("invariant: FWI field shapes match");
@@ -311,10 +311,8 @@ fn test_fwi_adjoint_gradient_is_valid_descent_direction() {
         let central = |eps: f64| -> f64 {
             let objective_at = |scale: f64| -> f64 {
                 let mut perturbed = model.clone();
-                leto_ops::zip_mut_with(&mut perturbed.view_mut(), &dir.view(), |c, d| {
-                    *c += scale * *d
-                })
-                .expect("invariant: FWI field shapes match");
+                leto_ops::zip_mut_with(perturbed.view_mut(), &dir.view(), |c, d| *c += scale * *d)
+                    .expect("invariant: FWI field shapes match");
                 let synth = processor
                     .generate_synthetic_data(&perturbed, &geometry, &grid)
                     .expect("forward at perturbed model");

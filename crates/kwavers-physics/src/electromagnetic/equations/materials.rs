@@ -3,6 +3,8 @@
 //! This module provides utilities for working with spatially-distributed
 //! electromagnetic material properties in physics simulations.
 
+use aequitas::systems::si::dimensions;
+use kwavers_core::units::DimensionedField;
 use leto::{ArrayD, VecStorage};
 
 /// Material distribution utilities for electromagnetic physics
@@ -30,8 +32,10 @@ impl EMMaterialUtils {
                 .expect("valid shape for permittivity"),
             permeability: ArrayD::<f64, VecStorage<f64>>::from_elem(shape, props.permeability)
                 .expect("valid shape for permeability"),
-            conductivity: ArrayD::<f64, VecStorage<f64>>::from_elem(shape, props.conductivity)
-                .expect("valid shape for conductivity"),
+            conductivity: DimensionedField::from_base(
+                ArrayD::<f64, VecStorage<f64>>::from_elem(shape, props.conductivity.into_base())
+                    .expect("valid shape for conductivity"),
+            ),
             relaxation_time: props.relaxation_time.map(|tau| {
                 ArrayD::<f64, VecStorage<f64>>::from_elem(shape, tau)
                     .expect("valid shape for relaxation_time")
@@ -52,7 +56,8 @@ pub struct EMMaterialDistribution {
     /// Relative permeability μ_r (dimensionless)
     pub permeability: ArrayD<f64, VecStorage<f64>>,
     /// Electrical conductivity σ (S/m)
-    pub conductivity: ArrayD<f64, VecStorage<f64>>,
+    pub conductivity:
+        DimensionedField<ArrayD<f64, VecStorage<f64>>, dimensions::ElectricalConductivity>,
     /// Dielectric relaxation time τ (s)
     pub relaxation_time: Option<ArrayD<f64, VecStorage<f64>>>,
 }
@@ -105,7 +110,11 @@ impl EMMaterialDistribution {
         // Extract values at index
         let permittivity = *self.permittivity.get(index).map_err(|e| e.to_string())?;
         let permeability = *self.permeability.get(index).map_err(|e| e.to_string())?;
-        let conductivity = *self.conductivity.get(index).map_err(|e| e.to_string())?;
+        let conductivity = *self
+            .conductivity
+            .samples()
+            .get(index)
+            .map_err(|e| e.to_string())?;
         let relaxation_time = self
             .relaxation_time
             .as_ref()
@@ -116,7 +125,7 @@ impl EMMaterialDistribution {
         kwavers_medium::properties::ElectromagneticPropertyData::new(
             permittivity,
             permeability,
-            conductivity,
+            aequitas::systems::si::quantities::ElectricalConductivity::from_base(conductivity),
             relaxation_time,
         )
     }
@@ -157,7 +166,11 @@ mod tests {
             .permeability
             .iter()
             .all(|&x| (x - 1.0).abs() < 1e-10));
-        assert!(material.conductivity.iter().all(|&x| x.abs() < 1e-10));
+        assert!(material
+            .conductivity
+            .samples()
+            .iter()
+            .all(|&x| x.abs() < 1e-10));
     }
 
     #[test]
@@ -169,6 +182,6 @@ mod tests {
         // Tissue should have higher permittivity than vacuum
         assert!(props.permittivity > 1.0);
         assert_eq!(props.permeability, 1.0); // Non-magnetic
-        assert!(props.conductivity >= 0.0);
+        assert!(props.conductivity.into_base() >= 0.0);
     }
 }
