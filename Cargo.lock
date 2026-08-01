@@ -5593,6 +5593,17 @@ dependencies = [
  "dicom",
  "dicom-pixeldata",
  "ritk-codecs",
+ "ritk-diffusion-scheme",
+ "ritk-spatial",
+]
+
+[[package]]
+name = "ritk-diffusion-scheme"
+version = "0.1.0"
+dependencies = [
+ "aequitas",
+ "ritk-spatial",
+ "thiserror 2.0.18",
 ]
 
 [[package]]
@@ -5806,6 +5817,7 @@ dependencies = [
  "coeus-core 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
  "flate2",
  "ritk-codecs",
+ "ritk-diffusion-scheme",
  "ritk-image",
  "ritk-spatial",
 ]
