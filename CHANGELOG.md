@@ -28,6 +28,9 @@
   zero-gradient fallback paths and complete the Leto mutable-view API cleanup
   required by the exact provider graph.
 
+- [patch] Align the cargo-deny source policy with the locked RITK graph by
+  allowing Gaia and removing the unused cutile-rs source entry.
+
 - [major] [arch] Functional-ultrasound vessel segmentation now requires
   validated Aequitas voxel spacing and returns typed `Length<f64>` geometry
   plus typed `Velocity<f64>` Doppler results. Frequency, sound speed, diameter,

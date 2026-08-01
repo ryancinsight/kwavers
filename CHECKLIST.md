@@ -25,6 +25,9 @@
 - [x] Verify the provider-compatible graph with exact-graph workspace check,
       solver clippy at `-D warnings`, Rustfmt, 422/422 PINN Nextest tests,
       and 4/4 solver doctests.
+- [x] Align `deny.toml` with the locked transitive RITK graph by allowing the
+      Gaia provider and deleting the unused cutile-rs source entry; local
+      `cargo deny check sources` passes.
 
 Acceptance: named public microbubble metrics are Aequitas-typed, provider
 vocabulary owns acceleration and pressure rate, formula/storage boundaries
@@ -35,10 +38,10 @@ Evidence: provider Aequitas Nextest passes 47/47 and the pressure-rate law
 filter passes 1/1; Kwavers physics microbubble Nextest passes 38/38; the
 preceding math slice passes 266/266; the current exact-graph workspace check,
 locked metadata, solver clippy at `-D warnings`, 79-file Rustfmt, PINN Nextest
-422/422, and solver doctests 4/4 pass offline outside the Atlas overlay. The
-workspace check reports only the existing `principal_axis` dead-code warning
-and external provider linker warnings. PR #328 source head `2299c33d3` is
-pending hosted matrix evidence.
+422/422, solver doctests 4/4, and `cargo deny check sources` pass offline
+outside the Atlas overlay. The workspace check reports only the existing
+`principal_axis` dead-code warning and external provider linker warnings. PR
+#328 source head `2bedc44bf` is pending hosted matrix evidence.
 
 ## Owner: Codex — KW-AEQ-MET-04 vessel physical metrics [major] [arch] — done
 

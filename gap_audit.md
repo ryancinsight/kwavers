@@ -107,7 +107,7 @@ metrics. Complex representation is not a new physical dimension.
 See [`Kwavers ADR 092`](docs/ADR/092-therapeutic-microbubble-quantities.md)
 and [`Aequitas ADR 0013`](../aequitas/docs/adr/0013-acceleration-quantity.md).
 
-The current implementation head is `2299c33d3` on PR #328. It propagates
+The current implementation head is `2bedc44bf` on PR #328. It propagates
 fallible Coeus forward and backward errors through PINN networks, residuals,
 autodiff utilities, loss functions, and trainers; zero-gradient fallback paths
 are removed. The same increment completes the Leto mutable-view API cleanup
@@ -136,11 +136,12 @@ Verification: Aequitas provider Nextest previously passed 47/47 and the
 pressure-rate dimensional-law filter passed 1/1; Kwavers physics microbubble
 Nextest passed 38/38; the preceding math slice passed 266/266; the current
 exact-graph workspace check, locked metadata, solver clippy at `-D warnings`,
-79-file Rustfmt, PINN Nextest passed 422/422 with 848 skipped, and solver
-doctests passed 4/4. The workspace check reports only the existing
-`kwavers-analysis::principal_axis` dead-code warning and external provider
-linker warnings. The corrected hosted wheel and benchmark matrix remains the
-integration residual on PR #328.
+79-file Rustfmt, PINN Nextest passed 422/422 with 848 skipped, solver doctests
+passed 4/4, and `cargo deny check sources` passed. The deny source policy now
+admits the transitive RITK Gaia provider and contains no unused cutile-rs entry.
+The workspace check reports only the existing `kwavers-analysis::principal_axis`
+dead-code warning and external provider linker warnings. The corrected hosted
+wheel and benchmark matrix remains the integration residual on PR #328.
 
 ## Review 2026-07-31 — KW-AEQ-MET-04 source-level closure
 

@@ -12,7 +12,7 @@
   backward errors through PINN networks, residuals, autodiff utilities, loss
   functions, and trainers; zero-gradient fallbacks are removed. It also
   completes the Leto mutable-view API cleanup required by the locked graph.
-- Integration: PR #328 is at `2299c33d3`. The checkout action and Python
+- Integration: PR #328 is at `2bedc44bf`. The checkout action and Python
   release workflow pin Atlas `777cf325fad3114299b44a99a48145997f93a5b0`, the
   current Coeus/Leto-compatible provider graph containing Aequitas `8cc90b2`
   and Eunomia `18459875`.
@@ -33,8 +33,10 @@
   introduced.
 - Evidence: provider 47/47 plus pressure-rate 1/1; Kwavers physics
   microbubble 38/38; exact-graph workspace check, locked metadata, solver
-  clippy at `-D warnings`, 79-file Rustfmt, PINN Nextest 422/422, and solver
-  doctests 4/4 pass offline. The workspace check reports only the existing
+  clippy at `-D warnings`, 79-file Rustfmt, PINN Nextest 422/422, solver
+  doctests 4/4, and `cargo deny check sources` pass offline. The source policy
+  admits the transitive RITK Gaia provider and removes an unused cutile-rs
+  entry. The workspace check reports only the existing
   `kwavers-analysis::principal_axis` dead-code warning and external provider
   linker warnings. The corrected hosted wheel and benchmark matrix remains
   pending on PR #328.
