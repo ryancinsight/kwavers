@@ -1,5 +1,22 @@
 # Backlog / Strategy
 
+## KWAVERS-AEQ-MET-33 — Type plasmonics quantities [major] — in progress
+
+- Owner: Codex; scope: `crates/kwavers-physics/src/electromagnetic/plasmonics/**`,
+  the public electromagnetic equation types, Aequitas provider vocabulary,
+  ADR 071, and synchronized metric PM artifacts.
+- Outcome: public plasmonics geometry, wavelength, number-density,
+  cross-section, reciprocal-volume coupling, and complex polarizability use
+  Aequitas quantities; relative dielectric functions and enhancement factors
+  remain dimensionless; Eunomia complex values retain one shared physical
+  unit and reduce only at formula boundaries.
+- Acceptance: all current callers and tests compile without compatibility
+  wrappers; analytical and complex-unit value regressions pass; raw physical
+  public signatures are absent; focused package checks, Clippy, formatting,
+  and documentation gates pass.
+- Re-open trigger: any hosted or exact-graph diagnostic against the current
+  PR head, or a remaining public plasmonics scalar found by the audit.
+
 ## KWAVERS-AEQ-MET-53 — Type therapeutic microbubble quantities [major] — implementation done; integration pending
 
 - Owner: Codex; scope: public therapeutic microbubble state, shell, force,

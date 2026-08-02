@@ -1,5 +1,17 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-33 typed plasmonics quantities [major] — in progress
+
+- [ ] Integrate the public plasmonics Aequitas contract migration across Mie,
+      enhancement, nanoparticle-array, and electromagnetic-equation APIs.
+- [ ] Preserve Eunomia `Complex64` as the real-plus-quadrature scalar for
+      `Polarizability`; do not introduce an imaginary physical unit.
+- [ ] Migrate all current callers and retain scalar extraction only inside
+      dielectric, cross-section, coupling, and array formulas.
+- [ ] Add value-semantic quantity and complex-phasor regressions, then run
+      focused package checks, warning-denied Clippy, rustfmt, and residue scans.
+- [ ] Synchronize ADR 071, `gap_audit.md`, backlog, checklist, and changelog.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-53 typed therapeutic microbubble quantities [major] — implementation done; integration pending
 
 - [x] Type public therapeutic microbubble state, shell, radiation-force,
