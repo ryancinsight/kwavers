@@ -1,5 +1,17 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-54 typed ultrafast scheduler quantities [major] — in progress 2026-08-02
+
+- [ ] Carry Aequitas `Velocity`, `Length`, `Frequency`, `Time`, and `Angle`
+      through the public transmission scheduler and all callers.
+- [ ] Keep unit conversion at the PRF and timing formula boundary; preserve
+      real-valued schedule metrics and state that no imaginary physical unit
+      applies to Eunomia representation data.
+- [ ] Add analytical schedule/timing regressions and ADR 093; synchronize
+      `gap_audit.md`, backlog, checklist, and changelog.
+- [ ] Run the focused locked check, Nextest, Clippy, doctest, Rustdoc, format,
+      and public raw-physical-signature scans.
+
 ## Owner: Codex — Rust package publication [patch] — in progress
 
 - [x] Select the 23 reusable Rust packages and preserve `kwavers-python` and
