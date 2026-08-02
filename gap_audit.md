@@ -9,10 +9,13 @@ volume fractions, and enhancement factors remain dimensionless.
 `Polarizability<eunomia::Complex64>` keeps real and quadrature components under
 one `FaradSquareMeter` unit. No imaginary physical unit or consumer wrapper is
 introduced. Scalar extraction is limited to dielectric interpolation,
-cross-section, coupling, and array formulas. Existing analytical plasmonics
-tests and the provider complex-unit law are the value-semantic acceptance
-oracles; the final result requires package checks, warning-denied Clippy,
-Rustfmt, and a raw-public-signature residue scan.
+cross-section, coupling, and array formulas. Commit `ed4472adf` passes the
+provider complex-unit law (1/1), exact pinned Kwavers package test-target
+check, plasmonics Nextest (10/10), warning-denied package Clippy, doctests
+(8/8 executable), package Rustdoc, targeted Rustfmt, and the raw-public-
+signature residue scan. The ordinary lane check remains blocked only by the
+pre-existing Apollo dual-path lock collision; the disposable pinned graph is
+the authoritative local verification environment.
 
 The CFDrs and Helios re-audits remain clean: no missing Aequitas physical
 metric was found in their current public boundaries. Their complex values are
