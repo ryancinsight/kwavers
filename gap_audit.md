@@ -107,10 +107,14 @@ metrics. Complex representation is not a new physical dimension.
 See [`Kwavers ADR 092`](docs/ADR/092-therapeutic-microbubble-quantities.md)
 and [`Aequitas ADR 0013`](../aequitas/docs/adr/0013-acceleration-quantity.md).
 
-The current implementation head is `1fd08058f` on PR #328. It propagates
+The current implementation head is `0d956071a` on PR #328. It propagates
 fallible Coeus forward and backward errors through PINN networks, residuals,
 autodiff utilities, loss functions, and trainers; zero-gradient fallback paths
-are removed. The same increment completes the Leto mutable-view API cleanup
+are removed. The follow-up also updates every Kwavers example and benchmark
+consumer of the now-fallible PINN forward, trainer-step, and backward APIs;
+the field-surrogate and convergence examples preserve provider errors through
+their executable boundaries, and benchmark failures remain explicit. The same
+increment completes the Leto mutable-view API cleanup
 required by the locked provider graph. The superseded
 `f37896521` wheel matrix failed before compiling Kwavers because the pinned
 Atlas checkout materialized Eunomia before `UnitScalar`; the benchmark smoke
@@ -135,8 +139,14 @@ remains distinct. The hosted validation then found one stale downstream test
 contract in `crates/kwavers/tests/ultrasound_physics_validation.rs`: RITK's
 typed `TemporalSyncResult` had replaced the old tuple and quality aggregate.
 Commit `1fd08058f` updates that test to assert the typed shift, correlation,
-overlap, and residual metrics. The refreshed hosted matrix is the remaining
-integration gate.
+overlap, and residual metrics. The hosted run at superseded head `fc2a5b863`
+then failed its architecture-validation wrapper while compiling stale example
+and benchmark Coeus call sites; the exact diagnostics were `E0609`/`E0308` in
+`field_surrogate_demo.rs` and `pinn_elastic_2d_training.rs`. Commit
+`0d956071a` closes that source gap. The exact disposable graph now passes
+locked `cargo check --examples --features pinn` and
+`cargo check --benches --features pinn`; the refreshed hosted matrix is the
+remaining integration gate.
 
 Advancing the lock to the Atlas-pinned Asclepius, Hyperion, Proteus, and Tyche
 revisions exposed two additional compatibility defects that are now resolved:
