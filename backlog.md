@@ -1,5 +1,12 @@
 # Backlog / Strategy
 
+## Current Aequitas integration slice — 2026-08-02
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KWAVERS-AEQ-INTEGRATION-1 | Integrate the current Aequitas metric closure for therapeutic microbubble and plasmonics contracts on current `main`; harden the public three-dimensional plasmonic coordinate contract and synchronize the audit. | [arch] [major] | in-progress | Codex | `crates/kwavers-physics/src/{acoustics/therapy/microbubble,electromagnetic}`, PM artifacts |
+
+
 ## KW-RELEASE-CRATES-01 — Publish the Rust package closure [patch] — in progress
 
 - Owner: Codex; scope: workspace and package registry metadata, every local
