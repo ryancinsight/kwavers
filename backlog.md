@@ -1,6 +1,6 @@
 # Backlog / Strategy
 
-## KWAVERS-AEQ-MET-33 — Type plasmonics quantities [major] — in progress
+## KWAVERS-AEQ-MET-33 — Type plasmonics quantities [major] — done 2026-08-02
 
 - Owner: Codex; scope: `crates/kwavers-physics/src/electromagnetic/plasmonics/**`,
   the public electromagnetic equation types, Aequitas provider vocabulary,
@@ -14,6 +14,16 @@
   wrappers; analytical and complex-unit value regressions pass; raw physical
   public signatures are absent; focused package checks, Clippy, formatting,
   and documentation gates pass.
+- Implementation: `ed4472adf` migrates the current public Mie, enhancement,
+  nanoparticle-array, and electromagnetic-equation surfaces without a
+  compatibility wrapper. The provider complex-unit law passes at Aequitas
+  `68e5e971-c0cd-44b7-a987-ace602f042a3`; the exact pinned Kwavers graph
+  passes package test-target check and plasmonics Nextest `5e31e58e-838b-49e5-
+  a851-511cc7738bc9` (10/10), warning-denied package Clippy, doctests (8/8
+  executable), package Rustdoc, and targeted Rustfmt. The raw public-signature
+  residue scan is clean. The ordinary lane check remains blocked only by the
+  pre-existing Apollo dual-path lock collision, so exact-graph evidence is the
+  authoritative local check.
 - Re-open trigger: any hosted or exact-graph diagnostic against the current
   PR head, or a remaining public plasmonics scalar found by the audit.
 

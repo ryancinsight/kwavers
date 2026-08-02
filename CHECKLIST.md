@@ -1,16 +1,26 @@
 # Project Checklist
 
-## Owner: Codex — KWAVERS-AEQ-MET-33 typed plasmonics quantities [major] — in progress
+## Owner: Codex — KWAVERS-AEQ-MET-33 typed plasmonics quantities [major] — done 2026-08-02
 
-- [ ] Integrate the public plasmonics Aequitas contract migration across Mie,
+- [x] Integrate the public plasmonics Aequitas contract migration across Mie,
       enhancement, nanoparticle-array, and electromagnetic-equation APIs.
-- [ ] Preserve Eunomia `Complex64` as the real-plus-quadrature scalar for
+- [x] Preserve Eunomia `Complex64` as the real-plus-quadrature scalar for
       `Polarizability`; do not introduce an imaginary physical unit.
-- [ ] Migrate all current callers and retain scalar extraction only inside
+- [x] Migrate all current callers and retain scalar extraction only inside
       dielectric, cross-section, coupling, and array formulas.
-- [ ] Add value-semantic quantity and complex-phasor regressions, then run
+- [x] Add value-semantic quantity and complex-phasor regressions, then run
       focused package checks, warning-denied Clippy, rustfmt, and residue scans.
-- [ ] Synchronize ADR 071, `gap_audit.md`, backlog, checklist, and changelog.
+- [x] Synchronize ADR 071, `gap_audit.md`, backlog, checklist, and changelog.
+
+Acceptance: current public plasmonics quantities are typed, complex
+polarizability retains one physical unit, no imaginary unit or compatibility
+wrapper is introduced, and all callers compile. Met.
+
+Evidence: commit `ed4472adf`; provider complex-unit Nextest 1/1; exact pinned
+Kwavers graph package test-target check; plasmonics Nextest 10/10; package
+Clippy at `-D warnings`; doctests 8/8 executable; package Rustdoc; targeted
+Rustfmt; and raw-public-signature residue scan pass. The ordinary lane check
+is blocked only by the pre-existing Apollo dual-path lock collision.
 
 ## Owner: Codex — KWAVERS-AEQ-MET-53 typed therapeutic microbubble quantities [major] — implementation done; integration pending
 
