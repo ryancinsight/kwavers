@@ -21,7 +21,12 @@ and `docs/ADR/094-ultrafast-plane-diverging-quantities.md`. The exact locked
 package check, Clippy with `-D warnings`, doctests, Rustdoc, targeted Rustfmt,
 `git diff --check`, and typed/complex residue scans pass. Final Nextest run
 `789c6fcc-a55c-49ce-9ff9-d12d6a4f944f` passes 218/218 with one ignored. The
-remaining raw physical metrics in other transducer families are outside this
+installed `cargo-semver-checks 0.48.0` cannot compare this package because
+`kwavers-transducer` is not published to crates.io; it fails before comparison
+with `kwavers-transducer not found in registry`. Hosted API review is the
+remaining public-surface review evidence.
+
+The remaining raw physical metrics in other transducer families are outside this
 bounded slice and remain audit candidates rather than being represented as
 closed.
 

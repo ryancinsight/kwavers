@@ -54,4 +54,7 @@ coordinates, and invalid-index behavior. The exact locked package check,
 Nextest `789c6fcc-a55c-49ce-9ff9-d12d6a4f944f` (218/218, one ignored), package
 Clippy with `-D warnings`, one executable doctest with six ignored, package
 Rustdoc, targeted Rustfmt, `git diff --check`, and typed/complex residue scans
-pass.
+pass. `cargo-semver-checks 0.48.0` cannot compare the package because it is not
+published to crates.io; the command fails before comparison with
+`kwavers-transducer not found in registry`. Hosted API review is the available
+public-surface review evidence.
