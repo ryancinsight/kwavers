@@ -1,10 +1,12 @@
 ## Live plasmonics closure — 2026-08-02
 
-`KWAVERS-AEQ-MET-33` is now implemented on the current Kwavers integration
-head. Public Mie, enhancement, nanoparticle-array, and electromagnetic
-equation APIs use Aequitas `Length`, `NumberDensity`, `Area`, `Frequency`,
-`Polarizability`, and `ReciprocalVolume`; relative dielectric functions,
-volume fractions, and enhancement factors remain dimensionless.
+`KWAVERS-AEQ-MET-33` is implemented on the current Kwavers integration branch.
+Public Mie, enhancement, nanoparticle-array, and electromagnetic equation APIs
+use Aequitas `Length`, `NumberDensity`, `Area`, `Frequency`, `Polarizability`,
+and `ReciprocalVolume`; relative dielectric functions, volume fractions, and
+enhancement factors remain dimensionless. The public near-field coupling
+contract now accepts fixed `[Length; 3]` coordinates, so malformed coordinate
+lengths cannot reach indexed formula inputs.
 
 `Polarizability<eunomia::Complex64>` keeps real and quadrature components under
 one `FaradSquareMeter` unit. No imaginary physical unit or consumer wrapper is
@@ -13,9 +15,13 @@ cross-section, coupling, and array formulas. Commit `ed4472adf` passes the
 provider complex-unit law (1/1), exact pinned Kwavers package test-target
 check, plasmonics Nextest (10/10), warning-denied package Clippy, doctests
 (8/8 executable), package Rustdoc, targeted Rustfmt, and the raw-public-
-signature residue scan. The ordinary lane check remains blocked only by the
-pre-existing Apollo dual-path lock collision; the disposable pinned graph is
-the authoritative local verification environment.
+signature residue scan. Commit `1f08f0a95` closes the audit's only concrete
+consumer correctness residual: the former slice contract could panic on a
+short coordinate input. The committed lock metadata and targeted Rustfmt pass
+against the current branch. Full native compilation remains gated by the
+mutable Atlas overlay's unrelated Moirai `moirai-iter` failure; the prior
+exact pinned graph remains the authoritative behavioral evidence until the
+integration branch's hosted matrix completes.
 
 The CFDrs and Helios re-audits remain clean: no missing Aequitas physical
 metric was found in their current public boundaries. Their complex values are

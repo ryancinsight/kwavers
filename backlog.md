@@ -34,6 +34,9 @@
   wrappers; analytical and complex-unit value regressions pass; raw physical
   public signatures are absent; focused package checks, Clippy, formatting,
   and documentation gates pass.
+- Correctness closure: `PlasmonicEnhancementEquation::near_field_coupling`
+  accepts `[Length; 3]` coordinates, preventing short-slice indexing panics;
+  commit `1f08f0a95`.
 - Implementation: `ed4472adf` migrates the current public Mie, enhancement,
   nanoparticle-array, and electromagnetic-equation surfaces without a
   compatibility wrapper. The provider complex-unit law passes at Aequitas

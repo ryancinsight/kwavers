@@ -21,6 +21,8 @@
       `Polarizability`; do not introduce an imaginary physical unit.
 - [x] Migrate all current callers and retain scalar extraction only inside
       dielectric, cross-section, coupling, and array formulas.
+- [x] Encode near-field coupling coordinates as fixed three-dimensional
+      `[Length; 3]` arrays so malformed public input cannot panic the formula.
 - [x] Add value-semantic quantity and complex-phasor regressions, then run
       focused package checks, warning-denied Clippy, rustfmt, and residue scans.
 - [x] Synchronize ADR 071, `gap_audit.md`, backlog, checklist, and changelog.
