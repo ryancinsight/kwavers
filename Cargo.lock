@@ -2100,26 +2100,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "gaia"
-version = "0.3.0"
-source = "git+https://github.com/ryancinsight/gaia#cde7395c5a49014df45365c86911b08224cf6d13"
-dependencies = [
- "anyhow",
- "eunomia",
- "geometry-predicates",
- "hashbrown 0.15.5",
- "indexmap 2.12.0",
- "leto",
- "melinoe",
- "rand 0.8.7",
- "serde",
- "serde_json",
- "slotmap",
- "thiserror 1.0.69",
- "tracing",
-]
-
-[[package]]
 name = "generator"
 version = "0.8.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3193,7 +3173,7 @@ dependencies = [
  "eunomia",
  "flate2",
  "flume",
- "gaia 0.3.0",
+ "gaia",
  "hephaestus-wgpu",
  "hermes-simd",
  "hyperion",
@@ -3476,7 +3456,7 @@ name = "kwavers-mesh"
 version = "3.0.0"
 dependencies = [
  "eunomia",
- "gaia 0.3.0",
+ "gaia",
  "kwavers-core",
  "kwavers-grid",
  "leto",
@@ -5632,7 +5612,7 @@ dependencies = [
  "dicom-transfer-syntax-registry",
  "dicom-ul",
  "flate2",
- "gaia 0.3.0 (git+https://github.com/ryancinsight/gaia)",
+ "gaia",
  "image",
  "moirai-runtime",
  "reqwest",
@@ -7248,12 +7228,16 @@ dependencies = [
  "cfg_aliases",
  "document-features",
  "hashbrown 0.17.1",
+ "js-sys",
  "log",
  "portable-atomic",
  "profiling",
  "raw-window-handle",
  "smallvec",
  "static_assertions",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
  "wgpu-core 30.0.0",
  "wgpu-hal 30.0.0",
  "wgpu-types 30.0.0",
@@ -7491,10 +7475,12 @@ checksum = "1a9c93c2b35edde326df60ffdee4c0f5864eac3011d6768b70d43f028ad93565"
 dependencies = [
  "bitflags 2.13.1",
  "bytemuck",
+ "js-sys",
  "log",
  "naga-types",
  "raw-window-handle",
  "static_assertions",
+ "web-sys",
 ]
 
 [[package]]
