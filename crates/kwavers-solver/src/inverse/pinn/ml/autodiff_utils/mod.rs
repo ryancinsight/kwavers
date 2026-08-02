@@ -23,6 +23,30 @@
 //! rho d²u/dt² = (lambda + 2mu) grad(div u) + mu laplacian(u)
 //! ```
 
+use coeus_autograd::Var;
+use kwavers_core::error::KwaversResult;
+
+/// Output contract accepted by autodiff finite-difference utilities.
+///
+/// Pure forward closures return `Var`; model-backed closures may return
+/// `KwaversResult<Var>` so backend and input-contract failures remain visible.
+pub trait ForwardOutput<B: coeus_ops::BackendOps<f32> + Default>: Sized {
+    /// Convert the forward result into the solver error contract.
+    fn into_forward_result(self) -> KwaversResult<Var<f32, B>>;
+}
+
+impl<B: coeus_ops::BackendOps<f32> + Default> ForwardOutput<B> for Var<f32, B> {
+    fn into_forward_result(self) -> KwaversResult<Var<f32, B>> {
+        Ok(self)
+    }
+}
+
+impl<B: coeus_ops::BackendOps<f32> + Default> ForwardOutput<B> for KwaversResult<Var<f32, B>> {
+    fn into_forward_result(self) -> KwaversResult<Var<f32, B>> {
+        self
+    }
+}
+
 mod elastic;
 mod second_order;
 mod spatial;

@@ -41,11 +41,13 @@ use coeus_core::MoiraiBackend;
 #[cfg(feature = "pinn")]
 use coeus_tensor::Tensor;
 #[cfg(feature = "pinn")]
-use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_core::error::KwaversError;
 #[cfg(feature = "pinn")]
 use kwavers_solver::inverse::pinn::elastic_2d::training::optimizer::PINNOptimizer;
 #[cfg(feature = "pinn")]
 use kwavers_solver::inverse::pinn::elastic_2d::{Config, ElasticPINN2D};
+#[cfg(feature = "pinn")]
+use std::error::Error;
 #[cfg(feature = "pinn")]
 use std::time::Instant;
 
@@ -148,7 +150,7 @@ fn train_pinn(
     inputs: &[[f64; 3]],
     targets: &[[f64; 2]],
     config: &ExperimentConfig,
-) -> KwaversResult<(ElasticPINN2D<AutodiffBackend>, Vec<f64>)> {
+) -> Result<(ElasticPINN2D<AutodiffBackend>, Vec<f64>), Box<dyn Error>> {
     println!("Starting PINN training...");
     println!("Configuration: {:?}", config);
     println!(
@@ -160,24 +162,23 @@ fn train_pinn(
     let mut loss_history = Vec::new();
 
     if config.hidden_layers.is_empty() {
-        return Err(KwaversError::InvalidInput(
-            "hidden_layers must be non-empty".to_string(),
-        ));
+        return Err(
+            KwaversError::InvalidInput("hidden_layers must be non-empty".to_string()).into(),
+        );
     }
     if config.hidden_layers.contains(&0) {
-        return Err(KwaversError::InvalidInput(
-            "hidden layer sizes must be positive".to_string(),
-        ));
+        return Err(
+            KwaversError::InvalidInput("hidden layer sizes must be positive".to_string()).into(),
+        );
     }
     if !config.learning_rate.is_finite() || config.learning_rate <= 0.0 {
         return Err(KwaversError::InvalidInput(
             "learning_rate must be positive and finite".to_string(),
-        ));
+        )
+        .into());
     }
     if config.epochs == 0 {
-        return Err(KwaversError::InvalidInput(
-            "epochs must be positive".to_string(),
-        ));
+        return Err(KwaversError::InvalidInput("epochs must be positive".to_string()).into());
     }
 
     let mut optimizer = PINNOptimizer::adam(&model, config.learning_rate, 0.0, 0.9, 0.999, 1e-8);
@@ -217,12 +218,12 @@ fn train_pinn(
     let start_time = Instant::now();
 
     for epoch in 0..config.epochs {
-        let predicted = model.forward(&x_tensor, &y_tensor, &t_tensor);
+        let predicted = model.forward(&x_tensor, &y_tensor, &t_tensor)?;
         let diff = sub(&predicted, &target_tensor);
         let sq = mul(&diff, &diff);
         let loss = mean(&sq);
-        loss.backward();
-        optimizer.step(&mut model);
+        loss.backward()?;
+        optimizer.step(&mut model)?;
 
         let loss_value = loss.tensor.as_slice()[0] as f64;
         loss_history.push(loss_value);
@@ -252,7 +253,7 @@ fn h_refinement_study(
     resolutions: &[usize],
     domain_size: f64,
     t_max: f64,
-) -> KwaversResult<Vec<(usize, f64)>> {
+) -> Result<Vec<(usize, f64)>, Box<dyn Error>> {
     println!("\n=== H-Refinement Convergence Study ===");
 
     let mut convergence_data = Vec::new();
@@ -310,7 +311,7 @@ fn h_refinement_study(
 fn validate_gradients(
     model: &ElasticPINN2D<AutodiffBackend>,
     test_point: [f64; 3],
-) -> KwaversResult<()> {
+) -> Result<(), Box<dyn Error>> {
     println!("\n=== Gradient Validation ===");
 
     let eps = 1e-5;
@@ -329,9 +330,9 @@ fn validate_gradients(
         false,
     );
 
-    let output = model.forward(&x, &y, &t);
+    let output = model.forward(&x, &y, &t)?;
     let u_x = mean(&output);
-    u_x.backward();
+    u_x.backward()?;
     let x_grad_tensor = x
         .grad()
         .ok_or_else(|| KwaversError::InvalidInput("missing gradient for x tensor".to_string()))?;
@@ -352,7 +353,7 @@ fn validate_gradients(
         Tensor::from_slice_on(vec![1, 1], [point_plus[2] as f32].as_ref(), &backend),
         false,
     );
-    let output_plus = model.forward(&x_plus, &y_plus, &t_plus);
+    let output_plus = model.forward(&x_plus, &y_plus, &t_plus)?;
     let u_plus = output_plus.tensor.as_slice()[0] as f64;
 
     let mut point_minus = test_point;
@@ -369,7 +370,7 @@ fn validate_gradients(
         Tensor::from_slice_on(vec![1, 1], [point_minus[2] as f32].as_ref(), &backend),
         false,
     );
-    let output_minus = model.forward(&x_minus, &y_minus, &t_minus);
+    let output_minus = model.forward(&x_minus, &y_minus, &t_minus)?;
     let u_minus = output_minus.tensor.as_slice()[0] as f64;
 
     let fd_grad_x = (u_plus - u_minus) / (2.0 * eps);
@@ -386,7 +387,7 @@ fn validate_gradients(
 }
 
 #[cfg(feature = "pinn")]
-fn main() -> KwaversResult<()> {
+fn main() -> Result<(), Box<dyn Error>> {
     println!("=============================================================");
     println!("  PINN Training with Convergence Analysis");
     println!("=============================================================\n");

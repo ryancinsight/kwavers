@@ -13,6 +13,8 @@ use coeus_optim::{Adam, AdamW, Optimizer as CoeusOptimizer, SGD};
 
 use super::types::OptimizerAlgorithm;
 use crate::inverse::pinn::elastic_2d::model::ElasticPINN2D;
+use crate::inverse::pinn::ml::coeus_forward::map_backend;
+use kwavers_core::error::KwaversResult;
 
 /// Stateful optimizer backing every algorithm — `coeus_optim`'s SGD already
 /// carries its own momentum/velocity state, so `SGD` and `SGDMomentum` share
@@ -183,25 +185,31 @@ where
     /// Perform one optimization step, writing the updated parameters back
     /// into `model`. Gradients must already be accumulated on `model`'s
     /// parameters (e.g. via a prior `.backward()` call).
-    pub fn step(&mut self, model: &mut ElasticPINN2D<B>) {
+    ///
+    /// # Errors
+    ///
+    /// Returns a solver error when the selected Coeus optimizer backend
+    /// cannot update its parameters.
+    pub fn step(&mut self, model: &mut ElasticPINN2D<B>) -> KwaversResult<()> {
         match &mut self.backend {
             Backend::Sgd(opt) => {
                 apply_coupled_weight_decay(&opt.params, self.weight_decay);
-                opt.step();
+                map_backend(opt.step(), "elastic PINN SGD step")?;
                 let updated = vars_from_parameters(&opt.params);
                 model.load_parameters(&updated);
             }
             Backend::Adam(opt) => {
                 apply_coupled_weight_decay(&opt.params, self.weight_decay);
-                opt.step();
+                map_backend(opt.step(), "elastic PINN Adam step")?;
                 let updated = vars_from_parameters(&opt.params);
                 model.load_parameters(&updated);
             }
             Backend::AdamW(opt) => {
-                opt.step();
+                map_backend(opt.step(), "elastic PINN AdamW step")?;
                 let updated = vars_from_parameters(&opt.params);
                 model.load_parameters(&updated);
             }
         }
+        Ok(())
     }
 }

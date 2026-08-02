@@ -1,6 +1,7 @@
 [package]
 name = "kwavers-core"
 version = "3.0.0"
+publish = true
 edition = "2021"
 authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
 description = "Foundation layer for kwavers: constants, error types, arena allocation, time and logging utilities"

@@ -52,7 +52,7 @@ pub trait SimulationPhysicsDomain<B: coeus_ops::BackendOps<f32> + coeus_ops::Cpu
         y: &Var<f32, B>,
         t: &Var<f32, B>,
         physics_params: &PinnDomainPhysicsParameters,
-    ) -> Var<f32, B>;
+    ) -> KwaversResult<Var<f32, B>>;
 
     /// Get boundary condition specifications
     fn boundary_conditions(&self) -> Vec<PinnBoundaryConditionSpec>;

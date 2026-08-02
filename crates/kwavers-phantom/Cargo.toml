@@ -1,6 +1,7 @@
 [package]
 name = "kwavers-phantom"
 version = "3.0.0"
+publish = true
 edition = "2021"
 authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
 description = "Clinical tissue-phantom builders for kwavers: blood-oxygenation, layered tissue, tumor, vascular network presets"
@@ -8,10 +9,10 @@ license = "MIT"
 repository = "https://github.com/ryancinsight/kwavers"
 
 [dependencies]
-kwavers-core = { path = "../kwavers-core" }
-kwavers-grid = { path = "../kwavers-grid" }
-kwavers-medium = { path = "../kwavers-medium" }
-kwavers-optics = { path = "../kwavers-optics" }
+kwavers-core = { path = "../kwavers-core", version = "3.0.0" }
+kwavers-grid = { path = "../kwavers-grid", version = "3.0.0" }
+kwavers-medium = { path = "../kwavers-medium", version = "4.0.0" }
+kwavers-optics = { path = "../kwavers-optics", version = "3.0.0" }
 leto = { workspace = true }
 
 [dev-dependencies]

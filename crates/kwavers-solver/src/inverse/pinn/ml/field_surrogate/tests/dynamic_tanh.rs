@@ -96,7 +96,7 @@ fn test_autodiff_gradient_flow_through_dyt() {
     }
     let out = dyt.forward(&input);
     let loss = coeus_autograd::mean(&coeus_autograd::mul(&out, &out));
-    loss.backward();
+    loss.backward().expect("dynamic tanh backward");
 
     for p in dyt.parameters() {
         let grad = p.grad().expect("DyT parameter must receive a gradient");

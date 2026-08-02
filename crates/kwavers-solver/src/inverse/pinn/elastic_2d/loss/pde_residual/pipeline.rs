@@ -69,13 +69,14 @@ where
     }
     let input = coeus_tensor::Tensor::from_slice_on(vec![batch, 3], &combined, &backend);
 
-    let forward_fn = |combined_input: &Var<f32, B>| -> Var<f32, B> {
-        let n = combined_input.tensor.shape()[0];
-        let t = coeus_autograd::slice(combined_input, &[(0, n), (0, 1)]);
-        let x = coeus_autograd::slice(combined_input, &[(0, n), (1, 2)]);
-        let y = coeus_autograd::slice(combined_input, &[(0, n), (2, 3)]);
-        model.forward(&x, &y, &t)
-    };
+    let forward_fn =
+        |combined_input: &Var<f32, B>| -> kwavers_core::error::KwaversResult<Var<f32, B>> {
+            let n = combined_input.tensor.shape()[0];
+            let t = coeus_autograd::slice(combined_input, &[(0, n), (0, 1)]);
+            let x = coeus_autograd::slice(combined_input, &[(0, n), (1, 2)]);
+            let y = coeus_autograd::slice(combined_input, &[(0, n), (2, 3)]);
+            model.forward(&x, &y, &t)
+        };
 
     compute_elastic_wave_residual_2d(forward_fn, &input, rho, lambda, mu)
 }

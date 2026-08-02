@@ -13,25 +13,25 @@ tyche-core = { version = "0.1.0", git = "https://github.com/ryancinsight/tyche" 
 # These repos carry their own [workspace], so Cargo resolves their internal
 # inheritance against THEIR roots — no path scaffolding needed here. SSOT: members
 # inherit via `{ workspace = true }`.
-ritk-core = { path = "../ritk/crates/ritk-core" }
-ritk-io = { path = "../ritk/crates/ritk-io" }
-ritk-image = { path = "../ritk/crates/ritk-image" }
-ritk-spatial = { path = "../ritk/crates/ritk-spatial" }
-ritk-registration = { path = "../ritk/crates/ritk-registration" }
-coeus-core = { path = "../coeus/crates/coeus-core" }
-coeus-tensor = { path = "../coeus/crates/coeus-tensor" }
-coeus-autograd = { path = "../coeus/crates/coeus-autograd" }
-coeus-nn = { path = "../coeus/crates/coeus-nn" }
-coeus-optim = { path = "../coeus/crates/coeus-optim" }
-coeus-ops = { path = "../coeus/crates/coeus-ops" }
-apollo = { path = "../apollo/crates/apollo-fft", package = "apollo-fft" }
-hephaestus-core = { path = "../hephaestus/crates/hephaestus-core", default-features = false }
-hephaestus-wgpu = { path = "../hephaestus/crates/hephaestus-wgpu", default-features = false, features = ["decomposition"] }
-hephaestus-cuda = { path = "../hephaestus/crates/hephaestus-cuda", default-features = false }
-hermes-simd = { path = "../hermes/crates/hermes-simd", default-features = false, features = ["std"] }
-moirai-parallel = { path = "../moirai/moirai-parallel", default-features = false, features = ["parallel"] }
-leto = { git = "https://github.com/ryancinsight/leto.git", default-features = false, features = ["std"] }
-leto-ops = { git = "https://github.com/ryancinsight/leto.git", default-features = false, features = ["std"] }
+ritk-core = { version = "0.9.0", git = "https://github.com/ryancinsight/ritk.git" }
+ritk-io = { version = "0.2.0", git = "https://github.com/ryancinsight/ritk.git" }
+ritk-image = { version = "0.2.0", git = "https://github.com/ryancinsight/ritk.git" }
+ritk-spatial = { version = "0.1.0", git = "https://github.com/ryancinsight/ritk.git" }
+ritk-registration = { version = "0.53.0", git = "https://github.com/ryancinsight/ritk.git" }
+coeus-core = { version = "0.9.0", git = "https://github.com/ryancinsight/Coeus.git" }
+coeus-tensor = { version = "0.9.0", git = "https://github.com/ryancinsight/Coeus.git" }
+coeus-autograd = { version = "0.9.0", git = "https://github.com/ryancinsight/Coeus.git" }
+coeus-nn = { version = "0.9.0", git = "https://github.com/ryancinsight/Coeus.git" }
+coeus-optim = { version = "0.9.0", git = "https://github.com/ryancinsight/Coeus.git" }
+coeus-ops = { version = "0.9.0", git = "https://github.com/ryancinsight/Coeus.git" }
+apollo = { package = "apollo-fft", version = "0.25.0", git = "https://github.com/ryancinsight/apollo.git" }
+hephaestus-core = { version = "0.18.0", git = "https://github.com/ryancinsight/hephaestus.git", default-features = false }
+hephaestus-wgpu = { version = "0.18.0", git = "https://github.com/ryancinsight/hephaestus.git", default-features = false, features = ["decomposition"] }
+hephaestus-cuda = { version = "0.18.0", git = "https://github.com/ryancinsight/hephaestus.git", default-features = false }
+hermes-simd = { version = "0.5.0", git = "https://github.com/ryancinsight/hermes.git", default-features = false, features = ["std"] }
+moirai-parallel = { version = "0.4.0", git = "https://github.com/ryancinsight/Moirai.git", default-features = false, features = ["parallel"] }
+leto = { version = "0.40.0", git = "https://github.com/ryancinsight/leto.git", default-features = false, features = ["std"] }
+leto-ops = { version = "0.40.0", git = "https://github.com/ryancinsight/leto.git", default-features = false, features = ["std"] }
 eunomia = { version = "0.7.0", git = "https://github.com/ryancinsight/eunomia", default-features = false, features = ["std"] }
 pyo3 = { version = "0.29", features = ["extension-module", "abi3-py39"] }
 numpy = "0.22"
@@ -43,7 +43,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 bytemuck = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-gaia = { path = "../gaia", default-features = false }
+gaia = { version = "0.3.0", git = "https://github.com/ryancinsight/gaia.git", default-features = false }
 tempfile = "3.10"
 stats_alloc = "0.1.10"
 proptest = "1.0"
@@ -64,11 +64,11 @@ onnx-ir = "0.20.1"
 openjpeg-sys = "1.0"
 openjp2 = { version = "0.6.1", default-features = false, features = ["std"] }
 jpeg2k = { version = "0.10.1", default-features = false, features = ["openjp2"] }
-consus-hdf5 = { git = "https://github.com/ryancinsight/consus", features = ["std"] }
-consus-core = { git = "https://github.com/ryancinsight/consus", features = ["std"] }
-consus-compression = { git = "https://github.com/ryancinsight/consus", features = ["std", "deflate"] }
-consus-io = { git = "https://github.com/ryancinsight/consus", features = ["std"] }
-consus-npy = { git = "https://github.com/ryancinsight/consus", branch = "codex/consus-npy-provider" }
+consus-hdf5 = { version = "0.1.0", git = "https://github.com/ryancinsight/consus.git", features = ["std"] }
+consus-core = { version = "0.1.0", git = "https://github.com/ryancinsight/consus.git", features = ["std"] }
+consus-compression = { version = "0.1.0", git = "https://github.com/ryancinsight/consus.git", features = ["std", "deflate"] }
+consus-io = { version = "0.1.0", git = "https://github.com/ryancinsight/consus.git", features = ["std"] }
+consus-npy = { version = "0.1.0", git = "https://github.com/ryancinsight/consus.git" }
 rand = "0.9"
 criterion = "0.5"
 
@@ -95,60 +95,3 @@ opt-level = 3
 lto = true
 codegen-units = 1
 strip = true  # Strip symbols for smaller Python wheels
-
-[patch."https://github.com/ryancinsight/leto.git"]
-leto = { path = "../leto/crates/leto" }
-leto-ops = { path = "../leto/crates/leto-ops" }
-
-[patch."https://github.com/ryancinsight/eunomia"]
-eunomia = { path = "../eunomia/crates/eunomia" }
-
-[patch."https://github.com/ryancinsight/eunomia.git"]
-eunomia = { path = "../eunomia/crates/eunomia" }
-
-[patch."https://github.com/ryancinsight/hephaestus.git"]
-hephaestus-core = { path = "../hephaestus/crates/hephaestus-core" }
-hephaestus-wgpu = { path = "../hephaestus/crates/hephaestus-wgpu" }
-hephaestus-cuda = { path = "../hephaestus/crates/hephaestus-cuda" }
-
-[patch."https://github.com/ryancinsight/apollo.git"]
-apollo-fft = { path = "../apollo/crates/apollo-fft" }
-apollo-fft-macros = { path = "../apollo/crates/apollo-fft-macros" }
-apollo-leto-interop = { path = "../apollo/crates/apollo-leto-interop" }
-
-[patch."https://github.com/ryancinsight/Mnemosyne.git"]
-mnemosyne = { path = "../mnemosyne/crates/mnemosyne" }
-mnemosyne-arena = { path = "../mnemosyne/crates/mnemosyne-arena" }
-mnemosyne-backend = { path = "../mnemosyne/crates/mnemosyne-backend" }
-mnemosyne-core = { path = "../mnemosyne/crates/mnemosyne-core" }
-mnemosyne-decay = { path = "../mnemosyne/crates/mnemosyne-decay" }
-mnemosyne-hardened = { path = "../mnemosyne/crates/mnemosyne-hardened" }
-mnemosyne-heap = { path = "../mnemosyne/crates/mnemosyne-heap" }
-mnemosyne-local = { path = "../mnemosyne/crates/mnemosyne-local" }
-mnemosyne-prof = { path = "../mnemosyne/crates/mnemosyne-prof" }
-
-[patch."https://github.com/ryancinsight/Moirai.git"]
-moirai = { path = "../moirai/moirai" }
-moirai-async = { path = "../moirai/moirai-async" }
-moirai-core = { path = "../moirai/moirai-core" }
-moirai-executor = { path = "../moirai/moirai-executor" }
-moirai-gpu = { path = "../moirai/moirai-gpu" }
-moirai-iter = { path = "../moirai/moirai-iter" }
-moirai-pal = { path = "../moirai/moirai-pal" }
-moirai-parallel = { path = "../moirai/moirai-parallel" }
-moirai-scheduler = { path = "../moirai/moirai-scheduler" }
-moirai-sync = { path = "../moirai/moirai-sync" }
-moirai-utils = { path = "../moirai/moirai-utils" }
-
-[patch."https://github.com/ryancinsight/themis"]
-themis = { path = "../themis" }
-
-[patch."https://github.com/ryancinsight/hermes.git"]
-hermes-simd = { path = "../hermes/crates/hermes-simd" }
-hermes-simd-core = { path = "../hermes/crates/hermes-simd-core" }
-
-[patch."https://github.com/ryancinsight/melinoe.git"]
-melinoe = { path = "../melinoe" }
-
-[patch.crates-io]
-melinoe = { path = "../melinoe" }

@@ -189,7 +189,7 @@ where
             coeus_tensor::Tensor::from_slice_on(vec![n, 5], &buf_in, &backend),
             false,
         );
-        let output = network.forward(&input);
+        let output = network.forward(&input)?;
         // Output is `[n, 3]`; already host-resident f32.
         let out_vec = output.tensor.as_slice();
         debug_assert_eq!((out_vec.len()), n * OUTPUT_DIM);

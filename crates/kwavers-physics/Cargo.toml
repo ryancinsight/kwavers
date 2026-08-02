@@ -1,6 +1,7 @@
 [package]
 name = "kwavers-physics"
 version = "3.0.0"
+publish = true
 edition = "2021"
 authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
 description = "Physics for kwavers: nonlinear acoustics, bubble dynamics, thermal, optics, chemistry, elastic waves"
@@ -11,15 +12,15 @@ repository = "https://github.com/ryancinsight/kwavers"
 aequitas = { workspace = true }
 asclepius = { workspace = true }
 consus-npy = { workspace = true }
-kwavers-core = { path = "../kwavers-core" }
-kwavers-math = { path = "../kwavers-math" }
-kwavers-grid = { path = "../kwavers-grid" }
-kwavers-imaging = { path = "../kwavers-imaging", optional = true }
-kwavers-transducer = { path = "../kwavers-transducer" }
-kwavers-receiver = { path = "../kwavers-receiver" }
-kwavers-source = { path = "../kwavers-source" }
-kwavers-medium = { path = "../kwavers-medium" }
-kwavers-field = { path = "../kwavers-field" }
+kwavers-core = { path = "../kwavers-core", version = "3.0.0" }
+kwavers-math = { path = "../kwavers-math", version = "3.0.0" }
+kwavers-grid = { path = "../kwavers-grid", version = "3.0.0" }
+kwavers-imaging = { path = "../kwavers-imaging", optional = true, version = "3.0.0" }
+kwavers-transducer = { path = "../kwavers-transducer", version = "4.1.0" }
+kwavers-receiver = { path = "../kwavers-receiver", version = "3.0.0" }
+kwavers-source = { path = "../kwavers-source", version = "3.0.0" }
+kwavers-medium = { path = "../kwavers-medium", version = "4.0.0" }
+kwavers-field = { path = "../kwavers-field", version = "3.0.0" }
 apollo = { workspace = true }
 serde = { version = "1.0", features = ["derive"] }
 log = "0.4"

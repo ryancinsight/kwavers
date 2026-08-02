@@ -207,11 +207,10 @@ fn test_staggered_divergence_uses_scratch_buffer() {
         .unwrap();
 
     let mut expected = dvz.clone();
-    leto_ops::zip2_mut_with(
-        &mut expected.view_mut(),
-        &dvx.view(),
-        &dvy.view(),
-        |d, dx_v, dy_v| *d += *dx_v + *dy_v,
+    leto_ops::zip_mut_with(
+        expected.view_mut(),
+        (&dvx.view(), &dvy.view()),
+        |d, (dx_v, dy_v)| *d += *dx_v + *dy_v,
     )
     .expect("invariant: divergence field shapes asserted equal");
 

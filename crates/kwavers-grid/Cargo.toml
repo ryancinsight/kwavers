@@ -1,6 +1,7 @@
 [package]
 name = "kwavers-grid"
 version = "3.0.0"
+publish = true
 edition = "2021"
 authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
 description = "Spatial discretization for kwavers: Cartesian/cylindrical grids, coordinates, topology, operators, k-space FFT utilities, and geometric domains"
@@ -9,8 +10,8 @@ repository = "https://github.com/ryancinsight/kwavers"
 
 [dependencies]
 eunomia = { workspace = true }
-kwavers-core = { path = "../kwavers-core" }
-kwavers-math = { path = "../kwavers-math" }
+kwavers-core = { path = "../kwavers-core", version = "3.0.0" }
+kwavers-math = { path = "../kwavers-math", version = "3.0.0" }
 moirai-parallel = { workspace = true }
 leto = { workspace = true }
 tyche-core = { workspace = true }

@@ -4,6 +4,15 @@
 
 ### Changed
 
+- [patch] Complete crates.io metadata and local dependency versions for the 23
+  reusable Rust packages, preserve the Python extension and `xtask` as
+  nonpublishable, and route post-bootstrap updates through the existing OIDC
+  trusted-publishing release workflow.
+
+- [patch] Complete the Leto tuple-producer cutover, propagate fallible Coeus
+  module and optimizer operations through Kwavers errors, and validate RITK's
+  structured temporal-synchronization result at the consumer boundary.
+
 - [major] [arch] Functional-ultrasound vessel segmentation now requires
   validated Aequitas voxel spacing and returns typed `Length<f64>` geometry
   plus typed `Velocity<f64>` Doppler results. Frequency, sound speed, diameter,

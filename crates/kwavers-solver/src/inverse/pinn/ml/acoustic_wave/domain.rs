@@ -8,6 +8,7 @@ use crate::inverse::pinn::ml::physics::{
     PinnDomainPhysicsParameters, PinnPhysicsCouplingType, SimulationPhysicsDomain,
 };
 use coeus_autograd::Var;
+use kwavers_core::error::{KwaversError, KwaversResult};
 use std::collections::HashMap;
 
 /// Acoustic wave physics domain implementation
@@ -88,43 +89,53 @@ where
         y: &Var<f32, B>,
         t: &Var<f32, B>,
         physics_params: &PinnDomainPhysicsParameters,
-    ) -> Var<f32, B> {
-        let backend = B::default();
-        let zeros_like = |v: &Var<f32, B>| {
-            Var::new(
-                coeus_tensor::Tensor::zeros_on(v.tensor.shape(), &backend),
-                false,
-            )
-        };
-
+    ) -> KwaversResult<Var<f32, B>> {
         // First derivatives are not needed by the residual itself (only the
         // second derivatives below and the raw field `p` for the nonlinear
         // term), so this is a plain forward pass.
-        let p = model.forward(x, y, t);
+        let p = model.forward(x, y, t)?;
 
         let x_grad_2 = Var::new(x.tensor.clone(), true);
-        let p_x_for_xx = model.forward(&x_grad_2, y, t);
-        p_x_for_xx.backward();
-        let p_xx = x_grad_2
-            .grad()
-            .map(|g| Var::new(g, false))
-            .unwrap_or_else(|| zeros_like(x));
+        let p_x_for_xx = model.forward(&x_grad_2, y, t)?;
+        p_x_for_xx.backward().map_err(|error| {
+            KwaversError::InternalError(format!("acoustic x derivative: {error}"))
+        })?;
+        let p_xx = Var::new(
+            x_grad_2.grad().ok_or_else(|| {
+                KwaversError::InternalError(
+                    "acoustic x derivative did not produce a gradient".into(),
+                )
+            })?,
+            false,
+        );
 
         let y_grad_2 = Var::new(y.tensor.clone(), true);
-        let p_y_for_yy = model.forward(x, &y_grad_2, t);
-        p_y_for_yy.backward();
-        let p_yy = y_grad_2
-            .grad()
-            .map(|g| Var::new(g, false))
-            .unwrap_or_else(|| zeros_like(y));
+        let p_y_for_yy = model.forward(x, &y_grad_2, t)?;
+        p_y_for_yy.backward().map_err(|error| {
+            KwaversError::InternalError(format!("acoustic y derivative: {error}"))
+        })?;
+        let p_yy = Var::new(
+            y_grad_2.grad().ok_or_else(|| {
+                KwaversError::InternalError(
+                    "acoustic y derivative did not produce a gradient".into(),
+                )
+            })?,
+            false,
+        );
 
         let t_grad_2 = Var::new(t.tensor.clone(), true);
-        let p_t_for_tt = model.forward(x, y, &t_grad_2);
-        p_t_for_tt.backward();
-        let p_tt = t_grad_2
-            .grad()
-            .map(|g| Var::new(g, false))
-            .unwrap_or_else(|| zeros_like(t));
+        let p_t_for_tt = model.forward(x, y, &t_grad_2)?;
+        p_t_for_tt.backward().map_err(|error| {
+            KwaversError::InternalError(format!("acoustic t derivative: {error}"))
+        })?;
+        let p_tt = Var::new(
+            t_grad_2.grad().ok_or_else(|| {
+                KwaversError::InternalError(
+                    "acoustic t derivative did not produce a gradient".into(),
+                )
+            })?,
+            false,
+        );
 
         let laplacian = coeus_autograd::add(&p_xx, &p_yy);
 
@@ -152,12 +163,18 @@ where
                 let coeff = (beta / (rho_0 * (c * c))) as f32;
 
                 let t_grad_for_pt = Var::new(t.tensor.clone(), true);
-                let p_for_pt = model.forward(x, y, &t_grad_for_pt);
-                p_for_pt.backward();
-                let p_t = t_grad_for_pt
-                    .grad()
-                    .map(|g| Var::new(g, false))
-                    .unwrap_or_else(|| zeros_like(t));
+                let p_for_pt = model.forward(x, y, &t_grad_for_pt)?;
+                p_for_pt.backward().map_err(|error| {
+                    KwaversError::InternalError(format!("acoustic nonlinear t derivative: {error}"))
+                })?;
+                let p_t = Var::new(
+                    t_grad_for_pt.grad().ok_or_else(|| {
+                        KwaversError::InternalError(
+                            "acoustic nonlinear t derivative did not produce a gradient".into(),
+                        )
+                    })?,
+                    false,
+                );
 
                 // ∂²(p²)/∂t² = 2*(p_t² + p * p_tt)
                 let p_t_sq = coeus_autograd::mul(&p_t, &p_t);
@@ -169,7 +186,7 @@ where
             }
         }
 
-        residual
+        Ok(residual)
     }
 
     fn boundary_conditions(&self) -> Vec<PinnBoundaryConditionSpec> {

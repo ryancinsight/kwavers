@@ -91,12 +91,10 @@ impl RefinementManager {
                     mark_cell(marker, error_slice[idx], threshold);
                 });
             }
-            _ => {
-                leto_ops::zip_mut_with(&mut markers.view_mut(), &error.view(), |marker, &value| {
-                    mark_cell(marker, value, threshold);
-                })
-                .expect("invariant: markers and error fields share grid shape")
-            }
+            _ => leto_ops::zip_mut_with(markers.view_mut(), &error.view(), |marker, &value| {
+                mark_cell(marker, value, threshold);
+            })
+            .expect("invariant: markers and error fields share grid shape"),
         }
 
         // Add buffer zones around refinement regions

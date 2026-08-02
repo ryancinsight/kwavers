@@ -66,7 +66,7 @@ fn test_residual_gradient_reaches_network_weights() -> KwaversResult<()> {
         &coeus_autograd::sum(&residual_x),
         &coeus_autograd::sum(&residual_y),
     );
-    loss.backward();
+    loss.backward().expect("elastic residual backward");
 
     let any_param_has_nonzero_grad = model.parameters().iter().any(|p| {
         p.grad()

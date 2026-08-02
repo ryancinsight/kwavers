@@ -281,9 +281,9 @@ fn k_mu_gradient_is_valid_descent_direction() {
         }
         let mut mu_p = mu0.clone();
         let mut mu_m = mu0.clone();
-        leto_ops::zip_mut_with(&mut mu_p.view_mut(), &delta.view(), |m, d| *m += eps * *d)
+        leto_ops::zip_mut_with(mu_p.view_mut(), &delta.view(), |m, d| *m += eps * *d)
             .expect("invariant: mu and delta field shapes asserted equal");
-        leto_ops::zip_mut_with(&mut mu_m.view_mut(), &delta.view(), |m, d| *m -= eps * *d)
+        leto_ops::zip_mut_with(mu_m.view_mut(), &delta.view(), |m, d| *m -= eps * *d)
             .expect("invariant: mu and delta field shapes asserted equal");
         let fd = (fwi.forward_misfit(&mu_p).expect("J+") - fwi.forward_misfit(&mu_m).expect("J-"))
             / (2.0 * eps);
@@ -551,9 +551,9 @@ fn k_mu_gradient_3d_is_valid_descent_direction() {
         }
         let mut mu_p = mu0.clone();
         let mut mu_m = mu0.clone();
-        leto_ops::zip_mut_with(&mut mu_p.view_mut(), &delta.view(), |mm, d| *mm += eps * *d)
+        leto_ops::zip_mut_with(mu_p.view_mut(), &delta.view(), |mm, d| *mm += eps * *d)
             .expect("invariant: mu and delta field shapes asserted equal");
-        leto_ops::zip_mut_with(&mut mu_m.view_mut(), &delta.view(), |mm, d| *mm -= eps * *d)
+        leto_ops::zip_mut_with(mu_m.view_mut(), &delta.view(), |mm, d| *mm -= eps * *d)
             .expect("invariant: mu and delta field shapes asserted equal");
         let fd = (fwi.forward_misfit(&mu_p).expect("J+") - fwi.forward_misfit(&mu_m).expect("J-"))
             / (2.0 * eps);

@@ -44,7 +44,7 @@ fn test_time_derivative_matches_analytic() -> kwavers_core::error::KwaversResult
         coeus_autograd::cat(&[&u0, &u1], 1)
     };
 
-    let du0_dt = compute_time_derivative::<B, _>(forward, &input, 0)?;
+    let du0_dt = compute_time_derivative(forward, &input, 0)?;
     let values = du0_dt.as_slice();
 
     // ∂u₀/∂t = 2t: [2×0.2, 2×0.7] = [0.4, 1.4]

@@ -20,6 +20,8 @@ use coeus_autograd::Var;
 use coeus_nn::{Linear, Module};
 use kwavers_core::error::{KwaversError, KwaversResult};
 
+use crate::inverse::pinn::ml::coeus_forward::map_forward;
+
 /// Physics-Informed Neural Network for the 2D elastic wave equation.
 ///
 /// Approximates displacement field u(x, y, t) = [uₓ, uᵧ].
@@ -193,13 +195,24 @@ where
     ///
     /// Concatenates inputs to `[batch, 3]`, applies tanh-activated fully connected layers,
     /// then a linear output projection.
-    pub fn forward(&self, x: &Var<f32, B>, y: &Var<f32, B>, t: &Var<f32, B>) -> Var<f32, B> {
+    pub fn forward(
+        &self,
+        x: &Var<f32, B>,
+        y: &Var<f32, B>,
+        t: &Var<f32, B>,
+    ) -> KwaversResult<Var<f32, B>> {
         let input = coeus_autograd::cat(&[x, y, t], 1);
-        let mut h = coeus_autograd::tanh(&self.input_layer.forward(&input));
+        let mut h = coeus_autograd::tanh(&map_forward(
+            self.input_layer.forward(&input),
+            "elastic PINN input layer",
+        )?);
         for layer in &self.hidden_layers {
-            h = coeus_autograd::tanh(&layer.forward(&h));
+            h = coeus_autograd::tanh(&map_forward(
+                layer.forward(&h),
+                "elastic PINN hidden layer",
+            )?);
         }
-        self.output_layer.forward(&h)
+        map_forward(self.output_layer.forward(&h), "elastic PINN output layer")
     }
 
     /// Return λ as a scalar tensor; uses `fixed_value` when not optimizing.

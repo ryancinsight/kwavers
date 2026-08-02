@@ -253,11 +253,13 @@ where
                 p.zero_grad();
             }
 
-            let residual = domain.pde_residual(model, &x_var, &y_var, &t_var, physics_params);
+            let residual = domain.pde_residual(model, &x_var, &y_var, &t_var, physics_params)?;
             let squared = coeus_autograd::mul(&residual, &residual);
             let pde_loss = coeus_autograd::mean(&squared);
-            pde_loss.backward();
-            *model = optimizer.step(model.clone());
+            pde_loss.backward().map_err(|error| {
+                KwaversError::InternalError(format!("universal PINN backward: {error}"))
+            })?;
+            *model = optimizer.step(model.clone())?;
 
             let loss_value = pde_loss.tensor.as_slice()[0] as f64;
             let mut epoch_losses = HashMap::new();

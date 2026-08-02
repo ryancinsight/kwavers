@@ -37,7 +37,7 @@ fn test_forward_output_shape() {
         coeus_tensor::Tensor::from_slice_on(vec![batch, 5], &data, &backend),
         false,
     );
-    let output = net.forward(&input);
+    let output = net.forward(&input).expect("field surrogate forward");
     assert_eq!(output.tensor.shape(), &[batch, 3]);
 }
 
@@ -54,6 +54,8 @@ fn test_forward_xyz_params_shape() {
             false,
         )
     };
-    let out = net.forward_xyz_params(&mk(0.1), &mk(0.2), &mk(0.3), &mk(0.4), &mk(0.5));
+    let out = net
+        .forward_xyz_params(&mk(0.1), &mk(0.2), &mk(0.3), &mk(0.4), &mk(0.5))
+        .expect("field surrogate parameterized forward");
     assert_eq!(out.tensor.shape(), &[batch, 3]);
 }

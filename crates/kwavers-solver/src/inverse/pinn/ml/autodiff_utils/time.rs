@@ -5,6 +5,8 @@
 
 use coeus_autograd::Var;
 
+use super::ForwardOutput;
+
 /// Compute first-order time derivative ∂u/∂t.
 ///
 /// # Arguments
@@ -24,7 +26,7 @@ use coeus_autograd::Var;
 /// ```
 /// # Errors
 /// - Propagates any [`crate::KwaversError`] returned by called functions.
-pub fn compute_time_derivative<B, F>(
+pub fn compute_time_derivative<B, F, O>(
     forward_fn: F,
     input: &coeus_tensor::Tensor<f32, B>,
     output_component: usize,
@@ -32,16 +34,23 @@ pub fn compute_time_derivative<B, F>(
 where
     B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default,
     B::DeviceBuffer<f32>: coeus_core::CpuAddressableStorage<f32>,
-    F: Fn(&Var<f32, B>) -> Var<f32, B>,
+    F: Fn(&Var<f32, B>) -> O,
+    O: ForwardOutput<B>,
 {
     let batch = input.shape()[0];
     let input_grad = Var::new(input.clone(), true);
-    let output = forward_fn(&input_grad);
+    let output = forward_fn(&input_grad).into_forward_result()?;
     let component = coeus_autograd::slice(
         &output,
         &[(0, batch), (output_component, output_component + 1)],
     );
-    coeus_autograd::sum(&component).backward();
+    coeus_autograd::sum(&component)
+        .backward()
+        .map_err(|error| {
+            kwavers_core::error::KwaversError::InternalError(format!(
+                "time derivative backward: {error}"
+            ))
+        })?;
     let dt_grad = input_grad
         .grad()
         .ok_or_else(|| {
@@ -77,7 +86,7 @@ where
 /// Truncation error O(ε²).
 /// # Errors
 /// - Returns [`Err`] if an internal constraint is violated.
-pub fn compute_second_time_derivative<B, F>(
+pub fn compute_second_time_derivative<B, F, O>(
     forward_fn: F,
     input: &coeus_tensor::Tensor<f32, B>,
     output_component: usize,
@@ -85,7 +94,8 @@ pub fn compute_second_time_derivative<B, F>(
 where
     B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default,
     B::DeviceBuffer<f32>: coeus_core::CpuAddressableStorage<f32>,
-    F: Fn(&Var<f32, B>) -> Var<f32, B>,
+    F: Fn(&Var<f32, B>) -> O,
+    O: ForwardOutput<B>,
 {
     let eps = 1e-4_f32;
     let batch = input.shape()[0];
@@ -101,19 +111,19 @@ where
     let input_plus = coeus_tensor::Tensor::from_slice_on(vec![batch, 3], &plus, &backend);
     let input_minus = coeus_tensor::Tensor::from_slice_on(vec![batch, 3], &minus, &backend);
 
-    let output = forward_fn(&Var::new(input.clone(), false));
+    let output = forward_fn(&Var::new(input.clone(), false)).into_forward_result()?;
     let u_t = coeus_autograd::slice(
         &output,
         &[(0, batch), (output_component, output_component + 1)],
     );
 
-    let output_plus = forward_fn(&Var::new(input_plus, false));
+    let output_plus = forward_fn(&Var::new(input_plus, false)).into_forward_result()?;
     let u_t_plus = coeus_autograd::slice(
         &output_plus,
         &[(0, batch), (output_component, output_component + 1)],
     );
 
-    let output_minus = forward_fn(&Var::new(input_minus, false));
+    let output_minus = forward_fn(&Var::new(input_minus, false)).into_forward_result()?;
     let u_t_minus = coeus_autograd::slice(
         &output_minus,
         &[(0, batch), (output_component, output_component + 1)],

@@ -47,7 +47,7 @@ fn test_forward_pass() -> KwaversResult<()> {
     let z = var_const(&backend, batch_size, 0.5);
     let t = var_const(&backend, batch_size, 0.1);
 
-    let output = network.forward(&x, &y, &z, &t);
+    let output = network.forward(&x, &y, &z, &t)?;
 
     assert_eq!(output.tensor.shape(), &[batch_size, 1]);
     Ok(())
@@ -124,8 +124,8 @@ fn test_network_forward_deterministic() -> KwaversResult<()> {
     let t = var_const(&backend, 3, 1.0);
 
     // Two forward passes with same input should give same output
-    let output1 = network.forward(&x, &y, &z, &t);
-    let output2 = network.forward(&x, &y, &z, &t);
+    let output1 = network.forward(&x, &y, &z, &t)?;
+    let output2 = network.forward(&x, &y, &z, &t)?;
 
     assert_eq!(output1.tensor.as_slice(), output2.tensor.as_slice());
     Ok(())

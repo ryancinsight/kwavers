@@ -1,6 +1,7 @@
 [package]
 name = "kwavers-mesh"
 version = "3.0.0"
+publish = true
 edition = "2021"
 authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
 description = "Tetrahedral mesh infrastructure for kwavers FEM: nodes, connectivity, statistics, quality metrics, gaia bridge"
@@ -8,8 +9,8 @@ license = "MIT"
 repository = "https://github.com/ryancinsight/kwavers"
 
 [dependencies]
-kwavers-core = { path = "../kwavers-core" }
-kwavers-grid = { path = "../kwavers-grid" }
+kwavers-core = { path = "../kwavers-core", version = "3.0.0" }
+kwavers-grid = { path = "../kwavers-grid", version = "3.0.0" }
 leto = { workspace = true }
 gaia = { workspace = true }
 

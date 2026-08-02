@@ -1,5 +1,19 @@
 # Backlog / Strategy
 
+## KW-RELEASE-CRATES-01 — Publish the Rust package closure [patch] — in progress
+
+- Owner: Codex; scope: workspace and package registry metadata, every local
+  dependency version, provider package aliases, `Cargo.lock`, Rust release
+  documentation, and publication of the 23 reusable Rust packages.
+- Non-goals: publishing `kwavers-python` or `xtask`, changing package versions,
+  or changing the independent Python wheel pipeline.
+- Acceptance: locked metadata identifies exactly 23 publishable packages in an
+  acyclic dependency order; each package passes `cargo publish --dry-run` from
+  the exact merged source; repository and hosted gates pass; every version is
+  indexed on crates.io; each crate trusts only
+  `.github/workflows/rust-release.yml` in the `crates-io` environment; and every
+  package version has a matching GitHub Release.
+
 ## KW-AEQ-MET-04 — Type functional-ultrasound vessel metrics [major] [arch] — done
 
 - Owner: Codex; scope: `crates/kwavers-analysis/src/signal_processing/vasculature/**`,

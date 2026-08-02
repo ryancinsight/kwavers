@@ -1,9 +1,11 @@
 [package]
 name = "xtask"
 version = "0.1.0"
+publish = false
+authors = ["Ryan Clanton <ryanclanton@outlook.com>"]
+repository = "https://github.com/ryancinsight/kwavers"
 edition = "2021"
 license = "MIT"
-publish = false
 
 [dependencies]
 anyhow = "1.0"

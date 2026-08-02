@@ -46,12 +46,12 @@ fn test_optimizer_step_compiles() {
 
     let x = var2(&[0.5], &backend);
     let t = var2(&[0.1], &backend);
-    let u = pinn.forward(&x, &t);
+    let u = pinn.forward(&x, &t).expect("1D optimizer forward");
     let loss = coeus_autograd::mean(&coeus_autograd::mul(&u, &u));
 
     zero_grad(&pinn);
-    loss.backward();
-    let _updated_pinn = optimizer.step(pinn);
+    loss.backward().expect("1D optimizer backward");
+    let _updated_pinn = optimizer.step(pinn).expect("PINN 1D optimizer step");
 }
 
 #[test]
@@ -65,7 +65,7 @@ fn test_optimizer_step_updates_parameters() {
 
     let x = var2(&[0.5], &backend);
     let t = var2(&[0.1], &backend);
-    let u_before = pinn.forward(&x, &t);
+    let u_before = pinn.forward(&x, &t).expect("1D optimizer forward");
     let u_before_val = u_before.tensor.as_slice()[0];
 
     let optimizer = SimpleOptimizer::new(0.1);
@@ -75,11 +75,11 @@ fn test_optimizer_step_updates_parameters() {
     let loss = coeus_autograd::mean(&coeus_autograd::mul(&diff, &diff));
 
     zero_grad(&pinn);
-    loss.backward();
+    loss.backward().expect("1D optimizer backward");
 
-    let updated_pinn = optimizer.step(pinn);
+    let updated_pinn = optimizer.step(pinn).expect("PINN 1D optimizer step");
 
-    let u_after = updated_pinn.forward(&x, &t);
+    let u_after = updated_pinn.forward(&x, &t).expect("1D optimizer forward");
     let u_after_val = u_after.tensor.as_slice()[0];
 
     assert!(u_before_val.is_finite());
@@ -104,7 +104,7 @@ fn test_optimizer_multiple_steps() {
     let mut losses = Vec::new();
 
     for _ in 0..5 {
-        let u = pinn.forward(&x, &t);
+        let u = pinn.forward(&x, &t).expect("1D optimizer forward");
         let diff = coeus_autograd::sub(&u, &target);
         let loss = coeus_autograd::mean(&coeus_autograd::mul(&diff, &diff));
 
@@ -112,8 +112,8 @@ fn test_optimizer_multiple_steps() {
         losses.push(loss_val);
 
         zero_grad(&pinn);
-        loss.backward();
-        pinn = optimizer.step(pinn);
+        loss.backward().expect("1D optimizer backward");
+        pinn = optimizer.step(pinn).expect("PINN 1D optimizer step");
     }
 
     for &loss in &losses {
@@ -144,23 +144,27 @@ fn test_optimizer_with_different_learning_rates() {
     let x = var2(&[0.5], &backend);
     let t = var2(&[0.1], &backend);
 
-    let u = pinn.forward(&x, &t);
+    let u = pinn.forward(&x, &t).expect("1D optimizer forward");
     let loss = coeus_autograd::mean(&coeus_autograd::mul(&u, &u));
     zero_grad(&pinn);
-    loss.backward();
-    let pinn = optimizer_small.step(pinn.clone());
+    loss.backward().expect("1D optimizer backward");
+    let pinn = optimizer_small
+        .step(pinn.clone())
+        .expect("PINN 1D optimizer step");
 
-    let u = pinn.forward(&x, &t);
+    let u = pinn.forward(&x, &t).expect("1D optimizer forward");
     let loss = coeus_autograd::mean(&coeus_autograd::mul(&u, &u));
     zero_grad(&pinn);
-    loss.backward();
-    let pinn = optimizer_medium.step(pinn.clone());
+    loss.backward().expect("1D optimizer backward");
+    let pinn = optimizer_medium
+        .step(pinn.clone())
+        .expect("PINN 1D optimizer step");
 
-    let u = pinn.forward(&x, &t);
+    let u = pinn.forward(&x, &t).expect("1D optimizer forward");
     let loss = coeus_autograd::mean(&coeus_autograd::mul(&u, &u));
     zero_grad(&pinn);
-    loss.backward();
-    let _ = optimizer_large.step(pinn);
+    loss.backward().expect("1D optimizer backward");
+    optimizer_large.step(pinn).expect("PINN 1D optimizer step");
 }
 
 #[test]
@@ -176,13 +180,13 @@ fn test_gradient_mapper_preserves_structure() {
 
     let x = var2(&[0.5], &backend);
     let t = var2(&[0.1], &backend);
-    let u = pinn.forward(&x, &t);
+    let u = pinn.forward(&x, &t).expect("1D optimizer forward");
     let loss = coeus_autograd::mean(&coeus_autograd::mul(&u, &u));
     zero_grad(&pinn);
-    loss.backward();
+    loss.backward().expect("1D optimizer backward");
 
-    let updated_pinn = optimizer.step(pinn);
+    let updated_pinn = optimizer.step(pinn).expect("PINN 1D optimizer step");
 
-    let u_after = updated_pinn.forward(&x, &t);
+    let u_after = updated_pinn.forward(&x, &t).expect("1D optimizer forward");
     assert_eq!(u_after.tensor.shape(), &[1, 1]);
 }

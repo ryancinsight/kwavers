@@ -52,7 +52,7 @@
 
 use kwavers_core::error::{KwaversResult, NumericalError};
 use leto::{Array3, ArrayView3};
-use leto_ops::zip2_mut_with;
+use leto_ops::zip_mut_with;
 
 use super::{traversal, DifferentialOperator};
 
@@ -182,7 +182,7 @@ impl CentralDifference2 {
         let field_lo = field
             .slice(&[(0, nx - 2, 1), (0, ny, 1), (0, nz, 1)])
             .unwrap();
-        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| {
+        zip_mut_with(&mut dst_slice, (&field_hi, &field_lo), |r, (&hi, &lo)| {
             *r = (hi - lo) * inv2dx
         })
         .unwrap();
@@ -191,7 +191,7 @@ impl CentralDifference2 {
         let mut dst_slice = dst.slice_mut(&[(0, 1, 1), (0, ny, 1), (0, nz, 1)]).unwrap();
         let field_hi = field.slice(&[(1, 2, 1), (0, ny, 1), (0, nz, 1)]).unwrap();
         let field_lo = field.slice(&[(0, 1, 1), (0, ny, 1), (0, nz, 1)]).unwrap();
-        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| {
+        zip_mut_with(&mut dst_slice, (&field_hi, &field_lo), |r, (&hi, &lo)| {
             *r = (hi - lo) * inv_dx
         })
         .unwrap();
@@ -206,7 +206,7 @@ impl CentralDifference2 {
         let field_lo = field
             .slice(&[(nx - 2, nx - 1, 1), (0, ny, 1), (0, nz, 1)])
             .unwrap();
-        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| {
+        zip_mut_with(&mut dst_slice, (&field_hi, &field_lo), |r, (&hi, &lo)| {
             *r = (hi - lo) * inv_dx
         })
         .unwrap();
@@ -273,7 +273,7 @@ impl CentralDifference2 {
         let field_lo = field
             .slice(&[(0, nx, 1), (0, ny - 2, 1), (0, nz, 1)])
             .unwrap();
-        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| {
+        zip_mut_with(&mut dst_slice, (&field_hi, &field_lo), |r, (&hi, &lo)| {
             *r = (hi - lo) * inv2dy
         })
         .unwrap();
@@ -282,7 +282,7 @@ impl CentralDifference2 {
         let mut dst_slice = dst.slice_mut(&[(0, nx, 1), (0, 1, 1), (0, nz, 1)]).unwrap();
         let field_hi = field.slice(&[(0, nx, 1), (1, 2, 1), (0, nz, 1)]).unwrap();
         let field_lo = field.slice(&[(0, nx, 1), (0, 1, 1), (0, nz, 1)]).unwrap();
-        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| {
+        zip_mut_with(&mut dst_slice, (&field_hi, &field_lo), |r, (&hi, &lo)| {
             *r = (hi - lo) * inv_dy
         })
         .unwrap();
@@ -297,7 +297,7 @@ impl CentralDifference2 {
         let field_lo = field
             .slice(&[(0, nx, 1), (ny - 2, ny - 1, 1), (0, nz, 1)])
             .unwrap();
-        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| {
+        zip_mut_with(&mut dst_slice, (&field_hi, &field_lo), |r, (&hi, &lo)| {
             *r = (hi - lo) * inv_dy
         })
         .unwrap();
@@ -365,7 +365,7 @@ impl CentralDifference2 {
         let field_lo = field
             .slice(&[(0, nx, 1), (0, ny, 1), (0, nz - 2, 1)])
             .unwrap();
-        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| {
+        zip_mut_with(&mut dst_slice, (&field_hi, &field_lo), |r, (&hi, &lo)| {
             *r = (hi - lo) * inv2dz
         })
         .unwrap();
@@ -374,7 +374,7 @@ impl CentralDifference2 {
         let mut dst_slice = dst.slice_mut(&[(0, nx, 1), (0, ny, 1), (0, 1, 1)]).unwrap();
         let field_hi = field.slice(&[(0, nx, 1), (0, ny, 1), (1, 2, 1)]).unwrap();
         let field_lo = field.slice(&[(0, nx, 1), (0, ny, 1), (0, 1, 1)]).unwrap();
-        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| {
+        zip_mut_with(&mut dst_slice, (&field_hi, &field_lo), |r, (&hi, &lo)| {
             *r = (hi - lo) * inv_dz
         })
         .unwrap();
@@ -389,7 +389,7 @@ impl CentralDifference2 {
         let field_lo = field
             .slice(&[(0, nx, 1), (0, ny, 1), (nz - 2, nz - 1, 1)])
             .unwrap();
-        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| {
+        zip_mut_with(&mut dst_slice, (&field_hi, &field_lo), |r, (&hi, &lo)| {
             *r = (hi - lo) * inv_dz
         })
         .unwrap();

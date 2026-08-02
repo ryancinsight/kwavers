@@ -2,6 +2,7 @@ use super::constants::EPS_FD_F32;
 use crate::inverse::pinn::ml::physics::PinnDomainPhysicsParameters;
 use crate::inverse::pinn::ml::PinnWave2D;
 use coeus_autograd::Var;
+use kwavers_core::error::KwaversResult;
 
 // Independent field tensors and physical parameters with no cohesive
 // sub-grouping; bundling would not clarify the call site.
@@ -15,7 +16,7 @@ pub fn wave_propagation_residual<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuB
     mu: f64,
     sigma: f64,
     physics_params: &PinnDomainPhysicsParameters,
-) -> Var<f32, B>
+) -> KwaversResult<Var<f32, B>>
 where
     B::DeviceBuffer<f32>:
         coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
@@ -59,25 +60,25 @@ where
     use coeus_autograd::{add, scalar_add, scalar_mul, scalar_sub, sub};
 
     // --- ∂²Ez/∂x² = (Ez(x+h) − 2·Ez(x) + Ez(x−h)) / h² ---
-    let ez_xp = model.forward(&scalar_add(x, h), y, t);
-    let ez_xm = model.forward(&scalar_sub(x, h), y, t);
-    let ez_0 = model.forward(x, y, t);
+    let ez_xp = model.forward(&scalar_add(x, h), y, t)?;
+    let ez_xm = model.forward(&scalar_sub(x, h), y, t)?;
+    let ez_0 = model.forward(x, y, t)?;
     let d2ez_dx2 = scalar_mul(
         &add(&sub(&ez_xp, &scalar_mul(&ez_0, 2.0)), &ez_xm),
         1.0 / (h * h),
     );
 
     // --- ∂²Ez/∂y² = (Ez(y+h) − 2·Ez(y) + Ez(y−h)) / h² ---
-    let ez_yp = model.forward(x, &scalar_add(y, h), t);
-    let ez_ym = model.forward(x, &scalar_sub(y, h), t);
+    let ez_yp = model.forward(x, &scalar_add(y, h), t)?;
+    let ez_ym = model.forward(x, &scalar_sub(y, h), t)?;
     let d2ez_dy2 = scalar_mul(
         &add(&sub(&ez_yp, &scalar_mul(&ez_0, 2.0)), &ez_ym),
         1.0 / (h * h),
     );
 
     // --- ∂²Ez/∂t² = (Ez(t+h) − 2·Ez(t) + Ez(t−h)) / h² ---
-    let ez_tp = model.forward(x, y, &scalar_add(t, h));
-    let ez_tm = model.forward(x, y, &scalar_sub(t, h));
+    let ez_tp = model.forward(x, y, &scalar_add(t, h))?;
+    let ez_tm = model.forward(x, y, &scalar_sub(t, h))?;
     let d2ez_dt2 = scalar_mul(
         &add(&sub(&ez_tp, &scalar_mul(&ez_0, 2.0)), &ez_tm),
         1.0 / (h * h),
@@ -94,7 +95,7 @@ where
     let wave_term = scalar_mul(&d2ez_dt2, eps_mu);
     let damping_term = scalar_mul(&dez_dt, mu_sigma);
 
-    sub(&add(&wave_term, &damping_term), &laplacian)
+    Ok(sub(&add(&wave_term, &damping_term), &laplacian))
 }
 
 #[cfg(test)]

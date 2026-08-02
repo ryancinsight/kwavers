@@ -25,6 +25,8 @@
 
 use coeus_autograd::Var;
 
+use super::ForwardOutput;
+
 /// 2D gradient component pair `(∂/∂x, ∂/∂y)`, each `[batch, 1]`.
 type GradientPair2D<B> = (Var<f32, B>, Var<f32, B>);
 
@@ -48,7 +50,7 @@ type GradientPair2D<B> = (Var<f32, B>, Var<f32, B>);
 /// Truncation error O(ε²).
 /// # Errors
 /// - Returns [`Err`] if an internal constraint is violated.
-pub fn compute_second_derivative_2d<B, F>(
+pub fn compute_second_derivative_2d<B, F, O>(
     forward_fn: F,
     input: &coeus_tensor::Tensor<f32, B>,
     output_component: usize,
@@ -57,7 +59,8 @@ pub fn compute_second_derivative_2d<B, F>(
 where
     B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default,
     B::DeviceBuffer<f32>: coeus_core::CpuAddressableStorage<f32>,
-    F: Fn(&Var<f32, B>) -> Var<f32, B>,
+    F: Fn(&Var<f32, B>) -> O,
+    O: ForwardOutput<B>,
 {
     if !(1..=2).contains(&spatial_dim) {
         return Err(kwavers_core::error::KwaversError::InvalidInput(format!(
@@ -80,19 +83,19 @@ where
     let input_plus = coeus_tensor::Tensor::from_slice_on(vec![batch, 3], &plus, &backend);
     let input_minus = coeus_tensor::Tensor::from_slice_on(vec![batch, 3], &minus, &backend);
 
-    let output = forward_fn(&Var::new(input.clone(), false));
+    let output = forward_fn(&Var::new(input.clone(), false)).into_forward_result()?;
     let u = coeus_autograd::slice(
         &output,
         &[(0, batch), (output_component, output_component + 1)],
     );
 
-    let output_plus = forward_fn(&Var::new(input_plus, false));
+    let output_plus = forward_fn(&Var::new(input_plus, false)).into_forward_result()?;
     let u_plus = coeus_autograd::slice(
         &output_plus,
         &[(0, batch), (output_component, output_component + 1)],
     );
 
-    let output_minus = forward_fn(&Var::new(input_minus, false));
+    let output_minus = forward_fn(&Var::new(input_minus, false)).into_forward_result()?;
     let u_minus = coeus_autograd::slice(
         &output_minus,
         &[(0, batch), (output_component, output_component + 1)],
@@ -122,7 +125,7 @@ where
 /// ```
 /// # Errors
 /// - Propagates any [`crate::KwaversError`] returned by called functions.
-pub fn compute_laplacian_2d<B, F>(
+pub fn compute_laplacian_2d<B, F, O>(
     forward_fn: F,
     input: &coeus_tensor::Tensor<f32, B>,
     output_component: usize,
@@ -130,7 +133,8 @@ pub fn compute_laplacian_2d<B, F>(
 where
     B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default,
     B::DeviceBuffer<f32>: coeus_core::CpuAddressableStorage<f32>,
-    F: Fn(&Var<f32, B>) -> Var<f32, B> + Clone,
+    F: Fn(&Var<f32, B>) -> O + Clone,
+    O: ForwardOutput<B>,
 {
     let d2u_dx2 = compute_second_derivative_2d(forward_fn.clone(), input, output_component, 1)?;
     let d2u_dy2 = compute_second_derivative_2d(forward_fn, input, output_component, 2)?;
@@ -164,14 +168,15 @@ where
 /// Truncation error O(ε²), matching [`compute_second_derivative_2d`].
 /// # Errors
 /// - Propagates any [`crate::KwaversError`] returned by called functions.
-pub fn compute_gradient_of_divergence_2d<B, F>(
+pub fn compute_gradient_of_divergence_2d<B, F, O>(
     forward_fn: F,
     input: &coeus_tensor::Tensor<f32, B>,
 ) -> Result<GradientPair2D<B>, kwavers_core::error::KwaversError>
 where
     B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default,
     B::DeviceBuffer<f32>: coeus_core::CpuAddressableStorage<f32>,
-    F: Fn(&Var<f32, B>) -> Var<f32, B> + Clone,
+    F: Fn(&Var<f32, B>) -> O + Clone,
+    O: ForwardOutput<B>,
 {
     let d2ux_dx2 = compute_second_derivative_2d(forward_fn.clone(), input, 0, 1)?;
     let d2uy_dy2 = compute_second_derivative_2d(forward_fn.clone(), input, 1, 2)?;
@@ -187,7 +192,7 @@ where
 /// Compute mixed partial ∂²u/∂x∂y for output component `output_component`
 /// via the standard 4-point central finite-difference stencil, entirely on
 /// forward-pass outputs (weight-gradient-preserving, see module docs).
-fn compute_mixed_partial_2d<B, F>(
+fn compute_mixed_partial_2d<B, F, O>(
     forward_fn: F,
     input: &coeus_tensor::Tensor<f32, B>,
     output_component: usize,
@@ -195,7 +200,8 @@ fn compute_mixed_partial_2d<B, F>(
 where
     B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default,
     B::DeviceBuffer<f32>: coeus_core::CpuAddressableStorage<f32>,
-    F: Fn(&Var<f32, B>) -> Var<f32, B>,
+    F: Fn(&Var<f32, B>) -> O,
+    O: ForwardOutput<B>,
 {
     let eps = 1e-4_f32;
     let batch = input.shape()[0];
@@ -217,10 +223,14 @@ where
         )
     };
 
-    let u_pp = component_of(&forward_fn(&Var::new(perturb(eps, eps), false)));
-    let u_pm = component_of(&forward_fn(&Var::new(perturb(eps, -eps), false)));
-    let u_mp = component_of(&forward_fn(&Var::new(perturb(-eps, eps), false)));
-    let u_mm = component_of(&forward_fn(&Var::new(perturb(-eps, -eps), false)));
+    let u_pp =
+        component_of(&forward_fn(&Var::new(perturb(eps, eps), false)).into_forward_result()?);
+    let u_pm =
+        component_of(&forward_fn(&Var::new(perturb(eps, -eps), false)).into_forward_result()?);
+    let u_mp =
+        component_of(&forward_fn(&Var::new(perturb(-eps, eps), false)).into_forward_result()?);
+    let u_mm =
+        component_of(&forward_fn(&Var::new(perturb(-eps, -eps), false)).into_forward_result()?);
 
     let sum_diag = coeus_autograd::add(&u_pp, &u_mm);
     let sum_anti = coeus_autograd::add(&u_pm, &u_mp);

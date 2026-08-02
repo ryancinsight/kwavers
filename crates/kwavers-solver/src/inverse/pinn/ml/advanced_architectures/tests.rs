@@ -33,7 +33,7 @@ fn test_residual_block() {
     let block = ResidualBlock::<TestBackend>::new(10, 20);
 
     let input = var_row(&backend, &[0.1f32; 10]);
-    let output = block.forward(&input);
+    let output = block.forward(&input).expect("residual block forward");
 
     // Should maintain input dimension.
     assert_eq!(output.tensor.shape(), &[1, 10]);
@@ -54,7 +54,7 @@ fn test_resnet_pinn_1d() {
 
     let x = var_row(&backend, &[0.5]);
     let t = var_row(&backend, &[0.1]);
-    let output = pinn.forward(&x, &t);
+    let output = pinn.forward(&x, &t).expect("1D ResNet forward");
 
     assert_eq!(output.tensor.shape(), &[1, 1]);
 }
@@ -75,7 +75,7 @@ fn test_resnet_pinn_2d() {
     let x = var_row(&backend, &[0.5]);
     let y = var_row(&backend, &[0.3]);
     let t = var_row(&backend, &[0.1]);
-    let output = pinn.forward(&x, &y, &t);
+    let output = pinn.forward(&x, &y, &t).expect("2D ResNet forward");
 
     assert_eq!(output.tensor.shape(), &[1, 1]);
 }

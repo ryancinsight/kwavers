@@ -10,6 +10,7 @@ use crate::inverse::pinn::ml::physics::{
     PinnDomainPhysicsParameters, SimulationPhysicsDomain,
 };
 use coeus_autograd::Var;
+use kwavers_core::error::KwaversResult;
 use std::collections::HashMap;
 
 impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> SimulationPhysicsDomain<B>
@@ -29,7 +30,7 @@ where
         y: &Var<f32, B>,
         t: &Var<f32, B>,
         physics_params: &PinnDomainPhysicsParameters,
-    ) -> Var<f32, B> {
+    ) -> KwaversResult<Var<f32, B>> {
         // Get material properties from parameters or defaults
         let eps = physics_params
             .domain_params

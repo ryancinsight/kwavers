@@ -1,6 +1,7 @@
 [package]
 name = "kwavers"
 version = "3.0.0"
+publish = true
 edition = "2021"
 authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
 description = "Ultrasound Simulation Toolbox with Cavitation and Light Physics"
@@ -19,29 +20,29 @@ autobenches = false
 
 # Foundation layer. `channels`+`registration` are always-on (flume/
 # ritk-registration); GPU execution is forwarded from this crate's features.
-kwavers-core = { path = "../kwavers-core", features = ["channels", "registration"] }
-kwavers-optics = { path = "../kwavers-optics" }
-kwavers-math = { path = "../kwavers-math" }
-kwavers-grid = { path = "../kwavers-grid" }
-kwavers-imaging = { path = "../kwavers-imaging" }
-kwavers-transducer = { path = "../kwavers-transducer" }
-kwavers-receiver = { path = "../kwavers-receiver" }
-kwavers-source = { path = "../kwavers-source" }
-kwavers-boundary = { path = "../kwavers-boundary" }
-kwavers-phantom = { path = "../kwavers-phantom" }
-kwavers-medium = { path = "../kwavers-medium" }
-kwavers-field = { path = "../kwavers-field" }
-kwavers-signal = { path = "../kwavers-signal" }
-kwavers-physics = { path = "../kwavers-physics", features = ["clinical-imaging"] }
-kwavers-solver = { path = "../kwavers-solver", features = ["clinical-imaging"] }
-kwavers-analysis = { path = "../kwavers-analysis" }
-kwavers-simulation = { path = "../kwavers-simulation" }
-kwavers-diagnostics = { path = "../kwavers-diagnostics" }
-kwavers-therapy = { path = "../kwavers-therapy" }
+kwavers-core = { path = "../kwavers-core", features = ["channels", "registration"], version = "3.0.0" }
+kwavers-optics = { path = "../kwavers-optics", version = "3.0.0" }
+kwavers-math = { path = "../kwavers-math", version = "3.0.0" }
+kwavers-grid = { path = "../kwavers-grid", version = "3.0.0" }
+kwavers-imaging = { path = "../kwavers-imaging", version = "3.0.0" }
+kwavers-transducer = { path = "../kwavers-transducer", version = "4.1.0" }
+kwavers-receiver = { path = "../kwavers-receiver", version = "3.0.0" }
+kwavers-source = { path = "../kwavers-source", version = "3.0.0" }
+kwavers-boundary = { path = "../kwavers-boundary", version = "3.0.0" }
+kwavers-phantom = { path = "../kwavers-phantom", version = "3.0.0" }
+kwavers-medium = { path = "../kwavers-medium", version = "4.0.0" }
+kwavers-field = { path = "../kwavers-field", version = "3.0.0" }
+kwavers-signal = { path = "../kwavers-signal", version = "3.0.0" }
+kwavers-physics = { path = "../kwavers-physics", features = ["clinical-imaging"], version = "3.0.0" }
+kwavers-solver = { path = "../kwavers-solver", features = ["clinical-imaging"], version = "3.0.0" }
+kwavers-analysis = { path = "../kwavers-analysis", version = "3.0.0" }
+kwavers-simulation = { path = "../kwavers-simulation", version = "3.0.0" }
+kwavers-diagnostics = { path = "../kwavers-diagnostics", version = "3.0.0" }
+kwavers-therapy = { path = "../kwavers-therapy", version = "3.0.0" }
 # Consolidated GPU backend. Regular dep (tiny without the `gpu` feature - just
 # allocation profiling); concrete provider paths activate via `kwavers-gpu`
 # features and remain owned by the leaf GPU crate.
-kwavers-gpu = { path = "../kwavers-gpu" }
+kwavers-gpu = { path = "../kwavers-gpu", version = "5.0.0" }
 
 # Essential numerical computing
 moirai-parallel = { workspace = true }
@@ -115,7 +116,7 @@ aequitas = { workspace = true }
 hyperion = { workspace = true }
 # Enable kwavers-solver's `test-util` feature so cross-crate test helpers
 # (kwavers_solver::plugin::test_support) are available to kwavers' own tests.
-kwavers-solver = { path = "../kwavers-solver", features = ["test-util"] }
+kwavers-solver = { path = "../kwavers-solver", features = ["test-util"], version = "3.0.0" }
 # SIMD dispatch facade — used by the simd_wave_kernel example (Part VI).
 hermes-simd = { workspace = true }
 criterion = "0.4"

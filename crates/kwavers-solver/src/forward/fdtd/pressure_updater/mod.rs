@@ -34,11 +34,10 @@ pub(super) fn accumulate_two_fields(target: &mut Array3<f64>, x: &Array3<f64>, y
             *target_value += x_values[idx] + y_values[idx];
         });
     } else {
-        leto_ops::zip2_mut_with(
-            &mut target.view_mut(),
-            &x.view(),
-            &y.view(),
-            |target_value, x_value, y_value| *target_value += *x_value + *y_value,
+        leto_ops::zip_mut_with(
+            target.view_mut(),
+            (&x.view(), &y.view()),
+            |target_value, (x_value, y_value)| *target_value += *x_value + *y_value,
         )
         .expect("invariant: accumulate_two_fields shapes asserted equal above");
     }

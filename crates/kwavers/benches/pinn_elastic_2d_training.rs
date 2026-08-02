@@ -111,7 +111,9 @@ fn bench_forward_pass(c: &mut Criterion) {
                 let t = uniform_var(&backend, n, 0.0, 1.0);
 
                 b.iter(|| {
-                    let output = model.forward(black_box(&x), black_box(&y), black_box(&t));
+                    let output = model
+                        .forward(black_box(&x), black_box(&y), black_box(&t))
+                        .expect("invariant: benchmark inputs have validated PINN shapes");
                     black_box(output)
                 });
             },
@@ -214,11 +216,14 @@ fn bench_backward_pass(c: &mut Criterion) {
             for p in model.parameters() {
                 p.zero_grad();
             }
-            let output = model.forward(&x, &y, &t);
+            let output = model
+                .forward(&x, &y, &t)
+                .expect("invariant: benchmark inputs have validated PINN shapes");
             let target = zeros_var(&backend, n, 2);
             let diff = coeus_autograd::sub(&output, &target);
             let loss = coeus_autograd::mean(&coeus_autograd::mul(&diff, &diff));
-            loss.backward();
+            loss.backward()
+                .expect("invariant: benchmark loss graph has valid gradients");
             black_box(())
         });
     });
@@ -336,7 +341,9 @@ fn bench_network_scaling(c: &mut Criterion) {
             let t = uniform_var(&backend, n, 0.0, 1.0);
 
             b.iter(|| {
-                let output = model.forward(black_box(&x), black_box(&y), black_box(&t));
+                let output = model
+                    .forward(black_box(&x), black_box(&y), black_box(&t))
+                    .expect("invariant: benchmark inputs have validated PINN shapes");
                 black_box(output)
             });
         });
@@ -379,11 +386,14 @@ fn bench_batch_scaling(c: &mut Criterion) {
                     for p in model.parameters() {
                         p.zero_grad();
                     }
-                    let output = model.forward(&x, &y, &t);
+                    let output = model
+                        .forward(&x, &y, &t)
+                        .expect("invariant: benchmark inputs have validated PINN shapes");
                     let target = zeros_var(&backend, n, 2);
                     let diff = coeus_autograd::sub(&output, &target);
                     let loss = coeus_autograd::mean(&coeus_autograd::mul(&diff, &diff));
-                    loss.backward();
+                    loss.backward()
+                        .expect("invariant: benchmark loss graph has valid gradients");
 
                     black_box(())
                 });

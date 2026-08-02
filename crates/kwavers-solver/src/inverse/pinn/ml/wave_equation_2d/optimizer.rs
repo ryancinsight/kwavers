@@ -1,7 +1,9 @@
 use coeus_autograd::Parameter;
 use coeus_optim::{Optimizer as CoeusOptimizer, SGD};
+use kwavers_core::error::KwaversResult;
 
 use super::model::PinnWave2D;
+use crate::inverse::pinn::ml::coeus_forward::map_backend;
 
 /// Simple gradient descent optimizer for 2D PINN training
 #[derive(Debug)]
@@ -22,10 +24,15 @@ impl SimpleOptimizer2D {
     /// (`coeus_tensor::Tensor`'s storage is copy-on-write, so a clone taken
     /// via `parameters()` detaches from the network on first mutation);
     /// `load_parameters` writes the updated values back into `pinn`'s layers.
+    ///
+    /// # Errors
+    ///
+    /// Returns a solver error when the Coeus SGD backend cannot update its
+    /// parameters.
     pub fn step<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
         &self,
         mut pinn: PinnWave2D<B>,
-    ) -> PinnWave2D<B>
+    ) -> KwaversResult<PinnWave2D<B>>
     where
         B::DeviceBuffer<f32>:
             coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
@@ -37,13 +44,13 @@ impl SimpleOptimizer2D {
             .map(|(index, var)| Parameter::new(var, format!("p{index}")))
             .collect();
         let mut opt = SGD::new(parameters, self.learning_rate, 0.0);
-        opt.step();
+        map_backend(opt.step(), "PINN 2D SGD step")?;
         let updated_parameters = opt
             .params
             .iter()
             .map(|parameter| parameter.var.clone())
             .collect::<Vec<_>>();
         pinn.load_parameters(&updated_parameters);
-        pinn
+        Ok(pinn)
     }
 }

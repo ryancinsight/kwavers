@@ -25,6 +25,7 @@ use coeus_nn::{Linear, Module};
 use kwavers_core::error::{KwaversError, KwaversResult};
 
 use super::super::config::PinnConfig3D;
+use crate::inverse::pinn::ml::coeus_forward::map_forward;
 
 /// Neural network for 3D wave equation PINN
 ///
@@ -145,15 +146,21 @@ where
         y: &Var<f32, B>,
         z: &Var<f32, B>,
         t: &Var<f32, B>,
-    ) -> Var<f32, B> {
+    ) -> KwaversResult<Var<f32, B>> {
         let input = coeus_autograd::cat(&[x, y, z, t], 1);
-        let mut output = coeus_autograd::tanh(&self.input_layer.forward(&input));
+        let mut output = coeus_autograd::tanh(&map_forward(
+            self.input_layer.forward(&input),
+            "PINN 3D input layer",
+        )?);
 
         for layer in &self.hidden_layers {
-            output = coeus_autograd::tanh(&layer.forward(&output));
+            output = coeus_autograd::tanh(&map_forward(
+                layer.forward(&output),
+                "PINN 3D hidden layer",
+            )?);
         }
 
-        self.output_layer.forward(&output)
+        map_forward(self.output_layer.forward(&output), "PINN 3D output layer")
     }
 
     /// Compute PDE residual for the wave equation using finite differences
@@ -176,7 +183,7 @@ where
     {
         let eps = 1e-3_f32;
 
-        let u = self.forward(x, y, z, t);
+        let u = self.forward(x, y, z, t)?;
 
         let x_plus = coeus_autograd::scalar_add(x, eps);
         let x_minus = coeus_autograd::scalar_add(x, -eps);
@@ -189,29 +196,29 @@ where
 
         let two_u = coeus_autograd::scalar_mul(&u, 2.0);
 
-        let u_x_plus = self.forward(&x_plus, y, z, t);
-        let u_x_minus = self.forward(&x_minus, y, z, t);
+        let u_x_plus = self.forward(&x_plus, y, z, t)?;
+        let u_x_minus = self.forward(&x_minus, y, z, t)?;
         let u_xx = coeus_autograd::scalar_mul(
             &coeus_autograd::sub(&coeus_autograd::add(&u_x_plus, &u_x_minus), &two_u),
             1.0 / (eps * eps),
         );
 
-        let u_y_plus = self.forward(x, &y_plus, z, t);
-        let u_y_minus = self.forward(x, &y_minus, z, t);
+        let u_y_plus = self.forward(x, &y_plus, z, t)?;
+        let u_y_minus = self.forward(x, &y_minus, z, t)?;
         let u_yy = coeus_autograd::scalar_mul(
             &coeus_autograd::sub(&coeus_autograd::add(&u_y_plus, &u_y_minus), &two_u),
             1.0 / (eps * eps),
         );
 
-        let u_z_plus = self.forward(x, y, &z_plus, t);
-        let u_z_minus = self.forward(x, y, &z_minus, t);
+        let u_z_plus = self.forward(x, y, &z_plus, t)?;
+        let u_z_minus = self.forward(x, y, &z_minus, t)?;
         let u_zz = coeus_autograd::scalar_mul(
             &coeus_autograd::sub(&coeus_autograd::add(&u_z_plus, &u_z_minus), &two_u),
             1.0 / (eps * eps),
         );
 
-        let u_t_plus = self.forward(x, y, z, &t_plus);
-        let u_t_minus = self.forward(x, y, z, &t_minus);
+        let u_t_plus = self.forward(x, y, z, &t_plus)?;
+        let u_t_minus = self.forward(x, y, z, &t_minus)?;
         let u_tt = coeus_autograd::scalar_mul(
             &coeus_autograd::sub(&coeus_autograd::add(&u_t_plus, &u_t_minus), &two_u),
             1.0 / (eps * eps),

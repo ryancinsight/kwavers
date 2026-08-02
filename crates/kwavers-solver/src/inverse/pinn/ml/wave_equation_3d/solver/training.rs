@@ -147,13 +147,15 @@ where
             metrics.epochs_completed = epoch + 1;
 
             // Backward pass to compute gradients
-            total_loss.backward();
+            total_loss.backward().map_err(|error| {
+                KwaversError::InternalError(format!("3D wave PINN backward: {error}"))
+            })?;
 
             // Update learning rate in optimizer (adaptive LR)
             self.optimizer = SimpleOptimizer3D::new(current_lr);
 
             // Optimizer step with accumulated gradients
-            self.pinn = self.optimizer.step(self.pinn.clone());
+            self.pinn = self.optimizer.step(self.pinn.clone())?;
 
             // Adaptive learning rate: decay if no improvement
             if total_val < best_total_loss * 0.999 {

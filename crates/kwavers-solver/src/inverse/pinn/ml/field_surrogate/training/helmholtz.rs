@@ -1,4 +1,5 @@
 use coeus_autograd::Var;
+use kwavers_core::error::KwaversResult;
 
 use super::super::network::ParamFieldPINNNetwork;
 use super::types::TrainingBatch;
@@ -28,14 +29,14 @@ pub(super) fn helmholtz_residual_tensor<
     batch: &TrainingBatch<B>,
     eps_m: f32,
     c0: f32,
-) -> Var<f32, B>
+) -> KwaversResult<Var<f32, B>>
 where
     B::DeviceBuffer<f32>:
         coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
 {
     let backend = B::default();
     let n = batch.inputs.tensor.shape()[0];
-    let center_out = network.forward(&batch.inputs);
+    let center_out = network.forward(&batch.inputs)?;
     let p_center = coeus_autograd::reshape(
         &coeus_autograd::slice(&center_out, &[(0, n), (1, 2)]),
         vec![n],
@@ -66,12 +67,12 @@ where
     let pick_pmax = |v: &Var<f32, B>| -> Var<f32, B> {
         coeus_autograd::reshape(&coeus_autograd::slice(v, &[(0, n), (1, 2)]), vec![n])
     };
-    let p_xp = pick_pmax(&network.forward(&plus_x));
-    let p_xm = pick_pmax(&network.forward(&minus_x));
-    let p_yp = pick_pmax(&network.forward(&plus_y));
-    let p_ym = pick_pmax(&network.forward(&minus_y));
-    let p_zp = pick_pmax(&network.forward(&plus_z));
-    let p_zm = pick_pmax(&network.forward(&minus_z));
+    let p_xp = pick_pmax(&network.forward(&plus_x)?);
+    let p_xm = pick_pmax(&network.forward(&minus_x)?);
+    let p_yp = pick_pmax(&network.forward(&plus_y)?);
+    let p_ym = pick_pmax(&network.forward(&minus_y)?);
+    let p_zp = pick_pmax(&network.forward(&plus_z)?);
+    let p_zm = pick_pmax(&network.forward(&minus_z)?);
 
     // Sum of finite-difference second-difference contributions across
     // all three axes (still dimensionless, equal to eps_m² · ∇²p̂).
@@ -93,5 +94,8 @@ where
     // Dimensionless residual: lap_sum / (k·eps_m)² + p̂.
     // Small floor on (k·eps_m)² prevents divide-by-zero when f0 = 0.
     let safe_k_eps_sq = coeus_autograd::scalar_add(&k_eps_sq, 1.0e-12);
-    coeus_autograd::add(&coeus_autograd::div(&lap_sum, &safe_k_eps_sq), &p_center)
+    Ok(coeus_autograd::add(
+        &coeus_autograd::div(&lap_sum, &safe_k_eps_sq),
+        &p_center,
+    ))
 }

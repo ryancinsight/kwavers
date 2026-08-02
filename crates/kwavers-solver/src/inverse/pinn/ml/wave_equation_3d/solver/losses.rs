@@ -79,7 +79,7 @@ where
         loss_scales: &mut LossScales,
     ) -> KwaversResult<PhysicsLossComponents3D<B>> {
         // Data loss: MSE between predictions and training data
-        let u_pred = self.pinn.forward(x_data, y_data, z_data, t_data);
+        let u_pred = self.pinn.forward(x_data, y_data, z_data, t_data)?;
         let data_diff = coeus_autograd::sub(&u_pred, u_data);
         let data_loss_raw = coeus_autograd::mean(&coeus_autograd::mul(&data_diff, &data_diff));
 
@@ -92,15 +92,15 @@ where
         let pde_loss_raw = coeus_autograd::mean(&coeus_autograd::mul(&pde_residual, &pde_residual));
 
         // Boundary condition loss: sample the 6 domain faces and enforce Dirichlet u=0.
-        let bc_loss_raw = self.compute_bc_loss_internal();
+        let bc_loss_raw = self.compute_bc_loss_internal()?;
 
         // Initial condition loss: displacement + optional velocity at t=0.
-        let u_ic_pred = self.pinn.forward(x_ic, y_ic, z_ic, t_ic);
+        let u_ic_pred = self.pinn.forward(x_ic, y_ic, z_ic, t_ic)?;
         let ic_disp_diff = coeus_autograd::sub(&u_ic_pred, u_ic);
         let ic_disp_loss = coeus_autograd::mean(&coeus_autograd::mul(&ic_disp_diff, &ic_disp_diff));
 
         let ic_loss_raw = if let Some(v_ic_var) = v_ic {
-            let du_dt = self.compute_temporal_derivative_at_t0(x_ic, y_ic, z_ic, t_ic);
+            let du_dt = self.compute_temporal_derivative_at_t0(x_ic, y_ic, z_ic, t_ic)?;
             let ic_vel_diff = coeus_autograd::sub(&du_dt, v_ic_var);
             let ic_vel_loss =
                 coeus_autograd::mean(&coeus_autograd::mul(&ic_vel_diff, &ic_vel_diff));
@@ -114,10 +114,10 @@ where
         };
 
         // Extract scalar values for scale update
-        let data_loss_val = Self::extract_scalar(&data_loss_raw).unwrap_or(1.0);
-        let pde_loss_val = Self::extract_scalar(&pde_loss_raw).unwrap_or(1.0);
-        let bc_loss_val = Self::extract_scalar(&bc_loss_raw).unwrap_or(1.0);
-        let ic_loss_val = Self::extract_scalar(&ic_loss_raw).unwrap_or(1.0);
+        let data_loss_val = Self::extract_scalar(&data_loss_raw)?;
+        let pde_loss_val = Self::extract_scalar(&pde_loss_raw)?;
+        let bc_loss_val = Self::extract_scalar(&bc_loss_raw)?;
+        let ic_loss_val = Self::extract_scalar(&ic_loss_raw)?;
 
         loss_scales.update(data_loss_val, pde_loss_val, bc_loss_val, ic_loss_val);
 
@@ -154,7 +154,7 @@ where
     /// Compute boundary condition loss for rectangular domains
     ///
     /// Samples points on the 6 boundary faces and evaluates Dirichlet BC (u=0) violations.
-    pub(crate) fn compute_bc_loss_internal(&self) -> Var<f32, B> {
+    pub(crate) fn compute_bc_loss_internal(&self) -> KwaversResult<Var<f32, B>> {
         let (x_min, x_max, y_min, y_max, z_min, z_max) = self.geometry.bounding_box();
 
         let n_bc_per_face = 100;
@@ -226,10 +226,10 @@ where
         let t_bc = mk(&bc_points_t);
 
         // Evaluate PINN at boundary points
-        let u_bc = self.pinn.forward(&x_bc, &y_bc, &z_bc, &t_bc);
+        let u_bc = self.pinn.forward(&x_bc, &y_bc, &z_bc, &t_bc)?;
 
         // Dirichlet BC: u = 0 on boundary
-        coeus_autograd::mean(&coeus_autograd::mul(&u_bc, &u_bc))
+        Ok(coeus_autograd::mean(&coeus_autograd::mul(&u_bc, &u_bc)))
     }
 }
 

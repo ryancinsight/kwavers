@@ -10,6 +10,7 @@ use coeus_autograd::Var;
 use super::SonoluminescenceCoupledDomain;
 use crate::inverse::pinn::ml::physics::PinnDomainPhysicsParameters;
 use kwavers_core::constants::fundamental::{VACUUM_PERMEABILITY, VACUUM_PERMITTIVITY};
+use kwavers_core::error::{KwaversError, KwaversResult};
 
 impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>
     SonoluminescenceCoupledDomain<B>
@@ -76,52 +77,60 @@ where
         y: &Var<f32, B>,
         t: &Var<f32, B>,
         physics_params: &PinnDomainPhysicsParameters,
-    ) -> Var<f32, B> {
-        let backend = B::default();
-        let zeros_like = |v: &Var<f32, B>| {
-            Var::new(
-                coeus_tensor::Tensor::zeros_on(v.tensor.shape(), &backend),
-                false,
-            )
-        };
-
+    ) -> KwaversResult<Var<f32, B>> {
         let x_grad = Var::new(x.tensor.clone(), true);
         let y_grad = Var::new(y.tensor.clone(), true);
         let t_grad = Var::new(t.tensor.clone(), true);
 
-        let electric_field = model.forward(&x_grad, &y_grad, &t_grad);
-        electric_field.backward();
-        let e_dx = x_grad
-            .grad()
-            .map(|g| Var::new(g, false))
-            .unwrap_or_else(|| zeros_like(x));
-        let e_dy = y_grad
-            .grad()
-            .map(|g| Var::new(g, false))
-            .unwrap_or_else(|| zeros_like(y));
-        let e_dt = t_grad
-            .grad()
-            .map(|g| Var::new(g, false))
-            .unwrap_or_else(|| zeros_like(t));
+        let electric_field = model.forward(&x_grad, &y_grad, &t_grad)?;
+        electric_field.backward().map_err(|error| {
+            KwaversError::InternalError(format!("sonoluminescence electric derivative: {error}"))
+        })?;
+        let e_dx = Var::new(
+            x_grad.grad().ok_or_else(|| {
+                KwaversError::InternalError("sonoluminescence electric x gradient missing".into())
+            })?,
+            false,
+        );
+        let e_dy = Var::new(
+            y_grad.grad().ok_or_else(|| {
+                KwaversError::InternalError("sonoluminescence electric y gradient missing".into())
+            })?,
+            false,
+        );
+        let e_dt = Var::new(
+            t_grad.grad().ok_or_else(|| {
+                KwaversError::InternalError("sonoluminescence electric t gradient missing".into())
+            })?,
+            false,
+        );
 
         let x_grad_2 = Var::new(x.tensor.clone(), true);
         let y_grad_2 = Var::new(y.tensor.clone(), true);
         let t_grad_2 = Var::new(t.tensor.clone(), true);
 
-        let magnetic_field_2 = model.forward(&x_grad_2, &y_grad_2, &t_grad_2);
-        magnetic_field_2.backward();
-        let b_dx = x_grad_2
-            .grad()
-            .map(|g| Var::new(g, false))
-            .unwrap_or_else(|| zeros_like(x));
-        let b_dy = y_grad_2
-            .grad()
-            .map(|g| Var::new(g, false))
-            .unwrap_or_else(|| zeros_like(y));
-        let b_dt = t_grad_2
-            .grad()
-            .map(|g| Var::new(g, false))
-            .unwrap_or_else(|| zeros_like(t));
+        let magnetic_field_2 = model.forward(&x_grad_2, &y_grad_2, &t_grad_2)?;
+        magnetic_field_2.backward().map_err(|error| {
+            KwaversError::InternalError(format!("sonoluminescence magnetic derivative: {error}"))
+        })?;
+        let b_dx = Var::new(
+            x_grad_2.grad().ok_or_else(|| {
+                KwaversError::InternalError("sonoluminescence magnetic x gradient missing".into())
+            })?,
+            false,
+        );
+        let b_dy = Var::new(
+            y_grad_2.grad().ok_or_else(|| {
+                KwaversError::InternalError("sonoluminescence magnetic y gradient missing".into())
+            })?,
+            false,
+        );
+        let b_dt = Var::new(
+            t_grad_2.grad().ok_or_else(|| {
+                KwaversError::InternalError("sonoluminescence magnetic t gradient missing".into())
+            })?,
+            false,
+        );
 
         // Physical constants (SI) from SSOT (cast to f32 for tensor arithmetic).
         let mu_0_f32 = VACUUM_PERMEABILITY as f32;
@@ -146,6 +155,6 @@ where
             ),
         );
 
-        coeus_autograd::add(&ampere_residual, &faraday_residual)
+        Ok(coeus_autograd::add(&ampere_residual, &faraday_residual))
     }
 }

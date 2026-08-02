@@ -1,6 +1,7 @@
 [package]
 name = "kwavers-optics"
 version = "3.0.0"
+publish = true
 edition = "2021"
 authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
 description = "Optical-material reference data for kwavers: chromophore extinction spectra (hemoglobin, etc.)"

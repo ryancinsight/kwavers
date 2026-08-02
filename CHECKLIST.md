@@ -1,5 +1,19 @@
 # Project Checklist
 
+## Owner: Codex — Rust package publication [patch] — in progress
+
+- [x] Select the 23 reusable Rust packages and preserve `kwavers-python` and
+      `xtask` as explicitly nonpublishable.
+- [x] Complete package metadata and version every local path dependency.
+- [x] Resolve provider dependencies through their registry package identities
+      while retaining Git plus version sources for standalone development.
+- [x] Confirm the local publication graph is acyclic and dependency ordered.
+- [x] Refresh the exact standalone lockfile and pass format, focused lint/test,
+      documentation, and per-package archive verification.
+- [ ] Merge hosted gates and publish all 23 packages in dependency order.
+- [ ] Verify crates.io indexing, trusted-publishing-only enforcement, and a
+      matching GitHub Release for every package version.
+
 ## Owner: Codex — KW-AEQ-MET-04 vessel physical metrics [major] [arch] — done
 
 - [x] Add validated Aequitas voxel spacing to vessel segmentation and preserve

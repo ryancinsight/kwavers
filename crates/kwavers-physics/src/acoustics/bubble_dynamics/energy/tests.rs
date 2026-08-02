@@ -4,8 +4,8 @@ use super::*;
 use crate::acoustics::bubble_dynamics::bubble_state::BubbleState;
 use crate::acoustics::bubble_dynamics::BubbleParameters;
 use aequitas::systems::si::{
-    quantities::{Power, Pressure},
-    units::{Pascal, Watt},
+    quantities::{Power, Pressure, SpecificHeatCapacity, Time},
+    units::{JoulePerKilogramKelvin, Kelvin, Pascal, Second, Watt},
 };
 use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 
@@ -39,6 +39,26 @@ fn test_heat_transfer_calculation() {
     // Heat rate is positive when bubble is hotter than liquid (heat flows out)
     // This is the standard convention: positive = heat out of bubble
     assert!(heat_rate.in_unit::<Watt>() > 0.0);
+}
+
+#[test]
+fn energy_update_adds_temperature_difference() {
+    let params = BubbleParameters::default();
+    let calculator = EnergyBalanceCalculator::new(&params);
+    let mut state = BubbleState::new(&params);
+    state.temperature = 400.0;
+
+    let heat_capacity = SpecificHeatCapacity::from_unit::<JoulePerKilogramKelvin>(1_000.0);
+    let time = Time::from_unit::<Second>(2.0);
+    let expected = 405.0;
+    let energy_rate = Power::from_unit::<Watt>(state.mass() * 1_000.0 * 5.0 / 2.0);
+
+    let temperature =
+        calculator.update_temperature_from_energy(&mut state, energy_rate, time, heat_capacity);
+    let actual = temperature.in_unit::<Kelvin>();
+    let roundoff_bound = 8.0 * f64::EPSILON * expected;
+
+    assert!((actual - expected).abs() <= roundoff_bound);
 }
 
 #[test]
