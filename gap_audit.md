@@ -1,6 +1,6 @@
-## Live plasmonics closure — 2026-08-02
+## Live Aequitas closure — 2026-08-02
 
-`KWAVERS-AEQ-MET-33` is implemented on the current Kwavers integration branch.
+`KWAVERS-AEQ-MET-33` is implemented on current Kwavers `main`.
 Public Mie, enhancement, nanoparticle-array, and electromagnetic equation APIs
 use Aequitas `Length`, `NumberDensity`, `Area`, `Frequency`, `Polarizability`,
 and `ReciprocalVolume`; relative dielectric functions, volume fractions, and
@@ -18,11 +18,14 @@ check, plasmonics Nextest (10/10), warning-denied package Clippy, doctests
 signature residue scan. Commit `9fb70554f` closes the audit's only concrete
 consumer correctness residual: the former slice contract could panic on a
 short coordinate input. The regenerated standalone Git lock metadata and
-targeted Rustfmt pass against the current branch; locked all-feature metadata
-passes outside the Atlas overlay. Full native compilation remains gated by the
-mutable Atlas overlay's unrelated Moirai `moirai-iter` failure; the prior
-exact pinned graph remains the authoritative behavioral evidence until the
-integration branch's hosted matrix completes.
+targeted Rustfmt pass against the merged branch; locked all-feature metadata
+passes outside the Atlas overlay. PR #330 merged as `5dad60d69` after the
+hosted matrix passed: CI/CD `30754176219`, architecture validation
+`30754176226`, Python wheels `30754176215`, legacy audit `30754176208`, and
+benchmark validation `30754176234`. Code Coverage completed in 1h4m38s;
+Miri, feature combinations, security, documentation, and benchmark checks are
+green. The local full-workspace check remains gated by the mutable Atlas
+overlay's unrelated Moirai `moirai-iter` failure.
 
 The CFDrs and Helios re-audits remain clean: no missing Aequitas physical
 metric was found in their current public boundaries. Their complex values are
@@ -111,7 +114,7 @@ immutable Atlas graph.
 
 # Gap Audit
 
-## Closed therapeutic microbubble quantity audit — 2026-08-01
+## Closed therapeutic microbubble quantity audit — 2026-08-02
 
 `KWAVERS-AEQ-MET-53` is closed for implementation. The public therapeutic
 microbubble state now carries Aequitas `Length`, `Velocity`, `Acceleration`,
@@ -138,7 +141,7 @@ metrics. Complex representation is not a new physical dimension.
 See [`Kwavers ADR 092`](docs/ADR/092-therapeutic-microbubble-quantities.md)
 and [`Aequitas ADR 0013`](../aequitas/docs/adr/0013-acceleration-quantity.md).
 
-The current implementation head is `1f50775fc` on PR #330. It includes the
+The merged implementation head is `5dad60d69`. It includes the
 plasmonics metric closure and propagates
 fallible Coeus forward and backward errors through PINN networks, residuals,
 autodiff utilities, loss functions, and trainers; zero-gradient fallback paths
@@ -177,8 +180,8 @@ and benchmark Coeus call sites; the exact diagnostics were `E0609`/`E0308` in
 `field_surrogate_demo.rs` and `pinn_elastic_2d_training.rs`. Commit
 `0d956071a` closes that source gap. The exact disposable graph now passes
 locked `cargo check --examples --features pinn` and
-`cargo check --benches --features pinn`; the refreshed hosted matrix is the
-remaining integration gate.
+`cargo check --benches --features pinn`. The hosted matrix then passed at the
+merged head; no integration gate remains for this slice.
 
 Advancing the lock to the Atlas-pinned Asclepius, Hyperion, Proteus, and Tyche
 revisions exposed two additional compatibility defects that are now resolved:
@@ -197,8 +200,8 @@ admits the transitive RITK Gaia provider and contains no unused cutile-rs entry.
 The workspace check reports only the existing `kwavers-analysis::principal_axis`
 dead-code warning and external provider linker warnings. The exact pinned graph
 also compiles the corrected `ultrasound_physics_validation` target. The
-refreshed hosted wheel, benchmark, and validation matrix remains the integration
-residual on PR #330.
+hosted wheel, benchmark, architecture, coverage, security, and validation
+matrix passed on PR #330 and the result is merged in `5dad60d69`.
 
 ## Review 2026-07-31 — KW-AEQ-MET-04 source-level closure
 

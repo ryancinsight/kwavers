@@ -37,7 +37,7 @@ Clippy at `-D warnings`; doctests 8/8 executable; package Rustdoc; targeted
 Rustfmt; and raw-public-signature residue scan pass. The ordinary lane check
 is blocked only by the pre-existing Apollo dual-path lock collision.
 
-## Owner: Codex — KWAVERS-AEQ-MET-53 typed therapeutic microbubble quantities [major] — implementation done; integration pending
+## Owner: Codex — KWAVERS-AEQ-MET-53 typed therapeutic microbubble quantities [major] — done 2026-08-02
 
 - [x] Type public therapeutic microbubble state, shell, radiation-force,
       pressure-gradient, streaming-velocity, dynamics-service, and sampling
@@ -91,9 +91,12 @@ locked metadata, solver clippy at `-D warnings`, 79-file Rustfmt, PINN Nextest
 outside the Atlas overlay. The workspace check reports only the existing
 `principal_axis` dead-code warning and external provider linker warnings. The
 exact pinned graph compiles the corrected temporal synchronization validation
-target and the updated `pinn` examples and benches. PR #330 source head
-`1f50775fc` includes the standalone lock closure and plasmonics metric closure;
-hosted matrix evidence is pending for this head.
+target and the updated `pinn` examples and benches. PR #330 merged as
+`5dad60d69` after the standalone lock closure and plasmonics metric closure
+passed the hosted matrix. CI/CD `30754176219`, architecture validation
+`30754176226`, Python wheels `30754176215`, legacy audit `30754176208`,
+benchmark validation `30754176234`, Code Coverage, Miri, security, feature
+combinations, and documentation checks are green.
 
 ## Owner: Codex — KW-AEQ-MET-04 vessel physical metrics [major] [arch] — done
 

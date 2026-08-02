@@ -4,7 +4,7 @@
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KWAVERS-AEQ-INTEGRATION-1 | Integrate the current Aequitas metric closure for therapeutic microbubble and plasmonics contracts on current `main`; harden the public three-dimensional plasmonic coordinate contract and synchronize the audit. | [arch] [major] | in-progress | Codex | `crates/kwavers-physics/src/{acoustics/therapy/microbubble,electromagnetic}`, PM artifacts |
+| KWAVERS-AEQ-INTEGRATION-1 | Integrate the current Aequitas metric closure for therapeutic microbubble and plasmonics contracts on current `main`; harden the public three-dimensional plasmonic coordinate contract and synchronize the audit. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-physics/src/{acoustics/therapy/microbubble,electromagnetic}`, PM artifacts |
 
 
 ## KW-RELEASE-CRATES-01 — Publish the Rust package closure [patch] — in progress
@@ -50,7 +50,7 @@
 - Re-open trigger: any hosted or exact-graph diagnostic against the current
   PR head, or a remaining public plasmonics scalar found by the audit.
 
-## KWAVERS-AEQ-MET-53 — Type therapeutic microbubble quantities [major] — implementation done; integration pending
+## KWAVERS-AEQ-MET-53 — Type therapeutic microbubble quantities [major] — done 2026-08-02
 
 - Owner: Codex; scope: public therapeutic microbubble state, shell, force,
   streaming, dynamics, sampling, Aequitas provider vocabulary, ADR 092, and
@@ -67,7 +67,7 @@
   stale tuple destructure. `0d956071a` updates all Kwavers example and
   benchmark consumers for fallible PINN forward, trainer-step, and backward
   APIs after the hosted architecture job exposed stale Coeus call sites.
-- Integration: PR #330 head is `1f50775fc` (standalone lock closure; plasmonics
+- Integration: PR #330 merged as `5dad60d69` (standalone lock closure; plasmonics
   source `77be364b9`).
   The source-history fixes remain `1fd08058f` and `0d956071a`. The
   checkout action and Python
@@ -79,8 +79,8 @@
   `ritk-diffusion-scheme` package and edges and has no stale package identity
   or dependency edges. Exact-graph `cargo metadata --locked --all-features`
   passes for the hosted Linux target, and the lock does not require a rewrite
-  under the pinned graph. The fresh hosted wheel and benchmark jobs remain
-  pending.
+  under the pinned graph. The hosted wheel and benchmark jobs passed on the
+  merged PR #330 head.
 - Provider-source closure: Kwavers' direct Consus dependencies now use the
   canonical `.git` URL used by RITK. Their lock entries align with the Atlas
   Consus `f0c28690` package source, so `consus-onnx` and the HDF5/IO packages
@@ -106,8 +106,9 @@
   `kwavers-analysis::principal_axis` dead-code warning and external provider
   linker warnings. The exact pinned graph compiles the corrected temporal
   synchronization validation target and the updated `pinn` examples and
-  benches. The corrected hosted wheel, benchmark, and validation matrix
-  remains pending on PR #330.
+  benches. The hosted CI/CD, architecture, wheel, legacy-audit, benchmark,
+  coverage, Miri, security, and feature-matrix jobs passed on PR #330; the
+  merge commit is `5dad60d69`.
 
 ## KW-AEQ-MET-04 — Type functional-ultrasound vessel metrics [major] [arch] — done
 
