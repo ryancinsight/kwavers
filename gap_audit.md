@@ -1,5 +1,30 @@
 ## Live Aequitas closure — 2026-08-02
 
+### KWAVERS-AEQ-MET-54 — ultrafast transmission scheduler
+
+The audit found one remaining public physical-metric gap in
+`crates/kwavers-transducer/src/ultrafast/sequencer`: sound speed, maximum
+depth, PRF, event time, compound frame rate, and tilt angle were exposed as
+raw `f64` values. The gap is closed with Aequitas `Velocity`, `Length`,
+`Frequency`, `Time`, and `Angle` across the scheduler state, events, schedules,
+tests, and callers. Scalar extraction is limited to the two equations
+`PRF_max = c / (2 z_max)` and `f_frame = PRF / N`; schedule indices and element
+identifiers remain discrete values.
+
+The scheduler now rejects non-finite or non-positive physical configuration
+and rejects empty angle schedules before constructing timing metrics. No
+imaginary physical unit is introduced: the scheduler is real-valued, while a
+future Eunomia complex phasor must retain one existing physical unit and reduce
+to its specified real observable at the numerical boundary.
+
+Implementation: `crates/kwavers-transducer/src/ultrafast/sequencer`,
+`docs/ADR/093-ultrafast-scheduler-quantities.md`. The standalone pinned graph
+passes the locked package all-target check and Nextest
+`7b7dfdab-3df2-4ed2-ad07-e5ce49e003dd` (218/218). Package Clippy with
+`-D warnings`, doctests, Rustdoc, targeted Rustfmt, and raw-public-signature
+and complex-unit residue scans pass. No remaining scheduler metric gap is
+open.
+
 `KWAVERS-AEQ-MET-33` is implemented on current Kwavers `main`.
 Public Mie, enhancement, nanoparticle-array, and electromagnetic equation APIs
 use Aequitas `Length`, `NumberDensity`, `Area`, `Frequency`, `Polarizability`,

@@ -4,6 +4,12 @@
 
 ### Changed
 
+- **Breaking:** The public ultrafast transmission scheduler now uses Aequitas
+  `Velocity`, `Length`, `Frequency`, `Time`, and `Angle` for physical metrics.
+  Scalar extraction remains limited to PRF and timing formulas; real-valued
+  scheduler contracts introduce no imaginary physical unit for Eunomia complex
+  representations. See [ADR 093](docs/ADR/093-ultrafast-scheduler-quantities.md).
+
 - [patch] Complete crates.io metadata and local dependency versions for the 23
   reusable Rust packages, preserve the Python extension and `xtask` as
   nonpublishable, and route post-bootstrap updates through the existing OIDC
