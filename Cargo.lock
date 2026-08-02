@@ -877,11 +877,7 @@ version = "0.9.0"
 dependencies = [
  "bytemuck",
  "coeus-core",
-<<<<<<< HEAD
  "coeus-leto 0.9.0",
-=======
- "coeus-leto",
->>>>>>> 996ed2b69 (fix(kwavers): Propagate Coeus PINN failures)
  "rkyv 0.8.17",
  "smallvec",
  "thiserror 2.0.19",
