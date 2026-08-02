@@ -3,6 +3,7 @@ use super::processor::DivergingWave;
 use aequitas::systems::si::quantities::{Dimensionless, Frequency, Length, Velocity};
 use aequitas::systems::si::units::{Hertz, Meter, MeterPerSecond};
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
+use kwavers_core::error::KwaversError;
 use leto::Array1;
 
 fn meters(value: f64) -> Length<f64> {
@@ -32,7 +33,7 @@ fn uniform_array(n: usize, pitch: f64) -> DivergingWave {
 fn test_max_prf_formula() {
     let dw = uniform_array(8, 3.0e-4);
     let z_max = meters(0.040); // 40 mm
-    let prf = dw.max_prf(z_max).into_base();
+    let prf = dw.max_prf(z_max).unwrap().into_base();
     let expected = SOUND_SPEED_TISSUE / (2.0 * 0.040);
     assert!(
         (prf - expected).abs() / expected < 1e-10,
@@ -187,7 +188,7 @@ fn test_hann_apodization_center_is_one() {
         .map(|(i, _)| i)
         .unwrap();
     let xc = dw.config.element_positions[center_idx];
-    let w = dw.hann_apodization(xc, meters(z), center_idx);
+    let w = dw.hann_apodization(xc, meters(z), center_idx).unwrap();
     let weight = w.into_base();
     assert!(
         (weight - 1.0).abs() < 1e-12,
@@ -213,7 +214,7 @@ fn test_hann_apodization_out_of_aperture_is_zero() {
         let f = dw.config.virtual_source_depth.in_unit::<Meter>();
         let d_half = (z + f) / (2.0 * dw.config.f_number.into_base());
         if (xj - x_far).abs() > d_half {
-            let w = dw.hann_apodization(meters(x_far), meters(z), elem);
+            let w = dw.hann_apodization(meters(x_far), meters(z), elem).unwrap();
             let weight = w.into_base();
             assert_eq!(
                 weight, 0.0,
@@ -312,4 +313,21 @@ fn test_out_of_range_index_errors() {
     assert!(dw.transmit_delay(meters(0.0), meters(0.01), 10).is_err());
     assert!(dw.receive_delay(meters(0.0), meters(0.01), 10).is_err());
     assert!(dw.sta_delay(meters(0.0), meters(0.01), 0, 10).is_err());
+    assert!(matches!(
+        dw.hann_apodization(meters(0.0), meters(0.01), 10),
+        Err(KwaversError::InvalidInput(_))
+    ));
+}
+
+#[test]
+fn test_max_prf_rejects_invalid_depth() {
+    let dw = uniform_array(4, 3.0e-4);
+    assert!(matches!(
+        dw.max_prf(meters(0.0)),
+        Err(KwaversError::InvalidInput(_))
+    ));
+    assert!(matches!(
+        dw.max_prf(meters(f64::NAN)),
+        Err(KwaversError::InvalidInput(_))
+    ));
 }

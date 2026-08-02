@@ -29,6 +29,8 @@ consumers require contiguous numeric buffers; their units are documented as
 seconds or dimensionless weights. The former `angles_degrees` conversion API
 is removed so callers retain the typed angle contract. No compatibility
 wrapper is retained; all in-repository callers and tests use the typed APIs.
+Invalid apodization indices and invalid PRF inputs return typed errors instead
+of panicking or constructing non-finite metrics.
 
 The implemented equations remain unchanged:
 
@@ -51,7 +53,8 @@ APIs; real and imaginary components share the phasor's existing physical unit.
 The focused `kwavers-transducer` package check and Nextest cover all ultrafast
 tests, including analytical delay, PRF, symmetry, apodization, typed image
 coordinates, and invalid-index behavior. The exact locked package check,
-Nextest `789c6fcc-a55c-49ce-9ff9-d12d6a4f944f` (218/218, one ignored), package
+Nextest `f1d0db2a-5e11-450b-831e-a4290847d6ee` (219/219, one ignored), including
+invalid-index apodization and invalid-depth PRF regressions, package
 Clippy with `-D warnings`, one executable doctest with six ignored, package
 Rustdoc, targeted Rustfmt, `git diff --check`, and typed/complex residue scans
 pass. `cargo-semver-checks 0.48.0` cannot compare the package because it is not

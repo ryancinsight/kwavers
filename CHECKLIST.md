@@ -14,7 +14,8 @@
       commit and publish the complete slice.
 
 Evidence: exact locked package check; Nextest
-`789c6fcc-a55c-49ce-9ff9-d12d6a4f944f` passed 218/218 with one ignored;
+`f1d0db2a-5e11-450b-831e-a4290847d6ee` passed 219/219 with one ignored,
+including invalid-index apodization and invalid-depth PRF regressions;
 package Clippy at `-D warnings`; one executable doctest with six ignored;
 package Rustdoc; targeted Rustfmt; `git diff --check`; and typed/complex
 residue scans. The shared Atlas build cache was used without a private target

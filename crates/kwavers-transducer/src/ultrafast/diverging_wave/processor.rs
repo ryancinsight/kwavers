@@ -156,13 +156,17 @@ impl DivergingWave {
     /// ```
     ///
     /// Reference: Synnevåg et al. (2007), *IEEE TUFFC* 54(11):2213–2220, Eq. (1).
-    #[must_use]
+    ///
+    /// # Errors
+    /// - Returns `KwaversError::InvalidInput` if `elem_idx` is outside the
+    ///   configured element array.
     pub fn hann_apodization(
         &self,
         x: Length<f64>,
         z: Length<f64>,
         elem_idx: usize,
-    ) -> Dimensionless<f64> {
+    ) -> KwaversResult<Dimensionless<f64>> {
+        self.check_elem(elem_idx)?;
         let xj = self.config.element_positions[elem_idx].in_unit::<Meter>();
         let f = self.config.virtual_source_depth.in_unit::<Meter>();
         let x = x.in_unit::<Meter>();
@@ -170,9 +174,11 @@ impl DivergingWave {
         let d_half = (z + f) / (2.0 * self.config.f_number.into_base());
         let dist = (xj - x).abs();
         if dist > d_half || d_half < 1e-30 {
-            Dimensionless::from_base(0.0)
+            Ok(Dimensionless::from_base(0.0))
         } else {
-            Dimensionless::from_base(0.5 * (1.0 + (std::f64::consts::PI * dist / d_half).cos()))
+            Ok(Dimensionless::from_base(
+                0.5 * (1.0 + (std::f64::consts::PI * dist / d_half).cos()),
+            ))
         }
     }
 
@@ -185,11 +191,24 @@ impl DivergingWave {
     /// ```text
     ///   PRF_max = c / (2 · z_max)     (Hz)
     /// ```
-    #[must_use]
-    pub fn max_prf(&self, z_max: Length<f64>) -> Frequency<f64> {
+    ///
+    /// # Errors
+    /// - Returns `KwaversError::InvalidInput` if `z_max` or the configured
+    ///   sound speed is non-finite or non-positive.
+    pub fn max_prf(&self, z_max: Length<f64>) -> KwaversResult<Frequency<f64>> {
         let c = self.config.sound_speed.in_unit::<MeterPerSecond>();
         let z_max = z_max.in_unit::<Meter>();
-        Frequency::from_unit::<Hertz>(c / (2.0 * z_max))
+        if !c.is_finite() || c <= 0.0 {
+            return Err(KwaversError::InvalidInput(
+                "sound speed must be finite and positive".to_owned(),
+            ));
+        }
+        if !z_max.is_finite() || z_max <= 0.0 {
+            return Err(KwaversError::InvalidInput(
+                "maximum imaging depth must be finite and positive".to_owned(),
+            ));
+        }
+        Ok(Frequency::from_unit::<Hertz>(c / (2.0 * z_max)))
     }
 
     /// Compute the full STA delay table: `delays[tx, rx, pixel]` for all

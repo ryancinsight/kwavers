@@ -11,6 +11,10 @@ is being closed with Aequitas `Length`, `Velocity`, `Frequency`, `Angle`,
 scalar buffers only at the explicit storage boundary, with seconds or
 dimensionless weights documented by their contracts.
 
+The scalar apodization index path now returns a typed invalid-input error
+instead of panicking, and `max_prf` rejects non-finite or non-positive depth
+and sound-speed inputs before constructing a frequency.
+
 The former `angles_degrees` API is removed; current callers retain typed
 angles. No Eunomia imaginary unit is introduced. Complex phasors remain
 representation data under one existing unit and reduce to the specified real
@@ -20,7 +24,8 @@ Implementation: `crates/kwavers-transducer/src/ultrafast/{plane_wave,diverging_w
 and `docs/ADR/094-ultrafast-plane-diverging-quantities.md`. The exact locked
 package check, Clippy with `-D warnings`, doctests, Rustdoc, targeted Rustfmt,
 `git diff --check`, and typed/complex residue scans pass. Final Nextest run
-`789c6fcc-a55c-49ce-9ff9-d12d6a4f944f` passes 218/218 with one ignored. The
+`f1d0db2a-5e11-450b-831e-a4290847d6ee` passes 219/219 with one ignored,
+including invalid-index apodization and invalid-depth PRF regressions. The
 installed `cargo-semver-checks 0.48.0` cannot compare this package because
 `kwavers-transducer` is not published to crates.io; it fails before comparison
 with `kwavers-transducer not found in registry`. Hosted API review is the
