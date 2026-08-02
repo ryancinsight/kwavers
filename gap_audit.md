@@ -17,8 +17,9 @@ check, plasmonics Nextest (10/10), warning-denied package Clippy, doctests
 (8/8 executable), package Rustdoc, targeted Rustfmt, and the raw-public-
 signature residue scan. Commit `9fb70554f` closes the audit's only concrete
 consumer correctness residual: the former slice contract could panic on a
-short coordinate input. The committed lock metadata and targeted Rustfmt pass
-against the current branch. Full native compilation remains gated by the
+short coordinate input. The regenerated standalone Git lock metadata and
+targeted Rustfmt pass against the current branch; locked all-feature metadata
+passes outside the Atlas overlay. Full native compilation remains gated by the
 mutable Atlas overlay's unrelated Moirai `moirai-iter` failure; the prior
 exact pinned graph remains the authoritative behavioral evidence until the
 integration branch's hosted matrix completes.
@@ -137,7 +138,7 @@ metrics. Complex representation is not a new physical dimension.
 See [`Kwavers ADR 092`](docs/ADR/092-therapeutic-microbubble-quantities.md)
 and [`Aequitas ADR 0013`](../aequitas/docs/adr/0013-acceleration-quantity.md).
 
-The current implementation head is `9fb70554f` on PR #330. It includes the
+The current implementation head is `1f50775fc` on PR #330. It includes the
 plasmonics metric closure and propagates
 fallible Coeus forward and backward errors through PINN networks, residuals,
 autodiff utilities, loss functions, and trainers; zero-gradient fallback paths

@@ -67,7 +67,8 @@
   stale tuple destructure. `0d956071a` updates all Kwavers example and
   benchmark consumers for fallible PINN forward, trainer-step, and backward
   APIs after the hosted architecture job exposed stale Coeus call sites.
-- Integration: PR #330 head is `9fb70554f` (plasmonics source `77be364b9`).
+- Integration: PR #330 head is `1f50775fc` (standalone lock closure; plasmonics
+  source `77be364b9`).
   The source-history fixes remain `1fd08058f` and `0d956071a`. The
   checkout action and Python
   release workflow pin Atlas `777cf325fad3114299b44a99a48145997f93a5b0`, the
