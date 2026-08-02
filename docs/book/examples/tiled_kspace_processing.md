@@ -1,6 +1,6 @@
 # Example: Tiled K-Space Processing
 
-**Source**: `crates/kwavers/examples/tiled_kspace_processing.rs`
+**Source**: [`crates/kwavers/examples/tiled_kspace_processing.rs`](../../../crates/kwavers/examples/tiled_kspace_processing.rs)
 
 ## Overview
 

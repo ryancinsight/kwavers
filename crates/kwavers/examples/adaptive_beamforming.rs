@@ -24,7 +24,7 @@
 //! └── neural.rs           # Neural/ML beamforming extension seam
 //! ```
 //!
-//! Run with: `cargo run --example adaptive_beamforming_refactored`
+//! Run with: `cargo run --example adaptive_beamforming`
 
 fn main() {
     println!("Adaptive Beamforming - Architecture Refactoring Complete");

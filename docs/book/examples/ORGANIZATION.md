@@ -49,7 +49,7 @@ These examples demonstrate architecture, refactoring, or utility functions rathe
 
 | Example | Description |
 |---------|-------------|
-| `adaptive_beamforming_refactored` | Adaptive beamforming architecture refactoring demonstration |
+| `adaptive_beamforming` | Adaptive beamforming architecture refactoring demonstration |
 | `boundary_smoothing` | Boundary smoothing implementation details |
 | `comprehensive_pinn_demo` | Full PINN ecosystem demonstration |
 | `dg_acoustic_timestep_sweep` | DG acoustic timestep refinement plots |

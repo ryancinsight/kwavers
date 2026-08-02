@@ -1,5 +1,46 @@
 # Backlog / Strategy
 
+## KW-EXAMPLES-BOOK-01 — Examples/book chapter correspondence [patch] — in progress
+
+**Owner:** Claude (atlas session 0161539d); last-update: 2026-08-02.
+**Scope:** `crates/kwavers/examples/adaptive_beamforming*`, `docs/book/examples/**`,
+`docs/book/SUMMARY.md`, `crates/kwavers/examples/README.md` — disjoint from the
+active transducer-typing slice.
+
+**Done this increment:** build-free correspondence audit over 62 example targets
+and 66 chapter files — every chapter's `Source:` link resolves and every
+`Run: --example NAME` names a real target (0 broken). Consolidated a duplicate:
+`adaptive_beamforming.md` and `adaptive_beamforming_refactored.md` documented the
+same example with the same run command; kept the fuller house-style chapter,
+deleted the thin duplicate, and repointed `SUMMARY.md`. Renamed
+`adaptive_beamforming_refactored.rs` to `adaptive_beamforming.rs` (the `_refactored`
+quality marker violates the identifier naming prohibition; the example is
+auto-discovered, so no manifest entry changes).
+
+**Verification limit:** `cargo build --examples` could NOT run this increment —
+the atlas overlay resolves first-party deps to live peers' in-flight trees and
+three separate peers were mid-edit (gaia `TetDecomposition::iter` unwritten,
+coeus `codex/coeus-random-init-dispatch` adding `RandomInitOps`, ritk-model not
+yet migrated to that trait bound). The delivered change is a filename rename of
+an auto-discovered target plus markdown, verified by exhaustive grep for residual
+references (0). Re-open trigger: run `cargo build --examples -p kwavers
+-p kwavers-solver` once the coeus random-init dispatch migration lands in ritk.
+
+**Remaining (open):**
+- `adaptive_beamforming.rs` is a process narrative, not a demonstration: it
+  prints ADR-001 refactoring achievements ("Eliminated monolithic
+  algorithms_old.rs", "Maintained 100% backwards compatibility") instead of
+  running MVDR/MUSIC/LCMV on a field. An example must demonstrate the domain
+  operation with real input-sensitive computation; migration narrative belongs
+  to the CHANGELOG, not an example or a book chapter. Rewrite it to beamform a
+  synthetic aperture and assert against an analytical steering oracle.
+- Four chapter/file name mismatches are cosmetic but break name-based lookup:
+  `dg_acoustic_1d.md` ↔ `dg_acoustic_1d_diagnostics.rs`, `transcranial_ct_mri.md`
+  ↔ `transcranial_ct_mri_reconstruction.rs`, plus `literature_validation.md` and
+  `ORGANIZATION.md`, which are aggregate pages rather than per-example chapters.
+  Decide per pair: rename the chapter to match its target, or record the page as
+  an aggregate in `ORGANIZATION.md`.
+
 ## Current Aequitas integration slice — 2026-08-02
 
 | ID | Outcome | Class | Status | Owner | Scope |

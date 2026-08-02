@@ -1,6 +1,6 @@
 # Example: SIMD Wave Kernel
 
-**Source**: `crates/kwavers/examples/simd_wave_kernel.rs`
+**Source**: [`crates/kwavers/examples/simd_wave_kernel.rs`](../../../crates/kwavers/examples/simd_wave_kernel.rs)
 
 ## Overview
 

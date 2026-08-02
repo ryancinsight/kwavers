@@ -73,7 +73,7 @@ This directory contains comprehensive examples demonstrating the interdisciplina
 | Example | Description | Features |
 |---------|-------------|----------|
 | [`electromagnetic_simulation.rs`](electromagnetic_simulation.rs) | EM wave simulation | Maxwell equations, antennas |
-| [`adaptive_beamforming_refactored.rs`](adaptive_beamforming_refactored.rs) | Adaptive beamforming | MVDR, MUSIC, LCMV algorithms |
+| [`adaptive_beamforming.rs`](adaptive_beamforming.rs) | Adaptive beamforming | MVDR, MUSIC, LCMV algorithms |
 | [`comprehensive_pinn_demo.rs`](comprehensive_pinn_demo.rs) | Full PINN ecosystem | Training, inference, validation |
 
 ## 🚀 Running Examples
