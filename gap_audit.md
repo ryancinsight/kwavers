@@ -11,11 +11,11 @@ lengths cannot reach indexed formula inputs.
 `Polarizability<eunomia::Complex64>` keeps real and quadrature components under
 one `FaradSquareMeter` unit. No imaginary physical unit or consumer wrapper is
 introduced. Scalar extraction is limited to dielectric interpolation,
-cross-section, coupling, and array formulas. Commit `ed4472adf` passes the
+cross-section, coupling, and array formulas. Commit `77be364b9` passes the
 provider complex-unit law (1/1), exact pinned Kwavers package test-target
 check, plasmonics Nextest (10/10), warning-denied package Clippy, doctests
 (8/8 executable), package Rustdoc, targeted Rustfmt, and the raw-public-
-signature residue scan. Commit `1f08f0a95` closes the audit's only concrete
+signature residue scan. Commit `9fb70554f` closes the audit's only concrete
 consumer correctness residual: the former slice contract could panic on a
 short coordinate input. The committed lock metadata and targeted Rustfmt pass
 against the current branch. Full native compilation remains gated by the
@@ -137,7 +137,7 @@ metrics. Complex representation is not a new physical dimension.
 See [`Kwavers ADR 092`](docs/ADR/092-therapeutic-microbubble-quantities.md)
 and [`Aequitas ADR 0013`](../aequitas/docs/adr/0013-acceleration-quantity.md).
 
-The current implementation head is `260a645bf` on PR #328. It includes the
+The current implementation head is `9fb70554f` on PR #330. It includes the
 plasmonics metric closure and propagates
 fallible Coeus forward and backward errors through PINN networks, residuals,
 autodiff utilities, loss functions, and trainers; zero-gradient fallback paths
@@ -197,7 +197,7 @@ The workspace check reports only the existing `kwavers-analysis::principal_axis`
 dead-code warning and external provider linker warnings. The exact pinned graph
 also compiles the corrected `ultrasound_physics_validation` target. The
 refreshed hosted wheel, benchmark, and validation matrix remains the integration
-residual on PR #328.
+residual on PR #330.
 
 ## Review 2026-07-31 — KW-AEQ-MET-04 source-level closure
 

@@ -36,8 +36,8 @@
   and documentation gates pass.
 - Correctness closure: `PlasmonicEnhancementEquation::near_field_coupling`
   accepts `[Length; 3]` coordinates, preventing short-slice indexing panics;
-  commit `1f08f0a95`.
-- Implementation: `ed4472adf` migrates the current public Mie, enhancement,
+  commit `9fb70554f`.
+- Implementation: `77be364b9` migrates the current public Mie, enhancement,
   nanoparticle-array, and electromagnetic-equation surfaces without a
   compatibility wrapper. The provider complex-unit law passes at Aequitas
   `68e5e971-c0cd-44b7-a987-ace602f042a3`; the exact pinned Kwavers graph
@@ -67,7 +67,7 @@
   stale tuple destructure. `0d956071a` updates all Kwavers example and
   benchmark consumers for fallible PINN forward, trainer-step, and backward
   APIs after the hosted architecture job exposed stale Coeus call sites.
-- Integration: PR #328 head is `260a645bf` (plasmonics source `ed4472adf`).
+- Integration: PR #330 head is `9fb70554f` (plasmonics source `77be364b9`).
   The source-history fixes remain `1fd08058f` and `0d956071a`. The
   checkout action and Python
   release workflow pin Atlas `777cf325fad3114299b44a99a48145997f93a5b0`, the
@@ -106,7 +106,7 @@
   linker warnings. The exact pinned graph compiles the corrected temporal
   synchronization validation target and the updated `pinn` examples and
   benches. The corrected hosted wheel, benchmark, and validation matrix
-  remains pending on PR #328.
+  remains pending on PR #330.
 
 ## KW-AEQ-MET-04 — Type functional-ultrasound vessel metrics [major] [arch] — done
 

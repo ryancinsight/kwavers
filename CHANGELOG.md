@@ -14,7 +14,8 @@
   structured temporal-synchronization result at the consumer boundary.
 - **Breaking:** Plasmonics particle geometry, wavelengths, concentration,
   cross-sections, near-field coupling, resonance frequency, and complex Mie
-  polarizability now use Aequitas quantities. Eunomia `Complex64` remains the
+  polarizability now use Aequitas quantities. Near-field coupling requires
+  fixed three-dimensional coordinate arrays. Eunomia `Complex64` remains the
   real-plus-quadrature provider; both components share the polarizability unit
   and no imaginary physical unit is introduced. See [ADR
   071](docs/ADR/071-plasmonics-quantities.md).

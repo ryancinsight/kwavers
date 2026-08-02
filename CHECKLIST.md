@@ -31,7 +31,7 @@ Acceptance: current public plasmonics quantities are typed, complex
 polarizability retains one physical unit, no imaginary unit or compatibility
 wrapper is introduced, and all callers compile. Met.
 
-Evidence: commit `ed4472adf`; provider complex-unit Nextest 1/1; exact pinned
+Evidence: commit `77be364b9`; provider complex-unit Nextest 1/1; exact pinned
 Kwavers graph package test-target check; plasmonics Nextest 10/10; package
 Clippy at `-D warnings`; doctests 8/8 executable; package Rustdoc; targeted
 Rustfmt; and raw-public-signature residue scan pass. The ordinary lane check
@@ -91,8 +91,8 @@ locked metadata, solver clippy at `-D warnings`, 79-file Rustfmt, PINN Nextest
 outside the Atlas overlay. The workspace check reports only the existing
 `principal_axis` dead-code warning and external provider linker warnings. The
 exact pinned graph compiles the corrected temporal synchronization validation
-target and the updated `pinn` examples and benches. PR #328 source head
-`260a645bf` includes the plasmonics metric closure; hosted matrix evidence is
+target and the updated `pinn` examples and benches. PR #330 source head
+`9fb70554f` includes the plasmonics metric closure; hosted matrix evidence is
 pending for this head.
 
 ## Owner: Codex — KW-AEQ-MET-04 vessel physical metrics [major] [arch] — done
