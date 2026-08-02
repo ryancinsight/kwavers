@@ -90,7 +90,8 @@ outside the Atlas overlay. The workspace check reports only the existing
 `principal_axis` dead-code warning and external provider linker warnings. The
 exact pinned graph compiles the corrected temporal synchronization validation
 target and the updated `pinn` examples and benches. PR #328 source head
-`0d956071a` is pending hosted matrix evidence.
+`260a645bf` includes the plasmonics metric closure; hosted matrix evidence is
+pending for this head.
 
 ## Owner: Codex — KW-AEQ-MET-04 vessel physical metrics [major] [arch] — done
 

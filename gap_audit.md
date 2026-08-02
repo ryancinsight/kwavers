@@ -131,7 +131,8 @@ metrics. Complex representation is not a new physical dimension.
 See [`Kwavers ADR 092`](docs/ADR/092-therapeutic-microbubble-quantities.md)
 and [`Aequitas ADR 0013`](../aequitas/docs/adr/0013-acceleration-quantity.md).
 
-The current implementation head is `0d956071a` on PR #328. It propagates
+The current implementation head is `260a645bf` on PR #328. It includes the
+plasmonics metric closure and propagates
 fallible Coeus forward and backward errors through PINN networks, residuals,
 autodiff utilities, loss functions, and trainers; zero-gradient fallback paths
 are removed. The follow-up also updates every Kwavers example and benchmark
