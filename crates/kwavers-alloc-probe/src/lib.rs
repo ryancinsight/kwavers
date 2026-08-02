@@ -30,6 +30,10 @@ thread_local! {
     ///
     /// A depth counter rather than a flag so nested windows compose; it is
     /// const-initialized so reading it inside the allocator never allocates.
+    #[expect(
+        clippy::missing_const_for_thread_local,
+        reason = "false positive: the initializer is already a const block"
+    )]
     static OPEN_WINDOWS: Cell<u32> = const { Cell::new(0) };
 }
 
