@@ -5,29 +5,32 @@
 //! - Elder (1959): "Steady flow produced by vibrating cylinders"
 //! - Marmottant & Hilgenfeldt (2003): "Controlled vesicle deformation"
 
+use aequitas::systems::si::quantities::{Frequency, Length, Velocity};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
+
+use super::radiation::Direction3D;
 
 /// Steady acoustic streaming velocity induced by viscous dissipation [m/s].
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct StreamingVelocity {
-    pub vx: f64,
-    pub vy: f64,
-    pub vz: f64,
+    pub vx: Velocity<f64>,
+    pub vy: Velocity<f64>,
+    pub vz: Velocity<f64>,
 }
 
 impl StreamingVelocity {
     #[must_use]
-    pub fn new(vx: f64, vy: f64, vz: f64) -> Self {
+    pub fn new(vx: Velocity<f64>, vy: Velocity<f64>, vz: Velocity<f64>) -> Self {
         Self { vx, vy, vz }
     }
 
     #[must_use]
     pub fn zero() -> Self {
         Self {
-            vx: 0.0,
-            vy: 0.0,
-            vz: 0.0,
+            vx: Velocity::from_base(0.0),
+            vy: Velocity::from_base(0.0),
+            vz: Velocity::from_base(0.0),
         }
     }
 
@@ -36,10 +39,11 @@ impl StreamingVelocity {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     #[must_use]
-    pub fn speed(&self) -> f64 {
-        self.vz
-            .mul_add(self.vz, self.vx.mul_add(self.vx, self.vy * self.vy))
-            .sqrt()
+    pub fn speed(&self) -> Velocity<f64> {
+        let vx = self.vx.into_base();
+        let vy = self.vy.into_base();
+        let vz = self.vz.into_base();
+        Velocity::from_base(vz.mul_add(vz, vx.mul_add(vx, vy * vy)).sqrt())
     }
 }
 
@@ -52,11 +56,11 @@ impl StreamingVelocity {
 /// - Returns [`Err`] if an internal constraint is violated.
 ///
 pub fn calculate_acoustic_streaming_velocity(
-    radius_equilibrium: f64,
-    wall_velocity_amplitude: f64,
-    frequency: f64,
-    distance: f64,
-    direction: (f64, f64, f64),
+    radius_equilibrium: Length<f64>,
+    wall_velocity_amplitude: Velocity<f64>,
+    frequency: Frequency<f64>,
+    distance: Length<f64>,
+    direction: Direction3D,
 ) -> KwaversResult<StreamingVelocity> {
     use kwavers_core::constants::cavitation::VISCOSITY_WATER;
     use kwavers_core::constants::fundamental::{DENSITY_WATER, SOUND_SPEED_TISSUE};
@@ -64,36 +68,40 @@ pub fn calculate_acoustic_streaming_velocity(
     // The previous hardcoded 1e-6 was correctly the 20 °C value but the comment
     // mislabelled it as 37 °C (where ν ≈ 7 × 10⁻⁷ m²/s).
     let kinematic_viscosity = VISCOSITY_WATER / DENSITY_WATER;
+    let radius_equilibrium_value = radius_equilibrium.into_base();
+    let wall_velocity_amplitude_value = wall_velocity_amplitude.into_base();
+    let frequency_value = frequency.into_base();
+    let distance_value = distance.into_base();
 
-    if distance <= radius_equilibrium {
+    if distance_value <= radius_equilibrium_value {
         return Ok(StreamingVelocity::zero());
     }
 
-    let omega = TWO_PI * frequency;
-    let mach_sq = (wall_velocity_amplitude / SOUND_SPEED_TISSUE).powi(2);
-    let re = (radius_equilibrium.powi(2) * omega) / kinematic_viscosity;
-    let r_ratio = distance / radius_equilibrium;
+    let omega = TWO_PI * frequency_value;
+    let mach_sq = (wall_velocity_amplitude_value / SOUND_SPEED_TISSUE).powi(2);
+    let re = (radius_equilibrium_value.powi(2) * omega) / kinematic_viscosity;
+    let r_ratio = distance_value / radius_equilibrium_value;
     let decay = 1.0 / r_ratio.powi(2);
-    let v_magnitude = re * mach_sq * radius_equilibrium * omega * decay;
+    let v_magnitude = re * mach_sq * radius_equilibrium_value * omega * decay;
 
     let dir_mag = direction
-        .2
+        .z
         .mul_add(
-            direction.2,
-            direction.0.mul_add(direction.0, direction.1 * direction.1),
+            direction.z,
+            direction.x.mul_add(direction.x, direction.y * direction.y),
         )
         .sqrt();
     if dir_mag < 1e-10 {
         return Ok(StreamingVelocity::zero());
     }
 
-    let nx = direction.0 / dir_mag;
-    let ny = direction.1 / dir_mag;
-    let nz = direction.2 / dir_mag;
+    let nx = direction.x / dir_mag;
+    let ny = direction.y / dir_mag;
+    let nz = direction.z / dir_mag;
 
     Ok(StreamingVelocity::new(
-        v_magnitude * nx,
-        v_magnitude * ny,
-        v_magnitude * nz,
+        Velocity::from_base(v_magnitude * nx),
+        Velocity::from_base(v_magnitude * ny),
+        Velocity::from_base(v_magnitude * nz),
     ))
 }

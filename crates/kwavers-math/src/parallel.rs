@@ -76,8 +76,8 @@ pub(crate) fn zip_mut_two_refs<T, U, V, const N: usize, F>(
                 },
             );
         }
-        _ => zip_mut_with(&mut out, (&first, &second), |value, (first, second)| {
-            f(value, first, second)
+        _ => zip_mut_with(&mut out, (&first, &second), |out, (first, second)| {
+            f(out, first, second)
         })
         .unwrap(),
     }

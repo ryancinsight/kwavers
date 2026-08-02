@@ -1,5 +1,12 @@
 # Backlog / Strategy
 
+## Current Aequitas integration slice — 2026-08-02
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KWAVERS-AEQ-INTEGRATION-1 | Integrate the current Aequitas metric closure for therapeutic microbubble and plasmonics contracts on current `main`; harden the public three-dimensional plasmonic coordinate contract and synchronize the audit. | [arch] [major] | in-progress | Codex | `crates/kwavers-physics/src/{acoustics/therapy/microbubble,electromagnetic}`, PM artifacts |
+
+
 ## KW-RELEASE-CRATES-01 — Publish the Rust package closure [patch] — in progress
 
 - Owner: Codex; scope: workspace and package registry metadata, every local
@@ -13,6 +20,94 @@
   indexed on crates.io; each crate trusts only
   `.github/workflows/rust-release.yml` in the `crates-io` environment; and every
   package version has a matching GitHub Release.
+## KWAVERS-AEQ-MET-33 — Type plasmonics quantities [major] — done 2026-08-02
+
+- Owner: Codex; scope: `crates/kwavers-physics/src/electromagnetic/plasmonics/**`,
+  the public electromagnetic equation types, Aequitas provider vocabulary,
+  ADR 071, and synchronized metric PM artifacts.
+- Outcome: public plasmonics geometry, wavelength, number-density,
+  cross-section, reciprocal-volume coupling, and complex polarizability use
+  Aequitas quantities; relative dielectric functions and enhancement factors
+  remain dimensionless; Eunomia complex values retain one shared physical
+  unit and reduce only at formula boundaries.
+- Acceptance: all current callers and tests compile without compatibility
+  wrappers; analytical and complex-unit value regressions pass; raw physical
+  public signatures are absent; focused package checks, Clippy, formatting,
+  and documentation gates pass.
+- Correctness closure: `PlasmonicEnhancementEquation::near_field_coupling`
+  accepts `[Length; 3]` coordinates, preventing short-slice indexing panics;
+  commit `9fb70554f`.
+- Implementation: `77be364b9` migrates the current public Mie, enhancement,
+  nanoparticle-array, and electromagnetic-equation surfaces without a
+  compatibility wrapper. The provider complex-unit law passes at Aequitas
+  `68e5e971-c0cd-44b7-a987-ace602f042a3`; the exact pinned Kwavers graph
+  passes package test-target check and plasmonics Nextest `5e31e58e-838b-49e5-
+  a851-511cc7738bc9` (10/10), warning-denied package Clippy, doctests (8/8
+  executable), package Rustdoc, and targeted Rustfmt. The raw public-signature
+  residue scan is clean. The ordinary lane check remains blocked only by the
+  pre-existing Apollo dual-path lock collision, so exact-graph evidence is the
+  authoritative local check.
+- Re-open trigger: any hosted or exact-graph diagnostic against the current
+  PR head, or a remaining public plasmonics scalar found by the audit.
+
+## KWAVERS-AEQ-MET-53 — Type therapeutic microbubble quantities [major] — implementation done; integration pending
+
+- Owner: Codex; scope: public therapeutic microbubble state, shell, force,
+  streaming, dynamics, sampling, Aequitas provider vocabulary, ADR 092, and
+  synchronized PM artifacts.
+- Outcome: public SI contracts use Aequitas `Length`, `Velocity`,
+  `Acceleration`, `Pressure`, `PressureRate`, `Time`, `Force`, `Energy`, and
+  related quantities; numerical and storage scalar extraction remains explicit.
+- Implementation commits: `2299c33d3` propagates fallible Coeus forward and
+  backward errors through PINN networks, residuals, autodiff utilities, loss
+  functions, and trainers; zero-gradient fallbacks are removed. It also
+  completes the Leto mutable-view API cleanup required by the locked graph.
+  `1fd08058f` updates the temporal synchronization validation test to RITK's
+  typed `TemporalSyncResult` contract after the hosted compiler exposed the
+  stale tuple destructure. `0d956071a` updates all Kwavers example and
+  benchmark consumers for fallible PINN forward, trainer-step, and backward
+  APIs after the hosted architecture job exposed stale Coeus call sites.
+- Integration: PR #330 head is `1f50775fc` (standalone lock closure; plasmonics
+  source `77be364b9`).
+  The source-history fixes remain `1fd08058f` and `0d956071a`. The
+  checkout action and Python
+  release workflow pin Atlas `777cf325fad3114299b44a99a48145997f93a5b0`, the
+  current Coeus/Leto-compatible provider graph containing Aequitas `8cc90b2`
+  and Eunomia `18459875`.
+- Lock graph: regenerated `Cargo.lock` from an exact disposable checkout of
+  the pinned Atlas graph; the lock includes the current RITK
+  `ritk-diffusion-scheme` package and edges and has no stale package identity
+  or dependency edges. Exact-graph `cargo metadata --locked --all-features`
+  passes for the hosted Linux target, and the lock does not require a rewrite
+  under the pinned graph. The fresh hosted wheel and benchmark jobs remain
+  pending.
+- Provider-source closure: Kwavers' direct Consus dependencies now use the
+  canonical `.git` URL used by RITK. Their lock entries align with the Atlas
+  Consus `f0c28690` package source, so `consus-onnx` and the HDF5/IO packages
+  no longer resolve through duplicate URL identities. The separate
+  `consus-npy` provider branch remains explicit because it contains the
+  required NPY implementation.
+- Compatibility closure: lock entries now use the Atlas-pinned Asclepius,
+  Hyperion, Proteus, and Tyche revisions; Kwavers uses Aequitas temperature
+  differences explicitly and Leto 0.40's tuple-source `zip_mut_with` API.
+  Math 266/266 remains green from the preceding provider slice; the current
+  PINN-targeted solver suite passes 422/422 with 848 tests skipped. No wrapper
+  or fallback path was introduced.
+- Eunomia boundary: the current contracts are real-valued. Genuine complex
+  phasors remain representation data at existing dimensions and reduce to a
+  real observable before force, energy, or state metrics; no imaginary unit is
+  introduced.
+- Evidence: provider 47/47 plus pressure-rate 1/1; Kwavers physics
+  microbubble 38/38; exact-graph workspace check, locked metadata, solver
+  clippy at `-D warnings`, 79-file Rustfmt, PINN Nextest 422/422, solver
+  doctests 4/4, and `cargo deny check sources` pass offline. The source policy
+  admits the transitive RITK Gaia provider and removes an unused cutile-rs
+  entry. The workspace check reports only the existing
+  `kwavers-analysis::principal_axis` dead-code warning and external provider
+  linker warnings. The exact pinned graph compiles the corrected temporal
+  synchronization validation target and the updated `pinn` examples and
+  benches. The corrected hosted wheel, benchmark, and validation matrix
+  remains pending on PR #330.
 
 ## KW-AEQ-MET-04 — Type functional-ultrasound vessel metrics [major] [arch] — done
 

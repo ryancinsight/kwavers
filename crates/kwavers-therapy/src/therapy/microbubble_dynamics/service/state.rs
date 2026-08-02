@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use aequitas::systems::si::quantities::{Length, Pressure, ThermodynamicTemperature, Velocity};
 use kwavers_core::constants::cavitation::{
     POLYTROPIC_EXPONENT_AIR, SURFACE_TENSION_WATER, VAPOR_PRESSURE_WATER_25C, VISCOSITY_WATER,
 };
@@ -48,7 +49,7 @@ impl MicrobubbleDynamicsService {
         );
 
         Ok(BubbleParameters {
-            r0: state.radius_equilibrium,
+            r0: state.radius_equilibrium.into_base(),
             p0: ATMOSPHERIC_PRESSURE,
             rho_liquid: DENSITY_WATER_NOMINAL,
             c_liquid: SOUND_SPEED_TISSUE,
@@ -82,13 +83,13 @@ impl MicrobubbleDynamicsService {
         let params = Self::extract_bubble_parameters(bubble)?;
         let mut km_state = BubbleState::new(&params);
 
-        km_state.radius = bubble.radius;
-        km_state.wall_velocity = bubble.wall_velocity;
-        km_state.wall_acceleration = bubble.wall_acceleration;
-        km_state.temperature = bubble.temperature;
-        km_state.pressure_internal = bubble.pressure_internal;
-        km_state.pressure_liquid = bubble.pressure_liquid;
-        km_state.n_gas = bubble.gas_moles * AVOGADRO;
+        km_state.radius = bubble.radius.into_base();
+        km_state.wall_velocity = bubble.wall_velocity.into_base();
+        km_state.wall_acceleration = bubble.wall_acceleration.into_base();
+        km_state.temperature = bubble.temperature.into_base();
+        km_state.pressure_internal = bubble.pressure_internal.into_base();
+        km_state.pressure_liquid = bubble.pressure_liquid.into_base();
+        km_state.n_gas = bubble.gas_moles.into_base() * AVOGADRO;
 
         Ok(km_state)
     }
@@ -99,12 +100,13 @@ impl MicrobubbleDynamicsService {
         bubble: &mut MicrobubbleState,
         shell: &MarmottantShellProperties,
     ) {
-        bubble.radius = km_state.radius;
-        bubble.wall_velocity = km_state.wall_velocity;
-        bubble.wall_acceleration = km_state.wall_acceleration;
-        bubble.temperature = km_state.temperature;
-        bubble.pressure_internal = km_state.pressure_internal;
-        bubble.pressure_liquid = km_state.pressure_liquid;
+        bubble.radius = Length::from_base(km_state.radius);
+        bubble.wall_velocity = Velocity::from_base(km_state.wall_velocity);
+        bubble.wall_acceleration =
+            aequitas::systems::si::quantities::Acceleration::from_base(km_state.wall_acceleration);
+        bubble.temperature = ThermodynamicTemperature::from_base(km_state.temperature);
+        bubble.pressure_internal = Pressure::from_base(km_state.pressure_internal);
+        bubble.pressure_liquid = Pressure::from_base(km_state.pressure_liquid);
         bubble.surface_tension = shell.surface_tension(bubble.radius);
         bubble.shell_is_ruptured = shell.is_ruptured();
     }

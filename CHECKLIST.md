@@ -13,6 +13,87 @@
 - [ ] Merge hosted gates and publish all 23 packages in dependency order.
 - [ ] Verify crates.io indexing, trusted-publishing-only enforcement, and a
       matching GitHub Release for every package version.
+## Owner: Codex — KWAVERS-AEQ-MET-33 typed plasmonics quantities [major] — done 2026-08-02
+
+- [x] Integrate the public plasmonics Aequitas contract migration across Mie,
+      enhancement, nanoparticle-array, and electromagnetic-equation APIs.
+- [x] Preserve Eunomia `Complex64` as the real-plus-quadrature scalar for
+      `Polarizability`; do not introduce an imaginary physical unit.
+- [x] Migrate all current callers and retain scalar extraction only inside
+      dielectric, cross-section, coupling, and array formulas.
+- [x] Encode near-field coupling coordinates as fixed three-dimensional
+      `[Length; 3]` arrays so malformed public input cannot panic the formula.
+- [x] Add value-semantic quantity and complex-phasor regressions, then run
+      focused package checks, warning-denied Clippy, rustfmt, and residue scans.
+- [x] Synchronize ADR 071, `gap_audit.md`, backlog, checklist, and changelog.
+
+Acceptance: current public plasmonics quantities are typed, complex
+polarizability retains one physical unit, no imaginary unit or compatibility
+wrapper is introduced, and all callers compile. Met.
+
+Evidence: commit `77be364b9`; provider complex-unit Nextest 1/1; exact pinned
+Kwavers graph package test-target check; plasmonics Nextest 10/10; package
+Clippy at `-D warnings`; doctests 8/8 executable; package Rustdoc; targeted
+Rustfmt; and raw-public-signature residue scan pass. The ordinary lane check
+is blocked only by the pre-existing Apollo dual-path lock collision.
+
+## Owner: Codex — KWAVERS-AEQ-MET-53 typed therapeutic microbubble quantities [major] — implementation done; integration pending
+
+- [x] Type public therapeutic microbubble state, shell, radiation-force,
+      pressure-gradient, streaming-velocity, dynamics-service, and sampling
+      contracts with Aequitas quantities.
+- [x] Add provider-owned `Acceleration` and `PressureRate` SI vocabulary;
+      keep Keller–Miksis, Marmottant, Leto storage, drug payload, and numerical
+      formula scalar extraction explicit.
+- [x] Add ADR 092 and synchronize the backlog, changelog, and gap audit with
+      the real-valued Eunomia boundary rule: no imaginary physical unit;
+      complex phasors reduce to real observables at numerical boundaries.
+- [x] Refresh the Kwavers Atlas checkout-action and Python-release pins to the
+      current Coeus/Leto-compatible Atlas graph after the superseded matrix
+      exposed an Eunomia `UnitScalar` graph mismatch.
+- [x] Regenerate `Cargo.lock` from an exact disposable checkout of that Atlas
+      graph; the lock includes the current RITK diffusion-scheme package and
+      edges, with no stale provider package identity or dependency edge.
+- [x] Advance direct provider lock entries to the Atlas graph and fix the
+      resulting Aequitas temperature-difference and Leto 0.40 zip API errors.
+- [x] Propagate Coeus forward/backward failures through PINN networks,
+      residuals, autodiff, losses, and trainers; remove zero-gradient fallback
+      paths and complete Leto mutable-view API cleanup.
+- [x] Verify the provider-compatible graph with exact-graph workspace check,
+      solver clippy at `-D warnings`, Rustfmt, 422/422 PINN Nextest tests,
+      and 4/4 solver doctests.
+- [x] Align `deny.toml` with the locked transitive RITK graph by allowing the
+      Gaia provider and deleting the unused cutile-rs source entry; local
+      `cargo deny check sources` passes.
+- [x] Regenerate the lock from the exact Atlas `777cf` provider graph with the
+      hosted Linux platform filter; locked metadata and source policy checks
+      pass without a lock rewrite.
+- [x] Normalize direct Consus dependencies to RITK's canonical `.git` source
+      URL and align the locked Consus packages with Atlas head `f0c28690`,
+      eliminating duplicate git-source identities while retaining the
+      separate `consus-npy` provider branch.
+- [x] Update the temporal synchronization validation test for RITK's typed
+      `TemporalSyncResult` contract and assert its value-semantic metrics.
+- [x] Update all example and benchmark consumers for fallible Coeus PINN
+      forward, trainer-step, and backward APIs; propagate executable-example
+      errors and keep benchmark failures explicit.
+
+Acceptance: named public microbubble metrics are Aequitas-typed, provider
+vocabulary owns acceleration and pressure rate, formula/storage boundaries
+remain explicit, and no compatibility wrapper or imaginary physical unit is
+introduced. Met.
+
+Evidence: provider Aequitas Nextest passes 47/47 and the pressure-rate law
+filter passes 1/1; Kwavers physics microbubble Nextest passes 38/38; the
+preceding math slice passes 266/266; the current exact-graph workspace check,
+locked metadata, solver clippy at `-D warnings`, 79-file Rustfmt, PINN Nextest
+422/422, solver doctests 4/4, and `cargo deny check sources` pass offline
+outside the Atlas overlay. The workspace check reports only the existing
+`principal_axis` dead-code warning and external provider linker warnings. The
+exact pinned graph compiles the corrected temporal synchronization validation
+target and the updated `pinn` examples and benches. PR #330 source head
+`1f50775fc` includes the standalone lock closure and plasmonics metric closure;
+hosted matrix evidence is pending for this head.
 
 ## Owner: Codex — KW-AEQ-MET-04 vessel physical metrics [major] [arch] — done
 

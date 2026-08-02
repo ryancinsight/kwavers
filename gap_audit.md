@@ -1,3 +1,34 @@
+## Live plasmonics closure — 2026-08-02
+
+`KWAVERS-AEQ-MET-33` is implemented on the current Kwavers integration branch.
+Public Mie, enhancement, nanoparticle-array, and electromagnetic equation APIs
+use Aequitas `Length`, `NumberDensity`, `Area`, `Frequency`, `Polarizability`,
+and `ReciprocalVolume`; relative dielectric functions, volume fractions, and
+enhancement factors remain dimensionless. The public near-field coupling
+contract now accepts fixed `[Length; 3]` coordinates, so malformed coordinate
+lengths cannot reach indexed formula inputs.
+
+`Polarizability<eunomia::Complex64>` keeps real and quadrature components under
+one `FaradSquareMeter` unit. No imaginary physical unit or consumer wrapper is
+introduced. Scalar extraction is limited to dielectric interpolation,
+cross-section, coupling, and array formulas. Commit `77be364b9` passes the
+provider complex-unit law (1/1), exact pinned Kwavers package test-target
+check, plasmonics Nextest (10/10), warning-denied package Clippy, doctests
+(8/8 executable), package Rustdoc, targeted Rustfmt, and the raw-public-
+signature residue scan. Commit `9fb70554f` closes the audit's only concrete
+consumer correctness residual: the former slice contract could panic on a
+short coordinate input. The regenerated standalone Git lock metadata and
+targeted Rustfmt pass against the current branch; locked all-feature metadata
+passes outside the Atlas overlay. Full native compilation remains gated by the
+mutable Atlas overlay's unrelated Moirai `moirai-iter` failure; the prior
+exact pinned graph remains the authoritative behavioral evidence until the
+integration branch's hosted matrix completes.
+
+The CFDrs and Helios re-audits remain clean: no missing Aequitas physical
+metric was found in their current public boundaries. Their complex values are
+Eunomia representation data at existing dimensions and reduce to real
+observables at formula or reporting boundaries.
+
 ## Review 2026-07-29 — PR #325 unresolved blocker closeout
 
 Three non-outdated review threads remained valid at `fc3ac0308`. The repository
@@ -79,6 +110,95 @@ immutable Atlas graph.
     Kwavers' full facade build; it no longer blocks compilation.
 
 # Gap Audit
+
+## Closed therapeutic microbubble quantity audit — 2026-08-01
+
+`KWAVERS-AEQ-MET-53` is closed for implementation. The public therapeutic
+microbubble state now carries Aequitas `Length`, `Velocity`, `Acceleration`,
+`ThermodynamicTemperature`, `Pressure`, `AmountOfSubstance`,
+`SurfaceTension`, `DynamicViscosity`, `MassDensity`, `Mass`, `Time`, and
+`Velocity3D` contracts. Shell properties use typed radius, surface tension,
+viscosity, strain, stress, and pressure contributions. Radiation force,
+pressure-gradient, and streaming-velocity surfaces use typed force, pressure,
+length, velocity, frequency, time, and dimensionless direction/scale values.
+The therapy dynamics service and sampling boundary use typed pressure,
+pressure-gradient, pressure-rate, length, and time values.
+
+The provider owns `Acceleration` (`m/s²`) and `PressureRate` (`Pa/s`) as SI
+dimensions and coherent units. Keller–Miksis, Marmottant, Leto storage, drug
+payload, finite-difference, and other numerical formula boundaries extract
+base scalars explicitly; no consumer-local SI wrapper remains.
+
+The therapeutic acoustic contracts are real-valued and do not require an
+imaginary physical unit. If a future Eunomia complex phasor is introduced,
+the numerical boundary must reduce it to the real observable (Hermitian
+magnitude where required) before producing real pressure, force, or energy
+metrics. Complex representation is not a new physical dimension.
+
+See [`Kwavers ADR 092`](docs/ADR/092-therapeutic-microbubble-quantities.md)
+and [`Aequitas ADR 0013`](../aequitas/docs/adr/0013-acceleration-quantity.md).
+
+The current implementation head is `1f50775fc` on PR #330. It includes the
+plasmonics metric closure and propagates
+fallible Coeus forward and backward errors through PINN networks, residuals,
+autodiff utilities, loss functions, and trainers; zero-gradient fallback paths
+are removed. The follow-up also updates every Kwavers example and benchmark
+consumer of the now-fallible PINN forward, trainer-step, and backward APIs;
+the field-surrogate and convergence examples preserve provider errors through
+their executable boundaries, and benchmark failures remain explicit. The same
+increment completes the Leto mutable-view API cleanup
+required by the locked provider graph. The superseded
+`f37896521` wheel matrix failed before compiling Kwavers because the pinned
+Atlas checkout materialized Eunomia before `UnitScalar`; the benchmark smoke
+failure was downstream of that same provider error. The Kwavers checkout
+action and Python-release workflow now pin Atlas
+`777cf325fad3114299b44a99a48145997f93a5b0`, the current Coeus/Leto-compatible
+graph, so Eunomia `18459875` and Aequitas `8cc90b2` resolve together. The
+hosted wheel and benchmark jobs then exposed a stale lock graph. `Cargo.lock`
+now exactly matches a disposable checkout of the pinned Atlas graph,
+including the current provider revisions, required git package identities, and
+the `ritk-diffusion-scheme` package and edges owned by that graph. Locked
+`cargo metadata --all-features` passes against the same exact graph. The first
+refreshed run exposed six Windows-target `wgpu` dependency entries that made
+hosted Linux `--locked` commands try to rewrite `Cargo.lock`; regeneration
+against the exact `777cf` graph with `x86_64-unknown-linux-gnu` selected removes
+that platform-specific resolver drift. The hosted run then exposed a second
+provider-source defect: Kwavers' direct Consus edges used the URL without
+`.git`, while RITK's `consus-onnx` edge used the canonical `.git` URL. Direct
+edges now use the canonical URL, and the lock aligns all shared Consus packages
+with Atlas head `f0c28690`; only the separately required `consus-npy` branch
+remains distinct. The hosted validation then found one stale downstream test
+contract in `crates/kwavers/tests/ultrasound_physics_validation.rs`: RITK's
+typed `TemporalSyncResult` had replaced the old tuple and quality aggregate.
+Commit `1fd08058f` updates that test to assert the typed shift, correlation,
+overlap, and residual metrics. The hosted run at superseded head `fc2a5b863`
+then failed its architecture-validation wrapper while compiling stale example
+and benchmark Coeus call sites; the exact diagnostics were `E0609`/`E0308` in
+`field_surrogate_demo.rs` and `pinn_elastic_2d_training.rs`. Commit
+`0d956071a` closes that source gap. The exact disposable graph now passes
+locked `cargo check --examples --features pinn` and
+`cargo check --benches --features pinn`; the refreshed hosted matrix is the
+remaining integration gate.
+
+Advancing the lock to the Atlas-pinned Asclepius, Hyperion, Proteus, and Tyche
+revisions exposed two additional compatibility defects that are now resolved:
+the new Aequitas temperature-difference semantics are used explicitly in the
+bubble heat-transfer formula, and all Kwavers `zip2_mut_with`/
+`zip3_mut_with` calls are native tuple-source `zip_mut_with` calls for Leto
+0.40. No compatibility wrapper or fallback path was added.
+
+Verification: Aequitas provider Nextest previously passed 47/47 and the
+pressure-rate dimensional-law filter passed 1/1; Kwavers physics microbubble
+Nextest passed 38/38; the preceding math slice passed 266/266; the current
+exact-graph workspace check, locked metadata, solver clippy at `-D warnings`,
+79-file Rustfmt, PINN Nextest passed 422/422 with 848 skipped, solver doctests
+passed 4/4, and exact-graph `cargo deny check sources` passed. The deny source policy now
+admits the transitive RITK Gaia provider and contains no unused cutile-rs entry.
+The workspace check reports only the existing `kwavers-analysis::principal_axis`
+dead-code warning and external provider linker warnings. The exact pinned graph
+also compiles the corrected `ultrasound_physics_validation` target. The
+refreshed hosted wheel, benchmark, and validation matrix remains the integration
+residual on PR #330.
 
 ## Review 2026-07-31 — KW-AEQ-MET-04 source-level closure
 

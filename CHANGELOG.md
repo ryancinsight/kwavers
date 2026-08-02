@@ -12,6 +12,48 @@
 - [patch] Complete the Leto tuple-producer cutover, propagate fallible Coeus
   module and optimizer operations through Kwavers errors, and validate RITK's
   structured temporal-synchronization result at the consumer boundary.
+- **Breaking:** Plasmonics particle geometry, wavelengths, concentration,
+  cross-sections, near-field coupling, resonance frequency, and complex Mie
+  polarizability now use Aequitas quantities. Near-field coupling requires
+  fixed three-dimensional coordinate arrays. Eunomia `Complex64` remains the
+  real-plus-quadrature provider; both components share the polarizability unit
+  and no imaginary physical unit is introduced. See [ADR
+  071](docs/ADR/071-plasmonics-quantities.md).
+
+- **Breaking:** Therapeutic microbubble state, shell, radiation-force,
+  pressure-gradient, streaming-velocity, dynamics-service, and sampling
+  contracts now use Aequitas physical quantities. Aequitas adds coherent
+  `Acceleration` (`m/s²`) and `PressureRate` (`Pa/s`) vocabulary. Keller–Miksis,
+  Marmottant, Leto storage, and numerical formula boundaries retain explicit
+  scalar extraction. The real-valued contracts introduce no imaginary physical
+  unit; future Eunomia complex phasors must reduce to real observables at the
+  numerical boundary. See [ADR 092](docs/ADR/092-therapeutic-microbubble-quantities.md).
+
+- [patch] Refresh the Kwavers Atlas checkout-action and Python-release pins to
+  Atlas `777cf325fad3114299b44a99a48145997f93a5b0`, the provider graph
+  containing Eunomia `UnitScalar` and Aequitas `8cc90b2`, so real and complex
+  quantity scaling resolve from one compatible Coeus/Leto graph.
+
+- [patch] Refresh `Cargo.lock` to the Atlas-pinned Asclepius, Hyperion, Proteus,
+  and Tyche revisions, use Aequitas `TemperatureDifference` for bubble energy
+  updates, and migrate Kwavers multi-input traversals to Leto 0.40's tuple
+  source `zip_mut_with` API.
+
+- [patch] Propagate Coeus forward and backward errors through PINN networks,
+  residuals, autodiff utilities, loss functions, and trainers; remove
+  zero-gradient fallback paths and complete the Leto mutable-view API cleanup
+  required by the exact provider graph.
+
+- [patch] Align the cargo-deny source policy with the locked RITK graph by
+  allowing Gaia and removing the unused cutile-rs source entry.
+
+- [patch] Regenerate `Cargo.lock` from the exact Atlas `777cf` graph for the
+  hosted Linux target so locked documentation and test commands do not rewrite
+  platform-specific `wgpu` dependency entries.
+
+- [patch] Normalize direct Consus dependencies to the canonical `.git` source
+  URL used by RITK and align the locked HDF5/IO packages with Atlas Consus
+  `f0c28690`, eliminating duplicate git-source identities around `consus-onnx`.
 
 - [major] [arch] Functional-ultrasound vessel segmentation now requires
   validated Aequitas voxel spacing and returns typed `Length<f64>` geometry

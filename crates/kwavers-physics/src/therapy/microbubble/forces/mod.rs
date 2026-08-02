@@ -15,6 +15,6 @@ mod tests;
 
 pub use radiation::{
     calculate_drag_force, calculate_primary_bjerknes_force,
-    calculate_primary_bjerknes_force_averaged, RadiationForce,
+    calculate_primary_bjerknes_force_averaged, Direction3D, PressureGradient3D, RadiationForce,
 };
 pub use streaming::{calculate_acoustic_streaming_velocity, StreamingVelocity};
