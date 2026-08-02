@@ -100,3 +100,4 @@
 | [090](090-sound-speed-field-quantity.md) | Aequitas sound-speed field quantity | Accepted |
 | [091](091-electromagnetic-sar-quantities.md) | Aequitas electromagnetic SAR quantities | Accepted |
 | [092](092-therapeutic-microbubble-quantities.md) | Aequitas therapeutic microbubble quantities | Accepted — 2026-08-01 |
+| [093](093-ultrafast-scheduler-quantities.md) | Aequitas ultrafast transmission scheduler quantities | Accepted — 2026-08-02 |

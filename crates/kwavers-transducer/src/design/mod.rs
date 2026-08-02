@@ -148,7 +148,7 @@ impl ArrayDesign {
     }
 
     /// Element-centre coordinates \`m` for the synthesized layout, centred on
-    /// `center`. The array lies in the `x`–`y` plane at constant `z = center[2]`;
+    /// `center`. The array lies in the `x`–`y` plane at constant `z = center\[2\]`;
     /// element `(i, j)` is at flat index `idx = i·ny + j` (`i ∈ 0..nx` short axis,
     /// `j ∈ 0..ny` long axis), matching [`Self::channel_of_index`]. This is the
     /// bridge from an abstract design to the concrete geometry consumed by the

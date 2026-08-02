@@ -1,16 +1,22 @@
 # Project Checklist
 
-## Owner: Codex — KWAVERS-AEQ-MET-54 typed ultrafast scheduler quantities [major] — in progress 2026-08-02
+## Owner: Codex — KWAVERS-AEQ-MET-54 typed ultrafast scheduler quantities [major] — done 2026-08-02
 
-- [ ] Carry Aequitas `Velocity`, `Length`, `Frequency`, `Time`, and `Angle`
+- [x] Carry Aequitas `Velocity`, `Length`, `Frequency`, `Time`, and `Angle`
       through the public transmission scheduler and all callers.
-- [ ] Keep unit conversion at the PRF and timing formula boundary; preserve
+- [x] Keep unit conversion at the PRF and timing formula boundary; preserve
       real-valued schedule metrics and state that no imaginary physical unit
       applies to Eunomia representation data.
-- [ ] Add analytical schedule/timing regressions and ADR 093; synchronize
+- [x] Add analytical schedule/timing regressions and ADR 093; synchronize
       `gap_audit.md`, backlog, checklist, and changelog.
-- [ ] Run the focused locked check, Nextest, Clippy, doctest, Rustdoc, format,
+- [x] Run the focused locked check, Nextest, Clippy, doctest, Rustdoc, format,
       and public raw-physical-signature scans.
+
+Evidence: exact standalone `cargo check --offline --locked` all-target check;
+Nextest `7b7dfdab-3df2-4ed2-ad07-e5ce49e003dd` passed 218/218 with one ignored;
+package Clippy at `-D warnings`; doctests; Rustdoc; targeted Rustfmt; and raw
+public physical-field and complex-unit scans. The local Atlas overlay was not
+used for closure because its mutable provider graph is non-authoritative.
 
 ## Owner: Codex — Rust package publication [patch] — in progress
 
