@@ -134,11 +134,15 @@ pub trait PlasmonicEnhancementEquation: ElectromagneticWaveEquation {
         Dimensionless::from_base(enhancement)
     }
 
-    /// Near-field coupling between nanoparticles
+    /// Near-field coupling between nanoparticles in three-dimensional space.
+    ///
+    /// The fixed-size coordinate arrays make the dimensionality part of the
+    /// contract and prevent malformed positions from reaching the indexed
+    /// dipole-coupling formula.
     fn near_field_coupling(
         &self,
-        particle1_pos: &[Length],
-        particle2_pos: &[Length],
+        particle1_pos: &[Length; 3],
+        particle2_pos: &[Length; 3],
         wavelength: Length,
     ) -> ReciprocalVolume {
         // Dipole-dipole coupling approximation
