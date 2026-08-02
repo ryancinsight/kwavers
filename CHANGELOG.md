@@ -4,6 +4,14 @@
 
 ### Changed
 
+- **Breaking:** Ultrafast plane-wave and diverging-wave public geometry,
+  sampling, timing, angle, F-number, image-coordinate, and scalar Hann
+  contracts now use Aequitas quantities. Dense Leto delay and apodization
+  buffers remain explicit scalar storage boundaries. Eunomia complex phasors
+  retain one existing physical unit and reduce to real observables; no
+  imaginary physical unit is introduced. See [ADR
+  094](docs/ADR/094-ultrafast-plane-diverging-quantities.md).
+
 - **Breaking:** The public ultrafast transmission scheduler now uses Aequitas
   `Velocity`, `Length`, `Frequency`, `Time`, and `Angle` for physical metrics.
   Scalar extraction remains limited to PRF and timing formulas; real-valued

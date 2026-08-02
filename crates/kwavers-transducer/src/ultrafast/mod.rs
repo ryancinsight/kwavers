@@ -142,12 +142,13 @@ pub use sequencer::{TransmissionSchedule, TransmissionSequencer};
 #[cfg(test)]
 mod tests {
     use super::UltrafastPlaneWaveConfig;
+    use aequitas::systems::si::units::MeterPerSecond;
 
     #[test]
     fn test_ultrafast_module() {
         let config = UltrafastPlaneWaveConfig::default();
         assert_eq!(config.tilt_angles.len(), 11);
-        assert!(config.sound_speed > 0.0);
-        assert_eq!(config.f_number.unwrap(), 1.5);
+        assert!(config.sound_speed.in_unit::<MeterPerSecond>() > 0.0);
+        assert_eq!(config.f_number.unwrap().into_base(), 1.5);
     }
 }

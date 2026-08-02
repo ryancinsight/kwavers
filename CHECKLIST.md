@@ -1,5 +1,25 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-55 typed ultrafast plane/diverging quantities [major] [arch] — done 2026-08-02
+
+- [x] Type plane-wave and diverging-wave public geometry, speed, frequency,
+      angle, delay, F-number, and scalar Hann contracts with Aequitas.
+- [x] Type image-coordinate arrays while retaining scalar Leto delay and
+      apodization buffers only at the explicit storage boundary.
+- [x] Remove the scalar degree-conversion API and migrate all current callers
+      and tests without a compatibility wrapper.
+- [x] Add ADR 094 and record the Eunomia real-observable/complex-shared-unit
+      rule plus the remaining out-of-slice transducer audit candidates.
+- [x] Collect package Clippy, doctest, Rustdoc, format, and residue gates;
+      commit and publish the complete slice.
+
+Evidence: exact locked package check; Nextest
+`789c6fcc-a55c-49ce-9ff9-d12d6a4f944f` passed 218/218 with one ignored;
+package Clippy at `-D warnings`; one executable doctest with six ignored;
+package Rustdoc; targeted Rustfmt; `git diff --check`; and typed/complex
+residue scans. The shared Atlas build cache was used without a private target
+fork.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-54 typed ultrafast scheduler quantities [major] — done 2026-08-02
 
 - [x] Carry Aequitas `Velocity`, `Length`, `Frequency`, `Time`, and `Angle`

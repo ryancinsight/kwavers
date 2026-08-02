@@ -101,3 +101,4 @@
 | [091](091-electromagnetic-sar-quantities.md) | Aequitas electromagnetic SAR quantities | Accepted |
 | [092](092-therapeutic-microbubble-quantities.md) | Aequitas therapeutic microbubble quantities | Accepted — 2026-08-01 |
 | [093](093-ultrafast-scheduler-quantities.md) | Aequitas ultrafast transmission scheduler quantities | Accepted — 2026-08-02 |
+| [094](094-ultrafast-plane-diverging-quantities.md) | Aequitas ultrafast plane and diverging-wave quantities | Accepted — 2026-08-02 |

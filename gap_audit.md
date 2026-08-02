@@ -1,5 +1,30 @@
 ## Live Aequitas closure — 2026-08-02
 
+### KWAVERS-AEQ-MET-55 — ultrafast plane and diverging-wave geometry
+
+The broader ultrafast audit found a second public gap adjacent to the closed
+scheduler: `plane_wave` and `diverging_wave` exposed element positions, image
+coordinates, sound speed, virtual-source depth, sampling frequency, angles,
+delays, PRF, F-number, and scalar Hann weights as untyped SI values. The gap
+is being closed with Aequitas `Length`, `Velocity`, `Frequency`, `Angle`,
+`Time`, and `Dimensionless`. Dense Leto delay and apodization arrays remain
+scalar buffers only at the explicit storage boundary, with seconds or
+dimensionless weights documented by their contracts.
+
+The former `angles_degrees` API is removed; current callers retain typed
+angles. No Eunomia imaginary unit is introduced. Complex phasors remain
+representation data under one existing unit and reduce to the specified real
+observable before these real geometry and timing APIs.
+
+Implementation: `crates/kwavers-transducer/src/ultrafast/{plane_wave,diverging_wave}`
+and `docs/ADR/094-ultrafast-plane-diverging-quantities.md`. The exact locked
+package check, Clippy with `-D warnings`, doctests, Rustdoc, targeted Rustfmt,
+`git diff --check`, and typed/complex residue scans pass. Final Nextest run
+`789c6fcc-a55c-49ce-9ff9-d12d6a4f944f` passes 218/218 with one ignored. The
+remaining raw physical metrics in other transducer families are outside this
+bounded slice and remain audit candidates rather than being represented as
+closed.
+
 ### KWAVERS-AEQ-MET-54 — ultrafast transmission scheduler
 
 The audit found one remaining public physical-metric gap in
