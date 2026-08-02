@@ -7,6 +7,7 @@ use crate::inverse::pinn::ml::physics::{
     PinnDomainPhysicsParameters, SimulationPhysicsDomain,
 };
 use coeus_autograd::Var;
+use kwavers_core::error::KwaversResult;
 use std::collections::HashMap;
 
 use super::config::CavitationCouplingType;
@@ -28,8 +29,8 @@ where
         y: &Var<f32, B>,
         t: &Var<f32, B>,
         physics_params: &PinnDomainPhysicsParameters,
-    ) -> Var<f32, B> {
-        let acoustic_field = model.forward(x, y, t);
+    ) -> KwaversResult<Var<f32, B>> {
+        let acoustic_field = model.forward(x, y, t)?;
 
         // Build bubble-position tensor from physics-driven nucleation sites.
         // Falls back to collocation points if no bubbles have nucleated yet.
@@ -61,7 +62,7 @@ where
 
         let cav = self.cavitation_residual(&acoustic_field, &bubble_positions, physics_params);
         let scat = self.bubble_scattering_residual(&acoustic_field, &bubble_positions);
-        coeus_autograd::add(&cav, &scat)
+        Ok(coeus_autograd::add(&cav, &scat))
     }
 
     fn boundary_conditions(&self) -> Vec<PinnBoundaryConditionSpec> {

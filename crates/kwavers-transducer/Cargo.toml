@@ -1,6 +1,7 @@
 [package]
 name = "kwavers-transducer"
 version = "4.1.0"
+publish = true
 edition = "2021"
 authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
 description = "High-level transducer devices for kwavers: focused bowls, phased/linear/matrix/2-D/hemispherical arrays, k-Wave arrays, calibration, factories, beamforming, PAM, ultrafast"
@@ -8,15 +9,15 @@ license = "MIT"
 repository = "https://github.com/ryancinsight/kwavers"
 
 [dependencies]
-kwavers-core = { path = "../kwavers-core" }
-kwavers-math = { path = "../kwavers-math" }
+kwavers-core = { path = "../kwavers-core", version = "3.0.0" }
+kwavers-math = { path = "../kwavers-math", version = "3.0.0" }
 eunomia = { workspace = true }
-kwavers-grid = { path = "../kwavers-grid" }
-kwavers-signal = { path = "../kwavers-signal" }
-kwavers-field = { path = "../kwavers-field" }
-kwavers-medium = { path = "../kwavers-medium" }
-kwavers-source = { path = "../kwavers-source" }
-kwavers-receiver = { path = "../kwavers-receiver" }
+kwavers-grid = { path = "../kwavers-grid", version = "3.0.0" }
+kwavers-signal = { path = "../kwavers-signal", version = "3.0.0" }
+kwavers-field = { path = "../kwavers-field", version = "3.0.0" }
+kwavers-medium = { path = "../kwavers-medium", version = "4.0.0" }
+kwavers-source = { path = "../kwavers-source", version = "3.0.0" }
+kwavers-receiver = { path = "../kwavers-receiver", version = "3.0.0" }
 leto = { workspace = true }
 leto-ops = { workspace = true }
 moirai-parallel = { workspace = true }

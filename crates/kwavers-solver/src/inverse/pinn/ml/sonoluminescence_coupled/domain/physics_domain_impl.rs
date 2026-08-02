@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 
 use coeus_autograd::Var;
+use kwavers_core::error::KwaversResult;
 
 use crate::inverse::pinn::ml::physics::{
     BoundaryPosition, InitialConditionSpec, PhysicsLossWeights, PhysicsValidationMetric,
@@ -30,7 +31,7 @@ where
         y: &Var<f32, B>,
         t: &Var<f32, B>,
         physics_params: &PinnDomainPhysicsParameters,
-    ) -> Var<f32, B> {
+    ) -> KwaversResult<Var<f32, B>> {
         self.electromagnetic_residual_with_sources(model, x, y, t, physics_params)
     }
 

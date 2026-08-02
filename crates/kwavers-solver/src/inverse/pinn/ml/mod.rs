@@ -62,6 +62,9 @@
 pub mod adapters;
 
 #[cfg(feature = "pinn")]
+pub(crate) mod coeus_forward;
+
+#[cfg(feature = "pinn")]
 pub mod fdtd_reference;
 
 #[cfg(feature = "pinn")]

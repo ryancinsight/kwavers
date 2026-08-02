@@ -122,7 +122,7 @@ where
                     &u_ic,
                     wave_speed,
                     loss_weights,
-                );
+                )?;
 
             let total_val = total_loss.tensor.as_slice()[0] as f64;
             let data_val = data_loss.tensor.as_slice()[0] as f64;
@@ -131,10 +131,14 @@ where
             let ic_val = ic_loss.tensor.as_slice()[0] as f64;
 
             if total_val.is_finite() {
-                total_loss.backward();
+                total_loss.backward().map_err(|error| {
+                    kwavers_core::error::KwaversError::InternalError(format!(
+                        "distributed PINN backward: {error}"
+                    ))
+                })?;
                 let optimizer = SimpleOptimizer2D::new(1e-3_f32);
                 self.coordinator.model_replicas[replica_idx] =
-                    optimizer.step(self.coordinator.model_replicas[replica_idx].clone());
+                    optimizer.step(self.coordinator.model_replicas[replica_idx].clone())?;
             }
 
             results.push((

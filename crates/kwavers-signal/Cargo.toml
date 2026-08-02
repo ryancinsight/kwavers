@@ -1,6 +1,7 @@
 [package]
 name = "kwavers-signal"
 version = "3.0.0"
+publish = true
 edition = "2021"
 authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
 description = "Excitation signal generation and processing for kwavers: waveforms, pulses, frequency sweeps, modulation, windowing, filters"
@@ -8,8 +9,8 @@ license = "MIT"
 repository = "https://github.com/ryancinsight/kwavers"
 
 [dependencies]
-kwavers-core = { path = "../kwavers-core" }
-kwavers-math = { path = "../kwavers-math" }
+kwavers-core = { path = "../kwavers-core", version = "3.0.0" }
+kwavers-math = { path = "../kwavers-math", version = "3.0.0" }
 apollo = { workspace = true }
 leto = { workspace = true }
 serde = { version = "1.0", features = ["derive"] }

@@ -1188,20 +1188,20 @@ fn validate_temporal_synchronization_multi_modal() {
     )
     .unwrap();
 
-    let (phase_offset, quality) = registration
+    let synchronization = registration
         .temporal_synchronization(&ref_signal, &target_signal)
         .unwrap();
 
     // Validate synchronization quality
     assert!(
-        phase_offset.abs() < std::f64::consts::PI * 2.0,
-        "Phase offset should be reasonable"
+        synchronization.shift_frames().abs() <= 10.0,
+        "Estimated shift should remain inside the default search range"
     );
-
-    // Quality metrics should be computed
-    assert!(quality.rms_timing_error >= 0.0);
-    assert!(quality.phase_lock_stability >= 0.0);
-    assert!(quality.phase_lock_stability <= 1.0);
-    assert!(quality.sync_success_rate >= 0.0);
-    assert!(quality.sync_success_rate <= 1.0);
+    assert!(synchronization.shift_seconds().is_finite());
+    assert!((-1.0..=1.0).contains(&synchronization.peak_correlation()));
+    assert!(synchronization.overlap_samples() > 0);
+    assert!(synchronization.residual_rms().is_finite());
+    assert!(synchronization.residual_rms() >= 0.0);
+    assert!(synchronization.residual_max_abs().is_finite());
+    assert!(synchronization.residual_max_abs() >= 0.0);
 }

@@ -2,9 +2,11 @@
 
 use coeus_autograd::Var;
 use coeus_nn::{Linear, Module};
+use kwavers_core::error::KwaversResult;
 
 use super::fourier::FourierFeatures;
 use super::residual::ResidualBlock;
+use crate::inverse::pinn::ml::coeus_forward::map_forward;
 
 /// Configuration for ResNet-based PINN architectures.
 #[derive(Debug, Clone)]
@@ -126,7 +128,7 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> ResNetPINN
     }
 
     /// Forward pass through ResNet PINN.
-    pub fn forward(&self, x: &Var<f32, B>, t: &Var<f32, B>) -> Var<f32, B>
+    pub fn forward(&self, x: &Var<f32, B>, t: &Var<f32, B>) -> KwaversResult<Var<f32, B>>
     where
         B::DeviceBuffer<f32>:
             coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
@@ -139,13 +141,20 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> ResNetPINN
             input
         };
 
-        let mut out = coeus_autograd::gelu(&self.input_proj.forward(&features));
+        let input_projection = map_forward(
+            self.input_proj.forward(&features),
+            "ResNet 1D input projection",
+        )?;
+        let mut out = coeus_autograd::gelu(&input_projection);
 
         for block in &self.residual_blocks {
-            out = coeus_autograd::gelu(&block.forward(&out));
+            out = coeus_autograd::gelu(&block.forward(&out)?);
         }
 
-        self.output_proj.forward(&out)
+        map_forward(
+            self.output_proj.forward(&out),
+            "ResNet 1D output projection",
+        )
     }
 }
 
@@ -242,7 +251,12 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> ResNetPINN
     }
 
     /// Forward pass through ResNet PINN.
-    pub fn forward(&self, x: &Var<f32, B>, y: &Var<f32, B>, t: &Var<f32, B>) -> Var<f32, B>
+    pub fn forward(
+        &self,
+        x: &Var<f32, B>,
+        y: &Var<f32, B>,
+        t: &Var<f32, B>,
+    ) -> KwaversResult<Var<f32, B>>
     where
         B::DeviceBuffer<f32>:
             coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
@@ -255,12 +269,19 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> ResNetPINN
             input
         };
 
-        let mut out = coeus_autograd::gelu(&self.input_proj.forward(&features));
+        let input_projection = map_forward(
+            self.input_proj.forward(&features),
+            "ResNet 2D input projection",
+        )?;
+        let mut out = coeus_autograd::gelu(&input_projection);
 
         for block in &self.residual_blocks {
-            out = coeus_autograd::gelu(&block.forward(&out));
+            out = coeus_autograd::gelu(&block.forward(&out)?);
         }
 
-        self.output_proj.forward(&out)
+        map_forward(
+            self.output_proj.forward(&out),
+            "ResNet 2D output projection",
+        )
     }
 }

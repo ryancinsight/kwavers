@@ -176,7 +176,7 @@ where
                     &u_ic,
                     wave_speed,
                     config.loss_weights,
-                );
+                )?;
 
             let total_val = total_loss.tensor.as_slice()[0] as f64;
             let data_val = data_loss.tensor.as_slice()[0] as f64;
@@ -208,8 +208,10 @@ where
             metrics.ic_loss.push(ic_val);
             metrics.epochs_completed = epoch + 1;
 
-            total_loss.backward();
-            self.pinn = self.optimizer.step(self.pinn.clone());
+            total_loss.backward().map_err(|error| {
+                KwaversError::InternalError(format!("2D wave PINN backward: {error}"))
+            })?;
+            self.pinn = self.optimizer.step(self.pinn.clone())?;
 
             if epoch % 100 == 0 {
                 log::info!("Epoch {}/{}: total_loss={:.6e}", epoch, epochs, total_val);

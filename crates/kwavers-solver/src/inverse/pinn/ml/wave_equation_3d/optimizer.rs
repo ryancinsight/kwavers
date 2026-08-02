@@ -10,8 +10,10 @@
 
 use coeus_autograd::Parameter;
 use coeus_optim::{Optimizer as CoeusOptimizer, SGD};
+use kwavers_core::error::KwaversResult;
 
 use super::network::PINN3DNetwork;
+use crate::inverse::pinn::ml::coeus_forward::map_backend;
 
 /// Simple SGD optimizer for PINN training
 #[derive(Debug, Clone)]
@@ -32,10 +34,15 @@ impl SimpleOptimizer3D {
     /// (`coeus_tensor::Tensor`'s storage is copy-on-write, so a clone taken
     /// via `parameters()` detaches from the network on first mutation);
     /// `load_parameters` writes the updated values back into `network`.
+    ///
+    /// # Errors
+    ///
+    /// Returns a solver error when the Coeus SGD backend cannot update its
+    /// parameters.
     pub fn step<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
         &self,
         mut network: PINN3DNetwork<B>,
-    ) -> PINN3DNetwork<B>
+    ) -> KwaversResult<PINN3DNetwork<B>>
     where
         B::DeviceBuffer<f32>:
             coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
@@ -47,14 +54,14 @@ impl SimpleOptimizer3D {
             .map(|(index, var)| Parameter::new(var, format!("p{index}")))
             .collect();
         let mut opt = SGD::new(parameters, self.learning_rate, 0.0);
-        opt.step();
+        map_backend(opt.step(), "PINN 3D SGD step")?;
         let updated_parameters = opt
             .params
             .iter()
             .map(|parameter| parameter.var.clone())
             .collect::<Vec<_>>();
         network.load_parameters(&updated_parameters);
-        network
+        Ok(network)
     }
 }
 
@@ -100,13 +107,17 @@ mod tests {
         for p in network.parameters() {
             p.zero_grad();
         }
-        let output = network.forward(&x, &y, &z, &t);
+        let output = network.forward(&x, &y, &z, &t)?;
         let diff = coeus_autograd::sub(&output, &target);
         let loss = coeus_autograd::mean(&coeus_autograd::mul(&diff, &diff));
-        loss.backward();
+        loss.backward().map_err(|error| {
+            kwavers_core::error::KwaversError::InternalError(format!(
+                "3D optimizer backward: {error}"
+            ))
+        })?;
 
         let optimizer = SimpleOptimizer3D::new(0.1);
-        let updated_network = optimizer.step(network);
+        let updated_network = optimizer.step(network)?;
 
         assert_eq!(
             updated_network.hidden_layer_count(),
@@ -132,7 +143,7 @@ mod tests {
         let t = var_col(&backend, &[0.1, 0.2, 0.3]);
         let target = var_col(&backend, &[0.0, 0.0, 0.0]);
 
-        let output_initial = network.forward(&x, &y, &z, &t);
+        let output_initial = network.forward(&x, &y, &z, &t)?;
         let diff_initial = coeus_autograd::sub(&output_initial, &target);
         let loss_initial = coeus_autograd::mean(&coeus_autograd::mul(&diff_initial, &diff_initial));
         assert!(loss_initial.tensor.as_slice()[0].is_finite());
@@ -141,14 +152,18 @@ mod tests {
             for p in network.parameters() {
                 p.zero_grad();
             }
-            let output = network.forward(&x, &y, &z, &t);
+            let output = network.forward(&x, &y, &z, &t)?;
             let diff = coeus_autograd::sub(&output, &target);
             let loss = coeus_autograd::mean(&coeus_autograd::mul(&diff, &diff));
-            loss.backward();
-            network = optimizer.step(network);
+            loss.backward().map_err(|error| {
+                kwavers_core::error::KwaversError::InternalError(format!(
+                    "3D optimizer backward: {error}"
+                ))
+            })?;
+            network = optimizer.step(network)?;
         }
 
-        let output_final = network.forward(&x, &y, &z, &t);
+        let output_final = network.forward(&x, &y, &z, &t)?;
         let diff_final = coeus_autograd::sub(&output_final, &target);
         let loss_final = coeus_autograd::mean(&coeus_autograd::mul(&diff_final, &diff_final));
 
@@ -176,19 +191,23 @@ mod tests {
         for p in network1.parameters() {
             p.zero_grad();
         }
-        let output = network1.forward(&x, &y, &z, &t);
+        let output = network1.forward(&x, &y, &z, &t)?;
         let diff = coeus_autograd::sub(&output, &target);
         let loss = coeus_autograd::mean(&coeus_autograd::mul(&diff, &diff));
-        loss.backward();
+        loss.backward().map_err(|error| {
+            kwavers_core::error::KwaversError::InternalError(format!(
+                "3D optimizer backward: {error}"
+            ))
+        })?;
 
         let optimizer_small = SimpleOptimizer3D::new(0.001);
         let optimizer_large = SimpleOptimizer3D::new(0.1);
 
-        let updated1 = optimizer_small.step(network1);
-        let updated2 = optimizer_large.step(network2);
+        let updated1 = optimizer_small.step(network1)?;
+        let updated2 = optimizer_large.step(network2)?;
 
-        let out1 = updated1.forward(&x, &y, &z, &t);
-        let out2 = updated2.forward(&x, &y, &z, &t);
+        let out1 = updated1.forward(&x, &y, &z, &t)?;
+        let out2 = updated2.forward(&x, &y, &z, &t)?;
 
         let diff1 = coeus_autograd::sub(&out1, &target);
         let loss1 = coeus_autograd::mean(&coeus_autograd::mul(&diff1, &diff1));

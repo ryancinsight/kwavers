@@ -8,8 +8,10 @@
 
 use coeus_autograd::Parameter;
 use coeus_optim::{Optimizer as CoeusOptimizer, SGD};
+use kwavers_core::error::KwaversResult;
 
 use super::network::ParamFieldPINNNetwork;
+use crate::inverse::pinn::ml::coeus_forward::map_backend;
 
 /// Plain SGD optimizer: `θ ← θ − η · ∇θ`.
 #[derive(Debug, Clone)]
@@ -27,10 +29,15 @@ impl ParamFieldOptimizer {
     /// One optimisation step over gradients accumulated on each
     /// parameter `Var` since the last `zero_grad`. Consumes the input
     /// network and returns the updated one.
+    ///
+    /// # Errors
+    ///
+    /// Returns a solver error when the Coeus SGD backend cannot update its
+    /// parameters.
     pub fn step<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
         &self,
         mut net: ParamFieldPINNNetwork<B>,
-    ) -> ParamFieldPINNNetwork<B>
+    ) -> KwaversResult<ParamFieldPINNNetwork<B>>
     where
         B::DeviceBuffer<f32>:
             coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
@@ -42,13 +49,13 @@ impl ParamFieldOptimizer {
             .map(|(index, var)| Parameter::new(var, format!("p{index}")))
             .collect();
         let mut opt = SGD::new(parameters, self.learning_rate, 0.0);
-        opt.step();
+        map_backend(opt.step(), "field-surrogate SGD step")?;
         let updated_parameters = opt
             .params
             .iter()
             .map(|parameter| parameter.var.clone())
             .collect::<Vec<_>>();
         net.load_parameters(&updated_parameters);
-        net
+        Ok(net)
     }
 }

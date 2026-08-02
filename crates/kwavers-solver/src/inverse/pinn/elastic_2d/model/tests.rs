@@ -28,7 +28,7 @@ fn test_model_forward_pass() {
     let y = var_scalar(0.5);
     let t = var_scalar(0.1);
 
-    let output = model.forward(&x, &y, &t);
+    let output = model.forward(&x, &y, &t).expect("elastic forward");
     let dims = output.tensor.shape();
     assert_eq!(dims[0], 1);
     assert_eq!(dims[1], 2);
@@ -55,7 +55,7 @@ fn test_model_batch_forward() {
     let y = mk(0.5);
     let t = mk(0.1);
 
-    let output = model.forward(&x, &y, &t);
+    let output = model.forward(&x, &y, &t).expect("elastic batch forward");
     let dims = output.tensor.shape();
     assert_eq!(dims[0], batch_size);
     assert_eq!(dims[1], 2);

@@ -6,7 +6,7 @@ use super::operator::StaggeredGridOperator;
 use crate::numerics::operators::differential::traversal;
 use kwavers_core::error::{KwaversResult, NumericalError};
 use leto::{Array3, ArrayView3};
-use leto_ops::zip2_mut_with;
+use leto_ops::zip_mut_with;
 
 impl StaggeredGridOperator {
     /// Apply forward difference in X into a pre-allocated buffer.
@@ -58,7 +58,7 @@ impl StaggeredGridOperator {
         let field_lo = field
             .slice(&[(0, nx - 1, 1), (0, ny, 1), (0, nz, 1)])
             .unwrap();
-        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| {
+        zip_mut_with(&mut dst_slice, (&field_hi, &field_lo), |r, (&hi, &lo)| {
             *r = (hi - lo) / dx
         })
         .unwrap();
@@ -114,7 +114,7 @@ impl StaggeredGridOperator {
         let field_lo = field
             .slice(&[(0, nx, 1), (0, ny - 1, 1), (0, nz, 1)])
             .unwrap();
-        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| {
+        zip_mut_with(&mut dst_slice, (&field_hi, &field_lo), |r, (&hi, &lo)| {
             *r = (hi - lo) / dy
         })
         .unwrap();
@@ -170,7 +170,7 @@ impl StaggeredGridOperator {
         let field_lo = field
             .slice(&[(0, nx, 1), (0, ny, 1), (0, nz - 1, 1)])
             .unwrap();
-        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| {
+        zip_mut_with(&mut dst_slice, (&field_hi, &field_lo), |r, (&hi, &lo)| {
             *r = (hi - lo) / dz
         })
         .unwrap();

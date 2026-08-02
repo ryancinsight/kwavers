@@ -134,7 +134,7 @@ where
 
         for _ in 0..self.config.adaptation_steps {
             let (loss, _grads) = self.compute_gradients_and_loss(&task_model, &task_data, task)?;
-            task_model = optimizer.step(task_model);
+            task_model = optimizer.step(task_model)?;
             task_loss = loss.total_loss;
             physics_loss = loss.physics_loss;
         }

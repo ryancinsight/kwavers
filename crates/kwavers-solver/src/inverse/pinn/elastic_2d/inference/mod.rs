@@ -102,7 +102,7 @@ where
                 false,
             )
         };
-        let output = self.model.forward(&mk(x), &mk(y), &mk(t));
+        let output = self.model.forward(&mk(x), &mk(y), &mk(t))?;
         let slice = output.tensor.as_slice();
         Ok([slice[0] as f64, slice[1] as f64])
     }
@@ -143,7 +143,7 @@ where
         let y_var = mk(&y_data);
         let t_var = mk(&t_data);
 
-        let output = self.model.forward(&x_var, &y_var, &t_var);
+        let output = self.model.forward(&x_var, &y_var, &t_var)?;
         let slice = output.tensor.as_slice();
 
         let values: Vec<f64> = slice.iter().map(|&v| v as f64).collect();

@@ -113,6 +113,7 @@
 //! ```
 
 use coeus_autograd::Var;
+use kwavers_core::error::{KwaversError, KwaversResult};
 
 use super::{config::LossWeights, network::PinnWave1D};
 
@@ -175,37 +176,43 @@ where
         x: &Var<f32, B>,
         t: &Var<f32, B>,
         wave_speed: f64,
-    ) -> Var<f32, B> {
+    ) -> KwaversResult<Var<f32, B>> {
         let c_squared = (wave_speed * wave_speed) as f32;
-        let backend = B::default();
-
         let x_grad = Var::new(x.tensor.clone(), true);
-        let u_for_x_deriv = self.forward(&x_grad, t);
-        u_for_x_deriv.backward();
-        let _du_dx = x_grad
-            .grad()
-            .unwrap_or_else(|| coeus_tensor::Tensor::zeros_on(x.tensor.shape(), &backend));
+        let u_for_x_deriv = self.forward(&x_grad, t)?;
+        u_for_x_deriv
+            .backward()
+            .map_err(|error| KwaversError::InternalError(format!("1D x derivative: {error}")))?;
+        let _du_dx = x_grad.grad().ok_or_else(|| {
+            KwaversError::InternalError("1D x derivative did not produce a gradient".into())
+        })?;
 
         let x_grad_2 = Var::new(x.tensor.clone(), true);
-        let u_xx = self.forward(&x_grad_2, t);
-        u_xx.backward();
-        let d2u_dx2 = x_grad_2
-            .grad()
-            .unwrap_or_else(|| coeus_tensor::Tensor::zeros_on(x.tensor.shape(), &backend));
+        let u_xx = self.forward(&x_grad_2, t)?;
+        u_xx.backward().map_err(|error| {
+            KwaversError::InternalError(format!("1D x second derivative: {error}"))
+        })?;
+        let d2u_dx2 = x_grad_2.grad().ok_or_else(|| {
+            KwaversError::InternalError("1D x second derivative did not produce a gradient".into())
+        })?;
 
         let t_grad = Var::new(t.tensor.clone(), true);
-        let u_for_t_deriv = self.forward(x, &t_grad);
-        u_for_t_deriv.backward();
-        let _du_dt = t_grad
-            .grad()
-            .unwrap_or_else(|| coeus_tensor::Tensor::zeros_on(t.tensor.shape(), &backend));
+        let u_for_t_deriv = self.forward(x, &t_grad)?;
+        u_for_t_deriv
+            .backward()
+            .map_err(|error| KwaversError::InternalError(format!("1D t derivative: {error}")))?;
+        let _du_dt = t_grad.grad().ok_or_else(|| {
+            KwaversError::InternalError("1D t derivative did not produce a gradient".into())
+        })?;
 
         let t_grad_2 = Var::new(t.tensor.clone(), true);
-        let u_tt = self.forward(x, &t_grad_2);
-        u_tt.backward();
-        let d2u_dt2 = t_grad_2
-            .grad()
-            .unwrap_or_else(|| coeus_tensor::Tensor::zeros_on(t.tensor.shape(), &backend));
+        let u_tt = self.forward(x, &t_grad_2)?;
+        u_tt.backward().map_err(|error| {
+            KwaversError::InternalError(format!("1D t second derivative: {error}"))
+        })?;
+        let d2u_dt2 = t_grad_2.grad().ok_or_else(|| {
+            KwaversError::InternalError("1D t second derivative did not produce a gradient".into())
+        })?;
 
         // Wrap the extracted (already-detached) second derivatives as fresh
         // leaves: the weight gradients they contribute to the physics loss
@@ -213,7 +220,10 @@ where
         // this residual value itself does not need further grad-tracking.
         let d2u_dt2 = Var::new(d2u_dt2, false);
         let d2u_dx2 = Var::new(d2u_dx2, false);
-        coeus_autograd::sub(&d2u_dt2, &coeus_autograd::scalar_mul(&d2u_dx2, c_squared))
+        Ok(coeus_autograd::sub(
+            &d2u_dt2,
+            &coeus_autograd::scalar_mul(&d2u_dx2, c_squared),
+        ))
     }
 
     /// Compute physics-informed loss function with all components
@@ -256,15 +266,15 @@ where
         u_boundary: &Var<f32, B>,
         wave_speed: f64,
         loss_weights: LossWeights,
-    ) -> (Var<f32, B>, Var<f32, B>, Var<f32, B>, Var<f32, B>) {
-        let u_pred_data = self.forward(x_data, t_data);
+    ) -> KwaversResult<(Var<f32, B>, Var<f32, B>, Var<f32, B>, Var<f32, B>)> {
+        let u_pred_data = self.forward(x_data, t_data)?;
         let data_diff = coeus_autograd::sub(&u_pred_data, u_data);
         let data_loss = coeus_autograd::mean(&coeus_autograd::mul(&data_diff, &data_diff));
 
-        let residual = self.compute_pde_residual(x_collocation, t_collocation, wave_speed);
+        let residual = self.compute_pde_residual(x_collocation, t_collocation, wave_speed)?;
         let pde_loss = coeus_autograd::mean(&coeus_autograd::mul(&residual, &residual));
 
-        let u_pred_boundary = self.forward(x_boundary, t_boundary);
+        let u_pred_boundary = self.forward(x_boundary, t_boundary)?;
         let bc_diff = coeus_autograd::sub(&u_pred_boundary, u_boundary);
         let bc_loss = coeus_autograd::mean(&coeus_autograd::mul(&bc_diff, &bc_diff));
 
@@ -276,6 +286,6 @@ where
             &coeus_autograd::scalar_mul(&bc_loss, loss_weights.boundary as f32),
         );
 
-        (total_loss, data_loss, pde_loss, bc_loss)
+        Ok((total_loss, data_loss, pde_loss, bc_loss))
     }
 }

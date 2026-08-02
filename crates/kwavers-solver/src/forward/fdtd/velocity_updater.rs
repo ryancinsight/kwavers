@@ -74,11 +74,10 @@ fn compute_forward_gradient(
             *output_value = (high_values[idx] - low_values[idx]) / spacing;
         });
     } else {
-        leto_ops::zip2_mut_with(
+        leto_ops::zip_mut_with(
             &mut output,
-            &high,
-            &low,
-            |output_value, high_value, low_value| {
+            (&high, &low),
+            |output_value, (high_value, low_value)| {
                 *output_value = (*high_value - *low_value) / spacing;
             },
         )
@@ -127,12 +126,10 @@ fn update_staggered_velocity(
             }
         });
     } else {
-        leto_ops::zip3_mut_with(
+        leto_ops::zip_mut_with(
             &mut velocity,
-            &rho_lower,
-            &rho_upper,
-            &pressure_gradient,
-            |velocity_value, rho_lower_value, rho_upper_value, pressure_gradient_value| {
+            (&rho_lower, &rho_upper, &pressure_gradient),
+            |velocity_value, (rho_lower_value, rho_upper_value, pressure_gradient_value)| {
                 let rho = 0.5 * (*rho_lower_value + *rho_upper_value);
                 if rho > 1e-9 {
                     *velocity_value -= dt / rho * *pressure_gradient_value;

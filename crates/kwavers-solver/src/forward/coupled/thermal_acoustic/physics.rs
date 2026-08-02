@@ -51,12 +51,12 @@ impl ThermalAcousticCoupler {
             return;
         }
 
-        leto_ops::zip_mut_with(&mut sound_speed.view_mut(), &temperature.view(), |c, t| {
+        leto_ops::zip_mut_with(sound_speed.view_mut(), &temperature.view(), |c, t| {
             let d_t = *t - d_t_offset;
             *c = dc_dt.mul_add(d_t, c_ref);
         })
         .expect("invariant: material property field shapes asserted equal");
-        leto_ops::zip_mut_with(&mut density.view_mut(), &temperature.view(), |rho, t| {
+        leto_ops::zip_mut_with(density.view_mut(), &temperature.view(), |rho, t| {
             let d_t = *t - d_t_offset;
             *rho = drho_dt.mul_add(d_t, rho_ref);
         })
@@ -98,12 +98,10 @@ impl ThermalAcousticCoupler {
             return;
         }
 
-        leto_ops::zip3_mut_with(
-            &mut acoustic_heating.view_mut(),
-            &pressure_prev.view(),
-            &density.view(),
-            &sound_speed.view(),
-            |q, p, rho, c| {
+        leto_ops::zip_mut_with(
+            acoustic_heating.view_mut(),
+            (&pressure_prev.view(), &density.view(), &sound_speed.view()),
+            |q, (p, rho, c)| {
                 if *rho > 0.0 && *c > 0.0 {
                     *q = 2.0 * alpha_ac * (*p * *p) / (*rho * *c);
                 } else {

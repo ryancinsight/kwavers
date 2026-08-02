@@ -5,6 +5,8 @@
 
 use coeus_autograd::Var;
 
+use super::ForwardOutput;
+
 /// 2D gradient component pair `(∂u/∂x, ∂u/∂y)`, each `[batch, 1]`.
 type GradientPair2D<B> = (coeus_tensor::Tensor<f32, B>, coeus_tensor::Tensor<f32, B>);
 
@@ -24,7 +26,7 @@ type GradientPair2D<B> = (coeus_tensor::Tensor<f32, B>, coeus_tensor::Tensor<f32
 /// ∂/∂y respectively.
 /// # Errors
 /// - Propagates any [`crate::KwaversError`] returned by called functions.
-pub fn compute_spatial_gradient_2d<B, F>(
+pub fn compute_spatial_gradient_2d<B, F, O>(
     forward_fn: F,
     input: &coeus_tensor::Tensor<f32, B>,
     output_component: usize,
@@ -32,16 +34,23 @@ pub fn compute_spatial_gradient_2d<B, F>(
 where
     B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default,
     B::DeviceBuffer<f32>: coeus_core::CpuAddressableStorage<f32>,
-    F: Fn(&Var<f32, B>) -> Var<f32, B>,
+    F: Fn(&Var<f32, B>) -> O,
+    O: ForwardOutput<B>,
 {
     let batch = input.shape()[0];
     let input_grad = Var::new(input.clone(), true);
-    let output = forward_fn(&input_grad);
+    let output = forward_fn(&input_grad).into_forward_result()?;
     let component = coeus_autograd::slice(
         &output,
         &[(0, batch), (output_component, output_component + 1)],
     );
-    coeus_autograd::sum(&component).backward();
+    coeus_autograd::sum(&component)
+        .backward()
+        .map_err(|error| {
+            kwavers_core::error::KwaversError::InternalError(format!(
+                "spatial gradient backward: {error}"
+            ))
+        })?;
 
     let grad_tensor = input_grad.grad().ok_or_else(|| {
         kwavers_core::error::KwaversError::InternalError(
@@ -72,22 +81,25 @@ where
 /// is computed from a distinct scalar reduction of its corresponding output slice.
 /// # Errors
 /// - Propagates any [`crate::KwaversError`] returned by called functions.
-pub fn compute_divergence_2d<B, F>(
+pub fn compute_divergence_2d<B, F, O>(
     forward_fn: F,
     input: &coeus_tensor::Tensor<f32, B>,
 ) -> Result<coeus_tensor::Tensor<f32, B>, kwavers_core::error::KwaversError>
 where
     B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default,
     B::DeviceBuffer<f32>: coeus_core::CpuAddressableStorage<f32>,
-    F: Fn(&Var<f32, B>) -> Var<f32, B>,
+    F: Fn(&Var<f32, B>) -> O,
+    O: ForwardOutput<B>,
 {
     let batch = input.shape()[0];
 
     // ∂u_x/∂x — backward through u_x component
     let input_grad = Var::new(input.clone(), true);
-    let output = forward_fn(&input_grad);
+    let output = forward_fn(&input_grad).into_forward_result()?;
     let u_x = coeus_autograd::slice(&output, &[(0, batch), (0, 1)]);
-    coeus_autograd::sum(&u_x).backward();
+    coeus_autograd::sum(&u_x).backward().map_err(|error| {
+        kwavers_core::error::KwaversError::InternalError(format!("divergence x backward: {error}"))
+    })?;
     let du_x_dx = input_grad
         .grad()
         .ok_or_else(|| {
@@ -100,9 +112,11 @@ where
 
     // ∂u_y/∂y — backward through u_y component
     let input_grad = Var::new(input.clone(), true);
-    let output = forward_fn(&input_grad);
+    let output = forward_fn(&input_grad).into_forward_result()?;
     let u_y = coeus_autograd::slice(&output, &[(0, batch), (1, 2)]);
-    coeus_autograd::sum(&u_y).backward();
+    coeus_autograd::sum(&u_y).backward().map_err(|error| {
+        kwavers_core::error::KwaversError::InternalError(format!("divergence y backward: {error}"))
+    })?;
     let du_y_dy = input_grad
         .grad()
         .ok_or_else(|| {

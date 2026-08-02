@@ -18,8 +18,8 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>
         _y: &Var<f32, B>,
         _t: &Var<f32, B>,
         _params: &PinnDomainPhysicsParameters,
-    ) -> Var<f32, B> {
-        coeus_autograd::scalar_mul(x, 0.1)
+    ) -> kwavers_core::error::KwaversResult<Var<f32, B>> {
+        Ok(coeus_autograd::scalar_mul(x, 0.1))
     }
     fn boundary_conditions(
         &self,

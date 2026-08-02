@@ -37,7 +37,9 @@ where
         let y = extract_column(1);
         let t = extract_column(2);
 
-        let residuals = self.domain.pde_residual(model, &x, &y, &t, &physics_params);
+        let residuals = self
+            .domain
+            .pde_residual(model, &x, &y, &t, &physics_params)?;
 
         let residual_magnitude: Vec<f32> = residuals
             .tensor

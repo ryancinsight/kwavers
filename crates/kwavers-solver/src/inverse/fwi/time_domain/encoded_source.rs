@@ -395,7 +395,7 @@ mod tests {
         let mut reference = Array3::<f64>::zeros(dims);
         for (geometry, observed) in &shots {
             let g = raw_gradient(&processor, &model, geometry, observed, &grid);
-            leto_ops::zip_mut_with(&mut reference.view_mut(), &g.view(), |r, gv| *r += *gv)
+            leto_ops::zip_mut_with(reference.view_mut(), &g.view(), |r, gv| *r += *gv)
                 .expect("invariant: gradient shapes match");
         }
 
@@ -405,7 +405,7 @@ mod tests {
         for code in &codes {
             let (geometry, encoded_data) = encode_shots(&shots, code).expect("encode");
             let g = raw_gradient(&processor, &model, &geometry, &encoded_data, &grid);
-            leto_ops::zip_mut_with(&mut encoded_avg.view_mut(), &g.view(), |a, gv| *a += *gv)
+            leto_ops::zip_mut_with(encoded_avg.view_mut(), &g.view(), |a, gv| *a += *gv)
                 .expect("invariant: gradient shapes match");
         }
         let ncodes = codes.len() as f64;

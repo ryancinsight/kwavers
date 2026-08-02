@@ -1,6 +1,7 @@
 [package]
 name = "kwavers-solver"
 version = "3.0.0"
+publish = true
 edition = "2021"
 authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
 description = "Forward and inverse solvers for kwavers: FDTD/PSTD/k-space/Helmholtz, BEM, FWI/RTM/CBS, PINN"
@@ -11,19 +12,19 @@ repository = "https://github.com/ryancinsight/kwavers"
 aequitas = { workspace = true }
 hyperion = { workspace = true }
 
-kwavers-core = { path = "../kwavers-core" }
-kwavers-math = { path = "../kwavers-math" }
-kwavers-grid = { path = "../kwavers-grid" }
-kwavers-imaging = { path = "../kwavers-imaging", optional = true }
-kwavers-transducer = { path = "../kwavers-transducer" }
-kwavers-receiver = { path = "../kwavers-receiver" }
-kwavers-source = { path = "../kwavers-source" }
-kwavers-boundary = { path = "../kwavers-boundary" }
-kwavers-mesh = { path = "../kwavers-mesh" }
-kwavers-medium = { path = "../kwavers-medium" }
-kwavers-field = { path = "../kwavers-field" }
-kwavers-signal = { path = "../kwavers-signal" }
-kwavers-physics = { path = "../kwavers-physics" }
+kwavers-core = { path = "../kwavers-core", version = "3.0.0" }
+kwavers-math = { path = "../kwavers-math", version = "3.0.0" }
+kwavers-grid = { path = "../kwavers-grid", version = "3.0.0" }
+kwavers-imaging = { path = "../kwavers-imaging", optional = true, version = "3.0.0" }
+kwavers-transducer = { path = "../kwavers-transducer", version = "4.1.0" }
+kwavers-receiver = { path = "../kwavers-receiver", version = "3.0.0" }
+kwavers-source = { path = "../kwavers-source", version = "3.0.0" }
+kwavers-boundary = { path = "../kwavers-boundary", version = "3.0.0" }
+kwavers-mesh = { path = "../kwavers-mesh", version = "3.0.0" }
+kwavers-medium = { path = "../kwavers-medium", version = "4.0.0" }
+kwavers-field = { path = "../kwavers-field", version = "3.0.0" }
+kwavers-signal = { path = "../kwavers-signal", version = "3.0.0" }
+kwavers-physics = { path = "../kwavers-physics", version = "3.0.0" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { workspace = true }
 log = "0.4"

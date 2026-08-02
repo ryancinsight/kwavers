@@ -122,11 +122,9 @@ impl NonlinearElasticWaveSolver {
                 d
             };
             // Apply delta after all RHS evaluations complete (Jacobi apply pass).
-            leto_ops::zip_mut_with(
-                &mut field.u_harmonics[0].view_mut(),
-                &delta3.view(),
-                |a, &b| *a += b,
-            )
+            leto_ops::zip_mut_with(field.u_harmonics[0].view_mut(), &delta3.view(), |a, &b| {
+                *a += b
+            })
             .expect("invariant: harmonic-3 field and delta share grid shape");
         }
 
@@ -175,7 +173,7 @@ impl NonlinearElasticWaveSolver {
             };
             // Jacobi apply: uₙ updated using only its pre-step values.
             leto_ops::zip_mut_with(
-                &mut field.u_harmonics[harmonic_idx].view_mut(),
+                field.u_harmonics[harmonic_idx].view_mut(),
                 &delta_n.view(),
                 |a, &b| *a += b,
             )

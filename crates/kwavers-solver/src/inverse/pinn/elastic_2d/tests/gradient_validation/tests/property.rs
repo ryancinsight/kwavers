@@ -50,10 +50,14 @@ fn test_gradient_batch_consistency() {
         false,
     );
 
-    let u_batch = model.forward(&x_batch, &y_batch, &t_batch);
+    let u_batch = model
+        .forward(&x_batch, &y_batch, &t_batch)
+        .expect("elastic batch forward");
     let u0 = coeus_autograd::slice(&u_batch, &[(0, 1), (0, 1)]);
 
-    coeus_autograd::sum(&u0).backward();
+    coeus_autograd::sum(&u0)
+        .backward()
+        .expect("elastic batch backward");
     let du_dx = x_batch.grad().expect("Batch gradient should exist");
     let batch_grad = du_dx.as_slice()[0] as f64;
 
@@ -87,14 +91,16 @@ fn test_pde_residual_components() {
     let y = mk(0.5);
     let t = mk(0.1);
 
-    let u = model.forward(&x, &y, &t);
+    let u = model.forward(&x, &y, &t).expect("elastic PDE forward");
 
     for &val in u.tensor.as_slice() {
         assert!(val.is_finite(), "Forward pass should produce finite values");
     }
 
     let u_x_component = coeus_autograd::slice(&u, &[(0, 1), (0, 1)]);
-    coeus_autograd::sum(&u_x_component).backward();
+    coeus_autograd::sum(&u_x_component)
+        .backward()
+        .expect("elastic PDE backward");
 
     let du_dx = x.grad().expect("PDE residual gradient should exist");
     let du_dx_val = du_dx.as_slice()[0];

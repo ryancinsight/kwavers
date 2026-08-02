@@ -93,7 +93,7 @@ impl TimeReversalReconstructor {
 
             // Accumulate reconstruction
             leto_ops::zip_mut_with(
-                &mut reconstruction.view_mut(),
+                reconstruction.view_mut(),
                 &iteration_result.view(),
                 |a, b| *a += *b,
             )

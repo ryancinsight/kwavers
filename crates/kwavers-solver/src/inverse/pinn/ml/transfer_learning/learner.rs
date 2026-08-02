@@ -261,16 +261,18 @@ where
         }
 
         let pde_residuals =
-            model.compute_pde_residual(&x_var, &y_var, &t_var, self.config.wave_speed);
+            model.compute_pde_residual(&x_var, &y_var, &t_var, self.config.wave_speed)?;
 
         let squared = coeus_autograd::mul(&pde_residuals, &pde_residuals);
         let total_loss = coeus_autograd::scalar_mul(&coeus_autograd::mean(&squared), 1e-12);
 
-        total_loss.backward();
+        total_loss.backward().map_err(|error| {
+            KwaversError::InternalError(format!("transfer-learning backward: {error}"))
+        })?;
 
         let optimizer =
             crate::inverse::pinn::ml::wave_equation_2d::SimpleOptimizer2D::new(1e-4_f32);
-        *model = optimizer.step(model.clone());
+        *model = optimizer.step(model.clone())?;
 
         let loss_value = total_loss.tensor.as_slice()[0];
         Ok(1.0 / (1.0 + loss_value))

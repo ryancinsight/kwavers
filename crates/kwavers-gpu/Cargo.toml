@@ -1,6 +1,9 @@
 [package]
 name = "kwavers-gpu"
 version = "5.0.0"
+publish = true
+authors = ["Ryan Clanton <ryanclanton@outlook.com>"]
+repository = "https://github.com/ryancinsight/kwavers"
 edition = "2021"
 description = "Hephaestus-backed provider-generic GPU compute backend for kwavers"
 license = "MIT OR Apache-2.0"
@@ -12,16 +15,16 @@ workspace = true
 # Layered kwavers crates. kwavers-gpu is a leaf above solver: it implements the
 # ComputeBackend / FdtdGpuAccelerator trait surfaces that live in kwavers-solver,
 # so concrete WGPU/WGSL or CUDA kernels never sit in the algorithm crates.
-kwavers-core = { path = "../kwavers-core" }
-kwavers-math = { path = "../kwavers-math" }
-kwavers-grid = { path = "../kwavers-grid" }
-kwavers-source = { path = "../kwavers-source" }
-kwavers-boundary = { path = "../kwavers-boundary" }
-kwavers-medium = { path = "../kwavers-medium" }
-kwavers-signal = { path = "../kwavers-signal" }
-kwavers-physics = { path = "../kwavers-physics" }
-kwavers-solver = { path = "../kwavers-solver" }
-kwavers-analysis = { path = "../kwavers-analysis", features = ["gpu"], optional = true }
+kwavers-core = { path = "../kwavers-core", version = "3.0.0" }
+kwavers-math = { path = "../kwavers-math", version = "3.0.0" }
+kwavers-grid = { path = "../kwavers-grid", version = "3.0.0" }
+kwavers-source = { path = "../kwavers-source", version = "3.0.0" }
+kwavers-boundary = { path = "../kwavers-boundary", version = "3.0.0" }
+kwavers-medium = { path = "../kwavers-medium", version = "4.0.0" }
+kwavers-signal = { path = "../kwavers-signal", version = "3.0.0" }
+kwavers-physics = { path = "../kwavers-physics", version = "3.0.0" }
+kwavers-solver = { path = "../kwavers-solver", version = "3.0.0" }
+kwavers-analysis = { path = "../kwavers-analysis", features = ["gpu"], optional = true, version = "3.0.0" }
 
 leto = { workspace = true }
 tracing = { workspace = true }
@@ -67,4 +70,4 @@ cuda-runtime = ["cuda-provider", "hephaestus-cuda/cuda"]
 
 [dev-dependencies]
 eunomia = { workspace = true }
-kwavers-solver = { path = "../kwavers-solver", features = ["test-util"] }
+kwavers-solver = { path = "../kwavers-solver", features = ["test-util"], version = "3.0.0" }

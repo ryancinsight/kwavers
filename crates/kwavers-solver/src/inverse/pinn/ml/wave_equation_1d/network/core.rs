@@ -25,6 +25,8 @@ use coeus_nn::{Linear, Module};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::{Array1, Array2};
 
+use crate::inverse::pinn::ml::coeus_forward::map_forward;
+
 /// Coeus-backed Physics-Informed Neural Network for 1D Wave Equation.
 ///
 /// Implements a fully connected feedforward neural network that approximates
@@ -138,14 +140,14 @@ where
     /// # Returns
     ///
     /// Predicted field values u(x,t) [batch_size, 1]
-    pub fn forward(&self, x: &Var<f32, B>, t: &Var<f32, B>) -> Var<f32, B> {
+    pub fn forward(&self, x: &Var<f32, B>, t: &Var<f32, B>) -> KwaversResult<Var<f32, B>> {
         let input = coeus_autograd::cat(&[x, t], 1);
-        let mut h = self.input_layer.forward(&input);
+        let mut h = map_forward(self.input_layer.forward(&input), "PINN 1D input layer")?;
         for layer in &self.hidden_layers {
-            h = layer.forward(&h);
+            h = map_forward(layer.forward(&h), "PINN 1D hidden layer")?;
             h = coeus_autograd::tanh(&h);
         }
-        self.output_layer.forward(&h)
+        map_forward(self.output_layer.forward(&h), "PINN 1D output layer")
     }
 
     /// Predict field values at given spatial and temporal coordinates.
@@ -185,7 +187,7 @@ where
             false,
         );
 
-        let u_var = self.forward(&x_var, &t_var);
+        let u_var = self.forward(&x_var, &t_var)?;
         let u_vec: Vec<f64> = u_var.tensor.as_slice().iter().map(|&v| v as f64).collect();
 
         Ok(Array2::from_shape_vec([n, 1], u_vec).unwrap())

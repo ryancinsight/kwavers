@@ -1,6 +1,7 @@
 [package]
 name = "kwavers-receiver"
 version = "3.0.0"
+publish = true
 edition = "2021"
 authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
 description = "Low-level acoustic recording primitives for kwavers: sensor-array geometry, field recorders, point sensors, grid sampling, sonoluminescence detection"
@@ -8,11 +9,11 @@ license = "MIT"
 repository = "https://github.com/ryancinsight/kwavers"
 
 [dependencies]
-kwavers-core = { path = "../kwavers-core" }
-kwavers-math = { path = "../kwavers-math" }
-kwavers-grid = { path = "../kwavers-grid" }
-kwavers-field = { path = "../kwavers-field" }
-kwavers-signal = { path = "../kwavers-signal" }
+kwavers-core = { path = "../kwavers-core", version = "3.0.0" }
+kwavers-math = { path = "../kwavers-math", version = "3.0.0" }
+kwavers-grid = { path = "../kwavers-grid", version = "3.0.0" }
+kwavers-field = { path = "../kwavers-field", version = "3.0.0" }
+kwavers-signal = { path = "../kwavers-signal", version = "3.0.0" }
 moirai-parallel = { workspace = true }
 leto = { workspace = true }
 serde = { version = "1.0", features = ["derive"] }
