@@ -14,8 +14,10 @@
   completes the Leto mutable-view API cleanup required by the locked graph.
   `1fd08058f` updates the temporal synchronization validation test to RITK's
   typed `TemporalSyncResult` contract after the hosted compiler exposed the
-  stale tuple destructure.
-- Integration: PR #328 head is `14e923b69` (source fix `1fd08058f`). The
+  stale tuple destructure. `0d956071a` updates all Kwavers example and
+  benchmark consumers for fallible PINN forward, trainer-step, and backward
+  APIs after the hosted architecture job exposed stale Coeus call sites.
+- Integration: PR #328 head is `0d956071a` (source fix `1fd08058f`). The
   checkout action and Python
   release workflow pin Atlas `777cf325fad3114299b44a99a48145997f93a5b0`, the
   current Coeus/Leto-compatible provider graph containing Aequitas `8cc90b2`
@@ -51,8 +53,9 @@
   entry. The workspace check reports only the existing
   `kwavers-analysis::principal_axis` dead-code warning and external provider
   linker warnings. The exact pinned graph compiles the corrected temporal
-  synchronization validation target. The corrected hosted wheel, benchmark,
-  and validation matrix remains pending on PR #328.
+  synchronization validation target and the updated `pinn` examples and
+  benches. The corrected hosted wheel, benchmark, and validation matrix
+  remains pending on PR #328.
 
 ## KW-AEQ-MET-04 — Type functional-ultrasound vessel metrics [major] [arch] — done
 

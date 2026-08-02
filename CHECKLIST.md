@@ -37,6 +37,9 @@
       separate `consus-npy` provider branch.
 - [x] Update the temporal synchronization validation test for RITK's typed
       `TemporalSyncResult` contract and assert its value-semantic metrics.
+- [x] Update all example and benchmark consumers for fallible Coeus PINN
+      forward, trainer-step, and backward APIs; propagate executable-example
+      errors and keep benchmark failures explicit.
 
 Acceptance: named public microbubble metrics are Aequitas-typed, provider
 vocabulary owns acceleration and pressure rate, formula/storage boundaries
@@ -51,7 +54,8 @@ locked metadata, solver clippy at `-D warnings`, 79-file Rustfmt, PINN Nextest
 outside the Atlas overlay. The workspace check reports only the existing
 `principal_axis` dead-code warning and external provider linker warnings. The
 exact pinned graph compiles the corrected temporal synchronization validation
-target. PR #328 source head `1fd08058f` is pending hosted matrix evidence.
+target and the updated `pinn` examples and benches. PR #328 source head
+`0d956071a` is pending hosted matrix evidence.
 
 ## Owner: Codex — KW-AEQ-MET-04 vessel physical metrics [major] [arch] — done
 
