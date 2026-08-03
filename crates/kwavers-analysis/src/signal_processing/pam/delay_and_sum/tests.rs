@@ -1,7 +1,7 @@
 use super::processor::DelayAndSumPAM;
 use super::types::{ApodizationType, DelayAndSumConfig, PamImagingMode};
-use aequitas::units::{Hertz, Meter, MeterPerSecond, Second};
-use aequitas::{Dimensionless, Frequency, Length, Time, Velocity};
+use aequitas::systems::si::quantities::{Dimensionless, Frequency, Length, Time, Velocity};
+use aequitas::systems::si::units::{Hertz, Meter, MeterPerSecond, Second};
 use eunomia::assert_relative_eq;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
