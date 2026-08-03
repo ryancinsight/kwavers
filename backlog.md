@@ -23,8 +23,24 @@ three separate peers were mid-edit (gaia `TetDecomposition::iter` unwritten,
 coeus `codex/coeus-random-init-dispatch` adding `RandomInitOps`, ritk-model not
 yet migrated to that trait bound). The delivered change is a filename rename of
 an auto-discovered target plus markdown, verified by exhaustive grep for residual
-references (0). Re-open trigger: run `cargo build --examples -p kwavers
--p kwavers-solver` once the coeus random-init dispatch migration lands in ritk.
+references (0).
+
+**Blocker status 2026-08-03:** the cited coeus/ritk trigger has FIRED and is
+closed — `RandomInitOps` landed on coeus `main` with all five backend impls
+(CPU, CUDA, ROCm, Metal, WGPU), `coeus-nn` carries the bound, and ritk adopted
+it across 15 files / 6 call sites. Verified here, not assumed: coeus-nn init
+differential suite 12/12 and ritk-model 55/55 green, and the examples build now
+compiles through coeus and ritk without error.
+
+The build is still blocked, but by a DIFFERENT and unrelated migration:
+`kwavers-boundary` imports `kwavers_math::linear_algebra::sparse::
+CompressedSparseRowMatrix` at four sites (bem/manager/{applicators,assembly,mod},
+fem/manager) while a live peer's uncommitted tree deletes 28 files including all
+of `kwavers-math`'s `sparse/`, `iterative/lsqr/`, and `norms` modules — the
+kwavers-math linear-algebra eviction in flight as of 15:31. Those four consumer
+imports belong to that peer's change, not to this item. New re-open trigger:
+run `cargo build --examples -p kwavers -p kwavers-solver` once the kwavers-math
+linear-algebra eviction is committed and its consumers are updated.
 
 **Remaining (open):**
 - `adaptive_beamforming.rs` is a process narrative, not a demonstration: it
