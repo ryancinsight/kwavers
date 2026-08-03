@@ -4,6 +4,7 @@
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
+| KWAVERS-AEQ-MET-60 | Type transducer aperture design and focused propagation metrics with Aequitas, including geometry, drive, pressure, impedance, intensity, and beam-width contracts; preserve Eunomia complex signal semantics. | [arch] [major] | in progress 2026-08-03 | Codex | `crates/kwavers-transducer/src/design/{mod,propagation}.rs`, direct driver callers/tests, ADR 099, PM artifacts |
 | KWAVERS-AEQ-MET-59 | Type PAM delay-and-sum and neural sensor geometry, timing, frequency, and event-coordinate metrics with Aequitas; preserve Eunomia complex signal units. | [arch] [major] | done 2026-08-03 | Codex | `crates/kwavers-analysis/src/signal_processing/{pam,beamforming/neural}/**`, callers/tests, ADR 098, PM artifacts |
 | KWAVERS-AEQ-MET-58 | Type sensor-beamformer geometry, sampling, steering, aperture, F-number, and spatial-frequency metrics with Aequitas; preserve Eunomia complex steering units. | [arch] [major] | done 2026-08-03 | Codex | `crates/kwavers-transducer/src/beamforming/sensor_beamformer/**`, direct Kwavers callers/tests, ADR 097, PM artifacts |
 | KWAVERS-AEQ-MET-57 | Type the shared beamforming configuration's sound speed, sampling frequency, and reference frequency with Aequitas; migrate the processor formula boundaries and preserve Eunomia complex storage units. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-transducer/src/beamforming/{config,processor}.rs`, callers/tests, ADR 096, PM artifacts |

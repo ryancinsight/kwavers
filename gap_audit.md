@@ -1,5 +1,24 @@
 ## Live Aequitas closure — 2026-08-02
 
+### KWAVERS-AEQ-MET-60 — transducer design/propagation metric gap (in progress 2026-08-03)
+
+The live audit found a remaining raw physical boundary in
+`crates/kwavers-transducer/src/design/{mod,propagation}.rs`. Aperture design
+publishes aperture dimensions, operating frequency, sound speed, pitch,
+element dimensions, kerf, wavelength, fill factor, and element/channel
+coordinates as `f64`. Focused propagation publishes center/focus coordinates,
+frequency, sound speed, drive current, pressure-per-current, acoustic
+impedance, focal pressure, intensity, and axial/lateral widths as raw scalars.
+The direct callers are the Kwavers driver validation and experiment adapters
+plus their tests.
+
+This item is bounded to the design and focused-propagation family and its
+direct callers. `transducers/acquisition_geometry.rs` element coordinates and
+the focused, hemispherical, MEMS, flexible, and two-dimensional array
+families remain separate audit candidates. No metric is marked closed until
+the typed public contracts, analytical regressions, locked checks, and hosted
+repository-owned gates pass.
+
 ### KWAVERS-AEQ-MET-59 — PAM/neural sensor metric gap (closed 2026-08-03)
 
 The audit found and closed the bounded raw-metric family. PAM exposes raw delay-and-

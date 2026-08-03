@@ -1,5 +1,25 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-60 typed transducer design/propagation metrics [major] [arch] — in progress 2026-08-03
+
+- [ ] Record ADR 099 for the typed aperture-design and focused-propagation
+      contract, including the Eunomia shared-unit complex-boundary rule.
+- [ ] Type aperture dimensions, pitch, kerf, wavelength, frequency, sound
+      speed, coordinates, drive current, pressure gain, acoustic impedance,
+      intensity, and beam-width outputs with Aequitas; migrate all direct
+      driver callers without wrappers.
+- [ ] Keep scalar extraction inside Euclidean, trigonometric, propagation,
+      unit-conversion, and legacy driver serialization boundaries; do not add
+      an imaginary SI unit for complex real/quadrature signal values.
+- [ ] Add analytical geometry/propagation regressions and invalid-input
+      coverage, then run the locked affected-package checks, Nextest, Clippy,
+      doctests, Rustdoc, format, residue scans, and hosted gates.
+
+Acceptance: no raw physical scalar remains in the scoped design or propagation
+public contracts; formulas retain their value semantics; all direct callers
+compile against the typed API; Eunomia complex values retain one observable
+unit and no imaginary physical unit is introduced.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-59 typed PAM/neural sensor metrics [major] [arch] — done 2026-08-03
 
 - [x] Audit the PAM delay-and-sum, PAM configuration, neural sensor geometry,
