@@ -1,6 +1,8 @@
 //! `UltrafastPlaneWave` — plane wave processor and delay calculator.
 
 use super::config::UltrafastPlaneWaveConfig;
+use aequitas::systems::si::quantities::{Angle, Dimensionless, Frequency, Length};
+use aequitas::systems::si::units::{Meter, MeterPerSecond, Radian};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::{Array1, Array2};
 use std::f64::consts::PI;
@@ -42,7 +44,7 @@ impl UltrafastPlaneWave {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     #[must_use]
-    pub fn functional_ultrasound(element_positions: Vec<f64>) -> Self {
+    pub fn functional_ultrasound(element_positions: Vec<Length<f64>>) -> Self {
         Self::new(UltrafastPlaneWaveConfig {
             element_positions,
             ..UltrafastPlaneWaveConfig::default()
@@ -55,15 +57,15 @@ impl UltrafastPlaneWave {
     /// # Errors
     /// - Propagates any `KwaversError` returned by called functions.
     ///
-    pub fn transmission_delays(&self, tilt_angle: f64) -> KwaversResult<Array1<f64>> {
+    pub fn transmission_delays(&self, tilt_angle: Angle<f64>) -> KwaversResult<Array1<f64>> {
         self.require_elements()?;
-        let c = self.config.sound_speed;
-        let sin_theta = tilt_angle.sin();
+        let c = self.config.sound_speed.in_unit::<MeterPerSecond>();
+        let sin_theta = tilt_angle.in_unit::<Radian>().sin();
         let delays: Vec<f64> = self
             .config
             .element_positions
             .iter()
-            .map(|&x| -x * sin_theta / c)
+            .map(|x| -x.in_unit::<Meter>() * sin_theta / c)
             .collect();
         Array1::from_vec([delays.len()], delays).map_err(|err| KwaversError::Shape(err.to_string()))
     }
@@ -74,16 +76,23 @@ impl UltrafastPlaneWave {
     /// # Errors
     /// - Propagates any `KwaversError` returned by called functions.
     ///
-    pub fn reception_delays(&self, x: f64, y: f64, tilt_angle: f64) -> KwaversResult<Array1<f64>> {
+    pub fn reception_delays(
+        &self,
+        x: Length<f64>,
+        y: Length<f64>,
+        tilt_angle: Angle<f64>,
+    ) -> KwaversResult<Array1<f64>> {
         self.require_elements()?;
-        let c = self.config.sound_speed;
-        let sin_theta = tilt_angle.sin();
-        let cos_theta = tilt_angle.cos();
+        let c = self.config.sound_speed.in_unit::<MeterPerSecond>();
+        let sin_theta = tilt_angle.in_unit::<Radian>().sin();
+        let cos_theta = tilt_angle.in_unit::<Radian>().cos();
+        let x = x.in_unit::<Meter>();
+        let y = y.in_unit::<Meter>();
         let delays: Vec<f64> = self
             .config
             .element_positions
             .iter()
-            .map(|&x_elem| (x_elem - x).mul_add(sin_theta, y * cos_theta) / c)
+            .map(|x_elem| (x_elem.in_unit::<Meter>() - x).mul_add(sin_theta, y * cos_theta) / c)
             .collect();
         Array1::from_vec([delays.len()], delays).map_err(|err| KwaversError::Shape(err.to_string()))
     }
@@ -96,19 +105,20 @@ impl UltrafastPlaneWave {
     ///
     pub fn beamforming_delays(
         &self,
-        _x: f64,
-        y: f64,
-        tilt_angle: f64,
+        _x: Length<f64>,
+        y: Length<f64>,
+        tilt_angle: Angle<f64>,
     ) -> KwaversResult<Array1<f64>> {
         self.require_elements()?;
-        let c = self.config.sound_speed;
-        let sin_theta = tilt_angle.sin();
-        let cos_theta = tilt_angle.cos();
+        let c = self.config.sound_speed.in_unit::<MeterPerSecond>();
+        let sin_theta = tilt_angle.in_unit::<Radian>().sin();
+        let cos_theta = tilt_angle.in_unit::<Radian>().cos();
+        let y = y.in_unit::<Meter>();
         let delays: Vec<f64> = self
             .config
             .element_positions
             .iter()
-            .map(|&x_elem| (2.0 * x_elem).mul_add(sin_theta, y * cos_theta) / c)
+            .map(|x_elem| (2.0 * x_elem.in_unit::<Meter>()).mul_add(sin_theta, y * cos_theta) / c)
             .collect();
         Array1::from_vec([delays.len()], delays).map_err(|err| KwaversError::Shape(err.to_string()))
     }
@@ -121,24 +131,25 @@ impl UltrafastPlaneWave {
     ///
     pub fn delay_surface(
         &self,
-        x_pixels: &Array1<f64>,
-        y_pixels: &Array1<f64>,
-        tilt_angle: f64,
+        x_pixels: &Array1<Length<f64>>,
+        y_pixels: &Array1<Length<f64>>,
+        tilt_angle: Angle<f64>,
     ) -> KwaversResult<Array2<f64>> {
         let n_elements = self.config.element_positions.len();
         let n_pixels = x_pixels.len() * y_pixels.len();
         let mut delays = Array2::zeros([n_elements, n_pixels]);
 
-        let c = self.config.sound_speed;
-        let sin_theta = tilt_angle.sin();
-        let cos_theta = tilt_angle.cos();
+        let c = self.config.sound_speed.in_unit::<MeterPerSecond>();
+        let sin_theta = tilt_angle.in_unit::<Radian>().sin();
+        let cos_theta = tilt_angle.in_unit::<Radian>().cos();
 
         let mut pixel_idx = 0;
-        for &y in y_pixels.iter() {
+        for y in y_pixels.iter() {
+            let y = y.in_unit::<Meter>();
             for _ in x_pixels.iter() {
                 for (elem_idx, &x_elem) in self.config.element_positions.iter().enumerate() {
                     delays[[elem_idx, pixel_idx]] =
-                        (2.0 * x_elem).mul_add(sin_theta, y * cos_theta) / c;
+                        (2.0 * x_elem.in_unit::<Meter>()).mul_add(sin_theta, y * cos_theta) / c;
                 }
                 pixel_idx += 1;
             }
@@ -153,16 +164,26 @@ impl UltrafastPlaneWave {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub fn apodization_weights(&self, x: f64, y: f64) -> KwaversResult<Array1<f64>> {
-        let f_number = self.config.f_number.unwrap_or(1.5);
+    pub fn apodization_weights(
+        &self,
+        x: Length<f64>,
+        y: Length<f64>,
+    ) -> KwaversResult<Array1<f64>> {
+        let f_number = self
+            .config
+            .f_number
+            .unwrap_or(Dimensionless::from_base(1.5))
+            .into_base();
+        let x = x.in_unit::<Meter>();
+        let y = y.in_unit::<Meter>();
         let half_aperture = y.abs() / (2.0 * f_number);
 
         let weights: Vec<f64> = self
             .config
             .element_positions
             .iter()
-            .map(|&x_elem| {
-                let distance = (x_elem - x).abs();
+            .map(|x_elem| {
+                let distance = (x_elem.in_unit::<Meter>() - x).abs();
                 if distance < half_aperture {
                     let normalized_pos = distance / half_aperture;
                     0.5 * (1.0 + (PI * normalized_pos).cos())
@@ -187,12 +208,8 @@ impl UltrafastPlaneWave {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     #[must_use]
-    pub fn angles_degrees(&self) -> Vec<f64> {
-        self.config
-            .tilt_angles
-            .iter()
-            .map(|&theta| theta.to_degrees())
-            .collect()
+    pub fn angles(&self) -> &[Angle<f64>] {
+        &self.config.tilt_angles
     }
 
     /// Compounded frame rate: `PRF / N_angles`.
@@ -200,8 +217,8 @@ impl UltrafastPlaneWave {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     #[must_use]
-    pub fn compounded_frame_rate(&self, prf: f64) -> f64 {
-        prf / self.num_angles() as f64
+    pub fn compounded_frame_rate(&self, prf: Frequency<f64>) -> Frequency<f64> {
+        Frequency::from_base(prf.into_base() / self.num_angles() as f64)
     }
 
     fn require_elements(&self) -> KwaversResult<()> {

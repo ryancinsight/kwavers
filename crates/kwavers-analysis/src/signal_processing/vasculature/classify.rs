@@ -185,6 +185,7 @@ pub(super) fn vessel_neighbor_count(mask: &Array3<f64>, point: &[usize; 3]) -> u
 ///
 /// Returns a unit vector aligned with the direction of largest variance of the
 /// masked voxel coordinates.
+#[cfg(test)]
 pub(super) fn principal_axis(points: &[[usize; 3]]) -> [f64; 3] {
     let values = points
         .iter()

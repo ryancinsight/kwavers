@@ -1,5 +1,46 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-56 typed rectangular-transducer quantities [major] [arch] — in progress
+
+- [x] Replace public rectangular width, height, and frequency scalars with
+      Aequitas `Length` and `Frequency`.
+- [x] Type FNM medium speed and density, wavenumber, element sizes, and all
+      current solver, dispatch, test, and benchmark callers.
+- [x] Reject zero/oversized element counts and invalid physical values with
+      typed errors; preserve Eunomia complex arrays as scalar storage only.
+- [x] Run exact locked affected-package checks, focused Nextest, package
+      Clippy, transducer/solver doctests, formatting, and typed/complex residue
+      scans. The simulation doctest and FNM benchmark smoke commands exceed
+      the 300-second shared-target collection bound without diagnostics.
+- [x] Run Rustdoc for the three affected packages and record the bounded
+      verification residuals.
+- [ ] Commit and publish the increment after final diff review.
+
+Acceptance: no raw SI scalar remains in the rectangular-transducer public
+geometry or FNM medium contract; invalid geometry and medium inputs fail with
+typed errors; numerical and complex storage boundaries remain explicit.
+
+## Owner: Codex — KWAVERS-AEQ-MET-55 typed ultrafast plane/diverging quantities [major] [arch] — done 2026-08-02
+
+- [x] Type plane-wave and diverging-wave public geometry, speed, frequency,
+      angle, delay, F-number, and scalar Hann contracts with Aequitas.
+- [x] Type image-coordinate arrays while retaining scalar Leto delay and
+      apodization buffers only at the explicit storage boundary.
+- [x] Remove the scalar degree-conversion API and migrate all current callers
+      and tests without a compatibility wrapper.
+- [x] Add ADR 094 and record the Eunomia real-observable/complex-shared-unit
+      rule plus the remaining out-of-slice transducer audit candidates.
+- [x] Collect package Clippy, doctest, Rustdoc, format, and residue gates;
+      commit and publish the complete slice.
+
+Evidence: exact locked package check; Nextest
+`f1d0db2a-5e11-450b-831e-a4290847d6ee` passed 219/219 with one ignored,
+including invalid-index apodization and invalid-depth PRF regressions;
+package Clippy at `-D warnings`; one executable doctest with six ignored;
+package Rustdoc; targeted Rustfmt; `git diff --check`; and typed/complex
+residue scans. The shared Atlas build cache was used without a private target
+fork.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-54 typed ultrafast scheduler quantities [major] — done 2026-08-02
 
 - [x] Carry Aequitas `Velocity`, `Length`, `Frequency`, `Time`, and `Angle`

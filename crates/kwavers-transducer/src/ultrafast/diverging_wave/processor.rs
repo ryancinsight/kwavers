@@ -18,6 +18,8 @@
 //! ```
 
 use super::config::DivergingWaveConfig;
+use aequitas::systems::si::quantities::{Dimensionless, Frequency, Length, Time};
+use aequitas::systems::si::units::{Hertz, Meter, MeterPerSecond, Second};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::{Array1, Array2, Array3};
 
@@ -36,7 +38,7 @@ impl DivergingWave {
 
     /// Create with default cardiac imaging configuration (128 elements, 0.3 mm pitch).
     #[must_use]
-    pub fn cardiac(element_positions: Vec<f64>) -> Self {
+    pub fn cardiac(element_positions: Vec<Length<f64>>) -> Self {
         Self::new(DivergingWaveConfig {
             element_positions,
             ..DivergingWaveConfig::default()
@@ -69,15 +71,22 @@ impl DivergingWave {
     /// # Errors
     /// - Propagates any `KwaversError` returned by called functions.
     ///
-    pub fn transmit_delay(&self, x: f64, z: f64, elem_idx: usize) -> KwaversResult<f64> {
+    pub fn transmit_delay(
+        &self,
+        x: Length<f64>,
+        z: Length<f64>,
+        elem_idx: usize,
+    ) -> KwaversResult<Time<f64>> {
         self.check_elem(elem_idx)?;
-        let xi = self.config.element_positions[elem_idx];
-        let f = self.config.virtual_source_depth;
-        let c = self.config.sound_speed;
+        let xi = self.config.element_positions[elem_idx].in_unit::<Meter>();
+        let f = self.config.virtual_source_depth.in_unit::<Meter>();
+        let c = self.config.sound_speed.in_unit::<MeterPerSecond>();
+        let x = x.in_unit::<Meter>();
+        let z = z.in_unit::<Meter>();
         let dx = x - xi;
         let dz = z + f;
         let delay = (dx.hypot(dz) - f) / c;
-        Ok(delay)
+        Ok(Time::from_unit::<Second>(delay))
     }
 
     /// Receive delay from imaging point (x, z) to element j.
@@ -96,13 +105,20 @@ impl DivergingWave {
     /// # Errors
     /// - Propagates any `KwaversError` returned by called functions.
     ///
-    pub fn receive_delay(&self, x: f64, z: f64, elem_idx: usize) -> KwaversResult<f64> {
+    pub fn receive_delay(
+        &self,
+        x: Length<f64>,
+        z: Length<f64>,
+        elem_idx: usize,
+    ) -> KwaversResult<Time<f64>> {
         self.check_elem(elem_idx)?;
-        let xj = self.config.element_positions[elem_idx];
-        let c = self.config.sound_speed;
+        let xj = self.config.element_positions[elem_idx].in_unit::<Meter>();
+        let c = self.config.sound_speed.in_unit::<MeterPerSecond>();
+        let x = x.in_unit::<Meter>();
+        let z = z.in_unit::<Meter>();
         let dx = x - xj;
         let delay = dx.hypot(z) / c;
-        Ok(delay)
+        Ok(Time::from_unit::<Second>(delay))
     }
 
     /// Total STA delay for transmit element i, receive element j at imaging point (x, z).
@@ -113,8 +129,16 @@ impl DivergingWave {
     /// # Errors
     /// - Propagates any `KwaversError` returned by called functions.
     ///
-    pub fn sta_delay(&self, x: f64, z: f64, tx_idx: usize, rx_idx: usize) -> KwaversResult<f64> {
-        Ok(self.transmit_delay(x, z, tx_idx)? + self.receive_delay(x, z, rx_idx)?)
+    pub fn sta_delay(
+        &self,
+        x: Length<f64>,
+        z: Length<f64>,
+        tx_idx: usize,
+        rx_idx: usize,
+    ) -> KwaversResult<Time<f64>> {
+        let transmit = self.transmit_delay(x, z, tx_idx)?.into_base();
+        let receive = self.receive_delay(x, z, rx_idx)?.into_base();
+        Ok(Time::from_unit::<Second>(transmit + receive))
     }
 
     /// Hann apodization weight for a receive element at this imaging point.
@@ -132,16 +156,29 @@ impl DivergingWave {
     /// ```
     ///
     /// Reference: Synnevåg et al. (2007), *IEEE TUFFC* 54(11):2213–2220, Eq. (1).
-    #[must_use]
-    pub fn hann_apodization(&self, x: f64, z: f64, elem_idx: usize) -> f64 {
-        let xj = self.config.element_positions[elem_idx];
-        let f = self.config.virtual_source_depth;
-        let d_half = (z + f) / (2.0 * self.config.f_number);
+    ///
+    /// # Errors
+    /// - Returns `KwaversError::InvalidInput` if `elem_idx` is outside the
+    ///   configured element array.
+    pub fn hann_apodization(
+        &self,
+        x: Length<f64>,
+        z: Length<f64>,
+        elem_idx: usize,
+    ) -> KwaversResult<Dimensionless<f64>> {
+        self.check_elem(elem_idx)?;
+        let xj = self.config.element_positions[elem_idx].in_unit::<Meter>();
+        let f = self.config.virtual_source_depth.in_unit::<Meter>();
+        let x = x.in_unit::<Meter>();
+        let z = z.in_unit::<Meter>();
+        let d_half = (z + f) / (2.0 * self.config.f_number.into_base());
         let dist = (xj - x).abs();
         if dist > d_half || d_half < 1e-30 {
-            0.0
+            Ok(Dimensionless::from_base(0.0))
         } else {
-            0.5 * (1.0 + (std::f64::consts::PI * dist / d_half).cos())
+            Ok(Dimensionless::from_base(
+                0.5 * (1.0 + (std::f64::consts::PI * dist / d_half).cos()),
+            ))
         }
     }
 
@@ -154,9 +191,24 @@ impl DivergingWave {
     /// ```text
     ///   PRF_max = c / (2 · z_max)     (Hz)
     /// ```
-    #[must_use]
-    pub fn max_prf(&self, z_max: f64) -> f64 {
-        self.config.sound_speed / (2.0 * z_max)
+    ///
+    /// # Errors
+    /// - Returns `KwaversError::InvalidInput` if `z_max` or the configured
+    ///   sound speed is non-finite or non-positive.
+    pub fn max_prf(&self, z_max: Length<f64>) -> KwaversResult<Frequency<f64>> {
+        let c = self.config.sound_speed.in_unit::<MeterPerSecond>();
+        let z_max = z_max.in_unit::<Meter>();
+        if !c.is_finite() || c <= 0.0 {
+            return Err(KwaversError::InvalidInput(
+                "sound speed must be finite and positive".to_owned(),
+            ));
+        }
+        if !z_max.is_finite() || z_max <= 0.0 {
+            return Err(KwaversError::InvalidInput(
+                "maximum imaging depth must be finite and positive".to_owned(),
+            ));
+        }
+        Ok(Frequency::from_unit::<Hertz>(c / (2.0 * z_max)))
     }
 
     /// Compute the full STA delay table: `delays[tx, rx, pixel]` for all
@@ -179,8 +231,8 @@ impl DivergingWave {
     ///
     pub fn sta_delay_table(
         &self,
-        x_pixels: &Array1<f64>,
-        z_pixels: &Array1<f64>,
+        x_pixels: &Array1<Length<f64>>,
+        z_pixels: &Array1<Length<f64>>,
     ) -> KwaversResult<Array3<f64>> {
         let n = self.n_elements();
         if n == 0 {
@@ -195,12 +247,14 @@ impl DivergingWave {
         let mut table = Array3::zeros([n, n, n_pixels]);
 
         for tx in 0..n {
-            let xi = self.config.element_positions[tx];
-            let f = self.config.virtual_source_depth;
-            let c = self.config.sound_speed;
+            let xi = self.config.element_positions[tx].in_unit::<Meter>();
+            let f = self.config.virtual_source_depth.in_unit::<Meter>();
+            let c = self.config.sound_speed.in_unit::<MeterPerSecond>();
 
-            for (iz, &z) in z_pixels.iter().enumerate() {
-                for (ix, &x) in x_pixels.iter().enumerate() {
+            for (iz, z) in z_pixels.iter().enumerate() {
+                let z = z.in_unit::<Meter>();
+                for (ix, x) in x_pixels.iter().enumerate() {
+                    let x = x.in_unit::<Meter>();
                     let pixel = iz * nx + ix;
                     // Transmit delay (same for all rx at this pixel)
                     let dx_tx = x - xi;
@@ -208,7 +262,7 @@ impl DivergingWave {
                     let tau_tx = (dx_tx.hypot(dz_tx) - f) / c;
 
                     for rx in 0..n {
-                        let xj = self.config.element_positions[rx];
+                        let xj = self.config.element_positions[rx].in_unit::<Meter>();
                         let dx_rx = x - xj;
                         let tau_rx = dx_rx.hypot(z) / c;
                         table[[tx, rx, pixel]] = tau_tx + tau_rx;
@@ -231,8 +285,8 @@ impl DivergingWave {
     ///
     pub fn transmit_delay_surface(
         &self,
-        x_pixels: &Array1<f64>,
-        z_pixels: &Array1<f64>,
+        x_pixels: &Array1<Length<f64>>,
+        z_pixels: &Array1<Length<f64>>,
     ) -> KwaversResult<Array2<f64>> {
         let n = self.n_elements();
         if n == 0 {
@@ -244,12 +298,15 @@ impl DivergingWave {
         let nz = z_pixels.len();
         let mut delays = Array2::zeros([n, nx * nz]);
 
-        let f = self.config.virtual_source_depth;
-        let c = self.config.sound_speed;
+        let f = self.config.virtual_source_depth.in_unit::<Meter>();
+        let c = self.config.sound_speed.in_unit::<MeterPerSecond>();
 
-        for (tx, &xi) in self.config.element_positions.iter().enumerate() {
-            for (iz, &z) in z_pixels.iter().enumerate() {
-                for (ix, &x) in x_pixels.iter().enumerate() {
+        for (tx, xi) in self.config.element_positions.iter().enumerate() {
+            let xi = xi.in_unit::<Meter>();
+            for (iz, z) in z_pixels.iter().enumerate() {
+                let z = z.in_unit::<Meter>();
+                for (ix, x) in x_pixels.iter().enumerate() {
+                    let x = x.in_unit::<Meter>();
                     let dx = x - xi;
                     let dz = z + f;
                     delays[[tx, iz * nx + ix]] = (dx.hypot(dz) - f) / c;

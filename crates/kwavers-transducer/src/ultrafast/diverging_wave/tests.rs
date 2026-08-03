@@ -1,18 +1,25 @@
 use super::config::DivergingWaveConfig;
 use super::processor::DivergingWave;
+use aequitas::systems::si::quantities::{Dimensionless, Frequency, Length, Velocity};
+use aequitas::systems::si::units::{Hertz, Meter, MeterPerSecond};
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
+use kwavers_core::error::KwaversError;
 use leto::Array1;
+
+fn meters(value: f64) -> Length<f64> {
+    Length::from_unit::<Meter>(value)
+}
 
 /// Build a small N-element array with uniform pitch `pitch` centred at x=0.
 fn uniform_array(n: usize, pitch: f64) -> DivergingWave {
     let x0 = -(n as f64 - 1.0) / 2.0 * pitch;
-    let positions: Vec<f64> = (0..n).map(|i| x0 + i as f64 * pitch).collect();
+    let positions: Vec<Length<f64>> = (0..n).map(|i| meters(x0 + i as f64 * pitch)).collect();
     DivergingWave::new(DivergingWaveConfig {
         element_positions: positions,
-        sound_speed: SOUND_SPEED_TISSUE,
-        virtual_source_depth: 0.010,
-        f_number: 1.5,
-        sampling_frequency: 40.0e6,
+        sound_speed: Velocity::from_unit::<MeterPerSecond>(SOUND_SPEED_TISSUE),
+        virtual_source_depth: meters(0.010),
+        f_number: Dimensionless::from_base(1.5),
+        sampling_frequency: Frequency::from_unit::<Hertz>(40.0e6),
     })
 }
 
@@ -25,8 +32,8 @@ fn uniform_array(n: usize, pitch: f64) -> DivergingWave {
 #[test]
 fn test_max_prf_formula() {
     let dw = uniform_array(8, 3.0e-4);
-    let z_max = 0.040; // 40 mm
-    let prf = dw.max_prf(z_max);
+    let z_max = meters(0.040); // 40 mm
+    let prf = dw.max_prf(z_max).unwrap().into_base();
     let expected = SOUND_SPEED_TISSUE / (2.0 * 0.040);
     assert!(
         (prf - expected).abs() / expected < 1e-10,
@@ -49,11 +56,14 @@ fn test_on_axis_tx_delay_equals_z_over_c() {
     let center = 4;
     // Center element is at x=0 by construction
     assert!(
-        dw.config.element_positions[center].abs() < 1e-12,
+        dw.config.element_positions[center].in_unit::<Meter>().abs() < 1e-12,
         "Center element must be at x=0"
     );
-    let tau = dw.transmit_delay(0.0, z, center).unwrap();
-    let expected = z / dw.config.sound_speed;
+    let tau = dw
+        .transmit_delay(meters(0.0), meters(z), center)
+        .unwrap()
+        .into_base();
+    let expected = z / dw.config.sound_speed.in_unit::<MeterPerSecond>();
     assert!(
         (tau - expected).abs() < 1e-12,
         "On-axis τ_tx = {tau:.6e} s, expected z/c = {expected:.6e} s"
@@ -69,7 +79,7 @@ fn test_receive_delay_at_face_is_zero() {
     let dw = uniform_array(8, 3.0e-4);
     // Element 3 at position x₃
     let x3 = dw.config.element_positions[3];
-    let tau = dw.receive_delay(x3, 0.0, 3).unwrap();
+    let tau = dw.receive_delay(x3, meters(0.0), 3).unwrap().into_base();
     assert!(tau.abs() < 1e-12, "τ_rx at face must be 0, got {tau:.4e}");
 }
 
@@ -87,7 +97,10 @@ fn test_transmit_delays_non_negative() {
     for &x in &x_test {
         for &z in &z_test {
             for elem in 0..dw.n_elements() {
-                let tau = dw.transmit_delay(x, z, elem).unwrap();
+                let tau = dw
+                    .transmit_delay(meters(x), meters(z), elem)
+                    .unwrap()
+                    .into_base();
                 assert!(
                     tau >= -1e-15,
                     "τ_tx negative: x={x:.3e} z={z:.3e} elem={elem} τ={tau:.4e}"
@@ -111,8 +124,14 @@ fn test_lateral_symmetry() {
     for i in 0..n / 2 {
         let j = n - 1 - i; // mirror element
                            // Symmetric test: transmit from i with query x, vs from j with query -x
-        let tau_i = dw.transmit_delay(x, z, i).unwrap();
-        let tau_j = dw.transmit_delay(-x, z, j).unwrap();
+        let tau_i = dw
+            .transmit_delay(meters(x), meters(z), i)
+            .unwrap()
+            .into_base();
+        let tau_j = dw
+            .transmit_delay(meters(-x), meters(z), j)
+            .unwrap()
+            .into_base();
         assert!(
             (tau_i - tau_j).abs() < 1e-12,
             "Symmetry broken: i={i} j={j} τ_i={tau_i:.6e} τ_j={tau_j:.6e}"
@@ -128,9 +147,18 @@ fn test_lateral_symmetry() {
 fn test_sta_delay_is_sum() {
     let dw = uniform_array(8, 3.0e-4);
     let (x, z, tx, rx) = (0.003, 0.015, 2, 5);
-    let tau_tx = dw.transmit_delay(x, z, tx).unwrap();
-    let tau_rx = dw.receive_delay(x, z, rx).unwrap();
-    let tau_sta = dw.sta_delay(x, z, tx, rx).unwrap();
+    let tau_tx = dw
+        .transmit_delay(meters(x), meters(z), tx)
+        .unwrap()
+        .into_base();
+    let tau_rx = dw
+        .receive_delay(meters(x), meters(z), rx)
+        .unwrap()
+        .into_base();
+    let tau_sta = dw
+        .sta_delay(meters(x), meters(z), tx, rx)
+        .unwrap()
+        .into_base();
     assert!(
         (tau_sta - (tau_tx + tau_rx)).abs() < 1e-15,
         "STA delay {tau_sta:.6e} ≠ τ_tx + τ_rx = {:.6e}",
@@ -152,14 +180,20 @@ fn test_hann_apodization_center_is_one() {
         .element_positions
         .iter()
         .enumerate()
-        .min_by(|(_, a), (_, b)| a.abs().total_cmp(&b.abs()))
+        .min_by(|(_, a), (_, b)| {
+            a.in_unit::<Meter>()
+                .abs()
+                .total_cmp(&b.in_unit::<Meter>().abs())
+        })
         .map(|(i, _)| i)
         .unwrap();
     let xc = dw.config.element_positions[center_idx];
-    let w = dw.hann_apodization(xc, z, center_idx);
+    let w = dw.hann_apodization(xc, meters(z), center_idx).unwrap();
+    let weight = w.into_base();
     assert!(
-        (w - 1.0).abs() < 1e-12,
-        "Hann weight at dist=0 must be 1.0, got {w:.6}"
+        (weight - 1.0).abs() < 1e-12,
+        "Hann weight at dist=0 must be 1.0, got {:.6}",
+        weight
     );
 }
 
@@ -176,14 +210,16 @@ fn test_hann_apodization_out_of_aperture_is_zero() {
                    // Use an extreme lateral point that must be outside
     let x_far = 0.020; // 20 mm lateral, far from any element
     for elem in 0..dw.n_elements() {
-        let xj = dw.config.element_positions[elem];
-        let f = dw.config.virtual_source_depth;
-        let d_half = (z + f) / (2.0 * dw.config.f_number);
+        let xj = dw.config.element_positions[elem].in_unit::<Meter>();
+        let f = dw.config.virtual_source_depth.in_unit::<Meter>();
+        let d_half = (z + f) / (2.0 * dw.config.f_number.into_base());
         if (xj - x_far).abs() > d_half {
-            let w = dw.hann_apodization(x_far, z, elem);
-            assert!(
-                w == 0.0,
-                "Element {elem} outside aperture must have w=0, got {w}"
+            let w = dw.hann_apodization(meters(x_far), meters(z), elem).unwrap();
+            let weight = w.into_base();
+            assert_eq!(
+                weight, 0.0,
+                "Element {elem} outside aperture must have w=0, got {}",
+                weight
             );
         }
     }
@@ -196,8 +232,10 @@ fn test_hann_apodization_out_of_aperture_is_zero() {
 #[test]
 fn test_transmit_delay_surface_shape() {
     let dw = uniform_array(8, 3.0e-4);
-    let x_px = Array1::from_shape_fn(16, |[i]| -0.005 + (0.005 - -0.005) / 15.0 * i as f64);
-    let z_px = Array1::from_shape_fn(32, |[i]| 0.005 + (0.030 - 0.005) / 31.0 * i as f64);
+    let x_px = Array1::from_shape_fn(16, |[i]| {
+        meters(-0.005 + (0.005 - -0.005) / 15.0 * i as f64)
+    });
+    let z_px = Array1::from_shape_fn(32, |[i]| meters(0.005 + (0.030 - 0.005) / 31.0 * i as f64));
     let surf = dw.transmit_delay_surface(&x_px, &z_px).unwrap();
     assert_eq!(
         surf.shape(),
@@ -213,8 +251,8 @@ fn test_transmit_delay_surface_shape() {
 #[test]
 fn test_sta_delay_table_shape() {
     let dw = uniform_array(4, 3.0e-4);
-    let x_px = Array1::from_shape_fn(8, |[i]| -0.003 + (0.003 - -0.003) / 7.0 * i as f64);
-    let z_px = Array1::from_shape_fn(16, |[i]| 0.005 + (0.020 - 0.005) / 15.0 * i as f64);
+    let x_px = Array1::from_shape_fn(8, |[i]| meters(-0.003 + (0.003 - -0.003) / 7.0 * i as f64));
+    let z_px = Array1::from_shape_fn(16, |[i]| meters(0.005 + (0.020 - 0.005) / 15.0 * i as f64));
     let table = dw.sta_delay_table(&x_px, &z_px).unwrap();
     assert_eq!(
         table.shape(),
@@ -230,13 +268,13 @@ fn test_sta_delay_table_shape() {
 #[test]
 fn test_transmit_delay_surface_matches_scalar() {
     let dw = uniform_array(4, 3.0e-4);
-    let x_px = Array1::from_vec(2, vec![0.0, 0.002]).unwrap();
-    let z_px = Array1::from_vec(2, vec![0.010, 0.020]).unwrap();
+    let x_px = Array1::from_vec(2, vec![meters(0.0), meters(0.002)]).unwrap();
+    let z_px = Array1::from_vec(2, vec![meters(0.010), meters(0.020)]).unwrap();
     let surf = dw.transmit_delay_surface(&x_px, &z_px).unwrap();
 
     // pixel at (ix=0, iz=1) → index = 1*2+0 = 2
     let tau_table = surf[[2, 2]]; // elem=2, pixel iz=1,ix=0
-    let tau_scalar = dw.transmit_delay(x_px[0], z_px[1], 2).unwrap();
+    let tau_scalar = dw.transmit_delay(x_px[0], z_px[1], 2).unwrap().into_base();
     assert!(
         (tau_table - tau_scalar).abs() < 1e-15,
         "Surface/scalar mismatch: table={tau_table:.6e} scalar={tau_scalar:.6e}"
@@ -254,8 +292,11 @@ fn test_monostatic_sta_delay_equals_round_trip() {
     let z = 0.020;
     // Monostatic: same element transmits and receives
     // τ_tx(0, z, 0) = z/c  (on-axis), τ_rx(0, z, 0) = z/c → total = 2z/c
-    let tau = dw.sta_delay(0.0, z, center, center).unwrap();
-    let expected = 2.0 * z / dw.config.sound_speed;
+    let tau = dw
+        .sta_delay(meters(0.0), meters(z), center, center)
+        .unwrap()
+        .into_base();
+    let expected = 2.0 * z / dw.config.sound_speed.in_unit::<MeterPerSecond>();
     assert!(
         (tau - expected).abs() < 1e-12,
         "Monostatic STA delay {tau:.6e} ≠ 2z/c = {expected:.6e}"
@@ -269,7 +310,24 @@ fn test_monostatic_sta_delay_equals_round_trip() {
 #[test]
 fn test_out_of_range_index_errors() {
     let dw = uniform_array(4, 3.0e-4);
-    assert!(dw.transmit_delay(0.0, 0.01, 10).is_err());
-    assert!(dw.receive_delay(0.0, 0.01, 10).is_err());
-    assert!(dw.sta_delay(0.0, 0.01, 0, 10).is_err());
+    assert!(dw.transmit_delay(meters(0.0), meters(0.01), 10).is_err());
+    assert!(dw.receive_delay(meters(0.0), meters(0.01), 10).is_err());
+    assert!(dw.sta_delay(meters(0.0), meters(0.01), 0, 10).is_err());
+    assert!(matches!(
+        dw.hann_apodization(meters(0.0), meters(0.01), 10),
+        Err(KwaversError::InvalidInput(_))
+    ));
+}
+
+#[test]
+fn test_max_prf_rejects_invalid_depth() {
+    let dw = uniform_array(4, 3.0e-4);
+    assert!(matches!(
+        dw.max_prf(meters(0.0)),
+        Err(KwaversError::InvalidInput(_))
+    ));
+    assert!(matches!(
+        dw.max_prf(meters(f64::NAN)),
+        Err(KwaversError::InvalidInput(_))
+    ));
 }

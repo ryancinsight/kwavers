@@ -1,5 +1,7 @@
 //! FastNearfieldSolver implementation.
 
+use aequitas::systems::si::quantities::{MassDensity, Velocity};
+use aequitas::systems::si::units::{KilogramPerCubicMeter, MeterPerSecond, PerMeter};
 use apollo::{fft_2d_complex, ifft_2d_complex, Complex64 as ApolloComplex64};
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_math::fft::Complex64;
@@ -19,10 +21,10 @@ pub struct FastNearfieldSolver {
     pub(super) cached_factors: HashMap<u64, AngularSpectrumFactors>,
     /// Current transducer geometry
     pub(super) transducer: Option<RectangularTransducer>,
-    /// Wave speed (m/s)
-    pub(super) c0: f64,
-    /// Density (kg/m³)
-    pub(super) rho0: f64,
+    /// Wave speed.
+    pub(super) c0: Velocity<f64>,
+    /// Medium mass density.
+    pub(super) rho0: MassDensity<f64>,
     /// Precomputed kx coordinates
     kx: Vec<f64>,
     /// Precomputed ky coordinates
@@ -65,8 +67,8 @@ impl FastNearfieldSolver {
             config,
             cached_factors: HashMap::new(),
             transducer: None,
-            c0: SOUND_SPEED_WATER_SIM,
-            rho0: DENSITY_WATER_NOMINAL,
+            c0: Velocity::from_unit::<MeterPerSecond>(SOUND_SPEED_WATER_SIM),
+            rho0: MassDensity::from_unit::<KilogramPerCubicMeter>(DENSITY_WATER_NOMINAL),
             kx,
             ky,
         })
@@ -81,11 +83,8 @@ impl FastNearfieldSolver {
         self.cached_factors.clear(); // Clear cache when transducer changes
     }
 
-    /// Set medium properties
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
-    pub fn set_medium(&mut self, c0: f64, rho0: f64) {
+    /// Set medium properties.
+    pub fn set_medium(&mut self, c0: Velocity<f64>, rho0: MassDensity<f64>) {
         self.c0 = c0;
         self.rho0 = rho0;
         self.cached_factors.clear(); // Clear cache when medium changes
@@ -123,7 +122,10 @@ impl FastNearfieldSolver {
         z: f64,
     ) -> Result<AngularSpectrumFactors, String> {
         let (n_kx, n_ky) = self.config.angular_spectrum_size;
-        let k = transducer.wavenumber(self.c0);
+        let k = transducer
+            .wavenumber(self.c0)
+            .map_err(|error| error.to_string())?;
+        let k = k.in_unit::<PerMeter>();
 
         // Compute angular spectrum of Green's function
         // Based on McGough (2004) and Kelly & McGough (2006)
@@ -226,8 +228,13 @@ impl FastNearfieldSolver {
         }
 
         // Scaling factor from Rayleigh-Sommerfeld theory
-        let k = transducer.wavenumber(self.c0);
-        let scaling = ApolloComplex64::new(0.0, self.rho0 * self.c0 * k / (TWO_PI));
+        let k = transducer
+            .wavenumber(self.c0)
+            .map_err(|error| error.to_string())?;
+        let rho0 = self.rho0.in_unit::<KilogramPerCubicMeter>();
+        let c0 = self.c0.in_unit::<MeterPerSecond>();
+        let k = k.in_unit::<PerMeter>();
+        let scaling = ApolloComplex64::new(0.0, rho0 * c0 * k / (TWO_PI));
 
         for i in 0..n_kx {
             for j in 0..n_ky {

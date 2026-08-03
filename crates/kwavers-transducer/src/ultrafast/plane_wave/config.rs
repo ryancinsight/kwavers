@@ -1,36 +1,38 @@
 //! `UltrafastPlaneWaveConfig` — plane wave imaging configuration.
 
+use aequitas::systems::si::quantities::{Angle, Dimensionless, Frequency, Length, Velocity};
+use aequitas::systems::si::units::{Hertz, MeterPerSecond, Radian};
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 
 /// Plane wave imaging configuration.
 #[derive(Debug, Clone)]
 pub struct UltrafastPlaneWaveConfig {
-    /// Tilt angles for coherent compounding (radians).
-    pub tilt_angles: Vec<f64>,
-    /// Speed of sound (m/s).
-    pub sound_speed: f64,
-    /// Element positions (x coordinates, meters).
-    pub element_positions: Vec<f64>,
+    /// Tilt angles for coherent compounding.
+    pub tilt_angles: Vec<Angle<f64>>,
+    /// Speed of sound in the configured medium.
+    pub sound_speed: Velocity<f64>,
+    /// Element positions along the lateral axis.
+    pub element_positions: Vec<Length<f64>>,
     /// F-number for apodization (optional).
-    pub f_number: Option<f64>,
-    /// Sampling frequency (Hz).
-    pub sampling_frequency: f64,
+    pub f_number: Option<Dimensionless<f64>>,
+    /// Sampling frequency.
+    pub sampling_frequency: Frequency<f64>,
 }
 
 impl Default for UltrafastPlaneWaveConfig {
     /// Default: 11 tilted plane waves from −10° to +10° (2° steps),
     /// as in Nouhoum et al. (2021) functional ultrasound protocol.
     fn default() -> Self {
-        let tilt_angles: Vec<f64> = (-10..=10)
+        let tilt_angles: Vec<Angle<f64>> = (-10..=10)
             .step_by(2)
-            .map(|a| (a as f64).to_radians())
+            .map(|a| Angle::from_unit::<Radian>((a as f64).to_radians()))
             .collect();
         Self {
             tilt_angles,
-            sound_speed: SOUND_SPEED_TISSUE,
+            sound_speed: Velocity::from_unit::<MeterPerSecond>(SOUND_SPEED_TISSUE),
             element_positions: Vec::new(),
-            f_number: Some(1.5),
-            sampling_frequency: 40e6,
+            f_number: Some(Dimensionless::from_base(1.5)),
+            sampling_frequency: Frequency::from_unit::<Hertz>(40e6),
         }
     }
 }

@@ -1,5 +1,84 @@
 ## Live Aequitas closure — 2026-08-02
 
+### KWAVERS-AEQ-MET-56 — rectangular transducer geometry and wavenumber
+
+The audit found that `RectangularTransducer` still exposed width, height,
+frequency, and wavenumber inputs as raw `f64` values. Its element-size method
+also divided by public element counts without rejecting zero counts. The
+bounded closure changes the public geometry to Aequitas `Length` and
+`Frequency`, accepts medium speed as `Velocity`, returns wavenumber as
+`ReciprocalLength`, and types the fast-nearfield medium as `Velocity` plus
+`MassDensity`.
+
+Element-size and wavenumber calculations now reject zero or oversized element
+counts, non-finite or non-positive dimensions/frequency, and invalid sound
+speed. Solver and Rayleigh-Sommerfeld callers perform scalar extraction only
+inside FFT and Green-function formulas. Eunomia complex arrays remain numeric
+representation buffers; their real and quadrature components retain the
+existing observable unit, with no imaginary physical unit.
+
+Implementation: `crates/kwavers-transducer/src/transducers/rectangular.rs`,
+`crates/kwavers-solver/src/analytical/transducer/fast_nearfield`,
+`crates/kwavers-simulation/src/dispatch/rayleigh_sommerfeld.rs`, and the FNM
+benchmark. Exact locked checks pass for `kwavers-transducer`,
+`kwavers-solver`, and `kwavers-simulation`; the focused transducer Nextest
+`8e15dcb4-76e5-4ef3-9768-0e9051705be4` passes 2/2 and the focused FNM Nextest
+`3d2af317-dfce-4fae-99d7-74c61ca554d9` passes 6/6. Package Clippy passes for
+the affected library targets and the `kwavers` benchmark target with
+`-D warnings`; the latter required removing a test-only dead-code warning and
+one needless borrow in the benchmark dependency closure. Transducer and
+solver doctests pass. Two locked `kwavers-simulation` doctest attempts and
+the FNM benchmark smoke command exceed the 300-second shared-target
+collection bound without a diagnostic; they remain verification residuals,
+not green evidence. Rustdoc passes for the three affected packages.
+Typed/complex residue scans, formatting, and diff checks pass. No runtime
+performance claim is made.
+
+The remaining raw physical metrics in other transducer families remain audit
+candidates and are not represented as closed by this item. The next audit
+frontier is `design/{mod,propagation}.rs` (aperture dimensions, pitch, kerf,
+wavelength, frequency, and sound speed), `transducers/acquisition_geometry.rs`
+(element coordinates), `beamforming/config.rs` (sound speed and sampling or
+reference frequency), and the focused, hemispherical, MEMS, flexible, and
+two-dimensional array contracts. Complex impedance in
+`transducers/physics/frequency.rs` remains a representation value under its
+existing physical unit rather than an imaginary unit.
+
+### KWAVERS-AEQ-MET-55 — ultrafast plane and diverging-wave geometry
+
+The broader ultrafast audit found a second public gap adjacent to the closed
+scheduler: `plane_wave` and `diverging_wave` exposed element positions, image
+coordinates, sound speed, virtual-source depth, sampling frequency, angles,
+delays, PRF, F-number, and scalar Hann weights as untyped SI values. The gap
+is being closed with Aequitas `Length`, `Velocity`, `Frequency`, `Angle`,
+`Time`, and `Dimensionless`. Dense Leto delay and apodization arrays remain
+scalar buffers only at the explicit storage boundary, with seconds or
+dimensionless weights documented by their contracts.
+
+The scalar apodization index path now returns a typed invalid-input error
+instead of panicking, and `max_prf` rejects non-finite or non-positive depth
+and sound-speed inputs before constructing a frequency.
+
+The former `angles_degrees` API is removed; current callers retain typed
+angles. No Eunomia imaginary unit is introduced. Complex phasors remain
+representation data under one existing unit and reduce to the specified real
+observable before these real geometry and timing APIs.
+
+Implementation: `crates/kwavers-transducer/src/ultrafast/{plane_wave,diverging_wave}`
+and `docs/ADR/094-ultrafast-plane-diverging-quantities.md`. The exact locked
+package check, Clippy with `-D warnings`, doctests, Rustdoc, targeted Rustfmt,
+`git diff --check`, and typed/complex residue scans pass. Final Nextest run
+`f1d0db2a-5e11-450b-831e-a4290847d6ee` passes 219/219 with one ignored,
+including invalid-index apodization and invalid-depth PRF regressions. The
+installed `cargo-semver-checks 0.48.0` cannot compare this package because
+`kwavers-transducer` is not published to crates.io; it fails before comparison
+with `kwavers-transducer not found in registry`. Hosted API review is the
+remaining public-surface review evidence.
+
+The remaining raw physical metrics in other transducer families are outside this
+bounded slice and remain audit candidates rather than being represented as
+closed.
+
 ### KWAVERS-AEQ-MET-54 — ultrafast transmission scheduler
 
 The audit found one remaining public physical-metric gap in

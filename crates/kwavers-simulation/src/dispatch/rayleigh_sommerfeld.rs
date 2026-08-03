@@ -1,5 +1,7 @@
 //! Rayleigh-Sommerfeld angular-spectrum solver dispatch.
 
+use aequitas::systems::si::quantities::{Frequency, Length, MassDensity, Velocity};
+use aequitas::systems::si::units::{Hertz, KilogramPerCubicMeter, Meter, MeterPerSecond};
 use kwavers_math::fft::Complex64;
 use leto::{Array1, Array2, Array3};
 
@@ -31,12 +33,12 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
     });
 
     let rect_transducer = RectangularTransducer {
-        width: transducer.aperture_width(),
-        height: transducer.element_length(),
-        frequency,
+        width: Length::from_unit::<Meter>(transducer.aperture_width()),
+        height: Length::from_unit::<Meter>(transducer.element_length()),
+        frequency: Frequency::from_unit::<Hertz>(frequency),
         elements: (transducer.number_elements(), 1),
     };
-    let aperture_width = rect_transducer.width;
+    let aperture_width = rect_transducer.width.in_unit::<Meter>();
     let n_elem_x = transducer.number_elements();
 
     let as_x = next_pow2(2 * n_elem_x).max(64);
@@ -52,7 +54,10 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
     let mut solver = FastNearfieldSolver::new(fnm_config)
         .map_err(kwavers_core::error::KwaversError::InvalidInput)?;
     solver.set_transducer(rect_transducer);
-    solver.set_medium(c0, rho0);
+    solver.set_medium(
+        Velocity::from_unit::<MeterPerSecond>(c0),
+        MassDensity::from_unit::<KilogramPerCubicMeter>(rho0),
+    );
 
     let velocity = Array2::<Complex64>::from_elem((n_elem_x, 1), Complex64::new(1.0, 0.0));
 
