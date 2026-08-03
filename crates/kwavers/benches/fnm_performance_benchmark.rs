@@ -4,6 +4,8 @@
 //! against a direct element-to-element Green-function sum to expose their
 //! different scaling behavior.
 
+use aequitas::systems::si::quantities::{Frequency, Length, MassDensity, Velocity};
+use aequitas::systems::si::units::{Hertz, KilogramPerCubicMeter, Meter, MeterPerSecond, PerMeter};
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use eunomia::Complex64;
 use kwavers_solver::analytical::transducer::{FNMConfig, FastNearfieldSolver};
@@ -18,12 +20,12 @@ use std::f64::consts::PI;
 /// or speedup claim between the two discretizations.
 struct DirectElementSum {
     transducer: RectangularTransducer,
-    c0: f64,
-    rho0: f64,
+    c0: Velocity<f64>,
+    rho0: MassDensity<f64>,
 }
 
 impl DirectElementSum {
-    fn new(transducer: RectangularTransducer, c0: f64, rho0: f64) -> Self {
+    fn new(transducer: RectangularTransducer, c0: Velocity<f64>, rho0: MassDensity<f64>) -> Self {
         Self {
             transducer,
             c0,
@@ -36,8 +38,19 @@ impl DirectElementSum {
         let [n_elem_x, n_elem_y] = velocity.shape();
         let mut pressure = Array2::<Complex64>::zeros((n_elem_x, n_elem_y));
 
-        let k = self.transducer.wavenumber(self.c0);
-        let (elem_width, elem_height) = self.transducer.element_size();
+        let k = self
+            .transducer
+            .wavenumber(self.c0)
+            .expect("benchmark medium and frequency are valid")
+            .in_unit::<PerMeter>();
+        let (elem_width, elem_height) = self
+            .transducer
+            .element_size()
+            .expect("benchmark geometry is valid");
+        let elem_width = elem_width.in_unit::<Meter>();
+        let elem_height = elem_height.in_unit::<Meter>();
+        let c0 = self.c0.in_unit::<MeterPerSecond>();
+        let rho0 = self.rho0.in_unit::<KilogramPerCubicMeter>();
 
         // For each observation point (on transducer surface for simplicity)
         for i in 0..n_elem_x {
@@ -66,7 +79,7 @@ impl DirectElementSum {
                 }
 
                 // Scaling factor
-                let scaling = Complex64::new(0.0, self.rho0 * self.c0 * k / (2.0 * PI));
+                let scaling = Complex64::new(0.0, rho0 * c0 * k / (2.0 * PI));
                 pressure[[i, j]] = p_sum * scaling;
             }
         }
@@ -83,9 +96,9 @@ fn benchmark_fnm_vs_rayleigh_sommerfeld(c: &mut Criterion) {
 
     for (nx, ny) in transducer_sizes {
         let transducer = RectangularTransducer {
-            width: 5.0e-3,
-            height: 5.0e-3,
-            frequency: 2.0e6,
+            width: Length::from_unit::<Meter>(5.0e-3),
+            height: Length::from_unit::<Meter>(5.0e-3),
+            frequency: Frequency::from_unit::<Hertz>(2.0e6),
             elements: (nx, ny),
         };
 
@@ -98,9 +111,16 @@ fn benchmark_fnm_vs_rayleigh_sommerfeld(c: &mut Criterion) {
 
         let mut fnm_solver = FastNearfieldSolver::new(config).unwrap();
         fnm_solver.set_transducer(transducer.clone());
-        fnm_solver.set_medium(1500.0, 1000.0);
+        fnm_solver.set_medium(
+            Velocity::from_unit::<MeterPerSecond>(1500.0),
+            MassDensity::from_unit::<KilogramPerCubicMeter>(1000.0),
+        );
 
-        let direct_solver = DirectElementSum::new(transducer, 1500.0, 1000.0);
+        let direct_solver = DirectElementSum::new(
+            transducer,
+            Velocity::from_unit::<MeterPerSecond>(1500.0),
+            MassDensity::from_unit::<KilogramPerCubicMeter>(1000.0),
+        );
 
         // Create test velocity distribution
         let velocity = Array2::<Complex64>::from_elem((nx, ny), Complex64::new(1.0, 0.0));
@@ -129,9 +149,9 @@ fn benchmark_fnm_precomputation(c: &mut Criterion) {
     let mut group = c.benchmark_group("FNM Precomputation");
 
     let transducer = RectangularTransducer {
-        width: 10.0e-3,
-        height: 10.0e-3,
-        frequency: 1.0e6,
+        width: Length::from_unit::<Meter>(10.0e-3),
+        height: Length::from_unit::<Meter>(10.0e-3),
+        frequency: Frequency::from_unit::<Hertz>(1.0e6),
         elements: (32, 32),
     };
 
@@ -167,9 +187,9 @@ fn benchmark_fnm_memory_scaling(c: &mut Criterion) {
 
     for (nx, ny) in transducer_sizes {
         let transducer = RectangularTransducer {
-            width: 10.0e-3,
-            height: 10.0e-3,
-            frequency: 1.0e6,
+            width: Length::from_unit::<Meter>(10.0e-3),
+            height: Length::from_unit::<Meter>(10.0e-3),
+            frequency: Frequency::from_unit::<Hertz>(1.0e6),
             elements: (nx, ny),
         };
 

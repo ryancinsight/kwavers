@@ -1,5 +1,7 @@
 use super::core::FastNearfieldSolver;
 use super::types::FNMConfig;
+use aequitas::systems::si::quantities::{Frequency, Length, MassDensity, Velocity};
+use aequitas::systems::si::units::{Hertz, KilogramPerCubicMeter, Meter, MeterPerSecond};
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_math::fft::Complex64;
@@ -18,17 +20,17 @@ fn test_transducer_setup() {
     let mut solver = FastNearfieldSolver::new(config).unwrap();
 
     let transducer = RectangularTransducer {
-        width: 10e-3,
-        height: 10e-3,
-        frequency: MHZ_TO_HZ,
+        width: Length::from_unit::<Meter>(10e-3),
+        height: Length::from_unit::<Meter>(10e-3),
+        frequency: Frequency::from_unit::<Hertz>(MHZ_TO_HZ),
         elements: (32, 32),
     };
 
     solver.set_transducer(transducer);
 
-    let (elem_width, elem_height) = solver.transducer.as_ref().unwrap().element_size();
-    assert!((elem_width - 10e-3 / 32.0).abs() < 1e-9);
-    assert!((elem_height - 10e-3 / 32.0).abs() < 1e-9);
+    let (elem_width, elem_height) = solver.transducer.as_ref().unwrap().element_size().unwrap();
+    assert!((elem_width.in_unit::<Meter>() - 10e-3 / 32.0).abs() < 1e-9);
+    assert!((elem_height.in_unit::<Meter>() - 10e-3 / 32.0).abs() < 1e-9);
 }
 
 #[test]
@@ -37,14 +39,17 @@ fn test_precompute_factors() {
     let mut solver = FastNearfieldSolver::new(config).unwrap();
 
     let transducer = RectangularTransducer {
-        width: 5e-3,
-        height: 5e-3,
-        frequency: 2.0 * MHZ_TO_HZ,
+        width: Length::from_unit::<Meter>(5e-3),
+        height: Length::from_unit::<Meter>(5e-3),
+        frequency: Frequency::from_unit::<Hertz>(2.0 * MHZ_TO_HZ),
         elements: (16, 16),
     };
 
     solver.set_transducer(transducer);
-    solver.set_medium(SOUND_SPEED_WATER_SIM, DENSITY_WATER_NOMINAL);
+    solver.set_medium(
+        Velocity::from_unit::<MeterPerSecond>(SOUND_SPEED_WATER_SIM),
+        MassDensity::from_unit::<KilogramPerCubicMeter>(DENSITY_WATER_NOMINAL),
+    );
 
     solver.precompute_factors(25e-3).unwrap(); // 25 mm
 
@@ -62,9 +67,9 @@ fn test_field_computation() {
     let mut solver = FastNearfieldSolver::new(config).unwrap();
 
     let transducer = RectangularTransducer {
-        width: 5e-3,
-        height: 5e-3,
-        frequency: 2.0 * MHZ_TO_HZ,
+        width: Length::from_unit::<Meter>(5e-3),
+        height: Length::from_unit::<Meter>(5e-3),
+        frequency: Frequency::from_unit::<Hertz>(2.0 * MHZ_TO_HZ),
         elements: (16, 16),
     };
 
@@ -88,9 +93,9 @@ fn test_memory_usage() {
     let mut solver = FastNearfieldSolver::new(config.clone()).unwrap();
 
     let transducer = RectangularTransducer {
-        width: 10e-3,
-        height: 10e-3,
-        frequency: MHZ_TO_HZ,
+        width: Length::from_unit::<Meter>(10e-3),
+        height: Length::from_unit::<Meter>(10e-3),
+        frequency: Frequency::from_unit::<Hertz>(MHZ_TO_HZ),
         elements: (32, 32),
     };
 
@@ -121,15 +126,16 @@ fn test_fast_nearfield_defaults_match_water_constants() {
     let config = FNMConfig::default();
     let solver = FastNearfieldSolver::new(config).unwrap();
     assert!(
-        (solver.c0 - SOUND_SPEED_WATER_SIM).abs() < f64::EPSILON,
+        (solver.c0.in_unit::<MeterPerSecond>() - SOUND_SPEED_WATER_SIM).abs() < f64::EPSILON,
         "Default c0 ({}) must equal SOUND_SPEED_WATER_SIM ({})",
-        solver.c0,
+        solver.c0.in_unit::<MeterPerSecond>(),
         SOUND_SPEED_WATER_SIM
     );
     assert!(
-        (solver.rho0 - DENSITY_WATER_NOMINAL).abs() < f64::EPSILON,
+        (solver.rho0.in_unit::<KilogramPerCubicMeter>() - DENSITY_WATER_NOMINAL).abs()
+            < f64::EPSILON,
         "Default rho0 ({}) must equal DENSITY_WATER_NOMINAL ({})",
-        solver.rho0,
+        solver.rho0.in_unit::<KilogramPerCubicMeter>(),
         DENSITY_WATER_NOMINAL
     );
 }

@@ -1,5 +1,25 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-56 typed rectangular-transducer quantities [major] [arch] — in progress
+
+- [x] Replace public rectangular width, height, and frequency scalars with
+      Aequitas `Length` and `Frequency`.
+- [x] Type FNM medium speed and density, wavenumber, element sizes, and all
+      current solver, dispatch, test, and benchmark callers.
+- [x] Reject zero/oversized element counts and invalid physical values with
+      typed errors; preserve Eunomia complex arrays as scalar storage only.
+- [x] Run exact locked affected-package checks, focused Nextest, package
+      Clippy, transducer/solver doctests, formatting, and typed/complex residue
+      scans. The simulation doctest and FNM benchmark smoke commands exceed
+      the 300-second shared-target collection bound without diagnostics.
+- [x] Run Rustdoc for the three affected packages and record the bounded
+      verification residuals.
+- [ ] Commit and publish the increment after final diff review.
+
+Acceptance: no raw SI scalar remains in the rectangular-transducer public
+geometry or FNM medium contract; invalid geometry and medium inputs fail with
+typed errors; numerical and complex storage boundaries remain explicit.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-55 typed ultrafast plane/diverging quantities [major] [arch] — done 2026-08-02
 
 - [x] Type plane-wave and diverging-wave public geometry, speed, frequency,
