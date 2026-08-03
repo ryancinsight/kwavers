@@ -106,3 +106,4 @@
 | [096](096-beamforming-configuration-quantities.md) | ADR 096 — Aequitas beamforming configuration quantities | Accepted — 2026-08-02 |
 | [097](097-sensor-beamformer-quantities.md) | Aequitas sensor-beamformer quantities | Accepted — 2026-08-03 |
 | [098](098-pam-neural-quantities.md) | Aequitas PAM and neural sensor quantities | Accepted — 2026-08-03 |
+| [099](099-transducer-design-propagation-quantities.md) | Aequitas transducer design and propagation quantities | Accepted — 2026-08-03 |

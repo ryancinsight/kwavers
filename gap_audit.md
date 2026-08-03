@@ -1,23 +1,32 @@
 ## Live Aequitas closure — 2026-08-02
 
-### KWAVERS-AEQ-MET-60 — transducer design/propagation metric gap (in progress 2026-08-03)
+### KWAVERS-AEQ-MET-60 — transducer design/propagation metric gap (implementation complete; hosted verification pending 2026-08-03)
 
-The live audit found a remaining raw physical boundary in
+The live audit found and implemented the remaining raw physical boundary in
 `crates/kwavers-transducer/src/design/{mod,propagation}.rs`. Aperture design
-publishes aperture dimensions, operating frequency, sound speed, pitch,
+now publishes aperture dimensions, operating frequency, sound speed, pitch,
 element dimensions, kerf, wavelength, fill factor, and element/channel
-coordinates as `f64`. Focused propagation publishes center/focus coordinates,
-frequency, sound speed, drive current, pressure-per-current, acoustic
-impedance, focal pressure, intensity, and axial/lateral widths as raw scalars.
-The direct callers are the Kwavers driver validation and experiment adapters
-plus their tests.
+coordinates through Aequitas. Focused propagation now publishes center/focus
+coordinates, frequency, sound speed, drive current, pressure-per-current,
+acoustic impedance, focal pressure, SI intensity, mechanical index, and
+axial/lateral widths through Aequitas. The Kwavers driver validation and
+experiment adapters construct the typed contracts and extract legacy Pa,
+W/cm², and mm values only at their reporting boundary.
+
+ADR 099 records the contract and the Eunomia rule: real/quadrature values in
+the coherent propagation formula remain one observable signal, so no imaginary
+SI unit is valid. Local evidence is transducer Nextest 226/226 with one
+skipped, driver Nextest 489/489, strict offline Clippy, formatting, diff, and
+scoped residue scans. The local Atlas overlay prevents locked Cargo commands
+from resolving without generated lock churn, and local doctests timed out
+during that overlay compilation before a test diagnostic; hosted locked gates
+remain the acceptance oracle.
 
 This item is bounded to the design and focused-propagation family and its
 direct callers. `transducers/acquisition_geometry.rs` element coordinates and
 the focused, hemispherical, MEMS, flexible, and two-dimensional array
-families remain separate audit candidates. No metric is marked closed until
-the typed public contracts, analytical regressions, locked checks, and hosted
-repository-owned gates pass.
+families remain separate audit candidates. The item moves to closed only
+after the hosted locked/documentation matrix passes on the final branch head.
 
 ### KWAVERS-AEQ-MET-59 — PAM/neural sensor metric gap (closed 2026-08-03)
 

@@ -13,6 +13,28 @@
 | KWAVERS-AEQ-MET-54 | Type the public ultrafast transmission scheduler's speed, depth, PRF, event times, frame rates, and tilt angles with Aequitas; keep scalar extraction at the PRF/timing formula boundary and document the real-only Eunomia compatibility rule. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-transducer/src/ultrafast/sequencer/**`, manifest, ADR 093, PM artifacts |
 | KWAVERS-AEQ-INTEGRATION-1 | Integrate the current Aequitas metric closure for therapeutic microbubble and plasmonics contracts on current `main`; harden the public three-dimensional plasmonic coordinate contract and synchronize the audit. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-physics/src/{acoustics/therapy/microbubble,electromagnetic}`, PM artifacts |
 
+## KWAVERS-AEQ-MET-60 — Type transducer design and propagation metrics [major] [arch] — implementation complete, hosted verification pending 2026-08-03
+
+- Owner: Codex; scope: `crates/kwavers-transducer/src/design/{mod,propagation}.rs`,
+  direct Kwavers driver validation and experiment adapters/tests, ADR 099, and
+  synchronized PM artifacts. Acquisition geometry and other transducer
+  families remain separate audit items.
+- Outcome: aperture dimensions, pitch, kerf, element extents, wavelength,
+  coordinates, frequency, sound speed, drive current, pressure gain,
+  impedance, pressure, SI intensity, mechanical index, and beam widths use
+  Aequitas quantities. Scalar extraction stays at formula, Euclidean,
+  propagation, explicit conversion, and legacy driver serialization boundaries.
+- Eunomia: coherent real/quadrature accumulators remain one observable pressure
+  signal; no imaginary SI dimension or complex physical wrapper is introduced.
+- Implementation: typed design and propagation contracts, direct driver
+  construction, analytical geometry/coherent-pressure regressions, invalid
+  focus/current tests, and ADR 099 are complete. Local offline Nextest passes
+  transducer 226/226 with one skipped and driver 489/489; strict offline
+  Clippy, formatting, diff, and scoped residue scans pass. Shared Atlas
+  overlay resolution blocks local `--locked` commands and local doctest
+  collection before diagnostics; hosted locked gates are the remaining
+  acceptance evidence.
+
 ## KWAVERS-AEQ-MET-59 — Type PAM/neural sensor metrics [major] [arch] — done 2026-08-03
 
 - Owner: Codex; scope: `crates/kwavers-analysis/src/signal_processing/pam/**`,

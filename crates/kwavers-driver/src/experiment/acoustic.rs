@@ -115,7 +115,7 @@ impl AcousticSimulator for InCrateAcousticSim {
 /// * `grating_lobe_free` — from `ArrayDesign.grating_lobe_free` (steered-axis pitch/wavelength
 ///   test on the realized pitch after quantization) rather than the driver-side
 ///   `max_grating_free_steer_deg` approximation.
-/// * `in_far_field` — from `design.aperture_y_m()` (realized aperture after integer element
+/// * `in_far_field` — from `design.aperture_y()` (realized aperture after integer element
 ///   count) rather than `step.aperture_m` (requested aperture, pre-quantization).
 /// * `focal_pressure_pa`, `mechanical_index`, `isppa_w_cm2`, and beam extents — from
 ///   `kwavers-transducer` propagation, not rederived in this crate.
@@ -125,7 +125,7 @@ pub struct KwaversSim;
 /// Synthesize the kwavers-transducer array geometry for a driver pre-step.
 ///
 /// [`KwaversBeamStep::aperture_m`] is the first-to-last channel-centre span. In
-/// `kwavers-transducer`, [`kwavers_transducer::ApertureDesignSpec::aperture_y_m`] is the
+/// `kwavers-transducer`, [`kwavers_transducer::ApertureDesignSpec::aperture_y`] is the
 /// pitch-cell span. The adapter therefore adds one channel pitch before calling
 /// [`kwavers_transducer::design_array`], so the realized channel count remains equal to the
 /// manifest lane count and the returned channel-centre positions still span the manifest
@@ -140,6 +140,8 @@ pub(crate) fn array_design_from_step(
     step: &KwaversBeamStep,
 ) -> Result<kwavers_transducer::ArrayDesign, crate::Error> {
     use crate::error::Validate;
+    use aequitas::systems::si::quantities::{Dimensionless, Frequency, Length, Velocity};
+    use aequitas::systems::si::units::{Hertz, MeterPerSecond};
     use kwavers_transducer::{
         design_array, ApertureDesignSpec, ChannelWiring, DEFAULT_KERF_FRACTION,
     };
@@ -149,12 +151,12 @@ pub(crate) fn array_design_from_step(
     // into n_channels = ny independently-driven linear channels.
     let pitch_fraction = (step.pitch_m / step.wavelength_m).clamp(1e-9, 2.0);
     let spec = ApertureDesignSpec {
-        aperture_x_m: 0.0,
-        aperture_y_m: step.aperture_m + step.pitch_m,
-        frequency_hz: step.frequency_hz,
-        sound_speed_m_s: step.sound_speed_m_s,
-        max_pitch_fraction: pitch_fraction,
-        kerf_fraction: DEFAULT_KERF_FRACTION,
+        aperture_x: Length::from_base(0.0),
+        aperture_y: Length::from_base(step.aperture_m + step.pitch_m),
+        frequency: Frequency::from_unit::<Hertz>(step.frequency_hz),
+        sound_speed: Velocity::from_unit::<MeterPerSecond>(step.sound_speed_m_s),
+        max_pitch_fraction: Dimensionless::from_base(pitch_fraction),
+        kerf_fraction: Dimensionless::from_base(DEFAULT_KERF_FRACTION),
         wiring: ChannelWiring::ColumnsAsChannels,
     };
     design_array(&spec)
@@ -174,30 +176,44 @@ pub(crate) fn kwavers_pressure_map_from_step(
     budget: &EnergyBudgetReport,
 ) -> Result<PressureMap, crate::Error> {
     use crate::error::Validate;
+    use aequitas::systems::si::quantities::{
+        AcousticImpedance, ElectricCurrent, Frequency, Length, PressurePerElectricCurrent, Velocity,
+    };
+    use aequitas::systems::si::units::{
+        Ampere, Hertz, Meter, MeterPerSecond, Rayl, WattPerSquareMeter,
+    };
     use kwavers_transducer::{propagate_focused_linear_array, FocusedLinearArrayPropagationSpec};
 
     let design = array_design_from_step(step)?;
     let per_element_i_a = budget.peak_i_a / (CHANNELS_PER_TILE_V2 as f64);
     let map = propagate_focused_linear_array(&FocusedLinearArrayPropagationSpec {
         design,
-        center_m: [0.0, 0.0, 0.0],
-        focus_m: [0.0, 0.0, step.focal_m],
-        frequency_hz: step.frequency_hz,
-        sound_speed_m_s: step.sound_speed_m_s,
-        per_channel_peak_current_a: per_element_i_a,
-        pressure_per_amp_pa: KWVERS_ARTICLE_FOCAL_PRESSURE_PER_AMP_PA,
-        acoustic_impedance_rayl: PHYSICS_WATER_Z0_RAYL,
+        center: [Length::from_base(0.0); 3],
+        focus: [
+            Length::from_base(0.0),
+            Length::from_base(0.0),
+            Length::from_base(step.focal_m),
+        ],
+        frequency: Frequency::from_unit::<Hertz>(step.frequency_hz),
+        sound_speed: Velocity::from_unit::<MeterPerSecond>(step.sound_speed_m_s),
+        per_channel_peak_current: ElectricCurrent::from_unit::<Ampere>(per_element_i_a),
+        pressure_per_current: PressurePerElectricCurrent::from_base(
+            KWVERS_ARTICLE_FOCAL_PRESSURE_PER_AMP_PA,
+        ),
+        acoustic_impedance: AcousticImpedance::from_unit::<Rayl>(PHYSICS_WATER_Z0_RAYL),
     })
     .map_err(|e| {
         Validate::KwaversBeamStepContract(format!("propagate_focused_linear_array: {e}"))
     })?;
 
     Ok(PressureMap {
-        focal_pressure_pa: map.focal_pressure_pa,
-        mechanical_index: map.mechanical_index,
-        isppa_w_cm2: map.isppa_w_cm2,
-        axial_extent_mm: map.axial_extent_mm,
-        lateral_extent_mm: map.lateral_extent_mm,
+        focal_pressure_pa: map
+            .focal_pressure
+            .in_unit::<aequitas::systems::si::units::Pascal>(),
+        mechanical_index: map.mechanical_index.into_base(),
+        isppa_w_cm2: map.isppa.in_unit::<WattPerSquareMeter>() / UNIT_W_CM2_PER_W_M2,
+        axial_extent_mm: map.axial_extent.in_unit::<Meter>() * UNIT_MM_PER_M,
+        lateral_extent_mm: map.lateral_extent.in_unit::<Meter>() * UNIT_MM_PER_M,
         grating_lobe_free: map.grating_lobe_free,
         in_far_field: map.in_far_field,
     })
