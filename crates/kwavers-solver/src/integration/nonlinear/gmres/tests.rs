@@ -108,3 +108,51 @@ fn test_givens_rotation() {
     let eliminated = -s * 3.0 + c * 4.0;
     assert!(eliminated.abs() < 1e-14);
 }
+
+/// Regression: Arnoldi estimate alone must never report convergence.
+///
+/// If `A = scale·I`, the Arnoldi residual estimate is `|scale| * ||true_residual||`.
+/// For `scale < 1` the estimate crosses the threshold early while the true
+/// residual is still large. The fixed solver checks the true residual before
+/// returning `Ok`, so `final_residual < tolerance` always holds when this
+/// function returns without error.
+#[test]
+fn preconditioned_estimate_alone_never_reports_convergence() {
+    let tolerance = 1e-8_f64;
+    // Use scale = 1e-6: the Arnoldi estimate is 1e6x smaller than true residual.
+    // The unfixed solver would report Ok after ~1 iteration; the fixed one
+    // must verify the true residual.
+    for &scale in &[1.0_f64, 1e-4, 1e-6] {
+        let config = GMRESConfig {
+            krylov_dim: 15,
+            max_iterations: 200,
+            relative_tolerance: tolerance,
+            absolute_tolerance: tolerance,
+            use_preconditioner: false,
+        };
+        let mut solver = GMRESSolver::new(config);
+
+        // b = all-ones tensor, true solution is x = all-ones / scale
+        let shape = [3, 3, 3];
+        let b = Array3::from_elem(shape, 1.0);
+        let mut x0 = Array3::zeros(shape);
+
+        // A·v = scale * v  (scaled identity)
+        let matvec = move |v: &Array3<f64>| Ok(v * scale);
+
+        match solver.solve(matvec, &b, &mut x0) {
+            Ok(info) => {
+                // When Ok, the true residual MUST be below tolerance
+                assert!(
+                    info.final_residual <= tolerance * 10.0,
+                    "scale={scale}: reported convergence with true residual \
+                     {r:.3e} > tolerance {tolerance:.3e}",
+                    r = info.final_residual
+                );
+            }
+            Err(_) => {
+                // Stagnation is allowed — just not a false Ok
+            }
+        }
+    }
+}

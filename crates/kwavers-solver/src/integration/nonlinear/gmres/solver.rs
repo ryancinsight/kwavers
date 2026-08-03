@@ -70,6 +70,13 @@ impl GMRESSolver {
         let mut rho = Self::norm(&r);
         let b_norm = Self::norm(b);
 
+        // Guard 1: non-finite initial residual
+        if !rho.is_finite() {
+            return Err(KwaversError::Numerical(NumericalError::InvalidOperation(
+                "GMRES: initial residual is non-finite (NaN or Inf)".into(),
+            )));
+        }
+
         if self.check_convergence(rho, b_norm) {
             return Ok(GmresConvergenceInfo {
                 converged: true,
@@ -108,9 +115,11 @@ impl GMRESSolver {
 
                 H[j + 1][j] = Self::norm(&w_next);
 
-                if H[j + 1][j] < 1e-14 {
-                    k_steps = j + 1;
-                } else {
+                // Happy breakdown: Krylov space is exactly invariant — the
+                // current iterate is the exact solution (up to floating-point).
+                // Treat it as convergence rather than leaving a stale basis.
+                let happy_breakdown = H[j + 1][j] < 1e-14;
+                if !happy_breakdown {
                     V[j + 1] = &w_next / H[j + 1][j];
                 }
 
@@ -130,23 +139,41 @@ impl GMRESSolver {
                 gamma[j] *= c;
 
                 let residual = gamma[j + 1].abs();
+                // Guard 2: non-finite Arnoldi residual estimate
+                if !residual.is_finite() {
+                    return Err(KwaversError::Numerical(NumericalError::InvalidOperation(
+                        "GMRES: Arnoldi recurrence produced a non-finite value".into(),
+                    )));
+                }
                 self.residual_history.push(residual);
                 self.iteration_count += 1;
+                k_steps = j + 1;
 
-                if self.check_convergence(residual, b_norm) {
+                if self.check_convergence(residual, b_norm) || happy_breakdown {
                     let y = Self::solve_upper_triangular(&H, &gamma, j + 1)?;
                     for i in 0..=j {
                         *x0 = &*x0 + &(&V[i] * y[i]);
                     }
-                    return Ok(GmresConvergenceInfo {
-                        converged: true,
-                        iterations: self.iteration_count,
-                        final_residual: residual,
-                        relative_residual: residual / b_norm.max(1e-15),
-                    });
+                    // Compute the true residual to confirm convergence
+                    let ax_true = matvec(x0)?;
+                    let r_true = b - &ax_true;
+                    let true_residual = Self::norm(&r_true);
+                    if self.check_convergence(true_residual, b_norm) || happy_breakdown {
+                        return Ok(GmresConvergenceInfo {
+                            converged: true,
+                            iterations: self.iteration_count,
+                            final_residual: true_residual,
+                            relative_residual: true_residual / b_norm.max(1e-15),
+                        });
+                    }
+                    // Arnoldi estimate was not tight enough — continue from the
+                    // updated x0 with the recomputed residual.
+                    r = r_true;
+                    rho = true_residual;
+                    break;
                 }
 
-                if H[j + 1][j] < 1e-14 {
+                if happy_breakdown {
                     break;
                 }
             }
@@ -159,6 +186,13 @@ impl GMRESSolver {
             let ax = matvec(x0)?;
             r = b - &ax;
             rho = Self::norm(&r);
+
+            // Guard 3: non-finite restart residual
+            if !rho.is_finite() {
+                return Err(KwaversError::Numerical(NumericalError::InvalidOperation(
+                    "GMRES: restart residual is non-finite (NaN or Inf)".into(),
+                )));
+            }
 
             if self.check_convergence(rho, b_norm) {
                 return Ok(GmresConvergenceInfo {

@@ -110,6 +110,12 @@ pub fn solve_gmres(
         let beta = leto_ops::dot(&r.view(), &r.view())
             .expect("invariant: GMRES residual self-dot")
             .sqrt();
+        // Guard: non-finite restart residual
+        if !beta.is_finite() {
+            return Err(KwaversError::Numerical(NumericalError::InvalidOperation(
+                "GMRES: restart residual is non-finite (NaN or Inf)".into(),
+            )));
+        }
         if beta / pb_norm < tol {
             return Ok(x);
         }
@@ -187,8 +193,15 @@ pub fn solve_gmres(
                 }
             }
 
-            // Convergence check
-            if g[j + 1].abs() / pb_norm < tol {
+            // Convergence check on Arnoldi estimate; true residual is verified
+            // at the restart boundary below.
+            let arnoldi_est = g[j + 1].abs();
+            if !arnoldi_est.is_finite() {
+                return Err(KwaversError::Numerical(NumericalError::InvalidOperation(
+                    "GMRES: Arnoldi recurrence produced a non-finite value".into(),
+                )));
+            }
+            if arnoldi_est / pb_norm < tol {
                 j_end = j + 1;
                 break;
             }
