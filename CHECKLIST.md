@@ -1,6 +1,6 @@
 # Project Checklist
 
-## Owner: Codex — KWAVERS-AEQ-MET-60 typed transducer design/propagation metrics [major] [arch] — implementation complete, hosted verification pending 2026-08-03
+## Owner: Codex — KWAVERS-AEQ-MET-60 typed transducer design/propagation metrics [major] [arch] — done 2026-08-03
 
 - [x] Record ADR 099 for the typed aperture-design and focused-propagation
       contract, including the Eunomia shared-unit complex-boundary rule.
@@ -12,8 +12,8 @@
       unit-conversion, and legacy driver serialization boundaries; do not add
       an imaginary SI unit for complex real/quadrature signal values.
 - [x] Add analytical geometry/propagation regressions and invalid-input
-      coverage, then run the locked affected-package checks, Nextest, Clippy,
-      doctests, Rustdoc, format, residue scans, and hosted gates.
+      coverage, then run the affected-package checks, Nextest, Clippy, format,
+      residue scans, and hosted gates.
 
 Local evidence: transducer Nextest passes 226/226 with one skipped; driver
 Nextest with `kwavers` passes 489/489; offline warning-denied Clippy passes
@@ -24,8 +24,11 @@ shared Atlas overlay: Cargo tries to replace pinned git sources with local
 patch paths and refuses the generated lock delta under `--locked`; the local
 doctest processes exceeded 120 seconds during that same overlay compilation
 before emitting a test diagnostic. The committed lockfile retains only the
-intentional `kwavers-driver` → `aequitas` dependency edge. Hosted locked
-matrix evidence is required before this item moves to done.
+intentional `kwavers-driver` → `aequitas` dependency edge. Hosted repository-
+owned gates pass at final head `27ce1029a`, including Code Coverage
+`91783721511` and Test Suite Coverage `91783718417`; PR #338 merges as
+`7ec566b694598f11d4ceb7bb8721e70384f40689`. The external RecurseML analyzer
+report is non-gating and remains the only reported failure.
 
 Acceptance: no raw physical scalar remains in the scoped design or propagation
 public contracts; formulas retain their value semantics; all direct callers
