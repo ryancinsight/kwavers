@@ -25,7 +25,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use std::path::Path;
 
-use super::py_convert::kwavers_to_py;
+use super::helpers::kwavers_to_py;
 use crate::array_utils::{
     leto1_to_pyarray1, leto2_to_pyarray2, leto3_to_pyarray3, pyarray2_to_leto2, pyarray3_to_leto3,
 };
