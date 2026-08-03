@@ -23,9 +23,9 @@ compile fixes in `5d70126f5` and `49adf4764`. It migrates all direct
 PAM/neural, Python, therapy, and integration-test callers, hardens
 geometry/configuration/detection validation, and propagates beamformed-signal
 errors instead of discarding them. Formatting, diff, and locked metadata pass.
-Final PR #337 head `49adf4764` passes the complete repository-owned matrix,
-including Test Suite Coverage `91742556621`, Code Coverage `91742557670`,
-Architecture Validation `91742556704`, stable/beta/nightly, Miri, security,
+Final PR #337 head `1c5c4d3ab` passes the complete repository-owned matrix,
+including Test Suite Coverage `91752793970`, Code Coverage `91752808795`,
+Architecture Validation `91752794111`, stable/beta/nightly, Miri, security,
 solver, benchmark, PINN, feature, documentation, wheel, migration-audit, and
 layer-boundary jobs. The first coverage attempt exposed stale Aequitas imports
 in the PAM test module; the fix changed only those canonical paths and did not

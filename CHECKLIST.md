@@ -18,10 +18,10 @@
       found and the follow-ups `5d70126f5` and `49adf4764` fixed the redundant
       closure and stale Aequitas test imports.
 - [x] Complete the locked package, Nextest, doctest, Rustdoc, residue, and
-      hosted gates at the final PR head `49adf4764`.
+      hosted gates at the final PR head `1c5c4d3ab`.
 
 Evidence: the final PR #337 matrix is green. Test Suite Coverage job
-`91742556621` and Code Coverage job `91742557670` pass; stable, beta, nightly,
+`91752793970` and Code Coverage job `91752808795` pass; stable, beta, nightly,
 Miri, security, solver, benchmark, PINN, feature, architecture, documentation,
 wheel, migration-audit, and layer-boundary jobs also pass. The first final-head
 coverage attempt exposed stale imports in the PAM test module; `49adf4764`
