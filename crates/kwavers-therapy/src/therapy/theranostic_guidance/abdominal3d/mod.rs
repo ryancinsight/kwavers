@@ -1,5 +1,5 @@
 pub(crate) mod bowl;
-pub(crate) mod helpers;
+pub(crate) mod coord_convert;
 pub(super) mod placement;
 pub(super) mod types;
 

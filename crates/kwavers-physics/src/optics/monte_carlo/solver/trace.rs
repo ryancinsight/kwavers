@@ -8,7 +8,7 @@ use std::sync::atomic::AtomicU64;
 use crate::optics::monte_carlo::config::SimulationConfig;
 use crate::optics::monte_carlo::interfaces::{apply_fresnel, fresnel_reflectance};
 use crate::optics::monte_carlo::photon::Photon;
-use crate::optics::monte_carlo::utils::{
+use crate::optics::monte_carlo::scatter::{
     atomic_add, normalize, photon_step_to_boundary, scatter_photon,
 };
 use kwavers_core::constants::optical::REFRACTIVE_INDEX_SOFT_TISSUE;

@@ -13,7 +13,7 @@
 pub mod config;
 pub mod processing;
 pub mod reconstruction;
-pub mod utils;
+pub mod focus;
 pub mod validation;
 
 // Re-export main types for convenience

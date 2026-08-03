@@ -1,6 +1,6 @@
 //! PMUT scalar model bindings.
 
-use super::helpers::pmut;
+use super::py_convert::pmut;
 use pyo3::prelude::*;
 
 /// PMUT immersion resonance `Hz` (film = "aln" | "pzt").

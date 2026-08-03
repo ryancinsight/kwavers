@@ -1,7 +1,7 @@
 //! Harmonic ratio method: B/A from A₂/A₁ (Rénier et al. 2008).
 
 use super::super::config::NonlinearInversionConfig;
-use super::helpers::{a_landau, ba_from_beta_s, beta_s_from_amplitudes, shear_modulus};
+use super::analytical::{a_landau, ba_from_beta_s, beta_s_from_amplitudes, shear_modulus};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_imaging::ultrasound::elastography::NonlinearParameterMap;

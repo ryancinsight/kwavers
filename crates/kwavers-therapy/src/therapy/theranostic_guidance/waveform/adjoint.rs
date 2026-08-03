@@ -179,7 +179,7 @@ use leto::Array2;
 
 use super::forward::{apply_attenuation, c2dt2_field, inject_sources, step_wavefield_cpml};
 use super::types::{AcousticGrid, CheckpointSchedule};
-use super::utils::linear;
+use super::indexing::linear;
 
 /// Sharpness of the Poynting-vector soft gate; see module docs for derivation.
 ///

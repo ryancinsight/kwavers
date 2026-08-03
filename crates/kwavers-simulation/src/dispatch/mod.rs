@@ -14,4 +14,4 @@ pub mod nonlinear;
 pub mod poroelastic;
 pub mod pstd;
 pub mod rayleigh_sommerfeld;
-pub(crate) mod shared;
+pub(crate) mod recording;

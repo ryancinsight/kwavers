@@ -14,7 +14,7 @@ use super::fourier::FourierReconstructor;
 use super::iterative::{IterativeAlgorithm, IterativeMethods};
 use super::linear_algebra::PhotoacousticLinearSolver;
 use super::time_reversal::PhotoacousticTimeReversal;
-use super::utils::Utils;
+use super::shared_ops::Utils;
 
 /// Photoacoustic reconstruction algorithms
 #[derive(Debug, Clone)]

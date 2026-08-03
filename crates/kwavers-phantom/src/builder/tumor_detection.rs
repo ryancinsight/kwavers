@@ -1,5 +1,5 @@
 use super::super::types::TumorSpec;
-use super::super::utils::compute_tumor_properties;
+use super::super::optical_properties::compute_tumor_properties;
 use kwavers_grid::GridDimensions;
 use kwavers_medium::optical_map::{OpticalPropertyMap, OpticalPropertyMapBuilder, Region};
 use kwavers_medium::properties::OpticalPropertyData;

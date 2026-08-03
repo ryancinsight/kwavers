@@ -86,7 +86,7 @@ pub mod photon;
 pub mod result;
 pub mod solver;
 pub mod source;
-pub mod utils;
+pub mod scatter;
 
 #[cfg(test)]
 mod tests;

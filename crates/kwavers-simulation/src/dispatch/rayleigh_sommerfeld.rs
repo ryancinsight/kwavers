@@ -3,7 +3,7 @@
 use kwavers_math::fft::Complex64;
 use leto::{Array1, Array2, Array3};
 
-use crate::dispatch::shared::{next_pow2, trim_initial_recorder_sample};
+use crate::dispatch::recording::{next_pow2, trim_initial_recorder_sample};
 use crate::types::{SimulationRunRequest, SimulationRunResult};
 use kwavers_core::error::KwaversResult;
 use kwavers_receiver::recorder::pressure_statistics::SampledStatistics;

@@ -6,7 +6,7 @@
 //! - `interpolation`: `interpolate_staggered_to_collocated` — half-cell shift.
 
 mod accumulator;
-mod helpers;
+mod stats_ops;
 mod interpolation;
 mod sampled;
 

@@ -9,7 +9,7 @@
 //! norm of the discrete operator.
 
 mod forward;
-mod helpers;
+mod grid_ops;
 mod passive_inverse;
 
 use leto::Array3;
@@ -20,7 +20,7 @@ use super::types::{
 };
 
 use forward::cavitation_source;
-use helpers::{active_indices, normalize, unflatten};
+use grid_ops::{active_indices, normalize, unflatten};
 use passive_inverse::{solve_projected_tikhonov, PassiveOperator};
 
 #[derive(Clone, Debug)]

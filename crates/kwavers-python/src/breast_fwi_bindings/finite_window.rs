@@ -1,7 +1,7 @@
 //! PyO3 conversion surface for finite-window PSTD Born prediction.
 
 use super::complex_compat::{leto2_to_nd2, nd_to_leto3};
-use super::helpers::kwavers_to_py;
+use super::py_convert::kwavers_to_py;
 use super::PyMultiRowRingArray;
 use eunomia::Complex64;
 use kwavers_solver::inverse::fwi::frequency_domain::{

@@ -1,6 +1,6 @@
 //! Hephaestus CUDA implementation of the real elementwise operation family.
 
-use super::shared::{
+use super::contract::{
     dense_slice, dense_slice_mut, limit_bytes_to_usize, map_hephaestus_error,
     validate_elementwise_shapes,
 };

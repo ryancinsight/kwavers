@@ -22,12 +22,12 @@ fn test_register_optical_validation() {
 #[test]
 fn test_robust_bounds_degenerate() {
     let empty_data = Array3::<f64>::zeros([0, 0, 0]);
-    let (min, max) = utils::compute_robust_bounds(&empty_data);
+    let (min, max) = super::super::registration::compute_robust_bounds(&empty_data);
     assert_eq!(min, 0.0);
     assert_eq!(max, 0.0);
 
     let uniform_data = Array3::<f64>::ones([2, 2, 2]);
-    let (min, max) = utils::compute_robust_bounds(&uniform_data);
+    let (min, max) = super::super::registration::compute_robust_bounds(&uniform_data);
     assert_eq!(min, 1.0);
     assert_eq!(max, 2.0);
 }

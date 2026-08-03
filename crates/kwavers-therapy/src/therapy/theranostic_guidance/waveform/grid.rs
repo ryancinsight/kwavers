@@ -26,7 +26,7 @@ use super::cavitation::{
 };
 use super::medium::{reference_speed, speed_bounds};
 use super::types::{AcousticGrid, CpmlCoeffs, PaddedSimulation};
-use super::utils::linear;
+use super::indexing::linear;
 use crate::therapy::theranostic_guidance::geometry::Point2;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 

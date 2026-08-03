@@ -8,7 +8,7 @@ use kwavers_source::{GridSource, Source as KwaversSource, SourceField};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
-use super::super::super::helpers::{SampledSignal, SineSignal};
+use super::super::super::py_convert::{SampledSignal, SineSignal};
 use super::super::super::Simulation;
 use super::super::sources::parse_source_mode;
 

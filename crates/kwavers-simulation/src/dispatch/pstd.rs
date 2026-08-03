@@ -5,7 +5,7 @@
 use leto::{Array3, SliceArg};
 
 use crate::configs::ThermalConfig;
-use crate::dispatch::shared::{record_modes_to_spec, trim_initial_recorder_view};
+use crate::dispatch::recording::{record_modes_to_spec, trim_initial_recorder_view};
 use crate::types::extract_full_grid_stats;
 use crate::types::{SimulationRunRequest, SimulationRunResult};
 use kwavers_boundary::cpml::CPMLConfig;

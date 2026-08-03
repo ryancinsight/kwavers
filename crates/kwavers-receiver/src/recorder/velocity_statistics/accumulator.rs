@@ -34,7 +34,7 @@ use kwavers_core::error::KwaversResult;
 use leto::Array1;
 use leto::Array3 as LetoArray3;
 
-use super::helpers::validate_sample_output_len;
+use super::stats_ops::validate_sample_output_len;
 
 #[doc(hidden)]
 pub trait VelocityArray3Access {

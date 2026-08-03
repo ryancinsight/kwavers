@@ -1,6 +1,6 @@
 //! CMUT scalar model bindings.
 
-use super::helpers::cmut;
+use super::py_convert::cmut;
 use pyo3::prelude::*;
 
 /// CMUT (Si) immersion resonance `Hz`.

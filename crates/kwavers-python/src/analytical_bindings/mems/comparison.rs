@@ -1,6 +1,6 @@
 //! CMUT/PMUT comparison figure-of-merit bindings.
 
-use super::helpers::{cmut, pmut};
+use super::py_convert::{cmut, pmut};
 use kwavers_transducer::mems::comparison;
 use pyo3::prelude::*;
 

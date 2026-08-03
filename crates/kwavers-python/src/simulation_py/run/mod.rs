@@ -1,4 +1,4 @@
-mod helpers;
+mod py_convert;
 pub(crate) mod sources;
 
 use kwavers_core::error::KwaversError;

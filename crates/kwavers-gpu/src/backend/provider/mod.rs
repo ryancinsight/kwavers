@@ -1,12 +1,12 @@
 //! GPU provider contracts and concrete Hephaestus implementations.
 
-mod shared;
+mod contract;
 mod wgpu;
 
 #[cfg(feature = "cuda-provider")]
 mod cuda;
 
-pub use shared::{
+pub use contract::{
     ElementWiseMultiplyProvider, GpuComputeProvider, GpuKernelProvider, GpuProviderBackend,
     SpatialDerivativeProvider,
 };

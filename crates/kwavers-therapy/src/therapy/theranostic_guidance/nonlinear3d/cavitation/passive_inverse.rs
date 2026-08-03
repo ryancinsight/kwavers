@@ -15,7 +15,7 @@ use kwavers_math::numerics::operators::interpolation::trilinear_index_space;
 use super::super::types::{
     grid_point_m, Nonlinear3dAperture, Nonlinear3dConfig, Nonlinear3dVolume,
 };
-use super::helpers::grid_index;
+use super::grid_ops::grid_index;
 use kwavers_core::constants::numerical::{FOUR_PI, TWO_PI};
 
 pub(super) struct PassiveOperator {

@@ -34,7 +34,7 @@
 //! - Wilkinson (1965): "The Algebraic Eigenvalue Problem"
 
 mod algorithms;
-mod helpers;
+mod eigen_solve;
 #[cfg(test)]
 mod tests;
 

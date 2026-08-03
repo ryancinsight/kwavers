@@ -4,7 +4,7 @@ use kwavers_math::fft::Complex64;
 use leto::{Array1, Array3};
 use std::f64::consts::TAU;
 
-use crate::dispatch::shared::trim_initial_recorder_sample;
+use crate::dispatch::recording::trim_initial_recorder_sample;
 use crate::types::{SimulationRunRequest, SimulationRunResult};
 use kwavers_core::error::KwaversResult;
 use kwavers_mesh::tetrahedral::TetrahedralMesh;

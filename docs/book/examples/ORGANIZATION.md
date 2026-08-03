@@ -11,7 +11,7 @@ This document provides an overview of all kwavers examples and their organizatio
 | [`basic_simulation`](../examples/basic_simulation.md) | Wave Physics Fundamentals | Simple acoustic wave propagation |
 | [`minimal_demo`](../examples/minimal_demo.md) | Wave Physics Fundamentals | Minimal working example |
 | [`pstd_fdtd_comparison`](../examples/pstd_fdtd_comparison.md) | Numerical Methods | FDTD vs PSTD comparison |
-| [`dg_acoustic_1d`](../examples/dg_acoustic_1d.md) | Numerical Methods | Discontinuous Galerkin acoustic diagnostics |
+| [`dg_acoustic_1d_diagnostics`](../examples/dg_acoustic_1d_diagnostics.md) | Numerical Methods | Discontinuous Galerkin acoustic diagnostics |
 | [`single_bubble_sonoluminescence`](../examples/single_bubble_sonoluminescence.md) | Cavitation | Single bubble sonoluminescence |
 | [`multiphysics_sonoluminescence`](../examples/multiphysics_sonoluminescence.md) | Cavitation | Complete interdisciplinary simulation |
 | [`spatially_varying_attenuation`](../examples/spatially_varying_attenuation.md) | Media | Spatially varying attenuation |
@@ -36,12 +36,12 @@ This document provides an overview of all kwavers examples and their organizatio
 | [`pinn_2d_wave_equation`](../examples/pinn_2d_wave_equation.md) | PINN | PINN 2D wave equation |
 | [`pinn_advanced_physics`](../examples/pinn_advanced_physics.md) | PINN | PINN advanced physics |
 | [`transfer_learning_pinn`](../examples/transfer_learning_pinn.md) | PINN | Transfer learning PINN |
-| [`literature_validation`](../examples/literature_validation.md) | Validation | Literature validation |
+| [`literature_validation_safe`](../examples/literature_validation_safe.md) | Validation | Literature validation |
 | [`physics_validation`](../examples/physics_validation.md) | Validation | Physics validation |
 | [`performance_validation`](../examples/performance_validation.md) | Validation | Performance validation |
 | [`theorem_validation_demo`](../examples/theorem_validation_demo.md) | Validation | Theorem validation demo |
 | [`safe_vectorization_benchmarks`](../examples/safe_vectorization_benchmarks.md) | Performance | Safe vectorization benchmarks |
-| [`transcranial_ct_mri`](../examples/transcranial_ct_mri.md) | Transcranial | Transcranial CT/MRI reconstruction |
+| [`transcranial_ct_mri_reconstruction`](../examples/transcranial_ct_mri_reconstruction.md) | Transcranial | Transcranial CT/MRI reconstruction |
 
 ### Architecture and Utility Examples (No Book Docs)
 
@@ -49,7 +49,7 @@ These examples demonstrate architecture, refactoring, or utility functions rathe
 
 | Example | Description |
 |---------|-------------|
-| `adaptive_beamforming` | Adaptive beamforming architecture refactoring demonstration |
+
 | `boundary_smoothing` | Boundary smoothing implementation details |
 | `comprehensive_pinn_demo` | Full PINN ecosystem demonstration |
 | `dg_acoustic_timestep_sweep` | DG acoustic timestep refinement plots |
@@ -61,7 +61,7 @@ These examples demonstrate architecture, refactoring, or utility functions rathe
 | `dg_advection_diagnostics` | DG advection diagnostics |
 | `field_surrogate_demo` | Field surrogate modeling |
 | `lines` | Line drawing utilities |
-| `literature_validation_safe` | Analytical validation (safe/Green's functions) |
+
 | `metrics` | Metrics collection utilities |
 | `mod` | Module utilities |
 | `monte_carlo_validation` | Monte Carlo validation methods |
@@ -75,7 +75,7 @@ These examples demonstrate architecture, refactoring, or utility functions rathe
 | `simulation` | Simulation utilities |
 | `swe_3d_liver_fibrosis` | SWE 3D liver fibrosis |
 | `tau_sweep` | Tau parameter sweeps |
-| `transcranial_ct_mri_reconstruction` | Transcranial CT/MRI reconstruction variant |
+
 | `validate_2d_pinn` | 2D PINN validation |
 | `pinn_gpu_training` | GPU PINN training |
 | `pinn_meta_uncertainty` | PINN meta-uncertainty |

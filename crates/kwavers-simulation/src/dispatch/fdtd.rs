@@ -1,6 +1,6 @@
 //! FDTD solver dispatch.
 
-use crate::dispatch::shared::{recording_modes_from_strings, trim_initial_recorder_sample};
+use crate::dispatch::recording::{recording_modes_from_strings, trim_initial_recorder_sample};
 use crate::types::extract_full_grid_stats;
 use crate::types::{SimulationRunRequest, SimulationRunResult};
 use kwavers_boundary::cpml::CPMLConfig;

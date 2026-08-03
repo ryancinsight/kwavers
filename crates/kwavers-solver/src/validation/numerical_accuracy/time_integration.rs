@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use super::super::helpers::*;
+    use super::super::laplacian::*;
     use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use kwavers_core::constants::tissue_thermal::THERMAL_DIFFUSIVITY_TISSUE;
     use leto::Array3;

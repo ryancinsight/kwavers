@@ -6,31 +6,39 @@
 
 ## What This Example Demonstrates
 
-This example is an architecture-focused tour of the adaptive beamforming stack after the ADR-001 refactor. Instead of running a numeric reconstruction, it documents how the monolithic implementation was split into focused submodules while preserving compatibility and test coverage.
+Runs Minimum Variance Distortionless Response (MVDR/Capon) adaptive beamforming
+on a synthetic uniform linear array and verifies the result against an
+analytical steering oracle. A far-field source is synthesized at a known angle,
+the sample covariance is estimated from deterministic complex baseband
+snapshots, and the Capon spectrum is scanned over candidate angles. The
+executable asserts:
+
+- the spectrum peaks at the oracle angle (within the scan step);
+- the distortionless constraint `a(θ₀)ᴴ w(θ₀) = 1` holds to round-off;
+- MVDR nulls a strong interferer that delay-and-sum (DAS) cannot.
 
 | Component | API | Value |
 |---|---|---|
-| Architecture | `adaptive_beamforming::{adaptive, conventional, subspace, tapering, past, opast}` | Focused modules replace the old 2193-line implementation |
-| API ownership | `kwavers_analysis::...::adaptive::MinimumVariance` | Analysis owns adaptive weighting; transducer owns hardware interfaces |
-| Verification | Package Nextest and strict Clippy | Validates the current source graph |
+| Steering oracle | `beamforming::narrowband::NarrowbandSteering` | phase-only plane-wave steering `a_i(θ) = exp(−j 2π f τ_i(θ))` |
+| Covariance | `beamforming::covariance::CovarianceEstimator::estimate_complex` | sample covariance with forward-backward averaging |
+| Adaptive weights | `beamforming::MinimumVariance::compute_weights` | `w = R⁻¹a / (aᴴR⁻¹a)` with diagonal loading |
+| Verification | Hermitian quadratic `wᴴRw` | Capon spectrum peak, distortionless, and interferer-nulling assertions |
 
 ## Key Code Snippet
 
 ```rust
-println!("Adaptive Beamforming - Architecture Refactoring Complete");
-println!("=======================================================");
-
-println!("\n✓ REFACTORING ACHIEVEMENTS:");
-println!("  • Eliminated monolithic algorithms_old.rs (2193 lines)");
-println!("  • Split into focused submodules (<500 lines each)");
-println!("  • Removed code duplication across algorithms");
-println!("  • Feature-gated legacy implementations");
-println!("  • Maintained 100% backwards compatibility");
+let w = mvdr.compute_weights(&covariance, &a)?;
+let power = hermitian_quadratic(&w, &covariance);
+// The Capon peak must match the steering oracle within the scan step.
+assert!((theta_hat - theta0_deg).abs() <= 3.0);
 ```
 
-## Expected Output (if applicable)
+## Expected Output
 
-The executable prints refactoring achievements, quality-assurance checks, and the new module layout rather than generating beamformed images.
+The executable prints the estimated Capon peak angle, the spectrum power at the
+oracle direction, the distortionless-constraint error, and the MVDR-versus-DAS
+interferer comparison. All checks must pass; a failing assertion reports the
+observed value before exiting.
 
 ## Book Chapter
 

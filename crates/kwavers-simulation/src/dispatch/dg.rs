@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use leto::Array3;
 
-use crate::dispatch::shared::trim_initial_recorder_sample;
+use crate::dispatch::recording::trim_initial_recorder_sample;
 use crate::types::{SimulationRunRequest, SimulationRunResult};
 use kwavers_core::error::KwaversResult;
 use kwavers_receiver::recorder::pressure_statistics::SampledStatistics;

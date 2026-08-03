@@ -9,7 +9,7 @@ use kwavers_transducer::array_2d::{
     TransducerArray2D as KwaversTransducerArray2D, TransducerArray2DConfig,
 };
 
-use crate::source_py::helpers::{apodization_to_string, parse_apodization_type};
+use crate::source_py::py_convert::{apodization_to_string, parse_apodization_type};
 
 /// 2D transducer array with electronic beam control.
 ///

@@ -1,6 +1,6 @@
 mod bayesian;
 mod harmonic_ratio;
-mod helpers;
+mod analytical;
 mod least_squares;
 mod processor;
 #[cfg(test)]

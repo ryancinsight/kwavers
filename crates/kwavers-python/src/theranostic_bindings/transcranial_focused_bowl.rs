@@ -12,7 +12,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use std::path::Path;
 
-use super::helpers::{kwavers_to_py, points3_to_array};
+use super::py_convert::{kwavers_to_py, points3_to_array};
 use crate::ritk_image::load_ritk_nifti;
 
 #[pyfunction]

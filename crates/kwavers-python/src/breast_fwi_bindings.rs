@@ -19,7 +19,7 @@ mod diagnostics;
 mod direct_field;
 mod finite_window;
 mod fwi_config;
-mod helpers;
+mod py_convert;
 mod inversion;
 mod operator_equivalence;
 mod phantom;

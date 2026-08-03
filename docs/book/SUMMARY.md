@@ -10,7 +10,7 @@
   - [Example: Electromagnetic Simulation](examples/electromagnetic_simulation.md)
 - [2. Numerical Methods: FDTD and PSTD](numerical_methods.md)
   - [Example: PSTD vs FDTD Comparison](examples/pstd_fdtd_comparison.md)
-  - [Example: DG Acoustic 1D Diagnostics](examples/dg_acoustic_1d.md)
+  - [Example: DG Acoustic 1D Diagnostics](examples/dg_acoustic_1d_diagnostics.md)
   - [Example: DG Acoustic Comparison Plot](examples/dg_acoustic_comparison_plot.md)
   - [Example: DG Acoustic Convergence Plot](examples/dg_acoustic_convergence_plot.md)
   - [Example: DG Acoustic Timestep Sweep](examples/dg_acoustic_timestep_sweep.md)

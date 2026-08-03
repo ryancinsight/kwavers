@@ -4,7 +4,7 @@ use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive, ParallelSlic
 use std::f64::consts::TAU;
 
 use super::super::LinearBornInversionConfig;
-use super::helpers::distance;
+use super::geometry::distance;
 use super::{RowContext, VolumeOperator, VolumeVoxel};
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use kwavers_transducer::transducers::TransducerGeometry;

@@ -19,7 +19,7 @@ pub mod stability;
 pub mod structure;
 pub mod topology;
 pub mod validation;
-use kwavers_math::fft::utils as fft_utils;
+use kwavers_math::fft::spectral as fft_utils;
 
 // ============================================================================
 // EXPLICIT RE-EXPORTS (Grid API)
