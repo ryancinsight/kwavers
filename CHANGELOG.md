@@ -4,6 +4,13 @@
 
 ### Changed
 
+- **Breaking:** Sensor-beamformer positions, sampling and steering frequency,
+  sound speed, angles, spacing, aperture, F-number, and spatial-Nyquist
+  metrics now use Aequitas quantities. Invalid derived-metric inputs return
+  typed errors. Eunomia complex steering retains one shared observable unit
+  for real and quadrature components; no imaginary physical unit is
+  introduced. See [ADR 097](docs/ADR/097-sensor-beamformer-quantities.md).
+
 - **Breaking:** Shared beamforming configuration now uses Aequitas
   `Velocity` and `Frequency` for sound speed, sampling frequency, and
   reference frequency. The former `BeamformingConfig` alias is removed and

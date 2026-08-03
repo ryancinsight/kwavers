@@ -1,3 +1,5 @@
+use aequitas::systems::si::quantities::{Angle, Frequency, Velocity};
+use aequitas::systems::si::units::{Hertz, MeterPerSecond, Radian};
 use kwavers_receiver::{Position, Sensor, SensorArray, SensorArrayGeometry};
 use kwavers_transducer::beamforming::sensor_beamformer::SensorBeamformer;
 use std::f64::consts::PI;
@@ -17,7 +19,7 @@ fn test_calculate_steering() {
     let sensors = vec![s1, s2];
 
     let array = SensorArray::new(sensors, sound_speed, SensorArrayGeometry::Linear);
-    let beamformer = SensorBeamformer::new(array, sampling_freq);
+    let beamformer = SensorBeamformer::new(array, Frequency::from_unit::<Hertz>(sampling_freq));
 
     // Test Angles: (theta, phi)
     // 1. Broadside: theta = 0 (Z-axis). Direction [0, 0, 1]. Path diff 0.
@@ -32,14 +34,24 @@ fn test_calculate_steering() {
     // For X-axis (endfire): theta = PI/2, phi = 0.
 
     let angles = vec![
-        (0.0, 0.0),      // Broadside (Z)
-        (PI / 2.0, 0.0), // Endfire (X)
+        (
+            Angle::from_unit::<Radian>(0.0),
+            Angle::from_unit::<Radian>(0.0),
+        ), // Broadside (Z)
+        (
+            Angle::from_unit::<Radian>(PI / 2.0),
+            Angle::from_unit::<Radian>(0.0),
+        ), // Endfire (X)
     ];
 
     // Call calculate_steering with NEW signature
     // This will fail to compile until I update the implementation.
     let result = beamformer
-        .calculate_steering(&angles, frequency, sound_speed)
+        .calculate_steering(
+            &angles,
+            Frequency::from_unit::<Hertz>(frequency),
+            Velocity::from_unit::<MeterPerSecond>(sound_speed),
+        )
         .expect("Calculation failed");
 
     // Check dimensions: (n_sensors, n_angles) = (2, 2)

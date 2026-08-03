@@ -26,9 +26,18 @@
   aperture, and spatial-Nyquist values; locked package checks, Nextest,
   Clippy, doctests, Rustdoc, residue scans, and hosted gates pass; no
   imaginary SI unit is introduced.
-- Definition of ready: raw-field inventory and dependency closure are recorded
-  here and in `gap_audit.md`; ADR 097 defines the public contract and
-  formula/storage boundaries.
+- Implementation: `SensorBeamformer` stores typed coordinates and sampling
+  frequency; delay/steering accept typed speed, frequency, and angles;
+  derived metrics return typed results and reject non-finite or non-positive
+  inputs. Eunomia steering remains a shared-unit complex representation.
+- Local evidence: transducer Nextest
+  `05509c41-f4c5-41a0-826e-b5749a1a2d21` passes 226/226 with one skipped;
+  sensor-beamformer focused Nextest `69a123fc-2f99-4471-a8a9-d643995c3f4b`
+  passes 13/13; direct Kwavers integration filters
+  `903ce106-7444-4f32-abbb-5d8a3ae691ca` and
+  `98ca19d1-e786-4fad-91b5-7401c49d4486` pass 1/1 each; locked
+  checks, warning-denied Clippy, doctests, Rustdoc, formatting, diff, and
+  residue scans pass.
 - Re-open trigger: raw physical metric residue, changed steering phase,
   formula-boundary mismatch, or Eunomia complex-unit incompatibility.
 

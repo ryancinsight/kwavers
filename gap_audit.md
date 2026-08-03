@@ -11,8 +11,8 @@ frequency. These values are a disjoint sensor-array contract; aperture-design,
 propagation, PAM, neural geometry, and other array families remain separate
 items.
 
-The claimed slice will use Aequitas `Length`, `Frequency`, `Angle`, `Velocity`,
-and `Dimensionless`. Scalar extraction is restricted to Euclidean distance,
+The slice uses Aequitas `Length`, `Frequency`, `Angle`, `Velocity`, and
+`Dimensionless`. Scalar extraction is restricted to Euclidean distance,
 trigonometric direction/phase, and dense `f64` delay or steering formulas.
 Eunomia complex steering buffers remain real-plus-quadrature representation
 data under their existing observable signal unit. No imaginary SI unit is
@@ -22,6 +22,24 @@ Acceptance is value-semantic: delay values retain distance/speed, steering
 phase retains `2π f Δt`, F-number retains focal-length/aperture, and spatial
 Nyquist retains `c/(2 Δd)` after migration. Direct callers and tests must use
 typed constructors with no compatibility wrapper.
+
+Implementation is complete. `SensorBeamformer` stores typed positions and
+sampling frequency; `calculate_delays` and `calculate_steering` accept typed
+speed, frequency, and angle values; `SensorProcessingParams` returns typed
+F-number and spatial-Nyquist results and rejects non-finite or non-positive
+inputs. The exact public raw-field scan is clean within the scoped module;
+the only remaining `f64` coordinate arrays are formula-boundary conversions
+for the existing scalar delay/phase kernels.
+
+Local evidence: transducer Nextest
+`05509c41-f4c5-41a0-826e-b5749a1a2d21` passes 226/226 with one skipped;
+focused sensor-beamformer Nextest `69a123fc-2f99-4471-a8a9-d643995c3f4b`
+passes 13/13; direct Kwavers delay and steering integration filters
+`903ce106-7444-4f32-abbb-5d8a3ae691ca` and
+`98ca19d1-e786-4fad-91b5-7401c49d4486` pass 1/1 each; locked checks,
+warning-denied Clippy, doctests, Rustdoc, formatting,
+diff, and typed/complex residue scans pass. Eunomia `Complex` steering data
+retains one shared observable unit and no imaginary SI unit is introduced.
 
 ### KWAVERS-AEQ-MET-57 — shared beamforming configuration metrics
 

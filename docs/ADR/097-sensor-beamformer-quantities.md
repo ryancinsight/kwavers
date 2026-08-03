@@ -1,6 +1,6 @@
 # ADR 097 — Aequitas sensor-beamformer quantities
 
-Status: Proposed — 2026-08-03
+Status: Accepted — 2026-08-03
 
 ## Context
 

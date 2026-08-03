@@ -1,5 +1,9 @@
 //! Beamforming types: apodization window selector and array processing parameters.
 
+use aequitas::systems::si::quantities::{Dimensionless, Frequency, Length, Velocity};
+use aequitas::systems::si::units::{Hertz, Meter, MeterPerSecond};
+use kwavers_core::error::{KwaversError, KwaversResult};
+
 /// Apodization window functions for sensor array weighting.
 ///
 /// Tapering window applied across sensor elements reduces side-lobe energy in
@@ -29,28 +33,60 @@ pub struct SensorProcessingParams {
     /// Number of sensors in the array.
     pub n_sensors: usize,
     /// Sampling frequency (Hz).
-    pub sampling_frequency: f64,
+    pub sampling_frequency: Frequency<f64>,
     /// Mean inter-element spacing (m).
-    pub element_spacing: f64,
+    pub element_spacing: Length<f64>,
     /// Array aperture — max-x minus min-x (m).
-    pub array_aperture: f64,
+    pub array_aperture: Length<f64>,
 }
 
 impl SensorProcessingParams {
     /// F-number = `focal_length / array_aperture`.
     ///
     /// Dimensionless depth-of-field metric (Van Trees 2002, §2.4).
-    #[must_use]
-    pub fn f_number(&self, focal_length: f64) -> f64 {
-        focal_length / self.array_aperture
+    ///
+    /// # Errors
+    /// Returns an error when either length is non-finite or not strictly
+    /// positive, because the ratio is undefined for those inputs.
+    #[must_use = "handle the validated F-number result"]
+    pub fn f_number(&self, focal_length: Length<f64>) -> KwaversResult<Dimensionless<f64>> {
+        let focal_length = focal_length.in_unit::<Meter>();
+        let aperture = self.array_aperture.in_unit::<Meter>();
+        if !focal_length.is_finite()
+            || focal_length <= 0.0
+            || !aperture.is_finite()
+            || aperture <= 0.0
+        {
+            return Err(KwaversError::InvalidInput(
+                "f_number requires finite positive focal length and aperture".to_owned(),
+            ));
+        }
+
+        Ok(Dimensionless::from_base(focal_length / aperture))
     }
 
     /// Spatial Nyquist limit: maximum unambiguous frequency (Hz).
     ///
     /// From the spatial sampling theorem: f_max = c / (2 Δd)
     /// where Δd = `element_spacing`.
-    #[must_use]
-    pub fn max_spatial_frequency(&self, sound_speed: f64) -> f64 {
-        sound_speed / (2.0 * self.element_spacing)
+    ///
+    /// # Errors
+    /// Returns an error when sound speed or spacing is non-finite or not
+    /// strictly positive, because the spatial-Nyquist ratio is undefined.
+    #[must_use = "handle the validated spatial-frequency result"]
+    pub fn max_spatial_frequency(
+        &self,
+        sound_speed: Velocity<f64>,
+    ) -> KwaversResult<Frequency<f64>> {
+        let sound_speed = sound_speed.in_unit::<MeterPerSecond>();
+        let spacing = self.element_spacing.in_unit::<Meter>();
+        if !sound_speed.is_finite() || sound_speed <= 0.0 || !spacing.is_finite() || spacing <= 0.0
+        {
+            return Err(KwaversError::InvalidInput(
+                "max_spatial_frequency requires finite positive sound speed and spacing".to_owned(),
+            ));
+        }
+
+        Ok(Frequency::from_unit::<Hertz>(sound_speed / (2.0 * spacing)))
     }
 }
