@@ -1,6 +1,28 @@
 # Backlog / Strategy
 
-## KW-MATH-LA-EVICTION-BLOCKER-1 — Complex sparse has no upstream home [arch] — blocked
+## KW-MATH-LA-EVICTION-BLOCKER-1 — Complex sparse has no upstream home [arch] — RESOLVED upstream
+
+**Resolution 2026-08-03 (leto PR #93, `1ef5d10`).** The complex gap is closed in
+`leto-ops`, and by a better route than the option (b) recommended below: no new
+container was added. `Scalar` now has an `impl<T> Scalar for Complex<T>`, so the
+*canonical* `CsrMatrix`/`CooMatrix` and the `spmv`/`spmv_into`/`spgemm` kernels
+serve `Complex64` directly — a parallel complex-only sparse type would have
+cloned `CsrMatrix` across the scalar dimension, exactly the duplicated-variant
+defect the generic containers prevent. eunomia already supplied
+`NumericElement for Complex<T>`; `Scalar` adds only `from_usize` over it.
+
+What this means for the eviction: `leto_ops::CsrMatrix<Complex64>` now exists,
+so the 38 complex BEM sites have an upstream target. The **assembly-model**
+difference stands and is the remaining design question — `leto_ops::CsrMatrix`
+is build-then-freeze (`CooMatrix::push` → `to_csr`, with duplicate entries
+accumulating, which is standard element-assembly semantics and is covered by a
+new upstream test) whereas the deleted type mutated structure in place. The
+BEM/FEM managers therefore need porting to COO-accumulate-then-freeze rather
+than a mechanical import swap. Verified upstream: leto-ops Nextest 496/496,
+doctests 16/16, warning-clean Clippy, including four new complex sparse tests
+against closed-form oracles.
+
+Original finding retained below for the record.
 
 **Filed by:** Claude (atlas session 0161539d); 2026-08-03. **Not a claim on the
 eviction** — the in-flight `kwavers-math` linear-algebra eviction belongs to its
