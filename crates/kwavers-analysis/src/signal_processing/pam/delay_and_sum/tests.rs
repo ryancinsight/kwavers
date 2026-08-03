@@ -12,7 +12,7 @@ use leto::Array2;
 fn length_positions(values: &[[f64; 3]]) -> Vec<[Length<f64>; 3]> {
     values
         .iter()
-        .map(|position| position.map(|value| Length::from_unit::<Meter>(value)))
+        .map(|position| position.map(Length::from_unit::<Meter>))
         .collect()
 }
 

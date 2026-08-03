@@ -74,7 +74,7 @@ fn pam_config_for(
         ),
         spatial_resolution: Length::from_unit::<Meter>(1e-3),
         apodization: ApodizationType::Hamming,
-        focal_point: focal_point.map(|value| Length::from_unit::<Meter>(value)),
+        focal_point: focal_point.map(Length::from_unit::<Meter>),
     };
 
     PAMConfig {
