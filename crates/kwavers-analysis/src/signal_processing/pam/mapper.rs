@@ -5,7 +5,7 @@ use crate::signal_processing::beamforming::narrowband::{
     subspace_spatial_spectrum_point, SubspaceMethod, SubspaceSpectrumConfig,
 };
 use aequitas::systems::si::quantities::Frequency;
-use aequitas::systems::si::units::{Hertz, MeterPerSecond};
+use aequitas::systems::si::units::{Hertz, Meter, MeterPerSecond};
 use kwavers_core::error::KwaversResult;
 use kwavers_transducer::beamforming::processor::BeamformingProcessor;
 use kwavers_transducer::beamforming::BeamformingCoreConfig;
@@ -24,7 +24,7 @@ impl PassiveAcousticMapper {
     /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn new(config: PAMConfig, geometry: PamArrayGeometry) -> KwaversResult<Self> {
-        config.beamforming.validate()?;
+        config.validate()?;
 
         let element_positions = geometry.element_positions();
         let core_cfg: BeamformingCoreConfig = config.beamforming.clone().into();
@@ -50,9 +50,11 @@ impl PassiveAcousticMapper {
 
         config.beamforming.validate()?;
 
-        let delays = self
-            .beamformer
-            .compute_delays(config.beamforming.focal_point);
+        let focal_point = config
+            .beamforming
+            .focal_point
+            .map(|coordinate| coordinate.in_unit::<Meter>());
+        let delays = self.beamformer.compute_delays(focal_point);
         let sensor_data_leto = sensor_data.clone();
 
         let beamformed = match config.beamforming.method {
@@ -140,9 +142,13 @@ impl PassiveAcousticMapper {
         let config = self.processor.config();
         let core = &config.beamforming.core;
         let (f_min, f_max) = config.beamforming.frequency_range;
+        let focal_point = config
+            .beamforming
+            .focal_point
+            .map(|coordinate| coordinate.in_unit::<Meter>());
 
         let cfg = SubspaceSpectrumConfig {
-            frequency_hz: 0.5 * (f_min + f_max),
+            frequency_hz: 0.5 * (f_min.in_unit::<Hertz>() + f_max.in_unit::<Hertz>()),
             sampling_frequency_hz: sample_rate,
             sound_speed: core.sound_speed.in_unit::<MeterPerSecond>(),
             num_sources,
@@ -150,13 +156,8 @@ impl PassiveAcousticMapper {
         };
 
         let positions = self.beamformer.sensor_positions().to_vec();
-        let power = subspace_spatial_spectrum_point(
-            method,
-            sensor_data,
-            &positions,
-            config.beamforming.focal_point,
-            &cfg,
-        )?;
+        let power =
+            subspace_spatial_spectrum_point(method, sensor_data, &positions, focal_point, &cfg)?;
 
         let mut map = Array3::<f64>::zeros((1, 1, 1));
         map[[0, 0, 0]] = power;
@@ -175,7 +176,7 @@ impl PassiveAcousticMapper {
     /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn set_config(&mut self, config: PAMConfig) -> KwaversResult<()> {
-        config.beamforming.validate()?;
+        config.validate()?;
 
         let element_positions: Vec<[f64; 3]> = self.beamformer.sensor_positions().to_vec();
         let core_cfg: BeamformingCoreConfig = config.beamforming.clone().into();
@@ -189,7 +190,9 @@ impl PassiveAcousticMapper {
 impl From<PamBeamformingConfig> for BeamformingCoreConfig {
     fn from(pam: PamBeamformingConfig) -> Self {
         let (f_min, f_max) = pam.frequency_range;
-        let reference_frequency = Frequency::from_unit::<Hertz>(0.5 * (f_min + f_max));
+        let reference_frequency = Frequency::from_unit::<Hertz>(
+            0.5 * (f_min.in_unit::<Hertz>() + f_max.in_unit::<Hertz>()),
+        );
 
         let mut core = pam.core;
         core.reference_frequency = reference_frequency;

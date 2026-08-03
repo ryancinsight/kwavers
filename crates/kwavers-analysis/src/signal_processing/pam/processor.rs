@@ -1,7 +1,7 @@
 use super::config::PAMConfig;
 use aequitas::systems::si::units::Hertz;
 use apollo::fft_1d_array;
-use kwavers_core::error::KwaversResult;
+use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array3;
 
 pub struct PAMProcessor {
@@ -22,6 +22,7 @@ impl PAMProcessor {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn new(config: PAMConfig) -> KwaversResult<Self> {
+        config.validate()?;
         Ok(Self { config })
     }
     /// Process.
@@ -31,6 +32,16 @@ impl PAMProcessor {
     pub fn process(&mut self, beamformed_data: &Array3<f64>) -> KwaversResult<Array3<f64>> {
         let shape = beamformed_data.shape();
         let (nx, ny, nt) = (shape[0], shape[1], shape[2]);
+        if nx == 0 || ny == 0 || nt == 0 {
+            return Err(KwaversError::InvalidInput(
+                "PAM beamformed data must have non-empty spatial and time axes".to_owned(),
+            ));
+        }
+        if !beamformed_data.iter().all(|value| value.is_finite()) {
+            return Err(KwaversError::InvalidInput(
+                "PAM beamformed data must contain only finite values".to_owned(),
+            ));
+        }
 
         let mut cavitation_map = Array3::zeros((nx, ny, self.config.frequency_bands.len()));
 
@@ -42,7 +53,11 @@ impl PAMProcessor {
                 let spectrum = self.compute_spectrum(&time_series)?;
 
                 for (band_idx, &(f_min, f_max)) in self.config.frequency_bands.iter().enumerate() {
-                    let power = self.integrate_band_power(&spectrum, f_min, f_max);
+                    let power = self.integrate_band_power(
+                        &spectrum,
+                        f_min.in_unit::<Hertz>(),
+                        f_max.in_unit::<Hertz>(),
+                    );
 
                     if power > self.config.threshold {
                         cavitation_map[[ix, iy, band_idx]] = power;
@@ -144,6 +159,7 @@ impl PAMProcessor {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn set_config(&mut self, config: PAMConfig) -> KwaversResult<()> {
+        config.validate()?;
         self.config = config;
         Ok(())
     }

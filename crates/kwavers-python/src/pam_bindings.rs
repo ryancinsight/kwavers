@@ -5,6 +5,8 @@
 //! lives in `kwavers_analysis::signal_processing::pam`.
 
 use crate::breast_fwi_bindings::complex_compat::{leto1_to_nd1, nd_to_leto2};
+use aequitas::systems::si::quantities::{Frequency, Length, Velocity};
+use aequitas::systems::si::units::{Hertz, Meter, MeterPerSecond};
 use kwavers_analysis::signal_processing::beamforming::adaptive::subspace::MUSIC;
 use kwavers_analysis::signal_processing::beamforming::{
     beamform_image_das, ImagingDasApodization, ImagingDasConfig,
@@ -178,14 +180,20 @@ fn passive_acoustic_map_das<'py>(
         ));
     }
 
-    let sensors: Vec<[f64; 3]> = sensor_positions
+    let sensors: Vec<[Length<f64>; 3]> = sensor_positions
         .rows()
         .into_iter()
-        .map(|row| [row[0], row[1], row[2]])
+        .map(|row| {
+            [
+                Length::from_unit::<Meter>(row[0]),
+                Length::from_unit::<Meter>(row[1]),
+                Length::from_unit::<Meter>(row[2]),
+            ]
+        })
         .collect();
     let config = DelayAndSumConfig {
-        sound_speed,
-        sampling_frequency,
+        sound_speed: Velocity::from_unit::<MeterPerSecond>(sound_speed),
+        sampling_frequency: Frequency::from_unit::<Hertz>(sampling_frequency),
         window_size,
         apodization: parse_apodization(apodization)?,
         coherence_weighting,

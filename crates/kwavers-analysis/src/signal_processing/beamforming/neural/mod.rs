@@ -104,6 +104,8 @@
 //! ## Usage Example
 //!
 //! ```ignore
+//! use aequitas::systems::si::quantities::Angle;
+//! use aequitas::systems::si::units::Radian;
 //! use kwavers_analysis::signal_processing::beamforming::neural::{
 //!     NeuralBeamformingNetwork,
 //!     PhysicsConstraints,
@@ -115,6 +117,7 @@
 //!
 //! // Set up physics constraints
 //! let constraints = PhysicsConstraints::new(1.0, 0.5, 0.1);
+//! let steering_angles = vec![Angle::from_unit::<Radian>(0.0)];
 //!
 //! // Process with constraints
 //! let output = network.forward(&features, &steering_angles)?;

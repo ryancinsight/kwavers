@@ -23,6 +23,7 @@
 //!
 //! Hyperbolic tangent (tanh) activation:
 //! - Range: [-1, 1]
+
 //! - Smooth, differentiable
 //! - Zero-centered (better convergence than sigmoid)
 //!
@@ -31,6 +32,8 @@
 //! - Glorot & Bengio (2010): "Understanding the difficulty of training deep feedforward neural networks"
 //! - LeCun et al. (1998): "Efficient BackProp"
 
+use aequitas::systems::si::quantities::Angle;
+use aequitas::systems::si::units::Radian;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array3;
 
@@ -108,7 +111,7 @@ impl NeuralBeamformingNetwork {
     /// # Arguments
     ///
     /// * `features` - Input feature vector (6 summary statistics)
-    /// * `steering_angles` - Beam steering angles (degrees)
+    /// * `steering_angles` - Beam steering angles (radians)
     ///
     /// # Returns
     ///
@@ -125,7 +128,7 @@ impl NeuralBeamformingNetwork {
     pub fn forward(
         &self,
         features: &leto::Array1<f32>,
-        steering_angles: &[f64],
+        steering_angles: &[Angle<f64>],
     ) -> KwaversResult<Array3<f32>> {
         // Concatenate features with steering angle into 3D input
         let input = self.concatenate_features(features, steering_angles)?;
@@ -147,7 +150,7 @@ impl NeuralBeamformingNetwork {
     /// # Arguments
     ///
     /// * `features` - Input feature vector (6 summary statistics)
-    /// * `steering_angles` - Beam steering angles
+    /// * `steering_angles` - Beam steering angles represented as radians
     /// * `constraints` - Physics constraints to enforce
     ///
     /// # Returns
@@ -160,7 +163,7 @@ impl NeuralBeamformingNetwork {
     pub fn forward_physics_informed(
         &self,
         features: &leto::Array1<f32>,
-        steering_angles: &[f64],
+        steering_angles: &[Angle<f64>],
         constraints: &PhysicsConstraints,
     ) -> KwaversResult<Array3<f32>> {
         let unconstrained = self.forward(features, steering_angles)?;
@@ -206,7 +209,7 @@ impl NeuralBeamformingNetwork {
     /// # Arguments
     ///
     /// * `features` - Feature vector (6 elements: mean, std, gradient, laplacian, entropy, peak)
-    /// * `steering_angles` - Beam steering angles to encode
+    /// * `steering_angles` - Beam steering angles represented as radians
     ///
     /// # Returns
     ///
@@ -217,7 +220,7 @@ impl NeuralBeamformingNetwork {
     fn concatenate_features(
         &self,
         features: &leto::Array1<f32>,
-        steering_angles: &[f64],
+        steering_angles: &[Angle<f64>],
     ) -> KwaversResult<Array3<f32>> {
         if features.len() != 6 {
             return Err(KwaversError::InvalidInput(format!(
@@ -234,7 +237,7 @@ impl NeuralBeamformingNetwork {
 
         // Create input vector: [6 features + 1 angle] = 7 elements
         let mut input_vec: Vec<f32> = features.iter().copied().collect();
-        input_vec.push(steering_angles[0] as f32); // Use first steering angle
+        input_vec.push(steering_angles[0].in_unit::<Radian>() as f32); // Use first steering angle
 
         // Reshape to (1, 1, 7) for layer processing
         // This represents 1 batch item with 1 spatial location and 7 features
@@ -271,7 +274,7 @@ mod tests {
         // 6 feature statistics + 1 angle = 7 input features
         use leto::Array1;
         let features = Array1::from_vec(6, vec![0.5, 0.1, 0.2, 0.05, 0.3, 0.8]).unwrap();
-        let angles = vec![15.0];
+        let angles = vec![Angle::from_unit::<Radian>(15.0_f64.to_radians())];
 
         let concatenated = net.concatenate_features(&features, &angles).unwrap();
 
@@ -286,7 +289,7 @@ mod tests {
         // 6 feature statistics
         use leto::Array1;
         let features = Array1::from_vec(6, vec![0.5, 0.1, 0.2, 0.05, 0.3, 0.8]).unwrap();
-        let angles = vec![15.0];
+        let angles = vec![Angle::from_unit::<Radian>(15.0_f64.to_radians())];
 
         let output = net.forward(&features, &angles).unwrap();
 

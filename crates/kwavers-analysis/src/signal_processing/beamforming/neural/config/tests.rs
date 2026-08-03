@@ -1,3 +1,5 @@
+use aequitas::systems::si::quantities::{Frequency, Length, Velocity};
+use aequitas::systems::si::units::{Hertz, Meter, MeterPerSecond};
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 
 use super::*;
@@ -20,17 +22,61 @@ fn test_physics_parameters_default() {
 
 #[test]
 fn test_sensor_geometry_linear() {
-    let geometry = SensorGeometry::linear_array(64, 0.0003, 40e6, SOUND_SPEED_TISSUE);
+    let geometry = SensorGeometry::linear_array(
+        64,
+        Length::from_unit::<Meter>(0.0003),
+        Frequency::from_unit::<Hertz>(40e6),
+        Velocity::from_unit::<MeterPerSecond>(SOUND_SPEED_TISSUE),
+    )
+    .expect("valid linear sensor geometry");
     assert_eq!(geometry.num_elements(), 64);
-    assert_eq!(geometry.sampling_frequency, 40e6);
+    assert_eq!(geometry.sampling_frequency.in_unit::<Hertz>(), 40e6);
 
-    assert!((geometry.positions[31][0] + geometry.positions[32][0]).abs() < 1e-10);
+    assert!(
+        (geometry.positions[31][0].in_unit::<Meter>()
+            + geometry.positions[32][0].in_unit::<Meter>())
+        .abs()
+            < 1e-10
+    );
 }
 
 #[test]
 fn test_sensor_geometry_phased() {
-    let geometry = SensorGeometry::phased_array(8, 8, 0.0003, 0.0003, 40e6, SOUND_SPEED_TISSUE);
+    let geometry = SensorGeometry::phased_array(
+        8,
+        8,
+        Length::from_unit::<Meter>(0.0003),
+        Length::from_unit::<Meter>(0.0003),
+        Frequency::from_unit::<Hertz>(40e6),
+        Velocity::from_unit::<MeterPerSecond>(SOUND_SPEED_TISSUE),
+    )
+    .expect("valid phased sensor geometry");
     assert_eq!(geometry.num_elements(), 64);
+}
+
+#[test]
+fn sensor_geometry_rejects_invalid_dimensions_and_parameters() {
+    let frequency = Frequency::from_unit::<Hertz>(40e6);
+    let sound_speed = Velocity::from_unit::<MeterPerSecond>(SOUND_SPEED_TISSUE);
+    let zero_elements = SensorGeometry::linear_array(
+        0,
+        Length::from_unit::<Meter>(0.0003),
+        frequency,
+        sound_speed,
+    );
+    assert!(zero_elements.is_err());
+
+    let zero_pitch =
+        SensorGeometry::linear_array(8, Length::from_unit::<Meter>(0.0), frequency, sound_speed);
+    assert!(zero_pitch.is_err());
+
+    let nonfinite_frequency = SensorGeometry::linear_array(
+        8,
+        Length::from_unit::<Meter>(0.0003),
+        Frequency::from_unit::<Hertz>(f64::NAN),
+        sound_speed,
+    );
+    assert!(nonfinite_frequency.is_err());
 }
 
 #[test]
@@ -83,6 +129,6 @@ fn test_config_validation_invalid_batch_size() {
 #[test]
 fn test_config_validation_invalid_sensor_count() {
     let mut config = NeuralBeamformingConfig::default();
-    config.sensor_geometry.positions = vec![[0.0, 0.0, 0.0]];
+    config.sensor_geometry.positions = vec![[Length::from_unit::<Meter>(0.0); 3]];
     assert!(config.validate().is_err());
 }

@@ -39,6 +39,7 @@ version = "0.1.0"
 source = "git+https://github.com/ryancinsight/aequitas#8f9974350fd12b2a0e9c62973ae73199bd372d7c"
 dependencies = [
  "eunomia",
+ "serde",
  "typenum",
 ]
 

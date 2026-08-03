@@ -1,5 +1,40 @@
 ## Live Aequitas closure — 2026-08-02
 
+### KWAVERS-AEQ-MET-59 — PAM/neural sensor metric gap (closed 2026-08-03)
+
+The audit found and closed the bounded raw-metric family. PAM exposes raw delay-and-
+sum sound speed and sampling frequency, beamforming frequency bands, spatial
+resolution, focal point, integration time, and event position/time/peak
+frequency. Neural `SensorGeometry` exposes raw positions, pitch, sampling
+frequency, and sound speed; traditional neural DAS accepts raw steering angles
+and converts position/speed/angle into sample delays.
+
+The implementation uses Aequitas `Length`, `Velocity`, `Frequency`, `Time`,
+`Angle`, and `Dimensionless`. Scalar extraction is limited to trigonometric and
+delay-index formulas, FFT-bin mapping, and dense Leto buffers. The noise-floor
+`detection_threshold` and event coherence are dimensionless. PAM-wide
+`threshold` and event `intensity` remain representation values because the
+consuming spectrum is computed from uncalibrated raw signal values; a future
+calibration contract must define that unit before those fields can become
+`Intensity` or another physical quantity.
+
+The implementation is committed in `6248ad9b5`, with strict-Clippy and hosted-
+compile fixes in `5d70126f5` and `49adf4764`. It migrates all direct
+PAM/neural, Python, therapy, and integration-test callers, hardens
+geometry/configuration/detection validation, and propagates beamformed-signal
+errors instead of discarding them. Formatting, diff, and locked metadata pass.
+Final PR #337 head `1c5c4d3ab` passes the complete repository-owned matrix,
+including Test Suite Coverage `91752793970`, Code Coverage `91752808795`,
+Architecture Validation `91752794111`, stable/beta/nightly, Miri, security,
+solver, benchmark, PINN, feature, documentation, wheel, migration-audit, and
+layer-boundary jobs. The first coverage attempt exposed stale Aequitas imports
+in the PAM test module; the fix changed only those canonical paths and did not
+weaken the workload or assertions.
+
+Eunomia `Complex` values, if present at the FFT/storage boundary, continue to
+represent real and quadrature components under one observable signal unit. An
+imaginary SI unit or complex-valued Aequitas physical quantity is not valid.
+
 ### KWAVERS-AEQ-MET-58 — sensor-beamformer metric gap (claimed 2026-08-03)
 
 The audit found a remaining raw physical boundary in

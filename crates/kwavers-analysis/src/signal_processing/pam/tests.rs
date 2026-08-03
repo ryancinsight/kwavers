@@ -1,7 +1,22 @@
 use super::*;
-use aequitas::systems::si::units::{Hertz, MeterPerSecond};
+use aequitas::systems::si::quantities::{Frequency, Length, Time};
+use aequitas::systems::si::units::{Hertz, Meter, MeterPerSecond, Second};
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::{SAMPLING_FREQUENCY_DEFAULT, SOUND_SPEED_TISSUE};
+
+#[test]
+fn pam_configuration_validation_rejects_invalid_bands_and_thresholds() {
+    let mut config = PAMConfig::default();
+    config.frequency_bands = vec![(
+        Frequency::from_unit::<Hertz>(100e3),
+        Frequency::from_unit::<Hertz>(20e3),
+    )];
+    assert!(config.validate().is_err());
+
+    let mut config = PAMConfig::default();
+    config.threshold = -1.0;
+    assert!(config.validate().is_err());
+}
 
 #[test]
 fn pam_policy_to_core_capon_loading_and_midpoint_frequency() {
@@ -10,10 +25,13 @@ fn pam_policy_to_core_capon_loading_and_midpoint_frequency() {
         method: PamBeamformingMethod::CaponDiagonalLoading {
             diagonal_loading: 0.05,
         },
-        frequency_range: (MHZ_TO_HZ, 3.0 * MHZ_TO_HZ),
-        spatial_resolution: 1e-3,
+        frequency_range: (
+            Frequency::from_unit::<Hertz>(MHZ_TO_HZ),
+            Frequency::from_unit::<Hertz>(3.0 * MHZ_TO_HZ),
+        ),
+        spatial_resolution: Length::from_unit::<Meter>(1e-3),
         apodization: ApodizationType::Hamming,
-        focal_point: [0.0, 0.0, 0.0],
+        focal_point: [Length::from_unit::<Meter>(0.0); 3],
     };
 
     let core: BeamformingCoreConfig = pam.into();
@@ -42,10 +60,13 @@ fn pam_policy_to_core_non_capon_preserves_core_loading_and_sets_reference_freque
     let pam = PamBeamformingConfig {
         core: embedded_core.clone(),
         method: PamBeamformingMethod::DelayAndSum,
-        frequency_range: (2.0 * MHZ_TO_HZ, 2.0 * MHZ_TO_HZ),
-        spatial_resolution: 1e-3,
+        frequency_range: (
+            Frequency::from_unit::<Hertz>(2.0 * MHZ_TO_HZ),
+            Frequency::from_unit::<Hertz>(2.0 * MHZ_TO_HZ),
+        ),
+        spatial_resolution: Length::from_unit::<Meter>(1e-3),
         apodization: ApodizationType::Uniform,
-        focal_point: [0.0, 0.0, 0.0],
+        focal_point: [Length::from_unit::<Meter>(0.0); 3],
     };
 
     let core: BeamformingCoreConfig = pam.into();

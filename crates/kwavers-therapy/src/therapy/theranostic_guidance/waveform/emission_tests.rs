@@ -1,5 +1,7 @@
 use super::*;
 use crate::therapy::theranostic_guidance::config::AnatomyKind;
+use aequitas::systems::si::quantities::{Frequency, Length, Velocity};
+use aequitas::systems::si::units::{Hertz, Meter, MeterPerSecond};
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use leto::Array2;
 
@@ -196,14 +198,20 @@ fn eikonal_delays_account_for_aberration_and_localize() {
     let passive_data = Array2::from_shape_fn((n_recv, n_samp), |[r, s]| {
         f64::from(run.traces[s * n_recv + r])
     });
-    let sensors: Vec<[f64; 3]> = layout
+    let sensors: Vec<[Length<f64>; 3]> = layout
         .imaging_receivers
         .iter()
-        .map(|p| [p.x_m, p.y_m, 0.0])
+        .map(|p| {
+            [
+                Length::from_unit::<Meter>(p.x_m),
+                Length::from_unit::<Meter>(p.y_m),
+                Length::from_unit::<Meter>(0.0),
+            ]
+        })
         .collect();
     let das_config = DelayAndSumConfig {
-        sound_speed: water,
-        sampling_frequency: 1.0 / sim.grid.dt_s,
+        sound_speed: Velocity::from_unit::<MeterPerSecond>(water),
+        sampling_frequency: Frequency::from_unit::<Hertz>(1.0 / sim.grid.dt_s),
         window_size: n_samp,
         apodization: ApodizationType::Uniform,
         ..DelayAndSumConfig::default()

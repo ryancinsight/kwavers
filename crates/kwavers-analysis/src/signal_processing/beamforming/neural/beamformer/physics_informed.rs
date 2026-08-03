@@ -1,3 +1,4 @@
+use aequitas::systems::si::quantities::Angle;
 use leto::Array4;
 
 use kwavers_core::error::{KwaversError, KwaversResult};
@@ -14,7 +15,7 @@ impl NeuralBeamformer {
     pub(super) fn process_physics_informed(
         &self,
         rf_data: &Array4<f32>,
-        steering_angles: &[f64],
+        steering_angles: &[Angle<f64>],
     ) -> KwaversResult<HybridBeamformingResult> {
         let network = self
             .neural_network

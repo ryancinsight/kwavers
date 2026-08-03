@@ -29,13 +29,15 @@ mod beamform;
 mod detection;
 
 use super::types::DelayAndSumConfig;
+use aequitas::systems::si::quantities::Length;
+use aequitas::systems::si::units::{Hertz, Meter, MeterPerSecond};
 use kwavers_core::error::{KwaversError, KwaversResult};
 
 /// Delay-and-Sum PAM processor.
 #[derive(Debug)]
 pub struct DelayAndSumPAM {
     pub(super) config: DelayAndSumConfig,
-    pub(super) sensor_positions: Vec<[f64; 3]>,
+    pub(super) sensor_positions: Vec<[Length<f64>; 3]>,
     pub(super) num_sensors: usize,
 }
 
@@ -47,21 +49,41 @@ impl DelayAndSumPAM {
     /// # Errors
     /// Returns `Err` if fewer than 3 sensors are provided or if `sound_speed`
     /// or `sampling_frequency` are non-positive.
-    pub fn new(sensor_positions: Vec<[f64; 3]>, config: DelayAndSumConfig) -> KwaversResult<Self> {
+    pub fn new(
+        sensor_positions: Vec<[Length<f64>; 3]>,
+        config: DelayAndSumConfig,
+    ) -> KwaversResult<Self> {
         let num_sensors = sensor_positions.len();
         if num_sensors < 3 {
             return Err(KwaversError::InvalidInput(
                 "Need at least 3 sensors for PAM".to_owned(),
             ));
         }
-        if config.sound_speed <= 0.0 {
+        let sound_speed = config.sound_speed.in_unit::<MeterPerSecond>();
+        if !sound_speed.is_finite() || sound_speed <= 0.0 {
             return Err(KwaversError::InvalidInput(
                 "Sound speed must be positive".to_owned(),
             ));
         }
-        if config.sampling_frequency <= 0.0 {
+        let sampling_frequency = config.sampling_frequency.in_unit::<Hertz>();
+        if !sampling_frequency.is_finite() || sampling_frequency <= 0.0 {
             return Err(KwaversError::InvalidInput(
                 "Sampling frequency must be positive".to_owned(),
+            ));
+        }
+        let detection_threshold = *config.detection_threshold.as_base();
+        if !detection_threshold.is_finite() || detection_threshold < 0.0 {
+            return Err(KwaversError::InvalidInput(
+                "Detection threshold must be finite and non-negative".to_owned(),
+            ));
+        }
+        if sensor_positions
+            .iter()
+            .flat_map(|position| position.iter())
+            .any(|coordinate| !coordinate.in_unit::<Meter>().is_finite())
+        {
+            return Err(KwaversError::InvalidInput(
+                "Sensor positions must contain only finite coordinates".to_owned(),
             ));
         }
         Ok(Self {

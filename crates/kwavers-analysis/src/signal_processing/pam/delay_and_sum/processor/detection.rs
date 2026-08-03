@@ -1,5 +1,7 @@
 //! Cavitation event detection, classification, and frequency estimation.
 
+use aequitas::systems::si::quantities::{Dimensionless, Length, Time};
+use aequitas::systems::si::units::Meter;
 use leto::Array1;
 use leto::Array2;
 
@@ -19,12 +21,11 @@ impl DelayAndSumPAM {
         &self,
         intensity_map: &Array1<f64>,
         grid_points: &Array2<f64>,
-        time: f64,
+        time: Time<f64>,
     ) -> KwaversResult<Vec<PamCavitationEvent>> {
-        if intensity_map.len() != grid_points.shape()[0] {
-            return Err(KwaversError::InvalidInput(
-                "Intensity map and grid points size mismatch".to_owned(),
-            ));
+        Self::validate_detection_inputs(intensity_map, grid_points)?;
+        if intensity_map.is_empty() {
+            return Ok(Vec::new());
         }
 
         let threshold = self.noise_threshold(intensity_map);
@@ -35,8 +36,13 @@ impl DelayAndSumPAM {
                 let grid_point = grid_points
                     .index_axis::<1>(0, idx)
                     .expect("invariant: row index within bounds");
-                let position = [grid_point[0], grid_point[1], grid_point[2]];
-                let coherence = self.coherence_factor(intensity, threshold);
+                let position = [
+                    Length::from_unit::<Meter>(grid_point[0]),
+                    Length::from_unit::<Meter>(grid_point[1]),
+                    Length::from_unit::<Meter>(grid_point[2]),
+                ];
+                let coherence =
+                    Dimensionless::from_base(self.coherence_factor(intensity, threshold));
                 events.push(PamCavitationEvent {
                     position,
                     intensity,
@@ -66,7 +72,7 @@ impl DelayAndSumPAM {
         passive_data: &Array2<f64>,
         intensity_map: &Array1<f64>,
         grid_points: &Array2<f64>,
-        time: f64,
+        time: Time<f64>,
     ) -> KwaversResult<Vec<PamCavitationEvent>> {
         let [num_sensors_data, _] = passive_data.shape();
         if num_sensors_data != self.num_sensors {
@@ -75,10 +81,9 @@ impl DelayAndSumPAM {
                 num_sensors_data, self.num_sensors
             )));
         }
-        if intensity_map.len() != grid_points.shape()[0] {
-            return Err(KwaversError::InvalidInput(
-                "Intensity map and grid points size mismatch".to_owned(),
-            ));
+        Self::validate_detection_inputs(intensity_map, grid_points)?;
+        if intensity_map.is_empty() {
+            return Ok(Vec::new());
         }
 
         let threshold = self.noise_threshold(intensity_map);
@@ -90,13 +95,20 @@ impl DelayAndSumPAM {
                 let grid_point = grid_points
                     .index_axis::<1>(0, idx)
                     .expect("invariant: row index within bounds");
-                let position = [grid_point[0], grid_point[1], grid_point[2]];
-                let coherence = self.coherence_factor(intensity, threshold);
+                let position = [
+                    Length::from_unit::<Meter>(grid_point[0]),
+                    Length::from_unit::<Meter>(grid_point[1]),
+                    Length::from_unit::<Meter>(grid_point[2]),
+                ];
+                let coherence =
+                    Dimensionless::from_base(self.coherence_factor(intensity, threshold));
                 let delays_samples = self.compute_delays(&position)?;
-                let peak_frequency = self
-                    .beamformed_signal_at_point(passive_data, &delays_samples, &apodization_weights)
-                    .ok()
-                    .and_then(|signal| self.estimate_peak_frequency(&signal));
+                let signal = self.beamformed_signal_at_point(
+                    passive_data,
+                    &delays_samples,
+                    &apodization_weights,
+                )?;
+                let peak_frequency = self.estimate_peak_frequency(&signal);
 
                 events.push(PamCavitationEvent {
                     position,
@@ -111,5 +123,33 @@ impl DelayAndSumPAM {
         events.sort_by(|a, b| b.intensity.total_cmp(&a.intensity));
 
         Ok(events)
+    }
+
+    fn validate_detection_inputs(
+        intensity_map: &Array1<f64>,
+        grid_points: &Array2<f64>,
+    ) -> KwaversResult<()> {
+        if intensity_map.len() != grid_points.shape()[0] {
+            return Err(KwaversError::InvalidInput(
+                "Intensity map and grid points size mismatch".to_owned(),
+            ));
+        }
+        if grid_points.shape()[1] != 3 {
+            return Err(KwaversError::InvalidInput(format!(
+                "Grid points must have shape [points x 3], got {} columns",
+                grid_points.shape()[1]
+            )));
+        }
+        if !intensity_map.iter().all(|value| value.is_finite()) {
+            return Err(KwaversError::InvalidInput(
+                "Intensity map must contain only finite values".to_owned(),
+            ));
+        }
+        if !grid_points.iter().all(|value| value.is_finite()) {
+            return Err(KwaversError::InvalidInput(
+                "Grid points must contain only finite coordinates".to_owned(),
+            ));
+        }
+        Ok(())
     }
 }

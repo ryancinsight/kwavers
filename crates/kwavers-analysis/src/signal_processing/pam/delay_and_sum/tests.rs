@@ -1,5 +1,7 @@
 use super::processor::DelayAndSumPAM;
 use super::types::{ApodizationType, DelayAndSumConfig, PamImagingMode};
+use aequitas::systems::si::quantities::{Dimensionless, Frequency, Length, Time, Velocity};
+use aequitas::systems::si::units::{Hertz, Meter, MeterPerSecond, Second};
 use eunomia::assert_relative_eq;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
@@ -7,27 +9,44 @@ use kwavers_core::constants::numerical::TWO_PI;
 use leto::Array1;
 use leto::Array2;
 
+fn length_positions(values: &[[f64; 3]]) -> Vec<[Length<f64>; 3]> {
+    values
+        .iter()
+        .map(|position| position.map(Length::from_unit::<Meter>))
+        .collect()
+}
+
 #[test]
 fn test_pam_creation() {
     let sensors = vec![[0.0, 0.0, 0.0], [0.01, 0.0, 0.0], [0.0, 0.01, 0.0]];
     let config = DelayAndSumConfig::default();
-    let _pam = DelayAndSumPAM::new(sensors, config).unwrap();
+    let _pam = DelayAndSumPAM::new(length_positions(&sensors), config).unwrap();
 }
 
 #[test]
 fn test_insufficient_sensors() {
     let sensors = vec![[0.0, 0.0, 0.0], [0.01, 0.0, 0.0]];
     let config = DelayAndSumConfig::default();
-    assert!(DelayAndSumPAM::new(sensors, config).is_err());
+    assert!(DelayAndSumPAM::new(length_positions(&sensors), config).is_err());
+}
+
+#[test]
+fn test_invalid_detection_threshold() {
+    let sensors = vec![[0.0, 0.0, 0.0], [0.01, 0.0, 0.0], [0.0, 0.01, 0.0]];
+    let config = DelayAndSumConfig {
+        detection_threshold: Dimensionless::from_base(-1.0),
+        ..Default::default()
+    };
+    assert!(DelayAndSumPAM::new(length_positions(&sensors), config).is_err());
 }
 
 #[test]
 fn test_delay_computation() {
     let sensors = vec![[0.0, 0.0, 0.0], [0.01, 0.0, 0.0], [0.0, 0.01, 0.0]];
     let config = DelayAndSumConfig::default();
-    let pam = DelayAndSumPAM::new(sensors, config).unwrap();
+    let pam = DelayAndSumPAM::new(length_positions(&sensors), config).unwrap();
 
-    let source_pos = [0.0, 0.0, 0.0];
+    let source_pos = [Length::from_unit::<Meter>(0.0); 3];
     let delays = pam.compute_delays(&source_pos).unwrap();
 
     assert_eq!(delays.len(), 3);
@@ -41,7 +60,7 @@ fn test_apodization_weights() {
         apodization: ApodizationType::Uniform,
         ..Default::default()
     };
-    let pam = DelayAndSumPAM::new(sensors, config).unwrap();
+    let pam = DelayAndSumPAM::new(length_positions(&sensors), config).unwrap();
 
     let weights = pam.compute_apodization_weights();
     assert_eq!(weights.len(), 3);
@@ -57,7 +76,7 @@ fn test_beamform_basic() {
         [0.01, 0.01, 0.0],
     ];
     let config = DelayAndSumConfig::default();
-    let pam = DelayAndSumPAM::new(sensors, config).unwrap();
+    let pam = DelayAndSumPAM::new(length_positions(&sensors), config).unwrap();
 
     let passive_data = Array2::<f64>::from_shape_fn((4, 1000), |[i, t]| {
         (TWO_PI * t as f64 / 100.0 + i as f64).sin()
@@ -89,13 +108,13 @@ fn beamform_view_localizes_analytic_impulse_source() {
     let source = [0.001, 0.0, 0.018];
     let distractor = [0.0, 0.0, 0.024];
     let config = DelayAndSumConfig {
-        sound_speed,
-        sampling_frequency,
+        sound_speed: Velocity::from_unit::<MeterPerSecond>(sound_speed),
+        sampling_frequency: Frequency::from_unit::<Hertz>(sampling_frequency),
         window_size: 64,
         apodization: ApodizationType::Uniform,
         ..Default::default()
     };
-    let pam = DelayAndSumPAM::new(sensors.clone(), config).unwrap();
+    let pam = DelayAndSumPAM::new(length_positions(&sensors), config).unwrap();
     let mut passive_data = Array2::<f64>::zeros((sensors.len(), 96));
 
     for (sensor_idx, sensor) in sensors.iter().enumerate() {
@@ -148,13 +167,13 @@ fn dmas_sharpens_localization_relative_to_das() {
     let source = [0.0, 0.0, 0.030];
 
     let config = DelayAndSumConfig {
-        sound_speed,
-        sampling_frequency,
+        sound_speed: Velocity::from_unit::<MeterPerSecond>(sound_speed),
+        sampling_frequency: Frequency::from_unit::<Hertz>(sampling_frequency),
         window_size: 128,
         apodization: ApodizationType::Uniform,
         ..Default::default()
     };
-    let pam = DelayAndSumPAM::new(sensors.clone(), config).unwrap();
+    let pam = DelayAndSumPAM::new(length_positions(&sensors), config).unwrap();
 
     // Impulse arrival per sensor at the true-source travel time.
     let n_samples = 256;
@@ -225,13 +244,13 @@ fn beamform_with_delays_aligns_on_supplied_delays() {
     // (energy ≈ N²); a zero-delay row leaves them outside the window (≈ 0).
     let sensors = vec![[0.0, 0.0, 0.0], [0.01, 0.0, 0.0], [0.0, 0.01, 0.0]];
     let config = DelayAndSumConfig {
-        sound_speed: 1.0,
-        sampling_frequency: 1.0,
+        sound_speed: Velocity::from_unit::<MeterPerSecond>(1.0),
+        sampling_frequency: Frequency::from_unit::<Hertz>(1.0),
         window_size: 8,
         apodization: ApodizationType::Uniform,
         ..Default::default()
     };
-    let pam = DelayAndSumPAM::new(sensors, config).unwrap();
+    let pam = DelayAndSumPAM::new(length_positions(&sensors), config).unwrap();
 
     let nt = 16;
     let arrivals = [10usize, 12, 14];
@@ -270,7 +289,8 @@ fn beamform_with_delays_aligns_on_supplied_delays() {
 #[test]
 fn beamform_signals_with_delays_rejects_bad_shapes() {
     let sensors = vec![[0.0, 0.0, 0.0], [0.01, 0.0, 0.0], [0.0, 0.01, 0.0]];
-    let pam = DelayAndSumPAM::new(sensors, DelayAndSumConfig::default()).unwrap();
+    let pam =
+        DelayAndSumPAM::new(length_positions(&sensors), DelayAndSumConfig::default()).unwrap();
     let data = Array2::<f64>::zeros((3, 16));
     // Delay matrix with the wrong number of sensor columns.
     let bad = Array2::<f64>::zeros((4, 2));
@@ -289,13 +309,13 @@ fn beamform_signals_with_delays_rejects_bad_shapes() {
 fn beamform_view_uses_fractional_delay_interpolation() {
     let sensors = vec![[0.0, 0.0, 0.0]; 3];
     let config = DelayAndSumConfig {
-        sound_speed: 1.0,
-        sampling_frequency: 1.0,
+        sound_speed: Velocity::from_unit::<MeterPerSecond>(1.0),
+        sampling_frequency: Frequency::from_unit::<Hertz>(1.0),
         window_size: 1,
         apodization: ApodizationType::Uniform,
         ..Default::default()
     };
-    let pam = DelayAndSumPAM::new(sensors, config).unwrap();
+    let pam = DelayAndSumPAM::new(length_positions(&sensors), config).unwrap();
     let passive_data = Array2::from_shape_vec((3, 2), vec![0.0, 2.0, 0.0, 2.0, 0.0, 2.0]).unwrap();
     let grid_points = Array2::from_shape_vec((1, 3), vec![0.0, 0.0, 0.5]).unwrap();
 
@@ -309,7 +329,8 @@ fn beamform_view_uses_fractional_delay_interpolation() {
 #[test]
 fn beamform_view_rejects_invalid_boundary_shapes_and_values() {
     let sensors = vec![[0.0, 0.0, 0.0], [0.01, 0.0, 0.0], [0.0, 0.01, 0.0]];
-    let pam = DelayAndSumPAM::new(sensors, DelayAndSumConfig::default()).unwrap();
+    let pam =
+        DelayAndSumPAM::new(length_positions(&sensors), DelayAndSumConfig::default()).unwrap();
     let passive_data = Array2::<f64>::zeros((3, 16));
     let bad_grid_shape = Array2::<f64>::zeros((2, 2));
     assert!(pam
@@ -328,10 +349,10 @@ fn beamform_view_rejects_invalid_boundary_shapes_and_values() {
 fn test_event_detection() {
     let sensors = vec![[0.0, 0.0, 0.0], [0.01, 0.0, 0.0], [0.0, 0.01, 0.0]];
     let config = DelayAndSumConfig {
-        detection_threshold: 2.0,
+        detection_threshold: Dimensionless::from_base(2.0),
         ..Default::default()
     };
-    let pam = DelayAndSumPAM::new(sensors, config).unwrap();
+    let pam = DelayAndSumPAM::new(length_positions(&sensors), config).unwrap();
 
     let intensity_map =
         Array1::from_vec([5], vec![0.5, 0.8, 5.0, 1.0, 0.3]).expect("shape matches map length");
@@ -344,7 +365,7 @@ fn test_event_detection() {
     .unwrap();
 
     let events = pam
-        .detect_events(&intensity_map, &grid_points, 0.0)
+        .detect_events(&intensity_map, &grid_points, Time::from_unit::<Second>(0.0))
         .unwrap();
 
     assert!(!events.is_empty());
@@ -352,21 +373,40 @@ fn test_event_detection() {
 }
 
 #[test]
+fn event_detection_rejects_invalid_grid_and_handles_empty_map() {
+    let sensors = vec![[0.0, 0.0, 0.0], [0.01, 0.0, 0.0], [0.0, 0.01, 0.0]];
+    let pam = DelayAndSumPAM::new(length_positions(&sensors), DelayAndSumConfig::default())
+        .expect("valid PAM configuration");
+    let intensity_map = Array1::from_vec([1], vec![1.0]).expect("shape matches map length");
+    let bad_columns = Array2::<f64>::zeros((1, 2));
+    assert!(pam
+        .detect_events(&intensity_map, &bad_columns, Time::from_unit::<Second>(0.0),)
+        .is_err());
+
+    let empty_map = Array1::from_vec([0], Vec::new()).expect("empty map has zero length");
+    let empty_grid = Array2::<f64>::zeros((0, 3));
+    let events = pam
+        .detect_events(&empty_map, &empty_grid, Time::from_unit::<Second>(0.0))
+        .expect("empty detection input is valid");
+    assert!(events.is_empty());
+}
+
+#[test]
 fn test_event_detection_with_peak_frequency() {
     let sensors = vec![[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]];
     let config = DelayAndSumConfig {
-        sampling_frequency: 10.0 * MHZ_TO_HZ,
+        sampling_frequency: Frequency::from_unit::<Hertz>(10.0 * MHZ_TO_HZ),
         window_size: 256,
-        detection_threshold: 0.5,
+        detection_threshold: Dimensionless::from_base(0.5),
         ..Default::default()
     };
-    let pam = DelayAndSumPAM::new(sensors, config).unwrap();
+    let pam = DelayAndSumPAM::new(length_positions(&sensors), config).unwrap();
 
     let freq = MHZ_TO_HZ;
     let num_samples = 256;
     let mut passive_data = Array2::zeros((3, num_samples));
     for t in 0..num_samples {
-        let time = t as f64 / pam.config.sampling_frequency;
+        let time = t as f64 / pam.config.sampling_frequency.in_unit::<Hertz>();
         let sample = (TWO_PI * freq * time).sin();
         for sensor in 0..3 {
             passive_data[[sensor, t]] = sample;
@@ -377,13 +417,19 @@ fn test_event_detection_with_peak_frequency() {
     let grid_points = Array2::from_shape_vec((1, 3), vec![0.0, 0.0, 0.0]).unwrap();
 
     let events = pam
-        .detect_events_with_data(&passive_data, &intensity_map, &grid_points, 0.0)
+        .detect_events_with_data(
+            &passive_data,
+            &intensity_map,
+            &grid_points,
+            Time::from_unit::<Second>(0.0),
+        )
         .unwrap();
 
     assert!(!events.is_empty());
     let peak = events[0]
         .peak_frequency
         .expect("peak frequency should be available");
-    let resolution = pam.config.sampling_frequency / num_samples as f64;
+    let resolution = pam.config.sampling_frequency.in_unit::<Hertz>() / num_samples as f64;
+    let peak = peak.in_unit::<Hertz>();
     assert!((peak - freq).abs() <= resolution);
 }

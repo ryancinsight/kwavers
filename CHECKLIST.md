@@ -1,5 +1,36 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-59 typed PAM/neural sensor metrics [major] [arch] — done 2026-08-03
+
+- [x] Audit the PAM delay-and-sum, PAM configuration, neural sensor geometry,
+      and neural traditional-DAS public fields and formula boundaries.
+- [x] Classify `detection_threshold` as dimensionless and preserve the
+      uncalibrated PAM signal threshold/intensity as representation values;
+      do not assign a fabricated physical unit.
+- [x] Record ADR 098 and the Eunomia shared-unit/real-observable rule before
+      changing the public API.
+- [x] Type positions, pitch, focal point, spatial resolution, sound speed,
+      sampling/band/peak frequencies, event/integration times, steering angles,
+      and coherence through Aequitas; migrate all direct callers without
+      wrappers.
+- [x] Add analytical geometry and delay regressions plus invalid-input
+      coverage. Commit `6248ad9b5` carries the implementation; strict Clippy
+      found and the follow-ups `5d70126f5` and `49adf4764` fixed the redundant
+      closure and stale Aequitas test imports.
+- [x] Complete the locked package, Nextest, doctest, Rustdoc, residue, and
+      hosted gates at the final PR head `1c5c4d3ab`.
+
+Evidence: the final PR #337 matrix is green. Test Suite Coverage job
+`91752793970` and Code Coverage job `91752808795` pass; stable, beta, nightly,
+Miri, security, solver, benchmark, PINN, feature, architecture, documentation,
+wheel, migration-audit, and layer-boundary jobs also pass. The first final-head
+coverage attempt exposed stale imports in the PAM test module; `49adf4764`
+corrects the canonical Aequitas paths without changing coverage scope.
+
+Acceptance: no raw physical scalar remains in the scoped PAM/neural public
+contracts; threshold semantics remain honest; Eunomia complex signal data
+retains one shared observable unit and no imaginary SI unit is introduced.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-58 typed sensor-beamformer metrics [major] [arch] — done 2026-08-03
 
 - [x] Audit the sensor-beamformer public fields, formulas, direct callers, and
