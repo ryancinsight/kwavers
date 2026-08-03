@@ -90,8 +90,10 @@ mod tests {
     fn test_power_law_db_cm_to_np_omega_m_matches_kwave_reference() {
         let got = power_law_db_cm_to_np_omega_m(0.75, 1.5);
         let expected = 5.482_481_235_081_536e-10;
+        // Tolerance: 16 × ε × |expected| ≈ 1.95e-24, covers ≤ 2 ULP drift
+        // from platform-dependent fma/libm ordering in the power-law formula.
         assert!(
-            (got - expected).abs() < 1e-24,
+            (got - expected).abs() < 16.0 * f64::EPSILON * expected,
             "conversion mismatch: got {got}, expected {expected}"
         );
     }
