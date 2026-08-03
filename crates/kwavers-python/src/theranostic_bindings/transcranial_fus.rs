@@ -19,15 +19,15 @@ use kwavers_therapy::therapy::theranostic_guidance::{
     run_transcranial_fus_planning, target_index_from_mask_fraction_3d,
     transcranial_pennes_thermal_dose, TranscranialFusPlanConfig,
 };
-use numpy::{PyArray1, PyReadonlyArray2, PyReadonlyArray3, ToPyArray};
+use numpy::{PyReadonlyArray2, PyReadonlyArray3};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use std::path::Path;
 
 use super::py_convert::kwavers_to_py;
-use crate::breast_fwi_bindings::complex_compat::{
-    leto2_to_nd2, leto3_to_nd3, nd_to_leto2, nd_to_leto3,
+use crate::array_utils::{
+    leto1_to_pyarray1, leto2_to_pyarray2, leto3_to_pyarray3, pyarray2_to_leto2, pyarray3_to_leto3,
 };
 use crate::ritk_image::load_ritk_nifti;
 
@@ -139,7 +139,7 @@ pub fn run_transcranial_fus_planning_from_ritk_ct<'py>(
         })
         .map_err(kwavers_to_py)?;
 
-    plan_to_pydict(py, &plan, target_fraction_xyz)
+    plan_to_pydict(py, plan, target_fraction_xyz)
 }
 
 // ── Array entry point ─────────────────────────────────────────────────────────
@@ -169,6 +169,10 @@ pub fn run_transcranial_fus_planning_from_ritk_ct<'py>(
 ///     Voxel edge lengths `m`.
 /// target_index : tuple of 3 ints
 ///     Target (focus) voxel index (ix, iy, iz).
+///
+/// `subspot_indices` accepted by the related BBB entry point uses NumPy's
+/// platform unsigned integer dtype (`np.uintp`, typically `np.uint64`) because
+/// it maps to Rust `usize`.
 #[pyfunction]
 #[pyo3(signature = (
     ct_hu,
@@ -215,10 +219,10 @@ pub fn run_transcranial_fus_planning_from_arrays<'py>(
     duty_cycle: f64,
 ) -> PyResult<Bound<'py, PyDict>> {
     // Marshal arrays into owned ndarray storage before releasing GIL.
-    let ct = nd_to_leto3(ct_hu.as_array().to_owned());
-    let skull = nd_to_leto3(skull_mask.as_array().to_owned());
-    let brain = nd_to_leto3(brain_mask.as_array().to_owned());
-    let tumor = nd_to_leto3(tumor_mask.as_array().to_owned());
+    let ct = pyarray3_to_leto3(&ct_hu)?;
+    let skull = pyarray3_to_leto3(&skull_mask)?;
+    let brain = pyarray3_to_leto3(&brain_mask)?;
+    let tumor = pyarray3_to_leto3(&tumor_mask)?;
     let spacing = [spacing_m.0, spacing_m.1, spacing_m.2];
     let target = [target_index.0, target_index.1, target_index.2];
 
@@ -246,7 +250,7 @@ pub fn run_transcranial_fus_planning_from_arrays<'py>(
         })
         .map_err(kwavers_to_py)?;
 
-    plan_to_pydict(py, &plan, None)
+    plan_to_pydict(py, plan, None)
 }
 
 /// Generate GBM subspot raster indices from a tumour mask.
@@ -262,14 +266,14 @@ pub fn gbm_subspot_raster_py<'py>(
     spacing_m: (f64, f64, f64),
     pitch_m: f64,
 ) -> PyResult<Bound<'py, PyDict>> {
-    let tumor = nd_to_leto3(tumor_mask.as_array().to_owned());
+    let tumor = pyarray3_to_leto3(&tumor_mask)?;
     let spacing = [spacing_m.0, spacing_m.1, spacing_m.2];
     let spots = py
         .detach(|| gbm_subspot_raster(&tumor, spacing, pitch_m))
         .map_err(kwavers_to_py)?;
     let covered_fraction = gbm_subspot_covered_fraction(&tumor, &spots, spacing, pitch_m);
     let out = PyDict::new(py);
-    out.set_item("indices", leto2_to_nd2(spots).to_pyarray(py))?;
+    out.set_item("indices", leto2_to_pyarray2(py, spots)?)?;
     out.set_item("covered_fraction", covered_fraction)?;
     Ok(out)
 }
@@ -304,8 +308,8 @@ pub fn bbb_opening_from_subspots_py<'py>(
     d50: f64,
     hill_n: f64,
 ) -> PyResult<Bound<'py, PyDict>> {
-    let tumor = nd_to_leto3(tumor_mask.as_array().to_owned());
-    let spots = nd_to_leto2(subspot_indices.as_array().to_owned());
+    let tumor = pyarray3_to_leto3(&tumor_mask)?;
+    let spots = pyarray2_to_leto2(&subspot_indices)?;
     let spacing = [spacing_m.0, spacing_m.1, spacing_m.2];
     let (dose, permeability, stable, inertial) = py.detach(|| {
         bbb_opening_dose(
@@ -327,17 +331,14 @@ pub fn bbb_opening_from_subspots_py<'py>(
         .map_err(|err| pyo3::exceptions::PyRuntimeError::new_err(err.to_string()))?;
 
     let out = PyDict::new(py);
-    out.set_item("dose", leto3_to_nd3(dose).to_pyarray(py))?;
-    out.set_item("permeability", leto3_to_nd3(permeability).to_pyarray(py))?;
+    out.set_item("dose", leto3_to_pyarray3(py, dose)?)?;
+    out.set_item("permeability", leto3_to_pyarray3(py, permeability)?)?;
     out.set_item(
         "stable_cavitation_probability",
-        leto3_to_nd3(stable).to_pyarray(py),
+        leto3_to_pyarray3(py, stable)?,
     )?;
-    out.set_item(
-        "inertial_cavitation_risk",
-        leto3_to_nd3(inertial).to_pyarray(py),
-    )?;
-    out.set_item("opened_mask", leto3_to_nd3(opened_mask).to_pyarray(py))?;
+    out.set_item("inertial_cavitation_risk", leto3_to_pyarray3(py, inertial)?)?;
+    out.set_item("opened_mask", leto3_to_pyarray3(py, opened_mask)?)?;
     Ok(out)
 }
 
@@ -398,9 +399,9 @@ pub fn transcranial_pennes_thermal_dose_py<'py>(
     baseline_c: f64,
 ) -> PyResult<Bound<'py, PyDict>> {
     // Marshal to owned arrays before releasing GIL.
-    let intensity = nd_to_leto3(intensity_w_m2.as_array().to_owned());
-    let skull = nd_to_leto3(skull_mask.as_array().to_owned());
-    let brain = nd_to_leto3(brain_mask.as_array().to_owned());
+    let intensity = pyarray3_to_leto3(&intensity_w_m2)?;
+    let skull = pyarray3_to_leto3(&skull_mask)?;
+    let brain = pyarray3_to_leto3(&brain_mask)?;
     let spacing = [spacing_m.0, spacing_m.1, spacing_m.2];
 
     // Release GIL for Pennes time-stepping.
@@ -422,17 +423,14 @@ pub fn transcranial_pennes_thermal_dose_py<'py>(
     let out = PyDict::new(py);
     out.set_item(
         "peak_temperature_c",
-        leto3_to_nd3(result.peak_temperature_c).to_pyarray(py),
+        leto3_to_pyarray3(py, result.peak_temperature_c)?,
     )?;
     out.set_item(
         "final_temperature_c",
-        leto3_to_nd3(result.final_temperature_c).to_pyarray(py),
+        leto3_to_pyarray3(py, result.final_temperature_c)?,
     )?;
-    out.set_item("cem43_min", leto3_to_nd3(result.cem43_min).to_pyarray(py))?;
-    out.set_item(
-        "lesion_mask",
-        leto3_to_nd3(result.lesion_mask).to_pyarray(py),
-    )?;
+    out.set_item("cem43_min", leto3_to_pyarray3(py, result.cem43_min)?)?;
+    out.set_item("lesion_mask", leto3_to_pyarray3(py, result.lesion_mask)?)?;
     Ok(out)
 }
 
@@ -441,65 +439,53 @@ pub fn transcranial_pennes_thermal_dose_py<'py>(
 /// Serialize a `TranscranialFusPlan` into a Python dict.
 fn plan_to_pydict<'py>(
     py: Python<'py>,
-    plan: &kwavers_therapy::therapy::theranostic_guidance::TranscranialFusPlan,
+    plan: kwavers_therapy::therapy::theranostic_guidance::TranscranialFusPlan,
     target_fraction_xyz: Option<(f64, f64, f64)>,
 ) -> PyResult<Bound<'py, PyDict>> {
     let out = PyDict::new(py);
-    out.set_item(
-        "pressure_pa",
-        leto3_to_nd3(plan.pressure_pa.clone()).to_pyarray(py),
-    )?;
+    out.set_item("pressure_pa", leto3_to_pyarray3(py, plan.pressure_pa)?)?;
     out.set_item(
         "intensity_w_m2",
-        leto3_to_nd3(plan.intensity_w_m2.clone()).to_pyarray(py),
+        leto3_to_pyarray3(py, plan.intensity_w_m2)?,
     )?;
     out.set_item(
         "mechanical_index",
-        leto3_to_nd3(plan.mechanical_index.clone()).to_pyarray(py),
+        leto3_to_pyarray3(py, plan.mechanical_index)?,
     )?;
     out.set_item(
         "cavitation_probability",
-        leto3_to_nd3(plan.cavitation_probability.clone()).to_pyarray(py),
+        leto3_to_pyarray3(py, plan.cavitation_probability)?,
     )?;
-    out.set_item(
-        "phases_rad",
-        PyArray1::from_iter(py, plan.phases_rad.iter().copied()),
-    )?;
-    out.set_item(
-        "delays_s",
-        PyArray1::from_iter(py, plan.delays_s.iter().copied()),
-    )?;
+    out.set_item("phases_rad", leto1_to_pyarray1(py, plan.phases_rad)?)?;
+    out.set_item("delays_s", leto1_to_pyarray1(py, plan.delays_s)?)?;
     out.set_item(
         "skull_lengths_m",
-        PyArray1::from_iter(py, plan.skull_lengths_m.iter().copied()),
+        leto1_to_pyarray1(py, plan.skull_lengths_m)?,
     )?;
     out.set_item(
         "amplitude_weights",
-        PyArray1::from_iter(py, plan.amplitude_weights.iter().copied()),
+        leto1_to_pyarray1(py, plan.amplitude_weights)?,
     )?;
     out.set_item(
         "element_positions_m",
-        leto2_to_nd2(plan.element_positions_m.clone()).to_pyarray(py),
+        leto2_to_pyarray2(py, plan.element_positions_m)?,
     )?;
     out.set_item(
         "subspot_indices",
-        leto2_to_nd2(plan.subspot_indices.clone()).to_pyarray(py),
+        leto2_to_pyarray2(py, plan.subspot_indices)?,
     )?;
-    out.set_item(
-        "bbb_dose",
-        leto3_to_nd3(plan.bbb_dose.clone()).to_pyarray(py),
-    )?;
+    out.set_item("bbb_dose", leto3_to_pyarray3(py, plan.bbb_dose)?)?;
     out.set_item(
         "bbb_permeability",
-        leto3_to_nd3(plan.bbb_permeability.clone()).to_pyarray(py),
+        leto3_to_pyarray3(py, plan.bbb_permeability)?,
     )?;
     out.set_item(
         "bbb_stable_cavitation",
-        leto3_to_nd3(plan.bbb_stable_cavitation.clone()).to_pyarray(py),
+        leto3_to_pyarray3(py, plan.bbb_stable_cavitation)?,
     )?;
     out.set_item(
         "bbb_inertial_risk",
-        leto3_to_nd3(plan.bbb_inertial_risk.clone()).to_pyarray(py),
+        leto3_to_pyarray3(py, plan.bbb_inertial_risk)?,
     )?;
     out.set_item(
         "focus_index",
