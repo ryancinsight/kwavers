@@ -169,10 +169,6 @@ pub fn run_transcranial_fus_planning_from_ritk_ct<'py>(
 ///     Voxel edge lengths `m`.
 /// target_index : tuple of 3 ints
 ///     Target (focus) voxel index (ix, iy, iz).
-///
-/// `subspot_indices` accepted by the related BBB entry point uses NumPy's
-/// platform unsigned integer dtype (`np.uintp`, typically `np.uint64`) because
-/// it maps to Rust `usize`.
 #[pyfunction]
 #[pyo3(signature = (
     ct_hu,
@@ -283,6 +279,9 @@ pub fn gbm_subspot_raster_py<'py>(
 /// The returned dict contains `dose`, `permeability`,
 /// `stable_cavitation_probability`, `inertial_cavitation_risk`, and
 /// `opened_mask`.
+///
+/// `subspot_indices` uses NumPy's platform unsigned integer dtype (`np.uintp`,
+/// typically `np.uint64`) because it maps to Rust `usize`.
 #[pyfunction]
 #[pyo3(signature = (
     tumor_mask,
