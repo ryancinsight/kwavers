@@ -1,5 +1,27 @@
 ## Live Aequitas closure — 2026-08-02
 
+### KWAVERS-AEQ-MET-61 — shared acquisition geometry metric gap (claimed 2026-08-03)
+
+The audit found that `crates/kwavers-transducer/src/transducers/
+acquisition_geometry.rs` still publishes `ElementPosition` Cartesian
+coordinates as raw metres. `TranscranialBowlGeometry::from_aperture` and
+`MultiRowRingArray::{new,from_ordered_elements}` likewise accept raw radius,
+diameter, and row-spacing values. Direct consumers span transcranial
+diagnostics, breast-FWI diagnostics, physics, solver, and Python adapters.
+
+The claimed vertical slice types those public contracts with Aequitas
+`Length<f64>`, updates every direct caller, and extracts metres only at
+rotation, Euclidean, mesh/index, and numerical-kernel boundaries. The selected
+design and Eunomia compatibility rule are recorded in ADR 100. Complex signal
+values, if present downstream, retain one observable signal unit; geometry has
+no imaginary SI dimension.
+
+Acceptance is typed public contracts, analytical ring/bowl coordinate
+preservation, invalid-input rejection, focused value-semantic verification,
+and green hosted repository-owned gates. Focused, hemispherical, MEMS,
+flexible, and two-dimensional families remain separate until their direct
+caller closure is enumerated.
+
 ### KWAVERS-AEQ-MET-60 — transducer design/propagation metric gap (closed 2026-08-03)
 
 The live audit found and implemented the remaining raw physical boundary in
