@@ -1,6 +1,6 @@
 ## Live Aequitas closure — 2026-08-02
 
-### KWAVERS-AEQ-MET-61 — shared acquisition geometry metric gap (verification pending 2026-08-03)
+### KWAVERS-AEQ-MET-61 — shared acquisition geometry metric gap (closed 2026-08-03)
 
 The audit found that `crates/kwavers-transducer/src/transducers/
 acquisition_geometry.rs` still publishes `ElementPosition` Cartesian
@@ -26,8 +26,12 @@ changed top-level PSTD integration target passes 6/6. A pre-existing absorption
 reference assertion was corrected to a scale-relative 16-ulp forward-error
 bound; its focused regression passes. The full top-level package Nextest was
 attempted but exceeded the 300-second local shared-build collection wall
-without a test diagnostic; the focused affected target is green. Hosted
-repository-owned gates remain the final acceptance step for this branch.
+without a test diagnostic; the focused affected target is green. The exact
+corrected head `55dbf23ef` passes the hosted repository-owned matrix: CI/CD
+run `30853358409`, architecture run `30853358425`, wheel run `30853358412`,
+migration run `30853358417`, and benchmark run `30853358459`. Code Coverage
+job `91818502615` passes in 18m40s and Test Suite Coverage job `91818502690`
+passes in 36m47s.
 
 Focused, hemispherical, MEMS, flexible, and two-dimensional array families
 remain separate only where their direct caller closure is not part of this

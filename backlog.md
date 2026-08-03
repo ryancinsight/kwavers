@@ -4,7 +4,7 @@
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KWAVERS-AEQ-MET-61 | Type shared acquisition geometry coordinates and ring/bowl radius, diameter, and row-spacing contracts with Aequitas; preserve Eunomia real geometry and migrate every direct caller. | [arch] [major] | verification pending 2026-08-03 | Codex | `kwavers-transducer/src/transducers/acquisition_geometry.rs`, transcranial diagnostics, breast FWI physics/solver/diagnostics/Python adapters, direct tests, ADR 100, PM artifacts |
+| KWAVERS-AEQ-MET-61 | Type shared acquisition geometry coordinates and ring/bowl radius, diameter, and row-spacing contracts with Aequitas; preserve Eunomia real geometry and migrate every direct caller. | [arch] [major] | done 2026-08-03 | Codex | `kwavers-transducer/src/transducers/acquisition_geometry.rs`, transcranial diagnostics, breast FWI physics/solver/diagnostics/Python adapters, direct tests, ADR 100, PM artifacts |
 | KWAVERS-AEQ-MET-60 | Type transducer aperture design and focused propagation metrics with Aequitas, including geometry, drive, pressure, impedance, intensity, and beam-width contracts; preserve Eunomia complex signal semantics. | [arch] [major] | done 2026-08-03 | Codex | `crates/kwavers-transducer/src/design/{mod,propagation}.rs`, direct driver callers/tests, ADR 099, PM artifacts |
 | KWAVERS-AEQ-MET-59 | Type PAM delay-and-sum and neural sensor geometry, timing, frequency, and event-coordinate metrics with Aequitas; preserve Eunomia complex signal units. | [arch] [major] | done 2026-08-03 | Codex | `crates/kwavers-analysis/src/signal_processing/{pam,beamforming/neural}/**`, callers/tests, ADR 098, PM artifacts |
 | KWAVERS-AEQ-MET-58 | Type sensor-beamformer geometry, sampling, steering, aperture, F-number, and spatial-frequency metrics with Aequitas; preserve Eunomia complex steering units. | [arch] [major] | done 2026-08-03 | Codex | `crates/kwavers-transducer/src/beamforming/sensor_beamformer/**`, direct Kwavers callers/tests, ADR 097, PM artifacts |
@@ -40,7 +40,7 @@
   `7ec566b694598f11d4ceb7bb8721e70384f40689`. The external RecurseML analyzer
   report remains non-gating and is not evidence against the source change.
 
-## KWAVERS-AEQ-MET-61 — Type shared acquisition geometry [major] [arch] — verification pending 2026-08-03
+## KWAVERS-AEQ-MET-61 — Type shared acquisition geometry [major] [arch] — done 2026-08-03
 
 - Owner: Codex; scope: `kwavers-transducer/src/transducers/acquisition_geometry.rs`,
   transcranial-bowl diagnostics, multi-row-ring physics, breast-FWI
@@ -72,7 +72,11 @@
   3074/3074 with 6 skipped and the changed `pstd_finite_window_born` target
   passes 6/6. Full top-level Kwavers Nextest exceeded the 300-second local
   shared-build collection wall without a test diagnostic; the focused changed
-  target is green. Hosted repository-owned verification is pending.
+  target is green. The exact corrected head `55dbf23ef` passes the hosted
+  repository-owned matrix in CI/CD run `30853358409`, architecture run
+  `30853358425`, wheel run `30853358412`, migration run `30853358417`, and
+  benchmark run `30853358459`; Code Coverage job `91818502615` passes in
+  18m40s and Test Suite Coverage job `91818502690` passes in 36m47s.
 
 ## KWAVERS-AEQ-MET-59 — Type PAM/neural sensor metrics [major] [arch] — done 2026-08-03
 
