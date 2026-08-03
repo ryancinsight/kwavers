@@ -1,6 +1,8 @@
 //! `SensorBeamformer` — geometry-aware delay, apodization, and steering for sensor arrays.
 
 use super::types::{BeamformerWindowType, SensorProcessingParams};
+use aequitas::systems::si::quantities::{Angle, Frequency, Length, Velocity};
+use aequitas::systems::si::units::{Hertz, Meter, MeterPerSecond, Radian};
 use eunomia::Complex;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
@@ -13,19 +15,25 @@ use leto::Array2;
 #[derive(Debug, Clone)]
 pub struct SensorBeamformer {
     /// Cached 3-D sensor positions `[x, y, z]` (m) derived from the sensor array at construction.
-    sensor_positions: Vec<[f64; 3]>,
+    sensor_positions: Vec<[Length<f64>; 3]>,
     /// Sampling frequency (Hz).
-    sampling_frequency: f64,
+    sampling_frequency: Frequency<f64>,
 }
 
 impl SensorBeamformer {
-    /// Construct from a sensor array and sampling frequency.
+    /// Construct from a sensor array and typed sampling frequency.
     #[must_use]
-    pub fn new(sensor_array: SensorArray, sampling_frequency: f64) -> Self {
+    pub fn new(sensor_array: SensorArray, sampling_frequency: Frequency<f64>) -> Self {
         let sensor_positions = sensor_array
             .get_sensor_positions()
             .into_iter()
-            .map(|pos| [pos.x, pos.y, pos.z])
+            .map(|pos| {
+                [
+                    Length::from_unit::<Meter>(pos.x),
+                    Length::from_unit::<Meter>(pos.y),
+                    Length::from_unit::<Meter>(pos.z),
+                ]
+            })
             .collect();
 
         Self {
@@ -37,17 +45,23 @@ impl SensorBeamformer {
     /// Construct with an additional grid sensor set for volumetric sampling.
     ///
     /// `grid_sensors` is accepted for API symmetry; volumetric-sampling dispatch
-    /// is a tracked backlog item.
+    /// remains outside this sensor-beamformer metric contract.
     #[must_use]
     pub fn with_grid_sensors(
         sensor_array: SensorArray,
         _grid_sensors: GridSensorSet,
-        sampling_frequency: f64,
+        sampling_frequency: Frequency<f64>,
     ) -> Self {
         let sensor_positions = sensor_array
             .get_sensor_positions()
             .into_iter()
-            .map(|pos| [pos.x, pos.y, pos.z])
+            .map(|pos| {
+                [
+                    Length::from_unit::<Meter>(pos.x),
+                    Length::from_unit::<Meter>(pos.y),
+                    Length::from_unit::<Meter>(pos.z),
+                ]
+            })
             .collect();
 
         Self {
@@ -56,12 +70,9 @@ impl SensorBeamformer {
         }
     }
 
-    /// Sensor positions as a slice of `[x, y, z]` triples (m).
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
+    /// Sensor positions as typed `[x, y, z]` triples in meters.
     #[must_use]
-    pub fn positions(&self) -> &[[f64; 3]] {
+    pub fn positions(&self) -> &[[Length<f64>; 3]] {
         &self.sensor_positions
     }
 
@@ -79,9 +90,10 @@ impl SensorBeamformer {
     pub fn calculate_delays(
         &self,
         image_grid: &Grid,
-        sound_speed: f64,
+        sound_speed: Velocity<f64>,
     ) -> KwaversResult<Array2<f64>> {
-        if sound_speed <= 0.0 {
+        let sound_speed = sound_speed.in_unit::<MeterPerSecond>();
+        if !sound_speed.is_finite() || sound_speed <= 0.0 {
             return Err(kwavers_core::error::KwaversError::InvalidInput(format!(
                 "Sound speed must be positive, got {}",
                 sound_speed
@@ -101,6 +113,11 @@ impl SensorBeamformer {
             .collect();
 
         for (sensor_idx, sensor_pos) in self.sensor_positions.iter().enumerate() {
+            let sensor_pos = [
+                sensor_pos[0].in_unit::<Meter>(),
+                sensor_pos[1].in_unit::<Meter>(),
+                sensor_pos[2].in_unit::<Meter>(),
+            ];
             let mut grid_idx = 0;
             for &x_rel in &x_coords {
                 let x = origin[0] + x_rel;
@@ -183,17 +200,19 @@ impl SensorBeamformer {
     ///
     pub fn calculate_steering(
         &self,
-        angles: &[(f64, f64)],
-        frequency: f64,
-        sound_speed: f64,
+        angles: &[(Angle<f64>, Angle<f64>)],
+        frequency: Frequency<f64>,
+        sound_speed: Velocity<f64>,
     ) -> KwaversResult<Array2<Complex<f64>>> {
-        if frequency <= 0.0 {
+        let frequency = frequency.in_unit::<Hertz>();
+        let sound_speed = sound_speed.in_unit::<MeterPerSecond>();
+        if !frequency.is_finite() || frequency <= 0.0 {
             return Err(kwavers_core::error::KwaversError::InvalidInput(format!(
                 "Frequency must be positive, got {}",
                 frequency
             )));
         }
-        if sound_speed <= 0.0 {
+        if !sound_speed.is_finite() || sound_speed <= 0.0 {
             return Err(kwavers_core::error::KwaversError::InvalidInput(format!(
                 "Sound speed must be positive, got {}",
                 sound_speed
@@ -203,13 +222,26 @@ impl SensorBeamformer {
         let n_sensors = self.sensor_positions.len();
         let n_angles = angles.len();
         let mut steering_matrix = Array2::zeros([n_sensors, n_angles]);
+        let sensor_positions: Vec<[f64; 3]> = self
+            .sensor_positions
+            .iter()
+            .map(|position| {
+                [
+                    position[0].in_unit::<Meter>(),
+                    position[1].in_unit::<Meter>(),
+                    position[2].in_unit::<Meter>(),
+                ]
+            })
+            .collect();
 
         for (idx, &(theta, phi)) in angles.iter().enumerate() {
+            let theta = theta.in_unit::<Radian>();
+            let phi = phi.in_unit::<Radian>();
             let sin_theta = theta.sin();
             let direction = [sin_theta * phi.cos(), sin_theta * phi.sin(), theta.cos()];
 
             let phase_delays = kwavers_math::geometry::delays::plane_wave_phase_delays(
-                &self.sensor_positions,
+                &sensor_positions,
                 direction,
                 frequency,
                 sound_speed,
@@ -236,9 +268,9 @@ impl SensorBeamformer {
 
     /// Mean spacing between adjacent elements (m).
     #[must_use]
-    fn calculate_element_spacing(&self) -> f64 {
+    fn calculate_element_spacing(&self) -> Length<f64> {
         if self.sensor_positions.len() < 2 {
-            return 0.0;
+            return Length::from_base(0.0);
         }
 
         let mut total = 0.0;
@@ -247,38 +279,36 @@ impl SensorBeamformer {
         for i in 0..self.sensor_positions.len() - 1 {
             let pos1 = self.sensor_positions[i];
             let pos2 = self.sensor_positions[i + 1];
-            total += (pos1[2] - pos2[2])
-                .mul_add(
-                    pos1[2] - pos2[2],
-                    (pos1[1] - pos2[1]).mul_add(pos1[1] - pos2[1], (pos1[0] - pos2[0]).powi(2)),
-                )
-                .sqrt();
+            let dx = pos1[0].in_unit::<Meter>() - pos2[0].in_unit::<Meter>();
+            let dy = pos1[1].in_unit::<Meter>() - pos2[1].in_unit::<Meter>();
+            let dz = pos1[2].in_unit::<Meter>() - pos2[2].in_unit::<Meter>();
+            total += dz.mul_add(dz, dy.mul_add(dy, dx.powi(2))).sqrt();
             count += 1;
         }
 
         if count > 0 {
-            total / count as f64
+            Length::from_unit::<Meter>(total / count as f64)
         } else {
-            0.0
+            Length::from_base(0.0)
         }
     }
 
     /// Array aperture = max_x − min_x across all sensor positions (m).
     #[must_use]
-    fn calculate_aperture(&self) -> f64 {
+    fn calculate_aperture(&self) -> Length<f64> {
         if self.sensor_positions.is_empty() {
-            return 0.0;
+            return Length::from_base(0.0);
         }
 
         let min_x = self
             .sensor_positions
             .iter()
-            .fold(f64::INFINITY, |acc, p| acc.min(p[0]));
+            .fold(f64::INFINITY, |acc, p| acc.min(p[0].in_unit::<Meter>()));
         let max_x = self
             .sensor_positions
             .iter()
-            .fold(f64::NEG_INFINITY, |acc, p| acc.max(p[0]));
+            .fold(f64::NEG_INFINITY, |acc, p| acc.max(p[0].in_unit::<Meter>()));
 
-        max_x - min_x
+        Length::from_unit::<Meter>(max_x - min_x)
     }
 }

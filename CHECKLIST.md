@@ -1,5 +1,39 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-58 typed sensor-beamformer metrics [major] [arch] — in progress 2026-08-03
+
+- [x] Audit the sensor-beamformer public fields, formulas, direct callers, and
+      test contracts; keep this slice disjoint from aperture-design and other
+      transducer families.
+- [x] Record ADR 097 and the Eunomia shared-unit/real-observable rule before
+      changing the public API.
+- [x] Type positions, sampling/steering frequency, angles, sound speed,
+      spacing, aperture, F-number, and spatial-frequency metrics through
+      Aequitas; migrate every direct caller without wrappers.
+- [x] Add analytical value regressions for delay, phase, and derived metrics,
+      including rejection of invalid typed derived-metric inputs.
+- [x] Run locked checks, focused/full Nextest, warning-denied Clippy,
+      doctests, Rustdoc, format, and residue scans.
+- [x] Split the complete plotting-compatible LLVM coverage workload into
+      concurrent reports after the exact-head job budget was consumed by the
+      long source-injection test; keep every selected target instrumented and
+      preserve the existing finite timeout contracts. Filter targets by their
+      Cargo-required features so the plotting lane does not select `full`-only
+      tests.
+- [ ] Rerun the exact PR head and collect green hosted gates before merge.
+
+Acceptance: no raw physical scalar remains in the sensor-beamformer public
+contract; numerical and Eunomia complex steering semantics remain unchanged;
+no imaginary physical unit is introduced.
+
+Evidence: transducer Nextest `05509c41-f4c5-41a0-826e-b5749a1a2d21` passes
+226/226 with one skipped; focused sensor-beamformer Nextest
+`69a123fc-2f99-4471-a8a9-d643995c3f4b` passes 13/13; direct Kwavers
+integration filters `903ce106-7444-4f32-abbb-5d8a3ae691ca` and
+`98ca19d1-e786-4fad-91b5-7401c49d4486` pass 1/1 each; locked checks,
+doctests, Rustdoc, formatting, diff, and typed/complex residue scans pass.
+Hosted repository-owned gates remain required before delivery.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-57 typed beamforming configuration quantities [major] [arch] — done 2026-08-02
 
 - [x] Audit shared beamforming configuration and processor callers; retain

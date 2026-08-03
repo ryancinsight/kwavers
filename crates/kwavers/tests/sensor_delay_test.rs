@@ -1,3 +1,5 @@
+use aequitas::systems::si::quantities::{Frequency, Velocity};
+use aequitas::systems::si::units::{Hertz, MeterPerSecond};
 use kwavers_grid::Grid;
 use kwavers_receiver::{Position, Sensor, SensorArray, SensorArrayGeometry};
 use kwavers_transducer::beamforming::SensorBeamformer;
@@ -15,7 +17,7 @@ fn test_geometric_delay_calculation() {
     let array = SensorArray::new(sensors, sound_speed, SensorArrayGeometry::Linear);
 
     let sampling_freq = 1.0e6;
-    let beamformer = SensorBeamformer::new(array, sampling_freq);
+    let beamformer = SensorBeamformer::new(array, Frequency::from_unit::<Hertz>(sampling_freq));
 
     // 2. Setup Grid
     // 2x2x2 grid with 1m spacing, starting at origin
@@ -51,7 +53,7 @@ fn test_geometric_delay_calculation() {
 
     // 3. Calculate Delays
     let delays = beamformer
-        .calculate_delays(&grid, sound_speed)
+        .calculate_delays(&grid, Velocity::from_unit::<MeterPerSecond>(sound_speed))
         .expect("calculate_delays failed");
 
     // 4. Verification

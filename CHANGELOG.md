@@ -4,6 +4,20 @@
 
 ### Changed
 
+- The LLVM Code Coverage gate now preserves complete plotting-compatible
+  Kwavers target coverage
+  while running the long source-injection integration binary as a concurrent
+  report shard; Cargo-required feature targets remain in their dedicated
+  feature-matrix lanes, and the per-test timeout and full-grid workload are
+  unchanged.
+
+- **Breaking:** Sensor-beamformer positions, sampling and steering frequency,
+  sound speed, angles, spacing, aperture, F-number, and spatial-Nyquist
+  metrics now use Aequitas quantities. Invalid derived-metric inputs return
+  typed errors. Eunomia complex steering retains one shared observable unit
+  for real and quadrature components; no imaginary physical unit is
+  introduced. See [ADR 097](docs/ADR/097-sensor-beamformer-quantities.md).
+
 - **Breaking:** Shared beamforming configuration now uses Aequitas
   `Velocity` and `Frequency` for sound speed, sampling frequency, and
   reference frequency. The former `BeamformingConfig` alias is removed and
