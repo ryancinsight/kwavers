@@ -1,4 +1,6 @@
 use super::*;
+use aequitas::systems::si::quantities::Length;
+use aequitas::systems::si::units::Meter;
 use kwavers_core::constants::fundamental::{
     DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM,
 };
@@ -8,7 +10,13 @@ use leto::{Array1, Array3};
 
 #[test]
 fn pstd_dataset_preserves_shape_and_is_input_sensitive() {
-    let array = MultiRowRingArray::new(4, 1, 0.006, 0.0).expect("array");
+    let array = MultiRowRingArray::new(
+        4,
+        1,
+        Length::from_unit::<Meter>(0.006),
+        Length::from_unit::<Meter>(0.0),
+    )
+    .expect("array");
     let config = BreastUstPstdDatasetConfig {
         spacing_m: 1.0e-3,
         time_step_s: 1.0e-7,
@@ -49,7 +57,13 @@ fn pstd_dataset_preserves_shape_and_is_input_sensitive() {
 
 #[test]
 fn pstd_dataset_rejects_unstable_cfl() {
-    let array = MultiRowRingArray::new(4, 1, 0.006, 0.0).expect("array");
+    let array = MultiRowRingArray::new(
+        4,
+        1,
+        Length::from_unit::<Meter>(0.006),
+        Length::from_unit::<Meter>(0.0),
+    )
+    .expect("array");
     let config = BreastUstPstdDatasetConfig {
         spacing_m: 1.0e-3,
         time_step_s: 1.0e-6,
@@ -82,7 +96,13 @@ fn frequency_bin_uses_trailing_steady_state_window() {
 
 #[test]
 fn snap_multi_row_ring_array_matches_pstd_grid_centers() {
-    let array = MultiRowRingArray::new(4, 1, 0.006, 0.0).expect("array");
+    let array = MultiRowRingArray::new(
+        4,
+        1,
+        Length::from_unit::<Meter>(0.006),
+        Length::from_unit::<Meter>(0.0),
+    )
+    .expect("array");
 
     let snapped =
         snap_multi_row_ring_array_to_grid(&array, (8, 8, 3), 1.0e-3).expect("snapped array");
@@ -92,9 +112,9 @@ fn snap_multi_row_ring_array_matches_pstd_grid_centers() {
     assert_eq!(
         snapped.elements()[0],
         ElementPosition {
-            x_m: 0.0035,
-            y_m: 0.0005,
-            z_m: 0.0,
+            x: Length::from_unit::<Meter>(0.0035),
+            y: Length::from_unit::<Meter>(0.0005),
+            z: Length::from_unit::<Meter>(0.0),
         }
     );
 }

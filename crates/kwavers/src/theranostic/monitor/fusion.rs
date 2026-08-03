@@ -235,7 +235,11 @@ mod tests {
                 perturbed[[i, j, 0]] = 1560.0;
             }
         }
-        let ring = fd::ring_around_slice(cfg.ring_elements, cfg.ring_diameter_m).unwrap();
+        let ring = fd::ring_around_slice(
+            cfg.ring_elements,
+            aequitas::systems::si::quantities::Length::from_base(cfg.ring_diameter_m),
+        )
+        .unwrap();
         let recon = fd::reconstruct(&perturbed, &background, &ring, &cfg).unwrap();
         let mut quant = Array2::<f64>::zeros((n, n));
         for i in 0..n {

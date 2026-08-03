@@ -6,6 +6,7 @@ use super::{
     born::ActiveVoxel, config::SOUND_SPEED_TISSUE, medium::AcousticSlice,
     transducer::TranscranialBowlGeometry,
 };
+use aequitas::systems::si::units::Meter;
 use kwavers_core::constants::numerical::MPA_TO_PA;
 use kwavers_core::constants::tissue_acoustics::DENSITY_BRAIN;
 use kwavers_solver::inverse::linear_born_inversion::LinearBornInversionConfig;
@@ -60,16 +61,17 @@ pub(super) fn build_sensitivity_matrix(
         let mut norm2 = 0.0;
 
         for (col, voxel) in active.iter().enumerate() {
+            let source_x = source.x.in_unit::<Meter>();
+            let source_y = source.y.in_unit::<Meter>();
+            let source_z = source.z.in_unit::<Meter>();
+            let receiver_x = receiver.x.in_unit::<Meter>();
+            let receiver_y = receiver.y.in_unit::<Meter>();
+            let receiver_z = receiver.z.in_unit::<Meter>();
             let ds = distance(
-                source.x_m, source.y_m, source.z_m, voxel.x_m, voxel.y_m, voxel.z_m,
+                source_x, source_y, source_z, voxel.x_m, voxel.y_m, voxel.z_m,
             );
             let dr = distance(
-                receiver.x_m,
-                receiver.y_m,
-                receiver.z_m,
-                voxel.x_m,
-                voxel.y_m,
-                voxel.z_m,
+                receiver_x, receiver_y, receiver_z, voxel.x_m, voxel.y_m, voxel.z_m,
             );
             let spreading = (ds * dr).sqrt().max(1.0e-6);
             let attenuation = attenuation_integrals.as_ref().map_or(1.0, |integrals| {
@@ -136,9 +138,9 @@ fn build_element_voxel_attenuation_integrals(
             for (col, voxel) in active.iter().enumerate() {
                 row[col] = attenuation_line_integral(
                     medium,
-                    element.x_m,
-                    element.y_m,
-                    element.z_m,
+                    element.x.in_unit::<Meter>(),
+                    element.y.in_unit::<Meter>(),
+                    element.z.in_unit::<Meter>(),
                     voxel.x_m,
                     voxel.y_m,
                     voxel.z_m,
@@ -192,9 +194,9 @@ fn build_element_voxel_traveltime_integrals(
             for (col, voxel) in active.iter().enumerate() {
                 row[col] = slowness_line_integral(
                     medium,
-                    element.x_m,
-                    element.y_m,
-                    element.z_m,
+                    element.x.in_unit::<Meter>(),
+                    element.y.in_unit::<Meter>(),
+                    element.z.in_unit::<Meter>(),
                     voxel.x_m,
                     voxel.y_m,
                     voxel.z_m,

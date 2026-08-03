@@ -4,6 +4,8 @@
 //! generic solver-layer kernels in
 //! [`kwavers_solver::inverse::linear_born_inversion`].
 
+use aequitas::systems::si::quantities::Length;
+use aequitas::systems::si::units::Meter;
 use kwavers_core::error::KwaversResult;
 use kwavers_math::statistics::{normalized_rmse, pearson, percentile_range};
 use kwavers_solver::inverse::linear_born_inversion::{
@@ -62,7 +64,7 @@ pub fn reconstruct_brain_volume(
     let linear = &config.linear;
     let geometry = TranscranialBowlGeometry::from_aperture(
         config.element_count,
-        config.radius_m,
+        Length::from_unit::<Meter>(config.radius_m),
         config.aperture,
     )?;
     let receiver_indices = geometry.receiver_indices(&linear.receiver_offsets);

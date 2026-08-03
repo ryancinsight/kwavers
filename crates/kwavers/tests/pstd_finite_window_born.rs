@@ -1,3 +1,5 @@
+use aequitas::systems::si::quantities::Length;
+use aequitas::systems::si::units::Meter;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_diagnostics::reconstruction::breast_ust_fwi::{
     generate_breast_ust_pstd_frequency_dataset, BreastUstPstdDatasetConfig,
@@ -11,7 +13,13 @@ use leto::Array3;
 
 #[test]
 fn finite_window_born_is_linear_in_slowness_squared_contrast() {
-    let array = MultiRowRingArray::new(4, 1, 0.01, 0.0).expect("ring array");
+    let array = MultiRowRingArray::new(
+        4,
+        1,
+        Length::from_unit::<Meter>(0.01),
+        Length::from_unit::<Meter>(0.0),
+    )
+    .expect("ring array");
     let config = test_config();
     let base = Array3::from_elem((3, 3, 1), SOUND_SPEED_WATER_SIM);
     let small = contrast_volume(0.01);
@@ -52,7 +60,13 @@ fn finite_window_born_is_linear_in_slowness_squared_contrast() {
 
 #[test]
 fn finite_window_born_rejects_off_grid_ring_geometry() {
-    let array = MultiRowRingArray::new(4, 1, 0.012, 0.0).expect("ring array");
+    let array = MultiRowRingArray::new(
+        4,
+        1,
+        Length::from_unit::<Meter>(0.012),
+        Length::from_unit::<Meter>(0.0),
+    )
+    .expect("ring array");
     let model = Array3::from_elem((3, 3, 1), SOUND_SPEED_WATER_SIM);
 
     let error = simulate_pstd_finite_window_born_observation(
@@ -75,7 +89,13 @@ fn finite_window_born_rejects_off_grid_ring_geometry() {
 /// quadruple the second-order-only contribution to receiver pressure.
 #[test]
 fn second_order_correction_is_quadratic_in_contrast() {
-    let array = MultiRowRingArray::new(4, 1, 0.01, 0.0).expect("ring array");
+    let array = MultiRowRingArray::new(
+        4,
+        1,
+        Length::from_unit::<Meter>(0.01),
+        Length::from_unit::<Meter>(0.0),
+    )
+    .expect("ring array");
     let config = test_config();
     let small = contrast_volume(0.01);
     let double = contrast_volume(0.02);
@@ -141,7 +161,13 @@ fn second_order_correction_is_quadratic_in_contrast() {
 /// homogeneous baseline but differ on a heterogeneous volume.
 #[test]
 fn second_order_differs_from_first_order_on_heterogeneous() {
-    let array = MultiRowRingArray::new(4, 1, 0.01, 0.0).expect("ring array");
+    let array = MultiRowRingArray::new(
+        4,
+        1,
+        Length::from_unit::<Meter>(0.01),
+        Length::from_unit::<Meter>(0.0),
+    )
+    .expect("ring array");
     let config = test_config();
     let homogeneous = Array3::from_elem((3, 3, 1), SOUND_SPEED_WATER_SIM);
     let heterogeneous = contrast_volume(0.05);
@@ -210,7 +236,13 @@ fn second_order_differs_from_first_order_on_heterogeneous() {
 /// than the first-order residual.
 #[test]
 fn second_order_does_not_worsen_pstd_match() {
-    let array = MultiRowRingArray::new(4, 1, 0.01, 0.0).expect("ring array");
+    let array = MultiRowRingArray::new(
+        4,
+        1,
+        Length::from_unit::<Meter>(0.01),
+        Length::from_unit::<Meter>(0.0),
+    )
+    .expect("ring array");
     let frequency_hz = 200_000.0;
     let heterogeneous = contrast_volume(0.03);
     let acquisition = BreastUstPstdDatasetConfig {
@@ -290,7 +322,13 @@ fn second_order_does_not_worsen_pstd_match() {
 /// small-contrast PSTD finite difference.
 #[test]
 fn source_phasing_is_frechet_derivative() {
-    let array = MultiRowRingArray::new(4, 1, 0.01, 0.0).expect("ring array");
+    let array = MultiRowRingArray::new(
+        4,
+        1,
+        Length::from_unit::<Meter>(0.01),
+        Length::from_unit::<Meter>(0.0),
+    )
+    .expect("ring array");
     let frequency_hz = 200_000.0;
     let reference = Array3::from_elem((3, 3, 1), SOUND_SPEED_WATER_SIM);
     let acquisition = BreastUstPstdDatasetConfig {

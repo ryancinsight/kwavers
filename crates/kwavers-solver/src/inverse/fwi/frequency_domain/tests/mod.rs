@@ -1,3 +1,5 @@
+use aequitas::systems::si::quantities::Length;
+use aequitas::systems::si::units::Meter;
 use std::sync::Arc;
 
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
@@ -33,7 +35,13 @@ pub(super) fn test_config() -> Config {
 }
 
 pub(super) fn test_array() -> MultiRowRingArray {
-    MultiRowRingArray::new(6, 2, 0.08, 0.01).expect("ring array")
+    MultiRowRingArray::new(
+        6,
+        2,
+        Length::from_unit::<Meter>(0.08),
+        Length::from_unit::<Meter>(0.01),
+    )
+    .expect("ring array")
 }
 
 pub(super) fn first_rows(array: &Array2<Complex64>, rows: usize) -> Array2<Complex64> {

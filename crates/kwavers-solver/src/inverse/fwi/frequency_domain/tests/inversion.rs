@@ -42,7 +42,13 @@ fn nonlinear_inversion_reduces_objective_and_raises_high_speed_target() {
 /// confirming that `J(s − h∇J/‖∇J‖) < J(s)`.
 #[test]
 fn source_scaled_gradient_is_descent_direction() {
-    let array = MultiRowRingArray::new(4, 1, 0.01, 0.0).expect("ring array");
+    let array = MultiRowRingArray::new(
+        4,
+        1,
+        Length::from_unit::<Meter>(0.01),
+        Length::from_unit::<Meter>(0.0),
+    )
+    .expect("ring array");
     let config = Config {
         spacing_m: 0.005,
         estimate_source_scaling: true,
@@ -102,7 +108,13 @@ fn source_scaled_gradient_is_descent_direction() {
 /// is convex near s_true.
 #[test]
 fn inversion_with_source_scaling_converges_for_consistent_model() {
-    let array = MultiRowRingArray::new(4, 1, 0.01, 0.0).expect("ring array");
+    let array = MultiRowRingArray::new(
+        4,
+        1,
+        Length::from_unit::<Meter>(0.01),
+        Length::from_unit::<Meter>(0.0),
+    )
+    .expect("ring array");
     let config = Config {
         spacing_m: 0.005,
         iterations: 14,
@@ -146,7 +158,13 @@ fn inversion_with_source_scaling_converges_for_consistent_model() {
 /// and the NCG loop must make progress on every run.
 #[test]
 fn pstd_finite_window_born_inversion_reduces_objective() {
-    let array = MultiRowRingArray::new(4, 1, 0.01, 0.0).expect("ring array");
+    let array = MultiRowRingArray::new(
+        4,
+        1,
+        Length::from_unit::<Meter>(0.01),
+        Length::from_unit::<Meter>(0.0),
+    )
+    .expect("ring array");
     let config = Config {
         spacing_m: 0.005,
         iterations: 10,
@@ -205,7 +223,13 @@ fn pstd_finite_window_born_inversion_reduces_objective() {
 /// at (±0.005, 0, 0) and (0, ±0.005, 0) map exactly to grid indices.
 #[test]
 fn ali2025_table1_parity_gate() {
-    let array = MultiRowRingArray::new(4, 1, 0.010, 0.0).expect("ring array");
+    let array = MultiRowRingArray::new(
+        4,
+        1,
+        Length::from_unit::<Meter>(0.010),
+        Length::from_unit::<Meter>(0.0),
+    )
+    .expect("ring array");
     let config = Config {
         reference_sound_speed_m_s: 1500.0,
         spacing_m: 0.005,

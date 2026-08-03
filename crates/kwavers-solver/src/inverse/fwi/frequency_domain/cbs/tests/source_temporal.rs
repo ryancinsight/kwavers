@@ -1,4 +1,6 @@
 use super::*;
+use aequitas::systems::si::quantities::Length;
+use aequitas::systems::si::units::Meter;
 use kwavers_core::constants::numerical::TWO_PI;
 use leto::Array3;
 use std::f64::consts::PI;
@@ -7,9 +9,9 @@ use std::f64::consts::PI;
 fn pstd_source_density_uses_grid_mask_and_source_kappa_symbol() {
     let grid = GridSpec::new((2, 1, 1), 1.0e-3).unwrap();
     let source = [ElementPosition {
-        x_m: -0.5e-3,
-        y_m: 0.0,
-        z_m: 0.0,
+        x: Length::from_unit::<Meter>(-0.5e-3),
+        y: Length::from_unit::<Meter>(0.0),
+        z: Length::from_unit::<Meter>(0.0),
     }];
     let sound_speed = SOUND_SPEED_WATER_SIM;
     let time_step = 1.0e-7;

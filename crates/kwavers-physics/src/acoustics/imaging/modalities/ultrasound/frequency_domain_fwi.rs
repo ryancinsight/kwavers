@@ -17,6 +17,8 @@
 //!    the least-squares source scale is
 //!    `gamma = <p, d> / <p, p>` for predicted pressure `p` and data `d`.
 
+use aequitas::systems::si::quantities::Length;
+use aequitas::systems::si::units::Meter;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::Complex64;
@@ -31,8 +33,8 @@ pub const FREQUENCY_DOMAIN_FWI_MODEL: &str = "ali_2025_multi_row_ring_frequency_
 pub struct MultiRowRingArray {
     circumferential_elements: usize,
     rows: usize,
-    diameter_m: f64,
-    row_spacing_m: f64,
+    diameter: Length<f64>,
+    row_spacing: Length<f64>,
     elements: Vec<ElementPosition>,
 }
 
@@ -46,15 +48,15 @@ impl MultiRowRingArray {
     /// Construct a centered multi-row ring array.
     ///
     /// Rows are centered about `z = 0`; circumferential elements lie on a
-    /// circle of radius `diameter_m / 2`.
+    /// circle of radius `diameter / 2`.
     ///
     /// # Errors
     /// Returns an error if counts or metric parameters are invalid.
     pub fn new(
         circumferential_elements: usize,
         rows: usize,
-        diameter_m: f64,
-        row_spacing_m: f64,
+        diameter: Length<f64>,
+        row_spacing: Length<f64>,
     ) -> KwaversResult<Self> {
         if circumferential_elements < 2 {
             return Err(KwaversError::InvalidInput(format!(
@@ -66,6 +68,8 @@ impl MultiRowRingArray {
                 "multi-row ring array requires at least one row".to_owned(),
             ));
         }
+        let diameter_m = diameter.in_unit::<Meter>();
+        let row_spacing_m = row_spacing.in_unit::<Meter>();
         if !diameter_m.is_finite() || diameter_m <= 0.0 {
             return Err(KwaversError::InvalidInput(format!(
                 "ring diameter must be positive and finite, got {diameter_m}"
@@ -85,9 +89,9 @@ impl MultiRowRingArray {
             for element in 0..circumferential_elements {
                 let theta = TWO_PI * element as f64 / circumferential_elements as f64;
                 elements.push(ElementPosition {
-                    x_m: radius * theta.cos(),
-                    y_m: radius * theta.sin(),
-                    z_m,
+                    x: Length::from_unit::<Meter>(radius * theta.cos()),
+                    y: Length::from_unit::<Meter>(radius * theta.sin()),
+                    z: Length::from_unit::<Meter>(z_m),
                 });
             }
         }
@@ -95,8 +99,8 @@ impl MultiRowRingArray {
         Ok(Self {
             circumferential_elements,
             rows,
-            diameter_m,
-            row_spacing_m,
+            diameter,
+            row_spacing,
             elements,
         })
     }
@@ -113,11 +117,11 @@ impl MultiRowRingArray {
     pub fn from_ordered_elements(
         circumferential_elements: usize,
         rows: usize,
-        diameter_m: f64,
-        row_spacing_m: f64,
+        diameter: Length<f64>,
+        row_spacing: Length<f64>,
         elements: Vec<ElementPosition>,
     ) -> KwaversResult<Self> {
-        Self::new(circumferential_elements, rows, diameter_m, row_spacing_m)?;
+        Self::new(circumferential_elements, rows, diameter, row_spacing)?;
         let expected = circumferential_elements * rows;
         if elements.len() != expected {
             return Err(KwaversError::DimensionMismatch(format!(
@@ -127,7 +131,10 @@ impl MultiRowRingArray {
             )));
         }
         for point in &elements {
-            if !point.x_m.is_finite() || !point.y_m.is_finite() || !point.z_m.is_finite() {
+            if !point.x.in_unit::<Meter>().is_finite()
+                || !point.y.in_unit::<Meter>().is_finite()
+                || !point.z.in_unit::<Meter>().is_finite()
+            {
                 return Err(KwaversError::InvalidInput(format!(
                     "ring element coordinate must be finite, got {point:?}"
                 )));
@@ -136,8 +143,8 @@ impl MultiRowRingArray {
         Ok(Self {
             circumferential_elements,
             rows,
-            diameter_m,
-            row_spacing_m,
+            diameter,
+            row_spacing,
             elements,
         })
     }
@@ -145,7 +152,12 @@ impl MultiRowRingArray {
     /// Ali et al. (2025) proof-of-concept geometry: 256 x 32, 22 cm diameter,
     /// 2.4 mm row spacing.
     pub fn ali_2025() -> KwaversResult<Self> {
-        Self::new(256, 32, 0.22, 0.0024)
+        Self::new(
+            256,
+            32,
+            Length::from_unit::<Meter>(0.22),
+            Length::from_unit::<Meter>(0.0024),
+        )
     }
 
     #[must_use]
@@ -159,13 +171,13 @@ impl MultiRowRingArray {
     }
 
     #[must_use]
-    pub fn diameter_m(&self) -> f64 {
-        self.diameter_m
+    pub fn diameter(&self) -> Length<f64> {
+        self.diameter
     }
 
     #[must_use]
-    pub fn row_spacing_m(&self) -> f64 {
-        self.row_spacing_m
+    pub fn row_spacing(&self) -> Length<f64> {
+        self.row_spacing
     }
 
     #[must_use]
@@ -383,15 +395,22 @@ mod tests {
         assert_eq!(array.circumferential_elements(), 256);
         assert_eq!(array.rows(), 32);
         assert_eq!(array.element_count(), 8192);
-        assert!((array.diameter_m() - 0.22).abs() <= f64::EPSILON);
-        assert!((array.row_spacing_m() - 0.0024).abs() <= f64::EPSILON);
+        assert!((array.diameter().in_unit::<Meter>() - 0.22).abs() <= f64::EPSILON);
+        assert!((array.row_spacing().in_unit::<Meter>() - 0.0024).abs() <= f64::EPSILON);
 
         let source = array.cylindrical_source(7);
         assert_eq!(source.len(), 32);
         for window in source.windows(2) {
-            assert!((window[1].z_m - window[0].z_m - 0.0024).abs() <= 1.0e-12);
-            assert!((window[1].x_m - window[0].x_m).abs() <= 1.0e-12);
-            assert!((window[1].y_m - window[0].y_m).abs() <= 1.0e-12);
+            assert!(
+                (window[1].z.in_unit::<Meter>() - window[0].z.in_unit::<Meter>() - 0.0024).abs()
+                    <= 1.0e-12
+            );
+            assert!(
+                (window[1].x.in_unit::<Meter>() - window[0].x.in_unit::<Meter>()).abs() <= 1.0e-12
+            );
+            assert!(
+                (window[1].y.in_unit::<Meter>() - window[0].y.in_unit::<Meter>()).abs() <= 1.0e-12
+            );
         }
     }
 

@@ -1,5 +1,7 @@
 //! PyO3 binding: `MultiRowRingArray` Python class.
 
+use aequitas::systems::si::quantities::Length;
+use aequitas::systems::si::units::Meter;
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
 use numpy::{PyArray2, ToPyArray};
 use pyo3::prelude::*;
@@ -25,8 +27,8 @@ impl PyMultiRowRingArray {
             inner: MultiRowRingArray::new(
                 circumferential_elements,
                 rows,
-                diameter_m,
-                row_spacing_m,
+                Length::from_unit::<Meter>(diameter_m),
+                Length::from_unit::<Meter>(row_spacing_m),
             )
             .map_err(kwavers_to_py)?,
         })
@@ -51,12 +53,12 @@ impl PyMultiRowRingArray {
 
     #[getter]
     pub fn diameter_m(&self) -> f64 {
-        self.inner.diameter_m()
+        self.inner.diameter().in_unit::<Meter>()
     }
 
     #[getter]
     pub fn row_spacing_m(&self) -> f64 {
-        self.inner.row_spacing_m()
+        self.inner.row_spacing().in_unit::<Meter>()
     }
 
     #[getter]

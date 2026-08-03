@@ -1,4 +1,6 @@
 use super::*;
+use aequitas::systems::si::quantities::Length;
+use aequitas::systems::si::units::Meter;
 
 #[test]
 fn pstd_receiver_projection_uses_exact_grid_cells_and_adjoint() {
@@ -6,8 +8,8 @@ fn pstd_receiver_projection_uses_exact_grid_cells_and_adjoint() {
     let array = MultiRowRingArray::from_ordered_elements(
         2,
         1,
-        1.0e-3,
-        0.0,
+        Length::from_unit::<Meter>(1.0e-3),
+        Length::from_unit::<Meter>(0.0),
         vec![grid.center_at(0, 0, 0), grid.center_at(1, 0, 0)],
     )
     .unwrap();
@@ -37,13 +39,13 @@ fn pstd_receiver_projection_rejects_off_grid_receivers() {
     let array = MultiRowRingArray::from_ordered_elements(
         2,
         1,
-        1.0e-3,
-        0.0,
+        Length::from_unit::<Meter>(1.0e-3),
+        Length::from_unit::<Meter>(0.0),
         vec![
             ElementPosition {
-                x_m: -0.25e-3,
-                y_m: 0.0,
-                z_m: 0.0,
+                x: Length::from_unit::<Meter>(-0.25e-3),
+                y: Length::from_unit::<Meter>(0.0),
+                z: Length::from_unit::<Meter>(0.0),
             },
             grid.center_at(1, 0, 0),
         ],

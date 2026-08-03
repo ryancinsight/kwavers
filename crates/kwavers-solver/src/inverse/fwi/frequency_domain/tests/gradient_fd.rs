@@ -2,7 +2,13 @@ use super::*;
 
 #[test]
 fn dense_cbs_adjoint_gradient_matches_finite_difference() {
-    let array = MultiRowRingArray::new(4, 1, 0.01, 0.0).expect("ring array");
+    let array = MultiRowRingArray::new(
+        4,
+        1,
+        Length::from_unit::<Meter>(0.01),
+        Length::from_unit::<Meter>(0.0),
+    )
+    .expect("ring array");
     let config = Config {
         spacing_m: 0.005,
         estimate_source_scaling: false,
@@ -47,7 +53,13 @@ fn dense_cbs_adjoint_gradient_matches_finite_difference() {
 
 #[test]
 fn spectral_cbs_adjoint_gradient_matches_finite_difference() {
-    let array = MultiRowRingArray::new(4, 1, 0.01, 0.0).expect("ring array");
+    let array = MultiRowRingArray::new(
+        4,
+        1,
+        Length::from_unit::<Meter>(0.01),
+        Length::from_unit::<Meter>(0.0),
+    )
+    .expect("ring array");
     let config = Config {
         spacing_m: 0.005,
         estimate_source_scaling: false,
@@ -93,7 +105,13 @@ fn spectral_cbs_adjoint_gradient_matches_finite_difference() {
 
 #[test]
 fn pstd_spectral_cbs_adjoint_gradient_matches_finite_difference() {
-    let array = MultiRowRingArray::new(4, 1, 0.01, 0.0).expect("ring array");
+    let array = MultiRowRingArray::new(
+        4,
+        1,
+        Length::from_unit::<Meter>(0.01),
+        Length::from_unit::<Meter>(0.0),
+    )
+    .expect("ring array");
     let config = Config {
         spacing_m: 0.005,
         estimate_source_scaling: false,
@@ -187,7 +205,13 @@ fn adjoint_gradient_matches_finite_difference() {
 /// to within floating-point rounding and temporal discretisation error.
 #[test]
 fn pstd_finite_window_born_adjoint_gradient_matches_finite_difference() {
-    let array = MultiRowRingArray::new(4, 1, 0.01, 0.0).expect("ring array");
+    let array = MultiRowRingArray::new(
+        4,
+        1,
+        Length::from_unit::<Meter>(0.01),
+        Length::from_unit::<Meter>(0.0),
+    )
+    .expect("ring array");
     let config = Config {
         spacing_m: 0.005,
         estimate_source_scaling: false,

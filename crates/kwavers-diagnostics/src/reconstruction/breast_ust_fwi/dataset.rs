@@ -206,8 +206,8 @@ pub fn snap_multi_row_ring_array_to_grid(
     MultiRowRingArray::from_ordered_elements(
         array.circumferential_elements(),
         array.rows(),
-        array.diameter_m(),
-        array.row_spacing_m(),
+        array.diameter(),
+        array.row_spacing(),
         snapped,
     )
 }

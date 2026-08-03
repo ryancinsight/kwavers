@@ -61,6 +61,7 @@ serde_json = "1.0"
 toml = "0.8"
 
 # Unit safety
+aequitas = { workspace = true }
 
 # Essential utilities
 log = "0.4"
@@ -112,7 +113,6 @@ flate2 = { workspace = true }
 
 [dev-dependencies]
 # Minimal dev dependencies for testing only
-aequitas = { workspace = true }
 hyperion = { workspace = true }
 # Enable kwavers-solver's `test-util` feature so cross-crate test helpers
 # (kwavers_solver::plugin::test_support) are available to kwavers' own tests.

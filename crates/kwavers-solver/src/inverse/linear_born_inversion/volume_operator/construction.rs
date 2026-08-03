@@ -1,5 +1,6 @@
 //! Construction and distance-table precomputation for [`super::VolumeOperator`].
 
+use aequitas::systems::si::units::Meter;
 use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive, ParallelSlice};
 use std::f64::consts::TAU;
 
@@ -41,7 +42,12 @@ impl<'a> VolumeOperator<'a> {
                     let elem = &elements[elem_idx];
                     for (col, voxel) in active.iter().enumerate() {
                         chunk[col] = distance(
-                            elem.x_m, elem.y_m, elem.z_m, voxel.x_m, voxel.y_m, voxel.z_m,
+                            elem.x.in_unit::<Meter>(),
+                            elem.y.in_unit::<Meter>(),
+                            elem.z.in_unit::<Meter>(),
+                            voxel.x_m,
+                            voxel.y_m,
+                            voxel.z_m,
                         );
                     }
                 },

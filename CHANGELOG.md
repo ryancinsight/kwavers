@@ -4,6 +4,18 @@
 
 ### Changed
 
+- **Breaking:** Shared acquisition geometry now carries Aequitas `Length`
+  coordinates and typed bowl/ring radius, diameter, and row-spacing
+  contracts. Direct transcranial, breast-FWI, CBS/FWI, linear-Born, diagnostic,
+  Python, theranostic, example, and test callers use the typed API with scalar
+  extraction confined to numerical and serialization boundaries. Eunomia
+  complex signals retain one observable signal unit and no imaginary SI length
+  is introduced. See [ADR 100](docs/ADR/100-acquisition-geometry-quantities.md).
+
+- **Fix:** Scale the k-Wave absorption reference assertion by a formula-derived
+  16-ulp bound so valid platform floating-point rounding is not rejected at
+  `5.48e-10`.
+
 - **Breaking:** Transducer aperture design and focused propagation contracts
   now carry Aequitas geometry, frequency, velocity, drive, impedance,
   pressure, intensity, and beam-width quantities. Eunomia real/quadrature

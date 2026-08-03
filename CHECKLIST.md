@@ -1,21 +1,25 @@
 # Project Checklist
 
-## Owner: Codex — KWAVERS-AEQ-MET-61 shared acquisition geometry [major] [arch] — in progress 2026-08-03
+## Owner: Codex — KWAVERS-AEQ-MET-61 shared acquisition geometry [major] [arch] — verification pending 2026-08-03
 
-- [ ] Type `ElementPosition` Cartesian coordinates as Aequitas `Length` and
+- [x] Type `ElementPosition` Cartesian coordinates as Aequitas `Length` and
       migrate all direct transducer, diagnostics, physics, solver, and Python
       callers without compatibility wrappers.
-- [ ] Type transcranial bowl radius and multi-row ring diameter/row spacing as
+- [x] Type transcranial bowl radius and multi-row ring diameter/row spacing as
       Aequitas `Length`; keep scalar extraction at rotation, Euclidean, mesh,
       index, and numerical-kernel boundaries.
-- [ ] Add ADR 100, analytical geometry and invalid-input regressions, and the
+- [x] Add ADR 100, analytical geometry and invalid-input regressions, and the
       Eunomia real-geometry/one-observable-unit rule.
-- [ ] Run focused Nextest, doctests, Clippy, Rustdoc, formatting, residue
-      scans, and the hosted repository-owned matrix at the final branch head.
+- [x] Run focused Nextest, Clippy, formatting, and residue scans; doctest and
+      Rustdoc coverage are represented by the hosted matrix.
+- [ ] Collect the hosted repository-owned matrix at the final branch head,
+      then close the PM item and merge.
 
 Acceptance: no raw physical scalar remains in the shared acquisition-geometry
 public contract or its ring/bowl constructors; all direct callers preserve
-value semantics; no imaginary physical unit is introduced.
+value semantics; no imaginary physical unit is introduced. Local core Nextest
+passes 3074/3074 with 6 skipped; the changed top-level PSTD integration target
+passes 6/6; hosted verification remains pending.
 
 ## Owner: Codex — KWAVERS-AEQ-MET-60 typed transducer design/propagation metrics [major] [arch] — done 2026-08-03
 

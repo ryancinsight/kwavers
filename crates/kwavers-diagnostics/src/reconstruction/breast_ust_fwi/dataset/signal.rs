@@ -2,6 +2,8 @@
 //! for the breast UST PSTD acquisition pipeline.
 
 use super::BreastUstPstdDatasetConfig;
+use aequitas::systems::si::quantities::Length;
+use aequitas::systems::si::units::Meter;
 use kwavers_boundary::CPMLConfig;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
@@ -74,9 +76,9 @@ pub(super) fn map_ring_point_to_grid(
         0.5 * (nz - 1) as f64 * spacing_m,
     ];
     let coord = [
-        center[0] + point.x_m,
-        center[1] + point.y_m,
-        center[2] + point.z_m,
+        center[0] + point.x.in_unit::<Meter>(),
+        center[1] + point.y.in_unit::<Meter>(),
+        center[2] + point.z.in_unit::<Meter>(),
     ];
     let max = [
         (nx - 1) as f64 * spacing_m,
@@ -109,9 +111,9 @@ pub(super) fn grid_index_to_ring_point(
         0.5 * (nz - 1) as f64,
     ];
     ElementPosition {
-        x_m: (ix as f64 - center[0]) * spacing_m,
-        y_m: (iy as f64 - center[1]) * spacing_m,
-        z_m: (iz as f64 - center[2]) * spacing_m,
+        x: Length::from_unit::<Meter>((ix as f64 - center[0]) * spacing_m),
+        y: Length::from_unit::<Meter>((iy as f64 - center[1]) * spacing_m),
+        z: Length::from_unit::<Meter>((iz as f64 - center[2]) * spacing_m),
     }
 }
 

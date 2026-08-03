@@ -8,6 +8,8 @@ use super::*;
 use crate::reconstruction::breast_ust_fwi::{
     generate_breast_ust_pstd_frequency_dataset, snap_multi_row_ring_array_to_grid,
 };
+use aequitas::systems::si::quantities::Length;
+use aequitas::systems::si::units::Meter;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_core::constants::numerical::{FOUR_PI, TWO_PI};
 use kwavers_math::fft::Complex64;
@@ -22,7 +24,13 @@ use std::sync::Arc;
 
 #[test]
 fn point_source_prediction_matches_outgoing_green_formula() {
-    let array = MultiRowRingArray::new(4, 1, 0.006, 0.0).expect("array");
+    let array = MultiRowRingArray::new(
+        4,
+        1,
+        Length::from_unit::<Meter>(0.006),
+        Length::from_unit::<Meter>(0.0),
+    )
+    .expect("array");
     let frequency_hz = 1.0 / (TWO_PI);
 
     let cube =
@@ -62,7 +70,13 @@ fn source_kappa_weights_match_two_cell_symbol() {
 
 #[test]
 fn direct_field_metrics_recover_exact_scaled_prediction() {
-    let array = MultiRowRingArray::new(4, 1, 0.006, 0.0).expect("array");
+    let array = MultiRowRingArray::new(
+        4,
+        1,
+        Length::from_unit::<Meter>(0.006),
+        Length::from_unit::<Meter>(0.0),
+    )
+    .expect("array");
     let frequencies_hz = [100.0];
     let predicted = Array3::from_shape_fn((1, 4, 4), |[_, transmit, receiver]| {
         Complex64::new(1.0 + transmit as f64, 0.5 + receiver as f64)
@@ -103,7 +117,13 @@ fn direct_field_metrics_recover_exact_scaled_prediction() {
 
 #[test]
 fn direct_field_metrics_separate_active_and_passive_receiver_classes() {
-    let array = MultiRowRingArray::new(4, 2, 0.006, 0.001).expect("array");
+    let array = MultiRowRingArray::new(
+        4,
+        2,
+        Length::from_unit::<Meter>(0.006),
+        Length::from_unit::<Meter>(0.001),
+    )
+    .expect("array");
     let frequencies_hz = [100.0];
     let predicted = Array3::from_elem((1, 4, 8), Complex64::new(1.0, 0.0));
     let mut observed = predicted.clone();
@@ -141,7 +161,13 @@ fn direct_field_metrics_separate_active_and_passive_receiver_classes() {
 
 #[test]
 fn homogeneous_diagnostic_rejects_nonuniform_reference_medium() {
-    let array = MultiRowRingArray::new(4, 1, 0.006, 0.0).expect("array");
+    let array = MultiRowRingArray::new(
+        4,
+        1,
+        Length::from_unit::<Meter>(0.006),
+        Length::from_unit::<Meter>(0.0),
+    )
+    .expect("array");
     let config = BreastUstPstdDatasetConfig {
         spacing_m: 1.0e-3,
         time_step_s: 1.0e-7,
@@ -162,7 +188,13 @@ fn homogeneous_diagnostic_rejects_nonuniform_reference_medium() {
 
 #[test]
 fn homogeneous_diagnostic_reports_passive_residual_deltas() {
-    let array = MultiRowRingArray::new(4, 1, 0.006, 0.0).expect("array");
+    let array = MultiRowRingArray::new(
+        4,
+        1,
+        Length::from_unit::<Meter>(0.006),
+        Length::from_unit::<Meter>(0.0),
+    )
+    .expect("array");
     let config = BreastUstPstdDatasetConfig {
         spacing_m: 1.0e-3,
         time_step_s: 1.0e-7,
@@ -212,7 +244,13 @@ fn finite_grid_pstd_prediction_matches_homogeneous_dataset() {
         density_kg_m3: DENSITY_WATER_NOMINAL,
         cpml_thickness_cells: 0,
     };
-    let unsnapped = MultiRowRingArray::new(4, 1, 0.00768, 0.0).expect("array");
+    let unsnapped = MultiRowRingArray::new(
+        4,
+        1,
+        Length::from_unit::<Meter>(0.00768),
+        Length::from_unit::<Meter>(0.0),
+    )
+    .expect("array");
     let model_shape = {
         let [nx, ny, nz] = model.shape();
         (nx, ny, nz)
@@ -304,7 +342,13 @@ fn pstd_spectral_cbs_matches_homogeneous_finite_grid_modal_prediction() {
         density_kg_m3: DENSITY_WATER_NOMINAL,
         cpml_thickness_cells: 0,
     };
-    let unsnapped = MultiRowRingArray::new(4, 1, 0.00768, 0.0).expect("array");
+    let unsnapped = MultiRowRingArray::new(
+        4,
+        1,
+        Length::from_unit::<Meter>(0.00768),
+        Length::from_unit::<Meter>(0.0),
+    )
+    .expect("array");
     let model_shape = {
         let [nx, ny, nz] = model.shape();
         (nx, ny, nz)

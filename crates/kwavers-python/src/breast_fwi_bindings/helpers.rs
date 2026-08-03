@@ -2,6 +2,7 @@
 //! observation stack construction, and error conversion for breast FWI bindings.
 
 use super::complex_compat::nd_to_leto2;
+use aequitas::systems::si::units::Meter;
 use eunomia::Complex64;
 use kwavers_solver::inverse::fwi::frequency_domain::{
     AbsorbingBoundary, Config, DenseConvergentBornOperator, FrequencyObservation,
@@ -112,9 +113,9 @@ pub(super) fn absorbing_boundary_from_thickness(
 
 pub(super) fn points_to_array(points: &[ElementPosition]) -> Array2<f64> {
     Array2::from_shape_fn((points.len(), 3), |(row, col)| match col {
-        0 => points[row].x_m,
-        1 => points[row].y_m,
-        _ => points[row].z_m,
+        0 => points[row].x.in_unit::<Meter>(),
+        1 => points[row].y.in_unit::<Meter>(),
+        _ => points[row].z.in_unit::<Meter>(),
     })
 }
 

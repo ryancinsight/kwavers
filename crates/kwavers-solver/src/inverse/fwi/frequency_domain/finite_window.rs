@@ -37,6 +37,7 @@
 use super::cbs::{
     pstd_modal_theta_squared, pstd_source_kappa_symbol, GridSpec, PstdTemporalTransferConfig,
 };
+use aequitas::systems::si::units::Meter;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::Complex64;
 use kwavers_math::fft::{fft_3d_complex_into, ifft_3d_complex_inplace};
@@ -1023,9 +1024,24 @@ fn exact_grid_index(
     role: &str,
 ) -> KwaversResult<(usize, usize, usize)> {
     Ok((
-        exact_axis_index(grid.dimensions.0, grid.spacing_m, point.x_m, role)?,
-        exact_axis_index(grid.dimensions.1, grid.spacing_m, point.y_m, role)?,
-        exact_axis_index(grid.dimensions.2, grid.spacing_m, point.z_m, role)?,
+        exact_axis_index(
+            grid.dimensions.0,
+            grid.spacing_m,
+            point.x.in_unit::<Meter>(),
+            role,
+        )?,
+        exact_axis_index(
+            grid.dimensions.1,
+            grid.spacing_m,
+            point.y.in_unit::<Meter>(),
+            role,
+        )?,
+        exact_axis_index(
+            grid.dimensions.2,
+            grid.spacing_m,
+            point.z.in_unit::<Meter>(),
+            role,
+        )?,
     ))
 }
 

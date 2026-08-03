@@ -258,10 +258,18 @@ fn newton_cg(
 mod tests {
     use super::*;
     use crate::inverse::fwi::frequency_domain::{simulate_frequency_observation, Config};
+    use aequitas::systems::si::quantities::Length;
+    use aequitas::systems::si::units::Meter;
     use leto::Array3;
 
     fn ring(n_elem: usize, diameter: f64) -> MultiRowRingArray {
-        MultiRowRingArray::new(n_elem, 1, diameter, 0.0).unwrap()
+        MultiRowRingArray::new(
+            n_elem,
+            1,
+            Length::from_unit::<Meter>(diameter),
+            Length::from_unit::<Meter>(0.0),
+        )
+        .unwrap()
     }
 
     /// From the EXACT background (where NLCG accepts no step), Gauss-Newton must

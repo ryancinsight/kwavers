@@ -199,6 +199,8 @@ pub fn reconstruct_breast_ust_sound_speed_volume(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use aequitas::systems::si::quantities::Length;
+    use aequitas::systems::si::units::Meter;
     use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use kwavers_solver::inverse::fwi::frequency_domain::{
         simulate_frequency_observation, SingleScatterBornOperator,
@@ -207,7 +209,13 @@ mod tests {
 
     #[test]
     fn clinical_adapter_delegates_to_solver_and_preserves_metadata() {
-        let array = MultiRowRingArray::new(5, 2, 0.07, 0.01).expect("array");
+        let array = MultiRowRingArray::new(
+            5,
+            2,
+            Length::from_unit::<Meter>(0.07),
+            Length::from_unit::<Meter>(0.01),
+        )
+        .expect("array");
         let config = FrequencyDomainFwiConfig {
             reference_sound_speed_m_s: SOUND_SPEED_WATER_SIM,
             spacing_m: 0.005,

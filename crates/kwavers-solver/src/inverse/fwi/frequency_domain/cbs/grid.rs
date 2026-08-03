@@ -1,5 +1,7 @@
 //! CBS grid and bandlimited point projection.
 
+use aequitas::systems::si::quantities::Length;
+use aequitas::systems::si::units::Meter;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::special::sinc;
 use kwavers_transducer::transducers::ElementPosition;
@@ -67,9 +69,9 @@ impl GridSpec {
         let cy = 0.5 * ny as f64;
         let cz = 0.5 * nz as f64;
         ElementPosition {
-            x_m: (ix as f64 + 0.5 - cx) * self.spacing_m,
-            y_m: (iy as f64 + 0.5 - cy) * self.spacing_m,
-            z_m: (iz as f64 + 0.5 - cz) * self.spacing_m,
+            x: Length::from_unit::<Meter>((ix as f64 + 0.5 - cx) * self.spacing_m),
+            y: Length::from_unit::<Meter>((iy as f64 + 0.5 - cy) * self.spacing_m),
+            z: Length::from_unit::<Meter>((iz as f64 + 0.5 - cz) * self.spacing_m),
         }
     }
 
@@ -176,9 +178,16 @@ pub fn bli_weights(
                 let iy = iy as usize;
                 let iz = iz as usize;
                 let center = grid.center_at(ix, iy, iz);
-                let weight = sinc(PI * (center.x_m - point.x_m) / grid.spacing_m)
-                    * sinc(PI * (center.y_m - point.y_m) / grid.spacing_m)
-                    * sinc(PI * (center.z_m - point.z_m) / grid.spacing_m);
+                let weight = sinc(
+                    PI * (center.x.in_unit::<Meter>() - point.x.in_unit::<Meter>())
+                        / grid.spacing_m,
+                ) * sinc(
+                    PI * (center.y.in_unit::<Meter>() - point.y.in_unit::<Meter>())
+                        / grid.spacing_m,
+                ) * sinc(
+                    PI * (center.z.in_unit::<Meter>() - point.z.in_unit::<Meter>())
+                        / grid.spacing_m,
+                );
                 if weight != 0.0 {
                     weights.push(GridWeight {
                         linear_index: grid.linear_index(ix, iy, iz),
@@ -194,17 +203,17 @@ pub fn bli_weights(
 fn nearest_indices(grid: GridSpec, point: ElementPosition) -> [usize; 3] {
     let (nx, ny, nz) = grid.dimensions;
     [
-        nearest_axis(nx, grid.spacing_m, point.x_m),
-        nearest_axis(ny, grid.spacing_m, point.y_m),
-        nearest_axis(nz, grid.spacing_m, point.z_m),
+        nearest_axis(nx, grid.spacing_m, point.x.in_unit::<Meter>()),
+        nearest_axis(ny, grid.spacing_m, point.y.in_unit::<Meter>()),
+        nearest_axis(nz, grid.spacing_m, point.z.in_unit::<Meter>()),
     ]
 }
 
 fn within_stencil_support(grid: GridSpec, point: ElementPosition, half_width: isize) -> bool {
     let (nx, ny, nz) = grid.dimensions;
-    axis_within_support(nx, grid.spacing_m, point.x_m, half_width)
-        && axis_within_support(ny, grid.spacing_m, point.y_m, half_width)
-        && axis_within_support(nz, grid.spacing_m, point.z_m, half_width)
+    axis_within_support(nx, grid.spacing_m, point.x.in_unit::<Meter>(), half_width)
+        && axis_within_support(ny, grid.spacing_m, point.y.in_unit::<Meter>(), half_width)
+        && axis_within_support(nz, grid.spacing_m, point.z.in_unit::<Meter>(), half_width)
 }
 
 fn axis_within_support(n: usize, spacing_m: f64, value_m: f64, half_width: isize) -> bool {
@@ -224,8 +233,8 @@ fn on_grid_axes(grid: GridSpec, point: ElementPosition, nearest: [usize; 3]) -> 
     let center = grid.center_at(nearest[0], nearest[1], nearest[2]);
     let threshold = grid.spacing_m * 1.0e-3;
     [
-        (center.x_m - point.x_m).abs() < threshold,
-        (center.y_m - point.y_m).abs() < threshold,
-        (center.z_m - point.z_m).abs() < threshold,
+        (center.x.in_unit::<Meter>() - point.x.in_unit::<Meter>()).abs() < threshold,
+        (center.y.in_unit::<Meter>() - point.y.in_unit::<Meter>()).abs() < threshold,
+        (center.z.in_unit::<Meter>() - point.z.in_unit::<Meter>()).abs() < threshold,
     ]
 }

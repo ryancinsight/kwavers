@@ -6,6 +6,8 @@ use super::cbs::{
     GridSpec,
 };
 use super::types::{Config, FREQUENCY_DOMAIN_FWI_SOLVER_MODEL};
+use aequitas::systems::si::quantities::Length;
+use aequitas::systems::si::units::Meter;
 use kwavers_core::constants::numerical::{FOUR_PI, TWO_PI};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::Complex64;
@@ -165,9 +167,9 @@ pub(super) fn outgoing_green(
     wavenumber: f64,
     min_distance: f64,
 ) -> Complex64 {
-    let dx = source.x_m - receiver.x_m;
-    let dy = source.y_m - receiver.y_m;
-    let dz = source.z_m - receiver.z_m;
+    let dx = source.x.in_unit::<Meter>() - receiver.x.in_unit::<Meter>();
+    let dy = source.y.in_unit::<Meter>() - receiver.y.in_unit::<Meter>();
+    let dz = source.z.in_unit::<Meter>() - receiver.z.in_unit::<Meter>();
     let distance = (dx * dx + dy * dy + dz * dz).sqrt().max(min_distance);
     Complex64::from_polar(1.0 / (FOUR_PI * distance), wavenumber * distance)
 }
@@ -187,9 +189,9 @@ pub(super) fn voxel_centers(
                 centers.push((
                     ix * ny * nz + iy * nz + iz,
                     ElementPosition {
-                        x_m: (ix as f64 + 0.5 - cx) * spacing_m,
-                        y_m: (iy as f64 + 0.5 - cy) * spacing_m,
-                        z_m: (iz as f64 + 0.5 - cz) * spacing_m,
+                        x: Length::from_unit::<Meter>((ix as f64 + 0.5 - cx) * spacing_m),
+                        y: Length::from_unit::<Meter>((iy as f64 + 0.5 - cy) * spacing_m),
+                        z: Length::from_unit::<Meter>((iz as f64 + 0.5 - cz) * spacing_m),
                     },
                 ));
             }
