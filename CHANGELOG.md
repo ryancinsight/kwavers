@@ -4,9 +4,12 @@
 
 ### Changed
 
-- The LLVM Code Coverage gate now preserves complete Kwavers target coverage
+- The LLVM Code Coverage gate now preserves complete plotting-compatible
+  Kwavers target coverage
   while running the long source-injection integration binary as a concurrent
-  report shard; the per-test timeout and full-grid workload are unchanged.
+  report shard; Cargo-required feature targets remain in their dedicated
+  feature-matrix lanes, and the per-test timeout and full-grid workload are
+  unchanged.
 
 - **Breaking:** Sensor-beamformer positions, sampling and steering frequency,
   sound speed, angles, spacing, aperture, F-number, and spatial-Nyquist

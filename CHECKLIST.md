@@ -14,10 +14,12 @@
       including rejection of invalid typed derived-metric inputs.
 - [x] Run locked checks, focused/full Nextest, warning-denied Clippy,
       doctests, Rustdoc, format, and residue scans.
-- [x] Split the complete LLVM coverage workload into concurrent reports after
-      the exact-head job budget was consumed by the long source-injection test;
-      keep every target instrumented and preserve the existing finite timeout
-      contracts.
+- [x] Split the complete plotting-compatible LLVM coverage workload into
+      concurrent reports after the exact-head job budget was consumed by the
+      long source-injection test; keep every selected target instrumented and
+      preserve the existing finite timeout contracts. Filter targets by their
+      Cargo-required features so the plotting lane does not select `full`-only
+      tests.
 - [ ] Rerun the exact PR head and collect green hosted gates before merge.
 
 Acceptance: no raw physical scalar remains in the sensor-beamformer public

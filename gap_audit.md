@@ -46,12 +46,15 @@ a sensor-metric defect: Code Coverage job `91609692912` consumed its
 70-minute budget while LLVM Tarpaulin was still executing the complete target
 set. The log records `session2_source_injection_test` completing its two tests
 in 1230.48 seconds before the job was cancelled; no source assertion failed.
-The coverage workflow now derives the Kwavers test-target list from Cargo
-metadata, keeps every target under LLVM instrumentation, runs the long binary
-as a concurrent shard after one clean, and uploads both Cobertura reports to
-Codecov. This removes serial wall-clock contention without raising the
-per-test 300-second timeout or shrinking the full-grid workload. The exact
-head must be rerun before this item can close.
+The first sharded retry exposed one command defect: explicit enumeration
+selected `solver_test`, whose Cargo metadata requires the `full` feature while
+this lane enables only `plotting`. The workflow now filters target metadata by
+required features, keeps every plotting-compatible target under LLVM
+instrumentation, runs the long binary as a concurrent shard after one clean,
+and uploads both Cobertura reports to Codecov. Feature-only targets remain in
+their dedicated matrix jobs. This removes serial wall-clock contention without
+raising the per-test 300-second timeout or shrinking the full-grid workload.
+The corrected exact head must be rerun before this item can close.
 
 ### KWAVERS-AEQ-MET-57 — shared beamforming configuration metrics
 

@@ -265,9 +265,11 @@ jobs:
         # Ptrace rewriting invalidates dependency compile-time layout checks;
         # LLVM source instrumentation preserves those const-evaluation invariants.
         # Tarpaulin serializes selected test targets. Keep the complete target
-        # set instrumented, but run the long source-injection binary alongside
-        # the remaining library and integration targets so one workload cannot
-        # consume the entire finite job budget.
+        # set accepted by the plotting feature set instrumented, but run the
+        # long source-injection binary alongside the remaining library and
+        # integration targets so one workload cannot consume the entire finite
+        # job budget. Targets requiring another feature are covered by their
+        # dedicated feature-matrix jobs, as in the original Cargo selection.
         run: |
           set -euo pipefail
           mkdir -p coverage/core coverage/source-injection
@@ -278,6 +280,7 @@ jobs:
                 | select(.name == "kwavers")
                 | .targets[]
                 | select((.kind | index("test")) != null)
+                | select((((.required-features // []) - ["plotting"]) | length) == 0)
                 | .name
               ' \
               | grep --fixed-strings --invert-match --line-regexp session2_source_injection_test
