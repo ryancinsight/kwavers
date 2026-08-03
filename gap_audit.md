@@ -1,5 +1,27 @@
 ## Live Aequitas closure — 2026-08-02
 
+### KWAVERS-AEQ-MET-59 — PAM/neural sensor metric gap (claimed 2026-08-03)
+
+The next bounded raw-metric family is now claimed. PAM exposes raw delay-and-
+sum sound speed and sampling frequency, beamforming frequency bands, spatial
+resolution, focal point, integration time, and event position/time/peak
+frequency. Neural `SensorGeometry` exposes raw positions, pitch, sampling
+frequency, and sound speed; traditional neural DAS accepts raw steering angles
+and converts position/speed/angle into sample delays.
+
+The implementation boundary will use Aequitas `Length`, `Velocity`,
+`Frequency`, `Time`, and `Angle`. Scalar extraction is limited to trigonometric
+and delay-index formulas, FFT-bin mapping, and dense Leto buffers. The
+noise-floor `detection_threshold` is a dimensionless multiplier. PAM-wide
+`threshold` and event `intensity` are not assigned a physical Aequitas unit in
+this slice because the consuming spectrum is computed from uncalibrated raw
+signal values; a future calibration contract must define that unit before the
+fields can become `Intensity` or another physical quantity.
+
+Eunomia `Complex` values, if present at the FFT/storage boundary, continue to
+represent real and quadrature components under one observable signal unit. An
+imaginary SI unit or complex-valued Aequitas physical quantity is not valid.
+
 ### KWAVERS-AEQ-MET-58 — sensor-beamformer metric gap (claimed 2026-08-03)
 
 The audit found a remaining raw physical boundary in

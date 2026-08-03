@@ -1,5 +1,25 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-59 typed PAM/neural sensor metrics [major] [arch] — in progress 2026-08-03
+
+- [x] Audit the PAM delay-and-sum, PAM configuration, neural sensor geometry,
+      and neural traditional-DAS public fields and formula boundaries.
+- [x] Classify `detection_threshold` as dimensionless and preserve the
+      uncalibrated PAM signal threshold/intensity as representation values;
+      do not assign a fabricated physical unit.
+- [x] Record ADR 098 and the Eunomia shared-unit/real-observable rule before
+      changing the public API.
+- [ ] Type positions, pitch, focal point, spatial resolution, sound speed,
+      sampling/band/peak frequencies, and event/integration times through
+      Aequitas; migrate all direct callers without wrappers.
+- [ ] Add analytical geometry and delay regressions, invalid-input coverage,
+      and complete the locked package, Nextest, Clippy, doctest, Rustdoc,
+      formatting, residue, and hosted gates.
+
+Acceptance: no raw physical scalar remains in the scoped PAM/neural public
+contracts; threshold semantics remain honest; Eunomia complex signal data
+retains one shared observable unit and no imaginary SI unit is introduced.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-58 typed sensor-beamformer metrics [major] [arch] — done 2026-08-03
 
 - [x] Audit the sensor-beamformer public fields, formulas, direct callers, and

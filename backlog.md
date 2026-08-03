@@ -4,14 +4,36 @@
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KWAVERS-AEQ-MET-58 | Type sensor-beamformer geometry, sampling, steering, aperture, F-number, and spatial-frequency metrics with Aequitas; preserve Eunomia complex steering units. | [arch] [major] | in progress | Codex | `crates/kwavers-transducer/src/beamforming/sensor_beamformer/**`, direct Kwavers callers/tests, ADR 097, PM artifacts |
+| KWAVERS-AEQ-MET-59 | Type PAM delay-and-sum and neural sensor geometry, timing, frequency, and event-coordinate metrics with Aequitas; preserve Eunomia complex signal units. | [arch] [major] | in progress | Codex | `crates/kwavers-analysis/src/signal_processing/{pam,beamforming/neural}/**`, callers/tests, ADR 098, PM artifacts |
+| KWAVERS-AEQ-MET-58 | Type sensor-beamformer geometry, sampling, steering, aperture, F-number, and spatial-frequency metrics with Aequitas; preserve Eunomia complex steering units. | [arch] [major] | done 2026-08-03 | Codex | `crates/kwavers-transducer/src/beamforming/sensor_beamformer/**`, direct Kwavers callers/tests, ADR 097, PM artifacts |
 | KWAVERS-AEQ-MET-57 | Type the shared beamforming configuration's sound speed, sampling frequency, and reference frequency with Aequitas; migrate the processor formula boundaries and preserve Eunomia complex storage units. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-transducer/src/beamforming/{config,processor}.rs`, callers/tests, ADR 096, PM artifacts |
 | KWAVERS-AEQ-MET-56 | Type rectangular-transducer geometry, frequency, medium speed/density, element-size, and wavenumber contracts with Aequitas; reject invalid geometry and preserve Eunomia complex storage boundaries. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-transducer/src/transducers/rectangular.rs`, FNM solver, Rayleigh-Sommerfeld dispatch, FNM benchmark, ADR 095, PM artifacts |
 | KWAVERS-AEQ-MET-55 | Type the public ultrafast plane-wave and diverging-wave geometry, timing, angle, frequency, F-number, image-coordinate, and scalar apodization metrics with Aequitas; preserve scalar extraction only at numerical and Leto storage boundaries and document Eunomia complex compatibility. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-transducer/src/ultrafast/{plane_wave,diverging_wave}/**`, ADR 094, PM artifacts |
 | KWAVERS-AEQ-MET-54 | Type the public ultrafast transmission scheduler's speed, depth, PRF, event times, frame rates, and tilt angles with Aequitas; keep scalar extraction at the PRF/timing formula boundary and document the real-only Eunomia compatibility rule. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-transducer/src/ultrafast/sequencer/**`, manifest, ADR 093, PM artifacts |
 | KWAVERS-AEQ-INTEGRATION-1 | Integrate the current Aequitas metric closure for therapeutic microbubble and plasmonics contracts on current `main`; harden the public three-dimensional plasmonic coordinate contract and synchronize the audit. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-physics/src/{acoustics/therapy/microbubble,electromagnetic}`, PM artifacts |
 
-## KWAVERS-AEQ-MET-58 — Type sensor-beamformer metrics [major] [arch] — in progress
+## KWAVERS-AEQ-MET-59 — Type PAM/neural sensor metrics [major] [arch] — in progress
+
+- Owner: Codex; scope: `crates/kwavers-analysis/src/signal_processing/pam/**`,
+  neural `SensorGeometry` and traditional DAS steering, direct callers/tests,
+  ADR 098, and synchronized PM artifacts. Aperture-design and other array
+  families remain separate.
+- Outcome: carry sensor positions, pitch, focal points, and PAM spatial
+  resolution as `Length`; sound speeds as `Velocity`; sampling, band, and peak
+  frequencies as `Frequency`; event times and PAM integration time as `Time`.
+  Scalar extraction remains at trigonometric, delay-index, FFT-bin, and dense
+  Leto storage boundaries.
+- Non-goal: `PAMConfig::threshold` and event intensity remain representation
+  values until the consuming signal calibration contract supplies a physical
+  unit. `detection_threshold` is a dimensionless noise-floor multiplier.
+- Acceptance: all typed fields migrate without compatibility wrappers;
+  linear/phased geometry and DAS delays preserve analytical values; invalid
+  geometry and non-finite quantities are rejected; locked checks, Nextest,
+  Clippy, doctests, Rustdoc, residue scans, and hosted gates pass; Eunomia
+  complex signal values retain one observable unit and no imaginary SI unit is
+  introduced.
+
+## KWAVERS-AEQ-MET-58 — Type sensor-beamformer metrics [major] [arch] — done 2026-08-03
 
 - Owner: Codex; scope: `crates/kwavers-transducer/src/beamforming/sensor_beamformer/**`,
   direct `crates/kwavers/tests/**` callers, ADR 097, and synchronized PM
