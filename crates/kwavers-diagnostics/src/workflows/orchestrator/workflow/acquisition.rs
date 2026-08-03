@@ -1,6 +1,10 @@
 //! Ultrasound data acquisition for the clinical workflow orchestrator.
 
 use super::ClinicalWorkflowOrchestrator;
+#[cfg(feature = "gpu")]
+use aequitas::systems::si::quantities::{Frequency, Velocity};
+#[cfg(feature = "gpu")]
+use aequitas::systems::si::units::{Hertz, MeterPerSecond};
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::error::KwaversResult;
@@ -43,10 +47,10 @@ impl ClinicalWorkflowOrchestrator {
             };
 
             let beamforming_config = BeamformingConfig3D {
-                base_config: kwavers_transducer::beamforming::BeamformingConfig {
-                    sound_speed: SOUND_SPEED_TISSUE,
-                    sampling_frequency: config.sampling_frequency,
-                    reference_frequency: config.frequency,
+                base_config: kwavers_transducer::beamforming::BeamformingCoreConfig {
+                    sound_speed: Velocity::from_unit::<MeterPerSecond>(SOUND_SPEED_TISSUE),
+                    sampling_frequency: Frequency::from_unit::<Hertz>(config.sampling_frequency),
+                    reference_frequency: Frequency::from_unit::<Hertz>(config.frequency),
                     diagonal_loading: 0.01,
                     num_snapshots: 100,
                     spatial_smoothing: None,

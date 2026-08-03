@@ -4,6 +4,8 @@ use super::PamBeamformingMethod;
 use crate::signal_processing::beamforming::narrowband::{
     subspace_spatial_spectrum_point, SubspaceMethod, SubspaceSpectrumConfig,
 };
+use aequitas::systems::si::quantities::Frequency;
+use aequitas::systems::si::units::{Hertz, MeterPerSecond};
 use kwavers_core::error::KwaversResult;
 use kwavers_transducer::beamforming::processor::BeamformingProcessor;
 use kwavers_transducer::beamforming::BeamformingCoreConfig;
@@ -142,7 +144,7 @@ impl PassiveAcousticMapper {
         let cfg = SubspaceSpectrumConfig {
             frequency_hz: 0.5 * (f_min + f_max),
             sampling_frequency_hz: sample_rate,
-            sound_speed: core.sound_speed,
+            sound_speed: core.sound_speed.in_unit::<MeterPerSecond>(),
             num_sources,
             diagonal_loading: core.diagonal_loading,
         };
@@ -187,7 +189,7 @@ impl PassiveAcousticMapper {
 impl From<PamBeamformingConfig> for BeamformingCoreConfig {
     fn from(pam: PamBeamformingConfig) -> Self {
         let (f_min, f_max) = pam.frequency_range;
-        let reference_frequency = 0.5 * (f_min + f_max);
+        let reference_frequency = Frequency::from_unit::<Hertz>(0.5 * (f_min + f_max));
 
         let mut core = pam.core;
         core.reference_frequency = reference_frequency;

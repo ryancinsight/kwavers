@@ -3321,6 +3321,7 @@ dependencies = [
 name = "kwavers-diagnostics"
 version = "3.0.0"
 dependencies = [
+ "aequitas",
  "anyhow",
  "chrono",
  "consus-core",

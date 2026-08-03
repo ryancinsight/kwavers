@@ -81,5 +81,5 @@ pub use transducers::{
 };
 
 // Receiver-array acquisition stacks
-pub use beamforming::{BeamformingConfig, BeamformingCoreConfig};
+pub use beamforming::BeamformingCoreConfig;
 pub use passive_acoustic_mapping::{PamArrayElement, PamArrayGeometry, PamDirectivityPattern};

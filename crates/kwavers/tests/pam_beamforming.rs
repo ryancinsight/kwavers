@@ -5,6 +5,8 @@
 //! - Tests must exercise only what we touched: PAM + shared `BeamformingProcessor` integration.
 //! - Tests must run in `--release` and be deterministic.
 
+use aequitas::systems::si::quantities::{Frequency, Velocity};
+use aequitas::systems::si::units::{Hertz, MeterPerSecond};
 use kwavers_analysis::signal_processing::pam::{
     ApodizationType, PAMConfig, PamBeamformingConfig, PamBeamformingMethod, PassiveAcousticMapper,
 };
@@ -58,8 +60,8 @@ fn pam_config_for(
     sound_speed: f64,
 ) -> PAMConfig {
     let core = BeamformingCoreConfig {
-        sampling_frequency: sample_rate,
-        sound_speed,
+        sampling_frequency: Frequency::from_unit::<Hertz>(sample_rate),
+        sound_speed: Velocity::from_unit::<MeterPerSecond>(sound_speed),
         ..Default::default()
     };
 

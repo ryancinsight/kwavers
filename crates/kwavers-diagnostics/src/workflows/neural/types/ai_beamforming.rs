@@ -1,7 +1,7 @@
 //! AI-enhanced beamforming configuration, result, and supporting types.
 
 use kwavers_analysis::signal_processing::beamforming::neural::config::FeatureConfig;
-use kwavers_transducer::beamforming::BeamformingConfig;
+use kwavers_transducer::beamforming::BeamformingCoreConfig;
 use leto::Array3;
 use std::collections::HashMap;
 
@@ -138,7 +138,7 @@ impl ClinicalThresholds {
 #[derive(Debug, Clone)]
 pub struct AIBeamformingConfig {
     /// Base beamforming configuration.
-    pub beamforming_config: BeamformingConfig,
+    pub beamforming_config: BeamformingCoreConfig,
 
     /// Feature extraction configuration.
     pub feature_config: FeatureConfig,
@@ -156,7 +156,7 @@ pub struct AIBeamformingConfig {
 impl Default for AIBeamformingConfig {
     fn default() -> Self {
         Self {
-            beamforming_config: BeamformingConfig::default(),
+            beamforming_config: BeamformingCoreConfig::default(),
             feature_config: FeatureConfig::default(),
             clinical_thresholds: ClinicalThresholds::default(),
             enable_realtime_pinn: true,

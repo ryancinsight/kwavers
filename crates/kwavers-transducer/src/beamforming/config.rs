@@ -1,5 +1,7 @@
 //! Beamforming configuration (core, unified)
 
+use aequitas::systems::si::quantities::{Frequency, Velocity};
+use aequitas::systems::si::units::{Hertz, MeterPerSecond};
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::{SAMPLING_FREQUENCY_DEFAULT, SOUND_SPEED_TISSUE};
 
@@ -7,19 +9,16 @@ use kwavers_core::constants::{SAMPLING_FREQUENCY_DEFAULT, SOUND_SPEED_TISSUE};
 ///
 /// This struct is the single source of truth for physical and numerical
 /// parameters used by array beamforming. Downstream modules (e.g., PAM and
-/// localization) should wrap or convert into this core type.
+/// localization) consume this core type directly.
 ///
-/// The legacy name `BeamformingConfig` remains available as a type alias to
-/// preserve API stability while consolidating the architecture.
-#[doc(alias = "BeamformingConfig")]
 #[derive(Debug, Clone)]
 pub struct BeamformingCoreConfig {
-    /// Sound speed in medium (m/s)
-    pub sound_speed: f64,
-    /// Sampling frequency (Hz)
-    pub sampling_frequency: f64,
-    /// Reference frequency for array design (Hz)
-    pub reference_frequency: f64,
+    /// Sound speed in the medium.
+    pub sound_speed: Velocity<f64>,
+    /// Sampling frequency.
+    pub sampling_frequency: Frequency<f64>,
+    /// Reference frequency for array design.
+    pub reference_frequency: Frequency<f64>,
     /// Diagonal loading factor for regularization
     pub diagonal_loading: f64,
     /// Number of snapshots for covariance estimation
@@ -30,13 +29,13 @@ pub struct BeamformingCoreConfig {
 
 impl Default for BeamformingCoreConfig {
     fn default() -> Self {
-        let reference_frequency = 5.0 * MHZ_TO_HZ; // 5 MHz
+        let reference_frequency = Frequency::from_unit::<Hertz>(5.0 * MHZ_TO_HZ);
         const DIAGONAL_LOADING_FACTOR: f64 = 0.01; // 1% diagonal loading
         const DEFAULT_SNAPSHOTS: usize = 100;
 
         Self {
-            sound_speed: SOUND_SPEED_TISSUE,
-            sampling_frequency: SAMPLING_FREQUENCY_DEFAULT,
+            sound_speed: Velocity::from_unit::<MeterPerSecond>(SOUND_SPEED_TISSUE),
+            sampling_frequency: Frequency::from_unit::<Hertz>(SAMPLING_FREQUENCY_DEFAULT),
             reference_frequency,
             diagonal_loading: DIAGONAL_LOADING_FACTOR,
             num_snapshots: DEFAULT_SNAPSHOTS,
@@ -45,5 +44,25 @@ impl Default for BeamformingCoreConfig {
     }
 }
 
-/// Backward-compatible alias for the unified core configuration.
-pub type BeamformingConfig = BeamformingCoreConfig;
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_physical_metrics_preserve_si_values() {
+        let config = BeamformingCoreConfig::default();
+
+        assert_eq!(
+            config.sound_speed.in_unit::<MeterPerSecond>(),
+            SOUND_SPEED_TISSUE
+        );
+        assert_eq!(
+            config.sampling_frequency.in_unit::<Hertz>(),
+            SAMPLING_FREQUENCY_DEFAULT
+        );
+        assert_eq!(
+            config.reference_frequency.in_unit::<Hertz>(),
+            5.0 * MHZ_TO_HZ
+        );
+    }
+}

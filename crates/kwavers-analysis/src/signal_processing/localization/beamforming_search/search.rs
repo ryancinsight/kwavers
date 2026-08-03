@@ -3,6 +3,7 @@ use super::types::{
     SearchGrid,
 };
 use crate::signal_processing::localization::LocalizationResult;
+use aequitas::systems::si::units::Hertz;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_receiver::array::{Position, SensorArray};
 use kwavers_transducer::beamforming::processor::BeamformingProcessor;
@@ -26,7 +27,8 @@ pub fn localize_beamforming(
     input.validate(expected)?;
     search_cfg.validate()?;
 
-    if (search_cfg.core.sampling_frequency - input.sampling_frequency).abs() > 0.0 {
+    let sampling_frequency = search_cfg.core.sampling_frequency.in_unit::<Hertz>();
+    if (sampling_frequency - input.sampling_frequency).abs() > 0.0 {
         return Err(KwaversError::InvalidInput(
             "localize_beamforming: search_cfg.core.sampling_frequency must equal input.sampling_frequency to keep frequency-to-sample mapping consistent".to_owned(),
         ));
@@ -184,7 +186,7 @@ impl BeamformSearch {
 
                 let out = crate::signal_processing::beamforming::time_domain::delay_and_sum(
                     sensor_data,
-                    self.processor.config.sampling_frequency,
+                    self.processor.config.sampling_frequency.in_unit::<Hertz>(),
                     &delays_s,
                     &weights,
                     *delay_reference,

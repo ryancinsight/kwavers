@@ -1,7 +1,8 @@
 //! Beamforming processor
 
 // Import config from domain layer (single source of truth for configuration)
-use crate::beamforming::BeamformingConfig;
+use crate::beamforming::BeamformingCoreConfig;
+use aequitas::systems::si::units::{Hertz, MeterPerSecond};
 use kwavers_core::error::KwaversResult;
 use kwavers_math::linear_algebra::LinearAlgebraExt;
 use leto::{Array1, Array2, Array3};
@@ -10,7 +11,7 @@ use leto_ops::inv;
 /// Beamforming processor for array algorithms
 #[derive(Debug)]
 pub struct BeamformingProcessor {
-    pub config: BeamformingConfig,
+    pub config: BeamformingCoreConfig,
     sensor_positions: Vec<[f64; 3]>,
     num_sensors: usize,
 }
@@ -18,7 +19,7 @@ pub struct BeamformingProcessor {
 impl BeamformingProcessor {
     /// Create new beamforming processor
     #[must_use]
-    pub fn new(config: BeamformingConfig, sensor_positions: Vec<[f64; 3]>) -> Self {
+    pub fn new(config: BeamformingCoreConfig, sensor_positions: Vec<[f64; 3]>) -> Self {
         let num_sensors = sensor_positions.len();
         Self {
             config,
@@ -76,7 +77,7 @@ impl BeamformingProcessor {
     /// Reference selection is a separate policy decision and must be explicit in the caller.
     #[must_use]
     pub fn compute_delays(&self, focal_point: [f64; 3]) -> Vec<f64> {
-        let c = self.config.sound_speed;
+        let c = self.config.sound_speed.in_unit::<MeterPerSecond>();
         self.sensor_positions
             .iter()
             .map(|&pos| {
@@ -187,7 +188,7 @@ impl BeamformingProcessor {
             let delays = vec![0.0; n_elements];
             return self.delay_and_sum_with(
                 sensor_data,
-                self.config.sampling_frequency,
+                self.config.sampling_frequency.in_unit::<Hertz>(),
                 &delays,
                 &weights,
             );
@@ -243,7 +244,7 @@ impl BeamformingProcessor {
             let delays = vec![0.0; n_elements];
             return self.delay_and_sum_with(
                 sensor_data,
-                self.config.sampling_frequency,
+                self.config.sampling_frequency.in_unit::<Hertz>(),
                 &delays,
                 &weights,
             );
@@ -269,9 +270,11 @@ impl BeamformingProcessor {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use aequitas::systems::si::quantities::Velocity;
+    use aequitas::systems::si::units::MeterPerSecond;
 
     fn make_processor(n_elements: usize) -> BeamformingProcessor {
-        let cfg = BeamformingConfig::default();
+        let cfg = BeamformingCoreConfig::default();
         let positions = (0..n_elements).map(|_| [0.0, 0.0, 0.0]).collect();
         BeamformingProcessor::new(cfg, positions)
     }
@@ -300,6 +303,17 @@ mod tests {
         for t in 0..n_samples {
             assert!((out[[0, 0, t]] - (sensor0[t] + sensor1[t])).abs() < 1e-12);
         }
+    }
+
+    #[test]
+    fn compute_delays_extracts_configured_velocity_at_formula_boundary() {
+        let config = BeamformingCoreConfig {
+            sound_speed: Velocity::from_unit::<MeterPerSecond>(2.0),
+            ..BeamformingCoreConfig::default()
+        };
+        let processor = BeamformingProcessor::new(config, vec![[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]]);
+
+        assert_eq!(processor.compute_delays([0.0, 0.0, 0.0]), vec![0.0, 0.5]);
     }
 
     #[test]

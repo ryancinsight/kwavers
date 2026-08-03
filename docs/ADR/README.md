@@ -103,3 +103,4 @@
 | [093](093-ultrafast-scheduler-quantities.md) | Aequitas ultrafast transmission scheduler quantities | Accepted — 2026-08-02 |
 | [094](094-ultrafast-plane-diverging-quantities.md) | Aequitas ultrafast plane and diverging-wave quantities | Accepted — 2026-08-02 |
 | [095](095-rectangular-transducer-quantities.md) | ADR 095 — Aequitas rectangular-transducer quantities | Accepted — 2026-08-02 |
+| [096](096-beamforming-configuration-quantities.md) | ADR 096 — Aequitas beamforming configuration quantities | Accepted — 2026-08-02 |

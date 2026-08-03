@@ -1,5 +1,44 @@
 ## Live Aequitas closure — 2026-08-02
 
+### KWAVERS-AEQ-MET-57 — shared beamforming configuration metrics
+
+The next audit found that `BeamformingCoreConfig` still exposed shared
+sound-speed, sampling-frequency, and reference-frequency configuration as
+raw `f64` values. The bounded slice covers that configuration and
+`beamforming/processor.rs`, where sound speed enters delay/steering formulas
+and sampling/reference frequency enter signal-axis and wavelength formulas.
+Sensor-array configuration, aperture design synthesis, and other transducer
+families remain separate audit items; this slice does not widen to them.
+
+The implementation uses Aequitas `Velocity<f64>` and `Frequency<f64>`.
+Scalar extraction occurs only at delay, FFT, wavelength, and GPU formula
+boundaries. The former `BeamformingConfig` alias is removed; current callers
+use the canonical `BeamformingCoreConfig` name without a wrapper.
+
+Eunomia compatibility is preserved at the signal boundary. Kwavers complex
+baseband and steering buffers remain `eunomia::Complex` representation data;
+their real and quadrature components share the observable signal unit and do
+not create an imaginary SI unit. Aequitas supports `Quantity<Complex64>` and
+Eunomia's `UnitScalar` scales both components by one real conversion factor,
+so complex physical quantities remain compatible when a future formula needs
+one. No complex-valued configuration metric is introduced in this slice.
+
+Implementation: `crates/kwavers-transducer/src/beamforming/config.rs` and
+`processor.rs`, PAM/localization/neural callers, diagnostics workflow setup,
+and the public re-exports. The transducer Nextest
+`2ce49892-e602-490f-843b-c4a265d7eec3` passes 4/4 focused tests, including the
+typed velocity delay regression. The analysis Nextest
+`dc48bbb6-6618-4531-8091-f18238723d57` passes 2/2 PAM frequency/loading
+regressions. Locked package checks and warning-denied Clippy pass for
+`kwavers-transducer`, `kwavers-analysis`, `kwavers-diagnostics`, and the
+`kwavers` test targets. Full package Nextest passes: transducer
+`1688543b-9f6e-4c6f-a88c-cb97f44e8d3e` is 223/223 with one skipped, analysis
+`afeb1b5d-be6b-421e-ba59-d99be55c567e` is 725/725, and diagnostics
+`12045599-c678-4d9d-8b2a-d322f6082f57` is 191/191. Transducer, analysis, and
+diagnostics doctests and Rustdoc pass. Formatting, diff checks,
+raw-public-signature scans, and complex boundary scans pass. No runtime or
+memory performance claim is made.
+
 ### KWAVERS-AEQ-MET-56 — rectangular transducer geometry and wavenumber
 
 The audit found that `RectangularTransducer` still exposed width, height,

@@ -1,4 +1,5 @@
 use super::*;
+use aequitas::systems::si::units::{Hertz, MeterPerSecond};
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::{SAMPLING_FREQUENCY_DEFAULT, SOUND_SPEED_TISSUE};
 
@@ -16,11 +17,17 @@ fn pam_policy_to_core_capon_loading_and_midpoint_frequency() {
     };
 
     let core: BeamformingCoreConfig = pam.into();
-    assert!((core.reference_frequency - 2.0 * MHZ_TO_HZ).abs() < 1.0);
+    assert!((core.reference_frequency.in_unit::<Hertz>() - 2.0 * MHZ_TO_HZ).abs() < 1.0);
     assert!((core.diagonal_loading - 0.05).abs() < 1e-12);
 
-    assert_eq!(core.sound_speed, SOUND_SPEED_TISSUE);
-    assert_eq!(core.sampling_frequency, SAMPLING_FREQUENCY_DEFAULT);
+    assert_eq!(
+        core.sound_speed.in_unit::<MeterPerSecond>(),
+        SOUND_SPEED_TISSUE
+    );
+    assert_eq!(
+        core.sampling_frequency.in_unit::<Hertz>(),
+        SAMPLING_FREQUENCY_DEFAULT
+    );
     assert_eq!(core.num_snapshots, 100);
     assert_eq!(core.spatial_smoothing, None);
 }
@@ -42,7 +49,7 @@ fn pam_policy_to_core_non_capon_preserves_core_loading_and_sets_reference_freque
     };
 
     let core: BeamformingCoreConfig = pam.into();
-    assert!((core.reference_frequency - 2.0 * MHZ_TO_HZ).abs() < 1.0);
+    assert!((core.reference_frequency.in_unit::<Hertz>() - 2.0 * MHZ_TO_HZ).abs() < 1.0);
     assert!((core.diagonal_loading - embedded_core.diagonal_loading).abs() < 1e-12);
 }
 
