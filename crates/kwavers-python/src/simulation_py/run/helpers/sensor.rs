@@ -1,3 +1,4 @@
+use aequitas::systems::si::units::Meter;
 use kwavers_grid::Grid as KwaversGrid;
 
 use super::super::super::Simulation;
@@ -17,13 +18,16 @@ impl Simulation {
 
         if let Some(trans) = transducer {
             let mut mask = leto::Array3::<bool>::from_elem((nx, ny, nz), false);
-            let width_pts = (trans.inner.element_width() / grid.dx).round() as isize;
-            let length_pts = (trans.inner.element_length() / grid.dz).round() as isize;
+            let width_pts =
+                (trans.inner.element_width().in_unit::<Meter>() / grid.dx).round() as isize;
+            let length_pts =
+                (trans.inner.element_length().in_unit::<Meter>() / grid.dz).round() as isize;
 
             for pos in trans.inner.element_positions() {
-                let cx = ((pos.0 - grid.origin[0]) / grid.dx).round() as isize;
-                let cy = ((pos.1 - grid.origin[1]) / grid.dy).round() as isize;
-                let cz = ((pos.2 - grid.origin[2]) / grid.dz).round() as isize;
+                let [x, y, z] = pos.map(|coordinate| coordinate.in_unit::<Meter>());
+                let cx = ((x - grid.origin[0]) / grid.dx).round() as isize;
+                let cy = ((y - grid.origin[1]) / grid.dy).round() as isize;
+                let cz = ((z - grid.origin[2]) / grid.dz).round() as isize;
 
                 let ix_start = cx - (width_pts / 2);
                 let ix_end = ix_start + width_pts - 1;
@@ -87,14 +91,15 @@ impl Simulation {
         let nx = grid.nx;
         let ny = grid.ny;
         let nz = grid.nz;
-        let width_pts = (trans.element_width() / grid.dx).round() as isize;
-        let length_pts = (trans.element_length() / grid.dz).round() as isize;
+        let width_pts = (trans.element_width().in_unit::<Meter>() / grid.dx).round() as isize;
+        let length_pts = (trans.element_length().in_unit::<Meter>() / grid.dz).round() as isize;
 
         let mut indices = Vec::new();
         for pos in trans.element_positions() {
-            let cx = ((pos.0 - grid.origin[0]) / grid.dx).round() as isize;
-            let cy = ((pos.1 - grid.origin[1]) / grid.dy).round() as isize;
-            let cz = ((pos.2 - grid.origin[2]) / grid.dz).round() as isize;
+            let [x, y, z] = pos.map(|coordinate| coordinate.in_unit::<Meter>());
+            let cx = ((x - grid.origin[0]) / grid.dx).round() as isize;
+            let cy = ((y - grid.origin[1]) / grid.dy).round() as isize;
+            let cz = ((z - grid.origin[2]) / grid.dz).round() as isize;
 
             let ix_start = cx - (width_pts / 2);
             let iz_start = cz - (length_pts / 2);

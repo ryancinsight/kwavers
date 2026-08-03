@@ -1,6 +1,8 @@
 //! `TransducerArray2D` struct and impl.
 
 use super::types::{ApodizationType, Array2dElement, TransducerArray2DConfig};
+use aequitas::systems::si::quantities::{Angle, Frequency, Length, Time, Velocity};
+use aequitas::systems::si::units::{Hertz, Meter, MeterPerSecond, Radian, Second};
 use kwavers_signal::Signal;
 use leto::Array3;
 use std::fmt::Debug;
@@ -10,12 +12,12 @@ use std::sync::Arc;
 #[derive(Debug)]
 pub struct TransducerArray2D {
     pub(super) config: TransducerArray2DConfig,
-    pub(super) sound_speed: f64,
-    pub(super) frequency: f64,
+    pub(super) sound_speed: Velocity<f64>,
+    pub(super) frequency: Frequency<f64>,
     pub(super) elements: Vec<Array2dElement>,
-    pub(super) focus_distance: f64,
-    pub(super) elevation_focus_distance: f64,
-    pub(super) steering_angle: f64,
+    pub(super) focus_distance: Option<Length<f64>>,
+    pub(super) elevation_focus_distance: Option<Length<f64>>,
+    pub(super) steering_angle: Angle<f64>,
     pub(super) transmit_apodization: ApodizationType,
     pub(super) receive_apodization: ApodizationType,
     pub(super) signal: Option<Arc<dyn Signal>>,
@@ -51,16 +53,22 @@ impl TransducerArray2D {
     ///
     pub fn new(
         config: TransducerArray2DConfig,
-        sound_speed: f64,
-        frequency: f64,
+        sound_speed: Velocity<f64>,
+        frequency: Frequency<f64>,
     ) -> Result<Self, String> {
         config.validate()?;
 
-        if sound_speed <= 0.0 {
-            return Err("Sound speed must be positive".to_owned());
+        let sound_speed_m_s = sound_speed.in_unit::<MeterPerSecond>();
+        if !sound_speed_m_s.is_finite() || sound_speed_m_s <= 0.0 {
+            return Err(format!(
+                "Sound speed must be finite and positive, got {sound_speed_m_s}"
+            ));
         }
-        if frequency <= 0.0 {
-            return Err("Frequency must be positive".to_owned());
+        let frequency_hz = frequency.in_unit::<Hertz>();
+        if !frequency_hz.is_finite() || frequency_hz <= 0.0 {
+            return Err(format!(
+                "Frequency must be finite and positive, got {frequency_hz}"
+            ));
         }
 
         let num_elements = config.number_elements;
@@ -72,9 +80,9 @@ impl TransducerArray2D {
             sound_speed,
             frequency,
             elements,
-            focus_distance: f64::INFINITY,
-            elevation_focus_distance: f64::INFINITY,
-            steering_angle: 0.0,
+            focus_distance: None,
+            elevation_focus_distance: None,
+            steering_angle: Angle::from_unit::<Radian>(0.0),
             transmit_apodization: ApodizationType::Uniform,
             receive_apodization: ApodizationType::Uniform,
             signal: None,
@@ -92,11 +100,12 @@ impl TransducerArray2D {
         config: &TransducerArray2DConfig,
     ) -> Vec<Array2dElement> {
         let num_elements = config.number_elements;
-        let (cx, cy, cz) = config.center_position;
+        let [cx, cy, cz] = config
+            .center_position
+            .map(|coordinate| coordinate.in_unit::<Meter>());
 
-        let pitch = config.element_width + config.element_spacing;
+        let pitch = config.element_spacing.in_unit::<Meter>();
         let total_width = (num_elements - 1) as f64 * pitch;
-        let _start_x = cx - total_width / 2.0;
 
         (0..num_elements)
             .map(|i| {
@@ -110,17 +119,22 @@ impl TransducerArray2D {
                 let mut y = cy;
                 let z = cz;
 
-                if config.radius.is_finite() && config.radius > 0.0 {
+                if let Some(radius) = config.curvature.radius() {
+                    let radius_m = radius.in_unit::<Meter>();
                     let arc_length = frac * total_width;
-                    let angle = arc_length / config.radius;
-                    y = config.radius.mul_add(1.0 - angle.cos(), cy);
+                    let angle = arc_length / radius_m;
+                    y = radius_m.mul_add(1.0 - angle.cos(), cy);
                 }
 
                 Array2dElement {
-                    position: (x, y, z),
+                    position: [
+                        Length::from_unit::<Meter>(x),
+                        Length::from_unit::<Meter>(y),
+                        Length::from_unit::<Meter>(z),
+                    ],
                     width: config.element_width,
                     length: config.element_length,
-                    time_delay: 0.0,
+                    time_delay: Time::from_unit::<Second>(0.0),
                     transmit_weight: 1.0,
                     receive_weight: 1.0,
                     is_active: true,
@@ -135,28 +149,56 @@ impl TransducerArray2D {
         self.invalidate_cache();
     }
 
-    /// Set focus distance (m)
-    pub fn set_focus_distance(&mut self, distance: f64) {
-        if distance > 0.0 {
-            self.focus_distance = distance;
-            self.update_time_delays();
-            self.invalidate_cache();
+    /// Set the azimuthal focus distance.
+    pub fn set_focus_distance(&mut self, distance: Length<f64>) -> Result<(), String> {
+        let distance_m = distance.in_unit::<Meter>();
+        if !distance_m.is_finite() || distance_m <= 0.0 {
+            return Err(format!(
+                "Focus distance must be finite and positive, got {distance_m}"
+            ));
         }
-    }
-
-    /// Set elevation focus distance (m)
-    pub fn set_elevation_focus_distance(&mut self, distance: f64) {
-        if distance > 0.0 {
-            self.elevation_focus_distance = distance;
-            self.invalidate_cache();
-        }
-    }
-
-    /// Set steering angle (degrees)
-    pub fn set_steering_angle(&mut self, angle_deg: f64) {
-        self.steering_angle = angle_deg;
+        self.focus_distance = Some(distance);
         self.update_time_delays();
         self.invalidate_cache();
+        Ok(())
+    }
+
+    /// Clear the azimuthal focus and use an unfocused wavefront.
+    pub fn clear_focus_distance(&mut self) {
+        self.focus_distance = None;
+        self.update_time_delays();
+        self.invalidate_cache();
+    }
+
+    /// Set the elevation focus distance.
+    pub fn set_elevation_focus_distance(&mut self, distance: Length<f64>) -> Result<(), String> {
+        let distance_m = distance.in_unit::<Meter>();
+        if !distance_m.is_finite() || distance_m <= 0.0 {
+            return Err(format!(
+                "Elevation focus distance must be finite and positive, got {distance_m}"
+            ));
+        }
+        self.elevation_focus_distance = Some(distance);
+        self.invalidate_cache();
+        Ok(())
+    }
+
+    /// Clear the elevation focus and use an unfocused elevation wavefront.
+    pub fn clear_elevation_focus_distance(&mut self) {
+        self.elevation_focus_distance = None;
+        self.invalidate_cache();
+    }
+
+    /// Set the steering angle in the coherent SI radian unit.
+    pub fn set_steering_angle(&mut self, angle: Angle<f64>) -> Result<(), String> {
+        let angle_rad = angle.in_unit::<Radian>();
+        if !angle_rad.is_finite() {
+            return Err(format!("Steering angle must be finite, got {angle_rad}"));
+        }
+        self.steering_angle = angle;
+        self.update_time_delays();
+        self.invalidate_cache();
+        Ok(())
     }
 
     /// Set transmit apodization type
@@ -210,19 +252,25 @@ impl TransducerArray2D {
 
     /// Get element positions
     #[must_use]
-    pub fn element_positions(&self) -> Vec<(f64, f64, f64)> {
+    pub fn element_positions(&self) -> Vec<[Length<f64>; 3]> {
         self.elements.iter().map(|e| e.position).collect()
     }
 
-    /// Get current focus distance
+    /// Get the current azimuthal focus distance, if focusing is enabled.
     #[must_use]
-    pub fn focus_distance(&self) -> f64 {
+    pub fn focus_distance(&self) -> Option<Length<f64>> {
         self.focus_distance
     }
 
-    /// Get current steering angle (degrees)
+    /// Get the current elevation focus distance, if focusing is enabled.
     #[must_use]
-    pub fn steering_angle(&self) -> f64 {
+    pub fn elevation_focus_distance(&self) -> Option<Length<f64>> {
+        self.elevation_focus_distance
+    }
+
+    /// Get the current steering angle in radians.
+    #[must_use]
+    pub fn steering_angle(&self) -> Angle<f64> {
         self.steering_angle
     }
 
@@ -232,39 +280,39 @@ impl TransducerArray2D {
         self.config.number_elements
     }
 
-    /// Get element width (m)
+    /// Get element width.
     #[must_use]
-    pub fn element_width(&self) -> f64 {
+    pub fn element_width(&self) -> Length<f64> {
         self.config.element_width
     }
 
-    /// Get element length (m)
+    /// Get element length.
     #[must_use]
-    pub fn element_length(&self) -> f64 {
+    pub fn element_length(&self) -> Length<f64> {
         self.config.element_length
     }
 
-    /// Get element spacing (m)
+    /// Get center-to-center element spacing.
     #[must_use]
-    pub fn element_spacing(&self) -> f64 {
+    pub fn element_spacing(&self) -> Length<f64> {
         self.config.element_spacing
     }
 
-    /// Get radius of curvature (m)
+    /// Get the array surface geometry.
     #[must_use]
-    pub fn radius(&self) -> f64 {
-        self.config.radius
+    pub fn curvature(&self) -> super::types::ArrayCurvature {
+        self.config.curvature
     }
 
-    /// Get operating frequency (Hz)
+    /// Get operating frequency.
     #[must_use]
-    pub fn frequency(&self) -> f64 {
+    pub fn frequency(&self) -> Frequency<f64> {
         self.frequency
     }
 
-    /// Get sound speed (m/s)
+    /// Get sound speed.
     #[must_use]
-    pub fn sound_speed(&self) -> f64 {
+    pub fn sound_speed(&self) -> Velocity<f64> {
         self.sound_speed
     }
 
@@ -280,12 +328,19 @@ impl TransducerArray2D {
         &self.receive_apodization
     }
 
-    /// Set center position
-    pub fn set_center_position(&mut self, position: (f64, f64, f64)) {
+    /// Set center position.
+    pub fn set_center_position(&mut self, position: [Length<f64>; 3]) -> Result<(), String> {
+        if position
+            .iter()
+            .any(|coordinate| !coordinate.in_unit::<Meter>().is_finite())
+        {
+            return Err("Center position coordinates must be finite".to_owned());
+        }
         self.config.center_position = position;
         self.elements = Self::compute_element_positions(&self.config);
         self.update_time_delays();
         self.invalidate_cache();
+        Ok(())
     }
 
     pub(super) fn update_apodization_weights(&mut self) {
@@ -303,55 +358,59 @@ impl TransducerArray2D {
     }
 
     pub(super) fn update_time_delays(&mut self) {
-        let c = self.sound_speed;
+        let c = self.sound_speed.in_unit::<MeterPerSecond>();
         let num_elements = self.config.number_elements;
 
         let center_idx = num_elements / 2;
-        let center_pos = self.elements[center_idx].position;
+        let center_pos = self.elements[center_idx]
+            .position
+            .map(|coordinate| coordinate.in_unit::<Meter>());
+        let steering_angle = self.steering_angle.in_unit::<Radian>();
 
-        let focus_point = if self.focus_distance.is_finite() {
-            let theta = self.steering_angle.to_radians();
-            Some((
-                self.focus_distance.mul_add(theta.sin(), center_pos.0),
-                center_pos.1,
-                self.focus_distance.mul_add(theta.cos(), center_pos.2),
-            ))
-        } else {
-            None
-        };
+        let focus_point = self.focus_distance.map(|focus_distance| {
+            (
+                focus_distance
+                    .in_unit::<Meter>()
+                    .mul_add(steering_angle.sin(), center_pos[0]),
+                center_pos[1],
+                focus_distance
+                    .in_unit::<Meter>()
+                    .mul_add(steering_angle.cos(), center_pos[2]),
+            )
+        });
 
         for element in &mut self.elements {
+            let position = element
+                .position
+                .map(|coordinate| coordinate.in_unit::<Meter>());
             let mut delay = 0.0;
 
-            if self.steering_angle != 0.0 {
-                let theta = self.steering_angle.to_radians();
-                let x_offset = element.position.0 - center_pos.0;
-                delay += x_offset * theta.sin() / c;
+            if steering_angle != 0.0 {
+                let x_offset = position[0] - center_pos[0];
+                delay += x_offset * steering_angle.sin() / c;
             }
 
             if let Some(focus) = focus_point {
-                let dist_to_focus = (element.position.2 - focus.2)
+                let dist_to_focus = (position[2] - focus.2)
                     .mul_add(
-                        element.position.2 - focus.2,
-                        (element.position.1 - focus.1).mul_add(
-                            element.position.1 - focus.1,
-                            (element.position.0 - focus.0).powi(2),
-                        ),
+                        position[2] - focus.2,
+                        (position[1] - focus.1)
+                            .mul_add(position[1] - focus.1, (position[0] - focus.0).powi(2)),
                     )
                     .sqrt();
 
-                let dist_center_to_focus = (center_pos.2 - focus.2)
+                let dist_center_to_focus = (center_pos[2] - focus.2)
                     .mul_add(
-                        center_pos.2 - focus.2,
-                        (center_pos.1 - focus.1)
-                            .mul_add(center_pos.1 - focus.1, (center_pos.0 - focus.0).powi(2)),
+                        center_pos[2] - focus.2,
+                        (center_pos[1] - focus.1)
+                            .mul_add(center_pos[1] - focus.1, (center_pos[0] - focus.0).powi(2)),
                     )
                     .sqrt();
 
                 delay += (dist_to_focus - dist_center_to_focus) / c;
             }
 
-            element.time_delay = delay;
+            element.time_delay = Time::from_unit::<Second>(delay);
         }
     }
 
@@ -360,9 +419,9 @@ impl TransducerArray2D {
         self.cached_grid_id = None;
     }
 
-    /// Get total aperture width (m)
+    /// Get total aperture width.
     #[must_use]
-    pub fn aperture_width(&self) -> f64 {
+    pub fn aperture_width(&self) -> Length<f64> {
         self.config.aperture_width()
     }
 

@@ -4,6 +4,14 @@
 
 ### Changed
 
+- **Breaking:** Two-dimensional transducer-array geometry and beam-control
+  contracts now use Aequitas `Length`, `Velocity`, `Frequency`, `Time`, and
+  `Angle` quantities. Flat/cylindrical curvature and no-focus state are typed,
+  center-to-center spacing is preserved, and Python retains SI/degree values
+  only at its serialization boundary. Eunomia geometry remains real and
+  coherent real/quadrature signals retain one observable unit; no imaginary SI
+  unit is introduced. See [ADR 101](docs/ADR/101-2d-array-quantities.md).
+
 - **Breaking:** Shared acquisition geometry now carries Aequitas `Length`
   coordinates and typed bowl/ring radius, diameter, and row-spacing
   contracts. Direct transcranial, breast-FWI, CBS/FWI, linear-Born, diagnostic,

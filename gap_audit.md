@@ -1,5 +1,47 @@
 ## Live Aequitas closure — 2026-08-02
 
+### KWAVERS-AEQ-MET-62 — two-dimensional array metric gap (closed 2026-08-03)
+
+The audit found that `crates/kwavers-transducer/src/array_2d/` still exposed
+element width, elevation length, center spacing, Cartesian coordinates, sound
+speed, operating frequency, focus distance, steering angle, and element delay
+as untyped scalars. The direct closure included the builder, source mesh,
+Rayleigh-Sommerfeld dispatch, Python binding, Python simulation sensor mesh,
+examples, and tests. The implementation also treated center spacing as an
+additional gap after element width, so the generated pitch was larger than
+the configured center-to-center spacing.
+
+The vertical slice now publishes Aequitas `Length<f64>`, `Velocity<f64>`,
+`Frequency<f64>`, `Time<f64>`, and `Angle<f64>` contracts. `ArrayCurvature`
+distinguishes flat and finite cylindrical geometry, `Option<Length<f64>>`
+represents focus instead of an infinity sentinel, and the three-dimensional
+center/element coordinates are typed arrays. Dimensionless transmit and
+receive weights remain scalar. Scalar extraction is confined to validation,
+trigonometric/delay formulas, mesh/index construction, and Python/source
+serialization boundaries. The center-to-center spacing formula is corrected
+and covered by an adjacent-center regression; cylindrical sag and invalid
+radius validation have analytical regressions.
+
+Python retains SI scalars and degree angles only at its explicit FFI
+serialization boundary. Eunomia compatibility is unchanged: geometry is
+real, and any real/quadrature signal components retain one observable signal
+unit. No imaginary SI length, angle, delay, or complex physical wrapper is
+introduced. ADR 101 records the contract, rejected alternatives, and formula
+boundaries.
+
+Local evidence at the implementation head: `kwavers-transducer` Nextest
+passes 228/228 with one skipped; strict offline Clippy passes for
+`kwavers-transducer` and `kwavers-python` with `-D warnings`; the transducer
+doctest passes 1/1 with six ignored; Python binding compilation passes via the
+affected-package check. Cargo emits the known shared-Atlas-overlay patch and
+linker warnings, but no affected-package diagnostic fails. Scoped raw-unit
+and diff checks are clean. Hosted repository-owned checks and merge evidence
+will be appended at the final PR head.
+
+Focused, hemispherical, MEMS, flexible, and other array families remain
+separate audit candidates until their direct public contracts are inspected;
+this item does not claim those families closed.
+
 ### KWAVERS-AEQ-MET-61 — shared acquisition geometry metric gap (closed 2026-08-03)
 
 The audit found that `crates/kwavers-transducer/src/transducers/

@@ -1,6 +1,6 @@
 //! Rayleigh-Sommerfeld angular-spectrum solver dispatch.
 
-use aequitas::systems::si::quantities::{Frequency, Length, MassDensity, Velocity};
+use aequitas::systems::si::quantities::{Frequency, MassDensity, Velocity};
 use aequitas::systems::si::units::{Hertz, KilogramPerCubicMeter, Meter, MeterPerSecond};
 use kwavers_math::fft::Complex64;
 use leto::{Array1, Array2, Array3};
@@ -24,17 +24,18 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
     let rho0 = req
         .medium
         .density(req.grid.nx / 2, req.grid.ny / 2, req.grid.nz / 2);
+    let transducer_frequency_hz = transducer.frequency().in_unit::<Hertz>();
     let frequency = req.helmholtz.and_then(|h| h.frequency).unwrap_or_else(|| {
-        if transducer.frequency() > 0.0 {
-            transducer.frequency()
+        if transducer_frequency_hz > 0.0 {
+            transducer_frequency_hz
         } else {
             1.0 / req.dt
         }
     });
 
     let rect_transducer = RectangularTransducer {
-        width: Length::from_unit::<Meter>(transducer.aperture_width()),
-        height: Length::from_unit::<Meter>(transducer.element_length()),
+        width: transducer.aperture_width(),
+        height: transducer.element_length(),
         frequency: Frequency::from_unit::<Hertz>(frequency),
         elements: (transducer.number_elements(), 1),
     };

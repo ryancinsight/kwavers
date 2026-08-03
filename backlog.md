@@ -4,6 +4,7 @@
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
+| KWAVERS-AEQ-MET-62 | Type two-dimensional array geometry, beam-control, timing, and medium metrics with Aequitas; correct center-to-center pitch and preserve Eunomia real geometry and shared signal units. | [arch] [major] | done 2026-08-03 | Codex | `crates/kwavers-transducer/src/array_2d/`, direct Python/simulation callers, ADR 101, PM artifacts |
 | KWAVERS-AEQ-MET-61 | Type shared acquisition geometry coordinates and ring/bowl radius, diameter, and row-spacing contracts with Aequitas; preserve Eunomia real geometry and migrate every direct caller. | [arch] [major] | done 2026-08-03 | Codex | `kwavers-transducer/src/transducers/acquisition_geometry.rs`, transcranial diagnostics, breast FWI physics/solver/diagnostics/Python adapters, direct tests, ADR 100, PM artifacts |
 | KWAVERS-AEQ-MET-60 | Type transducer aperture design and focused propagation metrics with Aequitas, including geometry, drive, pressure, impedance, intensity, and beam-width contracts; preserve Eunomia complex signal semantics. | [arch] [major] | done 2026-08-03 | Codex | `crates/kwavers-transducer/src/design/{mod,propagation}.rs`, direct driver callers/tests, ADR 099, PM artifacts |
 | KWAVERS-AEQ-MET-59 | Type PAM delay-and-sum and neural sensor geometry, timing, frequency, and event-coordinate metrics with Aequitas; preserve Eunomia complex signal units. | [arch] [major] | done 2026-08-03 | Codex | `crates/kwavers-analysis/src/signal_processing/{pam,beamforming/neural}/**`, callers/tests, ADR 098, PM artifacts |
@@ -13,6 +14,30 @@
 | KWAVERS-AEQ-MET-55 | Type the public ultrafast plane-wave and diverging-wave geometry, timing, angle, frequency, F-number, image-coordinate, and scalar apodization metrics with Aequitas; preserve scalar extraction only at numerical and Leto storage boundaries and document Eunomia complex compatibility. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-transducer/src/ultrafast/{plane_wave,diverging_wave}/**`, ADR 094, PM artifacts |
 | KWAVERS-AEQ-MET-54 | Type the public ultrafast transmission scheduler's speed, depth, PRF, event times, frame rates, and tilt angles with Aequitas; keep scalar extraction at the PRF/timing formula boundary and document the real-only Eunomia compatibility rule. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-transducer/src/ultrafast/sequencer/**`, manifest, ADR 093, PM artifacts |
 | KWAVERS-AEQ-INTEGRATION-1 | Integrate the current Aequitas metric closure for therapeutic microbubble and plasmonics contracts on current `main`; harden the public three-dimensional plasmonic coordinate contract and synchronize the audit. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-physics/src/{acoustics/therapy/microbubble,electromagnetic}`, PM artifacts |
+
+## KWAVERS-AEQ-MET-62 — Type two-dimensional array metrics [major] [arch] — done 2026-08-03
+
+- Owner: Codex; scope: `crates/kwavers-transducer/src/array_2d/`, direct
+  Rayleigh-Sommerfeld and Python simulation mesh callers, Python serialization,
+  ADR 101, and synchronized PM artifacts. Other array families remain
+  separate audit items.
+- Outcome: array dimensions, center spacing, coordinates, curvature, focus,
+  sound speed, operating frequency, steering, and element delays use Aequitas
+  quantities. Transmit/receive weights remain dimensionless. The generated
+  pitch now matches the configured center-to-center spacing instead of adding
+  element width a second time.
+- Eunomia: geometry is real; coherent real/quadrature signal components keep
+  one observable signal unit and no imaginary SI unit is assigned.
+- Acceptance: direct callers compile against typed contracts; flat,
+  cylindrical, no-focus, invalid-radius, pitch, and delay behavior retain
+  analytical value semantics; Python preserves its scalar SI/degree boundary;
+  local Nextest, Clippy, doctest, formatting, and residue checks pass; hosted
+  gates close at the final PR head.
+- Local evidence: transducer Nextest passes 228/228 with one skipped; affected
+  targets pass strict offline Clippy with `-D warnings`; the transducer
+  doctest passes 1/1 with six ignored; Python binding compilation passes.
+  Cargo's known shared-overlay patch and linker warnings are environmental and
+  do not produce an affected-package failure.
 
 ## KWAVERS-AEQ-MET-60 — Type transducer design and propagation metrics [major] [arch] — done 2026-08-03
 
