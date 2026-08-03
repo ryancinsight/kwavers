@@ -90,9 +90,9 @@ mod tests {
     fn test_power_law_db_cm_to_np_omega_m_matches_kwave_reference() {
         let got = power_law_db_cm_to_np_omega_m(0.75, 1.5);
         let expected: f64 = 5.482_481_235_081_536e-10;
-        // The conversion contains six rounded elementary operations plus a
-        // correctly-rounded `powf` result. Sixteen ulps bounds that sequence
-        // while retaining the published k-Wave reference as the oracle.
+        // The conversion contains six rounded elementary operations and a
+        // libm `powf` call. Sixteen ulps bounds this composed forward error
+        // at the reference magnitude while retaining k-Wave as the oracle.
         let tolerance = 16.0 * f64::EPSILON * expected.abs().max(got.abs());
         assert!(
             (got - expected).abs() <= tolerance,
