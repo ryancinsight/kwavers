@@ -1,6 +1,21 @@
 # Project Checklist
 
-## Owner: Codex — KWAVERS-AEQ-MET-56 typed rectangular-transducer quantities [major] [arch] — in progress
+## Owner: Codex — KWAVERS-AEQ-MET-57 typed beamforming configuration quantities [major] [arch] — in progress
+
+- [x] Audit shared beamforming configuration and processor callers; retain
+      only this bounded configuration/processor scope.
+- [ ] Type sound speed, sampling frequency, and reference frequency with
+      Aequitas and migrate all callers without wrappers.
+- [ ] Add analytical formula-boundary regressions, ADR 096, and Eunomia
+      shared-unit/real-observable documentation.
+- [ ] Run locked checks, focused Nextest, Clippy, doctests, Rustdoc, residue
+      scans, and hosted gates; commit and publish the slice.
+
+Acceptance: no raw physical scalar remains in the shared beamforming
+configuration; processor outputs preserve value semantics; no imaginary
+physical unit is introduced.
+
+## Owner: Codex — KWAVERS-AEQ-MET-56 typed rectangular-transducer quantities [major] [arch] — done 2026-08-02
 
 - [x] Replace public rectangular width, height, and frequency scalars with
       Aequitas `Length` and `Frequency`.

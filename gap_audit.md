@@ -1,5 +1,21 @@
 ## Live Aequitas closure — 2026-08-02
 
+### KWAVERS-AEQ-MET-57 — shared beamforming configuration metrics
+
+The next audit found that `BeamformingCoreConfig` still exposed shared
+sound-speed, sampling-frequency, and reference-frequency configuration as
+raw `f64` values. The bounded slice covers that configuration and
+`beamforming/processor.rs`, where sound speed enters delay/steering formulas
+and sampling/reference frequency enter signal-axis and wavelength formulas.
+Sensor-array configuration, aperture design synthesis, and other transducer
+families remain separate audit items; this slice does not widen to them.
+
+The implementation target is Aequitas `Velocity` and `Frequency`. Scalar
+extraction will occur only at formula boundaries. Eunomia complex signal
+buffers retain their existing shared physical unit; real and quadrature
+components do not create an imaginary SI unit. Verification is pending the
+implementation and exact locked gates.
+
 ### KWAVERS-AEQ-MET-56 — rectangular transducer geometry and wavenumber
 
 The audit found that `RectangularTransducer` still exposed width, height,
