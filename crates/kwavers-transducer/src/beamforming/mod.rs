@@ -89,7 +89,7 @@
 //! **For Sensor Interface (unchanged):** Keep using domain layer
 //! ```rust,ignore
 //! use kwavers_transducer::beamforming::SensorBeamformer;  // ✅ Still in domain
-//! use kwavers_transducer::beamforming::BeamformingConfig;  // ✅ Configuration
+//! use kwavers_transducer::beamforming::BeamformingCoreConfig;  // ✅ Configuration
 //! ```
 //!
 //! ## Usage Example
@@ -123,7 +123,7 @@ pub mod sensor_beamformer;
 
 // Configuration types (shared with analysis layer)
 mod config;
-pub use config::{BeamformingConfig, BeamformingCoreConfig};
+pub use config::BeamformingCoreConfig;
 
 pub use sensor_beamformer::{BeamformerWindowType, SensorBeamformer, SensorProcessingParams};
 
@@ -133,5 +133,5 @@ pub use sensor_beamformer::{BeamformerWindowType, SensorBeamformer, SensorProces
 //
 // This domain module now contains only:
 // - SensorBeamformer: Hardware-specific array geometry interface
-// - BeamformingConfig: Shared configuration types
+// - BeamformingCoreConfig: Shared configuration type
 // - GPU shaders: Hardware-accelerated kernels

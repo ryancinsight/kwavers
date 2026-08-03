@@ -10,7 +10,7 @@
 
 use leto::Array3;
 
-use kwavers_transducer::beamforming::BeamformingConfig;
+use kwavers_transducer::beamforming::BeamformingCoreConfig;
 
 // Use solver-agnostic interface instead of direct solver imports
 #[cfg(feature = "pinn")]
@@ -73,7 +73,7 @@ impl HybridBeamformingMetrics {
 #[derive(Debug, Clone)]
 pub struct PINNBeamformingConfig {
     /// Base beamforming configuration
-    pub base_config: BeamformingConfig,
+    pub base_config: BeamformingCoreConfig,
     /// PINN training configuration (solver-agnostic)
     #[cfg(feature = "pinn")]
     pub pinn_config: InterfacePinnConfig,
@@ -109,7 +109,7 @@ pub struct PINNBeamformingConfig {
 impl Default for PINNBeamformingConfig {
     fn default() -> Self {
         Self {
-            base_config: BeamformingConfig::default(),
+            base_config: BeamformingCoreConfig::default(),
             #[cfg(feature = "pinn")]
             pinn_config: InterfacePinnConfig::default(),
             #[cfg(feature = "pinn")]

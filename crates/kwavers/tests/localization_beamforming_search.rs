@@ -15,6 +15,8 @@
 //!   is the reference sensor at index 0 (`SensorIndex(0)`), which is the SSOT recommended default.
 //! - **B (narrowband/adaptive)** is covered by separate tests (Capon/MVDR spatial spectrum), not here.
 
+use aequitas::systems::si::quantities::{Frequency, Velocity};
+use aequitas::systems::si::units::{Hertz, MeterPerSecond};
 use kwavers_analysis::signal_processing::beamforming::time_domain::DelayReference;
 use kwavers_analysis::signal_processing::localization::beamforming_search::{
     localize_beamforming, BeamformingLocalizationInput, LocalizationBeamformSearchConfig,
@@ -119,9 +121,9 @@ fn beamforming_localization_finds_source_near_true_position() {
     let array = make_array(sound_speed);
 
     let core = BeamformingCoreConfig {
-        sound_speed,
-        sampling_frequency: sample_rate,
-        reference_frequency: 1e6,
+        sound_speed: Velocity::from_unit::<MeterPerSecond>(sound_speed),
+        sampling_frequency: Frequency::from_unit::<Hertz>(sample_rate),
+        reference_frequency: Frequency::from_unit::<Hertz>(1e6),
         ..Default::default()
     };
 
@@ -177,9 +179,9 @@ fn beamforming_localization_rejects_sampling_frequency_mismatch() {
     let array = make_array(sound_speed);
 
     let core = BeamformingCoreConfig {
-        sound_speed,
-        sampling_frequency: sample_rate + 1.0, // deliberate mismatch
-        reference_frequency: 1e6,
+        sound_speed: Velocity::from_unit::<MeterPerSecond>(sound_speed),
+        sampling_frequency: Frequency::from_unit::<Hertz>(sample_rate + 1.0), // deliberate mismatch
+        reference_frequency: Frequency::from_unit::<Hertz>(1e6),
         ..Default::default()
     };
 

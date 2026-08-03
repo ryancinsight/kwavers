@@ -1,19 +1,30 @@
 # Project Checklist
 
-## Owner: Codex — KWAVERS-AEQ-MET-57 typed beamforming configuration quantities [major] [arch] — in progress
+## Owner: Codex — KWAVERS-AEQ-MET-57 typed beamforming configuration quantities [major] [arch] — done 2026-08-02
 
 - [x] Audit shared beamforming configuration and processor callers; retain
       only this bounded configuration/processor scope.
-- [ ] Type sound speed, sampling frequency, and reference frequency with
+- [x] Type sound speed, sampling frequency, and reference frequency with
       Aequitas and migrate all callers without wrappers.
-- [ ] Add analytical formula-boundary regressions, ADR 096, and Eunomia
+- [x] Add analytical formula-boundary regressions, ADR 096, and Eunomia
       shared-unit/real-observable documentation.
-- [ ] Run locked checks, focused Nextest, Clippy, doctests, Rustdoc, residue
-      scans, and hosted gates; commit and publish the slice.
+- [x] Run locked checks, focused Nextest, Clippy, doctests, and residue scans;
+      hosted gates are required before merge.
 
 Acceptance: no raw physical scalar remains in the shared beamforming
 configuration; processor outputs preserve value semantics; no imaginary
 physical unit is introduced.
+
+Evidence: locked checks pass for `kwavers-transducer`, `kwavers-analysis`,
+`kwavers-diagnostics`, and Kwavers test targets. Transducer Nextest
+`2ce49892-e602-490f-843b-c4a265d7eec3` passes 4/4; analysis Nextest
+`dc48bbb6-6618-4531-8091-f18238723d57` passes 2/2; warning-denied Clippy
+passes for all affected packages and Kwavers test targets. Full package
+Nextest passes: transducer `1688543b-9f6e-4c6f-a88c-cb97f44e8d3e` 223/223
+with one skipped, analysis `afeb1b5d-be6b-421e-ba59-d99be55c567e` 725/725,
+and diagnostics `12045599-c678-4d9d-8b2a-d322f6082f57` 191/191. All three
+affected package doctest suites and Rustdoc pass; formatting, diff,
+raw-public signature, and complex-boundary scans pass.
 
 ## Owner: Codex — KWAVERS-AEQ-MET-56 typed rectangular-transducer quantities [major] [arch] — done 2026-08-02
 

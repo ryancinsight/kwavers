@@ -2,6 +2,7 @@
 
 use crate::signal_processing::beamforming::time_domain::DelayReference;
 use crate::signal_processing::beamforming::utils::steering::SteeringVectorMethod;
+use aequitas::systems::si::units::{Hertz, MeterPerSecond};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_transducer::beamforming::BeamformingCoreConfig;
 use leto::Array3;
@@ -88,19 +89,23 @@ impl LocalizationBeamformSearchConfig {
     /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn validate(&self) -> KwaversResult<()> {
-        if !self.core.sound_speed.is_finite() || self.core.sound_speed <= 0.0 {
+        let sound_speed = self.core.sound_speed.in_unit::<MeterPerSecond>();
+        let sampling_frequency = self.core.sampling_frequency.in_unit::<Hertz>();
+        let reference_frequency = self.core.reference_frequency.in_unit::<Hertz>();
+
+        if !sound_speed.is_finite() || sound_speed <= 0.0 {
             return Err(KwaversError::InvalidInput(
                 "LocalizationBeamformSearchConfig: core.sound_speed must be finite and > 0"
                     .to_owned(),
             ));
         }
-        if !self.core.sampling_frequency.is_finite() || self.core.sampling_frequency <= 0.0 {
+        if !sampling_frequency.is_finite() || sampling_frequency <= 0.0 {
             return Err(KwaversError::InvalidInput(
                 "LocalizationBeamformSearchConfig: core.sampling_frequency must be finite and > 0"
                     .to_owned(),
             ));
         }
-        if !self.core.reference_frequency.is_finite() || self.core.reference_frequency < 0.0 {
+        if !reference_frequency.is_finite() || reference_frequency < 0.0 {
             return Err(KwaversError::InvalidInput(
                 "LocalizationBeamformSearchConfig: core.reference_frequency must be finite and >= 0".to_owned(),
             ));

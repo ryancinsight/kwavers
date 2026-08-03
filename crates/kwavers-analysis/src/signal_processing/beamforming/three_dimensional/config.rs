@@ -5,7 +5,7 @@
 
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
-use kwavers_transducer::beamforming::BeamformingConfig;
+use kwavers_transducer::beamforming::BeamformingCoreConfig;
 
 /// 3D beamforming algorithm types optimized for volumetric imaging
 #[derive(Debug, Clone)]
@@ -69,7 +69,7 @@ impl Beamforming3dApodizationWindow {
 #[derive(Debug, Clone)]
 pub struct BeamformingConfig3D {
     /// Base 2D configuration
-    pub base_config: BeamformingConfig,
+    pub base_config: BeamformingCoreConfig,
     /// Volume dimensions (nx, ny, nz)
     pub volume_dims: (usize, usize, usize),
     /// Voxel spacing in meters (dx, dy, dz)
@@ -95,7 +95,7 @@ pub struct BeamformingConfig3D {
 impl Default for BeamformingConfig3D {
     fn default() -> Self {
         Self {
-            base_config: BeamformingConfig::default(),
+            base_config: BeamformingCoreConfig::default(),
             volume_dims: (128, 128, 128),
             voxel_spacing: (0.5e-3, 0.5e-3, 0.5e-3), // 0.5mm isotropic voxels
             num_elements_3d: (32, 32, 16),           // 32x32x16 = 16,384 elements

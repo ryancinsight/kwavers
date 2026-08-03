@@ -14,8 +14,9 @@ formulas in the beamforming processor.
 Use Aequitas `Velocity<f64>` for sound speed and `Frequency<f64>` for sampling
 and reference frequencies. Convert to base scalars only inside the numerical
 formulas that require scalar array indexing or trigonometric evaluation.
-Migrate all in-repository callers in the same change without compatibility
-wrappers.
+Use `BeamformingCoreConfig` as the only public name and migrate all
+in-repository callers in the same change without compatibility wrappers. The
+former `BeamformingConfig` alias is removed as part of the public cutover.
 
 ## Eunomia compatibility
 

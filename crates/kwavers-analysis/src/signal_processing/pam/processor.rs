@@ -1,4 +1,5 @@
 use super::config::PAMConfig;
+use aequitas::systems::si::units::Hertz;
 use apollo::fft_1d_array;
 use kwavers_core::error::KwaversResult;
 use leto::Array3;
@@ -74,7 +75,12 @@ impl PAMProcessor {
             return 0.0;
         }
 
-        let f_s = self.config.beamforming.core.sampling_frequency;
+        let f_s = self
+            .config
+            .beamforming
+            .core
+            .sampling_frequency
+            .in_unit::<Hertz>();
         if !f_s.is_finite() || f_s <= 0.0 {
             return 0.0;
         }

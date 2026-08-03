@@ -1,5 +1,6 @@
 //! NeuralBeamformingProcessor core implementation.
 
+use aequitas::systems::si::units::{Hertz, MeterPerSecond};
 use kwavers_core::error::KwaversResult;
 use leto::{Array3, Array4, ArrayView3, ArrayView4};
 use std::collections::HashMap;
@@ -189,8 +190,14 @@ impl NeuralBeamformingProcessor {
             sample_idx,
             self.config.channel_spacing,
             self.config.focal_depth,
-            self.config.base_config.sound_speed,
-            self.config.base_config.sampling_frequency,
+            self.config
+                .base_config
+                .sound_speed
+                .in_unit::<MeterPerSecond>(),
+            self.config
+                .base_config
+                .sampling_frequency
+                .in_unit::<Hertz>(),
         )
     }
 
@@ -248,8 +255,14 @@ impl NeuralBeamformingProcessor {
             sample,
             self.config.channel_spacing,
             self.config.focal_depth,
-            self.config.base_config.sound_speed,
-            self.config.base_config.reference_frequency,
+            self.config
+                .base_config
+                .sound_speed
+                .in_unit::<MeterPerSecond>(),
+            self.config
+                .base_config
+                .reference_frequency
+                .in_unit::<Hertz>(),
         )
     }
 

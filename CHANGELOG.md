@@ -4,6 +4,14 @@
 
 ### Changed
 
+- **Breaking:** Shared beamforming configuration now uses Aequitas
+  `Velocity` and `Frequency` for sound speed, sampling frequency, and
+  reference frequency. The former `BeamformingConfig` alias is removed and
+  all current callers use `BeamformingCoreConfig`. Eunomia complex baseband
+  buffers retain one shared observable unit for real and quadrature
+  components; no imaginary physical unit is introduced. See [ADR
+  096](docs/ADR/096-beamforming-configuration-quantities.md).
+
 - **Breaking:** Rectangular-transducer geometry and frequency now use
   Aequitas `Length` and `Frequency`; fast-nearfield medium properties use
   `Velocity` and `MassDensity`; element sizes and wavenumber return typed
