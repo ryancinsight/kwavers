@@ -4,6 +4,13 @@
 //! pressure-envelope calculation so downstream crates do not reimplement array
 //! propagation from copied pitch/channel scalars.
 
+use aequitas::systems::si::quantities::{
+    AcousticImpedance, Dimensionless, ElectricCurrent, Frequency, Intensity, Length, Pressure,
+    PressurePerElectricCurrent, Velocity,
+};
+use aequitas::systems::si::units::{
+    Ampere, Hertz, Meter, MeterPerSecond, Pascal, Rayl, WattPerSquareMeter,
+};
 use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
 
 use super::ArrayDesign;
@@ -18,35 +25,35 @@ const WIDTH_SEARCH_EXPANSIONS: usize = 8;
 pub struct FocusedLinearArrayPropagationSpec {
     /// Synthesized array geometry and wiring.
     pub design: ArrayDesign,
-    /// Array center in metres.
-    pub center_m: [f64; 3],
-    /// Focus point in metres.
-    pub focus_m: [f64; 3],
-    /// Drive frequency in hertz.
-    pub frequency_hz: f64,
-    /// Medium sound speed in metres per second.
-    pub sound_speed_m_s: f64,
+    /// Array center.
+    pub center: [Length<f64>; 3],
+    /// Focus point.
+    pub focus: [Length<f64>; 3],
+    /// Drive frequency.
+    pub frequency: Frequency<f64>,
+    /// Medium sound speed.
+    pub sound_speed: Velocity<f64>,
     /// Peak current driven into each independent channel.
-    pub per_channel_peak_current_a: f64,
+    pub per_channel_peak_current: ElectricCurrent<f64>,
     /// Peak pressure contribution per channel ampere at the focus.
-    pub pressure_per_amp_pa: f64,
+    pub pressure_per_current: PressurePerElectricCurrent<f64>,
     /// Medium acoustic impedance in Rayl.
-    pub acoustic_impedance_rayl: f64,
+    pub acoustic_impedance: AcousticImpedance<f64>,
 }
 
 /// Focused propagation output derived from the realized channel coordinates.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct FocusedPressureMap {
     /// Coherent pressure magnitude at the requested focus.
-    pub focal_pressure_pa: f64,
+    pub focal_pressure: Pressure<f64>,
     /// Mechanical Index at the focus.
-    pub mechanical_index: f64,
+    pub mechanical_index: Dimensionless<f64>,
     /// Spatial-peak pulse-average intensity at the focus.
-    pub isppa_w_cm2: f64,
+    pub isppa: Intensity<f64>,
     /// Axial full width at the half-pressure contour.
-    pub axial_extent_mm: f64,
+    pub axial_extent: Length<f64>,
     /// Lateral full width at the half-pressure contour.
-    pub lateral_extent_mm: f64,
+    pub lateral_extent: Length<f64>,
     /// True iff the realized steered pitch satisfies the spatial-Nyquist bound.
     pub grating_lobe_free: bool,
     /// True iff the requested focus lies beyond the realized-aperture Fraunhofer distance.
@@ -69,18 +76,25 @@ pub fn propagate_focused_linear_array(
     spec: &FocusedLinearArrayPropagationSpec,
 ) -> KwaversResult<FocusedPressureMap> {
     validate_spec(spec)?;
-    let channels = spec.design.channel_positions(spec.center_m);
-    let focal_pressure_pa = pressure_at(&channels, spec, spec.focus_m);
+    let focus_m = spec.focus.map(|coordinate| coordinate.in_unit::<Meter>());
+    let channels = spec
+        .design
+        .channel_positions(spec.center)
+        .into_iter()
+        .map(|channel| channel.map(|coordinate| coordinate.in_unit::<Meter>()))
+        .collect::<Vec<_>>();
+    let focal_pressure_pa = pressure_at(&channels, spec, focus_m);
     if !focal_pressure_pa.is_finite() || focal_pressure_pa <= 0.0 {
         return Err(invalid_value(
-            "focal_pressure_pa",
+            "focal_pressure",
             focal_pressure_pa,
             "finite and > 0 after coherent propagation",
         ));
     }
 
-    let wavelength_m = spec.sound_speed_m_s / spec.frequency_hz;
-    let aperture_y_m = (spec.design.n_channels.saturating_sub(1)) as f64 * spec.design.pitch_y_m;
+    let wavelength_m = spec.design.wavelength.in_unit::<Meter>();
+    let aperture_y_m =
+        (spec.design.n_channels.saturating_sub(1)) as f64 * spec.design.pitch_y.in_unit::<Meter>();
     let near_field_m = if wavelength_m > 0.0 {
         aperture_y_m * aperture_y_m / (4.0 * wavelength_m)
     } else {
@@ -88,38 +102,56 @@ pub fn propagate_focused_linear_array(
     };
 
     Ok(FocusedPressureMap {
-        focal_pressure_pa,
-        mechanical_index: mechanical_index(focal_pressure_pa, spec.frequency_hz),
-        isppa_w_cm2: acoustic_intensity_w_cm2(focal_pressure_pa, spec.acoustic_impedance_rayl),
-        axial_extent_mm: width_mm(&channels, spec, Axis::Axial, focal_pressure_pa)?,
-        lateral_extent_mm: width_mm(&channels, spec, Axis::Lateral, focal_pressure_pa)?,
+        focal_pressure: Pressure::from_unit::<Pascal>(focal_pressure_pa),
+        mechanical_index: Dimensionless::from_base(mechanical_index(
+            Pressure::from_unit::<Pascal>(focal_pressure_pa),
+            spec.frequency,
+        )),
+        isppa: acoustic_intensity(
+            Pressure::from_unit::<Pascal>(focal_pressure_pa),
+            spec.acoustic_impedance,
+        ),
+        axial_extent: Length::from_unit::<Meter>(width_m(
+            &channels,
+            spec,
+            Axis::Axial,
+            focal_pressure_pa,
+        )?),
+        lateral_extent: Length::from_unit::<Meter>(width_m(
+            &channels,
+            spec,
+            Axis::Lateral,
+            focal_pressure_pa,
+        )?),
         grating_lobe_free: spec.design.grating_lobe_free,
-        in_far_field: spec.focus_m[2] >= near_field_m,
+        in_far_field: focus_m[2] >= near_field_m,
     })
 }
 
 fn validate_spec(spec: &FocusedLinearArrayPropagationSpec) -> KwaversResult<()> {
-    validate_positive("frequency_hz", spec.frequency_hz)?;
-    validate_positive("sound_speed_m_s", spec.sound_speed_m_s)?;
+    validate_positive("frequency", spec.frequency.in_unit::<Hertz>())?;
+    validate_positive("sound_speed", spec.sound_speed.in_unit::<MeterPerSecond>())?;
     validate_positive(
-        "per_channel_peak_current_a",
-        spec.per_channel_peak_current_a,
+        "per_channel_peak_current",
+        spec.per_channel_peak_current.in_unit::<Ampere>(),
     )?;
-    validate_positive("pressure_per_amp_pa", spec.pressure_per_amp_pa)?;
-    validate_positive("acoustic_impedance_rayl", spec.acoustic_impedance_rayl)?;
-    validate_point("center_m", spec.center_m)?;
-    validate_point("focus_m", spec.focus_m)?;
+    validate_positive(
+        "pressure_per_current",
+        spec.pressure_per_current.into_base(),
+    )?;
+    validate_positive(
+        "acoustic_impedance",
+        spec.acoustic_impedance.in_unit::<Rayl>(),
+    )?;
+    validate_point("center", spec.center)?;
+    validate_point("focus", spec.focus)?;
     if spec.design.n_channels == 0 {
         return Err(invalid_value("n_channels", 0.0, "> 0"));
     }
-    if spec.design.channel_positions(spec.center_m).len() != spec.design.n_channels {
+    if spec.design.channel_positions(spec.center).len() != spec.design.n_channels {
         return Err(KwaversError::Config(ConfigError::ValidationFailed {
             field: "channel_positions".to_owned(),
-            value: spec
-                .design
-                .channel_positions(spec.center_m)
-                .len()
-                .to_string(),
+            value: spec.design.channel_positions(spec.center).len().to_string(),
             constraint: format!("exactly {} driven channels", spec.design.n_channels),
         }));
     }
@@ -134,8 +166,11 @@ fn validate_positive(parameter: &str, value: f64) -> KwaversResult<()> {
     }
 }
 
-fn validate_point(parameter: &str, point: [f64; 3]) -> KwaversResult<()> {
-    if point.iter().all(|value| value.is_finite()) {
+fn validate_point(parameter: &str, point: [Length<f64>; 3]) -> KwaversResult<()> {
+    if point
+        .iter()
+        .all(|value| value.in_unit::<Meter>().is_finite())
+    {
         Ok(())
     } else {
         Err(KwaversError::Config(ConfigError::InvalidValue {
@@ -159,13 +194,19 @@ fn pressure_at(
     spec: &FocusedLinearArrayPropagationSpec,
     point_m: [f64; 3],
 ) -> f64 {
-    let wavenumber = 2.0 * std::f64::consts::PI * spec.frequency_hz / spec.sound_speed_m_s;
-    let contribution_pa = spec.per_channel_peak_current_a * spec.pressure_per_amp_pa;
-    let focus_distance_m = distance(spec.center_m, spec.focus_m).max(f64::MIN_POSITIVE);
+    let frequency_hz = spec.frequency.in_unit::<Hertz>();
+    let sound_speed_m_s = spec.sound_speed.in_unit::<MeterPerSecond>();
+    let current_a = spec.per_channel_peak_current.in_unit::<Ampere>();
+    let pressure_per_current = spec.pressure_per_current.into_base();
+    let center_m = spec.center.map(|coordinate| coordinate.in_unit::<Meter>());
+    let focus_m = spec.focus.map(|coordinate| coordinate.in_unit::<Meter>());
+    let wavenumber = 2.0 * std::f64::consts::PI * frequency_hz / sound_speed_m_s;
+    let contribution_pa = current_a * pressure_per_current;
+    let focus_distance_m = distance(center_m, focus_m).max(f64::MIN_POSITIVE);
     let mut real = 0.0;
     let mut imag = 0.0;
     for channel in channels {
-        let focus_path_m = distance(*channel, spec.focus_m);
+        let focus_path_m = distance(*channel, focus_m);
         let sample_path_m = distance(*channel, point_m).max(f64::MIN_POSITIVE);
         let phase = wavenumber * (sample_path_m - focus_path_m);
         let spread = focus_distance_m / sample_path_m;
@@ -182,7 +223,7 @@ enum Axis {
     Axial,
 }
 
-fn width_mm(
+fn width_m(
     channels: &[[f64; 3]],
     spec: &FocusedLinearArrayPropagationSpec,
     axis: Axis,
@@ -190,17 +231,37 @@ fn width_mm(
 ) -> KwaversResult<f64> {
     let threshold = focal_pressure_pa * HALF_POWER_PRESSURE_RATIO;
     let search_extent_m = match axis {
-        Axis::Lateral => (2.0 * spec.design.aperture_y_m()).max(4.0 * spec.design.wavelength_m),
-        Axis::Axial => (2.0 * spec.focus_m[2].abs()).max(8.0 * spec.design.wavelength_m),
+        Axis::Lateral => (2.0 * spec.design.aperture_y().in_unit::<Meter>())
+            .max(4.0 * spec.design.wavelength.in_unit::<Meter>()),
+        Axis::Axial => (2.0 * spec.focus[2].in_unit::<Meter>().abs())
+            .max(8.0 * spec.design.wavelength.in_unit::<Meter>()),
     };
-    let positive = half_width_m(channels, spec, axis, threshold, search_extent_m, 1.0)?;
-    let negative = half_width_m(channels, spec, axis, threshold, search_extent_m, -1.0)?;
-    Ok((positive + negative) * 1.0e3)
+    let focus_m = spec.focus.map(|coordinate| coordinate.in_unit::<Meter>());
+    let positive = half_width_m(
+        channels,
+        spec,
+        focus_m,
+        axis,
+        threshold,
+        search_extent_m,
+        1.0,
+    )?;
+    let negative = half_width_m(
+        channels,
+        spec,
+        focus_m,
+        axis,
+        threshold,
+        search_extent_m,
+        -1.0,
+    )?;
+    Ok(positive + negative)
 }
 
 fn half_width_m(
     channels: &[[f64; 3]],
     spec: &FocusedLinearArrayPropagationSpec,
+    focus_m: [f64; 3],
     axis: Axis,
     threshold_pa: f64,
     search_extent_m: f64,
@@ -211,7 +272,7 @@ fn half_width_m(
     for _ in 0..=WIDTH_SEARCH_EXPANSIONS {
         for sample in 1..=WIDTH_SCAN_SAMPLES {
             let offset = extent * sample as f64 / WIDTH_SCAN_SAMPLES as f64;
-            let point = offset_point(spec.focus_m, axis, direction * offset);
+            let point = offset_point(focus_m, axis, direction * offset);
             if point[2] <= 0.0 {
                 continue;
             }
@@ -227,7 +288,7 @@ fn half_width_m(
     }
     let Some(mut hi) = below else {
         if matches!(axis, Axis::Axial) && direction < 0.0 {
-            return Ok(spec.focus_m[2].max(0.0));
+            return Ok(spec.focus[2].in_unit::<Meter>().max(0.0));
         }
         return Err(KwaversError::Config(ConfigError::ValidationFailed {
             field: "half_power_width".to_owned(),
@@ -238,7 +299,7 @@ fn half_width_m(
     let mut lo = 0.0;
     for _ in 0..WIDTH_BISECTION_STEPS {
         let mid = 0.5 * (lo + hi);
-        let point = offset_point(spec.focus_m, axis, direction * mid);
+        let point = offset_point(focus_m, axis, direction * mid);
         if point[2] > 0.0 && pressure_at(channels, spec, point) > threshold_pa {
             lo = mid;
         } else {
@@ -263,12 +324,19 @@ fn distance(a: [f64; 3], b: [f64; 3]) -> f64 {
     dx.mul_add(dx, dy.mul_add(dy, dz * dz)).sqrt()
 }
 
-fn mechanical_index(pressure_pa: f64, frequency_hz: f64) -> f64 {
+fn mechanical_index(pressure: Pressure<f64>, frequency: Frequency<f64>) -> f64 {
+    let pressure_pa = pressure.in_unit::<Pascal>();
+    let frequency_hz = frequency.in_unit::<Hertz>();
     (pressure_pa / 1.0e6) / (frequency_hz / 1.0e6).sqrt()
 }
 
-fn acoustic_intensity_w_cm2(pressure_pa: f64, impedance_rayl: f64) -> f64 {
-    pressure_pa * pressure_pa / (2.0 * impedance_rayl) / 1.0e4
+fn acoustic_intensity(
+    pressure: Pressure<f64>,
+    impedance: AcousticImpedance<f64>,
+) -> Intensity<f64> {
+    let pressure_pa = pressure.in_unit::<Pascal>();
+    let impedance_rayl = impedance.in_unit::<Rayl>();
+    Intensity::from_unit::<WattPerSquareMeter>(pressure_pa * pressure_pa / (2.0 * impedance_rayl))
 }
 
 #[cfg(test)]
@@ -278,24 +346,32 @@ mod tests {
 
     fn spec() -> FocusedLinearArrayPropagationSpec {
         let design = design_array(&ApertureDesignSpec {
-            aperture_x_m: 0.0,
-            aperture_y_m: 96.0 * 0.25e-3,
-            frequency_hz: 500_000.0,
-            sound_speed_m_s: 1540.0,
-            max_pitch_fraction: 0.25e-3 / (1540.0 / 500_000.0),
-            kerf_fraction: DEFAULT_KERF_FRACTION,
+            aperture_x: Length::from_unit::<Meter>(0.0),
+            aperture_y: Length::from_unit::<Meter>(96.0 * 0.25e-3),
+            frequency: Frequency::from_unit::<Hertz>(500_000.0),
+            sound_speed: Velocity::from_unit::<MeterPerSecond>(1540.0),
+            max_pitch_fraction: Dimensionless::from_base(0.25e-3 / (1540.0 / 500_000.0)),
+            kerf_fraction: Dimensionless::from_base(DEFAULT_KERF_FRACTION),
             wiring: ChannelWiring::ColumnsAsChannels,
         })
         .unwrap();
         FocusedLinearArrayPropagationSpec {
             design,
-            center_m: [0.0, 0.0, 0.0],
-            focus_m: [0.0, 0.0, 0.010],
-            frequency_hz: 500_000.0,
-            sound_speed_m_s: 1540.0,
-            per_channel_peak_current_a: 0.04,
-            pressure_per_amp_pa: 9.375e6,
-            acoustic_impedance_rayl: 1.48e6,
+            center: [
+                Length::from_unit::<Meter>(0.0),
+                Length::from_unit::<Meter>(0.0),
+                Length::from_unit::<Meter>(0.0),
+            ],
+            focus: [
+                Length::from_unit::<Meter>(0.0),
+                Length::from_unit::<Meter>(0.0),
+                Length::from_unit::<Meter>(0.010),
+            ],
+            frequency: Frequency::from_unit::<Hertz>(500_000.0),
+            sound_speed: Velocity::from_unit::<MeterPerSecond>(1540.0),
+            per_channel_peak_current: ElectricCurrent::from_unit::<Ampere>(0.04),
+            pressure_per_current: PressurePerElectricCurrent::from_base(9.375e6),
+            acoustic_impedance: AcousticImpedance::from_unit::<Rayl>(1.48e6),
         }
     }
 
@@ -303,34 +379,41 @@ mod tests {
     fn focused_propagation_uses_all_realized_channels() {
         let spec = spec();
         let map = propagate_focused_linear_array(&spec).unwrap();
-        let single_channel_pa = spec.per_channel_peak_current_a * spec.pressure_per_amp_pa;
-        let focus_distance_m = distance(spec.center_m, spec.focus_m);
+        let single_channel_pa = spec.per_channel_peak_current.in_unit::<Ampere>()
+            * spec.pressure_per_current.into_base();
+        let center = spec.center.map(|coordinate| coordinate.in_unit::<Meter>());
+        let focus = spec.focus.map(|coordinate| coordinate.in_unit::<Meter>());
+        let focus_distance_m = distance(center, focus);
         let expected_focus_pa = single_channel_pa
             * spec
                 .design
-                .channel_positions(spec.center_m)
+                .channel_positions(spec.center)
                 .iter()
-                .map(|channel| focus_distance_m / distance(*channel, spec.focus_m))
+                .map(|channel| {
+                    let channel = channel.map(|coordinate| coordinate.in_unit::<Meter>());
+                    focus_distance_m / distance(channel, focus)
+                })
                 .sum::<f64>();
         assert!(
-            (map.focal_pressure_pa - expected_focus_pa).abs() <= expected_focus_pa * 1.0e-12,
+            (map.focal_pressure.in_unit::<Pascal>() - expected_focus_pa).abs()
+                <= expected_focus_pa * 1.0e-12,
             "focused pressure must equal the coherent spherical-spreading sum"
         );
-        assert!(map.focal_pressure_pa > single_channel_pa);
-        assert!(map.mechanical_index > 0.0);
-        assert!(map.isppa_w_cm2 > 0.0);
-        assert!(map.lateral_extent_mm > 0.0);
-        assert!(map.axial_extent_mm > map.lateral_extent_mm);
+        assert!(map.focal_pressure.in_unit::<Pascal>() > single_channel_pa);
+        assert!(map.mechanical_index.into_base() > 0.0);
+        assert!(map.isppa.in_unit::<WattPerSquareMeter>() > 0.0);
+        assert!(map.lateral_extent.in_unit::<Meter>() > 0.0);
+        assert!(map.axial_extent.in_unit::<Meter>() > map.lateral_extent.in_unit::<Meter>());
         assert!(map.grating_lobe_free);
     }
 
     #[test]
     fn propagation_rejects_nonfinite_focus() {
         let mut spec = spec();
-        spec.focus_m[2] = f64::NAN;
+        spec.focus[2] = Length::from_unit::<Meter>(f64::NAN);
         let err = propagate_focused_linear_array(&spec).unwrap_err();
         assert!(
-            err.to_string().contains("focus_m"),
+            err.to_string().contains("focus"),
             "error must name invalid focus field: {err}"
         );
     }
@@ -338,10 +421,10 @@ mod tests {
     #[test]
     fn propagation_rejects_zero_drive_current() {
         let mut spec = spec();
-        spec.per_channel_peak_current_a = 0.0;
+        spec.per_channel_peak_current = ElectricCurrent::from_unit::<Ampere>(0.0);
         let err = propagate_focused_linear_array(&spec).unwrap_err();
         assert!(
-            err.to_string().contains("per_channel_peak_current_a"),
+            err.to_string().contains("per_channel_peak_current"),
             "error must name invalid current field: {err}"
         );
     }

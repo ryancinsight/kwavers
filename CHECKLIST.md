@@ -1,5 +1,37 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-60 typed transducer design/propagation metrics [major] [arch] — implementation complete, hosted verification pending 2026-08-03
+
+- [x] Record ADR 099 for the typed aperture-design and focused-propagation
+      contract, including the Eunomia shared-unit complex-boundary rule.
+- [x] Type aperture dimensions, pitch, kerf, wavelength, frequency, sound
+      speed, coordinates, drive current, pressure gain, acoustic impedance,
+      intensity, and beam-width outputs with Aequitas; migrate all direct
+      driver callers without wrappers.
+- [x] Keep scalar extraction inside Euclidean, trigonometric, propagation,
+      unit-conversion, and legacy driver serialization boundaries; do not add
+      an imaginary SI unit for complex real/quadrature signal values.
+- [x] Add analytical geometry/propagation regressions and invalid-input
+      coverage, then run the locked affected-package checks, Nextest, Clippy,
+      doctests, Rustdoc, format, residue scans, and hosted gates.
+
+Local evidence: transducer Nextest passes 226/226 with one skipped; driver
+Nextest with `kwavers` passes 489/489; offline warning-denied Clippy passes
+for both packages after fixing the kerf range validation; formatting, diff,
+and scoped public-raw-signature/obsolete-name/complex-boundary scans pass.
+The locked Cargo commands and local doctest processes are blocked by the
+shared Atlas overlay: Cargo tries to replace pinned git sources with local
+patch paths and refuses the generated lock delta under `--locked`; the local
+doctest processes exceeded 120 seconds during that same overlay compilation
+before emitting a test diagnostic. The committed lockfile retains only the
+intentional `kwavers-driver` → `aequitas` dependency edge. Hosted locked
+matrix evidence is required before this item moves to done.
+
+Acceptance: no raw physical scalar remains in the scoped design or propagation
+public contracts; formulas retain their value semantics; all direct callers
+compile against the typed API; Eunomia complex values retain one observable
+unit and no imaginary physical unit is introduced.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-59 typed PAM/neural sensor metrics [major] [arch] — done 2026-08-03
 
 - [x] Audit the PAM delay-and-sum, PAM configuration, neural sensor geometry,

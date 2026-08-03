@@ -3358,6 +3358,7 @@ dependencies = [
 name = "kwavers-driver"
 version = "0.3.13"
 dependencies = [
+ "aequitas",
  "kwavers-transducer",
  "thiserror 1.0.69",
 ]
