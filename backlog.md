@@ -1,5 +1,43 @@
 # Backlog / Strategy
 
+## KW-MATH-LA-EVICTION-BLOCKER-1 — Complex sparse has no upstream home [arch] — blocked
+
+**Filed by:** Claude (atlas session 0161539d); 2026-08-03. **Not a claim on the
+eviction** — the in-flight `kwavers-math` linear-algebra eviction belongs to its
+author; this records a capability gap found while verifying the examples build,
+so it is not discovered at consumer-migration time.
+
+**Evidence.** The in-flight change makes `kwavers-math` a thin re-export of
+`leto-ops` (`pub use leto_ops::application::sparse::*`, `linalg::norms::*`,
+`linalg::iterative::*`) and deletes `linear_algebra/{sparse,iterative/lsqr,
+norms}`. But the deleted `CompressedSparseRowMatrix<T>` (553 lines) exists for
+exactly what the replacement does not provide — its own module doc says leto's
+CSR is preferred only "for `f64` entries and read-only matvec":
+
+- **Complex scalars.** `leto_ops::Scalar` is implemented for `f32`, `f64`,
+  `F16`, `Bf16`, and the integer types — there is no complex impl, so
+  `leto_ops::CsrMatrix<Complex64>` does not exist. kwavers instantiates
+  `CompressedSparseRowMatrix<Complex64>` at **38 sites**: the BEM Helmholtz
+  H/G matrices, which are complex by the physics, not by preference.
+- **Mutable structural assembly.** `leto_ops::CsrMatrix` is build-then-freeze
+  (`CooMatrix` → `to_csr`; `values_mut`/`scale_values` mutate values only,
+  never the pattern), while the BEM/FEM managers assemble in place.
+
+**Blast radius if it proceeds as designed:** 97 call sites across 18 files in
+5 crates (`kwavers-solver` 9 files, `kwavers-boundary` 6, plus
+`kwavers-diagnostics`, `kwavers-therapy`, and the `simd_field_ops` bench).
+
+**Options, upstream-ownership first.** (a) Admit complex scalars to the Atlas
+sparse SSOT in `leto-ops` — correct if helios's frequency-domain work needs it
+too, and an ADR-worthy change to the numeric frontier since `Scalar` carries
+`from_usize` and SIMD obligations. (b) Add a distinct complex sparse type
+upstream in `leto-ops`, leaving `Scalar` untouched. (c) Scope the eviction to
+the genuinely duplicated real-valued read-only surface and keep a
+complex-capable assembly matrix, which is what the 38 sites actually need.
+Recommendation: (b) — it unblocks the eviction without reopening the scalar
+frontier, and keeps one owner for sparse storage.
+
+
 ## KW-EXAMPLES-BOOK-01 — Examples/book chapter correspondence [patch] — in progress
 
 **Owner:** Claude (atlas session 0161539d); last-update: 2026-08-02.
