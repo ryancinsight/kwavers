@@ -261,15 +261,48 @@ jobs:
       - name: Install cargo-tarpaulin
         run: cargo install cargo-tarpaulin --version 0.37.0 --locked
 
-      - name: Generate coverage report
+      - name: Generate coverage reports
         # Ptrace rewriting invalidates dependency compile-time layout checks;
         # LLVM source instrumentation preserves those const-evaluation invariants.
-        run: cargo tarpaulin --locked -p kwavers --profile coverage --engine llvm --out xml --features="plotting" --timeout 300
+        # Tarpaulin serializes selected test targets. Keep the complete target
+        # set instrumented, but run the long source-injection binary alongside
+        # the remaining library and integration targets so one workload cannot
+        # consume the entire finite job budget.
+        run: |
+          set -euo pipefail
+          mkdir -p coverage/core coverage/source-injection
+          mapfile -t integration_targets < <(
+            cargo metadata --locked --no-deps --format-version 1 \
+              | jq --raw-output '
+                .packages[]
+                | select(.name == "kwavers")
+                | .targets[]
+                | select((.kind | index("test")) != null)
+                | .name
+              ' \
+              | grep --fixed-strings --invert-match --line-regexp session2_source_injection_test
+          )
+
+          cargo clean
+
+          cargo tarpaulin --locked -p kwavers --profile coverage \
+            --engine llvm --skip-clean --lib --test "${integration_targets[@]}" \
+            --out xml --output-dir coverage/core --features="plotting" --timeout 300 &
+          core_pid=$!
+
+          cargo tarpaulin --locked -p kwavers --profile coverage \
+            --engine llvm --skip-clean --test session2_source_injection_test \
+            --out xml --output-dir coverage/source-injection \
+            --features="plotting" --timeout 300 &
+          source_injection_pid=$!
+
+          wait "$core_pid"
+          wait "$source_injection_pid"
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v7
         with:
-          files: ./cobertura.xml
+          files: ./coverage/core/cobertura.xml,./coverage/source-injection/cobertura.xml
           # Coverage generation above is the reproducible source gate. Codecov
           # ingestion is an external service and may rate-limit tokenless uploads;
           # preserve the report without turning transport failure into a source failure.

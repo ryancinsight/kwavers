@@ -38,6 +38,14 @@
   `98ca19d1-e786-4fad-91b5-7401c49d4486` pass 1/1 each; locked
   checks, warning-denied Clippy, doctests, Rustdoc, formatting, diff, and
   residue scans pass.
+- Hosted verification blocker: Code Coverage job `91609692912` reached the
+  70-minute job budget while the complete Tarpaulin run was still executing
+  `session2_source_injection_test`; the test passed before cancellation and no
+  source assertion failed. The CI gate now runs the metadata-derived complete
+  target set and that long binary as concurrent LLVM-instrumented shards,
+  emitting two Cobertura reports for one Codecov upload. This preserves every
+  coverage target and the per-test 300-second timeout without raising a
+  timeout or reducing a workload.
 - Re-open trigger: raw physical metric residue, changed steering phase,
   formula-boundary mismatch, or Eunomia complex-unit incompatibility.
 

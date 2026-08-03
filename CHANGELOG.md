@@ -4,6 +4,10 @@
 
 ### Changed
 
+- The LLVM Code Coverage gate now preserves complete Kwavers target coverage
+  while running the long source-injection integration binary as a concurrent
+  report shard; the per-test timeout and full-grid workload are unchanged.
+
 - **Breaking:** Sensor-beamformer positions, sampling and steering frequency,
   sound speed, angles, spacing, aperture, F-number, and spatial-Nyquist
   metrics now use Aequitas quantities. Invalid derived-metric inputs return

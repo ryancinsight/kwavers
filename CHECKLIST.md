@@ -1,6 +1,6 @@
 # Project Checklist
 
-## Owner: Codex — KWAVERS-AEQ-MET-58 typed sensor-beamformer metrics [major] [arch] — done 2026-08-03
+## Owner: Codex — KWAVERS-AEQ-MET-58 typed sensor-beamformer metrics [major] [arch] — in progress 2026-08-03
 
 - [x] Audit the sensor-beamformer public fields, formulas, direct callers, and
       test contracts; keep this slice disjoint from aperture-design and other
@@ -12,8 +12,13 @@
       Aequitas; migrate every direct caller without wrappers.
 - [x] Add analytical value regressions for delay, phase, and derived metrics,
       including rejection of invalid typed derived-metric inputs.
-- [ ] Run locked checks, focused/full Nextest, warning-denied Clippy,
-      doctests, Rustdoc, format, residue scans, and hosted gates.
+- [x] Run locked checks, focused/full Nextest, warning-denied Clippy,
+      doctests, Rustdoc, format, and residue scans.
+- [x] Split the complete LLVM coverage workload into concurrent reports after
+      the exact-head job budget was consumed by the long source-injection test;
+      keep every target instrumented and preserve the existing finite timeout
+      contracts.
+- [ ] Rerun the exact PR head and collect green hosted gates before merge.
 
 Acceptance: no raw physical scalar remains in the sensor-beamformer public
 contract; numerical and Eunomia complex steering semantics remain unchanged;

@@ -41,6 +41,18 @@ warning-denied Clippy, doctests, Rustdoc, formatting,
 diff, and typed/complex residue scans pass. Eunomia `Complex` steering data
 retains one shared observable unit and no imaginary SI unit is introduced.
 
+The first exact-head hosted matrix exposed one verification defect rather than
+a sensor-metric defect: Code Coverage job `91609692912` consumed its
+70-minute budget while LLVM Tarpaulin was still executing the complete target
+set. The log records `session2_source_injection_test` completing its two tests
+in 1230.48 seconds before the job was cancelled; no source assertion failed.
+The coverage workflow now derives the Kwavers test-target list from Cargo
+metadata, keeps every target under LLVM instrumentation, runs the long binary
+as a concurrent shard after one clean, and uploads both Cobertura reports to
+Codecov. This removes serial wall-clock contention without raising the
+per-test 300-second timeout or shrinking the full-grid workload. The exact
+head must be rerun before this item can close.
+
 ### KWAVERS-AEQ-MET-57 — shared beamforming configuration metrics
 
 The next audit found that `BeamformingCoreConfig` still exposed shared
