@@ -1,8 +1,8 @@
 ## Live Aequitas closure — 2026-08-02
 
-### KWAVERS-AEQ-MET-59 — PAM/neural sensor metric gap (claimed 2026-08-03)
+### KWAVERS-AEQ-MET-59 — PAM/neural sensor metric gap (closed 2026-08-03)
 
-The next bounded raw-metric family is now claimed. PAM exposes raw delay-and-
+The audit found and closed the bounded raw-metric family. PAM exposes raw delay-and-
 sum sound speed and sampling frequency, beamforming frequency bands, spatial
 resolution, focal point, integration time, and event position/time/peak
 frequency. Neural `SensorGeometry` exposes raw positions, pitch, sampling
@@ -18,13 +18,18 @@ consuming spectrum is computed from uncalibrated raw signal values; a future
 calibration contract must define that unit before those fields can become
 `Intensity` or another physical quantity.
 
-The implementation is committed in `6248ad9b5`, with strict-Clippy cleanup in
-`5d70126f5`. It migrates all direct PAM/neural, Python, therapy, and
-integration-test callers, hardens geometry/configuration/detection validation,
-and propagates beamformed-signal errors instead of discarding them. Formatting,
-diff, and locked metadata pass. PR #337 is collecting the remaining locked
-compile, Nextest, doctest, Rustdoc, residue, and hosted evidence; the corrected
-architecture Clippy step passes at `5d70126f5`.
+The implementation is committed in `6248ad9b5`, with strict-Clippy and hosted-
+compile fixes in `5d70126f5` and `49adf4764`. It migrates all direct
+PAM/neural, Python, therapy, and integration-test callers, hardens
+geometry/configuration/detection validation, and propagates beamformed-signal
+errors instead of discarding them. Formatting, diff, and locked metadata pass.
+Final PR #337 head `49adf4764` passes the complete repository-owned matrix,
+including Test Suite Coverage `91742556621`, Code Coverage `91742557670`,
+Architecture Validation `91742556704`, stable/beta/nightly, Miri, security,
+solver, benchmark, PINN, feature, documentation, wheel, migration-audit, and
+layer-boundary jobs. The first coverage attempt exposed stale Aequitas imports
+in the PAM test module; the fix changed only those canonical paths and did not
+weaken the workload or assertions.
 
 Eunomia `Complex` values, if present at the FFT/storage boundary, continue to
 represent real and quadrature components under one observable signal unit. An

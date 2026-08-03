@@ -4,7 +4,7 @@
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KWAVERS-AEQ-MET-59 | Type PAM delay-and-sum and neural sensor geometry, timing, frequency, and event-coordinate metrics with Aequitas; preserve Eunomia complex signal units. | [arch] [major] | in progress | Codex | `crates/kwavers-analysis/src/signal_processing/{pam,beamforming/neural}/**`, callers/tests, ADR 098, PM artifacts |
+| KWAVERS-AEQ-MET-59 | Type PAM delay-and-sum and neural sensor geometry, timing, frequency, and event-coordinate metrics with Aequitas; preserve Eunomia complex signal units. | [arch] [major] | done 2026-08-03 | Codex | `crates/kwavers-analysis/src/signal_processing/{pam,beamforming/neural}/**`, callers/tests, ADR 098, PM artifacts |
 | KWAVERS-AEQ-MET-58 | Type sensor-beamformer geometry, sampling, steering, aperture, F-number, and spatial-frequency metrics with Aequitas; preserve Eunomia complex steering units. | [arch] [major] | done 2026-08-03 | Codex | `crates/kwavers-transducer/src/beamforming/sensor_beamformer/**`, direct Kwavers callers/tests, ADR 097, PM artifacts |
 | KWAVERS-AEQ-MET-57 | Type the shared beamforming configuration's sound speed, sampling frequency, and reference frequency with Aequitas; migrate the processor formula boundaries and preserve Eunomia complex storage units. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-transducer/src/beamforming/{config,processor}.rs`, callers/tests, ADR 096, PM artifacts |
 | KWAVERS-AEQ-MET-56 | Type rectangular-transducer geometry, frequency, medium speed/density, element-size, and wavenumber contracts with Aequitas; reject invalid geometry and preserve Eunomia complex storage boundaries. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-transducer/src/transducers/rectangular.rs`, FNM solver, Rayleigh-Sommerfeld dispatch, FNM benchmark, ADR 095, PM artifacts |
@@ -12,7 +12,7 @@
 | KWAVERS-AEQ-MET-54 | Type the public ultrafast transmission scheduler's speed, depth, PRF, event times, frame rates, and tilt angles with Aequitas; keep scalar extraction at the PRF/timing formula boundary and document the real-only Eunomia compatibility rule. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-transducer/src/ultrafast/sequencer/**`, manifest, ADR 093, PM artifacts |
 | KWAVERS-AEQ-INTEGRATION-1 | Integrate the current Aequitas metric closure for therapeutic microbubble and plasmonics contracts on current `main`; harden the public three-dimensional plasmonic coordinate contract and synchronize the audit. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-physics/src/{acoustics/therapy/microbubble,electromagnetic}`, PM artifacts |
 
-## KWAVERS-AEQ-MET-59 — Type PAM/neural sensor metrics [major] [arch] — in progress
+## KWAVERS-AEQ-MET-59 — Type PAM/neural sensor metrics [major] [arch] — done 2026-08-03
 
 - Owner: Codex; scope: `crates/kwavers-analysis/src/signal_processing/pam/**`,
   neural `SensorGeometry` and traditional DAS steering, direct callers/tests,
@@ -34,16 +34,20 @@
   introduced.
 - Implementation: commit `6248ad9b5` types the PAM/neural contracts and all
   direct Kwavers analysis, Python, therapy, and integration-test callers;
-  commit `5d70126f5` fixes the strict-Clippy redundant-closure finding. The
+  commits `5d70126f5` and `49adf4764` fix the strict-Clippy redundant-closure
+  finding and stale Aequitas test imports. The
   PAM validator rejects invalid bands, thresholds, grids, non-finite maps,
   and empty beamformed data; complex FFT coefficients become real observable
   magnitudes before frequency units are assigned.
-- Verification state: formatting, diff, and locked metadata pass. Local
-  locked compilation was attempted twice but exceeded the shared Atlas
-  Cargo/build-lock bound while concurrent gates held the cache. PR #337 is
-  the hosted compile/test oracle; the first exact-head architecture run found
-  and closed the redundant closure, and the corrected architecture Clippy
-  step passes at `5d70126f5`.
+- Verification state: formatting, diff, and locked metadata pass. Local locked
+  compilation was attempted twice but exceeded the shared Atlas Cargo/build-
+  lock bound while concurrent gates held the cache. Final PR #337 head
+  `49adf4764` passes the complete repository-owned matrix, including Test Suite
+  Coverage `91742556621`, Code Coverage `91742557670`, Architecture Validation
+  `91742556704`, stable/beta/nightly, Miri, security, solver, benchmark, PINN,
+  feature, documentation, wheel, migration-audit, and layer-boundary jobs.
+  The first coverage attempt failed on stale test imports; `49adf4764` fixes
+  that diagnostic without weakening the instrument or assertions.
 
 ## KWAVERS-AEQ-MET-58 — Type sensor-beamformer metrics [major] [arch] — done 2026-08-03
 

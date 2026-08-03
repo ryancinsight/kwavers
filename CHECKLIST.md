@@ -1,6 +1,6 @@
 # Project Checklist
 
-## Owner: Codex — KWAVERS-AEQ-MET-59 typed PAM/neural sensor metrics [major] [arch] — in progress 2026-08-03
+## Owner: Codex — KWAVERS-AEQ-MET-59 typed PAM/neural sensor metrics [major] [arch] — done 2026-08-03
 
 - [x] Audit the PAM delay-and-sum, PAM configuration, neural sensor geometry,
       and neural traditional-DAS public fields and formula boundaries.
@@ -15,9 +15,17 @@
       wrappers.
 - [x] Add analytical geometry and delay regressions plus invalid-input
       coverage. Commit `6248ad9b5` carries the implementation; strict Clippy
-      found and the follow-up `5d70126f5` fixed one redundant test closure.
-- [ ] Complete the locked package, Nextest, doctest, Rustdoc, residue, and
-      hosted gates at the final PR head.
+      found and the follow-ups `5d70126f5` and `49adf4764` fixed the redundant
+      closure and stale Aequitas test imports.
+- [x] Complete the locked package, Nextest, doctest, Rustdoc, residue, and
+      hosted gates at the final PR head `49adf4764`.
+
+Evidence: the final PR #337 matrix is green. Test Suite Coverage job
+`91742556621` and Code Coverage job `91742557670` pass; stable, beta, nightly,
+Miri, security, solver, benchmark, PINN, feature, architecture, documentation,
+wheel, migration-audit, and layer-boundary jobs also pass. The first final-head
+coverage attempt exposed stale imports in the PAM test module; `49adf4764`
+corrects the canonical Aequitas paths without changing coverage scope.
 
 Acceptance: no raw physical scalar remains in the scoped PAM/neural public
 contracts; threshold semantics remain honest; Eunomia complex signal data
