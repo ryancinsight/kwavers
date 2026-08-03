@@ -121,7 +121,10 @@ fn main() -> KwaversResult<()> {
         tikhonov_weight: 0.0,
         use_gauss_newton: true,
     };
-    let ring = fd::ring_around_slice(cfg.ring_elements, cfg.ring_diameter_m)?;
+    let ring = fd::ring_around_slice(
+        cfg.ring_elements,
+        aequitas::systems::si::quantities::Length::from_base(cfg.ring_diameter_m),
+    )?;
 
     // PAM image frame aligned to the FD voxel-centre convention.
     let origin = [

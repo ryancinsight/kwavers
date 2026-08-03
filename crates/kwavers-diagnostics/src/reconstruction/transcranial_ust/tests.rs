@@ -1,3 +1,5 @@
+use aequitas::systems::si::quantities::Length;
+use aequitas::systems::si::units::Meter;
 use leto::{Array2, Array3};
 
 use kwavers_solver::inverse::linear_born_inversion::LinearBornInversionConfig;
@@ -11,26 +13,33 @@ use super::{
 
 #[test]
 fn transcranial_bowl_geometry_uses_distinct_element_positions() {
-    let geometry =
-        TranscranialBowlGeometry::from_aperture(64, 0.11, BowlAngularBounds::hemisphere()).unwrap();
+    let geometry = TranscranialBowlGeometry::from_aperture(
+        64,
+        Length::from_unit::<Meter>(0.11),
+        BowlAngularBounds::hemisphere(),
+    )
+    .unwrap();
     assert_eq!(geometry.len(), 64);
 
     let min_z = geometry
         .elements
         .iter()
-        .map(|element| element.z_m)
+        .map(|element| element.z.in_unit::<Meter>())
         .fold(f64::INFINITY, f64::min);
     let max_z = geometry
         .elements
         .iter()
-        .map(|element| element.z_m)
+        .map(|element| element.z.in_unit::<Meter>())
         .fold(f64::NEG_INFINITY, f64::max);
     assert!(min_z >= 0.0);
     assert!(max_z > 0.9 * 0.11);
     for element in &geometry.elements {
-        let radius = (element.x_m.powi(2) + element.y_m.powi(2) + element.z_m.powi(2)).sqrt();
+        let x = element.x.in_unit::<Meter>();
+        let y = element.y.in_unit::<Meter>();
+        let z = element.z.in_unit::<Meter>();
+        let radius = (x.powi(2) + y.powi(2) + z.powi(2)).sqrt();
         assert!((radius - 0.11).abs() < 1.0e-12);
-        assert!(element.z_m >= 0.0);
+        assert!(z >= 0.0);
     }
 
     let receivers = geometry.receiver_indices(&[32, 16, 48]);
@@ -47,17 +56,19 @@ fn transcranial_bowl_geometry_uses_distinct_element_positions() {
 #[test]
 fn transcranial_bowl_geometry_uses_configured_source_aperture() {
     let aperture = BowlAngularBounds::from_axis_projection_bounds(-0.25, 0.95).unwrap();
-    let geometry = TranscranialBowlGeometry::from_aperture(80, 0.11, aperture).unwrap();
+    let geometry =
+        TranscranialBowlGeometry::from_aperture(80, Length::from_unit::<Meter>(0.11), aperture)
+            .unwrap();
 
     let min_projection = geometry
         .elements
         .iter()
-        .map(|element| element.z_m / 0.11)
+        .map(|element| element.z.in_unit::<Meter>() / 0.11)
         .fold(f64::INFINITY, f64::min);
     let max_projection = geometry
         .elements
         .iter()
-        .map(|element| element.z_m / 0.11)
+        .map(|element| element.z.in_unit::<Meter>() / 0.11)
         .fold(f64::NEG_INFINITY, f64::max);
 
     assert_eq!(geometry.len(), 80);

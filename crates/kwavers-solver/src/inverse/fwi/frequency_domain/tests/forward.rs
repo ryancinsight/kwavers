@@ -2,7 +2,13 @@ use super::*;
 
 #[test]
 fn dense_cbs_prediction_matches_born_for_homogeneous_on_grid_ring() {
-    let array = MultiRowRingArray::new(4, 1, 0.01, 0.0).expect("ring array");
+    let array = MultiRowRingArray::new(
+        4,
+        1,
+        Length::from_unit::<Meter>(0.01),
+        Length::from_unit::<Meter>(0.0),
+    )
+    .expect("ring array");
     let model = Array3::from_elem([3, 3, 1], SOUND_SPEED_WATER_SIM);
     let born = Config {
         spacing_m: 0.005,
@@ -38,7 +44,13 @@ fn dense_cbs_prediction_matches_born_for_homogeneous_on_grid_ring() {
 
 #[test]
 fn dense_cbs_prediction_is_sensitive_to_sound_speed_volume() {
-    let array = MultiRowRingArray::new(4, 1, 0.01, 0.0).expect("ring array");
+    let array = MultiRowRingArray::new(
+        4,
+        1,
+        Length::from_unit::<Meter>(0.01),
+        Length::from_unit::<Meter>(0.0),
+    )
+    .expect("ring array");
     let base = Array3::from_elem([3, 3, 1], SOUND_SPEED_WATER_SIM);
     let mut perturbed = base.clone();
     perturbed[[1, 1, 0]] = 1510.0;
@@ -73,7 +85,13 @@ fn dense_cbs_prediction_is_sensitive_to_sound_speed_volume() {
 
 #[test]
 fn spectral_cbs_prediction_is_sensitive_to_sound_speed_volume() {
-    let array = MultiRowRingArray::new(4, 1, 0.01, 0.0).expect("ring array");
+    let array = MultiRowRingArray::new(
+        4,
+        1,
+        Length::from_unit::<Meter>(0.01),
+        Length::from_unit::<Meter>(0.0),
+    )
+    .expect("ring array");
     let base = Array3::from_elem([3, 3, 1], SOUND_SPEED_WATER_SIM);
     let mut perturbed = base.clone();
     perturbed[[1, 1, 0]] = 1510.0;
@@ -105,7 +123,13 @@ fn spectral_cbs_prediction_is_sensitive_to_sound_speed_volume() {
 
 #[test]
 fn pstd_spectral_cbs_prediction_is_sensitive_to_sound_speed_volume() {
-    let array = MultiRowRingArray::new(4, 1, 0.01, 0.0).expect("ring array");
+    let array = MultiRowRingArray::new(
+        4,
+        1,
+        Length::from_unit::<Meter>(0.01),
+        Length::from_unit::<Meter>(0.0),
+    )
+    .expect("ring array");
     let base = Array3::from_elem([3, 3, 1], SOUND_SPEED_WATER_SIM);
     let mut perturbed = base.clone();
     perturbed[[1, 1, 0]] = 1510.0;
@@ -139,7 +163,13 @@ fn pstd_spectral_cbs_prediction_is_sensitive_to_sound_speed_volume() {
 
 #[test]
 fn dense_cbs_prediction_rejects_ring_outside_inversion_grid() {
-    let array = MultiRowRingArray::new(4, 1, 0.10, 0.0).expect("ring array");
+    let array = MultiRowRingArray::new(
+        4,
+        1,
+        Length::from_unit::<Meter>(0.10),
+        Length::from_unit::<Meter>(0.0),
+    )
+    .expect("ring array");
     let model = Array3::from_elem([3, 3, 1], SOUND_SPEED_WATER_SIM);
     let config = Config {
         spacing_m: 0.005,

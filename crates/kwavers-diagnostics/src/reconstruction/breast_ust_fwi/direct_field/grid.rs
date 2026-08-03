@@ -1,3 +1,4 @@
+use aequitas::systems::si::units::Meter;
 use kwavers_core::constants::numerical::FOUR_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::Complex64;
@@ -63,9 +64,9 @@ pub(super) fn point_to_grid_index(
         0.5 * (shape.nz - 1) as f64 * spacing_m,
     ];
     let coordinate = [
-        center[0] + point.x_m,
-        center[1] + point.y_m,
-        center[2] + point.z_m,
+        center[0] + point.x.in_unit::<Meter>(),
+        center[1] + point.y.in_unit::<Meter>(),
+        center[2] + point.z.in_unit::<Meter>(),
     ];
     let maximum = [
         (shape.nx - 1) as f64 * spacing_m,
@@ -98,9 +99,15 @@ pub(super) fn grid_index_to_point(
         0.5 * (shape.nz - 1) as f64,
     ];
     ElementPosition {
-        x_m: (ix as f64 - center[0]) * spacing_m,
-        y_m: (iy as f64 - center[1]) * spacing_m,
-        z_m: (iz as f64 - center[2]) * spacing_m,
+        x: aequitas::systems::si::quantities::Length::from_unit::<Meter>(
+            (ix as f64 - center[0]) * spacing_m,
+        ),
+        y: aequitas::systems::si::quantities::Length::from_unit::<Meter>(
+            (iy as f64 - center[1]) * spacing_m,
+        ),
+        z: aequitas::systems::si::quantities::Length::from_unit::<Meter>(
+            (iz as f64 - center[2]) * spacing_m,
+        ),
     }
 }
 
@@ -165,8 +172,8 @@ pub(super) fn outgoing_green(
 
 #[inline]
 pub(super) fn distance_m(a: ElementPosition, b: ElementPosition) -> f64 {
-    let dx = a.x_m - b.x_m;
-    let dy = a.y_m - b.y_m;
-    let dz = a.z_m - b.z_m;
+    let dx = a.x.in_unit::<Meter>() - b.x.in_unit::<Meter>();
+    let dy = a.y.in_unit::<Meter>() - b.y.in_unit::<Meter>();
+    let dz = a.z.in_unit::<Meter>() - b.z.in_unit::<Meter>();
     (dx * dx + dy * dy + dz * dz).sqrt()
 }

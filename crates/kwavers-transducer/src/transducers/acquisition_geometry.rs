@@ -28,12 +28,17 @@
 
 use std::fmt::Debug;
 
-/// Cartesian position of one transducer element \[m\].
+use aequitas::systems::si::quantities::Length;
+
+/// Cartesian position of one transducer element.
+///
+/// Coordinates remain real spatial lengths. Scalar metres are extracted only
+/// where a consumer enters Euclidean, mesh, or numerical-kernel arithmetic.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ElementPosition {
-    pub x_m: f64,
-    pub y_m: f64,
-    pub z_m: f64,
+    pub x: Length<f64>,
+    pub y: Length<f64>,
+    pub z: Length<f64>,
 }
 
 /// Abstract acquisition geometry consumed by the generic linear Born + PCG
@@ -82,6 +87,7 @@ pub trait TransducerGeometry: Debug + Send + Sync {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use aequitas::systems::si::units::Meter;
 
     #[derive(Debug)]
     struct LinearStrip {
@@ -92,9 +98,9 @@ mod tests {
         fn new(n: usize, dx: f64) -> Self {
             let elements = (0..n)
                 .map(|i| ElementPosition {
-                    x_m: (i as f64) * dx,
-                    y_m: 0.0,
-                    z_m: 0.0,
+                    x: Length::from_unit::<Meter>((i as f64) * dx),
+                    y: Length::from_unit::<Meter>(0.0),
+                    z: Length::from_unit::<Meter>(0.0),
                 })
                 .collect();
             Self { elements }

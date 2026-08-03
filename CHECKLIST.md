@@ -1,5 +1,28 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-61 shared acquisition geometry [major] [arch] — done 2026-08-03
+
+- [x] Type `ElementPosition` Cartesian coordinates as Aequitas `Length` and
+      migrate all direct transducer, diagnostics, physics, solver, and Python
+      callers without compatibility wrappers.
+- [x] Type transcranial bowl radius and multi-row ring diameter/row spacing as
+      Aequitas `Length`; keep scalar extraction at rotation, Euclidean, mesh,
+      index, and numerical-kernel boundaries.
+- [x] Add ADR 100, analytical geometry and invalid-input regressions, and the
+      Eunomia real-geometry/one-observable-unit rule.
+- [x] Run focused Nextest, Clippy, formatting, and residue scans; doctest and
+      Rustdoc coverage are represented by the hosted matrix.
+- [x] Collect the hosted repository-owned matrix at the final branch head,
+      close the PM item, and prepare the merge.
+
+Acceptance: no raw physical scalar remains in the shared acquisition-geometry
+public contract or its ring/bowl constructors; all direct callers preserve
+value semantics; no imaginary physical unit is introduced. Local core Nextest
+passes 3074/3074 with 6 skipped; the changed top-level PSTD integration target
+passes 6/6; the exact corrected head `55dbf23ef` passes the complete hosted
+repository-owned matrix, including Code Coverage `91818502615` and Test Suite
+Coverage `91818502690`.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-60 typed transducer design/propagation metrics [major] [arch] — done 2026-08-03
 
 - [x] Record ADR 099 for the typed aperture-design and focused-propagation

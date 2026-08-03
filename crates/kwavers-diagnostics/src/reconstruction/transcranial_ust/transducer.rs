@@ -2,6 +2,8 @@
 
 use std::f64::consts::TAU;
 
+use aequitas::systems::si::quantities::Length;
+use aequitas::systems::si::units::Meter;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_transducer::transducers::focused::{BowlAngularBounds, BowlConfig, BowlTransducer};
 use kwavers_transducer::transducers::{ElementPosition, TransducerGeometry};
@@ -40,7 +42,7 @@ impl TranscranialBowlGeometry {
     /// Place `element_count` elements on a deterministic equal-area bowl aperture.
     pub fn from_aperture(
         element_count: usize,
-        radius_m: f64,
+        radius: Length<f64>,
         aperture: BowlAngularBounds,
     ) -> KwaversResult<Self> {
         if element_count < 8 {
@@ -48,6 +50,7 @@ impl TranscranialBowlGeometry {
                 "TranscranialBowlGeometry requires at least 8 elements".to_owned(),
             ));
         }
+        let radius_m = radius.in_unit::<Meter>();
         if !radius_m.is_finite() || radius_m <= 0.0 {
             return Err(KwaversError::InvalidInput(
                 "TranscranialBowlGeometry radius must be finite and positive".to_owned(),
@@ -67,9 +70,9 @@ impl TranscranialBowlGeometry {
             .element_positions()
             .iter()
             .map(|position| ElementPosition {
-                x_m: position[0],
-                y_m: position[1],
-                z_m: position[2],
+                x: Length::from_unit::<Meter>(position[0]),
+                y: Length::from_unit::<Meter>(position[1]),
+                z: Length::from_unit::<Meter>(position[2]),
             })
             .collect();
         Ok(Self { elements })
@@ -82,10 +85,13 @@ impl TranscranialBowlGeometry {
     fn nearest_rotated_azimuth(&self, source_idx: usize, azimuth: f64) -> usize {
         let source = self.elements[source_idx];
         let (sin_phi, cos_phi) = azimuth.sin_cos();
+        let source_x = source.x.in_unit::<Meter>();
+        let source_y = source.y.in_unit::<Meter>();
+        let source_z = source.z.in_unit::<Meter>();
         let target = ElementPosition {
-            x_m: cos_phi * source.x_m - sin_phi * source.y_m,
-            y_m: sin_phi * source.x_m + cos_phi * source.y_m,
-            z_m: source.z_m,
+            x: Length::from_unit::<Meter>(cos_phi * source_x - sin_phi * source_y),
+            y: Length::from_unit::<Meter>(sin_phi * source_x + cos_phi * source_y),
+            z: Length::from_unit::<Meter>(source_z),
         };
 
         let mut best_idx = if source_idx == 0 { 1 } else { 0 };
@@ -105,5 +111,8 @@ impl TranscranialBowlGeometry {
 }
 
 fn squared_distance(a: ElementPosition, b: ElementPosition) -> f64 {
-    (a.x_m - b.x_m).powi(2) + (a.y_m - b.y_m).powi(2) + (a.z_m - b.z_m).powi(2)
+    let dx = a.x.in_unit::<Meter>() - b.x.in_unit::<Meter>();
+    let dy = a.y.in_unit::<Meter>() - b.y.in_unit::<Meter>();
+    let dz = a.z.in_unit::<Meter>() - b.z.in_unit::<Meter>();
+    dx.powi(2) + dy.powi(2) + dz.powi(2)
 }

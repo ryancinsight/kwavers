@@ -4,6 +4,7 @@
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
+| KWAVERS-AEQ-MET-61 | Type shared acquisition geometry coordinates and ring/bowl radius, diameter, and row-spacing contracts with Aequitas; preserve Eunomia real geometry and migrate every direct caller. | [arch] [major] | done 2026-08-03 | Codex | `kwavers-transducer/src/transducers/acquisition_geometry.rs`, transcranial diagnostics, breast FWI physics/solver/diagnostics/Python adapters, direct tests, ADR 100, PM artifacts |
 | KWAVERS-AEQ-MET-60 | Type transducer aperture design and focused propagation metrics with Aequitas, including geometry, drive, pressure, impedance, intensity, and beam-width contracts; preserve Eunomia complex signal semantics. | [arch] [major] | done 2026-08-03 | Codex | `crates/kwavers-transducer/src/design/{mod,propagation}.rs`, direct driver callers/tests, ADR 099, PM artifacts |
 | KWAVERS-AEQ-MET-59 | Type PAM delay-and-sum and neural sensor geometry, timing, frequency, and event-coordinate metrics with Aequitas; preserve Eunomia complex signal units. | [arch] [major] | done 2026-08-03 | Codex | `crates/kwavers-analysis/src/signal_processing/{pam,beamforming/neural}/**`, callers/tests, ADR 098, PM artifacts |
 | KWAVERS-AEQ-MET-58 | Type sensor-beamformer geometry, sampling, steering, aperture, F-number, and spatial-frequency metrics with Aequitas; preserve Eunomia complex steering units. | [arch] [major] | done 2026-08-03 | Codex | `crates/kwavers-transducer/src/beamforming/sensor_beamformer/**`, direct Kwavers callers/tests, ADR 097, PM artifacts |
@@ -38,6 +39,44 @@
   boundary, Code Coverage, and Test Suite Coverage. Kwavers PR #338 merges as
   `7ec566b694598f11d4ceb7bb8721e70384f40689`. The external RecurseML analyzer
   report remains non-gating and is not evidence against the source change.
+
+## KWAVERS-AEQ-MET-61 — Type shared acquisition geometry [major] [arch] — done 2026-08-03
+
+- Owner: Codex; scope: `kwavers-transducer/src/transducers/acquisition_geometry.rs`,
+  transcranial-bowl diagnostics, multi-row-ring physics, breast-FWI
+  diagnostics/solver/Python adapters, direct tests, ADR 100, and synchronized
+  PM artifacts.
+- Gap: `ElementPosition` exposes Cartesian coordinates as raw metres, while
+  ring and bowl constructors expose raw radius, diameter, and row spacing.
+  These values cross generic Born/PCG, frequency-domain FWI, mesh indexing,
+  Euclidean, and rotation formulas.
+- Decision: publish `Length<f64>` for each Cartesian coordinate and each
+  radius/diameter/row-spacing parameter. Extract metres only at the existing
+  Euclidean, trigonometric, mesh/index, and numerical-kernel boundaries; update
+  all direct callers in one migration with no raw-field compatibility layer.
+- Eunomia: acquisition geometry is real spatial geometry. If a downstream
+  signal is complex, its real/quadrature components retain the signal's one
+  observable unit; no imaginary SI length or complex physical coordinate is
+  introduced.
+- Acceptance: all `ElementPosition` consumers compile against typed fields;
+  ring/bowl analytical geometry and invalid-input tests preserve values;
+  focused package Nextest, Clippy, format, doctest/Rustdoc, residue scans, and
+  hosted repository-owned gates pass.
+- Implementation complete: `ElementPosition`, transcranial bowl radius,
+  multi-row-ring diameter/row spacing, and all scoped direct callers now use
+  typed Aequitas lengths. The absorption reference regression now uses a
+  scale-relative 16-ulp bound derived from the formula's floating-point
+  operation sequence.
+- Local evidence: strict offline Clippy passes for transducer, physics, solver,
+  diagnostics, Python, and top-level Kwavers targets; core Nextest passes
+  3074/3074 with 6 skipped and the changed `pstd_finite_window_born` target
+  passes 6/6. Full top-level Kwavers Nextest exceeded the 300-second local
+  shared-build collection wall without a test diagnostic; the focused changed
+  target is green. The exact corrected head `55dbf23ef` passes the hosted
+  repository-owned matrix in CI/CD run `30853358409`, architecture run
+  `30853358425`, wheel run `30853358412`, migration run `30853358417`, and
+  benchmark run `30853358459`; Code Coverage job `91818502615` passes in
+  18m40s and Test Suite Coverage job `91818502690` passes in 36m47s.
 
 ## KWAVERS-AEQ-MET-59 — Type PAM/neural sensor metrics [major] [arch] — done 2026-08-03
 

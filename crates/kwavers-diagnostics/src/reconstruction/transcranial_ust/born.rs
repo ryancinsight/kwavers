@@ -1,5 +1,7 @@
 //! Finite-frequency Born inversion for CT-derived brain speed contrast.
 
+use aequitas::systems::si::quantities::Length;
+use aequitas::systems::si::units::Meter;
 use kwavers_core::error::KwaversResult;
 use kwavers_math::statistics::{normalized_rmse, pearson, percentile_range};
 use kwavers_solver::inverse::linear_born_inversion::{
@@ -76,7 +78,7 @@ pub fn reconstruct_brain_slice(
     let linear = &config.linear;
     let geometry = TranscranialBowlGeometry::from_aperture(
         config.element_count,
-        config.radius_m,
+        Length::from_unit::<Meter>(config.radius_m),
         config.aperture,
     )?;
     let active = active_voxels(medium);

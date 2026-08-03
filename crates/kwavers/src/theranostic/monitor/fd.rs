@@ -22,6 +22,7 @@
 //!   convergent Born series for strongly scattering media.
 //! - Ali et al. (2025) — multi-row ring-array transcranial FWI geometry.
 
+use aequitas::systems::si::quantities::Length;
 use kwavers_core::error::KwaversResult;
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
 use kwavers_solver::inverse::fwi::frequency_domain::operator::{
@@ -93,8 +94,11 @@ impl Default for FdMonitorConfig {
 ///
 /// # Errors
 /// Propagates [`MultiRowRingArray::new`] validation failures.
-pub fn ring_around_slice(elements: usize, diameter_m: f64) -> KwaversResult<MultiRowRingArray> {
-    MultiRowRingArray::new(elements, 1, diameter_m, 0.0)
+pub fn ring_around_slice(
+    elements: usize,
+    diameter: Length<f64>,
+) -> KwaversResult<MultiRowRingArray> {
+    MultiRowRingArray::new(elements, 1, diameter, Length::from_base(0.0))
 }
 
 /// Assemble the frequency-domain FWI `Config`.
@@ -244,7 +248,8 @@ mod tests {
     #[test]
     fn forward_observation_is_finite_and_correctly_shaped() {
         let cfg = small_config();
-        let array = ring_around_slice(cfg.ring_elements, cfg.ring_diameter_m).unwrap();
+        let array =
+            ring_around_slice(cfg.ring_elements, Length::from_base(cfg.ring_diameter_m)).unwrap();
         let config = build_config(&cfg);
         assert!(config.is_ok(), "CBS config must build");
         let slice = slice_with_bump(20, 1500.0, 60.0, 1);
@@ -258,7 +263,8 @@ mod tests {
     fn reconstructing_homogeneous_stays_homogeneous() {
         // No perturbation → the reconstruction must not invent contrast.
         let cfg = small_config();
-        let array = ring_around_slice(cfg.ring_elements, cfg.ring_diameter_m).unwrap();
+        let array =
+            ring_around_slice(cfg.ring_elements, Length::from_base(cfg.ring_diameter_m)).unwrap();
         let homo = slice_with_bump(20, 1500.0, 0.0, 0);
         let recon = reconstruct(&homo, &homo, &array, &cfg).unwrap();
         let max_dev = recon
@@ -276,7 +282,8 @@ mod tests {
         let cfg = small_config();
         let n = 12;
         let centre = n / 2;
-        let array = ring_around_slice(cfg.ring_elements, cfg.ring_diameter_m).unwrap();
+        let array =
+            ring_around_slice(cfg.ring_elements, Length::from_base(cfg.ring_diameter_m)).unwrap();
 
         let mut background = Array3::from_elem((n, n, 1), 1540.0);
         for i in 0..n {
@@ -316,7 +323,8 @@ mod tests {
         let cfg = small_config();
         let n = 12;
         let centre = n / 2; // 6
-        let array = ring_around_slice(cfg.ring_elements, cfg.ring_diameter_m).unwrap();
+        let array =
+            ring_around_slice(cfg.ring_elements, Length::from_base(cfg.ring_diameter_m)).unwrap();
         let background = slice_with_bump(n, 1500.0, 0.0, 0);
         let true_bump = 60.0;
         let perturbed = slice_with_bump(n, 1500.0, true_bump, 1); // indices 5..=7, centre 6

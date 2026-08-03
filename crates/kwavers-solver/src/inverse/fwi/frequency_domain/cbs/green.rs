@@ -3,6 +3,7 @@
 use super::absorbing::AbsorbingBoundary;
 use super::grid::GridSpec;
 use super::temporal::PstdTemporalBinConfig;
+use aequitas::systems::si::units::Meter;
 use eunomia::Complex64;
 use kwavers_core::constants::numerical::FOUR_PI;
 use kwavers_transducer::transducers::ElementPosition;
@@ -17,9 +18,9 @@ pub(super) fn shifted_outgoing_green(
     shifted_wavenumber: Complex64,
     min_distance_m: f64,
 ) -> Complex64 {
-    let dx = source.x_m - receiver.x_m;
-    let dy = source.y_m - receiver.y_m;
-    let dz = source.z_m - receiver.z_m;
+    let dx = source.x.in_unit::<Meter>() - receiver.x.in_unit::<Meter>();
+    let dy = source.y.in_unit::<Meter>() - receiver.y.in_unit::<Meter>();
+    let dz = source.z.in_unit::<Meter>() - receiver.z.in_unit::<Meter>();
     let distance = (dx * dx + dy * dy + dz * dz).sqrt().max(min_distance_m);
     (Complex64::new(0.0, 1.0) * shifted_wavenumber * distance).exp() / (FOUR_PI * distance)
 }
