@@ -1,6 +1,6 @@
 # Project Checklist
 
-## Owner: Codex — KWAVERS-AEQ-MET-58 typed sensor-beamformer metrics [major] [arch] — in progress 2026-08-03
+## Owner: Codex — KWAVERS-AEQ-MET-58 typed sensor-beamformer metrics [major] [arch] — done 2026-08-03
 
 - [x] Audit the sensor-beamformer public fields, formulas, direct callers, and
       test contracts; keep this slice disjoint from aperture-design and other
@@ -20,7 +20,11 @@
       preserve the existing finite timeout contracts. Filter targets by their
       Cargo-required features so the plotting lane does not select `full`-only
       tests.
-- [ ] Rerun the exact PR head and collect green hosted gates before merge.
+- [x] Rerun the exact PR head and collect green hosted gates before merge.
+      Code Coverage job `91693171499` passes in 27m7s; Test Suite Coverage
+      job `91693169453` passes in 37m56s; the complete repository-owned matrix
+      is green. PR #335 merges as
+      `c3e0ca39da0c928c83125ca27f9689de49b389f4`.
 
 Acceptance: no raw physical scalar remains in the sensor-beamformer public
 contract; numerical and Eunomia complex steering semantics remain unchanged;
@@ -32,7 +36,9 @@ Evidence: transducer Nextest `05509c41-f4c5-41a0-826e-b5749a1a2d21` passes
 integration filters `903ce106-7444-4f32-abbb-5d8a3ae691ca` and
 `98ca19d1-e786-4fad-91b5-7401c49d4486` pass 1/1 each; locked checks,
 doctests, Rustdoc, formatting, diff, and typed/complex residue scans pass.
-Hosted repository-owned gates remain required before delivery.
+Hosted repository-owned gates pass at the exact tested head and delivery is
+complete through Kwavers PR #335 merge
+`c3e0ca39da0c928c83125ca27f9689de49b389f4`.
 
 ## Owner: Codex — KWAVERS-AEQ-MET-57 typed beamforming configuration quantities [major] [arch] — done 2026-08-02
 
