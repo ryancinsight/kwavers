@@ -10,16 +10,20 @@ use numpy::{
 };
 use pyo3::{exceptions::PyRuntimeError, Py, PyResult, Python};
 
-fn shape_to_array<const N: usize>(shape: &[usize]) -> [usize; N] {
-    shape
-        .try_into()
-        .expect("shape length matches dimensionality")
+fn shape_to_array<const N: usize>(shape: &[usize]) -> PyResult<[usize; N]> {
+    shape.try_into().map_err(|_| {
+        PyRuntimeError::new_err(format!(
+            "expected a {N}-D NumPy shape, received {} dimensions",
+            shape.len()
+        ))
+    })
 }
 
 /// Copy a 1-D readonly NumPy array into a Rust `Vec`.
 ///
-/// Contiguous inputs use a zero-copy view; non-contiguous inputs are copied to a
-/// temporary contiguous buffer first.
+/// Contiguous inputs use the fast contiguous read path; non-contiguous inputs
+/// are copied to a temporary contiguous buffer first. Both paths then copy into
+/// Leto-owned storage.
 pub fn copy_pyarray1_to_vec<'py, T>(array: &PyReadonlyArray1<'py, T>) -> PyResult<Vec<T>>
 where
     T: Element + Copy,
@@ -41,7 +45,7 @@ pub fn copy_pyarray2_to_vec<'py, T>(
 where
     T: Element + Copy,
 {
-    let shape = shape_to_array(array.shape());
+    let shape = shape_to_array(array.shape())?;
     if let Ok(slice) = array.as_slice() {
         return Ok((slice.to_vec(), shape));
     }
@@ -61,7 +65,7 @@ pub fn copy_pyarray3_to_vec<'py, T>(
 where
     T: Element + Copy,
 {
-    let shape = shape_to_array(array.shape());
+    let shape = shape_to_array(array.shape())?;
     if let Ok(slice) = array.as_slice() {
         return Ok((slice.to_vec(), shape));
     }
@@ -87,7 +91,6 @@ where
 }
 
 /// Convert a 2-D readonly NumPy array into a leto 2-D array.
-#[allow(dead_code)]
 pub fn pyarray2_to_leto2<'py, T>(array: &PyReadonlyArray2<'py, T>) -> PyResult<leto::Array2<T>>
 where
     T: Element + Copy + Clone,
@@ -193,11 +196,17 @@ mod tests {
         leto1_to_pyarray1, leto2_to_pyarray2, leto3_to_pyarray3, linspace_vec, pyarray1_to_leto1,
         pyarray2_to_leto2, pyarray3_to_leto3,
     };
-    use numpy::{PyArray1, PyArray2, PyArray3, PyArrayMethods, PyUntypedArrayMethods};
+    use numpy::{
+        PyArray1, PyArray2, PyArray3, PyArrayMethods, PyReadonlyArray1, PyReadonlyArray2,
+        PyReadonlyArray3, PyUntypedArrayMethods,
+    };
+    use pyo3::types::PyAnyMethods;
     use pyo3::Python;
+    use std::ffi::CString;
 
     #[test]
     fn pyarray_round_trip_preserves_rank_shape_and_values() {
+        Python::initialize();
         Python::attach(|py| {
             let one = leto::Array1::from_shape_vec(3, vec![1.0_f64, 2.0, 3.0]).unwrap();
             let one_out = leto1_to_pyarray1(py, one).unwrap();
@@ -215,7 +224,8 @@ mod tests {
                 [1.0_f64, 2.0, 3.0, 4.0]
             );
 
-            let three = leto::Array3::from_shape_vec([1, 2, 2], vec![1.0_f64, 2.0, 3.0, 4.0]).unwrap();
+            let three =
+                leto::Array3::from_shape_vec([1, 2, 2], vec![1.0_f64, 2.0, 3.0, 4.0]).unwrap();
             let three_out = leto3_to_pyarray3(py, three).unwrap();
             assert_eq!(three_out.bind(py).shape(), [1, 2, 2]);
             assert_eq!(
@@ -227,6 +237,7 @@ mod tests {
 
     #[test]
     fn numpy_inputs_convert_to_leto_without_shape_changes() {
+        Python::initialize();
         Python::attach(|py| {
             let one_input = PyArray1::from_vec(py, vec![1.0_f64, 2.0, 3.0]);
             let one = pyarray1_to_leto1(&one_input.readonly()).unwrap();
@@ -248,7 +259,52 @@ mod tests {
             .unwrap();
             let three = pyarray3_to_leto3(&three_input.readonly()).unwrap();
             assert_eq!(three.shape(), [2, 2, 2]);
-            assert_eq!(three.into_vec(), [1.0_f64, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
+            assert_eq!(
+                three.into_vec(),
+                [1.0_f64, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]
+            );
+        });
+    }
+
+    #[test]
+    fn non_contiguous_numpy_inputs_are_copied_in_c_order() {
+        Python::initialize();
+        Python::attach(|py| {
+            let one_code = CString::new("__import__('numpy').arange(8.0)[::2]").unwrap();
+            let one_input = py
+                .eval(one_code.as_c_str(), None, None)
+                .unwrap()
+                .extract::<PyReadonlyArray1<f64>>()
+                .unwrap();
+            let one = pyarray1_to_leto1(&one_input).unwrap();
+            assert_eq!(one.shape(), [4]);
+            assert_eq!(one.into_vec(), [0.0, 2.0, 4.0, 6.0]);
+
+            let two_code =
+                CString::new("__import__('numpy').arange(12.0).reshape((3, 4))[:, ::2]").unwrap();
+            let two_input = py
+                .eval(two_code.as_c_str(), None, None)
+                .unwrap()
+                .extract::<PyReadonlyArray2<f64>>()
+                .unwrap();
+            let two = pyarray2_to_leto2(&two_input).unwrap();
+            assert_eq!(two.shape(), [3, 2]);
+            assert_eq!(two.into_vec(), [0.0, 2.0, 4.0, 6.0, 8.0, 10.0]);
+
+            let three_code =
+                CString::new("__import__('numpy').arange(24.0).reshape((2, 3, 4))[:, :, ::2]")
+                    .unwrap();
+            let three_input = py
+                .eval(three_code.as_c_str(), None, None)
+                .unwrap()
+                .extract::<PyReadonlyArray3<f64>>()
+                .unwrap();
+            let three = pyarray3_to_leto3(&three_input).unwrap();
+            assert_eq!(three.shape(), [2, 3, 2]);
+            assert_eq!(
+                three.into_vec(),
+                [0.0, 2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0, 18.0, 20.0, 22.0,]
+            );
         });
     }
 

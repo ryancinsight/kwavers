@@ -1,8 +1,9 @@
-use numpy::{PyReadonlyArray1, PyReadonlyArray2, PyReadonlyArray3};
+use numpy::{PyReadonlyArray1, PyReadonlyArray2, PyReadonlyArray3, PyUntypedArrayMethods};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
 use super::Source;
+use crate::array_utils::{pyarray1_to_leto1, pyarray2_to_leto2, pyarray3_to_leto3};
 
 #[pymethods]
 impl Source {
@@ -18,7 +19,7 @@ impl Source {
         uz: Option<PyReadonlyArray1<f64>>,
         mode: Option<&str>,
     ) -> PyResult<Self> {
-        let mask_arr = mask.as_array().to_owned();
+        let mask_arr = pyarray3_to_leto3(&mask)?;
         let num_sources = mask_arr.iter().filter(|v| **v != 0.0).count();
         if num_sources == 0 {
             return Err(PyValueError::new_err(
@@ -32,25 +33,25 @@ impl Source {
         }
 
         let nt = if let Some(ref s) = ux {
-            s.as_array().len()
+            s.shape()[0]
         } else if let Some(ref s) = uy {
-            s.as_array().len()
+            s.shape()[0]
         } else if let Some(ref s) = uz {
-            s.as_array().len()
+            s.shape()[0]
         } else {
             unreachable!()
         };
 
         let mut u_signal = leto::Array3::<f64>::zeros((3, 1, nt));
         if let Some(ref sx) = ux {
-            let arr = sx.as_array();
+            let arr = pyarray1_to_leto1(sx)?;
             for t in 0..nt {
                 u_signal[[0, 0, t]] = arr[t];
             }
         }
         if let Some(ref sy) = uy {
-            let arr = sy.as_array();
-            if arr.len() != nt {
+            let arr = pyarray1_to_leto1(sy)?;
+            if arr.shape()[0] != nt {
                 return Err(PyValueError::new_err(format!(
                     "uy length {} differs from first signal length {}",
                     arr.len(),
@@ -62,8 +63,8 @@ impl Source {
             }
         }
         if let Some(ref sz) = uz {
-            let arr = sz.as_array();
-            if arr.len() != nt {
+            let arr = pyarray1_to_leto1(sz)?;
+            if arr.shape()[0] != nt {
                 return Err(PyValueError::new_err(format!(
                     "uz length {} differs from first signal length {}",
                     arr.len(),
@@ -87,9 +88,7 @@ impl Source {
             frequency: 0.0,
             amplitude: max_amp,
             position: None,
-            mask: Some(crate::breast_fwi_bindings::complex_compat::nd_to_leto3(
-                mask_arr,
-            )),
+            mask: Some(mask_arr),
             signal: None,
             source_mode,
             initial_pressure: None,
@@ -115,7 +114,7 @@ impl Source {
         uz: Option<PyReadonlyArray2<f64>>,
         mode: Option<&str>,
     ) -> PyResult<Self> {
-        let mask_arr = mask.as_array().to_owned();
+        let mask_arr = pyarray3_to_leto3(&mask)?;
         let num_sources = mask_arr.iter().filter(|v| **v != 0.0).count();
         if num_sources == 0 {
             return Err(PyValueError::new_err(
@@ -129,13 +128,13 @@ impl Source {
         }
 
         let (n_sig, nt) = if let Some(ref s) = ux {
-            let shape = s.as_array().shape().to_vec();
+            let shape = s.shape();
             (shape[0], shape[1])
         } else if let Some(ref s) = uy {
-            let shape = s.as_array().shape().to_vec();
+            let shape = s.shape();
             (shape[0], shape[1])
         } else if let Some(ref s) = uz {
-            let shape = s.as_array().shape().to_vec();
+            let shape = s.shape();
             (shape[0], shape[1])
         } else {
             unreachable!()
@@ -150,7 +149,7 @@ impl Source {
 
         let mut u_signal = leto::Array3::<f64>::zeros((3, num_sources, nt));
         if let Some(ref sx) = ux {
-            let arr = sx.as_array();
+            let arr = pyarray2_to_leto2(sx)?;
             for s in 0..num_sources {
                 for t in 0..nt {
                     u_signal[[0, s, t]] = arr[[s, t]];
@@ -158,7 +157,7 @@ impl Source {
             }
         }
         if let Some(ref sy) = uy {
-            let arr = sy.as_array();
+            let arr = pyarray2_to_leto2(sy)?;
             if arr.shape()[0] != num_sources || arr.shape()[1] != nt {
                 return Err(PyValueError::new_err(format!(
                     "uy shape {:?} must be ({}, {})",
@@ -174,7 +173,7 @@ impl Source {
             }
         }
         if let Some(ref sz) = uz {
-            let arr = sz.as_array();
+            let arr = pyarray2_to_leto2(sz)?;
             if arr.shape()[0] != num_sources || arr.shape()[1] != nt {
                 return Err(PyValueError::new_err(format!(
                     "uz shape {:?} must be ({}, {})",
@@ -202,9 +201,7 @@ impl Source {
             frequency: 0.0,
             amplitude: max_amp,
             position: None,
-            mask: Some(crate::breast_fwi_bindings::complex_compat::nd_to_leto3(
-                mask_arr,
-            )),
+            mask: Some(mask_arr),
             signal: None,
             source_mode,
             initial_pressure: None,

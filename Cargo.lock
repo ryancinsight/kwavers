@@ -190,7 +190,7 @@ dependencies = [
 
 [[package]]
 name = "apollo-fft-macros"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -809,22 +809,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "coeus-leto"
-version = "0.9.0"
-source = "git+https://github.com/ryancinsight/Coeus.git#54cefedb126d2a06d2c8ae1b58a40498bcbda7f8"
-dependencies = [
- "coeus-core",
- "leto",
- "leto-ops",
-]
-
-[[package]]
 name = "coeus-nn"
 version = "0.9.0"
 dependencies = [
  "coeus-autograd",
  "coeus-core",
- "coeus-leto 0.9.0",
+ "coeus-leto",
  "coeus-ops",
  "coeus-tensor",
  "smallvec",
@@ -837,7 +827,7 @@ version = "0.9.0"
 dependencies = [
  "bytemuck",
  "coeus-core",
- "coeus-leto 0.9.0",
+ "coeus-leto",
  "coeus-sparse",
  "coeus-tensor",
  "eunomia",
@@ -877,7 +867,7 @@ version = "0.9.0"
 dependencies = [
  "bytemuck",
  "coeus-core",
- "coeus-leto 0.9.0",
+ "coeus-leto",
  "rkyv 0.8.17",
  "smallvec",
  "thiserror 2.0.19",
@@ -5699,7 +5689,7 @@ dependencies = [
  "bytemuck",
  "coeus-autograd",
  "coeus-core",
- "coeus-leto 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
+ "coeus-leto",
  "coeus-nn",
  "coeus-ops",
  "coeus-optim",
@@ -5833,7 +5823,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "coeus-core",
- "coeus-leto 0.9.0 (git+https://github.com/ryancinsight/Coeus.git)",
+ "coeus-leto",
  "coeus-ops",
  "coeus-tensor",
  "eunomia",
@@ -8022,7 +8012,11 @@ dependencies = [
 ]
 
 [[patch.unused]]
-name = "horae"
+name = "asclepius-coeus"
+version = "0.1.0"
+
+[[patch.unused]]
+name = "consus-zarr"
 version = "0.1.0"
 
 [[patch.unused]]
@@ -8034,20 +8028,8 @@ name = "athena-leto"
 version = "0.1.0"
 
 [[patch.unused]]
-name = "consus-zarr"
+name = "horae"
 version = "0.1.0"
-
-[[patch.unused]]
-name = "moirai-http"
-version = "0.4.0"
-
-[[patch.unused]]
-name = "apollo-nufft"
-version = "0.7.0"
-
-[[patch.unused]]
-name = "apollo-sht"
-version = "0.7.0"
 
 [[patch.unused]]
 name = "hephaestus-metal"
@@ -8058,5 +8040,13 @@ name = "hephaestus-rocm"
 version = "0.18.0"
 
 [[patch.unused]]
-name = "asclepius-coeus"
-version = "0.1.0"
+name = "apollo-nufft"
+version = "0.7.0"
+
+[[patch.unused]]
+name = "apollo-sht"
+version = "0.7.0"
+
+[[patch.unused]]
+name = "moirai-http"
+version = "0.4.0"

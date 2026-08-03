@@ -84,9 +84,9 @@ pub mod config;
 pub mod interfaces;
 pub mod photon;
 pub mod result;
+pub mod scatter;
 pub mod solver;
 pub mod source;
-pub mod scatter;
 
 #[cfg(test)]
 mod tests;

@@ -24,9 +24,9 @@ use super::super::medium::PreparedTheranosticSlice;
 use super::cavitation::{
     cavitation_burst_duration_s, cavitation_emission_waveform, CAV_MAX_LINE_MULTIPLE,
 };
+use super::indexing::linear;
 use super::medium::{reference_speed, speed_bounds};
 use super::types::{AcousticGrid, CpmlCoeffs, PaddedSimulation};
-use super::indexing::linear;
 use crate::therapy::theranostic_guidance::geometry::Point2;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 

@@ -2,8 +2,8 @@
 
 use super::forward::{peak_pressure_workspace_values, propagate_peak_pressure};
 use super::grid::acoustic_grid;
-use super::types::PeakPressureExposureResult;
 use super::indexing::linear;
+use super::types::PeakPressureExposureResult;
 use super::{THERANOSTIC_WAVE_EXPOSURE_BACKEND, THERANOSTIC_WAVE_EXPOSURE_MODEL};
 use crate::therapy::theranostic_guidance::config::TheranosticInverseConfig;
 use crate::therapy::theranostic_guidance::exposure::normalize_positive;

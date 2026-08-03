@@ -6,11 +6,10 @@ mod velocity;
 pub(crate) use py_convert::pressure_signal_to_matrix;
 
 use leto::{Array2, Array3};
-use numpy::ndarray::Axis;
 use numpy::{PyReadonlyArray2, PyReadonlyArray3};
 use pyo3::exceptions::PyValueError;
 
-use crate::breast_fwi_bindings::complex_compat::nd_to_leto3;
+use crate::array_utils::{pyarray2_to_leto2, pyarray3_to_leto3};
 use pyo3::prelude::*;
 
 /// Acoustic source for wave excitation.
@@ -193,10 +192,7 @@ impl Source {
             return Err(PyValueError::new_err("Frequency must be positive"));
         }
 
-        let mask_arr = mask.as_array().to_owned();
-        if mask_arr.ndim() != 3 {
-            return Err(PyValueError::new_err("Mask must be a 3D array"));
-        }
+        let mask_arr = pyarray3_to_leto3(&mask)?;
 
         let signal_arr = pressure_signal_to_matrix(signal)?;
 
@@ -232,7 +228,7 @@ impl Source {
             frequency,
             amplitude,
             position: None,
-            mask: Some(nd_to_leto3(mask_arr)),
+            mask: Some(mask_arr),
             signal: Some(signal_arr),
             source_mode,
             initial_pressure: None,
@@ -257,9 +253,11 @@ impl Source {
     #[staticmethod]
     fn from_initial_pressure(p0: &Bound<'_, PyAny>) -> PyResult<Self> {
         let p0_arr: Array3<f64> = if let Ok(p0_3d) = p0.extract::<PyReadonlyArray3<f64>>() {
-            nd_to_leto3(p0_3d.as_array().to_owned())
+            pyarray3_to_leto3(&p0_3d)?
         } else if let Ok(p0_2d) = p0.extract::<PyReadonlyArray2<f64>>() {
-            nd_to_leto3(p0_2d.as_array().insert_axis(Axis(2)).to_owned())
+            let p0_2d = pyarray2_to_leto2(&p0_2d)?;
+            let [nx, ny] = p0_2d.shape();
+            Array3::from_shape_fn([nx, ny, 1], |[i, j, _]| p0_2d[[i, j]])
         } else {
             return Err(PyValueError::new_err(
                 "Initial pressure must be a 2D or 3D ndarray of float64 values",

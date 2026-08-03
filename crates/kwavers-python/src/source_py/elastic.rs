@@ -1,11 +1,10 @@
 use leto::Array3;
-use numpy::ndarray::Axis;
 use numpy::{PyReadonlyArray1, PyReadonlyArray2, PyReadonlyArray3};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
 use super::Source;
-use crate::breast_fwi_bindings::complex_compat::{nd_to_leto1, nd_to_leto3};
+use crate::array_utils::{pyarray1_to_leto1, pyarray2_to_leto2, pyarray3_to_leto3};
 
 #[pymethods]
 impl Source {
@@ -41,9 +40,6 @@ impl Source {
             }
         };
         let mask_arr = mask.as_array();
-        if mask_arr.ndim() != 3 {
-            return Err(PyValueError::new_err("mask must be a 3D bool ndarray"));
-        }
         let n_active = mask_arr.iter().filter(|&&v| v).count();
         if n_active == 0 {
             return Err(PyValueError::new_err(
@@ -55,10 +51,25 @@ impl Source {
                 "At least one of ux, uy, uz must be provided",
             ));
         }
-        let convert = |opt: Option<PyReadonlyArray1<f64>>| -> Option<leto::Array1<f64>> {
-            opt.map(|sig| nd_to_leto1(sig.as_array().to_owned()))
+        let convert = |opt: Option<PyReadonlyArray1<f64>>| -> PyResult<Option<leto::Array1<f64>>> {
+            opt.map(|sig| pyarray1_to_leto1(&sig)).transpose()
         };
-        let mask_f64 = nd_to_leto3(mask_arr.mapv(|b| if b { 1.0 } else { 0.0 }));
+        let mask_shape = [
+            mask_arr.shape()[0],
+            mask_arr.shape()[1],
+            mask_arr.shape()[2],
+        ];
+        let mask_f64 =
+            leto::Array3::from_shape_fn(
+                mask_shape,
+                |[i, j, k]| {
+                    if mask_arr[[i, j, k]] {
+                        1.0
+                    } else {
+                        0.0
+                    }
+                },
+            );
         let amplitude = [&ux, &uy, &uz]
             .iter()
             .filter_map(|sig| {
@@ -78,9 +89,9 @@ impl Source {
             velocity_signal: None,
             direction: None,
             kwave_array: None,
-            elastic_ux_signal_1d: convert(ux),
-            elastic_uy_signal_1d: convert(uy),
-            elastic_uz_signal_1d: convert(uz),
+            elastic_ux_signal_1d: convert(ux)?,
+            elastic_uy_signal_1d: convert(uy)?,
+            elastic_uz_signal_1d: convert(uz)?,
         })
     }
 
@@ -93,9 +104,11 @@ impl Source {
     #[pyo3(signature = (field, axis="z"))]
     fn from_initial_displacement(field: &Bound<'_, PyAny>, axis: &str) -> PyResult<Self> {
         let field_arr: Array3<f64> = if let Ok(f3) = field.extract::<PyReadonlyArray3<f64>>() {
-            nd_to_leto3(f3.as_array().to_owned())
+            pyarray3_to_leto3(&f3)?
         } else if let Ok(f2) = field.extract::<PyReadonlyArray2<f64>>() {
-            nd_to_leto3(f2.as_array().insert_axis(Axis(2)).to_owned())
+            let f2 = pyarray2_to_leto2(&f2)?;
+            let [nx, ny] = f2.shape();
+            Array3::from_shape_fn([nx, ny, 1], |[i, j, _]| f2[[i, j]])
         } else {
             return Err(PyValueError::new_err(
                 "Initial displacement must be a 2D or 3D ndarray of float64 values",

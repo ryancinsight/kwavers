@@ -5,6 +5,8 @@ use numpy::PyReadonlyArray3;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
+use crate::array_utils::pyarray3_to_leto3;
+
 /// Sensor for recording acoustic fields.
 ///
 /// Mathematical Specification:
@@ -85,10 +87,7 @@ impl Sensor {
     /// >>> sensor = Sensor.from_mask(mask)
     #[staticmethod]
     fn from_mask(mask: PyReadonlyArray3<bool>) -> PyResult<Self> {
-        let mask_arr = mask.as_array().to_owned();
-        if mask_arr.ndim() != 3 {
-            return Err(PyValueError::new_err("Mask must be a 3D array"));
-        }
+        let mask_arr = pyarray3_to_leto3(&mask)?;
         let num_sensors = mask_arr.iter().filter(|&&v| v).count();
         if num_sensors == 0 {
             return Err(PyValueError::new_err(
@@ -98,9 +97,7 @@ impl Sensor {
         Ok(Sensor {
             sensor_type: "mask".to_string(),
             position: None,
-            mask: Some(crate::breast_fwi_bindings::complex_compat::nd_to_leto3(
-                mask_arr,
-            )),
+            mask: Some(mask_arr),
             record_modes: Vec::new(),
             record_start_index: 1,
         })

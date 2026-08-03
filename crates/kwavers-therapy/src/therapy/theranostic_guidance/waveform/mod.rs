@@ -24,9 +24,9 @@ mod eikonal;
 mod emission;
 mod forward;
 mod grid;
+mod indexing;
 mod medium;
 mod types;
-mod indexing;
 
 pub use emission::passive_acoustic_maps;
 pub use types::{PeakPressureExposureResult, WaveformSimulationResult};
@@ -40,8 +40,8 @@ use adjoint::adjoint_image;
 use backend::{downsample_max, simulate_peak_pressure_with_backend, ReferenceFdtdCpmlBackend};
 use forward::propagate;
 use grid::acoustic_grid;
-use medium::lesion_speed;
 use indexing::energy;
+use medium::lesion_speed;
 
 pub const THERANOSTIC_WAVEFORM_MODEL: &str = "source_encoded_time_domain_acoustic_adjoint_rtm";
 pub const THERANOSTIC_WAVE_EXPOSURE_MODEL: &str =

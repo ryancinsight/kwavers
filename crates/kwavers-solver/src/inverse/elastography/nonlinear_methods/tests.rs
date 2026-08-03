@@ -1,10 +1,10 @@
 use super::super::config::NonlinearInversionConfig;
-use super::bayesian::bayesian_inversion;
-use super::harmonic_ratio::harmonic_ratio_inversion;
 use super::analytical::{
     a_landau, ba_from_beta_s, beta_s_from_amplitudes, forward_model, forward_model_derivative,
     shear_modulus,
 };
+use super::bayesian::bayesian_inversion;
+use super::harmonic_ratio::harmonic_ratio_inversion;
 use super::least_squares::nonlinear_least_squares_inversion;
 use super::processor::NonlinearInversion;
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;

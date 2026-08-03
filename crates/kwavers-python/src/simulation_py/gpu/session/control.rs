@@ -6,7 +6,7 @@ use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyTuple};
 
 use super::GpuPstdSession;
-use crate::breast_fwi_bindings::complex_compat::{nd_to_leto2, nd_to_leto3};
+use crate::array_utils::{pyarray2_to_leto2, pyarray3_to_leto3};
 
 #[pymethods]
 impl GpuPstdSession {
@@ -17,8 +17,8 @@ impl GpuPstdSession {
         mask: PyReadonlyArray3<f64>,
         ux_signals: PyReadonlyArray2<f64>,
     ) -> PyResult<()> {
-        let mask_leto = nd_to_leto3(mask.as_array().to_owned());
-        let sig_leto = nd_to_leto2(ux_signals.as_array().to_owned());
+        let mask_leto = pyarray3_to_leto3(&mask)?;
+        let sig_leto = pyarray2_to_leto2(&ux_signals)?;
         self.rebuild_source_sensor_indices(mask_leto.view())?;
         self.update_velocity_signal_rows(sig_leto.view())
     }
@@ -29,7 +29,7 @@ impl GpuPstdSession {
         _py: Python<'_>,
         mask: PyReadonlyArray3<f64>,
     ) -> PyResult<()> {
-        let mask_leto = nd_to_leto3(mask.as_array().to_owned());
+        let mask_leto = pyarray3_to_leto3(&mask)?;
         self.rebuild_source_sensor_indices(mask_leto.view())
     }
 
@@ -39,7 +39,7 @@ impl GpuPstdSession {
         _py: Python<'_>,
         ux_signals: PyReadonlyArray2<f64>,
     ) -> PyResult<()> {
-        let sig_leto = nd_to_leto2(ux_signals.as_array().to_owned());
+        let sig_leto = pyarray2_to_leto2(&ux_signals)?;
         self.update_velocity_signal_rows(sig_leto.view())
     }
 

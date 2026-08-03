@@ -10,11 +10,11 @@
 
 use kwavers_physics::acoustics::bubble_dynamics::{EpsteinPlessetDissolution, GasDiffusionParams};
 use kwavers_simulation::multi_physics::residual_gas::ResidualGasField;
-use numpy::{PyArray3, PyReadonlyArray3, ToPyArray};
+use numpy::{PyArray3, PyReadonlyArray3, PyUntypedArrayMethods};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
-use crate::breast_fwi_bindings::complex_compat::{leto3_to_nd3, nd_to_leto3};
+use crate::array_utils::{leto3_to_pyarray3, pyarray3_to_leto3};
 
 /// 3-D residual cavitation-gas (lacuna) void-fraction field `β(x)` [-].
 ///
@@ -45,15 +45,22 @@ impl PyResidualGasField {
     /// Deposit freshly nucleated gas: add the per-voxel volume fraction
     /// `gas_fraction` to `β` (clamped < 1) and reset the representative radius.
     fn deposit(&mut self, gas_fraction: PyReadonlyArray3<'_, f64>) -> PyResult<()> {
-        let a = gas_fraction.as_array();
-        if a.dim() != self.shape {
+        let expected_shape = [self.shape.0, self.shape.1, self.shape.2];
+        if gas_fraction.shape() != expected_shape {
             return Err(PyValueError::new_err(format!(
                 "gas_fraction shape {:?} != field shape {:?}",
-                a.dim(),
+                gas_fraction.shape(),
                 self.shape
             )));
         }
-        let a_leto = nd_to_leto3(a.to_owned());
+        let a_leto = pyarray3_to_leto3(&gas_fraction)?;
+        if a_leto.shape() != [self.shape.0, self.shape.1, self.shape.2] {
+            return Err(PyValueError::new_err(format!(
+                "gas_fraction shape {:?} != field shape {:?}",
+                a_leto.shape(),
+                self.shape
+            )));
+        }
         self.inner.deposit(a_leto.view());
         Ok(())
     }
@@ -68,10 +75,8 @@ impl PyResidualGasField {
     }
 
     /// Current void-fraction field `β(x)` as an (nx, ny, nz) array.
-    fn void_fraction(&self, py: Python<'_>) -> Py<PyArray3<f64>> {
-        leto3_to_nd3(self.inner.void_fraction().to_contiguous())
-            .to_pyarray(py)
-            .into()
+    fn void_fraction(&self, py: Python<'_>) -> PyResult<Py<PyArray3<f64>>> {
+        leto3_to_pyarray3(py, self.inner.void_fraction().to_contiguous())
     }
 
     /// Wood (1930) effective sound-speed field [m/s] for the gas-laden medium.
@@ -83,13 +88,12 @@ impl PyResidualGasField {
         rho_liquid: f64,
         c_gas: f64,
         rho_gas: f64,
-    ) -> Py<PyArray3<f64>> {
-        leto3_to_nd3(
+    ) -> PyResult<Py<PyArray3<f64>>> {
+        leto3_to_pyarray3(
+            py,
             self.inner
                 .sound_speed_field(c_liquid, rho_liquid, c_gas, rho_gas),
         )
-        .to_pyarray(py)
-        .into()
     }
 
     /// Commander–Prosperetti excess-attenuation field [Np/m] at `freq_hz`.
@@ -104,13 +108,12 @@ impl PyResidualGasField {
         mu_liquid: f64,
         p0_pa: f64,
         polytropic: f64,
-    ) -> Py<PyArray3<f64>> {
-        leto3_to_nd3(
+    ) -> PyResult<Py<PyArray3<f64>>> {
+        leto3_to_pyarray3(
+            py,
             self.inner
                 .attenuation_field(freq_hz, c_liquid, rho_liquid, mu_liquid, p0_pa, polytropic),
         )
-        .to_pyarray(py)
-        .into()
     }
 
     /// Representative residual-bubble radius `m` (shrinks with dissolution).
@@ -126,5 +129,51 @@ impl PyResidualGasField {
     /// Total residual gas volume `Σ β·dV` `m³` for voxel volume `dv_m3`.
     fn total_gas_volume(&self, dv_m3: f64) -> f64 {
         self.inner.total_gas_volume(dv_m3)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::PyResidualGasField;
+    use numpy::{PyArray3, PyArrayMethods, PyUntypedArrayMethods};
+    use pyo3::Python;
+
+    #[test]
+    fn residual_gas_outputs_preserve_shape_and_deposit_values() {
+        Python::initialize();
+        Python::attach(|py| {
+            let mut field = PyResidualGasField::new(2, 1, 2, 3.0e-6);
+            let deposit =
+                PyArray3::from_vec3(py, &[vec![vec![0.1_f64, 0.2]], vec![vec![0.3, 0.4]]]).unwrap();
+            field.deposit(deposit.readonly()).unwrap();
+
+            let output = field.void_fraction(py).unwrap();
+            let output_bound = output.bind(py);
+            assert_eq!(output_bound.shape(), [2, 1, 2]);
+            let output_readonly = output_bound.readonly();
+            let values = output_readonly.as_slice().unwrap();
+            assert_eq!(values, [0.1_f64, 0.2, 0.3, 0.4]);
+
+            let sound_speed = field
+                .sound_speed_field(py, 1481.0, 998.0, 343.0, 1.2)
+                .unwrap();
+            assert_eq!(sound_speed.bind(py).shape(), [2, 1, 2]);
+
+            let attenuation = field
+                .attenuation_field(py, 1.0e6, 1481.0, 998.0, 1.0e-3, 101_325.0, 1.4)
+                .unwrap();
+            assert_eq!(attenuation.bind(py).shape(), [2, 1, 2]);
+        });
+    }
+
+    #[test]
+    fn residual_gas_rejects_deposit_shape_mismatch() {
+        Python::initialize();
+        Python::attach(|py| {
+            let mut field = PyResidualGasField::new(2, 2, 2, 3.0e-6);
+            let wrong_shape =
+                PyArray3::from_vec3(py, &[vec![vec![0.1_f64, 0.2]], vec![vec![0.3, 0.4]]]).unwrap();
+            assert!(field.deposit(wrong_shape.readonly()).is_err());
+        });
     }
 }

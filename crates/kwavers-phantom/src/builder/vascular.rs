@@ -1,5 +1,5 @@
-use super::super::types::VesselGeometry;
 use super::super::optical_properties::compute_blood_properties;
+use super::super::types::VesselGeometry;
 use kwavers_grid::GridDimensions;
 use kwavers_medium::optical_map::{OpticalPropertyMap, OpticalPropertyMapBuilder, Region};
 use kwavers_medium::properties::OpticalPropertyData;

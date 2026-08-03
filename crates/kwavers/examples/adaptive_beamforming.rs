@@ -110,8 +110,7 @@ fn single_source_scan(
     frequency_hz: f64,
     theta0_deg: f64,
 ) -> KwaversResult<(f64, f64, f64)> {
-    let snapshots =
-        synthesize_snapshots(steering, frequency_hz, &[(theta0_deg, 1.0)], 0.05, 42)?;
+    let snapshots = synthesize_snapshots(steering, frequency_hz, &[(theta0_deg, 1.0)], 0.05, 42)?;
     let covariance = CovarianceEstimator::new(true, NUM_SNAPSHOTS).estimate_complex(&snapshots)?;
     let mvdr = MinimumVariance::with_diagonal_loading(DIAGONAL_LOADING);
 
@@ -215,7 +214,8 @@ fn synthesize_snapshots(
     let mut snapshots = Array2::<Complex64>::zeros((NUM_ELEMENTS, NUM_SNAPSHOTS));
     for snapshot_index in 0..NUM_SNAPSHOTS {
         // One deterministic complex source term per snapshot.
-        let source_term = Complex64::new(0.0, deterministic_phase(seed, snapshot_index as u64)).exp();
+        let source_term =
+            Complex64::new(0.0, deterministic_phase(seed, snapshot_index as u64)).exp();
         for element_index in 0..NUM_ELEMENTS {
             let mut value = Complex64::default();
             for ((angle_deg, amplitude), a) in sources.iter().zip(&steering_vectors) {
@@ -248,7 +248,10 @@ fn hermitian_quadratic(w: &Array1<Complex64>, r: &Array2<Complex64>) -> f64 {
 
 /// `aᴴ w` — Hermitian inner product of two complex vectors.
 fn hermitian_inner(a: &Array1<Complex64>, w: &Array1<Complex64>) -> Complex64 {
-    a.iter().zip(w.iter()).map(|(a_i, w_i)| a_i.conj() * *w_i).sum()
+    a.iter()
+        .zip(w.iter())
+        .map(|(a_i, w_i)| a_i.conj() * *w_i)
+        .sum()
 }
 
 /// Deterministic pseudo-random phase in `[0, 2π)` (SplitMix64), so the

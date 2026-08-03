@@ -1,9 +1,9 @@
 //! Python bindings for same-device therapy/imaging inverse simulations.
 
 mod abdominal3d;
-mod py_convert;
 mod inverse;
 mod nonlinear3d;
+mod py_convert;
 mod standing_wave;
 mod transcranial_benchmark;
 mod transcranial_focused_bowl;

@@ -148,6 +148,7 @@ pub fn reconstruct(
     let background = background.clone();
     let mut observations = Vec::with_capacity(cfg.frequencies_hz.len());
     for &frequency_hz in &cfg.frequencies_hz {
+        // Safety: frequency_hz is validated at config construction time
         let pressure = simulate_frequency_observation(&medium_slice, array, frequency_hz, &config)?;
         observations.push(FrequencyObservation::new(frequency_hz, pressure));
     }

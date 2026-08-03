@@ -3,36 +3,33 @@ members = ["crates/kwavers", "xtask", "crates/kwavers-python", "crates/kwavers-c
 resolver = "2"
 
 [workspace.dependencies]
-aequitas = { version = "0.1.0", git = "https://github.com/ryancinsight/aequitas", default-features = false, features = ["std"] }
-asclepius = { version = "0.1.0", git = "https://github.com/ryancinsight/asclepius", default-features = false, features = ["std"] }
-hyperion = { version = "0.1.0", git = "https://github.com/ryancinsight/hyperion" }
-proteus = { version = "0.1.0", git = "https://github.com/ryancinsight/proteus" }
-tyche-core = { version = "0.1.0", git = "https://github.com/ryancinsight/tyche" }
-# External git submodules replaced by remote git dependencies (always-latest on the
-# default branch; `cargo update -p <crate>` refreshes the pinned commit in Cargo.lock).
-# These repos carry their own [workspace], so Cargo resolves their internal
-# inheritance against THEIR roots — no path scaffolding needed here. SSOT: members
-# inherit via `{ workspace = true }`.
-ritk-core = { version = "0.9.0", git = "https://github.com/ryancinsight/ritk.git" }
-ritk-io = { version = "0.2.0", git = "https://github.com/ryancinsight/ritk.git" }
-ritk-image = { version = "0.2.0", git = "https://github.com/ryancinsight/ritk.git" }
-ritk-spatial = { version = "0.1.0", git = "https://github.com/ryancinsight/ritk.git" }
-ritk-registration = { version = "0.53.0", git = "https://github.com/ryancinsight/ritk.git" }
-coeus-core = { version = "0.9.0", git = "https://github.com/ryancinsight/Coeus.git" }
-coeus-tensor = { version = "0.9.0", git = "https://github.com/ryancinsight/Coeus.git" }
-coeus-autograd = { version = "0.9.0", git = "https://github.com/ryancinsight/Coeus.git" }
-coeus-nn = { version = "0.9.0", git = "https://github.com/ryancinsight/Coeus.git" }
-coeus-optim = { version = "0.9.0", git = "https://github.com/ryancinsight/Coeus.git" }
-coeus-ops = { version = "0.9.0", git = "https://github.com/ryancinsight/Coeus.git" }
-apollo = { package = "apollo-fft", version = "0.25.0", git = "https://github.com/ryancinsight/apollo.git" }
-hephaestus-core = { version = "0.18.0", git = "https://github.com/ryancinsight/hephaestus.git", default-features = false }
-hephaestus-wgpu = { version = "0.18.0", git = "https://github.com/ryancinsight/hephaestus.git", default-features = false, features = ["decomposition"] }
-hephaestus-cuda = { version = "0.18.0", git = "https://github.com/ryancinsight/hephaestus.git", default-features = false }
-hermes-simd = { version = "0.5.0", git = "https://github.com/ryancinsight/hermes.git", default-features = false, features = ["std"] }
-moirai-parallel = { version = "0.4.0", git = "https://github.com/ryancinsight/Moirai.git", default-features = false, features = ["parallel"] }
-leto = { version = "0.40.0", git = "https://github.com/ryancinsight/leto.git", default-features = false, features = ["std"] }
-leto-ops = { version = "0.40.0", git = "https://github.com/ryancinsight/leto.git", default-features = false, features = ["std"] }
-eunomia = { version = "0.7.0", git = "https://github.com/ryancinsight/eunomia", default-features = false, features = ["std"] }
+aequitas = {path = "../../repos/aequitas", package = "aequitas"}
+asclepius = {path = "../../repos/asclepius/crates/asclepius", package = "asclepius"}
+hyperion = {path = "../../repos/hyperion", package = "hyperion"}
+proteus = {path = "../../repos/proteus", package = "proteus"}
+tyche-core = { path = "../../repos/tyche/crates/tyche-core", package = "tyche-core" }
+# Atlas foundation crates — local path deps preferred; git sources used only
+# where a specific revision is required (via [patch] override below).
+ritk-core = { path = "../../repos/ritk/crates/ritk-core", package = "ritk-core" }
+ritk-io = { path = "../../repos/ritk/crates/ritk-io", package = "ritk-io" }
+ritk-image = { path = "../../repos/ritk/crates/ritk-image", package = "ritk-image" }
+ritk-spatial = { path = "../../repos/ritk/crates/ritk-spatial", package = "ritk-spatial" }
+ritk-registration = { path = "../../repos/ritk/crates/ritk-registration", package = "ritk-registration" }
+coeus-core = { path = "../../repos/coeus/crates/coeus-core", package = "coeus-core" }
+coeus-tensor = { path = "../../repos/coeus/crates/coeus-tensor", package = "coeus-tensor" }
+coeus-autograd = { path = "../../repos/coeus/crates/coeus-autograd", package = "coeus-autograd" }
+coeus-nn = { path = "../../repos/coeus/crates/coeus-nn", package = "coeus-nn" }
+coeus-optim = { path = "../../repos/coeus/crates/coeus-optim", package = "coeus-optim" }
+coeus-ops = { path = "../../repos/coeus/crates/coeus-ops", package = "coeus-ops" }
+apollo = {path = "../../repos/apollo/crates/apollo-fft", package = "apollo-fft"}
+hephaestus-core = { path = "../../repos/hephaestus/crates/hephaestus-core", package = "hephaestus-core", default-features = false }
+hephaestus-wgpu = { path = "../../repos/hephaestus/crates/hephaestus-wgpu", package = "hephaestus-wgpu", default-features = false, features = ["decomposition"] }
+hephaestus-cuda = { path = "../../repos/hephaestus/crates/hephaestus-cuda", package = "hephaestus-cuda", default-features = false }
+hermes-simd = { path = "../../repos/hermes/crates/hermes-simd", package = "hermes-simd", default-features = false, features = ["std"] }
+moirai-parallel = {path = "../../repos/moirai/moirai-parallel", package = "moirai-parallel", features = ["parallel"], default-features = false}
+leto = {path = "../../repos/leto/crates/leto", package = "leto", features = ["std"], default-features = false}
+leto-ops = {path = "../../repos/leto/crates/leto-ops", package = "leto-ops", features = ["std"], default-features = false}
+eunomia = {path = "../../repos/eunomia/crates/eunomia", package = "eunomia", features = ["std"], default-features = false}
 pyo3 = { version = "0.29", features = ["extension-module", "abi3-py39"] }
 numpy = "0.22"
 
@@ -43,7 +40,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 bytemuck = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-gaia = { version = "0.3.0", git = "https://github.com/ryancinsight/gaia.git", default-features = false }
+gaia = {path = "../../repos/gaia", package = "gaia", default-features = false}
 tempfile = "3.10"
 proptest = "1.0"
 walkdir = "2.4"
@@ -63,11 +60,11 @@ onnx-ir = "0.20.1"
 openjpeg-sys = "1.0"
 openjp2 = { version = "0.6.1", default-features = false, features = ["std"] }
 jpeg2k = { version = "0.10.1", default-features = false, features = ["openjp2"] }
-consus-hdf5 = { version = "0.1.0", git = "https://github.com/ryancinsight/consus.git", features = ["std"] }
-consus-core = { version = "0.1.0", git = "https://github.com/ryancinsight/consus.git", features = ["std"] }
-consus-compression = { version = "0.1.0", git = "https://github.com/ryancinsight/consus.git", features = ["std", "deflate"] }
-consus-io = { version = "0.1.0", git = "https://github.com/ryancinsight/consus.git", features = ["std"] }
-consus-npy = { version = "0.1.0", git = "https://github.com/ryancinsight/consus.git" }
+consus-hdf5 = { path = "../../repos/consus/crates/consus-hdf5", package = "consus-hdf5", features = ["std"] }
+consus-core = {path = "../../repos/consus/crates/consus-core", package = "consus-core", features = ["std"]}
+consus-compression = { path = "../../repos/consus/crates/consus-compression", package = "consus-compression", features = ["std", "deflate"] }
+consus-io = { path = "../../repos/consus/crates/consus-io", package = "consus-io", features = ["std"] }
+consus-npy = { path = "../../repos/consus/crates/consus-npy", package = "consus-npy" }
 rand = "0.9"
 criterion = "0.5"
 

@@ -11,7 +11,6 @@ use moirai_parallel::{for_each_chunk_triple_mut_enumerated_with, Adaptive};
 
 const INTEGRATOR_CHUNK: usize = 4096;
 
-
 /// Time integration engine for elastic waves.
 ///
 /// Implements a velocity-Verlet scheme with optional body forces and a
@@ -501,7 +500,8 @@ impl<'a> TimeIntegrator<'a> {
                             let i = idx / (ny * nz);
                             let j = (idx / nz) % ny;
                             let k = idx % nz;
-                            let force = super::body_force::evaluate(grid, body_force, i, j, k, time);
+                            let force =
+                                super::body_force::evaluate(grid, body_force, i, j, k, time);
                             ax_chunk[offset] = (div_x_slice[idx] + force[0]) / rho_slice[idx];
                             ay_chunk[offset] = (div_y_slice[idx] + force[1]) / rho_slice[idx];
                             az_chunk[offset] = (div_z_slice[idx] + force[2]) / rho_slice[idx];

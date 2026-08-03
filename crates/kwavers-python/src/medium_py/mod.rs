@@ -1,6 +1,6 @@
 mod properties;
 
-use numpy::PyReadonlyArray3;
+use numpy::{PyReadonlyArray3, PyUntypedArrayMethods};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
@@ -9,7 +9,7 @@ use kwavers_medium::heterogeneous::{HeterogeneousFactory, HeterogeneousMedium};
 use kwavers_medium::traits::Medium as MediumTrait;
 use kwavers_medium::HomogeneousMedium;
 
-use crate::breast_fwi_bindings::complex_compat::nd_to_leto3;
+use crate::array_utils::pyarray3_to_leto3;
 use crate::grid_py::Grid;
 
 #[derive(Clone, Debug)]
@@ -45,18 +45,30 @@ impl Medium {
         alpha_power: Option<&pyo3::Bound<'_, pyo3::PyAny>>,
         nonlinearity: Option<PyReadonlyArray3<f64>>,
     ) -> PyResult<Self> {
-        let c_arr = sound_speed.as_array().to_owned();
-        let rho_arr = density.as_array().to_owned();
-
-        let shape = c_arr.shape().to_vec();
-        if shape.len() != 3 {
-            return Err(PyValueError::new_err("sound_speed must be a 3D array"));
-        }
-        if rho_arr.shape() != shape.as_slice() {
+        let shape = sound_speed.shape();
+        if density.shape() != shape {
             return Err(PyValueError::new_err(
                 "density shape must match sound_speed shape",
             ));
         }
+        if let Some(abs) = &absorption {
+            if abs.shape() != shape {
+                return Err(PyValueError::new_err(
+                    "absorption shape must match sound_speed shape",
+                ));
+            }
+        }
+        if let Some(nl) = &nonlinearity {
+            if nl.shape() != shape {
+                return Err(PyValueError::new_err(
+                    "nonlinearity shape must match sound_speed shape",
+                ));
+            }
+        }
+
+        let c_arr = pyarray3_to_leto3(&sound_speed)?;
+        let rho_arr = pyarray3_to_leto3(&density)?;
+
         if c_arr.iter().any(|&v| v <= 0.0) {
             return Err(PyValueError::new_err(
                 "All sound_speed values must be positive",
@@ -68,30 +80,25 @@ impl Medium {
 
         let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
         let mut het = HeterogeneousMedium::new_acoustic_only(nx, ny, nz, true);
-        het.sound_speed = nd_to_leto3(c_arr);
-        het.density = nd_to_leto3(rho_arr);
+        het.sound_speed = c_arr;
+        het.density = rho_arr;
 
         if let Some(abs) = absorption {
-            let abs_arr = abs.as_array().to_owned();
-            if abs_arr.shape() != [nx, ny, nz] {
-                return Err(PyValueError::new_err(
-                    "absorption shape must match sound_speed shape",
-                ));
-            }
-            het.absorption = nd_to_leto3(abs_arr);
+            let abs_arr = pyarray3_to_leto3(&abs)?;
+            het.absorption = abs_arr;
         }
 
         if let Some(py_ap) = alpha_power {
             if let Ok(scalar) = py_ap.extract::<f64>() {
                 het.alpha_power = leto::Array3::from_elem((nx, ny, nz), scalar);
             } else if let Ok(arr) = py_ap.extract::<PyReadonlyArray3<f64>>() {
-                let ap_arr = arr.as_array().to_owned();
-                if ap_arr.shape() != [nx, ny, nz] {
+                if arr.shape() != [nx, ny, nz] {
                     return Err(PyValueError::new_err(
                         "alpha_power shape must match sound_speed shape",
                     ));
                 }
-                het.alpha_power = nd_to_leto3(ap_arr);
+                let ap_arr = pyarray3_to_leto3(&arr)?;
+                het.alpha_power = ap_arr;
             } else {
                 return Err(PyValueError::new_err(
                     "alpha_power must be a float or a 3D ndarray matching sound_speed shape",
@@ -100,13 +107,8 @@ impl Medium {
         }
 
         if let Some(nl) = nonlinearity {
-            let nl_arr = nl.as_array().to_owned();
-            if nl_arr.shape() != [nx, ny, nz] {
-                return Err(PyValueError::new_err(
-                    "nonlinearity shape must match sound_speed shape",
-                ));
-            }
-            het.nonlinearity = nd_to_leto3(nl_arr);
+            let nl_arr = pyarray3_to_leto3(&nl)?;
+            het.nonlinearity = nl_arr;
         }
 
         Ok(Medium {
@@ -189,9 +191,15 @@ impl Medium {
         density: PyReadonlyArray3<f64>,
         reference_frequency: f64,
     ) -> PyResult<Self> {
-        let cp = nd_to_leto3(c_compression.as_array().to_owned());
-        let cs = nd_to_leto3(c_shear.as_array().to_owned());
-        let rho = nd_to_leto3(density.as_array().to_owned());
+        let shape = c_compression.shape();
+        if c_shear.shape() != shape || density.shape() != shape {
+            return Err(PyValueError::new_err(
+                "c_compression, c_shear, and density shapes must match",
+            ));
+        }
+        let cp = pyarray3_to_leto3(&c_compression)?;
+        let cs = pyarray3_to_leto3(&c_shear)?;
+        let rho = pyarray3_to_leto3(&density)?;
 
         let medium = HeterogeneousFactory::from_elastic_arrays(
             cp.view(),
@@ -204,5 +212,44 @@ impl Medium {
         Ok(Medium {
             inner: MediumInner::Heterogeneous(Box::new(medium)),
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Medium;
+    use numpy::{PyArray3, PyUntypedArrayMethods};
+    use pyo3::Python;
+
+    #[test]
+    fn heterogeneous_medium_preserves_values_and_rejects_shape_mismatch() {
+        Python::initialize();
+        Python::attach(|py| {
+            let sound_speed = PyArray3::from_vec3(
+                py,
+                &[vec![vec![1500.0_f64, 1501.0]], vec![vec![1502.0, 1503.0]]],
+            )
+            .unwrap();
+            let density = PyArray3::from_vec3(
+                py,
+                &[vec![vec![1000.0_f64, 1001.0]], vec![vec![1002.0, 1003.0]]],
+            )
+            .unwrap();
+            let medium =
+                Medium::new(sound_speed.readonly(), density.readonly(), None, None, None).unwrap();
+            assert_eq!(medium.inner.as_medium().max_sound_speed(), 1503.0);
+            assert_eq!(medium.inner.as_medium().density(0, 0, 0), 1000.0);
+
+            let mismatched =
+                PyArray3::from_vec3(py, &[vec![vec![1000.0_f64]], vec![vec![1000.0]]]).unwrap();
+            assert!(Medium::new(
+                sound_speed.readonly(),
+                mismatched.readonly(),
+                None,
+                None,
+                None,
+            )
+            .is_err());
+        });
     }
 }

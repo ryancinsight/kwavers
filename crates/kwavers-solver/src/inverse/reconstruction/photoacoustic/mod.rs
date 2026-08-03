@@ -22,8 +22,8 @@ mod fourier;
 mod iterative;
 mod line_reconstruction;
 mod linear_algebra;
-mod time_reversal;
 mod shared_ops;
+mod time_reversal;
 
 pub use algorithms::{PhotoacousticAlgorithm, PhotoacousticReconstructor};
 pub use config::ReconstructionPhotoacousticConfig;

@@ -1,5 +1,7 @@
 use crate::optics::monte_carlo::photon::Photon;
-use crate::optics::monte_carlo::scatter::{get_perpendicular, normalize, sample_isotropic_direction};
+use crate::optics::monte_carlo::scatter::{
+    get_perpendicular, normalize, sample_isotropic_direction,
+};
 use kwavers_core::constants::numerical::TWO_PI;
 use rand::Rng;
 

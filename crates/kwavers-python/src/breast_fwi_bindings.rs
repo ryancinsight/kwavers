@@ -19,10 +19,10 @@ mod diagnostics;
 mod direct_field;
 mod finite_window;
 mod fwi_config;
-mod py_convert;
 mod inversion;
 mod operator_equivalence;
 mod phantom;
+mod py_convert;
 mod reduction;
 
 pub use array_config::PyMultiRowRingArray;

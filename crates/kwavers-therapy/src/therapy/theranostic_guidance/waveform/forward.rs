@@ -6,8 +6,8 @@ use moirai_parallel::{
     for_each_chunk_pair_mut_enumerated_with, Adaptive,
 };
 
-use super::types::{AcousticGrid, CheckpointSchedule, WavefieldRun};
 use super::indexing::{linear, ricker};
+use super::types::{AcousticGrid, CheckpointSchedule, WavefieldRun};
 
 const WAVEFORM_FIELD_CHUNK: usize = 1024;
 

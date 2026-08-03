@@ -11,9 +11,9 @@
 //! - **DRY**: Reuses existing grid and solver infrastructure
 
 pub mod config;
+pub mod focus;
 pub mod processing;
 pub mod reconstruction;
-pub mod focus;
 pub mod validation;
 
 // Re-export main types for convenience

@@ -3,7 +3,7 @@ use numpy::PyReadonlyArray1;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
-use crate::breast_fwi_bindings::complex_compat::nd_to_leto1;
+use crate::array_utils::pyarray1_to_leto1;
 
 use kwavers_transducer::array_2d::{
     TransducerArray2D as KwaversTransducerArray2D, TransducerArray2DConfig,
@@ -209,11 +209,11 @@ impl TransducerArray2D {
     /// Set input signal (overrides sinusoidal).
     #[pyo3(signature = (signal))]
     fn set_input_signal(&mut self, signal: PyReadonlyArray1<f64>) -> PyResult<()> {
-        let signal_arr = signal.as_array().to_owned();
+        let signal_arr = pyarray1_to_leto1(&signal)?;
         if signal_arr.is_empty() {
             return Err(PyValueError::new_err("Signal must not be empty"));
         }
-        self.input_signal = Some(nd_to_leto1(signal_arr));
+        self.input_signal = Some(signal_arr);
         Ok(())
     }
 
