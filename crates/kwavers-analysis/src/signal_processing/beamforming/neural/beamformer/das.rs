@@ -1,3 +1,5 @@
+use aequitas::systems::si::quantities::Angle;
+use aequitas::systems::si::units::{Hertz, Meter, MeterPerSecond, Radian};
 use leto::{Array3, Array4};
 
 use kwavers_core::error::KwaversResult;
@@ -14,7 +16,7 @@ impl NeuralBeamformer {
     pub(super) fn traditional_beamforming(
         &self,
         rf_data: &Array4<f32>,
-        steering_angles: &[f64],
+        steering_angles: &[Angle<f64>],
     ) -> KwaversResult<Array3<f32>> {
         let [frames, channels, samples, _] = rf_data.shape();
         let num_angles = steering_angles.len();
@@ -22,13 +24,22 @@ impl NeuralBeamformer {
         let mut image = Array3::<f32>::zeros((frames, num_angles, samples));
 
         let positions = &self.config.sensor_geometry.positions;
-        let c = self.config.sensor_geometry.sound_speed;
+        let c = self
+            .config
+            .sensor_geometry
+            .sound_speed
+            .in_unit::<MeterPerSecond>();
+        let sampling_frequency = self
+            .config
+            .sensor_geometry
+            .sampling_frequency
+            .in_unit::<Hertz>();
 
         for f in 0..frames {
             for (a_idx, &angle) in steering_angles.iter().enumerate() {
                 let delays: Vec<f64> = positions
                     .iter()
-                    .map(|pos| pos[0] * angle.sin() / c)
+                    .map(|pos| pos[0].in_unit::<Meter>() * angle.in_unit::<Radian>().sin() / c)
                     .collect();
 
                 // Linear-interpolated DAS: reduces truncation error from O(1/f_s) to O(1/f_s²).
@@ -38,7 +49,7 @@ impl NeuralBeamformer {
                     let mut count = 0usize;
 
                     for ch in 0..channels.min(positions.len()) {
-                        let delay_f64 = delays[ch] * self.config.sensor_geometry.sampling_frequency;
+                        let delay_f64 = delays[ch] * sampling_frequency;
                         let delay_floor = delay_f64.floor() as isize;
                         let frac = (delay_f64 - delay_floor as f64) as f32;
 

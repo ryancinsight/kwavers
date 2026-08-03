@@ -3,6 +3,8 @@
 use leto::Array1;
 use leto::{Array2, ArrayView2};
 
+use aequitas::systems::si::quantities::{Frequency, Length};
+use aequitas::systems::si::units::{Hertz, Meter, MeterPerSecond};
 use apollo::fft_1d_array;
 use kwavers_core::error::{KwaversError, KwaversResult};
 
@@ -80,7 +82,11 @@ impl DelayAndSumPAM {
             .expect("invariant: rank-2 array has a row axis")
             .enumerate()
         {
-            let candidate_pos = [grid_point[0], grid_point[1], grid_point[2]];
+            let candidate_pos = [
+                Length::from_unit::<Meter>(grid_point[0]),
+                Length::from_unit::<Meter>(grid_point[1]),
+                Length::from_unit::<Meter>(grid_point[2]),
+            ];
             let delays_samples = self.compute_delays(&candidate_pos)?;
             intensity_map[grid_idx] = match mode {
                 PamImagingMode::DelayAndSum => self.delay_and_sum_at_point_view(
@@ -124,7 +130,11 @@ impl DelayAndSumPAM {
             .expect("invariant: rank-2 array has a row axis")
             .enumerate()
         {
-            let candidate_pos = [grid_point[0], grid_point[1], grid_point[2]];
+            let candidate_pos = [
+                Length::from_unit::<Meter>(grid_point[0]),
+                Length::from_unit::<Meter>(grid_point[1]),
+                Length::from_unit::<Meter>(grid_point[2]),
+            ];
             let delays_samples = self.compute_delays(&candidate_pos)?;
             let series =
                 self.beamformed_signal_at_point_view(passive_data, &delays_samples, &apodization)?;
@@ -252,14 +262,16 @@ impl DelayAndSumPAM {
     /// Compute propagation delays (samples) from each sensor to `source_pos`.
     ///
     /// `delay_i = ||r_s − r_i|| / c · fs`
-    pub(crate) fn compute_delays(&self, source_pos: &[f64; 3]) -> KwaversResult<Vec<f64>> {
+    pub(crate) fn compute_delays(&self, source_pos: &[Length<f64>; 3]) -> KwaversResult<Vec<f64>> {
         let mut delays = Vec::with_capacity(self.num_sensors);
+        let sound_speed = self.config.sound_speed.in_unit::<MeterPerSecond>();
+        let sampling_frequency = self.config.sampling_frequency.in_unit::<Hertz>();
         for sensor_pos in &self.sensor_positions {
-            let dx = source_pos[0] - sensor_pos[0];
-            let dy = source_pos[1] - sensor_pos[1];
-            let dz = source_pos[2] - sensor_pos[2];
+            let dx = source_pos[0].in_unit::<Meter>() - sensor_pos[0].in_unit::<Meter>();
+            let dy = source_pos[1].in_unit::<Meter>() - sensor_pos[1].in_unit::<Meter>();
+            let dz = source_pos[2].in_unit::<Meter>() - sensor_pos[2].in_unit::<Meter>();
             let distance = dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt();
-            delays.push(distance / self.config.sound_speed * self.config.sampling_frequency);
+            delays.push(distance / sound_speed * sampling_frequency);
         }
         Ok(delays)
     }
@@ -384,12 +396,10 @@ impl DelayAndSumPAM {
     }
 
     /// Estimate the dominant spectral frequency of a beamformed signal via FFT.
-    pub(super) fn estimate_peak_frequency(&self, signal: &[f64]) -> Option<f64> {
+    pub(super) fn estimate_peak_frequency(&self, signal: &[f64]) -> Option<Frequency<f64>> {
         let n = signal.len();
-        if n < 2
-            || !self.config.sampling_frequency.is_finite()
-            || self.config.sampling_frequency <= 0.0
-        {
+        let sampling_frequency = self.config.sampling_frequency.in_unit::<Hertz>();
+        if n < 2 || !sampling_frequency.is_finite() || sampling_frequency <= 0.0 {
             return None;
         }
 
@@ -408,7 +418,7 @@ impl DelayAndSumPAM {
             }
         }
 
-        max_idx.map(|idx| (idx as f64 * self.config.sampling_frequency) / n as f64)
+        max_idx.map(|idx| Frequency::from_unit::<Hertz>(idx as f64 * sampling_frequency / n as f64))
     }
 
     /// Compute apodization weights for sidelobe suppression.
@@ -420,7 +430,7 @@ impl DelayAndSumPAM {
         let mut sorted: Vec<f64> = intensity_map.iter().copied().collect();
         sorted.sort_by(|a, b| a.total_cmp(b));
         let noise_floor = sorted[sorted.len() / 4]; // lower quartile
-        noise_floor * self.config.detection_threshold
+        noise_floor * *self.config.detection_threshold.as_base()
     }
 
     pub(super) fn coherence_factor(&self, intensity: f64, noise_floor: f64) -> f64 {

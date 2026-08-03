@@ -1,3 +1,4 @@
+use aequitas::systems::si::quantities::Angle;
 use leto::Array4;
 
 use kwavers_core::error::{KwaversError, KwaversResult};
@@ -15,7 +16,7 @@ impl NeuralBeamformer {
     pub fn process(
         &mut self,
         rf_data: &Array4<f32>,
-        steering_angles: &[f64],
+        steering_angles: &[Angle<f64>],
     ) -> KwaversResult<HybridBeamformingResult> {
         let start_time = std::time::Instant::now();
 
@@ -43,7 +44,7 @@ impl NeuralBeamformer {
     pub(super) fn process_neural_only(
         &self,
         rf_data: &Array4<f32>,
-        steering_angles: &[f64],
+        steering_angles: &[Angle<f64>],
     ) -> KwaversResult<HybridBeamformingResult> {
         let network = self
             .neural_network
@@ -74,7 +75,7 @@ impl NeuralBeamformer {
     pub(super) fn process_hybrid(
         &self,
         rf_data: &Array4<f32>,
-        steering_angles: &[f64],
+        steering_angles: &[Angle<f64>],
     ) -> KwaversResult<HybridBeamformingResult> {
         let network = self
             .neural_network
@@ -106,7 +107,7 @@ impl NeuralBeamformer {
     pub(super) fn process_adaptive(
         &self,
         rf_data: &Array4<f32>,
-        steering_angles: &[f64],
+        steering_angles: &[Angle<f64>],
     ) -> KwaversResult<HybridBeamformingResult> {
         let signal_quality = self.assess_signal_quality(rf_data)?;
         let quality_threshold = self.config.adaptation_parameters.quality_threshold;

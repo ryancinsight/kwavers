@@ -42,6 +42,8 @@
 //!   localization … using acoustic cavitation emission feedback.* (ACE mapping
 //!   localizes cavitation to < 1.5 mm.)
 
+use aequitas::systems::si::quantities::{Frequency, Length, Velocity};
+use aequitas::systems::si::units::{Hertz, Meter, MeterPerSecond};
 use std::collections::HashMap;
 
 use leto::{Array1, Array2};
@@ -144,15 +146,21 @@ pub fn passive_acoustic_maps(
         f64::from(run.traces[step * n_receivers + receiver])
     });
 
-    let sensors: Vec<[f64; 3]> = layout
+    let sensors: Vec<[Length<f64>; 3]> = layout
         .imaging_receivers
         .iter()
-        .map(|p| [p.x_m, p.y_m, 0.0])
+        .map(|p| {
+            [
+                Length::from_unit::<Meter>(p.x_m),
+                Length::from_unit::<Meter>(p.y_m),
+                Length::from_unit::<Meter>(0.0),
+            ]
+        })
         .collect();
 
     let das_config = DelayAndSumConfig {
-        sound_speed: pam_sound_speed_m_s,
-        sampling_frequency: 1.0 / dt_s,
+        sound_speed: Velocity::from_unit::<MeterPerSecond>(pam_sound_speed_m_s),
+        sampling_frequency: Frequency::from_unit::<Hertz>(1.0 / dt_s),
         window_size: n_samples,
         apodization: ApodizationType::Uniform,
         ..DelayAndSumConfig::default()

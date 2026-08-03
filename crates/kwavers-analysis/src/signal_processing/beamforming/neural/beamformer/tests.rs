@@ -1,3 +1,5 @@
+use aequitas::systems::si::quantities::Angle;
+use aequitas::systems::si::units::Radian;
 use leto::Array4;
 
 use super::super::config::{NeuralBeamformingConfig, NeuralBeamformingMode};
@@ -41,7 +43,7 @@ fn test_process_hybrid() {
     let mut beamformer = NeuralBeamformer::new(config).unwrap();
 
     let rf_data = create_test_rf_data();
-    let angles = vec![0.0];
+    let angles = vec![Angle::from_unit::<Radian>(0.0)];
     let result = beamformer.process(&rf_data, &angles).unwrap();
     assert_eq!(result.processing_mode, "Hybrid");
     assert!((0.0..=1.0).contains(&result.confidence));
@@ -56,7 +58,7 @@ fn test_process_neural_only() {
     let mut beamformer = NeuralBeamformer::new(config).unwrap();
 
     let rf_data = create_test_rf_data();
-    let angles = vec![0.0];
+    let angles = vec![Angle::from_unit::<Radian>(0.0)];
     let result = beamformer.process(&rf_data, &angles).unwrap();
     assert_eq!(result.processing_mode, "NeuralOnly");
 }
@@ -70,7 +72,7 @@ fn test_process_adaptive() {
     let mut beamformer = NeuralBeamformer::new(config).unwrap();
 
     let rf_data = create_test_rf_data();
-    let angles = vec![0.0];
+    let angles = vec![Angle::from_unit::<Radian>(0.0)];
     let result = beamformer.process(&rf_data, &angles).unwrap();
     assert!(result.processing_mode.starts_with("Adaptive"));
 }
@@ -107,7 +109,7 @@ fn test_metrics_tracking() {
     let mut beamformer = NeuralBeamformer::new(config).unwrap();
 
     let rf_data = create_test_rf_data();
-    let angles = vec![0.0];
+    let angles = vec![Angle::from_unit::<Radian>(0.0)];
 
     for _ in 0..3 {
         let _ = beamformer.process(&rf_data, &angles);

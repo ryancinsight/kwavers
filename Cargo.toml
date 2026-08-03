@@ -3,7 +3,7 @@ members = ["crates/kwavers", "xtask", "crates/kwavers-python", "crates/kwavers-c
 resolver = "2"
 
 [workspace.dependencies]
-aequitas = { version = "0.1.0", git = "https://github.com/ryancinsight/aequitas", default-features = false, features = ["std"] }
+aequitas = { version = "0.1.0", git = "https://github.com/ryancinsight/aequitas", default-features = false, features = ["std", "serde"] }
 asclepius = { version = "0.1.0", git = "https://github.com/ryancinsight/asclepius", default-features = false, features = ["std"] }
 hyperion = { version = "0.1.0", git = "https://github.com/ryancinsight/hyperion" }
 proteus = { version = "0.1.0", git = "https://github.com/ryancinsight/proteus" }
@@ -94,4 +94,3 @@ opt-level = 3
 lto = true
 codegen-units = 1
 strip = true  # Strip symbols for smaller Python wheels
-

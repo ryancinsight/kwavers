@@ -1,3 +1,5 @@
+use aequitas::systems::si::quantities::{Dimensionless, Frequency, Length, Time, Velocity};
+use aequitas::systems::si::units::{Hertz, MeterPerSecond};
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use serde::{Deserialize, Serialize};
@@ -31,11 +33,11 @@ pub enum PamImagingMode {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DelayAndSumConfig {
     /// Sound speed in medium (m/s).
-    pub sound_speed: f64,
+    pub sound_speed: Velocity<f64>,
     /// Sampling frequency (Hz).
-    pub sampling_frequency: f64,
+    pub sampling_frequency: Frequency<f64>,
     /// Detection threshold (multiple of noise floor).
-    pub detection_threshold: f64,
+    pub detection_threshold: Dimensionless<f64>,
     /// Temporal window size (samples).
     pub window_size: usize,
     /// Apodization window type.
@@ -47,9 +49,9 @@ pub struct DelayAndSumConfig {
 impl Default for DelayAndSumConfig {
     fn default() -> Self {
         Self {
-            sound_speed: SOUND_SPEED_TISSUE,
-            sampling_frequency: 5.0 * MHZ_TO_HZ,
-            detection_threshold: 3.0,
+            sound_speed: Velocity::from_unit::<MeterPerSecond>(SOUND_SPEED_TISSUE),
+            sampling_frequency: Frequency::from_unit::<Hertz>(5.0 * MHZ_TO_HZ),
+            detection_threshold: Dimensionless::from_base(3.0),
             window_size: 512,
             apodization: ApodizationType::Hamming,
             coherence_weighting: true,
@@ -61,13 +63,13 @@ impl Default for DelayAndSumConfig {
 #[derive(Debug, Clone)]
 pub struct PamCavitationEvent {
     /// 3D position (m).
-    pub position: [f64; 3],
+    pub position: [Length<f64>; 3],
     /// Intensity (arbitrary units).
     pub intensity: f64,
     /// Time of occurrence (s).
-    pub time: f64,
-    /// Coherence factor (0–1).
-    pub coherence: f64,
+    pub time: Time<f64>,
+    /// Dimensionless coherence factor (0–1).
+    pub coherence: Dimensionless<f64>,
     /// Peak frequency content (Hz); `None` if not estimated.
-    pub peak_frequency: Option<f64>,
+    pub peak_frequency: Option<Frequency<f64>>,
 }

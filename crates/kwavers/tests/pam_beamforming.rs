@@ -5,8 +5,8 @@
 //! - Tests must exercise only what we touched: PAM + shared `BeamformingProcessor` integration.
 //! - Tests must run in `--release` and be deterministic.
 
-use aequitas::systems::si::quantities::{Frequency, Velocity};
-use aequitas::systems::si::units::{Hertz, MeterPerSecond};
+use aequitas::systems::si::quantities::{Frequency, Length, Time, Velocity};
+use aequitas::systems::si::units::{Hertz, Meter, MeterPerSecond, Second};
 use kwavers_analysis::signal_processing::pam::{
     ApodizationType, PAMConfig, PamBeamformingConfig, PamBeamformingMethod, PassiveAcousticMapper,
 };
@@ -68,17 +68,23 @@ fn pam_config_for(
     let beamforming = PamBeamformingConfig {
         core,
         method,
-        frequency_range: (20e3, 10e6),
-        spatial_resolution: 1e-3,
+        frequency_range: (
+            Frequency::from_unit::<Hertz>(20e3),
+            Frequency::from_unit::<Hertz>(10e6),
+        ),
+        spatial_resolution: Length::from_unit::<Meter>(1e-3),
         apodization: ApodizationType::Hamming,
-        focal_point,
+        focal_point: focal_point.map(|value| Length::from_unit::<Meter>(value)),
     };
 
     PAMConfig {
         beamforming,
         // Keep bands minimal so tests focus on integration not DSP decisions.
-        frequency_bands: vec![(20e3, 100e3)],
-        integration_time: 0.1,
+        frequency_bands: vec![(
+            Frequency::from_unit::<Hertz>(20e3),
+            Frequency::from_unit::<Hertz>(100e3),
+        )],
+        integration_time: Time::from_unit::<Second>(0.1),
         threshold: 0.0, // accept any non-zero power
         enable_harmonic_analysis: false,
         enable_broadband_analysis: false,
