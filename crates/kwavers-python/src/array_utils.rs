@@ -81,7 +81,9 @@ where
 {
     let data = copy_pyarray1_to_vec(array)?;
     let shape = array.shape();
-    Ok(leto::Array1::from_shape_vec(shape[0], data).expect("data length matches 1-D shape"))
+    leto::Array1::from_shape_vec(shape[0], data).map_err(|error| {
+        PyRuntimeError::new_err(format!("failed to construct Leto 1-D array: {error}"))
+    })
 }
 
 /// Convert a 2-D readonly NumPy array into a leto 2-D array.
@@ -91,7 +93,9 @@ where
     T: Element + Copy + Clone,
 {
     let (data, shape) = copy_pyarray2_to_vec(array)?;
-    Ok(leto::Array2::from_shape_vec(shape, data).expect("data length matches 2-D shape"))
+    leto::Array2::from_shape_vec(shape, data).map_err(|error| {
+        PyRuntimeError::new_err(format!("failed to construct Leto 2-D array: {error}"))
+    })
 }
 
 /// Convert a 3-D readonly NumPy array into a leto 3-D array.
@@ -100,7 +104,9 @@ where
     T: Element + Copy + Clone,
 {
     let (data, shape) = copy_pyarray3_to_vec(array)?;
-    Ok(leto::Array3::from_shape_vec(shape, data).expect("data length matches 3-D shape"))
+    leto::Array3::from_shape_vec(shape, data).map_err(|error| {
+        PyRuntimeError::new_err(format!("failed to construct Leto 3-D array: {error}"))
+    })
 }
 
 /// Convert a leto 1-D array into a Python 1-D NumPy array.
@@ -179,4 +185,77 @@ pub fn linspace_vec(start: f64, end: f64, n: usize) -> Vec<f64> {
     }
     let step = (end - start) / (n - 1) as f64;
     (0..n).map(|i| start + i as f64 * step).collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        leto1_to_pyarray1, leto2_to_pyarray2, leto3_to_pyarray3, linspace_vec, pyarray1_to_leto1,
+        pyarray2_to_leto2, pyarray3_to_leto3,
+    };
+    use numpy::{PyArray1, PyArray2, PyArray3, PyArrayMethods, PyUntypedArrayMethods};
+    use pyo3::Python;
+
+    #[test]
+    fn pyarray_round_trip_preserves_rank_shape_and_values() {
+        Python::attach(|py| {
+            let one = leto::Array1::from_shape_vec(3, vec![1.0_f64, 2.0, 3.0]).unwrap();
+            let one_out = leto1_to_pyarray1(py, one).unwrap();
+            assert_eq!(one_out.bind(py).shape(), [3]);
+            assert_eq!(
+                one_out.bind(py).readonly().as_slice().unwrap(),
+                [1.0_f64, 2.0, 3.0]
+            );
+
+            let two = leto::Array2::from_shape_vec([2, 2], vec![1.0_f64, 2.0, 3.0, 4.0]).unwrap();
+            let two_out = leto2_to_pyarray2(py, two).unwrap();
+            assert_eq!(two_out.bind(py).shape(), [2, 2]);
+            assert_eq!(
+                two_out.bind(py).readonly().as_slice().unwrap(),
+                [1.0_f64, 2.0, 3.0, 4.0]
+            );
+
+            let three = leto::Array3::from_shape_vec([1, 2, 2], vec![1.0_f64, 2.0, 3.0, 4.0]).unwrap();
+            let three_out = leto3_to_pyarray3(py, three).unwrap();
+            assert_eq!(three_out.bind(py).shape(), [1, 2, 2]);
+            assert_eq!(
+                three_out.bind(py).readonly().as_slice().unwrap(),
+                [1.0_f64, 2.0, 3.0, 4.0]
+            );
+        });
+    }
+
+    #[test]
+    fn numpy_inputs_convert_to_leto_without_shape_changes() {
+        Python::attach(|py| {
+            let one_input = PyArray1::from_vec(py, vec![1.0_f64, 2.0, 3.0]);
+            let one = pyarray1_to_leto1(&one_input.readonly()).unwrap();
+            assert_eq!(one.shape(), [3]);
+            assert_eq!(one.into_vec(), [1.0_f64, 2.0, 3.0]);
+
+            let two_input = PyArray2::from_vec2(py, &[vec![1.0_f64, 2.0], vec![3.0, 4.0]]).unwrap();
+            let two = pyarray2_to_leto2(&two_input.readonly()).unwrap();
+            assert_eq!(two.shape(), [2, 2]);
+            assert_eq!(two.into_vec(), [1.0_f64, 2.0, 3.0, 4.0]);
+
+            let three_input = PyArray3::from_vec3(
+                py,
+                &[
+                    vec![vec![1.0_f64, 2.0], vec![3.0, 4.0]],
+                    vec![vec![5.0_f64, 6.0], vec![7.0, 8.0]],
+                ],
+            )
+            .unwrap();
+            let three = pyarray3_to_leto3(&three_input.readonly()).unwrap();
+            assert_eq!(three.shape(), [2, 2, 2]);
+            assert_eq!(three.into_vec(), [1.0_f64, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
+        });
+    }
+
+    #[test]
+    fn linspace_handles_empty_singleton_and_endpoints() {
+        assert!(linspace_vec(0.0_f64, 1.0, 0).is_empty());
+        assert_eq!(linspace_vec(2.0_f64, 5.0, 1), [2.0_f64]);
+        assert_eq!(linspace_vec(0.0_f64, 1.0, 3), [0.0_f64, 0.5, 1.0]);
+    }
 }
