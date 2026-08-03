@@ -11,6 +11,14 @@
   feature-matrix lanes, and the per-test timeout and full-grid workload are
   unchanged.
 
+- **Breaking:** PAM and neural sensor geometry now use Aequitas `Length`,
+  `Velocity`, `Frequency`, `Time`, `Angle`, and `Dimensionless` contracts for
+  physical and ratio metrics. Uncalibrated PAM threshold/intensity remain
+  representation values. Detection and geometry validation reject malformed
+  inputs, and Eunomia complex FFT data is reduced to real observables before
+  unit assignment; no imaginary SI unit is introduced. See [ADR
+  098](docs/ADR/098-pam-neural-quantities.md).
+
 - **Breaking:** Sensor-beamformer positions, sampling and steering frequency,
   sound speed, angles, spacing, aperture, F-number, and spatial-Nyquist
   metrics now use Aequitas quantities. Invalid derived-metric inputs return

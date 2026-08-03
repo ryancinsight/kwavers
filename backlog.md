@@ -32,6 +32,18 @@
   Clippy, doctests, Rustdoc, residue scans, and hosted gates pass; Eunomia
   complex signal values retain one observable unit and no imaginary SI unit is
   introduced.
+- Implementation: commit `6248ad9b5` types the PAM/neural contracts and all
+  direct Kwavers analysis, Python, therapy, and integration-test callers;
+  commit `5d70126f5` fixes the strict-Clippy redundant-closure finding. The
+  PAM validator rejects invalid bands, thresholds, grids, non-finite maps,
+  and empty beamformed data; complex FFT coefficients become real observable
+  magnitudes before frequency units are assigned.
+- Verification state: formatting, diff, and locked metadata pass. Local
+  locked compilation was attempted twice but exceeded the shared Atlas
+  Cargo/build-lock bound while concurrent gates held the cache. PR #337 is
+  the hosted compile/test oracle; the first exact-head architecture run found
+  and closed the redundant closure, and the corrected architecture Clippy
+  step passes at `5d70126f5`.
 
 ## KWAVERS-AEQ-MET-58 — Type sensor-beamformer metrics [major] [arch] — done 2026-08-03
 

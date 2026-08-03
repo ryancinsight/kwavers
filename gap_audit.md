@@ -9,14 +9,22 @@ frequency. Neural `SensorGeometry` exposes raw positions, pitch, sampling
 frequency, and sound speed; traditional neural DAS accepts raw steering angles
 and converts position/speed/angle into sample delays.
 
-The implementation boundary will use Aequitas `Length`, `Velocity`,
-`Frequency`, `Time`, and `Angle`. Scalar extraction is limited to trigonometric
-and delay-index formulas, FFT-bin mapping, and dense Leto buffers. The
-noise-floor `detection_threshold` is a dimensionless multiplier. PAM-wide
-`threshold` and event `intensity` are not assigned a physical Aequitas unit in
-this slice because the consuming spectrum is computed from uncalibrated raw
-signal values; a future calibration contract must define that unit before the
-fields can become `Intensity` or another physical quantity.
+The implementation uses Aequitas `Length`, `Velocity`, `Frequency`, `Time`,
+`Angle`, and `Dimensionless`. Scalar extraction is limited to trigonometric and
+delay-index formulas, FFT-bin mapping, and dense Leto buffers. The noise-floor
+`detection_threshold` and event coherence are dimensionless. PAM-wide
+`threshold` and event `intensity` remain representation values because the
+consuming spectrum is computed from uncalibrated raw signal values; a future
+calibration contract must define that unit before those fields can become
+`Intensity` or another physical quantity.
+
+The implementation is committed in `6248ad9b5`, with strict-Clippy cleanup in
+`5d70126f5`. It migrates all direct PAM/neural, Python, therapy, and
+integration-test callers, hardens geometry/configuration/detection validation,
+and propagates beamformed-signal errors instead of discarding them. Formatting,
+diff, and locked metadata pass. PR #337 is collecting the remaining locked
+compile, Nextest, doctest, Rustdoc, residue, and hosted evidence; the corrected
+architecture Clippy step passes at `5d70126f5`.
 
 Eunomia `Complex` values, if present at the FFT/storage boundary, continue to
 represent real and quadrature components under one observable signal unit. An

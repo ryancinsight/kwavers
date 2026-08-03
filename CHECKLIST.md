@@ -9,12 +9,15 @@
       do not assign a fabricated physical unit.
 - [x] Record ADR 098 and the Eunomia shared-unit/real-observable rule before
       changing the public API.
-- [ ] Type positions, pitch, focal point, spatial resolution, sound speed,
-      sampling/band/peak frequencies, and event/integration times through
-      Aequitas; migrate all direct callers without wrappers.
-- [ ] Add analytical geometry and delay regressions, invalid-input coverage,
-      and complete the locked package, Nextest, Clippy, doctest, Rustdoc,
-      formatting, residue, and hosted gates.
+- [x] Type positions, pitch, focal point, spatial resolution, sound speed,
+      sampling/band/peak frequencies, event/integration times, steering angles,
+      and coherence through Aequitas; migrate all direct callers without
+      wrappers.
+- [x] Add analytical geometry and delay regressions plus invalid-input
+      coverage. Commit `6248ad9b5` carries the implementation; strict Clippy
+      found and the follow-up `5d70126f5` fixed one redundant test closure.
+- [ ] Complete the locked package, Nextest, doctest, Rustdoc, residue, and
+      hosted gates at the final PR head.
 
 Acceptance: no raw physical scalar remains in the scoped PAM/neural public
 contracts; threshold semantics remain honest; Eunomia complex signal data
