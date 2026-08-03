@@ -143,12 +143,29 @@ where
     Ok(arr1.reshape(shape)?.unbind())
 }
 
-/// Create a 1-D NumPy array from a `Vec`.
-pub fn vec_to_pyarray1<'py, T>(py: Python<'py>, data: Vec<T>) -> Py<PyArray1<T>>
+/// Create a 1-D NumPy array from a `Vec` or LeTo `Array1`.
+pub fn vec_to_pyarray1<'py, T>(py: Python<'py>, data: impl ArrayLike<T>) -> Py<PyArray1<T>>
 where
     T: Element + Copy,
 {
-    PyArray1::from_vec(py, data).unbind()
+    PyArray1::from_vec(py, data.into_vec()).unbind()
+}
+
+/// Trait for types that can be converted to a `Vec<T>`.
+pub trait ArrayLike<T> {
+    fn into_vec(self) -> Vec<T>;
+}
+
+impl<T> ArrayLike<T> for Vec<T> {
+    fn into_vec(self) -> Vec<T> {
+        self
+    }
+}
+
+impl<T: Clone, const N: usize> ArrayLike<T> for leto::Array<T, leto::VecStorage<T>, N> {
+    fn into_vec(self) -> Vec<T> {
+        self.into_vec()
+    }
 }
 
 /// Create a 2-D NumPy array from a flat `Vec` and shape.
@@ -231,6 +248,63 @@ mod tests {
             assert_eq!(
                 three_out.bind(py).readonly().as_slice().unwrap(),
                 [1.0_f64, 2.0, 3.0, 4.0]
+            );
+
+            let mask_2d =
+                leto::Array2::from_shape_vec([2, 2], vec![true, false, false, true]).unwrap();
+            let mask_2d_out = leto2_to_pyarray2(py, mask_2d).unwrap();
+            assert_eq!(mask_2d_out.bind(py).shape(), [2, 2]);
+            assert_eq!(
+                mask_2d_out.bind(py).readonly().as_slice().unwrap(),
+                [true, false, false, true]
+            );
+
+            let vector_out = super::vec_to_pyarray1(py, vec![5.0_f64, 6.0, 7.0]);
+            assert_eq!(vector_out.bind(py).shape(), [3]);
+            assert_eq!(
+                vector_out.bind(py).readonly().as_slice().unwrap(),
+                [5.0_f64, 6.0, 7.0]
+            );
+            let labels = leto::Array3::from_shape_vec([1, 2, 2], vec![-1_i16, 0, 2, 7]).unwrap();
+            let labels_out = leto3_to_pyarray3(py, labels).unwrap();
+            assert_eq!(labels_out.bind(py).shape(), [1, 2, 2]);
+            assert_eq!(
+                labels_out.bind(py).readonly().as_slice().unwrap(),
+                [-1_i16, 0, 2, 7]
+            );
+
+            let field_2d =
+                leto::Array2::from_shape_vec([2, 2], vec![1.0_f32, 2.0, 3.0, 4.0]).unwrap();
+            let field_2d_out = leto2_to_pyarray2(py, field_2d).unwrap();
+            assert_eq!(field_2d_out.bind(py).shape(), [2, 2]);
+            assert_eq!(
+                field_2d_out.bind(py).readonly().as_slice().unwrap(),
+                [1.0_f32, 2.0, 3.0, 4.0]
+            );
+
+            let field_3d =
+                leto::Array3::from_shape_vec([1, 2, 2], vec![1.0_f32, 2.0, 3.0, 4.0]).unwrap();
+            let field_3d_out = leto3_to_pyarray3(py, field_3d).unwrap();
+            assert_eq!(field_3d_out.bind(py).shape(), [1, 2, 2]);
+            assert_eq!(
+                field_3d_out.bind(py).readonly().as_slice().unwrap(),
+                [1.0_f32, 2.0, 3.0, 4.0]
+            );
+
+            let iteration_out = super::vec_to_pyarray1(py, vec![0_i64, 4, 8]);
+            assert_eq!(iteration_out.bind(py).shape(), [3]);
+            assert_eq!(
+                iteration_out.bind(py).readonly().as_slice().unwrap(),
+                [0_i64, 4, 8]
+            );
+
+            let mask_3d =
+                leto::Array3::from_shape_vec([2, 1, 2], vec![true, false, false, true]).unwrap();
+            let mask_3d_out = leto3_to_pyarray3(py, mask_3d).unwrap();
+            assert_eq!(mask_3d_out.bind(py).shape(), [2, 1, 2]);
+            assert_eq!(
+                mask_3d_out.bind(py).readonly().as_slice().unwrap(),
+                [true, false, false, true]
             );
         });
     }

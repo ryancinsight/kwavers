@@ -54,13 +54,6 @@ impl PyResidualGasField {
             )));
         }
         let a_leto = pyarray3_to_leto3(&gas_fraction)?;
-        if a_leto.shape() != [self.shape.0, self.shape.1, self.shape.2] {
-            return Err(PyValueError::new_err(format!(
-                "gas_fraction shape {:?} != field shape {:?}",
-                a_leto.shape(),
-                self.shape
-            )));
-        }
         self.inner.deposit(a_leto.view());
         Ok(())
     }

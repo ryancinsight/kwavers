@@ -1,6 +1,6 @@
 //! PyO3 binding for the skull-adaptive transcranial benchmark.
 
-use crate::breast_fwi_bindings::complex_compat::{leto2_to_nd2, leto3_to_nd3};
+use crate::array_utils::{leto2_to_pyarray2, leto3_to_pyarray3, vec_to_pyarray1};
 use kwavers_diagnostics::reconstruction::transcranial_ust::{
     resample_head_volume, select_head_slice,
 };
@@ -9,7 +9,6 @@ use kwavers_therapy::therapy::theranostic_guidance::{
     SkullAdaptiveBenchmarkConfig, TranscranialFusPlanConfig,
 };
 use leto::Array3;
-use numpy::{PyArray1, ToPyArray};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use std::path::Path;
@@ -39,6 +38,11 @@ use crate::ritk_image::load_ritk_nifti;
     skull_sound_speed = 2800.0
 ))]
 #[allow(clippy::too_many_arguments)]
+/// Run the skull-adaptive benchmark and return owned NumPy arrays.
+///
+/// Array-valued results are transferred directly from Leto-owned buffers via
+/// `crate::array_utils`, preserving C-order shapes while avoiding the legacy
+/// Leto → ndarray → NumPy intermediate conversion.
 pub fn run_transcranial_skull_adaptive_benchmark_from_ritk_ct<'py>(
     py: Python<'py>,
     ct_nifti_path: &str,
@@ -115,35 +119,29 @@ pub fn run_transcranial_skull_adaptive_benchmark_from_ritk_ct<'py>(
     let out = PyDict::new(py);
     out.set_item(
         "reference_pressure_pa",
-        leto3_to_nd3(result.reference_pressure_pa).to_pyarray(py),
+        leto3_to_pyarray3(py, result.reference_pressure_pa)?,
     )?;
     out.set_item(
         "baseline_pressure_pa",
-        leto3_to_nd3(result.baseline_pressure_pa).to_pyarray(py),
+        leto3_to_pyarray3(py, result.baseline_pressure_pa)?,
     )?;
-    out.set_item(
-        "phases_rad",
-        PyArray1::from_iter(py, result.phases_rad.iter().copied()),
-    )?;
-    out.set_item(
-        "delays_s",
-        PyArray1::from_iter(py, result.delays_s.iter().copied()),
-    )?;
+    out.set_item("phases_rad", vec_to_pyarray1(py, result.phases_rad))?;
+    out.set_item("delays_s", vec_to_pyarray1(py, result.delays_s))?;
     out.set_item(
         "skull_lengths_m",
-        PyArray1::from_iter(py, result.skull_lengths_m.iter().copied()),
+        vec_to_pyarray1(py, result.skull_lengths_m),
     )?;
     out.set_item(
         "amplitude_weights",
-        PyArray1::from_iter(py, result.amplitude_weights.iter().copied()),
+        vec_to_pyarray1(py, result.amplitude_weights),
     )?;
     out.set_item(
         "element_positions_m",
-        leto2_to_nd2(placement_result.element_positions_m).to_pyarray(py),
+        leto2_to_pyarray2(py, placement_result.element_positions_m)?,
     )?;
     out.set_item(
         "active_elements",
-        PyArray1::from_iter(py, placement_result.active_elements.iter().copied()),
+        vec_to_pyarray1(py, placement_result.active_elements),
     )?;
     out.set_item(
         "focus_index",

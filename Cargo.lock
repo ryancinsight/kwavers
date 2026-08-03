@@ -8012,7 +8012,11 @@ dependencies = [
 ]
 
 [[patch.unused]]
-name = "asclepius-coeus"
+name = "athena-core"
+version = "0.1.0"
+
+[[patch.unused]]
+name = "athena-leto"
 version = "0.1.0"
 
 [[patch.unused]]
@@ -8020,11 +8024,19 @@ name = "consus-zarr"
 version = "0.1.0"
 
 [[patch.unused]]
-name = "athena-core"
-version = "0.1.0"
+name = "apollo-nufft"
+version = "0.7.0"
 
 [[patch.unused]]
-name = "athena-leto"
+name = "apollo-sht"
+version = "0.7.0"
+
+[[patch.unused]]
+name = "moirai-http"
+version = "0.4.0"
+
+[[patch.unused]]
+name = "asclepius-coeus"
 version = "0.1.0"
 
 [[patch.unused]]
@@ -8038,15 +8050,3 @@ version = "0.18.0"
 [[patch.unused]]
 name = "hephaestus-rocm"
 version = "0.18.0"
-
-[[patch.unused]]
-name = "apollo-nufft"
-version = "0.7.0"
-
-[[patch.unused]]
-name = "apollo-sht"
-version = "0.7.0"
-
-[[patch.unused]]
-name = "moirai-http"
-version = "0.4.0"

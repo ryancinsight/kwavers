@@ -2,10 +2,12 @@
 
 use coeus_core::SequentialBackend;
 use leto::Array3;
-use numpy::{PyArray3, ToPyArray};
+use numpy::PyArray3;
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 use ritk_io::ImageReader;
+
+use crate::array_utils::leto3_to_pyarray3;
 use std::path::Path;
 
 /// Load a NIfTI volume (CT, segmentation, …) via RITK (`ritk-io`) — the kwavers
@@ -16,15 +18,15 @@ use std::path::Path;
 ///     path: NIfTI file path (.nii / .nii.gz).
 ///
 /// Returns:
-///     (volume, (dx_mm, dy_mm, dz_mm)).
+///     `(volume, (dx_mm, dy_mm, dz_mm))`, where `volume` has shape
+///     `(cols, rows, depth)` and dtype `float64`. The Leto-owned buffer is
+///     transferred directly to NumPy without an intermediate ndarray copy.
 #[pyfunction]
 #[pyo3(signature = (path,))]
 pub fn load_ct_nifti(py: Python<'_>, path: &str) -> PyResult<(Py<PyArray3<f64>>, (f64, f64, f64))> {
     let (volume, spacing) = load_ritk_nifti(Path::new(path))?;
     Ok((
-        crate::breast_fwi_bindings::complex_compat::leto3_to_nd3(volume)
-            .to_pyarray(py)
-            .unbind(),
+        leto3_to_pyarray3(py, volume)?,
         (spacing[0], spacing[1], spacing[2]),
     ))
 }

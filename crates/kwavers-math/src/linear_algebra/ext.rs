@@ -1,5 +1,5 @@
 use crate::linear_algebra::eigendecomposition::{EigenSolver, EigenSolverConfig};
-use crate::linear_algebra::{ComplexLinearAlgebra, VectorOperations};
+use crate::linear_algebra::ComplexLinearAlgebra;
 use eunomia::Complex64;
 use kwavers_core::error::KwaversResult;
 use leto::{Array1, Array2};
@@ -7,7 +7,8 @@ use leto::{Array1, Array2};
 /// Compute L2 norm of a 3D array.
 #[must_use]
 pub fn norm_l2(array: &leto::Array3<f64>) -> f64 {
-    VectorOperations::norm_l2(array)
+    leto_ops::application::linalg::norms::norm_l2(&array.view())
+        .expect("L2 norm computation failed for valid Array3<f64>")
 }
 
 /// Extension trait providing fluent leto linear-algebra operations.

@@ -39,6 +39,9 @@ pub(crate) fn zip_mut_ref<T, U, const N: usize, F>(
     }
 }
 
+#[allow(dead_code)]
+// "unused" because it's only called from the `#[cfg(test)]` module;
+// private visibility would also work, but this makes intent explicit.
 pub(crate) fn zip_mut_two_refs<T, U, V, const N: usize, F>(
     mut out: ArrayViewMut<'_, T, N>,
     first: ArrayView<'_, U, N>,

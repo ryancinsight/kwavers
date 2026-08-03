@@ -66,6 +66,25 @@ impl Medium {
             }
         }
 
+        let (alpha_scalar, alpha_array) = if let Some(py_ap) = alpha_power {
+            if let Ok(scalar) = py_ap.extract::<f64>() {
+                (Some(scalar), None)
+            } else if let Ok(arr) = py_ap.extract::<PyReadonlyArray3<f64>>() {
+                if arr.shape() != shape {
+                    return Err(PyValueError::new_err(
+                        "alpha_power shape must match sound_speed shape",
+                    ));
+                }
+                (None, Some(arr))
+            } else {
+                return Err(PyValueError::new_err(
+                    "alpha_power must be a float or a 3D ndarray matching sound_speed shape",
+                ));
+            }
+        } else {
+            (None, None)
+        };
+
         let c_arr = pyarray3_to_leto3(&sound_speed)?;
         let rho_arr = pyarray3_to_leto3(&density)?;
 
@@ -88,22 +107,10 @@ impl Medium {
             het.absorption = abs_arr;
         }
 
-        if let Some(py_ap) = alpha_power {
-            if let Ok(scalar) = py_ap.extract::<f64>() {
-                het.alpha_power = leto::Array3::from_elem((nx, ny, nz), scalar);
-            } else if let Ok(arr) = py_ap.extract::<PyReadonlyArray3<f64>>() {
-                if arr.shape() != [nx, ny, nz] {
-                    return Err(PyValueError::new_err(
-                        "alpha_power shape must match sound_speed shape",
-                    ));
-                }
-                let ap_arr = pyarray3_to_leto3(&arr)?;
-                het.alpha_power = ap_arr;
-            } else {
-                return Err(PyValueError::new_err(
-                    "alpha_power must be a float or a 3D ndarray matching sound_speed shape",
-                ));
-            }
+        if let Some(scalar) = alpha_scalar {
+            het.alpha_power = leto::Array3::from_elem((nx, ny, nz), scalar);
+        } else if let Some(arr) = alpha_array {
+            het.alpha_power = pyarray3_to_leto3(&arr)?;
         }
 
         if let Some(nl) = nonlinearity {
@@ -218,8 +225,8 @@ impl Medium {
 #[cfg(test)]
 mod tests {
     use super::Medium;
-    use numpy::{PyArray3, PyUntypedArrayMethods};
-    use pyo3::Python;
+    use numpy::{PyArray3, PyArrayMethods, PyUntypedArrayMethods};
+    use pyo3::{IntoPyObject, Python};
 
     #[test]
     fn heterogeneous_medium_preserves_values_and_rejects_shape_mismatch() {
@@ -247,6 +254,97 @@ mod tests {
                 mismatched.readonly(),
                 None,
                 None,
+                None,
+            )
+            .is_err());
+        });
+    }
+
+    #[test]
+    fn elastic_heterogeneous_rejects_mismatched_shapes_before_conversion() {
+        Python::initialize();
+        Python::attach(|py| {
+            let c_compression = PyArray3::from_vec3(
+                py,
+                &[vec![vec![1500.0_f64, 1501.0]], vec![vec![1502.0, 1503.0]]],
+            )
+            .unwrap();
+            let c_shear =
+                PyArray3::from_vec3(py, &[vec![vec![10.0_f64, 11.0]], vec![vec![12.0, 13.0]]])
+                    .unwrap();
+            let mismatched_density =
+                PyArray3::from_vec3(py, &[vec![vec![1000.0_f64]], vec![vec![1001.0]]]).unwrap();
+
+            assert!(Medium::elastic_heterogeneous(
+                c_compression.readonly(),
+                c_shear.readonly(),
+                mismatched_density.readonly(),
+                1.0e6,
+            )
+            .is_err());
+        });
+    }
+
+    #[test]
+    fn heterogeneous_medium_accepts_scalar_and_array_alpha_power() {
+        Python::initialize();
+        Python::attach(|py| {
+            let sound_speed = PyArray3::from_vec3(
+                py,
+                &[vec![vec![1500.0_f64, 1501.0]], vec![vec![1502.0, 1503.0]]],
+            )
+            .unwrap();
+            let density = PyArray3::from_vec3(
+                py,
+                &[vec![vec![1000.0_f64, 1001.0]], vec![vec![1002.0, 1003.0]]],
+            )
+            .unwrap();
+            let alpha_power =
+                PyArray3::from_vec3(py, &[vec![vec![1.0_f64, 1.1]], vec![vec![1.2, 1.3]]]).unwrap();
+
+            let scalar_value = 1.2_f64.into_pyobject(py).unwrap().into_any();
+            let scalar = Medium::new(
+                sound_speed.readonly(),
+                density.readonly(),
+                None,
+                Some(&scalar_value),
+                None,
+            )
+            .unwrap();
+            assert_eq!(scalar.inner.as_medium().max_sound_speed(), 1503.0);
+            match &scalar.inner {
+                super::MediumInner::Heterogeneous(medium) => {
+                    assert_eq!(medium.alpha_power[[0, 0, 0]], 1.2);
+                }
+                super::MediumInner::Homogeneous(_) => panic!("expected heterogeneous medium"),
+            }
+
+            let alpha_power_value = alpha_power.into_pyobject(py).unwrap().into_any();
+            let array = Medium::new(
+                sound_speed.readonly(),
+                density.readonly(),
+                None,
+                Some(&alpha_power_value),
+                None,
+            )
+            .unwrap();
+            assert_eq!(array.inner.as_medium().max_sound_speed(), 1503.0);
+            match &array.inner {
+                super::MediumInner::Heterogeneous(medium) => {
+                    assert_eq!(medium.alpha_power[[0, 0, 0]], 1.0);
+                    assert_eq!(medium.alpha_power[[1, 0, 1]], 1.3);
+                }
+                super::MediumInner::Homogeneous(_) => panic!("expected heterogeneous medium"),
+            }
+
+            let wrong_alpha_power =
+                PyArray3::from_vec3(py, &[vec![vec![1.0_f64]], vec![vec![1.0]]]).unwrap();
+            let wrong_alpha_power_value = wrong_alpha_power.into_pyobject(py).unwrap().into_any();
+            assert!(Medium::new(
+                sound_speed.readonly(),
+                density.readonly(),
+                None,
+                Some(&wrong_alpha_power_value),
                 None,
             )
             .is_err());

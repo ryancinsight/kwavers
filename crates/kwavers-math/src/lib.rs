@@ -10,11 +10,26 @@
 //! - **No dependencies** on domain-specific modules (imaging, therapy, analysis)
 //! - **Depended upon by**: solvers, physics, domain layers
 //!
+//! # Single Source of Truth (SSOT)
+//!
+//! Canonical implementations live in `leto-ops` and are re-exported here:
+//!
+//! | Domain concept       | leto-ops SSOT                        |
+//! |----------------------|---------------------------------------|
+//! | Sparse matrices      | `application::sparse`                 |
+//! | Vector norms         | `application::linalg::norms`           |
+//! | Iterative solvers    | `application::linalg::iterative`       |
+//! | Preconditioners      | `application::linalg::iterative::preconditioners` |
+//!
+//! kwavers-math retains only domain-specific math: FFT, geometry, inverse problems,
+//! numerics (FDTD/spectral), and signal processing. See
+//! [`crate::linear_algebra`] for the remaining linear-algebra submodules.
+//!
 //! # Modules
 //!
 //! - `fft`: Fast Fourier Transform operations and k-space utilities
 //! - `geometry`: Geometric primitives and spatial computations
-//! - `linear_algebra`: Linear algebra operations including sparse matrix support
+//! - `linear_algebra`: Linear algebra operations
 //! - `numerics`: Numerical methods and algorithms
 //!
 //! # Design Principles
@@ -23,6 +38,8 @@
 //! 2. **Type Safety**: Use newtypes and const generics to encode mathematical invariants
 //! 3. **Zero-Cost Abstractions**: Leverage Rust's type system without runtime overhead
 //! 4. **Composability**: Small, focused functions that compose into complex operations
+//! 5. **SSOT Compliance**: No math duplicated from leto-ops; all canonical implementations
+//!    flow through the re-export layer above.
 
 pub mod fft;
 pub mod geometry;
@@ -33,7 +50,6 @@ pub mod optimization;
 mod parallel;
 pub mod signal;
 pub mod simd;
-pub mod simd_safe;
 pub mod special;
 pub mod statistics;
 
@@ -56,13 +72,19 @@ pub use geometry::{
     make_sphere, // Alias for make_ball (MATLAB: makeSphere)
 };
 
-/// Sparse linear algebra operations
-pub use linear_algebra::sparse;
+/// Sparse linear algebra operations (SSOT: leto-ops)
+pub use leto_ops::application::sparse::*;
+
+/// Vector norms (SSOT: leto-ops)
+pub use leto_ops::application::linalg::norms::*;
+
+/// Iterative linear solvers (SSOT: leto-ops)
+pub use leto_ops::application::linalg::iterative::*;
+
+/// Preconditioners for iterative solvers (SSOT: leto-ops)
+pub use leto_ops::application::linalg::iterative::preconditioners::*;
 
 /// SIMD acceleration interfaces
 pub use simd::{
     FdtdSimdOps, FftSimdOps, InterpolationSimdOps, MathSimdLevel, SimdConfig, SimdPerformance,
 };
-
-/// Safe SIMD operations with runtime feature detection
-pub use simd_safe::SimdOps;
