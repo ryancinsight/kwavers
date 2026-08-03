@@ -4,11 +4,33 @@
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
+| KWAVERS-AEQ-MET-58 | Type sensor-beamformer geometry, sampling, steering, aperture, F-number, and spatial-frequency metrics with Aequitas; preserve Eunomia complex steering units. | [arch] [major] | in progress | Codex | `crates/kwavers-transducer/src/beamforming/sensor_beamformer/**`, direct Kwavers callers/tests, ADR 097, PM artifacts |
 | KWAVERS-AEQ-MET-57 | Type the shared beamforming configuration's sound speed, sampling frequency, and reference frequency with Aequitas; migrate the processor formula boundaries and preserve Eunomia complex storage units. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-transducer/src/beamforming/{config,processor}.rs`, callers/tests, ADR 096, PM artifacts |
 | KWAVERS-AEQ-MET-56 | Type rectangular-transducer geometry, frequency, medium speed/density, element-size, and wavenumber contracts with Aequitas; reject invalid geometry and preserve Eunomia complex storage boundaries. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-transducer/src/transducers/rectangular.rs`, FNM solver, Rayleigh-Sommerfeld dispatch, FNM benchmark, ADR 095, PM artifacts |
 | KWAVERS-AEQ-MET-55 | Type the public ultrafast plane-wave and diverging-wave geometry, timing, angle, frequency, F-number, image-coordinate, and scalar apodization metrics with Aequitas; preserve scalar extraction only at numerical and Leto storage boundaries and document Eunomia complex compatibility. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-transducer/src/ultrafast/{plane_wave,diverging_wave}/**`, ADR 094, PM artifacts |
 | KWAVERS-AEQ-MET-54 | Type the public ultrafast transmission scheduler's speed, depth, PRF, event times, frame rates, and tilt angles with Aequitas; keep scalar extraction at the PRF/timing formula boundary and document the real-only Eunomia compatibility rule. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-transducer/src/ultrafast/sequencer/**`, manifest, ADR 093, PM artifacts |
 | KWAVERS-AEQ-INTEGRATION-1 | Integrate the current Aequitas metric closure for therapeutic microbubble and plasmonics contracts on current `main`; harden the public three-dimensional plasmonic coordinate contract and synchronize the audit. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-physics/src/{acoustics/therapy/microbubble,electromagnetic}`, PM artifacts |
+
+## KWAVERS-AEQ-MET-58 — Type sensor-beamformer metrics [major] [arch] — in progress
+
+- Owner: Codex; scope: `crates/kwavers-transducer/src/beamforming/sensor_beamformer/**`,
+  direct `crates/kwavers/tests/**` callers, ADR 097, and synchronized PM
+  artifacts. No changes to the peer-dirty Kwavers checkout are in scope.
+- Outcome: carry sensor positions as `Length`, sampling and steering frequency
+  as `Frequency`, steering angles as `Angle`, sound speed as `Velocity`, and
+  derived F-number/spatial-frequency metrics as `Dimensionless`/`Frequency`.
+  Scalar extraction remains at Euclidean, trigonometric, phase, and dense
+  numeric-buffer boundaries.
+- Acceptance: all current callers migrate without compatibility wrappers;
+  analytical regressions preserve delay, steering phase, F-number, spacing,
+  aperture, and spatial-Nyquist values; locked package checks, Nextest,
+  Clippy, doctests, Rustdoc, residue scans, and hosted gates pass; no
+  imaginary SI unit is introduced.
+- Definition of ready: raw-field inventory and dependency closure are recorded
+  here and in `gap_audit.md`; ADR 097 defines the public contract and
+  formula/storage boundaries.
+- Re-open trigger: raw physical metric residue, changed steering phase,
+  formula-boundary mismatch, or Eunomia complex-unit incompatibility.
 
 
 ## KW-RELEASE-CRATES-01 — Publish the Rust package closure [patch] — in progress

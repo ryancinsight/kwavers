@@ -1,5 +1,23 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-58 typed sensor-beamformer metrics [major] [arch] — in progress
+
+- [x] Audit the sensor-beamformer public fields, formulas, direct callers, and
+      test contracts; keep this slice disjoint from aperture-design and other
+      transducer families.
+- [x] Record ADR 097 and the Eunomia shared-unit/real-observable rule before
+      changing the public API.
+- [ ] Type positions, sampling/steering frequency, angles, sound speed,
+      spacing, aperture, F-number, and spatial-frequency metrics through
+      Aequitas; migrate every direct caller without wrappers.
+- [ ] Add analytical value regressions for delay, phase, and derived metrics.
+- [ ] Run locked checks, focused/full Nextest, warning-denied Clippy,
+      doctests, Rustdoc, format, residue scans, and hosted gates.
+
+Acceptance: no raw physical scalar remains in the sensor-beamformer public
+contract; numerical and Eunomia complex steering semantics remain unchanged;
+no imaginary physical unit is introduced.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-57 typed beamforming configuration quantities [major] [arch] — done 2026-08-02
 
 - [x] Audit shared beamforming configuration and processor callers; retain

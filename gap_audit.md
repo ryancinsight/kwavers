@@ -1,5 +1,28 @@
 ## Live Aequitas closure — 2026-08-02
 
+### KWAVERS-AEQ-MET-58 — sensor-beamformer metric gap (claimed 2026-08-03)
+
+The audit found a remaining raw physical boundary in
+`beamforming/sensor_beamformer`: `SensorBeamformer` stores sampling frequency
+and sensor positions as `f64`, and its public delay and steering methods accept
+raw sound speed, frequency, and angle pairs. `SensorProcessingParams` exposes
+raw sampling frequency, element spacing, aperture, focal length, and spatial
+frequency. These values are a disjoint sensor-array contract; aperture-design,
+propagation, PAM, neural geometry, and other array families remain separate
+items.
+
+The claimed slice will use Aequitas `Length`, `Frequency`, `Angle`, `Velocity`,
+and `Dimensionless`. Scalar extraction is restricted to Euclidean distance,
+trigonometric direction/phase, and dense `f64` delay or steering formulas.
+Eunomia complex steering buffers remain real-plus-quadrature representation
+data under their existing observable signal unit. No imaginary SI unit is
+valid or introduced.
+
+Acceptance is value-semantic: delay values retain distance/speed, steering
+phase retains `2π f Δt`, F-number retains focal-length/aperture, and spatial
+Nyquist retains `c/(2 Δd)` after migration. Direct callers and tests must use
+typed constructors with no compatibility wrapper.
+
 ### KWAVERS-AEQ-MET-57 — shared beamforming configuration metrics
 
 The next audit found that `BeamformingCoreConfig` still exposed shared
