@@ -1,5 +1,28 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-62 two-dimensional array metrics [major] [arch] — done 2026-08-03
+
+- [x] Audit the 2-D array public fields and direct builder, source, simulation,
+      Rayleigh-Sommerfeld, Python, example, and test callers.
+- [x] Type lengths, coordinates, velocity, frequency, delays, and steering
+      angle with Aequitas; represent flat/cylindrical curvature and optional
+      focus without infinity sentinels in the Rust contract.
+- [x] Correct center-to-center pitch generation and add analytical pitch,
+      curvature/sag, no-focus, invalid-radius, and typed-delay regressions.
+- [x] Keep scalar extraction at validation, formula, mesh/index, and explicit
+      Python/source serialization boundaries; preserve the Eunomia one-
+      observable-unit rule for coherent real/quadrature signal values.
+- [x] Record ADR 101 and synchronize the gap audit, backlog, checklist, and
+      changelog.
+- [x] Run transducer Nextest, affected-package Clippy with `-D warnings`,
+      doctests, formatting, diff, and scoped raw-unit scans. Hosted gate and
+      merge evidence remain to be appended at the final PR head.
+
+Acceptance: no raw physical scalar remains in the scoped Rust 2-D array
+contract or direct typed callers; configured center spacing is preserved;
+Python compatibility is limited to the explicit serialization boundary; no
+imaginary physical unit is introduced.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-61 shared acquisition geometry [major] [arch] — done 2026-08-03
 
 - [x] Type `ElementPosition` Cartesian coordinates as Aequitas `Length` and

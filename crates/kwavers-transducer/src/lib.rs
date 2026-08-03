@@ -35,8 +35,8 @@ pub use factory::SourceFactory;
 
 // 2-D transducer arrays
 pub use array_2d::{
-    ApodizationType as Array2DApodizationType, TransducerArray2D, TransducerArray2DBuilder,
-    TransducerArray2DConfig,
+    ApodizationType as Array2DApodizationType, ArrayCurvature, TransducerArray2D,
+    TransducerArray2DBuilder, TransducerArray2DConfig,
 };
 
 // Basic array/element devices

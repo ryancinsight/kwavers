@@ -1,6 +1,7 @@
 //! `impl Source for TransducerArray2D`.
 
 use super::array::TransducerArray2D;
+use aequitas::systems::si::units::{Meter, Second};
 use kwavers_grid::Grid;
 use kwavers_signal::Signal;
 use kwavers_source::Source;
@@ -46,9 +47,11 @@ impl Source for TransducerArray2D {
                 continue;
             }
 
-            let (x, y, z) = element.position;
-            let half_width = self.config.element_width / 2.0;
-            let half_length = self.config.element_length / 2.0;
+            let [x, y, z] = element
+                .position
+                .map(|coordinate| coordinate.in_unit::<Meter>());
+            let half_width = self.config.element_width.in_unit::<Meter>() / 2.0;
+            let half_length = self.config.element_length.in_unit::<Meter>() / 2.0;
 
             let ix_start = (((x - half_width) - grid.origin[0]) / grid.dx).ceil() as isize;
             let ix_end = (((x + half_width) - grid.origin[0]) / grid.dx).floor() as isize;
@@ -89,17 +92,21 @@ impl Source for TransducerArray2D {
                 continue;
             }
 
-            let (ex, ey, ez) = element.position;
+            let [ex, ey, ez] = element
+                .position
+                .map(|coordinate| coordinate.in_unit::<Meter>());
 
             let dx = x - ex;
             let dy = y - ey;
             let dz = z - ez;
             let dist_sq = dz.mul_add(dz, dx.mul_add(dx, dy * dy));
 
-            let tol = (element.width.max(element.length) / 2.0).max(grid.dx);
+            let width_m = element.width.in_unit::<Meter>();
+            let length_m = element.length.in_unit::<Meter>();
+            let tol = (width_m.max(length_m) / 2.0).max(grid.dx);
 
             if dist_sq < tol * tol {
-                let delayed_time = t - element.time_delay;
+                let delayed_time = t - element.time_delay.in_unit::<Second>();
                 let amp = self.amplitude(delayed_time);
                 total += amp * element.transmit_weight;
             }
@@ -113,7 +120,10 @@ impl Source for TransducerArray2D {
             .iter()
             .enumerate()
             .filter(|(i, e)| e.is_active && self.active_elements[*i])
-            .map(|(_, e)| e.position)
+            .map(|(_, e)| {
+                let [x, y, z] = e.position.map(|coordinate| coordinate.in_unit::<Meter>());
+                (x, y, z)
+            })
             .collect()
     }
 
