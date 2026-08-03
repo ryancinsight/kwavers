@@ -87,6 +87,8 @@
   - [Example: Monte Carlo Validation](examples/monte_carlo_validation.md)
 - [20. Performance and Memory](performance_and_memory.md)
   - [Example: Safe Vectorization Benchmarks](examples/safe_vectorization_benchmarks.md)
+  - [Example: SIMD Wave Kernel](examples/simd_wave_kernel.md)
+  - [Example: Tiled K-Space Processing](examples/tiled_kspace_processing.md)
 - [21. Simulation Orchestration: The Capability Catalog](simulation_orchestration.md)
   - [Example: Plugin Architecture](examples/plugin_example.md)
 
@@ -114,27 +116,8 @@
 
 ---
 
-# Part VI — Atlas Stack Integration (Migration Reference)
-
-This part documents the migration from ndarray/nalgebra to the Atlas stack crates:
-
-- [37. Migration Overview: ndarray/nalgebra → Leto](migration_overview.md)
-- [38. Linear Algebra: Leto and Leto-Ops](migration_linalg.md)
-- [39. Geometry: Leto for Point, Vector, Isometry](migration_geometry.md)
-- [40. SIMD: Hermes for Vectorized Operations](migration_simd.md)
-  - [Example: SIMD Wave Kernel](examples/simd_wave_kernel.md)
-- [41. Memory: Mnemosyne and Themis](migration_memory.md)
-- [42. Concurrency: Moirai for Parallel Execution](migration_concurrency.md)
-- [43. FFT: Apollo for Spectral Methods](migration_fft.md)
-- [44. Python Integration: PyO3 and NumPy Boundary](migration_python.md)
-- [45. GAT Tiling: LendingIterator and Tiles](migration_gat_tiles.md)
-  - [Example: Tiled K-Space Processing](examples/tiled_kspace_processing.md)
-
----
-
 # Appendix
 
-- [A. Migration Quick Reference](migration_quick_reference.md)
-- [B. Atlas Crate Dependencies](atlas_dependencies.md)
-- [C. Glossary](appendix_glossary.md)
+- [A. Atlas Crate Dependencies](atlas_dependencies.md)
+- [B. Glossary](appendix_glossary.md)
 
