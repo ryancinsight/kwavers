@@ -4,6 +4,13 @@
 
 ### Changed
 
+- **Breaking:** Transducer aperture design and focused propagation contracts
+  now carry Aequitas geometry, frequency, velocity, drive, impedance,
+  pressure, intensity, and beam-width quantities. Eunomia real/quadrature
+  accumulators retain one observable pressure signal and no imaginary SI unit
+  is introduced. Kwavers PR #338 merges as
+  `7ec566b694598f11d4ceb7bb8721e70384f40689`; see ADR 099.
+
 - The LLVM Code Coverage gate now preserves complete plotting-compatible
   Kwavers target coverage
   while running the long source-injection integration binary as a concurrent

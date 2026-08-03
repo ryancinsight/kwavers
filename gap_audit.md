@@ -1,6 +1,6 @@
 ## Live Aequitas closure — 2026-08-02
 
-### KWAVERS-AEQ-MET-60 — transducer design/propagation metric gap (implementation complete; hosted verification pending 2026-08-03)
+### KWAVERS-AEQ-MET-60 — transducer design/propagation metric gap (closed 2026-08-03)
 
 The live audit found and implemented the remaining raw physical boundary in
 `crates/kwavers-transducer/src/design/{mod,propagation}.rs`. Aperture design
@@ -19,14 +19,17 @@ SI unit is valid. Local evidence is transducer Nextest 226/226 with one
 skipped, driver Nextest 489/489, strict offline Clippy, formatting, diff, and
 scoped residue scans. The local Atlas overlay prevents locked Cargo commands
 from resolving without generated lock churn, and local doctests timed out
-during that overlay compilation before a test diagnostic; hosted locked gates
-remain the acceptance oracle.
+during that overlay compilation before a test diagnostic. The hosted
+repository-owned matrix passes at final head `27ce1029a`, including Code
+Coverage `91783721511` and Test Suite Coverage `91783718417`; Kwavers PR #338
+merges as `7ec566b694598f11d4ceb7bb8721e70384f40689`. The external RecurseML
+analyzer report is non-gating and is not source-change evidence.
 
 This item is bounded to the design and focused-propagation family and its
 direct callers. `transducers/acquisition_geometry.rs` element coordinates and
 the focused, hemispherical, MEMS, flexible, and two-dimensional array
-families remain separate audit candidates. The item moves to closed only
-after the hosted locked/documentation matrix passes on the final branch head.
+families remain separate audit candidates. The next item is the shared
+`TransducerGeometry` acquisition-coordinate contract.
 
 ### KWAVERS-AEQ-MET-59 — PAM/neural sensor metric gap (closed 2026-08-03)
 
