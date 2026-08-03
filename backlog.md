@@ -49,6 +49,10 @@
   shards, and emits two Cobertura reports for one Codecov upload. Feature-only
   targets remain covered by their dedicated matrix jobs; no workload or
   per-test 300-second timeout is reduced or raised.
+- Closure: the corrected exact-head matrix passes Code Coverage job
+  `91693171499` in 27m7s and Test Suite Coverage job `91693169453` in 37m56s;
+  all repository-owned checks are green. PR #335 merges as
+  `c3e0ca39da0c928c83125ca27f9689de49b389f4`.
 - Re-open trigger: raw physical metric residue, changed steering phase,
   formula-boundary mismatch, or Eunomia complex-unit incompatibility.
 

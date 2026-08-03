@@ -54,7 +54,12 @@ instrumentation, runs the long binary as a concurrent shard after one clean,
 and uploads both Cobertura reports to Codecov. Feature-only targets remain in
 their dedicated matrix jobs. This removes serial wall-clock contention without
 raising the per-test 300-second timeout or shrinking the full-grid workload.
-The corrected exact head must be rerun before this item can close.
+The corrected exact head passed its hosted gates. Code Coverage job
+`91693171499` passes in 27m7s and Test Suite Coverage job `91693169453` passes
+in 37m56s; the remaining repository-owned matrix is green. Kwavers PR #335
+merges as `c3e0ca39da0c928c83125ca27f9689de49b389f4`. The external RecurseML
+analyzer remains report-only where it is rate-limited or emits no source
+diagnostic.
 
 ### KWAVERS-AEQ-MET-57 — shared beamforming configuration metrics
 
