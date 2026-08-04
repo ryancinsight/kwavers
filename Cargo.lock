@@ -3156,7 +3156,6 @@ dependencies = [
  "kwavers-imaging",
  "kwavers-math",
  "kwavers-medium",
- "kwavers-optics",
  "kwavers-phantom",
  "kwavers-physics",
  "kwavers-receiver",
@@ -3276,6 +3275,7 @@ dependencies = [
  "consus-io",
  "eunomia",
  "flate2",
+ "hyperion",
  "kwavers-analysis",
  "kwavers-boundary",
  "kwavers-core",
@@ -3284,7 +3284,6 @@ dependencies = [
  "kwavers-imaging",
  "kwavers-math",
  "kwavers-medium",
- "kwavers-optics",
  "kwavers-physics",
  "kwavers-receiver",
  "kwavers-solver",
@@ -3433,21 +3432,15 @@ dependencies = [
 ]
 
 [[package]]
-name = "kwavers-optics"
-version = "3.0.0"
-dependencies = [
- "anyhow",
-]
-
-[[package]]
 name = "kwavers-phantom"
 version = "3.0.0"
 dependencies = [
+ "aequitas",
  "eunomia",
+ "hyperion",
  "kwavers-core",
  "kwavers-grid",
  "kwavers-medium",
- "kwavers-optics",
  "leto",
 ]
 
