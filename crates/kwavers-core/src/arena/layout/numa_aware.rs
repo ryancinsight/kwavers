@@ -1,5 +1,8 @@
+use mnemosyne_arena::{allocate_large_or_huge, deallocate_large_or_huge};
+use mnemosyne_backend::MemoryBackendWrapper;
+use mnemosyne_core::constants::SEGMENT_ALIGN;
+use mnemosyne_core::types::Segment;
 use moirai_parallel::{for_each_chunk_mut_with, Adaptive};
-use std::alloc::{alloc, Layout};
 use std::ptr::NonNull;
 
 #[cfg(test)]
@@ -18,13 +21,21 @@ use crate::error::{KwaversError, KwaversResult, SystemError};
 pub struct NumaAwareAllocator {
     /// Target NUMA node(s) for allocation
     policy: ArenaLayoutNumaPolicy,
+    /// Last allocated user pointer (for deallocation)
+    user_ptr: Option<*mut u8>,
+    /// Segment pointer for mnemosyne deallocation
+    segment_ptr: *mut Segment,
 }
 
 impl NumaAwareAllocator {
     /// Create allocator with specified NUMA policy
     #[must_use]
     pub fn with_policy(policy: ArenaLayoutNumaPolicy) -> Self {
-        Self { policy }
+        Self {
+            policy,
+            user_ptr: None,
+            segment_ptr: std::ptr::null_mut(),
+        }
     }
 
     /// Allocate memory with NUMA awareness
@@ -43,25 +54,45 @@ impl NumaAwareAllocator {
     /// 1. Allocating with standard allocator (pages unbound)
     /// 2. Optionally touching pages in parallel across desired nodes
     /// # Errors
-    /// - Propagates any `KwaversError` returned by called functions.
+    /// - Returns [`KwaversError::System`] if `size` or `align` violate an
+    ///   allocation-layout precondition.
     ///
-    pub fn allocate(&self, size: usize, align: usize) -> KwaversResult<NonNull<u8>> {
-        let layout = Layout::from_size_align(size, align.max(NUMA_ALIGNMENT)).map_err(|_| {
-            KwaversError::System(SystemError::MemoryAllocation {
+    pub fn allocate(&mut self, size: usize, align: usize) -> KwaversResult<NonNull<u8>> {
+        // Validate the caller's alignment request up front so an invalid `align`
+        // surfaces with a descriptive error rather than the generic null-pointer
+        // fallback from mnemosyne. mnemosyne always returns `SEGMENT_ALIGN`-
+        // aligned memory (`SEGMENT_ALIGN >= NUMA_ALIGNMENT`), so the request is
+        // satisfied whenever `align <= SEGMENT_ALIGN`.
+        if !align.is_power_of_two() || align > SEGMENT_ALIGN {
+            return Err(KwaversError::System(SystemError::MemoryAllocation {
                 requested_bytes: size,
-                reason: "Invalid layout for NUMA allocation".to_owned(),
-            })
-        })?;
+                reason: "Invalid align for NUMA allocation".to_owned(),
+            }));
+        }
+        // `NUMA_ALIGNMENT` is the historical floor this allocator enforced; keep
+        // the bound in the contract even though mnemosyne over-satisfies it.
+        debug_assert!(align.max(NUMA_ALIGNMENT) <= SEGMENT_ALIGN);
 
-        // SAFETY: Layout is valid (checked above)
-        let ptr = unsafe { alloc(layout) };
-
-        NonNull::new(ptr).ok_or_else(|| {
+        // SAFETY: `size <= MAX_ALLOC_SIZE` and `SEGMENT_ALIGN` alignment are
+        // validated by mnemosyne's `is_valid_alloc_request`; a null user pointer
+        // is mapped to the descriptive allocation error below.
+        let user_ptr =
+            unsafe { allocate_large_or_huge::<MemoryBackendWrapper>(size, SEGMENT_ALIGN, false) };
+        let ptr = NonNull::new(user_ptr).ok_or_else(|| {
             KwaversError::System(SystemError::MemoryAllocation {
                 requested_bytes: size,
                 reason: "NUMA memory allocation failed".to_owned(),
             })
-        })
+        })?;
+
+        // SAFETY: Valid pointer to allocated memory.
+        // Segment pointer is stored in metadata slot by allocate_large_or_huge.
+        let segment_ptr = unsafe { *((ptr.as_ptr() as *mut *mut Segment).sub(1)) };
+
+        self.user_ptr = Some(ptr.as_ptr());
+        self.segment_ptr = segment_ptr;
+
+        Ok(ptr)
     }
 
     /// Perform parallel first-touch initialization
@@ -97,10 +128,26 @@ impl NumaAwareAllocator {
     }
 }
 
+impl Drop for NumaAwareAllocator {
+    fn drop(&mut self) {
+        // SAFETY: segment_ptr was written by allocate_large_or_huge and is valid.
+        // Only deallocate if we allocated at least once.
+        if let (Some(user_ptr), segment_ptr) = (self.user_ptr.take(), self.segment_ptr) {
+            if !segment_ptr.is_null() {
+                let _released = unsafe {
+                    deallocate_large_or_huge::<MemoryBackendWrapper>(user_ptr, segment_ptr)
+                };
+            }
+        }
+    }
+}
+
 impl Default for NumaAwareAllocator {
     fn default() -> Self {
         Self {
             policy: ArenaLayoutNumaPolicy::FirstTouch,
+            user_ptr: None,
+            segment_ptr: std::ptr::null_mut(),
         }
     }
 }
@@ -111,7 +158,7 @@ mod tests {
 
     #[test]
     fn test_numa_allocator() {
-        let alloc = NumaAwareAllocator::with_policy(ArenaLayoutNumaPolicy::FirstTouch);
+        let mut alloc = NumaAwareAllocator::with_policy(ArenaLayoutNumaPolicy::FirstTouch);
 
         let ptr = alloc
             .allocate(1024, CACHE_LINE_SIZE)

@@ -32,7 +32,15 @@ hermes-simd = { version = "0.5.0", git = "https://github.com/ryancinsight/hermes
 moirai-parallel = { version = "0.4.0", git = "https://github.com/ryancinsight/Moirai.git", default-features = false, features = ["parallel"] }
 leto = { version = "0.40.0", git = "https://github.com/ryancinsight/leto.git", default-features = false, features = ["std"] }
 leto-ops = { version = "0.40.0", git = "https://github.com/ryancinsight/leto.git", default-features = false, features = ["std"] }
-eunomia = { version = "0.7.0", git = "https://github.com/ryancinsight/eunomia", default-features = false, features = ["std"] }
+# Mnemosyne: Allocation / arenas / staging memory (Atlas first-party).
+# `kwavers-core` consumes the arena, backend, and memory-core seam directly
+# (`crates/kwavers-core/src/arena/**`) — see ADR 0006 §Failure modes for the
+# `mnemosyne::scratch::ScratchElement for eunomia::Complex<f64>` coupling point.
+mnemosyne-arena = { version = "0.3.0", git = "https://github.com/ryancinsight/Mnemosyne" }
+mnemosyne-backend = { version = "0.5.0", git = "https://github.com/ryancinsight/Mnemosyne" }
+# mnemosyne-core is the public crate name; maps to mnemosyne-memory-core package internally.
+mnemosyne-core = { version = "0.2.0", git = "https://github.com/ryancinsight/Mnemosyne", package = "mnemosyne-memory-core" }
+eunomia = { version = "0.8.0", git = "https://github.com/ryancinsight/eunomia", default-features = false, features = ["std"] }
 pyo3 = { version = "0.29", features = ["extension-module", "abi3-py39"] }
 numpy = "0.22"
 
