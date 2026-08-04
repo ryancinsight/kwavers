@@ -9,12 +9,12 @@ use kwavers_physics::field_surrogate::{
     place_kernel_at_focus as kwavers_place_kernel_at_focus, resample_trilinear,
     FocalKernel as KwaversFocalKernel, KernelCube as KwaversKernelCube,
 };
-use numpy::{PyArray3, PyReadonlyArray3, ToPyArray};
+use numpy::{PyArray3, PyReadonlyArray3};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 
-use crate::breast_fwi_bindings::complex_compat::{leto3_to_nd3, nd_to_leto3};
+use crate::array_utils::{leto3_to_pyarray3, pyarray3_to_leto3};
 
 /// A cached focal-pressure kernel from a single PSTD pulse.
 ///
@@ -70,8 +70,8 @@ impl FocalKernel {
         if f0 <= 0.0 {
             return Err(PyValueError::new_err("f0 must be positive"));
         }
-        let arr = field.as_array().to_owned();
-        let (nx, ny, nz) = arr.dim();
+        let arr = pyarray3_to_leto3(&field)?;
+        let [nx, ny, nz] = arr.shape();
         if focus_idx.0 >= nx || focus_idx.1 >= ny || focus_idx.2 >= nz {
             return Err(PyValueError::new_err(format!(
                 "focus_idx {focus_idx:?} out of bounds for shape ({nx}, {ny}, {nz})"
@@ -79,7 +79,7 @@ impl FocalKernel {
         }
         Ok(FocalKernel {
             inner: KwaversFocalKernel::new(
-                nd_to_leto3(arr),
+                arr,
                 dx_m,
                 focus_idx,
                 f0,
@@ -138,8 +138,8 @@ impl FocalKernel {
     }
 
     /// Return a copy of the field array as a numpy array.
-    fn field<'py>(&self, py: Python<'py>) -> Bound<'py, PyArray3<f64>> {
-        leto3_to_nd3(self.inner.field.clone()).to_pyarray(py)
+    fn field<'py>(&self, py: Python<'py>) -> PyResult<Py<PyArray3<f64>>> {
+        leto3_to_pyarray3(py, self.inner.field.clone())
     }
 
     fn __repr__(&self) -> String {
@@ -232,7 +232,7 @@ impl KernelCube {
         target_shape: (usize, usize, usize),
         target_focus_idx: (usize, usize, usize),
         target_dx_m: f64,
-    ) -> PyResult<Bound<'py, PyArray3<f64>>> {
+    ) -> PyResult<Py<PyArray3<f64>>> {
         if target_dx_m <= 0.0 {
             return Err(PyValueError::new_err("target_dx_m must be positive"));
         }
@@ -248,7 +248,7 @@ impl KernelCube {
             self.inner
                 .query(f0, pnp, target_shape, target_focus_idx, target_dx_m)
         });
-        Ok(leto3_to_nd3(env).to_pyarray(py))
+        leto3_to_pyarray3(py, env)
     }
 
     fn __repr__(&self) -> String {
@@ -275,7 +275,7 @@ fn place_kernel_at_focus<'py>(
     target_shape: (usize, usize, usize),
     target_focus_idx: (usize, usize, usize),
     target_dx_m: Option<f64>,
-) -> PyResult<Bound<'py, PyArray3<f64>>> {
+) -> PyResult<Py<PyArray3<f64>>> {
     if target_focus_idx.0 >= target_shape.0
         || target_focus_idx.1 >= target_shape.1
         || target_focus_idx.2 >= target_shape.2
@@ -293,7 +293,7 @@ fn place_kernel_at_focus<'py>(
         };
         kwavers_place_kernel_at_focus(&resampled, target_shape, target_focus_idx)
     });
-    Ok(leto3_to_nd3(placed).to_pyarray(py))
+    leto3_to_pyarray3(py, placed)
 }
 
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {

@@ -1,15 +1,16 @@
 //! PyO3 wrappers for Ali 2025 reduced-domain preparation.
 
-use super::complex_compat::{leto3_to_nd3, nd_to_leto3};
 use kwavers_diagnostics::reconstruction::breast_ust_fwi::{
     derive_reduced_breast_ust_array_geometry, derive_reduced_breast_ust_array_plan,
     prepare_reduced_breast_ust_phantom, BreastUstReducedArrayGeometry, BreastUstReducedArrayPlan,
     BreastUstReducedArrayRowPolicy, BreastUstReducedPhantom,
 };
-use numpy::{PyReadonlyArray3, ToPyArray};
+use numpy::PyReadonlyArray3;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyModule};
+
+use crate::array_utils::{leto3_to_pyarray3, pyarray3_to_leto3};
 
 #[pyfunction]
 pub fn prepare_breast_fwi_reduced_phantom<'py>(
@@ -21,7 +22,7 @@ pub fn prepare_breast_fwi_reduced_phantom<'py>(
     dataset_path: &str,
     source_path: &str,
 ) -> PyResult<Bound<'py, PyDict>> {
-    let source = nd_to_leto3(sound_speed_m_s.as_array().to_owned());
+    let source = pyarray3_to_leto3(&sound_speed_m_s)?;
     let reduced = py
         .detach(|| {
             prepare_reduced_breast_ust_phantom(&source, source_spacing_m, max_shape, decimation)
@@ -86,11 +87,11 @@ fn reduced_phantom_to_dict<'py>(
     let out = PyDict::new(py);
     out.set_item(
         "sound_speed_m_s",
-        leto3_to_nd3(reduced.sound_speed_m_s).to_pyarray(py),
+        leto3_to_pyarray3(py, reduced.sound_speed_m_s)?,
     )?;
     out.set_item(
         "initial_sound_speed_m_s",
-        leto3_to_nd3(reduced.initial_sound_speed_m_s).to_pyarray(py),
+        leto3_to_pyarray3(py, reduced.initial_sound_speed_m_s)?,
     )?;
     out.set_item("original_shape", reduced.original_shape)?;
     out.set_item("reduced_shape", reduced.reduced_shape)?;

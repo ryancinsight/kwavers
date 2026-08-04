@@ -1,15 +1,15 @@
 //! PyO3 wrapper for PSTD breast-FWI dataset generation.
 
-use super::complex_compat::{leto3_to_nd3, nd_to_leto3};
 use super::helpers::kwavers_to_py;
 use super::PyMultiRowRingArray;
 use kwavers_diagnostics::reconstruction::breast_ust_fwi::{
     generate_breast_ust_pstd_frequency_dataset, BreastUstPstdDatasetConfig,
 };
-use numpy::ndarray::Array1;
-use numpy::{PyReadonlyArray3, ToPyArray};
+use numpy::PyReadonlyArray3;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
+
+use crate::array_utils::{leto3_to_pyarray3, pyarray3_to_leto3, vec_to_pyarray1};
 
 #[pyclass(name = "BreastFwiPstdDatasetConfig", from_py_object)]
 #[derive(Clone, Copy)]
@@ -95,7 +95,7 @@ pub fn generate_breast_fwi_pstd_dataset<'py>(
     frequencies_hz: Vec<f64>,
     config: &PyBreastFwiPstdDatasetConfig,
 ) -> PyResult<Bound<'py, PyDict>> {
-    let sound_speed = nd_to_leto3(sound_speed_m_s.as_array().to_owned());
+    let sound_speed = pyarray3_to_leto3(&sound_speed_m_s)?;
     let dataset = py
         .detach(|| {
             generate_breast_ust_pstd_frequency_dataset(
@@ -110,11 +110,11 @@ pub fn generate_breast_fwi_pstd_dataset<'py>(
     let out = PyDict::new(py);
     out.set_item(
         "frequencies_hz",
-        Array1::from(dataset.frequencies_hz.clone()).to_pyarray(py),
+        vec_to_pyarray1(py, dataset.frequencies_hz),
     )?;
     out.set_item(
         "observed_pressure",
-        leto3_to_nd3(dataset.observed_pressure).to_pyarray(py),
+        leto3_to_pyarray3(py, dataset.observed_pressure)?,
     )?;
     out.set_item("transmissions", dataset.transmissions)?;
     out.set_item("receivers", dataset.receivers)?;

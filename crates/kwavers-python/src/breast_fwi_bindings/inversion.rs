@@ -2,7 +2,6 @@
 //! (`ali_2025_breast_fwi_frequency_sweep_hz`, `simulate_breast_fwi_frequency_observation`,
 //! `snap_breast_fwi_array_to_grid`, `invert_breast_fwi`).
 
-use super::complex_compat::{leto2_to_nd2, leto3_to_nd3, nd_to_leto2, nd_to_leto3};
 use eunomia::Complex64;
 use kwavers_diagnostics::reconstruction::breast_ust_fwi::{
     reconstruct_breast_ust_sound_speed_volume, snap_multi_row_ring_array_to_grid,
@@ -11,14 +10,17 @@ use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domai
 use kwavers_solver::inverse::fwi::frequency_domain::{
     simulate_frequency_observation, FrequencyObservation,
 };
-use numpy::ndarray::Array1;
-use numpy::{PyArray1, PyArray2, PyReadonlyArray2, PyReadonlyArray3, ToPyArray};
+use numpy::{PyArray1, PyArray2, PyReadonlyArray2, PyReadonlyArray3};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
 use super::array_config::PyMultiRowRingArray;
 use super::fwi_config::PyFrequencyDomainFwiConfig;
 use super::helpers::{kwavers_to_py, observations_from_stack};
+
+use crate::array_utils::{
+    leto2_to_pyarray2, leto3_to_pyarray3, pyarray2_to_leto2, pyarray3_to_leto3, vec_to_pyarray1,
+};
 
 #[pyclass(name = "FrequencyObservation", from_py_object)]
 #[derive(Clone)]
@@ -29,13 +31,13 @@ pub struct PyFrequencyObservation {
 #[pymethods]
 impl PyFrequencyObservation {
     #[new]
-    pub fn new(frequency_hz: f64, observed_pressure: PyReadonlyArray2<Complex64>) -> Self {
-        Self {
-            inner: FrequencyObservation::new(
-                frequency_hz,
-                nd_to_leto2(observed_pressure.as_array().to_owned()),
-            ),
-        }
+    pub fn new(
+        frequency_hz: f64,
+        observed_pressure: PyReadonlyArray2<Complex64>,
+    ) -> PyResult<Self> {
+        Ok(Self {
+            inner: FrequencyObservation::new(frequency_hz, pyarray2_to_leto2(&observed_pressure)?),
+        })
     }
 
     #[getter]
@@ -44,18 +46,14 @@ impl PyFrequencyObservation {
     }
 
     #[getter]
-    pub fn observed_pressure<'py>(&self, py: Python<'py>) -> Py<PyArray2<Complex64>> {
-        leto2_to_nd2(self.inner.observed_pressure.clone())
-            .to_pyarray(py)
-            .into()
+    pub fn observed_pressure<'py>(&self, py: Python<'py>) -> PyResult<Py<PyArray2<Complex64>>> {
+        leto2_to_pyarray2(py, self.inner.observed_pressure.clone())
     }
 }
 
 #[pyfunction]
 pub fn ali_2025_breast_fwi_frequency_sweep_hz<'py>(py: Python<'py>) -> Py<PyArray1<f64>> {
-    Array1::from(ali_2025_frequency_sweep_hz())
-        .to_pyarray(py)
-        .into()
+    vec_to_pyarray1(py, ali_2025_frequency_sweep_hz())
 }
 
 #[pyfunction]
@@ -66,13 +64,13 @@ pub fn simulate_breast_fwi_frequency_observation<'py>(
     frequency_hz: f64,
     config: &PyFrequencyDomainFwiConfig,
 ) -> PyResult<Py<PyArray2<Complex64>>> {
-    let sound_speed = nd_to_leto3(sound_speed_m_s.as_array().to_owned());
+    let sound_speed = pyarray3_to_leto3(&sound_speed_m_s)?;
     let pressure = py
         .detach(|| {
             simulate_frequency_observation(&sound_speed, &array.inner, frequency_hz, &config.inner)
         })
         .map_err(kwavers_to_py)?;
-    Ok(leto2_to_nd2(pressure).to_pyarray(py).into())
+    leto2_to_pyarray2(py, pressure)
 }
 
 #[pyfunction]
@@ -97,7 +95,7 @@ pub fn invert_breast_fwi<'py>(
     config: &PyFrequencyDomainFwiConfig,
 ) -> PyResult<Bound<'py, PyDict>> {
     let pressure = observed_pressure.as_array().to_owned();
-    let initial = nd_to_leto3(initial_sound_speed_m_s.as_array().to_owned());
+    let initial = pyarray3_to_leto3(&initial_sound_speed_m_s)?;
     let observations = observations_from_stack(&frequencies_hz, pressure)?;
     let result = py
         .detach(|| {
@@ -113,11 +111,11 @@ pub fn invert_breast_fwi<'py>(
     let out = PyDict::new(py);
     out.set_item(
         "sound_speed_m_s",
-        leto3_to_nd3(result.sound_speed_m_s).to_pyarray(py),
+        leto3_to_pyarray3(py, result.sound_speed_m_s)?,
     )?;
     out.set_item(
         "objective_history",
-        Array1::from(result.objective_history).to_pyarray(py),
+        vec_to_pyarray1(py, result.objective_history),
     )?;
     out.set_item("frequencies_used", result.frequencies_used)?;
     out.set_item("transmissions_used", result.transmissions_used)?;
