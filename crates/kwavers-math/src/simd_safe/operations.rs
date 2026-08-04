@@ -1,5 +1,11 @@
-//! Main SIMD operations structure with architecture dispatch
+//! Hermes-backed portable SIMD operations for dense `Array3<f64>` fields.
+//!
+//! All ISA dispatch is delegated to `hermes_simd`; this module contains only
+//! the Array3 ↔ contiguous-slice bridge and the element-wise scalar fallback
+//! for non-contiguous views.  The hand-written `avx2`/`neon`/`swar` intrinsic
+//! modules are preserved for the `auto_detect` path but are no longer used here.
 
+use hermes_simd::{elementwise_add, elementwise_mul, elementwise_sub, scale};
 use leto::Array3;
 
 /// SIMD lane width for f64, selected at compile time per target ISA.
@@ -7,10 +13,6 @@ use leto::Array3;
 /// - x86_64 AVX2: 256 bits / 64 bits = 4 lanes
 /// - AArch64 NEON: 128 bits / 64 bits = 2 lanes
 /// - Scalar fallback: 1 lane
-///
-/// Runtime feature detection (`is_x86_feature_detected!` / `is_aarch64_feature_detected!`)
-/// selects the actual code path; this constant records the expected maximum width for
-/// each architecture so it can be referenced in loop-unroll and tiling decisions.
 #[cfg(target_arch = "x86_64")]
 pub const SIMD_WIDTH: usize = 4;
 
@@ -20,137 +22,104 @@ pub const SIMD_WIDTH: usize = 2;
 #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
 pub const SIMD_WIDTH: usize = 1;
 
-/// Portable SIMD operations
+/// Portable SIMD operations backed by `hermes_simd`.
+///
+/// When the underlying `Array3` is contiguous in memory the work is dispatched
+/// through the `hermes_simd` kernel (which handles runtime ISA selection
+/// internally).  Non-contiguous views fall back to a safe scalar loop so that
+/// correctness is preserved at all layout variants.
 #[derive(Debug)]
 pub struct SimdOps;
 
 impl SimdOps {
-    /// Add two fields element-wise using SIMD
+    /// Add two fields element-wise.
     #[inline]
     #[must_use]
     pub fn add_fields(a: &Array3<f64>, b: &Array3<f64>) -> Array3<f64> {
         let shape = a.shape();
         let mut result = Array3::zeros(shape);
-
-        #[cfg(target_arch = "x86_64")]
-        {
-            if is_x86_feature_detected!("avx2") {
-                super::avx2::add_fields_avx2(a, b, &mut result);
-                return result;
+        if let (Some(a_s), Some(b_s), Some(r_s)) = (
+            a.as_slice_memory_order(),
+            b.as_slice_memory_order(),
+            result.as_slice_memory_order_mut(),
+        ) {
+            elementwise_add(a_s, b_s, r_s)
+                .expect("invariant: equal Array3 shapes produce equal slice lengths");
+        } else {
+            for ((r, &av), &bv) in result.iter_mut().zip(a.iter()).zip(b.iter()) {
+                *r = av + bv;
             }
         }
-
-        #[cfg(target_arch = "aarch64")]
-        {
-            if std::arch::is_aarch64_feature_detected!("neon") {
-                super::neon::add_fields_neon(a, b, &mut result);
-                return result;
-            }
-        }
-
-        super::swar::add_fields_swar(a, b, &mut result);
         result
     }
 
-    /// Scale field by scalar using SIMD
+    /// Scale field by scalar.
     #[inline]
     #[must_use]
     pub fn scale_field(field: &Array3<f64>, scalar: f64) -> Array3<f64> {
-        let shape = field.shape();
-        let mut result = Array3::zeros(shape);
-
-        #[cfg(target_arch = "x86_64")]
-        {
-            if is_x86_feature_detected!("avx2") {
-                super::avx2::scale_field_avx2(field, scalar, &mut result);
-                return result;
+        let mut result = field.clone();
+        if let Some(s) = result.as_slice_memory_order_mut() {
+            scale(s, scalar);
+        } else {
+            for v in result.iter_mut() {
+                *v *= scalar;
             }
         }
-
-        #[cfg(target_arch = "aarch64")]
-        {
-            if std::arch::is_aarch64_feature_detected!("neon") {
-                super::neon::scale_field_neon(field, scalar, &mut result);
-                return result;
-            }
-        }
-
-        super::swar::scale_field_swar(field, scalar, &mut result);
         result
     }
 
-    /// Compute L2 norm using SIMD
+    /// Compute the L2 (Euclidean) norm of a field.
     #[inline]
     #[must_use]
     pub fn norm(field: &Array3<f64>) -> f64 {
-        #[cfg(target_arch = "x86_64")]
-        {
-            if is_x86_feature_detected!("avx2") {
-                return super::avx2::norm_avx2(field);
-            }
+        if let Some(s) = field.as_slice_memory_order() {
+            hermes_simd::dot(s, s)
+                .expect("invariant: same-slice dot never mismatches length")
+                .sqrt()
+        } else {
+            field.iter().map(|&v| v * v).sum::<f64>().sqrt()
         }
-
-        #[cfg(target_arch = "aarch64")]
-        {
-            if std::arch::is_aarch64_feature_detected!("neon") {
-                return super::neon::norm_neon(field);
-            }
-        }
-
-        super::swar::norm_swar(field)
     }
 
-    /// Multiply two fields element-wise using SIMD
+    /// Multiply two fields element-wise.
     #[inline]
     #[must_use]
     pub fn multiply_fields(a: &Array3<f64>, b: &Array3<f64>) -> Array3<f64> {
         let shape = a.shape();
         let mut result = Array3::zeros(shape);
-
-        #[cfg(target_arch = "x86_64")]
-        {
-            if is_x86_feature_detected!("avx2") {
-                super::avx2::multiply_fields_avx2(a, b, &mut result);
-                return result;
+        if let (Some(a_s), Some(b_s), Some(r_s)) = (
+            a.as_slice_memory_order(),
+            b.as_slice_memory_order(),
+            result.as_slice_memory_order_mut(),
+        ) {
+            elementwise_mul(a_s, b_s, r_s)
+                .expect("invariant: equal Array3 shapes produce equal slice lengths");
+        } else {
+            for ((r, &av), &bv) in result.iter_mut().zip(a.iter()).zip(b.iter()) {
+                *r = av * bv;
             }
         }
-
-        #[cfg(target_arch = "aarch64")]
-        {
-            if std::arch::is_aarch64_feature_detected!("neon") {
-                super::neon::multiply_fields_neon(a, b, &mut result);
-                return result;
-            }
-        }
-
-        super::swar::multiply_fields_swar(a, b, &mut result);
         result
     }
 
-    /// Subtract two fields element-wise using SIMD
+    /// Subtract `b` from `a` element-wise.
     #[inline]
     #[must_use]
     pub fn subtract_fields(a: &Array3<f64>, b: &Array3<f64>) -> Array3<f64> {
         let shape = a.shape();
         let mut result = Array3::zeros(shape);
-
-        #[cfg(target_arch = "x86_64")]
-        {
-            if is_x86_feature_detected!("avx2") {
-                super::avx2::subtract_fields_avx2(a, b, &mut result);
-                return result;
+        if let (Some(a_s), Some(b_s), Some(r_s)) = (
+            a.as_slice_memory_order(),
+            b.as_slice_memory_order(),
+            result.as_slice_memory_order_mut(),
+        ) {
+            elementwise_sub(a_s, b_s, r_s)
+                .expect("invariant: equal Array3 shapes produce equal slice lengths");
+        } else {
+            for ((r, &av), &bv) in result.iter_mut().zip(a.iter()).zip(b.iter()) {
+                *r = av - bv;
             }
         }
-
-        #[cfg(target_arch = "aarch64")]
-        {
-            if std::arch::is_aarch64_feature_detected!("neon") {
-                super::neon::subtract_fields_neon(a, b, &mut result);
-                return result;
-            }
-        }
-
-        super::swar::subtract_fields_swar(a, b, &mut result);
         result
     }
 }
