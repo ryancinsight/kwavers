@@ -3,7 +3,6 @@ use super::super::utils::compute_tumor_properties;
 use kwavers_grid::GridDimensions;
 use kwavers_medium::optical_map::{OpticalPropertyMap, OpticalPropertyMapBuilder, Region};
 use kwavers_medium::properties::OpticalPropertyData;
-use kwavers_optics::chromophores::HemoglobinDatabase;
 
 /// Tumor detection phantom builder
 #[derive(Debug)]
@@ -60,10 +59,8 @@ impl TumorDetectionPhantomBuilder {
         let mut builder = OpticalPropertyMapBuilder::new(dims);
         builder.set_background(self.background);
 
-        let hb_db = HemoglobinDatabase::default();
-
         for tumor in &self.tumors {
-            let props = compute_tumor_properties(&hb_db, self.wavelength_nm, tumor.so2);
+            let props = compute_tumor_properties(self.wavelength_nm, tumor.so2);
             builder.add_region(Region::sphere(tumor.center, tumor.radius), props);
         }
 

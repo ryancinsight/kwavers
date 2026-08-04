@@ -21,11 +21,11 @@
 //! - Brain functional imaging (hemodynamic response)
 
 use anyhow::Result;
+use hyperion::coefficient::hemoglobin_absorption;
 use kwavers_analysis::signal_processing::spectroscopy::SpectralUnmixingConfig;
 use kwavers_diagnostics::workflows::blood_oxygenation::{estimate_oxygenation, OxygenationConfig};
 use kwavers_grid::Grid;
 use kwavers_medium::properties::OpticalPropertyData;
-use kwavers_optics::chromophores::HemoglobinDatabase;
 use kwavers_solver::forward::optical::diffusion::{DiffusionSolver, DiffusionSolverConfig};
 use leto::Array3;
 use std::time::Instant;
@@ -68,14 +68,15 @@ fn main() -> Result<()> {
     println!("------------------------------");
 
     let (nx, ny, nz) = grid.dimensions();
-    let hb_db = HemoglobinDatabase::standard();
 
     // Background: soft tissue (low absorption)
     let background = OpticalPropertyData::soft_tissue();
     println!("Background: Soft tissue");
 
     // Arterial blood vessel (98% oxygenation)
-    let (total_hb, so2_arterial, so2_venous) = HemoglobinDatabase::typical_blood_parameters();
+    // Whole-blood hemoglobin as tetramer molarity, with representative
+    // arterial and venous saturations.
+    let (total_hb, so2_arterial, so2_venous) = (2.3e-3_f64, 0.98_f64, 0.75_f64);
     let arterial_hbo2 = total_hb * so2_arterial;
     let arterial_hb = total_hb * (1.0 - so2_arterial);
     println!(
@@ -128,9 +129,15 @@ fn main() -> Result<()> {
         let mut optical_map = Array3::from_elem((nx, ny, nz), background);
 
         // Get wavelength-dependent absorption for blood
-        let arterial_mu_a = hb_db.absorption_coefficient(wavelength, arterial_hbo2, arterial_hb)?;
-        let venous_mu_a = hb_db.absorption_coefficient(wavelength, venous_hbo2, venous_hb)?;
-        let tumor_mu_a = hb_db.absorption_coefficient(wavelength, tumor_hbo2, tumor_hb)?;
+        let arterial_mu_a = hemoglobin_absorption::<f64>(wavelength, arterial_hbo2, arterial_hb)
+            .map_err(|error| anyhow::anyhow!("{error}"))?
+            .in_unit::<aequitas::systems::si::units::PerMeter>();
+        let venous_mu_a = hemoglobin_absorption::<f64>(wavelength, venous_hbo2, venous_hb)
+            .map_err(|error| anyhow::anyhow!("{error}"))?
+            .in_unit::<aequitas::systems::si::units::PerMeter>();
+        let tumor_mu_a = hemoglobin_absorption::<f64>(wavelength, tumor_hbo2, tumor_hb)
+            .map_err(|error| anyhow::anyhow!("{error}"))?
+            .in_unit::<aequitas::systems::si::units::PerMeter>();
 
         // Insert structures into phantom
         for i in 0..nx {
