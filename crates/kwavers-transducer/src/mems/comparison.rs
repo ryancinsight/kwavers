@@ -200,18 +200,25 @@ pub fn evaluate_therapy(
 mod tests {
     use super::*;
     use crate::mems::pmut::PiezoFilm;
+    use aequitas::systems::si::quantities::Length;
+    use aequitas::systems::si::units::Meter;
+
+    fn meters(value: f64) -> Length<f64> {
+        Length::from_unit::<Meter>(value)
+    }
 
     // Blood density.
     const BLOOD_RHO: f64 = 1060.0;
     // Representative IVUS CMUT: a=14 µm, h=0.4 µm membrane, 0.25 µm gap (→ tens-of-V collapse).
     fn ivus_cmut() -> CmutCell {
-        CmutCell::silicon(14e-6, 0.4e-6, 0.25e-6).unwrap()
+        CmutCell::silicon(meters(14e-6), meters(0.4e-6), meters(0.25e-6)).unwrap()
     }
 
     #[test]
     fn cmut_wins_ivus_on_bandwidth_and_thermal() {
         let cmut = ivus_cmut();
-        let pmut = PmutCell::new(20e-6, 1e-6, 2e-6, PiezoFilm::Pzt).unwrap();
+        let pmut =
+            PmutCell::new(meters(20e-6), meters(1e-6), meters(2e-6), PiezoFilm::Pzt).unwrap();
         let rho = BLOOD_RHO;
         let v = evaluate_ivus(&cmut, &pmut, rho, 5.0, IvusWeights::default());
 
@@ -237,7 +244,8 @@ mod tests {
     #[test]
     fn pmut_keeps_its_drive_voltage_advantage() {
         let cmut = ivus_cmut();
-        let pmut = PmutCell::new(20e-6, 1e-6, 2e-6, PiezoFilm::Aln).unwrap();
+        let pmut =
+            PmutCell::new(meters(20e-6), meters(1e-6), meters(2e-6), PiezoFilm::Aln).unwrap();
         let v = evaluate_ivus(&cmut, &pmut, BLOOD_RHO, 5.0, IvusWeights::default());
         // PMUT operates well below the CMUT collapse bias — the documented trade-off
         assert!(
@@ -251,8 +259,9 @@ mod tests {
     #[test]
     fn pmut_wins_high_pressure_therapy_and_flexing_hurts_cmut() {
         // therapy-scale (~2–5 MHz) designs in water; PMUT driven hard (PZT)
-        let cmut = CmutCell::silicon(60e-6, 2.0e-6, 0.2e-6).unwrap();
-        let pmut = PmutCell::new(60e-6, 2e-6, 4e-6, PiezoFilm::Pzt).unwrap();
+        let cmut = CmutCell::silicon(meters(60e-6), meters(2.0e-6), meters(0.2e-6)).unwrap();
+        let pmut =
+            PmutCell::new(meters(60e-6), meters(2e-6), meters(4e-6), PiezoFilm::Pzt).unwrap();
         let (rho, c) = (1000.0, 1500.0);
 
         // flat, rigid backing
@@ -285,7 +294,8 @@ mod tests {
     fn drive_weighted_priority_can_favour_pmut() {
         // a drive-voltage-dominated weighting flips the verdict toward PMUT
         let cmut = ivus_cmut();
-        let pmut = PmutCell::new(20e-6, 1e-6, 2e-6, PiezoFilm::Aln).unwrap();
+        let pmut =
+            PmutCell::new(meters(20e-6), meters(1e-6), meters(2e-6), PiezoFilm::Aln).unwrap();
         let w = IvusWeights {
             bandwidth: 0.1,
             thermal: 0.1,

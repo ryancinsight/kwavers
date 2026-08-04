@@ -133,7 +133,13 @@ pub fn cmut_flex_apodization(curvatures: &[f64], cell: &CmutCell) -> Vec<f64> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use aequitas::systems::si::quantities::Length;
+    use aequitas::systems::si::units::Meter;
     use leto::Array2;
+
+    fn meters(value: f64) -> Length<f64> {
+        Length::from_unit::<Meter>(value)
+    }
 
     /// Build an `n×3` position array from rows.
     fn positions(rows: &[[f64; 3]]) -> Array2<f64> {
@@ -273,7 +279,7 @@ mod tests {
     /// are derated (< 1) and tighter-gap cells are derated more.
     #[test]
     fn cmut_flex_apodization_derates_curved_elements() {
-        let cell = CmutCell::silicon(60e-6, 2.0e-6, 0.2e-6).unwrap();
+        let cell = CmutCell::silicon(meters(60e-6), meters(2.0e-6), meters(0.2e-6)).unwrap();
         let curvatures = [0.0, 1.0 / 2.0e-3, 1.0 / 1.0e-3]; // flat, 2 mm, 1 mm radius
         let w = cmut_flex_apodization(&curvatures, &cell);
         assert!((w[0] - 1.0).abs() < 1e-12, "flat element keeps full weight");
@@ -284,7 +290,7 @@ mod tests {
         assert!(w.iter().all(|&x| x > 0.0 && x <= 1.0));
 
         // A tighter-gap cell loses more output at the same curvature.
-        let tight = CmutCell::silicon(60e-6, 2.0e-6, 0.1e-6).unwrap();
+        let tight = CmutCell::silicon(meters(60e-6), meters(2.0e-6), meters(0.1e-6)).unwrap();
         let wt = cmut_flex_apodization(&curvatures, &tight);
         assert!(wt[2] < w[2], "tighter gap ⇒ more flex derating");
     }
