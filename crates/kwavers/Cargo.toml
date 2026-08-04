@@ -21,7 +21,6 @@ autobenches = false
 # Foundation layer. `channels`+`registration` are always-on (flume/
 # ritk-registration); GPU execution is forwarded from this crate's features.
 kwavers-core = { path = "../kwavers-core", features = ["channels", "registration"], version = "3.0.0" }
-kwavers-optics = { path = "../kwavers-optics", version = "3.0.0" }
 kwavers-math = { path = "../kwavers-math", version = "3.0.0" }
 kwavers-grid = { path = "../kwavers-grid", version = "3.0.0" }
 kwavers-imaging = { path = "../kwavers-imaging", version = "3.0.0" }

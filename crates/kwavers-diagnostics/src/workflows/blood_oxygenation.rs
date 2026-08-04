@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
+use hyperion::coefficient::{hemoglobin_absorption, DEOXYHEMOGLOBIN, OXYHEMOGLOBIN};
 use kwavers_analysis::signal_processing::spectroscopy::{SpectralUnmixer, SpectralUnmixingConfig};
-use kwavers_optics::chromophores::HemoglobinDatabase;
 use leto::{Array2, Array3};
 
 /// Blood oxygenation map result
@@ -80,21 +80,21 @@ pub fn estimate_oxygenation(
     // Get spatial dimensions
     let [nx, ny, nz] = absorption_maps[0].shape();
 
-    // Create hemoglobin database
-    let hb_db = HemoglobinDatabase::standard();
-
     // Build extinction matrix for these wavelengths
     let n_wavelengths = config.wavelengths.len();
     let mut extinction_matrix = Array2::zeros((n_wavelengths, 2)); // 2 chromophores: HbO₂, Hb
 
     for (i, &wavelength) in config.wavelengths.iter().enumerate() {
-        let (eps_hbo2, eps_hb) = hb_db
-            .extinction_pair(wavelength)
-            .context(format!("Failed to get extinction at {} nm", wavelength))?;
+        let eps_hbo2 = OXYHEMOGLOBIN
+            .molar_extinction::<f64>(wavelength)
+            .with_context(|| format!("no tabulated extinction at {wavelength} nm"))?;
+        let eps_hb = DEOXYHEMOGLOBIN
+            .molar_extinction::<f64>(wavelength)
+            .with_context(|| format!("no tabulated extinction at {wavelength} nm"))?;
 
-        // Convert from M⁻¹·cm⁻¹ to m⁻¹ per M concentration
-        // μₐ = ln(10) · ε · C · 100, so ε_effective = ln(10) · ε · 100
-        let factor = 2.303 * 100.0; // ln(10) * 100
+        // Convert from M⁻¹·cm⁻¹ to m⁻¹ per M concentration:
+        // μₐ = ln(10) · ε · C · 100, so ε_effective = ln(10) · ε · 100.
+        let factor = std::f64::consts::LN_10 * 100.0;
         extinction_matrix[[i, 0]] = eps_hbo2 * factor;
         extinction_matrix[[i, 1]] = eps_hb * factor;
     }
@@ -156,10 +156,9 @@ pub fn estimate_oxygenation(
 /// - Returns [`Err`] if an internal constraint is violated.
 ///
 pub fn arterial_blood_reference(wavelengths: &[f64]) -> Result<Vec<f64>> {
-    let hb_db = HemoglobinDatabase::standard();
     wavelengths
         .iter()
-        .map(|&wl| hb_db.arterial_blood_absorption(wl))
+        .map(|&wl| blood_absorption(wl, ARTERIAL_OXYGEN_SATURATION))
         .collect()
 }
 
@@ -170,9 +169,28 @@ pub fn arterial_blood_reference(wavelengths: &[f64]) -> Result<Vec<f64>> {
 /// - Returns [`Err`] if an internal constraint is violated.
 ///
 pub fn venous_blood_reference(wavelengths: &[f64]) -> Result<Vec<f64>> {
-    let hb_db = HemoglobinDatabase::standard();
     wavelengths
         .iter()
-        .map(|&wl| hb_db.venous_blood_absorption(wl))
+        .map(|&wl| blood_absorption(wl, VENOUS_OXYGEN_SATURATION))
         .collect()
+}
+
+/// Whole-blood hemoglobin, about 150 g/L, expressed as tetramer molarity.
+const BLOOD_HEMOGLOBIN_MOLAR: f64 = 2.3e-3;
+/// Representative arterial oxygen saturation.
+const ARTERIAL_OXYGEN_SATURATION: f64 = 0.98;
+/// Representative venous oxygen saturation.
+const VENOUS_OXYGEN_SATURATION: f64 = 0.75;
+
+/// Blood absorption at one wavelength and saturation, in m⁻¹.
+///
+/// These physiological reference values stay here rather than moving with the
+/// spectra: Hyperion owns optical coefficients, not human haematology defaults.
+fn blood_absorption(wavelength_nm: f64, so2: f64) -> Result<f64> {
+    let oxy = BLOOD_HEMOGLOBIN_MOLAR * so2;
+    let deoxy = BLOOD_HEMOGLOBIN_MOLAR * (1.0 - so2);
+    let coefficient = hemoglobin_absorption::<f64>(wavelength_nm, oxy, deoxy)
+        .map_err(|error| anyhow::anyhow!("{error}"))
+        .with_context(|| format!("blood absorption at {wavelength_nm} nm"))?;
+    Ok(coefficient.in_unit::<aequitas::systems::si::units::PerMeter>())
 }
