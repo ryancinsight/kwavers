@@ -20,51 +20,18 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Configure Pages
-        uses: actions/configure-pages@v5
-
-      - name: Install mdBook
-        env:
-          MDBOOK_VERSION: "0.5.4"
-        run: |
-          curl --fail --location --silent --show-error \
-            "https://github.com/rust-lang/mdBook/releases/download/v${MDBOOK_VERSION}/mdbook-v${MDBOOK_VERSION}-x86_64-unknown-linux-gnu.tar.gz" \
-            --output mdbook.tar.gz
-          tar -xzf mdbook.tar.gz
-          echo "$PWD" >> "$GITHUB_PATH"
-          export PATH="$PWD:$PATH"
-          mdbook --version
-
-      - name: Build book
-        run: |
-          mdbook build docs/book
-          test -f target/book/index.html
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v4
-        with:
-          path: target/book
-
-  deploy:
-    if: github.event_name != 'pull_request'
-    needs: build
-    runs-on: ubuntu-latest
-
+  book:
+    # Body owned once by Atlas (ADR 0035), pinned by SHA like any action. The
+    # shared workflow keeps the pull-request build and skips deployment there,
+    # so PRs still prove the book builds without publishing it.
+    uses: ryancinsight/atlas/.github/workflows/book-pages.yml@9772542cc9dbd53123da0b369a75f34a180da867
     permissions:
+      contents: read
+      # The shared deploy job publishes to Pages over OIDC.
       pages: write
       id-token: write
-
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+    with:
+      # Read from docs/book/book.toml's build-dir = "../../target/book" rather
+      # than assumed. mdbook-version stays at the shared 0.5.4 default, which is
+      # the version this book already pinned.
+      output-path: target/book
