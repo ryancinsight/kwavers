@@ -46,6 +46,8 @@
 //! - Sapareto & Dewey 1984; Damianou & Hynynen 1994 — CEM43 / 240 ablation.
 //! - Pennes 1948 — bioheat equation.
 
+use aequitas::systems::si::quantities::{Frequency, Length};
+use aequitas::systems::si::units::{Hertz, Meter};
 use kwavers::theranostic::{
     interleave_schedule, lesion, sparse_transmit_subsets, PulseKind, TargetSelection,
 };
@@ -163,7 +165,11 @@ fn ricker(f0: f64, dt: f64, nt: usize) -> Vec<f64> {
 /// Map the real 1024-element hemispherical array onto distinct exterior grid
 /// voxels (angular distribution preserved, scaled to `R_ARRAY_VOX`).
 fn map_array_to_grid() -> KwaversResult<Vec<(usize, usize, usize)>> {
-    let array = HemisphericalArray::new(ARRAY_RADIUS_M, ARRAY_ELEMENTS, F0_HZ)?;
+    let array = HemisphericalArray::new(
+        Length::from_unit::<Meter>(ARRAY_RADIUS_M),
+        ARRAY_ELEMENTS,
+        Frequency::from_unit::<Hertz>(F0_HZ),
+    )?;
     let (cx, cy, cz) = (NX as f64 / 2.0, NY as f64 / 2.0, NZ as f64 / 2.0);
     let scale = R_ARRAY_VOX / ARRAY_RADIUS_M;
     let mut seen = std::collections::BTreeSet::new();
