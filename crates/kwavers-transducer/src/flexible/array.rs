@@ -13,6 +13,7 @@ use std::sync::Arc;
 use super::calibration::CalibrationManager;
 use super::config::{CalibrationMethod, FlexibilityModel, FlexibleTransducerConfig};
 use super::geometry::{DeformationState, GeometryState};
+use aequitas::systems::si::units::{Meter, NewtonPerMeter, Pascal, Second};
 
 /// Flexible transducer array with real-time geometry tracking
 #[derive(Debug)]
@@ -35,7 +36,11 @@ impl FlexibleTransducerArray {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn new(config: FlexibleTransducerConfig, signal: Arc<dyn Signal>) -> KwaversResult<Self> {
-        let geometry_state = GeometryState::flat_array(config.num_elements, config.nominal_spacing);
+        let geometry_state = GeometryState::flat_array(
+            config.num_elements,
+            // Scalar extraction at the mesh boundary: GeometryState uses raw f64 metres.
+            config.nominal_spacing.in_unit::<Meter>(),
+        );
 
         let calibration_processor = CalibrationManager::new();
 
@@ -64,7 +69,8 @@ impl FlexibleTransducerArray {
             CalibrationMethod::SelfCalibration {
                 reference_reflectors: _,
                 calibration_interval,
-            } if timestamp - self.last_update_time > *calibration_interval => {
+                // Scalar extraction at the timestamp boundary: `calibration_interval` is typed Time.
+            } if timestamp - self.last_update_time > calibration_interval.in_unit::<Second>() => {
                 // For 2D measurement data, we use external tracking instead of self-calibration
                 // Self-calibration requires 3D pressure field data
                 // Measurement noise level based on typical ultrasound tracking accuracy
@@ -80,10 +86,11 @@ impl FlexibleTransducerArray {
                 tracking_system: _,
                 measurement_noise,
             } => {
-                // In real implementation, would interface with tracking system
+                // In real implementation, would interface with tracking system.
+                // Scalar extraction at the process boundary: noise level in metres.
                 self.calibration_processor.process_external_tracking(
                     &measurement_data,
-                    *measurement_noise,
+                    measurement_noise.in_unit::<Meter>(),
                     timestamp,
                 )?
             }
@@ -176,9 +183,9 @@ impl FlexibleTransducerArray {
                 poisson_ratio: _,
                 thickness,
             } => {
-                // Calculate strain and stress for elastic deformation
-                let strain = self.calculate_strain(curvature, *thickness);
-                let stress = self.calculate_stress(&strain, *young_modulus);
+                // Scalar extraction at formula boundary.
+                let strain = self.calculate_strain(curvature, thickness.in_unit::<Meter>());
+                let stress = self.calculate_stress(&strain, young_modulus.in_unit::<Pascal>());
 
                 let mut deformation = DeformationState {
                     curvature_radius: if curvature > 0.0 {
@@ -208,9 +215,13 @@ impl FlexibleTransducerArray {
                     } else {
                         None
                     },
+                    // Scalar extraction at formula boundary.
                     strain: vec![curvature * 0.001; self.config.num_elements],
-                    stress: vec![*membrane_tension; self.config.num_elements],
-                    deformation_energy: membrane_tension * curvature,
+                    stress: vec![
+                        membrane_tension.in_unit::<NewtonPerMeter>();
+                        self.config.num_elements
+                    ],
+                    deformation_energy: membrane_tension.in_unit::<NewtonPerMeter>() * curvature,
                     max_safe_deformation: 0.2,
                 };
             }
