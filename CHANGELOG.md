@@ -4,6 +4,15 @@
 
 ### Changed
 
+- **Breaking:** Focused bowl, spherical-cap, arc, multi-bowl, and
+  hemispherical source contracts now use Aequitas quantities for physical
+  geometry, frequency, pressure, phase, area, delay, volume, and validation
+  metrics. Therapy, diagnostics, and example callers cross the typed boundary
+  explicitly. Beam steering retargets normals and delays without moving the
+  physical aperture. Eunomia complex values remain numerical phasors with one
+  observable signal unit; no imaginary SI geometry unit is introduced. See
+  [ADR 102](docs/ADR/102-focused-source-quantities.md).
+
 - **Breaking:** Two-dimensional transducer-array geometry and beam-control
   contracts now use Aequitas `Length`, `Velocity`, `Frequency`, `Time`, and
   `Angle` quantities. Flat/cylindrical curvature and no-focus state are typed,

@@ -2,6 +2,8 @@
 //!
 //! Provides arc-shaped transducer geometry for 2D simulations.
 
+use aequitas::systems::si::quantities::{Angle, Frequency, Length, Pressure, Time};
+use aequitas::systems::si::units::{Hertz, Meter, Pascal, Radian, Second};
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use kwavers_core::{constants::SOUND_SPEED_WATER, error::KwaversResult};
 use kwavers_grid::Grid;
@@ -19,36 +21,36 @@ use kwavers_core::constants::numerical::TWO_PI;
 #[derive(Debug, Clone)]
 pub struct ArcConfig {
     /// Radius of curvature (m)
-    pub radius: f64,
+    pub radius: Length<f64>,
 
     /// Arc angle (radians)
-    pub arc_angle: f64,
+    pub arc_angle: Angle<f64>,
 
     /// Center position [x, y] (m)
-    pub center: [f64; 2],
+    pub center: [Length<f64>; 2],
 
     /// Orientation angle (radians)
-    pub orientation: f64,
+    pub orientation: Angle<f64>,
 
     /// Operating frequency (Hz)
-    pub frequency: f64,
+    pub frequency: Frequency<f64>,
 
     /// Source amplitude (Pa)
-    pub amplitude: f64,
+    pub amplitude: Pressure<f64>,
 
     /// Element spacing (m)
-    pub element_spacing: Option<f64>,
+    pub element_spacing: Option<Length<f64>>,
 }
 
 impl Default for ArcConfig {
     fn default() -> Self {
         Self {
-            radius: 0.05,        // 50mm
-            arc_angle: PI / 3.0, // 60 degrees
-            center: [0.0, 0.0],
-            orientation: 0.0,
-            frequency: MHZ_TO_HZ, // 1 MHz
-            amplitude: MPA_TO_PA, // 1 MPa
+            radius: Length::from_unit::<Meter>(0.05),
+            arc_angle: Angle::from_unit::<Radian>(PI / 3.0),
+            center: [Length::from_unit::<Meter>(0.0); 2],
+            orientation: Angle::from_unit::<Radian>(0.0),
+            frequency: Frequency::from_unit::<Hertz>(MHZ_TO_HZ),
+            amplitude: Pressure::from_unit::<Pascal>(MPA_TO_PA),
             element_spacing: None,
         }
     }
@@ -59,7 +61,7 @@ impl Default for ArcConfig {
 pub struct ArcSource {
     config: ArcConfig,
     /// Discretized element positions
-    element_positions: Vec<[f64; 2]>,
+    element_positions: Vec<[Length<f64>; 2]>,
     /// Element weights
     element_weights: Vec<f64>,
 }
@@ -75,14 +77,17 @@ impl ArcSource {
         // Calculate element spacing if not provided
         let element_spacing = config.element_spacing.unwrap_or_else(|| {
             let speed_of_sound = SOUND_SPEED_WATER;
-            let wavelength = speed_of_sound / config.frequency;
-            wavelength / 4.0
+            let wavelength = speed_of_sound / config.frequency.in_unit::<Hertz>();
+            Length::from_unit::<Meter>(wavelength / 4.0)
         });
-        validate_positive_finite_field("element_spacing", element_spacing)?;
+        validate_positive_finite_field("element_spacing", element_spacing.in_unit::<Meter>())?;
 
         // Number of elements
-        let arc_length = config.radius * config.arc_angle;
-        let n_elements = element_count_from_arc_length(arc_length, element_spacing)?;
+        let radius_m = config.radius.in_unit::<Meter>();
+        let arc_angle_rad = config.arc_angle.in_unit::<Radian>();
+        let arc_length = radius_m * arc_angle_rad;
+        let n_elements =
+            element_count_from_arc_length(arc_length, element_spacing.in_unit::<Meter>())?;
 
         // Generate element positions
         let mut positions = Vec::with_capacity(n_elements);
@@ -90,15 +95,14 @@ impl ArcSource {
 
         for i in 0..n_elements {
             // Angle for this element
-            let theta =
-                -config.arc_angle / 2.0 + (i as f64 + 0.5) * config.arc_angle / n_elements as f64;
-            let rotated_theta = theta + config.orientation;
+            let theta = -arc_angle_rad / 2.0 + (i as f64 + 0.5) * arc_angle_rad / n_elements as f64;
+            let rotated_theta = theta + config.orientation.in_unit::<Radian>();
 
             // Position
-            let x = config.radius.mul_add(rotated_theta.cos(), config.center[0]);
-            let y = config.radius.mul_add(rotated_theta.sin(), config.center[1]);
+            let x = radius_m.mul_add(rotated_theta.cos(), config.center[0].in_unit::<Meter>());
+            let y = radius_m.mul_add(rotated_theta.sin(), config.center[1].in_unit::<Meter>());
 
-            positions.push([x, y]);
+            positions.push([Length::from_unit::<Meter>(x), Length::from_unit::<Meter>(y)]);
             weights.push(1.0 / n_elements as f64);
         }
 
@@ -111,8 +115,20 @@ impl ArcSource {
 
     /// Generate 2D source distribution
     #[must_use]
-    pub fn generate_source_2d(&self, nx: usize, ny: usize, dx: f64, time: f64) -> Array2<f64> {
-        self.generate_source_2d_on_grid(nx, ny, [0.0, 0.0], [dx, dx], time)
+    pub fn generate_source_2d(
+        &self,
+        nx: usize,
+        ny: usize,
+        spacing: Length<f64>,
+        time: Time<f64>,
+    ) -> Array2<f64> {
+        self.generate_source_2d_on_grid(
+            nx,
+            ny,
+            [0.0, 0.0],
+            [spacing.in_unit::<Meter>(); 2],
+            time.in_unit::<Second>(),
+        )
     }
 
     /// Generate a 2-D source distribution on an anisotropic Cartesian grid.
@@ -133,10 +149,10 @@ impl ArcSource {
         time: f64,
     ) -> Array2<f64> {
         let mut source = Array2::zeros([nx, ny]);
-        let omega = TWO_PI * self.config.frequency;
+        let omega = TWO_PI * self.config.frequency.in_unit::<Hertz>();
 
         // Focus is at the center of curvature
-        let focus = self.config.center;
+        let focus = self.config.center.map(|value| value.in_unit::<Meter>());
 
         // Calculate delays for focusing
         let speed_of_sound = SOUND_SPEED_WATER;
@@ -144,6 +160,7 @@ impl ArcSource {
             .element_positions
             .iter()
             .map(|&pos| {
+                let pos = pos.map(|value| value.in_unit::<Meter>());
                 let distance = (focus[0] - pos[0]).hypot(focus[1] - pos[1]);
                 distance / speed_of_sound
             })
@@ -162,6 +179,7 @@ impl ArcSource {
 
             let mut pressure = 0.0;
             for (i, &pos) in self.element_positions.iter().enumerate() {
+                let pos = pos.map(|value| value.in_unit::<Meter>());
                 let r = (x - pos[0]).hypot(y - pos[1]);
 
                 if r > 0.0 {
@@ -169,8 +187,10 @@ impl ArcSource {
                     let phase = omega * (time - delays[i]);
 
                     // 2D Green's function (Hankel function calculation)
-                    let element_pressure =
-                        self.config.amplitude * self.element_weights[i] * phase.sin() / r.sqrt();
+                    let element_pressure = self.config.amplitude.in_unit::<Pascal>()
+                        * self.element_weights[i]
+                        * phase.sin()
+                        / r.sqrt();
 
                     pressure += element_pressure;
                 }
@@ -183,13 +203,13 @@ impl ArcSource {
     }
 
     /// Extend 2D source to 3D (uniform in z-direction)
-    pub fn generate_source_3d(&self, grid: &Grid, time: f64) -> Array3<f64> {
+    pub fn generate_source_3d(&self, grid: &Grid, time: Time<f64>) -> Array3<f64> {
         let source_2d = self.generate_source_2d_on_grid(
             grid.nx,
             grid.ny,
             [grid.origin[0], grid.origin[1]],
             [grid.dx, grid.dy],
-            time,
+            time.in_unit::<Second>(),
         );
         let mut source_3d = Array3::zeros([grid.nx, grid.ny, grid.nz]);
 
@@ -207,20 +227,22 @@ impl ArcSource {
 }
 
 fn validate_arc_config(config: &ArcConfig) -> KwaversResult<()> {
-    validate_positive_finite_field("radius", config.radius)?;
-    validate_positive_finite_field("frequency", config.frequency)?;
-    validate_finite_field("amplitude", config.amplitude)?;
-    validate_finite_field("orientation", config.orientation)?;
-    validate_finite_vector("center", config.center)?;
-    if !(config.arc_angle.is_finite() && config.arc_angle > 0.0 && config.arc_angle <= TWO_PI) {
+    validate_positive_finite_field("radius", config.radius.in_unit::<Meter>())?;
+    validate_positive_finite_field("frequency", config.frequency.in_unit::<Hertz>())?;
+    validate_finite_field("amplitude", config.amplitude.in_unit::<Pascal>())?;
+    validate_finite_field("orientation", config.orientation.in_unit::<Radian>())?;
+    let center = config.center.map(|value| value.in_unit::<Meter>());
+    validate_finite_vector("center", center)?;
+    let arc_angle = config.arc_angle.in_unit::<Radian>();
+    if !(arc_angle.is_finite() && arc_angle > 0.0 && arc_angle <= TWO_PI) {
         return Err(field_validation_error(
             "arc_angle",
-            config.arc_angle.to_string(),
+            arc_angle.to_string(),
             "must satisfy 0 < arc_angle <= 2*pi",
         ));
     }
     if let Some(element_spacing) = config.element_spacing {
-        validate_positive_finite_field("element_spacing", element_spacing)?;
+        validate_positive_finite_field("element_spacing", element_spacing.in_unit::<Meter>())?;
     }
     Ok(())
 }
@@ -243,42 +265,47 @@ fn element_count_from_arc_length(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use aequitas::systems::si::quantities::{Angle, Frequency, Length, Pressure, Time};
+    use aequitas::systems::si::units::{Hertz, Meter, Pascal, Radian};
     use kwavers_core::error::KwaversError;
 
     #[test]
     fn arc_rejects_invalid_source_domains() {
         let zero_radius = ArcConfig {
-            radius: 0.0,
+            radius: Length::from_unit::<Meter>(0.0),
             ..Default::default()
         };
         assert_validation_error(zero_radius);
 
         let zero_angle = ArcConfig {
-            arc_angle: 0.0,
+            arc_angle: Angle::from_unit::<Radian>(0.0),
             ..Default::default()
         };
         assert_validation_error(zero_angle);
 
         let excessive_angle = ArcConfig {
-            arc_angle: 2.0 * PI + 1.0e-12,
+            arc_angle: Angle::from_unit::<Radian>(2.0 * PI + 1.0e-12),
             ..Default::default()
         };
         assert_validation_error(excessive_angle);
 
         let zero_frequency = ArcConfig {
-            frequency: 0.0,
+            frequency: Frequency::from_unit::<Hertz>(0.0),
             ..Default::default()
         };
         assert_validation_error(zero_frequency);
 
         let zero_spacing = ArcConfig {
-            element_spacing: Some(0.0),
+            element_spacing: Some(Length::from_unit::<Meter>(0.0)),
             ..Default::default()
         };
         assert_validation_error(zero_spacing);
 
         let nonfinite_center = ArcConfig {
-            center: [f64::NAN, 0.0],
+            center: [
+                Length::from_unit::<Meter>(f64::NAN),
+                Length::from_unit::<Meter>(0.0),
+            ],
             ..Default::default()
         };
         assert_validation_error(nonfinite_center);
@@ -287,26 +314,26 @@ mod tests {
     #[test]
     fn arc_source_3d_uses_grid_origin_and_axis_spacing() {
         let config = ArcConfig {
-            radius: 0.04,
-            arc_angle: 0.5,
-            center: [0.0, 0.0],
-            orientation: 0.25,
-            frequency: 1.2 * MHZ_TO_HZ,
-            amplitude: 2.0e5,
-            element_spacing: Some(0.1),
+            radius: Length::from_unit::<Meter>(0.04),
+            arc_angle: Angle::from_unit::<Radian>(0.5),
+            center: [Length::from_unit::<Meter>(0.0); 2],
+            orientation: Angle::from_unit::<Radian>(0.25),
+            frequency: Frequency::from_unit::<Hertz>(1.2 * MHZ_TO_HZ),
+            amplitude: Pressure::from_unit::<Pascal>(2.0e5),
+            element_spacing: Some(Length::from_unit::<Meter>(0.1)),
         };
         let arc = ArcSource::new(config.clone()).unwrap();
         assert_eq!(arc.element_positions.len(), 1);
 
         let mut grid = Grid::new(3, 4, 2, 0.001, 0.002, 0.003).unwrap();
         grid.origin = [0.011, -0.017, 0.023];
-        let time = 0.41e-6;
+        let time = Time::from_base(0.41e-6);
         let source = arc.generate_source_3d(&grid, time);
 
-        let element_position = arc.element_positions[0];
+        let element_position = arc.element_positions[0].map(|value| value.in_unit::<Meter>());
         let element_weight = arc.element_weights[0];
-        let delay = config.radius / SOUND_SPEED_WATER;
-        let phase = 2.0 * PI * config.frequency * (time - delay);
+        let delay = config.radius.in_unit::<Meter>() / SOUND_SPEED_WATER;
+        let phase = 2.0 * PI * config.frequency.in_unit::<Hertz>() * (time.into_base() - delay);
 
         for ix in 0..grid.nx {
             for iy in 0..grid.ny {
@@ -317,7 +344,8 @@ mod tests {
                 let distance =
                     (point[0] - element_position[0]).hypot(point[1] - element_position[1]);
                 let expected = if distance > 0.0 {
-                    config.amplitude * element_weight * phase.sin() / distance.sqrt()
+                    config.amplitude.in_unit::<Pascal>() * element_weight * phase.sin()
+                        / distance.sqrt()
                 } else {
                     0.0
                 };

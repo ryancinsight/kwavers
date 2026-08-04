@@ -4,6 +4,8 @@
 
 use super::bowl::{BowlConfig, BowlTransducer};
 use super::validation::{field_validation_error, validate_finite_field};
+use aequitas::systems::si::quantities::{Angle, Length, Pressure, Time};
+use aequitas::systems::si::units::{Hertz, Pascal, Radian, Second};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
@@ -16,9 +18,9 @@ pub struct MultiBowlArray {
     /// Individual bowl transducers
     pub(crate) bowls: Vec<BowlTransducer>,
     /// Relative amplitudes for each bowl
-    amplitudes: Vec<f64>,
+    amplitudes: Vec<Pressure<f64>>,
     /// Relative phases for each bowl
-    phases: Vec<f64>,
+    phases: Vec<Angle<f64>>,
 }
 
 impl MultiBowlArray {
@@ -72,23 +74,33 @@ impl MultiBowlArray {
     /// # Errors
     /// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
     ///
-    pub fn generate_source(&self, grid: &Grid, time: f64) -> KwaversResult<Array3<f64>> {
+    pub fn generate_source(&self, grid: &Grid, time: Time<f64>) -> KwaversResult<Array3<f64>> {
         let mut combined_source = Array3::zeros([grid.nx, grid.ny, grid.nz]);
 
         // Add contributions from each bowl
         for (i, bowl) in self.bowls.iter().enumerate() {
             // Generate source for this bowl at the current time
             // Note: We need to adjust the time to account for the phase offset
-            let omega = TWO_PI * bowl.config.frequency;
-            validate_finite_field("multi_bowl_amplitude", self.amplitudes[i])?;
-            validate_finite_field("multi_bowl_phase", self.phases[i])?;
-            let phase_offset = self.phases[i] - bowl.config.phase; // Relative phase
+            let omega = TWO_PI * bowl.config.frequency.in_unit::<Hertz>();
+            validate_finite_field(
+                "multi_bowl_amplitude",
+                self.amplitudes[i].in_unit::<Pascal>(),
+            )?;
+            validate_finite_field("multi_bowl_phase", self.phases[i].in_unit::<Radian>())?;
+            let phase_offset =
+                self.phases[i].in_unit::<Radian>() - bowl.config.phase.in_unit::<Radian>(); // Relative phase
             let time_offset = phase_offset / omega; // Convert phase to time offset
 
-            let bowl_source = bowl.generate_source(grid, time + time_offset)?;
+            let bowl_source = bowl.generate_source(
+                grid,
+                Time::from_unit::<Second>(time.in_unit::<Second>() + time_offset),
+            )?;
 
             // Apply relative amplitude
-            let scale = amplitude_scale(self.amplitudes[i], bowl.config.amplitude);
+            let scale = amplitude_scale(
+                self.amplitudes[i].in_unit::<Pascal>(),
+                bowl.config.amplitude.in_unit::<Pascal>(),
+            );
 
             let combined_data = combined_source
                 .as_slice_mut()
@@ -105,11 +117,12 @@ impl MultiBowlArray {
     }
 
     /// Set beam steering parameters
-    pub fn set_beam_steering(&mut self, focus: [f64; 3]) {
+    pub fn set_beam_steering(&mut self, focus: [Length<f64>; 3]) -> KwaversResult<()> {
         // Update focus for all bowls
         for bowl in &mut self.bowls {
-            bowl.config.focus = focus;
+            bowl.set_focus(focus)?;
         }
+        Ok(())
     }
 
     /// Apply dimensionless apodization weights to the original drive pressures.
@@ -125,7 +138,9 @@ impl MultiBowlArray {
             .bowls
             .iter()
             .zip(apodization_type.weights(self.bowls.len()))
-            .map(|(bowl, weight)| bowl.config.amplitude * weight)
+            .map(|(bowl, weight)| {
+                Pressure::from_unit::<Pascal>(bowl.config.amplitude.in_unit::<Pascal>() * weight)
+            })
             .collect();
     }
 }

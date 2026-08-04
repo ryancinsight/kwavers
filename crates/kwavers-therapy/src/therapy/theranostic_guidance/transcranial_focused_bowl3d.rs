@@ -21,6 +21,8 @@
 //! - Voxel body threshold (−350 HU) captures all head/neck tissue.
 //! - The z-axis is approximately aligned with the inferior-superior axis.
 
+use aequitas::systems::si::quantities::Angle;
+use aequitas::systems::si::units::Radian;
 use leto::{Array3, SliceArg};
 
 use kwavers_core::error::{KwaversError, KwaversResult};
@@ -236,7 +238,10 @@ pub fn plan_transcranial_focused_bowl_placement(
         focus,
         bowl_radius_m,
         FocusedBowlVertexDirection::from_superior_positive(superior_positive),
-        BowlAngularBounds::new(theta_min, theta_max)?,
+        BowlAngularBounds::new(
+            Angle::from_unit::<Radian>(theta_min),
+            Angle::from_unit::<Radian>(theta_max),
+        )?,
     ))?;
     let (beam_start_points_m, beam_end_points_m, skull_intersections_m) = sample_beams(
         &therapy_elements_m,

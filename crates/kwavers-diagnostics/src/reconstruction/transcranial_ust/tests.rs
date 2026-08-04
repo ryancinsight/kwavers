@@ -1,4 +1,4 @@
-use aequitas::systems::si::quantities::Length;
+use aequitas::systems::si::quantities::{Dimensionless, Length};
 use aequitas::systems::si::units::Meter;
 use leto::{Array2, Array3};
 
@@ -55,7 +55,11 @@ fn transcranial_bowl_geometry_uses_distinct_element_positions() {
 
 #[test]
 fn transcranial_bowl_geometry_uses_configured_source_aperture() {
-    let aperture = BowlAngularBounds::from_axis_projection_bounds(-0.25, 0.95).unwrap();
+    let aperture = BowlAngularBounds::from_axis_projection_bounds(
+        Dimensionless::from_base(-0.25),
+        Dimensionless::from_base(0.95),
+    )
+    .unwrap();
     let geometry =
         TranscranialBowlGeometry::from_aperture(80, Length::from_unit::<Meter>(0.11), aperture)
             .unwrap();

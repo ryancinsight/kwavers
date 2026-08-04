@@ -4,6 +4,8 @@
 //! Source-domain [`BowlTransducer`] owns spherical-cap validation, equal-area
 //! sampling, and element placement.
 
+use aequitas::systems::si::quantities::{Frequency, Length, Pressure};
+use aequitas::systems::si::units::{Hertz, Meter, Pascal};
 use kwavers_core::error::KwaversResult;
 use kwavers_transducer::transducers::focused::{BowlAngularBounds, BowlConfig, BowlTransducer};
 
@@ -91,12 +93,12 @@ impl FocusedBowlCapSpec {
 pub(crate) fn focused_bowl_cap_points(spec: FocusedBowlCapSpec) -> KwaversResult<Vec<Point3>> {
     let focus_m = [spec.focus_m.x_m, spec.focus_m.y_m, spec.focus_m.z_m];
     let config = BowlConfig::from_focus_axis(
-        focus_m,
+        focus_m.map(Length::from_unit::<Meter>),
         spec.vertex_direction.vertex_to_focus_axis(),
-        spec.radius_m,
-        2.0 * spec.radius_m,
-        spec.frequency_hz,
-        spec.amplitude_pa,
+        Length::from_unit::<Meter>(spec.radius_m),
+        Length::from_unit::<Meter>(2.0 * spec.radius_m),
+        Frequency::from_unit::<Hertz>(spec.frequency_hz),
+        Pressure::from_unit::<Pascal>(spec.amplitude_pa),
     )?;
     let bowl =
         BowlTransducer::with_angular_bounds(config, spec.angular_bounds, spec.element_count)?;
@@ -105,9 +107,9 @@ pub(crate) fn focused_bowl_cap_points(spec: FocusedBowlCapSpec) -> KwaversResult
         .element_positions()
         .iter()
         .map(|position| Point3 {
-            x_m: position[0],
-            y_m: position[1],
-            z_m: position[2],
+            x_m: position[0].in_unit::<Meter>(),
+            y_m: position[1].in_unit::<Meter>(),
+            z_m: position[2].in_unit::<Meter>(),
         })
         .collect())
 }
@@ -115,6 +117,8 @@ pub(crate) fn focused_bowl_cap_points(spec: FocusedBowlCapSpec) -> KwaversResult
 #[cfg(test)]
 mod tests {
     use super::*;
+    use aequitas::systems::si::quantities::Angle;
+    use aequitas::systems::si::units::Radian;
 
     #[test]
     fn cap_points_follow_positive_vertex_axis() {
@@ -129,7 +133,7 @@ mod tests {
             focus,
             radius,
             FocusedBowlVertexDirection::PositiveZ,
-            BowlAngularBounds::new(0.2, 0.9).unwrap(),
+            BowlAngularBounds::new(angle(0.2), angle(0.9)).unwrap(),
         ))
         .unwrap();
 
@@ -156,11 +160,15 @@ mod tests {
             focus,
             0.08,
             FocusedBowlVertexDirection::NegativeZ,
-            BowlAngularBounds::polar_span(0.6).unwrap(),
+            BowlAngularBounds::polar_span(angle(0.6)).unwrap(),
         ))
         .unwrap();
 
         assert_eq!(points.len(), 16);
         assert!(points.iter().all(|point| point.z_m < focus.z_m));
+    }
+
+    fn angle(value: f64) -> Angle<f64> {
+        Angle::from_unit::<Radian>(value)
     }
 }

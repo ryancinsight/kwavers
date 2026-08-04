@@ -5,6 +5,8 @@
 //! aperture is the complete source-domain parameter. These constructors route
 //! that parameter through the canonical equal-area spherical-cap layout.
 
+use aequitas::systems::si::quantities::{Angle, Dimensionless, Length};
+use aequitas::systems::si::units::{Meter, Radian};
 use std::f64::consts::PI;
 
 use super::super::validation::{field_validation_error, validate_element_count};
@@ -20,8 +22,8 @@ use kwavers_core::error::KwaversResult;
 /// aperture-domain validation outside the bowl source boundary.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct BowlAngularBounds {
-    theta_min_rad: f64,
-    theta_max_rad: f64,
+    theta_min: Angle<f64>,
+    theta_max: Angle<f64>,
 }
 
 impl BowlAngularBounds {
@@ -31,30 +33,30 @@ impl BowlAngularBounds {
     ///
     /// Returns [`kwavers_core::error::KwaversError::Validation`] when the bounds
     /// do not satisfy `0 <= theta_min < theta_max <= pi`.
-    pub fn new(theta_min_rad: f64, theta_max_rad: f64) -> KwaversResult<Self> {
-        validate_polar_bounds(theta_min_rad, theta_max_rad)?;
+    pub fn new(theta_min: Angle<f64>, theta_max: Angle<f64>) -> KwaversResult<Self> {
+        validate_polar_bounds(theta_min, theta_max)?;
         Ok(Self {
-            theta_min_rad,
-            theta_max_rad,
+            theta_min,
+            theta_max,
         })
     }
 
-    /// Construct a cap over `0 <= theta <= theta_max_rad`.
+    /// Construct a cap over `0 <= theta <= theta_max`.
     ///
     /// # Errors
     ///
     /// Returns [`kwavers_core::error::KwaversError::Validation`] when
-    /// `theta_max_rad` is outside the physical focused-bowl domain.
-    pub fn polar_span(theta_max_rad: f64) -> KwaversResult<Self> {
-        Self::new(0.0, theta_max_rad)
+    /// `theta_max` is outside the physical focused-bowl domain.
+    pub fn polar_span(theta_max: Angle<f64>) -> KwaversResult<Self> {
+        Self::new(Angle::from_unit::<Radian>(0.0), theta_max)
     }
 
     /// Construct the full `0 <= theta <= pi/2` hemispherical aperture.
     #[must_use]
     pub fn hemisphere() -> Self {
         Self {
-            theta_min_rad: 0.0,
-            theta_max_rad: PI / 2.0,
+            theta_min: Angle::from_unit::<Radian>(0.0),
+            theta_max: Angle::from_unit::<Radian>(PI / 2.0),
         }
     }
 
@@ -78,20 +80,25 @@ impl BowlAngularBounds {
     /// Returns [`kwavers_core::error::KwaversError::Validation`] unless
     /// `-1 <= axis_projection_min < axis_projection_max <= 1`.
     pub fn from_axis_projection_bounds(
-        axis_projection_min: f64,
-        axis_projection_max: f64,
+        axis_projection_min: Dimensionless<f64>,
+        axis_projection_max: Dimensionless<f64>,
     ) -> KwaversResult<Self> {
-        if axis_projection_min.is_finite()
-            && axis_projection_max.is_finite()
-            && axis_projection_min >= -1.0
-            && axis_projection_min < axis_projection_max
-            && axis_projection_max <= 1.0
+        let axis_projection_min_base = axis_projection_min.into_base();
+        let axis_projection_max_base = axis_projection_max.into_base();
+        if axis_projection_min_base.is_finite()
+            && axis_projection_max_base.is_finite()
+            && axis_projection_min_base >= -1.0
+            && axis_projection_min_base < axis_projection_max_base
+            && axis_projection_max_base <= 1.0
         {
-            Self::new(axis_projection_max.acos(), axis_projection_min.acos())
+            Self::new(
+                Angle::from_unit::<Radian>(axis_projection_max_base.acos()),
+                Angle::from_unit::<Radian>(axis_projection_min_base.acos()),
+            )
         } else {
             Err(field_validation_error(
                 "axis_projection_bounds",
-                format!("[{axis_projection_min}, {axis_projection_max}]"),
+                format!("[{axis_projection_min_base}, {axis_projection_max_base}]"),
                 "must satisfy -1 <= min < max <= 1",
             ))
         }
@@ -99,31 +106,31 @@ impl BowlAngularBounds {
 
     /// Lower polar-angle bound \[rad\].
     #[must_use]
-    pub fn theta_min_rad(self) -> f64 {
-        self.theta_min_rad
+    pub fn theta_min(self) -> Angle<f64> {
+        self.theta_min
     }
 
     /// Upper polar-angle bound \[rad\].
     #[must_use]
-    pub fn theta_max_rad(self) -> f64 {
-        self.theta_max_rad
+    pub fn theta_max(self) -> Angle<f64> {
+        self.theta_max
     }
 
     /// Lower normalized aperture-axis projection.
     #[must_use]
-    pub fn axis_projection_min(self) -> f64 {
-        self.theta_max_rad.cos()
+    pub fn axis_projection_min(self) -> Dimensionless<f64> {
+        Dimensionless::from_base(self.theta_max.in_unit::<Radian>().cos())
     }
 
     /// Upper normalized aperture-axis projection.
     #[must_use]
-    pub fn axis_projection_max(self) -> f64 {
-        self.theta_min_rad.cos()
+    pub fn axis_projection_max(self) -> Dimensionless<f64> {
+        Dimensionless::from_base(self.theta_min.in_unit::<Radian>().cos())
     }
 }
 
 impl BowlTransducer {
-    /// Create a fixed-count bowl over `0 <= theta <= theta_max_rad`.
+    /// Create a fixed-count bowl over `0 <= theta <= theta_max`.
     ///
     /// Use this constructor when the aperture is specified by polar coverage
     /// rather than projected diameter. The `BowlConfig::diameter` field remains
@@ -144,14 +151,14 @@ impl BowlTransducer {
     /// config, or polar span violates the focused-bowl source domain.
     pub fn with_polar_span(
         config: BowlConfig,
-        theta_max_rad: f64,
+        theta_max: Angle<f64>,
         element_count: usize,
     ) -> KwaversResult<Self> {
-        let bounds = BowlAngularBounds::polar_span(theta_max_rad)?;
+        let bounds = BowlAngularBounds::polar_span(theta_max)?;
         Self::with_angular_bounds(config, bounds, element_count)
     }
 
-    /// Create a fixed-count bowl over `theta_min_rad <= theta <= theta_max_rad`.
+    /// Create a fixed-count bowl over `theta_min <= theta <= theta_max`.
     ///
     /// This supports annular focused bowls and cap layouts with a central
     /// cutout. Angles are measured from the bowl vertex-to-focus axis.
@@ -162,11 +169,11 @@ impl BowlTransducer {
     /// config, or angular bounds violate the focused-bowl source domain.
     pub fn with_polar_bounds(
         config: BowlConfig,
-        theta_min_rad: f64,
-        theta_max_rad: f64,
+        theta_min: Angle<f64>,
+        theta_max: Angle<f64>,
         element_count: usize,
     ) -> KwaversResult<Self> {
-        let bounds = BowlAngularBounds::new(theta_min_rad, theta_max_rad)?;
+        let bounds = BowlAngularBounds::new(theta_min, theta_max)?;
         Self::with_angular_bounds(config, bounds, element_count)
     }
 
@@ -183,8 +190,8 @@ impl BowlTransducer {
     /// config, or projection bounds violate the focused-bowl source domain.
     pub fn with_axis_projection_bounds(
         config: BowlConfig,
-        axis_projection_min: f64,
-        axis_projection_max: f64,
+        axis_projection_min: Dimensionless<f64>,
+        axis_projection_max: Dimensionless<f64>,
         element_count: usize,
     ) -> KwaversResult<Self> {
         let bounds = BowlAngularBounds::from_axis_projection_bounds(
@@ -208,8 +215,11 @@ impl BowlTransducer {
         validate_element_count(element_count)?;
         Self::validate_config(&config)?;
 
-        let radius_m = config.radius_of_curvature;
-        let axis = sub3(config.focus, config.center);
+        let radius = config.radius_of_curvature;
+        let axis = sub3(
+            config.focus.map(|value| value.in_unit::<Meter>()),
+            config.center.map(|value| value.in_unit::<Meter>()),
+        );
         let axis_unit = normalize3(axis).ok_or_else(|| {
             field_validation_error(
                 "focus",
@@ -217,23 +227,26 @@ impl BowlTransducer {
                 "must differ from center to define the bowl acoustic axis",
             )
         })?;
-        let curvature_center = add3(config.center, scale3(axis_unit, radius_m));
+        let curvature_center = add3(
+            config.center.map(|value| value.in_unit::<Meter>()),
+            scale3(axis_unit, radius.in_unit::<Meter>()),
+        );
         let layout = SphericalCapLayout::new(SphericalCapConfig::focused_cap(
             element_count,
-            radius_m,
-            curvature_center,
+            radius,
+            curvature_center.map(Length::from_unit::<Meter>),
             axis,
-            bounds.theta_min_rad,
-            bounds.theta_max_rad,
+            bounds.theta_min,
+            bounds.theta_max,
         ))?;
 
         let mut element_positions = Vec::with_capacity(layout.elements().len());
         let mut element_normals = Vec::with_capacity(layout.elements().len());
         let mut element_areas = Vec::with_capacity(layout.elements().len());
         for element in layout.elements() {
-            element_positions.push(element.position_m);
+            element_positions.push(element.position);
             element_normals.push(element.normal_to_focus);
-            element_areas.push(element.area_weight_m2);
+            element_areas.push(element.area_weight);
         }
 
         Ok(Self {
@@ -245,7 +258,9 @@ impl BowlTransducer {
     }
 }
 
-fn validate_polar_bounds(theta_min_rad: f64, theta_max_rad: f64) -> KwaversResult<()> {
+fn validate_polar_bounds(theta_min: Angle<f64>, theta_max: Angle<f64>) -> KwaversResult<()> {
+    let theta_min_rad = theta_min.in_unit::<Radian>();
+    let theta_max_rad = theta_max.in_unit::<Radian>();
     if theta_min_rad.is_finite()
         && theta_max_rad.is_finite()
         && theta_min_rad >= 0.0

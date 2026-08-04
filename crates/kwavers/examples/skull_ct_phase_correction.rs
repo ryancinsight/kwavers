@@ -16,6 +16,8 @@
 //!   and cortical/trabecular density metrics.
 //! - `<output>_element_maps.ppm` and `.svg`: 2D transducer element maps.
 
+use aequitas::systems::si::quantities::{Angle, Frequency, Length, Pressure};
+use aequitas::systems::si::units::{Hertz, Meter, Pascal, Radian};
 use std::env;
 use std::f64::consts::{FRAC_PI_2, PI, TAU};
 use std::fs::File;
@@ -301,22 +303,29 @@ fn hemispherical_projected_elements(grid: &Grid) -> Result<(Vec<f64>, Vec<f64>, 
     let projection_scale = (grid_radius / TRANSCRANIAL_FOCUSED_BOWL_RADIUS_M).min(1.0);
 
     let config = BowlConfig::hemispherical(
-        [0.0, 0.0, TRANSCRANIAL_FOCUSED_BOWL_RADIUS_M],
-        [0.0, 0.0, 0.0],
-        UNIT_FREQUENCY_HZ,
-        UNIT_AMPLITUDE_PA,
+        [
+            Length::from_unit::<Meter>(0.0),
+            Length::from_unit::<Meter>(0.0),
+            Length::from_unit::<Meter>(TRANSCRANIAL_FOCUSED_BOWL_RADIUS_M),
+        ],
+        [Length::from_unit::<Meter>(0.0); 3],
+        Frequency::from_unit::<Hertz>(UNIT_FREQUENCY_HZ),
+        Pressure::from_unit::<Pascal>(UNIT_AMPLITUDE_PA),
     );
-    let bowl =
-        BowlTransducer::with_polar_span(config, FRAC_PI_2, TRANSCRANIAL_FOCUSED_BOWL_ELEMENT_COUNT)
-            .context("failed to construct transcranial focused-bowl element layout")?;
+    let bowl = BowlTransducer::with_polar_span(
+        config,
+        Angle::from_unit::<Radian>(FRAC_PI_2),
+        TRANSCRANIAL_FOCUSED_BOWL_ELEMENT_COUNT,
+    )
+    .context("failed to construct transcranial focused-bowl element layout")?;
 
     let mut x = Vec::with_capacity(bowl.element_count());
     let mut y = Vec::with_capacity(bowl.element_count());
     let mut z = Vec::with_capacity(bowl.element_count());
     for position in bowl.element_positions() {
-        x.push(center_x + projection_scale * position[0]);
-        y.push(center_y + projection_scale * position[1]);
-        z.push(position[2]);
+        x.push(center_x + projection_scale * position[0].in_unit::<Meter>());
+        y.push(center_y + projection_scale * position[1].in_unit::<Meter>());
+        z.push(position[2].in_unit::<Meter>());
     }
 
     Ok((x, y, z))

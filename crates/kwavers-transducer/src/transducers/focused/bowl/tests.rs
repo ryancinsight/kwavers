@@ -1,32 +1,70 @@
 use super::*;
+use aequitas::systems::si::quantities::{Angle, Dimensionless, Frequency, Length, Pressure, Time};
+use aequitas::systems::si::units::{Hertz, Meter, Pascal, Radian, Second, SquareMeter};
 use kwavers_core::constants::numerical::{FOUR_PI, MHZ_TO_HZ, MPA_TO_PA, TWO_PI};
 use kwavers_core::error::KwaversError;
 use kwavers_grid::Grid;
 
+fn length(value: f64) -> Length<f64> {
+    Length::from_unit::<Meter>(value)
+}
+
+fn point(values: [f64; 3]) -> [Length<f64>; 3] {
+    values.map(length)
+}
+
+fn raw_point(values: [Length<f64>; 3]) -> [f64; 3] {
+    values.map(|value| value.in_unit::<Meter>())
+}
+
+fn frequency(value: f64) -> Frequency<f64> {
+    Frequency::from_unit::<Hertz>(value)
+}
+
+fn pressure(value: f64) -> Pressure<f64> {
+    Pressure::from_unit::<Pascal>(value)
+}
+
+fn angle(value: f64) -> Angle<f64> {
+    Angle::from_unit::<Radian>(value)
+}
+
+fn time(value: f64) -> Time<f64> {
+    Time::from_unit::<Second>(value)
+}
+
 #[test]
 fn bowl_layout_uses_canonical_equal_area_cap() {
     let element_size = 0.004_f64;
+    let radius = 0.08;
+    let diameter = 0.04;
+    let center = [0.01, -0.02, 0.003];
+    let focus = [0.01, -0.02, 0.083];
     let config = BowlConfig {
-        radius_of_curvature: 0.08,
-        diameter: 0.04,
-        center: [0.01, -0.02, 0.003],
-        focus: [0.01, -0.02, 0.083],
-        frequency: 1.2 * MHZ_TO_HZ,
-        amplitude: 7.5e5,
-        element_size: Some(element_size),
+        radius_of_curvature: length(radius),
+        diameter: length(diameter),
+        center: point(center),
+        focus: point(focus),
+        frequency: frequency(1.2 * MHZ_TO_HZ),
+        amplitude: pressure(7.5e5),
+        element_size: Some(length(element_size)),
         ..Default::default()
     };
 
     let bowl = BowlTransducer::new(config.clone()).unwrap();
-    let theta_max = (config.diameter * 0.5 / config.radius_of_curvature).asin();
-    let expected_area = spherical_cap_area(config.radius_of_curvature, theta_max);
+    let theta_max = (diameter * 0.5 / radius).asin();
+    let expected_area = spherical_cap_area(radius, theta_max);
     let expected_count = (expected_area / element_size.powi(2)).ceil() as usize;
 
     assert_eq!(bowl.element_positions.len(), expected_count);
     assert_eq!(bowl.element_normals.len(), expected_count);
     assert_eq!(bowl.element_areas.len(), expected_count);
 
-    let summed_area: f64 = bowl.element_areas.iter().sum();
+    let summed_area: f64 = bowl
+        .element_areas
+        .iter()
+        .map(|area| area.in_unit::<SquareMeter>())
+        .sum();
     assert!((summed_area - expected_area).abs() < 1.0e-14);
 
     let expected_weight = expected_area / expected_count as f64;
@@ -36,38 +74,47 @@ fn bowl_layout_uses_canonical_equal_area_cap() {
         .zip(&bowl.element_normals)
         .zip(&bowl.element_areas)
     {
-        let distance_to_curvature_center = norm3(sub3(config.focus, *position));
+        let position = raw_point(*position);
+        let distance_to_curvature_center = norm3(sub3(focus, position));
         let normal_norm = norm3(*normal);
-        let reconstructed_focus = add3(*position, scale3(*normal, config.radius_of_curvature));
+        let reconstructed_focus = add3(position, scale3(*normal, radius));
 
-        assert!((distance_to_curvature_center - config.radius_of_curvature).abs() < 1.0e-12);
+        assert!((distance_to_curvature_center - radius).abs() < 1.0e-12);
         assert!((normal_norm - 1.0).abs() < 1.0e-12);
-        assert!((reconstructed_focus[0] - config.focus[0]).abs() < 1.0e-12);
-        assert!((reconstructed_focus[1] - config.focus[1]).abs() < 1.0e-12);
-        assert!((reconstructed_focus[2] - config.focus[2]).abs() < 1.0e-12);
-        assert!((*area - expected_weight).abs() < 1.0e-14);
+        assert!((reconstructed_focus[0] - focus[0]).abs() < 1.0e-12);
+        assert!((reconstructed_focus[1] - focus[1]).abs() < 1.0e-12);
+        assert!((reconstructed_focus[2] - focus[2]).abs() < 1.0e-12);
+        assert!((area.in_unit::<SquareMeter>() - expected_weight).abs() < 1.0e-14);
     }
 }
 
 #[test]
 fn bowl_element_size_controls_layout_count() {
     let coarse = BowlTransducer::new(BowlConfig {
-        radius_of_curvature: 0.07,
-        diameter: 0.035,
-        element_size: Some(0.006),
+        radius_of_curvature: length(0.07),
+        diameter: length(0.035),
+        element_size: Some(length(0.006)),
         ..Default::default()
     })
     .unwrap();
     let fine = BowlTransducer::new(BowlConfig {
-        radius_of_curvature: 0.07,
-        diameter: 0.035,
-        element_size: Some(0.003),
+        radius_of_curvature: length(0.07),
+        diameter: length(0.035),
+        element_size: Some(length(0.003)),
         ..Default::default()
     })
     .unwrap();
 
-    let coarse_area: f64 = coarse.element_areas.iter().sum();
-    let fine_area: f64 = fine.element_areas.iter().sum();
+    let coarse_area: f64 = coarse
+        .element_areas
+        .iter()
+        .map(|area| area.in_unit::<SquareMeter>())
+        .sum();
+    let fine_area: f64 = fine
+        .element_areas
+        .iter()
+        .map(|area| area.in_unit::<SquareMeter>())
+        .sum();
 
     assert!(fine.element_positions.len() > coarse.element_positions.len());
     assert!((fine_area - coarse_area).abs() < 1.0e-14);
@@ -76,19 +123,23 @@ fn bowl_element_size_controls_layout_count() {
 #[test]
 fn bowl_explicit_element_count_controls_layout_count() {
     let config = BowlConfig {
-        radius_of_curvature: 0.16,
-        diameter: 0.16,
-        center: [0.0, 0.0, -0.16],
-        focus: [0.0, 0.0, 0.0],
-        frequency: 650.0e3,
-        amplitude: MPA_TO_PA,
+        radius_of_curvature: length(0.16),
+        diameter: length(0.16),
+        center: point([0.0, 0.0, -0.16]),
+        focus: point([0.0, 0.0, 0.0]),
+        frequency: frequency(650.0e3),
+        amplitude: pressure(MPA_TO_PA),
         ..Default::default()
     };
 
     let bowl = BowlTransducer::with_element_count(config.clone(), 1024).unwrap();
-    let theta_max = (config.diameter * 0.5 / config.radius_of_curvature).asin();
-    let expected_area = spherical_cap_area(config.radius_of_curvature, theta_max);
-    let summed_area: f64 = bowl.element_areas().iter().sum();
+    let theta_max = (0.16_f64 * 0.5 / 0.16).asin();
+    let expected_area = spherical_cap_area(0.16, theta_max);
+    let summed_area: f64 = bowl
+        .element_areas()
+        .iter()
+        .map(|area| area.in_unit::<SquareMeter>())
+        .sum();
 
     assert_eq!(bowl.element_count(), 1024);
     assert_eq!(bowl.element_positions().len(), 1024);
@@ -100,7 +151,7 @@ fn bowl_explicit_element_count_controls_layout_count() {
 #[test]
 fn explicit_element_count_owns_discretization_option() {
     let config = BowlConfig {
-        element_size: Some(0.0),
+        element_size: Some(length(0.0)),
         ..Default::default()
     };
 
@@ -112,13 +163,13 @@ fn explicit_element_count_owns_discretization_option() {
 #[test]
 fn bowl_source_uses_axis_specific_grid_spacing_and_origin() {
     let config = BowlConfig {
-        radius_of_curvature: 0.08,
-        diameter: 0.04,
-        center: [0.0, 0.0, -0.08],
-        focus: [0.0, 0.0, 0.0],
-        frequency: 1.25 * MHZ_TO_HZ,
-        amplitude: 4.0e5,
-        phase: 0.31,
+        radius_of_curvature: length(0.08),
+        diameter: length(0.04),
+        center: point([0.0, 0.0, -0.08]),
+        focus: point([0.0, 0.0, 0.0]),
+        frequency: frequency(1.25 * MHZ_TO_HZ),
+        amplitude: pressure(4.0e5),
+        phase: angle(0.31),
         apply_directivity: false,
         ..Default::default()
     };
@@ -126,13 +177,16 @@ fn bowl_source_uses_axis_specific_grid_spacing_and_origin() {
     let mut grid = Grid::new(3, 4, 5, 0.001, 0.002, 0.003).unwrap();
     grid.origin = [0.011, -0.017, 0.023];
 
-    let time = 0.37e-6;
-    let source = bowl.generate_source(&grid, time).unwrap();
-    let omega = TWO_PI * config.frequency;
+    let time_s = 0.37e-6;
+    let source = bowl.generate_source(&grid, time(time_s)).unwrap();
+    let omega = TWO_PI * config.frequency.in_unit::<Hertz>();
     let focus_delays = bowl.calculate_focus_delays();
-    let element_position = bowl.element_positions()[0];
-    let element_area = bowl.element_areas()[0];
-    let phase = omega.mul_add(time - focus_delays[0], config.phase);
+    let element_position = raw_point(bowl.element_positions()[0]);
+    let element_area = bowl.element_areas()[0].in_unit::<SquareMeter>();
+    let phase = omega.mul_add(
+        time_s - focus_delays[0].in_unit::<Second>(),
+        config.phase.in_unit::<Radian>(),
+    );
 
     for ix in 0..grid.nx {
         for iy in 0..grid.ny {
@@ -152,7 +206,8 @@ fn bowl_source_uses_axis_specific_grid_spacing_and_origin() {
                     )
                     .sqrt();
                 let expected = if distance > 0.0 {
-                    config.amplitude * element_area * phase.sin() / (FOUR_PI * distance)
+                    config.amplitude.in_unit::<Pascal>() * element_area * phase.sin()
+                        / (FOUR_PI * distance)
                 } else {
                     0.0
                 };
@@ -169,19 +224,28 @@ fn bowl_source_uses_axis_specific_grid_spacing_and_origin() {
 
 #[test]
 fn hemispherical_preset_generates_source_domain_fixed_count_layout() {
-    let config = BowlConfig::hemispherical([0.0, 0.0, 0.16], [0.0, 0.0, 0.0], 650.0e3, MPA_TO_PA);
+    let config = BowlConfig::hemispherical(
+        point([0.0, 0.0, 0.16]),
+        point([0.0, 0.0, 0.0]),
+        frequency(650.0e3),
+        pressure(MPA_TO_PA),
+    );
 
-    assert!((config.radius_of_curvature - 0.16).abs() < 1.0e-12);
-    assert!((config.diameter - 0.32).abs() < 1.0e-12);
+    assert!((config.radius_of_curvature.in_unit::<Meter>() - 0.16).abs() < 1.0e-12);
+    assert!((config.diameter.in_unit::<Meter>() - 0.32).abs() < 1.0e-12);
 
     let bowl = BowlTransducer::with_element_count(config, 1024).unwrap();
-    let summed_area: f64 = bowl.element_areas().iter().sum();
+    let summed_area: f64 = bowl
+        .element_areas()
+        .iter()
+        .map(|area| area.in_unit::<SquareMeter>())
+        .sum();
     let expected_hemisphere_area = TWO_PI * 0.16_f64.powi(2);
 
     assert_eq!(bowl.element_count(), 1024);
     assert!((summed_area - expected_hemisphere_area).abs() < 1.0e-14);
     for position in bowl.element_positions() {
-        assert!(position[2] >= -1.0e-12);
+        assert!(position[2].in_unit::<Meter>() >= -1.0e-12);
     }
 }
 
@@ -198,30 +262,35 @@ fn axis_reference_preset_preserves_focus_axis_and_explicit_radius() {
     // Aperture chord at theta_max = 0.90 rad: 2 R sin(theta_max).
     let aperture_diameter = 2.0 * radius * theta_max.sin();
     let config = BowlConfig::from_axis_reference_focus(
-        axis_reference,
-        focus,
-        radius,
-        aperture_diameter,
-        750.0e3,
-        2.5e5,
+        point(axis_reference),
+        point(focus),
+        length(radius),
+        length(aperture_diameter),
+        frequency(750.0e3),
+        pressure(2.5e5),
     )
     .unwrap();
 
-    assert!((config.radius_of_curvature - radius).abs() < 1.0e-14);
-    assert_eq!(config.focus, focus);
-    assert_eq!(config.frequency, 750.0e3);
-    assert_eq!(config.amplitude, 2.5e5);
-    for (actual, expected) in config.center.iter().zip(expected_vertex) {
-        assert!((*actual - expected).abs() < 1.0e-14);
+    assert!((config.radius_of_curvature.in_unit::<Meter>() - radius).abs() < 1.0e-14);
+    assert_eq!(raw_point(config.focus), focus);
+    assert_eq!(config.frequency.in_unit::<Hertz>(), 750.0e3);
+    assert_eq!(config.amplitude.in_unit::<Pascal>(), 2.5e5);
+    for (actual, expected) in raw_point(config.center).into_iter().zip(expected_vertex) {
+        assert!((actual - expected).abs() < 1.0e-14);
     }
 
-    let bowl = BowlTransducer::with_polar_bounds(config, theta_min, theta_max, 96).unwrap();
-    let summed_area: f64 = bowl.element_areas().iter().sum();
+    let bowl =
+        BowlTransducer::with_polar_bounds(config, angle(theta_min), angle(theta_max), 96).unwrap();
+    let summed_area: f64 = bowl
+        .element_areas()
+        .iter()
+        .map(|area| area.in_unit::<SquareMeter>())
+        .sum();
     let expected_area = TWO_PI * radius.powi(2) * (theta_min.cos() - theta_max.cos());
 
     assert!((summed_area - expected_area).abs() < 1.0e-14);
     for position in bowl.element_positions() {
-        let focus_to_element = sub3(focus, *position);
+        let focus_to_element = sub3(focus, raw_point(*position));
         let distance_to_focus = norm3(focus_to_element);
         let axis_projection = axis_unit[0].mul_add(
             focus_to_element[0],
@@ -243,23 +312,38 @@ fn focus_axis_preset_preserves_axis_radius_and_explicit_aperture() {
     let theta_min = 0.22_f64;
     let theta_max = 1.18_f64;
 
-    let config =
-        BowlConfig::from_focus_axis(focus, axis, radius, aperture_diameter, 650.0e3, 1.5e5)
-            .unwrap();
+    let config = BowlConfig::from_focus_axis(
+        point(focus),
+        axis,
+        length(radius),
+        length(aperture_diameter),
+        frequency(650.0e3),
+        pressure(1.5e5),
+    )
+    .unwrap();
 
-    assert_eq!(config.focus, focus);
-    assert_eq!(config.center, [focus[0], focus[1], focus[2] + radius]);
-    assert!((config.radius_of_curvature - radius).abs() < 1.0e-14);
-    assert!((config.diameter - aperture_diameter).abs() < 1.0e-14);
+    assert_eq!(raw_point(config.focus), focus);
+    assert_eq!(
+        raw_point(config.center),
+        [focus[0], focus[1], focus[2] + radius]
+    );
+    assert!((config.radius_of_curvature.in_unit::<Meter>() - radius).abs() < 1.0e-14);
+    assert!((config.diameter.in_unit::<Meter>() - aperture_diameter).abs() < 1.0e-14);
 
-    let bowl = BowlTransducer::with_polar_bounds(config, theta_min, theta_max, 128).unwrap();
+    let bowl =
+        BowlTransducer::with_polar_bounds(config, angle(theta_min), angle(theta_max), 128).unwrap();
     let expected_area = TWO_PI * radius.powi(2) * (theta_min.cos() - theta_max.cos());
-    let summed_area: f64 = bowl.element_areas().iter().sum();
+    let summed_area: f64 = bowl
+        .element_areas()
+        .iter()
+        .map(|area| area.in_unit::<SquareMeter>())
+        .sum();
 
     assert_eq!(bowl.element_count(), 128);
     assert!((summed_area - expected_area).abs() < 1.0e-14);
     for position in bowl.element_positions() {
-        let focus_to_element = sub3(*position, focus);
+        let position = raw_point(*position);
+        let focus_to_element = sub3(position, focus);
         let distance_to_focus = norm3(focus_to_element);
         let normalized_z = (position[2] - focus[2]) / radius;
 
@@ -272,12 +356,12 @@ fn focus_axis_preset_preserves_axis_radius_and_explicit_aperture() {
 #[test]
 fn axis_reference_preset_rejects_degenerate_axis() {
     let error = BowlConfig::from_axis_reference_focus(
-        [0.0, 0.0, 0.0],
-        [0.0, 0.0, 0.0],
-        0.1,
-        0.15,
-        500.0e3,
-        1.0e5,
+        point([0.0, 0.0, 0.0]),
+        point([0.0, 0.0, 0.0]),
+        length(0.1),
+        length(0.15),
+        frequency(500.0e3),
+        pressure(1.0e5),
     )
     .unwrap_err();
 
@@ -286,9 +370,15 @@ fn axis_reference_preset_rejects_degenerate_axis() {
 
 #[test]
 fn focus_axis_preset_rejects_degenerate_axis() {
-    let error =
-        BowlConfig::from_focus_axis([0.0, 0.0, 0.0], [0.0, 0.0, 0.0], 0.1, 0.15, 500.0e3, 1.0e5)
-            .unwrap_err();
+    let error = BowlConfig::from_focus_axis(
+        point([0.0, 0.0, 0.0]),
+        [0.0, 0.0, 0.0],
+        length(0.1),
+        length(0.15),
+        frequency(500.0e3),
+        pressure(1.0e5),
+    )
+    .unwrap_err();
 
     assert!(matches!(error, KwaversError::Validation(_)));
 }
@@ -296,12 +386,12 @@ fn focus_axis_preset_rejects_degenerate_axis() {
 #[test]
 fn axis_reference_preset_rejects_excessive_aperture_chord() {
     let error = BowlConfig::from_axis_reference_focus(
-        [0.0, 0.0, 0.04],
-        [0.0, 0.0, 0.0],
-        0.1,
-        0.21,
-        500.0e3,
-        1.0e5,
+        point([0.0, 0.0, 0.04]),
+        point([0.0, 0.0, 0.0]),
+        length(0.1),
+        length(0.21),
+        frequency(500.0e3),
+        pressure(1.0e5),
     )
     .unwrap_err();
 
@@ -310,22 +400,31 @@ fn axis_reference_preset_rejects_excessive_aperture_chord() {
 
 #[test]
 fn bowl_polar_span_supports_major_cap_beyond_hemisphere() {
-    let config =
-        BowlConfig::from_vertex_focus([0.0, 0.0, 0.16], [0.0, 0.0, 0.0], 0.32, 650.0e3, MPA_TO_PA);
+    let config = BowlConfig::from_vertex_focus(
+        point([0.0, 0.0, 0.16]),
+        point([0.0, 0.0, 0.0]),
+        length(0.32),
+        frequency(650.0e3),
+        pressure(MPA_TO_PA),
+    );
     let theta_max = 0.58 * std::f64::consts::PI;
 
-    let bowl = BowlTransducer::with_polar_span(config, theta_max, 128).unwrap();
-    let summed_area: f64 = bowl.element_areas().iter().sum();
+    let bowl = BowlTransducer::with_polar_span(config, angle(theta_max), 128).unwrap();
+    let summed_area: f64 = bowl
+        .element_areas()
+        .iter()
+        .map(|area| area.in_unit::<SquareMeter>())
+        .sum();
     let expected_area = TWO_PI * 0.16_f64.powi(2) * (1.0 - theta_max.cos());
     let min_z = bowl
         .element_positions()
         .iter()
-        .map(|position| position[2])
+        .map(|position| position[2].in_unit::<Meter>())
         .fold(f64::INFINITY, f64::min);
     let max_z = bowl
         .element_positions()
         .iter()
-        .map(|position| position[2])
+        .map(|position| position[2].in_unit::<Meter>())
         .fold(f64::NEG_INFINITY, f64::max);
 
     assert_eq!(bowl.element_count(), 128);
@@ -336,32 +435,48 @@ fn bowl_polar_span_supports_major_cap_beyond_hemisphere() {
 
 #[test]
 fn bowl_polar_span_rejects_invalid_angular_domain() {
-    let config = BowlConfig::hemispherical([0.0, 0.0, 0.16], [0.0, 0.0, 0.0], 650.0e3, MPA_TO_PA);
+    let config = BowlConfig::hemispherical(
+        point([0.0, 0.0, 0.16]),
+        point([0.0, 0.0, 0.0]),
+        frequency(650.0e3),
+        pressure(MPA_TO_PA),
+    );
 
     assert!(matches!(
-        BowlTransducer::with_polar_span(config.clone(), 0.0, 128).unwrap_err(),
+        BowlTransducer::with_polar_span(config.clone(), angle(0.0), 128).unwrap_err(),
         KwaversError::Validation(_)
     ));
     assert!(matches!(
-        BowlTransducer::with_polar_span(config, std::f64::consts::PI + 1.0e-12, 128).unwrap_err(),
+        BowlTransducer::with_polar_span(config, angle(std::f64::consts::PI + 1.0e-12), 128,)
+            .unwrap_err(),
         KwaversError::Validation(_)
     ));
 }
 
 #[test]
 fn bowl_polar_bounds_support_annular_cutout_area() {
-    let config =
-        BowlConfig::from_vertex_focus([0.0, 0.0, 0.10], [0.0, 0.0, 0.0], 0.20, 500.0e3, 1.0e5);
+    let config = BowlConfig::from_vertex_focus(
+        point([0.0, 0.0, 0.10]),
+        point([0.0, 0.0, 0.0]),
+        length(0.20),
+        frequency(500.0e3),
+        pressure(1.0e5),
+    );
     let theta_min = 0.20;
     let theta_max = 0.90;
 
-    let bowl = BowlTransducer::with_polar_bounds(config, theta_min, theta_max, 96).unwrap();
-    let summed_area: f64 = bowl.element_areas().iter().sum();
+    let bowl =
+        BowlTransducer::with_polar_bounds(config, angle(theta_min), angle(theta_max), 96).unwrap();
+    let summed_area: f64 = bowl
+        .element_areas()
+        .iter()
+        .map(|area| area.in_unit::<SquareMeter>())
+        .sum();
     let expected_area = TWO_PI * 0.10_f64.powi(2) * (theta_min.cos() - theta_max.cos());
     let max_z = bowl
         .element_positions()
         .iter()
-        .map(|position| position[2])
+        .map(|position| position[2].in_unit::<Meter>())
         .fold(f64::NEG_INFINITY, f64::max);
 
     assert_eq!(bowl.element_count(), 96);
@@ -371,20 +486,35 @@ fn bowl_polar_bounds_support_annular_cutout_area() {
 
 #[test]
 fn bowl_axis_projection_bounds_support_major_cap_area() {
-    let config =
-        BowlConfig::from_vertex_focus([0.0, 0.0, 0.16], [0.0, 0.0, 0.0], 0.32, 650.0e3, MPA_TO_PA);
-    let bowl = BowlTransducer::with_axis_projection_bounds(config, -0.28, 0.98, 128).unwrap();
-    let summed_area: f64 = bowl.element_areas().iter().sum();
+    let config = BowlConfig::from_vertex_focus(
+        point([0.0, 0.0, 0.16]),
+        point([0.0, 0.0, 0.0]),
+        length(0.32),
+        frequency(650.0e3),
+        pressure(MPA_TO_PA),
+    );
+    let bowl = BowlTransducer::with_axis_projection_bounds(
+        config,
+        Dimensionless::from_base(-0.28),
+        Dimensionless::from_base(0.98),
+        128,
+    )
+    .unwrap();
+    let summed_area: f64 = bowl
+        .element_areas()
+        .iter()
+        .map(|area| area.in_unit::<SquareMeter>())
+        .sum();
     let expected_area = TWO_PI * 0.16_f64.powi(2) * (0.98 - -0.28);
     let min_projection = bowl
         .element_positions()
         .iter()
-        .map(|position| position[2] / 0.16)
+        .map(|position| position[2].in_unit::<Meter>() / 0.16)
         .fold(f64::INFINITY, f64::min);
     let max_projection = bowl
         .element_positions()
         .iter()
-        .map(|position| position[2] / 0.16)
+        .map(|position| position[2].in_unit::<Meter>() / 0.16)
         .fold(f64::NEG_INFINITY, f64::max);
 
     assert_eq!(bowl.element_count(), 128);
@@ -396,15 +526,27 @@ fn bowl_axis_projection_bounds_support_major_cap_area() {
 #[test]
 fn bowl_axis_projection_bounds_reject_invalid_domain() {
     assert!(matches!(
-        BowlAngularBounds::from_axis_projection_bounds(-1.1, 0.9).unwrap_err(),
+        BowlAngularBounds::from_axis_projection_bounds(
+            Dimensionless::from_base(-1.1),
+            Dimensionless::from_base(0.9),
+        )
+        .unwrap_err(),
         KwaversError::Validation(_)
     ));
     assert!(matches!(
-        BowlAngularBounds::from_axis_projection_bounds(0.5, 0.5).unwrap_err(),
+        BowlAngularBounds::from_axis_projection_bounds(
+            Dimensionless::from_base(0.5),
+            Dimensionless::from_base(0.5),
+        )
+        .unwrap_err(),
         KwaversError::Validation(_)
     ));
     assert!(matches!(
-        BowlAngularBounds::from_axis_projection_bounds(-0.2, 1.1).unwrap_err(),
+        BowlAngularBounds::from_axis_projection_bounds(
+            Dimensionless::from_base(-0.2),
+            Dimensionless::from_base(1.1),
+        )
+        .unwrap_err(),
         KwaversError::Validation(_)
     ));
 }
@@ -412,41 +554,42 @@ fn bowl_axis_projection_bounds_reject_invalid_domain() {
 #[test]
 fn bowl_rejects_nonfinite_or_degenerate_domains() {
     let zero_radius = BowlConfig {
-        radius_of_curvature: 0.0,
+        radius_of_curvature: length(0.0),
         ..Default::default()
     };
     assert_validation_error(zero_radius);
 
     let zero_diameter = BowlConfig {
-        diameter: 0.0,
+        diameter: length(0.0),
         ..Default::default()
     };
     assert_validation_error(zero_diameter);
 
     let mut excessive_diameter = BowlConfig::default();
-    excessive_diameter.diameter = 2.0 * excessive_diameter.radius_of_curvature + 1.0e-6;
+    excessive_diameter.diameter =
+        length(2.0 * excessive_diameter.radius_of_curvature.in_unit::<Meter>() + 1.0e-6);
     assert_validation_error(excessive_diameter);
 
     let zero_frequency = BowlConfig {
-        frequency: 0.0,
+        frequency: frequency(0.0),
         ..Default::default()
     };
     assert_validation_error(zero_frequency);
 
     let zero_element = BowlConfig {
-        element_size: Some(0.0),
+        element_size: Some(length(0.0)),
         ..Default::default()
     };
     assert_validation_error(zero_element);
 
     let nonfinite_center = BowlConfig {
-        center: [f64::NAN, 0.0, 0.0],
+        center: point([f64::NAN, 0.0, 0.0]),
         ..Default::default()
     };
     assert_validation_error(nonfinite_center);
 
     let nonfinite_focus = BowlConfig {
-        focus: [0.0, f64::INFINITY, 0.064],
+        focus: point([0.0, f64::INFINITY, 0.064]),
         ..Default::default()
     };
     assert_validation_error(nonfinite_focus);
@@ -483,19 +626,19 @@ fn bowl_focal_gain_matches_oneil_via_rayleigh_sommerfeld() {
     let f0 = MHZ_TO_HZ; // 1 MHz
     let c = SOUND_SPEED_WATER;
     let config = BowlConfig {
-        radius_of_curvature: 0.064,
-        diameter: 0.04,
-        center: [0.0, 0.0, 0.0],
-        focus: [0.0, 0.0, 0.064],
-        frequency: f0,
-        amplitude: MPA_TO_PA,
+        radius_of_curvature: length(0.064),
+        diameter: length(0.04),
+        center: point([0.0, 0.0, 0.0]),
+        focus: point([0.0, 0.0, 0.064]),
+        frequency: frequency(f0),
+        amplitude: pressure(MPA_TO_PA),
         ..Default::default()
     };
     // Fine discretization (element ≪ λ = 1.5 mm) for the continuum limit.
     let bowl = BowlTransducer::with_element_count(config.clone(), 4000).unwrap();
 
     let k = TWO_PI * f0 / c;
-    let focus = config.focus;
+    let focus = raw_point(config.focus);
     // Discrete Rayleigh–Sommerfeld sum at the focus: p(F)/p₀ = (k/2π) Σ (A_e/d_e) e^{−j k d_e}.
     let mut acc = Complex64::new(0.0, 0.0);
     for (pos, &area) in bowl
@@ -503,16 +646,17 @@ fn bowl_focal_gain_matches_oneil_via_rayleigh_sommerfeld() {
         .iter()
         .zip(bowl.element_areas().iter())
     {
+        let pos = raw_point(*pos);
         let dx = pos[0] - focus[0];
         let dy = pos[1] - focus[1];
         let dz = pos[2] - focus[2];
         let d = (dx * dx + dy * dy + dz * dz).sqrt();
-        acc += Complex64::from_polar(area / d, -k * d);
+        acc += Complex64::from_polar(area.in_unit::<SquareMeter>() / d, -k * d);
     }
     let gain = (k / TWO_PI) * acc.norm();
 
-    let a = config.diameter / 2.0;
-    let big_f = config.radius_of_curvature;
+    let a = config.diameter.in_unit::<Meter>() / 2.0;
+    let big_f = config.radius_of_curvature.in_unit::<Meter>();
     let h = big_f - (big_f * big_f - a * a).sqrt();
     let expected = k * h; // O'Neil focal gain
     assert!(

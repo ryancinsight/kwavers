@@ -7,6 +7,8 @@ use super::multi_bowl::MultiBowlArray;
 use super::validation::{
     field_validation_error, validate_finite_vector, validate_positive_finite_field,
 };
+use aequitas::systems::si::quantities::{Frequency, Length, Pressure};
+use aequitas::systems::si::units::{Hertz, Meter, Pascal, Radian};
 use kwavers_core::constants::numerical::MPA_TO_PA;
 use kwavers_core::constants::SOUND_SPEED_WATER;
 use kwavers_core::error::KwaversResult;
@@ -34,13 +36,14 @@ use kwavers_core::constants::numerical::TWO_PI;
 /// the focused-bowl source domain.
 ///
 pub fn make_bowl(
-    radius: f64,
-    diameter: f64,
-    center: [f64; 3],
-    frequency: f64,
-    amplitude: f64,
+    radius: Length<f64>,
+    diameter: Length<f64>,
+    center: [Length<f64>; 3],
+    frequency: Frequency<f64>,
+    amplitude: Pressure<f64>,
 ) -> KwaversResult<BowlTransducer> {
-    let focus = [center[0], center[1], center[2] + radius];
+    let mut focus = center;
+    focus[2] = Length::from_unit::<Meter>(center[2].in_unit::<Meter>() + radius.in_unit::<Meter>());
     let config = BowlConfig::from_focus_axis(
         focus,
         [0.0, 0.0, 1.0],
@@ -75,45 +78,51 @@ pub fn make_bowl(
 /// source domain.
 ///
 pub fn make_annular_array(
-    radius_of_curvature: f64,
-    inner_aperture_radius: f64,
-    outer_aperture_radius: f64,
+    radius_of_curvature: Length<f64>,
+    inner_aperture_radius: Length<f64>,
+    outer_aperture_radius: Length<f64>,
     n_rings: usize,
-    vertex: [f64; 3],
-    frequency: f64,
+    vertex: [Length<f64>; 3],
+    frequency: Frequency<f64>,
 ) -> KwaversResult<MultiBowlArray> {
+    let radius_of_curvature_m = radius_of_curvature.in_unit::<Meter>();
+    let inner_aperture_radius_m = inner_aperture_radius.in_unit::<Meter>();
+    let outer_aperture_radius_m = outer_aperture_radius.in_unit::<Meter>();
+    let vertex_m = vertex.map(|value| value.in_unit::<Meter>());
+    let frequency_hz = frequency.in_unit::<Hertz>();
     validate_annular_array_domain(
-        radius_of_curvature,
-        inner_aperture_radius,
-        outer_aperture_radius,
+        radius_of_curvature_m,
+        inner_aperture_radius_m,
+        outer_aperture_radius_m,
         n_rings,
-        vertex,
-        frequency,
+        vertex_m,
+        frequency_hz,
     )?;
 
-    let focus = [vertex[0], vertex[1], vertex[2] + radius_of_curvature];
+    let mut focus = vertex;
+    focus[2] = Length::from_unit::<Meter>(vertex[2].in_unit::<Meter>() + radius_of_curvature_m);
     let base_config = BowlConfig::from_vertex_focus(
         vertex,
         focus,
-        2.0 * outer_aperture_radius,
+        Length::from_unit::<Meter>(2.0 * outer_aperture_radius_m),
         frequency,
-        MPA_TO_PA,
+        Pressure::from_unit::<Pascal>(MPA_TO_PA),
     );
     let mut bowls = Vec::with_capacity(n_rings);
 
     for i in 0..n_rings {
-        let ring_inner = inner_aperture_radius
-            + (outer_aperture_radius - inner_aperture_radius) * i as f64 / n_rings as f64;
-        let ring_outer = inner_aperture_radius
-            + (outer_aperture_radius - inner_aperture_radius) * (i + 1) as f64 / n_rings as f64;
-        let theta_min = (ring_inner / radius_of_curvature).asin();
-        let theta_max = (ring_outer / radius_of_curvature).asin();
+        let ring_inner = inner_aperture_radius_m
+            + (outer_aperture_radius_m - inner_aperture_radius_m) * i as f64 / n_rings as f64;
+        let ring_outer = inner_aperture_radius_m
+            + (outer_aperture_radius_m - inner_aperture_radius_m) * (i + 1) as f64 / n_rings as f64;
+        let theta_min = (ring_inner / radius_of_curvature_m).asin();
+        let theta_max = (ring_outer / radius_of_curvature_m).asin();
         let element_count =
-            annular_ring_element_count(radius_of_curvature, theta_min, theta_max, frequency)?;
+            annular_ring_element_count(radius_of_curvature_m, theta_min, theta_max, frequency_hz)?;
         bowls.push(BowlTransducer::with_polar_bounds(
             base_config.clone(),
-            theta_min,
-            theta_max,
+            aequitas::systems::si::quantities::Angle::from_unit::<Radian>(theta_min),
+            aequitas::systems::si::quantities::Angle::from_unit::<Radian>(theta_max),
             element_count,
         )?);
     }
@@ -187,10 +196,24 @@ fn annular_ring_element_count(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use aequitas::systems::si::quantities::{Angle, Time};
+    use aequitas::systems::si::units::{Radian, Second, SquareMeter};
     use kwavers_core::constants::numerical::MHZ_TO_HZ;
     use kwavers_core::error::{KwaversError, ValidationError};
     use kwavers_grid::Grid;
     use std::f64::consts::PI;
+
+    fn length(value: f64) -> Length<f64> {
+        Length::from_unit::<Meter>(value)
+    }
+
+    fn angle(value: f64) -> Angle<f64> {
+        Angle::from_unit::<Radian>(value)
+    }
+
+    fn time(value: f64) -> Time<f64> {
+        Time::from_unit::<Second>(value)
+    }
 
     #[test]
     fn test_bowl_transducer_creation() {
@@ -205,12 +228,16 @@ mod tests {
     #[test]
     fn test_bowl_focusing() {
         let config = BowlConfig {
-            radius_of_curvature: 0.05,
-            diameter: 0.04,
-            center: [0.0, 0.0, 0.0],
-            focus: [0.0, 0.0, 0.05],
-            frequency: MHZ_TO_HZ,
-            amplitude: MPA_TO_PA,
+            radius_of_curvature: Length::from_unit::<Meter>(0.05),
+            diameter: Length::from_unit::<Meter>(0.04),
+            center: [Length::from_unit::<Meter>(0.0); 3],
+            focus: [
+                Length::from_unit::<Meter>(0.0),
+                Length::from_unit::<Meter>(0.0),
+                Length::from_unit::<Meter>(0.05),
+            ],
+            frequency: Frequency::from_unit::<Hertz>(MHZ_TO_HZ),
+            amplitude: Pressure::from_unit::<Pascal>(MPA_TO_PA),
             ..Default::default()
         };
 
@@ -219,7 +246,7 @@ mod tests {
 
         // All delays should be positive
         for delay in delays {
-            assert!(delay >= 0.0);
+            assert!(delay.in_unit::<Second>() >= 0.0);
         }
     }
 
@@ -228,20 +255,33 @@ mod tests {
         let center = [0.01, -0.02, 0.03];
         let radius = 0.07;
         let diameter = 0.04;
-        let bowl = make_bowl(radius, diameter, center, 1.2 * MHZ_TO_HZ, 2.0 * MPA_TO_PA).unwrap();
+        let center_typed = center.map(Length::from_unit::<Meter>);
+        let bowl = make_bowl(
+            Length::from_unit::<Meter>(radius),
+            Length::from_unit::<Meter>(diameter),
+            center_typed,
+            Frequency::from_unit::<Hertz>(1.2 * MHZ_TO_HZ),
+            Pressure::from_unit::<Pascal>(2.0 * MPA_TO_PA),
+        )
+        .unwrap();
 
-        assert_eq!(bowl.config.center, center);
         assert_eq!(
-            bowl.config.focus,
+            bowl.config.center.map(|value| value.in_unit::<Meter>()),
+            center
+        );
+        assert_eq!(
+            bowl.config.focus.map(|value| value.in_unit::<Meter>()),
             [center[0], center[1], center[2] + radius]
         );
-        assert_close(bowl.config.radius_of_curvature, radius);
-        assert_close(bowl.config.diameter, diameter);
+        assert_close(bowl.config.radius_of_curvature.in_unit::<Meter>(), radius);
+        assert_close(bowl.config.diameter.in_unit::<Meter>(), diameter);
 
         for position in bowl.element_positions() {
-            let distance_to_focus = ((position[0] - bowl.config.focus[0]).powi(2)
-                + (position[1] - bowl.config.focus[1]).powi(2)
-                + (position[2] - bowl.config.focus[2]).powi(2))
+            let position = position.map(|value| value.in_unit::<Meter>());
+            let focus = bowl.config.focus.map(|value| value.in_unit::<Meter>());
+            let distance_to_focus = ((position[0] - focus[0]).powi(2)
+                + (position[1] - focus[1]).powi(2)
+                + (position[2] - focus[2]).powi(2))
             .sqrt();
             assert_close(distance_to_focus, radius);
         }
@@ -251,15 +291,19 @@ mod tests {
     fn test_multi_bowl_array() {
         let configs = vec![
             BowlConfig {
-                radius_of_curvature: 0.05,
-                diameter: 0.03,
-                center: [0.0, 0.0, 0.0],
+                radius_of_curvature: Length::from_unit::<Meter>(0.05),
+                diameter: Length::from_unit::<Meter>(0.03),
+                center: [Length::from_unit::<Meter>(0.0); 3],
                 ..Default::default()
             },
             BowlConfig {
-                radius_of_curvature: 0.06,
-                diameter: 0.04,
-                center: [0.01, 0.0, 0.0],
+                radius_of_curvature: Length::from_unit::<Meter>(0.06),
+                diameter: Length::from_unit::<Meter>(0.04),
+                center: [
+                    Length::from_unit::<Meter>(0.01),
+                    Length::from_unit::<Meter>(0.0),
+                    Length::from_unit::<Meter>(0.0),
+                ],
                 ..Default::default()
             },
         ];
@@ -270,24 +314,44 @@ mod tests {
 
     #[test]
     fn annular_array_uses_common_curvature_focus_and_radial_bands() {
-        let array = make_annular_array(0.08, 0.02, 0.04, 2, [0.0, 0.0, 0.0], MHZ_TO_HZ).unwrap();
+        let array = make_annular_array(
+            Length::from_unit::<Meter>(0.08),
+            Length::from_unit::<Meter>(0.02),
+            Length::from_unit::<Meter>(0.04),
+            2,
+            [Length::from_unit::<Meter>(0.0); 3],
+            Frequency::from_unit::<Hertz>(MHZ_TO_HZ),
+        )
+        .unwrap();
         let radial_bounds = [(0.02, 0.03), (0.03, 0.04)];
 
         assert_eq!(array.bowls.len(), 2);
         for (bowl, (inner, outer)) in array.bowls.iter().zip(radial_bounds) {
-            assert_close(bowl.config.radius_of_curvature, 0.08);
-            assert_eq!(bowl.config.center, [0.0, 0.0, 0.0]);
-            assert_eq!(bowl.config.focus, [0.0, 0.0, 0.08]);
+            assert_close(bowl.config.radius_of_curvature.in_unit::<Meter>(), 0.08);
+            assert_eq!(
+                bowl.config.center.map(|value| value.in_unit::<Meter>()),
+                [0.0, 0.0, 0.0]
+            );
+            assert_eq!(
+                bowl.config.focus.map(|value| value.in_unit::<Meter>()),
+                [0.0, 0.0, 0.08]
+            );
             assert!(bowl.element_count() > 0);
 
-            let summed_area: f64 = bowl.element_areas().iter().sum();
+            let summed_area: f64 = bowl
+                .element_areas()
+                .iter()
+                .map(|area| area.in_unit::<SquareMeter>())
+                .sum();
             let theta_min = (inner / 0.08_f64).asin();
             let theta_max = (outer / 0.08_f64).asin();
             let expected_area = 2.0 * PI * 0.08_f64.powi(2) * (theta_min.cos() - theta_max.cos());
             assert_close(summed_area, expected_area);
 
             for position in bowl.element_positions() {
-                let aperture_radius = position[0].hypot(position[1]);
+                let aperture_radius = position[0]
+                    .in_unit::<Meter>()
+                    .hypot(position[1].in_unit::<Meter>());
                 assert!(
                     aperture_radius >= inner - 1.0e-12 && aperture_radius <= outer + 1.0e-12,
                     "aperture radius {aperture_radius} outside [{inner}, {outer}]"
@@ -298,8 +362,15 @@ mod tests {
 
     #[test]
     fn annular_array_rejects_invalid_domains() {
-        let error =
-            make_annular_array(0.08, 0.04, 0.02, 2, [0.0, 0.0, 0.0], MHZ_TO_HZ).unwrap_err();
+        let error = make_annular_array(
+            Length::from_unit::<Meter>(0.08),
+            Length::from_unit::<Meter>(0.04),
+            Length::from_unit::<Meter>(0.02),
+            2,
+            [Length::from_unit::<Meter>(0.0); 3],
+            Frequency::from_unit::<Hertz>(MHZ_TO_HZ),
+        )
+        .unwrap_err();
         match error {
             KwaversError::Validation(ValidationError::FieldValidation { field, .. }) => {
                 assert_eq!(field, "aperture_radii");
@@ -307,8 +378,15 @@ mod tests {
             other => panic!("expected aperture radii validation error, got {other:?}"),
         }
 
-        let excessive_aperture =
-            make_annular_array(0.08, 0.02, 0.09, 2, [0.0, 0.0, 0.0], MHZ_TO_HZ).unwrap_err();
+        let excessive_aperture = make_annular_array(
+            Length::from_unit::<Meter>(0.08),
+            Length::from_unit::<Meter>(0.02),
+            Length::from_unit::<Meter>(0.09),
+            2,
+            [Length::from_unit::<Meter>(0.0); 3],
+            Frequency::from_unit::<Hertz>(MHZ_TO_HZ),
+        )
+        .unwrap_err();
         match excessive_aperture {
             KwaversError::Validation(ValidationError::FieldValidation { field, .. }) => {
                 assert_eq!(field, "outer_aperture_radius");
@@ -316,8 +394,15 @@ mod tests {
             other => panic!("expected outer aperture validation error, got {other:?}"),
         }
 
-        let zero_rings =
-            make_annular_array(0.08, 0.02, 0.04, 0, [0.0, 0.0, 0.0], MHZ_TO_HZ).unwrap_err();
+        let zero_rings = make_annular_array(
+            Length::from_unit::<Meter>(0.08),
+            Length::from_unit::<Meter>(0.02),
+            Length::from_unit::<Meter>(0.04),
+            0,
+            [Length::from_unit::<Meter>(0.0); 3],
+            Frequency::from_unit::<Hertz>(MHZ_TO_HZ),
+        )
+        .unwrap_err();
         match zero_rings {
             KwaversError::Validation(ValidationError::FieldValidation { field, .. }) => {
                 assert_eq!(field, "n_rings");
@@ -338,22 +423,30 @@ mod tests {
     fn test_multi_bowl_phases() {
         // Create two bowls with different phases
         let config1 = BowlConfig {
-            diameter: 0.03,
-            radius_of_curvature: 0.05,
-            focus: [0.0, 0.0, 0.05],
-            frequency: MHZ_TO_HZ,
-            amplitude: MPA_TO_PA,
-            phase: 0.0,
+            diameter: Length::from_unit::<Meter>(0.03),
+            radius_of_curvature: Length::from_unit::<Meter>(0.05),
+            focus: [
+                Length::from_unit::<Meter>(0.0),
+                Length::from_unit::<Meter>(0.0),
+                Length::from_unit::<Meter>(0.05),
+            ],
+            frequency: Frequency::from_unit::<Hertz>(MHZ_TO_HZ),
+            amplitude: Pressure::from_unit::<Pascal>(MPA_TO_PA),
+            phase: angle(0.0),
             ..Default::default()
         };
 
         let config2 = BowlConfig {
-            diameter: 0.03,
-            radius_of_curvature: 0.05,
-            focus: [0.0, 0.0, 0.05],
-            frequency: MHZ_TO_HZ,
-            amplitude: MPA_TO_PA,
-            phase: PI / 2.0, // 90 degree phase shift
+            diameter: Length::from_unit::<Meter>(0.03),
+            radius_of_curvature: Length::from_unit::<Meter>(0.05),
+            focus: [
+                Length::from_unit::<Meter>(0.0),
+                Length::from_unit::<Meter>(0.0),
+                Length::from_unit::<Meter>(0.05),
+            ],
+            frequency: Frequency::from_unit::<Hertz>(MHZ_TO_HZ),
+            amplitude: Pressure::from_unit::<Pascal>(MPA_TO_PA),
+            phase: angle(PI / 2.0), // 90 degree phase shift
             ..Default::default()
         };
 
@@ -361,8 +454,8 @@ mod tests {
         let grid = Grid::new(32, 32, 32, 0.001, 0.001, 0.001).unwrap();
 
         // Generate sources at different times
-        let source_t0 = multi_array.generate_source(&grid, 0.0).unwrap();
-        let source_t1 = multi_array.generate_source(&grid, 0.25e-6).unwrap(); // Quarter period
+        let source_t0 = multi_array.generate_source(&grid, time(0.0)).unwrap();
+        let source_t1 = multi_array.generate_source(&grid, time(0.25e-6)).unwrap(); // Quarter period
 
         // The sources should be different due to phase shifts
         let diff = &source_t1 - &source_t0;
@@ -384,22 +477,30 @@ mod tests {
     fn test_multi_bowl_phases_fast() {
         // Create two bowls with different phases
         let config1 = BowlConfig {
-            diameter: 0.03,
-            radius_of_curvature: 0.05,
-            focus: [0.0, 0.0, 0.05],
-            frequency: MHZ_TO_HZ,
-            amplitude: MPA_TO_PA,
-            phase: 0.0,
+            diameter: Length::from_unit::<Meter>(0.03),
+            radius_of_curvature: Length::from_unit::<Meter>(0.05),
+            focus: [
+                Length::from_unit::<Meter>(0.0),
+                Length::from_unit::<Meter>(0.0),
+                Length::from_unit::<Meter>(0.05),
+            ],
+            frequency: Frequency::from_unit::<Hertz>(MHZ_TO_HZ),
+            amplitude: Pressure::from_unit::<Pascal>(MPA_TO_PA),
+            phase: angle(0.0),
             ..Default::default()
         };
 
         let config2 = BowlConfig {
-            diameter: 0.03,
-            radius_of_curvature: 0.05,
-            focus: [0.0, 0.0, 0.05],
-            frequency: MHZ_TO_HZ,
-            amplitude: MPA_TO_PA,
-            phase: PI / 2.0, // 90 degree phase shift
+            diameter: Length::from_unit::<Meter>(0.03),
+            radius_of_curvature: Length::from_unit::<Meter>(0.05),
+            focus: [
+                Length::from_unit::<Meter>(0.0),
+                Length::from_unit::<Meter>(0.0),
+                Length::from_unit::<Meter>(0.05),
+            ],
+            frequency: Frequency::from_unit::<Hertz>(MHZ_TO_HZ),
+            amplitude: Pressure::from_unit::<Pascal>(MPA_TO_PA),
+            phase: angle(PI / 2.0), // 90 degree phase shift
             ..Default::default()
         };
 
@@ -407,8 +508,8 @@ mod tests {
         let grid = Grid::new(8, 8, 8, 0.001, 0.001, 0.001).unwrap();
 
         // Generate sources at different times
-        let source_t0 = multi_array.generate_source(&grid, 0.0).unwrap();
-        let source_t1 = multi_array.generate_source(&grid, 0.25e-6).unwrap(); // Quarter period
+        let source_t0 = multi_array.generate_source(&grid, time(0.0)).unwrap();
+        let source_t1 = multi_array.generate_source(&grid, time(0.25e-6)).unwrap(); // Quarter period
 
         // The sources should be different due to phase shifts
         let diff = &source_t1 - &source_t0;
@@ -423,13 +524,20 @@ mod tests {
     fn test_oneil_solution() {
         use eunomia::assert_relative_eq;
 
-        let bowl = make_bowl(0.064, 0.064, [0.0, 0.0, 0.0], MHZ_TO_HZ, MPA_TO_PA).unwrap();
+        let bowl = make_bowl(
+            Length::from_unit::<Meter>(0.064),
+            Length::from_unit::<Meter>(0.064),
+            [Length::from_unit::<Meter>(0.0); 3],
+            Frequency::from_unit::<Hertz>(MHZ_TO_HZ),
+            Pressure::from_unit::<Pascal>(MPA_TO_PA),
+        )
+        .unwrap();
 
         let focus_distance = 0.064; // radius of curvature = geometric focus [m]
         let frequency = MHZ_TO_HZ;
         let c = kwavers_core::constants::SOUND_SPEED_WATER;
-        let a = bowl.config.diameter / 2.0; // aperture radius = 0.032 m
-        let r = bowl.config.radius_of_curvature; // 0.064 m
+        let a = bowl.config.diameter.in_unit::<Meter>() / 2.0; // aperture radius = 0.032 m
+        let r = bowl.config.radius_of_curvature.in_unit::<Meter>(); // 0.064 m
         let k = 2.0 * PI * frequency / c;
         let h = r - (r * r - a * a).sqrt(); // spherical-cap height
 
@@ -444,7 +552,8 @@ mod tests {
         let d2_focus = ((focus_distance - f).powi(2) + a * a).sqrt();
         let phase_at_focus = k * (d2_focus - focus_distance);
         let expected_amplitude =
-            bowl.config.amplitude * 2.0 * (phase_at_focus / 2.0).sin().abs() / focus_distance;
+            bowl.config.amplitude.in_unit::<Pascal>() * 2.0 * (phase_at_focus / 2.0).sin().abs()
+                / focus_distance;
 
         // Peak pressure at z occurs at t = d₁/c + T/4 (propagation delay + sin max).
         // Using t = T/4 only is wrong because it ignores the k·d₁ phase in
@@ -453,7 +562,7 @@ mod tests {
 
         // Amplitude at the focal point.
         let p_focus_max = bowl
-            .oneil_solution(focus_distance, peak_time(focus_distance))
+            .oneil_solution(length(focus_distance), time(peak_time(focus_distance)))
             .abs();
         assert_relative_eq!(
             p_focus_max,
@@ -470,8 +579,12 @@ mod tests {
         // correct "focusing" check is that the near-field peak (here at z ≈ 0.05 m)
         // exceeds the far-field amplitude (z = 0.20 m >> r), where 1/z spherical
         // spreading dominates.
-        let amp_near_field = bowl.oneil_solution(0.05, peak_time(0.05)).abs();
-        let amp_far_field = bowl.oneil_solution(0.20, peak_time(0.20)).abs();
+        let amp_near_field = bowl
+            .oneil_solution(length(0.05), time(peak_time(0.05)))
+            .abs();
+        let amp_far_field = bowl
+            .oneil_solution(length(0.20), time(peak_time(0.20)))
+            .abs();
         assert!(
             amp_near_field > amp_far_field,
             "Near-field amplitude ({amp_near_field:.3e}) must exceed far-field ({amp_far_field:.3e})"
@@ -479,8 +592,9 @@ mod tests {
 
         // Temporal periodicity: P(t + T/2) = −P(t) at the focal point.
         let t0 = peak_time(focus_distance);
-        let p_t0 = bowl.oneil_solution(focus_distance, t0);
-        let p_t_half = bowl.oneil_solution(focus_distance, t0 + 1.0 / (2.0 * frequency));
+        let p_t0 = bowl.oneil_solution(length(focus_distance), time(t0));
+        let p_t_half =
+            bowl.oneil_solution(length(focus_distance), time(t0 + 1.0 / (2.0 * frequency)));
         assert_relative_eq!(p_t0, -p_t_half, epsilon = 0.01 * expected_amplitude);
     }
 

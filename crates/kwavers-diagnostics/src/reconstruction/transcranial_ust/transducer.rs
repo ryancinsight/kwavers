@@ -2,8 +2,8 @@
 
 use std::f64::consts::TAU;
 
-use aequitas::systems::si::quantities::Length;
-use aequitas::systems::si::units::Meter;
+use aequitas::systems::si::quantities::{Frequency, Length, Pressure};
+use aequitas::systems::si::units::{Hertz, Meter, Pascal};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_transducer::transducers::focused::{BowlAngularBounds, BowlConfig, BowlTransducer};
 use kwavers_transducer::transducers::{ElementPosition, TransducerGeometry};
@@ -58,21 +58,21 @@ impl TranscranialBowlGeometry {
         }
 
         let config = BowlConfig::from_focus_axis(
-            [0.0, 0.0, 0.0],
+            [Length::from_unit::<Meter>(0.0); 3],
             [0.0, 0.0, -1.0],
-            radius_m,
-            2.0 * radius_m,
-            GEOMETRY_UNIT_FREQUENCY_HZ,
-            GEOMETRY_UNIT_AMPLITUDE_PA,
+            Length::from_unit::<Meter>(radius_m),
+            Length::from_unit::<Meter>(2.0 * radius_m),
+            Frequency::from_unit::<Hertz>(GEOMETRY_UNIT_FREQUENCY_HZ),
+            Pressure::from_unit::<Pascal>(GEOMETRY_UNIT_AMPLITUDE_PA),
         )?;
         let bowl = BowlTransducer::with_angular_bounds(config, aperture, element_count)?;
         let elements = bowl
             .element_positions()
             .iter()
             .map(|position| ElementPosition {
-                x: Length::from_unit::<Meter>(position[0]),
-                y: Length::from_unit::<Meter>(position[1]),
-                z: Length::from_unit::<Meter>(position[2]),
+                x: position[0],
+                y: position[1],
+                z: position[2],
             })
             .collect();
         Ok(Self { elements })
