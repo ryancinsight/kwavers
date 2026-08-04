@@ -15,7 +15,7 @@ pub(super) fn cmut(radius: f64, thickness: f64, gap: f64) -> PyResult<CmutCell> 
         Length::from_unit::<Meter>(thickness),
         Length::from_unit::<Meter>(gap),
     )
-        .ok_or_else(|| PyValueError::new_err("invalid CMUT geometry (all dimensions must be > 0)"))
+    .ok_or_else(|| PyValueError::new_err("invalid CMUT geometry (all dimensions must be > 0)"))
 }
 
 pub(super) fn pmut(film: &str, radius: f64, t_p: f64, t_s: f64) -> PyResult<PmutCell> {
@@ -25,7 +25,7 @@ pub(super) fn pmut(film: &str, radius: f64, t_p: f64, t_s: f64) -> PyResult<Pmut
         Length::from_unit::<Meter>(t_s),
         parse_film(film)?,
     )
-        .ok_or_else(|| PyValueError::new_err("invalid PMUT geometry (all dimensions must be > 0)"))
+    .ok_or_else(|| PyValueError::new_err("invalid PMUT geometry (all dimensions must be > 0)"))
 }
 
 fn parse_film(name: &str) -> PyResult<PiezoFilm> {
