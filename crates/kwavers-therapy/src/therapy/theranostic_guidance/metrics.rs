@@ -1,6 +1,6 @@
 //! Value-semantic metrics for theranostic inverse outputs.
 
-use kwavers_math::statistics::{nrmse, pearson};
+use leto_ops::application::statistics::{nrmse, pearson};
 use leto::Array2;
 
 #[derive(Clone, Debug)]

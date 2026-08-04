@@ -2,7 +2,7 @@
 
 use eunomia::Complex64;
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use kwavers_math::linear_algebra::eigendecomposition::{EigenSolver, EigenSolverConfig};
+use leto_ops::application::linalg::{HermitianEigenJacobi, HermitianEigenJacobiConfig};
 use leto::{Array1, Array2, SliceArg};
 
 /// MUSIC (Multiple Signal Classification) Algorithm

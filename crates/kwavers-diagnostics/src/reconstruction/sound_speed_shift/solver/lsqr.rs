@@ -4,7 +4,7 @@
 //! [`solve_lsqr_matfree`] with the Tikhonov damping extracted from
 //! [`ShiftPrior::Lsqr`].
 
-use kwavers_math::linear_algebra::iterative::lsqr::{
+use kwavers_math::Lsqr{
     matfree::{MatFreeOperator, MatFreeResult},
     solve_lsqr_matfree,
     types::LsqrConfig,

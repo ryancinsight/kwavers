@@ -134,7 +134,7 @@ impl PhysicsInformedLoss {
         // Squared shortest-arc adjacent-pixel phase difference
         // |wrap_to_pi(Δφ)|² (SSOT wrap; see `math::signal::wrap_to_pi`).
         // Correct for any gradient magnitude, unlike a single π-fold of |Δφ|.
-        use kwavers_math::signal::wrap_to_pi;
+        use kwavers_math::wrap_to_pi;
         let [nx, ny] = phases.shape();
         let mut loss = 0.0;
 

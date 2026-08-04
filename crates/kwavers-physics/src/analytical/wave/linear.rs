@@ -424,7 +424,7 @@ pub fn centered_hann_tone_burst_waveform(
     freq_hz: f64,
     n_cycles: f64,
 ) -> Vec<f64> {
-    use kwavers_math::signal::window::hann;
+    use kwavers_math::hann;
     use std::f64::consts::PI;
 
     let mut out = vec![0.0; t_arr.len()];
@@ -514,7 +514,7 @@ pub fn pulse_train_waveform(
 #[cfg(test)]
 mod centered_hann_tone_burst_tests {
     use super::centered_hann_tone_burst_waveform;
-    use kwavers_math::signal::window::hann;
+    use kwavers_math::hann;
 
     #[test]
     fn centered_hann_tone_burst_matches_discrete_window_contract() {

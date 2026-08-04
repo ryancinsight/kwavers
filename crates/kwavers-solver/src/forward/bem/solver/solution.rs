@@ -106,7 +106,7 @@ impl BemSolver {
 
         let rhs_arr =
             Array1::from_vec(rhs.len(), rhs).expect("invariant: BEM RHS vector length well-formed");
-        let solver_config = kwavers_math::linear_algebra::sparse::solver::SolverConfig {
+        let solver_config = kwavers_math::SolverConfig {
             max_iterations: self.config.max_iterations,
             tolerance: self.config.tolerance,
             preconditioner: SparsePreconditioner::None,

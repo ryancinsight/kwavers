@@ -7,7 +7,7 @@
 use crate::{Source, SourceField};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_grid::Grid;
-use kwavers_math::special::bessel::jn;
+use kwavers_math::jn;
 use kwavers_signal::Signal;
 use leto::Array3;
 use std::fmt::Debug;

@@ -24,7 +24,7 @@ use super::{
     math::{DISC_AXIS_EPSILON, DISC_BLI_TOLERANCE, DISC_PACKING_NUMBER},
     KWaveArray,
 };
-use kwavers_math::special::sinc;
+use kwavers_math::sinc;
 
 impl KWaveArray {
     /// Map a single surface sample point through the BLI stencil, calling

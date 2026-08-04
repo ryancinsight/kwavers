@@ -49,7 +49,7 @@
 use super::basis::{fourier_theta, validate_fourier_nodes, BasisType};
 use kwavers_core::error::KwaversResult;
 use kwavers_core::error::{KwaversError, NumericalError};
-use kwavers_math::special::legendre::legendre_poly_and_deriv;
+use kwavers_math::legendre_poly_and_deriv;
 use leto::{Array1, Array2};
 
 /// Compute mass matrix using quadrature

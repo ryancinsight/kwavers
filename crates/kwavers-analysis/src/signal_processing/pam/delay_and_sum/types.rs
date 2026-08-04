@@ -4,7 +4,7 @@ use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use serde::{Deserialize, Serialize};
 
-pub use kwavers_math::signal::ApodizationType;
+pub use kwavers_math::ApodizationType;
 
 /// Spatial-map combination strategy for passive acoustic mapping.
 ///

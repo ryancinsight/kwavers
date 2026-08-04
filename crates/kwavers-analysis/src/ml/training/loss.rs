@@ -61,7 +61,7 @@ impl PhysicsLoss {
         for i in 0..phases.shape()[0] - 1 {
             for j in 0..phases.shape()[1] {
                 let normalized =
-                    kwavers_math::signal::wrap_to_pi(phases[[i + 1, j]] - phases[[i, j]]).abs();
+                    kwavers_math::wrap_to_pi(phases[[i + 1, j]] - phases[[i, j]]).abs();
                 violation += normalized;
             }
         }

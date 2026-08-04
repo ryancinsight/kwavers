@@ -34,7 +34,7 @@
 
 use core::f64::consts::{PI, TAU};
 use eunomia::Complex64;
-use kwavers_math::special::bessel::jn;
+use kwavers_math::jn;
 
 /// Acousto-optic diffraction regime selected by the Klein–Cook parameter `Q`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

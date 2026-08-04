@@ -24,7 +24,7 @@ impl MinimumVariance {
     ) -> KwaversResult<Array1<Complex64>> {
         let r_loaded = self.loaded_covariance(covariance, steering.len())?;
 
-        let y = kwavers_math::linear_algebra::ComplexLinearAlgebra::solve_linear_system_complex(
+        let y = kwavers_math::complex_solve::solve_linear_system_complex(
             &r_loaded, steering,
         )?;
 

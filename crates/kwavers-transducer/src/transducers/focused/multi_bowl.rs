@@ -145,7 +145,7 @@ impl MultiBowlArray {
     }
 }
 
-pub use kwavers_math::signal::ApodizationType;
+pub use kwavers_math::ApodizationType;
 
 fn validate_bowl_count(count: usize) -> KwaversResult<()> {
     if count > 0 {

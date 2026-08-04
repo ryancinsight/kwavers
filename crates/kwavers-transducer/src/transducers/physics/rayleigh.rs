@@ -731,7 +731,7 @@ fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kwavers_math::special::bessel::j1;
+    use kwavers_math::j1;
 
     fn piston(radius_m: f64) -> PlanarAperture {
         PlanarAperture::disk(
