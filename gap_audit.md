@@ -1,5 +1,44 @@
 ## Live Aequitas closure — 2026-08-02
 
+### KWAVERS-AEQ-MET-63 — focused-source and hemispherical metric gap (closed 2026-08-03)
+
+The audit found raw public contracts in focused bowl, spherical-cap, arc,
+multi-bowl, and hemispherical source modules, plus direct raw callers in
+therapy, diagnostics, and examples. Missing typed metrics included lengths,
+angles, frequencies, pressures, areas, delays, volumes, and validation ratios.
+The audit also found stale multi-bowl steering: changing focus updated only
+configuration and left element normals unchanged.
+
+The implementation types these contracts with Aequitas, extracts scalars only
+at validation/formula/mesh/FFI boundaries, updates steering normals while
+preserving element positions, and migrates the direct downstream callers. The
+remaining dimensionless source metrics are explicit `Dimensionless` values,
+including F-number, sparse density/weights, and normalized axis projections;
+unit-vector components remain raw dimensionless coordinates by design.
+Eunomia complex values remain phasors; real and quadrature components retain
+one observable unit and no imaginary SI geometry unit is introduced.
+
+Local evidence at the delivered lane head:
+
+- `cargo check -p kwavers-transducer --tests --offline -j 1` passes.
+- `cargo check -p kwavers-therapy -p kwavers-diagnostics --offline -j 1`
+  passes, and `cargo check -p kwavers --examples --offline -j 1` passes.
+- `cargo nextest run -p kwavers-transducer --offline --no-fail-fast` passes
+  229/229 tests with one skipped.
+- Strict offline Clippy passes for the affected transducer, therapy, and
+  diagnostics packages with `-D warnings`.
+- Doctests pass: diagnostics 1/1 plus 5 ignored, therapy 8/8 plus 1 ignored,
+  and transducer 1/1 plus 6 ignored.
+- Rustfmt checks and `git diff --check` pass; the scoped raw-unit scan leaves
+  only dimensionless vectors and explicit legacy serialization/metric
+  boundaries.
+
+The shared Atlas overlay emits known unused-patch and linker warnings, none of
+which fail an affected-package gate. Hosted repository checks and merge
+evidence are appended after the final PR head. Focused-source and
+hemispherical contracts are closed; MEMS, flexible, and other non-focused
+families remain separate audit candidates.
+
 ### KWAVERS-AEQ-MET-62 — two-dimensional array metric gap (closed 2026-08-03)
 
 The audit found that `crates/kwavers-transducer/src/array_2d/` still exposed

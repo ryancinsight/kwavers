@@ -12,9 +12,8 @@
 //! - Hertzberg et al. (2010): "Ultrasound focusing using magnetic resonance acoustic radiation force imaging"
 //! - Jones et al. (2019): "Transcranial MR-guided focused ultrasound: A review of the technology"
 
-use aequitas::systems::si::quantities::{Frequency, Length};
-use aequitas::systems::si::units::Hertz;
-use kwavers_core::constants::numerical::TWO_PI;
+use aequitas::systems::si::quantities::{Dimensionless, Frequency, Length};
+use aequitas::systems::si::units::{Hertz, Meter};
 mod constants;
 mod element;
 mod geometry;
@@ -49,11 +48,10 @@ pub struct HemisphericalArray {
 }
 
 impl HemisphericalArray {
-    /// Create a new hemispherical phased array transducer.
-    ///
+    /// Create new hemispherical array
     /// # Errors
-    /// Propagates any [`kwavers_core::error::KwaversError`] returned by the geometry or element
-    /// placement routines.
+    /// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
+    ///
     pub fn new(
         radius: Length<f64>,
         num_elements: usize,
@@ -62,7 +60,6 @@ impl HemisphericalArray {
         let geometry = HemisphereGeometry::new(radius)?;
         let elements = ElementPlacement::generate_elements(&geometry, num_elements)?;
         let steering = SteeringController::new(frequency);
-        // Scalar extraction at the signal boundary: SineWave::new takes raw Hz.
         let signal = Arc::new(SineWave::new(frequency.in_unit::<Hertz>(), 1.0, 0.0));
 
         Ok(Self {
@@ -77,7 +74,10 @@ impl HemisphericalArray {
     /// # Errors
     /// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
     ///
-    pub fn with_sparse_optimization(mut self, density_factor: f64) -> KwaversResult<Self> {
+    pub fn with_sparse_optimization(
+        mut self,
+        density_factor: Dimensionless<f64>,
+    ) -> KwaversResult<Self> {
         self.sparse_optimizer = Some(SparseArrayOptimizer::new(density_factor)?);
         Ok(self)
     }
@@ -87,7 +87,7 @@ impl HemisphericalArray {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn set_focus(&mut self, focal_point: FocalPoint) -> KwaversResult<()> {
-        self.steering.set_focus(focal_point, &self.elements)
+        self.steering.set_focus(focal_point, &mut self.elements)
     }
 
     /// Get active elements for current configuration
@@ -119,27 +119,32 @@ impl Source for HemisphericalArray {
 
             // Convert element position to grid indices
             if let Some((i, j, k)) = grid.position_to_indices(
-                element.position[0],
-                element.position[1],
-                element.position[2],
+                element.position[0].in_unit::<Meter>(),
+                element.position[1].in_unit::<Meter>(),
+                element.position[2].in_unit::<Meter>(),
             ) {
                 if i < grid.nx && j < grid.ny && k < grid.nz {
-                    mask[[i, j, k]] = element.amplitude;
+                    mask[[i, j, k]] = element.amplitude.into_base();
                 }
             }
         }
     }
 
     fn amplitude(&self, t: f64) -> f64 {
-        // Return base amplitude, phase is handled in mask
-        (TWO_PI * 650e3 * t).sin()
+        self.signal.amplitude(t)
     }
 
     fn positions(&self) -> Vec<(f64, f64, f64)> {
         self.elements
             .iter()
             .filter(|e| e.is_active())
-            .map(|e| (e.position[0], e.position[1], e.position[2]))
+            .map(|e| {
+                (
+                    e.position[0].in_unit::<Meter>(),
+                    e.position[1].in_unit::<Meter>(),
+                    e.position[2].in_unit::<Meter>(),
+                )
+            })
             .collect()
     }
 

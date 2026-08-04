@@ -1,5 +1,7 @@
 //! Full-volume transcranial placement context.
 
+use aequitas::systems::si::quantities::Angle;
+use aequitas::systems::si::units::Radian;
 use std::f64::consts::PI;
 
 use kwavers_core::{
@@ -76,7 +78,9 @@ pub fn build_brain_placement_context(
         focus_m: center,
         radius_m: radius.max(config.focal_radius_m),
         vertex_direction: FocusedBowlVertexDirection::from_superior_positive(superior_positive),
-        angular_bounds: BowlAngularBounds::polar_span(FOCUSED_BOWL_POLAR_SPAN_RAD)?,
+        angular_bounds: BowlAngularBounds::polar_span(Angle::from_unit::<Radian>(
+            FOCUSED_BOWL_POLAR_SPAN_RAD,
+        ))?,
         frequency_hz,
         amplitude_pa: config.source_pressure_pa,
     })?;

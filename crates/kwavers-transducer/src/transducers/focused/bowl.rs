@@ -2,6 +2,8 @@
 //!
 //! Provides focused bowl transducer geometry and source generation.
 
+use aequitas::systems::si::quantities::{Angle, Area, Frequency, Length, Pressure, Time};
+use aequitas::systems::si::units::{Hertz, Meter, Pascal, Radian, Second, SquareMeter};
 use kwavers_core::{
     constants::numerical::{MHZ_TO_HZ, MPA_TO_PA},
     constants::SOUND_SPEED_WATER,
@@ -29,34 +31,34 @@ mod tests;
 
 /// Discretized bowl surface: per-element centre positions, outward normals, and
 /// surface areas (parallel vectors, one entry per element).
-type BowlElements = (Vec<[f64; 3]>, Vec<[f64; 3]>, Vec<f64>);
+type BowlElements = (Vec<[Length<f64>; 3]>, Vec<[f64; 3]>, Vec<Area<f64>>);
 
 /// Configuration for a focused bowl transducer
 #[derive(Debug, Clone)]
 pub struct BowlConfig {
     /// Radius of curvature (m)
-    pub radius_of_curvature: f64,
+    pub radius_of_curvature: Length<f64>,
 
     /// Diameter of the bowl aperture (m)
-    pub diameter: f64,
+    pub diameter: Length<f64>,
 
     /// Center position [x, y, z] (m)
-    pub center: [f64; 3],
+    pub center: [Length<f64>; 3],
 
     /// Focus position [x, y, z] (m)
-    pub focus: [f64; 3],
+    pub focus: [Length<f64>; 3],
 
     /// Operating frequency (Hz)
-    pub frequency: f64,
+    pub frequency: Frequency<f64>,
 
     /// Source amplitude (Pa)
-    pub amplitude: f64,
+    pub amplitude: Pressure<f64>,
 
     /// Phase delay (radians)
-    pub phase: f64,
+    pub phase: Angle<f64>,
 
     /// Element size for discretization (m)
-    pub element_size: Option<f64>,
+    pub element_size: Option<Length<f64>>,
 
     /// Apply directivity weighting
     pub apply_directivity: bool,
@@ -64,20 +66,24 @@ pub struct BowlConfig {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum BowlDiscretization {
-    ElementSize(f64),
+    ElementSize(Length<f64>),
     ElementCount(usize),
 }
 
 impl Default for BowlConfig {
     fn default() -> Self {
         Self {
-            radius_of_curvature: 0.064, // 64mm
-            diameter: 0.064,            // 64mm
-            center: [0.0, 0.0, 0.0],
-            focus: [0.0, 0.0, 0.064], // Focus at radius
-            frequency: MHZ_TO_HZ,     // 1 MHz
-            amplitude: MPA_TO_PA,     // 1 MPa
-            phase: 0.0,
+            radius_of_curvature: Length::from_unit::<Meter>(0.064),
+            diameter: Length::from_unit::<Meter>(0.064),
+            center: [Length::from_unit::<Meter>(0.0); 3],
+            focus: [
+                Length::from_unit::<Meter>(0.0),
+                Length::from_unit::<Meter>(0.0),
+                Length::from_unit::<Meter>(0.064),
+            ],
+            frequency: Frequency::from_unit::<Hertz>(MHZ_TO_HZ),
+            amplitude: Pressure::from_unit::<Pascal>(MPA_TO_PA),
+            phase: Angle::from_unit::<Radian>(0.0),
             element_size: None,
             apply_directivity: true,
         }
@@ -89,11 +95,11 @@ impl Default for BowlConfig {
 pub struct BowlTransducer {
     pub(crate) config: BowlConfig,
     /// Discretized element positions
-    pub(crate) element_positions: Vec<[f64; 3]>,
+    pub(crate) element_positions: Vec<[Length<f64>; 3]>,
     /// Element normals for directivity
     pub(crate) element_normals: Vec<[f64; 3]>,
     /// Element areas for weighting
-    pub(crate) element_areas: Vec<f64>,
+    pub(crate) element_areas: Vec<Area<f64>>,
 }
 
 impl BowlTransducer {
@@ -136,10 +142,12 @@ impl BowlTransducer {
         config: BowlConfig,
         discretization: BowlDiscretization,
     ) -> KwaversResult<Self> {
-        if config.diameter > 2.0 * config.radius_of_curvature {
+        let diameter_m = config.diameter.in_unit::<Meter>();
+        let radius_m = config.radius_of_curvature.in_unit::<Meter>();
+        if diameter_m > 2.0 * radius_m {
             return Err(KwaversError::Validation(ValidationError::FieldValidation {
                 field: "diameter".to_owned(),
-                value: config.diameter.to_string(),
+                value: diameter_m.to_string(),
                 constraint: "Diameter cannot exceed 2 * radius_of_curvature".to_owned(),
             }));
         }
@@ -157,7 +165,7 @@ impl BowlTransducer {
 
     /// Borrow the generated element center positions \[m\].
     #[must_use]
-    pub fn element_positions(&self) -> &[[f64; 3]] {
+    pub fn element_positions(&self) -> &[[Length<f64>; 3]] {
         &self.element_positions
     }
 
@@ -169,7 +177,7 @@ impl BowlTransducer {
 
     /// Borrow equal surface-area weights \[m²\] represented by each element.
     #[must_use]
-    pub fn element_areas(&self) -> &[f64] {
+    pub fn element_areas(&self) -> &[Area<f64>] {
         &self.element_areas
     }
 
@@ -179,16 +187,52 @@ impl BowlTransducer {
         self.element_positions.len()
     }
 
-    fn validate_config(config: &BowlConfig) -> KwaversResult<()> {
-        validate_positive_finite_field("radius_of_curvature", config.radius_of_curvature)?;
-        validate_positive_finite_field("diameter", config.diameter)?;
-        validate_positive_finite_field("frequency", config.frequency)?;
-        validate_finite_field("amplitude", config.amplitude)?;
-        validate_finite_field("phase", config.phase)?;
-        validate_finite_vector("center", config.center)?;
-        validate_finite_vector("focus", config.focus)?;
+    /// Retarget the acoustic focus while preserving the physical aperture.
+    ///
+    /// Beam steering changes the phase-delay target and the directivity normal;
+    /// it does not move the transducer elements.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`KwaversError::Validation`] when the focus is non-finite or
+    /// coincides with an element position.
+    pub(crate) fn set_focus(&mut self, focus: [Length<f64>; 3]) -> KwaversResult<()> {
+        let focus_m = focus.map(|value| value.in_unit::<Meter>());
+        validate_finite_vector("focus", focus_m)?;
 
-        let axis = sub3(config.focus, config.center);
+        let mut normals = Vec::with_capacity(self.element_positions.len());
+        for position in &self.element_positions {
+            let position_m = position.map(|value| value.in_unit::<Meter>());
+            let normal = normalize3(sub3(focus_m, position_m)).ok_or_else(|| {
+                field_validation_error(
+                    "focus",
+                    format!("{focus:?}"),
+                    "must differ from every element position",
+                )
+            })?;
+            normals.push(normal);
+        }
+
+        self.config.focus = focus;
+        self.element_normals = normals;
+        Ok(())
+    }
+
+    fn validate_config(config: &BowlConfig) -> KwaversResult<()> {
+        validate_positive_finite_field(
+            "radius_of_curvature",
+            config.radius_of_curvature.in_unit::<Meter>(),
+        )?;
+        validate_positive_finite_field("diameter", config.diameter.in_unit::<Meter>())?;
+        validate_positive_finite_field("frequency", config.frequency.in_unit::<Hertz>())?;
+        validate_finite_field("amplitude", config.amplitude.in_unit::<Pascal>())?;
+        validate_finite_field("phase", config.phase.in_unit::<Radian>())?;
+        let center = config.center.map(|value| value.in_unit::<Meter>());
+        let focus = config.focus.map(|value| value.in_unit::<Meter>());
+        validate_finite_vector("center", center)?;
+        validate_finite_vector("focus", focus)?;
+
+        let axis = sub3(focus, center);
         if !positive_finite(norm3(axis)) {
             return Err(field_validation_error(
                 "focus",
@@ -208,8 +252,8 @@ impl BowlTransducer {
         config: &BowlConfig,
         discretization: BowlDiscretization,
     ) -> KwaversResult<BowlElements> {
-        let r = config.radius_of_curvature;
-        let a = config.diameter / 2.0;
+        let r = config.radius_of_curvature.in_unit::<Meter>();
+        let a = config.diameter.in_unit::<Meter>() / 2.0;
         let theta_max = (a / r).asin();
         let cap_area = spherical_cap_area(r, theta_max);
         let target_count = match discretization {
@@ -218,7 +262,10 @@ impl BowlTransducer {
             }
             BowlDiscretization::ElementCount(element_count) => element_count,
         };
-        let axis = sub3(config.focus, config.center);
+        let axis = sub3(
+            config.focus.map(|value| value.in_unit::<Meter>()),
+            config.center.map(|value| value.in_unit::<Meter>()),
+        );
         let axis_unit = normalize3(axis).ok_or_else(|| {
             field_validation_error(
                 "focus",
@@ -226,14 +273,17 @@ impl BowlTransducer {
                 "must differ from center to define the bowl acoustic axis",
             )
         })?;
-        let curvature_center = add3(config.center, scale3(axis_unit, r));
+        let curvature_center = add3(
+            config.center.map(|value| value.in_unit::<Meter>()),
+            scale3(axis_unit, r),
+        );
         let layout = SphericalCapLayout::new(SphericalCapConfig::focused_cap(
             target_count,
-            r,
-            curvature_center,
+            Length::from_unit::<Meter>(r),
+            curvature_center.map(Length::from_unit::<Meter>),
             axis,
-            0.0,
-            theta_max,
+            Angle::from_unit::<Radian>(0.0),
+            Angle::from_unit::<Radian>(theta_max),
         ))?;
 
         let mut positions = Vec::with_capacity(layout.elements().len());
@@ -241,9 +291,9 @@ impl BowlTransducer {
         let mut areas = Vec::with_capacity(layout.elements().len());
 
         for element in layout.elements() {
-            positions.push(element.position_m);
+            positions.push(element.position);
             normals.push(element.normal_to_focus);
-            areas.push(element.area_weight_m2);
+            areas.push(element.area_weight);
         }
 
         Ok((positions, normals, areas))
@@ -266,9 +316,10 @@ impl BowlTransducer {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub fn generate_source(&self, grid: &Grid, time: f64) -> KwaversResult<Array3<f64>> {
+    pub fn generate_source(&self, grid: &Grid, time: Time<f64>) -> KwaversResult<Array3<f64>> {
         let mut source = Array3::zeros([grid.nx, grid.ny, grid.nz]);
-        let omega = TWO_PI * self.config.frequency;
+        let omega = TWO_PI * self.config.frequency.in_unit::<Hertz>();
+        let time_s = time.in_unit::<Second>();
         let focus_delays = self.calculate_focus_delays();
 
         let source_data = source
@@ -283,16 +334,23 @@ impl BowlTransducer {
                 (iy as f64).mul_add(grid.dy, grid.origin[1]),
                 (iz as f64).mul_add(grid.dz, grid.origin[2]),
             ];
-            *cell = self.pressure_at(point, time, omega, &focus_delays);
+            *cell = self.pressure_at(point, time_s, omega, &focus_delays);
         });
 
         Ok(source)
     }
 
-    fn pressure_at(&self, point: [f64; 3], time: f64, omega: f64, focus_delays: &[f64]) -> f64 {
+    fn pressure_at(
+        &self,
+        point: [f64; 3],
+        time: f64,
+        omega: f64,
+        focus_delays: &[Time<f64>],
+    ) -> f64 {
         let mut pressure = 0.0;
 
         for (i, &pos) in self.element_positions.iter().enumerate() {
+            let pos = pos.map(|value| value.in_unit::<Meter>());
             let r = (point[2] - pos[2])
                 .mul_add(
                     point[2] - pos[2],
@@ -306,10 +364,13 @@ impl BowlTransducer {
                 } else {
                     1.0
                 };
-                let phase = omega * (time - focus_delays[i]) + self.config.phase;
-                pressure +=
-                    self.config.amplitude * self.element_areas[i] * directivity * phase.sin()
-                        / (FOUR_PI * r);
+                let phase = omega * (time - focus_delays[i].in_unit::<Second>())
+                    + self.config.phase.in_unit::<Radian>();
+                pressure += self.config.amplitude.in_unit::<Pascal>()
+                    * self.element_areas[i].in_unit::<SquareMeter>()
+                    * directivity
+                    * phase.sin()
+                    / (FOUR_PI * r);
             }
         }
 
@@ -317,29 +378,28 @@ impl BowlTransducer {
     }
 
     /// Calculate time delays for focusing
-    pub(crate) fn calculate_focus_delays(&self) -> Vec<f64> {
+    pub(crate) fn calculate_focus_delays(&self) -> Vec<Time<f64>> {
         let speed_of_sound = SOUND_SPEED_WATER;
 
         self.element_positions
             .iter()
             .map(|&pos| {
-                let distance = (self.config.focus[2] - pos[2])
+                let focus = self.config.focus.map(|value| value.in_unit::<Meter>());
+                let pos = pos.map(|value| value.in_unit::<Meter>());
+                let distance = (focus[2] - pos[2])
                     .mul_add(
-                        self.config.focus[2] - pos[2],
-                        (self.config.focus[1] - pos[1]).mul_add(
-                            self.config.focus[1] - pos[1],
-                            (self.config.focus[0] - pos[0]).powi(2),
-                        ),
+                        focus[2] - pos[2],
+                        (focus[1] - pos[1]).mul_add(focus[1] - pos[1], (focus[0] - pos[0]).powi(2)),
                     )
                     .sqrt();
-                distance / speed_of_sound
+                Time::from_unit::<Second>(distance / speed_of_sound)
             })
             .collect()
     }
 
     /// Calculate directivity for an element
     fn calculate_directivity(&self, element_idx: usize, target: [f64; 3]) -> f64 {
-        let pos = self.element_positions[element_idx];
+        let pos = self.element_positions[element_idx].map(|value| value.in_unit::<Meter>());
         let normal = self.element_normals[element_idx];
 
         // Vector from element to target
@@ -373,12 +433,14 @@ impl BowlTransducer {
     /// Reference: O'Neil, H. T. (1949). "Theory of focusing radiators."
     /// The Journal of the Acoustical Society of America, 21(5), 516-526.
     #[must_use]
-    pub fn oneil_solution(&self, z: f64, time: f64) -> f64 {
+    pub fn oneil_solution(&self, z: Length<f64>, time: Time<f64>) -> f64 {
         // O'Neil's solution for on-axis pressure of a focused bowl transducer
-        let r = self.config.radius_of_curvature;
-        let a = self.config.diameter / 2.0;
-        let k = TWO_PI * self.config.frequency / SOUND_SPEED_WATER; // Wave number
-        let omega = TWO_PI * self.config.frequency; // Angular frequency
+        let r = self.config.radius_of_curvature.in_unit::<Meter>();
+        let a = self.config.diameter.in_unit::<Meter>() / 2.0;
+        let frequency_hz = self.config.frequency.in_unit::<Hertz>();
+        let k = TWO_PI * frequency_hz / SOUND_SPEED_WATER; // Wave number
+        let omega = TWO_PI * frequency_hz; // Angular frequency
+        let z_m = z.in_unit::<Meter>();
         let _c = SOUND_SPEED_WATER; // Speed of sound in water
 
         // Geometric parameters
@@ -386,9 +448,9 @@ impl BowlTransducer {
         let h = r - r.mul_add(r, -(a * a)).sqrt();
 
         // Distance from transducer center to field point
-        let d1 = z.abs();
+        let d1 = z_m.abs();
         // Distance from edge of spherical cap to field point
-        let d2 = (z - (r - h)).mul_add(z - (r - h), a * a).sqrt();
+        let d2 = (z_m - (r - h)).mul_add(z_m - (r - h), a * a).sqrt();
 
         // O'Neil's formula for on-axis pressure
         // The pressure is the result of interference between waves from the center
@@ -399,19 +461,22 @@ impl BowlTransducer {
         // P(z,t) = P0 * |exp(ikd1) - exp(ikd2)| * exp(i*omega*t) / (2*d1)
         // For magnitude: |exp(ikd1) - exp(ikd2)| = 2*|sin(phase_diff/2)|
         let p_amplitude = if d1 > 0.0 {
-            self.config.amplitude * 2.0 * (phase_diff / 2.0).sin().abs() / d1
+            self.config.amplitude.in_unit::<Pascal>() * 2.0 * (phase_diff / 2.0).sin().abs() / d1
         } else {
             // At z=0, use limiting value
-            self.config.amplitude * k * h
+            self.config.amplitude.in_unit::<Pascal>() * k * h
         };
 
         // Add time-varying component
 
-        p_amplitude * (omega * time - k * d1 + self.config.phase).sin()
+        p_amplitude
+            * (omega * time.in_unit::<Second>() - k * d1 + self.config.phase.in_unit::<Radian>())
+                .sin()
     }
 }
 
-fn element_count_from_area(area_m2: f64, element_size_m: f64) -> KwaversResult<usize> {
+fn element_count_from_area(area_m2: f64, element_size: Length<f64>) -> KwaversResult<usize> {
+    let element_size_m = element_size.in_unit::<Meter>();
     let count = (area_m2 / element_size_m.powi(2)).ceil();
     if !count.is_finite() || count < 1.0 || count > usize::MAX as f64 {
         return Err(field_validation_error(
@@ -423,12 +488,12 @@ fn element_count_from_area(area_m2: f64, element_size_m: f64) -> KwaversResult<u
     Ok(count as usize)
 }
 
-fn default_or_configured_element_size(config: &BowlConfig) -> KwaversResult<f64> {
+fn default_or_configured_element_size(config: &BowlConfig) -> KwaversResult<Length<f64>> {
     let element_size = config.element_size.unwrap_or_else(|| {
-        let wavelength = SOUND_SPEED_WATER / config.frequency;
-        wavelength / 4.0
+        let wavelength = SOUND_SPEED_WATER / config.frequency.in_unit::<Hertz>();
+        Length::from_unit::<Meter>(wavelength / 4.0)
     });
-    validate_positive_finite_field("element_size", element_size)?;
+    validate_positive_finite_field("element_size", element_size.in_unit::<Meter>())?;
     Ok(element_size)
 }
 

@@ -109,3 +109,4 @@
 | [099](099-transducer-design-propagation-quantities.md) | Aequitas transducer design and propagation quantities | Accepted — 2026-08-03 |
 | [100](100-acquisition-geometry-quantities.md) | Aequitas shared acquisition-geometry quantities | Accepted — 2026-08-03 |
 | [101](101-2d-array-quantities.md) | Aequitas 2-D array geometry and beam-control quantities | Accepted — 2026-08-03 |
+| [102](102-focused-source-quantities.md) | Aequitas focused-source geometry, signal, and metric quantities | Accepted — 2026-08-03 |

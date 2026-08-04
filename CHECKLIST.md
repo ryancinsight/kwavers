@@ -1,5 +1,31 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-63 focused-source and hemispherical metrics [major] [arch] — done 2026-08-03
+
+- [x] Audit focused bowl, spherical-cap, arc, multi-bowl, hemispherical,
+      therapy, diagnostics, and example contracts for raw physical metrics.
+- [x] Convert source geometry, drive, phase, frequency, area, delay, and
+      hemispherical validation metrics to Aequitas quantities.
+- [x] Keep Eunomia complex values as numerical phasors with one observable
+      pressure/signal unit and no imaginary SI geometry unit.
+- [x] Fix beam steering to retarget focus normals and delays without moving
+      the physical aperture.
+- [x] Run focused and downstream package gates, synchronize the audit and
+      changelog, and close the item at the final commit head.
+
+Acceptance: focused and hemispherical Rust contracts expose physical values
+through Aequitas; direct therapy, diagnostics, and example callers compile;
+steering retargets normals and delays without moving elements; Eunomia
+phasors retain one observable unit with no imaginary SI geometry unit; and
+the scoped closure has no untyped physical metric left outside explicit
+formula, mesh, or serialization boundaries.
+
+Evidence: `cargo check` passes for transducer tests, therapy/diagnostics, and
+Kwavers examples; focused Nextest passes 229/229 with one skipped; strict
+offline Clippy passes for all three affected packages; doctests pass
+diagnostics 1/1, therapy 8/8, and transducer 1/1; Rustfmt and `git diff
+--check` pass.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-62 two-dimensional array metrics [major] [arch] — done 2026-08-03
 
 - [x] Audit the 2-D array public fields and direct builder, source, simulation,

@@ -1,5 +1,7 @@
 //! Focused bowl configuration constructors.
 
+use aequitas::systems::si::quantities::{Frequency, Length, Pressure};
+use aequitas::systems::si::units::Meter;
 use kwavers_core::error::KwaversResult;
 
 use super::super::validation::{
@@ -10,24 +12,27 @@ use super::BowlConfig;
 impl BowlConfig {
     /// Build a spherical-cap bowl from its vertex and acoustic focus.
     ///
-    /// The radius of curvature is the Euclidean distance from `vertex_m` to
-    /// `focus_m`. `diameter_m` controls the cap aperture; use
+    /// The radius of curvature is the Euclidean distance from `vertex` to
+    /// `focus`. `diameter` controls the cap aperture; use
     /// [`Self::hemispherical`] when the intended aperture is a full hemisphere.
     #[must_use]
     pub fn from_vertex_focus(
-        vertex_m: [f64; 3],
-        focus_m: [f64; 3],
-        diameter_m: f64,
-        frequency_hz: f64,
-        amplitude_pa: f64,
+        vertex: [Length<f64>; 3],
+        focus: [Length<f64>; 3],
+        diameter: Length<f64>,
+        frequency: Frequency<f64>,
+        amplitude: Pressure<f64>,
     ) -> Self {
         Self {
-            radius_of_curvature: distance3(vertex_m, focus_m),
-            diameter: diameter_m,
-            center: vertex_m,
-            focus: focus_m,
-            frequency: frequency_hz,
-            amplitude: amplitude_pa,
+            radius_of_curvature: Length::from_unit::<Meter>(distance3(
+                vertex.map(|value| value.in_unit::<Meter>()),
+                focus.map(|value| value.in_unit::<Meter>()),
+            )),
+            diameter,
+            center: vertex,
+            focus,
+            frequency,
+            amplitude,
             ..Self::default()
         }
     }
@@ -38,18 +43,21 @@ impl BowlConfig {
     /// without naming the source after a clinical anatomy or device topology.
     #[must_use]
     pub fn hemispherical(
-        vertex_m: [f64; 3],
-        focus_m: [f64; 3],
-        frequency_hz: f64,
-        amplitude_pa: f64,
+        vertex: [Length<f64>; 3],
+        focus: [Length<f64>; 3],
+        frequency: Frequency<f64>,
+        amplitude: Pressure<f64>,
     ) -> Self {
-        let radius_m = distance3(vertex_m, focus_m);
+        let radius_m = distance3(
+            vertex.map(|value| value.in_unit::<Meter>()),
+            focus.map(|value| value.in_unit::<Meter>()),
+        );
         Self::from_vertex_focus(
-            vertex_m,
-            focus_m,
-            2.0 * radius_m,
-            frequency_hz,
-            amplitude_pa,
+            vertex,
+            focus,
+            Length::from_unit::<Meter>(2.0 * radius_m),
+            frequency,
+            amplitude,
         )
     }
 
@@ -63,7 +71,7 @@ impl BowlConfig {
     ///
     /// # Theorem
     ///
-    /// Let `F` be `focus_m`, `a` be `vertex_to_focus_axis`, and `R > 0`. This
+    /// Let `F` be `focus`, `a` be `vertex_to_focus_axis`, and `R > 0`. This
     /// constructor sets `V = F - R normalize(a)`. Therefore
     /// `normalize(F - V) = normalize(a)` and `||F - V|| = R`; any
     /// [`super::BowlTransducer`] generated from the returned config is centered
@@ -73,17 +81,20 @@ impl BowlConfig {
     ///
     /// Returns a validation error when:
     /// - any coordinate or scalar parameter is non-finite,
-    /// - `radius_m` or `aperture_diameter_m` is non-positive,
-    /// - `aperture_diameter_m > 2 * radius_m`, or
+    /// - `radius` or `aperture_diameter` is non-positive,
+    /// - `aperture_diameter > 2 * radius`, or
     /// - `vertex_to_focus_axis` has zero or non-finite norm.
     pub fn from_focus_axis(
-        focus_m: [f64; 3],
+        focus: [Length<f64>; 3],
         vertex_to_focus_axis: [f64; 3],
-        radius_m: f64,
-        aperture_diameter_m: f64,
-        frequency_hz: f64,
-        amplitude_pa: f64,
+        radius: Length<f64>,
+        aperture_diameter: Length<f64>,
+        frequency: Frequency<f64>,
+        amplitude: Pressure<f64>,
     ) -> KwaversResult<Self> {
+        let focus_m = focus.map(|value| value.in_unit::<Meter>());
+        let radius_m = radius.in_unit::<Meter>();
+        let aperture_diameter_m = aperture_diameter.in_unit::<Meter>();
         validate_finite_vector("focus", focus_m)?;
         validate_finite_vector("vertex_to_focus_axis", vertex_to_focus_axis)?;
         validate_positive_finite_field("radius_of_curvature", radius_m)?;
@@ -107,12 +118,12 @@ impl BowlConfig {
         ];
 
         Ok(Self {
-            radius_of_curvature: radius_m,
-            diameter: aperture_diameter_m,
-            center: vertex_m,
-            focus: focus_m,
-            frequency: frequency_hz,
-            amplitude: amplitude_pa,
+            radius_of_curvature: radius,
+            diameter: aperture_diameter,
+            center: vertex_m.map(Length::from_unit::<Meter>),
+            focus,
+            frequency,
+            amplitude,
             ..Self::default()
         })
     }
@@ -123,10 +134,10 @@ impl BowlConfig {
     /// The axis reference fixes the vertex-to-focus axis but does not have to
     /// be the bowl vertex. This supports clinical placements that choose an
     /// anatomical contact point to orient the aperture while selecting a larger
-    /// curvature radius from an outside-body rim constraint. `aperture_diameter_m`
+    /// curvature radius from an outside-body rim constraint. `aperture_diameter`
     /// is the chord diameter of the active cap; for a cap bounded by maximum
     /// polar half-angle theta_max it equals `2 R sin(theta_max)`. This matches the
-    /// `diameter_m` convention of [`Self::from_vertex_focus`].
+    /// `diameter` convention of [`Self::from_vertex_focus`].
     ///
     /// # Theorem
     ///
@@ -140,18 +151,22 @@ impl BowlConfig {
     /// # Errors
     ///
     /// Returns a validation error when:
-    /// - any coordinate or `radius_m` / `aperture_diameter_m` is non-finite or
+    /// - any coordinate or `radius` / `aperture_diameter` is non-finite or
     ///   non-positive, or
     /// - the Euclidean separation `||F - A||` is less than 1 mm (degenerate
     ///   axis that cannot define a unique bowl orientation).
     pub fn from_axis_reference_focus(
-        axis_reference_m: [f64; 3],
-        focus_m: [f64; 3],
-        radius_m: f64,
-        aperture_diameter_m: f64,
-        frequency_hz: f64,
-        amplitude_pa: f64,
+        axis_reference: [Length<f64>; 3],
+        focus: [Length<f64>; 3],
+        radius: Length<f64>,
+        aperture_diameter: Length<f64>,
+        frequency: Frequency<f64>,
+        amplitude: Pressure<f64>,
     ) -> KwaversResult<Self> {
+        let axis_reference_m = axis_reference.map(|value| value.in_unit::<Meter>());
+        let focus_m = focus.map(|value| value.in_unit::<Meter>());
+        let radius_m = radius.in_unit::<Meter>();
+        let aperture_diameter_m = aperture_diameter.in_unit::<Meter>();
         validate_finite_vector("axis_reference", axis_reference_m)?;
         validate_finite_vector("focus", focus_m)?;
         validate_positive_finite_field("radius_of_curvature", radius_m)?;
@@ -174,20 +189,13 @@ impl BowlConfig {
             ));
         }
 
-        Self::from_focus_axis(
-            focus_m,
-            axis,
-            radius_m,
-            aperture_diameter_m,
-            frequency_hz,
-            amplitude_pa,
-        )
+        Self::from_focus_axis(focus, axis, radius, aperture_diameter, frequency, amplitude)
     }
 
     /// Return a config using the requested discretization element size \[m\].
     #[must_use]
-    pub fn with_element_size(mut self, element_size_m: f64) -> Self {
-        self.element_size = Some(element_size_m);
+    pub fn with_element_size(mut self, element_size: Length<f64>) -> Self {
+        self.element_size = Some(element_size);
         self
     }
 }

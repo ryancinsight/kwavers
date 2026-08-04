@@ -1,6 +1,8 @@
 //! Focused bowl transducer construction for SourceFactory.
 
 use crate::transducers::focused::{BowlAngularBounds, BowlConfig, BowlTransducer};
+use aequitas::systems::si::quantities::{Angle, Dimensionless, Frequency, Length, Pressure};
+use aequitas::systems::si::units::{Hertz, Meter, Pascal, Radian};
 use kwavers_core::error::{ConfigError, KwaversResult};
 use kwavers_source::config::DEFAULT_FOCUSED_BOWL_FOCUS_OFFSET_M;
 use kwavers_source::{DomainSourceParameters, FocusedBowlAperture};
@@ -31,7 +33,11 @@ pub(super) fn create_focused_bowl_transducer(
         FocusedBowlAperture::PolarSpan { theta_max_rad } => {
             let bowl_config = base_bowl_config(config, focus);
             let element_count = required_focused_bowl_element_count(config)?;
-            BowlTransducer::with_polar_span(bowl_config, theta_max_rad, element_count)
+            BowlTransducer::with_polar_span(
+                bowl_config,
+                Angle::from_unit::<Radian>(theta_max_rad),
+                element_count,
+            )
         }
         FocusedBowlAperture::PolarBounds {
             theta_min_rad,
@@ -41,8 +47,8 @@ pub(super) fn create_focused_bowl_transducer(
             let element_count = required_focused_bowl_element_count(config)?;
             BowlTransducer::with_polar_bounds(
                 bowl_config,
-                theta_min_rad,
-                theta_max_rad,
+                Angle::from_unit::<Radian>(theta_min_rad),
+                Angle::from_unit::<Radian>(theta_max_rad),
                 element_count,
             )
         }
@@ -54,8 +60,8 @@ pub(super) fn create_focused_bowl_transducer(
             let element_count = required_focused_bowl_element_count(config)?;
             BowlTransducer::with_axis_projection_bounds(
                 bowl_config,
-                axis_projection_min,
-                axis_projection_max,
+                Dimensionless::from_base(axis_projection_min),
+                Dimensionless::from_base(axis_projection_max),
                 element_count,
             )
         }
@@ -68,18 +74,18 @@ pub(super) fn create_focused_bowl_transducer(
             // Aperture chord: 2 R sin(theta_max).
             let aperture_diameter_m = 2.0 * radius_of_curvature_m * theta_max_rad.sin();
             let mut axis_config = BowlConfig::from_axis_reference_focus(
-                config.position,
-                focus,
-                radius_of_curvature_m,
-                aperture_diameter_m,
-                config.frequency,
-                config.amplitude,
+                config.position.map(Length::from_unit::<Meter>),
+                focus.map(Length::from_unit::<Meter>),
+                Length::from_unit::<Meter>(radius_of_curvature_m),
+                Length::from_unit::<Meter>(aperture_diameter_m),
+                Frequency::from_unit::<Hertz>(config.frequency),
+                Pressure::from_unit::<Pascal>(config.amplitude),
             )?;
-            axis_config.phase = config.phase;
+            axis_config.phase = Angle::from_unit::<Radian>(config.phase);
             BowlTransducer::with_polar_bounds(
                 axis_config,
-                theta_min_rad,
-                theta_max_rad,
+                Angle::from_unit::<Radian>(theta_min_rad),
+                Angle::from_unit::<Radian>(theta_max_rad),
                 element_count,
             )
         }
@@ -90,14 +96,14 @@ pub(super) fn create_focused_bowl_transducer(
             // Full hemisphere: theta_max = pi/2, sin(pi/2) = 1, aperture = 2R.
             let aperture_diameter_m = 2.0 * radius_of_curvature_m;
             let mut axis_config = BowlConfig::from_axis_reference_focus(
-                config.position,
-                focus,
-                radius_of_curvature_m,
-                aperture_diameter_m,
-                config.frequency,
-                config.amplitude,
+                config.position.map(Length::from_unit::<Meter>),
+                focus.map(Length::from_unit::<Meter>),
+                Length::from_unit::<Meter>(radius_of_curvature_m),
+                Length::from_unit::<Meter>(aperture_diameter_m),
+                Frequency::from_unit::<Hertz>(config.frequency),
+                Pressure::from_unit::<Pascal>(config.amplitude),
             )?;
-            axis_config.phase = config.phase;
+            axis_config.phase = Angle::from_unit::<Radian>(config.phase);
             BowlTransducer::with_angular_bounds(
                 axis_config,
                 BowlAngularBounds::hemisphere(),
@@ -117,13 +123,13 @@ fn focused_bowl_focus(config: &DomainSourceParameters) -> [f64; 3] {
 
 fn base_bowl_config(config: &DomainSourceParameters, focus: [f64; 3]) -> BowlConfig {
     let mut bowl_config = BowlConfig::from_vertex_focus(
-        config.position,
-        focus,
-        2.0 * config.radius,
-        config.frequency,
-        config.amplitude,
+        config.position.map(Length::from_unit::<Meter>),
+        focus.map(Length::from_unit::<Meter>),
+        Length::from_unit::<Meter>(2.0 * config.radius),
+        Frequency::from_unit::<Hertz>(config.frequency),
+        Pressure::from_unit::<Pascal>(config.amplitude),
     );
-    bowl_config.phase = config.phase;
+    bowl_config.phase = Angle::from_unit::<Radian>(config.phase);
     bowl_config
 }
 

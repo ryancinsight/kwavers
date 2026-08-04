@@ -1,6 +1,8 @@
 //! Focused bowl element placement through the source-domain bowl transducer.
 
 use super::super::geometry::Point3;
+use aequitas::systems::si::quantities::{Angle, Frequency, Length, Pressure};
+use aequitas::systems::si::units::{Hertz, Meter, Pascal, Radian};
 use kwavers_core::error::KwaversResult;
 use kwavers_transducer::transducers::focused::{BowlAngularBounds, BowlConfig, BowlTransducer};
 
@@ -36,23 +38,34 @@ pub(crate) fn bowl_elements(
     // This is the correct cap aperture, not the hemisphere diameter (2R).
     let aperture_diameter_m = 2.0 * radius_m * BOWL_THETA_MAX_RAD.sin();
     let config = BowlConfig::from_axis_reference_focus(
-        [skin_contact_m.x_m, skin_contact_m.y_m, skin_contact_m.z_m],
-        [focus_m.x_m, focus_m.y_m, focus_m.z_m],
-        radius_m,
-        aperture_diameter_m,
-        BOWL_GEOMETRY_FREQUENCY_HZ,
-        BOWL_GEOMETRY_AMPLITUDE_PA,
+        [
+            Length::from_unit::<Meter>(skin_contact_m.x_m),
+            Length::from_unit::<Meter>(skin_contact_m.y_m),
+            Length::from_unit::<Meter>(skin_contact_m.z_m),
+        ],
+        [
+            Length::from_unit::<Meter>(focus_m.x_m),
+            Length::from_unit::<Meter>(focus_m.y_m),
+            Length::from_unit::<Meter>(focus_m.z_m),
+        ],
+        Length::from_unit::<Meter>(radius_m),
+        Length::from_unit::<Meter>(aperture_diameter_m),
+        Frequency::from_unit::<Hertz>(BOWL_GEOMETRY_FREQUENCY_HZ),
+        Pressure::from_unit::<Pascal>(BOWL_GEOMETRY_AMPLITUDE_PA),
     )?;
-    let bounds = BowlAngularBounds::new(BOWL_THETA_CUTOUT_RAD, BOWL_THETA_MAX_RAD)?;
+    let bounds = BowlAngularBounds::new(
+        Angle::from_unit::<Radian>(BOWL_THETA_CUTOUT_RAD),
+        Angle::from_unit::<Radian>(BOWL_THETA_MAX_RAD),
+    )?;
     let bowl = BowlTransducer::with_angular_bounds(config, bounds, count)?;
 
     Ok(bowl
         .element_positions()
         .iter()
         .map(|position| Point3 {
-            x_m: position[0],
-            y_m: position[1],
-            z_m: position[2],
+            x_m: position[0].in_unit::<Meter>(),
+            y_m: position[1].in_unit::<Meter>(),
+            z_m: position[2].in_unit::<Meter>(),
         })
         .collect())
 }

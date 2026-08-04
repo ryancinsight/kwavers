@@ -1,4 +1,6 @@
 use crate::transducers::focused::bowl::{BowlConfig, BowlTransducer};
+use aequitas::systems::si::quantities::Time;
+use aequitas::systems::si::units::{Meter, Second, SquareMeter};
 use kwavers_grid::Grid;
 use kwavers_signal::Signal;
 use kwavers_source::Source;
@@ -15,7 +17,7 @@ pub struct FocusedSource {
     pub(crate) transducer: BowlTransducer,
     /// dyn Signal is the runtime waveform boundary; bowl geometry remains concrete.
     signal: Arc<dyn Signal>,
-    focus_delays: Vec<f64>,
+    focus_delays: Vec<Time<f64>>,
     element_map: ElementMap,
 }
 
@@ -71,6 +73,7 @@ impl FocusedSource {
 fn build_element_map(transducer: &BowlTransducer, grid: &Grid) -> ElementMap {
     let mut element_map: ElementMap = HashMap::with_capacity(transducer.element_count());
     for (element_index, &position) in transducer.element_positions().iter().enumerate() {
+        let position = position.map(|value| value.in_unit::<Meter>());
         if let Some(grid_index) = grid.position_to_indices(position[0], position[1], position[2]) {
             element_map
                 .entry(grid_index)
@@ -102,7 +105,7 @@ impl Source for FocusedSource {
             if ix < grid.nx && iy < grid.ny && iz < grid.nz {
                 let mut weight_sum = 0.0;
                 for &idx in indices {
-                    weight_sum += self.transducer.element_areas[idx];
+                    weight_sum += self.transducer.element_areas[idx].in_unit::<SquareMeter>();
                 }
                 mask[[ix, iy, iz]] += weight_sum;
             }
@@ -117,7 +120,10 @@ impl Source for FocusedSource {
         self.transducer
             .element_positions
             .iter()
-            .map(|p| (p[0], p[1], p[2]))
+            .map(|p| {
+                let p = p.map(|value| value.in_unit::<Meter>());
+                (p[0], p[1], p[2])
+            })
             .collect()
     }
 
@@ -131,8 +137,8 @@ impl Source for FocusedSource {
             if let Some(indices) = self.element_map.get(&(ix, iy, iz)) {
                 let mut sum_val = 0.0;
                 for &i in indices {
-                    let delay = self.focus_delays[i];
-                    let weight = self.transducer.element_areas[i];
+                    let delay = self.focus_delays[i].in_unit::<Second>();
+                    let weight = self.transducer.element_areas[i].in_unit::<SquareMeter>();
                     sum_val += weight * self.signal.amplitude(t - delay);
                 }
                 return sum_val;
@@ -142,7 +148,11 @@ impl Source for FocusedSource {
     }
 
     fn focal_point(&self) -> Option<(f64, f64, f64)> {
-        let f = self.transducer.config.focus;
+        let f = self
+            .transducer
+            .config
+            .focus
+            .map(|value| value.in_unit::<Meter>());
         Some((f[0], f[1], f[2]))
     }
 }
@@ -150,6 +160,8 @@ impl Source for FocusedSource {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use aequitas::systems::si::quantities::{Dimensionless, Frequency, Length, Pressure};
+    use aequitas::systems::si::units::{Hertz, Meter, Pascal, Second};
     use kwavers_core::constants::numerical::MPA_TO_PA;
 
     #[derive(Clone, Debug)]
@@ -184,14 +196,28 @@ mod tests {
     #[test]
     fn from_transducer_accepts_axis_projected_bowl_layout() {
         let config = BowlConfig::from_vertex_focus(
-            [0.0, 0.0, 0.16],
-            [0.0, 0.0, 0.0],
-            0.32,
-            650.0e3,
-            MPA_TO_PA,
+            [
+                Length::from_unit::<Meter>(0.0),
+                Length::from_unit::<Meter>(0.0),
+                Length::from_unit::<Meter>(0.16),
+            ],
+            [Length::from_unit::<Meter>(0.0); 3],
+            Length::from_unit::<Meter>(0.32),
+            Frequency::from_unit::<Hertz>(650.0e3),
+            Pressure::from_unit::<Pascal>(MPA_TO_PA),
         );
-        let bowl = BowlTransducer::with_axis_projection_bounds(config, -0.28, 0.98, 16).unwrap();
-        let expected_area: f64 = bowl.element_areas().iter().sum();
+        let bowl = BowlTransducer::with_axis_projection_bounds(
+            config,
+            Dimensionless::from_base(-0.28),
+            Dimensionless::from_base(0.98),
+            16,
+        )
+        .unwrap();
+        let expected_area: f64 = bowl
+            .element_areas()
+            .iter()
+            .map(|area| area.in_unit::<aequitas::systems::si::units::SquareMeter>())
+            .sum();
 
         let mut grid = Grid::new(25, 25, 13, 0.02, 0.02, 0.02).unwrap();
         grid.origin = [-0.24, -0.24, -0.06];
@@ -216,12 +242,16 @@ mod tests {
     #[test]
     fn source_term_uses_preconstructed_bowl_area_and_delay() {
         let config = BowlConfig {
-            radius_of_curvature: 0.08,
-            diameter: 0.04,
-            center: [0.0, 0.0, -0.08],
-            focus: [0.0, 0.0, 0.0],
-            frequency: 1.25e6,
-            amplitude: 1.0e5,
+            radius_of_curvature: Length::from_unit::<Meter>(0.08),
+            diameter: Length::from_unit::<Meter>(0.04),
+            center: [
+                Length::from_unit::<Meter>(0.0),
+                Length::from_unit::<Meter>(0.0),
+                Length::from_unit::<Meter>(-0.08),
+            ],
+            focus: [Length::from_unit::<Meter>(0.0); 3],
+            frequency: Frequency::from_unit::<Hertz>(1.25e6),
+            amplitude: Pressure::from_unit::<Pascal>(1.0e5),
             apply_directivity: false,
             ..Default::default()
         };
@@ -236,14 +266,17 @@ mod tests {
         let source =
             FocusedSource::from_transducer(bowl, Arc::new(ConstantSignal::new(3.0)), &grid);
         let actual = source.get_source_term(
-            focus_delay,
-            element_position[0],
-            element_position[1],
-            element_position[2],
+            focus_delay.in_unit::<Second>(),
+            element_position[0].in_unit::<Meter>(),
+            element_position[1].in_unit::<Meter>(),
+            element_position[2].in_unit::<Meter>(),
             &grid,
         );
 
-        assert_close(actual, 3.0 * element_area);
+        assert_close(
+            actual,
+            3.0 * element_area.in_unit::<aequitas::systems::si::units::SquareMeter>(),
+        );
     }
 
     fn assert_close(actual: f64, expected: f64) {

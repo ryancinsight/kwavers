@@ -1,3 +1,5 @@
+use aequitas::systems::si::quantities::{Angle, Length};
+use aequitas::systems::si::units::{Meter, Radian};
 use leto::Array2;
 
 use kwavers_core::error::KwaversResult;
@@ -26,14 +28,14 @@ pub fn focused_cap_positions(
 ) -> KwaversResult<Array2<f64>> {
     let layout = SphericalCapLayout::new(SphericalCapConfig::focused_cap(
         element_count,
-        radius_m,
-        [0.0, 0.0, 0.0],
+        Length::from_unit::<Meter>(radius_m),
+        [Length::from_unit::<Meter>(0.0); 3],
         [0.0, 0.0, 1.0],
-        cap_min_polar_rad,
-        cap_max_polar_rad,
+        Angle::from_unit::<Radian>(cap_min_polar_rad),
+        Angle::from_unit::<Radian>(cap_max_polar_rad),
     ))?;
 
     Ok(Array2::from_shape_fn((element_count, 3), |[idx, col]| {
-        layout.elements()[idx].position_m[col]
+        layout.elements()[idx].position[col].in_unit::<Meter>()
     }))
 }

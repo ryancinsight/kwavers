@@ -9,6 +9,8 @@
 //! `theta in [theta_min, theta_max]` is obtained by sampling `cos(theta)`
 //! uniformly because the cap area element is `R^2 sin(theta) dtheta dphi`.
 
+use aequitas::systems::si::quantities::{Angle, Area, Length};
+use aequitas::systems::si::units::{Meter, Radian, SquareMeter};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use std::f64::consts::{FRAC_PI_2, PI};
@@ -19,15 +21,15 @@ pub struct SphericalCapConfig {
     /// Number of elements on the cap.
     pub element_count: usize,
     /// Radius from the acoustic focus to the cap surface \[m\].
-    pub radius_m: f64,
+    pub radius: Length<f64>,
     /// Acoustic focus \[m\].
-    pub focus_m: [f64; 3],
+    pub focus: [Length<f64>; 3],
     /// Unit-agnostic axis from the cap vertex toward the focus.
     pub axis_vertex_to_focus: [f64; 3],
     /// Minimum polar angle from the cap axis \[rad\].
-    pub theta_min_rad: f64,
+    pub theta_min: Angle<f64>,
     /// Maximum polar angle from the cap axis \[rad\].
-    pub theta_max_rad: f64,
+    pub theta_max: Angle<f64>,
 }
 
 impl SphericalCapConfig {
@@ -35,19 +37,19 @@ impl SphericalCapConfig {
     #[must_use]
     pub fn focused_cap(
         element_count: usize,
-        radius_m: f64,
-        focus_m: [f64; 3],
+        radius: Length<f64>,
+        focus: [Length<f64>; 3],
         axis_vertex_to_focus: [f64; 3],
-        theta_min_rad: f64,
-        theta_max_rad: f64,
+        theta_min: Angle<f64>,
+        theta_max: Angle<f64>,
     ) -> Self {
         Self {
             element_count,
-            radius_m,
-            focus_m,
+            radius,
+            focus,
             axis_vertex_to_focus,
-            theta_min_rad,
-            theta_max_rad,
+            theta_min,
+            theta_max,
         }
     }
 
@@ -55,19 +57,22 @@ impl SphericalCapConfig {
     #[must_use]
     pub fn from_vertex_focus(
         element_count: usize,
-        radius_m: f64,
-        vertex_m: [f64; 3],
-        focus_m: [f64; 3],
-        theta_min_rad: f64,
-        theta_max_rad: f64,
+        radius: Length<f64>,
+        vertex: [Length<f64>; 3],
+        focus: [Length<f64>; 3],
+        theta_min: Angle<f64>,
+        theta_max: Angle<f64>,
     ) -> Self {
         Self::focused_cap(
             element_count,
-            radius_m,
-            focus_m,
-            sub3(focus_m, vertex_m),
-            theta_min_rad,
-            theta_max_rad,
+            radius,
+            focus,
+            sub3(
+                focus.map(|value| value.in_unit::<Meter>()),
+                vertex.map(|value| value.in_unit::<Meter>()),
+            ),
+            theta_min,
+            theta_max,
         )
     }
 
@@ -75,17 +80,17 @@ impl SphericalCapConfig {
     #[must_use]
     pub fn hemisphere(
         element_count: usize,
-        radius_m: f64,
-        focus_m: [f64; 3],
+        radius: Length<f64>,
+        focus: [Length<f64>; 3],
         axis_vertex_to_focus: [f64; 3],
     ) -> Self {
         Self::focused_cap(
             element_count,
-            radius_m,
-            focus_m,
+            radius,
+            focus,
             axis_vertex_to_focus,
-            0.0,
-            FRAC_PI_2,
+            Angle::from_unit::<Radian>(0.0),
+            Angle::from_unit::<Radian>(FRAC_PI_2),
         )
     }
 }
@@ -94,11 +99,11 @@ impl SphericalCapConfig {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SphericalCapElement {
     /// Element center position \[m\].
-    pub position_m: [f64; 3],
+    pub position: [Length<f64>; 3],
     /// Unit normal pointing from element toward the acoustic focus.
     pub normal_to_focus: [f64; 3],
     /// Equal surface-area weight represented by this element [m^2].
-    pub area_weight_m2: f64,
+    pub area_weight: Area<f64>,
 }
 
 /// Equal-area focused spherical-cap element layout.
@@ -119,9 +124,13 @@ impl SphericalCapLayout {
 
         let axis = normalize(config.axis_vertex_to_focus).expect("validated nonzero axis");
         let (e1, e2) = perpendicular_frame(axis);
-        let cos_min = config.theta_min_rad.cos();
-        let cos_max = config.theta_max_rad.cos();
-        let cap_area = TWO_PI * config.radius_m * config.radius_m * (cos_min - cos_max).abs();
+        let radius_m = config.radius.in_unit::<Meter>();
+        let focus_m = config.focus.map(|value| value.in_unit::<Meter>());
+        let theta_min_rad = config.theta_min.in_unit::<Radian>();
+        let theta_max_rad = config.theta_max.in_unit::<Radian>();
+        let cos_min = theta_min_rad.cos();
+        let cos_max = theta_max_rad.cos();
+        let cap_area = TWO_PI * radius_m * radius_m * (cos_min - cos_max).abs();
         let area_weight = cap_area / config.element_count as f64;
         let golden_angle = PI * (3.0 - 5.0_f64.sqrt());
 
@@ -133,11 +142,11 @@ impl SphericalCapLayout {
                 let phi = idx as f64 * golden_angle;
                 let radial = add3(scale3(e1, phi.cos()), scale3(e2, phi.sin()));
                 let normal = add3(scale3(axis, cos_theta), scale3(radial, sin_theta));
-                let position = sub3(config.focus_m, scale3(normal, config.radius_m));
+                let position = sub3(focus_m, scale3(normal, radius_m));
                 SphericalCapElement {
-                    position_m: position,
+                    position: position.map(Length::from_unit::<Meter>),
                     normal_to_focus: normal,
-                    area_weight_m2: area_weight,
+                    area_weight: Area::from_unit::<SquareMeter>(area_weight),
                 }
             })
             .collect();
@@ -153,8 +162,8 @@ impl SphericalCapLayout {
 
     /// Borrow generated element positions.
     #[must_use]
-    pub fn positions(&self) -> impl ExactSizeIterator<Item = [f64; 3]> + '_ {
-        self.elements.iter().map(|element| element.position_m)
+    pub fn positions(&self) -> impl ExactSizeIterator<Item = [Length<f64>; 3]> + '_ {
+        self.elements.iter().map(|element| element.position)
     }
 }
 
@@ -164,12 +173,16 @@ fn validate_config(config: SphericalCapConfig) -> KwaversResult<()> {
             "spherical-cap layout requires at least one element".to_owned(),
         ));
     }
-    if !positive_finite(config.radius_m) {
+    let radius_m = config.radius.in_unit::<Meter>();
+    let focus_m = config.focus.map(|value| value.in_unit::<Meter>());
+    let theta_min_rad = config.theta_min.in_unit::<Radian>();
+    let theta_max_rad = config.theta_max.in_unit::<Radian>();
+    if !positive_finite(radius_m) {
         return Err(KwaversError::InvalidInput(
             "spherical-cap radius must be positive and finite".to_owned(),
         ));
     }
-    if !config.focus_m.iter().all(|value| value.is_finite()) {
+    if !focus_m.iter().all(|value| value.is_finite()) {
         return Err(KwaversError::InvalidInput(
             "spherical-cap focus must be finite".to_owned(),
         ));
@@ -179,11 +192,11 @@ fn validate_config(config: SphericalCapConfig) -> KwaversResult<()> {
             "spherical-cap axis must be finite and nonzero".to_owned(),
         ));
     }
-    if !config.theta_min_rad.is_finite()
-        || !config.theta_max_rad.is_finite()
-        || config.theta_min_rad < 0.0
-        || config.theta_min_rad >= config.theta_max_rad
-        || config.theta_max_rad > PI
+    if !theta_min_rad.is_finite()
+        || !theta_max_rad.is_finite()
+        || theta_min_rad < 0.0
+        || theta_min_rad >= theta_max_rad
+        || theta_max_rad > PI
     {
         return Err(KwaversError::InvalidInput(
             "spherical-cap angles must satisfy 0 <= theta_min < theta_max <= pi".to_owned(),

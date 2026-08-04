@@ -4,6 +4,7 @@
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
+| KWAVERS-AEQ-MET-63 | Type focused and hemispherical source geometry, signal, timing, and validation metrics with Aequitas; preserve Eunomia real geometry and one observable unit for complex/quadrature signals; fix stale steering state and migrate direct therapy/diagnostics callers. | [arch] [major] | done 2026-08-03 | Codex | `crates/kwavers-transducer/src/{transducers/focused,hemispherical}`, direct `kwavers-therapy`, `kwavers-diagnostics`, examples, ADR 102, PM artifacts |
 | KWAVERS-AEQ-MET-62 | Type two-dimensional array geometry, beam-control, timing, and medium metrics with Aequitas; correct center-to-center pitch and preserve Eunomia real geometry and shared signal units. | [arch] [major] | done 2026-08-03 | Codex | `crates/kwavers-transducer/src/array_2d/`, direct Python/simulation callers, ADR 101, PM artifacts |
 | KWAVERS-AEQ-MET-61 | Type shared acquisition geometry coordinates and ring/bowl radius, diameter, and row-spacing contracts with Aequitas; preserve Eunomia real geometry and migrate every direct caller. | [arch] [major] | done 2026-08-03 | Codex | `kwavers-transducer/src/transducers/acquisition_geometry.rs`, transcranial diagnostics, breast FWI physics/solver/diagnostics/Python adapters, direct tests, ADR 100, PM artifacts |
 | KWAVERS-AEQ-MET-60 | Type transducer aperture design and focused propagation metrics with Aequitas, including geometry, drive, pressure, impedance, intensity, and beam-width contracts; preserve Eunomia complex signal semantics. | [arch] [major] | done 2026-08-03 | Codex | `crates/kwavers-transducer/src/design/{mod,propagation}.rs`, direct driver callers/tests, ADR 099, PM artifacts |
@@ -14,6 +15,29 @@
 | KWAVERS-AEQ-MET-55 | Type the public ultrafast plane-wave and diverging-wave geometry, timing, angle, frequency, F-number, image-coordinate, and scalar apodization metrics with Aequitas; preserve scalar extraction only at numerical and Leto storage boundaries and document Eunomia complex compatibility. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-transducer/src/ultrafast/{plane_wave,diverging_wave}/**`, ADR 094, PM artifacts |
 | KWAVERS-AEQ-MET-54 | Type the public ultrafast transmission scheduler's speed, depth, PRF, event times, frame rates, and tilt angles with Aequitas; keep scalar extraction at the PRF/timing formula boundary and document the real-only Eunomia compatibility rule. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-transducer/src/ultrafast/sequencer/**`, manifest, ADR 093, PM artifacts |
 | KWAVERS-AEQ-INTEGRATION-1 | Integrate the current Aequitas metric closure for therapeutic microbubble and plasmonics contracts on current `main`; harden the public three-dimensional plasmonic coordinate contract and synchronize the audit. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-physics/src/{acoustics/therapy/microbubble,electromagnetic}`, PM artifacts |
+
+## KWAVERS-AEQ-MET-63 — Type focused-source and hemispherical metrics [major] [arch] — done 2026-08-03
+
+- Owner: Codex; scope: focused bowl, spherical-cap, arc, multi-bowl, and
+  hemispherical source contracts, direct therapy/diagnostics adapters and
+  examples, ADR 102, and synchronized PM artifacts. Other transducer families
+  remain separate audit items.
+- Outcome: lengths, areas, frequencies, pressures, angles, times, volumes,
+  dimensionless F-number/density/projection values, and typed source positions
+  cross the Rust boundary through Aequitas. Scalar extraction remains at
+  validation, formula, mesh/index, and explicit legacy serialization seams.
+  Steering now retargets normals and delays without moving the aperture.
+- Eunomia: coherent real/quadrature values remain one observable signal or
+  pressure unit; geometry has no imaginary SI unit.
+- Acceptance: direct callers compile against typed contracts; focused and
+  hemispherical analytical behavior remains covered; local nextest, strict
+  clippy, doctests, formatting, and residue checks pass; hosted gates close at
+  the final PR head.
+- Local evidence: transducer Nextest passes 229/229 with one skipped; affected
+  transducer, therapy, and diagnostics targets pass strict offline Clippy with
+  `-D warnings`; doctests pass diagnostics 1/1, therapy 8/8, and transducer
+  1/1, with only documented ignored examples; examples and downstream checks
+  pass.
 
 ## KWAVERS-AEQ-MET-62 — Type two-dimensional array metrics [major] [arch] — done 2026-08-03
 
