@@ -12,6 +12,8 @@
 //! - Hertzberg et al. (2010): "Ultrasound focusing using magnetic resonance acoustic radiation force imaging"
 //! - Jones et al. (2019): "Transcranial MR-guided focused ultrasound: A review of the technology"
 
+use aequitas::systems::si::quantities::{Frequency, Length};
+use aequitas::systems::si::units::Hertz;
 use kwavers_core::constants::numerical::TWO_PI;
 mod constants;
 mod element;
@@ -47,15 +49,21 @@ pub struct HemisphericalArray {
 }
 
 impl HemisphericalArray {
-    /// Create new hemispherical array
-    /// # Errors
-    /// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
+    /// Create a new hemispherical phased array transducer.
     ///
-    pub fn new(radius: f64, num_elements: usize, frequency: f64) -> KwaversResult<Self> {
+    /// # Errors
+    /// Propagates any [`kwavers_core::error::KwaversError`] returned by the geometry or element
+    /// placement routines.
+    pub fn new(
+        radius: Length<f64>,
+        num_elements: usize,
+        frequency: Frequency<f64>,
+    ) -> KwaversResult<Self> {
         let geometry = HemisphereGeometry::new(radius)?;
         let elements = ElementPlacement::generate_elements(&geometry, num_elements)?;
         let steering = SteeringController::new(frequency);
-        let signal = Arc::new(SineWave::new(frequency, 1.0, 0.0));
+        // Scalar extraction at the signal boundary: SineWave::new takes raw Hz.
+        let signal = Arc::new(SineWave::new(frequency.in_unit::<Hertz>(), 1.0, 0.0));
 
         Ok(Self {
             elements,
