@@ -17,6 +17,7 @@ moirai-parallel = { workspace = true }
 leto = { workspace = true }
 mnemosyne-arena = { workspace = true }
 mnemosyne-backend = { workspace = true }
+mnemosyne-core = { workspace = true }
 serde = { version = "1.0", features = ["derive"] }
 thiserror = "1.0"
 # `std` feature so `log::SetLoggerError` implements `std::error::Error`

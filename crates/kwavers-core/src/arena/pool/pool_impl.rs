@@ -1,6 +1,8 @@
-use super::{allocate_numa_aware, PoolConfig, PoolStats, CACHE_LINE_SIZE};
+use super::{allocate_numa_aware, PoolConfig, PoolStats};
 use crate::error::{KwaversError, KwaversResult};
-use std::alloc::{dealloc, Layout};
+use mnemosyne_arena::deallocate_large_or_huge;
+use mnemosyne_backend::MemoryBackendWrapper;
+use mnemosyne_core::types::Segment;
 use std::ptr::NonNull;
 use std::sync::atomic::{AtomicPtr, AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -19,10 +21,10 @@ struct BufferNode {
 pub struct BufferPool {
     config: PoolConfig,
     memory: NonNull<u8>,
-    layout: Layout,
     free_list: AtomicPtr<BufferNode>,
     allocated: AtomicUsize,
     peak_allocated: AtomicUsize,
+    segment_ptr: *mut Segment,
 }
 
 // SAFETY: BufferPool is Send+Sync because all state is atomically synchronized.
@@ -53,22 +55,15 @@ impl BufferPool {
         let buffer_size = config.buffer_size();
         let total_size = buffer_size * config.capacity;
 
-        let memory = allocate_numa_aware(total_size)?;
-
-        let layout = Layout::from_size_align(total_size, CACHE_LINE_SIZE).map_err(|_| {
-            KwaversError::System(crate::error::SystemError::MemoryAllocation {
-                requested_bytes: total_size,
-                reason: "Failed to create layout for pool".to_owned(),
-            })
-        })?;
+        let (memory, segment_ptr) = allocate_numa_aware(total_size)?;
 
         let pool = Arc::new(Self {
             config: config.clone(),
             memory,
-            layout,
             free_list: AtomicPtr::new(std::ptr::null_mut()),
             allocated: AtomicUsize::new(0),
             peak_allocated: AtomicUsize::new(0),
+            segment_ptr,
         });
 
         // Partition memory into buffers and push to free list in reverse order.
@@ -192,10 +187,11 @@ impl BufferPool {
 
 impl Drop for BufferPool {
     fn drop(&mut self) {
-        // SAFETY: memory was allocated with alloc(), layout matches.
-        unsafe {
-            dealloc(self.memory.as_ptr(), self.layout);
-        }
+        // SAFETY: segment_ptr was written by allocate_large_or_huge and is valid.
+        // Recovered via the standard metadata-slot pattern.
+        let _released = unsafe {
+            deallocate_large_or_huge::<MemoryBackendWrapper>(self.memory.as_ptr(), self.segment_ptr)
+        };
     }
 }
 

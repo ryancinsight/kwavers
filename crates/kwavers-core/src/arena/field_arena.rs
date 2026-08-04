@@ -8,7 +8,10 @@
 // - Hanson D.R. (1990). Software: Practice and Experience, 20(1), 5–12.
 // - Berger E.D. et al. (2002). ACM SIGPLAN Notices, 37(1), 114–124.
 
-use std::alloc::{alloc, dealloc, Layout};
+use mnemosyne_arena::{allocate_large_or_huge, deallocate_large_or_huge};
+use mnemosyne_backend::MemoryBackendWrapper;
+use mnemosyne_core::constants::SEGMENT_ALIGN;
+use mnemosyne_core::types::Segment;
 use std::cell::RefCell;
 use std::ptr::NonNull;
 
@@ -111,12 +114,12 @@ pub(super) struct AllocationState {
 pub struct FieldArena {
     /// Pre-allocated, 64-byte-aligned memory block.
     pub(super) memory: NonNull<u8>,
-    /// Layout used at allocation (needed for `dealloc`).
-    layout: Layout,
     /// Configuration snapshot.
     pub(super) config: ArenaConfig,
     /// Slot-use bitmap.
     pub(super) allocation_state: RefCell<AllocationState>,
+    /// Segment pointer for mnemosyne deallocation.
+    segment_ptr: *mut Segment,
 }
 
 impl FieldArena {
@@ -139,22 +142,23 @@ impl FieldArena {
         }
 
         // 64-byte alignment for cache-line efficiency and SIMD readiness.
-        let layout = Layout::from_size_align(total_size, 64).map_err(|_| {
-            KwaversError::System(crate::error::SystemError::MemoryAllocation {
-                requested_bytes: total_size,
-                reason: "Failed to create layout for arena allocation".to_owned(),
-            })
-        })?;
-
-        // SAFETY: `layout` is non-zero and power-of-2-aligned (64).
-        // `NonNull::new` handles the null-pointer OOM case.
-        let memory = unsafe { alloc(layout) };
-        let memory = NonNull::new(memory).ok_or_else(|| {
+        // SAFETY: `total_size` is non-zero (checked above) and validated by
+        // mnemosyne's `is_valid_alloc_request`; a null user pointer is mapped
+        // to the descriptive allocation error below. mnemosyne allocates at
+        // least `SEGMENT_ALIGN` alignment (>= 64 bytes).
+        let user_ptr = unsafe {
+            allocate_large_or_huge::<MemoryBackendWrapper>(total_size, SEGMENT_ALIGN, false)
+        };
+        let memory = NonNull::new(user_ptr).ok_or_else(|| {
             KwaversError::System(crate::error::SystemError::MemoryAllocation {
                 requested_bytes: total_size,
                 reason: "Failed to allocate memory for arena".to_owned(),
             })
         })?;
+
+        // SAFETY: Valid pointer to allocated memory.
+        // Segment pointer is stored in metadata slot by allocate_large_or_huge.
+        let segment_ptr = unsafe { *((memory.as_ptr() as *mut *mut Segment).sub(1)) };
 
         let allocation_state = RefCell::new(AllocationState {
             allocated: vec![false; config.max_fields],
@@ -163,9 +167,9 @@ impl FieldArena {
 
         Ok(Self {
             memory,
-            layout,
             config,
             allocation_state,
+            segment_ptr,
         })
     }
 
@@ -226,10 +230,10 @@ impl FieldArena {
 
 impl Drop for FieldArena {
     fn drop(&mut self) {
-        // SAFETY: `self.memory` and `self.layout` are the identical pointer/layout
-        // used in `alloc()`.  Rust guarantees `drop` is called exactly once.
-        unsafe {
-            dealloc(self.memory.as_ptr(), self.layout);
-        }
+        // SAFETY: segment_ptr was written by allocate_large_or_huge and is valid.
+        // Recovered via the standard metadata-slot pattern.
+        let _released = unsafe {
+            deallocate_large_or_huge::<MemoryBackendWrapper>(self.memory.as_ptr(), self.segment_ptr)
+        };
     }
 }

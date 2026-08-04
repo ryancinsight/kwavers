@@ -1,6 +1,9 @@
 use super::config::BatchFieldConfig;
 use crate::error::{KwaversError, KwaversResult, SystemError};
-use std::alloc::{alloc, dealloc, Layout};
+use mnemosyne_arena::{allocate_large_or_huge, deallocate_large_or_huge};
+use mnemosyne_backend::MemoryBackendWrapper;
+use mnemosyne_core::constants::SEGMENT_ALIGN;
+use mnemosyne_core::types::Segment;
 use std::marker::PhantomData;
 use std::ptr::NonNull;
 
@@ -17,9 +20,10 @@ use std::ptr::NonNull;
 #[derive(Debug)]
 pub struct SoAFieldBuffer<T> {
     pub(super) memory: NonNull<u8>,
-    pub(super) layout: Layout,
     pub(super) field_elements: usize,
     pub(super) num_fields: usize,
+    pub(super) allocated_size: usize,
+    pub(super) segment_ptr: *mut Segment,
     pub(super) _phantom: PhantomData<T>,
 }
 
@@ -46,16 +50,19 @@ impl SoAFieldBuffer<f64> {
                 })
             })?;
 
-        let layout = Layout::from_size_align(total_size, config.alignment).map_err(|_| {
-            KwaversError::System(SystemError::MemoryAllocation {
+        if total_size == 0 || !config.alignment.is_power_of_two() {
+            return Err(KwaversError::System(SystemError::MemoryAllocation {
                 requested_bytes: total_size,
                 reason: "Invalid memory layout".to_owned(),
-            })
-        })?;
+            }));
+        }
 
-        // SAFETY: Non-zero size and power-of-two alignment.
-        let memory = unsafe { alloc(layout) };
-        let memory = NonNull::new(memory).ok_or_else(|| {
+        // SAFETY: non-zero size, power-of-two alignment (validated above).
+        // mnemosyne allocates at least `SEGMENT_ALIGN` alignment.
+        let user_ptr = unsafe {
+            allocate_large_or_huge::<MemoryBackendWrapper>(total_size, SEGMENT_ALIGN, false)
+        };
+        let memory = NonNull::new(user_ptr).ok_or_else(|| {
             KwaversError::System(SystemError::MemoryAllocation {
                 requested_bytes: total_size,
                 reason: "Failed to allocate SoA field buffer".to_owned(),
@@ -63,6 +70,8 @@ impl SoAFieldBuffer<f64> {
         })?;
 
         // SAFETY: Valid pointer to allocated memory.
+        // Segment pointer is stored in metadata slot by allocate_large_or_huge.
+        let segment_ptr = unsafe { *((memory.as_ptr() as *mut *mut Segment).sub(1)) };
         unsafe { std::ptr::write_bytes(memory.as_ptr(), 0, total_size) };
 
         // Apply NUMA binding via `arena::numa::bind_memory_to_node`.
@@ -74,11 +83,15 @@ impl SoAFieldBuffer<f64> {
             };
         }
 
+        // Round up to alignment boundary for actual allocation size.
+        let allocated_size = (total_size + SEGMENT_ALIGN - 1) & !(SEGMENT_ALIGN - 1);
+
         Ok(Self {
             memory,
-            layout,
             field_elements: config.field_elements,
             num_fields: config.num_fields,
+            allocated_size,
+            segment_ptr,
             _phantom: PhantomData,
         })
     }
@@ -155,9 +168,10 @@ impl SoAFieldBuffer<f64> {
     }
 
     /// Total memory usage in bytes.
+    /// Reports the actual allocated size (rounded up to alignment).
     #[must_use]
     pub fn memory_usage(&self) -> usize {
-        self.layout.size()
+        self.allocated_size
     }
 
     /// Check whether each field start is cache-line aligned.
@@ -170,8 +184,11 @@ impl SoAFieldBuffer<f64> {
 
 impl<T> Drop for SoAFieldBuffer<T> {
     fn drop(&mut self) {
-        // SAFETY: Matching pointer and layout from construction.
-        unsafe { dealloc(self.memory.as_ptr(), self.layout) };
+        // SAFETY: segment_ptr was written by allocate_large_or_huge and is valid.
+        // Recovered via the standard metadata-slot pattern.
+        let _released = unsafe {
+            deallocate_large_or_huge::<MemoryBackendWrapper>(self.memory.as_ptr(), self.segment_ptr)
+        };
     }
 }
 

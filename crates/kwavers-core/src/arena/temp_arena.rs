@@ -7,7 +7,10 @@
 // # References
 // - Evans J. (2006). BSDCan Conference, 157–168 (jemalloc arena design).
 
-use std::alloc::{alloc, dealloc, Layout};
+use mnemosyne_arena::{allocate_large_or_huge, deallocate_large_or_huge};
+use mnemosyne_backend::MemoryBackendWrapper;
+use mnemosyne_core::constants::SEGMENT_ALIGN;
+use mnemosyne_core::types::Segment;
 use std::cell::RefCell;
 use std::ptr::NonNull;
 
@@ -36,9 +39,9 @@ use super::field_arena::{ArenaConfig, ArenaStats, FieldArena};
 #[allow(missing_debug_implementations)]
 pub struct BumpAllocator {
     memory: NonNull<u8>,
-    layout: Layout,
     offset: RefCell<usize>,
     total_size: usize,
+    segment_ptr: *mut Segment,
 }
 
 impl BumpAllocator {
@@ -47,27 +50,28 @@ impl BumpAllocator {
     /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn new(size_bytes: usize) -> KwaversResult<Self> {
-        let layout = Layout::from_size_align(size_bytes, 64).map_err(|_| {
-            KwaversError::System(crate::error::SystemError::MemoryAllocation {
-                requested_bytes: size_bytes,
-                reason: "Failed to create layout for bump allocator".to_owned(),
-            })
-        })?;
-
-        // SAFETY: non-zero size, power-of-2 alignment.
-        let memory = unsafe { alloc(layout) };
-        let memory = NonNull::new(memory).ok_or_else(|| {
+        // SAFETY: `size_bytes` is validated by mnemosyne's `is_valid_alloc_request`;
+        // a null user pointer is mapped to the descriptive allocation error below.
+        // mnemosyne allocates at least `SEGMENT_ALIGN` alignment (>= 64 bytes).
+        let user_ptr = unsafe {
+            allocate_large_or_huge::<MemoryBackendWrapper>(size_bytes, SEGMENT_ALIGN, false)
+        };
+        let memory = NonNull::new(user_ptr).ok_or_else(|| {
             KwaversError::System(crate::error::SystemError::MemoryAllocation {
                 requested_bytes: size_bytes,
                 reason: "Failed to allocate memory for bump allocator".to_owned(),
             })
         })?;
 
+        // SAFETY: Valid pointer to allocated memory.
+        // Segment pointer is stored in metadata slot by allocate_large_or_huge.
+        let segment_ptr = unsafe { *((memory.as_ptr() as *mut *mut Segment).sub(1)) };
+
         Ok(Self {
             memory,
-            layout,
             offset: RefCell::new(0),
             total_size: size_bytes,
+            segment_ptr,
         })
     }
 
@@ -122,10 +126,11 @@ impl BumpAllocator {
 
 impl Drop for BumpAllocator {
     fn drop(&mut self) {
-        // SAFETY: matching pointer and layout from construction.
-        unsafe {
-            dealloc(self.memory.as_ptr(), self.layout);
-        }
+        // SAFETY: segment_ptr was written by allocate_large_or_huge and is valid.
+        // Recovered via the standard metadata-slot pattern.
+        let _released = unsafe {
+            deallocate_large_or_huge::<MemoryBackendWrapper>(self.memory.as_ptr(), self.segment_ptr)
+        };
     }
 }
 
