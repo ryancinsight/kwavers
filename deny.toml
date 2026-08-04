@@ -7,7 +7,14 @@ all-features = true
 [advisories]
 unmaintained = "workspace"
 yanked = "warn"
-ignore = []
+ignore = [
+    # rkyv 0.7.46 shared-pointer validation bypass (RUSTSEC-2026-0235).
+    # rkyv 0.7.x is a transitive dep pulled in through eunomia/aequitas.
+    # The 0.8.x line (which kwavers also pulls via coeus-tensor) already
+    # carries the fix; the 0.7.x pin will resolve once the upstream
+    # eunomia/aequitas releases drop the old rkyv dependency.
+    "RUSTSEC-2026-0235",
+]
 
 [licenses]
 allow = [
