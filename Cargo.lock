@@ -1825,7 +1825,7 @@ dependencies = [
 [[package]]
 name = "eunomia"
 version = "0.7.0"
-source = "git+https://github.com/ryancinsight/eunomia#98f853711a4832a2d3eea58e0fd3dc0f2a8810b3"
+source = "git+https://github.com/ryancinsight/eunomia#add4b9c3a7fcee53b9ee1b5fffd6b766030e9f1e"
 dependencies = [
  "bytemuck",
  "libm",
@@ -2603,7 +2603,7 @@ dependencies = [
 [[package]]
 name = "hyperion"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/hyperion#465799639e4f311d00d84bb81f4c1cedaed1a80e"
+source = "git+https://github.com/ryancinsight/hyperion#ce5a41356d11dc5dd9ac83f3a972a17ececf0e7b"
 dependencies = [
  "aequitas",
  "eunomia",
@@ -3210,7 +3210,6 @@ dependencies = [
  "kwavers-imaging",
  "kwavers-math",
  "kwavers-medium",
- "kwavers-optics",
  "kwavers-phantom",
  "kwavers-physics",
  "kwavers-receiver",
@@ -3330,6 +3329,7 @@ dependencies = [
  "consus-io",
  "eunomia",
  "flate2",
+ "hyperion",
  "kwavers-analysis",
  "kwavers-boundary",
  "kwavers-core",
@@ -3338,7 +3338,6 @@ dependencies = [
  "kwavers-imaging",
  "kwavers-math",
  "kwavers-medium",
- "kwavers-optics",
  "kwavers-physics",
  "kwavers-receiver",
  "kwavers-solver",
@@ -3487,21 +3486,15 @@ dependencies = [
 ]
 
 [[package]]
-name = "kwavers-optics"
-version = "3.0.0"
-dependencies = [
- "anyhow",
-]
-
-[[package]]
 name = "kwavers-phantom"
 version = "3.0.0"
 dependencies = [
+ "aequitas",
  "eunomia",
+ "hyperion",
  "kwavers-core",
  "kwavers-grid",
  "kwavers-medium",
- "kwavers-optics",
  "leto",
 ]
 
@@ -4929,7 +4922,7 @@ dependencies = [
 [[package]]
 name = "proteus"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/proteus#3eaa720b3c1e5016125a8ce79ee03e7f3075b0a1"
+source = "git+https://github.com/ryancinsight/proteus#6c002c28aaf5a3acf05f65e3cd81055bcdf9a1b4"
 dependencies = [
  "aequitas",
  "eunomia",
