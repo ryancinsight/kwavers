@@ -21,134 +21,19 @@ concurrency:
   group: crates-release-${{ github.event.release.tag_name || inputs.package }}
   cancel-in-progress: false
 
-env:
-  RUST_TOOLCHAIN: 1.97.1
-
 jobs:
-  validate:
+  publish:
+    # Gate stays here: the shared validate job has no prefix check and fails
+    # closed, so a legacy tag would go from a silent skip to a red run.
     if: >-
       github.event_name == 'workflow_dispatch' ||
       startsWith(github.event.release.tag_name, 'crate-')
-    name: Validate crate package
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Body owned once by Atlas (ADR 0035), pinned by SHA like any action.
+    uses: ryancinsight/atlas/.github/workflows/crates-publish.yml@9772542cc9dbd53123da0b369a75f34a180da867
     permissions:
       contents: read
-    outputs:
-      package: ${{ steps.release.outputs.package }}
-      version: ${{ steps.release.outputs.version }}
-    steps:
-      - name: Check out the release revision
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-          ref: ${{ github.event.release.tag_name || github.sha }}
-
-      - name: Check out exact Atlas path dependencies
-        uses: ./.github/actions/checkout-atlas-path-dependencies
-        with:
-          manifest: Cargo.toml
-          destination: ..
-
-      - name: Install the pinned Rust toolchain
-        uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable
-        with:
-          toolchain: ${{ env.RUST_TOOLCHAIN }}
-
-      - name: Resolve and validate release identity
-        id: release
-        shell: bash
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          INPUT_PACKAGE: ${{ inputs.package }}
-          INPUT_VERSION: ${{ inputs.version }}
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
-        run: |
-          set -euo pipefail
-
-          if [[ "$EVENT_NAME" == "release" ]]; then
-            if [[ "$RELEASE_TAG" =~ ^crate-(.+)-v([0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?)$ ]]; then
-              package="${BASH_REMATCH[1]}"
-              version="${BASH_REMATCH[2]}"
-            else
-              echo "release tag must be crate-<package>-v<version>" >&2
-              exit 1
-            fi
-          else
-            package="$INPUT_PACKAGE"
-            version="$INPUT_VERSION"
-          fi
-
-          if [[ ! "$package" =~ ^[A-Za-z0-9][A-Za-z0-9_-]*$ ]]; then
-            echo "invalid Cargo package name: $package" >&2
-            exit 1
-          fi
-
-          metadata="$(cargo metadata --locked --no-deps --format-version 1)"
-          matches="$(jq --arg package "$package" '[.packages[] | select(.name == $package)] | length' <<<"$metadata")"
-          if [[ "$matches" != "1" ]]; then
-            echo "expected exactly one workspace package named $package; found $matches" >&2
-            exit 1
-          fi
-
-          manifest_version="$(jq -r --arg package "$package" '.packages[] | select(.name == $package) | .version' <<<"$metadata")"
-          if [[ "$version" != "$manifest_version" ]]; then
-            echo "release version $version does not match Cargo version $manifest_version" >&2
-            exit 1
-          fi
-
-          publishable="$(jq -r --arg package "$package" '.packages[] | select(.name == $package) | (.publish == null or (.publish | index("crates-io") != null))' <<<"$metadata")"
-          if [[ "$publishable" != "true" ]]; then
-            echo "Cargo metadata marks $package as publish = false" >&2
-            exit 1
-          fi
-
-          echo "package=$package" >> "$GITHUB_OUTPUT"
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-
-      - name: Package and verify without publishing
-        shell: bash
-        env:
-          RELEASE_PACKAGE: ${{ steps.release.outputs.package }}
-        run: cargo publish --locked --package "$RELEASE_PACKAGE" --dry-run
-
-  publish:
-    if: github.event_name == 'release'
-    needs: validate
-    name: Publish crate
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    environment:
-      name: crates-io
-      url: https://crates.io/crates/${{ needs.validate.outputs.package }}
-    permissions:
-      contents: read
-      id-token: write
-    steps:
-      - name: Check out the release revision
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-          ref: ${{ github.event.release.tag_name }}
-
-      - name: Check out exact Atlas path dependencies
-        uses: ./.github/actions/checkout-atlas-path-dependencies
-        with:
-          manifest: Cargo.toml
-          destination: ..
-
-      - name: Install the pinned Rust toolchain
-        uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable
-        with:
-          toolchain: ${{ env.RUST_TOOLCHAIN }}
-
-      - name: Request a short-lived crates.io token
-        id: auth
-        uses: rust-lang/crates-io-auth-action@c6f97d42243bad5fab37ca0427f495c86d5b1a18 # v1.0.5
-
-      - name: Publish the validated package
-        shell: bash
-        env:
-          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
-          RELEASE_PACKAGE: ${{ needs.validate.outputs.package }}
-        run: cargo publish --locked --package "$RELEASE_PACKAGE"
+      id-token: write # OIDC trusted publishing; no stored registry token.
+    with:
+      rust-toolchain: "1.97.1"
+      dispatch-package: ${{ inputs.package }}
+      dispatch-version: ${{ inputs.version }}
