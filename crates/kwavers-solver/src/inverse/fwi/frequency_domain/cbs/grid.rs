@@ -3,7 +3,7 @@
 use aequitas::systems::si::quantities::Length;
 use aequitas::systems::si::units::Meter;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_math::special::sinc;
+use kwavers_math::sinc;
 use kwavers_transducer::transducers::ElementPosition;
 use std::f64::consts::PI;
 

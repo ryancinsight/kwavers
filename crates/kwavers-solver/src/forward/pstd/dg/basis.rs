@@ -61,7 +61,7 @@
 //! - Kopriva (2009). *Implementing Spectral Methods*. Springer. §4.
 
 use kwavers_core::error::KwaversResult;
-use kwavers_math::special::legendre::legendre_poly;
+use kwavers_math::legendre_poly;
 use leto::{Array1, Array2};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

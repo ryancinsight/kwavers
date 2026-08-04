@@ -279,7 +279,7 @@ fn ali2025_table1_parity_gate() {
         .sum::<f64>()
         / n)
         .sqrt();
-    let pcc = kwavers_math::statistics::pearson(&truth_flat, &recon_flat);
+    let pcc = kwavers_math::pearson(&truth_flat, &recon_flat);
 
     assert!(
         rmse <= 31.0,

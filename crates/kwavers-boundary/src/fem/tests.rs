@@ -1,6 +1,6 @@
 use super::manager::FemBoundaryManager;
 use kwavers_math::fft::Complex64;
-use kwavers_math::linear_algebra::sparse::CompressedSparseRowMatrix;
+use kwavers_math::CsrMatrix;
 use leto::Array1;
 
 #[test]

@@ -7,7 +7,7 @@
 use aequitas::systems::si::quantities::Length;
 use aequitas::systems::si::units::Meter;
 use kwavers_core::error::KwaversResult;
-use kwavers_math::statistics::{normalized_rmse, pearson, percentile_range};
+use leto_ops::application::statistics::{normalized_rmse, pearson, percentile_range};
 use kwavers_solver::inverse::linear_born_inversion::{
     high_pass_enhance_volume, pcg_invert, VolumeOperator, VolumeVoxel,
 };

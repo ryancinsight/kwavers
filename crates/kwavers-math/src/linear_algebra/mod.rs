@@ -1,33 +1,31 @@
 //! Linear algebra operations.
 //!
 //! Submodules:
-//! - `complex`: complex-matrix solve and inversion
-//! - `eigendecomposition`: general eigendecomposition
-//! - `iterative`: iterative solvers (LSQR)
-//! - `norms`: vector norms
 //! - `numeric_ops`: generic float trait (`NumericOps`)
-//! - `ext`: fluent `leto::Array` extension trait (`LinearAlgebraExt`) and `norm_l2`
 //! - `tolerance`: numerical tolerance constants
-//! - `sparse`: sparse matrix operations (CSR, COO)
+//! - `sparse`: sparse matrix operations (CSR, COO, iterative solvers)
 //!
-//! Note: Basic linear algebra operations (solve, inv, LU, QR, Cholesky, symmetric eigen)
-//! are provided by `leto-ops` and should be used directly instead of the deprecated
-//! `basic` and `eigen` modules.
+//! Note: Basic linear algebra operations (solve, inv, LU, QR, Cholesky, symmetric eigen,
+//! norms, window functions, optimization) are provided by `leto-ops` and should be used
+//! directly instead of the deprecated modules.
 
-pub mod complex;
-pub mod eigendecomposition;
-pub mod ext;
-pub mod iterative;
-pub mod norms;
 pub mod numeric_ops;
 pub mod sparse;
 pub mod tolerance;
 
-pub use complex::ComplexLinearAlgebra;
-pub use eigendecomposition::{EigenResult, EigenSolver, EigenSolverConfig};
-pub use ext::{norm_l2, LinearAlgebraExt};
-pub use norms::VectorOperations;
 pub use numeric_ops::NumericOps;
+
+// Re-export from leto-ops for backward compatibility
+pub use leto_ops::application::linalg::{
+    // Complex linear algebra
+    complex_inv, complex_solve,
+    // Eigendecomposition
+    eigenvalues, hermitian_eigen_jacobi, hermitian_eigen_qr, symmetric_eigen_jacobi,
+    // Iterative solvers
+    LsqrConfig, LsqrResult, LsqrSolver,
+    // Norms
+    norm, norm_l1, norm_l2, norm_max, l2_normalize, l2_normalize_into,
+};
 
 #[cfg(test)]
 mod tests;

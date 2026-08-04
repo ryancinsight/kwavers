@@ -53,7 +53,7 @@ mod fwi_demo {
         resample_head_slice, select_head_slice, AcousticSlice,
     };
     use kwavers_grid::Grid;
-    use kwavers_math::statistics::pearson;
+    use kwavers_math::pearson;
     use kwavers_solver::inverse::fwi::time_domain::{FwiGeometry, FwiProcessor};
     use kwavers_solver::inverse::seismic::parameters::{FwiParameters, RegularizationParameters};
     use kwavers_source::{GridSource, SourceMode};

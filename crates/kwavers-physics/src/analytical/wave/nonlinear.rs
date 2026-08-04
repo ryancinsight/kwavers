@@ -1,7 +1,7 @@
 use apollo::fft_1d_leto;
 use kwavers_core::constants::numerical::TWO_PI;
-use kwavers_math::signal::window::hann;
-use kwavers_math::special::bessel::jn;
+use kwavers_math::hann;
+use kwavers_math::jn;
 
 /// Evaluate the normalised amplitude of the nth harmonic at nonlinear parameter σ.
 ///
@@ -502,7 +502,7 @@ pub fn westervelt_harmonic_evolution(
 mod hann_windowed_harmonic_tests {
     use super::hann_windowed_harmonic_amplitudes;
     use kwavers_core::constants::numerical::TWO_PI;
-    use kwavers_math::signal::window::hann;
+    use kwavers_math::hann;
 
     fn manual_harmonic_amplitude(
         signal: &[f64],

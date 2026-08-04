@@ -4,7 +4,7 @@ use kwavers_math::fft::Complex64;
 use leto::Array1;
 
 use kwavers_core::error::KwaversResult;
-use kwavers_math::linear_algebra::sparse::solver::SparsePreconditioner;
+use kwavers_math::SparsePreconditioner;
 use kwavers_math::linear_algebra::sparse::{
     CompressedSparseRowMatrix, CoordinateMatrix, IterativeSolver, SolverConfig,
 };

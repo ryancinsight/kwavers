@@ -2,7 +2,7 @@
 
 use eunomia::Complex64;
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use kwavers_math::linear_algebra::eigendecomposition::{EigenSolver, EigenSolverConfig};
+use leto_ops::application::linalg::{HermitianEigenJacobi, HermitianEigenJacobiConfig};
 use leto::{Array1, Array2, SliceArg};
 
 /// Eigenspace Minimum Variance (ESMV) Beamformer
@@ -124,7 +124,7 @@ impl EigenspaceMV {
         }
 
         let r_inv_a =
-            kwavers_math::linear_algebra::ComplexLinearAlgebra::solve_linear_system_complex(
+            kwavers_math::complex_solve::solve_linear_system_complex(
                 &r_loaded, steering,
             )?;
 

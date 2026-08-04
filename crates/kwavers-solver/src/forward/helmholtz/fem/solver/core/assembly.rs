@@ -2,7 +2,7 @@ use super::FemHelmholtzSolver;
 use crate::forward::helmholtz::fem::assembly::FemAssembly;
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
 use kwavers_math::fft::Complex64;
-use kwavers_math::linear_algebra::sparse::csr::CompressedSparseRowMatrix;
+use kwavers_math::CompressedSparseRowMatrix;
 use kwavers_medium::Medium;
 use kwavers_mesh::MeshBoundaryType;
 use leto::Array1;

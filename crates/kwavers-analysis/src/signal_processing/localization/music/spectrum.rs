@@ -1,7 +1,7 @@
 use crate::signal_processing::localization::SourceLocation;
 use eunomia::Complex64;
 use kwavers_core::error::KwaversResult;
-use kwavers_math::linear_algebra::eigendecomposition::{EigenSolver, EigenSolverConfig};
+use leto_ops::application::linalg::{HermitianEigenJacobi, HermitianEigenJacobiConfig};
 use leto::Array2;
 
 use super::super::model_order::{ModelOrderConfig, ModelOrderEstimator};

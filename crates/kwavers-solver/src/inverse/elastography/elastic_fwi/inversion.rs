@@ -2,7 +2,7 @@
 //! inversion loop with Armijo line search (ADR 033 increment 3).
 
 use kwavers_core::error::KwaversResult;
-use kwavers_math::optimization::LbfgsMemory;
+use kwavers_math::LbfgsMemory;
 use leto::Array3;
 
 use super::ElasticFwi;

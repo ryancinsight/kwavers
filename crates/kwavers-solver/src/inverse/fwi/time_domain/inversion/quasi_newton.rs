@@ -21,7 +21,7 @@
 use super::super::{geometry::FwiGeometry, FwiProcessor};
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
-use kwavers_math::optimization::LbfgsMemory;
+use kwavers_math::LbfgsMemory;
 use leto::Array3;
 
 /// Maximum Armijo backtracking halvings per outer L-BFGS iteration.

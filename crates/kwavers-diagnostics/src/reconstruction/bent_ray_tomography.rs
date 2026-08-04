@@ -284,7 +284,7 @@ mod tests {
         assert!(last < first, "misfit must fall: {last} !< {first}");
 
         // (b) The reconstruction correlates with the truth.
-        let corr = kwavers_math::statistics::pearson(
+        let corr = kwavers_math::pearson(
             &result.slowness.iter().copied().collect::<Vec<_>>(),
             &truth.iter().copied().collect::<Vec<_>>(),
         );

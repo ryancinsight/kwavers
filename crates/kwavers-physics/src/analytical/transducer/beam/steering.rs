@@ -1,5 +1,5 @@
 use eunomia::Complex64;
-use kwavers_math::special::bessel::j1;
+use kwavers_math::j1;
 use moirai_parallel::{map_collect_with, Adaptive};
 
 // ─── Steering envelope (grating-lobe limited) ──────────────────────────────────

@@ -5,7 +5,7 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::Complex64;
-use kwavers_math::linear_algebra::sparse::CompressedSparseRowMatrix;
+use kwavers_math::CsrMatrix;
 use kwavers_mesh::Tetrahedron;
 use leto::Array1;
 use moirai_parallel::{map_collect_index_with, Adaptive};

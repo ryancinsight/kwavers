@@ -1,5 +1,5 @@
 use super::super::{KWaveArray, KwaveApodizationWindow};
-use kwavers_math::signal::ApodizationType;
+use kwavers_math::ApodizationType;
 
 impl KWaveArray {
     /// Calculate focus delays `(s)` for each element to a target point
@@ -70,7 +70,7 @@ impl KWaveArray {
     /// - `Tukey(r)`:    tapered cosine, fraction `r ∈ [0, 1]` (rect at 0, Hann at 1)
     ///
     /// Weights delegate to the canonical window SSOT
-    /// ([`kwavers_math::signal::ApodizationType`]) so the formulas live in one
+    /// ([`kwavers_math::ApodizationType`]) so the formulas live in one
     /// place; returns an empty vector when the array has no elements.
     ///
     /// Reference: Harris, F.J. (1978). Proc. IEEE 66(1):51–83.

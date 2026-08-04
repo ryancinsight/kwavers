@@ -1,5 +1,5 @@
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_math::signal::window as window_coeff;
+use leto_ops::application::signal as window_coeff;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum SignalWindowType {

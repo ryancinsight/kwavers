@@ -14,7 +14,7 @@
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
 use kwavers_core::error::{ConfigError, KwaversError};
-use kwavers_math::special::legendre::{legendre_poly, legendre_poly_and_deriv};
+use leto_ops::application::special_legendre::{legendre_poly, legendre_poly_and_deriv};
 use leto::Array1;
 
 /// Compute Gauss-Lobatto-Legendre (GLL) quadrature nodes and weights
