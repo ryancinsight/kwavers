@@ -33,7 +33,7 @@
   hemispherical analytical behavior remains covered; local nextest, strict
   clippy, doctests, formatting, and residue checks pass; hosted gates close at
   the final PR head.
-- Local evidence: transducer Nextest passes 229/229 with one skipped; affected
+- Local evidence: transducer Nextest passes 233/233 with one skipped; affected
   transducer, therapy, and diagnostics targets pass strict offline Clippy with
   `-D warnings`; doctests pass diagnostics 1/1, therapy 8/8, and transducer
   1/1, with only documented ignored examples; examples and downstream checks

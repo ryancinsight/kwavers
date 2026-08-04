@@ -24,7 +24,7 @@ Local evidence at the delivered lane head:
 - `cargo check -p kwavers-therapy -p kwavers-diagnostics --offline -j 1`
   passes, and `cargo check -p kwavers --examples --offline -j 1` passes.
 - `cargo nextest run -p kwavers-transducer --offline --no-fail-fast` passes
-  229/229 tests with one skipped.
+  233/233 tests with one skipped.
 - Strict offline Clippy passes for the affected transducer, therapy, and
   diagnostics packages with `-D warnings`.
 - Doctests pass: diagnostics 1/1 plus 5 ignored, therapy 8/8 plus 1 ignored,

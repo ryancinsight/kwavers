@@ -21,7 +21,7 @@ the scoped closure has no untyped physical metric left outside explicit
 formula, mesh, or serialization boundaries.
 
 Evidence: `cargo check` passes for transducer tests, therapy/diagnostics, and
-Kwavers examples; focused Nextest passes 229/229 with one skipped; strict
+Kwavers examples; focused Nextest passes 233/233 with one skipped; strict
 offline Clippy passes for all three affected packages; doctests pass
 diagnostics 1/1, therapy 8/8, and transducer 1/1; Rustfmt and `git diff
 --check` pass.
