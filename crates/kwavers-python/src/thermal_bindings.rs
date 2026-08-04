@@ -21,11 +21,14 @@
 //! binding divides by `ρ·cp` to produce K/s, which is what
 //! `ThermalDiffusionSolver::update` expects for its `external_source` argument.
 
-use crate::breast_fwi_bindings::complex_compat::{leto2_to_nd2, leto3_to_nd3, nd_to_leto3};
 use leto::{Array2, Array3};
-use numpy::{PyArray1, PyArray2, PyArray3, PyReadonlyArray3, ToPyArray};
+use numpy::{PyArray1, PyArray2, PyArray3, PyReadonlyArray3};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
+
+use crate::array_utils::{
+    leto2_to_pyarray2, leto3_to_pyarray3, pyarray3_to_leto3, vec_to_pyarray1,
+};
 
 use kwavers_core::constants::fundamental::{DENSITY_TISSUE, SOUND_SPEED_TISSUE};
 use kwavers_core::constants::thermodynamic::{BODY_TEMPERATURE_C, KELVIN_OFFSET_C};
@@ -282,7 +285,7 @@ impl ThermalSimulation {
         let rho_cp = self.density * self.specific_heat;
         let q_ks: Option<Array3<f64>> = match heat_source {
             Some(qs) => {
-                let arr = qs.as_array();
+                let arr = pyarray3_to_leto3(&qs)?;
                 if arr.shape() != [nx, ny, nz] {
                     return Err(PyValueError::new_err(format!(
                         "heat_source shape {:?} != ({nx},{ny},{nz})",
@@ -290,7 +293,7 @@ impl ThermalSimulation {
                     )));
                 }
                 let uniform_m = self.metabolic_heat / rho_cp;
-                Some(nd_to_leto3(arr.mapv(|q| q / rho_cp + uniform_m)))
+                Some(arr.mapv(|q| q / rho_cp + uniform_m))
             }
             None => {
                 if self.metabolic_heat != 0.0 {
@@ -356,20 +359,21 @@ impl ThermalSimulation {
                 .slice(&[(0, n_sensors, 1), (0, time_steps, 1)])
                 .expect("sensor slice bounds")
                 .to_contiguous();
-            Some(leto2_to_nd2(selected).to_pyarray(py).into())
+            Some(leto2_to_pyarray2(py, selected)?)
         } else {
             None
         };
 
         let thermal_dose_out: Option<Py<PyArray3<f64>>> = solver
             .thermal_dose()
-            .map(|d| leto3_to_nd3(d.to_owned()).to_pyarray(py).into());
+            .map(|d| leto3_to_pyarray3(py, d.to_owned()))
+            .transpose()?;
 
         Ok(ThermalResult {
-            temperature: leto3_to_nd3(temp_celsius).to_pyarray(py).into(),
+            temperature: leto3_to_pyarray3(py, temp_celsius)?,
             temperature_at_sensors,
             thermal_dose: thermal_dose_out,
-            time: PyArray1::from_vec(py, time_vec).into(),
+            time: vec_to_pyarray1(py, time_vec),
             time_steps,
             dt,
         })

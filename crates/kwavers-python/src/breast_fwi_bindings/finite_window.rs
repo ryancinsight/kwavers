@@ -1,6 +1,5 @@
 //! PyO3 conversion surface for finite-window PSTD Born prediction.
 
-use super::complex_compat::{leto2_to_nd2, nd_to_leto3};
 use super::helpers::kwavers_to_py;
 use super::PyMultiRowRingArray;
 use eunomia::Complex64;
@@ -8,9 +7,11 @@ use kwavers_solver::inverse::fwi::frequency_domain::{
     simulate_pstd_finite_window_born_observation,
     simulate_pstd_finite_window_born_second_order_observation, PstdFiniteWindowBornConfig,
 };
-use numpy::{PyArray2, PyReadonlyArray3, ToPyArray};
+use numpy::{PyArray2, PyReadonlyArray3};
 use pyo3::prelude::*;
 use pyo3::types::PyModule;
+
+use crate::array_utils::{leto2_to_pyarray2, pyarray3_to_leto3};
 
 #[pyfunction]
 #[pyo3(signature = (
@@ -39,7 +40,7 @@ pub fn simulate_breast_fwi_pstd_finite_window_born_observation<'py>(
     frequency_bin_cycles: usize,
     transmissions: Option<usize>,
 ) -> PyResult<Py<PyArray2<Complex64>>> {
-    let sound_speed = nd_to_leto3(sound_speed_m_s.as_array().to_owned());
+    let sound_speed = pyarray3_to_leto3(&sound_speed_m_s)?;
     let transmissions = transmissions.unwrap_or_else(|| array.inner.circumferential_elements());
     let config = PstdFiniteWindowBornConfig {
         reference_sound_speed_m_s,
@@ -60,7 +61,7 @@ pub fn simulate_breast_fwi_pstd_finite_window_born_observation<'py>(
             )
         })
         .map_err(kwavers_to_py)?;
-    Ok(leto2_to_nd2(pressure).to_pyarray(py).into())
+    leto2_to_pyarray2(py, pressure)
 }
 
 #[pyfunction]
@@ -90,7 +91,7 @@ pub fn simulate_breast_fwi_pstd_finite_window_born_second_order_observation<'py>
     frequency_bin_cycles: usize,
     transmissions: Option<usize>,
 ) -> PyResult<Py<PyArray2<Complex64>>> {
-    let sound_speed = nd_to_leto3(sound_speed_m_s.as_array().to_owned());
+    let sound_speed = pyarray3_to_leto3(&sound_speed_m_s)?;
     let transmissions = transmissions.unwrap_or_else(|| array.inner.circumferential_elements());
     let config = PstdFiniteWindowBornConfig {
         reference_sound_speed_m_s,
@@ -111,7 +112,7 @@ pub fn simulate_breast_fwi_pstd_finite_window_born_second_order_observation<'py>
             )
         })
         .map_err(kwavers_to_py)?;
-    Ok(leto2_to_nd2(pressure).to_pyarray(py).into())
+    leto2_to_pyarray2(py, pressure)
 }
 
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {

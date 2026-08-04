@@ -85,7 +85,6 @@ where
 }
 
 /// Convert a 2-D readonly NumPy array into a leto 2-D array.
-#[allow(dead_code)]
 pub fn pyarray2_to_leto2<'py, T>(array: &PyReadonlyArray2<'py, T>) -> PyResult<leto::Array2<T>>
 where
     T: Element + Copy + Clone,

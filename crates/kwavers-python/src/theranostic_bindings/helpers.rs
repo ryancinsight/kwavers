@@ -5,7 +5,7 @@ use kwavers_therapy::therapy::theranostic_guidance::{
     DevicePlacementMetrics, PlacementContext, Point3, ReconstructionMetrics,
     VolumeReconstructionMetrics,
 };
-use numpy::ndarray::{Array1, Array2};
+use numpy::ndarray::Array2;
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
@@ -50,13 +50,11 @@ pub(super) fn placement_context_skin_gap(context: &PlacementContext) -> f64 {
 pub(super) fn point_axis(
     points: &[kwavers_therapy::therapy::theranostic_guidance::Point2],
     x_axis: bool,
-) -> Array1<f64> {
-    Array1::from(
-        points
-            .iter()
-            .map(|point| if x_axis { point.x_m } else { point.y_m })
-            .collect::<Vec<_>>(),
-    )
+) -> Vec<f64> {
+    points
+        .iter()
+        .map(|point| if x_axis { point.x_m } else { point.y_m })
+        .collect()
 }
 
 pub(super) fn points3_to_array(points: &[Point3]) -> Array2<f64> {

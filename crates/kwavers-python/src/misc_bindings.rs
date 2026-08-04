@@ -1,6 +1,5 @@
 //! Phase 22 wrappers: PID controller, resampling, reconstruction, and bubble field.
 
-use crate::breast_fwi_bindings::complex_compat::{leto2_to_nd2, leto3_to_nd3, nd_to_leto2};
 use kwavers_core::error::KwaversError;
 use kwavers_solver::inverse::reconstruction::photoacoustic::{
     kspace_line_recon as kwavers_kspace_line_recon, LineReconDataOrder, LineReconInterpolation,
@@ -12,6 +11,9 @@ use pyo3::prelude::*;
 use pyo3::types::PyModule;
 use pyo3::wrap_pyfunction;
 
+use crate::array_utils::{
+    leto2_to_pyarray2, leto3_to_pyarray3, pyarray2_to_leto2, pyarray3_to_leto3,
+};
 use crate::grid_py::Grid;
 
 // ============================================================================
@@ -77,15 +79,9 @@ fn resample_to_target_grid<'py>(
     source_image: PyReadonlyArray3<f64>,
     transform: [f64; 16],
     target_dims: (usize, usize, usize),
-) -> Py<PyArray3<f64>> {
+) -> PyResult<Py<PyArray3<f64>>> {
     use kwavers_physics::acoustics::imaging::fusion::registration::resample_to_target_grid as kwavers_resample;
-    let arr = source_image.as_array().to_owned();
-    let shape = arr.shape();
-    let source_leto = leto::Array3::from_shape_vec(
-        [shape[0], shape[1], shape[2]],
-        arr.iter().copied().collect(),
-    )
-    .expect("ndarray source image shape must match contiguous voxel payload");
+    let source_leto = pyarray3_to_leto3(&source_image)?;
     let target = [target_dims.0, target_dims.1, target_dims.2];
 
     let resampled = py.detach(|| kwavers_resample(&source_leto, &transform, target));
@@ -98,7 +94,7 @@ fn resample_to_target_grid<'py>(
     )
     .expect("target dimensions must match resampled voxel payload");
 
-    PyArray3::from_owned_array(py, leto3_to_nd3(out)).into()
+    leto3_to_pyarray3(py, out)
 }
 
 #[pyfunction]
@@ -133,12 +129,12 @@ fn kspace_line_recon<'py>(
         }
     };
 
-    let input = nd_to_leto2(sensor_data.as_array().to_owned());
+    let input = pyarray2_to_leto2(&sensor_data)?;
     let recon = py
         .detach(|| kwavers_kspace_line_recon(input.view(), dy, dt, c, data_order, interp, pos_cond))
         .map_err(|err| PyRuntimeError::new_err(format!("kwavers error: {}", err)))?;
 
-    Ok(PyArray2::from_owned_array(py, leto2_to_nd2(recon)).into())
+    leto2_to_pyarray2(py, recon)
 }
 
 #[pyfunction]
@@ -152,8 +148,8 @@ fn time_reversal_reconstruction<'py>(
     sampling_frequency: f64,
     pml_size: Option<usize>,
 ) -> PyResult<Py<PyArray3<f64>>> {
-    let sensor_data = nd_to_leto2(sensor_data.as_array().to_owned());
-    let sensor_positions = nd_to_leto2(sensor_positions.as_array().to_owned());
+    let sensor_data = pyarray2_to_leto2(&sensor_data)?;
+    let sensor_positions = pyarray2_to_leto2(&sensor_positions)?;
     let grid_inner = grid.inner.clone();
     let reconstruction = py
         .detach(move || {
@@ -168,7 +164,7 @@ fn time_reversal_reconstruction<'py>(
         })
         .map_err(|err| PyRuntimeError::new_err(format!("kwavers error: {}", err)))?;
 
-    Ok(PyArray3::from_owned_array(py, leto3_to_nd3(reconstruction)).into())
+    leto3_to_pyarray3(py, reconstruction)
 }
 
 /// Reconstruct an initial pressure field by replaying time-reversed boundary data.

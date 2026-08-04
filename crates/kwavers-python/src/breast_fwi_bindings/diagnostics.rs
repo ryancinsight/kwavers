@@ -1,6 +1,5 @@
 //! PyO3 wrappers for Ali 2025 breast-FWI diagnostic metrics.
 
-use super::complex_compat::{leto3_to_nd3, nd_to_leto3};
 use super::{PyBreastFwiPstdDatasetConfig, PyMultiRowRingArray};
 use eunomia::Complex64;
 use kwavers_diagnostics::reconstruction::breast_ust_fwi::{
@@ -19,10 +18,12 @@ use kwavers_diagnostics::reconstruction::breast_ust_fwi::{
     BreastUstSourceExcitationDiagnostics, BreastUstSourceExcitationFrequencyDiagnostics,
     BreastUstSourceScalingPolicy, BreastUstTable1Parity,
 };
-use numpy::{PyArray3, PyReadonlyArray3, ToPyArray};
+use numpy::{PyArray3, PyReadonlyArray3};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList, PyModule};
+
+use crate::array_utils::{leto3_to_pyarray3, pyarray3_to_leto3};
 
 #[pyfunction]
 #[allow(clippy::too_many_arguments)]
@@ -36,8 +37,8 @@ pub fn diagnose_breast_fwi_observation_pair<'py>(
     time_steps_per_frequency: Vec<usize>,
     frequency_bin_start_steps_per_frequency: Vec<usize>,
 ) -> PyResult<Bound<'py, PyDict>> {
-    let predicted = nd_to_leto3(predicted_pressure.as_array().to_owned());
-    let observed = nd_to_leto3(observed_pressure.as_array().to_owned());
+    let predicted = pyarray3_to_leto3(&predicted_pressure)?;
+    let observed = pyarray3_to_leto3(&observed_pressure)?;
     let diagnostics = py
         .detach(|| {
             diagnose_breast_ust_observation_pair(
@@ -61,9 +62,11 @@ pub fn breast_fwi_scaled_observation_residual_metrics<'py>(
     observed_pressure: PyReadonlyArray3<'py, Complex64>,
     receiver_mask: Option<PyReadonlyArray3<'py, bool>>,
 ) -> PyResult<Bound<'py, PyDict>> {
-    let predicted = nd_to_leto3(predicted_pressure.as_array().to_owned());
-    let observed = nd_to_leto3(observed_pressure.as_array().to_owned());
-    let mask = receiver_mask.map(|mask| nd_to_leto3(mask.as_array().to_owned()));
+    let predicted = pyarray3_to_leto3(&predicted_pressure)?;
+    let observed = pyarray3_to_leto3(&observed_pressure)?;
+    let mask = receiver_mask
+        .map(|mask| pyarray3_to_leto3(&mask))
+        .transpose()?;
     let metrics = py
         .detach(|| {
             breast_ust_scaled_observation_residual_metrics(&predicted, &observed, mask.as_ref())
@@ -80,8 +83,8 @@ pub fn breast_fwi_source_channel_residual_diagnostics<'py>(
     circumferential_elements: usize,
     rows: usize,
 ) -> PyResult<Bound<'py, PyDict>> {
-    let predicted = nd_to_leto3(predicted_pressure.as_array().to_owned());
-    let observed = nd_to_leto3(observed_pressure.as_array().to_owned());
+    let predicted = pyarray3_to_leto3(&predicted_pressure)?;
+    let observed = pyarray3_to_leto3(&observed_pressure)?;
     let diagnostics = py
         .detach(|| {
             breast_ust_source_channel_residual_diagnostics(
@@ -104,7 +107,7 @@ pub fn breast_fwi_source_receiver_mask<'py>(
 ) -> PyResult<Py<PyArray3<bool>>> {
     let mask = breast_ust_source_receiver_mask(observation_shape, circumferential_elements, rows)
         .map_err(kwavers_to_value_py)?;
-    Ok(leto3_to_nd3(mask).to_pyarray(py).into())
+    leto3_to_pyarray3(py, mask)
 }
 
 #[pyfunction]
@@ -116,7 +119,7 @@ pub fn breast_fwi_passive_receiver_mask<'py>(
 ) -> PyResult<Py<PyArray3<bool>>> {
     let mask = breast_ust_passive_receiver_mask(observation_shape, circumferential_elements, rows)
         .map_err(kwavers_to_value_py)?;
-    Ok(leto3_to_nd3(mask).to_pyarray(py).into())
+    leto3_to_pyarray3(py, mask)
 }
 
 #[pyfunction]
@@ -131,8 +134,8 @@ pub fn breast_fwi_source_excitation_diagnostics<'py>(
     time_steps_per_frequency: Vec<usize>,
     frequency_bin_start_steps_per_frequency: Vec<usize>,
 ) -> PyResult<Bound<'py, PyDict>> {
-    let predicted = nd_to_leto3(predicted_pressure.as_array().to_owned());
-    let observed = nd_to_leto3(observed_pressure.as_array().to_owned());
+    let predicted = pyarray3_to_leto3(&predicted_pressure)?;
+    let observed = pyarray3_to_leto3(&observed_pressure)?;
     let diagnostics = py
         .detach(|| {
             breast_ust_source_excitation_diagnostics(
@@ -194,8 +197,8 @@ pub fn breast_fwi_reconstruction_metrics<'py>(
     reference_m_s: PyReadonlyArray3<'py, f64>,
     estimate_m_s: PyReadonlyArray3<'py, f64>,
 ) -> PyResult<Bound<'py, PyDict>> {
-    let reference = nd_to_leto3(reference_m_s.as_array().to_owned());
-    let estimate = nd_to_leto3(estimate_m_s.as_array().to_owned());
+    let reference = pyarray3_to_leto3(&reference_m_s)?;
+    let estimate = pyarray3_to_leto3(&estimate_m_s)?;
     let metrics = py
         .detach(|| breast_ust_reconstruction_metrics(&reference, &estimate))
         .map_err(kwavers_to_value_py)?;

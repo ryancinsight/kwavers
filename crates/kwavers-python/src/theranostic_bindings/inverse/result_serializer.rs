@@ -7,7 +7,6 @@ use kwavers_therapy::therapy::theranostic_guidance::{
     TRANSMIT_SCHEDULE_MODEL,
 };
 use leto::Array3;
-use numpy::ndarray::Array1;
 use numpy::ToPyArray;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
@@ -15,7 +14,7 @@ use pyo3::types::PyDict;
 use super::super::helpers::{
     metric_dict, placement_context_skin_gap, placement_dict, point_axis, points3_to_array,
 };
-use crate::breast_fwi_bindings::complex_compat::leto2_to_nd2;
+use crate::array_utils::{leto2_to_pyarray2, vec_to_pyarray1};
 
 pub(super) fn brain_target_index(
     ct_volume_hu: &Array3<f64>,
@@ -99,87 +98,75 @@ pub(super) fn result_to_dict<'py>(
     let placement_body_surface_points = points3_to_array(&placement_context.body_surface_points_m);
     out.set_item("anatomy", prepared.anatomy.label())?;
     out.set_item("device_model", layout.model_name.clone())?;
-    out.set_item("ct_hu", leto2_to_nd2(prepared.ct_hu.clone()).to_pyarray(py))?;
-    out.set_item("label", leto2_to_nd2(prepared.label.clone()).to_pyarray(py))?;
+    out.set_item("ct_hu", leto2_to_pyarray2(py, prepared.ct_hu)?)?;
+    out.set_item("label", leto2_to_pyarray2(py, prepared.label)?)?;
     out.set_item(
         "sound_speed_m_s",
-        leto2_to_nd2(prepared.sound_speed_m_s.clone()).to_pyarray(py),
+        leto2_to_pyarray2(py, prepared.sound_speed_m_s)?,
     )?;
     out.set_item(
         "attenuation_np_per_m_mhz",
-        leto2_to_nd2(prepared.attenuation_np_per_m_mhz.clone()).to_pyarray(py),
+        leto2_to_pyarray2(py, prepared.attenuation_np_per_m_mhz)?,
     )?;
-    out.set_item(
-        "body_mask",
-        leto2_to_nd2(prepared.body_mask.clone()).to_pyarray(py),
-    )?;
-    out.set_item(
-        "organ_mask",
-        leto2_to_nd2(prepared.organ_mask.clone()).to_pyarray(py),
-    )?;
-    out.set_item(
-        "target_mask",
-        leto2_to_nd2(prepared.target_mask.clone()).to_pyarray(py),
-    )?;
-    out.set_item(
-        "exposure",
-        leto2_to_nd2(result.exposure.clone()).to_pyarray(py),
-    )?;
+    out.set_item("body_mask", leto2_to_pyarray2(py, prepared.body_mask)?)?;
+    out.set_item("organ_mask", leto2_to_pyarray2(py, prepared.organ_mask)?)?;
+    out.set_item("target_mask", leto2_to_pyarray2(py, prepared.target_mask)?)?;
+    out.set_item("exposure", leto2_to_pyarray2(py, result.exposure)?)?;
     out.set_item(
         "exposure_raw_peak_pressure",
-        leto2_to_nd2(result.exposure_raw_peak_pressure.clone()).to_pyarray(py),
+        leto2_to_pyarray2(py, result.exposure_raw_peak_pressure)?,
     )?;
     out.set_item(
         "lesion_target",
-        leto2_to_nd2(result.lesion_target.clone()).to_pyarray(py),
+        leto2_to_pyarray2(py, result.lesion_target)?,
     )?;
     out.set_item(
         "anatomy_reconstruction",
-        leto2_to_nd2(result.anatomy_reconstruction.clone()).to_pyarray(py),
+        leto2_to_pyarray2(py, result.anatomy_reconstruction)?,
     )?;
     out.set_item(
         "active_lesion_reconstruction",
-        leto2_to_nd2(result.active_lesion_reconstruction.clone()).to_pyarray(py),
+        leto2_to_pyarray2(py, result.active_lesion_reconstruction)?,
     )?;
     out.set_item(
         "waveform_rtm_reconstruction",
-        leto2_to_nd2(result.waveform_rtm_reconstruction.clone()).to_pyarray(py),
+        leto2_to_pyarray2(py, result.waveform_rtm_reconstruction)?,
     )?;
     out.set_item(
         "elastic_shear_reconstruction",
-        leto2_to_nd2(result.elastic_shear_reconstruction.clone()).to_pyarray(py),
+        leto2_to_pyarray2(py, result.elastic_shear_reconstruction)?,
     )?;
     out.set_item(
         "subharmonic_reconstruction",
-        leto2_to_nd2(result.subharmonic_reconstruction.clone()).to_pyarray(py),
+        leto2_to_pyarray2(py, result.subharmonic_reconstruction)?,
     )?;
     out.set_item(
         "harmonic_reconstruction",
-        leto2_to_nd2(result.harmonic_reconstruction.clone()).to_pyarray(py),
+        leto2_to_pyarray2(py, result.harmonic_reconstruction)?,
     )?;
     out.set_item(
         "ultraharmonic_reconstruction",
-        leto2_to_nd2(result.ultraharmonic_reconstruction.clone()).to_pyarray(py),
+        leto2_to_pyarray2(py, result.ultraharmonic_reconstruction)?,
     )?;
     out.set_item(
         "fused_reconstruction",
-        leto2_to_nd2(result.fused_reconstruction.clone()).to_pyarray(py),
+        leto2_to_pyarray2(py, result.fused_reconstruction)?,
     )?;
     out.set_item(
         "therapy_x_m",
-        point_axis(&layout.therapy_elements, true).to_pyarray(py),
+        vec_to_pyarray1(py, point_axis(&layout.therapy_elements, true)),
     )?;
     out.set_item(
         "therapy_y_m",
-        point_axis(&layout.therapy_elements, false).to_pyarray(py),
+        vec_to_pyarray1(py, point_axis(&layout.therapy_elements, false)),
     )?;
     out.set_item(
         "imaging_x_m",
-        point_axis(&layout.imaging_receivers, true).to_pyarray(py),
+        vec_to_pyarray1(py, point_axis(&layout.imaging_receivers, true)),
     )?;
     out.set_item(
         "imaging_y_m",
-        point_axis(&layout.imaging_receivers, false).to_pyarray(py),
+        vec_to_pyarray1(py, point_axis(&layout.imaging_receivers, false)),
     )?;
     out.set_item("focus_m", (layout.focus_m.x_m, layout.focus_m.y_m))?;
     out.set_item(
@@ -230,15 +217,15 @@ pub(super) fn result_to_dict<'py>(
     out.set_item("placement_context_model", placement_context_model)?;
     out.set_item(
         "placement_ct_hu",
-        leto2_to_nd2(placement_context.ct_hu.clone()).to_pyarray(py),
+        leto2_to_pyarray2(py, placement_context.ct_hu)?,
     )?;
     out.set_item(
         "placement_body_mask",
-        leto2_to_nd2(placement_context.body_mask.clone()).to_pyarray(py),
+        leto2_to_pyarray2(py, placement_context.body_mask)?,
     )?;
     out.set_item(
         "placement_target_mask",
-        leto2_to_nd2(placement_context.target_mask.clone()).to_pyarray(py),
+        leto2_to_pyarray2(py, placement_context.target_mask)?,
     )?;
     out.set_item("placement_spacing_m", placement_spacing_m)?;
     out.set_item("placement_slice_index", placement_context.slice_index)?;
@@ -336,7 +323,7 @@ pub(super) fn result_to_dict<'py>(
     out.set_item("active_voxels", result.active_voxels)?;
     out.set_item(
         "objective_history",
-        Array1::from(result.objective_history).to_pyarray(py),
+        vec_to_pyarray1(py, result.objective_history),
     )?;
     let metrics = PyDict::new(py);
     metrics.set_item("anatomy", metric_dict(py, &result.anatomy_metrics)?)?;
@@ -355,4 +342,67 @@ pub(super) fn result_to_dict<'py>(
     metrics.set_item("fusion", metric_dict(py, &result.fused_metrics)?)?;
     out.set_item("metrics", metrics)?;
     Ok(out)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{brain_target_index, resampled_crop_index_xy};
+
+    #[test]
+    fn brain_target_index_resolves_inside_brain_support() {
+        // 5x5x5 volume: air (-1000 HU) outside, soft tissue (0 HU) block at 1..=3.
+        let mut ct = leto::Array3::from_elem((5, 5, 5), -1000.0);
+        for ix in 1..=3 {
+            for iy in 1..=3 {
+                for iz in 1..=3 {
+                    ct[[ix, iy, iz]] = 0.0;
+                }
+            }
+        }
+
+        let index = brain_target_index(&ct, [0.5, 0.5, 0.5]).unwrap();
+        assert_eq!(index, [2, 2, 2]);
+    }
+
+    #[test]
+    fn brain_target_index_falls_back_to_body_when_brain_empty() {
+        // Every voxel is 500 HU: no voxel lies in (-300, 300), so the body
+        // mask (hu > -300) is used and the full support resolves to the center.
+        let ct = leto::Array3::from_elem((7, 7, 7), 500.0);
+
+        let index = brain_target_index(&ct, [0.5, 0.5, 0.5]).unwrap();
+        assert_eq!(index, [3, 3, 3]);
+    }
+
+    #[test]
+    fn brain_target_index_rejects_volume_without_body_voxels() {
+        // Nothing exceeds -300 HU, so both the brain and body masks are empty
+        // and the target resolution fails instead of guessing.
+        let ct = leto::Array3::from_elem((4, 4, 4), -1000.0);
+
+        assert!(brain_target_index(&ct, [0.5, 0.5, 0.5]).is_err());
+    }
+
+    #[test]
+    fn resampled_crop_index_xy_maps_source_into_unit_grid() {
+        // grid 9x9 → scale 8; crop [1,5] x [2,6] maps source (2,3) to (2.0, 2.0).
+        let index = resampled_crop_index_xy([2, 3, 0], [1, 5, 2, 6], 9);
+        assert_eq!(index, [2.0, 2.0]);
+    }
+
+    #[test]
+    fn resampled_crop_index_xy_maps_crop_edges_to_grid_ends() {
+        // Source on the crop edge maps to 0.0; source on the opposite edge
+        // maps to the full scale (grid_size - 1).
+        let index = resampled_crop_index_xy([1, 6, 0], [1, 5, 2, 6], 9);
+        assert_eq!(index, [0.0, 8.0]);
+    }
+
+    #[test]
+    fn resampled_crop_index_xy_guards_degenerate_crop_span() {
+        // x1 == x0 would divide by zero; the .max(1.0) guard resolves the
+        // degenerate axis through a unit span instead.
+        let index = resampled_crop_index_xy([3, 3, 0], [3, 3, 0, 4], 9);
+        assert_eq!(index, [0.0, 6.0]);
+    }
 }
