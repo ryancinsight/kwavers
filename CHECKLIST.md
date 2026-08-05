@@ -1,6 +1,6 @@
 # Project Checklist
 
-## Owner: Codex — KWAVERS-AEQ-MET-66 thermal-diffusion quantities [major] [arch] — in progress
+## Owner: Codex — KWAVERS-AEQ-MET-66 thermal-diffusion quantities [major] [arch] — implementation complete; delivery blocked 2026-08-05
 
 - [x] Record ADR 103 for the typed thermal-diffusion parameter and time
       contract, including the CEM43 domain-dose and Eunomia compatibility rules.

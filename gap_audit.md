@@ -236,7 +236,7 @@ Eunomia `Complex` values, if present at the FFT/storage boundary, continue to
 represent real and quadrature components under one observable signal unit. An
 imaginary SI unit or complex-valued Aequitas physical quantity is not valid.
 
-### KWAVERS-AEQ-MET-58 — sensor-beamformer metric gap (claimed 2026-08-03)
+### KWAVERS-AEQ-MET-58 — sensor-beamformer metric gap (closed 2026-08-03)
 
 The audit found a remaining raw physical boundary in
 `beamforming/sensor_beamformer`: `SensorBeamformer` stores sampling frequency
@@ -297,7 +297,7 @@ merges as `c3e0ca39da0c928c83125ca27f9689de49b389f4`. The external RecurseML
 analyzer remains report-only where it is rate-limited or emits no source
 diagnostic.
 
-### KWAVERS-AEQ-MET-57 — shared beamforming configuration metrics
+### KWAVERS-AEQ-MET-57 — shared beamforming configuration metrics (closed 2026-08-02)
 
 The next audit found that `BeamformingCoreConfig` still exposed shared
 sound-speed, sampling-frequency, and reference-frequency configuration as
@@ -370,23 +370,22 @@ not green evidence. Rustdoc passes for the three affected packages.
 Typed/complex residue scans, formatting, and diff checks pass. No runtime
 performance claim is made.
 
-The remaining raw physical metrics in other transducer families remain audit
-candidates and are not represented as closed by this item. The next audit
-frontier is `design/{mod,propagation}.rs` (aperture dimensions, pitch, kerf,
-wavelength, frequency, and sound speed), `transducers/acquisition_geometry.rs`
-(element coordinates), `beamforming/config.rs` (sound speed and sampling or
-reference frequency), and the focused, hemispherical, MEMS, flexible, and
-two-dimensional array contracts. Complex impedance in
-`transducers/physics/frequency.rs` remains a representation value under its
-existing physical unit rather than an imaginary unit.
+The formerly listed audit frontier is closed by MET-60 through MET-65:
+design/propagation, acquisition geometry, beamforming configuration, focused
+and hemispherical sources, two-dimensional arrays, MEMS cells, and flexible
+arrays now have their own typed closure records. Complex impedance in
+`transducers/physics/frequency.rs` remains representation data under its
+existing physical unit rather than an imaginary unit. Any new transducer family
+requires a fresh public-field inventory; no unclassified family is silently
+claimed by this record.
 
-### KWAVERS-AEQ-MET-55 — ultrafast plane and diverging-wave geometry
+### KWAVERS-AEQ-MET-55 — ultrafast plane and diverging-wave geometry (closed 2026-08-02)
 
 The broader ultrafast audit found a second public gap adjacent to the closed
 scheduler: `plane_wave` and `diverging_wave` exposed element positions, image
 coordinates, sound speed, virtual-source depth, sampling frequency, angles,
 delays, PRF, F-number, and scalar Hann weights as untyped SI values. The gap
-is being closed with Aequitas `Length`, `Velocity`, `Frequency`, `Angle`,
+is closed with Aequitas `Length`, `Velocity`, `Frequency`, `Angle`,
 `Time`, and `Dimensionless`. Dense Leto delay and apodization arrays remain
 scalar buffers only at the explicit storage boundary, with seconds or
 dimensionless weights documented by their contracts.
@@ -408,12 +407,12 @@ package check, Clippy with `-D warnings`, doctests, Rustdoc, targeted Rustfmt,
 including invalid-index apodization and invalid-depth PRF regressions. The
 installed `cargo-semver-checks 0.48.0` cannot compare this package because
 `kwavers-transducer` is not published to crates.io; it fails before comparison
-with `kwavers-transducer not found in registry`. Hosted API review is the
-remaining public-surface review evidence.
+with `kwavers-transducer not found in registry`. Hosted API review is recorded
+for the merged PR #332 integration; it is not an open metric implementation gap.
 
-The remaining raw physical metrics in other transducer families are outside this
-bounded slice and remain audit candidates rather than being represented as
-closed.
+The other families named by this historical slice are closed by the later
+MET-60 through MET-65 increments. The remaining active Kwavers item is the
+provider-security delivery residual recorded under MET-66.
 
 ### KWAVERS-AEQ-MET-54 — ultrafast transmission scheduler
 

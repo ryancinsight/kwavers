@@ -17,7 +17,7 @@
 | KWAVERS-AEQ-MET-54 | Type the public ultrafast transmission scheduler's speed, depth, PRF, event times, frame rates, and tilt angles with Aequitas; keep scalar extraction at the PRF/timing formula boundary and document the real-only Eunomia compatibility rule. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-transducer/src/ultrafast/sequencer/**`, manifest, ADR 093, PM artifacts |
 | KWAVERS-AEQ-INTEGRATION-1 | Integrate the current Aequitas metric closure for therapeutic microbubble and plasmonics contracts on current `main`; harden the public three-dimensional plasmonic coordinate contract and synchronize the audit. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-physics/src/{acoustics/therapy/microbubble,electromagnetic}`, PM artifacts |
 
-## KWAVERS-AEQ-MET-66 — Type thermal-diffusion quantities [major] [arch] — done 2026-08-04
+## KWAVERS-AEQ-MET-66 — Type thermal-diffusion quantities [major] [arch] — implementation complete; delivery blocked 2026-08-05
 
 - Owner: Codex; scope: public thermal-diffusion parameters and integration-time
   contracts, their direct solver/orchestrator callers, Python and simulation
