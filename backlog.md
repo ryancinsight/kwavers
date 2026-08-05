@@ -4,6 +4,7 @@
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
+| KWAVERS-AEQ-MET-FLEX | Audit and type the flexible-array dynamic metrics: timestamps, focus/speed/delay contracts, calibration confidence, and deformation outputs; preserve raw dense mesh/signal storage boundaries. | [arch] [major] | blocked: peer-owned `crates/kwavers-transducer/src/flexible/array.rs` dirty; reopen on integration or scope release | Codex | `crates/kwavers-transducer/src/flexible/{array,beamforming,geometry,config}.rs`, direct callers/tests, ADR 070, PM artifacts |
 | KWAVERS-AEQ-MET-64 | Type CMUT, PMUT, and shared MEMS plate physical metrics with Aequitas, including charge-gradient and flexural-rigidity semantics; preserve Eunomia's one observable unit for complex components and keep Python scalar conversion at the FFI boundary. | [arch] [major] | done 2026-08-05 | Codex | `crates/kwavers-transducer/src/mems/{cmut,pmut,plate,comparison}.rs`, MEMS Python bindings, Aequitas MEMS quantities, ADR 070, PM artifacts |
 | KWAVERS-AEQ-MET-65 | Type the MEMS mutual-radiation crosstalk boundary with Aequitas `Area`, `Length`, `Frequency`, `MassDensity`, `Velocity`, and semantically correct complex `MechanicalImpedance`; preserve Eunomia's one observable phasor unit. | [arch] [major] | done 2026-08-05 | Codex | `crates/kwavers-transducer/src/mems/crosstalk.rs`, Aequitas mechanical-impedance quantity, ADR 070, PM artifacts |
 | KWAVERS-AEQ-MET-63 | Type focused and hemispherical source geometry, signal, timing, and validation metrics with Aequitas; preserve Eunomia real geometry and one observable unit for complex/quadrature signals; fix stale steering state and migrate direct therapy/diagnostics callers. | [arch] [major] | done 2026-08-03 | Codex | `crates/kwavers-transducer/src/{transducers/focused,hemispherical}`, direct `kwavers-therapy`, `kwavers-diagnostics`, examples, ADR 102, PM artifacts |
@@ -45,6 +46,21 @@
 - Acceptance: provider `dimension_laws` passes 54/54, Kwavers MEMS tests pass
   25/25, the transducer test target compiles, and the Python binding library
   compiles offline.
+
+## KWAVERS-AEQ-MET-FLEX — Audit flexible-array dynamic metrics [major] [arch] — blocked
+
+- Owner: Codex; scope: the flexible-array configuration, geometry, beamforming,
+  direct callers, and tests. The current implementation file is peer-owned
+  dirty work and is not changed in the MEMS cell slice.
+- Candidate contracts: timestamps and delays use `Time`; focus coordinates use
+  `Length`; sound speed uses `Velocity`; calibration confidence, strain, and
+  safety limits use `Dimensionless`; curvature/radius use reciprocal-length and
+  length; stress uses `Pressure`; deformation energy uses `Energy`.
+- Boundary rule: dense Leto/mesh/signal arrays and source serialization remain
+  scalar or raw representation boundaries until their consuming contracts are
+  typed; no imaginary SI unit is applicable to real flexible geometry.
+- Blocker and re-open trigger: peer integration or release of
+  `crates/kwavers-transducer/src/flexible/array.rs` ownership.
 
 ## KWAVERS-AEQ-MET-63 — Type focused-source and hemispherical metrics [major] [arch] — done 2026-08-03
 

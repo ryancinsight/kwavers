@@ -46,6 +46,24 @@ imaginary SI dimension is introduced. The typed MEMS and comparison tests pass
 peer-owned `crates/kwavers-transducer/src/flexible/array.rs` change is
 integrated.
 
+### KWAVERS-AEQ-MET-FLEX — flexible-array dynamic metric boundary (blocked)
+
+The remaining flexible-array audit is confined to the peer-owned
+`crates/kwavers-transducer/src/flexible/array.rs`. The public dynamic boundary
+still has candidate physical contracts for update timestamps (`Time`), focus
+coordinates (`Length`), sound speed (`Velocity`), focusing and steering delays
+(`Time`), calibration confidence (`Dimensionless`), and deformation state
+outputs such as curvature/radius (`ReciprocalLength`/`Length`), stress
+(`Pressure`), deformation energy (`Energy`), and strain/safety limits
+(`Dimensionless`). Dense measurement, mesh, signal, and source-position arrays
+remain explicit storage or infrastructure boundaries and must not receive
+fabricated physical units.
+
+Status is blocked only by the peer-owned dirty array implementation; the
+re-open trigger is integration of that change or release of its file scope.
+The current `flexible/beamforming.rs` adapter already converts curvature to
+the typed CMUT flex-derating API, so this residual does not reopen MET-64.
+
 ### KWAVERS-AEQ-MET-63 — focused-source and hemispherical metric gap (closed 2026-08-03)
 
 The audit found raw public contracts in focused bowl, spherical-cap, arc,
