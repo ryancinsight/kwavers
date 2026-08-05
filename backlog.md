@@ -4,6 +4,7 @@
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
+| KWAVERS-AEQ-MET-64 | Type CMUT, PMUT, and shared MEMS plate physical metrics with Aequitas, including charge-gradient and flexural-rigidity semantics; preserve Eunomia's one observable unit for complex components and keep Python scalar conversion at the FFI boundary. | [arch] [major] | done 2026-08-05 | Codex | `crates/kwavers-transducer/src/mems/{cmut,pmut,plate,comparison}.rs`, MEMS Python bindings, Aequitas MEMS quantities, ADR 070, PM artifacts |
 | KWAVERS-AEQ-MET-65 | Type the MEMS mutual-radiation crosstalk boundary with Aequitas `Area`, `Length`, `Frequency`, `MassDensity`, `Velocity`, and semantically correct complex `MechanicalImpedance`; preserve Eunomia's one observable phasor unit. | [arch] [major] | done 2026-08-05 | Codex | `crates/kwavers-transducer/src/mems/crosstalk.rs`, Aequitas mechanical-impedance quantity, ADR 070, PM artifacts |
 | KWAVERS-AEQ-MET-63 | Type focused and hemispherical source geometry, signal, timing, and validation metrics with Aequitas; preserve Eunomia real geometry and one observable unit for complex/quadrature signals; fix stale steering state and migrate direct therapy/diagnostics callers. | [arch] [major] | done 2026-08-03 | Codex | `crates/kwavers-transducer/src/{transducers/focused,hemispherical}`, direct `kwavers-therapy`, `kwavers-diagnostics`, examples, ADR 102, PM artifacts |
 | KWAVERS-AEQ-MET-62 | Type two-dimensional array geometry, beam-control, timing, and medium metrics with Aequitas; correct center-to-center pitch and preserve Eunomia real geometry and shared signal units. | [arch] [major] | done 2026-08-03 | Codex | `crates/kwavers-transducer/src/array_2d/`, direct Python/simulation callers, ADR 101, PM artifacts |
@@ -29,6 +30,21 @@
 - Acceptance: the provider law and focused Kwavers crosstalk tests pass; the
   closed-form magnitude/phase, reciprocity, inverse-distance scaling, zero
   diagonal, and degenerate-input contracts remain value-verified.
+
+## KWAVERS-AEQ-MET-64 — Type MEMS cell physical metrics [major] [arch] — done 2026-08-05
+
+- Owner: Codex; scope: CMUT, PMUT, shared clamped-plate, comparison, and MEMS
+  Python binding contracts, Aequitas `VolumeChargeDensity` and
+  `FlexuralRigidity`, ADR 070, and synchronized audit records. Flexible-array
+  core ownership remains separate and peer-owned.
+- Outcome: physical cell metrics cross the Rust boundary as typed Aequitas
+  quantities. Formula and assertion code extracts coherent scalars only where
+  required; Python converts at the explicit FFI boundary.
+- Eunomia: complex real and quadrature components retain one observable unit;
+  no imaginary SI unit is introduced for charge density or rigidity.
+- Acceptance: provider `dimension_laws` passes 54/54, Kwavers MEMS tests pass
+  25/25, the transducer test target compiles, and the Python binding library
+  compiles offline.
 
 ## KWAVERS-AEQ-MET-63 — Type focused-source and hemispherical metrics [major] [arch] — done 2026-08-03
 

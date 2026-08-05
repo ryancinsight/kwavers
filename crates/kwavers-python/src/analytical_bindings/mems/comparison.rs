@@ -1,6 +1,12 @@
 //! CMUT/PMUT comparison figure-of-merit bindings.
 
 use super::helpers::{cmut, pmut};
+use aequitas::systems::si::quantities::{
+    Dimensionless, ElectricPotential, MassDensity, ReciprocalLength, Velocity,
+};
+use aequitas::systems::si::units::{
+    KilogramPerCubicMeter, MeterPerSecond, Pascal, PerMeter, Volt, Watt,
+};
 use kwavers_transducer::mems::comparison;
 use pyo3::prelude::*;
 
@@ -29,12 +35,12 @@ pub fn therapy_figure_of_merit(
     let v = comparison::evaluate_therapy(
         &c,
         &p,
-        fluid_density,
-        fluid_sound_speed,
-        cmut_swing_fraction,
-        pmut_drive_voltage,
-        curvature,
-        substrate_output_factor,
+        MassDensity::from_unit::<KilogramPerCubicMeter>(fluid_density),
+        Velocity::from_unit::<MeterPerSecond>(fluid_sound_speed),
+        Dimensionless::from_base(cmut_swing_fraction),
+        ElectricPotential::from_unit::<Volt>(pmut_drive_voltage),
+        ReciprocalLength::from_unit::<PerMeter>(curvature),
+        Dimensionless::from_base(substrate_output_factor),
     );
     let recommended = if v.recommended == comparison::MutKind::Cmut {
         0.0
@@ -42,11 +48,11 @@ pub fn therapy_figure_of_merit(
         1.0
     };
     Ok(vec![
-        v.cmut_output_pa,
-        v.pmut_output_pa,
-        v.cmut_flex_derating,
-        v.cmut_heating,
-        v.pmut_heating,
+        v.cmut_output_pa.in_unit::<Pascal>(),
+        v.pmut_output_pa.in_unit::<Pascal>(),
+        v.cmut_flex_derating.into_base(),
+        v.cmut_heating.in_unit::<Watt>(),
+        v.pmut_heating.in_unit::<Watt>(),
         recommended,
     ])
 }
@@ -74,8 +80,8 @@ pub fn ivus_figure_of_merit(
     let v = comparison::evaluate_ivus(
         &c,
         &p,
-        fluid_density,
-        pmut_drive_voltage,
+        MassDensity::from_unit::<KilogramPerCubicMeter>(fluid_density),
+        ElectricPotential::from_unit::<Volt>(pmut_drive_voltage),
         comparison::IvusWeights::default(),
     );
     let recommended = if v.recommended == comparison::MutKind::Cmut {
@@ -84,14 +90,14 @@ pub fn ivus_figure_of_merit(
         1.0
     };
     Ok(vec![
-        v.cmut_fbw,
-        v.pmut_fbw,
-        v.cmut_heating,
-        v.pmut_heating,
-        v.cmut_drive_voltage,
-        v.pmut_drive_voltage,
-        v.cmut_fom,
-        v.pmut_fom,
+        v.cmut_fbw.into_base(),
+        v.pmut_fbw.into_base(),
+        v.cmut_heating.in_unit::<Watt>(),
+        v.pmut_heating.in_unit::<Watt>(),
+        v.cmut_drive_voltage.in_unit::<Volt>(),
+        v.pmut_drive_voltage.in_unit::<Volt>(),
+        v.cmut_fom.into_base(),
+        v.pmut_fom.into_base(),
         recommended,
     ])
 }

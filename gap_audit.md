@@ -19,7 +19,32 @@ impedance unit. No imaginary SI unit or local complex wrapper is introduced.
 The Aequitas provider law test and the Kwavers crosstalk suite cover complex
 conversion, closed-form magnitude and phase, reciprocity, inverse-distance
 scaling, zero diagonal, and degenerate input handling. The remaining MEMS
-cell-output and flexible-array boundaries remain separate audit items.
+cell-output boundary is closed under MET-64; the flexible-array boundary remains
+a separate audit item because its array owner is peer-owned dirty work.
+
+### KWAVERS-AEQ-MET-64 — MEMS cell physical-metric boundary (closed 2026-08-05)
+
+The CMUT, PMUT, and shared clamped-plate modules still exposed physical cell
+metrics as raw scalars after the crosstalk slice: capacitance, resonance,
+stiffness, collapse voltage, pressure, damping, fluid loading, flexural
+rigidity, and piezoelectric charge-gradient contracts. Their direct Python
+bindings also converted without an explicit typed Rust boundary.
+
+The cell models now publish Aequitas quantities for geometry, material,
+electrical, mechanical, acoustic, and dimensionless metrics. Aequitas adds
+`VolumeChargeDensity` (`C/m³`) for `|e₃₁,f|/t_p` and semantically distinct
+`FlexuralRigidity` (`J`) for `E h³/(12(1−ν²))`. The renamed PMUT
+`charge_density_gradient` method matches its actual unit instead of calling it
+pressure sensitivity. Scalar extraction is limited to formulas, assertions,
+and the explicit Python serialization boundary.
+
+Eunomia complex values remain compatible with both provider quantities: real
+and quadrature components retain one observable `C/m³` or `J` unit, and no
+imaginary SI dimension is introduced. The typed MEMS and comparison tests pass
+25/25, the Python binding library compiles, and the provider suite passes
+54/54. Flexible-array core ownership remains a separate audit item until the
+peer-owned `crates/kwavers-transducer/src/flexible/array.rs` change is
+integrated.
 
 ### KWAVERS-AEQ-MET-63 — focused-source and hemispherical metric gap (closed 2026-08-03)
 
@@ -57,9 +82,9 @@ Local evidence at the delivered lane head:
 The shared Atlas overlay emits known unused-patch and linker warnings, none of
 which fail an affected-package gate. Hosted repository checks and merge
 evidence are appended after the final PR head. Focused-source and
-hemispherical contracts are closed; MEMS crosstalk is closed under MET-65,
-while MEMS cell-output, flexible, and other non-focused families remain
-separate audit candidates.
+hemispherical, MEMS crosstalk, and MEMS cell-output contracts are closed under
+MET-65 and MET-64; flexible and other non-focused families remain separate
+audit candidates.
 
 ### KWAVERS-AEQ-MET-62 — two-dimensional array metric gap (closed 2026-08-03)
 

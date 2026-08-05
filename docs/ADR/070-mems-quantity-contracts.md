@@ -12,9 +12,9 @@ boundary accepted raw scalars and returned a complex value labeled
 `AcousticImpedance`, whose physical contract is pressure per particle velocity
 with unit `kg/(m²·s)`.
 
-CMUT and PMUT cell-output contracts and flexible-array contracts remain
-separate audit items; this decision covers the mutual-radiation crosstalk
-boundary.
+The CMUT, PMUT, and shared clamped-plate cell-output contracts also need
+explicit names for their physical metrics. Flexible-array contracts remain a
+separate audit item because the array owner is independently changing.
 
 ## Decision
 
@@ -23,6 +23,12 @@ the real inputs. Return
 `MechanicalImpedance<eunomia::Complex64>` from the scalar formula and store the
 same quantity in the crosstalk matrix. Scalar extraction is restricted to the
 wavenumber, magnitude, and Euclidean-distance formulas.
+
+Use Aequitas `VolumeChargeDensity` with `CoulombPerCubicMeter` for the PMUT
+charge-density gradient `|e₃₁,f|/t_p`, and `FlexuralRigidity` with `Joule` for
+the shared plate rigidity `E h³/(12(1−ν²))`. CMUT and PMUT public cell metrics
+use typed geometry, fluid, electrical, mechanical, acoustic, and dimensionless
+quantities; formula arithmetic extracts only coherent scalar values.
 
 Eunomia real and quadrature components are components of one observable
 mechanical-impedance phasor, so both retain the single `kg/s` unit. No
@@ -42,6 +48,7 @@ imaginary SI unit or local complex wrapper is introduced.
 ## Verification
 
 The Aequitas `dimension_laws` test verifies complex conversion through
-`KilogramPerSecond`. Kwavers crosstalk tests verify closed-form magnitude and
-phase, reciprocity, inverse-distance scaling, zero diagonal, and degenerate
-input behavior.
+`KilogramPerSecond`, `CoulombPerCubicMeter`, and `Joule`. Kwavers crosstalk,
+CMUT, PMUT, plate, and comparison tests verify the value contracts, and the
+Python MEMS binding library compiles with scalar conversion confined to its FFI
+boundary.
