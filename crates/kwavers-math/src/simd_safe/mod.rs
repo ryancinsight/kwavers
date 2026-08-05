@@ -1,11 +1,9 @@
 //! Portable SIMD operations backed by `hermes_simd`
 //!
 //! ISA selection and feature dispatch are handled by `hermes_simd`.
-//! The `auto_detect` submodule exposes the `SimdAuto` / `SimdCapability`
-//! types for callers that need runtime-capability queries.
+//! `SimdOps` is the single entry point for all SIMD field operations;
+//! callers should not need to query the ISA level directly.
 
-pub mod auto_detect;
 pub mod operations;
 
-pub use auto_detect::{SimdAuto, SimdCapability};
 pub use operations::SimdOps;
