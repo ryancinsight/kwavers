@@ -8,23 +8,65 @@ use std::ptr::NonNull;
 #[cfg(test)]
 use super::CACHE_LINE_SIZE;
 use super::{ArenaLayoutNumaPolicy, NUMA_ALIGNMENT};
+use crate::arena::numa::memory::{bind_memory_to_node, allocate_interleaved_memory};
 use crate::error::{KwaversError, KwaversResult, SystemError};
 
 // NUMA-AWARE MEMORY ALLOCATION
 // ═══════════════════════════════════════════════════════════════════════════
 
-/// NUMA-aware memory allocation policy
+/// Tracked allocation for NUMA-aware deallocation.
+struct Allocation {
+    user_ptr: NonNull<u8>,
+    segment_ptr: *mut Segment,
+}
+
+impl Allocation {
+    /// Create a new tracked allocation.
+    fn new(user_ptr: NonNull<u8>, segment_ptr: *mut Segment) -> Self {
+        Self {
+            user_ptr,
+            segment_ptr,
+        }
+    }
+
+    /// Deallocate this tracked allocation.
+    ///
+    /// # Safety
+    /// The stored pointers must remain valid and were originally returned
+    /// by `allocate_large_or_huge`.
+    unsafe fn deallocate(&self) {
+        if !self.segment_ptr.is_null() {
+            let _released = deallocate_large_or_huge::<MemoryBackendWrapper>(
+                self.user_ptr.as_ptr(),
+                self.segment_ptr,
+            );
+        }
+    }
+}
+
+/// NUMA-aware memory allocation with support for multiple policies.
 ///
-/// Implements first-touch allocation strategy where memory is allocated
-/// on the NUMA node of the first thread to write to it.
+/// # Policies
+///
+/// - **FirstTouch**: Memory is not pre-bound to any NUMA node. On first write,
+///   the OS allocates pages on the accessing thread's node. This is the default
+///   and most portable strategy.
+/// - **BindToNode(n)**: Memory is explicitly bound to NUMA node `n` using
+///   `mbind(2)` on Linux. On non-Linux platforms, this behaves as FirstTouch.
+/// - **Interleaved**: (Deferred) Memory would be interleaved across multiple
+///   nodes; currently treated as FirstTouch.
+///
+/// # Platform Support
+///
+/// - **Linux**: `BindToNode` uses `mbind(2)` for explicit binding.
+///   `Interleaved` requires allocator-level interleaver (planned).
+/// - **Non-Linux**: All policies fall back to FirstTouch behavior.
 #[derive(Debug)]
 pub struct NumaAwareAllocator {
     /// Target NUMA node(s) for allocation
     policy: ArenaLayoutNumaPolicy,
-    /// Last allocated user pointer (for deallocation)
-    user_ptr: Option<*mut u8>,
-    /// Segment pointer for mnemosyne deallocation
-    segment_ptr: *mut Segment,
+    /// All tracked allocations for deallocation
+    allocations: Vec<Allocation>,
 }
 
 impl NumaAwareAllocator {
@@ -33,8 +75,7 @@ impl NumaAwareAllocator {
     pub fn with_policy(policy: ArenaLayoutNumaPolicy) -> Self {
         Self {
             policy,
-            user_ptr: None,
-            segment_ptr: std::ptr::null_mut(),
+            allocations: Vec::new(),
         }
     }
 
@@ -44,19 +85,17 @@ impl NumaAwareAllocator {
     ///
     /// **Precondition**: $\text{size} > 0 \land \text{align}$ is power of 2
     /// **Postcondition**: Returned pointer is $\text{align}$-byte aligned
-    ///                    and suitable for first-touch NUMA optimization
+    ///                    and satisfies the configured NUMA policy
     ///
-    /// # Implementation Notes
+    /// # Placement Guarantees
     ///
-    /// First-touch policy: Memory is not bound to any NUMA node initially.
-    /// On first write, OS allocates pages on the accessing thread's node.
-    /// This is achieved by:
-    /// 1. Allocating with standard allocator (pages unbound)
-    /// 2. Optionally touching pages in parallel across desired nodes
+    /// - **FirstTouch**: Pages are allocated unbound; OS places them on first access
+    /// - **BindToNode(n)**: Pages are bound to NUMA node `n` via `mbind(2)` (Linux only)
+    /// - **Interleaved**: Currently treated as FirstTouch; deferred for future work
+    ///
     /// # Errors
     /// - Returns [`KwaversError::System`] if `size` or `align` violate an
     ///   allocation-layout precondition.
-    ///
     pub fn allocate(&mut self, size: usize, align: usize) -> KwaversResult<NonNull<u8>> {
         // Validate the caller's alignment request up front so an invalid `align`
         // surfaces with a descriptive error rather than the generic null-pointer
@@ -89,8 +128,28 @@ impl NumaAwareAllocator {
         // Segment pointer is stored in metadata slot by allocate_large_or_huge.
         let segment_ptr = unsafe { *((ptr.as_ptr() as *mut *mut Segment).sub(1)) };
 
-        self.user_ptr = Some(ptr.as_ptr());
-        self.segment_ptr = segment_ptr;
+        // Apply NUMA policy to the allocated region.
+        match self.policy {
+            ArenaLayoutNumaPolicy::FirstTouch => {
+                // No explicit binding; OS handles on first access.
+            }
+            ArenaLayoutNumaPolicy::BindToNode(node) => {
+                // Explicitly bind to the requested node (Linux only; no-op elsewhere).
+                // SAFETY: ptr is valid for size bytes.
+                let bind_result = unsafe { bind_memory_to_node(ptr.as_ptr(), size, node) };
+                if let Err(e) = bind_result {
+                    // Log the error but don't fail allocation; fall back to FirstTouch.
+                    eprintln!("Warning: Failed to bind memory to node {}: {:?}", node, e);
+                }
+            }
+            ArenaLayoutNumaPolicy::Interleaved => {
+                // Deferred: would require allocator-level interleaver.
+                // Currently falls back to FirstTouch.
+            }
+        }
+
+        // Track this allocation for safe deallocation.
+        self.allocations.push(Allocation::new(ptr, segment_ptr));
 
         Ok(ptr)
     }
@@ -130,13 +189,11 @@ impl NumaAwareAllocator {
 
 impl Drop for NumaAwareAllocator {
     fn drop(&mut self) {
-        // SAFETY: segment_ptr was written by allocate_large_or_huge and is valid.
-        // Only deallocate if we allocated at least once.
-        if let (Some(user_ptr), segment_ptr) = (self.user_ptr.take(), self.segment_ptr) {
-            if !segment_ptr.is_null() {
-                let _released = unsafe {
-                    deallocate_large_or_huge::<MemoryBackendWrapper>(user_ptr, segment_ptr)
-                };
+        // Deallocate all tracked allocations in reverse order of allocation.
+        while let Some(alloc) = self.allocations.pop() {
+            // SAFETY: segment_ptr was written by allocate_large_or_huge and is valid.
+            unsafe {
+                alloc.deallocate();
             }
         }
     }
@@ -146,8 +203,7 @@ impl Default for NumaAwareAllocator {
     fn default() -> Self {
         Self {
             policy: ArenaLayoutNumaPolicy::FirstTouch,
-            user_ptr: None,
-            segment_ptr: std::ptr::null_mut(),
+            allocations: Vec::new(),
         }
     }
 }
