@@ -20,6 +20,14 @@ fn shape_to_array<const N: usize>(shape: &[usize]) -> [usize; N] {
 ///
 /// Contiguous inputs use a zero-copy view; non-contiguous inputs are copied to a
 /// temporary contiguous buffer first.
+///
+/// # Migration note
+///
+/// Previously kwavers-python exposed `ndarray::Array1<T>` at this boundary.
+/// The backing store is now `leto::Array1<T>`; this helper bridges the
+/// Python/NumPy FFI surface to the Atlas host-array layer.
+#[doc(alias = "ndarray")]
+#[doc(alias = "Array1")]
 pub fn copy_pyarray1_to_vec<'py, T>(array: &PyReadonlyArray1<'py, T>) -> PyResult<Vec<T>>
 where
     T: Element + Copy,
@@ -35,6 +43,13 @@ where
 }
 
 /// Copy a 2-D readonly NumPy array into a flat `Vec` and return its shape.
+///
+/// # Migration note
+///
+/// Replaces direct `ndarray::Array2<T>` usage; the Atlas consumer-side
+/// representation is `leto::Array2<T>` (row-major `VecStorage`).
+#[doc(alias = "ndarray")]
+#[doc(alias = "Array2")]
 pub fn copy_pyarray2_to_vec<'py, T>(
     array: &PyReadonlyArray2<'py, T>,
 ) -> PyResult<(Vec<T>, [usize; 2])>
@@ -55,6 +70,13 @@ where
 }
 
 /// Copy a 3-D readonly NumPy array into a flat `Vec` and return its shape.
+///
+/// # Migration note
+///
+/// Replaces direct `ndarray::Array3<T>` usage; the Atlas consumer-side
+/// representation is `leto::Array3<T>` (row-major `VecStorage`).
+#[doc(alias = "ndarray")]
+#[doc(alias = "Array3")]
 pub fn copy_pyarray3_to_vec<'py, T>(
     array: &PyReadonlyArray3<'py, T>,
 ) -> PyResult<(Vec<T>, [usize; 3])>
@@ -75,6 +97,13 @@ where
 }
 
 /// Convert a 1-D readonly NumPy array into a leto 1-D array.
+///
+/// This is the primary ndarray-replacement boundary: callers that previously
+/// accepted `ndarray::Array1<T>` now accept `PyReadonlyArray1<'py, T>` at
+/// the FFI boundary and convert to `leto::Array1<T>` for interior use.
+#[doc(alias = "ndarray")]
+#[doc(alias = "Array1")]
+#[doc(alias = "from_numpy")]
 pub fn pyarray1_to_leto1<'py, T>(array: &PyReadonlyArray1<'py, T>) -> PyResult<leto::Array1<T>>
 where
     T: Element + Copy + Clone,
@@ -85,6 +114,11 @@ where
 }
 
 /// Convert a 2-D readonly NumPy array into a leto 2-D array.
+///
+/// Replaces `ndarray::Array2<T>` at the FFI boundary.
+#[doc(alias = "ndarray")]
+#[doc(alias = "Array2")]
+#[doc(alias = "from_numpy")]
 pub fn pyarray2_to_leto2<'py, T>(array: &PyReadonlyArray2<'py, T>) -> PyResult<leto::Array2<T>>
 where
     T: Element + Copy + Clone,
@@ -94,6 +128,11 @@ where
 }
 
 /// Convert a 3-D readonly NumPy array into a leto 3-D array.
+///
+/// Replaces `ndarray::Array3<T>` at the FFI boundary.
+#[doc(alias = "ndarray")]
+#[doc(alias = "Array3")]
+#[doc(alias = "from_numpy")]
 pub fn pyarray3_to_leto3<'py, T>(array: &PyReadonlyArray3<'py, T>) -> PyResult<leto::Array3<T>>
 where
     T: Element + Copy + Clone,
@@ -103,6 +142,12 @@ where
 }
 
 /// Convert a leto 1-D array into a Python 1-D NumPy array.
+///
+/// Replaces direct `ndarray::Array1` → Python ndarray conversion at the FFI
+/// boundary.  The Atlas host-array type is `leto::Array1<T>`.
+#[doc(alias = "ndarray")]
+#[doc(alias = "to_numpy")]
+#[doc(alias = "Array1")]
 pub fn leto1_to_pyarray1<'py, T>(py: Python<'py>, arr: leto::Array1<T>) -> PyResult<Py<PyArray1<T>>>
 where
     T: Element + Copy,
@@ -112,6 +157,11 @@ where
 }
 
 /// Convert a leto 2-D array into a Python 2-D NumPy array.
+///
+/// Replaces direct `ndarray::Array2` → Python ndarray conversion.
+#[doc(alias = "ndarray")]
+#[doc(alias = "to_numpy")]
+#[doc(alias = "Array2")]
 pub fn leto2_to_pyarray2<'py, T>(py: Python<'py>, arr: leto::Array2<T>) -> PyResult<Py<PyArray2<T>>>
 where
     T: Element + Copy,
@@ -123,6 +173,11 @@ where
 }
 
 /// Convert a leto 3-D array into a Python 3-D NumPy array.
+///
+/// Replaces direct `ndarray::Array3` → Python ndarray conversion.
+#[doc(alias = "ndarray")]
+#[doc(alias = "to_numpy")]
+#[doc(alias = "Array3")]
 pub fn leto3_to_pyarray3<'py, T>(py: Python<'py>, arr: leto::Array3<T>) -> PyResult<Py<PyArray3<T>>>
 where
     T: Element + Copy,
