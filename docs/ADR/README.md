@@ -110,3 +110,5 @@
 | [100](100-acquisition-geometry-quantities.md) | Aequitas shared acquisition-geometry quantities | Accepted — 2026-08-03 |
 | [101](101-2d-array-quantities.md) | Aequitas 2-D array geometry and beam-control quantities | Accepted — 2026-08-03 |
 | [102](102-focused-source-quantities.md) | Aequitas focused-source geometry, signal, and metric quantities | Accepted — 2026-08-03 |
+| [103](103-thermal-diffusion-quantities.md) | Aequitas thermal-diffusion parameter and integration-time quantities | Accepted — 2026-08-04 |
+| [104](104-thermal-acoustic-coupling-quantities.md) | Aequitas thermal-acoustic coupling quantities | Accepted — 2026-08-05 |

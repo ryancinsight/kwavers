@@ -17,7 +17,7 @@
 //! solver.populate_alpha_np_m_at_frequency(omega_c);
 //! // After each acoustic step:
 //! let q = solver.compute_acoustic_heat_source();
-//! thermal_solver.update(&medium, &grid, dt_thermal, Some(q.view()))?;
+//! thermal_solver.update(&medium, &grid, Time::from_base(dt_thermal), Some(q.view()))?;
 //! ```
 //!
 //! ## Usage (coupled time loop)
@@ -39,6 +39,7 @@
 
 use super::PSTDSolver;
 use crate::forward::thermal_diffusion::ThermalDiffusionSolver;
+use aequitas::systems::si::quantities::Time;
 use kwavers_core::error::KwaversResult;
 use kwavers_medium::Medium;
 use kwavers_physics::acoustics::conservation::acoustic_heat_source;
@@ -86,8 +87,8 @@ pub struct ThermalOrchestrationInput<'a> {
     pub thermal_medium: &'a dyn Medium,
     /// Center angular frequency [rad/s] used once to populate `alpha_np_m`.
     pub omega_c: f64,
-    /// Thermal time step \[s\].
-    pub dt_thermal: f64,
+    /// Thermal time step (s).
+    pub dt_thermal: Time<f64>,
     /// Acoustic steps between thermal updates. Must be at least one.
     pub n_acoustic_per_thermal: usize,
     /// Volumetric heat capacity `rho * cp` [J/(m^3 K)].
@@ -216,7 +217,7 @@ impl PSTDSolver {
     ///   `n_acoustic_per_thermal` acoustic steps.
     /// - `thermal_medium`: medium supplying `thermal_diffusivity` to the thermal solver.
     /// - `omega_c`: center angular frequency [rad/s]; used once to populate `alpha_np_m`.
-    /// - `dt_thermal`: thermal time step \[s\].  Typically
+    /// - `dt_thermal`: thermal time step (s). Typically
     ///   `n_acoustic_per_thermal * dt_acoustic`.
     /// - `n_acoustic_per_thermal`: number of acoustic steps between thermal updates.
     ///   Must be ≥ 1.

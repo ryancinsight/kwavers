@@ -4,6 +4,31 @@
 
 ### Changed
 
+- **Security:** Align the Kwavers provider lock with Ritk's Eunomia 0.8
+  cutover (`cfeebc7`) and upgrade the unused top-level zero-copy rkyv edge to
+  0.8. The all-features lock contains no rkyv 0.7 path; Eunomia real/complex
+  values retain one observable unit and no imaginary SI unit is introduced.
+
+- **Breaking:** Thermal-acoustic coupling contracts now use Aequitas
+  temperature coefficients, absorption, intensity, pressure, velocity,
+  density, frequency, time, energy-density, and power-density quantities.
+  The existing nonlinear source formula is exposed as a
+  `VolumetricPowerDensityGradient` with coherent `W/m⁴` dimensions rather than
+  a mislabeled scalar power result. Grid and serialization boundaries retain
+  scalar storage; Eunomia values remain real SI observables and no imaginary
+  SI unit is introduced. See [ADR 104](docs/adr/104-thermal-acoustic-coupling-quantities.md).
+
+- **Breaking:** Thermal-diffusion configuration and solver update contracts now
+  use Aequitas `ReciprocalTime`, `MassDensity`, `SpecificHeatCapacity`,
+  `ThermodynamicTemperature`, and `Time` quantities. Pennes and
+  Cattaneo–Vernotte formulas extract base SI values only at numerical
+  boundaries, while CEM43 remains a cumulative thermal-dose convention rather
+  than an elapsed-time unit. Direct simulation, solver, Python, and
+  orchestrator callers are migrated without compatibility wrappers. Eunomia
+  thermal values remain real SI observables; coherent real/quadrature values
+  retain one existing observable unit and no imaginary SI unit is introduced.
+  See [ADR 103](docs/ADR/103-thermal-diffusion-quantities.md).
+
 - **Breaking:** Focused bowl, spherical-cap, arc, multi-bowl, and
   hemispherical source contracts now use Aequitas quantities for physical
   geometry, frequency, pressure, phase, area, delay, volume, and validation

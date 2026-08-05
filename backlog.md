@@ -4,6 +4,8 @@
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
+| KWAVERS-AEQ-MET-67 | Type thermal-acoustic coupling coefficients, heating, streaming, nonlinear heating, and update outcomes with Aequitas; correct the existing nonlinear formula to its provider-owned `W/m⁴` volumetric power-density gradient; preserve Eunomia real/complex semantics. | [arch] [major] | clean lock complete; hosted gate pending 2026-08-05 | Codex | `crates/kwavers-physics/src/thermal/coupling/`, `crates/kwavers/src/theranostic/`, top-level rkyv edge, Aequitas provider metric, ADR 104, PM artifacts |
+| KWAVERS-AEQ-MET-66 | Type thermal-diffusion perfusion, density, heat-capacity, temperature, relaxation-time, and integration-time contracts with Aequitas; preserve CEM43 as a domain dose representation and Eunomia's real/complex rule. | [arch] [major] | implementation done; delivery blocked 2026-08-05 | Codex | `crates/kwavers-physics/src/thermal/diffusion/`, `crates/kwavers-solver/src/forward/{thermal_diffusion,pstd/implementation/core/orchestrator}/`, direct Python/simulation callers, ADR 103, PM artifacts |
 | KWAVERS-AEQ-MET-63 | Type focused and hemispherical source geometry, signal, timing, and validation metrics with Aequitas; preserve Eunomia real geometry and one observable unit for complex/quadrature signals; fix stale steering state and migrate direct therapy/diagnostics callers. | [arch] [major] | done 2026-08-03 | Codex | `crates/kwavers-transducer/src/{transducers/focused,hemispherical}`, direct `kwavers-therapy`, `kwavers-diagnostics`, examples, ADR 102, PM artifacts |
 | KWAVERS-AEQ-MET-62 | Type two-dimensional array geometry, beam-control, timing, and medium metrics with Aequitas; correct center-to-center pitch and preserve Eunomia real geometry and shared signal units. | [arch] [major] | done 2026-08-03 | Codex | `crates/kwavers-transducer/src/array_2d/`, direct Python/simulation callers, ADR 101, PM artifacts |
 | KWAVERS-AEQ-MET-61 | Type shared acquisition geometry coordinates and ring/bowl radius, diameter, and row-spacing contracts with Aequitas; preserve Eunomia real geometry and migrate every direct caller. | [arch] [major] | done 2026-08-03 | Codex | `kwavers-transducer/src/transducers/acquisition_geometry.rs`, transcranial diagnostics, breast FWI physics/solver/diagnostics/Python adapters, direct tests, ADR 100, PM artifacts |
@@ -15,6 +17,42 @@
 | KWAVERS-AEQ-MET-55 | Type the public ultrafast plane-wave and diverging-wave geometry, timing, angle, frequency, F-number, image-coordinate, and scalar apodization metrics with Aequitas; preserve scalar extraction only at numerical and Leto storage boundaries and document Eunomia complex compatibility. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-transducer/src/ultrafast/{plane_wave,diverging_wave}/**`, ADR 094, PM artifacts |
 | KWAVERS-AEQ-MET-54 | Type the public ultrafast transmission scheduler's speed, depth, PRF, event times, frame rates, and tilt angles with Aequitas; keep scalar extraction at the PRF/timing formula boundary and document the real-only Eunomia compatibility rule. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-transducer/src/ultrafast/sequencer/**`, manifest, ADR 093, PM artifacts |
 | KWAVERS-AEQ-INTEGRATION-1 | Integrate the current Aequitas metric closure for therapeutic microbubble and plasmonics contracts on current `main`; harden the public three-dimensional plasmonic coordinate contract and synchronize the audit. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-physics/src/{acoustics/therapy/microbubble,electromagnetic}`, PM artifacts |
+
+## KWAVERS-AEQ-MET-66 — Type thermal-diffusion quantities [major] [arch] — implementation complete; delivery blocked 2026-08-05
+
+- Owner: Codex; scope: public thermal-diffusion parameters and integration-time
+  contracts, their direct solver/orchestrator callers, Python and simulation
+  serialization boundaries, ADR 103, and synchronized PM artifacts. Thermal
+  dose storage and thresholds remain CEM43 domain values rather than being
+  mislabeled as SI time.
+- Outcome: perfusion uses `ReciprocalTime`, blood density uses `MassDensity`,
+  blood heat capacity uses `SpecificHeatCapacity`, arterial temperature uses
+  `ThermodynamicTemperature`, relaxation and integration steps use `Time`, and
+  scalar extraction occurs only at storage and numerical formula boundaries.
+  The Plugin trait's raw host timestep remains an explicit execution-boundary
+  conversion to `Time`.
+- Eunomia: thermal quantities are real SI observables. Any complex/quadrature
+  value in adjacent response code remains one existing observable unit; no
+  imaginary SI temperature, time, density, or dose unit is introduced.
+- Acceptance: every direct constructor and update caller compiles against the
+  typed contract without compatibility wrappers; analytical thermal and CEM43
+  value regressions pass; strict package gates, Nextest, doctests, Rustdoc,
+  formatting, and raw-unit scans pass.
+- Evidence: overlay Nextest passes 2,404/2,404 with five configured skips;
+  strict package Clippy passes for physics, solver, simulation, and Python;
+  physics doctests pass 8/8 with 4 ignored, solver doctests pass 4/4 with 8
+  ignored, and simulation doctests pass 4/4 with 2 ignored. The Python crate
+  is a `cdylib` with no library doctest target. The implementation-time lock
+  evidence resolved against Eunomia 0.7; the dependency-ordered follow-up now
+  regenerates the clean graph against Ritk `cfeebc7` and Eunomia 0.8.
+- Delivery residual: the historical `RUSTSEC-2026-0235` path is resolved by
+  the Ritk Eunomia 0.8 cutover and the top-level rkyv 0.8 update recorded in
+  `KWAVERS-AEQ-MET-67`. The clean all-features lock contains rkyv 0.8.17 only;
+  no advisory ignore or feature narrowing is used. The clean package
+  Nextest build is separately blocked by the Windows GNU linker missing
+  `libLIBCMT.a` and `libOLDNAMES.a` for unrelated top-level test binaries;
+  focused clean physics tests pass. The hosted exact-head matrix remains
+  pending.
 
 ## KWAVERS-AEQ-MET-63 — Type focused-source and hemispherical metrics [major] [arch] — done 2026-08-03
 

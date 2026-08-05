@@ -46,11 +46,12 @@
 //! - Sapareto & Dewey 1984; Damianou & Hynynen 1994 — CEM43 / 240 ablation.
 //! - Pennes 1948 — bioheat equation.
 
-use aequitas::systems::si::quantities::{Frequency, Length};
-use aequitas::systems::si::units::{Hertz, Meter};
+use aequitas::systems::si::quantities::{Frequency, Length, ThermodynamicTemperature};
+use aequitas::systems::si::units::{Hertz, Kelvin, Meter};
 use kwavers::theranostic::{
     interleave_schedule, lesion, sparse_transmit_subsets, PulseKind, TargetSelection,
 };
+use kwavers_core::constants::thermodynamic::KELVIN_OFFSET_C;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_physics::thermal::{TemperatureCoefficients, ThermalCEM43Grid};
@@ -514,7 +515,10 @@ fn main() -> KwaversResult<()> {
                         for _ in 0..THERMAL_SUBSTEPS {
                             bioheat_step(&mut temperature, &q_focal, dts);
                         }
-                        cem43.update(&temperature, THERAPY_PRI_S)?;
+                        cem43.update(
+                            &temperature,
+                            aequitas::systems::si::quantities::Time::from_base(THERAPY_PRI_S),
+                        )?;
                     }
                     lesion::TherapyMode::Cavitation => {
                         // Cumulative (irreversible) fractionation: β grows toward
@@ -539,7 +543,9 @@ fn main() -> KwaversResult<()> {
                 let state = match mode {
                     lesion::TherapyMode::Thermal => lesion::LesionState::Thermal {
                         temperature_c: &temperature,
-                        reference_c: BODY_TEMP_C,
+                        reference_temperature: ThermodynamicTemperature::from_unit::<Kelvin>(
+                            BODY_TEMP_C + KELVIN_OFFSET_C,
+                        ),
                         coeff,
                     },
                     lesion::TherapyMode::Cavitation => lesion::LesionState::Cavitation {

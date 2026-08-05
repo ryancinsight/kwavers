@@ -51,6 +51,9 @@ pub fn run_with_thermal(
     sources: Vec<Box<dyn KwaversSource>>,
     thermal_cfg: &ThermalConfig,
 ) -> KwaversResult<SimulationRunResult> {
+    use aequitas::systems::si::quantities::{
+        MassDensity, ReciprocalTime, SpecificHeatCapacity, ThermodynamicTemperature, Time,
+    };
     use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
     use kwavers_core::constants::thermodynamic::KELVIN_OFFSET_C;
     use kwavers_medium::HomogeneousMedium;
@@ -70,12 +73,12 @@ pub fn run_with_thermal(
 
     let config = ThermalDiffusionConfig {
         enable_bioheat: thermal_cfg.enable_bioheat,
-        perfusion_rate: thermal_cfg.perfusion_rate,
-        blood_density: thermal_cfg.blood_density,
-        blood_specific_heat: thermal_cfg.blood_specific_heat,
-        arterial_temperature: arterial_temp_k,
+        perfusion_rate: ReciprocalTime::from_base(thermal_cfg.perfusion_rate),
+        blood_density: MassDensity::from_base(thermal_cfg.blood_density),
+        blood_specific_heat: SpecificHeatCapacity::from_base(thermal_cfg.blood_specific_heat),
+        arterial_temperature: ThermodynamicTemperature::from_base(arterial_temp_k),
         enable_hyperbolic: false,
-        relaxation_time: 20.0,
+        relaxation_time: Time::from_base(20.0),
         track_thermal_dose: thermal_cfg.track_thermal_dose,
         spatial_order: 2,
     };
@@ -99,7 +102,7 @@ pub fn run_with_thermal(
             thermal: &mut thermal_solver,
             thermal_medium: &medium,
             omega_c,
-            dt_thermal,
+            dt_thermal: Time::from_base(dt_thermal),
             n_acoustic_per_thermal: thermal_cfg.n_acoustic_per_thermal,
             rho_cp,
             background_heat_ks,

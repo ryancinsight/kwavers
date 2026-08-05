@@ -33,7 +33,7 @@ pub struct ThermalDoseCalculator {
     cumulative_dose: Array3<f64>,
     increments: Array3<f64>,
     max_dose: f64,
-    max_dose_time: f64,
+    max_dose_time: Time<f64>,
 }
 
 impl ThermalDoseCalculator {
@@ -47,7 +47,7 @@ impl ThermalDoseCalculator {
             cumulative_dose: Array3::zeros(shape),
             increments: Array3::zeros(shape),
             max_dose: 0.0,
-            max_dose_time: 0.0,
+            max_dose_time: Time::from_base(0.0),
         }
     }
     /// Update dose.
@@ -57,16 +57,15 @@ impl ThermalDoseCalculator {
     pub fn update_dose(
         &mut self,
         temperature: &Array3<f64>,
-        dt: f64,
-        current_time: f64,
+        dt: Time<f64>,
+        current_time: Time<f64>,
     ) -> KwaversResult<()> {
         use thresholds::MIN_DOSE_TEMPERATURE_C;
 
-        let step = Time::from_base(dt);
         checked_cem43_increments::<KelvinStorage, _>(
             self.increments.view_mut(),
             temperature.view(),
-            step,
+            dt,
             |temp_kelvin| temp_kelvin - KELVIN_OFFSET_C > MIN_DOSE_TEMPERATURE_C,
         )?;
         zip_mut_ref(
@@ -98,7 +97,7 @@ impl ThermalDoseCalculator {
 
     /// Simulation time in seconds at which the peak dose was reached.
     #[must_use]
-    pub fn max_dose_time(&self) -> f64 {
+    pub fn max_dose_time(&self) -> Time<f64> {
         self.max_dose_time
     }
 
@@ -144,7 +143,7 @@ impl ThermalDoseCalculator {
         self.cumulative_dose.fill(0.0);
         self.increments.fill(0.0);
         self.max_dose = 0.0;
-        self.max_dose_time = 0.0;
+        self.max_dose_time = Time::from_base(0.0);
     }
 }
 
@@ -157,7 +156,7 @@ mod tests {
         let mut calculator = ThermalDoseCalculator::new((1, 1, 1));
         let temperature = Array3::from_elem((1, 1, 1), 316.15);
         calculator
-            .update_dose(&temperature, 60.0, 60.0)
+            .update_dose(&temperature, Time::from_base(60.0), Time::from_base(60.0))
             .expect("valid reference observation");
         assert_eq!(calculator.get_dose()[[0, 0, 0]], 1.0);
     }
@@ -167,7 +166,7 @@ mod tests {
         let mut calculator = ThermalDoseCalculator::new((2, 1, 1));
         let reference = Array3::from_elem((2, 1, 1), 316.15);
         calculator
-            .update_dose(&reference, 60.0, 60.0)
+            .update_dose(&reference, Time::from_base(60.0), Time::from_base(60.0))
             .expect("valid reference observation");
         let before = calculator.get_dose().clone();
         let max_before = calculator.max_dose();
@@ -175,13 +174,17 @@ mod tests {
 
         let mut invalid = Array3::from_elem((2, 1, 1), 317.15);
         invalid[[1, 0, 0]] = f64::NAN;
-        assert!(calculator.update_dose(&invalid, 60.0, 120.0).is_err());
+        assert!(calculator
+            .update_dose(&invalid, Time::from_base(60.0), Time::from_base(120.0))
+            .is_err());
         assert_eq!(calculator.get_dose(), &before);
         assert_eq!(calculator.max_dose(), max_before);
         assert_eq!(calculator.max_dose_time(), time_before);
 
         let wrong_shape = Array3::from_elem((1, 1, 1), 317.15);
-        assert!(calculator.update_dose(&wrong_shape, 60.0, 120.0).is_err());
+        assert!(calculator
+            .update_dose(&wrong_shape, Time::from_base(60.0), Time::from_base(120.0))
+            .is_err());
         assert_eq!(calculator.get_dose(), &before);
     }
 }

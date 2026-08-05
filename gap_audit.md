@@ -1,4 +1,99 @@
-## Live Aequitas closure — 2026-08-02
+## Live Aequitas closure — 2026-08-05
+
+### KWAVERS-AEQ-MET-68 — Eunomia compatibility closure (clean lock 2026-08-05)
+
+The dependency-ordered provider cutover is complete: Ritk PR #110 merged as
+`cfeebc7cab3c11f7fc0125f144c6e90ec03ffbd9`, and the standalone Kwavers lock
+now resolves `ritk-registration` from that revision with Eunomia `0.8.0`.
+The top-level `kwavers` zero-copy dependency also moved from rkyv `0.7` to
+`0.8` with the provider's `bytecheck` feature. The locked all-features graph
+contains rkyv `0.8.17` only; the previous `RUSTSEC-2026-0235` rkyv `0.7.46`
+path is absent.
+
+The clean graph passes `cargo tree --all-features --locked --offline` with
+only Eunomia `0.8.0` and rkyv `0.8.17`. Clean locked all-targets checking and
+strict Clippy pass for `kwavers`; the clean package Nextest build is blocked by
+the repository's Windows GNU linker configuration because `ld.lld` cannot
+find `libLIBCMT.a` and `libOLDNAMES.a` while linking unrelated top-level test
+binaries. The focused clean `kwavers-physics` suite passes 1,706/1,706 tests
+with one configured skip, including all thermal coupling tests. The earlier
+overlay package run passes 530/530 CI-profile tests, but it is not substituted
+for the clean-lock result. Eunomia real and complex numerical values retain
+their existing observable-unit boundary; no imaginary SI unit is introduced.
+Hosted Kwavers checks remain the final exact-head delivery gate.
+
+### KWAVERS-AEQ-MET-66 — thermal-diffusion metric gap (implemented; hosted delivery blocked 2026-08-05)
+
+The audit found raw public thermal-diffusion contracts for perfusion rate,
+blood density, blood heat capacity, arterial temperature, thermal relaxation,
+integration steps, and thermal-dose update time. The direct closure includes
+the Pennes and Cattaneo–Vernotte models, `ThermalDiffusionSolver`, the PSTD
+thermal orchestrator, the simulation dispatcher, the Python binding, and the
+thermal monitoring example. CEM43 itself is a cumulative equivalent-minutes
+dose convention and is intentionally not treated as SI elapsed time.
+
+The implementation migrates these contracts to Aequitas quantities and keeps
+scalar extraction at finite-difference, material-model, mesh/storage, and
+explicit FFI boundaries. `ThermalDiffusionConfig` defaults have a
+value-semantic regression for the canonical Kwavers constants. The Plugin
+trait's host timestep remains an explicit seconds boundary and converts once
+to `Time`. ADR 103 records the selected units and rejected compatibility
+paths.
+
+Eunomia compatibility is preserved: thermal quantities are real SI values.
+Real and quadrature values in adjacent response code remain components of one
+existing observable unit; no imaginary SI temperature, time, density,
+heat-capacity, or dose unit is introduced.
+
+Local evidence at the implementation head: overlay Nextest passes 2,404/2,404
+with five configured skips; strict package Clippy passes for physics, solver,
+simulation, and Python; physics, solver, and simulation doctests pass 8/8,
+4/4, and 4/4 respectively with only documented ignored examples. The Python
+crate is a `cdylib` with no library doctest target. Formatting, diff, and
+typed-boundary scans pass. The follow-up clean lock evidence is recorded in
+MET-68 below.
+
+Remaining thermal raw scalars are explicit simulation/Python/Plugin
+serialization or host-execution boundaries; they are not public domain
+contracts in this item.
+
+The historical provider-security residual is closed by the Ritk Eunomia 0.8
+cutover and the top-level rkyv 0.8 update recorded in MET-68. The external
+`recurseml/analysis` status remains a report-only analyzer error for range
+`80555fa6..087c23f0`; it is not a repository security or compilation
+diagnostic. The hosted exact-head matrix remains the active delivery gate.
+
+### KWAVERS-AEQ-MET-67 — thermal-acoustic coupling metric gap (implemented; clean lock complete 2026-08-05)
+
+The audit found raw physical fields and return values in
+`crates/kwavers-physics/src/thermal/coupling/`: temperature coefficient slopes,
+absorption heating, acoustic streaming, nonlinear heating, and thermal-acoustic
+coupling updates. The nonlinear source formula was also mislabeled as a power
+density. Dimensional closure gives
+`(B/A)·P²·ω²/(ρ·c³) = W/m⁴`, a volumetric power-density gradient, not `W/m³`.
+
+The implementation carries Aequitas quantities through the public coupling
+contracts: `VelocityPerTemperature`, `MassDensityPerTemperature`,
+`ReciprocalLengthPerTemperature`, `ReciprocalLength`, `Intensity`, `Pressure`,
+`Velocity`, `MassDensity`, `Frequency`, `Time`, `EnergyPerVolume`, and
+`VolumetricPowerDensity`. Scalar extraction remains at the Celsius grid,
+Leto-array storage, and scalar threshold boundaries. Aequitas now owns the
+`VolumetricPowerDensityGradient`/`W/m⁴` dimension used by the nonlinear formula.
+
+Eunomia compatibility remains explicit: these are real SI quantities. Complex
+or quadrature values, where adjacent signal code needs them, remain components
+of one existing observable unit; no imaginary temperature, coefficient,
+heating, or gradient unit is introduced.
+
+Local evidence at the implementation head: `cargo check -p kwavers-physics`,
+CI-profile Nextest passes 1,550/1,550 tests with one configured skip, strict
+package Clippy passes, 8 doctests pass with 4 ignored, Rustdoc generates after
+fixing one broken elastography link, and formatting and `git diff --check` pass.
+The downstream `kwavers` caller closure passes clean locked `cargo check`;
+the overlay package run passes 530/530 CI-profile Nextest tests. Provider
+Aequitas PR #13 is merged at `3c51a27`; the clean standalone lock is now
+regenerated against Ritk `cfeebc7`. The clean package Nextest linker blocker
+and hosted delivery remain the final exact-head gates.
 
 ### KWAVERS-AEQ-MET-63 — focused-source and hemispherical metric gap (closed 2026-08-03)
 
@@ -184,7 +279,7 @@ Eunomia `Complex` values, if present at the FFT/storage boundary, continue to
 represent real and quadrature components under one observable signal unit. An
 imaginary SI unit or complex-valued Aequitas physical quantity is not valid.
 
-### KWAVERS-AEQ-MET-58 — sensor-beamformer metric gap (claimed 2026-08-03)
+### KWAVERS-AEQ-MET-58 — sensor-beamformer metric gap (closed 2026-08-03)
 
 The audit found a remaining raw physical boundary in
 `beamforming/sensor_beamformer`: `SensorBeamformer` stores sampling frequency
@@ -245,7 +340,7 @@ merges as `c3e0ca39da0c928c83125ca27f9689de49b389f4`. The external RecurseML
 analyzer remains report-only where it is rate-limited or emits no source
 diagnostic.
 
-### KWAVERS-AEQ-MET-57 — shared beamforming configuration metrics
+### KWAVERS-AEQ-MET-57 — shared beamforming configuration metrics (closed 2026-08-02)
 
 The next audit found that `BeamformingCoreConfig` still exposed shared
 sound-speed, sampling-frequency, and reference-frequency configuration as
@@ -318,23 +413,22 @@ not green evidence. Rustdoc passes for the three affected packages.
 Typed/complex residue scans, formatting, and diff checks pass. No runtime
 performance claim is made.
 
-The remaining raw physical metrics in other transducer families remain audit
-candidates and are not represented as closed by this item. The next audit
-frontier is `design/{mod,propagation}.rs` (aperture dimensions, pitch, kerf,
-wavelength, frequency, and sound speed), `transducers/acquisition_geometry.rs`
-(element coordinates), `beamforming/config.rs` (sound speed and sampling or
-reference frequency), and the focused, hemispherical, MEMS, flexible, and
-two-dimensional array contracts. Complex impedance in
-`transducers/physics/frequency.rs` remains a representation value under its
-existing physical unit rather than an imaginary unit.
+The formerly listed audit frontier is closed by MET-60 through MET-65:
+design/propagation, acquisition geometry, beamforming configuration, focused
+and hemispherical sources, two-dimensional arrays, MEMS cells, and flexible
+arrays now have their own typed closure records. Complex impedance in
+`transducers/physics/frequency.rs` remains representation data under its
+existing physical unit rather than an imaginary unit. Any new transducer family
+requires a fresh public-field inventory; no unclassified family is silently
+claimed by this record.
 
-### KWAVERS-AEQ-MET-55 — ultrafast plane and diverging-wave geometry
+### KWAVERS-AEQ-MET-55 — ultrafast plane and diverging-wave geometry (closed 2026-08-02)
 
 The broader ultrafast audit found a second public gap adjacent to the closed
 scheduler: `plane_wave` and `diverging_wave` exposed element positions, image
 coordinates, sound speed, virtual-source depth, sampling frequency, angles,
 delays, PRF, F-number, and scalar Hann weights as untyped SI values. The gap
-is being closed with Aequitas `Length`, `Velocity`, `Frequency`, `Angle`,
+is closed with Aequitas `Length`, `Velocity`, `Frequency`, `Angle`,
 `Time`, and `Dimensionless`. Dense Leto delay and apodization arrays remain
 scalar buffers only at the explicit storage boundary, with seconds or
 dimensionless weights documented by their contracts.
@@ -356,12 +450,12 @@ package check, Clippy with `-D warnings`, doctests, Rustdoc, targeted Rustfmt,
 including invalid-index apodization and invalid-depth PRF regressions. The
 installed `cargo-semver-checks 0.48.0` cannot compare this package because
 `kwavers-transducer` is not published to crates.io; it fails before comparison
-with `kwavers-transducer not found in registry`. Hosted API review is the
-remaining public-surface review evidence.
+with `kwavers-transducer not found in registry`. Hosted API review is recorded
+for the merged PR #332 integration; it is not an open metric implementation gap.
 
-The remaining raw physical metrics in other transducer families are outside this
-bounded slice and remain audit candidates rather than being represented as
-closed.
+The other families named by this historical slice are closed by the later
+MET-60 through MET-65 increments. The remaining active Kwavers item is the
+provider-security delivery residual recorded under MET-66.
 
 ### KWAVERS-AEQ-MET-54 — ultrafast transmission scheduler
 

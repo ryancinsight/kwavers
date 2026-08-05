@@ -215,7 +215,7 @@ pub fn mre_displacement_envelope(
 /// to smoothed speckle reflectivity, then warps each post-heating line by the
 /// apparent displacement `u(i) = k_T · ΔT · i` in sample coordinates.  The
 /// returned pair is row-major with shape `n_lines × nz`; PyO3 reshapes it to
-/// `[n_lines, 1, nz]` for [`crate::acoustics::imaging::modalities::elastography`].
+/// `[n_lines, 1, nz]` for the elastography binding.
 ///
 /// # Errors
 /// Returns an error if dimensions are zero, `samples_per_carrier` is not
