@@ -16,8 +16,8 @@
 //! - Khuri-Yakub & Oralkan (2011), CMUT flex-derating (`CmutCell::flex_gap_derating`).
 
 use super::super::mems::CmutCell;
-use aequitas::systems::si::quantities::ReciprocalLength;
-use aequitas::systems::si::units::PerMeter;
+use aequitas::systems::si::quantities::{Dimensionless, Length, ReciprocalLength, Time, Velocity};
+use aequitas::systems::si::units::{Meter, MeterPerSecond, PerMeter, Second};
 use leto::ArrayView2;
 
 /// Conformal **delay-and-sum focusing** delays \`s` for a (possibly deformed)
@@ -30,8 +30,14 @@ use leto::ArrayView2;
 ///
 /// Returns an empty vector if `positions` is empty or `c ≤ 0`.
 #[must_use]
-pub fn focusing_delays(positions: &ArrayView2<f64>, focus: [f64; 3], c: f64) -> Vec<f64> {
+pub fn focusing_delays(
+    positions: &ArrayView2<f64>,
+    focus: [Length<f64>; 3],
+    c: Velocity<f64>,
+) -> Vec<Time<f64>> {
     let n = positions.shape()[0];
+    let focus = focus.map(|coordinate| coordinate.in_unit::<Meter>());
+    let c = c.in_unit::<MeterPerSecond>();
     if n == 0 || c <= 0.0 {
         return Vec::new();
     }
@@ -44,7 +50,10 @@ pub fn focusing_delays(positions: &ArrayView2<f64>, focus: [f64; 3], c: f64) -> 
         })
         .collect();
     let d_max = distances.iter().copied().fold(f64::NEG_INFINITY, f64::max);
-    distances.iter().map(|&d| (d_max - d) / c).collect()
+    distances
+        .iter()
+        .map(|&d| Time::from_unit::<Second>((d_max - d) / c))
+        .collect()
 }
 
 /// Far-field **plane-wave steering** delays \`s` toward unit direction `dir`.
@@ -55,8 +64,13 @@ pub fn focusing_delays(positions: &ArrayView2<f64>, focus: [f64; 3], c: f64) -> 
 /// `dir` is normalized internally. Returns empty if `positions` is empty,
 /// `c ≤ 0`, or `dir` is the zero vector.
 #[must_use]
-pub fn steering_delays(positions: &ArrayView2<f64>, dir: [f64; 3], c: f64) -> Vec<f64> {
+pub fn steering_delays(
+    positions: &ArrayView2<f64>,
+    dir: [f64; 3],
+    c: Velocity<f64>,
+) -> Vec<Time<f64>> {
     let n = positions.shape()[0];
+    let c = c.in_unit::<MeterPerSecond>();
     let norm = dir[2]
         .mul_add(dir[2], dir[0].mul_add(dir[0], dir[1] * dir[1]))
         .sqrt();
@@ -73,7 +87,9 @@ pub fn steering_delays(positions: &ArrayView2<f64>, dir: [f64; 3], c: f64) -> Ve
         })
         .collect();
     let p_max = proj.iter().copied().fold(f64::NEG_INFINITY, f64::max);
-    proj.iter().map(|&p| (p_max - p) / c).collect()
+    proj.iter()
+        .map(|&p| Time::from_unit::<Second>((p_max - p) / c))
+        .collect()
 }
 
 /// Per-element local **Menger curvature** \[1/m] of the array centreline from
@@ -83,10 +99,10 @@ pub fn steering_delays(positions: &ArrayView2<f64>, dir: [f64; 3], c: f64) -> Ve
 /// Endpoints copy their interior neighbour. Collinear (flat) triples give `0`.
 /// Used to drive the CMUT flex-derating apodization below.
 #[must_use]
-pub fn per_element_curvature(positions: &ArrayView2<f64>) -> Vec<f64> {
+pub fn per_element_curvature(positions: &ArrayView2<f64>) -> Vec<ReciprocalLength<f64>> {
     let n = positions.shape()[0];
     if n < 3 {
-        return vec![0.0; n];
+        return vec![ReciprocalLength::from_unit::<PerMeter>(0.0); n];
     }
     let row = |i: usize| [positions[[i, 0]], positions[[i, 1]], positions[[i, 2]]];
     let sub = |a: [f64; 3], b: [f64; 3]| [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
@@ -115,6 +131,9 @@ pub fn per_element_curvature(positions: &ArrayView2<f64>) -> Vec<f64> {
     kappa[0] = kappa[1];
     kappa[n - 1] = kappa[n - 2];
     kappa
+        .into_iter()
+        .map(|value| ReciprocalLength::from_unit::<PerMeter>(value))
+        .collect()
 }
 
 /// Per-element transmit **apodization** for a CMUT-populated conformal array.
@@ -125,21 +144,21 @@ pub fn per_element_curvature(positions: &ArrayView2<f64>) -> Vec<f64> {
 /// in `(0, 1]` (a flat element, `κ=0`, keeps the full weight `1`); they are
 /// returned un-normalized so the caller can normalize per its transmit budget.
 #[must_use]
-pub fn cmut_flex_apodization(curvatures: &[f64], cell: &CmutCell) -> Vec<f64> {
+pub fn cmut_flex_apodization(
+    curvatures: &[ReciprocalLength<f64>],
+    cell: &CmutCell,
+) -> Vec<Dimensionless<f64>> {
     curvatures
         .iter()
-        .map(|&k| {
-            cell.flex_gap_derating(ReciprocalLength::from_unit::<PerMeter>(k))
-                .into_base()
-        })
+        .map(|&k| cell.flex_gap_derating(k))
         .collect()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use aequitas::systems::si::quantities::Length;
-    use aequitas::systems::si::units::Meter;
+    use aequitas::systems::si::quantities::{Length, Velocity};
+    use aequitas::systems::si::units::{Meter, MeterPerSecond, PerMeter, Second};
     use leto::Array2;
 
     fn meters(value: f64) -> Length<f64> {
@@ -162,7 +181,9 @@ mod tests {
         d[2].mul_add(d[2], d[0].mul_add(d[0], d[1] * d[1])).sqrt()
     }
 
-    const C: f64 = 1500.0;
+    fn sound_speed() -> Velocity<f64> {
+        Velocity::from_unit::<MeterPerSecond>(1500.0)
+    }
 
     /// The defining property: focusing delays make every element arrive at the
     /// focus simultaneously — `d_i/c + τ_i` is identical for all elements — and
@@ -177,14 +198,14 @@ mod tests {
             [1e-3, 0.2e-3, 0.0],
             [2e-3, 0.0, 0.0],
         ]);
-        let focus = [0.0, 0.0, 10e-3];
-        let tau = focusing_delays(&pos.view(), focus, C);
+        let focus = [meters(0.0), meters(0.0), meters(10e-3)];
+        let tau = focusing_delays(&pos.view(), focus, sound_speed());
         assert_eq!(tau.len(), 5);
 
         let arrival: Vec<f64> = (0..5)
             .map(|i| {
                 let r = [pos[[i, 0]], pos[[i, 1]], pos[[i, 2]]];
-                distance(r, focus) / C + tau[i]
+                distance(r, [0.0, 0.0, 10e-3]) / 1500.0 + tau[i].in_unit::<Second>()
             })
             .collect();
         let a0 = arrival[0];
@@ -194,9 +215,9 @@ mod tests {
                 "arrivals must coincide: {a} vs {a0}"
             );
         }
-        assert!(tau.iter().all(|&t| t >= 0.0));
+        assert!(tau.iter().all(|t| t.into_base() >= 0.0));
         assert!(
-            tau.iter().any(|&t| t.abs() < 1e-15),
+            tau.iter().any(|t| t.into_base().abs() < 1e-15),
             "farthest element has τ=0"
         );
     }
@@ -212,11 +233,21 @@ mod tests {
             [1e-3, 0.0, 0.0],
             [2e-3, 0.0, 0.0],
         ]);
-        let tau = focusing_delays(&pos.view(), [0.0, 0.0, 20e-3], C);
-        assert!((tau[0] - tau[4]).abs() < 1e-15, "symmetric");
-        assert!((tau[1] - tau[3]).abs() < 1e-15, "symmetric");
+        let tau = focusing_delays(
+            &pos.view(),
+            [meters(0.0), meters(0.0), meters(20e-3)],
+            sound_speed(),
+        );
+        assert!(
+            (tau[0].into_base() - tau[4].into_base()).abs() < 1e-15,
+            "symmetric"
+        );
+        assert!(
+            (tau[1].into_base() - tau[3].into_base()).abs() < 1e-15,
+            "symmetric"
+        );
         assert!(tau[2] > tau[1] && tau[1] > tau[0], "peaked at centre");
-        assert!(tau[0].abs() < 1e-15, "edges fire first");
+        assert!(tau[0].into_base().abs() < 1e-15, "edges fire first");
     }
 
     /// Broadside steering (dir = +z) of a flat x-array gives equal (zero) delays;
@@ -230,20 +261,23 @@ mod tests {
             [3e-3, 0.0, 0.0],
         ]);
         // Broadside (perpendicular to the array axis): all projections equal ⇒ τ=0.
-        let broadside = steering_delays(&pos.view(), [0.0, 0.0, 1.0], C);
-        assert!(broadside.iter().all(|&t| t.abs() < 1e-15));
+        let broadside = steering_delays(&pos.view(), [0.0, 0.0, 1.0], sound_speed());
+        assert!(broadside.iter().all(|t| t.into_base().abs() < 1e-15));
 
         // Along +x: projections increase with index ⇒ delays decrease linearly.
-        let along = steering_delays(&pos.view(), [1.0, 0.0, 0.0], C);
-        let step = along[0] - along[1];
+        let along = steering_delays(&pos.view(), [1.0, 0.0, 0.0], sound_speed());
+        let step = along[0].into_base() - along[1].into_base();
         assert!(step > 0.0);
         for i in 0..3 {
             assert!(
-                (along[i] - along[i + 1] - step).abs() < 1e-15,
+                (along[i].into_base() - along[i + 1].into_base() - step).abs() < 1e-15,
                 "linear ramp"
             );
         }
-        assert!(along[3].abs() < 1e-15, "leading element fires first");
+        assert!(
+            along[3].into_base().abs() < 1e-15,
+            "leading element fires first"
+        );
     }
 
     /// Per-element curvature is zero for a collinear (flat) array and equals
@@ -258,7 +292,10 @@ mod tests {
             [2e-3, 0.0, 0.0],
         ]);
         for k in per_element_curvature(&flat.view()) {
-            assert!(k.abs() < 1e-9, "flat array curvature must be 0, got {k}");
+            assert!(
+                k.in_unit::<PerMeter>().abs() < 1e-9,
+                "flat array curvature must be 0, got {k:?}"
+            );
         }
 
         // Points on a circle of radius R in the x–z plane.
@@ -271,7 +308,8 @@ mod tests {
         let arc = positions(&rows);
         let kappa = per_element_curvature(&arc.view());
         // Interior points recover 1/R.
-        for &k in &kappa[1..kappa.len() - 1] {
+        for k in &kappa[1..kappa.len() - 1] {
+            let k = k.in_unit::<PerMeter>();
             assert!(
                 (k - 1.0 / r).abs() <= 1e-3 * (1.0 / r),
                 "circle κ≈1/R: {k} vs {}",
@@ -285,14 +323,23 @@ mod tests {
     #[test]
     fn cmut_flex_apodization_derates_curved_elements() {
         let cell = CmutCell::silicon(meters(60e-6), meters(2.0e-6), meters(0.2e-6)).unwrap();
-        let curvatures = [0.0, 1.0 / 2.0e-3, 1.0 / 1.0e-3]; // flat, 2 mm, 1 mm radius
+        let curvatures = [
+            ReciprocalLength::from_unit::<PerMeter>(0.0),
+            ReciprocalLength::from_unit::<PerMeter>(1.0 / 2.0e-3),
+            ReciprocalLength::from_unit::<PerMeter>(1.0 / 1.0e-3),
+        ]; // flat, 2 mm, 1 mm radius
         let w = cmut_flex_apodization(&curvatures, &cell);
-        assert!((w[0] - 1.0).abs() < 1e-12, "flat element keeps full weight");
+        assert!(
+            (w[0].into_base() - 1.0).abs() < 1e-12,
+            "flat element keeps full weight"
+        );
         assert!(
             w[1] < w[0] && w[2] < w[1],
             "tighter curvature ⇒ more derating"
         );
-        assert!(w.iter().all(|&x| x > 0.0 && x <= 1.0));
+        assert!(w
+            .iter()
+            .all(|x| x.into_base() > 0.0 && x.into_base() <= 1.0));
 
         // A tighter-gap cell loses more output at the same curvature.
         let tight = CmutCell::silicon(meters(60e-6), meters(2.0e-6), meters(0.1e-6)).unwrap();

@@ -146,8 +146,8 @@ impedance unit. No imaginary SI unit or local complex wrapper is introduced.
 The Aequitas provider law test and the Kwavers crosstalk suite cover complex
 conversion, closed-form magnitude and phase, reciprocity, inverse-distance
 scaling, zero diagonal, and degenerate input handling. The remaining MEMS
-cell-output boundary is closed under MET-64; the flexible-array boundary remains
-a separate audit item because its array owner is peer-owned dirty work.
+cell-output boundary is closed under MET-64; the flexible-array boundary is
+closed under MET-FLEX below.
 
 ### KWAVERS-AEQ-MET-64 — MEMS cell physical-metric boundary (closed 2026-08-05)
 
@@ -169,27 +169,36 @@ Eunomia complex values remain compatible with both provider quantities: real
 and quadrature components retain one observable `C/m³` or `J` unit, and no
 imaginary SI dimension is introduced. The typed MEMS and comparison tests pass
 25/25, the Python binding library compiles, and the provider suite passes
-54/54. Flexible-array core ownership remains a separate audit item until the
-peer-owned `crates/kwavers-transducer/src/flexible/array.rs` change is
-integrated.
+54/54. Flexible-array core metrics are closed under MET-FLEX below.
 
-### KWAVERS-AEQ-MET-FLEX — flexible-array dynamic metric boundary (blocked)
+### KWAVERS-AEQ-MET-FLEX — flexible-array dynamic metric boundary (closed 2026-08-05)
 
-The remaining flexible-array audit is confined to the peer-owned
-`crates/kwavers-transducer/src/flexible/array.rs`. The public dynamic boundary
-still has candidate physical contracts for update timestamps (`Time`), focus
-coordinates (`Length`), sound speed (`Velocity`), focusing and steering delays
-(`Time`), calibration confidence (`Dimensionless`), and deformation state
-outputs such as curvature/radius (`ReciprocalLength`/`Length`), stress
-(`Pressure`), deformation energy (`Energy`), and strain/safety limits
-(`Dimensionless`). Dense measurement, mesh, signal, and source-position arrays
-remain explicit storage or infrastructure boundaries and must not receive
+The flexible-array public dynamic boundary now carries update and
+calibration-snapshot timestamps as `Time`, focus coordinates as `Length`, sound
+speed as `Velocity`, delays as `Time`, calibration confidence and quality ratios
+as `Dimensionless`, position uncertainty as `Length`, orientation uncertainty
+as `Angle`, per-element curvature as `ReciprocalLength`, curvature radius as
+`Length`, strain and safety limits as `Dimensionless`, stress as `Pressure`, and
+deformation strain-energy density as `EnergyPerVolume`. Dense measurement, mesh,
+signal, and source-position arrays
+remain explicit storage or infrastructure boundaries and are not assigned
 fabricated physical units.
 
-Status is blocked only by the peer-owned dirty array implementation; the
-re-open trigger is integration of that change or release of its file scope.
-The current `flexible/beamforming.rs` adapter already converts curvature to
-the typed CMUT flex-derating API, so this residual does not reopen MET-64.
+The geometry implementation also corrects its curvature law. It previously
+returned an averaged turning angle while the strain and flex-derating formulas
+treated the value as `1/m`; it now returns averaged Menger curvature with the
+inverse-length dimension. The former `deformation_energy` field was likewise
+renamed to `deformation_energy_density`, because `½ ε σ` is `J/m³` without an
+integrated element volume.
+
+The existing position-visitor change was composed during stale-claim takeover;
+no peer work was discarded. Focused flexible tests pass 6/6 before the shared
+cache exhausted the disk during a subsequent rebuild. The latest rebuild is
+blocked before test execution by the live Melinoe dirty change using
+`MelinoeCell` without importing it; that provider defect is outside this metric
+slice and is recorded as a verification residual. Eunomia complex values remain
+one observable signal unit; flexible geometry has no imaginary SI unit. See
+[ADR 103](docs/ADR/103-flexible-array-quantities.md).
 
 ### KWAVERS-AEQ-MET-63 — focused-source and hemispherical metric gap (closed 2026-08-03)
 

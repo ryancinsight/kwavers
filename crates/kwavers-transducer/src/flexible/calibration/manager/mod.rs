@@ -1,6 +1,8 @@
 //! Calibration manager for flexible transducer arrays.
 
 use super::types::{CalibrationData, CalibrationQualityMetrics, GeometrySnapshot, KalmanState};
+use aequitas::systems::si::quantities::{Dimensionless, Length, Time};
+use aequitas::systems::si::units::{Meter, Second};
 use kwavers_core::error::KwaversResult;
 use leto::{Array1, Array2, Array3};
 use leto_ops::MatrixProduct;
@@ -33,9 +35,11 @@ impl CalibrationManager {
             data: CalibrationData {
                 geometry_history: Vec::new(),
                 quality_metrics: CalibrationQualityMetrics {
-                    position_uncertainty: 1e-3,
-                    orientation_uncertainty: 1e-2,
-                    confidence: 0.0,
+                    position_uncertainty: Length::from_unit::<Meter>(1e-3),
+                    orientation_uncertainty: aequitas::systems::si::quantities::Angle::from_base(
+                        1e-2,
+                    ),
+                    confidence: Dimensionless::from_base(0.0),
                 },
                 reference_geometry: None,
             },
@@ -155,7 +159,7 @@ impl CalibrationManager {
         let filtered_positions = self.kalman_filter_update(tracking_data, dt)?;
 
         self.data.geometry_history.push(GeometrySnapshot {
-            timestamp,
+            timestamp: Time::from_unit::<Second>(timestamp),
             positions: filtered_positions.clone(),
             confidence: {
                 let scale = 1.0 / (1.0 + measurement_noise);
@@ -174,14 +178,14 @@ impl CalibrationManager {
 
     /// Get calibration confidence from the last geometry snapshot.
     #[must_use]
-    pub fn get_confidence(&self) -> f64 {
+    pub fn get_confidence(&self) -> Dimensionless<f64> {
         if let Some(last_snapshot) = self.data.geometry_history.last() {
             {
                 let c = &last_snapshot.confidence;
-                c.iter().sum::<f64>() / c.shape()[0] as f64
+                Dimensionless::from_base(c.iter().sum::<f64>() / c.shape()[0] as f64)
             }
         } else {
-            0.0
+            Dimensionless::from_base(0.0)
         }
     }
 
