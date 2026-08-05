@@ -23,6 +23,12 @@ doctests pass with only documented ignored examples; standalone locked Cargo
 metadata resolves; formatting, diff, and typed-boundary scans pass. The Python
 `cdylib` has no doctest library target.
 
+Hosted delivery residual: the PR and base `main` Security Audit fail on
+`RUSTSEC-2026-0235` through Eunomia 0.7's `rkyv 0.7.46`. A clean Eunomia 0.8
+resolution reaches Ritk registration `cabc7115`, whose current manifest still
+requires Eunomia 0.7. The item reopens after the Ritk provider cutover; no
+advisory ignore or feature narrowing is permitted.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-63 focused-source and hemispherical metrics [major] [arch] — done 2026-08-03
 
 - [x] Audit focused bowl, spherical-cap, arc, multi-bowl, hemispherical,

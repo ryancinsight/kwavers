@@ -1,6 +1,6 @@
 ## Live Aequitas closure — 2026-08-02
 
-### KWAVERS-AEQ-MET-66 — thermal-diffusion metric gap (closed 2026-08-04)
+### KWAVERS-AEQ-MET-66 — thermal-diffusion metric gap (implemented; hosted delivery blocked 2026-08-05)
 
 The audit found raw public thermal-diffusion contracts for perfusion rate,
 blood density, blood heat capacity, arterial temperature, thermal relaxation,
@@ -38,6 +38,19 @@ overlay uses current provider worktrees only for source checking and must not
 rewrite the committed Kwavers lockfile. Remaining thermal raw scalars are
 explicit simulation/Python/Plugin serialization or host-execution boundaries;
 they are not public domain contracts in this item.
+
+Hosted closure has one pre-existing provider-security residual. Kwavers's
+Security Audit fails on the PR head and on the base `main` run
+`30907832078` because `rkyv 0.7.46` enters through Eunomia 0.7 and matches
+`RUSTSEC-2026-0235`. The direct Eunomia 0.8 experiment resolves Aequitas,
+Apollo, Gaia, and the other current provider heads, then stops at Ritk
+registration `cabc7115e360db52bfc700973ca1767786c48373`, whose manifest still
+requires `eunomia = "^0.7.0"`. No advisory ignore or feature narrowing is an
+acceptable closure. The next dependency-ordered item is the Ritk Eunomia 0.8
+cutover; after that lands, regenerate the standalone Kwavers lock and rerun
+the full hosted matrix. The external `recurseml/analysis` status also reports
+an analyzer error for range `80555fa6..087c23f0`, but it is not a repository
+security or compilation diagnostic.
 
 ### KWAVERS-AEQ-MET-63 — focused-source and hemispherical metric gap (closed 2026-08-03)
 
