@@ -3,7 +3,7 @@
 use super::types::FemBoundaryCondition;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_math::fft::Complex64;
-use kwavers_math::CsrMatrix;
+use kwavers_math::CompressedSparseRowMatrix;
 use leto::Array1;
 
 /// FEM boundary condition manager for variational solvers
@@ -197,10 +197,13 @@ impl FemBoundaryManager {
     ) -> KwaversResult<()> {
         for &(node_idx, bc_value) in node_values {
             Self::validate_node(node_idx, rhs.len())?;
+            // Set RHS first (before zeroing, to preserve bc_value)
+            rhs[node_idx] = bc_value;
+            // Zero the row (clears off-diagonals but preserves diagonal set below)
             stiffness.zero_row(node_idx);
+            // Set diagonal to identity and apply boundary condition via RHS
             stiffness.add_value(node_idx, node_idx, Complex64::new(1.0, 0.0));
             mass.zero_row(node_idx);
-            rhs[node_idx] = bc_value;
         }
 
         Ok(())

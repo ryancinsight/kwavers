@@ -8,13 +8,14 @@ use std::ptr::NonNull;
 #[cfg(test)]
 use super::CACHE_LINE_SIZE;
 use super::{ArenaLayoutNumaPolicy, NUMA_ALIGNMENT};
-use crate::arena::numa::memory::{bind_memory_to_node, allocate_interleaved_memory};
+use crate::arena::numa::bind_memory_to_node;
 use crate::error::{KwaversError, KwaversResult, SystemError};
 
 // NUMA-AWARE MEMORY ALLOCATION
 // ═══════════════════════════════════════════════════════════════════════════
 
 /// Tracked allocation for NUMA-aware deallocation.
+#[derive(Debug)]
 struct Allocation {
     user_ptr: NonNull<u8>,
     segment_ptr: *mut Segment,
@@ -130,6 +131,9 @@ impl NumaAwareAllocator {
 
         // Apply NUMA policy to the allocated region.
         match self.policy {
+            ArenaLayoutNumaPolicy::None => {
+                // No NUMA policy applied; memory uses default OS allocation.
+            }
             ArenaLayoutNumaPolicy::FirstTouch => {
                 // No explicit binding; OS handles on first access.
             }

@@ -159,6 +159,10 @@ impl Source for SphericalSource {
         vec![self.config.center]
     }
 
+    fn for_each_position(&self, visitor: &mut dyn FnMut((f64, f64, f64))) {
+        visitor(self.config.center);
+    }
+
     fn signal(&self) -> &dyn Signal {
         self.signal.as_ref()
     }
@@ -171,6 +175,23 @@ impl Source for SphericalSource {
         let spatial_amplitude = self.spherical_amplitude(x, y, z);
         let temporal_amplitude = self.signal.amplitude(t);
         spatial_amplitude * temporal_amplitude
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use kwavers_signal::NullSignal;
+
+    #[test]
+    fn position_visitor_matches_center_position() {
+        let source = SphericalSource::new_default(Arc::new(NullSignal::new()));
+        let mut visited = Vec::new();
+
+        source.for_each_position(&mut |position| visited.push(position));
+
+        assert_eq!(visited, source.positions());
+        assert_eq!(visited, vec![(0.0, 0.0, 0.0)]);
     }
 }
 

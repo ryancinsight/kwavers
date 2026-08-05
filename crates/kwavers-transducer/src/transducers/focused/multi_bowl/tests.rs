@@ -106,7 +106,10 @@ fn hamming_apodization_preserves_pressure_units() {
     array.apply_apodization(ApodizationType::Hamming);
     let tapered = array.generate_source(&grid, time(0.37e-6)).unwrap();
 
-    let weights = ApodizationType::Hamming.weights(2);
+    let n = array.bowls.len();
+    let weights: Vec<f64> = (0..n)
+        .map(|i| ApodizationType::Hamming.weights(i, n))
+        .collect();
     for (amplitude, weight) in array.amplitudes.iter().zip(weights.iter().copied()) {
         let expected = 2.0e5 * weight;
         assert_close(amplitude.in_unit::<Pascal>(), expected);

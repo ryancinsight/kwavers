@@ -52,10 +52,10 @@ fn test_assembly_one_element() {
     assert_eq!(mat.rows, 4);
     assert_eq!(mat.cols, 4);
 
-    let k00 = mat.get_diagonal(0).re;
+    let k00 = mat.get_diagonal(0).unwrap().re;
     assert_relative_eq!(k00, 0.5, epsilon = 1e-10);
 
-    let k11 = mat.get_diagonal(1).re;
+    let k11 = mat.get_diagonal(1).unwrap().re;
     assert_relative_eq!(k11, 1.0 / 6.0, epsilon = 1e-10);
 
     let (vals, _) = mat.get_row(0);
@@ -150,7 +150,7 @@ fn test_from_grid_structured_mesh_assembly() {
     assert_eq!(solver.system_matrix.rows, 8);
     assert_eq!(solver.system_matrix.cols, 8);
     let diagonal_sum: f64 = (0..8)
-        .map(|row| solver.system_matrix.get_diagonal(row).re)
+        .filter_map(|row| solver.system_matrix.get_diagonal(row).map(|c| c.re))
         .sum();
     assert!(diagonal_sum > 0.0);
 }
@@ -220,11 +220,11 @@ fn test_boundary_type_dirichlet_helper_applies_to_tagged_nodes() {
     assert_eq!(solver.rhs()[n2], Complex64::new(3.0, 0.0));
     assert_eq!(
         solver.system_matrix.get_diagonal(n0),
-        Complex64::new(1.0, 0.0)
+        Some(Complex64::new(1.0, 0.0))
     );
     assert_eq!(
         solver.system_matrix.get_diagonal(n2),
-        Complex64::new(1.0, 0.0)
+        Some(Complex64::new(1.0, 0.0))
     );
 }
 

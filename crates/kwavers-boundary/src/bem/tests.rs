@@ -1,6 +1,6 @@
 use super::manager::BemBoundaryManager;
 use kwavers_math::fft::Complex64;
-use kwavers_math::CsrMatrix;
+use kwavers_math::CompressedSparseRowMatrix;
 use leto::Array1;
 
 #[test]
@@ -67,7 +67,9 @@ fn test_robin_boundary_condition() {
         .apply_all(&mut h_matrix, &mut g_matrix, &mut boundary_values, 1.0)
         .unwrap();
 
-    assert_eq!(h_matrix.get_diagonal(2), Complex64::new(2.5, 0.0));
+    // set_diagonal replaces (does not accumulate), so after set_diagonal(2, (2.0, 0.0))
+    // then set_diagonal(2, (0.5, 0.0)), the diagonal is (0.5, 0.0)
+    assert_eq!(h_matrix.get_diagonal(2), Some(Complex64::new(0.5, 0.0)));
     assert_eq!(boundary_values[2], Complex64::new(3.0, 0.0));
 }
 
@@ -86,7 +88,7 @@ fn test_radiation_boundary_condition() {
         .apply_all(&mut h_matrix, &mut g_matrix, &mut boundary_values, 2.0)
         .unwrap();
 
-    // H_ii += −i·k = (0, −2) → total (1, −2)
-    let expected = Complex64::new(1.0, -2.0);
-    assert_eq!(h_matrix.get_diagonal(0), expected);
+    // set_diagonal replaces, so radiation term (0, -2) replaces existing (1, 0)
+    let expected = Complex64::new(0.0, -2.0);
+    assert_eq!(h_matrix.get_diagonal(0), Some(expected));
 }

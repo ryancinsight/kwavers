@@ -2,7 +2,7 @@ use kwavers_grid::Grid;
 use kwavers_signal::Signal;
 use kwavers_source::{Apodization, Source};
 use log::debug;
-use moirai_parallel::{enumerate_mut_with, Adaptive};
+use moirai_parallel::{Adaptive, enumerate_mut_with};
 use std::fmt::Debug;
 use std::sync::Arc;
 
@@ -250,7 +250,47 @@ impl Source for MatrixArray {
         positions
     }
 
+    fn for_each_position(&self, visitor: &mut dyn FnMut((f64, f64, f64))) {
+        let dx = self.element_spacing_x();
+        let dy = self.element_spacing_y();
+        let start_x = self.x_pos - self.width / 2.0;
+        let start_y = self.y_pos - self.height / 2.0;
+        for iy in 0..self.num_y {
+            for ix in 0..self.num_x {
+                let x = (ix as f64).mul_add(dx, start_x);
+                let y = (iy as f64).mul_add(dy, start_y);
+                visitor((x, y, self.z_pos));
+            }
+        }
+    }
+
     fn signal(&self) -> &dyn Signal {
         self.signal.as_ref()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use kwavers_signal::NullSignal;
+    use kwavers_source::RectangularApodization;
+
+    #[test]
+    fn position_visitor_matches_owned_positions() {
+        let source = MatrixArray::new(
+            8.0e-3,
+            8.0e-3,
+            4,
+            4,
+            (0.0, 0.0, 0.0),
+            Arc::new(NullSignal),
+            1500.0,
+            500.0e3,
+            RectangularApodization,
+        );
+        let mut visited = Vec::new();
+        source.for_each_position(&mut |position| visited.push(position));
+        assert_eq!(visited, source.positions());
+        assert_eq!(visited.len(), 16);
     }
 }

@@ -171,6 +171,8 @@ impl Source for PlaneWaveSource {
         vec![]
     }
 
+    fn for_each_position(&self, _visitor: &mut dyn FnMut((f64, f64, f64))) {}
+
     fn signal(&self) -> &dyn Signal {
         self.signal.as_ref()
     }
@@ -239,5 +241,22 @@ impl PlaneWaveBuilder {
 
     pub fn build(self, signal: Arc<dyn Signal>) -> PlaneWaveSource {
         PlaneWaveSource::new(self.config, signal)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use kwavers_signal::NullSignal;
+
+    #[test]
+    fn position_visitor_matches_empty_position_contract() {
+        let source = PlaneWaveSource::new_default(Arc::new(NullSignal::new()));
+        let mut visited = Vec::new();
+
+        source.for_each_position(&mut |position| visited.push(position));
+
+        assert_eq!(visited, source.positions());
+        assert!(visited.is_empty());
     }
 }

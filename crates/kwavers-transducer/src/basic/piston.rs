@@ -193,6 +193,10 @@ impl Source for PistonSource {
         vec![self.config.center]
     }
 
+    fn for_each_position(&self, visitor: &mut dyn FnMut((f64, f64, f64))) {
+        visitor(self.config.center);
+    }
+
     fn signal(&self) -> &dyn Signal {
         self.signal.as_ref()
     }
@@ -251,5 +255,20 @@ impl PistonBuilder {
 
     pub fn build(self, signal: Arc<dyn Signal>) -> PistonSource {
         PistonSource::new(self.config, signal)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use kwavers_signal::NullSignal;
+
+    #[test]
+    fn position_visitor_matches_owned_positions() {
+        let source = PistonSource::new(PistonConfig::default(), Arc::new(NullSignal));
+        let mut visited = Vec::new();
+        source.for_each_position(&mut |position| visited.push(position));
+        assert_eq!(visited, source.positions());
+        assert_eq!(visited, vec![(0.0, 0.0, 0.0)]);
     }
 }

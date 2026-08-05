@@ -34,7 +34,7 @@ mod tests;
 
 use kwavers_boundary::BemBoundaryManager;
 use kwavers_math::fft::Complex64;
-use kwavers_math::CsrMatrix;
+use kwavers_math::CompressedSparseRowMatrix;
 use std::collections::HashMap;
 
 /// Configuration for BEM solver

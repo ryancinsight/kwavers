@@ -97,12 +97,14 @@ fn curvature_rejects_nonfinite_radius() {
         },
         ..create_test_config()
     };
-    assert!(TransducerArray2D::new(
-        config,
-        Velocity::from_unit::<MeterPerSecond>(SOUND_SPEED_TISSUE),
-        Frequency::from_unit::<Hertz>(MHZ_TO_HZ),
-    )
-    .is_err());
+    assert!(
+        TransducerArray2D::new(
+            config,
+            Velocity::from_unit::<MeterPerSecond>(SOUND_SPEED_TISSUE),
+            Frequency::from_unit::<Hertz>(MHZ_TO_HZ),
+        )
+        .is_err()
+    );
 }
 
 #[test]
@@ -150,12 +152,14 @@ fn test_invalid_config() {
         ..create_test_config()
     };
 
-    assert!(TransducerArray2D::new(
-        config,
-        Velocity::from_unit::<MeterPerSecond>(SOUND_SPEED_TISSUE),
-        Frequency::from_unit::<Hertz>(MHZ_TO_HZ),
-    )
-    .is_err());
+    assert!(
+        TransducerArray2D::new(
+            config,
+            Velocity::from_unit::<MeterPerSecond>(SOUND_SPEED_TISSUE),
+            Frequency::from_unit::<Hertz>(MHZ_TO_HZ),
+        )
+        .is_err()
+    );
 }
 
 #[test]
@@ -195,4 +199,42 @@ fn add_mask_into_accumulates_cached_mask() {
     array.add_mask_into(&grid, &mut mask);
 
     assert_eq!(mask, Array3::from_elem([grid.nx, grid.ny, grid.nz], 3.0));
+}
+
+#[test]
+fn position_visitor_matches_owned_positions() {
+    let config = create_test_config();
+    let array = TransducerArray2D::new(
+        config,
+        Velocity::from_unit::<MeterPerSecond>(SOUND_SPEED_TISSUE),
+        Frequency::from_unit::<Hertz>(MHZ_TO_HZ),
+    )
+    .unwrap();
+
+    let mut visited = Vec::new();
+    array.for_each_position(&mut |position| visited.push(position));
+    assert_eq!(visited, array.positions());
+    assert_eq!(visited.len(), 16);
+}
+
+#[test]
+fn position_visitor_tracks_active_element_mask() {
+    let config = create_test_config();
+    let mut array = TransducerArray2D::new(
+        config,
+        Velocity::from_unit::<MeterPerSecond>(SOUND_SPEED_TISSUE),
+        Frequency::from_unit::<Hertz>(MHZ_TO_HZ),
+    )
+    .unwrap();
+
+    let mut mask = vec![true; 16];
+    for i in (0..16).step_by(2) {
+        mask[i] = false;
+    }
+    array.set_active_elements(&mask).unwrap();
+
+    let mut visited = Vec::new();
+    array.for_each_position(&mut |position| visited.push(position));
+    assert_eq!(visited, array.positions());
+    assert_eq!(visited.len(), 8);
 }

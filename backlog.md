@@ -124,7 +124,7 @@
   curvature was replaced with inverse-length Menger curvature, and the old
   energy field is now explicitly strain-energy density (`EnergyPerVolume`).
   Eunomia complex values remain one observable signal unit; flexible geometry
-  has no imaginary SI unit. See `docs/ADR/103-flexible-array-quantities.md`.
+  has no imaginary SI unit. See `docs/ADR/070-mems-quantity-contracts.md`.
 - Evidence: focused flexible Nextest passed 6/6 before the clean rebuild;
   the later rebuild exhausted the shared disk and then exposed a separate
   Melinoe compile defect before Kwavers test execution. The provider residual

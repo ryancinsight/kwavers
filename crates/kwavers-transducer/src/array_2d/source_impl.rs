@@ -127,6 +127,17 @@ impl Source for TransducerArray2D {
             .collect()
     }
 
+    fn for_each_position(&self, visitor: &mut dyn FnMut((f64, f64, f64))) {
+        for (idx, element) in self.elements.iter().enumerate() {
+            if element.is_active && self.active_elements[idx] {
+                let [x, y, z] = element
+                    .position
+                    .map(|coordinate| coordinate.in_unit::<Meter>());
+                visitor((x, y, z));
+            }
+        }
+    }
+
     fn signal(&self) -> &dyn Signal {
         self.signal
             .as_ref()

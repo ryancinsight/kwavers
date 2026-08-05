@@ -9,9 +9,10 @@ pub use super::csr::CompressedSparseRowMatrix;
 pub use eunomia::Complex64;
 
 /// Preconditioner type for iterative solvers.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub enum SparsePreconditioner {
     /// No preconditioner
+    #[default]
     None,
     /// Jacobi (diagonal) preconditioner
     Jacobi,
@@ -19,12 +20,6 @@ pub enum SparsePreconditioner {
     SSOR(f64),
     /// ILU preconditioner
     ILU,
-}
-
-impl Default for SparsePreconditioner {
-    fn default() -> Self {
-        Self::None
-    }
 }
 
 impl fmt::Display for SparsePreconditioner {
@@ -58,71 +53,49 @@ impl Default for SolverConfig {
     }
 }
 
-/// Iterative solver for sparse systems.
+/// Iterative solver configuration marker.
 ///
-/// Provides domain-specific solver methods for BEM/FEM systems.
-#[derive(Debug, Clone)]
-pub struct IterativeSolver {
-    config: SolverConfig,
-}
+/// Placeholder for future preconditioner/config support.
+/// Actual iterative solvers are accessed via `leto_ops::application::linalg`.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct IterativeSolver;
 
 impl IterativeSolver {
     /// Create a new solver with the given configuration.
-    pub fn new(config: SolverConfig) -> Self {
-        Self { config }
+    #[must_use]
+    pub fn new(_config: SolverConfig) -> Self {
+        Self
     }
 
     /// Create a solver with default configuration.
+    #[must_use]
     pub fn with_defaults() -> Self {
         Self::new(SolverConfig::default())
     }
 
     /// Create a new solver from configuration.
-    pub fn create(config: SolverConfig) -> Self {
-        Self::new(config)
+    #[must_use]
+    pub fn create(_config: SolverConfig) -> Self {
+        Self::new(SolverConfig::default())
     }
 
-    /// BiCGSTAB solver for complex systems.
-    ///
-    /// Solves the system A*x = b using the BiCGSTAB algorithm.
+    /// BiCGSTAB solver for complex systems (stub — use `leto_ops::application::linalg` for real solvers).
     pub fn bicgstab_complex(
         &self,
-        a_matrix: &crate::linear_algebra::sparse::csr::CompressedSparseRowMatrix<Complex64>,
-        b: &[Complex64],
-        x0: Option<&[Complex64]>,
+        _a_matrix: &CompressedSparseRowMatrix<Complex64>,
+        _b: &[Complex64],
+        _x0: Option<&[Complex64]>,
     ) -> Result<Vec<Complex64>, String> {
-        // Placeholder - actual implementation would use leto-ops solvers
-        Err("bicgstab_complex not implemented".to_string())
+        Err("bicgstab_complex: use leto_ops::application::linalg for iterative solvers".to_string())
     }
 
-    /// GMRES solver for complex systems.
+    /// GMRES solver for complex systems (stub — use `leto_ops::application::linalg` for real solvers).
     pub fn gmres_complex(
         &self,
-        a_matrix: &crate::linear_algebra::sparse::csr::CompressedSparseRowMatrix<Complex64>,
-        b: &[Complex64],
-        restart: usize,
+        _a_matrix: &CompressedSparseRowMatrix<Complex64>,
+        _b: &[Complex64],
+        _restart: usize,
     ) -> Result<Vec<Complex64>, String> {
-        Err("gmres_complex not implemented".to_string())
-    }
-
-    /// Apply preconditioner.
-    fn apply_preconditioner(
-        &self,
-        x: &mut [Complex64],
-        a_matrix: &crate::linear_algebra::sparse::csr::CompressedSparseRowMatrix<Complex64>,
-    ) {
-        match self.config.preconditioner {
-            SparsePreconditioner::None => {}
-            SparsePreconditioner::Jacobi => {
-                // Jacobi preconditioning: divide by diagonal
-                for i in 0..x.len() {
-                    let diag = a_matrix.values[a_matrix.row_pointers[i]];
-                    if diag != Complex64::new(0.0, 0.0) {
-                        x[i] /= diag;
-                    }
-                }
-            }
-            _ => {}
-        }
+        Err("gmres_complex: use leto_ops::application::linalg for iterative solvers".to_string())
     }
 }

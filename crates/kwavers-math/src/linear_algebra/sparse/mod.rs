@@ -10,7 +10,7 @@
 
 // Re-export from leto-ops for compatibility
 pub use leto_ops::application::sparse::{
-    csc_spmv, csc_spmv_into, csr_to_dense, factor_numeric, factor_symbolic,
+    csc_spmv, csc_spmv_into, csr_to_dense, factor_numeric,
     factor_symbolic_with_ordering, sparse_lu_solve, spgemm, spmm, spmm_into, spmv, spmv_into,
     CooMatrix, CscColumn, CscMatrix, CsrMatrix, CsrRow, NumericLu, OrderingStrategy,
     OwnedNumericLu, SparseLuSolver, SymbolicLu, DENSE_LIMIT_DEFAULT,
@@ -19,6 +19,7 @@ pub use leto_ops::application::sparse::{
 // Re-export domain-specific types
 pub use csr::CompressedSparseRowMatrix;
 pub use solver::{IterativeSolver, SolverConfig, SparsePreconditioner};
+pub use matfree::{MatFreeOperator, MatFreeResult, solve_lsqr_matfree};
 
 // Re-export Complex64 for convenience
 pub use eunomia::Complex64;
@@ -28,3 +29,6 @@ pub mod csr;
 
 // Iterative solver wrappers
 pub mod solver;
+
+// Matrix-free linear operators and LSQR solver
+pub mod matfree;

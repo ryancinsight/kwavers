@@ -2,7 +2,7 @@
 
 use eunomia::Complex64;
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use leto_ops::application::linalg::{HermitianEigenJacobi, HermitianEigenJacobiConfig};
+use leto_ops::application::linalg::{hermitian_eigen_jacobi, HermitianEigenConfig};
 use leto::{Array1, Array2, SliceArg};
 
 /// MUSIC (Multiple Signal Classification) Algorithm
@@ -82,7 +82,7 @@ impl MUSIC {
         }
 
         let (eigenvalues, eigenvectors) = {
-            let r = EigenSolver::jacobi_hermitian(covariance, EigenSolverConfig::default())?;
+            let r = hermitian_eigen_jacobi(covariance, HermitianEigenConfig::default())?;
             (r.eigenvalues, r.eigenvectors)
         };
 
