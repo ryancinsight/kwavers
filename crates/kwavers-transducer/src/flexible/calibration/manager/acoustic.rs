@@ -1,6 +1,8 @@
 //! Acoustic peak detection and quality metric helpers for [`CalibrationManager`].
 
 use super::CalibrationManager;
+use aequitas::systems::si::quantities::{Angle, Dimensionless, Length};
+use aequitas::systems::si::units::{Meter, Radian};
 use kwavers_core::error::KwaversResult;
 use leto::{Array2, Array3};
 
@@ -117,8 +119,11 @@ impl CalibrationManager {
         let num_elements = positions.shape()[0];
         let correspondence_ratio = num_correspondences as f64 / num_elements.max(1) as f64;
 
-        self.data.quality_metrics.position_uncertainty = 1e-3 / correspondence_ratio;
-        self.data.quality_metrics.orientation_uncertainty = 1e-2 / correspondence_ratio;
-        self.data.quality_metrics.confidence = correspondence_ratio.min(1.0);
+        self.data.quality_metrics.position_uncertainty =
+            Length::from_unit::<Meter>(1e-3 / correspondence_ratio);
+        self.data.quality_metrics.orientation_uncertainty =
+            Angle::from_unit::<Radian>(1e-2 / correspondence_ratio);
+        self.data.quality_metrics.confidence =
+            Dimensionless::from_base(correspondence_ratio.min(1.0));
     }
 }

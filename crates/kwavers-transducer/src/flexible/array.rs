@@ -13,6 +13,9 @@ use std::sync::Arc;
 use super::calibration::CalibrationManager;
 use super::config::{CalibrationMethod, FlexibilityModel, FlexibleTransducerConfig};
 use super::geometry::{DeformationState, GeometryState};
+use aequitas::systems::si::quantities::{
+    Dimensionless, EnergyPerVolume, Length, Pressure, Time, Velocity,
+};
 use aequitas::systems::si::units::{Meter, NewtonPerMeter, Pascal, Second};
 
 /// Flexible transducer array with real-time geometry tracking
@@ -27,7 +30,7 @@ pub struct FlexibleTransducerArray {
     /// Signal generator
     signal: Arc<dyn Signal>,
     /// Last update timestamp
-    last_update_time: f64,
+    last_update_time: Time<f64>,
 }
 
 impl FlexibleTransducerArray {
@@ -49,7 +52,7 @@ impl FlexibleTransducerArray {
             geometry_state,
             calibration_processor,
             signal,
-            last_update_time: 0.0,
+            last_update_time: Time::from_unit::<Second>(0.0),
         })
     }
 
@@ -60,7 +63,7 @@ impl FlexibleTransducerArray {
     pub fn update_geometry(
         &mut self,
         measurement_data: ArrayView2<f64>,
-        timestamp: f64,
+        timestamp: Time<f64>,
     ) -> KwaversResult<()> {
         let measurement_data = leto::Array2::try_from(measurement_data.to_contiguous())
             .map_err(|err| KwaversError::Shape(err.to_string()))?;
@@ -70,7 +73,9 @@ impl FlexibleTransducerArray {
                 reference_reflectors: _,
                 calibration_interval,
                 // Scalar extraction at the timestamp boundary: `calibration_interval` is typed Time.
-            } if timestamp - self.last_update_time > calibration_interval.in_unit::<Second>() => {
+            } if timestamp.in_unit::<Second>() - self.last_update_time.in_unit::<Second>()
+                > calibration_interval.in_unit::<Second>() =>
+            {
                 // For 2D measurement data, we use external tracking instead of self-calibration
                 // Self-calibration requires 3D pressure field data
                 // Measurement noise level based on typical ultrasound tracking accuracy
@@ -79,7 +84,7 @@ impl FlexibleTransducerArray {
                 self.calibration_processor.process_external_tracking(
                     &measurement_data,
                     TRACKING_NOISE_LEVEL,
-                    timestamp,
+                    timestamp.in_unit::<Second>(),
                 )?
             }
             CalibrationMethod::ExternalTracking {
@@ -91,7 +96,7 @@ impl FlexibleTransducerArray {
                 self.calibration_processor.process_external_tracking(
                     &measurement_data,
                     measurement_noise.in_unit::<Meter>(),
-                    timestamp,
+                    timestamp.in_unit::<Second>(),
                 )?
             }
             _ => {
@@ -165,6 +170,7 @@ impl FlexibleTransducerArray {
     ///
     fn update_deformation_state(&mut self) -> KwaversResult<()> {
         let curvature = self.geometry_state.calculate_curvature();
+        let curvature_per_meter = curvature.in_unit::<aequitas::systems::si::units::PerMeter>();
 
         // Update deformation based on flexibility model
         match &self.config.flexibility {
@@ -172,10 +178,10 @@ impl FlexibleTransducerArray {
                 // No deformation for rigid arrays
                 self.geometry_state.deformation = DeformationState {
                     curvature_radius: None,
-                    strain: vec![0.0; self.config.num_elements],
-                    stress: vec![0.0; self.config.num_elements],
-                    deformation_energy: 0.0,
-                    max_safe_deformation: 1.0,
+                    strain: vec![Dimensionless::from_base(0.0); self.config.num_elements],
+                    stress: vec![Pressure::from_unit::<Pascal>(0.0); self.config.num_elements],
+                    deformation_energy_density: EnergyPerVolume::from_base(0.0),
+                    max_safe_deformation: Dimensionless::from_base(1.0),
                 };
             }
             FlexibilityModel::Elastic {
@@ -184,19 +190,20 @@ impl FlexibleTransducerArray {
                 thickness,
             } => {
                 // Scalar extraction at formula boundary.
-                let strain = self.calculate_strain(curvature, thickness.in_unit::<Meter>());
+                let strain =
+                    self.calculate_strain(curvature_per_meter, thickness.in_unit::<Meter>());
                 let stress = self.calculate_stress(&strain, young_modulus.in_unit::<Pascal>());
 
                 let mut deformation = DeformationState {
-                    curvature_radius: if curvature > 0.0 {
-                        Some(1.0 / curvature)
+                    curvature_radius: if curvature_per_meter > 0.0 {
+                        Some(Length::from_unit::<Meter>(1.0 / curvature_per_meter))
                     } else {
                         None
                     },
                     strain,
                     stress,
-                    deformation_energy: 0.0,
-                    max_safe_deformation: 0.1, // 10% strain limit
+                    deformation_energy_density: EnergyPerVolume::from_base(0.0),
+                    max_safe_deformation: Dimensionless::from_base(0.1), // 10% strain limit
                 };
 
                 deformation.calculate_energy();
@@ -210,19 +217,28 @@ impl FlexibleTransducerArray {
                 // Membrane strain-stress: ε = κ·d, σ = T (membrane tension)
                 // Energy: U = T·κ per thin shell theory (Timoshenko & Woinowsky-Krieger 1959)
                 self.geometry_state.deformation = DeformationState {
-                    curvature_radius: if curvature > 0.0 {
-                        Some(1.0 / curvature)
+                    curvature_radius: if curvature_per_meter > 0.0 {
+                        Some(Length::from_unit::<Meter>(1.0 / curvature_per_meter))
                     } else {
                         None
                     },
                     // Scalar extraction at formula boundary.
-                    strain: vec![curvature * 0.001; self.config.num_elements],
-                    stress: vec![
-                        membrane_tension.in_unit::<NewtonPerMeter>();
+                    strain: vec![
+                        Dimensionless::from_base(curvature_per_meter * 0.001);
                         self.config.num_elements
                     ],
-                    deformation_energy: membrane_tension.in_unit::<NewtonPerMeter>() * curvature,
-                    max_safe_deformation: 0.2,
+                    stress: vec![
+                        Pressure::from_unit::<Pascal>(
+                            membrane_tension.in_unit::<NewtonPerMeter>() * curvature_per_meter,
+                        );
+                        self.config.num_elements
+                    ],
+                    deformation_energy_density: EnergyPerVolume::from_unit::<
+                        aequitas::systems::si::units::JoulePerCubicMeter,
+                    >(
+                        membrane_tension.in_unit::<NewtonPerMeter>() * curvature_per_meter,
+                    ),
+                    max_safe_deformation: Dimensionless::from_base(0.2),
                 };
             }
         }
@@ -231,14 +247,21 @@ impl FlexibleTransducerArray {
     }
 
     /// Calculate strain from curvature
-    fn calculate_strain(&self, curvature: f64, thickness: f64) -> Vec<f64> {
+    fn calculate_strain(&self, curvature: f64, thickness: f64) -> Vec<Dimensionless<f64>> {
         // Simple bending strain calculation
-        vec![curvature * thickness / 2.0; self.config.num_elements]
+        vec![Dimensionless::from_base(curvature * thickness / 2.0); self.config.num_elements]
     }
 
     /// Calculate stress from strain
-    fn calculate_stress(&self, strain: &[f64], young_modulus: f64) -> Vec<f64> {
-        strain.iter().map(|&s| s * young_modulus).collect()
+    fn calculate_stress(
+        &self,
+        strain: &[Dimensionless<f64>],
+        young_modulus: f64,
+    ) -> Vec<Pressure<f64>> {
+        strain
+            .iter()
+            .map(|s| Pressure::from_unit::<Pascal>(s.into_base() * young_modulus))
+            .collect()
     }
 
     /// Get current geometry state
@@ -255,7 +278,7 @@ impl FlexibleTransducerArray {
 
     /// Get calibration confidence
     #[must_use]
-    pub fn calibration_confidence(&self) -> f64 {
+    pub fn calibration_confidence(&self) -> Dimensionless<f64> {
         self.calibration_processor.get_confidence()
     }
 
@@ -266,14 +289,14 @@ impl FlexibleTransducerArray {
     ///
     /// [`update_geometry`]: Self::update_geometry
     #[must_use]
-    pub fn focusing_delays(&self, focus: [f64; 3], c: f64) -> Vec<f64> {
+    pub fn focusing_delays(&self, focus: [Length<f64>; 3], c: Velocity<f64>) -> Vec<Time<f64>> {
         super::beamforming::focusing_delays(&self.geometry_state.element_positions.view(), focus, c)
     }
 
     /// Far-field **plane-wave steering delays** \`s` toward unit direction `dir`
     /// for the current geometry.
     #[must_use]
-    pub fn steering_delays(&self, dir: [f64; 3], c: f64) -> Vec<f64> {
+    pub fn steering_delays(&self, dir: [f64; 3], c: Velocity<f64>) -> Vec<Time<f64>> {
         super::beamforming::steering_delays(&self.geometry_state.element_positions.view(), dir, c)
     }
 
@@ -282,7 +305,7 @@ impl FlexibleTransducerArray {
     /// the [`CmutCell`](crate::mems::CmutCell) model. Output falls where the
     /// array is tightly wrapped (sub-micron gap perturbed by the sag, §33.8).
     #[must_use]
-    pub fn cmut_flex_apodization(&self, cell: &crate::mems::CmutCell) -> Vec<f64> {
+    pub fn cmut_flex_apodization(&self, cell: &crate::mems::CmutCell) -> Vec<Dimensionless<f64>> {
         let curvatures = super::beamforming::per_element_curvature(
             &self.geometry_state.element_positions.view(),
         );
@@ -340,7 +363,34 @@ impl Source for FlexibleTransducerArray {
             .collect()
     }
 
+    fn for_each_position(&self, visitor: &mut dyn FnMut((f64, f64, f64))) {
+        for idx in 0..self.geometry_state.element_positions.shape()[0] {
+            visitor((
+                self.geometry_state.element_positions[[idx, 0]],
+                self.geometry_state.element_positions[[idx, 1]],
+                self.geometry_state.element_positions[[idx, 2]],
+            ));
+        }
+    }
+
     fn signal(&self) -> &dyn Signal {
         self.signal.as_ref()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use kwavers_signal::NullSignal;
+
+    #[test]
+    fn position_visitor_matches_owned_positions() {
+        let source =
+            FlexibleTransducerArray::new(FlexibleTransducerConfig::default(), Arc::new(NullSignal))
+                .expect("default flexible array builds");
+        let mut visited = Vec::new();
+        source.for_each_position(&mut |position| visited.push(position));
+        assert_eq!(visited, source.positions());
+        assert_eq!(visited.len(), 128);
     }
 }
