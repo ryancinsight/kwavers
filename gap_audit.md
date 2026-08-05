@@ -20,9 +20,14 @@ with one configured skip, including all thermal coupling tests. The earlier
 overlay package run passes 530/530 CI-profile tests, but it is not substituted
 for the clean-lock result. Eunomia real and complex numerical values retain
 their existing observable-unit boundary; no imaginary SI unit is introduced.
-Hosted Kwavers checks remain the final exact-head delivery gate.
+Hosted Kwavers checks passed at the exact head `5044c0c13`; PR #350 merged as
+`67c98a46e565cb2777d3cfc04b294bee4d435f35`. Code Coverage job
+`92228540236` passed in 27m47s and Test Suite Coverage job `92228540338`
+passed in 36m51s; the full repository-owned matrix, including Windows build
+and wheel, passed. The local Windows GNU linker limitation is therefore an
+environment-only residual, not a hosted delivery blocker.
 
-### KWAVERS-AEQ-MET-66 — thermal-diffusion metric gap (implemented; hosted delivery blocked 2026-08-05)
+### KWAVERS-AEQ-MET-66 — thermal-diffusion metric gap (closed 2026-08-05)
 
 The audit found raw public thermal-diffusion contracts for perfusion rate,
 blood density, blood heat capacity, arterial temperature, thermal relaxation,

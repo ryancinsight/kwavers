@@ -1,6 +1,6 @@
 # Project Checklist
 
-## Owner: Codex — KWAVERS-AEQ-MET-67 thermal-acoustic coupling quantities [major] [arch] — clean lock complete; hosted gate pending 2026-08-05
+## Owner: Codex — KWAVERS-AEQ-MET-67 thermal-acoustic coupling quantities [major] [arch] — done 2026-08-05
 
 - [x] Type temperature coefficient slopes, absorption heating, streaming,
       nonlinear heating, and thermal-acoustic coupling updates with Aequitas.
@@ -15,13 +15,15 @@
       overlay package run passes 530/530 CI-profile Nextest tests.
 - [x] Regenerate the standalone lock after the Ritk Eunomia 0.8 cutover and
       upgrade the unused top-level zero-copy rkyv edge from 0.7 to 0.8.
-- [ ] Pass the hosted Kwavers security/full matrix at the exact PR head.
+- [x] Pass the hosted Kwavers security/full matrix at the exact PR head and
+      merge PR #350 as `67c98a46e565cb2777d3cfc04b294bee4d435f35`.
 
-Clean locked package Nextest is additionally blocked by the Windows GNU
+Clean locked package Nextest remains locally blocked by the Windows GNU
 linker: `ld.lld` cannot find `libLIBCMT.a` and `libOLDNAMES.a` while linking
 unrelated top-level test binaries. The focused clean `kwavers-physics` suite
 passes 1,706/1,706 tests with one configured skip, including all thermal
-coupling tests.
+coupling tests. Hosted Windows build, wheels, coverage, full feature, and
+test-suite gates pass.
 
 Acceptance: thermal-acoustic public contracts carry their Aequitas dimensions,
 the nonlinear formula exposes `VolumetricPowerDensityGradient`, real/complex
@@ -31,7 +33,7 @@ Evidence: local source gates pass against merged Aequitas `3c51a27`; the clean
 lock resolves Ritk `cfeebc7` with Eunomia 0.8 and rkyv 0.8 only. No imaginary
 SI unit is introduced.
 
-## Owner: Codex — KWAVERS-AEQ-MET-66 thermal-diffusion quantities [major] [arch] — implementation complete; delivery blocked 2026-08-05
+## Owner: Codex — KWAVERS-AEQ-MET-66 thermal-diffusion quantities [major] [arch] — done 2026-08-05
 
 - [x] Record ADR 103 for the typed thermal-diffusion parameter and time
       contract, including the CEM43 domain-dose and Eunomia compatibility rules.
