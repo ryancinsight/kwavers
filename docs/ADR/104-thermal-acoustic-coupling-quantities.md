@@ -42,8 +42,10 @@ gradient unit is introduced.
 ## Verification
 
 The implementation compiles against merged Aequitas `3c51a27`. CI-profile
-Nextest passes 1,550/1,550 tests with one configured skip; the downstream
-`kwavers` package passes 530/530 CI-profile Nextest tests. Strict package
-Clippy, doctests, Rustdoc, formatting, and diff checks pass. The clean lock
-resolves Ritk `cfeebc7`, Eunomia `0.8.0`, and rkyv `0.8.17` only; the hosted
-exact-head matrix remains the delivery gate.
+Nextest passes 1,550/1,550 tests with one configured skip; focused clean
+`kwavers-physics` tests pass 1,706/1,706 with one configured skip. Strict
+package Clippy, doctests, Rustdoc, formatting, and diff checks pass. The clean
+lock resolves Ritk `cfeebc7`, Eunomia `0.8.0`, and rkyv `0.8.17` only. The
+hosted exact-head matrix passes, including Code Coverage `92228540236` and
+Test Suite Coverage `92228540338`; PR #350 merges as
+`67c98a46e565cb2777d3cfc04b294bee4d435f35`.
