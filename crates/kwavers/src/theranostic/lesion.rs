@@ -70,7 +70,7 @@ pub enum LesionState<'a> {
     Thermal {
         /// Temperature field [°C], same shape as the base sound-speed field.
         temperature_c: &'a LetoArray3<f64>,
-        /// Reference (baseline) temperature [K] at which `base_c` is defined.
+        /// Reference (baseline) temperature \[K\] at which `base_c` is defined.
         reference_temperature: ThermodynamicTemperature<f64>,
         /// Tissue temperature coefficients (e.g. [`TemperatureCoefficients::soft_tissue`]).
         coeff: TemperatureCoefficients,
