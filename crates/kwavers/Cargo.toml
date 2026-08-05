@@ -78,7 +78,7 @@ chrono = { version = "0.4", features = ["serde"] }
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"], optional = true }
 
 # Zero-copy serialization (Sprint 138 - Persona Requirements)
-rkyv = { version = "0.7", features = ["validation"], optional = true }
+rkyv = { version = "0.8", features = ["bytecheck"], optional = true }
 
 
 # Concurrency

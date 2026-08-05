@@ -27,6 +27,8 @@
 //! Both mechanisms feed [`perturb_sound_speed`], which returns the perturbed
 //! field for the monitored-slice reconstruction.
 
+use aequitas::systems::si::quantities::{ThermodynamicTemperature, Velocity};
+use kwavers_core::constants::thermodynamic::KELVIN_OFFSET_C;
 use kwavers_physics::acoustics::bubble_dynamics::wood_sound_speed;
 use kwavers_physics::thermal::TemperatureCoefficients;
 use leto::Array3 as LetoArray3;
@@ -68,8 +70,8 @@ pub enum LesionState<'a> {
     Thermal {
         /// Temperature field [°C], same shape as the base sound-speed field.
         temperature_c: &'a LetoArray3<f64>,
-        /// Reference (baseline) temperature [°C] at which `base_c` is defined.
-        reference_c: f64,
+        /// Reference (baseline) temperature [K] at which `base_c` is defined.
+        reference_temperature: ThermodynamicTemperature<f64>,
         /// Tissue temperature coefficients (e.g. [`TemperatureCoefficients::soft_tissue`]).
         coeff: TemperatureCoefficients,
     },
@@ -84,11 +86,13 @@ pub enum LesionState<'a> {
 /// `c(T) = c₀ + (∂c/∂T)·(T − T_ref)` (Duck 1990).
 ///
 /// `base_c`, `temperature_c` must share the same shape (same simulation grid).
+/// Celsius storage values are converted to Kelvin at this boundary before the
+/// Aequitas temperature-dependent sound-speed law is evaluated.
 #[must_use]
 pub fn thermal_perturbed_sound_speed(
     base_c: &Array3<f64>,
     temperature_c: &LetoArray3<f64>,
-    reference_c: f64,
+    reference_temperature: ThermodynamicTemperature<f64>,
     coeff: &TemperatureCoefficients,
 ) -> Array3<f64> {
     let [nx, ny, nz] = temperature_c.shape();
@@ -102,7 +106,12 @@ pub fn thermal_perturbed_sound_speed(
         .indexed_iter_mut()
         .expect("invariant: contiguous lesion field")
     {
-        *c = coeff.sound_speed(*c, temperature_c[[i, j, k]], reference_c);
+        let base_velocity = Velocity::from_base(*c);
+        let temperature =
+            ThermodynamicTemperature::from_base(temperature_c[[i, j, k]] + KELVIN_OFFSET_C);
+        *c = coeff
+            .sound_speed(base_velocity, temperature, reference_temperature)
+            .into_base();
     }
     out
 }
@@ -134,9 +143,9 @@ pub fn perturb_sound_speed(base_c: &Array3<f64>, state: &LesionState<'_>) -> Arr
     match state {
         LesionState::Thermal {
             temperature_c,
-            reference_c,
+            reference_temperature,
             coeff,
-        } => thermal_perturbed_sound_speed(base_c, temperature_c, *reference_c, coeff),
+        } => thermal_perturbed_sound_speed(base_c, temperature_c, *reference_temperature, coeff),
         LesionState::Cavitation { void_fraction } => {
             cavitation_perturbed_sound_speed(base_c, void_fraction)
         }
@@ -162,7 +171,12 @@ mod tests {
         let base = Array3::from_elem((2, 2, 2), 1540.0);
         let temp = LetoArray3::from_elem([2, 2, 2], 47.0);
         let coeff = TemperatureCoefficients::soft_tissue();
-        let out = thermal_perturbed_sound_speed(&base, &temp, 37.0, &coeff);
+        let out = thermal_perturbed_sound_speed(
+            &base,
+            &temp,
+            ThermodynamicTemperature::from_base(310.15),
+            &coeff,
+        );
         for &c in out.iter() {
             assert!(
                 (c - 1560.0).abs() < 1e-9,
@@ -176,7 +190,12 @@ mod tests {
         let base = Array3::from_elem((2, 1, 3), 1500.0);
         let temp = LetoArray3::from_elem([2, 1, 3], 37.0);
         let coeff = TemperatureCoefficients::soft_tissue();
-        let out = thermal_perturbed_sound_speed(&base, &temp, 37.0, &coeff);
+        let out = thermal_perturbed_sound_speed(
+            &base,
+            &temp,
+            ThermodynamicTemperature::from_base(310.15),
+            &coeff,
+        );
         for &c in out.iter() {
             assert!((c - 1500.0).abs() < 1e-9);
         }
@@ -243,11 +262,16 @@ mod tests {
             &base,
             &LesionState::Thermal {
                 temperature_c: &temp,
-                reference_c: 37.0,
+                reference_temperature: ThermodynamicTemperature::from_base(310.15),
                 coeff,
             },
         );
-        let direct = thermal_perturbed_sound_speed(&base, &temp, 37.0, &coeff);
+        let direct = thermal_perturbed_sound_speed(
+            &base,
+            &temp,
+            ThermodynamicTemperature::from_base(310.15),
+            &coeff,
+        );
         assert_eq!(via_dispatch, direct);
     }
 }

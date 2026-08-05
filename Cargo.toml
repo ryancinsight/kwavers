@@ -32,7 +32,7 @@ hermes-simd = { version = "0.5.0", git = "https://github.com/ryancinsight/hermes
 moirai-parallel = { version = "0.4.0", git = "https://github.com/ryancinsight/Moirai.git", default-features = false, features = ["parallel"] }
 leto = { version = "0.40.0", git = "https://github.com/ryancinsight/leto.git", default-features = false, features = ["std"] }
 leto-ops = { version = "0.40.0", git = "https://github.com/ryancinsight/leto.git", default-features = false, features = ["std"] }
-eunomia = { version = "0.7.0", git = "https://github.com/ryancinsight/eunomia", default-features = false, features = ["std"] }
+eunomia = { version = "0.8.0", git = "https://github.com/ryancinsight/eunomia", default-features = false, features = ["std"] }
 pyo3 = { version = "0.29", features = ["extension-module", "abi3-py39"] }
 numpy = "0.22"
 

@@ -1,4 +1,26 @@
-## Live Aequitas closure — 2026-08-02
+## Live Aequitas closure — 2026-08-05
+
+### KWAVERS-AEQ-MET-68 — Eunomia compatibility closure (clean lock 2026-08-05)
+
+The dependency-ordered provider cutover is complete: Ritk PR #110 merged as
+`cfeebc7cab3c11f7fc0125f144c6e90ec03ffbd9`, and the standalone Kwavers lock
+now resolves `ritk-registration` from that revision with Eunomia `0.8.0`.
+The top-level `kwavers` zero-copy dependency also moved from rkyv `0.7` to
+`0.8` with the provider's `bytecheck` feature. The locked all-features graph
+contains rkyv `0.8.17` only; the previous `RUSTSEC-2026-0235` rkyv `0.7.46`
+path is absent.
+
+The clean graph passes `cargo tree --all-features --locked --offline` with
+only Eunomia `0.8.0` and rkyv `0.8.17`. Clean locked all-targets checking and
+strict Clippy pass for `kwavers`; the clean package Nextest build is blocked by
+the repository's Windows GNU linker configuration because `ld.lld` cannot
+find `libLIBCMT.a` and `libOLDNAMES.a` while linking unrelated top-level test
+binaries. The focused clean `kwavers-physics` suite passes 1,706/1,706 tests
+with one configured skip, including all thermal coupling tests. The earlier
+overlay package run passes 530/530 CI-profile tests, but it is not substituted
+for the clean-lock result. Eunomia real and complex numerical values retain
+their existing observable-unit boundary; no imaginary SI unit is introduced.
+Hosted Kwavers checks remain the final exact-head delivery gate.
 
 ### KWAVERS-AEQ-MET-66 — thermal-diffusion metric gap (implemented; hosted delivery blocked 2026-08-05)
 
@@ -26,31 +48,52 @@ heat-capacity, or dose unit is introduced.
 Local evidence at the implementation head: overlay Nextest passes 2,404/2,404
 with five configured skips; strict package Clippy passes for physics, solver,
 simulation, and Python; physics, solver, and simulation doctests pass 8/8,
-4/4, and 4/4 respectively with only documented ignored examples. Full locked
-metadata resolves against the standalone Eunomia 0.7 graph, while the local
-overlay source pass verifies the current Eunomia 0.8 quantity API. The Python
+4/4, and 4/4 respectively with only documented ignored examples. The Python
 crate is a `cdylib` with no library doctest target. Formatting, diff, and
-typed-boundary scans pass.
+typed-boundary scans pass. The follow-up clean lock evidence is recorded in
+MET-68 below.
 
-The standalone manifest remains on the published Eunomia 0.7 graph until the
-upstream provider graph lands its coordinated 0.8 revision. The local Atlas
-overlay uses current provider worktrees only for source checking and must not
-rewrite the committed Kwavers lockfile. Remaining thermal raw scalars are
-explicit simulation/Python/Plugin serialization or host-execution boundaries;
-they are not public domain contracts in this item.
+Remaining thermal raw scalars are explicit simulation/Python/Plugin
+serialization or host-execution boundaries; they are not public domain
+contracts in this item.
 
-Hosted closure has one pre-existing provider-security residual. Kwavers's
-Security Audit fails on the PR head and on the base `main` run
-`30907832078` because `rkyv 0.7.46` enters through Eunomia 0.7 and matches
-`RUSTSEC-2026-0235`. The direct Eunomia 0.8 experiment resolves Aequitas,
-Apollo, Gaia, and the other current provider heads, then stops at Ritk
-registration `cabc7115e360db52bfc700973ca1767786c48373`, whose manifest still
-requires `eunomia = "^0.7.0"`. No advisory ignore or feature narrowing is an
-acceptable closure. The next dependency-ordered item is the Ritk Eunomia 0.8
-cutover; after that lands, regenerate the standalone Kwavers lock and rerun
-the full hosted matrix. The external `recurseml/analysis` status also reports
-an analyzer error for range `80555fa6..087c23f0`, but it is not a repository
-security or compilation diagnostic.
+The historical provider-security residual is closed by the Ritk Eunomia 0.8
+cutover and the top-level rkyv 0.8 update recorded in MET-68. The external
+`recurseml/analysis` status remains a report-only analyzer error for range
+`80555fa6..087c23f0`; it is not a repository security or compilation
+diagnostic. The hosted exact-head matrix remains the active delivery gate.
+
+### KWAVERS-AEQ-MET-67 — thermal-acoustic coupling metric gap (implemented; clean lock complete 2026-08-05)
+
+The audit found raw physical fields and return values in
+`crates/kwavers-physics/src/thermal/coupling/`: temperature coefficient slopes,
+absorption heating, acoustic streaming, nonlinear heating, and thermal-acoustic
+coupling updates. The nonlinear source formula was also mislabeled as a power
+density. Dimensional closure gives
+`(B/A)·P²·ω²/(ρ·c³) = W/m⁴`, a volumetric power-density gradient, not `W/m³`.
+
+The implementation carries Aequitas quantities through the public coupling
+contracts: `VelocityPerTemperature`, `MassDensityPerTemperature`,
+`ReciprocalLengthPerTemperature`, `ReciprocalLength`, `Intensity`, `Pressure`,
+`Velocity`, `MassDensity`, `Frequency`, `Time`, `EnergyPerVolume`, and
+`VolumetricPowerDensity`. Scalar extraction remains at the Celsius grid,
+Leto-array storage, and scalar threshold boundaries. Aequitas now owns the
+`VolumetricPowerDensityGradient`/`W/m⁴` dimension used by the nonlinear formula.
+
+Eunomia compatibility remains explicit: these are real SI quantities. Complex
+or quadrature values, where adjacent signal code needs them, remain components
+of one existing observable unit; no imaginary temperature, coefficient,
+heating, or gradient unit is introduced.
+
+Local evidence at the implementation head: `cargo check -p kwavers-physics`,
+CI-profile Nextest passes 1,550/1,550 tests with one configured skip, strict
+package Clippy passes, 8 doctests pass with 4 ignored, Rustdoc generates after
+fixing one broken elastography link, and formatting and `git diff --check` pass.
+The downstream `kwavers` caller closure passes clean locked `cargo check`;
+the overlay package run passes 530/530 CI-profile Nextest tests. Provider
+Aequitas PR #13 is merged at `3c51a27`; the clean standalone lock is now
+regenerated against Ritk `cfeebc7`. The clean package Nextest linker blocker
+and hosted delivery remain the final exact-head gates.
 
 ### KWAVERS-AEQ-MET-63 — focused-source and hemispherical metric gap (closed 2026-08-03)
 

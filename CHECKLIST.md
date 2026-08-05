@@ -1,5 +1,36 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-AEQ-MET-67 thermal-acoustic coupling quantities [major] [arch] — clean lock complete; hosted gate pending 2026-08-05
+
+- [x] Type temperature coefficient slopes, absorption heating, streaming,
+      nonlinear heating, and thermal-acoustic coupling updates with Aequitas.
+- [x] Correct the nonlinear source output to the provider-owned `W/m⁴`
+      volumetric power-density gradient dictated by its existing formula.
+- [x] Add value-semantic thermal coupling regressions and migrate every direct
+      constructor without scalar compatibility wrappers.
+- [x] Verify compile, 1,550/1,550 CI-profile Nextest tests, strict Clippy,
+      doctests, Rustdoc, formatting, and diff checks.
+- [x] Migrate the theranostic lesion caller and thermal monitor example to the
+      typed temperature API; clean locked `kwavers` checks pass and the
+      overlay package run passes 530/530 CI-profile Nextest tests.
+- [x] Regenerate the standalone lock after the Ritk Eunomia 0.8 cutover and
+      upgrade the unused top-level zero-copy rkyv edge from 0.7 to 0.8.
+- [ ] Pass the hosted Kwavers security/full matrix at the exact PR head.
+
+Clean locked package Nextest is additionally blocked by the Windows GNU
+linker: `ld.lld` cannot find `libLIBCMT.a` and `libOLDNAMES.a` while linking
+unrelated top-level test binaries. The focused clean `kwavers-physics` suite
+passes 1,706/1,706 tests with one configured skip, including all thermal
+coupling tests.
+
+Acceptance: thermal-acoustic public contracts carry their Aequitas dimensions,
+the nonlinear formula exposes `VolumetricPowerDensityGradient`, real/complex
+Eunomia semantics remain valid, and the clean locked provider graph passes.
+
+Evidence: local source gates pass against merged Aequitas `3c51a27`; the clean
+lock resolves Ritk `cfeebc7` with Eunomia 0.8 and rkyv 0.8 only. No imaginary
+SI unit is introduced.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-66 thermal-diffusion quantities [major] [arch] — implementation complete; delivery blocked 2026-08-05
 
 - [x] Record ADR 103 for the typed thermal-diffusion parameter and time
@@ -23,11 +54,10 @@ doctests pass with only documented ignored examples; standalone locked Cargo
 metadata resolves; formatting, diff, and typed-boundary scans pass. The Python
 `cdylib` has no doctest library target.
 
-Hosted delivery residual: the PR and base `main` Security Audit fail on
-`RUSTSEC-2026-0235` through Eunomia 0.7's `rkyv 0.7.46`. A clean Eunomia 0.8
-resolution reaches Ritk registration `cabc7115`, whose current manifest still
-requires Eunomia 0.7. The item reopens after the Ritk provider cutover; no
-advisory ignore or feature narrowing is permitted.
+The historical `RUSTSEC-2026-0235` path is closed by the Ritk Eunomia 0.8
+cutover and the top-level rkyv 0.8 update recorded in MET-67. The hosted
+exact-head matrix remains the active delivery gate; no advisory ignore or
+feature narrowing is used.
 
 ## Owner: Codex — KWAVERS-AEQ-MET-63 focused-source and hemispherical metrics [major] [arch] — done 2026-08-03
 

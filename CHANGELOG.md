@@ -4,6 +4,20 @@
 
 ### Changed
 
+- **Security:** Align the Kwavers provider lock with Ritk's Eunomia 0.8
+  cutover (`cfeebc7`) and upgrade the unused top-level zero-copy rkyv edge to
+  0.8. The all-features lock contains no rkyv 0.7 path; Eunomia real/complex
+  values retain one observable unit and no imaginary SI unit is introduced.
+
+- **Breaking:** Thermal-acoustic coupling contracts now use Aequitas
+  temperature coefficients, absorption, intensity, pressure, velocity,
+  density, frequency, time, energy-density, and power-density quantities.
+  The existing nonlinear source formula is exposed as a
+  `VolumetricPowerDensityGradient` with coherent `W/m⁴` dimensions rather than
+  a mislabeled scalar power result. Grid and serialization boundaries retain
+  scalar storage; Eunomia values remain real SI observables and no imaginary
+  SI unit is introduced. See [ADR 104](docs/adr/104-thermal-acoustic-coupling-quantities.md).
+
 - **Breaking:** Thermal-diffusion configuration and solver update contracts now
   use Aequitas `ReciprocalTime`, `MassDensity`, `SpecificHeatCapacity`,
   `ThermodynamicTemperature`, and `Time` quantities. Pennes and

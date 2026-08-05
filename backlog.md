@@ -4,6 +4,7 @@
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
+| KWAVERS-AEQ-MET-67 | Type thermal-acoustic coupling coefficients, heating, streaming, nonlinear heating, and update outcomes with Aequitas; correct the existing nonlinear formula to its provider-owned `W/m⁴` volumetric power-density gradient; preserve Eunomia real/complex semantics. | [arch] [major] | clean lock complete; hosted gate pending 2026-08-05 | Codex | `crates/kwavers-physics/src/thermal/coupling/`, `crates/kwavers/src/theranostic/`, top-level rkyv edge, Aequitas provider metric, ADR 104, PM artifacts |
 | KWAVERS-AEQ-MET-66 | Type thermal-diffusion perfusion, density, heat-capacity, temperature, relaxation-time, and integration-time contracts with Aequitas; preserve CEM43 as a domain dose representation and Eunomia's real/complex rule. | [arch] [major] | implementation done; delivery blocked 2026-08-05 | Codex | `crates/kwavers-physics/src/thermal/diffusion/`, `crates/kwavers-solver/src/forward/{thermal_diffusion,pstd/implementation/core/orchestrator}/`, direct Python/simulation callers, ADR 103, PM artifacts |
 | KWAVERS-AEQ-MET-63 | Type focused and hemispherical source geometry, signal, timing, and validation metrics with Aequitas; preserve Eunomia real geometry and one observable unit for complex/quadrature signals; fix stale steering state and migrate direct therapy/diagnostics callers. | [arch] [major] | done 2026-08-03 | Codex | `crates/kwavers-transducer/src/{transducers/focused,hemispherical}`, direct `kwavers-therapy`, `kwavers-diagnostics`, examples, ADR 102, PM artifacts |
 | KWAVERS-AEQ-MET-62 | Type two-dimensional array geometry, beam-control, timing, and medium metrics with Aequitas; correct center-to-center pitch and preserve Eunomia real geometry and shared signal units. | [arch] [major] | done 2026-08-03 | Codex | `crates/kwavers-transducer/src/array_2d/`, direct Python/simulation callers, ADR 101, PM artifacts |
@@ -41,15 +42,17 @@
   strict package Clippy passes for physics, solver, simulation, and Python;
   physics doctests pass 8/8 with 4 ignored, solver doctests pass 4/4 with 8
   ignored, and simulation doctests pass 4/4 with 2 ignored. The Python crate
-  is a `cdylib` with no library doctest target. Full locked metadata resolves
-  against the standalone Eunomia 0.7 graph; formatting, diff, and typed-boundary
-  scans pass. The local overlay evidence uses Eunomia 0.8 only because the
-  current unmerged provider worktrees are not yet the standalone remote graph.
-- Delivery residual: the hosted Security Audit and the base `main` audit both
-  fail on `RUSTSEC-2026-0235` through Eunomia 0.7's `rkyv 0.7.46`. A standalone
-  Eunomia 0.8 resolution reaches Ritk registration `cabc7115`, which still
-  requires Eunomia 0.7. The Ritk provider cutover is the dependency-ordered
-  reopen trigger; no advisory ignore or feature narrowing is used.
+  is a `cdylib` with no library doctest target. The implementation-time lock
+  evidence resolved against Eunomia 0.7; the dependency-ordered follow-up now
+  regenerates the clean graph against Ritk `cfeebc7` and Eunomia 0.8.
+- Delivery residual: the historical `RUSTSEC-2026-0235` path is resolved by
+  the Ritk Eunomia 0.8 cutover and the top-level rkyv 0.8 update recorded in
+  `KWAVERS-AEQ-MET-67`. The clean all-features lock contains rkyv 0.8.17 only;
+  no advisory ignore or feature narrowing is used. The clean package
+  Nextest build is separately blocked by the Windows GNU linker missing
+  `libLIBCMT.a` and `libOLDNAMES.a` for unrelated top-level test binaries;
+  focused clean physics tests pass. The hosted exact-head matrix remains
+  pending.
 
 ## KWAVERS-AEQ-MET-63 — Type focused-source and hemispherical metrics [major] [arch] — done 2026-08-03
 

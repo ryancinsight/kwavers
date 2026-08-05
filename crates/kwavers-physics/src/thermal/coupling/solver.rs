@@ -2,6 +2,14 @@
 
 use super::coefficients::TemperatureCoefficients;
 use super::heating::AcousticHeatingSource;
+use aequitas::systems::si::{
+    quantities::{
+        EnergyPerVolume, Intensity, MassDensity, ReciprocalLength, ThermodynamicTemperature, Time,
+        Velocity, VolumetricPowerDensity,
+    },
+    units::Kelvin,
+};
+use kwavers_core::constants::thermodynamic::KELVIN_OFFSET_C;
 use kwavers_core::error::KwaversResult;
 use leto::Array3;
 
@@ -20,8 +28,8 @@ impl ThermalAcousticCoupling {
     /// Initialize mathematical coupling framework
     #[must_use]
     pub fn new(
-        absorption_coefficient: f64,
-        intensity: f64,
+        absorption_coefficient: ReciprocalLength<f64>,
+        intensity: Intensity<f64>,
         coefficients: TemperatureCoefficients,
     ) -> Self {
         Self {
@@ -48,8 +56,8 @@ impl ThermalAcousticCoupling {
         &mut self,
         temperature: &Array3<f64>,
         acoustic_intensity: &Array3<f64>,
-        reference_temperature: f64,
-        dt: f64,
+        reference_temperature: ThermodynamicTemperature<f64>,
+        dt: Time<f64>,
     ) -> KwaversResult<()> {
         let (nx, ny, nz) = (
             self.acoustic_heat.shape()[0],
@@ -62,18 +70,22 @@ impl ThermalAcousticCoupling {
                 for k in 0..nz {
                     let t = temperature[[i, j, k]];
                     let i_ac = acoustic_intensity[[i, j, k]];
+                    let temperature =
+                        ThermodynamicTemperature::from_unit::<Kelvin>(t + KELVIN_OFFSET_C);
+                    let intensity = Intensity::from_base(i_ac);
 
                     // Heat generation from acoustic absorption
                     // Q = 2·α·I where α depends on current local temperature
                     let alpha = self.coefficients.absorption(
                         self.source.absorption_coefficient,
-                        t,
+                        temperature,
                         reference_temperature,
                     );
-                    let heat_rate = 2.0 * alpha * i_ac;
+                    let heat_rate: VolumetricPowerDensity<f64> = alpha * intensity * 2.0;
+                    let deposited: EnergyPerVolume<f64> = heat_rate * dt;
 
                     // Execute temporal accumulation of transfer power
-                    self.acoustic_heat[[i, j, k]] += heat_rate * dt;
+                    self.acoustic_heat[[i, j, k]] += deposited.into_base();
                 }
             }
         }
@@ -97,8 +109,8 @@ impl ThermalAcousticCoupling {
     /// This is a grid-agnostic L¹ norm — multiply by the per-cell volume to
     /// obtain energy in joules.
     #[must_use]
-    pub fn total_energy_density(&self) -> f64 {
-        self.acoustic_heat.iter().sum()
+    pub fn total_energy_density(&self) -> EnergyPerVolume<f64> {
+        EnergyPerVolume::from_base(self.acoustic_heat.iter().sum())
     }
 
     /// Nullify integral tracking arrays returning structure to initialization baseline
@@ -110,10 +122,10 @@ impl ThermalAcousticCoupling {
     #[must_use]
     pub fn sound_speed_at_temperature(
         &self,
-        base_sound_speed: f64,
-        temperature: f64,
-        reference_temperature: f64,
-    ) -> f64 {
+        base_sound_speed: Velocity<f64>,
+        temperature: ThermodynamicTemperature<f64>,
+        reference_temperature: ThermodynamicTemperature<f64>,
+    ) -> Velocity<f64> {
         self.coefficients
             .sound_speed(base_sound_speed, temperature, reference_temperature)
     }
@@ -122,10 +134,10 @@ impl ThermalAcousticCoupling {
     #[must_use]
     pub fn density_at_temperature(
         &self,
-        base_density: f64,
-        temperature: f64,
-        reference_temperature: f64,
-    ) -> f64 {
+        base_density: MassDensity<f64>,
+        temperature: ThermodynamicTemperature<f64>,
+        reference_temperature: ThermodynamicTemperature<f64>,
+    ) -> MassDensity<f64> {
         self.coefficients
             .density(base_density, temperature, reference_temperature)
     }
