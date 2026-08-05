@@ -23,8 +23,8 @@ fn shape_to_array<const N: usize>(shape: &[usize]) -> [usize; N] {
 ///
 /// # Migration note
 ///
-/// Previously kwavers-python exposed `ndarray::Array1<T>` at this boundary.
-/// The backing store is now `leto::Array1<T>`; this helper bridges the
+/// Previously kwavers-python exposed the legacy 1-D array boundary at this
+/// seam. The backing store is now `leto::Array1<T>`; this helper bridges the
 /// Python/NumPy FFI surface to the Atlas host-array layer.
 #[doc(alias = "ndarray")]
 #[doc(alias = "Array1")]
@@ -46,7 +46,7 @@ where
 ///
 /// # Migration note
 ///
-/// Replaces direct `ndarray::Array2<T>` usage; the Atlas consumer-side
+/// Replaces the legacy 2-D array type at this seam; the Atlas consumer-side
 /// representation is `leto::Array2<T>` (row-major `VecStorage`).
 #[doc(alias = "ndarray")]
 #[doc(alias = "Array2")]
@@ -73,7 +73,7 @@ where
 ///
 /// # Migration note
 ///
-/// Replaces direct `ndarray::Array3<T>` usage; the Atlas consumer-side
+/// Replaces the legacy 3-D array type at this seam; the Atlas consumer-side
 /// representation is `leto::Array3<T>` (row-major `VecStorage`).
 #[doc(alias = "ndarray")]
 #[doc(alias = "Array3")]
@@ -99,8 +99,8 @@ where
 /// Convert a 1-D readonly NumPy array into a leto 1-D array.
 ///
 /// This is the primary ndarray-replacement boundary: callers that previously
-/// accepted `ndarray::Array1<T>` now accept `PyReadonlyArray1<'py, T>` at
-/// the FFI boundary and convert to `leto::Array1<T>` for interior use.
+/// accepted the legacy 1-D array type now accept `PyReadonlyArray1<'py, T>`
+/// at the FFI boundary and convert to `leto::Array1<T>` for interior use.
 #[doc(alias = "ndarray")]
 #[doc(alias = "Array1")]
 #[doc(alias = "from_numpy")]
@@ -115,7 +115,7 @@ where
 
 /// Convert a 2-D readonly NumPy array into a leto 2-D array.
 ///
-/// Replaces `ndarray::Array2<T>` at the FFI boundary.
+/// Replaces the legacy 2-D array type at the FFI boundary.
 #[doc(alias = "ndarray")]
 #[doc(alias = "Array2")]
 #[doc(alias = "from_numpy")]
@@ -129,7 +129,7 @@ where
 
 /// Convert a 3-D readonly NumPy array into a leto 3-D array.
 ///
-/// Replaces `ndarray::Array3<T>` at the FFI boundary.
+/// Replaces the legacy 3-D array type at the FFI boundary.
 #[doc(alias = "ndarray")]
 #[doc(alias = "Array3")]
 #[doc(alias = "from_numpy")]
@@ -143,8 +143,8 @@ where
 
 /// Convert a leto 1-D array into a Python 1-D NumPy array.
 ///
-/// Replaces direct `ndarray::Array1` → Python ndarray conversion at the FFI
-/// boundary.  The Atlas host-array type is `leto::Array1<T>`.
+/// Replaces the legacy 1-D array → Python conversion at the FFI boundary.
+/// The Atlas host-array type is `leto::Array1<T>`.
 #[doc(alias = "ndarray")]
 #[doc(alias = "to_numpy")]
 #[doc(alias = "Array1")]
@@ -158,7 +158,7 @@ where
 
 /// Convert a leto 2-D array into a Python 2-D NumPy array.
 ///
-/// Replaces direct `ndarray::Array2` → Python ndarray conversion.
+/// Replaces the legacy 2-D array → Python conversion.
 #[doc(alias = "ndarray")]
 #[doc(alias = "to_numpy")]
 #[doc(alias = "Array2")]
@@ -174,7 +174,7 @@ where
 
 /// Convert a leto 3-D array into a Python 3-D NumPy array.
 ///
-/// Replaces direct `ndarray::Array3` → Python ndarray conversion.
+/// Replaces the legacy 3-D array → Python conversion.
 #[doc(alias = "ndarray")]
 #[doc(alias = "to_numpy")]
 #[doc(alias = "Array3")]
