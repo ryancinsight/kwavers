@@ -1,5 +1,26 @@
 ## Live Aequitas closure — 2026-08-02
 
+### KWAVERS-AEQ-MET-65 — MEMS crosstalk mechanical-impedance boundary (closed 2026-08-05)
+
+The MEMS crosstalk formula was still a raw complex boundary in this branch.
+Its inputs are element areas, separation, angular frequency, fluid density,
+and sound speed. The formula returns force per source velocity, whose coherent
+unit is `kg/s`; the previous `AcousticImpedance` label would instead mean
+pressure per particle velocity, `kg/(m²·s)`.
+
+The boundary now uses Aequitas `Area`, `Length`, `Frequency`, `MassDensity`,
+and `Velocity`, and returns
+`MechanicalImpedance<eunomia::Complex64>`. The matrix stores the same typed
+complex quantity, including its zero diagonal. Scalar extraction is confined
+to the wavenumber, magnitude, and Euclidean-distance formulas.
+
+Eunomia's real and quadrature components retain one observable mechanical-
+impedance unit. No imaginary SI unit or local complex wrapper is introduced.
+The Aequitas provider law test and the Kwavers crosstalk suite cover complex
+conversion, closed-form magnitude and phase, reciprocity, inverse-distance
+scaling, zero diagonal, and degenerate input handling. The remaining MEMS
+cell-output and flexible-array boundaries remain separate audit items.
+
 ### KWAVERS-AEQ-MET-63 — focused-source and hemispherical metric gap (closed 2026-08-03)
 
 The audit found raw public contracts in focused bowl, spherical-cap, arc,
@@ -36,8 +57,9 @@ Local evidence at the delivered lane head:
 The shared Atlas overlay emits known unused-patch and linker warnings, none of
 which fail an affected-package gate. Hosted repository checks and merge
 evidence are appended after the final PR head. Focused-source and
-hemispherical contracts are closed; MEMS, flexible, and other non-focused
-families remain separate audit candidates.
+hemispherical contracts are closed; MEMS crosstalk is closed under MET-65,
+while MEMS cell-output, flexible, and other non-focused families remain
+separate audit candidates.
 
 ### KWAVERS-AEQ-MET-62 — two-dimensional array metric gap (closed 2026-08-03)
 
