@@ -16,6 +16,8 @@
 //! - Khuri-Yakub & Oralkan (2011), CMUT flex-derating (`CmutCell::flex_gap_derating`).
 
 use super::super::mems::CmutCell;
+use aequitas::systems::si::quantities::ReciprocalLength;
+use aequitas::systems::si::units::PerMeter;
 use leto::ArrayView2;
 
 /// Conformal **delay-and-sum focusing** delays \`s` for a (possibly deformed)
@@ -126,7 +128,10 @@ pub fn per_element_curvature(positions: &ArrayView2<f64>) -> Vec<f64> {
 pub fn cmut_flex_apodization(curvatures: &[f64], cell: &CmutCell) -> Vec<f64> {
     curvatures
         .iter()
-        .map(|&k| cell.flex_gap_derating(k))
+        .map(|&k| {
+            cell.flex_gap_derating(ReciprocalLength::from_unit::<PerMeter>(k))
+                .into_base()
+        })
         .collect()
 }
 

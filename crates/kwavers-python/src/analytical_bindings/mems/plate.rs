@@ -1,5 +1,7 @@
 //! Clamped-plate MEMS resonance bindings.
 
+use aequitas::systems::si::quantities::{Dimensionless, Frequency, Length, MassDensity, Pressure};
+use aequitas::systems::si::units::{Hertz, KilogramPerCubicMeter, Meter, Pascal};
 use kwavers_transducer::mems::plate;
 use pyo3::prelude::*;
 
@@ -12,7 +14,14 @@ pub fn mems_clamped_plate_resonance(
     density: f64,
     radius: f64,
 ) -> f64 {
-    plate::vacuum_resonance(youngs, thickness, poisson, density, radius)
+    plate::vacuum_resonance(
+        Pressure::from_unit::<Pascal>(youngs),
+        Length::from_unit::<Meter>(thickness),
+        Dimensionless::from_base(poisson),
+        MassDensity::from_unit::<KilogramPerCubicMeter>(density),
+        Length::from_unit::<Meter>(radius),
+    )
+    .in_unit::<Hertz>()
 }
 
 /// Lamb fluid-loaded (immersion) resonance `Hz`.
@@ -24,5 +33,12 @@ pub fn mems_immersion_resonance(
     density_fluid: f64,
     radius: f64,
 ) -> f64 {
-    plate::immersion_resonance(vacuum_freq, density_plate, thickness, density_fluid, radius)
+    plate::immersion_resonance(
+        Frequency::from_unit::<Hertz>(vacuum_freq),
+        MassDensity::from_unit::<KilogramPerCubicMeter>(density_plate),
+        Length::from_unit::<Meter>(thickness),
+        MassDensity::from_unit::<KilogramPerCubicMeter>(density_fluid),
+        Length::from_unit::<Meter>(radius),
+    )
+    .in_unit::<Hertz>()
 }
