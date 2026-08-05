@@ -7869,6 +7869,10 @@ dependencies = [
 ]
 
 [[patch.unused]]
+name = "horae"
+version = "0.1.0"
+
+[[patch.unused]]
 name = "athena-core"
 version = "0.1.0"
 
@@ -7887,10 +7891,6 @@ version = "0.18.0"
 [[patch.unused]]
 name = "hephaestus-rocm"
 version = "0.18.0"
-
-[[patch.unused]]
-name = "horae"
-version = "0.1.0"
 
 [[patch.unused]]
 name = "apollo-nufft"
