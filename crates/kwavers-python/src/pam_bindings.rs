@@ -17,7 +17,7 @@ use kwavers_analysis::signal_processing::pam::{
     DelayAndSumConfig, DelayAndSumPAM,
 };
 use kwavers_math::fft::Complex64 as KwComplex;
-use leto_ops::application::linalg::{HermitianEigenJacobi, HermitianEigenJacobiConfig};
+use leto_ops::application::linalg::{hermitian_eigen_jacobi, HermitianEigenConfig};
 use leto::{Array1, Array2};
 use numpy::{PyArray1, PyReadonlyArray1, PyReadonlyArray2};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
@@ -78,9 +78,9 @@ fn hermitian_eigenvalues_complex(
     covariance_imag: PyReadonlyArray2<f64>,
 ) -> PyResult<Py<PyArray1<f64>>> {
     let h = hermitian_from_parts(&covariance_real, &covariance_imag)?;
-    let result = EigenSolver::jacobi_hermitian(&h, EigenSolverConfig::default())
+    let result = hermitian_eigen_jacobi(&h, HermitianEigenConfig::default())
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-    let mut v = result.eigenvalues.into_vec();
+    let mut v: Vec<f64> = result.eigenvalues.iter().cloned().collect();
     v.sort_by(|a, b| b.total_cmp(a));
     let eigenvalues = Array1::from(v);
     Ok(PyArray1::from_owned_array(py, leto1_to_nd1(eigenvalues)).into())

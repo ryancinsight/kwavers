@@ -4,6 +4,7 @@
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
+| KWAVERS-AEQ-MET-67 | Type thermal-acoustic temperature coefficients and the adjacent thermal-diffusion public parameters with Aequitas; keep CEM43 domain semantics and Eunomia real/complex boundaries explicit. | [arch] [major] | implemented 2026-08-06; library check green; native test collection blocked by shared-target budget/disk residual | Codex | `crates/kwavers-physics/src/thermal/{coupling,diffusion,thermal_dose.rs}`, direct callers/tests, ADR 103/104, PM artifacts |
 | KWAVERS-AEQ-MET-FLEX | Audit and type the flexible-array dynamic metrics: timestamps, focus/speed/delay contracts, calibration confidence, and deformation outputs; preserve raw dense mesh/signal storage boundaries. | [arch] [major] | done 2026-08-05; typed public contracts and corrected inverse-length curvature/energy-density semantics | Codex | `crates/kwavers-transducer/src/flexible/{array,beamforming,geometry,config}.rs`, direct callers/tests, ADR 103, PM artifacts |
 | KWAVERS-AEQ-MET-64 | Type CMUT, PMUT, and shared MEMS plate physical metrics with Aequitas, including charge-gradient and flexural-rigidity semantics; preserve Eunomia's one observable unit for complex components and keep Python scalar conversion at the FFI boundary. | [arch] [major] | done 2026-08-05 | Codex | `crates/kwavers-transducer/src/mems/{cmut,pmut,plate,comparison}.rs`, MEMS Python bindings, Aequitas MEMS quantities, ADR 070, PM artifacts |
 | KWAVERS-AEQ-MET-65 | Type the MEMS mutual-radiation crosstalk boundary with Aequitas `Area`, `Length`, `Frequency`, `MassDensity`, `Velocity`, and semantically correct complex `MechanicalImpedance`; preserve Eunomia's one observable phasor unit. | [arch] [major] | done 2026-08-05 | Codex | `crates/kwavers-transducer/src/mems/crosstalk.rs`, Aequitas mechanical-impedance quantity, ADR 070, PM artifacts |
@@ -68,7 +69,7 @@
   curvature was replaced with inverse-length Menger curvature, and the old
   energy field is now explicitly strain-energy density (`EnergyPerVolume`).
   Eunomia complex values remain one observable signal unit; flexible geometry
-  has no imaginary SI unit. See `docs/ADR/103-flexible-array-quantities.md`.
+  has no imaginary SI unit. See `docs/ADR/070-mems-quantity-contracts.md`.
 - Evidence: focused flexible Nextest passed 6/6 before the clean rebuild;
   the later rebuild exhausted the shared disk and then exposed a separate
   Melinoe compile defect before Kwavers test execution. The provider residual

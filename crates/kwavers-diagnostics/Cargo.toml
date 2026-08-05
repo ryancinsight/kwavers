@@ -13,6 +13,7 @@ hyperion = { workspace = true }
 aequitas = { workspace = true }
 kwavers-core = { path = "../kwavers-core", features = ["registration"], version = "3.0.0" }
 eunomia = { workspace = true }
+leto-ops = { workspace = true }
 kwavers-math = { path = "../kwavers-math", version = "3.0.0" }
 kwavers-grid = { path = "../kwavers-grid", version = "3.0.0" }
 kwavers-imaging = { path = "../kwavers-imaging", version = "3.0.0" }

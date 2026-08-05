@@ -147,10 +147,12 @@ mod tests {
         let elements = ElementPlacement::generate_elements(&geometry, 1).unwrap();
 
         assert_eq!(elements.len(), 1);
-        assert!(elements[0]
-            .position
-            .iter()
-            .all(|value| value.in_unit::<Meter>().is_finite()));
+        assert!(
+            elements[0]
+                .position
+                .iter()
+                .all(|value| value.in_unit::<Meter>().is_finite())
+        );
         assert!(elements[0].normal.iter().all(|value| value.is_finite()));
     }
 

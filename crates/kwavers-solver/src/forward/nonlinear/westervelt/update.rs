@@ -35,7 +35,7 @@
 //! workspace at the configured stencil order, incurring no additional FD
 //! stencil evaluation.
 
-use moirai_parallel::{enumerate_mut_with, Adaptive};
+use moirai_parallel::{Adaptive, enumerate_mut_with};
 use tracing::warn;
 
 use super::WesterveltFdtd;
@@ -132,15 +132,18 @@ impl WesterveltFdtd {
         });
 
         // Source injection: amplitude × Δt (Pa·s) applied as a pressure impulse.
+        // `for_each_position` avoids allocating a temporary position Vec on the
+        // timestep path while retaining the open `Source` trait boundary.
         for source in sources {
             let amplitude = source.amplitude(t);
             if amplitude.abs() > 1e-12 {
-                for position in source.positions() {
+                let mut inject = |position: (f64, f64, f64)| {
                     let i = ((position.0 / grid.dx).round() as usize).min(grid.nx - 1);
                     let j = ((position.1 / grid.dy).round() as usize).min(grid.ny - 1);
                     let k = ((position.2 / grid.dz).round() as usize).min(grid.nz - 1);
                     self.pressure_next[[i, j, k]] += amplitude * dt;
-                }
+                };
+                source.for_each_position(&mut inject);
             }
         }
 

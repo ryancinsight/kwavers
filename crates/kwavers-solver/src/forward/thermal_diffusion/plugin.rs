@@ -1,4 +1,5 @@
 use crate::plugin::{PluginContext, PluginMetadata, PluginState};
+use aequitas::systems::si::quantities::Time;
 use kwavers_core::error::KwaversResult;
 use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
@@ -80,7 +81,7 @@ impl crate::plugin::Plugin for ThermalDiffusionPlugin {
                 None
             };
 
-            solver.update(medium, grid, dt, heat_source)?;
+            solver.update(medium, grid, Time::from_base(dt), heat_source)?;
 
             let temp_idx = UnifiedFieldType::Temperature as usize;
             if fields.shape()[0] > temp_idx {
@@ -147,7 +148,9 @@ mod tests {
         solver.set_temperature(initial_temp);
 
         for _ in 0..10 {
-            solver.update(&medium, &grid, 0.001, None).unwrap();
+            solver
+                .update(&medium, &grid, Time::from_base(0.001), None)
+                .unwrap();
         }
 
         let final_temp = solver.temperature();

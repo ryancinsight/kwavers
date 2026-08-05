@@ -84,6 +84,12 @@ impl Source for SimpleCustomSource {
         self.positions.clone()
     }
 
+    fn for_each_position(&self, visitor: &mut dyn FnMut((f64, f64, f64))) {
+        for &position in &self.positions {
+            visitor(position);
+        }
+    }
+
     fn signal(&self) -> &dyn Signal {
         self.signal.as_ref()
     }
@@ -226,6 +232,11 @@ impl Source for FunctionSource {
         vec![]
     }
 
+    fn for_each_position(&self, _visitor: &mut dyn FnMut((f64, f64, f64))) {
+        // A function source has no discrete positions to stream; the
+        // compatibility `positions()` adaptation is already empty.
+    }
+
     fn signal(&self) -> &dyn Signal {
         self.signal.as_ref()
     }
@@ -286,5 +297,36 @@ mod tests {
             source.get_source_term(0.0, empty_cell.0, empty_cell.1, empty_cell.2, &grid),
             0.0
         );
+    }
+
+    #[test]
+    fn simple_custom_source_position_visitor_matches_owned_positions() {
+        let source = SimpleCustomSource::new(
+            vec![(1.0, 2.0, 3.0), (4.0, 5.0, 6.0)],
+            vec![1.0, 2.0],
+            Arc::new(ConstantSignal(1.0)),
+            SourceField::Pressure,
+        );
+        let mut visited = Vec::new();
+
+        source.for_each_position(&mut |position| visited.push(position));
+
+        assert_eq!(visited, source.positions());
+        assert_eq!(visited, vec![(1.0, 2.0, 3.0), (4.0, 5.0, 6.0)]);
+    }
+
+    #[test]
+    fn function_source_position_visitor_is_empty() {
+        let source = FunctionSource::new(
+            |x, y, z, _t| x + y + z,
+            Arc::new(ConstantSignal(1.0)),
+            SourceField::Pressure,
+        );
+        let mut visited = Vec::new();
+
+        source.for_each_position(&mut |position| visited.push(position));
+
+        assert!(visited.is_empty());
+        assert!(source.positions().is_empty());
     }
 }

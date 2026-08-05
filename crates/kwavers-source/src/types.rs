@@ -86,8 +86,9 @@ pub struct SourceFocalProperties {
 /// Efficient source trait using mask-based approach.
 ///
 // dyn: used as `dyn Source` (open, cross-crate-extensible implementor set —
-// 6 impls in kwavers-source, 8+ in kwavers-transducer — and stored in
-// heterogeneous `Vec<Box<dyn Source>>` collections). Per the zero-cost policy
+// built-ins live in kwavers-source and kwavers-transducer, while callers may
+// provide external implementations — and stored in heterogeneous
+// `Vec<Box<dyn Source>>` collections). Per the zero-cost policy
 // (ADR 012) this is a sanctioned dynamic-dispatch boundary: the concrete type is
 // genuinely unknown at the storage site and dispatch is O(num_sources)/step
 // (the scalar `amplitude(t)`), never per-cell. Trait methods stay object-safe.
@@ -128,8 +129,34 @@ pub trait Source: Debug + Sync + Send {
     /// This is called once per time step, not per grid point
     fn amplitude(&self, t: f64) -> f64;
 
-    /// Get source positions for visualization/analysis
+    /// Get source positions for visualization/analysis.
+    ///
+    /// This allocating compatibility method is retained for callers that need
+    /// to own the positions. Time-step kernels should prefer
+    /// [`Source::for_each_position`] so implementations that override it can
+    /// stream positions without constructing a temporary `Vec`.
     fn positions(&self) -> Vec<(f64, f64, f64)>;
+
+    /// Visit source positions through a callback.
+    ///
+    /// The default implementation preserves compatibility for external source
+    /// implementations by adapting [`Source::positions`], and therefore may
+    /// allocate. Built-in point, time-varying, null, plane-wave, Gaussian,
+    /// spherical, Bessel, and simple-custom sources override this method so
+    /// their hot timestep paths avoid constructing a position `Vec`. Optical
+    /// fiber,
+    /// laser, and LED sources stream through the parallel
+    /// `OpticalSource::for_each_position`. `CompositeSource` forwards without
+    /// constructing one itself when its children do;
+    /// nested sources using the default fallback may still allocate. Other
+    /// source families may adopt the override in later increments. The
+    /// visitor is called once for every position in the same order as
+    /// [`Source::positions`].
+    fn for_each_position(&self, visitor: &mut dyn FnMut((f64, f64, f64))) {
+        for position in self.positions() {
+            visitor(position);
+        }
+    }
 
     /// Get the underlying signal
     fn signal(&self) -> &dyn Signal;

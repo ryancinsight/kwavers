@@ -5,7 +5,7 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::Complex64;
-use kwavers_math::CsrMatrix;
+use kwavers_math::CompressedSparseRowMatrix;
 use kwavers_mesh::Tetrahedron;
 use leto::Array1;
 use moirai_parallel::{map_collect_index_with, Adaptive};
@@ -250,8 +250,10 @@ impl FemAssembly {
 
         for &node_idx in radiation_nodes {
             // Add -ik to diagonal for Sommerfeld radiation condition
-            let current_diag = stiffness.get_diagonal(node_idx);
-            stiffness.set_diagonal(node_idx, current_diag + radiation_term);
+            if let Some(mut current_diag) = stiffness.get_diagonal(node_idx) {
+                current_diag += radiation_term;
+                stiffness.set_diagonal(node_idx, current_diag);
+            }
         }
 
         Ok(())
@@ -279,10 +281,8 @@ impl FemAssembly {
         stiffness: &mut CompressedSparseRowMatrix<Complex64>,
         mass: &mut CompressedSparseRowMatrix<Complex64>,
     ) -> KwaversResult<()> {
-        // Remove entries below tolerance
-        let tolerance = 1e-12;
-        stiffness.compress(tolerance);
-        mass.compress(tolerance);
+        *stiffness = stiffness.compress();
+        *mass = mass.compress();
 
         Ok(())
     }

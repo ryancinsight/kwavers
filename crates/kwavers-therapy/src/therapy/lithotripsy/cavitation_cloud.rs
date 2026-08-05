@@ -10,7 +10,7 @@ use kwavers_core::constants::cavitation::{
 use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use kwavers_core::constants::numerical::MPA_TO_PA;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_math::Lsqr{
+use kwavers_math::{
     solve_lsqr_matfree, LsqrConfig, MatFreeOperator,
 };
 use kwavers_physics::acoustics::bubble_dynamics::adaptive_integration::integrate_bubble_dynamics_adaptive;
@@ -166,6 +166,17 @@ struct CouplingOperator {
     d: Vec<f64>,
     rho: f64,
     r_cut: f64,
+}
+
+impl Clone for CouplingOperator {
+    fn clone(&self) -> Self {
+        Self {
+            positions: self.positions.clone(),
+            d: self.d.clone(),
+            rho: self.rho,
+            r_cut: self.r_cut,
+        }
+    }
 }
 
 impl CouplingOperator {

@@ -25,7 +25,7 @@ pub fn fubini_harmonic_amplitude(n: u32, sigma: f64) -> f64 {
     if x.abs() < 1e-15 {
         return if n == 1 { 1.0 } else { 0.0 };
     }
-    2.0 / x * jn(n, x)
+    2.0 / x * jn(n as usize, x)
 }
 
 /// Compute the Fubini harmonic spectrum for harmonics n = 1..=n_max at parameter σ.

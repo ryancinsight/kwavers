@@ -1,7 +1,7 @@
 //! Error-metric validation bindings.
 
 use super::arrays::as_slices;
-use kwavers_math::statistics;
+// validation_psnr_from_relative_rmse imported from kwavers_math (line 12: #[pyfunction])
 use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
@@ -17,7 +17,7 @@ pub fn validation_psnr_from_relative_rmse(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = py
-        .detach(|| statistics::validation_psnr_from_relative_rmse(relative_rmse))
+        .detach(|| kwavers_math::validation_psnr_from_relative_rmse(relative_rmse))
         .map_err(PyValueError::new_err)?;
     Ok(result.to_pyarray(py).unbind())
 }
@@ -27,7 +27,7 @@ pub fn validation_psnr_from_relative_rmse(
 #[pyo3(signature = (a, b))]
 pub fn rmse(a: PyReadonlyArray1<f64>, b: PyReadonlyArray1<f64>) -> PyResult<f64> {
     let (a_s, b_s) = as_slices(&a, &b)?;
-    Ok(statistics::rmse(a_s, b_s))
+    Ok(kwavers_math::rmse(a_s, b_s))
 }
 
 /// Peak signal-to-noise ratio `PSNR = 20·log₁₀(MAX_b / RMSE(a,b))` `dB`, with
@@ -37,5 +37,5 @@ pub fn rmse(a: PyReadonlyArray1<f64>, b: PyReadonlyArray1<f64>) -> PyResult<f64>
 #[pyo3(signature = (a, b))]
 pub fn psnr(a: PyReadonlyArray1<f64>, b: PyReadonlyArray1<f64>) -> PyResult<f64> {
     let (a_s, b_s) = as_slices(&a, &b)?;
-    Ok(statistics::psnr(a_s, b_s))
+    Ok(kwavers_math::psnr(a_s, b_s))
 }

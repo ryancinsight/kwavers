@@ -1,7 +1,7 @@
 use crate::signal_processing::localization::SourceLocation;
 use eunomia::Complex64;
 use kwavers_core::error::KwaversResult;
-use leto_ops::application::linalg::{HermitianEigenJacobi, HermitianEigenJacobiConfig};
+use leto_ops::application::linalg::{hermitian_eigen_jacobi, HermitianEigenConfig};
 use leto::Array2;
 
 use super::super::model_order::{ModelOrderConfig, ModelOrderEstimator};
@@ -191,7 +191,7 @@ impl MUSICProcessor {
         let covariance = self.estimate_covariance(snapshots)?;
 
         let (eigenvalues, eigenvectors) = {
-            let r = EigenSolver::jacobi_hermitian(&covariance, EigenSolverConfig::default())?;
+            let r = hermitian_eigen_jacobi(&covariance, HermitianEigenConfig::default())?;
             (r.eigenvalues, r.eigenvectors)
         };
 

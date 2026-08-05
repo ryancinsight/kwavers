@@ -3,6 +3,7 @@
 //! Reference: Cattaneo, C. (1958). "A form of heat conduction equation which eliminates
 //! the paradox of instantaneous propagation." Comptes Rendus, 247, 431-433.
 
+use aequitas::systems::si::quantities::Time;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
@@ -22,13 +23,13 @@ use std::ops::Range;
 #[derive(Debug, Clone)]
 pub struct HyperbolicParameters {
     /// Thermal relaxation time `τ` `s`.
-    pub relaxation_time: f64,
+    pub relaxation_time: Time<f64>,
 }
 
 impl Default for HyperbolicParameters {
     fn default() -> Self {
         Self {
-            relaxation_time: 20.0,
+            relaxation_time: Time::from_base(20.0),
         }
     }
 }
@@ -74,13 +75,35 @@ impl CattaneoVernotte {
         temperature: &Array3<f64>,
         medium: &dyn Medium,
         grid: &Grid,
-        dt: f64,
+        dt: Time<f64>,
     ) -> KwaversResult<()> {
-        let tau = self.params.relaxation_time;
+        let dt_s = dt.into_base();
+        let tau_s = self.params.relaxation_time.into_base();
 
-        Self::update_flux_axis::<0>(&mut self.heat_flux_x, temperature, medium, grid, dt, tau);
-        Self::update_flux_axis::<1>(&mut self.heat_flux_y, temperature, medium, grid, dt, tau);
-        Self::update_flux_axis::<2>(&mut self.heat_flux_z, temperature, medium, grid, dt, tau);
+        Self::update_flux_axis::<0>(
+            &mut self.heat_flux_x,
+            temperature,
+            medium,
+            grid,
+            dt_s,
+            tau_s,
+        );
+        Self::update_flux_axis::<1>(
+            &mut self.heat_flux_y,
+            temperature,
+            medium,
+            grid,
+            dt_s,
+            tau_s,
+        );
+        Self::update_flux_axis::<2>(
+            &mut self.heat_flux_z,
+            temperature,
+            medium,
+            grid,
+            dt_s,
+            tau_s,
+        );
 
         Ok(())
     }
@@ -117,9 +140,10 @@ impl CattaneoVernotte {
         temperature: &mut Array3<f64>,
         medium: &dyn Medium,
         grid: &Grid,
-        dt: f64,
+        dt: Time<f64>,
     ) -> KwaversResult<()> {
         self.update_heat_flux(temperature, medium, grid, dt)?;
+        let dt_s = dt.into_base();
         Self::fill_heat_flux_divergence(
             &self.heat_flux_x,
             &self.heat_flux_y,
@@ -139,7 +163,7 @@ impl CattaneoVernotte {
                 let rho = kwavers_medium::density_at(medium, x, y, z, grid);
                 let cp = medium.specific_heat(x, y, z, grid);
 
-                *t -= dt * div / (rho * cp);
+                *t -= dt_s * div / (rho * cp);
             },
         );
 
@@ -282,7 +306,7 @@ mod tests {
         let medium = homogeneous_unit_medium(&grid);
         let mut solver = CattaneoVernotte::new(
             HyperbolicParameters {
-                relaxation_time: 1.0,
+                relaxation_time: Time::from_base(1.0),
             },
             &grid,
         );
@@ -290,9 +314,10 @@ mod tests {
         let mut temperature =
             Array3::from_shape_fn([grid.nx, grid.ny, grid.nz], |[i, _, _]| (i * i) as f64);
         let center_before = temperature[[2, 0, 0]];
-        let dt = 0.1;
-        let relax = dt / solver.params.relaxation_time;
-        let expected_center_after_one_step = center_before + dt * (2.0 * relax / (1.0 + relax));
+        let dt = Time::from_base(0.1);
+        let relax = dt.into_base() / solver.params.relaxation_time.into_base();
+        let expected_center_after_one_step =
+            center_before + dt.into_base() * (2.0 * relax / (1.0 + relax));
 
         solver
             .update_temperature(&mut temperature, &medium, &grid, dt)

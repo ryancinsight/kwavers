@@ -21,6 +21,9 @@
 //! binding divides by `ρ·cp` to produce K/s, which is what
 //! `ThermalDiffusionSolver::update` expects for its `external_source` argument.
 
+use aequitas::systems::si::quantities::{
+    MassDensity, ReciprocalTime, SpecificHeatCapacity, ThermodynamicTemperature, Time,
+};
 use leto::{Array2, Array3};
 use numpy::{PyArray1, PyArray2, PyArray3, PyReadonlyArray3};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
@@ -265,12 +268,12 @@ impl ThermalSimulation {
         // ── Build ThermalDiffusionConfig ──────────────────────────────────────
         let config = ThermalDiffusionConfig {
             enable_bioheat: self.enable_bioheat,
-            perfusion_rate: self.perfusion_rate,
-            blood_density: self.blood_density,
-            blood_specific_heat: self.blood_specific_heat,
-            arterial_temperature: arterial_temp_k,
+            perfusion_rate: ReciprocalTime::from_base(self.perfusion_rate),
+            blood_density: MassDensity::from_base(self.blood_density),
+            blood_specific_heat: SpecificHeatCapacity::from_base(self.blood_specific_heat),
+            arterial_temperature: ThermodynamicTemperature::from_base(arterial_temp_k),
             enable_hyperbolic: false,
-            relaxation_time: 20.0,
+            relaxation_time: Time::from_base(20.0),
             track_thermal_dose: self.track_thermal_dose,
             spatial_order: self.spatial_order as usize,
         };
@@ -344,7 +347,12 @@ impl ThermalSimulation {
             }
 
             solver
-                .update(&medium, &kgrid, dt, q_ks.as_ref().map(|a| a.view()))
+                .update(
+                    &medium,
+                    &kgrid,
+                    Time::from_base(dt),
+                    q_ks.as_ref().map(|a| a.view()),
+                )
                 .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
         }
 

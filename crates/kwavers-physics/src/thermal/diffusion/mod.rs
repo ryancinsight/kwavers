@@ -26,6 +26,12 @@
 //!    *IEEE Transactions on Biomedical Engineering*, 46(9), 1037-1043.
 //!    - Modern perfusion estimation methods
 
+use aequitas::systems::si::quantities::{
+    MassDensity, ReciprocalTime, SpecificHeatCapacity, ThermodynamicTemperature, Time,
+};
+use aequitas::systems::si::units::{
+    JoulePerKilogramKelvin, Kelvin, KilogramPerCubicMeter, PerSecond, Second,
+};
 use kwavers_core::constants::medical::{BLOOD_SPECIFIC_HEAT, TISSUE_PERFUSION_RATE};
 use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_K;
 use kwavers_core::constants::tissue_acoustics::DENSITY_BLOOD;
@@ -43,18 +49,18 @@ pub use hyperbolic::{CattaneoVernotte, HyperbolicParameters};
 pub struct ThermalDiffusionConfig {
     /// Enable Pennes bioheat equation terms
     pub enable_bioheat: bool,
-    /// Blood perfusion rate [1/s]
-    pub perfusion_rate: f64,
-    /// Blood density [kg/m³]
-    pub blood_density: f64,
-    /// Blood specific heat [J/(kg·K)]
-    pub blood_specific_heat: f64,
-    /// Arterial blood temperature (K)
-    pub arterial_temperature: f64,
+    /// Blood perfusion rate [1/s].
+    pub perfusion_rate: ReciprocalTime<f64>,
+    /// Blood density [kg/m³].
+    pub blood_density: MassDensity<f64>,
+    /// Blood specific heat [J/(kg·K)].
+    pub blood_specific_heat: SpecificHeatCapacity<f64>,
+    /// Arterial blood temperature (K).
+    pub arterial_temperature: ThermodynamicTemperature<f64>,
     /// Enable hyperbolic heat transfer (Cattaneo-Vernotte)
     pub enable_hyperbolic: bool,
-    /// Thermal relaxation time (s)
-    pub relaxation_time: f64,
+    /// Thermal relaxation time (s).
+    pub relaxation_time: Time<f64>,
     /// Enable thermal dose tracking
     pub track_thermal_dose: bool,
     /// Spatial discretization order (2 or 4)
@@ -67,14 +73,32 @@ impl Default for ThermalDiffusionConfig {
             enable_bioheat: true,
             // TISSUE_PERFUSION_RATE = 5×10⁻⁴ 1/s — generic soft tissue default
             // (Pennes 1948; Duck 1990). See `kwavers_core::constants::medical`.
-            perfusion_rate: TISSUE_PERFUSION_RATE,
-            blood_density: DENSITY_BLOOD,
-            blood_specific_heat: BLOOD_SPECIFIC_HEAT,
-            arterial_temperature: BODY_TEMPERATURE_K,
+            perfusion_rate: ReciprocalTime::from_unit::<PerSecond>(TISSUE_PERFUSION_RATE),
+            blood_density: MassDensity::from_unit::<KilogramPerCubicMeter>(DENSITY_BLOOD),
+            blood_specific_heat: SpecificHeatCapacity::from_unit::<JoulePerKilogramKelvin>(
+                BLOOD_SPECIFIC_HEAT,
+            ),
+            arterial_temperature: ThermodynamicTemperature::from_unit::<Kelvin>(BODY_TEMPERATURE_K),
             enable_hyperbolic: false,
-            relaxation_time: 20.0,
+            relaxation_time: Time::from_unit::<Second>(20.0),
             track_thermal_dose: true,
             spatial_order: 4,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_parameters_preserve_canonical_si_values() {
+        let config = ThermalDiffusionConfig::default();
+
+        assert_eq!(config.perfusion_rate.into_base(), TISSUE_PERFUSION_RATE);
+        assert_eq!(config.blood_density.into_base(), DENSITY_BLOOD);
+        assert_eq!(config.blood_specific_heat.into_base(), BLOOD_SPECIFIC_HEAT);
+        assert_eq!(config.arterial_temperature.into_base(), BODY_TEMPERATURE_K);
+        assert_eq!(config.relaxation_time.into_base(), 20.0);
     }
 }

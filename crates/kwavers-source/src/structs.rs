@@ -45,6 +45,10 @@ impl Source for PointSource {
         vec![self.position]
     }
 
+    fn for_each_position(&self, visitor: &mut dyn FnMut((f64, f64, f64))) {
+        visitor(self.position);
+    }
+
     fn signal(&self) -> &dyn Signal {
         self.signal.as_ref()
     }
@@ -105,6 +109,14 @@ impl Source for TimeVaryingSource {
         let y = self.position.1 as f64;
         let z = self.position.2 as f64;
         vec![(x, y, z)]
+    }
+
+    fn for_each_position(&self, visitor: &mut dyn FnMut((f64, f64, f64))) {
+        visitor((
+            self.position.0 as f64,
+            self.position.1 as f64,
+            self.position.2 as f64,
+        ));
     }
 
     fn signal(&self) -> &dyn Signal {
@@ -168,6 +180,12 @@ impl Source for CompositeSource {
             .collect()
     }
 
+    fn for_each_position(&self, visitor: &mut dyn FnMut((f64, f64, f64))) {
+        for source in &self.sources {
+            source.for_each_position(visitor);
+        }
+    }
+
     fn signal(&self) -> &dyn Signal {
         if let Some(first_source) = self.sources.first() {
             first_source.signal()
@@ -226,6 +244,8 @@ impl Source for NullSource {
     fn positions(&self) -> Vec<(f64, f64, f64)> {
         vec![]
     }
+
+    fn for_each_position(&self, _visitor: &mut dyn FnMut((f64, f64, f64))) {}
 
     fn signal(&self) -> &dyn Signal {
         &self.null_signal
@@ -295,6 +315,34 @@ mod tests {
         assert_eq!(reused, owned);
         assert_eq!(reused[[1, 1, 1]], 2.0);
         assert_eq!(reused.as_ptr(), ptr);
+    }
+
+    #[test]
+    fn point_source_position_visitor_matches_owned_positions() {
+        let source = PointSource::new((1.0, 2.0, 3.0), Arc::new(NullSignal::new()));
+        let mut visited = Vec::new();
+
+        source.for_each_position(&mut |position| visited.push(position));
+
+        assert_eq!(visited, source.positions());
+        assert_eq!(visited.len(), 1);
+    }
+
+    #[test]
+    fn composite_position_visitor_preserves_child_order() {
+        let source = CompositeSource::new(vec![
+            Box::new(PointSource::new(
+                (1.0, 2.0, 3.0),
+                Arc::new(NullSignal::new()),
+            )),
+            Box::new(TimeVaryingSource::new((4, 5, 6), vec![1.0], 1.0)),
+        ]);
+        let mut visited = Vec::new();
+
+        source.for_each_position(&mut |position| visited.push(position));
+
+        assert_eq!(visited, source.positions());
+        assert_eq!(visited, vec![(1.0, 2.0, 3.0), (4.0, 5.0, 6.0)]);
     }
 
     #[test]

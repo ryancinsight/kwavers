@@ -1,4 +1,5 @@
 use super::*;
+use aequitas::systems::si::quantities::Time;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_core::error::KwaversError;
 use kwavers_medium::HomogeneousMedium;
@@ -83,7 +84,7 @@ fn standard_update_consumes_borrowed_source_view_without_source_clone() {
     source[[1, 1, 0]] = 5.0;
 
     solver
-        .update(&medium, &grid, 2.0, Some(source.view()))
+        .update(&medium, &grid, Time::from_base(2.0), Some(source.view()))
         .unwrap();
 
     assert_eq!(solver.temperature()[[1, 1, 0]], 320.0);
@@ -105,7 +106,7 @@ fn standard_update_consumes_noncontiguous_source_view() {
     assert_eq!(source_view.as_slice(), None);
 
     solver
-        .update(&medium, &grid, 2.0, Some(source_view))
+        .update(&medium, &grid, Time::from_base(2.0), Some(source_view))
         .unwrap();
 
     assert_eq!(solver.temperature()[[1, 1, 0]], 320.0);
@@ -122,7 +123,7 @@ fn standard_update_rejects_mismatched_source_shape_without_mutation() {
     let source = Array3::zeros((2, 3, 1));
 
     let err = solver
-        .update(&medium, &grid, 2.0, Some(source.view()))
+        .update(&medium, &grid, Time::from_base(2.0), Some(source.view()))
         .unwrap_err();
 
     match err {

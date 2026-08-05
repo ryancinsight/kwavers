@@ -3,7 +3,7 @@
 use super::BemBoundaryManager;
 use kwavers_core::error::KwaversResult;
 use kwavers_math::fft::Complex64;
-use kwavers_math::CsrMatrix;
+use kwavers_math::CompressedSparseRowMatrix;
 use leto::Array1;
 
 impl BemBoundaryManager {

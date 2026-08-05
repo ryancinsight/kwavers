@@ -86,17 +86,28 @@ impl PinnAcousticSource {
     /// Create PINN source adapter from domain source.
     ///
     /// Extracts relevant information for PINN physics specifications.
+    ///
+    /// Positions are streamed through [`Source::for_each_position`]: only the
+    /// first position and the total count are needed, so built-in sources
+    /// that override the visitor contribute no intermediate position `Vec`.
+    ///
     /// # Errors
     /// - Returns [`AdapterError::NoSourcePositions`] if the source has no positions.
     ///
     pub fn from_domain_source(source: &dyn Source, time_sample: f64) -> Result<Self, AdapterError> {
-        let positions = source.positions();
-        if positions.is_empty() {
+        let mut first_position = None;
+        let mut position_count = 0usize;
+        source.for_each_position(&mut |position| {
+            if first_position.is_none() {
+                first_position = Some(position);
+            }
+            position_count += 1;
+        });
+        let Some(position) = first_position else {
             return Err(AdapterError::NoSourcePositions);
-        }
-        let position = positions[0];
+        };
 
-        let source_class = Self::classify_source(source, &positions);
+        let source_class = Self::classify_source(source, position_count);
 
         let signal = source.signal();
         let frequency = signal.frequency(time_sample);
@@ -118,10 +129,10 @@ impl PinnAcousticSource {
     }
 
     /// Classify domain source for PINN physics.
-    fn classify_source(source: &dyn Source, positions: &[(f64, f64, f64)]) -> PinnSourceClass {
+    fn classify_source(source: &dyn Source, position_count: usize) -> PinnSourceClass {
         match source.source_type() {
             SourceField::Pressure => {
-                if (positions.len()) == 1 {
+                if position_count == 1 {
                     PinnSourceClass::Monopole
                 } else {
                     PinnSourceClass::Distributed

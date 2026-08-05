@@ -73,4 +73,10 @@ impl OpticalSource for LEDSource {
     fn positions(&self) -> Vec<(f64, f64, f64)> {
         self.positions.clone()
     }
+
+    fn for_each_position(&self, visitor: &mut dyn FnMut((f64, f64, f64))) {
+        for &position in &self.positions {
+            visitor(position);
+        }
+    }
 }

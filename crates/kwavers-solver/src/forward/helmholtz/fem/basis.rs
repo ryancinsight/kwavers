@@ -300,10 +300,10 @@ impl GaussQuadrature {
     #[allow(clippy::too_many_arguments)]
     pub fn add_element_contribution(
         &self,
-        global_stiffness: &mut kwavers_math::CsrMatrix<
+        global_stiffness: &mut kwavers_math::CompressedSparseRowMatrix<
             kwavers_math::fft::Complex64,
         >,
-        global_mass: &mut kwavers_math::CsrMatrix<
+        global_mass: &mut kwavers_math::CompressedSparseRowMatrix<
             kwavers_math::fft::Complex64,
         >,
         global_rhs: &mut leto::Array1<kwavers_math::fft::Complex64>,

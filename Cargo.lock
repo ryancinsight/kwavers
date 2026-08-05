@@ -3920,13 +3920,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "mnemosyne-hardened"
-version = "0.2.0"
-dependencies = [
- "mnemosyne-memory-core",
-]
-
-[[package]]
 name = "mnemosyne-heap"
 version = "0.3.0"
 dependencies = [
@@ -3961,7 +3954,6 @@ dependencies = [
  "mnemosyne-arena",
  "mnemosyne-backend",
  "mnemosyne-decay",
- "mnemosyne-hardened",
  "mnemosyne-heap",
  "mnemosyne-local",
  "mnemosyne-memory-core",
@@ -7877,23 +7869,15 @@ dependencies = [
 ]
 
 [[patch.unused]]
-name = "apollo-nufft"
-version = "0.7.0"
-
-[[patch.unused]]
-name = "apollo-sht"
-version = "0.7.0"
-
-[[patch.unused]]
-name = "asclepius-coeus"
-version = "0.1.0"
-
-[[patch.unused]]
 name = "athena-core"
 version = "0.1.0"
 
 [[patch.unused]]
 name = "athena-leto"
+version = "0.1.0"
+
+[[patch.unused]]
+name = "asclepius-coeus"
 version = "0.1.0"
 
 [[patch.unused]]
@@ -7907,3 +7891,11 @@ version = "0.18.0"
 [[patch.unused]]
 name = "horae"
 version = "0.1.0"
+
+[[patch.unused]]
+name = "apollo-nufft"
+version = "0.7.0"
+
+[[patch.unused]]
+name = "apollo-sht"
+version = "0.7.0"

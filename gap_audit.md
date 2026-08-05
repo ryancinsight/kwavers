@@ -71,7 +71,40 @@ blocked before test execution by the live Melinoe dirty change using
 `MelinoeCell` without importing it; that provider defect is outside this metric
 slice and is recorded as a verification residual. Eunomia complex values remain
 one observable signal unit; flexible geometry has no imaginary SI unit. See
-[ADR 103](docs/ADR/103-flexible-array-quantities.md).
+[ADR 070](docs/ADR/070-mems-quantity-contracts.md).
+
+### KWAVERS-AEQ-MET-66/67 — thermal-diffusion and thermal-acoustic metric gaps (implemented 2026-08-06)
+
+The active branch still carried two public thermal metric families as raw
+scalars after the transducer and MEMS closures. Thermal-diffusion parameters
+now use Aequitas `ReciprocalTime`, `MassDensity`, `SpecificHeatCapacity`,
+`ThermodynamicTemperature`, and `Time`. Thermal-acoustic coefficients now use
+`VelocityPerTemperature`, `MassDensityPerTemperature`, and
+`ReciprocalLengthPerTemperature`; absorption, intensity, density, velocity,
+pressure, elapsed time, and nonlinear heating use their corresponding
+Aequitas quantities. The nonlinear heating result is explicitly
+`VolumetricPowerDensityGradient` (`W/m⁴`), matching
+`(B/A)·P²·ω²/(ρ·c³)`.
+
+Celsius/absolute-temperature arrays and dense Leto fields remain numerical
+storage boundaries. CEM43 remains a domain dose convention rather than an SI
+`Time`; only its integration step is typed. Scalar extraction is confined to
+finite-difference, material-model, numerical, and storage boundaries.
+
+Eunomia compatibility is real-valued for these thermal contracts. Complex or
+quadrature values in adjacent signal fields retain one existing observable
+unit; no imaginary SI temperature, coefficient, heating, gradient, or dose
+unit is introduced. The decisions are recorded in [ADR 103](docs/ADR/103-thermal-diffusion-quantities.md)
+and [ADR 104](docs/ADR/104-thermal-acoustic-coupling-quantities.md).
+
+Evidence on the active branch: `cargo check -p kwavers-physics --lib
+--offline -j 1` passes, and the raw temperature-coefficient residue scan is
+clean. The bounded native test collection was attempted through Nextest but
+exceeded the 300-second budget while peer jobs occupied the shared target and
+disk availability fell below 100 MB; it was terminated without test results.
+The source matches the already-verified thermal implementation on
+`origin/main`, but the active branch retains this environment verification
+residual until a clean focused Nextest run is collected.
 
 ### KWAVERS-AEQ-MET-63 — focused-source and hemispherical metric gap (closed 2026-08-03)
 

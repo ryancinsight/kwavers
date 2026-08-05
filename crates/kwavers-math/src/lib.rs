@@ -34,6 +34,7 @@
 //! - Iterative solvers: `leto_ops::application::linalg::{LsqrSolver, LsqrConfig, LsqrResult}`
 //! - Sparse matrices: `leto_ops::application::sparse::{CsrMatrix, CscMatrix, CooMatrix, ...}`
 
+pub mod apodization;
 pub mod fft;
 pub mod geometry;
 pub mod inverse_problems;
@@ -42,6 +43,11 @@ pub mod numerics;
 mod parallel;
 pub mod simd;
 pub mod simd_safe;
+
+// Matrix-free linear operators and LSQR solver (re-exported from linear_algebra::sparse)
+pub use linear_algebra::sparse::{
+    solve_lsqr_matfree, MatFreeOperator, MatFreeResult,
+};
 
 // ============================================================================
 // RE-EXPORTS FROM leto-ops (SSOT)
@@ -73,6 +79,9 @@ pub use leto_ops::application::linalg::{
 // Complex linear algebra (from leto-ops::application::linalg)
 pub use leto_ops::application::linalg::{complex_inv, complex_solve};
 
+// Apodization types for transducer arrays
+pub use apodization::ApodizationType;
+
 // Eigendecomposition (from leto-ops::application::linalg)
 pub use leto_ops::application::linalg::{
     eigenvalues, hermitian_eigen_jacobi, hermitian_eigen_qr, symmetric_eigen_jacobi,
@@ -82,7 +91,10 @@ pub use leto_ops::application::linalg::{
 pub use leto_ops::application::linalg::{LsqrConfig, LsqrResult, LsqrSolver};
 
 // Sparse matrices (from leto-ops::application::sparse)
-pub use leto_ops::application::sparse::{CsrMatrix, CscMatrix, CooMatrix};
+// CsrMatrix, CscMatrix, CooMatrix re-exported only where needed via fully-qualified paths
+
+// Domain-specific sparse matrix type for BEM/FEM
+pub use linear_algebra::sparse::CompressedSparseRowMatrix;
 
 // FFT operations for signal processing
 pub use fft::{Fft1d, Fft2d, Fft3d, KSpaceCalculator};

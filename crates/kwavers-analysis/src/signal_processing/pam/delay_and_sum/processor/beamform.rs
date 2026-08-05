@@ -423,7 +423,9 @@ impl DelayAndSumPAM {
 
     /// Compute apodization weights for sidelobe suppression.
     pub(crate) fn compute_apodization_weights(&self) -> Vec<f64> {
-        self.config.apodization.weights(self.num_sensors)
+        (0..self.num_sensors)
+            .map(|i| self.config.apodization.weights(i, self.num_sensors))
+            .collect()
     }
 
     pub(super) fn noise_threshold(&self, intensity_map: &Array1<f64>) -> f64 {

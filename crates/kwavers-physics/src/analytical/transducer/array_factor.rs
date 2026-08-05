@@ -192,7 +192,9 @@ pub fn apodization_weights(n: usize, window_type: &str) -> Vec<f64> {
         // "uniform" and any unrecognised key → rectangular window.
         _ => ApodizationType::Uniform,
     };
-    window.weights(n)
+    (0..n)
+        .map(|i| window.weights(i, n))
+        .collect()
 }
 
 /// Apodization weights and normalized spatial-frequency response.

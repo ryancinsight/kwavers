@@ -2,7 +2,7 @@
 
 use eunomia::Complex64;
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use leto_ops::application::linalg::{HermitianEigenJacobi, HermitianEigenJacobiConfig};
+use leto_ops::application::linalg::{hermitian_eigen_jacobi, HermitianEigenConfig};
 use leto::{Array1, Array2, SliceArg};
 
 /// Eigenspace Minimum Variance (ESMV) Beamformer
@@ -103,7 +103,7 @@ impl EigenspaceMV {
         }
 
         let (eigenvalues, eigenvectors) = {
-            let r = EigenSolver::jacobi_hermitian(&r_loaded, EigenSolverConfig::default())?;
+            let r = hermitian_eigen_jacobi(&r_loaded, HermitianEigenConfig::default())?;
             (r.eigenvalues, r.eigenvectors)
         };
 
@@ -123,10 +123,7 @@ impl EigenspaceMV {
             }
         }
 
-        let r_inv_a =
-            kwavers_math::complex_solve::solve_linear_system_complex(
-                &r_loaded, steering,
-            )?;
+        let r_inv_a = kwavers_math::complex_solve(&r_loaded, steering)?;
 
         let mut ps_r_inv_a = Array1::<Complex64>::from_elem(n, Complex64::default());
         for i in 0..n {
@@ -212,7 +209,7 @@ impl EigenspaceMV {
         }
 
         let (eigenvalues, eigenvectors) = {
-            let r = EigenSolver::jacobi_hermitian(covariance, EigenSolverConfig::default())?;
+            let r = hermitian_eigen_jacobi(covariance, HermitianEigenConfig::default())?;
             (r.eigenvalues, r.eigenvectors)
         };
 
