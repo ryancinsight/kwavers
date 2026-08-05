@@ -77,7 +77,7 @@
 | [067](067-ceus-quantities.md) | Type CEUS physical contracts with Aequitas | Accepted — 2026-07-27 |
 | [068](068-sonogenetics-quantities.md) | Type sonogenetics physical contracts | — |
 | [069](069-complex-quantities.md) | Eunomia Complex Values at Aequitas Physical Boundaries | — |
-| [070](070-mems-quantity-contracts.md) | Aequitas contracts for MEMS physical metrics | Accepted and implemented under `KWAVERS-AEQ-MET-32` by commits `1afd09768` |
+| [070](070-mems-quantity-contracts.md) | Aequitas contracts for MEMS physical metrics | Accepted; crosstalk corrected under `KWAVERS-AEQ-MET-65` |
 | [071](071-plasmonics-quantities.md) | Aequitas contracts for plasmonics metrics | Accepted and implemented under `KWAVERS-AEQ-MET-33`. |
 | [072](072-gpu-equivalence-quantities.md) | Aequitas contracts for GPU/CPU equivalence metrics | Accepted and implemented under `KWAVERS-AEQ-MET-34`. |
 | [073](073-gpu-performance-time-quantities.md) | Aequitas contracts for GPU performance time metrics | Accepted and implemented under `KWAVERS-AEQ-MET-35`. |
