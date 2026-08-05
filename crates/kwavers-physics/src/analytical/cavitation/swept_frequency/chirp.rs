@@ -179,7 +179,7 @@ impl FrequencySweep {
     /// sweep period covers only part of the band; a pulse spanning ≥ one period
     /// covers the full `[min(f_start,f_end), max(f_start,f_end)]`. This is why a
     /// µs (≈ single-cycle) pulse realizes ≈ zero swept bandwidth while a ms pulse
-    /// realizes the full band (see [`super::engagement`]).
+    /// realizes the full band; see the engagement calculation.
     #[must_use]
     pub fn covered_band_hz(&self, window_s: f64) -> (f64, f64) {
         let lo_full = self.f_start_hz.min(self.f_end_hz);

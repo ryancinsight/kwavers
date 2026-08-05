@@ -4,7 +4,7 @@
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KWAVERS-AEQ-MET-66 | Type thermal-diffusion perfusion, density, heat-capacity, temperature, relaxation-time, and integration-time contracts with Aequitas; preserve CEM43 as a domain dose representation and Eunomia's real/complex rule. | [arch] [major] | in-progress | Codex | `crates/kwavers-physics/src/thermal/diffusion/`, `crates/kwavers-solver/src/forward/{thermal_diffusion,pstd/implementation/core/orchestrator}/`, direct Python/simulation callers, ADR 103, PM artifacts |
+| KWAVERS-AEQ-MET-66 | Type thermal-diffusion perfusion, density, heat-capacity, temperature, relaxation-time, and integration-time contracts with Aequitas; preserve CEM43 as a domain dose representation and Eunomia's real/complex rule. | [arch] [major] | done 2026-08-04 | Codex | `crates/kwavers-physics/src/thermal/diffusion/`, `crates/kwavers-solver/src/forward/{thermal_diffusion,pstd/implementation/core/orchestrator}/`, direct Python/simulation callers, ADR 103, PM artifacts |
 | KWAVERS-AEQ-MET-63 | Type focused and hemispherical source geometry, signal, timing, and validation metrics with Aequitas; preserve Eunomia real geometry and one observable unit for complex/quadrature signals; fix stale steering state and migrate direct therapy/diagnostics callers. | [arch] [major] | done 2026-08-03 | Codex | `crates/kwavers-transducer/src/{transducers/focused,hemispherical}`, direct `kwavers-therapy`, `kwavers-diagnostics`, examples, ADR 102, PM artifacts |
 | KWAVERS-AEQ-MET-62 | Type two-dimensional array geometry, beam-control, timing, and medium metrics with Aequitas; correct center-to-center pitch and preserve Eunomia real geometry and shared signal units. | [arch] [major] | done 2026-08-03 | Codex | `crates/kwavers-transducer/src/array_2d/`, direct Python/simulation callers, ADR 101, PM artifacts |
 | KWAVERS-AEQ-MET-61 | Type shared acquisition geometry coordinates and ring/bowl radius, diameter, and row-spacing contracts with Aequitas; preserve Eunomia real geometry and migrate every direct caller. | [arch] [major] | done 2026-08-03 | Codex | `kwavers-transducer/src/transducers/acquisition_geometry.rs`, transcranial diagnostics, breast FWI physics/solver/diagnostics/Python adapters, direct tests, ADR 100, PM artifacts |
@@ -17,7 +17,7 @@
 | KWAVERS-AEQ-MET-54 | Type the public ultrafast transmission scheduler's speed, depth, PRF, event times, frame rates, and tilt angles with Aequitas; keep scalar extraction at the PRF/timing formula boundary and document the real-only Eunomia compatibility rule. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-transducer/src/ultrafast/sequencer/**`, manifest, ADR 093, PM artifacts |
 | KWAVERS-AEQ-INTEGRATION-1 | Integrate the current Aequitas metric closure for therapeutic microbubble and plasmonics contracts on current `main`; harden the public three-dimensional plasmonic coordinate contract and synchronize the audit. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-physics/src/{acoustics/therapy/microbubble,electromagnetic}`, PM artifacts |
 
-## KWAVERS-AEQ-MET-66 — Type thermal-diffusion quantities [major] [arch] — in progress
+## KWAVERS-AEQ-MET-66 — Type thermal-diffusion quantities [major] [arch] — done 2026-08-04
 
 - Owner: Codex; scope: public thermal-diffusion parameters and integration-time
   contracts, their direct solver/orchestrator callers, Python and simulation
@@ -37,6 +37,14 @@
   typed contract without compatibility wrappers; analytical thermal and CEM43
   value regressions pass; strict package gates, Nextest, doctests, Rustdoc,
   formatting, and raw-unit scans pass.
+- Evidence: overlay Nextest passes 2,404/2,404 with five configured skips;
+  strict package Clippy passes for physics, solver, simulation, and Python;
+  physics doctests pass 8/8 with 4 ignored, solver doctests pass 4/4 with 8
+  ignored, and simulation doctests pass 4/4 with 2 ignored. The Python crate
+  is a `cdylib` with no library doctest target. Full locked metadata resolves
+  against the standalone Eunomia 0.7 graph; formatting, diff, and typed-boundary
+  scans pass. The local overlay evidence uses Eunomia 0.8 only because the
+  current unmerged provider worktrees are not yet the standalone remote graph.
 
 ## KWAVERS-AEQ-MET-63 — Type focused-source and hemispherical metrics [major] [arch] — done 2026-08-03
 

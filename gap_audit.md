@@ -1,5 +1,44 @@
 ## Live Aequitas closure — 2026-08-02
 
+### KWAVERS-AEQ-MET-66 — thermal-diffusion metric gap (closed 2026-08-04)
+
+The audit found raw public thermal-diffusion contracts for perfusion rate,
+blood density, blood heat capacity, arterial temperature, thermal relaxation,
+integration steps, and thermal-dose update time. The direct closure includes
+the Pennes and Cattaneo–Vernotte models, `ThermalDiffusionSolver`, the PSTD
+thermal orchestrator, the simulation dispatcher, the Python binding, and the
+thermal monitoring example. CEM43 itself is a cumulative equivalent-minutes
+dose convention and is intentionally not treated as SI elapsed time.
+
+The implementation migrates these contracts to Aequitas quantities and keeps
+scalar extraction at finite-difference, material-model, mesh/storage, and
+explicit FFI boundaries. `ThermalDiffusionConfig` defaults have a
+value-semantic regression for the canonical Kwavers constants. The Plugin
+trait's host timestep remains an explicit seconds boundary and converts once
+to `Time`. ADR 103 records the selected units and rejected compatibility
+paths.
+
+Eunomia compatibility is preserved: thermal quantities are real SI values.
+Real and quadrature values in adjacent response code remain components of one
+existing observable unit; no imaginary SI temperature, time, density,
+heat-capacity, or dose unit is introduced.
+
+Local evidence at the implementation head: overlay Nextest passes 2,404/2,404
+with five configured skips; strict package Clippy passes for physics, solver,
+simulation, and Python; physics, solver, and simulation doctests pass 8/8,
+4/4, and 4/4 respectively with only documented ignored examples. Full locked
+metadata resolves against the standalone Eunomia 0.7 graph, while the local
+overlay source pass verifies the current Eunomia 0.8 quantity API. The Python
+crate is a `cdylib` with no library doctest target. Formatting, diff, and
+typed-boundary scans pass.
+
+The standalone manifest remains on the published Eunomia 0.7 graph until the
+upstream provider graph lands its coordinated 0.8 revision. The local Atlas
+overlay uses current provider worktrees only for source checking and must not
+rewrite the committed Kwavers lockfile. Remaining thermal raw scalars are
+explicit simulation/Python/Plugin serialization or host-execution boundaries;
+they are not public domain contracts in this item.
+
 ### KWAVERS-AEQ-MET-63 — focused-source and hemispherical metric gap (closed 2026-08-03)
 
 The audit found raw public contracts in focused bowl, spherical-cap, arc,

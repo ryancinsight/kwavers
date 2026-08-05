@@ -514,7 +514,10 @@ fn main() -> KwaversResult<()> {
                         for _ in 0..THERMAL_SUBSTEPS {
                             bioheat_step(&mut temperature, &q_focal, dts);
                         }
-                        cem43.update(&temperature, THERAPY_PRI_S)?;
+                        cem43.update(
+                            &temperature,
+                            aequitas::systems::si::quantities::Time::from_base(THERAPY_PRI_S),
+                        )?;
                     }
                     lesion::TherapyMode::Cavitation => {
                         // Cumulative (irreversible) fractionation: β grows toward

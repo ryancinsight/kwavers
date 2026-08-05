@@ -4,6 +4,17 @@
 
 ### Changed
 
+- **Breaking:** Thermal-diffusion configuration and solver update contracts now
+  use Aequitas `ReciprocalTime`, `MassDensity`, `SpecificHeatCapacity`,
+  `ThermodynamicTemperature`, and `Time` quantities. Pennes and
+  Cattaneo–Vernotte formulas extract base SI values only at numerical
+  boundaries, while CEM43 remains a cumulative thermal-dose convention rather
+  than an elapsed-time unit. Direct simulation, solver, Python, and
+  orchestrator callers are migrated without compatibility wrappers. Eunomia
+  thermal values remain real SI observables; coherent real/quadrature values
+  retain one existing observable unit and no imaginary SI unit is introduced.
+  See [ADR 103](docs/ADR/103-thermal-diffusion-quantities.md).
+
 - **Breaking:** Focused bowl, spherical-cap, arc, multi-bowl, and
   hemispherical source contracts now use Aequitas quantities for physical
   geometry, frequency, pressure, phase, area, delay, volume, and validation

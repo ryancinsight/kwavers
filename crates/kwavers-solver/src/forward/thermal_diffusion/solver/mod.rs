@@ -13,6 +13,7 @@
 //! invariant because it is independent of timestep, material parameters, and
 //! boundary treatment.
 
+use aequitas::systems::si::quantities::Time;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
@@ -33,13 +34,13 @@ pub struct ThermalDiffusionSolver {
     hyperbolic_solver: Option<CattaneoVernotte>,
     dose_calculator: Option<ThermalDoseCalculator>,
     pub(super) laplacian_workspace: Array3<f64>,
-    current_time: f64,
+    current_time: Time<f64>,
 }
 
 impl ThermalDiffusionSolver {
     pub fn new(config: ThermalDiffusionConfig, grid: &Grid) -> Self {
         let shape = (grid.nx, grid.ny, grid.nz);
-        let temperature = Array3::from_elem(shape, config.arterial_temperature);
+        let temperature = Array3::from_elem(shape, config.arterial_temperature.into_base());
 
         let bioheat_solver = if config.enable_bioheat {
             Some(PennesBioheat::new(BioheatParameters {
@@ -77,7 +78,7 @@ impl ThermalDiffusionSolver {
             hyperbolic_solver,
             dose_calculator,
             laplacian_workspace: Array3::zeros(shape),
-            current_time: 0.0,
+            current_time: Time::from_base(0.0),
         }
     }
 
@@ -258,7 +259,7 @@ impl ThermalDiffusionSolver {
         &mut self,
         medium: &dyn Medium,
         grid: &Grid,
-        dt: f64,
+        dt: Time<f64>,
         external_source: Option<ArrayView3<'_, f64>>,
     ) -> KwaversResult<()> {
         if self.temperature_prev.is_none() {
@@ -304,8 +305,9 @@ impl ThermalDiffusionSolver {
         external_source: Option<ArrayView3<'_, f64>>,
         medium: &dyn Medium,
         grid: &Grid,
-        dt: f64,
+        dt: Time<f64>,
     ) -> KwaversResult<()> {
+        let dt_s = dt.into_base();
         let shape = self.temperature.shape();
         if let Some(source) = external_source.as_ref() {
             if source.shape() != shape {
@@ -330,7 +332,7 @@ impl ThermalDiffusionSolver {
 
             let alpha = medium.thermal_diffusivity(x, y, z, grid);
 
-            *temp += dt * alpha.mul_add(lap, source);
+            *temp += dt_s * alpha.mul_add(lap, source);
         };
 
         let source_is_contiguous = external_source.is_none() || source_slice.is_some();
@@ -400,10 +402,10 @@ impl ThermalDiffusionSolver {
 
     pub fn reset(&mut self, grid: &Grid) {
         let shape = (grid.nx, grid.ny, grid.nz);
-        self.temperature = Array3::from_elem(shape, self.config.arterial_temperature);
+        self.temperature = Array3::from_elem(shape, self.config.arterial_temperature.into_base());
         self.temperature_prev = None;
         self.laplacian_workspace.fill(0.0);
-        self.current_time = 0.0;
+        self.current_time = Time::from_base(0.0);
 
         if let Some(ref mut calc) = self.dose_calculator {
             calc.reset();

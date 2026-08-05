@@ -2,20 +2,26 @@
 
 ## Owner: Codex — KWAVERS-AEQ-MET-66 thermal-diffusion quantities [major] [arch] — in progress
 
-- [ ] Record ADR 103 for the typed thermal-diffusion parameter and time
+- [x] Record ADR 103 for the typed thermal-diffusion parameter and time
       contract, including the CEM43 domain-dose and Eunomia compatibility rules.
-- [ ] Type `ThermalDiffusionConfig`, `BioheatParameters`, and
+- [x] Type `ThermalDiffusionConfig`, `BioheatParameters`, and
       `HyperbolicParameters` with Aequitas and migrate all direct constructors.
-- [ ] Type public thermal update steps and current-time tracking while keeping
+- [x] Type public thermal update steps and current-time tracking while keeping
       the Plugin trait's scalar host boundary explicit.
-- [ ] Add analytical dimensional/value regressions and update Python,
+- [x] Add analytical dimensional/value regressions and update Python,
       simulation, solver, and orchestrator callers without compatibility paths.
-- [ ] Run strict package gates, Nextest, doctests, Rustdoc, formatting, and
+- [x] Run strict package gates, Nextest, doctests, Rustdoc, formatting, and
       raw-unit scans; synchronize the child audit, changelog, and parent state.
 
 Acceptance: the thermal-diffusion public Rust contracts carry Aequitas physical
 quantities, CEM43 remains a domain dose representation, all direct callers are
 migrated, and no imaginary physical unit is introduced.
+
+Evidence: overlay Nextest 2,404/2,404 with five skips; strict Clippy passes for
+the four affected packages; physics 8/8, solver 4/4, and simulation 4/4
+doctests pass with only documented ignored examples; standalone locked Cargo
+metadata resolves; formatting, diff, and typed-boundary scans pass. The Python
+`cdylib` has no doctest library target.
 
 ## Owner: Codex — KWAVERS-AEQ-MET-63 focused-source and hemispherical metrics [major] [arch] — done 2026-08-03
 

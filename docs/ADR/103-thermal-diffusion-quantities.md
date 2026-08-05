@@ -1,6 +1,6 @@
 # ADR 103: Thermal-diffusion physical quantities
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-08-04
 - Driver: `KWAVERS-AEQ-MET-66`
 
