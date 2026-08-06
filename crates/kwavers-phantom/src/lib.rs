@@ -148,63 +148,71 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn arbitrary_public_wavelength_errors_are_value_semantic() {
-        let wavelength = 440.0;
-        assert!(matches!(
-            utils::compute_blood_properties(wavelength, 0.7),
-            Err(PhantomError::Hyperion(
-                TransportError::WavelengthOutOfRange { value, .. }
-            )) if value == wavelength
-        ));
-        assert!(matches!(
-            utils::compute_tumor_properties(wavelength, 0.7),
-            Err(PhantomError::Hyperion(
-                TransportError::WavelengthOutOfRange { value, .. }
-            )) if value == wavelength
-        ));
+    fn assert_wavelength_error<T>(result: Result<T, PhantomError>, wavelength: f64) {
+        match result {
+            Err(PhantomError::Hyperion(TransportError::WavelengthOutOfRange {
+                value,
+                minimum,
+                maximum,
+            })) => {
+                assert_eq!(value, wavelength);
+                assert!(wavelength < minimum || wavelength > maximum);
+            }
+            Err(error) => panic!("expected a wavelength error, got {error:?}"),
+            Ok(_) => panic!("expected an invalid wavelength to be rejected"),
+        }
+    }
 
+    #[test]
+    fn invalid_wavelengths_are_rejected_by_property_helpers() {
+        for wavelength in [440.0, 1_001.0] {
+            assert_wavelength_error(utils::compute_blood_properties(wavelength, 0.7), wavelength);
+            assert_wavelength_error(utils::compute_tumor_properties(wavelength, 0.7), wavelength);
+        }
+    }
+
+    #[test]
+    fn invalid_wavelengths_propagate_through_phantom_builders() {
         let dims = GridDimensions::new(1, 1, 1, 0.001, 0.001, 0.001);
-        assert!(matches!(
-            PhantomBuilder::blood_oxygenation()
-                .dimensions(dims)
-                .wavelength(wavelength)
-                .add_artery([0.0, 0.0, 0.0], 0.0001, 0.7)
-                .build(),
-            Err(PhantomError::Hyperion(
-                TransportError::WavelengthOutOfRange { value, .. }
-            )) if value == wavelength
-        ));
-        assert!(matches!(
-            PhantomBuilder::blood_oxygenation()
-                .dimensions(dims)
-                .wavelength(wavelength)
-                .add_tumor([0.0, 0.0, 0.0], 0.0001, 0.7)
-                .build(),
-            Err(PhantomError::Hyperion(
-                TransportError::WavelengthOutOfRange { value, .. }
-            )) if value == wavelength
-        ));
-        assert!(matches!(
-            PhantomBuilder::tumor_detection()
-                .dimensions(dims)
-                .wavelength(wavelength)
-                .add_tumor([0.0, 0.0, 0.0], 0.0001, 0.7)
-                .build(),
-            Err(PhantomError::Hyperion(
-                TransportError::WavelengthOutOfRange { value, .. }
-            )) if value == wavelength
-        ));
-        assert!(matches!(
-            PhantomBuilder::vascular()
-                .dimensions(dims)
-                .wavelength(wavelength)
-                .add_vessel([0.0, 0.0, 0.0], [0.0, 0.0, 0.001], 0.0001, 0.7)
-                .build(),
-            Err(PhantomError::Hyperion(
-                TransportError::WavelengthOutOfRange { value, .. }
-            )) if value == wavelength
-        ));
+
+        for wavelength in [440.0, 1_001.0] {
+            assert_wavelength_error(
+                PhantomBuilder::blood_oxygenation()
+                    .dimensions(dims)
+                    .wavelength(wavelength)
+                    .add_artery([0.0, 0.0, 0.0], 0.0001, 0.7)
+                    .build(),
+                wavelength,
+            );
+            assert_wavelength_error(
+                PhantomBuilder::blood_oxygenation()
+                    .dimensions(dims)
+                    .wavelength(wavelength)
+                    .add_tumor([0.0, 0.0, 0.0], 0.0001, 0.7)
+                    .build(),
+                wavelength,
+            );
+            assert_wavelength_error(
+                PhantomBuilder::tumor_detection()
+                    .dimensions(dims)
+                    .wavelength(wavelength)
+                    .add_tumor([0.0, 0.0, 0.0], 0.0001, 0.7)
+                    .build(),
+                wavelength,
+            );
+            assert_wavelength_error(
+                PhantomBuilder::vascular()
+                    .dimensions(dims)
+                    .wavelength(wavelength)
+                    .add_vessel([0.0, 0.0, 0.0], [0.0, 0.0, 0.001], 0.0001, 0.7)
+                    .build(),
+                wavelength,
+            );
+        }
+    }
+
+    #[test]
+    fn missing_dimensions_remains_a_distinct_builder_error() {
         assert!(matches!(
             PhantomBuilder::vascular().build(),
             Err(PhantomError::MissingDimensions)
