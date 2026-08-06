@@ -112,3 +112,4 @@
 | [102](102-focused-source-quantities.md) | Aequitas focused-source geometry, signal, and metric quantities | Accepted — 2026-08-03 |
 | [103](103-thermal-diffusion-quantities.md) | Aequitas thermal-diffusion parameter and integration-time quantities | Accepted — 2026-08-04 |
 | [104](104-thermal-acoustic-coupling-quantities.md) | Aequitas thermal-acoustic coupling quantities | Accepted — 2026-08-05 |
+| [105](105-b-mode-scan-conversion-quantities.md) | Aequitas B-mode scan-conversion geometry quantities | Accepted — 2026-08-06 |

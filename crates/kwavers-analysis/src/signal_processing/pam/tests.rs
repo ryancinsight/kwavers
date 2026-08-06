@@ -1,20 +1,24 @@
 use super::*;
-use aequitas::systems::si::quantities::{Frequency, Length, Time};
-use aequitas::systems::si::units::{Hertz, Meter, MeterPerSecond, Second};
+use aequitas::systems::si::quantities::{Frequency, Length};
+use aequitas::systems::si::units::{Hertz, Meter, MeterPerSecond};
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::{SAMPLING_FREQUENCY_DEFAULT, SOUND_SPEED_TISSUE};
 
 #[test]
 fn pam_configuration_validation_rejects_invalid_bands_and_thresholds() {
-    let mut config = PAMConfig::default();
-    config.frequency_bands = vec![(
-        Frequency::from_unit::<Hertz>(100e3),
-        Frequency::from_unit::<Hertz>(20e3),
-    )];
+    let config = PAMConfig {
+        frequency_bands: vec![(
+            Frequency::from_unit::<Hertz>(100e3),
+            Frequency::from_unit::<Hertz>(20e3),
+        )],
+        ..Default::default()
+    };
     assert!(config.validate().is_err());
 
-    let mut config = PAMConfig::default();
-    config.threshold = -1.0;
+    let config = PAMConfig {
+        threshold: -1.0,
+        ..Default::default()
+    };
     assert!(config.validate().is_err());
 }
 
