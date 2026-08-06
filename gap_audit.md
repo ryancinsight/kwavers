@@ -1,3 +1,30 @@
+## Live Aequitas closure — 2026-08-06
+
+### KWAVERS-AEQ-MET-69 — B-mode scan-conversion geometry (closed 2026-08-06)
+
+The post-MET-68 public-boundary scan found `kwavers-analysis` B-mode scan
+conversion still accepted beam angles, apex/range distances, and Cartesian
+display extents as raw `f64` values. These values determine the fan geometry
+and interpolation coordinates; they are not dense RF or image storage.
+
+The gap is closed. `ScanGeometry` now carries Aequitas `Angle` and `Length`
+values, and `CartesianGrid` carries typed lateral and axial extents. Scalar
+extraction is confined to radians/metres at the trigonometric, interpolation,
+and Cartesian-raster formula boundaries. Construction rejects non-finite or
+unordered extents, non-positive steps, and negative apex offsets. No raw
+compatibility fields or forwarding constructors remain.
+
+The B-mode conversion law is real-valued. A future complex RF representation
+retains one existing observable signal unit at its numerical boundary; no
+imaginary angle or length unit is introduced under Eunomia.
+
+Evidence: `cargo check -p kwavers-analysis --lib --offline --jobs 1`,
+warning-denied all-target Clippy, `cargo nextest run -p kwavers-analysis
+--offline -E 'test(/b_mode/)'` (9/9), `cargo test --doc -p kwavers-analysis
+--offline` (1 executable, 21 ignored), Rustdoc, formatting, and diff checks
+pass. The shared Atlas overlay emits existing unused-patch and linker
+diagnostics; they are outside this metric boundary.
+
 ## Live Aequitas closure — 2026-08-05
 
 ### KWAVERS-AEQ-MET-68 — Eunomia compatibility closure (clean lock 2026-08-05)

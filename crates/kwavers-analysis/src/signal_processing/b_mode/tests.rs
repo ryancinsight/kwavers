@@ -3,6 +3,8 @@
 use super::detection::{envelope, log_compress};
 use super::scan_conversion::{CartesianGrid, ScanConverter, ScanGeometry};
 use super::tgc::TgcConfig;
+use aequitas::systems::si::quantities::{Angle, Length};
+use aequitas::systems::si::units::{Meter, Radian};
 use leto::{Array1, Array2};
 use std::f64::consts::PI;
 
@@ -98,16 +100,22 @@ fn log_compress_rejects_bad_range() {
 fn converter() -> ScanConverter {
     // ±30° sector, 0.5° beams, apex at origin, 0.2 mm range samples.
     let geometry = ScanGeometry {
-        angle_min: -30.0_f64.to_radians(),
-        angle_step: 0.5_f64.to_radians(),
-        radius_offset: 0.0,
-        range_step: 2e-4,
+        angle_min: Angle::from_unit::<Radian>(-30.0_f64.to_radians()),
+        angle_step: Angle::from_unit::<Radian>(0.5_f64.to_radians()),
+        radius_offset: Length::from_unit::<Meter>(0.0),
+        range_step: Length::from_unit::<Meter>(2e-4),
     };
     let grid = CartesianGrid {
         width: 200,
         height: 200,
-        x_range: (-0.03, 0.03),
-        z_range: (0.0, 0.06),
+        x_range: (
+            Length::from_unit::<Meter>(-0.03),
+            Length::from_unit::<Meter>(0.03),
+        ),
+        z_range: (
+            Length::from_unit::<Meter>(0.0),
+            Length::from_unit::<Meter>(0.06),
+        ),
     };
     ScanConverter::new(geometry, grid).unwrap()
 }
@@ -144,4 +152,31 @@ fn scan_conversion_places_beam_sample_at_correct_cartesian_pixel() {
 fn scan_conversion_rejects_degenerate_beam_grid() {
     let sc = converter();
     assert!(sc.convert(Array2::<f64>::zeros((1, 10)).view()).is_err());
+}
+
+#[test]
+fn scan_conversion_rejects_invalid_typed_geometry() {
+    let mut geometry = ScanGeometry {
+        angle_min: Angle::from_unit::<Radian>(0.0),
+        angle_step: Angle::from_unit::<Radian>(0.0),
+        radius_offset: Length::from_unit::<Meter>(0.0),
+        range_step: Length::from_unit::<Meter>(1e-3),
+    };
+    let grid = CartesianGrid {
+        width: 2,
+        height: 2,
+        x_range: (
+            Length::from_unit::<Meter>(-1.0),
+            Length::from_unit::<Meter>(1.0),
+        ),
+        z_range: (
+            Length::from_unit::<Meter>(0.0),
+            Length::from_unit::<Meter>(1.0),
+        ),
+    };
+    assert!(ScanConverter::new(geometry, grid).is_err());
+
+    geometry.angle_step = Angle::from_unit::<Radian>(1.0);
+    geometry.radius_offset = Length::from_unit::<Meter>(-1.0);
+    assert!(ScanConverter::new(geometry, grid).is_err());
 }
