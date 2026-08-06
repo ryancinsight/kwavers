@@ -247,7 +247,7 @@ fn validate_blood_vessel() -> Result<()> {
         .wavelength(800.0)
         .add_artery([cx, cy, 0.010], 0.002, 0.98)
         .add_vein([cx, cy, 0.020], 0.003, 0.65)
-        .build();
+        .build()?;
 
     // Monte Carlo
     println!("  Running Monte Carlo (500k photons)...");

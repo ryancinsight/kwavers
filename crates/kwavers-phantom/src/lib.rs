@@ -4,6 +4,7 @@
 //! validation, protocol development, and algorithm testing.
 
 pub mod builder;
+mod error;
 pub mod presets;
 pub mod scatterers;
 pub mod shepp_logan;
@@ -14,6 +15,7 @@ pub use builder::{
     BloodOxygenationPhantomBuilder, LayeredTissuePhantomBuilder, PhantomBuilder,
     TumorDetectionPhantomBuilder, VascularPhantomBuilder,
 };
+pub use error::PhantomError;
 pub use presets::ClinicalPhantoms;
 pub use scatterers::{PointScatterer, RfSynthesisConfig, ScattererCloud, TransmitWavefront};
 pub use shepp_logan::{Ellipse, SheppLogan, SheppLoganVariant};
@@ -22,18 +24,19 @@ pub use types::{LayerSpec, PhantomTissueType, PhantomType, TumorSpec, VesselSpec
 #[cfg(test)]
 mod tests {
     use super::*;
+    use hyperion::TransportError;
     use kwavers_grid::GridDimensions;
     use kwavers_medium::properties::OpticalPropertyData;
 
     #[test]
-    fn test_blood_oxygenation_phantom() {
+    fn test_blood_oxygenation_phantom() -> Result<(), PhantomError> {
         let dims = GridDimensions::new(30, 30, 30, 0.001, 0.001, 0.001);
         let phantom = PhantomBuilder::blood_oxygenation()
             .dimensions(dims)
             .wavelength(800.0)
             .add_artery([0.015, 0.015, 0.015], 0.002, 0.98)
             .add_vein([0.015, 0.015, 0.020], 0.003, 0.65)
-            .build();
+            .build()?;
 
         assert_eq!(phantom.properties().len(), 27000);
         // Vessels (oxy/deoxy hemoglobin) raise absorption above the background, so
@@ -50,6 +53,7 @@ mod tests {
             .map(OpticalPropertyData::absorption_coefficient)
             .fold(f64::MAX, f64::min);
         assert!(max > min);
+        Ok(())
     }
 
     #[test]
@@ -75,34 +79,36 @@ mod tests {
     }
 
     #[test]
-    fn test_tumor_detection_phantom() {
+    fn test_tumor_detection_phantom() -> Result<(), PhantomError> {
         let dims = GridDimensions::new(25, 25, 25, 0.001, 0.001, 0.001);
         let phantom = PhantomBuilder::tumor_detection()
             .dimensions(dims)
             .wavelength(800.0)
             .background(OpticalPropertyData::soft_tissue())
             .add_tumor([0.0125, 0.0125, 0.0125], 0.003, 0.60)
-            .build();
+            .build()?;
 
         assert_eq!(phantom.properties().len(), 15625);
+        Ok(())
     }
 
     #[test]
-    fn test_vascular_phantom() {
+    fn test_vascular_phantom() -> Result<(), PhantomError> {
         let dims = GridDimensions::new(20, 20, 30, 0.001, 0.001, 0.001);
         let phantom = PhantomBuilder::vascular()
             .dimensions(dims)
             .wavelength(800.0)
             .add_vessel([0.01, 0.01, 0.0], [0.01, 0.01, 0.03], 0.001, 0.95)
-            .build();
+            .build()?;
 
         assert_eq!(phantom.properties().len(), 12000);
+        Ok(())
     }
 
     #[test]
-    fn test_standard_blood_oxygenation() {
+    fn test_standard_blood_oxygenation() -> Result<(), PhantomError> {
         let dims = GridDimensions::new(30, 30, 30, 0.001, 0.001, 0.001);
-        let phantom = ClinicalPhantoms::standard_blood_oxygenation(dims);
+        let phantom = ClinicalPhantoms::standard_blood_oxygenation(dims)?;
 
         assert_eq!(phantom.properties().len(), 27000);
         // Non-trivial mean absorption (inlined to keep fixtures physics-free).
@@ -113,6 +119,7 @@ mod tests {
             .sum::<f64>()
             / phantom.properties().len() as f64;
         assert!(mean > 0.0);
+        Ok(())
     }
 
     #[test]
@@ -124,18 +131,83 @@ mod tests {
     }
 
     #[test]
-    fn test_breast_tumor_phantom() {
+    fn test_breast_tumor_phantom() -> Result<(), PhantomError> {
         let dims = GridDimensions::new(30, 30, 30, 0.001, 0.001, 0.001);
-        let phantom = ClinicalPhantoms::breast_tumor(dims, [0.015, 0.015, 0.015]);
+        let phantom = ClinicalPhantoms::breast_tumor(dims, [0.015, 0.015, 0.015])?;
 
         assert_eq!(phantom.properties().len(), 27000);
+        Ok(())
     }
 
     #[test]
-    fn test_vascular_network_phantom() {
+    fn test_vascular_network_phantom() -> Result<(), PhantomError> {
         let dims = GridDimensions::new(25, 25, 30, 0.001, 0.001, 0.001);
-        let phantom = ClinicalPhantoms::vascular_network(dims);
+        let phantom = ClinicalPhantoms::vascular_network(dims)?;
 
         assert_eq!(phantom.properties().len(), 18750);
+        Ok(())
+    }
+
+    #[test]
+    fn arbitrary_public_wavelength_errors_are_value_semantic() {
+        let wavelength = 440.0;
+        assert!(matches!(
+            utils::compute_blood_properties(wavelength, 0.7),
+            Err(PhantomError::Hyperion(
+                TransportError::WavelengthOutOfRange { value, .. }
+            )) if value == wavelength
+        ));
+        assert!(matches!(
+            utils::compute_tumor_properties(wavelength, 0.7),
+            Err(PhantomError::Hyperion(
+                TransportError::WavelengthOutOfRange { value, .. }
+            )) if value == wavelength
+        ));
+
+        let dims = GridDimensions::new(1, 1, 1, 0.001, 0.001, 0.001);
+        assert!(matches!(
+            PhantomBuilder::blood_oxygenation()
+                .dimensions(dims)
+                .wavelength(wavelength)
+                .add_artery([0.0, 0.0, 0.0], 0.0001, 0.7)
+                .build(),
+            Err(PhantomError::Hyperion(
+                TransportError::WavelengthOutOfRange { value, .. }
+            )) if value == wavelength
+        ));
+        assert!(matches!(
+            PhantomBuilder::blood_oxygenation()
+                .dimensions(dims)
+                .wavelength(wavelength)
+                .add_tumor([0.0, 0.0, 0.0], 0.0001, 0.7)
+                .build(),
+            Err(PhantomError::Hyperion(
+                TransportError::WavelengthOutOfRange { value, .. }
+            )) if value == wavelength
+        ));
+        assert!(matches!(
+            PhantomBuilder::tumor_detection()
+                .dimensions(dims)
+                .wavelength(wavelength)
+                .add_tumor([0.0, 0.0, 0.0], 0.0001, 0.7)
+                .build(),
+            Err(PhantomError::Hyperion(
+                TransportError::WavelengthOutOfRange { value, .. }
+            )) if value == wavelength
+        ));
+        assert!(matches!(
+            PhantomBuilder::vascular()
+                .dimensions(dims)
+                .wavelength(wavelength)
+                .add_vessel([0.0, 0.0, 0.0], [0.0, 0.0, 0.001], 0.0001, 0.7)
+                .build(),
+            Err(PhantomError::Hyperion(
+                TransportError::WavelengthOutOfRange { value, .. }
+            )) if value == wavelength
+        ));
+        assert!(matches!(
+            PhantomBuilder::vascular().build(),
+            Err(PhantomError::MissingDimensions)
+        ));
     }
 }
