@@ -143,7 +143,11 @@ impl NumaAwareAllocator {
                 let bind_result = unsafe { bind_memory_to_node(ptr.as_ptr(), size, node) };
                 if let Err(e) = bind_result {
                     // Log the error but don't fail allocation; fall back to FirstTouch.
-                    eprintln!("Warning: Failed to bind memory to node {}: {:?}", node, e);
+                    log::warn!(
+                        "failed to bind NUMA allocation to node {}; falling back to FirstTouch placement: {:?}",
+                        node,
+                        e
+                    );
                 }
             }
             ArenaLayoutNumaPolicy::Interleaved => {
