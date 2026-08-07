@@ -2,9 +2,9 @@
 
 use kwavers_math::fft::Complex64;
 use kwavers_math::linear_algebra::sparse::CompressedSparseRowMatrix;
-use leto::Array1;
+use leto::{Array1, LetoError};
 
-use kwavers_core::error::KwaversResult;
+use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
 use kwavers_mesh::tetrahedral::TetrahedralMesh;
 
 use super::BemFemCoupler;
@@ -110,7 +110,16 @@ impl BemFemCoupler {
         }
 
         let dense_matrix = matrix.to_dense_array()?;
-        let solution = kwavers_math::complex_solve(&dense_matrix, &rhs)?;
+        let solution =
+            kwavers_math::complex_solve(&dense_matrix, &rhs).map_err(|error| match error {
+                LetoError::NumericalBreakdown(detail) => {
+                    KwaversError::Numerical(NumericalError::SolverFailed {
+                        method: "complex_solve".to_owned(),
+                        reason: detail,
+                    })
+                }
+                other => KwaversError::from(other),
+            })?;
         let solution = solution.as_slice().ok_or_else(|| {
             kwavers_core::error::KwaversError::InvalidInput(
                 "complex solver returned a non-contiguous solution".to_owned(),
