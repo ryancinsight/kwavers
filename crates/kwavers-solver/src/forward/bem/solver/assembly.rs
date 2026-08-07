@@ -90,7 +90,6 @@ impl BemSolver {
 ///
 /// Uses a hand-rolled complex BiCGSTAB to avoid the `RealField` bound
 /// required by `leto_ops::bicgstab`, which is designed for real-valued systems.
-#[must_use]
 #[allow(unused_assignments)]
 pub fn solve_csr_complex(
     a_matrix: &CompressedSparseRowMatrix<Complex64>,

@@ -132,7 +132,7 @@ pub fn per_element_curvature(positions: &ArrayView2<f64>) -> Vec<ReciprocalLengt
     kappa[n - 1] = kappa[n - 2];
     kappa
         .into_iter()
-        .map(|value| ReciprocalLength::from_unit::<PerMeter>(value))
+        .map(ReciprocalLength::from_unit::<PerMeter>)
         .collect()
 }
 

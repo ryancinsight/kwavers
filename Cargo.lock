@@ -36,7 +36,7 @@ checksum = "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa"
 [[package]]
 name = "aequitas"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/aequitas#d761eb61532c054e376e353992d7595e4fab627c"
+source = "git+https://github.com/ryancinsight/aequitas#adc272b9eff440acc0077a44d1d2971f25092945"
 dependencies = [
  "eunomia",
  "serde",

@@ -10,10 +10,9 @@
 
 // Re-export from leto-ops for compatibility
 pub use leto_ops::application::sparse::{
-    csc_spmv, csc_spmv_into, csr_to_dense, factor_numeric, factor_symbolic_with_ordering,
-    sparse_lu_solve, spgemm, spmm, spmm_into, spmv, spmv_into, CooMatrix, CscColumn, CscMatrix,
-    CsrMatrix, CsrRow, NumericLu, OrderingStrategy, OwnedNumericLu, SparseLuSolver, SymbolicLu,
-    DENSE_LIMIT_DEFAULT,
+    csc_spmv, csc_spmv_into, csr_to_dense, factor_numeric, factor_symbolic, sparse_lu_solve,
+    spgemm, spmm, spmm_into, spmv, spmv_into, CooMatrix, CscColumn, CscMatrix, CsrMatrix, CsrRow,
+    NumericLu, OwnedNumericLu, SparseLuSolver, SymbolicLu, DENSE_LIMIT_DEFAULT,
 };
 
 // Re-export domain-specific types
