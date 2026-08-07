@@ -1,9 +1,7 @@
 //! BEM system solve, FEM matrix assembly, and linear solver.
 
 use kwavers_math::fft::Complex64;
-use kwavers_math::linear_algebra::sparse::{
-    CompressedSparseRowMatrix, IterativeSolver, SolverConfig, SparsePreconditioner,
-};
+use kwavers_math::linear_algebra::sparse::CompressedSparseRowMatrix;
 use leto::Array1;
 
 use kwavers_core::error::KwaversResult;
@@ -88,13 +86,13 @@ impl BemFemCoupler {
         Ok(stiffness)
     }
 
-    /// Solve the assembled FEM linear system with BiCGSTAB.
+    /// Solve the assembled FEM linear system through Leto's complex solver.
     ///
     /// Applies penalty-row Dirichlet boundary conditions for interface nodes
     /// before solving. Overwrites `fem_field` with the solution.
     ///
     /// # Errors
-    /// Propagates errors from `IterativeSolver::bicgstab_complex`.
+    /// Propagates errors from Leto's provider-owned complex solver.
     pub(crate) fn solve_linear_system(
         &self,
         matrix: &CompressedSparseRowMatrix<Complex64>,
@@ -111,37 +109,19 @@ impl BemFemCoupler {
             }
         }
 
-        let config = SolverConfig {
-            max_iterations: 1000,
-            tolerance: 1e-6,
-            preconditioner: SparsePreconditioner::None,
-            verbose: false,
-        };
-        let solver = IterativeSolver::create(config);
-
-        let guess_values: Vec<_> = fem_field.to_vec();
-        let initial_guess = Array1::from_vec([guess_values.len()], guess_values)
-            .expect("invariant: initial guess is 1-D with the collected length");
-        let solution = solver
-            .bicgstab_complex(
-                matrix,
-                rhs.as_slice().expect("rhs must be contiguous"),
-                Some(
-                    initial_guess
-                        .as_slice()
-                        .expect("initial_guess must be contiguous"),
-                ),
+        let dense_matrix = matrix.to_dense_array()?;
+        let solution = kwavers_math::complex_solve(&dense_matrix, &rhs)?;
+        let solution = solution.as_slice().ok_or_else(|| {
+            kwavers_core::error::KwaversError::InvalidInput(
+                "complex solver returned a non-contiguous solution".to_owned(),
             )
-            .map_err(|_| {
-                kwavers_core::error::KwaversError::Numerical(
-                    kwavers_core::error::NumericalError::Instability {
-                        operation: "bicgstab_complex".to_owned(),
-                        condition: 0.0,
-                    },
-                )
-            })?;
-
-        fem_field[..num_nodes].copy_from_slice(&solution[..num_nodes]);
+        })?;
+        if solution.len() != num_nodes || fem_field.len() < num_nodes {
+            return Err(kwavers_core::error::KwaversError::DimensionMismatch(
+                "complex FEM solution dimensions do not match the assembled system".to_owned(),
+            ));
+        }
+        fem_field[..num_nodes].copy_from_slice(solution);
 
         Ok(())
     }

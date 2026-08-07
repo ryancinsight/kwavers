@@ -18,16 +18,12 @@ pub use leto_ops::application::sparse::{
 // Re-export domain-specific types
 pub use csr::CompressedSparseRowMatrix;
 pub use matfree::{solve_lsqr_matfree, MatFreeOperator, MatFreeResult};
-pub use solver::{IterativeSolver, SolverConfig, SparsePreconditioner};
 
 // Re-export Complex64 for convenience
 pub use eunomia::Complex64;
 
 // Domain-specific sparse matrix type for BEM/FEM
 pub mod csr;
-
-// Iterative solver wrappers
-pub mod solver;
 
 // Matrix-free linear operators and LSQR solver
 pub mod matfree;

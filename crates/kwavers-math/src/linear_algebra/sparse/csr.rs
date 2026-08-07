@@ -271,5 +271,61 @@ impl<T: leto_ops::Scalar + Clone> CompressedSparseRowMatrix<T> {
     }
 }
 
+impl CompressedSparseRowMatrix<Complex64> {
+    /// Convert the CSR storage to the dense array accepted by Leto's complex
+    /// linear-system solver.
+    ///
+    /// Duplicate entries are accumulated, preserving the mathematical value
+    /// of a CSR assembly that has not yet been coalesced.
+    ///
+    /// # Errors
+    /// Returns an error when the CSR storage invariants are invalid or the
+    /// dense allocation/array construction cannot be represented.
+    pub fn to_dense_array(&self) -> Result<leto::Array2<Complex64>, String> {
+        let expected_row_pointer_len = self
+            .rows
+            .checked_add(1)
+            .ok_or_else(|| "CSR row-pointer length overflows usize".to_owned())?;
+        if self.row_pointers.len() != expected_row_pointer_len {
+            return Err("CSR row-pointer length must equal rows + 1".to_owned());
+        }
+        if self.values.len() != self.col_indices.len() || self.nnz != self.values.len() {
+            return Err("CSR values, columns, and nnz lengths disagree".to_owned());
+        }
+        if self.row_pointers.first().copied() != Some(0)
+            || self.row_pointers.last().copied() != Some(self.nnz)
+            || self
+                .row_pointers
+                .windows(2)
+                .any(|window| window[0] > window[1])
+        {
+            return Err("CSR row pointers are not monotone or do not bound nnz".to_owned());
+        }
+
+        let dense_len = self
+            .rows
+            .checked_mul(self.cols)
+            .ok_or_else(|| "CSR dense shape overflows usize".to_owned())?;
+        let mut dense = vec![Complex64::new(0.0, 0.0); dense_len];
+        for row in 0..self.rows {
+            let start = self.row_pointers[row];
+            let end = self.row_pointers[row + 1];
+            for offset in start..end {
+                let column = self.col_indices[offset];
+                if column >= self.cols {
+                    return Err(format!(
+                        "CSR column index {column} is outside column count {}",
+                        self.cols
+                    ));
+                }
+                dense[row * self.cols + column] += self.values[offset];
+            }
+        }
+
+        leto::Array2::from_vec([self.rows, self.cols], dense)
+            .map_err(|error| format!("failed to construct dense CSR array: {error}"))
+    }
+}
+
 /// Type alias for Complex64 CSR matrices used in BEM solvers.
 pub type CsrMatrixComplex = CompressedSparseRowMatrix<Complex64>;
