@@ -3,6 +3,7 @@
 use kwavers_math::fft::Complex64;
 use kwavers_math::linear_algebra::sparse::CompressedSparseRowMatrix;
 use leto::{Array1, LetoError};
+use leto_ops::application::sparse::CooMatrix;
 
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
 use kwavers_mesh::tetrahedral::TetrahedralMesh;
@@ -58,32 +59,84 @@ impl BemFemCoupler {
         Ok(())
     }
 
+    /// Assemble the FEM Helmholtz matrix through Leto's provider-owned COO
+    /// assembly and CSR compression.
+    ///
+    /// Each linear tetrahedron contributes the P1 stiffness and consistent
+    /// mass matrices. The provider COO representation is duplicate-tolerant,
+    /// so element contributions and interface penalties are accumulated before
+    /// conversion to the CSR storage consumed by the complex solver.
+    ///
+    /// # Errors
+    /// Returns a numerical error when an element Jacobian is singular.
     pub(crate) fn assemble_system_matrix(
         &self,
         fem_mesh: &TetrahedralMesh,
         wavenumber: f64,
     ) -> KwaversResult<CompressedSparseRowMatrix<Complex64>> {
         let num_nodes = fem_mesh.nodes.len();
-        let mut stiffness = CompressedSparseRowMatrix::create(num_nodes, num_nodes);
-        // TODO: Implement actual FEM matrix assembly
-        let k_sq = Complex64::from(wavenumber.powi(2));
-        for i in 0..num_nodes {
-            stiffness.set_diagonal(i, Complex64::new(1.0, 0.0));
-            for j in 0..num_nodes {
-                if i != j {
-                    stiffness.add_value(i, j, Complex64::new(0.0, 0.0));
+        let mut coo = CooMatrix::new(num_nodes, num_nodes);
+
+        // Reference-element shape-function gradients for linear tetrahedra.
+        let grad_ref = [
+            [-1.0, -1.0, -1.0],
+            [1.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [0.0, 0.0, 1.0],
+        ];
+
+        for element in &fem_mesh.elements {
+            let n_indices = element.nodes;
+            let p0 = fem_mesh.nodes[n_indices[0]].coordinates;
+            let p1 = fem_mesh.nodes[n_indices[1]].coordinates;
+            let p2 = fem_mesh.nodes[n_indices[2]].coordinates;
+            let p3 = fem_mesh.nodes[n_indices[3]].coordinates;
+
+            let jacobian = mat3_from_columns(vec3_sub(p1, p0), vec3_sub(p2, p0), vec3_sub(p3, p0));
+
+            let Some(inv_j) = mat3_inv(&jacobian) else {
+                return Err(KwaversError::Numerical(NumericalError::SingularMatrix {
+                    operation: "element_jacobian".to_owned(),
+                    condition_number: 0.0,
+                }));
+            };
+
+            let inv_j_t = mat3_transpose(&inv_j);
+            let volume = mat3_det(&jacobian).abs() / 6.0;
+            let mut grads = [[0.0; 3]; 4];
+            for (gradient, reference_gradient) in grads.iter_mut().zip(grad_ref) {
+                *gradient = mat3_vec_mul(&inv_j_t, &reference_gradient);
+            }
+
+            for (i, &gradient_i) in grads.iter().enumerate() {
+                for (j, &gradient_j) in grads.iter().enumerate() {
+                    let stiffness = vec3_dot(gradient_i, gradient_j) * volume;
+                    let diagonal = if i == j { 1.0 } else { 0.0 };
+                    let mass = (1.0 + diagonal) * volume / 20.0;
+                    let value = Complex64::from(stiffness - wavenumber * wavenumber * mass);
+                    coo.push(n_indices[i], n_indices[j], value);
                 }
             }
         }
-        // Subtract k²M (mass matrix contribution)
-        // For now, just add the k² term to diagonal to make it non-trivial
-        for i in 0..num_nodes {
-            if let Some(mut val) = stiffness.get_diagonal(i) {
-                val -= k_sq;
-                stiffness.set_diagonal(i, val);
+
+        // Penalty enforcement for Dirichlet interface nodes.
+        let penalty = 1.0e14;
+        for &node_idx in &self.interface.fem_interface_nodes {
+            if node_idx < num_nodes {
+                coo.push(node_idx, node_idx, Complex64::from(penalty));
             }
         }
-        Ok(stiffness)
+
+        let csr = coo.to_csr();
+        let (values, col_indices, row_pointers) = csr.as_parts();
+        Ok(CompressedSparseRowMatrix::new(
+            num_nodes,
+            num_nodes,
+            values.to_vec(),
+            col_indices.to_vec(),
+            row_pointers.to_vec(),
+            values.len(),
+        ))
     }
 
     /// Solve the assembled FEM linear system through Leto's complex solver.
@@ -134,4 +187,75 @@ impl BemFemCoupler {
 
         Ok(())
     }
+}
+
+type Mat3 = [[f64; 3]; 3];
+
+#[inline]
+fn vec3_sub(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
+    [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
+}
+
+#[inline]
+fn vec3_dot(a: [f64; 3], b: [f64; 3]) -> f64 {
+    a[0].mul_add(b[0], a[1].mul_add(b[1], a[2] * b[2]))
+}
+
+#[inline]
+fn mat3_from_columns(c0: [f64; 3], c1: [f64; 3], c2: [f64; 3]) -> Mat3 {
+    [
+        [c0[0], c1[0], c2[0]],
+        [c0[1], c1[1], c2[1]],
+        [c0[2], c1[2], c2[2]],
+    ]
+}
+
+#[inline]
+fn mat3_det(m: &Mat3) -> f64 {
+    m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1])
+        - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0])
+        + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0])
+}
+
+#[inline]
+fn mat3_transpose(m: &Mat3) -> Mat3 {
+    [
+        [m[0][0], m[1][0], m[2][0]],
+        [m[0][1], m[1][1], m[2][1]],
+        [m[0][2], m[1][2], m[2][2]],
+    ]
+}
+
+#[inline]
+fn mat3_vec_mul(m: &Mat3, v: &[f64; 3]) -> [f64; 3] {
+    [
+        m[0][0].mul_add(v[0], m[0][1].mul_add(v[1], m[0][2] * v[2])),
+        m[1][0].mul_add(v[0], m[1][1].mul_add(v[1], m[1][2] * v[2])),
+        m[2][0].mul_add(v[0], m[2][1].mul_add(v[1], m[2][2] * v[2])),
+    ]
+}
+
+fn mat3_inv(m: &Mat3) -> Option<Mat3> {
+    let det = mat3_det(m);
+    if det.abs() < 1e-14 {
+        return None;
+    }
+    let inv_det = 1.0 / det;
+    Some([
+        [
+            (m[1][1] * m[2][2] - m[1][2] * m[2][1]) * inv_det,
+            (m[0][2] * m[2][1] - m[0][1] * m[2][2]) * inv_det,
+            (m[0][1] * m[1][2] - m[0][2] * m[1][1]) * inv_det,
+        ],
+        [
+            (m[1][2] * m[2][0] - m[1][0] * m[2][2]) * inv_det,
+            (m[0][0] * m[2][2] - m[0][2] * m[2][0]) * inv_det,
+            (m[0][2] * m[1][0] - m[0][0] * m[1][2]) * inv_det,
+        ],
+        [
+            (m[1][0] * m[2][1] - m[1][1] * m[2][0]) * inv_det,
+            (m[0][1] * m[2][0] - m[0][0] * m[2][1]) * inv_det,
+            (m[0][0] * m[1][1] - m[0][1] * m[1][0]) * inv_det,
+        ],
+    ])
 }
