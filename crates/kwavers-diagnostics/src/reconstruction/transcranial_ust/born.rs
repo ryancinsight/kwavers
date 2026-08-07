@@ -3,7 +3,6 @@
 use aequitas::systems::si::quantities::Length;
 use aequitas::systems::si::units::Meter;
 use kwavers_core::error::KwaversResult;
-use leto_ops::application::statistics::{normalized_rmse, pearson, percentile_range};
 use kwavers_solver::inverse::linear_born_inversion::{
     dense::{
         matrix_vector, migration_contrast, normal_equation_diagonal_rows, normalized_gradient_rows,
@@ -13,6 +12,7 @@ use kwavers_solver::inverse::linear_born_inversion::{
     LinearBornInversionConfig,
 };
 use leto::Array2;
+use leto_ops::application::statistics::{normalized_rmse, pearson, percentile_range};
 
 use kwavers_solver::inverse::linear_born_inversion::high_pass_enhance_slice;
 

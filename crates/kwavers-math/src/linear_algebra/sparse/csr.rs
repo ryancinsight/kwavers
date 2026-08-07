@@ -22,8 +22,22 @@ pub struct CompressedSparseRowMatrix<T> {
 impl<T: leto_ops::Scalar + Clone> CompressedSparseRowMatrix<T> {
     /// Create a new CSR matrix with the given dimensions and data.
     #[inline]
-    pub fn new(rows: usize, cols: usize, values: Vec<T>, col_indices: Vec<usize>, row_pointers: Vec<usize>, nnz: usize) -> Self {
-        Self { rows, cols, values, col_indices, row_pointers, nnz }
+    pub fn new(
+        rows: usize,
+        cols: usize,
+        values: Vec<T>,
+        col_indices: Vec<usize>,
+        row_pointers: Vec<usize>,
+        nnz: usize,
+    ) -> Self {
+        Self {
+            rows,
+            cols,
+            values,
+            col_indices,
+            row_pointers,
+            nnz,
+        }
     }
 
     /// Create a new CSR matrix with the given dimensions and pre-allocated capacity.
@@ -33,7 +47,14 @@ impl<T: leto_ops::Scalar + Clone> CompressedSparseRowMatrix<T> {
         let values = Vec::with_capacity(capacity);
         let col_indices = Vec::with_capacity(capacity);
         let row_pointers = vec![0; rows + 1];
-        Self { rows, cols, values, col_indices, row_pointers, nnz: 0 }
+        Self {
+            rows,
+            cols,
+            values,
+            col_indices,
+            row_pointers,
+            nnz: 0,
+        }
     }
 
     /// Create a new empty CSR matrix with the given dimensions.
@@ -43,7 +64,14 @@ impl<T: leto_ops::Scalar + Clone> CompressedSparseRowMatrix<T> {
         let values = Vec::new();
         let col_indices = Vec::new();
         let row_pointers = vec![0; rows + 1];
-        Self { rows, cols, values, col_indices, row_pointers, nnz: 0 }
+        Self {
+            rows,
+            cols,
+            values,
+            col_indices,
+            row_pointers,
+            nnz: 0,
+        }
     }
 
     /// Get the number of rows.
@@ -72,7 +100,8 @@ impl<T: leto_ops::Scalar + Clone> CompressedSparseRowMatrix<T> {
             self.row_pointers.clone(),
             self.rows,
             self.cols,
-        ).map_err(|e| e.to_string())
+        )
+        .map_err(|e| e.to_string())
     }
 
     /// Zero out all entries in the given row.
@@ -206,7 +235,7 @@ impl<T: leto_ops::Scalar + Clone> CompressedSparseRowMatrix<T> {
         let mut new_values = Vec::new();
         let mut new_col_indices = Vec::new();
         let mut new_row_pointers = vec![0; self.rows + 1];
-        
+
         for row in 0..self.rows {
             let start = self.row_pointers[row];
             let end = if row + 1 < self.rows {
@@ -214,7 +243,7 @@ impl<T: leto_ops::Scalar + Clone> CompressedSparseRowMatrix<T> {
             } else {
                 self.nnz
             };
-            
+
             let mut row_nnz = 0;
             for i in start..end {
                 let val = self.values[i];
@@ -224,16 +253,12 @@ impl<T: leto_ops::Scalar + Clone> CompressedSparseRowMatrix<T> {
                     row_nnz += 1;
                 }
             }
-            
+
             // Update row pointer
-            let current_ptr = if row > 0 {
-                new_row_pointers[row]
-            } else {
-                0
-            };
+            let current_ptr = if row > 0 { new_row_pointers[row] } else { 0 };
             new_row_pointers[row + 1] = current_ptr + row_nnz;
         }
-        
+
         let nnz = new_values.len();
         Self {
             rows: self.rows,

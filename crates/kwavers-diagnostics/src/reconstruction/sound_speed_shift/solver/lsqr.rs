@@ -4,9 +4,7 @@
 //! [`solve_lsqr_matfree`] with the Tikhonov damping extracted from
 //! [`ShiftPrior::Lsqr`].
 
-use kwavers_math::{
-    solve_lsqr_matfree, LsqrConfig, MatFreeOperator, MatFreeResult,
-};
+use kwavers_math::{solve_lsqr_matfree, LsqrConfig, MatFreeOperator, MatFreeResult};
 
 use super::super::operator::SoundSpeedShiftOperator;
 use super::super::types::{ShiftPrior, SoundSpeedShiftConfig, SoundSpeedShiftWorkspace};

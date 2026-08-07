@@ -141,9 +141,7 @@ impl DynamicFocusing {
     /// Apply apodization for sidelobe reduction
     pub fn apply_apodization(&mut self, window_type: ApodizationType) {
         let n = self.amplitude_weights.len();
-        let weights: Vec<f64> = (0..n)
-            .map(|i| window_type.weights(i, n))
-            .collect();
+        let weights: Vec<f64> = (0..n).map(|i| window_type.weights(i, n)).collect();
         for (w, v) in self.amplitude_weights.iter_mut().zip(weights.iter()) {
             *w = *v;
         }

@@ -1,7 +1,7 @@
 //! Value-semantic metrics for theranostic inverse outputs.
 
-use leto_ops::application::statistics::{nrmse, pearson};
 use leto::Array2;
+use leto_ops::application::statistics::{nrmse, pearson};
 
 #[derive(Clone, Debug)]
 pub struct ReconstructionMetrics {

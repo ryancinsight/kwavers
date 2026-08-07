@@ -10,9 +10,7 @@ use kwavers_core::constants::cavitation::{
 use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use kwavers_core::constants::numerical::MPA_TO_PA;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_math::{
-    solve_lsqr_matfree, LsqrConfig, MatFreeOperator,
-};
+use kwavers_math::{solve_lsqr_matfree, LsqrConfig, MatFreeOperator};
 use kwavers_physics::acoustics::bubble_dynamics::adaptive_integration::integrate_bubble_dynamics_adaptive;
 use kwavers_physics::acoustics::bubble_dynamics::bubbly_medium::commander_prosperetti_attenuation;
 use kwavers_physics::acoustics::bubble_dynamics::gilmore::GilmoreSolver;

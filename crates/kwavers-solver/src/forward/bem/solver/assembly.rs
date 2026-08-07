@@ -84,7 +84,6 @@ impl BemSolver {
 
         Ok(())
     }
-
 }
 
 /// Solve a complex CSR linear system via BiCGSTAB.
@@ -112,11 +111,18 @@ pub fn solve_csr_complex(
 
     // r = b - A*x (with x = 0 initially)
     {
-        let (values, col_indices, row_pointers) =
-            (&a_matrix.values, &a_matrix.col_indices, &a_matrix.row_pointers);
+        let (values, col_indices, row_pointers) = (
+            &a_matrix.values,
+            &a_matrix.col_indices,
+            &a_matrix.row_pointers,
+        );
         for i in 0..n {
             let row_start = row_pointers[i];
-            let row_end = if i + 1 < n { row_pointers[i + 1] } else { a_matrix.nnz };
+            let row_end = if i + 1 < n {
+                row_pointers[i + 1]
+            } else {
+                a_matrix.nnz
+            };
             let mut sum = Complex64::new(0.0, 0.0);
             for ptr in row_start..row_end {
                 let j = col_indices[ptr];
@@ -143,12 +149,19 @@ pub fn solve_csr_complex(
         }
         // Ap = A*p
         {
-            let (values, col_indices, row_pointers) =
-                (&a_matrix.values, &a_matrix.col_indices, &a_matrix.row_pointers);
+            let (values, col_indices, row_pointers) = (
+                &a_matrix.values,
+                &a_matrix.col_indices,
+                &a_matrix.row_pointers,
+            );
             ap.fill(Complex64::new(0.0, 0.0));
             for i in 0..n {
                 let row_start = row_pointers[i];
-                let row_end = if i + 1 < n { row_pointers[i + 1] } else { a_matrix.nnz };
+                let row_end = if i + 1 < n {
+                    row_pointers[i + 1]
+                } else {
+                    a_matrix.nnz
+                };
                 let mut sum = Complex64::new(0.0, 0.0);
                 for ptr in row_start..row_end {
                     let j = col_indices[ptr];
@@ -157,7 +170,11 @@ pub fn solve_csr_complex(
                 ap[i] = sum;
             }
         }
-        alpha = rho / (p.iter().zip(ap.iter()).map(|(pi, api)| pi * api.conj()).sum::<Complex64>());
+        alpha = rho
+            / (p.iter()
+                .zip(ap.iter())
+                .map(|(pi, api)| pi * api.conj())
+                .sum::<Complex64>());
         for i in 0..n {
             x[i] += alpha * p[i];
             r[i] -= alpha * ap[i];

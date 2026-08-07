@@ -3,8 +3,8 @@
 use super::element::ElementConfiguration;
 use aequitas::systems::si::quantities::{Angle, Frequency, Length, Pressure, Velocity};
 use aequitas::systems::si::units::{Hertz, Meter, MeterPerSecond, Radian};
-use kwavers_core::constants::SOUND_SPEED_WATER_SIM;
 use kwavers_core::constants::numerical::TWO_PI;
+use kwavers_core::constants::SOUND_SPEED_WATER_SIM;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_signal::Signal;

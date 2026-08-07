@@ -87,8 +87,6 @@ impl KWaveArray {
             KwaveApodizationWindow::Blackman => ApodizationType::Blackman,
             KwaveApodizationWindow::Tukey(r) => ApodizationType::Tukey { r },
         };
-        (0..n)
-            .map(|i| apodization.weights(i, n))
-            .collect()
+        (0..n).map(|i| apodization.weights(i, n)).collect()
     }
 }

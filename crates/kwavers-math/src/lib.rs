@@ -45,9 +45,7 @@ pub mod simd;
 pub mod simd_safe;
 
 // Matrix-free linear operators and LSQR solver (re-exported from linear_algebra::sparse)
-pub use linear_algebra::sparse::{
-    solve_lsqr_matfree, MatFreeOperator, MatFreeResult,
-};
+pub use linear_algebra::sparse::{solve_lsqr_matfree, MatFreeOperator, MatFreeResult};
 
 // ============================================================================
 // RE-EXPORTS FROM leto-ops (SSOT)
@@ -73,7 +71,7 @@ pub use leto_ops::application::special_legendre::{legendre_poly, legendre_poly_a
 
 // Linear algebra norms (from leto-ops::application::linalg)
 pub use leto_ops::application::linalg::{
-    norm, norm_l1, norm_l2, norm_max, l2_normalize, l2_normalize_into,
+    l2_normalize, l2_normalize_into, norm, norm_l1, norm_l2, norm_max,
 };
 
 // Complex linear algebra (from leto-ops::application::linalg)

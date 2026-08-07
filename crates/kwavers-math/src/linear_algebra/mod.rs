@@ -18,13 +18,24 @@ pub use numeric_ops::NumericOps;
 // Re-export from leto-ops for backward compatibility
 pub use leto_ops::application::linalg::{
     // Complex linear algebra
-    complex_inv, complex_solve,
+    complex_inv,
+    complex_solve,
     // Eigendecomposition
-    eigenvalues, hermitian_eigen_jacobi, hermitian_eigen_qr, symmetric_eigen_jacobi,
-    // Iterative solvers
-    LsqrConfig, LsqrResult, LsqrSolver,
+    eigenvalues,
+    hermitian_eigen_jacobi,
+    hermitian_eigen_qr,
+    l2_normalize,
+    l2_normalize_into,
     // Norms
-    norm, norm_l1, norm_l2, norm_max, l2_normalize, l2_normalize_into,
+    norm,
+    norm_l1,
+    norm_l2,
+    norm_max,
+    symmetric_eigen_jacobi,
+    // Iterative solvers
+    LsqrConfig,
+    LsqrResult,
+    LsqrSolver,
 };
 
 #[cfg(test)]

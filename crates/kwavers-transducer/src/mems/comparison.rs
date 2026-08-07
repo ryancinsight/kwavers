@@ -104,7 +104,11 @@ pub fn evaluate_ivus(
     // lower-is-better → invert (best gets 1.0)
     let nl = |x: f64, y: f64| {
         let m = x.min(y);
-        if x > 0.0 { m / x } else { 1.0 }
+        if x > 0.0 {
+            m / x
+        } else {
+            1.0
+        }
     };
 
     let cmut_integration = 1.0; // monolithic CMUT-on-CMOS

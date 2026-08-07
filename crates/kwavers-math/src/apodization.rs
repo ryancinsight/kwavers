@@ -34,12 +34,23 @@ impl ApodizationType {
     pub fn weights(&self, _element_index: usize, _num_elements: usize) -> f64 {
         match self {
             Self::Uniform => 1.0,
-            Self::Hanning => 0.5 * (1.0 - (2.0 * std::f64::consts::PI * _element_index as f64 / (_num_elements - 1).max(1) as f64).cos()),
-            Self::Hamming => 0.54 - 0.46 * (2.0 * std::f64::consts::PI * _element_index as f64 / (_num_elements - 1).max(1) as f64).cos(),
+            Self::Hanning => {
+                0.5 * (1.0
+                    - (2.0 * std::f64::consts::PI * _element_index as f64
+                        / (_num_elements - 1).max(1) as f64)
+                        .cos())
+            }
+            Self::Hamming => {
+                0.54 - 0.46
+                    * (2.0 * std::f64::consts::PI * _element_index as f64
+                        / (_num_elements - 1).max(1) as f64)
+                        .cos()
+            }
             Self::Blackman => {
                 let n = (_num_elements - 1).max(1) as f64;
                 let i = _element_index as f64;
-                0.42 - 0.5 * (2.0 * std::f64::consts::PI * i / n).cos() + 0.08 * (4.0 * std::f64::consts::PI * i / n).cos()
+                0.42 - 0.5 * (2.0 * std::f64::consts::PI * i / n).cos()
+                    + 0.08 * (4.0 * std::f64::consts::PI * i / n).cos()
             }
             Self::Tukey { r } => {
                 let r_val = r.clamp(0.0, 1.0);
@@ -63,7 +74,10 @@ impl ApodizationType {
             Self::Kaiser { .. } => {
                 // Kaiser with beta ≈ 0 approximates a rectangular window
                 // For simplicity, use Hamming as a close approximation
-                0.54 - 0.46 * (2.0 * std::f64::consts::PI * _element_index as f64 / (_num_elements - 1).max(1) as f64).cos()
+                0.54 - 0.46
+                    * (2.0 * std::f64::consts::PI * _element_index as f64
+                        / (_num_elements - 1).max(1) as f64)
+                        .cos()
             }
         }
     }

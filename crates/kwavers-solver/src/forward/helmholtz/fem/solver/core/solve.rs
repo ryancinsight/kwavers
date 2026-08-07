@@ -37,12 +37,20 @@ impl FemHelmholtzSolver {
 
         let solver = IterativeSolver::create(config);
         let x0 = if self.solution.iter().any(|c| c.norm() > 0.0) {
-            Some(self.solution.as_slice().expect("solution must be contiguous"))
+            Some(
+                self.solution
+                    .as_slice()
+                    .expect("solution must be contiguous"),
+            )
         } else {
             None
         };
 
-        let result = solver.bicgstab_complex(&self.system_matrix, self.rhs.as_slice().expect("rhs must be contiguous"), x0)?;
+        let result = solver.bicgstab_complex(
+            &self.system_matrix,
+            self.rhs.as_slice().expect("rhs must be contiguous"),
+            x0,
+        )?;
         self.solution = Array1::from_vec([result.len()], result)?;
         Ok(())
     }

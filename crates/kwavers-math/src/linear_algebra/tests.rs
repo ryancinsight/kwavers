@@ -39,15 +39,15 @@ fn eigenvalues_returns_only_eigenvalues() {
     let matrix = Array2::<f64>::from_vec([2, 2], vec![2.0, 1.0, 1.0, 2.0]).unwrap();
 
     let result = leto_ops::application::linalg::eigenvalues(&matrix.view());
-    
+
     // Should succeed for symmetric matrices
     assert!(result.is_ok());
-    
+
     let eigenvalues = result.unwrap();
-    
+
     // Check that we get 2 eigenvalues
     assert_eq!(eigenvalues.len(), 2);
-    
+
     // Verify they are approximately 1 and 3
     let mut sorted = eigenvalues.clone();
     sorted.sort_by(|a, b| a.re.partial_cmp(&b.re).unwrap());
@@ -60,7 +60,7 @@ fn symmetric_eigen_rejects_non_symmetric_matrix() {
     // Test that symmetric_eigenvalues_jacobi rejects non-symmetric matrices
     // by falling back or returning an error
     let matrix = Array2::<f64>::from_vec([2, 2], vec![1.0, 2.0, 2.0, 1.0]).unwrap();
-    
+
     // This should work since the matrix is symmetric
     let result = leto_ops::application::linalg::symmetric_eigenvalues_jacobi(&matrix.view());
     assert!(result.is_ok());
@@ -70,7 +70,7 @@ fn symmetric_eigen_rejects_non_symmetric_matrix() {
 fn eigendecomposition_symmetric_2x2() {
     // Test that symmetric_eigenvalues_jacobi works correctly
     let a = Array2::<f64>::from_vec([2, 2], vec![2.0, 1.0, 1.0, 2.0]).unwrap();
-    
+
     // Use symmetric_eigenvalues_jacobi which returns only eigenvalues
     let vals2 = leto_ops::application::linalg::symmetric_eigenvalues_jacobi(&a.view()).unwrap();
 

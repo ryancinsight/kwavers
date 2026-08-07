@@ -97,14 +97,12 @@ fn curvature_rejects_nonfinite_radius() {
         },
         ..create_test_config()
     };
-    assert!(
-        TransducerArray2D::new(
-            config,
-            Velocity::from_unit::<MeterPerSecond>(SOUND_SPEED_TISSUE),
-            Frequency::from_unit::<Hertz>(MHZ_TO_HZ),
-        )
-        .is_err()
-    );
+    assert!(TransducerArray2D::new(
+        config,
+        Velocity::from_unit::<MeterPerSecond>(SOUND_SPEED_TISSUE),
+        Frequency::from_unit::<Hertz>(MHZ_TO_HZ),
+    )
+    .is_err());
 }
 
 #[test]
@@ -152,14 +150,12 @@ fn test_invalid_config() {
         ..create_test_config()
     };
 
-    assert!(
-        TransducerArray2D::new(
-            config,
-            Velocity::from_unit::<MeterPerSecond>(SOUND_SPEED_TISSUE),
-            Frequency::from_unit::<Hertz>(MHZ_TO_HZ),
-        )
-        .is_err()
-    );
+    assert!(TransducerArray2D::new(
+        config,
+        Velocity::from_unit::<MeterPerSecond>(SOUND_SPEED_TISSUE),
+        Frequency::from_unit::<Hertz>(MHZ_TO_HZ),
+    )
+    .is_err());
 }
 
 #[test]

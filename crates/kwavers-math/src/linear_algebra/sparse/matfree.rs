@@ -42,7 +42,12 @@ pub struct MatFreeResult {
 impl MatFreeResult {
     /// Create a new LSQR result.
     #[must_use]
-    pub fn new(solution: Vec<f64>, objective_history: Vec<f64>, iterations: usize, converged: bool) -> Self {
+    pub fn new(
+        solution: Vec<f64>,
+        objective_history: Vec<f64>,
+        iterations: usize,
+        converged: bool,
+    ) -> Self {
         Self {
             solution,
             objective_history,
@@ -113,12 +118,7 @@ pub fn solve_lsqr_matfree(
     let n = op.cols();
 
     if m == 0 || n == 0 || b.is_empty() {
-        return MatFreeResult::new(
-            vec![0.0; n],
-            vec![],
-            0,
-            false,
-        );
+        return MatFreeResult::new(vec![0.0; n], vec![], 0, false);
     }
 
     let solver = LsqrSolver::new(*config);
@@ -182,7 +182,10 @@ mod tests {
         };
         let result = solve_lsqr_matfree(&op, &b, &config);
 
-        assert!(result.converged, "LSQR should converge for a diagonal system");
+        assert!(
+            result.converged,
+            "LSQR should converge for a diagonal system"
+        );
         assert!((result.solution[0] - 2.0).abs() < 1e-4);
         assert!((result.solution[1] - 3.0).abs() < 1e-4);
         assert!((result.solution[2] - 4.0).abs() < 1e-4);
@@ -201,8 +204,10 @@ mod tests {
         };
         let result = solve_lsqr_matfree(&op, &b, &config);
 
-        eprintln!("LSQR identity: converged={}, iterations={}, solution={:?}",
-                  result.converged, result.iterations, result.solution);
+        eprintln!(
+            "LSQR identity: converged={}, iterations={}, solution={:?}",
+            result.converged, result.iterations, result.solution
+        );
 
         assert!(result.converged, "LSQR should converge for identity system");
         assert!((result.solution[0] - 1.0).abs() < 1e-3);

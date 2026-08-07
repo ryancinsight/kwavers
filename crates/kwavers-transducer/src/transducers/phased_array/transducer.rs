@@ -11,7 +11,7 @@ use kwavers_medium::Medium;
 use kwavers_signal::Signal;
 use kwavers_source::Source;
 use leto::{Array1, Array3};
-use moirai_parallel::{Adaptive, enumerate_mut_with};
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 use std::sync::Arc;
 
 /// Phased array transducer with electronic beam control

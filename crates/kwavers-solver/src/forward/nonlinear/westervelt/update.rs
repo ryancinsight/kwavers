@@ -35,7 +35,7 @@
 //! workspace at the configured stencil order, incurring no additional FD
 //! stencil evaluation.
 
-use moirai_parallel::{Adaptive, enumerate_mut_with};
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 use tracing::warn;
 
 use super::WesterveltFdtd;

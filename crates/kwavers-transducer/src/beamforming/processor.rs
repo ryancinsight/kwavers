@@ -5,8 +5,8 @@ use crate::beamforming::BeamformingCoreConfig;
 use aequitas::systems::si::units::{Hertz, MeterPerSecond};
 use kwavers_core::error::KwaversResult;
 use leto::{Array1, Array2, Array3};
-use leto_ops::inv;
 use leto_ops::application::linalg::eigenvalues;
+use leto_ops::inv;
 
 /// Beamforming processor for array algorithms
 #[derive(Debug)]
@@ -49,12 +49,11 @@ impl BeamformingProcessor {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub fn eigenvalues(
-        &self,
-        matrix: &Array2<f64>,
-    ) -> KwaversResult<leto::Array1<f64>> {
+    pub fn eigenvalues(&self, matrix: &Array2<f64>) -> KwaversResult<leto::Array1<f64>> {
         let vals = eigenvalues(&matrix.view())?;
-        Ok(leto::Array1::from(vals.iter().map(|c| c.re).collect::<Vec<_>>()))
+        Ok(leto::Array1::from(
+            vals.iter().map(|c| c.re).collect::<Vec<_>>(),
+        ))
     }
 
     /// Compute matrix inverse

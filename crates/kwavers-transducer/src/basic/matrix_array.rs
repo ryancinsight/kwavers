@@ -2,7 +2,7 @@ use kwavers_grid::Grid;
 use kwavers_signal::Signal;
 use kwavers_source::{Apodization, Source};
 use log::debug;
-use moirai_parallel::{Adaptive, enumerate_mut_with};
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 use std::fmt::Debug;
 use std::sync::Arc;
 

@@ -5,8 +5,8 @@
 
 use apollo::fft_1d_leto;
 use kwavers_core::constants::numerical::TWO_PI;
-use kwavers_math::ApodizationType;
 use kwavers_math::j1;
+use kwavers_math::ApodizationType;
 
 // ─── Directivity ──────────────────────────────────────────────────────────────
 
@@ -192,9 +192,7 @@ pub fn apodization_weights(n: usize, window_type: &str) -> Vec<f64> {
         // "uniform" and any unrecognised key → rectangular window.
         _ => ApodizationType::Uniform,
     };
-    (0..n)
-        .map(|i| window.weights(i, n))
-        .collect()
+    (0..n).map(|i| window.weights(i, n)).collect()
 }
 
 /// Apodization weights and normalized spatial-frequency response.

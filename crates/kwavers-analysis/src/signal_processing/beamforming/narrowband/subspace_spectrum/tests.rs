@@ -17,8 +17,8 @@ use crate::signal_processing::beamforming::narrowband::steering::NarrowbandSteer
 use eunomia::Complex64;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, TWO_PI};
-use leto_ops::application::linalg::{hermitian_eigen_jacobi, HermitianEigenConfig};
 use leto::{Array1, Array2, Array3};
+use leto_ops::application::linalg::{hermitian_eigen_jacobi, HermitianEigenConfig};
 
 /// Uniform linear array of `n` elements with pitch `d` along x, centred on origin.
 fn linear_array(n: usize, d: f64) -> Vec<[f64; 3]> {

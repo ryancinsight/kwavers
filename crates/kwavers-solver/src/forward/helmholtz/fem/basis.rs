@@ -303,9 +303,7 @@ impl GaussQuadrature {
         global_stiffness: &mut kwavers_math::CompressedSparseRowMatrix<
             kwavers_math::fft::Complex64,
         >,
-        global_mass: &mut kwavers_math::CompressedSparseRowMatrix<
-            kwavers_math::fft::Complex64,
-        >,
+        global_mass: &mut kwavers_math::CompressedSparseRowMatrix<kwavers_math::fft::Complex64>,
         global_rhs: &mut leto::Array1<kwavers_math::fft::Complex64>,
         elem_stiffness: &leto::Array2<kwavers_math::fft::Complex64>,
         elem_mass: &leto::Array2<kwavers_math::fft::Complex64>,

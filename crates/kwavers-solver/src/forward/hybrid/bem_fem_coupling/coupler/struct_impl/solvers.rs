@@ -2,7 +2,7 @@
 
 use kwavers_math::fft::Complex64;
 use kwavers_math::linear_algebra::sparse::{
-    CompressedSparseRowMatrix, IterativeSolver, SparsePreconditioner, SolverConfig,
+    CompressedSparseRowMatrix, IterativeSolver, SolverConfig, SparsePreconditioner,
 };
 use leto::Array1;
 
@@ -126,14 +126,20 @@ impl BemFemCoupler {
             .bicgstab_complex(
                 matrix,
                 rhs.as_slice().expect("rhs must be contiguous"),
-                Some(initial_guess.as_slice().expect("initial_guess must be contiguous")),
+                Some(
+                    initial_guess
+                        .as_slice()
+                        .expect("initial_guess must be contiguous"),
+                ),
             )
-            .map_err(|_| kwavers_core::error::KwaversError::Numerical(
-                kwavers_core::error::NumericalError::Instability {
-                    operation: "bicgstab_complex".to_owned(),
-                    condition: 0.0,
-                },
-            ))?;
+            .map_err(|_| {
+                kwavers_core::error::KwaversError::Numerical(
+                    kwavers_core::error::NumericalError::Instability {
+                        operation: "bicgstab_complex".to_owned(),
+                        condition: 0.0,
+                    },
+                )
+            })?;
 
         fem_field[..num_nodes].copy_from_slice(&solution[..num_nodes]);
 

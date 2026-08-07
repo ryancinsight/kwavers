@@ -2,8 +2,8 @@
 
 use eunomia::Complex64;
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use leto_ops::application::linalg::{hermitian_eigen_jacobi, HermitianEigenConfig};
 use leto::{Array1, Array2, SliceArg};
+use leto_ops::application::linalg::{hermitian_eigen_jacobi, HermitianEigenConfig};
 
 /// Eigenspace Minimum Variance (ESMV) Beamformer
 ///

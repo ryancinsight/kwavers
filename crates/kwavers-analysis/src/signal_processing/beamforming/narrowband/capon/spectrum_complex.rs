@@ -110,8 +110,7 @@ pub fn capon_spatial_spectrum_point_complex_baseband(
         .into_array();
 
     // 5) Compute denom = aᴴ R^{-1} a via linear solve R y = a.
-    let y =
-        kwavers_math::complex_solve(&r, &a)?;
+    let y = kwavers_math::complex_solve(&r, &a)?;
 
     let mut denom = Complex64::new(0.0, 0.0);
     for i in 0..n_sensors {

@@ -532,14 +532,12 @@ mod tests {
         }
 
         // Collapsed (V ≥ V_c) ⇒ no stable equilibrium.
-        assert!(
-            c.bias_pulldown_fraction(ElectricPotential::from_unit::<Volt>(vc))
-                .is_none()
-        );
-        assert!(
-            c.bias_pulldown_fraction(ElectricPotential::from_unit::<Volt>(1.5 * vc))
-                .is_none()
-        );
+        assert!(c
+            .bias_pulldown_fraction(ElectricPotential::from_unit::<Volt>(vc))
+            .is_none());
+        assert!(c
+            .bias_pulldown_fraction(ElectricPotential::from_unit::<Volt>(1.5 * vc))
+            .is_none());
     }
 
     #[test]
@@ -619,7 +617,7 @@ mod tests {
         let fbw = c
             .fractional_bandwidth(MassDensity::from_unit::<KilogramPerCubicMeter>(1060.0))
             .into_base(); // blood
-        // CMUTs are fluid-coupling dominated → broad fractional bandwidth (>60%)
+                          // CMUTs are fluid-coupling dominated → broad fractional bandwidth (>60%)
         assert!(fbw > 0.6, "CMUT FBW {fbw} should be wide");
     }
 
@@ -649,7 +647,7 @@ mod tests {
         let c = CmutCell::silicon(meters(20e-6), meters(0.5e-6), meters(0.2e-6)).unwrap();
         let c2a = CmutCell::silicon(meters(40e-6), meters(0.5e-6), meters(0.2e-6)).unwrap(); // 2× radius
         let c2g = CmutCell::silicon(meters(20e-6), meters(0.5e-6), meters(0.4e-6)).unwrap(); // 2× gap
-        // c ∝ a⁴ → ×16 ; c ∝ 1/g³ → ÷8
+                                                                                             // c ∝ a⁴ → ×16 ; c ∝ 1/g³ → ÷8
         let viscosity = DynamicViscosity::from_unit::<PascalSecond>(AIR_VISC);
         let damping = c
             .squeeze_film_damping(viscosity)
