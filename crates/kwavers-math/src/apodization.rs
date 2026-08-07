@@ -32,6 +32,12 @@ impl ApodizationType {
     /// Returns a function that applies the apodization weight to a given element.
     #[must_use]
     pub fn weights(&self, _element_index: usize, _num_elements: usize) -> f64 {
+        // A singleton has no edge/interior distinction; every window reduces
+        // to the sole element's unit weight.
+        if _num_elements <= 1 {
+            return 1.0;
+        }
+
         match self {
             Self::Uniform => 1.0,
             Self::Hanning => {
