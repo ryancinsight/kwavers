@@ -56,8 +56,8 @@ use super::grid::GridSpec;
 use super::potential::{convergence_epsilon, pointwise_preconditioner, shifted_potential};
 use eunomia::Complex64;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_math::linear_algebra::complex::ComplexLinearAlgebra;
 use leto::{Array1, Array2};
+use leto_ops::application::linalg::complex_solve;
 
 /// CBS fixed-point solver settings.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -271,7 +271,7 @@ fn solve_adjoint_dense_free_space(
     let adjoint_operator = hermitian_transpose(&operator);
     let rhs = Array1::from_vec([adjoint_rhs.len()], adjoint_rhs.to_vec())
         .expect("dense adjoint rhs shape must match");
-    let solution = ComplexLinearAlgebra::solve_linear_system_complex(&adjoint_operator, &rhs)?;
+    let solution = complex_solve(&adjoint_operator, &rhs)?;
     let residual = dense_matvec_residual(&adjoint_operator, &solution, adjoint_rhs);
     let relative_residual = norm(&residual) / norm(adjoint_rhs).max(f64::EPSILON);
     if !relative_residual.is_finite() || relative_residual > config.relative_tolerance {

@@ -1,5 +1,6 @@
 //! Data types for flexible array calibration.
 
+use aequitas::systems::si::quantities::{Angle, Dimensionless, Length, Time};
 use leto::{Array1, Array2};
 use leto::{Array1 as NdArray1, Array2 as NdArray2};
 
@@ -18,7 +19,7 @@ pub struct CalibrationData {
 #[derive(Debug, Clone)]
 pub struct GeometrySnapshot {
     /// Timestamp
-    pub timestamp: f64,
+    pub timestamp: Time<f64>,
     /// Element positions [`n_elements` x 3]
     pub positions: NdArray2<f64>,
     /// Confidence scores per element
@@ -29,11 +30,11 @@ pub struct GeometrySnapshot {
 #[derive(Debug, Clone)]
 pub struct CalibrationQualityMetrics {
     /// Position uncertainty (meters)
-    pub position_uncertainty: f64,
+    pub position_uncertainty: Length<f64>,
     /// Orientation uncertainty (radians)
-    pub orientation_uncertainty: f64,
+    pub orientation_uncertainty: Angle<f64>,
     /// Overall calibration confidence [0, 1]
-    pub confidence: f64,
+    pub confidence: Dimensionless<f64>,
 }
 
 /// Kalman filter state for position tracking

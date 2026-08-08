@@ -38,12 +38,12 @@ fn test_bem_system_assembly() {
     let g = solver.g_matrix.unwrap();
 
     for i in 0..4 {
-        let diag = h.get_diagonal(i);
+        let diag = h.get_diagonal(i).expect("Diagonal should exist");
         assert!((diag.re - 0.5).abs() < 1e-6, "Diagonal H should be 0.5");
     }
 
     for i in 0..4 {
-        let diag = g.get_diagonal(i);
+        let diag = g.get_diagonal(i).expect("Diagonal should exist");
         assert!(diag.norm() > 1e-6, "Diagonal G should be non-zero");
     }
 }

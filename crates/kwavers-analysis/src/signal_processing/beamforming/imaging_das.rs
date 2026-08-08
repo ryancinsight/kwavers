@@ -415,7 +415,7 @@ fn zero_transmit_delays(pixel_count: usize) -> KwaversResult<Array1<f64>> {
 }
 
 fn apodization_weights(n: usize, kind: ImagingDasApodization) -> Vec<f64> {
-    use kwavers_math::signal::window::{blackman, hamming, hann};
+    use kwavers_math::{blackman, hamming, hann};
     if n == 0 {
         return Vec::new();
     }

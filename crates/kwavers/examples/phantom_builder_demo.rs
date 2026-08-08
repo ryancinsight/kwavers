@@ -76,7 +76,7 @@ fn demo_blood_oxygenation() -> Result<()> {
         .add_vein([0.025, 0.020, 0.020], 0.003, 0.65)
         // Hypoxic tumor: low oxygenation (sO₂ = 55%)
         .add_tumor([0.020, 0.020, 0.028], 0.004, 0.55)
-        .build();
+        .build()?;
 
     let stats = phantom.absorption_stats();
     println!("  Grid: {}×{}×{} voxels", dims.nx, dims.ny, dims.nz);
@@ -169,7 +169,7 @@ fn demo_tumor_detection() -> Result<()> {
         .add_tumor([0.010, 0.010, 0.015], 0.003, 0.60) // 3 mm, moderately hypoxic
         .add_tumor([0.025, 0.018, 0.020], 0.005, 0.55) // 5 mm, more hypoxic
         .add_tumor([0.018, 0.025, 0.025], 0.002, 0.70) // 2 mm, less hypoxic
-        .build();
+        .build()?;
 
     println!("  Grid: {}×{}×{} voxels", dims.nx, dims.ny, dims.nz);
     println!("  Background: Fat tissue (simulates breast)");
@@ -219,7 +219,7 @@ fn demo_vascular_network() -> Result<()> {
             0.0003,
             0.85,
         )
-        .build();
+        .build()?;
 
     println!("  Grid: {}×{}×{} voxels", dims.nx, dims.ny, dims.nz);
     println!("  Vessel network:");
@@ -309,7 +309,7 @@ fn demo_predefined_phantoms() -> Result<()> {
 
     // Standard blood oxygenation phantom
     println!("  6a. Standard Blood Oxygenation Phantom");
-    let _phantom1 = ClinicalPhantoms::standard_blood_oxygenation(dims);
+    let _phantom1 = ClinicalPhantoms::standard_blood_oxygenation(dims)?;
     println!("      Contains: artery (sO₂=98%), vein (sO₂=65%), tumor (sO₂=55%)");
     println!("      Use: Multi-wavelength spectroscopy validation");
     println!();
@@ -325,7 +325,7 @@ fn demo_predefined_phantoms() -> Result<()> {
     // Breast tumor phantom
     println!("  6c. Breast Tumor Phantom");
     let tumor_center = [0.0175, 0.0175, 0.0175];
-    let _phantom3 = ClinicalPhantoms::breast_tumor(dims, tumor_center);
+    let _phantom3 = ClinicalPhantoms::breast_tumor(dims, tumor_center)?;
     println!("      Background: Fat (breast tissue)");
     println!("      Lesion: 8 mm hypoxic tumor");
     println!("      Use: Tumor detection algorithm validation");
@@ -333,13 +333,13 @@ fn demo_predefined_phantoms() -> Result<()> {
 
     // Vascular network phantom
     println!("  6d. Vascular Network Phantom");
-    let _phantom4 = ClinicalPhantoms::vascular_network(dims);
+    let _phantom4 = ClinicalPhantoms::vascular_network(dims)?;
     println!("      Contains: Arterial tree and venous drainage");
     println!("      Use: Angiogenesis and perfusion studies");
     println!();
 
     println!("  Quick start:");
-    println!("    let phantom = ClinicalPhantoms::standard_blood_oxygenation(dims);");
+    println!("    let phantom = ClinicalPhantoms::standard_blood_oxygenation(dims)?;");
     println!("    // Ready to use with diffusion solver, MC, or other physics modules\n");
 
     Ok(())

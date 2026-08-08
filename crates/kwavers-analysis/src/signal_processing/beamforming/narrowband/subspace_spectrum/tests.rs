@@ -17,8 +17,8 @@ use crate::signal_processing::beamforming::narrowband::steering::NarrowbandSteer
 use eunomia::Complex64;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, TWO_PI};
-use kwavers_math::linear_algebra::eigendecomposition::{EigenSolver, EigenSolverConfig};
 use leto::{Array1, Array2, Array3};
+use leto_ops::application::linalg::{hermitian_eigen_jacobi, HermitianEigenConfig};
 
 /// Uniform linear array of `n` elements with pitch `d` along x, centred on origin.
 fn linear_array(n: usize, d: f64) -> Vec<[f64; 3]> {
@@ -75,7 +75,7 @@ fn eigenvalue_split_matches_theorem_22_2() {
         }
     }
 
-    let eigenvalues = EigenSolver::jacobi_hermitian(&r, EigenSolverConfig::default())
+    let eigenvalues = hermitian_eigen_jacobi(&r, HermitianEigenConfig::default())
         .expect("eig")
         .eigenvalues;
     let mut vals: Vec<f64> = (0..n).map(|i| eigenvalues[i]).collect();

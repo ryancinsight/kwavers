@@ -182,6 +182,10 @@ impl Source for GaussianSource {
         vec![self.config.focal_point]
     }
 
+    fn for_each_position(&self, visitor: &mut dyn FnMut((f64, f64, f64))) {
+        visitor(self.config.focal_point);
+    }
+
     fn signal(&self) -> &dyn Signal {
         self.signal.as_ref()
     }
@@ -241,6 +245,23 @@ impl Source for GaussianSource {
         // For simplicity, use a conservative estimate based on focusing geometry
         let gain = TWO_PI * self.rayleigh_range / self.config.wavelength;
         Some(gain)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use kwavers_signal::NullSignal;
+
+    #[test]
+    fn position_visitor_matches_focal_point_position() {
+        let source = GaussianSource::new_default(Arc::new(NullSignal::new()));
+        let mut visited = Vec::new();
+
+        source.for_each_position(&mut |position| visited.push(position));
+
+        assert_eq!(visited, source.positions());
+        assert_eq!(visited, vec![source.focal_point()]);
     }
 }
 

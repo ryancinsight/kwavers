@@ -176,7 +176,39 @@ impl Source for LinearArray {
             .collect()
     }
 
+    fn for_each_position(&self, visitor: &mut dyn FnMut((f64, f64, f64))) {
+        let spacing = self.element_spacing();
+        let start_x = self.x_pos - self.length / 2.0;
+        for i in 0..self.num_elements {
+            visitor(((i as f64).mul_add(spacing, start_x), self.y_pos, self.z_pos));
+        }
+    }
+
     fn signal(&self) -> &dyn Signal {
         self.signal.as_ref()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use kwavers_signal::NullSignal;
+    use kwavers_source::RectangularApodization;
+
+    #[test]
+    fn position_visitor_matches_owned_positions() {
+        let source = LinearArray::new(
+            10.0e-3,
+            8,
+            (0.0, 0.0, 0.0),
+            Arc::new(NullSignal),
+            1500.0,
+            500.0e3,
+            RectangularApodization,
+        );
+        let mut visited = Vec::new();
+        source.for_each_position(&mut |position| visited.push(position));
+        assert_eq!(visited, source.positions());
+        assert_eq!(visited.len(), 8);
     }
 }

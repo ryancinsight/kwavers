@@ -127,6 +127,13 @@ impl Source for FocusedSource {
             .collect()
     }
 
+    fn for_each_position(&self, visitor: &mut dyn FnMut((f64, f64, f64))) {
+        for element in &self.transducer.element_positions {
+            let element = element.map(|value| value.in_unit::<Meter>());
+            visitor((element[0], element[1], element[2]));
+        }
+    }
+
     fn signal(&self) -> &dyn Signal {
         self.signal.as_ref()
     }
@@ -237,6 +244,39 @@ mod tests {
                 "source position {position:?} must map into the grid"
             );
         }
+    }
+
+    #[test]
+    fn position_visitor_matches_owned_positions() {
+        let config = BowlConfig::from_vertex_focus(
+            [
+                Length::from_unit::<Meter>(0.0),
+                Length::from_unit::<Meter>(0.0),
+                Length::from_unit::<Meter>(0.16),
+            ],
+            [Length::from_unit::<Meter>(0.0); 3],
+            Length::from_unit::<Meter>(0.32),
+            Frequency::from_unit::<Hertz>(650.0e3),
+            Pressure::from_unit::<Pascal>(MPA_TO_PA),
+        );
+        let bowl = BowlTransducer::with_axis_projection_bounds(
+            config,
+            Dimensionless::from_base(-0.28),
+            Dimensionless::from_base(0.98),
+            16,
+        )
+        .unwrap();
+        let mut grid = Grid::new(25, 25, 13, 0.02, 0.02, 0.02).unwrap();
+        grid.origin = [-0.24, -0.24, -0.06];
+
+        let source =
+            FocusedSource::from_transducer(bowl, Arc::new(ConstantSignal::new(2.0)), &grid);
+        let mut visited = Vec::new();
+
+        source.for_each_position(&mut |position| visited.push(position));
+
+        assert_eq!(visited, source.positions());
+        assert_eq!(visited.len(), source.transducer.element_count());
     }
 
     #[test]

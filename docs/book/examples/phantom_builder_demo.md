@@ -27,7 +27,12 @@ let phantom = PhantomBuilder::blood_oxygenation()
     // Arterial vessel: high oxygenation (sO₂ = 98%)
     .add_artery([0.015, 0.020, 0.020], 0.002, 0.98)
     // Venous vessel: lower oxygenation (sO₂ = 65%)
+    .build()?;
 ```
+
+The blood-oxygenation, tumor-detection, and vascular builders return
+`Result<OpticalPropertyMap, PhantomError>`, so Hyperion wavelength-range
+failures remain observable at the public construction boundary.
 
 ## Expected Output (if applicable)
 

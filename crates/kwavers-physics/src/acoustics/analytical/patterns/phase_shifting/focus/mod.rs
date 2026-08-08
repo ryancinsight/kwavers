@@ -13,7 +13,7 @@ use crate::phase_modulation::phase_shifting::core::{
 };
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::constants::SOUND_SPEED_WATER;
-pub use kwavers_math::signal::ApodizationType;
+pub use kwavers_math::ApodizationType;
 
 /// Dynamic focusing controller
 #[derive(Debug)]
@@ -140,7 +140,8 @@ impl DynamicFocusing {
 
     /// Apply apodization for sidelobe reduction
     pub fn apply_apodization(&mut self, window_type: ApodizationType) {
-        let weights = window_type.weights(self.amplitude_weights.len());
+        let n = self.amplitude_weights.len();
+        let weights: Vec<f64> = (0..n).map(|i| window_type.weights(i, n)).collect();
         for (w, v) in self.amplitude_weights.iter_mut().zip(weights.iter()) {
             *w = *v;
         }

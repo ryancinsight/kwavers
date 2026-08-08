@@ -123,8 +123,7 @@ impl MisfitFunction {
             }
 
             for j in 0..nsamples {
-                let phase_diff =
-                    kwavers_math::signal::wrap_to_pi(phase_syn[[i, j]] - phase_obs[[i, j]]);
+                let phase_diff = kwavers_math::wrap_to_pi(phase_syn[[i, j]] - phase_obs[[i, j]]);
 
                 let envelope_sq = analytic[j].norm_sqr();
                 adjoint[[i, j]] = if envelope_sq > 1e-12 {

@@ -1,6 +1,10 @@
 use leto::{ArrayView3, ArrayViewMut3, Layout as LetoLayout};
+use mnemosyne_arena::{allocate_large_or_huge, deallocate_large_or_huge};
+use mnemosyne_backend::MemoryBackendWrapper;
+use mnemosyne_core::constants::SEGMENT_ALIGN;
+use mnemosyne_core::types::Segment;
 use moirai_parallel::{for_each_chunk_mut_with, Adaptive};
-use std::alloc::{alloc, dealloc, Layout};
+use std::alloc::Layout;
 use std::ptr::NonNull;
 
 use super::{cache_aligned_size, CACHE_LINE_SIZE};
@@ -43,7 +47,7 @@ pub struct SoAFieldStorage {
     /// Contiguous memory buffer for all fields
     memory: NonNull<u8>,
 
-    /// Allocated layout (needed for dealloc)
+    /// Allocated layout (needed for size reporting)
     layout: Layout,
 
     /// Number of fields stored
@@ -54,6 +58,9 @@ pub struct SoAFieldStorage {
 
     /// Stride between field starts (cache-aligned)
     field_stride: usize,
+
+    /// Segment pointer for mnemosyne deallocation
+    segment_ptr: *mut Segment,
 }
 
 impl SoAFieldStorage {
@@ -113,14 +120,21 @@ impl SoAFieldStorage {
             })
         })?;
 
-        // SAFETY: Layout is valid with non-zero size and power-of-2 alignment
-        let memory = unsafe { alloc(layout) };
-        let memory = NonNull::new(memory).ok_or_else(|| {
+        // SAFETY: Layout is valid with non-zero size and power-of-2 alignment.
+        // mnemosyne allocates at least `SEGMENT_ALIGN` alignment.
+        let user_ptr = unsafe {
+            allocate_large_or_huge::<MemoryBackendWrapper>(total_size, SEGMENT_ALIGN, false)
+        };
+        let memory = NonNull::new(user_ptr).ok_or_else(|| {
             KwaversError::System(SystemError::MemoryAllocation {
                 requested_bytes: total_size,
                 reason: "Failed to allocate SoA storage".to_owned(),
             })
         })?;
+
+        // SAFETY: Valid pointer to allocated memory.
+        // Segment pointer is stored in metadata slot by allocate_large_or_huge.
+        let segment_ptr = unsafe { *((memory.as_ptr() as *mut *mut Segment).sub(1)) };
 
         // Zero-initialize for cache warming (NUMA first-touch)
         // SAFETY: Memory is valid for total_size bytes
@@ -134,6 +148,7 @@ impl SoAFieldStorage {
             num_fields,
             num_elements,
             field_stride: field_size_bytes,
+            segment_ptr,
         })
     }
 
@@ -326,14 +341,22 @@ impl SoAFieldStorage {
     pub fn total_bytes(&self) -> usize {
         self.layout.size()
     }
+
+    /// Get the actual allocated size (rounded up to alignment)
+    #[inline]
+    #[must_use]
+    pub fn allocated_size(&self) -> usize {
+        (self.layout.size() + SEGMENT_ALIGN - 1) & !(SEGMENT_ALIGN - 1)
+    }
 }
 
 impl Drop for SoAFieldStorage {
     fn drop(&mut self) {
-        // SAFETY: Memory was allocated with this layout, properly aligned
-        unsafe {
-            dealloc(self.memory.as_ptr(), self.layout);
-        }
+        // SAFETY: segment_ptr was written by allocate_large_or_huge and is valid.
+        // Recovered via the standard metadata-slot pattern.
+        let _released = unsafe {
+            deallocate_large_or_huge::<MemoryBackendWrapper>(self.memory.as_ptr(), self.segment_ptr)
+        };
     }
 }
 

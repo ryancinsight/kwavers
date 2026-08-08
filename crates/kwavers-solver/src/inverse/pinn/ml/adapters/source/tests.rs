@@ -3,7 +3,7 @@
 use super::*;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_signal::waveform::SineWave;
-use kwavers_source::PointSource;
+use kwavers_source::{CompositeSource, PointSource};
 
 #[test]
 fn test_point_source_adapter() {
@@ -18,6 +18,28 @@ fn test_point_source_adapter() {
     assert_eq!(pinn_source.source_class, PinnSourceClass::Monopole);
     assert!((pinn_source.frequency - MHZ_TO_HZ).abs() < 1e-6);
     assert!((pinn_source.amplitude - 1.0).abs() < 1e-6);
+}
+
+#[test]
+fn composite_multi_position_classifies_as_distributed_via_visitor() {
+    // Regression: a multi-position composite must classify as `Distributed`
+    // through the `Source::for_each_position` count path, not fall back to the
+    // allocating `positions()` collection or mis-classify as a monopole.
+    let signal = Arc::new(SineWave::new(MHZ_TO_HZ, 1.0, 0.0));
+    let composite = CompositeSource::new(vec![
+        Box::new(PointSource::new((0.01, 0.02, 0.03), signal.clone())),
+        Box::new(PointSource::new((0.02, 0.02, 0.03), signal)),
+    ]);
+
+    let pinn_source = PinnAcousticSource::from_domain_source(&composite, 0.0)
+        .expect("Composite source should adapt");
+
+    assert_eq!(pinn_source.source_class, PinnSourceClass::Distributed);
+    assert_eq!(pinn_source.position, (0.01, 0.02, 0.03));
+    assert!(
+        pinn_source.focal_properties.is_none(),
+        "composite of point sources has no focal properties"
+    );
 }
 
 #[test]

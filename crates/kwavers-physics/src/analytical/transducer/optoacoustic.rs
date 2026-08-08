@@ -15,7 +15,7 @@
 //! geometry ⇄ numerical aperture ⇄ f-number conversions, the focal pressure
 //! gain `G` (the paper's Eq. 2), and the acoustic-resolution lateral resolution
 //! (the paper's Eq. 1). The optoacoustic *source amplitude* `p₀ = Γ·μ_a·F` and
-//! the absorber materials live in `kwavers_optics` and `kwavers_medium`.
+//! the absorber materials live in `hyperion` and `kwavers_medium`.
 
 use kwavers_core::constants::numerical::TWO_PI;
 

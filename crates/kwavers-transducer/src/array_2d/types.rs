@@ -2,7 +2,7 @@
 
 use aequitas::systems::si::quantities::{Frequency, Length, Time, Velocity};
 use aequitas::systems::si::units::{Hertz, Meter, MeterPerSecond};
-pub use kwavers_math::signal::ApodizationType;
+pub use kwavers_math::ApodizationType;
 use kwavers_source::{
     Apodization, BlackmanApodization, GaussianApodization, HammingApodization, HanningApodization,
     RectangularApodization, TukeyApodization,

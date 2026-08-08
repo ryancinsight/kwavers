@@ -47,7 +47,6 @@ const DOMAIN_TIER_CRATES: &[&str] = &[
     "kwavers-grid",
     "kwavers-field",
     "kwavers-signal",
-    "kwavers-optics",
     "kwavers-mesh",
     "kwavers-medium",
     "kwavers-phantom",

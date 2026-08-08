@@ -7,9 +7,7 @@ use crate::forward::bem::{
 use kwavers_boundary::BemBoundaryManager;
 use kwavers_core::error::KwaversResult;
 use kwavers_math::fft::Complex64;
-use kwavers_math::linear_algebra::sparse::{
-    solver::SparsePreconditioner, CompressedSparseRowMatrix,
-};
+use kwavers_math::linear_algebra::sparse::CompressedSparseRowMatrix;
 use leto::Array1;
 use moirai_parallel::{map_collect_with, Adaptive};
 
@@ -39,6 +37,25 @@ impl BemSolver {
     #[must_use]
     pub fn local_index(&self, global_idx: usize) -> Option<usize> {
         self.global_to_local_node.get(&global_idx).copied()
+    }
+
+    /// Solve the BEM linear system via complex BiCGSTAB.
+    ///
+    /// Delegates to [`solve_csr_complex`] for the actual linear solve.
+    /// # Errors
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
+    ///
+    fn solve_bem_system(
+        &self,
+        a_matrix: &CompressedSparseRowMatrix<Complex64>,
+        b_vector: &Array1<Complex64>,
+    ) -> KwaversResult<Array1<Complex64>> {
+        crate::forward::bem::solver::assembly::solve_csr_complex(
+            a_matrix,
+            b_vector,
+            self.config.max_iterations,
+            self.config.tolerance,
+        )
     }
 
     /// Solve the rigid-scattering CFIE for a prescribed incident field.
@@ -106,14 +123,12 @@ impl BemSolver {
 
         let rhs_arr =
             Array1::from_vec(rhs.len(), rhs).expect("invariant: BEM RHS vector length well-formed");
-        let solver_config = kwavers_math::linear_algebra::sparse::solver::SolverConfig {
-            max_iterations: self.config.max_iterations,
-            tolerance: self.config.tolerance,
-            preconditioner: SparsePreconditioner::None,
-            verbose: false,
-        };
-        let solver = kwavers_math::linear_algebra::sparse::IterativeSolver::create(solver_config);
-        let p_scat = solver.bicgstab_complex(&a_matrix, rhs_arr.view(), None)?;
+        let p_scat = crate::forward::bem::solver::assembly::solve_csr_complex(
+            &a_matrix,
+            &rhs_arr,
+            self.config.max_iterations,
+            self.config.tolerance,
+        )?;
 
         let p_total: Vec<Complex64> = p_inc
             .iter()

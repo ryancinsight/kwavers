@@ -204,7 +204,7 @@ mod tests {
         let phantom = disk(n, 31.5, 31.5, 12.0);
         let sino = radon_transform(&phantom, 180);
         let recon = filtered_backprojection(&sino, n);
-        let r = kwavers_math::statistics::pearson(
+        let r = kwavers_math::pearson(
             &phantom.iter().copied().collect::<Vec<_>>(),
             &recon.iter().copied().collect::<Vec<_>>(),
         );

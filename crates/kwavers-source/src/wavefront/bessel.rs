@@ -7,7 +7,7 @@
 use crate::{Source, SourceField};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_grid::Grid;
-use kwavers_math::special::bessel::jn;
+use kwavers_math::jn;
 use kwavers_signal::Signal;
 use leto::Array3;
 use std::fmt::Debug;
@@ -123,7 +123,7 @@ impl BesselSource {
 
         // Bessel function value (argument k_r·r), via the kwavers-math SSOT.
         let bessel_value = jn(
-            self.config.order as u32,
+            self.config.order,
             self.config.radial_wavenumber * radial_distance,
         );
 
@@ -176,6 +176,10 @@ impl Source for BesselSource {
     fn positions(&self) -> Vec<(f64, f64, f64)> {
         // Return the center position
         vec![self.config.center]
+    }
+
+    fn for_each_position(&self, visitor: &mut dyn FnMut((f64, f64, f64))) {
+        visitor(self.config.center);
     }
 
     fn signal(&self) -> &dyn Signal {
@@ -265,5 +269,26 @@ impl BesselBuilder {
 
     pub fn build(self, signal: Arc<dyn Signal>) -> BesselSource {
         BesselSource::new(self.config, signal)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use kwavers_signal::NullSignal;
+
+    #[test]
+    fn position_visitor_matches_center_position() {
+        let config = BesselConfig {
+            center: (1.0, 2.0, 3.0),
+            ..BesselConfig::default()
+        };
+        let source = BesselSource::new(config, Arc::new(NullSignal::new()));
+        let mut visited = Vec::new();
+
+        source.for_each_position(&mut |position| visited.push(position));
+
+        assert_eq!(visited, source.positions());
+        assert_eq!(visited, vec![(1.0, 2.0, 3.0)]);
     }
 }

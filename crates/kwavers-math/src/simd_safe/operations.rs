@@ -2,8 +2,7 @@
 //!
 //! All ISA dispatch is delegated to `hermes_simd`; this module contains only
 //! the Array3 ↔ contiguous-slice bridge and the element-wise scalar fallback
-//! for non-contiguous views.  The hand-written `avx2`/`neon`/`swar` intrinsic
-//! modules are preserved for the `auto_detect` path but are no longer used here.
+//! for non-contiguous views.
 
 use hermes_simd::{elementwise_add, elementwise_mul, elementwise_sub, scale};
 use leto::Array3;

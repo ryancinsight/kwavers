@@ -127,6 +127,112 @@ Aequitas PR #13 is merged at `3c51a27`; the clean standalone lock is now
 regenerated against Ritk `cfeebc7`. The clean package Nextest linker blocker
 and hosted delivery remain the final exact-head gates.
 
+### KWAVERS-AEQ-MET-65 — MEMS crosstalk mechanical-impedance boundary (closed 2026-08-05)
+
+The MEMS crosstalk formula was still a raw complex boundary in this branch.
+Its inputs are element areas, separation, angular frequency, fluid density,
+and sound speed. The formula returns force per source velocity, whose coherent
+unit is `kg/s`; the previous `AcousticImpedance` label would instead mean
+pressure per particle velocity, `kg/(m²·s)`.
+
+The boundary now uses Aequitas `Area`, `Length`, `Frequency`, `MassDensity`,
+and `Velocity`, and returns
+`MechanicalImpedance<eunomia::Complex64>`. The matrix stores the same typed
+complex quantity, including its zero diagonal. Scalar extraction is confined
+to the wavenumber, magnitude, and Euclidean-distance formulas.
+
+Eunomia's real and quadrature components retain one observable mechanical-
+impedance unit. No imaginary SI unit or local complex wrapper is introduced.
+The Aequitas provider law test and the Kwavers crosstalk suite cover complex
+conversion, closed-form magnitude and phase, reciprocity, inverse-distance
+scaling, zero diagonal, and degenerate input handling. The remaining MEMS
+cell-output boundary is closed under MET-64; the flexible-array boundary is
+closed under MET-FLEX below.
+
+### KWAVERS-AEQ-MET-64 — MEMS cell physical-metric boundary (closed 2026-08-05)
+
+The CMUT, PMUT, and shared clamped-plate modules still exposed physical cell
+metrics as raw scalars after the crosstalk slice: capacitance, resonance,
+stiffness, collapse voltage, pressure, damping, fluid loading, flexural
+rigidity, and piezoelectric charge-gradient contracts. Their direct Python
+bindings also converted without an explicit typed Rust boundary.
+
+The cell models now publish Aequitas quantities for geometry, material,
+electrical, mechanical, acoustic, and dimensionless metrics. Aequitas adds
+`VolumeChargeDensity` (`C/m³`) for `|e₃₁,f|/t_p` and semantically distinct
+`FlexuralRigidity` (`J`) for `E h³/(12(1−ν²))`. The renamed PMUT
+`charge_density_gradient` method matches its actual unit instead of calling it
+pressure sensitivity. Scalar extraction is limited to formulas, assertions,
+and the explicit Python serialization boundary.
+
+Eunomia complex values remain compatible with both provider quantities: real
+and quadrature components retain one observable `C/m³` or `J` unit, and no
+imaginary SI dimension is introduced. The typed MEMS and comparison tests pass
+25/25, the Python binding library compiles, and the provider suite passes
+54/54. Flexible-array core metrics are closed under MET-FLEX below.
+
+### KWAVERS-AEQ-MET-FLEX — flexible-array dynamic metric boundary (closed 2026-08-05)
+
+The flexible-array public dynamic boundary now carries update and
+calibration-snapshot timestamps as `Time`, focus coordinates as `Length`, sound
+speed as `Velocity`, delays as `Time`, calibration confidence and quality ratios
+as `Dimensionless`, position uncertainty as `Length`, orientation uncertainty
+as `Angle`, per-element curvature as `ReciprocalLength`, curvature radius as
+`Length`, strain and safety limits as `Dimensionless`, stress as `Pressure`, and
+deformation strain-energy density as `EnergyPerVolume`. Dense measurement, mesh,
+signal, and source-position arrays
+remain explicit storage or infrastructure boundaries and are not assigned
+fabricated physical units.
+
+The geometry implementation also corrects its curvature law. It previously
+returned an averaged turning angle while the strain and flex-derating formulas
+treated the value as `1/m`; it now returns averaged Menger curvature with the
+inverse-length dimension. The former `deformation_energy` field was likewise
+renamed to `deformation_energy_density`, because `½ ε σ` is `J/m³` without an
+integrated element volume.
+
+The existing position-visitor change was composed during stale-claim takeover;
+no peer work was discarded. Focused flexible tests pass 6/6 before the shared
+cache exhausted the disk during a subsequent rebuild. The latest rebuild is
+blocked before test execution by the live Melinoe dirty change using
+`MelinoeCell` without importing it; that provider defect is outside this metric
+slice and is recorded as a verification residual. Eunomia complex values remain
+one observable signal unit; flexible geometry has no imaginary SI unit. See
+[ADR 070](docs/ADR/070-mems-quantity-contracts.md).
+
+### KWAVERS-AEQ-MET-66/67 — thermal-diffusion and thermal-acoustic metric gaps (implemented 2026-08-06)
+
+The active branch still carried two public thermal metric families as raw
+scalars after the transducer and MEMS closures. Thermal-diffusion parameters
+now use Aequitas `ReciprocalTime`, `MassDensity`, `SpecificHeatCapacity`,
+`ThermodynamicTemperature`, and `Time`. Thermal-acoustic coefficients now use
+`VelocityPerTemperature`, `MassDensityPerTemperature`, and
+`ReciprocalLengthPerTemperature`; absorption, intensity, density, velocity,
+pressure, elapsed time, and nonlinear heating use their corresponding
+Aequitas quantities. The nonlinear heating result is explicitly
+`VolumetricPowerDensityGradient` (`W/m⁴`), matching
+`(B/A)·P²·ω²/(ρ·c³)`.
+
+Celsius/absolute-temperature arrays and dense Leto fields remain numerical
+storage boundaries. CEM43 remains a domain dose convention rather than an SI
+`Time`; only its integration step is typed. Scalar extraction is confined to
+finite-difference, material-model, numerical, and storage boundaries.
+
+Eunomia compatibility is real-valued for these thermal contracts. Complex or
+quadrature values in adjacent signal fields retain one existing observable
+unit; no imaginary SI temperature, coefficient, heating, gradient, or dose
+unit is introduced. The decisions are recorded in [ADR 103](docs/ADR/103-thermal-diffusion-quantities.md)
+and [ADR 104](docs/ADR/104-thermal-acoustic-coupling-quantities.md).
+
+Evidence on the active branch: `cargo check -p kwavers-physics --lib
+--offline -j 1` passes, and the raw temperature-coefficient residue scan is
+clean. The bounded native test collection was attempted through Nextest but
+exceeded the 300-second budget while peer jobs occupied the shared target and
+disk availability fell below 100 MB; it was terminated without test results.
+The source matches the already-verified thermal implementation on
+`origin/main`, but the active branch retains this environment verification
+residual until a clean focused Nextest run is collected.
+
 ### KWAVERS-AEQ-MET-63 — focused-source and hemispherical metric gap (closed 2026-08-03)
 
 The audit found raw public contracts in focused bowl, spherical-cap, arc,
@@ -163,8 +269,9 @@ Local evidence at the delivered lane head:
 The shared Atlas overlay emits known unused-patch and linker warnings, none of
 which fail an affected-package gate. Hosted repository checks and merge
 evidence are appended after the final PR head. Focused-source and
-hemispherical contracts are closed; MEMS, flexible, and other non-focused
-families remain separate audit candidates.
+hemispherical, MEMS crosstalk, and MEMS cell-output contracts are closed under
+MET-65 and MET-64; flexible and other non-focused families remain separate
+audit candidates.
 
 ### KWAVERS-AEQ-MET-62 — two-dimensional array metric gap (closed 2026-08-03)
 
@@ -1564,7 +1671,7 @@ do not assert an unconfirmed physics error.
   package clippy passes with `rustup run nightly cargo clippy -p kwavers-solver
   --lib --no-deps -- -D warnings` after the Atlas provider graph refresh.
 - **Phase-1A kwavers-math numeric SSOT pilot - RESOLVED [patch].** The `kwavers_math::linear_algebra::NumericOps<T>` trait moved from `num_traits::{Float, NumCast, Zero}` to `eunomia::RealField` + `NumericElement::ZERO`. `crates/kwavers-math/Cargo.toml` declares `eunomia = { workspace = true }` while retaining `num-traits` (csr.rs only); super-traits `Clone + Zero` + vestigial `NumCast` are dropped to `Copy + PartialOrd`; the six method bodies use `T::ZERO` instead of `T::zero()`; `max_abs` uses a `PartialOrd`-driven fold because `eunomia::RealField` does not propagate a `max` method. Evidence tier: focused compile validation plus kwavers xtask lexical audit. Verification: `cargo build -p kwavers-math` exits 0; `cargo run -p xtask -- legacy-migration-audit` no longer lists `numeric_ops.rs` in the source-legacy per-file output.
-- **Atlas extension: eunomia Complex64 SSOT for csr.rs - OPENED [arch].** Phase-1A closed `kwavers-math::linear_algebra::numeric_ops` but the `num_complex::Complex64 → CsrScalar` impl in `linear_algebra::sparse::csr.rs` cannot drop `num_traits::Zero` because `eunomia::NumericElement` and `eunomia::FloatElement` are `private::Sealed`. Atlas extension request `CR-EUNOMIA-COMPLEX`: unsealed `eunomia::Scalar` supertrait, OR a native `eunomia::Complex` with `magnitude`/`norm` derivations usable from `CsrScalar::magnitude`. Until that lands, `kwavers-math/Cargo.toml` carries both `num-traits` (csr.rs only) and `eunomia` (numeric_ops + downstream); the xtask audit tracks csr.rs as the lone remaining source-legacy entry under `crates/kwavers-math/src/linear_algebra/sparse`.
+- **Atlas extension: Eunomia complex CSR boundary - RECLASSIFIED 2026-08-05 [patch].** The former `CR-EUNOMIA-COMPLEX` request was based on the obsolete assumption that Kwavers needed to implement Eunomia's sealed numeric traits for a `num_complex::Complex64` adapter. Eunomia already provides native `Complex<T>`, `ComplexField::{real, imaginary, modulus}`, `Complex::norm`, and `UnitScalar`; Leto owns the operation-level `Scalar` extension and admits native complex values. The CSR consumer cutover therefore uses `leto_ops::Scalar`, `eunomia::NumericElement::ZERO`, and Eunomia's `Complex64` rather than unsealing a provider trait or inventing an imaginary SI dimension. This is a consumer migration in the peer-owned sparse files, not an upstream Eunomia gap. Complex real and quadrature components retain one observable physical unit. `cargo check --offline -p kwavers-math --lib -j 1` passes on the current cutover.
 - **GPU backend provider boundary - RESOLVED [patch].** The solver-owned
   compute backend trait now models GPU provider identity explicitly through
   `GpuProvider` on `BackendType::GPU`, and the existing WGPU leaf backend

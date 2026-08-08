@@ -1,7 +1,6 @@
 //! Correlation and phase-sensitivity validation bindings.
 
 use super::arrays::as_slices;
-use kwavers_math::statistics;
 use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
@@ -13,7 +12,7 @@ use pyo3::prelude::*;
 #[pyo3(signature = (a, b))]
 pub fn pearson(a: PyReadonlyArray1<f64>, b: PyReadonlyArray1<f64>) -> PyResult<f64> {
     let (a_s, b_s) = as_slices(&a, &b)?;
-    Ok(statistics::pearson(a_s, b_s))
+    Ok(kwavers_math::pearson(a_s, b_s))
 }
 
 /// Same-frequency sinusoid Pearson curve `r(phi) = cos(phi)` for phase offsets
@@ -28,7 +27,7 @@ pub fn phase_shift_correlation_curve(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = py
-        .detach(|| statistics::phase_shift_correlation_curve(phase_rad))
+        .detach(|| kwavers_math::phase_shift_correlation_curve(phase_rad))
         .map_err(PyValueError::new_err)?;
     Ok(result.to_pyarray(py).unbind())
 }
@@ -38,5 +37,5 @@ pub fn phase_shift_correlation_curve(
 #[pyfunction]
 #[pyo3(signature = (correlation))]
 pub fn phase_error_degrees_for_correlation(correlation: f64) -> PyResult<f64> {
-    statistics::phase_error_degrees_for_correlation(correlation).map_err(PyValueError::new_err)
+    kwavers_math::phase_error_degrees_for_correlation(correlation).map_err(PyValueError::new_err)
 }

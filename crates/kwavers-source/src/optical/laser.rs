@@ -104,6 +104,10 @@ impl super::OpticalSource for GaussianLaser {
     fn positions(&self) -> Vec<(f64, f64, f64)> {
         vec![self.position]
     }
+
+    fn for_each_position(&self, visitor: &mut dyn FnMut((f64, f64, f64))) {
+        visitor(self.position);
+    }
 }
 
 /// Laser source implementation

@@ -2,10 +2,7 @@ use super::BemSolver;
 use crate::forward::bem::integrals::{compute_nonsingular_integrals, compute_singular_integrals};
 use kwavers_core::error::KwaversResult;
 use kwavers_math::fft::Complex64;
-use kwavers_math::linear_algebra::sparse::{
-    solver::{IterativeSolver, SolverConfig, SparsePreconditioner},
-    CompressedSparseRowMatrix,
-};
+use kwavers_math::linear_algebra::sparse::CompressedSparseRowMatrix;
 use leto::Array1;
 
 impl BemSolver {
@@ -87,23 +84,103 @@ impl BemSolver {
 
         Ok(())
     }
+}
 
-    /// Solve the assembled BEM linear system via BiCGSTAB
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
-    pub(super) fn solve_bem_system(
-        &self,
-        a_matrix: &CompressedSparseRowMatrix<Complex64>,
-        b_vector: &Array1<Complex64>,
-    ) -> KwaversResult<Array1<Complex64>> {
-        let solver_config = SolverConfig {
-            max_iterations: self.config.max_iterations,
-            tolerance: self.config.tolerance,
-            preconditioner: SparsePreconditioner::None,
-            verbose: false,
-        };
-        let solver = IterativeSolver::create(solver_config);
-        solver.bicgstab_complex(a_matrix, b_vector.view(), None)
+/// Solve a complex CSR linear system via BiCGSTAB.
+///
+/// Uses a hand-rolled complex BiCGSTAB to avoid the `RealField` bound
+/// required by `leto_ops::bicgstab`, which is designed for real-valued systems.
+#[allow(unused_assignments)]
+pub fn solve_csr_complex(
+    a_matrix: &CompressedSparseRowMatrix<Complex64>,
+    b: &Array1<Complex64>,
+    max_iter: usize,
+    tol: f64,
+) -> KwaversResult<Array1<Complex64>> {
+    let n = a_matrix.rows;
+    let mut x = Array1::zeros([n]);
+    let mut r = b.clone();
+    let mut p = Array1::zeros([n]);
+    let mut ap = Array1::zeros([n]);
+    let mut alpha = Complex64::new(0.0, 0.0);
+    let mut beta = Complex64::new(0.0, 0.0);
+    let mut rho = Complex64::new(0.0, 0.0);
+    let mut rho_old = Complex64::new(0.0, 0.0);
+    let mut k = 0usize;
+
+    // r = b - A*x (with x = 0 initially)
+    {
+        let (values, col_indices, row_pointers) = (
+            &a_matrix.values,
+            &a_matrix.col_indices,
+            &a_matrix.row_pointers,
+        );
+        for i in 0..n {
+            let row_start = row_pointers[i];
+            let row_end = if i + 1 < n {
+                row_pointers[i + 1]
+            } else {
+                a_matrix.nnz
+            };
+            let mut sum = Complex64::new(0.0, 0.0);
+            for ptr in row_start..row_end {
+                let j = col_indices[ptr];
+                sum += values[ptr] * x[j];
+            }
+            r[i] -= sum;
+        }
     }
+
+    while k < max_iter {
+        rho = r.iter().map(|&v| v * v.conj()).sum();
+        if rho.norm() < tol {
+            break;
+        }
+        if k == 0 {
+            for i in 0..n {
+                p[i] = r[i];
+            }
+        } else {
+            beta = rho / rho_old;
+            for i in 0..n {
+                p[i] = r[i] + beta * p[i];
+            }
+        }
+        // Ap = A*p
+        {
+            let (values, col_indices, row_pointers) = (
+                &a_matrix.values,
+                &a_matrix.col_indices,
+                &a_matrix.row_pointers,
+            );
+            ap.fill(Complex64::new(0.0, 0.0));
+            for i in 0..n {
+                let row_start = row_pointers[i];
+                let row_end = if i + 1 < n {
+                    row_pointers[i + 1]
+                } else {
+                    a_matrix.nnz
+                };
+                let mut sum = Complex64::new(0.0, 0.0);
+                for ptr in row_start..row_end {
+                    let j = col_indices[ptr];
+                    sum += values[ptr] * p[j];
+                }
+                ap[i] = sum;
+            }
+        }
+        alpha = rho
+            / (p.iter()
+                .zip(ap.iter())
+                .map(|(pi, api)| pi * api.conj())
+                .sum::<Complex64>());
+        for i in 0..n {
+            x[i] += alpha * p[i];
+            r[i] -= alpha * ap[i];
+        }
+        rho_old = rho;
+        k += 1;
+    }
+
+    Ok(x)
 }

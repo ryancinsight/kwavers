@@ -148,7 +148,36 @@ impl Source for HemisphericalArray {
             .collect()
     }
 
+    fn for_each_position(&self, visitor: &mut dyn FnMut((f64, f64, f64))) {
+        for element in self.elements.iter().filter(|e| e.is_active()) {
+            visitor((
+                element.position[0].in_unit::<Meter>(),
+                element.position[1].in_unit::<Meter>(),
+                element.position[2].in_unit::<Meter>(),
+            ));
+        }
+    }
+
     fn signal(&self) -> &dyn Signal {
         self.signal.as_ref()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn position_visitor_matches_owned_positions() {
+        let source = HemisphericalArray::new(
+            Length::from_unit::<Meter>(50.0e-3),
+            16,
+            Frequency::from_unit::<Hertz>(500.0e3),
+        )
+        .unwrap();
+        let mut visited = Vec::new();
+        source.for_each_position(&mut |position| visited.push(position));
+        assert_eq!(visited, source.positions());
+        assert!(!visited.is_empty());
     }
 }

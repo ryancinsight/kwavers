@@ -29,6 +29,23 @@
   retain one existing observable unit and no imaginary SI unit is introduced.
   See [ADR 103](docs/ADR/103-thermal-diffusion-quantities.md).
 
+- [minor] Add a `Source::for_each_position` visitor and route Westervelt
+  pressure injection and the PINN source adapter through it. Point,
+  time-varying, null, plane-wave, Gaussian, spherical, Bessel, and
+  simple-custom sources avoid constructing temporary position vectors;
+  `CompositeSource` forwards that property when its children do. The parallel
+  `OpticalSource::for_each_position` streams fiber, laser, and LED positions
+  without cloning, and the focused-bowl transducer adapter streams its element
+  positions without collecting a `Vec`. The open `Source` trait remains
+  object-safe and externally extensible, while its compatibility default
+  still adapts allocating `positions()` implementations. The remaining
+  transducer source families override the visitor too: the planar
+  linear/matrix/piston apertures, hemispherical, phased-array, flexible, and
+  two-dimensional arrays stream element positions without intermediate `Vec`s,
+  and the multi-bowl configuration is covered by the focused-bowl adapter it
+  builds on, so no allocating `positions()` producer remains in the transducer
+ crate.
+
 - **Breaking:** Focused bowl, spherical-cap, arc, multi-bowl, and
   hemispherical source contracts now use Aequitas quantities for physical
   geometry, frequency, pressure, phase, area, delay, volume, and validation

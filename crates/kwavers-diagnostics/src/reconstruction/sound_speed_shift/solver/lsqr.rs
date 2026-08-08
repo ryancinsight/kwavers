@@ -4,17 +4,14 @@
 //! [`solve_lsqr_matfree`] with the Tikhonov damping extracted from
 //! [`ShiftPrior::Lsqr`].
 
-use kwavers_math::linear_algebra::iterative::lsqr::{
-    matfree::{MatFreeOperator, MatFreeResult},
-    solve_lsqr_matfree,
-    types::LsqrConfig,
-};
+use kwavers_math::{solve_lsqr_matfree, LsqrConfig, MatFreeOperator, MatFreeResult};
 
 use super::super::operator::SoundSpeedShiftOperator;
 use super::super::types::{ShiftPrior, SoundSpeedShiftConfig, SoundSpeedShiftWorkspace};
 
 /// Newtype so we can implement the foreign `MatFreeOperator` trait for the
 /// crate-internal `SoundSpeedShiftOperator`.
+#[derive(Clone)]
 struct ShiftOperatorAdapter<'a>(&'a SoundSpeedShiftOperator);
 
 impl MatFreeOperator for ShiftOperatorAdapter<'_> {

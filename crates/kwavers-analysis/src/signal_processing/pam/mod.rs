@@ -49,4 +49,4 @@ pub enum PamBeamformingMethod {
     TimeExposureAcoustics,
 }
 
-pub use kwavers_math::signal::ApodizationType;
+pub use kwavers_math::ApodizationType;

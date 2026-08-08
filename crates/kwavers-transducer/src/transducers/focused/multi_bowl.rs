@@ -134,10 +134,11 @@ impl MultiBowlArray {
     /// absolute pressure `w_i A_i` and scaling each generated bowl field by
     /// `(w_i A_i) / A_i`. Zero-drive bowls preserve the unique zero field.
     pub fn apply_apodization(&mut self, apodization_type: ApodizationType) {
+        let n = self.bowls.len();
         self.amplitudes = self
             .bowls
             .iter()
-            .zip(apodization_type.weights(self.bowls.len()))
+            .zip((0..n).map(|i| apodization_type.weights(i, n)))
             .map(|(bowl, weight)| {
                 Pressure::from_unit::<Pascal>(bowl.config.amplitude.in_unit::<Pascal>() * weight)
             })
@@ -145,7 +146,7 @@ impl MultiBowlArray {
     }
 }
 
-pub use kwavers_math::signal::ApodizationType;
+pub use kwavers_math::ApodizationType;
 
 fn validate_bowl_count(count: usize) -> KwaversResult<()> {
     if count > 0 {

@@ -1,4 +1,5 @@
 use super::builder::PhantomBuilder;
+use super::PhantomError;
 use kwavers_grid::GridDimensions;
 use kwavers_medium::optical_map::OpticalPropertyMap;
 use kwavers_medium::properties::OpticalPropertyData;
@@ -12,8 +13,13 @@ impl ClinicalPhantoms {
     ///
     /// Contains arterial vessel (sO₂=98%), venous vessel (sO₂=65%),
     /// and hypoxic tumor (sO₂=55%).
-    #[must_use]
-    pub fn standard_blood_oxygenation(dims: GridDimensions) -> OpticalPropertyMap {
+    ///
+    /// # Errors
+    ///
+    /// Propagates Hyperion wavelength and optical-property validation errors.
+    pub fn standard_blood_oxygenation(
+        dims: GridDimensions,
+    ) -> Result<OpticalPropertyMap, PhantomError> {
         let cx = dims.dx * (dims.nx as f64) / 2.0;
         let cy = dims.dy * (dims.ny as f64) / 2.0;
         let cz = dims.dz * (dims.nz as f64) / 2.0;
@@ -41,8 +47,14 @@ impl ClinicalPhantoms {
     }
 
     /// Breast tissue phantom with tumor
-    #[must_use]
-    pub fn breast_tumor(dims: GridDimensions, tumor_center: [f64; 3]) -> OpticalPropertyMap {
+    ///
+    /// # Errors
+    ///
+    /// Propagates Hyperion wavelength and optical-property validation errors.
+    pub fn breast_tumor(
+        dims: GridDimensions,
+        tumor_center: [f64; 3],
+    ) -> Result<OpticalPropertyMap, PhantomError> {
         PhantomBuilder::tumor_detection()
             .dimensions(dims)
             .wavelength(800.0)
@@ -52,8 +64,11 @@ impl ClinicalPhantoms {
     }
 
     /// Vascular network phantom
-    #[must_use]
-    pub fn vascular_network(dims: GridDimensions) -> OpticalPropertyMap {
+    ///
+    /// # Errors
+    ///
+    /// Propagates Hyperion wavelength and optical-property validation errors.
+    pub fn vascular_network(dims: GridDimensions) -> Result<OpticalPropertyMap, PhantomError> {
         let cx = dims.dx * (dims.nx as f64) / 2.0;
         let cy = dims.dy * (dims.ny as f64) / 2.0;
         let z_min = 0.0;

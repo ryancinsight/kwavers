@@ -1,9 +1,9 @@
 use super::super::types::VesselGeometry;
 use super::super::utils::compute_blood_properties;
+use super::super::PhantomError;
 use kwavers_grid::GridDimensions;
 use kwavers_medium::optical_map::{OpticalPropertyMap, OpticalPropertyMapBuilder, Region};
 use kwavers_medium::properties::OpticalPropertyData;
-use kwavers_optics::chromophores::HemoglobinDatabase;
 
 /// Vascular phantom builder
 #[derive(Debug)]
@@ -48,29 +48,27 @@ impl VascularPhantomBuilder {
         self
     }
 
-    /// Build phantom
-    /// # Panics
-    /// - Panics if `Dimensions must be set before building`.
+    /// Build phantom.
     ///
-    #[must_use]
-    pub fn build(self) -> OpticalPropertyMap {
-        let dims = self
-            .dimensions
-            .expect("Dimensions must be set before building");
+    /// # Errors
+    ///
+    /// Returns [`PhantomError::MissingDimensions`] when dimensions were not
+    /// configured, or propagates optical-property validation errors from
+    /// Hyperion and the medium contract.
+    pub fn build(self) -> Result<OpticalPropertyMap, PhantomError> {
+        let dims = self.dimensions.ok_or(PhantomError::MissingDimensions)?;
 
         let mut builder = OpticalPropertyMapBuilder::new(dims);
         builder.set_background(self.background);
 
-        let hb_db = HemoglobinDatabase::default();
-
         for vessel in &self.vessels {
-            let props = compute_blood_properties(&hb_db, self.wavelength_nm, vessel.so2);
+            let props = compute_blood_properties(self.wavelength_nm, vessel.so2)?;
             builder.add_region(
                 Region::cylinder(vessel.start, vessel.end, vessel.radius),
                 props,
             );
         }
 
-        builder.build()
+        Ok(builder.build())
     }
 }

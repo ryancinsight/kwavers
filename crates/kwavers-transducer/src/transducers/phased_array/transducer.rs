@@ -256,6 +256,12 @@ impl Source for PhasedArrayTransducer {
         self.elements.iter().map(|e| e.position).collect()
     }
 
+    fn for_each_position(&self, visitor: &mut dyn FnMut((f64, f64, f64))) {
+        for element in &self.elements {
+            visitor(element.position);
+        }
+    }
+
     fn signal(&self) -> &dyn Signal {
         self.signal.as_ref()
     }
@@ -379,5 +385,30 @@ impl Source for PhasedArrayTransducer {
         } else {
             None
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use kwavers_medium::{DomainMediumParameters, MediumBuilder};
+    use kwavers_signal::NullSignal;
+
+    #[test]
+    fn position_visitor_matches_owned_positions() {
+        let grid = Grid::new(25, 25, 13, 0.02, 0.02, 0.02).unwrap();
+        let medium = MediumBuilder::build(&DomainMediumParameters::default(), &grid)
+            .expect("water medium builds");
+        let source = PhasedArrayTransducer::create(
+            PhasedArrayConfig::default(),
+            Arc::new(NullSignal),
+            medium.as_ref(),
+            &grid,
+        )
+        .expect("default phased array builds");
+        let mut visited = Vec::new();
+        source.for_each_position(&mut |position| visited.push(position));
+        assert_eq!(visited, source.positions());
+        assert!(!visited.is_empty());
     }
 }

@@ -3,6 +3,10 @@
 //! This module handles the geometric representation and deformation state
 //! of flexible transducer arrays.
 
+use aequitas::systems::si::quantities::{
+    Dimensionless, EnergyPerVolume, Length, Pressure, ReciprocalLength, Time,
+};
+use aequitas::systems::si::units::{JoulePerCubicMeter, Pascal, PerMeter};
 use leto::{Array1, Array2};
 use serde::{Deserialize, Serialize};
 
@@ -15,8 +19,8 @@ pub struct GeometryState {
     pub element_normals: Array2<f64>,
     /// Confidence values for position estimates (0-1)
     pub position_confidence: Array1<f64>,
-    /// Timestamp of last geometry update
-    pub timestamp: f64,
+    /// Timestamp of last geometry update.
+    pub timestamp: Time<f64>,
     /// Deformation state
     pub deformation: DeformationState,
 }
@@ -45,7 +49,7 @@ impl GeometryState {
             element_positions: positions,
             element_normals: normals,
             position_confidence: Array1::ones([num_elements]),
-            timestamp: 0.0,
+            timestamp: Time::from_unit::<aequitas::systems::si::units::Second>(0.0),
             deformation: DeformationState::default(),
         }
     }
@@ -58,12 +62,13 @@ impl GeometryState {
 
     /// Calculate curvature from current positions
     #[must_use]
-    pub fn calculate_curvature(&self) -> f64 {
+    pub fn calculate_curvature(&self) -> ReciprocalLength<f64> {
         if self.element_positions.shape()[0] < 3 {
-            return 0.0;
+            return ReciprocalLength::from_unit::<PerMeter>(0.0);
         }
 
-        // Simple curvature estimation using three-point formula
+        // Average the Menger curvature of each consecutive three-point arc.
+        // Unlike the turning angle alone, this retains the required 1/m unit.
         let mut total_curvature = 0.0;
         let n_elements = self.element_positions.shape()[0];
 
@@ -88,19 +93,23 @@ impl GeometryState {
             let v1 = [p2[0] - p1[0], p2[1] - p1[1], p2[2] - p1[2]];
             let v2 = [p3[0] - p2[0], p3[1] - p2[1], p3[2] - p2[2]];
 
-            // Calculate angle between vectors
-            let dot_product: f64 = v1.iter().zip(v2.iter()).map(|(a, b)| a * b).sum();
             let mag1: f64 = v1.iter().map(|x| x * x).sum::<f64>().sqrt();
             let mag2: f64 = v2.iter().map(|x| x * x).sum::<f64>().sqrt();
+            let chord: [f64; 3] = [p3[0] - p1[0], p3[1] - p1[1], p3[2] - p1[2]];
+            let cross = [
+                v1[1].mul_add(v2[2], -(v1[2] * v2[1])),
+                v1[2].mul_add(v2[0], -(v1[0] * v2[2])),
+                v1[0].mul_add(v2[1], -(v1[1] * v2[0])),
+            ];
+            let cross_norm = cross.iter().map(|x| x * x).sum::<f64>().sqrt();
+            let chord_norm = chord.iter().map(|x| x * x).sum::<f64>().sqrt();
 
-            if mag1 > 0.0 && mag2 > 0.0 {
-                let cos_angle = (dot_product / (mag1 * mag2)).clamp(-1.0, 1.0);
-                let angle = cos_angle.acos();
-                total_curvature += angle;
+            if mag1 > 0.0 && mag2 > 0.0 && chord_norm > 0.0 {
+                total_curvature += 2.0 * cross_norm / (mag1 * mag2 * chord_norm);
             }
         }
 
-        total_curvature / (n_elements - 2) as f64
+        ReciprocalLength::from_unit::<PerMeter>(total_curvature / (n_elements - 2) as f64)
     }
 
     /// Get the centroid of all element positions
@@ -120,16 +129,16 @@ impl GeometryState {
 /// Deformation state tracking
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub struct DeformationState {
-    /// Curvature radius (m), None if flat
-    pub curvature_radius: Option<f64>,
+    /// Curvature radius, `None` for a flat or underdetermined centreline.
+    pub curvature_radius: Option<Length<f64>>,
     /// Strain values for each element
-    pub strain: Vec<f64>,
+    pub strain: Vec<Dimensionless<f64>>,
     /// Stress values for each element (Pa)
-    pub stress: Vec<f64>,
-    /// Total deformation energy (J)
-    pub deformation_energy: f64,
+    pub stress: Vec<Pressure<f64>>,
+    /// Strain-energy density (J/m³) derived from `½ ε σ`.
+    pub deformation_energy_density: EnergyPerVolume<f64>,
     /// Maximum allowable deformation before damage
-    pub max_safe_deformation: f64,
+    pub max_safe_deformation: Dimensionless<f64>,
 }
 
 impl DeformationState {
@@ -138,16 +147,51 @@ impl DeformationState {
     pub fn is_safe(&self) -> bool {
         self.strain
             .iter()
-            .all(|&s| s.abs() < self.max_safe_deformation)
+            .all(|s| s.into_base().abs() < self.max_safe_deformation.into_base())
     }
 
     /// Calculate deformation energy from strain and stress
     pub fn calculate_energy(&mut self) {
-        self.deformation_energy = self
+        let density = self
             .strain
             .iter()
             .zip(self.stress.iter())
-            .map(|(strain, stress)| 0.5 * strain * stress)
+            .map(|(strain, stress)| 0.5 * strain.into_base() * stress.in_unit::<Pascal>())
             .sum();
+        self.deformation_energy_density = EnergyPerVolume::from_unit::<JoulePerCubicMeter>(density);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use aequitas::systems::si::units::{Meter, PerMeter};
+
+    #[test]
+    fn flat_geometry_has_zero_inverse_length_curvature() {
+        let geometry = GeometryState::flat_array(5, 1.0e-3);
+
+        assert_eq!(geometry.calculate_curvature().in_unit::<PerMeter>(), 0.0);
+    }
+
+    #[test]
+    fn deformation_energy_is_reported_as_energy_density() {
+        let mut deformation = DeformationState {
+            curvature_radius: Some(Length::from_unit::<Meter>(0.01)),
+            strain: vec![Dimensionless::from_base(0.1)],
+            stress: vec![Pressure::from_unit::<Pascal>(2.0e6)],
+            deformation_energy_density: EnergyPerVolume::from_base(0.0),
+            max_safe_deformation: Dimensionless::from_base(0.2),
+        };
+
+        deformation.calculate_energy();
+
+        assert_eq!(
+            deformation
+                .deformation_energy_density
+                .in_unit::<JoulePerCubicMeter>(),
+            1.0e5
+        );
+        assert!(deformation.is_safe());
     }
 }

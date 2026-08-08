@@ -25,7 +25,10 @@ pub use batch::{BufferBatch, NumaPoolManager};
 pub use pool_impl::{BufferPool, PooledBuffer};
 
 use crate::error::{KwaversError, KwaversResult};
-use std::alloc::{alloc, Layout};
+use mnemosyne_arena::allocate_large_or_huge;
+use mnemosyne_backend::MemoryBackendWrapper;
+use mnemosyne_core::constants::SEGMENT_ALIGN;
+use mnemosyne_core::types::Segment;
 use std::ptr::NonNull;
 
 /// Cache line size for x86_64 architectures (64 bytes).
@@ -122,22 +125,22 @@ impl PoolStats {
 /// # Errors
 /// - Propagates any `KwaversError` returned by called functions.
 ///
-pub(super) fn allocate_numa_aware(size: usize) -> KwaversResult<NonNull<u8>> {
-    let layout = Layout::from_size_align(size, CACHE_LINE_SIZE).map_err(|_| {
-        KwaversError::System(crate::error::SystemError::MemoryAllocation {
-            requested_bytes: size,
-            reason: "Invalid layout for NUMA-aware allocation".to_owned(),
-        })
-    })?;
-
-    // SAFETY: Layout is valid (non-zero size, power-of-2 alignment).
-    let ptr = unsafe { alloc(layout) };
-    let memory = NonNull::new(ptr).ok_or_else(|| {
+pub(super) fn allocate_numa_aware(size: usize) -> KwaversResult<(NonNull<u8>, *mut Segment)> {
+    // SAFETY: `size` is validated by mnemosyne's `is_valid_alloc_request`;
+    // a null user pointer is mapped to the descriptive allocation error below.
+    // mnemosyne allocates at least `SEGMENT_ALIGN` alignment (>= CACHE_LINE_SIZE).
+    let user_ptr =
+        unsafe { allocate_large_or_huge::<MemoryBackendWrapper>(size, SEGMENT_ALIGN, false) };
+    let memory = NonNull::new(user_ptr).ok_or_else(|| {
         KwaversError::System(crate::error::SystemError::MemoryAllocation {
             requested_bytes: size,
             reason: "Failed to allocate NUMA-aware memory".to_owned(),
         })
     })?;
 
-    Ok(memory)
+    // SAFETY: Valid pointer to allocated memory.
+    // Segment pointer is stored in metadata slot by allocate_large_or_huge.
+    let segment_ptr = unsafe { *((memory.as_ptr() as *mut *mut Segment).sub(1)) };
+
+    Ok((memory, segment_ptr))
 }

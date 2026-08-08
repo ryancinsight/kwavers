@@ -1,56 +1,49 @@
 use super::types::PhantomTissueType;
+use super::PhantomError;
+use hyperion::coefficient::hemoglobin_absorption;
 use kwavers_core::constants::optical::REFRACTIVE_INDEX_SOFT_TISSUE;
 use kwavers_medium::properties::OpticalPropertyData;
-use kwavers_optics::chromophores::HemoglobinDatabase;
 
-/// Compute blood optical properties from hemoglobin database
-/// # Panics
-/// - Panics if an internal invariant assumed to hold at this call site is violated.
+/// Compute blood optical properties from Hyperion's hemoglobin spectra.
 ///
-#[must_use]
+/// # Errors
+///
+/// Returns [`PhantomError::Hyperion`] when `wavelength_nm` is outside
+/// Hyperion's tabulated range, or [`PhantomError::InvalidOpticalProperties`]
+/// when the resulting coefficients violate the medium contract.
 pub fn compute_blood_properties(
-    hb_db: &HemoglobinDatabase,
     wavelength_nm: f64,
     so2: f64,
-) -> OpticalPropertyData {
-    // Get extinction coefficients
-    let eps_hbo2 = hb_db
-        .hbo2_spectrum()
-        .at_wavelength(wavelength_nm)
-        .unwrap_or(0.0);
-    let eps_hb = hb_db
-        .hb_spectrum()
-        .at_wavelength(wavelength_nm)
-        .unwrap_or(0.0);
-
-    // Blood hemoglobin concentration: ~150 g/L = 2.3 mM total
+) -> Result<OpticalPropertyData, PhantomError> {
+    // Whole-blood hemoglobin: ~150 g/L, about 2.3 mM as tetramer.
     let c_total = 0.0023; // mol/L
     let c_hbo2 = c_total * so2;
     let c_hb = c_total * (1.0 - so2);
 
-    // Compute absorption coefficient (convert from cm⁻¹ to m⁻¹)
-    let mu_a = (eps_hbo2 * c_hbo2 + eps_hb * c_hb) * 100.0 * 2.303; // ln(10) factor
+    // Hyperion owns the spectra and the Beer-Lambert conversion, so the
+    // extinction lookup and the cm-to-m factor no longer live here.
+    let mu_a = hemoglobin_absorption::<f64>(wavelength_nm, c_hbo2, c_hb)?
+        .in_unit::<aequitas::systems::si::units::PerMeter>();
 
     // Blood scattering properties (weakly wavelength-dependent)
     let mu_s = 200.0;
     let g = 0.95;
     let n = REFRACTIVE_INDEX_SOFT_TISSUE;
 
-    OpticalPropertyData::new(mu_a, mu_s, g, n).unwrap()
+    OpticalPropertyData::new(mu_a, mu_s, g, n).map_err(PhantomError::InvalidOpticalProperties)
 }
 
 /// Compute tumor optical properties
-/// # Panics
-/// - Panics if an internal invariant assumed to hold at this call site is violated.
 ///
-#[must_use]
+/// # Errors
+///
+/// Returns the same optical-property errors as [`compute_blood_properties`].
 pub fn compute_tumor_properties(
-    hb_db: &HemoglobinDatabase,
     wavelength_nm: f64,
     so2: f64,
-) -> OpticalPropertyData {
+) -> Result<OpticalPropertyData, PhantomError> {
     // Tumors have enhanced blood content (2-3x normal tissue)
-    let blood_props = compute_blood_properties(hb_db, wavelength_nm, so2);
+    let blood_props = compute_blood_properties(wavelength_nm, so2)?;
 
     // Scale absorption by blood volume fraction (~10% for tumors vs 2% for normal)
     let mu_a = blood_props.absorption_coefficient().mul_add(0.1, 0.5); // Background tissue absorption
@@ -60,7 +53,7 @@ pub fn compute_tumor_properties(
     let g = 0.85;
     let n = REFRACTIVE_INDEX_SOFT_TISSUE;
 
-    OpticalPropertyData::new(mu_a, mu_s, g, n).unwrap()
+    OpticalPropertyData::new(mu_a, mu_s, g, n).map_err(PhantomError::InvalidOpticalProperties)
 }
 
 /// Get tissue optical properties by type

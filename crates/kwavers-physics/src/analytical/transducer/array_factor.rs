@@ -5,8 +5,8 @@
 
 use apollo::fft_1d_leto;
 use kwavers_core::constants::numerical::TWO_PI;
-use kwavers_math::signal::ApodizationType;
-use kwavers_math::special::bessel::j1;
+use kwavers_math::j1;
+use kwavers_math::ApodizationType;
 
 // ─── Directivity ──────────────────────────────────────────────────────────────
 
@@ -174,7 +174,7 @@ pub fn grating_lobe_angles(k: f64, d_m: f64, steer_rad: f64) -> Vec<f64> {
 /// Unknown keys fall back to uniform.
 ///
 /// The window math is **not** reimplemented here: this is a thin string-keyed
-/// wrapper over the canonical SSOT `kwavers_math::signal::ApodizationType`
+/// wrapper over the canonical SSOT `kwavers_math::ApodizationType`
 /// (which in turn delegates to `kwavers_math::signal::window`), so the
 /// coefficients live in exactly one place and the symmetric (N−1) convention,
 /// endpoint tapering, and `n ≤ 1` handling are shared with the rest of the
@@ -192,7 +192,7 @@ pub fn apodization_weights(n: usize, window_type: &str) -> Vec<f64> {
         // "uniform" and any unrecognised key → rectangular window.
         _ => ApodizationType::Uniform,
     };
-    window.weights(n)
+    (0..n).map(|i| window.weights(i, n)).collect()
 }
 
 /// Apodization weights and normalized spatial-frequency response.
@@ -262,4 +262,4 @@ pub fn apodization_window_response(
 }
 
 // J₁ for circular-piston directivity is the workspace SSOT
-// `kwavers_math::special::bessel::j1` (imported above).
+// `kwavers_math::j1` (imported above).

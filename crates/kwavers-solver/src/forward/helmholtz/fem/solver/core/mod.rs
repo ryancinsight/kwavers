@@ -28,7 +28,7 @@ use kwavers_boundary::FemBoundaryManager;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_math::fft::Complex64;
-use kwavers_math::linear_algebra::sparse::csr::CompressedSparseRowMatrix;
+use kwavers_math::CompressedSparseRowMatrix;
 use kwavers_mesh::TetrahedralMesh;
 use leto::Array1;
 

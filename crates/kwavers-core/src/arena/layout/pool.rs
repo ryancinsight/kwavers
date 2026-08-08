@@ -1,9 +1,12 @@
 use leto::{ArrayView3, ArrayViewMut3, Layout as LetoLayout};
-use std::alloc::{alloc, dealloc, Layout};
+use mnemosyne_arena::{allocate_large_or_huge, deallocate_large_or_huge};
+use mnemosyne_backend::MemoryBackendWrapper;
+use mnemosyne_core::constants::SEGMENT_ALIGN;
+use mnemosyne_core::types::Segment;
 use std::ptr::NonNull;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use super::{cache_aligned_size, CACHE_LINE_SIZE};
+use super::cache_aligned_size;
 use crate::error::{KwaversError, KwaversResult, SystemError, ValidationError};
 
 // BATCH FIELD ALLOCATION
@@ -17,9 +20,6 @@ use crate::error::{KwaversError, KwaversResult, SystemError, ValidationError};
 pub struct FieldPool {
     /// Contiguous memory for all pooled fields
     memory: NonNull<u8>,
-
-    /// Allocation layout
-    layout: Layout,
 
     /// Field capacity (max concurrent allocations)
     capacity: usize,
@@ -35,6 +35,9 @@ pub struct FieldPool {
 
     /// Bitmap of available slots (true = available)
     slot_bitmap: Vec<std::sync::atomic::AtomicBool>,
+
+    /// Segment pointer for mnemosyne deallocation
+    segment_ptr: *mut Segment,
 }
 
 impl FieldPool {
@@ -77,20 +80,21 @@ impl FieldPool {
             })
         })?;
 
-        let layout = Layout::from_size_align(total_bytes, CACHE_LINE_SIZE).map_err(|_| {
-            KwaversError::System(SystemError::MemoryAllocation {
-                requested_bytes: total_bytes,
-                reason: "Invalid layout for field pool".to_owned(),
-            })
-        })?;
-
-        let memory = unsafe { alloc(layout) };
-        let memory = NonNull::new(memory).ok_or_else(|| {
+        // SAFETY: Layout is valid (checked above).
+        // mnemosyne allocates at least `SEGMENT_ALIGN` alignment.
+        let user_ptr = unsafe {
+            allocate_large_or_huge::<MemoryBackendWrapper>(total_bytes, SEGMENT_ALIGN, false)
+        };
+        let memory = NonNull::new(user_ptr).ok_or_else(|| {
             KwaversError::System(SystemError::MemoryAllocation {
                 requested_bytes: total_bytes,
                 reason: "Failed to allocate field pool".to_owned(),
             })
         })?;
+
+        // SAFETY: Valid pointer to allocated memory.
+        // Segment pointer is stored in metadata slot by allocate_large_or_huge.
+        let segment_ptr = unsafe { *((memory.as_ptr() as *mut *mut Segment).sub(1)) };
 
         // Zero-initialize and first-touch
         unsafe {
@@ -105,12 +109,12 @@ impl FieldPool {
 
         Ok(Self {
             memory,
-            layout,
             capacity,
             available: AtomicUsize::new(capacity),
             elements_per_field,
             field_stride,
             slot_bitmap,
+            segment_ptr,
         })
     }
 
@@ -196,9 +200,10 @@ impl FieldPool {
 
 impl Drop for FieldPool {
     fn drop(&mut self) {
-        unsafe {
-            dealloc(self.memory.as_ptr(), self.layout);
-        }
+        // SAFETY: segment_ptr was written by allocate_large_or_huge and is valid.
+        let _released = unsafe {
+            deallocate_large_or_huge::<MemoryBackendWrapper>(self.memory.as_ptr(), self.segment_ptr)
+        };
     }
 }
 

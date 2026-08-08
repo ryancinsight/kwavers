@@ -1,13 +1,11 @@
 //! BEM system solve, FEM matrix assembly, and linear solver.
 
 use kwavers_math::fft::Complex64;
-use leto::Array1;
+use kwavers_math::linear_algebra::sparse::CompressedSparseRowMatrix;
+use leto::{Array1, LetoError};
+use leto_ops::application::sparse::CooMatrix;
 
-use kwavers_core::error::KwaversResult;
-use kwavers_math::linear_algebra::sparse::solver::SparsePreconditioner;
-use kwavers_math::linear_algebra::sparse::{
-    CompressedSparseRowMatrix, CoordinateMatrix, IterativeSolver, SolverConfig,
-};
+use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
 use kwavers_mesh::tetrahedral::TetrahedralMesh;
 
 use super::BemFemCoupler;
@@ -61,22 +59,23 @@ impl BemFemCoupler {
         Ok(())
     }
 
-    /// Assemble the FEM Helmholtz system matrix for the given `wavenumber`.
+    /// Assemble the FEM Helmholtz matrix through Leto's provider-owned COO
+    /// assembly and CSR compression.
     ///
-    /// Uses linear tetrahedral elements (P1). Each element contributes to the
-    /// stiffness matrix `K` (grad-grad) and the mass matrix `M` (N·N), combined
-    /// as `K − k² M`. Interface nodes receive a penalty row for Dirichlet
-    /// enforcement.
+    /// Each linear tetrahedron contributes the P1 stiffness and consistent
+    /// mass matrices. The provider COO representation is duplicate-tolerant,
+    /// so element contributions and interface penalties are accumulated before
+    /// conversion to the CSR storage consumed by the complex solver.
     ///
     /// # Errors
-    /// Returns `Err` when a tetrahedral Jacobian is singular.
+    /// Returns a numerical error when an element Jacobian is singular.
     pub(crate) fn assemble_system_matrix(
         &self,
         fem_mesh: &TetrahedralMesh,
         wavenumber: f64,
     ) -> KwaversResult<CompressedSparseRowMatrix<Complex64>> {
         let num_nodes = fem_mesh.nodes.len();
-        let mut coo = CoordinateMatrix::create(num_nodes, num_nodes);
+        let mut coo = CooMatrix::new(num_nodes, num_nodes);
 
         // Reference-element shape-function gradients for linear tetrahedra.
         let grad_ref = [
@@ -93,38 +92,30 @@ impl BemFemCoupler {
             let p2 = fem_mesh.nodes[n_indices[2]].coordinates;
             let p3 = fem_mesh.nodes[n_indices[3]].coordinates;
 
-            let c0 = vec3_sub(p1, p0);
-            let c1 = vec3_sub(p2, p0);
-            let c2 = vec3_sub(p3, p0);
-            let jacobian = mat3_from_columns(c0, c1, c2);
+            let jacobian = mat3_from_columns(vec3_sub(p1, p0), vec3_sub(p2, p0), vec3_sub(p3, p0));
 
-            if let Some(inv_j) = mat3_inv(&jacobian) {
-                let inv_j_t = mat3_transpose(&inv_j);
-                let det_j = mat3_det(&jacobian).abs();
-                let volume = det_j / 6.0;
+            let Some(inv_j) = mat3_inv(&jacobian) else {
+                return Err(KwaversError::Numerical(NumericalError::SingularMatrix {
+                    operation: "element_jacobian".to_owned(),
+                    condition_number: 0.0,
+                }));
+            };
 
-                let mut grads = [[0.0; 3]; 4];
-                for k in 0..4 {
-                    grads[k] = mat3_vec_mul(&inv_j_t, &grad_ref[k]);
+            let inv_j_t = mat3_transpose(&inv_j);
+            let volume = mat3_det(&jacobian).abs() / 6.0;
+            let mut grads = [[0.0; 3]; 4];
+            for (gradient, reference_gradient) in grads.iter_mut().zip(grad_ref) {
+                *gradient = mat3_vec_mul(&inv_j_t, &reference_gradient);
+            }
+
+            for (i, &gradient_i) in grads.iter().enumerate() {
+                for (j, &gradient_j) in grads.iter().enumerate() {
+                    let stiffness = vec3_dot(gradient_i, gradient_j) * volume;
+                    let diagonal = if i == j { 1.0 } else { 0.0 };
+                    let mass = (1.0 + diagonal) * volume / 20.0;
+                    let value = Complex64::from(stiffness - wavenumber * wavenumber * mass);
+                    coo.push(n_indices[i], n_indices[j], value);
                 }
-
-                for i in 0..4 {
-                    for j in 0..4 {
-                        let k_val = vec3_dot(grads[i], grads[j]) * volume;
-                        let delta = if i == j { 1.0 } else { 0.0 };
-                        let m_val = (1.0 + delta) * volume / 20.0;
-                        let val =
-                            Complex64::from(k_val) - Complex64::from(wavenumber.powi(2) * m_val);
-                        coo.add_triplet(n_indices[i], n_indices[j], val);
-                    }
-                }
-            } else {
-                return Err(kwavers_core::error::KwaversError::Numerical(
-                    kwavers_core::error::NumericalError::SingularMatrix {
-                        operation: "element_jacobian".to_owned(),
-                        condition_number: 0.0,
-                    },
-                ));
             }
         }
 
@@ -132,20 +123,29 @@ impl BemFemCoupler {
         let penalty = 1.0e14;
         for &node_idx in &self.interface.fem_interface_nodes {
             if node_idx < num_nodes {
-                coo.add_triplet(node_idx, node_idx, Complex64::from(penalty));
+                coo.push(node_idx, node_idx, Complex64::from(penalty));
             }
         }
 
-        Ok(coo.to_csr())
+        let csr = coo.to_csr();
+        let (values, col_indices, row_pointers) = csr.as_parts();
+        Ok(CompressedSparseRowMatrix::new(
+            num_nodes,
+            num_nodes,
+            values.to_vec(),
+            col_indices.to_vec(),
+            row_pointers.to_vec(),
+            values.len(),
+        ))
     }
 
-    /// Solve the assembled FEM linear system with BiCGSTAB.
+    /// Solve the assembled FEM linear system through Leto's complex solver.
     ///
     /// Applies penalty-row Dirichlet boundary conditions for interface nodes
     /// before solving. Overwrites `fem_field` with the solution.
     ///
     /// # Errors
-    /// Propagates errors from `IterativeSolver::bicgstab_complex`.
+    /// Propagates errors from Leto's provider-owned complex solver.
     pub(crate) fn solve_linear_system(
         &self,
         matrix: &CompressedSparseRowMatrix<Complex64>,
@@ -162,22 +162,28 @@ impl BemFemCoupler {
             }
         }
 
-        let config = SolverConfig {
-            max_iterations: 1000,
-            tolerance: 1e-6,
-            preconditioner: SparsePreconditioner::None,
-            verbose: false,
-        };
-        let solver = IterativeSolver::create(config);
-
-        let guess_values: Vec<_> = fem_field.to_vec();
-        let initial_guess = Array1::from_vec([guess_values.len()], guess_values)
-            .expect("invariant: initial guess is 1-D with the collected length");
-        let solution = solver.bicgstab_complex(matrix, rhs.view(), Some(initial_guess.view()))?;
-
-        for i in 0..num_nodes {
-            fem_field[i] = solution[i];
+        let dense_matrix = matrix.to_dense_array()?;
+        let solution =
+            kwavers_math::complex_solve(&dense_matrix, &rhs).map_err(|error| match error {
+                LetoError::NumericalBreakdown(detail) => {
+                    KwaversError::Numerical(NumericalError::SolverFailed {
+                        method: "complex_solve".to_owned(),
+                        reason: detail,
+                    })
+                }
+                other => KwaversError::from(other),
+            })?;
+        let solution = solution.as_slice().ok_or_else(|| {
+            kwavers_core::error::KwaversError::InvalidInput(
+                "complex solver returned a non-contiguous solution".to_owned(),
+            )
+        })?;
+        if solution.len() != num_nodes || fem_field.len() < num_nodes {
+            return Err(kwavers_core::error::KwaversError::DimensionMismatch(
+                "complex FEM solution dimensions do not match the assembled system".to_owned(),
+            ));
         }
+        fem_field[..num_nodes].copy_from_slice(solution);
 
         Ok(())
     }
