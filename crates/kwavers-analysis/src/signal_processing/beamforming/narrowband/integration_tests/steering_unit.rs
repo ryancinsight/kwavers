@@ -1,7 +1,7 @@
 //! Steering-vector unit-magnitude integration tests.
 
 use super::super::steering::NarrowbandSteering;
-use super::helpers::generate_ula_positions;
+use super::fixtures::generate_ula_positions;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
 #[test]

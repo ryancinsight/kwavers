@@ -1,4 +1,4 @@
-//! Shared helper functions for narrowband integration tests.
+//! Shared fixtures for narrowband integration tests.
 
 use eunomia::Complex64;
 use kwavers_core::constants::numerical::TWO_PI;

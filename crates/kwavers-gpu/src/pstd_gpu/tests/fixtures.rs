@@ -1,4 +1,4 @@
-//! Test helpers for GPU PSTD solver tests.
+//! Test fixtures for GPU PSTD solver tests.
 
 use super::super::{
     AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays, SolverParams, WgpuPstdStateProvider,

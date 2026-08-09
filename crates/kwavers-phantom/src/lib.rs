@@ -6,10 +6,10 @@
 pub mod builder;
 mod error;
 pub mod presets;
+pub mod properties;
 pub mod scatterers;
 pub mod shepp_logan;
 pub mod types;
-pub mod utils;
 
 pub use builder::{
     BloodOxygenationPhantomBuilder, LayeredTissuePhantomBuilder, PhantomBuilder,
@@ -166,8 +166,14 @@ mod tests {
     #[test]
     fn invalid_wavelengths_are_rejected_by_property_helpers() {
         for wavelength in [440.0, 1_001.0] {
-            assert_wavelength_error(utils::compute_blood_properties(wavelength, 0.7), wavelength);
-            assert_wavelength_error(utils::compute_tumor_properties(wavelength, 0.7), wavelength);
+            assert_wavelength_error(
+                properties::compute_blood_properties(wavelength, 0.7),
+                wavelength,
+            );
+            assert_wavelength_error(
+                properties::compute_tumor_properties(wavelength, 0.7),
+                wavelength,
+            );
         }
     }
 

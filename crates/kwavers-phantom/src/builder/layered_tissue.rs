@@ -1,5 +1,5 @@
+use super::super::properties::get_tissue_properties;
 use super::super::types::{LayerSpec, PhantomTissueType};
-use super::super::utils::get_tissue_properties;
 use kwavers_grid::GridDimensions;
 use kwavers_medium::optical_map::{Layer, OpticalPropertyMap, OpticalPropertyMapBuilder};
 use kwavers_medium::properties::OpticalPropertyData;

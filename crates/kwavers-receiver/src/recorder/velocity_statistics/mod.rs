@@ -6,9 +6,9 @@
 //! - `interpolation`: `interpolate_staggered_to_collocated` — half-cell shift.
 
 mod accumulator;
-mod helpers;
 mod interpolation;
 mod sampled;
+mod validation;
 
 #[cfg(test)]
 mod tests;

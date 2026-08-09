@@ -1,6 +1,6 @@
 //! Medium variable update and source-correction tests.
 
-use super::helpers::{make_small_test_solver, read_buffer};
+use super::fixtures::{make_small_test_solver, read_buffer};
 
 /// Regression guard: variable-only medium updates must preserve static
 /// absorption/nonlinearity buffers, and source-kappa disablement must write
