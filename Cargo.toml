@@ -52,6 +52,7 @@ bytemuck = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 gaia = { version = "0.3.0", git = "https://github.com/ryancinsight/gaia.git", default-features = false }
+iris = { version = "0.1.0", git = "https://github.com/ryancinsight/iris" }
 tempfile = "3.10"
 proptest = "1.0"
 walkdir = "2.4"

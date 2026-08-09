@@ -4,7 +4,7 @@
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KWAVERS-AEQ-MET-69 | Type B-mode scan-conversion angles and length geometry with Aequitas; keep scalar extraction at Cartesian raster and interpolation formula boundaries and preserve Eunomia's real geometry rule. | [major] [arch] | in progress 2026-08-06 | Codex | `crates/kwavers-analysis/src/signal_processing/b_mode/`, ADR 105, `gap_audit.md` |
+| KWAVERS-AEQ-MET-69 | Type B-mode scan-conversion angles and length geometry with Aequitas; keep scalar extraction at Cartesian raster and interpolation formula boundaries and preserve Eunomia's real geometry rule. | [major] [arch] | done 2026-08-06 | Codex | `crates/kwavers-analysis/src/signal_processing/b_mode/`, ADR 105, `gap_audit.md` |
 | KWAVERS-AEQ-MET-67 | Type thermal-acoustic coupling coefficients, heating, streaming, nonlinear heating, and update outcomes with Aequitas; correct the existing nonlinear formula to its provider-owned `W/m⁴` volumetric power-density gradient; preserve Eunomia real/complex semantics. | [arch] [major] | done 2026-08-05 | Codex | `crates/kwavers-physics/src/thermal/coupling/`, `crates/kwavers/src/theranostic/`, top-level rkyv edge, Aequitas provider metric, ADR 104, PM artifacts |
 | KWAVERS-AEQ-MET-66 | Type thermal-diffusion perfusion, density, heat-capacity, temperature, relaxation-time, and integration-time contracts with Aequitas; preserve CEM43 as a domain dose representation and Eunomia's real/complex rule. | [arch] [major] | done 2026-08-05 | Codex | `crates/kwavers-physics/src/thermal/diffusion/`, `crates/kwavers-solver/src/forward/{thermal_diffusion,pstd/implementation/core/orchestrator}/`, direct Python/simulation callers, ADR 103, PM artifacts |
 | KWAVERS-AEQ-MET-FLEX | Audit and type the flexible-array dynamic metrics: timestamps, focus/speed/delay contracts, calibration confidence, and deformation outputs; preserve raw dense mesh/signal storage boundaries. | [arch] [major] | blocked: peer-owned `crates/kwavers-transducer/src/flexible/array.rs` dirty; reopen on integration or scope release | Codex | `crates/kwavers-transducer/src/flexible/{array,beamforming,geometry,config}.rs`, direct callers/tests, ADR 070, PM artifacts |
@@ -23,7 +23,7 @@
 | KWAVERS-AEQ-MET-54 | Type the public ultrafast transmission scheduler's speed, depth, PRF, event times, frame rates, and tilt angles with Aequitas; keep scalar extraction at the PRF/timing formula boundary and document the real-only Eunomia compatibility rule. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-transducer/src/ultrafast/sequencer/**`, manifest, ADR 093, PM artifacts |
 | KWAVERS-AEQ-INTEGRATION-1 | Integrate the current Aequitas metric closure for therapeutic microbubble and plasmonics contracts on current `main`; harden the public three-dimensional plasmonic coordinate contract and synchronize the audit. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-physics/src/{acoustics/therapy/microbubble,electromagnetic}`, PM artifacts |
 
-## KWAVERS-AEQ-MET-69 — Type B-mode scan-conversion geometry [major] [arch] — in progress 2026-08-06
+## KWAVERS-AEQ-MET-69 — Type B-mode scan-conversion geometry [major] [arch] — done 2026-08-06
 
 - Owner: Codex; scope: `crates/kwavers-analysis/src/signal_processing/b_mode/`,
   direct tests, ADR 105, and the synchronized gap audit. The dense RF/image
@@ -39,6 +39,13 @@
   the bright-pixel and out-of-sector scan-conversion regressions preserve their
   value semantics; package check, strict Clippy, Nextest, doctests, Rustdoc,
   formatting, and raw-public-signature scans pass.
+- Evidence collected on the clean implementation tree before this ledger-only
+  status edit: `kwavers-analysis` library check, warning-denied all-target
+  Clippy, B-mode Nextest (9/9), doctests (1 executable, 21 ignored), formatting,
+  and diff checks pass. The raw public-signature scan finds no scalar geometry
+  fields or compatibility constructors. ADR 105 and the synchronized gap audit
+  record the real-valued Eunomia boundary and retain dense RF/image arrays as
+  numerical storage.
 
 ## KWAVERS-AEQ-MET-66 — Type thermal-diffusion quantities [major] [arch] — implementation complete; delivery blocked 2026-08-05
 

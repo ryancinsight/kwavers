@@ -25,6 +25,7 @@ leto = { workspace = true }
 leto-ops = { workspace = true }
 moirai-parallel = { workspace = true }
 tyche-core = { workspace = true }
+iris = { workspace = true }
 rand = "0.8"
 log = "0.4"
 anyhow = "1.0"

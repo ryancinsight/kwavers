@@ -4,6 +4,12 @@
 
 ### Changed
 
+- Volume-render transfer functions in `kwavers-analysis` now consume Iris
+  `NamedColorMap` lookup tables directly, removing duplicated local map
+  implementations while preserving existing scheme behavior (`Viridis`,
+  `Plasma`, `Inferno`, `Magma`, `Turbo`, and `Grayscale`; `Custom` remains a
+  Viridis fallback).
+
 - **Security:** Align the Kwavers provider lock with Ritk's Eunomia 0.8
   cutover (`cfeebc7`) and upgrade the unused top-level zero-copy rkyv edge to
   0.8. The all-features lock contains no rkyv 0.7 path; Eunomia real/complex

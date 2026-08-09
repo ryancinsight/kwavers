@@ -133,6 +133,11 @@ formula module plus the parallel `DiffusionOpticalProperties` and
 `OpticalAbsorption` models instead of adding a facade around them. See
 [ADR 046](docs/ADR/046-hyperion-optical-transport-ownership.md).
 
+Public [Iris](https://github.com/ryancinsight/iris) owns domain-neutral color
+laws and fixed lookup-table contracts. `kwavers-analysis` volume rendering now
+selects its transfer functions through Iris `NamedColorMap` instead of local
+duplicated palette implementations.
+
 Key architectural decisions:
 - **Layer Separation**: Unidirectional dependencies prevent circular imports
 - **Domain Purity**: Core entities remain free of application logic
