@@ -3,11 +3,12 @@ members = ["crates/kwavers", "xtask", "crates/kwavers-python", "crates/kwavers-c
 resolver = "2"
 
 [workspace.dependencies]
-aequitas = { version = "0.1.0", git = "https://github.com/ryancinsight/aequitas", default-features = false, features = ["std", "serde"] }
+aequitas = { version = "0.2.0", git = "https://github.com/ryancinsight/aequitas", default-features = false, features = ["std", "serde"] }
 asclepius = { version = "0.1.0", git = "https://github.com/ryancinsight/asclepius", default-features = false, features = ["std"] }
 hyperion = { version = "0.1.0", git = "https://github.com/ryancinsight/hyperion" }
 proteus = { version = "0.1.0", git = "https://github.com/ryancinsight/proteus" }
 tyche-core = { version = "0.1.0", git = "https://github.com/ryancinsight/tyche" }
+horae = { version = "0.1.0", git = "https://github.com/ryancinsight/horae" }
 # External git submodules replaced by remote git dependencies (always-latest on the
 # default branch; `cargo update -p <crate>` refreshes the pinned commit in Cargo.lock).
 # These repos carry their own [workspace], so Cargo resolves their internal
@@ -30,8 +31,8 @@ hephaestus-wgpu = { version = "0.18.0", git = "https://github.com/ryancinsight/h
 hephaestus-cuda = { version = "0.18.0", git = "https://github.com/ryancinsight/hephaestus.git", default-features = false }
 hermes-simd = { version = "0.5.0", git = "https://github.com/ryancinsight/hermes.git", default-features = false, features = ["std"] }
 moirai-parallel = { version = "0.4.0", git = "https://github.com/ryancinsight/Moirai.git", default-features = false, features = ["parallel"] }
-leto = { version = "0.40.0", git = "https://github.com/ryancinsight/leto.git", default-features = false, features = ["std"] }
-leto-ops = { version = "0.40.0", git = "https://github.com/ryancinsight/leto.git", default-features = false, features = ["std"] }
+leto = { version = "0.41.0", git = "https://github.com/ryancinsight/leto.git", default-features = false, features = ["std"] }
+leto-ops = { version = "0.41.0", git = "https://github.com/ryancinsight/leto.git", default-features = false, features = ["std"] }
 # Mnemosyne: Allocation / arenas / staging memory (Atlas first-party).
 # `kwavers-core` consumes the arena, backend, and memory-core seam directly
 # (`crates/kwavers-core/src/arena/**`) — see ADR 0006 §Failure modes for the
