@@ -38,7 +38,7 @@
 use apollo::{fft_2d_complex_inplace, ifft_2d_complex_inplace, Complex64 as ApolloComplex64};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
-use kwavers_math::fft::utils::{fft_shift_2d, ifft_shift_2d};
+use kwavers_math::fft::spectral::{fft_shift_2d, ifft_shift_2d};
 use kwavers_math::fft::Complex64;
 use leto::Array2 as LetoArray2;
 use leto::{Array1, Array2, ArrayView1, ArrayView2};

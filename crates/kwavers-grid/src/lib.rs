@@ -19,7 +19,7 @@ pub mod stability;
 pub mod structure;
 pub mod topology;
 pub mod validation;
-use kwavers_math::fft::utils as fft_utils;
+use kwavers_math::fft::spectral as fft_spectral;
 
 // ============================================================================
 // EXPLICIT RE-EXPORTS (Grid API)
@@ -45,7 +45,7 @@ pub use adapter::{GridAdapter, GridTopologyExt};
 pub use validation::GridValidator;
 
 /// FFT utilities for k-space operations
-pub use fft_utils::{fft_shift_2d, get_optimal_fft_size, ifft_shift_2d, is_optimal_fft_size};
+pub use fft_spectral::{fft_shift_2d, get_optimal_fft_size, ifft_shift_2d, is_optimal_fft_size};
 pub use kspace::KSpaceCalculator;
 
 /// Geometric-domain primitives
