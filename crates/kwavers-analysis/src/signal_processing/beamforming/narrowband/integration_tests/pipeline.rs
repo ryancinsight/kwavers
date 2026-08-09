@@ -4,7 +4,7 @@ use super::super::{
     capon::{capon_spatial_spectrum_point, CaponSpectrumConfig},
     snapshots::{extract_narrowband_snapshots, SnapshotScenario, SnapshotSelection},
 };
-use super::helpers::{generate_plane_wave_data, generate_ula_positions, PlaneWaveDataSpec};
+use super::fixtures::{generate_plane_wave_data, generate_ula_positions, PlaneWaveDataSpec};
 use crate::signal_processing::beamforming::{
     covariance::{CovarianceEstimator, CovariancePostProcess},
     utils::steering::SteeringVectorMethod,

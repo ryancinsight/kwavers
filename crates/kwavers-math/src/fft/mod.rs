@@ -8,7 +8,7 @@
 pub mod gpu_fft;
 pub mod kspace;
 pub mod shift_operators;
-pub mod utils;
+pub mod spectral;
 
 pub use apollo::{
     fftfreq, fftshift, ifftshift, rfftfreq, FftPlan1D, FftPlan2D, FftPlan3D, Normalization,
@@ -84,7 +84,7 @@ pub static FFT_CACHE_2D: FftCache2d = FftCache2d;
 pub static FFT_CACHE_3D: FftCache3d = FftCache3d;
 
 pub use kspace::KSpaceCalculator;
-pub use utils::{analytic_signal_1d, apply_spectral_response_1d};
+pub use spectral::{analytic_signal_1d, apply_spectral_response_1d};
 
 use leto::{Array1, Array2, Array3};
 use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};

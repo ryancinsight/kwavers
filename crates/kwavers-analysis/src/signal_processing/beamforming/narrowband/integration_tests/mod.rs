@@ -2,7 +2,7 @@
 //!
 //! Validates end-to-end pipeline: steering → snapshots → Capon spectrum.
 
-mod helpers;
+mod fixtures;
 mod invariance;
 mod pipeline;
 mod snapshot_consistency;

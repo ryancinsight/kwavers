@@ -1,4 +1,4 @@
-//! Shared helpers for velocity statistics modules.
+//! Shared validation for velocity statistics modules.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array1;
