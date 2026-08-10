@@ -20,12 +20,12 @@ jobs:
       attestations: write
       contents: write
       id-token: write
-    uses: ryancinsight/atlas/.github/workflows/python-wheels.yml@b20a1b494672759c39503daf5687b1de2062f9a0
+    uses: ryancinsight/atlas/.github/workflows/python-wheels.yml@1a7cdcafce845bfa625e4917436c22566ad3486
     with:
       distribution: kwavers-python
       import-name: pykwavers
       manifest-path: crates/kwavers-python/Cargo.toml
-      atlas-ref: 777cf325fad3114299b44a99a48145997f93a5b0
+      atlas-ref: 1a7cdcafce845bfa625e4917436c22566ad3486
       tag-prefix: kwavers-python-v
       abi3: true
       abi3-python: "3.8"
