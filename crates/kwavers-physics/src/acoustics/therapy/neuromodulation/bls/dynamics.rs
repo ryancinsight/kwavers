@@ -41,6 +41,11 @@ use super::pressures::{
     molecular_pressure, rest_gap, A_RADIUS_M, C0_MOL_M3, DELTA0_M, DGL_M2_S, KH_PA_M3_MOL,
     MU_L_PA_S, MU_S_PA_S, P0_PA, RHO_L_KG_M3, XI_M,
 };
+use aequitas::systems::si::quantities::Time;
+use horae::{
+    adaptive::{AdaptiveController, StepDecision},
+    time::StepSize,
+};
 use std::f64::consts::PI;
 
 /// Relative lower bound on deflection (critical compression), `Z_min = −0.49·Δ`
@@ -235,8 +240,9 @@ impl BilayerSonophoreDynamic {
     /// `freq_mhz` `MHz`, with resting charge set by `v_rest_mv` and rest
     /// capacitance `cm0_uf_cm2` [µF/cm²].
     ///
-    /// Uses adaptive step-doubling RK4 (the leaflet ODE is stiff near the steric
-    /// wall, so a fixed step is not stable at therapeutic amplitudes).
+    /// Uses adaptive step-doubling RK4 with Horae-owned accept/reject/scale
+    /// policy (the leaflet ODE is stiff near the steric wall, so a fixed step is
+    /// not stable at therapeutic amplitudes).
     #[must_use]
     pub fn new(cm0_uf_cm2: f64, freq_mhz: f64, pressure_amp_pa: f64, v_rest_mv: f64) -> Self {
         let f_hz = freq_mhz * 1.0e6;
@@ -260,6 +266,9 @@ impl BilayerSonophoreDynamic {
         // beyond the largest plausible expansion.
         let pm = PmTable::new(A_RADIUS_M, Self::N_PM_TABLE, delta);
 
+        let controller = AdaptiveController::new(Self::Z_TOL_M, 0.0, 0.9, 0.5, 2.0)
+            .expect("invariant: static Horae controller parameters are valid");
+
         // Adaptive step-doubling RK4 with an inelastic steric wall. The
         // intermolecular pressure rises near-vertically toward `Z_min`, so an
         // explicit step that reaches the wall overshoots; clamping `Z` to `Z_min`
@@ -273,11 +282,26 @@ impl BilayerSonophoreDynamic {
                 let half = rk4_step(s, t, 0.5 * *dt, qm0, delta, &pac, &pm);
                 let two = rk4_step(half, t + 0.5 * *dt, 0.5 * *dt, qm0, delta, &pac, &pm);
                 let err = (two.1 - full.1).abs();
+                let step = StepSize::new(Time::from_base(*dt));
+                let report = step
+                    .ok()
+                    .and_then(|step| controller.assess::<4>(step, err, 1.0).ok());
+
+                let suggested_dt = report
+                    .as_ref()
+                    .map(|report| *report.suggested_step().as_time().as_base())
+                    .unwrap_or(0.5 * *dt)
+                    .clamp(dt_min, dt_max);
                 // Accept once tolerance is met OR the step floor is reached. The
                 // `dt_min` branch must accept unconditionally (even on a non-finite
                 // step) — otherwise a wall blow-up at the floor cannot shrink
                 // further and would loop forever.
-                if err <= Self::Z_TOL_M || *dt <= dt_min {
+                if report
+                    .as_ref()
+                    .is_some_and(|report| report.decision() == StepDecision::Accept)
+                    || *dt <= dt_min
+                {
+                    *dt = suggested_dt;
                     let (mut u, mut z, ng) = two;
                     // Hard steric-wall contact (or a blown step at the floor):
                     // stop at the wall, drop the inward velocity, keep prior gas.
@@ -290,7 +314,7 @@ impl BilayerSonophoreDynamic {
                     }
                     return (u, z, ng);
                 }
-                *dt = (0.5 * *dt).max(dt_min);
+                *dt = suggested_dt;
             }
         };
 

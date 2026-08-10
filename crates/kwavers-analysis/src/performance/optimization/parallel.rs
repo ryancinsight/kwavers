@@ -2,6 +2,7 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult, SystemError};
 use moirai_parallel::{for_each_index_with, map_collect_with, reduce_index_with, Adaptive};
+use themis::CpuTopology;
 
 /// Parallel execution optimizer
 #[derive(Debug)]
@@ -17,13 +18,18 @@ impl Default for ParallelOptimizer {
 }
 
 impl ParallelOptimizer {
+    fn detected_parallel_lanes() -> usize {
+        CpuTopology::detect()
+            .map(|topology| topology.logical_processors())
+            .unwrap_or(1)
+            .max(1)
+    }
+
     /// Create a new parallel optimizer
     #[must_use]
     pub fn new() -> Self {
         Self {
-            num_threads: std::thread::available_parallelism()
-                .map(std::num::NonZeroUsize::get)
-                .unwrap_or(1),
+            num_threads: Self::detected_parallel_lanes(),
             chunk_size: 1024, // Default chunk size for parallel iteration
         }
     }

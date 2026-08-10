@@ -49,6 +49,7 @@ leto = { workspace = true }
 eunomia = { workspace = true }
 apollo = { workspace = true }
 gaia = { workspace = true }
+iris = { workspace = true }
 
 # Error handling (production critical)
 thiserror = "1.0"

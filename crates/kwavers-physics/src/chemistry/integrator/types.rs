@@ -16,6 +16,8 @@ pub struct IntegrationStats {
 pub enum IntegratorError {
     /// Step size collapsed below `h_min`; the system is too stiff for explicit integration.
     StepSizeTooSmall { h: f64, t: f64 },
+    /// Horae adaptive-policy configuration or observation failed validation.
+    AdaptiveControl { reason: String },
 }
 
 impl std::fmt::Display for IntegratorError {
@@ -23,6 +25,9 @@ impl std::fmt::Display for IntegratorError {
         match self {
             Self::StepSizeTooSmall { h, t } => {
                 write!(f, "step size {h:.3e} < h_min at t = {t:.3e} s")
+            }
+            Self::AdaptiveControl { reason } => {
+                write!(f, "adaptive control failed: {reason}")
             }
         }
     }

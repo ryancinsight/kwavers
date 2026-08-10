@@ -66,7 +66,7 @@ fn write_mat5_uint16_volume(
     compressed: bool,
 ) {
     let mut matrix = Vec::new();
-    write_element(&mut matrix, 6, &[6, 0, 0, 0, 0, 0, 0, 0]);
+    write_element(&mut matrix, 6, &[11, 0, 0, 0, 0, 0, 0, 0]);
     let dims_bytes = dims
         .iter()
         .flat_map(|&value| (value as i32).to_le_bytes())

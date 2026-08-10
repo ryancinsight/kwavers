@@ -4,6 +4,65 @@
 
 ### Changed
 
+- `kwavers-analysis` parallel lane defaults now route CPU topology detection
+  through Themis (`CpuTopology::detect().logical_processors()`) in both
+  `ParallelOptimizer` and distributed queue thread-pool configuration, removing
+  direct `std::thread::available_parallelism()` detection from those paths.
+- `kwavers-core` NUMA topology and first-touch chunk sizing now route logical
+  processor detection through Themis (`CpuTopology::detect().logical_processors()`)
+  instead of direct `std::thread::available_parallelism()` probing, aligning
+  allocator lane policy with the shared Atlas topology provider.
+- `kwavers-analysis` volume-render transfer-function colormaps now route
+  through Iris `NamedColorMap` sampling (`Viridis`, `Plasma`, `Inferno`,
+  `Magma`, `Turbo`, `Grayscale`) instead of local embedded LUT vectors.
+- `kwavers-analysis` performance memory pool now wraps the shared
+  Mnemosyne-backed `kwavers_core::arena::BumpAllocator` instead of a local
+  `Vec<u8>` bump implementation, preserving the same allocation/reset behavior
+  while centralizing temporary-allocation law at the core arena boundary.
+- `kwavers-analysis` ensemble uncertainty bootstrap/noise sampling now routes
+  through Tyche counter/categorical primitives instead of local `rand` range
+  draws, preserving per-model seeded reproducibility while removing local
+  discrete/uniform sampling law duplication.
+- `kwavers-analysis` liver SWE speed-based fibrosis staging now has an
+  Aequitas-typed boundary (`MassDensity`, `Velocity`, `Pressure`) with explicit
+  scalar extraction only in the convenience overload.
+- `kwavers-diagnostics` MAT5 phantom ingestion now routes through
+  `consus-mat` (pure Rust MAT v5 provider) for variable decoding, replacing
+  the bespoke parser/decompressor path and centralizing MAT5 law ownership at
+  the Consus boundary.
+- `kwavers-physics` optical Monte Carlo launch now routes chunk seeding through
+  Tyche counter streams (`Counter<UserDomain<0>, SplitMix64>::word`) and lane
+  sizing through Themis CPU topology detection, removing local
+  `thread_rng`/`available_parallelism` probing from the simulation launch seam.
+- `kwavers-physics` bubble-cloud generation now seeds its stochastic spatial/
+  size sampling stream via Tyche counter words (`Counter<UserDomain<1>,
+  SplitMix64>::word`) instead of `thread_rng`, making cloud synthesis
+  reproducible at fixed inputs under the Tyche boundary.
+- `kwavers-solver` PINN adaptive-sampling fallback point synthesis and
+  cavitation-coupled initial bubble placement now route stochastic draws
+  through Tyche counter streams (`Counter<UserDomain<2|3>, SplitMix64>::unit`)
+  instead of local `thread_rng` draws.
+
+- `kwavers-solver` adaptive time-stepping and the chemistry RK45 step controller
+  in `kwavers-physics` now route step-size accept/reject/scale control through
+  Horae's `AdaptiveController`, replacing local controller math with the shared
+  Atlas policy owner while preserving estimator-driven high/low-order step
+  workflows and Eunomia scalar law through the Horae boundary.
+- `kwavers-physics` neuromodulation BLS transient dynamics now route RK4
+  step-doubling accept/reject/scale policy through Horae's
+  `AdaptiveController` instead of local reject/halve-only control logic.
+- `kwavers-physics` photoacoustic governing equations now route absorbed
+  deposition (`q = μ_a · Φ`) through Hyperion's validated transport law
+  (`transport::absorbed_energy_density`) instead of local scalar-only
+  multiplication.
+- `kwavers-physics` HIFU thermal-dose interval updates now route CEM43
+  increments through the shared Asclepius-backed checked increment helper
+  (`checked_cem43_increments`) using interval-average temperatures, replacing
+  local per-voxel increment law application.
+- The liver theranostic reconstruction example now uses Iris
+  `NamedColorMap::Viridis` for GIF frame coloring instead of an embedded local
+  viridis lookup table.
+
 - **Security:** Align the Kwavers provider lock with Ritk's Eunomia 0.8
   cutover (`cfeebc7`) and upgrade the unused top-level zero-copy rkyv edge to
   0.8. The all-features lock contains no rkyv 0.7 path; Eunomia real/complex

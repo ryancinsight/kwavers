@@ -63,10 +63,12 @@ pub fn classify_liver_fibrosis(shear_modulus_kpa: f64) -> FibrosisStage {
 /// density `ρ` \[kg·m⁻³], via `μ = ρ c_S²` (then [`classify_liver_fibrosis`] in
 /// kPa). Non-positive `c_S`/`ρ` returns `F0`.
 #[must_use]
-pub fn classify_liver_fibrosis_from_speed(
-    shear_speed_m_s: f64,
-    density_kg_m3: f64,
+pub fn classify_liver_fibrosis_from_speed_quantities(
+    shear_speed: Velocity<f64>,
+    density: MassDensity<f64>,
 ) -> FibrosisStage {
+    let shear_speed_m_s = shear_speed.into_base();
+    let density_kg_m3 = density.into_base();
     if !(shear_speed_m_s.is_finite()
         && density_kg_m3.is_finite()
         && shear_speed_m_s > 0.0
@@ -74,8 +76,21 @@ pub fn classify_liver_fibrosis_from_speed(
     {
         return FibrosisStage::F0;
     }
-    let mu_kpa = density_kg_m3 * shear_speed_m_s * shear_speed_m_s / 1.0e3; // Pa → kPa
+    let shear_modulus_pa: Pressure<f64> = density * shear_speed * shear_speed;
+    let mu_kpa = shear_modulus_pa.into_base() / 1.0e3;
     classify_liver_fibrosis(mu_kpa)
+}
+
+/// Scalar convenience overload at the formula boundary.
+#[must_use]
+pub fn classify_liver_fibrosis_from_speed(
+    shear_speed_m_s: f64,
+    density_kg_m3: f64,
+) -> FibrosisStage {
+    classify_liver_fibrosis_from_speed_quantities(
+        Velocity::from_base(shear_speed_m_s),
+        MassDensity::from_base(density_kg_m3),
+    )
 }
 
 /// Region-of-interest SWE staging (Algorithm 11.5 steps 2, 4, 6): the organ
@@ -342,6 +357,14 @@ mod tests {
             classify_liver_fibrosis_from_speed(0.0, 1000.0),
             FibrosisStage::F0
         );
+
+        assert_eq!(
+            classify_liver_fibrosis_from_speed_quantities(
+                Velocity::from_base(2.0),
+                MassDensity::from_base(1000.0),
+            ),
+            FibrosisStage::F2
+        );
     }
 
     /// ROI staging classifies the median and flags heterogeneity when
@@ -488,3 +511,4 @@ mod tests {
         assert!((youngs_from_shear(10.0) - 30.0).abs() < 1e-12);
     }
 }
+use aequitas::systems::si::quantities::{MassDensity, Pressure, Velocity};

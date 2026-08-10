@@ -1,5 +1,11 @@
 use rand::prelude::*;
+use rand::SeedableRng;
+use rand_chacha::ChaCha8Rng;
 use rand_distr::{LogNormal, Normal, Uniform};
+use tyche_core::{
+    sampling::{Counter, UserDomain},
+    Seed, SplitMix64,
+};
 
 use super::super::bubble_state::{BubbleParameters, BubbleState};
 use super::core::BubbleField;
@@ -34,7 +40,7 @@ impl BubbleCloud {
 
     /// Generate bubble cloud with specified density
     pub fn generate(&mut self, bubble_density: f64, grid_spacing: (f64, f64, f64)) {
-        let mut rng = thread_rng();
+        let mut rng = ChaCha8Rng::seed_from_u64(self.generation_seed(bubble_density, grid_spacing));
 
         let volume = grid_spacing.0
             * grid_spacing.1
@@ -56,6 +62,18 @@ impl BubbleCloud {
 
             self.field.add_bubble(i, j, k, state);
         }
+    }
+
+    fn generation_seed(&self, bubble_density: f64, grid_spacing: (f64, f64, f64)) -> u64 {
+        let seed = Seed::new(0xD5B7_9E1C_4A20_F381u64);
+        let shape = self.field.grid_shape;
+        let shape_mix = (shape.0 as u64) ^ ((shape.1 as u64) << 21) ^ ((shape.2 as u64) << 42);
+        let spacing_mix = grid_spacing.0.to_bits()
+            ^ grid_spacing.1.to_bits().rotate_left(21)
+            ^ grid_spacing.2.to_bits().rotate_left(42);
+        let density_mix = bubble_density.to_bits();
+        let address = shape_mix ^ spacing_mix ^ density_mix;
+        Counter::<UserDomain<1>, SplitMix64>::word(seed, address, 0)
     }
 
     fn generate_position(&self, rng: &mut impl Rng) -> (usize, usize, usize) {

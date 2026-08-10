@@ -3,6 +3,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, Instant};
+use themis::CpuTopology;
 
 use super::scheduler::{current_timestamp, RealTimeScheduler};
 use super::task::{TaskPriority, WorkItem};
@@ -39,7 +40,10 @@ pub struct ThreadPoolConfig {
 
 impl Default for ThreadPoolConfig {
     fn default() -> Self {
-        let num_threads = std::thread::available_parallelism().map_or(4, |n| n.get());
+        let num_threads = CpuTopology::detect()
+            .map(|topology| topology.logical_processors())
+            .unwrap_or(4)
+            .max(1);
 
         Self {
             num_threads,

@@ -44,6 +44,11 @@ use self::tableau::{
 pub use self::types::{IntegrationStats, IntegratorError};
 use crate::chemistry::ros_plasma::radical_kinetics::RadicalKinetics;
 use crate::chemistry::ros_plasma::ros_species::ROSSpecies;
+use aequitas::systems::si::quantities::Time;
+use horae::{
+    adaptive::{AdaptiveController, StepDecision},
+    time::StepSize,
+};
 use std::collections::HashMap;
 
 /// Dormand-Prince RK45 adaptive integrator for radical ODE systems.
@@ -148,6 +153,11 @@ impl RadicalIntegrator {
         let mut k7 = vec![0.0_f64; n];
         let mut ytmp = vec![0.0_f64; n];
         let mut y5 = vec![0.0_f64; n];
+        let controller = AdaptiveController::new(1.0, 0.0, 0.9, 0.2, 5.0).map_err(|error| {
+            IntegratorError::AdaptiveControl {
+                reason: error.to_string(),
+            }
+        })?;
 
         while t < t_end {
             h = h.min(t_end - t);
@@ -221,7 +231,18 @@ impl RadicalIntegrator {
                 err_max = err_max.max((e / sc).abs());
             }
 
-            if err_max <= 1.0 || h <= self.h_min {
+            let step = StepSize::new(Time::from_base(h)).map_err(|error| {
+                IntegratorError::AdaptiveControl {
+                    reason: error.to_string(),
+                }
+            })?;
+            let report = controller
+                .assess::<4>(step, err_max, 1.0)
+                .map_err(|error| IntegratorError::AdaptiveControl {
+                    reason: error.to_string(),
+                })?;
+
+            if report.decision() == StepDecision::Accept || h <= self.h_min {
                 t += h;
                 y.copy_from_slice(&y5);
                 steps_accepted += 1;
@@ -230,12 +251,7 @@ impl RadicalIntegrator {
                 steps_rejected += 1;
             }
 
-            let factor = if err_max == 0.0 {
-                5.0
-            } else {
-                0.9 * err_max.powf(-0.2)
-            };
-            h = (h * factor.clamp(0.2, 5.0)).clamp(self.h_min, self.h_max);
+            h = (*report.suggested_step().as_time().as_base()).clamp(self.h_min, self.h_max);
 
             if h < self.h_min && t < t_end {
                 return Err(IntegratorError::StepSizeTooSmall { h, t });

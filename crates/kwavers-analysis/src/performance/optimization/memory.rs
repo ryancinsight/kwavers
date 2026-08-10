@@ -1,5 +1,6 @@
 //! Memory optimization strategies
 
+use kwavers_core::arena::BumpAllocator;
 use kwavers_core::error::KwaversResult;
 use std::alloc::{alloc, dealloc, Layout};
 
@@ -155,8 +156,7 @@ impl MemoryOptimizer {
     }
 
     /// Create a memory pool for reduced allocation overhead
-    #[must_use]
-    pub fn create_pool(&self, size: usize) -> PerfMemoryPool {
+    pub fn create_pool(&self, size: usize) -> KwaversResult<PerfMemoryPool> {
         PerfMemoryPool::new(size, self.alignment)
     }
 
@@ -186,63 +186,41 @@ impl MemoryOptimizer {
 }
 
 /// Memory pool for efficient allocation
-#[derive(Debug)]
 pub struct PerfMemoryPool {
-    buffer: Vec<u8>,
-    offset: usize,
+    allocator: BumpAllocator,
     alignment: usize,
+}
+
+impl std::fmt::Debug for PerfMemoryPool {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PerfMemoryPool")
+            .field("used_bytes", &self.allocator.used_bytes())
+            .field("total_bytes", &self.allocator.total_bytes())
+            .field("alignment", &self.alignment)
+            .finish()
+    }
 }
 
 impl PerfMemoryPool {
     /// Create a new memory pool
-    #[must_use]
-    pub fn new(size: usize, alignment: usize) -> Self {
-        Self {
-            buffer: vec![0u8; size],
-            offset: 0,
+    pub fn new(size: usize, alignment: usize) -> KwaversResult<Self> {
+        Ok(Self {
+            allocator: BumpAllocator::new(size)?,
             alignment,
-        }
+        })
     }
 
     /// Allocate from the pool
     pub fn allocate(&mut self, size: usize) -> Option<*mut u8> {
-        // Align the offset
-        let aligned_offset = self.offset.div_ceil(self.alignment) * self.alignment;
-
-        if aligned_offset + size > self.buffer.len() {
-            return None;
-        }
-
-        // SAFETY: Memory pool allocation with pointer arithmetic and alignment
-        //   - Alignment: aligned_offset = ⌈offset / alignment⌉ × alignment
-        //   - Bounds check: aligned_offset + size ≤ buffer.len() (checked before pointer arithmetic)
-        //   - Pointer arithmetic: buffer.as_mut_ptr().add(aligned_offset) within buffer bounds
-        //   - Lifetime: Returned pointer valid until pool is dropped or reset
-        //   - No individual deallocation: Pool allocations freed together at reset/drop
-        // INVARIANTS:
-        //   - Precondition: size > 0 (zero-size allocations handled separately)
-        //   - Precondition: aligned_offset + size ≤ buffer.len() (checked, returns None on overflow)
-        //   - Postcondition: ptr is aligned to self.alignment
-        //   - Postcondition: offset updated to aligned_offset + size (monotonic increase)
-        // ALTERNATIVES:
-        //   - Vec<u8> per allocation
-        //   - Rejection: Heap allocation overhead defeats pool purpose
-        //   - Bump allocator with separate buffer
-        //   - Rejection: PerfMemoryPool is a specialized bump allocator with reset capability
-        // PERFORMANCE:
-        //   - Allocation: O(1), ~2-3 cycles (alignment + bounds check + pointer bump)
-        //   - Reset: O(1), just resets offset to 0 (no deallocation)
-        //   - Use case: Per-frame allocations in real-time rendering/simulation
-        #[allow(unsafe_code)]
-        let ptr = unsafe { self.buffer.as_mut_ptr().add(aligned_offset) };
-        self.offset = aligned_offset + size;
-
-        Some(ptr)
+        self.allocator
+            .allocate(size, self.alignment)
+            .ok()
+            .map(|ptr| ptr.as_ptr())
     }
 
     /// Reset the pool for reuse
     pub fn reset(&mut self) {
-        self.offset = 0;
+        self.allocator.reset();
     }
 }
 
@@ -346,7 +324,7 @@ mod tests {
     /// Both pointers must be non-null.
     #[test]
     fn memory_pool_sequential_alloc_returns_non_null() {
-        let mut pool = PerfMemoryPool::new(128, 16);
+        let mut pool = PerfMemoryPool::new(128, 16).expect("pool creation must succeed");
         let p1 = pool.allocate(8);
         let p2 = pool.allocate(8);
         assert!(p1.is_some(), "first allocation must succeed");
@@ -363,7 +341,7 @@ mod tests {
     /// Pool of 16 bytes, alignment=8: alloc(16) succeeds, alloc(1) fails.
     #[test]
     fn memory_pool_exhaustion_returns_none() {
-        let mut pool = PerfMemoryPool::new(16, 8);
+        let mut pool = PerfMemoryPool::new(16, 8).expect("pool creation must succeed");
         let p1 = pool.allocate(16);
         assert!(p1.is_some(), "first allocation of 16 bytes must succeed");
         let p2 = pool.allocate(1);
@@ -376,7 +354,7 @@ mod tests {
     /// equals the base pointer (same offset=0 after reset).
     #[test]
     fn memory_pool_reset_restores_start_offset() {
-        let mut pool = PerfMemoryPool::new(64, 8);
+        let mut pool = PerfMemoryPool::new(64, 8).expect("pool creation must succeed");
         let p1 = pool.allocate(16).expect("first alloc must succeed");
         pool.reset();
         let p2 = pool.allocate(16).expect("post-reset alloc must succeed");

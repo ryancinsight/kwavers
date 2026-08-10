@@ -72,6 +72,7 @@ use gaia::{
 };
 use image::codecs::gif::{GifEncoder, Repeat};
 use image::{Delay, Frame, RgbaImage};
+use iris::color::{ColorMap, NamedColorMap, Normalized};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_solver::inverse::fwi::time_domain::{FwiGeometry, FwiProcessor};
@@ -723,46 +724,20 @@ fn pick_focal_point(mask: Option<&Array3<f64>>) -> (usize, usize) {
 // Multi-frame outputs are written as `image::codecs::gif::GifEncoder` with
 // per-frame delay control and infinite looping.
 //
-// Viridis LUT reference: Smith, N. J. & van der Walt, S. (2015).
-// matplotlib's `viridis` colormap.  Public domain.
+// Viridis map reference: Smith, N. J. & van der Walt, S. (2015).
+// The color-law implementation is owned by Iris.
 
 /// Pixel-replication upscale factor for frame output.
 const UPSCALE: usize = 4;
-/// 16-entry viridis subsample — full 256-entry ramp inflates source size for
-/// no perceptual gain at 8-bit display depth.
-const VIRIDIS_16: [[u8; 3]; 16] = [
-    [68, 1, 84],
-    [72, 26, 108],
-    [71, 47, 124],
-    [65, 68, 135],
-    [57, 86, 140],
-    [49, 104, 142],
-    [42, 120, 142],
-    [35, 136, 142],
-    [31, 152, 139],
-    [34, 168, 132],
-    [53, 183, 121],
-    [85, 198, 103],
-    [122, 209, 81],
-    [165, 219, 54],
-    [210, 226, 27],
-    [253, 231, 37],
-];
-
 #[inline]
 fn viridis_rgba(v01: f64) -> [u8; 4] {
-    let t = v01.clamp(0.0, 1.0) * 15.0;
-    let lo = t.floor() as usize;
-    let hi = (lo + 1).min(15);
-    let frac = t - lo as f64;
-    let c0 = VIRIDIS_16[lo];
-    let c1 = VIRIDIS_16[hi];
-    [
-        (c0[0] as f64 * (1.0 - frac) + c1[0] as f64 * frac) as u8,
-        (c0[1] as f64 * (1.0 - frac) + c1[1] as f64 * frac) as u8,
-        (c0[2] as f64 * (1.0 - frac) + c1[2] as f64 * frac) as u8,
-        255,
-    ]
+    let normalized = if v01.is_finite() {
+        let quantized = (v01.clamp(0.0, 1.0) * 255.0 + 0.5) as u8;
+        Normalized::from_u8(quantized)
+    } else {
+        Normalized::from_u8(0)
+    };
+    NamedColorMap::Viridis.sample(normalized).to_rgba8()
 }
 
 /// Render a 3-D field's y=0 plane to an `UPSCALE`×-upsampled RGBA frame.

@@ -4,6 +4,12 @@
 //! error estimation and tolerance requirements.
 
 use super::traits::{ErrorEstimatorTrait, TimeStepper};
+use aequitas::systems::si::quantities::Time;
+use horae::{
+    adaptive::{AdaptiveController, AdaptiveError, StepDecision},
+    time::{StepSize, TimeError},
+};
+use kwavers_core::error::{KwaversError, KwaversResult, NumericalError, ValidationError};
 use leto::Array3;
 
 fn fold_abs_diffs<F>(
@@ -81,23 +87,22 @@ impl<T: TimeStepper> AdaptiveTimeStepper<T> {
         field: &Array3<f64>,
         rhs_fn: F,
         grid: &kwavers_grid::Grid,
-    ) -> kwavers_core::error::KwaversResult<(Array3<f64>, f64)>
+    ) -> KwaversResult<(Array3<f64>, f64)>
     where
-        F: Fn(&Array3<f64>) -> kwavers_core::error::KwaversResult<Array3<f64>> + Clone,
+        F: Fn(&Array3<f64>) -> KwaversResult<Array3<f64>> + Clone,
     {
         let mut dt = self.current_dt;
         let mut attempts = 0;
         const MAX_ATTEMPTS: usize = 10;
+        let controller = adaptive_controller(self.tolerance)?;
 
         loop {
             attempts += 1;
             if attempts > MAX_ATTEMPTS {
-                return Err(kwavers_core::error::KwaversError::Numerical(
-                    kwavers_core::error::NumericalError::Instability {
-                        operation: "adaptive_step".to_owned(),
-                        condition: attempts as f64,
-                    },
-                ));
+                return Err(KwaversError::Numerical(NumericalError::Instability {
+                    operation: "adaptive_step".to_owned(),
+                    condition: attempts as f64,
+                }));
             }
 
             // Compute high-order solution (in-place update on a copy)
@@ -114,17 +119,20 @@ impl<T: TimeStepper> AdaptiveTimeStepper<T> {
             let error = self
                 .error_estimator
                 .estimate_local_error(&low_order, &high_order, dt);
+            let report = controller
+                .assess::<4>(step_size_from_dt(dt)?, error, 1.0)
+                .map_err(map_adaptive_error)?;
 
             // Check if error is acceptable
-            if error <= self.tolerance {
+            if report.decision() == StepDecision::Accept {
                 // Accept the step
-                self.current_dt = self.compute_optimal_dt(dt, error);
+                self.current_dt = dt_from_step(report.suggested_step());
                 self.current_dt = self.current_dt.clamp(self.min_dt, self.max_dt);
                 return Ok((high_order, dt));
             }
 
             // Reject the step and try with smaller dt
-            dt = self.compute_optimal_dt(dt, error);
+            dt = dt_from_step(report.suggested_step());
             dt = dt.max(self.min_dt);
 
             if dt == self.min_dt && error > 10.0 * self.tolerance {
@@ -138,27 +146,68 @@ impl<T: TimeStepper> AdaptiveTimeStepper<T> {
         }
     }
 
-    /// Compute optimal time step based on error
-    fn compute_optimal_dt(&self, current_dt: f64, error: f64) -> f64 {
-        let safety_factor = 0.9;
-        let max_increase = 2.0;
-        let max_decrease = 0.1;
-
-        if error < 1e-10 {
-            // Error is essentially zero, increase time step
-            return current_dt * max_increase;
-        }
-
-        let order = 4.0; // Assuming 4th order method
-        let factor = safety_factor * (self.tolerance / error).powf(1.0 / (order + 1.0));
-        let factor = factor.clamp(max_decrease, max_increase);
-
-        current_dt * factor
-    }
-
     /// Get current time step
     pub fn get_current_dt(&self) -> f64 {
         self.current_dt
+    }
+}
+
+fn adaptive_controller(tolerance: f64) -> KwaversResult<AdaptiveController<f64>> {
+    AdaptiveController::new(tolerance, 0.0, 0.9, 0.1, 2.0).map_err(map_adaptive_error)
+}
+
+fn step_size_from_dt(dt: f64) -> KwaversResult<StepSize<f64>> {
+    StepSize::new(Time::from_base(dt)).map_err(map_time_error)
+}
+
+fn dt_from_step(step: StepSize<f64>) -> f64 {
+    *step.as_time().as_base()
+}
+
+fn map_time_error(error: TimeError) -> KwaversError {
+    match error {
+        TimeError::NonFinite => KwaversError::Validation(ValidationError::InvalidParameter {
+            parameter: "dt".to_owned(),
+            reason: "time step must be finite".to_owned(),
+        }),
+        TimeError::NonPositiveStep => KwaversError::Validation(ValidationError::InvalidParameter {
+            parameter: "dt".to_owned(),
+            reason: "time step must be greater than zero".to_owned(),
+        }),
+        _ => KwaversError::Validation(ValidationError::InvalidParameter {
+            parameter: "dt".to_owned(),
+            reason: "time step failed Horae validation".to_owned(),
+        }),
+    }
+}
+
+fn map_adaptive_error(error: AdaptiveError) -> KwaversError {
+    match error {
+        AdaptiveError::InvalidParameter(parameter) => {
+            KwaversError::Validation(ValidationError::InvalidParameter {
+                parameter: "adaptive_controller".to_owned(),
+                reason: format!("invalid Horae adaptive parameter: {parameter:?}"),
+            })
+        }
+        AdaptiveError::NonFiniteObservation => KwaversError::Numerical(NumericalError::NaN {
+            operation: "horae::adaptive::AdaptiveController::assess".to_owned(),
+            inputs: "error observation or scale".to_owned(),
+        }),
+        AdaptiveError::NonFiniteTolerance => KwaversError::Numerical(NumericalError::NaN {
+            operation: "horae::adaptive::AdaptiveController::assess".to_owned(),
+            inputs: "mixed tolerance".to_owned(),
+        }),
+        AdaptiveError::InvalidOrder => {
+            KwaversError::Validation(ValidationError::InvalidParameter {
+                parameter: "method_order".to_owned(),
+                reason: "adaptive method order must be positive".to_owned(),
+            })
+        }
+        AdaptiveError::SuggestedStep(error) => map_time_error(error),
+        _ => KwaversError::Validation(ValidationError::InvalidParameter {
+            parameter: "adaptive_controller".to_owned(),
+            reason: "adaptive controller returned an unsupported error".to_owned(),
+        }),
     }
 }
 

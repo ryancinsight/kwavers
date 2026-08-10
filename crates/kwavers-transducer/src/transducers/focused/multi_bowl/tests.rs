@@ -1,8 +1,10 @@
 use super::*;
 use aequitas::systems::si::quantities::{Angle, Dimensionless, Frequency, Length, Pressure, Time};
 use aequitas::systems::si::units::{Hertz, Meter, Pascal, Radian, Second};
-use kwavers_core::constants::numerical::MPA_TO_PA;
+use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use kwavers_core::error::{KwaversError, ValidationError};
+use kwavers_grid::Grid;
+use std::f64::consts::PI;
 
 fn length(value: f64) -> Length<f64> {
     Length::from_unit::<Meter>(value)
@@ -165,6 +167,77 @@ fn small_bowl_config() -> BowlConfig {
         frequency: frequency(1.25e6),
         amplitude: pressure(1.0e5),
         element_size: Some(length(0.01)),
+        ..Default::default()
+    }
+}
+
+#[test]
+fn multi_bowl_array_builds_from_multiple_configs() {
+    let configs = vec![
+        BowlConfig {
+            radius_of_curvature: length(0.05),
+            diameter: length(0.03),
+            center: point([0.0, 0.0, 0.0]),
+            ..Default::default()
+        },
+        BowlConfig {
+            radius_of_curvature: length(0.06),
+            diameter: length(0.04),
+            center: point([0.01, 0.0, 0.0]),
+            ..Default::default()
+        },
+    ];
+
+    let array = MultiBowlArray::new(configs).unwrap();
+    assert_eq!(array.bowls.len(), 2);
+}
+
+#[test]
+fn multi_bowl_phases_produce_time_varying_field() {
+    let base_config = phase_config(angle(0.0));
+    let shifted_config = phase_config(angle(PI / 2.0));
+    let multi_array = MultiBowlArray::new(vec![base_config, shifted_config]).unwrap();
+    let grid = Grid::new(8, 8, 8, 0.001, 0.001, 0.001).unwrap();
+
+    let source_t0 = multi_array.generate_source(&grid, time(0.0)).unwrap();
+    let source_t1 = multi_array.generate_source(&grid, time(0.25e-6)).unwrap();
+
+    let diff = &source_t1 - &source_t0;
+    let max_diff = diff.iter().fold(0.0f64, |a, &b| a.max(b.abs()));
+    assert!(
+        max_diff > 0.0,
+        "Phase shifts should cause time-varying fields"
+    );
+}
+
+/// Comprehensive (Tier 3) variant of the phase-shift field test on a denser grid.
+#[test]
+#[ignore = "Tier 3: Comprehensive validation (>60s execution time)"]
+fn multi_bowl_phases_produce_time_varying_field_on_dense_grid() {
+    let base_config = phase_config(angle(0.0));
+    let shifted_config = phase_config(angle(PI / 2.0));
+    let multi_array = MultiBowlArray::new(vec![base_config, shifted_config]).unwrap();
+    let grid = Grid::new(32, 32, 32, 0.001, 0.001, 0.001).unwrap();
+
+    let source_t0 = multi_array.generate_source(&grid, time(0.0)).unwrap();
+    let source_t1 = multi_array.generate_source(&grid, time(0.25e-6)).unwrap();
+
+    let diff = &source_t1 - &source_t0;
+    let max_diff = diff.iter().fold(0.0f64, |a, &b| a.max(b.abs()));
+    assert!(
+        max_diff > 0.0,
+        "Phase shifts should cause time-varying fields"
+    );
+}
+
+fn phase_config(phase: Angle<f64>) -> BowlConfig {
+    BowlConfig {
+        diameter: length(0.03),
+        radius_of_curvature: length(0.05),
+        focus: point([0.0, 0.0, 0.05]),
+        frequency: frequency(MHZ_TO_HZ),
+        amplitude: pressure(MPA_TO_PA),
+        phase,
         ..Default::default()
     }
 }

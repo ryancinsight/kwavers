@@ -18,13 +18,13 @@ pub mod adapter;
 pub mod arc;
 pub mod bowl;
 pub mod cap;
+pub mod constructors;
 pub mod multi_bowl;
-pub mod utils;
 mod validation;
 
 pub use adapter::FocusedSource;
 pub use arc::{ArcConfig, ArcSource};
 pub use bowl::{BowlAngularBounds, BowlConfig, BowlTransducer};
 pub use cap::{SphericalCapConfig, SphericalCapElement, SphericalCapLayout};
-pub use multi_bowl::MultiBowlArray;
-pub use utils::{make_annular_array, make_bowl, ApodizationType};
+pub use constructors::{make_annular_array, make_bowl};
+pub use multi_bowl::{ApodizationType, MultiBowlArray};

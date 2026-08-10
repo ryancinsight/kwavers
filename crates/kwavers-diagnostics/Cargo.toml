@@ -38,7 +38,7 @@ tracing = { version = "0.1", features = ["attributes"] }
 consus-hdf5 = { workspace = true }
 consus-core = { workspace = true }
 consus-io = { workspace = true }
-flate2 = { workspace = true }
+consus-mat = { workspace = true }
 ritk-registration = { workspace = true }
 
 [features]
@@ -47,6 +47,7 @@ pinn = ["kwavers-solver/pinn", "kwavers-analysis/pinn"]
 
 [dev-dependencies]
 tempfile = { workspace = true }
+flate2 = { workspace = true }
 
 [lints]
 workspace = true

@@ -7,10 +7,10 @@
 //! Reference: Sapareto & Dewey (1984), Int. J. Radiat. Oncol. Biol. Phys.
 //! 10(6), 787-800.
 
+use crate::thermal::response::{checked_cem43_increments, CelsiusStorage};
 use aequitas::systems::si::quantities::{ThermodynamicTemperature, Time};
 use asclepius::response::thermal::Cem43;
 use kwavers_core::constants::medical::THERMAL_DOSE_THRESHOLD;
-use kwavers_core::constants::numerical::SECONDS_PER_MINUTE;
 use kwavers_core::constants::thermodynamic::KELVIN_OFFSET_C;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
@@ -23,6 +23,8 @@ pub struct HifuThermalDose {
     pub cem43: Array3<f64>,
     /// Reusable checked interval increments.
     increments: Array3<f64>,
+    /// Reusable interval-average temperature field [deg C].
+    average_temperature_c: Array3<f64>,
     /// Temperature history [deg C].
     temperature_history: Vec<Array3<f64>>,
     /// Measurement times `s`.
@@ -36,6 +38,7 @@ impl HifuThermalDose {
         Self {
             cem43: Array3::zeros(grid.dimensions()),
             increments: Array3::zeros(grid.dimensions()),
+            average_temperature_c: Array3::zeros(grid.dimensions()),
             temperature_history: Vec::new(),
             time_points_s: Vec::new(),
         }
@@ -70,41 +73,38 @@ impl HifuThermalDose {
             (self.temperature_history.last(), self.time_points_s.last())
         {
             let step = Time::from_base(time_s - previous_time_s);
-            let law = Cem43::<f64>::canonical();
             let previous = previous
                 .as_slice()
                 .expect("invariant: HIFU temperature history is dense");
             let current = temperature
                 .as_slice()
                 .expect("invariant: HIFU temperature measurement is dense");
-            let increments = self
-                .increments
+            let average = self
+                .average_temperature_c
                 .as_slice_mut()
-                .expect("invariant: HIFU increment field is dense");
-
-            for ((increment, &previous_c), &current_c) in
-                increments.iter_mut().zip(previous).zip(current)
-            {
-                let average_c = previous_c.midpoint(current_c);
-                *increment = law
-                    .increment(
-                        ThermodynamicTemperature::from_base(average_c + KELVIN_OFFSET_C),
-                        step,
-                    )
-                    .map_err(|source| {
-                        KwaversError::InvalidInput(format!(
-                            "HIFU CEM43 observation is invalid: {source}"
-                        ))
-                    })?
-                    .get()
-                    .into_base()
-                    / SECONDS_PER_MINUTE;
+                .expect("invariant: HIFU average-temperature field is dense");
+            for ((avg, &previous_c), &current_c) in average.iter_mut().zip(previous).zip(current) {
+                *avg = previous_c.midpoint(current_c);
             }
+
+            checked_cem43_increments::<CelsiusStorage, _>(
+                self.increments.view_mut(),
+                self.average_temperature_c.view(),
+                step,
+                |_| true,
+            )
+            .map_err(|source| {
+                KwaversError::InvalidInput(format!("HIFU CEM43 observation is invalid: {source}"))
+            })?;
 
             let dose = self
                 .cem43
                 .as_slice_mut()
                 .expect("invariant: HIFU dose field is dense");
+            let increments = self
+                .increments
+                .as_slice()
+                .expect("invariant: HIFU increment field is dense");
             for (value, increment) in dose.iter_mut().zip(increments) {
                 *value += *increment;
             }

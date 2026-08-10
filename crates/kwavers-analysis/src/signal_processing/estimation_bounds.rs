@@ -24,6 +24,7 @@ fn all_positive(values: &[f64]) -> bool {
 }
 
 use core::f64::consts::PI;
+use tyche_core::{Bootstrap, Seed, SplitMix64};
 
 /// CRLB on the **variance** of a time-delay (jitter) estimate from
 /// cross-correlation of band-limited signals (narrowband form):
@@ -125,17 +126,6 @@ pub struct BootstrapCi {
     pub upper: f64,
 }
 
-/// One `splitmix64` step — a small, fully-deterministic PRNG so bootstrap CIs
-/// are reproducible from a seed (no global RNG state, no `rand` dependency).
-#[inline]
-fn splitmix64(state: &mut u64) -> u64 {
-    *state = state.wrapping_add(0x9E37_79B9_7F4A_7C15);
-    let mut z = *state;
-    z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
-    z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
-    z ^ (z >> 31)
-}
-
 /// The `q`-quantile (`q ∈ [0, 1]`) of `sorted` (ascending) by linear
 /// interpolation between order statistics.
 #[inline]
@@ -153,7 +143,8 @@ fn quantile_sorted(sorted: &[f64], q: f64) -> f64 {
 
 /// **Percentile bootstrap confidence interval** for the *mean* of `samples` at
 /// confidence `level` (e.g. `0.95`), from `n_resamples` resamples with
-/// replacement, using a deterministic seeded PRNG (`seed`).
+/// replacement, using Tyche's deterministic seeded random-access bootstrap
+/// stream (`seed`).
 ///
 /// Each resample draws `samples.len()` values with replacement and records its
 /// mean; the CI is the `[(1−level)/2, (1+level)/2]` percentiles of those
@@ -163,6 +154,13 @@ fn quantile_sorted(sorted: &[f64], q: f64) -> f64 {
 ///
 /// Returns `None` for an empty sample, `level ∉ (0, 1)`, or `n_resamples == 0`.
 /// A single sample yields a degenerate (zero-width) interval at that value.
+///
+/// # Replay compatibility
+///
+/// This Tyche-backed implementation is a versioned replay boundary: it uses
+/// Tyche's explicit `(replicate, draw)` addresses and exact bounded reduction,
+/// rather than the former local continuous modulo stream. Callers persisting
+/// CI results must record the provider stream version with the result.
 ///
 /// # References
 /// - Efron, B. (1979). "Bootstrap methods: another look at the jackknife."
@@ -187,14 +185,18 @@ pub fn bootstrap_ci_mean(
         });
     }
 
-    let mut state = seed ^ 0xD1B5_4A32_D192_ED03; // de-bias all-zero seeds
+    let bootstrap = Bootstrap::<SplitMix64>::new(n, n).ok()?;
+    let mut indices = vec![0_usize; n];
     let mut means = Vec::with_capacity(n_resamples);
-    for _ in 0..n_resamples {
-        let mut acc = 0.0;
-        for _ in 0..n {
-            let idx = (splitmix64(&mut state) % n as u64) as usize;
-            acc += samples[idx];
-        }
+    for replicate in 0..n_resamples {
+        bootstrap
+            .fill_into(
+                Seed::new(seed),
+                u64::try_from(replicate).ok()?,
+                &mut indices,
+            )
+            .ok()?;
+        let acc = indices.iter().map(|&index| samples[index]).sum::<f64>();
         means.push(acc / n as f64);
     }
     means.sort_by(|a, b| a.partial_cmp(b).unwrap_or(core::cmp::Ordering::Equal));
@@ -308,6 +310,14 @@ mod tests {
         // Same seed ⇒ bit-identical CI (deterministic PRNG).
         let ci2 = bootstrap_ci_mean(&s, 0.95, 2000, 42).expect("ci");
         assert_eq!(ci, ci2);
+    }
+
+    #[test]
+    fn bootstrap_ci_pins_tyche_replay_vector() {
+        let ci = bootstrap_ci_mean(&[1.0, 2.0, 4.0], 0.5, 5, 42).expect("ci");
+        assert!((ci.point - 7.0 / 3.0).abs() < f64::EPSILON);
+        assert!((ci.lower - 2.0).abs() < f64::EPSILON);
+        assert!((ci.upper - 7.0 / 3.0).abs() < f64::EPSILON);
     }
 
     /// The 95% bootstrap CI half-width of the mean tracks the standard error:

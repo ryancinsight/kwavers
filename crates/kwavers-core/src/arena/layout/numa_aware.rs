@@ -8,7 +8,7 @@ use std::ptr::NonNull;
 #[cfg(test)]
 use super::CACHE_LINE_SIZE;
 use super::{ArenaLayoutNumaPolicy, NUMA_ALIGNMENT};
-use crate::arena::numa::bind_memory_to_node;
+use crate::arena::numa::{bind_memory_to_node, detected_logical_processors};
 use crate::error::{KwaversError, KwaversResult, SystemError};
 
 // NUMA-AWARE MEMORY ALLOCATION
@@ -179,7 +179,7 @@ impl NumaAwareAllocator {
         // SAFETY: Memory is valid for num_elements * sizeof(T) bytes
         let slice = unsafe { std::slice::from_raw_parts_mut(ptr.as_ptr(), num_elements) };
 
-        let workers = std::thread::available_parallelism().map_or(1, usize::from);
+        let workers = detected_logical_processors();
         let chunk_size = num_elements.div_ceil(workers).max(1);
 
         for_each_chunk_mut_with::<Adaptive, _, _>(slice, chunk_size, |chunk| {

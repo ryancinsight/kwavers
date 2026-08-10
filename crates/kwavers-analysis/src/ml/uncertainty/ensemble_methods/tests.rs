@@ -18,7 +18,7 @@ fn test_ensemble_quantifier_creation() {
 #[test]
 fn test_bootstrap_sampling() {
     let quantifier = EnsembleQuantifier::new(EnsembleConfig::default()).unwrap();
-    let indices = quantifier.bootstrap_sample(100);
+    let indices = quantifier.bootstrap_sample_seeded(100, 42);
     assert_eq!(
         indices.len(),
         100,

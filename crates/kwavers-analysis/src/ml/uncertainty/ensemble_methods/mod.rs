@@ -16,6 +16,7 @@ use leto::Array2;
 use leto::Array2;
 use model::EnsembleModel;
 use std::collections::HashMap;
+use tyche_core::{Categorical, CategoryCount, Seed, SplitMix64};
 
 /// Configuration for ensemble methods
 #[derive(Debug, Clone)]
@@ -100,8 +101,18 @@ impl EnsembleQuantifier {
         training_data: &[Array2<f32>],
         training_targets: &[Array2<f32>],
     ) -> KwaversResult<()> {
-        let bootstrap_samples: Vec<Vec<usize>> = (0..self.ensemble_models.len())
-            .map(|_| self.bootstrap_sample(training_data.len()))
+        let bootstrap_samples: Vec<Vec<usize>> = self
+            .ensemble_models
+            .iter()
+            .enumerate()
+            .map(|(model_idx, model)| {
+                self.bootstrap_sample_seeded(
+                    training_data.len(),
+                    model._random_seed
+                        ^ u64::try_from(model_idx)
+                            .expect("invariant: usize always fits into u64"),
+                )
+            })
             .collect();
 
         for (model_idx, bootstrap_indices) in bootstrap_samples.into_iter().enumerate() {
@@ -120,15 +131,21 @@ impl EnsembleQuantifier {
         Ok(())
     }
 
-    /// Generate bootstrap sample indices
-    pub(super) fn bootstrap_sample(&self, n_samples: usize) -> Vec<usize> {
-        use rand::rngs::StdRng;
-        use rand::{Rng, SeedableRng};
+    /// Generate bootstrap sample indices.
+    pub(super) fn bootstrap_sample_seeded(&self, n_samples: usize, seed: u64) -> Vec<usize> {
+        if n_samples == 0 {
+            return Vec::new();
+        }
 
-        let mut rng = StdRng::from_entropy();
+        let categories =
+            CategoryCount::new(n_samples).expect("invariant: n_samples > 0 by guard above");
+        let sampler = Categorical::<SplitMix64>::new(categories);
+        let seed = Seed::new(seed);
+
         let mut indices = Vec::with_capacity(n_samples);
-        for _ in 0..n_samples {
-            indices.push(rng.gen_range(0..n_samples));
+        for sample_index in 0..n_samples {
+            let address = u64::try_from(sample_index).expect("invariant: usize fits in u64");
+            indices.push(sampler.at(seed, address).get());
         }
         indices
     }

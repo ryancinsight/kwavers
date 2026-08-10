@@ -1,6 +1,7 @@
 //! Volume rendering implementation
 
 use crate::visualization::{ColorScheme, VisualizationConfig};
+use iris::color::{ColorMap, NamedColorMap, Normalized};
 use kwavers_core::error::KwaversResult;
 use kwavers_field::UnifiedFieldType;
 use kwavers_grid::Grid;
@@ -98,9 +99,9 @@ impl VolumeRenderer {
                 };
                 let color = self.transfer_function.map_value(normalized);
                 let idx = (j * nx + i) * 4;
-                image[idx] = (color[0] * 255.0) as u8;
-                image[idx + 1] = (color[1] * 255.0) as u8;
-                image[idx + 2] = (color[2] * 255.0) as u8;
+                image[idx] = color[0];
+                image[idx + 1] = color[1];
+                image[idx + 2] = color[2];
                 image[idx + 3] = if self.config.enable_transparency {
                     (normalized.clamp(0.0, 1.0) * 255.0) as u8
                 } else {
@@ -121,131 +122,31 @@ impl VolumeRenderer {
 /// Transfer function for mapping values to colors
 #[derive(Debug)]
 struct TransferFunction {
-    color_map: Vec<[f32; 4]>, // RGBA
+    color_map: NamedColorMap,
 }
 
 impl TransferFunction {
     /// Create a new transfer function
     fn new(scheme: &ColorScheme) -> Self {
         let color_map = match scheme {
-            ColorScheme::Viridis => Self::viridis_colormap(),
-            ColorScheme::Plasma => Self::plasma_colormap(),
-            ColorScheme::Inferno => Self::inferno_colormap(),
-            ColorScheme::Magma => Self::magma_colormap(),
-            ColorScheme::Turbo => Self::turbo_colormap(),
-            ColorScheme::Grayscale => Self::grayscale_colormap(),
-            ColorScheme::Custom => Self::viridis_colormap(), // Fallback to viridis for custom
+            ColorScheme::Viridis => NamedColorMap::Viridis,
+            ColorScheme::Plasma => NamedColorMap::Plasma,
+            ColorScheme::Inferno => NamedColorMap::Inferno,
+            ColorScheme::Magma => NamedColorMap::Magma,
+            ColorScheme::Turbo => NamedColorMap::Turbo,
+            ColorScheme::Grayscale => NamedColorMap::Grayscale,
+            // Preserve prior fallback behavior for custom scheme.
+            ColorScheme::Custom => NamedColorMap::Viridis,
         };
 
         Self { color_map }
     }
 
     /// Map a value to a color
-    fn map_value(&self, value: f32) -> [f32; 4] {
-        let idx = ((value.clamp(0.0, 1.0) * (self.color_map.len() - 1) as f32) as usize)
-            .min(self.color_map.len() - 1);
-        self.color_map[idx]
-    }
-
-    /// Viridis colormap
-    fn viridis_colormap() -> Vec<[f32; 4]> {
-        vec![
-            [0.267, 0.004, 0.329, 1.0],
-            [0.283, 0.141, 0.458, 1.0],
-            [0.253, 0.265, 0.530, 1.0],
-            [0.206, 0.372, 0.553, 1.0],
-            [0.164, 0.471, 0.558, 1.0],
-            [0.128, 0.567, 0.551, 1.0],
-            [0.135, 0.659, 0.518, 1.0],
-            [0.267, 0.749, 0.441, 1.0],
-            [0.478, 0.821, 0.31832, 1.0], // Avoid exact FRAC_1_PI approximation
-            [0.741, 0.873, 0.150, 1.0],
-            [0.993, 0.906, 0.144, 1.0],
-        ]
-    }
-
-    /// Plasma colormap (perceptually uniform, matplotlib-inspired)
-    /// Reference: Smith & van der Walt (2015) "Colormaps" matplotlib documentation
-    fn plasma_colormap() -> Vec<[f32; 4]> {
-        // Plasma colormap: purple → pink → orange → yellow
-        // Perceptually uniform for scientific visualization
-        vec![
-            [0.050, 0.030, 0.529, 1.0],
-            [0.283, 0.024, 0.627, 1.0],
-            [0.478, 0.007, 0.659, 1.0],
-            [0.648, 0.060, 0.620, 1.0],
-            [0.786, 0.184, 0.520, 1.0],
-            [0.893, 0.335, 0.384, 1.0],
-            [0.966, 0.505, 0.243, 1.0],
-            [0.989, 0.690, 0.138, 1.0],
-            [0.940, 0.876, 0.132, 1.0],
-        ]
-    }
-
-    /// Inferno colormap (perceptually uniform, matplotlib-inspired)
-    /// Reference: Smith & van der Walt (2015) "Colormaps" matplotlib documentation
-    fn inferno_colormap() -> Vec<[f32; 4]> {
-        // Inferno colormap: black → purple → red → orange → yellow
-        // Excellent for thermal/heat visualization
-        vec![
-            [0.001, 0.000, 0.014, 1.0],
-            [0.100, 0.031, 0.184, 1.0],
-            [0.276, 0.044, 0.397, 1.0],
-            [0.478, 0.066, 0.467, 1.0],
-            [0.659, 0.137, 0.432, 1.0],
-            [0.821, 0.268, 0.326, 1.0],
-            [0.937, 0.449, 0.208, 1.0],
-            [0.988, 0.653, 0.118, 1.0],
-            [0.988, 0.880, 0.381, 1.0],
-        ]
-    }
-
-    /// Magma colormap (perceptually uniform, matplotlib-inspired)
-    /// Reference: Smith & van der Walt (2015) "Colormaps" matplotlib documentation
-    fn magma_colormap() -> Vec<[f32; 4]> {
-        // Magma colormap: black → purple → red → orange → white
-        // Ideal for density/intensity visualization
-        vec![
-            [0.001, 0.000, 0.014, 1.0],
-            [0.118, 0.051, 0.260, 1.0],
-            [0.304, 0.080, 0.437, 1.0],
-            [0.504, 0.119, 0.500, 1.0],
-            [0.689, 0.196, 0.483, 1.0],
-            [0.857, 0.328, 0.422, 1.0],
-            [0.974, 0.524, 0.384, 1.0],
-            [0.998, 0.730, 0.524, 1.0],
-            [0.987, 0.914, 0.764, 1.0],
-        ]
-    }
-
-    /// Turbo colormap (Google's improved rainbow, high dynamic range)
-    /// Reference: Anton Mikhailov (2019) "Turbo, An Improved Rainbow Colormap"
-    #[allow(clippy::approx_constant)] // False positive: RGB values, not math constants
-    fn turbo_colormap() -> Vec<[f32; 4]> {
-        // Turbo: improved rainbow with better perceptual uniformity
-        // High dynamic range, reduces rainbow artifacts
-        vec![
-            [0.190, 0.073, 0.022, 1.0],
-            [0.230, 0.318, 0.545, 1.0],
-            [0.160, 0.519, 0.698, 1.0],
-            [0.214, 0.682, 0.634, 1.0],
-            [0.464, 0.801, 0.455, 1.0],
-            [0.739, 0.872, 0.260, 1.0],
-            [0.945, 0.869, 0.168, 1.0],
-            [0.990, 0.683, 0.085, 1.0],
-            [0.879, 0.314, 0.065, 1.0],
-        ]
-    }
-
-    /// Grayscale colormap
-    fn grayscale_colormap() -> Vec<[f32; 4]> {
-        vec![
-            [0.0, 0.0, 0.0, 1.0],
-            [0.2, 0.2, 0.2, 1.0],
-            [0.4, 0.4, 0.4, 1.0],
-            [0.6, 0.6, 0.6, 1.0],
-            [0.8, 0.8, 0.8, 1.0],
-            [1.0, 1.0, 1.0, 1.0],
-        ]
+    fn map_value(&self, value: f32) -> [u8; 4] {
+        let quantized = (value.clamp(0.0, 1.0) * 255.0 + 0.5) as u8;
+        self.color_map
+            .sample(Normalized::from_u8(quantized))
+            .to_rgba8()
     }
 }

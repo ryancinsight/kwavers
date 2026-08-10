@@ -3,8 +3,15 @@
 use super::MonteCarloSolver;
 use anyhow::Result;
 use moirai_parallel::{for_each_index_with, Adaptive};
+use rand::SeedableRng;
+use rand_chacha::ChaCha8Rng;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use themis::CpuTopology;
+use tyche_core::{
+    sampling::{Counter, UserDomain},
+    Seed, SplitMix64,
+};
 
 use crate::optics::monte_carlo::config::SimulationConfig;
 use crate::optics::monte_carlo::interfaces::fresnel_reflectance;
@@ -19,20 +26,25 @@ impl MonteCarloSolver {
     ///
     pub fn simulate(&self, source: &PhotonSource, config: &SimulationConfig) -> Result<MCResult> {
         let num_photons = config.num_photons;
-        let lanes = std::thread::available_parallelism()
-            .map(std::num::NonZeroUsize::get)
-            .unwrap_or(1);
+        let lanes = CpuTopology::detect()
+            .map(|topology| topology.logical_processors())
+            .unwrap_or(1)
+            .max(1);
         let chunk_size = (num_photons / lanes).max(1000);
         let chunk_count = num_photons.div_ceil(chunk_size);
         let total_voxels = total_voxels(&self.grid);
         let absorbed_energy = Arc::new(new_atomic_vec(total_voxels));
         let fluence = Arc::new(new_atomic_vec(total_voxels));
         let reflected_weight = Arc::new(AtomicU64::new(0));
+        let seed = Seed::new(0x8B45_D2A7_61C3_1E9Fu64);
 
         for_each_index_with::<Adaptive, _>(chunk_count, |chunk_idx| {
             let start = chunk_idx * chunk_size;
             let end = (start + chunk_size).min(num_photons);
-            let mut rng = rand::thread_rng();
+            let chunk_address = u64::try_from(chunk_idx).expect("invariant: usize fits in u64");
+            let chunk_seed =
+                Counter::<UserDomain<0>, SplitMix64>::word(seed, chunk_address, 0);
+            let mut rng = ChaCha8Rng::seed_from_u64(chunk_seed);
 
             for _ in start..end {
                 let mut photon = source.launch_photon(&mut rng);

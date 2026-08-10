@@ -5,6 +5,11 @@ use kwavers_core::error::KwaversResult;
 use leto::Array2;
 #[cfg(feature = "pinn")]
 use leto::Array2;
+#[cfg(feature = "pinn")]
+use tyche_core::{
+    sampling::{Counter, UserDomain},
+    Seed, SplitMix64,
+};
 
 /// Individual ensemble model
 #[derive(Debug, Clone)]
@@ -29,14 +34,14 @@ impl EnsembleModel {
         predictor: &P,
         inputs: &Array2<f32>,
     ) -> KwaversResult<Array2<f32>> {
-        use rand::rngs::StdRng;
-        use rand::{Rng, SeedableRng};
-
-        let mut rng = StdRng::seed_from_u64(self._random_seed);
+        let seed = Seed::new(self._random_seed);
         let mut noisy_inputs = inputs.clone();
 
-        for elem in noisy_inputs.iter_mut() {
-            let noise: f32 = rng.gen_range(-0.01..0.01);
+        for (idx, elem) in noisy_inputs.iter_mut().enumerate() {
+            let address = u64::try_from(idx).expect("invariant: usize fits in u64");
+            let unit =
+                Counter::<UserDomain<0>, SplitMix64>::unit::<f32>(seed, address, 0).clamp(0.0, 1.0);
+            let noise = unit.mul_add(0.02, -0.01);
             *elem += noise;
         }
 

@@ -133,6 +133,22 @@ formula module plus the parallel `DiffusionOpticalProperties` and
 `OpticalAbsorption` models instead of adding a facade around them. See
 [ADR 046](docs/ADR/046-hyperion-optical-transport-ownership.md).
 
+Public [Horae](https://github.com/ryancinsight/horae) owns shared adaptive
+step acceptance/scaling policy. `kwavers-solver` and chemistry integration in
+`kwavers-physics` keep their domain-specific error estimators but delegate
+step-size control to Horae's `AdaptiveController`, inheriting Eunomia-backed
+scalar policy through that provider boundary.
+
+Public [Hyperion](https://github.com/ryancinsight/hyperion) owns optical
+transport laws. Photoacoustic absorbed-energy-density computation in
+`kwavers-physics` is routed through Hyperion's validated deposition law
+(`q = μ_a · Φ`) instead of local scalar-only multiplication.
+
+Public [Asclepius](https://github.com/ryancinsight/asclepius) owns biological
+response laws. HIFU CEM43 interval updates in `kwavers-physics` route through
+the shared Asclepius-backed checked increment helper instead of local
+per-voxel increment math.
+
 Key architectural decisions:
 - **Layer Separation**: Unidirectional dependencies prevent circular imports
 - **Domain Purity**: Core entities remain free of application logic

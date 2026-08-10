@@ -11,6 +11,10 @@ use kwavers_core::constants::cavitation::SURFACE_TENSION_WATER;
 use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use kwavers_physics::bubble_dynamics::{BubbleState, KellerMiksisModel};
 use std::collections::HashMap;
+use tyche_core::{
+    sampling::{Counter, UserDomain},
+    Seed, SplitMix64,
+};
 
 impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> CavitationCoupledDomain<B>
 where
@@ -49,17 +53,17 @@ where
     ///
     /// Actual nucleation sites are refined later by [`detect_nucleation_sites`].
     fn initialize_bubble_locations(domain_dims: &[f64], n_bubbles: usize) -> Vec<(f64, f64, f64)> {
-        use rand::Rng;
-        let mut rng = rand::thread_rng();
+        let seed = Seed::new(0xB53C_6A94_11D2_4F07u64);
         let lx = domain_dims.first().copied().unwrap_or(0.01);
         let ly = domain_dims.get(1).copied().unwrap_or(0.01);
         let lz = domain_dims.get(2).copied().unwrap_or(0.01);
         (0..n_bubbles)
-            .map(|_| {
+            .map(|idx| {
+                let address = u64::try_from(idx).expect("invariant: usize fits in u64");
                 (
-                    rng.gen::<f64>() * lx,
-                    rng.gen::<f64>() * ly,
-                    rng.gen::<f64>() * lz,
+                    Counter::<UserDomain<2>, SplitMix64>::unit::<f64>(seed, address, 0) * lx,
+                    Counter::<UserDomain<2>, SplitMix64>::unit::<f64>(seed, address, 1) * ly,
+                    Counter::<UserDomain<2>, SplitMix64>::unit::<f64>(seed, address, 2) * lz,
                 )
             })
             .collect()

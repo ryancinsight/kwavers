@@ -41,6 +41,7 @@ tracing = { version = "0.1", features = ["attributes"] }
 apollo = { workspace = true }
 eunomia = { workspace = true }
 tyche-core = { workspace = true }
+horae = { workspace = true }
 
 # coeus ML stack — required only when the `pinn` feature is enabled.
 coeus-core = { workspace = true, optional = true }

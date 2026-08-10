@@ -17,4 +17,5 @@ pub use memory::{
     first_touch_memory_parallel,
 };
 pub use policy::{NumaAllocPolicy, CACHE_LINE_SIZE, MAX_NUMA_NODES, PAGE_SIZE};
+pub(crate) use topology::detected_logical_processors;
 pub use topology::NumaTopology;

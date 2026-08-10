@@ -1,6 +1,9 @@
 use super::{AdaptiveCollocationSampler, HighResidualRegion};
 use kwavers_core::error::KwaversResult;
-use rand::Rng;
+use tyche_core::{
+    sampling::{Counter, UserDomain},
+    Seed, SplitMix64,
+};
 
 /// Per-cell accumulator keyed by integer grid index `(gx, gy, gt)`, holding the
 /// `(x, y, t, priority)` values of every point that fell into that cell.
@@ -89,15 +92,16 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>
         } else if new_total < self.total_points {
             let deficit = self.total_points - new_total;
             let high_residual_regions = self.identify_high_residual_regions();
+            let seed = Seed::new(0xC41A_2B78_95D0_E63Fu64);
 
-            for region in high_residual_regions.into_iter().take(deficit) {
-                let mut rng = rand::thread_rng();
-                let x =
-                    (region.center_x + (rng.gen::<f32>() - 0.5) * region.size_x).clamp(0.0, 1.0);
-                let y =
-                    (region.center_y + (rng.gen::<f32>() - 0.5) * region.size_y).clamp(0.0, 1.0);
-                let t =
-                    (region.center_t + (rng.gen::<f32>() - 0.5) * region.size_t).clamp(0.0, 1.0);
+            for (offset, region) in high_residual_regions.into_iter().take(deficit).enumerate() {
+                let address = u64::try_from(offset).expect("invariant: usize fits in u64");
+                let ux = Counter::<UserDomain<3>, SplitMix64>::unit::<f32>(seed, address, 0);
+                let uy = Counter::<UserDomain<3>, SplitMix64>::unit::<f32>(seed, address, 1);
+                let ut = Counter::<UserDomain<3>, SplitMix64>::unit::<f32>(seed, address, 2);
+                let x = (region.center_x + (ux - 0.5) * region.size_x).clamp(0.0, 1.0);
+                let y = (region.center_y + (uy - 0.5) * region.size_y).clamp(0.0, 1.0);
+                let t = (region.center_t + (ut - 0.5) * region.size_t).clamp(0.0, 1.0);
 
                 new_points.extend_from_slice(&[x, y, t]);
                 new_priorities.push(0.7);

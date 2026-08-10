@@ -289,9 +289,7 @@ pub(crate) fn zip_mut_five_refs<T, U, V, W, X, Y, const N: usize, F>(
 mod tests {
     use leto::{Array2, SliceArg};
 
-    use super::{
-        zip_mut_five_refs, zip_mut_four_refs, zip_mut_ref, zip_mut_three_refs,
-    };
+    use super::{zip_mut_five_refs, zip_mut_four_refs, zip_mut_ref, zip_mut_three_refs};
 
     /// `s![..;2, ..]` in leto slice-argument form.
     fn every_other_row() -> [SliceArg; 2] {

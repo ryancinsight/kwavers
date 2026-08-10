@@ -1,3 +1,5 @@
+use themis::CpuTopology;
+
 /// NUMA topology information.
 #[derive(Debug, Clone)]
 pub struct NumaTopology {
@@ -17,7 +19,7 @@ impl Default for NumaTopology {
 impl NumaTopology {
     #[must_use]
     pub fn single_node() -> Self {
-        let cpus = std::thread::available_parallelism().map_or(1, |n| n.get());
+        let cpus = detected_logical_processors();
         Self {
             node_count: 1,
             total_cpus: cpus,
@@ -81,9 +83,7 @@ impl NumaTopology {
             distance_matrix.push(row);
         }
 
-        let total_cpus = std::thread::available_parallelism()
-            .map(|n| n.get())
-            .unwrap_or(1);
+        let total_cpus = detected_logical_processors();
 
         Self {
             node_count,
@@ -138,4 +138,12 @@ impl NumaTopology {
         nodes.sort_by_key(|(_, d)| *d);
         nodes
     }
+}
+
+#[must_use]
+pub(crate) fn detected_logical_processors() -> usize {
+    CpuTopology::detect()
+        .map(|topology| topology.logical_processors())
+        .unwrap_or(1)
+        .max(1)
 }

@@ -9,6 +9,7 @@ hyperion = { version = "0.1.0", git = "https://github.com/ryancinsight/hyperion"
 proteus = { version = "0.1.0", git = "https://github.com/ryancinsight/proteus" }
 tyche-core = { version = "0.1.0", git = "https://github.com/ryancinsight/tyche" }
 horae = { version = "0.1.0", git = "https://github.com/ryancinsight/horae" }
+iris = { version = "0.1.0", git = "https://github.com/ryancinsight/iris" }
 # External git submodules replaced by remote git dependencies (always-latest on the
 # default branch; `cargo update -p <crate>` refreshes the pinned commit in Cargo.lock).
 # These repos carry their own [workspace], so Cargo resolves their internal
@@ -31,6 +32,7 @@ hephaestus-wgpu = { version = "0.18.0", git = "https://github.com/ryancinsight/h
 hephaestus-cuda = { version = "0.18.0", git = "https://github.com/ryancinsight/hephaestus.git", default-features = false }
 hermes-simd = { version = "0.5.0", git = "https://github.com/ryancinsight/hermes.git", default-features = false, features = ["std"] }
 moirai-parallel = { version = "0.4.0", git = "https://github.com/ryancinsight/Moirai.git", default-features = false, features = ["parallel"] }
+themis = { version = "0.10.1", git = "https://github.com/ryancinsight/themis", package = "themis-topology" }
 leto = { version = "0.41.0", git = "https://github.com/ryancinsight/leto.git", default-features = false, features = ["std"] }
 leto-ops = { version = "0.41.0", git = "https://github.com/ryancinsight/leto.git", default-features = false, features = ["std"] }
 # Mnemosyne: Allocation / arenas / staging memory (Atlas first-party).
@@ -76,6 +78,7 @@ consus-hdf5 = { version = "0.1.0", git = "https://github.com/ryancinsight/consus
 consus-core = { version = "0.1.0", git = "https://github.com/ryancinsight/consus.git", features = ["std"] }
 consus-compression = { version = "0.1.0", git = "https://github.com/ryancinsight/consus.git", features = ["std", "deflate"] }
 consus-io = { version = "0.1.0", git = "https://github.com/ryancinsight/consus.git", features = ["std"] }
+consus-mat = { version = "0.1.0", git = "https://github.com/ryancinsight/consus.git" }
 consus-npy = { version = "0.1.0", git = "https://github.com/ryancinsight/consus.git" }
 rand = "0.9"
 criterion = "0.5"

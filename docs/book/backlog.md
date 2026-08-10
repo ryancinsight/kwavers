@@ -321,12 +321,16 @@ claimed struct name) before implementing. Confirmed corrections below.
 - ✅ **Bootstrap confidence intervals (elastography CRLB module)** — `[minor]` (2026-06-09, Ch11
   audit). §11.12 flagged "bootstrap confidence intervals are not yet implemented" (the CRLB bounds
   existed). Added `kwavers_analysis::signal_processing::estimation_bounds::bootstrap_ci_mean` —
-  percentile bootstrap (Efron 1979) of the sample mean with a self-contained **deterministic seeded
-  PRNG** (splitmix64; reproducible, no `rand` dep) + `BootstrapCi{point,lower,upper}`. 4
-  value-semantic tests: CI brackets the point + bit-identical from a fixed seed; **half-width tracks
-  the analytical `1.96·σ/√N` standard error** (within 35%); widens with spread + confidence level;
-  degenerate (empty/single/invalid-level) cases. Chapter §11.12/§11.13 updated (also cleared the
-  stale "theory only" list — Murnaghan §11.9 + acousto-elastic pre-stress inversion are implemented).
+  percentile bootstrap (Efron 1979) of the sample mean using Tyche's validated
+  `Bootstrap::<SplitMix64>` random-access index stream + `BootstrapCi{point,lower,upper}`.
+  Kwavers retains percentile interpolation and confidence-level policy; Tyche owns deterministic
+  index generation and exact bounded sampling. 4 value-semantic tests: CI brackets the point +
+  bit-identical from a fixed seed; **half-width tracks the analytical `1.96·σ/√N` standard error**
+  (within 35%); widens with spread + confidence level; degenerate (empty/single/invalid-level)
+  cases. The migration changes the deterministic replay vector: persisted CI results must record
+  the Tyche stream version rather than assume the former local continuous modulo schedule.
+  Chapter §11.12/§11.13 updated (also cleared the stale "theory only" list — Murnaghan §11.9 +
+  acousto-elastic pre-stress inversion are implemented).
 - ✅ **Viscoelastic dispersion-fitting inversion (shear-wave spectroscopy)** — `[minor]`
   (2026-06-09, Ch11 audit). §11.8 flagged "A dispersion-fitting inversion kernel is not yet
   implemented" (the KV/Zener *forward* models existed). Added to `kwavers_medium::viscoelastic`:
