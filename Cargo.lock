@@ -3350,6 +3350,7 @@ dependencies = [
  "pollster",
  "rand 0.8.7",
  "tracing",
+ "tyche-core",
  "wgpu 30.0.0",
 ]
 
