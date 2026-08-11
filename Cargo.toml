@@ -7,38 +7,39 @@ aequitas = { version = "0.2.0", git = "https://github.com/ryancinsight/aequitas"
 asclepius = { version = "0.1.0", git = "https://github.com/ryancinsight/asclepius", default-features = false, features = ["std"] }
 hyperion = { version = "0.1.0", git = "https://github.com/ryancinsight/hyperion" }
 proteus = { version = "0.1.0", git = "https://github.com/ryancinsight/proteus" }
-tyche-core = { version = "0.2.0", git = "https://github.com/ryancinsight/tyche" }
+tyche-core = { version = "0.1.0", git = "https://github.com/ryancinsight/tyche" }
 horae = { version = "0.1.0", git = "https://github.com/ryancinsight/horae" }
 # External git submodules replaced by remote git dependencies (always-latest on the
 # default branch; `cargo update -p <crate>` refreshes the pinned commit in Cargo.lock).
 # These repos carry their own [workspace], so Cargo resolves their internal
-# inheritance against THEIR roots â€” no path scaffolding needed here. SSOT: members
+# inheritance against THEIR roots — no path scaffolding needed here. SSOT: members
 # inherit via `{ workspace = true }`.
-ritk-core = { version = "0.10.0", git = "https://github.com/ryancinsight/ritk.git" }
-ritk-io = { version = "0.3.0", git = "https://github.com/ryancinsight/ritk.git" }
-ritk-image = { version = "0.4.0", git = "https://github.com/ryancinsight/ritk.git" }
-ritk-spatial = { version = "0.2.0", git = "https://github.com/ryancinsight/ritk.git" }
-ritk-registration = { version = "0.54.0", git = "https://github.com/ryancinsight/ritk.git" }
-coeus-core = { version = "0.10.0", git = "https://github.com/ryancinsight/Coeus.git" }
-coeus-tensor = { version = "0.10.0", git = "https://github.com/ryancinsight/Coeus.git" }
-coeus-autograd = { version = "0.10.0", git = "https://github.com/ryancinsight/Coeus.git" }
-coeus-nn = { version = "0.10.0", git = "https://github.com/ryancinsight/Coeus.git" }
-coeus-optim = { version = "0.10.0", git = "https://github.com/ryancinsight/Coeus.git" }
-coeus-ops = { version = "0.10.0", git = "https://github.com/ryancinsight/Coeus.git" }
-apollo = { package = "apollo-fft", version = "0.26.0", git = "https://github.com/ryancinsight/apollo.git" }
-hephaestus-core = { version = "0.19.0", git = "https://github.com/ryancinsight/hephaestus.git", default-features = false }
-hephaestus-wgpu = { version = "0.19.0", git = "https://github.com/ryancinsight/hephaestus.git", default-features = false, features = ["decomposition"] }
-hephaestus-cuda = { version = "0.19.0", git = "https://github.com/ryancinsight/hephaestus.git", default-features = false }
-hermes-simd = { version = "0.7.0", git = "https://github.com/ryancinsight/hermes.git", default-features = false, features = ["std"] }
-themis = { package = "themis-topology", version = "0.10.1", git = "https://github.com/ryancinsight/themis", default-features = false, features = ["std"] }
-moirai-parallel = { version = "0.5.0", git = "https://github.com/ryancinsight/Moirai.git", default-features = false, features = ["parallel"] }
-leto = { version = "0.42.0", git = "https://github.com/ryancinsight/leto.git", default-features = false, features = ["std"] }
-leto-ops = { version = "0.42.0", git = "https://github.com/ryancinsight/leto.git", default-features = false, features = ["std"] }
+ritk-core = { version = "0.9.0", git = "https://github.com/ryancinsight/ritk.git" }
+ritk-io = { version = "0.2.0", git = "https://github.com/ryancinsight/ritk.git" }
+ritk-image = { version = "0.2.0", git = "https://github.com/ryancinsight/ritk.git" }
+ritk-spatial = { version = "0.1.0", git = "https://github.com/ryancinsight/ritk.git" }
+ritk-registration = { version = "0.53.0", git = "https://github.com/ryancinsight/ritk.git" }
+coeus-core = { version = "0.9.0", git = "https://github.com/ryancinsight/Coeus.git" }
+coeus-tensor = { version = "0.9.0", git = "https://github.com/ryancinsight/Coeus.git" }
+coeus-autograd = { version = "0.9.0", git = "https://github.com/ryancinsight/Coeus.git" }
+coeus-nn = { version = "0.9.0", git = "https://github.com/ryancinsight/Coeus.git" }
+coeus-optim = { version = "0.9.0", git = "https://github.com/ryancinsight/Coeus.git" }
+coeus-ops = { version = "0.9.0", git = "https://github.com/ryancinsight/Coeus.git" }
+apollo = { package = "apollo-fft", version = "0.25.0", git = "https://github.com/ryancinsight/apollo.git" }
+hephaestus-core = { version = "0.18.0", git = "https://github.com/ryancinsight/hephaestus.git", default-features = false }
+hephaestus-wgpu = { version = "0.18.0", git = "https://github.com/ryancinsight/hephaestus.git", default-features = false, features = ["decomposition"] }
+hephaestus-cuda = { version = "0.18.0", git = "https://github.com/ryancinsight/hephaestus.git", default-features = false }
+hermes-simd = { version = "0.6.0", git = "https://github.com/ryancinsight/hermes.git", default-features = false, features = ["std"] }
+moirai-parallel = { version = "0.4.0", git = "https://github.com/ryancinsight/Moirai.git", default-features = false, features = ["parallel"] }
+themis = { version = "0.10.1", git = "https://github.com/ryancinsight/themis", package = "themis-topology" }
+iris = { package = "iris-viz", version = "0.1.0", git = "https://github.com/ryancinsight/iris" }
+leto = { version = "0.41.0", git = "https://github.com/ryancinsight/leto.git", default-features = false, features = ["std"] }
+leto-ops = { version = "0.41.0", git = "https://github.com/ryancinsight/leto.git", default-features = false, features = ["std"] }
 # Mnemosyne: Allocation / arenas / staging memory (Atlas first-party).
 # `kwavers-core` consumes the arena, backend, and memory-core seam directly
-# (`crates/kwavers-core/src/arena/**`) â€” see ADR 0006 Â§Failure modes for the
+# (`crates/kwavers-core/src/arena/**`) — see ADR 0006 §Failure modes for the
 # `mnemosyne::scratch::ScratchElement for eunomia::Complex<f64>` coupling point.
-mnemosyne-arena = { version = "0.4.0", git = "https://github.com/ryancinsight/Mnemosyne" }
+mnemosyne-arena = { version = "0.3.0", git = "https://github.com/ryancinsight/Mnemosyne" }
 mnemosyne-backend = { version = "0.5.0", git = "https://github.com/ryancinsight/Mnemosyne" }
 # mnemosyne-core is the public crate name; maps to mnemosyne-memory-core package internally.
 mnemosyne-core = { version = "0.2.0", git = "https://github.com/ryancinsight/Mnemosyne", package = "mnemosyne-memory-core" }
@@ -53,7 +54,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 bytemuck = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-gaia = { package = "gaia-mesh", version = "0.4.0", git = "https://github.com/ryancinsight/gaia.git", default-features = false }
+gaia = { version = "0.3.0", git = "https://github.com/ryancinsight/gaia.git", default-features = false }
 tempfile = "3.10"
 proptest = "1.0"
 walkdir = "2.4"
@@ -87,7 +88,7 @@ unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
 [profile.dev]
 # opt-level = 1: basic dead-code elimination, inlining, and loop optimisation.
 # Keeps debug symbols and unoptimised codegen units while making FFT-heavy test
-# kernels (PSTD phase-velocity, KZK conservation) ~5â€“10Ã— faster than opt-level=0.
+# kernels (PSTD phase-velocity, KZK conservation) ~5–10× faster than opt-level=0.
 opt-level = 1
 
 [profile.coverage]
