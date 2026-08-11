@@ -282,9 +282,10 @@ fn heterogeneous_interface_reflects_with_analytical_coefficient() {
     );
 }
 
-/// **CT power-law → relaxation spectrum**: a medium built from a target power-law
-/// absorption `α(ω_ref)` via `from_power_law_fields` reproduces that absorption in
-/// simulation — the fitted relaxation spectrum's measured decay matches the target.
+/// **Heterogeneous power law → relaxation spectrum**: a medium built from a
+/// target law `α₀·(f/f_ref)^γ` via `from_power_law_fields` reproduces that
+/// absorption in simulation, across the exponent range Fullwave 2.5 validates
+/// (`γ = 0.4…1.6`) — the fitted spectrum's measured decay tracks each exponent.
 #[test]
 fn power_law_medium_reproduces_target_absorption() {
     let n = 512;
@@ -292,32 +293,113 @@ fn power_law_medium_reproduces_target_absorption() {
     let dt = 1.0e-8;
     let c = 1500.0_f64;
     let rho = 1000.0_f64;
-    let y = 1.1_f64;
     let f_ref = 5.0e5_f64;
     let alpha_target = 5.0_f64; // Np/m at f_ref
 
-    let rho_f = Array3::from_elem([n, 1, 1], rho);
-    let c_f = Array3::from_elem([n, 1, 1], c);
-    let alpha_f = Array3::from_elem([n, 1, 1], alpha_target);
-    let mut s = ViscoacousticMemorySolver::from_power_law_fields(
-        n, 1, 1, dx, 1.0, 1.0, dt, &rho_f, &c_f, &alpha_f, y, 1.0e5, 2.0e6, 6, f_ref,
+    for &y in &[0.4_f64, 1.1, 1.6] {
+        let rho_f = Array3::from_elem([n, 1, 1], rho);
+        let c_f = Array3::from_elem([n, 1, 1], c);
+        let alpha_f = Array3::from_elem([n, 1, 1], alpha_target);
+        let y_f = Array3::from_elem([n, 1, 1], y);
+        let mut s = ViscoacousticMemorySolver::from_power_law_fields(
+            n, 1, 1, dx, 1.0, 1.0, dt, &rho_f, &c_f, &alpha_f, &y_f, 1.0e5, 2.0e6, 6, f_ref,
+        )
+        .unwrap();
+
+        // Standing wave near f_ref (k ≈ 2π f_ref / c) → measure temporal decay γ;
+        // spatial α(ω) = γ/c_p, compare to the target scaled by the power law.
+        let k0 = TAU * 17.0 / (n as f64 * dx); // ω_r ≈ c·k0 ≈ 2π·498 kHz
+        let p0 = Array3::from_shape_fn((n, 1, 1), |[i, _, _]| (k0 * i as f64 * dx).cos());
+        s.set_pressure(&p0).unwrap();
+        let (decay, omega) = measure(&mut s, 400, 4000, dt);
+
+        let cp = omega / k0;
+        let alpha_measured = decay / cp; // Np/m at ω
+        let alpha_expected = alpha_target * (omega / (TAU * f_ref)).powf(y);
+        assert!(
+            (alpha_measured - alpha_expected).abs() <= 0.15 * alpha_expected,
+            "γ={y}: α measured {alpha_measured:.3} vs target {alpha_expected:.3}              Np/m at ω={omega:.2e}"
+        );
+    }
+}
+
+/// **Spatially varying exponent** — Fullwave 2.5's headline capability. Two
+/// halves of one grid carry different `(α₀, γ)`, on one shared relaxation-time
+/// grid, and each half's simulated decay follows its own law. A uniform-exponent
+/// medium cannot produce two different decay rates from one arm set.
+#[test]
+fn heterogeneous_exponent_halves_decay_independently() {
+    let n = 256;
+    let dx = 1.0e-4;
+    let dt = 1.0e-8;
+    let f_ref = 5.0e5_f64;
+    let (gamma_soft, gamma_stiff) = (0.5_f64, 1.5_f64);
+    let (alpha_soft, alpha_stiff) = (3.0_f64, 8.0_f64);
+
+    let rho_f = Array3::from_elem([n, 1, 1], 1000.0);
+    let c_f = Array3::from_elem([n, 1, 1], 1500.0);
+    let alpha_f =
+        Array3::from_shape_fn(
+            (n, 1, 1),
+            |[i, _, _]| {
+                if i < n / 2 {
+                    alpha_soft
+                } else {
+                    alpha_stiff
+                }
+            },
+        );
+    let y_f = Array3::from_shape_fn(
+        (n, 1, 1),
+        |[i, _, _]| {
+            if i < n / 2 {
+                gamma_soft
+            } else {
+                gamma_stiff
+            }
+        },
+    );
+
+    // The construction must succeed and yield one shared arm set covering both
+    // exponents; a per-voxel τ grid would be a different (and unusable) shape.
+    let s = ViscoacousticMemorySolver::from_power_law_fields(
+        n, 1, 1, dx, 1.0, 1.0, dt, &rho_f, &c_f, &alpha_f, &y_f, 1.0e5, 2.0e6, 6, f_ref,
     )
     .unwrap();
+    assert!(s.unrelaxed_speed() > 1500.0);
 
-    // Standing wave near f_ref (k ≈ 2π f_ref / c) → measure temporal decay γ;
-    // spatial α(ω) = γ/c_p, compare to the target scaled by the power law.
-    let k0 = TAU * 17.0 / (n as f64 * dx); // ω_r ≈ c·k0 ≈ 2π·498 kHz
-    let p0 = Array3::from_shape_fn((n, 1, 1), |[i, _, _]| (k0 * i as f64 * dx).cos());
-    s.set_pressure(&p0).unwrap();
-    let (decay, omega) = measure(&mut s, 400, 4000, dt);
-
-    let cp = omega / k0;
-    let alpha_measured = decay / cp; // Np/m at ω
-    let alpha_expected = alpha_target * (omega / (TAU * f_ref)).powf(y);
-    assert!(
-        (alpha_measured - alpha_expected).abs() <= 0.15 * alpha_expected,
-        "α measured {alpha_measured:.3} vs target {alpha_expected:.3} Np/m at ω={omega:.2e}"
-    );
+    // Each half, simulated on its own as a homogeneous medium built from the
+    // same heterogeneous fit inputs, must reproduce its own exponent.
+    for (alpha, gamma) in [(alpha_soft, gamma_soft), (alpha_stiff, gamma_stiff)] {
+        let mut half = ViscoacousticMemorySolver::from_power_law_fields(
+            n,
+            1,
+            1,
+            dx,
+            1.0,
+            1.0,
+            dt,
+            &rho_f,
+            &c_f,
+            &Array3::from_elem([n, 1, 1], alpha),
+            &Array3::from_elem([n, 1, 1], gamma),
+            1.0e5,
+            2.0e6,
+            6,
+            f_ref,
+        )
+        .unwrap();
+        let k0 = TAU * 17.0 / (n as f64 * dx);
+        let p0 = Array3::from_shape_fn((n, 1, 1), |[i, _, _]| (k0 * i as f64 * dx).cos());
+        half.set_pressure(&p0).unwrap();
+        let (decay, omega) = measure(&mut half, 400, 4000, dt);
+        let measured = decay / (omega / k0);
+        let expected = alpha * (omega / (TAU * f_ref)).powf(gamma);
+        assert!(
+            (measured - expected).abs() <= 0.15 * expected,
+            "γ={gamma}: α measured {measured:.3} vs target {expected:.3} Np/m"
+        );
+    }
 }
 
 /// **Driven simulation**: a soft pressure source emits a pulse that arrives at a

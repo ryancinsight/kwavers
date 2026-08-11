@@ -30,6 +30,7 @@ pub mod dispersion;
 pub mod fractional;
 pub mod histotripsy;
 pub mod power_law;
+pub mod relaxation_fit;
 pub mod spatially_varying;
 pub mod stokes;
 pub mod tissue;
@@ -41,6 +42,10 @@ pub use histotripsy::{
     HistotripsyTissueProperties,
 };
 pub use power_law::{PowerLawAbsorption, PowerLawModel};
+pub use relaxation_fit::{
+    fit_power_law, fit_power_law_fields, FitBand, PowerLawTarget, RelaxationFieldFit,
+    RelaxationSpectrumFit,
+};
 pub use spatially_varying::{AbsorptionStatistics, SpatiallyVaryingAbsorption};
 pub use stokes::{StokesAbsorption, StokesParameters};
 pub use tissue::{
