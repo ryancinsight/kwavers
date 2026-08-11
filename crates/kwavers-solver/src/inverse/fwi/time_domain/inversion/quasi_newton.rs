@@ -4,7 +4,8 @@
 //! with the limited-memory BFGS direction `d = −H·g`, where the implicit
 //! inverse-Hessian `H` is reconstructed from the last `m` model/gradient
 //! correction pairs by the Nocedal two-loop recursion. The recursion itself is
-//! the canonical [`LbfgsMemory`] from `kwavers_math` (SSOT); this module owns
+//! the canonical [`LbfgsMemory`] from
+//! `leto_ops::application::optimization` (provider SSOT); this module owns
 //! only the FWI-specific glue: flattening the 3-D model, running the
 //! forward+adjoint gradient pass, and an Armijo projected line search.
 //!
@@ -21,8 +22,8 @@
 use super::super::{geometry::FwiGeometry, FwiProcessor};
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
-use kwavers_math::LbfgsMemory;
 use leto::Array3;
+use leto_ops::application::optimization::LbfgsMemory;
 
 /// Maximum Armijo backtracking halvings per outer L-BFGS iteration.
 const MAX_LINE_SEARCH: usize = 12;

@@ -1,16 +1,20 @@
 # Project Checklist
 
-## Owner: Codex — KWAVERS-FLOATELEMENT-ROOTS-001 migrate powf root emulation to eunomia FloatElement [patch] — done 2026-08-13
+## Owner: Codex — KW-MAT-043 direct FWI L-BFGS provider ownership [patch] [arch] — in progress 2026-08-11
 
-- [x] Replace 10 `powf`-emulated root sites with the sign-preserving Eunomia
-      `FloatElement` surface across 12 files: `powf(1/3)` → `.cbrt()`,
-      `powf(-0.5)` → `.rsqrt()`, `powf(-1/3)` → `.cbrt().recip()`,
-      `powf(0.25)` → `.nth_root(4)`, `powf(1/20)` → `.nth_root(20)`.
-- [x] Add the `eunomia` dependency to `kwavers-driver` (`[dependencies]`) and
-      `kwavers-core` (`[dev-dependencies]`); drop the unused `FloatElement`
-      import in `clearance.rs` (inherent `f64::cbrt`/`recip`).
-- [x] Verify `cargo check --all-targets --offline` rc=0 and the full suite
-      passes 6130/6130 (15 skipped). Merged as kwavers PR #364 (`1cb63974`).
+- [x] Confirm the duplicate `kwavers-math` implementation is absent at the
+      current baseline and inspect the provider API introduced by Leto PR #96.
+- [x] Replace direct FWI and elastic-FWI `kwavers_math::LbfgsMemory` imports
+      with `leto_ops::application::optimization::LbfgsMemory`.
+- [x] Add value-semantic direction equivalence after ring eviction and a
+      bounded-memory regression over repeated accepted pairs.
+- [x] Run exact-file `rustfmt --check` and the ownership/residual scans.
+- [ ] Run focused Nextest, doctests, strict Clippy, and the `kwavers-solver`
+      consumer check; all four currently stop before compilation because the
+      shared dirty graph resolves `hermes-simd ^0.5.0` against only cached
+      `0.6.0`.
+- [ ] Close the backlog item and synchronize the gap audit and changelog with
+      final evidence.
 
 ## Owner: Codex — KWAVERS-AEQ-MET-67 thermal-acoustic coupling quantities [major] [arch] — done 2026-08-05
 
