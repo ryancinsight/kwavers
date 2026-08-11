@@ -4,6 +4,10 @@
 
 ### Changed
 
+- `kwavers-solver` FWI and elastic-FWI L-BFGS callers now use the direct
+  provider-owned `leto_ops::application::optimization::LbfgsMemory` API.
+  Focused tests cover direction equivalence after eviction and bounded memory;
+  the superseded consumer implementation remains absent.
 - **Security:** Align the Kwavers provider lock with Ritk's Eunomia 0.8
   cutover (`cfeebc7`) and upgrade the unused top-level zero-copy rkyv edge to
   0.8. The all-features lock contains no rkyv 0.7 path; Eunomia real/complex

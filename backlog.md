@@ -23,6 +23,24 @@
 | KWAVERS-AEQ-MET-54 | Type the public ultrafast transmission scheduler's speed, depth, PRF, event times, frame rates, and tilt angles with Aequitas; keep scalar extraction at the PRF/timing formula boundary and document the real-only Eunomia compatibility rule. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-transducer/src/ultrafast/sequencer/**`, manifest, ADR 093, PM artifacts |
 | KWAVERS-AEQ-INTEGRATION-1 | Integrate the current Aequitas metric closure for therapeutic microbubble and plasmonics contracts on current `main`; harden the public three-dimensional plasmonic coordinate contract and synchronize the audit. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-physics/src/{acoustics/therapy/microbubble,electromagnetic}`, PM artifacts |
 
+## KW-MAT-043 — Direct FWI L-BFGS provider ownership [patch] [arch] — in progress 2026-08-11
+
+- Owner: Codex. Scope: the two FWI production callers, the focused FWI
+  L-BFGS tests, the existing `kwavers-math` optimization path, and the
+  synchronized PM artifacts.
+- Outcome: use `leto_ops::application::optimization::LbfgsMemory` directly in
+  every in-scope FWI caller. The consumer owns no adapter, fallback, or
+  duplicate memory implementation.
+- Baseline: `crates/kwavers-math/src/optimization/lbfgs.rs` is already absent
+  from the current tree and was deleted by the prior math SSOT migration;
+  this item must not recreate it. The existing public `kwavers-math`
+  re-export remains outside this FWI caller cutover.
+- Acceptance: direct provider imports replace all FWI-local imports; focused
+  tests prove value-equivalent two-loop directions after eviction and a hard
+  memory bound; affected package formatting, Nextest, doctests, strict
+  Clippy, and the consumer check run against the delivered source or record
+  the exact infrastructure blocker.
+
 ## KWAVERS-AEQ-MET-69 — Type B-mode scan-conversion geometry [major] [arch] — in progress 2026-08-06
 
 - Owner: Codex; scope: `crates/kwavers-analysis/src/signal_processing/b_mode/`,

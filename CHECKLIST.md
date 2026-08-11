@@ -1,5 +1,21 @@
 # Project Checklist
 
+## Owner: Codex — KW-MAT-043 direct FWI L-BFGS provider ownership [patch] [arch] — in progress 2026-08-11
+
+- [x] Confirm the duplicate `kwavers-math` implementation is absent at the
+      current baseline and inspect the provider API introduced by Leto PR #96.
+- [x] Replace direct FWI and elastic-FWI `kwavers_math::LbfgsMemory` imports
+      with `leto_ops::application::optimization::LbfgsMemory`.
+- [x] Add value-semantic direction equivalence after ring eviction and a
+      bounded-memory regression over repeated accepted pairs.
+- [x] Run exact-file `rustfmt --check` and the ownership/residual scans.
+- [ ] Run focused Nextest, doctests, strict Clippy, and the `kwavers-solver`
+      consumer check; all four currently stop before compilation because the
+      shared dirty graph resolves `hermes-simd ^0.5.0` against only cached
+      `0.6.0`.
+- [ ] Close the backlog item and synchronize the gap audit and changelog with
+      final evidence.
+
 ## Owner: Codex — KWAVERS-AEQ-MET-67 thermal-acoustic coupling quantities [major] [arch] — done 2026-08-05
 
 - [x] Type temperature coefficient slopes, absorption heating, streaming,
