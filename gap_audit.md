@@ -6379,8 +6379,11 @@ memory window evicts older pairs and assert the retained pair count remains
 bounded under repeated pushes.
 
 Exact-file `rustfmt --check`, the direct-import scan, the duplicate-path scan,
-and `git diff --check` pass. The affected `cargo nextest`, `cargo test --doc`,
-`cargo clippy`, and `cargo check -p kwavers-solver --no-default-features`
+and `git diff --check` pass. Package-wide `cargo fmt --package
+kwavers-solver -- --check` also reports unrelated peer-owned PINN formatting
+changes; the touched files pass exact-file formatting. The affected `cargo
+nextest`, `cargo test --doc`, `cargo clippy`, and `cargo check
+-p kwavers-solver --no-default-features`
 attempts all stop before compilation because the current dirty dependency
 graph resolves `hermes-simd ^0.5.0` while the available git candidate is
 `0.6.0`. This is an infrastructure blocker, not a Kwavers source diagnostic;
