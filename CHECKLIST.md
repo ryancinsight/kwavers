@@ -9,6 +9,9 @@
 - [x] Add value-semantic direction equivalence after ring eviction and a
       bounded-memory regression over repeated accepted pairs.
 - [x] Run exact-file `rustfmt --check` and the ownership/residual scans.
+- [ ] Package-wide `cargo fmt --package kwavers-solver -- --check` remains
+      blocked by unrelated peer-owned PINN formatting changes; the touched
+      files pass exact-file formatting.
 - [ ] Run focused Nextest, doctests, strict Clippy, and the `kwavers-solver`
       consumer check; all four currently stop before compilation because the
       shared dirty graph resolves `hermes-simd ^0.5.0` against only cached
