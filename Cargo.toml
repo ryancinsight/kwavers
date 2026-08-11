@@ -29,7 +29,7 @@ apollo = { package = "apollo-fft", version = "0.25.0", git = "https://github.com
 hephaestus-core = { version = "0.18.0", git = "https://github.com/ryancinsight/hephaestus.git", default-features = false }
 hephaestus-wgpu = { version = "0.18.0", git = "https://github.com/ryancinsight/hephaestus.git", default-features = false, features = ["decomposition"] }
 hephaestus-cuda = { version = "0.18.0", git = "https://github.com/ryancinsight/hephaestus.git", default-features = false }
-hermes-simd = { version = "0.5.0", git = "https://github.com/ryancinsight/hermes.git", default-features = false, features = ["std"] }
+hermes-simd = { version = "0.6.0", git = "https://github.com/ryancinsight/hermes.git", default-features = false, features = ["std"] }
 moirai-parallel = { version = "0.4.0", git = "https://github.com/ryancinsight/Moirai.git", default-features = false, features = ["parallel"] }
 themis = { version = "0.10.1", git = "https://github.com/ryancinsight/themis", package = "themis-topology" }
 iris = { package = "iris-viz", version = "0.1.0", git = "https://github.com/ryancinsight/iris" }
