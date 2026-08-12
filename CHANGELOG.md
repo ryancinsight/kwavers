@@ -5,7 +5,11 @@
 ### Added
 
 - Heterogeneous power-law attenuation in which the **exponent** varies per
-  voxel, matching the modelling capability of Fullwave 2.5. The new
+  voxel, for the **viscoacoustic** solver, matching the modelling capability of
+  Fullwave 2.5. (The PSTD path already had a heterogeneous-exponent
+  realization — the stratified fractional Laplacian; the two differ in cost and
+  applicability, and book §4.8.5 gives the selection rule. The FDTD path has
+  neither, tracked as KW-SOL-079.) The new
   `kwavers_medium::absorption::relaxation_fit` fits a non-negative relaxation
   spectrum to `α₀(x)·(f/f_ref)^γ(x)` on a shared relaxation-time grid, and
   calibrates each voxel's equilibrium modulus against the dispersive phase

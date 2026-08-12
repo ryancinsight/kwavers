@@ -860,7 +860,7 @@ tissue pipeline to the broadband solver. It realizes a **fully heterogeneous** p
 $\alpha(\mathbf x, f) = \alpha_0(\mathbf x)\,(f/f_{\text{ref}})^{\gamma(\mathbf x)}$ in which the
 **exponent varies voxel to voxel**, not merely the coefficient — the regime measured in abdominal
 wall, where fat and muscle differ in $\gamma$ as much as in $\alpha_0$. The fit lives in
-`kwavers_medium::absorption::relaxation_fit` and is described in §4.8.5.
+`kwavers_medium::absorption::relaxation_fit` and is described in §4.8.6.
 
 For **driven simulations**, `add_pressure_source(index, signal)` registers a soft (additive)
 pressure source (`p[index] += signal[step]`) and `add_pressure_sensor(index)` records the pressure
@@ -873,7 +873,25 @@ damp in every direction). A pulse launched at the boundary is absorbed rather th
 test confirms $<10\%$ of the energy survives with the layer versus the conserved (wrapped) energy
 without it.
 
-### 4.8.5 Fitting a relaxation spectrum to a heterogeneous power law
+### 4.8.5 Which realization of heterogeneous absorption to use
+
+Heterogeneous $\gamma(\mathbf{x})$ has **two** independent realizations in kwavers, one per
+time-stepping family, and they are not interchangeable:
+
+| solver | mechanism | per-step cost of heterogeneity | home |
+|---|---|---|---|
+| PSTD | stratified fractional Laplacian — $M$ spectral symbols $\lvert k\rvert^{y-s}$ blended per voxel | $M$ inverse FFTs per Laplacian ($M \le 8$) | `pstd::physics::absorption::strata` (§4.4.3) |
+| `ViscoacousticMemorySolver` | relaxation memory variables on one shared $\tau$ grid | one auxiliary field per arm, **no transform** | `relaxation_fit` (below) |
+| FDTD | — | — | *absent; see backlog KW-SOL-079* |
+
+The split is forced by the mathematics, not by taste. The fractional Laplacian's symbol
+$\lvert k\rvert^{y-s}$ is global in $k$, so a spectral solver can only carry one exponent per
+transform — stratification works around that by blending a few. The memory-variable form is purely
+local in space, so it costs no transform at all, which is why it is the realization that can be
+partitioned across devices (KW-GPU-078) and the one an FDTD path would use. Fullwave 2.5 is an FDTD
+code and takes exactly this route.
+
+### 4.8.6 Fitting a relaxation spectrum to a heterogeneous power law
 
 The Fung weighting of §4.8.3 reproduces the exponent only asymptotically in the band interior and
 only for $\gamma$ near unity. Across the range tissue actually spans — $\gamma \approx 0.4$ in some

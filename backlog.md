@@ -23,6 +23,71 @@
 | KWAVERS-AEQ-MET-54 | Type the public ultrafast transmission scheduler's speed, depth, PRF, event times, frame rates, and tilt angles with Aequitas; keep scalar extraction at the PRF/timing formula boundary and document the real-only Eunomia compatibility rule. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-transducer/src/ultrafast/sequencer/**`, manifest, ADR 093, PM artifacts |
 | KWAVERS-AEQ-INTEGRATION-1 | Integrate the current Aequitas metric closure for therapeutic microbubble and plasmonics contracts on current `main`; harden the public three-dimensional plasmonic coordinate contract and synchronize the audit. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-physics/src/{acoustics/therapy/microbubble,electromagnetic}`, PM artifacts |
 
+## KW-SOL-079 — Give the FDTD solver heterogeneous power-law absorption [minor] — todo
+
+- The FDTD path has **no absorption module at all**: `forward/fdtd/` contains no
+  absorption or attenuation source file, and `update_pressure_cpu` is the
+  lossless `p -= dt * rho_c_squared * div(v)` in all three of its branches
+  (k-space ops, staggered, central-difference). PSTD has the stratified
+  fractional Laplacian and the viscoacoustic solver has relaxation memory
+  variables; FDTD has neither. Fullwave 2.5 is an FDTD code whose entire
+  attenuation story is relaxation mechanisms, so this is the squarest remaining
+  parity gap.
+- Mechanism: relaxation memory variables, not a fractional Laplacian. The
+  fractional operator needs `IFFT(|k|^(y-s) FFT(.))`, which an FDTD path has no
+  transform for; memory variables are local in space, which is also what makes
+  them partitionable across devices (KW-GPU-078). `kwavers-medium`'s
+  `relaxation_fit` already produces exactly the per-voxel arm fields required.
+- Hook point (read 2026-08-12): all three branches of
+  `pressure_updater::update::update_pressure_cpu` land the divergence in a
+  single buffer before calling `update_pressure_simd`. That is the one place to
+  advance the arms and subtract their contribution, mirroring the viscoacoustic
+  solver's step with FD derivatives in place of spectral ones.
+- Design decisions to settle first:
+  1. **Modulus swap.** With relaxation the pressure update uses the *unrelaxed*
+     modulus `M_U = M_inf + sum(dM)`, not `rho_c_squared`. Enabling absorption
+     therefore changes what that cached field must hold; decide whether to
+     rebuild it or carry `M_U` alongside.
+  2. **CPML interaction.** The CPML gradient correction is applied to the
+     divergence components before accumulation. Confirm the arms see the
+     corrected divergence, since the memory variables must be driven by the same
+     `div(v)` the pressure update uses or the two go out of step inside the
+     layer.
+  3. **SIMD and GPU paths.** `update_pressure_simd` and `update_pressure_gpu`
+     both need the relaxation term, or absorption silently disappears when
+     either path is selected - the failure mode being a quiet accuracy loss
+     rather than an error.
+- Sequencing: independent of KW-SOL-074 (order affects the stencil, not the
+  absorption), but shares the pressure updater, so land one before starting the
+  other. `forward/fdtd/avx512_stencil/` remains nominally claimed by KW-SOL-054,
+  whose last commit was 2026-07-22 - stale, and reclaimable under the
+  stale-claim rule if the SIMD path needs touching.
+- Acceptance: a homogeneous FDTD run reproduces a prescribed alpha_0*f^gamma by
+  spectral ratio across 0.5-5 MHz to the same tolerance the viscoacoustic path
+  meets; a two-material grid with different exponents follows the path-weighted
+  law; the lossless path stays bit-identical when no absorption is configured.
+
+## KW-SOL-080 — Differential test across the two heterogeneous-absorption paths [patch] — todo
+
+- PSTD's stratified fractional Laplacian and the viscoacoustic solver's
+  relaxation memory variables are two *independent* implementations of the same
+  physics: heterogeneous alpha_0(x)*f^gamma(x). Neither is currently checked
+  against the other, so a systematic error in either would go unnoticed - each
+  is verified only against its own analytic target.
+- Build: one heterogeneous medium (two tissues with different exponents), the
+  same broadband excitation and sensor geometry, run through both solvers, and
+  compare the recovered alpha(f) by the reference-normalized spectral ratio the
+  `heterogeneous_power_law_attenuation` example already implements.
+- Tolerance is derived, not chosen: the fit's own analytic error (0.16 % at
+  three optimized arms) plus each scheme's time-discretization error
+  (0.117*(omega_max*dt)^2 for the viscoacoustic leapfrog, per KW-SOL-077;
+  PSTD's own bound for its path). Agreement inside that budget is the pass
+  condition; a systematic offset larger than it is a real finding in one of the
+  two.
+- This is the independent-oracle tier of the evidence ladder. Two backends
+  running the same algorithm would be differential evidence only; these two run
+  genuinely different mathematics for the same physical law, which is stronger.
+
 ## KW-GPU-078 — Partition a wave grid across GPUs [major] [arch] — todo
 
 - Confirmed gap against Fullwave 2.5, whose multi-GPU depth decomposition with
@@ -227,9 +292,17 @@
   crate, manifest, or gitlink changes.
 - Driver: replicate Fullwave 2.5 (pinton-lab/fullwave25) heterogeneous
   attenuation, whose stated advance over uniform-exponent models is that both
-  the coefficient *and the exponent* vary spatially. kwavers previously carried
-  a spatially varying alpha_0 with a scalar exponent and Fung tau^{1-y} weights
-  calibrated at a single frequency.
+  the coefficient *and the exponent* vary spatially. The **viscoacoustic**
+  path previously carried a spatially varying alpha_0 with a scalar exponent and
+  Fung tau^{1-y} weights calibrated at a single frequency.
+- Correction 2026-08-12: an earlier version of this entry read as though kwavers
+  had no heterogeneous-exponent capability at all. That was wrong - the PSTD
+  path already had one, the stratified fractional Laplacian in
+  `pstd::physics::absorption::strata`, verified by
+  `stratified_exponent_matches_per_tissue_uniform_operator`. This item is the
+  *viscoacoustic* realization, which is the one that needs no transform and so
+  is the route an FDTD or multi-device path would take. Book 4.8.5 now presents
+  both with a selection rule instead of implying one mechanism.
 - Outcome: `absorption::relaxation_fit` fits a non-negative relaxation spectrum
   to alpha_0(x)*(f/f_ref)^gamma(x) on a shared log-spaced tau grid by
   column-equilibrated, Tikhonov-damped Lawson-Hanson NNLS on the
