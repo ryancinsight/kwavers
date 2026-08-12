@@ -2022,8 +2022,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "gaia"
-version = "0.3.0"
+name = "gaia-mesh"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "eunomia",
@@ -3111,7 +3111,7 @@ dependencies = [
  "eunomia",
  "flate2",
  "flume",
- "gaia",
+ "gaia-mesh",
  "hephaestus-wgpu",
  "hermes-simd",
  "hyperion",
@@ -3399,7 +3399,7 @@ name = "kwavers-mesh"
 version = "3.0.0"
 dependencies = [
  "eunomia",
- "gaia",
+ "gaia-mesh",
  "kwavers-core",
  "kwavers-grid",
  "leto",
@@ -5373,7 +5373,7 @@ dependencies = [
 
 [[package]]
 name = "ritk-analyze"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "coeus-core",
@@ -5385,7 +5385,7 @@ dependencies = [
 
 [[package]]
 name = "ritk-annotation"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "ritk-spatial",
  "serde",
@@ -5395,7 +5395,7 @@ dependencies = [
 
 [[package]]
 name = "ritk-codecs"
-version = "0.5.3"
+version = "0.6.0"
 dependencies = [
  "anyhow",
  "jpeg-decoder",
@@ -5403,7 +5403,7 @@ dependencies = [
 
 [[package]]
 name = "ritk-core"
-version = "0.9.0"
+version = "0.10.0"
 dependencies = [
  "coeus-core",
  "coeus-tensor",
@@ -5417,7 +5417,7 @@ dependencies = [
 
 [[package]]
 name = "ritk-dicom"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "arrayvec",
@@ -5430,7 +5430,7 @@ dependencies = [
 
 [[package]]
 name = "ritk-diffusion-scheme"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "aequitas",
  "ritk-spatial",
@@ -5439,7 +5439,7 @@ dependencies = [
 
 [[package]]
 name = "ritk-filter"
-version = "0.2.60"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "apollo-fft",
@@ -5447,7 +5447,7 @@ dependencies = [
  "coeus-ops",
  "coeus-tensor",
  "eunomia",
- "gaia",
+ "gaia-mesh",
  "moirai-runtime",
  "rand 0.9.5",
  "ritk-annotation",
@@ -5465,7 +5465,7 @@ dependencies = [
 
 [[package]]
 name = "ritk-image"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "coeus-autograd",
@@ -5481,7 +5481,7 @@ dependencies = [
 
 [[package]]
 name = "ritk-interpolation"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "coeus-core",
@@ -5498,7 +5498,7 @@ dependencies = [
 
 [[package]]
 name = "ritk-io"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "arrayvec",
@@ -5513,7 +5513,7 @@ dependencies = [
  "dicom-transfer-syntax-registry",
  "dicom-ul",
  "flate2",
- "gaia",
+ "gaia-mesh",
  "image",
  "moirai-runtime",
  "reqwest",
@@ -5543,7 +5543,7 @@ dependencies = [
 
 [[package]]
 name = "ritk-jpeg"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "coeus-core",
@@ -5555,7 +5555,7 @@ dependencies = [
 
 [[package]]
 name = "ritk-metaimage"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "bytemuck",
@@ -5568,7 +5568,7 @@ dependencies = [
 
 [[package]]
 name = "ritk-mgh"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "coeus-core",
@@ -5580,7 +5580,7 @@ dependencies = [
 
 [[package]]
 name = "ritk-minc"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "coeus-core",
@@ -5594,7 +5594,7 @@ dependencies = [
 
 [[package]]
 name = "ritk-model"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "bytemuck",
  "coeus-autograd",
@@ -5616,11 +5616,11 @@ dependencies = [
 
 [[package]]
 name = "ritk-morphology"
-version = "0.1.0"
+version = "0.2.0"
 
 [[package]]
 name = "ritk-nifti"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "coeus-core",
@@ -5632,7 +5632,7 @@ dependencies = [
 
 [[package]]
 name = "ritk-nrrd"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "bytemuck",
@@ -5646,7 +5646,7 @@ dependencies = [
 
 [[package]]
 name = "ritk-png"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "coeus-core",
@@ -5657,7 +5657,7 @@ dependencies = [
 
 [[package]]
 name = "ritk-registration"
-version = "0.53.0"
+version = "0.54.0"
 dependencies = [
  "anyhow",
  "bytemuck",
@@ -5689,7 +5689,7 @@ dependencies = [
 
 [[package]]
 name = "ritk-segmentation"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "coeus-core",
@@ -5706,7 +5706,7 @@ dependencies = [
 
 [[package]]
 name = "ritk-spatial"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "leto",
  "serde",
@@ -5715,7 +5715,7 @@ dependencies = [
 
 [[package]]
 name = "ritk-statistics"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "coeus-core",
@@ -5729,7 +5729,7 @@ dependencies = [
 
 [[package]]
 name = "ritk-tensor-ops"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "coeus-core",
@@ -5743,7 +5743,7 @@ dependencies = [
 
 [[package]]
 name = "ritk-tiff"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "coeus-core",
@@ -5754,7 +5754,7 @@ dependencies = [
 
 [[package]]
 name = "ritk-transform"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "coeus-autograd",
  "coeus-core",
@@ -5774,12 +5774,12 @@ dependencies = [
 
 [[package]]
 name = "ritk-vtk"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "coeus-core",
  "consus-io",
- "gaia",
+ "gaia-mesh",
  "iris-viz",
  "ritk-image",
  "ritk-spatial",
@@ -5789,7 +5789,7 @@ dependencies = [
 
 [[package]]
 name = "ritk-wgpu-compat"
-version = "0.1.0"
+version = "0.2.0"
 
 [[package]]
 name = "rkyv"
@@ -7872,15 +7872,27 @@ dependencies = [
 ]
 
 [[patch.unused]]
+name = "asclepius-coeus"
+version = "0.1.0"
+
+[[patch.unused]]
+name = "consus-zarr"
+version = "0.1.0"
+
+[[patch.unused]]
+name = "hephaestus-metal"
+version = "0.19.0"
+
+[[patch.unused]]
+name = "hephaestus-rocm"
+version = "0.19.0"
+
+[[patch.unused]]
 name = "athena-core"
 version = "0.1.0"
 
 [[patch.unused]]
 name = "athena-leto"
-version = "0.1.0"
-
-[[patch.unused]]
-name = "asclepius-coeus"
 version = "0.1.0"
 
 [[patch.unused]]
@@ -7892,17 +7904,9 @@ name = "apollo-sht"
 version = "0.7.0"
 
 [[patch.unused]]
-name = "moirai-http"
-version = "0.5.0"
-
-[[patch.unused]]
-name = "hephaestus-metal"
-version = "0.19.0"
-
-[[patch.unused]]
-name = "hephaestus-rocm"
-version = "0.19.0"
-
-[[patch.unused]]
 name = "horae"
 version = "0.1.0"
+
+[[patch.unused]]
+name = "moirai-http"
+version = "0.5.0"

@@ -14,11 +14,11 @@ horae = { version = "0.1.0", git = "https://github.com/ryancinsight/horae" }
 # These repos carry their own [workspace], so Cargo resolves their internal
 # inheritance against THEIR roots â€” no path scaffolding needed here. SSOT: members
 # inherit via `{ workspace = true }`.
-ritk-core = { version = "0.9.0", git = "https://github.com/ryancinsight/ritk.git" }
-ritk-io = { version = "0.2.0", git = "https://github.com/ryancinsight/ritk.git" }
-ritk-image = { version = "0.2.0", git = "https://github.com/ryancinsight/ritk.git" }
-ritk-spatial = { version = "0.1.0", git = "https://github.com/ryancinsight/ritk.git" }
-ritk-registration = { version = "0.53.0", git = "https://github.com/ryancinsight/ritk.git" }
+ritk-core = { version = "0.10.0", git = "https://github.com/ryancinsight/ritk.git" }
+ritk-io = { version = "0.3.0", git = "https://github.com/ryancinsight/ritk.git" }
+ritk-image = { version = "0.3.0", git = "https://github.com/ryancinsight/ritk.git" }
+ritk-spatial = { version = "0.2.0", git = "https://github.com/ryancinsight/ritk.git" }
+ritk-registration = { version = "0.54.0", git = "https://github.com/ryancinsight/ritk.git" }
 coeus-core = { version = "0.10.0", git = "https://github.com/ryancinsight/Coeus.git" }
 coeus-tensor = { version = "0.10.0", git = "https://github.com/ryancinsight/Coeus.git" }
 coeus-autograd = { version = "0.10.0", git = "https://github.com/ryancinsight/Coeus.git" }
@@ -52,7 +52,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 bytemuck = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-gaia = { version = "0.3.0", git = "https://github.com/ryancinsight/gaia.git", default-features = false }
+gaia = { package = "gaia-mesh", version = "0.4.0", git = "https://github.com/ryancinsight/gaia.git", default-features = false }
 tempfile = "3.10"
 proptest = "1.0"
 walkdir = "2.4"

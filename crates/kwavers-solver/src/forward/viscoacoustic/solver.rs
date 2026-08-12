@@ -189,8 +189,14 @@ impl ViscoacousticMemorySolver {
     /// equilibrium modulus `M_∞(x)`, and relaxation arms `(ΔMₗ(x), τₗ(x))` (all of
     /// grid shape). This lets a CT-derived tissue model (§4.5) drive the broadband
     /// solver with spatially-varying viscoacoustic properties.
+    ///
+    /// A zero-strength arm is inert (an exactly lossless voxel), so `ΔM` is
+    /// only required non-negative; a heterogeneous medium may contain lossless
+    /// regions alongside absorbing ones.
+    ///
     /// # Errors
-    /// - Any field shape ≠ `(nx,ny,nz)`, a non-positive `ρ`/`M_∞`/`ΔM`/`τ`, or
+    /// - Any field shape ≠ `(nx,ny,nz)`, a non-positive `ρ`/`M_∞`/`τ`, a
+    ///   negative `ΔM`, or
     ///   non-positive grid/spacing/`dt`.
     #[allow(clippy::too_many_arguments)]
     pub fn new_heterogeneous(
@@ -224,11 +230,11 @@ impl ViscoacousticMemorySolver {
         if arms.iter().any(|(dm, tau)| {
             !ok_shape(dm)
                 || !ok_shape(tau)
-                || dm.iter().any(|&v| v <= 0.0)
+                || dm.iter().any(|&v| v < 0.0)
                 || tau.iter().any(|&v| v <= 0.0)
         }) {
             return Err(KwaversError::InvalidInput(
-                "relaxation arm fields must be grid-shaped with ΔM>0 and τ>0".to_owned(),
+                "relaxation arm fields must be grid-shaped with ΔM≥0 and τ>0".to_owned(),
             ));
         }
 
