@@ -23,6 +23,41 @@
 | KWAVERS-AEQ-MET-54 | Type the public ultrafast transmission scheduler's speed, depth, PRF, event times, frame rates, and tilt angles with Aequitas; keep scalar extraction at the PRF/timing formula boundary and document the real-only Eunomia compatibility rule. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-transducer/src/ultrafast/sequencer/**`, manifest, ADR 093, PM artifacts |
 | KWAVERS-AEQ-INTEGRATION-1 | Integrate the current Aequitas metric closure for therapeutic microbubble and plasmonics contracts on current `main`; harden the public three-dimensional plasmonic coordinate contract and synchronize the audit. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-physics/src/{acoustics/therapy/microbubble,electromagnetic}`, PM artifacts |
 
+## KW-MED-075 — Optimize relaxation times jointly with strengths [minor] — done 2026-08-12
+
+- Owner: Claude; scope `crates/kwavers-medium/src/absorption/relaxation_fit{.rs,/tests.rs}`,
+  the absorption re-exports, `crates/kwavers/examples/heterogeneous_power_law_attenuation.rs`,
+  book 4.8.5, CHANGELOG. No solver signature change.
+- Driver: Fullwave 2.5 ships `relaxation_params_database_num_relax=2`, i.e. it
+  reaches its accuracy on **two** relaxation mechanisms. kwavers placed tau on a
+  fixed log grid and fitted strengths only, which needs six arms; at two arms it
+  missed by 30 %. Arm count is the binding constraint on a 3-D heterogeneous run
+  because the solver carries one memory field per arm per voxel.
+- Outcome: `RelaxationTimePlacement::{LogSpaced, Optimized}`. Optimized runs a
+  deterministic Nelder-Mead simplex on ln(tau) whose every trial recovers the
+  strengths exactly by NNLS (variable projection, Golub & Pereyra 1973), seeded
+  by the log grid so it can never be worse. Measured worst case over
+  gamma = 0.4..1.6: 2 arms 29.9 % -> 2.0 %; 3 arms 2.6 % -> 0.16 %; 6 arms
+  0.09 % -> 0.004 %. Three optimized arms beat six log-spaced ones, halving the
+  solver's auxiliary storage; the example now runs at 3 arms with no measurable
+  loss (worst case 3.0 % -> 3.4 %, and that residual is measurement-limited).
+- Defect found and fixed during the change: the first cut optimized tau **per
+  voxel**, silently breaking the shared-grid invariant the solver's field layout
+  depends on (per-voxel weights were being paired with the band's log-spaced
+  times). `heterogeneous_exponent_field_is_fitted_per_voxel` caught it. The field
+  fit now runs one *minimax* search over every distinct voxel and solves each
+  voxel's strengths on that shared grid; `fit_at_taus` is the single point at
+  which a spectrum is constructed, so the per-voxel and whole-field paths cannot
+  drift again.
+- Performance: the search costs one Nelder-Mead run per medium (not per voxel).
+  Search-time refinement passes are cut from 6 to 3 (the fixed point is stable to
+  six digits by the third) and the simplex converges at 1e-4 relative rather than
+  1e-9; the fit test suite runs in 3.6 s against 15.9 s for the naive settings.
+- Acceptance (met): 17 tests including two-arm envelope coverage, optimized never
+  worse than log-spaced at any arm count, bit-identical determinism across runs,
+  one shared grid across a heterogeneous field with the sharing cost measured
+  rather than assumed, and a lossless voxel alongside lossy ones taking no arms.
+
 ## KW-MATH-073 — Derived staggered stencil coefficients to arbitrary even order [minor] — done 2026-08-12
 
 - Owner: Claude; scope

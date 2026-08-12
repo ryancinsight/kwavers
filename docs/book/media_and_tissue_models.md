@@ -914,6 +914,35 @@ fields serve a medium containing any mixture of exponents. Voxels whose five def
 ($\alpha_0$, $\gamma$, $f_{\text{ref}}$, $c_0$, $\rho$) are bit-identical share one fit, so a
 tissue-labelled medium costs one NNLS solve per distinct tissue.
 
+**Placing the relaxation times.** Fixing $\tau_l$ on a log grid keeps the fit linear but wastes
+arms — two arms cannot span a decade that way and miss by ~30 %. Since the strengths follow from
+the times by one least-squares solve, the times can be searched over directly with the strengths
+eliminated at every trial: the **variable-projection** structure (Golub & Pereyra 1973).
+`RelaxationTimePlacement::Optimized` does this with a deterministic Nelder–Mead simplex on
+$\ln\tau$ seeded by the log grid, so it can never be worse than the grid it starts from. The
+effect is on accuracy *per arm*:
+
+| arms | log-spaced | optimized |
+|---|---|---|
+| 2 | 29.9 % | **2.0 %** |
+| 3 | 2.6 % | **0.16 %** |
+| 4 | 0.77 % | **0.07 %** |
+| 6 | 0.09 % | **0.004 %** |
+
+(worst case over $\gamma = 0.4\ldots1.6$ at $\alpha_0 = 0.5$ dB cm$^{-1}$ MHz$^{-\gamma}$ across
+0.5–5 MHz.) Arm count, not fit quality, is the binding constraint on a 3-D heterogeneous run — the
+solver carries one memory field per arm *per voxel* — so three optimized arms beating six
+log-spaced ones is a halving of the solver's auxiliary storage. Fullwave 2.5 arrives at the same
+place from the other direction: it ships a precomputed relaxation-parameter database fitted at two
+mechanisms.
+
+For a heterogeneous medium the times must be **one grid for the whole domain**, since per-voxel
+times are not representable in the solver's field layout. `fit_power_law_fields` therefore runs a
+single *minimax* search over every distinct voxel present, rather than optimizing each voxel
+independently, and the reported error is the worst any voxel suffers on the grid they all share.
+Sharing costs little: four voxels spanning $\gamma = 0.5\ldots1.5$ on three shared arms reach 1.0 %
+against 0.3 % for private grids.
+
 **Time-step selection.** Von Neumann analysis of the memory-variable update (leapfrog velocity,
 exponentially integrated $\sigma$, trapezoidal relaxation term in the pressure update) gives the
 exact discrete relation
@@ -945,8 +974,10 @@ prescribed decay at $\gamma = 0.4$, $1.1$, and $1.6$, and two halves of one grid
 $(\alpha_0, \gamma)$ each follow their own law on one shared arm set. The
 `heterogeneous_power_law_attenuation` example measures the realized $\alpha(f)$ from a propagating
 broadband pulse by a reference-normalized two-sensor spectral ratio, recovering the prescribed law
-to 3.0 % worst case (0.35 % across the band interior) over the whole envelope, and matching the
-exact path-weighted prediction for a fat/muscle stack whose exponent varies along the path to 0.9 %.
+to 3.4 % worst case (0.5 % across the band interior) over the whole envelope, and matching the
+exact path-weighted prediction for a fat/muscle stack whose exponent varies along the path to 1.0 %
+— on three relaxation arms, where the residual is measurement-limited rather than fit-limited
+(six arms move the worst case only to 3.0 %).
 
 One measurement caveat is worth carrying to any spectral-ratio attenuation estimate: the analysis
 gate must **not** be tapered. A dispersive medium broadens the far-sensor pulse relative to the

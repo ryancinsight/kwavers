@@ -325,3 +325,196 @@ fn rejects_mismatched_field_shapes() {
     assert!(fit_power_law_fields(&a, &g, &c, &r, F_REF, &band).is_err());
 }
 
+fn band_with(n_arms: usize, placement: RelaxationTimePlacement) -> FitBand {
+    let mut band = FitBand::new(0.5e6, 5.0e6, n_arms).expect("valid band");
+    band.placement = placement;
+    band
+}
+
+/// **Two relaxation mechanisms suffice.** Fullwave 2.5 ships a database fitted
+/// at `num_relax = 2`; matching that arm count is what makes the memory cost of
+/// a heterogeneous run tractable, since the time-domain solver carries one field
+/// per arm per voxel.
+///
+/// On a fixed log-spaced grid two arms cannot span a decade — the error is ~30 %.
+/// Optimizing the times brings the same two arms to under 3 %, which is the
+/// capability this placement exists to provide.
+#[test]
+fn two_optimized_arms_cover_the_envelope() {
+    let optimized = band_with(2, RelaxationTimePlacement::Optimized);
+    let log_spaced = band_with(2, RelaxationTimePlacement::LogSpaced);
+
+    let mut worst_optimized = 0.0_f64;
+    let mut worst_log_spaced = 0.0_f64;
+    for &gamma in &[0.4, 0.7, 1.0, 1.3, 1.6] {
+        let t = target(0.5, gamma);
+        worst_optimized = worst_optimized.max(
+            fit_power_law(&t, &optimized)
+                .expect("fit converges")
+                .max_relative_error(),
+        );
+        worst_log_spaced = worst_log_spaced.max(
+            fit_power_law(&t, &log_spaced)
+                .expect("fit converges")
+                .max_relative_error(),
+        );
+    }
+
+    assert!(
+        worst_optimized < 3.0e-2,
+        "two optimized arms gave {worst_optimized:.4}"
+    );
+    // The improvement is the point: an order of magnitude, not a rounding.
+    assert!(
+        worst_log_spaced > 10.0 * worst_optimized,
+        "optimizing the times bought only {:.1}x ({worst_log_spaced:.4} -> \
+         {worst_optimized:.4})",
+        worst_log_spaced / worst_optimized
+    );
+}
+
+/// Optimized placement starts from the log-spaced grid and keeps it unless it
+/// finds better, so it can never be the worse of the two at any arm count.
+#[test]
+fn optimizing_never_degrades_the_fit() {
+    for n_arms in [1usize, 2, 3, 4, 6] {
+        for &gamma in &[0.4, 1.0, 1.6] {
+            let t = target(0.5, gamma);
+            let optimized =
+                fit_power_law(&t, &band_with(n_arms, RelaxationTimePlacement::Optimized))
+                    .expect("fit converges")
+                    .max_relative_error();
+            let log_spaced =
+                fit_power_law(&t, &band_with(n_arms, RelaxationTimePlacement::LogSpaced))
+                    .expect("fit converges")
+                    .max_relative_error();
+            assert!(
+                optimized <= log_spaced,
+                "{n_arms} arms, gamma={gamma}: optimized {optimized:.5} is worse \
+                 than log-spaced {log_spaced:.5}"
+            );
+        }
+    }
+}
+
+/// The search is deterministic: no RNG, a fixed initial simplex, and a canonical
+/// (sorted) parameterization. Two identical calls must agree bit for bit, or a
+/// simulation is not reproducible from its inputs.
+#[test]
+fn optimized_placement_is_deterministic() {
+    let band = band_with(3, RelaxationTimePlacement::Optimized);
+    let t = target(0.6, 1.2);
+    let first = fit_power_law(&t, &band).expect("fit converges");
+    let second = fit_power_law(&t, &band).expect("fit converges");
+    assert_eq!(first.relaxation_times(), second.relaxation_times());
+    assert_eq!(first.weights(), second.weights());
+    assert_eq!(first.equilibrium_modulus(), second.equilibrium_modulus());
+}
+
+/// A heterogeneous medium gets **one** relaxation-time grid, chosen against
+/// every distinct voxel at once. This is the invariant the solver depends on —
+/// one memory field per arm for the whole domain — and the reason the field fit
+/// cannot simply optimize each voxel independently.
+#[test]
+fn heterogeneous_field_shares_one_optimized_grid() {
+    let shape = [4usize, 1, 1];
+    let gammas = [0.5, 0.8, 1.2, 1.5];
+    let alphas_db = [0.3, 0.5, 0.6, 0.75];
+    let mut alpha = Array3::<f64>::zeros(shape);
+    let mut gamma = Array3::<f64>::zeros(shape);
+    let c = Array3::<f64>::from_elem(shape, C_WATER_LIKE);
+    let rho = Array3::<f64>::from_elem(shape, RHO_TISSUE);
+    for i in 0..4 {
+        alpha[[i, 0, 0]] = alpha_np_m(alphas_db[i]);
+        gamma[[i, 0, 0]] = gammas[i];
+    }
+
+    // Three arms — a count that the log-spaced grid cannot serve well, so the
+    // ensemble search is doing real work here.
+    let band = band_with(3, RelaxationTimePlacement::Optimized);
+    let fit =
+        fit_power_law_fields(&alpha, &gamma, &c, &rho, F_REF, &band).expect("field fit converges");
+
+    assert_eq!(fit.relaxation_times().len(), 3);
+
+    // Sharing one grid across four exponents costs something relative to giving
+    // each voxel its own; measure that cost rather than asserting a round
+    // number. The best any voxel could do with a private 3-arm grid is its
+    // single-target fit, and the shared grid must stay within a small multiple
+    // of the worst of those.
+    let best_private = (0..4)
+        .map(|i| {
+            let t = PowerLawTarget {
+                alpha_ref_np_m: alpha[[i, 0, 0]],
+                exponent: gammas[i],
+                f_ref: F_REF,
+                sound_speed: C_WATER_LIKE,
+                density: RHO_TISSUE,
+            };
+            fit_power_law(&t, &band)
+                .expect("private fit")
+                .max_relative_error()
+        })
+        .fold(0.0_f64, f64::max);
+    assert!(
+        fit.max_relative_error() <= 10.0 * best_private.max(1e-4),
+        "sharing one grid cost {:.4} against {best_private:.4} per-voxel",
+        fit.max_relative_error()
+    );
+    // Absolute ceiling: still an order below the ~10 % inter-study spread in
+    // reported tissue alpha_0, so the sharing penalty cannot dominate a result.
+    assert!(
+        fit.max_relative_error() < 2.0e-2,
+        "worst voxel on the shared grid: {:.4}",
+        fit.max_relative_error()
+    );
+
+    // Every arm field carries the *same* time for all voxels.
+    for (l, (_, tau_field)) in fit.arm_fields().iter().enumerate() {
+        for i in 0..4 {
+            assert_eq!(tau_field[[i, 0, 0]], fit.relaxation_times()[l]);
+        }
+    }
+
+    // And each voxel still follows its own law on that shared grid.
+    for i in 0..4 {
+        let weights: Vec<f64> = fit.weights().iter().map(|w| w[[i, 0, 0]]).collect();
+        let m_inf = fit.equilibrium_modulus()[[i, 0, 0]];
+        for &f in &[0.6e6, 2.0e6, 4.5e6] {
+            let omega = TWO_PI * f;
+            let m = complex_modulus(m_inf, &weights, fit.relaxation_times(), omega);
+            let got = wavenumber(RHO_TISSUE, m, omega).im.abs();
+            let want = alpha[[i, 0, 0]] * (f / F_REF).powf(gammas[i]);
+            assert!(
+                ((got - want) / want).abs() < 2.0e-2,
+                "voxel {i} (gamma={}) at {f:e} Hz: {got:e} vs {want:e}",
+                gammas[i]
+            );
+        }
+    }
+}
+
+/// A lossless voxel alongside lossy ones neither breaks the ensemble search nor
+/// acquires arms of its own.
+#[test]
+fn lossless_voxel_alongside_lossy_takes_no_arms() {
+    let shape = [2usize, 1, 1];
+    let mut alpha = Array3::<f64>::zeros(shape);
+    alpha[[1, 0, 0]] = alpha_np_m(0.5);
+    let gamma = Array3::<f64>::from_elem(shape, 1.1);
+    let c = Array3::<f64>::from_elem(shape, C_WATER_LIKE);
+    let rho = Array3::<f64>::from_elem(shape, RHO_TISSUE);
+
+    let band = band_with(3, RelaxationTimePlacement::Optimized);
+    let fit = fit_power_law_fields(&alpha, &gamma, &c, &rho, F_REF, &band).expect("field fit");
+
+    for field in fit.weights() {
+        assert_eq!(field[[0, 0, 0]], 0.0, "lossless voxel gained an arm");
+        assert!(field[[1, 0, 0]] >= 0.0);
+    }
+    assert_eq!(
+        fit.equilibrium_modulus()[[0, 0, 0]],
+        RHO_TISSUE * C_WATER_LIKE * C_WATER_LIKE
+    );
+    assert!(fit.max_relative_error() < 1.0e-2);
+}

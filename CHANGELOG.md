@@ -20,6 +20,16 @@
   prescribed law to 3.0 % worst case and 0.35 % across the band interior; the
   heterogeneous stack matches its exact path-weighted prediction to 0.9 %.
 
+- `RelaxationTimePlacement::Optimized` (now the default for `FitBand::new`):
+  optimizes the relaxation *times* jointly with the strengths by variable
+  projection — a deterministic Nelder–Mead search on `ln τ` with the strengths
+  eliminated by NNLS at every trial. Worst-case error over `γ = 0.4…1.6` drops
+  from 29.9 % to 2.0 % at two arms and from 2.6 % to 0.16 % at three, so three
+  optimized arms beat six log-spaced ones — halving the memory fields the
+  time-domain solver carries per voxel. A heterogeneous medium gets one shared
+  grid chosen by a minimax search over every distinct voxel, since per-voxel
+  relaxation times are not representable in the solver's field layout.
+
 - `kwavers_math::numerics::operators::staggered_first_derivative_coefficients`:
   derives half-grid staggered first-derivative stencil weights for any even
   order up to 16th by solving the Taylor system, instead of tabulating them.

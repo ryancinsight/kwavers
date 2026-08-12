@@ -23,10 +23,18 @@
 //! ## Measured accuracy
 //!
 //! Over the whole envelope the simulated `α(f)` matches the prescribed law to
-//! **3.0 % worst case, and to 0.35 % across the band interior** — the residual
+//! **3.4 % worst case, and to 0.5 % across the band interior** — the residual
 //! concentrates at 0.6 and 4.6 MHz, the edges where the excitation carries
 //! least energy. The heterogeneous fat/muscle stack, where `γ` varies along the
-//! propagation path, matches the exact path-weighted prediction to **0.9 %**.
+//! propagation path, matches the exact path-weighted prediction to **1.0 %**.
+//!
+//! This runs on **three** relaxation arms. With the relaxation times optimized
+//! rather than log-spaced (`RelaxationTimePlacement::Optimized`), three arms
+//! reproduce the fit to 0.16 % analytically, so the residual above is the
+//! *measurement*, not the medium: six arms move the worst case only from 3.4 %
+//! to 3.0 %. Each arm dropped is one fewer memory field per voxel in the
+//! solver, which is the dimension that decides whether a 3-D heterogeneous run
+//! fits in memory at all.
 //!
 //! Two measurement details are load-bearing, both established by experiment
 //! rather than assumed (KW-SOL-072):
@@ -75,7 +83,7 @@ const F_REF: f64 = 1.0e6;
 /// Fit band; also the band over which `α(f)` is reported.
 const F_MIN: f64 = 0.5e6;
 const F_MAX: f64 = 5.0e6;
-const N_ARMS: usize = 6;
+const N_ARMS: usize = 3;
 
 const SOURCE_INDEX: usize = 220;
 const SENSOR_NEAR: usize = 380;
@@ -147,15 +155,17 @@ fn excitation(dt: f64) -> Vec<f64> {
 /// residual, and a soft source radiates in both directions. Those late arrivals
 /// interfere with the direct pulse and put comb notches in the raw spectrum —
 /// at 0.9 MHz the ungated ratio misreports `α` by a factor of three. Gating to
-/// the direct arrival is the standard spectral-ratio practice and is what makes
-/// the measurement a plane-wave attenuation measurement at all. The window is a
-/// Hann taper of half-width [`GATE_HALF_STEPS`] centred on the geometric
-/// arrival `(sensor − source)·dx/c₀`: wide enough for the pulse plus its
-/// dispersive spread, and narrower than the earliest contaminant at either
-/// sensor (1445 steps at the near sensor, 6725 at the far one).
+/// the direct arrival is what makes this a plane-wave attenuation measurement
+/// at all.
 ///
-/// The same window is applied at both sensors, so its transfer function divides
-/// out of the ratio; it cannot manufacture an attenuation slope.
+/// The gate is **rectangular**, of half-width [`GATE_HALF_STEPS`], centred on
+/// the emission time plus the transit `(sensor − source)·dx/c₀`. Rectangular is
+/// deliberate: the pulse decays to zero well inside the gate, so there is no
+/// truncation to taper away, and a taper would instead weight the dispersively
+/// broadened far-sensor pulse differently from the near one — an 8–19 % bias in
+/// the recovered `α` (KW-SOL-072). The half-width is wide enough for the pulse
+/// plus its dispersive spread and narrower than the earliest contaminant at
+/// either sensor (1445 steps at the near sensor, 6725 at the far one).
 fn windowed_magnitude(trace: &[f64], sensor_index: usize, frequency_hz: f64, dt: f64) -> f64 {
     let emission = (3.0 * PULSE_WIDTH_S / dt).round() as usize;
     let arrival = emission + ((sensor_index - SOURCE_INDEX) as f64 * DX / C0 / dt).round() as usize;
