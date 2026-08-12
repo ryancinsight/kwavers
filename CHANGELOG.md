@@ -2,7 +2,35 @@
 
 ## Unreleased
 
+### Added
+
+- Heterogeneous power-law attenuation in which the **exponent** varies per
+  voxel, matching the modelling capability of Fullwave 2.5. The new
+  `kwavers_medium::absorption::relaxation_fit` fits a non-negative relaxation
+  spectrum to `α₀(x)·(f/f_ref)^γ(x)` on a shared relaxation-time grid, and
+  calibrates each voxel's equilibrium modulus against the dispersive phase
+  velocity at `f_ref`. Worst-case error in `α(f)` is under 1 % across
+  `α₀ = 0.25–0.75` dB·cm⁻¹·MHz⁻ᵞ and `γ = 0.4–1.6`. See book §4.8.5.
+
+- `heterogeneous_power_law_attenuation` example: reproduces the Fullwave 2.5
+  attenuation validation by simulation — a reference-normalized, time-gated
+  two-sensor spectral-ratio measurement across `α₀ = 0.25–0.75` dB·cm⁻¹·MHz⁻ᵞ
+  and `γ = 0.4–1.6`, plus a fat/muscle stack whose exponent varies along the
+  path. Emits a log-log figure and CSVs. The measured `α(f)` runs 8–19 % below
+  the prescribed law; the fit is not the cause and the residual is unexplained
+  (backlog KW-SOL-072), which the example states in its own output.
+
 ### Changed
+
+- `ViscoacousticMemorySolver::new_heterogeneous` accepts zero-strength
+  relaxation arms, so a heterogeneous medium may contain exactly lossless
+  regions alongside absorbing ones.
+
+- **Breaking:** `ViscoacousticMemorySolver::from_power_law_fields` takes the
+  power-law exponent as an `Array3<f64>` field rather than a scalar, and builds
+  its relaxation spectrum through the new fit instead of the single-frequency
+  Fung weighting. Callers with a uniform exponent pass
+  `Array3::from_elem(shape, y)`.
 
 - **Security:** Align the Kwavers provider lock with Ritk's Eunomia 0.8
   cutover (`cfeebc7`) and upgrade the unused top-level zero-copy rkyv edge to

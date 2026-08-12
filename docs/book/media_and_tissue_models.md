@@ -855,11 +855,12 @@ standard k-space-pseudospectral treatment of heterogeneous media. The exponentia
 coefficients become per-voxel fields. A modulus interface reflects an incident pulse with the
 analytical coefficient `R = (Z_B-Z_A)/(Z_B+Z_A)`, `Z=√(ρM)` (verified to ±0.06 for `R=1/3`).
 
-`from_power_law_fields(ρ(x), c(x), α(x)@f_ref, y, [f_min,f_max], N, f_ref)` bridges the §4.5 tissue
-pipeline to the broadband solver: it fits a per-voxel relaxation spectrum to a CT-derived power-law
-absorption (shared log-spaced τ-grid, Fung `ΔMₗ ∝ τₗ^{1-y}` weights, per-voxel strength calibrated so
-`α(ω_ref)` matches the target; `M_∞ = ρc²`), so a `HuAcousticModel`/`CtMediumBuilder` medium can drive
-the time-domain solver directly — verified to reproduce the target absorption in simulation.
+`from_power_law_fields(ρ(x), c(x), α(x)@f_ref, γ(x), [f_min,f_max], N, f_ref)` bridges the §4.5
+tissue pipeline to the broadband solver. It realizes a **fully heterogeneous** power law
+$\alpha(\mathbf x, f) = \alpha_0(\mathbf x)\,(f/f_{\text{ref}})^{\gamma(\mathbf x)}$ in which the
+**exponent varies voxel to voxel**, not merely the coefficient — the regime measured in abdominal
+wall, where fat and muscle differ in $\gamma$ as much as in $\alpha_0$. The fit lives in
+`kwavers_medium::absorption::relaxation_fit` and is described in §4.8.5.
 
 For **driven simulations**, `add_pressure_source(index, signal)` registers a soft (additive)
 pressure source (`p[index] += signal[step]`) and `add_pressure_sensor(index)` records the pressure
@@ -871,6 +872,56 @@ decay $\exp(-\gamma\,\Delta t)$ to $p$ and $\mathbf v$ each step (summed across 
 damp in every direction). A pulse launched at the boundary is absorbed rather than reflected — the
 test confirms $<10\%$ of the energy survives with the layer versus the conserved (wrapped) energy
 without it.
+
+### 4.8.5 Fitting a relaxation spectrum to a heterogeneous power law
+
+The Fung weighting of §4.8.3 reproduces the exponent only asymptotically in the band interior and
+only for $\gamma$ near unity. Across the range tissue actually spans — $\gamma \approx 0.4$ in some
+fat and fluid paths up to $\approx 1.6$ in fibrous tissue — the realized $\alpha(f)$ departs from the
+target by tens of percent near the band edges. `kwavers_medium::absorption::relaxation_fit` replaces
+the closed form with a constrained least-squares fit.
+
+Relaxation times $\tau_l$ are placed log-spaced across the band, padded half a decade on each side
+(arms peak at $\omega = 1/\tau$, so arms placed strictly inside the band have no lever on the edges).
+Using the weak-loss expansion $\alpha \approx \omega M''/(2M'c_p)$, which is **linear in the arm
+strengths**, the fit solves
+
+$$
+\min_{\Delta M \ge 0} \sum_i \left(
+\frac{1}{\alpha_{\text{target}}(\omega_i)} \frac{\omega_i^2}{2 M'(\omega_i)\,c_p(\omega_i)}
+\sum_l \frac{\Delta M_l\, \tau_l}{1 + (\omega_i\tau_l)^2} - 1 \right)^2
+$$
+
+by Lawson–Hanson NNLS (`leto_ops::nnls`). Dividing each row by the target makes the minimized
+residual the **relative** error, uniform across a band over which $\alpha$ spans a decade;
+non-negativity is a stability requirement, since a negative $\Delta M_l$ is an energy-generating
+Maxwell element in the time-domain update. Two numerical details are load-bearing: the design
+matrix is **column-equilibrated** (raw entries are $O(10^{-8})$ against arm strengths of
+$O(10^{8})$ Pa, so an absolute stopping test fires before the active set is complete), and a
+Tikhonov term $\lambda = 10^{-6}$ damps the near-null directions of a dense, strongly collinear
+$\tau$ grid.
+
+$M'(\omega)$ and $M_\infty$ are then refreshed from the solution and the fit repeated — a fixed
+point that settles in two to three passes. Each pass recalibrates $M_\infty$ by bisection so the
+**dispersive** phase velocity at $f_{\text{ref}}$ equals the prescribed $c_0$; the naive
+$M_\infty = \rho c_0^2$ makes the medium propagate fast by the full Kramers–Krönig increment, a
+systematic time-of-flight error. Accuracy is reported as the maximum relative error of the *exact*
+$\alpha$ from $M^*(\omega)$ — not the linearization the fit solves — so a caller can gate on it.
+
+Because the $\tau_l$ grid is **shared** across the medium and only the strength vector varies, a
+spatially varying exponent costs no extra memory fields in the solver: the same $L$ auxiliary
+fields serve a medium containing any mixture of exponents. Voxels whose five defining parameters
+($\alpha_0$, $\gamma$, $f_{\text{ref}}$, $c_0$, $\rho$) are bit-identical share one fit, so a
+tissue-labelled medium costs one NNLS solve per distinct tissue.
+
+Verification: over Fullwave 2.5's validated envelope ($\alpha_0 = 0.25$–$0.75$ dB cm$^{-1}$
+MHz$^{-\gamma}$, $\gamma = 0.4$–$1.6$) with six arms across 0.5–5 MHz, the worst-case relative error
+in $\alpha(f)$ is under 1 % — an order of magnitude below the $\approx 10\%$ inter-study spread in
+reported tissue $\alpha_0$ (Duck 1990, Ch. 4) — with the fitted phase velocity matching $c_0$ at
+$f_{\text{ref}}$ to $10^{-9}$ relative, causal (monotonically rising) dispersion, and all arm
+strengths non-negative. In simulation, a medium built through `from_power_law_fields` reproduces its
+prescribed decay at $\gamma = 0.4$, $1.1$, and $1.6$, and two halves of one grid carrying different
+$(\alpha_0, \gamma)$ each follow their own law on one shared arm set.
 
 ---
 

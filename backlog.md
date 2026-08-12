@@ -23,6 +23,73 @@
 | KWAVERS-AEQ-MET-54 | Type the public ultrafast transmission scheduler's speed, depth, PRF, event times, frame rates, and tilt angles with Aequitas; keep scalar extraction at the PRF/timing formula boundary and document the real-only Eunomia compatibility rule. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-transducer/src/ultrafast/sequencer/**`, manifest, ADR 093, PM artifacts |
 | KWAVERS-AEQ-INTEGRATION-1 | Integrate the current Aequitas metric closure for therapeutic microbubble and plasmonics contracts on current `main`; harden the public three-dimensional plasmonic coordinate contract and synchronize the audit. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-physics/src/{acoustics/therapy/microbubble,electromagnetic}`, PM artifacts |
 
+## KW-SOL-072 — Simulated absorption runs 8-19 % below the prescribed law [patch] — todo
+
+- Scope: `crates/kwavers-solver/src/forward/viscoacoustic/`, its tests, and
+  `crates/kwavers/examples/heterogeneous_power_law_attenuation.rs`.
+- Symptom: the fitted relaxation spectrum reproduces alpha(f) analytically to
+  under 1 %, but a propagating pulse through a medium built from it measures
+  alpha low by 8-19 %, growing with frequency and with gamma, and independent
+  of alpha_0. The pre-existing standing-wave test's 15 % tolerance was wide
+  enough to hide this.
+- Ruled out: the fit (analytic alpha of the fitted spectrum is within 1 %);
+  time discretization (a 4x smaller dt moves the residual under 0.1 %);
+  boundary damping (a lossless reference run divides it out, and the singleton
+  y/z axes correctly take no layer); gate contamination (the ungated ratio is
+  far worse and noisy, not smooth).
+- Next hypotheses, in order: (1) the trapezoidal relaxation term in the
+  pressure update against the exactly-integrated sigma - check the scheme's
+  realized dispersion relation analytically rather than by refinement, since
+  the dt-independence points at a splitting error that does not vanish with dt;
+  (2) the leapfrog staggering of v against the integer-step sigma accumulator.
+- Acceptance: the discrepancy is either explained and corrected, or shown to be
+  a measurement artefact with an independent oracle; the standing-wave test's
+  tolerance then tightens to the explained bound.
+
+## KW-MED-070 — Heterogeneous power-law exponent via fitted relaxation spectra [minor] — done 2026-08-11
+
+- Owner: Claude; scope `crates/kwavers-medium/src/absorption/relaxation_fit{.rs,/tests.rs}`,
+  `crates/kwavers-medium/src/absorption/mod.rs`,
+  `crates/kwavers-solver/src/forward/viscoacoustic/{solver,tests}.rs`,
+  `docs/book/media_and_tissue_models.md` §4.8.4–4.8.5, CHANGELOG. No other
+  crate, manifest, or gitlink changes.
+- Driver: replicate Fullwave 2.5 (pinton-lab/fullwave25) heterogeneous
+  attenuation, whose stated advance over uniform-exponent models is that both
+  the coefficient *and the exponent* vary spatially. kwavers previously carried
+  a spatially varying alpha_0 with a scalar exponent and Fung tau^{1-y} weights
+  calibrated at a single frequency.
+- Outcome: `absorption::relaxation_fit` fits a non-negative relaxation spectrum
+  to alpha_0(x)*(f/f_ref)^gamma(x) on a shared log-spaced tau grid by
+  column-equilibrated, Tikhonov-damped Lawson-Hanson NNLS on the
+  relative-error-normalized weak-loss system, with a fixed point refreshing
+  M'(omega) and a bisection calibrating M_inf so the dispersive phase velocity
+  at f_ref equals the prescribed c_0. `ViscoacousticMemorySolver::
+  from_power_law_fields` now takes gamma as a field and consumes the fit; the
+  superseded inline Fung path and its private helper are deleted (no shim).
+- Acceptance (met): worst-case relative error in alpha(f) < 1 % over
+  alpha_0 = 0.25-0.75 dB/cm/MHz^gamma x gamma = 0.4-1.6 with six arms across
+  0.5-5 MHz; phase velocity at f_ref matches c_0 to 1e-9 relative; dispersion
+  monotone; all arm strengths non-negative; simulated decay tracks gamma = 0.4,
+  1.1, 1.6; two grid halves with distinct (alpha_0, gamma) each follow their own
+  law on one shared arm set. 12 new medium tests + 2 solver tests, workspace
+  `cargo check --all-targets` green, clippy `-D warnings` clean on both
+  packages, book link gate 0/0/0.
+- Residual: (a) the fit is CPU-side and serial across distinct parameter
+  tuples; a smoothly varying (non-labelled) medium pays one NNLS solve per
+  voxel — filed as KW-MED-071. (b) In *simulation* the realized absorption runs
+  8-19 % below the prescribed law; the fit is not the cause (analytic alpha is
+  within 1 %) — filed as KW-SOL-072.
+
+## KW-MED-071 — Parallelize per-voxel relaxation fitting [patch] — todo
+
+- Scope: `crates/kwavers-medium/src/absorption/relaxation_fit.rs` only.
+- `fit_power_law_fields` dedups bit-identical voxels, so labelled media are
+  cheap, but a smoothly varying alpha_0/gamma field costs one Lawson-Hanson
+  solve per voxel on one thread. Distribute the distinct-tuple solves over
+  `moirai-parallel` (already a dependency) behind the same signature.
+- Acceptance: identical fitted weights to the serial path (bit-exact, the solve
+  is deterministic), measured speedup on a 128^3 smoothly varying field.
+
 ## KWAVERS-AEQ-MET-69 — Type B-mode scan-conversion geometry [major] [arch] — in progress 2026-08-06
 
 - Owner: Codex; scope: `crates/kwavers-analysis/src/signal_processing/b_mode/`,
