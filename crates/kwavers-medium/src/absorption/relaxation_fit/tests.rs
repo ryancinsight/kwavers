@@ -518,3 +518,81 @@ fn lossless_voxel_alongside_lossy_takes_no_arms() {
     );
     assert!(fit.max_relative_error() < 1.0e-2);
 }
+
+/// **Air inclusion in soft tissue** — the contrast case Fullwave 2.5 exercises
+/// in four separate examples, and the hardest thing to ask of a *shared*
+/// relaxation grid: air and tissue differ by 3600:1 in impedance, 4.5x in sound
+/// speed, two orders of magnitude in absorption, and carry different exponents,
+/// yet the solver can only hold one set of relaxation times for the domain.
+#[test]
+fn air_inclusion_shares_the_tissue_grid() {
+    const C_AIR: f64 = 343.0;
+    const RHO_AIR: f64 = 1.2;
+    const ALPHA_AIR_NP_M: f64 = 20.0;
+    const GAMMA_AIR: f64 = 1.8;
+    const GAMMA_TISSUE: f64 = 1.1;
+
+    let shape = [2usize, 1, 1];
+    let mut alpha = Array3::<f64>::from_elem(shape, alpha_np_m(0.5));
+    let mut gamma = Array3::<f64>::from_elem(shape, GAMMA_TISSUE);
+    let mut c = Array3::<f64>::from_elem(shape, C_WATER_LIKE);
+    let mut rho = Array3::<f64>::from_elem(shape, RHO_TISSUE);
+    alpha[[1, 0, 0]] = ALPHA_AIR_NP_M;
+    gamma[[1, 0, 0]] = GAMMA_AIR;
+    c[[1, 0, 0]] = C_AIR;
+    rho[[1, 0, 0]] = RHO_AIR;
+
+    let band = band_with(3, RelaxationTimePlacement::Optimized);
+    let fit = fit_power_law_fields(&alpha, &gamma, &c, &rho, F_REF, &band)
+        .expect("air/tissue field fit converges");
+
+    assert!(
+        fit.max_relative_error() < 1.0e-2,
+        "worst voxel across the air/tissue contrast: {:.4}",
+        fit.max_relative_error()
+    );
+
+    // Each phase keeps its own prescribed speed and law on the shared grid.
+    for (voxel, density, speed, exponent, alpha0) in [
+        (
+            0usize,
+            RHO_TISSUE,
+            C_WATER_LIKE,
+            GAMMA_TISSUE,
+            alpha_np_m(0.5),
+        ),
+        (1usize, RHO_AIR, C_AIR, GAMMA_AIR, ALPHA_AIR_NP_M),
+    ] {
+        let weights: Vec<f64> = fit.weights().iter().map(|w| w[[voxel, 0, 0]]).collect();
+        let m_inf = fit.equilibrium_modulus()[[voxel, 0, 0]];
+
+        let omega_ref = TWO_PI * F_REF;
+        let m = complex_modulus(m_inf, &weights, fit.relaxation_times(), omega_ref);
+        let c_p = omega_ref / wavenumber(density, m, omega_ref).re;
+        assert!(
+            ((c_p - speed) / speed).abs() < 1.0e-9,
+            "voxel {voxel}: phase velocity {c_p} != prescribed {speed}"
+        );
+
+        for &f in &[0.6e6, 2.0e6, 4.5e6] {
+            let omega = TWO_PI * f;
+            let m = complex_modulus(m_inf, &weights, fit.relaxation_times(), omega);
+            let got = wavenumber(density, m, omega).im.abs();
+            let want = alpha0 * (f / F_REF).powf(exponent);
+            assert!(
+                ((got - want) / want).abs() < 1.0e-2,
+                "voxel {voxel} at {f:e} Hz: {got:e} vs {want:e}"
+            );
+        }
+
+        // The unrelaxed (high-frequency) speed sets the solver's CFL. It must
+        // stay close to the prescribed speed: a relaxation spectrum that
+        // reproduced alpha by inflating the instantaneous modulus would silently
+        // force a far smaller time step on the whole simulation.
+        let unrelaxed: f64 = ((m_inf + weights.iter().sum::<f64>()) / density).sqrt();
+        assert!(
+            unrelaxed > speed && unrelaxed < 1.10 * speed,
+            "voxel {voxel}: unrelaxed speed {unrelaxed:.1} against prescribed {speed}"
+        );
+    }
+}

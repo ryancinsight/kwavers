@@ -23,6 +23,28 @@
 | KWAVERS-AEQ-MET-54 | Type the public ultrafast transmission scheduler's speed, depth, PRF, event times, frame rates, and tilt angles with Aequitas; keep scalar extraction at the PRF/timing formula boundary and document the real-only Eunomia compatibility rule. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-transducer/src/ultrafast/sequencer/**`, manifest, ADR 093, PM artifacts |
 | KWAVERS-AEQ-INTEGRATION-1 | Integrate the current Aequitas metric closure for therapeutic microbubble and plasmonics contracts on current `main`; harden the public three-dimensional plasmonic coordinate contract and synchronize the audit. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-physics/src/{acoustics/therapy/microbubble,electromagnetic}`, PM artifacts |
 
+## KW-MED-076 — Verify the shared relaxation grid under air/tissue contrast [patch] — done 2026-08-12
+
+- Scope: one test in `crates/kwavers-medium/src/absorption/relaxation_fit/tests.rs`.
+  No production change was needed - this is a verification increment whose
+  deliverable is the evidence.
+- Driver: Fullwave 2.5 exercises air inclusions in four separate examples
+  (simple_plane_wave_air, linear_transducer_abdominal_wall_with_air,
+  full_synthetic_aperture_air_targets, simple_plane_wave_3d_with_air), which is
+  the hardest case for a *shared* relaxation grid: air and tissue differ by
+  3600:1 in impedance, 4.5x in sound speed, two orders in absorption, and carry
+  different exponents, while the solver can hold only one set of relaxation
+  times for the whole domain.
+- Result: the ensemble minimax search handles it. Worst voxel error on three
+  shared arms is 0.57 % (0.01 % on six); air's equilibrium modulus lands on
+  rho*c^2 = 1.41e5 Pa and its phase velocity at f_ref on 343 m/s to 1e-9; both
+  phases follow their own law to under 1 %.
+- The test also pins a property nothing else covered: the *unrelaxed* speed must
+  stay within 10 % of the prescribed speed in every voxel. It sets the solver's
+  CFL, so a spectrum that reproduced alpha by inflating the instantaneous
+  modulus would be numerically correct and silently force a far smaller time
+  step on the entire simulation.
+
 ## KW-MED-075 — Optimize relaxation times jointly with strengths [minor] — done 2026-08-12
 
 - Owner: Claude; scope `crates/kwavers-medium/src/absorption/relaxation_fit{.rs,/tests.rs}`,
