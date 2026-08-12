@@ -20,20 +20,28 @@
 //!    reproduce** — the layers' exponents differ, so their sum is not a power
 //!    law of any single exponent.
 //!
-//! ## Measured accuracy and its open residual
+//! ## Measured accuracy
 //!
-//! The fitted spectra reproduce the prescribed `α(f)` analytically to under
-//! 1 % (see `kwavers_medium::absorption::relaxation_fit` tests). **In
-//! simulation this example measures a further, systematic 8–19 % shortfall**:
-//! the recovered `α(f)` runs low, by a factor that depends on frequency and
-//! `γ` but is independent of `α₀`. Ruled out so far: the fit itself (analytic
-//! `α` of the fitted spectrum is within 1 %), time discretization (a 4×
-//! smaller `Δt` moves the residual by under 0.1 %), boundary damping (a
-//! lossless reference run divides it out), and gate contamination (the raw
-//! ungated ratio was far worse and far noisier). The cause is not yet
-//! identified — tracked as KW-SOL-072. Read the numbers below as a
-//! demonstration of the heterogeneous-exponent capability, not as a validated
-//! 1 % agreement.
+//! Over the whole envelope the simulated `α(f)` matches the prescribed law to
+//! **3.0 % worst case, and to 0.35 % across the band interior** — the residual
+//! concentrates at 0.6 and 4.6 MHz, the edges where the excitation carries
+//! least energy. The heterogeneous fat/muscle stack, where `γ` varies along the
+//! propagation path, matches the exact path-weighted prediction to **0.9 %**.
+//!
+//! Two measurement details are load-bearing, both established by experiment
+//! rather than assumed (KW-SOL-072):
+//!
+//! - **The analysis gate must not be tapered.** A Hann taper over the gate
+//!   biased the recovered `α` low by 8–19 %, multiplicatively and independently
+//!   of sensor separation, because the far-sensor pulse is dispersively
+//!   broadened and so is weighted differently by the taper than the near-sensor
+//!   pulse. The pulse decays to zero well inside the gate, so a rectangular
+//!   gate truncates nothing and needs no taper at all.
+//! - **The gate must be centred on the true emission time**, `3·PULSE_WIDTH_S`
+//!   after step 0, not on step 0 plus the transit time.
+//!
+//! The scheme itself was exonerated analytically before the measurement was
+//! suspected — see `discrete_dispersion_matches_continuum` in the solver tests.
 //!
 //! Outputs (under `target/fullwave_attenuation/`):
 //! - `attenuation_sweep.png`  — measured vs prescribed `α(f)`, log-log
@@ -149,19 +157,16 @@ fn excitation(dt: f64) -> Vec<f64> {
 /// The same window is applied at both sensors, so its transfer function divides
 /// out of the ratio; it cannot manufacture an attenuation slope.
 fn windowed_magnitude(trace: &[f64], sensor_index: usize, frequency_hz: f64, dt: f64) -> f64 {
-    let arrival = ((sensor_index - SOURCE_INDEX) as f64 * DX / C0 / dt).round() as usize;
+    let emission = (3.0 * PULSE_WIDTH_S / dt).round() as usize;
+    let arrival = emission + ((sensor_index - SOURCE_INDEX) as f64 * DX / C0 / dt).round() as usize;
     let lo = arrival.saturating_sub(GATE_HALF_STEPS);
     let hi = (arrival + GATE_HALF_STEPS).min(trace.len());
-    let span = (hi - lo) as f64;
 
     let (mut re, mut im) = (0.0_f64, 0.0_f64);
     for (offset, &v) in trace[lo..hi].iter().enumerate() {
-        // Hann taper over the gate; suppresses the truncation sidelobes that
-        // would otherwise leak between analysis frequencies.
-        let taper = 0.5 * (1.0 - (TAU * offset as f64 / span).cos());
         let phase = TAU * frequency_hz * (lo + offset) as f64 * dt;
-        re += taper * v * phase.cos();
-        im -= taper * v * phase.sin();
+        re += v * phase.cos();
+        im -= v * phase.sin();
     }
     re.hypot(im)
 }
@@ -450,6 +455,9 @@ fn write_plot(path: &Path, rows: &[SweepRow]) -> Result<()> {
     }
     chart
         .configure_series_labels()
+        // Upper-left is the only empty quadrant: every series rises to the
+        // right, so a right-hand legend hides the high-frequency points.
+        .position(SeriesLabelPosition::UpperLeft)
         .background_style(WHITE.mix(0.85))
         .border_style(BLACK)
         .draw()?;

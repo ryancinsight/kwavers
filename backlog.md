@@ -23,28 +23,40 @@
 | KWAVERS-AEQ-MET-54 | Type the public ultrafast transmission scheduler's speed, depth, PRF, event times, frame rates, and tilt angles with Aequitas; keep scalar extraction at the PRF/timing formula boundary and document the real-only Eunomia compatibility rule. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-transducer/src/ultrafast/sequencer/**`, manifest, ADR 093, PM artifacts |
 | KWAVERS-AEQ-INTEGRATION-1 | Integrate the current Aequitas metric closure for therapeutic microbubble and plasmonics contracts on current `main`; harden the public three-dimensional plasmonic coordinate contract and synchronize the audit. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-physics/src/{acoustics/therapy/microbubble,electromagnetic}`, PM artifacts |
 
-## KW-SOL-072 — Simulated absorption runs 8-19 % below the prescribed law [patch] — todo
+## KW-SOL-072 — Simulated absorption ran 8-19 % below the prescribed law [patch] — done 2026-08-12
 
-- Scope: `crates/kwavers-solver/src/forward/viscoacoustic/`, its tests, and
-  `crates/kwavers/examples/heterogeneous_power_law_attenuation.rs`.
-- Symptom: the fitted relaxation spectrum reproduces alpha(f) analytically to
-  under 1 %, but a propagating pulse through a medium built from it measures
-  alpha low by 8-19 %, growing with frequency and with gamma, and independent
-  of alpha_0. The pre-existing standing-wave test's 15 % tolerance was wide
-  enough to hide this.
-- Ruled out: the fit (analytic alpha of the fitted spectrum is within 1 %);
-  time discretization (a 4x smaller dt moves the residual under 0.1 %);
-  boundary damping (a lossless reference run divides it out, and the singleton
-  y/z axes correctly take no layer); gate contamination (the ungated ratio is
-  far worse and noisy, not smooth).
-- Next hypotheses, in order: (1) the trapezoidal relaxation term in the
-  pressure update against the exactly-integrated sigma - check the scheme's
-  realized dispersion relation analytically rather than by refinement, since
-  the dt-independence points at a splitting error that does not vanish with dt;
-  (2) the leapfrog staggering of v against the integer-step sigma accumulator.
-- Acceptance: the discrepancy is either explained and corrected, or shown to be
-  a measurement artefact with an independent oracle; the standing-wave test's
-  tolerance then tightens to the explained bound.
+- Scope: `crates/kwavers-solver/src/forward/viscoacoustic/tests.rs` and
+  `crates/kwavers/examples/heterogeneous_power_law_attenuation.rs`. No solver
+  behaviour changed - the scheme was not at fault.
+- Root cause: the **measurement**, not the physics. The example's analysis gate
+  applied a Hann taper. The far-sensor pulse is dispersively broadened relative
+  to the near-sensor pulse, so the taper weighted the two differently; the bias
+  was multiplicative in alpha and independent of sensor separation, which is
+  what made it look like a physical attenuation deficit. The pulse decays to
+  zero inside the gate, so a rectangular gate truncates nothing. Second defect
+  found alongside: the gate centre omitted the source's emission delay
+  (3*PULSE_WIDTH_S).
+- Elimination trail, in order: the fit (analytic alpha within 1 %); time
+  discretization (4x smaller dt moved the residual <0.1 %); boundary damping (a
+  lossless reference run divides it out; singleton y/z axes correctly take no
+  layer); path length (halving the sensor separation left the relative error
+  unchanged - proving the bias multiplicative, which excluded every additive
+  contaminant); the scheme itself (von Neumann analysis of the actual update,
+  below).
+- Deliverable beyond the fix: `discrete_dispersion_matches_continuum` derives
+  the scheme's exact discrete dispersion relation,
+  `rho*(4/dt^2)sin^2(w*dt/2) = k^2 * M_eff(z)` with
+  `M_eff(z) = M_U - sum (dM/2)(1-e^-d)(1+z)/(z-e^-d)`, `z = e^{-i w dt}`, and
+  pins it against the continuum relation. It establishes the governing rule:
+  accuracy is set by how well dt resolves the *fastest relaxation*
+  (`d = dt/tau_min`), not the wave - 20 steps per tau_min holds the scheme's
+  error under 0.5 %, while the coarser step the sibling standing-wave tests use
+  (`d = 0.19`) costs 2.6 %, the dominant term in their 5 % tolerance.
+- Result: homogeneous sweep worst error 3.0 % (0.35 % across the band interior,
+  the residual sitting at the two band edges where the excitation is weakest);
+  heterogeneous fat/muscle stack 0.9 %. The standing-wave regression
+  `power_law_medium_reproduces_target_absorption` tightened from 15 % to 5 %,
+  which the artefact had been hiding behind.
 
 ## KW-MED-070 — Heterogeneous power-law exponent via fitted relaxation spectra [minor] — done 2026-08-11
 

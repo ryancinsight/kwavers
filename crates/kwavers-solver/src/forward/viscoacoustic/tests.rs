@@ -317,7 +317,7 @@ fn power_law_medium_reproduces_target_absorption() {
         let alpha_measured = decay / cp; // Np/m at ω
         let alpha_expected = alpha_target * (omega / (TAU * f_ref)).powf(y);
         assert!(
-            (alpha_measured - alpha_expected).abs() <= 0.15 * alpha_expected,
+            (alpha_measured - alpha_expected).abs() <= 0.05 * alpha_expected,
             "γ={y}: α measured {alpha_measured:.3} vs target {alpha_expected:.3}              Np/m at ω={omega:.2e}"
         );
     }
@@ -476,4 +476,98 @@ fn construction_validates_and_accepts_model() {
     )
     .expect("model-backed solver");
     assert!(solver.unrelaxed_speed() > (M_INF / RHO).sqrt());
+}
+
+/// **Discrete dispersion relation.** Von Neumann analysis of the actual update
+/// — leapfrog velocity, exponentially integrated `σ`, trapezoidal relaxation
+/// term in the pressure update — gives, for `p ∝ z^n e^{ikx}` with
+/// `z = e^{-iωΔt}`,
+///
+/// ```text
+///   ρ·(4/Δt²)·sin²(ωΔt/2) = k²·M_eff(z)
+///   M_eff(z) = M_U − Σₗ (ΔMₗ/2)(1−e^{-Δt/τₗ})(1+z)/(z − e^{-Δt/τₗ})
+/// ```
+///
+/// against the continuum `ρω² = k²M(ω)`, `M(ω) = M_U − Σₗ ΔMₗ/(1−iωτₗ)` (the
+/// `e^{-iωt}` form of the module's `M(ω)`). This test pins the scheme's own
+/// accuracy analytically, independent of any simulation: it asserts the two
+/// relations agree in `α` to better than 1 % across the band at the CFL step
+/// used in practice, and that the gap shrinks with `Δt`.
+///
+/// It exists because a simulated attenuation measurement disagreed with the
+/// prescribed law by 10 % (KW-SOL-072) and the scheme was the prime suspect;
+/// this calculation exonerated it and redirected the search to the measurement,
+/// where a tapered analysis gate turned out to be the artifact. Keeping it makes
+/// that exoneration a standing check rather than a one-off.
+#[test]
+fn discrete_dispersion_matches_continuum() {
+    /// `α` of the continuum relation at real `ω`.
+    fn alpha_continuum(omega: f64) -> f64 {
+        let mut m = Complex64::new(m_u(), 0.0);
+        for &(dm, tau) in &ARMS {
+            m -= dm / (1.0 - Complex64::new(0.0, omega * tau));
+        }
+        (Complex64::new(RHO * omega * omega, 0.0) / m)
+            .sqrt()
+            .im
+            .abs()
+    }
+
+    /// `α` of the discrete relation at real `ω` and step `dt`.
+    fn alpha_discrete(omega: f64, dt: f64) -> f64 {
+        let z = (Complex64::new(0.0, -omega * dt)).exp();
+        let mut m = Complex64::new(m_u(), 0.0);
+        for &(dm, tau) in &ARMS {
+            let e = (-dt / tau).exp();
+            m -= 0.5 * dm * (1.0 - e) * (1.0 + z) / (z - e);
+        }
+        let lhs = RHO * 4.0 / (dt * dt) * (0.5 * omega * dt).sin().powi(2);
+        (Complex64::new(lhs, 0.0) / m).sqrt().im.abs()
+    }
+
+    let frequencies = [0.5e6_f64, 1.0e6, 2.0e6, 3.5e6, 5.0e6];
+    let tau_min = ARMS
+        .iter()
+        .map(|&(_, tau)| tau)
+        .fold(f64::INFINITY, f64::min);
+    let worst = |dt: f64| {
+        frequencies.iter().fold(0.0_f64, |acc, &f| {
+            let omega = TAU * f;
+            let exact = alpha_continuum(omega);
+            assert!(exact > 0.0, "continuum α must be positive at {f:e} Hz");
+            acc.max((alpha_discrete(omega, dt) - exact).abs() / exact)
+        })
+    };
+
+    // The deviation is governed by how well Δt resolves the *fastest*
+    // relaxation, `d = Δt/τ_min`, not by how well it resolves the wave: the
+    // trapezoidal relaxation term in the pressure update is the only
+    // second-order piece (the σ integration is exact and the spatial operator
+    // spectral). Resolving τ_min with 20 steps holds the scheme's contribution
+    // under 0.5 %, an order below the 5 % tolerance the simulation tests here
+    // allow, so it cannot be their dominant error term.
+    let resolved = 0.05 * tau_min;
+    let resolved_error = worst(resolved);
+    assert!(
+        resolved_error < 5.0e-3,
+        "at Δt/τ_min = 0.05 the scheme deviates by {resolved_error:.4}"
+    );
+
+    // At the coarser step the sibling standing-wave tests use, `d = 0.19` and
+    // the deviation is ~2.6 % — still inside their tolerance, but the dominant
+    // term in it. Recorded so a future tightening of those tolerances has to
+    // reckon with the step, not just the physics.
+    let coarse_error = worst(1.5e-8);
+    assert!(
+        coarse_error < 3.0e-2,
+        "at Δt = 1.5e-8 the scheme deviates by {coarse_error:.4}"
+    );
+
+    // Second-order convergence in `d`: a 4× smaller step must cut the deviation
+    // by at least 4× (the bound, not the ideal 16×, so the assertion is not a
+    // fit to one machine's rounding).
+    assert!(
+        worst(1.5e-8 / 4.0) * 4.0 < coarse_error,
+        "refinement did not converge from {coarse_error:.3e}"
+    );
 }

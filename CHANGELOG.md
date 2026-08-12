@@ -16,9 +16,15 @@
   attenuation validation by simulation — a reference-normalized, time-gated
   two-sensor spectral-ratio measurement across `α₀ = 0.25–0.75` dB·cm⁻¹·MHz⁻ᵞ
   and `γ = 0.4–1.6`, plus a fat/muscle stack whose exponent varies along the
-  path. Emits a log-log figure and CSVs. The measured `α(f)` runs 8–19 % below
-  the prescribed law; the fit is not the cause and the residual is unexplained
-  (backlog KW-SOL-072), which the example states in its own output.
+  path. Emits a log-log figure and CSVs. Simulated `α(f)` matches the
+  prescribed law to 3.0 % worst case and 0.35 % across the band interior; the
+  heterogeneous stack matches its exact path-weighted prediction to 0.9 %.
+
+- `discrete_dispersion_matches_continuum`: derives the memory-variable
+  scheme's exact discrete dispersion relation by von Neumann analysis and pins
+  it against the continuum relation, establishing that accuracy is governed by
+  `Δt/τ_min` — 20 steps per fastest relaxation holds the scheme's error under
+  0.5 %.
 
 ### Changed
 

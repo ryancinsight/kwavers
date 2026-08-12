@@ -324,3 +324,4 @@ fn rejects_mismatched_field_shapes() {
     let r = Array3::<f64>::from_elem([2, 1, 1], RHO_TISSUE);
     assert!(fit_power_law_fields(&a, &g, &c, &r, F_REF, &band).is_err());
 }
+

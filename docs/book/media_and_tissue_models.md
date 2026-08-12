@@ -914,6 +914,27 @@ fields serve a medium containing any mixture of exponents. Voxels whose five def
 ($\alpha_0$, $\gamma$, $f_{\text{ref}}$, $c_0$, $\rho$) are bit-identical share one fit, so a
 tissue-labelled medium costs one NNLS solve per distinct tissue.
 
+**Time-step selection.** Von Neumann analysis of the memory-variable update (leapfrog velocity,
+exponentially integrated $\sigma$, trapezoidal relaxation term in the pressure update) gives the
+exact discrete relation
+
+$$
+\rho\,\frac{4}{\Delta t^2}\sin^2\!\Big(\frac{\omega\Delta t}{2}\Big) = k^2 M_{\text{eff}}(z),
+\qquad
+M_{\text{eff}}(z) = M_U - \sum_l \frac{\Delta M_l}{2}
+\frac{(1-e^{-\Delta t/\tau_l})(1+z)}{z - e^{-\Delta t/\tau_l}},
+\qquad z = e^{-\mathrm{i}\omega\Delta t},
+$$
+
+against the continuum $\rho\omega^2 = k^2 M(\omega)$. The trapezoidal relaxation term is the only
+second-order piece — the $\sigma$ integration is exact and the spatial operator spectral — so the
+accuracy is governed by how well $\Delta t$ resolves the **fastest relaxation**,
+$d = \Delta t/\tau_{\min}$, not by how well it resolves the wave. Twenty steps per $\tau_{\min}$
+($d = 0.05$) holds the scheme's contribution to $\alpha$ under 0.5 %; $d = 0.19$ costs 2.6 %. Since
+$\tau_{\min} \approx 1/(2\pi f_{\max}\sqrt{10})$ for the padded grid above, a band extended upward
+tightens $\Delta t$ faster than the CFL does — the practical constraint on a wideband fit. Pinned by
+`discrete_dispersion_matches_continuum`.
+
 Verification: over Fullwave 2.5's validated envelope ($\alpha_0 = 0.25$–$0.75$ dB cm$^{-1}$
 MHz$^{-\gamma}$, $\gamma = 0.4$–$1.6$) with six arms across 0.5–5 MHz, the worst-case relative error
 in $\alpha(f)$ is under 1 % — an order of magnitude below the $\approx 10\%$ inter-study spread in
@@ -921,7 +942,18 @@ reported tissue $\alpha_0$ (Duck 1990, Ch. 4) — with the fitted phase velocity
 $f_{\text{ref}}$ to $10^{-9}$ relative, causal (monotonically rising) dispersion, and all arm
 strengths non-negative. In simulation, a medium built through `from_power_law_fields` reproduces its
 prescribed decay at $\gamma = 0.4$, $1.1$, and $1.6$, and two halves of one grid carrying different
-$(\alpha_0, \gamma)$ each follow their own law on one shared arm set.
+$(\alpha_0, \gamma)$ each follow their own law on one shared arm set. The
+`heterogeneous_power_law_attenuation` example measures the realized $\alpha(f)$ from a propagating
+broadband pulse by a reference-normalized two-sensor spectral ratio, recovering the prescribed law
+to 3.0 % worst case (0.35 % across the band interior) over the whole envelope, and matching the
+exact path-weighted prediction for a fat/muscle stack whose exponent varies along the path to 0.9 %.
+
+One measurement caveat is worth carrying to any spectral-ratio attenuation estimate: the analysis
+gate must **not** be tapered. A dispersive medium broadens the far-sensor pulse relative to the
+near-sensor one, so a taper weights the two differently and biases the recovered $\alpha$ low —
+multiplicatively, and independently of sensor separation, which disguises it as a physical
+attenuation deficit rather than an instrument error. When the pulse decays to zero inside the gate,
+a rectangular gate truncates nothing and needs no taper.
 
 ---
 

@@ -25,6 +25,32 @@ warning-denied all-target Clippy, `cargo nextest run -p kwavers-analysis
 pass. The shared Atlas overlay emits existing unused-patch and linker
 diagnostics; they are outside this metric boundary.
 
+## Tapered analysis gates bias spectral-ratio attenuation measurements
+
+Recorded 2026-08-12 from KW-SOL-072.
+
+**Pattern.** A windowed-DFT attenuation measurement (`alpha = -ln(P_far/P_near)/d`)
+applies a taper to the analysis gate. In a *dispersive* medium the far-sensor
+pulse is broadened relative to the near-sensor pulse, so the taper weights the
+two differently. The resulting bias is multiplicative in alpha and independent
+of sensor separation -- indistinguishable, by inspection, from the medium
+genuinely absorbing less than prescribed.
+
+**Why it is hard to catch.** Every instinct points at the physics: the fit, the
+time step, the boundary treatment, the scheme. Here all four were eliminated
+before the instrument was suspected, and the analytic exoneration of the scheme
+(von Neumann analysis) was what finally redirected the search.
+
+**The discriminating test.** Vary the sensor separation. A genuine attenuation
+gives a separation-independent alpha; an additive contaminant (reflection,
+leakage, offset) scales as 1/d; a multiplicative instrument bias stays a fixed
+*fraction* at every separation. That one measurement classifies the error
+before any hypothesis about its mechanism.
+
+**Rule.** Do not taper a gate whose signal already decays to zero inside it --
+there is nothing to truncate, so a taper only adds a position-dependent weight.
+Centre the gate on the true emission time, not on step zero plus transit.
+
 ## Live Aequitas closure — 2026-08-05
 
 ### KWAVERS-AEQ-MET-68 — Eunomia compatibility closure (clean lock 2026-08-05)
