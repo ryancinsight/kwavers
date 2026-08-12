@@ -23,6 +23,39 @@
 | KWAVERS-AEQ-MET-54 | Type the public ultrafast transmission scheduler's speed, depth, PRF, event times, frame rates, and tilt angles with Aequitas; keep scalar extraction at the PRF/timing formula boundary and document the real-only Eunomia compatibility rule. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-transducer/src/ultrafast/sequencer/**`, manifest, ADR 093, PM artifacts |
 | KWAVERS-AEQ-INTEGRATION-1 | Integrate the current Aequitas metric closure for therapeutic microbubble and plasmonics contracts on current `main`; harden the public three-dimensional plasmonic coordinate contract and synchronize the audit. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-physics/src/{acoustics/therapy/microbubble,electromagnetic}`, PM artifacts |
 
+## KW-GPU-078 — Partition a wave grid across GPUs [major] [arch] — todo
+
+- Confirmed gap against Fullwave 2.5, whose multi-GPU depth decomposition with
+  demonstrated linear scaling is one of its two headline claims.
+- What kwavers has: `kwavers-gpu/src/gpu/multi_gpu/` provides `MultiGpuContext`
+  - device enumeration, P2P capability queries, a transfer queue, and workload
+  affinity. That is the plumbing, and it is generic over the device provider.
+- What kwavers does not have: any solver that splits a propagation grid across
+  devices. Verified 2026-08-12 by reading the tree, not inferred:
+  - `forward/hybrid/domain_decomposition/` is **method** selection (which
+    regions run PSTD vs FDTD), not spatial partitioning across devices. The
+    name collision is why this looked covered in an earlier survey.
+  - The halo/ghost-exchange code that exists is in FWI, RTM, and
+    fluid-structure coupling - none of it is a multi-device grid split.
+- Design decisions to settle before starting:
+  1. **Split axis.** Fullwave 2.5 splits along depth and orders its coordinates
+     `(x, y, z) = (depth, lateral, elevational)` specifically so the split axis
+     is outermost and each subdomain is contiguous. kwavers' Leto arrays are
+     C-order, so the equivalent is splitting the *first* axis; confirm that
+     matches the grid convention before committing to it.
+  2. **Which solver.** The pseudospectral viscoacoustic path takes FFTs along
+     the split axis, which needs either a distributed transform or a transpose
+     per step - the reason FD codes are the ones that scale this way. The FDTD
+     path is the natural first target, and its halo is `half_order` cells wide,
+     which ties this to KW-SOL-074.
+  3. **Exchange mechanism.** P2P where `MultiGpuContext::supports_p2p` reports
+     it, staged through host memory otherwise; the fallback must be surfaced,
+     not silent.
+- Acceptance: a heterogeneous run split across N devices reproduces the
+  single-device result to round-off; halo width derived from the stencil order
+  rather than hard-coded; measured scaling reported with the device count and
+  problem size, not asserted.
+
 ## KW-SOL-077 — Correct the viscoacoustic time-step rule [patch] — done 2026-08-12
 
 - Scope: `discrete_dispersion_matches_continuum` in

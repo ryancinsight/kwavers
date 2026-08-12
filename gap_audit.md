@@ -25,6 +25,29 @@ warning-denied all-target Clippy, `cargo nextest run -p kwavers-analysis
 pass. The shared Atlas overlay emits existing unused-patch and linker
 diagnostics; they are outside this metric boundary.
 
+## Capability surveys by keyword produce false positives on name collisions
+
+Recorded 2026-08-12 from the Fullwave 2.5 parity comparison.
+
+**Pattern.** Grepping for a capability by name finds the word, not the
+capability. Two collisions in one survey:
+
+- `domain decomposition` matched 20 files and read as "multi-GPU partitioning
+  present". It is PSTD-vs-FDTD **method** selection - an unrelated feature that
+  happens to share the term of art.
+- `multi.?gpu` matched 29 files and read the same way. Those are device
+  contexts, P2P queries and transfer queues - real infrastructure, but no solver
+  splits a grid across devices.
+
+A third was self-inflicted: `rg -li "convex\|curvilinear"` reported zero hits
+because ripgrep read the escaped pipe as a literal, and both features exist. A
+zero result deserves the same suspicion as a positive one.
+
+**Rule.** A capability is present when something *calls* it for the purpose in
+question, not when the phrase appears. Confirm a survey hit by finding the
+consumer - and confirm a survey miss by re-running the query a second way before
+reporting a gap.
+
 ## Tapered analysis gates bias spectral-ratio attenuation measurements
 
 Recorded 2026-08-12 from KW-SOL-072.
