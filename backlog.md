@@ -23,6 +23,32 @@
 | KWAVERS-AEQ-MET-54 | Type the public ultrafast transmission scheduler's speed, depth, PRF, event times, frame rates, and tilt angles with Aequitas; keep scalar extraction at the PRF/timing formula boundary and document the real-only Eunomia compatibility rule. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-transducer/src/ultrafast/sequencer/**`, manifest, ADR 093, PM artifacts |
 | KWAVERS-AEQ-INTEGRATION-1 | Integrate the current Aequitas metric closure for therapeutic microbubble and plasmonics contracts on current `main`; harden the public three-dimensional plasmonic coordinate contract and synchronize the audit. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-physics/src/{acoustics/therapy/microbubble,electromagnetic}`, PM artifacts |
 
+## KW-SOL-077 — Correct the viscoacoustic time-step rule [patch] — done 2026-08-12
+
+- Scope: `discrete_dispersion_matches_continuum` in
+  `crates/kwavers-solver/src/forward/viscoacoustic/tests.rs`, book 4.8.4,
+  CHANGELOG. No production change.
+- Correction of my own KW-SOL-072 deliverable. That test asserted the scheme's
+  accuracy is governed by `d = dt/tau_min` (how well the step resolves the
+  fastest relaxation), with a "20 steps per tau_min" rule. The reasoning was
+  plausible - the trapezoidal relaxation term is the only second-order piece
+  besides the leapfrog, since the sigma integration is exact and the spatial
+  operator spectral - but it was never tested against a tau sweep, and it is
+  wrong.
+- Evidence: scaling every tau up 100x, a 100x reduction in d, moves the error
+  from 2.6002 % to 2.7630 % - under 7 % relative, and in the *wrong direction*.
+  Separately, replacing the trapezoid with the closed-form exact integral of
+  sigma/tau across the step (derived and measured before implementing) changes
+  nothing: 2.60 % -> 2.78 %. The leapfrog's sinc^2 factor is the whole error.
+- Corrected rule: error ~= C*(omega_max*dt)^2 with C = 0.117 measured, i.e.
+  governed by how well dt resolves the *wave*. In points per period at the
+  highest frequency of interest: 25 gives under 1 %, 80 under 0.1 %. The test
+  now asserts the quadratic model itself (coefficient stable to 5 % across a
+  decade of dt) plus the tau-independence, rather than step counts read off it.
+- Why this mattered: the old rule tied dt to the fit band through
+  tau_min ~ 1/(2*pi*f_max*sqrt(10)), so it would have driven callers to take
+  steps several times smaller than necessary on any wideband fit.
+
 ## KW-MED-076 — Verify the shared relaxation grid under air/tissue contrast [patch] — done 2026-08-12
 
 - Scope: one test in `crates/kwavers-medium/src/absorption/relaxation_fit/tests.rs`.

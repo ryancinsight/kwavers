@@ -40,9 +40,11 @@
 
 - `discrete_dispersion_matches_continuum`: derives the memory-variable
   scheme's exact discrete dispersion relation by von Neumann analysis and pins
-  it against the continuum relation, establishing that accuracy is governed by
-  `Δt/τ_min` — 20 steps per fastest relaxation holds the scheme's error under
-  0.5 %.
+  it against the continuum relation. The error follows
+  `0.117·(ω_max·Δt)²` — governed by how well `Δt` resolves the **wave**, and
+  independent of `Δt/τ_min` to within 1 % across a hundredfold `τ` sweep. In
+  points per period at the highest frequency of interest: 25 holds the
+  time-discretization error in `α` under 1 %, 80 under 0.1 %.
 
 ### Changed
 

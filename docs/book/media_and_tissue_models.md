@@ -955,14 +955,31 @@ M_{\text{eff}}(z) = M_U - \sum_l \frac{\Delta M_l}{2}
 \qquad z = e^{-\mathrm{i}\omega\Delta t},
 $$
 
-against the continuum $\rho\omega^2 = k^2 M(\omega)$. The trapezoidal relaxation term is the only
-second-order piece — the $\sigma$ integration is exact and the spatial operator spectral — so the
-accuracy is governed by how well $\Delta t$ resolves the **fastest relaxation**,
-$d = \Delta t/\tau_{\min}$, not by how well it resolves the wave. Twenty steps per $\tau_{\min}$
-($d = 0.05$) holds the scheme's contribution to $\alpha$ under 0.5 %; $d = 0.19$ costs 2.6 %. Since
-$\tau_{\min} \approx 1/(2\pi f_{\max}\sqrt{10})$ for the padded grid above, a band extended upward
-tightens $\Delta t$ faster than the CFL does — the practical constraint on a wideband fit. Pinned by
-`discrete_dispersion_matches_continuum`.
+against the continuum $\rho\omega^2 = k^2 M(\omega)$.
+
+The left-hand side is the leapfrog's $\omega^2\,\mathrm{sinc}^2(\omega\Delta t/2)$, and it is what
+sets the error: accuracy is governed by how well $\Delta t$ resolves the **wave**,
+$\omega_{\max}\Delta t$, and is essentially independent of how well it resolves the fastest
+relaxation. Scaling every $\tau$ up a hundredfold — a hundredfold reduction in
+$d = \Delta t/\tau_{\min}$ — moves the error by under 1 % relative. The measured law is
+
+$$
+\frac{|\alpha_{\text{discrete}} - \alpha|}{\alpha} \approx C\,(\omega_{\max}\Delta t)^2,
+\qquad C \approx 0.117,
+$$
+
+so with $N = 2\pi/(\omega_{\max}\Delta t)$ points per period at the highest frequency of interest,
+**25 points per period holds the time-discretization error in $\alpha$ under 1 %, and 80 under
+0.1 %**. Pinned by `discrete_dispersion_matches_continuum`, which asserts the quadratic model
+itself rather than the step counts read off it.
+
+> An earlier revision of this section claimed the opposite — that $d = \Delta t/\tau_{\min}$
+> governed, with a "20 steps per $\tau_{\min}$" rule. That was plausible (the trapezoidal relaxation
+> term genuinely is the only second-order piece besides the leapfrog, since the $\sigma$ integration
+> is exact and the spatial operator spectral) but untested against a $\tau$ sweep, and it is wrong.
+> Replacing the trapezoid with the closed-form exact integral of $\sigma/\tau$ across the step
+> changes the error by under 7 % relative, which is why that avenue was measured and abandoned
+> rather than implemented.
 
 Verification: over Fullwave 2.5's validated envelope ($\alpha_0 = 0.25$–$0.75$ dB cm$^{-1}$
 MHz$^{-\gamma}$, $\gamma = 0.4$–$1.6$) with six arms across 0.5–5 MHz, the worst-case relative error
