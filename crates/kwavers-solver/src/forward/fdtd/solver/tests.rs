@@ -431,7 +431,7 @@ fn absorption_reproduces_prescribed_power_law_in_propagation() {
         }
 
         let mut trace = Vec::new();
-        let mut run = |solver: &mut FdtdSolver, steps: usize, trace: &mut Vec<f64>| -> f64 {
+        let run = |solver: &mut FdtdSolver, steps: usize, trace: &mut Vec<f64>| -> f64 {
             let mut accumulated = 0.0;
             for _ in 0..steps {
                 solver.step_forward().unwrap();
