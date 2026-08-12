@@ -290,7 +290,6 @@ fn homogeneous_sweep(dt: f64, reference: &[(f64, f64)]) -> Result<Vec<SweepRow>>
 }
 
 /// One layer of the abdominal-wall stack.
-#[allow(dead_code)]
 struct Layer {
     name: &'static str,
     cells: usize,
@@ -503,7 +502,14 @@ fn main() -> Result<()> {
     let layered_csv = out_dir.join("layered_medium.csv");
     write_layered_csv(&layered_csv, &layered)?;
 
-    println!("\nheterogeneous fat/muscle stack (gamma varies 0.6 <-> 1.1 along the path):");
+    println!("\nheterogeneous stack along the propagation path:");
+    for layer in &LAYERS {
+        println!(
+            "  {:<7} {:>4} cells   alpha0 = {:.2} dB/cm/MHz^gamma   gamma = {:.2}",
+            layer.name, layer.cells, layer.alpha0_db, layer.gamma
+        );
+    }
+    println!("\nrecovered vs the exact path-weighted prediction:");
     println!(
         "{:>12} {:>18} {:>14} {:>12}",
         "freq [MHz]", "path-weighted", "measured", "rel_err"
