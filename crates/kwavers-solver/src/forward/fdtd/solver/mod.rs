@@ -143,6 +143,12 @@ pub struct GenericFdtdSolver<T> {
     // Precomputed fields
     pub(crate) rho_c_squared: T,
 
+    /// Relaxation absorption state, `None` for a lossless configuration.
+    ///
+    /// When present its unrelaxed modulus replaces `rho_c_squared` in the
+    /// pressure update and its memory fields are advanced each step.
+    pub(crate) absorption: Option<super::absorption::RelaxationAbsorption>,
+
     // Nonlinear Westervelt fields
     pub(crate) p_prev: Option<T>,
     pub(crate) p_prev2: Option<T>,

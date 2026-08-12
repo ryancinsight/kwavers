@@ -24,6 +24,26 @@
   prescribed law to 3.0 % worst case and 0.35 % across the band interior; the
   heterogeneous stack matches its exact path-weighted prediction to 0.9 %.
 
+- **FDTD heterogeneous power-law absorption.** The FDTD solver previously had
+  no absorption at all. `FdtdAbsorption::PowerLawRelaxation` adds relaxation
+  memory variables fitted from the medium's own `α₀(x)` **and** `γ(x)`, so the
+  exponent varies per voxel; the arms are advanced by an exact exponential
+  integrator, so `Δt` stays bounded by the wave CFL. Absorption applies on all
+  three CPU branches; the GPU path rejects an absorbing configuration rather
+  than silently propagating a lossless medium.
+
+- **Full medium properties in `MaterialFields`.** The sampled property set now
+  carries the power-law coefficient, the power-law exponent, and `B/A` alongside
+  density and sound speed, with one `MaterialFields::sample` (including the
+  homogeneous fast path) replacing the per-solver sampling loops. The FDTD path
+  had no access to absorption properties at all before this, and its nonlinear
+  setup re-read `B/A` and `c²` through per-point trait calls after having just
+  sampled them.
+
+- `power_law_db_cm_to_np_m`: the forward `dB/(MHz^y·cm)` → `Np·m⁻¹`-at-a-frequency
+  conversion a time-domain solver needs, beside its existing inverse and the
+  spectral `…_to_np_omega_m` form.
+
 - `RelaxationTimePlacement::Optimized` (now the default for `FitBand::new`):
   optimizes the relaxation *times* jointly with the strengths by variable
   projection — a deterministic Nelder–Mead search on `ln τ` with the strengths

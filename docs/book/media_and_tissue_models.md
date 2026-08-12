@@ -882,14 +882,23 @@ time-stepping family, and they are not interchangeable:
 |---|---|---|---|
 | PSTD | stratified fractional Laplacian — $M$ spectral symbols $\lvert k\rvert^{y-s}$ blended per voxel | $M$ inverse FFTs per Laplacian ($M \le 8$) | `pstd::physics::absorption::strata` (§4.4.3) |
 | `ViscoacousticMemorySolver` | relaxation memory variables on one shared $\tau$ grid | one auxiliary field per arm, **no transform** | `relaxation_fit` (below) |
-| FDTD | — | — | *absent; see backlog KW-SOL-079* |
+| FDTD | relaxation memory variables on one shared $\tau$ grid | one auxiliary field per arm, **no transform** | `fdtd::absorption` |
 
 The split is forced by the mathematics, not by taste. The fractional Laplacian's symbol
 $\lvert k\rvert^{y-s}$ is global in $k$, so a spectral solver can only carry one exponent per
 transform — stratification works around that by blending a few. The memory-variable form is purely
-local in space, so it costs no transform at all, which is why it is the realization that can be
-partitioned across devices (KW-GPU-078) and the one an FDTD path would use. Fullwave 2.5 is an FDTD
-code and takes exactly this route.
+local in space, so it costs no transform at all, which is why it is the realization the FDTD path
+uses and the one that can be partitioned across devices (KW-GPU-078). Fullwave 2.5 is an FDTD code
+and takes exactly this route.
+
+The FDTD realization is configured through `FdtdAbsorption::PowerLawRelaxation`, which names the
+band the power law must hold over and the arm count — the memory knob, since each arm is one
+auxiliary field per voxel. It fits through the same `relaxation_fit` machinery, so the exponent
+varies per voxel there too, and the pressure update's modulus becomes the **unrelaxed** $M_U$
+rather than $\rho_0 c_0^2$: the relaxed modulus would propagate the medium at its low-frequency
+speed while the arms also supply dispersion, an error that presents as a wrong sound speed rather
+than a wrong absorption. The GPU path refuses an absorbing configuration outright instead of
+silently propagating a lossless medium.
 
 ### 4.8.6 Fitting a relaxation spectrum to a heterogeneous power law
 

@@ -228,39 +228,12 @@ impl PSTDSolver {
 
         let shape = (grid.nx, grid.ny, grid.nz);
         let shape3 = [grid.nx, grid.ny, grid.nz];
-        // `bon` is populated only when nonlinearity is active; `None` otherwise.
-        // Saves N×8 bytes for the common linear case.
-        let (rho0, c0, bon) = if medium.is_homogeneous() {
-            let bon = config
-                .nonlinearity
-                .then(|| leto::Array3::from_elem(shape, medium.nonlinearity(0, 0, 0)));
-            (
-                leto::Array3::from_elem(shape, medium.density(0, 0, 0)),
-                leto::Array3::from_elem(shape, medium.sound_speed(0, 0, 0)),
-                bon,
-            )
-        } else {
-            let mut rho0 = leto::Array3::zeros(shape);
-            let mut c0 = leto::Array3::zeros(shape);
-            let mut bon = config
-                .nonlinearity
-                .then(|| leto::Array3::<f64>::zeros(shape));
-
-            for k in 0..grid.nz {
-                for j in 0..grid.ny {
-                    for i in 0..grid.nx {
-                        let (x, y, z) = grid.indices_to_coordinates(i, j, k);
-                        rho0[[i, j, k]] = kwavers_medium::density_at(medium, x, y, z, &grid);
-                        c0[[i, j, k]] = kwavers_medium::sound_speed_at(medium, x, y, z, &grid);
-                        if let Some(ref mut b) = bon {
-                            b[[i, j, k]] = kwavers_medium::nonlinearity_at(medium, x, y, z, &grid);
-                        }
-                    }
-                }
-            }
-
-            (rho0, c0, bon)
-        };
+        // Density and sound speed come from the shared sampler below, which
+        // carries the same homogeneous fast path this block used to duplicate.
+        // `bon` stays local because it is `None` unless nonlinearity is active,
+        // saving N×8 bytes for the common linear case.
+        let materials = MaterialFields::sample(medium, &grid);
+        let bon = config.nonlinearity.then(|| materials.nonlinearity.clone());
 
         let sensor_recorder =
             SensorRecorder::new(config.sensor_mask.as_ref(), shape, config.nt + 1)?;
@@ -324,7 +297,7 @@ impl PSTDSolver {
             // (Opt-8) — all three axes are processed sequentially, one buffer suffices.
             ux_k: leto::Array3::zeros([grid.nx, grid.ny, nz_c]),
             grad_k: leto::Array3::zeros([grid.nx, grid.ny, nz_c]),
-            materials: MaterialFields { rho0, c0 },
+            materials,
             bon,
             absorption,
             k_mag_half,

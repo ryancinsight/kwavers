@@ -86,6 +86,7 @@
 //! - YAGNI: Implements only necessary features for acoustic simulation
 
 // Public modules
+pub mod absorption;
 pub mod avx512_stencil; // Phase 9.1: AVX-512 optimized FDTD stencil
 pub mod config;
 pub mod dispatch; // Phase 9.1: Runtime SIMD strategy dispatch

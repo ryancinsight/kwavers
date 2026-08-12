@@ -23,49 +23,69 @@
 | KWAVERS-AEQ-MET-54 | Type the public ultrafast transmission scheduler's speed, depth, PRF, event times, frame rates, and tilt angles with Aequitas; keep scalar extraction at the PRF/timing formula boundary and document the real-only Eunomia compatibility rule. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-transducer/src/ultrafast/sequencer/**`, manifest, ADR 093, PM artifacts |
 | KWAVERS-AEQ-INTEGRATION-1 | Integrate the current Aequitas metric closure for therapeutic microbubble and plasmonics contracts on current `main`; harden the public three-dimensional plasmonic coordinate contract and synchronize the audit. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-physics/src/{acoustics/therapy/microbubble,electromagnetic}`, PM artifacts |
 
-## KW-SOL-079 — Give the FDTD solver heterogeneous power-law absorption [minor] — todo
+## KW-SOL-079 - FDTD heterogeneous power-law absorption [minor] - done 2026-08-12
 
-- The FDTD path has **no absorption module at all**: `forward/fdtd/` contains no
-  absorption or attenuation source file, and `update_pressure_cpu` is the
-  lossless `p -= dt * rho_c_squared * div(v)` in all three of its branches
-  (k-space ops, staggered, central-difference). PSTD has the stratified
-  fractional Laplacian and the viscoacoustic solver has relaxation memory
-  variables; FDTD has neither. Fullwave 2.5 is an FDTD code whose entire
-  attenuation story is relaxation mechanisms, so this is the squarest remaining
-  parity gap.
-- Mechanism: relaxation memory variables, not a fractional Laplacian. The
-  fractional operator needs `IFFT(|k|^(y-s) FFT(.))`, which an FDTD path has no
-  transform for; memory variables are local in space, which is also what makes
-  them partitionable across devices (KW-GPU-078). `kwavers-medium`'s
-  `relaxation_fit` already produces exactly the per-voxel arm fields required.
-- Hook point (read 2026-08-12): all three branches of
-  `pressure_updater::update::update_pressure_cpu` land the divergence in a
-  single buffer before calling `update_pressure_simd`. That is the one place to
-  advance the arms and subtract their contribution, mirroring the viscoacoustic
-  solver's step with FD derivatives in place of spectral ones.
-- Design decisions to settle first:
-  1. **Modulus swap.** With relaxation the pressure update uses the *unrelaxed*
-     modulus `M_U = M_inf + sum(dM)`, not `rho_c_squared`. Enabling absorption
-     therefore changes what that cached field must hold; decide whether to
-     rebuild it or carry `M_U` alongside.
-  2. **CPML interaction.** The CPML gradient correction is applied to the
-     divergence components before accumulation. Confirm the arms see the
-     corrected divergence, since the memory variables must be driven by the same
-     `div(v)` the pressure update uses or the two go out of step inside the
-     layer.
-  3. **SIMD and GPU paths.** `update_pressure_simd` and `update_pressure_gpu`
-     both need the relaxation term, or absorption silently disappears when
-     either path is selected - the failure mode being a quiet accuracy loss
-     rather than an error.
-- Sequencing: independent of KW-SOL-074 (order affects the stencil, not the
-  absorption), but shares the pressure updater, so land one before starting the
-  other. `forward/fdtd/avx512_stencil/` remains nominally claimed by KW-SOL-054,
-  whose last commit was 2026-07-22 - stale, and reclaimable under the
-  stale-claim rule if the SIMD path needs touching.
-- Acceptance: a homogeneous FDTD run reproduces a prescribed alpha_0*f^gamma by
-  spectral ratio across 0.5-5 MHz to the same tolerance the viscoacoustic path
-  meets; a two-material grid with different exponents follows the path-weighted
-  law; the lossless path stays bit-identical when no absorption is configured.
+- Scope: new `crates/kwavers-solver/src/forward/fdtd/absorption/{mod,tests}.rs`;
+  FDTD config, solver struct, construction and pressure updater;
+  `kwavers-medium/src/material_fields.rs` (+ tests); one converter in
+  `kwavers-physics`; PSTD construction (de-duplicated onto the shared sampler);
+  book 4.8.5; FWI forward config literal.
+- The FDTD path had no absorption module at all - `update_pressure_cpu` was the
+  lossless `p -= dt*rho_c_squared*div(v)` in all three branches - while Fullwave
+  2.5 is an FDTD code whose entire attenuation story is relaxation mechanisms.
+- Delivered: `RelaxationAbsorption`, memory variables fitted through
+  `relaxation_fit` from the medium's own alpha_0(x) *and* gamma(x), advanced by
+  the exact exponential integrator so dt is bounded by the wave CFL and never by
+  the smallest tau. Configured by `FdtdAbsorption::{Lossless, PowerLawRelaxation}`
+  - a two-variant enum, since the parameters are meaningless without the model.
+- The three decisions this item recorded, as resolved:
+  1. **Modulus swap.** The absorbing update multiplies the divergence by the
+     unrelaxed M_U, exposed by the component; `rho_c_squared` keeps meaning
+     rho*c^2 rather than being silently redefined. A test asserts M_U is stiffer
+     than rho*c^2 wherever the medium absorbs, and by under 10 % - a larger
+     excess would mean the fit bought absorption with stiffness and wrecked the
+     CFL.
+  2. **CPML ordering.** Both finite-difference branches now converge on one
+     `apply_pressure_from_divergence`, reached *after* the CPML gradient
+     correction and the per-axis accumulation, so the arms integrate exactly the
+     divergence the pressure does.
+  3. **SIMD/GPU coverage.** All CPU branches (k-space, staggered, central) carry
+     the term. The GPU accelerator has no relaxation state, so an absorbing
+     configuration on that path now *errors* rather than silently propagating a
+     lossless medium.
+- Verification: 8 component tests (per-material fit, modulus stiffness bounds,
+  lossless degeneration, memory charge/decay, reset, unit convention, rejection)
+  plus a propagation test measuring alpha by standing-wave decay across
+  gamma = 0.6/1.0/1.4 and comparing against the prescribed law within 15 %.
+- Finding surfaced while testing, **not** caused by this change: the
+  finite-difference branches run without CPML diverge on a bare box - a growing
+  DC boundary mode - and the identical run with `FdtdAbsorption::Lossless`
+  diverges the same way. The propagation test therefore measures on the periodic
+  spectral branch. Filed as KW-SOL-081.
+
+## KW-SOL-081 - FDTD finite-difference branches diverge without CPML [patch] - todo
+
+- Observed 2026-08-12 while building KW-SOL-079. A `cos(kx)` standing wave on a
+  64x4x4 box, `spatial_order = 2`, `dt = 0.15*dx/c` (about a quarter of the 3-D
+  von Neumann limit), grows without bound on both the staggered and the central
+  finite-difference branches. Pressure at a point rises monotonically with no
+  oscillation - a zero-frequency mode - and total p-energy grows roughly
+  quadratically in step count.
+- **Not absorption**: the identical configuration with
+  `FdtdAbsorption::Lossless` diverges the same way, and the absorbing run's
+  energy sits consistently ~0.6 % below the lossless one at every step, which is
+  the absorption correctly removing energy from a diverging field.
+- The spectral (k-space) branch on the same setup is stable and oscillates
+  cleanly, which points at the edge handling of the finite-difference stencils
+  on a non-periodic box rather than at the interior scheme or the time step.
+- First hypotheses: the one-sided closures the staggered backward difference
+  applies at the faces, and whether the configuration is simply invalid without
+  a boundary condition (in which case the solver should reject it rather than
+  run and diverge).
+- Acceptance: either the boundary treatment is corrected and a lossless standing
+  wave conserves energy on the finite-difference branches, or an unbounded
+  finite-difference configuration is rejected at construction with a message
+  naming the missing boundary.
 
 ## KW-SOL-080 — Differential test across the two heterogeneous-absorption paths [patch] — todo
 

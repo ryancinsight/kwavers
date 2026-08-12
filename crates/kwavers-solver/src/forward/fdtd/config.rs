@@ -43,6 +43,35 @@ pub enum KSpaceCorrectionMode {
     Spectral,
 }
 
+/// Absorption model for the FDTD pressure update.
+///
+/// A two-variant enum rather than a flag plus loose parameters: the parameters
+/// are meaningless without the model, and the lossless case must carry none.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, Default)]
+pub enum FdtdAbsorption {
+    /// No absorption. The pressure update uses the lossless modulus `rho_0*c_0^2`
+    /// and allocates no memory fields.
+    #[default]
+    Lossless,
+    /// Heterogeneous power-law absorption `alpha_0(x)*(f/f_ref)^gamma(x)`,
+    /// realized by relaxation memory variables fitted to the medium's own
+    /// coefficient **and exponent** fields.
+    ///
+    /// Costs one auxiliary field per arm per voxel, so `relaxation_arms` is the
+    /// memory knob: three optimized arms reproduce a decade-wide power law to
+    /// about 0.2 %, and two to about 2 %.
+    PowerLawRelaxation {
+        /// Frequency at which the medium's `alpha_0` is quoted \[Hz].
+        reference_frequency_hz: f64,
+        /// Lower edge of the band the power law must hold over \[Hz].
+        band_min_hz: f64,
+        /// Upper edge of the band the power law must hold over \[Hz].
+        band_max_hz: f64,
+        /// Relaxation arms, i.e. memory fields per voxel.
+        relaxation_arms: usize,
+    },
+}
+
 /// FDTD solver configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FdtdConfig {
@@ -80,6 +109,10 @@ pub struct FdtdConfig {
     pub sensor_mask: Option<Array3<bool>>,
     /// Spatial coordinate geometry (Cartesian 3-D or axisymmetric cylindrical).
     pub geometry: SolverGeometry,
+
+    /// Absorption model applied in the pressure update.
+    #[serde(default)]
+    pub absorption: FdtdAbsorption,
 }
 
 impl Default for FdtdConfig {
@@ -97,6 +130,7 @@ impl Default for FdtdConfig {
             dt: 1e-7,
             sensor_mask: None,
             geometry: SolverGeometry::Cartesian3D,
+            absorption: FdtdAbsorption::Lossless,
         }
     }
 }
@@ -108,6 +142,33 @@ impl FdtdConfig {
     ///
     pub fn validate(&self) -> KwaversResult<()> {
         let mut multi_error = MultiError::new();
+
+        if let FdtdAbsorption::PowerLawRelaxation {
+            reference_frequency_hz,
+            band_min_hz,
+            band_max_hz,
+            relaxation_arms,
+        } = self.absorption
+        {
+            let ok = reference_frequency_hz.is_finite()
+                && reference_frequency_hz > 0.0
+                && band_min_hz.is_finite()
+                && band_max_hz.is_finite()
+                && band_min_hz > 0.0
+                && band_max_hz > band_min_hz
+                && relaxation_arms >= 1;
+            if !ok {
+                multi_error.add(
+                    ValidationError::FieldValidation {
+                        field: "absorption".to_owned(),
+                        value: format!("{:?}", self.absorption),
+                        constraint: "requires 0 < band_min < band_max, f_ref > 0, arms >= 1"
+                            .to_owned(),
+                    }
+                    .into(),
+                );
+            }
+        }
 
         // Validate spatial order
         if ![2, 4, 6].contains(&self.spatial_order) {

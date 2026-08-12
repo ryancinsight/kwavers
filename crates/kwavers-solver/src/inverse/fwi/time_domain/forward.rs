@@ -135,6 +135,9 @@ impl FwiProcessor {
         let num_steps = self.parameters.nt;
 
         let config = FdtdConfig {
+            // FWI inverts for sound speed in a lossless forward model;
+            // attenuation is not part of its parameter set.
+            absorption: crate::forward::fdtd::config::FdtdAbsorption::Lossless,
             spatial_order: 2,
             staggered_grid: true,
             cfl_factor: 0.3,
