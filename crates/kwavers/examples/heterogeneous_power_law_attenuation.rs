@@ -285,6 +285,7 @@ fn homogeneous_sweep(dt: f64, reference: &[(f64, f64)]) -> Result<Vec<SweepRow>>
 }
 
 /// One layer of the abdominal-wall stack.
+#[allow(dead_code)]
 struct Layer {
     name: &'static str,
     cells: usize,
