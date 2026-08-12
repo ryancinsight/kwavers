@@ -20,6 +20,14 @@
   prescribed law to 3.0 % worst case and 0.35 % across the band interior; the
   heterogeneous stack matches its exact path-weighted prediction to 0.9 %.
 
+- `kwavers_math::numerics::operators::staggered_first_derivative_coefficients`:
+  derives half-grid staggered first-derivative stencil weights for any even
+  order up to 16th by solving the Taylor system, instead of tabulating them.
+  Verified against the published Fornberg/Levander coefficients for orders 2–8
+  and by measured order of accuracy. This is the mathematical core of the
+  8th-order staggered scheme Fullwave 2.5 uses; the operator and FDTD wiring
+  are tracked as KW-SOL-074.
+
 - `discrete_dispersion_matches_continuum`: derives the memory-variable
   scheme's exact discrete dispersion relation by von Neumann analysis and pins
   it against the continuum relation, establishing that accuracy is governed by

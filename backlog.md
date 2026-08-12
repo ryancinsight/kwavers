@@ -23,6 +23,50 @@
 | KWAVERS-AEQ-MET-54 | Type the public ultrafast transmission scheduler's speed, depth, PRF, event times, frame rates, and tilt angles with Aequitas; keep scalar extraction at the PRF/timing formula boundary and document the real-only Eunomia compatibility rule. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-transducer/src/ultrafast/sequencer/**`, manifest, ADR 093, PM artifacts |
 | KWAVERS-AEQ-INTEGRATION-1 | Integrate the current Aequitas metric closure for therapeutic microbubble and plasmonics contracts on current `main`; harden the public three-dimensional plasmonic coordinate contract and synchronize the audit. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-physics/src/{acoustics/therapy/microbubble,electromagnetic}`, PM artifacts |
 
+## KW-MATH-073 — Derived staggered stencil coefficients to arbitrary even order [minor] — done 2026-08-12
+
+- Owner: Claude; scope
+  `crates/kwavers-math/src/numerics/operators/differential/staggered_grid/coefficients{.rs,/tests.rs}`
+  plus the three module re-export lines. No solver, manifest, or gitlink change.
+- Driver: Fullwave 2.5 runs an 8th-order-in-space staggered scheme; kwavers'
+  staggered operator is 2nd order only, and its collocated central differences
+  are three cloned types (CentralDifference2/4/6) with hand-entered constants.
+- Outcome: `staggered_first_derivative_coefficients(half_order)` derives the
+  half-grid stencil weights by solving the Taylor system
+  `sum_n c_n a_n^{2m+1} = delta_{m0}/2`, `a_n = n - 1/2`, rather than tabulating
+  them, so a new order is a parameter and not a new constant table to mis-enter.
+- Acceptance (met): matches the published Fornberg/Levander rationals for
+  orders 2, 4, 6, 8 to 1e-13; delivers its claimed order of accuracy under grid
+  refinement; exact on constant and linear fields at every order; alternating,
+  decaying taps; accuracy monotone in order. 7 tests, doctest, clippy clean.
+- Honest limit: the derivation is verified to half-order 8 (16th order) and
+  capped there; by that order the high Taylor moments cancel terms of order
+  1e12 and the residual is ~1e-11 relative, not exact. Documented at the cap.
+
+## KW-SOL-074 — Eighth-order staggered FDTD operator and solver wiring [minor] — todo
+
+- Scope: `kwavers-math` staggered_grid `{operator,forward,backward}.rs`,
+  `AcousticSpatialOrder` in kwavers-physics, the FDTD `CentralDifferenceOperator`
+  dispatch and config validation, and the two `StaggeredGridOperator::new` call
+  sites in `kwavers-solver/src/forward/fdtd/solver/`.
+- KW-MATH-073 delivered the mathematical core (derived coefficients to 8th
+  order). What remains is the array plumbing, and it carries two real design
+  decisions that must be settled first, not discovered mid-change:
+  1. **Output shape contract.** The current 2nd-order `apply_forward_x_into`
+     writes `(nx-1, ny, nz)`. A `2N`-order stencil consumes `N` taps each side,
+     so either the valid region shrinks to `(nx-2N+1, ...)` -- a breaking shape
+     change for every caller -- or the operator carries boundary closures.
+  2. **Boundary closures.** Reduced-order one-sided stencils near the faces are
+     the standard answer and interact with the CPML layer, which already occupies
+     the boundary region. Decide whether the interior order tapers into the PML.
+- Sequencing note: the FDTD SIMD stencil files are peer-claimed under KW-SOL-054
+  (AVX-512 layout contract). Sequence behind it or coordinate scope on the board;
+  do not edit `forward/fdtd/simd_stencil/` or `avx512_stencil/` concurrently.
+- Acceptance: order-of-accuracy convergence measured on a propagating wave at
+  orders 2/4/6/8; the existing 2nd-order behaviour bit-unchanged; CFL limits for
+  order 8 derived and asserted (the `AcousticSpatialOrder::cfl_limit` table needs
+  its 8th-order entry derived, not guessed).
+
 ## KW-SOL-072 — Simulated absorption ran 8-19 % below the prescribed law [patch] — done 2026-08-12
 
 - Scope: `crates/kwavers-solver/src/forward/viscoacoustic/tests.rs` and

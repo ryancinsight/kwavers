@@ -77,7 +77,9 @@ mod traversal;
 pub use central_difference_2::CentralDifference2;
 pub use central_difference_4::CentralDifference4;
 pub use central_difference_6::CentralDifference6;
-pub use staggered_grid::StaggeredGridOperator;
+pub use staggered_grid::{
+    staggered_first_derivative_coefficients, StaggeredGridOperator, MAX_HALF_ORDER,
+};
 
 // Integration tests
 #[cfg(test)]
