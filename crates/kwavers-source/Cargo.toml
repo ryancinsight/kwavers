@@ -2,11 +2,15 @@
 name = "kwavers-source"
 version = "3.0.0"
 publish = true
-edition = "2021"
-authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+readme = "README.md"
 description = "Low-level acoustic/optical/EM excitation primitives for kwavers: source trait, grid/mask sources, wavefronts, custom signals, apodization windows"
-license = "MIT"
-repository = "https://github.com/ryancinsight/kwavers"
 
 [dependencies]
 leto = { workspace = true }

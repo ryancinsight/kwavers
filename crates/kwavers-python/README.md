@@ -302,7 +302,8 @@ pykwavers includes comprehensive validation against:
 2. **k-Wave Reference**: Direct comparison on identical problems
 3. **Literature Values**: Published experimental measurements
 
-See [Sprint 217 Gap Analysis](../../docs/sprints/SPRINT_217_SESSION_9_KWAVE_GAP_ANALYSIS.md) for detailed validation specifications.
+See [`gap_audit.md`](https://github.com/ryancinsight/kwavers/blob/main/gap_audit.md)
+for the current physics/numerics gap findings.
 
 ## Examples
 
@@ -432,11 +433,12 @@ Contributions welcome! Please follow the development workflow:
 4. Run quality checks (format, lint, test)
 5. Submit pull request with clear description
 
-See [ARCHITECTURE.md](../ARCHITECTURE.md) for design principles.
+See the [architecture decision records](https://github.com/ryancinsight/kwavers/tree/main/docs/ADR)
+for design principles.
 
 ## License
 
-MIT License - see [LICENSE](../LICENSE) for details.
+MIT License - see [LICENSE](https://github.com/ryancinsight/kwavers/blob/main/LICENSE) for details.
 
 ## Contact
 

@@ -2,11 +2,15 @@
 name = "kwavers-analysis"
 version = "3.0.0"
 publish = true
-edition = "2021"
-authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+readme = "README.md"
 description = "Analysis layer for kwavers: signal processing, beamforming, validation, ML/uncertainty, performance, plotting/visualization"
-license = "MIT"
-repository = "https://github.com/ryancinsight/kwavers"
 
 [dependencies]
 aequitas = { workspace = true }

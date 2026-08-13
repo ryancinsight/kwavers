@@ -2,10 +2,10 @@
 name = "xtask"
 version = "0.1.0"
 publish = false
-authors = ["Ryan Clanton <ryanclanton@outlook.com>"]
-repository = "https://github.com/ryancinsight/kwavers"
-edition = "2021"
-license = "MIT"
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
 
 [dependencies]
 anyhow = "1.0"

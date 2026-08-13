@@ -2,11 +2,15 @@
 name = "kwavers-gpu"
 version = "5.0.0"
 publish = true
-authors = ["Ryan Clanton <ryanclanton@outlook.com>"]
-repository = "https://github.com/ryancinsight/kwavers"
-edition = "2021"
-description = "Hephaestus-backed provider-generic GPU compute backend for kwavers"
+edition.workspace = true
+authors.workspace = true
 license = "MIT OR Apache-2.0"
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+readme = "README.md"
+description = "Hephaestus-backed provider-generic GPU compute backend for kwavers"
 
 [lints]
 workspace = true

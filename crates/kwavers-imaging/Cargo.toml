@@ -2,11 +2,15 @@
 name = "kwavers-imaging"
 version = "3.0.0"
 publish = true
-edition = "2021"
-authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+readme = "README.md"
 description = "Medical-imaging domain workflows for kwavers: DICOM/CT/NIfTI loaders, ultrasound/photoacoustic modalities, CEUS orchestration, multimodality fusion"
-license = "MIT"
-repository = "https://github.com/ryancinsight/kwavers"
 
 [dependencies]
 kwavers-core = { path = "../kwavers-core", features = ["registration"], version = "3.0.0" }

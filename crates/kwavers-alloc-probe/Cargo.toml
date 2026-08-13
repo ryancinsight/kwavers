@@ -1,11 +1,18 @@
 [package]
 name = "kwavers-alloc-probe"
 version = "0.1.0"
-edition = "2021"
-authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
+# Published: `kwavers-grid` and `kwavers-solver` depend on it, so it must exist
+# on the registry for them to publish.
+publish = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+readme = "README.md"
 description = "Thread-scoped allocation counting for kwavers allocation-contract tests"
-license = "MIT"
-repository = "https://github.com/ryancinsight/kwavers"
 
 [lints]
 workspace = true

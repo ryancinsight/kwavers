@@ -2,11 +2,15 @@
 name = "kwavers-medium"
 version = "4.0.0"
 publish = true
-edition = "2021"
-authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+readme = "README.md"
 description = "Material and tissue models for kwavers: homogeneous/heterogeneous media, acoustic/elastic/optical/thermal/viscous properties, absorption models, anisotropy"
-license = "MIT"
-repository = "https://github.com/ryancinsight/kwavers"
 
 [dependencies]
 aequitas = { workspace = true }

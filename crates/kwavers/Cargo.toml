@@ -2,13 +2,15 @@
 name = "kwavers"
 version = "3.0.0"
 publish = true
-edition = "2021"
-authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+readme = "README.md"
 description = "Ultrasound Simulation Toolbox with Cavitation and Light Physics"
-license = "MIT"
-repository = "https://github.com/ryancinsight/kwavers"
-keywords = ["ultrasound", "simulation", "physics", "cavitation", "sonoluminescence", "medical-imaging"]
-categories = ["science", "simulation", "medical"]
 autobenches = false
 
 # This is a workspace member - see root Cargo.toml for workspace configuration

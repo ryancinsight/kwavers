@@ -6,12 +6,16 @@
 name = "kwavers-driver"
 version = "0.3.13"
 publish = true
-edition = "2021"
 rust-version = "1.80"
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+readme = "README.md"
 description = "Physics-guided, manufacturing-aware driver electronics design for kwavers"
-license = "MIT"
-repository = "https://github.com/ryancinsight/kwavers"
-authors = ["Ryan Clanton <ryanclanton@outlook.com>"]
 
 [dependencies]
 aequitas = { workspace = true }

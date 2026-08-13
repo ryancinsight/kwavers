@@ -1,3 +1,7 @@
+// The crate README is the docs.rs landing page and the registry landing page
+// (`readme` in Cargo.toml); including it here makes every quick-start snippet a
+// doctest, so the documented API cannot drift from the real one.
+#![doc = include_str!("../README.md")]
 //! # Kwavers — top-level application / integration crate
 //!
 //! `kwavers` is the thin top crate of the workspace. It does **not** re-export the

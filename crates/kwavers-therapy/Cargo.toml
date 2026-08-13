@@ -2,11 +2,15 @@
 name = "kwavers-therapy"
 version = "3.0.0"
 publish = true
-edition = "2021"
-authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+readme = "README.md"
 description = "Clinical therapy + care-delivery for kwavers: HIFU/histotripsy/lithotripsy planning, theranostic guidance, dose & safety monitoring, regulatory, patient management"
-license = "MIT"
-repository = "https://github.com/ryancinsight/kwavers"
 
 [dependencies]
 aequitas = { workspace = true }

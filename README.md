@@ -1,6 +1,6 @@
 # Kwavers 🌀
 
-[![Version](https://img.shields.io/badge/version-3.0.0-blue.svg)](https://github.com/kwavers/kwavers)
+[![Repository](https://img.shields.io/badge/repo-ryancinsight%2Fkwavers-blue.svg)](https://github.com/ryancinsight/kwavers)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Documentation](https://img.shields.io/badge/docs-available-blue.svg)](https://docs.rs/kwavers)
 [![Rust](https://img.shields.io/badge/rust-2021+-orange.svg)](https://www.rust-lang.org/)
@@ -34,27 +34,48 @@
 **Recently completed:** the workspace crate split (ADR-011) — the ~460k-LOC
 `kwavers` monolith is decomposed into per-layer crates to cut incremental build
 times. There is **no facade**: consumers (including the Python bindings) depend on
-the layer crates directly (`kwavers_core`, `kwavers_domain`, `kwavers_solver`, …).
+the layer crates directly (`kwavers_core`, `kwavers_grid`, `kwavers_solver`, …).
 The `kwavers` crate is now only a thin top-level **app/integration** crate — it
 hosts the binary and the cross-cutting tests/examples/benches, and re-exports
 nothing.
 
 ### Workspace layout
 
-| Crate | Layer / responsibility |
-|-------|------------------------|
-| `kwavers-core` | Constants, error types, arena allocation, time/logging utilities |
-| `kwavers-math` | FFT, linear algebra, numerics, geometry, statistics, SIMD |
-| `kwavers-domain` | Grid, medium, source, sensor, boundary, field, signal, imaging, therapy models |
-| `kwavers-physics` | Nonlinear acoustics, bubble dynamics, thermal, optics, chemistry, elastic waves |
-| `kwavers-solver` | FDTD / PSTD / k-space / Helmholtz, BEM, FWI / RTM / CBS, PINN |
-| `kwavers-analysis` | Signal processing, beamforming, validation, ML/uncertainty, plotting |
-| `kwavers-simulation` | Builders, runners, multi-physics coupling, modality pipelines, backends |
-| `kwavers-diagnostics` | Reconstruction, multi-modal fusion, Doppler, spectroscopy, decision support |
-| `kwavers-therapy` | HIFU / histotripsy / lithotripsy planning, theranostic guidance, dose & safety |
-| `kwavers-gpu` | wgpu/WGSL compute backend (leaf above solver); concrete `ComputeBackend` impls |
-| `kwavers` | Thin top-level app/integration crate: binary + cross-cutting tests/examples/benches (no re-exports) |
-| `kwavers-python` | PyO3 bindings (`pykwavers`); depends on the layer crates directly; no domain logic |
+Versions are per crate, not workspace-wide; each crate's `Cargo.toml` is
+authoritative and the table mirrors it. Crates are listed in dependency order:
+every crate depends only on crates above it.
+
+| Crate | Version | Layer / responsibility |
+|-------|---------|------------------------|
+| `kwavers-core` | 3.0.0 | Constants, error types, arena allocation, time/logging utilities |
+| `kwavers-alloc-probe` | 0.1.0 | Thread-scoped allocation counting for allocation-contract tests |
+| `kwavers-math` | 3.0.0 | FFT, linear algebra, numerics, geometry, statistics, SIMD |
+| `kwavers-grid` | 3.0.0 | Cartesian/cylindrical grids, coordinates, topology, operators, k-space utilities |
+| `kwavers-field` | 3.0.0 | Field component indices (SSOT), field-type mapping, operations, bubble/EM field state |
+| `kwavers-signal` | 3.0.0 | Excitation waveforms, pulses, frequency sweeps, modulation, windowing, filters |
+| `kwavers-medium` | 4.0.0 | Homogeneous/heterogeneous media; acoustic, elastic, optical, thermal, viscous properties |
+| `kwavers-mesh` | 3.0.0 | Tetrahedral FEM meshes: nodes, connectivity, quality metrics, gaia bridge |
+| `kwavers-phantom` | 3.0.0 | Tissue-phantom builders: blood oxygenation, layered tissue, tumour, vascular presets |
+| `kwavers-boundary` | 3.0.0 | CPML/PML absorbing layers, FEM/BEM, periodic boundaries, smoothing |
+| `kwavers-source` | 3.0.0 | Excitation primitives: source trait, grid/mask sources, wavefronts, apodization |
+| `kwavers-receiver` | 3.0.0 | Recording primitives: sensor-array geometry, field recorders, point sensors, grid sampling |
+| `kwavers-transducer` | 4.1.0 | Devices: focused bowls, phased/linear/matrix/2-D/hemispherical arrays, PAM, ultrafast |
+| `kwavers-imaging` | 3.0.0 | DICOM/CT/NIfTI loaders, ultrasound/photoacoustic modalities, CEUS orchestration, fusion |
+| `kwavers-physics` | 3.0.0 | Nonlinear acoustics, bubble dynamics, thermal, optics, chemistry, elastic waves |
+| `kwavers-solver` | 3.0.0 | FDTD / PSTD / k-space / Helmholtz, BEM, FWI / RTM / CBS, PINN |
+| `kwavers-analysis` | 3.0.0 | Signal processing, beamforming, validation, ML/uncertainty, plotting |
+| `kwavers-gpu` | 5.0.0 | Hephaestus-backed provider-generic GPU compute backend; concrete `ComputeBackend` impls |
+| `kwavers-simulation` | 3.0.0 | Builders, runners, multi-physics coupling, modality pipelines, backends |
+| `kwavers-diagnostics` | 3.0.0 | Reconstruction, multi-modal fusion, Doppler, spectroscopy, functional US, decision support |
+| `kwavers-therapy` | 3.0.0 | HIFU / histotripsy / lithotripsy planning, theranostic guidance, dose, safety, regulatory |
+| `kwavers-driver` | 0.3.13 | Physics-guided, manufacturing-aware driver-electronics design (leaf above `kwavers-transducer`) |
+| `kwavers` | 3.0.0 | Thin top-level app/integration crate: binary + cross-cutting tests/examples/benches (no re-exports) |
+| `kwavers-python` | 0.1.0 | PyO3 bindings (`pykwavers`); depends on the layer crates directly; no domain logic; `publish = false` |
+
+`xtask/` is the twenty-fifth workspace member: a build-tool package, also
+`publish = false`. Shared registry metadata (edition, authors, license,
+repository, homepage, keywords, categories) lives once in the root
+[`[workspace.package]`](Cargo.toml) table; members inherit it.
 
 Tyche owns reproducible counter streams, Latin-hypercube and Sobol designs,
 online moments, correlation screening, and finite-sample conformal
@@ -66,8 +87,8 @@ independent provider algorithms, while model-residual adaptive refinement
 remains solver-owned. See
 [ADR 043](docs/ADR/043-tyche-uncertainty-provider.md).
 
-Layer crates are at `3.0.0`; the completed split targets `4.0.0` (see
-[RELEASE_v4.0.0 notes in CHANGELOG](CHANGELOG.md)). `kwavers-python` is `0.1.0`.
+Each crate carries its own version and moves independently; see the table above
+and [`CHANGELOG.md`](CHANGELOG.md) for release history.
 
 Validation status: `pykwavers` reaches 1-to-1 PSTD parity with k-Wave /
 k-wave-python / KWave.jl on the homogeneous-water IVP benchmark (Pearson
@@ -84,7 +105,9 @@ through OIDC Trusted Publishing.
 
 ### Rust Crate Releases
 
-The 23 reusable Rust packages publish to crates.io in local dependency order.
+The 23 publishable Rust packages — every workspace member except
+`kwavers-python` and `xtask`, both of which set `publish = false` — publish to
+crates.io in local dependency order.
 The `Crates.io Release` workflow validates a named workspace package on manual
 dispatch. After its required first release is bootstrapped and its crates.io
 Trusted Publisher is registered, a GitHub Release tagged
@@ -113,8 +136,14 @@ Math Layer            → Linear algebra, FFT, numerical primitives
 Core Layer            → Fundamental types, error handling
 ```
 
-The module DAG is acyclic and linear (`core → math → domain → physics → solver →
-analysis → simulation → diagnostics/therapy`); each layer is now its own crate.
+Each layer is its own crate, and the crate dependency graph is an acyclic,
+strictly unidirectional DAG: `core → math → {grid, field, signal, medium, mesh,
+phantom, boundary, source, receiver, transducer, imaging} → physics → solver →
+analysis → gpu → simulation → diagnostics/therapy`. No crate depends on a layer
+above it, and `kwavers-core` has no first-party dependencies at all. Layers are
+enforced by the manifests, not by convention — `cargo tree` is the check.
+Dependencies within the domain band (for example `transducer → receiver`) and
+skips down the chain are permitted; upward edges are not.
 
 Cross-repository foundations remain below that DAG. Public
 [Asclepius](https://github.com/ryancinsight/asclepius) owns CEM43, Arrhenius
@@ -143,64 +172,70 @@ Key architectural decisions:
 
 ### Installation
 
-Add Kwavers to your `Cargo.toml`:
+There is no facade crate: `kwavers` re-exports nothing, so depend on the layer
+crates you actually use.
 
 ```toml
 [dependencies]
-kwavers = "3.0.0"
+kwavers-core = "3.0.0"
+kwavers-grid = "3.0.0"
+kwavers-medium = "4.0.0"
 ```
 
-For GPU acceleration and advanced features:
+Add solver, GPU, or PINN capability by pulling in the crate that owns it:
 
 ```toml
 [dependencies]
-kwavers = { version = "3.0.0", features = ["gpu", "pinn"] }
+kwavers-solver = { version = "3.0.0", features = ["pinn"] }
+kwavers-gpu = { version = "5.0.0", features = ["gpu"] }
 ```
+
+The three snippets below are the doctests of the `kwavers` crate
+([`crates/kwavers/README.md`](crates/kwavers/README.md), included as its crate
+documentation), so they are compiled and run by
+`cargo test -p kwavers --doc` and cannot drift from the API.
 
 ### Example 1: Basic Grid Setup
 
 ```rust
-use kwavers::domain::grid::Grid;
+use kwavers_grid::Grid;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Create a 3D computational grid
-    let grid = Grid::new(100, 100, 100, 0.001, 0.001, 0.001)?;
-    println!("Created grid: {}×{}×{} points", grid.nx, grid.ny, grid.nz);
-    println!("Grid spacing: {} m", grid.dx);
+    // 100³ points at 1 mm isotropic spacing.
+    let grid = Grid::new(100, 100, 100, 1e-3, 1e-3, 1e-3)?;
+
+    assert_eq!((grid.nx, grid.ny, grid.nz), (100, 100, 100));
+    assert_eq!(grid.dx, 1e-3);
     Ok(())
 }
 ```
 
 ### Example 2: Material Properties
 
+`HomogeneousMedium` carries acoustic, optical, thermal, and cavitation
+properties at once. The `water`, `tissue`, `blood`, and `air` constructors fill
+them from the reference constants in `kwavers-core`. The general constructor is
+`HomogeneousMedium::new(density, sound_speed, mu_a, mu_s_prime, grid)` — the
+third and fourth arguments are the *optical* absorption and reduced-scattering
+coefficients, not acoustic absorption and B/A.
+
 ```rust
-use kwavers::domain::medium::HomogeneousMedium;
-use kwavers::domain::grid::Grid;
+use kwavers_core::constants::fundamental::{DENSITY_WATER, SOUND_SPEED_WATER};
+use kwavers_grid::Grid;
+use kwavers_medium::{CoreMedium, HomogeneousMedium};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Create a computational grid
-    let grid = Grid::new(100, 100, 100, 0.001, 0.001, 0.001)?;
+    let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3)?;
+    let water = HomogeneousMedium::water(&grid);
 
-    // Define acoustic properties for water
-    let density = 1000.0;      // kg/m³
-    let sound_speed = 1500.0;  // m/s
-    let absorption = 0.0;      // dB/cm/MHz (water)
-    let nonlinearity = 0.0;    // B/A parameter
+    // Point accessors come from the `CoreMedium` trait.
+    let density = water.density(0, 0, 0); // kg/m³
+    let sound_speed = water.sound_speed(0, 0, 0); // m/s
+    let impedance = density * sound_speed; // Pa·s/m
 
-    // Create a homogeneous water medium
-    let medium = HomogeneousMedium::new(
-        &grid,
-        sound_speed,
-        density,
-        absorption,
-        nonlinearity,
-    );
-
-    println!("Water properties:");
-    println!("  Density: {} kg/m³", density);
-    println!("  Sound speed: {} m/s", sound_speed);
-    println!("  Acoustic impedance: {} MPa·s/m", density * sound_speed / 1e6);
-
+    assert_eq!(density, DENSITY_WATER);
+    assert_eq!(sound_speed, SOUND_SPEED_WATER);
+    assert_eq!(impedance, DENSITY_WATER * SOUND_SPEED_WATER);
     Ok(())
 }
 ```
@@ -208,24 +243,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Example 3: Basic Acoustic Calculations
 
 ```rust
-// Basic acoustic property calculations
 fn main() {
-    // Acoustic impedance calculation: Z = ρc
-    let density_water = 1000.0;     // kg/m³
-    let speed_water = 1500.0;       // m/s
-    let impedance_water = density_water * speed_water; // Pa·s/m
+    // Acoustic impedance Z = ρc.
+    let impedance_water = 1000.0 * 1500.0_f64; // Pa·s/m
+    let impedance_air = 1.2 * 343.0_f64;
 
-    println!("Water acoustic impedance: {:.0} Pa·s/m", impedance_water);
+    // Pressure reflection coefficient R = (Z₂ − Z₁) / (Z₂ + Z₁).
+    let reflection = (impedance_air - impedance_water) / (impedance_air + impedance_water);
 
-    // Reflection coefficient: R = (Z2 - Z1)/(Z2 + Z1)
-    let density_air = 1.2;          // kg/m³
-    let speed_air = 343.0;          // m/s
-    let impedance_air = density_air * speed_air;
-
-    let reflection_coeff = (impedance_air - impedance_water) /
-                          (impedance_air + impedance_water);
-
-    println!("Air-water reflection coefficient: {:.4}", reflection_coeff);
+    // The water/air interface is very nearly a perfect reflector.
+    assert!(reflection < -0.999);
 }
 ```
 
@@ -235,26 +262,27 @@ fn main() {
 
 - **[Published Kwavers book](https://ryancinsight.github.io/kwavers/)** - Hosted mdBook site
 - **[API Reference](https://docs.rs/kwavers)** - Generated Rust documentation
-- **[Examples](examples/)** - Basic usage examples
+- **[Examples](crates/kwavers/examples/)** - Runnable end-to-end programs
 - **[The Kwavers book](docs/book/)** - Chapters, figures, validation narratives
 - **[Architecture Decision Records](docs/ADR/)** - Design decisions (incl. ADR-011 crate split)
 - **[Documentation index](docs/README.md)** - What lives under `docs/`
 
 ### 🎯 Basic Usage
 
-See the `examples/` directory for basic usage patterns:
+Runnable programs live in
+[`crates/kwavers/examples/`](crates/kwavers/examples/):
 
 ```bash
 # List available examples
-cargo run --example
+cargo run -p kwavers --example
 
-# Run a basic example (if available)
-cargo run --example basic_simulation
+# Run one
+cargo run -p kwavers --example basic_simulation
 ```
 
 **Basic Test**: Check compilation
 ```bash
-cargo check
+cargo check --workspace
 ```
 
 ### 🏗️ Architecture
@@ -272,7 +300,10 @@ Mathematical Primitives  → Linear algebra, FFT, interpolation
 Core Infrastructure      → Error handling, memory management
 ```
 
-The architecture aims to separate concerns while maintaining flexibility for different research applications. Layer boundaries help organize code but are not strictly enforced in all areas during active development.
+The architecture separates concerns while maintaining flexibility for different
+research applications. Layer boundaries are enforced by the crate graph: each
+band is a crate, and Cargo rejects the upward or circular edge that would break
+the ordering above.
 
 
 ## 🤝 Contributing
@@ -281,10 +312,8 @@ This is an active research project under development. Contributions are welcome!
 
 ### 📝 Development Philosophy
 
-- **Clean Codebase**: No dead code, deprecated code, or build artifacts
 - **Deep Vertical Hierarchy**: Modules organized by domain with clear separation of concerns
 - **Single Source of Truth**: Shared accessors, no duplication
-- **Zero Technical Debt**: All TODOs resolved with full implementation or removed
 - **Architectural Purity**: Unidirectional dependencies, no circular imports
 
 ### 🚀 Getting Started
@@ -298,17 +327,15 @@ This is an active research project under development. Contributions are welcome!
 
 ### 📊 Development Approach
 
-**Artifact-driven sprints** (see [`CLAUDE.md`](CLAUDE.md) governance):
-- `backlog.md` — strategy and prioritized work
-- `CHECKLIST.md` — tactical tasks with change-class tags
-- `gap_audit.md` — physics/numerics gap findings
-- `CHANGELOG.md` — version history
+**Artifact-driven sprints**, tracked in the repository-root artifacts:
+- [`backlog.md`](backlog.md) — strategy and prioritized work
+- [`CHECKLIST.md`](CHECKLIST.md) — tactical tasks with change-class tags
+- [`gap_audit.md`](gap_audit.md) — physics/numerics gap findings
+- [`CHANGELOG.md`](CHANGELOG.md) — version history
 
 **Quality Standards**:
 - Zero compilation errors (enforced)
-- Minimal compiler warnings (dead code not allowed)
 - 100% test pass rate for all refactoring
-- API compatibility maintained across refactors
 - Mathematical specifications with literature references
 
 ### 🔬 Research Integration
@@ -378,8 +405,8 @@ is available.
 
 ## 📞 Contact & Support
 
-- **Issues**: [GitHub Issues](https://github.com/kwavers/kwavers/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/kwavers/kwavers/discussions)
+- **Issues**: [GitHub Issues](https://github.com/ryancinsight/kwavers/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/ryancinsight/kwavers/discussions)
 - **Documentation**: [docs.rs/kwavers](https://docs.rs/kwavers)
 
 ---

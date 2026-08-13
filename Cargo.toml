@@ -2,6 +2,19 @@
 members = ["crates/kwavers", "xtask", "crates/kwavers-python", "crates/kwavers-core", "crates/kwavers-math", "crates/kwavers-signal", "crates/kwavers-grid", "crates/kwavers-alloc-probe", "crates/kwavers-field", "crates/kwavers-medium", "crates/kwavers-mesh", "crates/kwavers-phantom", "crates/kwavers-boundary", "crates/kwavers-source", "crates/kwavers-receiver", "crates/kwavers-transducer", "crates/kwavers-imaging", "crates/kwavers-physics", "crates/kwavers-solver", "crates/kwavers-analysis", "crates/kwavers-simulation", "crates/kwavers-diagnostics", "crates/kwavers-therapy", "crates/kwavers-gpu", "crates/kwavers-driver"]
 resolver = "2"
 
+# Registry metadata SSOT. Members inherit with `<field>.workspace = true`; only a
+# field whose value genuinely differs per package (version, description, readme,
+# and `kwavers-gpu`'s dual license) is re-declared locally.
+[workspace.package]
+edition = "2021"
+authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
+license = "MIT"
+repository = "https://github.com/ryancinsight/kwavers"
+homepage = "https://ryancinsight.github.io/kwavers/"
+# crates.io caps keywords at 5 and accepts only registered category slugs.
+keywords = ["ultrasound", "acoustics", "simulation", "physics", "cavitation"]
+categories = ["science", "simulation", "mathematics"]
+
 [workspace.dependencies]
 aequitas = { version = "0.2.0", git = "https://github.com/ryancinsight/aequitas", default-features = false, features = ["std", "serde"] }
 asclepius = { version = "0.1.0", git = "https://github.com/ryancinsight/asclepius", default-features = false, features = ["std"] }

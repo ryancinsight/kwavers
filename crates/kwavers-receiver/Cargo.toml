@@ -2,11 +2,15 @@
 name = "kwavers-receiver"
 version = "3.0.0"
 publish = true
-edition = "2021"
-authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+readme = "README.md"
 description = "Low-level acoustic recording primitives for kwavers: sensor-array geometry, field recorders, point sensors, grid sampling, sonoluminescence detection"
-license = "MIT"
-repository = "https://github.com/ryancinsight/kwavers"
 
 [dependencies]
 kwavers-core = { path = "../kwavers-core", version = "3.0.0" }
