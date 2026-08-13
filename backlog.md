@@ -138,6 +138,155 @@
   comparison, and PWLS then wins on its own merits rather than by tuning.
 - Result: 29/29 FWI time-domain tests, 873/873 kwavers-solver.
 
+## KW-SOL-080 - Differential test across the absorption paths [patch] - done 2026-08-13
+
+- Scope: one new test module,
+  `crates/kwavers-solver/src/forward/cross_path_absorption_tests.rs`. No
+  production change - the deliverable is the evidence.
+- PSTD's stratified fractional Laplacian and the FDTD relaxation memory
+  variables are independent implementations of the same physical law - a
+  frequency-domain operator applied spectrally versus a time-domain ODE system
+  integrated locally - and each was checked only against its own analytic
+  target, never against the other. This is the independent-oracle tier: two
+  backends running the same algorithm would only be differential evidence.
+- Result: **they agree to 1.3 %**, and each matches the prescribed law to the
+  same. The bound was fixed by bisection rather than guessed - the pair holds at
+  2 % and breaks at 0.5 %, the worst single deviation being FDTD against the law
+  at alpha_0 = 0.5, gamma = 1.1 (11.361 vs 11.213 Np/m). Consistent with what
+  the parts contribute: the relaxation fit's sub-1 % bound at four arms plus the
+  leapfrog's 0.117*(omega*dt)^2. My first draft guessed 25 %.
+- A lossless companion test pins that both paths reduce to no decay together,
+  so a path that absorbed unconditionally could not pass by agreeing with the
+  other.
+- **Capability difference found.** PSTD *cannot represent gamma = 1.0*: the
+  Treeby-Cox dispersion coefficient carries tan(pi*y/2), which diverges there,
+  and the solver rejects the configuration. The relaxation path has no such
+  singularity - gamma = 1 is an ordinary point for a fitted spectrum. Linear
+  frequency dependence, the textbook soft-tissue idealization, is therefore
+  available only through relaxation. Recorded in the test module and in the
+  book's selection rule.
+- Two measurement lessons, both cost a debugging cycle and are worth carrying:
+  (1) compare **total** energy, not pressure alone - a standing wave moves
+  energy between the two forms twice per period, and a pressure-only measure
+  swung by a factor of five even averaged over several periods, burying the
+  decay; (2) convert temporal decay to spatial alpha inside the measurement, or
+  a lossless check ends up comparing s^-1 against Np/m.
+
+## KW-SOL-079 - FDTD heterogeneous power-law absorption [minor] - done 2026-08-12
+
+- Scope: new `crates/kwavers-solver/src/forward/fdtd/absorption/{mod,tests}.rs`;
+  FDTD config, solver struct, construction and pressure updater;
+  `kwavers-medium/src/material_fields.rs` (+ tests); one converter in
+  `kwavers-physics`; PSTD construction (de-duplicated onto the shared sampler);
+  book 4.8.5; FWI forward config literal.
+- The FDTD path had no absorption module at all - `update_pressure_cpu` was the
+  lossless `p -= dt*rho_c_squared*div(v)` in all three branches - while Fullwave
+  2.5 is an FDTD code whose entire attenuation story is relaxation mechanisms.
+- Delivered: `RelaxationAbsorption`, memory variables fitted through
+  `relaxation_fit` from the medium's own alpha_0(x) *and* gamma(x), advanced by
+  the exact exponential integrator so dt is bounded by the wave CFL and never by
+  the smallest tau. Configured by `FdtdAbsorption::{Lossless, PowerLawRelaxation}`
+  - a two-variant enum, since the parameters are meaningless without the model.
+- The three decisions this item recorded, as resolved:
+  1. **Modulus swap.** The absorbing update multiplies the divergence by the
+     unrelaxed M_U, exposed by the component; `rho_c_squared` keeps meaning
+     rho*c^2 rather than being silently redefined. A test asserts M_U is stiffer
+     than rho*c^2 wherever the medium absorbs, and by under 10 % - a larger
+     excess would mean the fit bought absorption with stiffness and wrecked the
+     CFL.
+  2. **CPML ordering.** Both finite-difference branches now converge on one
+     `apply_pressure_from_divergence`, reached *after* the CPML gradient
+     correction and the per-axis accumulation, so the arms integrate exactly the
+     divergence the pressure does.
+  3. **SIMD/GPU coverage.** All CPU branches (k-space, staggered, central) carry
+     the term. The GPU accelerator has no relaxation state, so an absorbing
+     configuration on that path now *errors* rather than silently propagating a
+     lossless medium.
+- Verification: 8 component tests (per-material fit, modulus stiffness bounds,
+  lossless degeneration, memory charge/decay, reset, unit convention, rejection)
+  plus a propagation test measuring alpha by standing-wave decay across
+  gamma = 0.6/1.0/1.4 and comparing against the prescribed law within 15 %.
+- Finding surfaced while testing, **not** caused by this change: the
+  finite-difference branches run without CPML diverge on a bare box - a growing
+  DC boundary mode - and the identical run with `FdtdAbsorption::Lossless`
+  diverges the same way. The propagation test therefore measures on the periodic
+  spectral branch. Filed as KW-SOL-081.
+
+## KW-SOL-081 - FDTD finite-difference branches diverged without CPML [patch] - done 2026-08-12
+
+- Scope: new `kwavers-math/.../staggered_grid/divergence{.rs,/tests.rs}` and
+  `central_first_derivative_coefficients`; new
+  `kwavers-solver/.../fdtd/solver/conservative_diff{.rs,/tests.rs}`; the FDTD
+  staggered divergence, both collocated update branches, and their tests.
+- Root cause: **broken adjointness at the low face**, in both branches.
+  - Staggered: the pressure update used `apply_backward_*`, whose `i = 0`
+    closure is a one-sided `(u[1]-u[0])/dx`. The Yee divergence needs
+    `u[0]/dx`, the backward difference with the out-of-domain face taken as
+    zero. Only that closure makes the divergence the negative adjoint of the
+    velocity update's forward difference, `D = -G^T`, which is what makes the
+    leapfrog symplectic.
+  - Collocated: the general central difference closes both edges with one-sided
+    formulas, which puts a non-zero entry on the operator's diagonal, so it is
+    not skew-symmetric and `D = G` is not `-G^T`.
+- Evidence, in order: instrumenting the low-face closure inside the divergence
+  turned a lossless standing wave from E/E0 = 8.8e4 after 2000 steps into a
+  bounded oscillation. An independent Python reimplementation of the exact
+  discrete update reproduced the Rust to three digits (9.3e4) and showed the
+  adjointness residual dropping from 5.1e-3 to 1.9e-16 with the closure; the
+  same probe on the collocated scheme showed skew-symmetry residual 1.006 ->
+  5.5e-16 and 1.3e4 -> [0.950, 1.053] energy.
+- Both closures are the same physical statement - the field vanishes outside a
+  rigid wall - and both are now separate, named operators rather than changes to
+  the general-purpose differences, whose one-sided boundary handling is correct
+  for differentiating an arbitrary field and stays tested as such.
+- The collocated coefficients are derived by the same Vandermonde solve as the
+  staggered ones (offsets `n` instead of `n-1/2`), so `coefficients.rs` now has
+  one derivation with two wrappers rather than a second hand-entered table.
+- Verification: adjointness and skew-symmetry asserted directly as identities on
+  arbitrary fields, per axis and per order, rather than inferred from a bounded
+  simulation; plus discrete-energy conservation on both branches over 2000 steps
+  (both hold [0.9, 1.1] where the defect reached 1.3e4-8.8e4). 74/74 FDTD tests.
+- Knock-on: the absorption propagation test (KW-SOL-079) had to run on the
+  spectral branch because the finite-difference ones diverged. It now runs on
+  the staggered branch, the solver's default.
+- Guard added: the adjointness test asserts its own discriminating power. The
+  two closures differ by exactly `p[0]*(u[1]-2u[0])/dx`, so a test field with a
+  vanishing low-face pressure satisfies the identity under both - an earlier
+  draft did exactly that and reported a zero residual for the defective closure.
+
+## KW-FWI-082 - L-BFGS aborted on an inadmissible line-search trial [patch] - done 2026-08-12
+
+- Scope: `inverse/fwi/time_domain/inversion/quasi_newton.rs` and the two FWI
+  tests' time step. No change to the misfit, gradient, or regularization.
+- Symptom: `lbfgs_reduces_misfit_and_recovers_anomaly` and
+  `pwls_is_robust_to_bad_channels_vs_unweighted_l2` failed with "Time step
+  1.000000e-7 exceeds CFL bound 7.172846e-8".
+- **My first diagnosis was wrong.** I filed this as a static setup mismatch -
+  the test sizing dt for the 1500 m/s background while its anomaly model reaches
+  2415 m/s. The anomaly is only +60 m/s (c_max = 1560, bound 1.11e-7), so dt =
+  1e-7 is admissible for the truth. The 2415 m/s model appears *during* the
+  inversion.
+- Root cause: the Armijo line search evaluated each trial with
+  `compute_objective(...)?`. A trial whose fastest cell outruns the time step is
+  rejected by `validate_time_step`, and the `?` propagated that out of the
+  optimizer, aborting the whole inversion. `apply_model_constraints` clamps only
+  to a broad physical range (750-6000 m/s), which is far wider than the range
+  any single dt is CFL-stable for (1732 m/s here), so a large first step lands
+  outside it easily.
+- Fix: a trial the forward solver cannot integrate is a **bad step**, not a
+  failed inversion - mathematically an infinite objective, which can never
+  satisfy Armijo, so the correct response is the halving the loop already does.
+  Only `KwaversError::Validation` is treated this way; a shape mismatch or
+  numerical fault still propagates, so a real defect is not swallowed.
+- Second, separate fix: both tests now derive dt from the model they invert
+  (half the truth model's own CFL bound) rather than hardcoding 1e-7. With only
+  the optimizer fix, the tests ran to completion but PWLS lost to plain L2 on
+  the anomaly-core MAE (18.820 vs 17.591) because both inversions were having
+  steps cut by rejections - the comparison was measuring backtracking, not
+  weighting. Sizing dt to keep trials admissible restores the intended
+  comparison, and PWLS then wins on its own merits rather than by tuning.
+- Result: 29/29 FWI time-domain tests, 873/873 kwavers-solver.
+
 ## KW-SOL-080 — Differential test across the two heterogeneous-absorption paths [patch] — todo
 
 - PSTD's stratified fractional Laplacian and the viscoacoustic solver's

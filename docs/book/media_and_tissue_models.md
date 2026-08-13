@@ -884,6 +884,12 @@ time-stepping family, and they are not interchangeable:
 | `ViscoacousticMemorySolver` | relaxation memory variables on one shared $\tau$ grid | one auxiliary field per arm, **no transform** | `relaxation_fit` (below) |
 | FDTD | relaxation memory variables on one shared $\tau$ grid | one auxiliary field per arm, **no transform** | `fdtd::absorption` |
 
+One further restriction decides the choice outright in a common case: the
+fractional-Laplacian dispersion coefficient is $\eta = 2\alpha_0 c_0^y\tan(\pi y/2)$, which
+**diverges at $y = 1$**, and the PSTD solver rejects that configuration. The relaxation paths have
+no singularity there. Linear frequency dependence — the textbook soft-tissue idealization — is
+available only through relaxation.
+
 The split is forced by the mathematics, not by taste. The fractional Laplacian's symbol
 $\lvert k\rvert^{y-s}$ is global in $k$, so a spectral solver can only carry one exponent per
 transform — stratification works around that by blending a few. The memory-variable form is purely
@@ -1016,6 +1022,13 @@ $f_{\text{ref}}$ to $10^{-9}$ relative, causal (monotonically rising) dispersion
 strengths non-negative. In simulation, a medium built through `from_power_law_fields` reproduces its
 prescribed decay at $\gamma = 0.4$, $1.1$, and $1.6$, and two halves of one grid carrying different
 $(\alpha_0, \gamma)$ each follow their own law on one shared arm set. The
+The two realizations are checked against **each other**, not only against their own targets:
+`cross_path_absorption_tests` runs the same standing wave through PSTD's fractional Laplacian and
+FDTD's relaxation memory variables and finds them agreeing to 1.3 %, with each within 1.3 % of the
+prescribed law. Because the two are different mathematics for the same physics — spectral operator
+versus local ODE system — that agreement is independent-oracle evidence rather than the weaker
+differential kind two backends of one algorithm would give.
+
 `heterogeneous_power_law_attenuation` example measures the realized $\alpha(f)$ from a propagating
 broadband pulse by a reference-normalized two-sensor spectral ratio, recovering the prescribed law
 to 3.4 % worst case (0.5 % across the band interior) over the whole envelope, and matching the

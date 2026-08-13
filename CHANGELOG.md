@@ -89,6 +89,13 @@
   derivative — leaving the general-purpose differences, whose one-sided handling
   is correct for an arbitrary field, unchanged.
 
+- Cross-path differential verification: PSTD's fractional Laplacian and FDTD's
+  relaxation memory variables now check against each other, agreeing to 1.3 %
+  on the realized `α` with each within 1.3 % of the prescribed law. The
+  comparison also records a capability difference — PSTD cannot represent
+  `γ = 1.0`, where the Treeby–Cox `tan(πy/2)` diverges, while the relaxation
+  paths treat it as an ordinary point.
+
 - `central_first_derivative_coefficients`: collocated central-difference
   coefficients from the same derivation as the staggered ones, so the two share
   one Vandermonde solve rather than a second hand-entered table.

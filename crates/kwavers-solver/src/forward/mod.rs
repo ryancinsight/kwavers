@@ -67,6 +67,9 @@
 //! Until then, both surfaces are stable and `cargo-semver-checks`-clean.
 
 // ── Flat layout (legacy, stable) ─────────────────────────────────────────────
+#[cfg(test)]
+mod cross_path_absorption_tests;
+
 pub mod acoustic_ivp;
 pub mod bem;
 pub mod bubble_dynamics;
