@@ -100,7 +100,7 @@ impl BenchmarkSuite {
                 println!(
                     "  {:<25} {:<15} {:<15.2e} {:<12.1} {:<10.2}x",
                     result.implementation,
-                    format!("{}³", (result.array_size as f64).powf(1.0 / 3.0) as usize),
+                    format!("{}³", (result.array_size as f64).cbrt() as usize),
                     result.operations_per_second,
                     result.memory_bandwidth_gb_per_s,
                     result.relative_performance

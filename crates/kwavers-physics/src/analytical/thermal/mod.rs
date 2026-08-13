@@ -60,7 +60,7 @@ pub fn bioheat_focal_temperature_rise(
     t_body_c: f64,
 ) -> Vec<f64> {
     // Effective half-dimension for spherical focal volume
-    let l = (3.0 * focal_volume_m3 / (FOUR_PI)).powf(1.0 / 3.0);
+    let l = (3.0 * focal_volume_m3 / (FOUR_PI)).cbrt();
     let perfusion_term = wb_perfusion * rho_blood * cb_blood; // [W/(m³·K)]
     let conduction_term = k_tissue / (l * l); // [W/(m³·K)]
     let loss = perfusion_term + conduction_term;

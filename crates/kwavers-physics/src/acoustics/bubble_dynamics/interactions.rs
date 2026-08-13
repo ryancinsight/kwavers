@@ -3,6 +3,7 @@
 //! Calculates forces between bubbles (Bjerknes forces, etc.)
 
 use super::bubble_state::BubbleState;
+use eunomia::FloatElement;
 use kwavers_core::constants::acoustic_parameters::AIR_POLYTROPIC_INDEX;
 use kwavers_core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL};
 use kwavers_core::constants::numerical::{FOUR_PI, TWO_PI};
@@ -185,7 +186,7 @@ impl CollectiveEffects {
         let compressibility = (1.0 - void_fraction) / (liquid_density * liquid_sound_speed.powi(2))
             + void_fraction / (gas_density * gas_sound_speed.powi(2));
 
-        (mixture_density * compressibility).powf(-0.5)
+        (mixture_density * compressibility).rsqrt()
     }
 
     /// Calculate void fraction from bubble field

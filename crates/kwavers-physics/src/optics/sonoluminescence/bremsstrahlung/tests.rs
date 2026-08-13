@@ -1,4 +1,5 @@
 use super::*;
+use eunomia::FloatElement;
 use kwavers_core::constants::fundamental::{
     ATMOSPHERIC_PRESSURE, BOLTZMANN as BOLTZMANN_CONSTANT, PLANCK as PLANCK_CONSTANT,
 };
@@ -146,7 +147,7 @@ fn emission_coefficient_magnitude_rybicki_lightman() {
     let c_ff_ref = 6.8e-51_f64 / (FOUR_PI);
     let h_nu = PLANCK_CONSTANT * frequency;
     let k_t = BOLTZMANN_CONSTANT * temperature;
-    let j_reference = c_ff_ref * n_e * n_e * temperature.powf(-0.5) * (-h_nu / k_t).exp();
+    let j_reference = c_ff_ref * n_e * n_e * temperature.rsqrt() * (-h_nu / k_t).exp();
     let rel_err = (j_computed - j_reference).abs() / j_reference;
     assert!(rel_err < 0.10, "rel_err = {rel_err:.3}");
 }

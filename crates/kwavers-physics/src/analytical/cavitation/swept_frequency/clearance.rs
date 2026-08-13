@@ -114,7 +114,7 @@ pub fn inter_pulse_residual_clearance(
     let beta_passive = beta0 * vol_ratio_passive;
 
     // Swept: N daughters of radius R₀·N^(−1/3) (gas-volume conserving at break-up).
-    let r_frag0 = initial_radius_m * n.powf(-1.0 / 3.0);
+    let r_frag0 = initial_radius_m * n.cbrt().recip();
     let r_frag = residual_after(r_frag0);
     // Total residual gas volume = N · r_frag³, normalised to R₀³.
     let vol_ratio_swept = n * (r_frag / initial_radius_m).powi(3);

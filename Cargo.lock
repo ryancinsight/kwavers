@@ -1781,7 +1781,7 @@ dependencies = [
 [[package]]
 name = "eunomia"
 version = "0.8.0"
-source = "git+https://github.com/ryancinsight/eunomia#085f217f9af2588887a940e4947957fea14771c7"
+source = "git+https://github.com/ryancinsight/eunomia#1a52590c05cb881a28443703c68d4659a17e4654"
 dependencies = [
  "bytemuck",
  "libm",
@@ -3254,6 +3254,7 @@ name = "kwavers-core"
 version = "3.0.0"
 dependencies = [
  "anyhow",
+ "eunomia",
  "flume",
  "leto",
  "libc",
@@ -3309,6 +3310,7 @@ name = "kwavers-driver"
 version = "0.3.13"
 dependencies = [
  "aequitas",
+ "eunomia",
  "kwavers-transducer",
  "thiserror 1.0.69",
 ]
