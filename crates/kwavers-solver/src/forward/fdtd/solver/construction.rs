@@ -16,9 +16,8 @@ use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
 use kwavers_field::wave::WaveFields;
 use kwavers_grid::Grid;
-use kwavers_math::numerics::operators::StaggeredGridOperator;
+use kwavers_math::numerics::operators::StaggeredLeapfrogOperator;
 use kwavers_medium::{material_fields::MaterialFields, Medium};
-use kwavers_physics::acoustics::mechanics::acoustic_wave::AcousticSpatialOrder;
 use kwavers_receiver::recorder::simple::SensorRecorder;
 use kwavers_source::grid_source::GridSource;
 
@@ -116,10 +115,9 @@ impl GenericFdtdSolver<Array3<f64>> {
     ) -> KwaversResult<Self> {
         info!("Initializing FDTD solver with config: {:?}", config);
 
-        // Validate spatial order by converting to enum
-        let spatial_order = AcousticSpatialOrder::from_usize(config.spatial_order)?;
-
-        let staggered_operator = StaggeredGridOperator::new(grid.dx, grid.dy, grid.dz)?;
+        let spatial_order = config.spatial_order;
+        let leapfrog_operator =
+            StaggeredLeapfrogOperator::new(config.spatial_order, grid.dx, grid.dy, grid.dz)?;
         let conservative_operator =
             ConservativeCentralDifference::new(config.spatial_order, grid.dx, grid.dy, grid.dz)?;
 
@@ -238,36 +236,11 @@ impl GenericFdtdSolver<Array3<f64>> {
             (None, None, None, None)
         };
 
-        // Pre-allocate staggered pressure-gradient scratch buffers.
-        // Shape (nx−1, ny, nz) for dp_dx, etc. — allocated once, reused every step.
-        // Only created when `staggered_grid = true` and the dimension has ≥ 2 points.
-        let (dp_dx_scratch, dp_dy_scratch, dp_dz_scratch) = if config.staggered_grid {
-            (
-                if grid.nx > 1 {
-                    Some(Array3::<f64>::zeros((grid.nx - 1, grid.ny, grid.nz)))
-                } else {
-                    None
-                },
-                if grid.ny > 1 {
-                    Some(Array3::<f64>::zeros((grid.nx, grid.ny - 1, grid.nz)))
-                } else {
-                    None
-                },
-                if grid.nz > 1 {
-                    Some(Array3::<f64>::zeros((grid.nx, grid.ny, grid.nz - 1)))
-                } else {
-                    None
-                },
-            )
-        } else {
-            (None, None, None)
-        };
-
         Ok(Self {
             config,
             grid: grid.clone(),
             conservative_operator,
-            staggered_operator,
+            leapfrog_operator,
             metrics: FdtdMetrics::new(),
             cpml_boundary: None,
             spatial_order,
@@ -290,9 +263,6 @@ impl GenericFdtdSolver<Array3<f64>> {
             dvx_scratch: Array3::<f64>::zeros(shape),
             dvy_scratch: Array3::<f64>::zeros(shape),
             divergence_scratch: Array3::<f64>::zeros(shape),
-            dp_dx_scratch,
-            dp_dy_scratch,
-            dp_dz_scratch,
         })
     }
 }

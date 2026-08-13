@@ -512,6 +512,95 @@
 - `halo_width()` is exposed because it is the halo a domain decomposition must
   exchange - the coupling to KW-GPU-078.
 
+## KW-SOL-074 - Eighth-order staggered FDTD [minor] - done 2026-08-13
+
+- Scope: FDTD solver struct, construction, both staggered updates, the CFL
+  accessor, config validation, and the tests those change; plus the CFL limit on
+  `StaggeredLeapfrogOperator`. One path for every order, as directed.
+- The staggered path now runs orders **2, 4, 6, 8** through
+  `StaggeredLeapfrogOperator` - eighth being the scheme Fullwave 2.5 uses. The
+  half-shape gradient scratch and the forced far-face zeroing are gone: the
+  operator is full-shape and closes both faces by zero-extension, which *is* the
+  wall and is what makes it the exact adjoint of the divergence.
+- **The CFL table was the wrong one, and now there are two.** The staggered
+  limit is `1/(sqrt(D)*sum|c_n|)`, derived on the operator from its own
+  coefficients. It coincides with the collocated table only at order 2; at order
+  4 it is 0.495 against the tabulated 0.258. The old tests asserted the
+  collocated value against a *staggered* solver and passed, so the solver was
+  taking half the step it could. Both tables are now covered by tests, on the
+  paths they actually describe. The collocated path keeps 2/4/6 because its
+  table stops there, and order 8 is rejected on it rather than silently sized
+  from a number that does not exist.
+- BC change accepted per direction: order 2 moves from a rigid far face to
+  zero-extension. Both are conservative; the tests that pinned the old wall were
+  updated rather than the path forked.
+- Verified: energy conservation at every order over 1000 steps (all within
+  [0.9, 1.1]); the derived CFL limits asserted per order against their closed
+  form; collocated eighth order rejected at validation.
+- **Evidence cost, stated plainly.** The cross-path comparison (KW-SOL-080)
+  loosened from 1.3 % to 9.1 %. Not a regression in either path: FDTD now closes
+  its domain by zero-extension while PSTD stays periodic, so one initial
+  condition is a different mode in each and the per-solver frequency
+  normalization only partly compensates. Filed as KW-SOL-084.
+
+## KW-SOL-084 - Make the cross-path comparison boundary-independent [patch] - todo
+
+- `cross_path_absorption_tests` compares a standing wave, which forces both
+  solvers to interact with their walls. Since KW-SOL-074 those walls differ
+  (FDTD zero-extension, PSTD periodic), so one initial condition is a different
+  mode in each; the agreement it can demonstrate fell from 1.3 % to 9.1 %.
+- Fix: measure a *travelling* pulse by reference-normalized spectral ratio
+  between two interior sensors, as `heterogeneous_power_law_attenuation` already
+  does, in a domain large enough that the pulse never reaches a boundary within
+  the window. The measurement is then boundary-independent and the two paths
+  become directly comparable again.
+- Acceptance: agreement restored to the 1-2 % the parts predict, with the bound
+  set by bisection rather than assumed.
+
+## KW-MATH-073 — Derived staggered stencil coefficients to arbitrary even order [minor] — done 2026-08-12
+
+- Owner: Claude; scope
+  `crates/kwavers-math/src/numerics/operators/differential/staggered_grid/coefficients{.rs,/tests.rs}`
+  plus the three module re-export lines. No solver, manifest, or gitlink change.
+- Driver: Fullwave 2.5 runs an 8th-order-in-space staggered scheme; kwavers'
+  staggered operator is 2nd order only, and its collocated central differences
+  are three cloned types (CentralDifference2/4/6) with hand-entered constants.
+- Outcome: `staggered_first_derivative_coefficients(half_order)` derives the
+  half-grid stencil weights by solving the Taylor system
+  `sum_n c_n a_n^{2m+1} = delta_{m0}/2`, `a_n = n - 1/2`, rather than tabulating
+  them, so a new order is a parameter and not a new constant table to mis-enter.
+- Acceptance (met): matches the published Fornberg/Levander rationals for
+  orders 2, 4, 6, 8 to 1e-13; delivers its claimed order of accuracy under grid
+  refinement; exact on constant and linear fields at every order; alternating,
+  decaying taps; accuracy monotone in order. 7 tests, doctest, clippy clean.
+- Honest limit: the derivation is verified to half-order 8 (16th order) and
+  capped there; by that order the high Taylor moments cancel terms of order
+  1e12 and the residual is ~1e-11 relative, not exact. Documented at the cap.
+
+## KW-MATH-083 - High-order staggered gradient/divergence pair [minor] - done 2026-08-13
+
+- Scope: new
+  `kwavers-math/src/numerics/operators/differential/staggered_leapfrog{.rs,/tests.rs}`
+  plus three re-export lines. No solver change.
+- `StaggeredLeapfrogOperator` supplies the gradient/divergence pair a Yee
+  leapfrog needs at **any even order** (2, 4, 6, 8), which is the spatial scheme
+  Fullwave 2.5 runs. Coefficients come from the derivation in KW-MATH-073, so an
+  order is a parameter rather than a hand-entered table.
+- The pair, with the one-index shift that is the half-cell stagger:
+  `G: u[i] = (1/dx) sum_n c_n (p[i+n] - p[i-n+1])`,
+  `D: d[j] = (1/dx) sum_n c_n (u[j+n-1] - u[j-n])`, taps outside the grid zero.
+- Adjointness `D = -G^T` is **exact at every order and grid size**, not
+  asymptotic: re-indexing the two sums maps one onto the other, and
+  zero-extension is precisely what makes the re-indexing valid. Proven in the
+  module docs and asserted as an identity per order and per axis.
+- Verified: adjointness at 2/4/6/8 on all three axes; measured convergence at
+  each claimed rate under refinement; exact reduction to the plain half-grid
+  difference at order 2; constant-field consistency; a guard that the
+  adjointness operands are non-degenerate at both faces, since a vanishing face
+  value hid a defective closure once before (KW-SOL-081).
+- `halo_width()` is exposed because it is the halo a domain decomposition must
+  exchange - the coupling to KW-GPU-078.
+
 ## KW-SOL-074 - Wire the high-order staggered pair into the FDTD solver [minor] - todo
 
 - KW-MATH-083 delivered and verified the operator. What remains is the solver

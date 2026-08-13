@@ -170,13 +170,24 @@ impl FdtdConfig {
             }
         }
 
-        // Validate spatial order
-        if ![2, 4, 6].contains(&self.spatial_order) {
+        // Validate spatial order. The staggered path derives its Courant limit
+        // from the stencil coefficients and so supports 8; the collocated path
+        // is bounded by its tabulated limits, which stop at 6.
+        let allowed: &[usize] = if self.staggered_grid {
+            &[2, 4, 6, 8]
+        } else {
+            &[2, 4, 6]
+        };
+        if !allowed.contains(&self.spatial_order) {
             multi_error.add(
                 ValidationError::FieldValidation {
                     field: "spatial_order".to_owned(),
                     value: self.spatial_order.to_string(),
-                    constraint: "Must be 2, 4, or 6".to_owned(),
+                    constraint: if self.staggered_grid {
+                        "Must be 2, 4, 6, or 8 on the staggered grid".to_owned()
+                    } else {
+                        "Must be 2, 4, or 6 on the collocated grid".to_owned()
+                    },
                 }
                 .into(),
             );

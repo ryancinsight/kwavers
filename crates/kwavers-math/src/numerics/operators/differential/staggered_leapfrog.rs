@@ -116,6 +116,36 @@ impl StaggeredLeapfrogOperator {
         self.coefficients.len()
     }
 
+    /// Courant limit as a multiple of `Δx/c`, for `dimensions` spatial axes.
+    ///
+    /// # Derivation
+    ///
+    /// The staggered symbol along one axis is
+    /// `S(θ) = 2 Σₙ cₙ sin((n−½)θ)`, whose magnitude is bounded by
+    /// `S_max = 2 Σₙ |cₙ|`. Leapfrog stability needs
+    /// `(c·Δt/2)·|k_eff| ≤ 1` with `|k_eff| = S_max·√D/Δx` in `D` dimensions,
+    /// so
+    ///
+    /// ```text
+    ///   Δt ≤ 2Δx / (c · S_max · √D) = Δx / (c · √D · Σₙ|cₙ|)
+    /// ```
+    ///
+    /// At order 2 the sum is 1 and this recovers the familiar `1/√3` in 3-D.
+    ///
+    /// # Why this is not `AcousticSpatialOrder::cfl_limit`
+    ///
+    /// That table (`1/√3`, `1/√15`, `1/√27`) is the **collocated**
+    /// central-difference limit. The two agree at order 2, which is why the
+    /// distinction went unnoticed, but diverge immediately after: at order 4 the
+    /// staggered limit is 0.495 against the collocated 0.258. Using the
+    /// collocated number for a staggered run costs roughly half the achievable
+    /// step for no accuracy gain.
+    #[must_use]
+    pub fn cfl_limit(&self, dimensions: usize) -> f64 {
+        let sum: f64 = self.coefficients.iter().map(|c| c.abs()).sum();
+        1.0 / ((dimensions as f64).sqrt() * sum)
+    }
+
     /// Gradient along `axis`: cell-centred `field` to face-centred `dst`, with
     /// face `i+½` stored at index `i`. Both are grid-shaped.
     pub fn gradient_into(&self, axis: Axis, field: ArrayView3<'_, f64>, dst: &mut Array3<f64>) {

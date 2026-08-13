@@ -94,6 +94,13 @@
   derivative — leaving the general-purpose differences, whose one-sided handling
   is correct for an arbitrary field, unchanged.
 
+- **Eighth-order spatial accuracy on the FDTD staggered path.** Orders 2, 4, 6
+  and 8 now run through one operator, the order Fullwave 2.5 uses. The Courant
+  limit is derived from the stencil coefficients rather than read from the
+  collocated table — the two coincide only at order 2, and at order 4 the
+  staggered limit is 0.495 against the tabulated 0.258, so staggered runs were
+  taking half the step they could.
+
 - `StaggeredLeapfrogOperator`: the gradient/divergence pair a Yee leapfrog
   needs, at **any even order up to 8** — the spatial scheme Fullwave 2.5 runs.
   Adjointness `D = −Gᵀ` is exact at every order and grid size under
@@ -112,6 +119,13 @@
   one Vandermonde solve rather than a second hand-entered table.
 
 ### Changed
+
+- **Breaking (numerical):** the FDTD staggered path closes its domain by
+  zero-extension at every order, replacing the order-2 path's forced far-face
+  zeroing. Both are conservative walls, but a simulation sensitive to the
+  boundary will differ; `FdtdConfig::spatial_order` also now accepts 8 on the
+  staggered grid and rejects it on the collocated one, whose CFL table stops at
+  six.
 
 - `ViscoacousticMemorySolver::new_heterogeneous` accepts zero-strength
   relaxation arms, so a heterogeneous medium may contain exactly lossless

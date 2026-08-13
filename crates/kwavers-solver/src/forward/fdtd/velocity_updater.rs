@@ -9,6 +9,8 @@ use leto::Array3;
 use leto::{ArrayView3, ArrayViewMut3};
 use moirai_parallel::{enumerate_mut_with, Adaptive};
 
+use kwavers_math::numerics::operators::Axis;
+
 use super::solver::FdtdSolver;
 
 fn update_velocity_from_gradient(
@@ -302,148 +304,56 @@ impl FdtdSolver {
     fn update_velocity_staggered(&mut self, dt: f64) -> KwaversResult<()> {
         let shape = self.fields.p.shape();
         let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
-        let dx = self.staggered_operator.dx;
-        let dy = self.staggered_operator.dy;
-        let dz = self.staggered_operator.dz;
-        let pressure = self.fields.p.view();
 
-        if nx > 1 {
-            if let Some(ref mut dp_dx) = self.dp_dx_scratch {
-                let hi = pressure
-                    .slice(&[(1, nx, 1), (0, ny, 1), (0, nz, 1)])
-                    .expect("invariant: nx > 1 checked above; hi-x slice valid");
-                let lo = pressure
-                    .slice(&[(0, nx - 1, 1), (0, ny, 1), (0, nz, 1)])
-                    .expect("invariant: nx > 1 checked above; lo-x slice valid");
-                compute_forward_gradient(dp_dx.view_mut(), hi, lo, dx);
-            }
-        }
-        if ny > 1 {
-            if let Some(ref mut dp_dy) = self.dp_dy_scratch {
-                let hi = pressure
-                    .slice(&[(0, nx, 1), (1, ny, 1), (0, nz, 1)])
-                    .expect("invariant: ny > 1 checked above; hi-y slice valid");
-                let lo = pressure
-                    .slice(&[(0, nx, 1), (0, ny - 1, 1), (0, nz, 1)])
-                    .expect("invariant: ny > 1 checked above; lo-y slice valid");
-                compute_forward_gradient(dp_dy.view_mut(), hi, lo, dy);
-            }
-        }
-        if nz > 1 {
-            if let Some(ref mut dp_dz) = self.dp_dz_scratch {
-                let hi = pressure
-                    .slice(&[(0, nx, 1), (0, ny, 1), (1, nz, 1)])
-                    .expect("invariant: nz > 1 checked above; hi-z slice valid");
-                let lo = pressure
-                    .slice(&[(0, nx, 1), (0, ny, 1), (0, nz - 1, 1)])
-                    .expect("invariant: nz > 1 checked above; lo-z slice valid");
-                compute_forward_gradient(dp_dz.view_mut(), hi, lo, dz);
-            }
-        }
+        // Gradient of pressure onto the faces, at the configured order. The
+        // operator is full-shape and closes both faces by zero-extension, so
+        // there is no half-shape scratch and no far-face zeroing: the closure
+        // *is* the wall, and it is what makes this the exact negative adjoint
+        // of the divergence the pressure update applies.
+        self.leapfrog_operator
+            .gradient_into(Axis::X, self.fields.p.view(), &mut self.dvx_scratch);
+        self.leapfrog_operator
+            .gradient_into(Axis::Y, self.fields.p.view(), &mut self.dvy_scratch);
+        self.leapfrog_operator.gradient_into(
+            Axis::Z,
+            self.fields.p.view(),
+            &mut self.divergence_scratch,
+        );
 
         if let Some(ref mut cpml) = self.cpml_boundary {
-            if let Some(ref mut dp_dx) = self.dp_dx_scratch {
-                cpml.update_and_apply_p_gradient_correction(dp_dx, 0);
-            }
-            if let Some(ref mut dp_dy) = self.dp_dy_scratch {
-                cpml.update_and_apply_p_gradient_correction(dp_dy, 1);
-            }
-            if let Some(ref mut dp_dz) = self.dp_dz_scratch {
-                cpml.update_and_apply_p_gradient_correction(dp_dz, 2);
-            }
+            cpml.update_and_apply_p_gradient_correction(&mut self.dvx_scratch, 0);
+            cpml.update_and_apply_p_gradient_correction(&mut self.dvy_scratch, 1);
+            cpml.update_and_apply_p_gradient_correction(&mut self.divergence_scratch, 2);
         }
 
-        if let Some(ref dp_dx) = self.dp_dx_scratch {
-            let rho_left = self
-                .materials
-                .rho0
-                .slice(&[(0, nx - 1, 1), (0, ny, 1), (0, nz, 1)])
-                .expect("invariant: dp_dx_scratch implies nx > 1; rho left valid");
-            let rho_right = self
-                .materials
-                .rho0
-                .slice(&[(1, nx, 1), (0, ny, 1), (0, nz, 1)])
-                .expect("invariant: dp_dx_scratch implies nx > 1; rho right valid");
-            update_staggered_velocity(
-                self.fields
-                    .ux
-                    .view_mut()
-                    .slice_mut(&[(0, nx - 1, 1), (0, ny, 1), (0, nz, 1)])
-                    .expect("invariant: dp_dx_scratch implies nx > 1; ux slice valid"),
-                rho_left,
-                rho_right,
-                dp_dx.view(),
-                dt,
-            );
-            let mut boundary = self
-                .fields
-                .ux
-                .view_mut()
-                .slice_mut(&[(nx - 1, nx, 1), (0, ny, 1), (0, nz, 1)])
-                .expect("invariant: dp_dx_scratch implies nx >= 1; ux boundary valid");
-            boundary.fill(0.0);
-        }
-
-        if let Some(ref dp_dy) = self.dp_dy_scratch {
-            let rho_front = self
-                .materials
-                .rho0
-                .slice(&[(0, nx, 1), (0, ny - 1, 1), (0, nz, 1)])
-                .expect("invariant: dp_dy_scratch implies ny > 1; rho front valid");
-            let rho_back = self
-                .materials
-                .rho0
-                .slice(&[(0, nx, 1), (1, ny, 1), (0, nz, 1)])
-                .expect("invariant: dp_dy_scratch implies ny > 1; rho back valid");
-            update_staggered_velocity(
-                self.fields
-                    .uy
-                    .view_mut()
-                    .slice_mut(&[(0, nx, 1), (0, ny - 1, 1), (0, nz, 1)])
-                    .expect("invariant: dp_dy_scratch implies ny > 1; uy slice valid"),
-                rho_front,
-                rho_back,
-                dp_dy.view(),
-                dt,
-            );
-            let mut boundary = self
-                .fields
-                .uy
-                .view_mut()
-                .slice_mut(&[(0, nx, 1), (ny - 1, ny, 1), (0, nz, 1)])
-                .expect("invariant: dp_dy_scratch implies ny >= 1; uy boundary valid");
-            boundary.fill(0.0);
-        }
-
-        if let Some(ref dp_dz) = self.dp_dz_scratch {
-            let rho_near = self
-                .materials
-                .rho0
-                .slice(&[(0, nx, 1), (0, ny, 1), (0, nz - 1, 1)])
-                .expect("invariant: dp_dz_scratch implies nz > 1; rho near valid");
-            let rho_far = self
-                .materials
-                .rho0
-                .slice(&[(0, nx, 1), (0, ny, 1), (1, nz, 1)])
-                .expect("invariant: dp_dz_scratch implies nz > 1; rho far valid");
-            update_staggered_velocity(
-                self.fields
-                    .uz
-                    .view_mut()
-                    .slice_mut(&[(0, nx, 1), (0, ny, 1), (0, nz - 1, 1)])
-                    .expect("invariant: dp_dz_scratch implies nz > 1; uz slice valid"),
-                rho_near,
-                rho_far,
-                dp_dz.view(),
-                dt,
-            );
-            let mut boundary = self
-                .fields
-                .uz
-                .view_mut()
-                .slice_mut(&[(0, nx, 1), (0, ny, 1), (nz - 1, nz, 1)])
-                .expect("invariant: dp_dz_scratch implies nz >= 1; uz boundary valid");
-            boundary.fill(0.0);
+        // Density at face `i+½` is the average of the two cells it separates.
+        // The last face has no cell beyond it, so the nearest cell's density is
+        // used — density is a material property and is not zero-extended; doing
+        // so would put a vacuum at the wall.
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    let index = [i, j, k];
+                    let rho = 0.5
+                        * (self.materials.rho0[index]
+                            + self.materials.rho0[[(i + 1).min(nx - 1), j, k]]);
+                    if rho > 1e-9 {
+                        self.fields.ux[index] -= dt / rho * self.dvx_scratch[index];
+                    }
+                    let rho = 0.5
+                        * (self.materials.rho0[index]
+                            + self.materials.rho0[[i, (j + 1).min(ny - 1), k]]);
+                    if rho > 1e-9 {
+                        self.fields.uy[index] -= dt / rho * self.dvy_scratch[index];
+                    }
+                    let rho = 0.5
+                        * (self.materials.rho0[index]
+                            + self.materials.rho0[[i, j, (k + 1).min(nz - 1)]]);
+                    if rho > 1e-9 {
+                        self.fields.uz[index] -= dt / rho * self.divergence_scratch[index];
+                    }
+                }
+            }
         }
 
         Ok(())

@@ -193,24 +193,24 @@ fn test_staggered_divergence_uses_scratch_buffer() {
 
     solver.compute_divergence_staggered().unwrap();
 
-    // The Yee divergence, not the general backward difference: they differ at
-    // the low face, and the solver must use the adjoint closure (KW-SOL-081).
+    // The staggered operator's divergence -- the adjoint of the gradient the
+    // velocity update applies -- not a general backward difference. They differ
+    // at the low face, and that row is what makes the leapfrog symplectic
+    // (KW-SOL-081).
+    use kwavers_math::numerics::operators::Axis;
     let shape = solver.fields.ux.shape();
     let mut dvx = leto::Array3::<f64>::zeros(shape);
     let mut dvy = leto::Array3::<f64>::zeros(shape);
     let mut dvz = leto::Array3::<f64>::zeros(shape);
     solver
-        .staggered_operator
-        .apply_divergence_x_into(solver.fields.ux.view(), &mut dvx)
-        .unwrap();
+        .leapfrog_operator
+        .divergence_into(Axis::X, solver.fields.ux.view(), &mut dvx);
     solver
-        .staggered_operator
-        .apply_divergence_y_into(solver.fields.uy.view(), &mut dvy)
-        .unwrap();
+        .leapfrog_operator
+        .divergence_into(Axis::Y, solver.fields.uy.view(), &mut dvy);
     solver
-        .staggered_operator
-        .apply_divergence_z_into(solver.fields.uz.view(), &mut dvz)
-        .unwrap();
+        .leapfrog_operator
+        .divergence_into(Axis::Z, solver.fields.uz.view(), &mut dvz);
 
     let mut expected = dvz.clone();
     leto_ops::zip_mut_with(

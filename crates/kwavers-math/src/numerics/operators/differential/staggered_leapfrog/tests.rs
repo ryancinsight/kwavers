@@ -199,3 +199,52 @@ fn rejects_invalid_orders_and_spacings() {
     // Past the coefficient derivation's verified range.
     assert!(StaggeredLeapfrogOperator::new(64, 1e-4, 1e-4, 1e-4).is_err());
 }
+
+/// The Courant limit follows the derivation in the module docs, and reproduces
+/// the familiar `1/√3` at second order in 3-D.
+///
+/// The higher-order values are *less* restrictive than the collocated table
+/// (`1/√15 = 0.258` at fourth order) by roughly a factor of two — the staggered
+/// stencil's symbol grows more slowly with order. Reusing the collocated number
+/// here would halve the step for nothing.
+#[test]
+fn cfl_limit_matches_its_derivation() {
+    // Σ|cₙ| for orders 2, 4, 6, 8.
+    let sums = [
+        1.0_f64,
+        9.0 / 8.0 + 1.0 / 24.0,
+        75.0 / 64.0 + 25.0 / 384.0 + 3.0 / 640.0,
+        1225.0 / 1024.0 + 245.0 / 3072.0 + 49.0 / 5120.0 + 5.0 / 7168.0,
+    ];
+    for (index, order) in [2usize, 4, 6, 8].into_iter().enumerate() {
+        let op = StaggeredLeapfrogOperator::new(order, 1e-4, 1e-4, 1e-4).expect("valid");
+        for dimensions in 1..=3 {
+            let expected = 1.0 / ((dimensions as f64).sqrt() * sums[index]);
+            let got = op.cfl_limit(dimensions);
+            assert!(
+                (got - expected).abs() < 1e-12 * expected,
+                "order {order}, {dimensions}-D: {got} vs {expected}"
+            );
+        }
+    }
+
+    // Second order in 3-D is the familiar 1/sqrt(3).
+    let second = StaggeredLeapfrogOperator::new(2, 1e-4, 1e-4, 1e-4).expect("valid");
+    assert!((second.cfl_limit(3) - 1.0 / 3.0_f64.sqrt()).abs() < 1e-12);
+
+    // The limit relaxes monotonically with order, and stays well above the
+    // collocated table's 1/sqrt(15) at fourth order.
+    let fourth = StaggeredLeapfrogOperator::new(4, 1e-4, 1e-4, 1e-4).expect("valid");
+    assert!(fourth.cfl_limit(3) > 1.0 / 15.0_f64.sqrt());
+    let mut previous = f64::INFINITY;
+    for order in [2usize, 4, 6, 8] {
+        let limit = StaggeredLeapfrogOperator::new(order, 1e-4, 1e-4, 1e-4)
+            .expect("valid")
+            .cfl_limit(3);
+        assert!(
+            limit < previous,
+            "order {order} limit {limit} did not tighten"
+        );
+        previous = limit;
+    }
+}

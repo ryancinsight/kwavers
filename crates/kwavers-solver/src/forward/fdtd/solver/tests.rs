@@ -122,62 +122,97 @@ fn max_stable_dt_2nd_order_matches_analytical_formula() {
     );
 }
 
-/// **Theorem (CFL max_stable_dt formula, 4th-order 3D)**:
+/// **Staggered CFL limit, 4th order.**
 ///
-/// For `spatial_order = 4`, `cfl_limit = 1/√15` (Gustafsson 1995):
+/// The staggered scheme's Courant limit is `1/(√D·Σ|cₙ|)`, derived on
+/// `StaggeredLeapfrogOperator` from the stencil coefficients themselves. At
+/// fourth order `Σ|cₙ| = 9/8 + 1/24`, giving `0.4949` in 3-D.
 ///
-/// ```text
-/// dt_max = cfl_factor × (1/√15) × dx / c_max
-/// ```
+/// This is **not** the collocated `1/√15 = 0.2582` that
+/// `AcousticSpatialOrder::cfl_limit` reports. The two coincide only at order 2,
+/// which is why this test previously asserted the collocated value against a
+/// staggered solver and passed — the solver was taking half the step it could
+/// (KW-SOL-074).
 #[test]
-fn max_stable_dt_4th_order_matches_analytical_formula() {
+fn max_stable_dt_4th_order_staggered_matches_the_derived_limit() {
     let n = 8;
     let dx = 1.0e-3_f64;
     let c0 = SOUND_SPEED_WATER_SIM;
     let rho0 = DENSITY_WATER_NOMINAL;
-    let cfl_factor = 0.25_f64; // strictly below 1/√15 ≈ 0.258
+    let cfl_factor = 0.25_f64;
 
     let solver = make_solver(n, dx, c0, rho0, cfl_factor, 4);
-
     let dt_computed = solver.max_stable_dt(c0);
-    let cfl_limit_4th = 1.0_f64 / (15.0_f64).sqrt();
-    let dt_analytic = cfl_factor * cfl_limit_4th * dx / c0;
+
+    let sum = 9.0 / 8.0 + 1.0 / 24.0;
+    let cfl_limit = 1.0 / (3.0_f64.sqrt() * sum);
+    let dt_analytic = cfl_factor * cfl_limit * dx / c0;
 
     let rel_err = (dt_computed - dt_analytic).abs() / dt_analytic;
     assert!(
         rel_err < 1e-12,
-        "max_stable_dt (4th order): computed={dt_computed:.6e} analytic={dt_analytic:.6e} \
-         rel_err={rel_err:.2e}"
+        "staggered max_stable_dt (4th order): computed={dt_computed:.6e} \
+         analytic={dt_analytic:.6e} rel_err={rel_err:.2e}"
     );
+    // And it is genuinely less restrictive than the collocated table.
+    assert!(cfl_limit > 1.0 / 15.0_f64.sqrt());
 }
 
-/// **Theorem (CFL max_stable_dt formula, 6th-order 3D)**:
+/// **Staggered CFL limit, 6th and 8th order.**
 ///
-/// For `spatial_order = 6`, `cfl_limit = 1/√27`:
-///
-/// ```text
-/// dt_max = cfl_factor × (1/√27) × dx / c_max
-/// ```
+/// Same derivation, and eighth order is reachable only on the staggered path —
+/// the collocated table stops at six.
 #[test]
-fn max_stable_dt_6th_order_matches_analytical_formula() {
+fn max_stable_dt_high_order_staggered_matches_the_derived_limit() {
     let n = 8;
     let dx = 1.0e-3_f64;
     let c0 = SOUND_SPEED_WATER_SIM;
     let rho0 = DENSITY_WATER_NOMINAL;
-    let cfl_factor = 0.18_f64; // strictly below 1/√27 ≈ 0.192
+    let cfl_factor = 0.18_f64;
 
-    let solver = make_solver(n, dx, c0, rho0, cfl_factor, 6);
+    let sums = [
+        (6usize, 75.0 / 64.0 + 25.0 / 384.0 + 3.0 / 640.0),
+        (
+            8usize,
+            1225.0 / 1024.0 + 245.0 / 3072.0 + 49.0 / 5120.0 + 5.0 / 7168.0,
+        ),
+    ];
+    for (order, sum) in sums {
+        let solver = make_solver(n, dx, c0, rho0, cfl_factor, order);
+        let dt_computed = solver.max_stable_dt(c0);
+        let dt_analytic = cfl_factor * (1.0 / (3.0_f64.sqrt() * sum)) * dx / c0;
+        let rel_err = (dt_computed - dt_analytic).abs() / dt_analytic;
+        assert!(
+            rel_err < 1e-12,
+            "staggered max_stable_dt (order {order}): computed={dt_computed:.6e} \
+             analytic={dt_analytic:.6e} rel_err={rel_err:.2e}"
+        );
+    }
+}
 
-    let dt_computed = solver.max_stable_dt(c0);
-    let cfl_limit_6th = 1.0_f64 / (27.0_f64).sqrt();
-    let dt_analytic = cfl_factor * cfl_limit_6th * dx / c0;
+/// The collocated path keeps the tabulated limits, so both tables stay covered.
+#[test]
+fn max_stable_dt_collocated_keeps_the_tabulated_limit() {
+    let n = 8;
+    let dx = 1.0e-3_f64;
+    let c0 = SOUND_SPEED_WATER_SIM;
+    let cfl_factor = 0.25_f64;
 
-    let rel_err = (dt_computed - dt_analytic).abs() / dt_analytic;
-    assert!(
-        rel_err < 1e-12,
-        "max_stable_dt (6th order): computed={dt_computed:.6e} analytic={dt_analytic:.6e} \
-         rel_err={rel_err:.2e}"
-    );
+    let grid = Grid::new(n, n, n, dx, dx, dx).unwrap();
+    let medium = HomogeneousMedium::new(DENSITY_WATER_NOMINAL, c0, 0.0, 0.0, &grid);
+    let config = FdtdConfig {
+        spatial_order: 4,
+        staggered_grid: false,
+        cfl_factor,
+        dt: cfl_factor / (3.0_f64).sqrt() * dx / c0,
+        nt: 10,
+        ..Default::default()
+    };
+    let solver = FdtdSolver::new(config, &grid, &medium, GridSource::new_empty()).unwrap();
+
+    let dt_analytic = cfl_factor * (1.0 / 15.0_f64.sqrt()) * dx / c0;
+    let rel_err = (solver.max_stable_dt(c0) - dt_analytic).abs() / dt_analytic;
+    assert!(rel_err < 1e-12, "collocated 4th-order limit changed");
 }
 
 /// **Theorem (CFL check_cfl_stability)**:
@@ -679,4 +714,102 @@ fn lossless_collocated_leapfrog_conserves_energy() {
          steps; the skew-symmetric closure holds it near 1 (the one-sided closure \
          reached 1.3e4)"
     );
+}
+
+/// **Eighth order runs, and every order conserves energy.**
+///
+/// Orders 4-8 became reachable on the staggered path when it moved onto
+/// `StaggeredLeapfrogOperator` (KW-SOL-074); eighth order is what Fullwave 2.5
+/// uses. Conservation must hold at each, since the gradient/divergence pair is
+/// adjoint at every order by construction.
+#[test]
+fn every_staggered_order_conserves_energy() {
+    use std::f64::consts::TAU;
+
+    const N: usize = 48;
+    const DX: f64 = 1.0e-4;
+    const C0: f64 = 1500.0;
+    const RHO0: f64 = 1000.0;
+    const STEPS: usize = 1000;
+
+    for order in [2usize, 4, 6, 8] {
+        let grid = Grid::new(N, 4, 4, DX, DX, DX).unwrap();
+        let mut medium = HomogeneousMedium::new(RHO0, C0, 0.0, 0.0, &grid);
+        medium.set_acoustic_properties(0.0, 1.1, 0.0).unwrap();
+
+        // Inside the derived staggered limit for every order tested.
+        let dt = 0.1 * DX / C0;
+        let config = FdtdConfig {
+            spatial_order: order,
+            staggered_grid: true,
+            dt,
+            nt: STEPS + 1,
+            ..Default::default()
+        };
+        let mut solver = FdtdSolver::new(config, &grid, &medium, GridSource::new_empty()).unwrap();
+
+        // The exact discrete Dirichlet mode of the zero-extension domain.
+        let k0 = std::f64::consts::PI * 8.0 / ((N as f64 + 1.0) * DX);
+        for i in 0..N {
+            let value = (k0 * (i as f64 + 1.0) * DX).sin();
+            for j in 0..4 {
+                for k in 0..4 {
+                    solver.fields.p[[i, j, k]] = value;
+                }
+            }
+        }
+
+        let energy = |solver: &FdtdSolver| -> f64 {
+            let bulk = RHO0 * C0 * C0;
+            let potential: f64 = solver.fields.p.iter().map(|&p| p * p / (2.0 * bulk)).sum();
+            let kinetic: f64 = solver
+                .fields
+                .ux
+                .iter()
+                .zip(solver.fields.uy.iter())
+                .zip(solver.fields.uz.iter())
+                .map(|((&a, &b), &c)| 0.5 * RHO0 * (a * a + b * b + c * c))
+                .sum();
+            potential + kinetic
+        };
+
+        let initial = energy(&solver);
+        assert!(initial > 0.0, "order {order}: zero initial energy");
+        let mut lowest = f64::INFINITY;
+        let mut highest = 0.0_f64;
+        for _ in 0..STEPS {
+            solver.step_forward().unwrap();
+            let ratio = energy(&solver) / initial;
+            lowest = lowest.min(ratio);
+            highest = highest.max(ratio);
+        }
+        assert!(
+            highest < 1.1 && lowest > 0.9,
+            "order {order}: energy drifted to [{lowest:.4}, {highest:.4}]"
+        );
+        let _ = TAU;
+    }
+}
+
+/// Eighth order is rejected on the collocated path, whose CFL table stops at
+/// six — a configuration the solver cannot size a stable step for must fail
+/// loudly rather than run.
+#[test]
+fn collocated_path_rejects_eighth_order() {
+    let grid = Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).unwrap();
+    let config = FdtdConfig {
+        spatial_order: 8,
+        staggered_grid: false,
+        dt: 1e-8,
+        nt: 4,
+        ..Default::default()
+    };
+    assert!(config.validate().is_err());
+
+    let staggered = FdtdConfig {
+        staggered_grid: true,
+        ..config
+    };
+    assert!(staggered.validate().is_ok());
+    let _ = grid;
 }
