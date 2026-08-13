@@ -24,7 +24,7 @@ jobs:
     # Body owned once by Atlas (ADR 0035), pinned by SHA like any action. The
     # shared workflow keeps the pull-request build and skips deployment there,
     # so PRs still prove the book builds without publishing it.
-    uses: ryancinsight/atlas/.github/workflows/book-pages.yml@4c31dd7
+    uses: ryancinsight/atlas/.github/workflows/book-pages.yml@4c31dd753f06dd93b4c04798cf781df253e3e532
     permissions:
       contents: read
       # The shared deploy job publishes to Pages over OIDC.
