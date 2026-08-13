@@ -569,6 +569,29 @@
 - Not covered: the collocated path, for a structural reason recorded in the ADR
   and filed as KW-SOL-086.
 
+## KW-CI-087 - The benchmark baseline lock will not resolve on this branch [patch] - todo
+
+- **Blocks merging PR #361**, and therefore blocks delivery of every item on
+  `cascade/provider-042` including KW-SOL-085 and KW-SOL-086, both of which are
+  complete and green locally.
+- `complete benchmark smoke` fails in its "Align historical baseline workspace
+  graph" step:
+  `error: cannot update the lock file .../kwavers-baseline/Cargo.lock because
+  --locked was passed to prevent this`. `benchmark regression check` then fails
+  only because it gates on that job.
+- **Not caused by the recent work.** The same check has failed on this branch
+  since `8d17a339` (14:28), before any of today's commits, and it *passed* on
+  `codex/kwavers-floatelement-roots` at `08b219d7` twenty minutes before the
+  latest failure - so it is branch-specific, not a global CI outage.
+- Cause to confirm: the baseline revision's committed lock cannot be satisfied
+  under `--locked` once this branch's first-party version requirements move.
+  That is the known `--locked` fragility with the stack overlay, where a lock
+  committed overlay-on carries `[patch.unused]` nondeterminism.
+- Fix direction: regenerate the baseline lock as part of the alignment step
+  (`--offline` rather than `--locked`, as the error message itself suggests), or
+  pin the baseline to a revision whose first-party requirements this branch still
+  satisfies. Do not drop the benchmark gate to get the branch merged.
+
 ## KW-SOL-086 - Summation by parts for the collocated rigid wall [minor] - done 2026-08-13
 
 - ADR: [107](docs/adr/107-collocated-summation-by-parts.md).
