@@ -180,3 +180,95 @@ fn scan_conversion_rejects_invalid_typed_geometry() {
     geometry.radius_offset = Length::from_unit::<Meter>(-1.0);
     assert!(ScanConverter::new(geometry, grid).is_err());
 }
+
+/// Differential oracle for the geometry migration: converting through
+/// `ritk_spatial::CurvilinearArray` must reproduce the formulas this module
+/// used to implement itself, pixel for pixel.
+///
+/// The reference below is the pre-migration arithmetic verbatim
+/// (`r = hypot(z,x)`, `theta = atan2(x,z)`, `line = (theta - angle_min)/angle_step`,
+/// `sample = (r - radius_offset)/range_step`), so the assertion fails if the
+/// delegated geometry disagrees anywhere on the raster.
+///
+/// # Tolerance derivation
+///
+/// The two paths are not bit-identical, and exact equality would be an
+/// analytically wrong assertion. The reference uses `atan2(x, z)` while the
+/// geometry uses `atan(x/z)` (ITK's form). For `z > 0` these agree
+/// mathematically but not in floating point: the quotient `x/z` is rounded once
+/// before `atan` is applied. That rounding is `≤ ε/2` relative, and since
+/// `|d atan(u)/du| = 1/(1+u²)`, the angle error is bounded by
+/// `(ε/2)·|u|/(1+u²) = (ε/2)·|sin θ cos θ| ≤ ε/4 ≈ 5.6e-17 rad`.
+///
+/// Dividing by the beam pitch `Δ = 0.5° = 8.727e-3 rad` gives a beam-index error
+/// near `1.3e-14`. The bilinear value is Lipschitz in the beam index with
+/// constant equal to the largest adjacent-beam difference, `1e3` in this
+/// fixture, so the value error is bounded by about `1.3e-11`. The observed
+/// worst case is `8e-12`.
+///
+/// `1e-9` is used: comfortably above that bound, and still ~14 orders below the
+/// fixture's own values (up to `1.2e5`). A genuinely mis-indexed pixel differs
+/// by `≥ 1` (adjacent sample) or `~1e3` (adjacent beam), so this tolerance
+/// cannot mask an indexing defect — which is what the test exists to catch.
+#[test]
+fn delegated_geometry_matches_the_previous_inline_formulas() {
+    let sc = converter();
+    let n_lines = 121; // ±30° at 0.5°
+    let n_samples = 300;
+    // A structured beam field, so a mis-indexed pixel cannot coincidentally match.
+    let mut beam = leto::Array2::zeros((n_lines, n_samples));
+    for l in 0..n_lines {
+        for s in 0..n_samples {
+            beam[[l, s]] = (l as f64) * 1.0e3 + (s as f64);
+        }
+    }
+    let got = sc.convert(beam.view()).expect("conversion");
+
+    // Pre-migration reference, recomputed here independently of the converter.
+    let angle_min = -30.0_f64.to_radians();
+    let angle_step = 0.5_f64.to_radians();
+    let radius_offset = 0.0_f64;
+    let range_step = 2e-4_f64;
+    let (width, height) = (200_usize, 200_usize);
+    let (x_min, z_min) = (-0.03_f64, 0.0_f64);
+    let dx = (0.03 - x_min) / (width - 1) as f64;
+    let dz = (0.06 - z_min) / (height - 1) as f64;
+
+    let mut checked_interior = 0_usize;
+    for row in 0..height {
+        let z = z_min + row as f64 * dz;
+        for col in 0..width {
+            let x = x_min + col as f64 * dx;
+            let r = z.hypot(x);
+            let theta = x.atan2(z);
+            let line = (theta - angle_min) / angle_step;
+            let sample = (r - radius_offset) / range_step;
+
+            let mut want = 0.0;
+            if line >= 0.0 && sample >= 0.0 {
+                let l0 = line.floor() as usize;
+                let s0 = sample.floor() as usize;
+                if l0 + 1 < n_lines && s0 + 1 < n_samples {
+                    let fl = line - l0 as f64;
+                    let fs = sample - s0 as f64;
+                    want = beam[[l0, s0]] * (1.0 - fl) * (1.0 - fs)
+                        + beam[[l0 + 1, s0]] * fl * (1.0 - fs)
+                        + beam[[l0, s0 + 1]] * (1.0 - fl) * fs
+                        + beam[[l0 + 1, s0 + 1]] * fl * fs;
+                    checked_interior += 1;
+                }
+            }
+            let delta = (got[[row, col]] - want).abs();
+            assert!(
+                delta < 1.0e-9,
+                "pixel ({row}, {col}) at (x={x}, z={z}): got {}, want {want}, delta {delta:e}",
+                got[[row, col]]
+            );
+        }
+    }
+    // Guard against a vacuous pass: the fan must actually cover the raster.
+    assert!(
+        checked_interior > 5_000,
+        "only {checked_interior} pixels landed inside the fan; fixture is not exercising the map"
+    );
+}
