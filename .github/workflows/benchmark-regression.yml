@@ -62,6 +62,10 @@ jobs:
             ~/.cargo/git
           key: ${{ runner.os }}-kwavers-bench-${{ hashFiles('kwavers-candidate/Cargo.lock') }}
 
+      - name: Verify the candidate lockfile
+        shell: bash
+        run: python3 kwavers-candidate/scripts/lockfile.py --check
+
       - name: Align historical baseline workspace graph
         shell: bash
         run: |
@@ -259,6 +263,10 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
           key: ${{ runner.os }}-kwavers-bench-${{ hashFiles('kwavers-candidate/Cargo.lock') }}
+
+      - name: Verify the candidate lockfile
+        shell: bash
+        run: python3 kwavers-candidate/scripts/lockfile.py --check
 
       - name: Align historical baseline workspace graph
         shell: bash

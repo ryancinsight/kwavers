@@ -569,28 +569,41 @@
 - Not covered: the collocated path, for a structural reason recorded in the ADR
   and filed as KW-SOL-086.
 
-## KW-CI-087 - The benchmark baseline lock will not resolve on this branch [patch] - todo
+## KW-CI-087 - The committed lockfile did not resolve without the stack overlay [patch] - done 2026-08-13
 
-- **Blocks merging PR #361**, and therefore blocks delivery of every item on
-  `cascade/provider-042` including KW-SOL-085 and KW-SOL-086, both of which are
-  complete and green locally.
-- `complete benchmark smoke` fails in its "Align historical baseline workspace
-  graph" step:
-  `error: cannot update the lock file .../kwavers-baseline/Cargo.lock because
-  --locked was passed to prevent this`. `benchmark regression check` then fails
-  only because it gates on that job.
-- **Not caused by the recent work.** The same check has failed on this branch
-  since `8d17a339` (14:28), before any of today's commits, and it *passed* on
-  `codex/kwavers-floatelement-roots` at `08b219d7` twenty minutes before the
-  latest failure - so it is branch-specific, not a global CI outage.
-- Cause to confirm: the baseline revision's committed lock cannot be satisfied
-  under `--locked` once this branch's first-party version requirements move.
-  That is the known `--locked` fragility with the stack overlay, where a lock
-  committed overlay-on carries `[patch.unused]` nondeterminism.
-- Fix direction: regenerate the baseline lock as part of the alignment step
-  (`--offline` rather than `--locked`, as the error message itself suggests), or
-  pin the baseline to a revision whose first-party requirements this branch still
-  satisfies. Do not drop the benchmark gate to get the branch merged.
+- Blocked merging PR #361, and with it KW-SOL-085 and KW-SOL-086.
+- **Root cause, and it is not the workflow.** The *committed* `Cargo.lock`
+  pinned first-party revisions whose versions no longer satisfied the manifests'
+  requirements, so cargo had to re-resolve and `--locked` refused. Reproduced
+  locally by running `cargo metadata --locked` from a directory outside the
+  stack root - cargo discovers `.cargo/config.toml` from the working directory,
+  never from `--manifest-path`, so that is what excludes the overlay and
+  reproduces what CI sees.
+- **My filed fix direction was wrong** and is retracted: it suggested relaxing
+  the step to `--offline`. That would have masked exactly the staleness the gate
+  exists to catch. `--locked` was doing its job; the lock was the defect.
+- Fixed by regenerating the lock outside the overlay. The result advances the
+  first-party pins to their current heads - two version moves, hermes `0.1.4 ->
+  0.1.5` and tyche `0.1.0 -> 0.2.0`, both forward, no backward move.
+- Verified: `cargo metadata --locked` resolves outside the overlay (the failing
+  check itself), and `cargo check --locked --all-targets` for `kwavers`
+  *compiles against the newly pinned revisions*. That second one matters - local
+  builds resolve first-party crates through the overlay to working trees, so a
+  green local suite does not exercise the pins CI uses, and this is the only
+  step here that did.
+- **The adjacent trap, now mechanized.** A lock regenerated with the overlay
+  active has every one of its 87 first-party `source = "git+..."` lines
+  *stripped*, because those deps resolved to local paths. Such a lock was sitting
+  uncommitted in the working tree, one `git add` from breaking CI far worse than
+  staleness did. `scripts/lockfile.py` regenerates correctly (`--regenerate`,
+  from a temp directory outside the overlay) and checks (`--check`, offline
+  structural check plus the `--locked` resolution), and both benchmark jobs now
+  run the check ahead of the baseline alignment so the failure names its cause
+  instead of emitting cargo's message, which is identical for a flattened lock
+  and a stale one.
+- Recurrence: this will go stale again whenever first-party crates advance past
+  the pins. That is the pin-drift the integration sweep exists for; the gate
+  correctly blocks the merge and the script makes the fix one command.
 
 ## KW-SOL-086 - Summation by parts for the collocated rigid wall [minor] - done 2026-08-13
 
