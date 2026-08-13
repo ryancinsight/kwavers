@@ -543,19 +543,62 @@
   condition is a different mode in each and the per-solver frequency
   normalization only partly compensates. Filed as KW-SOL-084.
 
-## KW-SOL-084 - Make the cross-path comparison boundary-independent [patch] - todo
+## KW-SOL-085 - Zero-extension makes every thin grid a waveguide [arch] - todo
 
-- `cross_path_absorption_tests` compares a standing wave, which forces both
-  solvers to interact with their walls. Since KW-SOL-074 those walls differ
-  (FDTD zero-extension, PSTD periodic), so one initial condition is a different
-  mode in each; the agreement it can demonstrate fell from 1.3 % to 9.1 %.
-- Fix: measure a *travelling* pulse by reference-normalized spectral ratio
-  between two interior sensors, as `heterogeneous_power_law_attenuation` already
-  does, in a domain large enough that the pulse never reaches a boundary within
-  the window. The measurement is then boundary-independent and the two paths
-  become directly comparable again.
-- Acceptance: agreement restored to the 1-2 % the parts predict, with the bound
-  set by bisection rather than assumed.
+- **Found while fixing KW-SOL-084; it is the cause, and it reaches much further
+  than that test.** The zero-extension closure accepted under KW-SOL-074 is a
+  *pressure-release* wall on every face. A transversely uniform field therefore
+  has a non-zero transverse gradient, so an `N x 4 x 4` slab is no longer a 1-D
+  line - it is a 4-cell-wide waveguide with soft walls.
+- Evidence, operator level: gradient of a uniform field along a transverse axis,
+  order 4, `dy = 1e-4`. It is not small, and it does not vanish for a singleton
+  axis:
+
+  | `ny` | transverse gradient of a uniform field |
+  |---|---|
+  | 1 | `[-11250]` |
+  | 2 | `[0, -10833]` |
+  | 4 | `[-417, 0, 417, -10833]` |
+  | 8 | `[-417, 0, 0, 0, 0, 0, 417, -10833]` |
+
+- Evidence, solver level: a purely axial launch (transverse energy exactly zero
+  at step 0) has **more energy in the transverse velocity than the axial one by
+  step 150** (ratio 1.24). The packet is pumped into waveguide modes, runs about
+  half speed, and never coherently arrives - the far sensor of the KW-SOL-084
+  test reads `0.0000` where PSTD, being periodic transversely, reads `1.0008`.
+- Energy is still conserved and the operators are still exactly adjoint; nothing
+  regressed against what KW-SOL-074 verified. The gap is that its verification
+  never asked whether a thin slab stays inert, and quasi-1-D grids are the
+  dominant test and modelling idiom in this crate.
+- **Recommended fix - rigid walls by even reflection, which costs nothing we
+  currently have.** Close the gradient with `p[-1] = p[0]` (even reflection about
+  the wall) instead of `p[-1] = 0`, and *define* the divergence as `-G^T`. Then:
+  a uniform field has exactly zero gradient at every order, so thin slabs are
+  inert again; the wall is rigid, which is the conventional acoustic default and
+  the behaviour every pre-KW-SOL-074 test assumed; and adjointness, hence energy
+  conservation and the KW-SOL-081 fix, holds by construction rather than by a
+  closure argument. Verified by hand on the order-4 stencil at both faces.
+- The alternative - keeping pressure-release and reaching for SBP-SAT operators
+  to get high-order rigid walls - is a much larger investment and buys physics we
+  have no requirement for.
+- Blocks KW-SOL-084.
+
+## KW-SOL-084 - Make the cross-path comparison boundary-independent [patch] - blocked on KW-SOL-085
+
+- Re-open trigger: KW-SOL-085 lands.
+- The travelling-pulse measurement is written and correct - one-way launch by
+  pairing `p0` with `u = p/(rho c)`, reference-normalized two-sensor spectral
+  ratio, 640 cells with the gate closing clear of the earliest contaminant.
+  **PSTD passes it outright**: arrivals at steps 298 and 1248 against 300 and
+  1250 expected, lossless ratio 1.0000, lossy 0.8455 giving 8.8 Np/m against a
+  prescribed 9.0. FDTD cannot pass it while its side walls are pressure-release,
+  for the reason recorded in KW-SOL-085.
+- The launch must go through each solver's own `apply_initial_conditions` rather
+  than assigning `fields.ux`: velocity is face-centred and half-time-staggered,
+  so a cell-centred whole-step assignment is a different field.
+- Draft kept at `scratchpad/travelling_pulse_test.rs`; the standing-wave version
+  stays in tree meanwhile so the suite is green.
+
 
 ## KW-MATH-073 — Derived staggered stencil coefficients to arbitrary even order [minor] — done 2026-08-12
 
