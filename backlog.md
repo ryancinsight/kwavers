@@ -569,21 +569,38 @@
 - Not covered: the collocated path, for a structural reason recorded in the ADR
   and filed as KW-SOL-086.
 
-## KW-SOL-086 - Rigid walls on the collocated path need SBP operators [minor] - todo
+## KW-SOL-086 - Summation by parts for the collocated rigid wall [minor] - done 2026-08-13
 
-- `ConservativeCentralDifference` still closes by zero-extension, so it carries
-  the same pressure-release wall KW-SOL-085 removed from the staggered path, and
-  quasi-1-D grids on it are still soft waveguides.
-- **The KW-SOL-085 fix cannot be transferred.** Reflection folds `f[-1] = f[0]`
-  onto row 0, putting a non-zero entry on the diagonal, and a skew-symmetric
-  matrix has a zero diagonal by definition. On a collocated grid reflection and
-  conservation are in direct conflict - the same obstruction one-sided closures
-  hit.
-- Fix: summation-by-parts operators with SAT boundary terms, which is the
-  general answer to high-order conservative walls. Sized as its own item rather
-  than approximated.
-- Meanwhile the staggered path is the default and is documented as the one to
-  use for quasi-1-D work.
+- ADR: [107](docs/adr/107-collocated-summation-by-parts.md).
+- The collocated path carried the same pressure-release wall KW-SOL-085 removed
+  from the staggered one, and the reflection fix provably could not transfer:
+  reflection puts a non-zero entry on the diagonal and a skew-symmetric matrix
+  has none, so reflection and conservation are in direct conflict there.
+- Resolved by moving conservation into a weighted norm. `SummationByPartsOperator`
+  supplies `D = H^-1 Q` with `Q + Q^T = B`, and the wall-normal velocity is held
+  at zero on every outer face, which is what makes the boundary term vanish.
+  Both halves are required: the operator alone does not conserve.
+- **Derived, not transcribed.** The boundary blocks are solved from the accuracy
+  and symmetry conditions at construction, matching how every other stencil here
+  is obtained. Construction fails if the derived block does not satisfy the
+  conditions it was solved from, so a bad solve cannot ship as an operator. The
+  conditions are over-determined but consistent, so the solve is least squares
+  and the *residual* is the acceptance test - `dense_solve` carries a test
+  asserting that an inconsistent system does not look solved.
+- Verified: `Q + Q^T = B` on the assembled matrix at orders 2/4/6; exactness on
+  the polynomials each row claims; positive norm summing to the interval count;
+  order 2 against its textbook closed form; weighted energy conserved by an
+  actual leapfrog integration. At solver level, the collocated path conserves
+  over 1200 steps and a thin axis stays inert to `1e-12` transverse/axial -
+  the defect itself, tested where it bit.
+- Consolidation: the old `ConservativeCentralDifference` is deleted outright, not
+  re-exported. `solve_in_place` moved to a shared `dense_solve` on its second
+  user rather than being copied, and two functions the KW-SOL-085 change had
+  orphaned in `velocity_updater` are gone.
+- Cost, stated: diagonal-norm SBP caps boundary accuracy at half the interior
+  order, so global order is `m + 1`. Interior accuracy is unchanged. **Callers
+  measuring energy must weight by `norm_weight`** - an unweighted sum is not the
+  conserved quantity and will show drift.
 
 ## KW-SOL-084 - Make the cross-path comparison boundary-independent [patch] - done 2026-08-13
 

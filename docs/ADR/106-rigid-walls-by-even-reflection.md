@@ -93,12 +93,14 @@ the one order that was never in question.
 wall was wrong. Reshaping tests around it would have left every quasi-1-D model
 in the crate silently mis-simulating.
 
-## Not covered
+## Not covered here — resolved separately
 
-The collocated path (`ConservativeCentralDifference`) has the same
-pressure-release wall and **cannot take this fix**. Reflection folds `f[−1] =
-f[0]` onto row 0, putting a non-zero entry on the diagonal, and a skew-symmetric
-matrix has a zero diagonal by definition — so on a collocated grid reflection
-and conservation are in direct conflict. Recovering a rigid wall there needs SBP
-operators; filed as KW-SOL-086. The staggered path is the default and is the one
-to use for quasi-1-D work.
+The collocated path has the same pressure-release wall and **cannot take this
+fix**. Reflection folds `f[−1] = f[0]` onto row 0, putting a non-zero entry on
+the diagonal, and a skew-symmetric matrix has a zero diagonal by definition — so
+on a collocated grid reflection and conservation are in direct conflict.
+
+That was filed as KW-SOL-086 and is now resolved by
+[107](107-collocated-summation-by-parts.md), which moves conservation into a
+weighted norm via summation by parts rather than trying to reconcile reflection
+with skew-symmetry. Both paths now have rigid walls and inert thin slabs.

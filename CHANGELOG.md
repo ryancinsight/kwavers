@@ -120,6 +120,18 @@
 
 ### Changed
 
+- **Breaking (numerical): the FDTD collocated path now has rigid walls, via
+  summation by parts.** The skew-symmetric zero-extension operator is replaced
+  by `SummationByPartsOperator` (`D = H^-1 Q`, `Q + Q^T = B`), and the
+  wall-normal velocity is held at zero on the outer faces. The previous closure
+  was conservative but was a *pressure-release* wall, so a transversely uniform
+  field had a large gradient at the boundary and a thin slab behaved as a soft
+  waveguide. Both discretisation paths now have rigid walls and inert thin slabs.
+  Two consequences for callers: energy is conserved in the operator's weighted
+  norm, so sum it with `norm_weight` rather than unweighted; and diagonal-norm
+  SBP caps *boundary* accuracy at half the interior order, leaving interior
+  accuracy unchanged. See ADR 107.
+
 - **Breaking (numerical): the FDTD staggered path now has rigid walls.** Taps
   falling outside the grid are reflected (`p[-1] = p[0]`) rather than treated as
   zero, and the divergence is defined as the gradient's negative transpose. The

@@ -6,7 +6,7 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array3;
-use leto::{ArrayView3, ArrayViewMut3};
+
 use moirai_parallel::{enumerate_mut_with, Adaptive};
 
 use kwavers_math::numerics::operators::Axis;
@@ -49,96 +49,6 @@ fn update_velocity_from_gradient(
                 *velocity_value -= dt / rho * gradient_value;
             }
         }
-    }
-}
-
-fn compute_forward_gradient(
-    mut output: ArrayViewMut3<'_, f64>,
-    high: ArrayView3<'_, f64>,
-    low: ArrayView3<'_, f64>,
-    spacing: f64,
-) {
-    assert_eq!(
-        output.shape(),
-        high.shape(),
-        "invariant: FDTD forward-gradient upper slice shape matches output"
-    );
-    assert_eq!(
-        output.shape(),
-        low.shape(),
-        "invariant: FDTD forward-gradient lower slice shape matches output"
-    );
-
-    if let (Some(output_values), Some(high_values), Some(low_values)) =
-        (output.as_mut_slice(), high.as_slice(), low.as_slice())
-    {
-        enumerate_mut_with::<Adaptive, _, _>(output_values, |idx, output_value| {
-            *output_value = (high_values[idx] - low_values[idx]) / spacing;
-        });
-    } else {
-        leto_ops::zip_mut_with(
-            &mut output,
-            (&high, &low),
-            |output_value, (high_value, low_value)| {
-                *output_value = (*high_value - *low_value) / spacing;
-            },
-        )
-        .expect("invariant: FDTD forward-gradient shapes asserted equal above");
-    }
-}
-
-fn update_staggered_velocity(
-    mut velocity: ArrayViewMut3<'_, f64>,
-    rho_lower: ArrayView3<'_, f64>,
-    rho_upper: ArrayView3<'_, f64>,
-    pressure_gradient: ArrayView3<'_, f64>,
-    dt: f64,
-) {
-    assert_eq!(
-        velocity.shape(),
-        rho_lower.shape(),
-        "invariant: FDTD staggered lower-density shape matches velocity field"
-    );
-    assert_eq!(
-        velocity.shape(),
-        rho_upper.shape(),
-        "invariant: FDTD staggered upper-density shape matches velocity field"
-    );
-    assert_eq!(
-        velocity.shape(),
-        pressure_gradient.shape(),
-        "invariant: FDTD staggered pressure-gradient shape matches velocity field"
-    );
-
-    if let (
-        Some(velocity_values),
-        Some(rho_lower_values),
-        Some(rho_upper_values),
-        Some(dp_values),
-    ) = (
-        velocity.as_mut_slice(),
-        rho_lower.as_slice(),
-        rho_upper.as_slice(),
-        pressure_gradient.as_slice(),
-    ) {
-        enumerate_mut_with::<Adaptive, _, _>(velocity_values, |idx, velocity_value| {
-            let rho = 0.5 * (rho_lower_values[idx] + rho_upper_values[idx]);
-            if rho > 1e-9 {
-                *velocity_value -= dt / rho * dp_values[idx];
-            }
-        });
-    } else {
-        leto_ops::zip_mut_with(
-            &mut velocity,
-            (&rho_lower, &rho_upper, &pressure_gradient),
-            |velocity_value, (rho_lower_value, rho_upper_value, pressure_gradient_value)| {
-                let rho = 0.5 * (*rho_lower_value + *rho_upper_value);
-                if rho > 1e-9 {
-                    *velocity_value -= dt / rho * *pressure_gradient_value;
-                }
-            },
-        )
-        .expect("invariant: FDTD staggered velocity shapes asserted equal above");
     }
 }
 
@@ -242,16 +152,21 @@ impl FdtdSolver {
             return self.update_velocity_staggered(dt);
         }
 
-        // Skew-symmetric closure, not the general central difference: the
-        // leapfrog conserves energy only when the gradient and the divergence
-        // are negative adjoints, and a one-sided boundary row breaks that
-        // (KW-SOL-081).
+        // Summation by parts, not the general central difference: the leapfrog
+        // conserves energy only when the boundary term vanishes, and a
+        // one-sided row breaks that (KW-SOL-081). SBP conserves in the weighted
+        // norm the operator carries, which additionally admits a rigid wall
+        // (KW-SOL-086) -- the plain skew-symmetric closure it replaced could
+        // only give a pressure-release one.
         self.conservative_operator
-            .apply_x_into(self.fields.p.view(), &mut self.dvx_scratch);
+            .apply_into(Axis::X, self.fields.p.view(), &mut self.dvx_scratch);
         self.conservative_operator
-            .apply_y_into(self.fields.p.view(), &mut self.dvy_scratch);
-        self.conservative_operator
-            .apply_z_into(self.fields.p.view(), &mut self.divergence_scratch);
+            .apply_into(Axis::Y, self.fields.p.view(), &mut self.dvy_scratch);
+        self.conservative_operator.apply_into(
+            Axis::Z,
+            self.fields.p.view(),
+            &mut self.divergence_scratch,
+        );
 
         if let Some(ref mut cpml) = self.cpml_boundary {
             cpml.update_and_apply_p_gradient_correction(&mut self.dvx_scratch, 0);
@@ -276,6 +191,12 @@ impl FdtdSolver {
             &self.divergence_scratch,
             &self.materials.rho0,
             dt,
+        );
+
+        apply_rigid_wall(
+            &mut self.fields.ux,
+            &mut self.fields.uy,
+            &mut self.fields.uz,
         );
 
         Ok(())
@@ -357,5 +278,48 @@ impl FdtdSolver {
         }
 
         Ok(())
+    }
+}
+
+/// Hold the wall-normal velocity at zero on every outer face.
+///
+/// This is the rigid wall, and on the collocated path it is what makes the
+/// scheme conserve energy rather than merely approximately conserve it. The
+/// summation-by-parts operator gives
+///
+/// ```text
+///   d/dt ‖E‖_H = −( p_{N−1}u_{N−1} − p₀u₀ )
+/// ```
+///
+/// per axis, so the energy is constant exactly when the wall-normal velocity
+/// vanishes at the two end points. The condition is not decoration on top of a
+/// conservative scheme — it is the half of it that lives at the boundary.
+///
+/// Only the normal component is held: a rigid wall is a slip wall, and the
+/// tangential components carry no flux through it, so zeroing them would impose
+/// a no-slip condition the inviscid equations do not have.
+///
+/// A PML, where configured, operates inside the domain and terminates against
+/// this wall rather than replacing it.
+fn apply_rigid_wall(ux: &mut Array3<f64>, uy: &mut Array3<f64>, uz: &mut Array3<f64>) {
+    let [nx, ny, nz] = ux.shape();
+
+    for j in 0..ny {
+        for k in 0..nz {
+            ux[[0, j, k]] = 0.0;
+            ux[[nx - 1, j, k]] = 0.0;
+        }
+    }
+    for i in 0..nx {
+        for k in 0..nz {
+            uy[[i, 0, k]] = 0.0;
+            uy[[i, ny - 1, k]] = 0.0;
+        }
+    }
+    for i in 0..nx {
+        for j in 0..ny {
+            uz[[i, j, 0]] = 0.0;
+            uz[[i, j, nz - 1]] = 0.0;
+        }
     }
 }

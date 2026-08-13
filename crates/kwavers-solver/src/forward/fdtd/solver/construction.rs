@@ -10,12 +10,12 @@ use leto::Array3;
 use log::info;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
 
-use super::conservative_diff::ConservativeCentralDifference;
 use super::{FdtdMetrics, GenericFdtdSolver};
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
 use kwavers_field::wave::WaveFields;
 use kwavers_grid::Grid;
+use kwavers_math::numerics::operators::differential::summation_by_parts::SummationByPartsOperator;
 use kwavers_math::numerics::operators::StaggeredLeapfrogOperator;
 use kwavers_medium::{material_fields::MaterialFields, Medium};
 use kwavers_receiver::recorder::simple::SensorRecorder;
@@ -118,8 +118,14 @@ impl GenericFdtdSolver<Array3<f64>> {
         let spatial_order = config.spatial_order;
         let leapfrog_operator =
             StaggeredLeapfrogOperator::new(config.spatial_order, grid.dx, grid.dy, grid.dz)?;
-        let conservative_operator =
-            ConservativeCentralDifference::new(config.spatial_order, grid.dx, grid.dy, grid.dz)?;
+        // The collocated pair needs the grid shape, not just the spacing: a
+        // summation-by-parts boundary block only exists where it fits, and an
+        // axis too short for the requested order falls back to one that does.
+        let conservative_operator = SummationByPartsOperator::new(
+            config.spatial_order,
+            [grid.nx, grid.ny, grid.nz],
+            [grid.dx, grid.dy, grid.dz],
+        )?;
 
         let source_handler = SourceHandler::new(source, grid)?;
         let sensor_recorder = SensorRecorder::new(

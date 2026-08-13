@@ -2,6 +2,7 @@ use crate::forward::fdtd::config::FdtdConfig;
 use crate::forward::fdtd::solver::FdtdSolver;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_grid::Grid;
+use kwavers_math::numerics::operators::Axis;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_source::GridSource;
 use leto::Array3;
@@ -116,16 +117,16 @@ fn test_fdtd_pressure_numerical_identity() {
     let mut dvz_s = Array3::<f64>::zeros((n, n, n));
     // The operator the collocated path actually uses. Its interior is the
     // standard central stencil, so a linear field still differentiates to its
-    // slope there; only the boundary closure differs (KW-SOL-081).
+    // slope there; only the boundary closure differs (KW-SOL-081, KW-SOL-086).
     solver
         .conservative_operator
-        .apply_x_into(solver.fields.ux.view(), &mut dvx_s);
+        .apply_into(Axis::X, solver.fields.ux.view(), &mut dvx_s);
     solver
         .conservative_operator
-        .apply_y_into(solver.fields.uy.view(), &mut dvy_s);
+        .apply_into(Axis::Y, solver.fields.uy.view(), &mut dvy_s);
     solver
         .conservative_operator
-        .apply_z_into(solver.fields.uz.view(), &mut dvz_s);
+        .apply_into(Axis::Z, solver.fields.uz.view(), &mut dvz_s);
 
     // Verify analytical reference: interior divergence = 3.0 exactly (linear field, O2 stencil).
     for i in 1..n - 1 {

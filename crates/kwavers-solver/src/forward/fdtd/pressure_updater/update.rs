@@ -6,6 +6,8 @@ use leto::{Array3, ArrayView3};
 
 use super::super::solver::{FdtdGpuAccelerator, FdtdSolver};
 
+use kwavers_math::numerics::operators::Axis;
+
 impl FdtdSolver {
     /// Dispatch pressure update to GPU or CPU; apply nonlinear correction if enabled.
     /// # Errors
@@ -83,14 +85,24 @@ impl FdtdSolver {
             self.compute_divergence_staggered()?;
             self.apply_pressure_from_divergence(dt);
         } else {
-            // The adjoint partner of the velocity update's gradient; see
-            // `conservative_diff`.
-            self.conservative_operator
-                .apply_x_into(self.fields.ux.view(), &mut self.dvx_scratch);
-            self.conservative_operator
-                .apply_y_into(self.fields.uy.view(), &mut self.dvy_scratch);
-            self.conservative_operator
-                .apply_z_into(self.fields.uz.view(), &mut self.divergence_scratch);
+            // The same operator the velocity update uses. On a collocated grid
+            // that is the point: one operator means the energy behaviour is
+            // governed entirely by its summation-by-parts property.
+            self.conservative_operator.apply_into(
+                Axis::X,
+                self.fields.ux.view(),
+                &mut self.dvx_scratch,
+            );
+            self.conservative_operator.apply_into(
+                Axis::Y,
+                self.fields.uy.view(),
+                &mut self.dvy_scratch,
+            );
+            self.conservative_operator.apply_into(
+                Axis::Z,
+                self.fields.uz.view(),
+                &mut self.divergence_scratch,
+            );
 
             if let Some(ref mut cpml) = self.cpml_boundary {
                 cpml.update_and_apply_v_gradient_correction(&mut self.dvx_scratch, 0);

@@ -51,6 +51,7 @@ use crate::forward::fdtd::config::FdtdConfig;
 use crate::forward::fdtd::solver::FdtdSolver;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_grid::Grid;
+use kwavers_math::numerics::operators::Axis;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_physics::acoustics::mechanics::acoustic_wave::AcousticSpatialOrder;
 use kwavers_source::GridSource;
@@ -815,4 +816,137 @@ fn collocated_path_rejects_eighth_order() {
     };
     assert!(staggered.validate().is_ok());
     let _ = grid;
+}
+
+/// **The collocated path conserves energy, and it conserves it in the norm the
+/// operator carries.**
+///
+/// This is the payoff of ADR 107, tested where it matters — a full solver run
+/// rather than the operator in isolation. The summation-by-parts property gives
+/// `d/dt ‖E‖_H = −(p_{N−1}u_{N−1} − p₀u₀)` per axis, so conservation needs both
+/// halves: the operator *and* the rigid wall holding the wall-normal velocity at
+/// zero. Removing either breaks it.
+///
+/// The weights are load-bearing. `H` is the trapezoidal rule — half at the end
+/// points, one inside — so an unweighted sum measures a quantity the scheme has
+/// no reason to preserve. The test asserts against `norm_weight` for that
+/// reason, not as a formality.
+#[test]
+fn the_collocated_path_conserves_the_weighted_energy() {
+    const N: usize = 24;
+    const STEPS: usize = 1200;
+    let dx = 1.0e-3_f64;
+    let c0 = SOUND_SPEED_WATER_SIM;
+    let rho0 = DENSITY_WATER_NOMINAL;
+    let dt = 0.2 / (3.0_f64).sqrt() * dx / c0;
+
+    let grid = Grid::new(N, N, N, dx, dx, dx).unwrap();
+    let medium = HomogeneousMedium::new(rho0, c0, 0.0, 0.0, &grid);
+    let config = FdtdConfig {
+        spatial_order: 4,
+        staggered_grid: false,
+        enable_nonlinear: false,
+        dt,
+        nt: STEPS + 1,
+        ..Default::default()
+    };
+    let mut solver = FdtdSolver::new(config, &grid, &medium, GridSource::new_empty()).unwrap();
+
+    let centre = (N / 2) as f64;
+    let sigma = 3.0_f64;
+    for i in 0..N {
+        for j in 0..N {
+            for k in 0..N {
+                let r2 = (i as f64 - centre).powi(2)
+                    + (j as f64 - centre).powi(2)
+                    + (k as f64 - centre).powi(2);
+                solver.fields.p[[i, j, k]] = (-r2 / (2.0 * sigma * sigma)).exp();
+            }
+        }
+    }
+
+    let weighted_energy = |solver: &FdtdSolver| -> f64 {
+        let op = &solver.conservative_operator;
+        let mut total = 0.0;
+        for i in 0..N {
+            for j in 0..N {
+                for k in 0..N {
+                    // Separable quadrature: the product of the three axes'
+                    // weights is the cell's weight in the 3-D norm.
+                    let weight = op.norm_weight(Axis::X, i)
+                        * op.norm_weight(Axis::Y, j)
+                        * op.norm_weight(Axis::Z, k);
+                    let p = solver.fields.p[[i, j, k]];
+                    let kinetic = solver.fields.ux[[i, j, k]].powi(2)
+                        + solver.fields.uy[[i, j, k]].powi(2)
+                        + solver.fields.uz[[i, j, k]].powi(2);
+                    total += weight * (p * p / (2.0 * rho0 * c0 * c0) + rho0 * kinetic / 2.0);
+                }
+            }
+        }
+        total
+    };
+
+    let initial = weighted_energy(&solver);
+    for _ in 0..STEPS {
+        solver.step_forward().expect("collocated step");
+    }
+    let final_energy = weighted_energy(&solver);
+    let drift = (final_energy - initial).abs() / initial;
+    assert!(
+        drift < 0.05,
+        "weighted energy drifted {:.3} % over {STEPS} steps",
+        100.0 * drift
+    );
+}
+
+/// A transversely uniform field stays uniform on the collocated path.
+///
+/// The defect KW-SOL-086 fixed, at solver level: under the previous
+/// zero-extension closure the walls were pressure-release, so a field uniform
+/// across a thin axis had a large gradient there and the axis developed
+/// transverse motion out of nothing. Here the launch has no transverse
+/// structure and must acquire none.
+#[test]
+fn the_collocated_path_leaves_a_thin_axis_inert() {
+    const N: usize = 48;
+    let dx = 1.0e-3_f64;
+    let c0 = SOUND_SPEED_WATER_SIM;
+    let rho0 = DENSITY_WATER_NOMINAL;
+    let dt = 0.2 / (3.0_f64).sqrt() * dx / c0;
+
+    let grid = Grid::new(N, 4, 4, dx, dx, dx).unwrap();
+    let medium = HomogeneousMedium::new(rho0, c0, 0.0, 0.0, &grid);
+    let config = FdtdConfig {
+        spatial_order: 4,
+        staggered_grid: false,
+        enable_nonlinear: false,
+        dt,
+        nt: 401,
+        ..Default::default()
+    };
+    let mut solver = FdtdSolver::new(config, &grid, &medium, GridSource::new_empty()).unwrap();
+
+    for i in 0..N {
+        let value = (-((i as f64 - 24.0) / 4.0).powi(2)).exp();
+        for j in 0..4 {
+            for k in 0..4 {
+                solver.fields.p[[i, j, k]] = value;
+            }
+        }
+    }
+
+    for _ in 0..400 {
+        solver.step_forward().expect("collocated step");
+    }
+
+    let axial: f64 = solver.fields.ux.iter().map(|v| v * v).sum();
+    let transverse: f64 = solver.fields.uy.iter().map(|v| v * v).sum::<f64>()
+        + solver.fields.uz.iter().map(|v| v * v).sum::<f64>();
+    assert!(axial > 0.0, "the packet must actually be propagating");
+    assert!(
+        transverse <= 1e-12 * axial,
+        "a uniform transverse profile developed motion: transverse/axial = {:.3e}",
+        transverse / axial
+    );
 }

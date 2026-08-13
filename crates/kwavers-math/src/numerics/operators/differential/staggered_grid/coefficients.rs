@@ -46,6 +46,8 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 
+use crate::numerics::dense_solve::solve_in_place;
+
 /// Largest supported half-order.
 ///
 /// The Vandermonde-like system is increasingly ill-conditioned in `N`. At
@@ -149,54 +151,8 @@ fn coefficients_for_offsets(
     let mut rhs = vec![0.0_f64; n];
     rhs[0] = 0.5;
 
-    solve_in_place(&mut matrix, &mut rhs, n)?;
+    solve_in_place(&mut matrix, &mut rhs, n, "staggered coefficient system")?;
     Ok(rhs)
-}
-
-/// Gaussian elimination with partial pivoting; `rhs` receives the solution.
-fn solve_in_place(matrix: &mut [f64], rhs: &mut [f64], n: usize) -> KwaversResult<()> {
-    for col in 0..n {
-        // Pivot on the largest magnitude in the column.
-        let mut pivot = col;
-        for row in (col + 1)..n {
-            if matrix[row * n + col].abs() > matrix[pivot * n + col].abs() {
-                pivot = row;
-            }
-        }
-        if matrix[pivot * n + col] == 0.0 {
-            return Err(KwaversError::InvalidInput(
-                "staggered coefficient system is singular".to_owned(),
-            ));
-        }
-        if pivot != col {
-            for k in 0..n {
-                matrix.swap(col * n + k, pivot * n + k);
-            }
-            rhs.swap(col, pivot);
-        }
-
-        let diagonal = matrix[col * n + col];
-        for row in (col + 1)..n {
-            let factor = matrix[row * n + col] / diagonal;
-            if factor == 0.0 {
-                continue;
-            }
-            for k in col..n {
-                matrix[row * n + k] -= factor * matrix[col * n + k];
-            }
-            rhs[row] -= factor * rhs[col];
-        }
-    }
-
-    // Back substitution.
-    for col in (0..n).rev() {
-        let mut acc = rhs[col];
-        for k in (col + 1)..n {
-            acc -= matrix[col * n + k] * rhs[k];
-        }
-        rhs[col] = acc / matrix[col * n + col];
-    }
-    Ok(())
 }
 
 #[cfg(test)]

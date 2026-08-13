@@ -114,3 +114,4 @@
 | [104](104-thermal-acoustic-coupling-quantities.md) | Aequitas thermal-acoustic coupling quantities | Accepted — 2026-08-05 |
 | [105](105-b-mode-scan-conversion-quantities.md) | Aequitas B-mode scan-conversion geometry quantities | Accepted — 2026-08-06 |
 | [106](106-rigid-walls-by-even-reflection.md) | Rigid walls by even reflection, divergence defined as -G^T | Accepted — 2026-08-13 |
+| [107](107-collocated-summation-by-parts.md) | Summation by parts for the collocated rigid wall | Accepted — 2026-08-13 |

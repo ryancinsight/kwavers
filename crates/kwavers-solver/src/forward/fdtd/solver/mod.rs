@@ -55,7 +55,7 @@
 //!
 //! ## Module layout
 //!
-//! - `conservative_diff`: skew-symmetric collocated derivative used by the
+//! - the collocated derivative is `SummationByPartsOperator` from kwavers-math, used by the
 //!   leapfrog; see its module docs for why the general central difference is
 //!   not usable here.
 //! - `construction`: `new` constructor — material precomputation, source
@@ -78,7 +78,6 @@
 //!   Velocity-stress finite-difference method. Geophysics 51(4), 889–901.
 
 mod accessors;
-mod conservative_diff;
 mod construction;
 mod gpu_accelerator;
 mod interface;
@@ -87,8 +86,8 @@ mod stepping;
 #[cfg(test)]
 mod tests;
 
-pub(crate) use conservative_diff::ConservativeCentralDifference;
 pub use gpu_accelerator::FdtdGpuAccelerator;
+pub(crate) use kwavers_math::numerics::operators::differential::summation_by_parts::SummationByPartsOperator;
 
 use kwavers_boundary::cpml::CPMLBoundary;
 use kwavers_grid::Grid;
@@ -122,7 +121,7 @@ pub struct GenericFdtdSolver<T> {
     pub(crate) grid: Grid,
     /// Skew-symmetric collocated operator used by the leapfrog when the
     /// staggered grid is off; see `conservative_diff`.
-    pub(crate) conservative_operator: ConservativeCentralDifference,
+    pub(crate) conservative_operator: SummationByPartsOperator,
     /// Staggered gradient/divergence pair, of the configured order. Its two
     /// halves are negative adjoints, which is what makes the leapfrog
     /// conserve energy (KW-SOL-081).

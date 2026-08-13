@@ -72,6 +72,7 @@ mod central_difference_4;
 mod central_difference_6;
 mod staggered_grid;
 pub mod staggered_leapfrog;
+pub mod summation_by_parts;
 mod traversal;
 
 // Re-export implementations
