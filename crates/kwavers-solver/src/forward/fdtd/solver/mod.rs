@@ -73,6 +73,7 @@
 
 mod accessors;
 mod central_diff;
+mod conservative_diff;
 mod construction;
 mod gpu_accelerator;
 mod interface;
@@ -82,6 +83,7 @@ mod stepping;
 mod tests;
 
 pub(crate) use central_diff::CentralDifferenceOperator;
+pub(crate) use conservative_diff::ConservativeCentralDifference;
 pub use gpu_accelerator::FdtdGpuAccelerator;
 
 use kwavers_boundary::cpml::CPMLBoundary;
@@ -116,6 +118,9 @@ pub struct GenericFdtdSolver<T> {
     /// Grid reference
     pub(crate) grid: Grid,
     pub(crate) central_operator: CentralDifferenceOperator,
+    /// Skew-symmetric collocated operator used by the leapfrog when the
+    /// staggered grid is off; see `conservative_diff`.
+    pub(crate) conservative_operator: ConservativeCentralDifference,
     pub(crate) staggered_operator: StaggeredGridOperator,
     /// Performance metrics
     pub(crate) metrics: FdtdMetrics,
@@ -181,6 +186,7 @@ impl<T: std::fmt::Debug> std::fmt::Debug for GenericFdtdSolver<T> {
             .field("config", &self.config)
             .field("grid", &self.grid)
             .field("central_operator", &self.central_operator)
+            .field("conservative_operator", &self.conservative_operator)
             .field("staggered_operator", &self.staggered_operator)
             .field("metrics", &self.metrics)
             .field("cpml_boundary", &self.cpml_boundary)

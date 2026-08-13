@@ -11,6 +11,7 @@ use log::info;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
 
 use super::central_diff::CentralDifferenceOperator;
+use super::conservative_diff::ConservativeCentralDifference;
 use super::{FdtdMetrics, GenericFdtdSolver};
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
@@ -122,6 +123,8 @@ impl GenericFdtdSolver<Array3<f64>> {
         let central_operator =
             CentralDifferenceOperator::new(config.spatial_order, grid.dx, grid.dy, grid.dz)?;
         let staggered_operator = StaggeredGridOperator::new(grid.dx, grid.dy, grid.dz)?;
+        let conservative_operator =
+            ConservativeCentralDifference::new(config.spatial_order, grid.dx, grid.dy, grid.dz)?;
 
         let source_handler = SourceHandler::new(source, grid)?;
         let sensor_recorder = SensorRecorder::new(
@@ -267,6 +270,7 @@ impl GenericFdtdSolver<Array3<f64>> {
             config,
             grid: grid.clone(),
             central_operator,
+            conservative_operator,
             staggered_operator,
             metrics: FdtdMetrics::new(),
             cpml_boundary: None,

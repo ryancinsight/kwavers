@@ -70,6 +70,22 @@
   points per period at the highest frequency of interest: 25 holds the
   time-discretization error in `α` under 1 %, 80 under 0.1 %.
 
+### Fixed
+
+- **FDTD finite-difference branches no longer diverge.** Both the staggered and
+  the collocated pressure/velocity updates closed their low faces with
+  one-sided differences, breaking the adjointness `D = −Gᵀ` that makes the Yee
+  leapfrog symplectic. A lossless standing wave grew its discrete energy by a
+  factor of 8.8·10⁴ (staggered) and 1.3·10⁴ (collocated) over 2000 steps; both
+  now hold it within ±10 %. The fix adds two boundary-closed operators — the
+  Yee divergence (`apply_divergence_*`) and a skew-symmetric collocated
+  derivative — leaving the general-purpose differences, whose one-sided handling
+  is correct for an arbitrary field, unchanged.
+
+- `central_first_derivative_coefficients`: collocated central-difference
+  coefficients from the same derivation as the staggered ones, so the two share
+  one Vandermonde solve rather than a second hand-entered table.
+
 ### Changed
 
 - `ViscoacousticMemorySolver::new_heterogeneous` accepts zero-strength

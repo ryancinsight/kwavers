@@ -83,15 +83,61 @@ pub const MAX_HALF_ORDER: usize = 8;
 /// assert!((c[1] + 1.0 / 24.0).abs() < 1e-14);
 /// ```
 pub fn staggered_first_derivative_coefficients(half_order: usize) -> KwaversResult<Vec<f64>> {
+    // Taps sit at the half-points a_j = j + 1/2.
+    coefficients_for_offsets(half_order, |j| j as f64 + 0.5, "staggered")
+}
+
+/// Derive the **collocated** central first-derivative coefficients `c_n`,
+/// `n = 1…N`, for a stencil of accuracy order `2·half_order`:
+///
+/// ```text
+///   ∂f/∂x |_i ≈ (1/Δx) Σ_{n=1..N} cₙ · ( f_{i+n} − f_{i−n} )
+/// ```
+///
+/// Same derivation as the staggered case with the taps at whole points
+/// `aₙ = n` instead of half points, so `N = 1` gives the familiar `1/2`
+/// (`(f_{i+1} − f_{i−1})/2Δx`) and `N = 2` gives `2/3, −1/12`.
+///
+/// The coefficients are **antisymmetric** by construction, which is what makes
+/// the operator skew-symmetric — and therefore energy-conserving in a leapfrog —
+/// once out-of-range taps are treated as zero rather than replaced by a
+/// one-sided formula.
+///
+/// # Errors
+/// Rejects `half_order == 0` and `half_order > MAX_HALF_ORDER`.
+///
+/// # Examples
+/// ```
+/// use kwavers_math::numerics::operators::central_first_derivative_coefficients;
+///
+/// let c = central_first_derivative_coefficients(1).unwrap();
+/// assert!((c[0] - 0.5).abs() < 1e-14);
+///
+/// let c = central_first_derivative_coefficients(2).unwrap();
+/// assert!((c[0] - 2.0 / 3.0).abs() < 1e-14);
+/// assert!((c[1] + 1.0 / 12.0).abs() < 1e-14);
+/// ```
+pub fn central_first_derivative_coefficients(half_order: usize) -> KwaversResult<Vec<f64>> {
+    // Taps sit at the whole points a_j = j + 1.
+    coefficients_for_offsets(half_order, |j| j as f64 + 1.0, "central")
+}
+
+/// Shared derivation: solve `Σₙ cₙ aₙ^{2m+1} = ½·δ_{m,0}` for the given tap
+/// offsets. Staggered and collocated stencils differ only in where the taps
+/// sit, so the linear system and its solve are the same.
+fn coefficients_for_offsets(
+    half_order: usize,
+    offset: impl Fn(usize) -> f64,
+    kind: &str,
+) -> KwaversResult<Vec<f64>> {
     if half_order == 0 || half_order > MAX_HALF_ORDER {
         return Err(KwaversError::InvalidInput(format!(
-            "staggered half-order must be 1..={MAX_HALF_ORDER}, got {half_order}"
+            "{kind} half-order must be 1..={MAX_HALF_ORDER}, got {half_order}"
         )));
     }
     let n = half_order;
 
-    // Row m, column j: a_j^{2m+1}, with a_j = j + 1/2 (zero-based j).
-    let offsets: Vec<f64> = (0..n).map(|j| j as f64 + 0.5).collect();
+    let offsets: Vec<f64> = (0..n).map(&offset).collect();
     let mut matrix = vec![0.0_f64; n * n];
     for m in 0..n {
         let power = (2 * m + 1) as i32;

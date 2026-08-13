@@ -240,12 +240,16 @@ impl FdtdSolver {
             return self.update_velocity_staggered(dt);
         }
 
-        self.central_operator
-            .apply_x_into(self.fields.p.view(), &mut self.dvx_scratch)?;
-        self.central_operator
-            .apply_y_into(self.fields.p.view(), &mut self.dvy_scratch)?;
-        self.central_operator
-            .apply_z_into(self.fields.p.view(), &mut self.divergence_scratch)?;
+        // Skew-symmetric closure, not the general central difference: the
+        // leapfrog conserves energy only when the gradient and the divergence
+        // are negative adjoints, and a one-sided boundary row breaks that
+        // (KW-SOL-081).
+        self.conservative_operator
+            .apply_x_into(self.fields.p.view(), &mut self.dvx_scratch);
+        self.conservative_operator
+            .apply_y_into(self.fields.p.view(), &mut self.dvy_scratch);
+        self.conservative_operator
+            .apply_z_into(self.fields.p.view(), &mut self.divergence_scratch);
 
         if let Some(ref mut cpml) = self.cpml_boundary {
             cpml.update_and_apply_p_gradient_correction(&mut self.dvx_scratch, 0);

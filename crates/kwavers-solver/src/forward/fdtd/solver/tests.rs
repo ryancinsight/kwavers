@@ -365,18 +365,14 @@ fn leapfrog_field_remains_bounded_in_lossless_medium() {
 /// The exponent is swept because frequency-independent damping would satisfy
 /// any single exponent; the measured `alpha` has to track `y`.
 ///
-/// **Why the k-space branch.** The finite-difference branches are run without
-/// CPML here, and a bare staggered or central stencil on a non-periodic box
-/// grows a boundary mode that swamps the measurement -- verified by running the
-/// identical setup with `FdtdAbsorption::Lossless`, which diverges the same
-/// way. That instability is a property of the unbounded finite-difference
-/// configuration, not of absorption, and is out of this test's scope. The
-/// spectral branch is periodic, so `cos(k x)` is an exact eigenmode and the
-/// only decay present is the one being measured. The absorption term is applied
-/// identically in all three branches.
+/// Runs on the **staggered** branch, the solver's default. An earlier revision
+/// had to use the spectral branch because the finite-difference ones grew a
+/// boundary mode that swamped the measurement; that was the adjointness defect
+/// fixed in KW-SOL-081, and with the conservative closures in place the decay
+/// measured here is absorption alone.
 #[test]
 fn absorption_reproduces_prescribed_power_law_in_propagation() {
-    use crate::forward::fdtd::config::{FdtdAbsorption, KSpaceCorrectionMode};
+    use crate::forward::fdtd::config::FdtdAbsorption;
     use std::f64::consts::TAU;
 
     const N: usize = 64;
@@ -401,8 +397,7 @@ fn absorption_reproduces_prescribed_power_law_in_propagation() {
         let dt = 0.15 * DX / C0;
         let config = FdtdConfig {
             spatial_order: 2,
-            staggered_grid: false,
-            kspace_correction: KSpaceCorrectionMode::Spectral,
+            staggered_grid: true,
             dt,
             nt: 5000,
             absorption: FdtdAbsorption::PowerLawRelaxation {
@@ -527,5 +522,161 @@ fn lossless_medium_skips_absorption_state() {
     assert!(
         solver.absorption.is_none(),
         "a lossless medium must not allocate relaxation memory fields"
+    );
+}
+
+/// **Lossless leapfrog conserves discrete energy (KW-SOL-081 regression).**
+///
+/// The Yee leapfrog is symplectic when the pressure update's divergence is the
+/// negative adjoint of the velocity update's gradient. It then has a conserved
+/// discrete energy
+///
+/// ```text
+///   E = sum_i [ p_i^2 / (2 rho c^2) + rho |u_i|^2 / 2 ] dV
+/// ```
+///
+/// which oscillates slightly (velocity sits at half steps, so the naive sum
+/// samples a shadow Hamiltonian) but does not drift.
+///
+/// Before the adjoint closure this ran away: the divergence used a one-sided
+/// difference at the low face instead of the zero-flux one, breaking
+/// `D = -G^T`, and pressure energy alone grew by a factor of 8.8e4 over two
+/// thousand steps. The bound below would fail by four orders of magnitude on
+/// that scheme, so this test pins the fix rather than merely exercising it.
+#[test]
+fn lossless_staggered_leapfrog_conserves_energy() {
+    use std::f64::consts::TAU;
+
+    const N: usize = 64;
+    const DX: f64 = 1.0e-4;
+    const C0: f64 = 1500.0;
+    const RHO0: f64 = 1000.0;
+    const STEPS: usize = 2000;
+
+    let grid = Grid::new(N, 4, 4, DX, DX, DX).unwrap();
+    let mut medium = HomogeneousMedium::new(RHO0, C0, 0.0, 0.0, &grid);
+    // Lossless: the conserved quantity only exists without absorption.
+    medium.set_acoustic_properties(0.0, 1.0, 0.0).unwrap();
+
+    let dt = 0.15 * DX / C0;
+    let config = FdtdConfig {
+        spatial_order: 2,
+        staggered_grid: true,
+        dt,
+        nt: STEPS + 1,
+        ..Default::default()
+    };
+    let mut solver = FdtdSolver::new(config, &grid, &medium, GridSource::new_empty()).unwrap();
+
+    let k0 = TAU * 8.0 / (N as f64 * DX);
+    for i in 0..N {
+        let value = (k0 * i as f64 * DX).cos();
+        for j in 0..4 {
+            for k in 0..4 {
+                solver.fields.p[[i, j, k]] = value;
+            }
+        }
+    }
+
+    let energy = |solver: &FdtdSolver| -> f64 {
+        let bulk = RHO0 * C0 * C0;
+        let potential: f64 = solver.fields.p.iter().map(|&p| p * p / (2.0 * bulk)).sum();
+        let kinetic: f64 = solver
+            .fields
+            .ux
+            .iter()
+            .zip(solver.fields.uy.iter())
+            .zip(solver.fields.uz.iter())
+            .map(|((&ux, &uy), &uz)| 0.5 * RHO0 * (ux * ux + uy * uy + uz * uz))
+            .sum();
+        potential + kinetic
+    };
+
+    let initial = energy(&solver);
+    assert!(initial > 0.0);
+
+    let mut lowest = f64::INFINITY;
+    let mut highest = 0.0_f64;
+    for _ in 0..STEPS {
+        solver.step_forward().unwrap();
+        let current = energy(&solver) / initial;
+        lowest = lowest.min(current);
+        highest = highest.max(current);
+    }
+
+    assert!(
+        highest < 1.1 && lowest > 0.9,
+        "discrete energy drifted to [{lowest:.4}, {highest:.4}] of its initial value \
+         over {STEPS} steps; a symplectic leapfrog holds it near 1"
+    );
+}
+
+/// The same conservation on the collocated (central-difference) branch, whose
+/// one-sided boundary rows broke skew-symmetry the same way the staggered
+/// divergence's did.
+#[test]
+fn lossless_collocated_leapfrog_conserves_energy() {
+    use std::f64::consts::TAU;
+
+    const N: usize = 64;
+    const DX: f64 = 1.0e-4;
+    const C0: f64 = 1500.0;
+    const RHO0: f64 = 1000.0;
+    const STEPS: usize = 2000;
+
+    let grid = Grid::new(N, 4, 4, DX, DX, DX).unwrap();
+    let mut medium = HomogeneousMedium::new(RHO0, C0, 0.0, 0.0, &grid);
+    medium.set_acoustic_properties(0.0, 1.0, 0.0).unwrap();
+
+    let dt = 0.15 * DX / C0;
+    let config = FdtdConfig {
+        spatial_order: 2,
+        staggered_grid: false,
+        dt,
+        nt: STEPS + 1,
+        ..Default::default()
+    };
+    let mut solver = FdtdSolver::new(config, &grid, &medium, GridSource::new_empty()).unwrap();
+
+    let k0 = TAU * 8.0 / (N as f64 * DX);
+    for i in 0..N {
+        let value = (k0 * i as f64 * DX).cos();
+        for j in 0..4 {
+            for k in 0..4 {
+                solver.fields.p[[i, j, k]] = value;
+            }
+        }
+    }
+
+    let energy = |solver: &FdtdSolver| -> f64 {
+        let bulk = RHO0 * C0 * C0;
+        let potential: f64 = solver.fields.p.iter().map(|&p| p * p / (2.0 * bulk)).sum();
+        let kinetic: f64 = solver
+            .fields
+            .ux
+            .iter()
+            .zip(solver.fields.uy.iter())
+            .zip(solver.fields.uz.iter())
+            .map(|((&ux, &uy), &uz)| 0.5 * RHO0 * (ux * ux + uy * uy + uz * uz))
+            .sum();
+        potential + kinetic
+    };
+
+    let initial = energy(&solver);
+    assert!(initial > 0.0);
+    let mut lowest = f64::INFINITY;
+    let mut highest = 0.0_f64;
+    for _ in 0..STEPS {
+        solver.step_forward().unwrap();
+        let current = energy(&solver) / initial;
+        lowest = lowest.min(current);
+        highest = highest.max(current);
+    }
+
+    assert!(
+        highest < 1.1 && lowest > 0.9,
+        "collocated discrete energy drifted to [{lowest:.4}, {highest:.4}] over {STEPS} \
+         steps; the skew-symmetric closure holds it near 1 (the one-sided closure \
+         reached 1.3e4)"
     );
 }

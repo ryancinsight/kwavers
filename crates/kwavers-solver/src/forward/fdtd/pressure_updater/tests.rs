@@ -193,17 +193,23 @@ fn test_staggered_divergence_uses_scratch_buffer() {
 
     solver.compute_divergence_staggered().unwrap();
 
-    let dvx = solver
+    // The Yee divergence, not the general backward difference: they differ at
+    // the low face, and the solver must use the adjoint closure (KW-SOL-081).
+    let shape = solver.fields.ux.shape();
+    let mut dvx = leto::Array3::<f64>::zeros(shape);
+    let mut dvy = leto::Array3::<f64>::zeros(shape);
+    let mut dvz = leto::Array3::<f64>::zeros(shape);
+    solver
         .staggered_operator
-        .apply_backward_x(solver.fields.ux.view())
+        .apply_divergence_x_into(solver.fields.ux.view(), &mut dvx)
         .unwrap();
-    let dvy = solver
+    solver
         .staggered_operator
-        .apply_backward_y(solver.fields.uy.view())
+        .apply_divergence_y_into(solver.fields.uy.view(), &mut dvy)
         .unwrap();
-    let dvz = solver
+    solver
         .staggered_operator
-        .apply_backward_z(solver.fields.uz.view())
+        .apply_divergence_z_into(solver.fields.uz.view(), &mut dvz)
         .unwrap();
 
     let mut expected = dvz.clone();

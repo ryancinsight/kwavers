@@ -63,29 +63,64 @@
   diverges the same way. The propagation test therefore measures on the periodic
   spectral branch. Filed as KW-SOL-081.
 
-## KW-SOL-081 - FDTD finite-difference branches diverge without CPML [patch] - todo
+## KW-SOL-081 - FDTD finite-difference branches diverged without CPML [patch] - done 2026-08-12
 
-- Observed 2026-08-12 while building KW-SOL-079. A `cos(kx)` standing wave on a
-  64x4x4 box, `spatial_order = 2`, `dt = 0.15*dx/c` (about a quarter of the 3-D
-  von Neumann limit), grows without bound on both the staggered and the central
-  finite-difference branches. Pressure at a point rises monotonically with no
-  oscillation - a zero-frequency mode - and total p-energy grows roughly
-  quadratically in step count.
-- **Not absorption**: the identical configuration with
-  `FdtdAbsorption::Lossless` diverges the same way, and the absorbing run's
-  energy sits consistently ~0.6 % below the lossless one at every step, which is
-  the absorption correctly removing energy from a diverging field.
-- The spectral (k-space) branch on the same setup is stable and oscillates
-  cleanly, which points at the edge handling of the finite-difference stencils
-  on a non-periodic box rather than at the interior scheme or the time step.
-- First hypotheses: the one-sided closures the staggered backward difference
-  applies at the faces, and whether the configuration is simply invalid without
-  a boundary condition (in which case the solver should reject it rather than
-  run and diverge).
-- Acceptance: either the boundary treatment is corrected and a lossless standing
-  wave conserves energy on the finite-difference branches, or an unbounded
-  finite-difference configuration is rejected at construction with a message
-  naming the missing boundary.
+- Scope: new `kwavers-math/.../staggered_grid/divergence{.rs,/tests.rs}` and
+  `central_first_derivative_coefficients`; new
+  `kwavers-solver/.../fdtd/solver/conservative_diff{.rs,/tests.rs}`; the FDTD
+  staggered divergence, both collocated update branches, and their tests.
+- Root cause: **broken adjointness at the low face**, in both branches.
+  - Staggered: the pressure update used `apply_backward_*`, whose `i = 0`
+    closure is a one-sided `(u[1]-u[0])/dx`. The Yee divergence needs
+    `u[0]/dx`, the backward difference with the out-of-domain face taken as
+    zero. Only that closure makes the divergence the negative adjoint of the
+    velocity update's forward difference, `D = -G^T`, which is what makes the
+    leapfrog symplectic.
+  - Collocated: the general central difference closes both edges with one-sided
+    formulas, which puts a non-zero entry on the operator's diagonal, so it is
+    not skew-symmetric and `D = G` is not `-G^T`.
+- Evidence, in order: instrumenting the low-face closure inside the divergence
+  turned a lossless standing wave from E/E0 = 8.8e4 after 2000 steps into a
+  bounded oscillation. An independent Python reimplementation of the exact
+  discrete update reproduced the Rust to three digits (9.3e4) and showed the
+  adjointness residual dropping from 5.1e-3 to 1.9e-16 with the closure; the
+  same probe on the collocated scheme showed skew-symmetry residual 1.006 ->
+  5.5e-16 and 1.3e4 -> [0.950, 1.053] energy.
+- Both closures are the same physical statement - the field vanishes outside a
+  rigid wall - and both are now separate, named operators rather than changes to
+  the general-purpose differences, whose one-sided boundary handling is correct
+  for differentiating an arbitrary field and stays tested as such.
+- The collocated coefficients are derived by the same Vandermonde solve as the
+  staggered ones (offsets `n` instead of `n-1/2`), so `coefficients.rs` now has
+  one derivation with two wrappers rather than a second hand-entered table.
+- Verification: adjointness and skew-symmetry asserted directly as identities on
+  arbitrary fields, per axis and per order, rather than inferred from a bounded
+  simulation; plus discrete-energy conservation on both branches over 2000 steps
+  (both hold [0.9, 1.1] where the defect reached 1.3e4-8.8e4). 74/74 FDTD tests.
+- Knock-on: the absorption propagation test (KW-SOL-079) had to run on the
+  spectral branch because the finite-difference ones diverged. It now runs on
+  the staggered branch, the solver's default.
+- Guard added: the adjointness test asserts its own discriminating power. The
+  two closures differ by exactly `p[0]*(u[1]-2u[0])/dx`, so a test field with a
+  vanishing low-face pressure satisfies the identity under both - an earlier
+  draft did exactly that and reported a zero residual for the defective closure.
+
+## KW-FWI-082 - Two FWI tests exceed their own CFL bound [patch] - todo
+
+- `lbfgs_reduces_misfit_and_recovers_anomaly` and
+  `pwls_is_robust_to_bad_channels_vs_unweighted_l2` fail at setup with
+  "Time step 1.000000e-7 exceeds CFL bound 7.172846e-8", before any propagation.
+- Pre-existing and independent of KW-SOL-081: `calculate_stable_timestep` is
+  `0.3 * min_spacing / (c_max * sqrt(3))` over the test's own hardcoded `dt`,
+  `dx = 1e-3` and sound-speed model. No solver code enters it.
+- Diagnosis: the tests pick `dt = 1e-7` against the 1500 m/s background, whose
+  bound is 1.15e-7. Their anomaly model reaches about 2415 m/s, whose bound is
+  7.17e-8. The step was sized for the background rather than for the fastest
+  cell in the perturbed model.
+- Acceptance: derive `dt` from the model the test actually inverts (the same
+  `calculate_stable_timestep` the constraint uses), rather than from the
+  background; confirm the inversion still recovers the anomaly at the smaller
+  step.
 
 ## KW-SOL-080 — Differential test across the two heterogeneous-absorption paths [patch] — todo
 

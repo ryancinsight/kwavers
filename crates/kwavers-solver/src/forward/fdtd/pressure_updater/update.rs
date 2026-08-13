@@ -83,12 +83,14 @@ impl FdtdSolver {
             self.compute_divergence_staggered()?;
             self.apply_pressure_from_divergence(dt);
         } else {
-            self.central_operator
-                .apply_x_into(self.fields.ux.view(), &mut self.dvx_scratch)?;
-            self.central_operator
-                .apply_y_into(self.fields.uy.view(), &mut self.dvy_scratch)?;
-            self.central_operator
-                .apply_z_into(self.fields.uz.view(), &mut self.divergence_scratch)?;
+            // The adjoint partner of the velocity update's gradient; see
+            // `conservative_diff`.
+            self.conservative_operator
+                .apply_x_into(self.fields.ux.view(), &mut self.dvx_scratch);
+            self.conservative_operator
+                .apply_y_into(self.fields.uy.view(), &mut self.dvy_scratch);
+            self.conservative_operator
+                .apply_z_into(self.fields.uz.view(), &mut self.divergence_scratch);
 
             if let Some(ref mut cpml) = self.cpml_boundary {
                 cpml.update_and_apply_v_gradient_correction(&mut self.dvx_scratch, 0);

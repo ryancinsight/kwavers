@@ -6,9 +6,17 @@ use kwavers_core::error::KwaversResult;
 use super::super::solver::FdtdSolver;
 
 impl FdtdSolver {
-    /// Compute velocity divergence on a staggered grid using backward differences.
+    /// Compute velocity divergence on a staggered grid.
     ///
     /// `div(v) = ∂ux/∂x + ∂uy/∂y + ∂uz/∂z`
+    ///
+    /// Uses the **Yee divergence**, the negative adjoint of the forward
+    /// difference the velocity update applies, rather than a general backward
+    /// difference. The two differ only at the low face — zero flux there versus
+    /// a one-sided difference — but that row is what makes the leapfrog
+    /// symplectic. With the one-sided closure a lossless standing wave grew its
+    /// energy by nearly five orders of magnitude over two thousand steps
+    /// (KW-SOL-081); with the adjoint closure it is bounded.
     ///
     /// For `CylindricalAS` geometry the cylindrical `ur/r` correction is added.
     /// CPML gradient corrections are applied per-direction when enabled.
@@ -17,11 +25,11 @@ impl FdtdSolver {
     ///
     pub(crate) fn compute_divergence_staggered(&mut self) -> KwaversResult<()> {
         self.staggered_operator
-            .apply_backward_x_into(self.fields.ux.view(), &mut self.dvx_scratch)?;
+            .apply_divergence_x_into(self.fields.ux.view(), &mut self.dvx_scratch)?;
         self.staggered_operator
-            .apply_backward_y_into(self.fields.uy.view(), &mut self.dvy_scratch)?;
+            .apply_divergence_y_into(self.fields.uy.view(), &mut self.dvy_scratch)?;
         self.staggered_operator
-            .apply_backward_z_into(self.fields.uz.view(), &mut self.divergence_scratch)?;
+            .apply_divergence_z_into(self.fields.uz.view(), &mut self.divergence_scratch)?;
 
         if self.config.geometry == SolverGeometry::CylindricalAS {
             let dz = self.grid.dz;
