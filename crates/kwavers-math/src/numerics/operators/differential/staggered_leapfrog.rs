@@ -4,7 +4,7 @@
 //!
 //! A velocity–pressure leapfrog needs two operators that are **negative
 //! adjoints**, `D = −Gᵀ`, or it has no conserved energy (see
-//! [`super::staggered_grid::divergence`]). [`StaggeredGridOperator`] supplies
+//! the second-order pair's divergence). `StaggeredGridOperator` supplies
 //! that pair at second order. This supplies it at any even order, which is what
 //! a high-accuracy ultrasound FDTD wants: Fullwave 2.5 runs eighth order in
 //! space, and the point of the higher order is fewer points per wavelength for
@@ -13,42 +13,44 @@
 //! # The pair
 //!
 //! With `N = order/2` tap pairs and the staggered coefficients `cₙ` from
-//! [`staggered_first_derivative_coefficients`], the gradient maps cell-centred
+//! `staggered_first_derivative_coefficients`, the gradient maps cell-centred
 //! `p` to face-centred `u` (face `i+½` stored at index `i`), and the divergence
 //! maps back:
 //!
 //! ```text
-//!   G:  u[i] = (1/Δx) Σₙ cₙ ( p[i+n]   − p[i−n+1] )
-//!   D:  d[j] = (1/Δx) Σₙ cₙ ( u[j+n−1] − u[j−n]   )
+//!   G:  u[i] = (1/Δx) Σₙ cₙ ( p[i+n] − p[i−n+1] )       taps reflected at the walls
+//!   D:  −Gᵀ                                             by construction
 //! ```
 //!
-//! Note the one-index shift between them: that is the half-cell stagger, and it
-//! is what makes the transpose work out. Both operators treat taps outside the
-//! grid as **zero**.
+//! Only the gradient has a stencil. The divergence is *defined* as its negative
+//! transpose rather than written down separately, so `D = −Gᵀ` holds identically
+//! — at every order, every grid size, and every boundary — instead of holding
+//! because a closure argument works out. In the interior the transpose is the
+//! familiar half-cell-shifted stencil `d[j] = (1/Δx) Σₙ cₙ (u[j+n−1] − u[j−n])`;
+//! near a wall it is whatever the transpose of the reflected gradient is, which
+//! is exactly the closure that conserves energy.
 //!
-//! # Why that is exactly adjoint
+//! # Boundary condition: a rigid wall, by even reflection
 //!
-//! Expand `⟨Gp, u⟩` and re-index each term:
+//! A tap falling outside the grid is **reflected**, `p[−1] = p[0]` and
+//! `p[nx] = p[nx−1]`, mirroring about the wall rather than vanishing at it. That
+//! is `∂p/∂n = 0`: a rigid wall, the conventional acoustic default.
 //!
-//! ```text
-//!   ⟨Gp, u⟩ = (1/Δx) Σₙ cₙ [ Σᵢ u[i]p[i+n] − Σᵢ u[i]p[i−n+1] ]
-//!           = (1/Δx) Σₙ cₙ  Σⱼ p[j] ( u[j−n] − u[j+n−1] )        (j = i+n, j = i−n+1)
-//!           = −⟨p, Du⟩
-//! ```
+//! The property that matters in practice is that **a uniform field has exactly
+//! zero gradient**, at every order and every extent. Zero-extension does not
+//! have it — it is a *pressure-release* wall, so `p` steps to zero half a cell
+//! outside and the stencil sees that step. The consequence is not subtle: an
+//! `N × 4 × 4` slab stops being a 1-D line and becomes a 4-cell-wide soft
+//! waveguide. A purely axial packet launched into one had more energy in the
+//! transverse velocity than the axial within 150 steps, ran at about half speed,
+//! and never coherently arrived (KW-SOL-085). Quasi-1-D grids are the dominant
+//! modelling idiom here, so the wall that leaves them inert is the right default.
 //!
-//! The re-indexing is only valid if the sums run over all integers, which is
-//! exactly what zero-extension provides — a tap that falls outside contributes
-//! nothing on either side. So the identity is exact for **every** order and grid
-//! size, not asymptotically. `N = 1` reduces to the familiar
-//! `(p[i+1] − p[i])/Δx` and `(u[j] − u[j−1])/Δx`.
-//!
-//! # Boundary condition
-//!
-//! Zero-extension means both fields vanish outside the grid: a closed domain.
-//! It differs from [`StaggeredGridOperator`]'s pairing, which instead forces the
-//! far velocity face to zero — both are conservative, but they are different
-//! walls, so the two are not interchangeable mid-simulation. A PML operates
-//! inside the domain and leaves either intact.
+//! Reflection also makes the far velocity face vanish on its own: at `i = nx−1`
+//! every tap pair becomes `p[nx+n−1] − p[nx−n]`, which reflection maps to
+//! `p[nx−n] − p[nx−n] = 0`. Where `StaggeredGridOperator` forced that face to
+//! zero as a separate step, here it is a consequence. A PML operates inside the
+//! domain and leaves the wall intact.
 //!
 //! # References
 //!
@@ -148,64 +150,91 @@ impl StaggeredLeapfrogOperator {
 
     /// Gradient along `axis`: cell-centred `field` to face-centred `dst`, with
     /// face `i+½` stored at index `i`. Both are grid-shaped.
+    ///
+    /// Taps outside the grid are reflected about the wall, giving `∂p/∂n = 0`.
     pub fn gradient_into(&self, axis: Axis, field: ArrayView3<'_, f64>, dst: &mut Array3<f64>) {
-        // Taps at +n and −n+1 relative to the output index.
-        self.apply(axis, field, dst, |n| (n as isize, 1 - n as isize));
+        let (index, extent, scale) = self.axis_geometry(axis, field.shape(), dst.shape());
+
+        for i in 0..field.shape()[0] {
+            for j in 0..field.shape()[1] {
+                for k in 0..field.shape()[2] {
+                    let base = [i, j, k];
+                    let here = base[index] as isize;
+                    let mut sum = 0.0;
+                    for (offset, &c) in self.coefficients.iter().enumerate() {
+                        let n = offset as isize + 1;
+                        let mut hi = base;
+                        hi[index] = reflect(here + n, extent);
+                        let mut lo = base;
+                        lo[index] = reflect(here - n + 1, extent);
+                        sum += c * (field[hi] - field[lo]);
+                    }
+                    dst[base] = sum * scale;
+                }
+            }
+        }
     }
 
     /// Divergence along `axis`: face-centred `field` back to cell-centred `dst`.
+    ///
+    /// This is `−Gᵀ` applied directly, which is why it scatters where the
+    /// gradient gathers: each face sends `∓cₙ` of its value to the two cells the
+    /// gradient drew from, reflected indices included. Writing the transpose out
+    /// as its own stencil would mean re-deriving the wall closure and hoping it
+    /// matches; scattering makes `D = −Gᵀ` true by construction, so energy
+    /// conservation does not depend on getting a boundary case right.
     pub fn divergence_into(&self, axis: Axis, field: ArrayView3<'_, f64>, dst: &mut Array3<f64>) {
-        // Taps at +n−1 and −n: the gradient's shifted by one, which is the
-        // half-cell stagger and what makes `D = −Gᵀ`.
-        self.apply(axis, field, dst, |n| (n as isize - 1, -(n as isize)));
+        let (index, extent, scale) = self.axis_geometry(axis, field.shape(), dst.shape());
+        dst.fill(0.0);
+
+        for i in 0..field.shape()[0] {
+            for j in 0..field.shape()[1] {
+                for k in 0..field.shape()[2] {
+                    let base = [i, j, k];
+                    let here = base[index] as isize;
+                    let value = field[base] * scale;
+                    for (offset, &c) in self.coefficients.iter().enumerate() {
+                        let n = offset as isize + 1;
+                        let mut hi = base;
+                        hi[index] = reflect(here + n, extent);
+                        let mut lo = base;
+                        lo[index] = reflect(here - n + 1, extent);
+                        dst[hi] -= c * value;
+                        dst[lo] += c * value;
+                    }
+                }
+            }
+        }
     }
 
-    /// Shared kernel: `dst[i] = (1/Δ) Σₙ cₙ (field[i+hi(n)] − field[i+lo(n)])`,
-    /// with out-of-range taps contributing zero.
-    fn apply(
-        &self,
-        axis: Axis,
-        field: ArrayView3<'_, f64>,
-        dst: &mut Array3<f64>,
-        taps: impl Fn(usize) -> (isize, isize),
-    ) {
-        let shape = field.shape();
-        debug_assert_eq!(
-            dst.shape(),
-            shape,
-            "gradient/divergence output is grid-shaped"
-        );
+    /// Axis index, extent along it, and the reciprocal spacing.
+    fn axis_geometry(&self, axis: Axis, shape: [usize; 3], dst: [usize; 3]) -> (usize, isize, f64) {
+        debug_assert_eq!(dst, shape, "gradient/divergence output is grid-shaped");
         let index = match axis {
             Axis::X => 0,
             Axis::Y => 1,
             Axis::Z => 2,
         };
-        let extent = shape[index] as isize;
-        let scale = 1.0 / self.spacing[index];
+        (index, shape[index] as isize, 1.0 / self.spacing[index])
+    }
+}
 
-        // Reading `field` at a shifted position along one axis.
-        let at = |base: [usize; 3], shifted: isize| -> f64 {
-            if shifted < 0 || shifted >= extent {
-                return 0.0;
-            }
-            let mut probe = base;
-            probe[index] = shifted as usize;
-            field[probe]
-        };
-
-        for i in 0..shape[0] {
-            for j in 0..shape[1] {
-                for k in 0..shape[2] {
-                    let base = [i, j, k];
-                    let here = base[index] as isize;
-                    let mut sum = 0.0;
-                    for (offset, &c) in self.coefficients.iter().enumerate() {
-                        let (hi, lo) = taps(offset + 1);
-                        sum += c * (at(base, here + hi) - at(base, here + lo));
-                    }
-                    dst[base] = sum * scale;
-                }
-            }
+/// Mirror an index about the nearest wall until it lands inside `[0, extent)`.
+///
+/// Cell centres sit at `(i+½)Δ`, so the walls fall *between* cells and the
+/// mirror is `−1−m` at the low end and `2·extent−1−m` at the high end — no cell
+/// is its own reflection. The loop repeats for stencils deeper than the grid,
+/// which only arises for extents below the halo width; it terminates for any
+/// `extent ≥ 1`.
+fn reflect(mut m: isize, extent: isize) -> usize {
+    debug_assert!(extent >= 1, "reflection needs a non-empty axis");
+    loop {
+        if m < 0 {
+            m = -1 - m;
+        } else if m >= extent {
+            m = 2 * extent - 1 - m;
+        } else {
+            return m as usize;
         }
     }
 }

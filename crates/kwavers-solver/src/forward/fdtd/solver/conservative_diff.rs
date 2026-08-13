@@ -25,8 +25,24 @@
 //!
 //! The central coefficients `cₙ` are antisymmetric, so with this closure the
 //! matrix is exactly skew-symmetric (`Gᵀ = −G`) for every order and every grid
-//! size — the collocated analogue of the staggered zero-flux closure, and the
-//! same physical statement: the field vanishes outside a rigid wall.
+//! size.
+//!
+//! # The wall this gives, which is not a rigid one
+//!
+//! A field vanishing outside the domain is a **pressure-release** wall, not a
+//! rigid one. Conservative, but not inert: a transversely uniform field has a
+//! non-zero transverse gradient at the wall, so a thin `N × 4 × 4` slab behaves
+//! as a soft-walled waveguide rather than a 1-D line (KW-SOL-085).
+//!
+//! The staggered path fixed that by reflecting taps instead of zeroing them.
+//! **That fix does not transfer here**, and the reason is structural rather than
+//! incidental: reflection folds `f[−1] = f[0]` back onto row 0, putting a
+//! non-zero entry on the diagonal — and a skew-symmetric matrix has a zero
+//! diagonal by definition. So on a collocated grid, reflection and conservation
+//! are in direct conflict, exactly as one-sided closures are. Recovering a rigid
+//! wall here needs summation-by-parts operators, which is a much larger piece of
+//! work; it is filed as KW-SOL-086 rather than approximated. Until then the
+//! staggered path is the one to use for quasi-1-D work, and it is the default.
 //!
 //! The coefficients are derived, not tabulated, by
 //! [`central_first_derivative_coefficients`], so an order is a parameter rather

@@ -543,62 +543,80 @@
   condition is a different mode in each and the per-solver frequency
   normalization only partly compensates. Filed as KW-SOL-084.
 
-## KW-SOL-085 - Zero-extension makes every thin grid a waveguide [arch] - todo
+## KW-SOL-085 - Rigid walls by even reflection [arch] - done 2026-08-13
 
-- **Found while fixing KW-SOL-084; it is the cause, and it reaches much further
-  than that test.** The zero-extension closure accepted under KW-SOL-074 is a
-  *pressure-release* wall on every face. A transversely uniform field therefore
-  has a non-zero transverse gradient, so an `N x 4 x 4` slab is no longer a 1-D
-  line - it is a 4-cell-wide waveguide with soft walls.
-- Evidence, operator level: gradient of a uniform field along a transverse axis,
-  order 4, `dy = 1e-4`. It is not small, and it does not vanish for a singleton
-  axis:
+- ADR: [106](docs/adr/106-rigid-walls-by-even-reflection.md).
+- Zero-extension was a *pressure-release* wall, so a transversely uniform field
+  had a large gradient at it and an `N x 4 x 4` slab was a soft waveguide rather
+  than a 1-D line. A purely axial packet put more energy into transverse
+  velocity than axial within 150 steps and never coherently arrived.
+- Fixed by reflecting taps at the wall (`p[-1] = p[0]`) and **defining** the
+  divergence as `-G^T` rather than writing it as its own stencil. A uniform
+  field now has exactly zero gradient at every order down to a singleton extent,
+  the wall is rigid, and `D = -G^T` holds identically instead of resting on a
+  closure argument - strictly stronger than what zero-extension gave.
+- Verified: three new operator properties (uniform-field inertness across orders
+  2-8 and extents 1-17; the negative-adjoint identity on non-degenerate fields
+  dense at the boundary; the far face rigid without being forced), plus
+  **2832 tests green across math, solver, physics and medium with no solver test
+  needing a change** - the swap is transparent to everything already verified,
+  energy conservation included.
+- Two tests pinned the old wall and were updated: the far-face gradient read
+  `-p[nx-1]/dx` and now reads zero, and the standing-wave energy test's exact
+  mode is a Neumann cosine rather than a Dirichlet sine.
+- The rustdoc gate was already failing before this change on three broken
+  intra-doc links into the private `staggered_grid` module; fixed in passing.
+- Not covered: the collocated path, for a structural reason recorded in the ADR
+  and filed as KW-SOL-086.
 
-  | `ny` | transverse gradient of a uniform field |
-  |---|---|
-  | 1 | `[-11250]` |
-  | 2 | `[0, -10833]` |
-  | 4 | `[-417, 0, 417, -10833]` |
-  | 8 | `[-417, 0, 0, 0, 0, 0, 417, -10833]` |
+## KW-SOL-086 - Rigid walls on the collocated path need SBP operators [minor] - todo
 
-- Evidence, solver level: a purely axial launch (transverse energy exactly zero
-  at step 0) has **more energy in the transverse velocity than the axial one by
-  step 150** (ratio 1.24). The packet is pumped into waveguide modes, runs about
-  half speed, and never coherently arrives - the far sensor of the KW-SOL-084
-  test reads `0.0000` where PSTD, being periodic transversely, reads `1.0008`.
-- Energy is still conserved and the operators are still exactly adjoint; nothing
-  regressed against what KW-SOL-074 verified. The gap is that its verification
-  never asked whether a thin slab stays inert, and quasi-1-D grids are the
-  dominant test and modelling idiom in this crate.
-- **Recommended fix - rigid walls by even reflection, which costs nothing we
-  currently have.** Close the gradient with `p[-1] = p[0]` (even reflection about
-  the wall) instead of `p[-1] = 0`, and *define* the divergence as `-G^T`. Then:
-  a uniform field has exactly zero gradient at every order, so thin slabs are
-  inert again; the wall is rigid, which is the conventional acoustic default and
-  the behaviour every pre-KW-SOL-074 test assumed; and adjointness, hence energy
-  conservation and the KW-SOL-081 fix, holds by construction rather than by a
-  closure argument. Verified by hand on the order-4 stencil at both faces.
-- The alternative - keeping pressure-release and reaching for SBP-SAT operators
-  to get high-order rigid walls - is a much larger investment and buys physics we
-  have no requirement for.
-- Blocks KW-SOL-084.
+- `ConservativeCentralDifference` still closes by zero-extension, so it carries
+  the same pressure-release wall KW-SOL-085 removed from the staggered path, and
+  quasi-1-D grids on it are still soft waveguides.
+- **The KW-SOL-085 fix cannot be transferred.** Reflection folds `f[-1] = f[0]`
+  onto row 0, putting a non-zero entry on the diagonal, and a skew-symmetric
+  matrix has a zero diagonal by definition. On a collocated grid reflection and
+  conservation are in direct conflict - the same obstruction one-sided closures
+  hit.
+- Fix: summation-by-parts operators with SAT boundary terms, which is the
+  general answer to high-order conservative walls. Sized as its own item rather
+  than approximated.
+- Meanwhile the staggered path is the default and is documented as the one to
+  use for quasi-1-D work.
 
-## KW-SOL-084 - Make the cross-path comparison boundary-independent [patch] - blocked on KW-SOL-085
+## KW-SOL-084 - Make the cross-path comparison boundary-independent [patch] - done 2026-08-13
 
-- Re-open trigger: KW-SOL-085 lands.
-- The travelling-pulse measurement is written and correct - one-way launch by
-  pairing `p0` with `u = p/(rho c)`, reference-normalized two-sensor spectral
-  ratio, 640 cells with the gate closing clear of the earliest contaminant.
-  **PSTD passes it outright**: arrivals at steps 298 and 1248 against 300 and
-  1250 expected, lossless ratio 1.0000, lossy 0.8455 giving 8.8 Np/m against a
-  prescribed 9.0. FDTD cannot pass it while its side walls are pressure-release,
-  for the reason recorded in KW-SOL-085.
-- The launch must go through each solver's own `apply_initial_conditions` rather
-  than assigning `fields.ux`: velocity is face-centred and half-time-staggered,
-  so a cell-centred whole-step assignment is a different field.
-- Draft kept at `scratchpad/travelling_pulse_test.rs`; the standing-wave version
-  stays in tree meanwhile so the suite is green.
+- Unblocked by KW-SOL-085 and landed tighter than the measurement it replaced:
+  **3 % against the prescribed law, 4 % between the two paths**, against 9.1 %.
+- Travelling-pulse measurement: one-way launch pairing `p0` with `u = p/(rho c)`
+  through each solver's own `apply_initial_conditions` - assigning `fields.ux`
+  directly does not work, because velocity is face-centred and half-time-
+  staggered, so a cell-centred whole-step assignment is a different field.
+  Reference-normalized two-sensor spectral ratio, gate closing clear of the
+  earliest contaminant.
+- Measured against the prescribed law across the band:
 
+  | | 1.00 | 1.25 | 1.50 | 1.75 | 2.00 MHz |
+  |---|---|---|---|---|---|
+  | fdtd, g=1.1 | +0.6 | +0.7 | +0.8 | +0.9 | +0.9 % |
+  | pstd, g=1.1 | -2.0 | -2.0 | -2.1 | -2.2 | -2.3 % |
+  | fdtd, g=1.4 | +1.7 | +1.9 | +2.0 | +2.1 | +2.2 % |
+  | pstd, g=1.4 | -0.9 | -1.0 | -1.1 | -1.2 | -1.3 % |
+
+  Near-constant in percent across the band, so the frequency *exponent* is right
+  in both paths and what remains is a small multiplicative offset of opposite
+  sign. Bounds bisected onto these numbers.
+- **The analysis band was the other defect.** A Gaussian envelope two
+  wavelengths wide has a spectral 1/e half-width of only +-8 %, so 0.8 MHz sat
+  roughly `1e-15` down the tail and the spectral ratio there measured leakage -
+  returning *negative* attenuation for both solvers. The envelope is now 0.6
+  wavelengths, giving +-27 % and real signal across 1.0-2.0 MHz.
+- Runtime: **57 s -> 2.1 s**, assertions unchanged. Rigid walls make thin slabs
+  inert, so the transverse extent drops from 4 cells to 1, and the lossless
+  reference does not depend on `alpha0` or the exponent so one per solver serves
+  every case. That the 1-cell grid reproduces the 4-cell answer is itself
+  evidence the slab is inert.
 
 ## KW-MATH-073 — Derived staggered stencil coefficients to arbitrary even order [minor] — done 2026-08-12
 

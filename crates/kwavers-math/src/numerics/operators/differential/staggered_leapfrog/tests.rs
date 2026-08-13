@@ -19,9 +19,9 @@ const AXES: [Axis; 3] = [Axis::X, Axis::Y, Axis::Z];
 
 /// **`⟨Gp, u⟩ = −⟨p, Du⟩`** at every supported order and axis.
 ///
-/// The identity the leapfrog's energy conservation rests on. It is exact for
-/// every order and grid size under zero-extension, not asymptotic, so the bound
-/// is round-off rather than a discretization tolerance.
+/// The identity the leapfrog's energy conservation rests on. The divergence is
+/// *defined* as `−Gᵀ`, so this holds identically at every order, grid size and
+/// boundary — the bound is round-off, not a discretization tolerance.
 #[test]
 fn gradient_and_divergence_are_negative_adjoints() {
     let shape = [9usize, 7, 6];
@@ -106,21 +106,33 @@ fn second_order_reduces_to_the_plain_half_grid_difference() {
         let expected = (field[[i + 1, 0, 0]] - field[[i, 0, 0]]) / dx;
         assert!((gradient[[i, 0, 0]] - expected).abs() < 1e-12 * expected.abs().max(1.0));
     }
-    // The far face sees zero outside.
+    // The far face is the wall, and reflection makes it rigid: `p[nx] = p[nx−1]`
+    // cancels the only tap pair. It read `−p[nx−1]/Δx` while the closure was
+    // zero-extension, which was a pressure-release wall (KW-SOL-085).
     let last = shape[0] - 1;
-    assert!((gradient[[last, 0, 0]] + field[[last, 0, 0]] / dx).abs() < 1e-12);
+    assert!(gradient[[last, 0, 0]].abs() < 1e-12);
 
     let mut divergence = Array3::<f64>::zeros(shape);
     op.divergence_into(Axis::X, field.view(), &mut divergence);
+    // The near wall carries no flux either, so the first cell sees only `u[0]`.
     assert!((divergence[[0, 0, 0]] - field[[0, 0, 0]] / dx).abs() < 1e-12);
-    for j in 1..shape[0] {
+    for j in 1..shape[0] - 1 {
         let expected = (field[[j, 0, 0]] - field[[j - 1, 0, 0]]) / dx;
         assert!((divergence[[j, 0, 0]] - expected).abs() < 1e-12 * expected.abs().max(1.0));
+    }
+    // The last cell is bounded by the rigid far wall. The transpose has no
+    // sensitivity to whatever is stored at that face — the gradient can never
+    // produce a non-zero there — so the flux out of the last cell is zero
+    // regardless of the value fed in, and only `u[nx−2]` flows in.
+    {
+        let last = shape[0] - 1;
+        let expected = -field[[last - 1, 0, 0]] / dx;
+        assert!((divergence[[last, 0, 0]] - expected).abs() < 1e-12 * expected.abs().max(1.0));
     }
 }
 
 /// Each order delivers **its claimed order of accuracy**, measured by grid
-/// refinement well inside the grid so the zero-extension closure never enters.
+/// refinement well inside the grid so the wall closure never enters.
 ///
 /// The observed slope is the falsifiable claim; an absolute error level is not,
 /// since it depends on the resolution chosen. (An earlier draft asserted the
@@ -246,5 +258,104 @@ fn cfl_limit_matches_its_derivation() {
             "order {order} limit {limit} did not tighten"
         );
         previous = limit;
+    }
+}
+
+/// A uniform field has *exactly* zero gradient, on every axis, at every order,
+/// down to a singleton extent.
+///
+/// This is the property a rigid wall has and a pressure-release wall does not,
+/// and it is what keeps a thin `N × 4 × 4` slab behaving as a 1-D line instead
+/// of a soft-walled waveguide. Zero-extension failed it badly — order 4 on a
+/// 4-cell axis gave `[-417, 0, 417, -10833]` for a field of ones, and a purely
+/// axial packet launched into such a grid put more energy into transverse
+/// velocity than axial within 150 steps (KW-SOL-085).
+#[test]
+fn a_uniform_field_has_no_gradient() {
+    for order in [2usize, 4, 6, 8] {
+        let op = StaggeredLeapfrogOperator::new(order, 1e-4, 1e-4, 1e-4).unwrap();
+        for extent in [1usize, 2, 4, 8, 17] {
+            for (axis, shape) in [
+                (Axis::X, [extent, 3, 3]),
+                (Axis::Y, [3, extent, 3]),
+                (Axis::Z, [3, 3, extent]),
+            ] {
+                let field = Array3::<f64>::from_elem(shape, 2.5);
+                let mut gradient = Array3::<f64>::zeros(shape);
+                op.gradient_into(axis, field.view(), &mut gradient);
+                let worst = gradient.iter().fold(0.0_f64, |a, v| a.max(v.abs()));
+                assert!(
+                    worst < 1e-9,
+                    "order {order}, {axis:?}, extent {extent}: uniform field \
+                     produced a gradient of {worst:.4e}"
+                );
+            }
+        }
+    }
+}
+
+/// `⟨Gp, u⟩ = −⟨p, Du⟩` to rounding, including at the walls.
+///
+/// The divergence is *defined* as `−Gᵀ`, so this is a check that the scatter
+/// implements the transpose it claims to, not a check that a boundary closure
+/// happened to work out. The fields are random and dense at the boundary
+/// precisely so a wall-only error cannot hide.
+#[test]
+fn the_divergence_is_the_negative_adjoint_of_the_gradient() {
+    for order in [2usize, 4, 6, 8] {
+        let op = StaggeredLeapfrogOperator::new(order, 3e-4, 7e-4, 1.1e-3).unwrap();
+        for (axis, shape) in [
+            (Axis::X, [11usize, 3, 3]),
+            (Axis::Y, [3, 9, 4]),
+            (Axis::Z, [4, 3, 13]),
+        ] {
+            // Deterministic, non-degenerate, and non-zero at every boundary.
+            let fill = |seed: f64| {
+                Array3::from_shape_fn(shape, |[i, j, k]| {
+                    let t = seed + i as f64 * 1.7 + j as f64 * 2.9 + k as f64 * 0.53;
+                    t.sin() + 0.5 * (2.0 * t).cos() + 0.25
+                })
+            };
+            let p = fill(0.3);
+            let u = fill(1.9);
+
+            let mut gradient = Array3::<f64>::zeros(shape);
+            op.gradient_into(axis, p.view(), &mut gradient);
+            let mut divergence = Array3::<f64>::zeros(shape);
+            op.divergence_into(axis, u.view(), &mut divergence);
+
+            let left: f64 = gradient.iter().zip(u.iter()).map(|(a, b)| a * b).sum();
+            let right: f64 = p.iter().zip(divergence.iter()).map(|(a, b)| a * b).sum();
+            let magnitude = left.abs().max(right.abs());
+            assert!(
+                magnitude > 1e-3,
+                "degenerate test: both inner products vanish"
+            );
+            assert!(
+                (left + right).abs() <= 1e-9 * magnitude,
+                "order {order}, {axis:?}: <Gp,u> = {left:.6e} against -<p,Du> = {:.6e}",
+                -right
+            );
+        }
+    }
+}
+
+/// The far velocity face vanishes on its own, which is the rigid wall.
+///
+/// `StaggeredGridOperator` forced this face to zero as a separate step; under
+/// reflection it is a consequence of the stencil, so there is nothing to forget.
+#[test]
+fn the_far_face_is_rigid_without_being_forced() {
+    for order in [2usize, 4, 6, 8] {
+        let op = StaggeredLeapfrogOperator::new(order, 1e-4, 1e-4, 1e-4).unwrap();
+        let shape = [12usize, 1, 1];
+        let field = Array3::from_shape_fn(shape, |[i, _, _]| (i as f64 * 0.9).sin() + 1.3);
+        let mut gradient = Array3::<f64>::zeros(shape);
+        op.gradient_into(Axis::X, field.view(), &mut gradient);
+        assert!(
+            gradient[[shape[0] - 1, 0, 0]].abs() < 1e-9,
+            "order {order}: far face carried {:.4e}",
+            gradient[[shape[0] - 1, 0, 0]]
+        );
     }
 }

@@ -120,6 +120,19 @@
 
 ### Changed
 
+- **Breaking (numerical): the FDTD staggered path now has rigid walls.** Taps
+  falling outside the grid are reflected (`p[-1] = p[0]`) rather than treated as
+  zero, and the divergence is defined as the gradient's negative transpose. The
+  previous zero-extension closure was a *pressure-release* wall, under which a
+  transversely uniform field had a large gradient at the boundary - so a thin
+  `N x 4 x 4` slab behaved as a soft-walled waveguide instead of a 1-D line, and
+  a purely axial packet lost more than half its energy to transverse modes
+  within 150 steps. A uniform field now has exactly zero gradient at every order
+  and every extent. Energy conservation is unaffected and in fact rests on a
+  stronger footing: `D = -G^T` now holds by construction rather than by a
+  closure argument. See ADR 106. The collocated path is unchanged and still
+  carries the pressure-release wall, for a structural reason recorded there.
+
 - **Breaking (numerical):** the FDTD staggered path closes its domain by
   zero-extension at every order, replacing the order-2 path's forced far-face
   zeroing. Both are conservative walls, but a simulation sensitive to the

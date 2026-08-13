@@ -306,10 +306,10 @@ impl FdtdSolver {
         let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
 
         // Gradient of pressure onto the faces, at the configured order. The
-        // operator is full-shape and closes both faces by zero-extension, so
-        // there is no half-shape scratch and no far-face zeroing: the closure
-        // *is* the wall, and it is what makes this the exact negative adjoint
-        // of the divergence the pressure update applies.
+        // operator is full-shape and reflects taps at the walls, so there is no
+        // half-shape scratch and no far-face zeroing: reflection makes the far
+        // face vanish on its own, and the divergence the pressure update applies
+        // is this operator's negative transpose by construction (ADR 106).
         self.leapfrog_operator
             .gradient_into(Axis::X, self.fields.p.view(), &mut self.dvx_scratch);
         self.leapfrog_operator

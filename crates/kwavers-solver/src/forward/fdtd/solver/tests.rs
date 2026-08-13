@@ -748,10 +748,13 @@ fn every_staggered_order_conserves_energy() {
         };
         let mut solver = FdtdSolver::new(config, &grid, &medium, GridSource::new_empty()).unwrap();
 
-        // The exact discrete Dirichlet mode of the zero-extension domain.
-        let k0 = std::f64::consts::PI * 8.0 / ((N as f64 + 1.0) * DX);
+        // The exact discrete Neumann mode of the rigid-walled domain (ADR 106):
+        // cell centres at `(i+½)Δ`, walls at `0` and `NΔ`, so `cos(k(i+½)Δ)`
+        // with `k = mπ/(NΔ)` satisfies `∂p/∂n = 0` at both. It was a `sin` mode
+        // while the walls were pressure-release.
+        let k0 = std::f64::consts::PI * 8.0 / (N as f64 * DX);
         for i in 0..N {
-            let value = (k0 * (i as f64 + 1.0) * DX).sin();
+            let value = (k0 * (i as f64 + 0.5) * DX).cos();
             for j in 0..4 {
                 for k in 0..4 {
                     solver.fields.p[[i, j, k]] = value;
