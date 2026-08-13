@@ -50,8 +50,9 @@
 //!
 //! ## Module layout
 //!
-//! - `central_diff`: dispatch enum over 2nd / 4th / 6th-order central
-//!   difference operators.
+//! - `conservative_diff`: skew-symmetric collocated derivative used by the
+//!   leapfrog; see its module docs for why the general central difference is
+//!   not usable here.
 //! - `construction`: `new` constructor — material precomputation, source
 //!   scaling, k-space ops, scratch-buffer pre-allocation.
 //! - `stepping`: Yee leapfrog `step_forward`, debug-only NaN scans.
@@ -72,7 +73,6 @@
 //!   Velocity-stress finite-difference method. Geophysics 51(4), 889–901.
 
 mod accessors;
-mod central_diff;
 mod conservative_diff;
 mod construction;
 mod gpu_accelerator;
@@ -82,7 +82,6 @@ mod stepping;
 #[cfg(test)]
 mod tests;
 
-pub(crate) use central_diff::CentralDifferenceOperator;
 pub(crate) use conservative_diff::ConservativeCentralDifference;
 pub use gpu_accelerator::FdtdGpuAccelerator;
 
@@ -117,7 +116,6 @@ pub struct GenericFdtdSolver<T> {
     pub config: FdtdConfig,
     /// Grid reference
     pub(crate) grid: Grid,
-    pub(crate) central_operator: CentralDifferenceOperator,
     /// Skew-symmetric collocated operator used by the leapfrog when the
     /// staggered grid is off; see `conservative_diff`.
     pub(crate) conservative_operator: ConservativeCentralDifference,
@@ -185,7 +183,6 @@ impl<T: std::fmt::Debug> std::fmt::Debug for GenericFdtdSolver<T> {
         f.debug_struct("GenericFdtdSolver")
             .field("config", &self.config)
             .field("grid", &self.grid)
-            .field("central_operator", &self.central_operator)
             .field("conservative_operator", &self.conservative_operator)
             .field("staggered_operator", &self.staggered_operator)
             .field("metrics", &self.metrics)

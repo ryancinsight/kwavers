@@ -114,18 +114,18 @@ fn test_fdtd_pressure_numerical_identity() {
     let mut dvx_s = Array3::<f64>::zeros((n, n, n));
     let mut dvy_s = Array3::<f64>::zeros((n, n, n));
     let mut dvz_s = Array3::<f64>::zeros((n, n, n));
+    // The operator the collocated path actually uses. Its interior is the
+    // standard central stencil, so a linear field still differentiates to its
+    // slope there; only the boundary closure differs (KW-SOL-081).
     solver
-        .central_operator
-        .apply_x_into(solver.fields.ux.view(), &mut dvx_s)
-        .unwrap();
+        .conservative_operator
+        .apply_x_into(solver.fields.ux.view(), &mut dvx_s);
     solver
-        .central_operator
-        .apply_y_into(solver.fields.uy.view(), &mut dvy_s)
-        .unwrap();
+        .conservative_operator
+        .apply_y_into(solver.fields.uy.view(), &mut dvy_s);
     solver
-        .central_operator
-        .apply_z_into(solver.fields.uz.view(), &mut dvz_s)
-        .unwrap();
+        .conservative_operator
+        .apply_z_into(solver.fields.uz.view(), &mut dvz_s);
 
     // Verify analytical reference: interior divergence = 3.0 exactly (linear field, O2 stencil).
     for i in 1..n - 1 {

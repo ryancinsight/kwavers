@@ -79,6 +79,11 @@
   rejects it and backtracks. Only validation failures are treated this way;
   shape mismatches and numerical faults still propagate.
 
+- Removed the FDTD solver's dead `central_operator`. KW-SOL-081 replaced it
+  with the skew-symmetric `conservative_operator` in both update paths but left
+  it constructed on every solver and referenced by one test, which was checking
+  an operator the solver no longer used.
+
 - **FDTD finite-difference branches no longer diverge.** Both the staggered and
   the collocated pressure/velocity updates closed their low faces with
   one-sided differences, breaking the adjointness `D = −Gᵀ` that makes the Yee
@@ -88,6 +93,12 @@
   Yee divergence (`apply_divergence_*`) and a skew-symmetric collocated
   derivative — leaving the general-purpose differences, whose one-sided handling
   is correct for an arbitrary field, unchanged.
+
+- `StaggeredLeapfrogOperator`: the gradient/divergence pair a Yee leapfrog
+  needs, at **any even order up to 8** — the spatial scheme Fullwave 2.5 runs.
+  Adjointness `D = −Gᵀ` is exact at every order and grid size under
+  zero-extension rather than asymptotic, and is asserted as an identity per
+  order and axis alongside measured convergence at each claimed rate.
 
 - Cross-path differential verification: PSTD's fractional Laplacian and FDTD's
   relaxation memory variables now check against each other, agreeing to 1.3 %

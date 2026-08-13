@@ -10,7 +10,6 @@ use leto::Array3;
 use log::info;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
 
-use super::central_diff::CentralDifferenceOperator;
 use super::conservative_diff::ConservativeCentralDifference;
 use super::{FdtdMetrics, GenericFdtdSolver};
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
@@ -120,8 +119,6 @@ impl GenericFdtdSolver<Array3<f64>> {
         // Validate spatial order by converting to enum
         let spatial_order = AcousticSpatialOrder::from_usize(config.spatial_order)?;
 
-        let central_operator =
-            CentralDifferenceOperator::new(config.spatial_order, grid.dx, grid.dy, grid.dz)?;
         let staggered_operator = StaggeredGridOperator::new(grid.dx, grid.dy, grid.dz)?;
         let conservative_operator =
             ConservativeCentralDifference::new(config.spatial_order, grid.dx, grid.dy, grid.dz)?;
@@ -269,7 +266,6 @@ impl GenericFdtdSolver<Array3<f64>> {
         Ok(Self {
             config,
             grid: grid.clone(),
-            central_operator,
             conservative_operator,
             staggered_operator,
             metrics: FdtdMetrics::new(),

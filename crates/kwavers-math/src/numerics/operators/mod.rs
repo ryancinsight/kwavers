@@ -61,6 +61,7 @@ pub use differential::{
     CentralDifference2, CentralDifference4, CentralDifference6, StaggeredGridOperator,
     MAX_HALF_ORDER,
 };
+pub use differential::{Axis, StaggeredLeapfrogOperator};
 pub use interpolation::{LinearInterpolator, NumericsTrilinearInterpolator};
 pub use spectral::PseudospectralDerivative;
 

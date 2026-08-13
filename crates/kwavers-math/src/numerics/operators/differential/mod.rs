@@ -71,6 +71,7 @@ mod central_difference_2;
 mod central_difference_4;
 mod central_difference_6;
 mod staggered_grid;
+pub mod staggered_leapfrog;
 mod traversal;
 
 // Re-export implementations
@@ -81,6 +82,7 @@ pub use staggered_grid::{
     central_first_derivative_coefficients, staggered_first_derivative_coefficients,
     StaggeredGridOperator, MAX_HALF_ORDER,
 };
+pub use staggered_leapfrog::{Axis, StaggeredLeapfrogOperator};
 
 // Integration tests
 #[cfg(test)]

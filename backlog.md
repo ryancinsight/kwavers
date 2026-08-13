@@ -444,6 +444,81 @@
   capped there; by that order the high Taylor moments cancel terms of order
   1e12 and the residual is ~1e-11 relative, not exact. Documented at the cap.
 
+## KW-MATH-083 - High-order staggered gradient/divergence pair [minor] - done 2026-08-13
+
+- Scope: new
+  `kwavers-math/src/numerics/operators/differential/staggered_leapfrog{.rs,/tests.rs}`
+  plus three re-export lines. No solver change.
+- `StaggeredLeapfrogOperator` supplies the gradient/divergence pair a Yee
+  leapfrog needs at **any even order** (2, 4, 6, 8), which is the spatial scheme
+  Fullwave 2.5 runs. Coefficients come from the derivation in KW-MATH-073, so an
+  order is a parameter rather than a hand-entered table.
+- The pair, with the one-index shift that is the half-cell stagger:
+  `G: u[i] = (1/dx) sum_n c_n (p[i+n] - p[i-n+1])`,
+  `D: d[j] = (1/dx) sum_n c_n (u[j+n-1] - u[j-n])`, taps outside the grid zero.
+- Adjointness `D = -G^T` is **exact at every order and grid size**, not
+  asymptotic: re-indexing the two sums maps one onto the other, and
+  zero-extension is precisely what makes the re-indexing valid. Proven in the
+  module docs and asserted as an identity per order and per axis.
+- Verified: adjointness at 2/4/6/8 on all three axes; measured convergence at
+  each claimed rate under refinement; exact reduction to the plain half-grid
+  difference at order 2; constant-field consistency; a guard that the
+  adjointness operands are non-degenerate at both faces, since a vanishing face
+  value hid a defective closure once before (KW-SOL-081).
+- `halo_width()` is exposed because it is the halo a domain decomposition must
+  exchange - the coupling to KW-GPU-078.
+
+## KW-SOL-074 - Wire the high-order staggered pair into the FDTD solver [minor] - todo
+
+- KW-MATH-083 delivered and verified the operator. What remains is the solver
+  wiring, and one finding from building the operator changes its shape.
+- **The existing CFL table is collocated, not staggered.**
+  `AcousticSpatialOrder::cfl_limit` gives 1/sqrt(3), 1/sqrt(15), 1/sqrt(27) for
+  orders 2/4/6. Those are the *central-difference* limits. A staggered scheme of
+  order 2N has limit `dx/(c*sqrt(D)*sum|c_n|)`: at order 2 that is 1/sqrt(3),
+  which is why the collision went unnoticed, but at order 4 it is
+  `1/(sqrt(3)*1.1667) = 0.495`, nearly double the 0.258 the table reports. The
+  table is therefore both wrong for the staggered path and needed for the new
+  one. Deriving a staggered table (and separating the two) is part of this item,
+  not an afterthought - a too-small step is merely slow, but exporting the
+  collocated number for a staggered run at order 8 would be a silent accuracy
+  and cost error.
+- Remaining work: extend `AcousticSpatialOrder` and `FdtdConfig::validate` to 8;
+  add the staggered CFL table beside the collocated one; replace the staggered
+  velocity update's `(nx-1)`-shaped scratch and forced far-face zeroing with the
+  new full-shape pair.
+- Decision to settle: the new pair closes both faces by zero-extension, whereas
+  today's order-2 path forces the far velocity face to zero. Both are
+  conservative but they are different walls, so order 2 changes behaviour when
+  it moves onto the shared path. Either accept that (and update the tests that
+  pin the current wall) or keep order 2 on its existing path, which forks the
+  code. Prefer the former: one path, one BC, and the fork is what produced the
+  KW-SOL-081 class of defect in the first place.
+- Acceptance: measured order of accuracy on a propagating wave at 2/4/6/8;
+  lossless energy conservation retained at every order; the CFL table asserted
+  against the derived staggered limits rather than reused from the collocated
+  one.
+
+## KW-MATH-073 — Derived staggered stencil coefficients to arbitrary even order [minor] — done 2026-08-12
+
+- Owner: Claude; scope
+  `crates/kwavers-math/src/numerics/operators/differential/staggered_grid/coefficients{.rs,/tests.rs}`
+  plus the three module re-export lines. No solver, manifest, or gitlink change.
+- Driver: Fullwave 2.5 runs an 8th-order-in-space staggered scheme; kwavers'
+  staggered operator is 2nd order only, and its collocated central differences
+  are three cloned types (CentralDifference2/4/6) with hand-entered constants.
+- Outcome: `staggered_first_derivative_coefficients(half_order)` derives the
+  half-grid stencil weights by solving the Taylor system
+  `sum_n c_n a_n^{2m+1} = delta_{m0}/2`, `a_n = n - 1/2`, rather than tabulating
+  them, so a new order is a parameter and not a new constant table to mis-enter.
+- Acceptance (met): matches the published Fornberg/Levander rationals for
+  orders 2, 4, 6, 8 to 1e-13; delivers its claimed order of accuracy under grid
+  refinement; exact on constant and linear fields at every order; alternating,
+  decaying taps; accuracy monotone in order. 7 tests, doctest, clippy clean.
+- Honest limit: the derivation is verified to half-order 8 (16th order) and
+  capped there; by that order the high Taylor moments cancel terms of order
+  1e12 and the residual is ~1e-11 relative, not exact. Documented at the cap.
+
 ## KW-SOL-074 — Eighth-order staggered FDTD operator and solver wiring [minor] — todo
 
 - Scope: `kwavers-math` staggered_grid `{operator,forward,backward}.rs`,
