@@ -11,9 +11,18 @@
 //! Beams emanate from an apex. A beam at angle `θ` (measured from the axial `z`
 //! axis) samples range `r = r₀ + i·Δr`, where `r₀` is the apex-to-aperture
 //! radius (`0` for a sector phased array, `> 0` for a convex array). A Cartesian
-//! pixel at `(x, z)` maps back to `r = √(x²+z²)`, `θ = atan2(x, z)`; if `(r, θ)`
+//! pixel at `(x, z)` maps back to `r = √(x²+z²)`, `θ = atan(x/z)`; if `(r, θ)`
 //! falls inside the acquired fan it is bilinearly interpolated from the four
-//! surrounding beam samples, otherwise it is background (`0`).
+//! surrounding beam samples, otherwise it is background (`0`). Pixels at or
+//! behind the apex plane (`z ≤ 0`) have no beam and are always background.
+//!
+//! # Geometry ownership
+//!
+//! The polar map itself is **not** implemented here. `ritk_spatial::CurvilinearArray`
+//! is the stack's single source of truth for curvilinear acquisition geometry
+//! (atlas ADR 0042); this module converts the Aequitas-typed [`ScanGeometry`]
+//! into it once at construction and then asks it for the beam index of each
+//! Cartesian pixel. Storage stays Leto and the public surface stays typed.
 //!
 //! # Reference
 //! - Szabo, T. L. (2014). *Diagnostic Ultrasound Imaging: Inside Out* (2nd ed.),
@@ -23,6 +32,7 @@ use aequitas::systems::si::quantities::{Angle, Length};
 use aequitas::systems::si::units::{Meter, Radian};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::{Array2, ArrayView2};
+use ritk_spatial::CurvilinearArray;
 
 /// Polar acquisition geometry: uniformly-spaced beams, uniform range sampling.
 #[derive(Debug, Clone, Copy)]
@@ -53,7 +63,8 @@ pub struct CartesianGrid {
 /// Sector/convex scan converter.
 #[derive(Debug, Clone, Copy)]
 pub struct ScanConverter {
-    geometry: ScanGeometry,
+    /// Geometry SSOT, built from `ScanGeometry` at construction.
+    fan: CurvilinearArray,
     grid: CartesianGrid,
 }
 
@@ -95,7 +106,11 @@ impl ScanConverter {
                 "Cartesian grid must be at least 2×2".to_owned(),
             ));
         }
-        Ok(Self { geometry, grid })
+        // `angle_min` is the fan's angular origin, which the geometry carries
+        // explicitly — a centred fan is not assumed.
+        let fan = CurvilinearArray::try_new(range_step, radius_offset, angle_step, angle_min)
+            .map_err(|error| KwaversError::InvalidInput(error.to_string()))?;
+        Ok(Self { fan, grid })
     }
 
     /// Bilinear sample of the beam grid at fractional `(line, sample)`; returns
@@ -133,24 +148,20 @@ impl ScanConverter {
             ));
         }
         let g = self.grid;
-        let geo = self.geometry;
         let x_min = g.x_range.0.in_unit::<Meter>();
         let z_min = g.z_range.0.in_unit::<Meter>();
         let dx = (g.x_range.1.in_unit::<Meter>() - x_min) / (g.width - 1) as f64;
         let dz = (g.z_range.1.in_unit::<Meter>() - z_min) / (g.height - 1) as f64;
-        let angle_min = geo.angle_min.in_unit::<Radian>();
-        let angle_step = geo.angle_step.in_unit::<Radian>();
-        let radius_offset = geo.radius_offset.in_unit::<Meter>();
-        let range_step = geo.range_step.in_unit::<Meter>();
         let mut image = Array2::zeros((g.height, g.width));
         for row in 0..g.height {
             let z = z_min + row as f64 * dz;
             for col in 0..g.width {
                 let x = x_min + col as f64 * dx;
-                let r = z.hypot(x);
-                let theta = x.atan2(z);
-                let line = (theta - angle_min) / angle_step;
-                let sample = (r - radius_offset) / range_step;
+                // Lateral = x, axial = z. Points behind the apex plane have no
+                // beam and stay background.
+                let Some((sample, line)) = self.fan.index_from_cartesian(x, z) else {
+                    continue;
+                };
                 if let Some(v) = Self::sample(beam_data, line, sample) {
                     image[[row, col]] = v;
                 }
