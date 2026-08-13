@@ -20,7 +20,7 @@ jobs:
       attestations: write
       contents: write
       id-token: write
-    uses: ryancinsight/atlas/.github/workflows/python-wheels.yml@d875348197be12ad593f993a6f1b8a62d3b8b195
+    uses: ryancinsight/atlas/.github/workflows/python-wheels.yml@4c31dd7
     with:
       distribution: kwavers-python
       import-name: pykwavers
