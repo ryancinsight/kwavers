@@ -3254,6 +3254,7 @@ name = "kwavers-core"
 version = "3.0.0"
 dependencies = [
  "anyhow",
+ "eunomia",
  "flume",
  "leto",
  "libc",
@@ -3309,6 +3310,7 @@ name = "kwavers-driver"
 version = "0.3.13"
 dependencies = [
  "aequitas",
+ "eunomia",
  "kwavers-transducer",
  "thiserror 1.0.69",
 ]
