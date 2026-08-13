@@ -1,5 +1,49 @@
 # Backlog / Strategy
 
+## KW-FWI-083 — Curvature-scaled NLCG step length [patch] — done 2026-08-13
+
+- Owner: Claude. Scope (claimed):
+  `crates/kwavers-solver/src/inverse/fwi/frequency_domain/{inversion.rs,gradient.rs,gauss_newton.rs,tests/inversion.rs}`.
+  Disjoint from the live peer scope (`forward/fdtd/**`, `kwavers-math`).
+- Driver: atlas `backlog.md#atlas-usct-fwi-024` item FWI-024-A, from the
+  `rehmanali1994/FullWaveformInversionUSCT` comparison
+  (atlas `gap_audit.md#atlas-usct-fwi-024`).
+- Outcome: the NLCG step is seeded by the exact minimizer of the objective's
+  quadratic model along the search direction, `α = −⟨g,d⟩/⟨d,Hd⟩`, instead of a
+  fixed `initial_step_s_per_m`. `⟨d,Hd⟩` reuses the existing matrix-free
+  `hessian_vector` action, which moves from `gauss_newton.rs` to `gradient.rs`
+  so both consumers share one implementation. Backtracking is retained as the
+  safeguard; `initial_step_s_per_m` remains the fallback seed where the model
+  gives no minimizer (non-positive curvature), so no public API changes.
+- Acceptance oracle: `weak_perturbation_is_recovered_despite_oversized_configured_step`
+  recovers a +5 m/s anomaly with `initial_step_s_per_m` set 200× too large —
+  the near-solution stall that `gauss_newton.rs` documents. Existing
+  frequency-domain FWI tests stay green.
+- Note: `frequency_domain` is behind the `clinical-imaging` feature, so all
+  verification for this scope must pass `--features clinical-imaging`; a bare
+  `cargo check -p kwavers-solver` does not compile it. This bit an initial
+  verification pass here: a green `cargo check -p kwavers-solver --lib`
+  compiled none of the changed code.
+- Evidence: `cargo fmt --check`, `cargo clippy --lib --features clinical-imaging
+  -- -D warnings` (0 findings in this scope), `RUSTDOCFLAGS=-D warnings cargo doc`,
+  and `cargo nextest run --features clinical-imaging -E 'test(/frequency_domain/)'`
+  44/44 — including the `ali2025_table1_parity_gate` RMSE/PCC gate.
+- Falsification: with `model_minimizer_step` forced to `Ok(None)` (the old
+  fixed-seed behaviour), the new test fails with `history=[5.405…]` — a single
+  entry, no step accepted — and the other five inversion tests still pass, so the
+  test isolates this change and is not tautological.
+
+## KW-OBS-084 — Peer `forward/fdtd` scope is clippy-red under `-D warnings` [patch] — observation 2026-08-13
+
+- Not claimed; recorded from the KW-FWI-083 gate. `cargo clippy -p kwavers-solver
+  --lib --features clinical-imaging -- -D warnings` reports 4 errors, all outside
+  that item's scope: dead `compute_forward_gradient` / `update_staggered_velocity`
+  in `forward/fdtd/velocity_updater.rs` (uncommitted peer WIP, mid-refactor) and
+  two `neg_cmp_op_on_partial_ord` at `forward/fdtd/absorption/mod.rs:108` (landed).
+- Left to the live peer holding that scope rather than edited across the claim
+  boundary. The `absorption/mod.rs:108` pair is landed-red and outlives the
+  peer's WIP, so it needs an owner once their refactor settles.
+
 ## Current Aequitas integration slice — 2026-08-02
 
 | ID | Outcome | Class | Status | Owner | Scope |
