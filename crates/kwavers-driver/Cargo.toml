@@ -15,6 +15,7 @@ authors = ["Ryan Clanton <ryanclanton@outlook.com>"]
 
 [dependencies]
 aequitas = { workspace = true }
+eunomia = { workspace = true }
 thiserror = "1"
 kwavers-transducer = { path = "../kwavers-transducer", optional = true, version = "4.1.0" }
 

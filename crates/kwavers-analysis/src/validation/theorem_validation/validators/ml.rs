@@ -1,6 +1,7 @@
 //! Machine learning convergence theorem validators (PINN).
 
 use super::super::{TheoremValidation, TheoremValidator};
+use eunomia::FloatElement;
 
 impl TheoremValidator {
     /// Validate PINN convergence theorem: ‖u − u_PINN‖_H1 ≤ C (log N / N)^{1/4} + C W^{-1/2}
@@ -12,7 +13,7 @@ impl TheoremValidator {
         solution_smoothness: f64,
     ) -> TheoremValidation {
         let n_term = (n_collocation as f64).ln() / (n_collocation as f64);
-        let convergence_term = n_term.powf(0.25);
+        let convergence_term = n_term.nth_root(4);
         let width_term = 1.0 / (network_width as f64).sqrt();
         let theoretical_bound = solution_smoothness * (convergence_term + width_term);
 

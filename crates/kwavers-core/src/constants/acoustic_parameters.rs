@@ -468,6 +468,7 @@ pub const BA_RATIO_TISSUE: f64 = 6.0;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use eunomia::FloatElement;
 
     /// Verify DB_TO_NP × NP_TO_DB == 1 to machine precision (round-trip identity).
     /// # Panics
@@ -515,7 +516,7 @@ mod tests {
     ///
     #[test]
     fn test_db_to_np_amplitude_consistency() {
-        let amp_from_db = 10_f64.powf(1.0 / 20.0); // 10^(1/20)
+        let amp_from_db = 10_f64.nth_root(20); // 10^(1/20)
         let amp_from_np = DB_TO_NP.exp(); // e^(ln(10)/20) = 10^(1/20)
         assert!(
             (amp_from_db - amp_from_np).abs() < 1e-14,

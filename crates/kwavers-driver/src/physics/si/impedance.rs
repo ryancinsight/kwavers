@@ -11,12 +11,14 @@
 //!
 //! [`Ohm`]: crate::units::Ohm
 
+use eunomia::FloatElement;
+
 /// Effective relative permittivity of a microstrip of width `w` over height `h` in a dielectric
 /// `er` (Hammerstad).
 #[must_use]
 pub fn microstrip_eeff(w: f64, h: f64, er: f64) -> f64 {
     let wh = (w / h).max(1.0e-6);
-    (er + 1.0) / 2.0 + (er - 1.0) / 2.0 * (1.0 + 12.0 / wh).powf(-0.5)
+    (er + 1.0) / 2.0 + (er - 1.0) / 2.0 * (1.0 + 12.0 / wh).rsqrt()
 }
 
 /// Characteristic impedance (Ω) of a microstrip (Hammerstad). `w`, `h` any consistent unit.

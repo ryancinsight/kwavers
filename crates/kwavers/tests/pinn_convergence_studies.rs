@@ -44,6 +44,7 @@ use validation::*;
 #[cfg(test)]
 mod convergence_studies {
     use super::*;
+    use eunomia::FloatElement;
 
     // ========================================================================
     // h-Refinement Studies (Spatial/Temporal Resolution)
@@ -330,7 +331,7 @@ mod convergence_studies {
 
         // Generate power law: L(t) = t^(-0.5)
         for epoch in 1..1000 {
-            let loss = (epoch as f64).powf(-0.5);
+            let loss = (epoch as f64).rsqrt();
             loss_data.push((epoch, loss));
         }
 
