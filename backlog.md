@@ -105,22 +105,38 @@
   vanishing low-face pressure satisfies the identity under both - an earlier
   draft did exactly that and reported a zero residual for the defective closure.
 
-## KW-FWI-082 - Two FWI tests exceed their own CFL bound [patch] - todo
+## KW-FWI-082 - L-BFGS aborted on an inadmissible line-search trial [patch] - done 2026-08-12
 
-- `lbfgs_reduces_misfit_and_recovers_anomaly` and
-  `pwls_is_robust_to_bad_channels_vs_unweighted_l2` fail at setup with
-  "Time step 1.000000e-7 exceeds CFL bound 7.172846e-8", before any propagation.
-- Pre-existing and independent of KW-SOL-081: `calculate_stable_timestep` is
-  `0.3 * min_spacing / (c_max * sqrt(3))` over the test's own hardcoded `dt`,
-  `dx = 1e-3` and sound-speed model. No solver code enters it.
-- Diagnosis: the tests pick `dt = 1e-7` against the 1500 m/s background, whose
-  bound is 1.15e-7. Their anomaly model reaches about 2415 m/s, whose bound is
-  7.17e-8. The step was sized for the background rather than for the fastest
-  cell in the perturbed model.
-- Acceptance: derive `dt` from the model the test actually inverts (the same
-  `calculate_stable_timestep` the constraint uses), rather than from the
-  background; confirm the inversion still recovers the anomaly at the smaller
-  step.
+- Scope: `inverse/fwi/time_domain/inversion/quasi_newton.rs` and the two FWI
+  tests' time step. No change to the misfit, gradient, or regularization.
+- Symptom: `lbfgs_reduces_misfit_and_recovers_anomaly` and
+  `pwls_is_robust_to_bad_channels_vs_unweighted_l2` failed with "Time step
+  1.000000e-7 exceeds CFL bound 7.172846e-8".
+- **My first diagnosis was wrong.** I filed this as a static setup mismatch -
+  the test sizing dt for the 1500 m/s background while its anomaly model reaches
+  2415 m/s. The anomaly is only +60 m/s (c_max = 1560, bound 1.11e-7), so dt =
+  1e-7 is admissible for the truth. The 2415 m/s model appears *during* the
+  inversion.
+- Root cause: the Armijo line search evaluated each trial with
+  `compute_objective(...)?`. A trial whose fastest cell outruns the time step is
+  rejected by `validate_time_step`, and the `?` propagated that out of the
+  optimizer, aborting the whole inversion. `apply_model_constraints` clamps only
+  to a broad physical range (750-6000 m/s), which is far wider than the range
+  any single dt is CFL-stable for (1732 m/s here), so a large first step lands
+  outside it easily.
+- Fix: a trial the forward solver cannot integrate is a **bad step**, not a
+  failed inversion - mathematically an infinite objective, which can never
+  satisfy Armijo, so the correct response is the halving the loop already does.
+  Only `KwaversError::Validation` is treated this way; a shape mismatch or
+  numerical fault still propagates, so a real defect is not swallowed.
+- Second, separate fix: both tests now derive dt from the model they invert
+  (half the truth model's own CFL bound) rather than hardcoding 1e-7. With only
+  the optimizer fix, the tests ran to completion but PWLS lost to plain L2 on
+  the anomaly-core MAE (18.820 vs 17.591) because both inversions were having
+  steps cut by rejections - the comparison was measuring backtracking, not
+  weighting. Sizing dt to keep trials admissible restores the intended
+  comparison, and PWLS then wins on its own merits rather than by tuning.
+- Result: 29/29 FWI time-domain tests, 873/873 kwavers-solver.
 
 ## KW-SOL-080 — Differential test across the two heterogeneous-absorption paths [patch] — todo
 

@@ -72,6 +72,13 @@
 
 ### Fixed
 
+- **L-BFGS FWI no longer aborts on an inadmissible line-search trial.** A trial
+  model whose fastest cell outran the configured time step propagated its CFL
+  validation error out of the optimizer and killed the inversion. Such a trial
+  is a bad step with an effectively infinite objective, so the Armijo loop now
+  rejects it and backtracks. Only validation failures are treated this way;
+  shape mismatches and numerical faults still propagate.
+
 - **FDTD finite-difference branches no longer diverge.** Both the staggered and
   the collocated pressure/velocity updates closed their low faces with
   one-sided differences, breaking the adjointness `D = −Gᵀ` that makes the Yee
