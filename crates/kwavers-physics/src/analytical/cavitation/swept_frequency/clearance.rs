@@ -14,7 +14,6 @@
 //! RK4 integrator; the sweep enters only through the gas-volume-conserving
 //! fragmentation of the initial radius.
 
-use eunomia::FloatElement;
 use kwavers_core::constants::cavitation::{
     GAS_DIFFUSION_COEFFICIENT_TISSUE, OSTWALD_SOLUBILITY_AIR_WATER, SURFACE_TENSION_TISSUE,
 };
