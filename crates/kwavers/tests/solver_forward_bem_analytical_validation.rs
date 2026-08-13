@@ -59,7 +59,7 @@ impl MieScatteringSolution {
         // Determine number of terms needed for convergence
         // Rule of thumb: N ≥ ka + 10·(ka)^(1/3)
         let ka = wavenumber * radius;
-        let num_terms = (ka + 10.0 * ka.powf(1.0 / 3.0)).ceil() as usize + 5;
+        let num_terms = (ka + 10.0 * ka.cbrt()).ceil() as usize + 5;
 
         Ok(Self {
             radius,

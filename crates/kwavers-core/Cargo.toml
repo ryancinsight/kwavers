@@ -33,6 +33,9 @@ anyhow = "1.0"
 flume = { version = "0.11", optional = true }
 ritk-registration = { workspace = true, optional = true }
 
+[dev-dependencies]
+eunomia = { workspace = true }
+
 [features]
 # `From<flume::RecvError>` for KwaversError.
 channels = ["dep:flume"]
