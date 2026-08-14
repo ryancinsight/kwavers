@@ -1,4 +1,4 @@
-# ADR 107: Adopt Aequitas for bubble-energy quantities
+# ADR 040: Adopt Aequitas for bubble-energy quantities
 
 - Status: Accepted
 - Date: 2026-07-19

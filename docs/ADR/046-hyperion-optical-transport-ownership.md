@@ -1,6 +1,6 @@
 # ADR 046 — Hyperion optical-transport ownership
 
-- **Status:** Accepted
+- **Status:** Implemented
 - **Date:** 2026-07-21
 - **Change class:** [major] [arch]
 - **Relates:** [ADR 004](004-domain-material-property-ssot.md), Atlas ADR 0030

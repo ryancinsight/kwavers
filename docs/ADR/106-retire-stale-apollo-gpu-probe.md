@@ -1,4 +1,4 @@
-# ADR 106: Retire the stale Apollo GPU availability probe
+# ADR 037: Retire the stale Apollo GPU availability probe
 
 ## Status
 

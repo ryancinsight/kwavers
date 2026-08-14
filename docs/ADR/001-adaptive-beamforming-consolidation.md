@@ -1,6 +1,6 @@
 # ADR 001 — Adaptive-beamforming consolidation
 
-- **Status:** Accepted
+- **Status:** Implemented (clean removal)
 - **Date:** 2025-11-03 · **Audited:** 2026-06-03
 - **Change class:** [patch]
 - **Relates:** subsumed by [ADR 002](002-sensor-array-processing-consolidation.md); placement finalized by [ADR 003](003-signal-processing-analysis-layer.md)

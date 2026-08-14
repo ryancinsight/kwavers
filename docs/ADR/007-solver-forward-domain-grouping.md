@@ -1,6 +1,6 @@
 # ADR 007 — `solver::forward` domain grouping
 
-- **Status:** Accepted
+- **Status:** Phase 1 implemented; Phase 2 (deprecate flat paths) open
 - **Date:** 2026-05-05 · **Audited:** 2026-06-03
 - **Change class:** [arch]
 - **Relates:** paths relocated by the crate split ([ADR 011](011-workspace-crate-split.md))

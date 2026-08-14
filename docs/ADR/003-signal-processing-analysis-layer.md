@@ -1,6 +1,6 @@
 # ADR 003 — Signal processing migrated to the analysis layer
 
-- **Status:** Accepted
+- **Status:** Implemented
 - **Date:** 2026-01-09 · **Audited:** 2026-06-03
 - **Change class:** [arch]
 - **Relates:** finalizes the placement for [ADR 001](001-adaptive-beamforming-consolidation.md) and [ADR 002](002-sensor-array-processing-consolidation.md); paths later relocated by the crate split ([ADR 011](011-workspace-crate-split.md))

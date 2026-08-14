@@ -1,6 +1,6 @@
 # ADR 004 — Domain material-property SSOT (composition pattern)
 
-- **Status:** Accepted
+- **Status:** Implemented; optical derivations superseded by ADR 046
 - **Date:** 2026-01-12 · **Audited:** 2026-06-03
 - **Change class:** [arch]
 - **Relates:** paths relocated by the crate split ([ADR 011](011-workspace-crate-split.md))
