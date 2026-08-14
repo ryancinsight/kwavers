@@ -1,5 +1,10 @@
 # ADR 044: Asclepius response ownership
 
+- Status: Accepted
+- Note (2026-08-14): status recorded retroactively from the tree as built —
+  `asclepius` is a workspace dependency of exactly the three crates this
+  decision names (`kwavers-physics`, `kwavers-therapy`, `kwavers-python`).
+
 ## Context
 
 Kwavers contains repeated implementations of three biological-response laws:

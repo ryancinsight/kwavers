@@ -6,17 +6,17 @@
 
 | ADR | Title | Status |
 | --- | ----- | ------ |
-| [001](001-adaptive-beamforming-consolidation.md) | Adaptive-beamforming consolidation | Implemented |
-| [002](002-sensor-array-processing-consolidation.md) | Sensor array-processing consolidation | Implemented |
-| [003](003-signal-processing-analysis-layer.md) | Signal processing migrated to the analysis layer | Implemented |
-| [004](004-domain-material-property-ssot.md) | Domain material-property SSOT (composition pattern) | Implemented; |
-| [005](005-pinn-training-stabilization.md) | PINN training stabilization | Implemented |
-| [006](006-workspace-pyo3-bindings-architecture.md) | Workspace architecture for PyO3 Python bindings | Implemented; |
-| [007](007-solver-forward-domain-grouping.md) | `solver::forward` domain grouping | Phase |
-| [008](008-compute-backend-trait-wiring.md) | Wire the `ComputeBackend` trait; gate the GPU submodule | Implemented |
-| [009](009-pykwavers-elastic-bindings.md) | pykwavers elastic-wave bindings | Implemented |
-| [010](010-fwi-finite-window-pstd-born.md) | Finite-window PSTD Born forward boundary | Implemented |
-| [011](011-workspace-crate-split.md) | Workspace crate split of the `kwavers` monolith | Implemented |
+| [001](001-adaptive-beamforming-consolidation.md) | Adaptive-beamforming consolidation | Accepted |
+| [002](002-sensor-array-processing-consolidation.md) | Sensor array-processing consolidation | Accepted |
+| [003](003-signal-processing-analysis-layer.md) | Signal processing migrated to the analysis layer | Accepted |
+| [004](004-domain-material-property-ssot.md) | Domain material-property SSOT (composition pattern) | Accepted |
+| [005](005-pinn-training-stabilization.md) | PINN training stabilization | Accepted |
+| [006](006-workspace-pyo3-bindings-architecture.md) | Workspace architecture for PyO3 Python bindings | Accepted |
+| [007](007-solver-forward-domain-grouping.md) | `solver::forward` domain grouping | Accepted |
+| [008](008-compute-backend-trait-wiring.md) | Wire the `ComputeBackend` trait; gate the GPU submodule | Accepted |
+| [009](009-pykwavers-elastic-bindings.md) | pykwavers elastic-wave bindings | Accepted |
+| [010](010-fwi-finite-window-pstd-born.md) | Finite-window PSTD Born forward boundary | Accepted |
+| [011](011-workspace-crate-split.md) | Workspace crate split of the `kwavers` monolith | Accepted |
 | [012](012-monomorphization-boundary-policy.md) | Monomorphization & dynamic-dispatch boundary policy | Accepted |
 | [013](013-acoustic-ct-radon-fbp.md) | Acoustic Computed Tomography: Radon Transform + Filtered Backprojection | Accepted |
 | [014](014-acoustoelasticity-murnaghan.md) | Acousto-elasticity: Murnaghan Stress-Dependent Wave Speed + Pre-Stress Inversion | Accepted |
@@ -42,18 +42,16 @@
 | [034](034-kwavers-grid-native-leto-surface.md) | Kwavers-grid native Leto surface | Accepted |
 | [035](035-planar-aperture-quadrature.md) | Planar aperture quadrature | Accepted |
 | [036](036-clinical-imaging-feature-boundary.md) | Clinical-imaging feature boundary | Accepted |
-| [037](037-gpu-pstd-output-contract.md) | 037-gpu-pstd-output-contract | Superseded |
-| [037](037-retire-stale-apollo-gpu-probe.md) | Retire the stale Apollo GPU availability probe | Accepted |
+| [037](037-gpu-pstd-output-contract.md) | 037-gpu-pstd-output-contract | Accepted |
 | [038](038-medium-accessor-consolidation.md) | Consolidate continuous medium access | Accepted |
 | [039](039-hephaestus-backend-kernel-ownership.md) | Move backend kernel ownership to Hephaestus | Accepted |
-| [040](040-aequitas-quantity-provider.md) | Adopt Aequitas for bubble-energy quantities | Accepted |
 | [040](040-gpu-pstd-peak-pressure-output.md) | 040-gpu-pstd-peak-pressure-output | Accepted |
 | [041](041-proteus-thermophysical-properties.md) | Proteus thermophysical properties | Accepted |
 | [042](042-proteus-temperature-response.md) | Proteus temperature-response ownership | Accepted |
 | [043](043-tyche-uncertainty-provider.md) | Tyche uncertainty provider | Accepted |
-| [044](044-asclepius-response-ownership.md) | Asclepius response ownership | — |
-| [045](045-atlas-benchmark-regression-gate.md) | Atlas benchmark regression gate | accepted |
-| [046](046-hyperion-optical-transport-ownership.md) | Hyperion optical-transport ownership | Implemented |
+| [044](044-asclepius-response-ownership.md) | Asclepius response ownership | Accepted |
+| [045](045-atlas-benchmark-regression-gate.md) | Atlas benchmark regression gate | Accepted |
+| [046](046-hyperion-optical-transport-ownership.md) | Hyperion optical-transport ownership | Accepted |
 | [047](047-vessel-physical-metrics.md) | Type functional-ultrasound vessel physical metrics | Accepted |
 | [070](070-mems-quantity-contracts.md) | Aequitas contracts for MEMS physical metrics | Accepted |
 | [071](071-plasmonics-quantities.md) | Aequitas contracts for plasmonics metrics | Accepted |
@@ -71,3 +69,5 @@
 | [103](103-thermal-diffusion-quantities.md) | Thermal-diffusion physical quantities | Accepted |
 | [104](104-thermal-acoustic-coupling-quantities.md) | Thermal-acoustic coupling quantities | Accepted |
 | [105](105-b-mode-scan-conversion-quantities.md) | B-mode scan-conversion geometry quantities | Accepted |
+| [106](106-retire-stale-apollo-gpu-probe.md) | Retire the stale Apollo GPU availability probe | Accepted |
+| [107](107-aequitas-quantity-provider.md) | Adopt Aequitas for bubble-energy quantities | Accepted |

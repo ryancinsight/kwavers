@@ -1,6 +1,6 @@
 # ADR 002 — Sensor array-processing consolidation
 
-- **Status:** Implemented (realized in the analysis layer per [ADR 003](003-signal-processing-analysis-layer.md))
+- **Status:** Accepted
 - **Date:** 2025-11-12 · **Audited:** 2026-06-03 · **Revised:** 2026-08-02
 - **Change class:** [arch]
 - **Relates:** subsumes [ADR 001](001-adaptive-beamforming-consolidation.md); placement overridden by [ADR 003](003-signal-processing-analysis-layer.md)
