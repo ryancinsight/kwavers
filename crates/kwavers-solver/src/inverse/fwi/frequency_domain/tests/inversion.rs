@@ -294,3 +294,67 @@ fn ali2025_table1_parity_gate() {
         result.objective_history
     );
 }
+
+/// A weak "differential monitor" perturbation must be recovered even when the
+/// configured fixed step is wildly oversized.
+///
+/// This is the near-solution stall documented in [`super::super::gauss_newton`]:
+/// with a step seeded only from `initial_step_s_per_m`, a model close to the
+/// truth has a small gradient, every one of the 8 backtracking trials overshoots
+/// into a region of no numerical decrease, no candidate is accepted, and the loop
+/// exits having recovered nothing — `objective_history` never grows past its
+/// initial entry.
+///
+/// The curvature-scaled step `α = −⟨g,d⟩/⟨d,Hd⟩` is invariant to that seed, so
+/// the inversion must still make progress. `initial_step_s_per_m` here is 200×
+/// the value the other tests use, which is what makes this falsifiable: the test
+/// fails if the step ever falls back to the configured seed.
+#[test]
+fn weak_perturbation_is_recovered_despite_oversized_configured_step() {
+    let array = MultiRowRingArray::new(
+        4,
+        1,
+        Length::from_unit::<Meter>(0.01),
+        Length::from_unit::<Meter>(0.0),
+    )
+    .expect("ring array");
+    let config = Config {
+        spacing_m: 0.005,
+        iterations: 8,
+        // 200x the seed used by the neighbouring consistent-model test.
+        initial_step_s_per_m: 1.0e-3,
+        estimate_source_scaling: false,
+        forward_operator: Arc::new(DenseConvergentBornOperator {
+            iterations: 64,
+            relative_tolerance: 1.0e-13,
+        }),
+        ..Config::default()
+    };
+    // Weak anomaly: +5 m/s on a 1500 m/s background is the differential regime.
+    let mut truth = Array3::from_elem([3, 3, 1], SOUND_SPEED_WATER_SIM);
+    truth[[1, 1, 0]] = SOUND_SPEED_WATER_SIM + 5.0;
+    let observed =
+        simulate_frequency_observation(&truth, &array, 200_000.0, &config).expect("observed");
+    let observations = [FrequencyObservation::new(200_000.0, observed)];
+    let initial = Array3::from_elem([3, 3, 1], SOUND_SPEED_WATER_SIM);
+
+    let result = invert(&observations, &array, &initial, &config).expect("inversion");
+
+    assert!(
+        result.objective_history.len() >= 2,
+        "loop stalled without accepting a step: history={:?}",
+        result.objective_history
+    );
+    let initial_obj = result.objective_history[0];
+    let final_obj = result.objective_history.last().copied().unwrap();
+    assert!(
+        final_obj < initial_obj,
+        "objective must decrease: initial={initial_obj:.4e}, final={final_obj:.4e}, history={:?}",
+        result.objective_history
+    );
+    assert!(
+        result.sound_speed_m_s[[1, 1, 0]] > SOUND_SPEED_WATER_SIM,
+        "weak central anomaly must be recovered above background, got {}",
+        result.sound_speed_m_s[[1, 1, 0]]
+    );
+}

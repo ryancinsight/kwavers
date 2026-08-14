@@ -45,6 +45,9 @@ impl PhotoacousticSimulator {
         let nt = 100;
 
         let fdtd_config = FdtdConfig {
+            // Lossless: photoacoustic reconstruction assumes a non-attenuating
+            // forward model here.
+            absorption: kwavers_solver::forward::fdtd::config::FdtdAbsorption::Lossless,
             spatial_order: 2,
             staggered_grid: true,
             cfl_factor: 0.3,

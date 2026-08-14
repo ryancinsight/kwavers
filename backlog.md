@@ -1,5 +1,49 @@
 # Backlog / Strategy
 
+## KW-FWI-083 — Curvature-scaled NLCG step length [patch] — done 2026-08-13
+
+- Owner: Claude. Scope (claimed):
+  `crates/kwavers-solver/src/inverse/fwi/frequency_domain/{inversion.rs,gradient.rs,gauss_newton.rs,tests/inversion.rs}`.
+  Disjoint from the live peer scope (`forward/fdtd/**`, `kwavers-math`).
+- Driver: atlas `backlog.md#atlas-usct-fwi-024` item FWI-024-A, from the
+  `rehmanali1994/FullWaveformInversionUSCT` comparison
+  (atlas `gap_audit.md#atlas-usct-fwi-024`).
+- Outcome: the NLCG step is seeded by the exact minimizer of the objective's
+  quadratic model along the search direction, `α = −⟨g,d⟩/⟨d,Hd⟩`, instead of a
+  fixed `initial_step_s_per_m`. `⟨d,Hd⟩` reuses the existing matrix-free
+  `hessian_vector` action, which moves from `gauss_newton.rs` to `gradient.rs`
+  so both consumers share one implementation. Backtracking is retained as the
+  safeguard; `initial_step_s_per_m` remains the fallback seed where the model
+  gives no minimizer (non-positive curvature), so no public API changes.
+- Acceptance oracle: `weak_perturbation_is_recovered_despite_oversized_configured_step`
+  recovers a +5 m/s anomaly with `initial_step_s_per_m` set 200× too large —
+  the near-solution stall that `gauss_newton.rs` documents. Existing
+  frequency-domain FWI tests stay green.
+- Note: `frequency_domain` is behind the `clinical-imaging` feature, so all
+  verification for this scope must pass `--features clinical-imaging`; a bare
+  `cargo check -p kwavers-solver` does not compile it. This bit an initial
+  verification pass here: a green `cargo check -p kwavers-solver --lib`
+  compiled none of the changed code.
+- Evidence: `cargo fmt --check`, `cargo clippy --lib --features clinical-imaging
+  -- -D warnings` (0 findings in this scope), `RUSTDOCFLAGS=-D warnings cargo doc`,
+  and `cargo nextest run --features clinical-imaging -E 'test(/frequency_domain/)'`
+  44/44 — including the `ali2025_table1_parity_gate` RMSE/PCC gate.
+- Falsification: with `model_minimizer_step` forced to `Ok(None)` (the old
+  fixed-seed behaviour), the new test fails with `history=[5.405…]` — a single
+  entry, no step accepted — and the other five inversion tests still pass, so the
+  test isolates this change and is not tautological.
+
+## KW-OBS-084 — Peer `forward/fdtd` scope is clippy-red under `-D warnings` [patch] — observation 2026-08-13
+
+- Not claimed; recorded from the KW-FWI-083 gate. `cargo clippy -p kwavers-solver
+  --lib --features clinical-imaging -- -D warnings` reports 4 errors, all outside
+  that item's scope: dead `compute_forward_gradient` / `update_staggered_velocity`
+  in `forward/fdtd/velocity_updater.rs` (uncommitted peer WIP, mid-refactor) and
+  two `neg_cmp_op_on_partial_ord` at `forward/fdtd/absorption/mod.rs:108` (landed).
+- Left to the live peer holding that scope rather than edited across the claim
+  boundary. The `absorption/mod.rs:108` pair is landed-red and outlives the
+  peer's WIP, so it needs an owner once their refactor settles.
+
 ## Current Aequitas integration slice — 2026-08-02
 
 | ID | Outcome | Class | Status | Owner | Scope |
@@ -36,28 +80,830 @@
 - Acceptance: `cargo check --all-targets --offline` rc=0; the full suite
   passes 6130/6130 (15 skipped). Merged as kwavers PR #364 (`1cb63974`).
 
-## KW-SOL-072 — Simulated absorption runs 8-19 % below the prescribed law [patch] — todo
 
-- Scope: `crates/kwavers-solver/src/forward/viscoacoustic/`, its tests, and
-  `crates/kwavers/examples/heterogeneous_power_law_attenuation.rs`.
-- Symptom: the fitted relaxation spectrum reproduces alpha(f) analytically to
-  under 1 %, but a propagating pulse through a medium built from it measures
-  alpha low by 8-19 %, growing with frequency and with gamma, and independent
-  of alpha_0. The pre-existing standing-wave test's 15 % tolerance was wide
-  enough to hide this.
-- Ruled out: the fit (analytic alpha of the fitted spectrum is within 1 %);
-  time discretization (a 4x smaller dt moves the residual under 0.1 %);
-  boundary damping (a lossless reference run divides it out, and the singleton
-  y/z axes correctly take no layer); gate contamination (the ungated ratio is
-  far worse and noisy, not smooth).
-- Next hypotheses, in order: (1) the trapezoidal relaxation term in the
-  pressure update against the exactly-integrated sigma - check the scheme's
-  realized dispersion relation analytically rather than by refinement, since
-  the dt-independence points at a splitting error that does not vanish with dt;
-  (2) the leapfrog staggering of v against the integer-step sigma accumulator.
-- Acceptance: the discrepancy is either explained and corrected, or shown to be
-  a measurement artefact with an independent oracle; the standing-wave test's
-  tolerance then tightens to the explained bound.
+## KW-SOL-079 - FDTD heterogeneous power-law absorption [minor] - done 2026-08-12
+
+- Scope: new `crates/kwavers-solver/src/forward/fdtd/absorption/{mod,tests}.rs`;
+  FDTD config, solver struct, construction and pressure updater;
+  `kwavers-medium/src/material_fields.rs` (+ tests); one converter in
+  `kwavers-physics`; PSTD construction (de-duplicated onto the shared sampler);
+  book 4.8.5; FWI forward config literal.
+- The FDTD path had no absorption module at all - `update_pressure_cpu` was the
+  lossless `p -= dt*rho_c_squared*div(v)` in all three branches - while Fullwave
+  2.5 is an FDTD code whose entire attenuation story is relaxation mechanisms.
+- Delivered: `RelaxationAbsorption`, memory variables fitted through
+  `relaxation_fit` from the medium's own alpha_0(x) *and* gamma(x), advanced by
+  the exact exponential integrator so dt is bounded by the wave CFL and never by
+  the smallest tau. Configured by `FdtdAbsorption::{Lossless, PowerLawRelaxation}`
+  - a two-variant enum, since the parameters are meaningless without the model.
+- The three decisions this item recorded, as resolved:
+  1. **Modulus swap.** The absorbing update multiplies the divergence by the
+     unrelaxed M_U, exposed by the component; `rho_c_squared` keeps meaning
+     rho*c^2 rather than being silently redefined. A test asserts M_U is stiffer
+     than rho*c^2 wherever the medium absorbs, and by under 10 % - a larger
+     excess would mean the fit bought absorption with stiffness and wrecked the
+     CFL.
+  2. **CPML ordering.** Both finite-difference branches now converge on one
+     `apply_pressure_from_divergence`, reached *after* the CPML gradient
+     correction and the per-axis accumulation, so the arms integrate exactly the
+     divergence the pressure does.
+  3. **SIMD/GPU coverage.** All CPU branches (k-space, staggered, central) carry
+     the term. The GPU accelerator has no relaxation state, so an absorbing
+     configuration on that path now *errors* rather than silently propagating a
+     lossless medium.
+- Verification: 8 component tests (per-material fit, modulus stiffness bounds,
+  lossless degeneration, memory charge/decay, reset, unit convention, rejection)
+  plus a propagation test measuring alpha by standing-wave decay across
+  gamma = 0.6/1.0/1.4 and comparing against the prescribed law within 15 %.
+- Finding surfaced while testing, **not** caused by this change: the
+  finite-difference branches run without CPML diverge on a bare box - a growing
+  DC boundary mode - and the identical run with `FdtdAbsorption::Lossless`
+  diverges the same way. The propagation test therefore measures on the periodic
+  spectral branch. Filed as KW-SOL-081.
+
+## KW-SOL-081 - FDTD finite-difference branches diverged without CPML [patch] - done 2026-08-12
+
+- Scope: new `kwavers-math/.../staggered_grid/divergence{.rs,/tests.rs}` and
+  `central_first_derivative_coefficients`; new
+  `kwavers-solver/.../fdtd/solver/conservative_diff{.rs,/tests.rs}`; the FDTD
+  staggered divergence, both collocated update branches, and their tests.
+- Root cause: **broken adjointness at the low face**, in both branches.
+  - Staggered: the pressure update used `apply_backward_*`, whose `i = 0`
+    closure is a one-sided `(u[1]-u[0])/dx`. The Yee divergence needs
+    `u[0]/dx`, the backward difference with the out-of-domain face taken as
+    zero. Only that closure makes the divergence the negative adjoint of the
+    velocity update's forward difference, `D = -G^T`, which is what makes the
+    leapfrog symplectic.
+  - Collocated: the general central difference closes both edges with one-sided
+    formulas, which puts a non-zero entry on the operator's diagonal, so it is
+    not skew-symmetric and `D = G` is not `-G^T`.
+- Evidence, in order: instrumenting the low-face closure inside the divergence
+  turned a lossless standing wave from E/E0 = 8.8e4 after 2000 steps into a
+  bounded oscillation. An independent Python reimplementation of the exact
+  discrete update reproduced the Rust to three digits (9.3e4) and showed the
+  adjointness residual dropping from 5.1e-3 to 1.9e-16 with the closure; the
+  same probe on the collocated scheme showed skew-symmetry residual 1.006 ->
+  5.5e-16 and 1.3e4 -> [0.950, 1.053] energy.
+- Both closures are the same physical statement - the field vanishes outside a
+  rigid wall - and both are now separate, named operators rather than changes to
+  the general-purpose differences, whose one-sided boundary handling is correct
+  for differentiating an arbitrary field and stays tested as such.
+- The collocated coefficients are derived by the same Vandermonde solve as the
+  staggered ones (offsets `n` instead of `n-1/2`), so `coefficients.rs` now has
+  one derivation with two wrappers rather than a second hand-entered table.
+- Verification: adjointness and skew-symmetry asserted directly as identities on
+  arbitrary fields, per axis and per order, rather than inferred from a bounded
+  simulation; plus discrete-energy conservation on both branches over 2000 steps
+  (both hold [0.9, 1.1] where the defect reached 1.3e4-8.8e4). 74/74 FDTD tests.
+- Knock-on: the absorption propagation test (KW-SOL-079) had to run on the
+  spectral branch because the finite-difference ones diverged. It now runs on
+  the staggered branch, the solver's default.
+- Guard added: the adjointness test asserts its own discriminating power. The
+  two closures differ by exactly `p[0]*(u[1]-2u[0])/dx`, so a test field with a
+  vanishing low-face pressure satisfies the identity under both - an earlier
+  draft did exactly that and reported a zero residual for the defective closure.
+
+## KW-FWI-082 - L-BFGS aborted on an inadmissible line-search trial [patch] - done 2026-08-12
+
+- Scope: `inverse/fwi/time_domain/inversion/quasi_newton.rs` and the two FWI
+  tests' time step. No change to the misfit, gradient, or regularization.
+- Symptom: `lbfgs_reduces_misfit_and_recovers_anomaly` and
+  `pwls_is_robust_to_bad_channels_vs_unweighted_l2` failed with "Time step
+  1.000000e-7 exceeds CFL bound 7.172846e-8".
+- **My first diagnosis was wrong.** I filed this as a static setup mismatch -
+  the test sizing dt for the 1500 m/s background while its anomaly model reaches
+  2415 m/s. The anomaly is only +60 m/s (c_max = 1560, bound 1.11e-7), so dt =
+  1e-7 is admissible for the truth. The 2415 m/s model appears *during* the
+  inversion.
+- Root cause: the Armijo line search evaluated each trial with
+  `compute_objective(...)?`. A trial whose fastest cell outruns the time step is
+  rejected by `validate_time_step`, and the `?` propagated that out of the
+  optimizer, aborting the whole inversion. `apply_model_constraints` clamps only
+  to a broad physical range (750-6000 m/s), which is far wider than the range
+  any single dt is CFL-stable for (1732 m/s here), so a large first step lands
+  outside it easily.
+- Fix: a trial the forward solver cannot integrate is a **bad step**, not a
+  failed inversion - mathematically an infinite objective, which can never
+  satisfy Armijo, so the correct response is the halving the loop already does.
+  Only `KwaversError::Validation` is treated this way; a shape mismatch or
+  numerical fault still propagates, so a real defect is not swallowed.
+- Second, separate fix: both tests now derive dt from the model they invert
+  (half the truth model's own CFL bound) rather than hardcoding 1e-7. With only
+  the optimizer fix, the tests ran to completion but PWLS lost to plain L2 on
+  the anomaly-core MAE (18.820 vs 17.591) because both inversions were having
+  steps cut by rejections - the comparison was measuring backtracking, not
+  weighting. Sizing dt to keep trials admissible restores the intended
+  comparison, and PWLS then wins on its own merits rather than by tuning.
+- Result: 29/29 FWI time-domain tests, 873/873 kwavers-solver.
+
+## KW-SOL-080 - Differential test across the absorption paths [patch] - done 2026-08-13
+
+- Scope: one new test module,
+  `crates/kwavers-solver/src/forward/cross_path_absorption_tests.rs`. No
+  production change - the deliverable is the evidence.
+- PSTD's stratified fractional Laplacian and the FDTD relaxation memory
+  variables are independent implementations of the same physical law - a
+  frequency-domain operator applied spectrally versus a time-domain ODE system
+  integrated locally - and each was checked only against its own analytic
+  target, never against the other. This is the independent-oracle tier: two
+  backends running the same algorithm would only be differential evidence.
+- Result: **they agree to 1.3 %**, and each matches the prescribed law to the
+  same. The bound was fixed by bisection rather than guessed - the pair holds at
+  2 % and breaks at 0.5 %, the worst single deviation being FDTD against the law
+  at alpha_0 = 0.5, gamma = 1.1 (11.361 vs 11.213 Np/m). Consistent with what
+  the parts contribute: the relaxation fit's sub-1 % bound at four arms plus the
+  leapfrog's 0.117*(omega*dt)^2. My first draft guessed 25 %.
+- A lossless companion test pins that both paths reduce to no decay together,
+  so a path that absorbed unconditionally could not pass by agreeing with the
+  other.
+- **Capability difference found.** PSTD *cannot represent gamma = 1.0*: the
+  Treeby-Cox dispersion coefficient carries tan(pi*y/2), which diverges there,
+  and the solver rejects the configuration. The relaxation path has no such
+  singularity - gamma = 1 is an ordinary point for a fitted spectrum. Linear
+  frequency dependence, the textbook soft-tissue idealization, is therefore
+  available only through relaxation. Recorded in the test module and in the
+  book's selection rule.
+- Two measurement lessons, both cost a debugging cycle and are worth carrying:
+  (1) compare **total** energy, not pressure alone - a standing wave moves
+  energy between the two forms twice per period, and a pressure-only measure
+  swung by a factor of five even averaged over several periods, burying the
+  decay; (2) convert temporal decay to spatial alpha inside the measurement, or
+  a lossless check ends up comparing s^-1 against Np/m.
+
+## KW-SOL-079 - FDTD heterogeneous power-law absorption [minor] - done 2026-08-12
+
+- Scope: new `crates/kwavers-solver/src/forward/fdtd/absorption/{mod,tests}.rs`;
+  FDTD config, solver struct, construction and pressure updater;
+  `kwavers-medium/src/material_fields.rs` (+ tests); one converter in
+  `kwavers-physics`; PSTD construction (de-duplicated onto the shared sampler);
+  book 4.8.5; FWI forward config literal.
+- The FDTD path had no absorption module at all - `update_pressure_cpu` was the
+  lossless `p -= dt*rho_c_squared*div(v)` in all three branches - while Fullwave
+  2.5 is an FDTD code whose entire attenuation story is relaxation mechanisms.
+- Delivered: `RelaxationAbsorption`, memory variables fitted through
+  `relaxation_fit` from the medium's own alpha_0(x) *and* gamma(x), advanced by
+  the exact exponential integrator so dt is bounded by the wave CFL and never by
+  the smallest tau. Configured by `FdtdAbsorption::{Lossless, PowerLawRelaxation}`
+  - a two-variant enum, since the parameters are meaningless without the model.
+- The three decisions this item recorded, as resolved:
+  1. **Modulus swap.** The absorbing update multiplies the divergence by the
+     unrelaxed M_U, exposed by the component; `rho_c_squared` keeps meaning
+     rho*c^2 rather than being silently redefined. A test asserts M_U is stiffer
+     than rho*c^2 wherever the medium absorbs, and by under 10 % - a larger
+     excess would mean the fit bought absorption with stiffness and wrecked the
+     CFL.
+  2. **CPML ordering.** Both finite-difference branches now converge on one
+     `apply_pressure_from_divergence`, reached *after* the CPML gradient
+     correction and the per-axis accumulation, so the arms integrate exactly the
+     divergence the pressure does.
+  3. **SIMD/GPU coverage.** All CPU branches (k-space, staggered, central) carry
+     the term. The GPU accelerator has no relaxation state, so an absorbing
+     configuration on that path now *errors* rather than silently propagating a
+     lossless medium.
+- Verification: 8 component tests (per-material fit, modulus stiffness bounds,
+  lossless degeneration, memory charge/decay, reset, unit convention, rejection)
+  plus a propagation test measuring alpha by standing-wave decay across
+  gamma = 0.6/1.0/1.4 and comparing against the prescribed law within 15 %.
+- Finding surfaced while testing, **not** caused by this change: the
+  finite-difference branches run without CPML diverge on a bare box - a growing
+  DC boundary mode - and the identical run with `FdtdAbsorption::Lossless`
+  diverges the same way. The propagation test therefore measures on the periodic
+  spectral branch. Filed as KW-SOL-081.
+
+## KW-SOL-081 - FDTD finite-difference branches diverged without CPML [patch] - done 2026-08-12
+
+- Scope: new `kwavers-math/.../staggered_grid/divergence{.rs,/tests.rs}` and
+  `central_first_derivative_coefficients`; new
+  `kwavers-solver/.../fdtd/solver/conservative_diff{.rs,/tests.rs}`; the FDTD
+  staggered divergence, both collocated update branches, and their tests.
+- Root cause: **broken adjointness at the low face**, in both branches.
+  - Staggered: the pressure update used `apply_backward_*`, whose `i = 0`
+    closure is a one-sided `(u[1]-u[0])/dx`. The Yee divergence needs
+    `u[0]/dx`, the backward difference with the out-of-domain face taken as
+    zero. Only that closure makes the divergence the negative adjoint of the
+    velocity update's forward difference, `D = -G^T`, which is what makes the
+    leapfrog symplectic.
+  - Collocated: the general central difference closes both edges with one-sided
+    formulas, which puts a non-zero entry on the operator's diagonal, so it is
+    not skew-symmetric and `D = G` is not `-G^T`.
+- Evidence, in order: instrumenting the low-face closure inside the divergence
+  turned a lossless standing wave from E/E0 = 8.8e4 after 2000 steps into a
+  bounded oscillation. An independent Python reimplementation of the exact
+  discrete update reproduced the Rust to three digits (9.3e4) and showed the
+  adjointness residual dropping from 5.1e-3 to 1.9e-16 with the closure; the
+  same probe on the collocated scheme showed skew-symmetry residual 1.006 ->
+  5.5e-16 and 1.3e4 -> [0.950, 1.053] energy.
+- Both closures are the same physical statement - the field vanishes outside a
+  rigid wall - and both are now separate, named operators rather than changes to
+  the general-purpose differences, whose one-sided boundary handling is correct
+  for differentiating an arbitrary field and stays tested as such.
+- The collocated coefficients are derived by the same Vandermonde solve as the
+  staggered ones (offsets `n` instead of `n-1/2`), so `coefficients.rs` now has
+  one derivation with two wrappers rather than a second hand-entered table.
+- Verification: adjointness and skew-symmetry asserted directly as identities on
+  arbitrary fields, per axis and per order, rather than inferred from a bounded
+  simulation; plus discrete-energy conservation on both branches over 2000 steps
+  (both hold [0.9, 1.1] where the defect reached 1.3e4-8.8e4). 74/74 FDTD tests.
+- Knock-on: the absorption propagation test (KW-SOL-079) had to run on the
+  spectral branch because the finite-difference ones diverged. It now runs on
+  the staggered branch, the solver's default.
+- Guard added: the adjointness test asserts its own discriminating power. The
+  two closures differ by exactly `p[0]*(u[1]-2u[0])/dx`, so a test field with a
+  vanishing low-face pressure satisfies the identity under both - an earlier
+  draft did exactly that and reported a zero residual for the defective closure.
+
+## KW-FWI-082 - L-BFGS aborted on an inadmissible line-search trial [patch] - done 2026-08-12
+
+- Scope: `inverse/fwi/time_domain/inversion/quasi_newton.rs` and the two FWI
+  tests' time step. No change to the misfit, gradient, or regularization.
+- Symptom: `lbfgs_reduces_misfit_and_recovers_anomaly` and
+  `pwls_is_robust_to_bad_channels_vs_unweighted_l2` failed with "Time step
+  1.000000e-7 exceeds CFL bound 7.172846e-8".
+- **My first diagnosis was wrong.** I filed this as a static setup mismatch -
+  the test sizing dt for the 1500 m/s background while its anomaly model reaches
+  2415 m/s. The anomaly is only +60 m/s (c_max = 1560, bound 1.11e-7), so dt =
+  1e-7 is admissible for the truth. The 2415 m/s model appears *during* the
+  inversion.
+- Root cause: the Armijo line search evaluated each trial with
+  `compute_objective(...)?`. A trial whose fastest cell outruns the time step is
+  rejected by `validate_time_step`, and the `?` propagated that out of the
+  optimizer, aborting the whole inversion. `apply_model_constraints` clamps only
+  to a broad physical range (750-6000 m/s), which is far wider than the range
+  any single dt is CFL-stable for (1732 m/s here), so a large first step lands
+  outside it easily.
+- Fix: a trial the forward solver cannot integrate is a **bad step**, not a
+  failed inversion - mathematically an infinite objective, which can never
+  satisfy Armijo, so the correct response is the halving the loop already does.
+  Only `KwaversError::Validation` is treated this way; a shape mismatch or
+  numerical fault still propagates, so a real defect is not swallowed.
+- Second, separate fix: both tests now derive dt from the model they invert
+  (half the truth model's own CFL bound) rather than hardcoding 1e-7. With only
+  the optimizer fix, the tests ran to completion but PWLS lost to plain L2 on
+  the anomaly-core MAE (18.820 vs 17.591) because both inversions were having
+  steps cut by rejections - the comparison was measuring backtracking, not
+  weighting. Sizing dt to keep trials admissible restores the intended
+  comparison, and PWLS then wins on its own merits rather than by tuning.
+- Result: 29/29 FWI time-domain tests, 873/873 kwavers-solver.
+
+## KW-SOL-080 — Differential test across the two heterogeneous-absorption paths [patch] — todo
+
+- PSTD's stratified fractional Laplacian and the viscoacoustic solver's
+  relaxation memory variables are two *independent* implementations of the same
+  physics: heterogeneous alpha_0(x)*f^gamma(x). Neither is currently checked
+  against the other, so a systematic error in either would go unnoticed - each
+  is verified only against its own analytic target.
+- Build: one heterogeneous medium (two tissues with different exponents), the
+  same broadband excitation and sensor geometry, run through both solvers, and
+  compare the recovered alpha(f) by the reference-normalized spectral ratio the
+  `heterogeneous_power_law_attenuation` example already implements.
+- Tolerance is derived, not chosen: the fit's own analytic error (0.16 % at
+  three optimized arms) plus each scheme's time-discretization error
+  (0.117*(omega_max*dt)^2 for the viscoacoustic leapfrog, per KW-SOL-077;
+  PSTD's own bound for its path). Agreement inside that budget is the pass
+  condition; a systematic offset larger than it is a real finding in one of the
+  two.
+- This is the independent-oracle tier of the evidence ladder. Two backends
+  running the same algorithm would be differential evidence only; these two run
+  genuinely different mathematics for the same physical law, which is stronger.
+
+## KW-GPU-078 — Partition a wave grid across GPUs [major] [arch] — todo
+
+- Confirmed gap against Fullwave 2.5, whose multi-GPU depth decomposition with
+  demonstrated linear scaling is one of its two headline claims.
+- What kwavers has: `kwavers-gpu/src/gpu/multi_gpu/` provides `MultiGpuContext`
+  - device enumeration, P2P capability queries, a transfer queue, and workload
+  affinity. That is the plumbing, and it is generic over the device provider.
+- What kwavers does not have: any solver that splits a propagation grid across
+  devices. Verified 2026-08-12 by reading the tree, not inferred:
+  - `forward/hybrid/domain_decomposition/` is **method** selection (which
+    regions run PSTD vs FDTD), not spatial partitioning across devices. The
+    name collision is why this looked covered in an earlier survey.
+  - The halo/ghost-exchange code that exists is in FWI, RTM, and
+    fluid-structure coupling - none of it is a multi-device grid split.
+- Design decisions to settle before starting:
+  1. **Split axis.** Fullwave 2.5 splits along depth and orders its coordinates
+     `(x, y, z) = (depth, lateral, elevational)` specifically so the split axis
+     is outermost and each subdomain is contiguous. kwavers' Leto arrays are
+     C-order, so the equivalent is splitting the *first* axis; confirm that
+     matches the grid convention before committing to it.
+  2. **Which solver.** The pseudospectral viscoacoustic path takes FFTs along
+     the split axis, which needs either a distributed transform or a transpose
+     per step - the reason FD codes are the ones that scale this way. The FDTD
+     path is the natural first target, and its halo is `half_order` cells wide,
+     which ties this to KW-SOL-074.
+  3. **Exchange mechanism.** P2P where `MultiGpuContext::supports_p2p` reports
+     it, staged through host memory otherwise; the fallback must be surfaced,
+     not silent.
+- Acceptance: a heterogeneous run split across N devices reproduces the
+  single-device result to round-off; halo width derived from the stencil order
+  rather than hard-coded; measured scaling reported with the device count and
+  problem size, not asserted.
+
+## KW-SOL-077 — Correct the viscoacoustic time-step rule [patch] — done 2026-08-12
+
+- Scope: `discrete_dispersion_matches_continuum` in
+  `crates/kwavers-solver/src/forward/viscoacoustic/tests.rs`, book 4.8.4,
+  CHANGELOG. No production change.
+- Correction of my own KW-SOL-072 deliverable. That test asserted the scheme's
+  accuracy is governed by `d = dt/tau_min` (how well the step resolves the
+  fastest relaxation), with a "20 steps per tau_min" rule. The reasoning was
+  plausible - the trapezoidal relaxation term is the only second-order piece
+  besides the leapfrog, since the sigma integration is exact and the spatial
+  operator spectral - but it was never tested against a tau sweep, and it is
+  wrong.
+- Evidence: scaling every tau up 100x, a 100x reduction in d, moves the error
+  from 2.6002 % to 2.7630 % - under 7 % relative, and in the *wrong direction*.
+  Separately, replacing the trapezoid with the closed-form exact integral of
+  sigma/tau across the step (derived and measured before implementing) changes
+  nothing: 2.60 % -> 2.78 %. The leapfrog's sinc^2 factor is the whole error.
+- Corrected rule: error ~= C*(omega_max*dt)^2 with C = 0.117 measured, i.e.
+  governed by how well dt resolves the *wave*. In points per period at the
+  highest frequency of interest: 25 gives under 1 %, 80 under 0.1 %. The test
+  now asserts the quadratic model itself (coefficient stable to 5 % across a
+  decade of dt) plus the tau-independence, rather than step counts read off it.
+- Why this mattered: the old rule tied dt to the fit band through
+  tau_min ~ 1/(2*pi*f_max*sqrt(10)), so it would have driven callers to take
+  steps several times smaller than necessary on any wideband fit.
+
+## KW-MED-076 — Verify the shared relaxation grid under air/tissue contrast [patch] — done 2026-08-12
+
+- Scope: one test in `crates/kwavers-medium/src/absorption/relaxation_fit/tests.rs`.
+  No production change was needed - this is a verification increment whose
+  deliverable is the evidence.
+- Driver: Fullwave 2.5 exercises air inclusions in four separate examples
+  (simple_plane_wave_air, linear_transducer_abdominal_wall_with_air,
+  full_synthetic_aperture_air_targets, simple_plane_wave_3d_with_air), which is
+  the hardest case for a *shared* relaxation grid: air and tissue differ by
+  3600:1 in impedance, 4.5x in sound speed, two orders in absorption, and carry
+  different exponents, while the solver can hold only one set of relaxation
+  times for the whole domain.
+- Result: the ensemble minimax search handles it. Worst voxel error on three
+  shared arms is 0.57 % (0.01 % on six); air's equilibrium modulus lands on
+  rho*c^2 = 1.41e5 Pa and its phase velocity at f_ref on 343 m/s to 1e-9; both
+  phases follow their own law to under 1 %.
+- The test also pins a property nothing else covered: the *unrelaxed* speed must
+  stay within 10 % of the prescribed speed in every voxel. It sets the solver's
+  CFL, so a spectrum that reproduced alpha by inflating the instantaneous
+  modulus would be numerically correct and silently force a far smaller time
+  step on the entire simulation.
+
+## KW-MED-075 — Optimize relaxation times jointly with strengths [minor] — done 2026-08-12
+
+- Owner: Claude; scope `crates/kwavers-medium/src/absorption/relaxation_fit{.rs,/tests.rs}`,
+  the absorption re-exports, `crates/kwavers/examples/heterogeneous_power_law_attenuation.rs`,
+  book 4.8.5, CHANGELOG. No solver signature change.
+- Driver: Fullwave 2.5 ships `relaxation_params_database_num_relax=2`, i.e. it
+  reaches its accuracy on **two** relaxation mechanisms. kwavers placed tau on a
+  fixed log grid and fitted strengths only, which needs six arms; at two arms it
+  missed by 30 %. Arm count is the binding constraint on a 3-D heterogeneous run
+  because the solver carries one memory field per arm per voxel.
+- Outcome: `RelaxationTimePlacement::{LogSpaced, Optimized}`. Optimized runs a
+  deterministic Nelder-Mead simplex on ln(tau) whose every trial recovers the
+  strengths exactly by NNLS (variable projection, Golub & Pereyra 1973), seeded
+  by the log grid so it can never be worse. Measured worst case over
+  gamma = 0.4..1.6: 2 arms 29.9 % -> 2.0 %; 3 arms 2.6 % -> 0.16 %; 6 arms
+  0.09 % -> 0.004 %. Three optimized arms beat six log-spaced ones, halving the
+  solver's auxiliary storage; the example now runs at 3 arms with no measurable
+  loss (worst case 3.0 % -> 3.4 %, and that residual is measurement-limited).
+- Defect found and fixed during the change: the first cut optimized tau **per
+  voxel**, silently breaking the shared-grid invariant the solver's field layout
+  depends on (per-voxel weights were being paired with the band's log-spaced
+  times). `heterogeneous_exponent_field_is_fitted_per_voxel` caught it. The field
+  fit now runs one *minimax* search over every distinct voxel and solves each
+  voxel's strengths on that shared grid; `fit_at_taus` is the single point at
+  which a spectrum is constructed, so the per-voxel and whole-field paths cannot
+  drift again.
+- Performance: the search costs one Nelder-Mead run per medium (not per voxel).
+  Search-time refinement passes are cut from 6 to 3 (the fixed point is stable to
+  six digits by the third) and the simplex converges at 1e-4 relative rather than
+  1e-9; the fit test suite runs in 3.6 s against 15.9 s for the naive settings.
+- Acceptance (met): 17 tests including two-arm envelope coverage, optimized never
+  worse than log-spaced at any arm count, bit-identical determinism across runs,
+  one shared grid across a heterogeneous field with the sharing cost measured
+  rather than assumed, and a lossless voxel alongside lossy ones taking no arms.
+
+## KW-MATH-073 — Derived staggered stencil coefficients to arbitrary even order [minor] — done 2026-08-12
+
+- Owner: Claude; scope
+  `crates/kwavers-math/src/numerics/operators/differential/staggered_grid/coefficients{.rs,/tests.rs}`
+  plus the three module re-export lines. No solver, manifest, or gitlink change.
+- Driver: Fullwave 2.5 runs an 8th-order-in-space staggered scheme; kwavers'
+  staggered operator is 2nd order only, and its collocated central differences
+  are three cloned types (CentralDifference2/4/6) with hand-entered constants.
+- Outcome: `staggered_first_derivative_coefficients(half_order)` derives the
+  half-grid stencil weights by solving the Taylor system
+  `sum_n c_n a_n^{2m+1} = delta_{m0}/2`, `a_n = n - 1/2`, rather than tabulating
+  them, so a new order is a parameter and not a new constant table to mis-enter.
+- Acceptance (met): matches the published Fornberg/Levander rationals for
+  orders 2, 4, 6, 8 to 1e-13; delivers its claimed order of accuracy under grid
+  refinement; exact on constant and linear fields at every order; alternating,
+  decaying taps; accuracy monotone in order. 7 tests, doctest, clippy clean.
+- Honest limit: the derivation is verified to half-order 8 (16th order) and
+  capped there; by that order the high Taylor moments cancel terms of order
+  1e12 and the residual is ~1e-11 relative, not exact. Documented at the cap.
+
+## KW-MATH-083 - High-order staggered gradient/divergence pair [minor] - done 2026-08-13
+
+- Scope: new
+  `kwavers-math/src/numerics/operators/differential/staggered_leapfrog{.rs,/tests.rs}`
+  plus three re-export lines. No solver change.
+- `StaggeredLeapfrogOperator` supplies the gradient/divergence pair a Yee
+  leapfrog needs at **any even order** (2, 4, 6, 8), which is the spatial scheme
+  Fullwave 2.5 runs. Coefficients come from the derivation in KW-MATH-073, so an
+  order is a parameter rather than a hand-entered table.
+- The pair, with the one-index shift that is the half-cell stagger:
+  `G: u[i] = (1/dx) sum_n c_n (p[i+n] - p[i-n+1])`,
+  `D: d[j] = (1/dx) sum_n c_n (u[j+n-1] - u[j-n])`, taps outside the grid zero.
+- Adjointness `D = -G^T` is **exact at every order and grid size**, not
+  asymptotic: re-indexing the two sums maps one onto the other, and
+  zero-extension is precisely what makes the re-indexing valid. Proven in the
+  module docs and asserted as an identity per order and per axis.
+- Verified: adjointness at 2/4/6/8 on all three axes; measured convergence at
+  each claimed rate under refinement; exact reduction to the plain half-grid
+  difference at order 2; constant-field consistency; a guard that the
+  adjointness operands are non-degenerate at both faces, since a vanishing face
+  value hid a defective closure once before (KW-SOL-081).
+- `halo_width()` is exposed because it is the halo a domain decomposition must
+  exchange - the coupling to KW-GPU-078.
+
+## KW-SOL-074 - Eighth-order staggered FDTD [minor] - done 2026-08-13
+
+- Scope: FDTD solver struct, construction, both staggered updates, the CFL
+  accessor, config validation, and the tests those change; plus the CFL limit on
+  `StaggeredLeapfrogOperator`. One path for every order, as directed.
+- The staggered path now runs orders **2, 4, 6, 8** through
+  `StaggeredLeapfrogOperator` - eighth being the scheme Fullwave 2.5 uses. The
+  half-shape gradient scratch and the forced far-face zeroing are gone: the
+  operator is full-shape and closes both faces by zero-extension, which *is* the
+  wall and is what makes it the exact adjoint of the divergence.
+- **The CFL table was the wrong one, and now there are two.** The staggered
+  limit is `1/(sqrt(D)*sum|c_n|)`, derived on the operator from its own
+  coefficients. It coincides with the collocated table only at order 2; at order
+  4 it is 0.495 against the tabulated 0.258. The old tests asserted the
+  collocated value against a *staggered* solver and passed, so the solver was
+  taking half the step it could. Both tables are now covered by tests, on the
+  paths they actually describe. The collocated path keeps 2/4/6 because its
+  table stops there, and order 8 is rejected on it rather than silently sized
+  from a number that does not exist.
+- BC change accepted per direction: order 2 moves from a rigid far face to
+  zero-extension. Both are conservative; the tests that pinned the old wall were
+  updated rather than the path forked.
+- Verified: energy conservation at every order over 1000 steps (all within
+  [0.9, 1.1]); the derived CFL limits asserted per order against their closed
+  form; collocated eighth order rejected at validation.
+- **Evidence cost, stated plainly.** The cross-path comparison (KW-SOL-080)
+  loosened from 1.3 % to 9.1 %. Not a regression in either path: FDTD now closes
+  its domain by zero-extension while PSTD stays periodic, so one initial
+  condition is a different mode in each and the per-solver frequency
+  normalization only partly compensates. Filed as KW-SOL-084.
+
+## KW-SOL-085 - Rigid walls by even reflection [arch] - done 2026-08-13
+
+- ADR: [106](docs/adr/106-rigid-walls-by-even-reflection.md).
+- Zero-extension was a *pressure-release* wall, so a transversely uniform field
+  had a large gradient at it and an `N x 4 x 4` slab was a soft waveguide rather
+  than a 1-D line. A purely axial packet put more energy into transverse
+  velocity than axial within 150 steps and never coherently arrived.
+- Fixed by reflecting taps at the wall (`p[-1] = p[0]`) and **defining** the
+  divergence as `-G^T` rather than writing it as its own stencil. A uniform
+  field now has exactly zero gradient at every order down to a singleton extent,
+  the wall is rigid, and `D = -G^T` holds identically instead of resting on a
+  closure argument - strictly stronger than what zero-extension gave.
+- Verified: three new operator properties (uniform-field inertness across orders
+  2-8 and extents 1-17; the negative-adjoint identity on non-degenerate fields
+  dense at the boundary; the far face rigid without being forced), plus
+  **2832 tests green across math, solver, physics and medium with no solver test
+  needing a change** - the swap is transparent to everything already verified,
+  energy conservation included.
+- Two tests pinned the old wall and were updated: the far-face gradient read
+  `-p[nx-1]/dx` and now reads zero, and the standing-wave energy test's exact
+  mode is a Neumann cosine rather than a Dirichlet sine.
+- The rustdoc gate was already failing before this change on three broken
+  intra-doc links into the private `staggered_grid` module; fixed in passing.
+- Not covered: the collocated path, for a structural reason recorded in the ADR
+  and filed as KW-SOL-086.
+
+## KW-SOL-088 - FDTD convergence test measured against a half-cell-offset reference [patch] - done 2026-08-13
+
+- The reference was built at `x = i*dx`, but the staggered path stores pressure
+  at cell **centres** `(i+0.5)*dx`, with walls at `0` and `L = nx*dx`. Against
+  the old pressure-release wall the mismatch did not dominate; against the rigid
+  wall (ADR 106) it did, and the observed order fell to 1.
+- Correcting the position drops the coarse-grid error from `1.05e-1` to
+  `1.97e-5` - four orders of magnitude, so the offset *was* the error.
+- **My predicted explanation was falsified and the assertion follows the data.**
+  I expected the ratio to drift toward 4 as the grid refined, with the coarse
+  point polluted by a higher-order term. Measured across nx = 30/60/120: orders
+  2.97 and 2.99 - a stable third-order regime, not a drift. The cause holds up
+  though: at `t = T/2` the mode sits at an extremum, where a phase error enters
+  as `cos(phi) ~ 1 - phi^2/2`, suppressing the leading `O(dx^2)` term.
+- The old `[2.0, 6.0]` ratio band encoded "faster than third order is
+  implausible", true away from an extremum but not here. Replaced by an observed
+  *order* in `[2.7, 3.3]` on both refinement levels, with the derivation at the
+  assertion. Tighter than what it replaced, not looser.
+- Also fixed alongside: `prop_invalid_spatial_order_rejected` still treated
+  order 8 as invalid, which KW-SOL-074 changed - the staggered default accepts
+  it now, the collocated path still rejects it.
+
+## KW-PM-090 - backlog.md carries a duplicated block of entries [patch] - todo
+
+- KW-SOL-079, KW-SOL-080, KW-SOL-081 and KW-FWI-082 each appear **twice**: once
+  with this branch's current statuses and once with an older wording carried from
+  `main` (the second copy still has KW-SOL-080 as todo). Roughly 135 lines.
+- Not introduced this session - present at every commit checked back to
+  `59bfdff2b`, so it came from an earlier merge on this branch. I initially
+  blamed my own merge and was wrong; the revision walk is what settled it.
+- The second copy is the stale one and should go, but the file is ~10k lines and
+  the duplicated span needs checking entry by entry for anything the older copy
+  records that the newer one dropped - it is not a blind delete.
+- Real cost: two sources of truth for the same item's status, which is exactly
+  what a board must not have. Low urgency, easy to get wrong in a hurry.
+
+## KW-SOL-089 - Staggered operators were address-bound, not scatter-bound [patch] - done 2026-08-13
+
+- `test_plane_wave_boundary_injection_timing` (64^3 full-grid FDTD, staggered)
+  timed out at 60.8 s under parallel load against the committed 60 s bound.
+  **Now 33.07 s**, and 1709/1709 pass under full parallel load with no timeouts.
+- **The hypothesis in ADR 106 was wrong, and profiling is what showed it.** That
+  ADR predicted the scattering divergence would be the cost if one ever appeared,
+  and this item was filed proposing the interior-gather rewrite it suggested.
+  Measured on 64^3 order 2: gradient 7.0 ms, divergence 7.9 ms - a ratio of 1.12.
+  The scatter was never the problem. Both kernels were slow for the same reason,
+  and rewriting the divergence would have bought roughly nothing while risking a
+  subtle transpose error in a conservation-critical operator.
+- The actual cost was **address arithmetic**: a three-index `[usize; 3]` lookup
+  recomputed per *tap*, ~26 ns per point for what is three memory operations.
+  Replaced by linear indexing - strides resolved once per axis, taps reached as
+  `linear +- n*stride` on the contiguous interior - with the three-index form
+  kept as a fallback for non-contiguous views.
+- Measured after: gradient 7.0 -> 1.9 ms, divergence 7.9 -> 1.9 ms (3.7x and
+  4.2x). The earlier hoist of `reflect()` out of the tap loop had taken the test
+  62.29 -> 57.96 s; this took it to 33.07 s.
+- Verified by the operator's own oracles rather than by the timing alone:
+  `Q + Q^T = B`, uniform-field inertness, polynomial exactness, per-order
+  convergence rates, the derived CFL limits, and energy conservation - 204/204 in
+  kwavers-math, then 1709/1709 across kwavers, kwavers-math and kwavers-solver.
+- The budget was not touched, and the workload was not shrunk.
+
+## KW-CI-087 - The committed lockfile did not resolve without the stack overlay [patch] - done 2026-08-13
+
+- Blocked merging PR #361, and with it KW-SOL-085 and KW-SOL-086.
+- **Root cause, and it is not the workflow.** The *committed* `Cargo.lock`
+  pinned first-party revisions whose versions no longer satisfied the manifests'
+  requirements, so cargo had to re-resolve and `--locked` refused. Reproduced
+  locally by running `cargo metadata --locked` from a directory outside the
+  stack root - cargo discovers `.cargo/config.toml` from the working directory,
+  never from `--manifest-path`, so that is what excludes the overlay and
+  reproduces what CI sees.
+- **My filed fix direction was wrong** and is retracted: it suggested relaxing
+  the step to `--offline`. That would have masked exactly the staleness the gate
+  exists to catch. `--locked` was doing its job; the lock was the defect.
+- Fixed by regenerating the lock outside the overlay. The result advances the
+  first-party pins to their current heads - two version moves, hermes `0.1.4 ->
+  0.1.5` and tyche `0.1.0 -> 0.2.0`, both forward, no backward move.
+- Verified: `cargo metadata --locked` resolves outside the overlay (the failing
+  check itself), and `cargo check --locked --all-targets` for `kwavers`
+  *compiles against the newly pinned revisions*. That second one matters - local
+  builds resolve first-party crates through the overlay to working trees, so a
+  green local suite does not exercise the pins CI uses, and this is the only
+  step here that did.
+- **The adjacent trap, now mechanized.** A lock written with the overlay active
+  has every one of its 87 first-party `source = "git+..."` lines *stripped*,
+  because those deps resolved to local paths. It is not limited to deliberate
+  regeneration - any cargo command that updates the lock under the overlay does
+  it, so an ordinary `cargo check` is enough. Observed exactly that way while
+  fixing this item: routine builds flattened the working-tree lock and the new
+  `--check` caught it before it could be staged. Such a lock was sitting
+  uncommitted in the working tree, one `git add` from breaking CI far worse than
+  staleness did. `scripts/lockfile.py` regenerates correctly (`--regenerate`,
+  from a temp directory outside the overlay) and checks (`--check`, offline
+  structural check plus the `--locked` resolution), and both benchmark jobs now
+  run the check ahead of the baseline alignment so the failure names its cause
+  instead of emitting cargo's message, which is identical for a flattened lock
+  and a stale one.
+- Recurrence: this will go stale again whenever first-party crates advance past
+  the pins. That is the pin-drift the integration sweep exists for; the gate
+  correctly blocks the merge and the script makes the fix one command.
+
+## KW-SOL-086 - Summation by parts for the collocated rigid wall [minor] - done 2026-08-13
+
+- ADR: [107](docs/adr/107-collocated-summation-by-parts.md).
+- The collocated path carried the same pressure-release wall KW-SOL-085 removed
+  from the staggered one, and the reflection fix provably could not transfer:
+  reflection puts a non-zero entry on the diagonal and a skew-symmetric matrix
+  has none, so reflection and conservation are in direct conflict there.
+- Resolved by moving conservation into a weighted norm. `SummationByPartsOperator`
+  supplies `D = H^-1 Q` with `Q + Q^T = B`, and the wall-normal velocity is held
+  at zero on every outer face, which is what makes the boundary term vanish.
+  Both halves are required: the operator alone does not conserve.
+- **Derived, not transcribed.** The boundary blocks are solved from the accuracy
+  and symmetry conditions at construction, matching how every other stencil here
+  is obtained. Construction fails if the derived block does not satisfy the
+  conditions it was solved from, so a bad solve cannot ship as an operator. The
+  conditions are over-determined but consistent, so the solve is least squares
+  and the *residual* is the acceptance test - `dense_solve` carries a test
+  asserting that an inconsistent system does not look solved.
+- Verified: `Q + Q^T = B` on the assembled matrix at orders 2/4/6; exactness on
+  the polynomials each row claims; positive norm summing to the interval count;
+  order 2 against its textbook closed form; weighted energy conserved by an
+  actual leapfrog integration. At solver level, the collocated path conserves
+  over 1200 steps and a thin axis stays inert to `1e-12` transverse/axial -
+  the defect itself, tested where it bit.
+- Consolidation: the old `ConservativeCentralDifference` is deleted outright, not
+  re-exported. `solve_in_place` moved to a shared `dense_solve` on its second
+  user rather than being copied, and two functions the KW-SOL-085 change had
+  orphaned in `velocity_updater` are gone.
+- Cost, stated: diagonal-norm SBP caps boundary accuracy at half the interior
+  order, so global order is `m + 1`. Interior accuracy is unchanged. **Callers
+  measuring energy must weight by `norm_weight`** - an unweighted sum is not the
+  conserved quantity and will show drift.
+
+## KW-SOL-084 - Make the cross-path comparison boundary-independent [patch] - done 2026-08-13
+
+- Unblocked by KW-SOL-085 and landed tighter than the measurement it replaced:
+  **3 % against the prescribed law, 4 % between the two paths**, against 9.1 %.
+- Travelling-pulse measurement: one-way launch pairing `p0` with `u = p/(rho c)`
+  through each solver's own `apply_initial_conditions` - assigning `fields.ux`
+  directly does not work, because velocity is face-centred and half-time-
+  staggered, so a cell-centred whole-step assignment is a different field.
+  Reference-normalized two-sensor spectral ratio, gate closing clear of the
+  earliest contaminant.
+- Measured against the prescribed law across the band:
+
+  | | 1.00 | 1.25 | 1.50 | 1.75 | 2.00 MHz |
+  |---|---|---|---|---|---|
+  | fdtd, g=1.1 | +0.6 | +0.7 | +0.8 | +0.9 | +0.9 % |
+  | pstd, g=1.1 | -2.0 | -2.0 | -2.1 | -2.2 | -2.3 % |
+  | fdtd, g=1.4 | +1.7 | +1.9 | +2.0 | +2.1 | +2.2 % |
+  | pstd, g=1.4 | -0.9 | -1.0 | -1.1 | -1.2 | -1.3 % |
+
+  Near-constant in percent across the band, so the frequency *exponent* is right
+  in both paths and what remains is a small multiplicative offset of opposite
+  sign. Bounds bisected onto these numbers.
+- **The analysis band was the other defect.** A Gaussian envelope two
+  wavelengths wide has a spectral 1/e half-width of only +-8 %, so 0.8 MHz sat
+  roughly `1e-15` down the tail and the spectral ratio there measured leakage -
+  returning *negative* attenuation for both solvers. The envelope is now 0.6
+  wavelengths, giving +-27 % and real signal across 1.0-2.0 MHz.
+- Runtime: **57 s -> 2.1 s**, assertions unchanged. Rigid walls make thin slabs
+  inert, so the transverse extent drops from 4 cells to 1, and the lossless
+  reference does not depend on `alpha0` or the exponent so one per solver serves
+  every case. That the 1-cell grid reproduces the 4-cell answer is itself
+  evidence the slab is inert.
+
+## KW-MATH-073 — Derived staggered stencil coefficients to arbitrary even order [minor] — done 2026-08-12
+
+- Owner: Claude; scope
+  `crates/kwavers-math/src/numerics/operators/differential/staggered_grid/coefficients{.rs,/tests.rs}`
+  plus the three module re-export lines. No solver, manifest, or gitlink change.
+- Driver: Fullwave 2.5 runs an 8th-order-in-space staggered scheme; kwavers'
+  staggered operator is 2nd order only, and its collocated central differences
+  are three cloned types (CentralDifference2/4/6) with hand-entered constants.
+- Outcome: `staggered_first_derivative_coefficients(half_order)` derives the
+  half-grid stencil weights by solving the Taylor system
+  `sum_n c_n a_n^{2m+1} = delta_{m0}/2`, `a_n = n - 1/2`, rather than tabulating
+  them, so a new order is a parameter and not a new constant table to mis-enter.
+- Acceptance (met): matches the published Fornberg/Levander rationals for
+  orders 2, 4, 6, 8 to 1e-13; delivers its claimed order of accuracy under grid
+  refinement; exact on constant and linear fields at every order; alternating,
+  decaying taps; accuracy monotone in order. 7 tests, doctest, clippy clean.
+- Honest limit: the derivation is verified to half-order 8 (16th order) and
+  capped there; by that order the high Taylor moments cancel terms of order
+  1e12 and the residual is ~1e-11 relative, not exact. Documented at the cap.
+
+## KW-MATH-083 - High-order staggered gradient/divergence pair [minor] - done 2026-08-13
+
+- Scope: new
+  `kwavers-math/src/numerics/operators/differential/staggered_leapfrog{.rs,/tests.rs}`
+  plus three re-export lines. No solver change.
+- `StaggeredLeapfrogOperator` supplies the gradient/divergence pair a Yee
+  leapfrog needs at **any even order** (2, 4, 6, 8), which is the spatial scheme
+  Fullwave 2.5 runs. Coefficients come from the derivation in KW-MATH-073, so an
+  order is a parameter rather than a hand-entered table.
+- The pair, with the one-index shift that is the half-cell stagger:
+  `G: u[i] = (1/dx) sum_n c_n (p[i+n] - p[i-n+1])`,
+  `D: d[j] = (1/dx) sum_n c_n (u[j+n-1] - u[j-n])`, taps outside the grid zero.
+- Adjointness `D = -G^T` is **exact at every order and grid size**, not
+  asymptotic: re-indexing the two sums maps one onto the other, and
+  zero-extension is precisely what makes the re-indexing valid. Proven in the
+  module docs and asserted as an identity per order and per axis.
+- Verified: adjointness at 2/4/6/8 on all three axes; measured convergence at
+  each claimed rate under refinement; exact reduction to the plain half-grid
+  difference at order 2; constant-field consistency; a guard that the
+  adjointness operands are non-degenerate at both faces, since a vanishing face
+  value hid a defective closure once before (KW-SOL-081).
+- `halo_width()` is exposed because it is the halo a domain decomposition must
+  exchange - the coupling to KW-GPU-078.
+
+## KW-SOL-074 - Wire the high-order staggered pair into the FDTD solver [minor] - todo
+
+- KW-MATH-083 delivered and verified the operator. What remains is the solver
+  wiring, and one finding from building the operator changes its shape.
+- **The existing CFL table is collocated, not staggered.**
+  `AcousticSpatialOrder::cfl_limit` gives 1/sqrt(3), 1/sqrt(15), 1/sqrt(27) for
+  orders 2/4/6. Those are the *central-difference* limits. A staggered scheme of
+  order 2N has limit `dx/(c*sqrt(D)*sum|c_n|)`: at order 2 that is 1/sqrt(3),
+  which is why the collision went unnoticed, but at order 4 it is
+  `1/(sqrt(3)*1.1667) = 0.495`, nearly double the 0.258 the table reports. The
+  table is therefore both wrong for the staggered path and needed for the new
+  one. Deriving a staggered table (and separating the two) is part of this item,
+  not an afterthought - a too-small step is merely slow, but exporting the
+  collocated number for a staggered run at order 8 would be a silent accuracy
+  and cost error.
+- Remaining work: extend `AcousticSpatialOrder` and `FdtdConfig::validate` to 8;
+  add the staggered CFL table beside the collocated one; replace the staggered
+  velocity update's `(nx-1)`-shaped scratch and forced far-face zeroing with the
+  new full-shape pair.
+- Decision to settle: the new pair closes both faces by zero-extension, whereas
+  today's order-2 path forces the far velocity face to zero. Both are
+  conservative but they are different walls, so order 2 changes behaviour when
+  it moves onto the shared path. Either accept that (and update the tests that
+  pin the current wall) or keep order 2 on its existing path, which forks the
+  code. Prefer the former: one path, one BC, and the fork is what produced the
+  KW-SOL-081 class of defect in the first place.
+- Acceptance: measured order of accuracy on a propagating wave at 2/4/6/8;
+  lossless energy conservation retained at every order; the CFL table asserted
+  against the derived staggered limits rather than reused from the collocated
+  one.
+
+## KW-MATH-073 — Derived staggered stencil coefficients to arbitrary even order [minor] — done 2026-08-12
+
+- Owner: Claude; scope
+  `crates/kwavers-math/src/numerics/operators/differential/staggered_grid/coefficients{.rs,/tests.rs}`
+  plus the three module re-export lines. No solver, manifest, or gitlink change.
+- Driver: Fullwave 2.5 runs an 8th-order-in-space staggered scheme; kwavers'
+  staggered operator is 2nd order only, and its collocated central differences
+  are three cloned types (CentralDifference2/4/6) with hand-entered constants.
+- Outcome: `staggered_first_derivative_coefficients(half_order)` derives the
+  half-grid stencil weights by solving the Taylor system
+  `sum_n c_n a_n^{2m+1} = delta_{m0}/2`, `a_n = n - 1/2`, rather than tabulating
+  them, so a new order is a parameter and not a new constant table to mis-enter.
+- Acceptance (met): matches the published Fornberg/Levander rationals for
+  orders 2, 4, 6, 8 to 1e-13; delivers its claimed order of accuracy under grid
+  refinement; exact on constant and linear fields at every order; alternating,
+  decaying taps; accuracy monotone in order. 7 tests, doctest, clippy clean.
+- Honest limit: the derivation is verified to half-order 8 (16th order) and
+  capped there; by that order the high Taylor moments cancel terms of order
+  1e12 and the residual is ~1e-11 relative, not exact. Documented at the cap.
+
+## KW-SOL-074 — Eighth-order staggered FDTD operator and solver wiring [minor] — todo
+
+- Scope: `kwavers-math` staggered_grid `{operator,forward,backward}.rs`,
+  `AcousticSpatialOrder` in kwavers-physics, the FDTD `CentralDifferenceOperator`
+  dispatch and config validation, and the two `StaggeredGridOperator::new` call
+  sites in `kwavers-solver/src/forward/fdtd/solver/`.
+- KW-MATH-073 delivered the mathematical core (derived coefficients to 8th
+  order). What remains is the array plumbing, and it carries two real design
+  decisions that must be settled first, not discovered mid-change:
+  1. **Output shape contract.** The current 2nd-order `apply_forward_x_into`
+     writes `(nx-1, ny, nz)`. A `2N`-order stencil consumes `N` taps each side,
+     so either the valid region shrinks to `(nx-2N+1, ...)` -- a breaking shape
+     change for every caller -- or the operator carries boundary closures.
+  2. **Boundary closures.** Reduced-order one-sided stencils near the faces are
+     the standard answer and interact with the CPML layer, which already occupies
+     the boundary region. Decide whether the interior order tapers into the PML.
+- Sequencing note: the FDTD SIMD stencil files are peer-claimed under KW-SOL-054
+  (AVX-512 layout contract). Sequence behind it or coordinate scope on the board;
+  do not edit `forward/fdtd/simd_stencil/` or `avx512_stencil/` concurrently.
+- Acceptance: order-of-accuracy convergence measured on a propagating wave at
+  orders 2/4/6/8; the existing 2nd-order behaviour bit-unchanged; CFL limits for
+  order 8 derived and asserted (the `AcousticSpatialOrder::cfl_limit` table needs
+  its 8th-order entry derived, not guessed).
+
+## KW-SOL-072 — Simulated absorption ran 8-19 % below the prescribed law [patch] — done 2026-08-12
+
+- Scope: `crates/kwavers-solver/src/forward/viscoacoustic/tests.rs` and
+  `crates/kwavers/examples/heterogeneous_power_law_attenuation.rs`. No solver
+  behaviour changed - the scheme was not at fault.
+- Root cause: the **measurement**, not the physics. The example's analysis gate
+  applied a Hann taper. The far-sensor pulse is dispersively broadened relative
+  to the near-sensor pulse, so the taper weighted the two differently; the bias
+  was multiplicative in alpha and independent of sensor separation, which is
+  what made it look like a physical attenuation deficit. The pulse decays to
+  zero inside the gate, so a rectangular gate truncates nothing. Second defect
+  found alongside: the gate centre omitted the source's emission delay
+  (3*PULSE_WIDTH_S).
+- Elimination trail, in order: the fit (analytic alpha within 1 %); time
+  discretization (4x smaller dt moved the residual <0.1 %); boundary damping (a
+  lossless reference run divides it out; singleton y/z axes correctly take no
+  layer); path length (halving the sensor separation left the relative error
+  unchanged - proving the bias multiplicative, which excluded every additive
+  contaminant); the scheme itself (von Neumann analysis of the actual update,
+  below).
+- Deliverable beyond the fix: `discrete_dispersion_matches_continuum` derives
+  the scheme's exact discrete dispersion relation,
+  `rho*(4/dt^2)sin^2(w*dt/2) = k^2 * M_eff(z)` with
+  `M_eff(z) = M_U - sum (dM/2)(1-e^-d)(1+z)/(z-e^-d)`, `z = e^{-i w dt}`, and
+  pins it against the continuum relation. It establishes the governing rule:
+  accuracy is set by how well dt resolves the *fastest relaxation*
+  (`d = dt/tau_min`), not the wave - 20 steps per tau_min holds the scheme's
+  error under 0.5 %, while the coarser step the sibling standing-wave tests use
+  (`d = 0.19`) costs 2.6 %, the dominant term in their 5 % tolerance.
+- Result: homogeneous sweep worst error 3.0 % (0.35 % across the band interior,
+  the residual sitting at the two band edges where the excitation is weakest);
+  heterogeneous fat/muscle stack 0.9 %. The standing-wave regression
+  `power_law_medium_reproduces_target_absorption` tightened from 15 % to 5 %,
+  which the artefact had been hiding behind.
 
 ## KW-MED-070 — Heterogeneous power-law exponent via fitted relaxation spectra [minor] — done 2026-08-11
 
@@ -68,9 +914,17 @@
   crate, manifest, or gitlink changes.
 - Driver: replicate Fullwave 2.5 (pinton-lab/fullwave25) heterogeneous
   attenuation, whose stated advance over uniform-exponent models is that both
-  the coefficient *and the exponent* vary spatially. kwavers previously carried
-  a spatially varying alpha_0 with a scalar exponent and Fung tau^{1-y} weights
-  calibrated at a single frequency.
+  the coefficient *and the exponent* vary spatially. The **viscoacoustic**
+  path previously carried a spatially varying alpha_0 with a scalar exponent and
+  Fung tau^{1-y} weights calibrated at a single frequency.
+- Correction 2026-08-12: an earlier version of this entry read as though kwavers
+  had no heterogeneous-exponent capability at all. That was wrong - the PSTD
+  path already had one, the stratified fractional Laplacian in
+  `pstd::physics::absorption::strata`, verified by
+  `stratified_exponent_matches_per_tissue_uniform_operator`. This item is the
+  *viscoacoustic* realization, which is the one that needs no transform and so
+  is the route an FDTD or multi-device path would take. Book 4.8.5 now presents
+  both with a selection rule instead of implying one mechanism.
 - Outcome: `absorption::relaxation_fit` fits a non-negative relaxation spectrum
   to alpha_0(x)*(f/f_ref)^gamma(x) on a shared log-spaced tau grid by
   column-equilibrated, Tikhonov-damped Lawson-Hanson NNLS on the

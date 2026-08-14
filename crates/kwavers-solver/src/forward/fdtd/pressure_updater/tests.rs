@@ -2,6 +2,7 @@ use crate::forward::fdtd::config::FdtdConfig;
 use crate::forward::fdtd::solver::FdtdSolver;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_grid::Grid;
+use kwavers_math::numerics::operators::Axis;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_source::GridSource;
 use leto::Array3;
@@ -114,18 +115,18 @@ fn test_fdtd_pressure_numerical_identity() {
     let mut dvx_s = Array3::<f64>::zeros((n, n, n));
     let mut dvy_s = Array3::<f64>::zeros((n, n, n));
     let mut dvz_s = Array3::<f64>::zeros((n, n, n));
+    // The operator the collocated path actually uses. Its interior is the
+    // standard central stencil, so a linear field still differentiates to its
+    // slope there; only the boundary closure differs (KW-SOL-081, KW-SOL-086).
     solver
-        .central_operator
-        .apply_x_into(solver.fields.ux.view(), &mut dvx_s)
-        .unwrap();
+        .conservative_operator
+        .apply_into(Axis::X, solver.fields.ux.view(), &mut dvx_s);
     solver
-        .central_operator
-        .apply_y_into(solver.fields.uy.view(), &mut dvy_s)
-        .unwrap();
+        .conservative_operator
+        .apply_into(Axis::Y, solver.fields.uy.view(), &mut dvy_s);
     solver
-        .central_operator
-        .apply_z_into(solver.fields.uz.view(), &mut dvz_s)
-        .unwrap();
+        .conservative_operator
+        .apply_into(Axis::Z, solver.fields.uz.view(), &mut dvz_s);
 
     // Verify analytical reference: interior divergence = 3.0 exactly (linear field, O2 stencil).
     for i in 1..n - 1 {
@@ -193,18 +194,24 @@ fn test_staggered_divergence_uses_scratch_buffer() {
 
     solver.compute_divergence_staggered().unwrap();
 
-    let dvx = solver
-        .staggered_operator
-        .apply_backward_x(solver.fields.ux.view())
-        .unwrap();
-    let dvy = solver
-        .staggered_operator
-        .apply_backward_y(solver.fields.uy.view())
-        .unwrap();
-    let dvz = solver
-        .staggered_operator
-        .apply_backward_z(solver.fields.uz.view())
-        .unwrap();
+    // The staggered operator's divergence -- the adjoint of the gradient the
+    // velocity update applies -- not a general backward difference. They differ
+    // at the low face, and that row is what makes the leapfrog symplectic
+    // (KW-SOL-081).
+    use kwavers_math::numerics::operators::Axis;
+    let shape = solver.fields.ux.shape();
+    let mut dvx = leto::Array3::<f64>::zeros(shape);
+    let mut dvy = leto::Array3::<f64>::zeros(shape);
+    let mut dvz = leto::Array3::<f64>::zeros(shape);
+    solver
+        .leapfrog_operator
+        .divergence_into(Axis::X, solver.fields.ux.view(), &mut dvx);
+    solver
+        .leapfrog_operator
+        .divergence_into(Axis::Y, solver.fields.uy.view(), &mut dvy);
+    solver
+        .leapfrog_operator
+        .divergence_into(Axis::Z, solver.fields.uz.view(), &mut dvz);
 
     let mut expected = dvz.clone();
     leto_ops::zip_mut_with(

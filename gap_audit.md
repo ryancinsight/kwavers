@@ -44,6 +44,55 @@ warning-denied all-target Clippy, `cargo nextest run -p kwavers-analysis
 pass. The shared Atlas overlay emits existing unused-patch and linker
 diagnostics; they are outside this metric boundary.
 
+## Capability surveys by keyword produce false positives on name collisions
+
+Recorded 2026-08-12 from the Fullwave 2.5 parity comparison.
+
+**Pattern.** Grepping for a capability by name finds the word, not the
+capability. Two collisions in one survey:
+
+- `domain decomposition` matched 20 files and read as "multi-GPU partitioning
+  present". It is PSTD-vs-FDTD **method** selection - an unrelated feature that
+  happens to share the term of art.
+- `multi.?gpu` matched 29 files and read the same way. Those are device
+  contexts, P2P queries and transfer queues - real infrastructure, but no solver
+  splits a grid across devices.
+
+A third was self-inflicted: `rg -li "convex\|curvilinear"` reported zero hits
+because ripgrep read the escaped pipe as a literal, and both features exist. A
+zero result deserves the same suspicion as a positive one.
+
+**Rule.** A capability is present when something *calls* it for the purpose in
+question, not when the phrase appears. Confirm a survey hit by finding the
+consumer - and confirm a survey miss by re-running the query a second way before
+reporting a gap.
+
+## Tapered analysis gates bias spectral-ratio attenuation measurements
+
+Recorded 2026-08-12 from KW-SOL-072.
+
+**Pattern.** A windowed-DFT attenuation measurement (`alpha = -ln(P_far/P_near)/d`)
+applies a taper to the analysis gate. In a *dispersive* medium the far-sensor
+pulse is broadened relative to the near-sensor pulse, so the taper weights the
+two differently. The resulting bias is multiplicative in alpha and independent
+of sensor separation -- indistinguishable, by inspection, from the medium
+genuinely absorbing less than prescribed.
+
+**Why it is hard to catch.** Every instinct points at the physics: the fit, the
+time step, the boundary treatment, the scheme. Here all four were eliminated
+before the instrument was suspected, and the analytic exoneration of the scheme
+(von Neumann analysis) was what finally redirected the search.
+
+**The discriminating test.** Vary the sensor separation. A genuine attenuation
+gives a separation-independent alpha; an additive contaminant (reflection,
+leakage, offset) scales as 1/d; a multiplicative instrument bias stays a fixed
+*fraction* at every separation. That one measurement classifies the error
+before any hypothesis about its mechanism.
+
+**Rule.** Do not taper a gate whose signal already decays to zero inside it --
+there is nothing to truncate, so a taper only adds a position-dependent weight.
+Centre the gate on the true emission time, not on step zero plus transit.
+
 ## Live Aequitas closure — 2026-08-05
 
 ### KWAVERS-AEQ-MET-68 — Eunomia compatibility closure (clean lock 2026-08-05)

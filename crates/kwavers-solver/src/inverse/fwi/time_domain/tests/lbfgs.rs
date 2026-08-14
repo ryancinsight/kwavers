@@ -39,8 +39,16 @@ fn build_problem(anomaly: f64) -> (Grid, FwiGeometry, FwiParameters, Array3<f64>
             sensor_mask[[6, iy, iz]] = true;
         }
     }
+    // Time step sized from the model space the inversion explores, not from the
+    // background. `validate_time_step` rejects any model whose fastest cell
+    // outruns `0.3*dx/(c_max*sqrt(3))`, and `apply_model_constraints` lets the
+    // optimizer roam up to 6000 m/s, so a step chosen for the 1500 m/s
+    // background leaves the stable region as soon as L-BFGS overshoots. Half the
+    // truth model's own bound leaves headroom for excursions to twice the true
+    // velocity while keeping the pulse's transit inside `nt` steps (KW-FWI-082).
     let nt = 96usize;
-    let dt = 1e-7;
+    let c_max_truth = truth.iter().copied().fold(0.0_f64, f64::max);
+    let dt = 0.5 * 0.3 * dx / (c_max_truth * 3.0_f64.sqrt());
 
     let mut p_mask = Array3::from_elem(dims, 0.0_f64);
     p_mask[[1, 4, 4]] = 1.0;

@@ -139,7 +139,33 @@ impl FwiProcessor {
                 )
                 .expect("trial model shares the model shape");
                 self.apply_model_constraints(&mut trial);
-                let trial_obj = self.compute_objective(&trial, observed_data, geometry, grid)?;
+                // A trial the forward solver cannot integrate is a *bad step*,
+                // not a failed inversion. `apply_model_constraints` clamps to a
+                // broad physical range (750–6000 m/s), which is far wider than
+                // the range any single `dt` is CFL-stable for, so a large first
+                // step can land on a model whose fastest cell outruns the time
+                // step. Mathematically that trial has an infinite objective: it
+                // can never satisfy Armijo, so the right response is to halve
+                // the step and try again — exactly what this loop already does
+                // for a trial that is merely not a descent.
+                //
+                // Propagating the error instead aborted the whole inversion
+                // (KW-FWI-082). Only *validation* failures are treated this
+                // way; a shape mismatch or a numerical fault is a real defect
+                // and still propagates.
+                let trial_obj = match self.compute_objective(&trial, observed_data, geometry, grid)
+                {
+                    Ok(value) => value,
+                    Err(KwaversError::Validation(reason)) => {
+                        log::debug!(
+                            "FWI(L-BFGS) iter {iteration}: rejecting inadmissible trial at \
+                             step={step:.3e} ({reason}); backtracking"
+                        );
+                        step *= 0.5;
+                        continue;
+                    }
+                    Err(other) => return Err(other),
+                };
                 if trial_obj <= objective + ARMIJO_C1 * step * gd {
                     accepted = Some(trial.iter().copied().collect());
                     break;

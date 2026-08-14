@@ -37,9 +37,14 @@
 //!
 //! | Stencil order | Accuracy | PPW required |
 //! |---------------|----------|--------------|
-//! | 2nd (default) | O(Δx²)   | ~10          |
-//! | 4th           | O(Δx⁴)   | ~5           |
+//! | 2nd           | O(Δx²)   | ~10          |
+//! | 4th (default) | O(Δx⁴)   | ~5           |
 //! | 6th           | O(Δx⁶)   | ~4           |
+//! | 8th           | O(Δx⁸)   | ~3           |
+//!
+//! Orders 2–8 are available on the staggered path through
+//! `StaggeredLeapfrogOperator`; the collocated path keeps 2–6, the range its
+//! CFL table covers.
 //!
 //! PPW = points per wavelength at the maximum frequency of interest.
 //!
@@ -50,8 +55,9 @@
 //!
 //! ## Module layout
 //!
-//! - `central_diff`: dispatch enum over 2nd / 4th / 6th-order central
-//!   difference operators.
+//! - the collocated derivative is `SummationByPartsOperator` from kwavers-math, used by the
+//!   leapfrog; see its module docs for why the general central difference is
+//!   not usable here.
 //! - `construction`: `new` constructor — material precomputation, source
 //!   scaling, k-space ops, scratch-buffer pre-allocation.
 //! - `stepping`: Yee leapfrog `step_forward`, debug-only NaN scans.
@@ -72,7 +78,6 @@
 //!   Velocity-stress finite-difference method. Geophysics 51(4), 889–901.
 
 mod accessors;
-mod central_diff;
 mod construction;
 mod gpu_accelerator;
 mod interface;
@@ -81,13 +86,12 @@ mod stepping;
 #[cfg(test)]
 mod tests;
 
-pub(crate) use central_diff::CentralDifferenceOperator;
 pub use gpu_accelerator::FdtdGpuAccelerator;
+pub(crate) use kwavers_math::numerics::operators::differential::summation_by_parts::SummationByPartsOperator;
 
 use kwavers_boundary::cpml::CPMLBoundary;
 use kwavers_grid::Grid;
-use kwavers_math::numerics::operators::StaggeredGridOperator;
-use kwavers_physics::acoustics::mechanics::acoustic_wave::AcousticSpatialOrder;
+use kwavers_math::numerics::operators::StaggeredLeapfrogOperator;
 use kwavers_source::{Source, SourceInjectionMode};
 use leto::Array3;
 use std::sync::Arc;
@@ -115,14 +119,21 @@ pub struct GenericFdtdSolver<T> {
     pub config: FdtdConfig,
     /// Grid reference
     pub(crate) grid: Grid,
-    pub(crate) central_operator: CentralDifferenceOperator,
-    pub(crate) staggered_operator: StaggeredGridOperator,
+    /// Skew-symmetric collocated operator used by the leapfrog when the
+    /// staggered grid is off; see `conservative_diff`.
+    pub(crate) conservative_operator: SummationByPartsOperator,
+    /// Staggered gradient/divergence pair, of the configured order. Its two
+    /// halves are negative adjoints, which is what makes the leapfrog
+    /// conserve energy (KW-SOL-081).
+    pub(crate) leapfrog_operator: StaggeredLeapfrogOperator,
     /// Performance metrics
     pub(crate) metrics: FdtdMetrics,
     /// C-PML boundary (if enabled)
     pub(crate) cpml_boundary: Option<CPMLBoundary>,
     /// Spatial order enum (validated at construction)
-    pub(crate) spatial_order: AcousticSpatialOrder,
+    /// Configured spatial accuracy order (2, 4, 6, or 8 on the staggered
+    /// path; 2, 4, or 6 collocated).
+    pub(crate) spatial_order: usize,
     pub(crate) gpu_accelerator: Option<Arc<dyn FdtdGpuAccelerator>>,
 
     // Shared components for source handling and sensor recording
@@ -143,6 +154,12 @@ pub struct GenericFdtdSolver<T> {
     // Precomputed fields
     pub(crate) rho_c_squared: T,
 
+    /// Relaxation absorption state, `None` for a lossless configuration.
+    ///
+    /// When present its unrelaxed modulus replaces `rho_c_squared` in the
+    /// pressure update and its memory fields are advanced each step.
+    pub(crate) absorption: Option<super::absorption::RelaxationAbsorption>,
+
     // Nonlinear Westervelt fields
     pub(crate) p_prev: Option<T>,
     pub(crate) p_prev2: Option<T>,
@@ -155,16 +172,6 @@ pub struct GenericFdtdSolver<T> {
     pub(crate) dvx_scratch: T,
     pub(crate) dvy_scratch: T,
     pub(crate) divergence_scratch: T,
-
-    // Pre-allocated staggered pressure-gradient scratch buffers.
-    //
-    // Shapes: (nx−1, ny, nz), (nx, ny−1, nz), (nx, ny, nz−1).
-    // Allocated once at construction when `config.staggered_grid = true` and the
-    // corresponding dimension has more than one point; `None` otherwise.
-    // Eliminates three `Array3::zeros` allocations per FDTD time step in the staggered path.
-    pub(crate) dp_dx_scratch: Option<T>,
-    pub(crate) dp_dy_scratch: Option<T>,
-    pub(crate) dp_dz_scratch: Option<T>,
 }
 
 pub type FdtdSolver = GenericFdtdSolver<Array3<f64>>;
@@ -174,8 +181,8 @@ impl<T: std::fmt::Debug> std::fmt::Debug for GenericFdtdSolver<T> {
         f.debug_struct("GenericFdtdSolver")
             .field("config", &self.config)
             .field("grid", &self.grid)
-            .field("central_operator", &self.central_operator)
-            .field("staggered_operator", &self.staggered_operator)
+            .field("conservative_operator", &self.conservative_operator)
+            .field("leapfrog_operator", &self.leapfrog_operator)
             .field("metrics", &self.metrics)
             .field("cpml_boundary", &self.cpml_boundary)
             .field("spatial_order", &self.spatial_order)

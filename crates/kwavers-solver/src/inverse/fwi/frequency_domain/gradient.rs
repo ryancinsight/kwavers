@@ -407,3 +407,57 @@ pub(super) fn dot(a: &Array3<f64>, b: &Array3<f64>) -> f64 {
 pub(super) fn max_abs(a: &Array3<f64>) -> f64 {
     a.iter().map(|value| value.abs()).fold(0.0, f64::max)
 }
+
+/// Matrix-free Hessian action `H v`, by central-free forward difference of the
+/// exact adjoint gradient:
+///
+/// ```text
+/// H v ≈ [g(m + ε v) − g(m)] / ε,   ε = fd_epsilon · reference_slowness / max|v|
+/// ```
+///
+/// Scaling `ε` by `max|v|` keeps the largest slowness perturbation at
+/// `fd_epsilon · reference_slowness` regardless of how `v` is normalized, so the
+/// difference stays in the regime where the linearization dominates round-off.
+/// No Jacobian is assembled, so this works for any
+/// [`super::operator::HelmholtzForwardOperator`] (single-scatter Born or CBS).
+///
+/// Both consumers use this one implementation: [`super::gauss_newton`] for the
+/// Newton-CG inner solve, and [`super::inversion`] for the curvature term of its
+/// line search.
+///
+/// # Errors
+/// Propagates forward/adjoint evaluation errors from [`objective_and_gradient`].
+// allow(too_many_arguments): each parameter is a distinct mathematical input to the
+// matrix-free Hessian action (current model, base gradient, probe direction, the
+// forward-problem triple, FD step). Bundling them into a struct would hide the
+// finite-difference formula rather than clarify it.
+#[allow(clippy::too_many_arguments)]
+pub(super) fn hessian_vector(
+    slowness: &Array3<f64>,
+    gradient0: &Array3<f64>,
+    direction: &Array3<f64>,
+    observations: &[FrequencyObservation],
+    array: &MultiRowRingArray,
+    config: &Config,
+    reference_slowness: f64,
+    fd_epsilon: f64,
+) -> KwaversResult<Array3<f64>> {
+    let scale = max_abs(direction);
+    if scale <= f64::EPSILON {
+        let shape = slowness.shape();
+        return Ok(Array3::zeros([shape[0], shape[1], shape[2]]));
+    }
+    // Keep the largest slowness perturbation at fd_epsilon · reference_slowness.
+    let eps = fd_epsilon * reference_slowness / scale;
+    let mut perturbed = slowness.clone();
+    for (m, &v) in perturbed.iter_mut().zip(direction.iter()) {
+        *m += eps * v;
+    }
+    super::inversion::clamp_slowness(&mut perturbed, config);
+    let (_objective, gradient1) = objective_and_gradient(&perturbed, observations, array, config)?;
+    let mut hv = gradient1;
+    for (h, &g0) in hv.iter_mut().zip(gradient0.iter()) {
+        *h = (*h - g0) / eps;
+    }
+    Ok(hv)
+}

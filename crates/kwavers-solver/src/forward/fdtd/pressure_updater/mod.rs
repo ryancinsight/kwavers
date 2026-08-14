@@ -79,6 +79,65 @@ pub(super) fn apply_pressure_update(
     }
 }
 
+/// Pressure update with relaxation absorption:
+/// `p -= dt * (M_U * div(v) + relaxation)`.
+///
+/// The lossless form multiplies the divergence by `rho_0*c_0^2`; here the
+/// coefficient is the **unrelaxed** modulus `M_U`, which is stiffer, and the
+/// memory-variable term is subtracted alongside it. Using the relaxed modulus
+/// would run the medium at its low-frequency speed while the arms also supply
+/// dispersion -- the error would look like a wrong sound speed, not a wrong
+/// absorption.
+pub(super) fn apply_absorbing_pressure_update(
+    pressure: &mut LetoArray3<f64>,
+    divergence: ArrayView3<'_, f64>,
+    unrelaxed_modulus: &Array3<f64>,
+    relaxation: &Array3<f64>,
+    dt: f64,
+) {
+    assert_eq!(
+        pressure.shape(),
+        divergence.shape(),
+        "invariant: FDTD absorbing divergence shape matches pressure field"
+    );
+    assert_eq!(
+        pressure.shape(),
+        unrelaxed_modulus.shape(),
+        "invariant: FDTD unrelaxed modulus shape matches pressure field"
+    );
+    assert_eq!(
+        pressure.shape(),
+        relaxation.shape(),
+        "invariant: FDTD relaxation term shape matches pressure field"
+    );
+
+    if let (
+        Some(pressure_values),
+        Some(divergence_values),
+        Some(modulus_values),
+        Some(relax_values),
+    ) = (
+        pressure.as_slice_mut(),
+        divergence.as_slice(),
+        unrelaxed_modulus.as_slice(),
+        relaxation.as_slice(),
+    ) {
+        enumerate_mut_with::<Adaptive, _, _>(pressure_values, |idx, pressure_value| {
+            *pressure_value -=
+                dt * modulus_values[idx].mul_add(divergence_values[idx], relax_values[idx]);
+        });
+    } else {
+        for (((pressure_value, &divergence_value), &modulus_value), &relax_value) in pressure
+            .iter_mut()
+            .zip(divergence.iter())
+            .zip(unrelaxed_modulus.iter())
+            .zip(relaxation.iter())
+        {
+            *pressure_value -= dt * modulus_value.mul_add(divergence_value, relax_value);
+        }
+    }
+}
+
 pub(super) fn add_nonlinear_pressure_delta(pressure: &mut LetoArray3<f64>, delta: &Array3<f64>) {
     assert_eq!(
         pressure.shape(),

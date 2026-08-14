@@ -860,7 +860,7 @@ tissue pipeline to the broadband solver. It realizes a **fully heterogeneous** p
 $\alpha(\mathbf x, f) = \alpha_0(\mathbf x)\,(f/f_{\text{ref}})^{\gamma(\mathbf x)}$ in which the
 **exponent varies voxel to voxel**, not merely the coefficient — the regime measured in abdominal
 wall, where fat and muscle differ in $\gamma$ as much as in $\alpha_0$. The fit lives in
-`kwavers_medium::absorption::relaxation_fit` and is described in §4.8.5.
+`kwavers_medium::absorption::relaxation_fit` and is described in §4.8.6.
 
 For **driven simulations**, `add_pressure_source(index, signal)` registers a soft (additive)
 pressure source (`p[index] += signal[step]`) and `add_pressure_sensor(index)` records the pressure
@@ -873,7 +873,40 @@ damp in every direction). A pulse launched at the boundary is absorbed rather th
 test confirms $<10\%$ of the energy survives with the layer versus the conserved (wrapped) energy
 without it.
 
-### 4.8.5 Fitting a relaxation spectrum to a heterogeneous power law
+### 4.8.5 Which realization of heterogeneous absorption to use
+
+Heterogeneous $\gamma(\mathbf{x})$ has **two** independent realizations in kwavers, one per
+time-stepping family, and they are not interchangeable:
+
+| solver | mechanism | per-step cost of heterogeneity | home |
+|---|---|---|---|
+| PSTD | stratified fractional Laplacian — $M$ spectral symbols $\lvert k\rvert^{y-s}$ blended per voxel | $M$ inverse FFTs per Laplacian ($M \le 8$) | `pstd::physics::absorption::strata` (§4.4.3) |
+| `ViscoacousticMemorySolver` | relaxation memory variables on one shared $\tau$ grid | one auxiliary field per arm, **no transform** | `relaxation_fit` (below) |
+| FDTD | relaxation memory variables on one shared $\tau$ grid | one auxiliary field per arm, **no transform** | `fdtd::absorption` |
+
+One further restriction decides the choice outright in a common case: the
+fractional-Laplacian dispersion coefficient is $\eta = 2\alpha_0 c_0^y\tan(\pi y/2)$, which
+**diverges at $y = 1$**, and the PSTD solver rejects that configuration. The relaxation paths have
+no singularity there. Linear frequency dependence — the textbook soft-tissue idealization — is
+available only through relaxation.
+
+The split is forced by the mathematics, not by taste. The fractional Laplacian's symbol
+$\lvert k\rvert^{y-s}$ is global in $k$, so a spectral solver can only carry one exponent per
+transform — stratification works around that by blending a few. The memory-variable form is purely
+local in space, so it costs no transform at all, which is why it is the realization the FDTD path
+uses and the one that can be partitioned across devices (KW-GPU-078). Fullwave 2.5 is an FDTD code
+and takes exactly this route.
+
+The FDTD realization is configured through `FdtdAbsorption::PowerLawRelaxation`, which names the
+band the power law must hold over and the arm count — the memory knob, since each arm is one
+auxiliary field per voxel. It fits through the same `relaxation_fit` machinery, so the exponent
+varies per voxel there too, and the pressure update's modulus becomes the **unrelaxed** $M_U$
+rather than $\rho_0 c_0^2$: the relaxed modulus would propagate the medium at its low-frequency
+speed while the arms also supply dispersion, an error that presents as a wrong sound speed rather
+than a wrong absorption. The GPU path refuses an absorbing configuration outright instead of
+silently propagating a lossless medium.
+
+### 4.8.6 Fitting a relaxation spectrum to a heterogeneous power law
 
 The Fung weighting of §4.8.3 reproduces the exponent only asymptotically in the band interior and
 only for $\gamma$ near unity. Across the range tissue actually spans — $\gamma \approx 0.4$ in some
@@ -914,6 +947,73 @@ fields serve a medium containing any mixture of exponents. Voxels whose five def
 ($\alpha_0$, $\gamma$, $f_{\text{ref}}$, $c_0$, $\rho$) are bit-identical share one fit, so a
 tissue-labelled medium costs one NNLS solve per distinct tissue.
 
+**Placing the relaxation times.** Fixing $\tau_l$ on a log grid keeps the fit linear but wastes
+arms — two arms cannot span a decade that way and miss by ~30 %. Since the strengths follow from
+the times by one least-squares solve, the times can be searched over directly with the strengths
+eliminated at every trial: the **variable-projection** structure (Golub & Pereyra 1973).
+`RelaxationTimePlacement::Optimized` does this with a deterministic Nelder–Mead simplex on
+$\ln\tau$ seeded by the log grid, so it can never be worse than the grid it starts from. The
+effect is on accuracy *per arm*:
+
+| arms | log-spaced | optimized |
+|---|---|---|
+| 2 | 29.9 % | **2.0 %** |
+| 3 | 2.6 % | **0.16 %** |
+| 4 | 0.77 % | **0.07 %** |
+| 6 | 0.09 % | **0.004 %** |
+
+(worst case over $\gamma = 0.4\ldots1.6$ at $\alpha_0 = 0.5$ dB cm$^{-1}$ MHz$^{-\gamma}$ across
+0.5–5 MHz.) Arm count, not fit quality, is the binding constraint on a 3-D heterogeneous run — the
+solver carries one memory field per arm *per voxel* — so three optimized arms beating six
+log-spaced ones is a halving of the solver's auxiliary storage. Fullwave 2.5 arrives at the same
+place from the other direction: it ships a precomputed relaxation-parameter database fitted at two
+mechanisms.
+
+For a heterogeneous medium the times must be **one grid for the whole domain**, since per-voxel
+times are not representable in the solver's field layout. `fit_power_law_fields` therefore runs a
+single *minimax* search over every distinct voxel present, rather than optimizing each voxel
+independently, and the reported error is the worst any voxel suffers on the grid they all share.
+Sharing costs little: four voxels spanning $\gamma = 0.5\ldots1.5$ on three shared arms reach 1.0 %
+against 0.3 % for private grids.
+
+**Time-step selection.** Von Neumann analysis of the memory-variable update (leapfrog velocity,
+exponentially integrated $\sigma$, trapezoidal relaxation term in the pressure update) gives the
+exact discrete relation
+
+$$
+\rho\,\frac{4}{\Delta t^2}\sin^2\!\Big(\frac{\omega\Delta t}{2}\Big) = k^2 M_{\text{eff}}(z),
+\qquad
+M_{\text{eff}}(z) = M_U - \sum_l \frac{\Delta M_l}{2}
+\frac{(1-e^{-\Delta t/\tau_l})(1+z)}{z - e^{-\Delta t/\tau_l}},
+\qquad z = e^{-\mathrm{i}\omega\Delta t},
+$$
+
+against the continuum $\rho\omega^2 = k^2 M(\omega)$.
+
+The left-hand side is the leapfrog's $\omega^2\,\mathrm{sinc}^2(\omega\Delta t/2)$, and it is what
+sets the error: accuracy is governed by how well $\Delta t$ resolves the **wave**,
+$\omega_{\max}\Delta t$, and is essentially independent of how well it resolves the fastest
+relaxation. Scaling every $\tau$ up a hundredfold — a hundredfold reduction in
+$d = \Delta t/\tau_{\min}$ — moves the error by under 1 % relative. The measured law is
+
+$$
+\frac{|\alpha_{\text{discrete}} - \alpha|}{\alpha} \approx C\,(\omega_{\max}\Delta t)^2,
+\qquad C \approx 0.117,
+$$
+
+so with $N = 2\pi/(\omega_{\max}\Delta t)$ points per period at the highest frequency of interest,
+**25 points per period holds the time-discretization error in $\alpha$ under 1 %, and 80 under
+0.1 %**. Pinned by `discrete_dispersion_matches_continuum`, which asserts the quadratic model
+itself rather than the step counts read off it.
+
+> An earlier revision of this section claimed the opposite — that $d = \Delta t/\tau_{\min}$
+> governed, with a "20 steps per $\tau_{\min}$" rule. That was plausible (the trapezoidal relaxation
+> term genuinely is the only second-order piece besides the leapfrog, since the $\sigma$ integration
+> is exact and the spatial operator spectral) but untested against a $\tau$ sweep, and it is wrong.
+> Replacing the trapezoid with the closed-form exact integral of $\sigma/\tau$ across the step
+> changes the error by under 7 % relative, which is why that avenue was measured and abandoned
+> rather than implemented.
+
 Verification: over Fullwave 2.5's validated envelope ($\alpha_0 = 0.25$–$0.75$ dB cm$^{-1}$
 MHz$^{-\gamma}$, $\gamma = 0.4$–$1.6$) with six arms across 0.5–5 MHz, the worst-case relative error
 in $\alpha(f)$ is under 1 % — an order of magnitude below the $\approx 10\%$ inter-study spread in
@@ -921,7 +1021,27 @@ reported tissue $\alpha_0$ (Duck 1990, Ch. 4) — with the fitted phase velocity
 $f_{\text{ref}}$ to $10^{-9}$ relative, causal (monotonically rising) dispersion, and all arm
 strengths non-negative. In simulation, a medium built through `from_power_law_fields` reproduces its
 prescribed decay at $\gamma = 0.4$, $1.1$, and $1.6$, and two halves of one grid carrying different
-$(\alpha_0, \gamma)$ each follow their own law on one shared arm set.
+$(\alpha_0, \gamma)$ each follow their own law on one shared arm set. The
+The two realizations are checked against **each other**, not only against their own targets:
+`cross_path_absorption_tests` runs the same standing wave through PSTD's fractional Laplacian and
+FDTD's relaxation memory variables and finds them agreeing to 1.3 %, with each within 1.3 % of the
+prescribed law. Because the two are different mathematics for the same physics — spectral operator
+versus local ODE system — that agreement is independent-oracle evidence rather than the weaker
+differential kind two backends of one algorithm would give.
+
+`heterogeneous_power_law_attenuation` example measures the realized $\alpha(f)$ from a propagating
+broadband pulse by a reference-normalized two-sensor spectral ratio, recovering the prescribed law
+to 3.4 % worst case (0.5 % across the band interior) over the whole envelope, and matching the
+exact path-weighted prediction for a fat/muscle stack whose exponent varies along the path to 1.0 %
+— on three relaxation arms, where the residual is measurement-limited rather than fit-limited
+(six arms move the worst case only to 3.0 %).
+
+One measurement caveat is worth carrying to any spectral-ratio attenuation estimate: the analysis
+gate must **not** be tapered. A dispersive medium broadens the far-sensor pulse relative to the
+near-sensor one, so a taper weights the two differently and biases the recovered $\alpha$ low —
+multiplicatively, and independently of sensor separation, which disguises it as a physical
+attenuation deficit rather than an instrument error. When the pulse decays to zero inside the gate,
+a rectangular gate truncates nothing and needs no taper.
 
 ---
 

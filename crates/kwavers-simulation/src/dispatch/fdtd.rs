@@ -24,6 +24,8 @@ pub fn run(
     };
 
     let config = FdtdConfig {
+        // Lossless: this path does not configure a power-law medium.
+        absorption: kwavers_solver::forward::fdtd::config::FdtdAbsorption::Lossless,
         dt: req.dt,
         nt: req.time_steps,
         spatial_order: 4,

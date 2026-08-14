@@ -6,6 +6,8 @@ use leto::{Array3, ArrayView3};
 
 use super::super::solver::{FdtdGpuAccelerator, FdtdSolver};
 
+use kwavers_math::numerics::operators::Axis;
+
 impl FdtdSolver {
     /// Dispatch pressure update to GPU or CPU; apply nonlinear correction if enabled.
     /// # Errors
@@ -14,6 +16,20 @@ impl FdtdSolver {
     #[inline]
     pub fn update_pressure(&mut self, dt: f64) -> KwaversResult<()> {
         if self.config.enable_gpu_acceleration {
+            // The GPU accelerator trait carries no relaxation state, so running
+            // it with absorption configured would silently propagate a lossless
+            // medium -- a quiet accuracy loss rather than a failure. Refuse.
+            if self.absorption.is_some() {
+                return Err(KwaversError::Config(
+                    kwavers_core::error::ConfigError::InvalidValue {
+                        parameter: "enable_gpu_acceleration".to_owned(),
+                        value: "true".to_owned(),
+                        constraint: "GPU acceleration does not implement relaxation absorption; \
+                                     use FdtdAbsorption::Lossless or the CPU path"
+                            .to_owned(),
+                    },
+                ));
+            }
             let accelerator = self.gpu_accelerator.as_ref().ok_or_else(|| {
                 KwaversError::Config(kwavers_core::error::ConfigError::InvalidValue {
                     parameter: "enable_gpu_acceleration".to_owned(),
@@ -50,25 +66,43 @@ impl FdtdSolver {
         if let Some(kops) = self.kspace_ops.as_mut() {
             kops.compute_divergence_neg(&self.fields.ux, &self.fields.uy, &self.fields.uz);
             let divergence = kops.divergence.view();
-            Self::update_pressure_simd(&mut self.fields.p, divergence, &self.rho_c_squared, dt);
+            if let Some(absorption) = self.absorption.as_mut() {
+                let (modulus, relaxation) = absorption.accumulate(divergence);
+                super::apply_absorbing_pressure_update(
+                    &mut self.fields.p,
+                    divergence,
+                    modulus,
+                    relaxation,
+                    dt,
+                );
+            } else {
+                Self::update_pressure_simd(&mut self.fields.p, divergence, &self.rho_c_squared, dt);
+            }
             return Ok(());
         }
 
         if self.config.staggered_grid {
             self.compute_divergence_staggered()?;
-            Self::update_pressure_simd(
-                &mut self.fields.p,
-                self.divergence_scratch.view(),
-                &self.rho_c_squared,
-                dt,
-            );
+            self.apply_pressure_from_divergence(dt);
         } else {
-            self.central_operator
-                .apply_x_into(self.fields.ux.view(), &mut self.dvx_scratch)?;
-            self.central_operator
-                .apply_y_into(self.fields.uy.view(), &mut self.dvy_scratch)?;
-            self.central_operator
-                .apply_z_into(self.fields.uz.view(), &mut self.divergence_scratch)?;
+            // The same operator the velocity update uses. On a collocated grid
+            // that is the point: one operator means the energy behaviour is
+            // governed entirely by its summation-by-parts property.
+            self.conservative_operator.apply_into(
+                Axis::X,
+                self.fields.ux.view(),
+                &mut self.dvx_scratch,
+            );
+            self.conservative_operator.apply_into(
+                Axis::Y,
+                self.fields.uy.view(),
+                &mut self.dvy_scratch,
+            );
+            self.conservative_operator.apply_into(
+                Axis::Z,
+                self.fields.uz.view(),
+                &mut self.divergence_scratch,
+            );
 
             if let Some(ref mut cpml) = self.cpml_boundary {
                 cpml.update_and_apply_v_gradient_correction(&mut self.dvx_scratch, 0);
@@ -82,6 +116,31 @@ impl FdtdSolver {
                 &self.dvy_scratch,
             );
 
+            self.apply_pressure_from_divergence(dt);
+        }
+        Ok(())
+    }
+
+    /// Apply the pressure update from `divergence_scratch`, with the relaxation
+    /// term when absorption is configured.
+    ///
+    /// Both finite-difference branches converge here **after** the CPML
+    /// gradient correction and the per-axis accumulation, so the memory
+    /// variables integrate exactly the divergence the pressure does. Driving
+    /// them from an uncorrected divergence would let the two drift apart inside
+    /// the PML, where the correction is largest.
+    fn apply_pressure_from_divergence(&mut self, dt: f64) {
+        if let Some(absorption) = self.absorption.as_mut() {
+            let divergence = self.divergence_scratch.view();
+            let (modulus, relaxation) = absorption.accumulate(divergence);
+            super::apply_absorbing_pressure_update(
+                &mut self.fields.p,
+                divergence,
+                modulus,
+                relaxation,
+                dt,
+            );
+        } else {
             Self::update_pressure_simd(
                 &mut self.fields.p,
                 self.divergence_scratch.view(),
@@ -89,7 +148,6 @@ impl FdtdSolver {
                 dt,
             );
         }
-        Ok(())
     }
 
     /// Element-wise pressure update: p -= dt · ρc² · div(v).

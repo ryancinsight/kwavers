@@ -1,6 +1,35 @@
 //! Nonlinear conjugate-gradient inversion loop.
+//!
+//! # Step length
+//!
+//! The step is the exact minimizer of the objective's quadratic model along the
+//! search direction `d`:
+//!
+//! ```text
+//! α = −⟨g, d⟩ / ⟨d, H d⟩
+//! ```
+//!
+//! This is scale-free: it is invariant to the magnitude of `d` and adapts to the
+//! local curvature, whereas a step seeded from a fixed slowness increment is not.
+//! The distinction is not cosmetic — with a fixed seed, a model already close to
+//! the truth has a small gradient, every trial step overshoots into a region of
+//! no numerical decrease, none is accepted, and the loop stalls having recovered
+//! nothing (see [`super::gauss_newton`], which was introduced to work around
+//! exactly that stall).
+//!
+//! `⟨d, H d⟩` reuses the matrix-free
+//! [`super::gradient::hessian_vector`] action, so the curvature costs one extra
+//! gradient evaluation per iteration and no Jacobian is assembled. Where the
+//! quadratic model does not bound the step — non-positive curvature `⟨d,Hd⟩ ≤ 0`,
+//! or a non-finite α — there is no model minimizer along `d`, and the step falls
+//! back to `config.initial_step_s_per_m`. Backtracking is retained below either
+//! seed as the safeguard against the model being locally inaccurate.
+//!
+//! Reference: Nocedal & Wright (2006) *Numerical Optimization* §3.1 (the exact
+//! minimizer of a quadratic model along a direction).
 
-use super::gradient::{dot, max_abs, objective_and_gradient};
+use super::gauss_newton::GaussNewtonConfig;
+use super::gradient::{dot, hessian_vector, max_abs, objective_and_gradient};
 use super::types::{
     Config, FrequencyObservation, InversionResult, FREQUENCY_DOMAIN_FWI_SOLVER_MODEL,
 };
@@ -50,9 +79,19 @@ pub fn invert(
             break;
         }
 
+        let seed_step = model_minimizer_step(
+            &slowness,
+            &gradient,
+            &direction,
+            observations,
+            array,
+            config,
+        )?
+        .unwrap_or(config.initial_step_s_per_m / direction_scale);
+
         let mut accepted = None;
         for search_step in 0..8 {
-            let step = config.initial_step_s_per_m * 0.5_f64.powi(search_step) / direction_scale;
+            let step = seed_step * 0.5_f64.powi(search_step);
             let mut candidate = slowness.clone();
             for (value, &dir) in candidate.iter_mut().zip(direction.iter()) {
                 *value += step * dir;
@@ -89,6 +128,56 @@ pub fn invert(
         receivers_used: array.element_count(),
         model_family: FREQUENCY_DOMAIN_FWI_SOLVER_MODEL,
     })
+}
+
+/// Exact minimizer of the quadratic model along `direction`:
+/// `α = −⟨g, d⟩ / ⟨d, H d⟩`.
+///
+/// Returns `None` when the model does not bound the step along `d` — non-positive
+/// curvature (`⟨d, H d⟩ ≤ 0`, where the model decreases without limit and has no
+/// minimizer), a vanishing directional derivative, or a non-finite result. The
+/// caller then falls back to the configured fixed seed.
+///
+/// # Errors
+/// Propagates forward/adjoint evaluation errors from the Hessian action.
+fn model_minimizer_step(
+    slowness: &Array3<f64>,
+    gradient: &Array3<f64>,
+    direction: &Array3<f64>,
+    observations: &[FrequencyObservation],
+    array: &MultiRowRingArray,
+    config: &Config,
+) -> KwaversResult<Option<f64>> {
+    let directional_derivative = dot(gradient, direction);
+    // A non-descent direction is the caller's safeguard to handle, not ours.
+    if directional_derivative >= 0.0 {
+        return Ok(None);
+    }
+
+    let fd_epsilon = GaussNewtonConfig::default().fd_epsilon;
+    let reference_slowness = 1.0 / config.reference_sound_speed_m_s;
+    let hd = hessian_vector(
+        slowness,
+        gradient,
+        direction,
+        observations,
+        array,
+        config,
+        reference_slowness,
+        fd_epsilon,
+    )?;
+
+    let curvature = dot(direction, &hd);
+    if curvature <= 0.0 {
+        return Ok(None);
+    }
+
+    let alpha = -directional_derivative / curvature;
+    if alpha.is_finite() && alpha > 0.0 {
+        Ok(Some(alpha))
+    } else {
+        Ok(None)
+    }
 }
 
 pub(super) fn clamp_slowness(slowness: &mut Array3<f64>, config: &Config) {

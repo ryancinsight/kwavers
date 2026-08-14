@@ -54,6 +54,8 @@ impl FdtdBackend {
         };
 
         let config = FdtdConfig {
+            // Lossless: this path does not configure a power-law medium.
+            absorption: kwavers_solver::forward::fdtd::config::FdtdAbsorption::Lossless,
             spatial_order: spatial_order_value,
             staggered_grid: true,
             cfl_factor: 0.5,

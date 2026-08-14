@@ -19,7 +19,7 @@
 //! References: Nocedal & Wright (2006) *Numerical Optimization* §7.1 (Newton-CG,
 //! Steihaug); Métivier et al. (2013) truncated-Newton FWI.
 
-use super::gradient::{dot, max_abs, objective_and_gradient};
+use super::gradient::{dot, hessian_vector, max_abs, objective_and_gradient};
 use super::inversion::clamp_slowness;
 use super::types::{
     Config, FrequencyObservation, InversionResult, FREQUENCY_DOMAIN_FWI_SOLVER_MODEL,
@@ -144,43 +144,6 @@ pub fn invert_gauss_newton(
         receivers_used: array.element_count(),
         model_family: FREQUENCY_DOMAIN_FWI_SOLVER_MODEL,
     })
-}
-
-/// Gauss-Newton/Hessian action `H v ≈ [g(m + ε v) − g(m)] / ε` with a relative
-/// finite-difference step (no Jacobian assembly).
-// allow(too_many_arguments): each parameter is a distinct mathematical input to the
-// matrix-free Hessian action (current model, base gradient, probe direction, the
-// forward-problem triple, FD step). Bundling them into a struct would hide the
-// finite-difference formula rather than clarify it.
-#[allow(clippy::too_many_arguments)]
-fn hessian_vector(
-    slowness: &Array3<f64>,
-    gradient0: &Array3<f64>,
-    direction: &Array3<f64>,
-    observations: &[FrequencyObservation],
-    array: &MultiRowRingArray,
-    config: &Config,
-    reference_slowness: f64,
-    fd_epsilon: f64,
-) -> KwaversResult<Array3<f64>> {
-    let scale = max_abs(direction);
-    if scale <= f64::EPSILON {
-        let shape = slowness.shape();
-        return Ok(Array3::zeros([shape[0], shape[1], shape[2]]));
-    }
-    // Keep the largest slowness perturbation at fd_epsilon · reference_slowness.
-    let eps = fd_epsilon * reference_slowness / scale;
-    let mut perturbed = slowness.clone();
-    for (m, &v) in perturbed.iter_mut().zip(direction.iter()) {
-        *m += eps * v;
-    }
-    clamp_slowness(&mut perturbed, config);
-    let (_objective, gradient1) = objective_and_gradient(&perturbed, observations, array, config)?;
-    let mut hv = gradient1;
-    for (h, &g0) in hv.iter_mut().zip(gradient0.iter()) {
-        *h = (*h - g0) / eps;
-    }
-    Ok(hv)
 }
 
 /// Steihaug-truncated conjugate gradients solving `(H + λI) p = -g`.

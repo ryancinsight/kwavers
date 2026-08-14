@@ -10,18 +10,18 @@ use leto::Array3;
 use log::info;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
 
-use super::central_diff::CentralDifferenceOperator;
 use super::{FdtdMetrics, GenericFdtdSolver};
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
 use kwavers_field::wave::WaveFields;
 use kwavers_grid::Grid;
-use kwavers_math::numerics::operators::StaggeredGridOperator;
-use kwavers_medium::{material_fields::GenericMaterialFields, Medium};
-use kwavers_physics::acoustics::mechanics::acoustic_wave::AcousticSpatialOrder;
+use kwavers_math::numerics::operators::differential::summation_by_parts::SummationByPartsOperator;
+use kwavers_math::numerics::operators::StaggeredLeapfrogOperator;
+use kwavers_medium::{material_fields::MaterialFields, Medium};
 use kwavers_receiver::recorder::simple::SensorRecorder;
 use kwavers_source::grid_source::GridSource;
 
+use super::super::absorption::{PowerLawRelaxationSettings, RelaxationAbsorption};
 use super::super::config::{FdtdConfig, KSpaceCorrectionMode};
 use super::super::kspace_correction::KSpaceFdtdOperators;
 use super::super::source_handler::SourceHandler;
@@ -115,12 +115,17 @@ impl GenericFdtdSolver<Array3<f64>> {
     ) -> KwaversResult<Self> {
         info!("Initializing FDTD solver with config: {:?}", config);
 
-        // Validate spatial order by converting to enum
-        let spatial_order = AcousticSpatialOrder::from_usize(config.spatial_order)?;
-
-        let central_operator =
-            CentralDifferenceOperator::new(config.spatial_order, grid.dx, grid.dy, grid.dz)?;
-        let staggered_operator = StaggeredGridOperator::new(grid.dx, grid.dy, grid.dz)?;
+        let spatial_order = config.spatial_order;
+        let leapfrog_operator =
+            StaggeredLeapfrogOperator::new(config.spatial_order, grid.dx, grid.dy, grid.dz)?;
+        // The collocated pair needs the grid shape, not just the spacing: a
+        // summation-by-parts boundary block only exists where it fits, and an
+        // axis too short for the requested order falls back to one that does.
+        let conservative_operator = SummationByPartsOperator::new(
+            config.spatial_order,
+            [grid.nx, grid.ny, grid.nz],
+            [grid.dx, grid.dy, grid.dz],
+        )?;
 
         let source_handler = SourceHandler::new(source, grid)?;
         let sensor_recorder = SensorRecorder::new(
@@ -132,25 +137,29 @@ impl GenericFdtdSolver<Array3<f64>> {
         // Initialize fields
         let shape = (grid.nx, grid.ny, grid.nz);
         let mut fields = WaveFields::new(shape);
-        let mut materials = GenericMaterialFields {
-            rho0: Array3::zeros(shape),
-            c0: Array3::zeros(shape),
-        };
 
-        // Pre-compute material properties
-        for k in 0..grid.nz {
-            for j in 0..grid.ny {
-                for i in 0..grid.nx {
-                    let (x, y, z) = grid.indices_to_coordinates(i, j, k);
-                    materials.rho0[[i, j, k]] = kwavers_medium::density_at(medium, x, y, z, grid);
-                    materials.c0[[i, j, k]] = kwavers_medium::sound_speed_at(medium, x, y, z, grid);
-                }
-            }
-        }
+        // Sample the medium's full acoustic property set once: density, sound
+        // speed, power-law coefficient and exponent, and B/A. The absorption
+        // path below needs the coefficient *and* the exponent, which is why
+        // this samples the whole set rather than the two properties the
+        // lossless update happens to use.
+        let materials = MaterialFields::sample(medium, grid);
 
         // Pre-compute rho * c^2 element-wise
         let mut rho_c_squared = Array3::<f64>::zeros(shape);
         fill_rho_c_squared(&mut rho_c_squared, &materials.rho0, &materials.c0);
+
+        // Fit the relaxation spectrum when an absorbing model is configured.
+        // A lossless medium under an absorbing configuration is not an error --
+        // the fit yields zero-strength arms -- but it wastes memory fields, so
+        // the state is skipped entirely.
+        let absorption =
+            match PowerLawRelaxationSettings::from_config(&config.absorption, config.dt) {
+                Some(settings) if !materials.is_lossless() => {
+                    Some(RelaxationAbsorption::new(&materials, &settings)?)
+                }
+                _ => None,
+            };
 
         // Precompute k-Wave compatible pressure and velocity source scaling
         let mut source_handler = source_handler;
@@ -211,20 +220,12 @@ impl GenericFdtdSolver<Array3<f64>> {
 
         // Precompute nonlinear medium property arrays (only when nonlinear mode is on)
         let (p_prev, p_prev2, nl_scratch, nl_coeff) = if config.enable_nonlinear {
-            let mut beta = Array3::<f64>::zeros(shape);
-            let mut c2 = Array3::<f64>::zeros(shape);
-            for k in 0..grid.nz {
-                for j in 0..grid.ny {
-                    for i in 0..grid.nx {
-                        let (x, y, z) = grid.indices_to_coordinates(i, j, k);
-                        let bn = kwavers_medium::nonlinearity_at(medium, x, y, z, grid);
-                        let c = kwavers_medium::sound_speed_at(medium, x, y, z, grid);
-                        // β = 1 + B/(2A) where B/A is returned by nonlinearity_at
-                        beta[[i, j, k]] = bn.mul_add(0.5, 1.0);
-                        c2[[i, j, k]] = c.powi(2);
-                    }
-                }
-            }
+            // β = 1 + B/(2A), from the sampled B/A field; c² likewise from the
+            // sampled sound speed. Both were previously re-read from the medium
+            // through per-point trait calls even though the same values had
+            // just been sampled.
+            let beta = materials.nonlinearity.mapv(|bn| bn.mul_add(0.5, 1.0));
+            let c2 = materials.c0.mapv(|c| c * c);
             // Precompute β/(ρ₀·c₀²) once; used every step in the hot nonlinear kernel.
             // Reduces per-element inner-loop reads from 5 to 3, cutting memory traffic ~40%.
             // beta and c2 are intermediate; only nl_coeff is retained in the struct.
@@ -241,36 +242,11 @@ impl GenericFdtdSolver<Array3<f64>> {
             (None, None, None, None)
         };
 
-        // Pre-allocate staggered pressure-gradient scratch buffers.
-        // Shape (nx−1, ny, nz) for dp_dx, etc. — allocated once, reused every step.
-        // Only created when `staggered_grid = true` and the dimension has ≥ 2 points.
-        let (dp_dx_scratch, dp_dy_scratch, dp_dz_scratch) = if config.staggered_grid {
-            (
-                if grid.nx > 1 {
-                    Some(Array3::<f64>::zeros((grid.nx - 1, grid.ny, grid.nz)))
-                } else {
-                    None
-                },
-                if grid.ny > 1 {
-                    Some(Array3::<f64>::zeros((grid.nx, grid.ny - 1, grid.nz)))
-                } else {
-                    None
-                },
-                if grid.nz > 1 {
-                    Some(Array3::<f64>::zeros((grid.nx, grid.ny, grid.nz - 1)))
-                } else {
-                    None
-                },
-            )
-        } else {
-            (None, None, None)
-        };
-
         Ok(Self {
             config,
             grid: grid.clone(),
-            central_operator,
-            staggered_operator,
+            conservative_operator,
+            leapfrog_operator,
             metrics: FdtdMetrics::new(),
             cpml_boundary: None,
             spatial_order,
@@ -283,6 +259,7 @@ impl GenericFdtdSolver<Array3<f64>> {
             fields,
             materials,
             rho_c_squared,
+            absorption,
             p_prev,
             p_prev2,
             nl_scratch,
@@ -292,9 +269,6 @@ impl GenericFdtdSolver<Array3<f64>> {
             dvx_scratch: Array3::<f64>::zeros(shape),
             dvy_scratch: Array3::<f64>::zeros(shape),
             divergence_scratch: Array3::<f64>::zeros(shape),
-            dp_dx_scratch,
-            dp_dy_scratch,
-            dp_dz_scratch,
         })
     }
 }

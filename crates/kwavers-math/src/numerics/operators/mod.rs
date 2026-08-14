@@ -57,8 +57,11 @@ pub use spectral::SpectralOperatorTrait;
 
 // Re-export common implementations
 pub use differential::{
+    central_first_derivative_coefficients, staggered_first_derivative_coefficients,
     CentralDifference2, CentralDifference4, CentralDifference6, StaggeredGridOperator,
+    MAX_HALF_ORDER,
 };
+pub use differential::{Axis, StaggeredLeapfrogOperator};
 pub use interpolation::{LinearInterpolator, NumericsTrilinearInterpolator};
 pub use spectral::PseudospectralDerivative;
 

@@ -44,7 +44,7 @@ pub use histotripsy::{
 pub use power_law::{PowerLawAbsorption, PowerLawModel};
 pub use relaxation_fit::{
     fit_power_law, fit_power_law_fields, FitBand, PowerLawTarget, RelaxationFieldFit,
-    RelaxationSpectrumFit,
+    RelaxationSpectrumFit, RelaxationTimePlacement,
 };
 pub use spatially_varying::{AbsorptionStatistics, SpatiallyVaryingAbsorption};
 pub use stokes::{StokesAbsorption, StokesParameters};

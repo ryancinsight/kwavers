@@ -50,6 +50,7 @@
 //! - Hesthaven, J. S., & Warburton, T. (2007). *Nodal Discontinuous Galerkin Methods*.
 //!   Springer.
 
+mod dense_solve;
 pub mod operators;
 pub mod symplectic;
 

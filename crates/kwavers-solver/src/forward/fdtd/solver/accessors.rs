@@ -1,6 +1,7 @@
 //! Public solver accessors: GPU accelerator hookup, CPML enable, CFL helpers,
 //! metrics access/merge, sensor data extraction, orchestrated run loop.
 
+use kwavers_physics::acoustics::mechanics::acoustic_wave::AcousticSpatialOrder;
 use leto::{Array3, ArrayView2};
 use log::info;
 use std::sync::Arc;
@@ -66,7 +67,17 @@ impl GenericFdtdSolver<Array3<f64>> {
     /// Calculate maximum stable time step based on CFL condition
     pub fn max_stable_dt(&self, max_sound_speed: f64) -> f64 {
         let min_dx = self.grid.dx.min(self.grid.dy).min(self.grid.dz);
-        let cfl_limit = self.spatial_order.cfl_limit();
+        // The staggered and collocated schemes have different Courant limits;
+        // they coincide only at order 2. Using the collocated table for a
+        // staggered run costs roughly half the achievable step at order 4 and
+        // above (KW-SOL-074).
+        let cfl_limit = if self.config.staggered_grid {
+            self.leapfrog_operator.cfl_limit(3)
+        } else {
+            AcousticSpatialOrder::from_usize(self.spatial_order)
+                .expect("invariant: collocated order validated at construction")
+                .cfl_limit()
+        };
         self.config.cfl_factor * cfl_limit * min_dx / max_sound_speed
     }
 
