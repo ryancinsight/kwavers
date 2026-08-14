@@ -569,34 +569,48 @@
 - Not covered: the collocated path, for a structural reason recorded in the ADR
   and filed as KW-SOL-086.
 
-## KW-SOL-088 - The FDTD convergence test measures against a half-cell-offset reference [patch] - todo
+## KW-SOL-088 - FDTD convergence test measured against a half-cell-offset reference [patch] - done 2026-08-13
 
-- Surfaced by CI's `Test Suite Coverage` after KW-CI-087 unblocked the run, and
-  it is a consequence of ADR 106 rather than an unrelated failure.
-- `test_fdtd_2nd_order_spatial_convergence` builds its exact solution
-  `A*cos(pi*x/L)` at `x = i*dx`, but the staggered path stores pressure at cell
-  **centres** `(i+0.5)*dx`, with walls at `0` and `L = nx*dx`. Against the old
-  pressure-release wall the mismatch did not dominate; against the rigid wall it
-  does, and the observed order drops to 1 (ratio 2.00).
-- Evidence the diagnosis is right: evaluating the reference at cell centres drops
-  the coarse-grid error from `1.05e-1` to `1.97e-5` - four orders of magnitude.
-  That is the whole error, not a tuning nudge.
-- **Not finished, and deliberately not committed half-done.** With the corrected
-  reference the coarse/fine ratio is 7.83, above the test's `< 6.0` bound, and
-  one measurement is missing: the fine/very-fine ratio. Predicted behaviour, to
-  be confirmed rather than assumed: at `t = T/2` the mode sits at an extremum,
-  where a phase error enters as `cos(phi) ~ 1 - phi^2/2` - quadratically. With
-  `phi ~ dx^2` from dispersion that adds a `dx^4` term beside the ordinary
-  `dx^2` one, so the effective ratio sits between 4 and 16 and should drift
-  *toward 4* as the grid refines. If `ratio_fv` is near 4, the asymptotic order
-  is 2 and the coarse point is polluted by the higher-order term; the fix is then
-  to assert the asymptotic ratio rather than widen the band.
-- Do not widen the acceptance band to make it pass. The reference-position fix is
-  analytically justified; any change to the assertion needs the second ratio.
-- Blocked locally: a peer's uncommitted `proteus::TemperatureLaw::new` signature
-  change breaks `kwavers-medium` through the stack overlay, so the `kwavers`
-  package will not build here. CI is unaffected - the lock pins proteus at a
-  committed revision with the old signature.
+- The reference was built at `x = i*dx`, but the staggered path stores pressure
+  at cell **centres** `(i+0.5)*dx`, with walls at `0` and `L = nx*dx`. Against
+  the old pressure-release wall the mismatch did not dominate; against the rigid
+  wall (ADR 106) it did, and the observed order fell to 1.
+- Correcting the position drops the coarse-grid error from `1.05e-1` to
+  `1.97e-5` - four orders of magnitude, so the offset *was* the error.
+- **My predicted explanation was falsified and the assertion follows the data.**
+  I expected the ratio to drift toward 4 as the grid refined, with the coarse
+  point polluted by a higher-order term. Measured across nx = 30/60/120: orders
+  2.97 and 2.99 - a stable third-order regime, not a drift. The cause holds up
+  though: at `t = T/2` the mode sits at an extremum, where a phase error enters
+  as `cos(phi) ~ 1 - phi^2/2`, suppressing the leading `O(dx^2)` term.
+- The old `[2.0, 6.0]` ratio band encoded "faster than third order is
+  implausible", true away from an extremum but not here. Replaced by an observed
+  *order* in `[2.7, 3.3]` on both refinement levels, with the derivation at the
+  assertion. Tighter than what it replaced, not looser.
+- Also fixed alongside: `prop_invalid_spatial_order_rejected` still treated
+  order 8 as invalid, which KW-SOL-074 changed - the staggered default accepts
+  it now, the collocated path still rejects it.
+
+## KW-SOL-089 - Plane-wave injection test sits on the 60 s termination bound [patch] - todo
+
+- `test_plane_wave_boundary_injection_timing` (64^3 full-grid FDTD, staggered)
+  measures 57.96 s standalone on a quiet host and **times out at 60.8 s under
+  parallel load**. The committed budget is slow-warn 10 s, terminate at 60 s.
+- Partly mine. The reflection closure (ADR 106) calls `reflect()` per tap per
+  point; hoisting it out of the interior took the test from 62.29 s to 57.96 s,
+  but that is margin, not headroom. The file itself is unchanged from main.
+- **The fix ADR 107 already anticipated**: `divergence_into` scatters where the
+  old operator gathered - two read-modify-writes per tap instead of two reads
+  and a write, which also defeats vectorization. The ADR recorded "if it becomes
+  one, the interior can gather on the shifted stencil and only the halo needs
+  the scatter". It has become one.
+- Care required: the gather region must start far enough in that no reflected
+  boundary row reaches it (`j >= 2*halo`), or the transpose is silently wrong in
+  a conservation-critical operator. Verify against the existing `Q + Q^T = B`
+  and energy tests, which is what they are for. Not attempted at the end of a
+  long session for exactly that reason.
+- Do not raise the budget in the fix diff. If profiling shows the workload is
+  analytically irreducible, that is a separate, reviewed profile change.
 
 ## KW-CI-087 - The committed lockfile did not resolve without the stack overlay [patch] - done 2026-08-13
 

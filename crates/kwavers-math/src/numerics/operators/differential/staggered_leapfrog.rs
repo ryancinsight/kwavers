@@ -154,19 +154,30 @@ impl StaggeredLeapfrogOperator {
     /// Taps outside the grid are reflected about the wall, giving `∂p/∂n = 0`.
     pub fn gradient_into(&self, axis: Axis, field: ArrayView3<'_, f64>, dst: &mut Array3<f64>) {
         let (index, extent, scale) = self.axis_geometry(axis, field.shape(), dst.shape());
+        let halo = self.coefficients.len() as isize;
 
         for i in 0..field.shape()[0] {
             for j in 0..field.shape()[1] {
                 for k in 0..field.shape()[2] {
                     let base = [i, j, k];
                     let here = base[index] as isize;
+                    let interior = here >= halo - 1 && here + halo < extent;
                     let mut sum = 0.0;
                     for (offset, &c) in self.coefficients.iter().enumerate() {
                         let n = offset as isize + 1;
                         let mut hi = base;
-                        hi[index] = reflect(here + n, extent);
                         let mut lo = base;
-                        lo[index] = reflect(here - n + 1, extent);
+                        if interior {
+                            // Every tap is in range here, so the mirror cannot
+                            // fire. Hoisting the test out of the tap loop keeps
+                            // the interior — which is nearly the whole grid — on
+                            // the same work per point as a plain stencil.
+                            hi[index] = (here + n) as usize;
+                            lo[index] = (here - n + 1) as usize;
+                        } else {
+                            hi[index] = reflect(here + n, extent);
+                            lo[index] = reflect(here - n + 1, extent);
+                        }
                         sum += c * (field[hi] - field[lo]);
                     }
                     dst[base] = sum * scale;
@@ -185,6 +196,7 @@ impl StaggeredLeapfrogOperator {
     /// conservation does not depend on getting a boundary case right.
     pub fn divergence_into(&self, axis: Axis, field: ArrayView3<'_, f64>, dst: &mut Array3<f64>) {
         let (index, extent, scale) = self.axis_geometry(axis, field.shape(), dst.shape());
+        let halo = self.coefficients.len() as isize;
         dst.fill(0.0);
 
         for i in 0..field.shape()[0] {
@@ -192,13 +204,19 @@ impl StaggeredLeapfrogOperator {
                 for k in 0..field.shape()[2] {
                     let base = [i, j, k];
                     let here = base[index] as isize;
+                    let interior = here >= halo - 1 && here + halo < extent;
                     let value = field[base] * scale;
                     for (offset, &c) in self.coefficients.iter().enumerate() {
                         let n = offset as isize + 1;
                         let mut hi = base;
-                        hi[index] = reflect(here + n, extent);
                         let mut lo = base;
-                        lo[index] = reflect(here - n + 1, extent);
+                        if interior {
+                            hi[index] = (here + n) as usize;
+                            lo[index] = (here - n + 1) as usize;
+                        } else {
+                            hi[index] = reflect(here + n, extent);
+                            lo[index] = reflect(here - n + 1, extent);
+                        }
                         dst[hi] -= c * value;
                         dst[lo] += c * value;
                     }

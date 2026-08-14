@@ -63,7 +63,11 @@ const DX_MIN: f64 = 1e-5;
 const DX_MAX: f64 = 1e-2;
 
 /// FDTD valid spatial orders: {2, 4, 6}
-const VALID_SPATIAL_ORDERS: [usize; 3] = [2, 4, 6];
+/// Orders `FdtdConfig::default()` accepts. The default is the **staggered**
+/// path, which gained order 8 with KW-SOL-074 — that is the order Fullwave 2.5
+/// runs. The collocated path still stops at 6, because its Courant table does,
+/// and rejects 8 at validation.
+const VALID_SPATIAL_ORDERS: [usize; 4] = [2, 4, 6, 8];
 
 // ============================================================================
 // CFL Stability Property Tests
@@ -168,7 +172,7 @@ proptest! {
 
     #[test]
     fn prop_valid_spatial_orders_accepted(
-        order_idx in 0usize..3
+        order_idx in 0usize..4
     ) {
         let order = VALID_SPATIAL_ORDERS[order_idx];
         let config = FdtdConfig {
