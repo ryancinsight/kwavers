@@ -67,6 +67,20 @@
 | KWAVERS-AEQ-MET-54 | Type the public ultrafast transmission scheduler's speed, depth, PRF, event times, frame rates, and tilt angles with Aequitas; keep scalar extraction at the PRF/timing formula boundary and document the real-only Eunomia compatibility rule. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-transducer/src/ultrafast/sequencer/**`, manifest, ADR 093, PM artifacts |
 | KWAVERS-AEQ-INTEGRATION-1 | Integrate the current Aequitas metric closure for therapeutic microbubble and plasmonics contracts on current `main`; harden the public three-dimensional plasmonic coordinate contract and synchronize the audit. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-physics/src/{acoustics/therapy/microbubble,electromagnetic}`, PM artifacts |
 
+## KWAVERS-FLOATELEMENT-ROOTS-001 — Migrate powf root emulation to eunomia FloatElement [patch] — done 2026-08-13
+
+- Owner: Codex; scope: 10 `powf`-emulated root sites across 12 files
+  (kwavers examples/tests, `kwavers-analysis`, `kwavers-core`,
+  `kwavers-driver`, `kwavers-physics`), plus the `eunomia` dependency edges
+  for `kwavers-driver` and `kwavers-core`.
+- Outcome: `powf(1/3)` → `.cbrt()`, `powf(-0.5)` → `.rsqrt()`,
+  `powf(-1/3)` → `.cbrt().recip()`, `powf(0.25)` → `.nth_root(4)`, and
+  `powf(1/20)` → `.nth_root(20)`, all on the sign-preserving Eunomia
+  `FloatElement` surface.
+- Acceptance: `cargo check --all-targets --offline` rc=0; the full suite
+  passes 6130/6130 (15 skipped). Merged as kwavers PR #364 (`1cb63974`).
+
+
 ## KW-SOL-079 - FDTD heterogeneous power-law absorption [minor] - done 2026-08-12
 
 - Scope: new `crates/kwavers-solver/src/forward/fdtd/absorption/{mod,tests}.rs`;

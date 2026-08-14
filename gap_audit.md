@@ -1,3 +1,22 @@
+## FloatElement root-emulation closure — 2026-08-13
+
+### KWAVERS-FLOATELEMENT-ROOTS-001 — powf emulation → provider roots (closed 2026-08-13)
+
+Kwavers emulated scalar roots through `powf` fractional powers instead of the
+provider-owned sign-preserving Eunomia `FloatElement` root surface — a
+redundancy gap: `powf(1/3)`, `powf(-0.5)`, `powf(-1/3)`, `powf(0.25)`, and
+`powf(1/20)` sites re-derived roots that Eunomia owns natively (`cbrt`,
+`rsqrt`, `nth_root`), with `powf(-1/3)` additionally losing sign preservation
+on negative inputs.
+
+The gap is closed: all 10 sites across 12 files now route through
+`FloatElement::{cbrt, rsqrt, nth_root}` (sign-preserving, libm-backed
+defaults, native f64 overrides), and the `eunomia` dependency edges are
+declared for `kwavers-driver` and `kwavers-core`. Evidence: `cargo check
+--all-targets --offline` rc=0 and the full suite passes 6130/6130 (15
+skipped). Merged as kwavers PR #364 (`1cb63974`), resolving eunomia at
+`1a52590`.
+
 ## Live Aequitas closure — 2026-08-06
 
 ### KWAVERS-AEQ-MET-69 — B-mode scan-conversion geometry (closed 2026-08-06)

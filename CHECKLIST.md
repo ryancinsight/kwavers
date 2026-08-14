@@ -1,5 +1,17 @@
 # Project Checklist
 
+## Owner: Codex — KWAVERS-FLOATELEMENT-ROOTS-001 migrate powf root emulation to eunomia FloatElement [patch] — done 2026-08-13
+
+- [x] Replace 10 `powf`-emulated root sites with the sign-preserving Eunomia
+      `FloatElement` surface across 12 files: `powf(1/3)` → `.cbrt()`,
+      `powf(-0.5)` → `.rsqrt()`, `powf(-1/3)` → `.cbrt().recip()`,
+      `powf(0.25)` → `.nth_root(4)`, `powf(1/20)` → `.nth_root(20)`.
+- [x] Add the `eunomia` dependency to `kwavers-driver` (`[dependencies]`) and
+      `kwavers-core` (`[dev-dependencies]`); drop the unused `FloatElement`
+      import in `clearance.rs` (inherent `f64::cbrt`/`recip`).
+- [x] Verify `cargo check --all-targets --offline` rc=0 and the full suite
+      passes 6130/6130 (15 skipped). Merged as kwavers PR #364 (`1cb63974`).
+
 ## Owner: Codex — KWAVERS-AEQ-MET-67 thermal-acoustic coupling quantities [major] [arch] — done 2026-08-05
 
 - [x] Type temperature coefficient slopes, absorption heating, streaming,
