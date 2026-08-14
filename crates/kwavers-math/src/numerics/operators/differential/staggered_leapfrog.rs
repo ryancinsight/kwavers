@@ -148,6 +148,28 @@ impl StaggeredLeapfrogOperator {
         1.0 / ((dimensions as f64).sqrt() * sum)
     }
 
+    /// Strides and the per-axis geometry for linear indexing.
+    ///
+    /// The arrays are row-major with the last axis contiguous (verified against
+    /// `as_slice`), so an offset of one step along `axis` is a fixed stride.
+    /// Resolving that once per point instead of recomputing a three-index
+    /// address per *tap* is the whole optimization: the address arithmetic, not
+    /// the arithmetic on the values, dominated these kernels (KW-SOL-089).
+    fn linear_geometry(&self, axis: Axis, shape: [usize; 3]) -> ([usize; 3], usize, [usize; 2]) {
+        let strides = [shape[1] * shape[2], shape[2], 1];
+        let index = match axis {
+            Axis::X => 0,
+            Axis::Y => 1,
+            Axis::Z => 2,
+        };
+        let others = match index {
+            0 => [1, 2],
+            1 => [0, 2],
+            _ => [0, 1],
+        };
+        (strides, index, others)
+    }
+
     /// Gradient along `axis`: cell-centred `field` to face-centred `dst`, with
     /// face `i+½` stored at index `i`. Both are grid-shaped.
     ///
@@ -155,29 +177,61 @@ impl StaggeredLeapfrogOperator {
     pub fn gradient_into(&self, axis: Axis, field: ArrayView3<'_, f64>, dst: &mut Array3<f64>) {
         let (index, extent, scale) = self.axis_geometry(axis, field.shape(), dst.shape());
         let halo = self.coefficients.len() as isize;
+        let shape = field.shape();
+        let (strides, _, others) = self.linear_geometry(axis, shape);
+        let stride = strides[index] as isize;
 
+        let (Some(source), Some(target)) = (field.as_slice(), dst.as_slice_mut()) else {
+            self.gradient_into_indexed(axis, field, dst);
+            return;
+        };
+
+        for a in 0..shape[others[0]] {
+            for b in 0..shape[others[1]] {
+                let line = a * strides[others[0]] + b * strides[others[1]];
+                for along in 0..extent as usize {
+                    let here = along as isize;
+                    let linear = line + along * strides[index];
+                    let mut sum = 0.0;
+                    if here >= halo - 1 && here + halo < extent {
+                        // No tap can leave the grid, so the mirror never fires
+                        // and every address is `linear ± n·stride`.
+                        let base = linear as isize;
+                        for (offset, &c) in self.coefficients.iter().enumerate() {
+                            let n = offset as isize + 1;
+                            let hi = (base + n * stride) as usize;
+                            let lo = (base + (1 - n) * stride) as usize;
+                            sum += c * (source[hi] - source[lo]);
+                        }
+                    } else {
+                        for (offset, &c) in self.coefficients.iter().enumerate() {
+                            let n = offset as isize + 1;
+                            let hi = line + reflect(here + n, extent) * strides[index];
+                            let lo = line + reflect(here - n + 1, extent) * strides[index];
+                            sum += c * (source[hi] - source[lo]);
+                        }
+                    }
+                    target[linear] = sum * scale;
+                }
+            }
+        }
+    }
+
+    /// Gradient via three-index addressing, for arrays that are not contiguous.
+    fn gradient_into_indexed(&self, axis: Axis, field: ArrayView3<'_, f64>, dst: &mut Array3<f64>) {
+        let (index, extent, scale) = self.axis_geometry(axis, field.shape(), dst.shape());
         for i in 0..field.shape()[0] {
             for j in 0..field.shape()[1] {
                 for k in 0..field.shape()[2] {
                     let base = [i, j, k];
                     let here = base[index] as isize;
-                    let interior = here >= halo - 1 && here + halo < extent;
                     let mut sum = 0.0;
                     for (offset, &c) in self.coefficients.iter().enumerate() {
                         let n = offset as isize + 1;
                         let mut hi = base;
+                        hi[index] = reflect(here + n, extent);
                         let mut lo = base;
-                        if interior {
-                            // Every tap is in range here, so the mirror cannot
-                            // fire. Hoisting the test out of the tap loop keeps
-                            // the interior — which is nearly the whole grid — on
-                            // the same work per point as a plain stencil.
-                            hi[index] = (here + n) as usize;
-                            lo[index] = (here - n + 1) as usize;
-                        } else {
-                            hi[index] = reflect(here + n, extent);
-                            lo[index] = reflect(here - n + 1, extent);
-                        }
+                        lo[index] = reflect(here - n + 1, extent);
                         sum += c * (field[hi] - field[lo]);
                     }
                     dst[base] = sum * scale;
@@ -197,26 +251,63 @@ impl StaggeredLeapfrogOperator {
     pub fn divergence_into(&self, axis: Axis, field: ArrayView3<'_, f64>, dst: &mut Array3<f64>) {
         let (index, extent, scale) = self.axis_geometry(axis, field.shape(), dst.shape());
         let halo = self.coefficients.len() as isize;
+        let shape = field.shape();
+        let (strides, _, others) = self.linear_geometry(axis, shape);
+        let stride = strides[index] as isize;
         dst.fill(0.0);
 
+        let (Some(source), Some(target)) = (field.as_slice(), dst.as_slice_mut()) else {
+            self.divergence_into_indexed(axis, field, dst);
+            return;
+        };
+
+        for a in 0..shape[others[0]] {
+            for b in 0..shape[others[1]] {
+                let line = a * strides[others[0]] + b * strides[others[1]];
+                for along in 0..extent as usize {
+                    let here = along as isize;
+                    let linear = line + along * strides[index];
+                    let value = source[linear] * scale;
+                    if here >= halo - 1 && here + halo < extent {
+                        let base = linear as isize;
+                        for (offset, &c) in self.coefficients.iter().enumerate() {
+                            let n = offset as isize + 1;
+                            target[(base + n * stride) as usize] -= c * value;
+                            target[(base + (1 - n) * stride) as usize] += c * value;
+                        }
+                    } else {
+                        for (offset, &c) in self.coefficients.iter().enumerate() {
+                            let n = offset as isize + 1;
+                            target[line + reflect(here + n, extent) * strides[index]] -= c * value;
+                            target[line + reflect(here - n + 1, extent) * strides[index]] +=
+                                c * value;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// Divergence via three-index addressing, for arrays that are not contiguous.
+    fn divergence_into_indexed(
+        &self,
+        axis: Axis,
+        field: ArrayView3<'_, f64>,
+        dst: &mut Array3<f64>,
+    ) {
+        let (index, extent, scale) = self.axis_geometry(axis, field.shape(), dst.shape());
         for i in 0..field.shape()[0] {
             for j in 0..field.shape()[1] {
                 for k in 0..field.shape()[2] {
                     let base = [i, j, k];
                     let here = base[index] as isize;
-                    let interior = here >= halo - 1 && here + halo < extent;
                     let value = field[base] * scale;
                     for (offset, &c) in self.coefficients.iter().enumerate() {
                         let n = offset as isize + 1;
                         let mut hi = base;
+                        hi[index] = reflect(here + n, extent);
                         let mut lo = base;
-                        if interior {
-                            hi[index] = (here + n) as usize;
-                            lo[index] = (here - n + 1) as usize;
-                        } else {
-                            hi[index] = reflect(here + n, extent);
-                            lo[index] = reflect(here - n + 1, extent);
-                        }
+                        lo[index] = reflect(here - n + 1, extent);
                         dst[hi] -= c * value;
                         dst[lo] += c * value;
                     }

@@ -64,9 +64,14 @@ included.
   `StaggeredGridOperator` forced that face to zero as a separate step, it is now
   a consequence, so there is nothing to forget.
 - The divergence scatters rather than gathers, which is the same asymptotic work
-  but less friendly to vectorization. Not measured as a bottleneck; if it
-  becomes one, the interior can gather on the shifted stencil and only the halo
-  needs the scatter.
+  but less friendly to vectorization. This predicted the scatter would be the
+  cost if a bottleneck ever appeared. **One appeared, and the prediction was
+  wrong** (KW-SOL-089): measured on 64³ at order 2, the gradient took 7.0 ms and
+  the scattering divergence 7.9 ms — a ratio of 1.12. Both were slow for an
+  unrelated reason, three-index address arithmetic recomputed per tap, and
+  linear indexing cut both to 1.9 ms. The interior-gather rewrite this note
+  proposed would have bought almost nothing while risking a transpose error in a
+  conservation-critical operator. Profile before acting on a note like this one.
 - Verification cost fell sharply. With slabs inert, the cross-path test runs at
   a transverse extent of 1 instead of 4 and shares one lossless reference across
   cases: **57 s → 2.1 s**, assertions unchanged. That the 1-cell grid reproduces

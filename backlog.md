@@ -591,26 +591,31 @@
   order 8 as invalid, which KW-SOL-074 changed - the staggered default accepts
   it now, the collocated path still rejects it.
 
-## KW-SOL-089 - Plane-wave injection test sits on the 60 s termination bound [patch] - todo
+## KW-SOL-089 - Staggered operators were address-bound, not scatter-bound [patch] - done 2026-08-13
 
 - `test_plane_wave_boundary_injection_timing` (64^3 full-grid FDTD, staggered)
-  measures 57.96 s standalone on a quiet host and **times out at 60.8 s under
-  parallel load**. The committed budget is slow-warn 10 s, terminate at 60 s.
-- Partly mine. The reflection closure (ADR 106) calls `reflect()` per tap per
-  point; hoisting it out of the interior took the test from 62.29 s to 57.96 s,
-  but that is margin, not headroom. The file itself is unchanged from main.
-- **The fix ADR 107 already anticipated**: `divergence_into` scatters where the
-  old operator gathered - two read-modify-writes per tap instead of two reads
-  and a write, which also defeats vectorization. The ADR recorded "if it becomes
-  one, the interior can gather on the shifted stencil and only the halo needs
-  the scatter". It has become one.
-- Care required: the gather region must start far enough in that no reflected
-  boundary row reaches it (`j >= 2*halo`), or the transpose is silently wrong in
-  a conservation-critical operator. Verify against the existing `Q + Q^T = B`
-  and energy tests, which is what they are for. Not attempted at the end of a
-  long session for exactly that reason.
-- Do not raise the budget in the fix diff. If profiling shows the workload is
-  analytically irreducible, that is a separate, reviewed profile change.
+  timed out at 60.8 s under parallel load against the committed 60 s bound.
+  **Now 33.07 s**, and 1709/1709 pass under full parallel load with no timeouts.
+- **The hypothesis in ADR 106 was wrong, and profiling is what showed it.** That
+  ADR predicted the scattering divergence would be the cost if one ever appeared,
+  and this item was filed proposing the interior-gather rewrite it suggested.
+  Measured on 64^3 order 2: gradient 7.0 ms, divergence 7.9 ms - a ratio of 1.12.
+  The scatter was never the problem. Both kernels were slow for the same reason,
+  and rewriting the divergence would have bought roughly nothing while risking a
+  subtle transpose error in a conservation-critical operator.
+- The actual cost was **address arithmetic**: a three-index `[usize; 3]` lookup
+  recomputed per *tap*, ~26 ns per point for what is three memory operations.
+  Replaced by linear indexing - strides resolved once per axis, taps reached as
+  `linear +- n*stride` on the contiguous interior - with the three-index form
+  kept as a fallback for non-contiguous views.
+- Measured after: gradient 7.0 -> 1.9 ms, divergence 7.9 -> 1.9 ms (3.7x and
+  4.2x). The earlier hoist of `reflect()` out of the tap loop had taken the test
+  62.29 -> 57.96 s; this took it to 33.07 s.
+- Verified by the operator's own oracles rather than by the timing alone:
+  `Q + Q^T = B`, uniform-field inertness, polynomial exactness, per-order
+  convergence rates, the derived CFL limits, and energy conservation - 204/204 in
+  kwavers-math, then 1709/1709 across kwavers, kwavers-math and kwavers-solver.
+- The budget was not touched, and the workload was not shrunk.
 
 ## KW-CI-087 - The committed lockfile did not resolve without the stack overlay [patch] - done 2026-08-13
 
