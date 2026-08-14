@@ -1165,8 +1165,11 @@ fn run_fdtd_lossless(
 /// real dissipative defect in a propagator's zero-velocity IVP?
 ///
 /// Method: drive the two spectral solvers (Kuznetsov-linear, Westervelt-lossless,
-/// both inherently periodic with NO boundary applied) and PSTD with the external
-/// PML removed, on a **lossless** domain. For a lossless standing wave
+/// both inherently periodic with NO boundary applied), plus PSTD and FDTD with
+/// the external PML removed, on a **lossless** domain. FDTD was excluded until
+/// its walls became rigid (ADR 106); against the pressure-release wall its
+/// zero-extension closure gave, the eigenmode grew past `1.5·A0` within the
+/// first period. For a lossless standing wave
 /// `p=A·sin(kx)·cos(ωt)`, `max|p|` returns to `A` once per half period, so the
 /// per-period **peak** of the envelope is conserved iff the solver is lossless.
 ///
@@ -1258,14 +1261,19 @@ fn diagnose_standing_wave_collapse_source() -> KwaversResult<()> {
         bl / bf
     );
 
-    // The spectral solvers are lossless + periodic with a correct zero-velocity
-    // IVP: the per-period envelope peak is CONSERVED (ratio ≈ 1) AND reaches A0.
-    // This proves the `fig standing_wave` collapse is NOT dissipation and NOT the
-    // IVP seed for these three solvers.
+    // All four are lossless with a correct zero-velocity IVP: the per-period
+    // envelope peak is CONSERVED (ratio ≈ 1) AND reaches A0. This proves the
+    // `fig standing_wave` collapse is NOT dissipation and NOT the IVP seed.
     for (name, first, last) in [
         ("Westervelt", wf, wl),
         ("Kuznetsov", kf, kl),
         ("PSTD(noPML)", pf, pl),
+        // FDTD joined this list when its walls became rigid (ADR 106). Before
+        // that its staggered stencil closed the domain by zero-extension, a
+        // pressure-release wall against which the eigenmode grew past `1.5·A0`
+        // inside the first period, so it was excluded and the guard below
+        // asserted that instability to pin why. It now conserves like the rest.
+        ("FDTD(noPML)", ff, fl),
     ] {
         let ratio = last / first;
         assert!(
@@ -1278,17 +1286,6 @@ fn diagnose_standing_wave_collapse_source() -> KwaversResult<()> {
             "{name} eigenmode first-period peak {first:.3e} must equal A0 = {amplitude:.3e} (±10%)",
         );
     }
-
-    // FDTD's 4th-order staggered stencil is NOT periodic-stable without its
-    // absorbing layer: with a transparent boundary the eigenmode grows far above
-    // A0 within the first period. This pins why FDTD is excluded from the lossless
-    // resonator comparison (its IVP is validated on the free-space Gaussian test).
-    // If FDTD ever conserves here, this guard fires → re-add it to the comparison.
-    assert!(
-        ff > 1.5 * amplitude,
-        "expected FDTD(noPML) to be periodic-unstable (first-period peak ≫ A0); got \
-         {ff:.3e} vs A0 {amplitude:.3e} — if FDTD now conserves, re-include it in the lossless test",
-    );
 
     // The NON-eigenmode IC ALSO conserves energy (ratio ≈ 1): the figure collapse
     // is single-mode-oracle dephasing, not amplitude loss.
