@@ -628,6 +628,34 @@
   every case. That the 1-cell grid reproduces the 4-cell answer is itself
   evidence the slab is inert.
 
+## KWAVERS-PLACEMENT-AXIS-ASSESS-001 — themis/melinoe adoption: transitively satisfied, NUMA stack redundant [audit] — done 2026-08-14
+
+- Verdict: kwavers needs **no new direct melinoe dependency** (zero melinoe
+  tokens in kwavers source; moirai-parallel already carries melinoe capability
+  branding internally). For themis, kwavers is **transitively satisfied for the
+  APIs it calls through moirai/mnemosyne/leto**, but it carries a hand-rolled
+  NUMA stack that duplicates the themis/mnemosyne SSOT.
+- Redundant duplicate: `crates/kwavers-core/src/arena/numa/{topology,allocator,affinity,memory,policy}.rs`
+  reimplements themis-owned placement vocabulary (`NumaTopology::detect()`
+  parses `/sys/devices/system/node/*/distance` — themis owns
+  `CpuTopology::detect()`/`NumaNode`; `current_numa_node()` duplicates
+  `themis::query::current_numa_node`) and mnemosyne-owned allocation locality
+  (`first_touch_memory(_parallel)`, `allocate_interleaved_memory`,
+  `bind_memory_to_node` — mnemosyne-heap exposes `alloc(&token, layout,
+  PlacementHint)`). Live call sites: `arena/batch/soa_buffer.rs:82`,
+  `arena/layout/numa_aware.rs:143`, `arena/pool/batch.rs:124`, the
+  `kwavers-analysis` re-export shim, and
+  `examples/book_numa_allocator_policy.rs`.
+- Genuine provider gap surfaced: `set_thread_affinity`/`ThreadAffinity` (raw
+  libc `sched_setaffinity` + Windows FFI) has **no public home** in the Atlas
+  stack — themis owns placement vocabulary only; moirai-executor sets
+  worker-thread defaults internally from `themis::CpuTopology::detect()` but
+  exposes no public setter. Options: keep a thin kwavers-local wrapper, or
+  promote the setter to moirai (execution locality is moirai's role).
+- Follow-up slice (todo): migrate `arena/numa/` onto a direct
+  `themis-topology` dep in kwavers-core (topology/query), route allocation
+  through mnemosyne `PlacementHint`, and resolve the affinity-setter home.
+
 ## KW-SOL-072 — Simulated absorption ran 8-19 % below the prescribed law [patch] — done 2026-08-12
 
 - Scope: `crates/kwavers-solver/src/forward/viscoacoustic/tests.rs` and
