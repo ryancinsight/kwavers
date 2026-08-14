@@ -757,32 +757,51 @@
   varying field tractable. Reporting the 12^3 measurement rather than
   extrapolating a 128^3 figure that the dominant phase would make meaningless.
 
-## KW-MED-091 - The joint tau search, not the solves, dominates a smooth field [major] - todo
+## KW-MED-091 - Cap the tau-search ensemble [major] - done 2026-08-14
 
-- Found while measuring KW-MED-071, and it inverts that item's premise. At
-  12^3 = 1728 distinct voxels, 24 threads:
-  - per-voxel solves, parallel: **0.07 s**
-  - the same solves, serial: **0.41 s**
-  - the whole fit with `RelaxationTimePlacement::Optimized`: **37.71 s**
-  The joint tau search is **99.8 %** of the runtime. Isolated by running the
-  same field under `LogSpaced`, which skips that phase entirely.
-- It scales with the distinct-target count, because each Nelder-Mead objective
-  evaluation loops over every lossy problem. Extrapolating 1728 -> 2 097 152
-  voxels puts a 128^3 smoothly varying field near **12 hours**. `Optimized`
-  placement is effectively unusable at realistic grid sizes for anything but
-  labelled media, which is precisely the case KW-MED-071 was filed to serve.
-- Directions, in order of expected value:
-  1. The ensemble objective is a sum over independent problems - parallelize it
-     with a fixed-order tree reduction so the result stays deterministic. A
-     naive parallel sum would not be, and the taus feed everything downstream.
-  2. Subsample the ensemble. The objective is a minimax over targets; a
-     representative subset of the (alpha_0, gamma) distribution may pick the same
-     taus. Needs evidence that the chosen times do not move.
-  3. Cluster targets in (alpha_0, gamma) and run one search per cluster, trading
-     one shared tau grid for a few.
-- Acceptance: a 128^3 smoothly varying field fits in minutes, with the selected
-  relaxation times and the resulting fit error unchanged against the current
-  search within a stated bound.
+- The joint relaxation-time search ran against every distinct lossy voxel, so
+  its cost scaled with the grid. It is now capped at 64 representative targets
+  and the cost is independent of field size.
+- **Two things I filed were wrong, and measuring is what corrected them.**
+  1. I wrote that a parallel reduction here would need a fixed-order tree to stay
+     deterministic. The reduction is `fold(0.0, f64::max)` - a minimax, not a
+     sum. `max` is exact and order-independent in floating point, so that
+     concern does not exist.
+  2. I extrapolated "roughly 12 hours at 128^3" assuming one distinct tuple per
+     voxel. The probe field dedups 2 097 152 voxels to 138 530 tuples, so the
+     honest pre-change figure for *that* field is ~50 min. The 12-hour number
+     holds only for a field with no dedup at all.
+- Why 64 suffices, measured rather than assumed: the objective is governed almost
+  entirely by the exponent. Across a 160x range of `alpha_0` at fixed `gamma` it
+  moves only in the fourth significant figure (2.383e-2 to 2.416e-2); across
+  `gamma` it moves by a third and **non-monotonically**, peaking near 1.2 - so
+  the ensemble needs coverage of the exponent range, and the extremes alone are
+  not enough.
+- Selection is by rank on `(gamma, alpha_0)`, endpoints included, not by stride.
+  The distinct list is in first-appearance order - a raster scan - so a stride
+  samples the traversal rather than the range, and two fields with identical
+  contents but different orderings would search different ensembles.
+- Quality measured against the right oracle: the worst-case fit error over the
+  *whole* field under the resulting times, not how far the times moved, which is
+  self-referential. On 12^3: full 1728-problem search 30.81 s leaving 0.2505 %;
+  64-problem ensemble 1.15 s leaving 0.2703 %.
+- End to end, 24 logical processors, smoothly varying:
+
+  | grid | distinct | time | worst error |
+  |---|---|---|---|
+  | 32^3 | 18 808 | 1.8 s | 0.1824 % |
+  | 64^3 | 55 284 | 2.2 s | 0.2396 % |
+  | 128^3 | 138 530 | **6.1 s** | 0.3972 % |
+
+  The acceptance asked for minutes at 128^3 against a pre-change ~50 min on this
+  field; it is seconds.
+- Verified: 213/213 kwavers-medium, 1091/1091 with kwavers-solver, 530/530 in the
+  kwavers package against pinned revisions. Existing `Optimized`-placement tests
+  still meet their own fit bounds, which is the regression guard that matters -
+  the times changed, so a coverage loss would have shown there.
+- Not done, and cheap if it is ever wanted: the capped objective is still a
+  serial max over 64 problems. Parallelizing it is bit-exact for free (max), but
+  it is ~1 s of a 6 s run.
 
 ## KWAVERS-AEQ-MET-69 — Type B-mode scan-conversion geometry [major] [arch] — in progress 2026-08-06
 

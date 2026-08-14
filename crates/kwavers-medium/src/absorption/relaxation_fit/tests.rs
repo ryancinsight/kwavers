@@ -658,3 +658,88 @@ fn parallel_field_fit_matches_the_serial_solve() {
         }
     }
 }
+
+/// The tau-search ensemble is bounded, spans the exponent range, and does not
+/// depend on the order voxels happened to appear in.
+///
+/// Order independence is the property that makes rank selection worth the sort:
+/// the distinct list is in first-appearance order, so a stride would sample the
+/// raster scan rather than the exponent range, and two fields with identical
+/// contents but different traversal would search different ensembles
+/// (KW-MED-091).
+#[test]
+fn the_tau_search_ensemble_is_bounded_and_order_independent() {
+    let make = |exponents: &[f64]| -> Vec<PowerLawTarget> {
+        exponents
+            .iter()
+            .enumerate()
+            .map(|(i, &g)| PowerLawTarget {
+                alpha_ref_np_m: 3.0 + i as f64 * 0.01,
+                exponent: g,
+                f_ref: 1.0e6,
+                sound_speed: 1540.0,
+                density: 1000.0,
+            })
+            .collect()
+    };
+    let exponents: Vec<f64> = (0..500).map(|i| 1.0 + i as f64 * 0.001).collect();
+    let forward = make(&exponents);
+    let lossy: Vec<usize> = (0..forward.len()).collect();
+    let chosen = representative_ensemble(&forward, &lossy);
+
+    assert!(
+        chosen.len() <= TAU_SEARCH_ENSEMBLE_CAP,
+        "ensemble of {} exceeds the cap",
+        chosen.len()
+    );
+    let picked: Vec<f64> = chosen.iter().map(|&s| forward[lossy[s]].exponent).collect();
+    let lo = picked.iter().copied().fold(f64::INFINITY, f64::min);
+    let hi = picked.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+    assert_eq!(lo, 1.0, "the lowest exponent must be in the ensemble");
+    assert_eq!(hi, 1.499, "the highest exponent must be in the ensemble");
+
+    // Same contents, reversed traversal: the *set* of exponents must match.
+    let mut reversed_exponents = exponents.clone();
+    reversed_exponents.reverse();
+    let reversed = make(&reversed_exponents);
+    let reversed_lossy: Vec<usize> = (0..reversed.len()).collect();
+    let reversed_chosen = representative_ensemble(&reversed, &reversed_lossy);
+    let mut a: Vec<f64> = picked.clone();
+    let mut b: Vec<f64> = reversed_chosen
+        .iter()
+        .map(|&s| reversed[reversed_lossy[s]].exponent)
+        .collect();
+    a.sort_by(f64::total_cmp);
+    b.sort_by(f64::total_cmp);
+    assert_eq!(a, b, "voxel ordering changed the searched ensemble");
+}
+
+/// A smoothly varying field still fits to the accuracy the capped search
+/// promises.
+///
+/// The bound is the measurement, not a guess: on this field the full-ensemble
+/// search leaves a worst-case relative error of 0.2505 % and the 64-problem
+/// ensemble leaves 0.2703 %. Asserting 0.5 % leaves room for the machine to
+/// differ without admitting a regression that would signal the ensemble stopped
+/// covering the exponent range - losing coverage takes the error to percent
+/// level, not to 0.3 %.
+#[test]
+fn a_smoothly_varying_field_keeps_its_fit_accuracy() {
+    let n = 8usize;
+    let shape = [n, n, n];
+    let smooth =
+        |i: usize, j: usize, k: usize| (i as f64) * 0.37 + (j as f64) * 0.11 + (k as f64) * 0.023;
+    let alpha = Array3::from_shape_fn(shape, |[i, j, k]| 4.0 + smooth(i, j, k));
+    let gamma = Array3::from_shape_fn(shape, |[i, j, k]| 1.05 + 0.02 * smooth(i, j, k));
+    let speed = Array3::from_elem(shape, 1540.0);
+    let density = Array3::from_elem(shape, 1000.0);
+
+    let band = band_with(3, RelaxationTimePlacement::Optimized);
+    let fit =
+        fit_power_law_fields(&alpha, &gamma, &speed, &density, 1.0e6, &band).expect("field fit");
+    assert!(
+        fit.max_relative_error() < 0.005,
+        "worst relative error {:.4} % exceeds the capped-search bound",
+        100.0 * fit.max_relative_error()
+    );
+}
