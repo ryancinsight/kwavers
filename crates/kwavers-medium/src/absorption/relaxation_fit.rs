@@ -120,6 +120,13 @@ const SEARCH_PASSES: usize = 3;
 /// dominates.
 const RIDGE: f64 = 1.0e-6;
 
+/// Largest ensemble the shared relaxation-time search runs against.
+///
+/// Sixty-four keeps the worst-case fit error within a fiftieth of a percentage
+/// point of the full-ensemble result while making the search independent of grid
+/// size; see [`representative_ensemble`].
+const TAU_SEARCH_ENSEMBLE_CAP: usize = 64;
+
 /// Distinct-voxel count at or above which the per-voxel solves are distributed.
 ///
 /// Derived rather than defaulted; the reasoning is at the call site in
@@ -949,16 +956,16 @@ pub fn fit_power_law_fields(
         RelaxationTimePlacement::LogSpaced => band.relaxation_times(),
         RelaxationTimePlacement::Optimized if lossy_targets.is_empty() => band.relaxation_times(),
         RelaxationTimePlacement::Optimized => {
-            let problems: Vec<LinearSubproblem<'_>> = lossy_index
+            let chosen = representative_ensemble(&distinct, &lossy_index);
+            let problems: Vec<LinearSubproblem<'_>> = chosen
                 .iter()
-                .zip(&lossy_targets)
-                .map(|(&i, alphas)| LinearSubproblem {
-                    density: distinct[i].density,
-                    sound_speed: distinct[i].sound_speed,
+                .map(|&slot| LinearSubproblem {
+                    density: distinct[lossy_index[slot]].density,
+                    sound_speed: distinct[lossy_index[slot]].sound_speed,
                     omega_ref: TWO_PI * f_ref,
-                    exponent: distinct[i].exponent,
+                    exponent: distinct[lossy_index[slot]].exponent,
                     omegas: &omegas,
-                    targets: alphas,
+                    targets: &lossy_targets[slot],
                 })
                 .collect();
             let initial = band.relaxation_times();
@@ -1018,6 +1025,58 @@ pub fn fit_power_law_fields(
         taus,
         max_relative_error,
     })
+}
+
+/// Choose at most [`TAU_SEARCH_ENSEMBLE_CAP`] lossy targets spanning the
+/// `(gamma, alpha_0)` range, returning positions into `lossy_index`.
+///
+/// # Why the search does not need every voxel
+///
+/// `optimize_relaxation_times` minimizes the **worst** relative error over the
+/// ensemble, and that maximum is governed almost entirely by the exponent.
+/// Measured across a 160x range of `alpha_0` at fixed `gamma`, the objective
+/// moves only in its fourth significant figure (2.383e-2 to 2.416e-2); across
+/// `gamma` it moves by a third, and non-monotonically, peaking near 1.2. So the
+/// ensemble needs *coverage of the exponent range*, not one problem per voxel.
+///
+/// Selection is by rank rather than by stride over the distinct list, because
+/// that list is in first-appearance order - a raster scan, which spans the range
+/// only for a field that happens to vary monotonically along it. Sorting by
+/// `(gamma, alpha_0)` and taking evenly spaced ranks including both endpoints
+/// covers the range whatever the voxel ordering, and is deterministic.
+///
+/// # What this costs
+///
+/// It is an approximation, and the honest measure of it is the worst-case fit
+/// error over the *whole* field under the resulting times - not how far the
+/// times themselves moved, which is self-referential. On a 12^3 smoothly
+/// varying field: the full 1728-problem search took 30.81 s and left a worst
+/// error of 0.2505 %; a 64-problem ensemble took 1.15 s and left 0.2703 %. The
+/// search cost also stops scaling with the grid, which is the point - the same
+/// field at 128^3 extrapolated to roughly 12 hours before this (KW-MED-091).
+fn representative_ensemble(distinct: &[PowerLawTarget], lossy_index: &[usize]) -> Vec<usize> {
+    let count = lossy_index.len();
+    if count <= TAU_SEARCH_ENSEMBLE_CAP {
+        return (0..count).collect();
+    }
+
+    let mut ranked: Vec<usize> = (0..count).collect();
+    ranked.sort_by(|&a, &b| {
+        let (ta, tb) = (&distinct[lossy_index[a]], &distinct[lossy_index[b]]);
+        ta.exponent
+            .total_cmp(&tb.exponent)
+            .then(ta.alpha_ref_np_m.total_cmp(&tb.alpha_ref_np_m))
+    });
+
+    // Evenly spaced ranks, endpoints included, so the extremes of the exponent
+    // range are always in the ensemble.
+    let last = TAU_SEARCH_ENSEMBLE_CAP - 1;
+    let mut chosen: Vec<usize> = (0..TAU_SEARCH_ENSEMBLE_CAP)
+        .map(|s| ranked[(s * (count - 1)) / last])
+        .collect();
+    chosen.sort_unstable();
+    chosen.dedup();
+    chosen
 }
 
 #[cfg(test)]
