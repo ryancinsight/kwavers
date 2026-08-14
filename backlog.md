@@ -705,15 +705,56 @@
   8-19 % below the prescribed law; the fit is not the cause (analytic alpha is
   within 1 %) — filed as KW-SOL-072.
 
-## KW-MED-071 — Parallelize per-voxel relaxation fitting [patch] — todo
+## KW-MED-071 - Parallelize per-voxel relaxation fitting [patch] - done 2026-08-14
 
-- Scope: `crates/kwavers-medium/src/absorption/relaxation_fit.rs` only.
-- `fit_power_law_fields` dedups bit-identical voxels, so labelled media are
-  cheap, but a smoothly varying alpha_0/gamma field costs one Lawson-Hanson
-  solve per voxel on one thread. Distribute the distinct-tuple solves over
-  `moirai-parallel` (already a dependency) behind the same signature.
-- Acceptance: identical fitted weights to the serial path (bit-exact, the solve
-  is deterministic), measured speedup on a 128^3 smoothly varying field.
+- The distinct-target Lawson-Hanson solves in `fit_power_law_fields` now
+  distribute over `moirai-parallel`, behind the same signature.
+- **Bit-exact, not close.** Each solve is independent and deterministic and each
+  result is written to its own index, so no reduction order can vary.
+  `parallel_field_fit_matches_the_serial_solve` asserts equality with `==`
+  against an oracle built by calling `fit_at_taus` in a plain serial loop -
+  comparing the function against itself under two policies would pass even if
+  both were wrong.
+- Threshold set explicitly, not defaulted: `moirai`'s `Adaptive` parallelizes at
+  1024 elements, sized for cheap per-element work. One element here is measured
+  at **273 us** against ~1 us dispatch, so the gate is 16 - clear of break-even,
+  while labelled media that dedup to a handful of tuples stay serial.
+- Measured, 24 logical processors, 12^3 smoothly varying (1728 distinct):
+  parallel solves **0.07 s** against **0.41 s** serial, **5.9x**. The parallel
+  figure includes dedup and field assembly, so the solve-only speedup is at
+  least that.
+- **The acceptance asked for 128^3 and that is where this stops being the
+  interesting number.** See KW-MED-091: on the `Optimized` placement the solves
+  are 0.2 % of the runtime, so a 5.9x on them is not what makes a smoothly
+  varying field tractable. Reporting the 12^3 measurement rather than
+  extrapolating a 128^3 figure that the dominant phase would make meaningless.
+
+## KW-MED-091 - The joint tau search, not the solves, dominates a smooth field [major] - todo
+
+- Found while measuring KW-MED-071, and it inverts that item's premise. At
+  12^3 = 1728 distinct voxels, 24 threads:
+  - per-voxel solves, parallel: **0.07 s**
+  - the same solves, serial: **0.41 s**
+  - the whole fit with `RelaxationTimePlacement::Optimized`: **37.71 s**
+  The joint tau search is **99.8 %** of the runtime. Isolated by running the
+  same field under `LogSpaced`, which skips that phase entirely.
+- It scales with the distinct-target count, because each Nelder-Mead objective
+  evaluation loops over every lossy problem. Extrapolating 1728 -> 2 097 152
+  voxels puts a 128^3 smoothly varying field near **12 hours**. `Optimized`
+  placement is effectively unusable at realistic grid sizes for anything but
+  labelled media, which is precisely the case KW-MED-071 was filed to serve.
+- Directions, in order of expected value:
+  1. The ensemble objective is a sum over independent problems - parallelize it
+     with a fixed-order tree reduction so the result stays deterministic. A
+     naive parallel sum would not be, and the taus feed everything downstream.
+  2. Subsample the ensemble. The objective is a minimax over targets; a
+     representative subset of the (alpha_0, gamma) distribution may pick the same
+     taus. Needs evidence that the chosen times do not move.
+  3. Cluster targets in (alpha_0, gamma) and run one search per cluster, trading
+     one shared tau grid for a few.
+- Acceptance: a 128^3 smoothly varying field fits in minutes, with the selected
+  relaxation times and the resulting fit error unchanged against the current
+  search within a stated bound.
 
 ## KWAVERS-AEQ-MET-69 — Type B-mode scan-conversion geometry [major] [arch] — in progress 2026-08-06
 

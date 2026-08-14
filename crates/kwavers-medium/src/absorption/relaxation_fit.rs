@@ -96,6 +96,7 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::Complex64;
 use leto::{Array1, Array2, Array3};
 use leto_ops::{nnls, NnlsConfig};
+use moirai_parallel::{enumerate_mut_with, AdaptiveWithThreshold};
 
 /// `2π`.
 const TWO_PI: f64 = std::f64::consts::TAU;
@@ -118,6 +119,12 @@ const SEARCH_PASSES: usize = 3;
 /// resolved. Below `1e-8` the instability returns; above `1e-4` the bias
 /// dominates.
 const RIDGE: f64 = 1.0e-6;
+
+/// Distinct-voxel count at or above which the per-voxel solves are distributed.
+///
+/// Derived rather than defaulted; the reasoning is at the call site in
+/// `fit_power_law_fields`.
+const PARALLEL_FIT_THRESHOLD: usize = 16;
 
 /// Bisection steps used to calibrate `M_∞` against the prescribed phase
 /// velocity — 80 halvings drive the bracket to `f64` resolution.
@@ -959,10 +966,35 @@ pub fn fit_power_law_fields(
         }
     };
 
-    // Solve each distinct voxel's strengths on the shared grid.
+    // Solve each distinct voxel's strengths on the shared grid, in parallel.
+    //
+    // The solves are independent and `fit_at_taus` is deterministic, so writing
+    // each result to its own index reproduces the serial answer *bit for bit* -
+    // there is no reduction here whose order could change. That is what
+    // `parallel_field_fit_matches_the_serial_solve` pins.
+    //
+    // The threshold is not the crate default. `Adaptive` parallelizes at 1024
+    // elements, sized for cheap per-element work; one element here is a
+    // Lawson-Hanson solve over the whole fit band, **measured at 273 us**
+    // against a task-dispatch cost around 1 us. Sixteen is well clear of
+    // break-even while keeping small labelled media - which dedup to a handful
+    // of distinct tuples - on the serial path.
+    //
+    // Scope worth knowing at this call site: this parallelizes the *solves*,
+    // which is 5.9x measured. On the `Optimized` placement it is not where the
+    // time goes - the joint tau search above dominates by three orders of
+    // magnitude (KW-MED-091).
+    let mut slots: Vec<Option<KwaversResult<RelaxationSpectrumFit>>> =
+        (0..distinct.len()).map(|_| None).collect();
+    enumerate_mut_with::<AdaptiveWithThreshold<PARALLEL_FIT_THRESHOLD>, _, _>(
+        &mut slots,
+        |i, slot| {
+            *slot = Some(fit_at_taus(&distinct[i], &omegas, &freqs, &taus));
+        },
+    );
     let mut solved: Vec<RelaxationSpectrumFit> = Vec::with_capacity(distinct.len());
-    for t in &distinct {
-        solved.push(fit_at_taus(t, &omegas, &freqs, &taus)?);
+    for slot in slots {
+        solved.push(slot.expect("invariant: every index is visited exactly once")?);
     }
 
     let n_arms = taus.len();

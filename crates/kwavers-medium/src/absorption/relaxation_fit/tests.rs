@@ -596,3 +596,65 @@ fn air_inclusion_shares_the_tissue_grid() {
         );
     }
 }
+
+/// **The distributed per-voxel solve reproduces the serial one bit for bit.**
+///
+/// Not "to a tolerance": each distinct voxel's Lawson-Hanson solve is
+/// independent and deterministic, and the parallel path writes every result to
+/// its own index, so no reduction order can vary. Anything short of bitwise
+/// equality would mean the distribution changed the mathematics rather than
+/// just its schedule (KW-MED-071).
+///
+/// The oracle is computed here by calling `fit_at_taus` in a plain serial loop
+/// on the same shared relaxation times, rather than by comparing the function
+/// against itself under two policies — a self-comparison would pass even if
+/// both paths were wrong together.
+#[test]
+fn parallel_field_fit_matches_the_serial_solve() {
+    // 6³ = 216 distinct tuples, comfortably past PARALLEL_FIT_THRESHOLD, so the
+    // distributed path is the one under test rather than the serial fallback.
+    let n = 6usize;
+    let shape = [n, n, n];
+    let smooth = |i: usize, j: usize, k: usize| {
+        (i as f64 + 1.0) * 0.37 + (j as f64) * 0.11 + (k as f64) * 0.023
+    };
+    let alpha = Array3::from_shape_fn(shape, |[i, j, k]| 4.0 + smooth(i, j, k));
+    let gamma = Array3::from_shape_fn(shape, |[i, j, k]| 1.05 + 0.02 * smooth(i, j, k));
+    let speed = Array3::from_elem(shape, 1540.0);
+    let density = Array3::from_elem(shape, 1000.0);
+
+    let band = band_with(3, RelaxationTimePlacement::Optimized);
+    let fit =
+        fit_power_law_fields(&alpha, &gamma, &speed, &density, 1.0e6, &band).expect("field fit");
+
+    // Serial oracle on the times the field fit selected.
+    let freqs = band.frequencies();
+    let omegas: Vec<f64> = freqs.iter().map(|f| std::f64::consts::TAU * f).collect();
+    for i in 0..n {
+        for j in 0..n {
+            for k in 0..n {
+                let target = PowerLawTarget {
+                    alpha_ref_np_m: alpha[[i, j, k]],
+                    exponent: gamma[[i, j, k]],
+                    f_ref: 1.0e6,
+                    sound_speed: speed[[i, j, k]],
+                    density: density[[i, j, k]],
+                };
+                let expected = fit_at_taus(&target, &omegas, &freqs, fit.relaxation_times())
+                    .expect("serial fit");
+                assert_eq!(
+                    fit.equilibrium_modulus()[[i, j, k]],
+                    expected.equilibrium_modulus(),
+                    "voxel ({i},{j},{k}): equilibrium modulus differs from the serial solve"
+                );
+                for (arm, weight) in expected.weights().iter().enumerate() {
+                    assert_eq!(
+                        fit.weights()[arm][[i, j, k]],
+                        *weight,
+                        "voxel ({i},{j},{k}) arm {arm}: weight differs from the serial solve"
+                    );
+                }
+            }
+        }
+    }
+}
