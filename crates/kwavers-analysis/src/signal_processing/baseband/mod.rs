@@ -6,6 +6,8 @@
 //! `(channel, sample)` layout and is suitable for coherent complex DAS or
 //! slow-time I/Q processing.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use apollo::{fft_1d_array, ifft_1d_complex};
 use eunomia::Complex64;
 use kwavers_core::constants::numerical::TWO_PI;

@@ -11,6 +11,8 @@
 //! deliberately not asserted — it is regime-dependent (the literature reports an
 //! optimal PRF), so the tests pin only the regime-independent mechanisms.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::*;
 use crate::analytical::cavitation::SweepProfile;
 

@@ -11,6 +11,8 @@
 //! $$ D(t) = \int_0^t I(\tau)\, d\tau $$
 //! where $I$ is the local cavitation intensity.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::state::{CavitationDose, CavitationMechanicsState};
 use super::thresholds::{blake_threshold, flynn_threshold, neppiras_threshold, ThresholdModel};
 use crate::acoustics::analysis::calculate_mechanical_index;

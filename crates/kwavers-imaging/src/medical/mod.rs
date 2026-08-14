@@ -34,6 +34,8 @@
 //!   ultrasound waves"
 //! - Cristescu et al. (2017) "Automated identification of skull bones from CT images"
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 pub mod ct_loader;
 pub mod dicom_loader;
 /// Shared ritk-io → kwavers volume bridge used by every format loader.
@@ -120,9 +122,10 @@ pub trait MedicalImageLoader: Send + Sync {
 /// - Returns [`Err`] if an internal constraint is violated.
 ///
 pub fn create_loader(path: &str) -> KwaversResult<Box<dyn MedicalImageLoader>> {
-    if path.ends_with(".nii") || path.ends_with(".nii.gz") {
+    use kwavers_core::path::has_suffix_ignore_ascii_case;
+    if has_suffix_ignore_ascii_case(path, &[".nii", ".nii.gz"]) {
         Ok(Box::new(CTImageLoader::new()))
-    } else if path.ends_with(".dcm") || path.ends_with(".dicom") {
+    } else if has_suffix_ignore_ascii_case(path, &[".dcm", ".dicom"]) {
         Ok(Box::new(DicomImageLoader::new()))
     } else {
         Err(kwavers_core::error::KwaversError::InvalidInput(format!(

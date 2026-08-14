@@ -1,5 +1,7 @@
 //! Dense-versus-sparse OpenPros-style speed-shift reconstruction benchmark.
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use kwavers_diagnostics::reconstruction::sound_speed_shift::{
     openpros_shift_benchmark_case, OpenProsShiftBenchmarkConfig, SoundSpeedShiftPlan,

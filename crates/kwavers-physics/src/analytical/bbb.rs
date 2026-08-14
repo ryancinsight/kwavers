@@ -14,6 +14,8 @@
 
 // ─── Hill dose-response model ─────────────────────────────────────────────────
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 /// BBB permeability enhancement as a function of acoustic dose (Hill model).
 ///
 /// ```text

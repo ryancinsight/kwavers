@@ -8,6 +8,8 @@
 //! The check is vacuous when a component's [`crate::place::PackageFormFactor`] is
 //! [`crate::place::PackageFormFactor::Unknown`] (no package metadata available).
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use crate::board::Board;
 use crate::geom::Point;
 use crate::place::{Component, FootprintDef, PackageFormFactor, Role};

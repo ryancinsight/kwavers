@@ -22,6 +22,8 @@
 //! - Xu et al. (2016): "Oncotripsy: targeted cancer therapy using tumor-specific cavitation"
 //! - Maxwell et al. (2013): "Cavitation clouds in tissue: replication and translation"
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use kwavers_core::error::KwaversResult;
 use kwavers_physics::cavitation_control::FeedbackController;
 use leto::Array3;

@@ -3,6 +3,8 @@
 //! All expected values are derived from the closed-form definitions of each
 //! imaging condition; no empirical tolerances or magic numbers.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 #[cfg(test)]
 mod cases {
     use leto::{Array2, Array3, Array4};

@@ -1,5 +1,7 @@
 //! Staggered-grid velocity divergence computation.
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use crate::geometry::SolverGeometry;
 use kwavers_core::error::KwaversResult;
 

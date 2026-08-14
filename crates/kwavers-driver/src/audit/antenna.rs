@@ -1,3 +1,10 @@
+//! Antenna / dangling-track detectors.
+//!
+//! Track ends that terminate without a pad or via act as etch-process and ESD antennas. This
+//! module walks routed geometry for such unconnected endpoints and reports them as audit faults.
+
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use std::collections::HashMap;
 
 use crate::board::Board;

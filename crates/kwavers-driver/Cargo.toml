@@ -30,3 +30,6 @@ kwavers = ["dep:kwavers-transducer"]
 
 [lib]
 name = "kwavers_driver"
+
+[lints]
+workspace = true

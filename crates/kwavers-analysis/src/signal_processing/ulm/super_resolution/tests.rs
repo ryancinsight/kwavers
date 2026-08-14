@@ -1,5 +1,7 @@
 //! Tests for super-resolution reconstruction.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::reconstructor::SuperResReconstructor;
 use super::types::{RenderMode, SuperResConfig};
 use crate::signal_processing::ulm::microbubble_detection::BubbleDetection;

@@ -2,6 +2,8 @@
 //!
 //! This module contains implementations of various traits for the `NonlinearWave` struct.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use crate::traits::AcousticWaveModel;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;

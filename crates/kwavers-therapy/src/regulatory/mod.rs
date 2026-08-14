@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 pub mod device;
 pub mod evidence;
 pub mod performance;

@@ -1,5 +1,7 @@
 //! State estimation for control system
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use super::super::detection::CavitationMetrics;
 use std::collections::VecDeque;
 

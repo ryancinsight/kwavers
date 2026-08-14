@@ -14,6 +14,8 @@
 //! unconstrained minimiser onto the box, and projected gradient descent converges
 //! to it.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use crate::parallel::zip_mut_ref;
 use leto::Array3;
 

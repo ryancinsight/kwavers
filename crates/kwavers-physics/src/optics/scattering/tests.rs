@@ -7,6 +7,8 @@
 //! whose `efficiencies_mx(m, x)` reproduces Wiscombe (1980) Table 1 to
 //! machine precision.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::*;
 use eunomia::Complex64;
 use kwavers_core::constants::numerical::TWO_PI;

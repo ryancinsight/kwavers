@@ -6,6 +6,9 @@
 //!
 //! The solver delegates to [`leto_ops::LsqrSolver`] under the hood.
 
+#![cfg_attr(test, expect(clippy::print_stderr, reason = "ratchet KWAVERS-LINT-1"))]
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use leto::Array1;
 use leto_ops::{LinearOperator, LsqrConfig, LsqrResult, LsqrSolver};
 

@@ -6,6 +6,8 @@
 
 // ─── Hill activation ──────────────────────────────────────────────────────────
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 /// Hill equation activation probability for mechanosensitive channels.
 ///
 /// Models the probability of channel activation as a function of acoustic

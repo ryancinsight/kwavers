@@ -2,6 +2,8 @@
 //!
 //! Tracks execution time, memory usage, and plugin performance metrics.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 

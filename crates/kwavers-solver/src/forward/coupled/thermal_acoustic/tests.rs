@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::*;
 
 fn assert_close(actual: f64, expected: f64) {

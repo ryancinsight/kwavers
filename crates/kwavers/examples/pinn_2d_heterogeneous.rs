@@ -21,6 +21,8 @@
 //! - Boundary condition enforcement in complex geometries
 //! - Training convergence monitoring for heterogeneous problems
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 #[cfg(feature = "pinn")]
 use kwavers_core::error::KwaversResult;
 #[cfg(feature = "pinn")]

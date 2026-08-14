@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::config::PhysicsNNTrainingConfig;
 use super::dataset::{EpochTrainingMetrics, TrainingDataset};
 use super::history::TrainingHistory;

@@ -3,6 +3,8 @@
 //! Covers: lateral and axial PSF models, Doppler frequency shift,
 //! plane-wave compounding PSF, and resolution limits.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use leto::Array1;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;

@@ -47,6 +47,8 @@
 //! - Krebs (2009) extends to medical USCT via cross-correlation-adjusted and
 //!   vortex-encoded variants (2024–2025 literature).
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::{geometry::FwiGeometry, FwiProcessor};
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;

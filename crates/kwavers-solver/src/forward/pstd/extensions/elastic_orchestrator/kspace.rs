@@ -36,6 +36,8 @@
 //!   simulation and reconstruction of photoacoustic wave fields." J. Biomed.
 //!   Opt. 15(2), 021314.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::types::ElasticPstdMedium;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_math::fft::shift_operators::generate_kappa as canonical_generate_kappa;

@@ -8,6 +8,8 @@
 //! Showcases the implementation of modern ultrasound imaging methods
 //! for improved resolution, frame rate, and penetration.
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::advanced::{
     CodedExcitationConfig, CodedExcitationProcessor, ExcitationCode, PlaneWaveCompounding,
     PlaneWaveReconstruction, SyntheticApertureConfig, SyntheticApertureReconstruction,

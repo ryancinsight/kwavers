@@ -25,6 +25,8 @@
 //! - Shu & Osher (1988). *J. Comput. Phys.* 77(2):439-471.
 //! - Pierce (1989). *Acoustics: An Introduction to Its Physical Principles*.
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_solver::forward::pstd::dg::quadrature::gauss_lobatto_quadrature;

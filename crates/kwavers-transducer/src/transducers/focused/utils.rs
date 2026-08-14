@@ -2,6 +2,8 @@
 //!
 //! Provides helper functions for creating common transducer configurations.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::bowl::{BowlConfig, BowlTransducer};
 use super::multi_bowl::MultiBowlArray;
 use super::validation::{

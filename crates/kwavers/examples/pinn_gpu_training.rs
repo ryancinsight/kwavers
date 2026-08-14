@@ -9,6 +9,8 @@
 //! - Memory optimization and performance monitoring
 //! - Multi-region domains with interface conditions
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 #[cfg(feature = "pinn")]
 use kwavers_core::error::KwaversResult;
 #[cfg(feature = "pinn")]

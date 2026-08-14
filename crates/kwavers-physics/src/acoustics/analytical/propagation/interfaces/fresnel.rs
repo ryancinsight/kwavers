@@ -3,6 +3,8 @@
 //! Implements the Fresnel equations for calculating reflection and transmission
 //! coefficients at dielectric interfaces.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::AnalyticalPolarization;
 use kwavers_core::error::KwaversResult;
 use std::f64::consts::PI;

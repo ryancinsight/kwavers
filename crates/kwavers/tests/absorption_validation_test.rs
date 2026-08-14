@@ -6,6 +6,9 @@
 //! Reference: Treeby et al., "Modeling power law absorption and dispersion
 //! for acoustic propagation using the fractional Laplacian", JASA 2010
 
+#![expect(clippy::print_stderr, reason = "ratchet KWAVERS-LINT-1")]
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use kwavers_core::constants::SOUND_SPEED_WATER;
 use plotters::prelude::*;
 use std::fs;

@@ -3,6 +3,8 @@
 //! Calculates total light emission from blackbody, bremsstrahlung,
 //! and Cherenkov radiation mechanisms at each spatial point.
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use leto::Array3;
 
 use kwavers_core::constants::fundamental::{BOLTZMANN, ELEMENTARY_CHARGE};

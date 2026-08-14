@@ -20,6 +20,8 @@
 //! - Performance benchmarking (solver comparison, runtime profiling)
 //! - Educational demonstrations (tissue optics, light transport)
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use anyhow::Result;
 use kwavers_grid::GridDimensions;
 use kwavers_medium::optical_map::{OpticalPropertyMapBuilder, Region};

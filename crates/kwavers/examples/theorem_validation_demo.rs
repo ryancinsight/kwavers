@@ -3,6 +3,8 @@
 //! This example demonstrates the systematic validation of mathematical theorems
 //! implemented in Kwavers with quantitative error bounds and convergence proofs.
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use kwavers_analysis::validation::theorem_validation::{TheoremValidation, TheoremValidator};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

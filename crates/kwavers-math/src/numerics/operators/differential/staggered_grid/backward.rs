@@ -2,6 +2,8 @@
 //!
 //! SRP: changes when the backward stencil or boundary treatment changes.
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use super::operator::StaggeredGridOperator;
 use crate::numerics::operators::differential::traversal;
 use kwavers_core::error::{KwaversResult, NumericalError};

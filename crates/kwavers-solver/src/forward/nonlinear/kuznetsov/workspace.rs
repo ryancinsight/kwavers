@@ -3,6 +3,8 @@
 //! This module provides pre-allocated workspace arrays to eliminate
 //! heap allocations in the main simulation loop.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::spectral::KuznetsovSpectralOperator;
 use crate::workspace::ScratchArena;
 use kwavers_core::error::KwaversResult;

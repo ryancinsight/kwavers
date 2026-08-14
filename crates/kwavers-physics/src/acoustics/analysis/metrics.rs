@@ -1,5 +1,7 @@
 //! Field metrics calculation
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::pressure::{acoustic_impedance, harmonic_peak_intensity};
 use super::validation::{validate_pressure_field_domain, validation_error};
 use kwavers_core::error::KwaversResult;

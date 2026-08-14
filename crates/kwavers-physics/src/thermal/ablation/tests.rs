@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::field::AblationField;
 use super::kinetics::AblationKinetics;
 use super::state::AblationState;

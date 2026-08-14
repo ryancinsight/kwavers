@@ -1,5 +1,7 @@
 //! Transmission-line length (λ/10 rule) violation detector.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use std::collections::BTreeMap;
 
 use crate::board::{Board, NetId};

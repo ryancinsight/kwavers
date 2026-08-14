@@ -4,6 +4,8 @@
 //! to support continuous integration and rapid feedback cycles.
 //! Heavy integration tests are separated into dedicated test files.
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use kwavers_core::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
 use kwavers_core::error::GridError;
 use kwavers_grid::Grid;

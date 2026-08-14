@@ -1,3 +1,5 @@
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use kwavers_math::fft::{Complex64, Fft3d, Fft3dInOutExt, Shape3D};
 use leto::Array3;
 

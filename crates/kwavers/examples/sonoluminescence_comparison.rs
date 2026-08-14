@@ -28,6 +28,9 @@
 //! - Cherenkov produces bluer, more directional emission
 //! - Combined emission shows complex interplay of both mechanisms
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use kwavers_grid::Grid;
 use kwavers_physics::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel;
 use kwavers_physics::bubble_dynamics::bubble_state::BubbleParameters;

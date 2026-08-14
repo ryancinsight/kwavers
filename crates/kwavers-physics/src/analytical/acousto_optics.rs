@@ -32,6 +32,8 @@
 //! - Korpel, A. (1997). *Acousto-Optics* (2nd ed.). Marcel Dekker.
 //! - Saleh, B. E. A., & Teich, M. C. (2007). *Fundamentals of Photonics*, §20.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use core::f64::consts::{PI, TAU};
 use eunomia::Complex64;
 use kwavers_math::jn;

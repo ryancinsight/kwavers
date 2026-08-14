@@ -1,3 +1,5 @@
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use kwavers_boundary::DomainPmlConfig;
 use kwavers_grid::Grid;
 use kwavers_medium::homogeneous::HomogeneousMedium;

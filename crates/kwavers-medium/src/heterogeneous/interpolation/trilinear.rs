@@ -3,6 +3,8 @@
 //! **Design Principle**: Extract interpolation logic following GRASP Information Expert
 //! Per TSE 2025 "Modular Scientific Computing Architecture"
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use kwavers_grid::Grid;
 use leto::Array3;
 

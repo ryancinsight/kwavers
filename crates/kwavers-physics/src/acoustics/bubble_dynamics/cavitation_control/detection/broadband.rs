@@ -1,5 +1,7 @@
 //! Broadband noise-based cavitation detection
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::constants::{BROADBAND_THRESHOLD_DB, MIN_SPECTRAL_POWER, TEMPORAL_SMOOTHING};
 use super::traits::{CavitationDetector, DetectorParameters};
 use super::types::{CavitationDetectionState, CavitationMetrics, DetectionMethod, HistoryBuffer};

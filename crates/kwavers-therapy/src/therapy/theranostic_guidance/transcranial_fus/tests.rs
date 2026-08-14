@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::bbb::bbb_opening_dose;
 use super::benchmark::{
     evaluate_pressure_field, run_skull_adaptive_transcranial_benchmark,

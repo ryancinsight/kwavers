@@ -1,3 +1,8 @@
+//! Near-short detectors — graded edge-to-edge clearance between different-net copper.
+//!
+//! Reports different-net copper whose edge-to-edge gap falls below the configured risk margin,
+//! as a graded warning band rather than a hard clearance violation.
+
 use crate::audit::crosstalk::point_features;
 use crate::audit::fault_report::is_hv;
 use crate::board::Board;

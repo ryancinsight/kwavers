@@ -1,3 +1,5 @@
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use super::super::config::CouplingConvergenceInfo;
 use super::super::residual_metric::norm;
 use super::super::state_vector::{flatten_fields, sorted_field_keys, unflatten_fields};

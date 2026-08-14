@@ -1,5 +1,7 @@
 //! Core Spectral Unmixer Implementation
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::tikhonov::{estimate_condition_number, tikhonov_solve};
 use crate::signal_processing::spectroscopy::types::{
     SpectralUnmixingConfig, UnmixingResult, VolumetricUnmixingResult,

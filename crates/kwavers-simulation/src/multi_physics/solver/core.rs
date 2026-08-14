@@ -1,5 +1,7 @@
 //! `SimulationMultiPhysicsSolver` — multi-physics simulation orchestrator.
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array3;
 use std::collections::HashMap;

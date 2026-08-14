@@ -18,6 +18,8 @@
 //! semi-discrete DG operator with the configured SSP-RK3 or Forward-Euler time
 //! integrator. No projection, flux, or CFL logic is duplicated here.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 use kwavers_medium::{density_at, sound_speed_at, Medium};

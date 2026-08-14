@@ -1,5 +1,7 @@
 //! Main phased array transducer implementation
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::beamforming::{BeamformingCalculator, BeamformingMode};
 use super::config::PhasedArrayConfig;
 use super::crosstalk::CrosstalkModel;

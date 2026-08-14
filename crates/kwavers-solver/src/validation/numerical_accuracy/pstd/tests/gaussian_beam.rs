@@ -1,3 +1,6 @@
+#![cfg_attr(test, expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1"))]
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use crate::pstd::PSTDConfig as PstdConfig;
 use crate::pstd::PSTDSolver;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};

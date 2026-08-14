@@ -66,6 +66,9 @@
 //! - Quesson, B. et al. (2010). A method for MRI guidance of intercostal HIFU
 //!   ablation in the liver. *Med. Phys.* **37**(6), 2533–2540.
 
+#![expect(clippy::print_stderr, reason = "ratchet KWAVERS-LINT-1")]
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use gaia::{
     domain::core::scalar::{Point3r, Vector3r},
     Ray as GaiaRay,

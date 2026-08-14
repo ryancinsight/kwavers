@@ -49,6 +49,8 @@
 //! cargo run --example comprehensive_pinn_demo -- --all
 //! ```
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use std::time::Instant;
 
 #[cfg(feature = "pinn")]

@@ -1,3 +1,9 @@
+//! Crosstalk detectors — capacitive/inductive coupling between adjacent copper.
+//!
+//! Complements [`super::shorts`]: where that module grades any different-net gap, this one
+//! targets the HV-class-versus-non-HV-class relationship so the placer is driven to separate
+//! switching nodes from sensitive control nets.
+
 use crate::audit::fault_report::is_hv;
 use crate::board::{Board, NetId};
 use crate::geom::{segments_cross, Nm, Point};

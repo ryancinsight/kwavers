@@ -3,6 +3,8 @@
 //! Validates that the CFL condition is properly enforced for numerical stability.
 //! Reference: Taflove & Hagness, "Computational Electrodynamics", 2005
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use kwavers_core::constants::CFL_SAFETY_FACTOR;
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;

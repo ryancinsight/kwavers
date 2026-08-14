@@ -1,6 +1,8 @@
 //! Tests for the `dfm` slice (Phase 4l carve-out). Moved verbatim from the flat `src/dfm.rs`
 //! `mod tests` block; `super::*` resolves the slice facade.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::*;
 use crate::board::{Board, LayerId, NetId, Track};
 use crate::geom::{GridSpec, Nm, Point};

@@ -5,6 +5,8 @@
 //! References:
 //! - Wooh & Shi (1999): "A simulation study of the beam steering characteristics for linear phased arrays"
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use kwavers_core::error::KwaversResult;
 use leto::{Array1, Array2};
 

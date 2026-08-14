@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::readonly::PluginFieldAccess;
 use crate::acoustics::state::PhysicsState;
 use kwavers_field::mapping::UnifiedFieldType;

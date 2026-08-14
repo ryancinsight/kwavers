@@ -3,6 +3,8 @@
 //! This example demonstrates distributed Physics-Informed Neural Network training
 //! across multiple GPUs using domain decomposition and load balancing.
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 #[cfg(feature = "pinn")]
 use kwavers_core::error::KwaversResult;
 #[cfg(feature = "pinn")]

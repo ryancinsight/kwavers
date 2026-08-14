@@ -1,5 +1,7 @@
 //! Spatial geometry helpers: coordinate mapping, masking, and distance.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::{Array2, Array3};
 

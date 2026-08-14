@@ -1,6 +1,8 @@
 //! Single-output traversal adapters: one mutable view plus one or more
 //! immutable views, closed over with references.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use leto::{ArrayView, ArrayViewMut};
 use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
 

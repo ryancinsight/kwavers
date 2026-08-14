@@ -15,6 +15,8 @@
 //!   delay-and-sum focusing on deformed apertures).
 //! - Khuri-Yakub & Oralkan (2011), CMUT flex-derating (`CmutCell::flex_gap_derating`).
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::super::mems::CmutCell;
 use aequitas::systems::si::quantities::{Dimensionless, Length, ReciprocalLength, Time, Velocity};
 use aequitas::systems::si::units::{Meter, MeterPerSecond, PerMeter, Second};

@@ -1,5 +1,7 @@
 //! Gradient processing: smoothing, regularization, near-source mute, TV/Laplacian helpers.
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use super::FwiProcessor;
 use crate::inverse::fwi::time_domain::field_ops::{add_scaled_field, write_negative_product};
 use kwavers_core::error::KwaversResult;

@@ -2,6 +2,8 @@
 //!
 //! Core phase shifting functionality for beam control.
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use super::core::{
     calculate_wavelength, quantize_phase, wrap_phase, ShiftingStrategy, MAX_FOCAL_POINTS,
     MAX_STEERING_ANGLE, MIN_FOCAL_DISTANCE,

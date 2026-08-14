@@ -4,6 +4,8 @@
 //! indirection. For concurrent access, wrap the entire PhysicsState in `Arc<RwLock>`
 //! at the application level if needed.
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use kwavers_core::error::{KwaversResult, PhysicsError};
 use kwavers_grid::Grid;
 use leto::{Array3, Array4, ArrayView3, ArrayViewMut3};

@@ -14,6 +14,8 @@
 //!   check requires ≥ 1; this check enforces a configurable minimum that can be raised to the
 //!   TI-recommended 4.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use crate::board::{Board, NetClassKind};
 use crate::geom::{Nm, Point};
 use crate::rules::DesignRules;

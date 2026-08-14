@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use crate::signal_processing::localization::model_order::ModelOrderCriterion;
 use crate::signal_processing::localization::{AcousticLocalizationConfig, LocalizationProcessor};
 use eunomia::Complex64;

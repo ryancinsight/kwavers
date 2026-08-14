@@ -7,6 +7,8 @@
 
 // ─── Absorption spectra ───────────────────────────────────────────────────────
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 /// Molar absorption coefficient of oxyhaemoglobin (HbO₂) vs wavelength.
 ///
 /// Returns [m⁻¹ per mol/L], so the absorption coefficient is:

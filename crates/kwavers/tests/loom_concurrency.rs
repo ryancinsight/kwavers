@@ -13,6 +13,8 @@
 //! RUSTFLAGS="--cfg loom" cargo test --test loom_concurrency --release
 //! ```
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 #[cfg(loom)]
 mod loom_tests {
     use loom::sync::{Arc, RwLock};

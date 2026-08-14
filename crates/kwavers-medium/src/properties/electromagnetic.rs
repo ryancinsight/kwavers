@@ -31,6 +31,8 @@
 //! - `permeability ≥ 1.0` (most materials)
 //! - `conductivity ≥ 0.0`
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use kwavers_core::constants::fundamental::{SPEED_OF_LIGHT, VACUUM_IMPEDANCE, VACUUM_PERMEABILITY};
 use kwavers_core::constants::numerical::TWO_PI;
 use std::fmt;

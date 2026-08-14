@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use crate::plugin::{PluginContext, PluginMetadata, PluginState};
 use aequitas::systems::si::quantities::Time;
 use kwavers_core::error::KwaversResult;

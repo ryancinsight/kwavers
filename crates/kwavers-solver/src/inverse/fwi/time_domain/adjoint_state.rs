@@ -1,5 +1,7 @@
 //! Acoustic adjoint-state primitives.
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use leto::{Array2, Array3, ArrayView3};
 use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};

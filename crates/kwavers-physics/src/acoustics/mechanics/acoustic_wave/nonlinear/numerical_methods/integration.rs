@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;

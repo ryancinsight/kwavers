@@ -41,6 +41,8 @@
 //! - `blood_perfusion ≥ 0` (if present)
 //! - `blood_specific_heat > 0` (if present)
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use aequitas::systems::si::quantities::{MassDensity, SpecificHeatCapacity, ThermalConductivity};
 use kwavers_core::constants::acoustic_parameters::BONE_DENSITY;
 use kwavers_core::constants::fundamental::{DENSITY_TISSUE, DENSITY_WATER};

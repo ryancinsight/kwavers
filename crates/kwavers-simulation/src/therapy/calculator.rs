@@ -1,5 +1,7 @@
 //! Therapy calculator orchestration
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use crate::parallel::zip_indexed_mut_ref3;
 use kwavers_core::constants::fundamental::DENSITY_TISSUE;
 use kwavers_core::constants::medical::{BLOOD_SPECIFIC_HEAT, TISSUE_PERFUSION_RATE};

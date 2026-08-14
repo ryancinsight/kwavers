@@ -34,6 +34,8 @@
 //! - Mittal, R. & Iaccarino, G. (2005). "Immersed boundary methods". *Annual Review of Fluid Mechanics*, 37, 239-261.
 //! - Treeby, B.E. et al. (2012). "Modeling nonlinear ultrasound propagation in heterogeneous media with power law absorption using a k-space pseudospectral method". *J. Acoust. Soc. Am.*, 131(6), 4324-4336.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 pub mod ghost_cell;
 pub mod immersed_interface;
 pub mod subgrid;

@@ -3,6 +3,8 @@
 //! These tests exercise the RITK-backed NIfTI reader/writer stack.
 //! Run with: cargo test
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use coeus_core::SequentialBackend;
 use leto::Array3;
 use ritk_io::domain::{ImageReader, ImageWriter};

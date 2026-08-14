@@ -14,6 +14,8 @@
 //! When called for every retarded-time slice (nt = 1000), one diffraction
 //! half-step saves 3000 allocations (~786 MB total clones + FFT temporaries).
 
+#![cfg_attr(test, expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1"))]
+
 use apollo::{fft_2d_complex_inplace, ifft_2d_complex_inplace, Complex64 as ApolloComplex64};
 use kwavers_math::fft::Complex64;
 use leto::Array2 as LetoArray2;

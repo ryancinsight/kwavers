@@ -15,6 +15,8 @@
 //! - Treeby & Cox (2010): "MATLAB toolbox"
 //! - Wang & Yao (2016): "Photoacoustic tomography: in vivo imaging from organelles to organs"
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 mod algorithms;
 mod config;
 mod filters;

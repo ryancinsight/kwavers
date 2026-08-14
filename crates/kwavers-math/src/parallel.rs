@@ -1,5 +1,7 @@
 //! Provider-owned traversal adapters for math kernels.
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use leto::{ArrayView, ArrayViewMut};
 use leto_ops::zip_mut_with;
 use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};

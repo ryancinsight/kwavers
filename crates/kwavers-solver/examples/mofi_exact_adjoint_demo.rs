@@ -10,6 +10,8 @@
 //!
 //! Run: `cargo run -p kwavers-solver --example mofi_exact_adjoint_demo`
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use kwavers_grid::Grid;
 use kwavers_solver::inverse::fwi::time_domain::{
     mofi_align, mofi_transform, FwiEngine, FwiGeometry, FwiProcessor, MofiConfig, RigidTransform,

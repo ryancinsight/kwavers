@@ -1,5 +1,7 @@
 //! Buffer allocation invariants, nonlinear steepening, and CFL stability tests.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use crate::forward::nonlinear::westervelt::{WesterveltFdtd, WesterveltFdtdConfig};
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_core::constants::tissue_acoustics::B_OVER_A_WATER;

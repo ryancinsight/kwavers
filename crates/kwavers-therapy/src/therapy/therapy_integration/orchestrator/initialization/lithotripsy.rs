@@ -95,7 +95,7 @@ fn create_stone_geometry(config: &TherapySessionConfig, grid: &Grid) -> Array3<f
 ///
 fn load_ct_imaging_data(config: &TherapySessionConfig) -> KwaversResult<Array3<f64>> {
     if let Some(ct_path) = &config.imaging_data_path {
-        if ct_path.ends_with(".nii") || ct_path.ends_with(".nii.gz") {
+        if kwavers_core::path::has_suffix_ignore_ascii_case(ct_path, &[".nii", ".nii.gz"]) {
             let mut loader = CTImageLoader::new();
             match loader.load(ct_path) {
                 Ok(ct_data) => {
@@ -116,7 +116,7 @@ fn load_ct_imaging_data(config: &TherapySessionConfig) -> KwaversResult<Array3<f
                     warn!("Failed to load NIFTI CT data: {error}. Using synthetic fallback.");
                 }
             }
-        } else if ct_path.ends_with(".dcm") {
+        } else if kwavers_core::path::has_suffix_ignore_ascii_case(ct_path, &[".dcm"]) {
             warn!(
                 "DICOM loading via ritk-io not wired into therapy orchestrator yet for {}. \
                  Use ritk_io::load_dicom_series directly (see examples/skull_ct_phase_correction.rs) \

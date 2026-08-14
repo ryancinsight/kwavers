@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1"))]
+
 use super::config::AdaptiveBubbleConfig;
 use super::integrator::AdaptiveBubbleIntegrator;
 use crate::acoustics::bubble_dynamics::{BubbleParameters, BubbleState, KellerMiksisModel};

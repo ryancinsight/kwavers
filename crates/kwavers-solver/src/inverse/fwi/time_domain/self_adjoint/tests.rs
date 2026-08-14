@@ -5,6 +5,8 @@
 //! literal algebraic gradient of the discrete `J`, so the finite-difference
 //! gradient test must return `κ = (g·δm)/(dJ/ds) ≈ 1` for every direction.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::{
     build_edge_sponge, forward, forward_sensor_only, forward_tail, gradient,
     gradient_reconstructed, Acquisition, SelfAdjointConfig,

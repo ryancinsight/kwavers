@@ -1,5 +1,10 @@
 //! Shared 1-D acoustic DG/FDTD/PSTD comparison fixture for examples.
-#![allow(dead_code)] // Shared example fixture: each example target uses a subset.
+#![expect(
+    dead_code,
+    reason = "shared example fixture: each example target uses a subset"
+)]
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;

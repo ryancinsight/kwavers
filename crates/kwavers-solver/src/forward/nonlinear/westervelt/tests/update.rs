@@ -1,5 +1,7 @@
 //! Pressure-buffer identity, wave propagation, and conservation-diagnostic integration tests.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use crate::forward::nonlinear::conservation::{ConservationDiagnostics, ConservationTolerances};
 use crate::forward::nonlinear::westervelt::{WesterveltFdtd, WesterveltFdtdConfig};
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};

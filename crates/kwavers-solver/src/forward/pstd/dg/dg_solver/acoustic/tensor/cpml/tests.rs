@@ -1,5 +1,7 @@
 //! Value-semantic regression tests for the DG-CPML tensor acoustic stepper.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::super::{AcousticDgTensorWorkspace, ACOUSTIC_PRESSURE_VAR, ACOUSTIC_VELOCITY_X_VAR};
 use crate::forward::pstd::dg::cpml::{
     DgCpmlAxis, DgCpmlConfig, DgCpmlMemoryWorkspace, DgCpmlProfiles,

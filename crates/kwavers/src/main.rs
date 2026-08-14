@@ -1,3 +1,6 @@
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;

@@ -35,6 +35,8 @@
 //! scaling factor is the same `2·2/c` compensation used by the reference
 //! implementation to account for the one-sided detector line.
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use apollo::{fft_2d_complex_inplace, ifft_2d_complex_inplace, Complex64 as ApolloComplex64};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};

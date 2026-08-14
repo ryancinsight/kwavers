@@ -5,6 +5,8 @@
 //! the Apollo plan cache and therefore preserve the single source of truth for
 //! transform execution while centralizing repeated spectral post-processing.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use crate::fft::{fft_1d_complex_slice_inplace, ifft_1d_complex_slice_inplace};
 use eunomia::Complex64;
 use leto::{Array1, Array2};

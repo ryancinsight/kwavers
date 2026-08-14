@@ -47,6 +47,8 @@
 //! - Gustafsson B et al. (1995). Time Compact Difference Schemes. §4.
 //! - Taflove A, Hagness SC (2005). Computational Electrodynamics, 3rd ed. §3.4.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use crate::forward::fdtd::config::FdtdConfig;
 use crate::forward::fdtd::solver::FdtdSolver;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};

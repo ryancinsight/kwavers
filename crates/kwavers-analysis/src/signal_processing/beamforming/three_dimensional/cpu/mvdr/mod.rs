@@ -58,6 +58,8 @@
 //! - Shan T.J., Kailath T. (1985): "Adaptive beamforming for coherent signals and
 //!   interference." *IEEE Trans. Acoust. Speech Signal Process.* 33(3), 527–536.
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use leto::{Array3, Array4};
 use moirai_parallel::{map_collect_index_with, Adaptive};
 

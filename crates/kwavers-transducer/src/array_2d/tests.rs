@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::array::TransducerArray2D;
 use super::types::{ApodizationType, ArrayCurvature, TransducerArray2DConfig};
 use aequitas::systems::si::quantities::{Angle, Frequency, Length, Velocity};

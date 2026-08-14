@@ -48,6 +48,8 @@
 //! under congestion pressure when no non-acute path is available. Evidence tier: unit tests in
 //! `mod tests` verify the routing steers toward non-acute paths when equivalent alternatives exist.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashSet};
 

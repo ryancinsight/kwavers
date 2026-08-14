@@ -5,9 +5,6 @@
 //! This module is a thin re-export shim so that existing import paths of the form
 //! `crate::performance::arena::*` continue to compile without change.
 
-// Unsafe pointer arithmetic lives in core::arena; allow propagation here.
-#![allow(unsafe_code)]
-
 // ─── Re-export everything from the canonical SSOT ─────────────────────────
 
 pub use kwavers_core::arena::batch::{

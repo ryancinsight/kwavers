@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use crate::recorder::fields::{SensorRecordField, SensorRecordSpec};
 use crate::recorder::simple::SensorRecorder;
 use crate::recorder::velocity_statistics::SampledVelocityStats;

@@ -1,3 +1,5 @@
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use kwavers_grid::Grid;
 use kwavers_medium::heterogeneous::HeterogeneousMedium;
 use kwavers_medium::viscous::ViscousProperties;

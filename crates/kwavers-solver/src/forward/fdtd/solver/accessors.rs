@@ -1,6 +1,8 @@
 //! Public solver accessors: GPU accelerator hookup, CPML enable, CFL helpers,
 //! metrics access/merge, sensor data extraction, orchestrated run loop.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use leto::{Array3, ArrayView2};
 use log::info;
 use std::sync::Arc;

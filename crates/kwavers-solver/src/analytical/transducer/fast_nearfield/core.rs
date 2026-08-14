@@ -1,5 +1,7 @@
 //! FastNearfieldSolver implementation.
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use aequitas::systems::si::quantities::{MassDensity, Velocity};
 use aequitas::systems::si::units::{KilogramPerCubicMeter, MeterPerSecond, PerMeter};
 use apollo::{fft_2d_complex, ifft_2d_complex, Complex64 as ApolloComplex64};

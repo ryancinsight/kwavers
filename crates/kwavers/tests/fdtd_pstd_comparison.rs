@@ -4,6 +4,9 @@
 //! fields against each other and, where possible, against the analytical
 //! d'Alembert solution. Generates PNG figures for each test scenario.
 
+#![expect(clippy::print_stderr, reason = "ratchet KWAVERS-LINT-1")]
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use kwavers_boundary::{DomainPMLBoundary, DomainPmlConfig};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;

@@ -176,6 +176,8 @@
 //! - Jensen (1996): "Field: A Program for Simulating Ultrasound Systems"
 //!   Medical & Biological Engineering & Computing
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 pub mod beamformer;
 pub mod config;
 pub mod features;

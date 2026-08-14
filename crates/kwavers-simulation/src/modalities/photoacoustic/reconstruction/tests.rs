@@ -1,5 +1,7 @@
 //! Tests for photoacoustic image reconstruction.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::core::{
     compute_detector_positions, interpolate_detector_signal, time_reversal_reconstruction,
 };

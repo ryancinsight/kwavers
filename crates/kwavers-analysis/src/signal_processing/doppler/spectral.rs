@@ -42,6 +42,8 @@
 //! - Evans DH, McDicken WN (2000). *Doppler Ultrasound: Physics, Instrumentation and
 //!   Signal Processing* (2nd ed.). Wiley.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use apollo::{fft_1d_array, Complex64};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};

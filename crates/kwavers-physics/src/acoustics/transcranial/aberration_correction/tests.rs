@@ -1,5 +1,7 @@
 //! Tests for aberration correction
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::*;
 use eunomia::Complex;
 use kwavers_core::constants::numerical::TWO_PI;

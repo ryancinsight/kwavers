@@ -13,6 +13,9 @@
 //! - `test_solver_validation_suite`: FDTD/PSTD solver comparisons
 //! - `test_full_workflow_validation`: End-to-end simulation validation
 
+#![expect(clippy::print_stderr, reason = "ratchet KWAVERS-LINT-1")]
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use kwavers_grid::Grid;
 
 // Import validation modules using path attribute

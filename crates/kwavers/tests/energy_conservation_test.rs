@@ -5,6 +5,8 @@
 //!
 //! Reference: LeVeque, "Finite Volume Methods for Hyperbolic Problems", 2002
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use eunomia::{FloatElement, NumericElement};
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;

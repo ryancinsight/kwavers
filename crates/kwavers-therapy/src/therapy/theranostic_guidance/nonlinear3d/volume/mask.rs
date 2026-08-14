@@ -1,5 +1,7 @@
 //! Body, target, and inversion mask construction for nonlinear 3-D volumes.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use std::collections::VecDeque;
 
 use leto::{Array3, SliceArg};

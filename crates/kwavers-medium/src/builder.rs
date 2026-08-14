@@ -2,6 +2,8 @@
 //!
 //! Follows Builder pattern for complex medium instantiation
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::{DomainMediumParameters, InterfaceTypeParameters, LayerParameters, MediumType};
 use crate::heterogeneous::HeterogeneousFactory;
 use crate::{homogeneous::HomogeneousMedium, Medium};

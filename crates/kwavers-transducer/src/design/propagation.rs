@@ -4,6 +4,8 @@
 //! pressure-envelope calculation so downstream crates do not reimplement array
 //! propagation from copied pitch/channel scalars.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use aequitas::systems::si::quantities::{
     AcousticImpedance, Dimensionless, ElectricCurrent, Frequency, Intensity, Length, Pressure,
     PressurePerElectricCurrent, Velocity,

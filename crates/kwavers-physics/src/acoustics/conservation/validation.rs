@@ -1,5 +1,7 @@
 //! Aggregated conservation validation.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::{
     entropy_production_rate, validate_energy_conservation, validate_mass_conservation,
     validate_momentum_conservation, AcousticConservationMetrics, AcousticStateRefs,

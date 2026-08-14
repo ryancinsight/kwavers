@@ -29,6 +29,8 @@
 //! - Treeby & Cox (2010). J. Biomed. Opt. 15(2), 021314.
 //! - Liu (1998). Geophysics 63(6), 2082-2089.
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;

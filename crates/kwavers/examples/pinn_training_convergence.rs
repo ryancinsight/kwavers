@@ -34,6 +34,8 @@
 //! cargo run --example pinn_training_convergence --features pinn --release
 //! ```
 
+#![expect(clippy::print_stderr, reason = "ratchet KWAVERS-LINT-1")]
+
 #[cfg(feature = "pinn")]
 use coeus_autograd::{mean, mul, sub, Var};
 #[cfg(feature = "pinn")]

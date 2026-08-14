@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::chemistry::PlasmaChemistry;
 use super::reaction::{zeldovich_no_rate, PlasmaReaction};
 use eunomia::assert_relative_eq;

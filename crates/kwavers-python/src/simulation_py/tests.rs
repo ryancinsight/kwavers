@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 #[cfg(test)]
 mod simulation_contract_tests {
     use super::super::Simulation;

@@ -5,6 +5,8 @@
 //! 2. Use the plugin manager for composition
 //! 3. Adapt existing components as plugins
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use kwavers_core::error::KwaversResult;
 use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;

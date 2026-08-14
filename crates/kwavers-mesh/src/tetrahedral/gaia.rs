@@ -14,6 +14,8 @@
 //! Gaia and kwavers use the scalar triple product volume
 //! `|det(b-a,c-a,d-a)|/6`, conversion preserves per-cell and total volume.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::mesh::TetrahedralMesh;
 use super::types::MeshBoundaryType;
 use gaia::domain::core::index::{FaceId, VertexId};

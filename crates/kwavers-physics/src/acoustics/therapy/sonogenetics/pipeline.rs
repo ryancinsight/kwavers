@@ -1,5 +1,7 @@
 //! Vector sonogenetics pipelines shared by Rust callers and PyO3 bindings.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use kwavers_core::constants::fundamental::BOLTZMANN as K_B;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use leto::{Array1, Array3};

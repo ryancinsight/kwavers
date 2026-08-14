@@ -1,5 +1,7 @@
 //! Initial pressure computation and spherical spreading correction tests.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::super::core::PhotoacousticSimulator;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_grid::Grid;

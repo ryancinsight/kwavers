@@ -12,6 +12,8 @@
 //! - Hertzberg et al. (2010): "Ultrasound focusing using magnetic resonance acoustic radiation force imaging"
 //! - Jones et al. (2019): "Transcranial MR-guided focused ultrasound: A review of the technology"
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use aequitas::systems::si::quantities::{Dimensionless, Frequency, Length};
 use aequitas::systems::si::units::{Hertz, Meter};
 mod constants;

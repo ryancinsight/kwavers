@@ -1,5 +1,7 @@
 //! Tests for photoacoustic acoustic pressure and propagation.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::pressure::{compute_initial_pressure, compute_multi_wavelength_pressure};
 use super::propagation::propagate_acoustic_wave;
 use eunomia::assert_relative_eq;

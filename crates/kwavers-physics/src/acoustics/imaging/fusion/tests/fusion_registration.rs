@@ -1,5 +1,7 @@
 //! Registration, coordinate, quality, and affine-transform tests.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::super::*;
 use leto::Array3;
 

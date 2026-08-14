@@ -2,6 +2,8 @@
 //!
 //! Reactions of ROS in the liquid surrounding the bubble
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::ros_species::ROSSpecies;
 use kwavers_core::constants::cavitation::L_TO_M3;
 use kwavers_core::constants::chemistry::{

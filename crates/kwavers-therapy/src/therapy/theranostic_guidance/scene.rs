@@ -5,6 +5,8 @@
 //! fraction against its own body or brain mask, so figure and solver paths use
 //! the same anatomical target without sharing grid-specific voxel indices.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use leto::{Array2, Array3};
 
 use kwavers_core::error::{KwaversError, KwaversResult};

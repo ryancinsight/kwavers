@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::super::ros_species::ROSSpecies;
 use super::model::SonochemistryModel;
 use kwavers_core::constants::fundamental::GAS_CONSTANT;

@@ -15,6 +15,8 @@
 //! - Radon, J. (1917). "Über die Bestimmung von Funktionen durch ihre
 //!   Integralwerte längs gewisser Mannigfaltigkeiten."
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use leto::Array2;
 
 const PI: f64 = std::f64::consts::PI;

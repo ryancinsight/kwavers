@@ -8,6 +8,8 @@
 //!    pressure field is attenuated by `dt·c₀·m·ĝ(c|k|)`, and two modes are
 //!    attenuated in the ratio of the true CP spectrum, not `(f₁/f₂)^y`.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::{cp_dispersion_stiffness, cp_spectral_shape};
 use crate::forward::pstd::config::PSTDConfig;
 use crate::multiphysics::residual_gas_coupling::BubblyMediumProps;

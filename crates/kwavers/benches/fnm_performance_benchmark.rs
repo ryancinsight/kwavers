@@ -4,6 +4,8 @@
 //! against a direct element-to-element Green-function sum to expose their
 //! different scaling behavior.
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use aequitas::systems::si::quantities::{Frequency, Length, MassDensity, Velocity};
 use aequitas::systems::si::units::{Hertz, KilogramPerCubicMeter, Meter, MeterPerSecond, PerMeter};
 use criterion::{black_box, criterion_group, criterion_main, Criterion};

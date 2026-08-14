@@ -6,6 +6,8 @@
 //! oscillatory. The tests pin both the zero-misfit identity and the
 //! shift-monotonicity that gives the metrics that property.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::types::{MisfitFunction, MisfitType};
 use leto::Array2;
 

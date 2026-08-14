@@ -3,6 +3,8 @@
 //! Configuration types for elasticity reconstruction algorithms, including
 //! linear and nonlinear inversion method selection.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use kwavers_imaging::ultrasound::elastography::{InversionMethod, NonlinearInversionMethod};
 

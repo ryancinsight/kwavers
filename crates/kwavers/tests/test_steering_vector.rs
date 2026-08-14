@@ -1,3 +1,5 @@
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use aequitas::systems::si::quantities::{Angle, Frequency, Velocity};
 use aequitas::systems::si::units::{Hertz, MeterPerSecond, Radian};
 use kwavers_receiver::{Position, Sensor, SensorArray, SensorArrayGeometry};

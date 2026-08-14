@@ -11,6 +11,8 @@
 //! al., *Ultrasonics* 51 (2011), Eq. 1,
 //! <https://doi.org/10.1016/j.ultras.2010.12.011>.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use eunomia::Complex64;
 use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
 use std::f64::consts::{PI, TAU};

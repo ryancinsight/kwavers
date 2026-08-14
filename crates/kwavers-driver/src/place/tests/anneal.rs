@@ -3,6 +3,8 @@
 //! These tests run the full SA loop and assert placement quality outcomes.
 //! Energy unit tests (asserting specific energy term values) remain in `energy.rs`.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::*;
 
 #[test]

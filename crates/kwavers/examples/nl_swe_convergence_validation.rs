@@ -7,6 +7,8 @@
 //! - Test harmonic generation accuracy
 //! - Analyze numerical convergence rates
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_solver::forward::elastic::nonlinear::{

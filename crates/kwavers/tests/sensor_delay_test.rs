@@ -1,3 +1,5 @@
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use aequitas::systems::si::quantities::{Frequency, Velocity};
 use aequitas::systems::si::units::{Hertz, MeterPerSecond};
 use kwavers_grid::Grid;

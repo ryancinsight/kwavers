@@ -42,6 +42,9 @@
 //! - Multi-physics coupling consistency
 //! - Clinical safety property verification
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_solver::forward::fdtd::{FdtdConfig, FdtdSolver};

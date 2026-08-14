@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use crate::fft::Complex64;
 use crate::numerics::operators::spectral::derivative::PseudospectralDerivative;
 use crate::numerics::operators::spectral::trait_def::SpectralOperatorTrait;

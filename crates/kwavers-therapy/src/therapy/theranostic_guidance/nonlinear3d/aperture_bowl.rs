@@ -1,5 +1,7 @@
 //! Focused abdominal bowl placement for the nonlinear 3-D solver.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use std::collections::HashSet;
 
 use leto::Array3;

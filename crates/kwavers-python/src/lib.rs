@@ -63,7 +63,14 @@
 //    arguments one-to-one; bundling them into a Rust struct would break the
 //    Python call surface.
 // Domain crates do not carry these allowances; they remain `-D warnings` clean.
-#![allow(clippy::type_complexity, clippy::too_many_arguments)]
+#![expect(
+    clippy::type_complexity,
+    reason = "PyO3 return tuples are the API contract; see the note above"
+)]
+#![expect(
+    clippy::too_many_arguments,
+    reason = "binding signatures mirror Python keyword arguments one-to-one"
+)]
 
 use pyo3::prelude::*;
 

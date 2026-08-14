@@ -77,3 +77,6 @@ pinn = ["kwavers-solver/pinn", "kwavers-analysis/pinn", "kwavers-diagnostics/pin
 full = ["gpu", "plotting", "pinn"]
 
 # Profiles are defined at workspace root (Cargo.toml)
+
+[lints]
+workspace = true

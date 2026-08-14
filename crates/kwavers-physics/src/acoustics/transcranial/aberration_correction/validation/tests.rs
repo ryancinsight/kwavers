@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::super::phase_correction::TranscranialAberrationCorrection;
 use kwavers_grid::Grid;
 use kwavers_math::numerics::operators::interpolation::trilinear_index_space;

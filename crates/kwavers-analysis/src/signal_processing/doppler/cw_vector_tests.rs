@@ -1,5 +1,7 @@
 //! Value-semantic tests for continuous-wave Doppler and cross-beam vector flow.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::continuous_wave::{ContinuousWaveDoppler, CwDopplerConfig, CwSpectrum};
 use super::continuous_wave_vector_flow_fixture;
 use super::vector_flow::{VectorFlowEstimator, VectorVelocity};

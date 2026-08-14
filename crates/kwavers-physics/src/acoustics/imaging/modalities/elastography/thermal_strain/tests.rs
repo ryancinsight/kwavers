@@ -6,6 +6,8 @@
 //! uniformly-heated-block reconstruction against a known ΔT, and the negative /
 //! boundary paths (singular coefficient, even window, dimension mismatch).
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::config::ThermalStrainConfig;
 use super::strain::least_squares_strain;
 use super::tracking::{track_line_samples, TrackingParams};

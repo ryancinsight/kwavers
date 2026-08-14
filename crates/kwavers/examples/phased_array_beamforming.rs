@@ -10,6 +10,8 @@
 //!
 //! Showcases the proper use of kwavers factory patterns with advanced transducer modeling.
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::homogeneous::HomogeneousMedium;

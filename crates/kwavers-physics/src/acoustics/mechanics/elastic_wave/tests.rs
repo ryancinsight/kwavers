@@ -5,6 +5,8 @@
 //! metrics (`ElasticWaveMetrics`), and properties (`AnisotropicElasticProperties`)
 //! are co-located with their respective modules.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use crate::acoustics::mechanics::elastic_wave::{
     mode_conversion::{ModeConversionConfig, ViscoelasticConfig},
     properties::AnisotropicElasticProperties,

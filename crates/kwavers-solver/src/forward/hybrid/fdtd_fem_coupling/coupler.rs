@@ -1,3 +1,5 @@
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use super::config::FdtdFemCouplingConfig;
 use super::interface::FdtdFemInterface;
 use crate::forward::helmholtz::fem::solver::{FemHelmholtzConfig, FemHelmholtzSolver};

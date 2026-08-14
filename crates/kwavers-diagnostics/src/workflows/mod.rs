@@ -13,6 +13,8 @@
 //! - **Clinical Decision Support**: AI-enhanced diagnostic recommendations
 //! - **Quality Assurance**: Automated quality checks and artifact detection
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 pub mod analysis;
 pub mod blood_oxygenation;
 pub mod config;

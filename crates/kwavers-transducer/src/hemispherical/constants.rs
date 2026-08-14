@@ -3,7 +3,10 @@
 //! These are physical and engineering constants used in clinical and research applications.
 //! Some constants may be unused in current implementations but are kept for completeness.
 
-#![allow(dead_code)] // Clinical configuration constants for library users
+#![expect(
+    dead_code,
+    reason = "clinical configuration constants published for library users"
+)]
 
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 

@@ -1,3 +1,5 @@
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use super::config::{KalmanFilterConfig, KalmanFilterType};
 use super::linalg::{invert3, mat6x3_mul_mat3x3, mat6x6_mul_mat6x6};
 use crate::signal_processing::localization::{LocalizationProcessor, SourceLocation};

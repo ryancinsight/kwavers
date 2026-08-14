@@ -3,6 +3,8 @@
 //! This example shows that despite compilation warnings, the library
 //! delivers scientifically accurate acoustic simulations.
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use kwavers_core::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
 use kwavers_grid::Grid;
 use leto::Array3;

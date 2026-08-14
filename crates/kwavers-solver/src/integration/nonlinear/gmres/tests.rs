@@ -1,5 +1,8 @@
 //! Tests for the GMRES solver.
 
+#![cfg_attr(test, expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1"))]
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::config::GMRESConfig;
 use super::solver::GMRESSolver;
 use eunomia::assert_relative_eq;

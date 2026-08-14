@@ -6,6 +6,8 @@
 //! - Acoustic wave propagation
 //! - Image reconstruction and validation
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use kwavers_core::error::KwaversResult;
 use kwavers_diagnostics::photoacoustic::PhotoacousticOpticalProperties as OpticalProperties;
 use kwavers_grid::Grid;

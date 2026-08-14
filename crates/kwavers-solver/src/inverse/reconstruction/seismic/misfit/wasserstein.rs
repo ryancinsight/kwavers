@@ -9,6 +9,8 @@
 //! - Engquist & Froese (2014): "Application of Wasserstein metric to seismic signals"
 //! - Métivier et al. (2016): "Measuring the misfit between seismograms using optimal transport"
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use super::types::MisfitFunction;
 use kwavers_core::error::KwaversResult;
 use leto::Array2;

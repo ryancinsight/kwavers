@@ -1,3 +1,5 @@
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use super::{exact_gaussian_pressure, physical_coordinate, NamedLine, DT, ELEMENTS, STEPS};
 use kwavers_core::error::KwaversResult;
 use kwavers_solver::forward::pstd::dg::quadrature::gauss_lobatto_quadrature;

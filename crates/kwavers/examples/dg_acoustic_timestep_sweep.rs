@@ -7,6 +7,8 @@
 //! Each solver advances to the same final time. DG is resampled onto the native
 //! uniform FDTD/PSTD grid by averaging duplicate element-interface traces.
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 #[path = "dg_common/dg_acoustic_common.rs"]
 mod dg_acoustic_common;
 

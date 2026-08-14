@@ -1,5 +1,7 @@
 //! Spectral operations for Westervelt solver
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_grid::Grid;
 use kwavers_math::fft::{fft_3d_array, fft_3d_array_into, ifft_3d_array, Complex64};

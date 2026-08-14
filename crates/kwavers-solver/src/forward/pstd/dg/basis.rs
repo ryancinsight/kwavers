@@ -60,6 +60,8 @@
 //! - Hesthaven & Warburton (2008). *Nodal Discontinuous Galerkin Methods*. Springer. §3.
 //! - Kopriva (2009). *Implementing Spectral Methods*. Springer. §4.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use kwavers_core::error::KwaversResult;
 use kwavers_math::legendre_poly;
 use leto::{Array1, Array2};

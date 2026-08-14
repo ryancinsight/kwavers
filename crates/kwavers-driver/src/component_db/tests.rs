@@ -3,6 +3,8 @@
 //! `src/component_db.rs` `mod tests` block; the one `for p in &pulsers` adapted to `for p in pulsers`
 //! for the `&'static [PulserIc]` slice return. `super::*` resolves the slice facade.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::*;
 
 #[test]

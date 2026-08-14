@@ -8,6 +8,8 @@
 //! - Kaczmarz, S. (1937). "Angenäherte Auflösung von Systemen linearer Gleichungen"
 //! - Hudson, H. M., & Larkin, R. S. (1994). "Accelerated image reconstruction using ordered subsets"
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use kwavers_core::error::KwaversResult;
 use kwavers_math::inverse_problems::ModelRegularizer3D;
 use leto::{Array1, Array2, Array3};

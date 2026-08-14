@@ -1,5 +1,7 @@
 //! Tests for multi-physics solver.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::super::{
     CoupledPhysicsSolver, MultiPhysicsConfig, SimulationCouplingStrategy, SimulationPhysicsDomain,
 };

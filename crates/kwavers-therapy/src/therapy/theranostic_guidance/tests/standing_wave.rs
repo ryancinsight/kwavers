@@ -7,6 +7,8 @@
 //! 3. Focal pressure history must have `n_opt_iter + 1` entries.
 //! 4. Snapshot fields must have shape `(n_snapshots, nx, ny)` with non-zero energy.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use crate::therapy::theranostic_guidance::{run_standing_wave_suppression, StandingWaveOptConfig};
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE};
 

@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::analysis::count_connected_components;
 use super::classify::{classify_vessels, principal_axis, vessel_neighbor_count};
 use super::frangi::{compute_frangi_response, symmetric_3x3_eigenvalues};

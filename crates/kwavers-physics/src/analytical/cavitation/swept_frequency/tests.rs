@@ -1,5 +1,8 @@
 //! Tests for the swept-frequency cavitation-control module.
 
+#![cfg_attr(test, expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1"))]
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::*;
 
 const PI2: f64 = std::f64::consts::TAU;

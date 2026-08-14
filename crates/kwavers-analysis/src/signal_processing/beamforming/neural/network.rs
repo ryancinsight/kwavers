@@ -32,6 +32,8 @@
 //! - Glorot & Bengio (2010): "Understanding the difficulty of training deep feedforward neural networks"
 //! - LeCun et al. (1998): "Efficient BackProp"
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use aequitas::systems::si::quantities::Angle;
 use aequitas::systems::si::units::Radian;
 use kwavers_core::error::{KwaversError, KwaversResult};

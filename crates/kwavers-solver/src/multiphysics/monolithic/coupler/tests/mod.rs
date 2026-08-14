@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::super::config::NewtonKrylovConfig;
 use super::super::state_vector::sorted_field_keys;
 use super::*;

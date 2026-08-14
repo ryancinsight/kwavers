@@ -1,3 +1,5 @@
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use eunomia::Complex64;
 use kwavers_math::j1;
 use moirai_parallel::{map_collect_with, Adaptive};

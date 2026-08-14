@@ -2,6 +2,8 @@
 //!
 //! Implements Planck's law for thermal radiation from hot bubble interior
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use aequitas::systems::si::quantities::Dimensionless;
 use hyperion::quantity::OpticalDepth;
 use leto::{Array1, Array3};

@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::*;
 use crate::optics::monte_carlo::config::SimulationConfig;
 use crate::optics::monte_carlo::photon::Photon;

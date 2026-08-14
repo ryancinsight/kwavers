@@ -1,5 +1,7 @@
 //! Amplitude Modulation (AM)
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::{Modulation, ModulationParams};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};

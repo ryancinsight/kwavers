@@ -1,5 +1,7 @@
 //! Tests for IMEX bubble integration
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::*;
 use crate::acoustics::bubble_dynamics::{BubbleParameters, BubbleState, KellerMiksisModel};
 use std::sync::Arc;

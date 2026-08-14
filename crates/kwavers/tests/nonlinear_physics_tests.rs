@@ -29,6 +29,8 @@
 //! - Westervelt (1963). J. Acoust. Soc. Am. 35(4), 535–537.
 //! - Hamilton & Blackstock (1998). Nonlinear Acoustics. Academic Press.
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;

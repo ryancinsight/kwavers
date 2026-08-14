@@ -26,6 +26,8 @@
 //! - **Harmonic detection**: < 100 μs for 1024 samples
 //! - **Memory efficiency**: < 8 bytes per grid point for storage
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use kwavers_grid::Grid;
 use kwavers_imaging::ultrasound::elastography::{InversionMethod, NonlinearInversionMethod};

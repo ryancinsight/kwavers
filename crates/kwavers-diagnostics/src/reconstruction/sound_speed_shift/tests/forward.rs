@@ -1,5 +1,7 @@
 //! Forward prediction sign contract.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use leto::Array2;
 
 use super::{predict_sound_speed_time_shifts, SoundSpeedShiftConfig, SoundSpeedShiftSample};

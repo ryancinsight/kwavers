@@ -26,6 +26,8 @@
 //! - Cockburn & Shu (2001). J. Sci. Comput. 16(3):173–261.
 //! - Hesthaven & Warburton (2008). *Nodal Discontinuous Galerkin Methods*. §3.
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use kwavers_grid::Grid;
 use kwavers_solver::forward::pstd::dg::config::{
     DGConfig, DgBoundaryCondition, DgTimeIntegrator, ShockCaptureConfig, WenoDegree,

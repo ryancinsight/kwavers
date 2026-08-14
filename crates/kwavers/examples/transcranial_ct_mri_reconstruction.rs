@@ -40,6 +40,8 @@
 //! - Guasch L. et al. (2020). Full-waveform inversion for brain imaging. npj Digit. Med. 3, 28.
 //! - Schneider U. et al. (1996). HU→density/speed. Phys. Med. Biol. 41(1).
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use kwavers_core::error::KwaversResult;
 
 fn main() -> KwaversResult<()> {

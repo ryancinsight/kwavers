@@ -14,6 +14,8 @@
 //! - Duck FA (1990). *Physical Properties of Tissue.* (y, B/A)
 //! - Connor CW, Hynynen K (2002). *Phys. Med. Biol.* 47(12), 2213–2231. (skull y)
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use crate::heterogeneous::HeterogeneousMedium;
 use crate::HomogeneousMedium;
 use kwavers_core::constants::hu_mapping::HuAcousticModel;

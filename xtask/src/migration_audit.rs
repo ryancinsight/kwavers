@@ -1,3 +1,6 @@
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use anyhow::{bail, Context, Result};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;

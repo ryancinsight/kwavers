@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use aequitas::systems::si::quantities::{Dimensionless, Length};
 use aequitas::systems::si::units::Meter;
 use leto::{Array2, Array3};

@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use aequitas::systems::si::{quantities::ReciprocalLength, units::JoulePerSquareMeter};
 use hyperion::{
     coefficient::{Absorption, EffectiveAttenuation, InteractionCoefficient},

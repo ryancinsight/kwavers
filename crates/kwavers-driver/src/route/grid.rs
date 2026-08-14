@@ -4,6 +4,8 @@
 //! nets temporarily exceed capacity (sharing), then charges progressively for it via the present
 //! and history terms until the routing is legal (every node at or under capacity).
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use crate::geom::{GridSpec, Nm};
 
 /// A flat grid-node index `(ix, iy, layer)` packed by [`GridSpec::node_index`].

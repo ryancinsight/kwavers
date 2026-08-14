@@ -42,6 +42,8 @@
 //!
 //! Run: `cargo run --release --example heterogeneous_power_law_attenuation`
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use anyhow::{anyhow, Result};
 use kwavers_solver::forward::viscoacoustic::ViscoacousticMemorySolver;
 use leto::Array3;

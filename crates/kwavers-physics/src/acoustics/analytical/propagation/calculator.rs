@@ -3,6 +3,8 @@
 //! This module provides the primary wave propagation calculator that coordinates
 //! calculations across different wave modes and interface types.
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use crate::acoustics::analytical::propagation::{
     coefficients::PropagationCoefficients, interfaces::fresnel::FresnelCalculator,
     interfaces::interface::Interface, interfaces::snell::SnellLawCalculator,

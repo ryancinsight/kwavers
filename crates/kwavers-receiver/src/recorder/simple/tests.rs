@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::SensorRecorder;
 use crate::recorder::config::RecordingMode;
 use leto::{Array1, Array3};

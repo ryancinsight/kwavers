@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use crate::safety::mechanical_index::MechanicalIndexTissueType;
 use crate::therapy::domain_types::ClinicalTherapyParameters;
 use kwavers_core::constants::acoustic_parameters::DB_TO_NP;

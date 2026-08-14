@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::functions::{
     add_noise, create_cw_signals, next_pow2, pad_zeros, tone_burst_series, ToneBurstSpec,
 };

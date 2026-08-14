@@ -1,5 +1,7 @@
 //! Test plane wave propagation to verify diffraction operator
 
+#![cfg_attr(test, expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1"))]
+
 #[cfg(test)]
 mod tests {
     use crate::forward::nonlinear::kzk::{

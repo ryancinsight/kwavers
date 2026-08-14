@@ -23,6 +23,8 @@
 //! on demand with
 //! `cargo nextest run -p kwavers-therapy --run-ignored ignored-only -E 'test(absorption_decay)'`.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::super::encoding::SourceEncoding;
 use super::super::forward::{forward_with_schedule, ForwardInput, TimeSchedule};
 use super::super::types::{GridIndex, Nonlinear3dAperture, SourceDomain};

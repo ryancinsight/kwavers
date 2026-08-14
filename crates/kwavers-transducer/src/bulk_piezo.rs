@@ -23,6 +23,8 @@
 //! - Kino, G. S. (1987). *Acoustic Waves: Devices, Imaging, and Analog Signal
 //!   Processing*, §1.3 (thickness-mode transducers).
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use core::f64::consts::PI;
 use eunomia::Complex64;
 use kwavers_core::constants::fundamental::VACUUM_PERMITTIVITY;

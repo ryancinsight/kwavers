@@ -1,5 +1,7 @@
 //! Component CAD/footprint accuracy manifest.
 
+#![cfg_attr(test, expect(clippy::print_stderr, reason = "ratchet KWAVERS-LINT-1"))]
+
 use std::fmt::Write as _;
 
 /// Accuracy status for one component family used by a generated board.

@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::super::{
     ShiftPrior, ShiftSampling, ShiftSensitivity, FINITE_FREQUENCY_SOUND_SPEED_SHIFT_MODEL,
 };

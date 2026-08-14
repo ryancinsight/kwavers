@@ -11,6 +11,8 @@
 //! The restored state is bit-exact (proven in `test_checkpoint_bit_exact_continuation`),
 //! so the velocity trajectory is identical and the recorded buffers match.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use crate::forward::pstd::config::{CompatibilityMode, PSTDConfig};
 use crate::forward::pstd::PSTDSolver;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};

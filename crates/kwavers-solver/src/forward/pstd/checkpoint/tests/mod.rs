@@ -3,6 +3,8 @@
 //! Split into leaf modules by test concern:
 //! - `mod velocity_recording`: velocity-field survival across checkpoint boundary.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 mod velocity_recording;
 
 use super::data::PSTDCheckpoint;

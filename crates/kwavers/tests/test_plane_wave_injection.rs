@@ -12,6 +12,8 @@
 //! Author: Ryan Clanton (@ryancinsight)
 //! Date: 2025-01-20
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_physics::acoustics::mechanics::acoustic_wave::AcousticSpatialOrder;

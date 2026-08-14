@@ -4,6 +4,8 @@
 //! owns concrete assembly because it is the orchestration boundary that binds
 //! domain objects to numerical implementations.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use crate::solver_adapters::DgSimulationSolver;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;

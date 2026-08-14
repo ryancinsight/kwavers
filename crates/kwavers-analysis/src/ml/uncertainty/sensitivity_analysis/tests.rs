@@ -1,5 +1,7 @@
 //! Value-semantic sensitivity-screening tests.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::{Parameter, ParameterSpace, Seed, SensitivityAnalyzer, SensitivityConfig};
 use core::num::NonZeroU32;
 

@@ -1,5 +1,7 @@
 //! Shared fixtures for narrowband integration tests.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use eunomia::Complex64;
 use kwavers_core::constants::numerical::TWO_PI;
 use leto::Array3;

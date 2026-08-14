@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::coordinates::generate_coordinate_arrays;
 use super::resampling::{resample_to_target_grid, trilinear_interpolate};
 use super::transforms::apply_inverse_transform;

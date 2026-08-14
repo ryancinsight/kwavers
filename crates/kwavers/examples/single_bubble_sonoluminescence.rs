@@ -31,6 +31,9 @@
 //! - Peak emissions occur at different collapse phases
 //! - Spectral signatures provide experimental discrimination
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use kwavers_grid::Grid;
 use kwavers_physics::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel;
 use kwavers_physics::bubble_dynamics::bubble_state::BubbleParameters;

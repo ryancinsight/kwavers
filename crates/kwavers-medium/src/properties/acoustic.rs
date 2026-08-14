@@ -39,6 +39,8 @@
 //! - `0.5 ≤ absorption_power ≤ 3.0` (physical range)
 //! - `nonlinearity > 0` (typically 3-10 for biological media)
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use kwavers_core::constants::fundamental::{
     ACOUSTIC_ABSORPTION_TISSUE, DENSITY_TISSUE, DENSITY_WATER, SOUND_SPEED_TISSUE,
     SOUND_SPEED_WATER,

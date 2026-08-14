@@ -10,6 +10,8 @@
 //! receive), so beamforming the RF reconstructs the reflectivity map with a realistic
 //! point-spread function and speckle — a genuine receive-data → image pipeline.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use leto::{Array2, ArrayView1, ArrayView2};
 use std::f64::consts::{LN_2, PI};
 

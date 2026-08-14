@@ -1,3 +1,5 @@
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use super::range::SpectralRange;
 use super::spectrum::EmissionSpectrum;
 use kwavers_core::constants::optical::WIEN_CONSTANT;

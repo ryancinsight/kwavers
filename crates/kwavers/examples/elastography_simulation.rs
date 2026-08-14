@@ -1,3 +1,5 @@
+#![expect(clippy::print_stderr, reason = "ratchet KWAVERS-LINT-1")]
+
 use kwavers::init_logging;
 use kwavers_grid::Grid;
 use kwavers_medium::heterogeneous::tissue::HeterogeneousTissueMedium;

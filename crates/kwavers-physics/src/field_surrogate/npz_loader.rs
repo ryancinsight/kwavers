@@ -25,6 +25,8 @@
 //! exact in linear water (B/A = 0); for non-linear media use a kernel
 //! generated at the target amplitude instead.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use std::fs::File;
 use std::io::BufReader;
 use std::path::{Path, PathBuf};
@@ -230,7 +232,8 @@ pub fn discover_focal_kernels(dir: &Path) -> KwaversResult<Vec<FocalKernel>> {
         .filter_map(|entry| entry.ok().map(|e| e.path()))
         .filter(|p| {
             let name = p.file_name().and_then(|n| n.to_str()).unwrap_or("");
-            name.starts_with("kernel_") && name.ends_with(".npz")
+            name.starts_with("kernel_")
+                && kwavers_core::path::has_suffix_ignore_ascii_case(name, &[".npz"])
         })
         .collect();
     paths.sort();

@@ -96,6 +96,116 @@ criterion = "0.5"
 [workspace.lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
 
+[workspace.lints.clippy]
+pedantic = { level = "deny", priority = -1 }
+
+# Pedantic floor ratchet: every class listed below already fires in this
+# workspace and is allowed at its measured baseline; every class NOT listed
+# is a hard error. Counts are `cargo clippy --all-targets` hits at the time
+# the floor was established, deduplicated by source span (total / production,
+# production excluding `#[cfg(test)]` modules and test, bench and example
+# targets). Burn a class down to zero, then delete its line -- the floor
+# tightens, never loosens.
+
+# --- Documentation debt (5628 sites, 4396 in production) ---
+doc_markdown = "allow"                         # 4905 (3724 prod)
+must_use_candidate = "allow"                   # 322 (292 prod)
+missing_panics_doc = "allow"                   # 232 (226 prod)
+missing_errors_doc = "allow"                   # 131 (119 prod)
+return_self_not_must_use = "allow"             # 17 (15 prod)
+missing_fields_in_debug = "allow"              # 16 (16 prod)
+doc_link_with_quotes = "allow"                 # 2 (2 prod)
+doc_comment_double_space_linebreaks = "allow"  # 2 (2 prod)
+ignore_without_reason = "allow"                # 3 (0 prod)
+
+# --- Numeric conversion debt (9460 sites, 5666 in production) ---
+cast_precision_loss = "allow"                  # 5745 (3289 prod)
+cast_possible_truncation = "allow"             # 1235 (811 prod)
+cast_sign_loss = "allow"                       # 923 (636 prod)
+cast_possible_wrap = "allow"                   # 761 (539 prod)
+cast_lossless = "allow"                        # 400 (143 prod)
+unreadable_literal = "allow"                   # 295 (193 prod)
+float_cmp = "allow"                            # 60 (26 prod)
+manual_midpoint = "allow"                      # 41 (29 prod)
+
+# --- Raw-pointer / layout debt (49 sites, 43 in production) ---
+ptr_as_ptr = "allow"                           # 22 (22 prod)
+cast_ptr_alignment = "allow"                   # 21 (21 prod)
+ref_as_ptr = "allow"                           # 4 (0 prod)
+borrow_as_ptr = "allow"                        # 2 (0 prod)
+
+# --- Signature and shape debt (1365 sites, 1269 in production) ---
+needless_pass_by_value = "allow"               # 571 (559 prod)
+unnecessary_wraps = "allow"                    # 309 (274 prod)
+unused_self = "allow"                          # 252 (242 prod)
+too_many_lines = "allow"                       # 168 (116 prod)
+pub_underscore_fields = "allow"                # 16 (16 prod)
+struct_excessive_bools = "allow"               # 14 (14 prod)
+trivially_copy_pass_by_ref = "allow"           # 12 (12 prod)
+struct_field_names = "allow"                   # 11 (8 prod)
+inline_always = "allow"                        # 10 (10 prod)
+implicit_hasher = "allow"                      # 8 (8 prod)
+ref_option = "allow"                           # 3 (3 prod)
+large_types_passed_by_value = "allow"          # 1 (1 prod)
+
+# --- Style debt (3095 sites, 1517 in production) ---
+uninlined_format_args = "allow"                # 1168 (342 prod)
+similar_names = "allow"                        # 852 (671 prod)
+explicit_iter_loop = "allow"                   # 266 (39 prod)
+items_after_statements = "allow"               # 159 (78 prod)
+many_single_char_names = "allow"               # 119 (96 prod)
+cloned_instead_of_copied = "allow"             # 107 (22 prod)
+redundant_closure_for_method_calls = "allow"   # 100 (72 prod)
+format_push_string = "allow"                   # 80 (65 prod)
+semicolon_if_nothing_returned = "allow"        # 77 (29 prod)
+no_effect_underscore_binding = "allow"         # 76 (15 prod)
+match_same_arms = "allow"                      # 63 (57 prod)
+elidable_lifetime_names = "allow"              # 56 (56 prod)
+map_unwrap_or = "allow"                        # 54 (36 prod)
+default_trait_access = "allow"                 # 41 (7 prod)
+used_underscore_binding = "allow"              # 41 (31 prod)
+single_match_else = "allow"                    # 32 (27 prod)
+if_not_else = "allow"                          # 26 (22 prod)
+from_iter_instead_of_collect = "allow"         # 26 (16 prod)
+unnecessary_literal_bound = "allow"            # 22 (19 prod)
+wildcard_imports = "allow"                     # 16 (13 prod)
+needless_for_each = "allow"                    # 12 (12 prod)
+manual_let_else = "allow"                      # 12 (6 prod)
+match_wildcard_for_single_variants = "allow"   # 11 (6 prod)
+assigning_clones = "allow"                     # 8 (8 prod)
+single_char_pattern = "allow"                  # 8 (4 prod)
+manual_assert_eq = "allow"                     # 7 (0 prod)
+stable_sort_primitive = "allow"                # 5 (2 prod)
+ignored_unit_patterns = "allow"                # 5 (0 prod)
+unnested_or_patterns = "allow"                 # 3 (3 prod)
+needless_continue = "allow"                    # 3 (3 prod)
+implicit_clone = "allow"                       # 3 (3 prod)
+bool_to_int_with_if = "allow"                  # 3 (2 prod)
+unnecessary_semicolon = "allow"                # 2 (2 prod)
+needless_raw_string_hashes = "allow"           # 2 (2 prod)
+enum_glob_use = "allow"                        # 2 (2 prod)
+redundant_else = "allow"                       # 1 (1 prod)
+expl_impl_clone_on_copy = "allow"              # 1 (1 prod)
+collapsible_else_if = "allow"                  # 1 (1 prod)
+while_let_on_iterator = "allow"                # 1 (0 prod)
+inefficient_to_string = "allow"                # 1 (0 prod)
+duration_suboptimal_units = "allow"            # 1 (0 prod)
+
+# --- Restriction floor ---
+# `unwrap_used` is denied outright: no workspace-wide allow. The 4523 existing
+# sites (252 in production) are pinned per file by
+# `#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]`, which
+# self-expires the moment a file's last unwrap goes. Files whose unwraps are all
+# inside `#[cfg(test)]` modules carry the `cfg_attr(test, ...)` form, because a
+# plain expectation there is unfulfilled in a non-test build.
+unwrap_used = "deny"
+# Library output belongs to `tracing` or the application output layer. The
+# `kwavers` binary, xtask, examples and test diagnostics carry per-file
+# `#![expect(..., reason = "ratchet KWAVERS-LINT-1")]`.
+print_stdout = "deny"
+print_stderr = "deny"
+dbg_macro = "deny"
+
 [profile.dev]
 # opt-level = 1: basic dead-code elimination, inlining, and loop optimisation.
 # Keeps debug symbols and unoptimised codegen units while making FFT-heavy test

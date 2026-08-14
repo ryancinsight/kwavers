@@ -1,3 +1,7 @@
+#![expect(clippy::print_stderr, reason = "ratchet KWAVERS-LINT-1")]
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use anyhow::Result;
 use regex::Regex;
 use std::collections::HashSet;

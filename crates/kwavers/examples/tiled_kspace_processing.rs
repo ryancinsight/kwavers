@@ -49,7 +49,9 @@
 //!
 //! Part VI — Atlas Stack Integration, §SIMD and Tiling.
 
-use leto::{Array3, LendingIterator, Tiles};
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
+use leto::{Array3, Tiles};
 
 // ── Grid and tile dimensions ───────────────────────────────────────────────
 const NX: usize = 32;
@@ -92,7 +94,7 @@ fn main() {
     let energy_ref: f64 = pressure.iter().map(|&p| p * p).sum();
     let peak_ref: f64 = pressure.iter().copied().fold(f64::NEG_INFINITY, f64::max);
 
-    // ── Tiled pass via LendingIterator ────────────────────────────────────
+    // ── Tiled pass over `Tiles` ───────────────────────────────────────────
     // `view.data()` and `view.layout()` give the slice and layout without
     // copying; ownership stays with `pressure`.
     let view = pressure.view();
@@ -106,7 +108,7 @@ fn main() {
     let mut peak_tiled = f64::NEG_INFINITY;
     let mut tile_count = 0usize;
 
-    // GAT streaming loop — `tile` borrows from `tiles` for one iteration
+    // Streaming loop — each `tile` is a view into `pressure`, never a copy
     while let Some(tile) = tiles.next() {
         // Each tile is a zero-copy ArrayView<'_, f64, 3>
         energy_tiled += tile.iter().map(|&p| p * p).sum::<f64>();

@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1"))]
+
 use super::solver::RayleighPlessetSolver;
 use crate::acoustics::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
 use eunomia::assert_relative_eq;

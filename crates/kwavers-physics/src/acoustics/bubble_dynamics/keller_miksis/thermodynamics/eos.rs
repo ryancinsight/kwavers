@@ -1,5 +1,7 @@
 //! Gas equation-of-state closures for Keller-Miksis thermodynamics.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use crate::acoustics::bubble_dynamics::bubble_state::{BubbleState, GasSpecies};
 use kwavers_core::constants::cavitation::{BAR_L2_TO_PA_M6, L_TO_M3};
 use kwavers_core::constants::thermodynamic::{

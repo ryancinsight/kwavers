@@ -19,6 +19,8 @@
 //! - Hesthaven and Warburton (2008): nodal discontinuous Galerkin methods.
 //! - Cockburn and Shu (2001): Runge-Kutta DG stability and conservation.
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 #[path = "focused_water_tank_common/mod.rs"]
 mod focused_water_tank_common;
 

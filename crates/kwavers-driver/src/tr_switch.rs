@@ -10,7 +10,10 @@
 //! Closed-form circuit physics (clamp voltage, RC time constant, diode
 //! conduction loss), verified against typical values from MAX14815 datasheet.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 /// T/R switch configuration.
+
 #[derive(Debug, Clone, Copy)]
 pub struct TrSwitchConfig {
     /// Clamp voltage — RX input is protected above this level (V).

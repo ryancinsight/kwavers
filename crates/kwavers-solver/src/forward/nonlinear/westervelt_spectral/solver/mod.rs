@@ -39,6 +39,8 @@
 //! - Westervelt, P.J. (1963). Parametric acoustic array. J. Acoust. Soc. Am. 35(4), 535–537.
 //! - Hamilton, M.F. & Blackstock, D.T. (1998). Nonlinear Acoustics. Academic Press, Ch. 3.
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use crate::forward::nonlinear::conservation::{
     ConservationDiagnostics, ConservationTolerances, ConservationTracker, ViolationSeverity,
 };

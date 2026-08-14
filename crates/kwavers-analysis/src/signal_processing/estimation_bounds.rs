@@ -17,6 +17,8 @@
 //!   estimation of subsample time delays of digitized echo signals."
 //!   *Ultrason. Imaging*, 17(2), 142–171.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 /// Guard: return `true` when every argument is finite and strictly positive.
 #[inline]
 fn all_positive(values: &[f64]) -> bool {

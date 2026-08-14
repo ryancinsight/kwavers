@@ -14,6 +14,8 @@
 //! - `Some`  — acoustic ray-tracing: `A[s,v] = exp(−2αf_c r) / r`
 //!   Row normalisation `D_R(s) = 1/‖A_row_s‖²` (Dines & Kak 1979, §III).
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use super::config::RealTimeSirtConfig;
 use super::types::{FrameQuality, ReconstructionFrame};
 use crate::reconstruction::acoustic_projection::{

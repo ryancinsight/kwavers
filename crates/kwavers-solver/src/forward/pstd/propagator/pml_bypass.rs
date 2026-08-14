@@ -1,5 +1,7 @@
 //! Reusable x-plane preservation for Dirichlet-PML bypass rows.
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use crate::forward::pstd::implementation::core::orchestrator::PSTDSolver;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array3 as LetoArray3;

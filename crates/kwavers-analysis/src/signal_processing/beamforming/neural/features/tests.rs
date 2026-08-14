@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::computation::{
     compute_laplacian, compute_local_entropy, compute_local_std, compute_spatial_gradient,
     concatenate_features, extract_all_features, normalize_features,

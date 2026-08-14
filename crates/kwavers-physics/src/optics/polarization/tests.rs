@@ -1,5 +1,7 @@
 //! Tests for optical polarization physics
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::*;
 use eunomia::assert_relative_eq;
 use eunomia::Complex64;

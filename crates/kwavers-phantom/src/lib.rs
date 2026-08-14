@@ -3,6 +3,8 @@
 //! Provides realistic tissue phantom constructors for photoacoustic and optical imaging
 //! validation, protocol development, and algorithm testing.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 pub mod builder;
 mod error;
 pub mod presets;

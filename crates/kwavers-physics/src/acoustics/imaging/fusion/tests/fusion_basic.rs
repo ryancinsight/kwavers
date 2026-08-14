@@ -1,5 +1,7 @@
 //! Basic fusion configuration, registration, and weighted-average tests.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::super::*;
 use leto::Array3;
 

@@ -12,6 +12,8 @@
 //! lives upstream in the ROI mask; this module only resolves the mask + score to
 //! a single focal voxel and its coordinates.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use leto::Array3;
 
 /// Result of resolving a target from a reconstructed volume.

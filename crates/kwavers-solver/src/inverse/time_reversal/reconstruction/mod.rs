@@ -2,6 +2,8 @@
 //!
 //! Core time-reversal reconstruction implementation.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use crate::plugin_based::PluginBasedSolver;
 use crate::workspace::inplace_ops::apply_inplace;
 use kwavers_core::error::KwaversResult;

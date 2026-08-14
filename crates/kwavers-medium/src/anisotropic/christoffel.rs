@@ -3,6 +3,8 @@
 //! References:
 //! - Auld, B. A. (1973). "Acoustic Fields and Waves in Solids"
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::stiffness::AnisotropicStiffnessTensor;
 use kwavers_core::error::KwaversResult;
 use leto::{Array1, Array2};

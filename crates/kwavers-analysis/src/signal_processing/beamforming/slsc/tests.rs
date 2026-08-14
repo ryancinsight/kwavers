@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::beamformer::compute_lag_coherence;
 use super::*;
 use eunomia::Complex64;

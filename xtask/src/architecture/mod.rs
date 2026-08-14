@@ -16,6 +16,8 @@
 //! cargo xtask check-architecture
 //! ```
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 pub mod dependency_checker;
 
 pub use dependency_checker::{

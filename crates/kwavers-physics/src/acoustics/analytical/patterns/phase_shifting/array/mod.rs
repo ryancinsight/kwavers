@@ -3,6 +3,8 @@
 //! Provides comprehensive phased array functionality combining
 //! beam steering, dynamic focusing, and array management.
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use kwavers_core::error::KwaversResult;
 use leto::{Array1, Array2};
 

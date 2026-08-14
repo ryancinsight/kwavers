@@ -19,6 +19,9 @@
 //! References: Nocedal & Wright (2006) *Numerical Optimization* §7.1 (Newton-CG,
 //! Steihaug); Métivier et al. (2013) truncated-Newton FWI.
 
+#![cfg_attr(test, expect(clippy::print_stderr, reason = "ratchet KWAVERS-LINT-1"))]
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::gradient::{dot, max_abs, objective_and_gradient};
 use super::inversion::clamp_slowness;
 use super::types::{

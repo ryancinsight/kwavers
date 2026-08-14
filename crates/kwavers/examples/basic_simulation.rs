@@ -2,6 +2,8 @@
 //!
 //! This example shows the simplest way to set up and run a simulation.
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use kwavers_core::error::KwaversResult;
 use kwavers_core::time::Time;
 use kwavers_grid::Grid;

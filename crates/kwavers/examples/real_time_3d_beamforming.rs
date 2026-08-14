@@ -16,6 +16,8 @@
 //! - Speedup: 10-100× vs CPU implementation
 //! - Memory efficiency: Streaming processing
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 #[cfg(feature = "gpu")]
 use kwavers_analysis::signal_processing::beamforming::three_dimensional::{
     Beamforming3dApodizationWindow as ApodizationWindow, BeamformingAlgorithm3D,

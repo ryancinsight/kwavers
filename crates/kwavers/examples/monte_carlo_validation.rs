@@ -26,6 +26,8 @@
 //! - Relative error maps
 //! - Runtime performance comparison
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use anyhow::Result;
 use kwavers_grid::{Grid3D, GridDimensions};
 use kwavers_medium::optical_map::{OpticalPropertyMap, OpticalPropertyMapBuilder};

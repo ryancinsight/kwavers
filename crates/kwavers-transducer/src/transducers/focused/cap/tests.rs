@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::{SphericalCapConfig, SphericalCapLayout};
 use aequitas::systems::si::quantities::{Angle, Length};
 use aequitas::systems::si::units::{Meter, Radian, SquareMeter};

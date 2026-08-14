@@ -1,5 +1,7 @@
 //! Keller-Miksis wall-motion ODE regression tests.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use crate::acoustics::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
 use crate::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel;
 use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;

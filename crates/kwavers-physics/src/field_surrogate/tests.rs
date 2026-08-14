@@ -2,6 +2,8 @@
 //! synthetic kernels (no real PSTD runs needed) to exercise resampling,
 //! placement, and `(f0, pnp)` blending invariants.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use leto::Array3;
 
 use super::{

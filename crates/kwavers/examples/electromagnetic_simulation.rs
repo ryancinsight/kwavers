@@ -24,6 +24,8 @@
 //! - GPU acceleration (when available)
 //! - Result visualization and validation
 
+#![expect(clippy::print_stderr, reason = "ratchet KWAVERS-LINT-1")]
+
 #[cfg(feature = "pinn")]
 use coeus_core::MoiraiBackend;
 #[cfg(feature = "pinn")]

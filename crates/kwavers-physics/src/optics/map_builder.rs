@@ -3,6 +3,8 @@
 //! `kwavers-medium` owns the validated spatial aggregate and its builder. This
 //! module adds only physics-facing distribution statistics.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use kwavers_medium::optical_map::OpticalPropertyMap;
 
 /// Statistical summary of optical property distribution

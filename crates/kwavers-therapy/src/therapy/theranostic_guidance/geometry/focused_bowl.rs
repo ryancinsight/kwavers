@@ -4,6 +4,8 @@
 //! Source-domain [`BowlTransducer`] owns spherical-cap validation, equal-area
 //! sampling, and element placement.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use aequitas::systems::si::quantities::{Frequency, Length, Pressure};
 use aequitas::systems::si::units::{Hertz, Meter, Pascal};
 use kwavers_core::error::KwaversResult;

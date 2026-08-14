@@ -197,10 +197,17 @@ impl DriverManifest {
         // for `i >= tile_profiles.len()`, the sequence is truncated — kwavers would produce a
         // wrong beam profile from the silently partial tile set.
         if any_tile_key && tile_profiles.len() < 4 {
-            let first_gap = (tile_profiles.len()..).find(|&i| {
-                map.keys()
-                    .any(|k| k.starts_with(&format!("stim_tile_{i}_")))
-            });
+            // Bounded by the key set, never by an open range: a complete 1..=3-tile manifest
+            // has no `stim_tile_{i}_` key at or beyond `tile_profiles.len()`, so probing
+            // ascending indices for one would never terminate.
+            let first_gap = map
+                .keys()
+                .filter_map(|k| {
+                    let (index, _) = k.strip_prefix("stim_tile_")?.split_once('_')?;
+                    index.parse::<usize>().ok()
+                })
+                .filter(|&i| i >= tile_profiles.len())
+                .min();
             if let Some(i) = first_gap {
                 return Err(format!(
                     "gappy tile sequence: `stim_tile_{i}_*` keys present but earlier tile indices 0..{} are incomplete",

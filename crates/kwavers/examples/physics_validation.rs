@@ -3,6 +3,8 @@
 //! This example demonstrates validation of numerical methods against
 //! known analytical solutions in physics.
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use kwavers_grid::Grid;
 use kwavers_medium::AcousticProperties;
 use kwavers_medium::HomogeneousMedium;

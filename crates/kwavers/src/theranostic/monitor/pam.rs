@@ -17,6 +17,8 @@
 //! the pixel and aligns by `+(τ_i − τ_min)` — advancing each channel by its own
 //! propagation delay so the emission stacks coherently at the true source.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::{Array2, Array3};
 

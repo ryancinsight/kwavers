@@ -1,4 +1,6 @@
 // log/file.rs
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use crate::log::format_record;
 use log::{Level, LevelFilter, Log, Metadata, Record};
 use std::fs::OpenOptions;

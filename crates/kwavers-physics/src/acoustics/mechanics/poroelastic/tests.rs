@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::material::PoroelasticMaterial;
 use super::simulation::PoroelasticSimulation;
 use kwavers_core::constants::cavitation::VISCOSITY_WATER;

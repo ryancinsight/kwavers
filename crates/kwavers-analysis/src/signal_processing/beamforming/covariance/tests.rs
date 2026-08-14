@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::{
     estimate_forward_backward_covariance, estimate_sample_covariance, is_hermitian, trace,
     validate_covariance_matrix,

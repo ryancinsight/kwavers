@@ -20,6 +20,8 @@
 //! - Tschoegl, N.W. (1989). *The Phenomenological Theory of Linear Viscoelastic
 //!   Behavior.* Springer.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use eunomia::Complex64;
 
 /// A generalized Maxwell (Wiechert) viscoelastic solid for the shear channel.

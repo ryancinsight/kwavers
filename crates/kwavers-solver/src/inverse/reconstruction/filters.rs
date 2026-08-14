@@ -1,5 +1,7 @@
 //! Reconstruction filter implementations
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use kwavers_core::error::KwaversResult;
 use leto::Array2;
 use std::f64::consts::PI;

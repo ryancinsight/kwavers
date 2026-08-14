@@ -25,7 +25,10 @@
 //! transmit elements, wall-clock time) that the example loop replays against the
 //! forward solver.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 /// What a single pulse in the schedule does.
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PulseKind {
     /// Focused high-amplitude burst that deposits therapeutic energy at the target.

@@ -1,5 +1,7 @@
 //! Secondary Bjerknes force calculations
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::calculator::BjerknesCalculator;
 use super::types::{BjerknesForceData, BjerknesInteractionType};
 use kwavers_core::constants::numerical::TWO_PI;

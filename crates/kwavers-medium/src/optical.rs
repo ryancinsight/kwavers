@@ -3,6 +3,8 @@
 //! This module defines traits for optical properties including absorption,
 //! scattering, and refractive index.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use crate::core::CoreMedium;
 use aequitas::systems::si::{quantities::ReciprocalLength, units::PerMeter};
 use hyperion::{

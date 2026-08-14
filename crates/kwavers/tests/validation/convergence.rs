@@ -44,6 +44,8 @@
 //! assert!(rate > 1.8, "Expected at least second-order convergence");
 //! ```
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use super::error_metrics::ErrorMetrics;
 
 /// Convergence study for numerical solver validation

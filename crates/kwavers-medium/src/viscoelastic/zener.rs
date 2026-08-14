@@ -1,5 +1,7 @@
 //! Zener / standard-linear-solid viscoelastic model (single relaxation arm).
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::{recover_complex_modulus, DispersionSample};
 use eunomia::Complex64;
 

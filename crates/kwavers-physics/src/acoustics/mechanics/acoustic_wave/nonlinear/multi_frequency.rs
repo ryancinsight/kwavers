@@ -2,6 +2,8 @@
 //!
 //! This module provides configuration and utilities for multi-frequency acoustic simulations.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 
 /// Configuration for multi-frequency acoustic simulations.

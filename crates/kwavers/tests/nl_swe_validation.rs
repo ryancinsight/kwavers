@@ -6,6 +6,8 @@
 //! - Nonlinear inversion methods
 //! - End-to-end NL-SWE workflow
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 pub use kwavers_grid::Grid;
 pub use kwavers_imaging::ultrasound::elastography::{
     InversionMethod, NonlinearInversionMethod, NonlinearParameterMap,

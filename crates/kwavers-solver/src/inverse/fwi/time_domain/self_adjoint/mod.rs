@@ -25,6 +25,8 @@
 //! sampling injected through the same `W⁻¹` path as the forward source, `g` is
 //! the literal algebraic gradient of the discrete `J`.
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 #[cfg(test)]
 mod tests;
 

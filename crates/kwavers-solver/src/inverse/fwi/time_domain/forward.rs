@@ -15,6 +15,8 @@
 //!   CPML is embedded in `PSTDConfig::boundary` at construction time so no
 //!   separate `enable_cpml` call is needed.
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use super::{geometry::FwiGeometry, self_adjoint, FwiEngine, FwiProcessor};
 use crate::config::SolverType;
 use crate::interface::Solver;

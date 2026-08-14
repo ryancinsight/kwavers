@@ -5,6 +5,8 @@
 //!
 //! Focus: Verify basic PSTD functionality independent of comparison framework
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;

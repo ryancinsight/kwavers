@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::beamformer::SensorBeamformer;
 use super::types::{BeamformerWindowType, SensorProcessingParams};
 use aequitas::systems::si::quantities::{Angle, Frequency, Length, Velocity};

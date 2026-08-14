@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::post_process::CovariancePostProcess;
 use super::shrinkage::shrinkage_to_identity_real;
 use super::{CovarianceEstimator, SpatialSmoothingComplex};

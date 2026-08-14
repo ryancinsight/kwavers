@@ -1,5 +1,7 @@
 //! `AdaptiveResolution` for multi-level GPU SWE.
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use super::types::{AdaptiveSolution, AdaptiveSolutionStep};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;

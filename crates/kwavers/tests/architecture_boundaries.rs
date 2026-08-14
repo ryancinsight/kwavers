@@ -8,6 +8,8 @@
 //! foundation/model/device-tier crates must never reference the orchestration
 //! tiers (`kwavers_solver`, `kwavers_simulation`, `kwavers_analysis`).
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use std::fs;
 use std::path::{Path, PathBuf};
 

@@ -28,6 +28,8 @@
 //! - `hardness > 0`
 //! - `fatigue_exponent > 0` (typical range: 5-15)
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use kwavers_core::constants::numerical::MPA_TO_PA;
 use std::fmt;
 

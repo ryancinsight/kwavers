@@ -42,6 +42,8 @@
 //! - Dewhirst MW et al. (2003). "Basic principles of thermal dosimetry and thermal thresholds
 //!   for tissue damage from hyperthermia." *Int J Hyperthermia* 19(3):267–294.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::monitor::TranscranialSafetyMonitor;
 use aequitas::systems::si::quantities::Time;
 use kwavers_core::constants::numerical::SECONDS_PER_MINUTE;

@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::container::{field_indices, PhysicsState};
 use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use kwavers_core::constants::thermodynamic::{KELVIN_OFFSET_C, ROOM_TEMPERATURE_K};

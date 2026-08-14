@@ -27,6 +27,8 @@
 //! References: Hesthaven & Warburton (2008) §6; Cockburn & Shu (2001) §4;
 //! Pierce (1989) Ch. 1.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::core::DGSolver;
 use super::rk_update::{update_euler, update_ssp_final, update_ssp_second};
 use kwavers_core::error::{KwaversError, KwaversResult};

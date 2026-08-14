@@ -53,6 +53,8 @@
 //! - Yoshida H (1990). Phys. Lett. A **150**(5-7):262–268.
 //! - Brennen CE (1995). *Cavitation and Bubble Dynamics*. Oxford. §2.3.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use std::sync::Arc;
 
 use super::bubble_state::{BubbleParameters, BubbleState};

@@ -3,6 +3,9 @@
 //! Provides automated module size checks, naming audits, test generation,
 //! and complexity analysis following the problem statement requirements.
 
+#![expect(clippy::print_stderr, reason = "ratchet KWAVERS-LINT-1")]
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use anyhow::{Context, Result};
 use clap::{ArgAction, Parser, Subcommand};
 use std::fs;

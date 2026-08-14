@@ -9,6 +9,8 @@
 //! a uniform-grid DG trace on the native FDTD/PSTD grid by averaging DG traces
 //! at shared element interfaces.
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 #[path = "dg_common/dg_acoustic_common.rs"]
 mod dg_acoustic_common;
 

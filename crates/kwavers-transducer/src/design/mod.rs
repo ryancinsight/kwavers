@@ -14,6 +14,8 @@
 //! at Euclidean and design-formula boundaries. The result feeds the existing
 //! array builders or a downstream geometry model without unit-bearing wrappers.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 pub mod propagation;
 
 pub use propagation::{

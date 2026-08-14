@@ -26,6 +26,9 @@
 //! - **Order of Accuracy**: Second-order convergence for central differences
 //! - **Harmonic Generation**: Amplitude ratios A₂/A₁ ∝ β, A₃/A₁ ∝ β²
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_solver::forward::elastic::nonlinear::{

@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use leto::{Array1, Array2, Array3};
 use leto_ops::application::linalg::norm_l2;
 use leto_ops::solve;

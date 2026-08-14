@@ -1,5 +1,7 @@
 //! Safety constraints validation
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::planner::TreatmentPlanner;
 use super::types::TranscranialSafetyConstraints;
 use crate::acoustics::analysis::calculate_mechanical_index;

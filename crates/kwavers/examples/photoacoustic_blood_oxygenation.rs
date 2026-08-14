@@ -20,6 +20,8 @@
 //! - Tissue viability monitoring (wound healing, transplant)
 //! - Brain functional imaging (hemodynamic response)
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use anyhow::Result;
 use hyperion::coefficient::hemoglobin_absorption;
 use kwavers_analysis::signal_processing::spectroscopy::SpectralUnmixingConfig;

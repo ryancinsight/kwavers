@@ -1,5 +1,7 @@
 //! Minimal MATLAB Level-5 numeric-volume parser.
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use flate2::read::ZlibDecoder;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use std::fs::File;

@@ -15,6 +15,8 @@
 //! When `normalize_output` is `true`, each output row is divided by its L2 norm
 //! (producing unit-length direction vectors — useful as logit pre-processing).
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use leto::{Array1, Array2};
 

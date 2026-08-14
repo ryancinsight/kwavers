@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::{test_k_mag, zeros_k_mag};
 use crate::forward::pstd::config::PSTDConfig;
 use crate::forward::pstd::physics::absorption::init::initialize_absorption_operators;

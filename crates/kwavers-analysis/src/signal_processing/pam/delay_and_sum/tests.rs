@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::processor::DelayAndSumPAM;
 use super::types::{ApodizationType, DelayAndSumConfig, PamImagingMode};
 use aequitas::systems::si::quantities::{Dimensionless, Frequency, Length, Time, Velocity};

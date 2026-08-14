@@ -1,5 +1,7 @@
 //! Value-semantic regression tests for linear elastography inversion methods.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::direct::direct_inversion;
 use super::directional::directional_phase_gradient_inversion;
 use super::lfe::local_frequency_estimation_inversion;

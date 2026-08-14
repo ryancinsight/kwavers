@@ -3,6 +3,8 @@
 //! Orchestrates physics simulations using a plugin architecture.
 //! Follows SOLID principles with clear separation of concerns.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use crate::plugin::Plugin;
 use crate::plugin::PluginManager;
 use kwavers_boundary::Boundary;

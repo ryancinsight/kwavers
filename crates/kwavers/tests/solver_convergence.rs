@@ -37,6 +37,8 @@
 //! ```
 //! represents two counter-propagating pulses.
 
+#![expect(clippy::print_stderr, reason = "ratchet KWAVERS-LINT-1")]
+
 /// Speed of sound in water (m/s)
 const SOUND_SPEED_WATER: f64 = 1480.0;
 

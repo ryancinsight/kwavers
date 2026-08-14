@@ -1,5 +1,7 @@
 //! Calibration manager for flexible transducer arrays.
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use super::types::{CalibrationData, CalibrationQualityMetrics, GeometrySnapshot, KalmanState};
 use aequitas::systems::si::quantities::{Dimensionless, Length, Time};
 use aequitas::systems::si::units::{Meter, Second};

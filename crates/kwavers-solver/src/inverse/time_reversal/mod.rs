@@ -10,6 +10,9 @@
 //! - **GRASP**: Modular organization with focused submodules
 //! - **DRY**: Reuses existing grid and solver infrastructure
 
+#![cfg_attr(test, expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1"))]
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 pub mod config;
 pub mod processing;
 pub mod reconstruction;

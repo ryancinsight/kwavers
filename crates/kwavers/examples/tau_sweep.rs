@@ -1,3 +1,5 @@
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use eunomia::Complex64;
 use std::f64::consts::PI;
 

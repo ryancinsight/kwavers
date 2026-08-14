@@ -35,6 +35,8 @@
 //! - Jeong M.K., Kwon S. (2013): "A comparison study of beamforming techniques
 //!   for 3D ultrasound." *J. Med. Ultrason.* 40, 395–408.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use leto::{Array3, Array4};
 use moirai_parallel::{map_collect_index_with, Adaptive};
 

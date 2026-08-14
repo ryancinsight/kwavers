@@ -44,6 +44,8 @@
 //! }
 //! ```
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 pub mod frequency_filter;
 
 pub use frequency_filter::FrequencyFilter;

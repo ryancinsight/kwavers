@@ -50,6 +50,8 @@
 //!   spaced grids." *Mathematics of Computation*, 51(184), 699-706.
 //!   DOI: 10.1090/S0025-5718-1988-0935077-0
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use kwavers_core::error::{KwaversResult, NumericalError};
 use leto::{Array3, ArrayView3};
 use leto_ops::zip_mut_with;

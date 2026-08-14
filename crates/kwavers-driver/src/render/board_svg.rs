@@ -18,6 +18,8 @@
 //! Evidence tier: visual/empirical — the geometry is derived from the same board model used by
 //! the LVS and DRC, so the render faithfully represents the routed copper.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use std::fmt::Write as _;
 
 use crate::board::Board;

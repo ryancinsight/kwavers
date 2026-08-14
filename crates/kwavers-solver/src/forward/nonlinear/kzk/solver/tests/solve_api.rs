@@ -1,5 +1,7 @@
 //! `KZKSolver::solve(n)` API invariant tests.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use crate::forward::nonlinear::kzk::{KZKConfig, KZKSolver};
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use leto::Array2;

@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::*;
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use kwavers_core::constants::medical::TI_LIMIT_SOFT_TISSUE;

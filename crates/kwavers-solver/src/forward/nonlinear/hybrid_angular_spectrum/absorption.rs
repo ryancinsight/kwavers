@@ -29,6 +29,8 @@
 //! - Hamilton MF, Blackstock DT (2008). *Nonlinear Acoustics*.
 //!   Acoustical Society of America Press, §2.3.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::HASConfig;
 use kwavers_core::constants::acoustic_parameters::NP_TO_DB;
 use kwavers_core::constants::numerical::{CM_TO_M, MHZ_TO_HZ};

@@ -17,7 +17,12 @@ pub(super) fn read_dataset_payload<R: consus_io::ReadAt + Sync>(
             let data_addr = dataset.data_address.ok_or_else(|| {
                 KwaversError::InvalidInput("contiguous HDF5 dataset has no data address".to_owned())
             })?;
-            let elem_size = fixed_element_size(&dataset.datatype)?;
+            let elem_size = dataset.datatype.element_size().ok_or_else(|| {
+                KwaversError::InvalidInput(format!(
+                    "variable-length HDF5 datatype is invalid for sound speed: {:?}",
+                    dataset.datatype
+                ))
+            })?;
             let total_bytes = dataset
                 .shape
                 .num_elements()

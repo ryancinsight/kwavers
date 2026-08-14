@@ -3,6 +3,8 @@
 //! Provides type-safe field management with O(1) access using direct indexing.
 //! Follows SOLID principles with single responsibility for field storage.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use kwavers_core::error::{FieldError, KwaversResult};
 use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;

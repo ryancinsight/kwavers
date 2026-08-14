@@ -16,6 +16,8 @@
 //! the smooth acoustic eigenmode and supplies an input-sensitive validation
 //! fixture without depending on a concrete PSTD or FDTD implementation.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
 

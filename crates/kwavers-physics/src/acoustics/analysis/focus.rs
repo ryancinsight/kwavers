@@ -1,5 +1,7 @@
 //! Focus finding and beam width calculations
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::validation::{invalid_parameter, validate_pressure_field_domain};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;

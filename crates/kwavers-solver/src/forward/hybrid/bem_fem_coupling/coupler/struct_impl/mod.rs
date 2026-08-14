@@ -5,6 +5,8 @@
 //! - `interface` — FEM/BEM interface data transfer methods.
 //! - `solvers`   — BEM system solve, FEM matrix assembly, linear solver.
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 mod coupled;
 mod interface;
 mod solvers;

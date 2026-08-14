@@ -4,6 +4,8 @@
 //! Refactored following GRASP principles - maintains backward compatibility
 //! Based on Claerbout (1985): "Imaging the Earth's Interior"
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use crate::plugin::{PluginMetadata, PluginState};
 use kwavers_core::error::KwaversResult;
 // Note: Keeping Plugin dependency here, which is in physics. Cycle?

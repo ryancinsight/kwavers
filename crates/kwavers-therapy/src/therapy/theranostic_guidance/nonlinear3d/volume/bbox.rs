@@ -1,5 +1,7 @@
 //! Bounding-box geometry for nonlinear 3-D CT volume cropping.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use std::collections::VecDeque;
 
 use leto::{Array2, Array3};

@@ -1,3 +1,5 @@
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use super::MultiModalFusion;
 use crate::acoustics::imaging::fusion::registration::{self, RitkRegistrationEngine};
 use crate::acoustics::imaging::fusion::types::{AffineTransform, FusedImageResult};

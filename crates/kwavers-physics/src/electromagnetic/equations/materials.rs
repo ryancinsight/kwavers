@@ -3,6 +3,8 @@
 //! This module provides utilities for working with spatially-distributed
 //! electromagnetic material properties in physics simulations.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use leto::{ArrayD, VecStorage};
 
 /// Material distribution utilities for electromagnetic physics

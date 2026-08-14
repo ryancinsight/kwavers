@@ -53,6 +53,8 @@
 //! - Kreiss H.O., Oliger J. (1972). SIAM J. Numer. Anal. 9(1), 112–128.
 //!   (spectral accuracy for periodic problems)
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use kwavers_math::fft::Complex64;
 use leto::Array3 as LetoArray3;
 

@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use crate::transducers::focused::bowl::{BowlConfig, BowlTransducer};
 use aequitas::systems::si::quantities::Time;
 use aequitas::systems::si::units::{Meter, Second, SquareMeter};

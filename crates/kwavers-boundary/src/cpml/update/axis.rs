@@ -7,6 +7,8 @@
 //! axis accessors. Behavior is bit-identical to the original per-axis code
 //! (proven by the differential tests below at migration time).
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::super::memory::CPMLMemory;
 use super::super::profiles::CPMLProfiles;
 use super::CPMLUpdater;

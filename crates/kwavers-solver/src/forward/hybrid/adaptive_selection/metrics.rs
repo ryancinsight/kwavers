@@ -1,5 +1,8 @@
 // adaptive_selection/metrics.rs - Metrics for method selection
 
+#![cfg_attr(test, expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1"))]
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_grid::Grid;

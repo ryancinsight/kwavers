@@ -8,6 +8,8 @@
 //! The DOCS path is preserved verbatim from the original inline module so the
 //! committed vendor files stay the differential oracle.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::*;
 
 // ────────────────────────────────────────────────────────────────────────────

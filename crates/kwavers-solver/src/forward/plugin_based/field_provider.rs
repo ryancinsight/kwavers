@@ -3,6 +3,8 @@
 //! Implements the Principle of Least Privilege by restricting plugin access
 //! to only the fields they need.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::field_registry::FieldRegistry;
 use kwavers_core::error::FieldError;
 use kwavers_field::mapping::UnifiedFieldType;

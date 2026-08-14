@@ -1,5 +1,7 @@
 //! Conservation diagnostics tests for the KZK solver.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use crate::forward::nonlinear::conservation::{ConservationDiagnostics, ConservationTolerances};
 use crate::forward::nonlinear::kzk::{KZKConfig, KZKSolver};
 use kwavers_core::constants::numerical::MHZ_TO_HZ;

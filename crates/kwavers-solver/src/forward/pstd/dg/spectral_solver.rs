@@ -3,6 +3,8 @@
 //! This module implements high-order spectral methods using FFT
 //! for solving PDEs in smooth regions.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use crate::pstd::utils::{compute_anti_aliasing_filter, compute_wavenumbers};
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::error::KwaversResult;

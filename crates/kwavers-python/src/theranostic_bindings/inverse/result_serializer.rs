@@ -1,6 +1,8 @@
 //! Serialization of `TheranosticInverseResult` into a Python dict, plus
 //! private geometry helpers used by `run_theranostic_inverse_from_ritk`.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use kwavers_therapy::therapy::theranostic_guidance::{
     placement_metrics, target_index_from_mask_fraction_3d, PlacementContext,
     TheranosticInverseConfig, TheranosticInverseResult, THERANOSTIC_OPERATOR_MODEL,

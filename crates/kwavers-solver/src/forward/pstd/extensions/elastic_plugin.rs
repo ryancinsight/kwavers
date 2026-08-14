@@ -27,6 +27,8 @@
 //! consumed: an acoustic pressure source is not an elastic velocity source, and
 //! conflating them would misrepresent the excitation.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use leto::Array4;
 use std::any::Any;
 use std::fmt::Debug;

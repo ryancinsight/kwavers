@@ -2,6 +2,8 @@
 //!
 //! Provides arc-shaped transducer geometry for 2D simulations.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use aequitas::systems::si::quantities::{Angle, Frequency, Length, Pressure, Time};
 use aequitas::systems::si::units::{Hertz, Meter, Pascal, Radian, Second};
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};

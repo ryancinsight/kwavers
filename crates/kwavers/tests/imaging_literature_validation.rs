@@ -39,6 +39,10 @@
 //! Energy balance at interface couples thermal diffusion and mechanics.
 //! Reference: Keller & Miksis (1980) DOI: 10.1121/1.389891
 
+#![expect(clippy::print_stderr, reason = "ratchet KWAVERS-LINT-1")]
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use plotters::prelude::*;
 use std::f64::consts::PI;
 

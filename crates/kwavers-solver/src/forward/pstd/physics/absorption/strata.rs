@@ -31,6 +31,8 @@
 //! ## References
 //! - Treeby & Cox (2010). J. Biomed. Opt. 15(2), 021314, Eqs. 9–10, 19–21.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use kwavers_core::constants::ABSORPTION_SINGULARITY_THRESHOLD;
 use leto::Array3;
 use moirai_parallel::{map_collect_index_with, Adaptive};

@@ -64,6 +64,8 @@
 //! - Gassmann F. (1951). "Elasticity of porous media." Vierteljahrschrift
 //!   der Naturforschenden Gesellschaft in Zürich 96, 1–23.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use crate::acoustics::mechanics::poroelastic::{PoroelasticMaterial, WaveSpeeds};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;

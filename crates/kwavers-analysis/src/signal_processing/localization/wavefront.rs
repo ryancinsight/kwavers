@@ -3,6 +3,8 @@
 //! Detects and characterizes acoustic wavefronts to estimate source distance
 //! and distinguish between plane waves (far-field) and spherical waves (near-field).
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array3;
 

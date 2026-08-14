@@ -3,6 +3,8 @@
 //! This example demonstrates the transfer learning capabilities of the PINN framework,
 //! showing how pre-trained models can be efficiently adapted to new physics scenarios.
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 #[cfg(feature = "pinn")]
 use coeus_core::MoiraiBackend;
 #[cfg(feature = "pinn")]

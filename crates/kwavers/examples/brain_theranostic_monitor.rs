@@ -46,6 +46,9 @@
 //! - Sapareto & Dewey 1984; Damianou & Hynynen 1994 — CEM43 / 240 ablation.
 //! - Pennes 1948 — bioheat equation.
 
+#![expect(clippy::print_stderr, reason = "ratchet KWAVERS-LINT-1")]
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use aequitas::systems::si::quantities::{Frequency, Length, ThermodynamicTemperature};
 use aequitas::systems::si::units::{Hertz, Kelvin, Meter};
 use kwavers::theranostic::{

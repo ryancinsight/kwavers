@@ -1,5 +1,7 @@
 //! Value-semantic tests for the eikonal solver and Kirchhoff migration.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::eikonal::EikonalSolver;
 use super::kirchhoff::{KirchhoffMigrator, Trace};
 use kwavers_grid::Grid;

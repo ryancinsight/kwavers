@@ -3,6 +3,8 @@
 //! This module implements the coupled photoacoustic solver that integrates
 //! electromagnetic (optical) and acoustic physics.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use aequitas::systems::si::{quantities::Length, units::PerMeter};
 use hyperion::{quantity::PathLength, transport::DiffusionCoefficients, TransportError};
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};

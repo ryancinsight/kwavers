@@ -6,6 +6,9 @@
 //! 3. Arrival times match theoretical expectations
 //! 4. Amplitudes are correct and not accumulated
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;

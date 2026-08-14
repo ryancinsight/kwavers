@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::super::DifferentialOperator;
 use super::core::CentralDifference6;
 use eunomia::assert_abs_diff_eq;

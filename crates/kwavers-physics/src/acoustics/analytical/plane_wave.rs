@@ -1,5 +1,7 @@
 //! Plane wave analytical solutions for validation
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::utils::DISPERSION_CORRECTION_SECOND_ORDER;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_grid::Grid;

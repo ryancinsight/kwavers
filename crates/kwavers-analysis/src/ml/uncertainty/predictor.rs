@@ -1,5 +1,7 @@
 //! Solver-agnostic prediction contract for PINN uncertainty estimation.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::{Array1, Array2};
 

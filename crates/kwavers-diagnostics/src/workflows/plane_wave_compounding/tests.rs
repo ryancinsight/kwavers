@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::compound::PlaneWaveCompound;
 use super::config::PlaneWaveCompoundingConfig;
 use eunomia::Complex;

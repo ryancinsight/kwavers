@@ -16,6 +16,9 @@
 //!   and cortical/trabecular density metrics.
 //! - `<output>_element_maps.ppm` and `.svg`: 2D transducer element maps.
 
+#![expect(clippy::print_stderr, reason = "ratchet KWAVERS-LINT-1")]
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use aequitas::systems::si::quantities::{Angle, Frequency, Length, Pressure};
 use aequitas::systems::si::units::{Hertz, Meter, Pascal, Radian};
 use std::env;

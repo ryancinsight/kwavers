@@ -86,6 +86,9 @@
 //! - Virieux, J. & Operto, S. (2009). An overview of full-waveform inversion in
 //!   exploration geophysics. *Geophysics*, 74(6), WCC1–WCC26.
 
+#![expect(clippy::print_stderr, reason = "ratchet KWAVERS-LINT-1")]
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 use kwavers_solver::inverse::fwi::time_domain::{FwiGeometry, FwiProcessor};

@@ -1,5 +1,8 @@
 //! Diffraction validation tests for KZK equation implementation.
 
+#![cfg_attr(test, expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1"))]
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 #[cfg(test)]
 mod tests {
     use super::super::super::*;

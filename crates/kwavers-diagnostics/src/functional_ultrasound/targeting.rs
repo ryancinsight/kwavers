@@ -3,6 +3,8 @@
 //! Converts between different coordinate systems and provides safe targeting
 //! with anatomical validation.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::atlas::BrainAtlas;
 use kwavers_core::error::{KwaversError, KwaversResult};
 

@@ -21,6 +21,9 @@
 //! Run: `cargo run --example hybrid_lesion_monitor`
 //! Fast (~20 s CPU); writes `hybrid_lesion_frameNN.png`.
 
+#![expect(clippy::print_stderr, reason = "ratchet KWAVERS-LINT-1")]
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use kwavers::theranostic::monitor::{
     fd, fuse_lesion_map, lesion_extent, passive_acoustic_map, synthesize_emission, FusionWeights,
     PamMonitorConfig,

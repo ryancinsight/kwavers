@@ -20,6 +20,8 @@
 //! Date: 2026-02-05
 //! Sprint: 217 Session 2 - k-Wave Validation
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;

@@ -14,6 +14,8 @@
 //! - **Strength**: Optional (only for damage/fracture mechanics)
 //! - **Thermal**: Optional (only for thermal effects)
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::{
     AcousticPropertyData, ElasticPropertyData, ElectromagneticPropertyData, OpticalPropertyData,
     StrengthPropertyData, ThermalPropertyData,

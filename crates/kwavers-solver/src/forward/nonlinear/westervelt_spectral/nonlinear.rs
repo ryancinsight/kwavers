@@ -1,5 +1,7 @@
 //! Nonlinear term computation for Westervelt equation
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use leto::Array3;

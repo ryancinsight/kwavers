@@ -8,6 +8,8 @@
 //! and the kwavers-beam driver→transducer seam. It should be cross-checked against the original
 //! intent if a copy resurfaces.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::*;
 use crate::board::{Board, LayerId, NetClassKind, Track, Via, ViaKind};
 use crate::geom::{GridSpec, Nm, Point};

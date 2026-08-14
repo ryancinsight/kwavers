@@ -4,6 +4,8 @@
 //! relevant to shock wave lithotripsy, where cavitation plays a key role in
 //! stone erosion and tissue bioeffects.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use kwavers_core::constants::cavitation::{
     SURFACE_TENSION_WATER, VAPOR_PRESSURE_WATER, VISCOSITY_WATER,
 };

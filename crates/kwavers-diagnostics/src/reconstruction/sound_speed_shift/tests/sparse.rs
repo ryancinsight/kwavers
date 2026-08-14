@@ -1,5 +1,7 @@
 //! Sparse sampling and L1 proximal localization tests.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use leto::Array2;
 
 use super::{

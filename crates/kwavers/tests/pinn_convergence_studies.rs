@@ -33,6 +33,7 @@
 //! - Eventual plateau at optimal capacity
 
 #![cfg(test)]
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
 
 mod validation;
 

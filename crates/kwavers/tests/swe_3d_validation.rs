@@ -37,6 +37,9 @@
 //! - Palmeri, M. L., et al. (2011). "Quantifying hepatic shear modulus in vivo using
 //!   acoustic radiation force." *Ultrasound in Medicine & Biology*, 37(4), 546-558.
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use kwavers_grid::Grid;
 use kwavers_medium::heterogeneous::HeterogeneousMedium;
 use kwavers_medium::HomogeneousMedium;

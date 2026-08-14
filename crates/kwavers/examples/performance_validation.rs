@@ -3,6 +3,8 @@
 //! This script validates core performance characteristics to provide
 //! evidence-based metrics for production readiness evaluation.
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use leto::Array3;

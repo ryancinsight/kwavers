@@ -39,6 +39,9 @@
 //!
 //! Part VI — Atlas Stack Integration, §SIMD: Hermes for Vectorized Operations.
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use hermes_simd::{axpy, dot, elementwise_add, scale, sum};
 
 // ── Physical constants ────────────────────────────────────────────────────

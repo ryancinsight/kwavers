@@ -1,5 +1,7 @@
 //! Simple integration tests for core functionality
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use kwavers_core::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
 use kwavers_grid::Grid;
 use kwavers_medium::{ArrayAccess, CoreMedium, HomogeneousMedium};

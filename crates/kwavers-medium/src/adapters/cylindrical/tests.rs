@@ -1,5 +1,7 @@
 //! Value-semantic regression tests for cylindrical projection.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::CylindricalMediumProjection;
 use crate::heterogeneous::HeterogeneousMedium;
 use crate::{CoreMedium, HomogeneousMedium};

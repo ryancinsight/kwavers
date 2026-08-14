@@ -1,6 +1,8 @@
 //! Value-semantic tests for point-scatterer RF synthesis. Expected delays and
 //! amplitudes are derived analytically from the monostatic echo model.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::{RfSynthesisConfig, ScattererCloud, TransmitWavefront};
 
 const C: f64 = 1540.0; // m/s

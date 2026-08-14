@@ -3,6 +3,9 @@
 //! Fast test to identify significant differences between solver implementations.
 //! Focuses on core functionality with minimal computational overhead.
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_solver::forward::fdtd::{FdtdConfig, FdtdSolver};

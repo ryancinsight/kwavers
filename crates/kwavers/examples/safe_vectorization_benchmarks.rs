@@ -32,6 +32,9 @@
 //! - Cache efficiency (L1, L2, L3 miss rates)
 //! - Energy efficiency (operations per joule)
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use kwavers_analysis::performance::SafeVectorOps;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;

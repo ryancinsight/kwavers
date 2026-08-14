@@ -9,6 +9,8 @@
 //!
 //! Expected: sensor amplitude >> 3.7e-10 Pa (the ~0 failure value seen in Python)
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use kwavers_boundary::cpml::CPMLConfig;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;

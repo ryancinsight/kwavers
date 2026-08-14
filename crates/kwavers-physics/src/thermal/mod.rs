@@ -11,6 +11,7 @@
 // Fully documented module — enforce complete public-item docs (incremental
 // crate-wide policy; see lib.rs).
 #![deny(missing_docs)]
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
 
 pub mod ablation;
 pub mod coupling;

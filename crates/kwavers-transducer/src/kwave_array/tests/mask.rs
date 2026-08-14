@@ -1,5 +1,7 @@
 //! Binary and weighted mask tests for [`KWaveArray`].
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::super::KWaveArray;
 
 #[test]

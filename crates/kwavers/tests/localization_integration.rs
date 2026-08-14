@@ -13,6 +13,8 @@
 //! Once MUSIC is implemented, integration tests can be added following the
 //! pattern of these multilateration tests.
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use eunomia::assert_relative_eq;
 use kwavers_analysis::signal_processing::localization::{Multilateration, MultilaterationConfig};
 

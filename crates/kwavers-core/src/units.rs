@@ -1,5 +1,7 @@
 //! Unit conversion helpers shared across Rust crates and PyO3 bindings.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use crate::constants::numerical::TWO_PI;
 use crate::error::{KwaversError, KwaversResult};
 

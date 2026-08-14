@@ -6,6 +6,8 @@
 //! These are pure data models and spatial primitives, suitable for use across
 //! all layers according to clean architecture principles.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::properties::OpticalPropertyData;
 use kwavers_grid::GridDimensions;
 use leto::Array3;

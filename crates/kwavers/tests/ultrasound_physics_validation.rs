@@ -3,6 +3,8 @@
 //! This test suite validates the MVDR beamforming implementation
 //! against established literature references and mathematical theorems.
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use kwavers_analysis::signal_processing::beamforming::covariance::{
     CovarianceEstimator, SpatialSmoothing,
 };

@@ -9,6 +9,8 @@
 
 // ─── Helmholtz 1-D FD matrix ──────────────────────────────────────────────────
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 /// Construct the 1-D Helmholtz operator as a dense real matrix (row-major).
 ///
 /// Discretises −(d²/dx² + k²) with second-order centred finite differences:

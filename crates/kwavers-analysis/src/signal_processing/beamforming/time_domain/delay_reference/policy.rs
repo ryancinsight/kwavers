@@ -1,5 +1,7 @@
 //! DelayReference enum and methods.
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use kwavers_core::error::{KwaversError, KwaversResult};
 
 /// Policy for selecting a delay datum / reference when converting absolute TOF delays to relative delays.

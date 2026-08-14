@@ -29,9 +29,6 @@
 //! - Evans J. (2006). *BSDCan Conference*, 157–168.
 //! - Bonwick J. (1994). "The Slab Allocator". *USENIX Summer Technical Conference*.
 
-// Unsafe pointer arithmetic is documented at each use site.
-#![allow(unsafe_code)]
-
 pub mod batch;
 pub mod field_arena;
 pub mod layout;

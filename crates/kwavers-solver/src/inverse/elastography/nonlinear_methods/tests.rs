@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::super::config::NonlinearInversionConfig;
 use super::bayesian::bayesian_inversion;
 use super::harmonic_ratio::harmonic_ratio_inversion;

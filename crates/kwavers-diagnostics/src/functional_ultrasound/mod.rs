@@ -24,6 +24,8 @@
 //! - Tiran, E., et al. (2017). "Transcranial functional ultrasound imaging"
 //! - Allen Brain Atlas: <http://mouse.brain-map.org>
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 pub mod atlas;
 pub mod targeting;
 pub mod tracking;

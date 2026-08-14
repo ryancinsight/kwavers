@@ -33,6 +33,8 @@
 //! - Wang & Wu (2007): "Biomedical Optics: Principles and Imaging"
 //!   Wiley-Interscience. ISBN: 978-0-471-74304-0
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::properties::OpticalPropertyData;

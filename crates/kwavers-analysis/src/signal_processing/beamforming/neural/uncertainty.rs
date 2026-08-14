@@ -15,6 +15,8 @@
 //! - Gal & Ghahramani (2016): "Dropout as a Bayesian Approximation"
 //! - Kendall & Gal (2017): "What Uncertainties Do We Need in Bayesian Deep Learning?"
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use kwavers_core::error::KwaversResult;
 use leto::Array3;
 

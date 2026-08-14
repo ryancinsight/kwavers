@@ -34,6 +34,8 @@
 //!   *Brain Research Bulletin*, 50(5-6), 303-304.
 //! - Koch, C. (1999). *Biophysics of Computation*. Oxford University Press.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 #[cfg(test)]
 mod tests;
 

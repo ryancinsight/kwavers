@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use std::f64::consts::PI;
 
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;

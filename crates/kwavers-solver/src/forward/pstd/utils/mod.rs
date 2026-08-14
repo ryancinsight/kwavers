@@ -3,6 +3,8 @@
 //! This module provides common functionality for computing wavenumbers,
 //! k-space corrections, and spectral derivatives used by multiple solvers.
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_math::fft::Complex64;

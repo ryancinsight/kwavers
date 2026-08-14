@@ -1,6 +1,8 @@
 //! Beamforming processor
 
 // Import config from domain layer (single source of truth for configuration)
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use crate::beamforming::BeamformingCoreConfig;
 use aequitas::systems::si::units::{Hertz, MeterPerSecond};
 use kwavers_core::error::KwaversResult;

@@ -26,6 +26,8 @@
 //!
 //! Run with: `cargo run --example adaptive_beamforming_refactored`
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 fn main() {
     println!("Adaptive Beamforming - Architecture Refactoring Complete");
     println!("=======================================================");

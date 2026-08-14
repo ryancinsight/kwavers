@@ -4,6 +4,8 @@
 //! helpers (`drc_args`, `parse_drc_json`, `locate_on_path`) are reached through their `pub(super)`
 //! sub-modules.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use std::path::PathBuf;
 
 use super::cli::{drc_args, locate_on_path, DrcOptions};

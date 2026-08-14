@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::super::geometry::Point3;
 use super::bowl::bowl_elements;
 use super::helpers::{distance_3d, keep_largest_connected_component_3d};

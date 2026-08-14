@@ -34,6 +34,8 @@
 //! positions, and accumulates the slowness gradient via cross-correlation of
 //! the adjoint field with the reference-field acceleration at each step.
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use super::cbs::{
     pstd_modal_theta_squared, pstd_source_kappa_symbol, GridSpec, PstdTemporalTransferConfig,
 };

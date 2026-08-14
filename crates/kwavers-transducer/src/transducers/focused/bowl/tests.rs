@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::*;
 use aequitas::systems::si::quantities::{Angle, Dimensionless, Frequency, Length, Pressure, Time};
 use aequitas::systems::si::units::{Hertz, Meter, Pascal, Radian, Second, SquareMeter};

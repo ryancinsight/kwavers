@@ -3,6 +3,8 @@
 //! This module defines the field components and energy-related calculations
 //! for electromagnetic wave propagation.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use kwavers_core::constants::fundamental::{VACUUM_PERMEABILITY, VACUUM_PERMITTIVITY};
 use leto::{ArrayD, VecStorage};
 

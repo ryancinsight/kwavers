@@ -2,6 +2,8 @@
 //!
 //! This test verifies that boundary plane detection works correctly.
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_signal::SineWave;

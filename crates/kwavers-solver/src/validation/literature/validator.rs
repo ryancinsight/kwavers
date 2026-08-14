@@ -1,5 +1,7 @@
 //! LiteratureValidator struct and validation methods.
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use leto::Array3;
 

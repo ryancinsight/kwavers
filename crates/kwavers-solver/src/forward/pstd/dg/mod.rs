@@ -3,6 +3,8 @@
 //! This module provides high-order spectral methods and discontinuous Galerkin
 //! methods for solving acoustic wave equations.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 pub mod basis;
 pub mod config;
 pub mod coupling;

@@ -8,6 +8,8 @@
 //!   k-Wave MATLAB source kspaceFirstOrderAS.m, WSWA-FFT case.
 //!   Treeby et al. (2012). k-Wave axisymmetric documentation.
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use apollo::{fft_2d_array_into, ifft_2d_complex_inplace, Complex64 as ApolloComplex64};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};

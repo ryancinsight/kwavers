@@ -16,6 +16,8 @@
 //! - Khuri-Yakub, B. T., & Oralkan, Ö. (2011). "CMUTs for medical imaging." *J.
 //!   Micromech. Microeng.*, 21(5).
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use aequitas::systems::si::quantities::{
     Area, Capacitance, DampingCoefficient, Dimensionless, DynamicViscosity, ElectricPotential,
     Frequency, Length, MassDensity, Power, Pressure, ReciprocalLength, SpringStiffness, Velocity,

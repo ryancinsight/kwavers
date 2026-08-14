@@ -3,6 +3,8 @@
 //! This module provides interfaces for creating custom source implementations
 //! that can be defined by users for specialized applications.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use crate::{Source, SourceField};
 use kwavers_grid::Grid;
 use kwavers_signal::Signal;

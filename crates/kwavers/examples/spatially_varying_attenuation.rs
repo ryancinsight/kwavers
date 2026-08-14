@@ -10,6 +10,8 @@
 //! - Gradient tissues (skin layers, vessel walls)
 //! - Temperature-dependent absorption for HIFU simulations
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use kwavers_medium::absorption::SpatiallyVaryingAbsorption;
 use leto::Array3;
 

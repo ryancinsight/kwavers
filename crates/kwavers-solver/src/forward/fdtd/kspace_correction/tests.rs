@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::operators::KSpaceFdtdOperators;
 use crate::forward::fdtd::config::{FdtdConfig, KSpaceCorrectionMode};
 use crate::forward::fdtd::solver::FdtdSolver;

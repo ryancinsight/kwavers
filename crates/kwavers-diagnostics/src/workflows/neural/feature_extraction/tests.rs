@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::extractor::FeatureExtractor;
 use eunomia::assert_relative_eq;
 use kwavers_analysis::signal_processing::beamforming::neural::config::FeatureConfig;

@@ -3,6 +3,8 @@
 //! Implements SIRT, ART, and OSEM algorithms.
 //! References: Kak & Slaney (1988) "Principles of Computerized Tomographic Imaging".
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 mod iterations;
 mod system;
 

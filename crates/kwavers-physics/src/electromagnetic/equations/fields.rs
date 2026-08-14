@@ -3,6 +3,8 @@
 //! This module provides utilities for working with electromagnetic fields
 //! and computing energy-related quantities like the Poynting vector.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use kwavers_field::{ArrayD, PoyntingVector, VecStorage};
 
 /// Electromagnetic field utilities for physics computations

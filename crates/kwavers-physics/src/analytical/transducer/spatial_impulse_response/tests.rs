@@ -1,6 +1,8 @@
 //! Value-semantic tests for the circular-piston spatial impulse response.
 //! Expected bounds and values are derived from the Stepanishen (1971) closed form.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::CircularPistonSir;
 
 const A: f64 = 5e-3; // 5 mm radius

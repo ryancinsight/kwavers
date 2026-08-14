@@ -1,5 +1,7 @@
 //! Localization Configuration
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use kwavers_core::constants::SOUND_SPEED_TISSUE;
 use kwavers_core::error::KwaversResult;
 

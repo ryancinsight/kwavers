@@ -1,5 +1,7 @@
 //! Family B — power & plane tests.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::*;
 use crate::board::{Board, LayerId, NetClassKind, ZoneFill};
 use crate::geom::{GridSpec, Nm, Point};

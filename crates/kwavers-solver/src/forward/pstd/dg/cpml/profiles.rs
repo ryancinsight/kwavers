@@ -26,6 +26,8 @@
 //! Per-axis array length equals the number of GLL nodes along that axis
 //! (`element_count · n_nodes`).
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use leto::Array1;
 
 use super::config::{DgCpmlAxis, DgCpmlConfig};

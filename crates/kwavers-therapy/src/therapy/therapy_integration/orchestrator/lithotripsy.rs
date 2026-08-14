@@ -20,6 +20,8 @@
 //! - ISO 16869:2015: "Lithotripters - Characteristics"
 //! - Bailey et al. (2005): "Cavitation detection during lithotripsy"
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use crate::therapy::lithotripsy::LithotripsySimulator;
 use kwavers_core::error::KwaversResult;
 

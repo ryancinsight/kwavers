@@ -7,6 +7,8 @@
 //! - Fichtner et al. (2008): "The adjoint method in seismology", *Phys. Earth Planet. Inter.*
 //! - Taner et al. (1979): "Complex seismic trace analysis"
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use super::types::MisfitFunction;
 use apollo::{fft_1d_leto, ifft_1d_complex, Complex64 as ApolloComplex64};
 use kwavers_core::error::KwaversResult;

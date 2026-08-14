@@ -1,5 +1,7 @@
 //! Debug module for beam propagation issues
 
+#![cfg_attr(test, expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1"))]
+
 #[cfg(test)]
 mod tests {
 

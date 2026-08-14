@@ -2,6 +2,8 @@
 //!
 //! Continuous tracking filter for real-time position updates during navigation.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use kwavers_core::error::KwaversResult;
 
 /// Tracking filter for continuous position estimation

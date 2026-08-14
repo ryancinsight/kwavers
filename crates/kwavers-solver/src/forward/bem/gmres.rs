@@ -23,6 +23,8 @@
 //!   algorithm for solving nonsymmetric linear systems." SIAM J. Sci. Stat.
 //!   Comput. 7(3), 856–869. DOI: 10.1137/0907058
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
 use leto::{Array1, Array2};
 

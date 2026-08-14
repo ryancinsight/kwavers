@@ -54,6 +54,8 @@
 //! - Stride & Coussios (2010): "Nucleation, mapping and control of cavitation for drug delivery"
 //! - Konofagou et al. (2012): "Focused ultrasound-mediated brain drug delivery"
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use crate::therapy::microbubble_dynamics::{
     sample_acoustic_field_at_position, MicrobubbleDynamicsService,
 };

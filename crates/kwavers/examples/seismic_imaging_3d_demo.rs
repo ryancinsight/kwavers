@@ -15,6 +15,9 @@
 // - Treeby & Cox 2010: JASA — fractional-Laplacian absorption.
 // - MNI ICBM 2009c: https://www.bic.mni.mcgill.ca/~vfonov/icbm/2009/
 
+#![expect(clippy::print_stderr, reason = "ratchet KWAVERS-LINT-1")]
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use anyhow::Context as _;
 use coeus_core::MoiraiBackend;
 use kwavers_core::error::{KwaversError, KwaversResult};

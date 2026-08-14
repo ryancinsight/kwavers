@@ -5,6 +5,8 @@
 //! `apollo`; this module only reexports the Apollo API under the legacy
 //! `kwavers::math::fft` path and keeps the spectral k-space utilities local.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 pub mod gpu_fft;
 pub mod kspace;
 pub mod shift_operators;

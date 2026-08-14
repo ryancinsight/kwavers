@@ -1,5 +1,7 @@
 //! Light diffusion solver implementation
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use crate::acoustics::traits::LightDiffusionModelTrait;
 use crate::optics::polarization::LinearPolarization;
 use crate::optics::PolarizationModel as PolarizationModelTrait;

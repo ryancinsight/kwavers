@@ -1,5 +1,7 @@
 //! Residual metrics for coupled multi-physics convergence.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::ArrayView3;
 

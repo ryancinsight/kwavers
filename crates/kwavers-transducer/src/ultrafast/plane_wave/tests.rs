@@ -1,5 +1,7 @@
 //! Tests for plane wave delay calculation.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::config::UltrafastPlaneWaveConfig;
 use super::processor::UltrafastPlaneWave;
 use aequitas::systems::si::quantities::{Angle, Dimensionless, Length, Velocity};

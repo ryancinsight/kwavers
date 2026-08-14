@@ -1,5 +1,7 @@
 //! Reconstruction algorithm, detector interpolation, and analytical validation tests.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::super::core::PhotoacousticSimulator;
 use super::super::reconstruction;
 use eunomia::assert_relative_eq;

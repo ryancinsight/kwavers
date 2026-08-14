@@ -1,5 +1,7 @@
 //! Residual norm metrics for Newton-Krylov convergence tests.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use leto::Array3;
 
 /// Compute squared L2 norm without taking a square root.

@@ -10,6 +10,8 @@
 //!
 //! This represents the complete interdisciplinary pathway from sound to light.
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 #[cfg(feature = "pinn")]
 use coeus_core::MoiraiBackend;
 use kwavers_core::error::KwaversResult;

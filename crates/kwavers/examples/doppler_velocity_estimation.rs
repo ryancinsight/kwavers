@@ -16,6 +16,8 @@
 //! cargo run --example doppler_velocity_estimation
 //! ```
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use eunomia::Complex64;
 use kwavers_analysis::signal_processing::doppler::{
     AutocorrelationConfig, AutocorrelationEstimator, ColorFlowConfig, ColorFlowImaging,

@@ -3,6 +3,8 @@
 //! Applies correction factors to 3D fields based on analytically
 //! computed dispersion errors from FDTD or PSTD methods.
 
+#![expect(clippy::print_stderr, reason = "ratchet KWAVERS-LINT-1")]
+
 use super::DispersionAnalysis;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_grid::Grid;

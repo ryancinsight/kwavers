@@ -3,6 +3,8 @@
 //! Provides a fluent, type-safe API for building configurations without
 //! dealing with nested public fields.
 
+#![cfg_attr(test, expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1"))]
+
 use super::{Configuration, SimulationParameters};
 use crate::parameters::{OutputParameters, PerformanceParameters};
 use kwavers_boundary::config::BoundaryParameters;

@@ -1,5 +1,7 @@
 //! Reference-plane / split-domain high-speed audit tests.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::super::board;
 use crate::audit::audit;
 use crate::board::{Board, LayerId, NetClassKind, Pad, Track, Zone, ZoneFill};

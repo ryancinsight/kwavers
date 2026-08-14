@@ -27,6 +27,9 @@
 //! - Tissue: Viscoelastic model (E = 2-12 kPa, η = 1-5 Pa·s)
 //! - Reconstruction: Time-of-flight method with phase gradient refinement
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use kwavers_core::error::KwaversError;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;

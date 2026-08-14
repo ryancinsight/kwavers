@@ -3,6 +3,8 @@
 //! Frequency-dependent absorption based on acoustic impedance matching.
 //! Particularly useful for ultrasound transducers and tissue interfaces.
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use crate::traits::BoundaryCondition;
 use kwavers_core::constants::fundamental::ACOUSTIC_IMPEDANCE_WATER_NOMINAL;
 use kwavers_core::error::KwaversResult;

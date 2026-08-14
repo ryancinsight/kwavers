@@ -1,3 +1,5 @@
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use criterion::{criterion_group, criterion_main, Criterion};
 use kwavers_solver::amr::ErrorEstimator;
 use leto::Array3;

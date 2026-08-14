@@ -22,6 +22,8 @@
 //! HelmholtzForwardOperator>` and convert the match blocks to virtual
 //! dispatch, removing the enum.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use std::fmt::Debug;
 
 use kwavers_math::fft::Complex64;

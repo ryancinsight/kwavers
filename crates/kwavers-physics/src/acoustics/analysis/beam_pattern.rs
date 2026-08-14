@@ -1,5 +1,7 @@
 //! Beam pattern analysis and directivity calculations
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::validation::{invalid_parameter, validate_pressure_field_domain};
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;

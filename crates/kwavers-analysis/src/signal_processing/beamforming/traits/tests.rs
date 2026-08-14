@@ -1,5 +1,7 @@
 //! Trait-conformance tests using a mock beamformer.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use leto::Array2;
 
 use super::{Beamformer, TimeDomainBeamformer};

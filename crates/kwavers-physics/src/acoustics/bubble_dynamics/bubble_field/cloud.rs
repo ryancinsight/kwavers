@@ -1,3 +1,5 @@
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use rand::prelude::*;
 use rand_distr::{LogNormal, Normal, Uniform};
 

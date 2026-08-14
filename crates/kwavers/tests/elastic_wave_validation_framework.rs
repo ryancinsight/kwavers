@@ -18,6 +18,8 @@
 //! Level 2: Wave Speed Validation (P-wave, S-wave formulae)
 //! Level 3: Analytical plane-wave reference identities
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use kwavers_physics::foundations::wave_equation::AutodiffElasticWaveEquation;
 
 // ============================================================================

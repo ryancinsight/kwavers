@@ -76,6 +76,8 @@
 //!   of the skull based on a human CT phantom. *Brain*, 145(11), 3917-3929.
 //! - BabelBrain dataset: Pineda-Pardo, J.A. et al. (2023). Zenodo 7894431.
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_solver::inverse::fwi::time_domain::{FwiGeometry, FwiProcessor};

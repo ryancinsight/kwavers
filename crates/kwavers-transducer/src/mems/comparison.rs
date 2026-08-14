@@ -11,6 +11,8 @@
 //! the PMUT IVUS literature): bandwidth 0.40, thermal 0.30, drive 0.15,
 //! integration 0.15.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::cmut::CmutCell;
 use super::pmut::PmutCell;
 use aequitas::systems::si::quantities::{

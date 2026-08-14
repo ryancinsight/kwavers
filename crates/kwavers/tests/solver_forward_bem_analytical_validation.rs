@@ -22,6 +22,8 @@
 //! - Pierce (1989): "Acoustics: An Introduction"
 //! - Colton & Kress (1998): "Inverse Acoustic and Electromagnetic Scattering Theory"
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use std::f64::consts::PI;
 
 /// Mie series solution for sphere scattering

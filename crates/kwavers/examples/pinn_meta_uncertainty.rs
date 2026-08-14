@@ -39,6 +39,8 @@
 //! cargo run --example pinn_meta_uncertainty -- --all
 //! ```
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use std::time::Instant;
 
 #[cfg(feature = "pinn")]

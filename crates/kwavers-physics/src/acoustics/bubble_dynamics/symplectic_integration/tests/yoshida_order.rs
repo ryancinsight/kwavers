@@ -1,5 +1,7 @@
 //! Test C — Yoshida4 convergence order via global trajectory error.
 
+#![cfg_attr(test, expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1"))]
+
 use super::super::{YOSHIDA_W1, YOSHIDA_W2};
 use kwavers_core::constants::numerical::TWO_PI;
 

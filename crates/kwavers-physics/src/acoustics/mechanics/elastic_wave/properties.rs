@@ -61,6 +61,8 @@
 //! - Auld B.A. (1990). *Acoustic Fields and Waves in Solids*. Krieger, §2.
 //! - Holzapfel G.A. (2000). *Nonlinear Solid Mechanics*. Wiley, §6.4.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use kwavers_core::error::{KwaversResult, PhysicsError};
 use kwavers_medium::properties::ElasticPropertyData;
 

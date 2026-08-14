@@ -1,5 +1,7 @@
 //! Value-semantic tests for the B-mode display pipeline.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::detection::{envelope, log_compress};
 use super::scan_conversion::{CartesianGrid, ScanConverter, ScanGeometry};
 use super::tgc::TgcConfig;

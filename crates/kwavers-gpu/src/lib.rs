@@ -20,8 +20,6 @@
 //! into one Hephaestus-backed provider boundary. The currently implemented
 //! provider is WGPU because the production kernels are WGSL.
 
-#![allow(clippy::module_inception)]
-
 // GPU allocation profiling/tracking. Pure bookkeeping over the ungated
 // kwavers_core GpuError; no wgpu dependency, so it is available unconditionally.
 pub mod profiling;

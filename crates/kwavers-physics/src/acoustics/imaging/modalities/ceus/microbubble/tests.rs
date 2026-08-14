@@ -3,6 +3,8 @@
 //! This file is already gated by `#[cfg(test)] mod tests;` in the parent
 //! `mod.rs`, so an inner `mod tests { ... }` would be redundant nesting.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::dynamics::BubbleDynamics;
 use kwavers_core::constants::cavitation::SURFACE_TENSION_WATER;
 use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;

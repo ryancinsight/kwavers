@@ -1,5 +1,7 @@
 //! Auto-organised from the original single-file `tests.rs` (split by concern).
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::*;
 
 /// Build a NICE configuration at a fixed carrier with `depth = ε`.

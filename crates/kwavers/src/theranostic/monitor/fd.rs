@@ -22,6 +22,9 @@
 //!   convergent Born series for strongly scattering media.
 //! - Ali et al. (2025) — multi-row ring-array transcranial FWI geometry.
 
+#![cfg_attr(test, expect(clippy::print_stderr, reason = "ratchet KWAVERS-LINT-1"))]
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use aequitas::systems::si::quantities::Length;
 use kwavers_core::error::KwaversResult;
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;

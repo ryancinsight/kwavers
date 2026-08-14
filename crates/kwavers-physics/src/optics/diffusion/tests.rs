@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::*;
 use aequitas::systems::si::units::PerMeter;
 use kwavers_core::constants::optical::REFRACTIVE_INDEX_SOFT_TISSUE;

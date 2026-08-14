@@ -40,12 +40,6 @@
 #![warn(missing_debug_implementations)]
 #![warn(trivial_casts, trivial_numeric_casts)]
 #![warn(unsafe_code)]
-#![allow(
-    clippy::type_complexity,
-    clippy::assertions_on_constants,
-    clippy::field_reassign_with_default
-)]
-#![allow(unexpected_cfgs)]
 
 use std::collections::HashMap;
 

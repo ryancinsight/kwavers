@@ -4,8 +4,6 @@
 //! This module provides the type definitions and tolerance constants
 //! used by `python_validation_integration_test.rs`.
 
-#![allow(dead_code)]
-
 use std::path::{Path, PathBuf};
 use std::process::Command;
 

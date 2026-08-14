@@ -2,6 +2,8 @@
 //!
 //! Generates 2D velocity maps for real-time flow visualization.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use crate::signal_processing::doppler::{
     AutocorrelationConfig, AutocorrelationEstimator, DopplerResult, WallFilter, WallFilterConfig,
 };

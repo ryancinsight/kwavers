@@ -3,6 +3,8 @@
 //! This module provides comprehensive validation of beamforming algorithms
 //! against analytical solutions and performance benchmarks.
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use kwavers_math::fft::Complex64;
 use leto::{Array1, Array2};
 use std::f64::consts::PI;

@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use std::f64::consts::{FRAC_PI_2, PI, TAU};
 
 use leto::Array2;

@@ -3,6 +3,8 @@
 //! RTM algorithm implementation following GRASP principles
 //! Reference: Baysal et al. (1983): "Reverse time migration"
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::parameters::{ImagingCondition, RtmSettings};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;

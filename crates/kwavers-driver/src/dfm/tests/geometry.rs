@@ -1,5 +1,7 @@
 //! Family C — geometric correction tests.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::*;
 use crate::board::{Board, LayerId, NetClassKind, Track};
 use crate::geom::{GridSpec, Nm, Point};

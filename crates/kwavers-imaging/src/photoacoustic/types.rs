@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::pressure_series::PressureFieldSeries;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::optical::REFRACTIVE_INDEX_SOFT_TISSUE;

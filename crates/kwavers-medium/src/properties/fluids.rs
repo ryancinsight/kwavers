@@ -14,6 +14,8 @@
 //! Temperature: 37°C (body temperature) unless otherwise noted
 //! Pressure: 1 atm unless otherwise noted
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::material::AcousticMaterialProperties;
 use kwavers_core::constants::acoustic_parameters::{
     BLOOD_PLASMA_VISCOSITY_37C, BLOOD_VISCOSITY_37C,

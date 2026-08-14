@@ -40,6 +40,8 @@
 //! assert!(titanium.sound_speed > 5000.0);
 //! ```
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use kwavers_core::constants::cavitation::VISCOSITY_WATER;
 use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use kwavers_core::constants::thermodynamic::{BODY_TEMPERATURE_C, ROOM_TEMPERATURE_C};

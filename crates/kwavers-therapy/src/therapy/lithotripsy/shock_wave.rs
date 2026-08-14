@@ -4,6 +4,8 @@
 //! lithotripsy (ESWL), including waveform generation, nonlinear propagation,
 //! and focusing characteristics.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;

@@ -24,6 +24,8 @@
 //! - Fornberg, B. (1988). "Generation of finite difference formulas on arbitrarily
 //!   spaced grids", Mathematics of Computation, 51(184), 699-706.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use kwavers_grid::Grid;
 use leto::Array3;
 

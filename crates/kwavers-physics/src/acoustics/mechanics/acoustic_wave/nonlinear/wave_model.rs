@@ -2,6 +2,8 @@
 //!
 //! This module contains the core `NonlinearWave` struct and its basic implementation.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, PRESSURE_LIMIT};
 use kwavers_grid::Grid;

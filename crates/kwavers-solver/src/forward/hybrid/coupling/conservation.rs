@@ -1,5 +1,7 @@
 //! Conservation enforcement for interface coupling
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::InterfaceGeometry;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use leto::Array3;

@@ -15,6 +15,8 @@
 //! cargo run --example boundary_smoothing
 //! ```
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use kwavers_boundary::smoothing::{
     BoundarySmoothing, BoundarySmoothingConfig, GhostCellConfig, IIMConfig, JumpConditionType,
     SmoothingMethod, SubgridConfig,

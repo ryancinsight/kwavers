@@ -1,5 +1,7 @@
 //! Charge-reservoir, charge-recycling, and pulse-skip PDN tests.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::*;
 use crate::place::component::Placement;
 use crate::place::footprint::PadDef;

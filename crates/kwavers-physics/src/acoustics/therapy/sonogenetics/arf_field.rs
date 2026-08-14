@@ -38,6 +38,8 @@
 //!   *Curr. Med. Imaging Rev.*, 6(1), 15-25.
 //! - Temkin, S. (2001). *Elements of Acoustics*. Acoustical Society of America.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use leto::Array3;
 

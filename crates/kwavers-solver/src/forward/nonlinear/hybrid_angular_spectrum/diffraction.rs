@@ -2,6 +2,8 @@
 //!
 //! Reference: Goodman (2005) "Introduction to Fourier Optics"
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use super::HASConfig;
 use apollo::{fft_2d_complex, ifft_2d_complex, Complex64};
 use kwavers_core::constants::numerical::TWO_PI;

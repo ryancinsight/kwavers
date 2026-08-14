@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::*;
 use eunomia::assert_relative_eq;
 use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_K;

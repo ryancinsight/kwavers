@@ -3,6 +3,8 @@
 //! Domain-level abstraction for CEUS (Contrast-Enhanced Ultrasound) simulation orchestration.
 //! This allows clinical layer to depend on domain abstractions rather than simulation internals.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;

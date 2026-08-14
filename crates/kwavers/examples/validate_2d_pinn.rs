@@ -35,6 +35,8 @@
 //! - Initial condition error: Measures initial condition accuracy
 //! - Periodicity: Verifies temporal periodicity of the solution
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use std::f64::consts::PI;
 use std::time::Instant;
 

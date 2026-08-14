@@ -14,6 +14,8 @@
 //!   transducers based on PZT thin films." *IEEE TUFFC*, 52(12).
 //! - Jung, J., et al. (2017). "Review of PMUTs." *J. Micromech. Microeng.*, 27(11).
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use aequitas::systems::si::quantities::{
     Area, Capacitance, Dimensionless, ElectricPotential, Frequency, Length, MassDensity, Power,
     Pressure, SurfaceChargeDensity, Velocity, VolumeChargeDensity,

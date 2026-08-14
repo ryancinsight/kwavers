@@ -13,6 +13,8 @@
 //! For acoustic properties (impedance), harmonic averaging is more appropriate:
 //! `1/Z_smooth = f/Z_inside + (1-f)/Z_outside`
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use kwavers_core::error::KwaversResult;
 use leto::Array3;
 

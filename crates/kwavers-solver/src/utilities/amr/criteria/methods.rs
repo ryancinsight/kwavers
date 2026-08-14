@@ -3,6 +3,8 @@
 //! All methods are `pub(super)` — dispatched exclusively through
 //! `ErrorEstimator::estimate_error` in `mod.rs`.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::ErrorEstimator;
 #[cfg(test)]
 use super::RefinementCriterion;

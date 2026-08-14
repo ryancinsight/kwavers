@@ -1,5 +1,7 @@
 //! Tests for velocity-Verlet time integration.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::integrator::TimeIntegrator;
 use crate::forward::elastic::swe::boundary::{ElasticSwePMLBoundary, SwePmlConfig};
 use crate::forward::elastic::swe::scratch::ElasticStepScratch;

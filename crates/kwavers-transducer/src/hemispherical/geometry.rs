@@ -1,5 +1,7 @@
 //! Hemisphere geometry and element placement
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::constants::MAX_ELEMENT_DENSITY;
 use super::element::ElementConfiguration;
 use crate::transducers::focused::{SphericalCapConfig, SphericalCapLayout};

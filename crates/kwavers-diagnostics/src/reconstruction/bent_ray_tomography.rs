@@ -28,6 +28,8 @@
 //! - Kaczmarz, S. (1937). Row-action linear solve.
 //! - Nolet, G. (1987). *Seismic Tomography*. (bent-ray traveltime inversion)
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::bent_ray::bent_ray_path;
 use leto::Array2;
 

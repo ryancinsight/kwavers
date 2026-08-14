@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::solver::EpsteinPlessetStabilitySolver;
 use super::types::{AmplitudeEvolution, OscillationType};
 use crate::acoustics::bubble_dynamics::bubble_state::BubbleParameters;

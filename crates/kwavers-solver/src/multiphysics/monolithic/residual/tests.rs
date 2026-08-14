@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::super::config::NewtonKrylovConfig;
 use super::super::coupler::MonolithicCoupler;
 use super::super::residual_metric::norm;

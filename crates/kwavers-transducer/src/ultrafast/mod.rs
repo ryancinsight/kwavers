@@ -131,6 +131,8 @@
 //! - `diverging_wave`: Virtual source / STA diverging wave delays and apodization
 //! - `sequencer`: Transmission sequence scheduling, interleaved angles, STA firing order
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 pub mod diverging_wave;
 pub mod plane_wave;
 pub mod sequencer;

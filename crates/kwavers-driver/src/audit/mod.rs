@@ -25,8 +25,6 @@
 //! 4. **Crosstalk**: capacitive/inductive coupling from parallel adjacent runs.
 //! 5. **Antenna / dangling**: etch/ESD risks from unconnected track ends.
 
-#![allow(missing_docs)] // Phase 4c carve: `pub mod X;` declarations are slice-private; lint allow covers the entire facade.
-
 pub mod antenna;
 pub mod critic;
 pub mod crosstalk;

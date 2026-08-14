@@ -1,5 +1,7 @@
 //! Test B — Hamiltonian non-drift over 1000 periods (Störmer-Verlet).
 
+#![cfg_attr(test, expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1"))]
+
 use super::super::{BubbleSymplecticIntegrator, SymplecticConfig};
 use super::helpers::{bubble_hamiltonian, make_model, make_params};
 use crate::acoustics::bubble_dynamics::bubble_state::BubbleState;

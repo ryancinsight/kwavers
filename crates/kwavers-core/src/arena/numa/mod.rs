@@ -1,7 +1,5 @@
 //! NUMA-Aware Memory Allocation and Thread Affinity
 
-#![allow(unsafe_code)]
-
 mod affinity;
 mod allocator;
 mod memory;

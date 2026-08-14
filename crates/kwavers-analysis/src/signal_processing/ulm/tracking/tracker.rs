@@ -1,3 +1,5 @@
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use super::types::{BubbleTrack, TrackingConfig};
 use crate::signal_processing::ulm::microbubble_detection::BubbleDetection;
 

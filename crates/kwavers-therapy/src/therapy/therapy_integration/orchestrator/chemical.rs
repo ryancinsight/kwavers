@@ -19,6 +19,8 @@
 //! - Suslick (1990): "Sonochemistry" - Science
 //! - Mason (1999): "Sonochemistry and sonoluminescence"
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE};
 use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_K;
 use kwavers_core::error::KwaversResult;

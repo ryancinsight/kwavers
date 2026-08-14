@@ -3,6 +3,8 @@
 //! Shared helpers (`spec`, `two_pad_fp`, `comp`, `comp_at`) live here; per-axis test families
 //! are split into sub-modules: `assembly` (physical verification) and `electrical` (ERC/BOM/
 //! schematic-isolation/AC-coupling). `lvs` was split in an earlier session.
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::*;
 use crate::board::{LayerId, NetId};
 use crate::geom::{GridSpec, Nm, Point};

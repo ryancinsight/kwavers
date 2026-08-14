@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::super::super::basis::BasisType;
 use super::super::super::config::DGConfig;
 use super::super::super::quadrature::fourier_periodic_nodes;

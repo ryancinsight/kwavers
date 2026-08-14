@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::linear::LinearInterpolator;
 use super::traits::Interpolator;
 use super::trilinear::NumericsTrilinearInterpolator;

@@ -24,6 +24,8 @@
 //! leading samples that contain only measurement noise), the standard SNR
 //! estimator in seismic/ultrasound practice.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use leto::Array2;
 

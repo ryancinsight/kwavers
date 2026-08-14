@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1"))]
+
 use super::KzkParabolicDiffractionOperator;
 use crate::forward::nonlinear::kzk::constants::{
     DEFAULT_BEAM_WAIST, DEFAULT_FREQUENCY, DEFAULT_GRID_SIZE, DEFAULT_WAVELENGTH,

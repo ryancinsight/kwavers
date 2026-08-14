@@ -1,3 +1,5 @@
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use super::{PstdSemCouplingConfig, SpectralCouplingInterface};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;

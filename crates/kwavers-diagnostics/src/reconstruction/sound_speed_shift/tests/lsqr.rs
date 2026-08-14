@@ -4,6 +4,8 @@
 //! public [`reconstruct_sound_speed_shift`] / [`reconstruct_sound_speed_shift_with_workspace`]
 //! APIs.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use leto::Array2;
 
 use super::{

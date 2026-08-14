@@ -2,6 +2,8 @@
 //!
 //! Tests extracted from filters module to maintain GRASP compliance (<500 lines/module).
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use kwavers_solver::reconstruction::photoacoustic::{
     Filters, PhotoacousticAlgorithm, ReconstructionPhotoacousticConfig,
 };

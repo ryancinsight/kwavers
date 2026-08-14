@@ -3,6 +3,8 @@
 //! This example demonstrates real-time inference capabilities for Physics-Informed Neural Networks
 //! using JIT compilation, quantization, and edge deployment optimization.
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 #[cfg(feature = "pinn")]
 use kwavers_core::error::KwaversResult;
 #[cfg(feature = "pinn")]

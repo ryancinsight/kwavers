@@ -5,6 +5,8 @@
 //! References:
 //! - Ebbini & Cain (1989): "Multiple-focus ultrasound phased-array pattern synthesis"
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use kwavers_core::error::KwaversResult;
 use leto::{Array1, Array2};
 

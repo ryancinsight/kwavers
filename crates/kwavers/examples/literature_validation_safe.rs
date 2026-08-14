@@ -31,6 +31,9 @@
 //! - **Test**: Shock wave formation and N-wave evolution
 //! - **Expected Error**: < 5% before shock formation
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::{CoreMedium, HomogeneousMedium};

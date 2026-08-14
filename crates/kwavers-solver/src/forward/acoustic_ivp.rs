@@ -22,6 +22,8 @@
 //! This identity avoids materializing a separate `|k|` array when `κ_src` is
 //! already available from the source-injection operator.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array3;
 

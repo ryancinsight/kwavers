@@ -4,6 +4,8 @@
 //! the numerical comparison table; `dg_acoustic_comparison_plot.rs` writes the
 //! plotted pressure/error artifact from the same fixture.
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 #[path = "dg_common/dg_acoustic_common.rs"]
 mod dg_acoustic_common;
 

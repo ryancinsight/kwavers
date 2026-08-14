@@ -37,6 +37,9 @@
 //!   pseudospectral method," J. Acoust. Soc. Am. 127(6), 2010.
 //! - k-Wave: http://www.k-wave.org/
 
+#![expect(clippy::print_stderr, reason = "ratchet KWAVERS-LINT-1")]
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;

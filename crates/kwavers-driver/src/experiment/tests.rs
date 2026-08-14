@@ -4,6 +4,8 @@
 //! expectations, not merely checked for `is_ok()`. The test pipeline exercises the full
 //! `run_experiment` path as well as each sub-module independently.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use crate::manifest::{
     DriverManifest, EnergyBudgetInputs, ResistorPackage, TileStimulationProfile,
 };

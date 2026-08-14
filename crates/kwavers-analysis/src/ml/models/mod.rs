@@ -3,6 +3,8 @@
 //! This module provides ML models for various simulation tasks.
 //! Each model is in its own submodule for proper separation of concerns.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 pub mod anomaly_detector;
 pub mod convergence_predictor;
 pub mod outcome_predictor;

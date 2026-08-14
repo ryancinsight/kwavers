@@ -1,6 +1,8 @@
 //! `KernelCube` — bilinear interpolator across a sparse `(f0, pnp)`
 //! grid of cached [`FocalKernel`]s.
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use leto::Array3;
 
 use kwavers_core::error::{KwaversError, KwaversResult};

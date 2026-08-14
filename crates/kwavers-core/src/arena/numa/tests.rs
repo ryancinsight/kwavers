@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::affinity::ThreadAffinity;
 use super::allocator::NumaAllocator;
 use super::memory::first_touch_memory;

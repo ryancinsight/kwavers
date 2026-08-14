@@ -6,6 +6,8 @@
 //! The default build presents the workflow contract; the `gpu` feature enables
 //! the complete simulation.
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use kwavers_core::error::KwaversResult;
 
 #[cfg(feature = "gpu")]

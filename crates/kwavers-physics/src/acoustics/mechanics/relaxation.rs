@@ -27,7 +27,10 @@
 //! - Szabo, T.L. (1995). "Time domain wave equations for lossy media obeying a
 //!   frequency power law." *J. Acoust. Soc. Am.* 96(1), 491–500.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 /// A discrete multi-relaxation absorption spectrum `(τ_l, w_l)`.
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct RelaxationAbsorption {
     /// Relaxation times `τ_l` \`s` (each `> 0`).

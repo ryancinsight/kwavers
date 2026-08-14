@@ -33,6 +33,8 @@
 //! All implementations satisfy the `LocalizationProcessor` trait from domain layer,
 //! ensuring clean architecture and easy swapping of algorithms.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 pub mod bayesian;
 pub mod beamforming_search;
 pub mod config;

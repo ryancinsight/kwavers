@@ -1,5 +1,7 @@
 //! Fast acoustic intensity and bioheat calculations
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::planner::TreatmentPlanner;
 use super::types::{TranscranialTargetVolume, TransducerSetup};
 use eunomia::Complex;

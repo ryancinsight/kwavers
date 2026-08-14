@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::model::{ChemicalModel, ChemicalModelState};
 use super::reactions::{
     ChemicalReactionConfig, LightDependence, PressureDependence, ReactionType, ThermalDependence,

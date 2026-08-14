@@ -22,6 +22,8 @@
 //! References: Burton & Miller (1971); Amini (1990) coupling-parameter
 //! analysis; residual a-posteriori Helmholtz estimators by Ihlenburg/Babuška.
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use super::config::EnhancedBemFemConfig;
 use super::types::{BemFemValidationResult, InterfaceQuality, RefinementStep};
 use kwavers_core::error::{KwaversError, KwaversResult};

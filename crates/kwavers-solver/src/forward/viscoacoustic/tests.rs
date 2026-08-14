@@ -2,6 +2,8 @@
 //! complex dispersion relation `ρω² = M(ω)|k|²` of the generalized-Maxwell
 //! medium, in 1-D, 2-D, and 3-D.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::ViscoacousticMemorySolver;
 use kwavers_math::fft::Complex64;
 use leto::Array3;

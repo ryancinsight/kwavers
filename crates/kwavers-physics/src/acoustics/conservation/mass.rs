@@ -1,5 +1,7 @@
 //! Mass-continuity residual checks.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use kwavers_grid::Grid;
 use leto::Array3;
 

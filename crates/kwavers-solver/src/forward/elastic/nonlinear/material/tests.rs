@@ -1,4 +1,4 @@
-#![allow(clippy::needless_range_loop)]
+#![expect(clippy::needless_range_loop, reason = "ratchet KWAVERS-ALLOW-1")]
 use super::*;
 
 #[test]

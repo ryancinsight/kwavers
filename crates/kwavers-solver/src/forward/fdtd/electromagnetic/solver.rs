@@ -1,5 +1,7 @@
 //! ElectromagneticFdtdSolver constructor and field update methods.
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use super::types::ElectromagneticFdtdSolver;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_field::{ArrayD, EMFields, VecStorage};

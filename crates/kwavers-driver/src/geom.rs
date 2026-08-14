@@ -13,6 +13,8 @@
 //! type-identical (no migration cost at the call-site). The authoritative path forward is
 //! [`crate::units::Nm`]; `crate::geom::Nm` is kept as a convenience alias.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 pub use crate::units::Nm;
 
 /// A point on the board in exact nanometre coordinates.

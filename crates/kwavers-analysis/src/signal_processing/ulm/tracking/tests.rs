@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::tracker::{hungarian, HungarianTracker};
 use super::types::TrackingConfig;
 use crate::signal_processing::ulm::microbubble_detection::BubbleDetection;

@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::radiation::{
     calculate_drag_force, calculate_primary_bjerknes_force, Direction3D, PressureGradient3D,
     RadiationForce,

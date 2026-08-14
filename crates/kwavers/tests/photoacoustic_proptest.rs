@@ -3,6 +3,8 @@
 //! Validates that simulate() produces time-resolved fields without panics,
 //! correct dimensionality, and finite energy across randomized small grids.
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use kwavers_grid::Grid;
 use kwavers_medium::homogeneous::HomogeneousMedium;
 use kwavers_simulation::modalities::photoacoustic::{

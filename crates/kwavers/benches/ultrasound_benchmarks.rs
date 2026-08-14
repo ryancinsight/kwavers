@@ -17,6 +17,8 @@
 //! - **Memory**: Peak usage, bandwidth requirements
 //! - **Scalability**: Weak/strong scaling with grid size
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use kwavers_analysis::signal_processing::beamforming::utils::{
     SteeringVector, SteeringVectorMethod,

@@ -1,3 +1,6 @@
+#![cfg_attr(test, expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1"))]
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::{FdtdAvx512Config, FdtdAvx512StencilProcessor};
 use leto::Array3;
 

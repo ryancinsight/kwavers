@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use aequitas::systems::si::quantities::{Frequency, Length, Velocity};
 use aequitas::systems::si::units::{Hertz, Meter, MeterPerSecond};
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;

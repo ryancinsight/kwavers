@@ -1,5 +1,7 @@
 //! End-to-end abdominal + brain focused-bowl pipeline integration tests.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::super::{run_theranostic_nonlinear_3d, Nonlinear3dConfig};
 use super::fixtures::{abdominal_fixture, brain_fixture};
 use crate::therapy::theranostic_guidance::AnatomyKind;

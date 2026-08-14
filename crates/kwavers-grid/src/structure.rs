@@ -2,6 +2,8 @@
 //!
 //! This module defines the core grid structure for spatial discretization.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::error::GridError;
 use leto::Array3;
 use log::debug;

@@ -86,6 +86,8 @@
 //! - YAGNI: Implements only necessary features for acoustic simulation
 
 // Public modules
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 pub mod avx512_stencil; // Phase 9.1: AVX-512 optimized FDTD stencil
 pub mod config;
 pub mod dispatch; // Phase 9.1: Runtime SIMD strategy dispatch

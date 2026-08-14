@@ -1,5 +1,7 @@
 //! `Swe3dClinicalDecisionSupport`: liver fibrosis and breast lesion classification.
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use std::collections::HashMap;
 
 use super::super::statistics::VolumetricStatistics;

@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::controller::SafetyController;
 use super::types::TherapyAction;
 use crate::therapy::therapy_integration::config::TherapyIntegrationSafetyLimits;

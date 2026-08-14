@@ -1,3 +1,5 @@
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use super::HybridSolver;
 use crate::forward::hybrid::config::HybridDecompositionStrategy;
 use crate::forward::hybrid::domain_decomposition::{DomainRegion, DomainType};

@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::core::FastNearfieldSolver;
 use super::types::FNMConfig;
 use aequitas::systems::si::quantities::{Frequency, Length, MassDensity, Velocity};

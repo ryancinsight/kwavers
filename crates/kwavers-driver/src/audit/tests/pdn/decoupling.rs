@@ -1,6 +1,8 @@
 //! Decoupling cap placement tests: ground via proximity, power layer matching,
 //! commutation loop area, and active-IC internal power plane.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::*;
 use crate::place::component::Placement;
 use crate::place::footprint::PadDef;

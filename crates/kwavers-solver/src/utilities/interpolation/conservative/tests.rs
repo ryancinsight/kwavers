@@ -1,3 +1,5 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::interpolator::UtilConservativeInterpolator;
 use super::mode::ConservationMode;
 use eunomia::assert_relative_eq;

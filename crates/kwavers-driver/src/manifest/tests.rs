@@ -479,6 +479,24 @@ fn from_text_rejects_gappy_tile_sequence() {
 }
 
 #[test]
+fn from_text_accepts_a_complete_short_tile_sequence() {
+    // Regression: the partial-tile guard probed ascending indices over an unbounded range,
+    // so a *complete* sequence shorter than the 4-tile maximum — which has no
+    // `stim_tile_{i}_*` key at or beyond its length — never terminated. Every other tile
+    // fixture uses 4 tiles, where the `len() < 4` guard is skipped, so the hang was unseen.
+    let mut short = four_tile_v2_manifest();
+    short.tile_profiles.truncate(2);
+    let parsed = DriverManifest::from_text(&short.to_text())
+        .expect("complete 2-tile sequence must parse, not spin");
+    assert_eq!(
+        parsed.tile_profiles.len(),
+        2,
+        "both complete tiles are retained"
+    );
+    assert_manifest_approx_eq(&parsed, &short, "short tile sequence round-trip");
+}
+
+#[test]
 fn v2_tile_form_validation_surfaces_signed_margins_for_underrated_resistor_package() {
     let m = four_tile_v2_manifest();
     // 1206 footprint (250 mW) -- the article-class 56 ohm / 50 pF operating point

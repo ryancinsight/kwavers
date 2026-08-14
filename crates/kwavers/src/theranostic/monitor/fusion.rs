@@ -18,6 +18,8 @@
 //! `q̂`, `p̂` are each min-max normalized (`|Δc|` for the signed quantitative map,
 //! raw energy for PAM).
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array2;
 

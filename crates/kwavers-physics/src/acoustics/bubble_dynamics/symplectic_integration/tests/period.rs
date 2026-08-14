@@ -1,5 +1,7 @@
 //! Test A — Minnaert period accuracy (Störmer-Verlet, O(h²) error).
 
+#![cfg_attr(test, expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1"))]
+
 use super::super::{BubbleSymplecticIntegrator, SymplecticConfig};
 use super::helpers::{make_model, make_params};
 use crate::acoustics::bubble_dynamics::bubble_state::BubbleState;

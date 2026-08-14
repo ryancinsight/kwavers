@@ -8,6 +8,8 @@
 //! also preserves the per-order nodal metric to show when node-set changes
 //! alias the comparison.
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 #[path = "dg_common/dg_acoustic_common.rs"]
 mod dg_acoustic_common;
 

@@ -4,6 +4,8 @@
 //! - Sapareto & Dewey (1984) "Thermal dose determination in cancer therapy"
 //! - Dewhirst et al. (2003) "Basic principles of thermal dosimetry"
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use aequitas::systems::si::quantities::Time;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array3;

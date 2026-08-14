@@ -18,6 +18,8 @@
 //! - Otsu, N. (1979). IEEE Trans. Syst. Man Cybern. 9(1), pp. 62-66.
 //! - Rosenfeld & Pfaltz (1966). J. ACM 13(4), pp. 471-494.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use leto::Array3;
 
 /// Number of equally-spaced histogram bins for Otsu thresholding.

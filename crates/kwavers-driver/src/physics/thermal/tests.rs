@@ -2,6 +2,8 @@
 //!
 //! 6 thermal tests from `src/thermal.rs` + 3 ir_drop tests relocated from `src/pdn.rs`.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::{
     ir_drop, junction_temperature_k, solve_board, solve_poisson, temperature_derated_resistance,
     thermal_time_constant_s, thermal_via_conductance, transient_rise_k,

@@ -7,6 +7,8 @@
 //! penalty constants are `pub(super)` in `physics.rs` (scope-visible to `crate::cost` and its
 //! children) rather than re-exported through `crate::cost`'s public `pub use` surface.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::physics::HIGH_SPEED_VIA_MULTIPLIER;
 use super::*;
 

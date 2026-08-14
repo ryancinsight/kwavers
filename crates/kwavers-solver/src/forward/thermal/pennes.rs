@@ -5,6 +5,8 @@
 //!
 //! Where Q is the heat source from ultrasound absorption.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use kwavers_medium::properties::ThermalPropertyData;
 use leto::Array3;
 

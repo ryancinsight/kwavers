@@ -48,6 +48,8 @@
 //! - Gassmann F. (1951). Vierteljahrschrift Naturf. Ges. Zürich 96, 1–23.
 //! - Wood A.B. (1955). *A Textbook of Sound*. Bell & Hyman, London.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use kwavers_core::constants::cavitation::{VISCOSITY_AIR, VISCOSITY_WATER};
 use kwavers_core::constants::fundamental::{DENSITY_TISSUE, DENSITY_WATER_NOMINAL};
 use kwavers_core::constants::tissue_acoustics::DENSITY_AIR;

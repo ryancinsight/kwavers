@@ -8,6 +8,8 @@
 //! from `crate::route` directly because `src/route/tests.rs` is a sibling sub-module whose
 //! `super` is also `crate::route`.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use super::*;
 use crate::board::{Board, LayerId, NetClassKind, Pad};
 use crate::cost::PhysicsCost;

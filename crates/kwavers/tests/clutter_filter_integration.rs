@@ -7,6 +7,8 @@
 //! - Edge cases handled gracefully
 //! - Realistic functional ultrasound workflow
 
+#![expect(clippy::print_stdout, reason = "ratchet KWAVERS-LINT-1")]
+
 use kwavers_analysis::signal_processing::clutter_filter::{
     AdaptiveFilter, AdaptiveFilterConfig, IirFilter, IirFilterConfig, PolynomialFilter,
     PolynomialFilterConfig, SignalSvdClutterFilter, SubspaceSeparationMethod,

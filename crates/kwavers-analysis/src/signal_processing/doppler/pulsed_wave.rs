@@ -48,6 +48,8 @@
 //! - Kasai C et al. (1985). "Real-time two-dimensional blood flow imaging using
 //!   an autocorrelation technique." *IEEE Trans Sonics Ultrason* 32(3):458–464.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use apollo::{fft_1d_complex, Complex64};
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;

@@ -8,6 +8,8 @@
 //! amplitude, hence the scale-invariant comparison) and do so *better* than naive
 //! single-sided redatuming, which retains overburden multiples.
 
+#![cfg_attr(test, expect(clippy::print_stderr, reason = "ratchet KWAVERS-LINT-1"))]
+
 use super::{redatum, redatum_naive, MarchenkoConfig};
 use crate::inverse::fwi::time_domain::{FwiEngine, FwiGeometry, FwiProcessor};
 use crate::inverse::seismic::parameters::FwiParameters;

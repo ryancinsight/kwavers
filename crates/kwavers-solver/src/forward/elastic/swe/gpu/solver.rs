@@ -1,5 +1,7 @@
 //! `GPUElasticWaveSolver3D` struct and impl.
 
+#![expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1")]
+
 use super::device::GPUDevice;
 use super::memory::{GPUMemoryPool, SweGpuMemoryStats};
 use super::metrics::SweGpuStepMetrics;

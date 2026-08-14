@@ -25,6 +25,8 @@
 //! - Kak, A. C., & Slaney, M. (1988). *Principles of Computerized Tomographic
 //!   Imaging*, Ch. 6. IEEE Press.
 
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::Complex64;
 use leto::Array2;
