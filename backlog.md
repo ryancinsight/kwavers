@@ -620,9 +620,13 @@
   builds resolve first-party crates through the overlay to working trees, so a
   green local suite does not exercise the pins CI uses, and this is the only
   step here that did.
-- **The adjacent trap, now mechanized.** A lock regenerated with the overlay
-  active has every one of its 87 first-party `source = "git+..."` lines
-  *stripped*, because those deps resolved to local paths. Such a lock was sitting
+- **The adjacent trap, now mechanized.** A lock written with the overlay active
+  has every one of its 87 first-party `source = "git+..."` lines *stripped*,
+  because those deps resolved to local paths. It is not limited to deliberate
+  regeneration - any cargo command that updates the lock under the overlay does
+  it, so an ordinary `cargo check` is enough. Observed exactly that way while
+  fixing this item: routine builds flattened the working-tree lock and the new
+  `--check` caught it before it could be staged. Such a lock was sitting
   uncommitted in the working tree, one `git add` from breaking CI far worse than
   staleness did. `scripts/lockfile.py` regenerates correctly (`--regenerate`,
   from a temp directory outside the overlay) and checks (`--check`, offline

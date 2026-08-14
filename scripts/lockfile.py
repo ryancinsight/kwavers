@@ -9,7 +9,7 @@ dependency to a local working tree. Cargo discovers that config by walking up
 from the *current directory*, so any `cargo` command run from inside the stack
 picks it up -- including anything that rewrites the lock.
 
-A lock regenerated with the overlay active has every `source = "git+..."` line
+A lock written with the overlay active has every `source = "git+..."` line
 **stripped**, because those dependencies resolved to local paths rather than to
 git. Committing it replaces all 87 git sources with nothing. CI has no overlay,
 so it re-resolves, and every `--locked` job fails with
@@ -20,6 +20,12 @@ which names neither the cause nor the fix. That message is also what a merely
 *stale* lock produces -- one pinning first-party revisions whose versions no
 longer satisfy the manifests -- so the two failures are indistinguishable from
 the log alone (KW-CI-087).
+
+This is not limited to deliberate regeneration. *Any* cargo invocation that
+updates the lock while the overlay is active flattens it -- an ordinary
+`cargo check` inside the stack is enough, which is how it happens in practice:
+nobody sets out to rewrite the lock. Treat a modified `Cargo.lock` after routine
+work as suspect and run `--check` before staging it.
 
 Both are fixed the same way: regenerate from outside the overlay. This script
 does that by running cargo from a temporary directory that is not underneath the
