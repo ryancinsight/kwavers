@@ -605,6 +605,20 @@
   order 8 as invalid, which KW-SOL-074 changed - the staggered default accepts
   it now, the collocated path still rejects it.
 
+## KW-PM-090 - backlog.md carries a duplicated block of entries [patch] - todo
+
+- KW-SOL-079, KW-SOL-080, KW-SOL-081 and KW-FWI-082 each appear **twice**: once
+  with this branch's current statuses and once with an older wording carried from
+  `main` (the second copy still has KW-SOL-080 as todo). Roughly 135 lines.
+- Not introduced this session - present at every commit checked back to
+  `59bfdff2b`, so it came from an earlier merge on this branch. I initially
+  blamed my own merge and was wrong; the revision walk is what settled it.
+- The second copy is the stale one and should go, but the file is ~10k lines and
+  the duplicated span needs checking entry by entry for anything the older copy
+  records that the newer one dropped - it is not a blind delete.
+- Real cost: two sources of truth for the same item's status, which is exactly
+  what a board must not have. Low urgency, easy to get wrong in a hurry.
+
 ## KW-SOL-089 - Staggered operators were address-bound, not scatter-bound [patch] - done 2026-08-13
 
 - `test_plane_wave_boundary_injection_timing` (64^3 full-grid FDTD, staggered)
