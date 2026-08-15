@@ -1,38 +1,42 @@
+#![cfg_attr(test, expect(clippy::unwrap_used, reason = "ratchet KWAVERS-UNWRAP-1"))]
+
+use themis::NumaNodeId;
+
 use super::affinity::ThreadAffinity;
 use super::allocator::NumaAllocator;
 use super::memory::first_touch_memory;
 use super::policy::PAGE_SIZE;
-use super::topology::NumaTopology;
+use super::topology::detect_topology;
 
 #[test]
 fn test_numa_topology_detection_sanity() {
-    let topo = NumaTopology::detect();
-    assert!(topo.node_count >= 1);
-    assert!(topo.total_cpus >= 1);
-    assert_eq!(topo.distance_matrix.len(), topo.node_count);
+    let topo = detect_topology();
+    assert!(!topo.numa_nodes().is_empty());
+    assert!(topo.logical_processors() >= 1);
 
-    for i in 0..topo.node_count {
-        let local = topo.distance(i, i);
+    for node in topo.numa_nodes() {
+        let local = topo.distance(node.id, node.id);
         assert!(
             local <= 20,
-            "Local access distance should be ≤20, got {}",
-            local
+            "Local access distance should be ≤20, got {local}"
         );
     }
 }
 
 #[test]
-fn test_nodes_by_distance_sorted() {
-    let topo = NumaTopology::detect();
-    for node in 0..topo.node_count {
-        let ordered = topo.nodes_by_distance(node);
-        assert_eq!(ordered.len(), topo.node_count);
-        assert_eq!(ordered[0].0, node, "self should be closest");
-        for i in 1..ordered.len() {
-            assert!(
-                ordered[i].1 >= ordered[i - 1].1,
-                "distances must be non-decreasing"
-            );
+fn test_adjacent_nodes_sorted() {
+    let topo = detect_topology();
+    for node in topo.numa_nodes() {
+        let ordered = topo.adjacent_nodes(node.id);
+        let mut prev: Option<NumaNodeId> = None;
+        for &other in ordered {
+            if let Some(previous) = prev {
+                assert!(
+                    topo.distance(node.id, other) >= topo.distance(node.id, previous),
+                    "adjacent nodes must be sorted by non-decreasing distance"
+                );
+            }
+            prev = Some(other);
         }
     }
 }
@@ -43,8 +47,8 @@ fn test_thread_affinity_construction() {
     assert!(unres.node.is_none());
     assert!(unres.cpus.is_none());
 
-    let node = ThreadAffinity::for_node(0);
-    assert_eq!(node.node, Some(0));
+    let node = ThreadAffinity::for_node(NumaNodeId::ZERO);
+    assert_eq!(node.node, Some(NumaNodeId::ZERO));
 
     let cpus = ThreadAffinity::for_cpus(vec![0, 2, 4]);
     assert_eq!(cpus.cpus, Some(vec![0, 2, 4]));
@@ -63,5 +67,5 @@ fn test_first_touch_memory() {
 #[test]
 fn test_numa_allocator_default() {
     let alloc = NumaAllocator::new();
-    assert!(alloc.topology().node_count >= 1);
+    assert!(!alloc.topology().numa_nodes().is_empty());
 }

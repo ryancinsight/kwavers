@@ -3,7 +3,7 @@
 //! This example keeps the compute-layer placement contract explicit at the
 //! allocation seam while preserving the `kwavers-core` domain boundary.
 
-use kwavers_core::arena::{ArenaLayoutNumaPolicy, NumaAwareAllocator, CACHE_LINE_SIZE};
+use kwavers_core::arena::{ArenaLayoutNumaPolicy, NumaAwareAllocator, NumaNodeId, CACHE_LINE_SIZE};
 use kwavers_core::error::KwaversResult;
 
 fn main() -> KwaversResult<()> {
@@ -17,7 +17,8 @@ fn main() -> KwaversResult<()> {
 
     // Explicit bind policy: on Linux this requests mbind(2) for node 0.
     // Non-Linux platforms fall back to first-touch behavior.
-    let mut bound = NumaAwareAllocator::with_policy(ArenaLayoutNumaPolicy::BindToNode(0));
+    let mut bound =
+        NumaAwareAllocator::with_policy(ArenaLayoutNumaPolicy::BindToNode(NumaNodeId::new(0)));
     let _bound_ptr = bound.allocate(bytes, CACHE_LINE_SIZE)?;
 
     Ok(())

@@ -5,8 +5,9 @@ use moirai_parallel::{for_each_index_with, Parallel};
 #[cfg(target_os = "linux")]
 use super::policy::MAX_NUMA_NODES;
 use super::policy::PAGE_SIZE;
-use super::topology::NumaTopology;
+use super::topology::detect_topology;
 use crate::error::{KwaversError, KwaversResult};
+use themis::NumaNodeId;
 
 /// # Safety
 ///
@@ -17,12 +18,17 @@ use crate::error::{KwaversError, KwaversResult};
 /// - Returns `KwaversError::System` if the precondition for a System-class constraint is violated.
 ///
 #[cfg(target_os = "linux")]
-pub unsafe fn bind_memory_to_node(ptr: *mut u8, size: usize, node: usize) -> KwaversResult<()> {
+pub unsafe fn bind_memory_to_node(
+    ptr: *mut u8,
+    size: usize,
+    node: NumaNodeId,
+) -> KwaversResult<()> {
     const MPOL_BIND: i32 = 2;
     const MPOL_MF_STRICT: u32 = 1;
 
     let mut nodemask: Vec<u64> = vec![0; MAX_NUMA_NODES.div_ceil(64)];
-    nodemask[node / 64] |= 1u64 << (node % 64);
+    let node_usize = node.get() as usize;
+    nodemask[node_usize / 64] |= 1u64 << (node_usize % 64);
 
     let result = libc::syscall(
         libc::SYS_mbind,
@@ -37,7 +43,7 @@ pub unsafe fn bind_memory_to_node(ptr: *mut u8, size: usize, node: usize) -> Kwa
     if result < 0 {
         return Err(KwaversError::System(
             crate::error::SystemError::ResourceUnavailable {
-                resource: format!("Memory binding to NUMA node {} failed", node),
+                resource: format!("Memory binding to NUMA node {} failed", node.get()),
             },
         ));
     }
@@ -53,7 +59,11 @@ pub unsafe fn bind_memory_to_node(ptr: *mut u8, size: usize, node: usize) -> Kwa
 /// - Returns [`Err`] if an internal constraint is violated.
 ///
 #[cfg(not(target_os = "linux"))]
-pub unsafe fn bind_memory_to_node(_ptr: *mut u8, _size: usize, _node: usize) -> KwaversResult<()> {
+pub unsafe fn bind_memory_to_node(
+    _ptr: *mut u8,
+    _size: usize,
+    _node: NumaNodeId,
+) -> KwaversResult<()> {
     Ok(())
 }
 /// Allocate interleaved memory.
@@ -77,9 +87,9 @@ pub fn allocate_interleaved_memory(layout: std::alloc::Layout) -> KwaversResult<
     const MPOL_INTERLEAVE: i32 = 3;
 
     unsafe {
-        let topology = NumaTopology::detect();
+        let topology = detect_topology();
         let mut nodemask: Vec<u64> = vec![0; MAX_NUMA_NODES.div_ceil(64)];
-        for node in 0..topology.node_count {
+        for node in 0..topology.numa_nodes().len() {
             nodemask[node / 64] |= 1u64 << (node % 64);
         }
 
@@ -122,8 +132,8 @@ pub fn allocate_interleaved_memory(layout: std::alloc::Layout) -> KwaversResult<
         pub const PAGE_READWRITE: u32 = 0x04;
     }
 
-    let topology = NumaTopology::detect();
-    let nodes = topology.node_count;
+    let topology = detect_topology();
+    let nodes = topology.numa_nodes().len();
 
     if nodes <= 1 {
         let ptr = unsafe { std::alloc::alloc(layout) };

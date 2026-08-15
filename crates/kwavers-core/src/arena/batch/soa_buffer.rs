@@ -6,6 +6,7 @@ use mnemosyne_core::constants::SEGMENT_ALIGN;
 use mnemosyne_core::types::Segment;
 use std::marker::PhantomData;
 use std::ptr::NonNull;
+use themis::NumaNodeId;
 
 /// Structure of Arrays field layout for cache-efficient access.
 ///
@@ -79,7 +80,11 @@ impl SoAFieldBuffer<f64> {
             // SAFETY: memory is valid for total_size bytes.
             // Non-fatal: if binding fails, allocation still succeeds.
             let _ = unsafe {
-                super::super::numa::bind_memory_to_node(memory.as_ptr(), total_size, node as usize)
+                super::super::numa::bind_memory_to_node(
+                    memory.as_ptr(),
+                    total_size,
+                    NumaNodeId::new(node),
+                )
             };
         }
 

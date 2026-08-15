@@ -24,6 +24,8 @@
 //! - Lam M.S. et al. (1991). "The Cache Performance of Blocked Algorithms". ASPLOS.
 //! - Hennessy J., Patterson D. (2019). *Computer Architecture: A Quantitative Approach*, 6th Ed.
 
+use themis::NumaNodeId;
+
 pub mod alignment;
 pub mod numa_aware;
 pub mod packing;
@@ -98,7 +100,7 @@ pub enum ArenaLayoutNumaPolicy {
     /// First-touch: memory allocated on first accessing NUMA node
     FirstTouch,
     /// Bind to specific NUMA node
-    BindToNode(usize),
+    BindToNode(NumaNodeId),
     /// Interleaved across all nodes
     Interleaved,
 }

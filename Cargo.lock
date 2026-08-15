@@ -3265,6 +3265,7 @@ dependencies = [
  "moirai-parallel",
  "ritk-registration",
  "serde",
+ "themis-topology",
  "thiserror 1.0.69",
 ]
 

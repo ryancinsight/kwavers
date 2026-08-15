@@ -1,17 +1,19 @@
-use super::topology::NumaTopology;
+use themis::{CpuTopology, NumaNodeId};
+
+use crate::arena::numa::detect_topology;
 use crate::error::{KwaversError, KwaversResult};
 
 /// Thread affinity configuration.
 #[derive(Debug, Clone)]
 pub struct ThreadAffinity {
-    pub node: Option<usize>,
+    pub node: Option<NumaNodeId>,
     pub cpus: Option<Vec<usize>>,
     pub respect_existing: bool,
 }
 
 impl ThreadAffinity {
     #[must_use]
-    pub fn for_node(node: usize) -> Self {
+    pub fn for_node(node: NumaNodeId) -> Self {
         Self {
             node: Some(node),
             cpus: None,
@@ -41,6 +43,18 @@ impl ThreadAffinity {
         }
     }
 }
+
+/// Logical processors assigned to a NUMA node, from the themis topology table.
+///
+/// Returns an empty set when the node is not present in the snapshot.
+fn node_processors(topology: &CpuTopology, node: NumaNodeId) -> Vec<u32> {
+    topology
+        .node_index(node)
+        .and_then(|index| topology.numa_nodes().get(index))
+        .map(|n| n.processors.to_vec())
+        .unwrap_or_default()
+}
+
 /// Set thread affinity.
 /// # Errors
 /// - Returns [`Err`] if an internal constraint is violated.
@@ -49,40 +63,19 @@ pub fn set_thread_affinity(affinity: &ThreadAffinity) -> KwaversResult<()> {
     set_current_thread_affinity(affinity)
 }
 
-#[must_use]
-pub fn current_numa_node() -> Option<usize> {
-    #[cfg(target_os = "linux")]
-    {
-        use std::fs;
-        let cpu = unsafe { libc::sched_getcpu() };
-        if cpu < 0 {
-            return None;
-        }
-        fs::read_to_string(format!("/sys/devices/system/cpu/cpu{}/cpulist", cpu))
-            .ok()
-            .and_then(|s| s.trim().parse::<usize>().ok())
-    }
-
-    #[cfg(not(target_os = "linux"))]
-    {
-        None
-    }
-}
-
 #[cfg(target_os = "linux")]
 fn set_current_thread_affinity(affinity: &ThreadAffinity) -> KwaversResult<()> {
     use libc::{cpu_set_t, sched_setaffinity, CPU_SET, CPU_ZERO};
 
     unsafe {
         let mut set: cpu_set_t = std::mem::zeroed();
-        let topology = NumaTopology::detect();
+        let topology = detect_topology();
 
         if let Some(node) = affinity.node {
-            let cpus_per_node = topology.cpus_per_node;
             CPU_ZERO(&mut set);
-            for cpu in (node * cpus_per_node)..((node + 1) * cpus_per_node) {
-                if cpu < topology.total_cpus {
-                    CPU_SET(cpu, &mut set);
+            for cpu in node_processors(&topology, node) {
+                if (cpu as usize) < topology.logical_processors() {
+                    CPU_SET(cpu as usize, &mut set);
                 }
             }
         } else if let Some(ref cpus) = affinity.cpus {
@@ -92,7 +85,7 @@ fn set_current_thread_affinity(affinity: &ThreadAffinity) -> KwaversResult<()> {
             }
         } else {
             CPU_ZERO(&mut set);
-            for cpu in 0..topology.total_cpus {
+            for cpu in 0..topology.logical_processors() {
                 CPU_SET(cpu, &mut set);
             }
         }
@@ -124,11 +117,25 @@ fn set_current_thread_affinity(affinity: &ThreadAffinity) -> KwaversResult<()> {
     }
 
     unsafe {
-        let topology = NumaTopology::detect();
+        let topology = detect_topology();
         let mask = if let Some(node) = affinity.node {
-            let cpus_per_node = topology.cpus_per_node;
-            let start_cpu = node * cpus_per_node;
-            ((1usize << cpus_per_node) - 1) << start_cpu
+            node_processors(&topology, node)
+                .into_iter()
+                .fold(0usize, |acc, cpu| {
+                    if cpu < usize::BITS {
+                        acc | (1usize << cpu)
+                    } else {
+                        acc
+                    }
+                })
+        } else if let Some(ref cpus) = affinity.cpus {
+            cpus.iter().fold(0usize, |acc, &cpu| {
+                if cpu < usize::BITS as usize {
+                    acc | (1usize << cpu)
+                } else {
+                    acc
+                }
+            })
         } else {
             !0usize
         };
