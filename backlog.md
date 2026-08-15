@@ -1825,7 +1825,7 @@
   `E0063` diagnostics after Hephaestus added the field. Focused GPU check and
   feature validation must pass on the refreshed provider graph.
 
-## KW-SOL-054 — Repair AVX-512 FDTD layout contract [patch] — in-progress
+## KW-SOL-054 - Repair AVX-512 FDTD layout contract [patch] - in-progress (claim stale; blocked on hardware here)
 
 - Owner: Codex; scope: `crates/kwavers-solver/src/forward/fdtd/avx512_stencil/`
   and synchronized PM evidence.
@@ -1836,6 +1836,20 @@
   write `0` at interior `[8, 8, 8]` for a uniform `7.5` field. On an AVX-512
   host, the focused Nextest suite passes all seven cases and package test
   compilation passes. A fresh hosted matrix remains required before merge.
+- Stale-claim sweep 2026-08-15: last commit citing this item is four days old,
+  past the reclaim threshold. Not taken over, because the acceptance cannot be
+  met on this machine - verified rather than assumed:
+  `is_x86_feature_detected!("avx512f")` returns **false** on this host (Intel
+  Core Ultra 9 285K), so the kernels cannot be executed at all here.
+- **The seven-case suite passes vacuously on a host without AVX-512, and does so
+  silently.** `pressure_update_keeps_interior_constant_for_uniform_field` opens
+  with `let Ok(processor) = ... else { return; }`, so on this machine all seven
+  report green while asserting nothing about the kernel. The item's own evidence
+  is careful to say "on an AVX-512 host" - but anyone running the suite elsewhere
+  gets a false green, and a CI runner without the feature would report the
+  acceptance met while testing nothing. Worth converting the silent skip into a
+  visible one (an explicit ignore, or a job that asserts the feature is present
+  before running) as part of finishing this item.
 
 ## KW-CI-053 — Update GPU PSTD parity contract [patch] — ✅ review
 
