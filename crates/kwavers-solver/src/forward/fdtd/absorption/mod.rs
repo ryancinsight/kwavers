@@ -64,14 +64,35 @@ mod tests;
 /// coefficients.
 #[derive(Debug, Clone)]
 struct Arm {
-    /// `e^{-Δt/τₗ(x)}` — decay over one step.
-    decay: Array3<f64>,
-    /// `−ΔMₗ(x)·τₗ(x)·(1 − e^{-Δt/τₗ})` — coefficient of `D` in the σ update.
-    gain: Array3<f64>,
-    /// `1/τₗ(x)` \[s⁻¹] — for the trapezoidal pressure contribution.
-    inv_tau: Array3<f64>,
+    /// Relaxation time `τₗ` \[s]. A **scalar**: the fit places one shared grid
+    /// of relaxation times across the whole field, so `τ` does not vary in
+    /// space even when the strengths do.
+    tau: f64,
+    /// Modulus defect `ΔMₗ(x)` \[Pa] — the only spatially varying term.
+    delta_m: Array3<f64>,
     /// Memory field `σₗ(x)` \[Pa].
     sigma: Array3<f64>,
+}
+
+impl Arm {
+    /// Exponential-integrator coefficients for a step of length `h`.
+    ///
+    /// Derived per call rather than stored, which is what lets the step length
+    /// be a parameter: the composition in `TemporalScheme::Yoshida4` takes
+    /// sub-steps of `w₁·dt` and `w₀·dt`, and a precomputed `e^{-Δt/τ}` would be
+    /// silently wrong for both (KW-SOL-093). Three scalars per arm per call
+    /// against a whole-grid traversal is not a measurable cost, and dropping the
+    /// stored `decay`/`gain`/`inv_tau` grids *reduces* memory by three arrays
+    /// per arm.
+    ///
+    /// `h` may be negative — the composition's central sub-step is — and the
+    /// coefficients stay consistent: `e^{-h/τ} > 1` is growth, exactly undone by
+    /// the two positive sub-steps, since the Yoshida weights sum to one.
+    fn coefficients(&self, h: f64) -> (f64, f64, f64) {
+        let decay = (-h / self.tau).exp();
+        let gain_scale = -self.tau * (1.0 - decay);
+        (decay, gain_scale, 1.0 / self.tau)
+    }
 }
 
 /// Relaxation-based power-law absorption state for one FDTD grid.
@@ -138,21 +159,15 @@ impl RelaxationAbsorption {
             &band,
         )?;
 
-        let dt = settings.dt;
         let mut unrelaxed_modulus = fit.equilibrium_modulus().clone();
         let mut arms = Vec::with_capacity(fit.weights().len());
         for (delta_m, &tau) in fit.weights().iter().zip(fit.relaxation_times()) {
-            let decay = Array3::from_elem(shape, (-dt / tau).exp());
-            let inv_tau = Array3::from_elem(shape, 1.0 / tau);
-            let one_minus_decay = 1.0 - (-dt / tau).exp();
-            let gain = delta_m.mapv(|dm| -dm * tau * one_minus_decay);
             for (modulus, &dm) in unrelaxed_modulus.iter_mut().zip(delta_m.iter()) {
                 *modulus += dm;
             }
             arms.push(Arm {
-                decay,
-                gain,
-                inv_tau,
+                tau,
+                delta_m: delta_m.clone(),
                 sigma: Array3::zeros(shape),
             });
         }
@@ -204,24 +219,28 @@ impl RelaxationAbsorption {
     /// `divergence` must be the **same** `∇·v` the pressure update consumes,
     /// after any CPML correction — the arms and the pressure would otherwise
     /// integrate different fields and drift apart inside the layer.
-    pub fn accumulate(&mut self, divergence: ArrayView3<'_, f64>) -> (&Array3<f64>, &Array3<f64>) {
+    pub fn accumulate(
+        &mut self,
+        divergence: ArrayView3<'_, f64>,
+        step: f64,
+    ) -> (&Array3<f64>, &Array3<f64>) {
         debug_assert_eq!(
             divergence.shape(),
             self.relaxation_sum.shape(),
             "FDTD relaxation divergence shape must match the grid"
         );
-        self.advance(divergence);
+        self.advance(divergence, step);
         (&self.unrelaxed_modulus, &self.relaxation_sum)
     }
 
     /// Advance the memory fields and fill the relaxation accumulator.
-    fn advance(&mut self, divergence: ArrayView3<'_, f64>) {
+    fn advance(&mut self, divergence: ArrayView3<'_, f64>, step: f64) {
         self.relaxation_sum.fill(0.0);
 
         let Some(divergence_values) = divergence.as_slice() else {
             // Non-contiguous view: fall back to indexed access rather than
             // silently skipping absorption.
-            self.accumulate_indexed(divergence);
+            self.accumulate_indexed(divergence, step);
             return;
         };
         let sum_values = self
@@ -230,35 +249,34 @@ impl RelaxationAbsorption {
             .expect("invariant: FDTD relaxation accumulator is contiguous");
 
         for arm in &mut self.arms {
-            let (Some(sigma), Some(decay), Some(gain), Some(inv_tau)) = (
-                arm.sigma.as_slice_mut(),
-                arm.decay.as_slice(),
-                arm.gain.as_slice(),
-                arm.inv_tau.as_slice(),
-            ) else {
+            let (decay, gain_scale, inv_tau) = arm.coefficients(step);
+            let (Some(sigma), Some(delta_m)) = (arm.sigma.as_slice_mut(), arm.delta_m.as_slice())
+            else {
                 unreachable!("invariant: FDTD relaxation arm fields are contiguous")
             };
             for (index, sum_value) in sum_values.iter_mut().enumerate() {
                 let old = sigma[index];
-                let new = decay[index].mul_add(old, gain[index] * divergence_values[index]);
-                *sum_value += 0.5 * (old + new) * inv_tau[index];
+                let gain = delta_m[index] * gain_scale;
+                let new = decay.mul_add(old, gain * divergence_values[index]);
+                *sum_value += 0.5 * (old + new) * inv_tau;
                 sigma[index] = new;
             }
         }
     }
 
     /// Indexed fallback for a non-contiguous divergence view.
-    fn accumulate_indexed(&mut self, divergence: ArrayView3<'_, f64>) {
+    fn accumulate_indexed(&mut self, divergence: ArrayView3<'_, f64>, step: f64) {
         let [nx, ny, nz] = self.relaxation_sum.shape();
         for arm in &mut self.arms {
+            let (decay, gain_scale, inv_tau) = arm.coefficients(step);
             for k in 0..nz {
                 for j in 0..ny {
                     for i in 0..nx {
                         let index = [i, j, k];
                         let old = arm.sigma[index];
-                        let new =
-                            arm.decay[index].mul_add(old, arm.gain[index] * divergence[index]);
-                        self.relaxation_sum[index] += 0.5 * (old + new) * arm.inv_tau[index];
+                        let gain = arm.delta_m[index] * gain_scale;
+                        let new = decay.mul_add(old, gain * divergence[index]);
+                        self.relaxation_sum[index] += 0.5 * (old + new) * inv_tau;
                         arm.sigma[index] = new;
                     }
                 }

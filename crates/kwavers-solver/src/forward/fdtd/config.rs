@@ -180,31 +180,13 @@ impl FdtdConfig {
     pub fn validate(&self) -> KwaversResult<()> {
         let mut multi_error = MultiError::new();
 
-        // Absorption is rejected under composition, and the reason is *not* the
-        // negative central sub-step, which was the original suspicion. Over a
-        // full composition the memory exponents sum to `-(2w1 + w0)dt/tau =
-        // -dt/tau` exactly, so the decay is right in aggregate; the intermediate
-        // amplification is `exp(1.70 dt/tau)`, which sits just above unity for
-        // any `tau` in the fit band. The actual blocker is that
-        // `RelaxationAbsorption` precomputes `decay = exp(-dt/tau)` **once** from
-        // the configured step, so every sub-step would silently reuse the
-        // full-step decay - a quiet accuracy defect rather than a visible
-        // failure. Fixing it means per-sub-step decay arrays and a memory
-        // tradeoff, tracked as KW-SOL-093.
-        if self.temporal_scheme == TemporalScheme::Yoshida4 {
-            if self.absorption != FdtdAbsorption::Lossless {
-                multi_error.add(
-                    ValidationError::FieldValidation {
-                        field: "temporal_scheme".to_owned(),
-                        value: format!("{:?} with {:?}", self.temporal_scheme, self.absorption),
-                        constraint: "fourth-order time integration is unverified with an                                      absorbing model - relaxation decay is precomputed for                                      the full step and would be reused unchanged by every                                      sub-step; use Leapfrog or run lossless (KW-SOL-093)"
-                            .to_owned(),
-                    }
-                    .into(),
-                );
-            }
-            if !self.staggered_grid {
-                multi_error.add(
+        // Absorption *is* supported under composition (KW-SOL-093). The
+        // exponential-integrator coefficients are derived per sub-step from a
+        // scalar tau rather than precomputed for one step, so each sub-step gets
+        // its own `e^{-h/tau}`; the negative central sub-step is growth that the
+        // two positive ones undo exactly, since the weights sum to one.
+        if self.temporal_scheme == TemporalScheme::Yoshida4 && !self.staggered_grid {
+            multi_error.add(
                     ValidationError::FieldValidation {
                         field: "temporal_scheme".to_owned(),
                         value: format!("{:?} with staggered_grid = false", self.temporal_scheme),
@@ -212,8 +194,7 @@ impl FdtdConfig {
                             .to_owned(),
                     }
                     .into(),
-                );
-            }
+            );
         }
 
         if let FdtdAbsorption::PowerLawRelaxation {

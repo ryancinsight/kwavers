@@ -109,7 +109,7 @@ fn lossless_medium_reduces_to_the_lossless_update() {
     }
 
     let divergence = Array3::from_elem(shape, 1.0e3);
-    let (_, relaxation) = absorption.accumulate(divergence.view());
+    let (_, relaxation) = absorption.accumulate(divergence.view(), DT);
     for value in relaxation.iter() {
         assert_eq!(*value, 0.0, "a lossless medium produced a relaxation term");
     }
@@ -126,14 +126,14 @@ fn memory_fields_charge_and_decay() {
 
     // Drive with a constant divergence: the relaxation term must grow from zero.
     let driven = Array3::from_elem(shape, 1.0e3);
-    let (_, first) = absorption.accumulate(driven.view());
+    let (_, first) = absorption.accumulate(driven.view(), DT);
     let charged = first[[0, 0, 0]];
     assert!(
         charged.abs() > 0.0,
         "memory fields did not respond to a driving divergence"
     );
 
-    let (_, second) = absorption.accumulate(driven.view());
+    let (_, second) = absorption.accumulate(driven.view(), DT);
     let more = second[[0, 0, 0]];
     assert!(
         more.abs() > charged.abs(),
@@ -142,7 +142,7 @@ fn memory_fields_charge_and_decay() {
 
     // Remove the drive: the arms must relax toward zero.
     let quiet = Array3::<f64>::zeros(shape);
-    let (_, third) = absorption.accumulate(quiet.view());
+    let (_, third) = absorption.accumulate(quiet.view(), DT);
     let decaying = third[[0, 0, 0]];
     assert!(
         decaying.abs() < more.abs(),
@@ -160,13 +160,13 @@ fn reset_clears_the_memory_history() {
     let shape = (2usize, 1, 1);
     let driven = Array3::from_elem(shape, 1.0e3);
 
-    absorption.accumulate(driven.view());
-    let (_, charged) = absorption.accumulate(driven.view());
+    absorption.accumulate(driven.view(), DT);
+    let (_, charged) = absorption.accumulate(driven.view(), DT);
     let before = charged[[0, 0, 0]];
     assert!(before.abs() > 0.0);
 
     absorption.reset();
-    let (_, after_reset) = absorption.accumulate(driven.view());
+    let (_, after_reset) = absorption.accumulate(driven.view(), DT);
     let after = after_reset[[0, 0, 0]];
 
     // After a reset the first accumulate must reproduce the *first* response,
