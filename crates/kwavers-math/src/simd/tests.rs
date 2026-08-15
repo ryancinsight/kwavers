@@ -1,8 +1,6 @@
 //! Value-semantic regression tests for SIMD ops.
 
-use super::{
-    FdtdSimdOps, FftSimdOps, InterpolationSimdOps, MathSimdLevel, SimdConfig, SimdPerformance,
-};
+use super::{FdtdSimdOps, FftSimdOps, MathSimdLevel, SimdConfig, SimdPerformance};
 
 #[test]
 fn test_simd_config_detection() {
@@ -28,11 +26,6 @@ fn test_fdtd_simd_ops_creation() {
 #[test]
 fn test_fft_simd_ops_creation() {
     let _ = FftSimdOps::new();
-}
-
-#[test]
-fn test_interpolation_simd_ops_creation() {
-    let _ = InterpolationSimdOps::new();
 }
 
 #[test]
@@ -96,18 +89,4 @@ fn test_complex_multiply() {
     // Results should be different from input
     assert_ne!(real1[0], 1.0);
     assert_ne!(imag1[0], 0.5);
-}
-
-#[test]
-fn test_trilinear_interpolation() {
-    let data = vec![1.0; 1000]; // 10x10x10 grid
-    let query_points = vec![(5.0, 5.0, 5.0), (2.5, 3.5, 4.5)];
-    let mut results = vec![0.0; 2];
-
-    let ops = InterpolationSimdOps::new();
-    ops.trilinear_interpolate(&data, 10, 10, 10, &query_points, &mut results);
-
-    // Should interpolate to valid values
-    assert!(results[0] >= 0.0);
-    assert!(results[1] >= 0.0);
 }

@@ -21,7 +21,6 @@ let transfer_config = TransferLearningConfig {
     fine_tune_lr: 1e-4,
     fine_tune_epochs: 10,
     freeze_strategy: FreezeStrategy::FreezeAllButLast,
-    adaptation_strength: 0.0,
     patience: 3,
     wave_speed: 1500.0,
 };

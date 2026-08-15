@@ -19,8 +19,6 @@ pub struct KzkSolverPlugin {
     pub(super) state: PluginState,
     /// Frequency domain operators for efficient computation.
     pub(super) frequency_operators: Option<FrequencyOperator>,
-    /// Retarded time frame for moving window.
-    pub(super) retarded_time_window: Option<f64>,
 }
 
 impl Default for KzkSolverPlugin {
@@ -44,7 +42,6 @@ impl KzkSolverPlugin {
             },
             state: PluginState::Initialized,
             frequency_operators: None,
-            retarded_time_window: None,
         }
     }
 
@@ -290,22 +287,5 @@ impl KzkSolverPlugin {
         let omega = TWO_PI * frequency;
 
         Ok(density * sound_speed.powi(3) / (beta * omega * source_pressure))
-    }
-
-    /// Apply retarded time transformation.
-    ///
-    /// Based on Jing et al. (2012): "Verification of the Westervelt equation"
-    ///
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    pub fn apply_retarded_time(
-        &mut self,
-        field: &Array3<f64>,
-        propagation_distance: f64,
-    ) -> KwaversResult<Array3<f64>> {
-        use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
-        let time_shift = propagation_distance / SOUND_SPEED_WATER_SIM;
-        self.retarded_time_window = Some(time_shift);
-        Ok(field.clone())
     }
 }

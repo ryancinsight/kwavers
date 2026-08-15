@@ -1,6 +1,5 @@
 use super::{
-    DomainAdapter, SourceFeatures, TrainingData, TransferLearner, TransferLearningStats,
-    TransferMetrics,
+    SourceFeatures, TrainingData, TransferLearner, TransferLearningStats, TransferMetrics,
 };
 use coeus_autograd::Var;
 use kwavers_core::error::{KwaversError, KwaversResult};
@@ -18,7 +17,6 @@ where
         Self {
             source_model,
             config,
-            domain_adapter: None,
             stats: TransferLearningStats::default(),
         }
     }
@@ -36,12 +34,7 @@ where
 
         let source_features = self.extract_source_features()?;
 
-        let mut target_model = self.initialize_target_model(&source_features)?;
-
-        if self.config.adaptation_strength > 0.0 {
-            self.setup_domain_adapter(target_geometry)?;
-            target_model = self.apply_domain_adaptation(target_model, target_geometry)?;
-        }
+        let target_model = self.initialize_target_model(&source_features)?;
 
         let initial_accuracy =
             self.evaluate_accuracy(&target_model, target_geometry, target_conditions)?;
@@ -113,33 +106,6 @@ where
         _source_features: &SourceFeatures,
     ) -> KwaversResult<crate::inverse::pinn::ml::PinnWave2D<B>> {
         Ok(self.source_model.clone())
-    }
-
-    /// Setup domain adapter for cross-geometry transfer
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
-    pub(super) fn setup_domain_adapter(
-        &mut self,
-        _target_geometry: &crate::inverse::pinn::ml::WaveGeometry2D,
-    ) -> KwaversResult<()> {
-        self.domain_adapter = Some(DomainAdapter {
-            _layers: Vec::new(),
-            _strength: self.config.adaptation_strength,
-        });
-        Ok(())
-    }
-
-    /// Apply domain adaptation to model
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
-    pub(super) fn apply_domain_adaptation(
-        &self,
-        model: crate::inverse::pinn::ml::PinnWave2D<B>,
-        _target_geometry: &crate::inverse::pinn::ml::WaveGeometry2D,
-    ) -> KwaversResult<crate::inverse::pinn::ml::PinnWave2D<B>> {
-        Ok(model)
     }
 
     /// Fine-tune model on target geometry

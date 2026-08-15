@@ -110,9 +110,7 @@ pub use geometry::{
 };
 
 // SIMD acceleration interfaces
-pub use simd::{
-    FdtdSimdOps, FftSimdOps, InterpolationSimdOps, MathSimdLevel, SimdConfig, SimdPerformance,
-};
+pub use simd::{FdtdSimdOps, FftSimdOps, MathSimdLevel, SimdConfig, SimdPerformance};
 
 // Safe SIMD operations with runtime feature detection
 pub use simd_safe::SimdOps;

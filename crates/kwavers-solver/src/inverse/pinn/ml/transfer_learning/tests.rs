@@ -7,7 +7,6 @@ fn test_transfer_learning_config() {
         fine_tune_lr: 0.001,
         fine_tune_epochs: 50,
         freeze_strategy: FreezeStrategy::ProgressiveUnfreeze,
-        adaptation_strength: 0.1,
         patience: 10,
         wave_speed: SOUND_SPEED_WATER_SIM,
     };

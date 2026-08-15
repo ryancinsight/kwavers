@@ -80,7 +80,6 @@ impl crate::plugin::Plugin for KzkSolverPlugin {
 
     fn reset(&mut self) -> KwaversResult<()> {
         self.frequency_operators = None;
-        self.retarded_time_window = None;
         self.state = PluginState::Created;
         Ok(())
     }

@@ -3,9 +3,6 @@
 //! This module implements transfer learning techniques to adapt Physics-Informed Neural Networks
 //! trained on simple geometries to more complex geometries, enabling efficient generalization.
 
-use coeus_autograd::Var;
-use kwavers_core::error::KwaversResult;
-
 mod evaluation;
 mod learner;
 #[cfg(test)]
@@ -20,8 +17,6 @@ pub struct TransferLearningConfig {
     pub fine_tune_epochs: usize,
     /// Layer freezing strategy
     pub freeze_strategy: FreezeStrategy,
-    /// Domain adaptation strength
-    pub adaptation_strength: f64,
     /// Early stopping patience
     pub patience: usize,
     /// Reference wave speed used when no wave speed function is set (m/s)
@@ -62,8 +57,6 @@ pub struct TransferLearner<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend
     pub(super) source_model: crate::inverse::pinn::ml::PinnWave2D<B>,
     /// Transfer learning configuration
     pub(super) config: TransferLearningConfig,
-    /// Domain adapter network (optional)
-    pub(super) domain_adapter: Option<DomainAdapter<B>>,
     /// Performance statistics
     pub(super) stats: TransferLearningStats,
 }
@@ -78,25 +71,6 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::
             .field("config", &self.config)
             .field("stats", &self.stats)
             .finish_non_exhaustive()
-    }
-}
-
-/// Domain adaptation network for cross-geometry transfer
-pub struct DomainAdapter<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> {
-    /// Adaptation layers
-    pub(super) _layers: Vec<coeus_tensor::Tensor<f32, B>>,
-    /// Adaptation strength
-    pub(super) _strength: f64,
-}
-
-impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::Debug
-    for DomainAdapter<B>
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("DomainAdapter")
-            .field("num_layers", &(self._layers.len()))
-            .field("strength", &self._strength)
-            .finish()
     }
 }
 
@@ -140,30 +114,5 @@ impl Default for TransferLearningStats {
             best_transfer_accuracy: 0.0,
             total_training_time: std::time::Duration::default(),
         }
-    }
-}
-
-impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> DomainAdapter<B> {
-    /// Create a new domain adapter
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
-    pub fn new(strength: f64) -> Self {
-        Self {
-            _layers: Vec::new(),
-            _strength: strength,
-        }
-    }
-
-    /// Adapt input features for target domain
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
-    pub fn adapt(&self, features: &Var<f32, B>) -> KwaversResult<Var<f32, B>> {
-        // Domain adaptation implementation for mathematical stability
-        // Currently implements identity adaptation to prevent runtime panics
-        // Future: Implement proper domain adaptation layers per Ganin et al. (2016)
-        // Reference: Raissi et al. (2019) "Physics-informed neural networks"
-        Ok(features.clone())
     }
 }
