@@ -230,6 +230,43 @@
   decay; (2) convert temporal decay to spatial alpha inside the measurement, or
   a lossless check ends up comparing s^-1 against Np/m.
 
+## KW-SOL-092 - Fourth-order time integration on the staggered path [minor] - todo
+
+- **The last measured Fullwave 2.5 parity gap that is actionable on this
+  hardware.** Fullwave runs "8th-order in space and 4th-order in time"; kwavers
+  matched the spatial order under KW-SOL-074, and the temporal order is 2.
+- Measured, not inferred from the scheme name: refining dt at fixed 8th-order
+  space on a rigid-wall eigenmode gives slopes 2.002, 2.001, 2.000. Pinned by
+  `the_staggered_path_is_second_order_in_time`.
+- **Getting that number took three attempts, and the wrong two are worth
+  knowing.** Sampling after a full period puts the mode at an extremum where the
+  phase error is squared and reports order 4; seeding velocity with zero is an
+  `O(dt)` inconsistency, because the leapfrog carries `u` at `t = -dt/2`, and
+  mixed with the first it reported order 3. Both are recorded at the test.
+- Mechanism already available: `kwavers_math::numerics::symplectic::yoshida4_step`
+  is the 4th-order symmetric triple composition of Stormer-Verlet, and the
+  acoustic leapfrog *is* Stormer-Verlet for `H = T(u) + V(p)`. `step_forward` is
+  already a clean `update_velocity(dt)` then `update_pressure(dt)`, so the
+  composition is three scaled substeps rather than a new integrator.
+- Four things to settle, and the middle two are why this is not a small change:
+  1. Sources inject once per step today; three substeps must not inject thrice.
+  2. The central Yoshida weight is **negative** (`w0 ~ -1.70`). Relaxation
+     memory variables integrate as `exp(-dt/tau)`, so a negative substep is
+     `exp(+dt/tau)` - growth. Whether the composition is stable with the
+     absorbing path needs deciding before, not after.
+  3. CPML memory has the same negative-substep question.
+  4. Stability: substeps run at `|w|*dt` with `|w0| ~ 1.70`, so the step must
+     shrink by that factor; net cost is roughly 3 substeps at ~0.59x dt against
+     one at dt, bought back by the error going as `dt^4`.
+- Suggested first increment, if the absorbing path proves awkward: the lossless
+  PML-free path only, with the measured order moving 2 -> 4 on the test above,
+  and the absorbing/PML extension split out. Do not ship a composition that is
+  silently wrong under absorption.
+- Acceptance: measured temporal order 4 on the existing benchmark; energy
+  conservation retained at every spatial order; the absorbing path either
+  verified under composition or explicitly excluded at config validation rather
+  than left to misbehave.
+
 ## KW-GPU-078 — Partition a wave grid across GPUs [major] [arch] — todo
 
 - Confirmed gap against Fullwave 2.5, whose multi-GPU depth decomposition with
