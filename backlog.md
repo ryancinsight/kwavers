@@ -269,6 +269,38 @@
   yet because the analysis question - whether a negative sub-step is admissible
   for relaxation memory at all - should be answered before it becomes an item.
 
+## KW-SOL-093 - Absorption under fourth-order time composition [minor] - todo
+
+- KW-SOL-092 rejects `TemporalScheme::Yoshida4` with any absorbing model at
+  validation, pending the question it deferred: **is a negative sub-step
+  admissible for relaxation memory at all?** That question is now answered, and
+  the answer is yes.
+- **The analysis.** Memory variables integrate as `xi <- xi*exp(-h/tau) + ...`.
+  For `h < 0` that factor exceeds one, which is growth - but over a full
+  composition the exponents sum to `-(w1 + w0 + w1)*dt/tau = -dt/tau` exactly,
+  because the Yoshida weights sum to 1. The decay is therefore correct *in
+  aggregate*; only the intermediate state is amplified, by
+  `exp(|w0|*dt/tau) = exp(1.70*dt/tau)`. With `tau >= 1/(2*pi*f_max)` across the
+  fit band and `dt` well under `1/f_max`, `dt/tau << 1` and that factor sits
+  just above unity. No instability follows from the sign.
+- **The blocker is not the sign, it is precomputation.** `RelaxationAbsorption`
+  builds `decay = exp(-dt/tau)` and the matching `gain` **once at construction**
+  from the configured `dt` (`absorption/mod.rs`, the `Arm` fields). A sub-step of
+  length `w*dt` would silently reuse the full-step decay, which is wrong for
+  every sub-step regardless of sign - a quiet accuracy defect rather than a
+  visible failure.
+- Implementation constraint worth settling before coding: the composition needs
+  decay/gain for two distinct sub-steps (`w1*dt` twice, `w0*dt` once), so the
+  obvious fix triples those arrays. At 128^3 with four arms that is a real memory
+  cost. Options: precompute the two extra sets and accept the memory;
+  recompute `exp(-h*inv_tau)` per voxel per sub-step and accept the transcendental
+  in the hot loop (`inv_tau` is already stored); or key the arrays by sub-step in
+  a small map so the leapfrog path keeps exactly one set.
+- Acceptance: measured attenuation still matches the prescribed power law under
+  composition, to the bound the leapfrog path meets; temporal order still 4 with
+  absorption active; and the validation rejection in KW-SOL-092 lifted rather
+  than left contradicting the code.
+
 ## KW-GPU-078 — Partition a wave grid across GPUs [major] [arch] — todo
 
 - Confirmed gap against Fullwave 2.5, whose multi-GPU depth decomposition with
