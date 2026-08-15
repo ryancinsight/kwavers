@@ -1,5 +1,5 @@
 ## FloatElement root-emulation closure — 2026-08-13
-## KWAVERS-PLACEMENT-REDUNDANCY-001 — hand-rolled NUMA stack duplicates themis/mnemosyne SSOT (open 2026-08-14)
+## KWAVERS-PLACEMENT-REDUNDANCY-001 — hand-rolled NUMA stack duplicates themis/mnemosyne SSOT (themis half closed 2026-08-15; mnemosyne half open)
 
 kwavers-core `arena/numa/` reimplements placement vocabulary that themis owns
 (`NumaTopology::detect()` vs `themis::CpuTopology::detect()`, `current_numa_node`
@@ -10,6 +10,17 @@ no provider home (themis = placement vocabulary; moirai sets worker affinity
 internally without a public setter). Closure slice: direct `themis-topology`
 dep in kwavers-core + mnemosyne allocation routing + affinity-setter
 resolution. Assessment recorded at KWAVERS-PLACEMENT-AXIS-ASSESS-001.
+
+- **themis half CLOSED** (PR #371, merged `62df796`): `arena/numa/` now uses
+  `themis::CpuTopology`/`NumaNodeId`/`PlacementHint`/`current_numa_node`;
+  `NumaTopology`, `NumaAllocPolicy`, and the hand-rolled `current_numa_node`
+  are deleted; `set_thread_affinity` stays a thin kwavers-local execution
+  wrapper (assessment option A).
+- **mnemosyne half still open**: `first_touch_memory(_parallel)` /
+  `allocate_interleaved_memory` / `bind_memory_to_node` still hand-roll the
+  mbind/VirtualAllocExNuma execution that mnemosyne-heap's
+  `alloc(PlacementHint)` owns. Separate closure slice (kwavers → mnemosyne
+  allocation locality), not this one.
 
 
 ### KWAVERS-FLOATELEMENT-ROOTS-001 — powf emulation → provider roots (closed 2026-08-13)

@@ -689,9 +689,37 @@
   worker-thread defaults internally from `themis::CpuTopology::detect()` but
   exposes no public setter. Options: keep a thin kwavers-local wrapper, or
   promote the setter to moirai (execution locality is moirai's role).
-- Follow-up slice (todo): migrate `arena/numa/` onto a direct
-  `themis-topology` dep in kwavers-core (topology/query), route allocation
-  through mnemosyne `PlacementHint`, and resolve the affinity-setter home.
+- Follow-up slice (partially landed 2026-08-15): `arena/numa/` migrated onto
+  a direct `themis-topology` dep in kwavers-core (topology/query), and the
+  affinity setter kept as a thin kwavers-local execution wrapper (assessment
+  option A) — PR #371, merged `62df796`. The mnemosyne `PlacementHint`
+  allocation routing remains a separate open axis (mnemosyne-heap owns it,
+  not themis).
+
+## KWAVERS-THEMIS-NUMA-001 — Migrate arena/numa topology/query onto themis [arch] — done 2026-08-15
+
+- Owner: Codex; scope `crates/kwavers-core/src/arena/numa/**` +
+  `arena/{batch/soa_buffer,layout/numa_aware,layout/mod,pool/batch,mod}.rs`,
+  the `kwavers-analysis` re-export shim, `examples/book_numa_allocator_policy.rs`,
+  and the `themis` workspace dep. PR #371, merged as `62df796`.
+- Outcome: deleted the hand-rolled `NumaTopology` (sysfs distance-matrix
+  scanning), `current_numa_node()`, and `NumaAllocPolicy`, re-pointing the
+  arena onto `themis-topology` (`CpuTopology`, `NumaNodeId`, `PlacementHint`,
+  `current_numa_node`/`try_current_numa_node`). Execution primitives themis
+  deliberately does not own (`bind_memory_to_node`/`allocate_interleaved_memory`/
+  `set_thread_affinity`/`first_touch_*`) stay kwavers-local but are re-typed
+  onto `NumaNodeId`/`CpuTopology`; the affinity-setter home resolves to the
+  assessment's option A (keep a thin kwavers-local wrapper — themis is
+  vocabulary-only and moirai exposes no public setter).
+- Net: −76 lines (177 insertions / 253 deletions).
+- Acceptance: `cargo check --workspace --offline` rc=0; `cargo nextest run -p
+  kwavers-core --offline` 69/69; `cargo clippy -p kwavers-core --all-targets`
+  clean; CI green (Build&Test stable/beta/nightly, Code Quality, Miri, three
+  wheels, layer/architecture validation, both migration audits).
+- Still open (separate axis, NOT this slice): mnemosyne-heap allocation
+  locality routing (`first_touch_memory`/`bind_memory_to_node` →
+  `mnemosyne-heap::alloc(PlacementHint)`), tracked at
+  KWAVERS-PLACEMENT-REDUNDANCY-001.
 
 ## KW-SOL-072 — Simulated absorption ran 8-19 % below the prescribed law [patch] — done 2026-08-12
 
