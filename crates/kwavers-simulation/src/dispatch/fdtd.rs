@@ -38,6 +38,7 @@ pub fn run(
         kspace_correction: req.kspace_correction.clone(),
         sensor_mask: req.sensor_mask.clone(),
         geometry,
+        ..Default::default()
     };
 
     let mut solver = FdtdSolver::new(config, req.grid, req.medium, req.grid_source.clone())?;

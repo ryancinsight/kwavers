@@ -68,6 +68,7 @@ impl FdtdBackend {
             dt,
             sensor_mask: None,
             geometry: Default::default(),
+            ..Default::default()
         };
 
         let source = GridSource::new_empty();
