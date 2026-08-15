@@ -180,19 +180,24 @@ impl FdtdConfig {
     pub fn validate(&self) -> KwaversResult<()> {
         let mut multi_error = MultiError::new();
 
-        // The fourth-order composition takes a **negative** central sub-step.
-        // Relaxation memory variables integrate as `exp(-dt/tau)`, so a negative
-        // sub-step is `exp(+dt/tau)` — growth — and the same question applies to
-        // CPML memory. Neither has been verified under composition, so the
-        // combination is rejected here rather than left to misbehave quietly
-        // (KW-SOL-092). Lifting this needs the analysis, not just the wiring.
+        // Absorption is rejected under composition, and the reason is *not* the
+        // negative central sub-step, which was the original suspicion. Over a
+        // full composition the memory exponents sum to `-(2w1 + w0)dt/tau =
+        // -dt/tau` exactly, so the decay is right in aggregate; the intermediate
+        // amplification is `exp(1.70 dt/tau)`, which sits just above unity for
+        // any `tau` in the fit band. The actual blocker is that
+        // `RelaxationAbsorption` precomputes `decay = exp(-dt/tau)` **once** from
+        // the configured step, so every sub-step would silently reuse the
+        // full-step decay - a quiet accuracy defect rather than a visible
+        // failure. Fixing it means per-sub-step decay arrays and a memory
+        // tradeoff, tracked as KW-SOL-093.
         if self.temporal_scheme == TemporalScheme::Yoshida4 {
             if self.absorption != FdtdAbsorption::Lossless {
                 multi_error.add(
                     ValidationError::FieldValidation {
                         field: "temporal_scheme".to_owned(),
                         value: format!("{:?} with {:?}", self.temporal_scheme, self.absorption),
-                        constraint: "fourth-order time integration is unverified with an                                      absorbing model - the composition's negative sub-step                                      turns relaxation decay into growth; use Leapfrog or run                                      lossless"
+                        constraint: "fourth-order time integration is unverified with an                                      absorbing model - relaxation decay is precomputed for                                      the full step and would be reused unchanged by every                                      sub-step; use Leapfrog or run lossless (KW-SOL-093)"
                             .to_owned(),
                     }
                     .into(),
