@@ -8,6 +8,7 @@
 use leto::Array3;
 
 use super::GenericFdtdSolver;
+use crate::forward::fdtd::config::TemporalScheme;
 use kwavers_core::error::KwaversResult;
 
 impl GenericFdtdSolver<Array3<f64>> {
@@ -23,6 +24,19 @@ impl GenericFdtdSolver<Array3<f64>> {
     pub fn step_forward(&mut self) -> KwaversResult<()> {
         let time_index = self.time_step_index;
         let dt = self.config.dt;
+
+        // Fourth-order composition replaces only the *propagation*: sources are
+        // injected once per step below, not once per sub-step, because they
+        // model an external drive at this instant rather than part of the
+        // Hamiltonian flow being composed.
+        if self.config.temporal_scheme == TemporalScheme::Yoshida4 {
+            self.advance_yoshida4(dt)?;
+            #[cfg(debug_assertions)]
+            self.check_nan_velocity(time_index, "yoshida4")?;
+            #[cfg(debug_assertions)]
+            self.check_nan_pressure(time_index, "yoshida4")?;
+            return self.finish_step(time_index, dt);
+        }
 
         // 1. Update Velocity (from current pressure field)
         self.update_velocity(dt)?;
@@ -48,7 +62,12 @@ impl GenericFdtdSolver<Array3<f64>> {
         #[cfg(debug_assertions)]
         self.check_nan_pressure(time_index, "update_pressure")?;
 
-        // 4. Apply pressure sources after update (additive + Dirichlet enforcement)
+        self.finish_step(time_index, dt)
+    }
+
+    /// Pressure sources, sensor recording and the step counter — the part of a
+    /// step that is not propagation, shared by both time-integration schemes.
+    fn finish_step(&mut self, time_index: usize, dt: f64) -> KwaversResult<()> {
         if self.source_handler.has_pressure_source() {
             self.source_handler
                 .inject_pressure_source(time_index, &mut self.fields.p);
@@ -61,13 +80,35 @@ impl GenericFdtdSolver<Array3<f64>> {
         #[cfg(debug_assertions)]
         self.check_nan_pressure(time_index, "pressure_sources")?;
 
-        // 5. Apply Boundary (CPML is applied within updates via self.cpml_boundary)
-
-        // 6. Record Sensors
+        // CPML is applied within the updates via `self.cpml_boundary`.
         self.sensor_recorder.record_step(&self.fields.p)?;
-
         self.time_step_index += 1;
 
+        Ok(())
+    }
+
+    /// Advance the propagation by `dt` with Yoshida's fourth-order composition.
+    ///
+    /// Three sub-steps at `w1·dt`, `w0·dt`, `w1·dt` with `2w1 + w0 = 1`, each
+    /// the self-adjoint `K(h/2) D(h) K(h/2)`. Composing the plain
+    /// kick-then-drift step instead would gain no order, because Yoshida's
+    /// cancellation needs a self-adjoint base method.
+    fn advance_yoshida4(&mut self, dt: f64) -> KwaversResult<()> {
+        let cbrt2 = 2.0_f64.cbrt();
+        let denominator = 2.0 - cbrt2;
+        let w1 = 1.0 / denominator;
+        let w0 = -cbrt2 / denominator;
+        debug_assert!(
+            (2.0 * w1 + w0 - 1.0).abs() < 1e-12,
+            "invariant: Yoshida weights advance the state by exactly dt"
+        );
+
+        for weight in [w1, w0, w1] {
+            let h = weight * dt;
+            self.update_velocity(0.5 * h)?;
+            self.update_pressure(h)?;
+            self.update_velocity(0.5 * h)?;
+        }
         Ok(())
     }
 

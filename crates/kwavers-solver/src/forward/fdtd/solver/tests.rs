@@ -48,6 +48,7 @@
 //! - Taflove A, Hagness SC (2005). Computational Electrodynamics, 3rd ed. §3.4.
 
 use crate::forward::fdtd::config::FdtdConfig;
+use crate::forward::fdtd::config::{FdtdAbsorption, TemporalScheme};
 use crate::forward::fdtd::solver::FdtdSolver;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_grid::Grid;
@@ -974,57 +975,7 @@ fn the_collocated_path_leaves_a_thin_axis_inert() {
 /// the exact pressure is identically zero and the phase error enters linearly.
 #[test]
 fn the_staggered_path_is_second_order_in_time() {
-    // Spatial error is held negligible: order 8 on a well-resolved mode, so the
-    // measured slope is the *time* discretization's.
-    const N: usize = 64;
-    let dx = 1.0e-3_f64;
-    let c0 = SOUND_SPEED_WATER_SIM;
-    let rho0 = DENSITY_WATER_NOMINAL;
-    let length = N as f64 * dx;
-    let k = std::f64::consts::PI / length; // rigid-wall Neumann mode, m = 1
-    let omega = c0 * k;
-    let period = std::f64::consts::TAU / omega;
-
-    let error_for = |steps: usize| -> f64 {
-        // Quarter period, not a full one: at wt = pi/2 the mode is at a zero
-        // crossing, where a phase error enters *linearly*. Sampling at a return
-        // point squares it and reports twice the true order (KW-SOL-088).
-        let dt = period / (4 * steps) as f64;
-        let grid = Grid::new(N, 1, 1, dx, dx, dx).unwrap();
-        let medium = HomogeneousMedium::new(rho0, c0, 0.0, 0.0, &grid);
-        let config = FdtdConfig {
-            spatial_order: 8,
-            staggered_grid: true,
-            enable_nonlinear: false,
-            dt,
-            nt: steps + 1,
-            ..Default::default()
-        };
-        let mut solver = FdtdSolver::new(config, &grid, &medium, GridSource::new_empty()).unwrap();
-        for i in 0..N {
-            let x = (i as f64 + 0.5) * dx;
-            solver.fields.p[[i, 0, 0]] = (k * x).cos();
-        }
-        // The leapfrog carries velocity at t = -dt/2, not 0. For
-        // p = cos(kx)cos(wt) the momentum equation gives
-        // u = (k/(rho*w)) sin(kx) sin(wt); seeding u with zero is an O(dt)
-        // inconsistency in the initial state, not in the scheme.
-        for i in 0..N {
-            let x_face = (i as f64 + 1.0) * dx;
-            solver.fields.ux[[i, 0, 0]] =
-                (k / (rho0 * omega)) * (k * x_face).sin() * (-omega * dt / 2.0).sin();
-        }
-        for _ in 0..steps {
-            solver.step_forward().expect("step");
-        }
-        // At a quarter period the exact pressure is identically zero.
-        let mut worst = 0.0_f64;
-        for i in 0..N {
-            worst = worst.max(solver.fields.p[[i, 0, 0]].abs());
-        }
-        worst
-    };
-
+    let error_for = |steps: usize| temporal_error(steps, TemporalScheme::Leapfrog);
     let coarse = error_for(200);
     let mid = error_for(400);
     let fine = error_for(800);
@@ -1035,4 +986,182 @@ fn the_staggered_path_is_second_order_in_time() {
             "{label}: observed temporal order {order:.3}, expected 2              (errors {a:.4e} -> {b:.4e})"
         );
     }
+}
+
+/// Worst pressure error a quarter period in, for a given time scheme.
+///
+/// Shared so the second- and fourth-order tests measure the *same* benchmark
+/// and differ only in the scheme under test. Two details are load-bearing and
+/// both cost a wrong answer before they were right (KW-SOL-092):
+///
+/// - The sample is at a **quarter** period, where the exact pressure is
+///   identically zero and a phase error enters linearly. At a full period the
+///   mode sits at an extremum, which squares the phase error and reports twice
+///   the true order — the KW-SOL-088 trap.
+/// - Velocity is seeded at `t = -dt/2`, where the leapfrog carries it. Seeding
+///   zero is an `O(dt)` inconsistency in the *initial state* that masquerades as
+///   a property of the scheme.
+fn temporal_error(steps: usize, scheme: TemporalScheme) -> f64 {
+    const N: usize = 64;
+    let dx = 1.0e-3_f64;
+    let c0 = SOUND_SPEED_WATER_SIM;
+    let rho0 = DENSITY_WATER_NOMINAL;
+    let length = N as f64 * dx;
+    let k = std::f64::consts::PI / length;
+    let omega = c0 * k;
+    let period = std::f64::consts::TAU / omega;
+
+    let dt = period / (4 * steps) as f64;
+    let grid = Grid::new(N, 1, 1, dx, dx, dx).unwrap();
+    let medium = HomogeneousMedium::new(rho0, c0, 0.0, 0.0, &grid);
+    let config = FdtdConfig {
+        spatial_order: 8,
+        staggered_grid: true,
+        enable_nonlinear: false,
+        temporal_scheme: scheme,
+        dt,
+        nt: steps + 1,
+        ..Default::default()
+    };
+    let mut solver = FdtdSolver::new(config, &grid, &medium, GridSource::new_empty()).unwrap();
+    for i in 0..N {
+        let x = (i as f64 + 0.5) * dx;
+        solver.fields.p[[i, 0, 0]] = (k * x).cos();
+    }
+    // The two schemes carry velocity at different instants: the leapfrog at
+    // t = -dt/2, the symmetric composition at t = 0 (synchronized). Seeding one
+    // convention into the other is an O(dt) error in the initial state and
+    // reports order 1.
+    let seed_time = match scheme {
+        TemporalScheme::Leapfrog => -dt / 2.0,
+        TemporalScheme::Yoshida4 => 0.0,
+    };
+    for i in 0..N {
+        let x_face = (i as f64 + 1.0) * dx;
+        solver.fields.ux[[i, 0, 0]] =
+            (k / (rho0 * omega)) * (k * x_face).sin() * (omega * seed_time).sin();
+    }
+    for _ in 0..steps {
+        solver.step_forward().expect("step");
+    }
+    (0..N).fold(0.0_f64, |worst, i| {
+        worst.max(solver.fields.p[[i, 0, 0]].abs())
+    })
+}
+
+/// **Yoshida composition delivers fourth order in time**, which is the half of
+/// Fullwave 2.5's "8th in space, 4th in time" that kwavers was missing.
+///
+/// Measured on the same benchmark as the second-order test, so the two slopes
+/// are directly comparable rather than each being read against its own setup.
+#[test]
+fn the_yoshida_composition_is_fourth_order_in_time() {
+    // Step counts sit inside the stable regime. The composition's largest
+    // sub-step is |w0| ~ 1.70 times dt, so it goes unstable at a step the plain
+    // leapfrog tolerates - at 50 steps here the error is 6.2e-3 against 6.3e-9
+    // at 100, which is the stability edge rather than a convergence rate.
+    let coarse = temporal_error(100, TemporalScheme::Yoshida4);
+    let mid = temporal_error(200, TemporalScheme::Yoshida4);
+    let fine = temporal_error(400, TemporalScheme::Yoshida4);
+    for (a, b, label) in [(coarse, mid, "100->200"), (mid, fine, "200->400")] {
+        let order = (a / b).log2();
+        assert!(
+            (3.7..=4.3).contains(&order),
+            "{label}: observed temporal order {order:.3}, expected 4              (errors {a:.4e} -> {b:.4e})"
+        );
+    }
+}
+
+/// The fourth-order composition still conserves energy, at every spatial order.
+///
+/// Yoshida composition of a symplectic method is itself symplectic, so this is
+/// the property that should survive — and it is the one that would break first
+/// if the sub-step weights or the half-kick structure were wrong, since a
+/// non-symplectic composition leaks energy steadily rather than failing loudly.
+#[test]
+fn the_yoshida_composition_conserves_energy() {
+    const N: usize = 32;
+    const STEPS: usize = 600;
+    let dx = 1.0e-3_f64;
+    let c0 = SOUND_SPEED_WATER_SIM;
+    let rho0 = DENSITY_WATER_NOMINAL;
+
+    for order in [2usize, 4, 6, 8] {
+        let grid = Grid::new(N, 1, 1, dx, dx, dx).unwrap();
+        let medium = HomogeneousMedium::new(rho0, c0, 0.0, 0.0, &grid);
+        // Well inside the composition's reduced stability limit: its largest
+        // sub-step is |w0| ~ 1.70 times dt.
+        let dt = 0.1 * dx / c0;
+        let config = FdtdConfig {
+            spatial_order: order,
+            staggered_grid: true,
+            enable_nonlinear: false,
+            temporal_scheme: TemporalScheme::Yoshida4,
+            dt,
+            nt: STEPS + 1,
+            ..Default::default()
+        };
+        let mut solver = FdtdSolver::new(config, &grid, &medium, GridSource::new_empty()).unwrap();
+        for i in 0..N {
+            let x = (i as f64 - N as f64 / 2.0) / 4.0;
+            solver.fields.p[[i, 0, 0]] = (-x * x).exp();
+        }
+
+        let energy = |s: &FdtdSolver| -> f64 {
+            (0..N)
+                .map(|i| {
+                    s.fields.p[[i, 0, 0]].powi(2) / (2.0 * rho0 * c0 * c0)
+                        + rho0 * s.fields.ux[[i, 0, 0]].powi(2) / 2.0
+                })
+                .sum()
+        };
+        let initial = energy(&solver);
+        for _ in 0..STEPS {
+            solver.step_forward().expect("step");
+        }
+        let drift = (energy(&solver) - initial).abs() / initial;
+        assert!(
+            drift < 0.05,
+            "order {order}: energy drifted {:.3} % under the fourth-order composition",
+            100.0 * drift
+        );
+    }
+}
+
+/// The combinations the composition has *not* been verified against are
+/// rejected at construction, not left to misbehave.
+#[test]
+fn fourth_order_time_rejects_the_unverified_combinations() {
+    let base = FdtdConfig {
+        staggered_grid: true,
+        temporal_scheme: TemporalScheme::Yoshida4,
+        ..Default::default()
+    };
+    assert!(
+        base.validate().is_ok(),
+        "lossless staggered must be allowed"
+    );
+
+    let absorbing = FdtdConfig {
+        absorption: FdtdAbsorption::PowerLawRelaxation {
+            reference_frequency_hz: 1.0e6,
+            band_min_hz: 0.5e6,
+            band_max_hz: 3.0e6,
+            relaxation_arms: 3,
+        },
+        ..base.clone()
+    };
+    assert!(
+        absorbing.validate().is_err(),
+        "the negative sub-step is unverified against relaxation memory and must be rejected"
+    );
+
+    let collocated = FdtdConfig {
+        staggered_grid: false,
+        ..base
+    };
+    assert!(
+        collocated.validate().is_err(),
+        "fourth-order time is staggered-only"
+    );
 }

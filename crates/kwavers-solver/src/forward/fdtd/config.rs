@@ -113,6 +113,42 @@ pub struct FdtdConfig {
     /// Absorption model applied in the pressure update.
     #[serde(default)]
     pub absorption: FdtdAbsorption,
+
+    /// Time-integration scheme.
+    #[serde(default)]
+    pub temporal_scheme: TemporalScheme,
+}
+
+/// How the solver advances in time.
+///
+/// Fullwave 2.5 runs fourth order in space *and* time; kwavers matched the
+/// spatial order first, and this closes the temporal half (KW-SOL-092).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum TemporalScheme {
+    /// Staggered leapfrog: one velocity update then one pressure update per
+    /// step. Second-order accurate in time, and the cheapest step available.
+    #[default]
+    Leapfrog,
+
+    /// Yoshida's symmetric triple composition, fourth-order accurate in time.
+    ///
+    /// # What it composes, and why not the plain step
+    ///
+    /// Yoshida composition reaches fourth order only when the method it
+    /// composes is **self-adjoint**. The plain step is kick-then-drift, whose
+    /// adjoint is drift-then-kick, so composing *that* would not gain an order.
+    /// Each sub-step is therefore the symmetric `K(h/2) D(h) K(h/2)` -
+    /// half-velocity, full-pressure, half-velocity - which is Stormer-Verlet
+    /// and self-adjoint.
+    ///
+    /// # What it costs
+    ///
+    /// Three sub-steps per step, and the central Yoshida weight is negative with
+    /// `|w0| ~ 1.7025`, so the largest sub-step is that much longer than `dt`
+    /// and the stable step shrinks by the same factor. Roughly five times the
+    /// work per unit simulated time, bought back by error falling as `dt^4`
+    /// rather than `dt^2`.
+    Yoshida4,
 }
 
 impl Default for FdtdConfig {
@@ -131,6 +167,7 @@ impl Default for FdtdConfig {
             sensor_mask: None,
             geometry: SolverGeometry::Cartesian3D,
             absorption: FdtdAbsorption::Lossless,
+            temporal_scheme: TemporalScheme::Leapfrog,
         }
     }
 }
@@ -142,6 +179,37 @@ impl FdtdConfig {
     ///
     pub fn validate(&self) -> KwaversResult<()> {
         let mut multi_error = MultiError::new();
+
+        // The fourth-order composition takes a **negative** central sub-step.
+        // Relaxation memory variables integrate as `exp(-dt/tau)`, so a negative
+        // sub-step is `exp(+dt/tau)` — growth — and the same question applies to
+        // CPML memory. Neither has been verified under composition, so the
+        // combination is rejected here rather than left to misbehave quietly
+        // (KW-SOL-092). Lifting this needs the analysis, not just the wiring.
+        if self.temporal_scheme == TemporalScheme::Yoshida4 {
+            if self.absorption != FdtdAbsorption::Lossless {
+                multi_error.add(
+                    ValidationError::FieldValidation {
+                        field: "temporal_scheme".to_owned(),
+                        value: format!("{:?} with {:?}", self.temporal_scheme, self.absorption),
+                        constraint: "fourth-order time integration is unverified with an                                      absorbing model - the composition's negative sub-step                                      turns relaxation decay into growth; use Leapfrog or run                                      lossless"
+                            .to_owned(),
+                    }
+                    .into(),
+                );
+            }
+            if !self.staggered_grid {
+                multi_error.add(
+                    ValidationError::FieldValidation {
+                        field: "temporal_scheme".to_owned(),
+                        value: format!("{:?} with staggered_grid = false", self.temporal_scheme),
+                        constraint: "fourth-order time integration is available on the                                      staggered path only"
+                            .to_owned(),
+                    }
+                    .into(),
+                );
+            }
+        }
 
         if let FdtdAbsorption::PowerLawRelaxation {
             reference_frequency_hz,

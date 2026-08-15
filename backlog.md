@@ -230,42 +230,44 @@
   decay; (2) convert temporal decay to spatial alpha inside the measurement, or
   a lossless check ends up comparing s^-1 against Np/m.
 
-## KW-SOL-092 - Fourth-order time integration on the staggered path [minor] - todo
+## KW-SOL-092 - Fourth-order time integration on the staggered path [minor] - done 2026-08-15
 
-- **The last measured Fullwave 2.5 parity gap that is actionable on this
-  hardware.** Fullwave runs "8th-order in space and 4th-order in time"; kwavers
-  matched the spatial order under KW-SOL-074, and the temporal order is 2.
-- Measured, not inferred from the scheme name: refining dt at fixed 8th-order
-  space on a rigid-wall eigenmode gives slopes 2.002, 2.001, 2.000. Pinned by
-  `the_staggered_path_is_second_order_in_time`.
-- **Getting that number took three attempts, and the wrong two are worth
-  knowing.** Sampling after a full period puts the mode at an extremum where the
-  phase error is squared and reports order 4; seeding velocity with zero is an
-  `O(dt)` inconsistency, because the leapfrog carries `u` at `t = -dt/2`, and
-  mixed with the first it reported order 3. Both are recorded at the test.
-- Mechanism already available: `kwavers_math::numerics::symplectic::yoshida4_step`
-  is the 4th-order symmetric triple composition of Stormer-Verlet, and the
-  acoustic leapfrog *is* Stormer-Verlet for `H = T(u) + V(p)`. `step_forward` is
-  already a clean `update_velocity(dt)` then `update_pressure(dt)`, so the
-  composition is three scaled substeps rather than a new integrator.
-- Four things to settle, and the middle two are why this is not a small change:
-  1. Sources inject once per step today; three substeps must not inject thrice.
-  2. The central Yoshida weight is **negative** (`w0 ~ -1.70`). Relaxation
-     memory variables integrate as `exp(-dt/tau)`, so a negative substep is
-     `exp(+dt/tau)` - growth. Whether the composition is stable with the
-     absorbing path needs deciding before, not after.
-  3. CPML memory has the same negative-substep question.
-  4. Stability: substeps run at `|w|*dt` with `|w0| ~ 1.70`, so the step must
-     shrink by that factor; net cost is roughly 3 substeps at ~0.59x dt against
-     one at dt, bought back by the error going as `dt^4`.
-- Suggested first increment, if the absorbing path proves awkward: the lossless
-  PML-free path only, with the measured order moving 2 -> 4 on the test above,
-  and the absorbing/PML extension split out. Do not ship a composition that is
-  silently wrong under absorption.
-- Acceptance: measured temporal order 4 on the existing benchmark; energy
-  conservation retained at every spatial order; the absorbing path either
-  verified under composition or explicitly excluded at config validation rather
-  than left to misbehave.
+- `TemporalScheme::Yoshida4` closes the temporal half of Fullwave 2.5's
+  "8th order in space, 4th in time". Measured order **4.00** on the same
+  benchmark the second-order test uses, so the two slopes are comparable.
+- **Composing the plain step would have gained nothing.** Yoshida's cancellation
+  needs a self-adjoint base method; `step_forward` is kick-then-drift, whose
+  adjoint is drift-then-kick. Each sub-step is therefore the symmetric
+  `K(h/2) D(h) K(h/2)`.
+- **Two wrong readings before the right one, both instructive.**
+  1. First attempt measured order **1**. The leapfrog carries `u` at
+     `t = -dt/2`; the symmetric composition carries it at `t = 0`. Seeding the
+     leapfrog convention into the composition is an `O(dt)` error in the
+     *initial state*, and it looked like a broken integrator. The schemes use
+     different time conventions for velocity, and the test now seeds per scheme.
+  2. The coarsest refinement blew up to `4.9e38`. The largest sub-step is
+     `|w0| ~ 1.70` times `dt`, so the composition goes unstable at a step the
+     leapfrog tolerates. The measurement now sits inside the stable regime and
+     says so.
+- Sources inject once per step, not once per sub-step: they model an external
+  drive at that instant rather than part of the flow being composed. The shared
+  tail was factored into `finish_step` so both schemes use one path.
+- **Absorption and the collocated path are rejected at validation, not left to
+  misbehave.** The central weight is negative, which turns relaxation memory
+  `exp(-dt/tau)` into growth; the same question stands for CPML. Lifting that
+  needs the analysis, not just the wiring, and
+  `fourth_order_time_rejects_the_unverified_combinations` pins it.
+- Energy conservation holds at spatial orders 2/4/6/8 under composition, which
+  is the property that would break first if the weights or the half-kick
+  structure were wrong - a non-symplectic composition leaks steadily rather than
+  failing loudly.
+- Cost, stated: three sub-steps and a stable step ~1.70x smaller, so roughly 5x
+  the work per unit simulated time, bought back by error falling as `dt^4`.
+- Verified: 1084/1084 across kwavers-solver and kwavers-math against pinned
+  revisions.
+- Remaining for a follow-up: the absorbing path under composition. Filed nowhere
+  yet because the analysis question - whether a negative sub-step is admissible
+  for relaxation memory at all - should be answered before it becomes an item.
 
 ## KW-GPU-078 — Partition a wave grid across GPUs [major] [arch] — todo
 

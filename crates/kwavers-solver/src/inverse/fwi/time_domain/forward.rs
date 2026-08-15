@@ -150,6 +150,7 @@ impl FwiProcessor {
             dt,
             sensor_mask,
             geometry: Default::default(),
+            ..Default::default()
         };
 
         let density = self.resolved_density(grid)?;

@@ -60,6 +60,7 @@ impl PhotoacousticSimulator {
             dt,
             sensor_mask: None,
             geometry: Default::default(),
+            ..Default::default()
         };
 
         let fdtd_solver = FdtdSolver::new(fdtd_config, &grid, medium, GridSource::default())?;
