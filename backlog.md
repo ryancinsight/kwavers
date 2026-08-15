@@ -289,13 +289,22 @@
   length `w*dt` would silently reuse the full-step decay, which is wrong for
   every sub-step regardless of sign - a quiet accuracy defect rather than a
   visible failure.
-- Implementation constraint worth settling before coding: the composition needs
-  decay/gain for two distinct sub-steps (`w1*dt` twice, `w0*dt` once), so the
-  obvious fix triples those arrays. At 128^3 with four arms that is a real memory
-  cost. Options: precompute the two extra sets and accept the memory;
-  recompute `exp(-h*inv_tau)` per voxel per sub-step and accept the transcendental
-  in the hot loop (`inv_tau` is already stored); or key the arrays by sub-step in
-  a small map so the leapfrog path keeps exactly one set.
+- **The memory tradeoff this item originally described does not exist.** I wrote
+  that per-sub-step coefficients would triple the decay/gain arrays. Reading
+  `Arm` shows `decay` is `Array3::from_elem(shape, (-dt/tau).exp())` - spatially
+  **uniform**, because the relaxation times are a shared grid, so it is one
+  scalar per arm stored as a whole array. `inv_tau` likewise. Extra sub-step
+  decays therefore cost a scalar each, not a grid each.
+- What is genuinely per-voxel is `gain = delta_m * (-tau * (1 - exp(-h/tau)))`,
+  and only the `delta_m` factor varies in space; the rest is a scalar in `h`. So
+  the change is: keep `delta_m`, carry `tau` as a scalar, and evaluate the two
+  sub-step scalars at construction. Either precompute the two extra gain arrays
+  (2x on that one array) or apply the scalar in the hot loop (one extra multiply
+  per voxel). Both are small.
+- Threading is also smaller than assumed: `accumulate` has exactly **two**
+  production call sites, in `pressure_updater/update.rs`, and `dt` is already in
+  scope at both. Passing the sub-step length needs no new plumbing - the
+  composition already calls `update_pressure(h)` with the value required.
 - **The obvious simplification does not work, so do not spend time on it.**
   Splitting dissipation out of the composition - Yoshida on the lossless flow,
   relaxation applied once per full step - avoids per-sub-step decay entirely and
