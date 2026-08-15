@@ -121,10 +121,11 @@ impl NumaPoolManager {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn new(config: PoolConfig) -> KwaversResult<Self> {
-        let topology = super::super::numa::NumaTopology::detect();
-        let mut pools = Vec::with_capacity(topology.node_count);
+        let topology = super::super::numa::detect_topology();
+        let node_count = topology.numa_nodes().len();
+        let mut pools = Vec::with_capacity(node_count);
 
-        for node in 0..topology.node_count {
+        for node in 0..node_count {
             let mut node_config = config.clone();
             node_config.numa_node = node as i32;
             match BufferPool::new(node_config) {

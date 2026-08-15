@@ -145,7 +145,7 @@ impl NumaAwareAllocator {
                     // Log the error but don't fail allocation; fall back to FirstTouch.
                     log::warn!(
                         "failed to bind NUMA allocation to node {}; falling back to FirstTouch placement: {:?}",
-                        node,
+                        node.get(),
                         e
                     );
                 }
