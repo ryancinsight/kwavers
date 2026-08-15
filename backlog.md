@@ -309,6 +309,29 @@
   absorption active; and the validation rejection in KW-SOL-092 lifted rather
   than left contradicting the code.
 
+## KW-CI-094 - The recurseml check errors on itself and is permanently red [patch] - todo
+
+- `recurseml/analysis` reported `state: error` with the description
+  `Error occurred during analysis (<base>..<head>)` on **six of the last seven**
+  pull requests - 365, 367, 368, 370, 373, 374 - succeeding only on 372. The
+  message is the bot failing, not a finding about the diff.
+- It is not a required check, so it never blocked a merge. That is exactly what
+  makes it worth fixing rather than tolerating: every PR now shows a red check
+  that everyone has learned to skip past, which is how a real failure gets
+  waved through. A check that cannot be trusted to mean anything is worse than
+  no check.
+- It also means the analysis it exists to provide has not run. Seven PRs of
+  numerical and concurrency changes went in with no independent automated
+  review; their evidence came from in-repo oracles - bit-exactness against
+  serial references, `Q + Q^T = B`, measured convergence order, energy
+  conservation - and not from this.
+- Directions: check the integration's configuration and whether the failure is
+  size- or timeout-related (the passing run, 372, was not obviously smaller);
+  if the service is unreliable or unwanted, remove the integration rather than
+  leave a red check standing. Either outcome is better than the current one.
+- Acceptance: the check either reports real findings, or is gone. Not left
+  erroring.
+
 ## KW-GPU-078 — Partition a wave grid across GPUs [major] [arch] — todo
 
 - Confirmed gap against Fullwave 2.5, whose multi-GPU depth decomposition with
