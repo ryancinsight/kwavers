@@ -409,6 +409,22 @@ fn leapfrog_field_remains_bounded_in_lossless_medium() {
 /// measured here is absorption alone.
 #[test]
 fn absorption_reproduces_prescribed_power_law_in_propagation() {
+    check_absorption_power_law(TemporalScheme::Leapfrog);
+}
+
+/// **The same law, under the fourth-order composition.**
+///
+/// This is the acceptance for KW-SOL-093: the exponential-integrator
+/// coefficients are now derived per sub-step, so each of `w1·dt`, `w0·dt`,
+/// `w1·dt` decays by its own `e^{-h/tau}` instead of all three reusing the
+/// full-step value. Held to the same bound as the leapfrog path, because a
+/// weaker one would not demonstrate anything.
+#[test]
+fn absorption_reproduces_prescribed_power_law_under_composition() {
+    check_absorption_power_law(TemporalScheme::Yoshida4);
+}
+
+fn check_absorption_power_law(scheme: TemporalScheme) {
     use crate::forward::fdtd::config::FdtdAbsorption;
     use std::f64::consts::TAU;
 
@@ -435,6 +451,7 @@ fn absorption_reproduces_prescribed_power_law_in_propagation() {
         let config = FdtdConfig {
             spatial_order: 2,
             staggered_grid: true,
+            temporal_scheme: scheme,
             dt,
             nt: 5000,
             absorption: FdtdAbsorption::PowerLawRelaxation {
@@ -503,7 +520,7 @@ fn absorption_reproduces_prescribed_power_law_in_propagation() {
 
         assert!(
             (measured - expected).abs() <= 0.15 * expected,
-            "y={y}: measured alpha {measured:.3} vs prescribed {expected:.3} Np/m at {:.3} MHz",
+            "{scheme:?}, y={y}: measured alpha {measured:.3} vs prescribed {expected:.3} Np/m              at {:.3} MHz",
             omega / TAU / 1.0e6
         );
     }
@@ -1128,10 +1145,13 @@ fn the_yoshida_composition_conserves_energy() {
     }
 }
 
-/// The combinations the composition has *not* been verified against are
-/// rejected at construction, not left to misbehave.
+/// What the composition supports, and what it still refuses.
+///
+/// Absorption was refused when KW-SOL-092 landed and is supported now that the
+/// coefficients are derived per sub-step (KW-SOL-093); the collocated path is
+/// still refused, because the composition is built on the staggered updates.
 #[test]
-fn fourth_order_time_rejects_the_unverified_combinations() {
+fn fourth_order_time_accepts_absorption_and_refuses_the_collocated_path() {
     let base = FdtdConfig {
         staggered_grid: true,
         temporal_scheme: TemporalScheme::Yoshida4,
@@ -1152,8 +1172,8 @@ fn fourth_order_time_rejects_the_unverified_combinations() {
         ..base.clone()
     };
     assert!(
-        absorbing.validate().is_err(),
-        "the negative sub-step is unverified against relaxation memory and must be rejected"
+        absorbing.validate().is_ok(),
+        "absorption under composition is supported since KW-SOL-093: coefficients are          derived per sub-step rather than precomputed for one step"
     );
 
     let collocated = FdtdConfig {

@@ -67,7 +67,7 @@ impl FdtdSolver {
             kops.compute_divergence_neg(&self.fields.ux, &self.fields.uy, &self.fields.uz);
             let divergence = kops.divergence.view();
             if let Some(absorption) = self.absorption.as_mut() {
-                let (modulus, relaxation) = absorption.accumulate(divergence);
+                let (modulus, relaxation) = absorption.accumulate(divergence, dt);
                 super::apply_absorbing_pressure_update(
                     &mut self.fields.p,
                     divergence,
@@ -132,7 +132,7 @@ impl FdtdSolver {
     fn apply_pressure_from_divergence(&mut self, dt: f64) {
         if let Some(absorption) = self.absorption.as_mut() {
             let divergence = self.divergence_scratch.view();
-            let (modulus, relaxation) = absorption.accumulate(divergence);
+            let (modulus, relaxation) = absorption.accumulate(divergence, dt);
             super::apply_absorbing_pressure_update(
                 &mut self.fields.p,
                 divergence,

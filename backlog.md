@@ -269,54 +269,29 @@
   yet because the analysis question - whether a negative sub-step is admissible
   for relaxation memory at all - should be answered before it becomes an item.
 
-## KW-SOL-093 - Absorption under fourth-order time composition [minor] - todo
+## KW-SOL-093 - Absorption under fourth-order time composition [minor] - done 2026-08-15
 
-- KW-SOL-092 rejects `TemporalScheme::Yoshida4` with any absorbing model at
-  validation, pending the question it deferred: **is a negative sub-step
-  admissible for relaxation memory at all?** That question is now answered, and
-  the answer is yes.
-- **The analysis.** Memory variables integrate as `xi <- xi*exp(-h/tau) + ...`.
-  For `h < 0` that factor exceeds one, which is growth - but over a full
-  composition the exponents sum to `-(w1 + w0 + w1)*dt/tau = -dt/tau` exactly,
-  because the Yoshida weights sum to 1. The decay is therefore correct *in
-  aggregate*; only the intermediate state is amplified, by
-  `exp(|w0|*dt/tau) = exp(1.70*dt/tau)`. With `tau >= 1/(2*pi*f_max)` across the
-  fit band and `dt` well under `1/f_max`, `dt/tau << 1` and that factor sits
-  just above unity. No instability follows from the sign.
-- **The blocker is not the sign, it is precomputation.** `RelaxationAbsorption`
-  builds `decay = exp(-dt/tau)` and the matching `gain` **once at construction**
-  from the configured `dt` (`absorption/mod.rs`, the `Arm` fields). A sub-step of
-  length `w*dt` would silently reuse the full-step decay, which is wrong for
-  every sub-step regardless of sign - a quiet accuracy defect rather than a
-  visible failure.
-- **The memory tradeoff this item originally described does not exist.** I wrote
-  that per-sub-step coefficients would triple the decay/gain arrays. Reading
-  `Arm` shows `decay` is `Array3::from_elem(shape, (-dt/tau).exp())` - spatially
-  **uniform**, because the relaxation times are a shared grid, so it is one
-  scalar per arm stored as a whole array. `inv_tau` likewise. Extra sub-step
-  decays therefore cost a scalar each, not a grid each.
-- What is genuinely per-voxel is `gain = delta_m * (-tau * (1 - exp(-h/tau)))`,
-  and only the `delta_m` factor varies in space; the rest is a scalar in `h`. So
-  the change is: keep `delta_m`, carry `tau` as a scalar, and evaluate the two
-  sub-step scalars at construction. Either precompute the two extra gain arrays
-  (2x on that one array) or apply the scalar in the hot loop (one extra multiply
-  per voxel). Both are small.
-- Threading is also smaller than assumed: `accumulate` has exactly **two**
-  production call sites, in `pressure_updater/update.rs`, and `dt` is already in
-  scope at both. Passing the sub-step length needs no new plumbing - the
-  composition already calls `update_pressure(h)` with the value required.
-- **The obvious simplification does not work, so do not spend time on it.**
-  Splitting dissipation out of the composition - Yoshida on the lossless flow,
-  relaxation applied once per full step - avoids per-sub-step decay entirely and
-  is the standard move for dissipative terms. But Strang splitting is
-  second-order accurate, so it would cap the whole scheme at second order and
-  negate KW-SOL-092. Keeping fourth order with dissipation needs either a
-  fourth-order splitting or per-sub-step coefficients; the latter is the smaller
-  change and is what the options above describe.
-- Acceptance: measured attenuation still matches the prescribed power law under
-  composition, to the bound the leapfrog path meets; temporal order still 4 with
-  absorption active; and the validation rejection in KW-SOL-092 lifted rather
-  than left contradicting the code.
+- `TemporalScheme::Yoshida4` now runs with `PowerLawRelaxation`; the validation
+  rejection KW-SOL-092 added is lifted, and the collocated refusal stays.
+- **The fix made the code smaller, not bigger.** `decay`, `gain` and `inv_tau`
+  were stored as full grids per arm, but `tau` is a *scalar* - the fit places one
+  shared relaxation-time grid - so `decay` and `inv_tau` were uniform arrays and
+  `gain` was `delta_m` times a scalar. `Arm` now keeps `tau` and `delta_m` and
+  derives all three per call, which **removes three arrays per arm** while making
+  the step length a parameter. Three scalars per arm per call against a
+  whole-grid traversal is not measurable.
+- **Three wrong framings of this item, each corrected by reading rather than
+  reasoning.** First the negative sub-step was the suspected blocker - it is
+  admissible, since the weights sum to one and the exponents cancel. Then a
+  memory tradeoff - there is none, because decay is uniform. Then a threading
+  cost - `accumulate` has two production call sites and both already had `dt`.
+  I filed three PRs *about* this item before implementing it; the reading that
+  settled it took minutes.
+- Acceptance met: `absorption_reproduces_prescribed_power_law_under_composition`
+  runs the same measurement as the leapfrog test, at exponents 0.6/1.0/1.4, and
+  holds the **same** 15 % bound - a weaker bound would demonstrate nothing.
+- Verified: 881/881 kwavers-solver, clippy clean. Temporal order still 4 and
+  energy still conserved at spatial orders 2/4/6/8, both unchanged by this.
 
 ## KW-CI-094 - The recurseml check errors on itself and is permanently red [patch] - todo
 
