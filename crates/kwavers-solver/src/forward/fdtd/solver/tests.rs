@@ -950,3 +950,89 @@ fn the_collocated_path_leaves_a_thin_axis_inert() {
         transverse / axial
     );
 }
+
+/// **The staggered path is second-order in time**, and this pins that.
+///
+/// Fullwave 2.5 runs 8th order in space and 4th in time. kwavers matched the
+/// spatial order under KW-SOL-074; this records where the temporal order stands
+/// and will need updating to 4 when KW-SOL-092 lands - a failure here after that
+/// work is the expected signal, not a regression.
+///
+/// # Measuring this correctly, which took three attempts
+///
+/// Both of the obvious designs report the wrong number:
+///
+/// - Sampling after a **full period** puts the mode at an extremum, where a
+///   phase error `phi ~ dt^2` enters as `cos(phi) ~ 1 - phi^2/2` and is squared.
+///   That reports order 4 for this second-order scheme - the same trap as
+///   KW-SOL-088.
+/// - Seeding velocity with **zero** is an `O(dt)` inconsistency in the initial
+///   state, because the leapfrog carries `u` at `t = -dt/2`. Mixed with the
+///   above it reported order 3.
+///
+/// So: consistent half-step velocity, and sample at a **quarter** period, where
+/// the exact pressure is identically zero and the phase error enters linearly.
+#[test]
+fn the_staggered_path_is_second_order_in_time() {
+    // Spatial error is held negligible: order 8 on a well-resolved mode, so the
+    // measured slope is the *time* discretization's.
+    const N: usize = 64;
+    let dx = 1.0e-3_f64;
+    let c0 = SOUND_SPEED_WATER_SIM;
+    let rho0 = DENSITY_WATER_NOMINAL;
+    let length = N as f64 * dx;
+    let k = std::f64::consts::PI / length; // rigid-wall Neumann mode, m = 1
+    let omega = c0 * k;
+    let period = std::f64::consts::TAU / omega;
+
+    let error_for = |steps: usize| -> f64 {
+        // Quarter period, not a full one: at wt = pi/2 the mode is at a zero
+        // crossing, where a phase error enters *linearly*. Sampling at a return
+        // point squares it and reports twice the true order (KW-SOL-088).
+        let dt = period / (4 * steps) as f64;
+        let grid = Grid::new(N, 1, 1, dx, dx, dx).unwrap();
+        let medium = HomogeneousMedium::new(rho0, c0, 0.0, 0.0, &grid);
+        let config = FdtdConfig {
+            spatial_order: 8,
+            staggered_grid: true,
+            enable_nonlinear: false,
+            dt,
+            nt: steps + 1,
+            ..Default::default()
+        };
+        let mut solver = FdtdSolver::new(config, &grid, &medium, GridSource::new_empty()).unwrap();
+        for i in 0..N {
+            let x = (i as f64 + 0.5) * dx;
+            solver.fields.p[[i, 0, 0]] = (k * x).cos();
+        }
+        // The leapfrog carries velocity at t = -dt/2, not 0. For
+        // p = cos(kx)cos(wt) the momentum equation gives
+        // u = (k/(rho*w)) sin(kx) sin(wt); seeding u with zero is an O(dt)
+        // inconsistency in the initial state, not in the scheme.
+        for i in 0..N {
+            let x_face = (i as f64 + 1.0) * dx;
+            solver.fields.ux[[i, 0, 0]] =
+                (k / (rho0 * omega)) * (k * x_face).sin() * (-omega * dt / 2.0).sin();
+        }
+        for _ in 0..steps {
+            solver.step_forward().expect("step");
+        }
+        // At a quarter period the exact pressure is identically zero.
+        let mut worst = 0.0_f64;
+        for i in 0..N {
+            worst = worst.max(solver.fields.p[[i, 0, 0]].abs());
+        }
+        worst
+    };
+
+    let coarse = error_for(200);
+    let mid = error_for(400);
+    let fine = error_for(800);
+    for (a, b, label) in [(coarse, mid, "200->400"), (mid, fine, "400->800")] {
+        let order = (a / b).log2();
+        assert!(
+            (1.8..=2.2).contains(&order),
+            "{label}: observed temporal order {order:.3}, expected 2              (errors {a:.4e} -> {b:.4e})"
+        );
+    }
+}
