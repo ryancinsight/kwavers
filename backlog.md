@@ -2201,15 +2201,25 @@
   physics path and retain no re-export. Acceptance: Physics has no registration
   dependency and Diagnostics owns all fusion and registration contracts.
 
-## KW-DOC-038 — Resolve Physics Rustdoc links [patch] — todo
+## KW-DOC-038 - Resolve Physics Rustdoc links [patch] - done 2026-08-15 (verified, no change needed)
 
-- Owner: unclaimed; scope: unresolved intra-doc links and bracketed unit
-  annotations in `kwavers-physics` Rustdoc.
-- Driver: the all-feature package documentation build emits 575 unresolved-link
-  warnings; the clinical-imaging boundary change introduces none.
-- Acceptance: `cargo doc -p kwavers-physics --all-features --no-deps` is
-  warning-clean without disabling Rustdoc diagnostics.
-- Evidence: `gap_audit.md` documentation baseline entry.
+- **Already satisfied when checked.** The acceptance command,
+  `cargo doc -p kwavers-physics --all-features --no-deps`, emits **zero**
+  rustdoc warnings, and passes under `RUSTDOCFLAGS="-D warnings"` as well. The
+  575 unresolved links the item was filed against are gone.
+- Verified against a forced rebuild, not a cached one: the package was touched
+  first so rustdoc actually re-ran. The only warnings the build emits are 11
+  `patch ... was not used in the crate graph` lines from the stack overlay,
+  which are environmental and not rustdoc's.
+- Closed by peers incrementally rather than by one change - `5044c0c13
+  docs(kwavers): Escape temperature unit link` is the pattern, escaping
+  bracketed unit annotations that rustdoc was reading as intra-doc links. Nobody
+  closed the item afterwards, so it sat as work that looked available.
+- Bracketed units still appear in a few Physics doc comments, but the build is
+  clean, so they are in contexts rustdoc does not treat as links. Left alone:
+  the acceptance is the warning count, not the absence of brackets.
+- Deliverable here is the evidence, not a diff. Recording it so the next agent
+  does not re-derive that 575 warnings no longer exist.
 
 ## KW-APERTURE-003 — Planar sector BLI rasterization [minor] — review
 
