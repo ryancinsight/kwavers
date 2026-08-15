@@ -296,6 +296,14 @@
   recompute `exp(-h*inv_tau)` per voxel per sub-step and accept the transcendental
   in the hot loop (`inv_tau` is already stored); or key the arrays by sub-step in
   a small map so the leapfrog path keeps exactly one set.
+- **The obvious simplification does not work, so do not spend time on it.**
+  Splitting dissipation out of the composition - Yoshida on the lossless flow,
+  relaxation applied once per full step - avoids per-sub-step decay entirely and
+  is the standard move for dissipative terms. But Strang splitting is
+  second-order accurate, so it would cap the whole scheme at second order and
+  negate KW-SOL-092. Keeping fourth order with dissipation needs either a
+  fourth-order splitting or per-sub-step coefficients; the latter is the smaller
+  change and is what the options above describe.
 - Acceptance: measured attenuation still matches the prescribed power law under
   composition, to the bound the leapfrog path meets; temporal order still 4 with
   absorption active; and the validation rejection in KW-SOL-092 lifted rather
