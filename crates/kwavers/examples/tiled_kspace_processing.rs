@@ -49,7 +49,7 @@
 //!
 //! Part VI — Atlas Stack Integration, §SIMD and Tiling.
 
-use leto::{Array3, LendingIterator, Tiles};
+use leto::{Array3, Tiles};
 
 // ── Grid and tile dimensions ───────────────────────────────────────────────
 const NX: usize = 32;
