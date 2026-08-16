@@ -63,8 +63,10 @@ fn f64_lanes(target: TargetId) -> usize {
     match target {
         TargetId::Avx512 => 8, // 512 bits / 64 bits
         TargetId::Avx2 => 4,   // 256 bits / 64 bits
-        TargetId::Neon => 2,   // 128 bits / 64 bits
+        TargetId::Neon | TargetId::Sve => 2, // 128 bits / 64 bits (SVE lane-emulated)
         TargetId::Scalar => 1,
+        // `TargetId` is #[non_exhaustive]; unknown future targets degrade to scalar.
+        _ => 1,
     }
 }
 
@@ -102,8 +104,10 @@ impl StencilStrategy {
     pub fn select_best() -> Self {
         match best_supported_target() {
             TargetId::Avx512 => Self::Avx512,
-            TargetId::Avx2 | TargetId::Neon => Self::GenericSimd,
+            TargetId::Avx2 | TargetId::Neon | TargetId::Sve => Self::GenericSimd,
             TargetId::Scalar => Self::Scalar,
+            // `TargetId` is #[non_exhaustive]; unknown future targets use scalar.
+            _ => Self::Scalar,
         }
     }
 

@@ -12,6 +12,7 @@ use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_grid::Grid;
 use kwavers_source::{GridSource, SourceMode};
 use leto::{Array2, Array3};
+use leto_ops::application::optimization::LbfgsMemory;
 
 /// Build the shared small-grid FWI problem: grid, geometry, true model, and a
 /// homogeneous initial model. The anomaly is a `+anomaly` m/s Gaussian bump at
@@ -268,4 +269,82 @@ fn lbfgs_is_stationary_at_the_truth() {
         "L-BFGS must not move away from the true (zero-misfit) model; \
          max |Δc| = {max_move:e}"
     );
+}
+
+/// Independent two-loop reference used to verify the provider's observable
+/// direction contract after its bounded history evicts the oldest pairs.
+fn reference_direction(history: &[(Vec<f64>, Vec<f64>)], gradient: &[f64]) -> Vec<f64> {
+    let mut q = gradient.to_vec();
+    let mut alpha = vec![0.0; history.len()];
+    for (index, (s, y)) in history.iter().enumerate().rev() {
+        let sy = s.iter().zip(y).map(|(s, y)| s * y).sum::<f64>();
+        let rho = 1.0 / sy;
+        let coefficient = rho * s.iter().zip(&q).map(|(s, q)| s * q).sum::<f64>();
+        alpha[index] = coefficient;
+        q.iter_mut().zip(y).for_each(|(q, y)| *q -= coefficient * y);
+    }
+
+    let (newest_s, newest_y) = history.last().expect("non-empty L-BFGS history");
+    let sy = newest_s
+        .iter()
+        .zip(newest_y)
+        .map(|(s, y)| s * y)
+        .sum::<f64>();
+    let yy = newest_y.iter().map(|value| value * value).sum::<f64>();
+    let gamma = sy / yy;
+    let mut direction = q.into_iter().map(|value| gamma * value).collect::<Vec<_>>();
+    for (index, (s, y)) in history.iter().enumerate() {
+        let rho = 1.0 / s.iter().zip(y).map(|(s, y)| s * y).sum::<f64>();
+        let beta = rho
+            * y.iter()
+                .zip(&direction)
+                .map(|(y, direction)| y * direction)
+                .sum::<f64>();
+        let coefficient = alpha[index] - beta;
+        direction
+            .iter_mut()
+            .zip(s)
+            .for_each(|(direction, s)| *direction += coefficient * s);
+    }
+    direction.into_iter().map(|value| -value).collect()
+}
+
+/// The provider preserves the Nocedal two-loop direction when its bounded
+/// history wraps. Both paths use the same scalar operation order, so the
+/// value-semantic oracle is bitwise equality rather than a widened tolerance.
+#[test]
+fn provider_lbfgs_direction_matches_reference_after_eviction() {
+    let pairs = (1..=4)
+        .map(|index| {
+            let scale = f64::from(index);
+            (vec![scale, 2.0 * scale], vec![1.0 + scale / 4.0, 0.5])
+        })
+        .collect::<Vec<_>>();
+    let mut memory = LbfgsMemory::new(2);
+    for (s, y) in &pairs {
+        assert!(memory.push(s.clone(), y.clone()));
+    }
+
+    let gradient = [0.3, -0.7];
+    let expected = reference_direction(&pairs[2..], &gradient);
+    let actual = memory.direction(&gradient);
+
+    assert_eq!(memory.len(), 2);
+    assert_eq!(actual, expected);
+}
+
+/// The provider retains at most the configured number of accepted correction
+/// pairs, even when many input pairs are pushed.
+#[test]
+fn provider_lbfgs_memory_is_bounded() {
+    let mut memory = LbfgsMemory::new(3);
+    for index in 1..=32 {
+        let scale = f64::from(index);
+        let s = vec![scale, 2.0 * scale, 0.5 * scale];
+        let y = vec![1.0 + scale / 8.0, 0.75, 0.25];
+        assert!(memory.push(s, y));
+        assert!(memory.len() <= 3);
+    }
+    assert_eq!(memory.len(), 3);
+    assert!(!memory.is_empty());
 }
