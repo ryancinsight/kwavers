@@ -2,14 +2,6 @@ use super::*;
 use leto::Array3;
 
 #[test]
-fn test_simd_config_detection() {
-    init_simd();
-    let config = get_simd_config();
-    println!("Detected SIMD level: {:?}", config.level);
-    assert!(config.enabled || config.level == MathSimdLevel::Scalar);
-}
-
-#[test]
 fn test_strategy_selection() {
     let best = StencilStrategy::select_best();
     println!("Best strategy: {}", best.as_str());

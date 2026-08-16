@@ -17,35 +17,43 @@ impl EdgeRuntime {
             Architecture::Other(std::env::consts::ARCH.to_string())
         };
 
+        // SIMD capability reporting delegates to hermes's runtime host detection
+        // (the Atlas ISA-dispatch SSOT). `cfg!(target_feature)` reflects only the
+        // build's baseline flags — a portable binary under-reports the host's real
+        // vector units — while hermes probes the live CPU with its OS-enabled
+        // register-state checks.
         let mut instruction_sets = Vec::new();
-        if cfg!(target_feature = "neon") {
-            instruction_sets.push("NEON".to_string());
+        if hermes_simd::TargetId::Avx512.is_supported() {
+            instruction_sets.push("AVX512".to_string());
         }
-        if cfg!(target_feature = "sse") {
-            instruction_sets.push("SSE".to_string());
-        }
-        if cfg!(target_feature = "avx") {
-            instruction_sets.push("AVX".to_string());
-        }
-        if cfg!(target_feature = "avx2") {
+        if hermes_simd::TargetId::Avx2.is_supported() {
             instruction_sets.push("AVX2".to_string());
         }
+        if hermes_simd::TargetId::Neon.is_supported() {
+            instruction_sets.push("NEON".to_string());
+        }
+
+        let simd_width: usize = if hermes_simd::TargetId::Avx512.is_supported() {
+            512
+        } else if hermes_simd::TargetId::Avx2.is_supported() {
+            256
+        } else if hermes_simd::TargetId::Neon.is_supported() {
+            128
+        } else {
+            64
+        };
 
         HardwareCapabilities {
             architecture,
             instruction_sets,
             total_memory_mb: 512,
+            // FPU presence is an architecture-level concern, not SIMD dispatch,
+            // so it stays a compile-time check rather than a hermes probe.
             has_fpu: cfg!(target_arch = "x86_64")
                 || cfg!(target_arch = "aarch64")
                 || cfg!(target_feature = "neon")
                 || cfg!(target_feature = "sse2"),
-            simd_width: if cfg!(target_feature = "avx2") {
-                256
-            } else if cfg!(target_feature = "neon") || cfg!(target_feature = "sse") {
-                128
-            } else {
-                64
-            },
+            simd_width,
             cache_line_size: 64,
         }
     }

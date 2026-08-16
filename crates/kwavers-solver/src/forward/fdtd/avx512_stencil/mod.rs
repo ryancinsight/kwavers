@@ -6,7 +6,7 @@
 //! ## Architecture
 //!
 //! ```text
-//! math/simd.rs (SIMD capability detection)
+//! hermes_simd::TargetId (Atlas ISA-dispatch SSOT)
 //!    ↓
 //! solver/forward/fdtd/
 //!    ├── simd_stencil.rs (Generic SIMD stencil processor)
@@ -19,9 +19,8 @@
 //! - `pressure`     — `update_pressure_avx512` + unsafe AVX-512 kernel
 //! - `velocity`     — `update_velocity_avx512` + unsafe AVX-512 kernel
 
+use hermes_simd::TargetId;
 use kwavers_core::constants::{CFL_FACTOR_3D_FDTD, DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE};
-use kwavers_math::simd::{MathSimdLevel, SimdConfig};
-use std::marker::PhantomData;
 
 mod construction;
 mod pressure;
@@ -74,8 +73,6 @@ pub struct FdtdAvx512StencilProcessor {
     pub(super) velocity_coeff: f64,
     /// Central coefficient for pressure Laplacian: (2 - 6*pressure_coeff)
     pub(super) pressure_central_coeff: f64,
-    pub(super) simd_config: SimdConfig,
-    pub(super) _phantom: PhantomData<()>,
 }
 
 impl FdtdAvx512StencilProcessor {
@@ -84,7 +81,7 @@ impl FdtdAvx512StencilProcessor {
     pub fn get_metrics(&self) -> FdtdAvx512Metrics {
         FdtdAvx512Metrics {
             grid_size: (self.nx, self.ny, self.nz),
-            simd_level: self.simd_config.level,
+            simd_level: TargetId::Avx512,
             vector_width: 8,
             alignment: 64,
         }
@@ -95,7 +92,8 @@ impl FdtdAvx512StencilProcessor {
 #[derive(Debug, Clone)]
 pub struct FdtdAvx512Metrics {
     pub grid_size: (usize, usize, usize),
-    pub simd_level: MathSimdLevel,
+    /// Always AVX-512: this processor runs only on AVX-512 hosts.
+    pub simd_level: TargetId,
     pub vector_width: usize,
     pub alignment: usize,
 }

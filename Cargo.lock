@@ -3600,6 +3600,7 @@ dependencies = [
  "coeus-optim",
  "coeus-tensor",
  "eunomia",
+ "hermes-simd",
  "hyperion",
  "kwavers-alloc-probe",
  "kwavers-boundary",

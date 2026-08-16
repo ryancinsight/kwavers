@@ -1,16 +1,12 @@
 //! Performance optimization module - properly modularized
 
 pub mod cache;
-pub mod config;
 pub mod memory;
 pub mod parallel;
-pub mod simd;
 
 pub use cache::{AccessPattern, CacheOptimizer};
-pub use config::PerfOptSimdLevel;
 pub use memory::{BandwidthOptimizer, MemoryOptimizer, PrefetchStrategy};
 pub use parallel::ParallelOptimizer;
-pub use simd::SimdOptimizer;
 
 /// Stencil kernel for finite difference computations
 #[derive(Debug, Clone)]

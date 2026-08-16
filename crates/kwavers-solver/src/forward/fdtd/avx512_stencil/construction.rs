@@ -4,8 +4,6 @@
 
 use super::{FdtdAvx512Config, FdtdAvx512StencilProcessor};
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_math::simd::SimdConfig;
-use std::marker::PhantomData;
 
 impl FdtdAvx512StencilProcessor {
     /// Create a new AVX-512 stencil processor.
@@ -59,10 +57,8 @@ impl FdtdAvx512StencilProcessor {
             "non-finite velocity coeff: {velocity_coeff}"
         );
 
-        let simd_config = SimdConfig::detect();
-
-        #[cfg(target_arch = "x86_64")]
-        if simd_config.level < kwavers_math::simd::MathSimdLevel::Avx512 {
+        // hermes is the ISA-dispatch SSOT; its probe is OS-aware and cached.
+        if !hermes_simd::TargetId::Avx512.is_supported() {
             return Err(KwaversError::FeatureNotAvailable(
                 "AVX-512 not available on this CPU".to_owned(),
             ));
@@ -76,8 +72,6 @@ impl FdtdAvx512StencilProcessor {
             pressure_coeff,
             velocity_coeff,
             pressure_central_coeff,
-            simd_config,
-            _phantom: PhantomData,
         })
     }
 }

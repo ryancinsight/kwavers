@@ -31,6 +31,7 @@ log = "0.4"
 leto = { workspace = true }
 leto-ops = { workspace = true }
 moirai-parallel = { workspace = true }
+hermes-simd = { workspace = true }
 
 rand = "0.8"
 rand_chacha = "0.3"
