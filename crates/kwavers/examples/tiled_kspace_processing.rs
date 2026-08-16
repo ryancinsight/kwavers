@@ -106,7 +106,14 @@ fn main() {
     let mut peak_tiled = f64::NEG_INFINITY;
     let mut tile_count = 0usize;
 
-    // GAT streaming loop — `tile` borrows from `tiles` for one iteration
+    // GAT streaming loop — `tile` borrows from `tiles` for one iteration.
+    // `for` loops require the std `Iterator` trait; `Tiles` is a lending
+    // iterator (GAT `Item` borrowing `&mut self`), so `while let` is the
+    // only legal form — the clippy lint is inapplicable here.
+    #[expect(
+        clippy::while_let_on_iterator,
+        reason = "LendingIterator has no Iterator impl; for-loop form is impossible"
+    )]
     while let Some(tile) = tiles.next() {
         // Each tile is a zero-copy ArrayView<'_, f64, 3>
         energy_tiled += tile.iter().map(|&p| p * p).sum::<f64>();
