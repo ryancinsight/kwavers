@@ -41,7 +41,6 @@ pub mod inverse_problems;
 pub mod linear_algebra;
 pub mod numerics;
 mod parallel;
-pub mod simd;
 pub mod simd_safe;
 
 // Matrix-free linear operators and LSQR solver (re-exported from linear_algebra::sparse)
@@ -107,11 +106,6 @@ pub use geometry::{
     make_disc,   // 2D circular mask (MATLAB: makeDisc)
     make_line,   // Linear mask between two points (MATLAB: makeLine)
     make_sphere, // Alias for make_ball (MATLAB: makeSphere)
-};
-
-// SIMD acceleration interfaces
-pub use simd::{
-    FdtdSimdOps, FftSimdOps, InterpolationSimdOps, MathSimdLevel, SimdConfig, SimdPerformance,
 };
 
 // Safe SIMD operations with runtime feature detection

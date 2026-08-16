@@ -7,14 +7,14 @@
 //!
 //! Deep vertical hierarchy for SIMD selection:
 //! ```text
-//! math/simd.rs (SIMD capability detection)
+//! hermes_simd::TargetId (Atlas ISA-dispatch SSOT)
 //!    ↓
 //! solver/forward/fdtd/dispatch.rs (THIS MODULE - Runtime dispatch)
 //!    ↓
 //! solver/forward/fdtd/
-//!    ├── avx512_stencil.rs (AVX-512 implementation)
-//!    ├── simd_stencil.rs (Generic SIMD fallback)
-//!    └── solver.rs (FDTD solver using dispatch)
+//!    ├── avx512_stencil/  (AVX-512 implementation)
+//!    ├── simd_stencil/    (Generic SIMD fallback)
+//!    └── solver/          (FDTD solver using dispatch)
 //! ```
 //!
 //! ## Strategy Pattern Implementation
@@ -27,24 +27,46 @@
 //!
 //! ## Performance Tiers
 //!
-//! | Tier | Implementation | Width | Speedup | Availability |
-//! |------|----------------|-------|---------|--------------|
-//! | 0 | Scalar (baseline) | 1 | 1x | Always |
-//! | 1 | SSE2 | 2 | ~2x | Most x86_64 |
-//! | 2 | AVX2 | 4 | ~4x | Modern CPUs |
-//! | 3 | AVX-512 | 8 | ~8x | Xeon, recent Intel |
-//! | 4 | ARM NEON | 2-4 | ~2-4x | ARM servers |
+//! | Tier | Implementation | Width (f64 lanes) | Availability |
+//! |------|----------------|-------------------|--------------|
+//! | 0 | Scalar (baseline) | 1 | Always |
+//! | 1 | Generic SIMD (AVX2 / NEON) | 4 / 2 | Modern CPUs |
+//! | 2 | AVX-512 | 8 | Xeon, recent Intel |
 
 #[cfg(test)]
 mod tests;
 
+use hermes_simd::TargetId;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_math::simd::{MathSimdLevel, SimdConfig};
 use leto::Array3;
-use std::sync::OnceLock;
 
-/// Global SIMD configuration (computed once at startup)
-static SIMD_CONFIG: OnceLock<SimdConfig> = OnceLock::new();
+/// Best runtime-supported SIMD target on this host, in capability order.
+///
+/// hermes caches its CPUID probe internally, so repeated calls are a cheap
+/// relaxed load; the previous `OnceLock<SimdConfig>` wrapper around a local
+/// `is_x86_feature_detected!` chain is gone — capability detection is hermes's
+/// single source of truth.
+fn best_supported_target() -> TargetId {
+    if TargetId::Avx512.is_supported() {
+        TargetId::Avx512
+    } else if TargetId::Avx2.is_supported() {
+        TargetId::Avx2
+    } else if TargetId::Neon.is_supported() {
+        TargetId::Neon
+    } else {
+        TargetId::Scalar
+    }
+}
+
+/// Number of `f64` lanes a target's vector registers hold.
+fn f64_lanes(target: TargetId) -> usize {
+    match target {
+        TargetId::Avx512 => 8, // 512 bits / 64 bits
+        TargetId::Avx2 => 4,   // 256 bits / 64 bits
+        TargetId::Neon => 2,   // 128 bits / 64 bits
+        TargetId::Scalar => 1,
+    }
+}
 
 /// FDTD stencil optimization strategy
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -78,11 +100,10 @@ impl StencilStrategy {
     /// Select best available strategy
     #[must_use]
     pub fn select_best() -> Self {
-        let config = get_simd_config();
-        match config.level {
-            MathSimdLevel::Avx512 => Self::Avx512,
-            MathSimdLevel::Avx2 | MathSimdLevel::Sse2 | MathSimdLevel::Neon => Self::GenericSimd,
-            _ => Self::Scalar,
+        match best_supported_target() {
+            TargetId::Avx512 => Self::Avx512,
+            TargetId::Avx2 | TargetId::Neon => Self::GenericSimd,
+            TargetId::Scalar => Self::Scalar,
         }
     }
 
@@ -91,35 +112,11 @@ impl StencilStrategy {
     pub fn is_available(&self) -> bool {
         match self {
             Self::Scalar => true,
-            Self::GenericSimd => {
-                let config = get_simd_config();
-                config.level >= MathSimdLevel::Sse2 || config.level == MathSimdLevel::Neon
-            }
-            Self::Avx512 => {
-                let config = get_simd_config();
-                config.level >= MathSimdLevel::Avx512
-            }
+            Self::GenericSimd => TargetId::Avx2.is_supported() || TargetId::Neon.is_supported(),
+            Self::Avx512 => TargetId::Avx512.is_supported(),
             Self::Auto => true,
         }
     }
-}
-
-/// Get global SIMD configuration (thread-safe singleton)
-///
-/// Returns a clone of `SimdConfig` — the struct is small (a few Copy fields),
-/// so the clone is a trivial stack copy.  The `OnceLock` guarantees detection
-/// runs once.
-#[must_use]
-pub fn get_simd_config() -> SimdConfig {
-    SIMD_CONFIG.get_or_init(SimdConfig::detect).clone()
-}
-
-/// Initialize global SIMD configuration
-///
-/// Should be called once at application startup.
-/// Safe to call multiple times (only computes once).
-pub fn init_simd() {
-    let _ = get_simd_config();
 }
 
 /// Dispatcher for FDTD stencil operations
@@ -350,11 +347,11 @@ impl FdtdStencilDispatcher {
     /// Get performance metrics
     #[must_use]
     pub fn metrics(&self) -> DispatchMetrics {
-        let config = get_simd_config();
+        let simd_level = best_supported_target();
         DispatchMetrics {
             selected_strategy: self.strategy,
-            simd_level: config.level,
-            vector_width: config.vector_width,
+            simd_level,
+            vector_width: f64_lanes(simd_level),
             grid_size: (self.nx, self.ny, self.nz),
         }
     }
@@ -366,10 +363,10 @@ pub struct DispatchMetrics {
     /// Selected stencil strategy
     pub selected_strategy: StencilStrategy,
 
-    /// Hardware SIMD level
-    pub simd_level: MathSimdLevel,
+    /// Best runtime-supported SIMD target on this host (hermes SSOT).
+    pub simd_level: TargetId,
 
-    /// SIMD vector width in elements
+    /// SIMD vector width in `f64` elements for `simd_level`.
     pub vector_width: usize,
 
     /// Grid dimensions
