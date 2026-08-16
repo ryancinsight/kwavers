@@ -1,4 +1,23 @@
 ## FloatElement root-emulation closure — 2026-08-13
+## KWAVERS-SIMD-DISPATCH-001 — hand-rolled SIMD ISA dispatch duplicated hermes (CLOSED 2026-08-16)
+
+`kwavers-math::simd` reimplemented runtime ISA capability detection
+(`SimdConfig::detect()`/`MathSimdLevel` over `is_x86_feature_detected!`) that
+hermes owns (`hermes_simd::TargetId::is_supported()`, `Avx512Support`, and the
+`Avx2`/`Avx512`/`Neon` markers), and carried dead f32 intrinsic kernels
+(`FdtdSimdOps`/`FftSimdOps`/`InterpolationSimdOps`) not wired into the live
+f64 `simd_stencil`/`avx512_stencil` backends. `kwavers-analysis`
+`PerfOptSimdLevel`/`SimdOptimizer` were a third redundant probe plus a
+chunked-scalar stub of hermes `dot`/`axpy`; edge_runtime capability reporting
+used compile-time `cfg!(target_feature)` rather than a host probe.
+
+- **CLOSED** (PR #380, merged `ba1fb437`): the `kwavers-math::simd` module is
+  deleted; kwavers-solver dispatch + avx512_stencil gate on
+  `hermes_simd::TargetId::Avx512/Avx2/Neon`; `kwavers-analysis`
+  `PerfOptSimdLevel`/`SimdOptimizer` are deleted; edge_runtime capability
+  reporting probes hermes at runtime instead of `cfg!(target_feature)`.
+- Assessment recorded at KWAVERS-HERMES-SIMD-001 in backlog.md.
+
 ## KWAVERS-PLACEMENT-REDUNDANCY-001 — hand-rolled NUMA stack duplicates themis/mnemosyne SSOT (themis half closed 2026-08-15; mnemosyne half open)
 
 kwavers-core `arena/numa/` reimplements placement vocabulary that themis owns

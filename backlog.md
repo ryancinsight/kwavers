@@ -770,6 +770,39 @@
   `mnemosyne-heap::alloc(PlacementHint)`), tracked at
   KWAVERS-PLACEMENT-REDUNDANCY-001.
 
+## KWAVERS-HERMES-SIMD-001 — Fold SIMD ISA dispatch onto hermes TargetId [arch] — done 2026-08-16
+
+- Owner: Codex; scope `crates/kwavers-math/src/simd/**`,
+  `crates/kwavers-solver/src/forward/fdtd/{dispatch,avx512_stencil}/**`,
+  `crates/kwavers-solver/src/inverse/pinn/ml/edge_runtime/hardware.rs`,
+  `crates/kwavers-analysis/src/performance/optimization/{config,simd,mod}.rs`,
+  and the `hermes-simd` dep in kwavers-solver. PR #380, merged as `ba1fb437`.
+- Outcome: deleted the hand-rolled `kwavers-math::simd` module — the
+  `SimdConfig`/`MathSimdLevel` runtime feature probe (a local
+  `is_x86_feature_detected!` chain), the dead f32 `FdtdSimdOps`/`FftSimdOps`/
+  `InterpolationSimdOps` intrinsic kernels (only test-exercised; the live
+  solver uses separate f64 `simd_stencil`/`avx512_stencil` backends), and the
+  heuristic `SimdPerformance`/`SimdMetrics` record — then re-pointed the live
+  FDTD dispatch + AVX-512 availability gate onto
+  `hermes_simd::TargetId::is_supported()` (hermes = ISA-dispatch SSOT).
+- kwavers-analysis: deleted the dead `PerfOptSimdLevel` enum + `SimdOptimizer`
+  stub (chunked-scalar dot/add); hermes `dot`/`axpy` are the SSOT replacement.
+- edge_runtime: `HardwareCapabilities` `instruction_sets` + `simd_width` now
+  probe hermes at runtime instead of compile-time `cfg!(target_feature)`, so a
+  portable binary reports the host's real vector units (incl. AVX-512).
+- Net: −1149 lines (84 insertions / 1233 deletions).
+- Acceptance: `cargo check` clean for kwavers-math / kwavers-solver (default +
+  `--features pinn`) / kwavers-analysis; `cargo fmt --check` clean; `cargo
+  clippy --lib --no-deps -D warnings` clean on changed code; `cargo nextest`
+  kwavers-math+analysis 926/926, kwavers-solver 880/880 (4 skipped),
+  edge_runtime 4/4; CI green (Build&Test stable/beta/nightly, all five feature
+  combos, Code Quality, Miri, three wheels, layer/architecture validation, both
+  migration audits, CUDA build).
+- Note: `simd_safe` had already folded into hermes (2026-07-04); this slice
+  closes the remaining sibling `simd` module + the two scattered hand-dispatch
+  sites. The unrelated hermes ternary-accumulation facade gap stays open at
+  the simd_safe evidence note.
+
 ## KW-SOL-072 — Simulated absorption ran 8-19 % below the prescribed law [patch] — done 2026-08-12
 
 - Scope: `crates/kwavers-solver/src/forward/viscoacoustic/tests.rs` and
