@@ -18,6 +18,7 @@ leto = { workspace = true }
 mnemosyne-arena = { workspace = true }
 mnemosyne-backend = { workspace = true }
 mnemosyne-core = { workspace = true }
+mnemosyne-heap = { workspace = true }
 themis = { workspace = true }
 serde = { version = "1.0", features = ["derive"] }
 thiserror = "1.0"

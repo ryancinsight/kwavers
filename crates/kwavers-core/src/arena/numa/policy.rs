@@ -1,6 +1,3 @@
-/// Maximum supported NUMA nodes (nodemask width for `mbind`).
-pub const MAX_NUMA_NODES: usize = 256;
-
 /// Cache line size in bytes (x86_64 standard).
 pub const CACHE_LINE_SIZE: usize = 64;
 

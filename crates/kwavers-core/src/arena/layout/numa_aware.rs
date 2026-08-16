@@ -8,8 +8,8 @@ use std::ptr::NonNull;
 #[cfg(test)]
 use super::CACHE_LINE_SIZE;
 use super::{ArenaLayoutNumaPolicy, NUMA_ALIGNMENT};
-use crate::arena::numa::bind_memory_to_node;
 use crate::error::{KwaversError, KwaversResult, SystemError};
+use mnemosyne_heap::numa::bind_to_node;
 
 // NUMA-AWARE MEMORY ALLOCATION
 // ═══════════════════════════════════════════════════════════════════════════
@@ -140,7 +140,7 @@ impl NumaAwareAllocator {
             ArenaLayoutNumaPolicy::BindToNode(node) => {
                 // Explicitly bind to the requested node (Linux only; no-op elsewhere).
                 // SAFETY: ptr is valid for size bytes.
-                let bind_result = unsafe { bind_memory_to_node(ptr.as_ptr(), size, node) };
+                let bind_result = unsafe { bind_to_node(ptr.as_ptr(), size, node) };
                 if let Err(e) = bind_result {
                     // Log the error but don't fail allocation; fall back to FirstTouch.
                     log::warn!(

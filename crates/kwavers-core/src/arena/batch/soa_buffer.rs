@@ -75,12 +75,12 @@ impl SoAFieldBuffer<f64> {
         let segment_ptr = unsafe { *((memory.as_ptr() as *mut *mut Segment).sub(1)) };
         unsafe { std::ptr::write_bytes(memory.as_ptr(), 0, total_size) };
 
-        // Apply NUMA binding via `arena::numa::bind_memory_to_node`.
+        // Apply NUMA binding via `mnemosyne_heap::numa::bind_to_node`.
         if let Some(node) = config.numa_node {
             // SAFETY: memory is valid for total_size bytes.
             // Non-fatal: if binding fails, allocation still succeeds.
             let _ = unsafe {
-                super::super::numa::bind_memory_to_node(
+                mnemosyne_heap::numa::bind_to_node(
                     memory.as_ptr(),
                     total_size,
                     NumaNodeId::new(node),

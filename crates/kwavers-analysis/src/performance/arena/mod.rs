@@ -21,9 +21,8 @@ pub use kwavers_core::arena::layout::{
     CACHE_LINE_SIZE, ELEMENTS_PER_CACHE_LINE,
 };
 pub use kwavers_core::arena::numa::{
-    allocate_interleaved_memory, bind_memory_to_node, current_numa_node, detect_topology,
-    first_touch_memory, first_touch_memory_parallel, set_thread_affinity, try_current_numa_node,
-    CpuTopology, NumaAllocator, NumaNodeId, PlacementHint, ThreadAffinity, MAX_NUMA_NODES,
+    current_numa_node, detect_topology, first_touch_memory_parallel, set_thread_affinity,
+    try_current_numa_node, CpuTopology, NumaAllocator, NumaNodeId, PlacementHint, ThreadAffinity,
     PAGE_SIZE,
 };
 pub use kwavers_core::arena::pool::{
