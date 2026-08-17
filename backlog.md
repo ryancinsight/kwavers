@@ -1233,6 +1233,32 @@
   RF-to-I/Q work to the same API. The direct primitives do not invent
   inter-frame phase or scatterer motion.
 
+## KW-SOL-096 — Audit for tests that pass without asserting [patch] — done 2026-08-17
+
+- Triggered by evidence, not suspicion: KW-SOL-054's acceptance test was found
+  passing **vacuously** on a host without AVX-512, so the question was whether
+  others do the same. Scanned every `#[test]` in kwavers-solver, kwavers-math
+  and kwavers-medium for bodies that can reach a bare `return;` before their
+  assertions.
+- **Exactly four**, and no more: the two AVX-512 stencil tests, and two Apollo
+  wgpu FFT tests in `kwavers-math/src/fft/gpu_fft.rs` that skip when no plan can
+  be built. A first, looser scan flagged 62 - almost all false positives, either
+  tests delegating assertions to a helper or `*_creation` tests asserting through
+  `.unwrap()`. Reporting the 62 would have been noise.
+- Fixed the two AVX-512 tests, and the fix is a strengthening rather than a
+  deletion. Skipping is now conditional on the feature being *genuinely absent*;
+  if `avx512f` is detected and the processor still fails to build, the test
+  panics. That is precisely the defect class KW-SOL-054 exists for, and the old
+  `let Ok(p) = ... else { return; }` swallowed it.
+- Caught before shipping: the module is **not** architecture-gated, so an
+  aarch64 host reaches the same branch. A first draft `cfg`-guarded only the
+  x86 arm, which would have turned a legitimate skip into a panic there. The
+  landed version handles the platform case.
+- **Left for their owner**: the two wgpu FFT tests have the same shape and the
+  same consequence - green on a runner with no usable GPU while asserting
+  nothing. They are not in the scope this work touched, and the fix is the same
+  pattern applied to adapter availability.
+
 ## KW-IMG-045 — Frame-resolved physical I/Q ensemble [minor] — todo
 
 - Owner: Codex; scope: consume the direct I/Q primitives from LeoNeuro using

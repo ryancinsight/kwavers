@@ -56,9 +56,8 @@ fn test_pressure_update_dimensions() {
 /// establish Laplacian coefficient sign or magnitude.
 #[test]
 fn pressure_update_keeps_interior_constant_for_uniform_field() {
-    let config = FdtdAvx512Config::default();
-    let Ok(processor) = FdtdAvx512StencilProcessor::new(16, 16, 16, config) else {
-        return; // AVX-512 unavailable on this host
+    let Some(processor) = processor_or_skip(16, 16, 16) else {
+        return;
     };
     let constant = 7.5_f64;
     let p_curr = Array3::from_elem([16, 16, 16], constant);
@@ -93,8 +92,7 @@ fn pressure_update_keeps_interior_constant_for_uniform_field() {
 /// complete vector/tail coverage, and the momentum-update sign.
 #[test]
 fn velocity_update_matches_linear_pressure_gradient() {
-    let config = FdtdAvx512Config::default();
-    let Ok(processor) = FdtdAvx512StencilProcessor::new(16, 16, 16, config) else {
+    let Some(processor) = processor_or_skip(16, 16, 16) else {
         return;
     };
 
@@ -135,5 +133,34 @@ fn test_pressure_update_mismatch() {
         let u_div = Array3::zeros((16, 16, 16));
         let result = processor.update_pressure_avx512(&p_curr, &p_prev, &u_div);
         assert!(result.is_err());
+    }
+}
+
+/// Build the processor, or skip **only** when the host genuinely lacks AVX-512.
+///
+/// The tests here used to open with `let Ok(p) = ... else { return; }`, which
+/// passes green on any host without the feature while asserting nothing about
+/// the kernel — a test that cannot fail (KW-SOL-054). Worse, it also swallowed
+/// the case the item exists to catch: AVX-512 *present* and construction failing
+/// for some other reason still looked like a clean skip.
+///
+/// This separates the two. No feature, no test — that is a genuine environment
+/// limit. Feature present and construction failing is a defect, and now says so.
+fn processor_or_skip(nx: usize, ny: usize, nz: usize) -> Option<FdtdAvx512StencilProcessor> {
+    match FdtdAvx512StencilProcessor::new(nx, ny, nz, FdtdAvx512Config::default()) {
+        Ok(processor) => Some(processor),
+        Err(error) => {
+            // Skipping is legitimate only where the feature is genuinely absent.
+            // The module is not architecture-gated, so a non-x86 host reaches
+            // here too and must skip rather than fail.
+            #[cfg(target_arch = "x86_64")]
+            if is_x86_feature_detected!("avx512f") {
+                panic!(
+                    "AVX-512F is available on this host but the processor failed                      to build: {error}"
+                );
+            }
+            let _ = error;
+            None
+        }
     }
 }
