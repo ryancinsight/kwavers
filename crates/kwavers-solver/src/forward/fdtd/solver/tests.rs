@@ -1395,12 +1395,32 @@ fn fullwave_material_interface_reflects_by_the_analytical_coefficient() {
 /// Returns `(peak_direct, peak_spurious, reference_self_consistency)`, the last
 /// being the peak change in the reference when its wall moves another 30 cells
 /// — the residual reflection contaminating the reference itself.
+fn pml_grazing_reflection_sf(
+    pml: usize,
+    h_test: usize,
+    offset: usize,
+    sigma_factor: f64,
+) -> (f64, f64, f64) {
+    pml_grazing_reflection_full(pml, h_test, offset, 1.0, 0.0, sigma_factor)
+}
+
 fn pml_grazing_reflection(
     pml: usize,
     h_test: usize,
     offset: usize,
     kappa_max: f64,
     alpha_max: f64,
+) -> (f64, f64, f64) {
+    pml_grazing_reflection_full(pml, h_test, offset, kappa_max, alpha_max, 2.0)
+}
+
+fn pml_grazing_reflection_full(
+    pml: usize,
+    h_test: usize,
+    offset: usize,
+    kappa_max: f64,
+    alpha_max: f64,
+    sigma_factor: f64,
 ) -> (f64, f64, f64) {
     const NX: usize = 150;
     const H_REF: usize = 90;
@@ -1449,6 +1469,8 @@ fn pml_grazing_reflection(
         let cpml = kwavers_boundary::cpml::CPMLConfig {
             per_dimension: kwavers_boundary::cpml::PerDimensionPML::new(pml, pml, 0),
             thickness: pml,
+            sigma_factor,
+            per_dimension_alpha: kwavers_boundary::cpml::PerDimensionAlpha::uniform(sigma_factor),
             kappa_max,
             alpha_max,
             ..kwavers_boundary::cpml::CPMLConfig::default()
@@ -1519,5 +1541,44 @@ fn cpml_absorbs_grazing_incidence_within_the_reflection_bound() {
         ratio < 5e-3,
         "grazing reflection {ratio:.4e} exceeds the 5e-3 bound (measured 1.23e-3); \
          a jump toward 6e-2 means the staggered profile sampling regressed"
+    );
+}
+
+/// ## Theorem
+/// On the convolutional FDTD path, `sigma_factor = 3` absorbs grazing incidence
+/// substantially better than the k-Wave default of 2.
+///
+/// ## Measured (2026-08-17, 70° incidence, σ-only)
+/// | `sigma_factor` | 10-cell PML | 20-cell PML |
+/// |---|---|---|
+/// | 2 (default) | 1.23e-3 | 4.26e-7 |
+/// | **3** | **4.51e-5** | **6.84e-9** |
+/// | 4 | 8.77e-5 | 9.12e-9 |
+/// | 5 | 1.40e-4 | 1.14e-8 |
+///
+/// The optimum sits at 3 for both thicknesses — 27× better than the default at
+/// 10 cells, 62× at 20. Only grazing incidence is asserted: the near-normal
+/// measurements have reference residuals ~0.6× their signal, so they report the
+/// method's noise floor rather than reflection.
+///
+/// The default stays at 2 because `sigma_factor` is k-Wave's `pml_alpha`, shared
+/// with the split-field PSTD path, which this measures nothing about. Changing
+/// it is KW-BND-100.
+#[test]
+fn sigma_factor_three_outperforms_the_kwave_default_at_grazing_incidence() {
+    let (direct_default, spurious_default, residual) = pml_grazing_reflection_sf(10, 20, 110, 2.0);
+    let (direct_tuned, spurious_tuned, _) = pml_grazing_reflection_sf(10, 20, 110, 3.0);
+
+    assert!(
+        residual <= 1e-8 * direct_default,
+        "reference must be reflection-free: residual {residual:.3e} against direct {direct_default:.3e}"
+    );
+
+    let ratio_default = spurious_default / direct_default;
+    let ratio_tuned = spurious_tuned / direct_tuned;
+    assert!(
+        ratio_tuned < 0.2 * ratio_default,
+        "sigma_factor 3 must beat the default 2 by >5x at grazing incidence: \
+         default {ratio_default:.4e}, tuned {ratio_tuned:.4e} (measured 27x)"
     );
 }
