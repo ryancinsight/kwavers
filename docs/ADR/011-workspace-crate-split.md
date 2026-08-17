@@ -1,6 +1,6 @@
 # ADR 011 — Workspace crate split of the `kwavers` monolith
 
-- **Status:** Implemented (split complete). **Amended 2026-06-03: the re-export facade was removed — see Amendment below.**
+- **Status:** Accepted
 - **Date:** 2026-06-01 · **Audited:** 2026-06-03
 - **Change class:** [arch] → [major] post-1.0 (target `4.0.0`)
 - **Relates:** extends and partially supersedes [ADR 006](006-workspace-pyo3-bindings-architecture.md); promotes the layering of [ADR 003](003-signal-processing-analysis-layer.md), [ADR 007](007-solver-forward-domain-grouping.md), [ADR 008](008-compute-backend-trait-wiring.md) to crate boundaries

@@ -1,6 +1,6 @@
 # ADR 005 — PINN training stabilization
 
-- **Status:** Implemented (with one documented limitation)
+- **Status:** Accepted
 - **Date:** 2026-02-02 · **Audited:** 2026-06-03
 - **Change class:** [minor]
 - **Relates:** paths relocated by the crate split ([ADR 011](011-workspace-crate-split.md))
