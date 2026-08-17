@@ -439,7 +439,7 @@ fn gaussian_elimination(a: &[Vec<f64>], b: &[f64]) -> Vec<f64> {
 }
 
 /// HbO₂ molar absorption polynomial fit [m⁻¹/(mol/L)].
-/// Polynomial in wavelength [nm], fit to Prahl tabulated values at 650–1000 nm.
+/// Polynomial in wavelength `nm`, fit to Prahl tabulated values at 650–1000 nm.
 /// Coefficients fit using least-squares to 10 tabulated anchor points.
 fn hbo2_poly(lam_nm: f64) -> f64 {
     // Anchor values (nm → m⁻¹/(mol/L)) from Prahl 1999 tabulation (scaled)
