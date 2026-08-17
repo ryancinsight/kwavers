@@ -1,3 +1,4 @@
+pub mod bioheat;
 pub mod config;
 pub mod contract;
 pub mod kwave_comparison;

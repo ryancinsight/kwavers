@@ -211,3 +211,6 @@ pub use pcb_emit::{save_kicad_pcb, save_kicad_pcb_flagged, write_kicad_pcb};
 pub use pro_emit::write_kicad_pro;
 pub use project_emit::{save_kicad_project, save_kicad_project_flagged};
 pub use sch_emit::{save_kicad_sch, write_kicad_sch};
+
+#[cfg(test)]
+mod tests;

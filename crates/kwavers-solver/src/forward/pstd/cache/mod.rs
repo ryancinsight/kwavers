@@ -337,7 +337,7 @@ mod tests {
         });
 
         assert_eq!(compute_count.get(), 1);
-        assert_eq!(ops.kappa.shape(), &[32, 32, 32]);
+        assert_eq!(ops.kappa.shape(), [32usize, 32, 32]);
 
         // Second access should use thread-local cache (no recompute)
         let ops2 = cache.get_operators(key, || {
