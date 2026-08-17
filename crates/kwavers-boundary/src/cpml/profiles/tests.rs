@@ -370,3 +370,47 @@ fn test_cfs_pml_grading_and_coefficients() {
         "split-field decay factors must be unchanged"
     );
 }
+
+/// ## Theorem
+/// `target_reflection` does not enter the absorbing profile: the σ grading is
+/// the k-Wave `pml_alpha·(c/dx)·q⁴` form, which carries no R₀ term. Tightening
+/// it changes nothing about how much energy the layer absorbs.
+///
+/// ## Why this is pinned
+/// The field reads as the PML's design reflection, so it invites being tuned
+/// for a quieter boundary. It feeds only [`CPMLConfig::theoretical_reflection`].
+/// Whether to wire the Roden–Gedney `σ_max = −(m+1)c₀ln(R₀)/(2d)` form in its
+/// place is a live question (KW-BND-099); until then the silence is asserted
+/// rather than left for a user to discover by not observing an effect.
+#[test]
+fn target_reflection_does_not_enter_the_profile() {
+    let grid = Grid::new(32, 32, 32, 1e-4, 1e-4, 1e-4).expect("grid");
+    let dt = 1e-8;
+
+    let build = |r0: f64| {
+        let config = CPMLConfig {
+            target_reflection: r0,
+            ..CPMLConfig::default()
+        };
+        CPMLProfiles::new(&config, &grid, SOUND_SPEED_WATER_SIM, dt).expect("profiles")
+    };
+
+    let loose = build(1e-3);
+    let tight = build(1e-12);
+
+    for (axis, (a, b)) in [
+        (0, (&loose.sigma_x, &tight.sigma_x)),
+        (1, (&loose.sigma_y, &tight.sigma_y)),
+        (2, (&loose.sigma_z, &tight.sigma_z)),
+    ] {
+        assert_eq!(
+            a.as_slice(),
+            b.as_slice(),
+            "sigma on axis {axis} must be independent of target_reflection"
+        );
+    }
+    assert_eq!(loose.b_x.as_slice(), tight.b_x.as_slice());
+    assert_eq!(loose.a_x.as_slice(), tight.a_x.as_slice());
+    assert_eq!(loose.b_x_sgx.as_slice(), tight.b_x_sgx.as_slice());
+    assert_eq!(loose.a_x_sgx.as_slice(), tight.a_x_sgx.as_slice());
+}

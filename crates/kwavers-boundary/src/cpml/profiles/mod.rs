@@ -22,6 +22,17 @@
 //! k-Wave's default acoustic profile fixes `m = 4`, `kappa = 1`, and
 //! `alpha = 0`, with `sigma = pml_alpha * (c / dx) * q^4`.
 //!
+//! **This module implements the k-Wave sigma form, not the R0-derived one
+//! above.** The Roden & Gedney `sigma_max` is stated here as the governing
+//! theory; `CPMLConfig::target_reflection` therefore does not reach the
+//! profile (see its docs, and KW-BND-099).
+//!
+//! Every profile is produced at a caller-chosen intra-cell position: the
+//! collocated set for quantities living at cell centers, and a half-cell
+//! shifted set for those living at faces. On a Yee grid `grad p` and `grad u`
+//! sit half a cell apart, so each must read its own profile — sampling both at
+//! the collocated points costs a factor ~50 in grazing reflection (KW-BND-097).
+//!
 //! ## Theorem (Recursive Convolution Coefficients)
 //! With complex-frequency-shift parameters `sigma`, `kappa`, and `alpha`
 //! (canonical SEISMIC_CPML / Roden & Gedney 2000 form):

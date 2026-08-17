@@ -40,7 +40,16 @@ pub struct CPMLConfig {
     /// `0` disables the α term. CFS-PML uses `≈ π·f₀` to absorb evanescent and
     /// low-frequency/grazing energy (Roden & Gedney 2000). Set via [`Self::with_cfs_pml`].
     pub alpha_max: f64,
-    /// Target reflection coefficient (e.g., 1e-6).
+    /// Target reflection coefficient (e.g., 1e-6) used to *estimate* boundary
+    /// performance via [`Self::theoretical_reflection`].
+    ///
+    /// It does **not** shape the absorbing profile. σ follows the k-Wave form
+    /// `pml_alpha·(c/dx)·q⁴`, which carries no R₀ term, so tightening this
+    /// value does not make the layer absorb more — raise `sigma_factor` or the
+    /// PML thickness instead. Asserted by
+    /// `target_reflection_does_not_enter_the_profile`; whether to adopt the
+    /// Roden–Gedney `σ_max = −(m+1)c₀ln(R₀)/(2d)` grading in its place is
+    /// tracked as KW-BND-099.
     pub target_reflection: f64,
     /// Enable grazing angle absorption.
     pub grazing_angle_absorption: bool,
