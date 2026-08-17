@@ -73,3 +73,4 @@
 | [107](107-collocated-summation-by-parts.md) | Summation by parts for the collocated rigid wall | Accepted |
 | [108](108-retire-stale-apollo-gpu-probe.md) | Retire the stale Apollo GPU availability probe | Accepted |
 | [109](109-aequitas-quantity-provider.md) | Adopt Aequitas for bubble-energy quantities | Accepted |
+| [110](110-drop-dead-boundary-parameters.md) | Delete the inert BoundaryParameters surface | Accepted |
