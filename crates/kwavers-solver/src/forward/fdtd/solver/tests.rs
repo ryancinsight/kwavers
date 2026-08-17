@@ -1382,3 +1382,150 @@ fn fullwave_material_interface_reflects_by_the_analytical_coefficient() {
         "reflection coefficient {measured:.4} against analytical {expected:.4}          (incident {incident:.4}, echo {echo:.4})"
     );
 }
+
+/// Spurious reflection off a PML wall, isolated by differencing against a
+/// reference run whose walls are too far away to reflect within the window.
+///
+/// Source and receiver both sit `h` cells above the lower PML, `offset` cells
+/// apart, so the specular bounce meets the wall at `atan((offset/2)/h)` from
+/// the normal. The reference repeats the run with the wall `H_REF` cells away;
+/// every other wall is at an identical distance and cancels in the difference,
+/// leaving the near-wall reflection alone.
+///
+/// Returns `(peak_direct, peak_spurious, reference_self_consistency)`, the last
+/// being the peak change in the reference when its wall moves another 30 cells
+/// — the residual reflection contaminating the reference itself.
+fn pml_grazing_reflection(
+    pml: usize,
+    h_test: usize,
+    offset: usize,
+    kappa_max: f64,
+    alpha_max: f64,
+) -> (f64, f64, f64) {
+    const NX: usize = 150;
+    const H_REF: usize = 90;
+    const UPPER: usize = 30;
+    const F0: f64 = 1.0e6;
+    const C: f64 = 1500.0;
+    const RHO: f64 = 1000.0;
+    const DX: f64 = C / F0 / 8.0;
+    const SX: usize = 20;
+    const STEPS: usize = 480;
+
+    let rx = SX + offset;
+    let run = |h: usize| -> Vec<f64> {
+        let ny = pml + h + UPPER + pml;
+        let y0 = pml + h;
+        let grid = Grid::new(NX, ny, 1, DX, DX, DX).unwrap();
+        let medium = HomogeneousMedium::new(RHO, C, 0.0, 0.0, &grid);
+
+        // Half-width lambda/2 = 4 cells: at the h = 20 standoff the tail
+        // reaching the PML is exp(-25) ~ 1e-11, so no source energy is absorbed
+        // directly and the difference is reflection rather than lost drive.
+        let width = C / F0 / 2.0;
+        let mut p0 = leto::Array3::<f64>::zeros((NX, ny, 1));
+        for i in 0..NX {
+            for j in 0..ny {
+                let dx = (i as f64 - SX as f64) * DX;
+                let dy = (j as f64 - y0 as f64) * DX;
+                p0[[i, j, 0]] = (-((dx * dx + dy * dy) / (width * width))).exp();
+            }
+        }
+        let source = GridSource {
+            p0: Some(p0),
+            ..GridSource::new_empty()
+        };
+
+        let dt = 0.3 * DX / C;
+        let config = FdtdConfig {
+            spatial_order: 4,
+            staggered_grid: true,
+            enable_nonlinear: false,
+            dt,
+            nt: STEPS + 1,
+            ..Default::default()
+        };
+        let mut solver = FdtdSolver::new(config, &grid, &medium, source).expect("solver");
+        let cpml = kwavers_boundary::cpml::CPMLConfig {
+            per_dimension: kwavers_boundary::cpml::PerDimensionPML::new(pml, pml, 0),
+            thickness: pml,
+            kappa_max,
+            alpha_max,
+            ..kwavers_boundary::cpml::CPMLConfig::default()
+        };
+        solver.enable_cpml(cpml, dt, C).expect("enable_cpml");
+
+        let mut trace = Vec::with_capacity(STEPS);
+        for _ in 0..STEPS {
+            solver.step_forward().expect("step");
+            trace.push(solver.fields.p[[rx, y0, 0]]);
+        }
+        trace
+    };
+
+    let peak = |v: &[f64]| v.iter().fold(0.0_f64, |a, b| a.max(b.abs()));
+    let peak_diff =
+        |a: &[f64], b: &[f64]| peak(&a.iter().zip(b).map(|(x, y)| x - y).collect::<Vec<_>>());
+
+    let reference = run(H_REF);
+    let test = run(h_test);
+    let farther = run(H_REF - 30);
+
+    (
+        peak(&reference),
+        peak_diff(&test, &reference),
+        peak_diff(&farther, &reference),
+    )
+}
+
+/// ## Theorem
+/// Enabling CFS-PML (graded κ and α) on the convolutional FDTD boundary reduces
+/// the spurious reflection of a grazing-incidence wave relative to the σ-only
+/// CPML that κ = 1, α = 0 reduces to.
+///
+/// ## Method
+/// Differential measurement against a reflection-free reference (see
+/// [`pml_grazing_reflection`]). At `h = 20`, `offset = 110` the specular bounce
+/// meets the wall 70° from the normal.
+///
+/// ## Measured (2026-08-17, this configuration)
+/// σ-only 6.31e-2 of the direct peak; CFS at the documented recommendation
+/// (κ_max = 10, α_max = π·f₀) 4.96e-2 — a ratio of 0.786. The reference is
+/// reflection-free to 1.5e-13 of the direct peak, so the separation is signal.
+///
+/// The reduction is real but modest. It is **not** the order of magnitude the
+/// CFS literature reports, and it shrinks toward grazing incidence rather than
+/// growing (2.09× at 14°, 1.44× at 74°), against an angle-independent ~2%
+/// floor that a 32× sweep of σ_max does not remove. That residual is tracked
+/// separately; this test pins the improvement that is actually delivered.
+#[test]
+fn cfs_pml_reduces_grazing_incidence_reflection() {
+    let (direct_sigma, spurious_sigma, reference_residual) =
+        pml_grazing_reflection(10, 20, 110, 1.0, 0.0);
+    let (direct_cfs, spurious_cfs, _) =
+        pml_grazing_reflection(10, 20, 110, 10.0, std::f64::consts::PI * 1.0e6);
+
+    // The method is only valid while the reference carries no reflection of its
+    // own; without this the difference would measure the reference's error.
+    assert!(
+        reference_residual <= 1e-8 * direct_sigma,
+        "reference must be reflection-free: residual {reference_residual:.3e} against direct {direct_sigma:.3e}"
+    );
+    assert!(
+        direct_sigma > 1e-2,
+        "the direct wave must reach the receiver: peak {direct_sigma:.3e}"
+    );
+
+    let ratio_sigma = spurious_sigma / direct_sigma;
+    let ratio_cfs = spurious_cfs / direct_cfs;
+    assert!(
+        (1e-3..0.5).contains(&ratio_sigma),
+        "sigma-only reflection {ratio_sigma:.3e} outside the regime this measures"
+    );
+    assert!(
+        ratio_cfs / ratio_sigma < 0.9,
+        "CFS-PML must reduce grazing reflection: sigma-only {ratio_sigma:.4e}, \
+         CFS {ratio_cfs:.4e}, ratio {:.4} (measured 0.786)",
+        ratio_cfs / ratio_sigma
+    );
+}

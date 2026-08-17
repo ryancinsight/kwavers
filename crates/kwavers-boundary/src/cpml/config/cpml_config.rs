@@ -21,8 +21,14 @@ pub struct CPMLConfig {
     /// Per-dimension sigma scaling factors (k-Wave `pml_alpha` vector).
     pub per_dimension_alpha: PerDimensionAlpha,
     /// Maximum κ (real coordinate stretch) at the PML wall; `≥ 1`. `1` disables
-    /// the κ term (σ-only CPML). CFS-PML uses `≈ 5–20` to absorb grazing-incidence
-    /// energy (Komatitsch & Martin 2009). Set via [`Self::with_cfs_pml`].
+    /// the κ term (σ-only CPML). Set via [`Self::with_cfs_pml`].
+    ///
+    /// The literature range is `≈ 5–20` (Komatitsch & Martin 2009), but measured
+    /// against a reflection-free reference in this implementation the useful
+    /// range is narrower: reflection bottoms out near `κ_max ≈ 5`, and `20` is
+    /// *worse* than no κ at all (7.4e-2 against 6.6e-2 of the direct peak at 74°
+    /// incidence). Prefer `5`; verify before exceeding `10`. Evidence:
+    /// `cfs_pml_reduces_grazing_incidence_reflection` in kwavers-solver.
     pub kappa_max: f64,
     /// Maximum α (complex frequency shift) at the physical-domain interface; `≥ 0`.
     /// `0` disables the α term. CFS-PML uses `≈ π·f₀` to absorb evanescent and
@@ -109,8 +115,11 @@ impl CPMLConfig {
     /// convolutional (FDTD) boundary path; the k-Wave split-field (PSTD) decay
     /// factors derive from σ alone and are unchanged.
     ///
-    /// Recommended: `kappa_max ∈ [5, 20]`, `alpha_max ≈ π·f₀` (f₀ = dominant
-    /// source frequency). `kappa_max = 1`, `alpha_max = 0` reduces exactly to
+    /// Recommended: `kappa_max ≈ 5`, `alpha_max ≈ π·f₀` (f₀ = dominant source
+    /// frequency); see [`Self::kappa_max`] for why the literature's upper bound
+    /// of 20 is not reproduced here. Measured reduction against σ-only CPML at
+    /// 70° incidence is a factor of 1.27, not the order of magnitude the CFS
+    /// literature reports. `kappa_max = 1`, `alpha_max = 0` reduces exactly to
     /// σ-only CPML.
     ///
     /// # Panics
