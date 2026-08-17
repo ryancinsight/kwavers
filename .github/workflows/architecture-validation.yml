@@ -19,12 +19,6 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v7
 
-    - name: Checkout Atlas path dependencies
-      uses: ./.github/actions/checkout-atlas-path-dependencies
-      with:
-        manifest: Cargo.toml
-        destination: ..
-
     - name: Install system dependencies
       run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
 
@@ -125,12 +119,6 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v7
 
-    - name: Checkout Atlas path dependencies
-      uses: ./.github/actions/checkout-atlas-path-dependencies
-      with:
-        manifest: Cargo.toml
-        destination: ..
-
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@stable
 
@@ -153,12 +141,6 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v7
-
-    - name: Checkout Atlas path dependencies
-      uses: ./.github/actions/checkout-atlas-path-dependencies
-      with:
-        manifest: Cargo.toml
-        destination: ..
 
     - name: Install system dependencies
       run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
@@ -211,12 +193,6 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v7
 
-    - name: Checkout Atlas path dependencies
-      uses: ./.github/actions/checkout-atlas-path-dependencies
-      with:
-        manifest: Cargo.toml
-        destination: ..
-
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@stable
 
@@ -247,12 +223,6 @@ jobs:
 
     - name: Checkout repository
       uses: actions/checkout@v7
-
-    - name: Checkout Atlas path dependencies
-      uses: ./.github/actions/checkout-atlas-path-dependencies
-      with:
-        manifest: Cargo.toml
-        destination: ..
 
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@stable

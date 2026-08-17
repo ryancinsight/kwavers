@@ -19,12 +19,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Checkout Atlas path dependencies
-        uses: ./.github/actions/checkout-atlas-path-dependencies
-        with:
-          manifest: Cargo.toml
-          destination: ..
-
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
 
@@ -71,12 +65,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Checkout Atlas path dependencies
-        uses: ./.github/actions/checkout-atlas-path-dependencies
-        with:
-          manifest: Cargo.toml
-          destination: ..
-
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
 
@@ -113,12 +101,6 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-
-      - name: Checkout Atlas path dependencies
-        uses: ./.github/actions/checkout-atlas-path-dependencies
-        with:
-          manifest: Cargo.toml
-          destination: ..
 
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
@@ -159,12 +141,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Checkout Atlas path dependencies
-        uses: ./.github/actions/checkout-atlas-path-dependencies
-        with:
-          manifest: Cargo.toml
-          destination: ..
-
       - name: Install cargo-deny
         run: cargo install cargo-deny
 
@@ -178,12 +154,6 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-
-      - name: Checkout Atlas path dependencies
-        uses: ./.github/actions/checkout-atlas-path-dependencies
-        with:
-          manifest: Cargo.toml
-          destination: ..
 
       - name: Install Rust nightly with miri
         uses: dtolnay/rust-toolchain@nightly
@@ -212,12 +182,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Checkout Atlas path dependencies
-        uses: ./.github/actions/checkout-atlas-path-dependencies
-        with:
-          manifest: Cargo.toml
-          destination: ..
-
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
 
@@ -245,12 +209,6 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-
-      - name: Checkout Atlas path dependencies
-        uses: ./.github/actions/checkout-atlas-path-dependencies
-        with:
-          manifest: Cargo.toml
-          destination: ..
 
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
@@ -319,12 +277,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Checkout Atlas path dependencies
-        uses: ./.github/actions/checkout-atlas-path-dependencies
-        with:
-          manifest: Cargo.toml
-          destination: ..
-
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
 
@@ -358,12 +310,6 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-
-      - name: Checkout Atlas path dependencies
-        uses: ./.github/actions/checkout-atlas-path-dependencies
-        with:
-          manifest: Cargo.toml
-          destination: ..
 
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev

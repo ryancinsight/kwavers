@@ -42,12 +42,6 @@ jobs:
           path: kwavers-candidate
           persist-credentials: false
 
-      - name: Checkout Atlas path dependencies
-        uses: ./kwavers-candidate/.github/actions/checkout-atlas-path-dependencies
-        with:
-          manifest: kwavers-candidate/Cargo.toml
-          destination: .
-
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
 
@@ -243,12 +237,6 @@ jobs:
           ref: 1393fd8838f3bcd548959a83daa8d9375e3b03d9
           path: atlas-tool
           persist-credentials: false
-
-      - name: Checkout Atlas path dependencies
-        uses: ./kwavers-candidate/.github/actions/checkout-atlas-path-dependencies
-        with:
-          manifest: kwavers-candidate/Cargo.toml
-          destination: .
 
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev

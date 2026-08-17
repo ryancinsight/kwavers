@@ -7,7 +7,6 @@ on:
       - Cargo.lock
       - Cargo.toml
       - crates/kwavers-python/**
-      - .github/actions/checkout-atlas-path-dependencies/**
       - .github/workflows/python-wheel-smoke.yml
 
 permissions:
@@ -32,12 +31,6 @@ jobs:
         with:
           path: source
           persist-credentials: false
-
-      - name: Checkout exact Atlas provider graph
-        uses: ./source/.github/actions/checkout-atlas-path-dependencies
-        with:
-          manifest: source/Cargo.toml
-          destination: .
 
       - name: Set up Python 3.8
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
