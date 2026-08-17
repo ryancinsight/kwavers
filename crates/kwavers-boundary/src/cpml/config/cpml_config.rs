@@ -43,18 +43,26 @@ pub struct CPMLConfig {
     /// Maximum κ (real coordinate stretch) at the PML wall; `≥ 1`. `1` disables
     /// the κ term (σ-only CPML). Set via [`Self::with_cfs_pml`].
     ///
-    /// The literature range is `≈ 5–20` (Komatitsch & Martin 2009), but measured
-    /// against a reflection-free reference here, κ **degrades** a 10-cell PML at
-    /// 70° incidence: 1.23e-3 of the direct peak at `κ_max = 1`, 1.77e-3 at `2`,
-    /// 1.24e-2 at `10`. The q⁴ grading varies too steeply over 10 cells, and the
-    /// discrete reflection it introduces exceeds what the stretch absorbs.
+    /// The literature range is `≈ 5–20` (Komatitsch & Martin 2009). Measured
+    /// against a reflection-free reference at the shipping `sigma_factor = 3.0`,
+    /// 70° incidence, as a fraction of the direct peak:
     ///
-    /// Leave at `1` unless a thicker PML is in use and a measurement on the
-    /// actual configuration shows a gain. Evidence:
-    /// `cpml_absorbs_grazing_incidence_within_the_reflection_bound` in
-    /// kwavers-solver; the earlier claim that `κ ≈ 5` was optimal was measured
-    /// before KW-BND-097 fixed the staggered profile sampling, whose error
-    /// dominated every κ comparison.
+    /// | `κ_max` | 10 cells | 20 cells (default) | 40 cells |
+    /// |---|---|---|---|
+    /// | 1 | 4.51e-5 | 6.84e-9 | 3.47e-10 |
+    /// | 2 | 3.01e-5 | 7.07e-9 | 3.43e-10 |
+    /// | 5 | 1.59e-4 | 1.92e-6 | 3.74e-10 |
+    /// | 10 | 4.38e-3 | 3.13e-4 | 1.08e-8 |
+    ///
+    /// **Leave at `1`.** `κ ≥ 5` is harmful at every thickness measured, and at
+    /// the default 20 cells `κ_max = 10` costs four orders of magnitude — so the
+    /// literature's `5–20` range is the wrong advice for this discretisation.
+    /// `κ_max = 2` is the only value that ever helps (1.5× at 10 cells) and is
+    /// within noise of `1` at 20 and 40, which is not worth a knob.
+    ///
+    /// Thickness raises the κ that becomes harmful — the q⁴ grading varies less
+    /// steeply per cell — but never makes κ profitable: even at 40 cells the
+    /// best κ ties `1`. Evidence: KW-BND-098.
     pub kappa_max: f64,
     /// Maximum α (complex frequency shift) at the physical-domain interface; `≥ 0`.
     /// `0` disables the α term. CFS-PML uses `≈ π·f₀` to absorb evanescent and
@@ -150,13 +158,22 @@ impl CPMLConfig {
     /// convolutional (FDTD) boundary path; the k-Wave split-field (PSTD) decay
     /// factors derive from σ alone and are unchanged.
     ///
-    /// Measured on a 10-cell PML at 70° incidence, neither term earns its place:
-    /// α is neutral (1.21e-3 of the direct peak against 1.23e-3 for σ-only) and
-    /// κ is harmful (see [`Self::kappa_max`]). The σ-only default is the
-    /// recommended configuration at this thickness; reach for CFS only with a
-    /// measurement on the actual geometry.
-    /// `kappa_max = 1`, `alpha_max = 0` reduces exactly to
-    /// σ-only CPML.
+    /// Measured at the shipping defaults (20-cell PML, `sigma_factor = 3.0`),
+    /// 70° incidence, as a fraction of the direct peak:
+    ///
+    /// | configuration | reflection |
+    /// |---|---|
+    /// | σ-only (`κ=1, α=0`) | 6.84e-9 |
+    /// | `κ=1, α=π·f₀` | **5.25e-9** (1.3×) |
+    /// | `κ=1, α=4π·f₀` | 5.34e-6 (780× worse) |
+    ///
+    /// So the useful call is `with_cfs_pml_for_frequency(1.0, f0)` — κ left at 1
+    /// (see [`Self::kappa_max`]; κ ≥ 5 is harmful) and α at the canonical
+    /// Roden–Gedney `π·f₀`. The gain is modest, and α is sharply peaked: 4π·f₀
+    /// is far worse than no α at all, so pass the real source frequency rather
+    /// than an approximate scale.
+    ///
+    /// `kappa_max = 1`, `alpha_max = 0` reduces exactly to σ-only CPML.
     ///
     /// # Panics
     /// Panics if `kappa_max < 1.0` or `alpha_max < 0.0` (invalid CFS parameters).
