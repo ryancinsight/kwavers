@@ -6415,3 +6415,16 @@ attempts all stop before compilation because the current dirty dependency
 graph resolves `hermes-simd ^0.5.0` while the available git candidate is
 `0.6.0`. This is an infrastructure blocker, not a Kwavers source diagnostic;
 the unrelated peer-owned manifest and lockfile changes remain untouched.
+## KWAVERS-COUPLING-CONTRACT-001 — Medium-aware field-coupling inputs
+
+`MultiphysicsFieldCoupler` currently receives only the pressure, thermal, and
+optical field volumes. Its photoelastic, optical-absorption, and acoustic-
+absorption coefficients therefore remain nominal constants selected by the
+current API contract. This is distinct from `AcousticOpticalSolver`, which
+already accepts a caller-supplied photoelastic coefficient. The field-coupler
+API needs a typed medium-property provider before per-voxel and
+frequency-dependent values can be implemented without hidden global state.
+
+The 2026-08-17 cleanup removes the misleading TODO/placeholder wording and
+records this boundary explicitly; no coefficient or field-update semantics
+change in that cleanup.

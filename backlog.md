@@ -1,5 +1,18 @@
 # Backlog / Strategy
 
+## KWAVERS-COUPLING-CONTRACT-001 — Medium-aware field-coupling inputs [minor]
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KWAVERS-COUPLING-CONTRACT-001 | Add a typed medium-property provider to `MultiphysicsFieldCoupler` for photoelastic, optical-absorption, and frequency-dependent acoustic-absorption coefficients; retain scalar extraction only at the field-update boundary. | [minor] | open: API extension required; nominal constants remain the documented current contract | Codex | `crates/kwavers-solver/src/multiphysics/field_coupling/`, direct callers/tests, `gap_audit.md` |
+
+The current field-coupler API accepts only collocated field volumes, so its
+nominal water/tissue coefficients are real defaults rather than hidden input
+or a silent fallback. The specialized `AcousticOpticalSolver` already accepts
+a caller-supplied photoelastic coefficient. The API extension above is the
+remaining provider-owned work; this cleanup removes misleading placeholder
+markers without changing the numerical contract.
+
 ## Current Aequitas integration slice — 2026-08-02
 
 | ID | Outcome | Class | Status | Owner | Scope |

@@ -4,6 +4,11 @@
 
 ### Changed
 
+- **Documentation:** The generic field-coupling implementation now states its
+  nominal medium-coefficient contract explicitly. The remaining medium-aware
+  provider extension is recorded in `KWAVERS-COUPLING-CONTRACT-001`; numerical
+  behavior is unchanged.
+
 - **Breaking:** Removed `BoundaryParameters`, `SolverBoundaryKind`,
   `SimulationBuilder::boundary`, and `Configuration::boundary`. The struct was
   validated and stored but no field was ever read, so any settings passed
