@@ -17,19 +17,26 @@ pub struct CPMLConfig {
     /// Polynomial order for profile grading (typically 3–4).
     pub polynomial_order: f64,
     /// Maximum conductivity scaling factor (uniform; overridden by
-    /// `per_dimension_alpha`). This is k-Wave's `pml_alpha`, and the default of
-    /// `2.0` is k-Wave's.
+    /// `per_dimension_alpha`). This is k-Wave's `pml_alpha`; k-Wave's own
+    /// default is `2.0`, **this crate's is `3.0`**.
     ///
-    /// On the convolutional FDTD path, `3.0` absorbs grazing incidence far
-    /// better — 4.51e-5 of the incident peak against 1.23e-3 at 10 cells (27×),
-    /// and 6.84e-9 against 4.26e-7 at 20 cells (62×), measured at 70° with σ-only
-    /// CPML. Values above 3 give the optimum back. Prefer `3.0` for FDTD work
-    /// that is not chasing k-Wave bit-parity.
+    /// Measured at 70° incidence with σ-only CPML on the default 20-cell PML,
+    /// `3.0` absorbs an order of magnitude better on both paths that read this
+    /// knob:
     ///
-    /// The default stays at k-Wave's `2.0` because this knob is shared with the
-    /// split-field PSTD path, for which no equivalent measurement exists yet
-    /// (KW-BND-100). Evidence:
-    /// `sigma_factor_three_outperforms_the_kwave_default_at_grazing_incidence`.
+    /// | `sigma_factor` | convolutional FDTD | split-field PSTD |
+    /// |---|---|---|
+    /// | 2.0 (k-Wave) | 4.26e-7 | 6.87e-6 |
+    /// | **3.0** | **6.84e-9** (62×) | **5.89e-8** (117×) |
+    /// | 4.0 | 9.12e-9 | 9.06e-8 |
+    ///
+    /// Above 3 the optimum is given back. At thinner PMLs the two paths disagree
+    /// (at 10 cells FDTD still prefers 3 while PSTD prefers 4), so 3.0 is chosen
+    /// as the value both agree on at the shipping thickness.
+    ///
+    /// Set `2.0` — via [`Self::with_alpha`] — for bit-parity with k-Wave.
+    /// Evidence: `sigma_factor_three_outperforms_the_kwave_default_at_grazing_incidence`
+    /// and `pstd_sigma_factor_three_outperforms_the_kwave_default`.
     pub sigma_factor: f64,
     /// Per-dimension sigma scaling factors (k-Wave `pml_alpha` vector).
     pub per_dimension_alpha: PerDimensionAlpha,
@@ -77,7 +84,7 @@ impl Default for CPMLConfig {
             thickness,
             per_dimension: PerDimensionPML::uniform(thickness),
             polynomial_order: 3.0,
-            sigma_factor: 2.0,
+            sigma_factor: 3.0,
             per_dimension_alpha: PerDimensionAlpha::default(),
             // σ-only CPML by default (κ=1, α=0). These match the behavior that
             // was always effective: the prior 15.0/0.24 defaults were never read

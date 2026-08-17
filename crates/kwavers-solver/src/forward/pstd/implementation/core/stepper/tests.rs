@@ -294,3 +294,113 @@ fn test_source_kappa_equals_cosine() {
         "source_kappa[{hi_k_idx},0,0]={hk_val} expected cos={expected_cos}"
     );
 }
+
+fn pstd_grazing_reflection(pml: usize, sigma_factor: f64) -> (f64, f64, f64) {
+    use kwavers_boundary::cpml::{CPMLConfig, PerDimensionAlpha, PerDimensionPML};
+    const NX: usize = 160;
+    const UPPER: usize = 32;
+    const H_REF: usize = 140;
+    const F0: f64 = 1.0e6;
+    const C: f64 = 1500.0;
+    const RHO: f64 = 1000.0;
+    const DX: f64 = C / F0 / 8.0;
+    const SX: usize = 20;
+    const RX: usize = 130;
+    const STEPS: usize = 480;
+
+    let run = |h: usize| -> Vec<f64> {
+        let ny = pml + h + UPPER + pml;
+        let y0 = pml + h;
+        let grid = Grid::new(NX, ny, 1, DX, DX, DX).unwrap();
+        let medium = HomogeneousMedium::new(RHO, C, 0.0, 0.0, &grid);
+
+        let width = C / F0 / 2.0;
+        let mut p0 = leto::Array3::<f64>::zeros((NX, ny, 1));
+        for i in 0..NX {
+            for j in 0..ny {
+                let dx = (i as f64 - SX as f64) * DX;
+                let dy = (j as f64 - y0 as f64) * DX;
+                p0[[i, j, 0]] = (-((dx * dx + dy * dy) / (width * width))).exp();
+            }
+        }
+        let source = GridSource {
+            p0: Some(p0),
+            ..GridSource::new_empty()
+        };
+
+        let cpml = CPMLConfig {
+            per_dimension: PerDimensionPML::new(pml, pml, 0),
+            thickness: pml,
+            sigma_factor,
+            per_dimension_alpha: PerDimensionAlpha::uniform(sigma_factor),
+            ..CPMLConfig::default()
+        };
+        let config = PSTDConfig {
+            dt: 0.3 * DX / C,
+            nt: STEPS + 1,
+            boundary: BoundaryConfig::CPML(cpml),
+            smooth_sources: false,
+            ..Default::default()
+        };
+        let mut solver = PSTDSolver::new(config, grid, &medium, source).unwrap();
+        let mut trace = Vec::with_capacity(STEPS);
+        for _ in 0..STEPS {
+            solver.step_forward().unwrap();
+            trace.push(solver.fields.p[[RX, y0, 0]]);
+        }
+        trace
+    };
+
+    let peak = |v: &[f64]| v.iter().fold(0.0_f64, |a, b| a.max(b.abs()));
+    let peak_diff =
+        |a: &[f64], b: &[f64]| peak(&a.iter().zip(b).map(|(x, y)| x - y).collect::<Vec<_>>());
+
+    let reference = run(H_REF);
+    let test = run(20);
+    let farther = run(H_REF - 30);
+    (
+        peak(&reference),
+        peak_diff(&test, &reference),
+        peak_diff(&farther, &reference),
+    )
+}
+
+/// ## Theorem
+/// On the k-Wave split-field PSTD path, `sigma_factor = 3` absorbs grazing
+/// incidence far better than k-Wave's `pml_alpha` default of 2.
+///
+/// ## Measured (2026-08-17, 70° incidence, 20-cell PML)
+/// 5.89e-8 of the incident peak against 6.87e-6 — a factor of 117. The
+/// convolutional FDTD path agrees at the same thickness (6.84e-9 against
+/// 4.26e-7, 62×), which is what licensed raising the shared default; see
+/// `sigma_factor_three_outperforms_the_kwave_default_at_grazing_incidence`.
+///
+/// At 10 cells the two paths disagree on the optimum (FDTD 3, PSTD 4), so this
+/// asserts at the shipping thickness, where they agree.
+#[test]
+fn pstd_sigma_factor_three_outperforms_the_kwave_default() {
+    let (direct_default, spurious_default, residual_default) = pstd_grazing_reflection(20, 2.0);
+    let (direct_tuned, spurious_tuned, residual_tuned) = pstd_grazing_reflection(20, 3.0);
+
+    // Both references are judged against the *smaller* of the two signals. The
+    // tuned configuration is ~100x quieter, so a reference clean enough to
+    // resolve the default is not automatically clean enough to resolve it.
+    let dirtiest = residual_default.max(residual_tuned);
+    assert!(
+        dirtiest <= 0.05 * spurious_tuned,
+        "reference must resolve the tuned signal: worst residual {dirtiest:.3e}, \
+         tuned signal {spurious_tuned:.3e}"
+    );
+    assert!(
+        direct_default > 1e-2,
+        "the direct wave must reach the receiver: peak {direct_default:.3e}"
+    );
+
+    let ratio_default = spurious_default / direct_default;
+    let ratio_tuned = spurious_tuned / direct_tuned;
+    assert!(
+        ratio_tuned < 0.2 * ratio_default,
+        "sigma_factor 3 must beat 2 by >5x on the PSTD path: default {ratio_default:.4e}, \
+         tuned {ratio_tuned:.4e} (measured 117x)"
+    );
+}
