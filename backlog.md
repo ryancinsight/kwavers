@@ -1355,6 +1355,24 @@
   **lossless** medium: no relaxation state is built and the run looks fine.
 - Verified: 883/883 kwavers-solver against pinned revisions.
 
+- **Extended 2026-08-17**: KW-SOL-095 checked only that one spectrum covers both
+  exponents - it never propagated anything, so it said nothing about whether the
+  interface behaves. `fullwave_material_interface_reflects_by_the_analytical_coefficient`
+  now runs a one-way pulse into their impedance step. Their `rho` and `c` fix
+  `Z = 1.54` and `1.76 MRayl`, so `R = (Z2-Z1)/(Z2+Z1) = 1/15 = 0.0667` exactly -
+  a closed form, not a tolerance carried over from a previous run. Measured
+  within 5 % of it.
+- Run lossless deliberately: `c` and `rho` set `R` while `alpha_0` and `gamma` do
+  not, so dropping absorption isolates the interface against an exact oracle
+  rather than folding in decay that would have to be modelled and subtracted.
+- Checked against existing coverage rather than assumed new, after finding
+  `viscoacoustic::heterogeneous_interface_reflects_with_analytical_coefficient`
+  already tests the same law: that one varies **modulus only** at fixed density
+  on the viscoacoustic path (`R = 1/3`, a large contrast); this varies **density
+  and sound speed together** on the staggered FDTD path at the small
+  tissue-realistic `R = 1/15`, where a mishandled density average still looks
+  plausible. The distinction is recorded at the test so it does not read as
+  duplication.
 ## KW-SOL-093 — Absorption under fourth-order time composition [minor] — done 2026-08-15
 
 - Re-recorded: the code is on `main` (`58dd5cf2f`) but this entry was lost to a
