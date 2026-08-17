@@ -180,6 +180,23 @@ mod tests {
     }
 
     #[test]
+    fn test_render_multi_field_rejects_field_type_mismatch() {
+        let config = VisualizationConfig::default();
+        let mut engine = VisualizationEngine::create(config).unwrap();
+        let grid = create_test_grid();
+        let fields = Array4::zeros((32, 32, 32, 2));
+        let field_types = vec![UnifiedFieldType::Pressure];
+
+        let result = pollster::block_on(engine.render_multi_field(&fields, &field_types, &grid));
+
+        assert!(matches!(
+            result,
+            Err(kwavers_core::error::KwaversError::InvalidInput(message))
+                if message.contains("received 2 fields but 1 field types")
+        ));
+    }
+
+    #[test]
     fn test_fallback_renderer() {
         let grid = create_test_grid();
         let field = create_test_field();

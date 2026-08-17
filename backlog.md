@@ -45,6 +45,21 @@
   untouched. mnemosyne already records `5ca0461`. Atlas root tracks the same
   closure as `ATLAS-KWAVERS-MNEMOSYNE-LOCALITY-001`.
 
+## KW-VIZ-001 — Preserve multi-field visualization semantics [patch] — done 2026-08-17
+
+- Audit finding: the GPU engine uploaded every field and then passed an empty
+  field list to the renderer; the CPU fallback rendered only the first field;
+  the renderer silently returned the first image when transparency was off.
+- Closure: validate the fourth-axis field count against `field_types`, pass
+  every uploaded field to GPU compositing, render every field through the CPU
+  fallback, and reject multi-field rendering without transparency instead of
+  dropping data.
+- Evidence: feature-enabled Nextest `758/758`, including positive compositing
+  and field-type mismatch regressions; package doctests `1 passed, 21 ignored`;
+  package no-dependency Clippy passes. Full package Clippy remains blocked by
+  the pre-existing `kwavers-solver` `neg_cmp_op_on_partial_ord` errors at
+  `crates/kwavers-solver/src/forward/fdtd/absorption/mod.rs:129`.
+
 ## KW-MAT-043 — Direct FWI L-BFGS provider ownership [patch] [arch] — in progress 2026-08-11
 
 - Owner: Codex. Scope: the two FWI production callers, the focused FWI
