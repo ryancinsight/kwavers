@@ -1,4 +1,4 @@
-## ATLAS-KWAVERS-HEPHAESTUS-VIS-104 — GPU visualization initialization boundary — in progress 2026-08-17
+## ATLAS-KWAVERS-HEPHAESTUS-VIS-104 — GPU visualization initialization boundary — verification pending 2026-08-17
 
 The feature-enabled `VisualizationEngine::render_multi_field` path validates
 field dimensions and then silently returns `Ok(())` when either the renderer or
@@ -11,8 +11,11 @@ The repair is consumer-local: return the existing typed
 `SystemError::FeatureNotAvailable` when the GPU resource pair is absent, keep
 the initialized GPU path responsible for all fields, and keep CPU fallback
 behind the non-GPU feature only. The FDTD/provider implementation gap remains
-separate and is not changed here. Reopen or close this record after the
-feature-enabled hosted gate at the pushed branch head.
+separate and is not changed here. Source head `b275b7115` passes the required
+feature-enabled hosted matrix; the PM-only follow-up head is pending the
+same exact-head rerun. Local compilation is blocked before package
+diagnostics by the shared Atlas overlay's stale Asclepius checkout requiring
+`aequitas ^0.1.0` versus `0.2.0`.
 
 ## Kwavers → mnemosyne allocation-locality axis closure — 2026-08-16 (Atlas gitlink scope)
 

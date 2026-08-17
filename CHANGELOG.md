@@ -9,6 +9,10 @@
   initialized both the renderer and data pipeline. The non-GPU fallback and
   initialized multi-field path retain their existing ownership boundaries.
 
+- **Verification:** The implementation source head `b275b7115` passes the
+  required feature-enabled hosted matrix. Exact-head verification of the
+  PM-only follow-up remains pending before this residual is marked closed.
+
 - **Documentation:** The generic field-coupling implementation now states its
   nominal medium-coefficient contract explicitly. The remaining medium-aware
   provider extension is recorded in `KWAVERS-COUPLING-CONTRACT-001`; numerical
