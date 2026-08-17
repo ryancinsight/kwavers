@@ -23,7 +23,7 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::{Array1, Array2};
-use leto_ops::svd_rank_revealing;
+use leto_ops::svd_decompose;
 
 mod iq;
 
@@ -186,11 +186,11 @@ impl SignalSvdClutterFilter {
         }
 
         // Step 2: Compute SVD: S = UΣV^T. Clutter ensembles are routinely
-        // rank-deficient (low-rank tissue clutter is the entire premise), so this
-        // uses the rank-revealing one-sided Jacobi SVD, which surfaces zero
-        // singular values instead of rejecting the input. Returns V (right
-        // singular vectors as columns); transpose to Vᵀ.
-        let svd = svd_rank_revealing(&centered_data.view())?;
+        // rank-deficient (low-rank tissue clutter is the entire premise);
+        // leto's post-collapse SVD (bidiagonal QR) keeps the decomposition at
+        // full rank with zero singular values rather than rejecting the input.
+        // Returns V (right singular vectors as columns); transpose to Vᵀ.
+        let svd = svd_decompose(&centered_data.view())?;
         let u = svd.left_singular_vectors;
         let vt = svd
             .right_singular_vectors

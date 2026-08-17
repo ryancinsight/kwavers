@@ -695,7 +695,8 @@ mod r2c_optimized_tests {
         // the required shape while forcing the general strided fallback.
         let row_stride = isize::try_from(NZ_C).expect("test dimensions fit isize");
         let plane_stride = isize::try_from(NY * NZ_C).expect("test dimensions fit isize");
-        let strided_layout = Layout::new([NX, NY, NZ_C], [row_stride, plane_stride, 1], 0);
+        let strided_layout = Layout::try_new([NX, NY, NZ_C], [row_stride, plane_stride, 1], 0)
+            .expect("invariant: test strided layout is valid");
         let mut strided_half = Array3::new(
             strided_layout,
             VecStorage::fill(NX * NY * NZ_C, Complex64::default()),

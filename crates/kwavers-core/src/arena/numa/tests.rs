@@ -4,9 +4,9 @@ use themis::NumaNodeId;
 
 use super::affinity::ThreadAffinity;
 use super::allocator::NumaAllocator;
-use super::memory::first_touch_memory;
 use super::policy::PAGE_SIZE;
 use super::topology::detect_topology;
+use mnemosyne_heap::numa::first_touch;
 
 #[test]
 fn test_numa_topology_detection_sanity() {
@@ -59,7 +59,7 @@ fn test_first_touch_memory() {
     let layout = std::alloc::Layout::from_size_align(PAGE_SIZE, PAGE_SIZE).unwrap();
     let ptr = unsafe { std::alloc::alloc(layout) };
     if !ptr.is_null() {
-        unsafe { first_touch_memory(ptr, PAGE_SIZE) };
+        unsafe { first_touch(ptr, PAGE_SIZE) };
         unsafe { std::alloc::dealloc(ptr, layout) };
     }
 }

@@ -61,8 +61,8 @@ fn best_supported_target() -> TargetId {
 /// Number of `f64` lanes a target's vector registers hold.
 fn f64_lanes(target: TargetId) -> usize {
     match target {
-        TargetId::Avx512 => 8, // 512 bits / 64 bits
-        TargetId::Avx2 => 4,   // 256 bits / 64 bits
+        TargetId::Avx512 => 8,               // 512 bits / 64 bits
+        TargetId::Avx2 => 4,                 // 256 bits / 64 bits
         TargetId::Neon | TargetId::Sve => 2, // 128 bits / 64 bits (SVE lane-emulated)
         TargetId::Scalar => 1,
         // `TargetId` is #[non_exhaustive]; unknown future targets degrade to scalar.

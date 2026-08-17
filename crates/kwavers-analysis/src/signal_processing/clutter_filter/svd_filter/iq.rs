@@ -21,7 +21,7 @@
 use eunomia::Complex64;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::{Array2, Array3};
-use leto_ops::svd_rank_revealing;
+use leto_ops::svd_decompose;
 
 /// Result of complex I/Q SVD clutter filtering.
 #[derive(Debug, Clone)]
@@ -131,7 +131,7 @@ impl IqSvdClutterFilter {
         }
 
         let realified = Array2::from_shape_vec([doubled_slow_time, doubled_pixels], realified)?;
-        let svd = svd_rank_revealing(&realified.view())?;
+        let svd = svd_decompose(&realified.view())?;
         let removed_modes = self.clutter_rank.checked_mul(2).ok_or_else(|| {
             KwaversError::InvalidInput("I/Q clutter rank overflows paired real modes".to_owned())
         })?;
