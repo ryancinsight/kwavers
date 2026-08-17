@@ -123,11 +123,12 @@ fn weak_coupling_updates_targets_from_source_fields() {
         .expect("weak coupling fields have matching dimensions");
 
     let expected_light = light * (1.0 + 1.0e-12 * pressure * dt);
-    let expected_optical_delta =
-        OPTICAL_ABSORPTION_TISSUE_NIR * expected_light * dt / (DENSITY_WATER_NOMINAL * SPECIFIC_HEAT_WATER);
-    let acoustic_intensity = pressure * pressure / (2.0 * DENSITY_WATER_NOMINAL * SOUND_SPEED_TISSUE);
-    let expected_acoustic_delta =
-        ACOUSTIC_ABSORPTION_TISSUE * acoustic_intensity * dt / (DENSITY_WATER_NOMINAL * SPECIFIC_HEAT_WATER);
+    let expected_optical_delta = OPTICAL_ABSORPTION_TISSUE_NIR * expected_light * dt
+        / (DENSITY_WATER_NOMINAL * SPECIFIC_HEAT_WATER);
+    let acoustic_intensity =
+        pressure * pressure / (2.0 * DENSITY_WATER_NOMINAL * SOUND_SPEED_TISSUE);
+    let expected_acoustic_delta = ACOUSTIC_ABSORPTION_TISSUE * acoustic_intensity * dt
+        / (DENSITY_WATER_NOMINAL * SPECIFIC_HEAT_WATER);
     let expected_temperature = temperature + expected_optical_delta + expected_acoustic_delta;
 
     assert_eq!(fields[0][[0, 0, 0]], pressure);

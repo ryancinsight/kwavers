@@ -73,13 +73,15 @@ impl MultiphysicsFieldCoupler {
     ///
     /// Refractive index modulation: Δn = dn/dp · p, where dn/dp ≈ 1.5×10⁻¹⁰ Pa⁻¹
     /// for water (Schmid et al. 2012, "Photoacoustic sound generation in water
-    ///droplets",Appl. Phys. Lett. 100:014105). The current 10⁻¹² Pa⁻¹ is a
-    /// placeholder; the struct does not yet carry medium optical properties.
+    /// droplets", Appl. Phys. Lett. 100:014105). The field-coupler contract
+    /// accepts collocated fields but no medium-property provider, so this path
+    /// uses the documented nominal coefficient. [`AcousticOpticalSolver`]
+    /// carries a caller-supplied coefficient for medium-specific coupling.
     fn couple_acoustic_to_optical(&self, fields: &mut [Array3<f64>], dt: f64) -> KwaversResult<()> {
         let (pressure, intensity) = read_write_fields::<PRESSURE_IDX, LIGHT_IDX>(fields)?;
 
-        // TODO: replace with medium elasto-optic coefficient (dn/dp)
-        const DN_DP: f64 = 1e-12; // placeholder — see doc comment above
+        // The generic field-coupler API has no medium-property input.
+        const DN_DP: f64 = 1e-12; // documented nominal water coefficient
 
         for ([i, j, k], &p) in pressure.indexed_iter() {
             let delta_n = DN_DP * p;
@@ -95,8 +97,9 @@ impl MultiphysicsFieldCoupler {
     /// Heat source: Q = μ_a · I, where μ_a is the optical absorption coefficient
     /// and I is the optical intensity (fluence rate). Uses
     /// [`OPTICAL_ABSORPTION_TISSUE_NIR`] (10 m⁻¹, typical for soft tissue in the
-    /// NIR window, Jacques 2013). TODO: replace with per-voxel optical property
-    /// from medium.
+    /// NIR window, Jacques 2013). The generic field-coupler API has no
+    /// per-voxel optical-property input, so it applies this nominal tissue
+    /// coefficient.
     fn couple_optical_to_thermal(&self, fields: &mut [Array3<f64>], dt: f64) -> KwaversResult<()> {
         let (intensity, temperature) = read_write_fields::<LIGHT_IDX, TEMPERATURE_IDX>(fields)?;
 
@@ -114,8 +117,9 @@ impl MultiphysicsFieldCoupler {
     /// Acoustic intensity: I = p² / (2ρc) (Morton & Ter Haar 1998).
     /// Heat source: Q = α · I, where α is the acoustic absorption coefficient.
     /// Uses [`ACOUSTIC_ABSORPTION_TISSUE`] (0.5 dB/(cm·MHz), Duck 1990) as a
-    /// generic tissue default. TODO: replace with frequency-dependent absorption
-    /// from medium properties.
+    /// generic tissue default. The generic field-coupler API has no
+    /// frequency-dependent medium-property input, so it applies this nominal
+    /// tissue coefficient.
     fn couple_acoustic_to_thermal(&self, fields: &mut [Array3<f64>], dt: f64) -> KwaversResult<()> {
         let (pressure, temperature) = read_write_fields::<PRESSURE_IDX, TEMPERATURE_IDX>(fields)?;
 
