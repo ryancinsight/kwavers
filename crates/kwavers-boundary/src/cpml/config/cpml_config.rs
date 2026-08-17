@@ -24,11 +24,17 @@ pub struct CPMLConfig {
     /// the κ term (σ-only CPML). Set via [`Self::with_cfs_pml`].
     ///
     /// The literature range is `≈ 5–20` (Komatitsch & Martin 2009), but measured
-    /// against a reflection-free reference in this implementation the useful
-    /// range is narrower: reflection bottoms out near `κ_max ≈ 5`, and `20` is
-    /// *worse* than no κ at all (7.4e-2 against 6.6e-2 of the direct peak at 74°
-    /// incidence). Prefer `5`; verify before exceeding `10`. Evidence:
-    /// `cfs_pml_reduces_grazing_incidence_reflection` in kwavers-solver.
+    /// against a reflection-free reference here, κ **degrades** a 10-cell PML at
+    /// 70° incidence: 1.23e-3 of the direct peak at `κ_max = 1`, 1.77e-3 at `2`,
+    /// 1.24e-2 at `10`. The q⁴ grading varies too steeply over 10 cells, and the
+    /// discrete reflection it introduces exceeds what the stretch absorbs.
+    ///
+    /// Leave at `1` unless a thicker PML is in use and a measurement on the
+    /// actual configuration shows a gain. Evidence:
+    /// `cpml_absorbs_grazing_incidence_within_the_reflection_bound` in
+    /// kwavers-solver; the earlier claim that `κ ≈ 5` was optimal was measured
+    /// before KW-BND-097 fixed the staggered profile sampling, whose error
+    /// dominated every κ comparison.
     pub kappa_max: f64,
     /// Maximum α (complex frequency shift) at the physical-domain interface; `≥ 0`.
     /// `0` disables the α term. CFS-PML uses `≈ π·f₀` to absorb evanescent and
@@ -115,11 +121,12 @@ impl CPMLConfig {
     /// convolutional (FDTD) boundary path; the k-Wave split-field (PSTD) decay
     /// factors derive from σ alone and are unchanged.
     ///
-    /// Recommended: `kappa_max ≈ 5`, `alpha_max ≈ π·f₀` (f₀ = dominant source
-    /// frequency); see [`Self::kappa_max`] for why the literature's upper bound
-    /// of 20 is not reproduced here. Measured reduction against σ-only CPML at
-    /// 70° incidence is a factor of 1.27, not the order of magnitude the CFS
-    /// literature reports. `kappa_max = 1`, `alpha_max = 0` reduces exactly to
+    /// Measured on a 10-cell PML at 70° incidence, neither term earns its place:
+    /// α is neutral (1.21e-3 of the direct peak against 1.23e-3 for σ-only) and
+    /// κ is harmful (see [`Self::kappa_max`]). The σ-only default is the
+    /// recommended configuration at this thickness; reach for CFS only with a
+    /// measurement on the actual geometry.
+    /// `kappa_max = 1`, `alpha_max = 0` reduces exactly to
     /// σ-only CPML.
     ///
     /// # Panics

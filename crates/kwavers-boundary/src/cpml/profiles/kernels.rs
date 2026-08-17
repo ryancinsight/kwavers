@@ -7,7 +7,7 @@
 
 use leto::Array1;
 
-pub(super) struct CollocatedProfileMut<'a> {
+pub(super) struct ProfileMut<'a> {
     sigma: &'a mut Array1<f64>,
     kappa: &'a mut Array1<f64>,
     alpha: &'a mut Array1<f64>,
@@ -15,9 +15,9 @@ pub(super) struct CollocatedProfileMut<'a> {
     b_coeff: &'a mut Array1<f64>,
 }
 
-/// Scalar inputs for [`compute_collocated_profile`]: axis geometry, the k-Wave σ
-/// scale, the time step, and the CFS-PML maxima.
-pub(super) struct CollocatedProfileSpec {
+/// Scalar inputs for [`compute_profile`]: axis geometry, the k-Wave σ scale,
+/// the time step, the CFS-PML maxima, and the grid-position shift.
+pub(super) struct ProfileSpec {
     pub dx: f64,
     pub thickness: usize,
     pub pml_alpha: f64,
@@ -25,9 +25,19 @@ pub(super) struct CollocatedProfileSpec {
     pub dt: f64,
     pub kappa_max: f64,
     pub alpha_max: f64,
+    /// Sample position within the cell, in cells: `0.0` for collocated
+    /// quantities (pressure, and the velocity gradient driving it) and `0.5`
+    /// for staggered ones (velocity, and the pressure gradient driving it).
+    ///
+    /// A Yee grid carries `p` at cell centers and `u` at faces, so the two
+    /// gradients are evaluated half a cell apart and must sample σ, κ, and α at
+    /// their own positions. Sampling both at the collocated points leaves an
+    /// O(Δx) mismatch at the PML entrance that no choice of σ_max or κ_max can
+    /// remove (KW-BND-097).
+    pub shift: f64,
 }
 
-impl<'a> CollocatedProfileMut<'a> {
+impl<'a> ProfileMut<'a> {
     pub(super) fn new(
         sigma: &'a mut Array1<f64>,
         kappa: &'a mut Array1<f64>,
@@ -45,7 +55,7 @@ impl<'a> CollocatedProfileMut<'a> {
     }
 }
 
-/// Collocated CPML profile with optional complex-frequency-shift (CFS) terms.
+/// CPML profile at a given intra-cell position, with optional CFS terms.
 ///
 /// The σ damping profile is the exact k-Wave form
 /// `σ(q) = pml_alpha·(c/dx)·q⁴`. On top of σ this computes the two CFS terms
@@ -73,14 +83,12 @@ impl<'a> CollocatedProfileMut<'a> {
 /// and the legacy default behavior is bit-identical.
 ///
 /// For the left PML, index `i = 0` is the outer wall and uses
-/// `q = (thickness - i) / thickness`. For the right PML, `q` increases from
-/// `1 / thickness` at the physical-domain interface to `1` at the outer wall.
-pub(super) fn compute_collocated_profile(
-    profile: CollocatedProfileMut<'_>,
-    n: usize,
-    spec: &CollocatedProfileSpec,
-) {
-    let CollocatedProfileSpec {
+/// `q = (thickness - i - shift) / thickness`. For the right PML, `q` increases
+/// from `(1 + shift) / thickness` at the physical-domain interface to `1` at
+/// the outer wall. `shift = 0.5` reproduces k-Wave's `get_pml(staggered=True)`
+/// half-cell offset exactly.
+pub(super) fn compute_profile(profile: ProfileMut<'_>, n: usize, spec: &ProfileSpec) {
+    let ProfileSpec {
         dx,
         thickness,
         pml_alpha,
@@ -88,6 +96,7 @@ pub(super) fn compute_collocated_profile(
         dt,
         kappa_max,
         alpha_max,
+        shift,
     } = *spec;
 
     if n <= 1 || thickness == 0 {
@@ -115,52 +124,20 @@ pub(super) fn compute_collocated_profile(
         profile.a_coeff[idx] = a;
     };
 
-    for i in 0..thickness.min(n) {
-        let q = (thickness - i) as f64 / thickness as f64;
-        assign(i, q, pml_alpha * (sound_speed / dx) * q.powi(4));
-    }
-
-    let right_start = n.saturating_sub(thickness);
-    for i in right_start..n {
-        let q = (i - right_start + 1) as f64 / thickness as f64;
-        assign(i, q, pml_alpha * (sound_speed / dx) * q.powi(4));
-    }
-}
-
-/// Exact k-Wave staggered PML profile for velocity components.
-///
-/// k-Wave shifts the profile by a half cell. The rightmost staggered cell can
-/// exceed the collocated wall value because the half-cell point lies outside
-/// the physical-domain sample centers; this is required for parity.
-pub(super) fn compute_staggered_profile(
-    sigma_sg: &mut Array1<f64>,
-    n: usize,
-    dx: f64,
-    thickness: usize,
-    pml_alpha: f64,
-    sound_speed: f64,
-) {
-    if n <= 1 || thickness == 0 {
-        sigma_sg.fill(0.0);
-        return;
-    }
-
     let t = thickness as f64;
-
     for i in 0..thickness.min(n) {
-        let q = (t - i as f64 - 0.5) / t;
-        sigma_sg[i] = pml_alpha * (sound_speed / dx) * q.abs().powi(4);
+        let q = ((t - i as f64 - shift) / t).abs();
+        assign(i, q, pml_alpha * (sound_speed / dx) * q.powi(4));
     }
 
     let right_start = n.saturating_sub(thickness);
     for i in right_start..n {
-        let j = (i - right_start) as f64;
-        let q = (j + 1.5) / t;
-        sigma_sg[i] = pml_alpha * (sound_speed / dx) * q.powi(4);
+        let q = ((i - right_start) as f64 + 1.0 + shift) / t;
+        assign(i, q, pml_alpha * (sound_speed / dx) * q.powi(4));
     }
 }
 
-fn set_neutral(profile: CollocatedProfileMut<'_>) {
+fn set_neutral(profile: ProfileMut<'_>) {
     profile.sigma.fill(0.0);
     profile.kappa.fill(1.0);
     profile.alpha.fill(0.0);

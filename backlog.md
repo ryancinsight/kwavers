@@ -6693,17 +6693,53 @@ of the direct peak (asserted, not assumed — moving its wall 30 cells changes t
 trace by ~1e-14). Method validated by a thickness control: reflection falls
 6.6e-2 → 2.7e-2 → 1.4e-2 for 10/20/30-cell PML.
 
-Measured, against the documented "order-of-magnitude fewer spurious reflections
-at grazing incidence":
-- CFS at the recommended κ=10, α=π·f₀ gives **1.27×** less reflection at 70°
-  incidence (6.31e-2 → 4.96e-2 of the direct peak). Real, but not 10×.
-- The benefit **shrinks toward grazing** — 2.09× at 14°, 1.89× at 45°, 1.64× at
-  63°, 1.44× at 74° — the opposite of the CFS rationale.
-- κ_max ≈ 5 is the optimum; **κ_max = 20 is worse than κ = 1** (7.4e-2 vs
-  6.6e-2), so the literature's [5, 20] upper bound is actively harmful here.
-  Rustdoc on `CPMLConfig::kappa_max` / `with_cfs_pml` corrected to match.
+**Superseded by KW-BND-097 (2026-08-17, same day).** The numbers first recorded
+here — CFS 1.27x better, kappa_max ~5 optimal — were measured against a defect
+this benchmark then exposed: the pressure-gradient memory sampled the collocated
+profile although that gradient lives half a cell away. That O(dx) error dominated
+every kappa/alpha comparison. Corrected results below; the Rustdoc claims derived
+from the old numbers were rewritten in the same change.
 
-**New item KW-BND-097 — angle-independent ~2% PML reflection floor [minor] — todo**
+## KW-BND-097 — Staggered-grid CPML profile sampling [patch] — DONE (2026-08-17)
+
+**Root cause.** On the Yee grid `p` sits at cell centers and `u` at faces, so
+`grad p` (which drives the velocity update) is evaluated half a cell from
+`grad u` (which drives the pressure update). `update_p_memory_axis` and
+`apply_p_correction_axis` nonetheless used the collocated `a`/`b`/`kappa`.
+`compute_staggered_profile` had produced a half-cell-shifted **sigma** only —
+built for the k-Wave split-field PSTD path — so the convolutional path never had
+staggered recursion coefficients to use.
+
+**Fix.** `compute_collocated_profile` generalized to `compute_profile` with a
+`shift` parameter (0 collocated, 0.5 staggered); the sigma-only
+`compute_staggered_profile` collapses into it rather than being duplicated
+(the two q formulas differed by exactly 0.5/t). Profiles now carry staggered
+kappa/alpha/a/b, and the pressure-gradient path uses them.
+
+**Effect** (70 degrees incidence, 10-cell PML, sigma-only):
+**6.31e-2 -> 1.23e-3**, a factor of 51. Near-normal 2.3e-2 -> ~3e-6, though
+there the reference residual is 2.0e-6, i.e. that figure is at the measurement
+noise floor and should be read as "at or below ~2e-6", not as 3e-6 exactly.
+k-Wave staggered-sigma parity is preserved (96/96 boundary tests, including
+`test_cpml_sigma_max_formula` and `test_precomputed_pml_exp_factors_match_sigma`).
+
+**Consequence for CFS.** With the dominant error gone, the CFS terms are exposed:
+alpha is neutral (1.21e-3 vs 1.23e-3) and **kappa is harmful** (1.77e-3 at
+kappa_max=2, 1.24e-2 at 10). The q^4 grading varies too steeply across 10 cells.
+This inverts the earlier reading, which was taken over the defect. Deferred item
+(d), double-pole CFS, should not be started on the assumption that CFS helps here
+— re-measure first.
+
+**Follow-up KW-BND-098 — does kappa pay on a thick PML? [minor] — todo**
+- Owner: unclaimed. kappa is harmful at 10 cells; the literature's kappa_max in
+  [5,20] presumes enough cells for the q^4 grading to vary smoothly. Sweep
+  kappa_max against PML thickness (10/20/30/40) to find where, if anywhere, it
+  turns profitable, and state the crossing in `CPMLConfig::kappa_max`.
+- Oracle: `pml_grazing_reflection(pml, h, offset, kappa, alpha)`, already
+  parameterized. Note the reference residual grows as reflection falls — assert
+  it, or the measurement silently becomes noise.
+
+**Original framing (retained): angle-independent ~2% PML reflection floor**
 - Owner: unclaimed. The measurements above sit on a floor the CFS terms do not
   touch: **2.3e-2 at 14° (near-normal)**, where published 10-cell CPML reaches
   ~1e-3. Ruled out by measurement: σ mistuning (a 32× sweep of `sigma_factor`

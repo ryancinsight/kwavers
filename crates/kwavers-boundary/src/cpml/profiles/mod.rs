@@ -91,6 +91,21 @@ pub struct CPMLProfiles {
     pub alpha_x: Array1<f64>,
     pub alpha_y: Array1<f64>,
     pub alpha_z: Array1<f64>,
+    /// Staggered counterparts of `kappa_*`/`alpha_*`/`a_*`/`b_*`, sampled half a
+    /// cell off so the pressure gradient (which lives where `u` lives) uses its
+    /// own profile rather than the pressure's. See `ProfileSpec::shift`.
+    pub kappa_x_sgx: Array1<f64>,
+    pub kappa_y_sgy: Array1<f64>,
+    pub kappa_z_sgz: Array1<f64>,
+    pub alpha_x_sgx: Array1<f64>,
+    pub alpha_y_sgy: Array1<f64>,
+    pub alpha_z_sgz: Array1<f64>,
+    pub a_x_sgx: Array1<f64>,
+    pub a_y_sgy: Array1<f64>,
+    pub a_z_sgz: Array1<f64>,
+    pub b_x_sgx: Array1<f64>,
+    pub b_y_sgy: Array1<f64>,
+    pub b_z_sgz: Array1<f64>,
     pub a_x: Array1<f64>,
     pub a_y: Array1<f64>,
     pub a_z: Array1<f64>,
@@ -132,6 +147,33 @@ impl CPMLProfiles {
         }
     }
 
+    /// Staggered `b` for `axis` — the pressure-gradient memory recursion.
+    pub(crate) fn b_staggered(&self, axis: usize) -> &Array1<f64> {
+        match axis {
+            0 => &self.b_x_sgx,
+            1 => &self.b_y_sgy,
+            _ => &self.b_z_sgz,
+        }
+    }
+
+    /// Staggered `a` for `axis` — the pressure-gradient memory recursion.
+    pub(crate) fn a_staggered(&self, axis: usize) -> &Array1<f64> {
+        match axis {
+            0 => &self.a_x_sgx,
+            1 => &self.a_y_sgy,
+            _ => &self.a_z_sgz,
+        }
+    }
+
+    /// Staggered `kappa` for `axis` — the pressure-gradient correction.
+    pub(crate) fn kappa_staggered(&self, axis: usize) -> &Array1<f64> {
+        match axis {
+            0 => &self.kappa_x_sgx,
+            1 => &self.kappa_y_sgy,
+            _ => &self.kappa_z_sgz,
+        }
+    }
+
     /// CPML stretch factor `kappa` for `axis` (0=x, 1=y, 2=z).
     #[inline]
     pub(crate) fn kappa(&self, axis: usize) -> &Array1<f64> {
@@ -170,6 +212,18 @@ impl CPMLProfiles {
             alpha_x: Array1::zeros([nx]),
             alpha_y: Array1::zeros([ny]),
             alpha_z: Array1::zeros([nz]),
+            kappa_x_sgx: Array1::ones([nx]),
+            kappa_y_sgy: Array1::ones([ny]),
+            kappa_z_sgz: Array1::ones([nz]),
+            alpha_x_sgx: Array1::zeros([nx]),
+            alpha_y_sgy: Array1::zeros([ny]),
+            alpha_z_sgz: Array1::zeros([nz]),
+            a_x_sgx: Array1::zeros([nx]),
+            a_y_sgy: Array1::zeros([ny]),
+            a_z_sgz: Array1::zeros([nz]),
+            b_x_sgx: Array1::ones([nx]),
+            b_y_sgy: Array1::ones([ny]),
+            b_z_sgz: Array1::ones([nz]),
             a_x: Array1::zeros([nx]),
             a_y: Array1::zeros([ny]),
             a_z: Array1::zeros([nz]),
@@ -228,7 +282,7 @@ impl CPMLProfiles {
         let alpha_y = config.sigma_factor_for_dimension(1)?;
         let alpha_z = config.sigma_factor_for_dimension(2)?;
 
-        let spec = |dx: f64, thickness: usize, pml_alpha: f64| kernels::CollocatedProfileSpec {
+        let spec = |dx: f64, thickness: usize, pml_alpha: f64, shift: f64| kernels::ProfileSpec {
             dx,
             thickness,
             pml_alpha,
@@ -236,10 +290,11 @@ impl CPMLProfiles {
             dt,
             kappa_max: config.kappa_max,
             alpha_max: config.alpha_max,
+            shift,
         };
 
-        kernels::compute_collocated_profile(
-            kernels::CollocatedProfileMut::new(
+        kernels::compute_profile(
+            kernels::ProfileMut::new(
                 &mut self.sigma_x,
                 &mut self.kappa_x,
                 &mut self.alpha_x,
@@ -247,10 +302,21 @@ impl CPMLProfiles {
                 &mut self.b_x,
             ),
             grid.nx,
-            &spec(grid.dx, config.per_dimension.x, alpha_x),
+            &spec(grid.dx, config.per_dimension.x, alpha_x, 0.0),
         );
-        kernels::compute_collocated_profile(
-            kernels::CollocatedProfileMut::new(
+        kernels::compute_profile(
+            kernels::ProfileMut::new(
+                &mut self.sigma_x_sgx,
+                &mut self.kappa_x_sgx,
+                &mut self.alpha_x_sgx,
+                &mut self.a_x_sgx,
+                &mut self.b_x_sgx,
+            ),
+            grid.nx,
+            &spec(grid.dx, config.per_dimension.x, alpha_x, 0.5),
+        );
+        kernels::compute_profile(
+            kernels::ProfileMut::new(
                 &mut self.sigma_y,
                 &mut self.kappa_y,
                 &mut self.alpha_y,
@@ -258,10 +324,21 @@ impl CPMLProfiles {
                 &mut self.b_y,
             ),
             grid.ny,
-            &spec(grid.dy, config.per_dimension.y, alpha_y),
+            &spec(grid.dy, config.per_dimension.y, alpha_y, 0.0),
         );
-        kernels::compute_collocated_profile(
-            kernels::CollocatedProfileMut::new(
+        kernels::compute_profile(
+            kernels::ProfileMut::new(
+                &mut self.sigma_y_sgy,
+                &mut self.kappa_y_sgy,
+                &mut self.alpha_y_sgy,
+                &mut self.a_y_sgy,
+                &mut self.b_y_sgy,
+            ),
+            grid.ny,
+            &spec(grid.dy, config.per_dimension.y, alpha_y, 0.5),
+        );
+        kernels::compute_profile(
+            kernels::ProfileMut::new(
                 &mut self.sigma_z,
                 &mut self.kappa_z,
                 &mut self.alpha_z,
@@ -269,33 +346,20 @@ impl CPMLProfiles {
                 &mut self.b_z,
             ),
             grid.nz,
-            &spec(grid.dz, config.per_dimension.z, alpha_z),
+            &spec(grid.dz, config.per_dimension.z, alpha_z, 0.0),
+        );
+        kernels::compute_profile(
+            kernels::ProfileMut::new(
+                &mut self.sigma_z_sgz,
+                &mut self.kappa_z_sgz,
+                &mut self.alpha_z_sgz,
+                &mut self.a_z_sgz,
+                &mut self.b_z_sgz,
+            ),
+            grid.nz,
+            &spec(grid.dz, config.per_dimension.z, alpha_z, 0.5),
         );
 
-        kernels::compute_staggered_profile(
-            &mut self.sigma_x_sgx,
-            grid.nx,
-            grid.dx,
-            config.per_dimension.x,
-            alpha_x,
-            sound_speed,
-        );
-        kernels::compute_staggered_profile(
-            &mut self.sigma_y_sgy,
-            grid.ny,
-            grid.dy,
-            config.per_dimension.y,
-            alpha_y,
-            sound_speed,
-        );
-        kernels::compute_staggered_profile(
-            &mut self.sigma_z_sgz,
-            grid.nz,
-            grid.dz,
-            config.per_dimension.z,
-            alpha_z,
-            sound_speed,
-        );
         Ok(())
     }
 
@@ -311,6 +375,10 @@ impl CPMLProfiles {
             self.alpha_z[i] = 0.0;
             self.a_z[i] = 0.0;
             self.b_z[i] = 1.0;
+            self.kappa_z_sgz[i] = 1.0;
+            self.alpha_z_sgz[i] = 0.0;
+            self.a_z_sgz[i] = 0.0;
+            self.b_z_sgz[i] = 1.0;
         }
     }
 }
