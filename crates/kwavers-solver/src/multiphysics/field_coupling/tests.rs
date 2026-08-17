@@ -1,6 +1,9 @@
 use super::{FieldCouplingStrategy, MultiphysicsFieldCoupler};
 use kwavers_core::constants::{
-    fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE},
+    fundamental::{
+        ACOUSTIC_ABSORPTION_TISSUE, DENSITY_WATER_NOMINAL, OPTICAL_ABSORPTION_TISSUE_NIR,
+        SOUND_SPEED_TISSUE,
+    },
     numerical::MPA_TO_PA,
     thermodynamic::{BODY_TEMPERATURE_C, SPECIFIC_HEAT_WATER},
 };
@@ -98,7 +101,7 @@ fn test_specific_heat_water_within_literature_range() {
 /// Analytical references:
 /// - photoelastic modulation: `I₁ = I₀(1 + s·10⁻¹²p·dt)`
 /// - optical heating: `ΔT_o = μ_a I₁ dt / (ρc_p)`
-/// - acoustic absorption heating: `ΔT_a = αp²dt / (ρ²c_pc)`
+/// - acoustic absorption heating: `ΔT_a = αp²dt / (2ρ²c_pc)` (factor of 2 from I = p²/(2ρc))
 /// # Panics
 /// - Panics if a value differs from the analytical coupling update.
 ///
@@ -121,10 +124,10 @@ fn weak_coupling_updates_targets_from_source_fields() {
 
     let expected_light = light * (1.0 + 1.0e-12 * pressure * dt);
     let expected_optical_delta =
-        10.0 * expected_light * dt / (DENSITY_WATER_NOMINAL * SPECIFIC_HEAT_WATER);
-    let acoustic_intensity = pressure * pressure / (DENSITY_WATER_NOMINAL * SOUND_SPEED_TISSUE);
+        OPTICAL_ABSORPTION_TISSUE_NIR * expected_light * dt / (DENSITY_WATER_NOMINAL * SPECIFIC_HEAT_WATER);
+    let acoustic_intensity = pressure * pressure / (2.0 * DENSITY_WATER_NOMINAL * SOUND_SPEED_TISSUE);
     let expected_acoustic_delta =
-        0.5 * acoustic_intensity * dt / (DENSITY_WATER_NOMINAL * SPECIFIC_HEAT_WATER);
+        ACOUSTIC_ABSORPTION_TISSUE * acoustic_intensity * dt / (DENSITY_WATER_NOMINAL * SPECIFIC_HEAT_WATER);
     let expected_temperature = temperature + expected_optical_delta + expected_acoustic_delta;
 
     assert_eq!(fields[0][[0, 0, 0]], pressure);

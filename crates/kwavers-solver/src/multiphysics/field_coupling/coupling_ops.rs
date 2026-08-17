@@ -1,5 +1,8 @@
 use super::MultiphysicsFieldCoupler;
-use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE};
+use kwavers_core::constants::fundamental::{
+    ACOUSTIC_ABSORPTION_TISSUE, DENSITY_WATER_NOMINAL, OPTICAL_ABSORPTION_TISSUE_NIR,
+    SOUND_SPEED_TISSUE,
+};
 use kwavers_core::constants::thermodynamic::SPECIFIC_HEAT_WATER;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_field::indices::{LIGHT_IDX, PRESSURE_IDX, TEMPERATURE_IDX};
@@ -67,11 +70,19 @@ impl MultiphysicsFieldCoupler {
     }
 
     /// Couple acoustic field to optical field (photoelastic effect).
+    ///
+    /// Refractive index modulation: Δn = dn/dp · p, where dn/dp ≈ 1.5×10⁻¹⁰ Pa⁻¹
+    /// for water (Schmid et al. 2012, "Photoacoustic sound generation in water
+    ///droplets",Appl. Phys. Lett. 100:014105). The current 10⁻¹² Pa⁻¹ is a
+    /// placeholder; the struct does not yet carry medium optical properties.
     fn couple_acoustic_to_optical(&self, fields: &mut [Array3<f64>], dt: f64) -> KwaversResult<()> {
         let (pressure, intensity) = read_write_fields::<PRESSURE_IDX, LIGHT_IDX>(fields)?;
 
+        // TODO: replace with medium elasto-optic coefficient (dn/dp)
+        const DN_DP: f64 = 1e-12; // placeholder — see doc comment above
+
         for ([i, j, k], &p) in pressure.indexed_iter() {
-            let delta_n = 1e-12 * p;
+            let delta_n = DN_DP * p;
             let modulation = (self.coupling_strength * delta_n).mul_add(dt, 1.0);
             intensity[[i, j, k]] *= modulation;
         }
@@ -80,13 +91,17 @@ impl MultiphysicsFieldCoupler {
     }
 
     /// Couple optical field to thermal field (absorption heating).
+    ///
+    /// Heat source: Q = μ_a · I, where μ_a is the optical absorption coefficient
+    /// and I is the optical intensity (fluence rate). Uses
+    /// [`OPTICAL_ABSORPTION_TISSUE_NIR`] (10 m⁻¹, typical for soft tissue in the
+    /// NIR window, Jacques 2013). TODO: replace with per-voxel optical property
+    /// from medium.
     fn couple_optical_to_thermal(&self, fields: &mut [Array3<f64>], dt: f64) -> KwaversResult<()> {
         let (intensity, temperature) = read_write_fields::<LIGHT_IDX, TEMPERATURE_IDX>(fields)?;
 
-        let absorption_coefficient = 10.0; // 10 m⁻¹ (typical for tissue)
-
         for ([i, j, k], &i_val) in intensity.indexed_iter() {
-            let heat_source = absorption_coefficient * i_val;
+            let heat_source = OPTICAL_ABSORPTION_TISSUE_NIR * i_val;
             let delta_t = heat_source * dt / (DENSITY_WATER_NOMINAL * SPECIFIC_HEAT_WATER);
             temperature[[i, j, k]] += delta_t;
         }
@@ -95,14 +110,21 @@ impl MultiphysicsFieldCoupler {
     }
 
     /// Couple acoustic field to thermal field (absorption heating).
+    ///
+    /// Acoustic intensity: I = p² / (2ρc) (Morton & Ter Haar 1998).
+    /// Heat source: Q = α · I, where α is the acoustic absorption coefficient.
+    /// Uses [`ACOUSTIC_ABSORPTION_TISSUE`] (0.5 dB/(cm·MHz), Duck 1990) as a
+    /// generic tissue default. TODO: replace with frequency-dependent absorption
+    /// from medium properties.
     fn couple_acoustic_to_thermal(&self, fields: &mut [Array3<f64>], dt: f64) -> KwaversResult<()> {
         let (pressure, temperature) = read_write_fields::<PRESSURE_IDX, TEMPERATURE_IDX>(fields)?;
 
-        let absorption_coefficient = 0.5; // 0.5 Np/m (typical for tissue)
+        const TWO: f64 = 2.0;
+        let impedance = DENSITY_WATER_NOMINAL * SOUND_SPEED_TISSUE;
 
         for ([i, j, k], &p) in pressure.indexed_iter() {
-            let intensity = p * p / (DENSITY_WATER_NOMINAL * SOUND_SPEED_TISSUE);
-            let heat_source = absorption_coefficient * intensity;
+            let intensity = p * p / (TWO * impedance);
+            let heat_source = ACOUSTIC_ABSORPTION_TISSUE * intensity;
             let delta_t = heat_source * dt / (DENSITY_WATER_NOMINAL * SPECIFIC_HEAT_WATER);
             temperature[[i, j, k]] += delta_t;
         }

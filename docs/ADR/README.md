@@ -69,8 +69,8 @@
 | [103](103-thermal-diffusion-quantities.md) | Thermal-diffusion physical quantities | Accepted |
 | [104](104-thermal-acoustic-coupling-quantities.md) | Thermal-acoustic coupling quantities | Accepted |
 | [105](105-b-mode-scan-conversion-quantities.md) | B-mode scan-conversion geometry quantities | Accepted |
-| [106](106-rigid-walls-by-even-reflection.md) | Rigid walls by even reflection, divergence defined as -G^T | Accepted |
-| [107](107-collocated-summation-by-parts.md) | Summation by parts for the collocated rigid wall | Accepted |
+| [106](106-rigid-walls-by-even-reflection.md) | 106. Rigid walls by even reflection, with the divergence defined as −Gᵀ | Accepted |
+| [107](107-collocated-summation-by-parts.md) | 107. Summation by parts for the collocated rigid wall | Accepted |
 | [108](108-retire-stale-apollo-gpu-probe.md) | Retire the stale Apollo GPU availability probe | Accepted |
 | [109](109-aequitas-quantity-provider.md) | Adopt Aequitas for bubble-energy quantities | Accepted |
-| [110](110-drop-dead-boundary-parameters.md) | Delete the inert BoundaryParameters surface | Accepted |
+| [110](110-drop-dead-boundary-parameters.md) | 110. Delete the inert BoundaryParameters surface | Accepted |
