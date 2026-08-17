@@ -1123,6 +1123,11 @@
 - Acceptance: the solver compiles under its complete feature set and its
   warning-denied Clippy gate has no remaining source diagnostics; behavior is
   unchanged and existing solver regressions retain their value semantics.
+- Increment 2026-08-17: replaced the partial-order negated comparisons in
+  `forward/fdtd/absorption/mod.rs` with an explicit `partial_cmp` predicate.
+  The absorption regression filter passes 8/8 and the package all-target
+  warning-denied Clippy gate now passes; remaining ratchet findings, if any,
+  are discovered by the hosted matrix.
 - Driver: 79 source diagnostics prevented the public analysis package from
   completing its all-feature warning-denied gate.
 - Evidence: the complete solver feature set compiles, warning-denied solver

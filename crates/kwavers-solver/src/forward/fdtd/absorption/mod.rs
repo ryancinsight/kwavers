@@ -126,7 +126,15 @@ impl RelaxationAbsorption {
         settings: &PowerLawRelaxationSettings,
     ) -> KwaversResult<Self> {
         let shape = materials.rho0.shape();
-        if materials.rho0.iter().any(|&r| !(r > 0.0)) || materials.c0.iter().any(|&c| !(c > 0.0)) {
+        if materials
+            .rho0
+            .iter()
+            .any(|&r| !matches!(r.partial_cmp(&0.0), Some(std::cmp::Ordering::Greater)))
+            || materials
+                .c0
+                .iter()
+                .any(|&c| !matches!(c.partial_cmp(&0.0), Some(std::cmp::Ordering::Greater)))
+        {
             return Err(KwaversError::InvalidInput(
                 "FDTD absorption requires positive density and sound speed everywhere".to_owned(),
             ));
