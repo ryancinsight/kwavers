@@ -6730,6 +6730,22 @@ This inverts the earlier reading, which was taken over the defect. Deferred item
 (d), double-pole CFS, should not be started on the assumption that CFS helps here
 — re-measure first.
 
+**KW-BND-099 — `target_reflection` does not shape the profile [minor] — todo**
+- Owner: unclaimed. sigma follows the k-Wave `pml_alpha*(c/dx)*q^4` form, which
+  carries no R0 term, while `profiles/mod.rs` states the Roden-Gedney
+  `sigma_max = -(m+1)c0 ln(R0)/(2d)` as the governing theory. So the field named
+  for the design reflection is inert: tightening 1e-6 -> 1e-12 changes no
+  coefficient. Now asserted (`target_reflection_does_not_enter_the_profile`) and
+  documented rather than left to be discovered by absence of effect.
+- Decision needed: adopt the R0-derived grading (principled, ties the knob to
+  its name, but moves sigma_max ~1.4x here and must be checked against the
+  k-Wave parity tests), or keep the k-Wave form and rename the field to what it
+  is (an estimator input). Not a silent third option: leaving a live-looking
+  knob inert is the trap this item exists to close.
+- Note: with KW-BND-097 fixed, sigma_max retuning is a much smaller lever than
+  it appeared -- the 32x sweep that found "no improvement" was taken over the
+  sampling defect and should be repeated before concluding.
+
 **Follow-up KW-BND-098 — does kappa pay on a thick PML? [minor] — todo**
 - Owner: unclaimed. kappa is harmful at 10 cells; the literature's kappa_max in
   [5,20] presumes enough cells for the q^4 grading to vary smoothly. Sweep
