@@ -6679,12 +6679,45 @@ dead `kappa_max`/`alpha_max` config activated (defaults reset 15/0.24 → 1/0 =
 prior effective behavior, FDTD bit-identical); fixed the wrong `a` doc formula.
 94 boundary + 81 FDTD/CPML solver tests pass; clippy clean. Split-field PSTD
 parity untouched (σ profile unchanged).
-**Deferred (tracked):** (a) full oblique-incidence FDTD differential benchmark
-proving the grazing-reflection reduction empirically (currently formula-tier +
-literature-cited); (b) plumb α_max≈π·f₀ from the source frequency instead of an
-absolute value; (c) **3rd CPML impl** found — `solver/forward/pstd/dg/cpml` (DG
+**Deferred (tracked):** (a) ✅ **DONE (2026-08-17)** — see below; (b) ✅ **already
+done**: `with_cfs_pml_for_frequency(kappa_max, f0)` sets α_max = π·f₀ (the note
+predated it); (c) **3rd CPML impl** found — `solver/forward/pstd/dg/cpml` (DG
 solver) is a separate CPML; evaluate consolidating onto `kwavers-boundary` or
 documenting the split. (d) double-pole CFS for >16:1 bandwidth (Feng 2017).
+
+**(a) empirical benchmark — DONE (2026-08-17), and it refutes the claim.**
+`cfs_pml_reduces_grazing_incidence_reflection` (kwavers-solver fdtd solver tests)
+measures spurious reflection differentially against a reference run whose walls
+are too distant to reflect in-window; the reference is reflection-free to 1.5e-13
+of the direct peak (asserted, not assumed — moving its wall 30 cells changes the
+trace by ~1e-14). Method validated by a thickness control: reflection falls
+6.6e-2 → 2.7e-2 → 1.4e-2 for 10/20/30-cell PML.
+
+Measured, against the documented "order-of-magnitude fewer spurious reflections
+at grazing incidence":
+- CFS at the recommended κ=10, α=π·f₀ gives **1.27×** less reflection at 70°
+  incidence (6.31e-2 → 4.96e-2 of the direct peak). Real, but not 10×.
+- The benefit **shrinks toward grazing** — 2.09× at 14°, 1.89× at 45°, 1.64× at
+  63°, 1.44× at 74° — the opposite of the CFS rationale.
+- κ_max ≈ 5 is the optimum; **κ_max = 20 is worse than κ = 1** (7.4e-2 vs
+  6.6e-2), so the literature's [5, 20] upper bound is actively harmful here.
+  Rustdoc on `CPMLConfig::kappa_max` / `with_cfs_pml` corrected to match.
+
+**New item KW-BND-097 — angle-independent ~2% PML reflection floor [minor] — todo**
+- Owner: unclaimed. The measurements above sit on a floor the CFS terms do not
+  touch: **2.3e-2 at 14° (near-normal)**, where published 10-cell CPML reaches
+  ~1e-3. Ruled out by measurement: σ mistuning (a 32× sweep of `sigma_factor`
+  0.5→16 never drops below 1.7e-2, and the default 2.0 is already near-optimal
+  at grazing), and measurement error (reference validated to 1.5e-13).
+- Lead: `profiles/mod.rs:16` documents σ_max = −(m+1)c₀ln(R₀)/(2d) (Roden–Gedney)
+  but the implementation uses k-Wave's σ_max = pml_alpha·c₀/dx — so
+  `target_reflection: 1e-6` never reaches the profile and is read only by the
+  `theoretical_reflection` estimator. The two differ ~1.4× here, which is not
+  itself 20×, but the doc/impl split is real and is the place to start.
+- Acceptance: root cause identified with evidence; either the floor drops or the
+  ~2% is shown to be the correct limit for this discretisation and the docs say
+  so. Oracle: the benchmark above, which is already parameterized by
+  `(pml, h, offset, kappa, alpha)`.
 
 ### Original spec (retained for the deferred items)
 ## OPEN: CPML → single-pole CFS-PML upgrade [minor] (opened 2026-06-19)
