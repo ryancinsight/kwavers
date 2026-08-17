@@ -4,6 +4,14 @@
 
 ### Changed
 
+- **Behavior:** `CPMLConfig` default `sigma_factor` raised from k-Wave's `2.0`
+  to `3.0`. Measured at 70 degrees incidence on the default 20-cell PML, this
+  reduces spurious boundary reflection by 62x on the convolutional FDTD path
+  (4.26e-7 -> 6.84e-9) and 117x on the split-field PSTD path
+  (6.87e-6 -> 5.89e-8). Set `2.0` via `CPMLConfig::with_alpha` for bit-parity
+  with k-Wave. Absorbing-boundary results change for callers relying on the
+  default; no API change.
+
 - `kwavers-solver` FWI and elastic-FWI L-BFGS callers now use the direct
   provider-owned `leto_ops::application::optimization::LbfgsMemory` API.
   Focused tests cover direction equivalence after eviction and bounded memory;

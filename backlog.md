@@ -6730,13 +6730,21 @@ This inverts the earlier reading, which was taken over the defect. Deferred item
 (d), double-pole CFS, should not be started on the assumption that CFS helps here
 — re-measure first.
 
-**KW-BND-100 — raise the default `sigma_factor` from 2 to 3? [minor] — todo**
+**KW-BND-100 — raise the default `sigma_factor` from 2 to 3 [minor] — DONE (2026-08-17)**
 - Owner: unclaimed. Measured post-KW-BND-097 on the convolutional FDTD path at
   70 degrees, sigma-only: sf=3 gives 4.51e-5 vs 1.23e-3 at 10 cells (27x) and
   6.84e-9 vs 4.26e-7 at 20 cells (62x). Optimum is 3 at both thicknesses; 4, 5,
   6 give it back. Pinned by
   `sigma_factor_three_outperforms_the_kwave_default_at_grazing_incidence`.
-- **Blocked on evidence, not effort.** `sigma_factor` is k-Wave's `pml_alpha`
+- **Resolved: PSTD measured, both paths agree.** At the shipping 20-cell
+  thickness, sf=3 gives 6.84e-9 vs 4.26e-7 on FDTD (62x) and 5.89e-8 vs 6.87e-6
+  on PSTD (117x). Default raised to 3.0; `with_alpha(2.0)` restores k-Wave
+  bit-parity, and no doc claimed default-configuration k-Wave equivalence (the
+  "k-Wave equivalent" notes are API mappings). CHANGELOG records the behavior
+  change. Pinned by `pstd_sigma_factor_three_outperforms_the_kwave_default`.
+- Thickness caveat: at 10 cells the paths disagree (FDTD 3, PSTD 4), so the
+  choice is anchored at the shipping thickness rather than the thin case.
+- Original blocking rationale (retained): `sigma_factor` is k-Wave's `pml_alpha`
   and is shared with the split-field PSTD path, whose default boundary is this
   same `CPMLConfig::default()`. The measurement above says nothing about PSTD,
   and 2.0 is k-Wave's own default, so raising it trades a stated parity goal for
