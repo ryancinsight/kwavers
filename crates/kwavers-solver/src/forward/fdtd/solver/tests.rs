@@ -1479,53 +1479,45 @@ fn pml_grazing_reflection(
 }
 
 /// ## Theorem
-/// Enabling CFS-PML (graded κ and α) on the convolutional FDTD boundary reduces
-/// the spurious reflection of a grazing-incidence wave relative to the σ-only
-/// CPML that κ = 1, α = 0 reduces to.
+/// The convolutional CPML absorbs a grazing-incidence wave to below 5e-3 of the
+/// incident peak, which holds only while each gradient samples the σ/κ/α
+/// profile at its own Yee position.
 ///
 /// ## Method
 /// Differential measurement against a reflection-free reference (see
 /// [`pml_grazing_reflection`]). At `h = 20`, `offset = 110` the specular bounce
 /// meets the wall 70° from the normal.
 ///
-/// ## Measured (2026-08-17, this configuration)
-/// σ-only 6.31e-2 of the direct peak; CFS at the documented recommendation
-/// (κ_max = 10, α_max = π·f₀) 4.96e-2 — a ratio of 0.786. The reference is
-/// reflection-free to 1.5e-13 of the direct peak, so the separation is signal.
+/// ## Measured (2026-08-17)
+/// 1.23e-3 of the direct peak, reference reflection-free to 1.9e-14. Before
+/// KW-BND-097 — when the pressure-gradient memory used the collocated
+/// coefficients although that gradient lives half a cell away — the same
+/// configuration reflected 6.31e-2, so the bound here fires ~50× over on a
+/// regression of that sampling.
 ///
-/// The reduction is real but modest. It is **not** the order of magnitude the
-/// CFS literature reports, and it shrinks toward grazing incidence rather than
-/// growing (2.09× at 14°, 1.44× at 74°), against an angle-independent ~2%
-/// floor that a 32× sweep of σ_max does not remove. That residual is tracked
-/// separately; this test pins the improvement that is actually delivered.
+/// The CFS terms are deliberately not exercised: with the sampling corrected,
+/// κ costs more in discrete reflection than it buys over a 10-cell PML
+/// (κ=2 → 1.77e-3, κ=10 → 1.24e-2 against 1.23e-3 for σ-only) and α is
+/// neutral (1.21e-3). See `CPMLConfig::kappa_max`.
 #[test]
-fn cfs_pml_reduces_grazing_incidence_reflection() {
-    let (direct_sigma, spurious_sigma, reference_residual) =
-        pml_grazing_reflection(10, 20, 110, 1.0, 0.0);
-    let (direct_cfs, spurious_cfs, _) =
-        pml_grazing_reflection(10, 20, 110, 10.0, std::f64::consts::PI * 1.0e6);
+fn cpml_absorbs_grazing_incidence_within_the_reflection_bound() {
+    let (direct, spurious, reference_residual) = pml_grazing_reflection(10, 20, 110, 1.0, 0.0);
 
     // The method is only valid while the reference carries no reflection of its
     // own; without this the difference would measure the reference's error.
     assert!(
-        reference_residual <= 1e-8 * direct_sigma,
-        "reference must be reflection-free: residual {reference_residual:.3e} against direct {direct_sigma:.3e}"
+        reference_residual <= 1e-8 * direct,
+        "reference must be reflection-free: residual {reference_residual:.3e} against direct {direct:.3e}"
     );
     assert!(
-        direct_sigma > 1e-2,
-        "the direct wave must reach the receiver: peak {direct_sigma:.3e}"
+        direct > 1e-2,
+        "the direct wave must reach the receiver: peak {direct:.3e}"
     );
 
-    let ratio_sigma = spurious_sigma / direct_sigma;
-    let ratio_cfs = spurious_cfs / direct_cfs;
+    let ratio = spurious / direct;
     assert!(
-        (1e-3..0.5).contains(&ratio_sigma),
-        "sigma-only reflection {ratio_sigma:.3e} outside the regime this measures"
-    );
-    assert!(
-        ratio_cfs / ratio_sigma < 0.9,
-        "CFS-PML must reduce grazing reflection: sigma-only {ratio_sigma:.4e}, \
-         CFS {ratio_cfs:.4e}, ratio {:.4} (measured 0.786)",
-        ratio_cfs / ratio_sigma
+        ratio < 5e-3,
+        "grazing reflection {ratio:.4e} exceeds the 5e-3 bound (measured 1.23e-3); \
+         a jump toward 6e-2 means the staggered profile sampling regressed"
     );
 }

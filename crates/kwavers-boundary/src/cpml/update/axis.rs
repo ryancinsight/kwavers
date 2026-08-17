@@ -133,8 +133,8 @@ impl CPMLUpdater {
             memory.psi_p_mut(axis),
             gradient,
             axis,
-            profiles.b(axis),
-            profiles.a(axis),
+            profiles.b_staggered(axis),
+            profiles.a_staggered(axis),
         );
     }
 
@@ -169,7 +169,12 @@ impl CPMLUpdater {
         if axis >= 3 {
             return;
         }
-        apply_correction_along(gradient, memory.psi_p(axis), axis, profiles.kappa(axis));
+        apply_correction_along(
+            gradient,
+            memory.psi_p(axis),
+            axis,
+            profiles.kappa_staggered(axis),
+        );
     }
 
     /// Apply the velocity-gradient CPML correction along `axis` (0=x, 1=y, 2=z).
