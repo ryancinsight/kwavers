@@ -1309,15 +1309,79 @@
   physics path and retain no re-export. Acceptance: Physics has no registration
   dependency and Diagnostics owns all fusion and registration contracts.
 
-## KW-DOC-038 — Resolve Physics Rustdoc links [patch] — todo
+## KW-SOL-095 — Replicate Fullwave's own scatterer experiment [patch] — done 2026-08-17
 
-- Owner: unclaimed; scope: unresolved intra-doc links and bracketed unit
-  annotations in `kwavers-physics` Rustdoc.
-- Driver: the all-feature package documentation build emits 575 unresolved-link
-  warnings; the clinical-imaging boundary change introduces none.
+- The original ask was to *replicate these results*; until now the parity
+  evidence was capability-by-capability against the README. This takes the
+  parameters from Fullwave 2.5's `experiments/exp_scatterer_diameter.py` rather
+  than inventing a case: background `c = 1540`, `rho = 1000`, `alpha_0 = 0.5`,
+  `gamma = 1.0`; centre-third inclusion `c = 1600`, `rho = 1100`,
+  `alpha_0 = 0.75`, `gamma = 1.1`; `f0 = 3 MHz`.
+- **Why this case and not another.** The exponent differs *between regions*, so
+  one shared fitted spectrum must serve both - that is the capability itself,
+  not a proxy. And the background sits at `gamma = 1.0`, which PSTD cannot
+  represent at all: the Treeby-Cox dispersion coefficient carries
+  `tan(pi*y/2)`, which diverges there (KW-SOL-080). For the relaxation path
+  `gamma = 1` is an ordinary point, so Fullwave's own experiment is reachable
+  only through the path this work built.
+- Result: one shared four-arm spectrum covers both exponents across their
+  materials with a worst relative fit error of **0.0082 %**. Asserted at 0.1 %,
+  an order of magnitude above the measurement rather than at it.
+- **API trap, recorded at the test.** `HeterogeneousMedium` exposes both
+  `alpha0` and `absorption`, and `alpha_coefficient` - what the FDTD material
+  sampler calls - reads `absorption`. Setting only `alpha0` produces a silently
+  **lossless** medium: no relaxation state is built and the run looks fine.
+- Verified: 883/883 kwavers-solver against pinned revisions.
+
+## KW-SOL-093 — Absorption under fourth-order time composition [minor] — done 2026-08-15
+
+- Re-recorded: the code is on `main` (`58dd5cf2f`) but this entry was lost to a
+  later merge that reverted board text without reverting commits.
+- `TemporalScheme::Yoshida4` runs with `PowerLawRelaxation`. Exponential
+  coefficients are derived per sub-step from a scalar `tau` instead of being
+  precomputed for one step, so each of `w1*dt`, `w0*dt`, `w1*dt` decays by its
+  own `e^{-h/tau}`. The negative central sub-step is admissible: the weights sum
+  to one, so the exponents cancel exactly.
+- The fix removed three arrays per arm rather than adding any - `decay` and
+  `inv_tau` were spatially uniform values stored as full grids.
+- Acceptance: `absorption_reproduces_prescribed_power_law_under_composition`
+  runs the leapfrog path's own measurement at exponents 0.6/1.0/1.4 and holds
+  the same 15 % bound.
+
+## KW-CI-094 — The recurseml check errors on itself and is permanently red [patch] — todo
+
+- Re-recorded; lost to the same merge as KW-SOL-093, and still true.
+- `recurseml/analysis` reports `state: error` with `Error occurred during
+  analysis`, on ten of the eleven pull requests in this stretch. The message is
+  the bot failing, not a finding.
+- It is not a required check, so it never blocks a merge - which is what makes it
+  worth fixing. Every PR shows a red check that everyone learns to skip, and that
+  is how a real failure gets waved through.
+- Acceptance: the check either reports real findings, or is removed. Not left
+  erroring.
+
+## KW-DOC-038 — Resolve Physics Rustdoc links [patch] — done 2026-08-17 (verified twice, no change needed)
+
 - Acceptance: `cargo doc -p kwavers-physics --all-features --no-deps` is
-  warning-clean without disabling Rustdoc diagnostics.
-- Evidence: `gap_audit.md` documentation baseline entry.
+  warning-clean without disabling Rustdoc diagnostics. **It is.**
+- Measured on `1d7c6899f`, forcing a real rustdoc run each time by touching the
+  crate first and confirming `Documenting kwavers-physics` in the output:
+  **0 warnings and 0 unresolved links** with `--all-features`, and 0 with
+  default features. The 575 the item was filed against are gone, resolved
+  incrementally by peers escaping bracketed unit annotations that rustdoc read
+  as intra-doc links (`5044c0c13` is the pattern).
+- **This closure was recorded once before and reverted.** It landed in PR #376
+  and is absent from `main` now, while the code merges from the same stretch are
+  all still ancestors - so a later merge took the board text and not the commits.
+  Re-recording rather than assuming it stuck.
+- **One open contradiction, deliberately not overwritten.** The KW-ARCH-065
+  evidence above states `kwavers-physics` "retains its tracked KW-DOC-038
+  baseline (557 warnings in this configuration)". I cannot reproduce that in
+  either configuration on current `main`. Their note says *this configuration*,
+  which suggests the published-graph resolution used for the SemVer work rather
+  than the acceptance command; if so, the two statements are about different
+  builds and both stand. Whoever owns KW-ARCH-065 should say which invocation
+  produces 557 - the acceptance command above is not it.
 
 ## KW-APERTURE-003 — Planar sector BLI rasterization [minor] — review
 
