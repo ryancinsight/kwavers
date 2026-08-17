@@ -16,7 +16,20 @@ pub struct CPMLConfig {
     pub per_dimension: PerDimensionPML,
     /// Polynomial order for profile grading (typically 3–4).
     pub polynomial_order: f64,
-    /// Maximum conductivity scaling factor (uniform; overridden by `per_dimension_alpha`).
+    /// Maximum conductivity scaling factor (uniform; overridden by
+    /// `per_dimension_alpha`). This is k-Wave's `pml_alpha`, and the default of
+    /// `2.0` is k-Wave's.
+    ///
+    /// On the convolutional FDTD path, `3.0` absorbs grazing incidence far
+    /// better — 4.51e-5 of the incident peak against 1.23e-3 at 10 cells (27×),
+    /// and 6.84e-9 against 4.26e-7 at 20 cells (62×), measured at 70° with σ-only
+    /// CPML. Values above 3 give the optimum back. Prefer `3.0` for FDTD work
+    /// that is not chasing k-Wave bit-parity.
+    ///
+    /// The default stays at k-Wave's `2.0` because this knob is shared with the
+    /// split-field PSTD path, for which no equivalent measurement exists yet
+    /// (KW-BND-100). Evidence:
+    /// `sigma_factor_three_outperforms_the_kwave_default_at_grazing_incidence`.
     pub sigma_factor: f64,
     /// Per-dimension sigma scaling factors (k-Wave `pml_alpha` vector).
     pub per_dimension_alpha: PerDimensionAlpha,

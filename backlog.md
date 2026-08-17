@@ -6730,6 +6730,25 @@ This inverts the earlier reading, which was taken over the defect. Deferred item
 (d), double-pole CFS, should not be started on the assumption that CFS helps here
 — re-measure first.
 
+**KW-BND-100 — raise the default `sigma_factor` from 2 to 3? [minor] — todo**
+- Owner: unclaimed. Measured post-KW-BND-097 on the convolutional FDTD path at
+  70 degrees, sigma-only: sf=3 gives 4.51e-5 vs 1.23e-3 at 10 cells (27x) and
+  6.84e-9 vs 4.26e-7 at 20 cells (62x). Optimum is 3 at both thicknesses; 4, 5,
+  6 give it back. Pinned by
+  `sigma_factor_three_outperforms_the_kwave_default_at_grazing_incidence`.
+- **Blocked on evidence, not effort.** `sigma_factor` is k-Wave's `pml_alpha`
+  and is shared with the split-field PSTD path, whose default boundary is this
+  same `CPMLConfig::default()`. The measurement above says nothing about PSTD,
+  and 2.0 is k-Wave's own default, so raising it trades a stated parity goal for
+  an unmeasured benefit on half the consumers. Measure PSTD first.
+- Mechanical risk already retired: with the default flipped to 3.0 the whole
+  affected suite passes (kwavers-boundary 97, kwavers-solver 886,
+  kwavers-simulation 87) and no test pins the value, so parity is asserted with
+  explicit values rather than the default. The open question is semantic only.
+- Caution for whoever measures PSTD: near-normal incidence is not usable as a
+  discriminator here — reference residuals run ~0.6x the signal, so that column
+  reports the method's noise floor. Use grazing (residual ~1e-14).
+
 **KW-BND-099 — `target_reflection` does not shape the profile [minor] — todo**
 - Owner: unclaimed. sigma follows the k-Wave `pml_alpha*(c/dx)*q^4` form, which
   carries no R0 term, while `profiles/mod.rs` states the Roden-Gedney
