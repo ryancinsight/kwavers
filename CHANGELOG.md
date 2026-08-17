@@ -4,6 +4,11 @@
 
 ### Changed
 
+- **Correctness:** GPU-enabled multi-field visualization now returns a typed
+  feature/resource error until `VisualizationEngine::initialize_gpu` has
+  initialized both the renderer and data pipeline. The non-GPU fallback and
+  initialized multi-field path retain their existing ownership boundaries.
+
 - **Documentation:** The generic field-coupling implementation now states its
   nominal medium-coefficient contract explicitly. The remaining medium-aware
   provider extension is recorded in `KWAVERS-COUPLING-CONTRACT-001`; numerical

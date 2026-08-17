@@ -1,3 +1,19 @@
+## ATLAS-KWAVERS-HEPHAESTUS-VIS-104 — GPU visualization initialization boundary — in progress 2026-08-17
+
+The feature-enabled `VisualizationEngine::render_multi_field` path validates
+field dimensions and then silently returns `Ok(())` when either the renderer or
+the data pipeline is absent. `VisualizationEngine::create` intentionally
+leaves both resources uninitialized; only `initialize_gpu` establishes the
+GPU rendering precondition. This is a correctness defect because a valid input
+can report success without processing any field.
+
+The repair is consumer-local: return the existing typed
+`SystemError::FeatureNotAvailable` when the GPU resource pair is absent, keep
+the initialized GPU path responsible for all fields, and keep CPU fallback
+behind the non-GPU feature only. The FDTD/provider implementation gap remains
+separate and is not changed here. Reopen or close this record after the
+feature-enabled hosted gate at the pushed branch head.
+
 ## Kwavers → mnemosyne allocation-locality axis closure — 2026-08-16 (Atlas gitlink scope)
 
 The *execution* half of the placement seam is folded onto mnemosyne-heap,
