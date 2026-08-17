@@ -148,9 +148,16 @@ impl VisualizationEngine {
         Ok(())
     }
 
-    /// Render multiple fields simultaneously
+    /// Render multiple fields simultaneously.
+    ///
+    /// The fourth axis of `fields` supplies the field count and `field_types`
+    /// supplies its matching semantic type for each slice. GPU rendering
+    /// composites every slice; the CPU path sends every slice through the
+    /// fallback renderer.
     /// # Errors
-    /// - Propagates any `KwaversError` returned by called functions.
+    /// - Returns [`KwaversError::InvalidInput`] when no fields are supplied or
+    ///   when the field-type count does not match the fourth-axis length.
+    /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     pub async fn render_multi_field(
         &mut self,
@@ -158,25 +165,42 @@ impl VisualizationEngine {
         field_types: &[UnifiedFieldType],
         grid: &Grid,
     ) -> KwaversResult<()> {
+        let field_count = fields.shape()[3];
+        if field_count == 0 {
+            return Err(KwaversError::InvalidInput(
+                "multi-field rendering requires at least one field".to_string(),
+            ));
+        }
+        if field_types.len() != field_count {
+            return Err(KwaversError::InvalidInput(format!(
+                "multi-field rendering received {field_count} fields but {} field types",
+                field_types.len()
+            )));
+        }
+
         #[cfg(feature = "gpu-visualization")]
         {
             if let (Some(renderer), Some(pipeline)) = (&mut self.renderer, &mut self.data_pipeline)
             {
                 // Upload all fields to GPU
                 let transfer_start = Instant::now();
+                let mut contiguous_fields = Vec::with_capacity(field_count);
                 for (i, &field_type) in field_types.iter().enumerate() {
-                    if i < fields.shape()[3] {
-                        let field = fields.index_axis::<3>(3, i)?.to_contiguous();
-                        pipeline.upload_field(&field, field_type).await?;
-                    }
+                    let field = fields.index_axis::<3>(3, i)?.to_contiguous();
+                    pipeline.upload_field(&field, field_type).await?;
+                    contiguous_fields.push(field);
                 }
                 let transfer_time =
                     transfer_start.elapsed().as_secs_f32() * MILLISECONDS_PER_SECOND as f32;
 
                 // Render all fields with transparency blending
                 let render_start = Instant::now();
-                // Future: Gather actual field data for multi-field rendering (Sprint 127+)
-                renderer.render_multi_volume(vec![], grid).await?;
+                let render_fields = field_types
+                    .iter()
+                    .copied()
+                    .zip(contiguous_fields.iter())
+                    .collect();
+                renderer.render_multi_volume(render_fields, grid).await?;
                 let render_time =
                     render_start.elapsed().as_secs_f32() * MILLISECONDS_PER_SECOND as f32;
 
@@ -194,11 +218,10 @@ impl VisualizationEngine {
 
         #[cfg(not(feature = "gpu-visualization"))]
         {
-            warn!("Multi-field rendering requires GPU visualization feature");
-            // Render first field as fallback
-            if !field_types.is_empty() && fields.shape()[3] > 0 {
-                let field = fields.index_axis::<3>(3, 0)?.to_contiguous();
-                super::fallback::render_field(&field, field_types[0], grid)?;
+            warn!("GPU visualization not enabled. Using fallback renderer for all fields.");
+            for (i, &field_type) in field_types.iter().enumerate() {
+                let field = fields.index_axis::<3>(3, i)?.to_contiguous();
+                super::fallback::render_field(&field, field_type, grid)?;
             }
         }
 
