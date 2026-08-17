@@ -1272,3 +1272,113 @@ fn fullwave_scatterer_experiment_medium_fits_both_exponents() {
         100.0 * absorption.fit_error()
     );
 }
+
+/// **The impedance step in Fullwave's experiment reflects by the analytical
+/// coefficient.**
+///
+/// KW-SOL-095 replicated their *medium* and showed one relaxation spectrum
+/// covers both exponents. It never propagated anything, so it said nothing
+/// about whether the interface behaves. This runs a wave into it.
+///
+/// Their materials fix the impedances: `Z = rho*c` gives `1.54` and
+/// `1.76 MRayl`, so normal-incidence reflection is
+/// `R = (Z2 - Z1)/(Z2 + Z1) = 1/15 = 0.0667` exactly - a closed form, not a
+/// tolerance pulled from a previous run.
+///
+/// Run **lossless** on purpose: their `c` and `rho` set `R`, while `alpha_0`
+/// and `gamma` do not, so dropping absorption isolates the interface against an
+/// exact oracle instead of folding in decay that would have to be modelled and
+/// subtracted. Absorption on these same materials is covered by KW-SOL-095.
+///
+/// # Not the same as `viscoacoustic::heterogeneous_interface_reflects_...`
+///
+/// That test exists and checks the same law, so the difference is worth stating
+/// rather than leaving a reader to assume duplication. It varies **modulus
+/// only** at fixed density on the *viscoacoustic* path, giving `R = 1/3` - a
+/// large contrast that exercises the per-voxel coupling. This varies **density
+/// and sound speed together** on the *staggered FDTD* path at `R = 1/15`, the
+/// small tissue-realistic contrast where an error is easy to miss and where a
+/// scheme that quietly mishandles the density average still looks plausible.
+#[test]
+fn fullwave_material_interface_reflects_by_the_analytical_coefficient() {
+    const N: usize = 512;
+    const F0: f64 = 3.0e6;
+    const C1: f64 = 1540.0;
+    const C2: f64 = 1600.0;
+    const RHO1: f64 = 1000.0;
+    const RHO2: f64 = 1100.0;
+    const DX: f64 = C1 / F0 / 8.0;
+    const SOURCE: usize = 60;
+    const SENSOR: usize = 160;
+    const INTERFACE: usize = 300;
+
+    let grid = Grid::new(N, 1, 1, DX, DX, DX).unwrap();
+    let mut medium = kwavers_medium::heterogeneous::HeterogeneousMedium::new(N, 1, 1, false);
+    for i in 0..N {
+        let beyond = i >= INTERFACE;
+        medium.sound_speed[[i, 0, 0]] = if beyond { C2 } else { C1 };
+        medium.density[[i, 0, 0]] = if beyond { RHO2 } else { RHO1 };
+    }
+
+    // One-way rightward launch: pressure paired with u = p/(rho c). An initial
+    // pressure alone splits into two halves and the left-going one returns off
+    // the rigid wall into the measurement.
+    let width = 2.0 * C1 / F0;
+    let mut p0 = leto::Array3::<f64>::zeros((N, 1, 1));
+    let mut ux0 = leto::Array3::<f64>::zeros((N, 1, 1));
+    for i in 0..N {
+        let x = (i as f64 - SOURCE as f64) * DX;
+        let envelope = (-(x / width).powi(2)).exp();
+        let value = envelope * (std::f64::consts::TAU * F0 * x / C1).cos();
+        p0[[i, 0, 0]] = value;
+        ux0[[i, 0, 0]] = value / (RHO1 * C1);
+    }
+    let source = GridSource {
+        p0: Some(p0),
+        u0: Some((
+            ux0,
+            leto::Array3::zeros((N, 1, 1)),
+            leto::Array3::zeros((N, 1, 1)),
+        )),
+        ..GridSource::new_empty()
+    };
+
+    let dt = 0.2 * DX / C2;
+    let config = FdtdConfig {
+        spatial_order: 4,
+        staggered_grid: true,
+        enable_nonlinear: false,
+        dt,
+        nt: 3001,
+        ..Default::default()
+    };
+    let mut solver = FdtdSolver::new(config, &grid, &medium, source).expect("solver");
+
+    let mut trace = Vec::with_capacity(3000);
+    for _ in 0..3000 {
+        solver.step_forward().expect("step");
+        trace.push(solver.fields.p[[SENSOR, 0, 0]]);
+    }
+
+    // The incident pulse passes the sensor first; the interface echo passes it
+    // again later. Split at the midpoint of those two arrivals.
+    let cells_per_step = C1 * dt / DX;
+    let incident_step = ((SENSOR - SOURCE) as f64 / cells_per_step) as usize;
+    let echo_step = incident_step + (2.0 * (INTERFACE - SENSOR) as f64 / cells_per_step) as usize;
+    let split = (incident_step + echo_step) / 2;
+
+    let peak = |window: &[f64]| window.iter().fold(0.0_f64, |a, v| a.max(v.abs()));
+    let incident = peak(&trace[..split.min(trace.len())]);
+    let echo = peak(&trace[split.min(trace.len())..(echo_step + 200).min(trace.len())]);
+
+    let expected = (RHO2 * C2 - RHO1 * C1) / (RHO2 * C2 + RHO1 * C1);
+    let measured = echo / incident;
+    assert!(
+        incident > 0.5,
+        "the incident pulse must reach the sensor: peak {incident:.4}"
+    );
+    assert!(
+        (measured - expected).abs() <= 0.05 * expected,
+        "reflection coefficient {measured:.4} against analytical {expected:.4}          (incident {incident:.4}, echo {echo:.4})"
+    );
+}
