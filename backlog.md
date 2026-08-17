@@ -1254,10 +1254,18 @@
   aarch64 host reaches the same branch. A first draft `cfg`-guarded only the
   x86 arm, which would have turned a legitimate skip into a panic there. The
   landed version handles the platform case.
-- **Left for their owner**: the two wgpu FFT tests have the same shape and the
-  same consequence - green on a runner with no usable GPU while asserting
-  nothing. They are not in the scope this work touched, and the fix is the same
-  pattern applied to adapter availability.
+- **Correction (same day): two of the four, not four.** I recorded the two wgpu
+  FFT tests as having "the same shape and the same consequence" and left them for
+  their owner. Reading `try_plan` rather than trusting the scan shows they were
+  already right: it skips **only** on `HephaestusError::AdapterUnavailable`,
+  prints a notice to stderr when it does, and **panics** on any other device
+  failure. That is the pattern this item applied to AVX-512, implemented before
+  it. My scan flagged them because it matched on `return;` alone, which cannot
+  tell a guarded skip from a silent one - and I reported the match instead of
+  reading the guard.
+- So the audit's real finding is two vacuous tests, both fixed here. The scan is
+  a locator, not a verdict; every hit needs the guard read before it is called a
+  defect.
 
 ## KW-IMG-045 — Frame-resolved physical I/Q ensemble [minor] — todo
 
