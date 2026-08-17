@@ -6773,11 +6773,37 @@ This inverts the earlier reading, which was taken over the defect. Deferred item
   it appeared -- the 32x sweep that found "no improvement" was taken over the
   sampling defect and should be repeated before concluding.
 
-**Follow-up KW-BND-098 — does kappa pay on a thick PML? [minor] — todo**
-- Owner: unclaimed. kappa is harmful at 10 cells; the literature's kappa_max in
-  [5,20] presumes enough cells for the q^4 grading to vary smoothly. Sweep
-  kappa_max against PML thickness (10/20/30/40) to find where, if anywhere, it
-  turns profitable, and state the crossing in `CPMLConfig::kappa_max`.
+**KW-BND-098 — does kappa pay on a thick PML? [minor] — DONE (2026-08-17)**
+**Answer: no.** Thickness raises the kappa at which harm begins but never makes
+kappa profitable. Measured at the shipping sigma_factor 3.0, 70 deg, fraction of
+the direct peak:
+
+  kappa | 10 cells | 20 cells (default) | 40 cells
+    1   | 4.51e-5  | 6.84e-9            | 3.47e-10
+    2   | 3.01e-5  | 7.07e-9            | 3.43e-10
+    5   | 1.59e-4  | 1.92e-6            | 3.74e-10
+   10   | 4.38e-3  | 3.13e-4            | 1.08e-8
+
+kappa=2 is the only value that ever helps (1.5x at 10 cells) and ties kappa=1 at
+20 and 40 -- not worth a knob. kappa >= 5 is harmful at every thickness, costing
+four orders of magnitude at the default 20. Even at 40 cells the best kappa only
+ties 1. The literature's [5,20] is the wrong advice for this discretisation.
+
+Also re-measured alpha at the shipping defaults, since the earlier "alpha is
+neutral" note was taken at sigma_factor 2 / 10 cells: alpha = pi*f0 gives
+5.25e-9 against 6.84e-9, a real 1.3x, while 4*pi*f0 gives 5.34e-6 -- 780x worse
+than no alpha. alpha is sharply peaked, so pass the true source frequency. The
+useful CFS call is `with_cfs_pml_for_frequency(1.0, f0)`.
+
+Both Rustdoc tables were corrected; the previous ones were measured at
+configurations that no longer ship.
+
+No new test: the guidance is documentation, and a third propagation benchmark
+would add ~20s to the suite to pin values that would (correctly) need updating
+if kappa were ever reworked. The default path stays guarded by
+`cpml_absorbs_grazing_incidence_within_the_reflection_bound`.
+
+- Original framing (retained):
 - Oracle: `pml_grazing_reflection(pml, h, offset, kappa, alpha)`, already
   parameterized. Note the reference residual grows as reflection falls — assert
   it, or the measurement silently becomes noise.
