@@ -45,12 +45,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
-      - name: Checkout Atlas path dependencies
-        uses: ./.github/actions/checkout-atlas-path-dependencies
-        with:
-          manifest: Cargo.toml
-          destination: ..
-
       - name: Install stable toolchain
         uses: dtolnay/rust-toolchain@stable
 
@@ -86,12 +80,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
-
-      - name: Checkout Atlas path dependencies
-        uses: ./.github/actions/checkout-atlas-path-dependencies
-        with:
-          manifest: Cargo.toml
-          destination: ..
 
       - name: Install stable toolchain
         uses: dtolnay/rust-toolchain@stable

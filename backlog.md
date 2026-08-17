@@ -1442,6 +1442,39 @@
   runs the leapfrog path's own measurement at exponents 0.6/1.0/1.4 and holds
   the same 15 % bound.
 
+## KW-CI-102 — Atlas provider checkout was a no-op fetching a whole repo [patch] — DONE (2026-08-17)
+
+Every CI job ran `checkout-atlas-path-dependencies`, which downloads a full
+`ryancinsight/atlas` tarball to materialize sibling provider repos. It
+materialized nothing. Sampled across 12 jobs in 4 runs, unanimously:
+
+    verified 0 provider checkout(s) and 0 dependency manifest(s):
+
+The step was needed when Kwavers declared `../apollo`-style path dependencies
+(the KW-CI-046 driver: "PR #288 fails before compilation because `../apollo`
+and the other Atlas path providers are absent"). The manifests have since moved
+to `git + version` sources, which cargo resolves by itself, and the step was
+never removed. Verified today: no sibling path deps (every `path = "../"` is
+intra-workspace), no `[patch]` in any committed manifest, no `[patch]` in the
+committed `.cargo/config.toml`, and nothing in scripts, xtask, or workflows
+reads a sibling directory. The tool only ever *reads* path/patch entries to
+decide what to fetch, so with neither present its work set is empty.
+
+Cost: 18 invocations across 5 workflows, each pulling the atlas repo, on top of
+23 `actions/checkout`, 16 `rust-toolchain`, and 13 `actions/cache` fetches per
+run -- and reruns re-download everything. This is what tripped codeload 429/503
+and blocked PRs #395 and #396 for hours; retrying under the limit fed the limit.
+
+Removed all 18 invocations and the local wrapper action. 115 lines deleted, no
+behaviour depends on them. This PR is its own test: if CI is green without the
+step, the step was doing nothing.
+
+Remaining CI hygiene, not addressed here: `actions/checkout@v7`,
+`dtolnay/rust-toolchain@stable`, `taiki-e/install-action@v2`, and
+`actions/cache@v6` are mutable tags rather than pinned SHAs (supply-chain), and
+docs/PM-only changes still run the full build matrix (path filters). Both are
+smaller levers now that the dominant fetch is gone.
+
 ## KW-CI-094 — The recurseml check errors on itself and is permanently red [patch] — todo
 
 - Re-recorded; lost to the same merge as KW-SOL-093, and still true.
