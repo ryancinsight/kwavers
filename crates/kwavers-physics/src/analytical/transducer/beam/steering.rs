@@ -61,7 +61,8 @@ pub fn linear_array_aperiodic_positions(n: usize, aperture_m: f64, jitter_frac: 
 
 /// Baffled circular-piston element directivity `D(θ) = 2 J₁(ka·sinθ)/(ka·sinθ)`,
 /// normalised so `D(0) = 1`. Avoids the per-call allocation of
-/// [`circular_piston_directivity`] in the hot beam-pattern loops.
+/// [`crate::analytical::transducer::array_factor::circular_piston_directivity`]
+/// in the hot beam-pattern loops.
 #[inline]
 fn piston_directivity(theta: f64, ka: f64) -> f64 {
     let arg = ka * theta.sin();

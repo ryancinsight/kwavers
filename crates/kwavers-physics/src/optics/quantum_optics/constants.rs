@@ -11,5 +11,5 @@ pub(super) use kwavers_core::constants::fundamental::{
     REDUCED_PLANCK as HBAR, SPEED_OF_LIGHT as C, VACUUM_PERMITTIVITY as EPS0,
 };
 
-/// Hydrogen 2s1/2 Lamb shift [eV].
+/// Hydrogen 2s1/2 Lamb shift `eV`.
 pub(super) const LAMB_SHIFT_HYDROGEN_EV: f64 = 4.374e-6;

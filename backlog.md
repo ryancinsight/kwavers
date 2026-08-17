@@ -1400,16 +1400,41 @@
 - Acceptance: the check either reports real findings, or is removed. Not left
   erroring.
 
-## KW-DOC-038 — Resolve Physics Rustdoc links [patch] — done 2026-08-17 (verified twice, no change needed)
+## KW-DOC-038 — Resolve Physics Rustdoc links [patch] — done 2026-08-17 (three configurations measured)
 
 - Acceptance: `cargo doc -p kwavers-physics --all-features --no-deps` is
-  warning-clean without disabling Rustdoc diagnostics. **It is.**
-- Measured on `1d7c6899f`, forcing a real rustdoc run each time by touching the
-  crate first and confirming `Documenting kwavers-physics` in the output:
-  **0 warnings and 0 unresolved links** with `--all-features`, and 0 with
-  default features. The 575 the item was filed against are gone, resolved
-  incrementally by peers escaping bracketed unit annotations that rustdoc read
-  as intra-doc links (`5044c0c13` is the pattern).
+  warning-clean. **It is**, measured on `df818b9a1` with a forced rustdoc run:
+  0 warnings, 0 unresolved links.
+- **The 557 figure is not reproducible.** The KW-ARCH-065 evidence states
+  `kwavers-physics` "retains its tracked KW-DOC-038 baseline (557 warnings in
+  this configuration)". Chasing that rather than leaving the contradiction open,
+  three configurations were measured:
+
+  | configuration | warnings | unresolved links |
+  |---|---|---|
+  | acceptance command (`--no-deps`) | 0 | 0 |
+  | `+ --document-private-items` | 5 → **2** | 3 → **0** |
+  | whole dependency graph (no `--no-deps`) | 4 | 1 |
+
+  None is near 557. The phrase "retains its tracked baseline" reads as a
+  carried-forward number rather than a fresh measurement; if some other
+  invocation does produce it, that is still worth knowing, but it is not any of
+  these.
+- **Chasing it found a defect of mine.** The single unresolved link in the whole
+  dependency closure was `[`Medium`]` in `kwavers-medium/src/material_fields.rs`,
+  introduced by `43f2f2370` — my own commit. None of my gates caught it: I ran
+  the rustdoc gate on kwavers-math, kwavers-solver and kwavers-physics, but not
+  on kwavers-medium, which I had also modified. Run the doc gate on every crate
+  the change touches, not the ones that come to mind.
+- Also fixed, within this item's stated scope of bracketed unit annotations:
+  `[nm]` in `photoacoustics.rs` and `[eV]` in `quantum_optics/constants.rs` were
+  being read as intra-doc links, and `[`circular_piston_directivity`]` in
+  `beam/steering.rs` had no resolvable path. Private-items unresolved links go
+  3 → 0.
+- Left alone deliberately: two `redundant explicit link target` lints in
+  `cavitation/passive_dose/simulate.rs`. Pre-existing, a different lint, and
+  visible only under `-D warnings` with private items — outside this item's
+  scope, and chasing it opens an unbounded sweep.
 - **This closure was recorded once before and reverted.** It landed in PR #376
   and is absent from `main` now, while the code merges from the same stretch are
   all still ancestors - so a later merge took the board text and not the commits.

@@ -1,4 +1,4 @@
-//! Per-cell sampling of a [`Medium`]'s acoustic properties into dense fields.
+//! Per-cell sampling of a [`crate::Medium`]'s acoustic properties into dense fields.
 //!
 //! A wave solver reads medium properties once, at construction, and then runs
 //! thousands of steps against the sampled arrays — the trait's per-point
