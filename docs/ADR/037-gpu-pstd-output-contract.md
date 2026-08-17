@@ -1,6 +1,14 @@
 ## Status
 
-Superseded by [`ADR-040`](040-gpu-pstd-peak-pressure-output.md).
+Accepted
+
+- Revision (2026-08-14): the `PstdOutputRequest` closed enum recorded below was
+  replaced by the composable final-field and peak-pressure selections of
+  [`ADR-040`](040-gpu-pstd-peak-pressure-output.md). The decisions this record
+  still owns remain current: the GPU adapter exposes actual provider values
+  rather than zero arrays, final-field readback is opt-in, and
+  `SolverType::PstdGpu` returns `FeatureNotAvailable` instead of substituting
+  CPU PSTD. ADR 040 makes no runner or substitution decision.
 
 ## Context
 

@@ -1,6 +1,6 @@
 # ADR 008 — Wire the `ComputeBackend` trait; gate the GPU submodule
 
-- **Status:** Implemented (Phases 1–3)
+- **Status:** Accepted
 - **Date:** 2026-05-05 · **Audited:** 2026-06-03
 - **Change class:** [arch]
 - **Relates:** paths relocated by the crate split ([ADR 011](011-workspace-crate-split.md))

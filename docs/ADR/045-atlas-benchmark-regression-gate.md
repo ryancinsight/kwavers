@@ -1,6 +1,6 @@
 # ADR 045: Atlas benchmark regression gate
 
-- Status: accepted
+- Status: Accepted
 - Date: 2026-07-20
 - Amended: 2026-07-22
 - Change class: patch, architecture

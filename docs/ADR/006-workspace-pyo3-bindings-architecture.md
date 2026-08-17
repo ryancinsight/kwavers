@@ -1,6 +1,6 @@
 # ADR 006 — Workspace architecture for PyO3 Python bindings
 
-- **Status:** Implemented; partially superseded by [ADR 011](011-workspace-crate-split.md)
+- **Status:** Accepted
 - **Date:** 2026-02-04 · **Audited:** 2026-06-03
 - **Change class:** [arch]
 - **Relates:** extended and partially superseded by [ADR 011](011-workspace-crate-split.md)

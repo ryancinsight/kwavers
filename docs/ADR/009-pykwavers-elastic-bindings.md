@@ -1,6 +1,6 @@
 # ADR 009 — pykwavers elastic-wave bindings
 
-- **Status:** Implemented (Phases A.1–A.4); A.3.5 stress-tensor source deferred
+- **Status:** Accepted
 - **Date:** 2026-05-05 · **Audited:** 2026-06-03
 - **Change class:** [minor]
 - **Relates:** binding layer per [ADR 006](006-workspace-pyo3-bindings-architecture.md); paths per [ADR 011](011-workspace-crate-split.md)
