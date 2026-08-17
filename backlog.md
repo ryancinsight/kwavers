@@ -23,6 +23,28 @@
 | KWAVERS-AEQ-MET-54 | Type the public ultrafast transmission scheduler's speed, depth, PRF, event times, frame rates, and tilt angles with Aequitas; keep scalar extraction at the PRF/timing formula boundary and document the real-only Eunomia compatibility rule. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-transducer/src/ultrafast/sequencer/**`, manifest, ADR 093, PM artifacts |
 | KWAVERS-AEQ-INTEGRATION-1 | Integrate the current Aequitas metric closure for therapeutic microbubble and plasmonics contracts on current `main`; harden the public three-dimensional plasmonic coordinate contract and synchronize the audit. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-physics/src/{acoustics/therapy/microbubble,electromagnetic}`, PM artifacts |
 
+## KWAVERS-MNEMOSYNE-LOCALITY-1 — Fold NUMA memory-policy execution onto mnemosyne-heap [patch] — done 2026-08-16 (Atlas gitlink scope)
+
+- Outcome: the hand-rolled `bind_memory_to_node` / `allocate_interleaved_memory` /
+  `first_touch_memory` primitives in `crates/kwavers-core/src/arena/numa/memory.rs`
+  are deleted (net −235 lines) and kwavers re-points `NumaAwareAllocator`
+  (`layout/numa_aware.rs`), `SoAFieldBuffer` (`batch/soa_buffer.rs`), and the
+  parallel first-touch fan-out at `mnemosyne_heap::numa::{bind_to_node, first_touch}`.
+  `first_touch_memory_parallel` stays consumer-local because mnemosyne sits below
+  moirai and cannot depend on an executor; `MAX_NUMA_NODES` (kwavers 256) is
+  deleted — the nodemask bound is mnemosyne's (1024).
+- Ownership split: mnemosyne `5ca0461` owns the kernel memory-policy execution
+  (`mnemosyne-heap::numa` + `TieredHeap::alloc` routing `PlacementHint::Numa`
+  through `bind_to_node`); Themis owns the placement vocabulary; Moirai owns the
+  parallel fan-out.
+- Integration: the fold (branch `codex/kwavers-mnemosyne-numa`, commit
+  `152c4a7d1`, head `08df5730f`) is merged to kwavers main via PR #382 (merge
+  `b74aa7ab3`); PR #383 normalizes the ADR statuses. Atlas records the merged
+  default `1d7c6899` (gitlink-only advance via `update-index --cacheinfo`);
+  the peer-dirty `codex/kwavers-floatelement-roots` working tree is left
+  untouched. mnemosyne already records `5ca0461`. Atlas root tracks the same
+  closure as `ATLAS-KWAVERS-MNEMOSYNE-LOCALITY-001`.
+
 ## KW-MAT-043 — Direct FWI L-BFGS provider ownership [patch] [arch] — in progress 2026-08-11
 
 - Owner: Codex. Scope: the two FWI production callers, the focused FWI

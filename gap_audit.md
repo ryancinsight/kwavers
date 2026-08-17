@@ -1,3 +1,30 @@
+## Kwavers → mnemosyne allocation-locality axis closure — 2026-08-16 (Atlas gitlink scope)
+
+The *execution* half of the placement seam is folded onto mnemosyne-heap,
+closing the kwavers → mnemosyne allocation-locality axis
+(`first_touch_memory`/`bind_memory_to_node` → mnemosyne-heap). Kwavers commit
+`152c4a7d1` (branch `codex/kwavers-mnemosyne-numa`, head `08df5730f`) deletes
+the hand-rolled `bind_memory_to_node` / `allocate_interleaved_memory` /
+`first_touch_memory` primitives in `crates/kwavers-core/src/arena/numa/memory.rs`
+(net −235 lines) and re-points `NumaAwareAllocator` (`layout/numa_aware.rs`),
+`SoAFieldBuffer` (`batch/soa_buffer.rs`), and the parallel first-touch fan-out
+at `mnemosyne_heap::numa::{bind_to_node, first_touch}`. `first_touch_memory_parallel`
+stays consumer-local because mnemosyne sits below moirai and cannot depend on
+an executor; `MAX_NUMA_NODES` (kwavers 256) is deleted — the nodemask bound is
+mnemosyne's (1024). Mnemosyne `5ca0461` adds `mnemosyne-heap::numa` and routes
+`PlacementHint::Numa(node)` through `bind_to_node` inside `TieredHeap::alloc`,
+so the axis splits cleanly: Themis owns the placement vocabulary, mnemosyne
+owns the kernel memory-policy execution, Moirai owns the parallel fan-out.
+
+The fold branch was merged to kwavers main via PR #382 (merge `b74aa7ab3`);
+PR #383 normalizes the ADR statuses. Atlas records the merged default
+`1d7c6899` (gitlink-only advance via `update-index --cacheinfo`); the kwavers
+working tree is peer-dirty on `codex/kwavers-floatelement-roots` and left
+untouched per the concurrent-agents disjoint-scope rule. mnemosyne already
+records `5ca0461`. Atlas root tracks the same closure as
+`ATLAS-KWAVERS-MNEMOSYNE-LOCALITY-001`; this kwavers-side record is the
+consumer-owned mirror. See `backlog.md` → `KWAVERS-MNEMOSYNE-LOCALITY-1`.
+
 ## FloatElement root-emulation closure — 2026-08-13
 ## KWAVERS-SIMD-DISPATCH-001 — hand-rolled SIMD ISA dispatch duplicated hermes (CLOSED 2026-08-16)
 
