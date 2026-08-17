@@ -66,7 +66,6 @@ use std::any::Any;
 use std::fmt::Debug;
 
 pub mod bem;
-pub mod config;
 pub mod coupling;
 pub mod cpml;
 pub mod fem;
@@ -78,7 +77,6 @@ pub mod traits;
 pub mod types;
 
 pub use bem::{BemBoundaryCondition, BemBoundaryManager};
-pub use config::{BoundaryParameters, SolverBoundaryKind};
 pub use coupling::{
     AdaptiveBoundary, BoundaryMultiPhysicsInterface, ImpedanceBoundary, MaterialInterface,
     SchwarzBoundary,

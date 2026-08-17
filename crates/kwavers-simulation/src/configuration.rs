@@ -7,7 +7,6 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 
 // Import domain configurations
-use kwavers_boundary::config::BoundaryParameters;
 use kwavers_grid::config::DomainGridParameters;
 use kwavers_medium::config::DomainMediumParameters;
 
@@ -28,8 +27,6 @@ pub struct Configuration {
     pub medium: DomainMediumParameters,
     /// Source configuration
     pub source: DomainSourceParameters,
-    /// Boundary conditions
-    pub boundary: BoundaryParameters,
     /// Solver settings
     pub solver: SolverConfiguration,
     /// Output control
@@ -99,9 +96,6 @@ impl Configuration {
             multi_error.add(e);
         }
         if let Err(e) = self.source.validate() {
-            multi_error.add(e);
-        }
-        if let Err(e) = self.boundary.validate() {
             multi_error.add(e);
         }
         if let Err(e) = self.solver.validate() {
@@ -204,7 +198,6 @@ impl Configuration {
 mod tests {
     use super::*;
     use crate::parameters::SimulationParameters;
-    use kwavers_boundary::config::BoundaryParameters;
     use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use kwavers_grid::config::DomainGridParameters;
     use kwavers_medium::config::DomainMediumParameters;
@@ -219,7 +212,6 @@ mod tests {
             grid: DomainGridParameters::default(),
             medium: DomainMediumParameters::default(),
             source: DomainSourceParameters::default(),
-            boundary: BoundaryParameters::default(),
             solver: SolverConfiguration::default(),
             output: OutputParameters::default(),
             performance: PerformanceParameters {

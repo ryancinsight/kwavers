@@ -4,6 +4,14 @@
 
 ### Changed
 
+- **Breaking:** Removed `BoundaryParameters`, `SolverBoundaryKind`,
+  `SimulationBuilder::boundary`, and `Configuration::boundary`. The struct was
+  validated and stored but no field was ever read, so any settings passed
+  through it were silently discarded. `PmlConfig` is the boundary-configuration
+  surface: `pml_thickness: n` becomes `PmlConfig::with_size(n)` and
+  `pml_alpha: a` becomes `PmlConfig::with_alpha(a)`. Per-face `boundary_types`
+  had no consumer before or after. See ADR 110.
+
 - **Behavior:** `CPMLConfig` default `sigma_factor` raised from k-Wave's `2.0`
   to `3.0`. Measured at 70 degrees incidence on the default 20-cell PML, this
   reduces spurious boundary reflection by 62x on the convolutional FDTD path

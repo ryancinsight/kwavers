@@ -5,7 +5,6 @@
 
 use super::{Configuration, SimulationParameters};
 use crate::parameters::{OutputParameters, PerformanceParameters};
-use kwavers_boundary::config::BoundaryParameters;
 use kwavers_core::error::KwaversResult;
 use kwavers_medium::config::DomainMediumParameters;
 use kwavers_solver::config::SolverConfiguration;
@@ -67,13 +66,6 @@ impl ConfigurationBuilder {
     #[must_use]
     pub fn source(mut self, params: DomainSourceParameters) -> Self {
         self.config.source = params;
-        self
-    }
-
-    /// Set boundary conditions
-    #[must_use]
-    pub fn boundary(mut self, params: BoundaryParameters) -> Self {
-        self.config.boundary = params;
         self
     }
 

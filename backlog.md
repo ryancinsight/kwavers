@@ -6757,6 +6757,21 @@ This inverts the earlier reading, which was taken over the defect. Deferred item
   discriminator here — reference residuals run ~0.6x the signal, so that column
   reports the method's noise floor. Use grazing (residual ~1e-14).
 
+**KW-SIM-101 — `BoundaryParameters` was inert public API [major] — DONE (2026-08-17)**
+- `SimulationBuilder::boundary(..)` accepted per-face boundary kinds, PML
+  thickness, and absorption factor, validated them, stored them, and **no field
+  was ever read**. A caller setting `pml_thickness: 30` got a silently different
+  boundary -- a wrong answer, not an error. Found by asking who else still
+  assumed the old `sigma_factor` after KW-BND-100 changed it.
+- Superseded rather than unfinished: `PmlConfig` -> `CPMLConfig` in
+  `dispatch/{fdtd,pstd}.rs` is the live path and already covers thickness,
+  per-dimension thickness, and alpha. So the fix is deletion, not wiring.
+  Removed the two types, the module, the re-export, the builder method, and the
+  config field; migration mapping in ADR 110 and CHANGELOG.
+- Same defect class as KW-BND-099, opposite disposition: there the field still
+  feeds `theoretical_reflection`, so it was documented and pinned by test; here
+  nothing remained to preserve.
+
 **KW-BND-099 — `target_reflection` does not shape the profile [minor] — todo**
 - Owner: unclaimed. sigma follows the k-Wave `pml_alpha*(c/dx)*q^4` form, which
   carries no R0 term, while `profiles/mod.rs` states the Roden-Gedney
@@ -6764,11 +6779,18 @@ This inverts the earlier reading, which was taken over the defect. Deferred item
   for the design reflection is inert: tightening 1e-6 -> 1e-12 changes no
   coefficient. Now asserted (`target_reflection_does_not_enter_the_profile`) and
   documented rather than left to be discovered by absence of effect.
-- Decision needed: adopt the R0-derived grading (principled, ties the knob to
-  its name, but moves sigma_max ~1.4x here and must be checked against the
-  k-Wave parity tests), or keep the k-Wave form and rename the field to what it
-  is (an estimator input). Not a silent third option: leaving a live-looking
-  knob inert is the trap this item exists to close.
+- **Decided (2026-08-17): keep the k-Wave form, do not wire R0.** Measured what
+  the Roden-Gedney grading would deliver at the shipping 20-cell PML, 70 deg:
+  R0=1e-6 (its own documented default) is equivalent to sigma_factor 1.727 and
+  gives 5.61e-6, against 6.84e-9 for the shipping sigma_factor 3.0 -- 820x
+  worse. R0=1e-8 -> 2.38e-8; R0=1e-10 -> 6.56e-9. The measured optimum
+  corresponds to R0 ~ 4e-11, so the continuum formula under-predicts required
+  sigma by about four orders of magnitude in R0 terms on this discretisation:
+  it is not a usable control here, and adopting it would degrade every default
+  configuration. The field stays an estimator input, documented and asserted.
+  No rename: the name is correct for its actual role in
+  `theoretical_reflection`, and renaming public API to fix a doc problem the
+  docs already fix is not worth a breaking change.
 - Note: with KW-BND-097 fixed, sigma_max retuning is a much smaller lever than
   it appeared -- the 32x sweep that found "no improvement" was taken over the
   sampling defect and should be repeated before concluding.

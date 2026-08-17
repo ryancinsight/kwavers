@@ -49,72 +49,6 @@
 | [041](041-proteus-thermophysical-properties.md) | Proteus thermophysical properties | Accepted |
 | [042](042-proteus-temperature-response.md) | Proteus temperature-response ownership | Accepted |
 | [043](043-tyche-uncertainty-provider.md) | Tyche uncertainty provider | Accepted |
-<<<<<<< Updated upstream
-| [044](044-asclepius-response-ownership.md) | Asclepius response ownership | — |
-| [045](045-atlas-benchmark-regression-gate.md) | Atlas benchmark regression gate | — |
-| [046](046-hyperion-optical-transport-ownership.md) | ADR 046 — Hyperion optical-transport ownership | — |
-| [047](047-pulsed-laser-physical-quantities.md) | Typed pulsed-laser physical quantities | — |
-| [048](048-cem43-physical-quantities.md) | Typed CEM43 and HIFU planning metrics | — |
-| [049](049-transducer-physical-quantities.md) | Typed transducer physical quantities | — |
-| [050](050-typed-vasculature-physical-quantities.md) | Typed vasculature physical quantities | — |
-| [051](051-thermal-perfusion-quantities.md) | Typed thermal material and perfusion quantities | — |
-| [052](052-hifu-planning-quantities.md) | Typed HIFU planning physical quantities | — |
-| [053](053-cavitation-control-quantities.md) | Typed cavitation-control physical quantities | — |
-| [054](054-therapy-integration-quantities.md) | Typed therapy-integration physical quantities | — |
-| [055](055-acoustic-solver-quantities.md) | Typed acoustic-solver physical quantities | — |
-| [056](056-typed-intensity-tracker-accessors.md) | Typed intensity-tracker accessors | — |
-| [057](057-clinical-scenario-quantities.md) | Typed clinical histotripsy scenario quantities | — |
-| [058](058-neuromodulation-protocol-quantities.md) | Typed neuromodulation protocol quantities | — |
-| [059](059-transducer-design-quantities.md) | Typed transducer design and propagation quantities | — |
-| [060](060-ultrafast-quantities.md) | Typed ultrafast transducer quantities | — |
-| [061](061-core-time-ultrasound-quantities.md) | Type Core Time and Ultrasound Configuration Quantities | Accepted and implemented in `KWAVERS-AEQ-MET-23`. |
-| [062](062-grid-stability-quantities.md) | Type grid stability quantities | — |
-| [063](063-imaging-hifu-quantities.md) | Type HIFU imaging quantities | — |
-| [064](064-hemispherical-quantities.md) | Type hemispherical-array quantities | — |
-| [065](065-cavitation-quantities.md) | Type therapeutic cavitation quantities | — |
-| [066](066-lithotripsy-quantities.md) | Type lithotripsy configuration quantities | — |
-| [067](067-ceus-quantities.md) | Type CEUS physical contracts with Aequitas | Accepted — 2026-07-27 |
-| [068](068-sonogenetics-quantities.md) | Type sonogenetics physical contracts | — |
-| [069](069-complex-quantities.md) | Eunomia Complex Values at Aequitas Physical Boundaries | — |
-| [070](070-mems-quantity-contracts.md) | Aequitas contracts for MEMS physical metrics | Accepted; crosstalk corrected under `KWAVERS-AEQ-MET-65` |
-| [071](071-plasmonics-quantities.md) | Aequitas contracts for plasmonics metrics | Accepted and implemented under `KWAVERS-AEQ-MET-33`. |
-| [072](072-gpu-equivalence-quantities.md) | Aequitas contracts for GPU/CPU equivalence metrics | Accepted and implemented under `KWAVERS-AEQ-MET-34`. |
-| [073](073-gpu-performance-time-quantities.md) | Aequitas contracts for GPU performance time metrics | Accepted and implemented under `KWAVERS-AEQ-MET-35`. |
-| [074](074-bulk-piezo-quantities.md) | Aequitas contracts for bulk piezoelectric and matching-layer metrics | Accepted and implemented under `KWAVERS-AEQ-MET-36`. |
-| [075](075-mems-verdict-pressure-names.md) | Remove unit suffixes from typed MEMS verdict pressure fields | Accepted and implemented under `KWAVERS-AEQ-MET-37`. |
-| [076](076-visualization-telemetry-quantities.md) | Aequitas contracts for visualization telemetry and temporal metrics | Accepted and implemented under `KWAVERS-AEQ-MET-38`. |
-| [077](077-neural-diagnostics-quantities.md) | Aequitas contracts for neural diagnostic geometry and timing metrics | Accepted — 2026-07-31 |
-| [078](078-clinical-workflow-quantities.md) | Type clinical workflow orchestration quantities | Accepted — 2026-07-31 |
-| [079](079-monomorphized-indexed-traversal.md) | Monomorphized indexed traversal and gradient entrypoints | Accepted — 2026-07-31 |
-| [080](080-stereotactic-targeting-quantities.md) | ADR 080 — Aequitas stereotactic targeting quantities | Accepted |
-| [081](081-plane-wave-compounding-quantities.md) | Aequitas plane-wave compounding quantities | Accepted |
-| [082](082-blood-oxygenation-quantities.md) | Aequitas blood-oxygenation quantities | Accepted |
-| [083](083-fk-migration-quantities.md) | Aequitas f-k migration quantities | Accepted |
-| [084](084-clinical-monitoring-quantities.md) | Aequitas clinical monitoring quantities | Accepted |
-| [085](085-real-time-sirt-quantities.md) | Aequitas real-time SIRT quantities | Accepted |
-| [086](086-sound-speed-shift-time-quantities.md) | Aequitas sound-speed-shift time quantities | Accepted |
-| [087](087-sound-speed-shift-spatial-quantities.md) | Aequitas sound-speed-shift spatial quantities | Accepted |
-| [088](088-sound-speed-curved-array-frequency-quantities.md) | Aequitas curved-array and benchmark frequency quantities | Accepted |
-| [089](089-sound-speed-error-quantities.md) | Aequitas sound-speed error quantities | Accepted |
-| [090](090-sound-speed-field-quantity.md) | Aequitas sound-speed field quantity | Accepted |
-| [091](091-electromagnetic-sar-quantities.md) | Aequitas electromagnetic SAR quantities | Accepted |
-| [092](092-therapeutic-microbubble-quantities.md) | Aequitas therapeutic microbubble quantities | Accepted — 2026-08-01 |
-| [093](093-ultrafast-scheduler-quantities.md) | Aequitas ultrafast transmission scheduler quantities | Accepted — 2026-08-02 |
-| [094](094-ultrafast-plane-diverging-quantities.md) | Aequitas ultrafast plane and diverging-wave quantities | Accepted — 2026-08-02 |
-| [095](095-rectangular-transducer-quantities.md) | ADR 095 — Aequitas rectangular-transducer quantities | Accepted — 2026-08-02 |
-| [096](096-beamforming-configuration-quantities.md) | ADR 096 — Aequitas beamforming configuration quantities | Accepted — 2026-08-02 |
-| [097](097-sensor-beamformer-quantities.md) | Aequitas sensor-beamformer quantities | Accepted — 2026-08-03 |
-| [098](098-pam-neural-quantities.md) | Aequitas PAM and neural sensor quantities | Accepted — 2026-08-03 |
-| [099](099-transducer-design-propagation-quantities.md) | Aequitas transducer design and propagation quantities | Accepted — 2026-08-03 |
-| [100](100-acquisition-geometry-quantities.md) | Aequitas shared acquisition-geometry quantities | Accepted — 2026-08-03 |
-| [101](101-2d-array-quantities.md) | Aequitas 2-D array geometry and beam-control quantities | Accepted — 2026-08-03 |
-| [102](102-focused-source-quantities.md) | Aequitas focused-source geometry, signal, and metric quantities | Accepted — 2026-08-03 |
-| [103](103-thermal-diffusion-quantities.md) | Aequitas thermal-diffusion parameter and integration-time quantities | Accepted — 2026-08-04 |
-| [104](104-thermal-acoustic-coupling-quantities.md) | Aequitas thermal-acoustic coupling quantities | Accepted — 2026-08-05 |
-| [105](105-b-mode-scan-conversion-quantities.md) | Aequitas B-mode scan-conversion geometry quantities | Accepted — 2026-08-06 |
-| [106](106-rigid-walls-by-even-reflection.md) | Rigid walls by even reflection, divergence defined as -G^T | Accepted — 2026-08-13 |
-| [107](107-collocated-summation-by-parts.md) | Summation by parts for the collocated rigid wall | Accepted — 2026-08-13 |
-=======
 | [044](044-asclepius-response-ownership.md) | Asclepius response ownership | Accepted |
 | [045](045-atlas-benchmark-regression-gate.md) | Atlas benchmark regression gate | Accepted |
 | [046](046-hyperion-optical-transport-ownership.md) | Hyperion optical-transport ownership | Accepted |
@@ -135,6 +69,8 @@
 | [103](103-thermal-diffusion-quantities.md) | Thermal-diffusion physical quantities | Accepted |
 | [104](104-thermal-acoustic-coupling-quantities.md) | Thermal-acoustic coupling quantities | Accepted |
 | [105](105-b-mode-scan-conversion-quantities.md) | B-mode scan-conversion geometry quantities | Accepted |
-| [106](106-retire-stale-apollo-gpu-probe.md) | Retire the stale Apollo GPU availability probe | Accepted |
-| [107](107-aequitas-quantity-provider.md) | Adopt Aequitas for bubble-energy quantities | Accepted |
->>>>>>> Stashed changes
+| [106](106-rigid-walls-by-even-reflection.md) | Rigid walls by even reflection, divergence defined as -G^T | Accepted |
+| [107](107-collocated-summation-by-parts.md) | Summation by parts for the collocated rigid wall | Accepted |
+| [108](108-retire-stale-apollo-gpu-probe.md) | Retire the stale Apollo GPU availability probe | Accepted |
+| [109](109-aequitas-quantity-provider.md) | Adopt Aequitas for bubble-energy quantities | Accepted |
+| [110](110-drop-dead-boundary-parameters.md) | Delete the inert BoundaryParameters surface | Accepted |
