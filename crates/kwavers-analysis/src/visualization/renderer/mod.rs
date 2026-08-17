@@ -126,9 +126,9 @@ impl Renderer3D {
         grid: &Grid,
     ) -> KwaversResult<Vec<u8>> {
         let mut iter = fields.into_iter();
-        let (first_type, first_field) = iter.next().ok_or_else(|| {
-            KwaversError::InvalidInput("no fields".to_string())
-        })?;
+        let (first_type, first_field) = iter
+            .next()
+            .ok_or_else(|| KwaversError::InvalidInput("no fields".to_string()))?;
 
         if !self.config.enable_transparency {
             if iter.next().is_some() {
