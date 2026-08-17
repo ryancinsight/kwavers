@@ -25,7 +25,6 @@ pub mod coupling; // Domain coupling interface
 pub mod domain_decomposition;
 pub mod fdtd_fem_coupling; // FDTD-FEM coupling for multi-scale problems
 pub mod metrics;
-pub mod mixed_domain;
 pub mod plugin;
 pub mod pstd_sem_coupling; // PSTD-SEM coupling for spectral accuracy
 pub mod solver;
