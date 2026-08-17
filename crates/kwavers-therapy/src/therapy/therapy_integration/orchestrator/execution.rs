@@ -298,7 +298,7 @@ pub fn generate_kzk_acoustic_field(
     })
 }
 
-/// Fallback KZK path using the real-valued plugin solver (collimated beam).
+/// Fallback KZK path using the collimated (unfocused) beam solver.
 ///
 /// Used when the grid does not satisfy the complex KZK solver's paraxial
 /// angle constraint.  The beam propagates without geometric focusing but
@@ -308,34 +308,89 @@ fn generate_kzk_collimated(
     acoustic_params: &AcousticTherapyParams,
     medium: &dyn Medium,
 ) -> KwaversResult<AcousticField> {
-    use kwavers_solver::forward::nonlinear::kzk_solver_plugin::KzkSolverPlugin;
+    use kwavers_physics::acoustics::wave_propagation::nonlinear::kzk::KZKSolverTrait;
+    use kwavers_solver::forward::nonlinear::kzk::{KZKConfig, KZKSolver};
 
     let (nx, ny, nz) = grid.dimensions();
     let beam_width_sq = 0.005_f64 * 0.005;
-    let max_frequency = acoustic_params.frequency * 10.0;
-    const NUM_HARMONICS: usize = 10;
 
-    let mut kzk = KzkSolverPlugin::new();
-    kzk.initialize_operators(grid, medium, max_frequency)?;
+    let c0 = kwavers_medium::sound_speed_at(medium, 0.0, 0.0, 0.0, grid);
+    let rho0 = kwavers_medium::density_at(medium, 0.0, 0.0, 0.0, grid);
+    let b_over_a = medium.nonlinearity_parameter(0.0, 0.0, 0.0, grid);
+    let alpha0 = medium.alpha_coefficient(0.0, 0.0, 0.0, grid);
+    let alpha_power = medium.alpha_power(0.0, 0.0, 0.0, grid);
 
-    let mut source = Array3::<f64>::zeros((nx, ny, NUM_HARMONICS));
-    for i in 0..nx {
-        for j in 0..ny {
-            let x = i as f64 * grid.dx;
-            let y = j as f64 * grid.dy;
-            let r_sq = x * x + y * y;
-            source[[i, j, 0]] = acoustic_params.pnp * (-r_sq / beam_width_sq).exp();
+    let frequency = acoustic_params.frequency;
+    let dt_cfl = 0.3 * grid.dx / c0;
+    let dt_nyquist = 1.0 / (2.0 * 10.0 * frequency);
+    let dt = dt_cfl.min(dt_nyquist);
+    let nt = ((10.0 / (frequency * dt)).ceil() as usize)
+        .max(128)
+        .next_power_of_two();
+
+    let config = KZKConfig {
+        nx: ny,
+        ny: nz,
+        nz: nx,
+        dx: grid.dy,
+        dz: grid.dx,
+        dt,
+        nt,
+        c0,
+        rho0,
+        b_over_a,
+        alpha0,
+        alpha_power,
+        include_diffraction: true,
+        include_absorption: true,
+        include_nonlinearity: true,
+        frequency,
+    };
+
+    let mut solver = KZKSolver::new(config).map_err(|e| {
+        kwavers_core::error::KwaversError::Physics(
+            kwavers_core::error::PhysicsError::InvalidParameter {
+                parameter: "KZKConfig".to_owned(),
+                value: 0.0,
+                reason: e,
+            },
+        )
+    })?;
+
+    // Build collimated (unfocused) Gaussian source.
+    let dx_kzk = grid.dy;
+    let mut source = Array2::<f64>::zeros((ny, nz));
+    let pnp = acoustic_params.pnp;
+    for j in 0..nz {
+        for i in 0..ny {
+            let x = (i as f64 - ny as f64 / 2.0) * dx_kzk;
+            let y = (j as f64 - nz as f64 / 2.0) * dx_kzk;
+            let r2 = x * x + y * y;
+            source[[i, j]] = pnp * (-r2 / beam_width_sq).exp();
+        }
+    }
+    // Collimated: no focusing phase — use set_source (no focal_depth).
+    solver.set_source(source, frequency);
+
+    let mut volume = Array3::<f64>::zeros((nx, ny, nz));
+    for iz in 0..nx {
+        if iz > 0 {
+            solver.step();
+        }
+        let rms = solver.current_field();
+        for j in 0..nz {
+            for i in 0..ny {
+                volume[[iz, i, j]] = rms[[i, j]];
+            }
         }
     }
 
-    let pressure_volume = kzk.propagate_volume(&source, grid, medium)?;
-
     let z_soft_tissue = DENSITY_WATER_NOMINAL * SOUND_SPEED_TISSUE;
-    let velocity_x = pressure_volume.mapv(|p| p / z_soft_tissue);
+    let velocity_x = volume.mapv(|p| p / z_soft_tissue);
     let velocity_zero = Array3::<f64>::zeros((nx, ny, nz));
 
     Ok(AcousticField {
-        pressure: pressure_volume,
+        pressure: volume,
         velocity_x,
         velocity_y: velocity_zero.clone(),
         velocity_z: velocity_zero,

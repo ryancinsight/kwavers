@@ -49,11 +49,13 @@ pub mod harmonic_tracking;
 pub mod nonlinearity;
 pub mod parabolic_diffraction;
 pub mod plane_wave_test;
+pub mod plugin;
 pub mod shock_capturing;
 pub mod solver;
 pub mod validation;
 
 pub use harmonic_tracking::{HarmonicAnalysis, HarmonicConfig, HarmonicTracker, PredictionModel};
+pub use plugin::KzkPlugin;
 pub use shock_capturing::{ShockCapture, ShockCapturingConfig, ShockDetectionResult};
 pub use solver::KZKSolver;
 

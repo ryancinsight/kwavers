@@ -26,7 +26,7 @@
 //! | `LinearAcoustics { PSTD }`               | [`PSTDPlugin`]                       |
 //! | `LinearAcoustics { DG }`                 | unsupported via plugin path; use     |
 //! |                                          | [`HybridSpectralDGSolver`] directly  |
-//! | `NonlinearAcoustics { KZK }`             | [`KzkSolverPlugin`]                  |
+//! | `NonlinearAcoustics { KZK }`             | [`KzkPlugin`]                        |
 //! | `NonlinearAcoustics { Westervelt }`      | [`WesterveltSolverPlugin`]          |
 //! | `NonlinearAcoustics { Kuznetsov }`       | [`KuznetsovSolverPlugin`]           |
 //! | `ThermalDiffusion`                       | [`ThermalDiffusionPlugin`]           |
@@ -45,7 +45,7 @@ use crate::fdtd::FdtdConfig;
 use crate::forward::bubble_dynamics::plugin::{BubbleDynamicsConfig, BubbleDynamicsPlugin};
 use crate::forward::fdtd::plugin::FdtdPlugin;
 use crate::forward::nonlinear::kuznetsov_solver_plugin::KuznetsovSolverPlugin;
-use crate::forward::nonlinear::kzk_solver_plugin::KzkSolverPlugin;
+use crate::forward::nonlinear::kzk::KzkPlugin;
 use crate::forward::nonlinear::westervelt_solver_plugin::WesterveltSolverPlugin;
 use crate::forward::pstd::extensions::MechanicalStressPlugin;
 use crate::forward::pstd::plugin::PSTDPlugin;
@@ -131,7 +131,7 @@ impl PhysicsCatalog {
                 )),
             },
             PhysicsModelType::NonlinearAcoustics { equation_type, .. } => match equation_type {
-                NonlinearEquation::KZK => Ok(Box::new(KzkSolverPlugin::new())),
+                NonlinearEquation::KZK => Ok(Box::new(KzkPlugin::new())),
                 NonlinearEquation::Westervelt => Ok(Box::new(WesterveltSolverPlugin::new())),
                 NonlinearEquation::Kuznetsov => Ok(Box::new(KuznetsovSolverPlugin::new())),
             },
