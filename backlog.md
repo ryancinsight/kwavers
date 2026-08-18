@@ -1,5 +1,25 @@
 # Backlog / Strategy
 
+## ATLAS-KWAVERS-HEPHAESTUS-FDTD-107 — Route collocated FDTD through Hephaestus [minor] [arch] — hosted verification pending 2026-08-17
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| ATLAS-KWAVERS-HEPHAESTUS-FDTD-107 | Delete the consumer-owned collocated raw-WGPU FDTD path and validate the real Hephaestus `Fdtd3dOps` provider against an independent f32 CPU stencil. | [minor] [arch] | implementation complete; exact-head hosted verification pending | Codex | `crates/kwavers-gpu/src/{gpu,validation/gpu_cpu_equivalence}/`, affected allocation test, PM artifacts |
+
+- Acceptance: provider-owned typed buffers and kernels execute velocity then
+  pressure updates; the CPU oracle uses the same mathematical contract in
+  native f32 precision; provider acquisition and dispatch failures remain
+  explicit; no CPU fallback or consumer-owned collocated FDTD shader remains;
+  focused Nextest, feature-enabled check/Clippy, doctests, and the Hephaestus
+  provider contract pass.
+- Upstream: Hephaestus PR #213, exact source head
+  `7bc9944852a6ba92d4ff265b9fff9bc8c81e3567`, adds the typed contract and
+  sequential-step differential coverage. Kwavers consumer delivery is on
+  `codex/kwavers-gpu-visualization-104` pending its next exact head.
+- Residuals: the separate pressure-only `gpu::compute::fdtd_gpu` dispatcher
+  and the disconnected f64 solver accelerator seam remain tracked boundaries;
+  neither is represented as proof of this provider integration.
+
 ## ATLAS-KWAVERS-HEPHAESTUS-VIS-104 — Reject uninitialized GPU visualization [patch] — verification pending 2026-08-17
 
 | ID | Outcome | Class | Status | Owner | Scope |

@@ -1,157 +1,279 @@
 use super::{EquivalenceReport, EquivalenceValidator};
-use kwavers_core::constants::numerical::MHZ_TO_HZ;
+use hephaestus_core::{ComputeDevice, Fdtd3dOps, Fdtd3dParams, FdtdMedium, FdtdVelocity};
+use hephaestus_wgpu::{WgpuDevice, WgpuFdtd3dOps};
 use kwavers_core::error::{KwaversError, SystemError, ValidationError};
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use kwavers_signal::traits::Signal;
-use kwavers_solver::forward::fdtd::{FdtdConfig, FdtdSolver, KSpaceCorrectionMode};
-use kwavers_solver::interface::Solver;
-use leto::Array3 as LetoArray3;
-use leto::{Array2 as NdArray2, Array3 as NdArray3};
+use std::time::Instant;
 
-fn pressure_field_to_leto(pressure: &NdArray3<f64>) -> Result<LetoArray3<f64>, KwaversError> {
-    let [nx, ny, nz] = pressure.shape();
-    let leto_shape = [nx, ny, nz];
-    LetoArray3::from_shape_vec(leto_shape, pressure.iter().copied().collect()).map_err(|err| {
-        KwaversError::InvalidInput(format!(
-            "FDTD pressure field could not be represented as leto::Array3: {}",
-            err
-        ))
-    })
-}
+const CFL_SAFETY_FACTOR: f64 = 0.9;
+const FDTD_ROUNDING_OPERATIONS_PER_STEP: f64 = 24.0;
 
-/// Calculate stable timestep based on CFL condition
-fn calculate_stable_dt(grid: &Grid, medium: &dyn Medium) -> f64 {
-    let c_max = medium.sound_speed(grid.nx / 2, grid.ny / 2, grid.nz / 2);
+/// Calculate a conservative timestep from the maximum medium speed.
+///
+/// The provider executes a three-dimensional centered gradient/divergence
+/// pair. The 0.5 factor is the CFL margin before the explicit provider safety
+/// factor is applied by the caller.
+fn calculate_stable_dt(grid: &Grid, medium: &dyn Medium) -> Result<f64, KwaversError> {
+    let c_max = medium.max_sound_speed();
     let dx_min = grid.dx.min(grid.dy).min(grid.dz);
-
-    // CFL condition with safety factor of 0.5
-    0.5 * dx_min / c_max
+    if !c_max.is_finite() || c_max <= 0.0 {
+        return Err(KwaversError::InvalidInput(format!(
+            "FDTD maximum sound speed must be finite and positive: {c_max}"
+        )));
+    }
+    if !dx_min.is_finite() || dx_min <= 0.0 {
+        return Err(KwaversError::InvalidInput(format!(
+            "FDTD minimum grid spacing must be finite and positive: {dx_min}"
+        )));
+    }
+    Ok(0.5 * dx_min / c_max)
 }
 
-/// Run CPU-only FDTD simulation
-///
-/// Executes the FDTD solver on CPU for the specified number of timesteps.
-/// Returns the final pressure field or an error.
-/// # Errors
-/// - Propagates any `KwaversError` returned by called functions.
-///
-fn run_simulation_cpu(
-    grid: &Grid,
-    medium: &dyn Medium,
-    nt: usize,
-    config: &FdtdConfig,
-) -> Result<LetoArray3<f64>, KwaversError> {
-    use kwavers_signal::ToneBurst;
-    use kwavers_source::grid_source::GridSource;
+fn provider_f32(name: &str, value: f64) -> Result<f32, KwaversError> {
+    let converted = value as f32;
+    if !value.is_finite() || !converted.is_finite() || converted <= 0.0 {
+        return Err(KwaversError::InvalidInput(format!(
+            "FDTD {name} must remain finite and positive in provider f32 precision: {value}"
+        )));
+    }
+    Ok(converted)
+}
 
-    // Create a simple plane wave source mask at x=0 boundary
-    let nx = grid.nx;
-    let ny = grid.ny;
-    let nz = grid.nz;
+fn provider_params(grid: &Grid, dt: f64) -> Result<Fdtd3dParams, KwaversError> {
+    let nx = u32::try_from(grid.nx).map_err(|error| {
+        KwaversError::InvalidInput(format!("FDTD nx does not fit provider u32: {error}"))
+    })?;
+    let ny = u32::try_from(grid.ny).map_err(|error| {
+        KwaversError::InvalidInput(format!("FDTD ny does not fit provider u32: {error}"))
+    })?;
+    let nz = u32::try_from(grid.nz).map_err(|error| {
+        KwaversError::InvalidInput(format!("FDTD nz does not fit provider u32: {error}"))
+    })?;
+    Fdtd3dParams::new(
+        nx,
+        ny,
+        nz,
+        provider_f32("dx", grid.dx)?,
+        provider_f32("dy", grid.dy)?,
+        provider_f32("dz", grid.dz)?,
+        provider_f32("dt", dt)?,
+    )
+    .map_err(|error| KwaversError::InvalidInput(format!("FDTD provider parameters: {error}")))
+}
 
-    // Create pressure source mask (1.0 at x=0 boundary plane)
-    let mut p_mask = NdArray3::zeros((nx, ny, nz));
-    for j in 0..ny {
-        for k in 0..nz {
-            p_mask[[0, j, k]] = 1.0; // Source at x=0 boundary
+fn medium_values(grid: &Grid, medium: &dyn Medium) -> Result<Vec<FdtdMedium>, KwaversError> {
+    let len = grid
+        .checked_size()
+        .ok_or_else(|| KwaversError::InvalidInput("FDTD grid size overflows usize".to_owned()))?;
+    let mut values = Vec::with_capacity(len);
+    for z in 0..grid.nz {
+        for y in 0..grid.ny {
+            for x in 0..grid.nx {
+                let density = provider_f32("density", medium.density(x, y, z))?;
+                let sound_speed = provider_f32("sound speed", medium.sound_speed(x, y, z))?;
+                let cell = FdtdMedium::new(density, sound_speed).map_err(|error| {
+                    KwaversError::InvalidInput(format!(
+                        "FDTD medium at ({x}, {y}, {z}) is invalid: {error}"
+                    ))
+                })?;
+                values.push(cell);
+            }
         }
     }
+    Ok(values)
+}
 
-    // Create signal: 1 MHz tone burst with 5 cycles
-    let signal = ToneBurst::new(MHZ_TO_HZ, 5.0, 1.0e-6, 1.0);
-    let num_samples = nt + 1;
-    let mut signal_array = NdArray2::zeros((1, num_samples));
-    for i in 0..num_samples {
-        let t = i as f64 * config.dt;
-        signal_array[[0, i]] = signal.amplitude(t);
+/// Build an input-sensitive pressure field for the source-free provider
+/// contract. Source injection is a consumer concern and is not hidden inside
+/// the provider operation.
+fn initial_pressure(grid: &Grid) -> Result<Vec<f32>, KwaversError> {
+    let len = grid
+        .checked_size()
+        .ok_or_else(|| KwaversError::InvalidInput("FDTD grid size overflows usize".to_owned()))?;
+    let mut pressure = Vec::with_capacity(len);
+    for z in 0..grid.nz {
+        for y in 0..grid.ny {
+            for x in 0..grid.nx {
+                pressure
+                    .push(0.25 * (x % 5) as f32 + 0.5 * (y % 7) as f32 + 0.75 * (z % 11) as f32);
+            }
+        }
     }
-
-    // Create GridSource
-    let grid_source = GridSource {
-        p0: None,
-        u0: None,
-        p_mask: Some(p_mask),
-        p_signal: Some(signal_array),
-        p_mode: kwavers_source::grid_source::SourceMode::Additive,
-        u_mask: None,
-        u_signal: None,
-        u_mode: kwavers_source::grid_source::SourceMode::Additive,
-    };
-
-    let mut solver = FdtdSolver::new(config.clone(), grid, medium, grid_source)?;
-    solver.run(nt)?;
-
-    pressure_field_to_leto(solver.pressure_field())
+    Ok(pressure)
 }
 
-/// Run GPU-accelerated FDTD simulation
+#[inline]
+fn flat_index(x: usize, y: usize, z: usize, nx: usize, ny: usize) -> usize {
+    x + y * nx + z * nx * ny
+}
+
+fn cpu_step(
+    pressure: &mut [f32],
+    velocity: &mut [FdtdVelocity],
+    medium: &[FdtdMedium],
+    params: Fdtd3dParams,
+) {
+    let nx = params.nx() as usize;
+    let ny = params.ny() as usize;
+    let nz = params.nz() as usize;
+    for z in 0..nz {
+        for y in 0..ny {
+            for x in 0..nx {
+                let index = flat_index(x, y, z, nx, ny);
+                if x == 0 || x + 1 == nx || y == 0 || y + 1 == ny || z == 0 || z + 1 == nz {
+                    velocity[index] = FdtdVelocity {
+                        components: [0.0; 3],
+                        padding: 0.0,
+                    };
+                    continue;
+                }
+                let gradient = [
+                    (pressure[index + 1] - pressure[index - 1]) / (2.0 * params.dx()),
+                    (pressure[index + nx] - pressure[index - nx]) / (2.0 * params.dy()),
+                    (pressure[index + nx * ny] - pressure[index - nx * ny]) / (2.0 * params.dz()),
+                ];
+                let cell = medium[index];
+                let scale = params.dt() / cell.density();
+                let previous = velocity[index];
+                velocity[index] = FdtdVelocity {
+                    components: [
+                        previous.components[0] - scale * gradient[0],
+                        previous.components[1] - scale * gradient[1],
+                        previous.components[2] - scale * gradient[2],
+                    ],
+                    padding: 0.0,
+                };
+            }
+        }
+    }
+    for z in 0..nz {
+        for y in 0..ny {
+            for x in 0..nx {
+                let index = flat_index(x, y, z, nx, ny);
+                if x == 0 || x + 1 == nx || y == 0 || y + 1 == ny || z == 0 || z + 1 == nz {
+                    pressure[index] = 0.0;
+                    continue;
+                }
+                let divergence = (velocity[index + 1].components[0]
+                    - velocity[index - 1].components[0])
+                    / (2.0 * params.dx())
+                    + (velocity[index + nx].components[1] - velocity[index - nx].components[1])
+                        / (2.0 * params.dy())
+                    + (velocity[index + nx * ny].components[2]
+                        - velocity[index - nx * ny].components[2])
+                        / (2.0 * params.dz());
+                let cell = medium[index];
+                pressure[index] -= params.dt()
+                    * cell.density()
+                    * cell.sound_speed()
+                    * cell.sound_speed()
+                    * divergence;
+            }
+        }
+    }
+}
+
+/// Run the independent f32 CPU reference for the provider contract.
 ///
-/// The current FDTD solver GPU accelerator contract is still ndarray/f64,
-/// while Kwavers GPU execution is moving to provider-generic Leto/Hephaestus
-/// traits that can be implemented by WGPU, CUDA, or another Hephaestus device.
-/// Reporting this as unavailable is more accurate than comparing the CPU solver
-/// against itself.
+/// The CPU path mirrors the mathematical stencil, not the provider's source
+/// or dispatch implementation. It returns flat row-major storage so the
+/// comparison remains f32-native until report metric accumulation.
+fn run_simulation_cpu(
+    medium: &[FdtdMedium],
+    nt: usize,
+    params: Fdtd3dParams,
+    mut pressure: Vec<f32>,
+) -> Result<Vec<f32>, KwaversError> {
+    let expected = params
+        .storage_len()
+        .map_err(|error| KwaversError::InvalidInput(format!("FDTD provider storage: {error}")))?;
+    if medium.len() != expected || pressure.len() != expected {
+        return Err(KwaversError::InvalidInput(
+            "FDTD CPU reference storage does not match provider geometry".to_owned(),
+        ));
+    }
+    let mut velocity = vec![
+        FdtdVelocity {
+            components: [0.0; 3],
+            padding: 0.0,
+        };
+        expected
+    ];
+    for _ in 0..nt {
+        cpu_step(&mut pressure, &mut velocity, medium, params);
+    }
+    Ok(pressure)
+}
+
+/// Run the provider-owned WGPU FDTD simulation.
 ///
-/// # Errors
-/// - Returns `KwaversError::System` until a real FDTD Leto/Hephaestus
-///   provider trait implementation is wired into this validation path.
-///
+/// Device acquisition is the only unavailable-provider branch. Once acquired,
+/// kernel compilation, upload, dispatch, synchronization, and download errors
+/// remain provider failures and are never replaced with CPU output.
 fn run_simulation_gpu(
-    _grid: &Grid,
-    _medium: &dyn Medium,
-    _nt: usize,
-    _config: &FdtdConfig,
-) -> Result<LetoArray3<f64>, KwaversError> {
-    Err(KwaversError::System(SystemError::FeatureNotAvailable {
-        feature: "FDTD provider-generic Leto/Hephaestus GPU equivalence".to_owned(),
-        reason:
-            "no real FDTD GPU provider trait implementation is wired; the previous path only ran the CPU solver"
-                .to_owned(),
-    }))
+    nt: usize,
+    pressure: &[f32],
+    medium: &[FdtdMedium],
+    params: Fdtd3dParams,
+) -> Result<Vec<f32>, KwaversError> {
+    let device = WgpuDevice::try_default("kwavers-fdtd-equivalence").map_err(|error| {
+        KwaversError::System(SystemError::FeatureNotAvailable {
+            feature: "Hephaestus WGPU FDTD provider".to_owned(),
+            reason: error.to_string(),
+        })
+    })?;
+    let pressure_buffer = device
+        .upload(pressure)
+        .map_err(|error| KwaversError::GpuError(format!("FDTD pressure upload: {error}")))?;
+    let velocity = vec![
+        FdtdVelocity {
+            components: [0.0; 3],
+            padding: 0.0,
+        };
+        pressure.len()
+    ];
+    let velocity_buffer = device
+        .upload(&velocity)
+        .map_err(|error| KwaversError::GpuError(format!("FDTD velocity upload: {error}")))?;
+    let medium_buffer = device
+        .upload(medium)
+        .map_err(|error| KwaversError::GpuError(format!("FDTD medium upload: {error}")))?;
+    let provider = WgpuFdtd3dOps;
+    let kernel = provider.prepare_fdtd_3d(&device).map_err(|error| {
+        KwaversError::GpuError(format!("FDTD provider kernel compilation: {error}"))
+    })?;
+    for _ in 0..nt {
+        provider
+            .step_fdtd_3d(
+                &device,
+                &kernel,
+                &pressure_buffer,
+                &velocity_buffer,
+                &medium_buffer,
+                &params,
+            )
+            .map_err(|error| KwaversError::GpuError(format!("FDTD provider dispatch: {error}")))?;
+    }
+    device
+        .synchronize()
+        .map_err(|error| KwaversError::GpuError(format!("FDTD provider synchronize: {error}")))?;
+    device
+        .download_owned(&pressure_buffer)
+        .map_err(|error| KwaversError::GpuError(format!("FDTD pressure download: {error}")))
 }
 
-/// Validate GPU/CPU equivalence for acoustic wave simulation
+/// Validate GPU/CPU equivalence for acoustic wave simulation.
 ///
-/// Runs the CPU reference simulation and compares it with a real GPU provider
-/// only after an FDTD Leto/Hephaestus trait implementation is wired into this
-/// path.
+/// Both paths execute the provider contract's f32 central-difference equations.
+/// The tolerance grows with the number of stencil operations and is derived
+/// from `f32::EPSILON`; it is not an f64 solver fallback.
 ///
-/// ## Mathematical Guarantee
-///
-/// This function validates that:
-/// - For deterministic operations: results are bitwise identical (within machine epsilon)
-/// - For parallel reductions: relative error < 10⁻¹²
-///
-/// ## Arguments
-///
-/// * `grid` - Computational grid with dimensions and spacing
-/// * `medium` - Acoustic medium properties (sound speed, density)
-/// * `nt` - Number of timesteps to simulate
-///
-/// ## Returns
-///
-/// * `Ok(EquivalenceReport)` with detailed equivalence metrics, or a failure
-///   reason when no real FDTD GPU provider trait implementation is available.
-/// * `Err(ValidationError)` if comparison cannot be performed
-///
-/// ## Example
-///
-/// ```rust,ignore
-/// use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
-/// use kwavers_grid::Grid;
-/// use kwavers_medium::HomogeneousMedium;
-/// use kwavers_solver::validation::validate_gpu_cpu_equivalence;
-///
-/// let grid = Grid::new(128, 128, 128, 0.1e-3, 0.1e-3, 0.1e-3).unwrap();
-/// let medium = HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.0, 0.0, &grid);
-///
-/// let report = validate_gpu_cpu_equivalence(&grid, &medium, 100).unwrap();
-/// assert!(report.passed(), "GPU/CPU equivalence failed");
-/// ```
 /// # Errors
-/// - Returns [`Err`] if an internal constraint is violated.
 ///
+/// Returns [`ValidationError`] when grid, medium, or provider parameters are
+/// invalid. Provider unavailability or runtime failure is returned in the
+/// report so callers can distinguish an unexecuted GPU path from a mismatch.
 pub fn validate_gpu_cpu_equivalence(
     grid: &Grid,
     medium: &dyn Medium,
@@ -161,89 +283,98 @@ pub fn validate_gpu_cpu_equivalence(
     validate_gpu_cpu_equivalence_with_config(grid, medium, nt, &validator)
 }
 
-/// Validate with custom validator configuration
+/// Validate GPU/CPU equivalence with a caller-provided report configuration.
 ///
-/// Allows specifying custom tolerances for specific validation scenarios.
+/// The FDTD f32 rounding bound is selected from the provider contract after
+/// applying the caller's other report settings.
+///
 /// # Errors
-/// - Propagates any `KwaversError` returned by called functions.
 ///
+/// Returns [`ValidationError`] when the input domain cannot be represented by
+/// the provider contract.
 pub fn validate_gpu_cpu_equivalence_with_config(
     grid: &Grid,
     medium: &dyn Medium,
     nt: usize,
     validator: &EquivalenceValidator,
 ) -> Result<EquivalenceReport, ValidationError> {
-    // Validate inputs
-    if grid.nx == 0 || grid.ny == 0 || grid.nz == 0 {
+    if grid.nx < 3 || grid.ny < 3 || grid.nz < 3 {
         return Err(ValidationError::InvalidParameter {
-            parameter: "grid dimensions".to_string(),
-            reason: "Grid dimensions must be positive".to_string(),
+            parameter: "grid dimensions".to_owned(),
+            reason: "FDTD provider dimensions must be at least three".to_owned(),
         });
     }
+    let dt = calculate_stable_dt(grid, medium).map_err(|error| {
+        ValidationError::ConstraintViolation {
+            message: format!("FDTD timestep calculation failed: {error}"),
+        }
+    })? * CFL_SAFETY_FACTOR;
+    let params =
+        provider_params(grid, dt).map_err(|error| ValidationError::ConstraintViolation {
+            message: format!("FDTD provider parameter construction failed: {error}"),
+        })?;
+    let medium_values =
+        medium_values(grid, medium).map_err(|error| ValidationError::ConstraintViolation {
+            message: format!("FDTD medium construction failed: {error}"),
+        })?;
+    let initial = initial_pressure(grid).map_err(|error| ValidationError::ConstraintViolation {
+        message: format!("FDTD initial pressure construction failed: {error}"),
+    })?;
+    let shape = [grid.nx, grid.ny, grid.nz];
+    let tolerance =
+        (FDTD_ROUNDING_OPERATIONS_PER_STEP * nt.max(1) as f64 + 1.0) * f32::EPSILON as f64;
+    let mut provider_validator = *validator;
+    provider_validator.tolerance_absolute = tolerance;
+    provider_validator.tolerance_relative = tolerance;
 
-    // Configure FDTD solver
-    let dt = calculate_stable_dt(grid, medium) * 0.9; // Safety factor
-    let config = FdtdConfig {
-        dt,
-        nt,
-        kspace_correction: KSpaceCorrectionMode::None,
-        ..Default::default()
-    };
-
-    // Run CPU simulation
-    let cpu_start = std::time::Instant::now();
-    let cpu_result = run_simulation_cpu(grid, medium, nt, &config);
+    let cpu_start = Instant::now();
+    let cpu_pressure =
+        run_simulation_cpu(&medium_values, nt, params, initial.clone()).map_err(|error| {
+            ValidationError::ConstraintViolation {
+                message: format!("CPU FDTD reference failed: {error}"),
+            }
+        })?;
     let cpu_time_ms = cpu_start.elapsed().as_secs_f64() * 1000.0;
 
-    let cpu_pressure = cpu_result.map_err(|e| ValidationError::ConstraintViolation {
-        message: format!("CPU solver failed: {}", e),
-    })?;
-
-    // Run GPU simulation
-    let gpu_start = std::time::Instant::now();
-    let gpu_result = run_simulation_gpu(grid, medium, nt, &config);
+    let gpu_start = Instant::now();
+    let gpu_result = run_simulation_gpu(nt, &initial, &medium_values, params);
     let gpu_time_ms = gpu_start.elapsed().as_secs_f64() * 1000.0;
-
     let gpu_pressure = match gpu_result {
-        Ok(p) => p,
-        Err(e) => {
-            // GPU not available, create failure report
+        Ok(pressure) => pressure,
+        Err(error) => {
+            let total_points =
+                grid.checked_size()
+                    .ok_or_else(|| ValidationError::ConstraintViolation {
+                        message: "FDTD grid size overflows usize".to_owned(),
+                    })?;
             let mut report =
-                EquivalenceReport::new(validator.tolerance_relative, grid.nx * grid.ny * grid.nz);
+                EquivalenceReport::new(provider_validator.tolerance_relative, total_points);
             report.cpu_time_ms = cpu_time_ms;
-            report.failure_reason = Some(format!("GPU unavailable: {}", e));
-            report.passed = false;
+            report.gpu_time_ms = gpu_time_ms;
+            report.failure_reason = Some(match error {
+                KwaversError::System(SystemError::FeatureNotAvailable { .. }) => {
+                    format!("GPU unavailable: {error}")
+                }
+                error => format!("GPU provider failed: {error}"),
+            });
             return Ok(report);
         }
     };
 
-    // Compare results
-    validator.validate_arrays(&cpu_pressure, &gpu_pressure, cpu_time_ms, gpu_time_ms)
+    provider_validator.validate_f32(
+        shape,
+        &cpu_pressure,
+        &gpu_pressure,
+        cpu_time_ms,
+        gpu_time_ms,
+    )
 }
 
-/// Validate equivalence for a specific test configuration (Test Matrix entry point)
+/// Validate equivalence for a specific grid and homogeneous medium.
 ///
-/// Part of the test matrix implementation:
-/// | Grid Size | Medium | Source | Status |
-/// |-----------|--------|--------|--------|
-/// | 64³ | Homogeneous | Plane wave | ✓ |
-/// | 128³ | Heterogeneous | Point source | ✓ |
-/// | 256³ | Absorbing | Custom | ✓ |
-///
-/// ## Arguments
-///
-/// * `grid_size` - (nx, ny, nz) tuple
-/// * `dx` - Grid spacing in all dimensions (m)
-/// * `c0` - Sound speed (m/s) for homogeneous medium creation
-/// * `rho0` - Density (kg/m³) for homogeneous medium creation
-/// * `nt` - Number of timesteps
-///
-/// ## Returns
-///
-/// Equivalence report or validation error
 /// # Errors
-/// - Propagates any `KwaversError` returned by called functions.
 ///
+/// Returns [`ValidationError`] when grid or provider construction fails.
 pub fn validate_equivalence_config(
     grid_size: (usize, usize, usize),
     dx: f64,
@@ -254,11 +385,11 @@ pub fn validate_equivalence_config(
     use kwavers_medium::HomogeneousMedium;
 
     let (nx, ny, nz) = grid_size;
-    let grid =
-        Grid::new(nx, ny, nz, dx, dx, dx).map_err(|e| ValidationError::ConstraintViolation {
-            message: format!("Grid creation failed: {}", e),
-        })?;
-
+    let grid = Grid::new(nx, ny, nz, dx, dx, dx).map_err(|error| {
+        ValidationError::ConstraintViolation {
+            message: format!("Grid creation failed: {error}"),
+        }
+    })?;
     let medium = HomogeneousMedium::new(rho0, c0, 0.0, 0.0, &grid);
     validate_gpu_cpu_equivalence(&grid, &medium, nt)
 }

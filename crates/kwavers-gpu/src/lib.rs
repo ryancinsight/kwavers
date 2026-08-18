@@ -2,8 +2,8 @@
 //!
 //! This crate is the single home for GPU concretions: Hephaestus-backed device
 //! acquisition, provider-specific buffers and kernels, and the concrete
-//! implementations of the [`kwavers_solver::backend::ComputeBackend`] and
-//! `kwavers_solver::forward::fdtd::FdtdGpuAccelerator` trait surfaces.
+//! implementations of the [`kwavers_solver::backend::traits::ComputeBackend`]
+//! trait surface.
 //!
 //! ## Why a separate leaf crate
 //!

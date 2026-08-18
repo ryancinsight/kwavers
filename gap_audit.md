@@ -1,3 +1,25 @@
+## ATLAS-KWAVERS-HEPHAESTUS-FDTD-107 — Collocated FDTD provider cutover — hosted verification pending 2026-08-17
+
+The old consumer-owned collocated FDTD implementation in
+`kwavers-gpu/src/gpu/fdtd.rs` and `gpu/shaders/fdtd.wgsl` is deleted. Kwavers'
+GPU/CPU equivalence runner now constructs validated Hephaestus `Fdtd3dParams`,
+`FdtdMedium`, and `FdtdVelocity` buffers, dispatches the provider-owned WGPU
+velocity/pressure kernels, and compares the result with an independent native
+f32 CPU stencil. Provider acquisition and dispatch failures are explicit; no
+CPU fallback is used. The validator applies the derived f32 absolute-or-
+relative error rule, including near-zero values.
+
+Evidence: Kwavers feature-enabled `cargo check --all-targets`, strict Clippy,
+focused Nextest (22/22), the affected top-level allocation test (2/2), and
+GPU-enabled doctests pass locally with the local Hephaestus provider. The
+upstream Hephaestus contract test passes two sequential steps at exact head
+`7bc9944852a6ba92d4ff265b9fff9bc8c81e3567`. Hosted exact-head verification is
+pending for Hephaestus PR #213 and Kwavers PR #402.
+
+The separate pressure-only `gpu::compute::fdtd_gpu` path and the disconnected
+f64 `FdtdGpuAccelerator` solver seam remain residuals. They are not treated as
+the collocated provider contract and require a separate ownership decision.
+
 ## ATLAS-KWAVERS-HEPHAESTUS-VIS-104 — GPU visualization initialization boundary — verification pending 2026-08-17
 
 The feature-enabled `VisualizationEngine::render_multi_field` path validates

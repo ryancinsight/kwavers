@@ -1,36 +1,31 @@
 //! GPU/CPU Equivalence Validation Module
 //!
 //! Provides rigorous validation that real GPU and CPU implementations produce
-//! equivalent results within IEEE 754 machine epsilon bounds.
+//! equivalent results within their declared floating-point error bounds.
 //!
-//! FDTD validation currently returns a report with an unavailable-provider
-//! failure reason until the FDTD path has a real provider-generic
-//! Leto/Hephaestus GPU trait implementation. WGPU and CUDA belong behind that
-//! trait seam; this module must not treat a CPU fallback as GPU equivalence
-//! evidence.
+//! FDTD validation executes the provider-owned Hephaestus WGPU contract and
+//! reports provider acquisition or dispatch failures explicitly; it never
+//! compares the CPU solver against itself.
 //!
 //! # Mathematical Foundation
 //!
-//! ## THEOREM: GPU/CPU Equivalence for Deterministic Operations
+//! ## GPU/CPU equivalence for deterministic operations
 //!
-//! **Statement**: For a deterministic numerical algorithm f implemented on both
-//! GPU and CPU with IEEE 754-2008 compliant arithmetic:
+//! For a deterministic numerical algorithm `f` implemented on both GPU and CPU
+//! with IEEE 754-2008 compliant arithmetic, bitwise equality follows only when
+//! the operation order and precision are identical. Provider paths with a
+//! different order or native precision use the validator's absolute-or-
+//! relative error contract instead.
 //!
-//! ```text
-//! f_GPU(x) = f_CPU(x) ∀ x ∈ 𝔽ⁿ (bitwise identical)
-//! ```
-//!
-//! **Proof Sketch**:
-//! 1. IEEE 754-2008 guarantees deterministic rounding for basic operations (+, -, *, /, √)
-//! 2. For algorithms using only these operations with identical operation ordering:
-//!    - Same inputs → same intermediate results → same final results
-//! 3. GPU and CPU both implement IEEE 754-2008 for f64/f32
-//! 4. Therefore f_GPU(x) = f_CPU(x) (bitwise)
+//! Under those conditions, equal inputs produce equal intermediate values and
+//! therefore equal outputs. The condition is not assumed for the provider
+//! FDTD path: its WGPU implementation is f32-native and its operation order
+//! is validated through the derived error bound above.
 //!
 //! **Reference**: IEEE Std 754-2008, §5.1; Goldberg (1991) "What Every Computer
 //! Scientist Should Know About Floating-Point Arithmetic"
 //!
-//! ## THEOREM: Parallel Reduction Equivalence
+//! ## Parallel reduction equivalence
 //!
 //! **Statement**: For parallel reduction operations where operation order differs:
 //!
@@ -49,16 +44,20 @@
 //!
 //! **Reference**: Higham (2002) "Accuracy and Stability of Numerical Algorithms", Ch. 4
 //!
-//! ## COROLLARY: Acceptance Threshold
+//! ## Acceptance threshold
 //!
-//! For practical n ≤ 10⁹ grid points: max_relative_error < 1×10⁻¹²
+//! The legacy reduction validator defaults to `max_relative_error < 1×10⁻¹²`.
+//! FDTD's provider-native f32 path derives its bound from f32 machine epsilon
+//! and the number of stencil operations, then accepts either the absolute or
+//! relative bound at each value.
 //!
-//! This bound is conservative (actual error typically < 10⁻¹⁵).
+//! The legacy f64 bound is conservative for the reduction workloads it covers;
+//! it is not an acceptance claim for the provider-native f32 FDTD path.
 //!
 //! # IEEE 754 Compliance Requirements
 //!
 //! This module validates:
-//! 1. Bitwise equality for deterministic operations (stencils, pointwise ops)
+//! 1. Bitwise equality where precision and operation order are identical
 //! 2. Bounded relative error for reduction operations (summations, norms)
 //! 3. Special value handling (NaN, ±Inf) propagates identically
 //! 4. Subnormal number consistency between platforms

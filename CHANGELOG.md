@@ -4,6 +4,18 @@
 
 ### Changed
 
+- **Provider:** Removed the consumer-owned collocated raw-WGPU FDTD shader and
+  dispatcher. GPU/CPU equivalence now uses Hephaestus' typed `Fdtd3dOps`
+  contract, a native-f32 independent CPU reference, explicit provider errors,
+  and a derived absolute-or-relative comparison bound. The separate
+  pressure-only dispatcher and disconnected f64 solver accelerator remain
+  tracked residuals rather than being presented as this integration.
+
+- **Verification:** Hephaestus PR #213 provides sequential two-step FDTD
+  differential coverage at source head
+  `7bc9944852a6ba92d4ff265b9fff9bc8c81e3567`; Kwavers local feature-enabled
+  focused gates pass. Hosted exact-head verification remains pending.
+
 - **Correctness:** GPU-enabled multi-field visualization now returns a typed
   feature/resource error until `VisualizationEngine::initialize_gpu` has
   initialized both the renderer and data pipeline. The non-GPU fallback and
