@@ -1,9 +1,9 @@
-//! Tiled k-space processing using `LendingIterator` and `Tiles<T, N>` from leto.
+//! Tiled k-space processing using `Tiles<T, N>` from leto.
 //!
 //! In PSTD solvers the pressure field spans hundreds of megabytes for
 //! production grids (e.g. 256³). Processing it tile-by-tile keeps each working
 //! set inside L2 cache and enables compiler auto-vectorization per tile.
-//! This example demonstrates the leto `Tiles<f64, 3>` GAT iterator for
+//! This example demonstrates the leto `Tiles<f64, 3>` iterator for
 //! zero-copy, cache-blocked field traversal.
 //!
 //! ## Physics context
@@ -31,14 +31,15 @@
 //! i.e., summing squared pressures tile-by-tile is identical to a single flat
 //! pass.  Tiling is a *pure* cache optimization with zero numerical effect.
 //!
-//! ## GAT advantage
+//! ## Standard Iterator design
 //!
-//! Standard `Iterator` cannot yield views *borrowed from the iterator itself*
-//! because `Item` must outlive `&mut self`.  `LendingIterator` (GAT-based)
-//! ties the item lifetime to `&'this self`, enabling the streaming loop:
+//! `Tiles` yields zero-copy [`ArrayView`] items that borrow the parent slice
+//! for `'a`, not the iterator itself, so it implements [`Iterator`] directly
+//! and composes with the full adaptor ecosystem (`zip`, `enumerate`, `rev`,
+//! `ExactSizeIterator`, parallel bridges, `for` loops).
 //!
 //! ```text
-//! while let Some(tile) = tiles.next() {
+//! for tile in &mut tiles {
 //!     // tile: ArrayView<'_, f64, 3>  — zero-copy borrow from backing array
 //!     process_tile(&tile);
 //!     // tile dropped here; cache lines from this tile may be evicted
@@ -65,7 +66,7 @@ const SIGMA_CELLS: f64 = 4.0; // Gaussian half-width in grid cells
 const AMPLITUDE: f64 = 1.0; // Peak pressure [Pa]
 
 fn main() {
-    println!("Tiled k-space processing demo (LendingIterator + Tiles from leto)");
+    println!("Tiled k-space processing demo (Tiles from leto)");
     println!("grid: {NX}³, tile: {TILE_X}³, dx: {:.3} mm", DX * 1e3);
     println!();
 
@@ -92,7 +93,7 @@ fn main() {
     let energy_ref: f64 = pressure.iter().map(|&p| p * p).sum();
     let peak_ref: f64 = pressure.iter().copied().fold(f64::NEG_INFINITY, f64::max);
 
-    // ── Tiled pass via LendingIterator ────────────────────────────────────
+    // ── Tiled pass via Iterator ────────────────────────────────────────────
     // `view.data()` and `view.layout()` give the slice and layout without
     // copying; ownership stays with `pressure`.
     let view = pressure.view();
@@ -106,15 +107,7 @@ fn main() {
     let mut peak_tiled = f64::NEG_INFINITY;
     let mut tile_count = 0usize;
 
-    // GAT streaming loop — `tile` borrows from `tiles` for one iteration.
-    // `for` loops require the std `Iterator` trait; `Tiles` is a lending
-    // iterator (GAT `Item` borrowing `&mut self`), so `while let` is the
-    // only legal form — the clippy lint is inapplicable here.
-    #[expect(
-        clippy::while_let_on_iterator,
-        reason = "LendingIterator has no Iterator impl; for-loop form is impossible"
-    )]
-    while let Some(tile) = tiles.next() {
+    for tile in &mut tiles {
         // Each tile is a zero-copy ArrayView<'_, f64, 3>
         energy_tiled += tile.iter().map(|&p| p * p).sum::<f64>();
         peak_tiled = peak_tiled.max(tile.iter().copied().fold(f64::NEG_INFINITY, f64::max));
@@ -151,7 +144,7 @@ fn main() {
     println!("Energy conservation: PASS  (error = {energy_error:.2e})");
     println!("Peak pressure:       PASS");
     println!();
-    println!("LendingIterator/Tiles: zero-copy tiling, no element copied.");
+    println!("Tiles: zero-copy tiling, no element copied.");
 }
 
 #[cfg(test)]
@@ -164,10 +157,10 @@ mod tests {
         let data: Vec<f64> = (0..8).map(|i| i as f64).collect();
         let arr = Array3::from_shape_vec([2, 2, 2], data).expect("shape matches data");
         let view = arr.view();
-        let mut tiles = Tiles::new(view.data(), view.layout(), [1, 1, 1]).expect("non-zero tile");
+        let tiles = Tiles::new(view.data(), view.layout(), [1, 1, 1]).expect("non-zero tile");
 
         let mut collected: Vec<f64> = Vec::new();
-        while let Some(tile) = tiles.next() {
+        for tile in tiles {
             for &v in tile.iter() {
                 collected.push(v);
             }
@@ -194,30 +187,24 @@ mod tests {
         }
         let flat: f64 = p.iter().map(|&v| v * v).sum();
         let view = p.view();
-        let mut tiles =
+        let tiles =
             Tiles::new(view.data(), view.layout(), [TILE_X, TILE_Y, TILE_Z]).expect("non-zero");
-        let tiled: f64 = {
-            let mut acc = 0.0;
-            while let Some(tile) = tiles.next() {
-                acc += tile.iter().map(|&v| v * v).sum::<f64>();
-            }
-            acc
-        };
+        let tiled: f64 = tiles.map(|tile| tile.iter().map(|&v| v * v).sum::<f64>()).sum();
         assert!(
             (tiled - flat).abs() < 1e-12 * flat.max(1.0),
             "tiled {tiled:.12e} ≠ flat {flat:.12e}"
         );
     }
 
-    /// `count_remaining` reports the correct number before exhaustion.
+    /// `ExactSizeIterator::len` reports the correct tile count before iteration.
     #[test]
-    fn count_remaining_is_correct() {
+    fn exact_size_len_is_correct() {
         let arr = Array3::<f64>::zeros([NX, NY, NZ]);
         let view = arr.view();
-        let mut tiles =
+        let tiles =
             Tiles::new(view.data(), view.layout(), [TILE_X, TILE_Y, TILE_Z]).expect("non-zero");
         let expected = (NX / TILE_X) * (NY / TILE_Y) * (NZ / TILE_Z);
-        assert_eq!(tiles.count_remaining(), expected);
-        assert!(tiles.next().is_none());
+        assert_eq!(tiles.len(), expected);
+        assert_eq!(tiles.size_hint(), (expected, Some(expected)));
     }
 }

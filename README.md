@@ -143,14 +143,15 @@ Key architectural decisions:
 
 ### Installation
 
-Add Kwavers to your `Cargo.toml`:
+Add the layer crates you need to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-kwavers = "3.0.0"
+kwavers-grid = "3.0.0"
+kwavers-medium = "4.0.0"
 ```
 
-For GPU acceleration and advanced features:
+For GPU acceleration and advanced features, add the top-level integration crate:
 
 ```toml
 [dependencies]
@@ -160,7 +161,7 @@ kwavers = { version = "3.0.0", features = ["gpu", "pinn"] }
 ### Example 1: Basic Grid Setup
 
 ```rust
-use kwavers::domain::grid::Grid;
+use kwavers_grid::Grid;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create a 3D computational grid
@@ -174,8 +175,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Example 2: Material Properties
 
 ```rust
-use kwavers::domain::medium::HomogeneousMedium;
-use kwavers::domain::grid::Grid;
+use kwavers_grid::Grid;
+use kwavers_medium::HomogeneousMedium;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create a computational grid
@@ -184,16 +185,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Define acoustic properties for water
     let density = 1000.0;      // kg/m³
     let sound_speed = 1500.0;  // m/s
-    let absorption = 0.0;      // dB/cm/MHz (water)
-    let nonlinearity = 0.0;    // B/A parameter
+    let mu_a = 0.0;            // optical absorption coefficient (1/m)
+    let mu_s_prime = 0.0;      // reduced optical scattering coefficient (1/m)
 
     // Create a homogeneous water medium
     let medium = HomogeneousMedium::new(
-        &grid,
-        sound_speed,
         density,
-        absorption,
-        nonlinearity,
+        sound_speed,
+        mu_a,
+        mu_s_prime,
+        &grid,
     );
 
     println!("Water properties:");
