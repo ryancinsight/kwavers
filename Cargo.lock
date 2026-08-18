@@ -2025,6 +2025,7 @@ dependencies = [
 name = "gaia-mesh"
 version = "0.4.0"
 dependencies = [
+ "aequitas",
  "anyhow",
  "eunomia",
  "geometry-predicates",
@@ -3918,7 +3919,7 @@ version = "0.2.0"
 [[package]]
 name = "mnemosyne-build-util"
 version = "0.2.0"
-source = "git+https://github.com/ryancinsight/Mnemosyne#5ca0461a548ecb7b633c87846d7dd34e2c666136"
+source = "git+https://github.com/ryancinsight/Mnemosyne#d1144f7434b1a72fffd2b817f2ac5de3468ba81f"
 
 [[package]]
 name = "mnemosyne-decay"
@@ -3932,7 +3933,7 @@ dependencies = [
 [[package]]
 name = "mnemosyne-decay"
 version = "0.3.0"
-source = "git+https://github.com/ryancinsight/Mnemosyne#5ca0461a548ecb7b633c87846d7dd34e2c666136"
+source = "git+https://github.com/ryancinsight/Mnemosyne#d1144f7434b1a72fffd2b817f2ac5de3468ba81f"
 dependencies = [
  "mnemosyne-arena",
  "mnemosyne-backend",
@@ -3956,7 +3957,7 @@ dependencies = [
 [[package]]
 name = "mnemosyne-heap"
 version = "0.4.0"
-source = "git+https://github.com/ryancinsight/Mnemosyne#5ca0461a548ecb7b633c87846d7dd34e2c666136"
+source = "git+https://github.com/ryancinsight/Mnemosyne#d1144f7434b1a72fffd2b817f2ac5de3468ba81f"
 dependencies = [
  "libc",
  "melinoe",
@@ -3985,7 +3986,7 @@ dependencies = [
 [[package]]
 name = "mnemosyne-local"
 version = "0.4.0"
-source = "git+https://github.com/ryancinsight/Mnemosyne#5ca0461a548ecb7b633c87846d7dd34e2c666136"
+source = "git+https://github.com/ryancinsight/Mnemosyne#d1144f7434b1a72fffd2b817f2ac5de3468ba81f"
 dependencies = [
  "melinoe",
  "mnemosyne-arena",
@@ -4030,7 +4031,7 @@ dependencies = [
 [[package]]
 name = "mnemosyne-prof"
 version = "0.2.0"
-source = "git+https://github.com/ryancinsight/Mnemosyne#5ca0461a548ecb7b633c87846d7dd34e2c666136"
+source = "git+https://github.com/ryancinsight/Mnemosyne#d1144f7434b1a72fffd2b817f2ac5de3468ba81f"
 dependencies = [
  "backtrace",
  "mnemosyne-build-util 0.2.0 (git+https://github.com/ryancinsight/Mnemosyne)",
@@ -5072,9 +5073,9 @@ dependencies = [
 
 [[package]]
 name = "quinn-proto"
-version = "0.11.16"
+version = "0.11.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2f4bfc015262b9df63c8845072ce59068853ff5872180c2ce2f13038b970e560"
+checksum = "04759210543be93709136e28212294a659ef5001836ff4eab4d663e4529bba83"
 dependencies = [
  "aws-lc-rs",
  "bytes",
@@ -5923,7 +5924,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys 0.4.15",
- "windows-sys 0.52.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -6482,7 +6483,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.3.4",
+ "getrandom 0.4.3",
  "once_cell",
  "rustix 1.1.4",
  "windows-sys 0.61.2",
@@ -7627,6 +7628,15 @@ dependencies = [
 
 [[package]]
 name = "windows-sys"
+version = "0.59.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1e38bc4d79ed67fd075bcc251a1c39b32a1776bbe92e5bef1f0bf1f8c531853b"
+dependencies = [
+ "windows-targets",
+]
+
+[[package]]
+name = "windows-sys"
 version = "0.61.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ae137229bcbd6cdf0f7b80a31df61766145077ddf49416a728b02cb3921ff3fc"
@@ -7928,14 +7938,6 @@ dependencies = [
 ]
 
 [[patch.unused]]
-name = "athena-core"
-version = "0.1.1"
-
-[[patch.unused]]
-name = "athena-leto"
-version = "0.1.1"
-
-[[patch.unused]]
 name = "apollo-nufft"
 version = "0.7.0"
 
@@ -7952,16 +7954,24 @@ name = "hephaestus-rocm"
 version = "0.19.0"
 
 [[patch.unused]]
-name = "moirai-http"
-version = "0.5.0"
+name = "asclepius-coeus"
+version = "0.1.0"
+
+[[patch.unused]]
+name = "athena-core"
+version = "0.1.1"
+
+[[patch.unused]]
+name = "athena-leto"
+version = "0.1.1"
 
 [[patch.unused]]
 name = "consus-zarr"
 version = "0.1.0"
 
 [[patch.unused]]
-name = "asclepius-coeus"
-version = "0.1.0"
+name = "moirai-http"
+version = "0.5.0"
 
 [[patch.unused]]
 name = "horae"
