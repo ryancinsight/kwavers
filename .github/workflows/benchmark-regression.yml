@@ -44,12 +44,12 @@ jobs:
 
       - name: Install system dependencies
         run: |
-          sudo apt-get \
+          timeout --foreground --kill-after=30s 8m sudo apt-get \
             -o Acquire::Retries=3 \
             -o Acquire::http::Timeout=20 \
             -o Acquire::https::Timeout=20 \
             update
-          sudo apt-get \
+          timeout --foreground --kill-after=30s 8m sudo apt-get \
             -o Acquire::Retries=3 \
             -o Acquire::http::Timeout=20 \
             -o Acquire::https::Timeout=20 \
@@ -250,12 +250,12 @@ jobs:
 
       - name: Install system dependencies
         run: |
-          sudo apt-get \
+          timeout --foreground --kill-after=30s 8m sudo apt-get \
             -o Acquire::Retries=3 \
             -o Acquire::http::Timeout=20 \
             -o Acquire::https::Timeout=20 \
             update
-          sudo apt-get \
+          timeout --foreground --kill-after=30s 8m sudo apt-get \
             -o Acquire::Retries=3 \
             -o Acquire::http::Timeout=20 \
             -o Acquire::https::Timeout=20 \
