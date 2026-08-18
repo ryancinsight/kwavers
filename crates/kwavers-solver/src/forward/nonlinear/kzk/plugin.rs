@@ -313,10 +313,57 @@ mod tests {
     use super::*;
     use crate::plugin::test_support::{make_context, null_plugin_fields, NullBoundary};
     use crate::plugin::Plugin;
+    use kwavers_core::constants::acoustic_parameters::NP_TO_DB;
+    use kwavers_core::constants::numerical::{CM_TO_M, MHZ_TO_HZ};
+    use kwavers_core::constants::tissue_acoustics::B_OVER_A_WATER;
     use kwavers_core::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
     use kwavers_grid::Grid;
     use kwavers_medium::HomogeneousMedium;
     use leto::Array4;
+
+    /// Attenuation coefficient used by the plane-wave oracles, in the clinical
+    /// unit the `Medium` trait and [`KZKConfig::alpha0`] both carry.
+    const ALPHA0_DB_PER_CM_MHZ: f64 = 0.5;
+    /// Power-law exponent y in α(f) = α₀·f^y.  y = 1 keeps α(f₀) = α₀ so the
+    /// oracle needs no frequency scaling.
+    const ALPHA_POWER: f64 = 1.0;
+
+    /// Round-off bound for a 32-step plane-wave propagation.
+    ///
+    /// ## Derivation
+    ///
+    /// Every term below is a relative error on the measured RMS ratio.
+    ///
+    /// 1. **Absorption is spectrally exact.**  The source is `sin(ω₀τ)`
+    ///    sampled at `nt = 200`, `Δτ = 5 ns`, `f₀ = 1 MHz`, so the fundamental
+    ///    sits on DFT bin `k₀ = f₀·nt·Δτ = 1` exactly (asserted below as a
+    ///    precondition).  With zero spectral leakage the per-step factor is
+    ///    exactly `exp(−α(f₀)·Δz)` (see `absorption.rs`, spectral-exactness
+    ///    theorem), so absorption contributes no truncation error at all.
+    /// 2. **Diffraction is the identity.**  A transversely uniform field has
+    ///    all energy at `k_T = 0`, where `H = exp(−i·0·Δz/2k₀) = 1`.
+    /// 3. **FFT round-off.**  Higham (2002) §24.1 bounds a radix-2 FFT of
+    ///    length N by `3·log₂(N)·ε`.  Per z-step: absorption runs 4 length-200
+    ///    transforms (`4 × 3 × 7.65 × ε ≈ 2.0e−14`) and diffraction 4
+    ///    length-256 2-D transforms (`4 × 3 × 8 × ε ≈ 2.1e−14`).  Over 32
+    ///    steps: `≈ 1.3e−12`.
+    /// 4. **RMS reduction.**  A sequential sum of `nt = 200` terms is bounded
+    ///    by `nt·ε ≈ 4.4e−14`, taken twice (numerator and denominator):
+    ///    `≈ 8.9e−14`.
+    /// 5. **Strang commutator.**  Absorption and nonlinearity do not commute.
+    ///    The per-step defect scales as `(α·Δz)²·σ/12` where the nonlinear
+    ///    distortion per step is `σ = β·ω₀·p₀·Δz/(ρ₀c₀³) ≈ 7e−9` for the
+    ///    1 Pa peak-normalised source, giving `≈ 2e−14` per step, `6e−13`
+    ///    over 32 steps.
+    /// 6. **Harmonic content in the RMS.**  Second-harmonic amplitude
+    ///    `≈ σ_total/2 ≈ 8e−8` enters the RMS quadratically: `≈ 3e−15`.
+    ///
+    /// Sum ≈ `2e−12`.  The bound below carries a factor-5 margin over that
+    /// sum, covering the unproven constant in the FFT error model.  It is a
+    /// round-off bound, not a physics tolerance: any real defect in the
+    /// absorption law, the unit conversion, or the axial mapping moves the
+    /// ratio by parts in a thousand or more.
+    const PLANE_WAVE_ROUNDOFF: f64 = 1.0e-11;
 
     fn small_grid() -> Grid {
         // Axial-elongated: grid.nx (therapy axial) > grid.ny so the KZK
@@ -325,140 +372,274 @@ mod tests {
         Grid::new(32, 16, 16, 1e-3, 1e-3, 1e-3).expect("grid")
     }
 
-    fn water(grid: &Grid) -> HomogeneousMedium {
-        HomogeneousMedium::new(DENSITY_WATER, SOUND_SPEED_WATER, 0.0, 0.0, grid)
+    /// Water with a power-law absorption of α₀ = 0.5 dB/(cm·MHz), y = 1.
+    fn absorbing_water(grid: &Grid) -> HomogeneousMedium {
+        let mut medium = HomogeneousMedium::new(DENSITY_WATER, SOUND_SPEED_WATER, 0.0, 0.0, grid);
+        medium
+            .set_acoustic_properties(ALPHA0_DB_PER_CM_MHZ, ALPHA_POWER, B_OVER_A_WATER)
+            .expect("set_acoustic_properties");
+        medium
     }
 
-    /// Plane-wave absorption oracle: lossless medium preserves finite,
-    /// positive amplitude through the propagation.
-    #[test]
-    fn plane_wave_absorption_oracle() {
-        let grid = small_grid();
-        let mut medium = water(&grid);
-        medium
-            .set_acoustic_properties(0.0, 1.0, 5.0)
-            .expect("set_acoustic_properties");
+    /// Plane-wave attenuation coefficient in Np/m at `frequency_hz`.
+    ///
+    /// Mirrors the clinical → SI conversion in
+    /// [`super::super::absorption::KzkAbsorptionOperator::new`]:
+    /// `α₀[Np/(m·Hz^y)] = α₀[dB/(cm·MHz^y)] / CM_TO_M / NP_TO_DB / (1e6)^y`.
+    fn alpha_np_per_m(frequency_hz: f64) -> f64 {
+        ALPHA0_DB_PER_CM_MHZ / CM_TO_M / NP_TO_DB * (frequency_hz / MHZ_TO_HZ).powf(ALPHA_POWER)
+    }
 
+    /// Assert the preconditions the round-off tolerance rests on.
+    ///
+    /// The derivation of [`PLANE_WAVE_ROUNDOFF`] assumes the fundamental lands
+    /// on an exact DFT bin.  If [`KzkPlugin::build_config`] ever changes `dt`
+    /// or `nt`, spectral leakage would spread energy onto bins with a
+    /// different α and the bound would no longer hold — so the assumption is
+    /// checked rather than trusted.
+    fn assert_exact_fft_bin(config: &KZKConfig) {
+        let bin = config.frequency * config.nt as f64 * config.dt;
+        assert!(
+            (bin - bin.round()).abs() < 1.0e-12,
+            "tolerance precondition: fundamental must sit on an exact DFT bin, \
+             got k₀ = {bin} (nt = {}, dt = {} s, f₀ = {} Hz)",
+            config.nt,
+            config.dt,
+            config.frequency
+        );
+        assert!(
+            bin >= 1.0,
+            "tolerance precondition: the retarded-time window must span at \
+             least one period of the fundamental, got k₀ = {bin}"
+        );
+    }
+
+    /// Drive the plugin over every axial plane and return the field it wrote.
+    ///
+    /// [`KzkPlugin::update`] runs the whole z-propagation on the first call and
+    /// then writes cached plane `step` at therapy index `x = step`.  After
+    /// `grid.nx` updates the therapy x-axis therefore holds the axial RMS
+    /// profile `p_rms(z = (x+1)·Δz)` at every transverse cell, which is what
+    /// the absorption and uniformity oracles read.
+    fn sweep_all_planes(
+        grid: &Grid,
+        medium: &HomogeneousMedium,
+        source: &Array4<f64>,
+    ) -> Array4<f64> {
         let mut plugin = KzkPlugin::new();
-        plugin.initialize(&grid, &medium).expect("initialize");
+        plugin.initialize(grid, medium).expect("initialize");
 
-        // Uniform plane wave of 1 Pa.
-        let mut fields = Array4::<f64>::zeros((1, grid.nx, grid.ny, grid.nz));
-        for ix in 0..grid.nx {
-            for iy in 0..grid.ny {
-                for iz in 0..grid.nz {
-                    fields[[0, ix, iy, iz]] = 1.0;
-                }
-            }
-        }
-
-        let extra = null_plugin_fields(&grid);
+        let mut fields = source.clone();
+        let extra = null_plugin_fields(grid);
         let mut boundary = NullBoundary;
         let mut ctx = make_context(&extra, &mut boundary);
         let dt = 1.0e-7;
 
-        // First update triggers full propagation and writes the first slice.
-        plugin
-            .update(&mut fields, &grid, &medium, dt, 0.0, &mut ctx)
-            .expect("update");
-
-        // The initial slice must be finite and positive.
-        let p000 = fields[[0, 0, 0, 0]];
-        assert!(
-            p000.is_finite() && p000 > 0.0,
-            "lossless plane-wave: p(0,0,0) must be finite positive, got {p000}"
-        );
-    }
-
-    /// Plugin must evolve the field: a centred pulse in lossless water
-    /// changes after update steps.
-    #[test]
-    fn plugin_evolves_real_field() {
-        let grid = small_grid();
-        let medium = water(&grid);
-        let mut plugin = KzkPlugin::new();
-        plugin.initialize(&grid, &medium).expect("initialize");
-
-        let mut fields = Array4::<f64>::zeros((1, grid.nx, grid.ny, grid.nz));
-        fields[[0, 8, 8, 8]] = 1.0e5;
-        let before = fields.clone();
-
-        let extra = null_plugin_fields(&grid);
-        let mut boundary = NullBoundary;
-        let mut ctx = make_context(&extra, &mut boundary);
-        let dt = 5.0e-8;
-
-        for step in 0..5 {
+        for step in 0..grid.nx {
             plugin
-                .update(&mut fields, &grid, &medium, dt, step as f64 * dt, &mut ctx)
+                .update(&mut fields, grid, medium, dt, step as f64 * dt, &mut ctx)
                 .expect("update");
         }
+        fields
+    }
+
+    /// Uniform 1 Pa plane wave over the whole therapy volume.
+    fn uniform_plane_wave(grid: &Grid) -> Array4<f64> {
+        let mut fields = Array4::<f64>::zeros((1, grid.nx, grid.ny, grid.nz));
+        for value in fields.iter_mut() {
+            *value = 1.0;
+        }
+        fields
+    }
+
+    /// Beer–Lambert oracle: a plane wave in a homogeneous absorber decays as
+    /// `exp(−α·z)`.
+    ///
+    /// ## Why a ratio
+    ///
+    /// [`KzkPlugin::extract_source`] normalises the source plane to unit peak,
+    /// which destroys absolute scale but leaves the axial profile untouched:
+    /// every plane is scaled by the same constant.  The ratio between two
+    /// depths is therefore scale-free and is the strongest oracle the adapter
+    /// admits:
+    ///
+    /// ```text
+    /// p_rms(z₂) / p_rms(z₁) = exp(−α(f₀)·(z₂ − z₁))
+    /// ```
+    ///
+    /// with α(f₀) = 0.5 dB/(cm·MHz) × 1 MHz = 5.7565 Np/m and
+    /// z₂ − z₁ = 24 mm, giving 0.87097.
+    ///
+    /// ## Reference
+    ///
+    /// Szabo TL (1994). J. Acoust. Soc. Am. 96(1), 491–500.
+    #[test]
+    fn plane_wave_decays_at_the_beer_lambert_rate() {
+        let grid = small_grid();
+        let medium = absorbing_water(&grid);
+        let config = KzkPlugin::build_config(&grid, &medium);
+        assert_exact_fft_bin(&config);
+
+        let fields = sweep_all_planes(&grid, &medium, &uniform_plane_wave(&grid));
+
+        // Two interior planes, clear of the first and last written slice.
+        let (x1, x2) = (4_usize, 28_usize);
+        let (cy, cz) = (grid.ny / 2, grid.nz / 2);
+        let p1 = fields[[0, x1, cy, cz]];
+        let p2 = fields[[0, x2, cy, cz]];
 
         assert!(
-            fields.iter().all(|v| v.is_finite()),
-            "field must remain finite (stable step)"
+            p1 > 0.0,
+            "plane wave must carry positive RMS amplitude at z₁, got {p1} Pa"
         );
-        let max_change = fields
-            .iter()
-            .zip(before.iter())
-            .map(|(a, b)| (a - b).abs())
-            .fold(0.0_f64, f64::max);
+
+        let span = (x2 - x1) as f64 * grid.dx;
+        let expected = (-alpha_np_per_m(config.frequency) * span).exp();
+        let measured = p2 / p1;
+        let relative_error = (measured - expected).abs() / expected;
+
         assert!(
-            max_change > 0.0,
-            "plugin must evolve the field (real computation); max change = {max_change} Pa"
+            relative_error < PLANE_WAVE_ROUNDOFF,
+            "plane-wave absorption: expected p(z₂)/p(z₁) = {expected:.15}, got \
+             {measured:.15} (relative error {relative_error:.3e} exceeds the \
+             derived round-off bound {PLANE_WAVE_ROUNDOFF:.1e}); \
+             α = {:.6} Np/m over {:.3} m",
+            alpha_np_per_m(config.frequency),
+            span
         );
     }
 
-    /// Focused beam: Gaussian source propagates and produces non-zero
-    /// on-axis amplitude at the midpoint.
+    /// Transverse-uniformity oracle: the parabolic propagator is exactly the
+    /// identity on a transversely uniform field.
+    ///
+    /// ## Theorem
+    ///
+    /// A field with no transverse variation has all its energy in the
+    /// `k_T = 0` bin, where the propagator is
+    /// `H(0) = exp(−i·0²·Δz/(2k₀)) = 1`.  Absorption acts identically at every
+    /// transverse cell and the nonlinear operator is pointwise, so a uniform
+    /// plane wave stays uniform to round-off at every z-plane.
+    ///
+    /// This is the oracle that a diffraction operator indexed by real-space
+    /// position instead of transverse wavenumber cannot satisfy: such an
+    /// operator multiplies each cell by a different factor and shreds the
+    /// uniformity immediately.
     #[test]
-    fn focused_beam_amplitude() {
-        let grid = Grid::new(32, 16, 16, 0.5e-3, 0.5e-3, 0.5e-3).expect("grid");
-        let medium = water(&grid);
-        let mut plugin = KzkPlugin::new();
-        plugin.initialize(&grid, &medium).expect("initialize");
+    fn plane_wave_stays_transversely_uniform() {
+        let grid = small_grid();
+        let medium = absorbing_water(&grid);
+        let config = KzkPlugin::build_config(&grid, &medium);
+        assert_exact_fft_bin(&config);
 
+        let fields = sweep_all_planes(&grid, &medium, &uniform_plane_wave(&grid));
+
+        for x in 0..grid.nx {
+            let mut min = f64::INFINITY;
+            let mut max = f64::NEG_INFINITY;
+            for iy in 0..grid.ny {
+                for iz in 0..grid.nz {
+                    let value = fields[[0, x, iy, iz]];
+                    min = min.min(value);
+                    max = max.max(value);
+                }
+            }
+            assert!(
+                max > 0.0,
+                "plane {x}: uniform plane wave must retain positive amplitude, got max {max} Pa"
+            );
+            let spread = (max - min) / max;
+            assert!(
+                spread < PLANE_WAVE_ROUNDOFF,
+                "plane {x}: transverse spread {spread:.3e} exceeds the derived \
+                 round-off bound {PLANE_WAVE_ROUNDOFF:.1e} (min {min:.15} Pa, \
+                 max {max:.15} Pa) — the k_T = 0 propagator is not the identity"
+            );
+        }
+
+        // The propagation must be non-trivial: absorption removes amplitude.
+        let (cy, cz) = (grid.ny / 2, grid.nz / 2);
+        let first = fields[[0, 0, cy, cz]];
+        let last = fields[[0, grid.nx - 1, cy, cz]];
+        let span = (grid.nx - 1) as f64 * grid.dx;
+        let expected = (-alpha_np_per_m(config.frequency) * span).exp();
+        let measured = last / first;
+        assert!(
+            (measured - expected).abs() / expected < PLANE_WAVE_ROUNDOFF,
+            "uniform plane wave must still be attenuated end to end: expected \
+             {expected:.15}, got {measured:.15}"
+        );
+    }
+
+    /// Adapter oracle: the plugin must reproduce the reference [`KZKSolver`]
+    /// exactly, under the documented axis remap.
+    ///
+    /// The plugin owns no physics — it owns the therapy ↔ KZK coordinate map
+    /// (`therapy (x, y, z) → KZK (z, x, y)`), the peak-normalised source
+    /// extraction, and the cached per-plane readout.  Its contract is therefore
+    /// differential: for every therapy index `(x, iy, iz)` the written value
+    /// must equal `KZKSolver::current_field()[[iy, iz]]` after `x + 1` steps of
+    /// a reference solver built from the same config and source.
+    ///
+    /// The source is deliberately anisotropic in y and z, so a transposed or
+    /// rotated mapping fails rather than cancelling out.
+    ///
+    /// Equality is asserted bit for bit: both paths execute the same
+    /// deterministic operator sequence on the same data, and every reduction
+    /// in that sequence is sequential within a disjoint slice, so the chunking
+    /// chosen by the parallel scheduler cannot change a result.
+    #[test]
+    fn adapter_reproduces_the_reference_solver_under_the_axis_remap() {
+        let grid = Grid::new(16, 8, 8, 1e-3, 1e-3, 1e-3).expect("grid");
+        let medium = absorbing_water(&grid);
+
+        // Anisotropic in (y, z) and non-uniform along x so that the source
+        // extraction's sum over the therapy axial axis is exercised.
         let mut fields = Array4::<f64>::zeros((1, grid.nx, grid.ny, grid.nz));
-        // Gaussian source centred on the transverse plane (iy, iz).
-        let cy = grid.ny as f64 / 2.0;
-        let cz = grid.nz as f64 / 2.0;
-        let sigma = grid.ny as f64 / 4.0;
+        let (cy, cz) = (grid.ny as f64 / 2.0, grid.nz as f64 / 2.0);
+        let (sy, sz) = (grid.ny as f64 / 3.0, grid.nz as f64 / 6.0);
         for ix in 0..grid.nx {
             for iy in 0..grid.ny {
                 for iz in 0..grid.nz {
-                    let r2 =
-                        ((iy as f64 - cy).powi(2) + (iz as f64 - cz).powi(2)) / (sigma * sigma);
-                    fields[[0, ix, iy, iz]] = (-r2).exp();
+                    let ry = (iy as f64 - cy) / sy;
+                    let rz = (iz as f64 - cz) / sz;
+                    fields[[0, ix, iy, iz]] = (1.0 + ix as f64) * (-(ry * ry + rz * rz)).exp();
                 }
             }
         }
 
-        let extra = null_plugin_fields(&grid);
-        let mut boundary = NullBoundary;
-        let mut ctx = make_context(&extra, &mut boundary);
-        let dt = 5.0e-8;
+        let config = KzkPlugin::build_config(&grid, &medium);
+        let source = KzkPlugin::extract_source(&fields, &grid);
+        let mut reference = KZKSolver::new(config.clone()).expect("reference solver");
+        reference.set_source(source, config.frequency);
 
-        // Run through all z-slices (grid.nx = therapy axial = KZK nz).
-        for step in 0..grid.nx {
-            plugin
-                .update(&mut fields, &grid, &medium, dt, step as f64 * dt, &mut ctx)
-                .expect("update");
+        let written = sweep_all_planes(&grid, &medium, &fields);
+
+        for x in 0..grid.nx {
+            reference.step();
+            let plane = reference.current_field();
+            for iy in 0..grid.ny {
+                for iz in 0..grid.nz {
+                    let actual = written[[0, x, iy, iz]];
+                    let expected = plane[[iy, iz]];
+                    assert!(
+                        actual.to_bits() == expected.to_bits(),
+                        "adapter mismatch at therapy (x = {x}, y = {iy}, z = {iz}) \
+                         ↔ KZK (i = {iy}, j = {iz}, step = {x}): plugin wrote \
+                         {actual:.17e} Pa, reference solver gives {expected:.17e} Pa"
+                    );
+                }
+            }
         }
 
-        // All written values must be finite.
+        // The comparison is only meaningful if the reference field is alive.
+        let peak = reference
+            .current_field()
+            .iter()
+            .cloned()
+            .fold(0.0_f64, f64::max);
         assert!(
-            fields.iter().all(|v| v.is_finite()),
-            "focused beam: field must remain finite"
-        );
-
-        // The on-axis centre point should have non-zero amplitude.
-        let mid_y = grid.ny / 2;
-        let mid_z = grid.nz / 2;
-        let mid_x = grid.nx / 2;
-        let p_centre = fields[[0, mid_x, mid_y, mid_z]];
-        assert!(
-            p_centre.abs() > 0.0,
-            "focused beam: on-axis pressure must be non-zero, got {p_centre}"
+            peak > 0.0,
+            "reference solver must carry non-zero amplitude at the final plane, got {peak} Pa"
         );
     }
 }

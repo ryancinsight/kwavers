@@ -1,5 +1,46 @@
 # Backlog / Strategy
 
+## ATLAS-KWAVERS-KZK-TESTS-082 — Value-semantic oracles for the KZK plugin and diffraction validation [major] — review 2026-08-18
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| ATLAS-KWAVERS-KZK-TESTS-082 | Replace the existence-only assertions shipped with `KzkPlugin` (finiteness/positivity only) with analytical oracles; un-ignore the Gaussian-beam diffraction oracle within the default per-test budget; record the retired `KzkSolverPlugin` public-surface removal as ADR 111 with a CHANGELOG migration line. | [major] | review: implementation and falsification complete; workspace gates blocked, see below | Claude | `crates/kwavers-solver/src/forward/nonlinear/kzk/{plugin.rs,validation/diffraction.rs}`, `docs/ADR/111`, `CHANGELOG.md` |
+
+Three plugin tests and the diffraction validation now assert value semantics
+against closed-form solutions: Beer–Lambert axial decay `exp(−α·Δz)` (stated as
+a ratio, which the peak-normalising source extraction leaves invariant),
+exactness of the parabolic propagator at `k_T = 0`, bit-for-bit adapter
+equivalence to a reference `KZKSolver` under the axis remap, and the
+Gaussian-beam envelope `w(z_R) = √2·w₀` with the on-axis closed form
+`Re[U(0, ζ)] = 1/(1 + ζ²)`. Every tolerance is derived at its assertion site
+from grid spacing, step count, and machine epsilon; none is measured-then-fitted.
+
+`test_gaussian_beam_diffraction` is no longer `#[ignore]`d: the workload is
+64² × 4 retarded-time slices × 10 axial steps and runs in 0.02 s, still landing
+exactly on the Rayleigh distance. The spectral propagator composes exactly with
+diffraction as the only active operator, so the coarser axial step reaches the
+same field — the reduction is in the instrument, not the regime. The former 35%
+tolerance is replaced by a derived 1%; the superseded `_fast` sibling (which
+asserted only `centre > corner`) is subsumed.
+
+Evidence tier: falsification. Each new oracle was run against the retired
+`KzkSolverPlugin` resurrected from `950fbc588^` and rewired into the catalog,
+and each failed (14.8% absorption-ratio error, transverse spread 1.0, adapter
+mismatch 1.30e−5 vs 8.14e−5 Pa). The three superseded tests all *passed*
+against that same buggy implementation. The diffraction oracle was falsified by
+operator mutation to the retired plugin's real-`cos()` defect class: measured
+5.19 mm against the required 7.07 mm — a 26.7% error the previous 35% tolerance
+would have admitted.
+
+Blocked (external, `repos/ritk`): `cargo metadata` for the whole kwavers
+workspace fails because `ritk-filter` requires `apollo-fft ^0.26.0` while the
+stack overlay resolves Apollo to the local 0.27.0 tree, and `crates/kwavers`
+git-depends on `ritk-io`. `cargo fmt --check` passes; `clippy`, `nextest`,
+`cargo test --doc`, and `cargo semver-checks` cannot run until ritk's
+requirement is swept forward. Re-open trigger: ritk resolves against
+apollo-fft 0.27. Focused `cargo nextest run -p kwavers-solver --lib` over the
+`kzk` tests passed on the revision immediately preceding the Apollo bump.
+
 ## KWAVERS-COUPLING-CONTRACT-001 — Medium-aware field-coupling inputs [minor]
 
 | ID | Outcome | Class | Status | Owner | Scope |
