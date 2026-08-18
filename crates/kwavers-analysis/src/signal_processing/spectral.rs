@@ -1,4 +1,8 @@
-//! Spectral Analysis for Doppler Signals — Welch's Method
+//! Welch's method: averaged-periodogram power spectral density.
+//!
+//! A general signal-processing utility, not tied to one modality. Doppler flow
+//! analysis uses it on slow-time ensembles; quantitative-ultrasound tissue
+//! characterization uses it on gated RF.
 //!
 //! ## Mathematical Foundation
 //!
