@@ -107,11 +107,7 @@ pub struct ShiftOperators {
 #[derive(Debug, Clone)]
 pub struct KSpaceOperators {
     pub kappa: leto::Array3<f64>,
-    pub k_vec: (
-        leto::Array3<f64>,
-        leto::Array3<f64>,
-        leto::Array3<f64>,
-    ),
+    pub k_vec: (leto::Array3<f64>, leto::Array3<f64>, leto::Array3<f64>),
     pub k_magnitude: leto::Array3<f64>,
     pub shift_ops: ShiftOperators,
 }
@@ -337,7 +333,7 @@ mod tests {
         });
 
         assert_eq!(compute_count.get(), 1);
-        assert_eq!(ops.kappa.shape(), &[32, 32, 32]);
+        assert_eq!(ops.kappa.shape(), [32usize, 32, 32]);
 
         // Second access should use thread-local cache (no recompute)
         let ops2 = cache.get_operators(key, || {

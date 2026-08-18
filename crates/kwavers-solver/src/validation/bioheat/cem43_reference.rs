@@ -161,8 +161,8 @@ pub mod literature_cases {
 
 #[cfg(test)]
 mod tests {
-    use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_C;
     use super::*;
+    use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_C;
 
     #[test]
     fn test_threshold_case() {
@@ -207,8 +207,8 @@ mod tests {
     #[test]
     fn test_r_factor_calculation() {
         assert_eq!(r_factor_at_temperature(BODY_TEMPERATURE_C), 0.25); // T < 43°C: subthreshold
-        assert_eq!(r_factor_at_temperature(43.0), 0.5);  // T ≥ 43°C: suprathreshold
-        assert_eq!(r_factor_at_temperature(45.0), 0.5);  // T ≥ 43°C: suprathreshold
+        assert_eq!(r_factor_at_temperature(43.0), 0.5); // T ≥ 43°C: suprathreshold
+        assert_eq!(r_factor_at_temperature(45.0), 0.5); // T ≥ 43°C: suprathreshold
     }
 
     #[test]
