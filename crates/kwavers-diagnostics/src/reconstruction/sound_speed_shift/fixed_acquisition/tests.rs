@@ -282,4 +282,3 @@ fn assert_image_close(actual: &Array2<f64>, expected: &Array2<f64>, tolerance: f
         );
     }
 }
-

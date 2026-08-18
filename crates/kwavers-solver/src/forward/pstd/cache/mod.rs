@@ -107,11 +107,7 @@ pub struct ShiftOperators {
 #[derive(Debug, Clone)]
 pub struct KSpaceOperators {
     pub kappa: leto::Array3<f64>,
-    pub k_vec: (
-        leto::Array3<f64>,
-        leto::Array3<f64>,
-        leto::Array3<f64>,
-    ),
+    pub k_vec: (leto::Array3<f64>, leto::Array3<f64>, leto::Array3<f64>),
     pub k_magnitude: leto::Array3<f64>,
     pub shift_ops: ShiftOperators,
 }

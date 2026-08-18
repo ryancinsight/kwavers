@@ -15,8 +15,7 @@ use crate::rules::{CreepageRule, DesignRules};
 
 #[test]
 fn emitted_pcb_has_well_formed_structure() {
-    let spec =
-        GridSpec::cover(Nm::from_mm(20.0), Nm::from_mm(20.0), Nm::from_mm(0.5), 4).unwrap();
+    let spec = GridSpec::cover(Nm::from_mm(20.0), Nm::from_mm(20.0), Nm::from_mm(0.5), 4).unwrap();
     let mut board = Board::new(spec);
     let n = board.add_net("VPP", NetClassKind::Hv);
     let gnd = board.add_net("GND", NetClassKind::Ground);
@@ -89,11 +88,9 @@ fn emitted_pcb_has_well_formed_structure() {
 
 #[test]
 fn flagged_save_stamps_a_fab_layer_drc_fail_banner() {
-    let spec =
-        GridSpec::cover(Nm::from_mm(20.0), Nm::from_mm(20.0), Nm::from_mm(0.5), 2).unwrap();
+    let spec = GridSpec::cover(Nm::from_mm(20.0), Nm::from_mm(20.0), Nm::from_mm(0.5), 2).unwrap();
     let board = Board::new(spec);
-    let path =
-        std::env::temp_dir().join(format!("flagged_drc_{}.kicad_pcb", std::process::id()));
+    let path = std::env::temp_dir().join(format!("flagged_drc_{}.kicad_pcb", std::process::id()));
     save_kicad_pcb_flagged(
         &path,
         &board,
@@ -126,8 +123,7 @@ fn flagged_save_stamps_a_fab_layer_drc_fail_banner() {
 
 #[test]
 fn save_kicad_project_writes_dru_and_pro_alongside_pcb() {
-    let spec =
-        GridSpec::cover(Nm::from_mm(10.0), Nm::from_mm(10.0), Nm::from_mm(0.5), 2).unwrap();
+    let spec = GridSpec::cover(Nm::from_mm(10.0), Nm::from_mm(10.0), Nm::from_mm(0.5), 2).unwrap();
     let board = Board::new(spec);
     let rules = DesignRules::holohv();
     let creepage = CreepageRule::holohv();
@@ -183,8 +179,7 @@ fn write_kicad_pro_encodes_basename_and_rules() {
 
 #[test]
 fn emitted_schematic_has_symbols_labels_and_balances() {
-    let spec =
-        GridSpec::cover(Nm::from_mm(20.0), Nm::from_mm(20.0), Nm::from_mm(0.5), 4).unwrap();
+    let spec = GridSpec::cover(Nm::from_mm(20.0), Nm::from_mm(20.0), Nm::from_mm(0.5), 4).unwrap();
     let mut board = Board::new(spec);
     let n = board.add_net("VPP", NetClassKind::Hv);
     let lib = vec![FootprintDef::new(
