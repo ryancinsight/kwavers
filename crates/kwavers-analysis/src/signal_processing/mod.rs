@@ -172,6 +172,8 @@ pub mod pam;
 /// General signal-processing utility, used by Doppler flow analysis and by
 /// quantitative-ultrasound tissue characterization alike; it lives here rather
 /// than inside either consumer.
+/// Quantitative ultrasound: spectral tissue characterization from RF.
+pub mod qus;
 pub mod spectral;
 pub mod spectroscopy;
 pub mod ulm;
