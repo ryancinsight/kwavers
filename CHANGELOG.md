@@ -15,9 +15,15 @@
   differential coverage at source head
   `7bc9944852a6ba92d4ff265b9fff9bc8c81e3567`; Kwavers local feature-enabled
   focused gates pass. Kwavers exact-head benchmark-regression run
-  `32093820457` passes at `4e11cf555`; the CI/architecture/wheel matrix is
-  pending. The same head bounds Ubuntu package-manager retries and HTTP(S)
-  timeouts after the prior CI benchmark lane stalled in `apt-get update`.
+  `32095365142` passes at `5155f32e8`; the final repaired matrix is pending at
+  `0a3446dac`. The prior CI benchmark lane and Test Suite Coverage lane stalled
+  in `apt-get update`; the workflows now bound both package-manager retries and
+  process lifetime.
+
+- **CI reliability:** Commit `0a3446dac` wraps every tracked Ubuntu
+  `apt-get update` and `apt-get install` invocation in an 8-minute process
+  deadline with a 30-second termination grace period. This changes no benchmark
+  input or production path.
 
 - **Correctness:** GPU-enabled multi-field visualization now returns a typed
   feature/resource error until `VisualizationEngine::initialize_gpu` has

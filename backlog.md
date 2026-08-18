@@ -1,10 +1,10 @@
 # Backlog / Strategy
 
-## ATLAS-KWAVERS-HEPHAESTUS-FDTD-107 — Route collocated FDTD through Hephaestus [minor] [arch] — exact-head matrix pending 2026-08-18
+## ATLAS-KWAVERS-HEPHAESTUS-FDTD-107 — Route collocated FDTD through Hephaestus [minor] [arch] — exact-head matrix rerun pending 2026-08-18
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| ATLAS-KWAVERS-HEPHAESTUS-FDTD-107 | Delete the consumer-owned collocated raw-WGPU FDTD path and validate the real Hephaestus `Fdtd3dOps` provider against an independent f32 CPU stencil. | [minor] [arch] | implementation complete; exact-head matrix pending | Codex | `crates/kwavers-gpu/src/{gpu,validation/gpu_cpu_equivalence}/`, affected allocation test, PM artifacts |
+| ATLAS-KWAVERS-HEPHAESTUS-FDTD-107 | Delete the consumer-owned collocated raw-WGPU FDTD path and validate the real Hephaestus `Fdtd3dOps` provider against an independent f32 CPU stencil. | [minor] [arch] | implementation complete; exact-head matrix rerun pending | Codex | `crates/kwavers-gpu/src/{gpu,validation/gpu_cpu_equivalence}/`, affected allocation test, PM artifacts |
 
 - Acceptance: provider-owned typed buffers and kernels execute velocity then
   pressure updates; the CPU oracle uses the same mathematical contract in
@@ -15,12 +15,14 @@
 - Upstream: Hephaestus PR #213, exact source head
   `7bc9944852a6ba92d4ff265b9fff9bc8c81e3567`, adds the typed contract and
   sequential-step differential coverage. Kwavers consumer delivery is on
-  `codex/kwavers-gpu-visualization-104` at `4e11cf555`; benchmark-regression
-  passes, and the remaining exact-head matrix is pending.
-- Workflow evidence: the prior CI benchmark lane was cancelled at its 30-minute
-  limit while blocked in `apt-get update`; `4e11cf555` applies bounded retries
-  and HTTP(S) timeouts to all Ubuntu package-install steps in the affected
-  workflows. It does not change benchmark inputs or production code.
+  `codex/kwavers-gpu-visualization-104` at `0a3446dac`; the previous exact-head
+  benchmark regression passes, and the repaired exact-head matrix is pending.
+- Workflow evidence: the prior CI benchmark lane and Test Suite Coverage lane
+  were cancelled at their job limits while blocked in `apt-get update`;
+  `4e11cf555` applies bounded retries and HTTP(S) timeouts, and `0a3446dac`
+  adds explicit 8-minute process deadlines with 30-second termination grace to
+  all Ubuntu package-install steps. These workflow changes do not change
+  benchmark inputs or production code.
 - Residuals: the separate pressure-only `gpu::compute::fdtd_gpu` dispatcher
   and the disconnected f64 solver accelerator seam remain tracked boundaries;
   neither is represented as proof of this provider integration.

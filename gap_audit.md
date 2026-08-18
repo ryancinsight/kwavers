@@ -1,4 +1,4 @@
-## ATLAS-KWAVERS-HEPHAESTUS-FDTD-107 — Collocated FDTD provider cutover — exact-head matrix pending 2026-08-18
+## ATLAS-KWAVERS-HEPHAESTUS-FDTD-107 — Collocated FDTD provider cutover — exact-head matrix rerun pending 2026-08-18
 
 The old consumer-owned collocated FDTD implementation in
 `kwavers-gpu/src/gpu/fdtd.rs` and `gpu/shaders/fdtd.wgsl` is deleted. Kwavers'
@@ -14,16 +14,18 @@ focused Nextest (22/22), the affected top-level allocation test (2/2), and
 GPU-enabled doctests pass locally with the local Hephaestus provider. The
 upstream Hephaestus contract test passes two sequential steps at exact head
 `7bc9944852a6ba92d4ff265b9fff9bc8c81e3567`. Kwavers benchmark-regression run
-`32093820457` passes at exact head `4e11cf555`. The remaining CI, architecture,
-and wheel workflows are pending.
+`32095365142` passes at exact head `5155f32e8`. The final workflow repair is
+on `0a3446dac`; its exact-head matrix is pending.
 
 The prior CI benchmark lane was cancelled at its 30-minute limit while blocked
-in `apt-get update`; no Cargo benchmark step had started. Commit `4e11cf555`
-applies bounded retries and HTTP(S) timeouts to every Ubuntu package-install
-step in the CI, architecture, CUDA-container, and benchmark workflows. The
-workflow repair does not change benchmark inputs or production code. Local
-workflow scans report no unbounded `apt-get update` or `apt-get install`
-invocation.
+in `apt-get update`; no Cargo benchmark step had started. The subsequent Test
+Suite Coverage lane was cancelled at its 45-minute job limit in the same
+install step. Commit `4e11cf555` applies bounded retries and HTTP(S) timeouts;
+`0a3446dac` additionally bounds every Ubuntu package-manager process with an
+8-minute deadline and a 30-second termination grace period across the CI,
+architecture, CUDA-container, and benchmark workflows. The workflow repairs do
+not change benchmark inputs or production code. Every tracked `apt-get`
+invocation is now deadline-wrapped.
 
 The separate pressure-only `gpu::compute::fdtd_gpu` path and the disconnected
 f64 `FdtdGpuAccelerator` solver seam remain residuals. They are not treated as
