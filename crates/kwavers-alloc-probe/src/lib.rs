@@ -25,11 +25,26 @@ use std::alloc::{GlobalAlloc, Layout, System};
 use std::cell::Cell;
 use std::sync::atomic::{AtomicU64, Ordering};
 
+// `missing_const_for_thread_local` is a false positive here: the initializer
+// below is already a `const` block, but the lint matches a node of the
+// `thread_local!` expansion instead. The diagnostic is host-triple dependent —
+// it fires on `windows-gnu` and stays quiet on `windows-msvc` under the same
+// Clippy build — so an unconditional suppression is wrong on one host or the
+// other: unfulfilled on msvc, load-bearing on gnu. Gating on the host that
+// actually emits it keeps `expect` fulfilled where it applies and absent where
+// it does not, so the ratchet still expires when upstream fixes the match.
 thread_local! {
     /// Number of open measurement windows on the current thread.
     ///
     /// A depth counter rather than a flag so nested windows compose; it is
     /// const-initialized so reading it inside the allocator never allocates.
+    #[cfg_attr(
+        all(windows, target_env = "gnu"),
+        expect(
+            clippy::missing_const_for_thread_local,
+            reason = "the initializer is already a const block; the lint matches the thread_local! expansion, and does so only on the windows-gnu host"
+        )
+    )]
     static OPEN_WINDOWS: Cell<u32> = const { Cell::new(0) };
 }
 

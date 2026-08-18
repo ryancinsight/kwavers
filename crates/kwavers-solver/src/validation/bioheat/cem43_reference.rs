@@ -57,8 +57,11 @@ pub const STANDARD_DAMAGE_THRESHOLD: f64 = 240.0;
 ///
 /// # Example
 /// ```
+/// use kwavers_solver::validation::bioheat::analytical_cem43_constant;
+///
+/// // One degree above the 43 °C threshold doubles the damage rate.
 /// let cem43 = analytical_cem43_constant(44.0, 60.0);
-/// // Returns 120.0 (double rate at 44°C)
+/// assert!((cem43 - 120.0).abs() < 1e-12);
 /// ```
 pub fn analytical_cem43_constant(t_celsius: f64, duration_minutes: f64) -> f64 {
     let r = if t_celsius >= THRESHOLD_TEMP_C {

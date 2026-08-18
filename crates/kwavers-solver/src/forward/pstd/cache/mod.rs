@@ -35,11 +35,30 @@
 //! - Kamil, S. et al. (2010). "An auto-tuning framework for parallel
 //!   multicore stencil computations." *IPDPS*, 1-12. §2 Cache tiling.
 
-use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_math::fft::Complex64;
 use leto::Array1;
 use std::cell::RefCell;
 use std::sync::Arc;
+
+/// Grid and medium parameters that fully determine a k-space operator set.
+///
+/// The k-space operators depend on nothing else, so this is exactly the state
+/// [`OperatorKey`] hashes:
+/// - grid dimensions define the FFT sizes,
+/// - grid spacing defines the k-vector sampling `k_x = 2π/(nx·dx)`,
+/// - the reference sound speed defines the correction `sinc(c_ref·|k|·dt/2)`,
+/// - the time step defines the propagation operator `exp(i·c·|k|·dt)`.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct OperatorParams {
+    /// Grid dimensions `(nx, ny, nz)`.
+    pub shape: (usize, usize, usize),
+    /// Grid spacing `(dx, dy, dz)` in meters.
+    pub spacing: (f64, f64, f64),
+    /// Reference sound speed in m/s.
+    pub c_ref: f64,
+    /// Time step in seconds.
+    pub dt: f64,
+}
 
 /// Cache key for identifying unique operator configurations
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -55,30 +74,19 @@ pub struct OperatorKey {
 }
 
 impl OperatorKey {
-    /// Create a new operator key from grid parameters
+    /// Create a new operator key from the geometry described by `params`.
     ///
-    /// # Arguments
-    /// * `nx, ny, nz` - Grid dimensions
-    /// * `dx, dy, dz` - Grid spacing in meters
-    /// * `c_ref` - Reference sound speed in m/s
-    /// * `dt` - Time step in seconds
-    ///
-    /// # Mathematical Justification
-    /// The k-space operators are fully determined by these 8 parameters:
-    /// - Grid dimensions define FFT sizes
-    /// - Grid spacing defines k-vector sampling: k_x = 2π/(nx·dx)
-    /// - Reference sound speed defines k-space correction: sinc(c_ref·|k|·dt/2)
-    /// - Time step defines propagation operator: exp(i·c·|k|·dt)
-    pub fn new(
-        nx: usize,
-        ny: usize,
-        nz: usize,
-        dx: f64,
-        dy: f64,
-        dz: f64,
-        c_ref: f64,
-        dt: f64,
-    ) -> Self {
+    /// The floating-point fields are stored as their bit patterns so that the
+    /// key is `Eq + Hash`; keys therefore match on exact parameter identity,
+    /// which is what operator reuse requires.
+    #[must_use]
+    pub fn new(params: OperatorParams) -> Self {
+        let OperatorParams {
+            shape: (nx, ny, nz),
+            spacing: (dx, dy, dz),
+            c_ref,
+            dt,
+        } = params;
         Self {
             nx,
             ny,
@@ -112,8 +120,26 @@ pub struct KSpaceOperators {
     pub shift_ops: ShiftOperators,
 }
 
-// Thread-local operator cache for fast access without synchronization
+// Thread-local operator cache for fast access without synchronization.
+//
+// `missing_const_for_thread_local` is a false positive here: the initializer is
+// already a `const` block, but the lint matches a node of the `thread_local!`
+// expansion instead. What varies is not the Clippy build but the host triple —
+// the same Clippy fires on `windows-gnu` and stays quiet on `windows-msvc` — so
+// an unconditional suppression is wrong on one host or the other, which is what
+// added and then removed the expectation in 02eee237a / c3cdef9f6. Gating on the
+// emitting host keeps `expect` fulfilled where the lint fires and absent where
+// it does not, so the suppression still expires once upstream fixes the match.
+// Same treatment as `kwavers-alloc-probe`'s `OPEN_WINDOWS` and `kwavers-gpu`'s
+// `HILBERT_SPECTRUM`.
 thread_local! {
+    #[cfg_attr(
+        all(windows, target_env = "gnu"),
+        expect(
+            clippy::missing_const_for_thread_local,
+            reason = "the initializer is already a const block; the lint matches the thread_local! expansion, and does so only on the windows-gnu host"
+        )
+    )]
     static THREAD_CACHE: RefCell<Option<ThreadLocalCache>> = const { RefCell::new(None) };
 }
 
@@ -282,10 +308,20 @@ pub fn init_cache() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+
+    fn params(n: usize) -> OperatorParams {
+        OperatorParams {
+            shape: (n, n, n),
+            spacing: (1e-4, 1e-4, 1e-4),
+            c_ref: SOUND_SPEED_WATER_SIM,
+            dt: 1e-8,
+        }
+    }
 
     #[test]
     fn test_operator_key_creation() {
-        let key = OperatorKey::new(64, 64, 64, 1e-4, 1e-4, 1e-4, SOUND_SPEED_WATER_SIM, 1e-8);
+        let key = OperatorKey::new(params(64));
         assert_eq!(key.nx, 64);
         assert_eq!(key.ny, 64);
         assert_eq!(key.nz, 64);
@@ -308,7 +344,7 @@ mod tests {
     #[test]
     fn test_cache_get_compute() {
         let mut cache = KSpaceCache::new();
-        let key = OperatorKey::new(32, 32, 32, 1e-4, 1e-4, 1e-4, SOUND_SPEED_WATER_SIM, 1e-8);
+        let key = OperatorKey::new(params(32));
 
         let compute_count = std::cell::Cell::new(0);
         let ops = cache.get_operators(key, || {

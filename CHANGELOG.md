@@ -4,24 +4,6 @@
 
 ### Changed
 
-- **Breaking:** Removed `kwavers_solver::forward::nonlinear::kzk_solver_plugin`
-  and its `KzkSolverPlugin` type. Migrate to
-  `kwavers_solver::forward::nonlinear::kzk::KzkPlugin`, or obtain the plugin
-  from `PhysicsCatalog` for `NonlinearEquation::KZK` and never name the type.
-  The two are not signature-compatible: `KzkSolverPlugin`'s inherent
-  `initialize_operators`, `propagate_volume`, `solve`,
-  `shock_formation_distance`, and `apply_retarded_time` have no counterpart on
-  `KzkPlugin`, which exposes only the `Plugin` trait — callers needing the
-  solver directly use `forward::nonlinear::kzk::KZKSolver`. The retired plugin
-  indexed transverse wavenumbers by spatial grid index, applied a real `cos()`
-  where the parabolic propagator requires `exp(-i·k_T²Δz/(2k₀))`, and raised a
-  per-metre attenuation factor to the power of a time step, so it attenuated
-  essentially nothing: a plane wave in a 0.5 dB/(cm·MHz) absorber lost 6e-11 of
-  its amplitude over 24 mm where Beer-Lambert requires 13%. Therapy results
-  produced through `NonlinearEquation::KZK` before this change understate
-  attenuation and misplace diffractive spreading, and must be regenerated. See
-  ADR 111.
-
 - **Documentation:** The generic field-coupling implementation now states its
   nominal medium-coefficient contract explicitly. The remaining medium-aware
   provider extension is recorded in `KWAVERS-COUPLING-CONTRACT-001`; numerical

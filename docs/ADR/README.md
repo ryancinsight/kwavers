@@ -74,4 +74,3 @@
 | [108](108-retire-stale-apollo-gpu-probe.md) | Retire the stale Apollo GPU availability probe | Accepted |
 | [109](109-aequitas-quantity-provider.md) | Adopt Aequitas for bubble-energy quantities | Accepted |
 | [110](110-drop-dead-boundary-parameters.md) | 110. Delete the inert BoundaryParameters surface | Accepted |
-| [111](111-retire-kzk-solver-plugin-surface.md) | 111. Retire the `KzkSolverPlugin` surface onto the complex-field KZK adapter | Accepted |
