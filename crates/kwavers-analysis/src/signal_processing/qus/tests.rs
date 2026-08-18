@@ -189,3 +189,156 @@ fn rejects_invalid_bands_gates_and_rates() {
     let b = Array1::from_vec([2], vec![1.0, 1.0]).unwrap();
     assert!(normalize_to_reference(&a, &b).is_err());
 }
+
+// ────────────────────────────────────────────────────────────────────────
+// Attenuation estimation tests (US-023-B2)
+// ────────────────────────────────────────────────────────────────────────
+
+/// Zero-attenuation oracle: when both spectra are identical (same depth,
+/// or perfectly non-attenuating medium), ΔS = 0 everywhere and α = 0.
+#[test]
+fn zero_attenuation_from_identical_spectra() {
+    let n = 64_usize;
+    let spectrum: Array1<f64> = Array1::from_iter((0..n).map(|i| {
+        let f_mhz = i as f64 * (SAMPLE_RATE_HZ / (2.0 * n as f64)) * 1e-6;
+        // Decreasing backscatter spectrum typical of tissue
+        -0.5 * f_mhz // dB, not zero so the fit is non-trivial
+    }));
+
+    let band = AnalysisBand::try_new(2.0e6, 8.0e6).expect("band");
+    let result = attenuation_from_spectra(
+        &spectrum,
+        &spectrum, // same spectrum → zero attenuation
+        SAMPLE_RATE_HZ / (2.0 * n as f64),
+        1.0,
+        2.0,
+        band,
+    )
+    .expect("attenuation");
+
+    assert!(
+        result.slope_db_per_mhz_cm.abs() < 1e-12,
+        "slope must be 0 for identical spectra, got {}",
+        result.slope_db_per_mhz_cm
+    );
+    assert!(
+        result.midband_db_per_cm.abs() < 1e-12,
+        "midband must be 0 for identical spectra, got {}",
+        result.midband_db_per_cm
+    );
+}
+
+/// Known-attenuation oracle: synthesize two spectra whose difference is a
+/// known linear ramp, and verify the fit recovers the exact slope and offset.
+///
+/// Modelled as: S_deep(f) = S_shallow(f) - 2·Δd·(α₀ + β·f_MHz)
+/// with α₀ = 0.1 dB/cm and β = 0.5 dB/(MHz·cm) over Δd = 2 cm.
+#[test]
+fn recovers_known_attenuation_from_synthesized_spectra() {
+    let n = 128_usize;
+    let freq_step = SAMPLE_RATE_HZ / (2.0 * n as f64); // Hz per bin
+    let delta_d_cm = 2.0_f64;
+    let alpha_0 = 0.1_f64; // dB/cm (intercept)
+    let beta = 0.5_f64; // dB/(MHz·cm) (slope)
+
+    // Shallow: flat 0 dB reference-normalized spectrum.
+    let shallow: Array1<f64> = Array1::zeros(n);
+
+    // Deep: attenuated by 2·Δd·α(f).
+    let deep: Array1<f64> = Array1::from_iter((0..n).map(|i| {
+        let f_mhz = i as f64 * freq_step * 1e-6;
+        let alpha_f = alpha_0 + beta * f_mhz; // dB/cm
+        -2.0 * delta_d_cm * alpha_f // dB, negative = signal lost
+    }));
+
+    let band = AnalysisBand::try_new(2.0e6, 10.0e6).expect("band");
+    let result = attenuation_from_spectra(
+        &shallow,
+        &deep,
+        freq_step,
+        1.0,          // depth_shallow_cm
+        1.0 + delta_d_cm, // depth_deep_cm
+        band,
+    )
+    .expect("attenuation");
+
+    let tol = 1e-10;
+    assert!(
+        (result.slope_db_per_mhz_cm - beta).abs() < tol,
+        "slope: expected {beta}, got {}, diff {}",
+        result.slope_db_per_mhz_cm,
+        (result.slope_db_per_mhz_cm - beta).abs()
+    );
+    assert!(
+        (result.intercept_db_per_cm - alpha_0).abs() < tol,
+        "intercept: expected {alpha_0}, got {}, diff {}",
+        result.intercept_db_per_cm,
+        (result.intercept_db_per_cm - alpha_0).abs()
+    );
+
+    let centre_mhz = (2.0 + 10.0) / 2.0;
+    let expected_midband = alpha_0 + beta * centre_mhz;
+    assert!(
+        (result.midband_db_per_cm - expected_midband).abs() < tol,
+        "midband: expected {expected_midband}, got {}",
+        result.midband_db_per_cm
+    );
+}
+
+/// Non-finite bins in one or both spectra are dropped from the fit, not rejected.
+#[test]
+fn drops_non_finite_bins_from_fit() {
+    let n = 64_usize;
+    let freq_step = SAMPLE_RATE_HZ / (2.0 * n as f64);
+    let delta_d_cm = 1.0_f64;
+    let beta = 0.4_f64; // dB/(MHz·cm)
+
+    let shallow: Array1<f64> = Array1::zeros(n);
+    let mut deep: Array1<f64> = Array1::from_iter((0..n).map(|i| {
+        let f_mhz = i as f64 * freq_step * 1e-6;
+        -2.0 * delta_d_cm * beta * f_mhz
+    }));
+    // Corrupt two in-band bins with NaN — they should be dropped.
+    deep[10] = f64::NAN;
+    deep[20] = f64::INFINITY;
+
+    let band = AnalysisBand::try_new(2.0e6, 10.0e6).expect("band");
+    let result = attenuation_from_spectra(&shallow, &deep, freq_step, 1.0, 2.0, band)
+        .expect("should succeed despite NaN/Inf bins");
+
+    // The fit degrades slightly but must still be close.
+    assert!(
+        (result.slope_db_per_mhz_cm - beta).abs() < 0.05,
+        "slope with dropped bins: expected ~{beta}, got {}",
+        result.slope_db_per_mhz_cm
+    );
+}
+
+/// Reject invalid inputs.
+#[test]
+fn attenuation_rejects_invalid_inputs() {
+    let spec = Array1::from_vec([4], vec![0.0, -1.0, -2.0, -3.0]).unwrap();
+    let band = AnalysisBand::try_new(2.0e6, 8.0e6).unwrap();
+    let step = SAMPLE_RATE_HZ / 8.0;
+
+    // Empty spectra.
+    let empty: Array1<f64> = Array1::zeros(0);
+    assert!(attenuation_from_spectra(&empty, &empty, step, 1.0, 2.0, band).is_err());
+
+    // Unequal lengths.
+    let short = Array1::zeros(2);
+    assert!(attenuation_from_spectra(&spec, &short, step, 1.0, 2.0, band).is_err());
+
+    // Non-positive step.
+    assert!(attenuation_from_spectra(&spec, &spec, 0.0, 1.0, 2.0, band).is_err());
+
+    // Depths in wrong order.
+    assert!(attenuation_from_spectra(&spec, &spec, step, 2.0, 1.0, band).is_err());
+
+    // Zero depth.
+    assert!(attenuation_from_spectra(&spec, &spec, step, 0.0, 1.0, band).is_err());
+
+    // Band out of range — no bins inside.
+    let narrow_band = AnalysisBand::try_new(100.0e6, 200.0e6).unwrap(); // above Nyquist for step
+    assert!(attenuation_from_spectra(&spec, &spec, step, 1.0, 2.0, narrow_band).is_err());
+}
