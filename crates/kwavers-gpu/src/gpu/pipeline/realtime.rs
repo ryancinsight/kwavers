@@ -159,11 +159,22 @@ impl RealtimeImagingPipeline {
         Ok(())
     }
 
+    /// Beamform, envelope-detect and log-compress one frame.
+    ///
+    /// The result is **log-compressed beam space**, not a Cartesian raster.
+    /// Scan conversion is a geometric resample that needs the acquisition's fan
+    /// geometry, which this pipeline is not given; a caller that needs a
+    /// display raster runs the scan converter in
+    /// `kwavers_analysis::signal_processing::b_mode::scan_conversion` with the
+    /// probe's `ScanGeometry`.
+    ///
+    /// This previously ended with a `scan_conversion` call that returned its
+    /// input unchanged, so the pipeline reported a scan-converted frame it had
+    /// never converted.
     fn process_frame(&mut self, rf_data: &LetoArray4<f32>) -> KwaversResult<LetoArray3<f32>> {
         let beamformed = self.beamform(rf_data)?;
         let envelope = self.envelope_detection(&beamformed)?;
-        let compressed = self.log_compression(&envelope)?;
-        self.scan_conversion(&compressed)
+        self.log_compression(&envelope)
     }
 
     fn beamform(&self, rf_data: &LetoArray4<f32>) -> KwaversResult<LetoArray3<f32>> {
@@ -237,10 +248,6 @@ impl RealtimeImagingPipeline {
         }
 
         Ok(compressed)
-    }
-
-    fn scan_conversion(&self, compressed: &LetoArray3<f32>) -> KwaversResult<LetoArray3<f32>> {
-        Ok(compressed.clone())
     }
 
     pub fn statistics(&self) -> &super::PipelineStats {
