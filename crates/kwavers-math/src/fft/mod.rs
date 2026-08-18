@@ -221,15 +221,20 @@ pub fn ifft_3d_array(field_hat: &Array3<Complex64>) -> Array3<f64> {
 }
 
 /// Inverse 3-D FFT into caller-owned real storage.
-/// Routes to Apollo's zero-alloc `ifft_3d_array_into`, avoiding intermediate
-/// allocation and element-wise copy.
+///
+/// Routes to Apollo's zero-alloc `ifft_3d_array_into_spectrum_scratch`, which
+/// consumes `field_hat` as its own scratch, avoiding both an intermediate
+/// allocation and an element-wise copy. Apollo 0.27 renamed this form: the
+/// plain `ifft_3d_array_into` name now belongs to the three-argument variant
+/// taking explicit scratch, matching its 1-D and 2-D siblings, which the
+/// two-argument form had been inverted against.
 pub fn ifft_3d_array_into(field_hat: &mut Array3<Complex64>, out: &mut Array3<f64>) {
     assert_eq!(
         field_hat.shape(),
         out.shape(),
         "ifft_3d_array_into: input and output shapes must match"
     );
-    apollo::ifft_3d_array_into(field_hat, out);
+    apollo::ifft_3d_array_into_spectrum_scratch(field_hat, out);
 }
 
 /// Forward 3-D complex FFT, allocating output.
