@@ -15,15 +15,20 @@
   differential coverage at source head
   `7bc9944852a6ba92d4ff265b9fff9bc8c81e3567`; Kwavers local feature-enabled
   focused gates pass. Kwavers exact-head benchmark-regression run
-  `32095365142` passes at `5155f32e8`; the final repaired matrix is pending at
-  `0a3446dac`. The prior CI benchmark lane and Test Suite Coverage lane stalled
-  in `apt-get update`; the workflows now bound both package-manager retries and
-  process lifetime.
+  `32095365142` passes at `5155f32e8`; the final repaired head is `2295bfff7`.
+  Its hosted matrix is blocked before source checks because Kwavers main
+  requires Apollo `0.27.0` while Apollo default remains `0.26.0`.
 
 - **CI reliability:** Commit `0a3446dac` wraps every tracked Ubuntu
   `apt-get update` and `apt-get install` invocation in an 8-minute process
   deadline with a 30-second termination grace period. This changes no benchmark
   input or production path.
+
+- **Integration blocker:** Exact-head CI run `32099296963` fails beta
+  resolution and architecture run `32099297012` fails clean-architecture
+  resolution on `apollo-fft ^0.27.0` versus Apollo default `0.26.0`. Apollo PR
+  #104 must land its locked workspace and benchmark-manifest repair before this
+  consumer PR can merge; no `0.26.0` fallback is retained.
 
 - **Correctness:** GPU-enabled multi-field visualization now returns a typed
   feature/resource error until `VisualizationEngine::initialize_gpu` has

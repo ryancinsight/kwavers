@@ -1,4 +1,4 @@
-## ATLAS-KWAVERS-HEPHAESTUS-FDTD-107 — Collocated FDTD provider cutover — exact-head matrix rerun pending 2026-08-18
+## ATLAS-KWAVERS-HEPHAESTUS-FDTD-107 — Collocated FDTD provider cutover — Apollo co-evolution blocker 2026-08-18
 
 The old consumer-owned collocated FDTD implementation in
 `kwavers-gpu/src/gpu/fdtd.rs` and `gpu/shaders/fdtd.wgsl` is deleted. Kwavers'
@@ -15,7 +15,8 @@ GPU-enabled doctests pass locally with the local Hephaestus provider. The
 upstream Hephaestus contract test passes two sequential steps at exact head
 `7bc9944852a6ba92d4ff265b9fff9bc8c81e3567`. Kwavers benchmark-regression run
 `32095365142` passes at exact head `5155f32e8`. The final workflow repair is
-on `0a3446dac`; its exact-head matrix is pending.
+on `2295bfff7`; its exact-head hosted matrix is blocked by the Apollo
+co-evolution state.
 
 The prior CI benchmark lane was cancelled at its 30-minute limit while blocked
 in `apt-get update`; no Cargo benchmark step had started. The subsequent Test
@@ -26,6 +27,17 @@ install step. Commit `4e11cf555` applies bounded retries and HTTP(S) timeouts;
 architecture, CUDA-container, and benchmark workflows. The workflow repairs do
 not change benchmark inputs or production code. Every tracked `apt-get`
 invocation is now deadline-wrapped.
+
+The exact-head merge ref inherits Kwavers main's `apollo-fft ^0.27.0`, while
+Apollo default still exposes `0.26.0`. CI run `32099296963` fails in beta
+build job `95596582400`, and architecture run `32099297012` fails in clean
+architecture job `95596582553`, both during Cargo resolution before source
+checks. Apollo PR #104 source `38192bed` is itself blocked by a stale locked
+workspace and benchmark measurement manifest: Rust run `32096086258` and
+benchmark run `32096086273` fail on those exact requirements. Lowering Kwavers
+back to `0.26.0` would contradict its merged API migration, so no consumer
+fallback or compatibility path is added. Re-open this item when Apollo's
+`0.27.0` default lands and rerun the exact-head matrix.
 
 The separate pressure-only `gpu::compute::fdtd_gpu` path and the disconnected
 f64 `FdtdGpuAccelerator` solver seam remain residuals. They are not treated as
