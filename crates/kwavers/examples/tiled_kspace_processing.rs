@@ -189,7 +189,9 @@ mod tests {
         let view = p.view();
         let tiles =
             Tiles::new(view.data(), view.layout(), [TILE_X, TILE_Y, TILE_Z]).expect("non-zero");
-        let tiled: f64 = tiles.map(|tile| tile.iter().map(|&v| v * v).sum::<f64>()).sum();
+        let tiled: f64 = tiles
+            .map(|tile| tile.iter().map(|&v| v * v).sum::<f64>())
+            .sum();
         assert!(
             (tiled - flat).abs() < 1e-12 * flat.max(1.0),
             "tiled {tiled:.12e} ≠ flat {flat:.12e}"
