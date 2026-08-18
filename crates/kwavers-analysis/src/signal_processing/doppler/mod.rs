@@ -71,7 +71,6 @@ pub mod book_fixture;
 pub mod color_flow;
 pub mod continuous_wave;
 pub mod pulsed_wave;
-pub mod spectral;
 pub mod types;
 pub mod vector_flow;
 pub mod wall_filter;
@@ -86,7 +85,6 @@ pub use book_fixture::{continuous_wave_vector_flow_fixture, ContinuousWaveVector
 pub use color_flow::{ColorFlowConfig, ColorFlowImaging, VelocityMap};
 pub use continuous_wave::{ContinuousWaveDoppler, CwDopplerConfig, CwSpectrum};
 pub use pulsed_wave::{PWDConfig, PulsedWaveDoppler, SignedSpectralWaveform, SpectralWaveform};
-pub use spectral::{SpectralAnalysis, SpectralConfig};
 pub use types::{DopplerResult, FlowDirection, VelocityEstimate};
 pub use vector_flow::{VectorFlowEstimator, VectorVelocity};
 pub use wall_filter::{WallFilter, WallFilterConfig, WallFilterType};

@@ -167,6 +167,12 @@ pub mod doppler;
 pub mod filtering;
 pub mod localization;
 pub mod pam;
+/// Welch averaged-periodogram power spectral density.
+///
+/// General signal-processing utility, used by Doppler flow analysis and by
+/// quantitative-ultrasound tissue characterization alike; it lives here rather
+/// than inside either consumer.
+pub mod spectral;
 pub mod spectroscopy;
 pub mod ulm;
 pub mod vasculature;
