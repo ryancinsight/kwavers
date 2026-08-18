@@ -14,7 +14,10 @@
 - **Verification:** Hephaestus PR #213 provides sequential two-step FDTD
   differential coverage at source head
   `7bc9944852a6ba92d4ff265b9fff9bc8c81e3567`; Kwavers local feature-enabled
-  focused gates pass. Hosted exact-head verification remains pending.
+  focused gates pass. Kwavers exact-head benchmark-regression run
+  `32093820457` passes at `4e11cf555`; the CI/architecture/wheel matrix is
+  pending. The same head bounds Ubuntu package-manager retries and HTTP(S)
+  timeouts after the prior CI benchmark lane stalled in `apt-get update`.
 
 - **Correctness:** GPU-enabled multi-field visualization now returns a typed
   feature/resource error until `VisualizationEngine::initialize_gpu` has
