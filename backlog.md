@@ -9794,7 +9794,15 @@ Burn → Coeus tensor type mismatches; that debt is outside the Batch #1 scope.
   this item and its owner-local checklist section.
 - Decision: [ADR 044](docs/ADR/044-asclepius-response-ownership.md).
 
-## KW-PY-TESTS-01 — kwavers-python array_utils committed coverage gap; numpy tests cannot run under cargo test [test] [chore] — open
+## KW-PY-TESTS-01 — kwavers-python array_utils committed coverage gap; numpy tests cannot run under cargo test [test] [chore] — in-progress
+
+- Owner: Codex `/root` (`01a01ab6-b584-7a71-9f65-720df5c1e8fd`).
+- Claimed files: `crates/kwavers-python/src/array_utils.rs`, the focused
+  Python-host regression under `crates/kwavers-python/tests/`, `Cargo.toml` only
+  if test-host configuration requires it, and the owner-local PM entries for
+  this item.
+- Last update: 2026-08-19. The live source and test runner were re-verified;
+  implementation and focused Python/Rust evidence are in progress.
 
 - Outcome: record two facts for anyone working the ndarray-compat migration
   in `kwavers-python`: (1) `array_utils.rs` currently has **no committed test
