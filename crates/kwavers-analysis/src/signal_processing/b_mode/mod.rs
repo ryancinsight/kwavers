@@ -9,7 +9,8 @@
 //! 1. [`tgc::TgcConfig`] — restore depth-uniform brightness.
 //! 2. [`detection::envelope`] — Hilbert envelope (carrier removal).
 //! 3. [`detection::log_compress`] — fit the echo dynamic range to `[0, 1]`.
-//! 4. [`scan_conversion::ScanConverter`] — polar beams → Cartesian image.
+//! 4. [`scan_conversion::scan_convert`] — polar beams → Cartesian image via
+//!    the `CoordinateMap` seam (atlas ADR 0048, US-023-A6).
 
 pub mod detection;
 pub mod scan_conversion;
@@ -19,5 +20,5 @@ pub mod tgc;
 mod tests;
 
 pub use detection::{envelope, log_compress};
-pub use scan_conversion::{CartesianGrid, ScanConverter, ScanGeometry};
+pub use scan_conversion::{CartesianGrid, ScanGeometry, scan_convert};
 pub use tgc::TgcConfig;

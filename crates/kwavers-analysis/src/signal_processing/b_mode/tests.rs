@@ -1,7 +1,7 @@
 //! Value-semantic tests for the B-mode display pipeline.
 
 use super::detection::{envelope, log_compress};
-use super::scan_conversion::{CartesianGrid, ScanConverter, ScanGeometry};
+use super::scan_conversion::{CartesianGrid, ScanGeometry, scan_convert};
 use super::tgc::TgcConfig;
 use aequitas::systems::si::quantities::{Angle, Length};
 use aequitas::systems::si::units::{Meter, Radian};
@@ -97,15 +97,18 @@ fn log_compress_rejects_bad_range() {
 
 // ── Scan conversion ───────────────────────────────────────────────────────────
 
-fn converter() -> ScanConverter {
+fn test_geometry() -> ScanGeometry {
     // ±30° sector, 0.5° beams, apex at origin, 0.2 mm range samples.
-    let geometry = ScanGeometry {
+    ScanGeometry {
         angle_min: Angle::from_unit::<Radian>(-30.0_f64.to_radians()),
         angle_step: Angle::from_unit::<Radian>(0.5_f64.to_radians()),
         radius_offset: Length::from_unit::<Meter>(0.0),
         range_step: Length::from_unit::<Meter>(2e-4),
-    };
-    let grid = CartesianGrid {
+    }
+}
+
+fn test_grid() -> CartesianGrid {
+    CartesianGrid {
         width: 200,
         height: 200,
         x_range: (
@@ -116,13 +119,11 @@ fn converter() -> ScanConverter {
             Length::from_unit::<Meter>(0.0),
             Length::from_unit::<Meter>(0.06),
         ),
-    };
-    ScanConverter::new(geometry, grid).unwrap()
+    }
 }
 
 #[test]
 fn scan_conversion_places_beam_sample_at_correct_cartesian_pixel() {
-    let sc = converter();
     let n_lines = 121; // -30..30 step 0.5
     let n_samples = 300;
     let mut beam = Array2::zeros((n_lines, n_samples));
@@ -134,7 +135,7 @@ fn scan_conversion_places_beam_sample_at_correct_cartesian_pixel() {
             beam[[line + dl, sample + ds]] = 1.0;
         }
     }
-    let img = sc.convert(beam.view()).unwrap();
+    let img = scan_convert(beam.view(), test_geometry(), test_grid()).unwrap();
     // Expected Cartesian location: x = 0, z = 0.04 m.
     let dz = 0.06_f64 / 199.0;
     let row = (0.04_f64 / dz).round() as usize;
@@ -150,8 +151,9 @@ fn scan_conversion_places_beam_sample_at_correct_cartesian_pixel() {
 
 #[test]
 fn scan_conversion_rejects_degenerate_beam_grid() {
-    let sc = converter();
-    assert!(sc.convert(Array2::<f64>::zeros((1, 10)).view()).is_err());
+    assert!(
+        scan_convert(Array2::<f64>::zeros((1, 10)).view(), test_geometry(), test_grid()).is_err()
+    );
 }
 
 #[test]
@@ -174,11 +176,11 @@ fn scan_conversion_rejects_invalid_typed_geometry() {
             Length::from_unit::<Meter>(1.0),
         ),
     };
-    assert!(ScanConverter::new(geometry, grid).is_err());
+    assert!(scan_convert(Array2::<f64>::zeros((2, 2)).view(), geometry, grid).is_err());
 
     geometry.angle_step = Angle::from_unit::<Radian>(1.0);
     geometry.radius_offset = Length::from_unit::<Meter>(-1.0);
-    assert!(ScanConverter::new(geometry, grid).is_err());
+    assert!(scan_convert(Array2::<f64>::zeros((2, 2)).view(), geometry, grid).is_err());
 }
 
 /// Differential oracle for the geometry migration: converting through
@@ -212,7 +214,6 @@ fn scan_conversion_rejects_invalid_typed_geometry() {
 /// cannot mask an indexing defect — which is what the test exists to catch.
 #[test]
 fn delegated_geometry_matches_the_previous_inline_formulas() {
-    let sc = converter();
     let n_lines = 121; // ±30° at 0.5°
     let n_samples = 300;
     // A structured beam field, so a mis-indexed pixel cannot coincidentally match.
@@ -222,7 +223,7 @@ fn delegated_geometry_matches_the_previous_inline_formulas() {
             beam[[l, s]] = (l as f64) * 1.0e3 + (s as f64);
         }
     }
-    let got = sc.convert(beam.view()).expect("conversion");
+    let got = scan_convert(beam.view(), test_geometry(), test_grid()).expect("conversion");
 
     // Pre-migration reference, recomputed here independently of the converter.
     let angle_min = -30.0_f64.to_radians();

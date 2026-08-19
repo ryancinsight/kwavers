@@ -1,28 +1,22 @@
-//! Scan conversion: polar beam space → Cartesian display.
+//! Scan conversion: polar beam space → Cartesian display via the ritk-image seam.
 //!
-//! Sector (phased) and convex-array probes acquire data along beams that fan out
-//! at different angles. Each beam is a column of samples in `(range, angle)`
-//! space; the display, however, is a rectangular Cartesian image. Scan
-//! conversion resamples the polar beam grid onto Cartesian pixels by bilinear
-//! interpolation.
+//! Scan conversion is a resample from a curvilinear acquisition onto a Cartesian
+//! raster. Coordinate mapping delegates to `ritk_spatial::CurvilinearArray`
+//! through the `ritk_image::Image::physical_point_to_continuous_index` seam
+//! (atlas ADR 0048), so no bespoke polar arithmetic lives in this module.
+//!
+//! # Entry point
+//!
+//! [`scan_convert`] is the only public API. The former `ScanConverter` struct
+//! has been deleted; callers that stored it should call [`scan_convert`]
+//! directly (atlas ADR 0048, US-023-A6).
 //!
 //! # Geometry
 //!
-//! Beams emanate from an apex. A beam at angle `θ` (measured from the axial `z`
-//! axis) samples range `r = r₀ + i·Δr`, where `r₀` is the apex-to-aperture
-//! radius (`0` for a sector phased array, `> 0` for a convex array). A Cartesian
-//! pixel at `(x, z)` maps back to `r = √(x²+z²)`, `θ = atan(x/z)`; if `(r, θ)`
-//! falls inside the acquired fan it is bilinearly interpolated from the four
-//! surrounding beam samples, otherwise it is background (`0`). Pixels at or
-//! behind the apex plane (`z ≤ 0`) have no beam and are always background.
-//!
-//! # Geometry ownership
-//!
-//! The polar map itself is **not** implemented here. `ritk_spatial::CurvilinearArray`
-//! is the stack's single source of truth for curvilinear acquisition geometry
-//! (atlas ADR 0042); this module converts the Aequitas-typed [`ScanGeometry`]
-//! into it once at construction and then asks it for the beam index of each
-//! Cartesian pixel. Storage stays Leto and the public surface stays typed.
+//! Beams fan out from an apex. A Cartesian pixel at `(x, z)` maps back to a
+//! fractional `(beam, sample)` index through the `CurvilinearArray` geometry.
+//! Bilinear interpolation on the beam grid follows; pixels outside the acquired
+//! fan stay zero.
 //!
 //! # Reference
 //! - Szabo, T. L. (2014). *Diagnostic Ultrasound Imaging: Inside Out* (2nd ed.),
@@ -30,9 +24,11 @@
 
 use aequitas::systems::si::quantities::{Angle, Length};
 use aequitas::systems::si::units::{Meter, Radian};
+use coeus_core::SequentialBackend;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::{Array2, ArrayView2};
-use ritk_spatial::CurvilinearArray;
+use ritk_image::Image;
+use ritk_spatial::{CoordinateMap, Direction, Point, Spacing};
 
 /// Polar acquisition geometry: uniformly-spaced beams, uniform range sampling.
 #[derive(Debug, Clone, Copy)]
@@ -50,9 +46,9 @@ pub struct ScanGeometry {
 /// Output Cartesian raster specification.
 #[derive(Debug, Clone, Copy)]
 pub struct CartesianGrid {
-    /// Image width `pixels` (lateral, `x`).
+    /// Image width in pixels (lateral, `x`).
     pub width: usize,
-    /// Image height `pixels` (axial, `z`).
+    /// Image height in pixels (axial, `z`).
     pub height: usize,
     /// Lateral extent `[x_min, x_max]`.
     pub x_range: (Length<f64>, Length<f64>),
@@ -60,113 +56,121 @@ pub struct CartesianGrid {
     pub z_range: (Length<f64>, Length<f64>),
 }
 
-/// Sector/convex scan converter.
-#[derive(Debug, Clone, Copy)]
-pub struct ScanConverter {
-    /// Geometry SSOT, built from `ScanGeometry` at construction.
-    fan: CurvilinearArray,
+/// Convert polar `beam_data` `[n_lines, n_samples]` to a Cartesian image
+/// `[height, width]` (row-major, row = axial `z`, column = lateral `x`).
+///
+/// Coordinate mapping routes through `ritk_image::Image::physical_point_to_continuous_index`
+/// with a `CoordinateMap::CurvilinearArray` attached. Each Cartesian pixel's
+/// world coordinates `(x, z)` are mapped to fractional `(beam, sample)` indices
+/// by the seam; bilinear interpolation follows. Pixels outside the acquired fan
+/// stay zero.
+///
+/// # Errors
+///
+/// Returns `KwaversError::InvalidInput` when geometry parameters are
+/// out-of-range, the Cartesian grid is degenerate, or `beam_data` has fewer
+/// than two beams or two samples.
+pub fn scan_convert(
+    beam_data: ArrayView2<f64>,
+    geometry: ScanGeometry,
     grid: CartesianGrid,
-}
-
-impl ScanConverter {
-    /// Create a scan converter.
-    ///
-    /// # Errors
-    /// Returns `KwaversError::InvalidInput` for a non-positive range/angle
-    /// step or a degenerate output grid.
-    pub fn new(geometry: ScanGeometry, grid: CartesianGrid) -> KwaversResult<Self> {
-        let angle_min = geometry.angle_min.in_unit::<Radian>();
-        let angle_step = geometry.angle_step.in_unit::<Radian>();
-        let radius_offset = geometry.radius_offset.in_unit::<Meter>();
-        let range_step = geometry.range_step.in_unit::<Meter>();
-        let x_min = grid.x_range.0.in_unit::<Meter>();
-        let x_max = grid.x_range.1.in_unit::<Meter>();
-        let z_min = grid.z_range.0.in_unit::<Meter>();
-        let z_max = grid.z_range.1.in_unit::<Meter>();
-        if !angle_min.is_finite()
-            || !angle_step.is_finite()
-            || !radius_offset.is_finite()
-            || !range_step.is_finite()
-            || !x_min.is_finite()
-            || !x_max.is_finite()
-            || !z_min.is_finite()
-            || !z_max.is_finite()
-            || angle_step <= 0.0
-            || radius_offset < 0.0
-            || range_step <= 0.0
-            || x_min >= x_max
-            || z_min >= z_max
-        {
-            return Err(KwaversError::InvalidInput(
-                "scan geometry and Cartesian extents must be finite and ordered; range and angle steps must be positive".to_owned(),
-            ));
-        }
-        if grid.width < 2 || grid.height < 2 {
-            return Err(KwaversError::InvalidInput(
-                "Cartesian grid must be at least 2×2".to_owned(),
-            ));
-        }
-        // `angle_min` is the fan's angular origin, which the geometry carries
-        // explicitly — a centred fan is not assumed.
-        let fan = CurvilinearArray::try_new(range_step, radius_offset, angle_step, angle_min)
-            .map_err(|error| KwaversError::InvalidInput(error.to_string()))?;
-        Ok(Self { fan, grid })
+) -> KwaversResult<Array2<f64>> {
+    let angle_min = geometry.angle_min.in_unit::<Radian>();
+    let angle_step = geometry.angle_step.in_unit::<Radian>();
+    let radius_offset = geometry.radius_offset.in_unit::<Meter>();
+    let range_step = geometry.range_step.in_unit::<Meter>();
+    let x_min = grid.x_range.0.in_unit::<Meter>();
+    let x_max = grid.x_range.1.in_unit::<Meter>();
+    let z_min = grid.z_range.0.in_unit::<Meter>();
+    let z_max = grid.z_range.1.in_unit::<Meter>();
+    if !angle_min.is_finite()
+        || !angle_step.is_finite()
+        || !radius_offset.is_finite()
+        || !range_step.is_finite()
+        || !x_min.is_finite()
+        || !x_max.is_finite()
+        || !z_min.is_finite()
+        || !z_max.is_finite()
+        || angle_step <= 0.0
+        || radius_offset < 0.0
+        || range_step <= 0.0
+        || x_min >= x_max
+        || z_min >= z_max
+    {
+        return Err(KwaversError::InvalidInput(
+            "scan geometry and Cartesian extents must be finite and ordered; range and angle steps must be positive".to_owned(),
+        ));
     }
-
-    /// Bilinear sample of the beam grid at fractional `(line, sample)`; returns
-    /// `None` when outside the acquired fan.
-    fn sample(beam: ArrayView2<f64>, line: f64, sample: f64) -> Option<f64> {
-        let [n_lines, n_samples] = beam.shape();
-        if line < 0.0 || sample < 0.0 {
-            return None;
-        }
-        let l0 = line.floor() as usize;
-        let s0 = sample.floor() as usize;
-        if l0 + 1 >= n_lines || s0 + 1 >= n_samples {
-            return None;
-        }
-        let fl = line - l0 as f64;
-        let fs = sample - s0 as f64;
-        let v = beam[[l0, s0]] * (1.0 - fl) * (1.0 - fs)
-            + beam[[l0 + 1, s0]] * fl * (1.0 - fs)
-            + beam[[l0, s0 + 1]] * (1.0 - fl) * fs
-            + beam[[l0 + 1, s0 + 1]] * fl * fs;
-        Some(v)
+    if grid.width < 2 || grid.height < 2 {
+        return Err(KwaversError::InvalidInput(
+            "Cartesian grid must be at least 2×2".to_owned(),
+        ));
     }
+    let [n_lines, n_samples] = beam_data.shape();
+    if n_lines < 2 || n_samples < 2 {
+        return Err(KwaversError::InvalidInput(
+            "scan conversion needs at least 2 beams and 2 samples".to_owned(),
+        ));
+    }
+    // Build the acquisition geometry and attach it to a sentinel Image. The
+    // sentinel carries no meaningful pixel data; it acts as the
+    // coordinate-map host so that `physical_point_to_continuous_index`
+    // dispatches through the `CoordinateMap` seam (atlas ADR 0048).
+    let fan = ritk_spatial::CurvilinearArray::try_new(range_step, radius_offset, angle_step, angle_min)
+        .map_err(|e| KwaversError::InvalidInput(e.to_string()))?;
+    let sentinel: Image<f32, SequentialBackend, 2> = Image::from_flat(
+        vec![0.0_f32; n_lines * n_samples],
+        [n_lines, n_samples],
+        Point::new([0.0_f64, 0.0_f64]),
+        Spacing::new([1.0_f64, 1.0_f64]),
+        Direction::identity(),
+    )
+    .map_err(|e| KwaversError::InvalidInput(e.to_string()))?
+    .with_coordinate_map(CoordinateMap::CurvilinearArray(fan))
+    .map_err(|e| KwaversError::InvalidInput(e.to_string()))?;
 
-    /// Convert polar `beam_data` `[n_lines, n_samples]` to a Cartesian image
-    /// `[height, width]` (row-major, row = axial `z`, column = lateral `x`).
-    ///
-    /// # Errors
-    /// Returns `KwaversError::InvalidInput` when `beam_data` has fewer than two
-    /// beams or two samples (interpolation needs a 2×2 neighbourhood).
-    pub fn convert(&self, beam_data: ArrayView2<f64>) -> KwaversResult<Array2<f64>> {
-        let [n_lines, n_samples] = beam_data.shape();
-        if n_lines < 2 || n_samples < 2 {
-            return Err(KwaversError::InvalidInput(
-                "scan conversion needs at least 2 beams and 2 samples".to_owned(),
-            ));
-        }
-        let g = self.grid;
-        let x_min = g.x_range.0.in_unit::<Meter>();
-        let z_min = g.z_range.0.in_unit::<Meter>();
-        let dx = (g.x_range.1.in_unit::<Meter>() - x_min) / (g.width - 1) as f64;
-        let dz = (g.z_range.1.in_unit::<Meter>() - z_min) / (g.height - 1) as f64;
-        let mut image = Array2::zeros((g.height, g.width));
-        for row in 0..g.height {
-            let z = z_min + row as f64 * dz;
-            for col in 0..g.width {
-                let x = x_min + col as f64 * dx;
-                // Lateral = x, axial = z. Points behind the apex plane have no
-                // beam and stay background.
-                let Some((sample, line)) = self.fan.index_from_cartesian(x, z) else {
-                    continue;
-                };
-                if let Some(v) = Self::sample(beam_data, line, sample) {
-                    image[[row, col]] = v;
-                }
+    // Resample: for each Cartesian pixel, map (z, x) world coordinates through
+    // the seam to fractional (beam, sample) indices and bilinearly interpolate.
+    //
+    // Convention in physical_point_to_continuous_index for D=2:
+    //   point[0] → passed as the axial  (second) arg of index_from_cartesian
+    //   point[1] → passed as the lateral (first)  arg of index_from_cartesian
+    // Returned index: idx[0] = beam line, idx[1] = range sample.
+    let dx = (x_max - x_min) / (grid.width - 1) as f64;
+    let dz = (z_max - z_min) / (grid.height - 1) as f64;
+    let mut output = Array2::zeros((grid.height, grid.width));
+    for row in 0..grid.height {
+        let z = z_min + row as f64 * dz;
+        for col in 0..grid.width {
+            let x = x_min + col as f64 * dx;
+            let Ok(idx) = sentinel.physical_point_to_continuous_index(&Point::new([z, x])) else {
+                continue;
+            };
+            // idx[0] = beam (line), idx[1] = range (sample)
+            if let Some(v) = bilinear(beam_data, idx[0], idx[1]) {
+                output[[row, col]] = v;
             }
         }
-        Ok(image)
     }
+    Ok(output)
+}
+
+fn bilinear(beam: ArrayView2<f64>, line: f64, sample: f64) -> Option<f64> {
+    let [n_lines, n_samples] = beam.shape();
+    if line < 0.0 || sample < 0.0 {
+        return None;
+    }
+    let l0 = line.floor() as usize;
+    let s0 = sample.floor() as usize;
+    if l0 + 1 >= n_lines || s0 + 1 >= n_samples {
+        return None;
+    }
+    let fl = line - l0 as f64;
+    let fs = sample - s0 as f64;
+    Some(
+        beam[[l0, s0]] * (1.0 - fl) * (1.0 - fs)
+            + beam[[l0 + 1, s0]] * fl * (1.0 - fs)
+            + beam[[l0, s0 + 1]] * (1.0 - fl) * fs
+            + beam[[l0 + 1, s0 + 1]] * fl * fs,
+    )
 }

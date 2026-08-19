@@ -25,6 +25,11 @@ leto = { workspace = true }
 # Curvilinear/phased acquisition geometry SSOT (atlas ADR 0042). Geometry only:
 # ritk-spatial carries no tensor stack, unlike ritk-image.
 ritk-spatial = { workspace = true }
+# Image seam: scan conversion routes through Image::physical_point_to_continuous_index
+# so any acquisition geometry flows without bespoke code (atlas ADR 0048).
+ritk-image = { workspace = true }
+# SequentialBackend for sentinel Image in scan_convert (atlas ADR 0048).
+coeus-core = { workspace = true }
 leto-ops = { workspace = true }
 moirai-parallel = { workspace = true }
 tyche-core = { workspace = true }
