@@ -34,11 +34,13 @@ use leto::{Array1, ArrayView2};
 
 use super::spectral::{SpectralAnalysis, SpectralConfig};
 
+mod attenuation;
 mod backscatter;
 
 #[cfg(test)]
 mod tests;
 
+pub use attenuation::{attenuation_from_spectra, AttenuationEstimate};
 pub use backscatter::{backscatter_parameters, AnalysisBand, BackscatterParameters};
 
 /// Power spectrum of an axial RF gate, averaged over the beams in the window.
