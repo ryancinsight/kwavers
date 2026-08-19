@@ -7,8 +7,13 @@ authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
 description = "Ultrasound Simulation Toolbox with Cavitation and Light Physics"
 license = "MIT"
 repository = "https://github.com/ryancinsight/kwavers"
-keywords = ["ultrasound", "simulation", "physics", "cavitation", "sonoluminescence", "medical-imaging"]
-categories = ["science", "simulation", "medical"]
+# crates.io caps keywords at 5 and rejects unregistered category slugs at
+# upload, after the version number is spent. "physics" was dropped as the most
+# generic of the six — the `science` category already carries it — and
+# "medical" is not a registered slug; the nearest registered ancestors are
+# already present.
+keywords = ["ultrasound", "simulation", "cavitation", "sonoluminescence", "medical-imaging"]
+categories = ["science", "simulation"]
 autobenches = false
 
 # This is a workspace member - see root Cargo.toml for workspace configuration
