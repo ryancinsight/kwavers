@@ -6749,9 +6749,51 @@ Triage (correctness/arch → tests → features), one WIP item at a time:
    (both fully implemented; see gap_audit). COV-11 Mur BC = WONTFIX (CPML superior).
 
 ### Remaining genuine coverage gaps (post-verification), best as focused increments:
-- **COV-3 curvilinear/convex transmit array** [minor] — `kwavers-transducer`. The
-  `kwave_array` already has Arc/Bowl element primitives + `rasterizer_curved`; add
-  a convex-array layout helper placing N elements along a curvature arc.
+- **COV-3 curvilinear/convex transmit array** [minor] — `kwavers-transducer`.
+  **Corrected 2026-08-19: the layout helper this entry asks for already exists.**
+  `curvilinear::ConvexArrayGeometry` places N elements on a circular arc, with
+  `from_angular_pitch` / `from_arc_pitch` / `from_total_angle` constructors and
+  per-element `element_position` / `element_normal` / `element_tangent` /
+  `element_angle`. Six behavioural tests cover arc placement, apex orientation,
+  unit radial normals with orthogonal tangents, arc-pitch round-trip and
+  symmetry, the chord aperture-width formula, and zero relative delays when
+  focusing at the centre of curvature.
+
+  **What is actually missing is the wiring**, and it is not mechanical.
+  `ConvexArrayGeometry` is referenced nowhere outside its own module, so the
+  layout can be computed but cannot drive a simulation. The obvious route —
+  feeding each element to `add_arc_element_with_angles` — does not work as-is,
+  because the two carry different conventions:
+
+  | | plane | angle reference | units |
+  | --- | --- | --- | --- |
+  | `ConvexArrayGeometry` | x–z (`[r sinθ, 0, r(cosθ−1)]`) | +z, apex at θ=0 | radians |
+  | `ElementShape::Arc` (`rasterize_arc_points`) | x–y at constant z (`[cx+r cosθ, cy+r sinθ, cz]`) | +x | degrees |
+
+  The Arc primitive has no orientation parameter, so it cannot express an
+  arc in the x–z plane. Mapping one onto the other without resolving that
+  would silently misplace every element while still producing a plausible
+  mask. So the increment is a design decision — give the curved rasterizer an
+  orientation/plane parameter, add an element shape that carries its own
+  normal, or express the convex layout in the rasterizer's plane — not a
+  wiring job. `add_planar_aperture_element(PlanarApertureGeometry)` is the
+  precedent for a geometry-taking constructor once the convention is settled.
+
+  **Resolved by ADR 112 (2026-08-19).** The array already has an
+  orientation-carrying primitive: `ElementShape::Rect` takes `euler_xyz_deg`,
+  and `rasterize_rect_points` builds its lattice at `(lx, ly, 0)` before
+  rotating, so a rect's local normal is `+z`. `euler_xyz_rotation_matrix`
+  composes `Rz·Ry·Rx`, whose y-block sends `+z` to `[sin B, 0, cos B]` --
+  identical to `element_normal(i) = [sin theta, 0, cos theta]` at `B = theta`.
+  So the convex array is a set of rect elements each rotated about y by its own
+  element angle, no sign flip, no axis swap. Next increment: a geometry-taking
+  constructor mapping to `add_rect_rot_element(.., (0, theta_deg, 0))`, taking
+  `aequitas::Angle` rather than `f64`, with the rasterised element normal
+  asserted against `element_normal(i)` -- the failure mode is silent
+  misplacement, so the test is the oracle. ADR 112 also proposes adding
+  `Degree` to aequitas (a `LinearUnit<Angle>` with `SCALE = pi/180`); aequitas
+  currently defines `Radian` only, which is why call sites read
+  `Angle::from_unit::<Radian>(x.to_radians())`.
 - **COV-4 discrete point-scatterer + spatial-impulse-response RF synthesis** [minor/major]
   — Field II core; largest. Home `kwavers-phantom` (scatterer cloud) + `kwavers-source`/
   analysis (SIR convolution → RF).
