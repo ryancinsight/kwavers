@@ -83,6 +83,21 @@ jobs:
         with:
           python-version: "3.10"
 
+      - name: Install k-Wave HDF5 runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo timeout 180s apt-get update
+          if apt-cache show libhdf5-103-1 >/dev/null 2>&1; then
+            hdf5_runtime=libhdf5-103-1
+          elif apt-cache show libhdf5-103-1t64 >/dev/null 2>&1; then
+            hdf5_runtime=libhdf5-103-1t64
+          else
+            echo "No Ubuntu package provides libhdf5_serial.so.103" >&2
+            exit 1
+          fi
+          sudo timeout 180s apt-get install --no-install-recommends -y "$hdf5_runtime"
+
       - name: Build stable-ABI wheel
         uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
         with:

@@ -9773,5 +9773,8 @@ Burn → Coeus tensor type mismatches; that debt is outside the Batch #1 scope.
   `KWAVERS_PYTHON_PACKAGE=installed`.
 - Follow-up: the hosted job also installs the locked Python 3.10+
   `pytest-benchmark==5.2.3` plugin required by the shared pytest `addopts`.
+- Runtime correction: the k-Wave parity job now installs the Ubuntu package
+  that provides the bundled solver's `libhdf5_serial.so.103` SONAME, resolving
+  the exact exit-127 failure from hosted run `32233382837`.
 - Acceptance: the exact hosted wheel parity job imports the extension from
   the installed wheel and all three value-semantic k-Wave cases pass.
