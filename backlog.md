@@ -6778,6 +6778,22 @@ Triage (correctness/arch → tests → features), one WIP item at a time:
   normal, or express the convex layout in the rasterizer's plane — not a
   wiring job. `add_planar_aperture_element(PlanarApertureGeometry)` is the
   precedent for a geometry-taking constructor once the convention is settled.
+
+  **Resolved by ADR 112 (2026-08-19).** The array already has an
+  orientation-carrying primitive: `ElementShape::Rect` takes `euler_xyz_deg`,
+  and `rasterize_rect_points` builds its lattice at `(lx, ly, 0)` before
+  rotating, so a rect's local normal is `+z`. `euler_xyz_rotation_matrix`
+  composes `Rz·Ry·Rx`, whose y-block sends `+z` to `[sin B, 0, cos B]` --
+  identical to `element_normal(i) = [sin theta, 0, cos theta]` at `B = theta`.
+  So the convex array is a set of rect elements each rotated about y by its own
+  element angle, no sign flip, no axis swap. Next increment: a geometry-taking
+  constructor mapping to `add_rect_rot_element(.., (0, theta_deg, 0))`, taking
+  `aequitas::Angle` rather than `f64`, with the rasterised element normal
+  asserted against `element_normal(i)` -- the failure mode is silent
+  misplacement, so the test is the oracle. ADR 112 also proposes adding
+  `Degree` to aequitas (a `LinearUnit<Angle>` with `SCALE = pi/180`); aequitas
+  currently defines `Radian` only, which is why call sites read
+  `Angle::from_unit::<Radian>(x.to_radians())`.
 - **COV-4 discrete point-scatterer + spatial-impulse-response RF synthesis** [minor/major]
   — Field II core; largest. Home `kwavers-phantom` (scatterer cloud) + `kwavers-source`/
   analysis (SIR convolution → RF).
