@@ -65,3 +65,55 @@ jobs:
           "$smoke_python" -m pip install --disable-pip-version-check dist/*.whl
           "$smoke_python" source/crates/kwavers-python/tests/optional_submodule_contract.py base
           "$smoke_python" source/crates/kwavers-python/tests/optional_submodule_contract.py access
+
+  kwave-comparison:
+    name: k-Wave comparison (Ubuntu)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout candidate source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: source
+          persist-credentials: false
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.10"
+
+      - name: Build stable-ABI wheel
+        uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
+        with:
+          maturin-version: v1.14.1
+          target: x86_64
+          manylinux: "2_17"
+          sccache: true
+          args: >-
+            --release
+            --locked
+            --compatibility pypi
+            --manifest-path source/crates/kwavers-python/Cargo.toml
+            --out dist
+            -i python3.10
+
+      - name: Install wheel and k-Wave comparison dependency
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m venv wheel-smoke
+          source wheel-smoke/bin/activate
+          python -m pip install --disable-pip-version-check --upgrade pip
+          python -m pip install --disable-pip-version-check "pytest==8.4.2" "pytest-timeout==2.4.0"
+          python -m pip install --disable-pip-version-check dist/*.whl
+          python -m pip install --disable-pip-version-check "k-wave-python>=0.4.1,<0.7"
+
+      - name: Run value-semantic k-Wave parity suite
+        shell: bash
+        env:
+          KWAVERS_RUN_SLOW: "1"
+        run: |
+          set -euo pipefail
+          source wheel-smoke/bin/activate
+          python -m pytest --import-mode=importlib --disable-warnings --maxfail=1 -q \
+            source/crates/kwavers-python/tests/test_kwave_comparison.py
