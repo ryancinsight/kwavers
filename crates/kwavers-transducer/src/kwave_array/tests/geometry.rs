@@ -134,3 +134,88 @@ fn test_rect_weighted_mask_matches_kwave_python_reference_mass() {
         weights.iter().sum::<f64>()
     );
 }
+
+/// ## Theorem
+/// For every element of a convex array, the orientation `add_convex_array`
+/// stores rotates the rectangle's local `+z` onto that element's outward
+/// normal, and the stored centre is the element's layout position.
+///
+/// ## Why this is the oracle (ADR 112)
+/// The wiring maps each element onto a rotated rectangle at Euler
+/// `(0, θᵢ°, 0)`, derived from the rect's `+z` local normal and the `Rz·Ry·Rx`
+/// composition. A wrong sign, a swapped Euler slot, or a radian/degree slip
+/// would still produce a full, plausible-looking element mask — just facing the
+/// wrong way. This drives the stored orientation through the same
+/// `euler_xyz_rotation_matrix` the rasterizer uses and compares the result
+/// against the layout's own `element_normal`, so the derivation is asserted
+/// rather than trusted.
+///
+/// θ is non-trivial and asymmetric (7 elements, 9° pitch) so a sign error
+/// cannot cancel, and the centre element (θ = 0) is included so a mapping that
+/// only works at the apex is still caught by its neighbours.
+#[test]
+fn convex_array_elements_face_along_their_layout_normals() {
+    use super::super::math::{apply_matrix, euler_xyz_rotation_matrix};
+    use super::super::{ElementShape, KWaveElement};
+    use crate::curvilinear::ConvexArrayGeometry;
+    use aequitas::systems::si::quantities::Length;
+    use aequitas::systems::si::units::Meter;
+
+    let radius = 40.0e-3;
+    let elements = 7;
+    let pitch = 9.0_f64.to_radians();
+    let geometry =
+        ConvexArrayGeometry::from_angular_pitch(radius, elements, pitch).expect("geometry");
+
+    let mut array = KWaveArray::new();
+    array.add_convex_array(
+        &geometry,
+        Length::from_unit::<Meter>(4.0e-3),
+        Length::from_unit::<Meter>(3.0e-3),
+    );
+    assert_eq!(
+        array.num_elements(),
+        elements,
+        "one element stored per array element"
+    );
+
+    for i in 0..elements {
+        let KWaveElement::Shape(ElementShape::Rect {
+            position,
+            euler_xyz_deg,
+            ..
+        }) = &array.elements[i]
+        else {
+            panic!("element {i} is not a rotated rect; the convex wiring must use that primitive");
+        };
+
+        let expected_centre = geometry.element_position(i);
+        for (axis, (got, want)) in [position.0, position.1, position.2]
+            .iter()
+            .zip(expected_centre.iter())
+            .enumerate()
+        {
+            assert!(
+                (got - want).abs() <= 1e-15,
+                "element {i} centre axis {axis}: {got:.6e} against layout {want:.6e}"
+            );
+        }
+
+        let rotation = euler_xyz_rotation_matrix(*euler_xyz_deg);
+        let (nx, ny, nz) = apply_matrix(&rotation, (0.0, 0.0, 1.0));
+        let want = geometry.element_normal(i);
+        let worst = (nx - want[0])
+            .abs()
+            .max((ny - want[1]).abs())
+            .max((nz - want[2]).abs());
+        assert!(
+            worst <= 1e-12,
+            "element {i} (θ = {:.3}°) faces [{nx:.6}, {ny:.6}, {nz:.6}] but its layout normal is \
+             [{:.6}, {:.6}, {:.6}]; a sign, axis, or degree/radian error shows here",
+            geometry.element_angle(i).to_degrees(),
+            want[0],
+            want[1],
+            want[2]
+        );
+    }
+}
