@@ -238,22 +238,22 @@ fn components_at_point(
     blackbody: &BlackbodyModel,
     bremsstrahlung: &BremsstrahlungModel,
 ) -> EmissionComponents {
-    let blackbody = params
-        .use_blackbody
-        .then(|| blackbody_power_density(temperature, radius, blackbody))
-        .unwrap_or(0.0);
+    let blackbody = if params.use_blackbody {
+        blackbody_power_density(temperature, radius, blackbody)
+    } else {
+        0.0
+    };
     let electron_density = charge_density / ELEMENTARY_CHARGE;
-    let bremsstrahlung = params
-        .use_bremsstrahlung
-        .then(|| {
-            bremsstrahlung_power_density(
-                temperature,
-                electron_density,
-                electron_density,
-                bremsstrahlung,
-            )
-        })
-        .unwrap_or(0.0);
+    let bremsstrahlung = if params.use_bremsstrahlung {
+        bremsstrahlung_power_density(
+            temperature,
+            electron_density,
+            electron_density,
+            bremsstrahlung,
+        )
+    } else {
+        0.0
+    };
 
     EmissionComponents::new(
         VolumetricPowerDensity::from_base(blackbody),

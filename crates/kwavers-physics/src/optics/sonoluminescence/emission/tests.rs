@@ -56,8 +56,10 @@ mod tests {
     #[test]
     fn emission_field_matches_typed_components_without_cherenkov_mixing() {
         let shape = [1, 1, 1];
-        let mut params = EmissionParameters::default();
-        params.use_cherenkov = true;
+        let params = EmissionParameters {
+            use_cherenkov: true,
+            ..Default::default()
+        };
         let mut emission = SonoluminescenceEmission::new(shape, params);
         let temperature = Array3::from_elem(shape, 20_000.0);
         let radius = Array3::from_elem(shape, 5e-6);
