@@ -1,5 +1,51 @@
 # Backlog / Strategy
 
+## ATLAS-KWAVERS-HEPHAESTUS-FDTD-107 — Route collocated FDTD through Hephaestus [minor] [arch] — Apollo co-evolution blocker 2026-08-18
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| ATLAS-KWAVERS-HEPHAESTUS-FDTD-107 | Delete the consumer-owned collocated raw-WGPU FDTD path and validate the real Hephaestus `Fdtd3dOps` provider against an independent f32 CPU stencil. | [minor] [arch] | implementation complete; blocked on Apollo 0.27.0 default | Codex | `crates/kwavers-gpu/src/{gpu,validation/gpu_cpu_equivalence}/`, affected allocation test, PM artifacts |
+
+- Acceptance: provider-owned typed buffers and kernels execute velocity then
+  pressure updates; the CPU oracle uses the same mathematical contract in
+  native f32 precision; provider acquisition and dispatch failures remain
+  explicit; no CPU fallback or consumer-owned collocated FDTD shader remains;
+  focused Nextest, feature-enabled check/Clippy, doctests, and the Hephaestus
+  provider contract pass.
+- Upstream: Hephaestus PR #213, exact source head
+  `7bc9944852a6ba92d4ff265b9fff9bc8c81e3567`, adds the typed contract and
+  sequential-step differential coverage. Kwavers consumer delivery is on
+  `codex/kwavers-gpu-visualization-104` at `2295bfff7`; the previous
+  exact-head benchmark regression passes. The final matrix stops at Cargo
+  resolution because Kwavers main requires Apollo `0.27.0` while Apollo
+  default remains `0.26.0`.
+- Workflow evidence: the prior CI benchmark lane and Test Suite Coverage lane
+  were cancelled at their job limits while blocked in `apt-get update`;
+  `4e11cf555` applies bounded retries and HTTP(S) timeouts, and `0a3446dac`
+  adds explicit 8-minute process deadlines with 30-second termination grace to
+  all Ubuntu package-install steps. These workflow changes do not change
+  benchmark inputs or production code.
+- Blocker evidence: CI run `32099296963` fails beta resolution in job
+  `95596582400`; architecture run `32099297012` fails clean-architecture
+  resolution in job `95596582553`. Apollo PR #104 source `38192bed` has the
+  required provider version but its Rust workspace run `32096086258` and
+  benchmark run `32096086273` fail on stale lock/measurement requirements.
+  Re-open after Apollo `0.27.0` lands on default; do not add a fallback to
+  Apollo `0.26.0`.
+- Residuals: the separate pressure-only `gpu::compute::fdtd_gpu` dispatcher
+  and the disconnected f64 solver accelerator seam remain tracked boundaries;
+  neither is represented as proof of this provider integration.
+
+## ATLAS-KWAVERS-HEPHAESTUS-VIS-104 — Reject uninitialized GPU visualization [patch] — verification pending 2026-08-17
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| ATLAS-KWAVERS-HEPHAESTUS-VIS-104 | GPU-enabled multi-field rendering returns the existing typed feature/resource error until the renderer and data pipeline are initialized; initialized GPU rendering and CPU fallback retain every field. | [patch] | implementation complete; exact-head hosted verification pending 2026-08-17 | Codex | `crates/kwavers-analysis/src/visualization/engine/mod.rs`, `crates/kwavers-analysis/src/visualization/mod.rs`, `gap_audit.md`, `CHANGELOG.md` |
+
+- Acceptance: valid multi-field input never returns `Ok(())` when GPU resources are absent; initialized GPU rendering processes every field; invalid field-count input and non-GPU fallback remain value-semantic.
+- Non-goals: no CPU fallback behind the GPU feature, no FDTD/provider changes, and no renderer ownership changes in Hephaestus or Leto.
+- Gate: source head `b275b7115` passes the required feature-enabled hosted matrix; the PM-only follow-up head must rerun the same gate before closure. Local execution remains blocked by the shared Atlas overlay's stale Asclepius checkout requiring `aequitas ^0.1.0` versus `0.2.0`.
+
 ## KWAVERS-COUPLING-CONTRACT-001 — Medium-aware field-coupling inputs [minor]
 
 | ID | Outcome | Class | Status | Owner | Scope |

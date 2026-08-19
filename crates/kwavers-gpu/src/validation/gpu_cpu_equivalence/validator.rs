@@ -90,11 +90,71 @@ impl EquivalenceValidator {
         }
 
         let total_points = cpu_result.shape().iter().product();
+        self.validate_values(
+            cpu_result.iter().copied(),
+            gpu_result.iter().copied(),
+            total_points,
+            cpu_time_ms,
+            gpu_time_ms,
+        )
+    }
+
+    /// Validate provider-native f32 fields without widening the computation.
+    ///
+    /// The report stores f64 error metrics, but both input iterators are
+    /// evaluated in their native f32 precision before metric accumulation.
+    /// This is the diagnostic boundary for providers whose operation contract
+    /// is f32; it is not an f64 solver adapter.
+    pub(crate) fn validate_f32(
+        &self,
+        expected_shape: [usize; 3],
+        cpu_result: &[f32],
+        gpu_result: &[f32],
+        cpu_time_ms: f64,
+        gpu_time_ms: f64,
+    ) -> Result<EquivalenceReport, ValidationError> {
+        let expected_points = expected_shape
+            .into_iter()
+            .try_fold(1_usize, usize::checked_mul)
+            .ok_or_else(|| ValidationError::ConstraintViolation {
+                message: format!("FDTD shape overflows usize: {expected_shape:?}"),
+            })?;
+        if cpu_result.len() != expected_points || gpu_result.len() != expected_points {
+            return Err(ValidationError::DimensionMismatch {
+                expected: format!("{expected_shape:?}"),
+                actual: format!("CPU={}, GPU={}", cpu_result.len(), gpu_result.len()),
+            });
+        }
+        self.validate_values(
+            cpu_result.iter().copied(),
+            gpu_result.iter().copied(),
+            expected_points,
+            cpu_time_ms,
+            gpu_time_ms,
+        )
+    }
+
+    fn validate_values<C, G>(
+        &self,
+        cpu_values: C,
+        gpu_values: G,
+        total_points: usize,
+        cpu_time_ms: f64,
+        gpu_time_ms: f64,
+    ) -> Result<EquivalenceReport, ValidationError>
+    where
+        C: IntoIterator,
+        G: IntoIterator,
+        C::Item: Into<f64>,
+        G::Item: Into<f64>,
+    {
+        let cpu_values: Vec<f64> = cpu_values.into_iter().map(Into::into).collect();
+        let gpu_values: Vec<f64> = gpu_values.into_iter().map(Into::into).collect();
         let mut report = EquivalenceReport::new(self.tolerance_relative, total_points);
 
         // Compute peak pressures
-        report.cpu_peak_pressure = cpu_result.iter().map(|&v| v.abs()).fold(0.0_f64, f64::max);
-        report.gpu_peak_pressure = gpu_result.iter().map(|&v| v.abs()).fold(0.0_f64, f64::max);
+        report.cpu_peak_pressure = cpu_values.iter().map(|v| v.abs()).fold(0.0_f64, f64::max);
+        report.gpu_peak_pressure = gpu_values.iter().map(|v| v.abs()).fold(0.0_f64, f64::max);
 
         // Compute error metrics
         let mut max_abs_error: f64 = 0.0;
@@ -102,7 +162,7 @@ impl EquivalenceValidator {
         let mut divergent_count: usize = 0;
         let min_threshold = self.tolerance_absolute.max(1e-300);
 
-        for (&cpu_val, &gpu_val) in cpu_result.iter().zip(gpu_result.iter()) {
+        for (&cpu_val, &gpu_val) in cpu_values.iter().zip(gpu_values.iter()) {
             let abs_error = (gpu_val - cpu_val).abs();
             max_abs_error = max_abs_error.max(abs_error);
 
@@ -115,7 +175,9 @@ impl EquivalenceValidator {
 
             max_rel_error = max_rel_error.max(rel_error);
 
-            if rel_error > self.tolerance_relative {
+            let within_absolute = abs_error <= self.tolerance_absolute;
+            let within_relative = rel_error <= self.tolerance_relative;
+            if !within_absolute && !within_relative {
                 divergent_count += 1;
             }
         }
@@ -132,12 +194,12 @@ impl EquivalenceValidator {
         };
 
         // Determine pass/fail
-        report.passed = max_rel_error <= self.tolerance_relative && divergent_count == 0;
+        report.passed = divergent_count == 0;
 
         if !report.passed {
             report.failure_reason = Some(format!(
-                "Max relative error {:.6e} exceeds threshold {:.6e}, or {} divergent points detected",
-                max_rel_error, self.tolerance_relative, divergent_count
+                "Max absolute error {:.6e}; max relative error {:.6e} exceeds threshold {:.6e}, or {} divergent points detected",
+                max_abs_error, max_rel_error, self.tolerance_relative, divergent_count
             ));
         }
 
@@ -323,5 +385,26 @@ mod tests {
             report.max_relative_error, 0.0,
             "Identical arrays: zero relative error"
         );
+    }
+
+    /// Test that the absolute tolerance accepts small errors near zero.
+    ///
+    /// Relative error is intentionally much larger than the configured
+    /// absolute bound for this case; either bound may establish equivalence.
+    /// # Panics
+    /// - Panics if the absolute tolerance is not applied.
+    #[test]
+    fn test_validate_f32_applies_absolute_tolerance() {
+        let validator = EquivalenceValidator {
+            tolerance_absolute: 1.0e-3,
+            tolerance_relative: 1.0e-12,
+            ..Default::default()
+        };
+        let report = validator
+            .validate_f32([3, 1, 1], &[0.0, 1.0, 1.0], &[5.0e-4, 1.0, 1.0], 0.0, 0.0)
+            .expect("matching f32 shapes");
+
+        assert!(report.passed());
+        assert_eq!(report.divergent_points, 0);
     }
 }

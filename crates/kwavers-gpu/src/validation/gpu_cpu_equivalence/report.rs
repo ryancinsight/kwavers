@@ -20,7 +20,10 @@ pub struct EquivalenceReport {
     /// Total number of grid points compared
     pub total_points: usize,
 
-    /// Applied tolerance threshold for pass/fail determination
+    /// Relative tolerance threshold recorded for the report.
+    ///
+    /// The validator also applies its absolute tolerance at each value; the
+    /// combined decision is represented by [`Self::divergent_points`].
     pub pass_threshold: f64,
 
     /// Peak absolute pressure value from CPU reference
@@ -66,11 +69,13 @@ impl EquivalenceReport {
 
     /// Check if validation passed
     ///
-    /// Validation passes if:
-    /// - max_relative_error ≤ pass_threshold
-    /// - divergent_points = 0 (strict)
+    /// Validation passes when the validator found no divergent points.
+    ///
+    /// The validator applies absolute and relative thresholds per value. The
+    /// report stores the relative threshold for display, while
+    /// `divergent_points` records the combined absolute-or-relative decision.
     pub fn passed(&self) -> bool {
-        self.passed && self.max_relative_error <= self.pass_threshold && self.divergent_points == 0
+        self.passed && self.divergent_points == 0
     }
 
     /// Get divergent fraction

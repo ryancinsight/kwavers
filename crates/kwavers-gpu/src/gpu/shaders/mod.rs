@@ -8,7 +8,6 @@
 //!
 //! | File                       | Loaded by                                   |
 //! |----------------------------|---------------------------------------------|
-//! | `fdtd.wgsl`                | `gpu::fdtd` (two-pass leapfrog)             |
 //! | `fdtd_pressure.wgsl`       | `gpu::compute::fdtd_gpu`                    |
 //! | `acoustic_field.wgsl`      | `gpu::compute_kernels::acoustic_field`      |
 //!

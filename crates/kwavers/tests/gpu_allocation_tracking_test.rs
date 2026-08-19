@@ -1,9 +1,6 @@
 #![cfg(feature = "gpu")]
 
-use kwavers_gpu::gpu::{FdtdGpuProvider, WgpuFdtd};
 use kwavers_gpu::profiling::{GpuAllocationConfig, GpuAllocationTracker};
-use kwavers_grid::Grid;
-use leto::Array3 as LetoArray3;
 
 #[test]
 fn test_gpu_budget_enforcement() {
@@ -49,37 +46,4 @@ fn test_gpu_allocation_guard_raii_release() {
 
     assert_eq!(tracker.current_bytes(), 0);
     assert_eq!(tracker.peak_bytes(), 500_000);
-}
-
-#[test]
-fn test_fdtd_gpu_construction_and_pressure_roundtrip() {
-    let grid = Grid::new(6, 6, 6, 0.1, 0.1, 0.1).unwrap();
-    let pressure = LetoArray3::from_shape_fn([6, 6, 6], |[i, j, k]| (i + 6 * j + 36 * k) as f32);
-    assert_fdtd_pressure_roundtrip::<WgpuFdtd>(&grid, pressure);
-}
-
-#[test]
-fn test_fdtd_gpu_pressure_roundtrip() {
-    let grid = Grid::new(4, 4, 4, 0.1, 0.1, 0.1).unwrap();
-    let pressure = LetoArray3::from_shape_fn([4, 4, 4], |[i, j, k]| (i + 4 * j + 16 * k) as f32);
-    assert_fdtd_pressure_roundtrip::<WgpuFdtd>(&grid, pressure);
-}
-
-fn assert_fdtd_pressure_roundtrip<P>(grid: &Grid, pressure: LetoArray3<f32>)
-where
-    P: FdtdGpuProvider<Scalar = f32>,
-{
-    let fdtd = match P::new(grid) {
-        Ok(fdtd) => fdtd,
-        Err(_) => return,
-    };
-
-    fdtd.upload_pressure(&pressure)
-        .expect("pressure upload must succeed");
-
-    let downloaded = fdtd
-        .download_pressure_blocking(grid)
-        .expect("pressure download must succeed");
-
-    assert_eq!(downloaded, pressure);
 }

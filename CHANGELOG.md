@@ -4,6 +4,41 @@
 
 ### Changed
 
+- **Provider:** Removed the consumer-owned collocated raw-WGPU FDTD shader and
+  dispatcher. GPU/CPU equivalence now uses Hephaestus' typed `Fdtd3dOps`
+  contract, a native-f32 independent CPU reference, explicit provider errors,
+  and a derived absolute-or-relative comparison bound. The separate
+  pressure-only dispatcher and disconnected f64 solver accelerator remain
+  tracked residuals rather than being presented as this integration.
+
+- **Verification:** Hephaestus PR #213 provides sequential two-step FDTD
+  differential coverage at source head
+  `7bc9944852a6ba92d4ff265b9fff9bc8c81e3567`; Kwavers local feature-enabled
+  focused gates pass. Kwavers exact-head benchmark-regression run
+  `32095365142` passes at `5155f32e8`; the final repaired head is `2295bfff7`.
+  Its hosted matrix is blocked before source checks because Kwavers main
+  requires Apollo `0.27.0` while Apollo default remains `0.26.0`.
+
+- **CI reliability:** Commit `0a3446dac` wraps every tracked Ubuntu
+  `apt-get update` and `apt-get install` invocation in an 8-minute process
+  deadline with a 30-second termination grace period. This changes no benchmark
+  input or production path.
+
+- **Integration blocker:** Exact-head CI run `32099296963` fails beta
+  resolution and architecture run `32099297012` fails clean-architecture
+  resolution on `apollo-fft ^0.27.0` versus Apollo default `0.26.0`. Apollo PR
+  #104 must land its locked workspace and benchmark-manifest repair before this
+  consumer PR can merge; no `0.26.0` fallback is retained.
+
+- **Correctness:** GPU-enabled multi-field visualization now returns a typed
+  feature/resource error until `VisualizationEngine::initialize_gpu` has
+  initialized both the renderer and data pipeline. The non-GPU fallback and
+  initialized multi-field path retain their existing ownership boundaries.
+
+- **Verification:** The implementation source head `b275b7115` passes the
+  required feature-enabled hosted matrix. Exact-head verification of the
+  PM-only follow-up remains pending before this residual is marked closed.
+
 - **Documentation:** The generic field-coupling implementation now states its
   nominal medium-coefficient contract explicitly. The remaining medium-aware
   provider extension is recorded in `KWAVERS-COUPLING-CONTRACT-001`; numerical

@@ -157,6 +157,9 @@ impl VisualizationEngine {
     /// # Errors
     /// - Returns [`KwaversError::InvalidInput`] when no fields are supplied or
     ///   when the field-type count does not match the fourth-axis length.
+    /// - Returns [`KwaversError::System`] when GPU visualization is enabled but
+    ///   [`Self::initialize_gpu`] has not initialized its renderer and data
+    ///   pipeline.
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     pub async fn render_multi_field(
@@ -213,6 +216,13 @@ impl VisualizationEngine {
                     render_time,
                     transfer_time
                 );
+            } else {
+                return Err(KwaversError::System(
+                    kwavers_core::error::SystemError::FeatureNotAvailable {
+                        feature: "gpu-visualization".to_string(),
+                        reason: "GPU renderer and data pipeline are not initialized; call initialize_gpu() first".to_string(),
+                    },
+                ));
             }
         }
 

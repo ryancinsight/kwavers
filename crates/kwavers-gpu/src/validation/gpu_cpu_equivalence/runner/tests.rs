@@ -53,24 +53,31 @@ fn create_test_256() -> (Grid, HomogeneousMedium) {
     (grid, medium)
 }
 
-fn assert_real_gpu_provider_unavailable(report: &EquivalenceReport) {
-    assert!(
-        !report.passed(),
-        "FDTD GPU equivalence must not pass without a real GPU provider"
-    );
-    let reason = report
-        .failure_reason
-        .as_deref()
-        .expect("unavailable FDTD GPU provider must be surfaced");
-    assert!(
-        reason.contains("FDTD provider-generic Leto/Hephaestus GPU equivalence"),
-        "failure reason must name the missing provider, got {reason}"
-    );
-    assert!(
-        reason.contains("provider trait implementation")
-            && reason.contains("previous path only ran the CPU solver"),
-        "failure reason must prevent CPU-vs-CPU equivalence claims, got {reason}"
-    );
+fn assert_real_gpu_provider_or_explicit_failure(report: &EquivalenceReport) {
+    if let Some(reason) = report.failure_reason.as_deref() {
+        assert!(
+            !report.passed(),
+            "a provider failure cannot pass equivalence"
+        );
+        if reason.contains("GPU unavailable") {
+            assert!(
+                reason.contains("Hephaestus WGPU FDTD provider"),
+                "unavailable-provider reason must name the provider path, got {reason}"
+            );
+        } else if reason.contains("GPU provider failed") {
+            assert!(
+                reason.contains("FDTD provider"),
+                "provider-failure reason must name the operation, got {reason}"
+            );
+        } else {
+            panic!("completed provider comparison failed its value contract: {reason}");
+        }
+    } else {
+        assert!(
+            report.passed(),
+            "a completed provider comparison must satisfy its value contract"
+        );
+    }
 }
 
 // ============================================================================
@@ -78,8 +85,8 @@ fn assert_real_gpu_provider_unavailable(report: &EquivalenceReport) {
 // ============================================================================
 
 /// Test Matrix: 64³ Homogeneous Medium + Plane Wave
-/// Status: CPU reference implemented; real FDTD GPU provider trait unavailable.
-/// Expected: report surfaces unavailable GPU provider, not CPU-vs-CPU parity.
+/// Status: CPU reference and Hephaestus provider path implemented.
+/// Expected: pass with an adapter, or surface explicit provider unavailability.
 /// # Panics
 /// - Panics if `Validation should complete`.
 ///
@@ -90,7 +97,7 @@ fn test_matrix_64_homogeneous_plane_wave() {
     let report =
         validate_gpu_cpu_equivalence(&grid, &medium, 50).expect("Validation should complete");
 
-    assert_real_gpu_provider_unavailable(&report);
+    assert_real_gpu_provider_or_explicit_failure(&report);
     assert_eq!(
         report.total_points,
         64 * 64 * 64,
@@ -111,7 +118,7 @@ fn test_matrix_128_heterogeneous_point_source() {
     let report =
         validate_gpu_cpu_equivalence(&grid, &medium, 30).expect("Validation should complete");
 
-    assert_real_gpu_provider_unavailable(&report);
+    assert_real_gpu_provider_or_explicit_failure(&report);
     assert_eq!(
         report.total_points,
         128 * 128 * 128,
@@ -133,7 +140,7 @@ fn test_matrix_256_absorbing_custom_source() {
     let report =
         validate_gpu_cpu_equivalence(&grid, &medium, 20).expect("Validation should complete");
 
-    assert_real_gpu_provider_unavailable(&report);
+    assert_real_gpu_provider_or_explicit_failure(&report);
 }
 
 /// Test equivalence_config function
@@ -152,7 +159,7 @@ fn test_validate_equivalence_config() {
     .expect("Config validation should complete");
 
     assert_eq!(report.total_points, 32 * 32 * 32);
-    assert_real_gpu_provider_unavailable(&report);
+    assert_real_gpu_provider_or_explicit_failure(&report);
 }
 
 /// Test CFL timestep calculation
@@ -170,7 +177,7 @@ fn test_calculate_stable_dt() {
         &grid,
     );
 
-    let dt = calculate_stable_dt(&grid, &medium);
+    let dt = calculate_stable_dt(&grid, &medium).expect("valid homogeneous medium and grid");
     let expected_dt = 0.5 * 0.1e-3 / SOUND_SPEED_WATER_SIM;
 
     assert!(

@@ -152,6 +152,7 @@ mod tests {
         engine.update_parameter("frequency", 2.0e6).unwrap();
     }
 
+    #[cfg(not(feature = "gpu-visualization"))]
     #[test]
     fn test_render_field_without_gpu() {
         let config = VisualizationConfig::default();
@@ -163,6 +164,7 @@ mod tests {
         pollster::block_on(engine.render_field(&field, UnifiedFieldType::Pressure, &grid)).unwrap();
     }
 
+    #[cfg(not(feature = "gpu-visualization"))]
     #[test]
     fn test_render_multi_field_without_gpu() {
         let config = VisualizationConfig::default();
@@ -177,6 +179,25 @@ mod tests {
         ];
 
         pollster::block_on(engine.render_multi_field(&fields, &field_types, &grid)).unwrap();
+    }
+
+    #[cfg(feature = "gpu-visualization")]
+    #[test]
+    fn test_render_multi_field_requires_gpu_initialization() {
+        let config = VisualizationConfig::default();
+        let mut engine = VisualizationEngine::create(config).unwrap();
+        let grid = create_test_grid();
+        let fields = Array4::zeros((32, 32, 32, 2));
+        let field_types = vec![UnifiedFieldType::Pressure, UnifiedFieldType::Temperature];
+
+        let result = pollster::block_on(engine.render_multi_field(&fields, &field_types, &grid));
+
+        assert!(matches!(
+            result,
+            Err(kwavers_core::error::KwaversError::System(
+                kwavers_core::error::SystemError::FeatureNotAvailable { feature, .. }
+            )) if feature == "gpu-visualization"
+        ));
     }
 
     #[test]
