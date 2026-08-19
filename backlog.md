@@ -9779,8 +9779,11 @@ Burn → Coeus tensor type mismatches; that debt is outside the Batch #1 scope.
 - Hosted run `32234170603` reached the runtime step at `f2f36ca9` but timed out
   during `apt-get update` because `azure.archive.ubuntu.com` was unavailable;
   the reachable Ubuntu archive was already the same distribution source.
-- The runtime step now normalizes the hosted runner's Ubuntu archive host to
-  `archive.ubuntu.com` before the bounded update, preserving the package
+- Hosted run `32234991542` confirmed that the runner resolves its mirror through
+  `/etc/apt/apt-mirrors.txt`; rewriting only source files left the unavailable
+  mirror active and produced the same bounded timeout.
+- The runtime step now normalizes both the hosted mirror list and source files
+  to `archive.ubuntu.com` before the bounded update, preserving the package
   detection and install checks without changing the parity workload.
 - Acceptance: the exact hosted wheel parity job imports the extension from
   the installed wheel and all three value-semantic k-Wave cases pass.
