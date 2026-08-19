@@ -1,0 +1,56 @@
+name: Install Ubuntu system dependencies
+description: Normalize Ubuntu package sources and install packages within bounded deadlines.
+
+inputs:
+  packages:
+    description: Space-separated Ubuntu package names to install after refreshing the index.
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Normalize Ubuntu package sources
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        for apt_source in \
+          /etc/apt/apt-mirrors.txt \
+          /etc/apt/sources.list \
+          /etc/apt/sources.list.d/*.list \
+          /etc/apt/sources.list.d/*.sources; do
+          if [[ -f "$apt_source" ]]; then
+            sudo sed -i \
+              's|azure.archive.ubuntu.com|archive.ubuntu.com|g' \
+              "$apt_source"
+            if sudo grep -q 'azure\.archive\.ubuntu\.com' "$apt_source"; then
+              echo "Failed to replace the Azure Ubuntu mirror in $apt_source" >&2
+              exit 1
+            fi
+          fi
+        done
+
+    - name: Refresh Ubuntu package index
+      shell: bash
+      run: |
+        set -euo pipefail
+        timeout --foreground --kill-after=30s 8m sudo apt-get \
+          -o Acquire::Retries=3 \
+          -o Acquire::http::Timeout=20 \
+          -o Acquire::https::Timeout=20 \
+          update
+
+    - name: Install Ubuntu packages
+      if: ${{ inputs.packages != '' }}
+      shell: bash
+      env:
+        PACKAGES: ${{ inputs.packages }}
+      run: |
+        set -euo pipefail
+        read -r -a packages <<< "$PACKAGES"
+        timeout --foreground --kill-after=30s 8m sudo apt-get \
+          -o Acquire::Retries=3 \
+          -o Acquire::http::Timeout=20 \
+          -o Acquire::https::Timeout=20 \
+          install --no-install-recommends -y "${packages[@]}"
