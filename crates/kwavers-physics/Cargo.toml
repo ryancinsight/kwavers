@@ -32,6 +32,7 @@ rand_distr = "0.4"
 rand_chacha = "0.3"
 anyhow = "1.0"
 ritk-registration = { workspace = true, optional = true }
+ritk-block-matching = { workspace = true }
 eunomia = { workspace = true }
 hyperion = { workspace = true }
 thiserror = { workspace = true }

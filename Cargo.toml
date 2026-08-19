@@ -19,6 +19,7 @@ ritk-io = { version = "0.3.0", git = "https://github.com/ryancinsight/ritk.git" 
 ritk-image = { version = "0.4.0", git = "https://github.com/ryancinsight/ritk.git" }
 ritk-spatial = { version = "0.2.0", git = "https://github.com/ryancinsight/ritk.git" }
 ritk-registration = { version = "0.54.0", git = "https://github.com/ryancinsight/ritk.git" }
+ritk-block-matching = { version = "0.1.0", git = "https://github.com/ryancinsight/ritk.git" }
 coeus-core = { version = "0.10.0", git = "https://github.com/ryancinsight/Coeus.git" }
 coeus-tensor = { version = "0.10.0", git = "https://github.com/ryancinsight/Coeus.git" }
 coeus-autograd = { version = "0.10.0", git = "https://github.com/ryancinsight/Coeus.git" }

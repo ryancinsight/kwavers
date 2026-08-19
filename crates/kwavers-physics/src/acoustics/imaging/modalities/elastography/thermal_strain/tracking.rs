@@ -5,10 +5,11 @@
 //! the integer lag that maximizes the windowed NCC is found, then refined to
 //! sub-sample precision by parabolic interpolation of the correlation peak.
 //!
-//! The convention is: a positive displacement means the post-heating echo
-//! appears at a larger axial index (later round-trip time, i.e. apparently
-//! farther from the transducer). Displacements are returned in metres using the
-//! axial sample spacing `Δz = c₀ / (2 f_s)`.
+//! The implementation delegates NCC computation and parabolic sub-sample
+//! refinement to `ritk-block-matching` (atlas US-023-D3), which is the SSOT
+//! for these operations across the stack. The kwavers 1-D A-line tracking case
+//! maps cleanly onto the 3-D seam with `dims=[1,1,nz]` and radii on the fast
+//! (axial) axis only.
 //!
 //! # References
 //! - Pinton, G. F., Dahl, J. J., & Trahey, G. E. (2006). "Rapid tracking of
@@ -18,6 +19,7 @@
 //!   correlation." *IEEE TUFFC*, 46(1), 82–96.
 
 use leto::{Array3, ArrayView1, SliceArg};
+use ritk_block_matching::{match_block, BlockMatchingConfig, SubpixelRefinement};
 
 /// Parameters controlling the cross-correlation displacement estimator.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -37,61 +39,16 @@ impl Default for TrackingParams {
     }
 }
 
-/// Normalized cross-correlation of two equal-length windows.
-///
-/// Returns a value in `[-1, 1]`. Zero is returned when either window has no
-/// variance (constant signal), for which displacement is undefined.
-fn ncc(a: ArrayView1<f64>, b: ArrayView1<f64>) -> f64 {
-    let n = a.size() as f64;
-    let mut sum_a = 0.0;
-    let mut sum_b = 0.0;
-    for &va in a.iter() {
-        sum_a += va;
-    }
-    for &vb in b.iter() {
-        sum_b += vb;
-    }
-    let mean_a = sum_a / n;
-    let mean_b = sum_b / n;
-    let mut num = 0.0;
-    let mut den_a = 0.0;
-    let mut den_b = 0.0;
-    for (&va, &vb) in a.iter().zip(b.iter()) {
-        let da = va - mean_a;
-        let db = vb - mean_b;
-        num += da * db;
-        den_a += da * da;
-        den_b += db * db;
-    }
-    let den = (den_a * den_b).sqrt();
-    if den < f64::EPSILON {
-        0.0
-    } else {
-        num / den
-    }
-}
-
-/// Sub-sample peak location from three correlation samples by fitting a
-/// parabola through `(−1, c_m1), (0, c_0), (1, c_p1)`.
-///
-/// Returns the offset in `[−0.5, 0.5]` of the true peak relative to the integer
-/// maximum. Falls back to `0.0` when the curvature is non-negative (flat or
-/// degenerate peak).
-fn parabolic_subsample(c_m1: f64, c_0: f64, c_p1: f64) -> f64 {
-    let denom = c_m1 - 2.0 * c_0 + c_p1;
-    if denom.abs() < f64::EPSILON || denom >= 0.0 {
-        return 0.0;
-    }
-    let delta = 0.5 * (c_m1 - c_p1) / denom;
-    // Guard against ill-conditioned fits driving the estimate outside one sample.
-    delta.clamp(-0.5, 0.5)
-}
-
 /// Estimate the apparent axial displacement of a single RF line, in samples.
 ///
 /// `reference[z]` is matched against `tracked[z + lag]` over `lag ∈
 /// [−max_lag, max_lag]`. Entries within `window_half + max_lag` of either end,
 /// where the kernel or search window would leave the array, are left at `0.0`.
+///
+/// Delegates NCC and parabolic sub-sample refinement to `ritk-block-matching`
+/// (atlas US-023-D3 — the SSOT for these operations across the stack).
+/// The 1-D tracking case maps onto the 3-D seam as `dims=[1,1,nz]` with
+/// radii on the fast (axial) axis only.
 #[must_use]
 pub fn track_line_samples(
     reference: ArrayView1<f64>,
@@ -99,39 +56,34 @@ pub fn track_line_samples(
     params: TrackingParams,
 ) -> Vec<f64> {
     let nz = reference.size();
+    let guard = params.window_half + params.max_lag;
     let mut disp = vec![0.0; nz];
-    let w = params.window_half;
-    let max_lag = params.max_lag as isize;
-    let guard = w + params.max_lag;
     if nz <= 2 * guard {
         return disp;
     }
-    for (z, displacement) in disp.iter_mut().enumerate().take(nz - guard).skip(guard) {
-        let ref_win = reference
-            .slice(&[(z - w, z + w, 1)])
-            .expect("reference window is in bounds");
-        let mut best_corr = f64::NEG_INFINITY;
-        let mut best_lag = 0isize;
-        let mut corr = vec![0.0; (2 * max_lag + 1) as usize];
-        for (idx, lag) in (-max_lag..=max_lag).enumerate() {
-            let center = (z as isize + lag) as usize;
-            let trk_win = tracked
-                .slice(&[(center - w, center + w, 1)])
-                .expect("tracked window is in bounds");
-            let c = ncc(ref_win, trk_win);
-            corr[idx] = c;
-            if c > best_corr {
-                best_corr = c;
-                best_lag = lag;
-            }
+
+    // Build flat row-major [1, 1, nz] buffers for the block-matching seam.
+    let fixed: Vec<f64> = reference.iter().copied().collect();
+    let moving: Vec<f64> = tracked.iter().copied().collect();
+    let dims = [1usize, 1, nz];
+    let config = BlockMatchingConfig {
+        block_radius: [0, 0, params.window_half],
+        search_radius: [0, 0, params.max_lag],
+    };
+
+    for z in guard..(nz - guard) {
+        let result = match_block(
+            &fixed,
+            &moving,
+            dims,
+            [0, 0, z],
+            config,
+            SubpixelRefinement::Parabolic,
+        );
+        if let Ok(bd) = result {
+            disp[z] = bd.displacement[2];
         }
-        let best_idx = (best_lag + max_lag) as usize;
-        let sub = if best_idx == 0 || best_idx == corr.len() - 1 {
-            0.0
-        } else {
-            parabolic_subsample(corr[best_idx - 1], corr[best_idx], corr[best_idx + 1])
-        };
-        *displacement = best_lag as f64 + sub;
+        // On error (e.g. search boundary): leave 0.0, matching prior behaviour.
     }
     disp
 }
