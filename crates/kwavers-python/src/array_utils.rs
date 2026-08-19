@@ -4,8 +4,8 @@
 //! NumPy arrays and the internal Leto / Rust `Vec` representation without
 //! exposing the backing array-provider type.
 
+use numpy::ndarray::{ArrayView, Dimension};
 use numpy::{
-    ndarray::{ArrayView, Dimension},
     Element, PyArray1, PyArray2, PyArray3, PyArrayMethods, PyReadonlyArray1, PyReadonlyArray2,
     PyReadonlyArray3, PyUntypedArrayMethods,
 };
