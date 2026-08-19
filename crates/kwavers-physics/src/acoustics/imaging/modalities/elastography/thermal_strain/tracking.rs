@@ -10,6 +10,15 @@
 //! farther from the transducer). Displacements are returned in metres using the
 //! axial sample spacing `Δz = c₀ / (2 f_s)`.
 //!
+//! # Where the matching lives
+//!
+//! The correlation search and its sub-sample peak estimate are not implemented
+//! here: they are `ritk_block_matching`, the stack's single block-matching
+//! seam. This module owns the *ultrasound* part — the guard band, the axial
+//! sample spacing, and the displacement sign convention — and delegates the
+//! matching itself, so there is one NCC and one parabolic-peak implementation
+//! in the stack rather than two that can drift.
+//!
 //! # References
 //! - Pinton, G. F., Dahl, J. J., & Trahey, G. E. (2006). "Rapid tracking of
 //!   small displacements with ultrasound." *IEEE TUFFC*, 53(6), 1103–1117.
@@ -18,6 +27,7 @@
 //!   correlation." *IEEE TUFFC*, 46(1), 82–96.
 
 use leto::{Array3, ArrayView1, SliceArg};
+use ritk_block_matching::{match_block, BlockMatchingConfig, SubpixelRefinement};
 
 /// Parameters controlling the cross-correlation displacement estimator.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -37,56 +47,6 @@ impl Default for TrackingParams {
     }
 }
 
-/// Normalized cross-correlation of two equal-length windows.
-///
-/// Returns a value in `[-1, 1]`. Zero is returned when either window has no
-/// variance (constant signal), for which displacement is undefined.
-fn ncc(a: ArrayView1<f64>, b: ArrayView1<f64>) -> f64 {
-    let n = a.size() as f64;
-    let mut sum_a = 0.0;
-    let mut sum_b = 0.0;
-    for &va in a.iter() {
-        sum_a += va;
-    }
-    for &vb in b.iter() {
-        sum_b += vb;
-    }
-    let mean_a = sum_a / n;
-    let mean_b = sum_b / n;
-    let mut num = 0.0;
-    let mut den_a = 0.0;
-    let mut den_b = 0.0;
-    for (&va, &vb) in a.iter().zip(b.iter()) {
-        let da = va - mean_a;
-        let db = vb - mean_b;
-        num += da * db;
-        den_a += da * da;
-        den_b += db * db;
-    }
-    let den = (den_a * den_b).sqrt();
-    if den < f64::EPSILON {
-        0.0
-    } else {
-        num / den
-    }
-}
-
-/// Sub-sample peak location from three correlation samples by fitting a
-/// parabola through `(−1, c_m1), (0, c_0), (1, c_p1)`.
-///
-/// Returns the offset in `[−0.5, 0.5]` of the true peak relative to the integer
-/// maximum. Falls back to `0.0` when the curvature is non-negative (flat or
-/// degenerate peak).
-fn parabolic_subsample(c_m1: f64, c_0: f64, c_p1: f64) -> f64 {
-    let denom = c_m1 - 2.0 * c_0 + c_p1;
-    if denom.abs() < f64::EPSILON || denom >= 0.0 {
-        return 0.0;
-    }
-    let delta = 0.5 * (c_m1 - c_p1) / denom;
-    // Guard against ill-conditioned fits driving the estimate outside one sample.
-    delta.clamp(-0.5, 0.5)
-}
-
 /// Estimate the apparent axial displacement of a single RF line, in samples.
 ///
 /// `reference[z]` is matched against `tracked[z + lag]` over `lag ∈
@@ -101,37 +61,35 @@ pub fn track_line_samples(
     let nz = reference.size();
     let mut disp = vec![0.0; nz];
     let w = params.window_half;
-    let max_lag = params.max_lag as isize;
     let guard = w + params.max_lag;
     if nz <= 2 * guard {
         return disp;
     }
+
+    // The seam works on flat buffers; a line is the degenerate 3-D case with
+    // the axial direction on the fast axis.
+    let reference: Vec<f64> = reference.iter().copied().collect();
+    let tracked: Vec<f64> = tracked.iter().copied().collect();
+    let dims = [1, 1, nz];
+    let config = BlockMatchingConfig {
+        block_radius: [0, 0, w],
+        search_radius: [0, 0, params.max_lag],
+    };
+
     for (z, displacement) in disp.iter_mut().enumerate().take(nz - guard).skip(guard) {
-        let ref_win = reference
-            .slice(&[(z - w, z + w, 1)])
-            .expect("reference window is in bounds");
-        let mut best_corr = f64::NEG_INFINITY;
-        let mut best_lag = 0isize;
-        let mut corr = vec![0.0; (2 * max_lag + 1) as usize];
-        for (idx, lag) in (-max_lag..=max_lag).enumerate() {
-            let center = (z as isize + lag) as usize;
-            let trk_win = tracked
-                .slice(&[(center - w, center + w, 1)])
-                .expect("tracked window is in bounds");
-            let c = ncc(ref_win, trk_win);
-            corr[idx] = c;
-            if c > best_corr {
-                best_corr = c;
-                best_lag = lag;
-            }
-        }
-        let best_idx = (best_lag + max_lag) as usize;
-        let sub = if best_idx == 0 || best_idx == corr.len() - 1 {
-            0.0
-        } else {
-            parabolic_subsample(corr[best_idx - 1], corr[best_idx], corr[best_idx + 1])
-        };
-        *displacement = best_lag as f64 + sub;
+        // A featureless window has no defined displacement. The seam says so by
+        // returning an error rather than a fabricated peak; here that is the
+        // long-standing "leave it at zero" behaviour for a window the estimator
+        // cannot speak about.
+        *displacement = match_block(
+            &reference,
+            &tracked,
+            dims,
+            [0, 0, z],
+            config,
+            SubpixelRefinement::Parabolic,
+        )
+        .map_or(0.0, |result| result.displacement[2]);
     }
     disp
 }
