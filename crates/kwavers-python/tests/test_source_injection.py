@@ -22,7 +22,7 @@ try:
 except ImportError as e:
     print(f"Failed to import pykwavers: {e}")
     print("\nTo install:")
-    print("  pip install --force-reinstall --no-deps ../target/wheels/pykwavers-*.whl")
+    print("  pip install --force-reinstall --no-deps target/wheels/kwavers_python-*.whl")
     sys.exit(1)
 
 

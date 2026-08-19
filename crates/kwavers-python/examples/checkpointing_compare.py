@@ -53,7 +53,11 @@ _ROOT = bootstrap_example_paths()
 try:
     import pykwavers as pkw
 except ImportError as exc:
-    sys.exit(f"pykwavers not installed — run: cd pykwavers && maturin develop --release ({exc})")
+    sys.exit(
+        "pykwavers not installed — run: cd kwavers && "
+        "maturin develop --release --manifest-path crates/kwavers-python/Cargo.toml "
+        f"({exc})"
+    )
 
 
 NX, NY, NZ = 32, 32, 32

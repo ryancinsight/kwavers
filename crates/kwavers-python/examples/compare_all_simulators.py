@@ -95,8 +95,8 @@ def check_availability():
 
     if not PYKWAVERS_AVAILABLE:
         print("ERROR: pykwavers is required. Install with:")
-        print("  cd kwavers/pykwavers")
-        print("  maturin develop --release")
+        print("  cd kwavers")
+        print("  maturin develop --release --manifest-path crates/kwavers-python/Cargo.toml")
         return False
 
     if not COMPARISON_AVAILABLE:

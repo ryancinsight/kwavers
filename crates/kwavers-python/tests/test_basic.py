@@ -20,9 +20,9 @@ try:
 except ImportError as e:
     print(f"Failed to import pykwavers: {e}")
     print("\nTo build and install pykwavers:")
-    print("  cd pykwavers")
-    print("  maturin build --release")
-    print("  pip install ../target/wheels/pykwavers-*.whl")
+    print("  cd kwavers")
+    print("  maturin build --release --manifest-path crates/kwavers-python/Cargo.toml")
+    print("  pip install target/wheels/kwavers_python-*.whl")
     sys.exit(1)
 
 
