@@ -9,17 +9,31 @@ use kwavers_physics::acoustics::bubble_dynamics::bubble_state::BubbleParameters;
 use kwavers_physics::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel;
 use kwavers_physics::optics::sonoluminescence::{EmissionParameters, IntegratedSonoluminescence};
 
+#[expect(
+    clippy::field_reassign_with_default,
+    reason = "the example varies selected bubble settings while retaining canonical defaults"
+)]
+fn bubble_parameters() -> BubbleParameters {
+    let mut params = BubbleParameters::default();
+    params.r0 = 10e-6;
+    params.t0 = 300.0;
+    params.initial_gas_pressure = 101_325.0;
+    params
+}
+
+#[expect(
+    clippy::field_reassign_with_default,
+    reason = "the example enables one emission component while retaining canonical defaults"
+)]
+fn emission_parameters() -> EmissionParameters {
+    let mut params = EmissionParameters::default();
+    params.use_cherenkov = true;
+    params
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let bubble_params = BubbleParameters {
-        r0: 10e-6,
-        t0: 300.0,
-        initial_gas_pressure: 101_325.0,
-        ..Default::default()
-    };
-    let emission_params = EmissionParameters {
-        use_cherenkov: true,
-        ..Default::default()
-    };
+    let bubble_params = bubble_parameters();
+    let emission_params = emission_parameters();
     let bubble_model = KellerMiksisModel::new(bubble_params.clone());
     let mut simulation =
         IntegratedSonoluminescence::new([1, 1, 1], bubble_params.clone(), emission_params);

@@ -11,6 +11,38 @@ use leto::Array3;
 mod tests {
     use super::*;
 
+    #[expect(
+        clippy::field_reassign_with_default,
+        reason = "tests vary selected emission settings while the canonical defaults remain SSOT"
+    )]
+    fn emission_parameters_with_cherenkov() -> EmissionParameters {
+        let mut params = EmissionParameters::default();
+        params.use_cherenkov = true;
+        params
+    }
+
+    fn bubble_parameters_with_overrides(
+        r0: Option<f64>,
+        initial_gas_pressure: Option<f64>,
+        t0: Option<f64>,
+        gamma: Option<f64>,
+    ) -> BubbleParameters {
+        let mut params = BubbleParameters::default();
+        if let Some(value) = r0 {
+            params.r0 = value;
+        }
+        if let Some(value) = initial_gas_pressure {
+            params.initial_gas_pressure = value;
+        }
+        if let Some(value) = t0 {
+            params.t0 = value;
+        }
+        if let Some(value) = gamma {
+            params.gamma = value;
+        }
+        params
+    }
+
     #[test]
     fn test_emission_calculation() {
         let shape = [10, 10, 10];
@@ -56,10 +88,7 @@ mod tests {
     #[test]
     fn emission_field_matches_typed_components_without_cherenkov_mixing() {
         let shape = [1, 1, 1];
-        let params = EmissionParameters {
-            use_cherenkov: true,
-            ..Default::default()
-        };
+        let params = emission_parameters_with_cherenkov();
         let mut emission = SonoluminescenceEmission::new(shape, params);
         let temperature = Array3::from_elem(shape, 20_000.0);
         let radius = Array3::from_elem(shape, 5e-6);
@@ -93,12 +122,12 @@ mod tests {
     fn test_adiabatic_temperature_scaling() {
         // Test that temperature scales correctly with compression ratio
         // For adiabatic process: T ∝ R^(3(1-γ))
-        let params = BubbleParameters {
-            r0: 10e-6,                           // 10 μm initial radius
-            t0: 300.0,                           // 300 K initial temperature
-            gamma: HEAT_CAPACITY_RATIO_DIATOMIC, // SSOT: thermodynamic::HEAT_CAPACITY_RATIO_DIATOMIC
-            ..Default::default()
-        };
+        let params = bubble_parameters_with_overrides(
+            Some(10e-6),
+            None,
+            Some(300.0),
+            Some(HEAT_CAPACITY_RATIO_DIATOMIC),
+        );
 
         let mut integrated = IntegratedSonoluminescence::new(
             [1, 1, 1],
@@ -131,13 +160,12 @@ mod tests {
     #[test]
     fn test_thermodynamic_consistency() {
         // Test that pressure and temperature follow correct adiabatic scaling
-        let params = BubbleParameters {
-            r0: 10e-6,
-            initial_gas_pressure: ATMOSPHERIC_PRESSURE, // 1 atm
-            t0: 300.0,
-            gamma: HEAT_CAPACITY_RATIO_DIATOMIC, // SSOT: thermodynamic::HEAT_CAPACITY_RATIO_DIATOMIC
-            ..Default::default()
-        };
+        let params = bubble_parameters_with_overrides(
+            Some(10e-6),
+            Some(ATMOSPHERIC_PRESSURE),
+            Some(300.0),
+            Some(HEAT_CAPACITY_RATIO_DIATOMIC),
+        );
 
         // Calculate compressed state
         let compressed_radius = 5e-6;
@@ -203,11 +231,12 @@ mod tests {
 
     #[test]
     fn integrated_constructor_uses_bubble_initial_state() {
-        let params = BubbleParameters {
-            t0: 1_234.0,
-            initial_gas_pressure: 2.5 * ATMOSPHERIC_PRESSURE,
-            ..Default::default()
-        };
+        let params = bubble_parameters_with_overrides(
+            None,
+            Some(2.5 * ATMOSPHERIC_PRESSURE),
+            Some(1_234.0),
+            None,
+        );
         let integrated = IntegratedSonoluminescence::new(
             [2, 1, 1],
             params.clone(),

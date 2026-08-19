@@ -14,20 +14,24 @@ use kwavers_solver::inverse::pinn::ml::universal_solver::{
 
 type Backend = MoiraiBackend;
 
-fn main() -> KwaversResult<()> {
-    const DEMO_EPOCHS: usize = 2;
-    const DEMO_COLLOCATION_POINTS: usize = 32;
+#[expect(
+    clippy::field_reassign_with_default,
+    reason = "the bounded demo varies workload controls while retaining canonical solver defaults"
+)]
+fn demo_config() -> UniversalTrainingConfig {
+    let mut config = UniversalTrainingConfig::default();
+    config.epochs = 2;
+    config.collocation_points = 32;
+    config.boundary_points = 8;
+    config.initial_points = 8;
+    config.batch_size = 8;
+    config.adaptive_sampling = false;
+    config
+}
 
+fn main() -> KwaversResult<()> {
     let mut solver = UniversalPINNSolver::<Backend>::with_cavitation_sonoluminescence_coupling()?;
-    let config = UniversalTrainingConfig {
-        epochs: DEMO_EPOCHS,
-        collocation_points: DEMO_COLLOCATION_POINTS,
-        boundary_points: 8,
-        initial_points: 8,
-        batch_size: 8,
-        adaptive_sampling: false,
-        ..Default::default()
-    };
+    let config = demo_config();
     let physics = PinnDomainPhysicsParameters {
         material_properties: [
             ("ambient_pressure".to_owned(), 101_325.0),
