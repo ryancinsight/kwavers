@@ -33,7 +33,7 @@
 - Non-goals: GPU kernels, Python bindings, and unrelated legacy migration surfaces remain separate items.
 - Evidence target: exact local revision plus hosted architecture, test, example, and book gates; dimensional limits and any external runner blockers are recorded here.
 - Local evidence at `547a74f01`: strict `kwavers-physics` Clippy (`-D warnings`) passed; Nextest run `80e43dec-0e15-4e32-b095-b9652be92772` passed 40/40 sonoluminescence tests (1,517 skipped); `single_bubble_sonoluminescence` and `multiphysics_sonoluminescence --features pinn` compiled and ran; `mdbook test docs/book` and `mdbook build docs/book` passed. The single-bubble run emitted changing Aequitas W/m³ fields and a separate arbitrary-unit spectrum; the multiphysics run trained three domains for two epochs.
-- Hosted evidence: PR [#414](https://github.com/ryancinsight/kwavers/pull/414) is open at head `40f2e3d59eff2dc4f3c2a31058b7dd6c524a13de`; its repository-owned checks are queued, while the external `recurseml/analysis` status is currently `error` without an associated Actions run. Local commands used the Atlas development overlay, so Cargo lockfile source state was restored after each command and no lockfile change is part of this item.
+- Hosted evidence: PR [#414](https://github.com/ryancinsight/kwavers/pull/414) is open at head `c512cdb8d`; its repository-owned checks are queued. Local commands used the Atlas development overlay, so Cargo lockfile source state was restored after each command and no lockfile change is part of this item.
 
 ## ATLAS-KWAVERS-HEPHAESTUS-FDTD-107 — Route collocated FDTD through Hephaestus [minor] [arch] — Apollo co-evolution blocker 2026-08-18
 
