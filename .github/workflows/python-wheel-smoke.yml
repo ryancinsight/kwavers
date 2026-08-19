@@ -87,6 +87,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          for apt_source in /etc/apt/sources.list /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources; do
+            if [[ -f "$apt_source" ]]; then
+              sudo sed -i 's|azure.archive.ubuntu.com|archive.ubuntu.com|g' "$apt_source"
+            fi
+          done
           sudo timeout 180s apt-get update
           if apt-cache show libhdf5-103-1 >/dev/null 2>&1; then
             hdf5_runtime=libhdf5-103-1
