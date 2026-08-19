@@ -48,6 +48,7 @@
 //! operator; finite-difference checks against any [`HelmholtzForwardOperator`]
 //! impl match the implemented gradient to first order.
 
+mod as_operator;
 pub mod cbs;
 mod finite_window;
 mod forward;
@@ -59,6 +60,7 @@ pub mod operator;
 mod tests;
 mod types;
 
+pub use as_operator::AngularSpectrumSplitStepOperator;
 pub use operator::{
     DenseConvergentBornOperator, HelmholtzForwardOperator, PstdFiniteWindowBornOperator,
     PstdFiniteWindowBornSecondOrderOperator, PstdSpectralConvergentBornOperator,
