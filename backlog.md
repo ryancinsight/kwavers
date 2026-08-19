@@ -9785,5 +9785,10 @@ Burn → Coeus tensor type mismatches; that debt is outside the Batch #1 scope.
 - The runtime step now normalizes both the hosted mirror list and source files
   to `archive.ubuntu.com` before the bounded update, preserving the package
   detection and install checks without changing the parity workload.
+- Hosted run `32235791877` passed the mirror correction and core HDF5 install,
+  then reached the installed-wheel suite and failed before comparison because
+  the bundled solver also requires `libhdf5_serial_hl.so.100`.
+- The runtime step now installs both the core and high-level HDF5 packages,
+  selecting the Ubuntu 22.04 or 24.04 package name for each SONAME.
 - Acceptance: the exact hosted wheel parity job imports the extension from
   the installed wheel and all three value-semantic k-Wave cases pass.

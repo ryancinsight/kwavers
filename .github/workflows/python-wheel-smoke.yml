@@ -96,15 +96,24 @@ jobs:
             fi
           done
           sudo timeout 180s apt-get update
-          if apt-cache show libhdf5-103-1 >/dev/null 2>&1; then
-            hdf5_runtime=libhdf5-103-1
-          elif apt-cache show libhdf5-103-1t64 >/dev/null 2>&1; then
-            hdf5_runtime=libhdf5-103-1t64
-          else
-            echo "No Ubuntu package provides libhdf5_serial.so.103" >&2
+          hdf5_runtime_packages=()
+          for hdf5_runtime in libhdf5-103-1 libhdf5-103-1t64; do
+            if apt-cache show "$hdf5_runtime" 2>/dev/null | grep -q '^Package:'; then
+              hdf5_runtime_packages+=("$hdf5_runtime")
+              break
+            fi
+          done
+          for hdf5_high_level_runtime in libhdf5-hl-100 libhdf5-hl-100t64; do
+            if apt-cache show "$hdf5_high_level_runtime" 2>/dev/null | grep -q '^Package:'; then
+              hdf5_runtime_packages+=("$hdf5_high_level_runtime")
+              break
+            fi
+          done
+          if ((${#hdf5_runtime_packages[@]} != 2)); then
+            echo "No Ubuntu packages provide libhdf5_serial.so.103 and libhdf5_serial_hl.so.100" >&2
             exit 1
           fi
-          sudo timeout 180s apt-get install --no-install-recommends -y "$hdf5_runtime"
+          sudo timeout 180s apt-get install --no-install-recommends -y "${hdf5_runtime_packages[@]}"
 
       - name: Build stable-ABI wheel
         uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
