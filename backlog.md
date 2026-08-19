@@ -1,5 +1,22 @@
 # Backlog / Strategy
 
+## KW-CI-104 — Centralize reliable Ubuntu dependency installation [patch] — in progress 2026-08-19
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-CI-104 | Normalize the Ubuntu package mirror once and install each job's system packages through one bounded repository-local action. | [patch] | in progress | Codex | `.github/actions/install-system-dependencies/action.yml`, Ubuntu workflow callers, this item |
+
+- Acceptance: no affected job contacts `azure.archive.ubuntu.com`; update and
+  installation retain finite deadlines and retries; the repeated workflow
+  scripts consolidate into one action; workflow lint and exact-head hosted
+  jobs pass without changing test, benchmark, or coverage inputs.
+- Evidence: Architecture Validation run `32276583436`, job `96145340888`, and
+  CI/CD Pipeline run `32276583452`, job `96145341309`, independently exhausted
+  the eight-minute `apt-get update` deadline against the Azure mirror on
+  Python integration PR #410. The same PR's wheel job passed after its local
+  source normalization selected `archive.ubuntu.com`.
+- Non-goals: no Rust, dependency, benchmark, test, or coverage-policy changes.
+
 ## ATLAS-KWAVERS-HEPHAESTUS-FDTD-107 — Route collocated FDTD through Hephaestus [minor] [arch] — Apollo co-evolution blocker 2026-08-18
 
 | ID | Outcome | Class | Status | Owner | Scope |
