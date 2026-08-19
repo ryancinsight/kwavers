@@ -29,6 +29,7 @@ jobs:
       tag-prefix: kwavers-python-v
       abi3: true
       abi3-python: "3.8"
+      python-test-path: crates/kwavers-python/tests
 
   publish:
     if: startsWith(github.event.release.tag_name, 'kwavers-python-v')

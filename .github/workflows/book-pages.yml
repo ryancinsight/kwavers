@@ -35,3 +35,4 @@ jobs:
       # than assumed. mdbook-version stays at the shared 0.5.4 default, which is
       # the version this book already pinned.
       output-path: target/book
+      mdbook-test: true
