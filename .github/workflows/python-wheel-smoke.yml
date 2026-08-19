@@ -8,6 +8,7 @@ on:
       - Cargo.toml
       - crates/kwavers-python/**
       - .github/workflows/python-wheel-smoke.yml
+  workflow_dispatch:
 
 permissions:
   contents: read
