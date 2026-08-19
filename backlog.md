@@ -9771,5 +9771,7 @@ Burn → Coeus tensor type mismatches; that debt is outside the Batch #1 scope.
 - Change: source tests retain the default checkout import mode; the wheel
   parity job selects the installed-package mode through
   `KWAVERS_PYTHON_PACKAGE=installed`.
+- Follow-up: the hosted job also installs the locked Python 3.10+
+  `pytest-benchmark==5.2.3` plugin required by the shared pytest `addopts`.
 - Acceptance: the exact hosted wheel parity job imports the extension from
   the installed wheel and all three value-semantic k-Wave cases pass.
