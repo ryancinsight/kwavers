@@ -16,7 +16,7 @@ This example directly compares bremsstrahlung and Cherenkov hypotheses for sonol
 
 ## Key Code Snippet
 
-```rust
+```rust,ignore
 let bubble_params = BubbleParameters {
     r0: 4e-6,                       // 4 μm initial radius
     t0: 300.0,                      // 300 K ambient temperature

@@ -25,7 +25,7 @@ CT/MRI NIfTI  →  RITK Image  →  CT acoustic slice  →  masked FWI  →  MRI
 
 ## Key Code Snippet
 
-```rust
+```rust,ignore
 let ct_path = std::env::var("KWAVERS_CT_PATH")
     .unwrap_or_else(|_| "data/cfb_gbm_sample/ct.nii.gz".to_owned());
 let Some(ct) = load_nifti(&ct_path) else {

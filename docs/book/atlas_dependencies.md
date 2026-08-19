@@ -2,7 +2,7 @@
 
 ## Dependency Graph (kwavers perspective)
 
-```
+```text
 eunomia          → scalar/complex traits (replaces num-traits/num-complex)
 mnemosyne/themis → memory allocator stack
 hermes           → SIMD abstraction (replaces direct intrinsics)

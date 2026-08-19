@@ -16,7 +16,7 @@ This example validates numerical building blocks against analytical physics resu
 
 ## Key Code Snippet
 
-```rust
+```rust,ignore
     test_heat_diffusion()?;
 
     // Test 2: Wave propagation with dispersion analysis

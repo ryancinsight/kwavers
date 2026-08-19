@@ -18,7 +18,7 @@ Chapters 1 and 2 derived the linear wave equation by expanding all field quantit
 ε-perturbations (ε ≪ 1) and retaining only O(ε) terms. At finite amplitudes the O(ε²)
 terms contribute observably. Define
 
-```
+```text
 p = p₀ + εp₁ + ε²p₂ + O(ε³)
 ρ = ρ₀ + ερ₁ + ε²ρ₂ + O(ε³)
 u = εu₁ + ε²u₂ + O(ε³)
@@ -30,20 +30,20 @@ number M_a = u₁/c₀.
 **Equation of state to second order.** Expanding pressure as a function of density about
 the equilibrium state ρ₀:
 
-```
+```text
 p − p₀ = (∂p/∂ρ)_s (ρ − ρ₀) + ½(∂²p/∂ρ²)_s (ρ − ρ₀)² + O((ρ−ρ₀)³)
 ```
 
 The isentropic derivatives define the acoustic parameters:
 
-```
+```text
 A ≡ ρ₀(∂p/∂ρ)_s = ρ₀c₀²                        (3.1)
 B ≡ ρ₀²(∂²p/∂ρ²)_s                              (3.2)
 ```
 
 yielding the Taylor equation of state:
 
-```
+```text
 p − p₀ = c₀²(ρ − ρ₀) + B/(2ρ₀) (ρ − ρ₀)² + O(ρ'³)    (3.3)
 ```
 
@@ -53,7 +53,7 @@ acoustics. Equivalently, B/A = 2ρ₀c₀(∂c/∂p)_s.
 
 **Definition 3.2 (Coefficient of Nonlinearity).** β ≡ 1 + B/(2A), so that
 
-```
+```text
 c(p) = c₀ + β p/(ρ₀c₀) + O(p²)                 (3.4)
 ```
 
@@ -87,7 +87,7 @@ In kwavers the B/A value is stored in `KuznetsovConfig::nonlinearity_coefficient
 density ρ₀ and sound speed c₀, the acoustic pressure p(x, t) satisfies, to second order
 in acoustic Mach number:
 
-```
+```text
 ∇²p − (1/c₀²) ∂²p/∂t² + (δ/c₀⁴) ∂³p/∂t³ + (β/ρ₀c₀⁴) ∂²(p²)/∂t² = 0    (3.5)
 ```
 
@@ -100,7 +100,7 @@ heats).
 *Step 1: Wave equation with nonlinear source.* Retaining O(ε²) terms in the conservation
 equations (Chapter 1, Eqs. 1.1–1.3) yields
 
-```
+```text
 ∇²p₁ − (1/c₀²) ∂²p₁/∂t² = (β/ρ₀c₀⁴) ∂²(p₁²)/∂t²                       (3.6)
 ```
 
@@ -109,7 +109,7 @@ where the RHS is the second-order acoustic self-action term (Morse & Feshbach 19
 *Step 2: Thermoviscous absorption.* Classical Stokes-Kirchhoff theory appends a
 third-time-derivative term to the linear wave operator:
 
-```
+```text
 ∇²p − (1/c₀²) ∂²p/∂t² + (δ/c₀⁴) ∂³p/∂t³ = 0                            (3.7)
 ```
 
@@ -130,7 +130,7 @@ time τ = t − z/c₀, recovers the KZK equation (Theorem 3.5 below). ∎
 
 For a thermoviscous Newtonian fluid the diffusivity is
 
-```
+```text
 δ = (4μ/3 + μ_B)/ρ₀ + κ(1/c_v − 1/c_p)/ρ₀                              (3.8)
 ```
 
@@ -142,7 +142,7 @@ In `kwavers_solver::forward::nonlinear::westervelt`, when power-law absorption
 Laplacian operators L₁, L₂ (see Chapter 1, §1.9.3, Theorem 1.7) to reproduce α ∝ f^y. The
 conversion is:
 
-```
+```text
 δ_eff = 2α₀c₀³ / (2π f_ref)²                                             (3.9)
 ```
 
@@ -152,7 +152,7 @@ at a 1 MHz reference frequency, matching the classical model at f_ref.
 
 Let p^n ≡ p(x, nΔt). A second-order leapfrog discretization of (3.5) gives:
 
-```
+```text
 p^{n+1} = 2p^n − p^{n-1}
          + (c₀Δt)²∇²_h p^n
          − (δΔt/c₀²)(p^n − 2p^{n-1} + p^{n-2})/Δt²
@@ -162,7 +162,7 @@ p^{n+1} = 2p^n − p^{n-1}
 where D²_t(·) is the second-order temporal difference operator and the nonlinear term
 is evaluated by the product rule:
 
-```
+```text
 D²_t(p²)|^n = 2p^n(p^n − 2p^{n-1} + p^{n-2})/Δt²
              + 2[(p^n − p^{n-1})/Δt]²                                    (3.11)
 ```
@@ -170,7 +170,7 @@ D²_t(p²)|^n = 2p^n(p^n − 2p^{n-1} + p^{n-2})/Δt²
 **Theorem 3.2 (Westervelt CFL Stability).** The explicit discretization (3.10) is stable
 when
 
-```
+```text
 Δt ≤ cfl_safety × Δx_min / (c_max √D)                                    (3.12)
 ```
 
@@ -190,14 +190,14 @@ rates bounded by O(M_a) < 1 for sub-shock acoustic Mach numbers. □
 **Theorem 3.3 (Kuznetsov Equation, 1971).** The velocity potential Φ, defined by
 u = ∇Φ and p = −ρ₀ ∂Φ/∂t + ρ₀|∇Φ|²/2 + O(ε²), satisfies
 
-```
+```text
 ∇²Φ − (1/c₀²) ∂²Φ/∂t² = −(1/c₀²) ∂/∂t[(∇Φ)² + (β−1)/c₀²(∂Φ/∂t)²]
                          − (δ/c₀⁴) ∂³Φ/∂t³                              (3.13)
 ```
 
 Re-expressing in pressure using p ≈ −ρ₀ ∂Φ/∂t recovers the pressure-form:
 
-```
+```text
 ∇²p − (1/c₀²) ∂²p/∂t² = −(β/ρ₀c₀⁴) ∂²(p²)/∂t²
                         − (δ/c₀⁴) ∂³p/∂t³ + F                          (3.14)
 ```
@@ -227,7 +227,7 @@ two equations are identical in the linear limit.
 L is a linear operator and N is nonlinear, the Strang second-order split step over
 interval Δt is
 
-```
+```text
 u^{n+1} = e^{LΔt/2} e^{NΔt} e^{LΔt/2} u^n + O(Δt³)                    (3.15)
 ```
 
@@ -236,7 +236,7 @@ global second-order accuracy in Δt if L and N are each separately second-order 
 
 *Proof.* By the Baker-Campbell-Hausdorff formula:
 
-```
+```text
 e^{LΔt/2} e^{NΔt} e^{LΔt/2}
   = exp{LΔt + NΔt + ½[L,N]Δt² + ¼[N,L]Δt² + O(Δt³)}
   = exp{(L+N)Δt + O(Δt³)}
@@ -246,7 +246,7 @@ The O(Δt²) commutator terms cancel between the two half-steps. □
 
 For the KZK equation in kwavers the Strang split at each axial step Δz is:
 
-```
+```text
 U(Δz) ≈ D(Δz/2) · A(Δz/2) · N(Δz) · A(Δz/2) · D(Δz/2)                (3.16)
 ```
 
@@ -265,7 +265,7 @@ For a directed acoustic beam propagating along the z-axis with maximum cone
 half-angle θ_max ≪ 1 radian (paraxial limit), the retarded-time pressure
 p(x, y, z, τ), where τ = t − z/c₀, satisfies:
 
-```
+```text
 ∂²p/∂z∂τ = (c₀/2)∇⊥²p + (δ/2c₀³)∂³p/∂τ³ + (β/2ρ₀c₀³)∂²(p²)/∂τ²    (3.17)
 ```
 
@@ -275,7 +275,7 @@ with ∇⊥² = ∂²/∂x² + ∂²/∂y² the transverse Laplacian and τ the 
 
 *Step 1: Slow-envelope factorization.* Write the Westervelt operator as
 
-```
+```text
 ∇²p − (1/c₀²)∂²p/∂t² = (∂/∂z + (1/c₀)∂/∂t)(∂/∂z − (1/c₀)∂/∂t)p + ∇⊥²p
 ```
 
@@ -283,7 +283,7 @@ with ∇⊥² = ∂²/∂x² + ∂²/∂y² the transverse Laplacian and τ the 
 (z, τ = t − z/c₀), under which ∂/∂t = ∂/∂τ and ∂/∂z|_t = ∂/∂z|_τ − (1/c₀)∂/∂τ.
 The two factors of the d'Alembertian become
 
-```
+```text
 (∂/∂z + (1/c₀)∂/∂t) = ∂/∂z|_τ                       (slow envelope derivative)
 (∂/∂z − (1/c₀)∂/∂t) = ∂/∂z|_τ − (2/c₀)∂/∂τ ≈ −(2/c₀)∂/∂τ   (fast, +z-traveling)
 ```
@@ -291,13 +291,13 @@ The two factors of the d'Alembertian become
 For a wave traveling predominantly in +z the envelope ∂/∂z|_τ is slow, so the
 forward factor is dominated by −(2/c₀)∂/∂τ. The d'Alembertian therefore reduces to
 
-```
+```text
 ∇²p − (1/c₀²)∂²p/∂t² ≈ −(2/c₀) ∂²p/∂z∂τ + ∇⊥²p
 ```
 
 Substituting into the Westervelt equation (3.5) and rearranging gives
 
-```
+```text
 (2/c₀) ∂²p/∂z∂τ = ∇⊥²p + (δ/c₀⁴)∂³p/∂τ³ + (β/ρ₀c₀⁴)∂²(p²)/∂τ²
 ```
 
@@ -311,7 +311,7 @@ limit: it computes θ_max = arctan(N_x Δx / (2 N_z Δz)) and returns an error i
 
 Transform τ → frequency by writing p(z, τ) = Σ_n P_n(z) exp(inω₀τ) + c.c.:
 
-```
+```text
 dP_n/dz = (i c₀/(4π n f₀))∇⊥²P_n
          − α_n P_n
          + i(nω₀β)/(ρ₀c₀³) Σ_{m} P_m P*_{m-n}                          (3.18)
@@ -329,20 +329,20 @@ harmonic amplitudes.
 **Theorem 3.6 (Burgers Equation).** For a plane wave propagating in the +z direction,
 the KZK equation (3.17) with ∇⊥² ≡ 0 reduces to the Burgers equation:
 
-```
+```text
 ∂p/∂z = (δ/(2c₀³))∂²p/∂τ² + (β/(ρ₀c₀³))p ∂p/∂τ                        (3.19)
 ```
 
 *Proof.* Set ∇⊥²p = 0 in the KZK equation (3.17):
 
-```
+```text
 ∂²p/∂z∂τ = (δ/2c₀³)∂³p/∂τ³ + (β/2ρ₀c₀³)∂²(p²)/∂τ²
 ```
 
 Integrate both sides once with respect to τ from −∞ to τ, using the
 radiation condition p → 0 as τ → −∞ (no precursor):
 
-```
+```text
 ∂p/∂z = (δ/2c₀³)∂²p/∂τ² + (β/2ρ₀c₀³)∂(p²)/∂τ
        = (δ/2c₀³)∂²p/∂τ² + (β/ρ₀c₀³)p ∂p/∂τ
 ```
@@ -351,7 +351,7 @@ where the last equality uses ∂(p²)/∂τ = 2p ∂p/∂τ.  This is exactly (3
 
 **Corollary 3.2 (Lossless Burgers — Inviscid Limit).** Setting δ = 0 in (3.19) gives
 
-```
+```text
 ∂p/∂z + (β/(ρ₀c₀³))p ∂p/∂τ = 0                                          (3.20)
 ```
 
@@ -367,7 +367,7 @@ This is a first-order quasi-linear PDE solvable by the method of characteristics
 source p(z=0, τ) = P₀ sin(ω₀τ), the solution of the lossless Burgers equation (3.20)
 in the pre-shock region z < z_s (shock distance, §3.7) is given by the Fubini solution:
 
-```
+```text
 p(z, τ) = (2P₀/σ) Σ_{n=1}^{∞} J_n(nσ)/(n) sin(nω₀τ)                   (3.21)
 ```
 
@@ -378,7 +378,7 @@ of the first kind of order n.
 
 *Step 1.* The lossless Burgers equation (3.20) is transformed to the implicit solution:
 
-```
+```text
 p = P₀ sin(ω₀(τ + βp z/(ρ₀c₀³)))                                        (3.22)
 ```
 
@@ -387,7 +387,7 @@ via the method of characteristics: each characteristic is τ - βp z/(ρ₀c₀�
 *Step 2.* Expand p in (3.22) as a Fourier series in τ using the
 Jacobi–Anger–Kepler identity:
 
-```
+```text
 sin(x + a sin x) = 2 Σ_{n=1}^∞ J_n(na)/n · sin(nx),   |a| < 1          (3.23)
 ```
 
@@ -402,7 +402,7 @@ Substituting x = ω₀τ and a = σ = βP₀ω₀z/(ρ₀c₀³) yields (3.21). 
 
 **Corollary 3.3 (Fundamental Depletion).** The fundamental-frequency amplitude is
 
-```
+```text
 P₁(z) = (2P₀/σ) J_1(σ)                                                  (3.24)
 ```
 
@@ -411,7 +411,7 @@ At σ = 1 (shock): J_1(1) ≈ 0.440, so P₁ ≈ 0.88 P₀ (12% depletion).
 
 **Corollary 3.4 (Second-Harmonic Growth).** The second-harmonic amplitude is
 
-```
+```text
 P₂(z) = P₀ J_2(2σ)/σ ≈ P₀σ/2 = βP₀² ω₀ z/(2ρ₀c₀³)    for σ ≪ 1       (3.25)
 ```
 
@@ -421,7 +421,7 @@ nonlinearity argument: p² generates a component at 2ω₀ via cos²(ω₀τ) = 
 **Corollary 3.5 (Post-shock sawtooth — Fay solution).** Past the shock (σ ≥ 1) the wave
 becomes a sawtooth whose harmonics decay as
 
-```
+```text
 Bₙ(σ) = 2 / (n·(1+σ))                                                   (3.25b)
 ```
 
@@ -442,7 +442,7 @@ binding for Figure 3.3 and only plots the returned pressure samples.
 Let p = P₀ cos(ω₀t) be the incident pressure. The nonlinear term (β/ρ₀c₀⁴)∂²p²/∂t² in
 the Westervelt equation generates the source
 
-```
+```text
 S = (β/ρ₀c₀⁴) ∂²(P₀²cos²ω₀t)/∂t²
   = (β P₀²/ρ₀c₀⁴) ∂²[(1 + cos2ω₀t)/2]/∂t²
   = −(2βω₀²P₀²/ρ₀c₀⁴) cos(2ω₀t)                                         (3.26)
@@ -451,26 +451,26 @@ S = (β/ρ₀c₀⁴) ∂²(P₀²cos²ω₀t)/∂t²
 The source term oscillates at 2ω₀ with amplitude proportional to P₀² and β.
 The radiated second-harmonic pressure amplitude grows as
 
-```
+```text
 P₂ ∝ β f₀² P₀² / (ρ₀ c₀⁴)                                               (3.27)
 ```
 
 *Proof.* Substitute p = P₁ cos(ω₀τ) into the nonlinear source term of (3.17):
 
-```
+```text
 (β/ρ₀c₀³) ∂²(p²)/∂τ² = (βP₁²/ρ₀c₀³) ∂²cos²(ω₀τ)/∂τ²
 ```
 
 Using cos²θ = (1 + cos 2θ)/2:
 
-```
+```text
 ∂²cos²(ω₀τ)/∂τ² = ∂²[(1 + cos 2ω₀τ)/2]/∂τ² = −2ω₀² cos(2ω₀τ)
 ```
 
 The source term at 2ω₀ is S = −2βP₁²ω₀²/(ρ₀c₀³) cos(2ω₀τ).  The
 driven propagation equation for the second-harmonic amplitude P₂(z) is:
 
-```
+```text
 ∂²P₂/∂z∂τ = S/2  →  ∂P₂/∂z = S z / (2 · 2ω₀) at resonance
 ```
 
@@ -497,7 +497,7 @@ diverge as σ → 1, where the exact series saturates.
 **Definition 3.4 (Shock Distance).** The shock formation distance z_s for a plane wave
 with sinusoidal source p(0, t) = P₀ sin(ω₀t) in a lossless medium is
 
-```
+```text
 z_s = ρ₀c₀³ / (β ω₀ P₀) = c₀ / (β ω₀ u₀)                               (3.28)
 ```
 
@@ -506,7 +506,7 @@ where u₀ = P₀/(ρ₀c₀) is the source particle velocity amplitude.
 **Derivation.** Along the characteristic τ_0 = τ − βpz/(ρ₀c₀³), the slope ∂p/∂τ becomes
 infinite when ∂τ/∂p|_{τ_0=const} = 0:
 
-```
+```text
 ∂τ/∂p = −βP₀ω₀ z/(ρ₀c₀³) cos(ω₀(τ − βpz/(ρ₀c₀³))) = 0
 ```
 
@@ -515,7 +515,7 @@ The most dangerous characteristic is where cos(·) = −1, giving z_s = ρ₀c�
 **Theorem 3.9 (Rankine-Hugoniot Jump Conditions).** Across a shock front propagating
 at velocity c_s the pressure, density, and particle velocity satisfy:
 
-```
+```text
 c_s = c₀ + β(p₁ + p₂)/(2ρ₀c₀)                                           (3.29)
 [p] = ρ₀c₀[u]                                                             (3.30)
 ```
@@ -553,7 +553,7 @@ three source amplitudes; higher β and source pressure shorten z_s.
 **Theorem 3.10 (Stokes-Kirchhoff Absorption).** For a plane wave p ∝ exp(ikz − iωt)
 in a viscothermal fluid, the complex wavenumber is
 
-```
+```text
 k = ω/c₀ (1 + iδω/(2c₀²)) + O(δ²)                                       (3.31)
 ```
 
@@ -596,7 +596,7 @@ fractional-Laplacian model (Ch1 §1.9.3).
 
 **Algorithm 3.1 (Nonlinear Solver Acceptance Protocol).**
 
-```
+```text
 Input:  solver S, reference solution R, source amplitude P₀, frequency f₀
 Output: pass / fail
 
@@ -626,7 +626,7 @@ Output: pass / fail
 At f₀ = 1 MHz, P₀ = 1 MPa (diagnostic-range amplitude), water (c₀ = 1500 m s⁻¹,
 ρ₀ = 1000 kg m⁻³, β = 3.5):
 
-```
+```text
 z_s = ρ₀c₀³ / (β ω₀ P₀)
     = 1000 × 1500³ / (3.5 × 2π × 10⁶ × 10⁶)
     = 3.375 × 10¹² / (2.199 × 10¹³)
@@ -654,7 +654,7 @@ first three harmonics, confirming the nonlinear-propagation implementation.
 
 ## 3.10 Equation Hierarchy Summary
 
-```
+```text
 Full compressible Navier-Stokes (exact)
         │
         ▼ (isentropic + small entropy, no-mean-flow)
@@ -729,7 +729,7 @@ Above MI ~ 1.9 inertial cavitation (Chapter 5) becomes likely.
 Compute z_s for a 2 MHz HIFU transducer producing P₀ = 2 MPa at its surface,
 propagating through water (c₀ = 1500 m s⁻¹, ρ₀ = 1000 kg m⁻³, β = 3.5):
 
-```
+```text
 z_s = ρ₀c₀³ / (β ω₀ P₀)
     = 1000 × (1500)³ / (3.5 × 2π × 2×10⁶ × 2×10⁶)
     = 3.375 × 10¹² / (8.796 × 10¹³)
@@ -747,7 +747,7 @@ sawtooth waveform at the focus, reproducing the Blackstock (1966) spectrum.
 Let Φ be the velocity potential (u = ∇Φ, irrotational flow). The full Kuznetsov equation
 in Φ (Kuznetsov 1971, eq. 3.13) is
 
-```
+```text
 ∇²Φ − (1/c₀²)Φ_tt = (1/c₀²) ∂/∂t[|∇Φ|²]
                    + (2(β−1)/c₀⁴)(∂Φ/∂t)(∂²Φ/∂t²)
                    − (δ/c₀⁴)(∂³Φ/∂t³)                                   (3A.1)
@@ -763,7 +763,7 @@ Converting (3A.1) to pressure via p = −ρ₀ Φ_t + ρ₀|∇Φ|²/2 recovers 
 
 For a circularly symmetric beam about the z-axis, ∇⊥²p = (1/r)∂/∂r(r ∂p/∂r):
 
-```
+```text
 ∂²p/∂z∂τ = (c₀/2)(1/r)(∂/∂r)(r ∂p/∂r)
            + (δ/2c₀³)∂³p/∂τ³
            + (β/2ρ₀c₀³)∂²(p²)/∂τ²                                       (3B.1)

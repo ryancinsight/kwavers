@@ -226,7 +226,7 @@ the worst-case threshold, assuming no stable nuclei pre-exist at the focus.
 `kwavers_therapy::safety::mechanical_index::MechanicalIndexCalculator` applies
 the derating formula and computes MI:
 
-```rust
+```rust,ignore
 // clinical::safety::mechanical_index::calculator (abridged)
 let attenuation_factor =
     10.0_f64.powf(-(α * f_mhz * z_cm) / 20.0);   // amplitude derating
@@ -308,7 +308,7 @@ $$\mathrm{TIS} = \frac{I_{\mathrm{SPTA.3}} \cdot A_{\mathrm{beam}}}{\text{(model
 where $A_{\mathrm{beam}}$ is the $-6\;\text{dB}$ beam area in cm². kwavers
 implements this via:
 
-```rust
+```rust,ignore
 // ThermalIndexCalculator::calculate
 let derated_power = acoustic_power_w
     * 10.0_f64.powf(-(α_db_cm_mhz * f_mhz * depth_cm) / 10.0);
@@ -375,7 +375,7 @@ to a safety factor of approximately 1.7 on temperature rise. $\square$
 `kwavers_therapy::safety::thermal_index::ThermalIndexCalculator` provides a
 unified implementation for TIS, TIB, and TIC via `ThermalIndexModel`:
 
-```rust
+```rust,ignore
 use kwavers_therapy::safety::thermal_index::{
     ThermalIndexCalculator, ThermalIndexModel,
 };
@@ -462,7 +462,7 @@ These thresholds are empirically established (Dewey 1994, Dewhirst 2003) and
 implemented as compile-time constants in
 `kwavers_physics::thermal::diffusion::dose::thresholds`:
 
-```rust
+```rust,ignore
 pub const NECROSIS_THRESHOLD_CEM43: f64 = 240.0;  // muscle
 pub const DAMAGE_THRESHOLD_CEM43:   f64 =  60.0;  // general
 pub const PROTEIN_DENATURATION:     f64 =   1.0;  // albumin onset
@@ -475,7 +475,7 @@ pub const DIAGNOSTIC_SAFETY:        f64 =   0.1;  // diagnostic safe level
 `kwavers_physics::thermal::diffusion::dose::ThermalDoseCalculator` both
 implement the CEM43 integral over 3-D temperature fields:
 
-```rust
+```rust,ignore
 // physics::thermal::thermal_dose::ThermalDose::update (abridged)
 let r = if temp >= 43.0 { 0.5 } else { 0.25 };
 let equiv_time = dt_minutes * r.powf(43.0 - temp);
@@ -835,7 +835,7 @@ overlaid in red.*
 
 ### 16.11.1 Module Structure
 
-```
+```text
 kwavers_therapy::safety
 ├── mechanical_index
 │   ├── MechanicalIndexCalculator  (MI computation with derating)

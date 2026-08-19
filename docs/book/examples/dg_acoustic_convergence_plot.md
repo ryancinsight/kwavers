@@ -26,7 +26,7 @@ This example generates convergence plots for Discontinuous Galerkin (DG) methods
 
 ## Key Code Snippet
 
-```rust
+```rust,ignore
 const ORDERS: [usize; 4] = [1, 2, 3, 4];
 
 let rows = run_convergence_sweep()?;

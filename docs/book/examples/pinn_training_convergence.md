@@ -16,7 +16,7 @@ This example is a verification harness for PINN training itself. It trains again
 
 ## Key Code Snippet
 
-```rust
+```rust,ignore
 struct ExperimentConfig {
     /// Number of spatial points (N×N grid)
     num_points: usize,

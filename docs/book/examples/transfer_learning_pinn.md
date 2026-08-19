@@ -16,7 +16,7 @@ This example shows how a pre-trained 2-D wave PINN can be adapted to a new geome
 
 ## Key Code Snippet
 
-```rust
+```rust,ignore
 let transfer_config = TransferLearningConfig {
     fine_tune_lr: 1e-4,
     fine_tune_epochs: 10,

@@ -16,7 +16,7 @@ This example demonstrates how kwavers builds and exercises phased-array transduc
 
 ## Key Code Snippet
 
-```rust
+```rust,ignore
 let array_config = PhasedArrayConfig {
     num_elements: 32,
     element_spacing: 0.3e-3, // λ/2 at 2.5 MHz

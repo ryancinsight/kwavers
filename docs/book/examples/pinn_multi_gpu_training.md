@@ -19,7 +19,7 @@ This example demonstrates multi-GPU Physics-Informed Neural Network (PINN) train
 
 ## Key Code Snippet
 
-```rust
+```rust,ignore
 // Create multiple GPU backends
 let backends: Vec<_> = (0..num_gpus)
     .map(|i| MoiraiBackend::gpu_with_device(i))

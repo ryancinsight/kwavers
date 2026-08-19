@@ -16,7 +16,7 @@ This example builds a high-resolution tissue block for elastography experiments.
 
 ## Key Code Snippet
 
-```rust
+```rust,ignore
 let domain_size = 0.04f64; // 4 cm cubic domain
 let dx = 0.0002f64; // 0.2 mm spacing
 let n = (domain_size / dx).round() as usize;

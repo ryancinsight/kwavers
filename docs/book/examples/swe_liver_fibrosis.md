@@ -16,7 +16,7 @@ This example turns shear-wave elastography into a clinical liver-fibrosis workfl
 
 ## Key Code Snippet
 
-```rust
+```rust,ignore
 let swe_config = create_swe_parameters()?;
 
 println!("📊 Simulation Setup:");

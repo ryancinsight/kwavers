@@ -777,7 +777,7 @@ reproduces this tradeoff rather than asserting that pulsing always wins.
 
 The model lives in `kwavers_physics::analytical::cavitation`:
 
-```rust
+```rust,ignore
 use kwavers_physics::analytical::cavitation::{
     compare_shielding_control, CavitationProduction, FrequencySweep,
     PulseProtocol, ShieldingConfig, ShieldingMedium, SweepProfile,

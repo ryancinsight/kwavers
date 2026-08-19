@@ -16,7 +16,7 @@ This example is an architecture-focused tour of the adaptive beamforming stack a
 
 ## Key Code Snippet
 
-```rust
+```rust,ignore
 println!("Adaptive Beamforming - Architecture Refactoring Complete");
 println!("=======================================================");
 

@@ -16,7 +16,7 @@ This example expands the PINN story beyond acoustics. It is a command-line showc
 
 ## Key Code Snippet
 
-```rust
+```rust,ignore
 let demo_mode = if args.len() > 1 {
     args[1].as_str()
 } else {

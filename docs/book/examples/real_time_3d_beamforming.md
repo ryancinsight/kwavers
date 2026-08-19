@@ -16,7 +16,7 @@ This example demonstrates GPU-accelerated volumetric beamforming for real-time 4
 
 ## Key Code Snippet
 
-```rust
+```rust,ignore
 let config = BeamformingConfig3D {
     volume_dims: (64, 64, 64),    // Smaller for demo
     num_elements_3d: (16, 16, 8), // 2,048 elements

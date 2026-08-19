@@ -16,7 +16,7 @@ This is a compact performance smoke test for production-readiness discussions. I
 
 ## Key Code Snippet
 
-```rust
+```rust,ignore
 let grid = Grid::new(100, 100, 100, 1e-3, 1e-3, 1e-3)?;
 let grid_creation_time = start.elapsed();
 println!(

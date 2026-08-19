@@ -17,7 +17,7 @@ The radiation pattern of a single element is the building block of every array b
 pattern in this chapter. The far-field **element directivity** of a baffled circular
 piston of radius `a` is
 
-```
+```text
 D(θ) = 2J₁(ka sin θ) / (ka sin θ)                                        (7.1)
 ```
 
@@ -51,7 +51,7 @@ element n receives a time delay τ_n = nd sin θ_s / c₀, equivalent to a phase
 **Definition 7.2 (Array Factor).** The array factor for a uniformly weighted linear array
 steered to angle θ_s is
 
-```
+```text
 AF(θ) = Σ_{n=0}^{N-1} w_n exp(iknd(sin θ − sin θ_s))                    (7.7)
 ```
 
@@ -60,7 +60,7 @@ where w_n are the element weights (apodization).
 **Theorem 7.2 (Grating Lobe Positions).** For a uniform array (w_n = 1) with pitch d,
 the array factor (7.7) has magnitude maxima at angles θ satisfying
 
-```
+```text
 d(sin θ − sin θ_s) = mλ,    m ∈ ℤ                                        (7.8)
 ```
 
@@ -68,7 +68,7 @@ The m = 0 peak is the main lobe. The m ≠ 0 peaks are **grating lobes**.
 
 *Proof.* AF(θ) is a geometric series:
 
-```
+```text
 AF(θ) = (1 − exp(iNkd(sin θ − sin θ_s))) / (1 − exp(ikd(sin θ − sin θ_s)))
 ```
 
@@ -78,7 +78,7 @@ which is equivalent to (7.8). □
 **Corollary 7.1 (Grating-Lobe-Free Condition).** No grating lobe exists within the visible
 region |sin θ| ≤ 1 if and only if
 
-```
+```text
 d ≤ λ / (1 + |sin θ_s|)                                                   (7.9)
 ```
 
@@ -100,7 +100,7 @@ half-space.
 
 The full radiation pattern of the phased array is
 
-```
+```text
 P(θ) = D(θ) · AF(θ)                                                       (7.10)
 ```
 
@@ -123,7 +123,7 @@ of AF(θ), attenuating grating lobes that fall in the D(θ) sidelobe structure.
 the geometric focus be at position r_f. To achieve constructive interference at r_f, element
 n is fired with time delay
 
-```
+```text
 τ_n = (|r_n − r_f| − min_m |r_m − r_f|) / c₀                            (7.11)
 ```
 
@@ -140,7 +140,7 @@ This is the canonical delay law implemented in
 **Theorem 7.4 (Lateral Resolution — −6 dB Beamwidth).** For a rectangular aperture of
 width L focused at depth z_f in the far field (z_f ≫ L), the −6 dB lateral resolution is
 
-```
+```text
 Δx₋₆dB ≈ 0.886 λ z_f / L = 0.886 λ F#                                   (7.12)
 ```
 
@@ -166,7 +166,7 @@ width.) This matches the sinc² PSF used by `lateral_psf_sinc2` /
 **Theorem 7.5 (Axial Resolution).** The −6 dB axial resolution for a pulse of N cycles
 at center frequency f₀ is
 
-```
+```text
 Δz₋₆dB ≈ N c₀ / (2 f₀)                                                   (7.13)
 ```
 
@@ -240,7 +240,7 @@ them when computing transmit delays and signals.
 
 **Algorithm 7.1 (Delay-and-Sum Beamforming).**
 
-```
+```text
 Input:  RF data s_n(t) from N receive elements; sound speed c₀; focus geometry
 Output: Beamformed RF signal b(t) at each image point x_p
 
@@ -255,7 +255,7 @@ For each image point x_p:
 **Theorem 7.7 (DAS Coherent Signal Enhancement).** If all elements receive independent
 zero-mean noise with variance σ² and coherent signal amplitude A, the post-DAS SNR is
 
-```
+```text
 SNR_DAS = N A² / σ²                                                       (7.14)
 ```
 
@@ -270,7 +270,7 @@ For a flat reflector model, the received signal spectrum S(k_x, ω) (spatial fre
 k_x = ω sin θ_r / c₀) is related to the reflectivity function R(k_x, k_z) via a
 Stolt migration mapping (Stolt 1978):
 
-```
+```text
 k_z = √((2ω/c₀)² − k_x²) / 2                                             (7.15)
 ```
 
@@ -288,7 +288,7 @@ The f-k (Stolt) migration is implemented for plane-wave imaging in
 beamformer selects weights w to minimize output power while preserving a unit response
 in the steering direction a(θ_s):
 
-```
+```text
 min_w  w^H R_xx w    subject to  w^H a(θ_s) = 1                          (7.16)
 ```
 
@@ -330,7 +330,7 @@ A 1-D linear array of N elements, each of width w and pitch d (d ≥ w), provide
 **Elevation resolution.** The elevation (y) beam is not dynamically focused in a standard
 linear array. The elevation −6 dB beamwidth is set by the element height h:
 
-```
+```text
 Δy ≈ 0.886 λ z_f / h    (fixed-focus elevation)                          (7.19)
 ```
 
@@ -377,7 +377,7 @@ single-transducer focusing. Beamforming uses `G` as the transmit focusing gain; 
 
 **Algorithm 7.2 (Grating Lobe Acceptance Test).**
 
-```
+```text
 Input:  N-element array, pitch d, center frequency f₀, steering angle θ_s
 Output: pass / fail
 
@@ -419,7 +419,7 @@ Output: pass / fail
 
 **Grating lobe positions (Eq. 7.8, m = ±1):**
 
-```
+```text
 sin θ_GL = sin 20° + 1 × (λ/d) = 0.342 + (0.308/0.300) = 0.342 + 1.027 → outside visible
 sin θ_GL = sin 20° − 1 × (λ/d) = 0.342 − 1.027 = −0.685 → θ_GL = −43.2°
 ```
@@ -429,7 +429,7 @@ d = λ/2 = 0.154 mm eliminates the grating lobe (Corollary 7.2).
 
 **Lateral resolution at 30 mm depth, L = 64 × 0.3 mm = 19.2 mm, F# = 30/19.2 = 1.56:**
 
-```
+```text
 Δx₋₆dB = 0.886 × 0.308 mm × 1.56 = 0.425 mm
 ```
 
@@ -455,7 +455,7 @@ composite wavefront is tilted, and the beam points along the ramp normal. A *qua
 (curved) delay profile superimposes focusing; the sum of a linear ramp and a curvature
 steers and focuses simultaneously. The canonical delay law (Theorem 7.3, Eq. 7.11)
 
-```
+```text
 τ_n = (|r_n − r_f| − min_m |r_m − r_f|) / c₀
 ```
 
@@ -466,7 +466,7 @@ produces a pure linear ramp.
 **Far-field (pure steering) limit.** As `|r_f| → ∞` along `θ_s`, Eq. 7.11 reduces for a
 linear array with element coordinates `x_n` to the steering ramp
 
-```
+```text
 τ_n = (x_max − x_n) sin θ_s / c₀,                                        (7.22)
 ```
 
@@ -480,7 +480,7 @@ profiles are straight lines whose slope is proportional to `sin θ_s`, confirmin
 
 For narrowband (single-frequency) excitation the time delay is equivalent to a phase shift
 
-```
+```text
 φ_n = ω₀ τ_n = k₀ (x_max − x_n) sin θ_s,                                 (7.23)
 ```
 
@@ -505,7 +505,7 @@ Two angle-dependent penalties accompany steering, both visible in Figure 7.8:
 1. **Main-lobe broadening (beam spreading).** The projected aperture shrinks by `cos θ_s`,
    so the steered −6 dB beamwidth widens as
 
-   ```
+   ```text
    Δθ(θ_s) ≈ Δθ(0) / cos θ_s.                                            (7.24)
    ```
 
@@ -520,7 +520,7 @@ Two angle-dependent penalties accompany steering, both visible in Figure 7.8:
 
 Steering moves not only the main lobe but every grating lobe (Theorem 7.2, Eq. 7.8):
 
-```
+```text
 sin θ_GL = sin θ_s + m λ/d,    m ∈ ℤ \ {0}.
 ```
 
@@ -528,7 +528,7 @@ A lobe that is evanescent at broadside can be swept into the visible region `|si
 as `θ_s` increases. The grating-lobe-free condition over a maximum steering angle
 `θ_s,max` is Corollary 7.1,
 
-```
+```text
 d ≤ λ / (1 + |sin θ_s,max|),                                            (7.25)
 ```
 
@@ -556,7 +556,7 @@ fractional bandwidth `B` contains components at `ω₀(1 ± B/2)`; for a fixed p
 effective steering angle satisfies `k(ω) sin θ(ω) = const`, so the beam direction drifts
 with frequency — **beam squint**:
 
-```
+```text
 sin θ(ω) = (ω₀/ω) sin θ_s   ⟹   Δθ_squint ≈ −tan θ_s · (Δω/ω₀).        (7.26)
 ```
 
@@ -572,7 +572,7 @@ For a planar (matrix) array the steering direction is the unit vector
 `û = (sin θ_s cos φ_s, sin θ_s sin φ_s, cos θ_s)` and the ramp generalises to the inner
 product
 
-```
+```text
 τ_{mn} = (R_max − r_{mn} · û) / c₀,                                      (7.27)
 ```
 
@@ -601,7 +601,7 @@ applied delays. The deepest such concentration — the last axial pressure maxim
 field transitions from the near (Fresnel) zone to the far (Fraunhofer) zone — defines the
 **natural focus**
 
-```
+```text
 N = D² / (4λ),        λ = c / f.                                         (7.28)
 ```
 

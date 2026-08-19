@@ -16,7 +16,7 @@ This example loads a skull CT DICOM series, converts Hounsfield units into acous
 
 ## Key Code Snippet
 
-```rust
+```rust,ignore
 const FREQUENCY_HZ: f64 = 650_000.0;
 const TRANSCRANIAL_FOCUSED_BOWL_ELEMENT_COUNT: usize = 1024;
 const TRANSCRANIAL_FOCUSED_BOWL_RADIUS_M: f64 = 0.150;

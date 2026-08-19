@@ -16,7 +16,7 @@ This example combines multiple simulation capabilities into a single liver-asses
 
 ## Key Code Snippet
 
-```rust
+```rust,ignore
 let mut workflow = LiverAssessmentWorkflow::new(
     "LIVER_PATIENT_001",
     (120.0, 80.0, 60.0), // 120x80x60 mm³ liver volume

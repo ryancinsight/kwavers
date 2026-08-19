@@ -30,7 +30,7 @@ reflections), it should agree more closely with PSTD than classical FDTD.
 
 ## Key Code Snippet
 
-```rust
+```rust,ignore
 use kwavers_solver::{FdtdSolver, KSpaceCorrectionMode, PstdSolver};
 
 // Classical FDTD

@@ -49,7 +49,7 @@ not a styling choice.
 A circular hydrophone element of radius `a` responding to plane acoustic waves has an
 angle-dependent pressure sensitivity (directivity function) of
 
-```
+```text
 H(θ) = 2 J_1(ka sinθ) / (ka sinθ)
 ```
 
@@ -57,7 +57,7 @@ identical in form to the piston transmit directivity derived in Chapter 6. By th
 principle, the receive directivity of a passive element equals its transmit directivity.
 
 For a square element of half-width `b`, the directivity is separable:
-```
+```text
 H(θ_x, θ_y) = sinc(kb sinθ_x / π) · sinc(kb sinθ_y / π)
 ```
 
@@ -77,7 +77,7 @@ is unity in the far field.
 Under plane wave incidence from angle `θ` the pressure at each surface element of the
 hydrophone integrates over the aperture with a phase factor `exp(ik x sinθ)`. The
 integrated output is
-```
+```text
 S(θ) = ∫∫_aperture p_0 e^{ikx sinθ} dA.
 ```
 For a circular aperture the integral evaluates identically to the Huygens-Fresnel piston
@@ -90,7 +90,7 @@ method (IEC 61685:2001):
 1. Three calibrated hydrophones `A`, `B`, `C` form three transmitter-receiver pairs.
 2. Voltage transfer ratios `M_{AB}`, `M_{AC}`, `M_{BC}` are measured in a free field.
 3. The individual sensitivity `M_A` satisfies
-   ```
+   ```text
    |M_A|² = (M_{AB} M_{AC} / M_{BC}) · (ρ c / (π a_B a_C))
    ```
    where `a_B`, `a_C` are element areas.
@@ -110,7 +110,7 @@ and does not require correction for frequencies below the hydrophone resonance.
 For a hydrophone with `ka ≤ 1` at the center frequency (element diameter ≤ λ/π),
 the directivity error in received amplitude is below 1% for angles `|θ| ≤ 30°`. At higher
 frequencies or larger elements:
-```
+```text
 H(-3 dB angle) ≈ arcsin(1.6 / (ka))   (angular half-power width)
 ```
 
@@ -130,12 +130,12 @@ narrow and develop sidelobes — the receive analog of the piston pattern (Sourc
 For a uniform linear sensor array with inter-element spacing `d`, the received acoustic
 field can be spatially sampled without grating lobes (spatial aliasing) if and only if
 
-```
+```text
 d ≤ λ / 2.
 ```
 
 When `d > λ/2`, spatial aliasing produces grating lobes at angles
-```
+```text
 sinθ_grating = sinθ_signal ± n λ / d,   n = 1, 2, 3, ...
 ```
 that are indistinguishable from the signal direction without additional constraints.
@@ -147,7 +147,7 @@ A linear array of `N` elements at positions `x_n = n d`, `n = 0, ..., N-1`, reco
 the pressure field `p(x, t)`. The spatial Fourier transform of the array output at
 time `t` and temporal frequency `ω` is
 
-```
+```text
 P(k_x, ω) = Σ_{n=0}^{N-1} p(x_n, ω) e^{-ik_x n d}.
 ```
 
@@ -156,7 +156,7 @@ This discrete sum is periodic in `k_x` with period `2π/d`. The spatial spectrum
 propagating plane wave at angle `θ` has `k_x = k sinθ = (ω/c) sinθ`. The Nyquist
 condition requires the period `2π/d` to exceed the maximum one-sided spatial frequency
 `k_x,max = ω/c` (maximum at `|sinθ| = 1`):
-```
+```text
 2π/d ≥ 2 · ω/c
 ⟹  d ≤ πc/ω = λ/2.       □
 ```
@@ -170,7 +170,7 @@ maximum severity case where grating lobes alias to end-fire.
 
 For a 2-D matrix array with spacings `(d_x, d_y)`, the spatial Nyquist conditions apply
 independently in each dimension:
-```
+```text
 d_x ≤ λ/2,   d_y ≤ λ/2.
 ```
 For a hexagonal grid with pitch `d`, the effective spacings are `d` and `d sqrt(3)/2`,
@@ -204,31 +204,31 @@ broadside signal aliases to end-fire — the spatial-Nyquist limit of §8.3.
 In a linear, lossless acoustic medium, the particle velocity and pressure satisfy Newton's
 second law (Euler's equation of motion):
 
-```
+```text
 ρ ∂u/∂t = -∇p
 ```
 
 In the frequency domain with `e^{-iωt}` convention, this becomes
 
-```
+```text
 -iω ρ U(r, ω) = -∇P(r, ω)
 ```
 
 or equivalently
 
-```
+```text
 U(r, ω) = ∇P(r, ω) / (iω ρ).
 ```
 
 For a plane wave propagating in direction `n̂`, the relationship reduces to
 
-```
+```text
 U = P / (ρ c)   (in the direction of propagation)
 ```
 
 and for a focused beam with effective aperture area `A`, the volume velocity is
 
-```
+```text
 Q = ∫_A U · n̂ dA = P / (ρ c A).
 ```
 
@@ -237,7 +237,7 @@ Q = ∫_A U · n̂ dA = P / (ρ c A).
 **Step 1 — Linearization.**
 In a quiescent medium with ambient density `ρ_0` and no background flow, the acoustic
 momentum equation at first order in perturbation amplitude is
-```
+```text
 ρ_0 ∂u/∂t = -∇p,
 ```
 where `p = p_total - p_0` is the acoustic pressure perturbation and `u` is the acoustic
@@ -246,7 +246,7 @@ particle velocity. This is Euler's equation linearized about the rest state.    
 **Step 2 — Plane wave solution.**
 For a plane wave `p = P_0 exp(i(k·r - ωt))` propagating in direction `k̂`, substituting
 into the momentum equation gives:
-```
+```text
 ρ_0 (-iω) u = -ik P_0 exp(i(k·r - ωt))
 ⟹  u = (k/ω) P_0 / ρ_0 = P_0 / (ρ_0 c) k̂.
 ```
@@ -255,12 +255,12 @@ The acoustic impedance `Z = ρ c` appears as the ratio `P_0 / |u|`.
 **Step 3 — Staggered grid discretization.**
 kwavers uses a staggered (Yee-type) grid where pressure is stored at integer nodes and
 velocity components are stored at half-integer nodes:
-```
+```text
 u_x[i+½, j, k] = u_x at position ((i+½)Δx, jΔy, kΔz)
 p[i, j, k]     = p at position (iΔx, jΔy, kΔz)
 ```
 The discrete momentum update is
-```
+```text
 u_x^{n+½}[i+½] = u_x^{n-½}[i+½] - (dt/ρΔx) (p^n[i+1] - p^n[i])
 ```
 which is a second-order accurate centered-difference approximation to `ρ ∂u_x/∂t = -∂p/∂x`.
@@ -273,7 +273,7 @@ interpolation shifts each component back a half cell along its own axis by avera
 adjacent nodes — `u_ns[i] = ½(u[i] + u[i−1])` (k-Wave `u_non_staggered`, with a ghost-cell-zero
 boundary at `i = 0`). It is performed post-hoc, once per component, in
 `kwavers_receiver::recorder::velocity_statistics::interpolate_staggered_to_collocated`:
-```rust
+```rust,ignore
 pub fn interpolate_staggered_to_collocated(
     u: &Array3<f64>,   // one staggered velocity component
     axis: usize,       // half-cell-shift axis: 0 = x, 1 = y, 2 = z
@@ -298,13 +298,13 @@ source at `r_0` in a heterogeneous medium (possibly with absorption). The time-r
 pressure field produced by re-emitting the time-conjugate signals recorded on a closed
 surface `S` converges to a focus at the original source location `r_0`:
 
-```
+```text
 p_TR(r, ω) = ∫_S [G*(r, r_s; ω) G(r_s, r_0; ω) - G(r, r_s; ω) G*(r_s, r_0; ω)] dS
 ```
 
 In a lossless medium this simplifies to
 
-```
+```text
 p_TR(r_0, ω) ∝ Im[G(r_0, r_0; ω)],
 ```
 
@@ -316,7 +316,7 @@ self-interaction.
 **Step 1 — Helmholtz reciprocity.**
 For two acoustic fields `p_A` and `p_B` satisfying the Helmholtz equation in the same
 medium, the reciprocity theorem states:
-```
+```text
 ∫_V (p_A ∇²p_B - p_B ∇²p_A) dV = ∮_S (p_A ∇p_B - p_B ∇p_A) · n̂ dS.
 ```
 
@@ -329,11 +329,11 @@ reversing the time axis: `p*(r, ω) ↔ p(r, -t)`.
 Suppose the forward wave `p_F(r, ω) = G(r, r_0; ω)` is recorded on surface `S`.
 Re-emitting `p_F^*(r_s, ω)` from each point `r_s ∈ S` as a source drives the time-reversed
 field
-```
+```text
 p_TR(r, ω) = ∫_S G(r, r_s; ω) G*(r_s, r_0; ω) dS.
 ```
 Using reciprocity `G(r, r_s) = G(r_s, r)` and the optical theorem for the Green's function:
-```
+```text
 ∮_S [G*(r_s, r_0; ω) ∂_n G(r, r_s; ω) - G(r, r_s; ω) ∂_n G*(r_s, r_0; ω)] dS
   = 2iω ρ Im[G(r, r_0; ω)].
 ```
@@ -348,7 +348,7 @@ recorded field already carries phase information from all propagation paths (Fin
 
 ### Discrete Time-Reversal Reconstruction
 
-```
+```text
 Algorithm: Time-Reversal Reconstruction (kwavers implementation)
 
 Phase 1 — Forward simulation:
@@ -371,7 +371,7 @@ Contract:
 
 In a homogeneous medium with sensor array aperture `D` and focal depth `z_f`, the
 time-reversal focal spot has lateral resolution:
-```
+```text
 Δr_TR ≈ λ z_f / D   (diffraction-limited)
 ```
 identical to the forward beamformed resolution. In a heterogeneous random medium, multiple
@@ -394,7 +394,7 @@ or to binary checkpoint files.
 
 ### Algorithm 8.1 — Sensor Recording Contract
 
-```
+```text
 Input:
   G          — computational grid (nx, ny, nz, dx, dy, dz)
   mask       — binary 3-D array of shape (nx, ny, nz), 1 at sensor positions
@@ -461,7 +461,7 @@ producing the Fortran-order sequence without explicit transposition.
 
 ### RecordField Variants
 
-```rust
+```rust,ignore
 pub enum SensorRecordField {
     Pressure,                   // scalar p at sensor nodes
     VelocityX,                  // staggered u_x
@@ -500,7 +500,7 @@ validating the recording contract and Fortran-order convention of §8.6.
 Photoacoustic (optoacoustic) imaging uses a pulsed laser to deposit thermal energy that
 generates a broadband ultrasound signal. The initial pressure rise is
 
-```
+```text
 p_0(r) = Γ(r) · μ_a(r) · Φ(r)
 ```
 
@@ -509,7 +509,7 @@ optical absorption coefficient (m⁻¹), and `Φ` is the optical fluence (J m⁻
 
 ### Algorithm 8.2 — Photoacoustic Forward Measurement
 
-```
+```text
 Input:
   p_0(r)    — initial pressure distribution (3-D array, Pa)
   medium    — acoustic medium parameters (c, ρ, absorption)
@@ -539,7 +539,7 @@ Notes:
 ### Bandwidth and Spatial Resolution
 
 The spatial resolution of photoacoustic imaging is determined by the detection bandwidth:
-```
+```text
 Δr_PA ≈ 0.88 c / BW_Hz
 ```
 where `BW_Hz = BW · f_center` is the absolute bandwidth. For a 5 MHz center frequency and
@@ -565,7 +565,7 @@ thermal–acoustic run is the remaining step.
 
 ### Algorithm 8.3 — Iterative Time-Reversal for Photoacoustic Imaging
 
-```
+```text
 Input:
   s_n(t)    — sensor time series, shape (M, nt) in Fortran order
   sensor_pos — sensor positions {r_n}, shape (M, 3)
@@ -606,7 +606,7 @@ Notes:
 
 An alternative to TR reconstruction is delay-and-sum (DAS) beamforming. For each image
 pixel `r`:
-```
+```text
 p_DAS(r) = Σ_{n=1}^{M} s_n(τ_n(r)) · w_n(r)
 ```
 where `τ_n(r) = |r - r_n| / c` is the travel time from pixel to sensor `n`, and `w_n(r)`
@@ -617,7 +617,7 @@ implemented in `kwavers_analysis::signal_processing::beamforming`.
 
 Coherence-based compounding uses the short-lag spatial coherence (SLSC) to improve image
 contrast:
-```
+```text
 R(m) = (1/(M-m)) Σ_{n=0}^{M-m-1} <s_n(t) s_{n+m}(t)> / sqrt(<s_n²><s_{n+m}²>)
 ```
 The SLSC image is formed by summing `R(m)` over `m = 1..M_lag`. Unlike DAS, SLSC is
@@ -629,7 +629,7 @@ signal-to-noise-ratio dependent and rejects uncorrelated noise naturally.
 
 ### Module Structure
 
-```
+```text
 kwavers_receiver
 ├── mod.rs                          Sensor trait, SensorType, SensorField
 ├── array.rs                        SensorArray: multi-element sensor collections
@@ -664,7 +664,7 @@ The `SimpleRecorder` type provides pressure and velocity recording for standard 
 workflows. It is constructed from a `RecorderConfig` that specifies the grid dimensions,
 active sensor mask, and the list of fields to record.
 
-```rust
+```rust,ignore
 pub struct SensorRecorder {
     config: RecorderConfig,
     active_indices: Vec<(usize, usize, usize)>,  // (ix, iy, iz) in Fortran order
@@ -688,7 +688,7 @@ impl SensorRecorder {
 The Fortran-order bug was fixed in the `active_indices` construction. The corrected
 enumeration in Rust:
 
-```rust
+```rust,ignore
 // Fortran order: x-index varies fastest (matches k-Wave MATLAB)
 let mut active_indices = Vec::new();
 for iz in 0..nz {
@@ -713,7 +713,7 @@ actually correct physics in the wrong row order (see feedback_sensor_ordering.md
 
 Statistics collected during recording without storing the full time series:
 
-```rust
+```rust,ignore
 pub struct PressureFieldStatistics {
     pub p_max: Array3<f64>,    // maximum pressure at each grid node over all time steps
     pub p_min: Array3<f64>,    // minimum pressure at each grid node over all time steps
@@ -729,7 +729,7 @@ These statistics are computed in a single pass over time without retaining the f
 
 `RecordingMode` selects what is accumulated:
 
-```rust
+```rust,ignore
 pub enum RecordingMode {
     TimeSeries,         // full (M, nt) matrix per field
     Statistics,         // p_max, p_min, p_rms only — O(M) memory

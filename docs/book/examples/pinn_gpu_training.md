@@ -19,7 +19,7 @@ This example demonstrates GPU-accelerated Physics-Informed Neural Network (PINN)
 
 ## Key Code Snippet
 
-```rust
+```rust,ignore
 // Create GPU backend
 let backend = MoiraiBackend::gpu()?;
 

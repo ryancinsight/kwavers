@@ -5940,6 +5940,21 @@ do not assert an unconfirmed physics error.
   physics before removal or Rust/PyO3 promotion; do not claim the book-wide
   "Python only plots" invariant until this audit is complete and executable.
 
+### Book fence gate repair (2026-08-19)
+
+The shared Pages workflow's `mdbook test docs/book` gate previously parsed
+equations, expected output, diagrams, and workspace-dependent API excerpts as
+standalone Rust, producing 286 failures. The affected fences now declare their
+actual semantics: prose/output/equation blocks use `text`, while source-linked
+workspace excerpts use `rust,ignore`; the stale `DENSITY_WATER_NOMINAL` excerpt
+was corrected to `DENSITY_WATER_37C`. `mdbook test docs/book` and
+`mdbook build docs/book` pass locally. The linked Cargo examples still require
+an independent compile gate: `cargo check -p kwavers --examples --locked`
+stops before compilation because the shared Atlas overlay has a stale lock
+file (`--locked` refuses to update `D:\\atlas\\repos\\kwavers\\Cargo.lock`).
+That resolver/overlay blocker remains open; the ignored fences are not evidence
+that the linked examples compile.
+
 ### Cavitation-cloud branch reconciliation (2026-06-28)
 
 `main` was compared against `feat/cloud-time-resolved-bubble-dynamics`,

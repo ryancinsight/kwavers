@@ -16,7 +16,7 @@ This example shows a full multi-wavelength oxygenation workflow: diffuse-light f
 
 ## Key Code Snippet
 
-```rust
+```rust,ignore
 let wavelengths = vec![
     532.0, // Green (Nd:YAG doubled) - strong Hb absorption
     700.0, // Red edge - near isosbestic point

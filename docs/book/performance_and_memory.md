@@ -22,7 +22,7 @@ Sections 20.2–20.6 establish formal theorems that bound attainable performance
 
 **Statement.** For a kernel with arithmetic intensity *I* = (FLOP count) / (bytes transferred), the attainable performance *P* satisfies:
 
-```
+```text
 P ≤ min( I · BW,  P_peak )
 ```
 
@@ -62,7 +62,7 @@ At *I* = 0.5 FLOP/byte and CPU ridge point ~8 FLOP/byte (Intel Xeon, AVX-512, DD
 
 **Crossover grid size.** For the 1-D case with second-order FD (m = 2), the PSTD cost per step exceeds the FD cost when:
 
-```
+```text
 (5/2) log₂ N > 2  →  N > 2^(4/5) ≈ 1.74
 ```
 
@@ -113,7 +113,7 @@ the pointwise update in `cpml::update::axis`; backlog #12 closed this sub-item a
 
 **Work granularity constraint.** Rayon's work-stealing is efficient only when task granularity exceeds ~1 µs of compute (to amortize deque operations). For very small grids (N < 32), the overhead dominates. kwavers uses a `min_grain_size` parameter equal to `max(N³/P, 1024)` to prevent over-subdivision.
 
-```rust
+```rust,ignore
 // crates/kwavers-solver/src/forward/pstd/implementation/core/stepper/step.rs (illustrative)
 // The CPU solver is monomorphic f64 (the GPU path is f32); there is no Scalar
 // trait — see the architecture note in §20.10.3.
@@ -171,7 +171,7 @@ Prior to the consolidation committed in the density-advection fix (April 2026), 
 
 **Optimization.** The spectral derivative and the wavenumber correction are computed in the same FFT pass. By reusing the single FFT scratch buffer for both, the two separate allocations are eliminated. Memory saving: 2 × 256³ × 4 B = 2 × 67 MB = **134 MB** for N=256.
 
-```rust
+```rust,ignore
 // Before: two owned allocations
 let grad_kx = vec![0.0f32; n3];
 let grad_ky = vec![0.0f32; n3];
@@ -198,7 +198,7 @@ All 47 PSTD tests pass after this removal, confirming the term was computational
 
 For lossless simulations (absorption coefficient α = 0 everywhere), the PSTD absorption kernel allocates several N³ arrays for the fractional Laplacian absorption operator (Treeby & Cox 2010, Equations 9–10). The whole kernel is held as an `Option` on the orchestrator (`Option<AbsorptionKernel>`), so a lossless run allocates **none** of these arrays:
 
-```rust
+```rust,ignore
 // crates/kwavers-solver/src/forward/pstd/physics/absorption/kernel.rs
 pub struct AbsorptionKernel {
     pub tau: Array3<f64>,     // N³  absorption proportionality
@@ -239,7 +239,7 @@ reduced to the five operators above.
 
 The GPU dispatch pipeline uses wgpu as the compute backend. Buffer creation follows a deterministic ownership protocol to avoid aliasing and lifetime errors:
 
-```rust
+```rust,ignore
 // 1. Create device-side storage buffers (GPU VRAM, no CPU visibility)
 let p_buf = device.create_buffer(&wgpu::BufferDescriptor {
     size: (n3 * mem::size_of::<f32>()) as u64,
@@ -286,7 +286,7 @@ Windows TDR (Timeout Detection and Recovery) terminates GPU computations exceedi
 
 **Fix (committed 2026-04-22).** Batch `STEP_BATCH = 32` steps per command buffer and `device.poll(...Wait)` every 16 batches in the GPU time loop:
 
-```rust
+```rust,ignore
 // crates/kwavers-gpu/src/pstd_gpu/time_loop/run.rs
 const STEP_BATCH: usize = 32;
 for batch_start in (0..nt).step_by(STEP_BATCH) {
@@ -310,7 +310,7 @@ for batch_start in (0..nt).step_by(STEP_BATCH) {
 
 After simulation completes, results are copied from GPU VRAM to CPU RAM via a readback staging buffer:
 
-```rust
+```rust,ignore
 let readback = device.create_buffer(&wgpu::BufferDescriptor {
     size: p_buf.size(),
     usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
@@ -335,7 +335,7 @@ PCIe readback bandwidth is ~16 GB/s (PCIe 4.0 × 16). For N = 256, the pressure 
 
 The KWCP (kWavers CheckPoint) format is a flat binary file with the following layout:
 
-```
+```text
 [KWCP_MAGIC: 8 bytes] [VERSION: u32] [STEP: u64] [GRID_SHAPE: 3×u64]
 [FIELD_COUNT: u32]    [FIELD_OFFSETS: FIELD_COUNT×u64]
 [rkyv-archived state vector: variable length]
@@ -457,7 +457,7 @@ The 14× speedup matches the project memory record (project_phased_array_parity.
 
 The chart below (see Figure 20.3) illustrates the memory savings from the AbsorptionKernel optimization:
 
-```
+```text
 Memory (MB)
   │ 5000 ┤                                     ●  baseline
   │ 4500 ┤                                   ●
@@ -499,7 +499,7 @@ The flame graph for the PSTD loop shows the following typical hot-path distribut
 
 kwavers instruments the simulation loop with `tracing` spans at three granularities:
 
-```rust
+```rust,ignore
 // Per-step span (emit at TRACE level to avoid log spam)
 let _step_span = tracing::trace_span!("pstd_step", step = t).entered();
 
@@ -510,7 +510,7 @@ let _vel_span  = tracing::trace_span!("velocity_update").entered();
 
 Use `tracing-chrome` subscriber to generate a Chrome trace JSON file:
 
-```rust
+```rust,ignore
 let guard = tracing_chrome::ChromeLayerBuilder::new()
     .file("pstd_trace.json")
     .build();
@@ -523,7 +523,7 @@ Load `pstd_trace.json` in `chrome://tracing` or Perfetto UI to visualize per-ste
 
 wgpu supports timestamp queries on adapters that expose `Features::TIMESTAMP_QUERY`:
 
-```rust
+```rust,ignore
 let query_set = device.create_query_set(&wgpu::QuerySetDescriptor {
     count: 2,
     ty: wgpu::QueryType::Timestamp,

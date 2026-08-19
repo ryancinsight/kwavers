@@ -16,7 +16,7 @@ This example uses the universal PINN machinery to couple acoustic propagation, c
 
 ## Key Code Snippet
 
-```rust
+```rust,ignore
 let mut solver = UniversalPINNSolver::<Backend>::with_cavitation_sonoluminescence_coupling()?;
 
 // Configure training for multi-physics coupling

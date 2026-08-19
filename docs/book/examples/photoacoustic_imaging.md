@@ -16,7 +16,7 @@ This example runs an end-to-end photoacoustic simulation. It defines a computati
 
 ## Key Code Snippet
 
-```rust
+```rust,ignore
 let grid = create_simulation_grid()?;
 println!("📊 Computational Grid:");
 println!("   Dimensions: {} × {} × {}", grid.nx, grid.ny, grid.nz);

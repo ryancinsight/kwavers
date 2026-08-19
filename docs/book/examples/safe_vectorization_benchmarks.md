@@ -16,7 +16,7 @@ This example benchmarks safe vectorized kernels against more traditional impleme
 
 ## Key Code Snippet
 
-```rust
+```rust,ignore
 pub struct BenchmarkResult {
     pub test_name: String,
     pub implementation: String,

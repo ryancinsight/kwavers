@@ -251,7 +251,7 @@ quasi-static approximation holds for f < 1 MHz in this context.
 `kwavers_physics::acoustics::therapy::sonogenetics::membrane` evaluates equation (17.6)
 element-wise:
 
-```rust
+```rust,ignore
 ΔT_membrane[x] = intensity[x] * params.radius_m / (2.0 * sound_speed[x])
 ```
 
@@ -432,7 +432,7 @@ Well below the 0.1 min safety limit; the safety margin exceeds 300×.
 
 ## 17.9 Algorithm: Sonogenetic Stimulation Protocol
 
-```
+```text
 Algorithm SGS (Sonogenetic Stimulation Protocol)
 
 Input:  target region V_t, channel type C, protocol parameters {f, p_neg, PRF, DC, T_son}
@@ -523,7 +523,7 @@ I_MscL = g_MscL · N_chan · A_cell · 0.5 · (E_MscL_rev − V_m) = 25 pS × N_
 
 **Equivalence algorithm.**
 
-```
+```text
 Algorithm OSequiv (Optogenetic–Sonogenetic Current Equivalence)
 
 Input:  target neural activation threshold I_thresh [A] (from LIF spike initiation analysis)
@@ -588,7 +588,7 @@ Output: required acoustic parameters {f, p_neg, DC} achieving I_ion = I_thresh
 
 ### 17.11.2 End-to-End Simulation Example
 
-```rust
+```rust,ignore
 use kwavers_physics::acoustics::therapy::sonogenetics::{
     VolumetricArfField,
     compute_membrane_tension, compute_radiation_pressure, CellMembraneParams,

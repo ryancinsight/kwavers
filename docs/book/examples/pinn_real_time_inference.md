@@ -19,7 +19,7 @@ This example demonstrates real-time Physics-Informed Neural Network (PINN) infer
 
 ## Key Code Snippet
 
-```rust
+```rust,ignore
 // Load pre-trained PINN
 let pinn = load_trained_pinn("checkpoint.bin")?;
 

@@ -19,7 +19,7 @@ In a pulse-echo configuration the transmitted pulse p_tx(t) propagates into tiss
 scatters from heterogeneities, and returns to the receive aperture. Ignoring multiple
 scattering, the received signal from a point scatterer at depth z is
 
-```
+```text
 s(t) = p_tx(t − 2z/c₀) · r(z) · α_geo(z)                                (9.1)
 ```
 
@@ -29,7 +29,7 @@ geometric spreading factor.
 **Definition 9.1 (Point Spread Function).** The PSF of a pulse-echo system is the
 response to a single point scatterer:
 
-```
+```text
 h(x, z) = h_lat(x, z) · h_ax(z)                                           (9.2)
 ```
 
@@ -41,7 +41,7 @@ the axial pulse envelope.
 Tissue absorption attenuates the signal as exp(−α₀ f z) (α₀ in dB/cm/MHz, z in cm). The
 time-gain compensation (TGC) amplification is
 
-```
+```text
 TGC(t) = exp(+α₀ f c₀ t / 2)                                             (9.3)
 ```
 
@@ -52,7 +52,7 @@ compensating round-trip attenuation. The factor of 2 accounts for the round-trip
 The B-mode image is the envelope of the beamformed RF signal. Denoting the analytic
 signal z(t) = s(t) + i·H{s(t)} (where H is the Hilbert transform):
 
-```
+```text
 env(t) = |z(t)| = √(s²(t) + H{s}²(t))                                   (9.4)
 ```
 
@@ -64,7 +64,7 @@ z(t) = A(t)(cos + i·sin)(ω₀t + φ) = A(t)exp(i(ω₀t + φ)), and |z| = A(t)
 
 The log-compressed display dynamic range is typically 40–60 dB:
 
-```
+```text
 B(t) = 20 log₁₀(env(t) / env_max)    [dB]                               (9.5)
 ```
 
@@ -73,7 +73,7 @@ B(t) = 20 log₁₀(env(t) / env_max)    [dB]                               (9.5
 **Definition 9.2 (Contrast-to-Noise Ratio).** For a lesion with mean intensity μ_l
 and background mean μ_b and standard deviation σ_b:
 
-```
+```text
 CNR = |μ_l − μ_b| / σ_b                                                   (9.6)
 ```
 
@@ -137,13 +137,13 @@ s_i,n(t) are collected for each transmit angle θ_i and receive element n.
 **Theorem 9.2 (Plane-Wave Compounding SNR).** Let s_i(r) be the complex beamformed image
 for transmit angle θ_i (i = 1,…,N_c). Under coherent compounding:
 
-```
+```text
 S(r) = Σ_{i=1}^{N_c} s_i(r)                                              (9.7)
 ```
 
 If speckle noise is zero-mean and independent across angles, the compounded SNR scales as
 
-```
+```text
 SNR_comp = √N_c × SNR_single                                               (9.8)
 ```
 
@@ -158,7 +158,7 @@ single plane wave, recovering focused-transmit image quality at a higher frame r
 
 The Stolt mapping (Chapter 7, Eq. 7.15) extends to each plane-wave transmit angle:
 
-```
+```text
 k_z(ω, k_x) = √((ω/c₀)² − k_x²) + √((ω/c₀)² − (k_x − k_x,tx)²)       (9.9)
 ```
 
@@ -183,7 +183,7 @@ remap with obliquity Jacobian); coherent compounding remains the default product
 **Theorem 9.3 (Doppler Shift).** A scatterer moving at velocity v along the beam axis
 (angle α to beam) returns a signal shifted by
 
-```
+```text
 f_D = 2 f₀ v cos α / c₀                                                   (9.10)
 ```
 
@@ -195,7 +195,7 @@ f_D = 2f₀ v·cos α/c₀. □
 **Definition 9.5 (Maximum Unambiguous Velocity).** For a pulsed wave system with pulse
 repetition frequency PRF, the maximum velocity without aliasing (Nyquist limit) is:
 
-```
+```text
 v_max = c₀ PRF / (4 f₀ cos α)                                             (9.11)
 ```
 
@@ -206,7 +206,7 @@ range-velocity uncertainty of pulsed Doppler.
 
 **Algorithm 9.1 (Kasai Autocorrelation Estimator — Kasai et al. 1985).**
 
-```
+```text
 Input:  I+Q channel data x_m(t) for ensemble m = 1..M (slow-time packets)
 Output: Mean velocity estimate v̂
 
@@ -219,7 +219,7 @@ Output: Mean velocity estimate v̂
 **Theorem 9.4 (Autocorrelation Estimator Variance).** For M ensemble members and
 signal-to-clutter ratio SCR, the variance of the velocity estimate is
 
-```
+```text
 Var(v̂) ≈ v_max² (1 − |R(1)|²) / (π² M |R(1)|²)                         (9.12)
 ```
 
@@ -230,7 +230,7 @@ distribution with variance `σ²_Φ = (1 − |R(1)|²) / (M |R(1)|²)` by the Cr
 bound for circular phase estimation (Kay 1993, §3.7).  The velocity is a linear function
 of phase: `v = (v_max/π) Φ`, so the velocity variance is
 
-```
+```text
 Var(v̂) = (v_max/π)² · σ²_Φ = v_max²(1 − |R(1)|²) / (π² M |R(1)|²).
 ```
 
@@ -325,7 +325,7 @@ equilibrium radius R₀, shell stiffness χ, shell viscosity κ_s, and internal 
 p_gas, driven by an incident pressure p_inc(t), the linearized radius perturbation
 x = R − R₀ satisfies
 
-```
+```text
 ρ_l R₀ ẍ + (4κ_s/R₀² + 4μ_l/R₀) ẋ + (3κ_p0/(R₀²) + 2χ/R₀) x = −p_inc(t)  (9.13)
 ```
 
@@ -334,7 +334,7 @@ where ρ_l is liquid density, μ_l is liquid viscosity, p_0 is ambient pressure,
 
 The natural frequency of the bubble is
 
-```
+```text
 f_0^{bubble} = (1/2πR₀) √(3κp_0/ρ_l + 2χ/(ρ_l R₀))                     (9.14)
 ```
 
@@ -349,7 +349,7 @@ harmonic oscillator (9.13). Natural frequency follows from the restoring coeffic
 `λ/(2π) ≈ 119 μm`, so the approximation holds for `r ≳ 1 mm` — well within
 clinical imaging depth), the scattered pressure is
 
-```
+```text
 p_s(r) = ρ_l R₀ R̈ / r · exp(−ikr)                                        (9.15)
 ```
 
@@ -378,7 +378,7 @@ At higher driving pressures (MI > 0.1), the bubble response becomes nonlinear an
 generates sub-harmonics (f₀/2), ultra-harmonics (3f₀/2), and super-harmonics (2f₀, 3f₀).
 Clinical CEUS receives the fundamental or second harmonic with tissue suppression:
 
-```
+```text
 CTR = 20 log₁₀(p_bubble_2f / p_tissue_2f)    [dB]                        (9.16)
 ```
 
@@ -391,7 +391,7 @@ Typical CTR at second harmonic: 15–25 dB.
 **Definition 9.6 (ULM Resolution Limit).** At ultra-low microbubble concentration (one
 bubble per resolution cell), the center of each bubble PSF can be localized to:
 
-```
+```text
 σ_loc ≈ FWHM / (2.35 √SNR)                                                (9.17)
 ```
 
@@ -400,7 +400,7 @@ where FWHM is the diffraction-limited PSF width. For SNR = 25 dB (316), FWHM = 2
 
 **Algorithm 9.2 (ULM Processing Pipeline).**
 
-```
+```text
 Input:  Ultrafast plane-wave sequence s_frame(t, n, θ) at frame rate ≥ 500 Hz
 Output: Super-resolved vascular map
 
@@ -480,20 +480,20 @@ reference sound speed, and the image is a quantitative sound-speed contrast.
 
 For a straight transmit/receive ray Γᵣ with observed-minus-reference time shift δtᵣ:
 
-```
+```text
 δtᵣ = ∫_{Γᵣ} [1/(c₀ + δc(r)) − 1/c₀] ds
     ≈ −1/c₀² ∫_{Γᵣ} δc(r) ds                                      (9.23)
 ```
 
 After voxelization with exact ray/pixel intersection lengths ℓᵣᵥ:
 
-```
+```text
 Σ_v ℓᵣᵥ δc_v = −c₀² δtᵣ                                           (9.24)
 ```
 
 **Dense regime.** Dense shift imaging uses all measured aperture rows and solves:
 
-```
+```text
 min_δc  1/2 ||Aδc − b||₂² + λ/2 ||δc||₂² + γ/2 δcᵀLδc              (9.25)
 ```
 
@@ -502,7 +502,7 @@ sound-speed shift field for diffuse thermal, fat, fibrosis, or skull-aberration 
 
 **Sparse regime.** Sparse shift imaging uses a deterministic row subset and an L1 prior:
 
-```
+```text
 min_δc  1/2 ||A_Sδc − b_S||₂² + λ/2 ||δc||₂² + γ/2 δcᵀLδc
         + μ ||δc||₁                                                 (9.26)
 ```
@@ -526,7 +526,7 @@ model, sensitivity model, and sampling policy are fixed across a time series,
 operator. A frame then supplies only the measured shift vector in original
 acquisition order:
 
-```
+```text
 b_S^(n)[r] = -c0^2 Delta t_i(r)^(n)
 ```
 
@@ -538,7 +538,7 @@ For frame batches, the same plan drives all frames through one solver workspace
 and one reusable sampled-row RHS buffer. `SoundSpeedShiftBatchConfig` defaults
 to compact objective retention:
 
-```
+```text
 summary_n = (J_n(0), J_n(final), iteration_count_n).                         (9.27)
 ```
 
@@ -548,7 +548,7 @@ so long time series do not store every solver objective value by default.
 **Curved-array acquisition.** A 2-D curved array is represented as a circular
 arc:
 
-```
+```text
 p_i = c + r[cos(theta_0 + i Delta theta), sin(theta_0 + i Delta theta)]      (9.28)
 ```
 
@@ -561,7 +561,7 @@ receiver coordinates to the same straight-ray operator in (9.24)-(9.26).
 **Curved-ray and finite-frequency sensitivity.** The same reconstruction API
 also supports a circular-arc propagation row:
 
-```
+```text
 Γ_r = union_k [q_k, q_{k+1}],   q_k on the transmitter-receiver circular arc.  (9.29)
 ```
 
@@ -570,7 +570,7 @@ case, so the curved row is a sum of exact voxel intersections over the declared
 piecewise-linear circular-arc discretization. For finite-frequency sensitivity,
 each subsegment uses a compact Fresnel tube around the propagation path:
 
-```
+```text
 K_vk = exp(-d(v, Γ_k)^2 / (2σ_k²)),   σ_k² = λ s_k(L - s_k) / L.              (9.30)
 ```
 
@@ -597,7 +597,7 @@ Dense and sparse branches are selected only through existing configuration:
 branches run through `SoundSpeedShiftPlan` on the same samples and frame shift
 vector. The Criterion entry point is:
 
-```
+```text
 cargo bench -p kwavers --bench clinical_sound_speed_shift_openpros
 ```
 
@@ -675,7 +675,7 @@ reparameterization by the change-of-variables theorem. □
 
 **Compounded SNR (Theorem 9.2):**
 
-```
+```text
 SNR_comp = √16 × SNR_single   (linear amplitude gain 4× = +20 log₁₀(4) = +12 dB)
          = 20 dB + 12 dB = 32.0 dB     (linear check: 4 × 10 = 40 → 20 log₁₀(40) = 32.0 dB)
 ```
@@ -683,7 +683,7 @@ SNR_comp = √16 × SNR_single   (linear amplitude gain 4× = +20 log₁₀(4) =
 The 12 dB improvement recovers image quality comparable to focused transmit scanning
 (typically SNR 30–35 dB) while maintaining the high frame rate of plane-wave imaging:
 
-```
+```text
 Frame rate = PRF / N_c = 10,000 Hz / 16 = 625 frames/s
 ```
 

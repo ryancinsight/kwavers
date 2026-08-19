@@ -816,7 +816,7 @@ $\Delta V = -V_0 \Delta P / K = -V_0 P_{\text{rad}} / K$. $\square$
 
 ### 15.11.1 CT Segmentation and Medium Construction
 
-```
+```text
 CT DICOM stack
      │
      ▼

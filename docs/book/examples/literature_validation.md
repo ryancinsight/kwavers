@@ -16,7 +16,7 @@ This validation example packages canonical acoustic benchmarks from the literatu
 
 ## Key Code Snippet
 
-```rust
+```rust,ignore
 pub struct ValidationResult {
     pub test_name: String,
     pub reference: String,

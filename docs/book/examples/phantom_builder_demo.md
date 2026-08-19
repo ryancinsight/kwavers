@@ -16,7 +16,7 @@ This example is a guided tour of the phantom-construction APIs used by optical a
 
 ## Key Code Snippet
 
-```rust
+```rust,ignore
 let dims = GridDimensions::new(40, 40, 40, 0.001, 0.001, 0.001);
 
 // Build phantom with arterial/venous vessels and hypoxic tumor

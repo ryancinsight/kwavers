@@ -19,7 +19,7 @@ This example validates the 2D wave equation Physics-Informed Neural Network (PIN
 
 ## Key Code Snippet
 
-```rust
+```rust,ignore
 // Create PINN for 2D wave equation
 let pinn = create_2d_wave_pinn()?;
 

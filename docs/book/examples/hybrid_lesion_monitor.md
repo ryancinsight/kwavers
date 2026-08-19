@@ -16,7 +16,7 @@ This example demonstrates the ADR-024 hybrid lesion-monitoring path. It combines
 
 ## Key Code Snippet
 
-```rust
+```rust,ignore
 let cfg = fd::FdMonitorConfig {
     ring_elements: RING_ELEMENTS,
     ring_diameter_m: RING_DIAMETER_M,

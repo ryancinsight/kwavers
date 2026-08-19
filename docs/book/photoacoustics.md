@@ -852,7 +852,7 @@ where $\mathcal{R}$ is a regularization functional (total variation, Tikhonov, o
 
 The photoacoustics pipeline in kwavers is organized as follows:
 
-```
+```text
 kwavers_simulation                                       # high-level PA pipeline
 ├── PhotoacousticSimulator                               # end-to-end p₀ = Γ μₐ F → field → recon
 └── modalities::photoacoustic

@@ -16,7 +16,7 @@ This example demonstrates heterogeneous power-law attenuation where both the abs
 
 ## Key Code Snippet
 
-```rust
+```rust,ignore
 let uniform = SpatiallyVaryingAbsorption::uniform(
     100, 100, 100, 0.75, // α₀ = 0.75 Np/m
     1.1,  // γ = 1.1 (typical soft tissue)

@@ -25,7 +25,7 @@ phased line aperture and compared against the analytical O'Neil pressure field.
 
 ## Key Code Snippet
 
-```rust
+```rust,ignore
 use kwavers_transducer::PhasedArrayTransducer;
 
 // Drive a 16-element phased array with analytical focus delays

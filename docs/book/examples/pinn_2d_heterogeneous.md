@@ -19,7 +19,7 @@ This example demonstrates Physics-Informed Neural Networks (PINN) for solving th
 
 ## Key Code Snippet
 
-```rust
+```rust,ignore
 // Create heterogeneous medium
 let medium = create_heterogeneous_medium()?;
 

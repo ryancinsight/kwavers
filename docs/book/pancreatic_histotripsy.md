@@ -83,7 +83,7 @@ envelope as described in the Mathematical Contract below.
 
 Focal spot sizes at 500 kHz (f# = 100/70 ≈ 1.43, c = 1540 m/s):
 
-```
+```text
 λ = 3.08 mm
 w_lateral  = 1.41 · λ · F#  ≈  6.2 mm FWHM
 w_axial    = 7   · λ · F#²  ≈  44  mm FWHM
@@ -131,13 +131,13 @@ The acoustic pressure field is computed by the paraxial Rayleigh-Sommerfeld
 model with 3-D attenuation. Let (x, y, z) be the AP, RL, and SI axes;
 x = 0 is the skin surface and x = x_focus is the PDAC centroid depth.
 
-```
+```text
 p(x, y, z) = P_source · G_lat(y, z) · G_ax(x) · exp(−∫₀ˣ α(x′,y,z) dx′)
 ```
 
 where the focal Gaussian envelopes are:
 
-```
+```text
 G_lat(y, z) = exp(−(r_lat² / (2 σ_lat²)))
 G_ax(x)     = exp(−((x − x_f)² / (2 σ_ax²)))
 r_lat²       = (y − y_f)² + (z − z_f)²
@@ -153,7 +153,7 @@ of the per-voxel attenuation (in Np/m, converted from dB/cm by
 The intrinsic threshold is tissue- and frequency-dependent
 (Vlaisavljevich 2015/2016, Maxwell 2013):
 
-```
+```text
 p_t(f, T) = p_{t,1MHz} + 1.4 MPa · log₁₀(f / 1 MHz) − 0.3 MPa · max(0, T − 20)
 P_cav(x)  = 0.5 · (1 + erf((|p(x)| − p_t) / (σ · √2)))
 ```
@@ -165,7 +165,7 @@ computed from the per-pulse heat deposition.
 
 Per-pulse heat deposition:
 
-```
+```text
 Q_pulse = 2 · α · G_shock · I_eff
 I_eff   = (P_source · η)² / (2 ρ c),    η = P_pp / P_pnp
 dT_pulse = Q_pulse · t_on / (ρ · c_p)
@@ -174,14 +174,14 @@ dT_pulse = Q_pulse · t_on / (ρ · c_p)
 Steady-state temperature rise from Pennes bioheat equation with a
 Gaussian focal kernel of radius w_f = 1.41 λ F# / 2.355:
 
-```
+```text
 ΔT_ss = Q_avg · w_f² / (4 κ + W_b ρ_b c_b w_f²)
 Q_avg  = Q_pulse · (t_on · PRF)
 ```
 
 Thermal dose CEM43 (Sapareto & Dewey 1984):
 
-```
+```text
 CEM43 = R^(43 − T) · t_treatment / 60,    R = 0.5 (T ≥ 43 °C), 0.25 (T < 43 °C)
 ```
 

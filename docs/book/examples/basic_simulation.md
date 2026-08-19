@@ -18,7 +18,7 @@ grid → medium → time.
 
 ## Key Code Snippet
 
-```rust
+```rust,ignore
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_core::time::Time;
@@ -35,7 +35,7 @@ println!("Memory estimate: {:.1} MB", grid.memory_estimate_mb(6));
 
 ## Expected Output
 
-```
+```text
 Grid created: 64x64x64 points
 Domain size: 64.0x64.0x64.0 mm
 CFL timestep: 1.92e-7 s

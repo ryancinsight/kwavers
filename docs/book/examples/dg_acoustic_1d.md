@@ -16,7 +16,7 @@ This diagnostic executable audits the native 1-D discontinuous Galerkin acoustic
 
 ## Key Code Snippet
 
-```rust
+```rust,ignore
 let diagnostic = run_native_acoustic_diagnostic()?;
 let series = run_embedded_gaussian_series()?;
 

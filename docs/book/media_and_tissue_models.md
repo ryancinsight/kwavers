@@ -90,7 +90,7 @@ These values are encoded directly in `kwavers_medium::properties::tissue` as
 compile-time constants of type `TissueProperties`. The canonical definitions are, for
 example:
 
-```rust
+```rust,ignore
 // kwavers/src/domain/medium/properties/tissue.rs
 pub const LIVER: TissueProperties = TissueProperties {
     sound_speed: SOUND_SPEED_LIVER,              // 1570 m/s
@@ -237,7 +237,7 @@ Typical values: water $y = 2$, soft tissue $y \approx 1.0$–$1.5$, bone $y \app
 
 The kwavers implementation is `kwavers_medium::absorption::power_law::PowerLawAbsorption`:
 
-```rust
+```rust,ignore
 // PowerLawAbsorption::absorption_at_frequency
 pub fn absorption_at_frequency(&self, frequency: f64) -> f64 {
     let f_mhz = frequency / 1e6;
@@ -373,7 +373,7 @@ the unit tests). Sound speed follows the Mast (2000) affine density relation
 $c = (\rho + 349)/0.893$, and impedance is $Z = \rho c$. At the water anchor (HU = 1000) this
 yields $\rho \approx 1011.9$ kg m⁻³ and $c \approx 1524$ m s⁻¹.
 
-```rust
+```rust,ignore
 use kwavers_core::constants::hounsfield::HounsfieldUnits;
 
 let rho = HounsfieldUnits::to_density(1300.0);     // cortical bone ≈ 1210 kg/m³
@@ -403,7 +403,7 @@ and lung-adjacent simulations. Schneider's 0.76 m s⁻¹ HU⁻¹ bone slope matc
 120-kVp bone-kernel measurement (0.75), and its HU=1500 speed (2640 m s⁻¹) sits inside Webb's
 measured 1996–3114 m s⁻¹ skull range.
 
-```rust
+```rust,ignore
 use kwavers_core::constants::hu_mapping::HuAcousticModel;
 
 let m = HuAcousticModel::default();              // Schneider 1996 + Aubry absorption
@@ -447,7 +447,7 @@ Voigt-modulus speed (a property the test suite asserts across $\phi$). The pure-
 ($\phi=0$) recovers $c_{\text{water}}$ and the pure-cortical limit ($\phi=1$) recovers
 $c_{\text{bone}}$ exactly.
 
-```rust
+```rust,ignore
 use kwavers_physics::acoustics::skull::HeterogeneousSkull;
 
 // ct: Array3<f64> of standard-HU voxels → density/sound_speed/attenuation grids
@@ -474,7 +474,7 @@ solver-ready `HeterogeneousMedium`: it maps **every** acoustic field — density
 absorption prefactor α₀, exponent $y$, and $B/A$ — per voxel from HU, and broadcasts the
 non-acoustic fields (thermal, optical, bubble, elastic, viscous) from a homogeneous background.
 
-```rust
+```rust,ignore
 use kwavers_medium::CtMediumBuilder;
 
 // ct: Array3<f64> of standard-HU voxels, grid: simulation Grid
@@ -604,7 +604,7 @@ Spatial heterogeneity is managed by `kwavers_medium::heterogeneous::Heterogeneou
 Properties are stored as `Array3<f64>` voxel grids and accessed through the
 `HeterogeneousAcousticProperties` trait:
 
-```rust
+```rust,ignore
 // kwavers/src/domain/medium/heterogeneous/traits/acoustic/properties.rs
 pub trait HeterogeneousAcousticProperties {
     fn sound_speed_map(&self) -> &Array3<f64>;
@@ -1247,7 +1247,7 @@ the plasticizer/PVC ratio:
 
 ### 4.11.5 Algorithm: Phantom validation
 
-```
+```text
 Algorithm 4.1 — Tissue-mimicking phantom acoustic validation
 Input:  Phantom sample, reference hydrophone, pulse-echo system
 Output: (c₀, ρ₀, α₀, y, B/A) with uncertainties
@@ -1282,7 +1282,7 @@ Output: (c₀, ρ₀, α₀, y, B/A) with uncertainties
 `kwavers_medium::homogeneous::HomogeneousMedium` is the canonical representation
 for spatially uniform media. Its internal layout is:
 
-```rust
+```rust,ignore
 pub struct HomogeneousMedium {
     // Scalar acoustic parameters (authoritative)
     density:          f64,
@@ -1306,7 +1306,7 @@ avoiding per-voxel dispatch at solver time.
 
 ### 4.12.2 Construction and validation
 
-```rust
+```rust,ignore
 // kwavers/src/domain/medium/homogeneous/implementation/mod.rs
 impl HomogeneousMedium {
     pub fn new(density: f64, sound_speed: f64, mu_a: f64, mu_s: f64, grid: &Grid) -> Self {
@@ -1324,7 +1324,7 @@ impl HomogeneousMedium {
 The method `set_acoustic_properties` validates all scalar inputs (finite, non-negative) before
 broadcasting to the cache arrays:
 
-```rust
+```rust,ignore
 pub fn set_acoustic_properties(
     &mut self, alpha: f64, y: f64, ba: f64,
 ) -> KwaversResult<()> {
@@ -1381,7 +1381,7 @@ ultrasound simulation targeting a 30 mm deep liver lesion through 10 mm of subcu
 
 **Step 1 — Medium construction.**
 
-```rust
+```rust,ignore
 use kwavers_medium::heterogeneous::{HeterogeneousFactory, TissueFactory};
 use kwavers_medium::properties::tissue::{FAT, LIVER};
 

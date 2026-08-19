@@ -16,7 +16,7 @@ This example demonstrates an end-to-end theranostic brain workflow: CT/phantom-d
 
 ## Key Code Snippet
 
-```rust
+```rust,ignore
 const DX: f64 = 3.0e-3; // m
 const NX: usize = 40; // 120 mm lateral
 const NY: usize = 24; // 72 mm elevation (true 3-D recon)

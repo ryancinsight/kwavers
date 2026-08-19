@@ -16,7 +16,7 @@ This example demonstrates adjoint-state full-wave inversion for transcranial ult
 
 ## Key Code Snippet
 
-```rust
+```rust,ignore
 const DX: f64 = 3.0e-3;
 /// Grid dimensions (2-D coronal slice embedded in 3-D; ny=2 satisfies FDTD
 /// staggered-stencil minimum while keeping the second y-plane acoustically

@@ -26,7 +26,7 @@ cargo run --example simd_wave_kernel
 
 ## Expected output (excerpt)
 
-```
+```text
 SIMD wave kernel demo (hermes-simd runtime dispatch)
 field size: 1024, dt: 1.0e-8 s, ρ₀: 1000 kg/m³
 backend: AVX2 (4×f64)
@@ -51,7 +51,7 @@ All SIMD correctness checks PASS
 
 ## Key API
 
-```rust
+```rust,ignore
 use hermes_simd::{axpy, dot, elementwise_add, scale, sum};
 
 // elementwise add: two pressure contributions

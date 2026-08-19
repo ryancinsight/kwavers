@@ -33,7 +33,7 @@ kwavers follows a three-tier validation hierarchy, in ascending order of inferen
 
 **Statement.** The Pearson correlation coefficient between vectors *A* and *B* is:
 
-```
+```text
 r(A, B) = cov(A, B) / (σ_A · σ_B)
          = Σᵢ (Aᵢ - μ_A)(Bᵢ - μ_B) / [√Σᵢ(Aᵢ - μ_A)² · √Σᵢ(Bᵢ - μ_B)²]
 ```
@@ -54,7 +54,7 @@ The Cauchy-Schwarz inequality states |⟨u, v⟩| ≤ ‖u‖ · ‖v‖ with eq
 
 **Consequence for validation.** Pearson r measures waveform shape agreement, not amplitude agreement. A simulation with correct spatial pressure pattern but 10% amplitude error gives r = 1.0. Therefore, kwavers parity scripts always report r together with the RMS amplitude ratio:
 
-```
+```text
 RMS ratio = √(Σ Aᵢ²) / √(Σ Bᵢ²)
 ```
 
@@ -74,13 +74,13 @@ driver-owned scenario thresholds that are recorded in the comparison report.
 
 **Statement.** The Peak Signal-to-Noise Ratio between simulation output *A* and reference *B* is:
 
-```
+```text
 PSNR(A, B) = 20 · log₁₀( MAX_B / RMSE(A, B) )
 ```
 
 where RMSE(A, B) = √(‖A – B‖² / n) and MAX_B = max(|Bᵢ|). PSNR is monotone-decreasing in RMSE and monotone-increasing in MAX_B. Under a Gaussian noise assumption, PSNR relates to signal dynamic range as:
 
-```
+```text
 PSNR = SNR_dB + 20 · log₁₀( MAX_B / σ_signal )
 ```
 
@@ -88,7 +88,7 @@ where SNR_dB is the traditional signal-to-noise ratio in decibels.
 
 **Proof (relationship to dynamic range).** Let B = s + n where s is the signal and n ~ N(0, σ_n²) is additive Gaussian noise. Then RMSE(A, B) ≈ σ_n (for A ≈ s). By definition:
 
-```
+```text
 PSNR = 20 log₁₀(MAX_s / σ_n)
      = 20 log₁₀(MAX_s / σ_s) + 20 log₁₀(σ_s / σ_n)
      = 20 log₁₀(MAX_s / σ_s) + SNR_dB
@@ -112,13 +112,13 @@ The first term is a property of the signal's dynamic range (crest factor); the s
 
 **Statement.** For the linear acoustic wave equation:
 
-```
+```text
 ∂²p/∂t² = c² ∇²p
 ```
 
 discretized with the pseudospectral method (spectral differentiation in space, second-order leapfrog in time), the spatial error is O(Δx^N) for any order N (spectral convergence — exponential in the number of grid points for smooth solutions), and the temporal error is O(Δt²). The scheme is stable when:
 
-```
+```text
 c · Δt / Δx ≤ C_max = π / (d · k_max · Δx)
 ```
 
@@ -126,13 +126,13 @@ where d is the spatial dimension and k_max = π/Δx is the Nyquist wavenumber.
 
 **Proof sketch (temporal convergence).** The leapfrog scheme advances the field as:
 
-```
+```text
 p^{n+1} = 2p^n - p^{n-1} + (c·Δt)² · L_h[p^n]
 ```
 
 where L_h is the spectral Laplacian. Taylor expanding the exact solution p(t + Δt) and p(t - Δt) and summing gives:
 
-```
+```text
 p(t+Δt) + p(t-Δt) = 2p(t) + Δt² · ∂²p/∂t² + O(Δt⁴)
 ```
 
@@ -142,7 +142,7 @@ The O(Δt⁴)/Δt² = O(Δt²) local truncation error per step, accumulated over
 
 **CFL condition.** The von Neumann stability analysis of the leapfrog-spectral scheme requires that the spectral radius of the time-stepping operator is ≤ 1. For the spectral Laplacian with maximum eigenvalue –k_max² = –(π/Δx)²:
 
-```
+```text
 (c · Δt · k_max)² ≤ d
 ⟹ c · Δt / Δx ≤ √d · (π / (π)) = 1/√d   (for k_max = π/Δx)
 ```
@@ -151,7 +151,7 @@ More precisely, kwavers uses CFL = 0.3 / d^(1/2) by default, providing a 70% saf
 
 **Convergence validation procedure.** For each new solver component, kwavers runs a convergence test that doubles N from N_min to N_max and verifies that the error halves (second-order) or decreases exponentially (spectral):
 
-```rust
+```rust,ignore
 for n in [32, 64, 128, 256] {
     let error = run_pstd_vs_analytical(n, dt_scaled(n));
     // Verify: error(2n) / error(n) ≈ (1/2)^2 = 0.25 for O(Δt²)
@@ -168,13 +168,13 @@ for n in [32, 64, 128, 256] {
 
 **Statement.** For a finite-difference scheme of order 2m applied to the spatial Laplacian, the numerical wavenumber k_num satisfies:
 
-```
+```text
 k_num = (1/Δx) · arcsin(k · Δx · C_FD(k, m))
 ```
 
 where C_FD is a correction factor that deviates from 1 as k → k_Nyquist. The phase velocity error is:
 
-```
+```text
 ε_v(k) = (c_num(k) - c) / c = (k_num/k - 1)
 ```
 
@@ -182,7 +182,7 @@ For the pseudospectral method, k_num = k exactly for |k| ≤ π/Δx, so ε_v = 0
 
 **Proof (FD dispersion).** Insert the plane-wave ansatz A·exp(i(k_num·x – ωt)) into the FD stencil:
 
-```
+```text
 [2cos(k_num·Δx) – 2] / Δx²  ≈  –k_num²  (for k_num·Δx ≪ 1)
 ```
 
@@ -190,7 +190,7 @@ The FD approximation of –k² with error O((kΔx)^{2m}) gives k_num = k – k^{
 
 **Proof (PSTD zero dispersion).** The spectral derivative is implemented as multiplication by ik in Fourier space:
 
-```
+```text
 ∂p/∂x  →  ℱ⁻¹[ik · ℱ[p]]
 ```
 
@@ -311,7 +311,7 @@ Test organization:
 
 All assertions use value-semantic checks:
 
-```rust
+```rust,ignore
 // Correct: inspect computed value
 assert!((r - 0.9999).abs() < 1e-3, "Pearson r = {r}");
 
@@ -520,7 +520,7 @@ Test data is derived from one of three authoritative sources:
 
 **Analytical solution.** At time t after the wavefront passes position x:
 
-```
+```text
 p(x, t) = A · sin(2πf(t – x/c))   for t > x/c
 p(x, t) = 0                         for t ≤ x/c
 ```
@@ -535,7 +535,7 @@ p(x, t) = 0                         for t ≤ x/c
 
 **Analytical solution.** On the acoustic axis, the focal-zone pressure amplitude is given by the O'Neil formula (O'Neil 1949):
 
-```
+```text
 |p(z)| = ρ₀ c u₀ · | ∫₀^a J₀(ka·r/z) · exp(ikz√(1+(r/z)²)) · r dr |
 ```
 
@@ -708,7 +708,7 @@ Tests that approach the timeout threshold trigger an optimization cycle on the r
 
 Parity figures are uploaded as CI artifacts for visual inspection on each run. The figure naming convention is:
 
-```
+```text
 {scenario}_{pearson_r:.4f}_{psnr:.1f}dB_{rms_ratio:.3f}.png
 ```
 

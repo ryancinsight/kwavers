@@ -58,7 +58,7 @@ controller of §13.2.2.
 A PCD-based controller adjusts the therapeutic ultrasound pulse amplitude to maintain
 stable cavitation while avoiding inertial cavitation:
 
-```
+```text
 Algorithm 13.1 (PCD Feedback Control):
 Input:  S(f): PCD spectrum; P_n: current pressure amplitude; thresholds SC_min, IC_min
 Output: P_{n+1}
@@ -80,7 +80,7 @@ Output: P_{n+1}
 **Theorem 13.1 (MR Thermometry — PRFS Method).** The proton resonance frequency
 (PRF) in water-containing tissues shifts linearly with temperature:
 
-```
+```text
 f_MR(T) = f_0(1 + α_PRFS T)    α_PRFS ≈ −0.0102 ppm/°C                 (13.1)
 ```
 
@@ -93,7 +93,7 @@ for aqueous tissue (De Poorter 1995). The frequency shift is therefore
 
 Phase difference between reference and post-heating MR images gives ΔT:
 
-```
+```text
 ΔT(r) = Δφ(r) / (2π f_0 α_PRFS TE)                                      (13.2)
 ```
 
@@ -105,7 +105,7 @@ MR thermometry precision: ~1–2 °C at 3 T with TE = 15 ms.
 **Theorem 13.2 (Closed-Loop Thermal Dose Monotonicity).** Let D_k be the cumulative
 CEM43 dose at step k and u_k ≥ 0 the acoustic power.  Define the CEM43 dose rate:
 
-```
+```text
 φ(T) = R(T)^(43 − T)   where R(T) = 0.50 (T ≥ 43 °C), R(T) = 0.25 (T < 43 °C)
 ```
 
@@ -116,7 +116,7 @@ Python as `kw.cem43_cumulative`): above 43 °C the exponent `43 − T < 0` makes
 
 The dose update
 
-```
+```text
 D_{k+1} = D_k + φ(T_k) Δt                                                (13.3)
 ```
 
@@ -143,7 +143,7 @@ evolution `{D_k}` and selects an exposure schedule that keeps the trajectory bel
 
 **Algorithm 13.2 (Image-Guided Therapy Loop).**
 
-```
+```text
 Initialize: acoustic field model; tissue state estimate x̂_0; dose D_0 = 0
 
 Loop (k = 0, 1, 2, ...):
@@ -166,7 +166,7 @@ Loop (k = 0, 1, 2, ...):
 
 State-estimator uncertainty must be propagated explicitly:
 
-```
+```text
 σ_D² = σ_x² (∂φ/∂x)² Δt²    (linearized uncertainty propagation)          (13.4)
 ```
 
@@ -189,7 +189,7 @@ Oscillating microbubbles increase local permeability via:
 **Theorem 13.3 (Drug Uptake Enhancement).** For stable cavitation at MI ≈ 0.3, the
 fractional drug uptake enhancement ε relative to passive diffusion scales as
 
-```
+```text
 ε ∝ μ_l R₀ f₀ p_A / (ρ_l c₀ δ)                                          (13.5)
 ```
 

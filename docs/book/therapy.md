@@ -20,7 +20,7 @@ and the acoustic propagation solvers (Chapters 2–3).
 propagating in a medium with absorption coefficient α [Np m⁻¹], the volumetric acoustic
 power deposition (heat source density) is
 
-```
+```text
 Q_ac(r) = 2α I(r) = α P²(r) / (ρ₀ c₀)    [W m⁻³]                       (12.1)
 ```
 
@@ -44,7 +44,7 @@ focused beams the full vector form Q = −∇·⟨p u⟩ must be used.
 For a HIFU focused bowl of aperture 2a, focal length R_f, face pressure P₀, surface
 intensity I_face = P₀²/(2ρ₀c₀):
 
-```
+```text
 I_focal = G² I_face    G = k a²/(2R_f)    (Ch. 6 §6.4, Focusing Gain)                   (12.2)
 ```
 
@@ -65,7 +65,7 @@ For a = 30 mm, f = 1 MHz, R_f = 60 mm: G ≈ 31, I_focal/I_face ≈ 961.
 **Theorem 12.2 (Pennes Bioheat Equation).** The temperature T(r, t) in perfused tissue
 satisfies
 
-```
+```text
 ρ_t c_p ∂T/∂t = ∇·(κ ∇T) + Q_ac − ω_b ρ_b c_b (T − T_b) + Q_met         (12.3)
 ```
 
@@ -98,13 +98,13 @@ heat exchanger at temperature T_b. □
 
 Neglecting perfusion and conduction (short exposures, τ < 1 s), Eq. (12.3) reduces to:
 
-```
+```text
 ∂T/∂t ≈ Q_ac / (ρ_t c_p)  →  ΔT = 2αI τ / (ρ_t c_p)                    (12.4)
 ```
 
 At HIFU focal intensities (I = 5000 W/cm² = 5×10⁷ W/m², α = 5 Np/m, τ = 1 s):
 
-```
+```text
 ΔT = 2αIτ / (ρ_t c_p) = 2 × 5 × 5×10⁷ × 1 / (1060 × 3600) ≈ 131 °C
 ```
 
@@ -127,7 +127,7 @@ numerator; the result has units of °C, not °C/s).  Tissue reaches 60 °C
 **Definition 12.1 (Cumulative Equivalent Minutes at 43 °C, CEM43).** The thermal dose
 accumulated over a treatment at spatially varying temperature T(t) is
 
-```
+```text
 CEM43 = ∫₀^{t_total} R^{43−T(t)} dt                                       (12.5)
 ```
 
@@ -136,7 +136,7 @@ where R = 0.5 for T ≥ 43 °C and R = 0.25 for T < 43 °C (Sapareto & Dewey 198
 **Theorem 12.3 (CEM43 Ablation Threshold).** Irreversible tissue damage (coagulative
 necrosis) occurs when
 
-```
+```text
 CEM43 ≥ 240 min    (muscle and most soft tissue)                           (12.6)
 ```
 
@@ -159,7 +159,7 @@ for tissues with activation energy E_a ≈ 680 kJ/mol (Dewey 2009). □
 
 For a numerical simulation with time step Δt and temperature T^n at step n:
 
-```
+```text
 CEM43^{N} = Σ_{n=0}^{N-1} R^{43−T^n} · Δt                               (12.7)
 ```
 
@@ -182,7 +182,7 @@ temperature field).
 **Theorem 12.4 (Acoustic Radiation Force).** The time-averaged body force per unit volume
 exerted by an acoustic field on an absorbing medium is
 
-```
+```text
 F_rad = 2α I / c₀    [N m⁻³]                                              (12.8)
 ```
 
@@ -196,7 +196,7 @@ proportional to energy deposition × 1/c₀). □
 
 For a push pulse of duration τ_push [s] at focal intensity I_focus [W m⁻²]:
 
-```
+```text
 F_push = 2α I_focus / c₀ × τ_push    [N m⁻³ · s = Pa]                   (12.9)
 ```
 
@@ -216,7 +216,7 @@ delivery of otherwise membrane-impermeant molecules.
 
 **Theorem 12.5 (Permeabilization Threshold).** Inertial cavitation (IC) onset requires
 
-```
+```text
 MI ≡ P_neg / √f₀ ≥ MI_IC ≈ 1.0    (P_neg in MPa, f₀ in MHz)            (12.10)
 ```
 
@@ -225,7 +225,7 @@ P_neg is expressed in MPa and f₀ in MHz (so MI has nominal units MPa·MHz⁻�
 
 Stable cavitation (SC, non-inertial), sufficient for gentle sonoporation, occurs at
 
-```
+```text
 MI_SC ≈ 0.1 – 0.5    (bubble-type and size dependent)                     (12.11)
 ```
 
@@ -267,7 +267,7 @@ mechanisms are:
 peak pressure P_s transmitted into a stone of impedance Z_s ≫ Z_fluid generates a
 reflected tensile wave at the distal stone–fluid interface of amplitude
 
-```
+```text
 p_tensile = −(Z_s − Z_f)/(Z_s + Z_f) × P_s × T_12                       (12.12)
 ```
 
@@ -309,7 +309,7 @@ models in `kwavers_physics::acoustics::therapy::sonogenetics`).
 
 **Algorithm 12.1 (Therapy Validation Loop).**
 
-```
+```text
 Input:  transducer geometry, medium properties, exposure parameters
 Output: thermal dose map CEM43(r), peak pressure field, MI/TI
 

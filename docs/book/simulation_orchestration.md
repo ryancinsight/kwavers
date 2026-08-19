@@ -33,7 +33,7 @@ A *plugin* is the minimal abstraction over one physics domain's per-step
 update. The contract lives in `kwavers_solver::plugin::Plugin` and reduces to a
 few pieces of metadata plus an update method:
 
-```rust
+```rust,ignore
 pub trait Plugin: Debug + Send + Sync {
     fn metadata(&self) -> &PluginMetadata;
     fn required_fields(&self) -> Vec<UnifiedFieldType>;   // reads
@@ -102,7 +102,7 @@ a string-keyed parameter bag for global state. Two key properties:
 
 The catalog is one function:
 
-```rust
+```rust,ignore
 PhysicsCatalog::build(config, grid, medium, dt) -> KwaversResult<PluginManager>
 ```
 
@@ -189,7 +189,7 @@ The forward simulation needed to develop a PAM reconstruction algorithm
 must propagate broadband emissions through the skull and capture them at
 a virtual aperture. With the catalog, that simulation is one config:
 
-```rust
+```rust,ignore
 use kwavers_solver::plugin::{PhysicsCatalog, PluginManager};
 use kwavers_physics::factory::{
     PhysicsConfig, PhysicsModelConfig,

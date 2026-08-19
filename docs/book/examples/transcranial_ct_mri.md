@@ -16,7 +16,7 @@ This example performs masked full-wave inversion on a real CT-derived head model
 
 ## Key Code Snippet
 
-```rust
+```rust,ignore
 const GRID: usize = 40; // CT head slice resampled to GRID×GRID
 const PAD: usize = 8; // water-bath border (CPML-absorbed); sources sit here
 const N_SRC: usize = 16; // ring transmit/receive elements (coverage: N·(N−1) data)

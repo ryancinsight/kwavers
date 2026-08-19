@@ -16,7 +16,7 @@ This example solves the 2-D acoustic wave equation with a physics-informed neura
 
 ## Key Code Snippet
 
-```rust
+```rust,ignore
 fn analytical_solution_2d(x: f64, y: f64, t: f64, wave_speed: f64) -> f64 {
     let k = std::f64::consts::PI * 2.0_f64.sqrt();
     (x * std::f64::consts::PI).sin() * (y * std::f64::consts::PI).sin() * (k * wave_speed * t).cos()

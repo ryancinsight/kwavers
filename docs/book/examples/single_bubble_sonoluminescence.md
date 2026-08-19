@@ -16,7 +16,7 @@ This example models a single collapsing bubble and compares bremsstrahlung and C
 
 ## Key Code Snippet
 
-```rust
+```rust,ignore
 let bubble_params = BubbleParameters {
     r0: 10e-6,                      // 10 μm initial radius
     t0: 300.0,                      // 300 K ambient temperature

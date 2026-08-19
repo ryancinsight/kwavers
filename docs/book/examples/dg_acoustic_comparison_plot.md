@@ -28,7 +28,7 @@ This example generates comparison plots for different acoustic solvers on a comm
 
 ## Key Code Snippet
 
-```rust
+```rust,ignore
 let series = run_embedded_gaussian_series()?;
 let uniform = uniform_resampling(&series)?;
 let out_dir = PathBuf::from("target/dg_acoustic_comparison");

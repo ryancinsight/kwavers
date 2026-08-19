@@ -16,7 +16,7 @@ This example shows a full Doppler processing path for vascular imaging. It start
 
 ## Key Code Snippet
 
-```rust
+```rust,ignore
 let doppler_config = AutocorrelationConfig::vascular();
 
 println!(

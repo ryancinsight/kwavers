@@ -19,7 +19,7 @@ simple 2nd-order finite difference stencil, tracking peak energy over 10 steps.
 
 ## Key Code Snippet
 
-```rust
+```rust,ignore
 use kwavers_core::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
 use kwavers_grid::Grid;
 use leto::Array3;
@@ -39,7 +39,7 @@ let dt = 0.3 * grid.dx / SOUND_SPEED_WATER; // ≈ 200 ns
 
 ## Expected Output
 
-```
+```text
 Simulation Parameters:
   Grid: 32x32x32 points
   Spacing: 1.0 mm

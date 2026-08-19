@@ -155,7 +155,7 @@ becomes $r\sqrt{3} \leq 1$.  $\square$
 **kwavers implementation.**  The CFL constant is set to $1/\sqrt{3}$ and a
 safety factor of 0.95 is applied:
 
-```rust
+```rust,ignore
 // kwavers_solver::forward::fdtd::config
 pub const CFL_3D: f64 = 0.577_350_269_189_625_8;  // 1/√3, 16 significant figures
 pub const CFL_SAFETY: f64 = 0.95;
@@ -513,7 +513,7 @@ used by both FDTD and PSTD solvers.
 
 kwavers stores the FDTD state in `GenericWaveFields<Array3<f64>>`:
 
-```rust
+```rust,ignore
 // kwavers_solver::forward::fdtd
 pub struct GenericFdtdSolver<T> {
     pub config: FdtdConfig,
@@ -541,7 +541,7 @@ Rayon parallelism.  No `Vec` allocations occur inside the time loop.
 PSTD stores both real and complex fields, roughly doubling the memory footprint
 of FDTD:
 
-```rust
+```rust,ignore
 // kwavers_solver::forward::pstd::implementation::core::orchestrator
 pub struct PSTDSolver {
     pub p:    Array3<f64>,    // pressure (real, physical space)

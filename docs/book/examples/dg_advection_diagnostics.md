@@ -27,7 +27,7 @@ This example provides diagnostic metrics for Discontinuous Galerkin (DG) methods
 
 ## Key Code Snippet
 
-```rust
+```rust,ignore
 // Periodic advection test
 let mass = compute_mass_conservation(&field, &analytical_solution);
 let phase = compute_phase_accuracy(&field, &analytical_solution);

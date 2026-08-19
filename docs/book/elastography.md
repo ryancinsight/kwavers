@@ -480,7 +480,7 @@ comparing SWE-derived $E$ to literature values.
 
 ### 11.5.4 Algorithm 11.1 — Strain Elastography Pipeline
 
-```
+```text
 Algorithm 11.1  Strain Elastography
 
 INPUT:  RF frames r_pre[z,t], r_post[z,t]; sound speed c_P; window L; gradient neighbourhood l
@@ -602,7 +602,7 @@ frequency content of the push pulse.
 
 ### 11.6.5 Algorithm 11.2 — Shear-Wave Speed Mapping
 
-```
+```text
 Algorithm 11.2  Shear-Wave Elastography (SWE) Inversion
 
 INPUT:  Tissue velocity volume v_z[x, y, z, t] from ultrafast tracking;
@@ -733,7 +733,7 @@ both the storage modulus $\mu'$ (stiffness) and the loss modulus $\mu''$
 
 ### 11.7.3 Algorithm 11.3 — Helmholtz Inversion (MRE)
 
-```
+```text
 Algorithm 11.3  Local Helmholtz Inversion for MRE
 
 INPUT:  Complex displacement field U[x,y,z,c] (3 components c∈{x,y,z});
@@ -958,7 +958,7 @@ stiffens tissue by a factor of $2$–$5$.
 
 ### 11.9.3 Algorithm 11.4 — Acousto-Elastic Pre-Stress Estimation
 
-```
+```text
 Algorithm 11.4  Pre-Stress Estimation from Shear-Wave Speed Variation
 
 INPUT:  Shear-wave speed sequences c_S[x, y, z, t_cardiac] over a cardiac cycle;
@@ -1141,7 +1141,7 @@ and must not be down-classified based on stiffness alone.
 
 ### 11.11.5 Algorithm 11.5 — Automated Tissue Classification
 
-```
+```text
 Algorithm 11.5  SWE-Based Tissue Classification
 
 INPUT:  Shear modulus map μ[x,y,z]; organ label (liver | prostate | thyroid | breast);
@@ -1348,7 +1348,7 @@ widens with sample spread and confidence level.
 
 ### 11.14.1 Module Topology
 
-```
+```text
 kwavers_solver::inverse::elastography::linear_methods
 └── ShearWaveInversion          — shear-speed inversion; methods:
     ├── time_of_flight_inversion()            (§11.6.2; Bercoff 2004)
@@ -1399,7 +1399,7 @@ Theory only — covered in this chapter but NOT yet implemented as kwavers kerne
 
 ### 11.14.2 Data Flow
 
-```
+```text
 ARFI/external vibrator excitation
          │
          ▼
@@ -1422,7 +1422,7 @@ Tissue classification  ──►  stage, confidence, uncertainty map
 
 **Algorithm 11.6 — Elastography Validation Against Analytical Phantoms**
 
-```
+```text
 Algorithm 11.6  Elastography Validation
 
 INPUT:  Phantom geometry; known μ_true[x,z]; noise level σ_noise

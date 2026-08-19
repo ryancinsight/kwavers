@@ -387,7 +387,7 @@ mechanical repositioning.
 
 ## 23.10 Simulation workflow
 
-```rust
+```rust,ignore
 use kwavers_solver::plugin::{PhysicsCatalog, PluginManager};
 use kwavers_physics::factory::{
     PhysicsConfig, PhysicsModelConfig,

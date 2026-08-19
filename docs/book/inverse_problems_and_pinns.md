@@ -404,7 +404,7 @@ drivers without re-running the inversion.
 
 The inverse solver hierarchy in kwavers follows a strict dependency inversion architecture:
 
-```
+```text
 kwavers_solver::inverse
 ├── fwi/
 │   ├── time_domain/

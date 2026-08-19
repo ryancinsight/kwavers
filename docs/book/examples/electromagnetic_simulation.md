@@ -16,7 +16,7 @@ This example demonstrates electromagnetic wave simulation using Physics-Informed
 
 ## Key Code Snippet
 
-```rust
+```rust,ignore
 use kwavers_solver::inverse::pinn::ml::electromagnetic::{EMProblemType, ElectromagneticDomain};
 use kwavers_solver::inverse::pinn::ml::universal_solver::UniversalSolverGeometry2D;
 use kwavers_solver::inverse::pinn::ml::{PinnEMSource, UniversalPINNSolver};

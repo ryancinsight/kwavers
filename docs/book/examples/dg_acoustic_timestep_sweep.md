@@ -34,7 +34,7 @@ This example performs a timestep refinement sweep for Discontinuous Galerkin (DG
 
 ## Key Code Snippet
 
-```rust
+```rust,ignore
 const STEP_COUNTS: [usize; 3] = [20, 40, 80];
 
 let rows = run_timestep_sweep()?;

@@ -232,7 +232,7 @@ at 1 MHz, giving $\text{CF}_\phi \approx -4.3\;\text{dB}$.
 The forward simulation propagates broadband cavitation emissions through a
 skull-heterogeneous medium and captures them at a hemispherical receive array.
 
-```rust
+```rust,ignore
 use kwavers_solver::plugin::{PhysicsCatalog, PluginManager};
 use kwavers_physics::factory::{
     PhysicsConfig, PhysicsModelConfig,

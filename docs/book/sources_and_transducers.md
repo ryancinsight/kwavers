@@ -43,7 +43,7 @@ chapter for the full beam-pattern analysis.
 | `N_sub` | BLI stencil half-width (grid cells) | – |
 
 The Fourier convention used throughout is
-```
+```text
 p̂(k, ω) = ∫∫ p(x, t) e^{-i(kx - ωt)} dx dt,
 ```
 consistent with k-Wave MATLAB and kwavers' internal PSTD implementation.
@@ -57,7 +57,7 @@ consistent with k-Wave MATLAB and kwavers' internal PSTD implementation.
 For a linear piezoelectric medium polarized along the 3-axis (thickness direction), the
 mechanical and electrical fields satisfy the coupled constitutive equations (IEEE Std 176):
 
-```
+```text
 S_3 = s_33^E · T_3 + d_33 · E_3         (strain from stress and field)
 D_3 = d_33 · T_3 + ε_33^T · E_3         (electric displacement)
 ```
@@ -69,7 +69,7 @@ and `ε_33^T` is the permittivity at constant stress.
 The resonance frequency of a thickness-mode resonator of thickness `t` and longitudinal
 wave speed `c_piezo = 1 / sqrt(ρ s_33^D)` is
 
-```
+```text
 f_r = c_piezo / (2t)
 ```
 
@@ -78,13 +78,13 @@ f_r = c_piezo / (2t)
 **Step 1 — Electromechanical wave equation.**
 For a piezoelectric slab with cross-sectional area `A` and thickness `t`, let `u(x,t)` be
 the particle displacement along the 3-axis. The equation of motion is
-```
+```text
 ρ ∂²u/∂t² = ∂T_3/∂x.
 ```
 Using the constitutive relation `T_3 = c_33^D S_3 - h_33 D_3` where `c_33^D = 1/s_33^D`
 is the stiffened elastic constant and `h_33 = d_33 / (s_33^D ε_33^S)` is the piezoelectric
 constant at constant strain, the wave equation becomes
-```
+```text
 ρ ∂²u/∂t² = c_33^D ∂²u/∂x²,
 ```
 yielding a wave speed `c_piezo = sqrt(c_33^D / ρ)`.
@@ -93,11 +93,11 @@ yielding a wave speed `c_piezo = sqrt(c_33^D / ρ)`.
 For a free slab (zero stress at both faces `x = 0` and `x = t`) the allowed spatial modes
 satisfy `T_3(0) = T_3(t) = 0`. The normal mode condition requires the thickness to equal
 half integer multiples of the wavelength:
-```
+```text
 t = n λ_piezo / 2,   n = 1, 2, 3, ...
 ```
 The fundamental resonance (`n = 1`) gives
-```
+```text
 λ_piezo = 2t  ⟹  f_r = c_piezo / λ_piezo = c_piezo / (2t).       □
 ```
 
@@ -149,7 +149,7 @@ in `kwavers_source::config`).
 For a circular piston of radius `a` vibrating with uniform normal velocity `U_0` at angular
 frequency `ω`, the far-field acoustic pressure directivity function is
 
-```
+```text
 H(θ) = 2 J_1(ka sinθ) / (ka sinθ)
 ```
 
@@ -166,30 +166,30 @@ far-field observation point is at position `(R, θ, φ)` with `R ≫ a`.
 **Step 1 — Rayleigh integral.**
 The far-field pressure contribution from each surface element in the Fraunhofer
 (far-field) approximation is
-```
+```text
 dp(R,θ) = -i ρ ω U_0 / (2π) · e^{ikR} / R · e^{-ik r'sinθ cos(φ'-φ)} r' dr' dφ'.
 ```
 
 **Step 2 — Azimuthal integration.**
 Integrating over `φ'` from 0 to `2π`:
-```
+```text
 ∫₀^{2π} e^{-ik r' sinθ cos(φ'-φ)} dφ' = 2π J_0(k r' sinθ).
 ```
 
 **Step 3 — Radial integration.**
 The total far-field pressure is
-```
+```text
 p(R,θ) = -i ρ ω U_0 e^{ikR} / R · ∫₀^a J_0(k r' sinθ) r' dr'.
 ```
 Using the identity `∫₀^a J_0(α r') r' dr' = a J_1(α a) / α` with `α = k sinθ`:
-```
+```text
 p(R,θ) = -i ρ ω U_0 e^{ikR} / R · a J_1(ka sinθ) / (k sinθ).
 ```
 
 **Step 4 — Normalization.**
 The on-axis value (`θ = 0`) gives `H(0) = 1` by the limit `J_1(x)/x → 1/2` as `x → 0`.
 Normalizing:
-```
+```text
 H(θ) = 2 J_1(ka sinθ) / (ka sinθ).       □
 ```
 
@@ -197,7 +197,7 @@ H(θ) = 2 J_1(ka sinθ) / (ka sinθ).       □
 
 Along the axis the exact (all-distance) on-axis pressure of a baffled circular
 piston driven at face velocity `U_0` is (O'Neil 1949)
-```
+```text
 p(z) = 2 ρ c U_0 · sin[(k/2)(√(z² + a²) − z)],
 ```
 which oscillates between `0` and `2 ρ c U_0` in the near field and rolls off as
@@ -216,7 +216,7 @@ which oscillates between `0` and `2 ρ c U_0` in the near field and rolls off as
 Capacitive micromachined ultrasound transducers (CMUT) have a square or hexagonal membrane
 geometry rather than a circular piston. The directivity function for a rectangular element
 of half-widths `a_x` and `a_y` is the separable product
-```
+```text
 H(θ_x, θ_y) = sinc(k a_x sinθ_x / π) · sinc(k a_y sinθ_y / π),
 ```
 where `sinc(x) = sin(πx)/(πx)`. CMUT elements may also exhibit strong electrostatic pull-in
@@ -240,13 +240,13 @@ For a spherical bowl transducer of aperture radius `a`, radius of curvature (foc
 `F`, and surface velocity amplitude `U_0`, the on-axis pressure at axial distance `r` from
 the transducer vertex (so `r = F` is the geometric focus) near the focal region (`r ≈ F`) is
 
-```
+```text
 P(r) ≈ P_peak · |sin(k (F - r) / 2)| / |k (F - r) / 2|,   r near F
 ```
 
 where the peak focal pressure is
 
-```
+```text
 P_peak = ρ c U_0 · G,   G = π a² / (λ F)
 ```
 
@@ -258,7 +258,7 @@ the pressure converges to `P_peak`.
 **Step 1 — O'Neil integral.**
 For a spherical bowl of half-angle `α = arcsin(a/F)`, the exact on-axis pressure (O'Neil,
 1949) is
-```
+```text
 P(r) = ρ c U_0 · (e^{ikr} - e^{ikR_max}),
 ```
 where `R_max = sqrt(r² + a² - 2ra cosα) + F(1 - cosα)` is the path length from the bowl
@@ -268,17 +268,17 @@ cap.
 **Step 2 — Paraxial approximation.**
 Near the focus, write `r = F - ξ` with `|ξ| ≪ F`. The path length from the bowl rim
 expands to `R_max ≈ F + ξ/2 + a²/(2F) + O(ξ²/F)`. Substituting into the O'Neil integral:
-```
+```text
 P(F-ξ) ≈ ρ c U_0 · |1 - e^{ikξ}| = 2 ρ c U_0 |sin(kξ/2)|.
 ```
 Dividing by the focal maximum `2 ρ c U_0` and expressing in terms of defocus `ξ = F - r`:
-```
+```text
 P(r) / P_peak ≈ |sin(k(F-r)/2)| / |k(F-r)/2|.   □
 ```
 
 **Step 3 — Focusing gain.**
 The on-axis peak pressure relative to a planar source of the same surface area scales as
-```
+```text
 G = π a² / (λ F) = π / (4 f_#² λ / a)
 ```
 where `f_# = F / (2a)` is the f-number. High f-numbers give weak focusing; low f-numbers
@@ -286,7 +286,7 @@ give tight but narrow focal zones.
 
 ### Focal Zone Length and Width
 
-```
+```text
 Δz (axial -6 dB) ≈ 7.08 λ f_#²
 Δr (lateral -6 dB) ≈ 1.02 λ f_#
 ```
@@ -309,7 +309,7 @@ For a phased array with element positions `{r_i}`, focus position `r_f`, and hom
 medium with speed `c`, the transmit delay for element `i` that causes all elements to
 arrive simultaneously at `r_f` is
 
-```
+```text
 τ_i = (|r_i - r_f| - min_j |r_j - r_f|) / c,   i = 1, ..., N
 ```
 
@@ -320,7 +320,7 @@ All delays are non-negative with `min_i τ_i = 0`.
 **Step 1 — Equal-time condition.**
 Let element `i` emit at absolute time `t_i`. The wavefront from element `i` arrives at
 `r_f` at time
-```
+```text
 t_arrival,i = t_i + |r_i - r_f| / c.
 ```
 Simultaneous arrival requires `t_arrival,i = T` for all `i` and some global arrival
@@ -328,7 +328,7 @@ time `T`. Therefore `t_i = T - |r_i - r_f| / c`.
 
 **Step 2 — Causality and offset.**
 To ensure all elements emit after time `t = 0`, subtract the minimum emission time:
-```
+```text
 τ_i = t_i - min_j t_j = (T - |r_i - r_f|/c) - (T - max_j |r_j - r_f|/c)
     = (max_j |r_j - r_f| - |r_i - r_f|) / c.
 ```
@@ -336,7 +336,7 @@ To ensure all elements emit after time `t = 0`, subtract the minimum emission ti
 **Step 3 — Minimum path formulation.**
 The element with the minimum path `|r_m - r_f| = min_j |r_j - r_f|` emits last (delay 0)
 because its wavefront requires the least travel time. Rewriting:
-```
+```text
 τ_i = (|r_i - r_f| - min_j |r_j - r_f|) / c.       □
 ```
 
@@ -344,7 +344,7 @@ because its wavefront requires the least travel time. Rewriting:
 
 For a linear array with element positions `x_i` and steering direction `θ` (angle from
 array normal), the far-field approximation gives
-```
+```text
 τ_i = x_i sinθ / c   (relative delay, may be negative)
 ```
 normalized to make the minimum delay zero by subtracting `min_i(x_i sinθ) / c`.
@@ -400,13 +400,13 @@ reduces sidelobes at the cost of increased main lobe width.
 Let `f(x)` be a band-limited signal with maximum spatial frequency `k_max = π/Δx` sampled
 on a uniform grid with spacing `Δx`. The Whittaker-Shannon interpolation formula recovers
 `f` exactly from its samples:
-```
+```text
 f(x) = Σ_n f(nΔx) sinc(π(x - nΔx)/Δx),
 ```
 where `sinc(u) = sin(u)/u`. When a source is rasterized to a discrete grid using this
 kernel with a finite stencil half-width `N_sub`, the aliasing error at any grid point is
 bounded by
-```
+```text
 |ε_alias| ≤ 2 A_max · (1 / (π N_sub)),
 ```
 where `A_max` is the maximum amplitude of the source signal.
@@ -415,17 +415,17 @@ where `A_max` is the maximum amplitude of the source signal.
 
 **Step 1 — Truncation error.**
 Truncating the infinite sinc sum at `|n - n_0| ≤ N_sub` introduces a remainder
-```
+```text
 R(x) = Σ_{|n-n_0| > N_sub} f(nΔx) sinc(π(x - nΔx)/Δx).
 ```
 For a bounded source `|f| ≤ A_max` and using `|sinc(u)| ≤ 1/|u|` for `|u| > π`:
-```
+```text
 |R(x)| ≤ A_max Σ_{m=N_sub+1}^∞ 2/(πm) ≤ 2 A_max / (π N_sub).       □
 ```
 
 **Step 2 — Default stencil width.**
 kwavers uses `BLI_TOLERANCE = 0.05` (5% maximum weight threshold), giving
-```
+```text
 N_sub = ceil(1 / (π · BLI_TOLERANCE)) = ceil(1 / (π · 0.05)) = ceil(6.37) = 7.
 ```
 The bound becomes `|ε_alias| ≤ 2 A_max / (π · 7) ≈ 9.1%` of peak amplitude.
@@ -441,7 +441,7 @@ exact interpolation.
 If the source aperture contains spatial frequencies above `k_max = π/Δx` (e.g., a sharp
 edge at the aperture boundary), aliasing cannot be eliminated by BLI alone. The aliasing
 bound in terms of the aperture diameter `D = 2a` and grid spacing `Δx` is:
-```
+```text
 Aliasing content ∝ Δx / D   (relative to total source energy)
 ```
 This motivates the kwavers requirement of at least `ppw ≥ 6` points per wavelength and
@@ -462,7 +462,7 @@ satisfy from geometric support definition through to solver injection.
 
 ### Algorithm 6.1 — Source Contract
 
-```
+```text
 Input:
   G     — computational grid (nx, ny, nz, dx, dy, dz)
   S     — geometric source description (shape, orientation, center, focus)
@@ -515,7 +515,7 @@ additional permutation.
 
 ### Algorithm 6.2 — Spherical Cap Rasterization
 
-```
+```text
 Input:
   center    — (cx, cy, cz): bowl center (geometric apex)
   focus_pos — (fx, fy, fz): focus position
@@ -554,7 +554,7 @@ k-Wave uses grid coordinates centered at index `Nx/2` (integer division), placin
 origin at the center of cell `Nx/2`. kwavers follows this same convention when constructing
 source positions from physical coordinates. For an N-point grid with spacing `Δx`, the
 coordinate of node `i` is:
-```
+```text
 x_i = (i - N_x/2) · Δx,   i = 0 .. N_x - 1
 ```
 This half-cell offset is the load-bearing gotcha for any kwavers-to-k-Wave parity test:
@@ -567,7 +567,7 @@ a cell and introduces a systematic phase error (see project_annular_array_coordi
 
 ### Algorithm 6.3 — Delay-and-Sum Excitation Construction
 
-```
+```text
 Input:
   elements — array of element positions {r_i}, i = 1..N
   focus_pos — r_f (focus or steering direction)
@@ -604,7 +604,7 @@ Algorithm:
 ### Far-Field Grating Lobe Condition
 
 Grating lobes appear when element pitch `d > λ/2`. The grating lobe at angle `θ_g` satisfies
-```
+```text
 sinθ_g = sinθ_steer + n λ / d,   n = ±1, ±2, ...
 ```
 At maximum steering `|sinθ_steer| = 1`, the first grating lobe is suppressed for all real
@@ -614,7 +614,7 @@ angles when `d ≤ λ/2`. For `d = λ`, grating lobes appear at `|sinθ_g - sin�
 
 An annular array with `N` rings and ring radii `{ρ_n}` provides depth-variable focusing.
 At transmit depth `z_f`, the delay for ring `n` is:
-```
+```text
 τ_n = (sqrt(ρ_n² + z_f²) - z_f) / c
 ```
 (spherical wave approximation, valid when `ρ_n² ≪ z_f²` or exactly for spherical geometry).
@@ -643,7 +643,7 @@ For an aperture of extent `A` on a steered axis, wavelength `λ = c/f`, and a ma
 pitch fraction `q` (pitch `p ≤ qλ`), the smallest element count whose uniform pitch
 stays within budget and the realized pitch are
 
-```
+```text
 n = ⌈A / (qλ)⌉,      p = A / n  ≤  qλ.
 ```
 
@@ -689,7 +689,7 @@ A single-surface acoustic lens of radius of curvature `R` made of a material wit
 sound speed `c_lens`, immersed in a medium of speed `c_m`, focuses by refraction
 (Snell's law). Its focal length follows the acoustic lensmaker's equation
 
-```
+```text
 F = R · c_m / (c_m − c_lens).
 ```
 
@@ -706,7 +706,7 @@ refraction/critical-angle primitives are `analytical::propagation::SnellLawCalcu
 The focusing delay a lens imposes from aperture radius `r` to the geometric focus,
 relative to the centre, is
 
-```
+```text
 τ(r) = (√(F² + r²) − F) / c_m  ≈  r² / (2 c_m F)   (paraxial),
 ```
 
@@ -741,7 +741,7 @@ A Fresnel zone plate replaces the bulk refractive lens with a thin, flat set of
 concentric zones that focus by **diffraction**. The zone boundaries lie at radii
 where the path to the focus grows by half a wavelength,
 
-```
+```text
 r_n = √(n λ F + (n λ / 2)²)  ≈  √(n λ F)   (paraxial),   n = 1, 2, 3, …,
 ```
 
@@ -777,7 +777,7 @@ CT-derived medium exactly as in Ch24 §24.3 — is baked into the lens *thicknes
 because a slab of speed `c_lens` over thickness `p` advances the phase by
 `Δφ = 2π f₀ p (1/c_water − 1/c_lens)`; inverting,
 
-```
+```text
 p(M) = φ̃(M) / (2π f₀) · 1 / (1/c_water − 1/c_lens) + K,
 ```
 
@@ -788,7 +788,7 @@ targets *mechanically* by exploiting the skull's **isoplanatic** angle
 (neighbouring targets share essentially the same aberration). Steering to a
 transverse offset `x` rotates and translates the transducer/lens pair by
 
-```
+```text
 θ_y = arcsin(x / F),     T_z = F − √(F² − x²),
 ```
 
@@ -826,7 +826,7 @@ Rust kernels; the example only plots them.*
 
 ### Module Structure
 
-```
+```text
 kwavers_source                       Source trait + grid injection (solver-facing)
 ├── types.rs                        Source trait, SourceType (= SourceField)
 ├── config.rs                       PulseParameters, PulseType, EnvelopeType, SourceModel
@@ -860,7 +860,7 @@ kwavers_transducer                   Transducer geometry → grid rasterization
 **`KWaveArray`** is the primary type for constructing multi-element transducer arrays that
 produce k-Wave-compatible source masks and signal matrices. The public API exposes:
 
-```rust
+```rust,ignore
 // Add a rectangular element (typical for linear arrays); builder-style, returns &mut Self
 pub fn add_rect_element(
     &mut self,
@@ -907,7 +907,7 @@ For parity with k-Wave MATLAB, additive (soft) injection is the default for pres
 
 ### BLI Constants (from `kwave_array/math.rs`)
 
-```rust
+```rust,ignore
 pub const DISC_BLI_TOLERANCE: f64 = 0.05;     // 5% weight threshold → N_sub = 7
 pub const DISC_AXIS_EPSILON: f64 = 1.0e-12;   // collinearity guard for Gram-Schmidt
 pub const DISC_PACKING_NUMBER: f64 = 7.0;     // azimuthal ring packing factor
@@ -917,7 +917,7 @@ pub const DISC_PACKING_NUMBER: f64 = 7.0;     // azimuthal ring packing factor
 
 kwavers uses intrinsic XYZ Euler angles `(α, β, γ)` to orient element normal vectors,
 matching the k-Wave MATLAB `kWaveArray` convention. The rotation matrix is:
-```
+```text
 R = R_z(γ) · R_y(β) · R_x(α)
 ```
 This is implemented as `euler_xyz_rotation_matrix` in `kwave_array/math.rs` and applied

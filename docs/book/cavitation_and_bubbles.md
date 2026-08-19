@@ -468,7 +468,7 @@ detection (PCD).
 provides `BroadbandDetector`, `SubharmonicDetector`, and `SpectralDetector`
 types.  Each implements the `CavitationDetector` trait:
 
-```rust
+```rust,ignore
 // kwavers_physics::acoustics::bubble_dynamics::cavitation_control::detection::traits
 pub trait CavitationDetector {
     type Config;
@@ -756,7 +756,7 @@ multi-bubble cloud dynamics via coupled Keller–Miksis equations.
 
 **Algorithm 5.1: Bubble Cloud Nucleation and Collapse Simulation**
 
-```
+```text
 Input:  Focus pressure waveform p(x,t), tissue acoustic properties
 Output: Mechanical dose map D(x), bubble event locations E
 ```
@@ -915,7 +915,7 @@ IMEX-SSP3(4,3,3) scheme with automatic stiffness detection.
 
 **Algorithm 5.2: Bubble ODE Integration (Adaptive RK45)**
 
-```
+```text
 Input:  Initial state (R0, dR0), time span [t0, tf], tolerances rtol, atol
 Output: Trajectory {(t_i, R_i, dR_i)}, collapse events
 ```
@@ -940,7 +940,7 @@ Output: Trajectory {(t_i, R_i, dR_i)}, collapse events
 
 **Algorithm 5.3: Collapse Event Detection by Bisection**
 
-```
+```text
 Input:  Bracketing interval [t_a, t_b] where R(t_a) > R_min > R(t_b)
 Output: Collapse time t_c, state y(t_c)
 ```
@@ -981,7 +981,7 @@ $H(q,p) = T(p) + V(q)$ first.
 
 **Algorithm 5.4: Yoshida Integration for Long-Time Bubble Dynamics**
 
-```
+```text
 Input:  State (q, π), Hamiltonian H(q,π), step h, N steps
 Output: Phase-space trajectory {(q_n, π_n)}
 ```

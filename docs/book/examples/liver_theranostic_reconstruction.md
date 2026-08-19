@@ -16,7 +16,7 @@ This example reconstructs liver acoustic-property maps for focused-ultrasound th
 
 ## Key Code Snippet
 
-```rust
+```rust,ignore
 const DX: f64 = 3.0e-3;
 const NX: usize = 80;
 /// 2-D coronal slice embedded in 3-D.  RTM's 4th-order FD Laplacian requires

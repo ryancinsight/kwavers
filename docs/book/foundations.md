@@ -751,7 +751,7 @@ The physical constants relevant to this chapter are defined as single-source-of-
 constants in `kwavers_core::constants` (verbatim names and values from the
 crate):
 
-```rust
+```rust,ignore
 // From kwavers_core::constants::fundamental
 pub const SOUND_SPEED_WATER: f64       = 1482.0;   // m/s, 20 °C (physical)
 pub const SOUND_SPEED_WATER_SIM: f64   = 1500.0;   // m/s, round-number sim default
@@ -763,7 +763,7 @@ pub const DENSITY_TISSUE: f64          = 1050.0;   // kg/m³
 pub const SOUND_SPEED_AIR: f64         = 343.0;    // m/s
 // Impedance is derived, not stored: Z = ρ·c.
 pub const ACOUSTIC_IMPEDANCE_WATER_NOMINAL: f64  =
-    DENSITY_WATER_NOMINAL * SOUND_SPEED_WATER_SIM; // 1.50e6 Pa·s/m
+    DENSITY_WATER_37C * SOUND_SPEED_WATER_SIM; // 1.50e6 Pa·s/m
 pub const ACOUSTIC_IMPEDANCE_TISSUE_NOMINAL: f64 =
     DENSITY_TISSUE * SOUND_SPEED_TISSUE;           // 1.617e6 Pa·s/m
 

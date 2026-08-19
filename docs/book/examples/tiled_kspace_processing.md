@@ -35,7 +35,7 @@ cargo run --example tiled_kspace_processing
 
 ## Expected output
 
-```
+```text
 Tiled k-space processing demo (Tiles from leto)
 grid: 32³, tile: 8³, dx: 0.500 mm
 
@@ -59,7 +59,7 @@ Tiles: zero-copy tiling, no element copied.
 
 ## Key API
 
-```rust
+```rust,ignore
 use leto::{Array3, Tiles};
 
 let arr = Array3::<f64>::zeros([NX, NY, NZ]);

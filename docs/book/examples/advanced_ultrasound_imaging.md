@@ -16,7 +16,7 @@ This example walks through three modern ultrasound imaging modes in one place: s
 
 ## Key Code Snippet
 
-```rust
+```rust,ignore
 let sa_config = SyntheticApertureConfig {
     num_tx_elements: 32,
     num_rx_elements: 32,

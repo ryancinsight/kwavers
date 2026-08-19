@@ -16,7 +16,7 @@ This example runs the theorem-validation machinery over the mathematical claims 
 
 ## Key Code Snippet
 
-```rust
+```rust,ignore
 let validations = validator.run_comprehensive_validation();
 
 println!("Validated {} mathematical theorems", validations.len());
