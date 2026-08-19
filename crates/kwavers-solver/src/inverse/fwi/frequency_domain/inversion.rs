@@ -63,9 +63,18 @@ pub fn invert(
             for (value, &previous) in diff.iter_mut().zip(previous_gradient.iter()) {
                 *value -= previous;
             }
-            let beta = (dot(&gradient, &diff)
-                / dot(&previous_gradient, &previous_gradient).max(f64::EPSILON))
-            .max(0.0);
+            // Gilbert-Nocedal hybrid: beta = min(max(beta_PR, 0), beta_FR).
+            //
+            // beta_PR alone restarts well after a poor step but is unbounded,
+            // so a near-orthogonal gradient pair can inflate it and throw the
+            // search direction far from the descent cone. beta_FR is bounded
+            // but stalls. Capping PR by FR keeps PR's restart behaviour while
+            // retaining the global convergence guarantee FR carries under an
+            // inexact line search, which is what this loop performs.
+            let previous_energy = dot(&previous_gradient, &previous_gradient).max(f64::EPSILON);
+            let beta_polak_ribiere = (dot(&gradient, &diff) / previous_energy).max(0.0);
+            let beta_fletcher_reeves = dot(&gradient, &gradient) / previous_energy;
+            let beta = beta_polak_ribiere.min(beta_fletcher_reeves);
             for (dir, &grad) in direction.iter_mut().zip(gradient.iter()) {
                 *dir = -grad + beta * *dir;
             }

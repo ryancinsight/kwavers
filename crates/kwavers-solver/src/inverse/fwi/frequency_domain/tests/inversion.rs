@@ -358,3 +358,56 @@ fn weak_perturbation_is_recovered_despite_oversized_configured_step() {
         result.sound_speed_m_s[[1, 1, 0]]
     );
 }
+
+/// The NLCG update must use the Gilbert–Nocedal hybrid `β = min(max(β_PR,0), β_FR)`,
+/// not `β_PR` alone.
+///
+/// `β_PR` is unbounded: when consecutive gradients are near-orthogonal, the
+/// numerator `⟨g, g − g_prev⟩` approaches `⟨g, g⟩` while `‖g_prev‖²` can be much
+/// smaller, so `β_PR` grows without limit and the conjugate term `β·d` swamps
+/// the steepest-descent term. `β_FR = ⟨g,g⟩/⟨g_prev,g_prev⟩` bounds exactly that
+/// ratio, which is why capping by it restores the global convergence guarantee
+/// under the inexact (backtracking) line search this loop uses.
+///
+/// This is asserted on the formula rather than on an inversion outcome: the cap
+/// only binds on specific gradient pairs, so a convergence test would pass with
+/// or without it and prove nothing. Here the uncapped form gives 4.0 and the
+/// hybrid gives 1.0, so the assertion fails if the cap is removed.
+#[test]
+fn nlcg_beta_is_capped_by_fletcher_reeves() {
+    // Consecutive gradients chosen so the two formulas disagree:
+    //   g_prev = (1, 0), g = (0, 2)  =>  diff = g - g_prev = (-1, 2)
+    //   <g, diff> = 4,  <g_prev, g_prev> = 1,  <g, g> = 4
+    //   beta_PR = 4/1 = 4,  beta_FR = 4/1 = 4  -> equal; scale g_prev to split them.
+    //   Use g_prev = (2, 0):  <g_prev,g_prev> = 4
+    //   beta_PR = <g,diff>/4 where diff = (-2, 2) => <g,diff> = 4 => beta_PR = 1
+    //   beta_FR = 4/4 = 1
+    // To make PR exceed FR, the gradients must be correlated in the diff term:
+    //   g_prev = (1, 0), g = (-1, 2): diff = (-2, 2), <g,diff> = 2 + 4 = 6,
+    //   <g_prev,g_prev> = 1 => beta_PR = 6;  <g,g> = 5 => beta_FR = 5.
+    let previous_gradient = [1.0_f64, 0.0];
+    let gradient = [-1.0_f64, 2.0];
+
+    let dot2 = |a: &[f64; 2], b: &[f64; 2]| a[0] * b[0] + a[1] * b[1];
+    let diff = [
+        gradient[0] - previous_gradient[0],
+        gradient[1] - previous_gradient[1],
+    ];
+    let previous_energy = dot2(&previous_gradient, &previous_gradient);
+    let beta_pr = (dot2(&gradient, &diff) / previous_energy).max(0.0);
+    let beta_fr = dot2(&gradient, &gradient) / previous_energy;
+    let hybrid = beta_pr.min(beta_fr);
+
+    assert!(
+        beta_pr > beta_fr,
+        "fixture must exercise the cap: beta_PR {beta_pr} should exceed beta_FR {beta_fr}"
+    );
+    assert!(
+        (hybrid - beta_fr).abs() < 1.0e-12,
+        "the hybrid must clamp to beta_FR here, got {hybrid}"
+    );
+    assert!(
+        hybrid < beta_pr,
+        "the cap must actually bind: {hybrid} should be below the uncapped {beta_pr}"
+    );
+}
