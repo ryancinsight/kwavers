@@ -256,7 +256,7 @@ fn recovers_known_attenuation_from_synthesized_spectra() {
         &shallow,
         &deep,
         freq_step,
-        1.0,          // depth_shallow_cm
+        1.0,              // depth_shallow_cm
         1.0 + delta_d_cm, // depth_deep_cm
         band,
     )

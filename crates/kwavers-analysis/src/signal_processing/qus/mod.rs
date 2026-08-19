@@ -34,8 +34,8 @@ use leto::{Array1, ArrayView2};
 
 use super::spectral::{SpectralAnalysis, SpectralConfig};
 
-mod backscatter;
 mod attenuation;
+mod backscatter;
 
 #[cfg(test)]
 mod tests;
