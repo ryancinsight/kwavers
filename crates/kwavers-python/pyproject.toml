@@ -67,7 +67,7 @@ full = [
 [project.urls]
 Homepage = "https://github.com/ryancinsight/kwavers"
 Repository = "https://github.com/ryancinsight/kwavers"
-Documentation = "https://github.com/ryancinsight/kwavers/tree/main/pykwavers"
+Documentation = "https://github.com/ryancinsight/kwavers/tree/main/crates/kwavers-python"
 
 [tool.maturin]
 # Python source directory for pure Python code alongside Rust extension

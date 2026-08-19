@@ -45,7 +45,6 @@ mnemosyne-core = { version = "0.2.0", git = "https://github.com/ryancinsight/Mne
 # mnemosyne-heap owns NUMA memory-policy execution (bind / interleave / first-touch).
 mnemosyne-heap = { version = "0.4.0", git = "https://github.com/ryancinsight/Mnemosyne" }
 eunomia = { version = "0.8.0", git = "https://github.com/ryancinsight/eunomia", default-features = false, features = ["std"] }
-pyo3 = { version = "0.29", features = ["extension-module", "abi3-py39"] }
 numpy = "0.29"
 
 anyhow = "1.0"

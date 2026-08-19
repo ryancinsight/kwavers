@@ -5,10 +5,16 @@ on:
     branches: [main]
     paths:
       - "docs/book/**"
+      - "crates/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
       - ".github/workflows/book-pages.yml"
   pull_request:
     paths:
       - "docs/book/**"
+      - "crates/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
       - ".github/workflows/book-pages.yml"
   workflow_dispatch:
 
