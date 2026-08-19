@@ -20,17 +20,9 @@ jobs:
           fetch-depth: 0
 
       - name: Install system dependencies
-        run: |
-          timeout --foreground --kill-after=30s 8m sudo apt-get \
-            -o Acquire::Retries=3 \
-            -o Acquire::http::Timeout=20 \
-            -o Acquire::https::Timeout=20 \
-            update
-          timeout --foreground --kill-after=30s 8m sudo apt-get \
-            -o Acquire::Retries=3 \
-            -o Acquire::http::Timeout=20 \
-            -o Acquire::https::Timeout=20 \
-            install -y libfontconfig1-dev
+        uses: ./.github/actions/install-system-dependencies
+        with:
+          packages: libfontconfig1-dev
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -76,17 +68,9 @@ jobs:
           fetch-depth: 0
 
       - name: Install system dependencies
-        run: |
-          timeout --foreground --kill-after=30s 8m sudo apt-get \
-            -o Acquire::Retries=3 \
-            -o Acquire::http::Timeout=20 \
-            -o Acquire::https::Timeout=20 \
-            update
-          timeout --foreground --kill-after=30s 8m sudo apt-get \
-            -o Acquire::Retries=3 \
-            -o Acquire::http::Timeout=20 \
-            -o Acquire::https::Timeout=20 \
-            install -y libfontconfig1-dev
+        uses: ./.github/actions/install-system-dependencies
+        with:
+          packages: libfontconfig1-dev
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -123,17 +107,9 @@ jobs:
           fetch-depth: 0
 
       - name: Install system dependencies
-        run: |
-          timeout --foreground --kill-after=30s 8m sudo apt-get \
-            -o Acquire::Retries=3 \
-            -o Acquire::http::Timeout=20 \
-            -o Acquire::https::Timeout=20 \
-            update
-          timeout --foreground --kill-after=30s 8m sudo apt-get \
-            -o Acquire::Retries=3 \
-            -o Acquire::http::Timeout=20 \
-            -o Acquire::https::Timeout=20 \
-            install -y libfontconfig1-dev
+        uses: ./.github/actions/install-system-dependencies
+        with:
+          packages: libfontconfig1-dev
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@master
@@ -213,17 +189,9 @@ jobs:
           fetch-depth: 0
 
       - name: Install system dependencies
-        run: |
-          timeout --foreground --kill-after=30s 8m sudo apt-get \
-            -o Acquire::Retries=3 \
-            -o Acquire::http::Timeout=20 \
-            -o Acquire::https::Timeout=20 \
-            update
-          timeout --foreground --kill-after=30s 8m sudo apt-get \
-            -o Acquire::Retries=3 \
-            -o Acquire::http::Timeout=20 \
-            -o Acquire::https::Timeout=20 \
-            install -y libfontconfig1-dev
+        uses: ./.github/actions/install-system-dependencies
+        with:
+          packages: libfontconfig1-dev
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -251,17 +219,9 @@ jobs:
           fetch-depth: 0
 
       - name: Install system dependencies
-        run: |
-          timeout --foreground --kill-after=30s 8m sudo apt-get \
-            -o Acquire::Retries=3 \
-            -o Acquire::http::Timeout=20 \
-            -o Acquire::https::Timeout=20 \
-            update
-          timeout --foreground --kill-after=30s 8m sudo apt-get \
-            -o Acquire::Retries=3 \
-            -o Acquire::http::Timeout=20 \
-            -o Acquire::https::Timeout=20 \
-            install -y libfontconfig1-dev
+        uses: ./.github/actions/install-system-dependencies
+        with:
+          packages: libfontconfig1-dev
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -328,17 +288,9 @@ jobs:
           fetch-depth: 0
 
       - name: Install system dependencies
-        run: |
-          timeout --foreground --kill-after=30s 8m sudo apt-get \
-            -o Acquire::Retries=3 \
-            -o Acquire::http::Timeout=20 \
-            -o Acquire::https::Timeout=20 \
-            update
-          timeout --foreground --kill-after=30s 8m sudo apt-get \
-            -o Acquire::Retries=3 \
-            -o Acquire::http::Timeout=20 \
-            -o Acquire::https::Timeout=20 \
-            install -y libfontconfig1-dev
+        uses: ./.github/actions/install-system-dependencies
+        with:
+          packages: libfontconfig1-dev
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -372,17 +324,9 @@ jobs:
           fetch-depth: 0
 
       - name: Install system dependencies
-        run: |
-          timeout --foreground --kill-after=30s 8m sudo apt-get \
-            -o Acquire::Retries=3 \
-            -o Acquire::http::Timeout=20 \
-            -o Acquire::https::Timeout=20 \
-            update
-          timeout --foreground --kill-after=30s 8m sudo apt-get \
-            -o Acquire::Retries=3 \
-            -o Acquire::http::Timeout=20 \
-            -o Acquire::https::Timeout=20 \
-            install -y libfontconfig1-dev
+        uses: ./.github/actions/install-system-dependencies
+        with:
+          packages: libfontconfig1-dev
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
