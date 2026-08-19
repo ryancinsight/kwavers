@@ -22,6 +22,16 @@
   source configuration.
 - Non-goals: no Rust, dependency, benchmark, test, or coverage-policy changes.
 
+## KWAVERS-SONO-113 — Type sonoluminescence emission and close the example/book slice [major] [arch] — in progress 2026-08-19
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KWAVERS-SONO-113 | Route dimensioned sonoluminescence power through Aequitas, assemble one authoritative field pass, and synchronize tests, examples, and book pages. | [major] [arch] | in progress | Codex | `crates/kwavers-physics/src/optics/sonoluminescence/`, sonoluminescence examples, `docs/book/examples/`, ADR 113, this item |
+
+- Acceptance: emission components carry Aequitas `VolumetricPowerDensity`; Cherenkov spectral yield is not added to the dimensioned power field; one field traversal computes enabled dimensioned components without temporary field clones; the integrated step refreshes emission from updated state; constructor state uses `BubbleParameters`; placeholder molecular-line and example paths are removed; focused value-semantic tests, example builds/runs, book tests/build, and package gates pass.
+- Non-goals: GPU kernels, Python bindings, and unrelated legacy migration surfaces remain separate items.
+- Evidence target: exact local revision plus hosted architecture, test, example, and book gates; dimensional limits and any external runner blockers are recorded here.
+
 ## ATLAS-KWAVERS-HEPHAESTUS-FDTD-107 — Route collocated FDTD through Hephaestus [minor] [arch] — Apollo co-evolution blocker 2026-08-18
 
 | ID | Outcome | Class | Status | Owner | Scope |
