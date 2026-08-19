@@ -1,5 +1,6 @@
 # Backlog / Strategy
 
+<<<<<<< HEAD
 ## KW-CI-104 — Centralize reliable Ubuntu dependency installation [patch] — in progress 2026-08-19
 
 | ID | Outcome | Class | Status | Owner | Scope |
@@ -22,15 +23,17 @@
   source configuration.
 - Non-goals: no Rust, dependency, benchmark, test, or coverage-policy changes.
 
-## KWAVERS-SONO-113 — Type sonoluminescence emission and close the example/book slice [major] [arch] — in progress 2026-08-19
+## KWAVERS-SONO-113 — Type sonoluminescence emission and close the example/book slice [major] [arch] — implementation complete; hosted verification pending 2026-08-19
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KWAVERS-SONO-113 | Route dimensioned sonoluminescence power through Aequitas, assemble one authoritative field pass, and synchronize tests, examples, and book pages. | [major] [arch] | in progress | Codex | `crates/kwavers-physics/src/optics/sonoluminescence/`, sonoluminescence examples, `docs/book/examples/`, ADR 113, this item |
+| KWAVERS-SONO-113 | Route dimensioned sonoluminescence power through Aequitas, assemble one authoritative field pass, and synchronize tests, examples, and book pages. | [major] [arch] | implementation complete; hosted verification pending | Codex | `crates/kwavers-physics/src/optics/sonoluminescence/`, sonoluminescence examples, `docs/book/examples/`, ADR 113, this item |
 
 - Acceptance: emission components carry Aequitas `VolumetricPowerDensity`; Cherenkov spectral yield is not added to the dimensioned power field; one field traversal computes enabled dimensioned components without temporary field clones; the integrated step refreshes emission from updated state; constructor state uses `BubbleParameters`; placeholder molecular-line and example paths are removed; focused value-semantic tests, example builds/runs, book tests/build, and package gates pass.
 - Non-goals: GPU kernels, Python bindings, and unrelated legacy migration surfaces remain separate items.
 - Evidence target: exact local revision plus hosted architecture, test, example, and book gates; dimensional limits and any external runner blockers are recorded here.
+- Local evidence at `547a74f01`: strict `kwavers-physics` Clippy (`-D warnings`) passed; Nextest run `80e43dec-0e15-4e32-b095-b9652be92772` passed 40/40 sonoluminescence tests (1,517 skipped); `single_bubble_sonoluminescence` and `multiphysics_sonoluminescence --features pinn` compiled and ran; `mdbook test docs/book` and `mdbook build docs/book` passed. The single-bubble run emitted changing Aequitas W/m³ fields and a separate arbitrary-unit spectrum; the multiphysics run trained three domains for two epochs.
+- Hosted evidence: pending branch publication and pull-request checks; local commands used the Atlas development overlay, so Cargo lockfile source state was restored after each command and no lockfile change is part of this item.
 
 ## ATLAS-KWAVERS-HEPHAESTUS-FDTD-107 — Route collocated FDTD through Hephaestus [minor] [arch] — Apollo co-evolution blocker 2026-08-18
 
