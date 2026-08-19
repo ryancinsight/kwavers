@@ -9760,7 +9760,7 @@ Burn → Coeus tensor type mismatches; that debt is outside the Batch #1 scope.
   the built module, or pyo3 reconfiguration enabling an embedded interpreter
   for tests), then delete this item.
 
-## KW-CI-103 — Wheel parity must import the installed extension [patch] — review
+## KW-CI-103 — Wheel parity must import the installed extension [patch] — DONE (2026-08-19)
 
 - Outcome: run the k-Wave parity suite against the wheel built by the release
   job, not the checkout's pure-Python source tree.
@@ -9790,5 +9790,6 @@ Burn → Coeus tensor type mismatches; that debt is outside the Batch #1 scope.
   the bundled solver also requires `libhdf5_serial_hl.so.100`.
 - The runtime step now installs both the core and high-level HDF5 packages,
   selecting the Ubuntu 22.04 or 24.04 package name for each SONAME.
-- Acceptance: the exact hosted wheel parity job imports the extension from
-  the installed wheel and all three value-semantic k-Wave cases pass.
+- Acceptance: hosted run `32237250724` at exact head `56bded6fa` passed all
+  Ubuntu, Windows, and macOS wheel jobs; its Ubuntu job installed the wheel
+  and passed all three value-semantic k-Wave cases.
