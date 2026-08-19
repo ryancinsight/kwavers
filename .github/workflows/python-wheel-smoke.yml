@@ -113,6 +113,7 @@ jobs:
         shell: bash
         env:
           KWAVERS_RUN_SLOW: "1"
+          KWAVERS_PYTHON_PACKAGE: installed
         run: |
           set -euo pipefail
           source wheel-smoke/bin/activate

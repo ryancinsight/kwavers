@@ -13,14 +13,16 @@ import numpy as np
 import pytest
 
 ROOT = Path(__file__).resolve().parent
-for path in (
-    ROOT / "python",
-    ROOT / "examples",
-    ROOT.parent / "external" / "k-wave-python",
-):
-    path_str = str(path)
-    if path_str not in sys.path:
-        sys.path.insert(0, path_str)
+python_package_mode = os.getenv("KWAVERS_PYTHON_PACKAGE", "source")
+if python_package_mode == "source":
+    for path in (
+        ROOT / "python",
+        ROOT / "examples",
+        ROOT.parent / "external" / "k-wave-python",
+    ):
+        path_str = str(path)
+        if path_str not in sys.path:
+            sys.path.insert(0, path_str)
 
 # On Windows, the _pykwavers extension depends on MSYS2 UCRT64 runtime DLLs.
 # Add the standard MSYS2 ucrt64 bin path so the venv CPython can resolve them.

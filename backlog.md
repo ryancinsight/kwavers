@@ -9759,3 +9759,17 @@ Burn → Coeus tensor type mismatches; that debt is outside the Batch #1 scope.
   together with a route that actually runs it (a Python-host test importing
   the built module, or pyo3 reconfiguration enabling an embedded interpreter
   for tests), then delete this item.
+
+## KW-CI-103 — Wheel parity must import the installed extension [patch] — review
+
+- Outcome: run the k-Wave parity suite against the wheel built by the release
+  job, not the checkout's pure-Python source tree.
+- Finding: the wheel built successfully, but `conftest.py` unconditionally
+  prepended `crates/kwavers-python/python` to `sys.path`; the hosted parity
+  job then imported that source package and failed with
+  `ModuleNotFoundError: pykwavers._pykwavers`.
+- Change: source tests retain the default checkout import mode; the wheel
+  parity job selects the installed-package mode through
+  `KWAVERS_PYTHON_PACKAGE=installed`.
+- Acceptance: the exact hosted wheel parity job imports the extension from
+  the installed wheel and all three value-semantic k-Wave cases pass.
