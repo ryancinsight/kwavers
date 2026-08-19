@@ -18,25 +18,14 @@ mod tests {
 
         // Create test fields
         let mut temp_field = Array3::zeros(shape);
-        let pressure_field = Array3::from_elem(shape, ATMOSPHERIC_PRESSURE); // 1 atm
         let radius_field = Array3::from_elem(shape, 5e-6); // 5 μm
-        let velocity_field = Array3::zeros(shape); // No velocity for test
         let charge_density_field = Array3::zeros(shape); // No charge for test
-        let compression_field = Array3::from_elem(shape, 1.0); // No compression for test
 
         // Set high temperature at center
         temp_field[[5, 5, 5]] = 20000.0; // 20,000 K
 
         // Calculate emission
-        emission.calculate_emission(
-            &temp_field,
-            &pressure_field,
-            &radius_field,
-            &velocity_field,
-            &charge_density_field,
-            &compression_field,
-            0.0,
-        );
+        emission.calculate_emission(&temp_field, &radius_field, &charge_density_field);
 
         // Check that emission occurred at hot spot
         assert!(emission.emission_field[[5, 5, 5]] > 0.0);
@@ -62,6 +51,40 @@ mod tests {
         // Peak should be in UV for this temperature
         let peak = spectrum.peak_wavelength();
         assert!(peak > 100e-9 && peak < 400e-9);
+    }
+
+    #[test]
+    fn emission_field_matches_typed_components_without_cherenkov_mixing() {
+        let shape = [1, 1, 1];
+        let mut params = EmissionParameters::default();
+        params.use_cherenkov = true;
+        let mut emission = SonoluminescenceEmission::new(shape, params);
+        let temperature = Array3::from_elem(shape, 20_000.0);
+        let radius = Array3::from_elem(shape, 5e-6);
+        let charge_density = Array3::from_elem(shape, 1.0e-3);
+
+        let components = emission.components_at_point(20_000.0, 5e-6, 1.0e-3);
+        emission.calculate_emission(&temperature, &radius, &charge_density);
+
+        eunomia::assert_relative_eq!(
+            emission.emission_field[[0, 0, 0]],
+            components.total().into_base() * emission.params.opacity_factor,
+            epsilon = components.total().into_base().abs() * 1e-12
+        );
+    }
+
+    #[test]
+    fn emission_field_applies_temperature_cutoff() {
+        let shape = [1, 1, 1];
+        let mut emission = SonoluminescenceEmission::new(shape, EmissionParameters::default());
+        let temperature = Array3::from_elem(shape, 1_999.0);
+        let radius = Array3::from_elem(shape, 5e-6);
+        let charge_density = Array3::from_elem(shape, 1.0e-3);
+
+        emission.emission_field.fill(123.0);
+        emission.calculate_emission(&temperature, &radius, &charge_density);
+
+        assert_eq!(emission.emission_field[[0, 0, 0]], 0.0);
     }
 
     #[test]
@@ -174,5 +197,44 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn integrated_constructor_uses_bubble_initial_state() {
+        let params = BubbleParameters {
+            t0: 1_234.0,
+            initial_gas_pressure: 2.5 * ATMOSPHERIC_PRESSURE,
+            ..Default::default()
+        };
+        let integrated = IntegratedSonoluminescence::new(
+            [2, 1, 1],
+            params.clone(),
+            EmissionParameters::default(),
+        );
+
+        assert_eq!(integrated.temperature_field[[0, 0, 0]], params.t0);
+        assert_eq!(
+            integrated.pressure_field[[1, 0, 0]],
+            params.initial_gas_pressure
+        );
+    }
+
+    #[test]
+    fn simulate_step_refreshes_dimensioned_emission() {
+        let params = BubbleParameters::default();
+        let bubble_model = KellerMiksisModel::new(params.clone());
+        let mut integrated = IntegratedSonoluminescence::new(
+            [1, 1, 1],
+            params.clone(),
+            EmissionParameters::default(),
+        );
+        integrated.emission.params.min_temperature = 0.0;
+        integrated.emission.emission_field.fill(123.0);
+
+        integrated
+            .simulate_step(1e-9, 0.0, &params, &bubble_model)
+            .expect("zero acoustic pressure should integrate");
+
+        assert_ne!(integrated.emission.emission_field[[0, 0, 0]], 123.0);
     }
 }

@@ -172,27 +172,27 @@ pub fn calculate_blackbody_emission(
         temperature_field.view(),
         bubble_radius_field.view(),
         |out, &temp, &radius| {
-            if radius > 0.0 && temp > 0.0 {
-                // Surface area of bubble
-                let surface_area = FOUR_PI * radius * radius;
-
-                // Total power emitted
-                let power = model.total_power(temp, surface_area);
-
-                // Convert to power density (W/m³). Guard against f64 underflow
-                // (volume → 0 for radius below ~1e-103 m) by skipping the cell
-                // rather than silently clamping volume to 1e-20 — the prior
-                // clamp mis-reported emission density for any radius below
-                // ~1.34e-7 m by replacing the true volume with a fixed minimum.
-                let volume = 4.0 / 3.0 * PI * radius.powi(3);
-                if volume > 0.0 {
-                    *out = power / volume;
-                }
-            }
+            *out = blackbody_power_density(temp, radius, model);
         },
     );
 
     emission_field
+}
+
+/// Calculate blackbody power density for one bubble cell in `W/m³`.
+#[must_use]
+pub fn blackbody_power_density(temperature: f64, radius: f64, model: &BlackbodyModel) -> f64 {
+    if radius <= 0.0 || temperature <= 0.0 {
+        return 0.0;
+    }
+
+    let surface_area = FOUR_PI * radius * radius;
+    let volume = 4.0 / 3.0 * PI * radius.powi(3);
+    if volume > 0.0 {
+        model.total_power(temperature, surface_area) / volume
+    } else {
+        0.0
+    }
 }
 
 #[cfg(test)]

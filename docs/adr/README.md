@@ -75,3 +75,4 @@
 | [109](109-aequitas-quantity-provider.md) | Adopt Aequitas for bubble-energy quantities | Accepted |
 | [110](110-drop-dead-boundary-parameters.md) | 110. Delete the inert BoundaryParameters surface | Accepted |
 | [111](111-retire-kzk-solver-plugin-surface.md) | 111. Retire the `KzkSolverPlugin` surface onto the complex-field KZK adapter | Accepted |
+| [113](113-typed-sonoluminescence-emission.md) | Type sonoluminescence emission components at the Aequitas boundary | Accepted |

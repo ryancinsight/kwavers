@@ -1,10 +1,7 @@
 use crate::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
 use crate::bubble_dynamics::integration::rk4_weighted_sum;
 use crate::bubble_dynamics::keller_miksis::KellerMiksisModel;
-use kwavers_core::constants::fundamental::{
-    ATMOSPHERIC_PRESSURE, BOLTZMANN, ELECTRON_MASS, ELEMENTARY_CHARGE,
-};
-use kwavers_core::constants::thermodynamic::BUBBLE_REFERENCE_TEMPERATURE_K;
+use kwavers_core::constants::fundamental::{BOLTZMANN, ELECTRON_MASS, ELEMENTARY_CHARGE};
 use kwavers_core::error::KwaversResult;
 use leto::Array3;
 
@@ -67,11 +64,8 @@ impl IntegratedSonoluminescence {
         Self {
             emission,
             acoustic_pressure: Array3::zeros(grid_shape),
-            // Initial bubble interior: thermal equilibrium at the Brenner (2002)
-            // 300 K baseline used by the Cherenkov & emission models in this
-            // submodule; ambient pressure sourced from SSOT.
-            temperature_field: Array3::from_elem(grid_shape, BUBBLE_REFERENCE_TEMPERATURE_K),
-            pressure_field: Array3::from_elem(grid_shape, ATMOSPHERIC_PRESSURE),
+            temperature_field: Array3::from_elem(grid_shape, bubble_params.t0),
+            pressure_field: Array3::from_elem(grid_shape, bubble_params.initial_gas_pressure),
             radius_field: Array3::from_elem(grid_shape, bubble_params.r0),
             wall_velocity_field: Array3::zeros(grid_shape),
             particle_velocity_field: Array3::zeros(grid_shape),
@@ -210,6 +204,11 @@ impl IntegratedSonoluminescence {
                 }
             }
         }
+        self.emission.calculate_emission(
+            &self.temperature_field,
+            &self.radius_field,
+            &self.charge_density_field,
+        );
         Ok(())
     }
 }

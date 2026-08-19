@@ -427,6 +427,15 @@ path = "examples/field_surrogate_demo.rs"
 required-features = ["pinn"]
 
 [[example]]
+name = "multiphysics_sonoluminescence"
+path = "examples/multiphysics_sonoluminescence.rs"
+required-features = ["pinn"]
+
+[[example]]
+name = "single_bubble_sonoluminescence"
+path = "examples/single_bubble_sonoluminescence.rs"
+
+[[example]]
 name = "liver_theranostic_reconstruction"
 path = "examples/liver_theranostic_reconstruction.rs"
 

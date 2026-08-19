@@ -4,6 +4,18 @@
 
 ### Changed
 
+- **Breaking sonoluminescence surface:** Dimensioned emission now exposes
+  typed Aequitas blackbody and bremsstrahlung components and excludes the
+  arbitrary-unit Cherenkov yield from the `W/m³` field. The integrated step
+  initializes from `BubbleParameters` and refreshes emission after state
+  updates; unused emission parameters and the unimplemented molecular-line
+  flag are removed.
+
+- **Examples and book:** The duplicate comparison example is removed. The
+  single-bubble example runs the typed integrated path, and the multiphysics
+  example reports real bounded PINN training statistics instead of placeholder
+  luminosity and validation claims.
+
 - **Provider:** Removed the consumer-owned collocated raw-WGPU FDTD shader and
   dispatcher. GPU/CPU equivalence now uses Hephaestus' typed `Fdtd3dOps`
   contract, a native-f32 independent CPU reference, explicit provider errors,
