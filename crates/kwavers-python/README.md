@@ -50,13 +50,13 @@ pip install maturin
 
 # Clone repository
 git clone https://github.com/ryancinsight/kwavers.git
-cd kwavers/pykwavers
+cd kwavers
 
 # Development install (editable)
-maturin develop --release
+maturin develop --release --manifest-path crates/kwavers-python/Cargo.toml
 
 # Or build wheel
-maturin build --release
+maturin build --release --manifest-path crates/kwavers-python/Cargo.toml
 pip install target/wheels/kwavers_python-*.whl
 ```
 
@@ -66,8 +66,11 @@ pip install target/wheels/kwavers_python-*.whl
 # Plotting and comparison reports
 pip install "kwavers-python[comparison]"
 
-# MATLAB k-Wave bridge
+# MATLAB-free k-Wave Python comparison bridge (Python 3.10+)
 pip install "kwavers-python[kwave]"
+
+# MATLAB k-Wave bridge (requires MATLAB R2022b+)
+pip install "kwavers-python[matlab]"
 
 # For development
 pip install "kwavers-python[dev]"
@@ -116,7 +119,7 @@ print(f"Sensor data shape: {result.sensor_data.shape}")
 print(f"Final time: {result.final_time*1e6:.2f} μs")
 ```
 
-### k-Wave Comparison
+### MATLAB k-Wave Comparison
 
 ```python
 from pykwavers.kwave_bridge import KWaveBridge, GridConfig, MediumConfig
@@ -352,9 +355,9 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 # Install maturin
 pip install maturin
 
-# Build and install
-cd kwavers/pykwavers
-maturin develop --release
+# Build and install from the repository root
+cd kwavers
+maturin develop --release --manifest-path crates/kwavers-python/Cargo.toml
 ```
 
 ### Running Tests
