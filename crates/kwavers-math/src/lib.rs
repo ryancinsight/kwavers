@@ -1,38 +1,4 @@
-//! Pure mathematical abstractions and primitives.
-//!
-//! This module contains foundational mathematical components that have no domain-specific
-//! dependencies. These are the lowest-level computational building blocks used throughout
-//! the system.
-//!
-//! # Architecture
-//!
-//! Math sits at the foundation of the dependency hierarchy:
-//! - **No dependencies** on domain-specific modules (imaging, therapy, analysis)
-//! - **Depended upon by**: solvers, physics, domain layers
-//!
-//! # Modules
-//!
-//! - `fft`: Fast Fourier Transform operations and k-space utilities
-//! - `geometry`: Geometric primitives and spatial computations
-//! - `inverse_problems`: Regularization and inverse problem solvers
-//! - `linear_algebra`: Linear algebra operations (norms, decompositions via leto-ops)
-//! - `numerics`: Numerical methods and algorithms
-//!
-//! # Re-exports from leto-ops (SSOT)
-//!
-//! The following symbols are re-exported from `leto-ops` for backward compatibility
-//! and to maintain a single source of truth:
-//!
-//! - Optimization: `leto_ops::application::optimization::{minimize, LbfgsConfig, LbfgsMemory, LbfgsResult}`
-//! - Signal processing: `leto_ops::application::signal::{hann, hamming, blackman, tukey, wrap_to_pi}`
-//! - Statistics: `leto_ops::application::statistics::{pearson, rmse, nrmse, psnr, normalized_rmse, percentile_range, ...}`
-//! - Special functions: `leto_ops::application::special::{erf, j0, j1, jn, sinc}`
-//! - Special Legendre: `leto_ops::application::special_legendre::{legendre_poly, legendre_poly_and_deriv}`
-//! - Linear algebra norms: `leto_ops::application::linalg::{norm, norm_l1, norm_l2, norm_max, l2_normalize, dot_product, cross_product}`
-//! - Complex linear algebra: `leto_ops::application::linalg::{complex_solve, complex_inv}`
-//! - Eigendecomposition: `leto_ops::application::linalg::{eigenvalues, hermitian_eigen_jacobi, hermitian_eigen_qr, symmetric_eigen_jacobi}`
-//! - Iterative solvers: `leto_ops::application::linalg::{LsqrSolver, LsqrConfig, LsqrResult}`
-//! - Sparse matrices: `leto_ops::application::sparse::{CsrMatrix, CscMatrix, CooMatrix, ...}`
+#![doc = include_str!("../README.md")]
 
 pub mod apodization;
 pub mod fft;

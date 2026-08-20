@@ -62,6 +62,9 @@ jobs:
     - name: Check formatting
       run: cargo fmt -- --check
 
+    - name: Audit per-crate READMEs
+      run: cargo run --locked -p xtask -- check-readmes
+
     - name: Run clippy (strict mode)
       run: |
         cargo clippy --locked -p kwavers-core --all-targets --all-features -- -D warnings

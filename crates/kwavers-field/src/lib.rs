@@ -1,3 +1,5 @@
+#![doc = include_str!("../README.md")]
+
 pub mod bubble;
 pub mod electromagnetic;
 pub mod r#type;

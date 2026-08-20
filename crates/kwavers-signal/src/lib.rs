@@ -1,12 +1,4 @@
-// signal/mod.rs
-//! Signal generation and processing module
-//!
-//! Comprehensive signal generation library including:
-//! - Basic waveforms (sine, square, triangle)
-//! - Pulse signals (Gaussian, rectangular, tone burst, Ricker)
-//! - Frequency sweeps (linear, logarithmic, hyperbolic)
-//! - Modulation techniques (AM, FM, PM, QAM, PWM)
-//! - Windowing functions
+#![doc = include_str!("../README.md")]
 
 pub mod amplitude;
 pub mod analytic;

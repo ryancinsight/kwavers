@@ -34,7 +34,7 @@
 **Recently completed:** the workspace crate split (ADR-011) — the ~460k-LOC
 `kwavers` monolith is decomposed into per-layer crates to cut incremental build
 times. There is **no facade**: consumers (including the Python bindings) depend on
-the layer crates directly (`kwavers_core`, `kwavers_domain`, `kwavers_solver`, …).
+the layer crates directly (`kwavers_core`, `kwavers_grid`, `kwavers_solver`, …).
 The `kwavers` crate is now only a thin top-level **app/integration** crate — it
 hosts the binary and the cross-cutting tests/examples/benches, and re-exports
 nothing.
@@ -43,18 +43,30 @@ nothing.
 
 | Crate | Layer / responsibility |
 |-------|------------------------|
-| `kwavers-core` | Constants, error types, arena allocation, time/logging utilities |
-| `kwavers-math` | FFT, linear algebra, numerics, geometry, statistics, SIMD |
-| `kwavers-domain` | Grid, medium, source, sensor, boundary, field, signal, imaging, therapy models |
-| `kwavers-physics` | Nonlinear acoustics, bubble dynamics, thermal, optics, chemistry, elastic waves |
-| `kwavers-solver` | FDTD / PSTD / k-space / Helmholtz, BEM, FWI / RTM / CBS, PINN |
-| `kwavers-analysis` | Signal processing, beamforming, validation, ML/uncertainty, plotting |
-| `kwavers-simulation` | Builders, runners, multi-physics coupling, modality pipelines, backends |
-| `kwavers-diagnostics` | Reconstruction, multi-modal fusion, Doppler, spectroscopy, decision support |
-| `kwavers-therapy` | HIFU / histotripsy / lithotripsy planning, theranostic guidance, dose & safety |
-| `kwavers-gpu` | wgpu/WGSL compute backend (leaf above solver); concrete `ComputeBackend` impls |
-| `kwavers` | Thin top-level app/integration crate: binary + cross-cutting tests/examples/benches (no re-exports) |
-| `kwavers-python` | PyO3 bindings (`pykwavers`); depends on the layer crates directly; no domain logic |
+| [`kwavers-core`](crates/kwavers-core) | Constants, error types, arena allocation, time/logging utilities |
+| [`kwavers-math`](crates/kwavers-math) | FFT, linear algebra, numerics, geometry, statistics, SIMD |
+| [`kwavers-grid`](crates/kwavers-grid) | Cartesian/cylindrical grids, coordinates, topology, operators, geometric domains |
+| [`kwavers-field`](crates/kwavers-field) | Field component indices (SSOT), field-type mapping, operations, statistics |
+| [`kwavers-signal`](crates/kwavers-signal) | Waveforms, pulses, sweeps, modulation, windowing, filters |
+| [`kwavers-medium`](crates/kwavers-medium) | Homogeneous/heterogeneous media, acoustic/elastic/optical/thermal properties |
+| [`kwavers-phantom`](crates/kwavers-phantom) | Clinical tissue-phantom builders and Shepp-Logan references |
+| [`kwavers-mesh`](crates/kwavers-mesh) | Tetrahedral FEM meshes, quality metrics, gaia bridge |
+| [`kwavers-boundary`](crates/kwavers-boundary) | CPML/PML absorbing layers, FEM/BEM boundaries, coupling, periodic |
+| [`kwavers-source`](crates/kwavers-source) | `Source` trait, grid/mask sources, wavefronts, apodization |
+| [`kwavers-receiver`](crates/kwavers-receiver) | Sensor-array geometry (SSOT), recorders, point sensors, grid sampling |
+| [`kwavers-transducer`](crates/kwavers-transducer) | Bowls, phased/linear/matrix/hemispherical arrays, beamforming, PAM, ultrafast |
+| [`kwavers-imaging`](crates/kwavers-imaging) | DICOM/CT/NIfTI loaders, ultrasound/photoacoustic models, CEUS, fusion |
+| [`kwavers-physics`](crates/kwavers-physics) | Nonlinear acoustics, bubble dynamics, thermal, optics, chemistry, elastic waves |
+| [`kwavers-solver`](crates/kwavers-solver) | FDTD / PSTD / k-space / Helmholtz, BEM, FWI / RTM / CBS, PINN |
+| [`kwavers-gpu`](crates/kwavers-gpu) | Hephaestus-backed provider-generic GPU backend; concrete `ComputeBackend` impls |
+| [`kwavers-simulation`](crates/kwavers-simulation) | Builders, runners, multi-physics coupling, modality pipelines, backends |
+| [`kwavers-analysis`](crates/kwavers-analysis) | Signal processing, conservation, validation, ML/uncertainty, plotting |
+| [`kwavers-diagnostics`](crates/kwavers-diagnostics) | Reconstruction, multi-modal fusion, Doppler, spectroscopy, decision support |
+| [`kwavers-therapy`](crates/kwavers-therapy) | HIFU / histotripsy / lithotripsy planning, theranostic guidance, dose & safety |
+| [`kwavers-driver`](crates/kwavers-driver) | Physics-guided, manufacturing-aware driver-electronics (PCB) design |
+| [`kwavers-alloc-probe`](crates/kwavers-alloc-probe) | Thread-scoped allocation counting for allocation-contract tests |
+| [`kwavers`](crates/kwavers) | Thin top-level app/integration crate: binary + cross-cutting tests/examples/benches (no re-exports) |
+| [`kwavers-python`](crates/kwavers-python) | PyO3 bindings (`pykwavers`); depends on the layer crates directly; no domain logic |
 
 Tyche owns reproducible counter streams, Latin-hypercube and Sobol designs,
 online moments, correlation screening, and finite-sample conformal
