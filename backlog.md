@@ -1,5 +1,33 @@
 # Backlog / Strategy
 
+## KW-CLEAN-108 — Delete the tracked driver backup file [patch] — done 2026-08-20
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-CLEAN-108 | No editor backup artifacts are tracked, and the ignore rule that should have stopped this one actually matches it. | [patch] | done | Claude | `crates/kwavers-driver/src/physics/mod.rs.bak-final`, `.gitignore` |
+
+- Merge note: filed on `feat/aperture-sir-seam` (commit `7f9a4e718`), closed here on
+  `fix/xtask-metrics-paths` because a peer moved the shared tree between branches. Keep
+  this closed entry and drop the `todo` entry of the same ID when the branches meet.
+- Acceptance: the file is deleted; a tree-wide scan finds no other tracked `.bak`/`.orig`
+  siblings.
+- Deleted: `crates/kwavers-driver/src/physics/mod.rs.bak-final` — 41 lines, entirely
+  superseded doc text from the Phase-0 era describing an empty `physics` namespace with the
+  flat `src/<name>.rs` modules authoritative. Neither statement has been true since the
+  physics slices landed, it carries no code, it is referenced from nowhere, and rustc never
+  saw it (the extension is not `.rs`). Git holds the history.
+- Root cause, and the actual fix: `.gitignore` already carried a "Backup files" block with
+  `*.bak`, so the artifact looked like it should have been ignored. It was not — a bare
+  `*.bak` glob requires the name to end in `.bak` and does not match `mod.rs.bak-final`.
+  The pattern is now `*.bak*`, which does, and `*.orig` / `*.rej` are added for
+  merge-conflict leftovers, the other common accidental commit. Deleting the file without
+  this leaves the same hole open.
+- Evidence: tree-wide scans for `.bak`/`.backup`/`.orig`/`.rej`/`.old`/`.save`/`.swp`/`~`
+  and for `backup`/`bkp`/`copy`/`deprecated`/`disabled` in tracked paths return this one
+  file and nothing else. `git check-ignore -v` confirms `.gitignore:71` now matches it, and
+  no tracked file is newly shadowed by the added patterns. `cargo nextest run -p
+  kwavers-driver` 494/494 after the deletion.
+
 ## KW-DOC-107 — Move driver migration plans out of module docstrings [patch] — done 2026-08-20
 
 | ID | Outcome | Class | Status | Owner | Scope |
