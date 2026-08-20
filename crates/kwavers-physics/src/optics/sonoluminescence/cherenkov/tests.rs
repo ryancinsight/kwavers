@@ -87,8 +87,8 @@ fn test_cherenkov_refractive_index_update() {
 }
 
 #[test]
-fn test_cherenkov_power_density_scaling() {
-    // Power density scales with charge density and threshold behavior
+fn test_cherenkov_threshold_yield_scaling() {
+    // Arbitrary-unit threshold yield scales with charge density.
     let model = CherenkovModel::new(1.5, 10.0);
     let velocity = model.critical_velocity * 1.5;
     let temperature = 15000.0; // K
@@ -96,16 +96,16 @@ fn test_cherenkov_power_density_scaling() {
     let charge_density_1 = 1e3; // C/m³
     let charge_density_2 = 2e3; // C/m³
 
-    let power1 = model.total_power_density(velocity, charge_density_1, temperature);
-    let power2 = model.total_power_density(velocity, charge_density_2, temperature);
+    let yield1 = model.total_threshold_yield(velocity, charge_density_1, temperature);
+    let yield2 = model.total_threshold_yield(velocity, charge_density_2, temperature);
 
     // Should scale approximately with charge density
-    assert!(power2 > power1);
+    assert!(yield2 > yield1);
 
     // No emission below threshold
-    let power_below =
-        model.total_power_density(model.critical_velocity * 0.9, charge_density_1, temperature);
-    assert_eq!(power_below, 0.0);
+    let yield_below =
+        model.total_threshold_yield(model.critical_velocity * 0.9, charge_density_1, temperature);
+    assert_eq!(yield_below, 0.0);
 }
 
 #[test]

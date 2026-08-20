@@ -36,7 +36,7 @@ checksum = "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa"
 [[package]]
 name = "aequitas"
 version = "0.2.0"
-source = "git+https://github.com/ryancinsight/aequitas#260ad10dd5480eef8c82958d1d148199656db59e"
+source = "git+https://github.com/ryancinsight/aequitas#a197bae887140449f6b9c67e23571cd66e6d053e"
 dependencies = [
  "eunomia",
  "serde",
@@ -3210,7 +3210,6 @@ dependencies = [
  "apollo-fft",
  "bytemuck",
  "chrono",
- "coeus-core",
  "egui",
  "eunomia",
  "flume",
@@ -3232,7 +3231,6 @@ dependencies = [
  "plotly",
  "pollster",
  "rand 0.8.7",
- "ritk-image",
  "ritk-spatial",
  "serde",
  "tracing",
@@ -3486,6 +3484,7 @@ dependencies = [
  "rand 0.8.7",
  "rand_chacha 0.3.1",
  "rand_distr 0.4.3",
+ "ritk-block-matching",
  "ritk-registration",
  "serde",
  "thiserror 2.0.20",
@@ -3935,7 +3934,7 @@ dependencies = [
 [[package]]
 name = "mnemosyne-arena"
 version = "0.4.0"
-source = "git+https://github.com/ryancinsight/Mnemosyne#baf4f235d2b04db2d6a9203dbc38b3f39aa12fa2"
+source = "git+https://github.com/ryancinsight/Mnemosyne#d00f139e36456ead2ea3f6d2c116828290736354"
 dependencies = [
  "eunomia",
  "loom",
@@ -3947,7 +3946,7 @@ dependencies = [
 [[package]]
 name = "mnemosyne-backend"
 version = "0.5.0"
-source = "git+https://github.com/ryancinsight/Mnemosyne#baf4f235d2b04db2d6a9203dbc38b3f39aa12fa2"
+source = "git+https://github.com/ryancinsight/Mnemosyne#d00f139e36456ead2ea3f6d2c116828290736354"
 dependencies = [
  "mnemosyne-memory-core",
 ]
@@ -3955,12 +3954,12 @@ dependencies = [
 [[package]]
 name = "mnemosyne-build-util"
 version = "0.2.0"
-source = "git+https://github.com/ryancinsight/Mnemosyne#baf4f235d2b04db2d6a9203dbc38b3f39aa12fa2"
+source = "git+https://github.com/ryancinsight/Mnemosyne#d00f139e36456ead2ea3f6d2c116828290736354"
 
 [[package]]
 name = "mnemosyne-decay"
 version = "0.3.0"
-source = "git+https://github.com/ryancinsight/Mnemosyne#baf4f235d2b04db2d6a9203dbc38b3f39aa12fa2"
+source = "git+https://github.com/ryancinsight/Mnemosyne#d00f139e36456ead2ea3f6d2c116828290736354"
 dependencies = [
  "mnemosyne-arena",
  "mnemosyne-backend",
@@ -3970,7 +3969,7 @@ dependencies = [
 [[package]]
 name = "mnemosyne-heap"
 version = "0.4.0"
-source = "git+https://github.com/ryancinsight/Mnemosyne#baf4f235d2b04db2d6a9203dbc38b3f39aa12fa2"
+source = "git+https://github.com/ryancinsight/Mnemosyne#d00f139e36456ead2ea3f6d2c116828290736354"
 dependencies = [
  "libc",
  "melinoe",
@@ -3985,7 +3984,7 @@ dependencies = [
 [[package]]
 name = "mnemosyne-local"
 version = "0.4.0"
-source = "git+https://github.com/ryancinsight/Mnemosyne#baf4f235d2b04db2d6a9203dbc38b3f39aa12fa2"
+source = "git+https://github.com/ryancinsight/Mnemosyne#d00f139e36456ead2ea3f6d2c116828290736354"
 dependencies = [
  "melinoe",
  "mnemosyne-arena",
@@ -4000,7 +3999,7 @@ dependencies = [
 [[package]]
 name = "mnemosyne-memory"
 version = "0.7.0"
-source = "git+https://github.com/ryancinsight/Mnemosyne#baf4f235d2b04db2d6a9203dbc38b3f39aa12fa2"
+source = "git+https://github.com/ryancinsight/Mnemosyne#d00f139e36456ead2ea3f6d2c116828290736354"
 dependencies = [
  "eunomia",
  "mnemosyne-arena",
@@ -4015,7 +4014,7 @@ dependencies = [
 [[package]]
 name = "mnemosyne-memory-core"
 version = "0.2.0"
-source = "git+https://github.com/ryancinsight/Mnemosyne#baf4f235d2b04db2d6a9203dbc38b3f39aa12fa2"
+source = "git+https://github.com/ryancinsight/Mnemosyne#d00f139e36456ead2ea3f6d2c116828290736354"
 dependencies = [
  "loom",
 ]
@@ -4023,7 +4022,7 @@ dependencies = [
 [[package]]
 name = "mnemosyne-prof"
 version = "0.2.0"
-source = "git+https://github.com/ryancinsight/Mnemosyne#baf4f235d2b04db2d6a9203dbc38b3f39aa12fa2"
+source = "git+https://github.com/ryancinsight/Mnemosyne#d00f139e36456ead2ea3f6d2c116828290736354"
 dependencies = [
  "backtrace",
  "mnemosyne-build-util",
@@ -5464,6 +5463,14 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror 2.0.20",
+]
+
+[[package]]
+name = "ritk-block-matching"
+version = "0.1.0"
+source = "git+https://github.com/ryancinsight/ritk.git#ac722c585a0530351e39c1c71c9082d7af570f31"
+dependencies = [
+ "anyhow",
 ]
 
 [[package]]

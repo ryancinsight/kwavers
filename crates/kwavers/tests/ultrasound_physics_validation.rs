@@ -509,25 +509,13 @@ fn validate_sonoluminescence_spectral_analysis() {
     // Create test fields
     let grid_shape = [4, 4, 4];
     let temperature_field = Array3::from_elem(grid_shape, 8000.0); // Hot plasma
-    let pressure_field = Array3::from_elem(grid_shape, 1e9); // High pressure
     let radius_field = Array3::from_elem(grid_shape, 1e-7); // Small radius
 
     let params = EmissionParameters::default();
     let mut emission = SonoluminescenceEmission::new(grid_shape, params);
 
-    // Calculate emission (provide velocity, charge density, compression fields)
-    let velocity_field = Array3::from_elem(grid_shape, 0.0);
     let charge_density_field = Array3::from_elem(grid_shape, 0.0);
-    let compression_field = Array3::from_elem(grid_shape, 1.0);
-    emission.calculate_emission(
-        &temperature_field,
-        &pressure_field,
-        &radius_field,
-        &velocity_field,
-        &charge_density_field,
-        &compression_field,
-        0.0,
-    );
+    emission.calculate_emission(&temperature_field, &radius_field, &charge_density_field);
 
     // Verify emission is positive where temperature is high enough
     let total_emission: f64 = emission.emission_field.iter().sum();
@@ -594,24 +582,13 @@ fn validate_acoustic_to_optic_energy_conversion() {
     // Step 4: Sonoluminescence emission (optic output)
     let grid_shape = [2, 2, 2];
     let temperature_field = Array3::from_elem(grid_shape, 10000.0); // Post-collapse temperature
-    let pressure_field = Array3::from_elem(grid_shape, 1e9); // Post-collapse pressure
     let radius_field = Array3::from_elem(grid_shape, 1e-7); // Post-collapse radius
 
     let emission_params = EmissionParameters::default();
     let mut emission = SonoluminescenceEmission::new(grid_shape, emission_params);
 
-    let velocity_field = Array3::from_elem(grid_shape, 0.0);
     let charge_density_field = Array3::from_elem(grid_shape, 0.0);
-    let compression_field = Array3::from_elem(grid_shape, 1.0);
-    emission.calculate_emission(
-        &temperature_field,
-        &pressure_field,
-        &radius_field,
-        &velocity_field,
-        &charge_density_field,
-        &compression_field,
-        0.0,
-    );
+    emission.calculate_emission(&temperature_field, &radius_field, &charge_density_field);
 
     // Verify acoustic-to-optic conversion produces light
     let total_light: f64 = emission.emission_field.iter().sum();
@@ -659,24 +636,13 @@ fn validate_interdisciplinary_coupling_efficiency() {
     // Optical output via sonoluminescence
     let grid_shape = [2, 2, 2];
     let temperature_field = Array3::from_elem(grid_shape, 15000.0); // Very hot plasma
-    let pressure_field = Array3::from_elem(grid_shape, 1e10); // Extreme pressure
     let radius_field = Array3::from_elem(grid_shape, 5e-8); // Very small radius
 
     let emission_params = EmissionParameters::default();
     let mut emission = SonoluminescenceEmission::new(grid_shape, emission_params);
 
-    let velocity_field = Array3::from_elem(grid_shape, 0.0);
     let charge_density_field = Array3::from_elem(grid_shape, 0.0);
-    let compression_field = Array3::from_elem(grid_shape, 1.0);
-    emission.calculate_emission(
-        &temperature_field,
-        &pressure_field,
-        &radius_field,
-        &velocity_field,
-        &charge_density_field,
-        &compression_field,
-        0.0,
-    );
+    emission.calculate_emission(&temperature_field, &radius_field, &charge_density_field);
 
     let optical_energy: f64 = emission.emission_field.iter().sum();
 
@@ -686,12 +652,8 @@ fn validate_interdisciplinary_coupling_efficiency() {
         SonoluminescenceEmission::new(grid_shape, EmissionParameters::default());
     hotter_emission.calculate_emission(
         &hotter_temperature_field,
-        &pressure_field,
         &radius_field,
-        &velocity_field,
         &charge_density_field,
-        &compression_field,
-        0.0,
     );
 
     let hotter_optical_energy: f64 = hotter_emission.emission_field.iter().sum();
@@ -801,23 +763,12 @@ fn validate_multi_modal_fusion_ultrasound_optical() {
 
     // Create optical/sonoluminescence data
     let temperature_field = Array3::from_elem(grid_shape, 10000.0);
-    let pressure_field = Array3::from_elem(grid_shape, 1e9);
     let radius_field = Array3::from_elem(grid_shape, 1e-7);
 
     let emission_params = EmissionParameters::default();
     let mut emission = SonoluminescenceEmission::new(grid_shape, emission_params);
-    let velocity_field = Array3::from_elem(grid_shape, 0.0);
     let charge_density_field = Array3::from_elem(grid_shape, 0.0);
-    let compression_field = Array3::from_elem(grid_shape, 1.0);
-    emission.calculate_emission(
-        &temperature_field,
-        &pressure_field,
-        &radius_field,
-        &velocity_field,
-        &charge_density_field,
-        &compression_field,
-        0.0,
-    );
+    emission.calculate_emission(&temperature_field, &radius_field, &charge_density_field);
     let optical_data = LetoArray3::from_shape_vec(
         leto_shape,
         emission.emission_field.iter().copied().collect(),

@@ -6,9 +6,9 @@ use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
 use super::gradient::objective_and_gradient;
 use super::{
-    invert, simulate_frequency_observation, AbsorbingBoundary, Config, DenseConvergentBornOperator,
-    FrequencyObservation, PstdFiniteWindowBornOperator, PstdSpectralConvergentBornOperator,
-    SingleScatterBornOperator, SpectralConvergentBornOperator,
+    invert, simulate_frequency_observation, AbsorbingBoundary, AngularSpectrumSplitStepOperator,
+    Config, DenseConvergentBornOperator, FrequencyObservation, PstdFiniteWindowBornOperator,
+    PstdSpectralConvergentBornOperator, SingleScatterBornOperator, SpectralConvergentBornOperator,
 };
 use kwavers_math::fft::Complex64;
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::{

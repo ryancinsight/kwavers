@@ -12,8 +12,6 @@ pub struct EmissionParameters {
     pub use_bremsstrahlung: bool,
     /// Enable Cherenkov radiation
     pub use_cherenkov: bool,
-    /// Enable molecular line emission
-    pub use_molecular_lines: bool,
     /// Ionization energy for gas (eV)
     pub ionization_energy: f64,
     /// Minimum temperature for light emission (K)
@@ -31,8 +29,7 @@ impl Default for EmissionParameters {
         Self {
             use_blackbody: true,
             use_bremsstrahlung: true,
-            use_cherenkov: false,       // Experimental feature
-            use_molecular_lines: false, // Not implemented yet
+            use_cherenkov: false, // Experimental feature
             ionization_energy: kwavers_core::constants::chemistry::ARGON_IONIZATION_ENERGY, // eV for argon
             min_temperature: 2000.0,                                                        // K
             opacity_factor: 1.0, // Optically thin

@@ -7,6 +7,7 @@ on:
       - Cargo.lock
       - Cargo.toml
       - crates/kwavers-python/**
+      - .github/actions/install-system-dependencies/**
       - .github/workflows/python-wheel-smoke.yml
   workflow_dispatch:
 
@@ -83,19 +84,13 @@ jobs:
         with:
           python-version: "3.10"
 
+      - name: Prepare Ubuntu package index
+        uses: ./source/.github/actions/install-system-dependencies
+
       - name: Install k-Wave HDF5 runtime
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -f /etc/apt/apt-mirrors.txt ]]; then
-            sudo sed -i 's|azure.archive.ubuntu.com|archive.ubuntu.com|g' /etc/apt/apt-mirrors.txt
-          fi
-          for apt_source in /etc/apt/sources.list /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources; do
-            if [[ -f "$apt_source" ]]; then
-              sudo sed -i 's|azure.archive.ubuntu.com|archive.ubuntu.com|g' "$apt_source"
-            fi
-          done
-          sudo timeout 180s apt-get update
           hdf5_runtime_packages=()
           for hdf5_runtime in libhdf5-103-1 libhdf5-103-1t64; do
             if apt-cache show "$hdf5_runtime" 2>/dev/null | grep -q '^Package:'; then

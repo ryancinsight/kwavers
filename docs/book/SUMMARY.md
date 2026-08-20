@@ -18,7 +18,6 @@
 - [3. Nonlinear Acoustics](nonlinear_acoustics.md)
   - [Example: Sonoluminescence](examples/single_bubble_sonoluminescence.md)
   - [Example: Multiphysics Sonoluminescence](examples/multiphysics_sonoluminescence.md)
-  - [Example: Sonoluminescence Comparison](examples/sonoluminescence_comparison.md)
 - [4. Media and Tissue Models](media_and_tissue_models.md)
   - [Example: Spatially Varying Attenuation](examples/spatially_varying_attenuation.md)
   - [Example: Tau Parameter Sweep](examples/tau_sweep.md)
@@ -120,4 +119,3 @@
 
 - [A. Atlas Crate Dependencies](atlas_dependencies.md)
 - [B. Glossary](appendix_glossary.md)
-

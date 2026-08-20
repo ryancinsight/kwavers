@@ -28,7 +28,7 @@ pub(crate) const THERMAL_REFRACTIVE_COEFFICIENT: f64 = 1e-5;
 /// throughout the Cherenkov emission submodule.
 pub(crate) const REFERENCE_TEMPERATURE: f64 = BUBBLE_REFERENCE_TEMPERATURE_K;
 
-/// Compute Cherenkov emission field over a grid from physical fields
+/// Compute arbitrary-unit Cherenkov threshold yield over a grid.
 ///
 /// ## Algorithm
 ///
@@ -36,7 +36,8 @@ pub(crate) const REFERENCE_TEMPERATURE: f64 = BUBBLE_REFERENCE_TEMPERATURE_K;
 /// compression (piezo-optic effect) and temperature (thermo-optic
 /// effect). Emission occurs only where particle velocity exceeds
 /// the local phase velocity c/n. The Frank–Tamm formula then gives
-/// spectral yield ∝ (1 − 1/(n²β²)).
+/// spectral yield ∝ (1 − 1/(n²β²)). The result is not a dimensional
+/// power-density field.
 ///
 /// ## References
 ///
@@ -45,7 +46,7 @@ pub(crate) const REFERENCE_TEMPERATURE: f64 = BUBBLE_REFERENCE_TEMPERATURE_K;
 /// - Panics if an internal precondition is violated.
 ///
 #[must_use]
-pub fn calculate_cherenkov_emission(
+pub fn calculate_cherenkov_threshold_yield(
     velocity_field: &Array3<f64>,
     charge_density_field: &Array3<f64>,
     temperature_field: &Array3<f64>,

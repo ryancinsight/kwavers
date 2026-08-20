@@ -1,5 +1,40 @@
 # Backlog / Strategy
 
+## KW-CI-104 — Centralize reliable Ubuntu dependency installation [patch] — in progress 2026-08-19
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-CI-104 | Normalize the Ubuntu package mirror once and install each job's system packages through one bounded repository-local action. | [patch] | implementation complete; hosted verification pending | Codex | `.github/actions/install-system-dependencies/action.yml`, Ubuntu workflow callers, this item |
+
+- Acceptance: no affected job contacts `azure.archive.ubuntu.com`; update and
+  installation retain finite deadlines and retries; the repeated workflow
+  scripts consolidate into one action; workflow lint and exact-head hosted
+  jobs pass without changing test, benchmark, or coverage inputs.
+- Evidence: Architecture Validation run `32276583436`, job `96145340888`, and
+  CI/CD Pipeline run `32276583452`, job `96145341309`, independently exhausted
+  the eight-minute `apt-get update` deadline against the Azure mirror on
+  Python integration PR #410. The same PR's wheel job passed after its local
+  source normalization selected `archive.ubuntu.com`.
+- Local verification: `actionlint` 1.7.12 passes every workflow and the local
+  action; both composite-action Bash programs parse; `git diff --check` and
+  residue scans pass. The CUDA container retains its pre-checkout bootstrap,
+  which cannot call repository-local code and does not use the affected runner
+  source configuration.
+- Non-goals: no Rust, dependency, benchmark, test, or coverage-policy changes.
+
+## KWAVERS-SONO-113 — Type sonoluminescence emission and close the example/book slice [major] [arch] — implementation complete; hosted verification pending 2026-08-19
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KWAVERS-SONO-113 | Route dimensioned sonoluminescence power through Aequitas, assemble one authoritative field pass, and synchronize tests, examples, and book pages. | [major] [arch] | implementation complete; hosted verification pending | Codex | `crates/kwavers-physics/src/optics/sonoluminescence/`, sonoluminescence examples, `docs/book/examples/`, ADR 114, this item |
+
+- Acceptance: emission components carry Aequitas `VolumetricPowerDensity`; Cherenkov spectral yield is not added to the dimensioned power field; one field traversal computes enabled dimensioned components without temporary field clones; the integrated step refreshes emission from updated state; constructor state uses `BubbleParameters`; placeholder molecular-line and example paths are removed; focused value-semantic tests, example builds/runs, book tests/build, and package gates pass.
+- Non-goals: GPU kernels, Python bindings, and unrelated legacy migration surfaces remain separate items.
+- Evidence target: exact local revision plus hosted architecture, test, example, and book gates; dimensional limits and any external runner blockers are recorded here.
+- Local evidence at `a6a8a44a4`: strict `kwavers-physics` Clippy (`-D warnings`) passed; Nextest run `b8d4c544-fa3d-46ca-8076-86187239f04b` passed 40/40 sonoluminescence tests (1,517 skipped); both examples passed package checks, `single_bubble_sonoluminescence` ran through eight integrated steps, and `multiphysics_sonoluminescence --features pinn` ran through two epochs over three domains; `mdbook test docs/book` and `mdbook build docs/book` passed. The single-bubble run emitted changing Aequitas W/m³ fields and a separate arbitrary-unit spectrum.
+- Pre-merge regression closure: the full-feature facade gate exposed five stale seven-argument emission calls in `ultrasound_physics_validation`; every call now uses the dimensioned temperature/radius/charge-density contract and the unused pressure, velocity, and compression fixtures are deleted. Both strict workflow Clippy commands pass locally, and Nextest run `e6b1b6ae-e36c-4ea7-8aca-ecf2514ced5f` passes all 18 facade physics-validation tests.
+- Hosted evidence: PR [#414](https://github.com/ryancinsight/kwavers/pull/414) is open; every PR update reruns the repository-owned exact-head checks. Local commands used the Atlas development overlay, so Cargo lockfile source state was restored after each command and no lockfile change is part of this item.
+
 ## ATLAS-KWAVERS-HEPHAESTUS-FDTD-107 — Route collocated FDTD through Hephaestus [minor] [arch] — Apollo co-evolution blocker 2026-08-18
 
 | ID | Outcome | Class | Status | Owner | Scope |
@@ -6749,9 +6784,64 @@ Triage (correctness/arch → tests → features), one WIP item at a time:
    (both fully implemented; see gap_audit). COV-11 Mur BC = WONTFIX (CPML superior).
 
 ### Remaining genuine coverage gaps (post-verification), best as focused increments:
-- **COV-3 curvilinear/convex transmit array** [minor] — `kwavers-transducer`. The
-  `kwave_array` already has Arc/Bowl element primitives + `rasterizer_curved`; add
-  a convex-array layout helper placing N elements along a curvature arc.
+- **COV-3 curvilinear/convex transmit array** [minor] — ✅ **DONE (2026-08-19).**
+  `KWaveArray::add_convex_array(&geometry, element_width, element_height)` wires
+  the layout into the rasterizer per ADR 112, mapping each element to
+  `add_rect_rot_element` at Euler `(0, theta_i deg, 0)` and taking
+  `aequitas::Length`/typed angle so no bare radian crosses the seam. Asserted by
+  `convex_array_elements_face_along_their_layout_normals`, which drives the
+  stored orientation through the rasterizer's own `euler_xyz_rotation_matrix`
+  and compares against `element_normal(i)`. The oracle was falsified before
+  being trusted: swapping the Euler slot to `(theta, 0, 0)` and dropping
+  `.to_degrees()` each make it fail, which is the point -- both bugs still
+  produce a full, plausible element mask facing the wrong way.
+  Remaining from ADR 112: `Degree` as a `LinearUnit<Angle>` upstream in
+  aequitas (item 3), which does not block this.
+
+  Prior status, retained: **the layout helper this entry asked for already existed.**
+  `curvilinear::ConvexArrayGeometry` places N elements on a circular arc, with
+  `from_angular_pitch` / `from_arc_pitch` / `from_total_angle` constructors and
+  per-element `element_position` / `element_normal` / `element_tangent` /
+  `element_angle`. Six behavioural tests cover arc placement, apex orientation,
+  unit radial normals with orthogonal tangents, arc-pitch round-trip and
+  symmetry, the chord aperture-width formula, and zero relative delays when
+  focusing at the centre of curvature.
+
+  **What is actually missing is the wiring**, and it is not mechanical.
+  `ConvexArrayGeometry` is referenced nowhere outside its own module, so the
+  layout can be computed but cannot drive a simulation. The obvious route —
+  feeding each element to `add_arc_element_with_angles` — does not work as-is,
+  because the two carry different conventions:
+
+  | | plane | angle reference | units |
+  | --- | --- | --- | --- |
+  | `ConvexArrayGeometry` | x–z (`[r sinθ, 0, r(cosθ−1)]`) | +z, apex at θ=0 | radians |
+  | `ElementShape::Arc` (`rasterize_arc_points`) | x–y at constant z (`[cx+r cosθ, cy+r sinθ, cz]`) | +x | degrees |
+
+  The Arc primitive has no orientation parameter, so it cannot express an
+  arc in the x–z plane. Mapping one onto the other without resolving that
+  would silently misplace every element while still producing a plausible
+  mask. So the increment is a design decision — give the curved rasterizer an
+  orientation/plane parameter, add an element shape that carries its own
+  normal, or express the convex layout in the rasterizer's plane — not a
+  wiring job. `add_planar_aperture_element(PlanarApertureGeometry)` is the
+  precedent for a geometry-taking constructor once the convention is settled.
+
+  **Resolved by ADR 112 (2026-08-19).** The array already has an
+  orientation-carrying primitive: `ElementShape::Rect` takes `euler_xyz_deg`,
+  and `rasterize_rect_points` builds its lattice at `(lx, ly, 0)` before
+  rotating, so a rect's local normal is `+z`. `euler_xyz_rotation_matrix`
+  composes `Rz·Ry·Rx`, whose y-block sends `+z` to `[sin B, 0, cos B]` --
+  identical to `element_normal(i) = [sin theta, 0, cos theta]` at `B = theta`.
+  So the convex array is a set of rect elements each rotated about y by its own
+  element angle, no sign flip, no axis swap. Next increment: a geometry-taking
+  constructor mapping to `add_rect_rot_element(.., (0, theta_deg, 0))`, taking
+  `aequitas::Angle` rather than `f64`, with the rasterised element normal
+  asserted against `element_normal(i)` -- the failure mode is silent
+  misplacement, so the test is the oracle. ADR 112 also proposes adding
+  `Degree` to aequitas (a `LinearUnit<Angle>` with `SCALE = pi/180`); aequitas
+  currently defines `Radian` only, which is why call sites read
+  `Angle::from_unit::<Radian>(x.to_radians())`.
 - **COV-4 discrete point-scatterer + spatial-impulse-response RF synthesis** [minor/major]
   — Field II core; largest. Home `kwavers-phantom` (scatterer cloud) + `kwavers-source`/
   analysis (SIR convolution → RF).
@@ -9730,35 +9820,21 @@ Burn → Coeus tensor type mismatches; that debt is outside the Batch #1 scope.
   this item and its owner-local checklist section.
 - Decision: [ADR 044](docs/ADR/044-asclepius-response-ownership.md).
 
-## KW-PY-TESTS-01 — kwavers-python array_utils committed coverage gap; numpy tests cannot run under cargo test [test] [chore] — open
+## KW-PY-TESTS-01 — kwavers-python NumPy conversion coverage [test] [chore] — done
 
-- Outcome: record two facts for anyone working the ndarray-compat migration
-  in `kwavers-python`: (1) `array_utils.rs` currently has **no committed test
-  module**, and (2) numpy-backed `#[test]`s cannot run under `cargo test` in
-  this crate because pyo3 is built without an embedded interpreter.
-- Finding 1 (committed coverage): HEAD's `crates/kwavers-python/src/array_utils.rs`
-  is the helper-only 182-line file; its last related commit is `cdf8ec217`
-  ("refactor(kwavers-python): complete ndarray-compat migration") and carries no
-  `mod tests`. The helper regression tests written during the migration were
-  uncommitted worktree edits and were lost in parallel origin merges (at least
-  twice — see also the `result_serializer` migration being reset to HEAD). The
-  17 passing `cargo test -p kwavers-python --lib` tests are pure-Rust
-  (physics/response/simulation); no numpy conversion is exercised.
-- Finding 2 (why numpy tests cannot run): `Cargo.toml` declares
-  `pyo3 = { version = "0.29", features = ["extension-module", "abi3-py38",
-  "multiple-pymethods"] }` with no `auto-initialize`, so `Python::with_gil` in a
-  `#[test]` cannot start an interpreter under `cargo test`. Any numpy-backed
-  unit test added to this crate must be exercised through a real Python host
-  (e.g. pytest against the built extension module) instead of `cargo test`.
-- Consequence: for this crate, serializer-level correctness is verified by
-  (a) pure-Rust tests on non-Python logic (e.g. the `result_serializer`
-  `brain_target_index` / `resampled_crop_index_xy` tests) and (b) code review
-  of the conversion paths. Do not cite cargo-test counts as evidence for numpy
-  conversion behavior.
-- Suggested closure: commit a `#[cfg(test)]` module in `array_utils.rs` only
-  together with a route that actually runs it (a Python-host test importing
-  the built module, or pyo3 reconfiguration enabling an embedded interpreter
-  for tests), then delete this item.
+- Outcome: PyO3's deprecated `extension-module` feature is removed; Maturin
+  `>=1.9.4` owns extension linking, while the test target enables
+  `auto-initialize` for a real embedded Python host. `array_utils` now has
+  committed value-semantic tests for strided 1-D/2-D/3-D inputs, Leto round
+  trips, vector outputs, shapes, scalar families, and linspace boundaries.
+- Data movement: contiguous inputs copy once from a borrowed slice; strided
+  inputs iterate directly into the owned output instead of allocating a
+  temporary contiguous NumPy array and copying it again.
+- Evidence: exact MSVC locked Nextest run
+  `1f66cc44-14a4-4274-927f-40e250e098e9` passes 21/21; warning-denied
+  all-target Clippy passes; Maturin builds a CPython 3.8+ ABI3 wheel with the
+  explicit MSVC/Miniforge toolchain, and an isolated environment imports its
+  installed `_pykwavers.pyd`.
 
 ## KW-CI-103 — Wheel parity must import the installed extension [patch] — DONE (2026-08-19)
 

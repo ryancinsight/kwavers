@@ -47,7 +47,7 @@ mod species;
 #[cfg(test)]
 mod tests;
 
-pub use field::calculate_bremsstrahlung_emission;
+pub use field::{bremsstrahlung_power_density, calculate_bremsstrahlung_emission};
 pub use gaunt::gaunt_factor_thermal;
 pub use model::BremsstrahlungModel;
 pub use plasma::PlasmaState;

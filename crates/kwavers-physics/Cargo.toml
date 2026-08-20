@@ -31,6 +31,10 @@ rand = "0.8"
 rand_distr = "0.4"
 rand_chacha = "0.3"
 anyhow = "1.0"
+# Speckle-tracking seam. Light by construction (anyhow only), so it is a
+# plain dependency rather than being gated behind clinical-imaging like the
+# registration stack.
+ritk-block-matching = { workspace = true }
 ritk-registration = { workspace = true, optional = true }
 eunomia = { workspace = true }
 hyperion = { workspace = true }

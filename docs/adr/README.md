@@ -75,3 +75,7 @@
 | [109](109-aequitas-quantity-provider.md) | Adopt Aequitas for bubble-energy quantities | Accepted |
 | [110](110-drop-dead-boundary-parameters.md) | 110. Delete the inert BoundaryParameters surface | Accepted |
 | [111](111-retire-kzk-solver-plugin-surface.md) | 111. Retire the `KzkSolverPlugin` surface onto the complex-field KZK adapter | Accepted |
+| [112](112-convex-array-rasterizer-seam.md) | 112. Wiring the convex array: orientation seam and angle units | Accepted |
+| [113](113-finite-aperture-sir-seam.md) | 113. Finite-aperture diffraction in RF synthesis: an injected SIR seam | Accepted |
+| [114](114-typed-sonoluminescence-emission.md) | Type sonoluminescence emission components at the Aequitas boundary | Accepted |
+| [115](115-fwi-transmission-acquisition-seam.md) | 115. A transmission-acquisition seam for frequency-domain FWI | Accepted |
