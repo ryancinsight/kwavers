@@ -160,6 +160,7 @@ impl ElasticWaveField {
 /// step, but not the velocity components. Keeping this distinct internal type
 /// makes that storage contract explicit and halves the retained wave-field
 /// arrays without changing the propagated state.
+#[cfg(feature = "clinical-imaging")]
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct ElasticDisplacementSnapshot {
     pub(crate) ux: Array3<f64>,
@@ -167,6 +168,7 @@ pub(crate) struct ElasticDisplacementSnapshot {
     pub(crate) uz: Array3<f64>,
 }
 
+#[cfg(feature = "clinical-imaging")]
 impl From<&ElasticWaveField> for ElasticDisplacementSnapshot {
     fn from(field: &ElasticWaveField) -> Self {
         Self {

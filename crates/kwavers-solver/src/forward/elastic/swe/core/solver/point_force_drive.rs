@@ -10,7 +10,9 @@
 
 use super::super::super::integration::TimeIntegrator;
 use super::super::super::scratch::ElasticStepScratch;
-use super::super::super::types::{ElasticDisplacementSnapshot, ElasticWaveField};
+#[cfg(feature = "clinical-imaging")]
+use super::super::super::types::ElasticDisplacementSnapshot;
+use super::super::super::types::ElasticWaveField;
 use super::definition::ElasticWaveSolver;
 use kwavers_core::error::{KwaversResult, NumericalError};
 
