@@ -146,4 +146,8 @@ impl TransmissionAcquisition for RotatingAcquisition<'_> {
     fn sources(&self, transmit: usize) -> &[ElementPosition] {
         self.array.transmit_sources(transmit)
     }
+
+    fn receivers(&self, transmit: usize) -> &[ElementPosition] {
+        self.array.transmit_receivers(transmit)
+    }
 }
