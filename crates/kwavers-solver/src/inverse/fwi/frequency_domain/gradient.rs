@@ -1,5 +1,6 @@
 //! Discrete adjoint gradient for frequency-domain FWI.
 
+use super::acquisition::TransmissionAcquisition;
 use super::cbs::{
     apply_shifted_green_adjoint_operator, real_scattering_potential,
     real_scattering_potential_for_operator, receiver_adjoint_for_operator,
@@ -13,7 +14,7 @@ use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::Complex64;
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::{
-    complex_l2_objective, complex_source_scale, helmholtz_slowness_derivative, MultiRowRingArray,
+    complex_l2_objective, complex_source_scale, helmholtz_slowness_derivative,
 };
 use kwavers_transducer::transducers::ElementPosition;
 use leto::Array3;
@@ -21,7 +22,7 @@ use leto::Array3;
 pub(super) fn objective_and_gradient(
     slowness_s_per_m: &Array3<f64>,
     observations: &[FrequencyObservation],
-    array: &MultiRowRingArray,
+    acquisition: &dyn TransmissionAcquisition,
     config: &Config,
 ) -> KwaversResult<(f64, Array3<f64>)> {
     if observations.is_empty() {
@@ -35,16 +36,16 @@ pub(super) fn objective_and_gradient(
     let mut gradient = Array3::zeros([shape[0], shape[1], shape[2]]);
     for observation in observations {
         let rows = observation.observed_pressure.shape()[0];
-        if observation.observed_pressure.shape()[1] != array.element_count() {
+        if observation.observed_pressure.shape()[1] != acquisition.receiver_count() {
             return Err(KwaversError::DimensionMismatch(format!(
                 "receiver count mismatch: observed {}, geometry {}",
                 observation.observed_pressure.shape()[1],
-                array.element_count()
+                acquisition.receiver_count()
             )));
         }
         validate_forward_inputs(
             slowness_s_per_m,
-            array,
+            acquisition,
             observation.frequency_hz,
             config,
             rows,
@@ -53,7 +54,7 @@ pub(super) fn objective_and_gradient(
             accumulate_finite_window_frequency_gradient(
                 slowness_s_per_m,
                 observation,
-                array,
+                acquisition,
                 config,
                 &mut objective,
                 &mut gradient,
@@ -62,7 +63,7 @@ pub(super) fn objective_and_gradient(
             accumulate_dense_cbs_frequency_gradient(
                 slowness_s_per_m,
                 observation,
-                array,
+                acquisition,
                 config,
                 &mut objective,
                 &mut gradient,
@@ -71,7 +72,7 @@ pub(super) fn objective_and_gradient(
             accumulate_frequency_gradient(
                 slowness_s_per_m,
                 observation,
-                array,
+                acquisition,
                 config,
                 &mut objective,
                 &mut gradient,
@@ -86,7 +87,7 @@ pub(super) fn objective_and_gradient(
 fn accumulate_finite_window_frequency_gradient(
     slowness_s_per_m: &Array3<f64>,
     observation: &FrequencyObservation,
-    array: &MultiRowRingArray,
+    acquisition: &dyn TransmissionAcquisition,
     config: &Config,
     objective: &mut f64,
     gradient: &mut Array3<f64>,
@@ -109,7 +110,7 @@ fn accumulate_finite_window_frequency_gradient(
     let rows = observation.observed_pressure.shape()[0];
     super::finite_window::finite_window_pstd_born_gradient(
         &kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::slowness_to_sound_speed(slowness_s_per_m)?,
-        array,
+        acquisition,
         observation.frequency_hz,
         &observation.observed_pressure,
         fw_config,
@@ -123,7 +124,7 @@ fn accumulate_finite_window_frequency_gradient(
 fn accumulate_dense_cbs_frequency_gradient(
     slowness_s_per_m: &Array3<f64>,
     observation: &FrequencyObservation,
-    array: &MultiRowRingArray,
+    acquisition: &dyn TransmissionAcquisition,
     config: &Config,
     objective: &mut f64,
     gradient: &mut Array3<f64>,
@@ -156,7 +157,7 @@ fn accumulate_dense_cbs_frequency_gradient(
     for transmit in 0..rows {
         let source_density = source_density_for_operator(
             grid,
-            &array.cylindrical_source(transmit),
+            acquisition.sources(transmit),
             reference_wavenumber,
             operator,
         )?;
@@ -168,7 +169,12 @@ fn accumulate_dense_cbs_frequency_gradient(
             cbs_config,
             operator,
         )?;
-        let predicted = sample_array_for_operator(grid, &forward_solution.field, array, operator)?;
+        let predicted = sample_array_for_operator(
+            grid,
+            &forward_solution.field,
+            acquisition.receivers(transmit),
+            operator,
+        )?;
         let observed = observation
             .observed_pressure
             .index_axis::<1>(0, transmit)
@@ -195,7 +201,12 @@ fn accumulate_dense_cbs_frequency_gradient(
                 source_scale.conj() * (predicted_value - observed_value)
             })
             .collect::<Vec<_>>();
-        let adjoint_rhs = receiver_adjoint_for_operator(grid, array, &receiver_residual, operator)?;
+        let adjoint_rhs = receiver_adjoint_for_operator(
+            grid,
+            acquisition.receivers(transmit),
+            &receiver_residual,
+            operator,
+        )?;
         let adjoint_solution = solve_adjoint_volume_field_with_operator(
             grid,
             reference_wavenumber,
@@ -249,7 +260,7 @@ fn accumulate_dense_cbs_slowness_gradient(
 fn accumulate_frequency_gradient(
     slowness_s_per_m: &Array3<f64>,
     observation: &FrequencyObservation,
-    array: &MultiRowRingArray,
+    acquisition: &dyn TransmissionAcquisition,
     config: &Config,
     objective: &mut f64,
     gradient: &mut Array3<f64>,
@@ -266,14 +277,14 @@ fn accumulate_frequency_gradient(
     let slowness = slowness_s_per_m.iter().copied().collect::<Vec<_>>();
 
     for transmit in 0..rows {
-        let sources = array.cylindrical_source(transmit);
-        let incident = incident_field(&sources, &centers, reference_wavenumber, min_distance);
+        let sources = acquisition.sources(transmit);
+        let incident = incident_field(sources, &centers, reference_wavenumber, min_distance);
         let predicted = predicted_row(
-            &sources,
+            sources,
             &centers,
             &incident,
             &potential,
-            array,
+            acquisition.receivers(transmit),
             reference_wavenumber,
             min_distance,
             cell_volume,
@@ -301,7 +312,7 @@ fn accumulate_frequency_gradient(
             &centers,
             &incident,
             &slowness,
-            array,
+            acquisition.receivers(transmit),
             omega,
             reference_wavenumber,
             min_distance,
@@ -320,13 +331,12 @@ fn predicted_row(
     centers: &[(usize, ElementPosition)],
     incident: &[Complex64],
     potential: &[f64],
-    array: &MultiRowRingArray,
+    receivers: &[ElementPosition],
     reference_wavenumber: f64,
     min_distance: f64,
     cell_volume: f64,
 ) -> Vec<Complex64> {
-    array
-        .elements()
+    receivers
         .iter()
         .map(|&receiver| {
             let direct = sources
@@ -353,7 +363,7 @@ fn accumulate_row_adjoint(
     centers: &[(usize, ElementPosition)],
     incident: &[Complex64],
     slowness: &[f64],
-    array: &MultiRowRingArray,
+    receivers: &[ElementPosition],
     omega: f64,
     reference_wavenumber: f64,
     min_distance: f64,
@@ -363,7 +373,7 @@ fn accumulate_row_adjoint(
     observed: &[Complex64],
 ) {
     let [_nx, ny, nz] = gradient.shape();
-    for (receiver_index, &receiver) in array.elements().iter().enumerate() {
+    for (receiver_index, &receiver) in receivers.iter().enumerate() {
         let residual = predicted[receiver_index] - observed[receiver_index];
         for ((linear_index, point), (&incident_value, &slowness_value)) in
             centers.iter().zip(incident.iter().zip(slowness.iter()))
@@ -437,7 +447,7 @@ pub(super) fn hessian_vector(
     gradient0: &Array3<f64>,
     direction: &Array3<f64>,
     observations: &[FrequencyObservation],
-    array: &MultiRowRingArray,
+    acquisition: &dyn TransmissionAcquisition,
     config: &Config,
     reference_slowness: f64,
     fd_epsilon: f64,
@@ -454,7 +464,8 @@ pub(super) fn hessian_vector(
         *m += eps * v;
     }
     super::inversion::clamp_slowness(&mut perturbed, config);
-    let (_objective, gradient1) = objective_and_gradient(&perturbed, observations, array, config)?;
+    let (_objective, gradient1) =
+        objective_and_gradient(&perturbed, observations, acquisition, config)?;
     let mut hv = gradient1;
     for (h, &g0) in hv.iter_mut().zip(gradient0.iter()) {
         *h = (*h - g0) / eps;
