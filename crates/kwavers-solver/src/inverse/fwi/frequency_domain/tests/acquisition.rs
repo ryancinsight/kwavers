@@ -1,4 +1,4 @@
-//! Tests for the transmission-acquisition seam (ADR 113).
+//! Tests for the transmission-acquisition seam (ADR 115).
 
 use kwavers_transducer::transducers::ElementPosition;
 
@@ -18,7 +18,7 @@ fn ring(circumferential: usize, rows: usize) -> MultiRowRingArray {
     .expect("valid ring geometry")
 }
 
-/// ADR 113 promised a behaviour-preserving substitution, so the seam must
+/// ADR 115 promised a behaviour-preserving substitution, so the seam must
 /// report exactly what the concrete array reported — not merely something
 /// within a tolerance.
 ///

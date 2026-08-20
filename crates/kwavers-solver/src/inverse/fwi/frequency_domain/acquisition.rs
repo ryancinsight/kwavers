@@ -8,7 +8,7 @@
 //!
 //! Making that explicit is what lets a transmission-USCT acquisition (two
 //! opposed linear arrays on a rotation stage) drive the same inversion, per
-//! ADR 113.
+//! ADR 115.
 //!
 //! # Receivers are indexed by transmit
 //!
@@ -31,7 +31,7 @@ use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domai
 /// Deliberately dyn-compatible: it is passed through
 /// [`super::operator::HelmholtzForwardOperator::predict_receiver_rows`], and
 /// `Config` stores that operator as `Arc<dyn HelmholtzForwardOperator>`. See
-/// ADR 113 for why the seam is `&dyn` rather than a generic parameter.
+/// ADR 115 for why the seam is `&dyn` rather than a generic parameter.
 pub trait TransmissionAcquisition {
     /// Number of transmit events.
     fn transmission_count(&self) -> usize;
