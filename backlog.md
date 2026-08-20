@@ -456,6 +456,14 @@
   2-D entry point is 1,396 lines and the 3-D entry point is 1,382 lines, so
   acquisition, phantom, inversion, and reporting still require partitioning
   before `KW-EXAMPLES-115` can close.
+- 2026-08-20 2-D acquisition slice: full-ring source/receiver geometry and
+  Ricker source construction now live in `seismic_imaging/acquisition.rs`, with
+  the geometry tests beside the owned boundary. Exact example Nextest run
+  `0e396915-ab6b-42d4-bb15-e8577213310b` passes 69/69 (one slow comparison at
+  37.708 seconds); strict all-example Clippy, `mdbook test docs/book`, and
+  `mdbook build docs/book` pass. The 2-D entry point is 1,234 lines and the 3-D
+  entry point is 1,382 lines, so phantom, inversion, and reporting still
+  require partitioning before `KW-EXAMPLES-115` can close.
 - 2026-08-20 example-gate runtime slice: the focused water-tank comparison's
   independent FDTD, PSTD, DG-2D, DG-3D, and DG-3D-CPML branches now overlap
   through the provider-owned Moirai `Parallel` join. The complete example

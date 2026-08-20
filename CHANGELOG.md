@@ -81,6 +81,12 @@
   passes. The mdBook content is unchanged from the preceding passing
   `mdbook test` and `mdbook build` gate.
 
+- **2-D acquisition structure:** Full-ring source/receiver geometry and Ricker
+  source construction now live in `seismic_imaging/acquisition.rs`, including
+  their value-semantic geometry tests. The exact example Nextest gate passes
+  69/69 (one slow comparison at 37.708 seconds), strict example Clippy passes,
+  and the mdBook test/build gates pass.
+
 - **Breaking CT skull material boundary:** `AcousticSkullProperties` now stores
   validated Aequitas velocity, mass-density, reciprocal-length attenuation,
   length, and optional shear velocity. `HeterogeneousSkull::from_ct_hill`

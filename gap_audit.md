@@ -62,6 +62,14 @@ gate. The 2-D entry point is 1,396 lines and the 3-D entry point is 1,382 lines;
 acquisition, phantom, inversion, and reporting still require partitioning, so
 `KW-EXAMPLES-115` remains in progress.
 
+Full-ring source/receiver geometry and Ricker source construction now have their
+own `seismic_imaging/acquisition.rs` leaf, with geometry tests beside the owned
+boundary. Exact local Nextest run `0e396915-ab6b-42d4-bb15-e8577213310b` passes
+69/69 (one slow comparison at 37.708 seconds); strict all-example Clippy,
+`mdbook test docs/book`, and `mdbook build docs/book` pass. The 2-D entry point
+is 1,234 lines and the 3-D entry point is 1,382 lines; phantom, inversion, and
+reporting still require partitioning, so `KW-EXAMPLES-115` remains in progress.
+
 ## ATLAS-KWAVERS-HEPHAESTUS-FDTD-107 — Collocated FDTD provider cutover — Apollo co-evolution blocker 2026-08-18
 
 The old consumer-owned collocated FDTD implementation in

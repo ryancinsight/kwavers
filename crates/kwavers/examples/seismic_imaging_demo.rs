@@ -86,6 +86,8 @@
 //! - Virieux, J. & Operto, S. (2009). An overview of full-waveform inversion in
 //!   exploration geophysics. *Geophysics*, 74(6), WCC1–WCC26.
 
+#[path = "seismic_imaging/acquisition.rs"]
+mod seismic_acquisition;
 #[path = "seismic_imaging/brain_model.rs"]
 mod seismic_brain_model;
 mod seismic_imaging;
@@ -95,13 +97,11 @@ mod seismic_metrics;
 mod seismic_planar_artifacts;
 use seismic_metrics::{print_quality_pairs, print_quality_report};
 
-use aequitas::systems::si::quantities::{Frequency, Pressure, Time};
 use kwavers_core::constants::{
     acoustic_parameters::SOUND_SPEED_SKULL_CORTICAL, fundamental::SOUND_SPEED_WATER_SIM,
 };
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
-use kwavers_signal::DomainRickerWavelet;
 use kwavers_solver::inverse::fwi::time_domain::{FwiGeometry, FwiProcessor};
 use kwavers_solver::inverse::seismic::{
     parameters::{
@@ -110,7 +110,6 @@ use kwavers_solver::inverse::seismic::{
     },
     rtm::RtmProcessor,
 };
-use kwavers_source::{GridSource, SourceMode};
 use leto::{Array2, Array3};
 use std::path::PathBuf;
 use std::time::Instant;
@@ -277,38 +276,10 @@ fn build_skull_phantom() -> KwaversResult<SkullModel> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Source wavelet
+// Gaussian blur for CT-derived initial model
 // ─────────────────────────────────────────────────────────────────────────────
-
-/// Centre frequency of the Ricker source wavelet `Hz`.
-///
-/// 150 kHz: λ = 10 mm in water, 3.3 × dx sampling per wavelength at 3 mm.
-/// Diagnostic ultrasound TUS range: 100–650 kHz (Marsac 2017; Guasch 2020).
-const F0_HZ: f64 = 150_000.0;
-
-/// Peak source pressure `Pa`.  100 kPa is a representative clinical TUS level.
-///
-/// Reference: FDA (2008), diagnostic ultrasound guidance, Table 1.
-const P0_PA: f64 = 1.0e5;
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Acquisition geometry — full-ring section
-// ─────────────────────────────────────────────────────────────────────────────
-
-/// Number of active elements in the FWI full-ring section.
-const FWI_ACTIVE_ELEMENTS: usize = 16;
-
-/// Number of transmit sources on the full-ring section (every other element).
-const N_SHOTS: usize = 8;
-
-/// Number of receivers for each shot: all active transducer samples except the
-/// element used as the current transmitter.
-const N_RECEIVERS: usize = FWI_ACTIVE_ELEMENTS - 1;
 
 /// FWI gradient descent step size [m/s].
-///
-/// 50 m/s per iteration with max-norm normalization is conservative for a
-/// 1500–2900 m/s skull model.
 const STEP_SIZE: f64 = 50.0;
 
 /// Pixel size per model panel [px].
@@ -316,123 +287,6 @@ const PANEL: usize = 320;
 
 /// Colorbar height below each panel [px].
 const COLORBAR_H: usize = 20;
-
-/// Active transducer element positions sampled from a 1024-element full-ring array.
-///
-/// # Design rationale
-///
-/// Sixteen elements are uniformly distributed around the full ring at radius
-/// R_ARRAY = 20 voxels from centre (32, 32).  Full-ring coverage provides
-/// illumination from all azimuths, eliminating the shadow zone that degrades
-/// convergence with superior-hemisphere-only apertures.
-///
-/// # CPML safety constraint
-///
-/// The FDTD CPML absorbs energy in cells ix ∈ [0,9] and [54,63], iz ∈ [0,9]
-/// and [54,63].  Physical domain: ix ∈ [10,53], iz ∈ [10,53].
-///
-/// # Geometry derivation
-///
-/// Centre = (32, 32), R_ARRAY = 20 voxels.
-/// Sixteen points at θ_k = k × 22.5°, k = 0..15:
-///
-/// ```text
-/// ix = 32 + round(R_ARRAY · cos θ_k)
-/// iz = 32 + round(R_ARRAY · sin θ_k)
-/// ```
-///
-/// k=0  (  0.0°): ix=52, iz=32   k=1  ( 22.5°): ix=50, iz=40
-/// k=2  ( 45.0°): ix=46, iz=46   k=3  ( 67.5°): ix=40, iz=50
-/// k=4  ( 90.0°): ix=32, iz=52   k=5  (112.5°): ix=24, iz=50
-/// k=6  (135.0°): ix=18, iz=46   k=7  (157.5°): ix=14, iz=40
-/// k=8  (180.0°): ix=12, iz=32   k=9  (202.5°): ix=14, iz=24
-/// k=10 (225.0°): ix=18, iz=18   k=11 (247.5°): ix=24, iz=14
-/// k=12 (270.0°): ix=32, iz=12   k=13 (292.5°): ix=40, iz=14
-/// k=14 (315.0°): ix=46, iz=18   k=15 (337.5°): ix=50, iz=24
-///
-/// Reference: Guasch 2020 — full-waveform inversion with complete angular coverage.
-const ACTIVE_TRANSDUCER_POSITIONS: [(usize, usize); FWI_ACTIVE_ELEMENTS] = [
-    (52, 32), // k=0  (  0.0°)
-    (50, 40), // k=1  ( 22.5°)
-    (46, 46), // k=2  ( 45.0°)
-    (40, 50), // k=3  ( 67.5°)
-    (32, 52), // k=4  ( 90.0°)
-    (24, 50), // k=5  (112.5°)
-    (18, 46), // k=6  (135.0°)
-    (14, 40), // k=7  (157.5°)
-    (12, 32), // k=8  (180.0°)
-    (14, 24), // k=9  (202.5°)
-    (18, 18), // k=10 (225.0°)
-    (24, 14), // k=11 (247.5°)
-    (32, 12), // k=12 (270.0°)
-    (40, 14), // k=13 (292.5°)
-    (46, 18), // k=14 (315.0°)
-    (50, 24), // k=15 (337.5°)
-];
-
-/// Transmit subset indexes into `ACTIVE_TRANSDUCER_POSITIONS`.
-///
-/// Every other element transmits (even indices), giving 8 shots with maximally
-/// diverse angular coverage across the full ring.
-const TRANSMIT_ELEMENT_INDICES: [usize; N_SHOTS] = [0, 2, 4, 6, 8, 10, 12, 14];
-
-/// Build the receiver mask on the same full-ring transducer section.
-///
-/// The transmitting element is excluded to avoid a colocated source/receiver
-/// singular sample.  All remaining active transducer positions record.
-fn build_receiver_mask(source_element_index: usize) -> Array3<bool> {
-    let mut mask = Array3::<bool>::from_elem((NX, NY, NZ), false);
-    for (element_index, &(ix, iz)) in ACTIVE_TRANSDUCER_POSITIONS.iter().enumerate() {
-        if element_index != source_element_index {
-            mask[[ix, 0, iz]] = true;
-        }
-    }
-    mask
-}
-
-/// Return the four transmit coordinates used by the current FWI run.
-fn transmit_positions() -> Vec<(usize, usize)> {
-    TRANSMIT_ELEMENT_INDICES
-        .iter()
-        .map(|&idx| ACTIVE_TRANSDUCER_POSITIONS[idx])
-        .collect()
-}
-
-/// Build `FwiGeometry` for one array element with source at `(ix, 0, iz)` and
-/// receivers on all other active transducer elements.
-///
-/// The source signal has `nt` samples.
-fn build_shot(
-    source_element_index: usize,
-    f0_hz: f64,
-    nt: usize,
-    dt: f64,
-) -> KwaversResult<FwiGeometry> {
-    let (ix, iz) = ACTIVE_TRANSDUCER_POSITIONS[source_element_index];
-    let mut source_mask = Array3::<f64>::zeros((NX, NY, NZ));
-    source_mask[[ix, 0, iz]] = 1.0;
-
-    let wavelet =
-        DomainRickerWavelet::causal(Frequency::from_base(f0_hz), Pressure::from_base(P0_PA))?;
-    let mut p_signal = Array2::<f64>::zeros((1, nt));
-    for (t, pressure) in wavelet.samples(Time::from_base(dt), nt)?.enumerate() {
-        p_signal[[0, t]] = pressure;
-    }
-
-    let mut source = GridSource::new_empty();
-    source.p_mask = Some(source_mask);
-    source.p_signal = Some(p_signal);
-    source.p_mode = SourceMode::Dirichlet;
-
-    Ok(FwiGeometry::new(
-        source,
-        build_receiver_mask(source_element_index),
-    ))
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Gaussian blur for CT-derived initial model
-// ─────────────────────────────────────────────────────────────────────────────
 
 /// Separable Gaussian blur of a (NX, NY, NZ) model in the x–z plane (y = 0 only,
 /// broadcasted to all NY slices).
@@ -767,12 +621,20 @@ fn main() -> KwaversResult<()> {
     println!(
         "  Full aperture    : {TRANSCRANIAL_FOCUSED_BOWL_ELEMENT_COUNT} elements, 650 kHz design authority"
     );
-    println!("  FWI section      : {FWI_ACTIVE_ELEMENTS} active full-ring samples");
     println!(
-        "  Transmits        : {N_SHOTS} shots; receivers/shot = {N_RECEIVERS} on same full ring"
+        "  FWI section      : {} active full-ring samples",
+        seismic_acquisition::FWI_ACTIVE_ELEMENTS
     );
-    for (s, &element_index) in TRANSMIT_ELEMENT_INDICES.iter().enumerate() {
-        let (ix, iz) = ACTIVE_TRANSDUCER_POSITIONS[element_index];
+    println!(
+        "  Transmits        : {} shots; receivers/shot = {} on same full ring",
+        seismic_acquisition::N_SHOTS,
+        seismic_acquisition::N_RECEIVERS
+    );
+    for (s, &element_index) in seismic_acquisition::TRANSMIT_ELEMENT_INDICES
+        .iter()
+        .enumerate()
+    {
+        let (ix, iz) = seismic_acquisition::ACTIVE_TRANSDUCER_POSITIONS[element_index];
         println!(
             "  Shot {:1}: (x={:2}, y=0, z={:2}) = ({:.1} mm, {:.1} mm)",
             s,
@@ -807,15 +669,16 @@ fn main() -> KwaversResult<()> {
     let mut current_model = initial_model.clone();
 
     // Compute J₀ at the finest scale (150 kHz) for reporting consistency.
-    let nt_fine = ((t_transit * 1.2 + 3.0 / F0_HZ) / dt).ceil() as usize;
-    let mut shots_fine: Vec<(FwiGeometry, Array2<f64>)> = Vec::with_capacity(N_SHOTS);
+    let nt_fine = ((t_transit * 1.2 + 3.0 / seismic_acquisition::F0_HZ) / dt).ceil() as usize;
+    let mut shots_fine: Vec<(FwiGeometry, Array2<f64>)> =
+        Vec::with_capacity(seismic_acquisition::N_SHOTS);
     {
         let tmp_fwi = FwiProcessor::new(FwiParameters {
             max_iterations: 1,
-            frequency: F0_HZ,
+            frequency: seismic_acquisition::F0_HZ,
             nt: nt_fine,
             dt,
-            n_trace: N_RECEIVERS,
+            n_trace: seismic_acquisition::N_RECEIVERS,
             n_depth: 1,
             step_size: STEP_SIZE,
             tolerance: 1e-12,
@@ -830,15 +693,20 @@ fn main() -> KwaversResult<()> {
             ..FwiParameters::default()
         });
         let t0 = Instant::now();
-        for &element_index in &TRANSMIT_ELEMENT_INDICES {
-            let geom = build_shot(element_index, F0_HZ, nt_fine, dt)?;
+        for &element_index in &seismic_acquisition::TRANSMIT_ELEMENT_INDICES {
+            let geom = seismic_acquisition::build_shot(
+                element_index,
+                seismic_acquisition::F0_HZ,
+                nt_fine,
+                dt,
+            )?;
             let obs = tmp_fwi.generate_synthetic_data(&true_model, &geom, &grid)?;
             shots_fine.push((geom, obs));
         }
         println!(
             "  {} observed gathers at {} kHz ({:.1} s)",
-            N_SHOTS,
-            F0_HZ * 1e-3,
+            seismic_acquisition::N_SHOTS,
+            seismic_acquisition::F0_HZ * 1e-3,
             t0.elapsed().as_secs_f32()
         );
     }
@@ -846,10 +714,10 @@ fn main() -> KwaversResult<()> {
     let j_initial = {
         let fwi_tmp = FwiProcessor::new(FwiParameters {
             max_iterations: 1,
-            frequency: F0_HZ,
+            frequency: seismic_acquisition::F0_HZ,
             nt: nt_fine,
             dt,
-            n_trace: N_RECEIVERS,
+            n_trace: seismic_acquisition::N_RECEIVERS,
             n_depth: 1,
             step_size: STEP_SIZE,
             tolerance: 1e-12,
@@ -879,7 +747,10 @@ fn main() -> KwaversResult<()> {
 
     println!("\n  Quality before inversion:");
     print_quality_report(&true_model, &initial_model);
-    println!("  Joint J₀ (150 kHz) : {j_initial:.6e} Pa²·s  ({N_SHOTS} shots)");
+    println!(
+        "  Joint J₀ (150 kHz) : {j_initial:.6e} Pa²·s  ({} shots)",
+        seismic_acquisition::N_SHOTS
+    );
 
     let t_inv = Instant::now();
 
@@ -894,13 +765,14 @@ fn main() -> KwaversResult<()> {
         let mute_r = mute_r.clamp(2, 12);
 
         // Build shots at this frequency.
-        let mut scale_shots: Vec<(FwiGeometry, Array2<f64>)> = Vec::with_capacity(N_SHOTS);
+        let mut scale_shots: Vec<(FwiGeometry, Array2<f64>)> =
+            Vec::with_capacity(seismic_acquisition::N_SHOTS);
         let fwi_scale = FwiProcessor::new(FwiParameters {
             max_iterations: n_iter,
             frequency: f0,
             nt: nt_scale,
             dt,
-            n_trace: N_RECEIVERS,
+            n_trace: seismic_acquisition::N_RECEIVERS,
             n_depth: 1,
             step_size: STEP_SIZE,
             tolerance: 1e-12,
@@ -916,8 +788,8 @@ fn main() -> KwaversResult<()> {
         });
 
         let t_scale = Instant::now();
-        for &element_index in &TRANSMIT_ELEMENT_INDICES {
-            let geom = build_shot(element_index, f0, nt_scale, dt)?;
+        for &element_index in &seismic_acquisition::TRANSMIT_ELEMENT_INDICES {
+            let geom = seismic_acquisition::build_shot(element_index, f0, nt_scale, dt)?;
             let obs = fwi_scale.generate_synthetic_data(&true_model, &geom, &grid)?;
             scale_shots.push((geom, obs));
         }
@@ -961,10 +833,10 @@ fn main() -> KwaversResult<()> {
     let j_final = {
         let fwi_tmp = FwiProcessor::new(FwiParameters {
             max_iterations: 1,
-            frequency: F0_HZ,
+            frequency: seismic_acquisition::F0_HZ,
             nt: nt_fine,
             dt,
-            n_trace: N_RECEIVERS,
+            n_trace: seismic_acquisition::N_RECEIVERS,
             n_depth: 1,
             step_size: STEP_SIZE,
             tolerance: 1e-12,
@@ -1043,7 +915,7 @@ fn main() -> KwaversResult<()> {
                 frequency: F0_BRAIN_HZ,
                 nt: nt_brain,
                 dt,
-                n_trace: N_RECEIVERS,
+                n_trace: seismic_acquisition::N_RECEIVERS,
                 n_depth: 1,
                 step_size: STEP_SIZE_BRAIN,
                 tolerance: 1e-14,
@@ -1058,10 +930,12 @@ fn main() -> KwaversResult<()> {
                 ..FwiParameters::default()
             });
             // Generate observed gathers using the true brain tissue model.
-            let mut brain_shots: Vec<(FwiGeometry, Array2<f64>)> = Vec::with_capacity(N_SHOTS);
+            let mut brain_shots: Vec<(FwiGeometry, Array2<f64>)> =
+                Vec::with_capacity(seismic_acquisition::N_SHOTS);
             let t_brain_obs = Instant::now();
-            for &element_index in &TRANSMIT_ELEMENT_INDICES {
-                let geom = build_shot(element_index, F0_BRAIN_HZ, nt_brain, dt)?;
+            for &element_index in &seismic_acquisition::TRANSMIT_ELEMENT_INDICES {
+                let geom =
+                    seismic_acquisition::build_shot(element_index, F0_BRAIN_HZ, nt_brain, dt)?;
                 match fwi_brain.generate_synthetic_data(&brain_true, &geom, &grid) {
                     Ok(obs) => brain_shots.push((geom, obs)),
                     Err(e) => {
@@ -1070,14 +944,16 @@ fn main() -> KwaversResult<()> {
                 }
             }
             println!(
-                "  {N_SHOTS} brain gathers at {:.0} kHz ({:.1} s)",
+                "  {} brain gathers at {:.0} kHz ({:.1} s)",
+                seismic_acquisition::N_SHOTS,
                 F0_BRAIN_HZ * 1e-3,
                 t_brain_obs.elapsed().as_secs_f32()
             );
 
             if brain_shots.is_empty() {
                 return Err(KwaversError::InvalidInput(format!(
-                    "brain FWI produced no successful gathers from {N_SHOTS} shots"
+                    "brain FWI produced no successful gathers from {} shots",
+                    seismic_acquisition::N_SHOTS
                 )));
             }
 
@@ -1193,8 +1069,9 @@ fn main() -> KwaversResult<()> {
     let csv_path = abs_dir.join(format!("{base}.csv"));
     let brain_tissue_path = abs_dir.join(format!("{base}_brain_tissue.png"));
 
-    let shot_positions = transmit_positions();
-    let active_elements: Vec<(usize, usize)> = ACTIVE_TRANSDUCER_POSITIONS.to_vec();
+    let shot_positions = seismic_acquisition::transmit_positions();
+    let active_elements: Vec<(usize, usize)> =
+        seismic_acquisition::ACTIVE_TRANSDUCER_POSITIONS.to_vec();
 
     seismic_planar_artifacts::write_three_plane_png(
         &three_plane_path,
@@ -1335,45 +1212,6 @@ fn main() -> KwaversResult<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn full_ring_transducer_section_stays_outside_skull_and_cpml() {
-        let cx = NX as f64 / 2.0;
-        let cz = NZ as f64 / 2.0;
-        let mut has_superior = false;
-        let mut has_inferior = false;
-        for &(ix, iz) in &ACTIVE_TRANSDUCER_POSITIONS {
-            let r = ((ix as f64 - cx).powi(2) + (iz as f64 - cz).powi(2)).sqrt();
-            assert!(
-                r > R_HEAD,
-                "element ({ix},{iz}) must be outside skull radius {R_HEAD}, got {r}"
-            );
-            assert!(
-                (10..54).contains(&ix) && (10..54).contains(&iz),
-                "element ({ix},{iz}) must stay inside CPML-free physical domain"
-            );
-            has_superior |= iz < NZ / 2;
-            has_inferior |= iz > NZ / 2;
-        }
-        assert!(
-            has_superior && has_inferior,
-            "full-ring section must cover both z hemispheres"
-        );
-    }
-
-    #[test]
-    fn receiver_mask_excludes_only_transmitting_element() {
-        for &source_index in &TRANSMIT_ELEMENT_INDICES {
-            let mask = build_receiver_mask(source_index);
-            let active = mask.iter().filter(|&&v| v).count();
-            assert_eq!(active, N_RECEIVERS);
-            let (sx, sz) = ACTIVE_TRANSDUCER_POSITIONS[source_index];
-            assert!(!mask[[sx, 0, sz]]);
-            for (idx, &(ix, iz)) in ACTIVE_TRANSDUCER_POSITIONS.iter().enumerate() {
-                assert_eq!(mask[[ix, 0, iz]], idx != source_index);
-            }
-        }
-    }
 
     #[test]
     fn brain_support_fills_non_bone_region_between_skull_edges() {
