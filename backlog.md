@@ -66,8 +66,31 @@
 - Acceptance: each entry is inspected, its unique delta either committed onto an
   appropriate branch or discarded as superseded by landed work, and the entry dropped. A
   discard is recorded with the evidence that the content is already on `origin`.
-- Not done inline: eleven entries spanning a month can contain real unique work, and
-  popping them blindly onto an unrelated branch would be worse than leaving them.
+- Triage completed 2026-08-20 (read-only; nothing dropped):
+
+  | Entry | Date | Content | Assessment |
+  |---|---|---|---|
+  | `stash@{0}` | 08-18 | 4 files: README fix + LendingIterator example migration | Inspect — may be superseded by the README work in PR #433 |
+  | `stash@{1}` | 08-09 | 40 files, -1252 lines, "kwavers-stranded-2" | Inspect — largest deletion-heavy snapshot |
+  | `stash@{2}` | 08-08 | 7 files, "pre-gitlink-advance-dirt" | Inspect |
+  | `stash@{3}` | 08-08 | `Cargo.lock` only | Discard — overlay lock churn, superseded |
+  | `stash@{4}` | 08-07 | `Cargo.lock` only | Discard — overlay lock churn, superseded |
+  | `stash@{5}` | 08-07 | `Cargo.lock` only | Discard — overlay lock churn, superseded |
+  | `stash@{6}` | 08-05 | `Cargo.lock` only | Discard — overlay lock churn, superseded |
+  | `stash@{7}` | 07-15 | `crates/kwavers/deny.toml`, 1 line | Check against `main`, then discard or apply |
+  | `stash@{8}` | 07-15 | Untracked scratch markers (`.slice-N-sha`, workflow file) | Discard — scratch |
+  | `stash@{9}` | 07-07 | 27 files, -1652 lines, "pre-existing-atlas-migration-context" | Inspect — pre-migration snapshot |
+  | `stash@{10}` | 07-07 | 144 files, -4209 lines, same series | Inspect — pre-migration snapshot |
+
+- Recommendation: the four `Cargo.lock`-only entries and the scratch-marker entry (five of
+  eleven) are unambiguously superseded — a lockfile snapshot from July against a lock that
+  has moved hundreds of commits since carries no recoverable information. The remaining six
+  need a diff read before any decision, and the three large "pre-migration context"
+  snapshots most likely record state *before* a migration that has since landed, meaning
+  applying them would revert landed work.
+- Blocked on: dropping a stash destroys parked work that is not otherwise on `origin`, so
+  the discards need explicit authorization even where the assessment is unambiguous. Re-open
+  trigger: owner confirms which entries may be dropped.
 
 ## KW-DIST-QUEUE-2026-08-20 — close distributed queue completion and deadline contracts [patch] — implementation complete; hosted verification pending
 
