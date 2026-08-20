@@ -1,5 +1,84 @@
 # Backlog / Strategy
 
+## KW-LINT-111 — Put every member on workspace lint inheritance [patch] — done 2026-08-20
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-LINT-111 | All 24 workspace members inherit `[workspace.lints]`, and no member re-declares a rule the workspace already owns. | [patch] | done | Claude | `crates/{kwavers,kwavers-driver,kwavers-python}/Cargo.toml` |
+
+- Premise correction. This item was filed as "three crates miss the Atlas clippy floor
+  (`clippy::all` + `pedantic`), ~1,155 warnings to burn down". Verified against `main`, that
+  is wrong on both halves. `main`'s root `Cargo.toml` has **no
+  `[workspace.lints.clippy]` table at all** — only `[workspace.lints.rust]` with
+  `unexpected_cfgs` — and `git log -S workspace.lints.clippy -- Cargo.toml` shows it has
+  never had one. The table I read exists on exactly one unmerged branch,
+  `origin/codex/kwavers-floatelement-roots`; I measured it while the shared tree happened to
+  sit on a branch carrying that work, and attributed it to `main`. The ~1,155 figure came
+  from passing `-W clippy::pedantic` on the command line, which measures a floor the
+  repository does not currently have.
+- What was actually true, and is now fixed: three of twenty-four members carried no
+  `[lints]` section, so they inherited nothing — not even `unexpected_cfgs`. All 24 now
+  inherit. The top-level `kwavers` crate additionally re-declared
+  `[lints.rust] unexpected_cfgs = …` byte-identically to the workspace table; that
+  duplicate is deleted in favour of inheritance, so the rule has one owner.
+- Measured, not assumed: with inheritance in place, `cargo clippy --all-targets` reports
+  **zero** warnings for `kwavers-driver`, `kwavers-python`, and `kwavers` (excluding the
+  stack overlay's unused-`[patch]` notices, which are unrelated to lints). Both CI clippy
+  gates pass with `-D warnings`: `-p kwavers --all-targets --no-default-features --features
+  full --no-deps` and `-p kwavers --features pinn --lib`. There is no burn-down, because
+  there is no clippy floor to burn down against.
+- Not done here, deliberately: adopting an Atlas clippy floor for the workspace is a real
+  and separate decision, and `origin/codex/kwavers-floatelement-roots` already carries a
+  candidate table (`all` + `pedantic` at warn with a curated allow set and a documented
+  ratchet rationale). Writing a second table here would fork that decision. Tracked as
+  KW-LINT-112.
+- Consequence for earlier claims: every "clippy clean" recorded for `kwavers-driver` in
+  KW-DOC-106, KW-DOC-107, KW-CLEAN-108, and KW-DOC-110 was `cargo clippy` at the default
+  lint set. That was accurate as stated and is what CI would have run; the correction filed
+  under KW-DOC-110 said those runs were weaker than the *workspace floor* — but no such
+  floor exists on `main`, so the runs were the strongest gate available.
+- Note: `crates/kwavers-driver/src/ssot.rs` carries `#![allow(clippy::doc_markdown)]` with
+  no justification. It is dead today (pedantic is not enabled anywhere) and becomes live
+  only if KW-LINT-112 lands. Left in place.
+
+## KW-LINT-112 — Decide the workspace clippy floor [minor] — todo
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-LINT-112 | The workspace has one clippy floor, owned by the root `[workspace.lints.clippy]` table, with its debt either burned down or recorded as a ratchet baseline. | [minor] | todo | unclaimed | root `Cargo.toml`, then the warnings that surface |
+
+- Today `main` has no workspace clippy configuration: `[workspace.lints.rust]` carries
+  `unexpected_cfgs` and nothing else, so every member builds at clippy's default lint set.
+- A candidate table already exists on `origin/codex/kwavers-floatelement-roots`:
+  `clippy::all` + `clippy::pedantic` at `warn` with `priority = -1`, `print_stdout` and
+  `dbg_macro` at `warn` rather than `deny` (the comment records ~4,000 `unwrap()` calls,
+  244 outside `#[cfg(test)]`, as the reason), and an allow set mirroring the Atlas template.
+- Do not author a second table. Either land that branch or adopt its table verbatim, so the
+  floor has one definition.
+- Sizing input: at `all` + `pedantic` with no allow set, `kwavers-driver` alone emits ~1,155
+  warnings, dominated by `cast_possible_truncation` (110). Re-measure with the candidate
+  allow set applied before sizing the burn-down.
+- Acceptance: the table lands once; the resulting count is driven to zero or recorded as a
+  non-increasing baseline; no blanket `allow` is added to absorb it.
+
+## KW-GIT-113 — Drain the kwavers stash backlog [patch] — todo
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-GIT-113 | The repository's stash list is empty; anything of value in it is committed on a branch. | [patch] | todo | unclaimed | `git stash` entries in the kwavers gitdir |
+
+- `git stash list` holds **11 entries** dating from 2026-07-07 to 2026-08-18 — over a month
+  of work hidden from the board, from peers, and from every diff review. Several were taken
+  on branches that no longer exist or in detached-HEAD states, and two name themselves
+  `kwavers-stranded-2` and `pre-gitlink-advance-dirt`.
+- Stashes are shared per gitdir, so every worktree lane sees the same list; this is one
+  backlog, not five.
+- Acceptance: each entry is inspected, its unique delta either committed onto an
+  appropriate branch or discarded as superseded by landed work, and the entry dropped. A
+  discard is recorded with the evidence that the content is already on `origin`.
+- Not done inline: eleven entries spanning a month can contain real unique work, and
+  popping them blindly onto an unrelated branch would be worse than leaving them.
+
 ## KW-DIST-QUEUE-2026-08-20 — close distributed queue completion and deadline contracts [patch] — implementation complete; hosted verification pending
 
 | ID | Outcome | Class | Status | Owner | Scope |
