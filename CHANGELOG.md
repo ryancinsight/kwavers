@@ -35,6 +35,13 @@
 
 ### Changed
 
+- **Documentation:** the README single-sourcing check now exempts `publish = false`
+  crates by rule instead of an allowlist. The rule follows the requirement's rationale —
+  keeping a crates.io page and a docs.rs front page from drifting — which does not apply
+  to a crate that publishes neither. `kwavers-python` is the only such crate: its README
+  is the PyPI landing page for a Python reader and its `//!` docs address the Rust
+  maintainer of the binding layer, so they are deliberately two documents.
+
 - **Elastic FWI runtime and structure:** Singleton-z in-plane point-force
   propagation now selects a zero-sized plane-strain mode once, avoiding the
   out-of-plane stress, acceleration, integration, damping, and gradient work
