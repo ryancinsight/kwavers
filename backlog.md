@@ -557,11 +557,11 @@
   `seismic_imaging/{planar_inversion,planar_schedule,planar_reporting,planar_artifacts,planar_auxiliary}.rs`
   leaves. The root entry point is 465 lines and every seismic artifact leaf is
   below the 500-line target (`planar_artifacts.rs` is 488 lines). Exact local
-  package-plus-example Nextest run `676e5159-36d2-424d-b3d9-11f0b0e95cec`
-  passes 116/116 in 43.857 seconds; strict all-example Clippy, `cargo test
-  --doc --offline -p kwavers` (1/1), `mdbook test docs/book`, and `mdbook build
-  docs/book` pass. `KW-EXAMPLES-115` is ready for hosted verification and
-  integration.
+  package-plus-example Nextest run `37c67cf0-17bf-445d-9d8c-170e3608c568`
+  passes 116/116 in 43.604 seconds; workspace rustfmt, strict all-example
+  Clippy, `cargo test --doc --offline -p kwavers` (1/1), `mdbook test
+  docs/book`, and `mdbook build docs/book` pass. `KW-EXAMPLES-115` is ready
+  for hosted verification and integration.
 - 2026-08-20 example-gate runtime slice: the focused water-tank comparison's
   independent FDTD, PSTD, DG-2D, DG-3D, and DG-3D-CPML branches now overlap
   through the provider-owned Moirai `Parallel` join. The complete example

@@ -7,10 +7,10 @@ synthetic phantom, CT reader, acquisition geometry, metrics, inversion, and
 artifact reporting each have one canonical module. Planar artifact writers are
 split between `planar_artifacts.rs` (488 lines) and `planar_auxiliary.rs` (235
 lines), keeping every seismic leaf below the 500-line target. Exact local
-package-plus-example Nextest run `676e5159-36d2-424d-b3d9-11f0b0e95cec`
-passes 116/116 in 43.857 seconds; strict example Clippy, the Kwavers doctest
-(1/1), and the mdBook test/build gates pass. No fallback or compatibility path
-is added.
+package-plus-example Nextest run `37c67cf0-17bf-445d-9d8c-170e3608c568`
+passes 116/116 in 43.604 seconds; workspace rustfmt, strict example Clippy,
+the Kwavers doctest (1/1), and the mdBook test/build gates pass. No fallback or
+compatibility path is added.
 
 The residual is hosted PR verification and merge of the exact pushed head.
 
