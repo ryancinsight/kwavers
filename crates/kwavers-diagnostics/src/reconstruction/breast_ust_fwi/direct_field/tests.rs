@@ -14,6 +14,7 @@ use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WA
 use kwavers_core::constants::numerical::{FOUR_PI, TWO_PI};
 use kwavers_math::fft::Complex64;
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
+use kwavers_solver::inverse::fwi::frequency_domain::RingAcquisition;
 use kwavers_solver::inverse::fwi::frequency_domain::{
     simulate_frequency_observation, AbsorbingBoundary, Config as FrequencyDomainFwiConfig,
     PstdSpectralConvergentBornOperator, PstdTemporalTransferConfig,
@@ -397,8 +398,13 @@ fn pstd_spectral_cbs_matches_homogeneous_finite_grid_modal_prediction() {
         array.element_count(),
     ));
     for (frequency_index, &frequency_hz) in frequencies_hz.iter().enumerate() {
-        let rows = simulate_frequency_observation(&model_leto, &array, frequency_hz, &fwi)
-            .expect("PSTD spectral CBS homogeneous prediction");
+        let rows = simulate_frequency_observation(
+            &model_leto,
+            &RingAcquisition::new(&array),
+            frequency_hz,
+            &fwi,
+        )
+        .expect("PSTD spectral CBS homogeneous prediction");
         for transmit in 0..array.circumferential_elements() {
             for receiver in 0..array.element_count() {
                 predicted[[frequency_index, transmit, receiver]] = rows[[transmit, receiver]];

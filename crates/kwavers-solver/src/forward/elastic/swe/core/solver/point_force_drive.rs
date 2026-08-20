@@ -10,6 +10,8 @@
 
 use super::super::super::integration::TimeIntegrator;
 use super::super::super::scratch::ElasticStepScratch;
+#[cfg(feature = "clinical-imaging")]
+use super::super::super::types::ElasticDisplacementSnapshot;
 use super::super::super::types::ElasticWaveField;
 use super::definition::ElasticWaveSolver;
 use kwavers_core::error::{KwaversResult, NumericalError};
@@ -41,6 +43,50 @@ impl ElasticPointForce {
             fz: vec![0.0; n_steps],
         }
     }
+
+    /// Whether the first `n_steps` samples contain no out-of-plane forcing.
+    pub(crate) fn is_in_plane(&self, n_steps: usize) -> bool {
+        self.fz
+            .get(..n_steps)
+            .is_some_and(|samples| samples.iter().all(|&value| value == 0.0))
+    }
+}
+
+trait PointForceStep {
+    fn advance(
+        integrator: &TimeIntegrator<'_>,
+        field: &mut ElasticWaveField,
+        dt: f64,
+        scratch: &mut ElasticStepScratch,
+    ) -> KwaversResult<()>;
+}
+
+struct SpatialPointForceStep;
+
+impl PointForceStep for SpatialPointForceStep {
+    #[inline]
+    fn advance(
+        integrator: &TimeIntegrator<'_>,
+        field: &mut ElasticWaveField,
+        dt: f64,
+        scratch: &mut ElasticStepScratch,
+    ) -> KwaversResult<()> {
+        integrator.step(field, dt, None, scratch)
+    }
+}
+
+struct PlaneStrainPointForceStep;
+
+impl PointForceStep for PlaneStrainPointForceStep {
+    #[inline]
+    fn advance(
+        integrator: &TimeIntegrator<'_>,
+        field: &mut ElasticWaveField,
+        dt: f64,
+        scratch: &mut ElasticStepScratch,
+    ) -> KwaversResult<()> {
+        integrator.step_plane_strain(field, dt, scratch)
+    }
 }
 
 impl ElasticWaveSolver {
@@ -66,7 +112,8 @@ impl ElasticWaveSolver {
     ///
     /// # Errors
     /// Returns [`NumericalError::InvalidOperation`] for a non-positive `dt`, or
-    /// when any force time series is shorter than `n_steps`.
+    /// when a force lies outside the grid or any force time series is shorter
+    /// than `n_steps`.
     pub fn propagate_point_forces(
         &self,
         n_steps: usize,
@@ -76,6 +123,30 @@ impl ElasticWaveSolver {
         let mut history = Vec::with_capacity(n_steps);
         self.propagate_point_forces_observing(n_steps, dt, forces, |_, field| {
             history.push(field.clone());
+        })?;
+        Ok(history)
+    }
+
+    /// Propagate point forces and retain only displacement checkpoints.
+    ///
+    /// The adjoint FWI kernel consumes displacement gradients and does not use
+    /// forward velocities. This path stores three arrays per step instead of
+    /// the six arrays in [`Self::propagate_point_forces`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`NumericalError::InvalidOperation`] for invalid propagation
+    /// inputs.
+    #[cfg(feature = "clinical-imaging")]
+    pub(crate) fn propagate_point_force_displacements(
+        &self,
+        n_steps: usize,
+        dt: f64,
+        forces: &[ElasticPointForce],
+    ) -> KwaversResult<Vec<ElasticDisplacementSnapshot>> {
+        let mut history = Vec::with_capacity(n_steps);
+        self.propagate_point_forces_observing(n_steps, dt, forces, |_, field| {
+            history.push(ElasticDisplacementSnapshot::from(field));
         })?;
         Ok(history)
     }
@@ -137,9 +208,20 @@ impl ElasticWaveSolver {
     where
         F: FnMut(usize, &ElasticWaveField),
     {
+        self.validate_point_force_inputs(n_steps, dt, forces)?;
+        self.propagate_point_forces_selected(n_steps, dt, forces, &mut observe)
+    }
+
+    fn validate_point_force_inputs(
+        &self,
+        n_steps: usize,
+        dt: f64,
+        forces: &[ElasticPointForce],
+    ) -> KwaversResult<()> {
         if dt <= 0.0 {
             return Err(NumericalError::InvalidOperation("dt must be positive".to_owned()).into());
         }
+        let (nx, ny, nz) = self.grid.dimensions();
         for f in forces {
             if f.fx.len() < n_steps || f.fy.len() < n_steps || f.fz.len() < n_steps {
                 return Err(NumericalError::InvalidOperation(
@@ -147,8 +229,51 @@ impl ElasticWaveSolver {
                 )
                 .into());
             }
+            let (i, j, k) = f.index;
+            if i >= nx || j >= ny || k >= nz {
+                return Err(NumericalError::InvalidOperation(format!(
+                    "point-force index ({i}, {j}, {k}) is outside grid ({nx}, {ny}, {nz})"
+                ))
+                .into());
+            }
         }
+        Ok(())
+    }
 
+    fn propagate_point_forces_selected<F>(
+        &self,
+        n_steps: usize,
+        dt: f64,
+        forces: &[ElasticPointForce],
+        observe: &mut F,
+    ) -> KwaversResult<()>
+    where
+        F: FnMut(usize, &ElasticWaveField),
+    {
+        let (_, _, nz) = self.grid.dimensions();
+        let is_plane_strain = nz == 1 && forces.iter().all(|force| force.is_in_plane(n_steps));
+        if is_plane_strain {
+            self.propagate_point_forces_with::<PlaneStrainPointForceStep, _>(
+                n_steps, dt, forces, observe,
+            )
+        } else {
+            self.propagate_point_forces_with::<SpatialPointForceStep, _>(
+                n_steps, dt, forces, observe,
+            )
+        }
+    }
+
+    fn propagate_point_forces_with<S, F>(
+        &self,
+        n_steps: usize,
+        dt: f64,
+        forces: &[ElasticPointForce],
+        observe: &mut F,
+    ) -> KwaversResult<()>
+    where
+        S: PointForceStep,
+        F: FnMut(usize, &ElasticWaveField),
+    {
         let (nx, ny, nz) = self.grid.dimensions();
         let integrator =
             TimeIntegrator::new(&self.grid, &self.lambda, &self.mu, &self.density, &self.pml);
@@ -166,7 +291,7 @@ impl ElasticWaveSolver {
                     field.vz[[i, j, k]] += scale * f.fz[step];
                 }
             }
-            integrator.step(&mut field, dt, None, &mut scratch)?;
+            S::advance(&integrator, &mut field, dt, &mut scratch)?;
             field.time += dt;
             observe(step, &field);
         }
@@ -178,19 +303,28 @@ impl ElasticWaveSolver {
 mod tests {
     use super::*;
     use crate::forward::elastic::swe::ElasticWaveConfig;
+    use kwavers_core::error::KwaversError;
     use kwavers_grid::Grid;
     use kwavers_medium::homogeneous::HomogeneousMedium;
+
+    fn solver(grid: &Grid) -> ElasticWaveSolver {
+        let medium =
+            HomogeneousMedium::elastic_homogeneous(1000.0, 3.464_101_6, 2.0, grid).expect("medium");
+        ElasticWaveSolver::new(
+            grid,
+            &medium,
+            ElasticWaveConfig {
+                pml_thickness: 2,
+                ..ElasticWaveConfig::default()
+            },
+        )
+        .expect("solver")
+    }
 
     #[test]
     fn sensor_only_recording_matches_full_history_sampling() {
         let grid = Grid::new(12, 12, 1, 1.0e-3, 1.0e-3, 1.0e-3).expect("grid");
-        let medium = HomogeneousMedium::elastic_homogeneous(1000.0, 3.464_101_6, 2.0, &grid)
-            .expect("medium");
-        let config = ElasticWaveConfig {
-            pml_thickness: 2,
-            ..ElasticWaveConfig::default()
-        };
-        let solver = ElasticWaveSolver::new(&grid, &medium, config).expect("solver");
+        let solver = solver(&grid);
         let n_steps = 8;
         let mut force = ElasticPointForce::zeros((4, 4, 0), n_steps);
         force.fy[0] = 1.0e6;
@@ -201,8 +335,11 @@ mod tests {
             .propagate_point_forces(n_steps, dt, &[force.clone()])
             .expect("history");
         let recorded = solver
-            .propagate_point_forces_recording(n_steps, dt, &[force], &receivers)
+            .propagate_point_forces_recording(n_steps, dt, &[force.clone()], &receivers)
             .expect("recording");
+        let displacements = solver
+            .propagate_point_force_displacements(n_steps, dt, &[force.clone()])
+            .expect("displacement history");
         let expected = receivers
             .iter()
             .map(|&(i, j, k)| {
@@ -220,5 +357,63 @@ mod tests {
             .collect::<Vec<_>>();
 
         assert_eq!(recorded, expected);
+        for (snapshot, field) in displacements.iter().zip(&history) {
+            assert_eq!(snapshot.ux, field.ux);
+            assert_eq!(snapshot.uy, field.uy);
+            assert_eq!(snapshot.uz, field.uz);
+        }
+    }
+
+    #[test]
+    fn plane_strain_point_forces_match_spatial_steps_exactly() {
+        let grid = Grid::new(12, 11, 1, 1.0e-3, 1.2e-3, 1.5e-3).expect("grid");
+        let solver = solver(&grid);
+        let n_steps = 12;
+        let dt = solver.recommended_timestep(0.3);
+        let mut force = ElasticPointForce::zeros((4, 5, 0), n_steps);
+        force.fx[0] = 4.0e6;
+        force.fy[3] = -7.0e6;
+        let forces = [force];
+        let plane = solver
+            .propagate_point_forces(n_steps, dt, &forces)
+            .expect("plane history");
+        let mut spatial = Vec::with_capacity(n_steps);
+        solver
+            .propagate_point_forces_with::<SpatialPointForceStep, _>(
+                n_steps,
+                dt,
+                &forces,
+                &mut |_, field| spatial.push(field.clone()),
+            )
+            .expect("spatial history");
+
+        for (plane, spatial) in plane.iter().zip(&spatial) {
+            assert_eq!(plane.ux, spatial.ux);
+            assert_eq!(plane.uy, spatial.uy);
+            assert_eq!(plane.uz, spatial.uz);
+            assert_eq!(plane.vx, spatial.vx);
+            assert_eq!(plane.vy, spatial.vy);
+            assert_eq!(plane.vz, spatial.vz);
+            assert_eq!(plane.time, spatial.time);
+        }
+    }
+
+    #[test]
+    fn point_force_outside_grid_returns_typed_error() {
+        let grid = Grid::new(12, 12, 1, 1.0e-3, 1.0e-3, 1.0e-3).expect("grid");
+        let solver = solver(&grid);
+        let force = ElasticPointForce::zeros((12, 0, 0), 1);
+
+        let error = solver
+            .propagate_point_forces(1, 1.0e-6, &[force])
+            .expect_err("out-of-grid force must fail before propagation");
+
+        match error {
+            KwaversError::Numerical(NumericalError::InvalidOperation(message)) => assert_eq!(
+                message,
+                "point-force index (12, 0, 0) is outside grid (12, 12, 1)"
+            ),
+            other => panic!("unexpected error variant: {other:?}"),
+        }
     }
 }

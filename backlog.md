@@ -1,5 +1,31 @@
 # Backlog / Strategy
 
+## KW-DIST-QUEUE-2026-08-20 — close distributed queue completion and deadline contracts [patch] — implementation complete; hosted verification pending
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-DIST-QUEUE-2026-08-20 | Make distributed queue completion include executing tasks, replace worker polling with scheduler notification, and reject timestamp overflow. | [patch] | implementation complete; hosted verification pending | Codex | `crates/kwavers-analysis/src/distributed/{queue,scheduler,task,mod}.rs`, this item, `gap_audit.md`, `CHANGELOG.md` |
+
+- Acceptance: `wait_all` waits for queued and executing tasks; workers wait on
+  the scheduler condition variable; deadline overflow returns typed
+  `KwaversError::InvalidInput`; focused value-semantic tests cover active-task
+  completion and both queue/item overflow boundaries; exact-head hosted checks
+  pass before merge.
+- Local evidence: Rust 1.97.0 rustfmt check, offline overlay `cargo check
+  -p kwavers-analysis --lib`, strict offline Clippy, doctest, and rustdoc pass.
+  Nextest run `7bdc39ee-be1b-47ae-b486-423362162176` passes all 17 distributed
+  tests (727 skipped). Overlay Cargo lock churn was restored after each local
+  run; no lockfile change is part of this item.
+- Locked boundary: `cargo nextest run --locked -p kwavers-analysis --lib
+  distributed` stops before compilation because the Atlas development overlay
+  requires a lock rewrite for local patches. Hosted CI remains the locked
+  acceptance gate.
+- Hosted delivery: PR [#427](https://github.com/ryancinsight/kwavers/pull/427)
+  carries exact head `073a5adbbdb22e3e88c161a0f2009d52376115ff`; the PR is ready
+  for review and its synchronize-triggered CI/Architecture runs are pending.
+- Non-goals: no changes to the existing peer-owned Kwavers medium, physics,
+  visualization, workflow, lockfile, or documentation edits.
+
 ## KW-DOC-105 — Per-crate README landing pages [patch] — ✅ done 2026-08-20
 
 | ID | Outcome | Class | Status | Owner | Scope |
@@ -149,18 +175,52 @@
   source configuration.
 - Non-goals: no Rust, dependency, benchmark, test, or coverage-policy changes.
 
-## KWAVERS-SONO-113 — Type sonoluminescence emission and close the example/book slice [major] [arch] — implementation complete; hosted verification pending 2026-08-19
+## KWAVERS-SONO-113 — Type sonoluminescence emission and close the example/book slice [major] [arch] — merged; exact-head hosted verification queued 2026-08-19
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KWAVERS-SONO-113 | Route dimensioned sonoluminescence power through Aequitas, assemble one authoritative field pass, and synchronize tests, examples, and book pages. | [major] [arch] | implementation complete; hosted verification pending | Codex | `crates/kwavers-physics/src/optics/sonoluminescence/`, sonoluminescence examples, `docs/book/examples/`, ADR 114, this item |
+| KWAVERS-SONO-113 | Route dimensioned sonoluminescence power through Aequitas, assemble one authoritative field pass, and synchronize tests, examples, and book pages. | [major] [arch] | merged; exact-head hosted verification queued | Codex | `crates/kwavers-physics/src/optics/sonoluminescence/`, sonoluminescence examples, `docs/book/examples/`, ADR 114, this item |
 
 - Acceptance: emission components carry Aequitas `VolumetricPowerDensity`; Cherenkov spectral yield is not added to the dimensioned power field; one field traversal computes enabled dimensioned components without temporary field clones; the integrated step refreshes emission from updated state; constructor state uses `BubbleParameters`; placeholder molecular-line and example paths are removed; focused value-semantic tests, example builds/runs, book tests/build, and package gates pass.
 - Non-goals: GPU kernels, Python bindings, and unrelated legacy migration surfaces remain separate items.
 - Evidence target: exact local revision plus hosted architecture, test, example, and book gates; dimensional limits and any external runner blockers are recorded here.
 - Local evidence at `a6a8a44a4`: strict `kwavers-physics` Clippy (`-D warnings`) passed; Nextest run `b8d4c544-fa3d-46ca-8076-86187239f04b` passed 40/40 sonoluminescence tests (1,517 skipped); both examples passed package checks, `single_bubble_sonoluminescence` ran through eight integrated steps, and `multiphysics_sonoluminescence --features pinn` ran through two epochs over three domains; `mdbook test docs/book` and `mdbook build docs/book` passed. The single-bubble run emitted changing Aequitas W/m³ fields and a separate arbitrary-unit spectrum.
 - Pre-merge regression closure: the full-feature facade gate exposed five stale seven-argument emission calls in `ultrasound_physics_validation`; every call now uses the dimensioned temperature/radius/charge-density contract and the unused pressure, velocity, and compression fixtures are deleted. Both strict workflow Clippy commands pass locally, and Nextest run `e6b1b6ae-e36c-4ea7-8aca-ecf2514ced5f` passes all 18 facade physics-validation tests.
-- Hosted evidence: PR [#414](https://github.com/ryancinsight/kwavers/pull/414) is open; every PR update reruns the repository-owned exact-head checks. Local commands used the Atlas development overlay, so Cargo lockfile source state was restored after each command and no lockfile change is part of this item.
+- Hosted state: PR [#414](https://github.com/ryancinsight/kwavers/pull/414)
+  merged as `25bf5deca` from exact head `0bdcb17d9`. Exact-head runs
+  `32322520315`, `32322520318`, `32322520322`, `32322520338`, and
+  `32322520613` remain queued and must pass before this item closes. Local
+  commands used the Atlas development overlay, so Cargo lockfile source state
+  was restored after each command and no lockfile change is part of this item.
+
+## KW-EXAMPLES-114 — Complete the heterogeneous attenuation example/book contract [patch] — implementation complete; hosted verification pending 2026-08-19
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-EXAMPLES-114 | Split the heterogeneous power-law attenuation experiment by concern, add one source-linked book page, remove stale example links, and retain the measured analytical-oracle evidence. | [patch] | implementation complete; hosted verification pending | Codex | `crates/kwavers/examples/{heterogeneous_power_law_attenuation.rs,heterogeneous_power_law_attenuation/,README.md}`, `docs/book/{SUMMARY.md,media_and_tissue_models.md,examples/}`, this item, `CHANGELOG.md` |
+
+- Acceptance: the example entry point is a manifest over named configuration,
+  propagation, measurement, experiment, and artifact modules; every example
+  README link resolves; the book page states the
+  prescribed-law and path-integral oracles, the Fullwave reference envelope,
+  run command, outputs, and measured bounds; source and chapter links are
+  reciprocal; the release example, book tests/build, and link audit pass.
+- Non-goals: no attenuation-kernel, relaxation-fit, benchmark-input, or
+  generated-output change.
+- Value-semantic evidence after the structural split: the exact locked release
+  build completes in 206.5 s and its executable completes in 25.6 s, emitting
+  120 homogeneous rows plus 8 layered rows; the
+  whole-envelope worst relative error is 0.034137, the 1.2–3.8 MHz interior
+  worst is 0.004532, and the path-weighted layered worst is 0.009939. The
+  generated log-log PNG was inspected for curves, markers, axes, units, and
+  legend agreement.
+- Fresh local evidence: `cargo fmt --all -- --check`, standalone locked MSVC
+  Clippy with `-D warnings`, `mdbook test docs/book`, and `mdbook build docs/book`
+  pass against the committed dependency graph and shared Atlas target. The
+  Markdown audit
+  resolves 497 relative targets across 107 book/index files and finds no
+  missing link; the
+  four deleted-example names and stale toolchain-update instruction are absent.
 
 ## ATLAS-KWAVERS-HEPHAESTUS-FDTD-107 — Route collocated FDTD through Hephaestus [minor] [arch] — Apollo co-evolution blocker 2026-08-18
 
@@ -1174,20 +1234,37 @@ markers without changing the numerical contract.
 - Versioning: `kwavers-medium` 3.0.0 → 4.0.0; ADR 038 records the public
   removal and value-preservation theorem.
 
-## KW-SOL-058 — Elide elastic-FWI objective histories [patch] — in-progress
+## KW-SOL-058 — Restore elastic-FWI hosted runtime budget [patch] — in-progress
 
-- Owner: Codex; scope:
-  `crates/kwavers-solver/src/forward/elastic/swe/core/solver/point_force_drive.rs`,
-  `crates/kwavers-solver/src/inverse/elastography/elastic_fwi/mod.rs`, and
-  synchronized PM evidence.
-- Acceptance: observed-data synthesis and objective-only FWI forward runs
-  retain receiver traces directly, preserve exact trace values relative to the
-  full-history propagator, and complete the lesion-reconstruction contract
-  under the existing CI timeout.
-- Evidence: hosted job `87949355634` timed out the FWI contract at 90.010 s
-  despite `--test-threads=1`. The new exact trace-equivalence regression passes,
-  and the full FWI contract passes locally in 29.123 s; a fresh hosted matrix
-  remains the closure gate.
+- Owner: Codex `/root`; last-update: 2026-08-20; scope:
+  elastic SWE point-force/stress/integration modules, elastic-FWI
+  gradient/inversion modules, ADR 033, the elastography book chapter, and
+  synchronized release evidence. Inputs, iteration counts, value assertions,
+  and Nextest budgets are non-goals.
+- Acceptance: singleton-z in-plane propagation is exactly equivalent to the
+  spatial operator, retained forward state contains only gradient-consumed
+  displacements, accepted line-search histories are reused, the complete 2-D
+  and 3-D elastic-FWI contracts pass unchanged, and exact-head hosted execution
+  completes below the 30-second slow-test target.
+- Entry evidence: hosted job `87949355634` timed out the FWI contract at
+  90.010 s despite `--test-threads=1`. A prior trace-only change passed locally
+  in 29.123 s but never closed the hosted matrix.
+- Takeover evidence: current-main Architecture Validation run `32333948199`
+  completes the unchanged contract in 57.544 s, while PR #426 exact-head run
+  `32336386162` terminates it at 60.010 s. The prior local result did not close
+  the hosted runtime defect. The workload, assertions, and 60 s termination
+  contract remain fixed.
+- Current evidence: controlled warm-cache Nextest samples moved from
+  10.080/10.000/9.421 seconds (10.000-second median) to
+  4.952/4.964/4.910 seconds (4.952-second median), a 50.5% production-path
+  reduction. Exact plane-strain stress, propagation, displacement-history, and
+  gradient-oracle tests pass; the complete elastic-FWI suite passes 8/8 in
+  13.552 seconds; the serial solver library gate passes 1,013/1,013 with four
+  skipped in 143.899 seconds; warning-denied all-target Clippy passes. Solver
+  doctests pass 7 with eight environment-specific cases ignored, and mdBook
+  test/build pass. Native sampling was attempted but Windows denied both
+  `dtrace` and `blondie` without administrator privileges. Exact-head hosted
+  validation remains the closure gate.
 
 ## KW-CI-057 — Serialize full workspace test processes [patch] — superseded
 

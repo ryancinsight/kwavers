@@ -1,3 +1,4 @@
+use super::super::acquisition::RingAcquisition;
 use super::*;
 
 #[test]
@@ -7,14 +8,21 @@ fn nonlinear_inversion_reduces_objective_and_raises_high_speed_target() {
     let mut truth = Array3::from_elem([3, 3, 3], SOUND_SPEED_WATER_SIM);
     truth[[1, 1, 1]] = 1535.0;
     let observed =
-        simulate_frequency_observation(&truth, &array, 240_000.0, &config).expect("observed");
+        simulate_frequency_observation(&truth, &RingAcquisition::new(&array), 240_000.0, &config)
+            .expect("observed");
     let observations = [FrequencyObservation::new(
         240_000.0,
         first_rows(&observed, 4),
     )];
     let initial = Array3::from_elem([3, 3, 3], SOUND_SPEED_WATER_SIM);
 
-    let result = invert(&observations, &array, &initial, &config).expect("inversion");
+    let result = invert(
+        &observations,
+        &RingAcquisition::new(&array),
+        &initial,
+        &config,
+    )
+    .expect("inversion");
 
     assert!((result.objective_history.len()) >= 2);
     assert!(
@@ -61,15 +69,20 @@ fn source_scaled_gradient_is_descent_direction() {
     let mut truth = Array3::from_elem([3, 3, 1], SOUND_SPEED_WATER_SIM);
     truth[[1, 1, 0]] = 1515.0;
     let observed =
-        simulate_frequency_observation(&truth, &array, 200_000.0, &config).expect("observed");
+        simulate_frequency_observation(&truth, &RingAcquisition::new(&array), 200_000.0, &config)
+            .expect("observed");
     // Evaluate gradient at a model different from truth.
     let mut current_speed = Array3::from_elem([3, 3, 1], SOUND_SPEED_WATER_SIM);
     current_speed[[0, 0, 0]] = 1490.0;
     let current_slowness = sound_speed_to_slowness(&current_speed).expect("slowness");
     let observations = [FrequencyObservation::new(200_000.0, observed)];
-    let (objective, gradient) =
-        objective_and_gradient(&current_slowness, &observations, &array, &config)
-            .expect("objective_and_gradient");
+    let (objective, gradient) = objective_and_gradient(
+        &current_slowness,
+        &observations,
+        &RingAcquisition::new(&array),
+        &config,
+    )
+    .expect("objective_and_gradient");
     // Compute a normalized step h in the −∇J direction small enough to stay
     // within the quadratic regime.
     let grad_norm = gradient.iter().map(|v| v * v).sum::<f64>().sqrt();
@@ -85,9 +98,13 @@ fn source_scaled_gradient_is_descent_direction() {
         .collect::<Vec<_>>();
     let candidate_slowness =
         Array3::from_shape_vec(current_slowness.shape(), candidate_slowness).expect("shape");
-    let (candidate_objective, _) =
-        objective_and_gradient(&candidate_slowness, &observations, &array, &config)
-            .expect("candidate objective");
+    let (candidate_objective, _) = objective_and_gradient(
+        &candidate_slowness,
+        &observations,
+        &RingAcquisition::new(&array),
+        &config,
+    )
+    .expect("candidate objective");
     assert!(
         candidate_objective < objective,
         "descent step must decrease objective: original={objective:.6e}, candidate={candidate_objective:.6e}"
@@ -129,10 +146,17 @@ fn inversion_with_source_scaling_converges_for_consistent_model() {
     let mut truth = Array3::from_elem([3, 3, 1], SOUND_SPEED_WATER_SIM);
     truth[[1, 1, 0]] = 1520.0;
     let observed =
-        simulate_frequency_observation(&truth, &array, 200_000.0, &config).expect("observed");
+        simulate_frequency_observation(&truth, &RingAcquisition::new(&array), 200_000.0, &config)
+            .expect("observed");
     let observations = [FrequencyObservation::new(200_000.0, observed)];
     let initial = Array3::from_elem([3, 3, 1], SOUND_SPEED_WATER_SIM);
-    let result = invert(&observations, &array, &initial, &config).expect("inversion");
+    let result = invert(
+        &observations,
+        &RingAcquisition::new(&array),
+        &initial,
+        &config,
+    )
+    .expect("inversion");
 
     // Objective must decrease by at least 80 %.
     let initial_obj = result.objective_history[0];
@@ -181,10 +205,17 @@ fn pstd_finite_window_born_inversion_reduces_objective() {
     let mut truth = Array3::from_elem([3, 3, 1], SOUND_SPEED_WATER_SIM);
     truth[[1, 1, 0]] = 1520.0;
     let observed =
-        simulate_frequency_observation(&truth, &array, 200_000.0, &config).expect("observed");
+        simulate_frequency_observation(&truth, &RingAcquisition::new(&array), 200_000.0, &config)
+            .expect("observed");
     let observations = [FrequencyObservation::new(200_000.0, observed)];
     let initial = Array3::from_elem([3, 3, 1], SOUND_SPEED_WATER_SIM);
-    let result = invert(&observations, &array, &initial, &config).expect("inversion");
+    let result = invert(
+        &observations,
+        &RingAcquisition::new(&array),
+        &initial,
+        &config,
+    )
+    .expect("inversion");
 
     assert!(
         (result.objective_history.len()) >= 2,
@@ -259,15 +290,25 @@ fn ali2025_table1_parity_gate() {
     // forward model as the inversion (closed-loop / self-consistent test).
     let freq_lo = 200_000.0_f64;
     let freq_hi = 400_000.0_f64;
-    let obs_lo = simulate_frequency_observation(&truth, &array, freq_lo, &config).expect("obs_lo");
-    let obs_hi = simulate_frequency_observation(&truth, &array, freq_hi, &config).expect("obs_hi");
+    let obs_lo =
+        simulate_frequency_observation(&truth, &RingAcquisition::new(&array), freq_lo, &config)
+            .expect("obs_lo");
+    let obs_hi =
+        simulate_frequency_observation(&truth, &RingAcquisition::new(&array), freq_hi, &config)
+            .expect("obs_hi");
     let observations = [
         FrequencyObservation::new(freq_lo, obs_lo),
         FrequencyObservation::new(freq_hi, obs_hi),
     ];
 
     let initial = Array3::from_elem([5, 5, 3], 1500.0_f64);
-    let result = invert(&observations, &array, &initial, &config).expect("inversion");
+    let result = invert(
+        &observations,
+        &RingAcquisition::new(&array),
+        &initial,
+        &config,
+    )
+    .expect("inversion");
 
     let truth_flat: Vec<f64> = truth.iter().copied().collect();
     let recon_flat: Vec<f64> = result.sound_speed_m_s.iter().copied().collect();
@@ -334,11 +375,18 @@ fn weak_perturbation_is_recovered_despite_oversized_configured_step() {
     let mut truth = Array3::from_elem([3, 3, 1], SOUND_SPEED_WATER_SIM);
     truth[[1, 1, 0]] = SOUND_SPEED_WATER_SIM + 5.0;
     let observed =
-        simulate_frequency_observation(&truth, &array, 200_000.0, &config).expect("observed");
+        simulate_frequency_observation(&truth, &RingAcquisition::new(&array), 200_000.0, &config)
+            .expect("observed");
     let observations = [FrequencyObservation::new(200_000.0, observed)];
     let initial = Array3::from_elem([3, 3, 1], SOUND_SPEED_WATER_SIM);
 
-    let result = invert(&observations, &array, &initial, &config).expect("inversion");
+    let result = invert(
+        &observations,
+        &RingAcquisition::new(&array),
+        &initial,
+        &config,
+    )
+    .expect("inversion");
 
     assert!(
         result.objective_history.len() >= 2,

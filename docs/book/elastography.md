@@ -664,6 +664,12 @@ Implementation: `kwavers_solver::inverse::elastography::elastic_fwi::ElasticFwi`
 convenience entry point `reconstruct_lesion_transmission` builds the four-side
 acquisition, synthesises the data, and runs the inversion; it is exposed to Python
 as `pykwavers.elastic_shear_fwi_reconstruct(mu_true_pa, dx, rho, c_s, c_p, …)`. The
+singleton-z in-plane case selects the plane-strain operator once: z stress and
+gradient terms that are identically zero are absent from its inner loops, while
+exact differential tests require the retained x/y results to match the spatial
+operator. The lossy forward solve retains displacement checkpoints for the adjoint
+correlation, and an accepted line-search trial supplies the next iteration's
+checkpoints instead of repeating that forward solve. The
 figure is produced by the Rust example `elastic_shear_fwi_lesion` (physics) and the
 script `ch10_elastic_fwi_lesion.py` (plotting). The linear estimators remain the
 fast default; the FWI is the higher-cost, higher-resolution refinement. On a

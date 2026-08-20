@@ -1,8 +1,12 @@
 # ADR 033: Elastic / shear-wave FWI for lesion-stiffness reconstruction
 
-- Status: Accepted (increments 1–3 implemented and verified)
+- Status: Accepted
 - Date: 2026-06-25
 - Change class: [major] (new inverse capability: adjoint-state elastic FWI for μ)
+- Revision 2026-08-20: record the displacement-only retained history,
+  plane-strain static dispatch, and accepted-line-search checkpoint reuse that
+  restore the ordinary Nextest runtime contract without changing FWI inputs or
+  numerical outputs (KW-SOL-058).
 - Builds on: ADR 010 (FWI finite-window PSTD/Born), ADR 016 (exact-adjoint acoustic
   self-adjoint engine), ADR 009 (elastic bindings), and the existing
   `forward::elastic::swe::ElasticWaveSolver`.
@@ -75,17 +79,20 @@ The acoustic exact-adjoint engine (ADR 016) reconstructs the forward field backw
 in lockstep using the **lossless leapfrog's exact reversibility** (`O(N)` memory).
 That trick does **not** apply here: the elastic stepping is velocity-Verlet with a
 **lossy PML**, which is not time-reversible. Therefore the implementation stores
-the forward field history (`O(nt·N)`) — consistent with how the acoustic `Solver`
-(damped) path already stores history. The adjoint propagates forward under a
+the three forward displacement volumes (`O(nt·N)`) consumed by the strain
+correlation, not the three velocity volumes — consistent with the gradient's
+actual data dependency. The adjoint propagates forward under a
 time-reversed residual source, so each adjoint state is correlated immediately
 with the matching reverse-time forward state and then discarded. Adjoint
 retention is `O(N)`. Forward checkpointing (Griewank–Walther `revolve`) remains a
 follow-up optimization.
 
 To make this tractable: 2-D first (mirroring `ElasticPINN2D`'s 2-D scope), modest
-grids, μ-only. The retained field bound is six forward displacement/velocity
-volumes per time step plus one live six-volume adjoint field, rather than two
-six-volume histories. Streaming removes `6 · (nt − 1) · N` retained doubles.
+grids, μ-only. The retained field bound is three forward displacement volumes
+per time step plus one live six-volume adjoint field, rather than two
+six-volume histories. Streaming the adjoint and excluding unused forward
+velocity checkpoints remove `9 · nt · N - 6 · N` retained doubles relative to
+two complete histories.
 
 ### 4. Misfit and regularization — reuse
 
@@ -147,9 +154,18 @@ clamped to a physical `[μ_min, μ_max]`.
 - **Observability.** A reflection/ring geometry left the inclusion essentially
   unobservable (data misfit at the floor); a **crossed four-side transmission**
   geometry makes the inclusion's transmitted-phase advance the dominant signal.
-- **Test budget.** The elastic FWI test is a full-wave inverse solver; it is
-  assigned to the committed `elastic-fwi` nextest group (90 s ceiling,
-  single-threaded), the project's established class for FWI/theranostic tests.
+- **Plane-strain dispatch.** Singleton-z point-force runs with no z forcing
+  select zero-sized plane-strain stress and gradient modes once at the
+  propagation boundary. The inner kernels omit analytically zero z terms;
+  exact differential tests pin every retained component to the spatial formula.
+- **Line-search checkpoint reuse.** A trial objective already propagates the
+  accepted model. Its displacement checkpoints feed the next adjoint pass, so
+  the next iteration does not repeat that forward solve. Rejected histories are
+  dropped and never alter optimizer state.
+- **Test budget.** The unchanged elastic FWI contract uses the ordinary
+  30-second slow threshold and 60-second termination bound. KW-SOL-058 reduces
+  its controlled local median from 10.000 to 4.952 seconds; exact-head hosted
+  validation remains authoritative for CI closure.
 
 ## Increments (WIP-limited, one merge-affecting item at a time)
 
@@ -219,10 +235,11 @@ at the real module (`inverse::elastography::elastic_fwi`).
 
 - Adds a genuine full-waveform elastic inverse, closing the Ch26 §26 / Ch11 §11.14
   "not implemented" disclosure with real, tested code.
-- Memory cost remains `O(nt·N)` for the non-reversible forward history, while
+- Memory cost remains `O(nt·N)` for the non-reversible displacement history, while
   adjoint-state retention is `O(N)`; forward checkpointing is the documented
   growth path.
 - The linear `ShearWaveInversion` remains the fast, robust default; the FWI is the
   high-resolution refinement, selected explicitly (no silent fallback).
-- No change to existing forward/acoustic-FWI behaviour (all additions are new
-  modules + additive accessors).
+- Point-force stepping now selects its spatial regime through an internal
+  zero-sized type; exact differential tests preserve the previous spatial
+  results. Existing public forward and acoustic-FWI contracts do not change.

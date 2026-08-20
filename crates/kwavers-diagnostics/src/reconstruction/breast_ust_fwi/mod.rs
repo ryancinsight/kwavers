@@ -59,7 +59,7 @@ use kwavers_core::error::KwaversError;
 use kwavers_core::error::KwaversResult;
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
 use kwavers_solver::inverse::fwi::frequency_domain::{
-    self, Config as FrequencyDomainFwiConfig, FrequencyObservation,
+    self, Config as FrequencyDomainFwiConfig, FrequencyObservation, RingAcquisition,
 };
 use leto::Array3;
 use std::io::Read;
@@ -172,8 +172,12 @@ pub fn reconstruct_breast_ust_sound_speed_volume(
     config: &FrequencyDomainFwiConfig,
 ) -> KwaversResult<BreastUstFwiImage> {
     let initial_sound_speed_m_s = initial_sound_speed_m_s.clone();
-    let solver_result =
-        frequency_domain::invert(observations, array, &initial_sound_speed_m_s, config)?;
+    let solver_result = frequency_domain::invert(
+        observations,
+        &RingAcquisition::new(array),
+        &initial_sound_speed_m_s,
+        config,
+    )?;
     let [nx, ny, nz] = solver_result.sound_speed_m_s.shape();
     let sound_speed_m_s = Array3::from_shape_vec(
         (nx, ny, nz),
@@ -230,8 +234,13 @@ mod tests {
         let mut truth = Array3::from_elem((2, 2, 2), SOUND_SPEED_WATER_SIM);
         truth[[1, 1, 1]] = 1525.0;
         let truth_leto: leto::Array3<f64> = truth.clone();
-        let observed = simulate_frequency_observation(&truth_leto, &array, 230_000.0, &config)
-            .expect("observed");
+        let observed = simulate_frequency_observation(
+            &truth_leto,
+            &RingAcquisition::new(&array),
+            230_000.0,
+            &config,
+        )
+        .expect("observed");
         let observed_nd: leto::Array2<kwavers_math::fft::Complex64> = observed;
         let sliced: leto::Array2<kwavers_math::fft::Complex64> = observed_nd
             .slice_with::<2>(&[
