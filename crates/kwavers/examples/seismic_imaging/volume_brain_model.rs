@@ -209,7 +209,7 @@ fn build_brain_velocity_3d(
                 let p_gm = gm[[mx, my, mz]];
                 let p_wm = wm[[mx, my, mz]];
                 let p_csf = csf[[mx, my, mz]];
-                let p_rest = (1.0 - p_gm - p_wm - p_csf).clamp(0.0, 1.0);
+                let p_rest: f64 = (1.0_f64 - p_gm - p_wm - p_csf).clamp(0.0, 1.0);
                 brain_model[[ix, iy, iz]] =
                     p_gm * C_GRAY + p_wm * C_WHITE + p_csf * C_CSF + p_rest * SOUND_SPEED_WATER_SIM;
             }

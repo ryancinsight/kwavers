@@ -22,6 +22,8 @@ mod seismic_metrics;
 mod seismic_volume_acquisition;
 #[path = "seismic_imaging/volume_artifacts.rs"]
 mod seismic_volume_artifacts;
+#[path = "seismic_imaging/volume_brain_inversion.rs"]
+mod seismic_volume_brain_inversion;
 #[path = "seismic_imaging/volume_brain_model.rs"]
 mod seismic_volume_brain_model;
 #[path = "seismic_imaging/volume_initial_model.rs"]
@@ -30,7 +32,8 @@ mod seismic_volume_initial_model;
 mod seismic_volume_phantom;
 #[path = "seismic_imaging/volume_reporting.rs"]
 mod seismic_volume_reporting;
-use seismic_metrics::{print_quality_pairs, print_quality_report};
+#[path = "seismic_imaging/volume_skull_inversion.rs"]
+mod seismic_volume_skull_inversion;
 
 use anyhow::Context as _;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
@@ -39,7 +42,6 @@ use kwavers_grid::Grid;
 use kwavers_solver::inverse::fwi::time_domain::{FwiGeometry, FwiProcessor};
 use kwavers_solver::inverse::seismic::parameters::{FwiParameters, RegularizationParameters};
 use leto::{Array2, Array3};
-use std::time::Instant;
 
 #[path = "support/brain_prior.rs"]
 mod brain_prior;
@@ -150,30 +152,6 @@ const COLORBAR_H: usize = 20; // colorbar height below each panel
 // ─────────────────────────────────────────────────────────────────────────────
 // Gaussian blur (3D separable)
 // ─────────────────────────────────────────────────────────────────────────────
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Reconstruction quality metrics
-// ─────────────────────────────────────────────────────────────────────────────
-
-/// Print RMSE, Pearson r, max |error|, ±10 m/s fraction for brain voxels only.
-///
-/// Brain voxels defined geometrically: r_3d < R_SKULL_IN from grid centre.
-fn print_quality_report_brain(true_model: &Array3<f64>, reconstructed: &Array3<f64>) {
-    let cx = (NX / 2) as f64;
-    let cy = (NY / 2) as f64;
-    let cz = (NZ / 2) as f64;
-    let free_pairs: Vec<(f64, f64)> = true_model
-        .indexed_iter()
-        .filter(|([ix, iy, iz], _)| {
-            let dx = *ix as f64 - cx;
-            let dy = *iy as f64 - cy;
-            let dz = *iz as f64 - cz;
-            (dx * dx + dy * dy + dz * dz).sqrt() < R_SKULL_IN
-        })
-        .map(|([ix, iy, iz], &t)| (t, reconstructed[[ix, iy, iz]]))
-        .collect();
-    print_quality_pairs(&free_pairs);
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Image output
@@ -314,382 +292,32 @@ fn main() -> KwaversResult<()> {
 
     // ── [ 6 / 7 ]  Multi-scale 3D skull FWI ─────────────────────────────
     println!("\n[ 6 / 7 ]  Running multi-scale 3D transcranial FWI …");
-
-    let true_model = phantom.acoustic().sound_speed.clone();
-
-    // Initial model: Gaussian-blurred CT prior (σ = 3 voxels ≈ 9 mm).
-    let initial_model = seismic_volume_initial_model::gaussian_blur_3d(&true_model, 3.0);
-    let mut current_model = initial_model.clone();
-
-    // Pre-compute observed gathers at the finest scale (150 kHz) for J₀.
-    let nt_fine = ((t_transit * 1.2 + 3.0 / F0_HZ) / dt).ceil() as usize;
-    let mut shots_fine: Vec<(FwiGeometry, Array2<f64>)> = Vec::with_capacity(N_SHOTS_3D);
-    {
-        let tmp_fwi = FwiProcessor::new(FwiParameters {
-            max_iterations: 1,
-            frequency: F0_HZ,
-            nt: nt_fine,
-            dt,
-            n_trace: N_RECEIVERS_3D,
-            n_depth: 1,
-            step_size: STEP_SIZE,
-            tolerance: 1e-12,
-            regularization: RegularizationParameters {
-                tikhonov_weight: 0.0,
-                tv_weight: 0.0,
-                directional_tv_weight: 0.0,
-                directional_tv_adaptive: false,
-                smoothness_weight: 0.0,
-            },
-            source_mute_radius: 4,
-            ..FwiParameters::default()
-        });
-        let t0 = Instant::now();
-        for &elem_idx in &transmit_indices {
-            let geom = seismic_volume_acquisition::build_shot_3d(
-                all_elements[elem_idx],
-                &all_elements,
-                elem_idx,
-                F0_HZ,
-                nt_fine,
-                dt,
-            )?;
-            let obs = tmp_fwi.generate_synthetic_data(&true_model, &geom, &grid)?;
-            shots_fine.push((geom, obs));
-        }
-        println!(
-            "  {} observed gathers at {} kHz ({:.1} s)",
-            N_SHOTS_3D,
-            F0_HZ * 1e-3,
-            t0.elapsed().as_secs_f32()
-        );
-    }
-
-    let j_initial = {
-        let fwi_tmp = FwiProcessor::new(FwiParameters {
-            max_iterations: 1,
-            frequency: F0_HZ,
-            nt: nt_fine,
-            dt,
-            n_trace: N_RECEIVERS_3D,
-            n_depth: 1,
-            step_size: STEP_SIZE,
-            tolerance: 1e-12,
-            regularization: RegularizationParameters {
-                tikhonov_weight: 0.0,
-                tv_weight: 0.0,
-                directional_tv_weight: 0.0,
-                directional_tv_adaptive: false,
-                smoothness_weight: 0.0,
-            },
-            source_mute_radius: 4,
-            ..FwiParameters::default()
-        });
-        let mut j = 0.0_f64;
-        for (geom, obs) in &shots_fine {
-            let d_syn = fwi_tmp.generate_synthetic_data(&initial_model, geom, &grid)?;
-            j += d_syn
-                .iter()
-                .zip(obs.iter())
-                .map(|(&s, &o)| (s - o).powi(2))
-                .sum::<f64>()
-                * 0.5
-                * dt;
-        }
-        j
-    };
-
-    println!("\n  Quality before inversion (all voxels):");
-    print_quality_report(&true_model, &initial_model);
-    println!("  J₀ (150 kHz)    : {j_initial:.6e} Pa²·s  ({N_SHOTS_3D} shots)");
-
-    let t_inv = Instant::now();
-
-    // Multi-scale inversion loop.
-    for (scale_idx, &(f0, n_iter)) in scales.iter().enumerate() {
-        let nt_scale = ((t_transit * 1.2 + 3.0 / f0) / dt).ceil() as usize;
-        let mute_r = ((SOUND_SPEED_WATER_SIM / (2.0 * f0)) / DX).floor() as usize;
-        let mute_r = mute_r.clamp(2, 12);
-
-        let mut scale_shots: Vec<(FwiGeometry, Array2<f64>)> = Vec::with_capacity(N_SHOTS_3D);
-        let fwi_scale = FwiProcessor::new(FwiParameters {
-            max_iterations: n_iter,
-            frequency: f0,
-            nt: nt_scale,
-            dt,
-            n_trace: N_RECEIVERS_3D,
-            n_depth: 1,
-            step_size: STEP_SIZE,
-            tolerance: 1e-12,
-            regularization: RegularizationParameters {
-                tikhonov_weight: 0.0,
-                tv_weight: 0.0,
-                directional_tv_weight: 0.0,
-                directional_tv_adaptive: false,
-                smoothness_weight: 0.0,
-            },
-            source_mute_radius: mute_r,
-            ..FwiParameters::default()
-        });
-
-        let t_scale = Instant::now();
-        for &elem_idx in &transmit_indices {
-            let geom = seismic_volume_acquisition::build_shot_3d(
-                all_elements[elem_idx],
-                &all_elements,
-                elem_idx,
-                f0,
-                nt_scale,
-                dt,
-            )?;
-            let obs = fwi_scale.generate_synthetic_data(&true_model, &geom, &grid)?;
-            scale_shots.push((geom, obs));
-        }
-
-        println!(
-            "\n  ── Scale {} / {} : f₀ = {:.0} kHz, {} iter, nt = {}, mute_r = {} ──",
-            scale_idx + 1,
-            scales.len(),
-            f0 * 1e-3,
-            n_iter,
-            nt_scale,
-            mute_r
-        );
-
-        current_model = fwi_scale.invert_multi_source(&scale_shots, &current_model, &grid)?;
-        current_model = current_model.mapv(|c| c.max(SOUND_SPEED_WATER_SIM));
-
-        let c_now_max = current_model
-            .iter()
-            .copied()
-            .fold(f64::NEG_INFINITY, f64::max);
-        let c_now_min = current_model.iter().copied().fold(f64::INFINITY, f64::min);
-        println!(
-            "    Scale {} done ({:.1} s): c ∈ [{:.0}, {:.0}] m/s",
-            scale_idx + 1,
-            t_scale.elapsed().as_secs_f32(),
-            c_now_min,
-            c_now_max
-        );
-    }
-
-    let reconstructed = current_model;
-    println!(
-        "\n  FWI completed in {:.1} s",
-        t_inv.elapsed().as_secs_f32()
-    );
-
-    // Final J at 150 kHz.
-    let j_final = {
-        let fwi_tmp = FwiProcessor::new(FwiParameters {
-            max_iterations: 1,
-            frequency: F0_HZ,
-            nt: nt_fine,
-            dt,
-            n_trace: N_RECEIVERS_3D,
-            n_depth: 1,
-            step_size: STEP_SIZE,
-            tolerance: 1e-12,
-            regularization: RegularizationParameters {
-                tikhonov_weight: 0.0,
-                tv_weight: 0.0,
-                directional_tv_weight: 0.0,
-                directional_tv_adaptive: false,
-                smoothness_weight: 0.0,
-            },
-            source_mute_radius: 4,
-            ..FwiParameters::default()
-        });
-        let mut j = 0.0_f64;
-        for (geom, obs) in &shots_fine {
-            let d_syn = fwi_tmp.generate_synthetic_data(&reconstructed, geom, &grid)?;
-            j += d_syn
-                .iter()
-                .zip(obs.iter())
-                .map(|(&s, &o)| (s - o).powi(2))
-                .sum::<f64>()
-                * 0.5
-                * dt;
-        }
-        j
-    };
-
-    println!("\n  Quality after inversion (all voxels):");
-    print_quality_report(&true_model, &reconstructed);
-    println!("  J₀              : {j_initial:.6e} Pa²·s");
-    println!(
-        "  J_final         : {j_final:.6e} Pa²·s  (reduction: {:.1}×)",
-        if j_final > 0.0 {
-            j_initial / j_final
-        } else {
-            f64::INFINITY
-        }
-    );
+    let reconstructed = seismic_volume_skull_inversion::run_skull_inversion(
+        &phantom,
+        &grid,
+        &all_elements,
+        &transmit_indices,
+        dt,
+        t_transit,
+        scales,
+    )?;
 
     // ── [ 7 / 7 ]  Stage-2 brain tissue FWI ─────────────────────────────
     let brain_prior =
         BrainPriorMode::from_env("KWAVERS_BRAIN_PRIOR").map_err(KwaversError::InvalidInput)?;
     println!("\n[ 7 / 7 ]  Stage-2 3D brain tissue FWI ({brain_prior:?}) …");
 
-    let (_brain_true_model, brain_reconstructed, t1_brain_model) =
-        match seismic_volume_brain_model::build_brain_prior_3d(&phantom, &brain_prior) {
-            Err(e) => {
-                return Err(KwaversError::InvalidInput(format!(
-                    "selected brain prior failed: {e:#}"
-                )));
-            }
-            Ok(brain_true) => {
-                // Skull mask: bone voxels frozen at CT-derived velocity.
-                let skull_mask: Array3<bool> = phantom
-                    .acoustic()
-                    .sound_speed
-                    .mapv(|c| c > BONE_VELOCITY_THRESHOLD);
-                let n_frozen = skull_mask.iter().filter(|&&b| b).count();
-                let n_free = skull_mask.len() - n_frozen;
-                println!(
-                    "  Skull mask        : {n_frozen} frozen bone voxels, {n_free} free brain voxels"
-                );
-
-                let (bt_min, bt_max) = skull_mask
-                    .indexed_iter()
-                    .filter(|(_, &frozen)| !frozen)
-                    .map(|([ix, iy, iz], _)| brain_true[[ix, iy, iz]])
-                    .fold((f64::INFINITY, f64::NEG_INFINITY), |(mn, mx), c| {
-                        (mn.min(c), mx.max(c))
-                    });
-                println!("  True brain c      : [{bt_min:.1}, {bt_max:.1}] m/s");
-
-                // Build T1-derived initial brain model when T1 was loaded.
-                let t1_brain = match (&brain_prior, t1_result.as_ref()) {
-                    (_, Some((t1_vol, t1_sp))) => {
-                        Some(seismic_volume_brain_model::build_brain_velocity_from_t1(
-                            &phantom, t1_vol, *t1_sp,
-                        ))
-                    }
-                    (BrainPriorMode::T1(path) | BrainPriorMode::MniT1 { t1: path, .. }, None) => {
-                        let (t1_vol, t1_sp) = seismic_volume_brain_model::load_t1_mri(path)
-                            .with_context(|| {
-                                format!("explicit T1 prior could not be loaded: {}", path.display())
-                            })?;
-                        Some(seismic_volume_brain_model::build_brain_velocity_from_t1(
-                            &phantom, &t1_vol, t1_sp,
-                        ))
-                    }
-                    _ => None,
-                };
-
-                // Brain FWI initial model: T1-derived if available, otherwise uniform water.
-                let mut brain_initial = match &t1_brain {
-                    Some(t1_model) => t1_model.clone(),
-                    None => skull_mask.mapv(|frozen| {
-                        if frozen {
-                            0.0_f64
-                        } else {
-                            SOUND_SPEED_WATER_SIM
-                        }
-                    }),
-                };
-                // Fill frozen voxels with CT skull velocity.
-                let [bi_nx, bi_ny, bi_nz] = brain_initial.shape();
-                for i in 0..bi_nx {
-                    for j in 0..bi_ny {
-                        for k in 0..bi_nz {
-                            if skull_mask[[i, j, k]] {
-                                brain_initial[[i, j, k]] =
-                                    phantom.acoustic().sound_speed[[i, j, k]];
-                            }
-                        }
-                    }
-                }
-
-                // Stage-2 FWI at 400 kHz, 15 iterations.
-                let f0_brain = 400_000.0_f64;
-                let n_brain_iter: usize = 15;
-                let step_brain = 30.0_f64;
-                let nt_brain = {
-                    let domain_transit = (NX as f64 * DX) / SOUND_SPEED_WATER_SIM;
-                    let source_dur = 3.0 / f0_brain;
-                    ((domain_transit + source_dur) / dt).ceil() as usize
-                };
-
-                let fwi_brain = FwiProcessor::new(FwiParameters {
-                    max_iterations: n_brain_iter,
-                    frequency: f0_brain,
-                    nt: nt_brain,
-                    dt,
-                    n_trace: N_RECEIVERS_3D,
-                    n_depth: 1,
-                    step_size: step_brain,
-                    tolerance: 1e-14,
-                    regularization: RegularizationParameters {
-                        tikhonov_weight: 0.0,
-                        tv_weight: 0.0,
-                        directional_tv_weight: 0.0,
-                        directional_tv_adaptive: false,
-                        smoothness_weight: 0.0,
-                    },
-                    source_mute_radius: 2,
-                    ..FwiParameters::default()
-                });
-
-                let mut brain_shots: Vec<(FwiGeometry, Array2<f64>)> =
-                    Vec::with_capacity(N_SHOTS_3D);
-                let t_brain_obs = Instant::now();
-                for &elem_idx in &transmit_indices {
-                    let geom = seismic_volume_acquisition::build_shot_3d(
-                        all_elements[elem_idx],
-                        &all_elements,
-                        elem_idx,
-                        f0_brain,
-                        nt_brain,
-                        dt,
-                    )?;
-                    match fwi_brain.generate_synthetic_data(&brain_true, &geom, &grid) {
-                        Ok(obs) => brain_shots.push((geom, obs)),
-                        Err(e) => {
-                            eprintln!("  Brain gather failed for element {elem_idx}: {e:#}");
-                        }
-                    }
-                }
-                println!(
-                    "  {N_SHOTS_3D} brain gathers at {:.0} kHz ({:.1} s)",
-                    f0_brain * 1e-3,
-                    t_brain_obs.elapsed().as_secs_f32()
-                );
-
-                if brain_shots.is_empty() {
-                    return Err(KwaversError::InvalidInput(format!(
-                        "brain FWI produced no successful gathers from {N_SHOTS_3D} shots"
-                    )));
-                }
-
-                println!(
-                    "  Running {n_brain_iter} iterations at {:.0} kHz (nt={nt_brain}) …",
-                    f0_brain * 1e-3
-                );
-                let t_brain_inv = Instant::now();
-                let brain_recon = fwi_brain
-                    .invert_multi_source_masked(
-                        &brain_shots,
-                        &brain_initial,
-                        &phantom.acoustic().sound_speed,
-                        &skull_mask,
-                        BRAIN_C_MIN,
-                        BRAIN_C_MAX,
-                        &grid,
-                    )
-                    .map_err(|error| {
-                        KwaversError::InvalidInput(format!("brain FWI inversion failed: {error:#}"))
-                    })?;
-                println!(
-                    "  Brain FWI done ({:.1} s)",
-                    t_brain_inv.elapsed().as_secs_f32()
-                );
-                println!("  Quality (brain voxels only, r_3d < R_SKULL_IN):");
-                print_quality_report_brain(&brain_true, &brain_recon);
-                (Some(brain_true), Some(brain_recon), t1_brain)
-            }
-        };
+    let brain_result = seismic_volume_brain_inversion::run_brain_inversion(
+        &phantom,
+        &brain_prior,
+        &grid,
+        dt,
+        &all_elements,
+        &transmit_indices,
+        t1_result.as_ref(),
+    )?;
+    let brain_reconstructed = brain_result.reconstructed;
+    let t1_brain_model = brain_result.t1_model;
 
     let output_dir = std::env::args()
         .nth(1)

@@ -146,6 +146,18 @@
   passes 77/77 (one slow comparison at 40.959 seconds), strict example Clippy
   passes, and the mdBook test/build gates pass.
 
+- **3-D skull-inversion structure:** Multi-scale skull FWI, synthetic-gather
+  construction, and inversion diagnostics now live in the typed
+  `seismic_imaging/volume_skull_inversion.rs` workflow leaf. The stage retains
+  native provider-array execution and explicit inversion errors.
+
+- **3-D brain-inversion structure:** Stage-two masked brain FWI, prior-derived
+  initialization, gather construction, and brain-only quality reporting now live
+  in `seismic_imaging/volume_brain_inversion.rs`, returning a typed artifact
+  result. The 3-D entry point is 347 lines; the exact local package-plus-example
+  Nextest gate passes 116/116 in 42.039 seconds, strict example Clippy passes,
+  and the mdBook test/build gates pass.
+
 - **Breaking CT skull material boundary:** `AcousticSkullProperties` now stores
   validated Aequitas velocity, mass-density, reciprocal-length attenuation,
   length, and optional shear velocity. `HeterogeneousSkull::from_ct_hill`

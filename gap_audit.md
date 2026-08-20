@@ -117,6 +117,16 @@ and `mdbook build docs/book` pass. The 2-D entry point is 860 lines and the 3-D
 entry point is 718 lines; 3-D inversion still requires partitioning, so
 `KW-EXAMPLES-115` remains in progress.
 
+Multi-scale skull FWI, synthetic-gather construction, and inversion diagnostics
+now have the typed `seismic_imaging/volume_skull_inversion.rs` leaf. Stage-two
+masked brain FWI, prior-derived initialization, gather construction, and
+brain-only quality reporting now have the typed
+`seismic_imaging/volume_brain_inversion.rs` leaf. Exact local package-plus-example
+Nextest run `2170b8c5-71b1-4be0-9c2a-44235c0676d5` passes 116/116 in 42.039
+seconds; strict all-example Clippy, `mdbook test docs/book`, and `mdbook build
+docs/book` pass. The 3-D entry point is 347 lines; the 2-D entry point remains
+860 lines, so `KW-EXAMPLES-115` remains in progress for the 2-D partition.
+
 Synthetic skull construction, explicit CT loading, HU resampling, and
 brain-support filling now have the `seismic_imaging/phantom.rs` leaf; the
 brain-support classifier is owned by `brain_model.rs` and planar artifacts

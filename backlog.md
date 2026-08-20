@@ -541,6 +541,19 @@
   `mdbook build docs/book` pass. The 2-D entry point is 860 lines and the 3-D
   entry point is 718 lines, so 3-D inversion still requires partitioning before
   `KW-EXAMPLES-115` can close.
+- 2026-08-20 3-D skull-inversion slice: multi-scale skull FWI, synthetic
+  gathers, and inversion diagnostics now live in the typed
+  `seismic_imaging/volume_skull_inversion.rs` leaf. The stage preserves native
+  provider-array execution and explicit inversion errors.
+- 2026-08-20 3-D brain-inversion slice: stage-two masked brain FWI, prior-derived
+  initialization, gather construction, and brain-only quality reporting now
+  live in `seismic_imaging/volume_brain_inversion.rs`, returning a typed result.
+  Exact local package-plus-example Nextest run
+  `2170b8c5-71b1-4be0-9c2a-44235c0676d5` passes 116/116 in 42.039 seconds;
+  strict all-example Clippy, `mdbook test docs/book`, and `mdbook build docs/book`
+  pass. The 3-D entry point is 347 lines, while the 2-D entry point is 860 lines;
+  the residual item is the 2-D entry-point partition before `KW-EXAMPLES-115`
+  can close.
 - 2026-08-20 example-gate runtime slice: the focused water-tank comparison's
   independent FDTD, PSTD, DG-2D, DG-3D, and DG-3D-CPML branches now overlap
   through the provider-owned Moirai `Parallel` join. The complete example
