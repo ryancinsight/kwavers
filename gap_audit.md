@@ -30,6 +30,13 @@ only dimension-specific resampling and interpolation. Full example Nextest run
 Clippy is green. The entry points remain above the 500-line target, so
 `KW-EXAMPLES-115` remains in progress.
 
+The raster boundary is now canonical in
+`crates/kwavers/examples/seismic_imaging/render.rs`: both seismic entries share
+pixel writes, velocity coloring, and PNG encoding, while 2-D/3-D panel layouts
+remain dimension-specific. The exact local Nextest run
+`20e6d2c9-8a84-4bd9-a2d0-6e9084ea08af` passes 69/69 and strict all-example
+Clippy remains green. The entry points remain above the 500-line target.
+
 ## ATLAS-KWAVERS-HEPHAESTUS-FDTD-107 — Collocated FDTD provider cutover — Apollo co-evolution blocker 2026-08-18
 
 The old consumer-owned collocated FDTD implementation in

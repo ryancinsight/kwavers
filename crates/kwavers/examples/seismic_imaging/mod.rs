@@ -3,3 +3,4 @@
 pub(crate) mod ct;
 pub(crate) mod dicom;
 pub(crate) mod medium;
+pub(crate) mod render;

@@ -428,6 +428,11 @@
   dimension-specific resampling and interpolation. The full example Nextest
   run `33cd7cd5-876c-4d3e-a4a6-89fa41005873` passes 59/59 and strict all-example
   Clippy is green; the remaining entry-point partition is still open.
+- 2026-08-20 raster boundary slice: pixel writes, velocity color mapping, and
+  PNG encoding now have one tested `seismic_imaging/render.rs` home used by
+  both seismic entries; the dimension-specific panel layouts remain local.
+  Full example Nextest run `20e6d2c9-8a84-4bd9-a2d0-6e9084ea08af` passes 69/69
+  and strict all-example Clippy is green.
 - 2026-08-20 example-gate runtime slice: the focused water-tank comparison's
   independent FDTD, PSTD, DG-2D, DG-3D, and DG-3D-CPML branches now overlap
   through the provider-owned Moirai `Parallel` join. The complete example

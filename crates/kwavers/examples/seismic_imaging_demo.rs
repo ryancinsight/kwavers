@@ -128,6 +128,7 @@ use seismic_imaging::ct::{
     load_ct_volume, skull_centroid_2d, skull_equator_z, skull_outer_radius_ct, CtVolume,
 };
 use seismic_imaging::medium::SkullModel;
+use seismic_imaging::render::{put_pixel, velocity_color, write_png};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Grid constants
@@ -796,41 +797,6 @@ fn print_quality_report_brain(true_model: &Array3<f64>, reconstructed: &Array3<f
 // ─────────────────────────────────────────────────────────────────────────────
 // Image output
 // ─────────────────────────────────────────────────────────────────────────────
-
-/// Write one RGB pixel into a flat byte buffer.
-fn put_pixel(rgb: &mut [u8], width: usize, height: usize, x: usize, y: usize, color: [u8; 3]) {
-    if x >= width || y >= height {
-        return;
-    }
-    let idx = 3 * (y * width + x);
-    rgb[idx..idx + 3].copy_from_slice(&color);
-}
-
-/// Map sound speed to RGB via 5-stop blue → cyan → green → yellow → red.
-///
-/// Maps c ∈ [c_lo, c_hi] linearly:
-/// - 1500 m/s (water / brain) → blue
-/// - ~1800 m/s (scalp / soft tissue) → cyan
-/// - ~2000 m/s (diploe) → green
-/// - ~2450 m/s (dense bone) → yellow
-/// - 2900 m/s (cortical bone) → red
-fn velocity_color(c: f64, c_lo: f64, c_hi: f64) -> [u8; 3] {
-    let t = ((c - c_lo) / (c_hi - c_lo)).clamp(0.0, 1.0);
-    let (r, g, b) = if t < 0.25 {
-        let s = t / 0.25;
-        (0.0, s, 1.0) // blue → cyan
-    } else if t < 0.5 {
-        let s = (t - 0.25) / 0.25;
-        (0.0, 1.0, 1.0 - s) // cyan → green
-    } else if t < 0.75 {
-        let s = (t - 0.5) / 0.25;
-        (s, 1.0, 0.0) // green → yellow
-    } else {
-        let s = (t - 0.75) / 0.25;
-        (1.0, 1.0 - s, 0.0) // yellow → red
-    };
-    [(255.0 * r) as u8, (255.0 * g) as u8, (255.0 * b) as u8]
-}
 
 /// Blue ← white → red diverging colormap.  Zero → white; positive → red; negative → blue.
 fn diverging_color(value: f64, max_abs: f64) -> [u8; 3] {
@@ -1571,22 +1537,6 @@ pub fn write_velocity_csv(
             r_c - t_c
         )?;
     }
-    Ok(())
-}
-
-/// Encode a flat RGB buffer as PNG.
-fn write_png(path: &Path, rgb: &[u8], width: usize, height: usize) -> io::Result<()> {
-    let file = File::create(path)?;
-    let w = BufWriter::new(file);
-    let mut enc = png::Encoder::new(w, width as u32, height as u32);
-    enc.set_color(png::ColorType::Rgb);
-    enc.set_depth(png::BitDepth::Eight);
-    let mut writer = enc
-        .write_header()
-        .map_err(|e| io::Error::other(e.to_string()))?;
-    writer
-        .write_image_data(rgb)
-        .map_err(|e| io::Error::other(e.to_string()))?;
     Ok(())
 }
 
