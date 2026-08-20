@@ -27,6 +27,31 @@
 
 ### Changed
 
+- **Elastic FWI runtime and structure:** Singleton-z in-plane point-force
+  propagation now selects a zero-sized plane-strain mode once, avoiding the
+  out-of-plane stress, acceleration, integration, damping, and gradient work
+  that is analytically zero. The adjoint retains displacement-only forward
+  checkpoints, and steepest-descent iterations reuse the accepted line-search
+  history instead of propagating that model twice. The unchanged
+  `fwi_outperforms_linear_inversion` contract drops from a 10.000-second local
+  median to 4.952 seconds; exact differential tests pin the optimized 2-D
+  operators to the full 3-D formulas.
+
+- **Attenuation example structure and documentation:** The heterogeneous
+  power-law attenuation replication now separates configuration, propagation,
+  measurement, experiments, and artifacts into named modules and has a
+  dedicated book page linked from the media chapter and example index. The
+  example catalog no longer links to four deleted programs or instructs readers
+  to replace the repository-pinned Rust toolchain.
+
+- **Distributed scheduling:** `WorkQueue::wait_all` now waits for both queued
+  and executing tasks. Workers block on scheduler state notification instead of
+  polling, and task completion claims are released on success, error, or
+  unwind. Deadline construction rejects timestamp overflow with the existing
+  typed invalid-input error. Focused distributed Nextest passes 17/17; the
+  locked local gate remains blocked by the Atlas development overlay's derived
+  lock rewrite pending hosted verification.
+
 - **Breaking sonoluminescence surface:** Dimensioned emission now exposes
   typed Aequitas blackbody and bremsstrahlung components and excludes the
   arbitrary-unit Cherenkov yield from the `W/m³` field. The integrated step

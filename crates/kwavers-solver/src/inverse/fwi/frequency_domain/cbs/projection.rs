@@ -10,7 +10,6 @@ use aequitas::systems::si::units::Meter;
 use eunomia::Complex64;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::{fft_3d_complex_into, ifft_3d_complex_inplace};
-use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
 use kwavers_transducer::transducers::ElementPosition;
 use leto::Array3;
 use std::f64::consts::TAU;
@@ -153,10 +152,9 @@ pub fn sample_field_with_bli(
 pub fn sample_array_with_bli(
     grid: GridSpec,
     field: &[Complex64],
-    array: &MultiRowRingArray,
+    receivers: &[ElementPosition],
 ) -> KwaversResult<Vec<Complex64>> {
-    array
-        .elements()
+    receivers
         .iter()
         .map(|&receiver| sample_field_with_bli(grid, field, receiver))
         .collect()
@@ -173,25 +171,26 @@ pub fn sample_array_with_bli(
 pub fn sample_array_for_operator(
     grid: GridSpec,
     field: &[Complex64],
-    array: &MultiRowRingArray,
+    receivers: &[ElementPosition],
     operator: GreenOperatorKind,
 ) -> KwaversResult<Vec<Complex64>> {
     match operator {
         GreenOperatorKind::DenseFreeSpace | GreenOperatorKind::SpectralPeriodic { .. } => {
-            sample_array_with_bli(grid, field, array)
+            sample_array_with_bli(grid, field, receivers)
         }
-        GreenOperatorKind::SpectralPstdPeriodic { .. } => sample_array_on_grid(grid, field, array),
+        GreenOperatorKind::SpectralPstdPeriodic { .. } => {
+            sample_array_on_grid(grid, field, receivers)
+        }
     }
 }
 
 fn sample_array_on_grid(
     grid: GridSpec,
     field: &[Complex64],
-    array: &MultiRowRingArray,
+    receivers: &[ElementPosition],
 ) -> KwaversResult<Vec<Complex64>> {
     validate_field_len(grid, field)?;
-    array
-        .elements()
+    receivers
         .iter()
         .map(|&receiver| {
             let (ix, iy, iz) = exact_grid_index(grid, receiver, "receiver")?;
@@ -210,19 +209,19 @@ fn sample_array_on_grid(
 /// receiver has no BLI support on the grid.
 pub fn receiver_adjoint_from_bli(
     grid: GridSpec,
-    array: &MultiRowRingArray,
+    receivers: &[ElementPosition],
     residual: &[Complex64],
 ) -> KwaversResult<Vec<Complex64>> {
-    if residual.len() != array.element_count() {
+    if residual.len() != receivers.len() {
         return Err(KwaversError::DimensionMismatch(format!(
             "CBS receiver residual mismatch: residual {}, geometry {}",
             residual.len(),
-            array.element_count()
+            receivers.len()
         )));
     }
 
     let mut adjoint = vec![Complex64::new(0.0, 0.0); grid.len()];
-    for (&receiver, &value) in array.elements().iter().zip(residual.iter()) {
+    for (&receiver, &value) in receivers.iter().zip(residual.iter()) {
         let weights = nonempty_bli_weights(grid, receiver, "receiver")?;
         for contribution in weights {
             adjoint[contribution.linear_index] += value * contribution.weight;
@@ -242,35 +241,35 @@ pub fn receiver_adjoint_from_bli(
 /// invalid.
 pub fn receiver_adjoint_for_operator(
     grid: GridSpec,
-    array: &MultiRowRingArray,
+    receivers: &[ElementPosition],
     residual: &[Complex64],
     operator: GreenOperatorKind,
 ) -> KwaversResult<Vec<Complex64>> {
     match operator {
         GreenOperatorKind::DenseFreeSpace | GreenOperatorKind::SpectralPeriodic { .. } => {
-            receiver_adjoint_from_bli(grid, array, residual)
+            receiver_adjoint_from_bli(grid, receivers, residual)
         }
         GreenOperatorKind::SpectralPstdPeriodic { .. } => {
-            receiver_adjoint_on_grid(grid, array, residual)
+            receiver_adjoint_on_grid(grid, receivers, residual)
         }
     }
 }
 
 fn receiver_adjoint_on_grid(
     grid: GridSpec,
-    array: &MultiRowRingArray,
+    receivers: &[ElementPosition],
     residual: &[Complex64],
 ) -> KwaversResult<Vec<Complex64>> {
-    if residual.len() != array.element_count() {
+    if residual.len() != receivers.len() {
         return Err(KwaversError::DimensionMismatch(format!(
             "CBS receiver residual mismatch: residual {}, geometry {}",
             residual.len(),
-            array.element_count()
+            receivers.len()
         )));
     }
 
     let mut adjoint = vec![Complex64::new(0.0, 0.0); grid.len()];
-    for (&receiver, &value) in array.elements().iter().zip(residual.iter()) {
+    for (&receiver, &value) in receivers.iter().zip(residual.iter()) {
         let (ix, iy, iz) = exact_grid_index(grid, receiver, "receiver")?;
         adjoint[grid.linear_index(ix, iy, iz)] += value;
     }

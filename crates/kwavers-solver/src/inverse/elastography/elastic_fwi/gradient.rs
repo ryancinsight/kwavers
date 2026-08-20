@@ -5,6 +5,7 @@ use kwavers_core::error::{KwaversResult, NumericalError};
 use leto::Array3;
 
 use super::{l2_misfit, sample_receivers, ElasticFwi, ReceiverTraces};
+use crate::forward::elastic::swe::types::ElasticDisplacementSnapshot;
 use crate::forward::elastic::swe::{ElasticPointForce, ElasticWaveField, ElasticWaveSolver};
 
 impl ElasticFwi {
@@ -21,14 +22,35 @@ impl ElasticFwi {
         self.solver.set_mu(mu)?;
         let fwd = self
             .solver
-            .propagate_point_forces(n, dt, &self.config.source)?;
-        let syn = sample_receivers(&fwd, &self.config.receivers);
+            .propagate_point_force_displacements(n, dt, &self.config.source)?;
+        self.forward_adjoint_from_history(&fwd)
+    }
+
+    /// Complete an adjoint evaluation from checkpoints already propagated at
+    /// the current solver model.
+    pub(super) fn forward_adjoint_from_history(
+        &mut self,
+        fwd: &[ElasticDisplacementSnapshot],
+    ) -> KwaversResult<(f64, Array3<f64>, Array3<f64>)> {
+        let n = self.config.n_steps;
+        let dt = self.config.dt;
+        let syn = sample_receivers(fwd, &self.config.receivers);
         let j = l2_misfit(&syn, &self.observed, dt);
 
         let residual = residual(&syn, &self.observed);
         let adj_forces = build_adjoint_forces(&residual, &self.config.receivers, n);
-        let (grad, illum) =
-            stream_k_mu_kernel(&self.solver, &fwd, &adj_forces, dt, self.grid_spacing)?;
+        let plane_strain = fwd
+            .first()
+            .is_some_and(|snapshot| snapshot.ux.shape()[2] == 1)
+            && self.config.source.iter().all(|force| force.is_in_plane(n));
+        let (grad, illum) = stream_k_mu_kernel(
+            &self.solver,
+            fwd,
+            &adj_forces,
+            dt,
+            self.grid_spacing,
+            plane_strain,
+        )?;
         Ok((j, grad, illum))
     }
 
@@ -60,6 +82,25 @@ impl ElasticFwi {
         mu: &Array3<f64>,
     ) -> KwaversResult<(f64, Array3<f64>)> {
         let (j, mut grad, illum) = self.forward_adjoint(mu)?;
+        self.precondition_gradient(&mut grad, &illum);
+        self.mute_acquisition_imprint(&mut grad);
+        Ok((j, grad))
+    }
+
+    /// Inversion gradient from a line-search history at the installed model.
+    pub(super) fn inversion_gradient_from_history(
+        &mut self,
+        history: &[ElasticDisplacementSnapshot],
+    ) -> KwaversResult<(f64, Array3<f64>)> {
+        let (j, mut grad, illum) = self.forward_adjoint_from_history(history)?;
+        if self.config.precond_eps > 0.0 {
+            self.precondition_gradient(&mut grad, &illum);
+        }
+        self.mute_acquisition_imprint(&mut grad);
+        Ok((j, grad))
+    }
+
+    fn precondition_gradient(&self, grad: &mut Array3<f64>, illum: &Array3<f64>) {
         let wmax = illum.iter().fold(0.0_f64, |m, &v| m.max(v));
         if wmax > 0.0 {
             let floor = self.config.precond_eps * wmax;
@@ -68,8 +109,6 @@ impl ElasticFwi {
             })
             .expect("invariant: gradient and illumination field shapes asserted equal");
         }
-        self.mute_acquisition_imprint(&mut grad);
-        Ok((j, grad))
     }
 
     /// Zero the gradient within `config.mute_radius` cells of every source and
@@ -151,7 +190,65 @@ fn build_adjoint_forces(
 /// six-component adjoint field instead of `n_steps` cloned fields.
 fn stream_k_mu_kernel(
     solver: &ElasticWaveSolver,
-    fwd: &[ElasticWaveField],
+    fwd: &[ElasticDisplacementSnapshot],
+    adj_forces: &[ElasticPointForce],
+    dt: f64,
+    grid_spacing: (f64, f64, f64),
+    plane_strain: bool,
+) -> KwaversResult<(Array3<f64>, Array3<f64>)> {
+    if plane_strain {
+        stream_k_mu_kernel_with::<PlaneStrainGradient>(solver, fwd, adj_forces, dt, grid_spacing)
+    } else {
+        stream_k_mu_kernel_with::<SpatialGradient>(solver, fwd, adj_forces, dt, grid_spacing)
+    }
+}
+
+trait GradientAccumulator {
+    fn accumulate(
+        grad: &mut Array3<f64>,
+        illum: &mut Array3<f64>,
+        forward: &ElasticDisplacementSnapshot,
+        adjoint: &ElasticWaveField,
+        dt: f64,
+        grid_spacing: (f64, f64, f64),
+    );
+}
+
+struct SpatialGradient;
+
+impl GradientAccumulator for SpatialGradient {
+    #[inline]
+    fn accumulate(
+        grad: &mut Array3<f64>,
+        illum: &mut Array3<f64>,
+        forward: &ElasticDisplacementSnapshot,
+        adjoint: &ElasticWaveField,
+        dt: f64,
+        grid_spacing: (f64, f64, f64),
+    ) {
+        accumulate_k_mu_step(grad, illum, forward, adjoint, dt, grid_spacing);
+    }
+}
+
+struct PlaneStrainGradient;
+
+impl GradientAccumulator for PlaneStrainGradient {
+    #[inline]
+    fn accumulate(
+        grad: &mut Array3<f64>,
+        illum: &mut Array3<f64>,
+        forward: &ElasticDisplacementSnapshot,
+        adjoint: &ElasticWaveField,
+        dt: f64,
+        grid_spacing: (f64, f64, f64),
+    ) {
+        accumulate_k_mu_step_plane_strain(grad, illum, forward, adjoint, dt, grid_spacing);
+    }
+}
+
+fn stream_k_mu_kernel_with<G: GradientAccumulator>(
+    solver: &ElasticWaveSolver,
+    fwd: &[ElasticDisplacementSnapshot],
     adj_forces: &[ElasticPointForce],
     dt: f64,
     grid_spacing: (f64, f64, f64),
@@ -168,9 +265,42 @@ fn stream_k_mu_kernel(
 
     solver.propagate_point_forces_observing(n_steps, dt, adj_forces, |adjoint_step, adjoint| {
         let forward = &fwd[n_steps - 1 - adjoint_step];
-        accumulate_k_mu_step(&mut grad, &mut illum, forward, adjoint, dt, grid_spacing);
+        G::accumulate(&mut grad, &mut illum, forward, adjoint, dt, grid_spacing);
     })?;
     Ok((grad, illum))
+}
+
+fn accumulate_k_mu_step_plane_strain(
+    grad: &mut Array3<f64>,
+    illum: &mut Array3<f64>,
+    forward: &ElasticDisplacementSnapshot,
+    adjoint: &ElasticWaveField,
+    dt: f64,
+    (dx, dy, _dz): (f64, f64, f64),
+) {
+    let [nx, ny, nz] = grad.shape();
+    debug_assert_eq!(nz, 1);
+    for i in 0..nx {
+        for j in 0..ny {
+            let exx_f = ddx(&forward.ux, i, j, 0, nx, dx);
+            let eyy_f = ddy(&forward.uy, i, j, 0, ny, dy);
+            let gxy_f = ddx(&forward.uy, i, j, 0, nx, dx) + ddy(&forward.ux, i, j, 0, ny, dy);
+            let exx_a = ddx(&adjoint.ux, i, j, 0, nx, dx);
+            let eyy_a = ddy(&adjoint.uy, i, j, 0, ny, dy);
+            let gxy_a = ddx(&adjoint.uy, i, j, 0, nx, dx) + ddy(&adjoint.ux, i, j, 0, ny, dy);
+
+            illum[[i, j, 0]] += dt
+                * 2.0f64.mul_add(
+                    gxy_f.mul_add(gxy_f, 0.0),
+                    4.0 * exx_f.mul_add(exx_f, eyy_f.mul_add(eyy_f, 0.0)),
+                );
+            let correlation = 4.0f64.mul_add(
+                exx_f.mul_add(exx_a, eyy_f.mul_add(eyy_a, 0.0)),
+                2.0 * gxy_f.mul_add(gxy_a, 0.0),
+            );
+            grad[[i, j, 0]] -= dt * correlation;
+        }
+    }
 }
 
 /// Accumulate one reverse-time-aligned shear-strain cross-correlation step.
@@ -195,7 +325,7 @@ fn stream_k_mu_kernel(
 fn accumulate_k_mu_step(
     grad: &mut Array3<f64>,
     illum: &mut Array3<f64>,
-    uf: &ElasticWaveField,
+    uf: &ElasticDisplacementSnapshot,
     ua: &ElasticWaveField,
     dt: f64,
     (dx, dy, dz): (f64, f64, f64),
@@ -326,49 +456,4 @@ fn ddz(a: &Array3<f64>, i: usize, j: usize, k: usize, nz: usize, dz: f64) -> f64
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::forward::elastic::swe::ElasticWaveConfig;
-    use kwavers_grid::Grid;
-    use kwavers_medium::homogeneous::HomogeneousMedium;
-
-    #[test]
-    fn streamed_kernel_matches_full_history_oracle() {
-        let grid = Grid::new(10, 10, 10, 1.0e-3, 1.0e-3, 1.0e-3).expect("grid");
-        let medium = HomogeneousMedium::elastic_homogeneous(1000.0, 3.464_101_6, 2.0, &grid)
-            .expect("medium");
-        let config = ElasticWaveConfig {
-            pml_thickness: 2,
-            ..ElasticWaveConfig::default()
-        };
-        let solver = ElasticWaveSolver::new(&grid, &medium, config).expect("solver");
-        let dt = solver.recommended_timestep(0.3);
-        let n_steps = 24;
-
-        let mut forward_force = ElasticPointForce::zeros((4, 5, 5), n_steps);
-        forward_force.fx[0] = 4.0e6;
-        forward_force.fy[2] = -7.0e6;
-        forward_force.fz[5] = 3.0e6;
-        let forward = solver
-            .propagate_point_forces(n_steps, dt, &[forward_force])
-            .expect("forward history");
-
-        let mut adjoint_force = ElasticPointForce::zeros((5, 5, 5), n_steps);
-        adjoint_force.fx[1] = -2.0e6;
-        adjoint_force.fy[4] = 5.0e6;
-        adjoint_force.fz[7] = 6.0e6;
-        let adjoint_forces = [adjoint_force];
-        let adjoint = solver
-            .propagate_point_forces(n_steps, dt, &adjoint_forces)
-            .expect("adjoint history");
-
-        let expected = k_mu_kernel_from_histories(&forward, &adjoint, dt, grid.spacing());
-        let actual = stream_k_mu_kernel(&solver, &forward, &adjoint_forces, dt, grid.spacing())
-            .expect("streamed kernel");
-
-        assert!(expected.0.iter().any(|value| *value != 0.0));
-        assert!(expected.1.iter().any(|value| *value > 0.0));
-        assert_eq!(actual.0, expected.0, "streamed gradient");
-        assert_eq!(actual.1, expected.1, "streamed illumination");
-    }
-}
+mod tests;

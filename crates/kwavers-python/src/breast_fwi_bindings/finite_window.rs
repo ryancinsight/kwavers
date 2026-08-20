@@ -6,6 +6,7 @@ use eunomia::Complex64;
 use kwavers_solver::inverse::fwi::frequency_domain::{
     simulate_pstd_finite_window_born_observation,
     simulate_pstd_finite_window_born_second_order_observation, PstdFiniteWindowBornConfig,
+    RingAcquisition,
 };
 use numpy::{PyArray2, PyReadonlyArray3};
 use pyo3::prelude::*;
@@ -54,7 +55,7 @@ pub fn simulate_breast_fwi_pstd_finite_window_born_observation<'py>(
         .detach(|| {
             simulate_pstd_finite_window_born_observation(
                 &sound_speed,
-                &array.inner,
+                &RingAcquisition::new(&array.inner),
                 frequency_hz,
                 config,
                 transmissions,
@@ -105,7 +106,7 @@ pub fn simulate_breast_fwi_pstd_finite_window_born_second_order_observation<'py>
         .detach(|| {
             simulate_pstd_finite_window_born_second_order_observation(
                 &sound_speed,
-                &array.inner,
+                &RingAcquisition::new(&array.inner),
                 frequency_hz,
                 config,
                 transmissions,

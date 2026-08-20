@@ -1,3 +1,4 @@
+use super::super::acquisition::RingAcquisition;
 use super::*;
 
 #[test]
@@ -24,8 +25,12 @@ fn dense_cbs_prediction_matches_born_for_homogeneous_on_grid_ring() {
         ..Config::default()
     };
 
-    let born_data = simulate_frequency_observation(&model, &array, 250_000.0, &born).expect("born");
-    let cbs_data = simulate_frequency_observation(&model, &array, 250_000.0, &cbs).expect("cbs");
+    let born_data =
+        simulate_frequency_observation(&model, &RingAcquisition::new(&array), 250_000.0, &born)
+            .expect("born");
+    let cbs_data =
+        simulate_frequency_observation(&model, &RingAcquisition::new(&array), 250_000.0, &cbs)
+            .expect("cbs");
     let max_reference = born_data
         .iter()
         .map(|value| value.norm())
@@ -64,9 +69,15 @@ fn dense_cbs_prediction_is_sensitive_to_sound_speed_volume() {
     };
 
     let base_data =
-        simulate_frequency_observation(&base, &array, 250_000.0, &config).expect("base");
-    let perturbed_data =
-        simulate_frequency_observation(&perturbed, &array, 250_000.0, &config).expect("perturbed");
+        simulate_frequency_observation(&base, &RingAcquisition::new(&array), 250_000.0, &config)
+            .expect("base");
+    let perturbed_data = simulate_frequency_observation(
+        &perturbed,
+        &RingAcquisition::new(&array),
+        250_000.0,
+        &config,
+    )
+    .expect("perturbed");
     let max_reference = base_data
         .iter()
         .map(|value| value.norm())
@@ -106,9 +117,15 @@ fn spectral_cbs_prediction_is_sensitive_to_sound_speed_volume() {
     };
 
     let base_data =
-        simulate_frequency_observation(&base, &array, 180_000.0, &config).expect("base");
-    let perturbed_data =
-        simulate_frequency_observation(&perturbed, &array, 180_000.0, &config).expect("perturbed");
+        simulate_frequency_observation(&base, &RingAcquisition::new(&array), 180_000.0, &config)
+            .expect("base");
+    let perturbed_data = simulate_frequency_observation(
+        &perturbed,
+        &RingAcquisition::new(&array),
+        180_000.0,
+        &config,
+    )
+    .expect("perturbed");
     let max_difference = base_data
         .iter()
         .zip(perturbed_data.iter())
@@ -146,9 +163,15 @@ fn pstd_spectral_cbs_prediction_is_sensitive_to_sound_speed_volume() {
     };
 
     let base_data =
-        simulate_frequency_observation(&base, &array, 180_000.0, &config).expect("base");
-    let perturbed_data =
-        simulate_frequency_observation(&perturbed, &array, 180_000.0, &config).expect("perturbed");
+        simulate_frequency_observation(&base, &RingAcquisition::new(&array), 180_000.0, &config)
+            .expect("base");
+    let perturbed_data = simulate_frequency_observation(
+        &perturbed,
+        &RingAcquisition::new(&array),
+        180_000.0,
+        &config,
+    )
+    .expect("perturbed");
     let max_difference = base_data
         .iter()
         .zip(perturbed_data.iter())
@@ -180,8 +203,9 @@ fn dense_cbs_prediction_rejects_ring_outside_inversion_grid() {
         ..Config::default()
     };
 
-    let error = simulate_frequency_observation(&model, &array, 250_000.0, &config)
-        .expect_err("outside ring must fail");
+    let error =
+        simulate_frequency_observation(&model, &RingAcquisition::new(&array), 250_000.0, &config)
+            .expect_err("outside ring must fail");
     assert!(
         error.to_string().contains("outside the inversion grid"),
         "{error}"
@@ -197,9 +221,15 @@ fn forward_model_is_sensitive_to_sound_speed_volume() {
     perturbed[[1, 1, 1]] = 1530.0;
 
     let base_data =
-        simulate_frequency_observation(&base, &array, 250_000.0, &config).expect("base data");
-    let perturbed_data = simulate_frequency_observation(&perturbed, &array, 250_000.0, &config)
-        .expect("perturbed data");
+        simulate_frequency_observation(&base, &RingAcquisition::new(&array), 250_000.0, &config)
+            .expect("base data");
+    let perturbed_data = simulate_frequency_observation(
+        &perturbed,
+        &RingAcquisition::new(&array),
+        250_000.0,
+        &config,
+    )
+    .expect("perturbed data");
     let difference = base_data
         .iter()
         .zip(perturbed_data.iter())
@@ -256,10 +286,20 @@ fn asm_matches_cbs_for_homogeneous_medium() {
         ..Config::default()
     };
 
-    let cbs_data = simulate_frequency_observation(&model, &array, 250_000.0, &cbs_config)
-        .expect("cbs homogeneous");
-    let asm_data = simulate_frequency_observation(&model, &array, 250_000.0, &asm_config)
-        .expect("asm homogeneous");
+    let cbs_data = simulate_frequency_observation(
+        &model,
+        &RingAcquisition::new(&array),
+        250_000.0,
+        &cbs_config,
+    )
+    .expect("cbs homogeneous");
+    let asm_data = simulate_frequency_observation(
+        &model,
+        &RingAcquisition::new(&array),
+        250_000.0,
+        &asm_config,
+    )
+    .expect("asm homogeneous");
 
     // The two operators use different source normalizations (CBS projects
     // point sources into a volume density; ASM launches a cylindrical-wave
@@ -311,9 +351,15 @@ fn asm_prediction_is_sensitive_to_sound_speed_volume() {
     };
 
     let base_data =
-        simulate_frequency_observation(&base, &array, 250_000.0, &config).expect("base");
-    let perturbed_data =
-        simulate_frequency_observation(&perturbed, &array, 250_000.0, &config).expect("perturbed");
+        simulate_frequency_observation(&base, &RingAcquisition::new(&array), 250_000.0, &config)
+            .expect("base");
+    let perturbed_data = simulate_frequency_observation(
+        &perturbed,
+        &RingAcquisition::new(&array),
+        250_000.0,
+        &config,
+    )
+    .expect("perturbed");
     let max_difference = base_data
         .iter()
         .zip(perturbed_data.iter())
@@ -354,10 +400,20 @@ fn phase_screen_isolates_the_split_step_correction() {
         ..Config::default()
     };
 
-    let on_data = simulate_frequency_observation(&model, &array, 250_000.0, &on_config)
-        .expect("phase screen on");
-    let off_data = simulate_frequency_observation(&model, &array, 250_000.0, &off_config)
-        .expect("phase screen off");
+    let on_data = simulate_frequency_observation(
+        &model,
+        &RingAcquisition::new(&array),
+        250_000.0,
+        &on_config,
+    )
+    .expect("phase screen on");
+    let off_data = simulate_frequency_observation(
+        &model,
+        &RingAcquisition::new(&array),
+        250_000.0,
+        &off_config,
+    )
+    .expect("phase screen off");
     let max_difference = on_data
         .iter()
         .zip(off_data.iter())
@@ -370,10 +426,20 @@ fn phase_screen_isolates_the_split_step_correction() {
 
     // On a homogeneous medium the phase screen is identity: both paths agree.
     let homogeneous = Array3::from_elem([3, 3, 4], SOUND_SPEED_WATER_SIM);
-    let on_homo = simulate_frequency_observation(&homogeneous, &array, 250_000.0, &on_config)
-        .expect("on homogeneous");
-    let off_homo = simulate_frequency_observation(&homogeneous, &array, 250_000.0, &off_config)
-        .expect("off homogeneous");
+    let on_homo = simulate_frequency_observation(
+        &homogeneous,
+        &RingAcquisition::new(&array),
+        250_000.0,
+        &on_config,
+    )
+    .expect("on homogeneous");
+    let off_homo = simulate_frequency_observation(
+        &homogeneous,
+        &RingAcquisition::new(&array),
+        250_000.0,
+        &off_config,
+    )
+    .expect("off homogeneous");
     let homo_difference = on_homo
         .iter()
         .zip(off_homo.iter())
@@ -414,20 +480,40 @@ fn asm_matches_cbs_on_weak_contrast_within_derived_bound() {
         ..Config::default()
     };
 
-    let cbs_data =
-        simulate_frequency_observation(&model, &array, 250_000.0, &cbs_config).expect("cbs");
-    let asm_data =
-        simulate_frequency_observation(&model, &array, 250_000.0, &asm_config).expect("asm");
+    let cbs_data = simulate_frequency_observation(
+        &model,
+        &RingAcquisition::new(&array),
+        250_000.0,
+        &cbs_config,
+    )
+    .expect("cbs");
+    let asm_data = simulate_frequency_observation(
+        &model,
+        &RingAcquisition::new(&array),
+        250_000.0,
+        &asm_config,
+    )
+    .expect("asm");
 
     // The two operators normalize sources differently, so compare the *relative
     // response to the contrast*: the perturbation each operator sees must have
     // the same order of magnitude. Compute the max-relative change against the
     // homogeneous reference for each.
     let homogeneous = Array3::from_elem([3, 3, 4], SOUND_SPEED_WATER_SIM);
-    let cbs_homo = simulate_frequency_observation(&homogeneous, &array, 250_000.0, &cbs_config)
-        .expect("cbs homo");
-    let asm_homo = simulate_frequency_observation(&homogeneous, &array, 250_000.0, &asm_config)
-        .expect("asm homo");
+    let cbs_homo = simulate_frequency_observation(
+        &homogeneous,
+        &RingAcquisition::new(&array),
+        250_000.0,
+        &cbs_config,
+    )
+    .expect("cbs homo");
+    let asm_homo = simulate_frequency_observation(
+        &homogeneous,
+        &RingAcquisition::new(&array),
+        250_000.0,
+        &asm_config,
+    )
+    .expect("asm homo");
 
     let cbs_relative = cbs_data
         .iter()
@@ -473,14 +559,15 @@ fn asm_rejects_invalid_frequency_and_geometry() {
     };
 
     // Zero frequency.
-    let error = simulate_frequency_observation(&model, &array, 0.0, &config)
+    let error = simulate_frequency_observation(&model, &RingAcquisition::new(&array), 0.0, &config)
         .expect_err("zero frequency must fail");
     assert!(error.to_string().contains("frequency"), "{error}");
 
     // Empty volume.
     let empty = Array3::<f64>::zeros([0, 0, 0]);
-    let error = simulate_frequency_observation(&empty, &array, 250_000.0, &config)
-        .expect_err("empty volume must fail");
+    let error =
+        simulate_frequency_observation(&empty, &RingAcquisition::new(&array), 250_000.0, &config)
+            .expect_err("empty volume must fail");
     assert!(
         error.to_string().contains("nonempty") || error.to_string().contains("empty"),
         "{error}"

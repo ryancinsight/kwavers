@@ -1,5 +1,6 @@
 //! Matrix-free frequency-domain forward model.
 
+use super::acquisition::TransmissionAcquisition;
 use super::cbs::{
     real_scattering_potential, real_scattering_potential_for_operator, sample_array_for_operator,
     solve_volume_field_with_operator, source_density_for_operator, CbsConfig, GreenOperatorKind,
@@ -11,9 +12,7 @@ use aequitas::systems::si::units::Meter;
 use kwavers_core::constants::numerical::{FOUR_PI, TWO_PI};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::Complex64;
-use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::{
-    sound_speed_to_slowness, MultiRowRingArray,
-};
+use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::sound_speed_to_slowness;
 use kwavers_transducer::transducers::ElementPosition;
 use leto::{Array2, Array3};
 
@@ -24,31 +23,37 @@ use leto::{Array2, Array3};
 /// the frequency-domain FWI contract.
 pub fn simulate_frequency_observation(
     sound_speed_m_s: &Array3<f64>,
-    array: &MultiRowRingArray,
+    acquisition: &dyn TransmissionAcquisition,
     frequency_hz: f64,
     config: &Config,
 ) -> KwaversResult<Array2<Complex64>> {
     let slowness = sound_speed_to_slowness(sound_speed_m_s)?;
     predict_frequency_rows(
         &slowness,
-        array,
+        acquisition,
         frequency_hz,
         config,
-        array.circumferential_elements(),
+        acquisition.transmission_count(),
     )
 }
 
 pub(super) fn predict_frequency_rows(
     slowness_s_per_m: &Array3<f64>,
-    array: &MultiRowRingArray,
+    acquisition: &dyn TransmissionAcquisition,
     frequency_hz: f64,
     config: &Config,
     transmissions: usize,
 ) -> KwaversResult<Array2<Complex64>> {
-    validate_forward_inputs(slowness_s_per_m, array, frequency_hz, config, transmissions)?;
+    validate_forward_inputs(
+        slowness_s_per_m,
+        acquisition,
+        frequency_hz,
+        config,
+        transmissions,
+    )?;
     config.forward_operator.predict_receiver_rows(
         slowness_s_per_m,
-        array,
+        acquisition,
         frequency_hz,
         config,
         transmissions,
@@ -57,7 +62,7 @@ pub(super) fn predict_frequency_rows(
 
 pub(super) fn predict_born_rows(
     slowness_s_per_m: &Array3<f64>,
-    array: &MultiRowRingArray,
+    acquisition: &dyn TransmissionAcquisition,
     frequency_hz: f64,
     config: &Config,
     transmissions: usize,
@@ -72,11 +77,11 @@ pub(super) fn predict_born_rows(
     let centers = voxel_centers((nx, ny, nz), config.spacing_m);
     let potential = real_scattering_potential(omega, slowness_s_per_m, reference_slowness)?;
 
-    let mut output = Array2::zeros([transmissions, array.element_count()]);
+    let mut output = Array2::zeros([transmissions, acquisition.receiver_count()]);
     for transmit in 0..transmissions {
-        let sources = array.cylindrical_source(transmit);
-        let incident = incident_field(&sources, &centers, reference_wavenumber, min_distance);
-        for (receiver_index, &receiver) in array.elements().iter().enumerate() {
+        let sources = acquisition.sources(transmit);
+        let incident = incident_field(sources, &centers, reference_wavenumber, min_distance);
+        for (receiver_index, &receiver) in acquisition.receivers(transmit).iter().enumerate() {
             let direct = sources
                 .iter()
                 .map(|&source| outgoing_green(source, receiver, reference_wavenumber, min_distance))
@@ -98,7 +103,7 @@ pub(super) fn predict_born_rows(
 
 pub(super) fn predict_cbs_rows(
     slowness_s_per_m: &Array3<f64>,
-    array: &MultiRowRingArray,
+    acquisition: &dyn TransmissionAcquisition,
     frequency_hz: f64,
     config: &Config,
     transmissions: usize,
@@ -117,11 +122,11 @@ pub(super) fn predict_cbs_rows(
         reference_slowness,
         operator,
     )?;
-    let mut output = Array2::zeros([transmissions, array.element_count()]);
+    let mut output = Array2::zeros([transmissions, acquisition.receiver_count()]);
     for transmit in 0..transmissions {
         let source_density = source_density_for_operator(
             grid,
-            &array.cylindrical_source(transmit),
+            acquisition.sources(transmit),
             reference_wavenumber,
             operator,
         )?;
@@ -133,10 +138,14 @@ pub(super) fn predict_cbs_rows(
             cbs_config,
             operator,
         )?;
-        for (receiver_index, pressure) in
-            sample_array_for_operator(grid, &solution.field, array, operator)?
-                .into_iter()
-                .enumerate()
+        for (receiver_index, pressure) in sample_array_for_operator(
+            grid,
+            &solution.field,
+            acquisition.receivers(transmit),
+            operator,
+        )?
+        .into_iter()
+        .enumerate()
         {
             output[[transmit, receiver_index]] = pressure;
         }
@@ -202,7 +211,7 @@ pub(super) fn voxel_centers(
 
 pub(super) fn validate_forward_inputs(
     slowness_s_per_m: &Array3<f64>,
-    array: &MultiRowRingArray,
+    acquisition: &dyn TransmissionAcquisition,
     frequency_hz: f64,
     config: &Config,
     transmissions: usize,
@@ -217,10 +226,10 @@ pub(super) fn validate_forward_inputs(
             "FWI frequency must be positive and finite, got {frequency_hz}"
         )));
     }
-    if transmissions == 0 || transmissions > array.circumferential_elements() {
+    if transmissions == 0 || transmissions > acquisition.transmission_count() {
         return Err(KwaversError::InvalidInput(format!(
             "transmissions must be in 1..={}, got {transmissions}",
-            array.circumferential_elements()
+            acquisition.transmission_count()
         )));
     }
     validate_config(config)?;

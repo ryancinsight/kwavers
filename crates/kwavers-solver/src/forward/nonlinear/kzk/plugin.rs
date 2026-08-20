@@ -3,9 +3,9 @@
 //!
 //! The [`KZKSolver`] is a parabolic beam-propagation solver that advances
 //! through z-planes using Strang operator splitting.  This adapter runs the
-//! full z-propagation on the first [`Plugin::update`] call and serves cached
-//! z-slices thereafter, matching the therapy `execution.rs` pattern where the
-//! entire volume is computed before per-plane readout.
+//! full z-propagation on the first [`crate::plugin::Plugin::update`] call and
+//! serves cached z-slices thereafter, matching the therapy `execution.rs`
+//! pattern where the entire volume is computed before per-plane readout.
 //!
 //! # Coordinate mapping
 //!

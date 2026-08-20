@@ -22,8 +22,9 @@ fn pstd_receiver_projection_uses_exact_grid_cells_and_adjoint() {
     let field = [Complex64::new(3.0, -1.0), Complex64::new(-2.0, 0.5)];
     let receiver_values = [Complex64::new(0.25, -0.5), Complex64::new(-1.5, 2.0)];
 
-    let sampled = sample_array_for_operator(grid, &field, &array, operator).unwrap();
-    let adjoint = receiver_adjoint_for_operator(grid, &array, &receiver_values, operator).unwrap();
+    let sampled = sample_array_for_operator(grid, &field, array.elements(), operator).unwrap();
+    let adjoint =
+        receiver_adjoint_for_operator(grid, array.elements(), &receiver_values, operator).unwrap();
 
     assert_eq!(sampled, field.to_vec());
     assert_eq!(adjoint, receiver_values.to_vec());
@@ -59,7 +60,7 @@ fn pstd_receiver_projection_rejects_off_grid_receivers() {
     };
     let field = [Complex64::new(1.0, 0.0), Complex64::new(2.0, 0.0)];
 
-    let err = sample_array_for_operator(grid, &field, &array, operator)
+    let err = sample_array_for_operator(grid, &field, array.elements(), operator)
         .expect_err("off-grid PSTD receiver must reject");
 
     assert!(err.to_string().contains("receiver point coordinate"));
