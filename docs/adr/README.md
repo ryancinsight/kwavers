@@ -79,3 +79,4 @@
 | [113](113-finite-aperture-sir-seam.md) | 113. Finite-aperture diffraction in RF synthesis: an injected SIR seam | Accepted |
 | [114](114-typed-sonoluminescence-emission.md) | Type sonoluminescence emission components at the Aequitas boundary | Accepted |
 | [115](115-fwi-transmission-acquisition-seam.md) | 115. A transmission-acquisition seam for frequency-domain FWI | Accepted |
+| [116](116-fwi-rotating-acquisition-geometry.md) | 116. Per-view element-position rotation for the rotating opposed-linear-array acquisition | Accepted |

@@ -382,6 +382,171 @@ pub fn sound_speed_pcc(
     Ok(covariance / denom)
 }
 
+/// Two opposed linear arrays on a rotation stage for transmission-USCT FWI.
+///
+/// The acquisition sweeps `view_count` uniformly-spaced angles from `0` to
+/// `2π` (exclusive). At each view, array 1 (the transmitter side) fires one
+/// element at a time while both arrays record: `receiver_count()` = `2 *
+/// elements_per_array`. `transmission_count()` = `elements_per_array *
+/// view_count`.
+///
+/// Element positions are pre-computed at construction so that the inner loop
+/// of the inversion does not allocate per transmit.
+///
+/// # Geometry
+///
+/// At view angle `θ = view * 2π / view_count`, array 1 sits at
+/// `(+standoff * cos θ,  +standoff * sin θ)` and array 2 at the opposite
+/// side.  Elements are uniformly spaced along the direction perpendicular to
+/// the standoff axis in the `(x, y)` plane; `z = 0` for all elements (2-D
+/// acquisition).
+///
+/// # References
+///
+/// Atlas ADR 116 — per-view element-position rotation for the rotating
+/// opposed-linear-array acquisition.
+#[derive(Clone, Debug)]
+pub struct RotatingOpposedLinearArray {
+    elements_per_array: usize,
+    view_count: usize,
+    /// Flat `[transmission_count]` single-element source positions.
+    /// Transmit `t` fires `sources[t]`.
+    sources: Vec<ElementPosition>,
+    /// Per-view receiver lists: `receivers_per_view[v]` is the full
+    /// `[2 * elements_per_array]` receiver set at view `v`.
+    receivers_per_view: Vec<Vec<ElementPosition>>,
+}
+
+impl RotatingOpposedLinearArray {
+    /// Construct the array, pre-computing all element positions.
+    ///
+    /// # Errors
+    /// Returns `KwaversError::InvalidInput` for non-positive counts or
+    /// non-positive, non-finite metric parameters.
+    pub fn new(
+        elements_per_array: usize,
+        element_pitch_m: f64,
+        standoff_m: f64,
+        view_count: usize,
+    ) -> KwaversResult<Self> {
+        if elements_per_array < 2 {
+            return Err(KwaversError::InvalidInput(format!(
+                "elements_per_array must be at least 2, got {elements_per_array}"
+            )));
+        }
+        if view_count == 0 {
+            return Err(KwaversError::InvalidInput(
+                "view_count must be at least 1".to_owned(),
+            ));
+        }
+        if !element_pitch_m.is_finite() || element_pitch_m <= 0.0 {
+            return Err(KwaversError::InvalidInput(format!(
+                "element_pitch_m must be positive and finite, got {element_pitch_m}"
+            )));
+        }
+        if !standoff_m.is_finite() || standoff_m <= 0.0 {
+            return Err(KwaversError::InvalidInput(format!(
+                "standoff_m must be positive and finite, got {standoff_m}"
+            )));
+        }
+
+        let angular_step = TWO_PI / view_count as f64;
+
+        let mut receivers_per_view = Vec::with_capacity(view_count);
+        let mut sources = Vec::with_capacity(elements_per_array * view_count);
+
+        for view in 0..view_count {
+            let theta = view as f64 * angular_step;
+            let (sin_t, cos_t) = theta.sin_cos();
+
+            // Unit vector along the array (perpendicular to standoff axis in xy).
+            let (arr_x, arr_y) = (-sin_t, cos_t);
+
+            // Array 1 centre: (+standoff * cos θ, +standoff * sin θ).
+            let c1x = standoff_m * cos_t;
+            let c1y = standoff_m * sin_t;
+
+            // Array 2 centre: opposite side.
+            let c2x = -standoff_m * cos_t;
+            let c2y = -standoff_m * sin_t;
+
+            let mut view_receivers = Vec::with_capacity(2 * elements_per_array);
+
+            for k in 0..elements_per_array {
+                let offset = (k as f64 - 0.5 * (elements_per_array as f64 - 1.0)) * element_pitch_m;
+                // Array 1 element k — also the source for transmit `view * n + k`.
+                let p1 = ElementPosition {
+                    x: Length::from_unit::<Meter>(c1x + arr_x * offset),
+                    y: Length::from_unit::<Meter>(c1y + arr_y * offset),
+                    z: Length::from_unit::<Meter>(0.0),
+                };
+                sources.push(p1);
+                view_receivers.push(p1);
+            }
+            for k in 0..elements_per_array {
+                let offset = (k as f64 - 0.5 * (elements_per_array as f64 - 1.0)) * element_pitch_m;
+                let p2 = ElementPosition {
+                    x: Length::from_unit::<Meter>(c2x + arr_x * offset),
+                    y: Length::from_unit::<Meter>(c2y + arr_y * offset),
+                    z: Length::from_unit::<Meter>(0.0),
+                };
+                view_receivers.push(p2);
+            }
+            receivers_per_view.push(view_receivers);
+        }
+
+        Ok(Self {
+            elements_per_array,
+            view_count,
+            sources,
+            receivers_per_view,
+        })
+    }
+
+    /// Number of elements per linear array.
+    #[must_use]
+    pub fn elements_per_array(&self) -> usize {
+        self.elements_per_array
+    }
+
+    /// Number of rotation-stage views.
+    #[must_use]
+    pub fn view_count(&self) -> usize {
+        self.view_count
+    }
+
+    /// Sources slice for transmit `t` (single-element).
+    ///
+    /// # Panics
+    /// Panics when `t >= transmission_count()`.
+    #[must_use]
+    pub fn transmit_sources(&self, t: usize) -> &[ElementPosition] {
+        std::slice::from_ref(&self.sources[t])
+    }
+
+    /// Receiver slice for transmit `t` (all `2 * elements_per_array` elements).
+    ///
+    /// # Panics
+    /// Panics when `t >= transmission_count()`.
+    #[must_use]
+    pub fn transmit_receivers(&self, t: usize) -> &[ElementPosition] {
+        let view = t / self.elements_per_array;
+        &self.receivers_per_view[view]
+    }
+
+    /// Total transmit events.
+    #[must_use]
+    pub fn transmission_count(&self) -> usize {
+        self.elements_per_array * self.view_count
+    }
+
+    /// Receiver count (constant across transmits).
+    #[must_use]
+    pub fn receiver_count(&self) -> usize {
+        2 * self.elements_per_array
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -453,5 +618,129 @@ mod tests {
 
         assert!((rmse - 1.0).abs() <= f64::EPSILON);
         assert!((pcc - 1.0).abs() <= 1.0e-14);
+    }
+
+    #[test]
+    fn rotating_array_counts_are_correct() {
+        let arr = RotatingOpposedLinearArray::new(8, 1.5e-3, 0.1, 180).expect("construction");
+        assert_eq!(arr.transmission_count(), 8 * 180);
+        assert_eq!(arr.receiver_count(), 16);
+        assert_eq!(arr.transmit_sources(0).len(), 1);
+        assert_eq!(arr.transmit_receivers(0).len(), 16);
+    }
+
+    #[test]
+    fn rotating_array_at_view_zero_is_opposed() {
+        // At θ=0: array 1 at (+standoff, *, 0), array 2 at (−standoff, *, 0).
+        let standoff = 0.1_f64;
+        let pitch = 1.5e-3_f64;
+        let n = 4_usize;
+        let arr = RotatingOpposedLinearArray::new(n, pitch, standoff, 4).expect("construction");
+
+        // Transmit element 0 of view 0 → first source.
+        let src = arr.transmit_sources(0)[0];
+        let sx = src.x.in_unit::<Meter>();
+        let sy = src.y.in_unit::<Meter>();
+        // At θ=0: centre of array 1 is (+standoff, 0).
+        // Array is along y (arr_x=-sin0=0, arr_y=cos0=1).
+        // Element 0 offset = (0 - 1.5) * pitch = -1.5 * 1.5e-3.
+        let expected_sx = standoff;
+        let expected_sy = (0.0 - 0.5 * (n as f64 - 1.0)) * pitch;
+        assert!(
+            (sx - expected_sx).abs() <= 1.0e-12,
+            "source x: {sx} vs {expected_sx}"
+        );
+        assert!(
+            (sy - expected_sy).abs() <= 1.0e-12,
+            "source y: {sy} vs {expected_sy}"
+        );
+
+        // Receivers: array 1 (n positions) then array 2 (n positions).
+        let rx = arr.transmit_receivers(0);
+        assert_eq!(rx.len(), 2 * n);
+        // Array 1 elements should be at x ≈ +standoff.
+        for r in &rx[..n] {
+            assert!((r.x.in_unit::<Meter>() - standoff).abs() <= 1.0e-12);
+        }
+        // Array 2 elements should be at x ≈ −standoff.
+        for r in &rx[n..] {
+            assert!((r.x.in_unit::<Meter>() + standoff).abs() <= 1.0e-12);
+        }
+    }
+
+    #[test]
+    fn rotating_array_rotation_round_trip() {
+        // Rotating by θ then −θ must reproduce the original positions.
+        let arr = RotatingOpposedLinearArray::new(4, 1.5e-3, 0.1, 8).expect("construction");
+        let n_per = arr.elements_per_array();
+
+        // View 0 source positions.
+        for elem in 0..n_per {
+            let t0 = elem; // view 0, element `elem`
+            let src0 = arr.transmit_sources(t0)[0];
+            let rx0 = &arr.transmit_receivers(t0).to_vec();
+
+            // After full 360° rotation (view_count views) we are back at view 0.
+            let t_full = 8 * n_per + elem; // would wrap back to same view if > transmission_count
+                                           // Instead, verify: view 0 and view 8 (= view_count) are the same by construction.
+                                           // The geometry repeats modulo view_count so view % view_count == 0 equals view 0.
+                                           // Since transmission_count = n * view_count, transmit n*view_count+elem is out of
+                                           // range. Instead verify that transmit elem (view 0) matches view 8%8 = 0 by checking
+                                           // the angular step produces 360° total: step = TWO_PI / view_count.
+            let _ = t_full;
+
+            // Round-trip: rotate by +2*PI/8 then −2*PI/8. Element positions at view 1 then
+            // back-rotated by the same angle must equal view 0.
+            let step = TWO_PI / 8.0;
+            let t1 = n_per + elem; // view 1, same element
+            let src1 = arr.transmit_sources(t1)[0];
+            let cos_neg = (-step).cos();
+            let sin_neg = (-step).sin();
+            let bx = src1.x.in_unit::<Meter>() * cos_neg - src1.y.in_unit::<Meter>() * sin_neg;
+            let by = src1.x.in_unit::<Meter>() * sin_neg + src1.y.in_unit::<Meter>() * cos_neg;
+            assert!(
+                (bx - src0.x.in_unit::<Meter>()).abs() <= 1.0e-12,
+                "round-trip x: {bx} vs {}",
+                src0.x.in_unit::<Meter>()
+            );
+            assert!(
+                (by - src0.y.in_unit::<Meter>()).abs() <= 1.0e-12,
+                "round-trip y: {by} vs {}",
+                src0.y.in_unit::<Meter>()
+            );
+
+            // Same for receivers.
+            let rx1 = &arr.transmit_receivers(t1).to_vec();
+            for (r0, r1) in rx0.iter().zip(rx1.iter()) {
+                let bxr = r1.x.in_unit::<Meter>() * cos_neg - r1.y.in_unit::<Meter>() * sin_neg;
+                let byr = r1.x.in_unit::<Meter>() * sin_neg + r1.y.in_unit::<Meter>() * cos_neg;
+                assert!((bxr - r0.x.in_unit::<Meter>()).abs() <= 1.0e-12);
+                assert!((byr - r0.y.in_unit::<Meter>()).abs() <= 1.0e-12);
+            }
+        }
+    }
+
+    #[test]
+    fn rotating_array_view_separation_is_equal() {
+        // All adjacent views should be separated by the same angle.
+        let n_views = 6_usize;
+        let arr = RotatingOpposedLinearArray::new(4, 1.5e-3, 0.1, n_views).expect("construction");
+        let n = arr.elements_per_array();
+        let step = TWO_PI / n_views as f64;
+
+        for v in 0..n_views - 1 {
+            let s0 = arr.transmit_sources(v * n)[0];
+            let s1 = arr.transmit_sources((v + 1) * n)[0];
+            // Angle between adjacent view-0-element-0 source positions.
+            let a0 = s0.y.in_unit::<Meter>().atan2(s0.x.in_unit::<Meter>());
+            let a1 = s1.y.in_unit::<Meter>().atan2(s1.x.in_unit::<Meter>());
+            let diff = (a1 - a0).abs();
+            // Normalise to [0, π].
+            let diff = if diff > PI { TWO_PI - diff } else { diff };
+            assert!(
+                (diff - step).abs() <= 1.0e-12,
+                "view {v}: step {diff} vs expected {step}"
+            );
+        }
     }
 }

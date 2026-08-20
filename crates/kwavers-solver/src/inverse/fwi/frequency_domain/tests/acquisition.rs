@@ -145,3 +145,81 @@ fn the_seam_is_dyn_compatible() {
     assert_eq!(erased.transmission_count(), 4);
     assert_eq!(erased.sources(0), array.cylindrical_source(0).as_slice());
 }
+
+// ── RotatingAcquisition ────────────────────────────────────────────────────
+
+use super::super::acquisition::RotatingAcquisition;
+use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::RotatingOpposedLinearArray;
+use std::f64::consts::TAU;
+
+fn rotating(n: usize, views: usize) -> RotatingOpposedLinearArray {
+    RotatingOpposedLinearArray::new(n, 1.5e-3, 0.1, views).expect("rotating array")
+}
+
+#[test]
+fn rotating_acquisition_counts_match_geometry() {
+    let arr = rotating(8, 180);
+    let acq = RotatingAcquisition::new(&arr);
+    assert_eq!(acq.transmission_count(), 8 * 180);
+    assert_eq!(acq.receiver_count(), 16);
+    assert_eq!(acq.sources(0).len(), 1);
+    assert_eq!(acq.receivers(0).len(), 16);
+}
+
+/// Verifies the core per-transmit indexing: receivers depend on the view but
+/// not on which element within that view fires, because the whole array
+/// rotates together.
+#[test]
+fn rotating_acquisition_receivers_constant_within_view() {
+    let n = 4_usize;
+    let arr = rotating(n, 6);
+    let acq = RotatingAcquisition::new(&arr);
+    // All n transmits of view 0 should see the same receiver set.
+    let ref_rx = acq.receivers(0).to_vec();
+    for elem in 1..n {
+        assert_eq!(acq.receivers(elem), ref_rx.as_slice());
+    }
+    // View 1 (transmits n..2n) should differ from view 0.
+    assert_ne!(acq.receivers(n), ref_rx.as_slice());
+}
+
+/// The seam must be dyn-compatible even with the rotating acquisition.
+#[test]
+fn rotating_acquisition_is_dyn_compatible() {
+    let arr = rotating(4, 8);
+    let acq = RotatingAcquisition::new(&arr);
+    let erased: &dyn TransmissionAcquisition = &acq;
+    assert_eq!(erased.transmission_count(), 4 * 8);
+    assert_eq!(erased.sources(0).len(), 1);
+}
+
+/// Round-trip: positions rotated by +step then back by −step reproduce the
+/// originals within floating-point tolerance.  This is the acceptance oracle
+/// from ADR 116.
+#[test]
+fn rotating_acquisition_round_trip_identity() {
+    let n = 4_usize;
+    let views = 8_usize;
+    let arr = rotating(n, views);
+    let acq = RotatingAcquisition::new(&arr);
+    let step = TAU / views as f64;
+
+    for elem in 0..n {
+        let src0 = acq.sources(elem)[0]; // view 0, element `elem`
+        let src1 = acq.sources(n + elem)[0]; // view 1, element `elem`
+        let cos_neg = (-step).cos();
+        let sin_neg = (-step).sin();
+        let bx = src1.x.in_unit::<Meter>() * cos_neg - src1.y.in_unit::<Meter>() * sin_neg;
+        let by = src1.x.in_unit::<Meter>() * sin_neg + src1.y.in_unit::<Meter>() * cos_neg;
+        assert!(
+            (bx - src0.x.in_unit::<Meter>()).abs() <= 1.0e-12,
+            "elem {elem} round-trip x: {bx} vs {}",
+            src0.x.in_unit::<Meter>()
+        );
+        assert!(
+            (by - src0.y.in_unit::<Meter>()).abs() <= 1.0e-12,
+            "elem {elem} round-trip y: {by} vs {}",
+            src0.y.in_unit::<Meter>()
+        );
+    }
+}

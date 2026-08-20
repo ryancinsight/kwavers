@@ -61,7 +61,7 @@ pub mod operator;
 mod tests;
 mod types;
 
-pub use acquisition::{RingAcquisition, TransmissionAcquisition};
+pub use acquisition::{RingAcquisition, RotatingAcquisition, TransmissionAcquisition};
 pub use as_operator::AngularSpectrumSplitStepOperator;
 pub use operator::{
     DenseConvergentBornOperator, HelmholtzForwardOperator, PstdFiniteWindowBornOperator,
