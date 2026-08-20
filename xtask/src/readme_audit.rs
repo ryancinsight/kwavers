@@ -11,19 +11,15 @@
 //!    front page cannot drift apart.
 //!
 //! Property 3 is compiler-enforced once wired; the audit exists to catch a *new* crate
-//! that never wires it. `SINGLE_SOURCE_EXEMPT` is a non-increasing ratchet, not a
-//! license: entries name the backlog item that removes them.
+//! that never wires it. It applies only to crates that publish: the rationale is keeping
+//! the crates.io page and the docs.rs front page from drifting, and a `publish = false`
+//! crate has neither. `kwavers-python` is the one such crate — a `cdylib` whose README is
+//! the PyPI landing page and whose `//!` docs address the Rust maintainer of the binding
+//! layer; the two serve different readers and are not one source.
 
 use anyhow::{Context, Result};
 use std::fs;
 use std::path::Path;
-
-/// Crates whose README is not yet the crate documentation.
-///
-/// Both carry substantial `//!` documentation that differs from their README, so folding
-/// the two is a content merge rather than a mechanical wiring step. Tracked by
-/// KW-DOC-105; this list only shrinks.
-const SINGLE_SOURCE_EXEMPT: &[&str] = &["kwavers-driver", "kwavers-python"];
 
 const INCLUDE_DIRECTIVE: &str = r#"#![doc = include_str!("../README.md")]"#;
 
@@ -73,7 +69,11 @@ pub fn check_readmes(workspace_root: &Path) -> Result<()> {
         let lib_rs = crate_dir.join("src").join("lib.rs");
         let lib_source = fs::read_to_string(&lib_rs).unwrap_or_default();
 
-        let exempt = SINGLE_SOURCE_EXEMPT.contains(&name.as_str());
+        // A `publish = false` crate has no registry page and no docs.rs page, so there is
+        // nothing for its README to drift against.
+        let exempt = manifest
+            .lines()
+            .any(|line| line.split_whitespace().collect::<String>() == "publish=false");
 
         audits.push(CrateAudit {
             missing_readme: !crate_dir.join("README.md").is_file(),
