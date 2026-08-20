@@ -27,7 +27,7 @@ use super::types::{
 };
 use kwavers_core::error::KwaversResult;
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::{
-    slowness_to_sound_speed, sound_speed_to_slowness, MultiRowRingArray,
+    slowness_to_sound_speed, sound_speed_to_slowness,
 };
 use leto::Array3;
 
@@ -225,6 +225,7 @@ mod tests {
     use crate::inverse::fwi::frequency_domain::{simulate_frequency_observation, Config};
     use aequitas::systems::si::quantities::Length;
     use aequitas::systems::si::units::Meter;
+    use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
     use leto::Array3;
 
     fn ring(n_elem: usize, diameter: f64) -> MultiRowRingArray {

@@ -14,7 +14,7 @@ use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::Complex64;
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::{
-    complex_l2_objective, complex_source_scale, helmholtz_slowness_derivative, MultiRowRingArray,
+    complex_l2_objective, complex_source_scale, helmholtz_slowness_derivative,
 };
 use kwavers_transducer::transducers::ElementPosition;
 use leto::Array3;
@@ -157,7 +157,7 @@ fn accumulate_dense_cbs_frequency_gradient(
     for transmit in 0..rows {
         let source_density = source_density_for_operator(
             grid,
-            &acquisition.sources(transmit),
+            acquisition.sources(transmit),
             reference_wavenumber,
             operator,
         )?;
@@ -278,9 +278,9 @@ fn accumulate_frequency_gradient(
 
     for transmit in 0..rows {
         let sources = acquisition.sources(transmit);
-        let incident = incident_field(&sources, &centers, reference_wavenumber, min_distance);
+        let incident = incident_field(sources, &centers, reference_wavenumber, min_distance);
         let predicted = predicted_row(
-            &sources,
+            sources,
             &centers,
             &incident,
             &potential,

@@ -36,7 +36,7 @@ use super::types::{
 };
 use kwavers_core::error::KwaversResult;
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::{
-    slowness_to_sound_speed, sound_speed_to_slowness, MultiRowRingArray,
+    slowness_to_sound_speed, sound_speed_to_slowness,
 };
 use leto::Array3;
 

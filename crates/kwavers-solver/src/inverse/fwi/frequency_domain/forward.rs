@@ -12,9 +12,7 @@ use aequitas::systems::si::units::Meter;
 use kwavers_core::constants::numerical::{FOUR_PI, TWO_PI};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::Complex64;
-use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::{
-    sound_speed_to_slowness, MultiRowRingArray,
-};
+use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::sound_speed_to_slowness;
 use kwavers_transducer::transducers::ElementPosition;
 use leto::{Array2, Array3};
 
@@ -82,7 +80,7 @@ pub(super) fn predict_born_rows(
     let mut output = Array2::zeros([transmissions, acquisition.receiver_count()]);
     for transmit in 0..transmissions {
         let sources = acquisition.sources(transmit);
-        let incident = incident_field(&sources, &centers, reference_wavenumber, min_distance);
+        let incident = incident_field(sources, &centers, reference_wavenumber, min_distance);
         for (receiver_index, &receiver) in acquisition.receivers(transmit).iter().enumerate() {
             let direct = sources
                 .iter()
@@ -128,7 +126,7 @@ pub(super) fn predict_cbs_rows(
     for transmit in 0..transmissions {
         let source_density = source_density_for_operator(
             grid,
-            &acquisition.sources(transmit),
+            acquisition.sources(transmit),
             reference_wavenumber,
             operator,
         )?;

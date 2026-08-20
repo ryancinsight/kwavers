@@ -29,7 +29,6 @@ use kwavers_math::fft::Complex64;
 use leto::{Array2, Array3};
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
 
 use super::cbs::{
     AbsorbingBoundary, CbsConfig, GreenOperatorKind, GridSpec, PstdTemporalTransferConfig,

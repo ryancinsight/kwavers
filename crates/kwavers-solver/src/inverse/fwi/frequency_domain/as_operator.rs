@@ -30,7 +30,6 @@ use aequitas::systems::si::units::Meter;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::{fft_2d_complex, ifft_2d_complex, Complex64};
-use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
 use kwavers_transducer::transducers::ElementPosition;
 use leto::{Array2, Array3};
 
@@ -343,7 +342,7 @@ impl HelmholtzForwardOperator for AngularSpectrumSplitStepOperator {
         for transmit in 0..transmissions {
             let sources = acquisition.sources(transmit);
             let source_plane = build_source_plane(
-                &sources,
+                sources,
                 nx,
                 ny,
                 config.spacing_m,

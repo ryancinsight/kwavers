@@ -43,7 +43,7 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::Complex64;
 use kwavers_math::fft::{fft_3d_complex_into, ifft_3d_complex_inplace};
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::{
-    complex_l2_objective, complex_source_scale, sound_speed_to_slowness, MultiRowRingArray,
+    complex_l2_objective, complex_source_scale, sound_speed_to_slowness,
 };
 use kwavers_transducer::transducers::ElementPosition;
 use leto::{Array2, Array3};
@@ -100,7 +100,7 @@ pub fn simulate_pstd_finite_window_born_observation(
     for transmit in 0..transmissions {
         let receiver_indices = receiver_indices_on_grid(grid, acquisition, transmit)?;
         let source_hat =
-            source_spectrum_on_grid(grid, &acquisition.sources(transmit), &symbols.source_kappa)?;
+            source_spectrum_on_grid(grid, acquisition.sources(transmit), &symbols.source_kappa)?;
         let row = simulate_transmit(
             grid,
             &source_hat,
@@ -340,7 +340,7 @@ pub fn finite_window_pstd_born_gradient(
     for transmit in 0..transmissions {
         let receiver_indices = receiver_indices_on_grid(grid, acquisition, transmit)?;
         let source_hat =
-            source_spectrum_on_grid(grid, &acquisition.sources(transmit), &symbols.source_kappa)?;
+            source_spectrum_on_grid(grid, acquisition.sources(transmit), &symbols.source_kappa)?;
         let (d_model, accel_history) = simulate_transmit_with_accel(
             grid,
             &source_hat,
@@ -695,7 +695,7 @@ pub fn simulate_pstd_finite_window_born_second_order_observation(
     for transmit in 0..transmissions {
         let receiver_indices = receiver_indices_on_grid(grid, acquisition, transmit)?;
         let source_hat =
-            source_spectrum_on_grid(grid, &acquisition.sources(transmit), &symbols.source_kappa)?;
+            source_spectrum_on_grid(grid, acquisition.sources(transmit), &symbols.source_kappa)?;
         let row = simulate_transmit_second_order(
             grid,
             &source_hat,
