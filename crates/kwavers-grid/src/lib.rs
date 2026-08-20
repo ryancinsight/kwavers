@@ -1,10 +1,4 @@
-//! Spatial discretization for kwavers.
-//!
-//! This crate provides the core grid structures and utilities for defining
-//! computational domains and spatial discretization (Cartesian/cylindrical
-//! grids, coordinates, topology, operators, k-space FFT helpers), plus the
-//! geometric-domain primitives (rectangular/spherical regions, point
-//! classification) previously co-located in `kwavers-domain`.
+#![doc = include_str!("../README.md")]
 
 pub mod adapter;
 pub mod config;

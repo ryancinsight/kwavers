@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Added
+
+- **Documentation:** Every workspace crate now carries its own `README.md` — the
+  crates.io/docs.rs landing page — closing the gap where 22 of 24 crates published
+  blank. Each README states what the crate owns, where it sits in the layer stack, and
+  its API surface, and most carry a runnable example. The README is single-sourced as
+  the crate documentation via `#![doc = include_str!("../README.md")]`, so the registry
+  page and the docs.rs front page cannot drift and README examples run as doctests.
+  `cargo run -p xtask -- check-readmes` enforces README presence, manifest
+  `description`, and the single-sourcing directive; it runs in Architecture Validation.
+  `kwavers-driver` and `kwavers-python` keep separate `//!` docs pending a content merge
+  and are tracked as a shrinking exemption.
+
 ### Changed
 
 - **Elastic FWI runtime and structure:** Singleton-z in-plane point-force

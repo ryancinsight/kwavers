@@ -16,6 +16,7 @@ use architecture::validate_architecture;
 
 mod fixes;
 mod migration_audit;
+mod readme_audit;
 
 #[derive(Parser)]
 #[command(name = "xtask")]
@@ -110,6 +111,8 @@ enum Command {
     BurnMigrationAudit,
     /// Refresh the Burn migration allowlist baseline file.
     RefreshBurnAllowlist,
+    /// Audit per-crate READMEs, descriptions, and single-sourced crate docs.
+    CheckReadmes,
 }
 
 fn main() -> Result<()> {
@@ -147,6 +150,7 @@ fn main() -> Result<()> {
             migration_audit::print_burn_migration_audit(&workspace_root())
         }
         Command::RefreshBurnAllowlist => migration_audit::refresh_burn_allowlist(&workspace_root()),
+        Command::CheckReadmes => readme_audit::check_readmes(&workspace_root()),
     }
 }
 

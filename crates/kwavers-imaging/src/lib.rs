@@ -1,21 +1,4 @@
-//! Imaging Domain Module
-//!
-//! This module contains imaging-related domain types.
-//!
-//! ## Architecture
-//!
-//! Provides three layers:
-//! 1. **Domain Models** (ultrasound/, photoacoustic/) - Data structures for imaging concepts
-//! 2. **Orchestration Interfaces** (ceus_orchestrator.rs) - Traits for orchestration logic
-//! 3. **Implementations** - Physics and simulation layers implement these traits
-//!
-//! This ensures clinical layer depends only on domain abstractions, not on implementation details.
-//!
-//! ## See Also
-//!
-//! - `kwavers_physics::foundations` - Physics specifications for wave equations
-//! - `kwavers_receiver` - Sensor primitives for signal detection
-//! - `kwavers_source` - Source primitives for wave generation
+#![doc = include_str!("../README.md")]
 
 pub mod ceus_orchestrator;
 pub mod fusion;

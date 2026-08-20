@@ -1,7 +1,4 @@
-//! Clinical imaging workflows
-//!
-//! This module provides application-level imaging workflows that combine
-//! physics models and solvers for clinical imaging applications.
+#![doc = include_str!("../README.md")]
 
 pub mod photoacoustic;
 pub mod reconstruction;

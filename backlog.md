@@ -1,5 +1,51 @@
 # Backlog / Strategy
 
+## KW-DOC-105 — Per-crate README landing pages [patch] — ✅ done 2026-08-20
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-DOC-105 | Every workspace crate publishes a real registry landing page, single-sourced as its crate documentation and mechanically enforced. | [patch] | done | Claude | `crates/*/README.md`, each `crates/*/src/lib.rs` doc attribute, `xtask/src/readme_audit.rs`, `.github/workflows/architecture-validation.yml`, root `README.md` |
+
+- Acceptance: no crate under `crates/` lacks a `README.md` or a manifest
+  `description`; each README is the crate documentation via
+  `#![doc = include_str!("../README.md")]` so registry and docs.rs cannot drift;
+  README examples compile and run as doctests; a committed check fails when a new
+  crate reopens the gap.
+- Evidence: 22 READMEs added (all crates but `kwavers-driver` and `kwavers-python`,
+  which already had one). `cargo run -p xtask -- check-readmes` passes over 24 crates.
+  `cargo test --doc --workspace` green — every new README example is an executed
+  doctest. `cargo fmt --all -- --check` clean for the touched files (three unrelated
+  peer-dirty files remain unformatted). `cargo doc --workspace --exclude
+  kwavers-python --no-deps` emits only the two pre-existing warnings
+  (`kwavers-core` NUMA allocator private-item link, `kwavers-solver` KZK
+  `Plugin::update`); the gated `RUSTDOCFLAGS="-D warnings" cargo doc -p kwavers
+  --features full` passes. `cargo package -p kwavers-core --list` confirms the README
+  ships in the package.
+- Incidental drift closed: the root README crate table listed the deleted
+  `kwavers-domain` and omitted twelve crates; it now lists all 24 with links. The
+  `kwavers-physics` crate doc's reference to the non-existent
+  `ARCHITECTURE_AUDIT_REPORT.md` is gone with the folded `//!` block.
+- Residual: `kwavers-driver` and `kwavers-python` carry substantial `//!` docs that
+  differ from their READMEs, so folding them is a content merge, not mechanical
+  wiring. They sit in `SINGLE_SOURCE_EXEMPT` in `xtask/src/readme_audit.rs`; the
+  list only shrinks. `kwavers-driver`'s README additionally carries stale migration
+  claims and mojibake (`∑`, `+:`) — see KW-DOC-106.
+
+## KW-DOC-106 — Fold driver/python READMEs into their crate docs [patch] — todo
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-DOC-106 | `kwavers-driver` and `kwavers-python` single-source their READMEs like every other crate, with stale content corrected first. | [patch] | todo | unclaimed | `crates/kwavers-driver/{README.md,src/lib.rs}`, `crates/kwavers-python/{README.md,src/lib.rs}`, `xtask/src/readme_audit.rs` |
+
+- Acceptance: both crates' `//!` blocks and READMEs are merged into one README that
+  serves as crate documentation; `SINGLE_SOURCE_EXEMPT` is emptied and the constant
+  deleted; `cargo run -p xtask -- check-readmes` passes with no exemption.
+- Definition of Ready blockers to resolve first: `kwavers-driver`'s README states a
+  refactor phase, a `113 tests` count, and a `kicad-routing` rename that must be
+  re-verified against the tree before the text is promoted to crate docs; it also
+  contains mojibake (`∑` for `→`, a stray `+:`). `kwavers-python`'s README is
+  Python-reader-facing (install/import), which is correct for PyPI but must gain the
+  Rust-side framing before becoming the docs.rs front page.
 ## KW-DIST-QUEUE-2026-08-20 — close distributed queue completion and deadline contracts [patch] — implementation complete; hosted verification pending
 
 | ID | Outcome | Class | Status | Owner | Scope |
