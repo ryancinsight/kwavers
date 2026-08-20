@@ -21,6 +21,14 @@
   example catalog no longer links to four deleted programs or instructs readers
   to replace the repository-pinned Rust toolchain.
 
+- **Distributed scheduling:** `WorkQueue::wait_all` now waits for both queued
+  and executing tasks. Workers block on scheduler state notification instead of
+  polling, and task completion claims are released on success, error, or
+  unwind. Deadline construction rejects timestamp overflow with the existing
+  typed invalid-input error. Focused distributed Nextest passes 17/17; the
+  locked local gate remains blocked by the Atlas development overlay's derived
+  lock rewrite pending hosted verification.
+
 - **Breaking sonoluminescence surface:** Dimensioned emission now exposes
   typed Aequitas blackbody and bremsstrahlung components and excludes the
   arbitrary-unit Cherenkov yield from the `W/m³` field. The integrated step
