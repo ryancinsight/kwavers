@@ -1,25 +1,4 @@
-//! Thread-scoped allocation counting for allocation-contract tests.
-//!
-//! A process-global counting allocator (the previous `stats_alloc` regions)
-//! observes every thread in the process, so under full-suite load a
-//! measurement window occasionally records harness or peer-test allocations
-//! and an exact-count assertion flakes (ATLAS-KWAVERS-ALLOC-TEST-RACE-1).
-//! This probe counts only on threads that opened a [`Window`], confining the
-//! measurement to the test's own effects while forwarding every request to
-//! the system allocator unchanged.
-//!
-//! Usage, in a test binary:
-//!
-//! ```ignore
-//! #[global_allocator]
-//! static GLOBAL: kwavers_alloc_probe::ThreadScopedAllocator =
-//!     kwavers_alloc_probe::ThreadScopedAllocator;
-//!
-//! let window = kwavers_alloc_probe::Window::open();
-//! let value = build_the_thing();
-//! let change = window.change();
-//! assert_eq!(change.allocations, 1);
-//! ```
+#![doc = include_str!("../README.md")]
 
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::cell::Cell;

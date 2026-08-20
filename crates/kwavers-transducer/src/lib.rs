@@ -1,11 +1,4 @@
-//! High-level transducer devices for kwavers.
-//!
-//! This crate provides the physical-device convenience layer built on top of the
-//! low-level `kwavers-source` (excitation primitives) and `kwavers-receiver`
-//! (recording primitives) crates: focused bowls, phased/linear/matrix arrays,
-//! 2-D and hemispherical arrays, k-Wave array compatibility, flexible-array
-//! calibration, source factories, and the array-geometry-driven beamforming,
-//! passive-acoustic-mapping, and ultrafast acquisition stacks.
+#![doc = include_str!("../README.md")]
 
 pub mod array_2d;
 pub mod basic;
