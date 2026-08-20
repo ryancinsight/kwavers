@@ -1083,7 +1083,7 @@ markers without changing the numerical contract.
 
 ## KW-SOL-058 — Elide elastic-FWI objective histories [patch] — in-progress
 
-- Owner: Codex; scope:
+- Owner: Codex `/root`; last-update: 2026-08-20; scope:
   `crates/kwavers-solver/src/forward/elastic/swe/core/solver/point_force_drive.rs`,
   `crates/kwavers-solver/src/inverse/elastography/elastic_fwi/mod.rs`, and
   synchronized PM evidence.
@@ -1095,6 +1095,12 @@ markers without changing the numerical contract.
   despite `--test-threads=1`. The new exact trace-equivalence regression passes,
   and the full FWI contract passes locally in 29.123 s; a fresh hosted matrix
   remains the closure gate.
+- Takeover evidence: current-main Architecture Validation run `32333948199`
+  completes the unchanged contract in 57.544 s, while PR #426 exact-head run
+  `32336386162` terminates it at 60.010 s. The prior local result did not close
+  the hosted runtime defect. The workload, assertions, and 60 s termination
+  contract remain fixed; this item now owns the production-path reduction that
+  restores margin below the 30 s slow-test target.
 
 ## KW-CI-057 — Serialize full workspace test processes [patch] — superseded
 
