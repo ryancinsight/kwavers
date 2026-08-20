@@ -2515,7 +2515,6 @@ fn main() -> KwaversResult<()> {
                 source_mute_radius: 2,
                 ..FwiParameters::default()
             });
-
             // Generate observed gathers using the true brain tissue model.
             let mut brain_shots: Vec<(FwiGeometry, Array2<f64>)> = Vec::with_capacity(N_SHOTS);
             let t_brain_obs = Instant::now();
