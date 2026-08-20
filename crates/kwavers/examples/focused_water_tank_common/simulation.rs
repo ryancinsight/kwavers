@@ -18,6 +18,7 @@ use kwavers_solver::forward::pstd::PSTDSolver;
 use kwavers_solver::interface::solver::Solver;
 use leto::Array1;
 use leto::{Array2, Array3};
+use moirai_parallel::{join_with, Parallel};
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -29,13 +30,26 @@ const DG_TENSOR_POLYNOMIAL_ORDER: usize = 3;
 const DG_TENSOR_SUBSTEPS_PER_STEP: usize = 2;
 
 pub fn run_solver_fields() -> Result<Vec<SolverField>> {
-    Ok(vec![
-        run_fdtd()?,
-        run_pstd()?,
-        run_dg_tensor_field("DG-2D", 1)?,
-        run_dg_tensor_field("DG-3D", physics::NZ)?,
-        run_dg_tensor_field_with_cpml("DG-3D-CPML", physics::NZ)?,
-    ])
+    // These solver runs own disjoint state and analytical work. The provider
+    // join keeps them concurrent without sharing mutable solver state, so the
+    // comparison's wall time is bounded by the slowest numerical backend.
+    let ((fdtd, pstd), (dg_2d, dg_3d, dg_3d_cpml)) = join_with::<Parallel, _, _, _, _>(
+        || join_with::<Parallel, _, _, _, _>(run_fdtd, run_pstd),
+        || {
+            let (dg_2d, (dg_3d, dg_3d_cpml)) = join_with::<Parallel, _, _, _, _>(
+                || run_dg_tensor_field("DG-2D", 1),
+                || {
+                    join_with::<Parallel, _, _, _, _>(
+                        || run_dg_tensor_field("DG-3D", physics::NZ),
+                        || run_dg_tensor_field_with_cpml("DG-3D-CPML", physics::NZ),
+                    )
+                },
+            );
+            (dg_2d, dg_3d, dg_3d_cpml)
+        },
+    );
+
+    Ok(vec![fdtd?, pstd?, dg_2d?, dg_3d?, dg_3d_cpml?])
 }
 
 pub fn run_dg_axial_field() -> Result<AxialField> {

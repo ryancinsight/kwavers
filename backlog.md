@@ -422,6 +422,12 @@
   `seismic_imaging/dicom.rs` home used by both 2-D and 3-D CT loaders. The
   focused cross-example Nextest rerun `5a75e7f4-3d2d-4734-a0d8-3603ae25c511`
   passes 14/14 and strict all-example Clippy remains green.
+- 2026-08-20 example-gate runtime slice: the focused water-tank comparison's
+  independent FDTD, PSTD, DG-2D, DG-3D, and DG-3D-CPML branches now overlap
+  through the provider-owned Moirai `Parallel` join. The complete example
+  Nextest run passes 59/59; the comparison test completes in 51.861 seconds
+  under the committed 60-second budget without changing its workload or
+  assertions.
 - Non-goals: frequency-domain FWI and ADR 115, solver-algorithm replacement,
   committed clinical datasets, GPU-kernel changes, and compatibility aliases.
 - Verification: strict focused Clippy, example unit tests through Nextest,

@@ -14,6 +14,14 @@ seismic entry points remain above the 500-line target; further partitioning is
 required before `KW-EXAMPLES-115` can close. No fallback or compatibility path
 is added.
 
+The complete example gate initially exposed an independent runtime defect in
+`focused_ultrasound_water_tank`: its five disjoint solver branches ran
+sequentially, and the comparison test terminated at 60 seconds. The provider
+owned `moirai_parallel::Parallel` join now overlaps the FDTD, PSTD, DG-2D,
+DG-3D, and DG-3D-CPML computations without sharing mutable solver state. The
+exact local Nextest run passes 59/59; the comparison test completes in 51.861
+seconds. No workload, assertion, or runtime budget changed.
+
 ## ATLAS-KWAVERS-HEPHAESTUS-FDTD-107 — Collocated FDTD provider cutover — Apollo co-evolution blocker 2026-08-18
 
 The old consumer-owned collocated FDTD implementation in

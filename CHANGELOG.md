@@ -35,6 +35,12 @@
 
 ### Changed
 
+- **Focused water-tank example runtime:** Independent FDTD, PSTD, and DG
+  comparison branches now use the provider-owned Moirai `Parallel` join while
+  retaining each solver's native state and analytical output. The complete
+  example Nextest gate passes 59/59; the previously terminating comparison test
+  completes in 51.861 seconds under the committed 60-second budget.
+
 - **Transcranial FWI example structure:** The entry point is now a small
   manifest over typed grid configuration, acquisition, phantom/CT loading,
   metrics, and workflow modules. The provider-owned skull model and Ricker
