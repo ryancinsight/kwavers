@@ -21,11 +21,18 @@ example's `output/` directory (override with the first positional argument).
 
 ## Physics
 
-Skull bone-volume-fraction acoustic model (Aubry 2003) with fractional-Laplacian absorption (Treeby & Cox 2010). The 2D quasi-3D grid (NX=64, NY=2, NZ=64) exercises the full 3D solver on a thin slab.
+The consumer supplies only the CT Hounsfield-unit volume. The shared
+`seismic_imaging::medium::SkullModel` sends it to
+`HeterogeneousSkull::from_ct_hill` with Aequitas-typed canonical cortical-bone
+properties. Density follows Voigt volume averaging, sound speed follows the
+Hill average of the Voigt and Reuss bulk moduli, and attenuation is mixed at
+the 1 MHz reference frequency. The 2D quasi-3D grid (NX=64, NY=2, NZ=64)
+exercises the full 3D solver on a thin slab.
 
 ## Key Concepts
 
-- Skull CT phantom construction with bone-volume-fraction → sound-speed mapping
+- Provider-owned skull CT mapping with the validated `AcousticSkullProperties`
+  configuration SSOT
 - Aequitas-typed frequency, time, and pressure passed to the provider-owned
   `DomainRickerWavelet` without an intermediate sample allocation
 - Adjoint-state FWI with L2 misfit

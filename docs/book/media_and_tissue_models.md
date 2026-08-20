@@ -440,7 +440,8 @@ K_V = \phi K_b + (1-\phi)K_w, \;\;
 K_R = \left(\tfrac{\phi}{K_b} + \tfrac{1-\phi}{K_w}\right)^{-1},
 $$
 
-with $c_{\text{eff}} = \sqrt{K_{\text{H}}/\rho_{\text{eff}}}$ and linearly mixed attenuation
+with $c_{\text{eff}} = \sqrt{K_{\text{H}}/\rho_{\text{eff}}}$ and linearly mixed attenuation at
+the 1 MHz reference frequency,
 $\alpha_{\text{eff}} = \phi\,\alpha_{\text{bone}} + (1-\phi)\,\alpha_{\text{water}}$. Because the
 Hill modulus is bounded above by the Voigt modulus, $c_{\text{eff}}$ never exceeds the
 Voigt-modulus speed (a property the test suite asserts across $\phi$). The pure-water limit
@@ -448,10 +449,11 @@ Voigt-modulus speed (a property the test suite asserts across $\phi$). The pure-
 $c_{\text{bone}}$ exactly.
 
 ```rust,ignore
-use kwavers_physics::acoustics::skull::HeterogeneousSkull;
+use kwavers_physics::acoustics::skull::{AcousticSkullProperties, HeterogeneousSkull};
 
 // ct: Array3<f64> of standard-HU voxels → density/sound_speed/attenuation grids
-let skull = HeterogeneousSkull::from_ct_hill(&ct, 3100.0, 2100.0, 20.0)?;
+let bone = AcousticSkullProperties::cortical();
+let skull = HeterogeneousSkull::from_ct_hill(&ct, &bone)?;
 // skull.density, skull.sound_speed, skull.attenuation feed the heterogeneous medium (§4.6.4)
 ```
 

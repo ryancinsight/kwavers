@@ -1,3 +1,4 @@
+use aequitas::systems::si::quantities::{Frequency, MassDensity, Velocity};
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
@@ -93,12 +94,20 @@ impl TranscranialSimulation {
         parameters: &[f64],
     ) -> KwaversResult<()> {
         let mask = match model_type {
-            "sphere" => {
-                generate_spherical_skull(&self.grid, self.skull_props.thickness, parameters[0])?
-            }
-            "ellipsoid" => {
-                generate_ellipsoidal_skull(&self.grid, self.skull_props.thickness, parameters)?
-            }
+            "sphere" => generate_spherical_skull(
+                &self.grid,
+                self.skull_props.thickness().into_base(),
+                *parameters.first().ok_or_else(|| {
+                    KwaversError::InvalidInput(
+                        "sphere skull geometry requires a radius parameter".to_owned(),
+                    )
+                })?,
+            )?,
+            "ellipsoid" => generate_ellipsoidal_skull(
+                &self.grid,
+                self.skull_props.thickness().into_base(),
+                parameters,
+            )?,
             _ => {
                 return Err(KwaversError::InvalidInput(format!(
                     "Unknown model type: {}",
@@ -156,19 +165,24 @@ impl TranscranialSimulation {
     ///
     /// # Returns
     /// Pressure amplitude ratio in [0, 1].
-    pub fn estimate_insertion_loss(&self, frequency: f64) -> KwaversResult<f64> {
-        let attenuation_np_per_m = self.skull_props.attenuation_at_frequency(frequency);
+    pub fn estimate_insertion_loss(&self, frequency: Frequency<f64>) -> KwaversResult<f64> {
+        let attenuation_np_per_m = self.skull_props.attenuation_at_frequency(frequency)?;
 
         // One-way path through skull (not round-trip)
-        let attenuation_np = attenuation_np_per_m * self.skull_props.thickness;
+        let attenuation_np =
+            attenuation_np_per_m.into_base() * self.skull_props.thickness().into_base();
 
         // Pressure amplitude after bulk absorption
         let amplitude_ratio = (-attenuation_np).exp();
 
         // Pressure TC through water→skull→water slab equals T_I (see docstring).
         // Z_water = ρ_water · c_water (sourced from SSOT constants)
-        let water_z = DENSITY_WATER_NOMINAL * SOUND_SPEED_WATER_SIM;
-        let t_i = self.skull_props.transmission_coefficient(water_z);
+        let water_z = MassDensity::from_base(DENSITY_WATER_NOMINAL)
+            * Velocity::from_base(SOUND_SPEED_WATER_SIM);
+        let t_i = self
+            .skull_props
+            .transmission_coefficient(water_z)?
+            .into_base();
 
         Ok(amplitude_ratio * t_i)
     }
