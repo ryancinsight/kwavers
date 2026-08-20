@@ -36,7 +36,14 @@ impl Log for CombinedLogger {
                 }
             }
             if self.console {
-                println!("{message}");
+                // This type is the console sink itself -- writing the record to
+                // stdout is its contract, not incidental output from library
+                // code. Ratchet: whether a log sink belongs on stdout rather
+                // than stderr is tracked separately as KW-CORE-LOG-1.
+                #[expect(clippy::print_stdout, reason = "console log sink")]
+                {
+                    println!("{message}");
+                }
             }
         }
     }
