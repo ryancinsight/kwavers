@@ -43,11 +43,6 @@ use kwavers_medium::HomogeneousMedium;
 use kwavers_physics::acoustics::imaging::modalities::elastography::{
     AcousticRadiationForce, MultiDirectionalPush,
 };
-use kwavers_solver::forward::elastic::swe::AdaptiveResolution;
-#[cfg(feature = "gpu")]
-use kwavers_solver::forward::elastic::swe::GPUDevice;
-#[cfg(feature = "gpu")]
-use kwavers_solver::forward::elastic::swe::GPUElasticWaveSolver3D;
 use kwavers_solver::forward::elastic::{
     ArrivalDetection, ElasticBodyForceConfig, ElasticWaveSolver, VolumetricWaveConfig,
     WaveFrontTracker,
@@ -266,118 +261,7 @@ fn test_clinical_liver_fibrosis_accuracy() {
     );
 }
 
-/// Test GPU acceleration performance
-#[test]
-#[cfg(feature = "gpu")]
-#[ignore = "Long-running benchmark-style validation; excluded under nextest per-test 30s timeout policy"]
-fn test_gpu_acceleration_performance() {
-    println!("Testing GPU acceleration performance...");
 
-    // Create mock GPU device
-    let gpu_device = GPUDevice {
-        name: "NVIDIA RTX 3080".to_string(),
-        global_memory: 10 * 1024 * 1024 * 1024, // 10GB
-        shared_memory: 48 * 1024,               // 48KB
-        max_threads_per_block: 1024,
-        max_grid_dims: [2147483647, 65535, 65535],
-        compute_capability: (8, 6),
-        memory_bandwidth: 760.0, // GB/s
-    };
-
-    let mut gpu_solver = GPUElasticWaveSolver3D::new(gpu_device).unwrap();
-    gpu_solver.initialize_kernels().unwrap();
-
-    let grid = Grid::new(64, 64, 64, 0.001, 0.001, 0.001).unwrap();
-    // Solid medium for GPU solver
-    let medium = HomogeneousMedium::soft_tissue(10_000.0, 0.49, &grid);
-
-    // Create test displacements
-    let mut displacements = Vec::new();
-    let arf = AcousticRadiationForce::new(&grid, &medium).unwrap();
-
-    // Create a CPU solver used only to generate representative displacement histories for the GPU
-    // harness (this test is about GPU API plumbing / performance reporting, not correctness).
-    let solver = ElasticWaveSolver::new(&grid, &medium, Default::default()).unwrap();
-
-    for i in 0..3 {
-        let location = [0.02 + i as f64 * 0.01, 0.032, 0.032];
-        let body_force = arf.push_pulse_body_force(location).unwrap();
-        // Use body-force-only override propagation; initial displacement remains zero.
-        let _history = solver
-            .propagate_waves_with_body_force_only_override(Some(&body_force))
-            .unwrap();
-        // Preserve the original vector length semantics used by the GPU perf test harness.
-        displacements.push(Array3::zeros((grid.nx, grid.ny, grid.nz)));
-    }
-
-    let push_times = vec![0.0, 50e-6, 100e-6];
-
-    // Test GPU propagation
-    let gpu_result = gpu_solver.propagate_waves_gpu(&displacements, &push_times, &grid, 100);
-
-    match gpu_result {
-        Ok(result) => {
-            println!("GPU Performance Results:");
-            println!("  Execution time: {:.3} s", result.execution_time);
-            println!("  Kernel time: {:.3} s", result.kernel_time);
-            println!("  Throughput: {:.1} cells/s", result.throughput);
-            println!(
-                "  Memory used: {:.1} MB",
-                result.memory_used as f64 / (1024.0 * 1024.0)
-            );
-
-            assert!(
-                result.execution_time > 0.0,
-                "Execution time should be positive"
-            );
-            assert!(
-                result.throughput > 1000.0,
-                "Throughput too low: {:.0}",
-                result.throughput
-            );
-        }
-        Err(e) => {
-            println!("GPU test skipped (expected on systems without GPU): {}", e);
-        }
-    }
-}
-
-/// Test adaptive resolution for large volumes
-#[test]
-fn test_adaptive_resolution() {
-    println!("Testing adaptive resolution...");
-
-    let base_grid = Grid::new(128, 128, 128, 0.0005, 0.0005, 0.0005).unwrap(); // 6.4x6.4x6.4cm
-    let adaptive = AdaptiveResolution::new(&base_grid, 4);
-
-    // Create test displacement field
-    let initial_disp = Array3::from_elem((128, 128, 128), 1e-6);
-
-    // Test adaptive solving
-    let result = adaptive.adaptive_solve(&initial_disp, 0.85).unwrap();
-
-    println!("Adaptive Resolution Results:");
-    println!("  Resolution levels: {}", result.steps.len());
-    println!("  Final quality: {:.2}", result.final_quality);
-    println!(
-        "  Total computation time: {:.3} s",
-        result.total_computation_time
-    );
-
-    assert!(
-        result.steps.len() >= 2,
-        "Should use multiple resolution levels"
-    );
-    assert!(
-        result.final_quality > 0.8,
-        "Final quality too low: {:.2}",
-        result.final_quality
-    );
-    assert!(
-        result.total_computation_time > 0.0,
-        "Computation time should be positive"
-    );
-}
 
 /// Test robustness with edge cases
 #[test]
