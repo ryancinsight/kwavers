@@ -90,6 +90,15 @@ have boundary tests. Exact local Nextest run
 entry point is 952 lines; 3-D acquisition, inversion, and reporting still
 require partitioning, so `KW-EXAMPLES-115` remains in progress.
 
+Fibonacci-sphere element placement, receiver masks, and Ricker shot construction
+now have the `seismic_imaging/volume_acquisition.rs` leaf; domain-boundary tests
+cover clamping and source exclusion. Exact local Nextest run
+`54856a9f-51aa-42bc-9ab9-4952ccf3160f` passes 75/75 (one slow comparison at
+42.443 seconds); strict all-example Clippy, `mdbook test docs/book`, and
+`mdbook build docs/book` pass. The 2-D entry point is 860 lines and the 3-D
+entry point is 875 lines; 3-D inversion and reporting still require
+partitioning, so `KW-EXAMPLES-115` remains in progress.
+
 Synthetic skull construction, explicit CT loading, HU resampling, and
 brain-support filling now have the `seismic_imaging/phantom.rs` leaf; the
 brain-support classifier is owned by `brain_model.rs` and planar artifacts

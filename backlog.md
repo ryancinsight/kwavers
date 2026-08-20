@@ -515,6 +515,15 @@
   `mdbook build docs/book` pass. The 2-D entry point is 860 lines and the 3-D
   entry point is 952 lines, so 3-D acquisition, inversion, and reporting still
   require partitioning before `KW-EXAMPLES-115` can close.
+- 2026-08-20 3-D acquisition slice: Fibonacci-sphere element placement,
+  receiver masks, and Ricker shot construction now live in
+  `seismic_imaging/volume_acquisition.rs`; domain-boundary tests cover clamping
+  and source exclusion. Exact example Nextest run
+  `54856a9f-51aa-42bc-9ab9-4952ccf3160f` passes 75/75 (one slow comparison at
+  42.443 seconds); strict all-example Clippy, `mdbook test docs/book`, and
+  `mdbook build docs/book` pass. The 2-D entry point is 860 lines and the 3-D
+  entry point is 875 lines, so 3-D inversion and reporting still require
+  partitioning before `KW-EXAMPLES-115` can close.
 - 2026-08-20 example-gate runtime slice: the focused water-tank comparison's
   independent FDTD, PSTD, DG-2D, DG-3D, and DG-3D-CPML branches now overlap
   through the provider-owned Moirai `Parallel` join. The complete example

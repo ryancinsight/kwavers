@@ -18,6 +18,8 @@
 mod seismic_imaging;
 #[path = "seismic_imaging/metrics.rs"]
 mod seismic_metrics;
+#[path = "seismic_imaging/volume_acquisition.rs"]
+mod seismic_volume_acquisition;
 #[path = "seismic_imaging/volume_artifacts.rs"]
 mod seismic_volume_artifacts;
 #[path = "seismic_imaging/volume_brain_model.rs"]
@@ -26,19 +28,15 @@ mod seismic_volume_brain_model;
 mod seismic_volume_phantom;
 use seismic_metrics::{print_quality_pairs, print_quality_report};
 
-use aequitas::systems::si::quantities::{Frequency, Pressure, Time};
 use anyhow::Context as _;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
-use kwavers_signal::DomainRickerWavelet;
 use kwavers_solver::inverse::fwi::time_domain::{FwiGeometry, FwiProcessor};
 use kwavers_solver::inverse::seismic::parameters::{FwiParameters, RegularizationParameters};
-use kwavers_source::{GridSource, SourceMode};
 use leto::{Array2, Array3};
 use moirai_parallel::{Adaptive, map_collect_index_with};
 use seismic_imaging::render::{put_pixel, velocity_color, write_png};
-use std::f64::consts::PI;
 use std::path::PathBuf;
 use std::time::Instant;
 
@@ -101,7 +99,6 @@ const BRAIN_C_MAX: f64 = 1560.0; // m/s
 const BONE_VELOCITY_THRESHOLD: f64 = 1714.0; // m/s
 
 const F0_HZ: f64 = 150_000.0; // Hz — default Ricker centre frequency
-const P0_PA: f64 = 1.0e5; // Pa — peak source pressure
 const STEP_SIZE: f64 = 50.0; // m/s per normalised gradient step
 
 const MNI_INNER_SKULL_RADIUS_MM: f64 = 82.0; // mm
@@ -148,85 +145,6 @@ const COLORBAR_H: usize = 20; // colorbar height below each panel
 // ─────────────────────────────────────────────────────────────────────────────
 // Fibonacci-sphere acquisition geometry
 // ─────────────────────────────────────────────────────────────────────────────
-
-/// Generate N positions on a sphere of radius r using the Fibonacci lattice.
-///
-/// # Algorithm
-///
-/// For i ∈ [0, n):
-/// ```text
-/// y_norm = (2(i + 0.5)/n) - 1              ∈ (−1, 1)
-/// r_xz   = √(1 − y_norm²)
-/// φ      = 2π × i / φ_gold                 (φ_gold = (1 + √5)/2)
-/// x_off  = r × r_xz × cos(φ)
-/// y_off  = r × y_norm
-/// z_off  = r × r_xz × sin(φ)
-/// ```
-///
-/// Positions are clamped to [6, NX/NY/NZ − 7] to stay within the physical domain.
-///
-/// Reference: González 2010 — Fibonacci lattice for uniform sphere sampling.
-fn fibonacci_sphere_elements(n: usize, r: f64, cx: f64, cy: f64, cz: f64) -> Vec<[usize; 3]> {
-    let golden_ratio = (1.0 + 5.0_f64.sqrt()) / 2.0;
-    (0..n)
-        .map(|i| {
-            let y_norm = (2.0 * (i as f64 + 0.5) / n as f64) - 1.0;
-            let r_xz = (1.0 - y_norm * y_norm).sqrt();
-            let phi = 2.0 * PI * i as f64 / golden_ratio;
-            let x_off = r * r_xz * phi.cos();
-            let y_off = r * y_norm;
-            let z_off = r * r_xz * phi.sin();
-            let ix = ((cx + x_off).round() as isize).clamp(6, NX as isize - 7) as usize;
-            let iy = ((cy + y_off).round() as isize).clamp(6, NY as isize - 7) as usize;
-            let iz = ((cz + z_off).round() as isize).clamp(6, NZ as isize - 7) as usize;
-            [ix, iy, iz]
-        })
-        .collect()
-}
-
-/// Build a receiver mask for all Fibonacci-sphere elements except the source.
-fn build_receiver_mask_3d(all_elements: &[[usize; 3]], source_idx: usize) -> Array3<bool> {
-    let mut mask = Array3::<bool>::from_elem((NX, NY, NZ), false);
-    for (idx, &[ix, iy, iz]) in all_elements.iter().enumerate() {
-        if idx != source_idx {
-            mask[[ix, iy, iz]] = true;
-        }
-    }
-    mask
-}
-
-/// Build FwiGeometry for one Fibonacci-sphere shot.
-///
-/// Source at `source_pos`; receivers at all other Fibonacci-sphere elements.
-fn build_shot_3d(
-    source_pos: [usize; 3],
-    all_elements: &[[usize; 3]],
-    shot_idx: usize,
-    f0_hz: f64,
-    nt: usize,
-    dt: f64,
-) -> KwaversResult<FwiGeometry> {
-    let [ix, iy, iz] = source_pos;
-    let mut source_mask = Array3::<f64>::zeros((NX, NY, NZ));
-    source_mask[[ix, iy, iz]] = 1.0;
-
-    let wavelet =
-        DomainRickerWavelet::causal(Frequency::from_base(f0_hz), Pressure::from_base(P0_PA))?;
-    let mut p_signal = Array2::<f64>::zeros((1, nt));
-    for (t, pressure) in wavelet.samples(Time::from_base(dt), nt)?.enumerate() {
-        p_signal[[0, t]] = pressure;
-    }
-
-    let mut source = GridSource::new_empty();
-    source.p_mask = Some(source_mask);
-    source.p_signal = Some(p_signal);
-    source.p_mode = SourceMode::Dirichlet;
-
-    Ok(FwiGeometry::new(
-        source,
-        build_receiver_mask_3d(all_elements, shot_idx),
-    ))
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Gaussian blur (3D separable)
@@ -460,8 +378,13 @@ fn main() -> KwaversResult<()> {
     let cy_grid = (NY / 2) as f64;
     let cz_grid = (NZ / 2) as f64;
 
-    let all_elements =
-        fibonacci_sphere_elements(N_SPHERE_ELEMENTS, R_ARRAY_3D, cx_grid, cy_grid, cz_grid);
+    let all_elements = seismic_volume_acquisition::fibonacci_sphere_elements(
+        N_SPHERE_ELEMENTS,
+        R_ARRAY_3D,
+        cx_grid,
+        cy_grid,
+        cz_grid,
+    );
 
     // Transmit every other element (even indices → 12 shots).
     let transmit_indices: Vec<usize> = (0..N_SPHERE_ELEMENTS).step_by(2).collect();
@@ -515,7 +438,7 @@ fn main() -> KwaversResult<()> {
         });
         let t0 = Instant::now();
         for &elem_idx in &transmit_indices {
-            let geom = build_shot_3d(
+            let geom = seismic_volume_acquisition::build_shot_3d(
                 all_elements[elem_idx],
                 &all_elements,
                 elem_idx,
@@ -603,7 +526,7 @@ fn main() -> KwaversResult<()> {
 
         let t_scale = Instant::now();
         for &elem_idx in &transmit_indices {
-            let geom = build_shot_3d(
+            let geom = seismic_volume_acquisition::build_shot_3d(
                 all_elements[elem_idx],
                 &all_elements,
                 elem_idx,
@@ -805,7 +728,7 @@ fn main() -> KwaversResult<()> {
                     Vec::with_capacity(N_SHOTS_3D);
                 let t_brain_obs = Instant::now();
                 for &elem_idx in &transmit_indices {
-                    let geom = build_shot_3d(
+                    let geom = seismic_volume_acquisition::build_shot_3d(
                         all_elements[elem_idx],
                         &all_elements,
                         elem_idx,

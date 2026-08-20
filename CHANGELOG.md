@@ -126,6 +126,13 @@
   comparison at 42.758 seconds), strict example Clippy passes, and the mdBook
   test/build gates pass.
 
+- **3-D acquisition structure:** Fibonacci-sphere element placement, receiver
+  masks, and Ricker shot construction now live in
+  `seismic_imaging/volume_acquisition.rs`; domain-boundary tests cover clamping
+  and source exclusion. The exact example Nextest gate passes 75/75 (one slow
+  comparison at 42.443 seconds), strict example Clippy passes, and the mdBook
+  test/build gates pass.
+
 - **Breaking CT skull material boundary:** `AcousticSkullProperties` now stores
   validated Aequitas velocity, mass-density, reciprocal-length attenuation,
   length, and optional shear velocity. `HeterogeneousSkull::from_ct_hill`
