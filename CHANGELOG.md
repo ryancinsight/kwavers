@@ -40,6 +40,10 @@
   metrics, and workflow modules. The provider-owned skull model and Ricker
   wavelet remain the only physical sources; focused example tests pass 6/6.
 
+- **Shared seismic metrics:** The 2-D and 3-D seismic examples now call one
+  canonical quality-report implementation and pair-report implementation,
+  with value-semantic regression coverage in both example binaries.
+
 - **Breaking CT skull material boundary:** `AcousticSkullProperties` now stores
   validated Aequitas velocity, mass-density, reciprocal-length attenuation,
   length, and optional shear velocity. `HeterogeneousSkull::from_ct_hill`

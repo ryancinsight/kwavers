@@ -412,6 +412,11 @@
   exact-value Nextest run `d1e3550e-f570-406b-a151-c50832cfe198` passes 6/6,
   and strict example Clippy passes. The remaining seismic entry points are
   still above the 500-line target and require the next partition slices.
+- 2026-08-20 shared-metrics slice: whole-model and selected-pair quality
+  calculations now have one canonical `seismic_imaging/metrics.rs` home used
+  by both 2-D and 3-D entries, with one value-semantic regression test per
+  binary. Focused example Nextest run `d93a0d0d-4893-4c99-9dbd-f5ccbdd6bbfa`
+  passes 14/14; strict all-example Clippy and example checks pass.
 - Non-goals: frequency-domain FWI and ADR 115, solver-algorithm replacement,
   committed clinical datasets, GPU-kernel changes, and compatibility aliases.
 - Verification: strict focused Clippy, example unit tests through Nextest,

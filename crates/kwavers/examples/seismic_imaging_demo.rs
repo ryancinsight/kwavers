@@ -87,6 +87,9 @@
 //!   exploration geophysics. *Geophysics*, 74(6), WCC1–WCC26.
 
 mod seismic_imaging;
+#[path = "seismic_imaging/metrics.rs"]
+mod seismic_metrics;
+use seismic_metrics::{print_quality_pairs, print_quality_report};
 
 use aequitas::systems::si::quantities::{Frequency, Pressure, Time};
 use kwavers_core::constants::{
@@ -1120,63 +1123,6 @@ fn build_phantom_for_demo(
 // Reconstruction quality metrics
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Print RMSE, Pearson r, max |error|, ±100 m/s fraction vs ground truth.
-///
-/// Returns ‖true − reconstructed‖² (unnormalized L2 proxy).
-fn print_quality_report(true_model: &Array3<f64>, reconstructed: &Array3<f64>) -> f64 {
-    let n = true_model.len() as f64;
-
-    let l2: f64 = true_model
-        .iter()
-        .zip(reconstructed.iter())
-        .map(|(&t, &r)| (t - r).powi(2))
-        .sum();
-    let rmse = (l2 / n).sqrt();
-
-    let mean_t = true_model.iter().sum::<f64>() / n;
-    let mean_r = reconstructed.iter().sum::<f64>() / n;
-    let cov = true_model
-        .iter()
-        .zip(reconstructed.iter())
-        .map(|(&t, &r)| (t - mean_t) * (r - mean_r))
-        .sum::<f64>();
-    let var_t = true_model
-        .iter()
-        .map(|&t| (t - mean_t).powi(2))
-        .sum::<f64>();
-    let var_r = reconstructed
-        .iter()
-        .map(|&r| (r - mean_r).powi(2))
-        .sum::<f64>();
-    let denom = (var_t * var_r).sqrt();
-
-    let max_err = true_model
-        .iter()
-        .zip(reconstructed.iter())
-        .map(|(&t, &r)| (t - r).abs())
-        .fold(0.0_f64, f64::max);
-
-    let within_100 = true_model
-        .iter()
-        .zip(reconstructed.iter())
-        .filter(|(&t, &r)| (t - r).abs() <= 100.0)
-        .count() as f64
-        / n
-        * 100.0;
-
-    println!("  RMSE            : {rmse:8.1} m/s");
-    if denom > f64::EPSILON {
-        let pearson = cov / denom;
-        println!("  Pearson r       : {pearson:8.4}");
-    } else {
-        println!("  Pearson r       :      N/A  (uniform model)");
-    }
-    println!("  Max |error|     : {max_err:8.1} m/s");
-    println!("  Voxels ±100 m/s : {within_100:7.1} %");
-
-    l2
-}
-
 /// Print RMSE, Pearson r, max |error|, ±10 m/s fraction for brain voxels only
 /// (geometric: r < R_SKULL_IN from grid center, independent of FWI frozen mask).
 ///
@@ -1194,42 +1140,6 @@ fn print_quality_report_brain(true_model: &Array3<f64>, reconstructed: &Array3<f
         .map(|([ix, _iy, iz], &t)| (t, reconstructed[[ix, _iy, iz]]))
         .collect();
     print_quality_pairs(&free_pairs);
-}
-
-fn print_quality_pairs(free_pairs: &[(f64, f64)]) {
-    let n = free_pairs.len() as f64;
-    if n < 2.0 {
-        println!("  (no free voxels)");
-        return;
-    }
-    let l2: f64 = free_pairs.iter().map(|&(t, r)| (t - r).powi(2)).sum();
-    let rmse = (l2 / n).sqrt();
-    let mean_t = free_pairs.iter().map(|&(t, _)| t).sum::<f64>() / n;
-    let mean_r = free_pairs.iter().map(|&(_, r)| r).sum::<f64>() / n;
-    let cov: f64 = free_pairs
-        .iter()
-        .map(|&(t, r)| (t - mean_t) * (r - mean_r))
-        .sum();
-    let var_t: f64 = free_pairs.iter().map(|&(t, _)| (t - mean_t).powi(2)).sum();
-    let var_r: f64 = free_pairs.iter().map(|&(_, r)| (r - mean_r).powi(2)).sum();
-    let max_err = free_pairs
-        .iter()
-        .map(|&(t, r)| (t - r).abs())
-        .fold(0.0_f64, f64::max);
-    let within_10 = free_pairs
-        .iter()
-        .filter(|&&(t, r)| (t - r).abs() <= 10.0)
-        .count() as f64
-        / n
-        * 100.0;
-    println!("  RMSE            : {rmse:8.2} m/s");
-    let denom = (var_t * var_r).sqrt();
-    if denom > f64::EPSILON {
-        let pearson = cov / denom;
-        println!("  Pearson r       : {pearson:8.4}");
-    }
-    println!("  Max |error|     : {max_err:8.2} m/s");
-    println!("  Voxels ±10 m/s  : {within_10:7.1} %");
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
