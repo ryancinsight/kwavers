@@ -4,6 +4,12 @@
 
 ### Changed
 
+- **Breaking CT skull material boundary:** `AcousticSkullProperties` now stores
+  validated Aequitas velocity, mass-density, reciprocal-length attenuation,
+  length, and optional shear velocity. `HeterogeneousSkull::from_ct_hill`
+  consumes that canonical skull configuration, and the seismic examples route
+  synthetic and explicit CT volumes through the provider-owned model.
+
 - **Elastic FWI runtime and structure:** Singleton-z in-plane point-force
   propagation now selects a zero-sized plane-strain mode once, avoiding the
   out-of-plane stress, acceleration, integration, damping, and gradient work

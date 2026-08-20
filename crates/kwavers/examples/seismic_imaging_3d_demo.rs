@@ -15,9 +15,12 @@
 // - Treeby & Cox 2010: JASA — fractional-Laplacian absorption.
 // - MNI ICBM 2009c: https://www.bic.mni.mcgill.ca/~vfonov/icbm/2009/
 
+mod seismic_imaging;
+
 use aequitas::systems::si::quantities::{Frequency, Pressure, Time};
 use anyhow::Context as _;
 use coeus_core::MoiraiBackend;
+use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 use kwavers_signal::DomainRickerWavelet;
@@ -30,6 +33,7 @@ use ritk_io::format::nifti::native::NiftiReader as NativeNiftiReader;
 use ritk_io::format::png::native::PngSeriesReader as NativePngSeriesReader;
 use ritk_io::ImageReader;
 use ritk_io::{load_native_dicom_series, scan_dicom_directory, DicomSeriesInfo};
+use seismic_imaging::medium::SkullModel;
 use std::f64::consts::PI;
 use std::fs::File;
 use std::io::{self, BufWriter};
@@ -72,7 +76,7 @@ const R_SKULL_IN: f64 = 12.0; // 36 mm — inner cortical / brain boundary
 const R_BRAIN: f64 = 11.0; // 33 mm — brain surface (CSF buffer ≈ 3 mm)
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Hounsfield unit → acoustic property constants (Aubry 2003)
+// Hounsfield-unit phantom labels
 // ─────────────────────────────────────────────────────────────────────────────
 
 const HU_WATER: f64 = 0.0;
@@ -81,11 +85,6 @@ const HU_CORTICAL_OUT: f64 = 720.0;
 const HU_DIPLOE: f64 = 380.0;
 const HU_CORTICAL_IN: f64 = 660.0;
 const HU_BRAIN: f64 = 35.0;
-
-const C_WATER: f64 = 1500.0; // m/s
-const C_CORTICAL: f64 = 2900.0; // m/s
-const RHO_WATER: f64 = 1000.0; // kg/m³
-const RHO_CORTICAL: f64 = 1900.0; // kg/m³
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Stage-2 brain tissue FWI constants (Duck 1990; Guasch 2020)
@@ -143,46 +142,6 @@ const DEFAULT_MEDIMODEL_SERIES_UID: &str =
 struct CtVolume {
     hu: Array3<f64>,
     spacing_mm: [f64; 3],
-}
-
-/// 3-D skull phantom with sound-speed, density, and HU fields.
-#[allow(dead_code)]
-struct SkullPhantom {
-    sound_speed: Array3<f64>,
-    density: Array3<f64>,
-    hu: Array3<f64>,
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Aubry 2003 bone-volume-fraction acoustic model
-// ─────────────────────────────────────────────────────────────────────────────
-
-/// Bone volume fraction: φ(HU) = clamp(HU/1000, 0, 1).
-///
-/// Reference: Aubry 2003, JASA 113(1), eq. (2).
-#[inline]
-fn bvf(hu: f64) -> f64 {
-    (hu / 1000.0).clamp(0.0, 1.0)
-}
-
-/// Sound speed from HU via linear Voigt BVF mixing.
-///
-/// c(HU) = c_water × (1 − φ) + c_cortical × φ   [m/s]
-///
-/// Reference: Aubry 2003; Marsac 2017 eq. (1).
-#[inline]
-fn hu_to_sound_speed(hu: f64) -> f64 {
-    let phi = bvf(hu);
-    C_WATER * (1.0 - phi) + C_CORTICAL * phi
-}
-
-/// Density from HU via linear BVF mixing.
-///
-/// ρ(HU) = ρ_water × (1 − φ) + ρ_cortical × φ   [kg/m³]
-#[inline]
-fn hu_to_density(hu: f64) -> f64 {
-    let phi = bvf(hu);
-    RHO_WATER * (1.0 - phi) + RHO_CORTICAL * phi
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -523,10 +482,7 @@ fn resample_ct_to_fwi_grid_3d(vol: &CtVolume) -> Array3<f64> {
 
     let hu_min = result.iter().copied().fold(f64::INFINITY, f64::min);
     let hu_max = result.iter().copied().fold(f64::NEG_INFINITY, f64::max);
-    let c_min = hu_to_sound_speed(hu_min);
-    let c_max = hu_to_sound_speed(hu_max);
     println!("  HU range        : [{hu_min:.0}, {hu_max:.0}]");
-    println!("  Sound-speed     : [{c_min:.0}, {c_max:.0}] m/s");
     println!(
         "  Head radius     : {:.0} mm  (R_HEAD = {R_HEAD} voxels)",
         R_HEAD * DX * 1e3
@@ -552,7 +508,7 @@ fn resample_ct_to_fwi_grid_3d(vol: &CtVolume) -> Array3<f64> {
 ///
 /// ```text
 /// c(x) = p_gm(x) × C_GRAY + p_wm(x) × C_WHITE + p_csf(x) × C_CSF
-///       + (1 − p_gm − p_wm − p_csf) × C_WATER
+///       + (1 − p_gm − p_wm − p_csf) × c_water
 /// ```
 ///
 /// # Spatial mapping
@@ -564,7 +520,7 @@ fn resample_ct_to_fwi_grid_3d(vol: &CtVolume) -> Array3<f64> {
 /// mni_coord  = mni_centre + fwi_offset_mm × fwi_to_mni
 /// ```
 fn build_brain_velocity_3d(
-    skull_phantom: &SkullPhantom,
+    skull_phantom: &SkullModel,
     mni_dir: &Path,
 ) -> anyhow::Result<Array3<f64>> {
     let backend = MoiraiBackend;
@@ -607,7 +563,7 @@ fn build_brain_velocity_3d(
     let fwi_inner_mm = R_SKULL_IN * DX * 1e3;
     let fwi_to_mni = MNI_INNER_SKULL_RADIUS_MM / fwi_inner_mm;
 
-    let mut brain_model = skull_phantom.sound_speed.clone();
+    let mut brain_model = skull_phantom.acoustic().sound_speed.clone();
 
     for iz in 0..NZ {
         for iy in 0..NY {
@@ -641,7 +597,8 @@ fn build_brain_velocity_3d(
                 let p_wm = wm[[mx, my, mz]];
                 let p_csf = csf[[mx, my, mz]];
                 let p_rest = (1.0 - p_gm - p_wm - p_csf).clamp(0.0, 1.0);
-                let c_tissue = p_gm * C_GRAY + p_wm * C_WHITE + p_csf * C_CSF + p_rest * C_WATER;
+                let c_tissue =
+                    p_gm * C_GRAY + p_wm * C_WHITE + p_csf * C_CSF + p_rest * SOUND_SPEED_WATER_SIM;
 
                 brain_model[[ix, iy, iz]] = c_tissue;
             }
@@ -722,7 +679,7 @@ fn t1_to_velocity(t1_norm: f64) -> f64 {
     } else if t1_norm > 0.05 {
         C_CSF
     } else {
-        C_WATER
+        SOUND_SPEED_WATER_SIM
     }
 }
 
@@ -732,7 +689,7 @@ fn t1_to_velocity(t1_norm: f64) -> f64 {
 /// skull velocities.  Inside the skull the T1 intensity is sampled via the
 /// same scale factor used for CT resampling (atlas-space approximation).
 fn build_brain_velocity_from_t1(
-    skull_phantom: &SkullPhantom,
+    skull_phantom: &SkullModel,
     t1: &Array3<f64>,
     t1_spacing: [f64; 3],
 ) -> Array3<f64> {
@@ -747,7 +704,7 @@ fn build_brain_velocity_from_t1(
     let t1_inner_skull_mm = MNI_INNER_SKULL_RADIUS_MM; // 82 mm
     let fwi_to_t1 = t1_inner_skull_mm / (fwi_inner_mm * t1_spacing[0]);
 
-    let mut model = skull_phantom.sound_speed.clone();
+    let mut model = skull_phantom.acoustic().sound_speed.clone();
 
     for ix in 0..NX {
         for iy in 0..NY {
@@ -773,8 +730,8 @@ fn build_brain_velocity_from_t1(
 }
 
 /// Build a deterministic homogeneous brain prior without external datasets.
-fn build_uniform_brain_velocity_3d(skull_phantom: &SkullPhantom) -> Array3<f64> {
-    let mut model = skull_phantom.sound_speed.clone();
+fn build_uniform_brain_velocity_3d(skull_phantom: &SkullModel) -> Array3<f64> {
+    let mut model = skull_phantom.acoustic().sound_speed.clone();
     let cx = NX as f64 / 2.0;
     let cy = NY as f64 / 2.0;
     let cz = NZ as f64 / 2.0;
@@ -785,7 +742,7 @@ fn build_uniform_brain_velocity_3d(skull_phantom: &SkullPhantom) -> Array3<f64> 
                 let dy = iy as f64 - cy;
                 let dz = iz as f64 - cz;
                 if (dx * dx + dy * dy + dz * dz).sqrt() < R_SKULL_IN {
-                    model[[ix, iy, iz]] = C_WATER;
+                    model[[ix, iy, iz]] = SOUND_SPEED_WATER_SIM;
                 }
             }
         }
@@ -794,7 +751,7 @@ fn build_uniform_brain_velocity_3d(skull_phantom: &SkullPhantom) -> Array3<f64> 
 }
 
 fn build_brain_prior_3d(
-    skull_phantom: &SkullPhantom,
+    skull_phantom: &SkullModel,
     prior: &BrainPriorMode,
 ) -> anyhow::Result<Array3<f64>> {
     match prior {
@@ -818,7 +775,7 @@ fn build_brain_prior_3d(
 /// Build a synthetic 3D spherical skull phantom.
 ///
 /// Each voxel is assigned an HU based on its 3D Euclidean distance from grid centre.
-fn build_skull_phantom_3d() -> SkullPhantom {
+fn build_skull_phantom_3d() -> KwaversResult<SkullModel> {
     let cx = (NX / 2) as f64;
     let cy = (NY / 2) as f64;
     let cz = (NZ / 2) as f64;
@@ -850,20 +807,14 @@ fn build_skull_phantom_3d() -> SkullPhantom {
         }
     }
 
-    let sound_speed = hu.mapv(hu_to_sound_speed);
-    let density = hu.mapv(hu_to_density);
-    SkullPhantom {
-        sound_speed,
-        density,
-        hu,
-    }
+    SkullModel::from_hu(hu)
 }
 
 /// Build the 3D phantom for an explicit input mode.
-fn build_phantom_3d(input: &SeismicInputMode) -> anyhow::Result<(SkullPhantom, Option<CtVolume>)> {
+fn build_phantom_3d(input: &SeismicInputMode) -> anyhow::Result<(SkullModel, Option<CtVolume>)> {
     let (SeismicInputMode::Ct(path) | SeismicInputMode::CtMri { ct: path, .. }) = input else {
         println!("  Phantom         : synthetic 3D spherical model");
-        return Ok((build_skull_phantom_3d(), None));
+        return Ok((build_skull_phantom_3d()?, None));
     };
 
     print!("  CT source       : {}  ", path.display());
@@ -875,13 +826,7 @@ fn build_phantom_3d(input: &SeismicInputMode) -> anyhow::Result<(SkullPhantom, O
         vol.spacing_mm[0], vol.spacing_mm[1], vol.spacing_mm[2]
     );
     let hu_fwi = resample_ct_to_fwi_grid_3d(&vol);
-    let sound_speed = hu_fwi.mapv(hu_to_sound_speed);
-    let density = hu_fwi.mapv(hu_to_density);
-    let phantom = SkullPhantom {
-        sound_speed,
-        density,
-        hu: hu_fwi,
-    };
+    let phantom = SkullModel::from_hu(hu_fwi)?;
     Ok((phantom, Some(vol)))
 }
 
@@ -1319,15 +1264,24 @@ fn main() -> KwaversResult<()> {
         .map_err(|error| KwaversError::InvalidInput(error.to_string()))?;
 
     let _c_min = phantom
+        .acoustic()
         .sound_speed
         .iter()
         .copied()
         .fold(f64::INFINITY, f64::min);
     let _c_max = phantom
+        .acoustic()
         .sound_speed
         .iter()
         .copied()
         .fold(f64::NEG_INFINITY, f64::max);
+    let hu_min = phantom.hu().iter().copied().fold(f64::INFINITY, f64::min);
+    let hu_max = phantom
+        .hu()
+        .iter()
+        .copied()
+        .fold(f64::NEG_INFINITY, f64::max);
+    println!("  HU range        : [{hu_min:.0}, {hu_max:.0}]");
 
     // ── [ 2 / 7 ]  T1 MRI ────────────────────────────────────────────────
     println!("\n[ 2 / 7 ]  Loading explicit T1 MRI input …");
@@ -1364,12 +1318,13 @@ fn main() -> KwaversResult<()> {
     // CFL-stable timestep for 3D PSTD: dt ≤ 0.3 × dx / (c_max × √3).
     // Use actual phantom c_max (not the 2D-demo hardcoded 2621 m/s) with 10 % safety margin.
     let c_max_phantom = phantom
+        .acoustic()
         .sound_speed
         .iter()
         .copied()
         .fold(f64::NEG_INFINITY, f64::max);
     let dt = 0.9 * 0.3 * DX / (c_max_phantom * 3.0_f64.sqrt());
-    let t_transit = 3.0_f64.sqrt() * NX as f64 * DX / C_WATER;
+    let t_transit = 3.0_f64.sqrt() * NX as f64 * DX / SOUND_SPEED_WATER_SIM;
 
     // Multi-scale frequency schedule: 40 kHz (5 iter) → 80 kHz (7 iter) → 150 kHz (10 iter).
     let scales: &[(f64, usize)] = &[(40_000.0, 5), (80_000.0, 7), (150_000.0, 10)];
@@ -1421,7 +1376,7 @@ fn main() -> KwaversResult<()> {
     // ── [ 6 / 7 ]  Multi-scale 3D skull FWI ─────────────────────────────
     println!("\n[ 6 / 7 ]  Running multi-scale 3D transcranial FWI …");
 
-    let true_model = phantom.sound_speed.clone();
+    let true_model = phantom.acoustic().sound_speed.clone();
 
     // Initial model: Gaussian-blurred CT prior (σ = 3 voxels ≈ 9 mm).
     let initial_model = gaussian_blur_3d(&true_model, 3.0);
@@ -1514,7 +1469,7 @@ fn main() -> KwaversResult<()> {
     // Multi-scale inversion loop.
     for (scale_idx, &(f0, n_iter)) in scales.iter().enumerate() {
         let nt_scale = ((t_transit * 1.2 + 3.0 / f0) / dt).ceil() as usize;
-        let mute_r = ((C_WATER / (2.0 * f0)) / DX).floor() as usize;
+        let mute_r = ((SOUND_SPEED_WATER_SIM / (2.0 * f0)) / DX).floor() as usize;
         let mute_r = mute_r.clamp(2, 12);
 
         let mut scale_shots: Vec<(FwiGeometry, Array2<f64>)> = Vec::with_capacity(N_SHOTS_3D);
@@ -1563,7 +1518,7 @@ fn main() -> KwaversResult<()> {
         );
 
         current_model = fwi_scale.invert_multi_source(&scale_shots, &current_model, &grid)?;
-        current_model = current_model.mapv(|c| c.max(C_WATER));
+        current_model = current_model.mapv(|c| c.max(SOUND_SPEED_WATER_SIM));
 
         let c_now_max = current_model
             .iter()
@@ -1646,8 +1601,10 @@ fn main() -> KwaversResult<()> {
             }
             Ok(brain_true) => {
                 // Skull mask: bone voxels frozen at CT-derived velocity.
-                let skull_mask: Array3<bool> =
-                    phantom.sound_speed.mapv(|c| c > BONE_VELOCITY_THRESHOLD);
+                let skull_mask: Array3<bool> = phantom
+                    .acoustic()
+                    .sound_speed
+                    .mapv(|c| c > BONE_VELOCITY_THRESHOLD);
                 let n_frozen = skull_mask.iter().filter(|&&b| b).count();
                 let n_free = skull_mask.len() - n_frozen;
                 println!(
@@ -1680,7 +1637,13 @@ fn main() -> KwaversResult<()> {
                 // Brain FWI initial model: T1-derived if available, otherwise uniform water.
                 let mut brain_initial = match &t1_brain {
                     Some(t1_model) => t1_model.clone(),
-                    None => skull_mask.mapv(|frozen| if frozen { 0.0_f64 } else { C_WATER }),
+                    None => skull_mask.mapv(|frozen| {
+                        if frozen {
+                            0.0_f64
+                        } else {
+                            SOUND_SPEED_WATER_SIM
+                        }
+                    }),
                 };
                 // Fill frozen voxels with CT skull velocity.
                 let [bi_nx, bi_ny, bi_nz] = brain_initial.shape();
@@ -1688,7 +1651,8 @@ fn main() -> KwaversResult<()> {
                     for j in 0..bi_ny {
                         for k in 0..bi_nz {
                             if skull_mask[[i, j, k]] {
-                                brain_initial[[i, j, k]] = phantom.sound_speed[[i, j, k]];
+                                brain_initial[[i, j, k]] =
+                                    phantom.acoustic().sound_speed[[i, j, k]];
                             }
                         }
                     }
@@ -1699,7 +1663,7 @@ fn main() -> KwaversResult<()> {
                 let n_brain_iter: usize = 15;
                 let step_brain = 30.0_f64;
                 let nt_brain = {
-                    let domain_transit = (NX as f64 * DX) / C_WATER;
+                    let domain_transit = (NX as f64 * DX) / SOUND_SPEED_WATER_SIM;
                     let source_dur = 3.0 / f0_brain;
                     ((domain_transit + source_dur) / dt).ceil() as usize
                 };
@@ -1761,7 +1725,7 @@ fn main() -> KwaversResult<()> {
                     match fwi_brain.invert_multi_source_masked(
                         &brain_shots,
                         &brain_initial,
-                        &phantom.sound_speed,
+                        &phantom.acoustic().sound_speed,
                         &skull_mask,
                         BRAIN_C_MIN,
                         BRAIN_C_MAX,
@@ -1801,8 +1765,8 @@ fn main() -> KwaversResult<()> {
     let abs_dir = std::fs::canonicalize(&output_dir).unwrap_or(output_dir.clone());
 
     // Skull velocity colourmap bounds.
-    let c_lo = C_WATER;
-    let c_hi = C_CORTICAL;
+    let c_lo = SOUND_SPEED_WATER_SIM;
+    let c_hi = kwavers_core::constants::acoustic_parameters::SOUND_SPEED_SKULL_CORTICAL;
 
     let axial_path = abs_dir.join("brain3d_fwi_axial.png");
     let coronal_path = abs_dir.join("brain3d_fwi_coronal.png");

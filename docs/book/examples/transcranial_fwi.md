@@ -15,7 +15,7 @@ silently switching models.
 | Component | API | Value |
 |---|---|---|
 | Domain | `DX`, `NX`, `NY`, `NZ` | Defines a 64×2×64 coronal head cross-section at 3 mm spacing |
-| Skull phantom | `HU_SCALP`, `HU_CORTICAL_*`, `HU_DIPLOE`, `HU_BRAIN` | Maps layered CT-style intensities into heterogeneous acoustic properties |
+| Skull phantom | `seismic_imaging::medium::SkullModel` | Routes layered synthetic or explicit CT intensities through the validated provider-owned Hill model |
 | Source | `DomainRickerWavelet` | Streams causal pressure samples from Aequitas-typed frequency, time, and pressure |
 | FWI loop | forward FDTD → residual → adjoint → gradient update | Implements the standard adjoint-state inversion workflow |
 
@@ -36,8 +36,9 @@ const NZ: usize = 64;
 
 ## Expected Output (if applicable)
 
-The run prints phantom and inversion summaries. Outputs are written under the
-example output directory; no dataset is downloaded or generated implicitly.
+The run prints provider-derived HU and sound-speed ranges plus inversion
+summaries. Outputs are written under the example output directory; no dataset
+is downloaded or generated implicitly.
 
 ## Book Chapter
 

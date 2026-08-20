@@ -129,6 +129,26 @@
   the solver-owned struct and shift-constant deletions as two expected major
   breaks; manual API review also classifies the typed, fallible signal
   constructor replacement as major.
+- 2026-08-20 physical-model slice: the existing `AcousticSkullProperties` SSOT
+  now validates Aequitas velocity, mass density, reciprocal-length attenuation,
+  length, and optional shear velocity; the Hill CT API accepts it and rejects
+  empty or non-finite volumes. One shared
+  `seismic_imaging::medium::SkullModel` now owns the source HU volume and the
+  provider-derived acoustic fields for all three workflows. The local BVF,
+  sound-speed, density, and phantom-structure copies are deleted. Strict
+  standalone Clippy passes for `kwavers-physics` and the four affected
+  examples. Exact MSVC Nextest run
+  `8095f9e5-4550-4994-a3d2-dc5d346a0b57` passes 53/53 skull-provider cases;
+  run `6e0819a4-8452-4966-964c-479c61004def` passes 6/6 example
+  geometry/phase-correction cases. The provider doctest gate passes 9 runnable
+  cases with 4 environmental cases ignored, warning-denied Rustdoc passes, and
+  mdBook test and build pass. `cargo-semver-checks` runs 223 checks: 218 pass,
+  5 expected API-change lints fail, and 30 skip. It classifies private
+  `AcousticSkullProperties` storage, removal of its former public scalar fields,
+  and the `from_ct_hill` arity replacement as four major lint failures; adding
+  `#[must_use]` is one minor lint failure. Hosted evidence remains pending before
+  this slice closes. The consolidation follows
+  [ADR 004](docs/adr/004-domain-material-property-ssot.md).
 - Non-goals: frequency-domain FWI and ADR 115, solver-algorithm replacement,
   committed clinical datasets, GPU-kernel changes, and compatibility aliases.
 - Verification: strict focused Clippy, example unit tests through Nextest,

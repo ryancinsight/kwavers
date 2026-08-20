@@ -76,7 +76,10 @@
 //!   of the skull based on a human CT phantom. *Brain*, 145(11), 3917-3929.
 //! - BabelBrain dataset: Pineda-Pardo, J.A. et al. (2023). Zenodo 7894431.
 
+mod seismic_imaging;
+
 use aequitas::systems::si::quantities::{Frequency, Pressure, Time};
+use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 use kwavers_signal::DomainRickerWavelet;
@@ -85,6 +88,7 @@ use kwavers_solver::inverse::seismic::parameters::{FwiParameters, Regularization
 use kwavers_source::{GridSource, SourceMode};
 use leto::{Array2, Array3};
 use ritk_io::domain::ImageReader;
+use seismic_imaging::medium::SkullModel;
 use std::time::Instant;
 
 #[path = "support/seismic_input.rs"]
@@ -124,62 +128,9 @@ const HU_DIPLOE: f64 = 380.0; // trabecular / diploe
 const HU_CORTICAL_IN: f64 = 660.0; // inner cortical bone
 const HU_BRAIN: f64 = 35.0; // grey/white matter average
 
-/// Water acoustic properties.
-const C_WATER: f64 = 1500.0; // [m/s]
-const RHO_WATER: f64 = 1000.0; // [kg/m³]
-/// Dense cortical bone acoustic properties (Aubry 2003).
-const C_CORTICAL: f64 = 2900.0; // [m/s]
-const RHO_CORTICAL: f64 = 1900.0; // [kg/m³]
-
-// ─────────────────────────────────────────────────────────────────────────────
-// HU → acoustic conversion (Aubry 2003 bone-volume-fraction model)
-// ─────────────────────────────────────────────────────────────────────────────
-
-/// Bone volume fraction from CT Hounsfield unit.
-///
-/// φ(HU) = clamp(HU / HU_cortical, 0, 1)
-///
-/// Reference: Aubry et al. (2003) JASA 113(1) Eq. (2).
-#[inline]
-fn bvf(hu: f64) -> f64 {
-    (hu / 1000.0).clamp(0.0, 1.0)
-}
-
-/// Sound speed from HU via linear BVF mixing (Voigt bound).
-///
-/// c(HU) = c_water · (1 − φ) + c_cortical · φ   [m/s]
-///
-/// Reference: Aubry 2003; Marsac 2017 Eq. (1).
-#[inline]
-fn hu_to_sound_speed(hu: f64) -> f64 {
-    let phi = bvf(hu);
-    C_WATER * (1.0 - phi) + C_CORTICAL * phi
-}
-
-/// Density from HU via linear BVF mixing.
-///
-/// ρ(HU) = ρ_water · (1 − φ) + ρ_cortical · φ   [kg/m³]
-///
-/// Reference: Aubry 2003; Marsac 2017 Eq. (2).
-#[inline]
-fn hu_to_density(hu: f64) -> f64 {
-    let phi = bvf(hu);
-    RHO_WATER * (1.0 - phi) + RHO_CORTICAL * phi
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Skull phantom generation
 // ─────────────────────────────────────────────────────────────────────────────
-
-/// Synthetic skull phantom — HU array and derived acoustic fields.
-pub struct SkullPhantom {
-    /// CT Hounsfield unit map [nx, ny, nz].
-    pub hu: Array3<f64>,
-    /// Sound speed c(x) [m/s].
-    pub sound_speed: Array3<f64>,
-    /// Density ρ(x) [kg/m³].
-    pub density: Array3<f64>,
-}
 
 /// Build a 2-D coronal skull cross-section phantom.
 ///
@@ -197,7 +148,7 @@ pub struct SkullPhantom {
 /// | Diploe          | R_SKULL_IN < r ≤ R_DIPLOE    | 380 |
 /// | Inner cortical  | R_BRAIN    < r ≤ R_SKULL_IN  | 660 |
 /// | Brain / CSF     | r ≤ R_BRAIN            |   35 |
-fn build_skull_phantom() -> SkullPhantom {
+fn build_skull_phantom() -> KwaversResult<SkullModel> {
     let cx = (NX / 2) as f64; // 32.0
     let cz = (NZ / 2) as f64; // 32.0
 
@@ -229,14 +180,7 @@ fn build_skull_phantom() -> SkullPhantom {
         }
     }
 
-    let sound_speed = hu.mapv(hu_to_sound_speed);
-    let density = hu.mapv(hu_to_density);
-
-    SkullPhantom {
-        hu,
-        sound_speed,
-        density,
-    }
+    SkullModel::from_hu(hu)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -271,7 +215,7 @@ fn load_ct_slice(
     ct_nifti_path: &str,
     _mri_nifti_path: &str,
     _slice_index: usize,
-) -> KwaversResult<SkullPhantom> {
+) -> KwaversResult<SkullModel> {
     use ritk_io::format::nifti::native::NiftiReader;
 
     let reader = NiftiReader::new(coeus_core::SequentialBackend);
@@ -323,13 +267,7 @@ fn load_ct_slice(
         }
     }
 
-    let sound_speed = hu.mapv(hu_to_sound_speed);
-    let density = hu.mapv(hu_to_density);
-    Ok(SkullPhantom {
-        hu,
-        sound_speed,
-        density,
-    })
+    SkullModel::from_hu(hu)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -526,7 +464,7 @@ fn main() -> KwaversResult<()> {
     let phantom = match input_mode {
         SeismicInputMode::Synthetic => {
             println!("  Input mode       : synthetic analytical skull");
-            build_skull_phantom()
+            build_skull_phantom()?
         }
         SeismicInputMode::Ct(path) => {
             println!("  Input mode       : CT {}", path.display());
@@ -544,17 +482,23 @@ fn main() -> KwaversResult<()> {
 
     // ── Print phantom statistics ───────────────────────────────────────────
     let c_min = phantom
+        .acoustic()
         .sound_speed
         .iter()
         .copied()
         .fold(f64::INFINITY, f64::min);
     let c_max = phantom
+        .acoustic()
         .sound_speed
         .iter()
         .copied()
         .fold(f64::NEG_INFINITY, f64::max);
-    let hu_min = phantom.hu.iter().copied().fold(f64::INFINITY, f64::min);
-    let hu_max = phantom.hu.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+    let hu_min = phantom.hu().iter().copied().fold(f64::INFINITY, f64::min);
+    let hu_max = phantom
+        .hu()
+        .iter()
+        .copied()
+        .fold(f64::NEG_INFINITY, f64::max);
     println!(
         "  Grid            : {NX}×{NY}×{NZ} voxels @ {:.0} mm",
         DX * 1e3
@@ -590,7 +534,7 @@ fn main() -> KwaversResult<()> {
     let f0 = 150_000.0; // 150 kHz centre frequency
 
     // Number of time steps: cover full domain transit at water speed with 20% margin
-    let t_transit = (NX as f64 * DX) / C_WATER; // ~128 μs
+    let t_transit = (NX as f64 * DX) / SOUND_SPEED_WATER_SIM; // ~128 μs
     let nt = ((t_transit * 1.2) / dt).ceil() as usize;
 
     // Step size and iteration budget.
@@ -656,7 +600,7 @@ fn main() -> KwaversResult<()> {
     let fwi = FwiProcessor::new(fwi_params.clone());
 
     // True model: CT-derived sound speed field.
-    let true_model = phantom.sound_speed.clone();
+    let true_model = phantom.acoustic().sound_speed.clone();
 
     // Generate observed data for each shot from the true model.
     println!("\n  ── Forward models (true skull, {} shots) ──", n_shots);
@@ -687,12 +631,12 @@ fn main() -> KwaversResult<()> {
     // Guasch et al. 2020).  Four sources already demonstrate multi-shot gradient
     // accumulation; convergence to the full skull contrast (2508 m/s) requires
     // more sources and a CT-derived starting model.
-    let initial_model = Array3::from_elem((NX, NY, NZ), C_WATER);
+    let initial_model = Array3::from_elem((NX, NY, NZ), SOUND_SPEED_WATER_SIM);
     println!(
         "\n  ── FWI inversion ({} iterations, {} shots) ──",
         fwi_params.max_iterations, n_shots
     );
-    println!("  Initial model: homogeneous water, c = {C_WATER} m/s");
+    println!("  Initial model: homogeneous water, c = {SOUND_SPEED_WATER_SIM} m/s");
 
     // Joint data-space objective before inversion: J₀ = Σᵢ Jᵢ(c_water).
     let mut j_initial = 0.0_f64;
