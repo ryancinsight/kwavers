@@ -158,8 +158,71 @@ fn workspace_root() -> PathBuf {
         .unwrap_or_else(|| xtask_dir)
 }
 
-fn src_root() -> PathBuf {
-    workspace_root().join("kwavers").join("src")
+/// Every crate's `src` directory in the workspace.
+///
+/// The workspace is a crate DAG under `crates/`, so there is no single source
+/// root. Scanning one path was how these checks came to report green while
+/// examining nothing: they pointed at `<root>/kwavers/src`, which stopped
+/// existing when the layout moved to `crates/kwavers/src`, and `WalkDir` over a
+/// missing directory yields no entries rather than an error.
+fn source_roots() -> Vec<PathBuf> {
+    let crates_dir = workspace_root().join("crates");
+    let mut roots: Vec<PathBuf> = fs::read_dir(&crates_dir)
+        .into_iter()
+        .flatten()
+        .filter_map(Result::ok)
+        .map(|entry| entry.path().join("src"))
+        .filter(|path| path.is_dir())
+        .collect();
+    roots.sort();
+    roots
+}
+
+/// Walk every workspace source tree as a single iterator.
+///
+/// # Panics
+/// Panics when no crate source directory is found. A scan that silently covers
+/// nothing is the defect this replaced, so an empty workspace is loud.
+pub(crate) fn walk_sources() -> impl Iterator<Item = walkdir::DirEntry> {
+    let roots = source_roots();
+    assert!(
+        !roots.is_empty(),
+        "no crate source directories under {}; the metrics scan would cover nothing",
+        workspace_root().join("crates").display()
+    );
+    roots
+        .into_iter()
+        .flat_map(|root| WalkDir::new(root).into_iter().filter_map(Result::ok))
+}
+
+/// Whether `haystack` contains `needle` as a whole word.
+///
+/// The bare substring test flags domain vocabulary: `kwavers-driver` models PCB
+/// signal integrity, where "via stub" and `high_speed_stub_violations` are the
+/// standard terms, and 29 of the first honest run's 49 hits were those. A check
+/// that cries wolf is a check that gets ignored, which is the same failure as
+/// one that never runs.
+fn contains_word(haystack: &str, needle: &str) -> bool {
+    let mut from = 0;
+    while let Some(offset) = haystack[from..].find(needle) {
+        let start = from + offset;
+        let end = start + needle.len();
+        let before_ok = start == 0
+            || !haystack[..start]
+                .chars()
+                .next_back()
+                .is_some_and(|c| c.is_alphanumeric() || c == '_');
+        let after_ok = end == haystack.len()
+            || !haystack[end..]
+                .chars()
+                .next()
+                .is_some_and(|c| c.is_alphanumeric() || c == '_');
+        if before_ok && after_ok {
+            return true;
+        }
+        from = end;
+    }
+    false
 }
 
 /// Check module sizes against GRASP principles (<500 lines)
@@ -168,7 +231,7 @@ fn check_module_sizes() -> Result<()> {
 
     let mut violations = Vec::new();
 
-    for entry in WalkDir::new(src_root()).into_iter().filter_map(|e| e.ok()) {
+    for entry in walk_sources() {
         if entry.path().extension().is_some_and(|ext| ext == "rs") {
             let content = fs::read_to_string(entry.path())
                 .with_context(|| format!("Failed to read {}", entry.path().display()))?;
@@ -253,7 +316,7 @@ fn audit_naming() -> Result<()> {
     )
     .expect("valid regex");
 
-    for entry in WalkDir::new(src_root()).into_iter().filter_map(|e| e.ok()) {
+    for entry in walk_sources() {
         if entry.path().extension().is_some_and(|ext| ext == "rs") {
             let content = fs::read_to_string(entry.path())
                 .with_context(|| format!("Failed to read {}", entry.path().display()))?;
@@ -354,7 +417,7 @@ fn check_stubs() -> Result<()> {
         "not implemented",
     ];
 
-    for entry in WalkDir::new(src_root()).into_iter().filter_map(|e| e.ok()) {
+    for entry in walk_sources() {
         if entry.path().extension().is_some_and(|ext| ext == "rs") {
             // Skip xtask and tool files to avoid false positives
             if entry.path().to_string_lossy().contains("xtask")
@@ -369,7 +432,16 @@ fn check_stubs() -> Result<()> {
 
             for (line_num, line) in lines.iter().enumerate() {
                 for pattern in &stub_patterns {
-                    if line.contains(pattern)
+                    // Word-prefixed patterns ("stub", "placeholder") match whole
+                    // words only; the macro and marker patterns keep the plain
+                    // substring test because `todo!` and `FIXME` cannot appear
+                    // inside a longer identifier.
+                    let hit = if *pattern == "stub" || *pattern == "placeholder" {
+                        contains_word(line, pattern)
+                    } else {
+                        line.contains(pattern)
+                    };
+                    if hit
                         && !line.trim_start().starts_with("//")  // Skip comments
                         && !line.contains("\"")                 // Skip string literals
                         && !line.contains("&amp;")                 // Skip HTML entities
@@ -471,7 +543,7 @@ fn check_configs() -> Result<()> {
     let mut config_count = 0;
     let mut configs = Vec::new();
 
-    for entry in WalkDir::new(src_root()).into_iter().filter_map(|e| e.ok()) {
+    for entry in walk_sources() {
         if entry.path().extension().is_some_and(|ext| ext == "rs") {
             let content = fs::read_to_string(entry.path())
                 .with_context(|| format!("Failed to read {}", entry.path().display()))?;
@@ -508,7 +580,7 @@ fn check_configs() -> Result<()> {
 
 /// Check architecture for layer violations and cross-contamination
 fn check_architecture(markdown: bool, strict: bool) -> Result<()> {
-    let src_root = src_root();
+    let src_root = workspace_root().join("crates");
 
     if !src_root.exists() {
         eprintln!("❌ Source directory not found: {}", src_root.display());
