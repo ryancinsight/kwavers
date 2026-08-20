@@ -159,12 +159,13 @@
   and the mdBook test/build gates pass.
 
 - **2-D workflow structure:** Multi-scale skull FWI, the frequency schedule, and
-  planar artifact output now live in the typed
-  `seismic_imaging/{planar_inversion,planar_schedule,planar_reporting}.rs`
-  leaves. The 2-D entry point is 463 lines and retains only stage orchestration.
-  The exact local package-plus-example Nextest gate passes 116/116 in 42.155
-  seconds; strict example Clippy, the Kwavers doctest (1/1), and both mdBook
-  test/build gates pass.
+  planar artifact reporting now live in typed
+  `seismic_imaging/{planar_inversion,planar_schedule,planar_reporting,planar_artifacts,planar_auxiliary}.rs`
+  leaves. The 2-D entry point is 465 lines, and every seismic artifact leaf is
+  below the 500-line target (`planar_artifacts.rs` is 488 lines). The exact
+  local package-plus-example Nextest gate passes 116/116 in 43.857 seconds
+  (run `676e5159-36d2-424d-b3d9-11f0b0e95cec`); strict example Clippy, the
+  Kwavers doctest (1/1), and both mdBook test/build gates pass.
 
 - **Breaking CT skull material boundary:** `AcousticSkullProperties` now stores
   validated Aequitas velocity, mass-density, reciprocal-length attenuation,

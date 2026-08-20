@@ -1,13 +1,16 @@
 ## KW-EXAMPLES-115 — Seismic example partition closure 2026-08-20
 
 The transcranial FWI entry points are manifests over SRP leaf modules: the 3-D
-workflow is 347 lines and the 2-D workflow is 463 lines. The fixed-grid
+workflow is 347 lines and the 2-D workflow is 465 lines. The fixed-grid
 configuration remains a zero-sized owner with associated constants, while
 synthetic phantom, CT reader, acquisition geometry, metrics, inversion, and
-artifact reporting each have one canonical module. Exact local package-plus-
-example Nextest run `33af4f2b-9838-4fae-9fff-d060968a110c` passes 116/116 in
-42.155 seconds; strict example Clippy, the Kwavers doctest (1/1), and the
-mdBook test/build gates pass. No fallback or compatibility path is added.
+artifact reporting each have one canonical module. Planar artifact writers are
+split between `planar_artifacts.rs` (488 lines) and `planar_auxiliary.rs` (235
+lines), keeping every seismic leaf below the 500-line target. Exact local
+package-plus-example Nextest run `676e5159-36d2-424d-b3d9-11f0b0e95cec`
+passes 116/116 in 43.857 seconds; strict example Clippy, the Kwavers doctest
+(1/1), and the mdBook test/build gates pass. No fallback or compatibility path
+is added.
 
 The residual is hosted PR verification and merge of the exact pushed head.
 

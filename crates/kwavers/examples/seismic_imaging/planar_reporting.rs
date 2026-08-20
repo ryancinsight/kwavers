@@ -4,7 +4,7 @@ use super::seismic_imaging::ct::CtVolume;
 use super::seismic_imaging::medium::SkullModel;
 use super::{
     Array3, BRAIN_C_MAX, BRAIN_C_MIN, C_HI, C_LO, COLORBAR_H, KwaversError, KwaversResult, PANEL,
-    seismic_acquisition, seismic_planar_artifacts,
+    seismic_acquisition, seismic_planar_artifacts, seismic_planar_auxiliary,
 };
 use std::path::PathBuf;
 
@@ -74,7 +74,7 @@ pub(super) fn write_outputs(request: PlanarOutput<'_>) -> KwaversResult<()> {
         &active_elements,
     )
     .map_err(|error| KwaversError::InvalidInput(format!("velocity panel write failed: {error}")))?;
-    seismic_planar_artifacts::write_brain_prior_png(
+    seismic_planar_auxiliary::write_brain_prior_png(
         &brain_prior_path,
         phantom.hu(),
         &shot_positions,
@@ -83,9 +83,9 @@ pub(super) fn write_outputs(request: PlanarOutput<'_>) -> KwaversResult<()> {
     .map_err(|error| {
         KwaversError::InvalidInput(format!("brain prior PNG write failed: {error}"))
     })?;
-    seismic_planar_artifacts::write_rtm_panel(&rtm_path, rtm_image)
+    seismic_planar_auxiliary::write_rtm_panel(&rtm_path, rtm_image)
         .map_err(|error| KwaversError::InvalidInput(format!("RTM panel write failed: {error}")))?;
-    seismic_planar_artifacts::write_velocity_csv(
+    seismic_planar_auxiliary::write_velocity_csv(
         &csv_path,
         true_model,
         initial_model,
@@ -94,7 +94,7 @@ pub(super) fn write_outputs(request: PlanarOutput<'_>) -> KwaversResult<()> {
     .map_err(|error| KwaversError::InvalidInput(format!("CSV write failed: {error}")))?;
 
     if let (Some(brain_true), Some(brain_reconstructed)) = (brain_true, brain_reconstructed) {
-        seismic_planar_artifacts::write_brain_tissue_png(
+        seismic_planar_auxiliary::write_brain_tissue_png(
             &brain_tissue_path,
             brain_true,
             brain_reconstructed,

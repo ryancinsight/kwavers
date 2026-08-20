@@ -101,6 +101,8 @@ mod seismic_metrics;
 mod seismic_phantom;
 #[path = "seismic_imaging/planar_artifacts.rs"]
 mod seismic_planar_artifacts;
+#[path = "seismic_imaging/planar_auxiliary.rs"]
+mod seismic_planar_auxiliary;
 #[path = "seismic_imaging/planar_inversion.rs"]
 mod seismic_planar_inversion;
 #[path = "seismic_imaging/planar_reporting.rs"]
