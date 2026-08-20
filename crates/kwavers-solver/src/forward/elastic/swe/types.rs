@@ -154,6 +154,29 @@ impl ElasticWaveField {
     }
 }
 
+/// Displacement-only checkpoint for adjoint correlation.
+///
+/// Elastic FWI needs the three displacement components from every forward
+/// step, but not the velocity components. Keeping this distinct internal type
+/// makes that storage contract explicit and halves the retained wave-field
+/// arrays without changing the propagated state.
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct ElasticDisplacementSnapshot {
+    pub(crate) ux: Array3<f64>,
+    pub(crate) uy: Array3<f64>,
+    pub(crate) uz: Array3<f64>,
+}
+
+impl From<&ElasticWaveField> for ElasticDisplacementSnapshot {
+    fn from(field: &ElasticWaveField) -> Self {
+        Self {
+            ux: field.ux.clone(),
+            uy: field.uy.clone(),
+            uz: field.uz.clone(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -1081,26 +1081,37 @@ markers without changing the numerical contract.
 - Versioning: `kwavers-medium` 3.0.0 → 4.0.0; ADR 038 records the public
   removal and value-preservation theorem.
 
-## KW-SOL-058 — Elide elastic-FWI objective histories [patch] — in-progress
+## KW-SOL-058 — Restore elastic-FWI hosted runtime budget [patch] — in-progress
 
 - Owner: Codex `/root`; last-update: 2026-08-20; scope:
-  `crates/kwavers-solver/src/forward/elastic/swe/core/solver/point_force_drive.rs`,
-  `crates/kwavers-solver/src/inverse/elastography/elastic_fwi/mod.rs`, and
-  synchronized PM evidence.
-- Acceptance: observed-data synthesis and objective-only FWI forward runs
-  retain receiver traces directly, preserve exact trace values relative to the
-  full-history propagator, and complete the lesion-reconstruction contract
-  under the existing CI timeout.
-- Evidence: hosted job `87949355634` timed out the FWI contract at 90.010 s
-  despite `--test-threads=1`. The new exact trace-equivalence regression passes,
-  and the full FWI contract passes locally in 29.123 s; a fresh hosted matrix
-  remains the closure gate.
+  elastic SWE point-force/stress/integration modules, elastic-FWI
+  gradient/inversion modules, ADR 033, the elastography book chapter, and
+  synchronized release evidence. Inputs, iteration counts, value assertions,
+  and Nextest budgets are non-goals.
+- Acceptance: singleton-z in-plane propagation is exactly equivalent to the
+  spatial operator, retained forward state contains only gradient-consumed
+  displacements, accepted line-search histories are reused, the complete 2-D
+  and 3-D elastic-FWI contracts pass unchanged, and exact-head hosted execution
+  completes below the 30-second slow-test target.
+- Entry evidence: hosted job `87949355634` timed out the FWI contract at
+  90.010 s despite `--test-threads=1`. A prior trace-only change passed locally
+  in 29.123 s but never closed the hosted matrix.
 - Takeover evidence: current-main Architecture Validation run `32333948199`
   completes the unchanged contract in 57.544 s, while PR #426 exact-head run
   `32336386162` terminates it at 60.010 s. The prior local result did not close
   the hosted runtime defect. The workload, assertions, and 60 s termination
-  contract remain fixed; this item now owns the production-path reduction that
-  restores margin below the 30 s slow-test target.
+  contract remain fixed.
+- Current evidence: controlled warm-cache Nextest samples moved from
+  10.080/10.000/9.421 seconds (10.000-second median) to
+  4.952/4.964/4.910 seconds (4.952-second median), a 50.5% production-path
+  reduction. Exact plane-strain stress, propagation, displacement-history, and
+  gradient-oracle tests pass; the complete elastic-FWI suite passes 8/8 in
+  13.552 seconds; the serial solver library gate passes 1,013/1,013 with four
+  skipped in 143.899 seconds; warning-denied all-target Clippy passes. Solver
+  doctests pass 7 with eight environment-specific cases ignored, and mdBook
+  test/build pass. Native sampling was attempted but Windows denied both
+  `dtrace` and `blondie` without administrator privileges. Exact-head hosted
+  validation remains the closure gate.
 
 ## KW-CI-057 — Serialize full workspace test processes [patch] — superseded
 

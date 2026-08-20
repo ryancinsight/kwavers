@@ -29,7 +29,7 @@
 //!
 //! 2-D plane strain (`nz = 1`) and full 3-D, with `μ` as the only inversion
 //! parameter (`ρ` and `λ` remain fixed from the medium).
-//! The forward field history is stored in full (`O(n_steps·N)`): the PML +
+//! The forward displacement history is stored (`O(n_steps·N)`): the PML +
 //! velocity-Verlet stepping is **not** time-reversible, so the acoustic
 //! self-adjoint reconstruction trick (ADR 016) does not apply. Adjoint states
 //! are consumed by the gradient kernel as they are produced, retaining only
@@ -52,9 +52,8 @@ use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use leto::Array3;
 
-use crate::forward::elastic::swe::{
-    ElasticPointForce, ElasticWaveConfig, ElasticWaveField, ElasticWaveSolver,
-};
+use crate::forward::elastic::swe::types::ElasticDisplacementSnapshot;
+use crate::forward::elastic::swe::{ElasticPointForce, ElasticWaveConfig, ElasticWaveSolver};
 
 /// Per-receiver, per-step displacement traces: `traces[receiver][step] = [ux, uy, uz]`.
 pub type ReceiverTraces = Vec<Vec<[f64; 3]>>;
@@ -214,7 +213,7 @@ impl ElasticFwi {
 
 /// Sample per-receiver displacement traces from a forward/adjoint history.
 pub(super) fn sample_receivers(
-    history: &[ElasticWaveField],
+    history: &[ElasticDisplacementSnapshot],
     receivers: &[(usize, usize, usize)],
 ) -> ReceiverTraces {
     receivers

@@ -4,6 +4,16 @@
 
 ### Changed
 
+- **Elastic FWI runtime and structure:** Singleton-z in-plane point-force
+  propagation now selects a zero-sized plane-strain mode once, avoiding the
+  out-of-plane stress, acceleration, integration, damping, and gradient work
+  that is analytically zero. The adjoint retains displacement-only forward
+  checkpoints, and steepest-descent iterations reuse the accepted line-search
+  history instead of propagating that model twice. The unchanged
+  `fwi_outperforms_linear_inversion` contract drops from a 10.000-second local
+  median to 4.952 seconds; exact differential tests pin the optimized 2-D
+  operators to the full 3-D formulas.
+
 - **Attenuation example structure and documentation:** The heterogeneous
   power-law attenuation replication now separates configuration, propagation,
   measurement, experiments, and artifacts into named modules and has a
