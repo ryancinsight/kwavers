@@ -532,6 +532,15 @@
   `mdbook build docs/book` pass. The 2-D entry point is 860 lines and the 3-D
   entry point is 799 lines, so 3-D inversion and reporting still require
   partitioning before `KW-EXAMPLES-115` can close.
+- 2026-08-20 3-D reporting slice: output-directory validation and orthogonal
+  skull, T1, and brain-tissue artifact writes now live in
+  `seismic_imaging/volume_reporting.rs`; the entry point delegates the complete
+  output contract through one typed boundary. Exact example Nextest run
+  `d5b20341-82fa-4e7c-9567-b37021b00e46` passes 77/77 (one slow comparison at
+  40.959 seconds); strict all-example Clippy, `mdbook test docs/book`, and
+  `mdbook build docs/book` pass. The 2-D entry point is 860 lines and the 3-D
+  entry point is 718 lines, so 3-D inversion still requires partitioning before
+  `KW-EXAMPLES-115` can close.
 - 2026-08-20 example-gate runtime slice: the focused water-tank comparison's
   independent FDTD, PSTD, DG-2D, DG-3D, and DG-3D-CPML branches now overlap
   through the provider-owned Moirai `Parallel` join. The complete example

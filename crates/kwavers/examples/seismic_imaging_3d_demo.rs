@@ -28,6 +28,8 @@ mod seismic_volume_brain_model;
 mod seismic_volume_initial_model;
 #[path = "seismic_imaging/volume_phantom.rs"]
 mod seismic_volume_phantom;
+#[path = "seismic_imaging/volume_reporting.rs"]
+mod seismic_volume_reporting;
 use seismic_metrics::{print_quality_pairs, print_quality_report};
 
 use anyhow::Context as _;
@@ -37,8 +39,6 @@ use kwavers_grid::Grid;
 use kwavers_solver::inverse::fwi::time_domain::{FwiGeometry, FwiProcessor};
 use kwavers_solver::inverse::seismic::parameters::{FwiParameters, RegularizationParameters};
 use leto::{Array2, Array3};
-use seismic_imaging::render::{put_pixel, velocity_color, write_png};
-use std::path::PathBuf;
 use std::time::Instant;
 
 #[path = "support/brain_prior.rs"]
@@ -178,22 +178,6 @@ fn print_quality_report_brain(true_model: &Array3<f64>, reconstructed: &Array3<f
 // ─────────────────────────────────────────────────────────────────────────────
 // Image output
 // ─────────────────────────────────────────────────────────────────────────────
-
-/// Blue ← white → red diverging colormap.
-#[allow(dead_code)]
-fn diverging_color(value: f64, max_abs: f64) -> [u8; 3] {
-    if max_abs < f64::EPSILON {
-        return [200, 200, 200];
-    }
-    let t = (value / max_abs).clamp(-1.0, 1.0);
-    if t >= 0.0 {
-        let gb = (255.0 * (1.0 - t)) as u8;
-        [255, gb, gb]
-    } else {
-        let rg = (255.0 * (1.0 + t)) as u8;
-        [rg, rg, 255]
-    }
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Main
@@ -707,81 +691,16 @@ fn main() -> KwaversResult<()> {
             }
         };
 
-    // ── Image output ──────────────────────────────────────────────────────
-    let output_dir: PathBuf = std::env::args()
+    let output_dir = std::env::args()
         .nth(1)
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from("target/seismic_imaging_3d_demo"));
-
-    std::fs::create_dir_all(&output_dir)
-        .map_err(|e| KwaversError::InvalidInput(format!("cannot create output dir: {e}")))?;
-
-    let abs_dir = std::fs::canonicalize(&output_dir).map_err(|error| {
-        KwaversError::InvalidInput(format!("cannot canonicalize output dir: {error}"))
-    })?;
-
-    // Skull velocity colourmap bounds.
-    let c_lo = SOUND_SPEED_WATER_SIM;
-    let c_hi = kwavers_core::constants::acoustic_parameters::SOUND_SPEED_SKULL_CORTICAL;
-
-    let axial_path = abs_dir.join("brain3d_fwi_axial.png");
-    let coronal_path = abs_dir.join("brain3d_fwi_coronal.png");
-    let sagittal_path = abs_dir.join("brain3d_fwi_sagittal.png");
-    let t1_tissue_path = abs_dir.join("brain3d_t1_tissue.png");
-    let brain_tissue_path = abs_dir.join("brain3d_brain_tissue.png");
-
-    // Three-plane skull FWI images (write from reconstructed model).
-    seismic_volume_artifacts::write_orthogonal_slices_png(&axial_path, &reconstructed, c_lo, c_hi)
-        .map_err(|e| KwaversError::InvalidInput(format!("axial PNG write failed: {e}")))?;
-
-    seismic_volume_artifacts::write_orthogonal_slices_png(
-        &coronal_path,
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| std::path::PathBuf::from("target/seismic_imaging_3d_demo"));
+    seismic_volume_reporting::write_outputs(
+        output_dir,
         &reconstructed,
-        c_lo,
-        c_hi,
-    )
-    .map_err(|e| KwaversError::InvalidInput(format!("coronal PNG write failed: {e}")))?;
-
-    seismic_volume_artifacts::write_orthogonal_slices_png(
-        &sagittal_path,
-        &reconstructed,
-        c_lo,
-        c_hi,
-    )
-    .map_err(|e| KwaversError::InvalidInput(format!("sagittal PNG write failed: {e}")))?;
-
-    // T1-derived tissue velocity image.
-    if let Some(t1_brain) = &t1_brain_model {
-        seismic_volume_artifacts::write_orthogonal_slices_png(
-            &t1_tissue_path,
-            t1_brain,
-            BRAIN_C_MIN,
-            BRAIN_C_MAX,
-        )
-        .map_err(|e| KwaversError::InvalidInput(format!("T1 tissue PNG write failed: {e}")))?;
-        println!("  T1 tissue image  : {}", t1_tissue_path.display());
-    }
-
-    // Brain tissue FWI result image.
-    if let Some(bt_recon) = &brain_reconstructed {
-        seismic_volume_artifacts::write_orthogonal_slices_png(
-            &brain_tissue_path,
-            bt_recon,
-            BRAIN_C_MIN,
-            BRAIN_C_MAX,
-        )
-        .map_err(|e| KwaversError::InvalidInput(format!("brain tissue PNG write failed: {e}")))?;
-        println!("  Brain tissue image: {}", brain_tissue_path.display());
-    }
-
-    println!("\n  Output directory  : {}", abs_dir.display());
-    println!("\n  Wrote images:");
-    println!(
-        "    {}  (axial+coronal+sagittal skull velocity, reconstructed)",
-        axial_path.display()
-    );
-    println!("    {}", coronal_path.display());
-    println!("    {}", sagittal_path.display());
+        t1_brain_model.as_ref(),
+        brain_reconstructed.as_ref(),
+    )?;
 
     // ── Summary footer ────────────────────────────────────────────────────
     println!("\n  Physics references:");

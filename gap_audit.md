@@ -108,6 +108,15 @@ impulse-response tests cover the clamped 3-D kernel. Exact local Nextest run
 entry point is 799 lines; 3-D inversion and reporting still require
 partitioning, so `KW-EXAMPLES-115` remains in progress.
 
+Output-directory validation and orthogonal skull, T1, and brain-tissue artifact
+writes now have the `seismic_imaging/volume_reporting.rs` leaf; the entry point
+delegates the complete output contract through one typed boundary. Exact local
+Nextest run `d5b20341-82fa-4e7c-9567-b37021b00e46` passes 77/77 (one slow
+comparison at 40.959 seconds); strict all-example Clippy, `mdbook test docs/book`,
+and `mdbook build docs/book` pass. The 2-D entry point is 860 lines and the 3-D
+entry point is 718 lines; 3-D inversion still requires partitioning, so
+`KW-EXAMPLES-115` remains in progress.
+
 Synthetic skull construction, explicit CT loading, HU resampling, and
 brain-support filling now have the `seismic_imaging/phantom.rs` leaf; the
 brain-support classifier is owned by `brain_model.rs` and planar artifacts

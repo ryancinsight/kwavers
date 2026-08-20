@@ -1,6 +1,7 @@
 //! Orthogonal volume-rendering artifact for the 3-D seismic example.
 
-use super::{Array3, COLORBAR_H, NX, NY, NZ, PANEL, put_pixel, velocity_color, write_png};
+use super::seismic_imaging::render::{put_pixel, velocity_color, write_png};
+use super::{Array3, COLORBAR_H, NX, NY, NZ, PANEL};
 use std::path::Path;
 
 /// Write axial, coronal, and sagittal velocity slices with a shared colorbar.

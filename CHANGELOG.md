@@ -139,6 +139,13 @@
   Nextest gate passes 77/77 (one slow comparison at 43.001 seconds), strict
   example Clippy passes, and the mdBook test/build gates pass.
 
+- **3-D reporting structure:** Output-directory validation and orthogonal skull,
+  T1, and brain-tissue artifact writes now live in
+  `seismic_imaging/volume_reporting.rs`; the entry point delegates the complete
+  output contract through one typed boundary. The exact example Nextest gate
+  passes 77/77 (one slow comparison at 40.959 seconds), strict example Clippy
+  passes, and the mdBook test/build gates pass.
+
 - **Breaking CT skull material boundary:** `AcousticSkullProperties` now stores
   validated Aequitas velocity, mass-density, reciprocal-length attenuation,
   length, and optional shear velocity. `HeterogeneousSkull::from_ct_hill`
