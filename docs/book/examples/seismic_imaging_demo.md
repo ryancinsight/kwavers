@@ -6,7 +6,18 @@
 
 ## What This Example Demonstrates
 
-Transcranial ultrasound full-waveform inversion (FWI) — brain reconstruction from synthetic ultrasound data. Demonstrates the complete pipeline: skull CT phantom → acoustic forward simulation → adjoint-state gradient → iterative model update → brain image.
+Transcranial ultrasound full-waveform inversion (FWI) — brain reconstruction
+from an explicitly selected synthetic or CT input. The complete pipeline is:
+skull model → acoustic forward simulation → adjoint-state gradient → iterative
+model update → brain image.
+
+## Input mode
+
+The default is the deterministic analytical phantom. Select a real CT input
+without changing the workflow with
+`KWAVERS_SEISMIC_INPUT_MODE=ct:<path>`. A failed explicit CT load is an error;
+it never changes the run to a synthetic model. Outputs default below the
+example's `output/` directory (override with the first positional argument).
 
 ## Physics
 

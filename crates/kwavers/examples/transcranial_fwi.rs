@@ -17,16 +17,16 @@
 //!
 //! # Dataset
 //!
-//! This example ships with a self-contained synthetic skull phantom that
-//! reproduces the geometry and acoustic properties of a human head coronal
-//! cross-section.  To use real CT+MRI data instead:
+//! This example supports an explicit synthetic skull phantom or a real CT
+//! input. The synthetic mode reproduces the geometry and acoustic properties
+//! of a human head coronal cross-section. To use real CT data instead:
 //!
 //! 1. Download the **BabelBrain** dataset (CC-BY 4.0):
 //!    `https://doi.org/10.5281/zenodo.7894431`
 //!    (5 subjects; skull CT + co-registered T1 MRI; ~270 GB total)
 //!
-//! 2. Extract a single NIfTI file, e.g. `sub-001_CT.nii.gz`, and pass its
-//!    path to `load_ct_slice()` at the top of `main()`.
+//! 2. Extract a single NIfTI file, e.g. `sub-001_CT.nii.gz`, and select it with
+//!    `KWAVERS_SEISMIC_INPUT_MODE=ct:sub-001_CT.nii.gz`.
 //!
 //! # Skull phantom
 //!
@@ -77,7 +77,7 @@
 //! - BabelBrain dataset: Pineda-Pardo, J.A. et al. (2023). Zenodo 7894431.
 
 use aequitas::systems::si::quantities::{Frequency, Pressure, Time};
-use kwavers_core::error::KwaversResult;
+use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 use kwavers_signal::DomainRickerWavelet;
 use kwavers_solver::inverse::fwi::time_domain::{FwiGeometry, FwiProcessor};
@@ -86,6 +86,10 @@ use kwavers_source::{GridSource, SourceMode};
 use leto::{Array2, Array3};
 use ritk_io::domain::ImageReader;
 use std::time::Instant;
+
+#[path = "support/seismic_input.rs"]
+mod seismic_input;
+use seismic_input::SeismicInputMode;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Grid and phantom constants
@@ -261,20 +265,29 @@ fn build_skull_phantom() -> SkullPhantom {
 ///
 /// # Returns
 ///
-/// `None` if the file cannot be opened. The example falls back to the synthetic
-/// phantom in that case.
+/// Returns a typed input error when the file cannot be opened or its dimensions
+/// cannot supply a valid volume.
 fn load_ct_slice(
     ct_nifti_path: &str,
     _mri_nifti_path: &str,
     _slice_index: usize,
-) -> Option<SkullPhantom> {
+) -> KwaversResult<SkullPhantom> {
     use ritk_io::format::nifti::native::NiftiReader;
 
     let reader = NiftiReader::new(coeus_core::SequentialBackend);
-    let obj = reader.read(ct_nifti_path).ok()?;
+    let obj = reader.read(ct_nifti_path).map_err(|error| {
+        KwaversError::InvalidInput(format!(
+            "CT NIfTI read failed for {ct_nifti_path}: {error:?}"
+        ))
+    })?;
     let spacing = obj.spacing();
     let _voxel_spacing_mm = [spacing[0], spacing[1], spacing[2]];
     let dims = obj.shape();
+    if dims.contains(&0) {
+        return Err(KwaversError::InvalidInput(format!(
+            "CT NIfTI has an empty dimension: {dims:?}"
+        )));
+    }
     let volume = obj.data_vec();
     let (vol_nx, vol_ny, vol_nz) = (dims[0], dims[1], dims[2]);
 
@@ -292,7 +305,18 @@ fn load_ct_slice(
         for k in 0..NZ {
             let src_i = ((i as f64 * scale_x) as usize).min(vol_nx - 1);
             let src_k = ((k as f64 * scale_z) as usize).min(vol_nz - 1);
-            let voxel = data[src_i * vol_ny * vol_nz + coronal_idx * vol_nz + src_k];
+            let index = src_i
+                .checked_mul(vol_ny)
+                .and_then(|value| value.checked_mul(vol_nz))
+                .and_then(|value| value.checked_add(coronal_idx * vol_nz))
+                .and_then(|value| value.checked_add(src_k))
+                .ok_or_else(|| KwaversError::InvalidInput("CT voxel index overflow".to_owned()))?;
+            let voxel = *data.get(index).ok_or_else(|| {
+                KwaversError::InvalidInput(format!(
+                    "CT voxel index {index} exceeds {} loaded values",
+                    data.len()
+                ))
+            })?;
             for j in 0..NY {
                 hu[[i, j, k]] = voxel;
             }
@@ -301,7 +325,7 @@ fn load_ct_slice(
 
     let sound_speed = hu.mapv(hu_to_sound_speed);
     let density = hu.mapv(hu_to_density);
-    Some(SkullPhantom {
+    Ok(SkullPhantom {
         hu,
         sound_speed,
         density,
@@ -497,26 +521,25 @@ fn main() -> KwaversResult<()> {
     // ── 1. Skull phantom ──────────────────────────────────────────────────
     println!("[ 1 / 5 ]  Building skull phantom …");
 
-    // Try to load real BabelBrain CT data; fall back to synthetic phantom.
-    // To use real data: download from https://doi.org/10.5281/zenodo.7894431
-    // and set CT_PATH / MRI_PATH to the file locations.
-    let ct_path = std::env::var("TRANSCRANIAL_CT_PATH").unwrap_or_default();
-    let mri_path = std::env::var("TRANSCRANIAL_MRI_PATH").unwrap_or_default();
-
-    let phantom = if !ct_path.is_empty() {
-        match load_ct_slice(&ct_path, &mri_path, 0) {
-            Some(p) => {
-                println!("  Loaded real CT from {ct_path}");
-                p
-            }
-            None => {
-                println!("  WARNING: could not load {ct_path} — using synthetic phantom");
-                build_skull_phantom()
-            }
+    let input_mode = SeismicInputMode::from_env("KWAVERS_SEISMIC_INPUT_MODE")
+        .map_err(KwaversError::InvalidInput)?;
+    let phantom = match input_mode {
+        SeismicInputMode::Synthetic => {
+            println!("  Input mode       : synthetic analytical skull");
+            build_skull_phantom()
         }
-    } else {
-        println!("  Using synthetic skull phantom (set TRANSCRANIAL_CT_PATH for real data)");
-        build_skull_phantom()
+        SeismicInputMode::Ct(path) => {
+            println!("  Input mode       : CT {}", path.display());
+            let path = path.to_str().ok_or_else(|| {
+                KwaversError::InvalidInput("CT input path is not valid UTF-8".to_owned())
+            })?;
+            load_ct_slice(path, "", 0)?
+        }
+        SeismicInputMode::CtMri { .. } => {
+            return Err(KwaversError::InvalidInput(
+                "transcranial_fwi accepts synthetic or ct:<path> input only".to_owned(),
+            ));
+        }
     };
 
     // ── Print phantom statistics ───────────────────────────────────────────
@@ -734,9 +757,8 @@ fn main() -> KwaversResult<()> {
     println!("    Tarantola 1984 — adjoint-state FWI gradient");
     println!("    Virieux & Operto 2009 — FWI objective and chain rule");
     println!();
-    println!("  To use real BabelBrain CT+MRI data:");
-    println!("    export TRANSCRANIAL_CT_PATH=sub-001_CT.nii.gz");
-    println!("    export TRANSCRANIAL_MRI_PATH=sub-001_T1w.nii.gz");
+    println!("  To use an explicit BabelBrain CT input:");
+    println!("    set KWAVERS_SEISMIC_INPUT_MODE=ct:sub-001_CT.nii.gz");
     println!("    cargo run --example transcranial_fwi");
     println!("═══════════════════════════════════════════════════════════");
 

@@ -6,7 +6,11 @@
 
 ## What This Example Demonstrates
 
-This example demonstrates adjoint-state full-wave inversion for transcranial ultrasound. By default it uses a self-contained skull phantom, but the same code path can be redirected to real NIfTI-based CT/MRI data for more realistic studies.
+This example demonstrates adjoint-state full-wave inversion for transcranial
+ultrasound. Its input is explicit: `KWAVERS_SEISMIC_INPUT_MODE=synthetic`
+selects the self-contained skull phantom, while `ct:<path>` selects a real CT
+NIfTI volume. A CT read failure is returned as an input error rather than
+silently switching models.
 
 | Component | API | Value |
 |---|---|---|
@@ -32,7 +36,8 @@ const NZ: usize = 64;
 
 ## Expected Output (if applicable)
 
-The run prints phantom and inversion summaries and can be extended to real-image input when the optional NIfTI path is enabled.
+The run prints phantom and inversion summaries. Outputs are written under the
+example output directory; no dataset is downloaded or generated implicitly.
 
 ## Book Chapter
 

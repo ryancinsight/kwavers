@@ -2,7 +2,7 @@
 //
 // Extends seismic_imaging_demo.rs (2D quasi-3D: NX=64, NY=2, NZ=64) to full 3D
 // (NX=64, NY=48, NZ=64) with a Fibonacci-sphere acquisition geometry, trilinear
-// CT resampling, 3D MNI atlas brain velocity, and T1 MRI tissue mapping.
+// CT resampling, and explicit co-registered T1 MRI input selection.
 //
 // Compile: cargo check --release --example seismic_imaging_3d_demo
 //
@@ -35,6 +35,13 @@ use std::fs::File;
 use std::io::{self, BufWriter};
 use std::path::{Path, PathBuf};
 use std::time::Instant;
+
+#[path = "support/brain_prior.rs"]
+mod brain_prior;
+#[path = "support/seismic_input.rs"]
+mod seismic_input;
+use brain_prior::BrainPriorMode;
+use seismic_input::SeismicInputMode;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Grid constants — TRUE 3D (NY = 48, not 2)
@@ -123,23 +130,6 @@ const COLORBAR_H: usize = 20; // colorbar height below each panel
 // ─────────────────────────────────────────────────────────────────────────────
 // Dataset paths (compile-time constants, derived from CARGO_MANIFEST_DIR)
 // ─────────────────────────────────────────────────────────────────────────────
-
-const DEFAULT_CT_NIFTI: &str = concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../data/niivue/CT_Philips.nii.gz"
-);
-const DEFAULT_T1_MRI: &str = concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../data/niivue/chris_t1.nii.gz"
-);
-const DEFAULT_MNI_DIR: &str = concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../data/mni_icbm152_2009c/mni_icbm152_nlin_sym_09c"
-);
-const DEFAULT_MEDIMODEL_DIR: &str = concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../data/medimodel_human_skull_2/dicom/DICOM"
-);
 
 /// Phase-correction example Medimodel series UID.
 const DEFAULT_MEDIMODEL_SERIES_UID: &str =
@@ -782,8 +772,47 @@ fn build_brain_velocity_from_t1(
     model
 }
 
+/// Build a deterministic homogeneous brain prior without external datasets.
+fn build_uniform_brain_velocity_3d(skull_phantom: &SkullPhantom) -> Array3<f64> {
+    let mut model = skull_phantom.sound_speed.clone();
+    let cx = NX as f64 / 2.0;
+    let cy = NY as f64 / 2.0;
+    let cz = NZ as f64 / 2.0;
+    for ix in 0..NX {
+        for iy in 0..NY {
+            for iz in 0..NZ {
+                let dx = ix as f64 - cx;
+                let dy = iy as f64 - cy;
+                let dz = iz as f64 - cz;
+                if (dx * dx + dy * dy + dz * dz).sqrt() < R_SKULL_IN {
+                    model[[ix, iy, iz]] = C_WATER;
+                }
+            }
+        }
+    }
+    model
+}
+
+fn build_brain_prior_3d(
+    skull_phantom: &SkullPhantom,
+    prior: &BrainPriorMode,
+) -> anyhow::Result<Array3<f64>> {
+    match prior {
+        BrainPriorMode::Uniform => Ok(build_uniform_brain_velocity_3d(skull_phantom)),
+        BrainPriorMode::Mni(path) | BrainPriorMode::MniT1 { mni: path, .. } => {
+            build_brain_velocity_3d(skull_phantom, path)
+        }
+        BrainPriorMode::T1(path) => {
+            let (t1, spacing) = load_t1_mri(path).with_context(|| {
+                format!("explicit T1 prior could not be loaded: {}", path.display())
+            })?;
+            Ok(build_brain_velocity_from_t1(skull_phantom, &t1, spacing))
+        }
+    }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
-// Synthetic skull phantom (fallback)
+// Synthetic skull phantom
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Build a synthetic 3D spherical skull phantom.
@@ -830,55 +859,30 @@ fn build_skull_phantom_3d() -> SkullPhantom {
     }
 }
 
-/// Build the 3D phantom, loading real CT when available.
-///
-/// Priority:
-/// 1. `KWAVERS_SEISMIC_CT_PATH` env var
-/// 2. DEFAULT_CT_NIFTI (CT_Philips.nii.gz)
-/// 3. DEFAULT_MEDIMODEL_DIR (DICOM fallback)
-/// 4. Synthetic spherical phantom
-fn build_phantom_3d() -> (SkullPhantom, Option<CtVolume>) {
-    let ct_path = std::env::var("KWAVERS_SEISMIC_CT_PATH")
-        .map(PathBuf::from)
-        .ok()
-        .or_else(|| {
-            let p = PathBuf::from(DEFAULT_CT_NIFTI);
-            p.exists().then_some(p)
-        })
-        .or_else(|| {
-            let p = PathBuf::from(DEFAULT_MEDIMODEL_DIR);
-            p.exists().then_some(p)
-        });
+/// Build the 3D phantom for an explicit input mode.
+fn build_phantom_3d(input: &SeismicInputMode) -> anyhow::Result<(SkullPhantom, Option<CtVolume>)> {
+    let (SeismicInputMode::Ct(path) | SeismicInputMode::CtMri { ct: path, .. }) = input else {
+        println!("  Phantom         : synthetic 3D spherical model");
+        return Ok((build_skull_phantom_3d(), None));
+    };
 
-    if let Some(ct_path) = ct_path {
-        print!("  CT source       : {}  ", ct_path.display());
-        match load_ct_volume(&ct_path) {
-            Ok(vol) => {
-                let [cx, cy, nz] = vol.hu.shape();
-                println!(
-                    "({cx}×{cy}×{nz} voxels @ [{:.2},{:.2},{:.2}] mm)",
-                    vol.spacing_mm[0], vol.spacing_mm[1], vol.spacing_mm[2]
-                );
-                let hu_fwi = resample_ct_to_fwi_grid_3d(&vol);
-                let sound_speed = hu_fwi.mapv(hu_to_sound_speed);
-                let density = hu_fwi.mapv(hu_to_density);
-                let phantom = SkullPhantom {
-                    sound_speed,
-                    density,
-                    hu: hu_fwi,
-                };
-                return (phantom, Some(vol));
-            }
-            Err(e) => {
-                eprintln!("\n  CT load failed: {e:#}");
-                eprintln!("  Falling back to synthetic phantom.");
-            }
-        }
-    } else {
-        eprintln!("  No CT found at default paths; set KWAVERS_SEISMIC_CT_PATH to override.");
-    }
-    println!("  Phantom         : synthetic 3D spherical fallback");
-    (build_skull_phantom_3d(), None)
+    print!("  CT source       : {}  ", path.display());
+    let vol = load_ct_volume(path)
+        .with_context(|| format!("explicit CT input could not be loaded: {}", path.display()))?;
+    let [cx, cy, nz] = vol.hu.shape();
+    println!(
+        "({cx}×{cy}×{nz} voxels @ [{:.2},{:.2},{:.2}] mm)",
+        vol.spacing_mm[0], vol.spacing_mm[1], vol.spacing_mm[2]
+    );
+    let hu_fwi = resample_ct_to_fwi_grid_3d(&vol);
+    let sound_speed = hu_fwi.mapv(hu_to_sound_speed);
+    let density = hu_fwi.mapv(hu_to_density);
+    let phantom = SkullPhantom {
+        sound_speed,
+        density,
+        hu: hu_fwi,
+    };
+    Ok((phantom, Some(vol)))
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1308,8 +1312,11 @@ fn main() -> KwaversResult<()> {
     println!("╚══════════════════════════════════════════════════════════╝\n");
 
     // ── [ 1 / 7 ]  3D skull phantom ──────────────────────────────────────
-    println!("[ 1 / 7 ]  Building 3D skull phantom (CT_Philips.nii.gz) …");
-    let (phantom, _ct_vol) = build_phantom_3d();
+    let input_mode = SeismicInputMode::from_env("KWAVERS_SEISMIC_INPUT_MODE")
+        .map_err(KwaversError::InvalidInput)?;
+    println!("[ 1 / 7 ]  Building 3D skull phantom ({input_mode:?}) …");
+    let (phantom, _ct_vol) = build_phantom_3d(&input_mode)
+        .map_err(|error| KwaversError::InvalidInput(error.to_string()))?;
 
     let _c_min = phantom
         .sound_speed
@@ -1323,34 +1330,27 @@ fn main() -> KwaversResult<()> {
         .fold(f64::NEG_INFINITY, f64::max);
 
     // ── [ 2 / 7 ]  T1 MRI ────────────────────────────────────────────────
-    println!("\n[ 2 / 7 ]  Loading T1 MRI (chris_t1.nii.gz) …");
+    println!("\n[ 2 / 7 ]  Loading explicit T1 MRI input …");
 
-    let t1_path = std::env::var("KWAVERS_T1_MRI_PATH")
-        .map(PathBuf::from)
-        .ok()
-        .unwrap_or_else(|| PathBuf::from(DEFAULT_T1_MRI));
-
-    let t1_result = if t1_path.exists() {
-        match load_t1_mri(&t1_path) {
-            Ok(r) => {
-                let [t1_nx, t1_ny, t1_nz] = r.0.shape();
-                println!(
-                    "  T1 loaded       : {t1_nx}×{t1_ny}×{t1_nz} voxels @ [{:.2},{:.2},{:.2}] mm",
-                    r.1[0], r.1[1], r.1[2]
-                );
-                Some(r)
-            }
-            Err(e) => {
-                eprintln!("  T1 MRI load failed: {e:#}; skipping T1-derived model.");
-                None
-            }
+    let t1_result = match &input_mode {
+        SeismicInputMode::CtMri { mri, .. } => {
+            let result = load_t1_mri(mri).with_context(|| {
+                format!(
+                    "explicit T1 MRI input could not be loaded: {}",
+                    mri.display()
+                )
+            })?;
+            let [t1_nx, t1_ny, t1_nz] = result.0.shape();
+            println!(
+                "  T1 loaded       : {t1_nx}×{t1_ny}×{t1_nz} voxels @ [{:.2},{:.2},{:.2}] mm",
+                result.1[0], result.1[1], result.1[2]
+            );
+            Some(result)
         }
-    } else {
-        eprintln!(
-            "  T1 MRI not found at '{}'; skipping T1-derived model.",
-            t1_path.display()
-        );
-        None
+        SeismicInputMode::Synthetic | SeismicInputMode::Ct(_) => {
+            println!("  T1 mode         : disabled for this explicit input selection");
+            None
+        }
     };
 
     // ── [ 3 / 7 ]  Computational grid ────────────────────────────────────
@@ -1632,19 +1632,17 @@ fn main() -> KwaversResult<()> {
         }
     );
 
-    // ── [ 7 / 7 ]  Stage-2 brain tissue FWI (skull frozen, T1+MNI prior) ─
-    println!("\n[ 7 / 7 ]  Stage-2 3D brain tissue FWI (skull frozen, T1+MNI prior) …");
-
-    let mni_dir = std::env::var("KWAVERS_MNI_DIR")
-        .map(PathBuf::from)
-        .ok()
-        .unwrap_or_else(|| PathBuf::from(DEFAULT_MNI_DIR));
+    // ── [ 7 / 7 ]  Stage-2 brain tissue FWI ─────────────────────────────
+    let brain_prior =
+        BrainPriorMode::from_env("KWAVERS_BRAIN_PRIOR").map_err(KwaversError::InvalidInput)?;
+    println!("\n[ 7 / 7 ]  Stage-2 3D brain tissue FWI ({brain_prior:?}) …");
 
     let (_brain_true_model, brain_reconstructed, t1_brain_model) =
-        match build_brain_velocity_3d(&phantom, &mni_dir) {
+        match build_brain_prior_3d(&phantom, &brain_prior) {
             Err(e) => {
-                eprintln!("  MNI tissue maps unavailable ({e:#}); skipping Stage 2.");
-                (None, None, None)
+                return Err(KwaversError::InvalidInput(format!(
+                    "selected brain prior failed: {e:#}"
+                )));
             }
             Ok(brain_true) => {
                 // Skull mask: bone voxels frozen at CT-derived velocity.
@@ -1666,9 +1664,18 @@ fn main() -> KwaversResult<()> {
                 println!("  True brain c      : [{bt_min:.1}, {bt_max:.1}] m/s");
 
                 // Build T1-derived initial brain model when T1 was loaded.
-                let t1_brain = t1_result
-                    .as_ref()
-                    .map(|(t1_vol, t1_sp)| build_brain_velocity_from_t1(&phantom, t1_vol, *t1_sp));
+                let t1_brain = match (&brain_prior, t1_result.as_ref()) {
+                    (_, Some((t1_vol, t1_sp))) => {
+                        Some(build_brain_velocity_from_t1(&phantom, t1_vol, *t1_sp))
+                    }
+                    (BrainPriorMode::T1(path) | BrainPriorMode::MniT1 { t1: path, .. }, None) => {
+                        let (t1_vol, t1_sp) = load_t1_mri(path).with_context(|| {
+                            format!("explicit T1 prior could not be loaded: {}", path.display())
+                        })?;
+                        Some(build_brain_velocity_from_t1(&phantom, &t1_vol, t1_sp))
+                    }
+                    _ => None,
+                };
 
                 // Brain FWI initial model: T1-derived if available, otherwise uniform water.
                 let mut brain_initial = match &t1_brain {

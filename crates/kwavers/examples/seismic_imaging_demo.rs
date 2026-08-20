@@ -105,6 +105,13 @@ use std::io::{self, BufWriter, Write};
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
+#[path = "support/brain_prior.rs"]
+mod brain_prior;
+#[path = "support/seismic_input.rs"]
+mod seismic_input;
+use brain_prior::BrainPriorMode;
+use seismic_input::SeismicInputMode;
+
 // CT loading imports (ritk required-feature)
 use anyhow::Context as _;
 use coeus_core::MoiraiBackend;
@@ -172,14 +179,6 @@ const C_CORTICAL: f64 = 2900.0; // sound speed in dense cortical bone [m/s]
 const RHO_WATER: f64 = 1000.0; // density of water [kg/m³]
 const RHO_CORTICAL: f64 = 1900.0; // density of cortical bone [kg/m³]
 
-/// Repository-local Medimodel skull CT used by `skull_ct_phase_correction.rs`.
-/// Absolute path derived at compile time from CARGO_MANIFEST_DIR so the binary
-/// resolves the dataset regardless of the working directory it is invoked from.
-const DEFAULT_MEDIMODEL_DICOM_DIR: &str = concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../data/medimodel_human_skull_2/dicom/DICOM"
-);
-
 /// Phase-correction example Medimodel series UID.  The directory contains
 /// additional derived CT series with inconsistent orientation; this UID is the
 /// same 67-slice skull CT series used by the companion example.
@@ -219,14 +218,6 @@ const N_BRAIN_ITER: usize = 20;
 
 /// Step size for brain tissue FWI (smaller than skull FWI — brain Δc is tiny).
 const STEP_SIZE_BRAIN: f64 = 30.0; // m/s per normalised gradient step
-
-/// Repository-local MNI ICBM 2009c NIfTI directory (downloaded from BIC MNI).
-/// Contains GM / WM / CSF tissue probability maps at 1 mm isotropic resolution.
-/// Download: https://www.bic.mni.mcgill.ca/~vfonov/icbm/2009/mni_icbm152_nlin_sym_09c_nifti.zip
-const DEFAULT_MNI_DIR: &str = concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../data/mni_icbm152_2009c/mni_icbm152_nlin_sym_09c"
-);
 
 /// MNI ICBM 2009c inner-skull radius at the coronal mid-plane `mm`.
 /// The inner cortical surface is ≈ 82 mm from the brain centroid in this atlas.
@@ -405,6 +396,39 @@ fn build_brain_velocity_model(
     }
 
     Ok(brain_model)
+}
+
+/// Build a deterministic homogeneous brain prior without external datasets.
+fn build_uniform_brain_velocity_model(skull_phantom: &SkullPhantom) -> Array3<f64> {
+    let mut brain_model = skull_phantom.sound_speed.clone();
+    let cx = NX as f64 / 2.0;
+    let cz = NZ as f64 / 2.0;
+    for ix in 0..NX {
+        for iz in 0..NZ {
+            let dx = ix as f64 - cx;
+            let dz = iz as f64 - cz;
+            if (dx * dx + dz * dz).sqrt() >= R_SKULL_IN {
+                continue;
+            }
+            for iy in 0..NY {
+                brain_model[[ix, iy, iz]] = C_WATER;
+            }
+        }
+    }
+    brain_model
+}
+
+fn build_brain_prior(
+    skull_phantom: &SkullPhantom,
+    prior: &BrainPriorMode,
+) -> anyhow::Result<Array3<f64>> {
+    match prior {
+        BrainPriorMode::Uniform => Ok(build_uniform_brain_velocity_model(skull_phantom)),
+        BrainPriorMode::Mni(path) => build_brain_velocity_model(skull_phantom, path),
+        BrainPriorMode::T1(_) | BrainPriorMode::MniT1 { .. } => {
+            anyhow::bail!("the 2-D workflow accepts uniform or mni:<directory> brain priors")
+        }
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1114,58 +1138,35 @@ fn resample_ct_to_fwi_grid(vol: &CtVolume) -> Array3<f64> {
     result
 }
 
-/// Build the skull phantom, loading real CT when available.
-///
-/// Priority:
-/// 1. `KWAVERS_SEISMIC_CT_PATH` env var (DICOM dir or NIfTI file).
-/// 2. `TRANSCRANIAL_CT_PATH` env var for compatibility with older examples.
-/// 3. Repository-local Medimodel DICOM directory used by the phase demo.
-/// 4. Synthetic circular phantom — last-resort fallback only if CT load fails.
-///
-/// Priority: KWAVERS_SEISMIC_CT_PATH env var → TRANSCRANIAL_CT_PATH env var →
-/// repository-local Medimodel DICOM at DEFAULT_MEDIMODEL_DICOM_DIR.
-fn build_phantom_for_demo() -> (SkullPhantom, Option<CtVolume>) {
-    let ct_path = std::env::var("KWAVERS_SEISMIC_CT_PATH")
-        .or_else(|_| std::env::var("TRANSCRANIAL_CT_PATH"))
-        .map(PathBuf::from)
-        .ok()
-        .or_else(|| {
-            let default_path = PathBuf::from(DEFAULT_MEDIMODEL_DICOM_DIR);
-            default_path.exists().then_some(default_path)
-        });
-
-    if let Some(ct_path) = ct_path {
-        print!("  CT source       : {}  ", ct_path.display());
-        match load_ct_volume(&ct_path) {
-            Ok(vol) => {
-                let [cx, cy, nz] = vol.hu.shape();
-                println!(
-                    "({cx}×{cy}×{nz} voxels @ [{:.2},{:.2},{:.2}] mm)",
-                    vol.spacing_mm[0], vol.spacing_mm[1], vol.spacing_mm[2]
-                );
-                let hu_fwi = resample_ct_to_fwi_grid(&vol);
-                let sound_speed = hu_fwi.mapv(hu_to_sound_speed);
-                let density = hu_fwi.mapv(hu_to_density);
-                let phantom = SkullPhantom {
-                    sound_speed,
-                    density,
-                    hu: hu_fwi,
-                };
-                return (phantom, Some(vol));
-            }
-            Err(e) => {
-                eprintln!("\n  CT load failed: {e:#}");
-                eprintln!("  Falling back to synthetic phantom.");
-            }
+/// Build the skull phantom for an explicit input mode.
+fn build_phantom_for_demo(
+    input: &SeismicInputMode,
+) -> anyhow::Result<(SkullPhantom, Option<CtVolume>)> {
+    let SeismicInputMode::Ct(path) = input else {
+        if matches!(input, SeismicInputMode::CtMri { .. }) {
+            anyhow::bail!("the 2-D seismic workflow accepts synthetic or ct:<path> input only");
         }
-    } else {
-        eprintln!(
-            "  No CT found at default path '{}'; set KWAVERS_SEISMIC_CT_PATH to override.",
-            DEFAULT_MEDIMODEL_DICOM_DIR
-        );
-    }
-    println!("  Phantom         : synthetic fallback");
-    (build_skull_phantom(), None)
+        println!("  Phantom         : synthetic analytical skull");
+        return Ok((build_skull_phantom(), None));
+    };
+
+    print!("  CT source       : {}  ", path.display());
+    let vol = load_ct_volume(path)
+        .with_context(|| format!("explicit CT input could not be loaded: {}", path.display()))?;
+    let [cx, cy, nz] = vol.hu.shape();
+    println!(
+        "({cx}×{cy}×{nz} voxels @ [{:.2},{:.2},{:.2}] mm)",
+        vol.spacing_mm[0], vol.spacing_mm[1], vol.spacing_mm[2]
+    );
+    let hu_fwi = resample_ct_to_fwi_grid(&vol);
+    let sound_speed = hu_fwi.mapv(hu_to_sound_speed);
+    let density = hu_fwi.mapv(hu_to_density);
+    let phantom = SkullPhantom {
+        sound_speed,
+        density,
+        hu: hu_fwi,
+    };
+    Ok((phantom, Some(vol)))
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2094,7 +2095,11 @@ fn main() -> KwaversResult<()> {
 
     // ── 1. Skull phantom ──────────────────────────────────────────────────
     println!("[ 1 / 6 ]  Building skull phantom …");
-    let (phantom, ct_vol) = build_phantom_for_demo();
+    let input_mode = SeismicInputMode::from_env("KWAVERS_SEISMIC_INPUT_MODE")
+        .map_err(KwaversError::InvalidInput)?;
+    println!("  Input mode       : {input_mode:?}");
+    let (phantom, ct_vol) = build_phantom_for_demo(&input_mode)
+        .map_err(|error| KwaversError::InvalidInput(error.to_string()))?;
 
     let c_min = phantom
         .sound_speed
@@ -2455,128 +2460,130 @@ fn main() -> KwaversResult<()> {
     println!("  J reduction       : {j_reduction_pct:7.1} %  (150 kHz joint L2)");
 
     // ── 6. Stage-2 brain tissue FWI (Guasch 2020 style) ─────────────────
-    println!("\n[ 6 / 7 ]  Stage-2 brain tissue FWI (skull frozen, MNI tissue prior) …");
+    let brain_prior =
+        BrainPriorMode::from_env("KWAVERS_BRAIN_PRIOR").map_err(KwaversError::InvalidInput)?;
+    println!("\n[ 6 / 7 ]  Stage-2 brain tissue FWI ({brain_prior:?}) …");
 
-    let (brain_true_model, brain_reconstructed) =
-        match build_brain_velocity_model(&phantom, Path::new(DEFAULT_MNI_DIR)) {
-            Err(e) => {
-                eprintln!("  MNI tissue maps unavailable ({e:#}); skipping Stage 2.");
-                (None, None)
-            }
-            Ok(brain_true) => {
-                // Skull mask: bone voxels frozen at CT-derived velocity.
-                let skull_mask = build_skull_mask(&phantom.sound_speed);
-                let n_frozen = skull_mask.iter().filter(|&&b| b).count();
-                let n_free = skull_mask.len() - n_frozen;
-                println!(
+    let (brain_true_model, brain_reconstructed) = match build_brain_prior(&phantom, &brain_prior) {
+        Err(e) => {
+            return Err(KwaversError::InvalidInput(format!(
+                "selected brain prior failed: {e:#}"
+            )));
+        }
+        Ok(brain_true) => {
+            // Skull mask: bone voxels frozen at CT-derived velocity.
+            let skull_mask = build_skull_mask(&phantom.sound_speed);
+            let n_frozen = skull_mask.iter().filter(|&&b| b).count();
+            let n_free = skull_mask.len() - n_frozen;
+            println!(
                 "  Skull mask        : {n_frozen} frozen bone voxels, {n_free} free brain voxels"
             );
 
-                // Velocity range of the true brain tissue model (brain only).
-                let (bt_min, bt_max) = skull_mask
-                    .indexed_iter()
-                    .filter(|(_, &frozen)| !frozen)
-                    .map(|([ix, iy, iz], _)| brain_true[[ix, iy, iz]])
-                    .fold((f64::INFINITY, f64::NEG_INFINITY), |(mn, mx), c| {
-                        (mn.min(c), mx.max(c))
-                    });
-                println!("  True brain c      : [{bt_min:.1}, {bt_max:.1}] m/s");
-
-                // Stage-2 FWI processor: brain tissue frequencies + tight bounds.
-                let nt_brain = {
-                    // Total sim time: 3 Ricker half-periods + full domain transit.
-                    let domain_transit_s = (NX as f64 * DX) / C_WATER;
-                    let source_dur_s = 3.0 / F0_BRAIN_HZ;
-                    ((domain_transit_s + source_dur_s) / dt).ceil() as usize
-                };
-                let fwi_brain = FwiProcessor::new(FwiParameters {
-                    max_iterations: N_BRAIN_ITER,
-                    frequency: F0_BRAIN_HZ,
-                    nt: nt_brain,
-                    dt,
-                    n_trace: N_RECEIVERS,
-                    n_depth: 1,
-                    step_size: STEP_SIZE_BRAIN,
-                    tolerance: 1e-14,
-                    regularization: RegularizationParameters {
-                        tikhonov_weight: 0.0,
-                        tv_weight: 0.0,
-                        directional_tv_weight: 0.0,
-                        directional_tv_adaptive: false,
-                        smoothness_weight: 0.0,
-                    },
-                    source_mute_radius: 2,
-                    ..FwiParameters::default()
+            // Velocity range of the true brain tissue model (brain only).
+            let (bt_min, bt_max) = skull_mask
+                .indexed_iter()
+                .filter(|(_, &frozen)| !frozen)
+                .map(|([ix, iy, iz], _)| brain_true[[ix, iy, iz]])
+                .fold((f64::INFINITY, f64::NEG_INFINITY), |(mn, mx), c| {
+                    (mn.min(c), mx.max(c))
                 });
+            println!("  True brain c      : [{bt_min:.1}, {bt_max:.1}] m/s");
 
-                // Generate observed gathers using the true brain tissue model.
-                let mut brain_shots: Vec<(FwiGeometry, Array2<f64>)> = Vec::with_capacity(N_SHOTS);
-                let t_brain_obs = Instant::now();
-                for &element_index in &TRANSMIT_ELEMENT_INDICES {
-                    let geom = build_shot(element_index, F0_BRAIN_HZ, nt_brain, dt)?;
-                    match fwi_brain.generate_synthetic_data(&brain_true, &geom, &grid) {
-                        Ok(obs) => brain_shots.push((geom, obs)),
-                        Err(e) => {
-                            eprintln!("  Brain gather failed for element {element_index}: {e:#}");
-                        }
-                    }
-                }
-                println!(
-                    "  {N_SHOTS} brain gathers at {:.0} kHz ({:.1} s)",
-                    F0_BRAIN_HZ * 1e-3,
-                    t_brain_obs.elapsed().as_secs_f32()
-                );
+            // Stage-2 FWI processor: brain tissue frequencies + tight bounds.
+            let nt_brain = {
+                // Total sim time: 3 Ricker half-periods + full domain transit.
+                let domain_transit_s = (NX as f64 * DX) / C_WATER;
+                let source_dur_s = 3.0 / F0_BRAIN_HZ;
+                ((domain_transit_s + source_dur_s) / dt).ceil() as usize
+            };
+            let fwi_brain = FwiProcessor::new(FwiParameters {
+                max_iterations: N_BRAIN_ITER,
+                frequency: F0_BRAIN_HZ,
+                nt: nt_brain,
+                dt,
+                n_trace: N_RECEIVERS,
+                n_depth: 1,
+                step_size: STEP_SIZE_BRAIN,
+                tolerance: 1e-14,
+                regularization: RegularizationParameters {
+                    tikhonov_weight: 0.0,
+                    tv_weight: 0.0,
+                    directional_tv_weight: 0.0,
+                    directional_tv_adaptive: false,
+                    smoothness_weight: 0.0,
+                },
+                source_mute_radius: 2,
+                ..FwiParameters::default()
+            });
 
-                if brain_shots.is_empty() {
-                    eprintln!("  No brain shots succeeded; skipping Stage 2.");
-                    (Some(brain_true), None)
-                } else {
-                    // Initial brain model: uniform water inside skull, bone frozen.
-                    let mut brain_initial =
-                        skull_mask.mapv(|frozen| if frozen { 0.0_f64 } else { C_WATER });
-                    // Fill frozen voxels with CT skull velocity for the reference model.
-                    let [bi_nx, bi_ny, bi_nz] = brain_initial.shape();
-                    for i in 0..bi_nx {
-                        for j in 0..bi_ny {
-                            for k in 0..bi_nz {
-                                if skull_mask[[i, j, k]] {
-                                    brain_initial[[i, j, k]] = phantom.sound_speed[[i, j, k]];
-                                }
-                            }
-                        }
-                    }
-
-                    println!(
-                        "  Running {N_BRAIN_ITER} iterations at {:.0} kHz (nt={nt_brain}) …",
-                        F0_BRAIN_HZ * 1e-3
-                    );
-                    let t_brain_inv = Instant::now();
-                    match fwi_brain.invert_multi_source_masked(
-                        &brain_shots,
-                        &brain_initial,
-                        &phantom.sound_speed, // skull reference (frozen voxels)
-                        &skull_mask,
-                        BRAIN_C_MIN,
-                        BRAIN_C_MAX,
-                        &grid,
-                    ) {
-                        Ok(brain_recon) => {
-                            println!(
-                                "  Brain FWI done ({:.1} s)",
-                                t_brain_inv.elapsed().as_secs_f32()
-                            );
-                            println!("  Quality (brain voxels only, r < R_SKULL_IN):");
-                            print_quality_report_brain(&brain_true, &brain_recon);
-                            (Some(brain_true), Some(brain_recon))
-                        }
-                        Err(e) => {
-                            eprintln!("  Brain FWI failed: {e:#}");
-                            (Some(brain_true), None)
-                        }
+            // Generate observed gathers using the true brain tissue model.
+            let mut brain_shots: Vec<(FwiGeometry, Array2<f64>)> = Vec::with_capacity(N_SHOTS);
+            let t_brain_obs = Instant::now();
+            for &element_index in &TRANSMIT_ELEMENT_INDICES {
+                let geom = build_shot(element_index, F0_BRAIN_HZ, nt_brain, dt)?;
+                match fwi_brain.generate_synthetic_data(&brain_true, &geom, &grid) {
+                    Ok(obs) => brain_shots.push((geom, obs)),
+                    Err(e) => {
+                        eprintln!("  Brain gather failed for element {element_index}: {e:#}");
                     }
                 }
             }
-        };
+            println!(
+                "  {N_SHOTS} brain gathers at {:.0} kHz ({:.1} s)",
+                F0_BRAIN_HZ * 1e-3,
+                t_brain_obs.elapsed().as_secs_f32()
+            );
+
+            if brain_shots.is_empty() {
+                eprintln!("  No brain shots succeeded; skipping Stage 2.");
+                (Some(brain_true), None)
+            } else {
+                // Initial brain model: uniform water inside skull, bone frozen.
+                let mut brain_initial =
+                    skull_mask.mapv(|frozen| if frozen { 0.0_f64 } else { C_WATER });
+                // Fill frozen voxels with CT skull velocity for the reference model.
+                let [bi_nx, bi_ny, bi_nz] = brain_initial.shape();
+                for i in 0..bi_nx {
+                    for j in 0..bi_ny {
+                        for k in 0..bi_nz {
+                            if skull_mask[[i, j, k]] {
+                                brain_initial[[i, j, k]] = phantom.sound_speed[[i, j, k]];
+                            }
+                        }
+                    }
+                }
+
+                println!(
+                    "  Running {N_BRAIN_ITER} iterations at {:.0} kHz (nt={nt_brain}) …",
+                    F0_BRAIN_HZ * 1e-3
+                );
+                let t_brain_inv = Instant::now();
+                match fwi_brain.invert_multi_source_masked(
+                    &brain_shots,
+                    &brain_initial,
+                    &phantom.sound_speed, // skull reference (frozen voxels)
+                    &skull_mask,
+                    BRAIN_C_MIN,
+                    BRAIN_C_MAX,
+                    &grid,
+                ) {
+                    Ok(brain_recon) => {
+                        println!(
+                            "  Brain FWI done ({:.1} s)",
+                            t_brain_inv.elapsed().as_secs_f32()
+                        );
+                        println!("  Quality (brain voxels only, r < R_SKULL_IN):");
+                        print_quality_report_brain(&brain_true, &brain_recon);
+                        (Some(brain_true), Some(brain_recon))
+                    }
+                    Err(e) => {
+                        eprintln!("  Brain FWI failed: {e:#}");
+                        (Some(brain_true), None)
+                    }
+                }
+            }
+        }
+    };
 
     // ── 7. RTM — zero-lag cross-correlation imaging ───────────────────────
     println!("\n[ 7 / 7 ]  Reverse Time Migration (reflectivity image) …");
@@ -2767,8 +2774,8 @@ fn main() -> KwaversResult<()> {
     println!("    Tarantola (1984)          — adjoint-state FWI gradient");
     println!("    Virieux & Operto (2009)   — FWI objective and chain rule");
     println!();
-    println!("  To use a different CT:");
-    println!("    set KWAVERS_SEISMIC_CT_PATH=path\\to\\ct_dicom_or_nifti");
+    println!("  To use an explicit CT input:");
+    println!("    set KWAVERS_SEISMIC_INPUT_MODE=ct:path\\to\\ct_dicom_or_nifti");
     println!("    cargo run --example seismic_imaging_demo");
     println!("═══════════════════════════════════════════════════════════");
 
