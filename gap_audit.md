@@ -70,6 +70,16 @@ boundary. Exact local Nextest run `0e396915-ab6b-42d4-bb15-e8577213310b` passes
 is 1,234 lines and the 3-D entry point is 1,382 lines; phantom, inversion, and
 reporting still require partitioning, so `KW-EXAMPLES-115` remains in progress.
 
+Synthetic skull construction, explicit CT loading, HU resampling, and
+brain-support filling now have the `seismic_imaging/phantom.rs` leaf; the
+brain-support classifier is owned by `brain_model.rs` and planar artifacts
+consume it through a sibling boundary. Exact local Nextest run
+`529c2f34-5d9a-45cb-86f9-fc32473623a6` passes 69/69 (one slow comparison at
+43.391 seconds); strict all-example Clippy, `mdbook test docs/book`, and
+`mdbook build docs/book` pass. The 2-D entry point is 1,089 lines and the 3-D
+entry point is 1,382 lines; inversion and reporting still require partitioning,
+so `KW-EXAMPLES-115` remains in progress.
+
 ## ATLAS-KWAVERS-HEPHAESTUS-FDTD-107 — Collocated FDTD provider cutover — Apollo co-evolution blocker 2026-08-18
 
 The old consumer-owned collocated FDTD implementation in

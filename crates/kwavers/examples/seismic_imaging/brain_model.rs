@@ -2,15 +2,38 @@
 
 use anyhow::Context as _;
 use coeus_core::MoiraiBackend;
-use leto::Array3;
+use leto::{Array2, Array3};
 use ritk_io::ImageReader;
 use ritk_io::format::nifti::native::NiftiReader as NativeNiftiReader;
 use std::path::Path;
 
+use super::seismic_imaging::medium::SkullModel;
 use super::{
     BONE_VELOCITY_THRESHOLD, BrainPriorMode, C_CSF, C_GRAY, C_WHITE, DX, MNI_INNER_SKULL_RADIUS_MM,
-    NX, NY, NZ, R_SKULL_IN, SOUND_SPEED_WATER_SIM, SkullModel,
+    NX, NY, NZ, R_SKULL_IN, SOUND_SPEED_WATER_SIM,
 };
+
+/// Estimate intracranial brain support from a CT-derived HU map.
+pub(super) fn brain_support_from_hu(hu: &Array3<f64>) -> Array2<bool> {
+    let mut mask = Array2::<bool>::from_elem((NX, NZ), false);
+    for iz in 0..NZ {
+        let bone: Vec<usize> = (0..NX).filter(|&ix| hu[[ix, 0, iz]] >= 250.0).collect();
+        if bone.len() < 2 {
+            continue;
+        }
+        let left = bone[0];
+        let right = *bone.last().expect("bone len checked");
+        if right <= left + 2 {
+            continue;
+        }
+        for ix in (left + 1)..right {
+            if hu[[ix, 0, iz]] < 250.0 {
+                mask[[ix, iz]] = true;
+            }
+        }
+    }
+    mask
+}
 
 // Stage-2 brain tissue helpers
 // ─────────────────────────────────────────────────────────────────────────────

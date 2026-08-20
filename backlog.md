@@ -464,6 +464,15 @@
   `mdbook build docs/book` pass. The 2-D entry point is 1,234 lines and the 3-D
   entry point is 1,382 lines, so phantom, inversion, and reporting still
   require partitioning before `KW-EXAMPLES-115` can close.
+- 2026-08-20 2-D phantom slice: synthetic skull construction, explicit CT
+  loading, HU resampling, and brain-support filling now live in
+  `seismic_imaging/phantom.rs`; the brain-support classifier is owned by
+  `brain_model.rs` and planar artifacts consume it through a sibling boundary.
+  Exact example Nextest run `529c2f34-5d9a-45cb-86f9-fc32473623a6` passes 69/69
+  (one slow comparison at 43.391 seconds); strict all-example Clippy,
+  `mdbook test docs/book`, and `mdbook build docs/book` pass. The 2-D entry
+  point is 1,089 lines and the 3-D entry point is 1,382 lines, so inversion and
+  reporting still require partitioning before `KW-EXAMPLES-115` can close.
 - 2026-08-20 example-gate runtime slice: the focused water-tank comparison's
   independent FDTD, PSTD, DG-2D, DG-3D, and DG-3D-CPML branches now overlap
   through the provider-owned Moirai `Parallel` join. The complete example

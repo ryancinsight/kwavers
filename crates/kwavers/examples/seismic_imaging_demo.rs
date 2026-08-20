@@ -93,6 +93,8 @@ mod seismic_brain_model;
 mod seismic_imaging;
 #[path = "seismic_imaging/metrics.rs"]
 mod seismic_metrics;
+#[path = "seismic_imaging/phantom.rs"]
+mod seismic_phantom;
 #[path = "seismic_imaging/planar_artifacts.rs"]
 mod seismic_planar_artifacts;
 use seismic_metrics::{print_quality_pairs, print_quality_report};
@@ -121,11 +123,6 @@ mod seismic_input;
 use brain_prior::BrainPriorMode;
 use seismic_input::SeismicInputMode;
 
-use anyhow::Context as _;
-use seismic_imaging::ct::{
-    CtVolume, load_ct_volume, skull_centroid_2d, skull_equator_z, skull_outer_radius_ct,
-};
-use seismic_imaging::medium::SkullModel;
 use seismic_imaging::render::{put_pixel, velocity_color, write_png};
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -222,59 +219,6 @@ const STEP_SIZE_BRAIN: f64 = 30.0; // m/s per normalised gradient step
 /// The inner cortical surface is ≈ 82 mm from the brain centroid in this atlas.
 const MNI_INNER_SKULL_RADIUS_MM: f64 = 82.0;
 
-// Skull phantom structure
-// ─────────────────────────────────────────────────────────────────────────────
-
-/// Build the synthetic skull phantom.
-///
-/// Each voxel is assigned an HU value based on its distance from the head
-/// centre (NX/2, NZ/2).  HU is then converted to c and ρ via Aubry (2003).
-///
-/// # Geometry (radii from centre in voxels)
-///
-/// | Region           | Radius range           | HU    |
-/// |------------------|------------------------|-------|
-/// | Water coupling   | r > R_HEAD             |     0 |
-/// | Scalp            | R_SKULL_OUT < r ≤ R_HEAD |  40 |
-/// | Outer cortical   | R_DIPLOE < r ≤ R_SKULL_OUT | 720 |
-/// | Diploe           | R_SKULL_IN < r ≤ R_DIPLOE  | 380 |
-/// | Inner cortical   | R_BRAIN < r ≤ R_SKULL_IN   | 660 |
-/// | Brain / CSF      | r ≤ R_BRAIN            |    35 |
-fn build_skull_phantom() -> KwaversResult<SkullModel> {
-    let cx = (NX / 2) as f64; // 32.0
-    let cz = (NZ / 2) as f64; // 32.0
-
-    let mut hu = Array3::<f64>::from_elem((NX, NY, NZ), HU_WATER);
-
-    for i in 0..NX {
-        for k in 0..NZ {
-            let dx = i as f64 - cx;
-            let dz = k as f64 - cz;
-            let r = (dx * dx + dz * dz).sqrt();
-
-            let voxel_hu = if r > R_HEAD {
-                HU_WATER
-            } else if r > R_SKULL_OUT {
-                HU_SCALP
-            } else if r > R_DIPLOE {
-                HU_CORTICAL_OUT
-            } else if r > R_SKULL_IN {
-                HU_DIPLOE
-            } else if r > R_BRAIN {
-                HU_CORTICAL_IN
-            } else {
-                HU_BRAIN
-            };
-
-            for j in 0..NY {
-                hu[[i, j, k]] = voxel_hu;
-            }
-        }
-    }
-
-    SkullModel::from_hu(hu)
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Gaussian blur for CT-derived initial model
 // ─────────────────────────────────────────────────────────────────────────────
@@ -355,95 +299,6 @@ fn gaussian_blur_xz(model: &Array3<f64>, sigma: f64) -> Array3<f64> {
     result
 }
 
-fn bilinear_hu(hu: &Array3<f64>, x: f64, y: f64, z: usize) -> f64 {
-    let [nx, ny, nz] = hu.shape();
-    if z >= nz {
-        return 0.0;
-    }
-    let clamp_x = |index: isize| index.clamp(0, nx as isize - 1) as usize;
-    let clamp_y = |index: isize| index.clamp(0, ny as isize - 1) as usize;
-    let x0 = x.floor() as isize;
-    let y0 = y.floor() as isize;
-    let fx = x - x.floor();
-    let fy = y - y.floor();
-    let h00 = hu[[clamp_x(x0), clamp_y(y0), z]];
-    let h10 = hu[[clamp_x(x0 + 1), clamp_y(y0), z]];
-    let h01 = hu[[clamp_x(x0), clamp_y(y0 + 1), z]];
-    let h11 = hu[[clamp_x(x0 + 1), clamp_y(y0 + 1), z]];
-    h00 * (1.0 - fx) * (1.0 - fy) + h10 * fx * (1.0 - fy) + h01 * (1.0 - fx) * fy + h11 * fx * fy
-}
-
-fn resample_ct_to_fwi_grid(vol: &CtVolume) -> Array3<f64> {
-    let hu = vol.hu();
-    let z_eq = skull_equator_z(hu);
-    let (cx, cy) = skull_centroid_2d(hu, z_eq);
-
-    // Detect skull outer radius in CT pixels and derive scale so the skull
-    // outer edge lands at R_HEAD FWI voxels from the grid centre.
-    let r_skull_ct = skull_outer_radius_ct(hu, z_eq, cx, cy);
-    let spacing_mm = vol.spacing_mm();
-    let scale = r_skull_ct / R_HEAD; // CT pixels per FWI voxel
-
-    println!(
-        "  CT skull radius : {r_skull_ct:.1} px × {:.2} mm/px = {:.0} mm",
-        spacing_mm[0],
-        r_skull_ct * spacing_mm[0]
-    );
-    println!(
-        "  FWI fit scale   : {scale:.2} CT px / FWI voxel  \
-              (skull outer edge → R_HEAD={R_HEAD} voxels)"
-    );
-
-    let mut result = Array3::<f64>::zeros((NX, NY, NZ));
-    for ix in 0..NX {
-        for iz in 0..NZ {
-            let x_ct = cx + (ix as f64 - NX as f64 / 2.0) * scale;
-            let y_ct = cy + (iz as f64 - NZ as f64 / 2.0) * scale;
-            let hu_val = bilinear_hu(hu, x_ct, y_ct, z_eq);
-            for iy in 0..NY {
-                result[[ix, iy, iz]] = hu_val;
-            }
-        }
-    }
-    let brain = seismic_planar_artifacts::brain_support_from_hu(&result);
-    for ix in 0..NX {
-        for iz in 0..NZ {
-            if brain[[ix, iz]] && result[[ix, 0, iz]] < 250.0 {
-                for iy in 0..NY {
-                    result[[ix, iy, iz]] = HU_BRAIN;
-                }
-            }
-        }
-    }
-    result
-}
-
-/// Build the skull phantom for an explicit input mode.
-fn build_phantom_for_demo(
-    input: &SeismicInputMode,
-) -> anyhow::Result<(SkullModel, Option<CtVolume>)> {
-    let SeismicInputMode::Ct(path) = input else {
-        if matches!(input, SeismicInputMode::CtMri { .. }) {
-            anyhow::bail!("the 2-D seismic workflow accepts synthetic or ct:<path> input only");
-        }
-        println!("  Phantom         : synthetic analytical skull");
-        return Ok((build_skull_phantom()?, None));
-    };
-
-    print!("  CT source       : {}  ", path.display());
-    let vol = load_ct_volume(path)
-        .with_context(|| format!("explicit CT input could not be loaded: {}", path.display()))?;
-    let [cx, cy, nz] = vol.hu().shape();
-    let spacing_mm = vol.spacing_mm();
-    println!(
-        "({cx}×{cy}×{nz} voxels @ [{:.2},{:.2},{:.2}] mm)",
-        spacing_mm[0], spacing_mm[1], spacing_mm[2]
-    );
-    let hu_fwi = resample_ct_to_fwi_grid(&vol);
-    let phantom = SkullModel::from_hu(hu_fwi)?;
-    Ok((phantom, Some(vol)))
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Reconstruction quality metrics
 // ─────────────────────────────────────────────────────────────────────────────
@@ -483,7 +338,7 @@ fn main() -> KwaversResult<()> {
     let input_mode = SeismicInputMode::from_env("KWAVERS_SEISMIC_INPUT_MODE")
         .map_err(KwaversError::InvalidInput)?;
     println!("  Input mode       : {input_mode:?}");
-    let (phantom, ct_vol) = build_phantom_for_demo(&input_mode)
+    let (phantom, ct_vol) = seismic_phantom::build_phantom_for_demo(&input_mode)
         .map_err(|error| KwaversError::InvalidInput(error.to_string()))?;
 
     let c_min = phantom
@@ -1223,7 +1078,7 @@ mod tests {
         hu[[20, 1, row]] = 500.0;
         hu[[44, 1, row]] = 500.0;
 
-        let mask = seismic_planar_artifacts::brain_support_from_hu(&hu);
+        let mask = seismic_brain_model::brain_support_from_hu(&hu);
 
         assert!(mask[[32, row]]);
         assert!(!mask[[20, row]]);

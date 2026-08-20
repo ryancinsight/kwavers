@@ -1,8 +1,11 @@
 //! Planar seismic artifact rendering.
 
+use leto::Array3;
+
+use super::seismic_imaging::ct::CtVolume;
 use super::{
-    Array2, Array3, BONE_VELOCITY_THRESHOLD, BRAIN_C_MAX, BRAIN_C_MIN, C_HI, C_LO, COLORBAR_H,
-    CtVolume, DX, NX, NZ, PANEL, R_SKULL_IN, put_pixel, velocity_color, write_png,
+    BONE_VELOCITY_THRESHOLD, BRAIN_C_MAX, BRAIN_C_MIN, C_HI, C_LO, COLORBAR_H, DX, NX, NZ, PANEL,
+    R_SKULL_IN, put_pixel, velocity_color, write_png,
 };
 use std::fs::File;
 use std::io::{self, BufWriter, Write};
@@ -487,33 +490,6 @@ pub(super) fn write_velocity_panels(
     Ok(())
 }
 
-/// Estimate intracranial brain support from the CT-derived HU map.
-///
-/// For each image row, the leftmost and rightmost bone voxels define the skull
-/// envelope. Non-bone voxels between those bounds are labelled brain/CSF. This
-/// fills skull-focused CT cavities with average parenchyma support for the FWI
-/// brain target and for the diagnostic prior image.
-pub(super) fn brain_support_from_hu(hu: &Array3<f64>) -> Array2<bool> {
-    let mut mask = Array2::<bool>::from_elem((NX, NZ), false);
-    for iz in 0..NZ {
-        let bone: Vec<usize> = (0..NX).filter(|&ix| hu[[ix, 0, iz]] >= 250.0).collect();
-        if bone.len() < 2 {
-            continue;
-        }
-        let left = bone[0];
-        let right = *bone.last().expect("bone len checked");
-        if right <= left + 2 {
-            continue;
-        }
-        for ix in (left + 1)..right {
-            if hu[[ix, 0, iz]] < 250.0 {
-                mask[[ix, iz]] = true;
-            }
-        }
-    }
-    mask
-}
-
 /// Write a CT-derived brain/skull prior PNG with the sparse transducer section.
 pub(super) fn write_brain_prior_png(
     path: &Path,
@@ -524,7 +500,7 @@ pub(super) fn write_brain_prior_png(
     let img_w = PANEL;
     let img_h = PANEL;
     let mut rgb = vec![0_u8; img_w * img_h * 3];
-    let brain = brain_support_from_hu(hu);
+    let brain = super::seismic_brain_model::brain_support_from_hu(hu);
 
     for py in 0..PANEL {
         for px in 0..PANEL {

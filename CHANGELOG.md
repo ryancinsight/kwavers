@@ -87,6 +87,13 @@
   69/69 (one slow comparison at 37.708 seconds), strict example Clippy passes,
   and the mdBook test/build gates pass.
 
+- **2-D phantom structure:** Synthetic skull construction, explicit CT loading,
+  HU resampling, and brain-support filling now live in
+  `seismic_imaging/phantom.rs`; the brain-support classifier is owned by
+  `brain_model.rs` and planar artifacts consume it through a sibling boundary.
+  The exact example Nextest gate passes 69/69 (one slow comparison at 43.391
+  seconds), strict example Clippy passes, and the mdBook test/build gates pass.
+
 - **Breaking CT skull material boundary:** `AcousticSkullProperties` now stores
   validated Aequitas velocity, mass-density, reciprocal-length attenuation,
   length, and optional shear velocity. `HeterogeneousSkull::from_ct_hill`
