@@ -1714,15 +1714,18 @@ fn main() -> KwaversResult<()> {
                 );
 
                 if brain_shots.is_empty() {
-                    eprintln!("  No brain shots succeeded; skipping Stage 2.");
-                    (Some(brain_true), None, t1_brain)
-                } else {
-                    println!(
-                        "  Running {n_brain_iter} iterations at {:.0} kHz (nt={nt_brain}) …",
-                        f0_brain * 1e-3
-                    );
-                    let t_brain_inv = Instant::now();
-                    match fwi_brain.invert_multi_source_masked(
+                    return Err(KwaversError::InvalidInput(format!(
+                        "brain FWI produced no successful gathers from {N_SHOTS_3D} shots"
+                    )));
+                }
+
+                println!(
+                    "  Running {n_brain_iter} iterations at {:.0} kHz (nt={nt_brain}) …",
+                    f0_brain * 1e-3
+                );
+                let t_brain_inv = Instant::now();
+                let brain_recon = fwi_brain
+                    .invert_multi_source_masked(
                         &brain_shots,
                         &brain_initial,
                         &phantom.acoustic().sound_speed,
@@ -1730,22 +1733,17 @@ fn main() -> KwaversResult<()> {
                         BRAIN_C_MIN,
                         BRAIN_C_MAX,
                         &grid,
-                    ) {
-                        Ok(brain_recon) => {
-                            println!(
-                                "  Brain FWI done ({:.1} s)",
-                                t_brain_inv.elapsed().as_secs_f32()
-                            );
-                            println!("  Quality (brain voxels only, r_3d < R_SKULL_IN):");
-                            print_quality_report_brain(&brain_true, &brain_recon);
-                            (Some(brain_true), Some(brain_recon), t1_brain)
-                        }
-                        Err(e) => {
-                            eprintln!("  Brain FWI failed: {e:#}");
-                            (Some(brain_true), None, t1_brain)
-                        }
-                    }
-                }
+                    )
+                    .map_err(|error| {
+                        KwaversError::InvalidInput(format!("brain FWI inversion failed: {error:#}"))
+                    })?;
+                println!(
+                    "  Brain FWI done ({:.1} s)",
+                    t_brain_inv.elapsed().as_secs_f32()
+                );
+                println!("  Quality (brain voxels only, r_3d < R_SKULL_IN):");
+                print_quality_report_brain(&brain_true, &brain_recon);
+                (Some(brain_true), Some(brain_recon), t1_brain)
             }
         };
 
@@ -1753,16 +1751,14 @@ fn main() -> KwaversResult<()> {
     let output_dir: PathBuf = std::env::args()
         .nth(1)
         .map(PathBuf::from)
-        .unwrap_or_else(|| {
-            PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                .join("examples")
-                .join("output")
-        });
+        .unwrap_or_else(|| PathBuf::from("target/seismic_imaging_3d_demo"));
 
     std::fs::create_dir_all(&output_dir)
         .map_err(|e| KwaversError::InvalidInput(format!("cannot create output dir: {e}")))?;
 
-    let abs_dir = std::fs::canonicalize(&output_dir).unwrap_or(output_dir.clone());
+    let abs_dir = std::fs::canonicalize(&output_dir).map_err(|error| {
+        KwaversError::InvalidInput(format!("cannot canonicalize output dir: {error}"))
+    })?;
 
     // Skull velocity colourmap bounds.
     let c_lo = SOUND_SPEED_WATER_SIM;

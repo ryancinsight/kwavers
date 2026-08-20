@@ -37,8 +37,9 @@ const NZ: usize = 64;
 ## Expected Output (if applicable)
 
 The run prints provider-derived HU and sound-speed ranges plus inversion
-summaries. Outputs are written under the example output directory; no dataset
-is downloaded or generated implicitly.
+summaries. Outputs are written under `target/` by default (or the explicit
+first positional output path); no dataset is downloaded or generated
+implicitly.
 
 ## Book Chapter
 

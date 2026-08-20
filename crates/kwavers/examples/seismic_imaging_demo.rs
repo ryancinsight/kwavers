@@ -472,13 +472,13 @@ const F0_HZ: f64 = 150_000.0;
 const P0_PA: f64 = 1.0e5;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Acquisition geometry — hemispherical arc
+// Acquisition geometry — full-ring section
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Number of active elements in the FWI full-ring section.
 const FWI_ACTIVE_ELEMENTS: usize = 16;
 
-/// Number of transmit sources on the full-ring arc (every other element).
+/// Number of transmit sources on the full-ring section (every other element).
 const N_SHOTS: usize = 8;
 
 /// Number of receivers for each shot: all active transducer samples except the
@@ -556,7 +556,7 @@ const ACTIVE_TRANSDUCER_POSITIONS: [(usize, usize); FWI_ACTIVE_ELEMENTS] = [
 /// diverse angular coverage across the full ring.
 const TRANSMIT_ELEMENT_INDICES: [usize; N_SHOTS] = [0, 2, 4, 6, 8, 10, 12, 14];
 
-/// Build the receiver mask on the same superior hemispherical transducer arc.
+/// Build the receiver mask on the same full-ring transducer section.
 ///
 /// The transmitting element is excluded to avoid a colocated source/receiver
 /// singular sample.  All remaining active transducer positions record.
@@ -2178,13 +2178,15 @@ fn main() -> KwaversResult<()> {
         );
     }
 
-    // ── 4. Hemispherical acquisition geometry ─────────────────────────────
-    println!("\n[ 4 / 6 ]  Building hemispherical acquisition geometry …");
+    // ── 4. Full-ring acquisition geometry ─────────────────────────────────
+    println!("\n[ 4 / 6 ]  Building full-ring acquisition geometry …");
     println!(
         "  Full aperture    : {TRANSCRANIAL_FOCUSED_BOWL_ELEMENT_COUNT} elements, 650 kHz design authority"
     );
     println!("  FWI section      : {FWI_ACTIVE_ELEMENTS} active full-ring samples");
-    println!("  Transmits        : {N_SHOTS} shots; receivers/shot = {N_RECEIVERS} on same arc");
+    println!(
+        "  Transmits        : {N_SHOTS} shots; receivers/shot = {N_RECEIVERS} on same full ring"
+    );
     for (s, &element_index) in TRANSMIT_ELEMENT_INDICES.iter().enumerate() {
         let (ix, iz) = ACTIVE_TRANSDUCER_POSITIONS[element_index];
         println!(
@@ -2487,36 +2489,38 @@ fn main() -> KwaversResult<()> {
             );
 
             if brain_shots.is_empty() {
-                eprintln!("  No brain shots succeeded; skipping Stage 2.");
-                (Some(brain_true), None)
-            } else {
-                // Initial brain model: uniform water inside skull, bone frozen.
-                let mut brain_initial = skull_mask.mapv(|frozen| {
-                    if frozen {
-                        0.0_f64
-                    } else {
-                        SOUND_SPEED_WATER_SIM
-                    }
-                });
-                // Fill frozen voxels with CT skull velocity for the reference model.
-                let [bi_nx, bi_ny, bi_nz] = brain_initial.shape();
-                for i in 0..bi_nx {
-                    for j in 0..bi_ny {
-                        for k in 0..bi_nz {
-                            if skull_mask[[i, j, k]] {
-                                brain_initial[[i, j, k]] =
-                                    phantom.acoustic().sound_speed[[i, j, k]];
-                            }
+                return Err(KwaversError::InvalidInput(format!(
+                    "brain FWI produced no successful gathers from {N_SHOTS} shots"
+                )));
+            }
+
+            // Initial brain model: uniform water inside skull, bone frozen.
+            let mut brain_initial = skull_mask.mapv(|frozen| {
+                if frozen {
+                    0.0_f64
+                } else {
+                    SOUND_SPEED_WATER_SIM
+                }
+            });
+            // Fill frozen voxels with CT skull velocity for the reference model.
+            let [bi_nx, bi_ny, bi_nz] = brain_initial.shape();
+            for i in 0..bi_nx {
+                for j in 0..bi_ny {
+                    for k in 0..bi_nz {
+                        if skull_mask[[i, j, k]] {
+                            brain_initial[[i, j, k]] = phantom.acoustic().sound_speed[[i, j, k]];
                         }
                     }
                 }
+            }
 
-                println!(
-                    "  Running {N_BRAIN_ITER} iterations at {:.0} kHz (nt={nt_brain}) …",
-                    F0_BRAIN_HZ * 1e-3
-                );
-                let t_brain_inv = Instant::now();
-                match fwi_brain.invert_multi_source_masked(
+            println!(
+                "  Running {N_BRAIN_ITER} iterations at {:.0} kHz (nt={nt_brain}) …",
+                F0_BRAIN_HZ * 1e-3
+            );
+            let t_brain_inv = Instant::now();
+            let brain_recon = fwi_brain
+                .invert_multi_source_masked(
                     &brain_shots,
                     &brain_initial,
                     &phantom.acoustic().sound_speed, // skull reference (frozen voxels)
@@ -2524,22 +2528,17 @@ fn main() -> KwaversResult<()> {
                     BRAIN_C_MIN,
                     BRAIN_C_MAX,
                     &grid,
-                ) {
-                    Ok(brain_recon) => {
-                        println!(
-                            "  Brain FWI done ({:.1} s)",
-                            t_brain_inv.elapsed().as_secs_f32()
-                        );
-                        println!("  Quality (brain voxels only, r < R_SKULL_IN):");
-                        print_quality_report_brain(&brain_true, &brain_recon);
-                        (Some(brain_true), Some(brain_recon))
-                    }
-                    Err(e) => {
-                        eprintln!("  Brain FWI failed: {e:#}");
-                        (Some(brain_true), None)
-                    }
-                }
-            }
+                )
+                .map_err(|error| {
+                    KwaversError::InvalidInput(format!("brain FWI inversion failed: {error:#}"))
+                })?;
+            println!(
+                "  Brain FWI done ({:.1} s)",
+                t_brain_inv.elapsed().as_secs_f32()
+            );
+            println!("  Quality (brain voxels only, r < R_SKULL_IN):");
+            print_quality_report_brain(&brain_true, &brain_recon);
+            (Some(brain_true), Some(brain_recon))
         }
     };
 
@@ -2582,7 +2581,7 @@ fn main() -> KwaversResult<()> {
     let rtm = RtmProcessor::new(rtm_settings);
     let rtm_image = rtm
         .migrate(&recv_snapshot, &recv_snapshot, &grid)
-        .unwrap_or_else(|_| Array3::<f64>::zeros((NX, NY, NZ)));
+        .map_err(|error| KwaversError::InvalidInput(format!("RTM migration failed: {error:#}")))?;
     let rtm_peak = rtm_image.iter().copied().fold(0.0_f64, f64::max);
     println!("  RTM image completed — peak amplitude: {rtm_peak:.4}");
 
@@ -2590,16 +2589,14 @@ fn main() -> KwaversResult<()> {
     let output_dir: PathBuf = std::env::args()
         .nth(1)
         .map(PathBuf::from)
-        .unwrap_or_else(|| {
-            PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                .join("examples")
-                .join("output")
-        });
+        .unwrap_or_else(|| PathBuf::from("target/seismic_imaging_demo"));
 
     std::fs::create_dir_all(&output_dir)
         .map_err(|e| KwaversError::InvalidInput(format!("cannot create output dir: {e}")))?;
 
-    let abs_dir = std::fs::canonicalize(&output_dir).unwrap_or(output_dir.clone());
+    let abs_dir = std::fs::canonicalize(&output_dir).map_err(|error| {
+        KwaversError::InvalidInput(format!("cannot canonicalize output dir: {error}"))
+    })?;
 
     let base = "brain_fwi";
     let three_plane_path = abs_dir.join(format!("{base}_three_plane.png"));
@@ -2745,9 +2742,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn superior_transducer_section_stays_outside_skull_and_cpml() {
+    fn full_ring_transducer_section_stays_outside_skull_and_cpml() {
         let cx = NX as f64 / 2.0;
         let cz = NZ as f64 / 2.0;
+        let mut has_superior = false;
+        let mut has_inferior = false;
         for &(ix, iz) in &ACTIVE_TRANSDUCER_POSITIONS {
             let r = ((ix as f64 - cx).powi(2) + (iz as f64 - cz).powi(2)).sqrt();
             assert!(
@@ -2758,11 +2757,13 @@ mod tests {
                 (10..54).contains(&ix) && (10..54).contains(&iz),
                 "element ({ix},{iz}) must stay inside CPML-free physical domain"
             );
-            assert!(
-                iz < NZ / 2,
-                "element ({ix},{iz}) must lie on the superior arc"
-            );
+            has_superior |= iz < NZ / 2;
+            has_inferior |= iz > NZ / 2;
         }
+        assert!(
+            has_superior && has_inferior,
+            "full-ring section must cover both z hemispheres"
+        );
     }
 
     #[test]

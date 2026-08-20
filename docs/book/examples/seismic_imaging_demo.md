@@ -16,8 +16,11 @@ model update → brain image.
 The default is the deterministic analytical phantom. Select a real CT input
 without changing the workflow with
 `KWAVERS_SEISMIC_INPUT_MODE=ct:<path>`. A failed explicit CT load is an error;
-it never changes the run to a synthetic model. Outputs default below the
-example's `output/` directory (override with the first positional argument).
+it never changes the run to a synthetic model. Outputs default below
+`target/seismic_imaging_demo/` (override with the first positional argument).
+A brain acquisition with no successful gathers or an RTM failure is a typed
+run error; the workflow never reports a skipped stage or zero-filled image as
+success.
 
 ## Physics
 
