@@ -41,6 +41,10 @@
 //!   arbitrarily shaped, apodized, and excited ultrasound transducers."
 //!   *IEEE Trans. UFFC* 39(2), 262–267 (spatial impulse response).
 
+mod aperture;
+
+pub use aperture::{ApertureElement, RoundTripKernel};
+
 use kwavers_core::constants::acoustic_parameters::NP_TO_DB;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::error::{KwaversError, KwaversResult};
@@ -386,6 +390,110 @@ impl ScattererCloud {
         } else {
             0.0
         })
+    }
+
+    /// Synthesize RF with the finite-aperture diffraction refinement.
+    ///
+    /// Same echo model as [`Self::synthesize_rf`] — monostatic
+    /// synthetic-aperture, `1/r²` round-trip spreading, optional power-law
+    /// attenuation — with the pulse convolved by each element's round-trip
+    /// spatial impulse response for that scatterer's geometry.
+    ///
+    /// The kernel enters as a **unit-area** filter, so it contributes the
+    /// aperture's temporal response and leaves the amplitude law alone. That is
+    /// what makes this a refinement of the point-element model rather than a
+    /// different one: as the aperture shrinks the kernel tends to a delta and
+    /// the output converges on `synthesize_rf`. Convolving the raw kernel
+    /// instead would converge on silence, because its area
+    /// `(√(z²+a²) − z)²` tends to zero with the radius. See ADR 113.
+    ///
+    /// `kernel_samples` sets the kernel's sampled length on the `1/fs` grid.
+    /// A provider samples from `t = 0`, so this must reach past `2·d_max/c` for
+    /// the deepest scatterer — roughly `2·z·fs/c` samples — or the kernel is all
+    /// zeros there and that scatterer drops out. Synthesis strips the leading
+    /// zeros, so the delay is applied once, not twice.
+    ///
+    /// # Errors
+    /// Returns `KwaversError::InvalidInput` for a non-finite or non-positive
+    /// configuration, an empty pulse, `kernel_samples == 0`, or a non-finite
+    /// synthesized amplitude.
+    pub fn synthesize_rf_with_aperture(
+        &self,
+        elements: &[ApertureElement],
+        pulse: &[f64],
+        config: &RfSynthesisConfig,
+        kernel: &impl RoundTripKernel,
+        kernel_samples: usize,
+    ) -> KwaversResult<Array2<f64>> {
+        let positions: Vec<[f64; 3]> = elements.iter().map(|e| e.position).collect();
+        let attenuation_np_m = self.validate_synthesis(&positions, pulse, config)?;
+        if kernel_samples == 0 {
+            return Err(KwaversError::InvalidInput(
+                "synthesize_rf_with_aperture requires kernel_samples > 0".to_owned(),
+            ));
+        }
+        let dt = 1.0 / config.sampling_frequency;
+
+        let mut rf = Array2::<f64>::zeros([elements.len(), config.num_samples]);
+        for (element_index, element) in elements.iter().enumerate() {
+            for &scatterer in &self.scatterers {
+                let distance = distance(element.position, scatterer.position);
+                if distance < config.min_distance {
+                    continue;
+                }
+                let Some((r, z)) = element.field_point(scatterer.position) else {
+                    continue;
+                };
+                // The kernel is sampled from t = 0 and its support starts near
+                // the round-trip arrival, so a window that cannot reach the
+                // arrival can never contain it. That is a caller sizing error
+                // and is reported, not absorbed -- otherwise it is
+                // indistinguishable from the sub-resolution case below.
+                let round_trip_time = 2.0 * distance / config.sound_speed;
+                if (kernel_samples as f64) * dt < round_trip_time {
+                    return Err(KwaversError::InvalidInput(format!(
+                        "kernel_samples = {kernel_samples} spans {:.3e} s, short of the {round_trip_time:.3e} s                          round trip to scatterer {:?}; size it past 2*d_max/c",
+                        (kernel_samples as f64) * dt,
+                        scatterer.position
+                    )));
+                }
+                let raw = kernel.round_trip(r, z, dt, kernel_samples);
+                // An aperture whose two-way support is shorter than one sample
+                // has no representable shape -- no sample midpoint lands inside
+                // it. Physically that *is* a point element, so it degrades to
+                // the point-element impulse rather than dropping the scatterer,
+                // which would replace a real echo with silence.
+                let effective = match aperture::unit_area_shape(&raw, dt) {
+                    Some(shaped) => aperture::convolve(pulse, &shaped, dt),
+                    None => pulse.to_vec(),
+                };
+
+                let time_s = 2.0 * distance / config.sound_speed;
+                let spreading = 1.0 / (distance * distance);
+                let amplitude =
+                    scatterer.amplitude * spreading * (-attenuation_np_m * 2.0 * distance).exp();
+                if !amplitude.is_finite() {
+                    return Err(KwaversError::InvalidInput(format!(
+                        "synthesize_rf_with_aperture produced non-finite amplitude for scatterer {:?}",
+                        scatterer.position
+                    )));
+                }
+                let sample_delay = (time_s * config.sampling_frequency).round();
+                if !sample_delay.is_finite() || sample_delay < 0.0 {
+                    continue;
+                }
+                let sample_delay = sample_delay as usize;
+                for (offset, &sample) in effective.iter().enumerate() {
+                    let Some(index) = sample_delay.checked_add(offset) else {
+                        continue;
+                    };
+                    if index < config.num_samples {
+                        rf[[element_index, index]] += amplitude * sample;
+                    }
+                }
+            }
+        }
+        Ok(rf)
     }
 
     fn synthesize_with_paths(
