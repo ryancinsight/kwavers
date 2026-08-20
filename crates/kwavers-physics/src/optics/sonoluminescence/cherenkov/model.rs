@@ -89,7 +89,7 @@ impl CherenkovModel {
     ///
     /// **SSOT**: This is the single authoritative computation of the
     /// Cherenkov radiation threshold factor, used by `spectral_intensity`,
-    /// `total_power_density`, and `emission_spectrum`.
+    /// `total_threshold_yield`, and `emission_spectrum`.
     ///
     /// Returns 0 for sub-threshold velocities.
     #[must_use]
@@ -117,9 +117,17 @@ impl CherenkovModel {
         self.coherence_factor * charge.abs() * ft * frequency_hz
     }
 
-    /// Total power density (phenomenological): scales with charge density and temperature
+    /// Total phenomenological threshold yield in arbitrary units.
+    ///
+    /// This is not a dimensional power density and must not be added to a
+    /// `VolumetricPowerDensity` field.
     #[must_use]
-    pub fn total_power_density(&self, velocity: f64, charge_density: f64, temperature: f64) -> f64 {
+    pub fn total_threshold_yield(
+        &self,
+        velocity: f64,
+        charge_density: f64,
+        temperature: f64,
+    ) -> f64 {
         let ft = self.frank_tamm_factor(velocity);
         let temp_scale = (temperature / REFERENCE_TEMPERATURE).sqrt().max(0.0);
         self.coherence_factor * charge_density.max(0.0) * ft * temp_scale

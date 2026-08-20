@@ -1,21 +1,24 @@
 //! Sonoluminescence Emission Calculator
 //!
-//! Calculates total light emission from blackbody, bremsstrahlung,
-//! and Cherenkov radiation mechanisms at each spatial point.
+//! Calculates dimensioned blackbody and bremsstrahlung emission fields and
+//! arbitrary-unit spectra for the supported radiation mechanisms.
 
 use leto::Array3;
 
+use aequitas::systems::si::quantities::VolumetricPowerDensity;
+
 use kwavers_core::constants::fundamental::{BOLTZMANN, ELEMENTARY_CHARGE};
 
-use crate::optics::sonoluminescence::blackbody::{calculate_blackbody_emission, BlackbodyModel};
+use crate::optics::sonoluminescence::blackbody::{blackbody_power_density, BlackbodyModel};
 use crate::optics::sonoluminescence::bremsstrahlung::{
-    calculate_bremsstrahlung_emission, BremsstrahlungModel,
+    bremsstrahlung_power_density, BremsstrahlungModel,
 };
-use crate::optics::sonoluminescence::cherenkov::{calculate_cherenkov_emission, CherenkovModel};
+use crate::optics::sonoluminescence::cherenkov::CherenkovModel;
 use crate::optics::sonoluminescence::spectral::{
     EmissionSpectrum, SpectralAnalyzer, SpectralRange,
 };
 
+use crate::optics::sonoluminescence::emission::orchestrator::components::EmissionComponents;
 use crate::optics::sonoluminescence::emission::spectrum::{EmissionParameters, SpectralField};
 
 /// Main sonoluminescence emission calculator
@@ -58,70 +61,59 @@ impl SonoluminescenceEmission {
         }
     }
 
-    /// Calculate total light emission from bubble fields
-    #[allow(clippy::too_many_arguments)]
+    /// Calculate dimensioned light emission from bubble fields.
+    ///
+    /// The output contains blackbody and bremsstrahlung power density only.
+    /// Cherenkov threshold yield remains on the arbitrary-unit spectral path.
     pub fn calculate_emission(
         &mut self,
         temperature_field: &Array3<f64>,
-        _pressure_field: &Array3<f64>,
         radius_field: &Array3<f64>,
-        velocity_field: &Array3<f64>,
         charge_density_field: &Array3<f64>,
-        compression_field: &Array3<f64>,
-        _time: f64,
     ) {
-        self.emission_field.fill(0.0);
+        let params = &self.params;
+        let blackbody = &self.blackbody;
+        let bremsstrahlung = &self.bremsstrahlung;
 
-        // Blackbody contribution
-        if self.params.use_blackbody {
-            let bb_emission =
-                calculate_blackbody_emission(temperature_field, radius_field, &self.blackbody);
-            for (dst, src) in self.emission_field.iter_mut().zip(bb_emission.iter()) {
-                *dst += *src;
-            }
-        }
+        crate::parallel::zip_mut_three_refs(
+            self.emission_field.view_mut(),
+            temperature_field.view(),
+            radius_field.view(),
+            charge_density_field.view(),
+            |out, &temperature, &radius, &charge_density| {
+                if temperature < params.min_temperature {
+                    *out = 0.0;
+                    return;
+                }
+                let components = components_at_point(
+                    temperature,
+                    radius,
+                    charge_density,
+                    params,
+                    blackbody,
+                    bremsstrahlung,
+                );
+                *out = params.opacity_factor * components.total().into_base();
+            },
+        );
+    }
 
-        // Bremsstrahlung contribution
-        if self.params.use_bremsstrahlung {
-            let mut electron_density_field = charge_density_field.clone();
-            for v in electron_density_field.iter_mut() {
-                *v /= ELEMENTARY_CHARGE;
-            }
-            let ion_density_field = electron_density_field.clone();
-
-            let br_emission = calculate_bremsstrahlung_emission(
-                temperature_field,
-                &electron_density_field,
-                &ion_density_field,
-                &self.bremsstrahlung,
-            );
-            for (dst, src) in self.emission_field.iter_mut().zip(br_emission.iter()) {
-                *dst += *src;
-            }
-        }
-
-        // Cherenkov contribution
-        if self.params.use_cherenkov {
-            let ch_emission = calculate_cherenkov_emission(
-                velocity_field,
-                charge_density_field,
-                temperature_field,
-                compression_field,
-                &self.cherenkov,
-            );
-            for (dst, src) in self.emission_field.iter_mut().zip(ch_emission.iter()) {
-                *dst += *src;
-            }
-        }
-
-        // Apply minimum temperature cutoff
-        for ([i, j, k], emission) in self.emission_field.indexed_iter_mut().unwrap() {
-            if temperature_field[[i, j, k]] < self.params.min_temperature {
-                *emission = 0.0;
-            } else {
-                *emission *= self.params.opacity_factor;
-            }
-        }
+    /// Calculate dimensioned emission components for one spatial cell.
+    #[must_use]
+    pub fn components_at_point(
+        &self,
+        temperature: f64,
+        radius: f64,
+        charge_density: f64,
+    ) -> EmissionComponents {
+        components_at_point(
+            temperature,
+            radius,
+            charge_density,
+            &self.params,
+            &self.blackbody,
+            &self.bremsstrahlung,
+        )
     }
 
     /// Calculate spectral emission at a specific point
@@ -236,4 +228,35 @@ impl SonoluminescenceEmission {
         spectral_field.update_derived_quantities();
         self.spectral_field = Some(spectral_field);
     }
+}
+
+fn components_at_point(
+    temperature: f64,
+    radius: f64,
+    charge_density: f64,
+    params: &EmissionParameters,
+    blackbody: &BlackbodyModel,
+    bremsstrahlung: &BremsstrahlungModel,
+) -> EmissionComponents {
+    let blackbody = if params.use_blackbody {
+        blackbody_power_density(temperature, radius, blackbody)
+    } else {
+        0.0
+    };
+    let electron_density = charge_density / ELEMENTARY_CHARGE;
+    let bremsstrahlung = if params.use_bremsstrahlung {
+        bremsstrahlung_power_density(
+            temperature,
+            electron_density,
+            electron_density,
+            bremsstrahlung,
+        )
+    } else {
+        0.0
+    };
+
+    EmissionComponents::new(
+        VolumetricPowerDensity::from_base(blackbody),
+        VolumetricPowerDensity::from_base(bremsstrahlung),
+    )
 }

@@ -20,11 +20,20 @@ pub fn calculate_bremsstrahlung_emission(
         electron_density_field.view(),
         ion_density_field.view(),
         |out, &temp, &n_electron, &n_ion| {
-            if n_electron > 0.0 && n_ion > 0.0 && temp > 0.0 {
-                *out = model.total_power(temp, n_electron, n_ion, 1.0);
-            }
+            *out = bremsstrahlung_power_density(temp, n_electron, n_ion, model);
         },
     );
 
     emission_field
+}
+
+/// Calculate bremsstrahlung power density for one cell in `W/m³`.
+#[must_use]
+pub fn bremsstrahlung_power_density(
+    temperature: f64,
+    electron_density: f64,
+    ion_density: f64,
+    model: &BremsstrahlungModel,
+) -> f64 {
+    model.total_power(temperature, electron_density, ion_density, 1.0)
 }

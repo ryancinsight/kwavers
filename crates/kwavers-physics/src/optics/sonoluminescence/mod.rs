@@ -4,7 +4,6 @@
 //! - Blackbody radiation from hot bubble interior
 //! - Bremsstrahlung from ionized gas
 //! - Cherenkov radiation from relativistic particles
-//! - Molecular emission lines
 //! - Spectral analysis
 
 pub mod blackbody;

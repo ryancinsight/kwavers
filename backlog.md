@@ -22,6 +22,19 @@
   source configuration.
 - Non-goals: no Rust, dependency, benchmark, test, or coverage-policy changes.
 
+## KWAVERS-SONO-113 — Type sonoluminescence emission and close the example/book slice [major] [arch] — implementation complete; hosted verification pending 2026-08-19
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KWAVERS-SONO-113 | Route dimensioned sonoluminescence power through Aequitas, assemble one authoritative field pass, and synchronize tests, examples, and book pages. | [major] [arch] | implementation complete; hosted verification pending | Codex | `crates/kwavers-physics/src/optics/sonoluminescence/`, sonoluminescence examples, `docs/book/examples/`, ADR 114, this item |
+
+- Acceptance: emission components carry Aequitas `VolumetricPowerDensity`; Cherenkov spectral yield is not added to the dimensioned power field; one field traversal computes enabled dimensioned components without temporary field clones; the integrated step refreshes emission from updated state; constructor state uses `BubbleParameters`; placeholder molecular-line and example paths are removed; focused value-semantic tests, example builds/runs, book tests/build, and package gates pass.
+- Non-goals: GPU kernels, Python bindings, and unrelated legacy migration surfaces remain separate items.
+- Evidence target: exact local revision plus hosted architecture, test, example, and book gates; dimensional limits and any external runner blockers are recorded here.
+- Local evidence at `a6a8a44a4`: strict `kwavers-physics` Clippy (`-D warnings`) passed; Nextest run `b8d4c544-fa3d-46ca-8076-86187239f04b` passed 40/40 sonoluminescence tests (1,517 skipped); both examples passed package checks, `single_bubble_sonoluminescence` ran through eight integrated steps, and `multiphysics_sonoluminescence --features pinn` ran through two epochs over three domains; `mdbook test docs/book` and `mdbook build docs/book` passed. The single-bubble run emitted changing Aequitas W/m³ fields and a separate arbitrary-unit spectrum.
+- Pre-merge regression closure: the full-feature facade gate exposed five stale seven-argument emission calls in `ultrasound_physics_validation`; every call now uses the dimensioned temperature/radius/charge-density contract and the unused pressure, velocity, and compression fixtures are deleted. Both strict workflow Clippy commands pass locally, and Nextest run `e6b1b6ae-e36c-4ea7-8aca-ecf2514ced5f` passes all 18 facade physics-validation tests.
+- Hosted evidence: PR [#414](https://github.com/ryancinsight/kwavers/pull/414) is open; every PR update reruns the repository-owned exact-head checks. Local commands used the Atlas development overlay, so Cargo lockfile source state was restored after each command and no lockfile change is part of this item.
+
 ## ATLAS-KWAVERS-HEPHAESTUS-FDTD-107 — Route collocated FDTD through Hephaestus [minor] [arch] — Apollo co-evolution blocker 2026-08-18
 
 | ID | Outcome | Class | Status | Owner | Scope |

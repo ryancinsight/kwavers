@@ -4,6 +4,18 @@
 
 ### Changed
 
+- **Breaking sonoluminescence surface:** Dimensioned emission now exposes
+  typed Aequitas blackbody and bremsstrahlung components and excludes the
+  arbitrary-unit Cherenkov yield from the `W/m³` field. The integrated step
+  initializes from `BubbleParameters` and refreshes emission after state
+  updates; unused emission parameters and the unimplemented molecular-line
+  flag are removed.
+
+- **Examples and book:** The duplicate comparison example is removed. The
+  single-bubble example runs the typed integrated path, and the multiphysics
+  example reports real bounded PINN training statistics instead of placeholder
+  luminosity and validation claims.
+
 - **Python verification:** `kwavers-python` now runs its NumPy/Leto conversion
   tests through an embedded Python interpreter. PyO3's deprecated
   `extension-module` Cargo feature is replaced by Maturin `>=1.9.4` build-time

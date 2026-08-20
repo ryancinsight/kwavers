@@ -1,6 +1,6 @@
 //! Main sonoluminescence emission module
 //!
-//! Integrates blackbody, bremsstrahlung, and molecular emission models
+//! Integrates blackbody and bremsstrahlung emission models.
 //!
 //! ## Physical Models
 //!
@@ -31,7 +31,6 @@
 //! ### Emission Models
 //! - **Blackbody Radiation**: Planck's law with Wien and Rayleigh-Jeans approximations
 //! - **Bremsstrahlung**: Free-free emission from ionized gas
-//! - **Molecular Lines**: Placeholder for future implementation
 //!
 //! **Numerical Stability:**
 //! - RK4 integration for bubble dynamics with adaptive timestep control
