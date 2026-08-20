@@ -1,18 +1,15 @@
-## KW-EXAMPLES-115 — Seismic example partition residual 2026-08-20
+## KW-EXAMPLES-115 — Seismic example partition closure 2026-08-20
 
-The transcranial FWI entry point is reduced to a 31-line manifest over five
-single-concern modules. The fixed grid is represented by the zero-sized
-`GridSpec` owner with associated constants, and its synthetic phantom, CT
-reader, acquisition geometry, metrics, and workflow are independently tested.
-Focused MSVC Nextest run `d1e3550e-f570-406b-a151-c50832cfe198` passes 6/6 and
-strict example Clippy passes. Whole-model and selected-pair quality metrics
-are now canonical in `seismic_imaging/metrics.rs`; DICOM series selection is
-canonical in `seismic_imaging/dicom.rs`. The cross-example focused runs
-`d93a0d0d-4893-4c99-9dbd-f5ccbdd6bbfa` and
-`5a75e7f4-3d2d-4734-a0d8-3603ae25c511` each pass 14/14. The 2-D and 3-D
-seismic entry points remain above the 500-line target; further partitioning is
-required before `KW-EXAMPLES-115` can close. No fallback or compatibility path
-is added.
+The transcranial FWI entry points are manifests over SRP leaf modules: the 3-D
+workflow is 347 lines and the 2-D workflow is 463 lines. The fixed-grid
+configuration remains a zero-sized owner with associated constants, while
+synthetic phantom, CT reader, acquisition geometry, metrics, inversion, and
+artifact reporting each have one canonical module. Exact local package-plus-
+example Nextest run `33af4f2b-9838-4fae-9fff-d060968a110c` passes 116/116 in
+42.155 seconds; strict example Clippy, the Kwavers doctest (1/1), and the
+mdBook test/build gates pass. No fallback or compatibility path is added.
+
+The residual is hosted PR verification and merge of the exact pushed head.
 
 The complete example gate initially exposed an independent runtime defect in
 `focused_ultrasound_water_tank`: its five disjoint solver branches ran

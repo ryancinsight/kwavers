@@ -356,11 +356,11 @@
   `32329958998` completed successfully, including 10/10 architecture jobs and
   11/11 CI jobs.
 
-## KW-EXAMPLES-115 — Type and partition the seismic example workflows [major] [arch] — in progress 2026-08-20
+## KW-EXAMPLES-115 — Type and partition the seismic example workflows [major] [arch] — implementation complete; hosted verification pending 2026-08-20
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-EXAMPLES-115 | Replace the three seismic example monoliths with explicit typed workflows that call Atlas providers directly and document value-semantic 2-D/3-D behavior. | [major] [arch] | in progress | Codex | `crates/kwavers/examples/{seismic_imaging_demo,seismic_imaging_3d_demo,transcranial_fwi}*`, shared seismic modules, `kwavers-signal`/`kwavers-solver` provider call sites, `crates/kwavers/Cargo.toml`, seismic book pages, ADR 117, PM artifacts |
+| KW-EXAMPLES-115 | Replace the three seismic example monoliths with explicit typed workflows that call Atlas providers directly and document value-semantic 2-D/3-D behavior. | [major] [arch] | implementation complete; hosted verification pending | Codex | `crates/kwavers/examples/{seismic_imaging_demo,seismic_imaging_3d_demo,transcranial_fwi}*`, shared seismic modules, `kwavers-signal`/`kwavers-solver` provider call sites, `crates/kwavers/Cargo.toml`, seismic book pages, ADR 117, PM artifacts |
 
 - Acceptance: each example entry point is a manifest over SRP leaf modules no
   larger than 500 lines; shared acquisition, CT, physical configuration,
@@ -551,9 +551,16 @@
   Exact local package-plus-example Nextest run
   `2170b8c5-71b1-4be0-9c2a-44235c0676d5` passes 116/116 in 42.039 seconds;
   strict all-example Clippy, `mdbook test docs/book`, and `mdbook build docs/book`
-  pass. The 3-D entry point is 347 lines, while the 2-D entry point is 860 lines;
-  the residual item is the 2-D entry-point partition before `KW-EXAMPLES-115`
-  can close.
+  pass. The 3-D entry point is 347 lines.
+- 2026-08-20 2-D workflow slice: multi-scale skull FWI, frequency continuation,
+  and output-directory/artifact orchestration now live in typed
+  `seismic_imaging/planar_inversion.rs`, `planar_schedule.rs`, and
+  `planar_reporting.rs` leaves. The root entry point is 463 lines. Exact local
+  package-plus-example Nextest run `33af4f2b-9838-4fae-9fff-d060968a110c`
+  passes 116/116 in 42.155 seconds; strict all-example Clippy, `cargo test
+  --doc --offline -p kwavers` (1/1), `mdbook test docs/book`, and `mdbook build
+  docs/book` pass. `KW-EXAMPLES-115` is ready for hosted verification and
+  integration.
 - 2026-08-20 example-gate runtime slice: the focused water-tank comparison's
   independent FDTD, PSTD, DG-2D, DG-3D, and DG-3D-CPML branches now overlap
   through the provider-owned Moirai `Parallel` join. The complete example

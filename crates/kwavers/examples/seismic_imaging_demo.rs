@@ -101,9 +101,15 @@ mod seismic_metrics;
 mod seismic_phantom;
 #[path = "seismic_imaging/planar_artifacts.rs"]
 mod seismic_planar_artifacts;
+#[path = "seismic_imaging/planar_inversion.rs"]
+mod seismic_planar_inversion;
+#[path = "seismic_imaging/planar_reporting.rs"]
+mod seismic_planar_reporting;
+#[path = "seismic_imaging/planar_schedule.rs"]
+mod seismic_planar_schedule;
 #[path = "seismic_imaging/rtm.rs"]
 mod seismic_rtm;
-use seismic_metrics::{print_quality_pairs, print_quality_report};
+use seismic_metrics::print_quality_pairs;
 
 use kwavers_core::constants::{
     acoustic_parameters::SOUND_SPEED_SKULL_CORTICAL, fundamental::SOUND_SPEED_WATER_SIM,
@@ -114,7 +120,6 @@ use kwavers_solver::inverse::fwi::time_domain::{FwiGeometry, FwiProcessor};
 use kwavers_solver::inverse::seismic::parameters::{FwiParameters, RegularizationParameters};
 use leto::{Array2, Array3};
 use std::path::PathBuf;
-use std::time::Instant;
 
 #[path = "support/brain_prior.rs"]
 mod brain_prior;
@@ -330,79 +335,7 @@ fn main() -> KwaversResult<()> {
     // Full domain transit time at water speed (same for all scales).
     let t_transit = (NX as f64 * DX) / SOUND_SPEED_WATER_SIM;
 
-    // Multi-scale frequency schedule (Guasch 2020, §Methods — frequency continuation).
-    //
-    // # Cycle-skipping criterion (Virieux & Operto 2009)
-    //
-    // Cycle-skipping occurs when the initial model travel-time error exceeds T/2.
-    // Skull transmission delay:
-    //   Δt = skull_thickness × (1/c_water − 1/c_skull_avg)
-    //      = 24mm × (1/1500 − 1/2264) = 5.4 μs
-    //
-    // At 150 kHz: T/2 = 3.3 μs <  Δt = 5.4 μs → CYCLE-SKIPPING ✗
-    // At  60 kHz: T/2 = 8.3 μs >  Δt = 5.4 μs → safe ✓  (start here)
-    //
-    // # CPML absorption adequacy (why 20 kHz is excluded)
-    //
-    // CPML absorbs effectively only when PML thickness ≥ λ/4 in the absorbing medium.
-    // Physical CPML thickness = 10 cells × 3 mm = 30 mm.
-    // In bone (c_bone ≈ 2500 m/s):
-    //   λ_bone(20 kHz)  = 2500/20000 = 125 mm →  λ/4 = 31 mm ≈ CPML (marginal)
-    //   λ_bone(60 kHz)  = 2500/60000 =  42 mm →  λ/4 = 10.5 mm << CPML (adequate)
-    //   λ_bone(150 kHz) = 2500/150000 = 17 mm →  λ/4 = 4.2 mm << CPML (adequate)
-    // At 20 kHz the CPML absorbs less than one λ/4 through bone → reflections
-    // overwhelm the recorded wavefield, producing J ≈ 10⁹ Pa²·s (catastrophic).
-    // Minimum usable frequency given this CPML thickness: ≈ 50 kHz.
-    //
-    // Schedule: 40 kHz → 80 kHz → 150 kHz with 10-12-15 iterations per scale.
-    // Each scale starts from the previous scale's result; nt is computed per scale
-    // to include 3 source periods (for the low-frequency wavelet to decay fully).
-    //
-    //   nt(f₀) = ceil((t_transit × 1.2  +  3.0 / f₀) / dt)
-    //
-    // Three scales improve initial model recovery at the lowest frequency before
-    // refining skull boundaries at intermediate and full resolution.
-    //
-    // At 40 kHz: T/2 = 12.5 μs > Δt_skull = 5.4 μs → safe ✓ (start here)
-    // At 80 kHz: T/2 =  6.25 μs > Δt_skull = 5.4 μs → safe ✓
-    // At 150 kHz: T/2 = 3.3 μs < Δt_skull = 5.4 μs → cycle-skipping if from
-    //   uniform 1500 m/s, but safe when starting from 80 kHz result.
-    //
-    // Initial model: Gaussian-blurred CT (σ = 3 voxels).  At 40 kHz,
-    // T/2 = 12.5 μs > Δt_skull(blurred) ≈ 2.7 μs → no cycle-skipping.
-    //
-    // Physical constraint: all tissues have c ≥ c_water = 1500 m/s.
-    // Sub-water-speed artefacts are clamped after each scale.
-    //
-    // Source mute radius: scaled with wavelength = floor(c_water / (2·f₀·dx)).
-    // At 40 kHz:  radius = floor(1500/(2×40000×0.003)) = 6 voxels.
-    // At 80 kHz:  radius = floor(1500/(2×80000×0.003)) = 3 voxels.
-    // At 150 kHz: radius = floor(1500/(2×150000×0.003)) = 2 voxels (clamped to 2 minimum).
-    let scales: &[(f64, usize)] = &[
-        (40_000.0, 10),  // f₀ Hz, n_iter — safe from blurred CT prior (T/2 > Δt_skull)
-        (80_000.0, 12),  // intermediate refinement — still cycle-skip safe
-        (150_000.0, 15), // refine skull boundaries at full ultrasound resolution
-    ];
-
-    println!("  dt              : {:.1} ns", dt * 1e9);
-    println!(
-        "  Scales          : {} → {} → {} kHz  (10-12-15 iterations)",
-        scales[0].0 * 1e-3,
-        scales[1].0 * 1e-3,
-        scales[2].0 * 1e-3
-    );
-    for &(f0, n) in scales {
-        let nt_s = ((t_transit * 1.2 + 3.0 / f0) / dt).ceil() as usize;
-        let t_half = 1.0 / (2.0 * f0) * 1e6;
-        println!(
-            "    f₀={:.0} kHz: T/2={:.1} μs, Δt_skull=5.4 μs → {}, nt={}, {} iter",
-            f0 * 1e-3,
-            t_half,
-            if t_half > 5.4 { "OK" } else { "WARN" },
-            nt_s,
-            n
-        );
-    }
+    let scales = seismic_planar_schedule::configure(dt, t_transit);
 
     // ── 4. Full-ring acquisition geometry ─────────────────────────────────
     println!("\n[ 4 / 6 ]  Building full-ring acquisition geometry …");
@@ -436,227 +369,12 @@ fn main() -> KwaversResult<()> {
     // ── 5. Multi-scale FWI ────────────────────────────────────────────────
     println!("\n[ 5 / 6 ]  Running multi-scale transcranial FWI …");
 
-    let true_model = phantom.acoustic().sound_speed.clone();
-
-    // Initial model: Gaussian-blurred true skull model (σ = 3 voxels ≈ 9 mm).
-    //
-    // This is the standard clinical approach (Guasch 2020): a low-resolution CT
-    // scan is always available and provides a smooth but geometrically correct
-    // bone map.  Starting from this blurred prior:
-    //   • Skull structure is already approximately located → gradient acts as a
-    //     *refinement* operator (sharpen boundaries, raise bone peak velocity)
-    //     rather than a discovery operator (find bone from featureless water).
-    //   • Blurred initial travel-time error ≈ 2.7 μs < T/2(60 kHz) = 8.3 μs
-    //     → no cycle-skipping at any modelled frequency.
-    //   • FWI converges in far fewer iterations than from uniform 1500 m/s.
-    //
-    // Convergence evidence (from uniform initial): after 13 iterations at
-    // 60 → 150 kHz, c_max reached only 1634 m/s (true 2508 m/s) — gradient
-    // spent all budget discovering skull geometry rather than refining it.
-    let initial_model = seismic_initial_model::gaussian_blur_xz(&true_model, 3.0);
-    let mut current_model = initial_model.clone();
-
-    // Compute J₀ at the finest scale (150 kHz) for reporting consistency.
-    let nt_fine = ((t_transit * 1.2 + 3.0 / seismic_acquisition::F0_HZ) / dt).ceil() as usize;
-    let mut shots_fine: Vec<(FwiGeometry, Array2<f64>)> =
-        Vec::with_capacity(seismic_acquisition::N_SHOTS);
-    {
-        let tmp_fwi = FwiProcessor::new(FwiParameters {
-            max_iterations: 1,
-            frequency: seismic_acquisition::F0_HZ,
-            nt: nt_fine,
-            dt,
-            n_trace: seismic_acquisition::N_RECEIVERS,
-            n_depth: 1,
-            step_size: STEP_SIZE,
-            tolerance: 1e-12,
-            regularization: RegularizationParameters {
-                tikhonov_weight: 0.0,
-                tv_weight: 0.0,
-                directional_tv_weight: 0.0,
-                directional_tv_adaptive: false,
-                smoothness_weight: 0.0,
-            },
-            source_mute_radius: 4,
-            ..FwiParameters::default()
-        });
-        let t0 = Instant::now();
-        for &element_index in &seismic_acquisition::TRANSMIT_ELEMENT_INDICES {
-            let geom = seismic_acquisition::build_shot(
-                element_index,
-                seismic_acquisition::F0_HZ,
-                nt_fine,
-                dt,
-            )?;
-            let obs = tmp_fwi.generate_synthetic_data(&true_model, &geom, &grid)?;
-            shots_fine.push((geom, obs));
-        }
-        println!(
-            "  {} observed gathers at {} kHz ({:.1} s)",
-            seismic_acquisition::N_SHOTS,
-            seismic_acquisition::F0_HZ * 1e-3,
-            t0.elapsed().as_secs_f32()
-        );
-    }
-
-    let j_initial = {
-        let fwi_tmp = FwiProcessor::new(FwiParameters {
-            max_iterations: 1,
-            frequency: seismic_acquisition::F0_HZ,
-            nt: nt_fine,
-            dt,
-            n_trace: seismic_acquisition::N_RECEIVERS,
-            n_depth: 1,
-            step_size: STEP_SIZE,
-            tolerance: 1e-12,
-            regularization: RegularizationParameters {
-                tikhonov_weight: 0.0,
-                tv_weight: 0.0,
-                directional_tv_weight: 0.0,
-                directional_tv_adaptive: false,
-                smoothness_weight: 0.0,
-            },
-            source_mute_radius: 4,
-            ..FwiParameters::default()
-        });
-        let mut j = 0.0_f64;
-        for (geom, obs) in &shots_fine {
-            let d_syn = fwi_tmp.generate_synthetic_data(&initial_model, geom, &grid)?;
-            j += d_syn
-                .iter()
-                .zip(obs.iter())
-                .map(|(&s, &o)| (s - o).powi(2))
-                .sum::<f64>()
-                * 0.5
-                * dt;
-        }
-        j
-    };
-
-    println!("\n  Quality before inversion:");
-    print_quality_report(&true_model, &initial_model);
-    println!(
-        "  Joint J₀ (150 kHz) : {j_initial:.6e} Pa²·s  ({} shots)",
-        seismic_acquisition::N_SHOTS
-    );
-
-    let t_inv = Instant::now();
-
-    // Multi-scale inversion loop.
-    for (scale_idx, &(f0, n_iter)) in scales.iter().enumerate() {
-        // Compute scale-specific nt: include 3 source periods + transit time.
-        // At 60 kHz the Ricker wavelet has t_peak = 25 μs; at 150 kHz, 10 μs.
-        let nt_scale = ((t_transit * 1.2 + 3.0 / f0) / dt).ceil() as usize;
-
-        // Source mute radius = half-wavelength in voxels (clamped to [2, 12]).
-        let mute_r = ((SOUND_SPEED_WATER_SIM / (2.0 * f0)) / DX).floor() as usize;
-        let mute_r = mute_r.clamp(2, 12);
-
-        // Build shots at this frequency.
-        let mut scale_shots: Vec<(FwiGeometry, Array2<f64>)> =
-            Vec::with_capacity(seismic_acquisition::N_SHOTS);
-        let fwi_scale = FwiProcessor::new(FwiParameters {
-            max_iterations: n_iter,
-            frequency: f0,
-            nt: nt_scale,
-            dt,
-            n_trace: seismic_acquisition::N_RECEIVERS,
-            n_depth: 1,
-            step_size: STEP_SIZE,
-            tolerance: 1e-12,
-            regularization: RegularizationParameters {
-                tikhonov_weight: 0.0,
-                tv_weight: 0.0,
-                directional_tv_weight: 0.0,
-                directional_tv_adaptive: false,
-                smoothness_weight: 0.0,
-            },
-            source_mute_radius: mute_r,
-            ..FwiParameters::default()
-        });
-
-        let t_scale = Instant::now();
-        for &element_index in &seismic_acquisition::TRANSMIT_ELEMENT_INDICES {
-            let geom = seismic_acquisition::build_shot(element_index, f0, nt_scale, dt)?;
-            let obs = fwi_scale.generate_synthetic_data(&true_model, &geom, &grid)?;
-            scale_shots.push((geom, obs));
-        }
-
-        println!(
-            "\n  ── Scale {} / {} : f₀ = {:.0} kHz, {} iter, nt = {}, mute_r = {} ──",
-            scale_idx + 1,
-            scales.len(),
-            f0 * 1e-3,
-            n_iter,
-            nt_scale,
-            mute_r
-        );
-
-        current_model = fwi_scale.invert_multi_source(&scale_shots, &current_model, &grid)?;
-
-        // Physical constraint: c ≥ c_water.
-        current_model = current_model.mapv(|c| c.max(SOUND_SPEED_WATER_SIM));
-
-        let c_now_max = current_model
-            .iter()
-            .copied()
-            .fold(f64::NEG_INFINITY, f64::max);
-        let c_now_min = current_model.iter().copied().fold(f64::INFINITY, f64::min);
-        println!(
-            "    Scale {} done ({:.1} s): c ∈ [{:.0}, {:.0}] m/s",
-            scale_idx + 1,
-            t_scale.elapsed().as_secs_f32(),
-            c_now_min,
-            c_now_max
-        );
-    }
-
-    let reconstructed = current_model;
-    println!(
-        "\n  FWI completed in {:.1} s",
-        t_inv.elapsed().as_secs_f32()
-    );
-
-    // Final J at 150 kHz.
-    let j_final = {
-        let fwi_tmp = FwiProcessor::new(FwiParameters {
-            max_iterations: 1,
-            frequency: seismic_acquisition::F0_HZ,
-            nt: nt_fine,
-            dt,
-            n_trace: seismic_acquisition::N_RECEIVERS,
-            n_depth: 1,
-            step_size: STEP_SIZE,
-            tolerance: 1e-12,
-            regularization: RegularizationParameters {
-                tikhonov_weight: 0.0,
-                tv_weight: 0.0,
-                directional_tv_weight: 0.0,
-                directional_tv_adaptive: false,
-                smoothness_weight: 0.0,
-            },
-            source_mute_radius: 4,
-            ..FwiParameters::default()
-        });
-        let mut j = 0.0_f64;
-        for (geom, obs) in &shots_fine {
-            let d_syn = fwi_tmp.generate_synthetic_data(&reconstructed, geom, &grid)?;
-            j += d_syn
-                .iter()
-                .zip(obs.iter())
-                .map(|(&s, &o)| (s - o).powi(2))
-                .sum::<f64>()
-                * 0.5
-                * dt;
-        }
-        j
-    };
-    let j_reduction_pct = (1.0 - j_final / j_initial) * 100.0;
-
-    println!("\n  Quality after inversion:");
-    print_quality_report(&true_model, &reconstructed);
-    println!("  Joint J (150 kHz) : {j_final:.6e} Pa²·s");
-    println!("  J reduction       : {j_reduction_pct:7.1} %  (150 kHz joint L2)");
+    let inversion =
+        seismic_planar_inversion::run_skull_inversion(&phantom, &grid, dt, t_transit, scales)?;
+    let true_model = inversion.true_model;
+    let initial_model = inversion.initial_model;
+    let reconstructed = inversion.reconstructed;
+    let shots_fine = inversion.shots_fine;
 
     // ── 6. Stage-2 brain tissue FWI (Guasch 2020 style) ─────────────────
     let brain_prior =
@@ -680,132 +398,17 @@ fn main() -> KwaversResult<()> {
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("target/seismic_imaging_demo"));
 
-    std::fs::create_dir_all(&output_dir)
-        .map_err(|e| KwaversError::InvalidInput(format!("cannot create output dir: {e}")))?;
-
-    let abs_dir = std::fs::canonicalize(&output_dir).map_err(|error| {
-        KwaversError::InvalidInput(format!("cannot canonicalize output dir: {error}"))
+    seismic_planar_reporting::write_outputs(seismic_planar_reporting::PlanarOutput {
+        output_dir,
+        phantom: &phantom,
+        ct_vol: ct_vol.as_ref(),
+        true_model: &true_model,
+        initial_model: &initial_model,
+        reconstructed: &reconstructed,
+        brain_true: brain_true_model.as_ref(),
+        brain_reconstructed: brain_reconstructed.as_ref(),
+        rtm_image: &rtm_image,
     })?;
-
-    let base = "brain_fwi";
-    let three_plane_path = abs_dir.join(format!("{base}_three_plane.png"));
-    let velocity_ppm_path = abs_dir.join(format!("{base}.ppm"));
-    let rtm_path = abs_dir.join(format!("{base}_rtm.ppm"));
-    let brain_prior_path = abs_dir.join(format!("{base}_ct_brain_prior.png"));
-    let csv_path = abs_dir.join(format!("{base}.csv"));
-    let brain_tissue_path = abs_dir.join(format!("{base}_brain_tissue.png"));
-
-    let shot_positions = seismic_acquisition::transmit_positions();
-    let active_elements: Vec<(usize, usize)> =
-        seismic_acquisition::ACTIVE_TRANSDUCER_POSITIONS.to_vec();
-
-    seismic_planar_artifacts::write_three_plane_png(
-        &three_plane_path,
-        &true_model,
-        &reconstructed,
-        seismic_planar_artifacts::VelocityScale { lo: C_LO, hi: C_HI },
-        seismic_planar_artifacts::AcquisitionMarkers {
-            shot_positions: &shot_positions,
-            active_elements: &active_elements,
-        },
-        ct_vol.as_ref(),
-    )
-    .map_err(|e| KwaversError::InvalidInput(format!("PNG write failed: {e}")))?;
-
-    seismic_planar_artifacts::write_velocity_panels(
-        &velocity_ppm_path,
-        &true_model,
-        &initial_model,
-        &reconstructed,
-        &shot_positions,
-        &active_elements,
-    )
-    .map_err(|e| KwaversError::InvalidInput(format!("velocity panel write failed: {e}")))?;
-
-    seismic_planar_artifacts::write_brain_prior_png(
-        &brain_prior_path,
-        phantom.hu(),
-        &shot_positions,
-        &active_elements,
-    )
-    .map_err(|e| KwaversError::InvalidInput(format!("brain prior PNG write failed: {e}")))?;
-
-    seismic_planar_artifacts::write_rtm_panel(&rtm_path, &rtm_image)
-        .map_err(|e| KwaversError::InvalidInput(format!("RTM panel write failed: {e}")))?;
-
-    seismic_planar_artifacts::write_velocity_csv(
-        &csv_path,
-        &true_model,
-        &initial_model,
-        &reconstructed,
-    )
-    .map_err(|e| KwaversError::InvalidInput(format!("CSV write failed: {e}")))?;
-
-    // Brain tissue PNG — written only when Stage-2 FWI succeeded.
-    if let (Some(bt_true), Some(bt_recon)) = (&brain_true_model, &brain_reconstructed) {
-        seismic_planar_artifacts::write_brain_tissue_png(&brain_tissue_path, bt_true, bt_recon)
-            .map_err(|e| {
-                KwaversError::InvalidInput(format!("brain tissue PNG write failed: {e}"))
-            })?;
-    }
-
-    println!("\n  Output directory  : {}", abs_dir.display());
-    println!("\n  Wrote images and data:");
-    let three_plane_desc = if ct_vol.is_some() {
-        "PNG 3×2: CT coronal|axial|sagittal (top) / FWI true|reconstructed|difference (bottom)"
-    } else {
-        "PNG: true skull (FWI grid) | FWI reconstructed | difference — coronal x-z"
-    };
-    println!("    {}  ({})", three_plane_path.display(), three_plane_desc);
-    println!(
-        "    {}  (PPM 4-panel: true | initial | reconstructed | error)",
-        velocity_ppm_path.display()
-    );
-    println!(
-        "    {}  (PNG CT-derived brain/skull prior + transducer)",
-        brain_prior_path.display()
-    );
-    println!(
-        "    {}  (PPM RTM zero-lag cross-correlation)",
-        rtm_path.display()
-    );
-    println!(
-        "    {}  (CSV depth profile at x = NX/2)",
-        csv_path.display()
-    );
-    if brain_reconstructed.is_some() {
-        println!(
-            "    {}  (PNG brain tissue: true|reconstructed|difference, [1480,1560] m/s colormap)",
-            brain_tissue_path.display()
-        );
-    }
-    if ct_vol.is_some() {
-        println!(
-            "  Image size        : {}×{} px (3×{PANEL} wide, 2×({PANEL}+{COLORBAR_H}) tall)",
-            3 * PANEL,
-            2 * (PANEL + COLORBAR_H)
-        );
-    } else {
-        println!(
-            "  Image size        : {PANEL}×{PANEL} px per panel, 3 panels, {COLORBAR_H}px colorbar"
-        );
-    }
-    println!(
-        "  Colormap          : blue (1500 m/s, water/brain) → red ({:.0} m/s, cortical bone)",
-        C_HI
-    );
-    if ct_vol.is_some() {
-        println!(
-            "  PNG layout        : 3×2 grid — top: CT coronal | axial | sagittal (bone window); bottom: FWI true | reconstructed | difference"
-        );
-    } else {
-        println!(
-            "  PNG panels        : true skull | reconstructed | difference (x-z coronal, y=0)"
-        );
-    }
-    println!(
-        "  Markers           : white = transmitting elements | yellow = active transducer samples"
-    );
 
     // ── Summary ───────────────────────────────────────────────────────────
     println!("\n═══════════════════════════════════════════════════════════");
