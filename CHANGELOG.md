@@ -74,6 +74,13 @@
   gate passes 69/69 (one slow comparison at 44.608 seconds), strict example
   Clippy passes, and `mdbook test` plus `mdbook build` pass.
 
+- **2-D brain-prior structure:** MNI/uniform prior construction and the frozen
+  skull mask now live in `seismic_imaging/brain_model.rs`; root orchestration
+  calls the bounded parent-qualified API. The exact example Nextest gate passes
+  69/69 (one slow comparison at 44.104 seconds), and strict example Clippy
+  passes. The mdBook content is unchanged from the preceding passing
+  `mdbook test` and `mdbook build` gate.
+
 - **Breaking CT skull material boundary:** `AcousticSkullProperties` now stores
   validated Aequitas velocity, mass-density, reciprocal-length attenuation,
   length, and optional shear velocity. `HeterogeneousSkull::from_ct_hill`

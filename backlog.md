@@ -447,6 +447,15 @@
   `mdbook build docs/book` pass. The 2-D entry point is 1,574 lines and the
   3-D entry point is 1,382 lines, so further partitioning remains before
   `KW-EXAMPLES-115` can close.
+- 2026-08-20 2-D brain-prior slice: MNI/uniform prior construction and the
+  frozen skull mask now live in `seismic_imaging/brain_model.rs`; the root
+  workflow retains only orchestration and qualifies the leaf API. Exact example
+  Nextest run `24eac9ad-f072-45bf-a8fd-f609652a77b1` passes 69/69 (one slow
+  comparison at 44.104 seconds), and strict all-example Clippy passes. The
+  mdBook content is unchanged from the preceding passing test/build gate. The
+  2-D entry point is 1,396 lines and the 3-D entry point is 1,382 lines, so
+  acquisition, phantom, inversion, and reporting still require partitioning
+  before `KW-EXAMPLES-115` can close.
 - 2026-08-20 example-gate runtime slice: the focused water-tank comparison's
   independent FDTD, PSTD, DG-2D, DG-3D, and DG-3D-CPML branches now overlap
   through the provider-owned Moirai `Parallel` join. The complete example
