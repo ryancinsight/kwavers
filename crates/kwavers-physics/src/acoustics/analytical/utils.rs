@@ -11,8 +11,7 @@ use leto::Array3;
 /// the exact dispersion relation around the continuous limit.
 pub const DISPERSION_CORRECTION_SECOND_ORDER: f64 = 0.02;
 
-/// Fourth-order dispersion correction coefficient for k-space methods  
-/// This coefficient provides higher-order correction to minimize
+/// Fourth-order dispersion correction coefficient for k-space methods\n/// This coefficient provides higher-order correction to minimize
 /// numerical dispersion at high wavenumbers approaching the Nyquist limit.
 /// Value optimized for typical ultrasound simulation parameters.
 pub const DISPERSION_CORRECTION_FOURTH_ORDER: f64 = 0.001;
