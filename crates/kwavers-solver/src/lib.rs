@@ -1,3 +1,5 @@
+#![doc = include_str!("../README.md")]
+
 /// Internal re-exports for macro use.
 #[doc(hidden)]
 pub mod __private {

@@ -1,4 +1,4 @@
-// src/medium/mod.rs
+#![doc = include_str!("../README.md")]
 
 // Module declarations
 pub mod absorption;
