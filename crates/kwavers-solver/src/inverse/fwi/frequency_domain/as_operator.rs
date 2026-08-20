@@ -25,11 +25,11 @@
 //! on a weak-contrast phantom within a bound that vanishes as the contrast
 //! tends to zero — the regime where the one-way approximation is exact.
 
+use super::acquisition::TransmissionAcquisition;
 use aequitas::systems::si::units::Meter;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::{fft_2d_complex, ifft_2d_complex, Complex64};
-use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
 use kwavers_transducer::transducers::ElementPosition;
 use leto::{Array2, Array3};
 
@@ -312,7 +312,7 @@ impl HelmholtzForwardOperator for AngularSpectrumSplitStepOperator {
     fn predict_receiver_rows(
         &self,
         slowness_s_per_m: &Array3<f64>,
-        array: &MultiRowRingArray,
+        acquisition: &dyn TransmissionAcquisition,
         frequency_hz: f64,
         config: &Config,
         transmissions: usize,
@@ -330,19 +330,19 @@ impl HelmholtzForwardOperator for AngularSpectrumSplitStepOperator {
                 "ASM frequency must be positive and finite, got {frequency_hz}"
             )));
         }
-        if transmissions > array.circumferential_elements() {
+        if transmissions > acquisition.transmission_count() {
             return Err(KwaversError::InvalidInput(format!(
                 "ASM transmissions {transmissions} exceed circumferential elements {}",
-                array.circumferential_elements()
+                acquisition.transmission_count()
             )));
         }
 
-        let mut output = Array2::<Complex64>::zeros([transmissions, array.element_count()]);
+        let mut output = Array2::<Complex64>::zeros([transmissions, acquisition.receiver_count()]);
         let center_z = 0.5 * nz as f64;
         for transmit in 0..transmissions {
-            let sources = array.cylindrical_source(transmit);
+            let sources = acquisition.sources(transmit);
             let source_plane = build_source_plane(
-                &sources,
+                sources,
                 nx,
                 ny,
                 config.spacing_m,
@@ -371,7 +371,7 @@ impl HelmholtzForwardOperator for AngularSpectrumSplitStepOperator {
                 source_z_index,
                 frequency_hz,
                 config,
-                array.elements(),
+                acquisition.receivers(transmit),
             )?;
             for (receiver_index, value) in receiver_values.into_iter().enumerate() {
                 output[[transmit, receiver_index]] = value;
