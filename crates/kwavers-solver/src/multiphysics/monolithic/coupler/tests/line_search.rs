@@ -1,7 +1,7 @@
 use super::super::super::config::NewtonKrylovConfig;
 use super::super::super::residual_metric::norm;
 use super::super::*;
-use crate::integration::nonlinear::GMRESConfig;
+use crate::krylov::GMRESConfig;
 use kwavers_core::error::{KwaversError, ValidationError};
 use kwavers_field::UnifiedFieldType;
 use leto::Array3;
@@ -151,7 +151,7 @@ fn test_line_search_fallback_returns_last_evaluated_alpha() {
 /// `u + eps * v` candidate and keeps the same allocation across calls.
 #[test]
 fn test_jvp_state_workspace_reuses_buffer_and_returns_identity_derivative() {
-    let mut coupler = MonolithicCoupler::new(NewtonKrylovConfig::default(), GMRESConfig::default());
+    let coupler = MonolithicCoupler::new(NewtonKrylovConfig::default(), GMRESConfig::default());
     let dims = (3, 3, 3);
     let field_order = vec![UnifiedFieldType::Density];
     let u_prev = Array3::zeros(dims);
@@ -165,12 +165,15 @@ fn test_jvp_state_workspace_reuses_buffer_and_returns_identity_derivative() {
         .unwrap();
     assert!(jv.iter().all(|&value| (value - 0.25).abs() < 1e-8));
 
-    let state = coupler.jvp_state_scratch.as_ref().unwrap();
-    let first_ptr = state.as_ptr();
-    let expected_state = 2.0 + eps * 0.25;
-    assert!(state
-        .iter()
-        .all(|&value| (value - expected_state).abs() < 1e-15));
+    let first_ptr = {
+        let scratch = coupler.jvp_state_scratch.borrow();
+        let state = scratch.as_ref().unwrap();
+        let expected_state = 2.0 + eps * 0.25;
+        assert!(state
+            .iter()
+            .all(|&value| (value - expected_state).abs() < 1e-15));
+        state.as_ptr()
+    };
 
     let u = Array3::from_elem(dims, 3.0);
     let v = Array3::from_elem(dims, 0.5);
@@ -180,7 +183,8 @@ fn test_jvp_state_workspace_reuses_buffer_and_returns_identity_derivative() {
         .unwrap();
     assert!(jv.iter().all(|&value| (value - 0.5).abs() < 1e-8));
 
-    let state = coupler.jvp_state_scratch.as_ref().unwrap();
+    let scratch = coupler.jvp_state_scratch.borrow();
+    let state = scratch.as_ref().unwrap();
     let expected_state = 3.0 + eps * 0.5;
     assert_eq!(state.as_ptr(), first_ptr);
     assert!(state
