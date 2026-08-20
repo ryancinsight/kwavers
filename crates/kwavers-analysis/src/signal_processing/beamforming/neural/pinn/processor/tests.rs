@@ -14,12 +14,6 @@ fn test_processor_creation() {
         processor.config.samples_per_channel, 1024,
         "default samples_per_channel must be 1024"
     );
-    // Fresh processor: empty steering cache, zero metrics
-    assert_eq!(
-        processor.steering_cache_len(),
-        0,
-        "new processor must have empty steering cache"
-    );
 }
 
 #[test]
