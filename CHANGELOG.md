@@ -35,6 +35,18 @@
 
 ### Changed
 
+- **Breaking sonoluminescence surface:** Dimensioned emission now exposes
+  typed Aequitas blackbody and bremsstrahlung components and excludes the
+  arbitrary-unit Cherenkov yield from the `W/m³` field. The integrated step
+  initializes from `BubbleParameters` and refreshes emission after state
+  updates; unused emission parameters and the unimplemented molecular-line
+  flag are removed.
+
+- **Examples and book:** The duplicate comparison example is removed. The
+  single-bubble example runs the typed integrated path, and the multiphysics
+  example reports real bounded PINN training statistics instead of placeholder
+  luminosity and validation claims.
+
 - **Documentation:** the README single-sourcing check now exempts `publish = false`
   crates by rule instead of an allowlist. The rule follows the requirement's rationale —
   keeping a crates.io page and a docs.rs front page from drifting — which does not apply

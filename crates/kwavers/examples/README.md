@@ -22,8 +22,8 @@ This directory contains comprehensive examples demonstrating the interdisciplina
 | Example | Description | Features |
 |---------|-------------|----------|
 | [`hifu_tumor_ablation.rs`](hifu_tumor_ablation.rs) | HIFU therapy simulation | Thermal ablation, bioheat transfer |
-| [`multiphysics_sonoluminescence.rs`](multiphysics_sonoluminescence.rs) | **Complete interdisciplinary** | Ultrasound → cavitation → light |
-| [`sonoluminescence_simulation.rs`](sonoluminescence_simulation.rs) | Sonoluminescence modeling | Bubble dynamics, light emission |
+| [`multiphysics_sonoluminescence.rs`](multiphysics_sonoluminescence.rs) | Bounded multi-domain PINN training | Cavitation, sonoluminescence, electromagnetic domains (`pinn`) |
+| [`single_bubble_sonoluminescence.rs`](single_bubble_sonoluminescence.rs) | Sonoluminescence modeling | Bubble dynamics, typed dimensioned emission |
 
 ### 🎯 **Advanced Applications**
 | Example | Description | Features |
@@ -117,11 +117,9 @@ Some examples require specific feature flags:
 cargo run --example multiphysics_sonoluminescence --features full
 ```
 
-This demonstrates the complete physics pipeline:
-1. **Ultrasound excitation** → Acoustic wave propagation
-2. **Cavitation physics** → Bubble oscillation and collapse
-3. **Sonoluminescence** → Light emission from collapse
-4. **Multi-modal detection** → Combined ultrasound + optical imaging
+This trains the registered domains with a bounded demo workload and reports
+the solver's returned final losses and convergence flags. It is a training
+demonstration, not a validation claim for a physical experiment.
 
 ## 🧪 Testing Examples
 

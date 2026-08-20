@@ -35,12 +35,6 @@ impl IntegratedSonoluminescence {
 }
 
 impl SonoluminescenceEmission {
-    /// Get total light output
-    #[must_use]
-    pub fn total_light_output(&self) -> f64 {
-        self.emission_field.iter().copied().sum::<f64>()
-    }
-
     /// Get peak emission location
     #[must_use]
     pub fn peak_emission_location(&self) -> (usize, usize, usize) {
@@ -55,13 +49,6 @@ impl SonoluminescenceEmission {
         }
 
         max_loc
-    }
-
-    /// Estimate color temperature from peak emission
-    #[must_use]
-    pub fn estimate_color_temperature(&self, temperature_field: &Array3<f64>) -> f64 {
-        let (i, j, k) = self.peak_emission_location();
-        temperature_field[[i, j, k]]
     }
 
     /// Get spectral statistics from the spectral field
