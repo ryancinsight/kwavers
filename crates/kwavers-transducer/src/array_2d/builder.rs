@@ -7,7 +7,7 @@
 //!
 //! ```rust
 //! use aequitas::systems::si::quantities::{Angle, Frequency, Length, Velocity};
-//! use aequitas::systems::si::units::{Hertz, Meter, MeterPerSecond, Radian};
+//! use aequitas::systems::si::units::{Degree, Hertz, Meter, MeterPerSecond};
 //! use kwavers_transducer::array_2d::{TransducerArray2DBuilder, ApodizationType};
 //!
 //! let array = TransducerArray2DBuilder::new()
@@ -15,7 +15,7 @@
 //!     .with_spacing(Length::from_unit::<Meter>(0.3e-3))
 //!     .with_frequency(Frequency::from_unit::<Hertz>(2.5e6))
 //!     .with_focus(Length::from_unit::<Meter>(20e-3))
-//!     .with_steering(Angle::from_unit::<Radian>(15.0_f64.to_radians()))
+//!     .with_steering(Angle::from_unit::<Degree>(15.0))
 //!     .with_apodization(ApodizationType::Hanning)
 //!     .build(Velocity::from_unit::<MeterPerSecond>(1540.0))
 //!     .unwrap();
@@ -260,7 +260,7 @@ impl TransducerArray2DBuilder {
 mod tests {
     use super::*;
     use aequitas::systems::si::quantities::{Angle, Frequency, Length, Velocity};
-    use aequitas::systems::si::units::{Hertz, Meter, MeterPerSecond, Radian};
+    use aequitas::systems::si::units::{Degree, Hertz, Meter, MeterPerSecond};
     use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 
     #[test]
@@ -280,12 +280,12 @@ mod tests {
             .with_elements(32)
             .with_spacing(Length::from_unit::<Meter>(0.3e-3))
             .with_focus(Length::from_unit::<Meter>(20e-3))
-            .with_steering(Angle::from_unit::<Radian>(10.0_f64.to_radians()))
+            .with_steering(Angle::from_unit::<Degree>(10.0))
             .build(Velocity::from_unit::<MeterPerSecond>(SOUND_SPEED_TISSUE))
             .unwrap();
 
         assert!((array.focus_distance().unwrap().in_unit::<Meter>() - 20e-3).abs() < 1e-10);
-        assert!((array.steering_angle().in_unit::<Radian>() - 10.0_f64.to_radians()).abs() < 1e-10);
+        assert!((array.steering_angle().in_unit::<Degree>() - 10.0).abs() < 1e-10);
     }
 
     #[test]

@@ -4,7 +4,7 @@ use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 
 use aequitas::systems::si::quantities::{Angle, Length};
-use aequitas::systems::si::units::{Meter, Radian};
+use aequitas::systems::si::units::{Degree, Meter};
 
 use super::{ArrayTransform, DiscSourceProfile, ElementShape, KWaveArray, KWaveElement};
 use crate::curvilinear::ConvexArrayGeometry;
@@ -216,10 +216,11 @@ impl KWaveArray {
         let height = element_height.in_unit::<Meter>();
         for i in 0..geometry.num_elements() {
             let position = geometry.element_position(i);
-            // The one conversion into the rasterizer's f64-degree surface. The
-            // angle arrives typed so radians cannot reach it unconverted.
+            // The rasterizer's surface is f64 degrees; reading the typed angle
+            // in degrees is the whole conversion. No hand-rolled to_degrees(),
+            // so a unit slip here is a type error rather than a wrong mask.
             let theta: Angle<f64> = geometry.element_angle_quantity(i);
-            let theta_deg = theta.in_unit::<Radian>().to_degrees();
+            let theta_deg = theta.in_unit::<Degree>();
             self.add_rect_rot_element(
                 (position[0], position[1], position[2]),
                 width,
