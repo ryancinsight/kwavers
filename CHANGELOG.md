@@ -4,6 +4,12 @@
 
 ### Fixed
 
+- **Repository hygiene:** deleted the tracked
+  `crates/kwavers-driver/src/physics/mod.rs.bak-final` backup file and fixed the ignore
+  rule that should have stopped it: the "Backup files" block matched `*.bak`, which does
+  not match a suffixed `.bak-final`. The pattern is now `*.bak*`, with `*.orig` and `*.rej`
+  added for merge leftovers.
+
 - **Documentation:** `kwavers-driver` module docs no longer carry the phased-refactor
   narrative that produced them. `physics/mod.rs` opened as a "Phase 0 placeholder"
   promising to migrate flat modules that no longer exist and closed 79 lines later with
