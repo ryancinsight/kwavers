@@ -70,6 +70,16 @@ boundary. Exact local Nextest run `0e396915-ab6b-42d4-bb15-e8577213310b` passes
 is 1,234 lines and the 3-D entry point is 1,382 lines; phantom, inversion, and
 reporting still require partitioning, so `KW-EXAMPLES-115` remains in progress.
 
+Full-volume CT interpolation, skull resampling, synthetic spherical phantom
+construction, and input-mode selection now have the
+`seismic_imaging/volume_phantom.rs` leaf; interpolation has value-semantic
+corner and center tests. Exact local Nextest run
+`de2bef5e-ab00-4b67-8910-3b89ac171fec` passes 72/72 (one slow comparison at
+41.982 seconds); strict all-example Clippy, `mdbook test docs/book`, and
+`mdbook build docs/book` pass. The 2-D entry point is 860 lines and the 3-D
+entry point is 1,212 lines; 3-D brain-model, acquisition, inversion, and
+reporting still require partitioning, so `KW-EXAMPLES-115` remains in progress.
+
 Synthetic skull construction, explicit CT loading, HU resampling, and
 brain-support filling now have the `seismic_imaging/phantom.rs` leaf; the
 brain-support classifier is owned by `brain_model.rs` and planar artifacts

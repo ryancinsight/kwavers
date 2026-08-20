@@ -112,6 +112,13 @@
   slow comparison at 42.319 seconds), strict example Clippy passes, and the
   mdBook test/build gates pass.
 
+- **3-D phantom structure:** Full-volume CT interpolation, skull resampling,
+  synthetic spherical phantom construction, and input-mode selection now live
+  in `seismic_imaging/volume_phantom.rs`; interpolation has value-semantic
+  corner and center tests. The exact example Nextest gate passes 72/72 (one
+  slow comparison at 41.982 seconds), strict example Clippy passes, and the
+  mdBook test/build gates pass.
+
 - **Breaking CT skull material boundary:** `AcousticSkullProperties` now stores
   validated Aequitas velocity, mass-density, reciprocal-length attenuation,
   length, and optional shear velocity. `HeterogeneousSkull::from_ct_hill`
