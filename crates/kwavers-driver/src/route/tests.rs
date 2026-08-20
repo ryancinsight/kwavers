@@ -1,6 +1,6 @@
 //! Negotiated-congestion routing tests — PathFinder inner-loop + tree growth + emission checks.
 //!
-//! Moved out of `src/route/mod.rs` at Phase 2b so the 10 tests below live in their own file
+//! Held here rather than in `src/route/mod.rs` so the tests below live in their own file
 //! (gated `#[cfg(test)]`) per the spec's `route/{mod.rs, grid.rs, search.rs, pathfinder.rs,
 //! tests.rs, ...}` layout. The test count is preserved from the pre-move state — the 10 tests
 //! below were moved **verbatim** from `src/route/mod.rs::mod tests`, with the `use super::*;`

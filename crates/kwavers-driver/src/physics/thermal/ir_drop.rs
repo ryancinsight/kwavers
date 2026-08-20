@@ -1,4 +1,4 @@
-//! IR-drop solver on a routed power net — relocated from `crate::pdn` at Phase 3b so the
+//! IR-drop solver on a routed power net. It lives in the thermal slice rather than `pdn` so the
 //! electro-thermal coupling chain (`ir_drop` → [`super::joule_source::joule_source`] →
 //! [`super::electrothermal::solve_electrothermal`]) all sits in `crate::physics::thermal`.
 //!

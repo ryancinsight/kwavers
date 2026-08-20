@@ -1,4 +1,4 @@
-//! # Experiment framework (Phase 6).
+//! # Experiment framework
 //!
 //! Orchestrates end-to-end driver→transducer simulation:
 //! stim profile → dispatch → acoustic simulation → thermal propagation →

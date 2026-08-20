@@ -1,4 +1,4 @@
-//! Phase 3c dielectric slice — lifted tests from the flat `src/dielectric.rs`.
+//! Tests for the dielectric slice.
 //!
 //! Four pinning tests:
 //! * `caf_lifetime_grows_with_spacing_and_falls_with_voltage` — analytic scaling

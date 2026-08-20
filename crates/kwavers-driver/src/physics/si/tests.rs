@@ -1,11 +1,9 @@
-//! Slice-wide tests for the [`crate::physics::si`] vertical slice (Phase 3f).
+//! Slice-wide tests for the [`crate::physics::si`] slice.
 //!
-//! Phase 3f consolidated the previously-inline `mod tests { ... }` blocks of the `src/si.rs`
-//! flat-file into a single `crate::physics::si::tests` module, mirroring the Phase 2c
-//! `place::tests` / `cost::tests` / `route::tests` consolidation pattern: one slice-wide
-//! test file collects the existing test surface + the 3 new slice APIs (impedance_target,
-//! channel_operating_margin_db, return_loss_db) so an external reviewer can grep `tests.rs`
-//! once and see the entire si-slice behavioural contract.
+//! Consolidated from the previously-inline `mod tests { ... }` blocks of the `src/si.rs`
+//! flat file into a single `crate::physics::si::tests` module, matching the convention
+//! every slice follows: one test file per slice, so a reviewer can read `tests.rs` once and
+//! see the entire si-slice behavioural contract.
 
 use crate::physics::si::{
     channel_operating_margin_db, crosstalk_coupling, differential_microstrip_impedance,
@@ -95,7 +93,7 @@ fn risetime_degradation_is_positive_and_small_at_2mhz() {
     );
 }
 
-// -------- Phase 3f NEW APIs: impedance_target, channel_operating_margin_db, return_loss_db --------
+// -------- impedance_target, channel_operating_margin_db, return_loss_db --------
 
 #[test]
 fn impedance_target_matches_at_zero_reflection_and_scales_with_gamma() {

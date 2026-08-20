@@ -4,7 +4,7 @@
 //! segments meeting at nine interior vertices. Each vertex is a fabrication concern that carries no
 //! electrical meaning. These passes consolidate the geometry **without moving copper**, so DRC and
 //! clearance are provably unchanged while the photoplot, the vertex count, and the acid-trap surface
-//! all shrink. Carved by role (Phase 4l): `tracks`, `vias`, `copper`, `diagonal`.
+//! all shrink. Carved by role: `tracks`, `vias`, `copper`, `diagonal`.
 
 mod copper;
 mod diagonal;

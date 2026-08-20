@@ -1,4 +1,4 @@
-//! `AcousticSimulator` DIP trait + in-crate fallback + (feature-gated) kwavers backend (Phase 6).
+//! `AcousticSimulator` DIP trait, in-crate fallback, and the feature-gated kwavers backend.
 //!
 //! The experiment orchestrator depends on [`AcousticSimulator`] only; the concrete simulator
 //! is injected at the call site. The default simulator is [`InCrateAcousticSim`], which runs the
@@ -61,7 +61,7 @@ pub trait AcousticSimulator {
 ///
 /// Same computation as the [`crate::validate::validate_against_budget`] physics block,
 /// re-derived from `(step, budget)` so no manifest is required at simulation time.
-/// Active when the `kwavers` Cargo feature is off (the default at Phase 5).
+/// Active when the `kwavers` Cargo feature is off, which is the default.
 pub struct InCrateAcousticSim;
 
 impl AcousticSimulator for InCrateAcousticSim {

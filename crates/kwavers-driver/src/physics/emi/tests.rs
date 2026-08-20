@@ -1,4 +1,4 @@
-//! Phase 3d emi slice — 8 lifted tests from the flat `src/emi.rs` (verbatim move).
+//! Tests for the emi slice.
 //!
 //! Eight pinning tests:
 //! * `closer_cap_yields_smaller_loop_and_inductance` — geometric correctness of scene walker.

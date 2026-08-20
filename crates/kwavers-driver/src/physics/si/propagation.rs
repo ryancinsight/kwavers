@@ -7,10 +7,9 @@
 //! dielectric loss so a length-matched route can still be checked for **edge-alignment**,
 //! not just centre-alignment.
 //!
-//! All fns accept `f64` lengths / power-of-ten rates; the docstrings say "any consistent
-//! length unit". Phase 2 will replace the `w, h, er` parameters with `Meter, Meter, f64` for
-//! the dimensioned quantities and return types as `Second_per_meter` / `Second`.
-//! **No signature change at Phase 3f** — keeping the API as `f64` preserves every existing
+//! All fns accept `f64` lengths and rates; the docstrings say "any consistent length
+//! unit". Typing the `w, h, er` parameters and the delay return values is tracked in
+//! `docs/MIGRATION.md`.
 //! call-site and test fixture until the vertical-slice units land.
 
 /// Microstrip propagation delay (s/m): `√εeff / c`.
