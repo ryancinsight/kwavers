@@ -37,6 +37,13 @@ remain dimension-specific. The exact local Nextest run
 `20e6d2c9-8a84-4bd9-a2d0-6e9084ea08af` passes 69/69 and strict all-example
 Clippy remains green. The entry points remain above the 500-line target.
 
+The 3-D orthogonal axial, coronal, and sagittal artifact renderer now has its
+own `seismic_imaging/volume_artifacts.rs` leaf; output orchestration remains in
+the example workflow. Exact local Nextest run
+`8af9dbfd-555e-4696-a4df-357b443bf080` passes 69/69 and strict all-example
+Clippy is green. The 2-D entry point and remaining 3-D workflow logic still
+require partitioning before `KW-EXAMPLES-115` can close.
+
 ## ATLAS-KWAVERS-HEPHAESTUS-FDTD-107 — Collocated FDTD provider cutover — Apollo co-evolution blocker 2026-08-18
 
 The old consumer-owned collocated FDTD implementation in

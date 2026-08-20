@@ -63,6 +63,10 @@
   encoding now have one tested rendering home shared by the 2-D and 3-D
   seismic artifacts; their panel layouts remain dimension-specific.
 
+- **3-D seismic artifact structure:** Orthogonal volume-slice rendering now
+  lives in a dedicated leaf module, leaving the 3-D workflow entry point focused
+  on acquisition, inversion, and artifact orchestration.
+
 - **Breaking CT skull material boundary:** `AcousticSkullProperties` now stores
   validated Aequitas velocity, mass-density, reciprocal-length attenuation,
   length, and optional shear velocity. `HeterogeneousSkull::from_ct_hill`

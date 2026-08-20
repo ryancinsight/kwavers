@@ -18,6 +18,8 @@
 mod seismic_imaging;
 #[path = "seismic_imaging/metrics.rs"]
 mod seismic_metrics;
+#[path = "seismic_imaging/volume_artifacts.rs"]
+mod seismic_volume_artifacts;
 use seismic_metrics::{print_quality_pairs, print_quality_report};
 
 use aequitas::systems::si::quantities::{Frequency, Pressure, Time};
@@ -40,7 +42,6 @@ use seismic_imaging::ct::{
 use seismic_imaging::medium::SkullModel;
 use seismic_imaging::render::{put_pixel, velocity_color, write_png};
 use std::f64::consts::PI;
-use std::io;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
@@ -787,84 +788,6 @@ fn diverging_color(value: f64, max_abs: f64) -> [u8; 3] {
     }
 }
 
-/// Write a 3-panel PNG with orthogonal slices from a 3D velocity model.
-///
-/// # Layout (side by side, each PANEL×PANEL, with colorbar row below)
-///
-/// ```text
-/// ┌─────────────┬─────────────┬─────────────┐  ← PANEL rows
-/// │  Axial      │  Coronal    │  Sagittal   │
-/// │  y=NY/2     │  z=NZ/2     │  x=NX/2    │
-/// ├─────────────┴─────────────┴─────────────┤  ← COLORBAR_H rows
-/// └─────────────────────────────────────────┘
-///   3×PANEL wide × (PANEL + COLORBAR_H) tall
-/// ```
-fn write_orthogonal_slices_png(
-    path: &Path,
-    vol: &Array3<f64>,
-    c_lo: f64,
-    c_hi: f64,
-) -> io::Result<()> {
-    let img_w = 3 * PANEL;
-    let img_h = PANEL + COLORBAR_H;
-    let mut rgb = vec![0_u8; img_w * img_h * 3];
-
-    let mid_y = NY / 2;
-    let mid_z = NZ / 2;
-    let mid_x = NX / 2;
-
-    // Panel 0 (axial): y = NY/2, ix = column, iz = row.
-    for py in 0..PANEL {
-        for px in 0..PANEL {
-            let ix = (px * NX / PANEL).min(NX - 1);
-            let iz = (py * NZ / PANEL).min(NZ - 1);
-            let color = velocity_color(vol[[ix, mid_y, iz]], c_lo, c_hi);
-            put_pixel(&mut rgb, img_w, img_h, px, py, color);
-        }
-    }
-
-    // Panel 1 (coronal): z = NZ/2, ix = column, iy = row.
-    for py in 0..PANEL {
-        for px in 0..PANEL {
-            let ix = (px * NX / PANEL).min(NX - 1);
-            let iy = (py * NY / PANEL).min(NY - 1);
-            let color = velocity_color(vol[[ix, iy, mid_z]], c_lo, c_hi);
-            put_pixel(&mut rgb, img_w, img_h, PANEL + px, py, color);
-        }
-    }
-
-    // Panel 2 (sagittal): x = NX/2, iy = column, iz = row.
-    for py in 0..PANEL {
-        for px in 0..PANEL {
-            let iy = (px * NY / PANEL).min(NY - 1);
-            let iz = (py * NZ / PANEL).min(NZ - 1);
-            let color = velocity_color(vol[[mid_x, iy, iz]], c_lo, c_hi);
-            put_pixel(&mut rgb, img_w, img_h, 2 * PANEL + px, py, color);
-        }
-    }
-
-    // Colorbar row below all three panels.
-    for panel_col in 0..3 {
-        for px in 0..PANEL {
-            let t = px as f64 / (PANEL - 1) as f64;
-            let c = c_lo + t * (c_hi - c_lo);
-            let color = velocity_color(c, c_lo, c_hi);
-            for dy in 0..COLORBAR_H {
-                put_pixel(
-                    &mut rgb,
-                    img_w,
-                    img_h,
-                    panel_col * PANEL + px,
-                    PANEL + dy,
-                    color,
-                );
-            }
-        }
-    }
-
-    write_png(path, &rgb, img_w, img_h)
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Main
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1391,28 +1314,46 @@ fn main() -> KwaversResult<()> {
     let brain_tissue_path = abs_dir.join("brain3d_brain_tissue.png");
 
     // Three-plane skull FWI images (write from reconstructed model).
-    write_orthogonal_slices_png(&axial_path, &reconstructed, c_lo, c_hi)
+    seismic_volume_artifacts::write_orthogonal_slices_png(&axial_path, &reconstructed, c_lo, c_hi)
         .map_err(|e| KwaversError::InvalidInput(format!("axial PNG write failed: {e}")))?;
 
-    write_orthogonal_slices_png(&coronal_path, &reconstructed, c_lo, c_hi)
-        .map_err(|e| KwaversError::InvalidInput(format!("coronal PNG write failed: {e}")))?;
+    seismic_volume_artifacts::write_orthogonal_slices_png(
+        &coronal_path,
+        &reconstructed,
+        c_lo,
+        c_hi,
+    )
+    .map_err(|e| KwaversError::InvalidInput(format!("coronal PNG write failed: {e}")))?;
 
-    write_orthogonal_slices_png(&sagittal_path, &reconstructed, c_lo, c_hi)
-        .map_err(|e| KwaversError::InvalidInput(format!("sagittal PNG write failed: {e}")))?;
+    seismic_volume_artifacts::write_orthogonal_slices_png(
+        &sagittal_path,
+        &reconstructed,
+        c_lo,
+        c_hi,
+    )
+    .map_err(|e| KwaversError::InvalidInput(format!("sagittal PNG write failed: {e}")))?;
 
     // T1-derived tissue velocity image.
     if let Some(t1_brain) = &t1_brain_model {
-        write_orthogonal_slices_png(&t1_tissue_path, t1_brain, BRAIN_C_MIN, BRAIN_C_MAX)
-            .map_err(|e| KwaversError::InvalidInput(format!("T1 tissue PNG write failed: {e}")))?;
+        seismic_volume_artifacts::write_orthogonal_slices_png(
+            &t1_tissue_path,
+            t1_brain,
+            BRAIN_C_MIN,
+            BRAIN_C_MAX,
+        )
+        .map_err(|e| KwaversError::InvalidInput(format!("T1 tissue PNG write failed: {e}")))?;
         println!("  T1 tissue image  : {}", t1_tissue_path.display());
     }
 
     // Brain tissue FWI result image.
     if let Some(bt_recon) = &brain_reconstructed {
-        write_orthogonal_slices_png(&brain_tissue_path, bt_recon, BRAIN_C_MIN, BRAIN_C_MAX)
-            .map_err(|e| {
-                KwaversError::InvalidInput(format!("brain tissue PNG write failed: {e}"))
-            })?;
+        seismic_volume_artifacts::write_orthogonal_slices_png(
+            &brain_tissue_path,
+            bt_recon,
+            BRAIN_C_MIN,
+            BRAIN_C_MAX,
+        )
+        .map_err(|e| KwaversError::InvalidInput(format!("brain tissue PNG write failed: {e}")))?;
         println!("  Brain tissue image: {}", brain_tissue_path.display());
     }
 
