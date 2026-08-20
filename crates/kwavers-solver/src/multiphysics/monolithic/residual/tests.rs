@@ -1,7 +1,7 @@
 use super::super::config::NewtonKrylovConfig;
 use super::super::coupler::MonolithicCoupler;
 use super::super::residual_metric::norm;
-use crate::integration::nonlinear::GMRESConfig;
+use crate::krylov::GMRESConfig;
 use kwavers_field::UnifiedFieldType;
 use leto::Array3;
 

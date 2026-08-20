@@ -54,6 +54,7 @@ pub mod analytical;
 pub mod integration;
 pub mod interface;
 pub mod inverse;
+pub mod krylov;
 pub mod multiphysics;
 pub mod plugin;
 pub mod utilities;

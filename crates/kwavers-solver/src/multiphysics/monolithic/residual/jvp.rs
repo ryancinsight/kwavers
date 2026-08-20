@@ -12,10 +12,18 @@ impl MonolithicCoupler {
     /// place into the finite-difference quotient, avoiding an additional
     /// full-state scaled-difference allocation.
     ///
+    /// This takes `&self` so it can back an Athena
+    /// [`LinearOperator`](athena_core::LinearOperator), whose `apply` is
+    /// `&self` — the operator is read-only to the Krylov recurrence, which may
+    /// hold it while borrowing its own workspace. The perturbation buffer is
+    /// therefore reached through a [`RefCell`](std::cell::RefCell): it is a
+    /// cache, not part of the operator's mathematical state, and the borrow is
+    /// released before the residual is evaluated so no borrow spans a call.
+    ///
     /// # Errors
     /// - Propagates any error returned while evaluating `F(u)` or `F(u+εv)`.
     pub(in crate::multiphysics::monolithic) fn jacobian_vector_product(
-        &mut self,
+        &self,
         v: &Array3<f64>,
         u: &Array3<f64>,
         u_prev: &Array3<f64>,
@@ -28,6 +36,7 @@ impl MonolithicCoupler {
 
         let mut u_plus = self
             .jvp_state_scratch
+            .borrow_mut()
             .take()
             .filter(|scratch| scratch.shape() == u.shape())
             .unwrap_or_else(|| Array3::zeros(u.shape()));
@@ -41,11 +50,11 @@ impl MonolithicCoupler {
         let mut f_u_plus = match self.compute_residual(&u_plus, u_prev, dt, dims, field_order) {
             Ok(residual) => residual,
             Err(error) => {
-                self.jvp_state_scratch = Some(u_plus);
+                *self.jvp_state_scratch.borrow_mut() = Some(u_plus);
                 return Err(error);
             }
         };
-        self.jvp_state_scratch = Some(u_plus);
+        *self.jvp_state_scratch.borrow_mut() = Some(u_plus);
 
         let inv_eps = 1.0 / eps;
         for (jv, base) in f_u_plus.iter_mut().zip(f_u.iter()) {

@@ -13,9 +13,10 @@
 //! All child modules add inherent methods to [`MonolithicCoupler`].  No wrapper
 //! type, compatibility alias, or dynamic dispatch layer is introduced.
 
-use crate::integration::nonlinear::{GMRESConfig, GMRESSolver};
+use crate::krylov::{GMRESConfig, KrylovWorkspace};
 use crate::plugin::Plugin;
 use leto::Array3;
+use std::cell::RefCell;
 use std::collections::HashMap;
 
 use super::config::{NewtonKrylovConfig, PhysicsCoefficients};
@@ -70,10 +71,18 @@ pub struct MonolithicCoupler {
     pub(super) line_search_state_scratch: Option<Array3<f64>>,
 
     /// Pre-allocated perturbed state for Jacobian-vector products.
-    pub(super) jvp_state_scratch: Option<Array3<f64>>,
+    ///
+    /// Jacobian-vector products run behind an Athena
+    /// [`LinearOperator`](athena_core::LinearOperator), whose `apply` takes
+    /// `&self`, so this cache is reached through interior mutability. It is a
+    /// buffer, not solver state: keeping it here rather than in the operator
+    /// is what lets one allocation serve every Newton iteration of every
+    /// coupled step, as it did when the product took `&mut self`.
+    pub(super) jvp_state_scratch: RefCell<Option<Array3<f64>>>,
 
-    /// Reusable GMRES solver instance.
-    pub(super) gmres_solver: Option<GMRESSolver>,
+    /// Reusable Krylov workspace, held across Newton iterations and coupled
+    /// steps so the Arnoldi basis is allocated once per system dimension.
+    pub(super) krylov_workspace: Option<KrylovWorkspace>,
 
     /// Grid cell spacings `(dx, dy, dz)` in metres from the active solve grid.
     pub(super) grid_spacing: (f64, f64, f64),
