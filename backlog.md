@@ -6771,8 +6771,21 @@ Triage (correctness/arch → tests → features), one WIP item at a time:
    (both fully implemented; see gap_audit). COV-11 Mur BC = WONTFIX (CPML superior).
 
 ### Remaining genuine coverage gaps (post-verification), best as focused increments:
-- **COV-3 curvilinear/convex transmit array** [minor] — `kwavers-transducer`.
-  **Corrected 2026-08-19: the layout helper this entry asks for already exists.**
+- **COV-3 curvilinear/convex transmit array** [minor] — ✅ **DONE (2026-08-19).**
+  `KWaveArray::add_convex_array(&geometry, element_width, element_height)` wires
+  the layout into the rasterizer per ADR 112, mapping each element to
+  `add_rect_rot_element` at Euler `(0, theta_i deg, 0)` and taking
+  `aequitas::Length`/typed angle so no bare radian crosses the seam. Asserted by
+  `convex_array_elements_face_along_their_layout_normals`, which drives the
+  stored orientation through the rasterizer's own `euler_xyz_rotation_matrix`
+  and compares against `element_normal(i)`. The oracle was falsified before
+  being trusted: swapping the Euler slot to `(theta, 0, 0)` and dropping
+  `.to_degrees()` each make it fail, which is the point -- both bugs still
+  produce a full, plausible element mask facing the wrong way.
+  Remaining from ADR 112: `Degree` as a `LinearUnit<Angle>` upstream in
+  aequitas (item 3), which does not block this.
+
+  Prior status, retained: **the layout helper this entry asked for already existed.**
   `curvilinear::ConvexArrayGeometry` places N elements on a circular arc, with
   `from_angular_pitch` / `from_arc_pitch` / `from_total_angle` constructors and
   per-element `element_position` / `element_normal` / `element_tangent` /

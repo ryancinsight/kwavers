@@ -32,6 +32,8 @@
 //! - Szabo, T. L. (2014). *Diagnostic Ultrasound Imaging*, 2nd ed., §7
 //!   (array geometries). Curved/convex arrays.
 
+use aequitas::systems::si::quantities::Angle;
+use aequitas::systems::si::units::Radian;
 use kwavers_core::error::{KwaversError, KwaversResult};
 
 /// A convex (curvilinear) transducer-array layout on a circular arc.
@@ -158,6 +160,17 @@ impl ConvexArrayGeometry {
     #[must_use]
     pub fn element_angle(&self, i: usize) -> f64 {
         (i as f64 - (self.num_elements as f64 - 1.0) / 2.0) * self.angular_pitch
+    }
+
+    /// Subtended angle of element `i` as a typed quantity.
+    ///
+    /// The bare [`Self::element_angle`] returns radians by convention; this
+    /// carries the unit in the type so a consumer cannot feed radians to a
+    /// degree-taking API. Used by `KWaveArray::add_convex_array`, where the
+    /// single conversion to the rasterizer's degrees happens (ADR 112).
+    #[must_use]
+    pub fn element_angle_quantity(&self, i: usize) -> Angle<f64> {
+        Angle::from_unit::<Radian>(self.element_angle(i))
     }
 
     /// Centre position of element `i` \[m\].
