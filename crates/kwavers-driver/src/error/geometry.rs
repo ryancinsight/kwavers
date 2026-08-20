@@ -1,6 +1,6 @@
 //! Geometry / grid / board-model invariant errors.
 //!
-//! Migrates the 4 variants that lived on the legacy flat `Error` enum at Phase 0:
+//! The board- and grid-model invariant failures:
 //!
 //! * [`Geometry::PadOutOfBounds`] — a pad's coordinates lie outside the routing grid
 //!   bounds. Raised by [`crate::validate`] when reconciling pin assignments against

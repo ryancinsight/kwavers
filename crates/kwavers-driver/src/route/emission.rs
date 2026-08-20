@@ -1,6 +1,6 @@
 //! Track + via emission from a `RouteOutcome` onto a `Board`, plus the via-column helpers.
 //!
-//! Phase 2b round-2 carved three concerns out of `src/route/pathfinder.rs` into this
+//! Three concerns live here rather than in `src/route/pathfinder.rs`, in this
 //! sibling module:
 //!
 //! * `via_nodes` — endpoints of via edges (layer-changing edges) on the lower-indexed

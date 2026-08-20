@@ -8,7 +8,7 @@
 //! Parser: a focused scanner for the `(name "…")` / `(number "…")` token pairs that appear (in that
 //! order) inside each `(pin …)` of the symbol. No external dependency.
 //!
-//! Phase 2c: the inline `mod tests { ... }` block moved to `crate::place::tests` (the consolidated
+//! The inline `mod tests { ... }` block lives in `crate::place::tests` (the consolidated
 //! slice-wide test surface). `quoted_events` stays private — the byte-tracking pinning tests at
 //! `crate::place::tests` exercise it indirectly through `import_symbol_pinmap` (and through the
 //! `pub(super)` parser items at `crate::place::footprint_import` for the dedicated sexpr contracts).
@@ -68,14 +68,14 @@ impl PinMap {
 /// Collect the quoted string immediately following each occurrence of `pat` (which ends in `"`),
 /// tagged with its byte position so name/number events can be interleaved in file order.
 ///
-/// **Phase 1d polish**: on an unclosed-quote the function returns
+/// On an unclosed quote the function returns
 /// [`crate::error::Manifest::Parse`] with the byte offset pointing at the opening `"`,
 /// so a contributor trimming a half-finished vendor symbol gets a typed diagnostic in
 /// `cargo` output rather than a silently-dropped event (the previous behaviour fell
 /// through to `no_pins` which masked the real bug). The opening `"` is at byte
 /// `qstart - 1` (one byte before the payload start `qstart = from + idx + plen`); the
 /// error envelope carries that byte as `offset`, matching the byte-tracking convention
-/// `parse_sexpr` set in Phase 1c polish.
+/// `parse_sexpr` sets.
 fn quoted_events(
     text: &str,
     pat: &str,
@@ -115,7 +115,7 @@ pub fn import_symbol_pinmap(path: impl AsRef<std::path::Path>) -> Result<PinMap,
     let path_buf: std::path::PathBuf = path.as_ref().to_path_buf();
     // Use the cross-file SSOT constructor at `crate::error::manifest::io_at` so the
     // failing case reads as one line and the inner `io::Error` joins a `#[source]`
-    // chain via the same path every other import uses (Phase 1b dedup).
+    // chain via the same path every other import uses.
     let text = std::fs::read_to_string(&path_buf)
         .map_err(|source| crate::error::manifest::io_at(path_buf.clone(), source))?;
     // Within each (pin …), the name token precedes the number token; both carry a quoted value.
@@ -123,7 +123,7 @@ pub fn import_symbol_pinmap(path: impl AsRef<std::path::Path>) -> Result<PinMap,
     // token is opened but never closed (half-finished vendor symbol, copy-paste artefact,
     // etc.); the partial event stream is discarded because the typed diagnostic supersedes
     // it — the user wants to know which token broke, not collect events that pair against
-    // undefined payloads. The Phase 1c polish byte offset `qstart - 1` points at the
+    // undefined payloads. The byte offset `qstart - 1` points at the
     // opening `"`; `parse_err` is the SSOT constructor that already carries the byte.
     let mut events: Vec<(usize, bool, String)> = quoted_events(&text, "(name \"", true)?;
     events.extend(quoted_events(&text, "(number \"", false)?);
@@ -141,7 +141,7 @@ pub fn import_symbol_pinmap(path: impl AsRef<std::path::Path>) -> Result<PinMap,
     if pins.is_empty() {
         // Routes through the cross-file SSOT helper at `crate::error::manifest::no_pins`.
         // Identical envelope shape to the inline literal otherwise; the hoist mirrors
-        // the Phase 1b follow-up SSOT pattern.
+        // the SSOT pattern.
         return Err(crate::error::manifest::no_pins(path_buf));
     }
     Ok(PinMap { pins })

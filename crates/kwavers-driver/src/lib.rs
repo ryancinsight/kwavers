@@ -84,23 +84,6 @@ pub mod tr_switch;
 pub mod validate;
 pub mod verify;
 
-// Phase 0 vertical-slice placeholders (see docs/MIGRATION.md + docs/ARCHITECTURE.md). Each
-// of these is a fresh `src/<slice>/` directory whose content will be migrated from the
-// existing flat modules in Phase 1. Declaring them at Phase 0 puts the new vertical-slice
-// tree into the compile graph + the docs target so the structure is locked-in for every
-// follow-on phase.
-//
-// `pub mod units;` is canonical from Phase 1a — implements the length newtype (`Nm`) +
-// the SI wrappers (`Hz`, `Ohm`, `Watt`, `Kelvin`, `Celsius`, `Volt`, `Amp`, `Henry`,
-// `Farad`, `Coulomb`) with `From<f64>` conversions, scalar + same-unit + cross-product
-// arithmetic, prefix factories, and SI-symbol `Display`. See its module docstring for the
-// migration convention.
-
-// Phase 1a prelude — the canonical `pub use` surface for downstream consumers.
-// `use kwavers_driver::prelude::*;` brings the canonical unit newtypes, geometry types,
-// board model, and physics facade into scope. Promoted from a Phase-0 doc-only file to
-// a real entry point at Phase 1a; declared here as `pub mod prelude;` alongside the other
-// top-level modules.
 pub mod experiment;
 #[cfg(feature = "kwavers")]
 pub use experiment::KwaversSim;

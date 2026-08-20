@@ -1,13 +1,9 @@
 //! Controlled-impedance characteristic values for microstrip / stripline / differential
 //! signal-integrity design.
 //!
-//! All four characteristic-impedance fns accept `f64` lengths / impedances — the docstrings
-//! say "any consistent length unit". Phase 2 will replace the `w, h, er, t, b` parameters with
-//! `Meter, Meter, f64, Meter, Meter` for the dimensioned quantities and return types as the
-//! typed [`Ohm`] wrapper (not yet wrapped at Phase 1a; carried in plain backticks to keep
-//! informational references rustdoc-warning-clean). **No signature change at Phase 3f** —
-//! keeping the API as `f64` preserves every existing call-site and test fixture until the
-//! vertical-slice units land.
+//! All four characteristic-impedance fns accept `f64` lengths and impedances — the
+//! docstrings say "any consistent length unit". Typing the `w, h, er, t, b` parameters as
+//! lengths and the return values as [`Ohm`] is tracked in `docs/MIGRATION.md`.
 //!
 //! [`Ohm`]: crate::units::Ohm
 

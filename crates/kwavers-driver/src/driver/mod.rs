@@ -27,7 +27,7 @@
 //!
 //! # Slice layout
 //!
-//! Carved by **physics role** (Phase 4g). Plain backticks name the slice-private submodules; the
+//! Carved by **physics role**. Plain backticks name the slice-private submodules; the
 //! public items each hosts stay clickable.
 //! * `pulser` — the core loss model: [`PulserOp`] operating point → [`PulserDissipation`] breakdown
 //!   via [`pulser_dissipation`].

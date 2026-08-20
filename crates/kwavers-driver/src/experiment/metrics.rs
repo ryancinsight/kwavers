@@ -1,4 +1,4 @@
-//! Aggregated experiment metrics — acoustic + thermal in one view (Phase 5).
+//! Aggregated experiment metrics — acoustic and thermal in one view.
 //!
 //! [`ExperimentMetrics`] collects every scalar a downstream consumer (UI dashboard, report
 //! template, acceptance test) needs without having to walk two separate structs. All fields are

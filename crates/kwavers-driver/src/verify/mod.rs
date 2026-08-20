@@ -24,7 +24,7 @@
 //! produces the expected finding); the LVS connectivity extraction is differential against the
 //! intended netlist. Property/empirical tier, cross-checked by `kicad-cli` in the example flows.
 //!
-//! # Module layout (Phase 4b carve)
+//! # Module layout
 //!
 //! The slice is split by verification axis — each sign-off check lives in its own sub-module
 //! plus a `suite` aggregator that runs them all and gates the result. The [`pub use`] block at

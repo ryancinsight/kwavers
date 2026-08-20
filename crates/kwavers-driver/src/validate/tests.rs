@@ -1,4 +1,4 @@
-//! Tests for the `validate` slice (Phase 4j).
+//! Tests for the `validate` slice.
 //!
 //! NOTE — RECONSTRUCTED SUITE: the original 662-line `mod tests` block was lost when the flat
 //! `src/validate.rs` file was removed (a tool auto-resolving the transient `validate.rs`↔`validate/`

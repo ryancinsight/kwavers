@@ -1,4 +1,4 @@
-//! Consolidated tests for the `component_db` slice (Phase 4i carve-out): catalog completeness, the
+//! Consolidated tests for the `component_db` slice: catalog completeness, the
 //! candidate-comparison ranking, and the per-IC board-area model. Moved verbatim from the flat
 //! `src/component_db.rs` `mod tests` block; the one `for p in &pulsers` adapted to `for p in pulsers`
 //! for the `&'static [PulserIc]` slice return. `super::*` resolves the slice facade.

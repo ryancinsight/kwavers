@@ -1,5 +1,63 @@
 # Backlog / Strategy
 
+## KW-DOC-107 — Move driver migration plans out of module docstrings [patch] — done 2026-08-20
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-DOC-107 | `kwavers-driver` module docs describe what each module is, not the phased plan that produced it. | [patch] | done | Claude | 83 files under `crates/kwavers-driver/src/` |
+
+- Merge note: this item was filed on `feat/aperture-sir-seam` (commit `7f9a4e718`) and
+  closed here on `fix/xtask-metrics-paths`, because a peer moved the shared tree onto a
+  different branch mid-item. When the two branches meet, keep this closed entry and drop
+  the `todo` entry of the same ID.
+- Acceptance: no module docstring contradicts its own module; phase narrative lives in
+  `docs/MIGRATION.md`, which already carries it; `cargo doc -p kwavers-driver` stays
+  warning-clean.
+- The defect: `src/physics/mod.rs` opened "Physics vertical-slice tree (Phase 0
+  placeholder)" and carried a plan to migrate flat modules that no longer exist, then
+  closed 79 lines later with "Phase 3 is COMPLETE" — a docstring contradicting itself over
+  7 `pub mod` lines. `src/geometry/mod.rs` declared itself a placeholder whose content
+  would replace `src/geom.rs`, a migration `docs/MIGRATION.md` records as not started.
+  Twelve rustdoc `# Phase N` section headings rendered process narrative into the published
+  API docs, and ~150 further doc lines carried phase labels.
+- Done: every `Phase N` reference is gone from `src/` except the crate-level `//!` block in
+  `src/lib.rs`, which commit `7f9a4e718` deletes outright (editing it here would collide
+  with that deletion for no gain). Rewrites keep the engineering content and drop the
+  process framing — the per-module "which parameters are still plain `f64` and why" notes
+  became `# Units` sections pointing at `docs/MIGRATION.md`; "Phase 2b round-2 carve-out"
+  became "# Cross-file impl blocks"; the physics-tree docstring became a slice
+  responsibility table plus the no-cross-slice-coupling invariant; `src/geometry/mod.rs`
+  now states plainly that it is empty and that [`crate::geom`] is authoritative.
+- Evidence: 83 files, +240/-416 lines, and a diff review confirms every changed line is a
+  comment — no code, and no reformat churn (each changed file carries a comment-line
+  change). `cargo nextest run -p kwavers-driver` 494/494 in 2.519 s.
+  `RUSTDOCFLAGS="-D warnings" cargo doc -p kwavers-driver --no-deps` clean.
+  `cargo clippy -p kwavers-driver --all-targets -- -D warnings` clean. `cargo fmt` clean.
+- Observations recorded rather than acted on: `src/geometry/` is an empty `pub mod` that
+  exports nothing — public surface reserved for a migration that has not started; it stays
+  because `docs/MIGRATION.md` still plans it. `src/ssot.rs` documents `TX_LANES_V2` and
+  `CHANNELS_PER_TILE_V2`, version-suffixed identifiers whose `_V2` may name a real board
+  revision or may be an iteration marker; a rename needs the owner's reading of which.
+  KW-DOC-110 below covers the blanket allow this item surfaced.
+
+## KW-DOC-110 — Document the audit slice submodules [patch] — todo
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-DOC-110 | `crates/kwavers-driver/src/audit/` satisfies the crate's `#![deny(missing_docs)]` without a blanket allow. | [patch] | todo | unclaimed | `crates/kwavers-driver/src/audit/**` |
+
+- The defect: `src/audit/mod.rs` carries `#![allow(missing_docs)]` covering the whole audit
+  facade, so `#![deny(missing_docs)]` at the crate root does not reach it. It is not
+  cosmetic — `antenna.rs` and `crosstalk.rs` open directly on `use` statements with no
+  module documentation at all, and the allow is what lets that ship.
+- Acceptance: every public module and item under `src/audit/` carries documentation stating
+  its responsibility; the blanket allow is deleted, not narrowed to `#[expect]`;
+  `cargo doc -p kwavers-driver` stays warning-clean.
+- Not folded into KW-DOC-107: that item removed stale narrative, this one writes missing
+  documentation for eleven modules — a different defect class, and writing eleven module
+  docs without reading each module would produce exactly the filler this codebase does not
+  want.
+
 ## KW-CI-104 — Centralize reliable Ubuntu dependency installation [patch] — in progress 2026-08-19
 
 | ID | Outcome | Class | Status | Owner | Scope |

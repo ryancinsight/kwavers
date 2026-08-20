@@ -1,4 +1,4 @@
-//! Consolidated tests for the `optim` slice (Phase 4h carve-out): the full design-point evaluation
+//! Consolidated tests for the `optim` slice: the full design-point evaluation
 //! and the standalone thermal/breakdown/track-resistance kernels. Moved verbatim from the flat
 //! `src/optim.rs` `mod tests` block; `super::*` resolves the slice facade.
 

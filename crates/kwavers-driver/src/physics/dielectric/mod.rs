@@ -1,5 +1,5 @@
 //! High-voltage dielectric withstand — Paschen air-breakdown, IPC-2221 voltage spacing,
-//! and CAF time-to-failure — `physics::dielectric` vertical slice (Phase 3c).
+//! and CAF time-to-failure.
 //!
 //! # SSOT for the slice
 //!
