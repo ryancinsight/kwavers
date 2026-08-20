@@ -1,7 +1,7 @@
 //! 3-D reconstruction artifact writing and output-directory handling.
 
 use super::{
-    Array3, BRAIN_C_MAX, BRAIN_C_MIN, KwaversError, KwaversResult, seismic_volume_artifacts,
+    seismic_volume_artifacts, Array3, KwaversError, KwaversResult, BRAIN_C_MAX, BRAIN_C_MIN,
 };
 use kwavers_core::constants::acoustic_parameters::SOUND_SPEED_SKULL_CORTICAL;
 use std::path::PathBuf;

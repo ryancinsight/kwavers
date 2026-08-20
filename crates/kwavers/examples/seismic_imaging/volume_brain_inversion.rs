@@ -2,10 +2,10 @@
 
 use super::seismic_imaging::medium::SkullModel;
 use super::{
-    Array2, Array3, BONE_VELOCITY_THRESHOLD, BRAIN_C_MAX, BRAIN_C_MIN, BrainPriorMode, DX,
-    FwiGeometry, FwiParameters, FwiProcessor, Grid, KwaversError, KwaversResult, N_RECEIVERS_3D,
-    NX, NY, NZ, R_SKULL_IN, SOUND_SPEED_WATER_SIM, seismic_metrics, seismic_volume_acquisition,
-    seismic_volume_brain_model,
+    seismic_metrics, seismic_volume_acquisition, seismic_volume_brain_model, Array2, Array3,
+    BrainPriorMode, FwiGeometry, FwiParameters, FwiProcessor, Grid, KwaversError, KwaversResult,
+    BONE_VELOCITY_THRESHOLD, BRAIN_C_MAX, BRAIN_C_MIN, DX, NX, NY, NZ, N_RECEIVERS_3D, R_SKULL_IN,
+    SOUND_SPEED_WATER_SIM,
 };
 use anyhow::Context as _;
 use kwavers_solver::inverse::seismic::parameters::RegularizationParameters;

@@ -1,7 +1,7 @@
 //! Separable 3-D Gaussian initial-model construction.
 
 use super::{Array3, NX, NY, NZ};
-use moirai_parallel::{Adaptive, map_collect_index_with};
+use moirai_parallel::{map_collect_index_with, Adaptive};
 
 /// Blur a volume sequentially along x, y, and z with clamped boundaries.
 ///
@@ -83,11 +83,9 @@ mod tests {
         let blurred = gaussian_blur_3d(&volume, 3.0);
         let bound = 64.0 * f64::EPSILON * value.abs();
 
-        assert!(
-            blurred
-                .iter()
-                .all(|&sample| (sample - value).abs() <= bound)
-        );
+        assert!(blurred
+            .iter()
+            .all(|&sample| (sample - value).abs() <= bound));
     }
 
     #[test]

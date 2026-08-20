@@ -3,7 +3,7 @@
 use leto::Array3;
 
 use super::seismic_imaging::ct::CtVolume;
-use super::{C_HI, C_LO, COLORBAR_H, NX, NZ, PANEL, put_pixel, velocity_color, write_png};
+use super::{put_pixel, velocity_color, write_png, COLORBAR_H, C_HI, C_LO, NX, NZ, PANEL};
 use std::fs::File;
 use std::io::{self, BufWriter, Write};
 use std::path::Path;

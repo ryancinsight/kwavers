@@ -81,7 +81,7 @@ pub(super) fn build_shot_3d(
 
 #[cfg(test)]
 mod tests {
-    use super::{NX, NY, NZ, build_receiver_mask_3d, fibonacci_sphere_elements};
+    use super::{build_receiver_mask_3d, fibonacci_sphere_elements, NX, NY, NZ};
 
     #[test]
     fn fibonacci_positions_stay_inside_the_physical_domain() {

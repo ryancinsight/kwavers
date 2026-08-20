@@ -4,7 +4,7 @@ use anyhow::Context as _;
 use leto::Array3;
 
 use super::seismic_imaging::ct::{
-    CtVolume, load_ct_volume, skull_centroid_2d, skull_equator_z, skull_outer_radius_ct,
+    load_ct_volume, skull_centroid_2d, skull_equator_z, skull_outer_radius_ct, CtVolume,
 };
 use super::seismic_imaging::medium::SkullModel;
 use super::seismic_input::SeismicInputMode;

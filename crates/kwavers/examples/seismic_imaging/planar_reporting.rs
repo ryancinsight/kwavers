@@ -3,8 +3,8 @@
 use super::seismic_imaging::ct::CtVolume;
 use super::seismic_imaging::medium::SkullModel;
 use super::{
-    Array3, BRAIN_C_MAX, BRAIN_C_MIN, C_HI, C_LO, COLORBAR_H, KwaversError, KwaversResult, PANEL,
-    seismic_acquisition, seismic_planar_artifacts, seismic_planar_auxiliary,
+    seismic_acquisition, seismic_planar_artifacts, seismic_planar_auxiliary, Array3, KwaversError,
+    KwaversResult, BRAIN_C_MAX, BRAIN_C_MIN, COLORBAR_H, C_HI, C_LO, PANEL,
 };
 use std::path::PathBuf;
 

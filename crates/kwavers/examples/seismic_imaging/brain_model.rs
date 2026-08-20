@@ -3,13 +3,13 @@
 use anyhow::Context as _;
 use coeus_core::MoiraiBackend;
 use leto::{Array2, Array3};
-use ritk_io::ImageReader;
 use ritk_io::format::nifti::native::NiftiReader as NativeNiftiReader;
+use ritk_io::ImageReader;
 use std::path::Path;
 
 use super::seismic_imaging::medium::SkullModel;
 use super::{
-    BONE_VELOCITY_THRESHOLD, BrainPriorMode, C_CSF, C_GRAY, C_WHITE, DX, MNI_INNER_SKULL_RADIUS_MM,
+    BrainPriorMode, BONE_VELOCITY_THRESHOLD, C_CSF, C_GRAY, C_WHITE, DX, MNI_INNER_SKULL_RADIUS_MM,
     NX, NY, NZ, R_SKULL_IN, SOUND_SPEED_WATER_SIM,
 };
 

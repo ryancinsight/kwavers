@@ -72,11 +72,9 @@ mod tests {
         let blurred = gaussian_blur_xz(&model, 3.0);
         let bound = 64.0 * f64::EPSILON * value.abs();
 
-        assert!(
-            blurred
-                .iter()
-                .all(|&sample| (sample - value).abs() <= bound)
-        );
+        assert!(blurred
+            .iter()
+            .all(|&sample| (sample - value).abs() <= bound));
     }
 
     #[test]

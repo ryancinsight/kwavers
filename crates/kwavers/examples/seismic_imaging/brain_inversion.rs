@@ -12,7 +12,7 @@ use super::brain_prior::BrainPriorMode;
 use super::seismic_acquisition;
 use super::seismic_brain_model;
 use super::seismic_imaging::medium::SkullModel;
-use super::{BRAIN_C_MAX, BRAIN_C_MIN, DX, F0_BRAIN_HZ, N_BRAIN_ITER, NX, STEP_SIZE_BRAIN};
+use super::{BRAIN_C_MAX, BRAIN_C_MIN, DX, F0_BRAIN_HZ, NX, N_BRAIN_ITER, STEP_SIZE_BRAIN};
 
 /// Value-semantic outputs produced by the successful brain inversion stage.
 pub(super) struct BrainInversionResult {

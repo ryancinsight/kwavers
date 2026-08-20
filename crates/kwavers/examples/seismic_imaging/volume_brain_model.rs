@@ -2,13 +2,13 @@
 
 use super::seismic_imaging::medium::SkullModel;
 use super::{
-    Array3, BrainPriorMode, C_CSF, C_GRAY, C_WHITE, DX, MNI_INNER_SKULL_RADIUS_MM, NX, NY, NZ,
-    R_SKULL_IN, SOUND_SPEED_WATER_SIM, seismic_volume_phantom,
+    seismic_volume_phantom, Array3, BrainPriorMode, C_CSF, C_GRAY, C_WHITE, DX,
+    MNI_INNER_SKULL_RADIUS_MM, NX, NY, NZ, R_SKULL_IN, SOUND_SPEED_WATER_SIM,
 };
 use anyhow::Context as _;
 use coeus_core::MoiraiBackend;
-use ritk_io::ImageReader;
 use ritk_io::format::nifti::native::NiftiReader as NativeNiftiReader;
+use ritk_io::ImageReader;
 use std::path::Path;
 
 /// Load and normalize a T1 MRI NIfTI volume.
@@ -240,7 +240,7 @@ pub(super) fn build_brain_prior_3d(
 
 #[cfg(test)]
 mod tests {
-    use super::{C_CSF, C_GRAY, C_WHITE, SOUND_SPEED_WATER_SIM, t1_to_velocity};
+    use super::{t1_to_velocity, C_CSF, C_GRAY, C_WHITE, SOUND_SPEED_WATER_SIM};
 
     #[test]
     fn t1_velocity_bands_match_the_declared_contract() {

@@ -4,8 +4,8 @@ use leto::Array3;
 
 use super::seismic_planar_artifacts::{diverging_color, draw_acquisition_markers};
 use super::{
-    BONE_VELOCITY_THRESHOLD, BRAIN_C_MAX, BRAIN_C_MIN, DX, NX, NZ, PANEL, R_SKULL_IN, put_pixel,
-    velocity_color, write_png,
+    put_pixel, velocity_color, write_png, BONE_VELOCITY_THRESHOLD, BRAIN_C_MAX, BRAIN_C_MIN, DX,
+    NX, NZ, PANEL, R_SKULL_IN,
 };
 use std::fs::File;
 use std::io::{self, BufWriter, Write};

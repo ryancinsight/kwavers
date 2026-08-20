@@ -2,9 +2,9 @@
 
 use super::seismic_imaging::medium::SkullModel;
 use super::{
-    Array2, Array3, F0_HZ, FwiGeometry, FwiParameters, FwiProcessor, Grid, KwaversResult,
-    N_RECEIVERS_3D, RegularizationParameters, SOUND_SPEED_WATER_SIM, STEP_SIZE, seismic_metrics,
-    seismic_volume_acquisition,
+    seismic_metrics, seismic_volume_acquisition, Array2, Array3, FwiGeometry, FwiParameters,
+    FwiProcessor, Grid, KwaversResult, RegularizationParameters, F0_HZ, N_RECEIVERS_3D,
+    SOUND_SPEED_WATER_SIM, STEP_SIZE,
 };
 use std::time::Instant;
 
