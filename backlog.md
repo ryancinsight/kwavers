@@ -1147,7 +1147,7 @@ markers without changing the numerical contract.
 - Versioning: `kwavers-medium` 3.0.0 → 4.0.0; ADR 038 records the public
   removal and value-preservation theorem.
 
-## KW-SOL-058 — Restore elastic-FWI hosted runtime budget [patch] — in-progress
+## KW-SOL-058 — Restore elastic-FWI hosted runtime budget [patch] — ✅ done
 
 - Owner: Codex `/root`; last-update: 2026-08-20; scope:
   elastic SWE point-force/stress/integration modules, elastic-FWI
@@ -1176,8 +1176,11 @@ markers without changing the numerical contract.
   skipped in 143.899 seconds; warning-denied all-target Clippy passes. Solver
   doctests pass 7 with eight environment-specific cases ignored, and mdBook
   test/build pass. Native sampling was attempted but Windows denied both
-  `dtrace` and `blondie` without administrator privileges. Exact-head hosted
-  validation remains the closure gate.
+  `dtrace` and `blondie` without administrator privileges.
+- Hosted closure: PR #429 exact head `9f86c95e5` passes Architecture Validation
+  run `32346688058`, job `96356812801`: the unchanged FWI regression passes in
+  29.031 seconds and the full native suite passes 5,729/5,729. All five hosted
+  workflows are green; merge commit `2a291a064` integrates the fix.
 
 ## KW-CI-057 — Serialize full workspace test processes [patch] — superseded
 
