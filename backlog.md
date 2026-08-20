@@ -22,18 +22,52 @@
   source configuration.
 - Non-goals: no Rust, dependency, benchmark, test, or coverage-policy changes.
 
-## KWAVERS-SONO-113 — Type sonoluminescence emission and close the example/book slice [major] [arch] — implementation complete; hosted verification pending 2026-08-19
+## KWAVERS-SONO-113 — Type sonoluminescence emission and close the example/book slice [major] [arch] — merged; exact-head hosted verification queued 2026-08-19
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KWAVERS-SONO-113 | Route dimensioned sonoluminescence power through Aequitas, assemble one authoritative field pass, and synchronize tests, examples, and book pages. | [major] [arch] | implementation complete; hosted verification pending | Codex | `crates/kwavers-physics/src/optics/sonoluminescence/`, sonoluminescence examples, `docs/book/examples/`, ADR 114, this item |
+| KWAVERS-SONO-113 | Route dimensioned sonoluminescence power through Aequitas, assemble one authoritative field pass, and synchronize tests, examples, and book pages. | [major] [arch] | merged; exact-head hosted verification queued | Codex | `crates/kwavers-physics/src/optics/sonoluminescence/`, sonoluminescence examples, `docs/book/examples/`, ADR 114, this item |
 
 - Acceptance: emission components carry Aequitas `VolumetricPowerDensity`; Cherenkov spectral yield is not added to the dimensioned power field; one field traversal computes enabled dimensioned components without temporary field clones; the integrated step refreshes emission from updated state; constructor state uses `BubbleParameters`; placeholder molecular-line and example paths are removed; focused value-semantic tests, example builds/runs, book tests/build, and package gates pass.
 - Non-goals: GPU kernels, Python bindings, and unrelated legacy migration surfaces remain separate items.
 - Evidence target: exact local revision plus hosted architecture, test, example, and book gates; dimensional limits and any external runner blockers are recorded here.
 - Local evidence at `a6a8a44a4`: strict `kwavers-physics` Clippy (`-D warnings`) passed; Nextest run `b8d4c544-fa3d-46ca-8076-86187239f04b` passed 40/40 sonoluminescence tests (1,517 skipped); both examples passed package checks, `single_bubble_sonoluminescence` ran through eight integrated steps, and `multiphysics_sonoluminescence --features pinn` ran through two epochs over three domains; `mdbook test docs/book` and `mdbook build docs/book` passed. The single-bubble run emitted changing Aequitas W/m³ fields and a separate arbitrary-unit spectrum.
 - Pre-merge regression closure: the full-feature facade gate exposed five stale seven-argument emission calls in `ultrasound_physics_validation`; every call now uses the dimensioned temperature/radius/charge-density contract and the unused pressure, velocity, and compression fixtures are deleted. Both strict workflow Clippy commands pass locally, and Nextest run `e6b1b6ae-e36c-4ea7-8aca-ecf2514ced5f` passes all 18 facade physics-validation tests.
-- Hosted evidence: PR [#414](https://github.com/ryancinsight/kwavers/pull/414) is open; every PR update reruns the repository-owned exact-head checks. Local commands used the Atlas development overlay, so Cargo lockfile source state was restored after each command and no lockfile change is part of this item.
+- Hosted state: PR [#414](https://github.com/ryancinsight/kwavers/pull/414)
+  merged as `25bf5deca` from exact head `0bdcb17d9`. Exact-head runs
+  `32322520315`, `32322520318`, `32322520322`, `32322520338`, and
+  `32322520613` remain queued and must pass before this item closes. Local
+  commands used the Atlas development overlay, so Cargo lockfile source state
+  was restored after each command and no lockfile change is part of this item.
+
+## KW-EXAMPLES-114 — Complete the heterogeneous attenuation example/book contract [patch] — implementation complete; hosted verification pending 2026-08-19
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-EXAMPLES-114 | Split the heterogeneous power-law attenuation experiment by concern, add one source-linked book page, remove stale example links, and retain the measured analytical-oracle evidence. | [patch] | implementation complete; hosted verification pending | Codex | `crates/kwavers/examples/{heterogeneous_power_law_attenuation.rs,heterogeneous_power_law_attenuation/,README.md}`, `docs/book/{SUMMARY.md,media_and_tissue_models.md,examples/}`, this item, `CHANGELOG.md` |
+
+- Acceptance: the example entry point is a manifest over named configuration,
+  propagation, measurement, experiment, and artifact modules; every example
+  README link resolves; the book page states the
+  prescribed-law and path-integral oracles, the Fullwave reference envelope,
+  run command, outputs, and measured bounds; source and chapter links are
+  reciprocal; the release example, book tests/build, and link audit pass.
+- Non-goals: no attenuation-kernel, relaxation-fit, benchmark-input, or
+  generated-output change.
+- Value-semantic evidence after the structural split: the exact locked release
+  build completes in 206.5 s and its executable completes in 25.6 s, emitting
+  120 homogeneous rows plus 8 layered rows; the
+  whole-envelope worst relative error is 0.034137, the 1.2–3.8 MHz interior
+  worst is 0.004532, and the path-weighted layered worst is 0.009939. The
+  generated log-log PNG was inspected for curves, markers, axes, units, and
+  legend agreement.
+- Fresh local evidence: `cargo fmt --all -- --check`, standalone locked MSVC
+  Clippy with `-D warnings`, `mdbook test docs/book`, and `mdbook build docs/book`
+  pass against the committed dependency graph and shared Atlas target. The
+  Markdown audit
+  resolves 497 relative targets across 107 book/index files and finds no
+  missing link; the
+  four deleted-example names and stale toolchain-update instruction are absent.
 
 ## ATLAS-KWAVERS-HEPHAESTUS-FDTD-107 — Route collocated FDTD through Hephaestus [minor] [arch] — Apollo co-evolution blocker 2026-08-18
 

@@ -20,6 +20,7 @@
   - [Example: Multiphysics Sonoluminescence](examples/multiphysics_sonoluminescence.md)
 - [4. Media and Tissue Models](media_and_tissue_models.md)
   - [Example: Spatially Varying Attenuation](examples/spatially_varying_attenuation.md)
+  - [Example: Heterogeneous Power-Law Attenuation](examples/heterogeneous_power_law_attenuation.md)
   - [Example: Tau Parameter Sweep](examples/tau_sweep.md)
 - [5. Cavitation and Bubble Dynamics](cavitation_and_bubbles.md)
 - [6. Sources and Transducers](sources_and_transducers.md)

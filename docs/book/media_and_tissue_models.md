@@ -1029,8 +1029,9 @@ prescribed law. Because the two are different mathematics for the same physics �
 versus local ODE system — that agreement is independent-oracle evidence rather than the weaker
 differential kind two backends of one algorithm would give.
 
-`heterogeneous_power_law_attenuation` example measures the realized $\alpha(f)$ from a propagating
-broadband pulse by a reference-normalized two-sensor spectral ratio, recovering the prescribed law
+[The heterogeneous power-law attenuation example](examples/heterogeneous_power_law_attenuation.md)
+measures the realized $\alpha(f)$ from a propagating broadband pulse by a reference-normalized
+two-sensor spectral ratio, recovering the prescribed law
 to 3.4 % worst case (0.5 % across the band interior) over the whole envelope, and matching the
 exact path-weighted prediction for a fat/muscle stack whose exponent varies along the path to 1.0 %
 — on three relaxation arms, where the residual is measurement-limited rather than fit-limited
