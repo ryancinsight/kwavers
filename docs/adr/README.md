@@ -79,3 +79,4 @@
 | [113](113-finite-aperture-sir-seam.md) | 113. Finite-aperture diffraction in RF synthesis: an injected SIR seam | Accepted |
 | [114](114-typed-sonoluminescence-emission.md) | Type sonoluminescence emission components at the Aequitas boundary | Accepted |
 | [115](115-fwi-transmission-acquisition-seam.md) | 115. A transmission-acquisition seam for frequency-domain FWI | Accepted |
+| [116](116-typed-seismic-example-workflows.md) | Type and partition the seismic example workflows | Accepted |

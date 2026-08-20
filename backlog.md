@@ -48,29 +48,29 @@
   source configuration.
 - Non-goals: no Rust, dependency, benchmark, test, or coverage-policy changes.
 
-## KWAVERS-SONO-113 — Type sonoluminescence emission and close the example/book slice [major] [arch] — merged; exact-head hosted verification queued 2026-08-19
+## KWAVERS-SONO-113 — Type sonoluminescence emission and close the example/book slice [major] [arch] — closed 2026-08-20
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KWAVERS-SONO-113 | Route dimensioned sonoluminescence power through Aequitas, assemble one authoritative field pass, and synchronize tests, examples, and book pages. | [major] [arch] | merged; exact-head hosted verification queued | Codex | `crates/kwavers-physics/src/optics/sonoluminescence/`, sonoluminescence examples, `docs/book/examples/`, ADR 114, this item |
+| KWAVERS-SONO-113 | Route dimensioned sonoluminescence power through Aequitas, assemble one authoritative field pass, and synchronize tests, examples, and book pages. | [major] [arch] | closed | Codex | `crates/kwavers-physics/src/optics/sonoluminescence/`, sonoluminescence examples, `docs/book/examples/`, ADR 114, this item |
 
 - Acceptance: emission components carry Aequitas `VolumetricPowerDensity`; Cherenkov spectral yield is not added to the dimensioned power field; one field traversal computes enabled dimensioned components without temporary field clones; the integrated step refreshes emission from updated state; constructor state uses `BubbleParameters`; placeholder molecular-line and example paths are removed; focused value-semantic tests, example builds/runs, book tests/build, and package gates pass.
 - Non-goals: GPU kernels, Python bindings, and unrelated legacy migration surfaces remain separate items.
 - Evidence target: exact local revision plus hosted architecture, test, example, and book gates; dimensional limits and any external runner blockers are recorded here.
 - Local evidence at `a6a8a44a4`: strict `kwavers-physics` Clippy (`-D warnings`) passed; Nextest run `b8d4c544-fa3d-46ca-8076-86187239f04b` passed 40/40 sonoluminescence tests (1,517 skipped); both examples passed package checks, `single_bubble_sonoluminescence` ran through eight integrated steps, and `multiphysics_sonoluminescence --features pinn` ran through two epochs over three domains; `mdbook test docs/book` and `mdbook build docs/book` passed. The single-bubble run emitted changing Aequitas W/m³ fields and a separate arbitrary-unit spectrum.
 - Pre-merge regression closure: the full-feature facade gate exposed five stale seven-argument emission calls in `ultrasound_physics_validation`; every call now uses the dimensioned temperature/radius/charge-density contract and the unused pressure, velocity, and compression fixtures are deleted. Both strict workflow Clippy commands pass locally, and Nextest run `e6b1b6ae-e36c-4ea7-8aca-ecf2514ced5f` passes all 18 facade physics-validation tests.
-- Hosted state: PR [#414](https://github.com/ryancinsight/kwavers/pull/414)
+- Hosted evidence: PR [#414](https://github.com/ryancinsight/kwavers/pull/414)
   merged as `25bf5deca` from exact head `0bdcb17d9`. Exact-head runs
   `32322520315`, `32322520318`, `32322520322`, `32322520338`, and
-  `32322520613` remain queued and must pass before this item closes. Local
-  commands used the Atlas development overlay, so Cargo lockfile source state
-  was restored after each command and no lockfile change is part of this item.
+  `32322520613` completed successfully. Local commands used the Atlas
+  development overlay, so Cargo lockfile source state was restored after each
+  command and no lockfile change is part of this item.
 
-## KW-EXAMPLES-114 — Complete the heterogeneous attenuation example/book contract [patch] — implementation complete; hosted verification pending 2026-08-19
+## KW-EXAMPLES-114 — Complete the heterogeneous attenuation example/book contract [patch] — closed 2026-08-20
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-EXAMPLES-114 | Split the heterogeneous power-law attenuation experiment by concern, add one source-linked book page, remove stale example links, and retain the measured analytical-oracle evidence. | [patch] | implementation complete; hosted verification pending | Codex | `crates/kwavers/examples/{heterogeneous_power_law_attenuation.rs,heterogeneous_power_law_attenuation/,README.md}`, `docs/book/{SUMMARY.md,media_and_tissue_models.md,examples/}`, this item, `CHANGELOG.md` |
+| KW-EXAMPLES-114 | Split the heterogeneous power-law attenuation experiment by concern, add one source-linked book page, remove stale example links, and retain the measured analytical-oracle evidence. | [patch] | closed | Codex | `crates/kwavers/examples/{heterogeneous_power_law_attenuation.rs,heterogeneous_power_law_attenuation/,README.md}`, `docs/book/{SUMMARY.md,media_and_tissue_models.md,examples/}`, this item, `CHANGELOG.md` |
 
 - Acceptance: the example entry point is a manifest over named configuration,
   propagation, measurement, experiment, and artifact modules; every example
@@ -94,6 +94,34 @@
   resolves 497 relative targets across 107 book/index files and finds no
   missing link; the
   four deleted-example names and stale toolchain-update instruction are absent.
+- Hosted evidence: PR [#422](https://github.com/ryancinsight/kwavers/pull/422)
+  merged as `9cf62aa98` from exact head `fc0e6baa1`. Exact-head runs
+  `32329958628`, `32329958640`, `32329958646`, `32329958660`, and
+  `32329958998` completed successfully, including 10/10 architecture jobs and
+  11/11 CI jobs.
+
+## KW-EXAMPLES-115 — Type and partition the seismic example workflows [major] [arch] — in progress 2026-08-20
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-EXAMPLES-115 | Replace the three seismic example monoliths with explicit typed workflows that call Atlas providers directly and document value-semantic 2-D/3-D behavior. | [major] [arch] | in progress | Codex | `crates/kwavers/examples/{seismic_imaging_demo,seismic_imaging_3d_demo,transcranial_fwi}*`, shared seismic modules, provider call sites, `crates/kwavers/Cargo.toml`, seismic book pages, ADR 116, PM artifacts |
+
+- Acceptance: each example entry point is a manifest over SRP leaf modules no
+  larger than 500 lines; shared acquisition, CT, physical configuration,
+  metrics, and artifact logic has one canonical home; physical configuration
+  uses Aequitas quantities and grid shapes use zero-sized strategy types with
+  associated consts; skull properties and Ricker samples come directly from
+  provider-owned APIs; explicit input and brain-prior enums replace CT/MRI/MNI
+  load fallbacks and skipped FWI/RTM stages; selected inputs fail with typed
+  context instead of changing the workflow; output defaults under `target/`;
+  the no-op `dicom` and `ritk` Cargo features and all in-repo references are
+  deleted; positive, negative, boundary, and provider-differential tests plus
+  focused example and book gates pass.
+- Non-goals: frequency-domain FWI and ADR 115, solver-algorithm replacement,
+  committed clinical datasets, GPU-kernel changes, and compatibility aliases.
+- Verification: strict focused Clippy, example unit tests through Nextest,
+  doctests, bounded synthetic runs with value-semantic artifacts, mdBook tests
+  and build, link/residue audits, and exact-head hosted CI before merge.
 
 ## ATLAS-KWAVERS-HEPHAESTUS-FDTD-107 — Route collocated FDTD through Hephaestus [minor] [arch] — Apollo co-evolution blocker 2026-08-18
 
