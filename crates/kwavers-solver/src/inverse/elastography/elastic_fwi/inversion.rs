@@ -5,7 +5,8 @@ use kwavers_core::error::KwaversResult;
 use leto::Array3;
 use leto_ops::application::optimization::LbfgsMemory;
 
-use super::ElasticFwi;
+use super::{l2_misfit, sample_receivers, ElasticFwi};
+use crate::forward::elastic::swe::types::ElasticDisplacementSnapshot;
 
 /// Huber smoothing for the isotropic-TV denominator (`ε²`), in Pa².
 const TV_EPS_SQ: f64 = 1.0e-6;
@@ -34,6 +35,32 @@ impl ElasticFwi {
         Ok((j_data + penalty, grad))
     }
 
+    pub(super) fn misfit_and_gradient_from_history(
+        &mut self,
+        mu: &Array3<f64>,
+        history: &[ElasticDisplacementSnapshot],
+    ) -> KwaversResult<(f64, Array3<f64>)> {
+        let (j_data, mut grad) = self.inversion_gradient_from_history(history)?;
+        let penalty = self.regularization_penalty(mu);
+        self.add_regularization_gradient(&mut grad, mu);
+        Ok((j_data + penalty, grad))
+    }
+
+    pub(super) fn objective_with_history(
+        &mut self,
+        mu: &Array3<f64>,
+    ) -> KwaversResult<(f64, Vec<ElasticDisplacementSnapshot>)> {
+        self.solver.set_mu(mu)?;
+        let history = self.solver.propagate_point_force_displacements(
+            self.config.n_steps,
+            self.config.dt,
+            &self.config.source,
+        )?;
+        let synthetic = sample_receivers(&history, &self.config.receivers);
+        let data_misfit = l2_misfit(&synthetic, &self.observed, self.config.dt);
+        Ok((data_misfit + self.regularization_penalty(mu), history))
+    }
+
     /// Reconstruct `μ` by steepest descent with Armijo backtracking, starting
     /// from the engine's initial model. Returns the final `μ` map and leaves it
     /// installed on the internal solver.
@@ -46,10 +73,14 @@ impl ElasticFwi {
     /// Propagates solver errors.
     pub fn run(&mut self) -> KwaversResult<Array3<f64>> {
         let mut mu = self.solver.mu().clone();
-        let mut objective = self.objective(&mu)?;
+        let mut accepted_history: Option<Vec<ElasticDisplacementSnapshot>> = None;
 
         for _iter in 0..self.config.iterations {
-            let (_j, grad) = self.misfit_and_gradient(&mu)?;
+            let (objective, grad) = if let Some(history) = accepted_history.take() {
+                self.misfit_and_gradient_from_history(&mu, &history)?
+            } else {
+                self.misfit_and_gradient(&mu)?
+            };
             let gmax = grad.iter().fold(0.0_f64, |m, &g| m.max(g.abs()));
             if gmax <= 0.0 {
                 break;
@@ -60,10 +91,10 @@ impl ElasticFwi {
             for _ls in 0..12 {
                 let alpha = step / gmax;
                 let trial = self.stepped_model(&mu, &grad, alpha);
-                let j_trial = self.objective(&trial)?;
+                let (j_trial, trial_history) = self.objective_with_history(&trial)?;
                 if j_trial < objective {
                     mu = trial;
-                    objective = j_trial;
+                    accepted_history = Some(trial_history);
                     improved = true;
                     break;
                 }

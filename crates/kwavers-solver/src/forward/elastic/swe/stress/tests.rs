@@ -204,3 +204,29 @@ fn test_stress_divergence_quadratic_ux_fluid() {
         );
     }
 }
+
+#[test]
+fn plane_strain_divergence_matches_spatial_operator_exactly() {
+    use super::super::{scratch::ElasticStepScratch, types::ElasticWaveField};
+
+    let (nx, ny) = (11, 9);
+    let grid = Grid::new(nx, ny, 1, 0.7e-3, 1.3e-3, 2.0e-3).expect("grid");
+    let lambda = Array3::from_shape_fn((nx, ny, 1), |[i, j, _]| 2.0e6 + (i * 37 + j * 11) as f64);
+    let mu = Array3::from_shape_fn((nx, ny, 1), |[i, j, _]| 0.8e6 + (i * 17 + j * 29) as f64);
+    let mut field = ElasticWaveField::new(nx, ny, 1);
+    field.ux = Array3::from_shape_fn((nx, ny, 1), |[i, j, _]| {
+        ((i * 13 + j * 7) as f64 * 0.037).sin()
+    });
+    field.uy = Array3::from_shape_fn((nx, ny, 1), |[i, j, _]| {
+        ((i * 5 + j * 19) as f64 * 0.041).cos()
+    });
+    let mut spatial = ElasticStepScratch::new(nx, ny, 1);
+    let mut plane = ElasticStepScratch::new(nx, ny, 1);
+
+    stress_divergence_into(&grid, &lambda, &mu, &field, &mut spatial);
+    stress_divergence_plane_strain_into(&grid, &lambda, &mu, &field, &mut plane);
+
+    assert_eq!(plane.div_x, spatial.div_x);
+    assert_eq!(plane.div_y, spatial.div_y);
+    assert_eq!(plane.div_z, spatial.div_z);
+}

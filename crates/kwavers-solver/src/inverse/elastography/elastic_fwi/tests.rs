@@ -76,10 +76,10 @@ fn fwi_outperforms_linear_inversion() {
             fz: vec![0.0; n_steps],
         })
         .collect();
-    let hist = solver
+    let history = solver
         .propagate_point_forces(n_steps, dt, &sources)
         .expect("prop");
-    let last = hist.last().expect("nonempty");
+    let last = history.last().expect("non-empty history");
     let mut disp = DisplacementField::zeros(n, n, 1);
     disp.uz.assign(&last.uy); // LFE reads `uz`; the in-plane shear component is uy.
     let mu_lin = ShearWaveInversion::new(
@@ -226,6 +226,21 @@ fn forward_misfit_zero_at_true_model_positive_off_it() {
     let mu_off = Array3::from_elem(g.dimensions(), 1.5 * MU_BG);
     let j_off = fwi.forward_misfit(&mu_off).expect("misfit off");
     assert!(j_off > 0.0, "J(off) must be > 0, got {j_off}");
+
+    // A line-search checkpoint must preserve the objective and gradient exactly;
+    // accepted checkpoints are reused by the next inversion iteration.
+    let (j_checkpoint, history) = fwi
+        .objective_with_history(&mu_off)
+        .expect("checkpointed objective");
+    assert_eq!(j_checkpoint, j_off);
+    let (j_fresh, gradient_fresh) = fwi
+        .misfit_and_gradient(&mu_off)
+        .expect("fresh objective and gradient");
+    let (j_reused, gradient_reused) = fwi
+        .misfit_and_gradient_from_history(&mu_off, &history)
+        .expect("checkpointed objective and gradient");
+    assert_eq!(j_reused, j_fresh);
+    assert_eq!(gradient_reused, gradient_fresh);
 }
 
 /// Increment 2: the K_μ gradient is a valid descent direction — its directional
