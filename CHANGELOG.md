@@ -16,6 +16,12 @@
   example reports real bounded PINN training statistics instead of placeholder
   luminosity and validation claims.
 
+- **Python verification:** `kwavers-python` now runs its NumPy/Leto conversion
+  tests through an embedded Python interpreter. PyO3's deprecated
+  `extension-module` Cargo feature is replaced by Maturin `>=1.9.4` build-time
+  linking, and strided arrays copy directly into owned storage without an
+  intermediate contiguous NumPy allocation.
+
 - **Provider:** Removed the consumer-owned collocated raw-WGPU FDTD shader and
   dispatcher. GPU/CPU equivalence now uses Hephaestus' typed `Fdtd3dOps`
   contract, a native-f32 independent CPU reference, explicit provider errors,

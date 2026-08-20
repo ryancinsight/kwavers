@@ -6784,8 +6784,21 @@ Triage (correctness/arch → tests → features), one WIP item at a time:
    (both fully implemented; see gap_audit). COV-11 Mur BC = WONTFIX (CPML superior).
 
 ### Remaining genuine coverage gaps (post-verification), best as focused increments:
-- **COV-3 curvilinear/convex transmit array** [minor] — `kwavers-transducer`.
-  **Corrected 2026-08-19: the layout helper this entry asks for already exists.**
+- **COV-3 curvilinear/convex transmit array** [minor] — ✅ **DONE (2026-08-19).**
+  `KWaveArray::add_convex_array(&geometry, element_width, element_height)` wires
+  the layout into the rasterizer per ADR 112, mapping each element to
+  `add_rect_rot_element` at Euler `(0, theta_i deg, 0)` and taking
+  `aequitas::Length`/typed angle so no bare radian crosses the seam. Asserted by
+  `convex_array_elements_face_along_their_layout_normals`, which drives the
+  stored orientation through the rasterizer's own `euler_xyz_rotation_matrix`
+  and compares against `element_normal(i)`. The oracle was falsified before
+  being trusted: swapping the Euler slot to `(theta, 0, 0)` and dropping
+  `.to_degrees()` each make it fail, which is the point -- both bugs still
+  produce a full, plausible element mask facing the wrong way.
+  Remaining from ADR 112: `Degree` as a `LinearUnit<Angle>` upstream in
+  aequitas (item 3), which does not block this.
+
+  Prior status, retained: **the layout helper this entry asked for already existed.**
   `curvilinear::ConvexArrayGeometry` places N elements on a circular arc, with
   `from_angular_pitch` / `from_arc_pitch` / `from_total_angle` constructors and
   per-element `element_position` / `element_normal` / `element_tangent` /
@@ -9807,35 +9820,21 @@ Burn → Coeus tensor type mismatches; that debt is outside the Batch #1 scope.
   this item and its owner-local checklist section.
 - Decision: [ADR 044](docs/ADR/044-asclepius-response-ownership.md).
 
-## KW-PY-TESTS-01 — kwavers-python array_utils committed coverage gap; numpy tests cannot run under cargo test [test] [chore] — open
+## KW-PY-TESTS-01 — kwavers-python NumPy conversion coverage [test] [chore] — done
 
-- Outcome: record two facts for anyone working the ndarray-compat migration
-  in `kwavers-python`: (1) `array_utils.rs` currently has **no committed test
-  module**, and (2) numpy-backed `#[test]`s cannot run under `cargo test` in
-  this crate because pyo3 is built without an embedded interpreter.
-- Finding 1 (committed coverage): HEAD's `crates/kwavers-python/src/array_utils.rs`
-  is the helper-only 182-line file; its last related commit is `cdf8ec217`
-  ("refactor(kwavers-python): complete ndarray-compat migration") and carries no
-  `mod tests`. The helper regression tests written during the migration were
-  uncommitted worktree edits and were lost in parallel origin merges (at least
-  twice — see also the `result_serializer` migration being reset to HEAD). The
-  17 passing `cargo test -p kwavers-python --lib` tests are pure-Rust
-  (physics/response/simulation); no numpy conversion is exercised.
-- Finding 2 (why numpy tests cannot run): `Cargo.toml` declares
-  `pyo3 = { version = "0.29", features = ["extension-module", "abi3-py38",
-  "multiple-pymethods"] }` with no `auto-initialize`, so `Python::with_gil` in a
-  `#[test]` cannot start an interpreter under `cargo test`. Any numpy-backed
-  unit test added to this crate must be exercised through a real Python host
-  (e.g. pytest against the built extension module) instead of `cargo test`.
-- Consequence: for this crate, serializer-level correctness is verified by
-  (a) pure-Rust tests on non-Python logic (e.g. the `result_serializer`
-  `brain_target_index` / `resampled_crop_index_xy` tests) and (b) code review
-  of the conversion paths. Do not cite cargo-test counts as evidence for numpy
-  conversion behavior.
-- Suggested closure: commit a `#[cfg(test)]` module in `array_utils.rs` only
-  together with a route that actually runs it (a Python-host test importing
-  the built module, or pyo3 reconfiguration enabling an embedded interpreter
-  for tests), then delete this item.
+- Outcome: PyO3's deprecated `extension-module` feature is removed; Maturin
+  `>=1.9.4` owns extension linking, while the test target enables
+  `auto-initialize` for a real embedded Python host. `array_utils` now has
+  committed value-semantic tests for strided 1-D/2-D/3-D inputs, Leto round
+  trips, vector outputs, shapes, scalar families, and linspace boundaries.
+- Data movement: contiguous inputs copy once from a borrowed slice; strided
+  inputs iterate directly into the owned output instead of allocating a
+  temporary contiguous NumPy array and copying it again.
+- Evidence: exact MSVC locked Nextest run
+  `1f66cc44-14a4-4274-927f-40e250e098e9` passes 21/21; warning-denied
+  all-target Clippy passes; Maturin builds a CPython 3.8+ ABI3 wheel with the
+  explicit MSVC/Miniforge toolchain, and an isolated environment imports its
+  installed `_pykwavers.pyd`.
 
 ## KW-CI-103 — Wheel parity must import the installed extension [patch] — DONE (2026-08-19)
 

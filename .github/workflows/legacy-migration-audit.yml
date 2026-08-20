@@ -24,10 +24,22 @@ on:
     branches:
       - main
       - codex/kwavers-atlas-integration
+    paths-ignore:
+      - 'backlog.md'
+      - 'CHANGELOG.md'
+      - 'README.md'
+      - 'gap_audit.md'
+      - 'docs/**'
   pull_request:
     branches:
       - main
       - codex/kwavers-atlas-integration
+    paths-ignore:
+      - 'backlog.md'
+      - 'CHANGELOG.md'
+      - 'README.md'
+      - 'gap_audit.md'
+      - 'docs/**'
   workflow_dispatch:
 
 env:
