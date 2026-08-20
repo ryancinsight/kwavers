@@ -2,6 +2,37 @@
 
 ## Unreleased
 
+### Added
+
+- **Documentation:** Every workspace crate now carries its own `README.md` — the
+  crates.io/docs.rs landing page — closing the gap where 22 of 24 crates published
+  blank. Each README states what the crate owns, where it sits in the layer stack, and
+  its API surface, and most carry a runnable example. The README is single-sourced as
+  the crate documentation via `#![doc = include_str!("../README.md")]`, so the registry
+  page and the docs.rs front page cannot drift and README examples run as doctests.
+  `cargo run -p xtask -- check-readmes` enforces README presence, manifest
+  `description`, and the single-sourcing directive; it runs in Architecture Validation.
+  `kwavers-python` keeps separate `//!` docs by rule — see below.
+
+### Fixed
+
+- **Documentation:** `kwavers-driver`'s README, now its crate documentation, had every
+  claim re-verified against the tree: the test count was `113` and is 494; the refactor
+  status read "Phase 0 scaffolding" while Phases 0-5 have landed; four `examples/*.rs`
+  programs it told readers to run are not in the repository (the example set is
+  proprietary and gitignored); the tree-growth description claimed Prim-style growth for
+  all nets when signal and high-voltage nets use chain-tip growth; the module map covered
+  12 of the crate's modules. Mojibake and a stale "planned extraction name" sentence are
+  gone.
+
+- **Documentation:** `kwavers-python`'s README dropped an unsupported performance table
+  (three runtimes with no stored baseline, grid size, or machine class), three dead links,
+  and `-p pykwavers` cargo commands that name the lib rather than the package
+  (`-p kwavers-python`). Parity thresholds are re-attributed to `pykwavers.comparison` and
+  `tests/test_solver_parity.py`, which actually enforce them; the `SolverType`, `run`, and
+  `SimulationResult` surfaces are completed; the stale roadmap and the sprint/date process
+  trailer are removed.
+
 ### Changed
 
 - **Lint configuration:** all 24 workspace members now inherit `[workspace.lints]`.
@@ -9,6 +40,13 @@
   inherited nothing; `kwavers` additionally re-declared `unexpected_cfgs` byte-identically
   to the workspace table, so that duplicate is deleted in favour of inheritance. Clippy
   reports zero warnings for all three afterwards and both CI clippy gates pass.
+
+- **Documentation:** the README single-sourcing check now exempts `publish = false`
+  crates by rule instead of an allowlist. The rule follows the requirement's rationale —
+  keeping a crates.io page and a docs.rs front page from drifting — which does not apply
+  to a crate that publishes neither. `kwavers-python` is the only such crate: its README
+  is the PyPI landing page for a Python reader and its `//!` docs address the Rust
+  maintainer of the binding layer, so they are deliberately two documents.
 
 ### Changed
 

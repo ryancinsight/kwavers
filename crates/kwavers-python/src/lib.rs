@@ -41,15 +41,18 @@
 //! - Sensor: Point/grid sampling with interpolation
 //! - Simulation: FDTD/PSTD time-stepping with CPML boundaries
 //!
+//! ## Audience
+//!
+//! These docs address the Rust maintainer of the binding layer. The Python-facing
+//! documentation — installation, the full `pykwavers` API, k-Wave parity thresholds — is
+//! `README.md`, which is this package's PyPI landing page. The two are deliberately
+//! separate documents for separate readers, so this crate is exempt from the workspace
+//! README single-sourcing rule (see `xtask/src/readme_audit.rs`).
+//!
 //! ## References
 //!
 //! 1. Treeby & Cox (2010). "k-Wave: MATLAB toolbox for simulation and
 //!    reconstruction of photoacoustic wave fields." J. Biomed. Opt. 15(2).
-//! 2. kwavers architecture documentation (../kwavers/ARCHITECTURE.md)
-//!
-//! Author: Ryan Clanton (@ryancinsight)
-//! Date: 2026-02-04
-//! Sprint: 217 Session 9 - Python Integration via PyO3
 
 // Crate-wide PyO3 FFI-boundary lint allowances. This crate is exclusively the
 // thin Python binding layer (no domain logic, per the architecture rule), so two

@@ -1,14 +1,4 @@
-//! Low-level acoustic/optical/EM excitation primitives for kwavers.
-//!
-//! This crate owns the fundamental source abstractions and field profiles —
-//! the [`Source`] trait, grid/mask-driven sources, point/composite/time-varying
-//! sources, analytic wavefronts (plane/Bessel/Gaussian/spherical), custom
-//! arbitrary-signal sources, electromagnetic/optical primitives, and the
-//! apodization-window math shared by higher-level devices.
-//!
-//! Physical transducer *devices* (bowls, phased/linear/matrix arrays,
-//! calibration, factories) live in `kwavers-transducer`, which depends on this
-//! crate and on `kwavers-receiver`.
+#![doc = include_str!("../README.md")]
 
 pub mod apodization;
 pub mod config;

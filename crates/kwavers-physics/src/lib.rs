@@ -1,29 +1,4 @@
-//! Physics Module for Multi-Physics Simulation
-//!
-//! This module contains comprehensive physics implementations for acoustic wave simulation,
-//! multi-physics coupling, and material property modeling.
-//!
-//! ## Module Organization (9-Layer Deep Vertical Hierarchy)
-//!
-//! - **foundations**: Wave equation specifications and coupling traits (SSOT for physics specs)
-//! - **acoustics**: Acoustic propagation, bubble dynamics, medical imaging, therapy
-//! - **thermal**: Heat transfer and thermal diffusion
-//! - **chemistry**: Chemical kinetics and sonochemistry
-//! - **electromagnetic**: Electromagnetic wave equations and photoacoustic coupling
-//! - **optics**: Light propagation and sonoluminescence
-//!
-//! ## Design Philosophy
-//!
-//! This module maintains strict architectural separation using a deep vertical hierarchy
-//! with Single Source of Truth (SSOT) principles. The domain layer provides definitive
-//! data models; physics implements the physics specifications from foundations.
-//!
-//! ## Namespace Management
-//!
-//! The wildcard re-export below maintains backward compatibility while new code should
-//! use explicit imports: `use crate::acoustics::Type;`
-//!
-//! See ARCHITECTURE_AUDIT_REPORT.md for detailed namespace management strategy.
+#![doc = include_str!("../README.md")]
 
 pub mod acoustics;
 pub mod analytical; // Cross-domain analytical physics kernels
