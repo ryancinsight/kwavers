@@ -28,6 +28,7 @@
 //! Reference: Nocedal & Wright (2006) *Numerical Optimization* §3.1 (the exact
 //! minimizer of a quadratic model along a direction).
 
+use super::acquisition::TransmissionAcquisition;
 use super::gauss_newton::GaussNewtonConfig;
 use super::gradient::{dot, hessian_vector, max_abs, objective_and_gradient};
 use super::types::{
@@ -46,13 +47,13 @@ use leto::Array3;
 /// outside the solver contract.
 pub fn invert(
     observations: &[FrequencyObservation],
-    array: &MultiRowRingArray,
+    acquisition: &dyn TransmissionAcquisition,
     initial_sound_speed_m_s: &Array3<f64>,
     config: &Config,
 ) -> KwaversResult<InversionResult> {
     let mut slowness = sound_speed_to_slowness(initial_sound_speed_m_s)?;
     let (mut objective, mut gradient) =
-        objective_and_gradient(&slowness, observations, array, config)?;
+        objective_and_gradient(&slowness, observations, acquisition, config)?;
     let mut history = vec![objective];
     let mut direction = gradient.mapv(|value| -value);
     let mut previous_gradient = gradient.clone();
@@ -93,7 +94,7 @@ pub fn invert(
             &gradient,
             &direction,
             observations,
-            array,
+            acquisition,
             config,
         )?
         .unwrap_or(config.initial_step_s_per_m / direction_scale);
@@ -107,7 +108,7 @@ pub fn invert(
             }
             clamp_slowness(&mut candidate, config);
             let (candidate_objective, candidate_gradient) =
-                objective_and_gradient(&candidate, observations, array, config)?;
+                objective_and_gradient(&candidate, observations, acquisition, config)?;
             // (config is &Config; no move)
             if candidate_objective < objective {
                 accepted = Some((candidate, candidate_objective, candidate_gradient));
@@ -134,7 +135,7 @@ pub fn invert(
             .first()
             .map(|obs| obs.observed_pressure.shape()[0])
             .unwrap_or(0),
-        receivers_used: array.element_count(),
+        receivers_used: acquisition.receiver_count(),
         model_family: FREQUENCY_DOMAIN_FWI_SOLVER_MODEL,
     })
 }
@@ -154,7 +155,7 @@ fn model_minimizer_step(
     gradient: &Array3<f64>,
     direction: &Array3<f64>,
     observations: &[FrequencyObservation],
-    array: &MultiRowRingArray,
+    acquisition: &dyn TransmissionAcquisition,
     config: &Config,
 ) -> KwaversResult<Option<f64>> {
     let directional_derivative = dot(gradient, direction);
@@ -170,7 +171,7 @@ fn model_minimizer_step(
         gradient,
         direction,
         observations,
-        array,
+        acquisition,
         config,
         reference_slowness,
         fd_epsilon,

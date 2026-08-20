@@ -19,6 +19,7 @@
 //! References: Nocedal & Wright (2006) *Numerical Optimization* §7.1 (Newton-CG,
 //! Steihaug); Métivier et al. (2013) truncated-Newton FWI.
 
+use super::acquisition::TransmissionAcquisition;
 use super::gradient::{dot, hessian_vector, max_abs, objective_and_gradient};
 use super::inversion::clamp_slowness;
 use super::types::{
@@ -71,14 +72,14 @@ const LM_MIN: f64 = 1.0e-12;
 /// Propagates forward/adjoint evaluation errors from `objective_and_gradient`.
 pub fn invert_gauss_newton(
     observations: &[FrequencyObservation],
-    array: &MultiRowRingArray,
+    acquisition: &dyn TransmissionAcquisition,
     initial_sound_speed_m_s: &Array3<f64>,
     config: &Config,
     gn: &GaussNewtonConfig,
 ) -> KwaversResult<InversionResult> {
     let mut slowness = sound_speed_to_slowness(initial_sound_speed_m_s)?;
     let (mut objective, mut gradient) =
-        objective_and_gradient(&slowness, observations, array, config)?;
+        objective_and_gradient(&slowness, observations, acquisition, config)?;
     let mut history = vec![objective];
     let reference_slowness = 1.0 / config.reference_sound_speed_m_s;
     let mut lambda = gn.lm_damping.max(LM_MIN);
@@ -99,7 +100,7 @@ pub fn invert_gauss_newton(
                 &slowness,
                 &gradient,
                 observations,
-                array,
+                acquisition,
                 config,
                 gn,
                 reference_slowness,
@@ -115,7 +116,7 @@ pub fn invert_gauss_newton(
             }
             clamp_slowness(&mut candidate, config);
             let (candidate_objective, candidate_gradient) =
-                objective_and_gradient(&candidate, observations, array, config)?;
+                objective_and_gradient(&candidate, observations, acquisition, config)?;
             if candidate_objective < objective {
                 accepted = Some((candidate, candidate_objective, candidate_gradient));
                 lambda = (lambda * LM_DECREASE).max(LM_MIN);
@@ -141,7 +142,7 @@ pub fn invert_gauss_newton(
             .first()
             .map(|obs| obs.observed_pressure.shape()[0])
             .unwrap_or(0),
-        receivers_used: array.element_count(),
+        receivers_used: acquisition.receiver_count(),
         model_family: FREQUENCY_DOMAIN_FWI_SOLVER_MODEL,
     })
 }
@@ -158,7 +159,7 @@ fn newton_cg(
     slowness: &Array3<f64>,
     gradient: &Array3<f64>,
     observations: &[FrequencyObservation],
-    array: &MultiRowRingArray,
+    acquisition: &dyn TransmissionAcquisition,
     config: &Config,
     gn: &GaussNewtonConfig,
     reference_slowness: f64,
@@ -181,7 +182,7 @@ fn newton_cg(
             gradient,
             &direction,
             observations,
-            array,
+            acquisition,
             config,
             reference_slowness,
             gn.fd_epsilon,
@@ -219,6 +220,7 @@ fn newton_cg(
 
 #[cfg(test)]
 mod tests {
+    use super::super::acquisition::RingAcquisition;
     use super::*;
     use crate::inverse::fwi::frequency_domain::{simulate_frequency_observation, Config};
     use aequitas::systems::si::quantities::Length;
@@ -267,18 +269,36 @@ mod tests {
             .map(|&f| {
                 FrequencyObservation::new(
                     f,
-                    simulate_frequency_observation(&perturbed, &array, f, &config).unwrap(),
+                    simulate_frequency_observation(
+                        &perturbed,
+                        &RingAcquisition::new(&array),
+                        f,
+                        &config,
+                    )
+                    .unwrap(),
                 )
             })
             .collect();
 
         // Objective at the exact background start.
         let start_slowness = sound_speed_to_slowness(&background).unwrap();
-        let (obj_start, _) =
-            objective_and_gradient(&start_slowness, &observations, &array, &config).unwrap();
+        let (obj_start, _) = objective_and_gradient(
+            &start_slowness,
+            &observations,
+            &RingAcquisition::new(&array),
+            &config,
+        )
+        .unwrap();
 
         let gn = GaussNewtonConfig::default();
-        let result = invert_gauss_newton(&observations, &array, &background, &config, &gn).unwrap();
+        let result = invert_gauss_newton(
+            &observations,
+            &RingAcquisition::new(&array),
+            &background,
+            &config,
+            &gn,
+        )
+        .unwrap();
 
         let obj_end = *result.objective_history.last().unwrap();
         eprintln!(

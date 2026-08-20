@@ -16,6 +16,7 @@ use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domai
 };
 use leto::{Array2, Array3};
 
+mod acquisition;
 mod forward;
 mod gradient_fd;
 mod inversion;

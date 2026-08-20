@@ -34,6 +34,7 @@
 //! positions, and accumulates the slowness gradient via cross-correlation of
 //! the adjoint field with the reference-field acceleration at each step.
 
+use super::acquisition::TransmissionAcquisition;
 use super::cbs::{
     pstd_modal_theta_squared, pstd_source_kappa_symbol, GridSpec, PstdTemporalTransferConfig,
 };
@@ -72,13 +73,13 @@ pub struct PstdFiniteWindowBornConfig {
 /// sound-speed values violate the finite-window PSTD contract.
 pub fn simulate_pstd_finite_window_born_observation(
     sound_speed_m_s: &Array3<f64>,
-    array: &MultiRowRingArray,
+    acquisition: &dyn TransmissionAcquisition,
     frequency_hz: f64,
     config: PstdFiniteWindowBornConfig,
     transmissions: usize,
 ) -> KwaversResult<Array2<Complex64>> {
     let slowness = sound_speed_to_slowness(sound_speed_m_s)?;
-    validate_inputs(&slowness, array, frequency_hz, config, transmissions)?;
+    validate_inputs(&slowness, acquisition, frequency_hz, config, transmissions)?;
     let grid = GridSpec::new(
         {
             let s = slowness.shape();
@@ -94,15 +95,12 @@ pub fn simulate_pstd_finite_window_born_observation(
     )?;
     let contrast = normalized_slowness_squared_contrast(&slowness, config)?;
     let symbols = ModalSymbols::new(grid, config);
-    let receiver_indices = receiver_indices_on_grid(grid, array)?;
-    let mut output = Array2::<Complex64>::zeros([transmissions, array.element_count()]);
+    let mut output = Array2::<Complex64>::zeros([transmissions, acquisition.receiver_count()]);
 
     for transmit in 0..transmissions {
-        let source_hat = source_spectrum_on_grid(
-            grid,
-            &array.cylindrical_source(transmit),
-            &symbols.source_kappa,
-        )?;
+        let receiver_indices = receiver_indices_on_grid(grid, acquisition, transmit)?;
+        let source_hat =
+            source_spectrum_on_grid(grid, &acquisition.sources(transmit), &symbols.source_kappa)?;
         let row = simulate_transmit(
             grid,
             &source_hat,
@@ -299,7 +297,7 @@ fn simulate_transmit(
 #[allow(clippy::too_many_arguments)]
 pub fn finite_window_pstd_born_gradient(
     sound_speed_m_s: &Array3<f64>,
-    array: &MultiRowRingArray,
+    acquisition: &dyn TransmissionAcquisition,
     frequency_hz: f64,
     observed_rows: &Array2<Complex64>,
     config: PstdFiniteWindowBornConfig,
@@ -309,15 +307,16 @@ pub fn finite_window_pstd_born_gradient(
     gradient: &mut Array3<f64>,
 ) -> KwaversResult<()> {
     let slowness = sound_speed_to_slowness(sound_speed_m_s)?;
-    validate_inputs(&slowness, array, frequency_hz, config, transmissions)?;
-    if observed_rows.shape()[0] < transmissions || observed_rows.shape()[1] != array.element_count()
+    validate_inputs(&slowness, acquisition, frequency_hz, config, transmissions)?;
+    if observed_rows.shape()[0] < transmissions
+        || observed_rows.shape()[1] != acquisition.receiver_count()
     {
         return Err(KwaversError::DimensionMismatch(format!(
             "observed_rows shape ({}, {}) does not match transmissions {} × receivers {}",
             observed_rows.shape()[0],
             observed_rows.shape()[1],
             transmissions,
-            array.element_count(),
+            acquisition.receiver_count(),
         )));
     }
     let grid = GridSpec::new(
@@ -335,16 +334,13 @@ pub fn finite_window_pstd_born_gradient(
     )?;
     let contrast = normalized_slowness_squared_contrast(&slowness, config)?;
     let symbols = ModalSymbols::new(grid, config);
-    let receiver_indices = receiver_indices_on_grid(grid, array)?;
     let reference_slowness = 1.0 / config.reference_sound_speed_m_s;
     let reference_slowness_sq = reference_slowness * reference_slowness;
 
     for transmit in 0..transmissions {
-        let source_hat = source_spectrum_on_grid(
-            grid,
-            &array.cylindrical_source(transmit),
-            &symbols.source_kappa,
-        )?;
+        let receiver_indices = receiver_indices_on_grid(grid, acquisition, transmit)?;
+        let source_hat =
+            source_spectrum_on_grid(grid, &acquisition.sources(transmit), &symbols.source_kappa)?;
         let (d_model, accel_history) = simulate_transmit_with_accel(
             grid,
             &source_hat,
@@ -672,13 +668,13 @@ fn adjoint_backward_pass(
 /// sound-speed values violate the finite-window PSTD contract.
 pub fn simulate_pstd_finite_window_born_second_order_observation(
     sound_speed_m_s: &Array3<f64>,
-    array: &MultiRowRingArray,
+    acquisition: &dyn TransmissionAcquisition,
     frequency_hz: f64,
     config: PstdFiniteWindowBornConfig,
     transmissions: usize,
 ) -> KwaversResult<Array2<Complex64>> {
     let slowness = sound_speed_to_slowness(sound_speed_m_s)?;
-    validate_inputs(&slowness, array, frequency_hz, config, transmissions)?;
+    validate_inputs(&slowness, acquisition, frequency_hz, config, transmissions)?;
     let grid = GridSpec::new(
         {
             let s = slowness.shape();
@@ -694,15 +690,12 @@ pub fn simulate_pstd_finite_window_born_second_order_observation(
     )?;
     let contrast = normalized_slowness_squared_contrast(&slowness, config)?;
     let symbols = ModalSymbols::new(grid, config);
-    let receiver_indices = receiver_indices_on_grid(grid, array)?;
-    let mut output = Array2::<Complex64>::zeros([transmissions, array.element_count()]);
+    let mut output = Array2::<Complex64>::zeros([transmissions, acquisition.receiver_count()]);
 
     for transmit in 0..transmissions {
-        let source_hat = source_spectrum_on_grid(
-            grid,
-            &array.cylindrical_source(transmit),
-            &symbols.source_kappa,
-        )?;
+        let receiver_indices = receiver_indices_on_grid(grid, acquisition, transmit)?;
+        let source_hat =
+            source_spectrum_on_grid(grid, &acquisition.sources(transmit), &symbols.source_kappa)?;
         let row = simulate_transmit_second_order(
             grid,
             &source_hat,
@@ -972,12 +965,20 @@ fn source_spectrum_on_grid(
     Ok(spectrum)
 }
 
+/// Grid indices of the receivers recording `transmit`.
+///
+/// Indexed by transmit rather than hoisted: an acquisition on a rotation stage
+/// moves its receivers between views, so a single hoisted index set would be
+/// silently wrong for every view but the first. For a rotationally symmetric
+/// acquisition the result is identical each time, and the cost — a grid-index
+/// lookup per receiver — is negligible against the transmit's own solve.
 fn receiver_indices_on_grid(
     grid: GridSpec,
-    array: &MultiRowRingArray,
+    acquisition: &dyn TransmissionAcquisition,
+    transmit: usize,
 ) -> KwaversResult<Vec<(usize, usize, usize)>> {
-    array
-        .elements()
+    acquisition
+        .receivers(transmit)
         .iter()
         .map(|&receiver| exact_grid_index(grid, receiver, "receiver"))
         .collect()
@@ -985,7 +986,7 @@ fn receiver_indices_on_grid(
 
 fn validate_inputs(
     slowness_s_per_m: &Array3<f64>,
-    array: &MultiRowRingArray,
+    acquisition: &dyn TransmissionAcquisition,
     frequency_hz: f64,
     config: PstdFiniteWindowBornConfig,
     transmissions: usize,
@@ -1009,10 +1010,10 @@ fn validate_inputs(
             config.time_step_s
         )));
     }
-    if transmissions == 0 || transmissions > array.circumferential_elements() {
+    if transmissions == 0 || transmissions > acquisition.transmission_count() {
         return Err(KwaversError::InvalidInput(format!(
             "finite-window PSTD transmissions must be in 1..={}, got {transmissions}",
-            array.circumferential_elements()
+            acquisition.transmission_count()
         )));
     }
     config.temporal_transfer().validate()

@@ -22,6 +22,7 @@
 //! HelmholtzForwardOperator>` and convert the match blocks to virtual
 //! dispatch, removing the enum.
 
+use super::acquisition::TransmissionAcquisition;
 use std::fmt::Debug;
 
 use kwavers_math::fft::Complex64;
@@ -50,7 +51,7 @@ pub trait HelmholtzForwardOperator: Debug + Send + Sync {
     fn predict_receiver_rows(
         &self,
         slowness_s_per_m: &Array3<f64>,
-        array: &MultiRowRingArray,
+        acquisition: &dyn TransmissionAcquisition,
         frequency_hz: f64,
         config: &Config,
         transmissions: usize,
@@ -121,14 +122,14 @@ impl HelmholtzForwardOperator for SingleScatterBornOperator {
     fn predict_receiver_rows(
         &self,
         slowness_s_per_m: &Array3<f64>,
-        array: &MultiRowRingArray,
+        acquisition: &dyn TransmissionAcquisition,
         frequency_hz: f64,
         config: &Config,
         transmissions: usize,
     ) -> KwaversResult<Array2<Complex64>> {
         super::forward::predict_born_rows(
             slowness_s_per_m,
-            array,
+            acquisition,
             frequency_hz,
             config,
             transmissions,
@@ -156,14 +157,14 @@ impl HelmholtzForwardOperator for DenseConvergentBornOperator {
     fn predict_receiver_rows(
         &self,
         slowness_s_per_m: &Array3<f64>,
-        array: &MultiRowRingArray,
+        acquisition: &dyn TransmissionAcquisition,
         frequency_hz: f64,
         config: &Config,
         transmissions: usize,
     ) -> KwaversResult<Array2<Complex64>> {
         super::forward::predict_cbs_rows(
             slowness_s_per_m,
-            array,
+            acquisition,
             frequency_hz,
             config,
             transmissions,
@@ -229,14 +230,14 @@ impl HelmholtzForwardOperator for SpectralConvergentBornOperator {
     fn predict_receiver_rows(
         &self,
         slowness_s_per_m: &Array3<f64>,
-        array: &MultiRowRingArray,
+        acquisition: &dyn TransmissionAcquisition,
         frequency_hz: f64,
         config: &Config,
         transmissions: usize,
     ) -> KwaversResult<Array2<Complex64>> {
         super::forward::predict_cbs_rows(
             slowness_s_per_m,
-            array,
+            acquisition,
             frequency_hz,
             config,
             transmissions,
@@ -303,14 +304,14 @@ impl HelmholtzForwardOperator for PstdSpectralConvergentBornOperator {
     fn predict_receiver_rows(
         &self,
         slowness_s_per_m: &Array3<f64>,
-        array: &MultiRowRingArray,
+        acquisition: &dyn TransmissionAcquisition,
         frequency_hz: f64,
         config: &Config,
         transmissions: usize,
     ) -> KwaversResult<Array2<Complex64>> {
         super::forward::predict_cbs_rows(
             slowness_s_per_m,
-            array,
+            acquisition,
             frequency_hz,
             config,
             transmissions,
@@ -423,14 +424,14 @@ impl HelmholtzForwardOperator for PstdFiniteWindowBornOperator {
     fn predict_receiver_rows(
         &self,
         slowness_s_per_m: &Array3<f64>,
-        array: &MultiRowRingArray,
+        acquisition: &dyn TransmissionAcquisition,
         frequency_hz: f64,
         config: &Config,
         transmissions: usize,
     ) -> KwaversResult<Array2<Complex64>> {
         super::finite_window::simulate_pstd_finite_window_born_observation(
             &kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::slowness_to_sound_speed(slowness_s_per_m)?,
-            array,
+            acquisition,
             frequency_hz,
             self.finite_window_config(config),
             transmissions,
@@ -533,14 +534,14 @@ impl HelmholtzForwardOperator for PstdFiniteWindowBornSecondOrderOperator {
     fn predict_receiver_rows(
         &self,
         slowness_s_per_m: &Array3<f64>,
-        array: &MultiRowRingArray,
+        acquisition: &dyn TransmissionAcquisition,
         frequency_hz: f64,
         config: &Config,
         transmissions: usize,
     ) -> KwaversResult<Array2<Complex64>> {
         super::finite_window::simulate_pstd_finite_window_born_second_order_observation(
             &kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::slowness_to_sound_speed(slowness_s_per_m)?,
-            array,
+            acquisition,
             frequency_hz,
             self.finite_window_config(config),
             transmissions,

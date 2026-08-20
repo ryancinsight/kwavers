@@ -8,7 +8,7 @@ use kwavers_diagnostics::reconstruction::breast_ust_fwi::{
 };
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::ali_2025_frequency_sweep_hz;
 use kwavers_solver::inverse::fwi::frequency_domain::{
-    simulate_frequency_observation, FrequencyObservation,
+    simulate_frequency_observation, FrequencyObservation, RingAcquisition,
 };
 use numpy::{PyArray1, PyArray2, PyReadonlyArray2, PyReadonlyArray3};
 use pyo3::prelude::*;
@@ -67,7 +67,12 @@ pub fn simulate_breast_fwi_frequency_observation<'py>(
     let sound_speed = pyarray3_to_leto3(&sound_speed_m_s)?;
     let pressure = py
         .detach(|| {
-            simulate_frequency_observation(&sound_speed, &array.inner, frequency_hz, &config.inner)
+            simulate_frequency_observation(
+                &sound_speed,
+                &RingAcquisition::new(&array.inner),
+                frequency_hz,
+                &config.inner,
+            )
         })
         .map_err(kwavers_to_py)?;
     leto2_to_pyarray2(py, pressure)
