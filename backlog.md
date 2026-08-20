@@ -1,5 +1,82 @@
 # Backlog / Strategy
 
+## KW-GPU-200 — Remove the simulated SWE GPU path [patch] — done 2026-08-20
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-GPU-200 | `kwavers-solver` carries no fabricated GPU surface. | [patch] | done | Claude | `crates/kwavers-solver/src/forward/elastic/swe/gpu/`, `swe/mod.rs`, `crates/kwavers/tests/swe_3d_validation.rs` |
+
+`crates/kwavers-solver/src/forward/elastic/swe/gpu/` (862 LOC) was deleted. It
+could not have run a kernel: `kwavers-solver` declares no GPU dependency at all
+— no `wgpu`, no `hephaestus`, no `kwavers-gpu`. Every public item in the module
+either fabricated a result or existed only to serve something that did:
+
+- `propagate_waves_gpu` ignored `_initial_displacements` and `_push_times`,
+  launched nothing, and derived `execution_time`/`throughput` from a hardcoded
+  10 TFLOPS constant and a 32 GB/s PCIe assumption.
+- `AdaptiveResolution::adaptive_solve` looked real but never solved: it
+  interpolated, then scored quality as `0.7 + fudge` via `simulate_solve_quality`
+  and reported `computation_time: 0.1 * 4^level`. Its grid pyramid and trilinear
+  `interpolate_to_resolution` were genuine but had no consumer outside the
+  module.
+- `GPUMemoryPool`, `SweGpuStepMetrics`, and `GPUDevice` modelled a device that
+  was never acquired.
+
+The two consuming tests went with it. `test_gpu_acceleration_performance` was
+already `#[cfg(feature = "gpu")]` plus `#[ignore]`, so it never ran, and it
+asserted `execution_time > 0.0` and `throughput > 1000.0` against constants.
+`test_adaptive_resolution` asserted `final_quality > 0.0` against a 0.7 floor.
+
+Verification: `cargo check -p kwavers-solver` passes; `cargo nextest run -p
+kwavers --test swe_3d_validation` is 2 passed / 4 skipped, the skips being
+pre-existing `#[ignore]` long-runners. No remaining reference to any deleted
+symbol anywhere under `crates/` or `docs/`.
+
+## KW-GPU-201 — Real GPU SWE through the Hephaestus seam [minor] — todo
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-GPU-201 | Volumetric SWE propagation runs on a real accelerator via Hephaestus, with a CPU differential oracle. | [minor] | todo | unowned | `crates/kwavers-solver`, Hephaestus operation seam |
+
+KW-GPU-200 removed a fake capability rather than a real one, so the accelerated
+path is now absent instead of imaginary. Restoring it is new capability and goes
+through the stack GPU owner, not a solver-local device wrapper: Hephaestus owns
+the vendor dimension (Atlas ADR 0039), with the CPU side in Leto.
+
+- Scope: bind the Hephaestus stencil/elementwise seams from `kwavers-solver`, or
+  push the kernel into Hephaestus if the seam does not yet cover it.
+- Non-goals: any solver-local `wgpu`/CUDA dependency; any per-vendor code in
+  `kwavers-solver`.
+- Acceptance: the GPU result matches the CPU reference within a tolerance derived
+  from the scheme's error model, asserted by a differential test that fails if the
+  device path is skipped. A run that silently executes nothing is not acceptance.
+- Dependency: Hephaestus seam coverage for the required stencil ops.
+
+## KW-GPU-202 — Migrate `kwavers-gpu` onto Hephaestus [major][arch] — todo
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-GPU-202 | Kwavers holds no direct GPU-API dependency; all device work goes through Hephaestus. | [major] [arch] | todo | unowned | `crates/kwavers-gpu`, `crates/kwavers-analysis` |
+
+Atlas ADR 0039 gives the vendor dimension to Hephaestus alone; a consumer
+carrying its own device stack has re-forked the dimension the substrate exists to
+own. Kwavers currently carries 662 raw `wgpu::` sites across 50 files, 18.4k LOC
+in `crates/kwavers-gpu`.
+
+The urgent sub-item is a version split already in the tree:
+`crates/kwavers-gpu/Cargo.toml` pins `wgpu = "30.0.0"` while
+`crates/kwavers-analysis/Cargo.toml` pins `wgpu = "26.0"` — two incompatible
+majors in one workspace. Both crates already declare optional
+`hephaestus-core`/`hephaestus-wgpu` dependencies, so the seam is partly wired.
+
+- Sequence: close Hephaestus seam coverage for the kernels Kwavers needs, migrate
+  crate by crate with call sites converted in the same change, then delete the
+  direct `wgpu` dependency from each manifest.
+- Non-goals: compatibility shims, dual-path adapters, or a `_native` sibling API.
+  Per the anti-shim mandate each increment converts a bounded scope completely.
+- Acceptance: `grep -rn 'wgpu::' crates/` returns nothing outside a Hephaestus
+  backend impl, and no `kwavers-*` manifest declares `wgpu`.
+
 ## KW-CI-115 — Enforce the merge gate on main [minor] — todo
 
 | ID | Outcome | Class | Status | Owner | Scope |
