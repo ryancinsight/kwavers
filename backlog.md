@@ -506,6 +506,15 @@
   `mdbook build docs/book` pass. The 2-D entry point is 860 lines and the 3-D
   entry point is 1,212 lines, so 3-D brain-model, acquisition, inversion, and
   reporting still require partitioning before `KW-EXAMPLES-115` can close.
+- 2026-08-20 3-D brain-prior slice: MNI probability-map loading, T1
+  normalization and tissue mapping, uniform-prior construction, and prior
+  selection now live in `seismic_imaging/volume_brain_model.rs`; the declared
+  T1 velocity bands have boundary tests. Exact example Nextest run
+  `744440bf-a9e0-4ed1-90ae-9b800cb97e3e` passes 73/73 (one slow comparison at
+  42.758 seconds); strict all-example Clippy, `mdbook test docs/book`, and
+  `mdbook build docs/book` pass. The 2-D entry point is 860 lines and the 3-D
+  entry point is 952 lines, so 3-D acquisition, inversion, and reporting still
+  require partitioning before `KW-EXAMPLES-115` can close.
 - 2026-08-20 example-gate runtime slice: the focused water-tank comparison's
   independent FDTD, PSTD, DG-2D, DG-3D, and DG-3D-CPML branches now overlap
   through the provider-owned Moirai `Parallel` join. The complete example

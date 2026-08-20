@@ -119,6 +119,13 @@
   slow comparison at 41.982 seconds), strict example Clippy passes, and the
   mdBook test/build gates pass.
 
+- **3-D brain-prior structure:** MNI probability-map loading, T1 normalization
+  and tissue mapping, uniform-prior construction, and prior selection now live
+  in `seismic_imaging/volume_brain_model.rs`; the declared T1 velocity bands
+  have boundary tests. The exact example Nextest gate passes 73/73 (one slow
+  comparison at 42.758 seconds), strict example Clippy passes, and the mdBook
+  test/build gates pass.
+
 - **Breaking CT skull material boundary:** `AcousticSkullProperties` now stores
   validated Aequitas velocity, mass-density, reciprocal-length attenuation,
   length, and optional shear velocity. `HeterogeneousSkull::from_ct_hill`

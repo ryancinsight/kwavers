@@ -80,6 +80,16 @@ corner and center tests. Exact local Nextest run
 entry point is 1,212 lines; 3-D brain-model, acquisition, inversion, and
 reporting still require partitioning, so `KW-EXAMPLES-115` remains in progress.
 
+MNI probability-map loading, T1 normalization and tissue mapping, uniform-prior
+construction, and prior selection now have the
+`seismic_imaging/volume_brain_model.rs` leaf; the declared T1 velocity bands
+have boundary tests. Exact local Nextest run
+`744440bf-a9e0-4ed1-90ae-9b800cb97e3e` passes 73/73 (one slow comparison at
+42.758 seconds); strict all-example Clippy, `mdbook test docs/book`, and
+`mdbook build docs/book` pass. The 2-D entry point is 860 lines and the 3-D
+entry point is 952 lines; 3-D acquisition, inversion, and reporting still
+require partitioning, so `KW-EXAMPLES-115` remains in progress.
+
 Synthetic skull construction, explicit CT loading, HU resampling, and
 brain-support filling now have the `seismic_imaging/phantom.rs` leaf; the
 brain-support classifier is owned by `brain_model.rs` and planar artifacts

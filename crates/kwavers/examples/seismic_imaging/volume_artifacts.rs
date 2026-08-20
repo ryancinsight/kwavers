@@ -1,6 +1,7 @@
 //! Orthogonal volume-rendering artifact for the 3-D seismic example.
 
-use super::{put_pixel, velocity_color, write_png, Array3, Path, COLORBAR_H, NX, NY, NZ, PANEL};
+use super::{Array3, COLORBAR_H, NX, NY, NZ, PANEL, put_pixel, velocity_color, write_png};
+use std::path::Path;
 
 /// Write axial, coronal, and sagittal velocity slices with a shared colorbar.
 pub(super) fn write_orthogonal_slices_png(
