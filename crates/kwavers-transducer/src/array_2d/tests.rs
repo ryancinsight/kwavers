@@ -1,7 +1,7 @@
 use super::array::TransducerArray2D;
 use super::types::{ApodizationType, ArrayCurvature, TransducerArray2DConfig};
 use aequitas::systems::si::quantities::{Angle, Frequency, Length, Velocity};
-use aequitas::systems::si::units::{Hertz, Meter, MeterPerSecond, Radian};
+use aequitas::systems::si::units::{Degree, Hertz, Meter, MeterPerSecond};
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_grid::Grid;
@@ -47,11 +47,11 @@ fn test_focus_and_steering() {
         .set_focus_distance(Length::from_unit::<Meter>(20e-3))
         .unwrap();
     array
-        .set_steering_angle(Angle::from_unit::<Radian>(10.0_f64.to_radians()))
+        .set_steering_angle(Angle::from_unit::<Degree>(10.0))
         .unwrap();
 
     assert!((array.focus_distance().unwrap().in_unit::<Meter>() - 20e-3).abs() < 1e-10);
-    assert!((array.steering_angle().in_unit::<Radian>() - 10.0_f64.to_radians()).abs() < 1e-10);
+    assert!((array.steering_angle().in_unit::<Degree>() - 10.0).abs() < 1e-10);
 
     let positions = array.element_positions();
     assert_eq!(positions.len(), 16);
