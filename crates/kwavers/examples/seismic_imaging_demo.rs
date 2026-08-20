@@ -101,6 +101,8 @@ mod seismic_metrics;
 mod seismic_phantom;
 #[path = "seismic_imaging/planar_artifacts.rs"]
 mod seismic_planar_artifacts;
+#[path = "seismic_imaging/rtm.rs"]
+mod seismic_rtm;
 use seismic_metrics::{print_quality_pairs, print_quality_report};
 
 use kwavers_core::constants::{
@@ -109,13 +111,7 @@ use kwavers_core::constants::{
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 use kwavers_solver::inverse::fwi::time_domain::{FwiGeometry, FwiProcessor};
-use kwavers_solver::inverse::seismic::{
-    parameters::{
-        FwiParameters, ImagingCondition, RegularizationParameters, RtmSettings,
-        SeismicBoundaryType, StorageStrategy,
-    },
-    rtm::RtmProcessor,
-};
+use kwavers_solver::inverse::seismic::parameters::{FwiParameters, RegularizationParameters};
 use leto::{Array2, Array3};
 use std::path::PathBuf;
 use std::time::Instant;
@@ -676,45 +672,7 @@ fn main() -> KwaversResult<()> {
     // ── 7. RTM — zero-lag cross-correlation imaging ───────────────────────
     println!("\n[ 7 / 7 ]  Reverse Time Migration (reflectivity image) …");
 
-    // Build the receiver snapshot directly from observed shot-0 seismograms.
-    // For each active receiver r at grid position (i, k) we project the RMS
-    // of its observed trace onto the grid.  This avoids a redundant forward
-    // simulation (which caused an OOM crash on debug binaries after the long
-    // FWI run) while providing the correct spatial energy distribution for the
-    // zero-lag imaging condition I(x) = ∫ p_src(x,t)·p_recv(x,T−t) dt
-    // (Baysal et al., 1983).
-    let (geom0, obs0) = &shots_fine[0];
-    let mut recv_snapshot = Array3::<f64>::zeros((NX, NY, NZ));
-    {
-        let recv_mask = &geom0.sensor_mask;
-        let mut recv_idx = 0usize;
-        for ([i, _j, k], &active) in recv_mask.indexed_iter() {
-            if active {
-                if recv_idx < obs0.shape()[0] {
-                    let trace = obs0.index_axis::<1>(0, recv_idx).expect("index_axis");
-                    let nt_obs = trace.shape()[0].max(1);
-                    // RMS amplitude of the observed trace: scalar proxy for the
-                    // receiver wavefield energy at this grid point.
-                    let rms = (trace.iter().map(|&v| v * v).sum::<f64>() / nt_obs as f64).sqrt();
-                    recv_snapshot[[i, 0, k]] = rms;
-                }
-                recv_idx += 1;
-            }
-        }
-    }
-
-    let rtm_settings = RtmSettings {
-        imaging_condition: ImagingCondition::Normalized,
-        storage_strategy: StorageStrategy::Full,
-        boundary_type: SeismicBoundaryType::Absorbing,
-        apply_laplacian: true,
-    };
-    let rtm = RtmProcessor::new(rtm_settings);
-    let rtm_image = rtm
-        .migrate(&recv_snapshot, &recv_snapshot, &grid)
-        .map_err(|error| KwaversError::InvalidInput(format!("RTM migration failed: {error:#}")))?;
-    let rtm_peak = rtm_image.iter().copied().fold(0.0_f64, f64::max);
-    println!("  RTM image completed — peak amplitude: {rtm_peak:.4}");
+    let rtm_image = seismic_rtm::run_rtm(&shots_fine, &grid)?;
 
     // ── Image output ──────────────────────────────────────────────────────
     let output_dir: PathBuf = std::env::args()

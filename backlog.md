@@ -489,6 +489,14 @@
   `mdbook build docs/book` pass. The 2-D entry point is 902 lines and the 3-D
   entry point is 1,382 lines, so top-level inversion and reporting still
   require partitioning before `KW-EXAMPLES-115` can close.
+- 2026-08-20 2-D RTM slice: receiver-snapshot construction and normalized
+  zero-lag reverse-time migration now live in `seismic_imaging/rtm.rs`, with an
+  explicit empty-shot error. Exact example Nextest run
+  `004ce523-953d-4a38-830d-0cdf2688903e` passes 71/71 (one slow comparison at
+  42.319 seconds); strict all-example Clippy, `mdbook test docs/book`, and
+  `mdbook build docs/book` pass. The 2-D entry point is 860 lines and the 3-D
+  entry point is 1,382 lines, so top-level inversion and reporting still
+  require partitioning before `KW-EXAMPLES-115` can close.
 - 2026-08-20 example-gate runtime slice: the focused water-tank comparison's
   independent FDTD, PSTD, DG-2D, DG-3D, and DG-3D-CPML branches now overlap
   through the provider-owned Moirai `Parallel` join. The complete example

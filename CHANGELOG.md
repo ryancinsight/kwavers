@@ -106,6 +106,12 @@
   Nextest gate passes 71/71 (one slow comparison at 44.692 seconds), strict
   example Clippy passes, and the mdBook test/build gates pass.
 
+- **2-D RTM structure:** Receiver-snapshot construction and normalized
+  zero-lag reverse-time migration now live in `seismic_imaging/rtm.rs`, with an
+  explicit empty-shot error. The exact example Nextest gate passes 71/71 (one
+  slow comparison at 42.319 seconds), strict example Clippy passes, and the
+  mdBook test/build gates pass.
+
 - **Breaking CT skull material boundary:** `AcousticSkullProperties` now stores
   validated Aequitas velocity, mass-density, reciprocal-length attenuation,
   length, and optional shear velocity. `HeterogeneousSkull::from_ct_hill`

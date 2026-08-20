@@ -89,6 +89,14 @@ explicit prior, gather, and inversion error handling. Exact local Nextest run
 entry point is 1,382 lines; top-level inversion and reporting still require
 partitioning, so `KW-EXAMPLES-115` remains in progress.
 
+Receiver-snapshot construction and normalized zero-lag reverse-time migration
+now have the `seismic_imaging/rtm.rs` leaf, with an explicit empty-shot error.
+Exact local Nextest run `004ce523-953d-4a38-830d-0cdf2688903e` passes 71/71
+(one slow comparison at 42.319 seconds); strict all-example Clippy,
+`mdbook test docs/book`, and `mdbook build docs/book` pass. The 2-D entry point
+is 860 lines and the 3-D entry point is 1,382 lines; top-level inversion and
+reporting still require partitioning, so `KW-EXAMPLES-115` remains in progress.
+
 The separable Gaussian CT-prior blur now has the
 `seismic_imaging/initial_model.rs` leaf, with constant-field and impulse
 response tests beside the owned boundary. Exact local Nextest run
