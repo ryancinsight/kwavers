@@ -20,6 +20,9 @@
   distributed` stops before compilation because the Atlas development overlay
   requires a lock rewrite for local patches. Hosted CI remains the locked
   acceptance gate.
+- Hosted delivery: PR [#427](https://github.com/ryancinsight/kwavers/pull/427)
+  carries exact head `073a5adbbdb22e3e88c161a0f2009d52376115ff`; the PR is ready
+  for review and its synchronize-triggered CI/Architecture runs are pending.
 - Non-goals: no changes to the existing peer-owned Kwavers medium, physics,
   visualization, workflow, lockfile, or documentation edits.
 
