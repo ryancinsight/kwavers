@@ -1,7 +1,7 @@
 # Example: Seismic Imaging 3D Demo
 
 **Crate**: `kwavers`
-**Run**: `cargo run -p kwavers --example seismic_imaging_3d_demo --features "dicom ritk"`
+**Run**: `cargo run -p kwavers --example seismic_imaging_3d_demo`
 **Source**: [`crates/kwavers/examples/seismic_imaging_3d_demo.rs`](../../../crates/kwavers/examples/seismic_imaging_3d_demo.rs)
 
 ## What This Example Demonstrates

@@ -4,7 +4,7 @@
 // (NX=64, NY=48, NZ=64) with a Fibonacci-sphere acquisition geometry, trilinear
 // CT resampling, 3D MNI atlas brain velocity, and T1 MRI tissue mapping.
 //
-// Compile: cargo check --release --example seismic_imaging_3d_demo --features "dicom ritk"
+// Compile: cargo check --release --example seismic_imaging_3d_demo
 //
 // # References
 //

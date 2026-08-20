@@ -14,6 +14,10 @@
   median to 4.952 seconds; exact differential tests pin the optimized 2-D
   operators to the full 3-D formulas.
 
+- **Breaking feature cleanup:** The empty `dicom` and `ritk` compatibility
+  features are removed. RITK medical-image I/O remains available
+  unconditionally; commands that passed either feature should remove the flag.
+
 - **Attenuation example structure and documentation:** The heterogeneous
   power-law attenuation replication now separates configuration, propagation,
   measurement, experiments, and artifacts into named modules and has a

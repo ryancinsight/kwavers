@@ -715,7 +715,7 @@ fn gaussian_blur_xz(model: &Array3<f64>, sigma: f64) -> Array3<f64> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Real CT loading via ritk (compiled only with --features ritk)
+// Real CT loading via the unconditional RITK provider
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Raw CT volume in voxel space.

@@ -3,7 +3,7 @@
 //! Usage:
 //!
 //! ```text
-//! cargo run -p kwavers --features ritk --example skull_ct_phase_correction -- \
+//! cargo run -p kwavers --example skull_ct_phase_correction -- \
 //!   <dicom_dir> <output.ppm> [series_instance_uid]
 //! ```
 //!

@@ -157,8 +157,6 @@ gpu = ["kwavers-gpu/gpu", "kwavers-math/gpu", "kwavers-solver/gpu", "kwavers-ana
 cuda-provider = ["gpu", "kwavers-gpu/cuda-provider"]
 cuda-runtime = ["cuda-provider", "kwavers-gpu/cuda-runtime"]
 plotting = ["dep:plotly", "kwavers-analysis/plotting"]
-# Additional features referenced in code
-dicom = []             # No-op alias retained for back-compat; DICOM I/O is unconditional via ritk-io.
 
 nightly = []           # Nightly Rust features
 simd = []              # SIMD acceleration support
@@ -183,11 +181,7 @@ opast = []                           # OPAST benchmarks (Criterion)
 # Sprint 159 - Enterprise API for production deployment
 # Feature flags for conditional compilation (used in tests/examples)
 em_pinn_module_exists = []          # Conditional feature for electromagnetic PINN tests
-# NOTE: ritk-core and ritk-io are now mandatory dependencies (see [dependencies]),
-# so the former `ritk` feature is a no-op alias retained only for callers that
-# still pass `--features ritk` on the CLI. New code should not gate on it.
-ritk = []
-full = ["gpu", "plotting", "dicom", "advanced-visualization", "gpu-visualization", "async-runtime", "structured-logging", "zero-copy", "pinn"]
+full = ["gpu", "plotting", "advanced-visualization", "gpu-visualization", "async-runtime", "structured-logging", "zero-copy", "pinn"]
 
 # SRS NFR-002 Compliant Test Configuration Strategy
 # ================================================
