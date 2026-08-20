@@ -6,8 +6,10 @@ single-concern modules. The fixed grid is represented by the zero-sized
 reader, acquisition geometry, metrics, and workflow are independently tested.
 Focused MSVC Nextest run `d1e3550e-f570-406b-a151-c50832cfe198` passes 6/6 and
 strict example Clippy passes. Whole-model and selected-pair quality metrics
-are now canonical in `seismic_imaging/metrics.rs`; the cross-example focused
-run `d93a0d0d-4893-4c99-9dbd-f5ccbdd6bbfa` passes 14/14. The 2-D and 3-D
+are now canonical in `seismic_imaging/metrics.rs`; DICOM series selection is
+canonical in `seismic_imaging/dicom.rs`. The cross-example focused runs
+`d93a0d0d-4893-4c99-9dbd-f5ccbdd6bbfa` and
+`5a75e7f4-3d2d-4734-a0d8-3603ae25c511` each pass 14/14. The 2-D and 3-D
 seismic entry points remain above the 500-line target; further partitioning is
 required before `KW-EXAMPLES-115` can close. No fallback or compatibility path
 is added.

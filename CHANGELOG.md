@@ -44,6 +44,10 @@
   canonical quality-report implementation and pair-report implementation,
   with value-semantic regression coverage in both example binaries.
 
+- **Shared seismic CT selection:** DICOM series selection and the
+  one-file-per-series merge rule now live in one module used by both seismic
+  examples, removing the duplicated provider-boundary implementation.
+
 - **Breaking CT skull material boundary:** `AcousticSkullProperties` now stores
   validated Aequitas velocity, mass-density, reciprocal-length attenuation,
   length, and optional shear velocity. `HeterogeneousSkull::from_ct_hill`

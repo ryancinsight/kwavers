@@ -86,6 +86,8 @@
 //! - Virieux, J. & Operto, S. (2009). An overview of full-waveform inversion in
 //!   exploration geophysics. *Geophysics*, 74(6), WCC1–WCC26.
 
+#[path = "seismic_imaging/dicom.rs"]
+mod seismic_dicom;
 mod seismic_imaging;
 #[path = "seismic_imaging/metrics.rs"]
 mod seismic_metrics;
@@ -126,7 +128,7 @@ use coeus_core::MoiraiBackend;
 use ritk_io::format::nifti::native::NiftiReader as NativeNiftiReader;
 use ritk_io::format::png::native::PngSeriesReader as NativePngSeriesReader;
 use ritk_io::ImageReader;
-use ritk_io::{load_native_dicom_series, scan_dicom_directory, DicomSeriesInfo};
+use ritk_io::{load_native_dicom_series, scan_dicom_directory};
 use seismic_imaging::medium::SkullModel;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -185,9 +187,6 @@ const HU_BRAIN: f64 = 35.0; // grey/white matter average
 /// Phase-correction example Medimodel series UID.  The directory contains
 /// additional derived CT series with inconsistent orientation; this UID is the
 /// same 67-slice skull CT series used by the companion example.
-const DEFAULT_MEDIMODEL_SERIES_UID: &str =
-    "1.3.6.1.4.1.5962.99.1.1761388472.1291962045.1616669124536.2634.0";
-
 /// Full hemispherical aperture size used by the companion phase-correction demo.
 const TRANSCRANIAL_FOCUSED_BOWL_ELEMENT_COUNT: usize = 1024;
 
@@ -803,7 +802,7 @@ fn load_ct_volume(path: &Path) -> anyhow::Result<CtVolume> {
         if series.is_empty() {
             anyhow::bail!("no DICOM series found in '{}'", path.display());
         }
-        let selected = build_dicom_series(series);
+        let selected = seismic_dicom::select_series(series);
         println!(
             "  DICOM series    : '{}' ({} files)",
             selected.series_description,
@@ -867,75 +866,6 @@ fn load_ct_volume(path: &Path) -> anyhow::Result<CtVolume> {
         hu,
         spacing_mm: [spacing[0], spacing[1], spacing[2]],
     })
-}
-
-/// Select or build the DICOM series to load.
-///
-/// # Normal case
-///
-/// One multi-file series (all slices share a SeriesInstanceUID) → return it.
-/// When multiple multi-file series exist, prefer modality == "CT" and most
-/// slices.
-///
-/// # Non-standard case: one file per series
-///
-/// Some datasets (including the "Paired MRI / CT" public dataset used here)
-/// assign a unique SeriesInstanceUID to every individual slice.
-/// `scan_dicom_directory` therefore returns N × 1-file series.
-///
-/// Detection heuristic: all series have ≤ 1 file.
-///
-/// Fix: merge all file paths from all series into one synthetic
-/// `DicomSeriesInfo`.  `load_native_dicom_series` will sort them spatially by
-/// `ImagePositionPatient`, producing a correct 3-D volume regardless of the
-/// per-slice UID anomaly.
-fn build_dicom_series(mut series: Vec<DicomSeriesInfo>) -> DicomSeriesInfo {
-    let max_files = series.iter().map(|s| s.file_paths.len()).max().unwrap_or(0);
-
-    if let Some(best) = series
-        .iter()
-        .position(|s| s.series_instance_uid() == DEFAULT_MEDIMODEL_SERIES_UID)
-    {
-        return series.swap_remove(best);
-    }
-
-    if max_files <= 1 {
-        // One-file-per-series dataset: merge everything into a single logical series.
-        let all_paths: Vec<_> = series
-            .iter_mut()
-            .flat_map(|s| s.file_paths.drain(..))
-            .collect();
-        let n = all_paths.len();
-        println!(
-            "  Note: each DICOM slice has a unique SeriesInstanceUID; \
-                  merging {n} files into one logical series for spatial sort."
-        );
-        DicomSeriesInfo::new(
-            "merged",
-            format!("merged-{n}-slices"),
-            "CT",
-            String::new(),
-            all_paths,
-        )
-    } else {
-        // Standard multi-file series: pick the best one.
-        let ct: Vec<usize> = series
-            .iter()
-            .enumerate()
-            .filter(|(_, s)| s.modality() == "CT")
-            .map(|(i, _)| i)
-            .collect();
-        let pool: Vec<usize> = if ct.is_empty() {
-            (0..series.len()).collect()
-        } else {
-            ct
-        };
-        let best = pool
-            .into_iter()
-            .max_by_key(|&i| series[i].file_paths.len())
-            .unwrap_or(0);
-        series.swap_remove(best)
-    }
 }
 
 /// Find the axial (z) slice index with the maximum count of bone voxels (HU > 300).

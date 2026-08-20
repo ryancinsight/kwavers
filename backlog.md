@@ -417,6 +417,11 @@
   by both 2-D and 3-D entries, with one value-semantic regression test per
   binary. Focused example Nextest run `d93a0d0d-4893-4c99-9dbd-f5ccbdd6bbfa`
   passes 14/14; strict all-example Clippy and example checks pass.
+- 2026-08-20 DICOM ownership slice: the repeated Medimodel series selection
+  and one-file-per-series merge heuristic now has one canonical
+  `seismic_imaging/dicom.rs` home used by both 2-D and 3-D CT loaders. The
+  focused cross-example Nextest rerun `5a75e7f4-3d2d-4734-a0d8-3603ae25c511`
+  passes 14/14 and strict all-example Clippy remains green.
 - Non-goals: frequency-domain FWI and ADR 115, solver-algorithm replacement,
   committed clinical datasets, GPU-kernel changes, and compatibility aliases.
 - Verification: strict focused Clippy, example unit tests through Nextest,

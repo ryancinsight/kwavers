@@ -15,6 +15,8 @@
 // - Treeby & Cox 2010: JASA — fractional-Laplacian absorption.
 // - MNI ICBM 2009c: https://www.bic.mni.mcgill.ca/~vfonov/icbm/2009/
 
+#[path = "seismic_imaging/dicom.rs"]
+mod seismic_dicom;
 mod seismic_imaging;
 #[path = "seismic_imaging/metrics.rs"]
 mod seismic_metrics;
@@ -35,7 +37,7 @@ use moirai_parallel::{map_collect_index_with, Adaptive};
 use ritk_io::format::nifti::native::NiftiReader as NativeNiftiReader;
 use ritk_io::format::png::native::PngSeriesReader as NativePngSeriesReader;
 use ritk_io::ImageReader;
-use ritk_io::{load_native_dicom_series, scan_dicom_directory, DicomSeriesInfo};
+use ritk_io::{load_native_dicom_series, scan_dicom_directory};
 use seismic_imaging::medium::SkullModel;
 use std::f64::consts::PI;
 use std::fs::File;
@@ -133,10 +135,6 @@ const COLORBAR_H: usize = 20; // colorbar height below each panel
 // Dataset paths (compile-time constants, derived from CARGO_MANIFEST_DIR)
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Phase-correction example Medimodel series UID.
-const DEFAULT_MEDIMODEL_SERIES_UID: &str =
-    "1.3.6.1.4.1.5962.99.1.1761388472.1291962045.1616669124536.2634.0";
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Structs
 // ─────────────────────────────────────────────────────────────────────────────
@@ -150,54 +148,6 @@ struct CtVolume {
 // ─────────────────────────────────────────────────────────────────────────────
 // CT loading
 // ─────────────────────────────────────────────────────────────────────────────
-
-/// Select the best DICOM series (same logic as seismic_imaging_demo.rs).
-fn build_dicom_series(mut series: Vec<DicomSeriesInfo>) -> DicomSeriesInfo {
-    let max_files = series.iter().map(|s| s.file_paths.len()).max().unwrap_or(0);
-
-    if let Some(best) = series
-        .iter()
-        .position(|s| s.series_instance_uid() == DEFAULT_MEDIMODEL_SERIES_UID)
-    {
-        return series.swap_remove(best);
-    }
-
-    if max_files <= 1 {
-        let all_paths: Vec<_> = series
-            .iter_mut()
-            .flat_map(|s| s.file_paths.drain(..))
-            .collect();
-        let n = all_paths.len();
-        println!(
-            "  Note: each DICOM slice has a unique SeriesInstanceUID; \
-                  merging {n} files into one logical series for spatial sort."
-        );
-        DicomSeriesInfo::new(
-            "merged",
-            format!("merged-{n}-slices"),
-            "CT",
-            String::new(),
-            all_paths,
-        )
-    } else {
-        let ct: Vec<usize> = series
-            .iter()
-            .enumerate()
-            .filter(|(_, s)| s.modality() == "CT")
-            .map(|(i, _)| i)
-            .collect();
-        let pool: Vec<usize> = if ct.is_empty() {
-            (0..series.len()).collect()
-        } else {
-            ct
-        };
-        let best = pool
-            .into_iter()
-            .max_by_key(|&i| series[i].file_paths.len())
-            .unwrap_or(0);
-        series.swap_remove(best)
-    }
-}
 
 /// Load a CT volume from a NIfTI file or DICOM directory via ritk.
 ///
@@ -261,7 +211,7 @@ fn load_ct_volume(path: &Path) -> anyhow::Result<CtVolume> {
         if series.is_empty() {
             anyhow::bail!("no DICOM series found in '{}'", path.display());
         }
-        let selected = build_dicom_series(series);
+        let selected = seismic_dicom::select_series(series);
         println!(
             "  DICOM series    : '{}' ({} files)",
             selected.series_description,
