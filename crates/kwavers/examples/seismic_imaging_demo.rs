@@ -86,14 +86,13 @@
 //! - Virieux, J. & Operto, S. (2009). An overview of full-waveform inversion in
 //!   exploration geophysics. *Geophysics*, 74(6), WCC1–WCC26.
 
-#[path = "seismic_imaging/dicom.rs"]
-mod seismic_dicom;
 mod seismic_imaging;
 #[path = "seismic_imaging/metrics.rs"]
 mod seismic_metrics;
 use seismic_metrics::{print_quality_pairs, print_quality_report};
 
 use aequitas::systems::si::quantities::{Frequency, Pressure, Time};
+use coeus_core::MoiraiBackend;
 use kwavers_core::constants::{
     acoustic_parameters::SOUND_SPEED_SKULL_CORTICAL, fundamental::SOUND_SPEED_WATER_SIM,
 };
@@ -110,6 +109,8 @@ use kwavers_solver::inverse::seismic::{
 };
 use kwavers_source::{GridSource, SourceMode};
 use leto::{Array2, Array3};
+use ritk_io::format::nifti::native::NiftiReader as NativeNiftiReader;
+use ritk_io::ImageReader;
 use std::fs::File;
 use std::io::{self, BufWriter, Write};
 use std::path::{Path, PathBuf};
@@ -122,13 +123,10 @@ mod seismic_input;
 use brain_prior::BrainPriorMode;
 use seismic_input::SeismicInputMode;
 
-// CT loading imports (ritk required-feature)
 use anyhow::Context as _;
-use coeus_core::MoiraiBackend;
-use ritk_io::format::nifti::native::NiftiReader as NativeNiftiReader;
-use ritk_io::format::png::native::PngSeriesReader as NativePngSeriesReader;
-use ritk_io::ImageReader;
-use ritk_io::{load_native_dicom_series, scan_dicom_directory};
+use seismic_imaging::ct::{
+    load_ct_volume, skull_centroid_2d, skull_equator_z, skull_outer_radius_ct, CtVolume,
+};
 use seismic_imaging::medium::SkullModel;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -683,317 +681,39 @@ fn gaussian_blur_xz(model: &Array3<f64>, sigma: f64) -> Array3<f64> {
     result
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Real CT loading via the unconditional RITK provider
-// ─────────────────────────────────────────────────────────────────────────────
-
-/// Raw CT volume in voxel space.
-///
-/// `hu` has shape `(cols, rows, depth)` = `(x, y, z)` in the patient frame.
-/// `spacing_mm` is `[dx, dy, dz]` — physical mm per voxel on each axis.
-struct CtVolume {
-    hu: Array3<f64>,
-    spacing_mm: [f64; 3],
-}
-
-/// Load a CT volume from either a NIfTI file or a DICOM directory via ritk.
-///
-/// # Format detection
-///
-/// - Path is a directory → DICOM series directory.
-/// - Path ends with `.nii` or `.nii.gz` → NIfTI file.
-///
-/// # Axis convention
-///
-/// Returns `hu[x, y, z]` where:
-/// - x = left-right (columns in-plane)
-/// - y = anterior-posterior (rows in-plane)
-/// - z = superior-inferior (slice axis / depth)
-///
-/// This matches the convention used in `skull_ct_phase_correction.rs`.
-fn load_ct_volume(path: &Path) -> anyhow::Result<CtVolume> {
-    let backend = MoiraiBackend;
-
-    // ── PNG series (bone-window secondary-capture) ────────────────────────
-    // The "Paired MRI / CT" public dataset stores CT as secondary-capture
-    // DICOM (Modality=OT, no spatial metadata) but also supplies PNG exports.
-    // `read_png_series` converts them to a [depth, rows, cols] f32 tensor
-    // with raw 0-255 pixel values (`.to_luma8()` handles RGB→grayscale).
-    //
-    // # HU approximation from bone-window PNG
-    //
-    // The PNGs are rendered with a standard bone window (W=2000, C=400):
-    //   display_range = [C − W/2, C + W/2] = [−600, 1400] HU
-    //   HU(pixel) = pixel × W/255 + (C − W/2)
-    //             = pixel × 7.843 − 600
-    //
-    // Pixel = 0   → HU = −600  → c = 1500 m/s (water, clamped by bvf)
-    // Pixel = 77  → HU =   4   → c = 1503 m/s (≈ water)
-    // Pixel = 166 → HU = 702   → c = 2194 m/s (cortical bone)
-    // Pixel = 255 → HU = 1400  → c = 2900 m/s (dense cortical bone)
-    //
-    // Spacing assumption: typical 512×512 head CT with 256 mm FOV
-    //   → 0.5 mm/pixel in-plane; 49 slices × ~4 mm slice spacing.
-    if path.is_dir() {
-        let has_png = std::fs::read_dir(path)
-            .with_context(|| format!("failed to read dir '{}'", path.display()))?
-            .filter_map(|e| e.ok())
-            .any(|e| {
-                e.path()
-                    .extension()
-                    .and_then(|ext| ext.to_str())
-                    .map(|ext| ext.eq_ignore_ascii_case("png"))
-                    .unwrap_or(false)
-            });
-
-        if has_png {
-            println!("  PNG series      : {}", path.display());
-            let img = ImageReader::read(&NativePngSeriesReader::new(backend), path)
-                .map_err(|e| anyhow::anyhow!("PNG series load failed: {e:#}"))?;
-            let [depth, rows, cols] = img.shape();
-            let values = img
-                .data_slice()
-                .map_err(|e| anyhow::anyhow!("PNG tensor data is not f32: {e:?}"))?;
-            anyhow::ensure!(
-                values.len() == depth * rows * cols,
-                "PNG data length mismatch: got {}, expected {}",
-                values.len(),
-                depth * rows * cols
-            );
-
-            // Bone window: W=2000, C=400 → HU ∈ [−600, 1400]
-            // HU = pixel × (2000/255) − 600
-            const PNG_W: f64 = 2000.0;
-            const PNG_C: f64 = 400.0;
-            let hu_lo = PNG_C - PNG_W / 2.0; // −600.0
-            let hu_per_pixel = PNG_W / 255.0; // 7.843
-
-            // Transpose from tensor [Z,Y,X] layout to hu[x,y,z] = [cols,rows,depth]
-            let mut hu = Array3::<f64>::zeros((cols, rows, depth));
-            for z in 0..depth {
-                for y in 0..rows {
-                    for x in 0..cols {
-                        let px = f64::from(values[z * rows * cols + y * cols + x]);
-                        hu[[x, y, z]] = hu_lo + px * hu_per_pixel;
-                    }
-                }
-            }
-
-            // Clamp to physically valid DICOM HU range.
-            // Values below −1024 are FOV-padding artefacts (some scanners write −3024 or
-            // −4048 outside the reconstructed circle).  Values above 3071 are outside the
-            // 12-bit DICOM signed range.  Neither appears in real tissue.
-            for h in hu.iter_mut() {
-                *h = (*h).clamp(-1024.0, 3071.0);
-            }
-
-            // Assumed spacing: 0.5 mm in-plane, 4.0 mm slice (256mm FOV / 512 px)
-            return Ok(CtVolume {
-                hu,
-                spacing_mm: [0.5, 0.5, 4.0],
-            });
-        }
-    }
-
-    let image = if path.is_dir() {
-        // ── DICOM directory ───────────────────────────────────────────────
-        let series = scan_dicom_directory(path)
-            .with_context(|| format!("failed to scan DICOM dir '{}'", path.display()))?;
-        if series.is_empty() {
-            anyhow::bail!("no DICOM series found in '{}'", path.display());
-        }
-        let selected = seismic_dicom::select_series(series);
-        println!(
-            "  DICOM series    : '{}' ({} files)",
-            selected.series_description,
-            selected.file_paths.len()
-        );
-        load_native_dicom_series(&selected, &backend).map_err(|e| {
-            anyhow::anyhow!(
-                "DICOM load failed for series '{}': {e:#}",
-                selected.series_instance_uid()
-            )
-        })?
-    } else {
-        // ── NIfTI file ────────────────────────────────────────────────────
-        let name = path.file_name().unwrap_or_default().to_string_lossy();
-        if !name.ends_with(".nii") && !name.ends_with(".nii.gz") {
-            anyhow::bail!(
-                "unrecognised format for '{}'; expected .nii/.nii.gz or a DICOM dir",
-                path.display()
-            );
-        }
-        println!("  NIfTI file      : {}", path.display());
-        ImageReader::read(&NativeNiftiReader::new(backend), path)
-            .with_context(|| format!("NIfTI read failed for '{}'", path.display()))?
-    };
-
-    // image shape is [depth/Z, rows/Y, cols/X] in ritk convention
-    let [depth, rows, cols] = image.shape();
-    let spacing = image.spacing().into_vector().to_array();
-
-    let values = image
-        .data_slice()
-        .map_err(|e| anyhow::anyhow!("tensor data is not f32: {e:?}"))?;
-    anyhow::ensure!(
-        values.len() == depth * rows * cols,
-        "data length mismatch: got {}, expected {}",
-        values.len(),
-        depth * rows * cols
-    );
-
-    // Transpose from tensor [Z,Y,X] layout to hu[x,y,z] = [cols,rows,depth]
-    let mut hu = Array3::<f64>::zeros((cols, rows, depth));
-    for z in 0..depth {
-        for y in 0..rows {
-            for x in 0..cols {
-                hu[[x, y, z]] = f64::from(values[z * rows * cols + y * cols + x]);
-            }
-        }
-    }
-
-    // Clamp to physically valid DICOM HU range.
-    // Values below −1024 are FOV-padding artefacts (some scanners write −3024 or
-    // −4048 outside the reconstructed circle).  Values above 3071 are outside the
-    // 12-bit DICOM signed range.  Neither appears in real tissue.
-    for h in hu.iter_mut() {
-        *h = (*h).clamp(-1024.0, 3071.0);
-    }
-
-    // spacing[0..2] = [x_spacing, y_spacing, z_spacing] in mm for both
-    // DICOM (pixel_spacing + slice_thickness) and NIfTI (affine column norms).
-    Ok(CtVolume {
-        hu,
-        spacing_mm: [spacing[0], spacing[1], spacing[2]],
-    })
-}
-
-/// Find the axial (z) slice index with the maximum count of bone voxels (HU > 300).
-///
-/// The equatorial skull cross-section has the largest bone ring area and gives
-/// the most informative FWI slice for hemispherical array geometry.
-fn skull_equator_z(hu: &Array3<f64>) -> usize {
-    let [_, _, nz] = hu.shape();
-    (0..nz)
-        .max_by_key(|&z| {
-            hu.index_axis::<2>(2, z)
-                .expect("index_axis")
-                .iter()
-                .filter(|&&h| h > 300.0)
-                .count()
-        })
-        .unwrap_or(nz / 2)
-}
-
-/// Find the centroid (x_ct, y_ct) of bone voxels on an axial slice.
-///
-/// Falls back to the geometric centre when no bone is present.
-fn skull_centroid_2d(hu: &Array3<f64>, z: usize) -> (f64, f64) {
-    let slice = hu.index_axis::<2>(2, z).expect("index_axis");
-    let [nx, ny] = slice.shape();
-    let (mut sx, mut sy, mut n) = (0.0f64, 0.0f64, 0.0f64);
-    for ([x, y], &h) in slice.indexed_iter() {
-        if h > 300.0 {
-            sx += x as f64;
-            sy += y as f64;
-            n += 1.0;
-        }
-    }
-    if n > 0.0 {
-        (sx / n, sy / n)
-    } else {
-        (nx as f64 / 2.0, ny as f64 / 2.0)
-    }
-}
-
-/// Bilinear interpolation into an axial HU slice `hu[:, :, z]`.
-///
-/// Clamps out-of-bound indices to the boundary (reflects water coupling at
-/// CT field-of-view edges).
 fn bilinear_hu(hu: &Array3<f64>, x: f64, y: f64, z: usize) -> f64 {
     let [nx, ny, nz] = hu.shape();
     if z >= nz {
         return 0.0;
     }
-    let cx = |i: isize| i.clamp(0, nx as isize - 1) as usize;
-    let cy = |j: isize| j.clamp(0, ny as isize - 1) as usize;
+    let clamp_x = |index: isize| index.clamp(0, nx as isize - 1) as usize;
+    let clamp_y = |index: isize| index.clamp(0, ny as isize - 1) as usize;
     let x0 = x.floor() as isize;
     let y0 = y.floor() as isize;
     let fx = x - x.floor();
     let fy = y - y.floor();
-    let h00 = hu[[cx(x0), cy(y0), z]];
-    let h10 = hu[[cx(x0 + 1), cy(y0), z]];
-    let h01 = hu[[cx(x0), cy(y0 + 1), z]];
-    let h11 = hu[[cx(x0 + 1), cy(y0 + 1), z]];
+    let h00 = hu[[clamp_x(x0), clamp_y(y0), z]];
+    let h10 = hu[[clamp_x(x0 + 1), clamp_y(y0), z]];
+    let h01 = hu[[clamp_x(x0), clamp_y(y0 + 1), z]];
+    let h11 = hu[[clamp_x(x0 + 1), clamp_y(y0 + 1), z]];
     h00 * (1.0 - fx) * (1.0 - fy) + h10 * fx * (1.0 - fy) + h01 * (1.0 - fx) * fy + h11 * fx * fy
 }
 
-/// Measure the outer skull radius in an axial slice.
-///
-/// Scans all bone voxels (HU > 300) on slice `z` and returns the maximum
-/// Euclidean distance from the centroid `(cx, cy)` in CT pixels.
-///
-/// Returns `nx.min(ny) / 4` as a safe fallback when no bone is found
-/// (prevents division-by-zero in the scale computation).
-fn skull_outer_radius_ct(hu: &Array3<f64>, z: usize, cx: f64, cy: f64) -> f64 {
-    let [nx, ny, _] = hu.shape();
-    let r = hu
-        .index_axis::<2>(2, z)
-        .expect("index_axis")
-        .indexed_iter()
-        .filter(|(_, &h)| h > 300.0)
-        .map(|([x, y], _)| {
-            let dx = x as f64 - cx;
-            let dy = y as f64 - cy;
-            (dx * dx + dy * dy).sqrt()
-        })
-        .fold(0.0_f64, f64::max);
-    if r < 1.0 {
-        (nx.min(ny) / 4) as f64
-    } else {
-        r
-    }
-}
-
-/// Resample a 3-D CT volume onto the FWI grid `(NX, NY, NZ)` at spacing `DX`.
-///
-/// # Algorithm
-///
-/// 1. Identify the equatorial axial slice (maximum bone area in z).
-/// 2. Locate the skull centroid `(cx, cy)` and outer radius `r_skull` [CT px].
-/// 3. Compute a scale factor so the skull outer edge lands at `R_HEAD` FWI voxels:
-///    ```text
-///    scale = r_skull_ct / R_HEAD          [CT pixels per FWI voxel]
-///    ```
-///    This ensures sources and receivers (placed at R_SRC > R_HEAD) are always
-///    outside the skull regardless of the CT field-of-view.  For a real adult
-///    head (r_skull ≈ 260 px at 0.5 mm/px) the physically-correct mapping
-///    (scale = DX/dx_mm = 6) would project the skull to 43 FWI voxels from
-///    centre, placing every source inside the skull and breaking the acquisition
-///    geometry.  The skull-fitting scale reduces the effective voxel size to
-///    preserve the anatomy-to-geometry relationship intended by the demo.
-/// 4. For each FWI voxel `(ix, iz)`:
-///    ```text
-///    x_ct = cx + (ix − NX/2) · scale
-///    y_ct = cy + (iz − NZ/2) · scale
-///    ```
-/// 5. Bilinear interpolation from the axial CT slice.
-/// 6. Broadcast the 2-D result to all `NY` planes.
-///
-/// FWI ix (lateral) maps to CT x (columns); FWI iz (depth) maps to CT y (rows).
 fn resample_ct_to_fwi_grid(vol: &CtVolume) -> Array3<f64> {
-    let z_eq = skull_equator_z(&vol.hu);
-    let (cx, cy) = skull_centroid_2d(&vol.hu, z_eq);
+    let hu = vol.hu();
+    let z_eq = skull_equator_z(hu);
+    let (cx, cy) = skull_centroid_2d(hu, z_eq);
 
     // Detect skull outer radius in CT pixels and derive scale so the skull
     // outer edge lands at R_HEAD FWI voxels from the grid centre.
-    let r_skull_ct = skull_outer_radius_ct(&vol.hu, z_eq, cx, cy);
+    let r_skull_ct = skull_outer_radius_ct(hu, z_eq, cx, cy);
+    let spacing_mm = vol.spacing_mm();
     let scale = r_skull_ct / R_HEAD; // CT pixels per FWI voxel
 
     println!(
         "  CT skull radius : {r_skull_ct:.1} px × {:.2} mm/px = {:.0} mm",
-        vol.spacing_mm[0],
-        r_skull_ct * vol.spacing_mm[0]
+        spacing_mm[0],
+        r_skull_ct * spacing_mm[0]
     );
     println!(
         "  FWI fit scale   : {scale:.2} CT px / FWI voxel  \
@@ -1005,7 +725,7 @@ fn resample_ct_to_fwi_grid(vol: &CtVolume) -> Array3<f64> {
         for iz in 0..NZ {
             let x_ct = cx + (ix as f64 - NX as f64 / 2.0) * scale;
             let y_ct = cy + (iz as f64 - NZ as f64 / 2.0) * scale;
-            let hu_val = bilinear_hu(&vol.hu, x_ct, y_ct, z_eq);
+            let hu_val = bilinear_hu(hu, x_ct, y_ct, z_eq);
             for iy in 0..NY {
                 result[[ix, iy, iz]] = hu_val;
             }
@@ -1039,10 +759,11 @@ fn build_phantom_for_demo(
     print!("  CT source       : {}  ", path.display());
     let vol = load_ct_volume(path)
         .with_context(|| format!("explicit CT input could not be loaded: {}", path.display()))?;
-    let [cx, cy, nz] = vol.hu.shape();
+    let [cx, cy, nz] = vol.hu().shape();
+    let spacing_mm = vol.spacing_mm();
     println!(
         "({cx}×{cy}×{nz} voxels @ [{:.2},{:.2},{:.2}] mm)",
-        vol.spacing_mm[0], vol.spacing_mm[1], vol.spacing_mm[2]
+        spacing_mm[0], spacing_mm[1], spacing_mm[2]
     );
     let hu_fwi = resample_ct_to_fwi_grid(&vol);
     let phantom = SkullModel::from_hu(hu_fwi)?;
@@ -1269,7 +990,7 @@ fn write_three_plane_png(
         let img_h = 2 * (PANEL + COLORBAR_H);
         let mut rgb = vec![0_u8; img_w * img_h * 3];
 
-        let [nx_ct, ny_ct, nz_ct] = vol.hu.shape();
+        let [nx_ct, ny_ct, nz_ct] = vol.hu().shape();
         let cy_ct = ny_ct / 2;
         let cz_ct = nz_ct / 2;
         let cx_ct = nx_ct / 2;
@@ -1286,7 +1007,7 @@ fn write_three_plane_png(
                     img_h,
                     px,
                     py,
-                    ct_bone_color(vol.hu[[ix, cy_ct, iz]]),
+                    ct_bone_color(vol.hu()[[ix, cy_ct, iz]]),
                 );
             }
         }
@@ -1301,7 +1022,7 @@ fn write_three_plane_png(
                     img_h,
                     PANEL + px,
                     py,
-                    ct_bone_color(vol.hu[[ix, iy, cz_ct]]),
+                    ct_bone_color(vol.hu()[[ix, iy, cz_ct]]),
                 );
             }
         }
@@ -1316,7 +1037,7 @@ fn write_three_plane_png(
                     img_h,
                     2 * PANEL + px,
                     py,
-                    ct_bone_color(vol.hu[[cx_ct, iy, iz]]),
+                    ct_bone_color(vol.hu()[[cx_ct, iy, iz]]),
                 );
             }
         }

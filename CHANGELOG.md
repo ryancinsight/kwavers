@@ -54,6 +54,11 @@
   one-file-per-series merge rule now live in one module used by both seismic
   examples, removing the duplicated provider-boundary implementation.
 
+- **Shared seismic CT boundary:** RITK PNG, DICOM, and NIfTI loading, HU
+  normalization, axial skull geometry, and `CtVolume` ownership now live in one
+  provider-facing module. The 2-D and 3-D entries retain only their
+  dimension-specific resampling and interpolation paths.
+
 - **Breaking CT skull material boundary:** `AcousticSkullProperties` now stores
   validated Aequitas velocity, mass-density, reciprocal-length attenuation,
   length, and optional shear velocity. `HeterogeneousSkull::from_ct_hill`

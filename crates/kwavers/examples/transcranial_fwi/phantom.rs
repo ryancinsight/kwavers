@@ -1,7 +1,7 @@
 //! Synthetic and NIfTI-backed skull medium construction.
 
 use super::config::GridSpec;
-use super::seismic_imaging::medium::SkullModel;
+use super::seismic_medium::SkullModel;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array3;
 use ritk_io::domain::ImageReader;

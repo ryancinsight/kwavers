@@ -10,7 +10,8 @@
 //! (1984) and Virieux & Operto (2009), with HU-to-acoustic properties supplied
 //! by the provider-owned `SkullModel`.
 
-mod seismic_imaging;
+#[path = "seismic_imaging/medium/mod.rs"]
+mod seismic_medium;
 
 #[path = "support/seismic_input.rs"]
 mod seismic_input;

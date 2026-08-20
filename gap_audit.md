@@ -22,6 +22,14 @@ DG-3D, and DG-3D-CPML computations without sharing mutable solver state. The
 exact local Nextest run passes 59/59; the comparison test completes in 51.861
 seconds. No workload, assertion, or runtime budget changed.
 
+The next consolidation moves RITK PNG, DICOM, and NIfTI conversion, HU clamping,
+`CtVolume` ownership, and axial skull geometry into
+`crates/kwavers/examples/seismic_imaging/ct.rs`. The 2-D and 3-D entries retain
+only dimension-specific resampling and interpolation. Full example Nextest run
+`33cd7cd5-876c-4d3e-a4a6-89fa41005873` passes 59/59 and strict all-example
+Clippy is green. The entry points remain above the 500-line target, so
+`KW-EXAMPLES-115` remains in progress.
+
 ## ATLAS-KWAVERS-HEPHAESTUS-FDTD-107 — Collocated FDTD provider cutover — Apollo co-evolution blocker 2026-08-18
 
 The old consumer-owned collocated FDTD implementation in

@@ -422,6 +422,12 @@
   `seismic_imaging/dicom.rs` home used by both 2-D and 3-D CT loaders. The
   focused cross-example Nextest rerun `5a75e7f4-3d2d-4734-a0d8-3603ae25c511`
   passes 14/14 and strict all-example Clippy remains green.
+- 2026-08-20 CT boundary slice: RITK PNG, DICOM, and NIfTI conversion, HU
+  clamping, `CtVolume` storage, and axial skull geometry now have one canonical
+  `seismic_imaging/ct.rs` home. The 2-D and 3-D entries retain only their
+  dimension-specific resampling and interpolation. The full example Nextest
+  run `33cd7cd5-876c-4d3e-a4a6-89fa41005873` passes 59/59 and strict all-example
+  Clippy is green; the remaining entry-point partition is still open.
 - 2026-08-20 example-gate runtime slice: the focused water-tank comparison's
   independent FDTD, PSTD, DG-2D, DG-3D, and DG-3D-CPML branches now overlap
   through the provider-owned Moirai `Parallel` join. The complete example
