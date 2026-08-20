@@ -6507,3 +6507,21 @@ frequency-dependent values can be implemented without hidden global state.
 The 2026-08-17 cleanup removes the misleading TODO/placeholder wording and
 records this boundary explicitly; no coefficient or field-update semantics
 change in that cleanup.
+## Distributed queue completion and deadline closure — 2026-08-20
+
+The distributed scheduler previously removed a task from its pending vector
+before execution, so `WorkQueue::wait_all` could return while the last task was
+still running. Idle workers also polled with a fixed sleep, and deadline
+construction used unchecked timestamp addition. The scheduler now owns one
+condition-variable predicate containing pending work and task-ID claims;
+workers block on that predicate, completion guards release claims on success,
+error, or unwind, and `wait_all` observes both pending and active state.
+`WorkItem::with_deadline` uses checked addition and returns the existing typed
+invalid-input error on overflow.
+
+Evidence: the focused distributed Nextest run
+`7bdc39ee-be1b-47ae-b486-423362162176` passes 17/17, including a channel-
+synchronized active-task wait test and queue/item `u64::MAX` boundary tests;
+strict offline Clippy, doctest, rustfmt, and rustdoc pass. The locked local
+gate is blocked before compilation by the Atlas development overlay's required
+Cargo.lock rewrite; the lockfile was restored after overlay verification.

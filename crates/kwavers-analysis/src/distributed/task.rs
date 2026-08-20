@@ -1,4 +1,4 @@
-use kwavers_core::error::KwaversResult;
+use kwavers_core::error::{KwaversError, KwaversResult};
 use std::sync::Arc;
 
 /// Task priority level
@@ -78,11 +78,22 @@ impl WorkItem {
         }
     }
 
-    /// Set a deadline for the task
-    #[must_use]
-    pub fn with_deadline(mut self, deadline_ms: u64, current_timestamp: u64) -> Self {
-        self.deadline = Some(current_timestamp + deadline_ms);
-        self
+    /// Set a deadline for the task.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`KwaversError::InvalidInput`] when adding `deadline_ms` to
+    /// `current_timestamp` would overflow the timestamp representation.
+    pub fn with_deadline(
+        mut self,
+        deadline_ms: u64,
+        current_timestamp: u64,
+    ) -> KwaversResult<Self> {
+        let deadline = current_timestamp.checked_add(deadline_ms).ok_or_else(|| {
+            KwaversError::InvalidInput("Task deadline overflows timestamp".to_owned())
+        })?;
+        self.deadline = Some(deadline);
+        Ok(self)
     }
 
     /// Check if task has exceeded deadline

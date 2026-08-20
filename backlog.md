@@ -1,5 +1,28 @@
 # Backlog / Strategy
 
+## KW-DIST-QUEUE-2026-08-20 — close distributed queue completion and deadline contracts [patch] — implementation complete; hosted verification pending
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-DIST-QUEUE-2026-08-20 | Make distributed queue completion include executing tasks, replace worker polling with scheduler notification, and reject timestamp overflow. | [patch] | implementation complete; hosted verification pending | Codex | `crates/kwavers-analysis/src/distributed/{queue,scheduler,task,mod}.rs`, this item, `gap_audit.md`, `CHANGELOG.md` |
+
+- Acceptance: `wait_all` waits for queued and executing tasks; workers wait on
+  the scheduler condition variable; deadline overflow returns typed
+  `KwaversError::InvalidInput`; focused value-semantic tests cover active-task
+  completion and both queue/item overflow boundaries; exact-head hosted checks
+  pass before merge.
+- Local evidence: Rust 1.97.0 rustfmt check, offline overlay `cargo check
+  -p kwavers-analysis --lib`, strict offline Clippy, doctest, and rustdoc pass.
+  Nextest run `7bdc39ee-be1b-47ae-b486-423362162176` passes all 17 distributed
+  tests (727 skipped). Overlay Cargo lock churn was restored after each local
+  run; no lockfile change is part of this item.
+- Locked boundary: `cargo nextest run --locked -p kwavers-analysis --lib
+  distributed` stops before compilation because the Atlas development overlay
+  requires a lock rewrite for local patches. Hosted CI remains the locked
+  acceptance gate.
+- Non-goals: no changes to the existing peer-owned Kwavers medium, physics,
+  visualization, workflow, lockfile, or documentation edits.
+
 ## KW-CI-104 — Centralize reliable Ubuntu dependency installation [patch] — in progress 2026-08-19
 
 | ID | Outcome | Class | Status | Owner | Scope |

@@ -2,7 +2,7 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::thread;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use super::scheduler::{current_timestamp, RealTimeScheduler};
 use super::task::{TaskPriority, WorkItem};
@@ -100,26 +100,22 @@ impl WorkQueue {
 
                 // Worker loop
                 loop {
-                    if scheduler_clone.is_shutdown() && scheduler_clone.queue_depth() == 0 {
+                    let idle_start = Instant::now();
+                    let item = scheduler_clone.wait_for_task();
+                    let idle_elapsed = idle_start.elapsed().as_millis() as u64;
+                    idle_time_clone.fetch_add(idle_elapsed, Ordering::Relaxed);
+
+                    let Some(item) = item else {
                         break;
-                    }
+                    };
 
-                    // Try to get next task
-                    if let Some(item) = scheduler_clone.next_task() {
-                        let start = Instant::now();
+                    let start = Instant::now();
 
-                        // Execute task
-                        let _ = scheduler_clone.execute_task(item);
+                    // Execute task
+                    let _ = scheduler_clone.execute_task(item);
 
-                        let elapsed = start.elapsed().as_millis() as u64;
-                        work_time_clone.fetch_add(elapsed, Ordering::Relaxed);
-                    } else {
-                        // No work available, sleep briefly
-                        let idle_start = Instant::now();
-                        thread::sleep(Duration::from_micros(100));
-                        let idle_elapsed = idle_start.elapsed().as_millis() as u64;
-                        idle_time_clone.fetch_add(idle_elapsed, Ordering::Relaxed);
-                    }
+                    let elapsed = start.elapsed().as_millis() as u64;
+                    work_time_clone.fetch_add(elapsed, Ordering::Relaxed);
                 }
             });
 
@@ -164,8 +160,9 @@ impl WorkQueue {
         }
 
         let task_id = self.scheduler.submitted.fetch_add(1, Ordering::SeqCst);
-        let item = WorkItem::new(task_id, priority, work, current_timestamp())
-            .with_deadline(deadline_ms, current_timestamp());
+        let queued_at = current_timestamp();
+        let item = WorkItem::new(task_id, priority, work, queued_at)
+            .with_deadline(deadline_ms, queued_at)?;
 
         self.scheduler.add_item(item);
 
@@ -186,11 +183,10 @@ impl WorkQueue {
             0.0
         };
 
-        let active_threads = if task_metrics.current_queue_depth > 0 {
-            (task_metrics.current_queue_depth as usize).min(self.config.num_threads)
-        } else {
-            0
-        };
+        let active_threads = self
+            .scheduler
+            .active_task_count()
+            .min(self.config.num_threads);
 
         let throughput = if work > 0 {
             (task_metrics.total_completed as f64 / work as f64) * 1000.0
@@ -213,12 +209,7 @@ impl WorkQueue {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn wait_all(&self) -> KwaversResult<()> {
-        loop {
-            if self.scheduler.queue_depth() == 0 {
-                break;
-            }
-            thread::sleep(Duration::from_millis(1));
-        }
+        self.scheduler.wait_all();
         Ok(())
     }
 
