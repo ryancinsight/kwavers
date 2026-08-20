@@ -35,6 +35,11 @@
 
 ### Changed
 
+- **Transcranial FWI example structure:** The entry point is now a small
+  manifest over typed grid configuration, acquisition, phantom/CT loading,
+  metrics, and workflow modules. The provider-owned skull model and Ricker
+  wavelet remain the only physical sources; focused example tests pass 6/6.
+
 - **Breaking CT skull material boundary:** `AcousticSkullProperties` now stores
   validated Aequitas velocity, mass-density, reciprocal-length attenuation,
   length, and optional shear velocity. `HeterogeneousSkull::from_ct_hill`

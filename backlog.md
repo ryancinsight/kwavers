@@ -405,6 +405,13 @@
   `#[must_use]` is one minor lint failure. Hosted evidence remains pending before
   this slice closes. The consolidation follows
   [ADR 004](docs/adr/004-domain-material-property-ssot.md).
+- 2026-08-20 transcranial entry-point slice: `transcranial_fwi.rs` is now a
+  31-line manifest over five single-concern modules. `GridSpec` is a zero-sized
+  owner for compile-time grid and phantom constants; acquisition, phantom/CT
+  loading, metrics, and workflow state no longer share one monolith. Focused
+  exact-value Nextest run `d1e3550e-f570-406b-a151-c50832cfe198` passes 6/6,
+  and strict example Clippy passes. The remaining seismic entry points are
+  still above the 500-line target and require the next partition slices.
 - Non-goals: frequency-domain FWI and ADR 115, solver-algorithm replacement,
   committed clinical datasets, GPU-kernel changes, and compatibility aliases.
 - Verification: strict focused Clippy, example unit tests through Nextest,

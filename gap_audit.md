@@ -1,3 +1,14 @@
+## KW-EXAMPLES-115 — Seismic example partition residual 2026-08-20
+
+The transcranial FWI entry point is reduced to a 31-line manifest over five
+single-concern modules. The fixed grid is represented by the zero-sized
+`GridSpec` owner with associated constants, and its synthetic phantom, CT
+reader, acquisition geometry, metrics, and workflow are independently tested.
+Focused MSVC Nextest run `d1e3550e-f570-406b-a151-c50832cfe198` passes 6/6 and
+strict example Clippy passes. The 2-D and 3-D seismic entry points remain
+above the 500-line target; further partitioning is required before
+`KW-EXAMPLES-115` can close. No fallback or compatibility path is added.
+
 ## ATLAS-KWAVERS-HEPHAESTUS-FDTD-107 — Collocated FDTD provider cutover — Apollo co-evolution blocker 2026-08-18
 
 The old consumer-owned collocated FDTD implementation in
