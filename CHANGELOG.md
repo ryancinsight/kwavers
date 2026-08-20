@@ -100,6 +100,12 @@
   71/71 (one slow comparison at 41.967 seconds), strict example Clippy passes,
   and the mdBook test/build gates pass.
 
+- **2-D brain inversion structure:** Stage-two masked brain-tissue FWI now
+  lives in `seismic_imaging/brain_inversion.rs`, returning a typed result after
+  explicit prior, gather, and inversion error handling. The exact example
+  Nextest gate passes 71/71 (one slow comparison at 44.692 seconds), strict
+  example Clippy passes, and the mdBook test/build gates pass.
+
 - **Breaking CT skull material boundary:** `AcousticSkullProperties` now stores
   validated Aequitas velocity, mass-density, reciprocal-length attenuation,
   length, and optional shear velocity. `HeterogeneousSkull::from_ct_hill`

@@ -80,6 +80,15 @@ consume it through a sibling boundary. Exact local Nextest run
 entry point is 1,382 lines; inversion and reporting still require partitioning,
 so `KW-EXAMPLES-115` remains in progress.
 
+Stage-two masked brain-tissue FWI now has the
+`seismic_imaging/brain_inversion.rs` leaf, returning a typed result after
+explicit prior, gather, and inversion error handling. Exact local Nextest run
+`761d76b5-0ae2-4c75-8baf-4b6833a36ef7` passes 71/71 (one slow comparison at
+44.692 seconds); strict all-example Clippy, `mdbook test docs/book`, and
+`mdbook build docs/book` pass. The 2-D entry point is 902 lines and the 3-D
+entry point is 1,382 lines; top-level inversion and reporting still require
+partitioning, so `KW-EXAMPLES-115` remains in progress.
+
 The separable Gaussian CT-prior blur now has the
 `seismic_imaging/initial_model.rs` leaf, with constant-field and impulse
 response tests beside the owned boundary. Exact local Nextest run
