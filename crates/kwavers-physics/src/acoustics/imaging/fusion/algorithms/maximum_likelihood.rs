@@ -78,7 +78,7 @@ pub(crate) fn fuse_maximum_likelihood(
 
     for modality_name in &modality_names {
         let modality = fusion.registered_data.get(modality_name.as_str()).unwrap();
-        modality_quality.insert(modality_name.clone(), modality.quality_score);
+        modality_quality.insert((*modality_name).clone(), modality.quality_score);
 
         // Register
         let registration_result = registration_engine.register_for_method(
@@ -89,7 +89,7 @@ pub(crate) fn fuse_maximum_likelihood(
 
         let affine_transform =
             AffineTransform::from_homogeneous(&registration_result.transform_matrix);
-        registration_transforms.insert(modality_name.clone(), affine_transform);
+        registration_transforms.insert((*modality_name).clone(), affine_transform);
 
         // Resample
         let transform = registration_result.transform_matrix;
