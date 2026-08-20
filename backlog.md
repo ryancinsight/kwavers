@@ -68,6 +68,58 @@
   revision or may be an iteration marker; a rename needs the owner's reading of which.
   KW-DOC-110 below covers the blanket allow this item surfaced.
 
+## KW-LINT-1 — Burn down the clippy debt baseline [patch] — todo
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | todo | unclaimed | `Cargo.toml`, `crates/**` |
+
+- Context: the clippy floor landed in #423. 21 of 24 crates already declared
+  `[lints] workspace = true`, but no `[workspace.lints.clippy]` table existed for them to
+  inherit, so the plumbing was live and the floor was empty. The floor is now the canonical
+  apollo template; what kwavers trips today sits in a counted debt block beneath it.
+- Baseline at adoption, measured by `cargo clippy -p kwavers --features pinn --lib` (which
+  lints every path member, i.e. the whole workspace): **1390** warnings. `unused_self` 257,
+  `unwrap_used` 255, `missing_panics_doc` 225, `missing_errors_doc` 119 — 62% of the total —
+  then a ~200-warning tail across 25 lints.
+- Acceptance: per lint, drive the count to zero **in the production code**, then delete that
+  lint's line from the debt block so the floor re-enables it. The count in the comment is the
+  ratchet; it only decreases. Suppressing a site with `#[expect]` counts only where the lint
+  is genuinely inapplicable and the reason says why — `unwrap_used` inside `#[test]` is the
+  sanctioned case, `unwrap_used` on a production path is not.
+- Sequencing: `missing_panics_doc` and `missing_errors_doc` (344 combined) are documentation
+  the panic/error surface should carry anyway and burn down mechanically per crate.
+  `unwrap_used` (255) is the one with real correctness content and wants the panic-policy
+  treatment (`?`, `ok_or_else`, or `expect("invariant: …")`), not a mass rewrite.
+  `unused_self` (257) is the one to read before acting: it often marks a method that should
+  be an associated function, but sometimes marks a seam deliberately taking `&self`.
+- Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
+  burn-down; changing them is a separate decision:
+  - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
+    workspace-level `deny` would make `cargo clippy -p kwavers-solver` unusable before the
+    debt clears. Promote to `deny` once the workspace is clean.
+  - Six pedantic lints the arena allocator trips are allowed on the merits, not as debt.
+    `cast_ptr_alignment` is inherent to an arena handing out typed views of a byte block;
+    that invariant belongs in a per-site `SAFETY` note.
+- Already clean, and not by suppression: `kwavers-core` and the `kwavers` facade — the two
+  crates CI gates with `-D warnings` — trip none of the debt lints.
+
+## KW-CORE-LOG-1 — Decide whether the console log sink belongs on stdout [patch] — todo
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-CORE-LOG-1 | `CombinedLogger`'s console stream is a decision with a stated reason, not an unexamined default. | [patch] | todo | unclaimed | `crates/kwavers-core/src/log/file.rs` |
+
+- `CombinedLogger::log` writes each record to stdout via `println!` when `console` is set.
+  That is what `clippy::print_stdout` exists to catch, and the site carries a per-site
+  `#[expect]` because the type is the sink itself rather than incidental library output.
+- The open question is the stream, not the lint: diagnostics on stdout interleave with a
+  program's actual output, which is why `eprintln!` is the convention for log sinks. Changing
+  it is an observable behaviour change for anything piping kwavers output, so it was left
+  alone in a lint-adoption commit.
+- Acceptance: either move the console sink to stderr and note it in the CHANGELOG, or record
+  in the type's Rustdoc why stdout is correct here.
+
 ## KW-DOC-110 — Document the audit slice submodules [patch] — todo
 
 | ID | Outcome | Class | Status | Owner | Scope |
