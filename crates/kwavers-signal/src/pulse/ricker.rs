@@ -118,8 +118,20 @@ impl DomainRickerWavelet {
     fn ricker_value(&self, t: f64) -> f64 {
         let tau = t - *self.peak_time.as_base();
         let f = *self.peak_frequency.as_base();
-        let arg = PI * f * tau;
+        // Normalize before multiplying by π so a valid high-frequency wavelet
+        // never evaluates the peak as infinity times zero.
+        let normalized_time = tau * f;
+        if !normalized_time.is_finite() {
+            return 0.0;
+        }
+        let arg = PI * normalized_time;
+        if !arg.is_finite() {
+            return 0.0;
+        }
         let arg_squared = arg * arg;
+        if !arg_squared.is_finite() {
+            return 0.0;
+        }
 
         2.0f64.mul_add(-arg_squared, 1.0) * (-arg_squared).exp()
     }
@@ -135,7 +147,15 @@ impl Signal for DomainRickerWavelet {
         // Peak at center, decreases away from center
         let peak_frequency = *self.peak_frequency.as_base();
         let tau = (t - *self.peak_time.as_base()).abs();
-        let decay_factor = (-PI * PI * peak_frequency * peak_frequency * tau * tau).exp();
+        let normalized_time = tau * peak_frequency;
+        if !normalized_time.is_finite() {
+            return 0.0;
+        }
+        let arg = PI * normalized_time;
+        if !arg.is_finite() {
+            return 0.0;
+        }
+        let decay_factor = (-(arg * arg)).exp();
         peak_frequency * decay_factor
     }
 
@@ -250,6 +270,21 @@ mod tests {
         )
         .expect("wavelet parameters are valid");
         assert_invalid_parameter(wavelet.samples(Time::from_base(f64::NAN), 1), "time_step");
+    }
+
+    #[test]
+    fn extreme_finite_frequency_preserves_peak_and_decays_without_nan() {
+        let wavelet = DomainRickerWavelet::new(
+            Frequency::from_base(f64::MAX),
+            Time::from_base(0.0),
+            Pressure::from_base(1.0),
+        )
+        .expect("maximum finite frequency is valid");
+
+        assert_eq!(wavelet.amplitude(0.0), 1.0);
+        assert_eq!(wavelet.frequency(0.0), f64::MAX);
+        assert_eq!(wavelet.amplitude(1.0), 0.0);
+        assert_eq!(wavelet.frequency(1.0), 0.0);
     }
 
     #[test]
