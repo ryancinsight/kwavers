@@ -4,6 +4,13 @@
 
 ### Changed
 
+- **Attenuation example structure and documentation:** The heterogeneous
+  power-law attenuation replication now separates configuration, propagation,
+  measurement, experiments, and artifacts into named modules and has a
+  dedicated book page linked from the media chapter and example index. The
+  example catalog no longer links to four deleted programs or instructs readers
+  to replace the repository-pinned Rust toolchain.
+
 - **Breaking sonoluminescence surface:** Dimensioned emission now exposes
   typed Aequitas blackbody and bremsstrahlung components and excludes the
   arbitrary-unit Cherenkov yield from the `W/m³` field. The integrated step

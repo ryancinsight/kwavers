@@ -35,6 +35,35 @@
 - Pre-merge regression closure: the full-feature facade gate exposed five stale seven-argument emission calls in `ultrasound_physics_validation`; every call now uses the dimensioned temperature/radius/charge-density contract and the unused pressure, velocity, and compression fixtures are deleted. Both strict workflow Clippy commands pass locally, and Nextest run `e6b1b6ae-e36c-4ea7-8aca-ecf2514ced5f` passes all 18 facade physics-validation tests.
 - Hosted evidence: PR [#414](https://github.com/ryancinsight/kwavers/pull/414) is open; every PR update reruns the repository-owned exact-head checks. Local commands used the Atlas development overlay, so Cargo lockfile source state was restored after each command and no lockfile change is part of this item.
 
+## KW-EXAMPLES-114 — Complete the heterogeneous attenuation example/book contract [patch] — implementation complete; predecessor integration pending 2026-08-19
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-EXAMPLES-114 | Split the heterogeneous power-law attenuation experiment by concern, add one source-linked book page, remove stale example links, and retain the measured analytical-oracle evidence. | [patch] | implementation complete; awaiting predecessor integration | Codex | `crates/kwavers/examples/{heterogeneous_power_law_attenuation.rs,heterogeneous_power_law_attenuation/,README.md}`, `docs/book/{SUMMARY.md,media_and_tissue_models.md,examples/}`, this item, `CHANGELOG.md` |
+
+- Acceptance: the example entry point is a manifest over named configuration,
+  propagation, measurement, experiment, and artifact modules; every example
+  README link resolves; the book page states the
+  prescribed-law and path-integral oracles, the Fullwave reference envelope,
+  run command, outputs, and measured bounds; source and chapter links are
+  reciprocal; the release example, book tests/build, and link audit pass.
+- Non-goals: no attenuation-kernel, relaxation-fit, benchmark-input, or
+  generated-output change.
+- Value-semantic evidence after the structural split: the exact locked release
+  build completes in 206.5 s and its executable completes in 25.6 s, emitting
+  120 homogeneous rows plus 8 layered rows; the
+  whole-envelope worst relative error is 0.034137, the 1.2–3.8 MHz interior
+  worst is 0.004532, and the path-weighted layered worst is 0.009939. The
+  generated log-log PNG was inspected for curves, markers, axes, units, and
+  legend agreement.
+- Fresh local evidence: `cargo fmt --all -- --check`, standalone locked MSVC
+  Clippy with `-D warnings`, `mdbook test docs/book`, and `mdbook build docs/book`
+  pass against the committed dependency graph and shared Atlas target. The
+  Markdown audit
+  resolves 497 relative targets across 107 book/index files and finds no
+  missing link; the
+  four deleted-example names and stale toolchain-update instruction are absent.
+
 ## ATLAS-KWAVERS-HEPHAESTUS-FDTD-107 — Route collocated FDTD through Hephaestus [minor] [arch] — Apollo co-evolution blocker 2026-08-18
 
 | ID | Outcome | Class | Status | Owner | Scope |
