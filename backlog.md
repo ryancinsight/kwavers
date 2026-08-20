@@ -120,23 +120,66 @@
 - Acceptance: either move the console sink to stderr and note it in the CHANGELOG, or record
   in the type's Rustdoc why stdout is correct here.
 
-## KW-DOC-110 — Document the audit slice submodules [patch] — todo
+## KW-DOC-110 — Document the audit slice submodules [patch] — done 2026-08-20
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-DOC-110 | `crates/kwavers-driver/src/audit/` satisfies the crate's `#![deny(missing_docs)]` without a blanket allow. | [patch] | todo | unclaimed | `crates/kwavers-driver/src/audit/**` |
+| KW-DOC-110 | `crates/kwavers-driver/src/audit/` satisfies the crate's `#![deny(missing_docs)]` without a blanket allow. | [patch] | done | Claude | `crates/kwavers-driver/src/audit/{mod,antenna,crosstalk,shorts}.rs` |
 
-- The defect: `src/audit/mod.rs` carries `#![allow(missing_docs)]` covering the whole audit
-  facade, so `#![deny(missing_docs)]` at the crate root does not reach it. It is not
-  cosmetic — `antenna.rs` and `crosstalk.rs` open directly on `use` statements with no
-  module documentation at all, and the allow is what lets that ship.
-- Acceptance: every public module and item under `src/audit/` carries documentation stating
-  its responsibility; the blanket allow is deleted, not narrowed to `#[expect]`;
-  `cargo doc -p kwavers-driver` stays warning-clean.
-- Not folded into KW-DOC-107: that item removed stale narrative, this one writes missing
-  documentation for eleven modules — a different defect class, and writing eleven module
-  docs without reading each module would produce exactly the filler this codebase does not
-  want.
+- The defect: `src/audit/mod.rs` carried `#![allow(missing_docs)]` covering the whole audit
+  facade, so `#![deny(missing_docs)]` at the crate root did not reach it, and
+  `antenna.rs`, `crosstalk.rs`, and `shorts.rs` opened directly on `use` statements with no
+  module documentation at all.
+- Acceptance: every public module under `src/audit/` documents its responsibility; the
+  blanket allow is deleted rather than narrowed; `cargo doc -p kwavers-driver` stays
+  warning-clean.
+- Scope was smaller than filed: removing the allow and compiling named exactly three
+  undocumented modules, not eleven — every other module in the slice, and every public item
+  inside the three, was already documented. The compiler was the oracle; the filed estimate
+  came from reading first lines.
+- Written from the code, not from the module names. `antenna.rs` turned out to be mostly
+  not about antennas: only `detect_antenna_impedance_mismatch` concerns antenna nets, while
+  the rest are whole-board copper-geometry checks (dangling ends, per-layer copper balance
+  for reflow warpage, via adjacency, parallel-track counting). The doc says so rather than
+  paraphrasing the filename. `crosstalk.rs` documents what makes its checks *placement*
+  signals — they run before any copper exists — and `shorts.rs` documents the graded-margin
+  posture that distinguishes it from binary DRC.
+- Evidence: `cargo check -p kwavers-driver` compiles with `#![deny(missing_docs)]` reaching
+  the slice and no blanket allow. `RUSTDOCFLAGS="-D warnings" cargo doc -p kwavers-driver
+  --no-deps` clean — four public-doc-to-private-item links were caught by that gate and
+  demoted to code spans. `cargo clippy -p kwavers-driver --all-targets -- -D warnings`
+  clean. `cargo nextest run -p kwavers-driver` 494/494.
+- Merge note: filed and closed on `fix/xtask-metrics-paths`; KW-DOC-107 and KW-CLEAN-108
+  carry the same note about the branch split.
+
+## KW-LINT-111 — Put kwavers-driver, -python, and kwavers on the workspace lint floor [minor] — todo
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-LINT-111 | Every workspace member inherits `[workspace.lints]`, so the Atlas clippy floor actually reaches all of them. | [minor] | todo | unclaimed | `crates/{kwavers-driver,kwavers-python,kwavers}/Cargo.toml` and the warnings that surface |
+
+- The defect, found while closing KW-DOC-110: three of the twenty-four members carry no
+  `[lints] workspace = true`, so `clippy::all` + `clippy::pedantic`, `print_stdout`, and
+  `dbg_macro` from the root `[workspace.lints.clippy]` table never apply to them. The
+  crates are `kwavers-driver`, `kwavers-python`, and the top-level `kwavers`. Every other
+  member inherits.
+- Correction it forces: any "clippy clean" claim previously recorded for `kwavers-driver`
+  — including in KW-DOC-106, KW-DOC-107, and KW-CLEAN-108 — was `cargo clippy` against the
+  *default* lint set, not the workspace floor. Those runs were real and passed; they were
+  simply a weaker gate than the phrase suggests.
+- Measured size: `cargo clippy -p kwavers-driver --all-targets -- -W clippy::all -W
+  clippy::pedantic` emits ~1,155 warnings, dominated by `cast_possible_truncation` (110).
+  The real count under the floor is lower, because the workspace table already allows
+  `module_name_repetitions`, `must_use_candidate`, `similar_names`, and `too_many_lines`;
+  measure again after adding inheritance before sizing the burn-down.
+- Acceptance: the three manifests inherit `[lints] workspace = true`; the resulting warning
+  count is either driven to zero or recorded as a ratchet baseline per the workspace
+  convention in the root `Cargo.toml` comment (`warn` now, `deny` per crate as each reaches
+  zero); no new blanket `allow` is introduced to absorb the count.
+- Related: `crates/kwavers-driver/src/ssot.rs:39` carries an unexplained
+  `#![allow(clippy::doc_markdown)]`. It is currently dead — pedantic is not enabled for the
+  crate, so the lint cannot fire — and becomes live the moment this item lands. Keep or
+  justify it then, rather than deleting it now.
 
 ## KW-CI-104 — Centralize reliable Ubuntu dependency installation [patch] — in progress 2026-08-19
 

@@ -25,10 +25,6 @@
 //! 4. **Crosstalk**: capacitive/inductive coupling from parallel adjacent runs.
 //! 5. **Antenna / dangling**: etch/ESD risks from unconnected track ends.
 
-// Blanket allow: several slice submodules below carry no module docs yet. Tracked as
-// KW-DOC-110 in backlog.md, which documents them and removes this.
-#![allow(missing_docs)]
-
 pub mod antenna;
 pub mod critic;
 pub mod crosstalk;

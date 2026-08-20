@@ -1,3 +1,23 @@
+//! Clearance and etch-quality audits over routed copper.
+//!
+//! Where binary design-rule checking answers pass or fail, these grade the margin, so a
+//! board that is legal but close to the limit is visible to the place-and-route loop:
+//!
+//! * `near_shorts` — different-net copper whose *edge-to-edge* gap falls inside a warning
+//!   band, scored as a ramp that rises as the gap closes, with high-voltage pairs weighted
+//!   double. It covers three proximity classes — track to track on one layer, track to
+//!   point feature, and point to point — using the copper model from
+//!   `crate::audit::crosstalk::point_features`, with axis-aligned bounding-box rejects to
+//!   keep it near-linear on realistic boards.
+//! * `detect_hole_clearance_violations` — a via barrel's drilled hole must hold
+//!   [`crate::rules::DesignRules::hole_clearance`] from every foreign-net track on a layer
+//!   the barrel actually passes through. This is the in-crate mirror of `kicad-cli`'s
+//!   `hole_clearance` class. Same-net copper is exempt, and pad copper is out of scope
+//!   because the board model carries no pad extent.
+//! * `acid_traps` — connected same-net segments meeting at an interior angle below 90°
+//!   trap etchant, a standard fabrication reject. A Manhattan or 45°-chamfered router
+//!   produces only turns of 90° or more, so a clean board reads 0.
+
 use crate::audit::crosstalk::point_features;
 use crate::audit::fault_report::is_hv;
 use crate::board::Board;

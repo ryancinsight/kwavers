@@ -4,6 +4,12 @@
 
 ### Fixed
 
+- **Documentation:** `kwavers-driver`'s audit slice no longer hides behind a blanket
+  `#![allow(missing_docs)]`. The allow covered the whole facade, so the crate's
+  `#![deny(missing_docs)]` never reached it and three modules — `antenna`, `crosstalk`,
+  `shorts` — shipped with no module documentation. All three are now documented from their
+  code and the allow is deleted.
+
 - **Repository hygiene:** deleted the tracked
   `crates/kwavers-driver/src/physics/mod.rs.bak-final` backup file and fixed the ignore
   rule that should have stopped it: the "Backup files" block matched `*.bak`, which does
