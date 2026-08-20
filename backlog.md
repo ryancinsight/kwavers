@@ -1,5 +1,39 @@
 # Backlog / Strategy
 
+## KW-CI-115 — Enforce the merge gate on main [minor] — todo
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-CI-115 | `main` cannot take a merge whose verification has not passed. | [minor] | todo | unclaimed (needs repository-admin rights) | GitHub repository settings: branch protection or a ruleset on `main` |
+
+- The gap: `main` is unprotected. `GET /repos/ryancinsight/kwavers/branches/main/protection`
+  returns `404 Branch not protected`, so there are no required status checks and no review
+  requirement. Every workflow in `.github/workflows/` is advisory — a red or unfinished
+  build can land, and nothing in the repository stops it.
+- Demonstrated, not hypothetical: PR #433 merged on 2026-08-20 with two of its thirty-one
+  checks still running (`Benchmark Runtime Smoke`, `PINN Convergence Analysis`). The merge
+  was a mistake — `gh pr merge --auto` silently degraded to an immediate merge because this
+  repository does not allow auto-merge — but the point stands that no gate refused it.
+  `PINN Convergence Analysis` passed afterwards.
+- Design constraint that makes this more than a checkbox: the full matrix is expensive.
+  Three-OS wheel builds run 20-26 minutes, alongside CUDA, coverage, and benchmark jobs, and
+  on 2026-08-20 three concurrent PRs left every workflow **queued** for 45+ minutes without
+  starting. Marking all thirty-one checks required would make that queue a hard merge
+  blocker on every change, including documentation-only ones.
+- Recommended shape, therefore: require the fast affected-scope gates that actually
+  discriminate — formatting, Clippy, the workspace build and test, `check-readmes`, the
+  architecture validation — and leave the heavy suites (wheels, CUDA, coverage, benchmark,
+  mutation) to default-branch and scheduled runs, which is what the workflow-hygiene
+  convention already prescribes. A required set that is slower than the work it gates gets
+  bypassed, which returns the repository to where it is now.
+- Acceptance: a branch-protection rule or ruleset exists on `main`; its required checks are
+  the curated fast set, chosen and recorded deliberately rather than "all of them"; a PR
+  with a failing required check cannot be merged; and the heavy suites still run on merge
+  and on schedule.
+- Needs repository-admin rights, so this is an owner action rather than a code change. Also
+  worth deciding at the same time: whether to enable "Allow auto-merge", which would make
+  merge-when-green available and remove the failure mode that produced the #433 merge.
+
 ## KW-DOC-105 — Per-crate README landing pages [patch] — ✅ done 2026-08-20
 
 | ID | Outcome | Class | Status | Owner | Scope |
