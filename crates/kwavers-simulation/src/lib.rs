@@ -1,6 +1,4 @@
-//! Simulation orchestration module
-//!
-//! Provides the core simulation loop and orchestration of components.
+#![doc = include_str!("../README.md")]
 
 pub mod backends;
 pub mod builder;

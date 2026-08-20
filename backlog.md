@@ -121,6 +121,108 @@
   in the type's Rustdoc why stdout is correct here.
 
 ## KW-DOC-110 — Document the audit slice submodules [patch] — done 2026-08-20
+## KW-DOC-105 — Per-crate README landing pages [patch] — ✅ done 2026-08-20
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-DOC-105 | Every workspace crate publishes a real registry landing page, single-sourced as its crate documentation and mechanically enforced. | [patch] | done | Claude | `crates/*/README.md`, each `crates/*/src/lib.rs` doc attribute, `xtask/src/readme_audit.rs`, `.github/workflows/architecture-validation.yml`, root `README.md` |
+
+- Acceptance: no crate under `crates/` lacks a `README.md` or a manifest
+  `description`; each README is the crate documentation via
+  `#![doc = include_str!("../README.md")]` so registry and docs.rs cannot drift;
+  README examples compile and run as doctests; a committed check fails when a new
+  crate reopens the gap.
+- Evidence: 22 READMEs added (all crates but `kwavers-driver` and `kwavers-python`,
+  which already had one). `cargo run -p xtask -- check-readmes` passes over 24 crates.
+  `cargo test --doc --workspace` green — every new README example is an executed
+  doctest. `cargo fmt --all -- --check` clean for the touched files (three unrelated
+  peer-dirty files remain unformatted). `cargo doc --workspace --exclude
+  kwavers-python --no-deps` emits only the two pre-existing warnings
+  (`kwavers-core` NUMA allocator private-item link, `kwavers-solver` KZK
+  `Plugin::update`); the gated `RUSTDOCFLAGS="-D warnings" cargo doc -p kwavers
+  --features full` passes. `cargo package -p kwavers-core --list` confirms the README
+  ships in the package.
+- Incidental drift closed: the root README crate table listed the deleted
+  `kwavers-domain` and omitted twelve crates; it now lists all 24 with links. The
+  `kwavers-physics` crate doc's reference to the non-existent
+  `ARCHITECTURE_AUDIT_REPORT.md` is gone with the folded `//!` block.
+- Residual: `kwavers-driver` and `kwavers-python` carry substantial `//!` docs that
+  differ from their READMEs, so folding them is a content merge, not mechanical
+  wiring. They sit in `SINGLE_SOURCE_EXEMPT` in `xtask/src/readme_audit.rs`; the
+  list only shrinks. `kwavers-driver`'s README additionally carries stale migration
+  claims and mojibake (`∑`, `+:`) — see KW-DOC-106.
+
+## KW-DOC-106 — Correct and settle the driver/python crate docs [patch] — done 2026-08-20
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-DOC-106 | `kwavers-driver` single-sources its README as crate docs with every claim re-verified; `kwavers-python` keeps two documents by rule, both corrected. | [patch] | done | Claude | `crates/kwavers-driver/{README.md,src/lib.rs}`, `crates/kwavers-python/{README.md,src/lib.rs}`, `xtask/src/readme_audit.rs` |
+
+- Acceptance: no crate README contradicts the tree; the single-sourcing exemption is a
+  stated rule rather than a name list; `cargo run -p xtask -- check-readmes` passes and
+  still fails when the directive is removed.
+- Scope correction (technical dissent against this item's original acceptance):
+  KW-DOC-105 assumed both crates would single-source. `kwavers-python` is
+  `publish = false` with `crate-type = ["cdylib"]` — no crates.io page, no docs.rs page —
+  so the anti-drift rationale does not apply, and its README is the PyPI landing page for
+  a Python reader while its `//!` docs address the Rust maintainer of the binding layer.
+  Folding them would make one document serve two audiences badly. The audit now exempts
+  `publish = false` crates by rule; the `SINGLE_SOURCE_EXEMPT` name list is deleted.
+- `kwavers-driver` claims corrected before promotion to crate docs: test count `113` to
+  **494** (`cargo nextest run -p kwavers-driver`, 494 passed in 2.975 s); refactor status
+  `Phase 0 scaffolding` to Phases 0-5 landed per `docs/MIGRATION.md` with Phase 6
+  (public-API examples + docs backfill) outstanding; the four referenced `examples/*.rs`
+  programs do not exist in the repository and never did — the example set is proprietary
+  and gitignored (`.gitignore` lines 141-143), so the README no longer instructs readers
+  to run them; the `planned extraction name is kwavers-drivers` sentence is removed (the
+  crate is extracted and named `kwavers-driver`); the tree-growth description is corrected
+  from a blanket Prim-style/rectilinear-Steiner claim to the actual per-net-class dispatch
+  (Prim-style for power/ground, chain-tip daisy chain for signal/HV, `src/route/tree.rs`);
+  the module map is expanded from 12 entries to the full public surface; the physics table
+  is repointed at the `physics::*` slices; mojibake is removed. Cross-check claims are
+  retained only where a test grounds them (`bvd_resonance_matches_2mhz_drive`, thermal
+  manufactured solution).
+- `kwavers-python` README corrections: removed the unsupported performance table
+  (8.3 s / 12.1 s / 2.4 s with no stored baseline, grid size, or machine class — a speedup
+  claim without evidence); parity thresholds re-attributed from
+  `examples/compare_plane_wave.py` (which asserts `L2 < 0.01`) to their real home,
+  `pykwavers.comparison` plus `tests/test_solver_parity.py`; dead links removed
+  (`docs/sprints/SPRINT_217_...md`, `../ARCHITECTURE.md`, `../LICENSE`);
+  `cargo test/fmt/clippy -p pykwavers` corrected to `-p kwavers-python` (the package name;
+  `pykwavers` is the lib name); `Medium.heterogeneous (future)` corrected because
+  `elastic_heterogeneous` exists; `SolverType` list completed (FDTD, PSTD, Hybrid,
+  PstdGpu, Elastic, ElasticPSTD, Helmholtz, BEM, DG); `run` signature completed
+  (`record_start_index`, `record_modes`); `SimulationResult` surface completed; the stale
+  roadmap is replaced with a status paragraph; the `Sprint: 217 Session 9 /
+  Date: 2026-02-04` process trailer is dropped from both the README and the crate docs.
+- Evidence: `cargo run -p xtask -- check-readmes` passes over 24 crates and fails with
+  exit 1 when the driver directive is deleted (negative test run, then reverted).
+  `cargo nextest run -p kwavers-driver` 494/494 in 2.975 s. `cargo clippy -p kwavers-driver
+  --all-targets -- -D warnings` clean. `RUSTDOCFLAGS="-D warnings" cargo doc -p
+  kwavers-driver --no-deps` clean. `cargo test --doc -p kwavers-driver` green.
+  `cargo check -p kwavers-python` clean. `cargo fmt --all -- --check` clean for the touched
+  files.
+- Residual, filed below: KW-DOC-107, KW-CLEAN-108, KW-DOC-109.
+
+## KW-DOC-109 — Review driver publication surface [patch] — done 2026-08-20
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-DOC-109 | The published `kwavers-driver` landing page discloses only what the project intends to publish. | [patch] | done | Claude | `crates/kwavers-driver/{README.md,Cargo.toml}`, `.gitignore` |
+
+- The question: `kwavers-driver` is `publish = true`, so its README is a public crates.io
+  page, while the example programs it grew out of are gitignored as CONFIDENTIAL
+  (`.gitignore` lines 141-143). The README names the project codename, specific part
+  numbers (`HV7355K6-G`, `XC7A200T`), channel counts, and the stack architecture.
+- **Decision (owner, 2026-08-20): keep as-is — the published README content is not
+  confidential.** Only `crates/kwavers-driver/examples/` stays gitignored. `publish = true`
+  and the README content stand as they are.
+- Consequence for future audits: a confidential-examples directory sitting under a
+  `publish = true` crate is an intentional, recorded arrangement, not drift. Re-raise only
+  if the README starts carrying material the examples gate was meant to hold back — new
+  board geometry, pinouts, or per-tile layout detail.
+- No code or manifest change was needed to close this.
+
 ## KW-DIST-QUEUE-2026-08-20 — close distributed queue completion and deadline contracts [patch] — implementation complete; hosted verification pending
 
 | ID | Outcome | Class | Status | Owner | Scope |

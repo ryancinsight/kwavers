@@ -1,60 +1,6 @@
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
-//! Physics-guided, manufacturing-aware driver electronics design for the kwavers ecosystem.
-//!
-//! This crate implements the negotiated-congestion PathFinder autorouter, the simulated-
-//! annealing physics-guided placer, the per-domain physics models, and the deterministic
-//! artifact + sidecar emit that ties the generated boards to the `kwavers-transducer`
-//! beam-propagation pipeline. It is designed for the holohv high-voltage ultrasound-
-//! driver boards, where ordinary sequential A\* maze routing fails: the dense control
-//! bus and high-voltage creepage constraints make routing *order-dependent* and cause
-//! sequential routers to deadlock with unresolvable shorts.
-//!
-//! # Refactor status
-//!
-//! The crate is mid-refactor from `kicad-routing` to `kwavers-driver` (see
-//! `docs/MIGRATION.md`). **Phase 0 has laid the directory scaffolding for the new
-//! vertical-slice tree** (the `experiment/`, `geometry/`, `physics/`, `prelude/`,
-//! `ssot/`, `units/` namespaces are declared but not yet filled). The `experiment/`
-//! tree — which orchestrates end-to-end driver-side simulation — will fill in at
-//! Phase 5; until then the existing flat physics + validate + manifest slice is the
-//! authoritative surface for end-to-end usage (`manifest -> validate_against_budget
-//! -> KwaversBeamValidation`).
-//!
-//! # Why not sequential A\*
-//!
-//! A sequential maze router commits each net greedily, so early nets wall off later ones and
-//! congested regions (a shared SPI daisy-chain, a BGA escape, an HV fan-in) saturate with no
-//! mechanism for one net to step aside for a more constrained one. The result is an
-//! order-dependent solution that gets *stuck* — the exact failure observed on the 16/24-channel
-//! tiles.
-//!
-//! # The algorithm
-//!
-//! [`route`] implements **negotiated-congestion routing** (PathFinder, McMurchie & Ebeling,
-//! *FPGA '95*). All nets are routed every iteration allowing temporary overlap; a node's cost is
-//!
-//! ```text
-//! cost(n) = (base(n) + history(n)) * (1 + overuse(n) * present_factor)
-//! ```
-//!
-//! `present_factor` rises each iteration and `history(n)` accumulates on persistently overused
-//! nodes, so nets *negotiate* shared resources until the routing is legal (no node over
-//! capacity). This is order-independent and resolves the congestion that defeats A\*.
-//!
-//! # Physics guidance
-//!
-//! [`cost::RoutingCost`] is the extension seam: `base(n)` folds the *physics* and
-//! *manufacturing* constraints directly into the search instead of checking them after the fact.
-//! [`cost::PhysicsCost`] implements high-voltage creepage as a spatial hazard gradient (HV nets
-//! are pushed away from low-voltage features) and layer affinity (HV to outer copper, control to
-//! inner), so the design rules shape the route rather than rejecting it post hoc.
-//!
-//! # Evidence tier
-//!
-//! The negotiated-congestion convergence (legality on a congested instance that has no
-//! single-layer solution) and the creepage-gradient effect are covered by value-semantic unit
-//! tests in the respective modules — property/empirical tier, not a machine-checked proof.
+#![doc = include_str!("../README.md")]
 
 pub mod audit;
 pub mod board;
