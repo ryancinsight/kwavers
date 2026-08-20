@@ -27,11 +27,12 @@
   gates pass with `-D warnings`: `-p kwavers --all-targets --no-default-features --features
   full --no-deps` and `-p kwavers --features pinn --lib`. There is no burn-down, because
   there is no clippy floor to burn down against.
-- Not done here, deliberately: adopting an Atlas clippy floor for the workspace is a real
-  and separate decision, and `origin/codex/kwavers-floatelement-roots` already carries a
-  candidate table (`all` + `pedantic` at warn with a curated allow set and a documented
-  ratchet rationale). Writing a second table here would fork that decision. Tracked as
-  KW-LINT-112.
+- Not done here, deliberately: adopting an Atlas clippy floor is a real and separate
+  decision that already has an owner — KW-LINT-1 tracks the burn-down, and PR #423
+  (`fix/xtask-metrics-paths`, open at the time of writing) carries the candidate
+  `[workspace.lints.clippy]` table. Writing a second table here would fork that decision.
+  Note that KW-LINT-1's context line says the floor "landed in #423"; #423 is not merged,
+  so `main` has no clippy table and the item's premise is ahead of the code.
 - Consequence for earlier claims: every "clippy clean" recorded for `kwavers-driver` in
   KW-DOC-106, KW-DOC-107, KW-CLEAN-108, and KW-DOC-110 was `cargo clippy` at the default
   lint set. That was accurate as stated and is what CI would have run; the correction filed
@@ -41,25 +42,14 @@
   no justification. It is dead today (pedantic is not enabled anywhere) and becomes live
   only if KW-LINT-112 lands. Left in place.
 
-## KW-LINT-112 — Decide the workspace clippy floor [minor] — todo
+## KW-LINT-112 — withdrawn, duplicate of KW-LINT-1
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-LINT-112 | The workspace has one clippy floor, owned by the root `[workspace.lints.clippy]` table, with its debt either burned down or recorded as a ratchet baseline. | [minor] | todo | unclaimed | root `Cargo.toml`, then the warnings that surface |
+- Filed as "decide the workspace clippy floor", then found to duplicate the existing
+  KW-LINT-1 ("Burn down the clippy debt baseline"), which already owns that work. The floor
+  itself is in PR #423, still open at the time of writing — so `main` has no
+  `[workspace.lints.clippy]` table yet, and KW-LINT-1's context line ("the clippy floor
+  landed in #423") is ahead of the code. Nothing to do here; KW-LINT-1 is the item.
 
-- Today `main` has no workspace clippy configuration: `[workspace.lints.rust]` carries
-  `unexpected_cfgs` and nothing else, so every member builds at clippy's default lint set.
-- A candidate table already exists on `origin/codex/kwavers-floatelement-roots`:
-  `clippy::all` + `clippy::pedantic` at `warn` with `priority = -1`, `print_stdout` and
-  `dbg_macro` at `warn` rather than `deny` (the comment records ~4,000 `unwrap()` calls,
-  244 outside `#[cfg(test)]`, as the reason), and an allow set mirroring the Atlas template.
-- Do not author a second table. Either land that branch or adopt its table verbatim, so the
-  floor has one definition.
-- Sizing input: at `all` + `pedantic` with no allow set, `kwavers-driver` alone emits ~1,155
-  warnings, dominated by `cast_possible_truncation` (110). Re-measure with the candidate
-  allow set applied before sizing the burn-down.
-- Acceptance: the table lands once; the resulting count is driven to zero or recorded as a
-  non-increasing baseline; no blanket `allow` is added to absorb it.
 
 ## KW-GIT-113 — Drain the kwavers stash backlog [patch] — todo
 
