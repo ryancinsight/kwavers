@@ -1,4 +1,4 @@
-# 116. Type and partition the seismic example workflows
+# 117. Type and partition the seismic example workflows
 
 - Status: Accepted
 - Date: 2026-08-20
