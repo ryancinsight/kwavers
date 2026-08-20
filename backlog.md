@@ -110,22 +110,24 @@
 - Acceptance: the file is deleted; a tree-wide scan finds no other tracked `.bak`/`.orig`
   siblings.
 
-## KW-DOC-109 — Review driver publication surface [patch] — todo
+## KW-DOC-109 — Review driver publication surface [patch] — done 2026-08-20
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-DOC-109 | The published `kwavers-driver` landing page discloses only what the project intends to publish. | [patch] | todo | unclaimed | `crates/kwavers-driver/{README.md,Cargo.toml}`, `.gitignore` |
+| KW-DOC-109 | The published `kwavers-driver` landing page discloses only what the project intends to publish. | [patch] | done | Claude | `crates/kwavers-driver/{README.md,Cargo.toml}`, `.gitignore` |
 
-- Observation, surfaced rather than acted on: `kwavers-driver` is `publish = true`, so its
-  README is a public crates.io page, while the example programs it grew out of are
-  gitignored as CONFIDENTIAL (`.gitignore` lines 141-143). The current README names the
-  project, specific part numbers, channel counts, and stack architecture. KW-DOC-106
-  removed the instructions to run the unpublished examples and added no proprietary
-  detail, but whether the remaining board specifics belong on a public registry page — or
-  whether the crate should be `publish = false` — is the owner call, not a documentation
-  decision.
-- Acceptance: an explicit decision is recorded (keep as-is, redact, or unpublish), and the
-  README and manifest match it.
+- The question: `kwavers-driver` is `publish = true`, so its README is a public crates.io
+  page, while the example programs it grew out of are gitignored as CONFIDENTIAL
+  (`.gitignore` lines 141-143). The README names the project codename, specific part
+  numbers (`HV7355K6-G`, `XC7A200T`), channel counts, and the stack architecture.
+- **Decision (owner, 2026-08-20): keep as-is — the published README content is not
+  confidential.** Only `crates/kwavers-driver/examples/` stays gitignored. `publish = true`
+  and the README content stand as they are.
+- Consequence for future audits: a confidential-examples directory sitting under a
+  `publish = true` crate is an intentional, recorded arrangement, not drift. Re-raise only
+  if the README starts carrying material the examples gate was meant to hold back — new
+  board geometry, pinouts, or per-tile layout detail.
+- No code or manifest change was needed to close this.
 
 ## KW-DIST-QUEUE-2026-08-20 — close distributed queue completion and deadline contracts [patch] — implementation complete; hosted verification pending
 
