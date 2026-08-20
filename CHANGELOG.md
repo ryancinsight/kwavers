@@ -67,6 +67,13 @@
   lives in a dedicated leaf module, leaving the 3-D workflow entry point focused
   on acquisition, inversion, and artifact orchestration.
 
+- **2-D seismic artifact structure:** Planar velocity, CT-prior, RTM, brain-tissue,
+  and CSV artifact writers now live in the dedicated
+  `seismic_imaging/planar_artifacts.rs` leaf. The workflow entry point owns only
+  acquisition, inversion, and artifact orchestration. The exact example Nextest
+  gate passes 69/69 (one slow comparison at 44.608 seconds), strict example
+  Clippy passes, and `mdbook test` plus `mdbook build` pass.
+
 - **Breaking CT skull material boundary:** `AcousticSkullProperties` now stores
   validated Aequitas velocity, mass-density, reciprocal-length attenuation,
   length, and optional shear velocity. `HeterogeneousSkull::from_ct_hill`

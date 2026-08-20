@@ -438,6 +438,15 @@
   3-D entry point without changing its output contract. Full example Nextest
   run `8af9dbfd-555e-4696-a4df-357b443bf080` passes 69/69 and strict all-example
   Clippy is green.
+- 2026-08-20 2-D artifact slice: planar velocity, CT-prior, RTM, brain-tissue,
+  and CSV writers now live in `seismic_imaging/planar_artifacts.rs`; the entry
+  point retains only workflow orchestration and qualifies the leaf's bounded
+  API. Exact example Nextest run
+  `26fc6ce2-eef8-4479-826c-c00584c0fa41` passes 69/69 (one slow comparison at
+  44.608 seconds); strict all-example Clippy, `mdbook test docs/book`, and
+  `mdbook build docs/book` pass. The 2-D entry point is 1,574 lines and the
+  3-D entry point is 1,382 lines, so further partitioning remains before
+  `KW-EXAMPLES-115` can close.
 - 2026-08-20 example-gate runtime slice: the focused water-tank comparison's
   independent FDTD, PSTD, DG-2D, DG-3D, and DG-3D-CPML branches now overlap
   through the provider-owned Moirai `Parallel` join. The complete example

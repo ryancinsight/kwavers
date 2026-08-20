@@ -44,6 +44,15 @@ the example workflow. Exact local Nextest run
 Clippy is green. The 2-D entry point and remaining 3-D workflow logic still
 require partitioning before `KW-EXAMPLES-115` can close.
 
+The 2-D planar velocity, CT-prior, RTM, brain-tissue, and CSV artifact writers
+now have their own `seismic_imaging/planar_artifacts.rs` leaf. The entry point
+retains only workflow orchestration and qualifies the leaf's bounded artifact
+API. Exact local Nextest run `26fc6ce2-eef8-4479-826c-c00584c0fa41` passes
+69/69 (one slow comparison at 44.608 seconds); strict all-example Clippy,
+`mdbook test docs/book`, and `mdbook build docs/book` pass. The 2-D entry point
+is 1,574 lines and the 3-D entry point is 1,382 lines, so further vertical
+partitioning remains before `KW-EXAMPLES-115` can close.
+
 ## ATLAS-KWAVERS-HEPHAESTUS-FDTD-107 — Collocated FDTD provider cutover — Apollo co-evolution blocker 2026-08-18
 
 The old consumer-owned collocated FDTD implementation in
