@@ -91,6 +91,8 @@ mod seismic_acquisition;
 #[path = "seismic_imaging/brain_model.rs"]
 mod seismic_brain_model;
 mod seismic_imaging;
+#[path = "seismic_imaging/initial_model.rs"]
+mod seismic_initial_model;
 #[path = "seismic_imaging/metrics.rs"]
 mod seismic_metrics;
 #[path = "seismic_imaging/phantom.rs"]
@@ -231,73 +233,6 @@ const PANEL: usize = 320;
 
 /// Colorbar height below each panel [px].
 const COLORBAR_H: usize = 20;
-
-/// Separable Gaussian blur of a (NX, NY, NZ) model in the x–z plane (y = 0 only,
-/// broadcasted to all NY slices).
-///
-/// # Algorithm
-///
-/// Separable 1-D convolutions in x then z with a truncated Gaussian kernel of
-/// radius r = ⌈3σ⌉.  Boundary voxels use reflect-padding (clamp at edge).
-///
-/// # Why CT-derived blur is the clinical standard
-///
-/// Starting FWI from a homogeneous 1500 m/s background requires the gradient
-/// to simultaneously *discover* bone location AND increase bone velocity — a
-/// slow, ill-conditioned search.  A Gaussian-blurred CT prior already places
-/// bone where it belongs; the FWI only needs to sharpen boundaries and raise
-/// peak velocities.  σ = 3 voxels (9 mm) reduces the initial model travel-time
-/// error to ≈ 2.7 μs, which is below T/2 at all modelled frequencies.
-///
-/// Reference: Guasch (2020) npj Digital Medicine — §Methods, CT initial model.
-fn gaussian_blur_xz(model: &Array3<f64>, sigma: f64) -> Array3<f64> {
-    let radius = (3.0 * sigma).ceil() as usize;
-    let kernel_size = 2 * radius + 1;
-
-    // 1-D Gaussian kernel, sum-normalised.
-    let raw: Vec<f64> = (0..kernel_size)
-        .map(|i| {
-            let x = i as f64 - radius as f64;
-            (-x * x / (2.0 * sigma * sigma)).exp()
-        })
-        .collect();
-    let ksum: f64 = raw.iter().sum();
-    let kernel: Vec<f64> = raw.iter().map(|&k| k / ksum).collect();
-
-    // Convolve in x-direction → tmp.
-    let mut tmp = Array3::<f64>::zeros((NX, NY, NZ));
-    for j in 0..NY {
-        for k in 0..NZ {
-            for i in 0..NX {
-                let mut val = 0.0_f64;
-                for (ki, &kw) in kernel.iter().enumerate() {
-                    let si = (i as isize + ki as isize - radius as isize).clamp(0, NX as isize - 1)
-                        as usize;
-                    val += kw * model[[si, j, k]];
-                }
-                tmp[[i, j, k]] = val;
-            }
-        }
-    }
-
-    // Convolve in z-direction → result.
-    let mut result = Array3::<f64>::zeros((NX, NY, NZ));
-    for j in 0..NY {
-        for i in 0..NX {
-            for k in 0..NZ {
-                let mut val = 0.0_f64;
-                for (ki, &kw) in kernel.iter().enumerate() {
-                    let sk = (k as isize + ki as isize - radius as isize).clamp(0, NZ as isize - 1)
-                        as usize;
-                    val += kw * tmp[[i, j, sk]];
-                }
-                result[[i, j, k]] = val;
-            }
-        }
-    }
-
-    result
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Reconstruction quality metrics
@@ -520,7 +455,7 @@ fn main() -> KwaversResult<()> {
     // Convergence evidence (from uniform initial): after 13 iterations at
     // 60 → 150 kHz, c_max reached only 1634 m/s (true 2508 m/s) — gradient
     // spent all budget discovering skull geometry rather than refining it.
-    let initial_model = gaussian_blur_xz(&true_model, 3.0);
+    let initial_model = seismic_initial_model::gaussian_blur_xz(&true_model, 3.0);
     let mut current_model = initial_model.clone();
 
     // Compute J₀ at the finest scale (150 kHz) for reporting consistency.

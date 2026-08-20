@@ -94,6 +94,12 @@
   The exact example Nextest gate passes 69/69 (one slow comparison at 43.391
   seconds), strict example Clippy passes, and the mdBook test/build gates pass.
 
+- **2-D initial-model structure:** The separable Gaussian CT-prior blur now
+  lives in `seismic_imaging/initial_model.rs`, with constant-field and impulse
+  response tests at the owned boundary. The exact example Nextest gate passes
+  71/71 (one slow comparison at 41.967 seconds), strict example Clippy passes,
+  and the mdBook test/build gates pass.
+
 - **Breaking CT skull material boundary:** `AcousticSkullProperties` now stores
   validated Aequitas velocity, mass-density, reciprocal-length attenuation,
   length, and optional shear velocity. `HeterogeneousSkull::from_ct_hill`

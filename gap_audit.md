@@ -80,6 +80,15 @@ consume it through a sibling boundary. Exact local Nextest run
 entry point is 1,382 lines; inversion and reporting still require partitioning,
 so `KW-EXAMPLES-115` remains in progress.
 
+The separable Gaussian CT-prior blur now has the
+`seismic_imaging/initial_model.rs` leaf, with constant-field and impulse
+response tests beside the owned boundary. Exact local Nextest run
+`dfbc676e-77cd-4b3c-a081-ae062106bdc6` passes 71/71 (one slow comparison at
+41.967 seconds); strict all-example Clippy, `mdbook test docs/book`, and
+`mdbook build docs/book` pass. The 2-D entry point is 1,024 lines and the 3-D
+entry point is 1,382 lines; inversion and reporting still require partitioning,
+so `KW-EXAMPLES-115` remains in progress.
+
 ## ATLAS-KWAVERS-HEPHAESTUS-FDTD-107 — Collocated FDTD provider cutover — Apollo co-evolution blocker 2026-08-18
 
 The old consumer-owned collocated FDTD implementation in
