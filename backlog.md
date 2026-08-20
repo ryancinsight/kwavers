@@ -104,7 +104,7 @@
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-EXAMPLES-115 | Replace the three seismic example monoliths with explicit typed workflows that call Atlas providers directly and document value-semantic 2-D/3-D behavior. | [major] [arch] | in progress | Codex | `crates/kwavers/examples/{seismic_imaging_demo,seismic_imaging_3d_demo,transcranial_fwi}*`, shared seismic modules, provider call sites, `crates/kwavers/Cargo.toml`, seismic book pages, ADR 116, PM artifacts |
+| KW-EXAMPLES-115 | Replace the three seismic example monoliths with explicit typed workflows that call Atlas providers directly and document value-semantic 2-D/3-D behavior. | [major] [arch] | in progress | Codex | `crates/kwavers/examples/{seismic_imaging_demo,seismic_imaging_3d_demo,transcranial_fwi}*`, shared seismic modules, `kwavers-signal`/`kwavers-solver` provider call sites, `crates/kwavers/Cargo.toml`, seismic book pages, ADR 116, PM artifacts |
 
 - Acceptance: each example entry point is a manifest over SRP leaf modules no
   larger than 500 lines; shared acquisition, CT, physical configuration,
@@ -117,6 +117,18 @@
   the no-op `dicom` and `ritk` Cargo features and all in-repo references are
   deleted; positive, negative, boundary, and provider-differential tests plus
   focused example and book gates pass.
+- 2026-08-20 provider slice: `DomainRickerWavelet` stores Aequitas frequency,
+  time, and pressure quantities, validates construction without panics, and
+  streams exact-size samples without an intermediate allocation. The 2-D,
+  3-D, and transcranial examples and RTM propagation call that provider
+  directly; three example-local equations and the solver-owned duplicate are
+  deleted. Focused nextest runs pass 4/4 provider reference/validation cases and
+  the medical-ultrasound RTM propagation regression; strict standalone Clippy
+  passes for `kwavers-signal`, `kwavers-solver`, and the three examples.
+  `cargo-semver-checks` passes 223/223 checks for `kwavers-signal` and classifies
+  the solver-owned struct and shift-constant deletions as two expected major
+  breaks; manual API review also classifies the typed, fallible signal
+  constructor replacement as major.
 - Non-goals: frequency-domain FWI and ADR 115, solver-algorithm replacement,
   committed clinical datasets, GPU-kernel changes, and compatibility aliases.
 - Verification: strict focused Clippy, example unit tests through Nextest,

@@ -76,14 +76,15 @@
 //!   of the skull based on a human CT phantom. *Brain*, 145(11), 3917-3929.
 //! - BabelBrain dataset: Pineda-Pardo, J.A. et al. (2023). Zenodo 7894431.
 
+use aequitas::systems::si::quantities::{Frequency, Pressure, Time};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
+use kwavers_signal::DomainRickerWavelet;
 use kwavers_solver::inverse::fwi::time_domain::{FwiGeometry, FwiProcessor};
 use kwavers_solver::inverse::seismic::parameters::{FwiParameters, RegularizationParameters};
 use kwavers_source::{GridSource, SourceMode};
 use leto::{Array2, Array3};
 use ritk_io::domain::ImageReader;
-use std::f64::consts::PI;
 use std::time::Instant;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -336,17 +337,6 @@ fn load_ct_slice(
 /// ultrasound systems and transducers*, Table 1.
 const P0_PA: f64 = 1.0e5; // peak source pressure [Pa]
 
-fn ricker_wavelet(f0: f64, dt: f64, nt: usize) -> Vec<f64> {
-    let t_peak = 1.5 / f0;
-    (0..nt)
-        .map(|i| {
-            let t = i as f64 * dt;
-            let tau = PI * f0 * (t - t_peak);
-            P0_PA * (1.0 - 2.0 * tau * tau) * (-tau * tau).exp()
-        })
-        .collect()
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Acquisition geometry — hemispherical array
 // ─────────────────────────────────────────────────────────────────────────────
@@ -395,14 +385,15 @@ fn build_receiver_mask() -> Array3<bool> {
 }
 
 /// Build the `FwiGeometry` for one shot with source at voxel `(ix, 0, iz)`.
-fn build_shot(ix: usize, iz: usize, nt: usize, dt: f64, f0: f64) -> FwiGeometry {
+fn build_shot(ix: usize, iz: usize, nt: usize, dt: f64, f0: f64) -> KwaversResult<FwiGeometry> {
     let mut source_mask = Array3::<f64>::zeros((NX, NY, NZ));
     source_mask[[ix, 0, iz]] = 1.0;
 
-    let wavelet = ricker_wavelet(f0, dt, nt);
+    let wavelet =
+        DomainRickerWavelet::causal(Frequency::from_base(f0), Pressure::from_base(P0_PA))?;
     let mut p_signal = Array2::<f64>::zeros((1, nt));
-    for t in 0..nt {
-        p_signal[[0, t]] = wavelet[t];
+    for (t, pressure) in wavelet.samples(Time::from_base(dt), nt)?.enumerate() {
+        p_signal[[0, t]] = pressure;
     }
 
     let mut source = GridSource::new_empty();
@@ -410,7 +401,7 @@ fn build_shot(ix: usize, iz: usize, nt: usize, dt: f64, f0: f64) -> FwiGeometry 
     source.p_signal = Some(p_signal);
     source.p_mode = SourceMode::Dirichlet;
 
-    FwiGeometry::new(source, build_receiver_mask())
+    Ok(FwiGeometry::new(source, build_receiver_mask()))
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -652,7 +643,7 @@ fn main() -> KwaversResult<()> {
         leto::Array2<f64>,
     )> = Vec::with_capacity(n_shots);
     for &(ix, iz) in &HEMI_SOURCE_POSITIONS {
-        let geometry = build_shot(ix, iz, nt, dt, f0);
+        let geometry = build_shot(ix, iz, nt, dt, f0)?;
         let obs = fwi.generate_synthetic_data(&true_model, &geometry, &grid)?;
         shots.push((geometry, obs));
     }

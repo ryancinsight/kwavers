@@ -12,6 +12,7 @@ This example demonstrates adjoint-state full-wave inversion for transcranial ult
 |---|---|---|
 | Domain | `DX`, `NX`, `NY`, `NZ` | Defines a 64×2×64 coronal head cross-section at 3 mm spacing |
 | Skull phantom | `HU_SCALP`, `HU_CORTICAL_*`, `HU_DIPLOE`, `HU_BRAIN` | Maps layered CT-style intensities into heterogeneous acoustic properties |
+| Source | `DomainRickerWavelet` | Streams causal pressure samples from Aequitas-typed frequency, time, and pressure |
 | FWI loop | forward FDTD → residual → adjoint → gradient update | Implements the standard adjoint-state inversion workflow |
 
 ## Key Code Snippet

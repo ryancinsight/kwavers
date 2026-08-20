@@ -1,66 +1,7 @@
-//! Source wavelet implementations for seismic imaging
+//! Source wavelet implementations for seismic imaging.
 
-use super::constants::RICKER_TIME_SHIFT;
 use kwavers_core::constants::numerical::TWO_PI;
 use std::f64::consts::PI;
-
-/// Ricker wavelet generator for seismic sources
-#[derive(Debug)]
-pub struct SeismicRickerWavelet {
-    /// Dominant frequency in Hz
-    pub frequency: f64,
-    /// Time shift for causality
-    pub time_shift: f64,
-}
-
-impl SeismicRickerWavelet {
-    /// Create a new Ricker wavelet with specified frequency
-    #[must_use]
-    pub fn new(frequency: f64) -> Self {
-        Self {
-            frequency,
-            time_shift: RICKER_TIME_SHIFT / frequency,
-        }
-    }
-
-    /// Evaluate the Ricker wavelet at time t
-    ///
-    /// The Ricker wavelet is defined as:
-    /// w(t) = (1 - 2π²f²t'²) * exp(-π²f²t'²)
-    /// where t' = t - `t_shift`
-    #[must_use]
-    pub fn evaluate(&self, t: f64) -> f64 {
-        let t_shifted = t - self.time_shift;
-        let arg = PI * self.frequency * t_shifted;
-        let arg_squared = arg * arg;
-        2.0f64.mul_add(-arg_squared, 1.0) * (-arg_squared).exp()
-    }
-
-    /// Generate a time series of the wavelet
-    #[must_use]
-    pub fn generate_time_series(&self, dt: f64, n_samples: usize) -> Vec<f64> {
-        (0..n_samples)
-            .map(|i| self.evaluate(i as f64 * dt))
-            .collect()
-    }
-
-    /// Compute the frequency spectrum of the Ricker wavelet
-    ///
-    /// The analytical spectrum is:
-    /// W(f) = (2f²/√π*f₀³) * exp(-f²/f₀²)
-    #[must_use]
-    pub fn frequency_spectrum(&self, freq: f64) -> f64 {
-        let f_ratio = freq / self.frequency;
-        let f_ratio_squared = f_ratio * f_ratio;
-        (2.0 * f_ratio_squared / PI.sqrt()) * (-f_ratio_squared).exp()
-    }
-
-    /// Get the peak frequency (which differs from dominant frequency)
-    #[must_use]
-    pub fn peak_frequency(&self) -> f64 {
-        self.frequency / PI.sqrt()
-    }
-}
 
 /// Gaussian wavelet generator
 #[derive(Debug)]

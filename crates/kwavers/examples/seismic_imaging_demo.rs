@@ -86,8 +86,10 @@
 //! - Virieux, J. & Operto, S. (2009). An overview of full-waveform inversion in
 //!   exploration geophysics. *Geophysics*, 74(6), WCC1–WCC26.
 
+use aequitas::systems::si::quantities::{Frequency, Pressure, Time};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
+use kwavers_signal::DomainRickerWavelet;
 use kwavers_solver::inverse::fwi::time_domain::{FwiGeometry, FwiProcessor};
 use kwavers_solver::inverse::seismic::{
     parameters::{
@@ -98,7 +100,6 @@ use kwavers_solver::inverse::seismic::{
 };
 use kwavers_source::{GridSource, SourceMode};
 use leto::{Array2, Array3};
-use std::f64::consts::PI;
 use std::fs::File;
 use std::io::{self, BufWriter, Write};
 use std::path::{Path, PathBuf};
@@ -493,26 +494,6 @@ const F0_HZ: f64 = 150_000.0;
 /// Reference: FDA (2008), diagnostic ultrasound guidance, Table 1.
 const P0_PA: f64 = 1.0e5;
 
-/// Ricker (Mexican hat) wavelet.
-///
-/// ```text
-/// w(t) = P₀ · (1 − 2π²f₀²τ²) · exp(−π²f₀²τ²),   τ = t − t_peak
-/// ```
-///
-/// Peak at t_peak = 1.5/f₀ (three half-cycles of build-up before peak).
-///
-/// Reference: Ricker N (1953). *Geophysics*, 18(4), 769–792.
-fn ricker_wavelet(f0: f64, dt: f64, nt: usize) -> Vec<f64> {
-    let t_peak = 1.5 / f0;
-    (0..nt)
-        .map(|i| {
-            let t = i as f64 * dt;
-            let tau = PI * f0 * (t - t_peak);
-            P0_PA * (1.0 - 2.0 * tau * tau) * (-tau * tau).exp()
-        })
-        .collect()
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Acquisition geometry — hemispherical arc
 // ─────────────────────────────────────────────────────────────────────────────
@@ -624,15 +605,21 @@ fn transmit_positions() -> Vec<(usize, usize)> {
 /// receivers on all other active transducer elements.
 ///
 /// The source signal has `nt` samples.
-fn build_shot(source_element_index: usize, f0_hz: f64, nt: usize, dt: f64) -> FwiGeometry {
+fn build_shot(
+    source_element_index: usize,
+    f0_hz: f64,
+    nt: usize,
+    dt: f64,
+) -> KwaversResult<FwiGeometry> {
     let (ix, iz) = ACTIVE_TRANSDUCER_POSITIONS[source_element_index];
     let mut source_mask = Array3::<f64>::zeros((NX, NY, NZ));
     source_mask[[ix, 0, iz]] = 1.0;
 
-    let wavelet = ricker_wavelet(f0_hz, dt, nt);
+    let wavelet =
+        DomainRickerWavelet::causal(Frequency::from_base(f0_hz), Pressure::from_base(P0_PA))?;
     let mut p_signal = Array2::<f64>::zeros((1, nt));
-    for t in 0..nt {
-        p_signal[[0, t]] = wavelet[t];
+    for (t, pressure) in wavelet.samples(Time::from_base(dt), nt)?.enumerate() {
+        p_signal[[0, t]] = pressure;
     }
 
     let mut source = GridSource::new_empty();
@@ -640,7 +627,10 @@ fn build_shot(source_element_index: usize, f0_hz: f64, nt: usize, dt: f64) -> Fw
     source.p_signal = Some(p_signal);
     source.p_mode = SourceMode::Dirichlet;
 
-    FwiGeometry::new(source, build_receiver_mask(source_element_index))
+    Ok(FwiGeometry::new(
+        source,
+        build_receiver_mask(source_element_index),
+    ))
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2297,7 +2287,7 @@ fn main() -> KwaversResult<()> {
         });
         let t0 = Instant::now();
         for &element_index in &TRANSMIT_ELEMENT_INDICES {
-            let geom = build_shot(element_index, F0_HZ, nt_fine, dt);
+            let geom = build_shot(element_index, F0_HZ, nt_fine, dt)?;
             let obs = tmp_fwi.generate_synthetic_data(&true_model, &geom, &grid)?;
             shots_fine.push((geom, obs));
         }
@@ -2383,7 +2373,7 @@ fn main() -> KwaversResult<()> {
 
         let t_scale = Instant::now();
         for &element_index in &TRANSMIT_ELEMENT_INDICES {
-            let geom = build_shot(element_index, f0, nt_scale, dt);
+            let geom = build_shot(element_index, f0, nt_scale, dt)?;
             let obs = fwi_scale.generate_synthetic_data(&true_model, &geom, &grid)?;
             scale_shots.push((geom, obs));
         }
@@ -2523,7 +2513,7 @@ fn main() -> KwaversResult<()> {
                 let mut brain_shots: Vec<(FwiGeometry, Array2<f64>)> = Vec::with_capacity(N_SHOTS);
                 let t_brain_obs = Instant::now();
                 for &element_index in &TRANSMIT_ELEMENT_INDICES {
-                    let geom = build_shot(element_index, F0_BRAIN_HZ, nt_brain, dt);
+                    let geom = build_shot(element_index, F0_BRAIN_HZ, nt_brain, dt)?;
                     match fwi_brain.generate_synthetic_data(&brain_true, &geom, &grid) {
                         Ok(obs) => brain_shots.push((geom, obs)),
                         Err(e) => {

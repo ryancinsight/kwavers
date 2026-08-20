@@ -14,6 +14,12 @@
   median to 4.952 seconds; exact differential tests pin the optimized 2-D
   operators to the full 3-D formulas.
 
+- **Breaking typed seismic source generation:** `DomainRickerWavelet::new` now accepts
+  Aequitas frequency, time, and pressure quantities and returns a validation
+  result. Its causal constructor and zero-allocation `samples` iterator are the
+  single Ricker implementation used by the seismic solver and examples; the
+  duplicated solver-owned wavelet is removed.
+
 - **Breaking feature cleanup:** The empty `dicom` and `ritk` compatibility
   features are removed. RITK medical-image I/O remains available
   unconditionally; commands that passed either feature should remove the flag.

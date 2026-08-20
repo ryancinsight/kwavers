@@ -78,10 +78,6 @@ pub const RTM_AMPLITUDE_THRESHOLD: f64 = 1e-10;
 /// Scaling factor for Laplacian-based RTM imaging
 pub const RTM_LAPLACIAN_SCALING: f64 = 0.01;
 
-// Wavelet Constants
-/// Ricker wavelet time shift factor
-pub const RICKER_TIME_SHIFT: f64 = 1.5;
-
 // FWI (Full Waveform Inversion) Constants
 /// Gradient scaling factor for FWI updates
 pub const GRADIENT_SCALING_FACTOR: f64 = 1e-6;

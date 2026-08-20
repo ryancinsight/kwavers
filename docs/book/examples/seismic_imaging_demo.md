@@ -15,5 +15,7 @@ Skull bone-volume-fraction acoustic model (Aubry 2003) with fractional-Laplacian
 ## Key Concepts
 
 - Skull CT phantom construction with bone-volume-fraction → sound-speed mapping
+- Aequitas-typed frequency, time, and pressure passed to the provider-owned
+  `DomainRickerWavelet` without an intermediate sample allocation
 - Adjoint-state FWI with L2 misfit
 - Multi-shot acquisition and gradient accumulation
