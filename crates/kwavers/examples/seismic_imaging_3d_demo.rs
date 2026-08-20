@@ -24,6 +24,8 @@ mod seismic_volume_acquisition;
 mod seismic_volume_artifacts;
 #[path = "seismic_imaging/volume_brain_model.rs"]
 mod seismic_volume_brain_model;
+#[path = "seismic_imaging/volume_initial_model.rs"]
+mod seismic_volume_initial_model;
 #[path = "seismic_imaging/volume_phantom.rs"]
 mod seismic_volume_phantom;
 use seismic_metrics::{print_quality_pairs, print_quality_report};
@@ -35,7 +37,6 @@ use kwavers_grid::Grid;
 use kwavers_solver::inverse::fwi::time_domain::{FwiGeometry, FwiProcessor};
 use kwavers_solver::inverse::seismic::parameters::{FwiParameters, RegularizationParameters};
 use leto::{Array2, Array3};
-use moirai_parallel::{Adaptive, map_collect_index_with};
 use seismic_imaging::render::{put_pixel, velocity_color, write_png};
 use std::path::PathBuf;
 use std::time::Instant;
@@ -149,83 +150,6 @@ const COLORBAR_H: usize = 20; // colorbar height below each panel
 // ─────────────────────────────────────────────────────────────────────────────
 // Gaussian blur (3D separable)
 // ─────────────────────────────────────────────────────────────────────────────
-
-/// Separable 3D Gaussian blur applied sequentially in x → y → z.
-///
-/// Each pass maps one flat output index through Moirai with clamped boundary
-/// handling.
-///
-/// Boundary voxels use reflect-padding (clamp-at-edge).
-///
-/// Reference: Guasch (2020) npj Digital Medicine — §Methods, CT initial model.
-fn gaussian_blur_3d(model: &Array3<f64>, sigma: f64) -> Array3<f64> {
-    let radius = (3.0 * sigma).ceil() as usize;
-    let kernel_size = 2 * radius + 1;
-
-    // 1-D normalised Gaussian kernel.
-    let raw: Vec<f64> = (0..kernel_size)
-        .map(|i| {
-            let x = i as f64 - radius as f64;
-            (-x * x / (2.0 * sigma * sigma)).exp()
-        })
-        .collect();
-    let ksum: f64 = raw.iter().sum();
-    let kernel: Vec<f64> = raw.iter().map(|&k| k / ksum).collect();
-
-    let cell_count = NX * NY * NZ;
-
-    // Pass 1: convolve along x → tmp_x. Parallel over all output voxels.
-    let tmp_x_values = map_collect_index_with::<Adaptive, _, _>(cell_count, |idx| {
-        let ix = idx / (NY * NZ);
-        let rem = idx % (NY * NZ);
-        let iy = rem / NZ;
-        let iz = rem % NZ;
-        let mut acc = 0.0_f64;
-        for (ki, &kw) in kernel.iter().enumerate() {
-            let si =
-                (ix as isize + ki as isize - radius as isize).clamp(0, NX as isize - 1) as usize;
-            acc += kw * model[[si, iy, iz]];
-        }
-        acc
-    });
-    let tmp_x = Array3::<f64>::from_shape_vec((NX, NY, NZ), tmp_x_values)
-        .expect("invariant: flat Moirai x-pass preserves model shape length");
-
-    // Pass 2: convolve along y → tmp_y. Parallel over all output voxels.
-    let tmp_y_values = map_collect_index_with::<Adaptive, _, _>(cell_count, |idx| {
-        let ix = idx / (NY * NZ);
-        let rem = idx % (NY * NZ);
-        let iy = rem / NZ;
-        let iz = rem % NZ;
-        let mut acc = 0.0_f64;
-        for (ki, &kw) in kernel.iter().enumerate() {
-            let sj =
-                (iy as isize + ki as isize - radius as isize).clamp(0, NY as isize - 1) as usize;
-            acc += kw * tmp_x[[ix, sj, iz]];
-        }
-        acc
-    });
-    let tmp_y = Array3::<f64>::from_shape_vec((NX, NY, NZ), tmp_y_values)
-        .expect("invariant: flat Moirai y-pass preserves model shape length");
-
-    // Pass 3: convolve along z.
-    let out_values = map_collect_index_with::<Adaptive, _, _>(cell_count, |idx| {
-        let ix = idx / (NY * NZ);
-        let rem = idx % (NY * NZ);
-        let iy = rem / NZ;
-        let iz = rem % NZ;
-        let mut acc = 0.0_f64;
-        for (ki, &kw) in kernel.iter().enumerate() {
-            let sk =
-                (iz as isize + ki as isize - radius as isize).clamp(0, NZ as isize - 1) as usize;
-            acc += kw * tmp_y[[ix, iy, sk]];
-        }
-        acc
-    });
-
-    Array3::<f64>::from_shape_vec((NX, NY, NZ), out_values)
-        .expect("invariant: flat Moirai z-pass preserves model shape length")
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Reconstruction quality metrics
@@ -410,7 +334,7 @@ fn main() -> KwaversResult<()> {
     let true_model = phantom.acoustic().sound_speed.clone();
 
     // Initial model: Gaussian-blurred CT prior (σ = 3 voxels ≈ 9 mm).
-    let initial_model = gaussian_blur_3d(&true_model, 3.0);
+    let initial_model = seismic_volume_initial_model::gaussian_blur_3d(&true_model, 3.0);
     let mut current_model = initial_model.clone();
 
     // Pre-compute observed gathers at the finest scale (150 kHz) for J₀.

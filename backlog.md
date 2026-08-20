@@ -524,6 +524,14 @@
   `mdbook build docs/book` pass. The 2-D entry point is 860 lines and the 3-D
   entry point is 875 lines, so 3-D inversion and reporting still require
   partitioning before `KW-EXAMPLES-115` can close.
+- 2026-08-20 3-D initial-model slice: provider-parallel separable Gaussian blur
+  now lives in `seismic_imaging/volume_initial_model.rs`; constant-volume and
+  impulse-response tests cover the clamped 3-D kernel. Exact example Nextest
+  run `295655d1-c5e0-4c1b-bbad-f44a5d23d75a` passes 77/77 (one slow comparison
+  at 43.001 seconds); strict all-example Clippy, `mdbook test docs/book`, and
+  `mdbook build docs/book` pass. The 2-D entry point is 860 lines and the 3-D
+  entry point is 799 lines, so 3-D inversion and reporting still require
+  partitioning before `KW-EXAMPLES-115` can close.
 - 2026-08-20 example-gate runtime slice: the focused water-tank comparison's
   independent FDTD, PSTD, DG-2D, DG-3D, and DG-3D-CPML branches now overlap
   through the provider-owned Moirai `Parallel` join. The complete example

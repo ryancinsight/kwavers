@@ -133,6 +133,12 @@
   comparison at 42.443 seconds), strict example Clippy passes, and the mdBook
   test/build gates pass.
 
+- **3-D initial-model structure:** Provider-parallel separable Gaussian blur now
+  lives in `seismic_imaging/volume_initial_model.rs`; constant-volume and
+  impulse-response tests cover the clamped 3-D kernel. The exact example
+  Nextest gate passes 77/77 (one slow comparison at 43.001 seconds), strict
+  example Clippy passes, and the mdBook test/build gates pass.
+
 - **Breaking CT skull material boundary:** `AcousticSkullProperties` now stores
   validated Aequitas velocity, mass-density, reciprocal-length attenuation,
   length, and optional shear velocity. `HeterogeneousSkull::from_ct_hill`

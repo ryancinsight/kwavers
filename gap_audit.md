@@ -99,6 +99,15 @@ cover clamping and source exclusion. Exact local Nextest run
 entry point is 875 lines; 3-D inversion and reporting still require
 partitioning, so `KW-EXAMPLES-115` remains in progress.
 
+Provider-parallel separable Gaussian blur now has the
+`seismic_imaging/volume_initial_model.rs` leaf; constant-volume and
+impulse-response tests cover the clamped 3-D kernel. Exact local Nextest run
+`295655d1-c5e0-4c1b-bbad-f44a5d23d75a` passes 77/77 (one slow comparison at
+43.001 seconds); strict all-example Clippy, `mdbook test docs/book`, and
+`mdbook build docs/book` pass. The 2-D entry point is 860 lines and the 3-D
+entry point is 799 lines; 3-D inversion and reporting still require
+partitioning, so `KW-EXAMPLES-115` remains in progress.
+
 Synthetic skull construction, explicit CT loading, HU resampling, and
 brain-support filling now have the `seismic_imaging/phantom.rs` leaf; the
 brain-support classifier is owned by `brain_model.rs` and planar artifacts
