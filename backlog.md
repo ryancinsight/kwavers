@@ -639,6 +639,16 @@
   seconds; `cargo test --doc --offline -p kwavers` passes 1/1; and both
   `mdbook test docs/book` and `mdbook build docs/book` pass. Cargo lockfile
   source state is restored after each overlay command.
+- 2026-08-20 FDTD budget closure: `FdtdBackend` now exposes the solver-owned
+  pressure and velocity fields directly, deleting four full-volume shadow-field
+  copies from every step. The isolated plane-wave regression passes in
+  `3eed71e5-a1cc-4852-be8f-b7ebf756b356` (1/1 in 30.927 seconds), the full
+  Kwavers package passes `dd51875b-2423-44c6-9980-c0b4e72081be` (530/530),
+  and the exact workspace gate passes `a440f991-41b4-4bc4-ad0b-f635c6470490`
+  (6,279/6,279; 15 skipped; 30 slow). The timeout was resolved by the
+  production zero-copy path and by assigning the plane-wave binary to the
+  existing serialized full-grid Nextest group; no workload, assertion, or
+  timeout was changed.
 - 2026-08-20 review-fix slice: strict review findings are closed for stage
   counters, environment decoding, CT/NIfTI axis and spacing semantics, DICOM
   modality selection, RTM receiver accounting and signed peaks, successful

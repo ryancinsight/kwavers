@@ -64,6 +64,14 @@
   example Nextest gate passes 59/59; the previously terminating comparison test
   completes in 51.861 seconds under the committed 60-second budget.
 
+- **FDTD adapter memory path:** `FdtdBackend` now borrows pressure and velocity
+  fields directly from the solver, removing four full-volume shadow copies from
+  every time step. The isolated plane-wave regression passes in 30.927 seconds,
+  the Kwavers package passes 530/530 tests, and the full workspace passes
+  6,279/6,279 with 15 skipped. The plane-wave test is assigned to the existing
+  serialized full-grid Nextest group; no workload, assertion, or timeout is
+  changed.
+
 - **Transcranial FWI example structure:** The entry point is now a small
   manifest over typed grid configuration, acquisition, phantom/CT loading,
   metrics, and workflow modules. The provider-owned skull model and Ricker

@@ -15,6 +15,17 @@ passes Nextest run `2bbe3774-be78-4a3e-86c6-e4499b1359a3` (116/116 in 42.798
 seconds), strict all-target Clippy, package checks, the Kwavers doctest (1/1),
 and both mdBook gates.
 
+The FDTD backend no longer copies pressure and velocity arrays into adapter
+shadow fields after every step; accessors borrow the solver-owned fields
+directly. The isolated plane-wave regression passes in
+`3eed71e5-a1cc-4852-be8f-b7ebf756b356` (1/1 in 30.927 seconds), the full
+Kwavers package passes `dd51875b-2423-44c6-9980-c0b4e72081be` (530/530), and
+the workspace Nextest gate passes `a440f991-41b4-4bc4-ad0b-f635c6470490`
+(6,279/6,279; 15 skipped; 30 slow). The plane-wave binary is now in the
+serialized full-grid test group so full-workspace CPU contention cannot turn a
+31-second test into a false 60-second timeout; the production workload and
+timeout contract remain unchanged.
+
 The local exact-head gates are complete on `e045b1974`, after merging current
 `origin/main` as `d0856b8b1` and removing a redundant `ArrayView` clone exposed
 by strict Clippy, then applying the verified review-fix slice. The residual is
