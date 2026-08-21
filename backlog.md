@@ -716,6 +716,12 @@
   refinement nesting helper in `utilities/amr/{octree,refinement}.rs`. Tree ownership and
   refinement configuration remain receiver-bound; wavelet transforms are a separate follow-up
   because their current inverse path requires behavioral completion, not only receiver removal.
+- 2026-08-21 AMR tree slice is implemented: octree node/leaf counting wrappers and refinement
+  nesting enforcement are associated functions with all callers migrated; tree ownership and
+  refinement configuration remain receiver-bound. Focused Nextest `kwavers-solver` AMR filter
+  passes 11/11 (894 filtered), package doctests pass 5/5 (8 ignored), warning-denied rustdoc
+  passes, and the refreshed workspace `unused_self` count is 131 sites (solver 10). Wavelet
+  transforms remain a separate behavioral-completion item.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
