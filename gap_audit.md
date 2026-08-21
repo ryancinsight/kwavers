@@ -7480,6 +7480,12 @@ package Clippy, Nextest (494/494), doctests, and warning-denied Rustdoc pass. Th
 production scan (`--lib`) reports 0 sites and the ratchet override is removed from `Cargo.toml`;
 all-targets still reports test-only sites outside this production slice.
 
+The `kwavers-physics` `from_iter_instead_of_collect` slice replaces two sonogenetics
+`Array1::from_iter` constructions with direct iterator collection, preserving the existing reshape
+and validation behavior. Warning-denied package Clippy, Nextest (1,561/1,561 with 1 configured
+skip), doctests (9 passed; 4 ignored), and warning-denied Rustdoc pass. The production workspace
+count decreases from 16 to 14 sites, and the ratchet comment is updated.
+
 Final exact-revision validation at merged revision `192eb7575` passes workspace Nextest (5,781/5,781
 with 7 configured skips) and workspace doctests with no failures. The previously recorded example
 build and mdBook test/build remain valid because the final changes are lint-only production edits and

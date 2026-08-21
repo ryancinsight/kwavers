@@ -1145,6 +1145,11 @@
   denied driver Clippy, 494/494 Nextest, doctests, and warning-denied Rustdoc pass. The exact
   production workspace scan (`--lib`) reports zero sites, so the ratchet override is removed from
   `Cargo.toml`; all-targets still reports test-only sites outside this production slice.
+- 2026-08-21 `from_iter_instead_of_collect` physics slice is complete: sonogenetics pressure and
+  tension arrays now collect directly into `Array1`, retaining the existing shape conversion and
+  validation paths. Warning-denied physics Clippy, 1,561/1,561 Nextest with 1 configured skip,
+  doctests (9 passed; 4 ignored), and warning-denied Rustdoc pass. The production workspace count
+  decreases from 16 to 14 sites; the ratchet comment is updated.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
