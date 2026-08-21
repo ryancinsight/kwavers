@@ -7095,6 +7095,17 @@ solver tests filtered); the package doctests pass 5/5 (8 ignored),
 warning-denied rustdoc passes, and the focused unused_self scan has zero
 warnings in `harmonic_tracking/tracker.rs`.
 
+After PR #485, the workspace `unused_self` scan reports 190 sites, including
+69 in `kwavers-solver`. The next bounded slice is the receiver-free helper in
+`forward/nonlinear/westervelt_spectral/solver/mod.rs`.
+
+The Westervelt spectral slice converts its measured receiver-free stability
+helper to an associated function and migrates the wave-model and regression
+test callers. Focused Nextest run `e7af4df6-97ba-4be5-9f31-5b44a1a96d48`
+passes 16/16 (889 solver tests filtered); the package doctests pass 5/5 (8
+ignored), warning-denied rustdoc passes, and the focused unused_self scan has
+zero warnings in the Westervelt solver module.
+
 After PR #477, the workspace `unused_self` scan reports 211 sites, including
 90 in `kwavers-solver`. The next bounded slice is the receiver-free helper in
 `forward/hybrid/adaptive_selection/selector.rs`.
