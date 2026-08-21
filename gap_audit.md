@@ -7375,6 +7375,13 @@ workspace `unused_self` count is 10 sites: 8 in `kwavers-diagnostics` and 2 in `
 The package-wide all-targets Clippy gate still reports two pre-existing test-only lint defects
 outside this slice.
 
+The `kwavers-diagnostics` feature-extraction slice converts gradient magnitude, Laplacian, local
+frequency, and homogeneity kernels to associated functions while window-size configuration remains
+receiver-bound for speckle variance. Package check, warning-denied Clippy, Nextest (191/191),
+doctests (1/6; 5 ignored), and warning-denied rustdoc pass. The refreshed workspace `unused_self`
+count is 6 sites: 4 in `kwavers-diagnostics` and 2 in `kwavers-therapy`. The package-wide
+all-targets Clippy gate still reports two pre-existing test-only lint defects outside this slice.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.
