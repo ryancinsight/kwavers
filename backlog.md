@@ -892,6 +892,12 @@
   (1561/1561 with one configured skip), doctests (9/13; 4 ignored), and warning-denied rustdoc
   pass. The refreshed workspace `unused_self` count is 57 sites with 10 remaining in other
   physics domains.
+- 2026-08-21 `kwavers-physics` cortical neuromodulation slice is implemented: the M-current
+  steady-state gate function is an associated function; voltage-dependent kinetics and neuron
+  parameters remain receiver-bound. Package check, targeted `unused_self` Clippy (neuromodulation
+  path clean), Nextest (1561/1561 with one configured skip), doctests (9/13; 4 ignored), and
+  warning-denied rustdoc pass. The refreshed workspace `unused_self` count is 56 sites with 9
+  remaining in other physics domains.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
