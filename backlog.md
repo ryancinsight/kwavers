@@ -208,33 +208,6 @@
   files.
 - Residual, filed below: KW-DOC-107, KW-CLEAN-108, KW-DOC-109.
 
-## KW-DOC-107 — Move driver migration plans out of module docstrings [patch] — todo
-
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-DOC-107 | `kwavers-driver` module docs describe what the module is, not the phased plan that produced it. | [patch] | todo | unclaimed | `crates/kwavers-driver/src/{physics,geometry}/mod.rs` and any sibling carrying a `# Phase N` block |
-
-- Evidence of the defect: `src/physics/mod.rs` opens "Physics vertical-slice tree (Phase 0
-  placeholder)" and carries a Phase 1+ migration plan, though the tree is populated and the
-  flat `src/{ampacity,dielectric,thermal,emi,pdn,si,acoustic}.rs` modules it says it will
-  migrate no longer exist. `src/geometry/mod.rs` says the same while `src/geom.rs` remains
-  authoritative. Migration plans belong in `docs/MIGRATION.md`; a module docstring that
-  contradicts its own module is documentation drift.
-- Acceptance: each module docstring states the module current responsibility and
-  invariants; phase narrative moves to (or is deleted as already captured by)
-  `docs/MIGRATION.md`; `cargo doc -p kwavers-driver` stays warning-clean.
-
-## KW-CLEAN-108 — Delete the tracked driver backup file [patch] — todo
-
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-CLEAN-108 | No editor backup artifacts are tracked in the source tree. | [patch] | todo | unclaimed | `crates/kwavers-driver/src/physics/mod.rs.bak-final` |
-
-- `git ls-files` lists `crates/kwavers-driver/src/physics/mod.rs.bak-final`. Git is the
-  archive; a superseded copy beside the file it supersedes is an obsolete artifact.
-- Acceptance: the file is deleted; a tree-wide scan finds no other tracked `.bak`/`.orig`
-  siblings.
-
 ## KW-DOC-109 — Review driver publication surface [patch] — done 2026-08-20
 
 | ID | Outcome | Class | Status | Owner | Scope |
@@ -431,35 +404,6 @@
   clean. `cargo nextest run -p kwavers-driver` 494/494.
 - Merge note: filed and closed on `fix/xtask-metrics-paths`; KW-DOC-107 and KW-CLEAN-108
   carry the same note about the branch split.
-
-## KW-LINT-111 — Put kwavers-driver, -python, and kwavers on the workspace lint floor [minor] — todo
-
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-LINT-111 | Every workspace member inherits `[workspace.lints]`, so the Atlas clippy floor actually reaches all of them. | [minor] | todo | unclaimed | `crates/{kwavers-driver,kwavers-python,kwavers}/Cargo.toml` and the warnings that surface |
-
-- The defect, found while closing KW-DOC-110: three of the twenty-four members carry no
-  `[lints] workspace = true`, so `clippy::all` + `clippy::pedantic`, `print_stdout`, and
-  `dbg_macro` from the root `[workspace.lints.clippy]` table never apply to them. The
-  crates are `kwavers-driver`, `kwavers-python`, and the top-level `kwavers`. Every other
-  member inherits.
-- Correction it forces: any "clippy clean" claim previously recorded for `kwavers-driver`
-  — including in KW-DOC-106, KW-DOC-107, and KW-CLEAN-108 — was `cargo clippy` against the
-  *default* lint set, not the workspace floor. Those runs were real and passed; they were
-  simply a weaker gate than the phrase suggests.
-- Measured size: `cargo clippy -p kwavers-driver --all-targets -- -W clippy::all -W
-  clippy::pedantic` emits ~1,155 warnings, dominated by `cast_possible_truncation` (110).
-  The real count under the floor is lower, because the workspace table already allows
-  `module_name_repetitions`, `must_use_candidate`, `similar_names`, and `too_many_lines`;
-  measure again after adding inheritance before sizing the burn-down.
-- Acceptance: the three manifests inherit `[lints] workspace = true`; the resulting warning
-  count is either driven to zero or recorded as a ratchet baseline per the workspace
-  convention in the root `Cargo.toml` comment (`warn` now, `deny` per crate as each reaches
-  zero); no new blanket `allow` is introduced to absorb the count.
-- Related: `crates/kwavers-driver/src/ssot.rs:39` carries an unexplained
-  `#![allow(clippy::doc_markdown)]`. It is currently dead — pedantic is not enabled for the
-  crate, so the lint cannot fire — and becomes live the moment this item lands. Keep or
-  justify it then, rather than deleting it now.
 
 ## KW-CI-104 — Centralize reliable Ubuntu dependency installation [patch] — in progress 2026-08-19
 
