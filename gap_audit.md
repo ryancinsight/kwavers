@@ -7051,6 +7051,18 @@ run `aba72bce-5be5-427f-826b-9d98da3eb543` passes 6/6 (899 solver tests
 filtered); the package doctests pass 5/5 (8 ignored), warning-denied rustdoc
 passes, and the focused unused_self scan has zero warnings in `quality.rs`.
 
+After PR #481, the workspace `unused_self` scan reports 201 sites, including
+80 in `kwavers-solver`. The next bounded slice is the five receiver-free
+domain decomposition helpers in `forward/hybrid/domain_decomposition/`.
+
+The domain decomposition slice converts the three stateless analyzer helpers,
+the buffer blend helper, and the partitioner score helper to receiver-free
+functions. Focused Nextest run `1693b120-db5b-4947-af12-68f3cd53e3bb` passes
+38/38 (867 solver tests filtered); the direct domain-decomposition filter has
+no tests registered, the package doctests pass 5/5 (8 ignored), warning-denied
+rustdoc passes, and the focused unused_self scan has zero warnings in the
+domain-decomposition modules.
+
 After PR #477, the workspace `unused_self` scan reports 211 sites, including
 90 in `kwavers-solver`. The next bounded slice is the receiver-free helper in
 `forward/hybrid/adaptive_selection/selector.rs`.

@@ -75,7 +75,7 @@ impl OverlapRegion {
             for _j in start.1..end.1 {
                 for _k in start.2..end.2 {
                     let weight =
-                        self.compute_blend_weight(i - start.0, end.0 - start.0, buffer.blend_type);
+                        Self::compute_blend_weight(i - start.0, end.0 - start.0, buffer.blend_type);
 
                     self.weights1[idx] = weight;
                     self.weights2[idx] = 1.0 - weight;
@@ -86,7 +86,7 @@ impl OverlapRegion {
     }
 
     /// Compute blend weight for a position
-    fn compute_blend_weight(&self, pos: usize, width: usize, blend_type: BlendType) -> f64 {
+    fn compute_blend_weight(pos: usize, width: usize, blend_type: BlendType) -> f64 {
         let x = pos as f64 / width as f64;
 
         match blend_type {

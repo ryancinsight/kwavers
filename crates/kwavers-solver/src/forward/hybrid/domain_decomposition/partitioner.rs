@@ -61,7 +61,7 @@ impl DomainPartitioner {
                         (k + block_size).min(grid.nz),
                     );
 
-                    let score = self.compute_region_score(start, end, metrics);
+                    let score = Self::compute_region_score(start, end, metrics);
                     let domain_type = self.classify_region(score);
 
                     regions.push(DomainRegion::new(start, end, domain_type, score));
@@ -74,7 +74,6 @@ impl DomainPartitioner {
 
     /// Compute quality score for a region
     fn compute_region_score(
-        &self,
         start: (usize, usize, usize),
         end: (usize, usize, usize),
         metrics: &DomainDecompQualityMetrics,
