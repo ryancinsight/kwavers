@@ -93,11 +93,10 @@ pub fn pressure_to_membrane_tension_mn_m(
     }
 
     let n = pressure_pa.len();
-    let intensity_1d = Array1::from_iter(
-        pressure_pa
-            .iter()
-            .map(|&p| p * p / (2.0 * density_kg_m3 * sound_speed_m_s)),
-    );
+    let intensity_1d: Array1<f64> = pressure_pa
+        .iter()
+        .map(|&p| p * p / (2.0 * density_kg_m3 * sound_speed_m_s))
+        .collect();
     let intensity_3d = intensity_1d
         .into_shape::<3>([n, 1, 1])
         .expect("1-D-to-(N,1,1) reshape is infallible");
@@ -149,13 +148,12 @@ pub fn boltzmann_open_probability_from_tension_mn_m(
         single_channel_conductance_s: 0.0,
         reversal_potential_v: 0.0,
     };
-    let tension_3d = Array1::from_iter(
-        tension_mn_m
-            .iter()
-            .map(|&t| t * MEMBRANE_TENSION_MN_PER_M_TO_N_PER_M),
-    )
-    .into_shape::<3>([n, 1, 1])
-    .expect("1-D-to-(N,1,1) reshape is infallible");
+    let tension_3d: Array3<f64> = tension_mn_m
+        .iter()
+        .map(|&t| t * MEMBRANE_TENSION_MN_PER_M_TO_N_PER_M)
+        .collect::<Array1<_>>()
+        .into_shape::<3>([n, 1, 1])
+        .expect("1-D-to-(N,1,1) reshape is infallible");
     Ok(boltzmann_p_open(&tension_3d, &params, temperature_k)?
         .into_shape::<1>([n])
         .expect("(N,1,1)-to-1-D reshape is infallible")
