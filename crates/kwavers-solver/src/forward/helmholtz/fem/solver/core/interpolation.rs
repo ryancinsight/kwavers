@@ -39,7 +39,7 @@ impl FemHelmholtzSolver {
                 let p2 = self.mesh.nodes[nodes[2]].coordinates;
                 let p3 = self.mesh.nodes[nodes[3]].coordinates;
 
-                let (u, v, w, t) = self.compute_shape_functions(point, p0, p1, p2, p3)?;
+                let (u, v, w, t) = Self::compute_shape_functions(point, p0, p1, p2, p3)?;
 
                 results[i] = self.solution[nodes[0]] * Complex64::from(t)
                     + self.solution[nodes[1]] * Complex64::from(u)
@@ -62,7 +62,6 @@ impl FemHelmholtzSolver {
     /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn compute_shape_functions(
-        &self,
         point: [f64; 3],
         p0: [f64; 3],
         p1: [f64; 3],
