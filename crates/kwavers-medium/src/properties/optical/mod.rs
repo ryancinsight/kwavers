@@ -119,6 +119,11 @@ impl OpticalPropertyData {
     /// # Errors
     ///
     /// Returns [`TransportError::DegenerateTransport`] for a vacuum aggregate.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the validated optical coefficients no longer satisfy the
+    /// reduced-scattering contract. Construction validates this invariant.
     pub fn diffusion_coefficients(
         &self,
     ) -> Result<DiffusionCoefficients<f64>, TransportError<f64>> {

@@ -231,6 +231,11 @@ impl AnisotropicStiffnessTensor {
     /// # Errors
     /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
     ///
+    /// # Panics
+    ///
+    /// Panics if the fixed 6×6 stiffness matrix cannot be rebuilt with its
+    /// known shape or if an inverse entry falls outside the fixed matrix
+    /// bounds. Either case violates the representation invariant of `self.c`.
     pub fn compliance_matrix(&self) -> KwaversResult<Array2<f64>> {
         use leto_ops::application::linalg::lu_decompose;
 

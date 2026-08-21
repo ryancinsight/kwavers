@@ -167,6 +167,11 @@ impl ThermalPropertyData {
     }
 
     /// Water properties (at 20°C)
+    ///
+    /// # Panics
+    ///
+    /// Panics if the built-in water catalog values violate the validated
+    /// thermophysical property contract.
     #[must_use]
     pub fn water() -> Self {
         Self::new(
@@ -180,6 +185,11 @@ impl ThermalPropertyData {
     }
 
     /// Soft tissue properties (generic)
+    ///
+    /// # Panics
+    ///
+    /// Panics if the built-in soft-tissue catalog values violate the validated
+    /// thermophysical property contract.
     #[must_use]
     pub fn soft_tissue() -> Self {
         Self::new(
@@ -193,9 +203,11 @@ impl ThermalPropertyData {
     }
 
     /// Bone properties
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
     ///
+    /// # Panics
+    ///
+    /// Panics if the built-in bone catalog values violate the validated
+    /// thermophysical property contract.
     #[must_use]
     pub fn bone() -> Self {
         Self::new(

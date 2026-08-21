@@ -23,6 +23,11 @@ impl OpticalPropertyData {
     }
 
     /// Vacuum optical properties.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the built-in vacuum values violate the validated optical
+    /// property contract.
     #[must_use]
     pub fn vacuum() -> Self {
         Self::from_si(0.0, 0.0, 0.0, 1.0)
@@ -30,6 +35,11 @@ impl OpticalPropertyData {
     }
 
     /// Water optical properties (visible spectrum, ~550 nm)
+    ///
+    /// # Panics
+    ///
+    /// Panics if the built-in water values violate the validated optical
+    /// property contract.
     #[must_use]
     pub fn water() -> Self {
         Self::from_si(0.01, 0.001, 0.0, REFRACTIVE_INDEX_WATER)
@@ -37,6 +47,11 @@ impl OpticalPropertyData {
     }
 
     /// Soft tissue optical properties (generic, ~650 nm)
+    ///
+    /// # Panics
+    ///
+    /// Panics if the built-in soft-tissue values violate the validated optical
+    /// property contract.
     #[must_use]
     pub fn soft_tissue() -> Self {
         Self::from_si(0.5, 100.0, 0.9, REFRACTIVE_INDEX_SOFT_TISSUE)
@@ -44,6 +59,11 @@ impl OpticalPropertyData {
     }
 
     /// Blood optical properties (oxygenated, ~650 nm)
+    ///
+    /// # Panics
+    ///
+    /// Panics if the built-in oxygenated-blood values violate the validated
+    /// optical property contract.
     #[must_use]
     pub fn blood_oxygenated() -> Self {
         Self::from_si(50.0, 200.0, 0.95, REFRACTIVE_INDEX_SOFT_TISSUE)
@@ -51,6 +71,11 @@ impl OpticalPropertyData {
     }
 
     /// Blood optical properties (deoxygenated, ~650 nm)
+    ///
+    /// # Panics
+    ///
+    /// Panics if the built-in deoxygenated-blood values violate the validated
+    /// optical property contract.
     #[must_use]
     pub fn blood_deoxygenated() -> Self {
         Self::from_si(80.0, 200.0, 0.95, REFRACTIVE_INDEX_SOFT_TISSUE)
@@ -58,6 +83,11 @@ impl OpticalPropertyData {
     }
 
     /// Tumor tissue optical properties (hypervascular, ~650 nm)
+    ///
+    /// # Panics
+    ///
+    /// Panics if the built-in tumor values violate the validated optical
+    /// property contract.
     #[must_use]
     pub fn tumor() -> Self {
         Self::from_si(10.0, 120.0, 0.85, REFRACTIVE_INDEX_SOFT_TISSUE)
@@ -65,6 +95,11 @@ impl OpticalPropertyData {
     }
 
     /// Brain tissue optical properties (gray matter, ~650 nm)
+    ///
+    /// # Panics
+    ///
+    /// Panics if the built-in gray-matter values violate the validated optical
+    /// property contract.
     #[must_use]
     pub fn brain_gray_matter() -> Self {
         Self::from_si(0.8, 150.0, 0.9, REFRACTIVE_INDEX_SOFT_TISSUE_NIR)
@@ -72,6 +107,11 @@ impl OpticalPropertyData {
     }
 
     /// Brain tissue optical properties (white matter, ~650 nm)
+    ///
+    /// # Panics
+    ///
+    /// Panics if the built-in white-matter values violate the validated optical
+    /// property contract.
     #[must_use]
     pub fn brain_white_matter() -> Self {
         Self::from_si(1.0, 250.0, 0.92, REFRACTIVE_INDEX_SOFT_TISSUE_NIR)
@@ -79,6 +119,11 @@ impl OpticalPropertyData {
     }
 
     /// Liver tissue optical properties (~650 nm)
+    ///
+    /// # Panics
+    ///
+    /// Panics if the built-in liver values violate the validated optical
+    /// property contract.
     #[must_use]
     pub fn liver() -> Self {
         Self::from_si(2.0, 120.0, 0.88, 1.39)
@@ -86,6 +131,11 @@ impl OpticalPropertyData {
     }
 
     /// Muscle tissue optical properties (~650 nm)
+    ///
+    /// # Panics
+    ///
+    /// Panics if the built-in muscle values violate the validated optical
+    /// property contract.
     #[must_use]
     pub fn muscle() -> Self {
         Self::from_si(0.8, 100.0, 0.85, 1.37)
@@ -93,6 +143,11 @@ impl OpticalPropertyData {
     }
 
     /// Skin (epidermis) optical properties (~650 nm)
+    ///
+    /// # Panics
+    ///
+    /// Panics if the built-in epidermis values violate the validated optical
+    /// property contract.
     #[must_use]
     pub fn skin_epidermis() -> Self {
         Self::from_si(5.0, 300.0, 0.8, REFRACTIVE_INDEX_SOFT_TISSUE)
@@ -100,6 +155,11 @@ impl OpticalPropertyData {
     }
 
     /// Skin (dermis) optical properties (~650 nm)
+    ///
+    /// # Panics
+    ///
+    /// Panics if the built-in dermis values violate the validated optical
+    /// property contract.
     #[must_use]
     pub fn skin_dermis() -> Self {
         Self::from_si(1.0, 200.0, 0.85, REFRACTIVE_INDEX_SOFT_TISSUE)
@@ -107,6 +167,11 @@ impl OpticalPropertyData {
     }
 
     /// Bone (cortical) optical properties (~650 nm)
+    ///
+    /// # Panics
+    ///
+    /// Panics if the built-in cortical-bone values violate the validated
+    /// optical property contract.
     #[must_use]
     pub fn bone_cortical() -> Self {
         Self::from_si(5.0, 500.0, 0.9, 1.55)
@@ -114,6 +179,11 @@ impl OpticalPropertyData {
     }
 
     /// Fat tissue optical properties (~650 nm)
+    ///
+    /// # Panics
+    ///
+    /// Panics if the built-in fat values violate the validated optical
+    /// property contract.
     #[must_use]
     pub fn fat() -> Self {
         Self::from_si(0.3, 100.0, 0.9, 1.46)
