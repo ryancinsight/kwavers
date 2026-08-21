@@ -17,8 +17,7 @@ fn test_ensemble_quantifier_creation() {
 
 #[test]
 fn test_bootstrap_sampling() {
-    let quantifier = EnsembleQuantifier::new(EnsembleConfig::default()).unwrap();
-    let indices = quantifier.bootstrap_sample(100);
+    let indices = EnsembleQuantifier::bootstrap_sample(100);
     assert_eq!(
         indices.len(),
         100,
@@ -35,7 +34,6 @@ fn test_ensemble_statistics() {
     // mean = (1.0+1.1+0.9)/3 = 1.0 per element
     // weighted variance = ((0² + 0.1² + 0.1²)·1.0) / 3.0 = 0.02/3 ≈ 0.006667
     // uncertainty (std) = sqrt(0.006667) ≈ 0.08165
-    let quantifier = EnsembleQuantifier::new(EnsembleConfig::default()).unwrap();
     let predictions = vec![
         Array2::from_elem((5, 5), 1.0_f32),
         Array2::from_elem((5, 5), 1.1_f32),
@@ -43,9 +41,7 @@ fn test_ensemble_statistics() {
     ];
     let weights = vec![1.0_f64, 1.0, 1.0];
 
-    let result = quantifier
-        .compute_ensemble_statistics(&predictions, &weights)
-        .unwrap();
+    let result = EnsembleQuantifier::compute_ensemble_statistics(&predictions, &weights).unwrap();
 
     assert_eq!(result.mean_prediction.shape(), [5, 5]);
     assert_eq!(result.uncertainty.shape(), [5, 5]);
@@ -87,14 +83,13 @@ fn test_ensemble_diversity() {
     // predictions: 1.0, 1.5, 2.0 on (3,3)
     // pairwise L2 distances: ||1.0-1.5||=sqrt(9·0.25)=1.5, ||1.0-2.0||=3.0, ||1.5-2.0||=1.5
     // diversity = (1.5+3.0+1.5)/3 = 2.0
-    let quantifier = EnsembleQuantifier::new(EnsembleConfig::default()).unwrap();
     let predictions = vec![
         Array2::from_elem((3, 3), 1.0_f32),
         Array2::from_elem((3, 3), 1.5_f32),
         Array2::from_elem((3, 3), 2.0_f32),
     ];
 
-    let diversity = quantifier.compute_ensemble_diversity(&predictions);
+    let diversity = EnsembleQuantifier::compute_ensemble_diversity(&predictions);
     let diversity_err = (diversity - 2.0).abs();
     assert!(
         diversity_err < 1e-5,
@@ -108,10 +103,7 @@ fn test_ensemble_diversity() {
 
 #[test]
 fn test_ensemble_statistics_empty_rejects() {
-    let quantifier = EnsembleQuantifier::new(EnsembleConfig::default()).unwrap();
-    let err = quantifier
-        .compute_ensemble_statistics(&[], &[])
-        .unwrap_err();
+    let err = EnsembleQuantifier::compute_ensemble_statistics(&[], &[]).unwrap_err();
     let msg = format!("{err:?}");
     assert!(
         msg.contains("No predictions"),

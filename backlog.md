@@ -948,6 +948,11 @@
   syntax. Package check, targeted `unused_self` Clippy (conformal path clean), Nextest (744/744),
   doctests (1/22; 21 ignored), and warning-denied rustdoc pass. The refreshed workspace
   `unused_self` count is 42 sites with 23 remaining in other analysis paths.
+- 2026-08-21 `kwavers-analysis` ensemble uncertainty slice is implemented: bootstrap sampling,
+  weighted statistics, and diversity kernels are associated functions; stateful model training and
+  weights remain receiver-bound. Package check, targeted `unused_self` Clippy (ensemble path clean),
+  Nextest (744/744), doctests (1/22; 21 ignored), and warning-denied rustdoc pass. The refreshed
+  workspace `unused_self` count is 40 sites with 21 remaining in other analysis paths.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
