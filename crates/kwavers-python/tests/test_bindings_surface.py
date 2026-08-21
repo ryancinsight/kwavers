@@ -6,6 +6,8 @@ verify that the public Python API still exposes the expected constructors and
 execution path on the CPU-only default feature set.
 """
 
+from concurrent.futures import ThreadPoolExecutor
+
 import numpy as np
 import pytest
 
@@ -41,6 +43,26 @@ def test_public_symbols_are_exposed():
     assert hasattr(kw, "plan_transcranial_focused_bowl_placement_from_ritk_ct")
     assert hasattr(kw, "run_transcranial_fus_planning_from_ritk_ct")
     assert hasattr(kw, "run_transcranial_skull_adaptive_benchmark_from_ritk_ct")
+
+
+def test_core_facade_exports_match_registered_extension_classes():
+    core_names = {
+        "Grid",
+        "Medium",
+        "Source",
+        "Sensor",
+        "Simulation",
+        "SimulationResult",
+        "SolverType",
+        "PmlConfig",
+        "HelmholtzConfig",
+        "NonlinearConfig",
+        "ThermalConfig",
+    }
+
+    assert core_names.issubset(set(kw.__all__))
+    assert all(hasattr(kw, name) for name in core_names)
+    assert all(hasattr(kw._pykwavers, name) for name in core_names)
 
 
 def test_breast_fwi_frequency_domain_binding_surface_runs_forward():
@@ -269,6 +291,36 @@ def test_simulation_cpu_surface_runs_end_to_end():
     assert result.p_rms is not None
     assert np.all(np.isfinite(result.sensor_data))
     assert np.all(np.isfinite(result.time))
+
+
+def test_simulation_runs_concurrently_and_preserves_input_sensitive_values():
+    def run(amplitude):
+        grid = kw.Grid(nx=16, ny=16, nz=16, dx=0.1e-3, dy=0.1e-3, dz=0.1e-3)
+        medium = kw.Medium.homogeneous(sound_speed=1500.0, density=1000.0)
+        source = kw.Source.point(
+            position=(0.2e-3, 0.8e-3, 0.8e-3),
+            frequency=1.0e6,
+            amplitude=amplitude,
+        )
+        sensor = kw.Sensor.point(position=(0.8e-3, 0.8e-3, 0.8e-3))
+        simulation = kw.Simulation(
+            grid,
+            medium,
+            source,
+            sensor,
+            solver=kw.SolverType.FDTD,
+            pml_size=4,
+        )
+        return simulation.run(time_steps=12, dt=1.0e-8).sensor_data
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        low, high = executor.map(run, (5.0e4, 1.0e5))
+
+    assert low.shape == (12,)
+    assert high.shape == (12,)
+    assert np.all(np.isfinite(low))
+    assert np.all(np.isfinite(high))
+    assert np.linalg.norm(high - low) > 0.0
 
 
 def test_simulation_exposes_kspace_correction_mode():
