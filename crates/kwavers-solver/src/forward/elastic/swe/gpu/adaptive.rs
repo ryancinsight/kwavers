@@ -80,14 +80,14 @@ impl AdaptiveResolution {
                 level, resolution_level.grid.nx, resolution_level.grid.ny, resolution_level.grid.nz
             );
 
-            let interpolated_displacement = self.interpolate_to_resolution(
+            let interpolated_displacement = Self::interpolate_to_resolution(
                 initial_displacement,
                 &self.base_grid,
                 &resolution_level.grid,
             )?;
 
             let solution_quality =
-                self.simulate_solve_quality(&interpolated_displacement, resolution_level);
+                Self::simulate_solve_quality(&interpolated_displacement, resolution_level);
 
             solutions.push(AdaptiveSolutionStep {
                 level,
@@ -109,7 +109,6 @@ impl AdaptiveResolution {
     }
 
     fn interpolate_to_resolution(
-        &self,
         data: &Array3<f64>,
         source_grid: &Grid,
         target_grid: &Grid,
@@ -164,7 +163,7 @@ impl AdaptiveResolution {
         Ok(result)
     }
 
-    fn simulate_solve_quality(&self, displacement: &Array3<f64>, level: &ResolutionLevel) -> f64 {
+    fn simulate_solve_quality(displacement: &Array3<f64>, level: &ResolutionLevel) -> f64 {
         let base_quality = 0.7;
         let resolution_bonus = 0.1 * level.scale_factor.log2().min(1.0);
 

@@ -151,7 +151,7 @@ impl GPUElasticWaveSolver3D {
 
             if step % 100 == 0 {
                 let transfer_time =
-                    self.simulate_data_transfer(volume_size * std::mem::size_of::<f64>());
+                    Self::simulate_data_transfer(volume_size * std::mem::size_of::<f64>());
                 kernel_time += transfer_time;
             }
         }
@@ -211,7 +211,7 @@ impl GPUElasticWaveSolver3D {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    fn simulate_data_transfer(&self, bytes: usize) -> f64 {
+    fn simulate_data_transfer(bytes: usize) -> f64 {
         let pcie_bandwidth = 32.0 * 1024.0 * 1024.0 * 1024.0;
         bytes as f64 / pcie_bandwidth
     }

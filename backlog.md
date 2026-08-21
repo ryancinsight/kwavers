@@ -474,6 +474,9 @@
 - 2026-08-21 Burton-Miller slice merged in PR #473 (`54659d09d`). The refreshed `unused_self`
   measurement is 225 sites (solver 104); the next bounded slice is the three receiver-free
   helpers in `forward/elastic/swe/gpu`, now claimed with the same focused gates.
+- 2026-08-21 SWE GPU slice is implemented: the two adaptive interpolation/quality helpers and
+  the transfer-time helper are associated functions with all callers migrated. Focused tests,
+  doctests, and warning-denied rustdoc pass; the remaining solver sites stay queued.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a

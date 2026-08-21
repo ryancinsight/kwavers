@@ -7002,3 +7002,9 @@ remaining warnings in that kernel module; the other solver sites remain queued.
 After PR #473, the workspace `unused_self` scan reports 225 sites, including
 104 in `kwavers-solver`. The next bounded slice is the three receiver-free
 helpers in `forward/elastic/swe/gpu`.
+
+The SWE GPU slice converts its three measured receiver-free helpers to
+associated functions. Focused Nextest run `be884b6c-b178-4063-b2e1-70244b94b056`
+passes 5/5 (900 solver tests filtered); the package doctests pass 5/5 (8
+ignored), warning-denied rustdoc passes, and the focused unused_self scan has
+zero warnings in the SWE GPU module.
