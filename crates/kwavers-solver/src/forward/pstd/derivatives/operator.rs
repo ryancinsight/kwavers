@@ -78,6 +78,9 @@ impl std::fmt::Debug for SpectralDerivativeOperator {
             .field("nx", &self.nx)
             .field("ny", &self.ny)
             .field("nz", &self.nz)
+            .field("ikd_x", &self.ikd_x.len())
+            .field("ikd_y", &self.ikd_y.len())
+            .field("ikd_z", &self.ikd_z.len())
             .finish()
     }
 }

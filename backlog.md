@@ -1192,6 +1192,11 @@
   Clippy, 1,561/1,561 Nextest with 1 configured skip, doctests (9 passed; 4 ignored), and
   warning-denied Rustdoc pass. The production workspace count decreases from 15 to 13 sites; the
   ratchet comment is updated.
+- 2026-08-21 `missing_fields_in_debug` solver slice is complete: all thirteen remaining solver
+  Debug implementations now represent every field, using values, shapes, lengths, booleans, and
+  redacted markers for opaque plans/backends. Warning-denied solver Clippy, 902/902 Nextest with
+  4 configured skips, doctests (5 passed; 8 ignored), warning-denied Rustdoc, and the exact
+  production workspace scan pass. The `missing_fields_in_debug` ratchet override is removed.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a

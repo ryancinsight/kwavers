@@ -45,6 +45,7 @@ impl std::fmt::Debug for ParabolicDiffractionOperator {
             .field("config", &self.config)
             .field("kx2_shape", &self.kx2.shape())
             .field("ky2_shape", &self.ky2.shape())
+            .field("scratch", &self.scratch.shape())
             .finish()
     }
 }

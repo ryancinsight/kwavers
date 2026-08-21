@@ -110,8 +110,33 @@ impl std::fmt::Debug for ViscoacousticMemorySolver {
             .field("ny", &self.ny)
             .field("nz", &self.nz)
             .field("dt", &self.dt)
+            .field("cell_volume", &self.cell_volume)
+            .field("inv_rho", &self.inv_rho.shape())
+            .field("m_u", &self.m_u.shape())
+            .field("m_inf", &self.m_inf.shape())
             .field("max_unrelaxed_speed", &self.max_unrelaxed_speed)
             .field("arms", &(self.arms.len()))
+            .field("fft", &"<fft-plan>")
+            .field("kx", &self.kx.len())
+            .field("ky", &self.ky.len())
+            .field("kz", &self.kz.len())
+            .field("cbuf", &self.cbuf.shape())
+            .field("p", &self.p.shape())
+            .field("vx", &self.vx.shape())
+            .field("vy", &self.vy.shape())
+            .field("vz", &self.vz.shape())
+            .field("sigma", &self.sigma.len())
+            .field("gx", &self.gx.shape())
+            .field("gy", &self.gy.shape())
+            .field("gz", &self.gz.shape())
+            .field(
+                "damping_decay",
+                &self.damping_decay.as_ref().map(|v| v.shape()),
+            )
+            .field("step_count", &self.step_count)
+            .field("pressure_sources", &self.pressure_sources.len())
+            .field("pressure_sensors", &self.pressure_sensors)
+            .field("sensor_record", &self.sensor_record.len())
             .finish()
     }
 }

@@ -21,6 +21,7 @@ impl std::fmt::Debug for AngularSpectrum2D {
             .field("config", &self.config)
             .field("kx", &self.kx)
             .field("ky", &self.ky)
+            .field("scratch", &self.scratch.shape())
             .finish()
     }
 }

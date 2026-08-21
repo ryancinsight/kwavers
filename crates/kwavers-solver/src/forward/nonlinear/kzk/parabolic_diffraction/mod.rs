@@ -120,6 +120,7 @@ impl std::fmt::Debug for KzkParabolicDiffractionOperator {
                     self.ky2.shape()[1]
                 ),
             )
+            .field("scratch", &self.scratch.shape())
             .finish()
     }
 }
