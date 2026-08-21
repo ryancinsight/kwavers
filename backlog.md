@@ -1150,6 +1150,11 @@
   validation paths. Warning-denied physics Clippy, 1,561/1,561 Nextest with 1 configured skip,
   doctests (9 passed; 4 ignored), and warning-denied Rustdoc pass. The production workspace count
   decreases from 16 to 14 sites; the ratchet comment is updated.
+- 2026-08-21 `from_iter_instead_of_collect` simulation slice is complete: DG recorder statistics
+  collect directly into `Array1` for maximum, minimum, RMS, and final pressure values. Warning-
+  denied simulation Clippy, 87/87 Nextest, doctests (4 passed; 2 ignored), and warning-denied
+  Rustdoc pass. The production workspace count decreases from 14 to 10 sites; the ratchet comment
+  is updated.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
