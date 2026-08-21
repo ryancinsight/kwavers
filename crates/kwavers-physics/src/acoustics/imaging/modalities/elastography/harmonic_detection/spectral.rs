@@ -17,8 +17,8 @@ impl HarmonicDetector {
         sampling_frequency: f64,
     ) -> KwaversResult<PointHarmonics> {
         // Apply windowing and FFT
-        let windowed = self.apply_window(time_series);
-        let spectrum = self.compute_fft(&windowed)?;
+        let windowed = Self::apply_window(time_series);
+        let spectrum = Self::compute_fft(&windowed)?;
 
         // Find fundamental frequency peak
         let _fundamental_idx = self.find_fundamental_peak(&spectrum, sampling_frequency)?;
@@ -38,7 +38,7 @@ impl HarmonicDetector {
                 let phase = spectrum[harmonic_idx].arg();
 
                 // Compute SNR
-                let snr = self.compute_snr(&spectrum, harmonic_idx);
+                let snr = Self::compute_snr(&spectrum, harmonic_idx);
 
                 harmonic_magnitudes.push(magnitude);
                 harmonic_phases.push(phase);
@@ -72,7 +72,7 @@ impl HarmonicDetector {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub(crate) fn apply_window(&self, time_series: &[f64]) -> Vec<f64> {
+    pub(crate) fn apply_window(time_series: &[f64]) -> Vec<f64> {
         let n = time_series.len();
         let mut windowed = Vec::with_capacity(n);
 
@@ -89,7 +89,7 @@ impl HarmonicDetector {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub(crate) fn compute_fft(&self, time_series: &[f64]) -> KwaversResult<Vec<Complex64>> {
+    pub(crate) fn compute_fft(time_series: &[f64]) -> KwaversResult<Vec<Complex64>> {
         let fft_input = leto::Array1::from_shape_vec([time_series.len()], time_series.to_vec())
             .expect("harmonic-detection series length must match Leto FFT shape");
         let mut buffer = fft_1d_leto(fft_input.view());
@@ -143,7 +143,7 @@ impl HarmonicDetector {
     }
 
     /// Compute signal-to-noise ratio at given frequency bin
-    pub(crate) fn compute_snr(&self, spectrum: &[Complex64], signal_idx: usize) -> f64 {
+    pub(crate) fn compute_snr(spectrum: &[Complex64], signal_idx: usize) -> f64 {
         let signal_power = spectrum[signal_idx].norm().powi(2);
 
         // Compute noise power (average of neighboring bins, excluding signal)
