@@ -602,6 +602,13 @@
   focused `unused_self` scan is clean in the touched FWI modules. The increment is ready for
   integration; the workspace debt-block line remains until a refreshed workspace measurement
   confirms the count.
+- 2026-08-21 photoacoustic filter slice is implemented: the private bandpass/FBP application
+  helpers, three frequency-response constructors, and FFT application kernel are associated
+  functions, with all filter-core callers migrated. Focused Nextest
+  `d2c98cf4-fd72-41a5-89d2-c1d715b311e2` passes 10/10 (895 solver tests skipped); the package
+  doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and the focused `unused_self`
+  scan is clean in `photoacoustic/filters/core.rs`. The increment is ready for integration; the
+  workspace debt-block line remains until a refreshed workspace measurement confirms the count.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a

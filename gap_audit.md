@@ -7172,6 +7172,13 @@ migrates all callers. Focused Nextest run
 the package doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and
 the focused `unused_self` scan is clean in the touched FWI modules.
 
+The photoacoustic filter slice converts the private bandpass/FBP application
+helpers, three frequency-response constructors, and FFT application kernel to
+associated functions and migrates all filter-core callers. Focused Nextest run
+`d2c98cf4-fd72-41a5-89d2-c1d715b311e2` passes 10/10 (895 solver tests skipped);
+the package doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and
+the focused `unused_self` scan is clean in `photoacoustic/filters/core.rs`.
+
 After PR #477, the workspace `unused_self` scan reports 211 sites, including
 90 in `kwavers-solver`. The next bounded slice is the receiver-free helper in
 `forward/hybrid/adaptive_selection/selector.rs`.
