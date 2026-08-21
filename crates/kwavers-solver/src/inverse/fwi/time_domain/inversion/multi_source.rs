@@ -57,7 +57,7 @@ impl FwiProcessor {
                 add_assign_field(&mut total_gradient, &grad);
             }
 
-            let smoothed = self.smooth_gradient(&total_gradient);
+            let smoothed = Self::smooth_gradient(&total_gradient);
             let regularized = self.apply_regularization(&smoothed, &current_model, 1.0)?;
 
             let grad_max = regularized
@@ -167,7 +167,7 @@ impl FwiProcessor {
 
             zero_masked_field(&mut total_gradient, frozen_mask);
 
-            let smoothed = self.smooth_gradient(&total_gradient);
+            let smoothed = Self::smooth_gradient(&total_gradient);
             let mut regularized = self.apply_regularization(&smoothed, &current_model, 1.0)?;
 
             // Re-zero skull voxels after smoothing to prevent smooth-gradient leakage
