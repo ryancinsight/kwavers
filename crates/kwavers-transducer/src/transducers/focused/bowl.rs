@@ -316,6 +316,11 @@ impl BowlTransducer {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
+    /// # Panics
+    ///
+    /// Panics only if a freshly allocated source array is not contiguous,
+    /// violating the storage invariant required by the zero-copy fill.
+    ///
     pub fn generate_source(&self, grid: &Grid, time: Time<f64>) -> KwaversResult<Array3<f64>> {
         let mut source = Array3::zeros([grid.nx, grid.ny, grid.nz]);
         let omega = TWO_PI * self.config.frequency.in_unit::<Hertz>();

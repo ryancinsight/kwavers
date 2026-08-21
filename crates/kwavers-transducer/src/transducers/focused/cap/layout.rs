@@ -119,6 +119,13 @@ impl SphericalCapLayout {
     ///
     /// Returns an error when the count, radius, focus, axis, or angular span is
     /// outside the physical spherical-cap domain.
+    ///
+    /// # Panics
+    ///
+    /// Panics only if validation accepts an axis that subsequently cannot be
+    /// normalized or cannot form a perpendicular frame; those are internal
+    /// invariant violations because validation rejects non-finite and zero
+    /// axes.
     pub fn new(config: SphericalCapConfig) -> KwaversResult<Self> {
         validate_config(config)?;
 

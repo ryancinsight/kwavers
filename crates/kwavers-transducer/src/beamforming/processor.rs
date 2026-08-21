@@ -174,6 +174,11 @@ impl BeamformingProcessor {
     /// # Errors
     /// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
     ///
+    /// # Panics
+    ///
+    /// Panics only if the array backend rejects the internally constructed
+    /// steering vector even though its shape and element count are identical.
+    ///
     pub fn mvdr_unsteered_weights_time_series(
         &self,
         sensor_data: &Array3<f64>,

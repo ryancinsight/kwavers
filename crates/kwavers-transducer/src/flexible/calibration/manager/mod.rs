@@ -77,6 +77,11 @@ impl CalibrationManager {
     /// - Returns [`kwavers_core::error::KwaversError::InvalidInput`] if fewer than 4 reflectors.
     /// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
     ///
+    /// # Panics
+    ///
+    /// Panics only if the array backend rejects the dimensionally valid
+    /// transpose or matrix product constructed from the validated inputs.
+    ///
     pub fn triangulate_position(
         &self,
         measurements: &[f64],

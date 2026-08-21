@@ -74,6 +74,11 @@ impl MultiBowlArray {
     /// # Errors
     /// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
     ///
+    /// # Panics
+    ///
+    /// Panics only if a freshly allocated combined array or a generated bowl
+    /// source is not contiguous, violating the zero-copy slice invariant.
+    ///
     pub fn generate_source(&self, grid: &Grid, time: Time<f64>) -> KwaversResult<Array3<f64>> {
         let mut combined_source = Array3::zeros([grid.nx, grid.ny, grid.nz]);
 

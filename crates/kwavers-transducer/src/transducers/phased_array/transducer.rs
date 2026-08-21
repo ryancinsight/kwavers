@@ -147,6 +147,11 @@ impl PhasedArrayTransducer {
     }
 
     /// Calculate pressure field at given time
+    ///
+    /// # Panics
+    ///
+    /// Panics only if the freshly allocated field is not contiguous, violating
+    /// the storage invariant required by the zero-copy fill.
     pub fn calculate_field(&self, grid: &Grid, time: f64) -> Array3<f64> {
         let mut field = Array3::zeros([grid.nx, grid.ny, grid.nz]);
 
