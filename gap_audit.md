@@ -7492,6 +7492,12 @@ final pressure statistics. Warning-denied package Clippy, Nextest (87/87), docte
 2 ignored), and warning-denied Rustdoc pass. The production workspace count decreases from 14 to
 10 sites, and the ratchet comment is updated.
 
+The `kwavers-analysis` `from_iter_instead_of_collect` slice replaces the polynomial clutter-filter
+time-coordinate `Array1::from_iter` construction with direct iterator collection, preserving the
+optional normalization and Vandermonde path. Warning-denied package Clippy, Nextest (744/744),
+doctests (1 passed; 21 ignored), and warning-denied Rustdoc pass. The production workspace count
+decreases from 10 to 9 sites, and the ratchet comment is updated.
+
 Final exact-revision validation at merged revision `192eb7575` passes workspace Nextest (5,781/5,781
 with 7 configured skips) and workspace doctests with no failures. The previously recorded example
 build and mdBook test/build remain valid because the final changes are lint-only production edits and

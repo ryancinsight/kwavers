@@ -69,7 +69,7 @@ impl PolynomialFilter {
             )));
         }
 
-        let mut time: Array1<f64> = Array1::from_iter((0..n_frames).map(|t| t as f64));
+        let mut time: Array1<f64> = (0..n_frames).map(|t| t as f64).collect();
 
         if self.config.normalize_time {
             let max_time = (n_frames - 1) as f64;
