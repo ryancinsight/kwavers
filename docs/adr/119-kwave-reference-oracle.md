@@ -52,6 +52,7 @@ isotropic Gaussian initial pressure at `sigma = 3 dx`, on a `0.1 mm` grid at
 | `ivp_homogeneous_3d` | 32 x 32 x 32 | 50 | 10 ns | 12 cells | lossless | 128 KB |
 | `ivp_absorbing_2d` | 64 x 64 | 100 | 10 ns | 24 cells | `40 dB/(MHz^1.5 cm)`, `y = 1.5` | 22 KB |
 | `ivp_layered_2d` | 80 x 64 | 120 | 8.33 ns | 24 cells | lossless, layered medium | 34 KB |
+| `src_tone_burst_2d` | 96 x 80 | 151 | 10 ns | 30 cells | lossless, driven point source | 36 KB |
 
 Four choices make the comparison an oracle rather than a coincidence.
 
@@ -86,6 +87,7 @@ Full-field agreement over the comparison window, at the committed revision:
 | `ivp_homogeneous_3d` | 1.06e-4 | 2.20e-4 | 0.999999994 |
 | `ivp_absorbing_2d` | 8.10e-3 | 4.99e-3 | 0.999999924 |
 | `ivp_layered_2d` | 7.97e-3 | 1.54e-2 | 0.999963422 |
+| `src_tone_burst_2d` | 2.58e-3 | 2.20e-3 | 0.999996674 |
 
 Both cases exceed the `r >= 0.9999` figure the README published, by four to five
 orders of magnitude in the L2 norm.
@@ -108,7 +110,7 @@ relative L2 and `0.99` on correlation — a dispersion error shifts phase, it do
 not decorrelate, so falling below the correlation floor would mean the scheme is
 wrong rather than merely dispersive.
 
-The six tests execute in 1.61 s, inside the standard nextest budget.
+The seven tests execute in 3.03 s, inside the standard nextest budget.
 
 ## The absorbing case
 
@@ -196,6 +198,44 @@ cases are all symmetric cannot detect a transposition**, and every convention a
 reference solver carries -- axis order, memory order, time-point counting --
 needs at least one case that breaks the symmetry hiding it.
 
+## The driven case, and the step count it corrected
+
+`src_tone_burst_2d` injects a Gaussian-windowed 3 MHz burst at a single
+off-centre cell of a 96 x 80 grid, starting from a zero field. Every other case
+seeds an initial pressure and lets it evolve, which never reaches the source
+injection path -- and that path is the one a real driven simulation runs on. It
+carries four conventions the initial-value cases cannot check: where the mask's
+cell sits, which signal column a step consumes, how the source term is scaled,
+and whether the k-space source correction is applied to it. All four have to be
+right at once for the case to pass, and it does, at `2.58e-3` and
+`r = 0.999996674`.
+
+It runs through `PSTDSolver` rather than `PluginManager`. The plugin path
+constructs its solver with an empty `GridSource` and never forwards the sources
+handed to `execute`, so a driven comparison cannot be expressed through it. That
+is worth knowing independently of this ADR: a caller who passes sources to
+`PluginManager::execute` and expects the pseudospectral solver to see them will
+get a silently undriven simulation.
+
+**The propagation-interval count differs by source type, and the difference is
+one step.** An initial-value case has a meaningful state at `t = 0` -- the seed
+itself -- so the first of k-Wave's `Nt` time points is the initial condition and
+the returned field is `Nt - 1` intervals later. A driven case starts from a zero
+field, which is not a state worth counting: k-Wave updates for every one of its
+`Nt` points and the returned field is `Nt` intervals later.
+
+Both were measured rather than assumed. Using `Nt - 1` on the driven case scores
+`2.59e-1` instead of `2.58e-3` -- two orders worse, and the kind of result that
+reads as a solver defect. The manifest therefore records the interval count for
+the case at hand rather than one rule for both, and the step-count guard now
+covers the driven case, where a single wrong step costs the same hundredfold it
+costs the initial-value cases.
+
+That is the third convention this series has had to pin down by measurement,
+after time-point counting and axis order. The pattern is stable enough to state
+plainly: **a reference solver's conventions are discovered by a case that breaks
+the symmetry hiding them, never by reading them off the interface.**
+
 ## Tolerance derivation
 
 The two codes integrate the same system with the same scheme over the same grid,
@@ -244,10 +284,11 @@ at the assignment site.
   That suite's reproducibility is a separate item; this ADR closes the Rust-side
   gap only.
 - The reference set covers linear propagation in two and three dimensions:
-  lossless, with power-law absorption, and through a layered medium.
-  Nonlinearity, elastic propagation, and source-driven (as opposed to
-  initial-value) problems have no committed reference yet, and each is a
-  follow-up case rather than a claim this ADR supports.
+  lossless, with power-law absorption, through a layered medium, and driven by a
+  time-varying point source. Nonlinearity and elastic propagation have no
+  committed reference yet, nor does a distributed (as opposed to single-cell)
+  source, whose mask ordering is a convention this set does not exercise. Each is
+  a follow-up case rather than a claim this ADR supports.
 
 ## Alternatives rejected
 
