@@ -96,6 +96,10 @@ pub fn gbm_subspot_raster(
 ///
 /// Uses radius `0.5 * pitch_m`, matching the book Chapter 25 planning
 /// convention for visual GBM subspot coverage.
+///
+/// # Panics
+///
+/// Panics if a subspot coordinate is outside the validated tumor-mask shape.
 #[must_use]
 pub fn gbm_subspot_covered_fraction(
     tumor_mask: &Array3<bool>,

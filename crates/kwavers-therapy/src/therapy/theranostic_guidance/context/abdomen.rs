@@ -24,6 +24,11 @@ use super::{centroid_2d, centroid_index, validate_spacing, PlacementContext, Poi
 ///
 /// Returns an error when the CT and label volumes, spacing, anatomy, or target
 /// configuration are inconsistent.
+///
+/// # Panics
+///
+/// Panics if a validated abdominal mask is indexed with dimensions inconsistent
+/// with the CT volume layout.
 pub fn build_abdominal_placement_context(
     anatomy: AnatomyKind,
     ct_volume_hu: &Array3<f64>,

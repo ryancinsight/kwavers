@@ -7,6 +7,11 @@ use leto::{Array2, Array3};
 ///
 /// # Returns
 /// `(dose, permeability, stable_cavitation_prob, inertial_cavitation_risk)`
+///
+/// # Panics
+///
+/// Panics if tumor support or subspot coordinates violate the validated mask
+/// and coordinate shapes.
 #[allow(clippy::too_many_arguments)]
 pub fn bbb_opening_dose(
     tumor_mask: &Array3<bool>,
