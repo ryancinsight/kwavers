@@ -44,7 +44,6 @@ pub struct PhotoacousticReconstructor {
     filters: Filters,
     iterative: IterativeMethods,
     linear_solver: PhotoacousticLinearSolver,
-    utils: Utils,
 }
 
 impl PhotoacousticReconstructor {
@@ -55,7 +54,6 @@ impl PhotoacousticReconstructor {
             filters: Filters::new(&config),
             iterative: IterativeMethods::new(&config),
             linear_solver: PhotoacousticLinearSolver::new(),
-            utils: Utils::new(),
             config,
         }
     }
@@ -181,7 +179,7 @@ impl PhotoacousticReconstructor {
                     let mut value = 0.0;
                     for (sensor_idx, sensor_pos) in sensor_positions.iter().enumerate() {
                         // Calculate distance from grid point to sensor
-                        let distance = self.utils.euclidean_distance(&grid_pos, sensor_pos);
+                        let distance = Utils::euclidean_distance(&grid_pos, sensor_pos);
 
                         // Calculate time of flight
                         let time_idx = (distance / sound_speed / dt) as usize;
@@ -191,11 +189,8 @@ impl PhotoacousticReconstructor {
                             let sensor_value = processed_data[[time_idx, sensor_idx]];
 
                             // Apply spherical spreading compensation
-                            let weight = self.utils.calculate_back_projection_weight(
-                                distance,
-                                sound_speed,
-                                dt,
-                            );
+                            let weight =
+                                Utils::calculate_back_projection_weight(distance, sound_speed, dt);
 
                             value += sensor_value * weight;
                         }
@@ -299,7 +294,7 @@ impl PhotoacousticReconstructor {
         sensor_positions: &[[f64; 3]],
     ) -> KwaversResult<Array3<f64>> {
         // Build forward model
-        let forward_model = self.utils.build_forward_model(
+        let forward_model = Utils::build_forward_model(
             sensor_positions,
             self.config.grid_size,
             self.config.sound_speed,
