@@ -40,6 +40,8 @@ bitflags = "2.4"
 parking_lot = "0.12"
 tracing = { version = "0.1", features = ["attributes"] }
 apollo = { workspace = true }
+athena-core = { workspace = true }
+athena-leto = { workspace = true }
 eunomia = { workspace = true }
 tyche-core = { workspace = true }
 

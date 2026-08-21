@@ -1,6 +1,7 @@
 use super::super::config::{NewtonKrylovConfig, PhysicsCoefficients};
 use super::MonolithicCoupler;
-use crate::integration::nonlinear::GMRESConfig;
+use crate::krylov::GMRESConfig;
+use std::cell::RefCell;
 use std::collections::HashMap;
 
 impl MonolithicCoupler {
@@ -27,8 +28,8 @@ impl MonolithicCoupler {
             u_prev_scratch: None,
             rhs_scratch: None,
             line_search_state_scratch: None,
-            jvp_state_scratch: None,
-            gmres_solver: None,
+            jvp_state_scratch: RefCell::new(None),
+            krylov_workspace: None,
             grid_spacing: (1e-3, 1e-3, 1e-3),
         }
     }

@@ -1,16 +1,48 @@
 use super::super::config::CouplingConvergenceInfo;
+use super::super::residual::JacobianOperator;
 use super::super::residual_metric::norm;
 use super::super::state_vector::{flatten_fields, sorted_field_keys, unflatten_fields};
 use super::MonolithicCoupler;
-use crate::integration::nonlinear::GMRESSolver;
+use crate::krylov::{GmresConvergenceInfo, KrylovWorkspace};
 use crate::workspace::inplace_ops::scale_inplace;
-use kwavers_core::error::KwaversResult;
+use athena_core::Identity;
+use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
 use kwavers_field::UnifiedFieldType;
 use kwavers_grid::Grid;
-use leto::Array3;
+use leto::{Array1, Array3};
 use log::{debug, warn};
 use std::collections::HashMap;
 use std::time::Instant;
+
+/// Reinterpret a dense stacked state as the flat Krylov vector of the same
+/// elements, and back.
+///
+/// Both shapes are dense row-major over one allocation, so the reinterpretation
+/// moves no data: element `i` of the vector is element `i` of the stacked state
+/// in row-major order, which is exactly the correspondence the residual and the
+/// Jacobian operator already share.
+fn into_flat(state: Array3<f64>) -> KwaversResult<Array1<f64>> {
+    let [rows, columns, planes] = state.shape();
+    let length = rows * columns * planes;
+    state
+        .into_shape([length])
+        .map_err(|error| reshape_error(&error))
+}
+
+/// Inverse of [`into_flat`].
+fn into_stacked(vector: Array1<f64>, shape: [usize; 3]) -> KwaversResult<Array3<f64>> {
+    vector
+        .into_shape(shape)
+        .map_err(|error| reshape_error(&error))
+}
+
+fn reshape_error(error: &leto::LetoError) -> KwaversError {
+    KwaversError::Numerical(NumericalError::MatrixDimension {
+        operation: "monolithic Newton state reshape".to_owned(),
+        expected: "dense row-major stacked state".to_owned(),
+        actual: error.to_string(),
+    })
+}
 
 impl MonolithicCoupler {
     /// Solve one coupled multiphysics step.
@@ -105,44 +137,71 @@ impl MonolithicCoupler {
                 break;
             }
 
-            let mut gmres = self
-                .gmres_solver
-                .take()
-                .unwrap_or_else(|| GMRESSolver::new(self.gmres_config.clone()));
-
-            let rhs = rhs_scratch.get_or_insert_with(|| Array3::zeros(f.shape()));
-            if rhs.shape() != f.shape() {
-                *rhs = Array3::zeros(f.shape());
+            let stacked_shape = f.shape();
+            let rhs = rhs_scratch.get_or_insert_with(|| Array3::zeros(stacked_shape));
+            if rhs.shape() != stacked_shape {
+                *rhs = Array3::zeros(stacked_shape);
             }
             rhs.assign(&f);
             scale_inplace(rhs, -1.0);
 
             du.fill(0.0);
 
-            let solve_result = gmres.solve(
-                |v: &Array3<f64>| {
-                    self.jacobian_vector_product(v, &u_current, &u_prev, dt, dims, &field_order)
-                },
-                &*rhs,
-                &mut du,
-            );
-            self.gmres_solver = Some(gmres);
+            // Athena solves over flat vectors; the stacked state and the Krylov
+            // vector are the same allocation viewed at two shapes.
+            let right_hand_side = into_flat(
+                rhs_scratch
+                    .take()
+                    .expect("invariant: right-hand side scratch was just populated"),
+            )?;
+            let mut correction = into_flat(du)?;
 
-            match solve_result {
-                Ok(conv_info) => {
-                    total_gmres_iters += conv_info.iterations;
-                    if self.newton_config.verbose {
-                        debug!(
-                            "  GMRES: {} iterations, ||r|| = {:.3e}",
-                            conv_info.iterations, conv_info.final_residual
-                        );
-                    }
-                }
-                Err(error) => {
-                    if self.newton_config.verbose {
-                        warn!("  GMRES failed: {:?}", error);
-                    }
-                }
+            let dimension = correction.len();
+            let mut workspace = match self.krylov_workspace.take() {
+                Some(workspace) if workspace.dimension() == dimension => workspace,
+                _ => KrylovWorkspace::new(self.gmres_config.krylov_dim, dimension)?,
+            };
+            let policy = self.gmres_config.policy()?;
+
+            let (solve_result, physics_failure) = {
+                let operator =
+                    JacobianOperator::new(self, &u_current, &u_prev, dt, dims, &field_order);
+                let result = workspace.solve(
+                    &operator,
+                    &Identity,
+                    &right_hand_side,
+                    &mut correction,
+                    policy,
+                );
+                (result, operator.take_failure())
+            };
+            self.krylov_workspace = Some(workspace);
+
+            du = into_stacked(correction, stacked_shape)?;
+            rhs_scratch = Some(into_stacked(right_hand_side, stacked_shape)?);
+
+            // A residual that could not be evaluated is a physics failure, not
+            // a convergence outcome: the iterate it would have produced does
+            // not exist, so it propagates rather than being logged away.
+            if let Some(error) = physics_failure {
+                self.du_scratch = Some(du);
+                self.u_prev_scratch = Some(u_prev);
+                self.rhs_scratch = rhs_scratch;
+                return Err(error);
+            }
+
+            let conv_info = GmresConvergenceInfo::from_report(&solve_result?);
+            total_gmres_iters += conv_info.iterations;
+            if !conv_info.converged {
+                warn!(
+                    "  GMRES did not converge: {} iterations, ||r|| = {:.3e}",
+                    conv_info.iterations, conv_info.final_residual
+                );
+            } else if self.newton_config.verbose {
+                debug!(
+                    "  GMRES: {} iterations, ||r|| = {:.3e}",
+                    conv_info.iterations, conv_info.final_residual
+                );
             }
 
             let step_size = if self.newton_config.adaptive_step_size {
