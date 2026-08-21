@@ -30,6 +30,7 @@ pub mod sampling;
 mod spherical;
 #[cfg(test)]
 mod tests;
+mod validation;
 
 pub use error::GeometryError;
 pub use rectangular::RectangularDomain;

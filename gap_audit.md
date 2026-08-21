@@ -7063,6 +7063,12 @@ associated function and migrates all callers. Package Nextest passes 63/63, doct
 warning-denied rustdoc passes, and the refreshed workspace `unused_self` count is 119 sites with
 zero in `kwavers-signal` and `kwavers-solver`.
 
+The `kwavers-grid` geometry slice consolidates the duplicated measure validator into the
+vertical `geometry/validation.rs` leaf and migrates both domain constructors. Package Nextest
+passes 45/45, doctests pass 1/1 (1 ignored), warning-denied rustdoc passes, and the refreshed
+workspace `unused_self` count is 117 sites with zero in `kwavers-grid`, `kwavers-signal`, and
+`kwavers-solver`.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.
