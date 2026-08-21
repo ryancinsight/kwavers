@@ -178,6 +178,10 @@ pub struct GaussianDeconvolutionFixture {
     pub observed_signal: Vec<f64>,
 }
 
+/// # Errors
+///
+/// Returns a descriptive error when `n` is too small or either scale parameter is non-finite or
+/// outside its valid domain.
 pub fn gaussian_deconvolution_fixture(
     n: usize,
     sigma: f64,

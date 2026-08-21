@@ -5,6 +5,11 @@
 /// Returns `mu(delta_x) = sinc(L_src * delta_x / (lambda * z))`, where
 /// `sinc(u) = sin(pi * u) / (pi * u)`. This is the far-field paraxial
 /// coherence law used by Chapter 23's passive-acoustic mapping figure.
+///
+/// # Errors
+///
+/// Returns a descriptive error when the source extent, depth, wavelength, or offset samples are
+/// non-finite or outside their physical domain.
 pub fn van_cittert_zernike_coherence(
     delta_x_m: &[f64],
     source_extent_m: f64,

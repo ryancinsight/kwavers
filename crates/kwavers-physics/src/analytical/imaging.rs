@@ -669,6 +669,10 @@ pub struct IvusMicrobubbleDeliveryInput<'a> {
     pub radial_width_m: f64,
 }
 
+/// # Errors
+///
+/// Returns a descriptive error when input arrays have different lengths or a physical parameter
+/// is non-finite or outside its valid domain.
 pub fn ivus_microbubble_delivery_fraction(
     input: IvusMicrobubbleDeliveryInput<'_>,
 ) -> Result<Vec<f64>, String> {

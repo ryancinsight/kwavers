@@ -207,6 +207,11 @@ pub struct ClosedLoopCem43Fixture {
 /// references. The feedback trace models controller overshoot followed by
 /// damped convergence, with deterministic seed-controlled MR-thermometry jitter.
 /// CEM43 integration delegates directly to Asclepius.
+///
+/// # Errors
+///
+/// Returns [`KwaversError::InvalidInput`] when the step count, timestep, or temperatures violate
+/// the fixture's finite physical domain, or propagates the CEM43 integration failure.
 pub fn closed_loop_cem43_fixture(
     n_steps: usize,
     dt_s: f64,
