@@ -7069,6 +7069,11 @@ passes 45/45, doctests pass 1/1 (1 ignored), warning-denied rustdoc passes, and 
 workspace `unused_self` count is 117 sites with zero in `kwavers-grid`, `kwavers-signal`, and
 `kwavers-solver`.
 
+Exact integrated-head validation after PR #511 (`2b157eac8`) passes full Kwavers Nextest
+(530/530, eight configured skips, 13 slow tests reported), the package examples build, and both
+mdBook test/build commands; HTML is written to `target/book`. Test-generated PNG outputs were
+restored after the run, with no binary fixture deltas included.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.

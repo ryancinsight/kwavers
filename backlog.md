@@ -754,6 +754,11 @@
   constructors use the shared receiver-free helper. Package Nextest passes 45/45, doctests pass
   1/1 (1 ignored), warning-denied rustdoc passes, and the refreshed workspace `unused_self` count
   is 117 sites with zero in `kwavers-grid`, `kwavers-signal`, and `kwavers-solver`.
+- 2026-08-21 exact integrated-head validation after PR #511 (`2b157eac8`): full Kwavers Nextest
+  passes 530/530 with eight configured skips (13 slow tests reported); `cargo build --offline
+  -p kwavers --examples`, `mdbook test docs/book`, and `mdbook build docs/book` all exit 0, with
+  HTML written to `target/book`. Test-generated PNG outputs were restored and no binary fixture
+  deltas are included.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
