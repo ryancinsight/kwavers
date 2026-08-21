@@ -7281,6 +7281,12 @@ check, targeted `unused_self` Clippy (DAS path clean), Nextest (744/744), doctes
 and warning-denied rustdoc pass. The refreshed workspace `unused_self` count is 35 sites with 16
 remaining in other analysis paths.
 
+The `kwavers-analysis` neural network slice converts receiver-free feature concatenation to an
+associated function; forward processing and direct tests use associated-function syntax while layer
+weights remain receiver-bound. Package check, targeted `unused_self` Clippy (network path clean),
+Nextest (744/744), doctests (1/22; 21 ignored), and warning-denied rustdoc pass. The refreshed
+workspace `unused_self` count is 34 sites with 15 remaining in other analysis paths.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.
