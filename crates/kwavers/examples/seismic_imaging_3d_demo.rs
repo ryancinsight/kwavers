@@ -15,6 +15,12 @@
 // - Treeby & Cox 2010: JASA — fractional-Laplacian absorption.
 // - MNI ICBM 2009c: https://www.bic.mni.mcgill.ca/~vfonov/icbm/2009/
 
+#![expect(
+    clippy::print_stdout,
+    clippy::print_stderr,
+    reason = "The example's console report is its user-visible output contract"
+)]
+
 mod seismic_imaging;
 #[path = "seismic_imaging/metrics.rs"]
 mod seismic_metrics;
