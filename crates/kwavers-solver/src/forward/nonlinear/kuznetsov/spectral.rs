@@ -49,29 +49,35 @@ impl KuznetsovSpectralOperator {
         let ky_nyquist = PI / grid.dy;
         let kz_nyquist = PI / grid.dz;
 
-        let kx_vec = LetoArray1::from_iter((0..nx).map(|i| {
-            if i <= nx / 2 {
-                2.0 * kx_nyquist * i as f64 / nx as f64
-            } else {
-                2.0 * kx_nyquist * (i as f64 - nx as f64) / nx as f64
-            }
-        }));
+        let kx_vec: LetoArray1<f64> = (0..nx)
+            .map(|i| {
+                if i <= nx / 2 {
+                    2.0 * kx_nyquist * i as f64 / nx as f64
+                } else {
+                    2.0 * kx_nyquist * (i as f64 - nx as f64) / nx as f64
+                }
+            })
+            .collect();
 
-        let ky_vec = LetoArray1::from_iter((0..ny).map(|j| {
-            if j <= ny / 2 {
-                2.0 * ky_nyquist * j as f64 / ny as f64
-            } else {
-                2.0 * ky_nyquist * (j as f64 - ny as f64) / ny as f64
-            }
-        }));
+        let ky_vec: LetoArray1<f64> = (0..ny)
+            .map(|j| {
+                if j <= ny / 2 {
+                    2.0 * ky_nyquist * j as f64 / ny as f64
+                } else {
+                    2.0 * ky_nyquist * (j as f64 - ny as f64) / ny as f64
+                }
+            })
+            .collect();
 
-        let kz_vec = LetoArray1::from_iter((0..nz).map(|k| {
-            if k <= nz / 2 {
-                2.0 * kz_nyquist * k as f64 / nz as f64
-            } else {
-                2.0 * kz_nyquist * (k as f64 - nz as f64) / nz as f64
-            }
-        }));
+        let kz_vec: LetoArray1<f64> = (0..nz)
+            .map(|k| {
+                if k <= nz / 2 {
+                    2.0 * kz_nyquist * k as f64 / nz as f64
+                } else {
+                    2.0 * kz_nyquist * (k as f64 - nz as f64) / nz as f64
+                }
+            })
+            .collect();
 
         let fft = get_fft_for_grid(nx, ny, nz);
 

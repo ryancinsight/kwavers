@@ -335,17 +335,19 @@ impl AsContext {
         let dk_z = TWO_PI / (nr_exp as f64 * dr);
         let dk_x = TWO_PI / (nx as f64 * dx);
 
-        let r_sg = Array1::from_iter((0..nr).map(|m| (m as f64 + 0.5) * dr));
+        let r_sg: Array1<f64> = (0..nr).map(|m| (m as f64 + 0.5) * dr).collect();
 
-        let kz: Array1<f64> = Array1::from_iter((0..nr_exp).map(|k| {
-            let ki = k as i64;
-            let n = nr_exp as i64;
-            if ki <= n / 2 {
-                ki as f64 * dk_z
-            } else {
-                (ki - n) as f64 * dk_z
-            }
-        }));
+        let kz: Array1<f64> = (0..nr_exp)
+            .map(|k| {
+                let ki = k as i64;
+                let n = nr_exp as i64;
+                if ki <= n / 2 {
+                    ki as f64 * dk_z
+                } else {
+                    (ki - n) as f64 * dk_z
+                }
+            })
+            .collect();
 
         let ddy_k_shift_pos = kz
             .iter()
@@ -357,15 +359,17 @@ impl AsContext {
             .map(|&v| Complex64::from_polar(1.0, -v * dr / 2.0))
             .collect();
 
-        let kx: Array1<f64> = Array1::from_iter((0..nx).map(|i| {
-            let ii = i as i64;
-            let n = nx as i64;
-            if ii <= n / 2 {
-                ii as f64 * dk_x
-            } else {
-                (ii - n) as f64 * dk_x
-            }
-        }));
+        let kx: Array1<f64> = (0..nx)
+            .map(|i| {
+                let ii = i as i64;
+                let n = nx as i64;
+                if ii <= n / 2 {
+                    ii as f64 * dk_x
+                } else {
+                    (ii - n) as f64 * dk_x
+                }
+            })
+            .collect();
 
         let kappa_2d = Array2::from_shape_fn((nx, nr_exp), |[i, k]| {
             let k2d = kx[i].hypot(kz[k]);

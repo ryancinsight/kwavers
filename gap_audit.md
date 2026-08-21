@@ -7498,6 +7498,14 @@ optional normalization and Vandermonde path. Warning-denied package Clippy, Next
 doctests (1 passed; 21 ignored), and warning-denied Rustdoc pass. The production workspace count
 decreases from 10 to 9 sites, and the ratchet comment is updated.
 
+The `kwavers-solver` `from_iter_instead_of_collect` slice replaces seven spectral, quadrature, and
+axisymmetric propagator `Array1::from_iter` constructions with direct iterator collection,
+preserving the wavenumber formulas and grid shapes. Warning-denied package Clippy, Nextest
+(902/902 with 4 configured skips), doctests (5 passed; 8 ignored), and warning-denied Rustdoc pass.
+The production workspace count decreases from 9 to 2 sites, and the ratchet comment is updated.
+Nextest compilation reports two pre-existing test-only unused-variable warnings in unrelated RTM
+tests; they are outside this slice.
+
 Final exact-revision validation at merged revision `192eb7575` passes workspace Nextest (5,781/5,781
 with 7 configured skips) and workspace doctests with no failures. The previously recorded example
 build and mdBook test/build remain valid because the final changes are lint-only production edits and

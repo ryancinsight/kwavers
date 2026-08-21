@@ -1160,6 +1160,12 @@
   denied analysis Clippy, 744/744 Nextest, doctests (1 passed; 21 ignored), and warning-denied
   Rustdoc pass. The production workspace count decreases from 10 to 9 sites; the ratchet comment
   is updated.
+- 2026-08-21 `from_iter_instead_of_collect` solver slice is complete: Kuznetsov spectral vectors,
+  Fourier quadrature nodes, and axisymmetric propagator grids now collect directly into `Array1`.
+  Warning-denied solver Clippy, 902/902 Nextest with 4 configured skips, doctests (5 passed; 8
+  ignored), and warning-denied Rustdoc pass. The production workspace count decreases from 9 to 2
+  sites; the ratchet comment is updated. Nextest compilation also reports two pre-existing
+  test-only unused-variable warnings in unrelated RTM tests.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
