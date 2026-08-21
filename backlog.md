@@ -315,7 +315,7 @@
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | in progress | Codex | `crates/kwavers-solver/src/forward/hybrid/pstd_sem_coupling/coupler.rs` (`unused_self` slice; parent remains open) |
+| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | in progress | Codex | `crates/kwavers-solver/src/forward/hybrid/validation/suite.rs` (`unused_self` slice; parent remains open) |
 
 - Context: the clippy floor landed in #423. 21 of 24 crates already declared
   `[lints] workspace = true`, but no `[workspace.lints.clippy]` table existed for them to
@@ -534,6 +534,9 @@
 - 2026-08-21 PSTD/SEM coupling slice is implemented: the receiver-free continuity residual helper
   is an associated function with its caller migrated. Hybrid tests, doctests, and warning-denied
   rustdoc pass; the remaining solver sites stay queued.
+- 2026-08-21 PSTD/SEM coupling slice merged in PR #483 (`c1cc14a67`). The refreshed `unused_self`
+  measurement is 195 sites (solver 74); the next bounded slice is the three receiver-free helpers
+  in `forward/hybrid/validation/suite.rs`.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a

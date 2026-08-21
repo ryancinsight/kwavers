@@ -7073,6 +7073,10 @@ residual helper to an associated function. Focused Nextest run
 filtered); the package doctests pass 5/5 (8 ignored), warning-denied rustdoc
 passes, and the focused unused_self scan has zero warnings in `coupler.rs`.
 
+After PR #483, the workspace `unused_self` scan reports 195 sites, including
+74 in `kwavers-solver`. The next bounded slice is the three receiver-free
+helpers in `forward/hybrid/validation/suite.rs`.
+
 After PR #477, the workspace `unused_self` scan reports 211 sites, including
 90 in `kwavers-solver`. The next bounded slice is the receiver-free helper in
 `forward/hybrid/adaptive_selection/selector.rs`.
