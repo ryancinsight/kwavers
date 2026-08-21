@@ -759,6 +759,11 @@
   -p kwavers --examples`, `mdbook test docs/book`, and `mdbook build docs/book` all exit 0, with
   HTML written to `target/book`. Test-generated PNG outputs were restored and no binary fixture
   deltas are included.
+- 2026-08-21 `kwavers-mesh` tetrahedral face enumeration slice is implemented: the receiver-free
+  face helper is an associated function and both mesh connectivity callers are migrated. Package
+  check, `unused_self` Clippy, Nextest, doctests (1/1), and warning-denied rustdoc pass; the
+  refreshed workspace `unused_self` count is 116 sites with zero in `kwavers-mesh`,
+  `kwavers-grid`, `kwavers-signal`, and `kwavers-solver`.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
