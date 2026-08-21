@@ -880,6 +880,12 @@
   (1561/1561 with one configured skip), doctests (9/13; 4 ignored), and warning-denied rustdoc
   pass. The refreshed workspace `unused_self` count is 60 sites with 13 remaining in other
   physics domains.
+- 2026-08-21 `kwavers-physics` coded-excitation slice is implemented: Barker and Golay code
+  generation are associated functions; chirp generation remains receiver-bound for sampling
+  frequency configuration. Package check, targeted `unused_self` Clippy (coded-excitation paths
+  clean), Nextest (1561/1561 with one configured skip), doctests (9/13; 4 ignored), and
+  warning-denied rustdoc pass. The refreshed workspace `unused_self` count is 58 sites with 11
+  remaining in other physics domains.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a

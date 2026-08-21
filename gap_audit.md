@@ -7185,6 +7185,13 @@ for harmonic selection. Unit callers use associated-function syntax. Package che
 skip), doctests (9/13; 4 ignored), and warning-denied rustdoc pass. The refreshed workspace
 `unused_self` count is 60 sites with 13 remaining in other physics domains.
 
+The `kwavers-physics` coded-excitation slice converts Barker and Golay code generation to
+associated functions; chirp generation remains receiver-bound for sampling-frequency
+configuration. Package check, targeted `unused_self` Clippy (coded-excitation paths clean),
+Nextest (1561/1561 with one configured skip), doctests (9/13; 4 ignored), and warning-denied
+rustdoc pass. The refreshed workspace `unused_self` count is 58 sites with 11 remaining in other
+physics domains.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.
