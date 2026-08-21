@@ -315,7 +315,7 @@
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | in progress | Codex | `crates/kwavers-solver/src/inverse/fwi/frequency_domain` (next slice; parent remains open) |
+| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | in progress | Codex | `crates/kwavers-simulation/src/dispatch` (next slice; parent remains open) |
 
 - Context: the clippy floor landed in #423. 21 of 24 crates already declared
   `[lints] workspace = true`, but no `[workspace.lints.clippy]` table existed for them to
@@ -366,6 +366,10 @@
   found one `missing_errors_doc` site in the solver frequency-domain FWI operator. Its
   acceptance is strict package Clippy with the lint re-enabled, the package nextest gate,
   doctests, and warning-denied rustdoc; the workspace debt block remains unchanged.
+- 2026-08-21 solver FWI slice merged in PR #454 (`f9a2e3841`); the next workspace measurement
+  found 11 `missing_errors_doc` sites in `kwavers-simulation` dispatch modules. Its acceptance
+  is strict package Clippy with the lint re-enabled, the package nextest gate, doctests, and
+  warning-denied rustdoc; the workspace debt block remains unchanged.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a

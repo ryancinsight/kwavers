@@ -11,6 +11,11 @@ use kwavers_receiver::recorder::pressure_statistics::SampledStatistics;
 use kwavers_solver::forward::pstd::dg::{HybridSpectralDGConfig, HybridSpectralDGSolver};
 
 /// Run a discontinuous Galerkin (hybrid spectral) simulation.
+///
+/// # Errors
+///
+/// Returns an error when a DG time step or result extraction fails for the
+/// supplied grid and medium.
 pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult> {
     let sensor_mask = req
         .sensor_mask

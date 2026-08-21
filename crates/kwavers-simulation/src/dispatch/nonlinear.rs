@@ -13,6 +13,11 @@ use kwavers_source::Source;
 ///
 /// Uses the Westervelt FDTD solver for nonlinear acoustic propagation.
 /// Sources are built from the grid source's p0 field as simple point sources.
+///
+/// # Errors
+///
+/// Returns an error when nonlinearity is disabled, source construction fails,
+/// or a Westervelt update cannot advance the requested time step.
 pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult> {
     let nl = req.nonlinear.cloned().unwrap_or_default();
     if !nl.enabled {

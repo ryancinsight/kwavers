@@ -13,6 +13,11 @@ use kwavers_solver::forward::helmholtz::fem::{
 };
 
 /// Run a frequency-domain Helmholtz FEM simulation for the given request.
+///
+/// # Errors
+///
+/// Returns an error when the FEM system cannot be assembled, a source load is
+/// invalid, the linear solve fails, or result extraction cannot complete.
 pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult> {
     let c_max = req.medium.max_sound_speed();
     let wavenumber = if let Some(freq) = req.helmholtz.and_then(|h| h.frequency) {

@@ -100,6 +100,13 @@ the lint re-enabled and `-D warnings`; its nextest gate passes 901/901 tests
 with four skipped, doctests pass 5/13 with eight ignored, and warning-denied
 rustdoc passes. The workspace debt block remains unchanged.
 
+The next `missing_errors_doc` slice covers 11 public APIs in
+`kwavers-simulation` dispatch modules, including BEM, DG, elastic, FDTD,
+Helmholtz, nonlinear, poroelastic, PSTD, and Rayleigh-Sommerfeld routes. Strict
+package Clippy passes with the lint re-enabled and `-D warnings`; its nextest
+gate passes 87/87 tests, doctests pass 4/6 with two ignored, and warning-denied
+rustdoc passes. The workspace debt block remains unchanged.
+
 The complete example gate initially exposed an independent runtime defect in
 `focused_ultrasound_water_tank`: its five disjoint solver branches ran
 sequentially, and the comparison test terminated at 60 seconds. The provider

@@ -34,6 +34,11 @@ fn embed_leto3(
 // ── PSTD (acoustic-only) ──────────────────────────────────────────────────────
 
 /// Run a PSTD (acoustic-only) simulation.
+///
+/// # Errors
+///
+/// Returns an error when PSTD setup, source registration, propagation, or
+/// result extraction fails.
 pub fn run(
     req: &SimulationRunRequest<'_>,
     sources: Vec<Box<dyn KwaversSource>>,
@@ -46,6 +51,11 @@ pub fn run(
 // ── PSTD + Thermal ────────────────────────────────────────────────────────────
 
 /// Run a PSTD simulation with thermal coupling.
+///
+/// # Errors
+///
+/// Returns an error when PSTD or thermal setup fails, or when propagation and
+/// coupled result extraction cannot complete.
 pub fn run_with_thermal(
     req: &SimulationRunRequest<'_>,
     sources: Vec<Box<dyn KwaversSource>>,
