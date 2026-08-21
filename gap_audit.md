@@ -7263,6 +7263,12 @@ calibrated predictor state remains receiver-bound. Package check, targeted `unus
 pass. The refreshed workspace `unused_self` count is 42 sites with 23 remaining in other analysis
 paths.
 
+The `kwavers-analysis` ensemble uncertainty slice converts bootstrap sampling, weighted ensemble
+statistics, and diversity kernels to associated functions; model training and mutable weights remain
+receiver-bound. Package check, targeted `unused_self` Clippy (ensemble path clean), Nextest (744/744),
+doctests (1/22; 21 ignored), and warning-denied rustdoc pass. The refreshed workspace `unused_self`
+count is 40 sites with 21 remaining in other analysis paths.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.

@@ -88,7 +88,7 @@ impl EnsembleQuantifier {
             weights.push(model.weight);
         }
 
-        self.compute_ensemble_statistics(&predictions, &weights)
+        Self::compute_ensemble_statistics(&predictions, &weights)
     }
 
     /// Train ensemble models with bootstrap sampling
@@ -101,7 +101,7 @@ impl EnsembleQuantifier {
         training_targets: &[Array2<f32>],
     ) -> KwaversResult<()> {
         let bootstrap_samples: Vec<Vec<usize>> = (0..self.ensemble_models.len())
-            .map(|_| self.bootstrap_sample(training_data.len()))
+            .map(|_| Self::bootstrap_sample(training_data.len()))
             .collect();
 
         for (model_idx, bootstrap_indices) in bootstrap_samples.into_iter().enumerate() {
@@ -121,7 +121,7 @@ impl EnsembleQuantifier {
     }
 
     /// Generate bootstrap sample indices
-    pub(super) fn bootstrap_sample(&self, n_samples: usize) -> Vec<usize> {
+    pub(super) fn bootstrap_sample(n_samples: usize) -> Vec<usize> {
         use rand::rngs::StdRng;
         use rand::{Rng, SeedableRng};
 
@@ -138,7 +138,6 @@ impl EnsembleQuantifier {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(super) fn compute_ensemble_statistics(
-        &self,
         predictions: &[Array2<f32>],
         weights: &[f64],
     ) -> KwaversResult<super::MlPredictionWithUncertainty> {
@@ -182,7 +181,7 @@ impl EnsembleQuantifier {
         let ci_95_upper = &mean_prediction + &(&uncertainty * ci_factor);
         confidence_intervals.insert("95%".to_owned(), (ci_95_lower, ci_95_upper));
 
-        let diversity = self.compute_ensemble_diversity(predictions);
+        let diversity = Self::compute_ensemble_diversity(predictions);
         let reliability_score = 1.0 / (1.0 + diversity);
 
         Ok(super::MlPredictionWithUncertainty {
@@ -194,7 +193,7 @@ impl EnsembleQuantifier {
     }
 
     /// Compute ensemble diversity (disagreement between models)
-    pub(super) fn compute_ensemble_diversity(&self, predictions: &[Array2<f32>]) -> f64 {
+    pub(super) fn compute_ensemble_diversity(predictions: &[Array2<f32>]) -> f64 {
         if predictions.len() < 2 {
             return 0.0;
         }
@@ -227,8 +226,8 @@ impl EnsembleQuantifier {
         predictions: &[Array2<f32>],
         weights: &[f64],
     ) -> KwaversResult<EnsembleResult> {
-        let stats = self.compute_ensemble_statistics(predictions, weights)?;
-        let diversity_score = self.compute_ensemble_diversity(predictions);
+        let stats = Self::compute_ensemble_statistics(predictions, weights)?;
+        let diversity_score = Self::compute_ensemble_diversity(predictions);
 
         Ok(EnsembleResult {
             predictions: predictions.to_vec(),
