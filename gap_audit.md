@@ -1,4 +1,17 @@
-## KW-EXAMPLES-115 — Seismic example partition closure 2026-08-20
+## KW-EXAMPLES-115 — Seismic example partition closure 2026-08-21
+
+### Integration closure
+
+PR #426 merged the exact validated head
+`5cdc7d34e5db0f791e862ed55cb61319bf648d94` as
+`051a322165411826ffdbd5654b68b092814b3d77`; `origin/main` contains the merge
+commit. Local evidence is the full workspace Nextest gate (6,279/6,279, 15
+skipped), the Kwavers package gate (530/530), the isolated plane-wave regression
+(1/1 in 30.927 seconds), strict all-target Clippy, the Kwavers doctest (1/1),
+and both mdBook test/build gates. The six pull-request workflows remained queued
+(`32439952601`, `32439952614`, `32439952635`, `32439952620`, `32439952636`,
+`32439952863`); the repository has no required branch-protection checks, so
+hosted execution is advisory residual risk and is not represented as passing.
 
 The transcranial FWI entry points are manifests over SRP leaf modules: the 3-D
 workflow is 347 lines and the 2-D workflow is 465 lines. The fixed-grid
@@ -26,10 +39,10 @@ serialized full-grid test group so full-workspace CPU contention cannot turn a
 31-second test into a false 60-second timeout; the production workload and
 timeout contract remain unchanged.
 
-The local exact-head gates are complete on `e045b1974`, after merging current
-`origin/main` as `d0856b8b1` and removing a redundant `ArrayView` clone exposed
-by strict Clippy, then applying the verified review-fix slice. The residual is
-hosted PR verification and merge of the exact pushed head.
+The local exact-head gates were completed before PR #426 integration, after
+merging current `origin/main` and removing a redundant `ArrayView` clone exposed
+by strict Clippy, then applying the verified review-fix slice. The integration
+closure above records the resulting merge and the hosted queue residual.
 
 The complete example gate initially exposed an independent runtime defect in
 `focused_ultrasound_water_tank`: its five disjoint solver branches ran

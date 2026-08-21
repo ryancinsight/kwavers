@@ -479,11 +479,11 @@
   `32329958998` completed successfully, including 10/10 architecture jobs and
   11/11 CI jobs.
 
-## KW-EXAMPLES-115 — Type and partition the seismic example workflows [major] [arch] — local gates complete; hosted verification pending 2026-08-20
+## KW-EXAMPLES-115 — Type and partition the seismic example workflows [major] [arch] — closed 2026-08-21
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-EXAMPLES-115 | Replace the three seismic example monoliths with explicit typed workflows that call Atlas providers directly and document value-semantic 2-D/3-D behavior. | [major] [arch] | local gates complete; hosted verification pending | Codex | `crates/kwavers/examples/{seismic_imaging_demo,seismic_imaging_3d_demo,transcranial_fwi}*`, shared seismic modules, `kwavers-signal`/`kwavers-solver` provider call sites, `crates/kwavers/Cargo.toml`, seismic book pages, ADR 117, PM artifacts |
+| KW-EXAMPLES-115 | Replace the three seismic example monoliths with explicit typed workflows that call Atlas providers directly and document value-semantic 2-D/3-D behavior. | [major] [arch] | closed | Codex | `crates/kwavers/examples/{seismic_imaging_demo,seismic_imaging_3d_demo,transcranial_fwi}*`, shared seismic modules, `kwavers-signal`/`kwavers-solver` provider call sites, `crates/kwavers/Cargo.toml`, seismic book pages, ADR 117, PM artifacts |
 
 - Acceptance: each example entry point is a manifest over SRP leaf modules no
   larger than 500 lines; shared acquisition, CT, physical configuration,
@@ -683,8 +683,8 @@
   package-plus-example Nextest run `37c67cf0-17bf-445d-9d8c-170e3608c568`
   passes 116/116 in 43.604 seconds; workspace rustfmt, strict all-example
   Clippy, `cargo test --doc --offline -p kwavers` (1/1), `mdbook test
-  docs/book`, and `mdbook build docs/book` pass. `KW-EXAMPLES-115` is ready
-  for hosted verification and integration.
+  docs/book`, and `mdbook build docs/book` pass. The exact head was
+  subsequently integrated as PR #426.
 - 2026-08-20 example-gate runtime slice: the focused water-tank comparison's
   independent FDTD, PSTD, DG-2D, DG-3D, and DG-3D-CPML branches now overlap
   through the provider-owned Moirai `Parallel` join. The complete example
@@ -724,6 +724,16 @@
 - Verification: strict focused Clippy, example unit tests through Nextest,
   doctests, bounded synthetic runs with value-semantic artifacts, mdBook tests
   and build, link/residue audits, and exact-head hosted CI before merge.
+- 2026-08-21 integration closure: PR #426 merged with exact head
+  `5cdc7d34e5db0f791e862ed55cb61319bf648d94` as merge commit
+  `051a322165411826ffdbd5654b68b092814b3d77`; `origin/main` contains that
+  commit. The local full-workspace gate, package gate, focused plane-wave
+  regression, strict Clippy, doctest, and mdBook gates above are the acceptance
+  evidence. Pull-request workflows `32439952601`, `32439952614`,
+  `32439952635`, `32439952620`, `32439952636`, and `32439952863` remained queued
+  because the repository has no required branch-protection checks; this is
+  retained as advisory hosted residual risk rather than a claim of hosted
+  success.
 
 ## ATLAS-KWAVERS-HEPHAESTUS-FDTD-107 — Route collocated FDTD through Hephaestus [minor] [arch] — Apollo co-evolution blocker 2026-08-18
 
