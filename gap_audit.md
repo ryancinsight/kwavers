@@ -7074,6 +7074,12 @@ Exact integrated-head validation after PR #511 (`2b157eac8`) passes full Kwavers
 mdBook test/build commands; HTML is written to `target/book`. Test-generated PNG outputs were
 restored after the run, with no binary fixture deltas included.
 
+The `kwavers-mesh` tetrahedral face-enumeration slice converts its receiver-free helper to an
+associated function and migrates both mesh connectivity callers. Package check, `unused_self`
+Clippy, Nextest, doctests (1/1), and warning-denied rustdoc pass; the refreshed workspace
+`unused_self` count is 116 sites with zero in `kwavers-mesh`, `kwavers-grid`, `kwavers-signal`,
+and `kwavers-solver`.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.
