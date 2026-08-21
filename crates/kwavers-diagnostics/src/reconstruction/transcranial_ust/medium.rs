@@ -44,6 +44,11 @@ pub struct AcousticSlice {
 }
 
 /// Select the axial slice with the largest non-air head support.
+///
+/// # Errors
+///
+/// Returns an error when the CT volume has no slices or contains no supported
+/// head region.
 pub fn select_head_slice(volume_hu: &Array3<f64>) -> KwaversResult<usize> {
     let [_, _, nz] = volume_hu.shape();
     if nz == 0 {
@@ -74,6 +79,11 @@ pub fn select_head_slice(volume_hu: &Array3<f64>) -> KwaversResult<usize> {
 }
 
 /// Crop the head support from a CT slice and resample it onto a square grid.
+///
+/// # Errors
+///
+/// Returns an error when the CT spacing, slice index, or target grid size is
+/// invalid, or when the selected slice has no head support.
 pub fn resample_head_slice(
     volume_hu: &Array3<f64>,
     spacing_mm: [f64; 3],
@@ -145,11 +155,21 @@ pub fn resample_head_slice(
 
 impl AcousticSlice {
     /// Convert resampled CT HU values to acoustic speed and inversion masks.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the CT array is empty, spacing is invalid, or the
+    /// values cannot produce finite acoustic fields.
     pub fn from_ct_hu(ct_hu: Array2<f64>, spacing_m: f64) -> KwaversResult<Self> {
         Self::from_ct_hu_at_offset(ct_hu, spacing_m, 0.0)
     }
 
     /// Convert resampled CT HU values at a fixed axial offset into acoustic fields.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the CT array is empty, spacing or offset is
+    /// invalid, or the values cannot produce finite acoustic fields.
     pub fn from_ct_hu_at_offset(
         ct_hu: Array2<f64>,
         spacing_m: f64,

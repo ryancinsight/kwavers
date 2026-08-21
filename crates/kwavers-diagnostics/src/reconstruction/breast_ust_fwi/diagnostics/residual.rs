@@ -10,6 +10,12 @@ pub enum BreastUstReceiverChannelPolicy {
 }
 
 impl BreastUstReceiverChannelPolicy {
+    /// Parse a receiver-channel policy from its stable configuration name.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when `value` is not `all`, `active_only`, or
+    /// `passive_only`.
     pub fn parse(value: &str) -> KwaversResult<Self> {
         match value {
             "all" => Ok(Self::All),
@@ -79,6 +85,12 @@ pub struct BreastUstSourceChannelResidualDiagnostics {
     pub passive_full_scale_residual_energy_fraction: f64,
 }
 
+/// Compute source-scaled residual metrics for selected receiver channels.
+///
+/// # Errors
+///
+/// Returns an error when the observation cubes or optional receiver mask have
+/// incompatible shapes, or when selected observations have zero energy.
 pub fn scaled_observation_residual_metrics(
     predicted: &Array3<Complex64>,
     observed: &Array3<Complex64>,
@@ -199,6 +211,12 @@ pub(crate) fn scaled_observation_residual_metrics_by_policy(
     })
 }
 
+/// Separate residual metrics into active and passive source channels.
+///
+/// # Errors
+///
+/// Returns an error when the observation shape or ring topology is invalid, or
+/// when the selected observations have zero energy.
 pub fn source_channel_residual_diagnostics(
     predicted: &Array3<Complex64>,
     observed: &Array3<Complex64>,
@@ -243,6 +261,12 @@ pub fn source_channel_residual_diagnostics(
     })
 }
 
+/// Build the active-source receiver mask for a ring acquisition.
+///
+/// # Errors
+///
+/// Returns an error when the observation shape or ring dimensions are
+/// inconsistent.
 pub fn source_receiver_mask(
     observation_shape: (usize, usize, usize),
     circumferential_elements: usize,
@@ -278,6 +302,12 @@ pub fn source_receiver_mask(
     Ok(mask)
 }
 
+/// Build the complement of the active-source receiver mask.
+///
+/// # Errors
+///
+/// Returns an error when the observation shape or ring dimensions are
+/// inconsistent.
 pub fn passive_receiver_mask(
     observation_shape: (usize, usize, usize),
     circumferential_elements: usize,

@@ -24,6 +24,12 @@ pub struct BreastUstTable1Parity {
     pub passes: bool,
 }
 
+/// Compute RMSE, normalized RMSE, and Pearson correlation for two volumes.
+///
+/// # Errors
+///
+/// Returns an error when the volumes have incompatible shapes, empty data, a
+/// zero reference RMS, or constant inputs for correlation.
 pub fn reconstruction_metrics(
     reference_m_s: &Array3<f64>,
     estimate_m_s: &Array3<f64>,
@@ -81,6 +87,11 @@ pub fn reconstruction_metrics(
     })
 }
 
+/// Evaluate reconstruction metrics against the Ali et al. Table 1 thresholds.
+///
+/// # Errors
+///
+/// Returns an error when the phantom index or any metric threshold is invalid.
 pub fn table1_parity(
     rmse_m_s: f64,
     pearson_correlation: f64,

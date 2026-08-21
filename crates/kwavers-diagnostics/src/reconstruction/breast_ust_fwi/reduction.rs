@@ -46,6 +46,13 @@ pub struct BreastUstReducedArrayPlan {
     pub row_policy: BreastUstReducedArrayRowPolicy,
 }
 
+/// Prepare a centered, decimated breast phantom for reduced-domain probes.
+///
+/// # Errors
+///
+/// Returns an error when the source volume, spacing, maximum shape, or
+/// decimation factor is invalid, or when the reduced volume has no finite
+/// median sound speed.
 pub fn prepare_reduced_breast_ust_phantom(
     sound_speed_m_s: &Array3<f64>,
     source_spacing_m: f64,
@@ -104,6 +111,12 @@ pub fn prepare_reduced_breast_ust_phantom(
     })
 }
 
+/// Derive ring diameter and row spacing for a reduced breast acquisition.
+///
+/// # Errors
+///
+/// Returns an error when the grid, spacing, row count, or optional geometry
+/// overrides are invalid or exceed the finite reduced domain.
 pub fn derive_reduced_breast_ust_array_geometry(
     shape: (usize, usize, usize),
     spacing_m: f64,

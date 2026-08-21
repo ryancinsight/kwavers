@@ -40,6 +40,11 @@ impl TransducerGeometry for TranscranialBowlGeometry {
 
 impl TranscranialBowlGeometry {
     /// Place `element_count` elements on a deterministic equal-area bowl aperture.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the element count, radius, or angular aperture is
+    /// invalid.
     pub fn from_aperture(
         element_count: usize,
         radius: Length<f64>,
