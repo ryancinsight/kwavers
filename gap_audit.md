@@ -7050,6 +7050,11 @@ Nextest suite (530/530, eight configured skips), builds all package examples, an
 `mdbook test docs/book` and `mdbook build docs/book` with HTML in `target/book`. Test-generated
 PNG outputs were restored after the run; no binary fixture deltas are part of the integrated head.
 
+The `kwavers-math` stateless geometry slice converts `linear_geometry` to an associated helper
+and migrates both contiguous gradient/divergence callers. Package Nextest passes 196/196, package
+doctests pass 3/3 (7 ignored), warning-denied rustdoc passes, and the refreshed workspace
+`unused_self` count is 120 sites.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.

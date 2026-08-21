@@ -315,7 +315,7 @@
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | in progress | Codex | `crates/kwavers-solver/src/integration/time_integration/time_scale_separation.rs` (`unused_self` slice; parent remains open) |
+| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | in progress | Codex | Workspace `unused_self` burn-down; `kwavers-solver` is at zero, current slice `kwavers-math/src/numerics/operators/differential/staggered_leapfrog.rs` |
 
 - Context: the clippy floor landed in #423. 21 of 24 crates already declared
   `[lints] workspace = true`, but no `[workspace.lints.clippy]` table existed for them to
@@ -738,6 +738,10 @@
   exits 0; `mdbook test docs/book` exits 0 across all listed chapters; and `mdbook build docs/book`
   exits 0 with HTML written to `target/book`. The test run regenerated tracked PNG outputs locally;
   those derived deltas were restored and no binary fixture changes are included.
+- 2026-08-21 `kwavers-math` stateless geometry slice is implemented: `linear_geometry` is an
+  associated helper with both contiguous gradient/divergence callers migrated. Package Nextest
+  passes 196/196, package doctests pass 3/3 (7 ignored), warning-denied rustdoc passes, and the
+  refreshed workspace `unused_self` count is 120 sites.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
