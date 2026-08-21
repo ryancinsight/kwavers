@@ -592,6 +592,9 @@
   warning-denied rustdoc passes, and the focused `unused_self` scan is clean in the touched FWI
   modules. The increment is ready for integration; the workspace debt-block line remains until
   a refreshed workspace measurement confirms the count.
+- 2026-08-21 FWI constraints slice merged in PR #491 (`90a305ba4`). The refreshed `unused_self`
+  measurement is 182 sites (solver 61); the next bounded slice is the three receiver-free FWI
+  helpers in `inverse/fwi/time_domain/forward.rs` and `gradient.rs`.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
