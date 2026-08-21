@@ -12,14 +12,14 @@ impl Multilateration {
         measured_range_diffs: &[f64],
     ) -> Vec<f64> {
         let ref_pos = &self.sensor_positions[0];
-        let ref_range = self.distance(position, ref_pos);
+        let ref_range = Self::distance(position, ref_pos);
 
         measured_range_diffs
             .iter()
             .enumerate()
             .map(|(i, &measured)| {
                 let sensor_pos = &self.sensor_positions[i + 1];
-                let range = self.distance(position, sensor_pos);
+                let range = Self::distance(position, sensor_pos);
                 measured - (range - ref_range)
             })
             .collect()
@@ -27,7 +27,7 @@ impl Multilateration {
 
     pub(super) fn compute_jacobian(&self, position: &[f64; 3]) -> Vec<[f64; 3]> {
         let ref_pos = &self.sensor_positions[0];
-        let ref_range = self.distance(position, ref_pos);
+        let ref_range = Self::distance(position, ref_pos);
 
         let ref_dx = (position[0] - ref_pos[0]) / ref_range;
         let ref_dy = (position[1] - ref_pos[1]) / ref_range;
@@ -36,7 +36,7 @@ impl Multilateration {
         (1..self.num_sensors)
             .map(|i| {
                 let sensor_pos = &self.sensor_positions[i];
-                let range = self.distance(position, sensor_pos);
+                let range = Self::distance(position, sensor_pos);
                 let dx = (position[0] - sensor_pos[0]) / range;
                 let dy = (position[1] - sensor_pos[1]) / range;
                 let dz = (position[2] - sensor_pos[2]) / range;
@@ -45,7 +45,7 @@ impl Multilateration {
             .collect()
     }
 
-    pub(super) fn distance(&self, p1: &[f64; 3], p2: &[f64; 3]) -> f64 {
+    pub(super) fn distance(p1: &[f64; 3], p2: &[f64; 3]) -> f64 {
         let dx = p1[0] - p2[0];
         let dy = p1[1] - p2[1];
         let dz = p1[2] - p2[2];
