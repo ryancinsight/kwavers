@@ -10,7 +10,10 @@ lines), keeping every seismic leaf below the 500-line target. Exact local
 package-plus-example Nextest run `37c67cf0-17bf-445d-9d8c-170e3608c568`
 passes 116/116 in 43.604 seconds; workspace rustfmt, strict example Clippy,
 the Kwavers doctest (1/1), and the mdBook test/build gates pass. No fallback or
-compatibility path is added.
+compatibility path is added. Review-fix verification on the current code head
+passes Nextest run `2bbe3774-be78-4a3e-86c6-e4499b1359a3` (116/116 in 42.798
+seconds), strict all-target Clippy, package checks, the Kwavers doctest (1/1),
+and both mdBook gates.
 
 The local exact-head gates are complete on `d6a7aab52`, after merging current
 `origin/main` as `d0856b8b1` and removing a redundant `ArrayView` clone exposed

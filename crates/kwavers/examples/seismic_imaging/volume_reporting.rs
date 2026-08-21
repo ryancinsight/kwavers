@@ -22,23 +22,12 @@ pub(super) fn write_outputs(
 
     let c_lo = kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     let c_hi = SOUND_SPEED_SKULL_CORTICAL;
-    let axial_path = abs_dir.join("brain3d_fwi_axial.png");
-    let coronal_path = abs_dir.join("brain3d_fwi_coronal.png");
-    let sagittal_path = abs_dir.join("brain3d_fwi_sagittal.png");
+    let skull_path = abs_dir.join("brain3d_fwi_orthogonal.png");
     let t1_tissue_path = abs_dir.join("brain3d_t1_tissue.png");
     let brain_tissue_path = abs_dir.join("brain3d_brain_tissue.png");
 
-    seismic_volume_artifacts::write_orthogonal_slices_png(&axial_path, reconstructed, c_lo, c_hi)
-        .map_err(|e| KwaversError::InvalidInput(format!("axial PNG write failed: {e}")))?;
-    seismic_volume_artifacts::write_orthogonal_slices_png(&coronal_path, reconstructed, c_lo, c_hi)
-        .map_err(|e| KwaversError::InvalidInput(format!("coronal PNG write failed: {e}")))?;
-    seismic_volume_artifacts::write_orthogonal_slices_png(
-        &sagittal_path,
-        reconstructed,
-        c_lo,
-        c_hi,
-    )
-    .map_err(|e| KwaversError::InvalidInput(format!("sagittal PNG write failed: {e}")))?;
+    seismic_volume_artifacts::write_orthogonal_slices_png(&skull_path, reconstructed, c_lo, c_hi)
+        .map_err(|e| KwaversError::InvalidInput(format!("skull PNG write failed: {e}")))?;
 
     if let Some(t1_brain) = t1_brain_model {
         seismic_volume_artifacts::write_orthogonal_slices_png(
@@ -66,9 +55,7 @@ pub(super) fn write_outputs(
     println!("\n  Wrote images:");
     println!(
         "    {}  (axial+coronal+sagittal skull velocity, reconstructed)",
-        axial_path.display()
+        skull_path.display()
     );
-    println!("    {}", coronal_path.display());
-    println!("    {}", sagittal_path.display());
     Ok(())
 }

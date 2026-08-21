@@ -21,8 +21,10 @@ pub(crate) fn select_series(mut series: Vec<DicomSeriesInfo>) -> DicomSeriesInfo
     }
 
     if maximum_file_count <= 1 {
+        let has_ct_series = series.iter().any(|candidate| candidate.modality() == "CT");
         let all_paths: Vec<_> = series
             .iter_mut()
+            .filter(|candidate| !has_ct_series || candidate.modality() == "CT")
             .flat_map(|candidate| candidate.file_paths.drain(..))
             .collect();
         let count = all_paths.len();

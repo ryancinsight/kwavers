@@ -24,6 +24,12 @@ pub(super) fn load_t1_mri(path: &Path) -> anyhow::Result<(Array3<f64>, [f64; 3])
 
     let [depth, rows, cols] = img.shape();
     let spacing = img.spacing().into_vector().to_array();
+    anyhow::ensure!(
+        spacing
+            .iter()
+            .all(|value| value.is_finite() && *value > 0.0),
+        "T1 spacing must be finite and positive, got {spacing:?}"
+    );
     let values = img
         .data_slice()
         .map_err(|e| anyhow::anyhow!("T1 tensor data is not f32: {e:?}"))?;
@@ -86,7 +92,12 @@ pub(super) fn build_brain_velocity_from_t1(
 
     let fwi_inner_mm = R_SKULL_IN * DX * 1e3;
     let t1_inner_skull_mm = MNI_INNER_SKULL_RADIUS_MM;
-    let fwi_to_t1 = t1_inner_skull_mm / (fwi_inner_mm * t1_spacing[0]);
+    let fwi_to_t1_mm = t1_inner_skull_mm / fwi_inner_mm;
+    let fwi_to_t1 = [
+        DX * 1e3 * fwi_to_t1_mm / t1_spacing[0],
+        DX * 1e3 * fwi_to_t1_mm / t1_spacing[1],
+        DX * 1e3 * fwi_to_t1_mm / t1_spacing[2],
+    ];
 
     let mut model = skull_phantom.acoustic().sound_speed.clone();
 
@@ -101,9 +112,9 @@ pub(super) fn build_brain_velocity_from_t1(
                     continue;
                 }
 
-                let tx = (cx_t1 + dx_fwi * fwi_to_t1).clamp(0.0, t1_nx as f64 - 1.001);
-                let ty = (cy_t1 + dy_fwi * fwi_to_t1).clamp(0.0, t1_ny as f64 - 1.001);
-                let tz = (cz_t1 + dz_fwi * fwi_to_t1).clamp(0.0, t1_nz as f64 - 1.001);
+                let tx = (cx_t1 + dx_fwi * fwi_to_t1[0]).clamp(0.0, t1_nx as f64 - 1.001);
+                let ty = (cy_t1 + dy_fwi * fwi_to_t1[1]).clamp(0.0, t1_ny as f64 - 1.001);
+                let tz = (cz_t1 + dz_fwi * fwi_to_t1[2]).clamp(0.0, t1_nz as f64 - 1.001);
 
                 let t1_val = seismic_volume_phantom::trilinear_hu(t1, tx, ty, tz);
                 model[[ix, iy, iz]] = t1_to_velocity(t1_val);
@@ -141,7 +152,7 @@ fn build_brain_velocity_3d(
 ) -> anyhow::Result<Array3<f64>> {
     let backend = MoiraiBackend;
 
-    let load = |name: &str| -> anyhow::Result<Array3<f64>> {
+    let load = |name: &str| -> anyhow::Result<(Array3<f64>, [f64; 3])> {
         let path = mni_dir.join(name);
         anyhow::ensure!(
             path.exists(),
@@ -152,6 +163,13 @@ fn build_brain_velocity_3d(
         let img = ImageReader::read(&NativeNiftiReader::new(backend), &path)
             .with_context(|| format!("NIfTI load failed: '{}'", path.display()))?;
         let [depth, rows, cols] = img.shape();
+        let spacing = img.spacing().into_vector().to_array();
+        anyhow::ensure!(
+            spacing
+                .iter()
+                .all(|value| value.is_finite() && *value > 0.0),
+            "MNI spacing must be finite and positive, got {spacing:?}"
+        );
         let vals = img
             .data_slice()
             .map_err(|e| anyhow::anyhow!("NIfTI data not f32: {e:?}"))?;
@@ -164,12 +182,20 @@ fn build_brain_velocity_3d(
                 }
             }
         }
-        Ok(vol)
+        Ok((vol, [spacing[0], spacing[1], spacing[2]]))
     };
 
-    let gm = load("mni_icbm152_gm_tal_nlin_sym_09c.nii")?;
-    let wm = load("mni_icbm152_wm_tal_nlin_sym_09c.nii")?;
-    let csf = load("mni_icbm152_csf_tal_nlin_sym_09c.nii")?;
+    let (gm, mni_spacing) = load("mni_icbm152_gm_tal_nlin_sym_09c.nii")?;
+    let (wm, wm_spacing) = load("mni_icbm152_wm_tal_nlin_sym_09c.nii")?;
+    let (csf, csf_spacing) = load("mni_icbm152_csf_tal_nlin_sym_09c.nii")?;
+    anyhow::ensure!(
+        wm.shape() == gm.shape() && csf.shape() == gm.shape(),
+        "MNI tissue maps must have identical shapes"
+    );
+    anyhow::ensure!(
+        wm_spacing == mni_spacing && csf_spacing == mni_spacing,
+        "MNI tissue maps must have identical spacing"
+    );
 
     let [mni_nx, mni_ny, mni_nz] = gm.shape();
     let cx_mni = mni_nx / 2;
@@ -190,9 +216,12 @@ fn build_brain_velocity_3d(
                     continue;
                 }
 
-                let mni_x = (cx_mni as f64 + dx_fwi * DX * 1e3 * fwi_to_mni).round() as isize;
-                let mni_y = (cy_mni as f64 + dy_fwi * DX * 1e3 * fwi_to_mni).round() as isize;
-                let mni_z = (cz_mni as f64 + dz_fwi * DX * 1e3 * fwi_to_mni).round() as isize;
+                let mni_x = (cx_mni as f64 + dx_fwi * DX * 1e3 * fwi_to_mni / mni_spacing[0])
+                    .round() as isize;
+                let mni_y = (cy_mni as f64 + dy_fwi * DX * 1e3 * fwi_to_mni / mni_spacing[1])
+                    .round() as isize;
+                let mni_z = (cz_mni as f64 + dz_fwi * DX * 1e3 * fwi_to_mni / mni_spacing[2])
+                    .round() as isize;
                 if mni_x < 0
                     || mni_x >= mni_nx as isize
                     || mni_y < 0

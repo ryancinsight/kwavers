@@ -34,7 +34,7 @@ pub(crate) fn run() -> KwaversResult<()> {
             let path = path.to_str().ok_or_else(|| {
                 KwaversError::InvalidInput("CT input path is not valid UTF-8".to_owned())
             })?;
-            load_ct_slice(path, "", 0)?
+            load_ct_slice(path, None)?
         }
         SeismicInputMode::CtMri { .. } => {
             return Err(KwaversError::InvalidInput(

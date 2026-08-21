@@ -17,7 +17,13 @@ pub enum SeismicInputMode {
 impl SeismicInputMode {
     /// Read a mode from an environment variable, defaulting to the synthetic mode.
     pub fn from_env(variable: &str) -> Result<Self, String> {
-        let value = std::env::var(variable).unwrap_or_else(|_| "synthetic".to_owned());
+        let value = match std::env::var(variable) {
+            Ok(value) => value,
+            Err(std::env::VarError::NotPresent) => "synthetic".to_owned(),
+            Err(std::env::VarError::NotUnicode(_)) => {
+                return Err(format!("{variable} contains invalid Unicode"));
+            }
+        };
         Self::from_str(&value)
     }
 }

@@ -46,8 +46,7 @@ pub(crate) fn build_skull_phantom() -> KwaversResult<SkullModel> {
 /// Load a coronal CT slice from a NIfTI file and resample it to the demo grid.
 pub(crate) fn load_ct_slice(
     ct_nifti_path: &str,
-    _mri_nifti_path: &str,
-    _slice_index: usize,
+    slice_index: Option<usize>,
 ) -> KwaversResult<SkullModel> {
     use ritk_io::format::nifti::native::NiftiReader;
 
@@ -69,8 +68,9 @@ pub(crate) fn load_ct_slice(
         .iter()
         .map(|&value| value as f64)
         .collect();
-    let (source_nx, source_ny, source_nz) = (dimensions[0], dimensions[1], dimensions[2]);
-    let coronal_index = source_ny / 2;
+    // ritk exposes NIfTI data as [depth, rows, cols] with z-major storage.
+    let (source_nz, source_ny, source_nx) = (dimensions[0], dimensions[1], dimensions[2]);
+    let coronal_index = slice_index.unwrap_or(source_ny / 2).min(source_ny - 1);
     let scale_x = source_nx as f64 / GridSpec::NX as f64;
     let scale_z = source_nz as f64 / GridSpec::NZ as f64;
     let mut hu = Array3::<f64>::from_elem(
@@ -80,13 +80,13 @@ pub(crate) fn load_ct_slice(
 
     for i in 0..GridSpec::NX {
         for k in 0..GridSpec::NZ {
-            let source_i = ((i as f64 * scale_x) as usize).min(source_nx - 1);
-            let source_k = ((k as f64 * scale_z) as usize).min(source_nz - 1);
-            let index = source_i
+            let source_x = ((i as f64 * scale_x) as usize).min(source_nx - 1);
+            let source_z = ((k as f64 * scale_z) as usize).min(source_nz - 1);
+            let index = source_z
                 .checked_mul(source_ny)
-                .and_then(|value| value.checked_mul(source_nz))
-                .and_then(|value| value.checked_add(coronal_index * source_nz))
-                .and_then(|value| value.checked_add(source_k))
+                .and_then(|value| value.checked_mul(source_nx))
+                .and_then(|value| value.checked_add(coronal_index * source_nx))
+                .and_then(|value| value.checked_add(source_x))
                 .ok_or_else(|| KwaversError::InvalidInput("CT voxel index overflow".to_owned()))?;
             let voxel = *values.get(index).ok_or_else(|| {
                 KwaversError::InvalidInput(format!(

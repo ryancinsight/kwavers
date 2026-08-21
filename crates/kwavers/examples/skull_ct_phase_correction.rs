@@ -49,6 +49,8 @@ const C_WATER_M_PER_S: f64 = 1482.0;
 const C_CORTICAL_BONE_M_PER_S: f64 = 2800.0;
 const RHO_WATER_KG_PER_M3: f64 = 1000.0;
 const RHO_CORTICAL_BONE_KG_PER_M3: f64 = 1900.0;
+const CORTICAL_BONE_ATTENUATION_NP_PER_M: f64 = 20.0;
+const CORTICAL_BONE_THICKNESS_M: f64 = 0.007;
 const HU_BONE_LOWER: f64 = 300.0;
 const PANEL: usize = 384;
 const MAP_PANEL: usize = 384;
@@ -294,8 +296,8 @@ fn skull_from_hu(ct: &CtVolume) -> Result<HeterogeneousSkull> {
     let bone = AcousticSkullProperties::new(
         Velocity::from_base(C_CORTICAL_BONE_M_PER_S),
         MassDensity::from_base(RHO_CORTICAL_BONE_KG_PER_M3),
-        ReciprocalLength::from_base(20.0),
-        Length::from_base(0.007),
+        ReciprocalLength::from_base(CORTICAL_BONE_ATTENUATION_NP_PER_M),
+        Length::from_base(CORTICAL_BONE_THICKNESS_M),
         None,
     )?;
     Ok(HeterogeneousSkull::from_ct_hill(&ct.hu, &bone)?)
@@ -1388,8 +1390,8 @@ mod tests {
         let bone = AcousticSkullProperties::new(
             Velocity::from_base(C_CORTICAL_BONE_M_PER_S),
             MassDensity::from_base(RHO_CORTICAL_BONE_KG_PER_M3),
-            ReciprocalLength::from_base(20.0),
-            Length::from_base(0.007),
+            ReciprocalLength::from_base(CORTICAL_BONE_ATTENUATION_NP_PER_M),
+            Length::from_base(CORTICAL_BONE_THICKNESS_M),
             None,
         )
         .expect("finite bone properties");

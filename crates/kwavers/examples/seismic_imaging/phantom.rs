@@ -111,24 +111,28 @@ fn resample_ct_to_fwi_grid(vol: &CtVolume) -> Array3<f64> {
 pub(super) fn build_phantom_for_demo(
     input: &SeismicInputMode,
 ) -> anyhow::Result<(SkullModel, Option<CtVolume>)> {
-    let SeismicInputMode::Ct(path) = input else {
-        if matches!(input, SeismicInputMode::CtMri { .. }) {
-            anyhow::bail!("the 2-D seismic workflow accepts synthetic or ct:<path> input only");
+    match input {
+        SeismicInputMode::Synthetic => {
+            println!("  Phantom         : synthetic analytical skull");
+            Ok((build_skull_phantom()?, None))
         }
-        println!("  Phantom         : synthetic analytical skull");
-        return Ok((build_skull_phantom()?, None));
-    };
-
-    print!("  CT source       : {}  ", path.display());
-    let vol = load_ct_volume(path)
-        .with_context(|| format!("explicit CT input could not be loaded: {}", path.display()))?;
-    let [cx, cy, nz] = vol.hu().shape();
-    let spacing_mm = vol.spacing_mm();
-    println!(
-        "({cx}×{cy}×{nz} voxels @ [{:.2},{:.2},{:.2}] mm)",
-        spacing_mm[0], spacing_mm[1], spacing_mm[2]
-    );
-    let hu_fwi = resample_ct_to_fwi_grid(&vol);
-    let phantom = SkullModel::from_hu(hu_fwi)?;
-    Ok((phantom, Some(vol)))
+        SeismicInputMode::Ct(path) => {
+            print!("  CT source       : {}  ", path.display());
+            let vol = load_ct_volume(path).with_context(|| {
+                format!("explicit CT input could not be loaded: {}", path.display())
+            })?;
+            let [cx, cy, nz] = vol.hu().shape();
+            let spacing_mm = vol.spacing_mm();
+            println!(
+                "({cx}×{cy}×{nz} voxels @ [{:.2},{:.2},{:.2}] mm)",
+                spacing_mm[0], spacing_mm[1], spacing_mm[2]
+            );
+            let hu_fwi = resample_ct_to_fwi_grid(&vol);
+            let phantom = SkullModel::from_hu(hu_fwi)?;
+            Ok((phantom, Some(vol)))
+        }
+        SeismicInputMode::CtMri { .. } => {
+            anyhow::bail!("the 2-D seismic workflow accepts synthetic or ct:<path> input only")
+        }
+    }
 }

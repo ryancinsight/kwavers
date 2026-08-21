@@ -130,7 +130,8 @@ pub(super) fn run_brain_inversion(
         }
     }
     println!(
-        "  {} brain gathers at {:.0} kHz ({:.1} s)",
+        "  {} / {} brain gathers at {:.0} kHz ({:.1} s)",
+        brain_shots.len(),
         transmit_indices.len(),
         F0_BRAIN_HZ * 1e-3,
         observed_at.elapsed().as_secs_f32()

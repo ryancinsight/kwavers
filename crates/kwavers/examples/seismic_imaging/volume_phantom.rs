@@ -52,6 +52,8 @@ fn resample_ct_to_fwi_grid_3d(vol: &CtVolume) -> Array3<f64> {
     let r_skull_ct = skull_outer_radius_ct(hu, z_eq, cx_ct, cy_ct);
     let spacing_mm = vol.spacing_mm();
     let scale = r_skull_ct / R_HEAD;
+    let scale_y = scale * spacing_mm[0] / spacing_mm[1];
+    let scale_z = scale * spacing_mm[0] / spacing_mm[2];
 
     println!(
         "  CT skull radius : {r_skull_ct:.1} px × {:.2} mm/px = {:.0} mm",
@@ -78,8 +80,8 @@ fn resample_ct_to_fwi_grid_3d(vol: &CtVolume) -> Array3<f64> {
         for iy in 0..NY {
             for iz in 0..NZ {
                 let x_ct = cx_ct + (ix as f64 - NX as f64 / 2.0) * scale;
-                let y_ct = cy_ct + (iz as f64 - NZ as f64 / 2.0) * scale;
-                let z_ct = z_eq as f64 + (iy as f64 - NY as f64 / 2.0) * scale;
+                let y_ct = cy_ct + (iz as f64 - NZ as f64 / 2.0) * scale_y;
+                let z_ct = z_eq as f64 + (iy as f64 - NY as f64 / 2.0) * scale_z;
                 result[[ix, iy, iz]] = trilinear_hu(hu, x_ct, y_ct, z_ct);
             }
         }

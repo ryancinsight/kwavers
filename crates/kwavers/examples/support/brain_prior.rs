@@ -19,7 +19,13 @@ pub enum BrainPriorMode {
 impl BrainPriorMode {
     /// Read a brain-prior mode from an environment variable, defaulting to uniform.
     pub fn from_env(variable: &str) -> Result<Self, String> {
-        let value = std::env::var(variable).unwrap_or_else(|_| "uniform".to_owned());
+        let value = match std::env::var(variable) {
+            Ok(value) => value,
+            Err(std::env::VarError::NotPresent) => "uniform".to_owned(),
+            Err(std::env::VarError::NotUnicode(_)) => {
+                return Err(format!("{variable} contains invalid Unicode"));
+            }
+        };
         Self::from_str(&value)
     }
 }

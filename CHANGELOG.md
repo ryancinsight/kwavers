@@ -191,6 +191,14 @@
   strict example Clippy, the Kwavers doctest (1/1), and both mdBook test/build
   gates pass.
 
+- **Seismic review correctness:** CT/NIfTI loaders now preserve source axis
+  order, selected slices, modality boundaries, and anisotropic voxel spacing;
+  MNI/T1 priors use per-axis atlas spacing; RTM rejects receiver-count
+  mismatches; partial gather reports show successful/attempted counts; and the
+  3-D workflow writes one orthogonal skull artifact instead of overwriting the
+  same image three times. Environment selectors reject invalid Unicode rather
+  than silently choosing a default.
+
 - **Breaking CT skull material boundary:** `AcousticSkullProperties` now stores
   validated Aequitas velocity, mass-density, reciprocal-length attenuation,
   length, and optional shear velocity. `HeterogeneousSkull::from_ct_hill`

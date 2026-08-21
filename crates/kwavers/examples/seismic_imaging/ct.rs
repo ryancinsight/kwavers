@@ -60,10 +60,24 @@ pub(crate) fn load_ct_volume(path: &Path) -> anyhow::Result<CtVolume> {
                 values.len(),
                 depth * rows * cols
             );
+            anyhow::ensure!(
+                values
+                    .iter()
+                    .all(|&value| value.is_finite() && (0.0..=255.0).contains(&value)),
+                "PNG samples must be finite display values in [0, 255]"
+            );
+            let peak = values.iter().copied().fold(0.0_f32, f32::max);
+            anyhow::ensure!(
+                peak > 1.0,
+                "PNG samples look normalized (peak {peak}); expected 8-bit display values"
+            );
 
             // Bone window W=2000, C=400 maps display pixels back to HU.
             const PNG_WINDOW: f64 = 2000.0;
             const PNG_CENTER: f64 = 400.0;
+            // PNG series have no physical spacing metadata; this is the
+            // acquisition spacing assumed by the example's HU reconstruction.
+            const PNG_SPACING_MM: [f64; 3] = [0.5, 0.5, 4.0];
             let hu_low = PNG_CENTER - PNG_WINDOW / 2.0;
             let hu_per_pixel = PNG_WINDOW / 255.0;
             let mut hu = Array3::<f64>::zeros((cols, rows, depth));
@@ -78,7 +92,7 @@ pub(crate) fn load_ct_volume(path: &Path) -> anyhow::Result<CtVolume> {
             clamp_hounsfield_units(&mut hu);
             return Ok(CtVolume {
                 hu,
-                spacing_mm: [0.5, 0.5, 4.0],
+                spacing_mm: PNG_SPACING_MM,
             });
         }
     }

@@ -81,7 +81,7 @@ fn build_brain_velocity_model(
 
     // Load the three probability maps via ritk NIfTI reader.
     // CtVolume.hu stores probability values [0,1] (HU clamping [-1024,3071] is harmless).
-    let load = |name: &str| -> anyhow::Result<Array3<f64>> {
+    let load = |name: &str| -> anyhow::Result<(Array3<f64>, [f64; 3])> {
         let path = mni_dir.join(name);
         anyhow::ensure!(
             path.exists(),
@@ -93,6 +93,13 @@ fn build_brain_velocity_model(
         let img = ImageReader::read(&NativeNiftiReader::new(backend), &path)
             .with_context(|| format!("NIfTI load failed: '{}'", path.display()))?;
         let [depth, rows, cols] = img.shape();
+        let spacing = img.spacing().into_vector().to_array();
+        anyhow::ensure!(
+            spacing
+                .iter()
+                .all(|value| value.is_finite() && *value > 0.0),
+            "MNI spacing must be finite and positive, got {spacing:?}"
+        );
         let vals = img
             .data_slice()
             .map_err(|e| anyhow::anyhow!("NIfTI data not f32: {e:?}"))?;
@@ -105,12 +112,20 @@ fn build_brain_velocity_model(
                 }
             }
         }
-        Ok(vol)
+        Ok((vol, [spacing[0], spacing[1], spacing[2]]))
     };
 
-    let gm = load("mni_icbm152_gm_tal_nlin_sym_09c.nii")?;
-    let wm = load("mni_icbm152_wm_tal_nlin_sym_09c.nii")?;
-    let csf = load("mni_icbm152_csf_tal_nlin_sym_09c.nii")?;
+    let (gm, mni_spacing) = load("mni_icbm152_gm_tal_nlin_sym_09c.nii")?;
+    let (wm, wm_spacing) = load("mni_icbm152_wm_tal_nlin_sym_09c.nii")?;
+    let (csf, csf_spacing) = load("mni_icbm152_csf_tal_nlin_sym_09c.nii")?;
+    anyhow::ensure!(
+        wm.shape() == gm.shape() && csf.shape() == gm.shape(),
+        "MNI tissue maps must have identical shapes"
+    );
+    anyhow::ensure!(
+        wm_spacing == mni_spacing && csf_spacing == mni_spacing,
+        "MNI tissue maps must have identical spacing"
+    );
 
     let [mni_nx, mni_ny, mni_nz] = gm.shape();
     // MNI centroid voxel (brain centre-of-mass in MNI space ≈ [nx/2, ny/2, nz/2]).
@@ -152,8 +167,8 @@ fn build_brain_velocity_model(
             let dz_mm = dz_fwi * DX * 1e3;
 
             // Map to MNI voxel coordinate.
-            let mni_x = (cx_mni as f64 + dx_mm * fwi_to_mni).round() as isize;
-            let mni_z = (cz_mni as f64 + dz_mm * fwi_to_mni).round() as isize;
+            let mni_x = (cx_mni as f64 + dx_mm * fwi_to_mni / mni_spacing[0]).round() as isize;
+            let mni_z = (cz_mni as f64 + dz_mm * fwi_to_mni / mni_spacing[2]).round() as isize;
 
             // Out-of-bounds → keep water velocity.
             if mni_x < 0 || mni_x >= mni_nx as isize || mni_z < 0 || mni_z >= mni_nz as isize {

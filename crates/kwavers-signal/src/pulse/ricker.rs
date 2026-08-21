@@ -237,6 +237,20 @@ mod tests {
     }
 
     #[test]
+    fn extreme_frequency_sampling_remains_finite() {
+        let wavelet = DomainRickerWavelet::new(
+            Frequency::from_base(f64::MAX),
+            Time::from_base(0.0),
+            Pressure::from_base(1.0),
+        )
+        .expect("finite positive frequency is valid");
+
+        assert_eq!(wavelet.amplitude(0.0), 1.0);
+        assert_eq!(wavelet.amplitude(1.0), 0.0);
+        assert_eq!(wavelet.frequency(1.0), 0.0);
+    }
+
+    #[test]
     fn invalid_physical_parameters_return_typed_errors() {
         assert_invalid_parameter(
             DomainRickerWavelet::new(

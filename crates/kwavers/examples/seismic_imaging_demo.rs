@@ -274,7 +274,7 @@ fn main() -> KwaversResult<()> {
     println!("╚══════════════════════════════════════════════════════════╝\n");
 
     // ── 1. Skull phantom ──────────────────────────────────────────────────
-    println!("[ 1 / 6 ]  Building skull phantom …");
+    println!("[ 1 / 7 ]  Building skull phantom …");
     let input_mode = SeismicInputMode::from_env("KWAVERS_SEISMIC_INPUT_MODE")
         .map_err(KwaversError::InvalidInput)?;
     println!("  Input mode       : {input_mode:?}");
@@ -323,12 +323,12 @@ fn main() -> KwaversResult<()> {
     println!("  Layers          : water coupling / scalp / cortical bone / diploe / brain");
 
     // ── 2. Grid ───────────────────────────────────────────────────────────
-    println!("\n[ 2 / 6 ]  Constructing computational grid …");
+    println!("\n[ 2 / 7 ]  Constructing computational grid …");
     let grid = Grid::new(NX, NY, NZ, DX, DX, DX)?;
     println!("  Grid OK");
 
     // ── 3. Multi-scale FWI parameters ────────────────────────────────────
-    println!("\n[ 3 / 6 ]  Configuring multi-scale FWI …");
+    println!("\n[ 3 / 7 ]  Configuring multi-scale FWI …");
 
     // CFL-stable timestep: dt ≤ 0.3 × dx / (c_max × √3).
     // Fixed across all scales — determined by maximum velocity, not frequency.
@@ -340,7 +340,7 @@ fn main() -> KwaversResult<()> {
     let scales = seismic_planar_schedule::configure(dt, t_transit);
 
     // ── 4. Full-ring acquisition geometry ─────────────────────────────────
-    println!("\n[ 4 / 6 ]  Building full-ring acquisition geometry …");
+    println!("\n[ 4 / 7 ]  Building full-ring acquisition geometry …");
     println!(
         "  Full aperture    : {TRANSCRANIAL_FOCUSED_BOWL_ELEMENT_COUNT} elements, 650 kHz design authority"
     );
@@ -369,7 +369,7 @@ fn main() -> KwaversResult<()> {
     }
 
     // ── 5. Multi-scale FWI ────────────────────────────────────────────────
-    println!("\n[ 5 / 6 ]  Running multi-scale transcranial FWI …");
+    println!("\n[ 5 / 7 ]  Running multi-scale transcranial FWI …");
 
     let inversion =
         seismic_planar_inversion::run_skull_inversion(&phantom, &grid, dt, t_transit, scales)?;

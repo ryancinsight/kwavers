@@ -115,34 +115,7 @@
   kwavers-driver --no-deps` clean. `cargo test --doc -p kwavers-driver` green.
   `cargo check -p kwavers-python` clean. `cargo fmt --all -- --check` clean for the touched
   files.
-- Residual, filed below: KW-DOC-107, KW-CLEAN-108, KW-DOC-109.
-
-## KW-DOC-107 — Move driver migration plans out of module docstrings [patch] — todo
-
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-DOC-107 | `kwavers-driver` module docs describe what the module is, not the phased plan that produced it. | [patch] | todo | unclaimed | `crates/kwavers-driver/src/{physics,geometry}/mod.rs` and any sibling carrying a `# Phase N` block |
-
-- Evidence of the defect: `src/physics/mod.rs` opens "Physics vertical-slice tree (Phase 0
-  placeholder)" and carries a Phase 1+ migration plan, though the tree is populated and the
-  flat `src/{ampacity,dielectric,thermal,emi,pdn,si,acoustic}.rs` modules it says it will
-  migrate no longer exist. `src/geometry/mod.rs` says the same while `src/geom.rs` remains
-  authoritative. Migration plans belong in `docs/MIGRATION.md`; a module docstring that
-  contradicts its own module is documentation drift.
-- Acceptance: each module docstring states the module current responsibility and
-  invariants; phase narrative moves to (or is deleted as already captured by)
-  `docs/MIGRATION.md`; `cargo doc -p kwavers-driver` stays warning-clean.
-
-## KW-CLEAN-108 — Delete the tracked driver backup file [patch] — todo
-
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-CLEAN-108 | No editor backup artifacts are tracked in the source tree. | [patch] | todo | unclaimed | `crates/kwavers-driver/src/physics/mod.rs.bak-final` |
-
-- `git ls-files` lists `crates/kwavers-driver/src/physics/mod.rs.bak-final`. Git is the
-  archive; a superseded copy beside the file it supersedes is an obsolete artifact.
-- Acceptance: the file is deleted; a tree-wide scan finds no other tracked `.bak`/`.orig`
-  siblings.
+- Historical closure records follow below for KW-DOC-107, KW-CLEAN-108, and KW-DOC-109.
 
 ## KW-DOC-109 — Review driver publication surface [patch] — done 2026-08-20
 
@@ -665,6 +638,14 @@
   seconds; `cargo test --doc --offline -p kwavers` passes 1/1; and both
   `mdbook test docs/book` and `mdbook build docs/book` pass. Cargo lockfile
   source state is restored after each overlay command.
+- 2026-08-20 review-fix slice: strict review findings are closed for stage
+  counters, environment decoding, CT/NIfTI axis and spacing semantics, DICOM
+  modality selection, RTM receiver accounting and signed peaks, successful
+  gather reporting, MNI/T1 per-axis registration, one orthogonal 3-D artifact,
+  and duplicated book/PM text. Exact Nextest run
+  `2bbe3774-be78-4a3e-86c6-e4499b1359a3` passes 116/116 in 42.798 seconds;
+  strict all-target Clippy, package checks, the Kwavers doctest, and mdBook
+  test/build pass.
 - Non-goals: frequency-domain FWI and ADR 115, solver-algorithm replacement,
   committed clinical datasets, GPU-kernel changes, and compatibility aliases.
 - Verification: strict focused Clippy, example unit tests through Nextest,

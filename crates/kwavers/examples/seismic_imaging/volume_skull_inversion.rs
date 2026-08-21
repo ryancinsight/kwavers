@@ -103,7 +103,8 @@ pub(super) fn run_skull_inversion(
     println!("\n  Quality before inversion (all voxels):");
     seismic_metrics::print_quality_report(&true_model, &initial_model);
     println!(
-        "  J₀ (150 kHz)    : {j_initial:.6e} Pa²·s  ({} shots)",
+        "  J₀ ({:.0} kHz)    : {j_initial:.6e} Pa²·s  ({} shots)",
+        F0_HZ * 1e-3,
         transmit_indices.len()
     );
 
