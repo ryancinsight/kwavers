@@ -36,7 +36,7 @@ impl BroadbandDetector {
     }
 
     /// Calculate signal energy
-    fn calculate_energy(&self, signal: &ArrayView1<f64>) -> Option<f64> {
+    fn calculate_energy(signal: &ArrayView1<f64>) -> Option<f64> {
         if signal.size() == 0 || !signal.iter().all(|value| value.is_finite()) {
             return None;
         }
@@ -47,7 +47,7 @@ impl BroadbandDetector {
 
     /// Detect broadband emissions
     fn detect_broadband_emissions(&mut self, signal: &ArrayView1<f64>) -> f64 {
-        let Some(current_energy) = self.calculate_energy(signal) else {
+        let Some(current_energy) = Self::calculate_energy(signal) else {
             return 0.0;
         };
 
@@ -80,7 +80,7 @@ impl BroadbandDetector {
 
     /// Update baseline for adaptive detection
     pub fn update_baseline(&mut self, signal: &ArrayView1<f64>) {
-        self.baseline_energy = self.calculate_energy(signal);
+        self.baseline_energy = Self::calculate_energy(signal);
     }
 
     /// Apply temporal smoothing

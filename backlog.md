@@ -1,18 +1,23 @@
 # Backlog / Strategy
 
-## KW-BOOK-116 — Make the book gate execute a Rust oracle [patch] — in progress
+## KW-BOOK-116 — Make the book gate execute a Rust oracle [patch] — implementation complete; hosted verification pending
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-BOOK-116 | The published Kwavers book executes one package-backed Rust sample and the shared workflow builds the exact package before `mdbook test`. | [patch] | in progress | Codex | `.github/workflows/book-pages.yml`, `docs/book/examples/basic_simulation.md`, this item |
+| KW-BOOK-116 | The published Kwavers book executes one deterministic Rust oracle and the shared workflow builds the exact package before `mdbook test`. | [patch] | implementation complete; hosted verification pending | Codex | `.github/workflows/book-pages.yml`, `docs/book/examples/basic_simulation.md`, this item |
 
 - Non-goals: no changes to the concurrently modified transducer files and no
   expansion of the Python binding or ensemble-model contract.
-- Acceptance: `mdbook test docs/book` executes the `kwavers` sample against the
-  locked package; `mdbook build docs/book` and the book link checker pass; the
-  workflow pins the package and library target explicitly.
+- Acceptance: `mdbook test docs/book` executes the analytical CFL oracle;
+  `mdbook build docs/book` passes; and the workflow pins the package and library
+  target explicitly.
 - Claim committed on branch `fix/kwavers-python-book-boundary`; the unrelated
   dirty transducer files remain outside this scope.
+- Local evidence at `546949cc0`: locked `kwavers` package build, `cargo fmt
+  --check`, `mdbook test docs/book`, `mdbook build docs/book`, and staged diff
+  checks pass. The standalone link checker still reports pre-existing source
+  links outside the book root and incomplete mathematical-link parsing; those
+  remain separate documentation cleanup work.
 
 ## KW-LINT-111 — Put every member on workspace lint inheritance [patch] — done 2026-08-20
 
@@ -843,6 +848,12 @@
   Nextest (1561/1561 with one configured skip), doctests (9/13; 4 ignored), and warning-denied
   rustdoc pass. The refreshed workspace `unused_self` count is 76 sites with 29 remaining in
   other physics domains.
+- 2026-08-21 `kwavers-physics` cavitation-detection slice is implemented: broadband energy,
+  subharmonic FFT spectrum, and spectral state classification are associated functions;
+  baseline/history/stateful detector fields remain receiver-bound. Package check, targeted
+  `unused_self` Clippy (detection paths clean), Nextest (1561/1561 with one configured skip),
+  doctests (9/13; 4 ignored), and warning-denied rustdoc pass. The refreshed workspace
+  `unused_self` count is 73 sites with 26 remaining in other physics domains.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a

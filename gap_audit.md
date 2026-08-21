@@ -7149,6 +7149,13 @@ boundary. Package check, targeted `unused_self` Clippy (optics scattering clean)
 (1561/1561 with one configured skip), doctests (9/13; 4 ignored), and warning-denied rustdoc pass.
 The refreshed workspace `unused_self` count is 76 sites with 29 remaining in other physics domains.
 
+The `kwavers-physics` cavitation-detection slice converts broadband energy, subharmonic FFT
+spectrum, and spectral state classification to associated functions; baseline/history/stateful
+detector fields remain receiver-bound. Package check, targeted `unused_self` Clippy (detection
+paths clean), Nextest (1561/1561 with one configured skip), doctests (9/13; 4 ignored), and
+warning-denied rustdoc pass. The refreshed workspace `unused_self` count is 73 sites with 26
+remaining in other physics domains.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.
