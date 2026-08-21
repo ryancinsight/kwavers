@@ -175,6 +175,11 @@ impl DGSolver {
     ///
     /// The projection and RK workspaces are reused when their dimensions match the grid-derived
     /// tensor-product layout.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`KwaversError::InvalidInput`] when the field, mask, and output shapes differ, or
+    /// propagates a projection or time-step failure from the DG solver.
     pub fn solve_into(
         &mut self,
         field: &Array3<f64>,

@@ -63,6 +63,11 @@ impl PhysicsCoefficients {
     }
 
     /// Optical diffusion coefficient `D = 1 / (3 * (mu_a + mu_s'))`.
+    ///
+    /// # Errors
+    ///
+    /// Returns a validation error when the absorption or reduced-scattering coefficients are
+    /// non-finite, negative, or produce an invalid optical transport denominator.
     pub fn optical_diffusion(&self) -> KwaversResult<f64> {
         Ok(self
             .diffusion_coefficients()?
