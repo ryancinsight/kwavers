@@ -7225,6 +7225,12 @@ retains planner/grid state. Planner callers use associated-function syntax. Pack
 doctests (9/13; 4 ignored), and warning-denied rustdoc pass. The refreshed workspace `unused_self`
 count is 48 sites with 1 remaining in other physics domains.
 
+The `kwavers-physics` plasmonics slice converts the host-medium wavenumber helper to an associated
+function; particle-array geometry and interaction state remain receiver-bound. Package check,
+targeted `unused_self` Clippy (plasmonics path clean), Nextest (1561/1561 with one configured skip),
+doctests (9/13; 4 ignored), and warning-denied rustdoc pass. The refreshed workspace `unused_self`
+count is 47 sites with zero remaining in `kwavers-physics`.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.

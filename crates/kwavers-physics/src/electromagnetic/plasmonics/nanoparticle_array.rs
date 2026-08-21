@@ -63,7 +63,7 @@ impl NanoparticleArray {
             if distance > particle.radius.into_base() {
                 // Determine coherent dipole radiating field
                 let alpha = particle.polarizability(wavelength).into_base();
-                let k = self.medium_wavenumber(wavelength).into_base();
+                let k = Self::medium_wavenumber(wavelength).into_base();
 
                 // Near-field dominant term: E ∝ α / r³ · exp(ikr)
                 let phase = eunomia::Complex::new(0.0, k * distance).exp();
@@ -108,7 +108,7 @@ impl NanoparticleArray {
 
     /// Helper to determine the physical wavenumber inside the host dielectric
     #[must_use]
-    fn medium_wavenumber(&self, wavelength: Length) -> ReciprocalLength {
+    fn medium_wavenumber(wavelength: Length) -> ReciprocalLength {
         // Assume water host matrix
         let refractive_index = REFRACTIVE_INDEX_WATER;
         ReciprocalLength::from_base(TWO_PI * refractive_index / wavelength.into_base())
