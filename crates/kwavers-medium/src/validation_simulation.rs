@@ -29,7 +29,7 @@ impl MediumValidator {
                 )?;
             }
             MediumType::Heterogeneous => {
-                Self::validate_heterogeneous(&config.tissue_file)?;
+                Self::validate_heterogeneous(config.tissue_file.as_ref())?;
             }
             MediumType::Layered => {
                 Self::validate_layered(&config.layers)?;
@@ -136,7 +136,7 @@ impl MediumValidator {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    fn validate_heterogeneous(tissue_file: &Option<String>) -> KwaversResult<()> {
+    fn validate_heterogeneous(tissue_file: Option<&String>) -> KwaversResult<()> {
         if let Some(file_path) = tissue_file {
             if file_path.is_empty() {
                 return Err(ConfigError::InvalidValue {

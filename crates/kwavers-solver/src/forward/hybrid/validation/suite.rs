@@ -123,7 +123,7 @@ impl HybridValidationSuite {
         let computed = self.compute_solution()?;
         let reference = self.get_reference_solution()?;
 
-        let error = self.compute_relative_error(&computed, &reference)?;
+        let error = self.compute_relative_error(computed, reference)?;
         Ok(error < self.config.error_tolerance)
     }
 
@@ -183,7 +183,7 @@ impl HybridValidationSuite {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    fn compute_relative_error(&self, computed: &f64, reference: &f64) -> KwaversResult<f64> {
+    fn compute_relative_error(&self, computed: f64, reference: f64) -> KwaversResult<f64> {
         if reference.abs() > kwavers_core::constants::numerical::EPSILON {
             Ok((computed - reference).abs() / reference.abs())
         } else {
@@ -255,7 +255,7 @@ mod tests {
         let suite = suite_with(128);
         let computed = suite.compute_solution().unwrap();
         let reference = suite.get_reference_solution().unwrap();
-        let relative_error = suite.compute_relative_error(&computed, &reference).unwrap();
+        let relative_error = suite.compute_relative_error(computed, reference).unwrap();
 
         assert!(relative_error < 1e-8, "relative_error={relative_error:e}");
         assert!(computed.is_finite());

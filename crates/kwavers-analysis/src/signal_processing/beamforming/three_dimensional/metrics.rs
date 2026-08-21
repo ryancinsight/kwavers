@@ -85,6 +85,15 @@ pub fn calculate_cpu_memory_usage(streaming_buffer: &Option<StreamingBuffer>) ->
 ///
 /// Returns `0.0`: no streaming buffer exists in CPU-only builds.
 #[cfg(not(feature = "gpu"))]
+// The parameter mirrors the `gpu` variant's signature so shared call sites
+// compile unchanged across the feature. `Option<&()>` and a by-value `Option<()>`
+// would both satisfy the lints while making the two signatures diverge, which is
+// the one property this parameter exists to preserve.
+#[expect(
+    clippy::ref_option,
+    clippy::trivially_copy_pass_by_ref,
+    reason = "signature mirrors the gpu variant"
+)]
 pub fn calculate_cpu_memory_usage(_streaming_buffer: &Option<()>) -> f64 {
     // No GPU buffers in CPU-only mode
     0.0

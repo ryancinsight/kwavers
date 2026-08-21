@@ -30,7 +30,7 @@ where
         }
 
         for condition in conditions {
-            let boundary_error = self.evaluate_boundary_condition(model, condition, geometry)?;
+            let boundary_error = self.evaluate_boundary_condition(model, *condition, geometry)?;
             total_boundary_error += boundary_error * boundary_error;
         }
 
@@ -118,7 +118,7 @@ where
     pub(super) fn evaluate_boundary_condition(
         &self,
         model: &crate::inverse::pinn::ml::PinnWave2D<B>,
-        condition: &crate::inverse::pinn::ml::BoundaryCondition2D,
+        condition: crate::inverse::pinn::ml::BoundaryCondition2D,
         geometry: &crate::inverse::pinn::ml::WaveGeometry2D,
     ) -> KwaversResult<f64> {
         use crate::inverse::pinn::ml::BoundaryCondition2D;
