@@ -120,7 +120,6 @@ fn apply_correction_along(
 impl CPMLUpdater {
     /// Update the pressure-gradient memory along `axis` (0=x, 1=y, 2=z).
     pub(super) fn update_p_memory_axis(
-        &self,
         memory: &mut CPMLMemory,
         gradient: &Array3<f64>,
         axis: usize,
@@ -140,7 +139,6 @@ impl CPMLUpdater {
 
     /// Update the velocity-gradient memory along `axis` (0=x, 1=y, 2=z).
     pub(super) fn update_v_memory_axis(
-        &self,
         memory: &mut CPMLMemory,
         v_gradient: &Array3<f64>,
         axis: usize,
@@ -160,7 +158,6 @@ impl CPMLUpdater {
 
     /// Apply the pressure-gradient CPML correction along `axis` (0=x, 1=y, 2=z).
     pub(super) fn apply_p_correction_axis(
-        &self,
         gradient: &mut Array3<f64>,
         memory: &CPMLMemory,
         axis: usize,
@@ -179,7 +176,6 @@ impl CPMLUpdater {
 
     /// Apply the velocity-gradient CPML correction along `axis` (0=x, 1=y, 2=z).
     pub(super) fn apply_v_correction_axis(
-        &self,
         v_gradient: &mut Array3<f64>,
         memory: &CPMLMemory,
         axis: usize,

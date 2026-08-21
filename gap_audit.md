@@ -7107,6 +7107,13 @@ Clippy still reports seven pre-existing boundary sites in CPML and smoothing. Th
 workspace `unused_self` count is 103 sites with zero in the FEM/BEM managers, `kwavers-imaging`,
 `kwavers-receiver`, `kwavers-mesh`, `kwavers-grid`, `kwavers-signal`, and `kwavers-solver`.
 
+The `kwavers-boundary` CPML axis-update slice converts four receiver-free memory/correction
+helpers to associated functions and migrates their public wrapper callers. Package check, targeted
+`unused_self` Clippy, Nextest, doctests (4/4; 1 ignored), and warning-denied rustdoc pass; package
+Clippy now reports three pre-existing boundary sites in smoothing. The refreshed workspace
+`unused_self` count is 99 sites with zero in CPML, the FEM/BEM managers, `kwavers-imaging`,
+`kwavers-receiver`, `kwavers-mesh`, `kwavers-grid`, `kwavers-signal`, and `kwavers-solver`.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.

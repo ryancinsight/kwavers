@@ -50,7 +50,7 @@ impl CPMLUpdater {
         component: usize,
         profiles: &CPMLProfiles,
     ) {
-        self.update_p_memory_axis(memory, gradient, component, profiles);
+        Self::update_p_memory_axis(memory, gradient, component, profiles);
     }
 
     /// Update memory component for velocity gradients (used in pressure update).
@@ -62,7 +62,7 @@ impl CPMLUpdater {
         component: usize,
         profiles: &CPMLProfiles,
     ) {
-        self.update_v_memory_axis(memory, v_gradient, component, profiles);
+        Self::update_v_memory_axis(memory, v_gradient, component, profiles);
     }
 
     /// Apply gradient correction from CPML memory.
@@ -74,7 +74,7 @@ impl CPMLUpdater {
         component: usize,
         profiles: &CPMLProfiles,
     ) {
-        self.apply_p_correction_axis(gradient, memory, component, profiles);
+        Self::apply_p_correction_axis(gradient, memory, component, profiles);
     }
 
     /// Apply velocity gradient correction from CPML memory.
@@ -86,7 +86,7 @@ impl CPMLUpdater {
         component: usize,
         profiles: &CPMLProfiles,
     ) {
-        self.apply_v_correction_axis(v_gradient, memory, component, profiles);
+        Self::apply_v_correction_axis(v_gradient, memory, component, profiles);
     }
 }
 
