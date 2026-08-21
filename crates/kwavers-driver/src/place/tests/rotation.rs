@@ -1,14 +1,14 @@
 //! Tests lifted from src/place/footprint.rs (rotation + role + footprint escape).
 //!
 //! `Rot` + `RotationPolicy` resolve via `crate::place::rotation::*` because the
-//! carve at Phase 2c extracted them out of `footprint.rs`.
+//! carve extracted them out of `footprint.rs`.
 
 use super::*;
 
 // ────────────────────────────────────────────────────────────────────────────
 // Section B — Tests lifted from src/place/footprint.rs (rotation + role +
 // footprint escape). These tests now resolve `Rot` + `RotationPolicy` via
-// `crate::place::rotation::*` because the carve at Phase 2c extracted them out
+// `crate::place::rotation::*` because the carve extracted them out
 // of `footprint.rs`.
 // ────────────────────────────────────────────────────────────────────────────
 

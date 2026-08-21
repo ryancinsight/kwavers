@@ -1,8 +1,9 @@
-//! Power-delivery-network (PDN) decoupling, impedance and resonance — Phase 3e slice leaf.
+//! Power-delivery-network (PDN) decoupling, impedance and resonance.
 //!
-//! The IR-drop solver ([`crate::physics::thermal::IrDrop`] + [`crate::physics::thermal::ir_drop()`])
-//! moved to the thermal slice at Phase 3b. This subtree keeps the **decoupling / resonance /
-//! target-impedance / plane-cavity** half of PDN, organised as:
+//! This subtree owns the **decoupling / resonance / target-impedance / plane-cavity** half
+//! of PDN; the IR-drop solver ([`crate::physics::thermal::IrDrop`] +
+//! [`crate::physics::thermal::ir_drop()`]) lives in the thermal slice for the reason given
+//! below. The organisation is:
 //!
 //! * [`target_impedance`] — [`target_impedance::target_impedance_ohm`] +
 //!   [`target_impedance::holdup_capacitance_f`] +
@@ -13,19 +14,17 @@
 //!   [`impedance::anti_resonance_hz`] (parallel-bank impedance + antiparallel LC peak).
 //! * [`cavity`] — [`cavity::plane_resonance_hz`] (power-plane `(m, n)` cavity mode).
 //!
-//! All seven free functions are pure-math — they take `f64` inputs and return `f64` outputs, with
-//! no internal state or cross-slice dependency. Migration motivates splitting them by physical
-//! role (target-impedance sizing vs. parallel-bank impedance vs. plane cavity), not by file-size
-//! symmetry. [`pdn_impedance_at_freq`] is the most likely target for a `(Farad, Ohm, Henry)` typed
-//! struct at Phase 2 alongside the rest of the units migration.
+//! All seven free functions are pure math — `f64` in, `f64` out, no internal state and no
+//! cross-slice dependency. They are grouped by physical role (target-impedance sizing vs.
+//! parallel-bank impedance vs. plane cavity), not by file size.
 //!
-//! # Phase 1a migration roadmap
+//! # Units
 //!
-//! [`crate::physics::thermal::IrDrop::max_drop_v`] is flat `f64` today. Phase 2 will replace it
-//! with [`crate::units::Volt`] alongside the rest of the PDN signature migration (`supply` point
-//! already carries `Nm`, so only the impedance / voltage / current parameters remain). The
-//! `(C_f, ESR_ohm, ESL_h)` tuple in [`impedance::pdn_impedance_at_freq`] is the most likely target
-//! for a `(Farad, Ohm, Henry)` typed struct at Phase 2.
+//! Impedance, voltage, and current parameters are plain `f64` in their documented SI units;
+//! only the `supply` point carries an [`crate::units::Nm`]. Typing them — the
+//! `(C_f, ESR_ohm, ESL_h)` tuple in [`impedance::pdn_impedance_at_freq`] as a
+//! `(Farad, Ohm, Henry)` struct, and [`crate::physics::thermal::IrDrop::max_drop_v`] as a
+//! [`crate::units::Volt`] — is tracked in `docs/MIGRATION.md`.
 //!
 //! The acoustic output of a 150 V pulser scales with the delivered rail voltage, so resistive
 //! voltage drop on VPP/GND between the supply connector and each device sets the channel-to-channel
@@ -39,13 +38,11 @@
 //! [`crate::physics::ampacity::track_resistance()`], so co-locating them keeps the electro-thermal
 //! coupling chain in one crate plane.
 //!
-//! # Vertical-slice convention
+//! # Visibility
 //!
-//! Symbol-level API surface (the seven free fns + their docstring targets) is identical to the
-//! prior flat `crate::pdn::…` shape. Internal helpers stay private to the slice (`pub(super)`
-//! where a sibling importer needs access; never `pub(crate)` or `pub`). Downstream `lib.rs`
-//! carries the canonical `pub use physics::pdn::{…}` re-export so the crate-root API does not
-//! change at the call-site level.
+//! Internal helpers stay private to the slice — `pub(super)` where a sibling needs access,
+//! never `pub(crate)` or `pub`. `lib.rs` carries the canonical `pub use physics::pdn::{…}`
+//! re-export, so every public item here is also reachable from the crate root.
 
 pub mod cavity;
 pub mod impedance;

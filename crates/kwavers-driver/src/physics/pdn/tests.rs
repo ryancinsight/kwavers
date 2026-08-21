@@ -1,4 +1,4 @@
-//! Phase 3e consolidated test surface for the [`crate::physics::pdn`] slice.
+//! Consolidated test surface for the [`crate::physics::pdn`] slice.
 //!
 //! Four tests, migrated verbatim from the prior flat `src/pdn.rs::tests` module. All free fns
 //! are re-exported at the slice root via `pub use` in [`super::mod`], so `use super::*` brings

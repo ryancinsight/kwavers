@@ -1,4 +1,4 @@
-//! Consolidated tests for the `units` slice (Phase 4k carve-out): the `Nm` integer-length newtype,
+//! Consolidated tests for the `units` slice: the `Nm` integer-length newtype,
 //! the prefix factories, same-unit + scalar arithmetic, the cross-unit dimensional algebra (Ohm's
 //! law etc.), temperature conversions, and the SI-suffix `Display`. Moved verbatim from the flat
 //! `src/units.rs` `mod tests` block; `super::*` resolves the slice facade.

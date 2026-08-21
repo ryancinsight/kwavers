@@ -14,7 +14,7 @@
 //!
 //! # Slice layout
 //!
-//! Carved by **role** (Phase 4h). Plain backticks name the slice-private submodules; the public
+//! Carved by **role**. Plain backticks name the slice-private submodules; the public
 //! items each hosts stay clickable.
 //! * `context` — the input context types: [`ArrayGeometry`], [`ThermalContext`], [`PdnConfig`],
 //!   [`EmiContext`].

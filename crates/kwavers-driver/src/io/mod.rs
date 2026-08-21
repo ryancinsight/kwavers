@@ -1,8 +1,8 @@
 //! `io` slice facade — KiCad file emission.
 //!
-//! Phase 4a carve: `src/io.rs` was split into a 7-file `src/io/` subtree by **emission
-//! format** (pcb / sch / dru / pro / project), with this `mod.rs` carrying the format-agnostic
-//! helpers that every emission kernel reaches via the `#[macro_use]` scope-inheritance trick:
+//! The subtree is split by **emission format** (pcb / sch / dru / pro / project), with this
+//! `mod.rs` carrying the format-agnostic helpers that every emission kernel reaches via the
+//! `#[macro_use]` scope-inheritance trick:
 //!
 //! * [`crate::geom::MechKind`] / [`crate::geom::MechFeature`] + [`crate::geom::mechanical_features`]
 //!   — the SSOT for board mechanical features (4 corner MountingHole + 3 fiducials); defined in
@@ -38,7 +38,7 @@
 //! # Format version stamping
 //!
 //! The KiCad format-version literals (`KICAD_PCB_FORMAT_VERSION`, `KICAD_SCH_FORMAT_VERSION`)
-//! and the generator name (`KICAD_GENERATOR_NAME`) moved to [`crate::ssot`] at Phase 1c. A future
+//! and the generator name (`KICAD_GENERATOR_NAME`) live in [`crate::ssot`]. A future
 //! KiCad version bump touches one SSOT address, not every emission submodule.
 
 // ============================================================================
@@ -67,7 +67,7 @@ macro_rules! w {
 // Format-agnostic helper items at the slice facade.
 //
 // KiCad format-version stamps (`KICAD_PCB_FORMAT_VERSION`, `KICAD_SCH_FORMAT_VERSION`) and
-// the generator name (`KICAD_GENERATOR_NAME`) live at `crate::ssot::*` (Phase 1c SSOT). Each
+// the generator name (`KICAD_GENERATOR_NAME`) live at `crate::ssot::*`. Each
 // emission submodule declares its OWN `use crate::ssot::*;` for the format-string
 // interpolations that reference it (a `use` does NOT carry over `#[macro_use]` propagation).
 // No slice-facade-level `use crate::ssot::*;` is needed here.

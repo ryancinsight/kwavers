@@ -1,4 +1,4 @@
-//! `Stimulus` trait — per-tile stimulation-program abstraction (Phase 5).
+//! `Stimulus` trait — the per-tile stimulation-program abstraction.
 //!
 //! The experiment orchestrator depends on [`Stimulus`] only; the concrete type
 //! ([`DefaultStimulus`]) is injected at the call site. That is the DIP boundary: the

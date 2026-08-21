@@ -112,7 +112,7 @@ impl CalibrationManager {
             );
         }
 
-        let a_t = a_matrix.transpose([1, 0]).unwrap().to_owned();
+        let a_t = a_matrix.transpose([1, 0]).unwrap().clone();
         let at_a = a_t.matmul(&a_matrix).unwrap();
         let at_b = {
             let m = a_t.shape()[0];

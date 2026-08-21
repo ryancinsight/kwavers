@@ -1,4 +1,4 @@
-//! End-to-end tests for the `experiment` slice (Phase 5).
+//! End-to-end tests for the `experiment` slice.
 //!
 //! Every assertion is value-semantic: raw scalars are compared against analytically-derived
 //! expectations, not merely checked for `is_ok()`. The test pipeline exercises the full

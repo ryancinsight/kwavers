@@ -1,4 +1,4 @@
-//! Per-tile transducer dispatch and lane binding (Phase 5).
+//! Per-tile transducer dispatch and lane binding.
 //!
 //! Maps `manifest.tx_nets[lane]` → tile index for a balanced equal-partition stack.
 //! For the 96-lane 4-tile v2 stack: lanes 0–23 → tile 0, 24–47 → tile 1, etc.

@@ -56,7 +56,9 @@ pub struct ClinicalSafetyMonitor {
     current_state: ClinicalSafetyLevel,
     violations: Vec<SafetyViolation>,
     monitoring_enabled: bool,
-    last_check: Instant,
+    /// When `check_safety` last evaluated the parameters. `None` until the
+    /// first evaluation, so the first call is never rate-limited.
+    last_check: Option<Instant>,
     check_interval: Duration,
 }
 
@@ -70,7 +72,7 @@ impl ClinicalSafetyMonitor {
             current_state: ClinicalSafetyLevel::Normal,
             violations: Vec::new(),
             monitoring_enabled: true,
-            last_check: Instant::now() - check_interval,
+            last_check: None,
             check_interval,
         }
     }
@@ -82,7 +84,10 @@ impl ClinicalSafetyMonitor {
         }
 
         let now = Instant::now();
-        if now.duration_since(self.last_check) < self.check_interval {
+        if self
+            .last_check
+            .is_some_and(|last| now.duration_since(last) < self.check_interval)
+        {
             return self.current_state;
         }
 
@@ -142,7 +147,7 @@ impl ClinicalSafetyMonitor {
         }
 
         self.current_state = new_state;
-        self.last_check = now;
+        self.last_check = Some(now);
         new_state
     }
 

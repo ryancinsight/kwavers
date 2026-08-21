@@ -56,7 +56,7 @@ impl CheckpointManager {
             }
         }
 
-        checkpoints.sort();
+        checkpoints.sort_unstable();
         Ok(checkpoints)
     }
     /// Cleanup old checkpoints.

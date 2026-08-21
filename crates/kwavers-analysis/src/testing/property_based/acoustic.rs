@@ -15,8 +15,7 @@ pub mod acoustic_properties {
     /// Range: 1-5000 kg/m³ (covers air to dense materials)
     pub const DENSITY_RANGE: (f64, f64) = (1.0, 5000.0);
 
-    /// Sound speed range for property testing (m/s)  
-    /// Range: 100-6000 m/s (covers gases to solids)
+    /// Sound speed range for property testing (m/s)\n    /// Range: 100-6000 m/s (covers gases to solids)
     pub const SOUND_SPEED_RANGE: (f64, f64) = (100.0, 6000.0);
 
     /// Absorption coefficient range for property testing (Np/m)

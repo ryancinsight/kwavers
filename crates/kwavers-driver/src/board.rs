@@ -1,13 +1,8 @@
 //! The board model: layers, nets, pads, and the routed copper (tracks and vias).
 //!
-//! # Phase 1a migration roadmap
-//!
-//! The board model's spatial quantities (track width, via drill/diameter, pad offsets) already
-//! use [`crate::units::Nm`] from `geom`. **No f64 length sites remain in this module.** Pad and
-//! track layer indices use [`LayerId`] (a `u16` newtype). The remaining soft-unit `f64` sites
-//! (`IrDrop` / voltage / current / power in the per-net thermal co-analysis) live in
-//! [`crate::physics::thermal`] / [`crate::physics::pdn`] and migrate when those vertical slices are carved out.
-//! **This module is essentially migration-complete at Phase 1a.**
+//! Every spatial quantity here — track width, via drill and diameter, pad offset — is an
+//! [`crate::units::Nm`], and layer and net identifiers are newtypes ([`LayerId`],
+//! [`NetId`]), so a raw `f64` or bare integer cannot be mistaken for a board dimension.
 //!
 //! This is a pure domain model with no infrastructure dependency — it can be built in memory by a
 //! test, a generator, or a future `.kicad_pcb` parser without any of them leaking into the model.

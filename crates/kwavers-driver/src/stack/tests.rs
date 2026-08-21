@@ -1,4 +1,4 @@
-//! Consolidated tests for the `stack` slice (Phase 4e carve-out): single-board optimisation,
+//! Consolidated tests for the `stack` slice: single-board optimisation,
 //! connector mating, and full shield-stack assembly. Moved verbatim from the flat `src/stack.rs`
 //! `mod tests` block; `super::*` resolves the slice facade and `DriverManifest` is imported directly.
 

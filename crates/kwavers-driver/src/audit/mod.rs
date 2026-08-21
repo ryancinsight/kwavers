@@ -6,7 +6,7 @@
 //! The [`audit`] entrypoint inside `critic` combines all five axes into a
 //! [`FaultReport`].
 //!
-//! # Slice layout (Phase 4c output-slice migration)
+//! # Slice layout
 //!
 //! (Plain backticks rather than `[X]`-escaped intra-doc link placeholders because each sub-module
 //! is `mod` (private) within the slice; the public types each sub-module hosts
@@ -15,7 +15,7 @@
 //! [`charge_recycling_efficiency_audit`], [`PulseSkipInterferenceReport`],
 //! [`pulse_skip_interference_audit`] — stay clickable through the `pub use`
 //! block below. Matches the `cost/*.rs` + `route/tree.rs` precedent set in
-//! the Phase 3 hygiene pass.)
+//! the hygiene pass.)
 //!
 //! # Attack axes
 //!
@@ -24,8 +24,6 @@
 //! 3. **Near-short / fault risk**: graded margins, especially across HV↔LV.
 //! 4. **Crosstalk**: capacitive/inductive coupling from parallel adjacent runs.
 //! 5. **Antenna / dangling**: etch/ESD risks from unconnected track ends.
-
-#![allow(missing_docs)] // Phase 4c carve: `pub mod X;` declarations are slice-private; lint allow covers the entire facade.
 
 pub mod antenna;
 pub mod critic;

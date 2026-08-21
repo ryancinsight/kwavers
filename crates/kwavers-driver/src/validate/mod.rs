@@ -6,7 +6,7 @@
 //!
 //! # Slice layout
 //!
-//! Carved by **role** (Phase 4j). Plain backticks name the slice-private submodules; the public
+//! Carved by **role**. Plain backticks name the slice-private submodules; the public
 //! items each hosts stay clickable.
 //! * `check` — the [`Check`] / [`PhysicsReport`] primitives (measured value vs limit + signed margin).
 //! * `board_checks` — board-geometry physics checks: HV creepage ([`min_hv_spacing_mm`]), ampacity

@@ -1,8 +1,8 @@
 //! Power-delivery-network (PDN) failures.
 //!
-//! Forward-looking variants for the [`crate::physics::pdn`] slice. Mirrors the EMI
-//! pattern: today `ir_drop(...) -> f64` and `target_impedance_ohm(...) -> f64`
-//! return breached values; Phase 2 migrates the breaches into `Result<_, Pdn>`.
+//! Declared variants for the [`crate::physics::pdn`] slice, mirroring the EMI pattern:
+//! `ir_drop(...) -> f64` and `target_impedance_ohm(...) -> f64` return breached values
+//! today, and these variants are adopted when those breaches become `Result<_, Pdn>`.
 
 /// Power-delivery-network failure.
 ///

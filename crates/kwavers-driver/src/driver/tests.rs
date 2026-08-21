@@ -1,4 +1,4 @@
-//! Consolidated tests for the `driver` slice (Phase 4g carve-out): the pulser loss model, the
+//! Consolidated tests for the `driver` slice: the pulser loss model, the
 //! reactive/matching math, the thermal-duty + power-rating limits, the frequency sweep and the
 //! cross-IC comparison. Moved verbatim from the flat `src/driver.rs` `mod tests` block; `super::*`
 //! resolves the slice facade.

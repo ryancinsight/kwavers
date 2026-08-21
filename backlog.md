@@ -1,5 +1,39 @@
 # Backlog / Strategy
 
+## KW-CI-115 — Enforce the merge gate on main [minor] — todo
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-CI-115 | `main` cannot take a merge whose verification has not passed. | [minor] | todo | unclaimed (needs repository-admin rights) | GitHub repository settings: branch protection or a ruleset on `main` |
+
+- The gap: `main` is unprotected. `GET /repos/ryancinsight/kwavers/branches/main/protection`
+  returns `404 Branch not protected`, so there are no required status checks and no review
+  requirement. Every workflow in `.github/workflows/` is advisory — a red or unfinished
+  build can land, and nothing in the repository stops it.
+- Demonstrated, not hypothetical: PR #433 merged on 2026-08-20 with two of its thirty-one
+  checks still running (`Benchmark Runtime Smoke`, `PINN Convergence Analysis`). The merge
+  was a mistake — `gh pr merge --auto` silently degraded to an immediate merge because this
+  repository does not allow auto-merge — but the point stands that no gate refused it.
+  `PINN Convergence Analysis` passed afterwards.
+- Design constraint that makes this more than a checkbox: the full matrix is expensive.
+  Three-OS wheel builds run 20-26 minutes, alongside CUDA, coverage, and benchmark jobs, and
+  on 2026-08-20 three concurrent PRs left every workflow **queued** for 45+ minutes without
+  starting. Marking all thirty-one checks required would make that queue a hard merge
+  blocker on every change, including documentation-only ones.
+- Recommended shape, therefore: require the fast affected-scope gates that actually
+  discriminate — formatting, Clippy, the workspace build and test, `check-readmes`, the
+  architecture validation — and leave the heavy suites (wheels, CUDA, coverage, benchmark,
+  mutation) to default-branch and scheduled runs, which is what the workflow-hygiene
+  convention already prescribes. A required set that is slower than the work it gates gets
+  bypassed, which returns the repository to where it is now.
+- Acceptance: a branch-protection rule or ruleset exists on `main`; its required checks are
+  the curated fast set, chosen and recorded deliberately rather than "all of them"; a PR
+  with a failing required check cannot be merged; and the heavy suites still run on merge
+  and on schedule.
+- Needs repository-admin rights, so this is an owner action rather than a code change. Also
+  worth deciding at the same time: whether to enable "Allow auto-merge", which would make
+  merge-when-green available and remove the failure mode that produced the #433 merge.
+
 ## KW-DOC-105 — Per-crate README landing pages [patch] — ✅ done 2026-08-20
 
 | ID | Outcome | Class | Status | Owner | Scope |
@@ -155,132 +189,186 @@
 - Non-goals: no changes to the existing peer-owned Kwavers medium, physics,
   visualization, workflow, lockfile, or documentation edits.
 
-## KW-DOC-105 — Per-crate README landing pages [patch] — ✅ done 2026-08-20
+## KW-CLEAN-108 — Delete the tracked driver backup file [patch] — done 2026-08-20
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-DOC-105 | Every workspace crate publishes a real registry landing page, single-sourced as its crate documentation and mechanically enforced. | [patch] | done | Claude | `crates/*/README.md`, each `crates/*/src/lib.rs` doc attribute, `xtask/src/readme_audit.rs`, `.github/workflows/architecture-validation.yml`, root `README.md` |
+| KW-CLEAN-108 | No editor backup artifacts are tracked, and the ignore rule that should have stopped this one actually matches it. | [patch] | done | Claude | `crates/kwavers-driver/src/physics/mod.rs.bak-final`, `.gitignore` |
 
-- Acceptance: no crate under `crates/` lacks a `README.md` or a manifest
-  `description`; each README is the crate documentation via
-  `#![doc = include_str!("../README.md")]` so registry and docs.rs cannot drift;
-  README examples compile and run as doctests; a committed check fails when a new
-  crate reopens the gap.
-- Evidence: 22 READMEs added (all crates but `kwavers-driver` and `kwavers-python`,
-  which already had one). `cargo run -p xtask -- check-readmes` passes over 24 crates.
-  `cargo test --doc --workspace` green — every new README example is an executed
-  doctest. `cargo fmt --all -- --check` clean for the touched files (three unrelated
-  peer-dirty files remain unformatted). `cargo doc --workspace --exclude
-  kwavers-python --no-deps` emits only the two pre-existing warnings
-  (`kwavers-core` NUMA allocator private-item link, `kwavers-solver` KZK
-  `Plugin::update`); the gated `RUSTDOCFLAGS="-D warnings" cargo doc -p kwavers
-  --features full` passes. `cargo package -p kwavers-core --list` confirms the README
-  ships in the package.
-- Incidental drift closed: the root README crate table listed the deleted
-  `kwavers-domain` and omitted twelve crates; it now lists all 24 with links. The
-  `kwavers-physics` crate doc's reference to the non-existent
-  `ARCHITECTURE_AUDIT_REPORT.md` is gone with the folded `//!` block.
-- Residual: `kwavers-driver` and `kwavers-python` carry substantial `//!` docs that
-  differ from their READMEs, so folding them is a content merge, not mechanical
-  wiring. They sit in `SINGLE_SOURCE_EXEMPT` in `xtask/src/readme_audit.rs`; the
-  list only shrinks. `kwavers-driver`'s README additionally carries stale migration
-  claims and mojibake (`∑`, `+:`) — see KW-DOC-106.
-
-## KW-DOC-106 — Correct and settle the driver/python crate docs [patch] — done 2026-08-20
-
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-DOC-106 | `kwavers-driver` single-sources its README as crate docs with every claim re-verified; `kwavers-python` keeps two documents by rule, both corrected. | [patch] | done | Claude | `crates/kwavers-driver/{README.md,src/lib.rs}`, `crates/kwavers-python/{README.md,src/lib.rs}`, `xtask/src/readme_audit.rs` |
-
-- Acceptance: no crate README contradicts the tree; the single-sourcing exemption is a
-  stated rule rather than a name list; `cargo run -p xtask -- check-readmes` passes and
-  still fails when the directive is removed.
-- Scope correction (technical dissent against this item's original acceptance):
-  KW-DOC-105 assumed both crates would single-source. `kwavers-python` is
-  `publish = false` with `crate-type = ["cdylib"]` — no crates.io page, no docs.rs page —
-  so the anti-drift rationale does not apply, and its README is the PyPI landing page for
-  a Python reader while its `//!` docs address the Rust maintainer of the binding layer.
-  Folding them would make one document serve two audiences badly. The audit now exempts
-  `publish = false` crates by rule; the `SINGLE_SOURCE_EXEMPT` name list is deleted.
-- `kwavers-driver` claims corrected before promotion to crate docs: test count `113` to
-  **494** (`cargo nextest run -p kwavers-driver`, 494 passed in 2.975 s); refactor status
-  `Phase 0 scaffolding` to Phases 0-5 landed per `docs/MIGRATION.md` with Phase 6
-  (public-API examples + docs backfill) outstanding; the four referenced `examples/*.rs`
-  programs do not exist in the repository and never did — the example set is proprietary
-  and gitignored (`.gitignore` lines 141-143), so the README no longer instructs readers
-  to run them; the `planned extraction name is kwavers-drivers` sentence is removed (the
-  crate is extracted and named `kwavers-driver`); the tree-growth description is corrected
-  from a blanket Prim-style/rectilinear-Steiner claim to the actual per-net-class dispatch
-  (Prim-style for power/ground, chain-tip daisy chain for signal/HV, `src/route/tree.rs`);
-  the module map is expanded from 12 entries to the full public surface; the physics table
-  is repointed at the `physics::*` slices; mojibake is removed. Cross-check claims are
-  retained only where a test grounds them (`bvd_resonance_matches_2mhz_drive`, thermal
-  manufactured solution).
-- `kwavers-python` README corrections: removed the unsupported performance table
-  (8.3 s / 12.1 s / 2.4 s with no stored baseline, grid size, or machine class — a speedup
-  claim without evidence); parity thresholds re-attributed from
-  `examples/compare_plane_wave.py` (which asserts `L2 < 0.01`) to their real home,
-  `pykwavers.comparison` plus `tests/test_solver_parity.py`; dead links removed
-  (`docs/sprints/SPRINT_217_...md`, `../ARCHITECTURE.md`, `../LICENSE`);
-  `cargo test/fmt/clippy -p pykwavers` corrected to `-p kwavers-python` (the package name;
-  `pykwavers` is the lib name); `Medium.heterogeneous (future)` corrected because
-  `elastic_heterogeneous` exists; `SolverType` list completed (FDTD, PSTD, Hybrid,
-  PstdGpu, Elastic, ElasticPSTD, Helmholtz, BEM, DG); `run` signature completed
-  (`record_start_index`, `record_modes`); `SimulationResult` surface completed; the stale
-  roadmap is replaced with a status paragraph; the `Sprint: 217 Session 9 /
-  Date: 2026-02-04` process trailer is dropped from both the README and the crate docs.
-- Evidence: `cargo run -p xtask -- check-readmes` passes over 24 crates and fails with
-  exit 1 when the driver directive is deleted (negative test run, then reverted).
-  `cargo nextest run -p kwavers-driver` 494/494 in 2.975 s. `cargo clippy -p kwavers-driver
-  --all-targets -- -D warnings` clean. `RUSTDOCFLAGS="-D warnings" cargo doc -p
-  kwavers-driver --no-deps` clean. `cargo test --doc -p kwavers-driver` green.
-  `cargo check -p kwavers-python` clean. `cargo fmt --all -- --check` clean for the touched
-  files.
-- Residual, filed below: KW-DOC-107, KW-CLEAN-108, KW-DOC-109.
-
-## KW-DOC-107 — Move driver migration plans out of module docstrings [patch] — todo
-
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-DOC-107 | `kwavers-driver` module docs describe what the module is, not the phased plan that produced it. | [patch] | todo | unclaimed | `crates/kwavers-driver/src/{physics,geometry}/mod.rs` and any sibling carrying a `# Phase N` block |
-
-- Evidence of the defect: `src/physics/mod.rs` opens "Physics vertical-slice tree (Phase 0
-  placeholder)" and carries a Phase 1+ migration plan, though the tree is populated and the
-  flat `src/{ampacity,dielectric,thermal,emi,pdn,si,acoustic}.rs` modules it says it will
-  migrate no longer exist. `src/geometry/mod.rs` says the same while `src/geom.rs` remains
-  authoritative. Migration plans belong in `docs/MIGRATION.md`; a module docstring that
-  contradicts its own module is documentation drift.
-- Acceptance: each module docstring states the module current responsibility and
-  invariants; phase narrative moves to (or is deleted as already captured by)
-  `docs/MIGRATION.md`; `cargo doc -p kwavers-driver` stays warning-clean.
-
-## KW-CLEAN-108 — Delete the tracked driver backup file [patch] — todo
-
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-CLEAN-108 | No editor backup artifacts are tracked in the source tree. | [patch] | todo | unclaimed | `crates/kwavers-driver/src/physics/mod.rs.bak-final` |
-
-- `git ls-files` lists `crates/kwavers-driver/src/physics/mod.rs.bak-final`. Git is the
-  archive; a superseded copy beside the file it supersedes is an obsolete artifact.
+- Merge note: filed on `feat/aperture-sir-seam` (commit `7f9a4e718`), closed here on
+  `fix/xtask-metrics-paths` because a peer moved the shared tree between branches. Keep
+  this closed entry and drop the `todo` entry of the same ID when the branches meet.
 - Acceptance: the file is deleted; a tree-wide scan finds no other tracked `.bak`/`.orig`
   siblings.
+- Deleted: `crates/kwavers-driver/src/physics/mod.rs.bak-final` — 41 lines, entirely
+  superseded doc text from the Phase-0 era describing an empty `physics` namespace with the
+  flat `src/<name>.rs` modules authoritative. Neither statement has been true since the
+  physics slices landed, it carries no code, it is referenced from nowhere, and rustc never
+  saw it (the extension is not `.rs`). Git holds the history.
+- Root cause, and the actual fix: `.gitignore` already carried a "Backup files" block with
+  `*.bak`, so the artifact looked like it should have been ignored. It was not — a bare
+  `*.bak` glob requires the name to end in `.bak` and does not match `mod.rs.bak-final`.
+  The pattern is now `*.bak*`, which does, and `*.orig` / `*.rej` are added for
+  merge-conflict leftovers, the other common accidental commit. Deleting the file without
+  this leaves the same hole open.
+- Evidence: tree-wide scans for `.bak`/`.backup`/`.orig`/`.rej`/`.old`/`.save`/`.swp`/`~`
+  and for `backup`/`bkp`/`copy`/`deprecated`/`disabled` in tracked paths return this one
+  file and nothing else. `git check-ignore -v` confirms `.gitignore:71` now matches it, and
+  no tracked file is newly shadowed by the added patterns. `cargo nextest run -p
+  kwavers-driver` 494/494 after the deletion.
 
-## KW-DOC-109 — Review driver publication surface [patch] — todo
+## KW-DOC-107 — Move driver migration plans out of module docstrings [patch] — done 2026-08-20
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-DOC-109 | The published `kwavers-driver` landing page discloses only what the project intends to publish. | [patch] | todo | unclaimed | `crates/kwavers-driver/{README.md,Cargo.toml}`, `.gitignore` |
+| KW-DOC-107 | `kwavers-driver` module docs describe what each module is, not the phased plan that produced it. | [patch] | done | Claude | 83 files under `crates/kwavers-driver/src/` |
 
-- Observation, surfaced rather than acted on: `kwavers-driver` is `publish = true`, so its
-  README is a public crates.io page, while the example programs it grew out of are
-  gitignored as CONFIDENTIAL (`.gitignore` lines 141-143). The current README names the
-  project, specific part numbers, channel counts, and stack architecture. KW-DOC-106
-  removed the instructions to run the unpublished examples and added no proprietary
-  detail, but whether the remaining board specifics belong on a public registry page — or
-  whether the crate should be `publish = false` — is the owner call, not a documentation
-  decision.
-- Acceptance: an explicit decision is recorded (keep as-is, redact, or unpublish), and the
-  README and manifest match it.
+- Merge note: this item was filed on `feat/aperture-sir-seam` (commit `7f9a4e718`) and
+  closed here on `fix/xtask-metrics-paths`, because a peer moved the shared tree onto a
+  different branch mid-item. When the two branches meet, keep this closed entry and drop
+  the `todo` entry of the same ID.
+- Acceptance: no module docstring contradicts its own module; phase narrative lives in
+  `docs/MIGRATION.md`, which already carries it; `cargo doc -p kwavers-driver` stays
+  warning-clean.
+- The defect: `src/physics/mod.rs` opened "Physics vertical-slice tree (Phase 0
+  placeholder)" and carried a plan to migrate flat modules that no longer exist, then
+  closed 79 lines later with "Phase 3 is COMPLETE" — a docstring contradicting itself over
+  7 `pub mod` lines. `src/geometry/mod.rs` declared itself a placeholder whose content
+  would replace `src/geom.rs`, a migration `docs/MIGRATION.md` records as not started.
+  Twelve rustdoc `# Phase N` section headings rendered process narrative into the published
+  API docs, and ~150 further doc lines carried phase labels.
+- Done: every `Phase N` reference is gone from `src/` except the crate-level `//!` block in
+  `src/lib.rs`, which commit `7f9a4e718` deletes outright (editing it here would collide
+  with that deletion for no gain). Rewrites keep the engineering content and drop the
+  process framing — the per-module "which parameters are still plain `f64` and why" notes
+  became `# Units` sections pointing at `docs/MIGRATION.md`; "Phase 2b round-2 carve-out"
+  became "# Cross-file impl blocks"; the physics-tree docstring became a slice
+  responsibility table plus the no-cross-slice-coupling invariant; `src/geometry/mod.rs`
+  now states plainly that it is empty and that [`crate::geom`] is authoritative.
+- Evidence: 83 files, +240/-416 lines, and a diff review confirms every changed line is a
+  comment — no code, and no reformat churn (each changed file carries a comment-line
+  change). `cargo nextest run -p kwavers-driver` 494/494 in 2.519 s.
+  `RUSTDOCFLAGS="-D warnings" cargo doc -p kwavers-driver --no-deps` clean.
+  `cargo clippy -p kwavers-driver --all-targets -- -D warnings` clean. `cargo fmt` clean.
+- Observations recorded rather than acted on: `src/geometry/` is an empty `pub mod` that
+  exports nothing — public surface reserved for a migration that has not started; it stays
+  because `docs/MIGRATION.md` still plans it. `src/ssot.rs` documents `TX_LANES_V2` and
+  `CHANNELS_PER_TILE_V2`, version-suffixed identifiers whose `_V2` may name a real board
+  revision or may be an iteration marker; a rename needs the owner's reading of which.
+  KW-DOC-110 below covers the blanket allow this item surfaced.
+
+## KW-LINT-1 — Burn down the clippy debt baseline [patch] — todo
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | todo | unclaimed | `Cargo.toml`, `crates/**` |
+
+- Context: the clippy floor landed in #423. 21 of 24 crates already declared
+  `[lints] workspace = true`, but no `[workspace.lints.clippy]` table existed for them to
+  inherit, so the plumbing was live and the floor was empty. The floor is now the canonical
+  apollo template; what kwavers trips today sits in a counted debt block beneath it.
+- Baseline at adoption, measured by `cargo clippy -p kwavers --features pinn --lib` (which
+  lints every path member, i.e. the whole workspace): **1390** warnings. `unused_self` 257,
+  `unwrap_used` 255, `missing_panics_doc` 225, `missing_errors_doc` 119 — 62% of the total —
+  then a ~200-warning tail across 25 lints.
+- Acceptance: per lint, drive the count to zero **in the production code**, then delete that
+  lint's line from the debt block so the floor re-enables it. The count in the comment is the
+  ratchet; it only decreases. Suppressing a site with `#[expect]` counts only where the lint
+  is genuinely inapplicable and the reason says why — `unwrap_used` inside `#[test]` is the
+  sanctioned case, `unwrap_used` on a production path is not.
+- Sequencing: `missing_panics_doc` and `missing_errors_doc` (344 combined) are documentation
+  the panic/error surface should carry anyway and burn down mechanically per crate.
+  `unwrap_used` (255) is the one with real correctness content and wants the panic-policy
+  treatment (`?`, `ok_or_else`, or `expect("invariant: …")`), not a mass rewrite.
+  `unused_self` (257) is the one to read before acting: it often marks a method that should
+  be an associated function, but sometimes marks a seam deliberately taking `&self`.
+- Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
+  burn-down; changing them is a separate decision:
+  - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
+    workspace-level `deny` would make `cargo clippy -p kwavers-solver` unusable before the
+    debt clears. Promote to `deny` once the workspace is clean.
+  - Six pedantic lints the arena allocator trips are allowed on the merits, not as debt.
+    `cast_ptr_alignment` is inherent to an arena handing out typed views of a byte block;
+    that invariant belongs in a per-site `SAFETY` note.
+- Already clean, and not by suppression: `kwavers-core` and the `kwavers` facade — the two
+  crates CI gates with `-D warnings` — trip none of the debt lints.
+
+## KW-CORE-LOG-1 — Decide whether the console log sink belongs on stdout [patch] — todo
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-CORE-LOG-1 | `CombinedLogger`'s console stream is a decision with a stated reason, not an unexamined default. | [patch] | todo | unclaimed | `crates/kwavers-core/src/log/file.rs` |
+
+- `CombinedLogger::log` writes each record to stdout via `println!` when `console` is set.
+  That is what `clippy::print_stdout` exists to catch, and the site carries a per-site
+  `#[expect]` because the type is the sink itself rather than incidental library output.
+- The open question is the stream, not the lint: diagnostics on stdout interleave with a
+  program's actual output, which is why `eprintln!` is the convention for log sinks. Changing
+  it is an observable behaviour change for anything piping kwavers output, so it was left
+  alone in a lint-adoption commit.
+- Acceptance: either move the console sink to stderr and note it in the CHANGELOG, or record
+  in the type's Rustdoc why stdout is correct here.
+
+## KW-DOC-110 — Document the audit slice submodules [patch] — done 2026-08-20
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-DOC-110 | `crates/kwavers-driver/src/audit/` satisfies the crate's `#![deny(missing_docs)]` without a blanket allow. | [patch] | done | Claude | `crates/kwavers-driver/src/audit/{mod,antenna,crosstalk,shorts}.rs` |
+
+- The defect: `src/audit/mod.rs` carried `#![allow(missing_docs)]` covering the whole audit
+  facade, so `#![deny(missing_docs)]` at the crate root did not reach it, and
+  `antenna.rs`, `crosstalk.rs`, and `shorts.rs` opened directly on `use` statements with no
+  module documentation at all.
+- Acceptance: every public module under `src/audit/` documents its responsibility; the
+  blanket allow is deleted rather than narrowed; `cargo doc -p kwavers-driver` stays
+  warning-clean.
+- Scope was smaller than filed: removing the allow and compiling named exactly three
+  undocumented modules, not eleven — every other module in the slice, and every public item
+  inside the three, was already documented. The compiler was the oracle; the filed estimate
+  came from reading first lines.
+- Written from the code, not from the module names. `antenna.rs` turned out to be mostly
+  not about antennas: only `detect_antenna_impedance_mismatch` concerns antenna nets, while
+  the rest are whole-board copper-geometry checks (dangling ends, per-layer copper balance
+  for reflow warpage, via adjacency, parallel-track counting). The doc says so rather than
+  paraphrasing the filename. `crosstalk.rs` documents what makes its checks *placement*
+  signals — they run before any copper exists — and `shorts.rs` documents the graded-margin
+  posture that distinguishes it from binary DRC.
+- Evidence: `cargo check -p kwavers-driver` compiles with `#![deny(missing_docs)]` reaching
+  the slice and no blanket allow. `RUSTDOCFLAGS="-D warnings" cargo doc -p kwavers-driver
+  --no-deps` clean — four public-doc-to-private-item links were caught by that gate and
+  demoted to code spans. `cargo clippy -p kwavers-driver --all-targets -- -D warnings`
+  clean. `cargo nextest run -p kwavers-driver` 494/494.
+- Merge note: filed and closed on `fix/xtask-metrics-paths`; KW-DOC-107 and KW-CLEAN-108
+  carry the same note about the branch split.
+
+## KW-LINT-111 — Put kwavers-driver, -python, and kwavers on the workspace lint floor [minor] — todo
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-LINT-111 | Every workspace member inherits `[workspace.lints]`, so the Atlas clippy floor actually reaches all of them. | [minor] | todo | unclaimed | `crates/{kwavers-driver,kwavers-python,kwavers}/Cargo.toml` and the warnings that surface |
+
+- The defect, found while closing KW-DOC-110: three of the twenty-four members carry no
+  `[lints] workspace = true`, so `clippy::all` + `clippy::pedantic`, `print_stdout`, and
+  `dbg_macro` from the root `[workspace.lints.clippy]` table never apply to them. The
+  crates are `kwavers-driver`, `kwavers-python`, and the top-level `kwavers`. Every other
+  member inherits.
+- Correction it forces: any "clippy clean" claim previously recorded for `kwavers-driver`
+  — including in KW-DOC-106, KW-DOC-107, and KW-CLEAN-108 — was `cargo clippy` against the
+  *default* lint set, not the workspace floor. Those runs were real and passed; they were
+  simply a weaker gate than the phrase suggests.
+- Measured size: `cargo clippy -p kwavers-driver --all-targets -- -W clippy::all -W
+  clippy::pedantic` emits ~1,155 warnings, dominated by `cast_possible_truncation` (110).
+  The real count under the floor is lower, because the workspace table already allows
+  `module_name_repetitions`, `must_use_candidate`, `similar_names`, and `too_many_lines`;
+  measure again after adding inheritance before sizing the burn-down.
+- Acceptance: the three manifests inherit `[lints] workspace = true`; the resulting warning
+  count is either driven to zero or recorded as a ratchet baseline per the workspace
+  convention in the root `Cargo.toml` comment (`warn` now, `deny` per crate as each reaches
+  zero); no new blanket `allow` is introduced to absorb the count.
+- Related: `crates/kwavers-driver/src/ssot.rs:39` carries an unexplained
+  `#![allow(clippy::doc_markdown)]`. It is currently dead — pedantic is not enabled for the
+  crate, so the lint cannot fire — and becomes live the moment this item lands. Keep or
+  justify it then, rather than deleting it now.
 
 ## KW-CI-104 — Centralize reliable Ubuntu dependency installation [patch] — in progress 2026-08-19
 

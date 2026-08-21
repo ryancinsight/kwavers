@@ -1,4 +1,4 @@
-//! Consolidated thermal + ir_drop tests (Phase 3b).
+//! Consolidated thermal and ir_drop tests.
 //!
 //! 6 thermal tests from `src/thermal.rs` + 3 ir_drop tests relocated from `src/pdn.rs`.
 

@@ -1,10 +1,8 @@
-//! Signal-integrity vertical slice — controlled-impedance microstrip / stripline /
-//! propagation / crosstalk kernels (Phase 3f carve).
+//! Signal integrity: controlled-impedance microstrip and stripline, propagation, and
+//! crosstalk kernels.
 //!
-//! All eight free fns (4 characteristic-impedance + 1 propagation-delay + 1 skew-budget +
-//! 1 risetime-degradation + 1 crosstalk coupling) take `f64` inputs and return `f64` outputs
-//! with no internal state or cross-slice dependency on the rest of the physics tree. The
-//! carved-per-concern submodules are:
+//! Every function here is pure math — `f64` in, `f64` out, no internal state and no
+//! cross-slice dependency on the rest of the physics tree. The per-concern submodules are:
 //!
 //! * [`impedance`] — [`impedance::microstrip_eeff`] + [`impedance::microstrip_impedance`] +
 //!   [`impedance::stripline_impedance`] + [`impedance::differential_microstrip_impedance`] +
@@ -20,22 +18,13 @@
 //!   two compose into the eye-mask budget check that the polyline router exercises vs the
 //!   receiver threshold).
 //!
-//! # Phase 1a migration roadmap
+//! # Units
 //!
-//! [`impedance_target`] + [`return_loss_db`] + [`microstrip_impedance`] etc. return `f64`
-//! today. Phase 2 will replace the `w, h, er, t, b, s` parameters with `Meter, Meter, f64,
-//! Meter, Meter, Meter` for the dimensioned quantities and return types as the typed
-//! [`Ohm`] wrapper. **No signature change at Phase 3f** — keeping the API as `f64` preserves
-//! every existing call-site and test fixture until the vertical-slice units land.
+//! The dimensioned parameters (`w`, `h`, `t`, `b`, `s`) and the impedance return values are
+//! plain `f64` in their documented SI units. Typing them as lengths and [`Ohm`] is tracked
+//! in `docs/MIGRATION.md`.
 //!
 //! [`Ohm`]: crate::units::Ohm
-//!
-//! # SSOT for the slice
-//!
-//! * `pub mod impedance` — characteristic impedance (microstrip + stripline + differential)
-//!   + signal-line branching-match target + per-call RL for frequency-band loops.
-//! * `pub mod propagation` — microstrip delay + cross-trace skew budget + risetime spread.
-//! * `pub mod crosstalk` — backward-coupling coefficient + IEEE amplitude-ratio COM margin.
 //!
 //! # SSOT distinction with PDN
 //!
@@ -47,13 +36,8 @@
 //! distinguished SSOT is anchored in the `crate::physics::si::tests::ssot_distinction_pdn_target_impedance_is_separate`
 //! test fixture in the slice's consolidated `tests.rs`.
 //!
-//! # Phase 3f cut-over status
-//!
-//! The flat `src/si.rs` (Phase 0 surface) has been retired: all 8 prior `pub fn`s have
-//! migrated into the carved tree at this path, plus 3 new APIs (impedance_target,
-//! return_loss_db, channel_operating_margin_db) added to fill out the frequency-band-aware
-//! impedance budget surface. The crate-root re-export at `src/lib.rs::pub use physics::si::{...}`
-//! covers the 10-fn surface for downstream callers; `crate::si::*` is now retired.
+//! Every public item here is re-exported at the crate root by
+//! `src/lib.rs::pub use physics::si::{…}`.
 
 pub mod crosstalk;
 pub mod impedance;

@@ -20,9 +20,9 @@
 //! iterations, the present factor receives a temporary multiplicative boost that breaks
 //! congestion equilibria where two nets keep swapping the same overloaded resource.
 //!
-//! # Phase 2b round-2 carve-out
+//! # Cross-file impl blocks
 //!
-//! Two concerns previously inlined here have been carved out into sibling modules (round-2):
+//! Two `impl Router` concerns live in sibling modules rather than here:
 //!
 //! * `tree.rs` — the single-net `route_one` method (Prim-style for power / ground, chain-tip
 //!   for signal / HV). The dispatcher logic (chain-sources tracking, terminal-group

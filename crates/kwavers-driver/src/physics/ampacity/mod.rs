@@ -1,12 +1,11 @@
 //! Current-carrying capacity (ampacity) and conductor resistance — IPC-2221.
 //!
-//! # Phase 1a migration roadmap
+//! # Units
 //!
-//! `ipc2221_min_width` already returns `Nm` (length newtype). The remaining flat-`f64`
-//! parameters (`current_a`, `dt_c`, `copper_oz`, `len_m`, `width_m`) stay as `f64` at Phase 1a —
-//! Phase 2 will swap to `Amp` / `Celsius` / `Meter` (plain backticks — those newtypes are not yet
-//! wrapped) as the ampacity slice migrates. The DFM helpers (annular ring, aspect ratio)
-//! similarly stay `f64` for now.
+//! `ipc2221_min_width` returns an [`crate::units::Nm`]. The current, temperature-rise,
+//! copper-weight, length, and width parameters are still plain `f64` in their documented
+//! SI units, as are the DFM helpers; adopting the `Amp` / `Celsius` newtypes here is
+//! tracked in `docs/MIGRATION.md`.
 //!
 //! A track must be wide enough to carry its current without overheating, and its `I²R` loss is a
 //! distributed heat source that couples into the [`crate::physics::thermal`] field (electro-thermal
@@ -31,7 +30,7 @@ pub mod ipc2221;
 /// copper utilisation regime (thin / partial-skin / deep-skin) can be selected at design time.
 pub mod skin_and_film;
 /// DC track resistance `R = ρ·L/(W·t)` plus the SOLE Tier-2 upstream enabler for both
-/// `thermal::joule_source` and `pdn::ir_drop` (Phase 3a cut-over kept this here).
+/// `thermal::joule_source` and `pdn::ir_drop`.
 pub mod track_resistance;
 /// Annular ring floor (mm around a via drill) plus through-hole aspect-ratio check (drill length
 /// vs drill diameter); the manufacturing-readiness gates a fab rejects first.

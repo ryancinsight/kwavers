@@ -1,7 +1,7 @@
 //! Placement → routing bridge and the place↔route co-optimization loop.
 //!
 //! After the placer fixes component positions, this derives what the router needs, then runs the
-//! adversarial place↔route loop. Carved by role (Phase 4m): `config`, `result`, `place_board`,
+//! adversarial place↔route loop. Carved by role: `config`, `result`, `place_board`,
 //! `cooptimize`.
 
 mod config;
