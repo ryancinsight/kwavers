@@ -120,8 +120,8 @@ impl ClinicalWorkflowOrchestrator {
         let acquisition_start = Instant::now();
 
         let ultrasound_data = self.acquire_ultrasound_data()?;
-        let pa_result = self.acquire_photoacoustic_data()?;
-        let elastography_result = self.acquire_elastography_data()?;
+        let pa_result = Self::acquire_photoacoustic_data()?;
+        let elastography_result = Self::acquire_elastography_data()?;
 
         let acquisition_time = acquisition_start.elapsed();
         if self.config.real_time_enabled
@@ -158,7 +158,7 @@ impl ClinicalWorkflowOrchestrator {
         self.fusion_processor
             .register_elastography(&acquisition.elastography_result)?;
 
-        let quality_metrics = self.perform_quality_assessment(&acquisition)?;
+        let quality_metrics = Self::perform_quality_assessment(&acquisition)?;
 
         let processing_time = processing_start.elapsed();
         if self.config.real_time_enabled
@@ -231,7 +231,7 @@ impl ClinicalWorkflowOrchestrator {
         })
     }
 
-    fn acquire_photoacoustic_data(&self) -> KwaversResult<PhotoacousticResult> {
+    fn acquire_photoacoustic_data() -> KwaversResult<PhotoacousticResult> {
         let pa_config = ClinicalPhotoacousticConfig {
             _wavelength: 800e-9,
             _optical_energy: 10e-3,
@@ -255,7 +255,7 @@ impl ClinicalWorkflowOrchestrator {
         })
     }
 
-    fn acquire_elastography_data(&self) -> KwaversResult<ElasticityMap> {
+    fn acquire_elastography_data() -> KwaversResult<ElasticityMap> {
         let elast_config = ElastographyConfig {
             _excitation_frequency: 100.0,
             _push_duration: 200e-6,
@@ -277,7 +277,6 @@ impl ClinicalWorkflowOrchestrator {
     }
 
     fn perform_quality_assessment(
-        &self,
         acquisition: &AcquisitionResult,
     ) -> KwaversResult<HashMap<String, f64>> {
         let mut metrics = HashMap::new();
