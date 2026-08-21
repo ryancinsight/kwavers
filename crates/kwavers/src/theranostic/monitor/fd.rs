@@ -141,6 +141,11 @@ fn build_config(cfg: &FdMonitorConfig) -> KwaversResult<Config> {
 ///
 /// # Errors
 /// Propagates FD forward-modelling and inversion errors.
+///
+/// # Panics
+///
+/// Panics if the medium and background volumes violate the shared slice-shape
+/// invariant required by the finite-difference monitor.
 pub fn reconstruct(
     medium_slice: &Array3<f64>,
     background: &Array3<f64>,
