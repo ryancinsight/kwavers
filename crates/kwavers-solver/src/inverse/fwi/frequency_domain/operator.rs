@@ -64,6 +64,11 @@ pub trait HelmholtzForwardOperator: Debug + Send + Sync {
     /// CBS solver descriptor — `Some((cbs_config, kernel))` for CBS impls,
     /// `None` otherwise. The volume-field adjoint gradient needs these to
     /// reconstruct the matching forward and adjoint solves.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the operator cannot construct a valid CBS descriptor for the supplied
+    /// inversion configuration.
     fn cbs_descriptor(
         &self,
         _config: &Config,
