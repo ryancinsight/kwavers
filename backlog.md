@@ -959,6 +959,11 @@
   (quantifier path clean), Nextest (744/744), doctests (1/22; 21 ignored), and warning-denied rustdoc
   pass. The refreshed workspace `unused_self` count is 36 sites with 17 remaining in other analysis
   paths.
+- 2026-08-21 `kwavers-analysis` neural DAS slice is implemented: receiver-free signal-quality
+  assessment is an associated function; the adaptive pipeline and direct test use associated syntax.
+  Package check, targeted `unused_self` Clippy (DAS path clean), Nextest (744/744), doctests (1/22;
+  21 ignored), and warning-denied rustdoc pass. The refreshed workspace `unused_self` count is 35
+  sites with 16 remaining in other analysis paths.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a

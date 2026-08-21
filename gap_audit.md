@@ -7275,6 +7275,12 @@ quantifier state remains receiver-bound. Package check, targeted `unused_self` C
 clean), Nextest (744/744), doctests (1/22; 21 ignored), and warning-denied rustdoc pass. The refreshed
 workspace `unused_self` count is 36 sites with 17 remaining in other analysis paths.
 
+The `kwavers-analysis` neural DAS slice converts receiver-free signal-quality assessment to an
+associated function; the adaptive pipeline and direct test use associated-function syntax. Package
+check, targeted `unused_self` Clippy (DAS path clean), Nextest (744/744), doctests (1/22; 21 ignored),
+and warning-denied rustdoc pass. The refreshed workspace `unused_self` count is 35 sites with 16
+remaining in other analysis paths.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.
