@@ -1155,6 +1155,11 @@
   denied simulation Clippy, 87/87 Nextest, doctests (4 passed; 2 ignored), and warning-denied
   Rustdoc pass. The production workspace count decreases from 14 to 10 sites; the ratchet comment
   is updated.
+- 2026-08-21 `from_iter_instead_of_collect` analysis slice is complete: polynomial clutter-filter
+  time coordinates now collect directly into `Array1` before optional normalization. Warning-
+  denied analysis Clippy, 744/744 Nextest, doctests (1 passed; 21 ignored), and warning-denied
+  Rustdoc pass. The production workspace count decreases from 10 to 9 sites; the ratchet comment
+  is updated.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
