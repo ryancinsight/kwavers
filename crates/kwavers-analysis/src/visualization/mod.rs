@@ -32,7 +32,7 @@ pub mod engine;
 pub mod fallback;
 pub mod metrics;
 
-// GPU-specific modules
+// Feature-gated visualization modules
 #[cfg(feature = "gpu-visualization")]
 pub mod controls;
 #[cfg(feature = "gpu-visualization")]
@@ -186,6 +186,25 @@ mod tests {
         ];
 
         pollster::block_on(engine.render_multi_field(&fields, &field_types, &grid)).unwrap();
+    }
+
+    #[cfg(feature = "gpu-visualization")]
+    #[test]
+    fn test_render_field_requires_gpu_initialization() {
+        let config = VisualizationConfig::default();
+        let mut engine = VisualizationEngine::create(config).unwrap();
+        let grid = create_test_grid();
+        let field = create_test_field();
+
+        let result =
+            pollster::block_on(engine.render_field(&field, UnifiedFieldType::Pressure, &grid));
+
+        assert!(matches!(
+            result,
+            Err(kwavers_core::error::KwaversError::System(
+                kwavers_core::error::SystemError::FeatureNotAvailable { feature, .. }
+            )) if feature == "gpu-visualization"
+        ));
     }
 
     #[cfg(feature = "gpu-visualization")]
