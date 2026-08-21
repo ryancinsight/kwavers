@@ -20,6 +20,12 @@ impl<'a> FieldAccessor<'a> {
     }
 
     /// Get a specific field by type
+    ///
+    /// # Panics
+    ///
+    /// Panics if the first axis of `fields` is shorter than the index assigned
+    /// to `field_type`. A correctly constructed unified field array contains
+    /// every [`UnifiedFieldType`] slot.
     #[must_use]
     pub fn get(&self, field_type: UnifiedFieldType) -> ArrayView3<'a, f64> {
         self.fields
@@ -59,6 +65,12 @@ impl<'a> FieldAccessorMut<'a> {
     }
 
     /// Get a specific field mutably by type
+    ///
+    /// # Panics
+    ///
+    /// Panics if the first axis of `fields` is shorter than the index assigned
+    /// to `field_type`. A correctly constructed unified field array contains
+    /// every [`UnifiedFieldType`] slot.
     pub fn get_mut(&mut self, field_type: UnifiedFieldType) -> ArrayViewMut3<'_, f64> {
         self.fields
             .index_axis_mut::<3>(0, field_type.index())
