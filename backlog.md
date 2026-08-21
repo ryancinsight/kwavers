@@ -315,7 +315,7 @@
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | in progress | Codex | `crates/kwavers-solver/src` (`unused_self` slice; parent remains open) |
+| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | in progress | Codex | `crates/kwavers-solver/src/forward/bem/burton_miller/kernels.rs` (`unused_self` slice; parent remains open) |
 
 - Context: the clippy floor landed in #423. 21 of 24 crates already declared
   `[lints] workspace = true`, but no `[workspace.lints.clippy]` table existed for them to
@@ -467,6 +467,10 @@
 - 2026-08-21 `unused_self` measurement distributes 228 sites across 14 packages; the largest
   slice is 107 sites in `kwavers-solver`, which is now claimed with package Clippy, nextest,
   doctest, and warning-denied rustdoc acceptance gates. The debt comment is ratcheted to 228.
+- 2026-08-21 solver `unused_self` work starts with the four measured kernel methods in
+  `forward/bem/burton_miller/kernels.rs`; they are converted to associated functions and all
+  in-repo callers are migrated. The bounded slice passes its focused native tests, doctests,
+  and warning-denied rustdoc; the remaining solver sites stay in the parent queue.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a

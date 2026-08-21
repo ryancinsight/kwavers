@@ -6991,3 +6991,10 @@ The post-merge workspace measurement with `-D clippy::missing_panics_doc`
 exits 0, so the `missing_panics_doc` debt-block line is removed from the root
 lint table. The next measured debt class is `unused_self` (228 sites), with
 107 sites in `kwavers-solver` as the current package slice.
+
+The first bounded solver increment targets the four `unused_self` kernel methods
+in `forward/bem/burton_miller/kernels.rs`. They are now associated functions;
+focused Nextest run `f7e57382-0201-4ccc-8f15-7f4f7bfbc4f0` passes 12/12 (893
+solver tests filtered), the package doctests pass 5/5 (8 ignored), and
+warning-denied rustdoc passes. The `unused_self` package measurement reports no
+remaining warnings in that kernel module; the other solver sites remain queued.
