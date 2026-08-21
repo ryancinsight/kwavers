@@ -45,6 +45,11 @@ fn ang_bin(bin: usize, n: usize, d: f64) -> f64 {
 /// Returns the migrated image `image[ix, iz]` = `r(x, z)` on the depth grid
 /// `z = (c/2)·t` (same shape as the input). The exploding-reflector velocity
 /// `v = c/2` accounts for the round trip.
+///
+/// # Panics
+///
+/// Panics if the migration kernel indexes a spectrum with dimensions that do
+/// not match the validated input grid.
 #[must_use]
 pub fn fk_stolt_migration(data: &Array2<f64>, dx: f64, dt: f64, sound_speed: f64) -> Array2<f64> {
     let [nx, nt] = data.shape();

@@ -68,6 +68,11 @@ pub fn forward_operator_equivalence_diagnostics(
 ///
 /// Returns an error when model names are empty or duplicated, shapes differ,
 /// or residual and excitation diagnostics cannot be computed.
+///
+/// # Panics
+///
+/// Panics if a receiver-policy projection indexes a prediction or observation
+/// with dimensions inconsistent with the validated diagnostic layout.
 pub fn forward_operator_equivalence_diagnostics_with_receiver_policy(
     predictions_by_model: &[BreastUstForwardOperatorPrediction<'_>],
     observed: &Array3<Complex64>,

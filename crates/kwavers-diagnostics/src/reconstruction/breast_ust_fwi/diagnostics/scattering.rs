@@ -75,6 +75,11 @@ pub struct BreastUstScatteringIncrementDiagnostics {
 /// Returns an error when observation shapes differ, model names are empty or
 /// repeated, a receiver policy is incompatible with the array shape, or the
 /// calibrated observed scattering increment has zero energy.
+///
+/// # Panics
+///
+/// Panics if a calibrated scattering increment is indexed with dimensions
+/// inconsistent with the validated observation layout.
 pub fn scattering_increment_diagnostics(
     homogeneous_baseline: &Array3<Complex64>,
     predictions_by_model: &[BreastUstForwardOperatorPrediction<'_>],

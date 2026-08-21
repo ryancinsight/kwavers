@@ -81,6 +81,11 @@ pub struct BentRayTomographyResult {
 /// `dx` is the (isotropic) grid spacing \`m`. Measurements whose ray cannot be
 /// traced (out-of-bounds endpoints) are skipped. Returns the reconstructed
 /// slowness and the per-outer-iteration RMS data misfit.
+///
+/// # Panics
+///
+/// Panics if an internal grid or ray-tracing operation receives a shape that
+/// violates the reconstruction invariant.
 #[must_use]
 pub fn reconstruct_bent_ray_tomography(
     initial_slowness: &Array2<f64>,
