@@ -48,7 +48,7 @@ impl ClinicalMonitor {
         spatial_resolution_mm: f64,
         artifact_level: f64,
     ) -> KwaversResult<()> {
-        let quality_score = self.compute_quality_score(snr_db, contrast, artifact_level);
+        let quality_score = Self::compute_quality_score(snr_db, contrast, artifact_level);
 
         let record = FrameQualityRecord {
             frame_number,
@@ -178,12 +178,7 @@ impl ClinicalMonitor {
     /// - SNR: 0 dB → 0%, 30 dB → 100% (weight 40%)
     /// - Contrast: 0 → 0%, 1.0 → 100% (weight 40%)
     /// - Artifact: 0 → 100%, 1.0 → 0% (weight 20%)
-    pub(super) fn compute_quality_score(
-        &self,
-        snr_db: f64,
-        contrast: f64,
-        artifact_level: f64,
-    ) -> f64 {
+    pub(super) fn compute_quality_score(snr_db: f64, contrast: f64, artifact_level: f64) -> f64 {
         let snr_score = (snr_db / 30.0 * 100.0).clamp(0.0, 100.0);
         let contrast_score = (contrast * 100.0).clamp(0.0, 100.0);
         let artifact_score = ((1.0 - artifact_level) * 100.0).clamp(0.0, 100.0);

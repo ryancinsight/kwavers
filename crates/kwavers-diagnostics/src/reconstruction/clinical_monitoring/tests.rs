@@ -81,13 +81,10 @@ fn test_monitoring_report() {
 
 #[test]
 fn test_quality_score_computation() {
-    let config = ClinicalMonitoringConfig::default();
-    let monitor = ClinicalMonitor::new(config);
-
-    let score = monitor.compute_quality_score(30.0, 1.0, 0.0);
+    let score = ClinicalMonitor::compute_quality_score(30.0, 1.0, 0.0);
     assert!(score > 90.0);
 
-    let score = monitor.compute_quality_score(5.0, 0.2, 0.8);
+    let score = ClinicalMonitor::compute_quality_score(5.0, 0.2, 0.8);
     assert!(score < 30.0);
 }
 
@@ -107,8 +104,7 @@ fn test_safety_event_severity() {
 /// total = (100×0.4 + 100×0.4 + 100×0.2).round() = 100.0
 #[test]
 fn quality_score_perfect_inputs_is_one_hundred() {
-    let monitor = ClinicalMonitor::new(ClinicalMonitoringConfig::default());
-    let score = monitor.compute_quality_score(30.0, 1.0, 0.0);
+    let score = ClinicalMonitor::compute_quality_score(30.0, 1.0, 0.0);
     assert!((score - 100.0).abs() < 1e-10, "expected 100.0, got {score}");
 }
 
@@ -120,8 +116,7 @@ fn quality_score_perfect_inputs_is_one_hundred() {
 /// total = 0.round() = 0.0
 #[test]
 fn quality_score_zero_inputs_is_zero() {
-    let monitor = ClinicalMonitor::new(ClinicalMonitoringConfig::default());
-    let score = monitor.compute_quality_score(0.0, 0.0, 1.0);
+    let score = ClinicalMonitor::compute_quality_score(0.0, 0.0, 1.0);
     assert!(score.abs() < 1e-10, "expected 0.0, got {score}");
 }
 
@@ -133,8 +128,7 @@ fn quality_score_zero_inputs_is_zero() {
 /// total = (50×0.4 + 50×0.4 + 100×0.2).round() = (20 + 20 + 20).round() = 60.0
 #[test]
 fn quality_score_mid_range_exact() {
-    let monitor = ClinicalMonitor::new(ClinicalMonitoringConfig::default());
-    let score = monitor.compute_quality_score(15.0, 0.5, 0.0);
+    let score = ClinicalMonitor::compute_quality_score(15.0, 0.5, 0.0);
     assert!((score - 60.0).abs() < 1e-10, "expected 60.0, got {score}");
 }
 
