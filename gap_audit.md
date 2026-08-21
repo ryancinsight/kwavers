@@ -7045,6 +7045,11 @@ conservation helpers to associated functions and migrates all callers. Focused N
 17/17 (889 filtered), package doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and
 the refreshed workspace `unused_self` count is 121 sites with zero in `kwavers-solver`.
 
+Exact integrated-head validation after PR #506 (`855117c00`) passes the full Kwavers package
+Nextest suite (530/530, eight configured skips), builds all package examples, and passes both
+`mdbook test docs/book` and `mdbook build docs/book` with HTML in `target/book`. Test-generated
+PNG outputs were restored after the run; no binary fixture deltas are part of the integrated head.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.
