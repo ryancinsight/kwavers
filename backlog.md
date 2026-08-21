@@ -1117,6 +1117,9 @@
   therapy gates pass (1,364/1,364 Nextest with 5 configured skips; doctests and warning-denied
   rustdoc pass). The exact workspace `unnecessary_semicolon` scan is 0 and its ratchet override is
   removed from `Cargo.toml`.
+- 2026-08-21 small Clippy ratchet slice is complete: primitive test ordering uses `sort_unstable`,
+  and exact all-targets scans confirm `stable_sort_primitive=0`, `unchecked_time_subtraction=0`,
+  and `self_only_used_in_recursion=0`. The three suppression lines are removed from `Cargo.toml`.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a

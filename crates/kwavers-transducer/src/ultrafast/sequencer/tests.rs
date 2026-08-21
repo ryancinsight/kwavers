@@ -129,9 +129,9 @@ fn test_interleaved_schedule_all_angles_present() {
         .iter()
         .map(|ev| (ev.tilt_angle.in_unit::<Radian>() * 180.0 / PI).round() as i64)
         .collect();
-    fired.sort();
+    fired.sort_unstable();
     let mut expected: Vec<i64> = (-5..=5).collect();
-    expected.sort();
+    expected.sort_unstable();
     assert_eq!(
         fired, expected,
         "All 11 angles must appear in interleaved schedule"
