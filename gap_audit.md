@@ -6893,6 +6893,9 @@ The refreshed workspace measurement then found seven additional
 `missing_panics_doc` sites in `kwavers-simulation` and 38 in
 `kwavers-analysis`; the simulation package is the current ratchet item.
 
+The simulation slice has since integrated; `kwavers-analysis` is now the
+current ratchet item with 38 measured sites.
+
 ## `missing_panics_doc` simulation slice — 2026-08-21
 
 The `kwavers-simulation` slice documents the seven measured panic contracts in
