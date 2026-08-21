@@ -6,6 +6,7 @@ use kwavers_grid::Grid;
 use leto::Array4;
 use log::info;
 
+use super::super::config::RecorderChannel;
 use super::super::traits::RecorderTrait;
 use super::recorder::Recorder;
 
@@ -35,13 +36,13 @@ impl RecorderTrait for Recorder {
         self.fields_snapshots.reserve(expected_snapshots);
         self.recorded_steps.reserve(expected_steps);
 
-        if self.record_pressure {
+        if self.channels.contains(RecorderChannel::Pressure) {
             self.pressure_sensor_data.reserve(expected_steps);
         }
-        if self.record_light {
+        if self.channels.contains(RecorderChannel::Light) {
             self.light_sensor_data.reserve(expected_steps);
         }
-        if self.record_temperature {
+        if self.channels.contains(RecorderChannel::Temperature) {
             self.temperature_sensor_data.reserve(expected_steps);
         }
 
@@ -52,7 +53,7 @@ impl RecorderTrait for Recorder {
         let time = step as f64 * self.time.dt;
         self.recorded_steps.push(time);
 
-        if self.record_pressure {
+        if self.channels.contains(RecorderChannel::Pressure) {
             let pressure_field = fields
                 .index_axis::<3>(0, PRESSURE_IDX)
                 .map_err(|e| {
@@ -76,7 +77,7 @@ impl RecorderTrait for Recorder {
             self.pressure_sensor_data.push(sensor_data);
         }
 
-        if self.record_light {
+        if self.channels.contains(RecorderChannel::Light) {
             let light_field = fields
                 .index_axis::<3>(0, LIGHT_IDX)
                 .map_err(|e| KwaversError::InternalError(format!("light axis slice failed: {e}")))?
@@ -98,7 +99,7 @@ impl RecorderTrait for Recorder {
             self.light_sensor_data.push(sensor_data);
         }
 
-        if self.record_temperature {
+        if self.channels.contains(RecorderChannel::Temperature) {
             let temp_field = fields
                 .index_axis::<3>(0, TEMPERATURE_IDX)
                 .map_err(|e| {

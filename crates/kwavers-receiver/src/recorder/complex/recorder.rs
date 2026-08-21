@@ -13,7 +13,7 @@ use log::info;
 use std::fs::File;
 use std::io::Write;
 
-use super::super::config::RecorderConfig;
+use super::super::config::{RecorderChannel, RecorderConfig, RecordingChannels};
 use super::super::events::{RecorderCavitationEvent, ThermalEvent};
 use super::super::statistics::RecorderStatistics;
 
@@ -22,11 +22,7 @@ use super::super::statistics::RecorderStatistics;
 pub struct Recorder {
     pub sensor: GridSensorSet,
     pub filename: String,
-    pub record_pressure: bool,
-    pub record_light: bool,
-    pub record_temperature: bool,
-    pub record_cavitation: bool,
-    pub record_sonoluminescence: bool,
+    pub channels: RecordingChannels,
     pub fields_snapshots: Vec<(usize, Array4<f64>)>,
     pub snapshot_interval: usize,
     pub pressure_sensor_data: Vec<Vec<f64>>,
@@ -119,11 +115,7 @@ impl Recorder {
         Self {
             sensor,
             filename: config.filename,
-            record_pressure: config.record_pressure,
-            record_light: config.record_light,
-            record_temperature: config.record_temperature,
-            record_cavitation: config.record_cavitation,
-            record_sonoluminescence: config.record_sonoluminescence,
+            channels: config.channels,
             fields_snapshots: Vec::new(),
             snapshot_interval: config.snapshot_interval,
             pressure_sensor_data: Vec::new(),
@@ -154,7 +146,7 @@ impl Recorder {
         step: usize,
         time: f64,
     ) -> KwaversResult<()> {
-        if self.record_pressure {
+        if self.channels.contains(RecorderChannel::Pressure) {
             let pressure_field = fields.index_axis::<3>(0, PRESSURE_IDX).map_err(|e| {
                 KwaversError::InternalError(format!("pressure axis slice failed: {e}"))
             })?;
@@ -167,7 +159,7 @@ impl Recorder {
             self.statistics.update_pressure(min_p);
         }
 
-        if self.record_temperature {
+        if self.channels.contains(RecorderChannel::Temperature) {
             let temp_field = fields.index_axis::<3>(0, TEMPERATURE_IDX).map_err(|e| {
                 KwaversError::InternalError(format!("temperature axis slice failed: {e}"))
             })?;
@@ -175,7 +167,7 @@ impl Recorder {
             self.statistics.update_temperature(max_t);
         }
 
-        if self.record_light {
+        if self.channels.contains(RecorderChannel::Light) {
             let light_field = fields.index_axis::<3>(0, LIGHT_IDX).map_err(|e| {
                 KwaversError::InternalError(format!("light axis slice failed: {e}"))
             })?;
@@ -188,15 +180,15 @@ impl Recorder {
             self.statistics.total_snapshots += 1;
         }
 
-        if self.record_cavitation {
+        if self.channels.contains(RecorderChannel::Cavitation) {
             self.detect_cavitation_events(fields, step, time)?;
         }
 
-        if self.record_sonoluminescence {
+        if self.channels.contains(RecorderChannel::Sonoluminescence) {
             self.detect_sonoluminescence_events(fields, step, time)?;
         }
 
-        if self.record_temperature {
+        if self.channels.contains(RecorderChannel::Temperature) {
             self.detect_thermal_events(fields, step, time)?;
         }
 
@@ -356,13 +348,15 @@ impl Recorder {
         for (i, &time) in self.recorded_steps.iter().enumerate() {
             write!(file, "{time:.6e}")?;
 
-            if self.record_pressure && i < self.pressure_sensor_data.len() {
+            if self.channels.contains(RecorderChannel::Pressure)
+                && i < self.pressure_sensor_data.len()
+            {
                 for &val in &self.pressure_sensor_data[i] {
                     write!(file, "\t{val:.6e}")?;
                 }
             }
 
-            if self.record_light && i < self.light_sensor_data.len() {
+            if self.channels.contains(RecorderChannel::Light) && i < self.light_sensor_data.len() {
                 for &val in &self.light_sensor_data[i] {
                     write!(file, "\t{val:.6e}")?;
                 }

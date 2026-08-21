@@ -7549,6 +7549,13 @@ warning-denied Rustdoc pass. The exact production workspace count decreases from
 the remaining 15 sites are public clinical-workflow configuration fields and require a separate
 public-contract migration.
 
+The `kwavers-receiver` `struct_excessive_bools` slice replaces the five independent recorder
+channel booleans in both configuration and runtime state with a compact `RecordingChannels` bitset
+and descriptive channel/state enums. Builder methods now accept `RecordingState`, eliminating
+boolean-blind toggles. Warning-denied package Clippy, Nextest (48/48), doctests (1 passed), and
+warning-denied Rustdoc pass. The exact production workspace count decreases from 14 to 12 sites;
+the root ratchet comment is updated.
+
 Final exact-revision validation at merged revision `192eb7575` passes workspace Nextest (5,781/5,781
 with 7 configured skips) and workspace doctests with no failures. The previously recorded example
 build and mdBook test/build remain valid because the final changes are lint-only production edits and

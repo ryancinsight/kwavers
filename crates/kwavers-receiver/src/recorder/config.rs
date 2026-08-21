@@ -26,15 +26,84 @@ pub enum RecordingMode {
     AllStatistics,
 }
 
+/// Whether a recorder channel is active.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum RecordingState {
+    /// Do not collect this channel.
+    #[default]
+    Disabled,
+    /// Collect this channel.
+    Enabled,
+}
+
+/// Recorder channels that are active for a simulation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct RecordingChannels(u8);
+
+/// A recorder channel selected in [`RecordingChannels`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RecorderChannel {
+    /// Acoustic pressure samples and statistics.
+    Pressure,
+    /// Optical light samples and statistics.
+    Light,
+    /// Temperature samples and thermal events.
+    Temperature,
+    /// Cavitation event detection.
+    Cavitation,
+    /// Sonoluminescence event detection.
+    Sonoluminescence,
+}
+
+impl RecordingChannels {
+    const PRESSURE: u8 = 1 << 0;
+    const LIGHT: u8 = 1 << 1;
+    const TEMPERATURE: u8 = 1 << 2;
+    const CAVITATION: u8 = 1 << 3;
+    const SONOLUMINESCENCE: u8 = 1 << 4;
+
+    /// Return an empty channel selection.
+    #[must_use]
+    pub const fn empty() -> Self {
+        Self(0)
+    }
+
+    /// Return a selection with `channel` set to `state`.
+    #[must_use]
+    pub const fn with(self, channel: RecorderChannel, state: RecordingState) -> Self {
+        let mask = match channel {
+            RecorderChannel::Pressure => Self::PRESSURE,
+            RecorderChannel::Light => Self::LIGHT,
+            RecorderChannel::Temperature => Self::TEMPERATURE,
+            RecorderChannel::Cavitation => Self::CAVITATION,
+            RecorderChannel::Sonoluminescence => Self::SONOLUMINESCENCE,
+        };
+        match state {
+            RecordingState::Disabled => Self(self.0 & !mask),
+            RecordingState::Enabled => Self(self.0 | mask),
+        }
+    }
+
+    /// Report whether `channel` is enabled.
+    #[must_use]
+    pub const fn contains(self, channel: RecorderChannel) -> bool {
+        let mask = match channel {
+            RecorderChannel::Pressure => Self::PRESSURE,
+            RecorderChannel::Light => Self::LIGHT,
+            RecorderChannel::Temperature => Self::TEMPERATURE,
+            RecorderChannel::Cavitation => Self::CAVITATION,
+            RecorderChannel::Sonoluminescence => Self::SONOLUMINESCENCE,
+        };
+        self.0 & mask != 0
+    }
+}
+
 /// Configuration for recorder setup
 #[derive(Debug, Clone)]
 pub struct RecorderConfig {
     pub filename: String,
-    pub record_pressure: bool,
-    pub record_light: bool,
-    pub record_temperature: bool,
-    pub record_cavitation: bool,
-    pub record_sonoluminescence: bool,
+    /// Channels collected by the recorder.
+    pub channels: RecordingChannels,
     pub snapshot_interval: usize,
     /// Threshold for cavitation detection (Pa)
     pub cavitation_threshold: f64,
@@ -49,11 +118,9 @@ impl RecorderConfig {
     pub fn create(filename: &str) -> Self {
         Self {
             filename: filename.to_owned(),
-            record_pressure: true,
-            record_light: true,
-            record_temperature: false,
-            record_cavitation: false,
-            record_sonoluminescence: false,
+            channels: RecordingChannels::empty()
+                .with(RecorderChannel::Pressure, RecordingState::Enabled)
+                .with(RecorderChannel::Light, RecordingState::Enabled),
             snapshot_interval: 1,
             cavitation_threshold: -1e5, // -1 bar for cavitation
             sl_detector_config: None,
@@ -62,26 +129,26 @@ impl RecorderConfig {
     }
 
     #[must_use]
-    pub fn with_pressure_recording(mut self, record: bool) -> Self {
-        self.record_pressure = record;
+    pub fn with_pressure_recording(mut self, state: RecordingState) -> Self {
+        self.channels = self.channels.with(RecorderChannel::Pressure, state);
         self
     }
 
     #[must_use]
-    pub fn with_light_recording(mut self, record: bool) -> Self {
-        self.record_light = record;
+    pub fn with_light_recording(mut self, state: RecordingState) -> Self {
+        self.channels = self.channels.with(RecorderChannel::Light, state);
         self
     }
 
     #[must_use]
-    pub fn with_temperature_recording(mut self, record: bool) -> Self {
-        self.record_temperature = record;
+    pub fn with_temperature_recording(mut self, state: RecordingState) -> Self {
+        self.channels = self.channels.with(RecorderChannel::Temperature, state);
         self
     }
 
     #[must_use]
-    pub fn with_cavitation_detection(mut self, enable: bool, threshold: f64) -> Self {
-        self.record_cavitation = enable;
+    pub fn with_cavitation_detection(mut self, state: RecordingState, threshold: f64) -> Self {
+        self.channels = self.channels.with(RecorderChannel::Cavitation, state);
         self.cavitation_threshold = threshold;
         self
     }
@@ -89,10 +156,10 @@ impl RecorderConfig {
     #[must_use]
     pub fn with_sonoluminescence_detection(
         mut self,
-        enable: bool,
+        state: RecordingState,
         config: Option<DetectorConfig>,
     ) -> Self {
-        self.record_sonoluminescence = enable;
+        self.channels = self.channels.with(RecorderChannel::Sonoluminescence, state);
         self.sl_detector_config = config;
         self
     }
@@ -168,5 +235,26 @@ impl RecordingMode {
             Self::MaxMinPressure => "p_max_min",
             Self::AllStatistics => "p_all_stats",
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{RecorderChannel, RecorderConfig, RecordingState};
+
+    #[test]
+    fn channel_selection_preserves_independent_states() {
+        let config = RecorderConfig::create("output")
+            .with_pressure_recording(RecordingState::Disabled)
+            .with_temperature_recording(RecordingState::Enabled)
+            .with_cavitation_detection(RecordingState::Enabled, -2.0e5)
+            .with_sonoluminescence_detection(RecordingState::Disabled, None);
+
+        assert!(!config.channels.contains(RecorderChannel::Pressure));
+        assert!(config.channels.contains(RecorderChannel::Light));
+        assert!(config.channels.contains(RecorderChannel::Temperature));
+        assert!(config.channels.contains(RecorderChannel::Cavitation));
+        assert!(!config.channels.contains(RecorderChannel::Sonoluminescence));
+        assert_eq!(config.cavitation_threshold, -2.0e5);
     }
 }

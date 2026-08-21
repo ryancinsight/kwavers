@@ -1202,6 +1202,19 @@
   Warning-denied solver Clippy, 902/902 Nextest with 4 configured skips, doctests (5 passed; 8
   ignored), and warning-denied Rustdoc pass. The exact production workspace count decreases from
   16 to 15 sites; the root ratchet comment is updated.
+- 2026-08-21 `struct_excessive_bools` receiver slice is complete: recorder channel selection now
+  uses `RecordingChannels` and descriptive `RecorderChannel`/`RecordingState` enums instead of
+  five independent booleans in both the configuration and runtime recorder. Warning-denied
+  receiver Clippy, 48/48 Nextest, one doctest, and warning-denied Rustdoc pass. The exact
+  production workspace count decreases from 14 to 12 sites; the root ratchet comment is updated.
+
+## KW-LINT-REC-01 — Type recorder channel selection [major] — done
+
+- Outcome: recorder configuration and runtime state use a compact channel bitset with descriptive
+  enums; boolean-blind builder arguments are removed.
+- Acceptance: receiver Clippy, Nextest, doctests, Rustdoc, workspace `-D warnings`, and the exact
+  production `struct_excessive_bools` scan pass.
+- Decision: [ADR 118](docs/adr/118-typed-recorder-channel-selection.md).
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
