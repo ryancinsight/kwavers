@@ -113,7 +113,7 @@ impl BoundaryMultiPhysicsInterface {
 }
 
 impl BoundaryCondition for BoundaryMultiPhysicsInterface {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "BoundaryMultiPhysicsInterface"
     }
 
