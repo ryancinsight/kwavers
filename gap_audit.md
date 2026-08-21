@@ -7506,6 +7506,12 @@ The production workspace count decreases from 9 to 2 sites, and the ratchet comm
 Nextest compilation reports two pre-existing test-only unused-variable warnings in unrelated RTM
 tests; they are outside this slice.
 
+The `kwavers-therapy` `from_iter_instead_of_collect` slice replaces the elastic-shear velocity
+source `Array1::from_iter` waveform construction with direct iterator collection, preserving the
+burst envelope and sampled values. Warning-denied package Clippy, Nextest (350/350 with 1 configured
+skip), doctests (8 passed; 1 ignored), and warning-denied Rustdoc pass. The production workspace
+count decreases from 2 to 1 site, and the ratchet comment is updated.
+
 Final exact-revision validation at merged revision `192eb7575` passes workspace Nextest (5,781/5,781
 with 7 configured skips) and workspace doctests with no failures. The previously recorded example
 build and mdBook test/build remain valid because the final changes are lint-only production edits and
