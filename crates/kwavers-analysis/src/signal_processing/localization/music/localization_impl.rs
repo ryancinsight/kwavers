@@ -44,7 +44,7 @@ impl LocalizationProcessor for MUSICProcessor {
         TDOAProcessor::new(&tdoa_config)?.localize(time_delays, sensor_positions)
     }
 
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "MUSIC"
     }
 }
