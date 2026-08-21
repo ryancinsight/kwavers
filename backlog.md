@@ -334,7 +334,7 @@
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | in progress | Codex | Workspace `unused_self` burn-down; `kwavers-solver`, `kwavers-signal`, and `kwavers-grid` are clean, current count 117 |
+| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | in progress | Codex | Workspace lint ratchet; `unused_self`, `return_self_not_must_use`, and `unnecessary_literal_bound` are clean; remaining debt lines are tracked below |
 
 - Context: the clippy floor landed in #423. 21 of 24 crates already declared
   `[lints] workspace = true`, but no `[workspace.lints.clippy]` table existed for them to
