@@ -117,6 +117,10 @@ impl MultiBowlArray {
     }
 
     /// Set beam steering parameters
+    ///
+    /// # Errors
+    ///
+    /// Returns the first bowl error when the requested focus is invalid for any bowl.
     pub fn set_beam_steering(&mut self, focus: [Length<f64>; 3]) -> KwaversResult<()> {
         // Update focus for all bowls
         for bowl in &mut self.bowls {

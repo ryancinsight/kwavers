@@ -80,6 +80,12 @@ with the lint re-enabled and `-D warnings`; its nextest gate passes 196/196
 tests, doctests pass 3/10 with seven ignored, and warning-denied rustdoc passes.
 The workspace debt block remains unchanged.
 
+The next `missing_errors_doc` slice covers nine `kwavers-transducer` APIs in
+2-D array focusing, multi-bowl steering, and ultrafast scheduling. Strict
+transducer Clippy passes with the lint re-enabled and `-D warnings`; its nextest
+gate passes 245/245 tests with one skipped, doctests pass 2/8 with six ignored,
+and warning-denied rustdoc passes. The workspace debt block remains unchanged.
+
 The complete example gate initially exposed an independent runtime defect in
 `focused_ultrasound_water_tank`: its five disjoint solver branches ran
 sequentially, and the comparison test terminated at 60 seconds. The provider

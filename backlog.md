@@ -315,7 +315,7 @@
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | in progress | Codex | `crates/kwavers-math/src` (next slice; parent remains open) |
+| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | in progress | Codex | `crates/kwavers-transducer/src` (next slice; parent remains open) |
 
 - Context: the clippy floor landed in #423. 21 of 24 crates already declared
   `[lints] workspace = true`, but no `[workspace.lints.clippy]` table existed for them to
@@ -354,6 +354,10 @@
   found three `missing_errors_doc` sites in `kwavers-math` production source. Its acceptance
   is strict package Clippy with the lint re-enabled, the package nextest gate, doctests, and
   warning-denied rustdoc; the workspace debt block remains unchanged.
+- 2026-08-21 math slice merged in PR #451 (`d8b6afa86`); the next workspace measurement
+  found nine `missing_errors_doc` sites in `kwavers-transducer` production source. Its
+  acceptance is strict package Clippy with the lint re-enabled, the package nextest gate,
+  doctests, and warning-denied rustdoc; the workspace debt block remains unchanged.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
