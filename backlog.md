@@ -1207,6 +1207,11 @@
   five independent booleans in both the configuration and runtime recorder. Warning-denied
   receiver Clippy, 48/48 Nextest, one doctest, and warning-denied Rustdoc pass. The exact
   production workspace count decreases from 14 to 12 sites; the root ratchet comment is updated.
+- 2026-08-21 `needless_for_each` physics slice is complete: seven mutating normalization and
+  centering passes in cavitation, inverse, RTM, and transducer analysis now use direct loops.
+  Warning-denied physics Clippy, 1,561/1,561 Nextest with 1 configured skip, doctests (9 passed;
+  4 ignored), warning-denied Rustdoc, and workspace warning-denied Clippy pass. The exact
+  production workspace count decreases from 12 to 5 sites; the root ratchet comment is updated.
 
 ## KW-LINT-REC-01 — Type recorder channel selection [major] — done
 

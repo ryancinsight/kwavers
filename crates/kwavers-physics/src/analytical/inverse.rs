@@ -82,7 +82,9 @@ pub fn matrix_singular_values(matrix_flat: &[f64], nrows: usize, ncols: usize) -
     }
     let mut eigs = symmetric_eigenvalues(&ata, k);
     // σ_i = √(λ_i)  (clip negatives from numerical error)
-    eigs.iter_mut().for_each(|e| *e = e.max(0.0).sqrt());
+    for e in &mut eigs {
+        *e = e.max(0.0).sqrt();
+    }
     eigs.sort_by(|a, b| b.total_cmp(a));
     eigs
 }

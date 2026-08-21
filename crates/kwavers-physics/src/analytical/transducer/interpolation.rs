@@ -49,7 +49,9 @@ pub fn bli_stencil_weights(delta: &[f64], n_stencil: usize) -> Vec<Vec<f64>> {
             // Normalise so weights sum to 1 (preserve DC)
             let sum: f64 = w.iter().sum();
             if sum.abs() > 1e-15 {
-                w.iter_mut().for_each(|x| *x /= sum);
+                for x in &mut w {
+                    *x /= sum;
+                }
             }
             w
         })
