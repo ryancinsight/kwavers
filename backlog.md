@@ -315,7 +315,7 @@
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | in progress | Codex | `crates/kwavers-diagnostics/src/reconstruction` (next slice; parent remains open) |
+| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | in progress | Codex | `crates/kwavers-therapy/src/therapy` (next slice; parent remains open) |
 
 - Context: the clippy floor landed in #423. 21 of 24 crates already declared
   `[lints] workspace = true`, but no `[workspace.lints.clippy]` table existed for them to
@@ -372,6 +372,11 @@
   warning-denied rustdoc; the workspace debt block remains unchanged.
 - 2026-08-21 simulation dispatch slice merged in PR #455 (`61f07dd92`); the next workspace
   measurement found 25 `missing_errors_doc` sites in `kwavers-diagnostics` reconstruction
+  modules. Its acceptance is strict package Clippy with the lint re-enabled, the package
+  nextest gate, doctests, and warning-denied rustdoc; the workspace debt block remains
+  unchanged.
+- 2026-08-21 diagnostics reconstruction slice merged in PR #456 (`e4bb154dc`); the next
+  workspace measurement found 20 `missing_errors_doc` sites in `kwavers-therapy` therapy
   modules. Its acceptance is strict package Clippy with the lint re-enabled, the package
   nextest gate, doctests, and warning-denied rustdoc; the workspace debt block remains
   unchanged.
