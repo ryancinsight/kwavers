@@ -6831,3 +6831,11 @@ import, and stack-plan selection. Strict offline Clippy with
 
 The next workspace measurement found three `missing_panics_doc` sites in
 `kwavers-signal`; that slice is the current ratchet item.
+
+## `missing_panics_doc` signal slice — 2026-08-21
+
+The `kwavers-signal` slice documents the three measured public 2-D analytic
+signal helpers: row-wise Hilbert transform, envelope, and phase. Strict
+offline Clippy with `-D clippy::missing_panics_doc -D warnings` passes;
+Nextest run `ef65468e-f4de-41e7-9fd1-8494c28a76cb` passes 63/63; doctests pass
+4/4; and rustdoc passes with `RUSTDOCFLAGS=-D warnings`.
