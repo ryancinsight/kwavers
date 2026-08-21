@@ -72,10 +72,9 @@ fn test_focal_intensity_zero_field() {
 
 #[test]
 fn test_sidelobe_zero_for_uniform_field() {
-    let correction = make_correction();
     let field = Array3::from_elem((32, 32, 32), 1.0);
     let target = [16e-3_f64, 16e-3, 16e-3];
-    let ratio = correction.calculate_sidelobe_level(&field, &target);
+    let ratio = TranscranialAberrationCorrection::calculate_sidelobe_level(&field, &target);
     assert_eq!(
         ratio, 0.0,
         "uniform field has no sidelobe outside bounding box"
@@ -84,10 +83,9 @@ fn test_sidelobe_zero_for_uniform_field() {
 
 #[test]
 fn test_sidelobe_less_than_main_lobe_for_gaussian() {
-    let correction = make_correction();
     let field = gaussian_field(32, 32, 32, 16.0, 16.0, 16.0, 2.0);
     let target = [16e-3_f64, 16e-3, 16e-3];
-    let ratio = correction.calculate_sidelobe_level(&field, &target);
+    let ratio = TranscranialAberrationCorrection::calculate_sidelobe_level(&field, &target);
     assert!(
         ratio < 1.0,
         "sidelobe ratio must be < 1 for Gaussian field; got {ratio}"
