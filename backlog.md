@@ -916,6 +916,11 @@
   check, targeted `unused_self` Clippy (treatment-planning paths clean), Nextest (1561/1561 with one
   configured skip), doctests (9/13; 4 ignored), and warning-denied rustdoc pass. The refreshed
   workspace `unused_self` count is 48 sites with 1 remaining in other physics domains.
+- 2026-08-21 `kwavers-physics` plasmonics slice is implemented: the host-medium wavenumber helper is
+  an associated function; particle-array geometry and interaction state remain receiver-bound.
+  Package check, targeted `unused_self` Clippy (plasmonics path clean), Nextest (1561/1561 with one
+  configured skip), doctests (9/13; 4 ignored), and warning-denied rustdoc pass. The refreshed
+  workspace `unused_self` count is 47 sites with zero remaining in `kwavers-physics`.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
