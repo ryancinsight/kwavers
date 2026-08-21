@@ -53,10 +53,10 @@ impl WENOLimiter {
         let q3 = v[3] / 4.0 + 13.0 * v[4] / 12.0 - 5.0 * v[5] / 12.0 + v[6] / 12.0;
 
         // Smoothness indicators (more complex for WENO7)
-        let beta0 = self.compute_weno7_smoothness(&v[0..5]);
-        let beta1 = self.compute_weno7_smoothness(&v[1..6]);
-        let beta2 = self.compute_weno7_smoothness(&v[2..7]);
-        let beta3 = self.compute_weno7_smoothness(&v[3..8]);
+        let beta0 = Self::compute_weno7_smoothness(&v[0..5]);
+        let beta1 = Self::compute_weno7_smoothness(&v[1..6]);
+        let beta2 = Self::compute_weno7_smoothness(&v[2..7]);
+        let beta3 = Self::compute_weno7_smoothness(&v[3..8]);
 
         // Optimal weights for WENO7
         let d0 = 0.05;
@@ -83,7 +83,7 @@ impl WENOLimiter {
 
     /// Compute WENO7 smoothness indicator for a 5-point stencil.
     /// Based on Jiang & Shu (1996) smoothness indicators.
-    pub(super) fn compute_weno7_smoothness(&self, v: &[f64]) -> f64 {
+    pub(super) fn compute_weno7_smoothness(v: &[f64]) -> f64 {
         let d1 = v[1] - v[0];
         let d2 = v[2] - v[1];
         let d3 = v[3] - v[2];

@@ -569,6 +569,9 @@
 - 2026-08-21 PSTD derivative slice merged in PR #488 (`e9e919f87`). The refreshed `unused_self`
   measurement is 187 sites (solver 66); the next bounded slice is the receiver-free WENO7 limiter
   helper in `forward/pstd/dg/shock_capturing/limiter/weno7.rs`.
+- 2026-08-21 WENO7 limiter slice is implemented: smoothness-indicator evaluation is an associated
+  function with all four stencil callers migrated. WENO7 tests, doctests, and warning-denied
+  rustdoc pass; the remaining solver sites stay queued.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
