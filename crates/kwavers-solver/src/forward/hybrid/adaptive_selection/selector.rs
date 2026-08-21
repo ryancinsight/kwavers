@@ -86,7 +86,7 @@ impl AdaptiveMethodSelector {
         dt: f64,
     ) -> SelectedMethod {
         // Extract local region around point
-        let region = self.extract_region(field, position);
+        let region = Self::extract_region(field, position);
 
         // Compute metrics
         let spectral = SpectralMetrics::compute(region.view(), grid);
@@ -114,7 +114,6 @@ impl AdaptiveMethodSelector {
 
     /// Extract local region around a point
     fn extract_region(
-        &self,
         field: leto::ArrayView3<f64>,
         position: (usize, usize, usize),
     ) -> Array3<f64> {
