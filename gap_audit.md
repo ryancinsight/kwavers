@@ -6817,8 +6817,8 @@ operations. The package gate passes strict offline Clippy with
 `f5618d54-01d3-4c42-b3b0-6aab73b7d5f2` passes 196/196, doctests pass 3/3
 (7 ignored), and rustdoc passes with `RUSTDOCFLAGS=-D warnings`.
 
-The remaining workspace debt is four `missing_panics_doc` sites in
-`kwavers-driver`; that slice is next after this math increment integrates.
+The next workspace measurement after this math increment found four
+`missing_panics_doc` sites in `kwavers-driver`; that slice has since integrated.
 
 ## `missing_panics_doc` driver slice — 2026-08-21
 
@@ -6828,3 +6828,14 @@ import, and stack-plan selection. Strict offline Clippy with
 `-D clippy::missing_panics_doc -D warnings` passes; Nextest run
 `38560f9c-4836-4c03-9a6c-a05129770ab5` passes 494/494; doctests complete with
 0 tests; and rustdoc passes with `RUSTDOCFLAGS=-D warnings`.
+
+The next workspace measurement found three `missing_panics_doc` sites in
+`kwavers-signal`; that slice is the current ratchet item.
+
+## `missing_panics_doc` signal slice — 2026-08-21
+
+The `kwavers-signal` slice documents the three measured public 2-D analytic
+signal helpers: row-wise Hilbert transform, envelope, and phase. Strict
+offline Clippy with `-D clippy::missing_panics_doc -D warnings` passes;
+Nextest run `ef65468e-f4de-41e7-9fd1-8494c28a76cb` passes 63/63; doctests pass
+4/4; and rustdoc passes with `RUSTDOCFLAGS=-D warnings`.

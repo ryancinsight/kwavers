@@ -196,6 +196,12 @@ pub fn instantaneous_frequency(signal: &Array1<f64>, dt: f64) -> Array1<f64> {
 /// # Returns
 ///
 /// 2D array of analytic signals
+///
+/// # Panics
+///
+/// Panics if an extracted row cannot be rebuilt with its original column
+/// count. The row iterator emits exactly `ncols` values, so this indicates a
+/// violated internal shape invariant.
 #[must_use]
 pub fn hilbert_transform_2d(data: &Array2<f64>) -> Array2<Complex64> {
     let [nrows, ncols] = data.shape();
@@ -214,6 +220,12 @@ pub fn hilbert_transform_2d(data: &Array2<f64>) -> Array2<Complex64> {
 }
 
 /// Compute envelope for each row of a 2D array
+///
+/// # Panics
+///
+/// Panics if an extracted row cannot be rebuilt with its original column
+/// count. The row iterator emits exactly `ncols` values, so this indicates a
+/// violated internal shape invariant.
 #[must_use]
 pub fn instantaneous_envelope_2d(data: &Array2<f64>) -> Array2<f64> {
     let [nrows, ncols] = data.shape();
@@ -232,6 +244,12 @@ pub fn instantaneous_envelope_2d(data: &Array2<f64>) -> Array2<f64> {
 }
 
 /// Compute phase for each row of a 2D array
+///
+/// # Panics
+///
+/// Panics if an extracted row cannot be rebuilt with its original column
+/// count. The row iterator emits exactly `ncols` values, so this indicates a
+/// violated internal shape invariant.
 #[must_use]
 pub fn instantaneous_phase_2d(data: &Array2<f64>) -> Array2<f64> {
     let [nrows, ncols] = data.shape();
