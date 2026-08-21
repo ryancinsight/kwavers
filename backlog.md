@@ -836,6 +836,13 @@
   migrated. Package check, targeted `unused_self` Clippy (zero transducer sites), Nextest
   (245/245 with one configured skip), doctests (2/2; 6 ignored), and warning-denied rustdoc pass.
   The refreshed workspace `unused_self` count is 83 sites; transducer is clean.
+- 2026-08-21 `kwavers-physics` Mie-scattering slice is implemented: Rayleigh approximation,
+  logarithmic derivative, coefficient construction, efficiency reductions, asymmetry, and phase
+  helpers are associated functions; `MieCalculator::max_terms` remains stateful at the public
+  calculation boundary. Package check, targeted `unused_self` Clippy (optics scattering clean),
+  Nextest (1561/1561 with one configured skip), doctests (9/13; 4 ignored), and warning-denied
+  rustdoc pass. The refreshed workspace `unused_self` count is 76 sites with 29 remaining in
+  other physics domains.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
