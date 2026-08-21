@@ -37,18 +37,16 @@ fn test_clinical_significance_assessment() {
 
 #[test]
 fn test_recommendations_no_lesions() {
-    let support = NeuralClinicalDecisionSupport::new(ClinicalThresholds::default());
     let lesions = Vec::new();
     let classification = TissueClassification::empty();
 
-    let recs = support.generate_recommendations(&lesions, &classification);
+    let recs = NeuralClinicalDecisionSupport::generate_recommendations(&lesions, &classification);
     assert!(!recs.is_empty());
     assert!(recs[0].contains("No significant lesions"));
 }
 
 #[test]
 fn test_recommendations_with_lesions() {
-    let support = NeuralClinicalDecisionSupport::new(ClinicalThresholds::default());
     let lesions = vec![
         LesionDetection {
             center: (10, 10, 10),
@@ -67,24 +65,23 @@ fn test_recommendations_with_lesions() {
     ];
     let classification = TissueClassification::empty();
 
-    let recs = support.generate_recommendations(&lesions, &classification);
+    let recs = NeuralClinicalDecisionSupport::generate_recommendations(&lesions, &classification);
     assert!(recs[0].contains("2 potential lesion"));
     assert!(recs.iter().any(|r| r.contains("high-confidence")));
 }
 
 #[test]
 fn test_diagnostic_confidence_no_lesions() {
-    let support = NeuralClinicalDecisionSupport::new(ClinicalThresholds::default());
     let lesions = Vec::new();
     let confidence = Array3::from_elem((10, 10, 10), 0.8);
 
-    let diag_conf = support.compute_diagnostic_confidence(&lesions, confidence.view());
+    let diag_conf =
+        NeuralClinicalDecisionSupport::compute_diagnostic_confidence(&lesions, confidence.view());
     assert!(diag_conf > 0.8);
 }
 
 #[test]
 fn test_diagnostic_confidence_with_lesions() {
-    let support = NeuralClinicalDecisionSupport::new(ClinicalThresholds::default());
     let lesions = vec![LesionDetection {
         center: (5, 5, 5),
         size_mm: 4.0,
@@ -94,7 +91,8 @@ fn test_diagnostic_confidence_with_lesions() {
     }];
     let confidence = Array3::from_elem((10, 10, 10), 0.85);
 
-    let diag_conf = support.compute_diagnostic_confidence(&lesions, confidence.view());
+    let diag_conf =
+        NeuralClinicalDecisionSupport::compute_diagnostic_confidence(&lesions, confidence.view());
     assert!(diag_conf > 0.85);
 }
 

@@ -18,9 +18,9 @@ impl NeuralClinicalDecisionSupport {
         confidence: ArrayView3<f32>,
     ) -> KwaversResult<ClinicalAnalysis> {
         let lesions = self.detect_lesions(volume, features, uncertainty, confidence)?;
-        let tissue_classification = self.classify_tissues(volume, features)?;
-        let recommendations = self.generate_recommendations(&lesions, &tissue_classification);
-        let diagnostic_confidence = self.compute_diagnostic_confidence(&lesions, confidence);
+        let tissue_classification = Self::classify_tissues(volume, features)?;
+        let recommendations = Self::generate_recommendations(&lesions, &tissue_classification);
+        let diagnostic_confidence = Self::compute_diagnostic_confidence(&lesions, confidence);
 
         Ok(ClinicalAnalysis {
             lesions,
@@ -37,7 +37,6 @@ impl NeuralClinicalDecisionSupport {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(super) fn classify_tissues(
-        &self,
         volume: ArrayView3<f32>,
         features: &FeatureMap,
     ) -> KwaversResult<TissueClassification> {
@@ -100,7 +99,6 @@ impl NeuralClinicalDecisionSupport {
 
     /// Generate clinical recommendations: routine follow-up or lesion correlation + urgency.
     pub(super) fn generate_recommendations(
-        &self,
         lesions: &[LesionDetection],
         _tissue_classification: &TissueClassification,
     ) -> Vec<String> {
@@ -136,7 +134,6 @@ impl NeuralClinicalDecisionSupport {
     ///
     /// No-lesion case uses 0.9 (high confidence in negative finding).
     pub(super) fn compute_diagnostic_confidence(
-        &self,
         lesions: &[LesionDetection],
         confidence: ArrayView3<f32>,
     ) -> f32 {
