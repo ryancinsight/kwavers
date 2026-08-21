@@ -1124,6 +1124,10 @@
   source selection use typed `usize::from` conversions. Diagnostics and driver gates pass (685/685
   Nextest; doctests and warning-denied rustdoc pass). The exact workspace scan is 0 and its ratchet
   override is removed from `Cargo.toml`.
+- 2026-08-21 `large_types_passed_by_value` slice is complete: simulated-population monitor input
+  validation borrows its 264-byte input while the public trace API remains value-semantic. Physics
+  gates pass (1,561/1,561 Nextest with 1 configured skip; doctests 9/13; warning-denied rustdoc).
+  The exact workspace scan is 0 and its ratchet override is removed from `Cargo.toml`.
 - 2026-08-21 final exact-revision validation at merged revision `192eb7575`: workspace Nextest
   passes 5,781/5,781 with 7 configured skips; workspace doctests pass with no failures. The
   previously recorded example build and mdBook test/build remain valid because the final changes
