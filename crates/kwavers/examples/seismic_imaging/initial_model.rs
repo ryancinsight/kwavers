@@ -7,7 +7,7 @@ use super::{NX, NY, NZ};
 /// Blur a model separably in the x–z plane while preserving every y slice.
 ///
 /// The one-dimensional kernel is truncated at `3σ` and normalized before the
-/// x and z passes. Boundary samples use clamped reflection, so the output
+/// x and z passes. Boundary samples use clamped edge replication, so the output
 /// remains defined at the model edges without allocating a padded volume.
 ///
 /// The CT-derived prior supplies the inversion with the skull location before
