@@ -722,6 +722,12 @@
   passes 11/11 (894 filtered), package doctests pass 5/5 (8 ignored), warning-denied rustdoc
   passes, and the refreshed workspace `unused_self` count is 131 sites (solver 10). Wavelet
   transforms remain a separate behavioral-completion item.
+- 2026-08-21 wavelet slice is implemented: CDF and Daubechies transforms are associated
+  functions; Haar now performs separable 3-D forward/inverse transforms across configured levels,
+  preserves odd-length tails, and has a value-semantic round-trip test. Focused Nextest
+  `kwavers-solver` AMR filter passes 12/12 (894 filtered), package doctests pass 5/5 (8 ignored),
+  warning-denied rustdoc passes, and the refreshed workspace `unused_self` count is 125 sites
+  (solver 4). The remaining solver sites are numerical-validation helpers.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
