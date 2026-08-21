@@ -13,7 +13,7 @@
   target explicitly.
 - Claim committed on branch `fix/kwavers-python-book-boundary`; the unrelated
   dirty transducer files remain outside this scope.
-- Local evidence at `49e4f459c`: locked `kwavers` package build, `cargo fmt
+- Local evidence at `546949cc0`: locked `kwavers` package build, `cargo fmt
   --check`, `mdbook test docs/book`, `mdbook build docs/book`, and staged diff
   checks pass. The standalone link checker still reports pre-existing source
   links outside the book root and incomplete mathematical-link parsing; those

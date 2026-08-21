@@ -44,4 +44,3 @@ jobs:
       mdbook-test: true
       rust-toolchain: "1.97.0"
       cargo-package: kwavers
-      cargo-crate: kwavers
