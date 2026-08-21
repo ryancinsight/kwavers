@@ -551,6 +551,9 @@
 - 2026-08-21 KZK harmonic tracker slice merged in PR #485 (`a0b0242c2`). The refreshed `unused_self`
   measurement is 190 sites (solver 69); the next bounded slice is the receiver-free helper in
   `forward/nonlinear/westervelt_spectral/solver/mod.rs`.
+- 2026-08-21 Westervelt spectral slice is implemented: the receiver-free stability helper is an
+  associated function with its wave-model and regression-test callers migrated. Westervelt tests,
+  doctests, and warning-denied rustdoc pass; the remaining solver sites stay queued.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a

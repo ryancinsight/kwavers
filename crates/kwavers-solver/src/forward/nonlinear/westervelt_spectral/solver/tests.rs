@@ -123,7 +123,6 @@ fn check_stability_correctly_classifies_subcritical_and_supercritical_dt() {
     let grid = Grid::new(4, 4, 4, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
     let medium =
         HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, &grid);
-    let solver = WesterveltWave::new(&grid);
 
     let c0 = SOUND_SPEED_WATER_SIM;
     let dx = 1.0e-3_f64;
@@ -131,7 +130,7 @@ fn check_stability_correctly_classifies_subcritical_and_supercritical_dt() {
     // Subcritical: CFL = c₀·dt/dx = 1500·3e-7/1e-3 = 0.45 < 0.5
     let dt_stable = 3.0e-7_f64;
     assert!(
-        solver.check_stability(dt_stable, &grid, &medium),
+        WesterveltWave::check_stability(dt_stable, &grid, &medium),
         "dt=3e-7 (CFL={:.3}) must be classified as stable (< 0.5)",
         c0 * dt_stable / dx
     );
@@ -139,7 +138,7 @@ fn check_stability_correctly_classifies_subcritical_and_supercritical_dt() {
     // Supercritical: CFL = 1500·4e-7/1e-3 = 0.60 ≥ 0.5
     let dt_unstable = 4.0e-7_f64;
     assert!(
-        !solver.check_stability(dt_unstable, &grid, &medium),
+        !WesterveltWave::check_stability(dt_unstable, &grid, &medium),
         "dt=4e-7 (CFL={:.3}) must be classified as unstable (≥ 0.5)",
         c0 * dt_unstable / dx
     );
@@ -147,7 +146,7 @@ fn check_stability_correctly_classifies_subcritical_and_supercritical_dt() {
     // Boundary: CFL = c₀·dt_boundary/dx = 0.5 exactly → not < 0.5 → false
     let dt_boundary = 0.5 * dx / c0; // = 3.333e-7 → CFL = 0.5 exactly
     assert!(
-        !solver.check_stability(dt_boundary, &grid, &medium),
+        !WesterveltWave::check_stability(dt_boundary, &grid, &medium),
         "dt at CFL=0.5 exactly must be classified as unstable (boundary is exclusive)"
     );
 }
