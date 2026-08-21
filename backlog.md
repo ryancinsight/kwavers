@@ -790,6 +790,13 @@
   in CPML and smoothing. The refreshed workspace `unused_self` count is 103 sites with zero in
   the FEM/BEM managers, `kwavers-imaging`, `kwavers-receiver`, `kwavers-mesh`, `kwavers-grid`,
   `kwavers-signal`, and `kwavers-solver`.
+- 2026-08-21 `kwavers-boundary` CPML axis-update slice is implemented: four receiver-free axis
+  memory/correction helpers are associated functions and public wrapper callers are migrated.
+  Package check, targeted `unused_self` Clippy, Nextest, doctests (4/4; 1 ignored), and
+  warning-denied rustdoc pass; package Clippy now reports three pre-existing boundary sites in
+  smoothing. The refreshed workspace `unused_self` count is 99 sites with zero in CPML, FEM/BEM
+  managers, `kwavers-imaging`, `kwavers-receiver`, `kwavers-mesh`, `kwavers-grid`,
+  `kwavers-signal`, and `kwavers-solver`.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
