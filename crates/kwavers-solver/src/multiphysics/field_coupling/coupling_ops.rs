@@ -20,8 +20,8 @@ impl MultiphysicsFieldCoupler {
     ) -> KwaversResult<()> {
         validate_coupled_field_set(fields)?;
         self.couple_acoustic_to_optical(fields, dt)?;
-        self.couple_optical_to_thermal(fields, dt)?;
-        self.couple_acoustic_to_thermal(fields, dt)?;
+        Self::couple_optical_to_thermal(fields, dt)?;
+        Self::couple_acoustic_to_thermal(fields, dt)?;
         Ok(())
     }
 
@@ -47,7 +47,7 @@ impl MultiphysicsFieldCoupler {
             copy_fields_into(&mut previous_fields, fields);
 
             if iteration > 0 {
-                self.apply_relaxation(&previous_fields, fields);
+                Self::apply_relaxation(&previous_fields, fields);
             }
         }
 
@@ -64,8 +64,8 @@ impl MultiphysicsFieldCoupler {
         dt: f64,
     ) -> KwaversResult<()> {
         validate_coupled_field_set(fields)?;
-        let gradients = self.calculate_field_gradients(fields);
-        let coupling_strength = self.adjust_coupling_strength(&gradients);
+        let gradients = Self::calculate_field_gradients(fields);
+        let coupling_strength = Self::adjust_coupling_strength(&gradients);
         self.apply_coupling_with_strength(fields, dt, coupling_strength)
     }
 
@@ -100,7 +100,7 @@ impl MultiphysicsFieldCoupler {
     /// NIR window, Jacques 2013). The generic field-coupler API has no
     /// per-voxel optical-property input, so it applies this nominal tissue
     /// coefficient.
-    fn couple_optical_to_thermal(&self, fields: &mut [Array3<f64>], dt: f64) -> KwaversResult<()> {
+    fn couple_optical_to_thermal(fields: &mut [Array3<f64>], dt: f64) -> KwaversResult<()> {
         let (intensity, temperature) = read_write_fields::<LIGHT_IDX, TEMPERATURE_IDX>(fields)?;
 
         for ([i, j, k], &i_val) in intensity.indexed_iter() {
@@ -120,7 +120,7 @@ impl MultiphysicsFieldCoupler {
     /// generic tissue default. The generic field-coupler API has no
     /// frequency-dependent medium-property input, so it applies this nominal
     /// tissue coefficient.
-    fn couple_acoustic_to_thermal(&self, fields: &mut [Array3<f64>], dt: f64) -> KwaversResult<()> {
+    fn couple_acoustic_to_thermal(fields: &mut [Array3<f64>], dt: f64) -> KwaversResult<()> {
         let (pressure, temperature) = read_write_fields::<PRESSURE_IDX, TEMPERATURE_IDX>(fields)?;
 
         const TWO: f64 = 2.0;
@@ -162,7 +162,7 @@ impl MultiphysicsFieldCoupler {
     }
 
     /// Apply relaxation (omega = 0.5) for iterative stability.
-    fn apply_relaxation(&self, previous: &[Array3<f64>], current: &mut [Array3<f64>]) {
+    fn apply_relaxation(previous: &[Array3<f64>], current: &mut [Array3<f64>]) {
         let omega = 0.5;
         for (prev_field, curr_field) in previous.iter().zip(current.iter_mut()) {
             for ([i, j, k], &prev_val) in prev_field.indexed_iter() {
@@ -173,7 +173,7 @@ impl MultiphysicsFieldCoupler {
     }
 
     /// Calculate maximum gradient magnitude per field.
-    fn calculate_field_gradients(&self, fields: &[Array3<f64>]) -> Vec<f64> {
+    fn calculate_field_gradients(fields: &[Array3<f64>]) -> Vec<f64> {
         fields
             .iter()
             .map(|field| {
@@ -197,7 +197,7 @@ impl MultiphysicsFieldCoupler {
     }
 
     /// Adjust coupling strength based on gradient magnitudes.
-    fn adjust_coupling_strength(&self, gradients: &[f64]) -> f64 {
+    fn adjust_coupling_strength(gradients: &[f64]) -> f64 {
         let max_gradient = gradients.iter().fold(0.0, |max, &g| g.max(max));
         if max_gradient > 1.0 {
             0.1
