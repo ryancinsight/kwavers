@@ -51,7 +51,7 @@ impl ErrorEstimator {
     pub fn estimate_error(&self, field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
         match self.criterion {
             RefinementCriterion::Gradient => self.gradient_error(field),
-            RefinementCriterion::Curvature => self.curvature_error(field),
+            RefinementCriterion::Curvature => Self::curvature_error(field),
             RefinementCriterion::Richardson => self.richardson_error(field),
             RefinementCriterion::Wavelet => self.wavelet_error(field),
             RefinementCriterion::Physics => self.physics_error(field),

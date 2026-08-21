@@ -706,6 +706,12 @@
   scheme selection, and octree state remain receiver-bound. Acceptance is static conversion of
   the measured helpers plus any exposed stateless family members, all callers migrated, focused
   AMR tests, package doctests, warning-denied rustdoc, and a refreshed workspace count.
+- 2026-08-21 AMR criteria/interpolation slice is implemented: curvature estimation and the full
+  receiver-free prolongation/restriction helper family are associated functions with all callers
+  migrated; smoothing, scheme selection, and octree state remain receiver-bound. Focused Nextest
+  `kwavers-solver` AMR filter passes 11/11 (894 filtered), package doctests pass 5/5 (8 ignored),
+  warning-denied rustdoc passes, and the refreshed workspace `unused_self` count is 134 sites
+  (solver 13). The increment is ready for integration.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
