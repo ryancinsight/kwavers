@@ -155,7 +155,7 @@ impl StaggeredLeapfrogOperator {
     /// Resolving that once per point instead of recomputing a three-index
     /// address per *tap* is the whole optimization: the address arithmetic, not
     /// the arithmetic on the values, dominated these kernels (KW-SOL-089).
-    fn linear_geometry(&self, axis: Axis, shape: [usize; 3]) -> ([usize; 3], usize, [usize; 2]) {
+    fn linear_geometry(axis: Axis, shape: [usize; 3]) -> ([usize; 3], usize, [usize; 2]) {
         let strides = [shape[1] * shape[2], shape[2], 1];
         let index = match axis {
             Axis::X => 0,
@@ -178,7 +178,7 @@ impl StaggeredLeapfrogOperator {
         let (index, extent, scale) = self.axis_geometry(axis, field.shape(), dst.shape());
         let halo = self.coefficients.len() as isize;
         let shape = field.shape();
-        let (strides, _, others) = self.linear_geometry(axis, shape);
+        let (strides, _, others) = Self::linear_geometry(axis, shape);
         let stride = strides[index] as isize;
 
         let (Some(source), Some(target)) = (field.as_slice(), dst.as_slice_mut()) else {
@@ -252,7 +252,7 @@ impl StaggeredLeapfrogOperator {
         let (index, extent, scale) = self.axis_geometry(axis, field.shape(), dst.shape());
         let halo = self.coefficients.len() as isize;
         let shape = field.shape();
-        let (strides, _, others) = self.linear_geometry(axis, shape);
+        let (strides, _, others) = Self::linear_geometry(axis, shape);
         let stride = strides[index] as isize;
         dst.fill(0.0);
 
