@@ -74,6 +74,12 @@ with `missing_errors_doc` re-enabled and `-D warnings`; its nextest gate passes
 494/494 tests, doctests report zero tests, and warning-denied rustdoc passes. The
 workspace debt block remains unchanged.
 
+The next `missing_errors_doc` slice covers three `kwavers-math` APIs: generic
+array addition, scalar scaling, and CSR conversion. Strict math Clippy passes
+with the lint re-enabled and `-D warnings`; its nextest gate passes 196/196
+tests, doctests pass 3/10 with seven ignored, and warning-denied rustdoc passes.
+The workspace debt block remains unchanged.
+
 The complete example gate initially exposed an independent runtime defect in
 `focused_ultrasound_water_tank`: its five disjoint solver branches ran
 sequentially, and the comparison test terminated at 60 seconds. The provider
