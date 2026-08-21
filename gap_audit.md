@@ -7128,6 +7128,13 @@ configured skip), doctests (2/2; 6 ignored), and warning-denied rustdoc pass. Th
 workspace `unused_self` count is 93 sites with 10 remaining in transducer array/k-Wave rasterizer
 helpers and zero in the completed calibration and boundary slices.
 
+The `kwavers-transducer` flexible-array slice converts normal computation and stress calculation to
+associated functions and migrates their callers; strain calculation remains configuration-dependent.
+Package check, targeted `unused_self` Clippy, Nextest (245/245 with one configured skip), doctests
+(2/2; 6 ignored), and warning-denied rustdoc pass. The refreshed workspace `unused_self` count is
+91 sites with eight remaining in transducer k-Wave rasterizer helpers and zero in the completed
+flexible calibration, flexible-array, and boundary slices.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.
