@@ -87,6 +87,11 @@ impl TissueClassifierModel {
     /// # Errors
     /// - Propagates any `KwaversError` returned by called functions.
     ///
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal analysis state violates
+    /// the precondition required by this operation.
     pub fn classify(&self, features: &Array1<f32>) -> KwaversResult<usize> {
         let input = features
             .clone()

@@ -54,6 +54,11 @@ impl PolynomialFilter {
     ///
     /// - Time complexity: O(n_pixels × n_frames × order²)
     /// - Space complexity: O(n_frames × order)
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal analysis state violates
+    /// the precondition required by this operation.
     pub fn filter(&self, slow_time_data: &Array2<f64>) -> KwaversResult<Array2<f64>> {
         let [n_pixels, n_frames] = slow_time_data.shape();
 

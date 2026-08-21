@@ -19,6 +19,11 @@ use leto::Array2;
 /// Returns `Err(...)` if data has no snapshots, contains non-finite values,
 /// `diagonal_loading` is negative/non-finite, or snapshots are insufficient for
 /// full-rank estimation without loading.
+///
+/// # Panics
+///
+/// Panics if a caller-supplied shape or an internal analysis state violates
+/// the precondition required by this operation.
 pub fn estimate_sample_covariance(
     data: &Array2<Complex64>,
     diagonal_loading: f64,

@@ -65,6 +65,11 @@ impl DelayAndSumPAM {
     ///
     /// # Errors
     /// Returns `Err` on shape mismatches or non-finite values.
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal analysis state violates
+    /// the precondition required by this operation.
     pub fn beamform_with_mode_view(
         &self,
         passive_data: ArrayView2<'_, f64>,
@@ -116,6 +121,11 @@ impl DelayAndSumPAM {
     ///
     /// # Errors
     /// Propagates input-validation and interpolation errors.
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal analysis state violates
+    /// the precondition required by this operation.
     pub fn beamform_signals_view(
         &self,
         passive_data: ArrayView2<'_, f64>,
@@ -160,6 +170,11 @@ impl DelayAndSumPAM {
     /// # Errors
     /// Returns `Err` on shape mismatches (sensor count, delay-matrix columns) or
     /// non-finite values.
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal analysis state violates
+    /// the precondition required by this operation.
     pub fn beamform_signals_with_delays(
         &self,
         passive_data: ArrayView2<'_, f64>,

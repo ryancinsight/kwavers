@@ -21,6 +21,11 @@ impl SpatialSmoothing {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal analysis state violates
+    /// the precondition required by this operation.
     pub fn apply(&self, covariance: &Array2<f64>) -> KwaversResult<Array2<f64>> {
         let n = covariance.shape()[0];
 
@@ -81,6 +86,11 @@ impl SpatialSmoothingComplex {
     /// # Errors
     /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal analysis state violates
+    /// the precondition required by this operation.
     pub fn apply(&self, covariance: &Array2<Complex64>) -> KwaversResult<Array2<Complex64>> {
         let n = covariance.shape()[0];
         if covariance.shape()[1] != n {

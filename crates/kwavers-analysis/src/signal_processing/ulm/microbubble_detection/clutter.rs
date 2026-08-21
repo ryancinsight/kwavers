@@ -60,6 +60,11 @@ impl UlmSvdClutterFilter {
     /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
     /// - Propagates any `KwaversError` returned by called functions.
     ///
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal analysis state violates
+    /// the precondition required by this operation.
     pub fn filter(&self, iq_data: &Array2<f64>) -> KwaversResult<(Array2<f64>, usize)> {
         let [n_px, n_t] = iq_data.shape();
         if n_px == 0 || n_t == 0 {

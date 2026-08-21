@@ -44,6 +44,11 @@ impl SlscBeamformer {
     ///
     /// # Errors
     /// Returns error if input data has fewer than 2 elements
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal analysis state violates
+    /// the precondition required by this operation.
     pub fn process(&self, data: &Array2<Complex64>) -> KwaversResult<Array1<f64>> {
         let [n_elements, n_samples] = data.shape();
 
@@ -80,6 +85,11 @@ impl SlscBeamformer {
     /// # Errors
     /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
     ///
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal analysis state violates
+    /// the precondition required by this operation.
     pub fn process_parallel(&self, data: &Array2<Complex64>) -> KwaversResult<Array1<f64>> {
         let [n_elements, n_samples] = data.shape();
 

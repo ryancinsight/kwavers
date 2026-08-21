@@ -289,6 +289,11 @@ impl SignalSvdClutterFilter {
     /// Power Doppler image (n_pixels,) where each value is the temporal
     /// variance of the filtered signal at that pixel
     #[must_use]
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal analysis state violates
+    /// the precondition required by this operation.
     pub fn compute_power_doppler(&self, filtered_data: &Array2<f64>) -> Array1<f64> {
         let [n_pixels, n_frames] = filtered_data.shape();
         let mut power_doppler = Array1::zeros(n_pixels);
@@ -337,6 +342,11 @@ impl SignalSvdClutterFilter {
     /// # Errors
     /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal analysis state violates
+    /// the precondition required by this operation.
     pub fn estimate_scr_improvement(
         &self,
         original: &Array2<f64>,

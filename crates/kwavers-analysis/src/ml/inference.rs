@@ -64,6 +64,11 @@ impl InferenceEngine {
     ///
     /// # Errors
     /// Returns [`KwaversError::Validation`] when `input.shape()[1] != weights.shape()[0]`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal analysis state violates
+    /// the precondition required by this operation.
     pub fn forward(&self, input: &Array2<f32>) -> KwaversResult<Array2<f32>> {
         let [n_samples, input_dim] = input.shape();
         let [weight_in, out_dim] = self.weights.shape();

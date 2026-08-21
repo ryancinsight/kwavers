@@ -77,6 +77,11 @@ impl CovarianceEstimator {
     /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     /// - Propagates any `KwaversError` returned by called functions.
     ///
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal analysis state violates
+    /// the precondition required by this operation.
     pub fn estimate(&self, data: &Array2<f64>) -> KwaversResult<Array2<f64>> {
         let [num_sensors, num_snapshots] = data.shape();
 
@@ -119,6 +124,11 @@ impl CovarianceEstimator {
     /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     /// - Propagates any `KwaversError` returned by called functions.
     ///
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal analysis state violates
+    /// the precondition required by this operation.
     pub fn estimate_complex(&self, data: &Array2<Complex64>) -> KwaversResult<Array2<Complex64>> {
         let [num_sensors, num_snapshots] = data.shape();
 

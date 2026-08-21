@@ -17,6 +17,11 @@ impl DelayAndSumPAM {
     ///
     /// # Errors
     /// Returns `Err` when `intensity_map.len() != grid_points.shape()[0]`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal analysis state violates
+    /// the precondition required by this operation.
     pub fn detect_events(
         &self,
         intensity_map: &Array1<f64>,
@@ -67,6 +72,11 @@ impl DelayAndSumPAM {
     /// # Errors
     /// Returns `Err` on sensor-count mismatch or size mismatch between map
     /// and grid points.
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal analysis state violates
+    /// the precondition required by this operation.
     pub fn detect_events_with_data(
         &self,
         passive_data: &Array2<f64>,

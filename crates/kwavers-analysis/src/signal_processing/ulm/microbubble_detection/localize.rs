@@ -48,6 +48,11 @@ impl GaussianLocalizer {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal analysis state violates
+    /// the precondition required by this operation.
     pub fn localize_frame(
         &self,
         envelope: &Array2<f64>,

@@ -32,6 +32,11 @@ impl UlmDetector {
     /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
     /// - Propagates any `KwaversError` returned by called functions.
     ///
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal analysis state violates
+    /// the precondition required by this operation.
     pub fn process_block(
         &self,
         iq_block: &Array2<f64>,
