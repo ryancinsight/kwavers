@@ -7255,6 +7255,11 @@ helpers for phase conjugation, source application, backward propagation, and
 convergence measurement. Reconstruction configuration and post-processing remain
 receiver-bound.
 
+The time-reversal slice is implemented: those four helpers are associated
+functions with all callers migrated. Focused Nextest passes 9/9 (896 filtered),
+package doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and the
+refreshed workspace `unused_self` count is 143 sites (22 in `kwavers-solver`).
+
 After PR #477, the workspace `unused_self` scan reports 211 sites, including
 90 in `kwavers-solver`. The next bounded slice is the receiver-free helper in
 `forward/hybrid/adaptive_selection/selector.rs`.

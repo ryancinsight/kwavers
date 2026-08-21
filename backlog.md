@@ -678,6 +678,12 @@
   propagation, and convergence measurement. Reconstruction configuration and post-processing stay
   receiver-bound. Acceptance is static conversion with all callers migrated, focused
   time-reversal tests, package doctests, warning-denied rustdoc, and a refreshed workspace count.
+- 2026-08-21 time-reversal slice is implemented: phase conjugation, source application, backward
+  propagation, and convergence measurement are associated functions with all callers migrated;
+  reconstruction configuration and post-processing remain receiver-bound. Focused Nextest
+  `kwavers-solver` time-reversal filter passes 9/9 (896 filtered), package doctests pass 5/5 (8
+  ignored), warning-denied rustdoc passes, and the refreshed workspace `unused_self` count is 143
+  sites (solver 22). The increment is ready for integration.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
