@@ -4,6 +4,17 @@
 
 ### Added
 
+- **Validation:** The k-Wave parity claim is now reproducible from a clean clone.
+  `crates/kwavers/tests/kwave_reference_parity.rs` compares the k-space
+  pseudospectral solver against committed k-Wave reference fields
+  (`crates/kwavers/tests/reference/kwave/`, 156 KB) on the homogeneous-water
+  initial-value benchmark, and runs in the default test gate with no external
+  solver present. Measured agreement is relative L2 `5.50e-7` at Pearson
+  `r = 1.000000000` in two dimensions and `1.06e-4` at `r = 0.999999994` in
+  three. `scripts/generate_kwave_reference.py` regenerates the reference set by
+  driving `k-wave-python`. See
+  [ADR 119](docs/adr/119-kwave-reference-oracle.md).
+
 - **Documentation:** Every workspace crate now carries its own `README.md` — the
   crates.io/docs.rs landing page — closing the gap where 22 of 24 crates published
   blank. Each README states what the crate owns, where it sits in the layer stack, and
