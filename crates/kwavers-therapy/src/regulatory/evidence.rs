@@ -37,6 +37,7 @@ impl ClinicalEvidence {
     }
 
     /// Set study type
+    #[must_use]
     pub fn with_study_type(mut self, study_type: impl Into<String>) -> Self {
         self.study_type = study_type.into();
         self

@@ -37,36 +37,42 @@ impl<'a, M: Medium> SimulationBuilder<'a, M> {
     }
 
     /// Set the computational grid
+    #[must_use]
     pub fn with_grid(mut self, grid: Grid) -> Self {
         self.grid = Some(grid);
         self
     }
 
     /// Set the medium
+    #[must_use]
     pub fn with_medium(mut self, medium: &'a M) -> Self {
         self.medium = Some(medium);
         self
     }
 
     /// Add a source
+    #[must_use]
     pub fn with_source(mut self, source: Arc<dyn Source>) -> Self {
         self.sources.push(source);
         self
     }
 
     /// Add a sensor
+    #[must_use]
     pub fn with_sensor(mut self, sensor: GridSensorSet) -> Self {
         self.sensors.push(sensor);
         self
     }
 
     /// Enable a feature
+    #[must_use]
     pub fn with_feature(mut self, feature: SolverFeature) -> Self {
         self.feature_config.enabled_features.enable(feature);
         self
     }
 
     /// Set fallback behavior
+    #[must_use]
     pub fn with_fallback_behavior(
         mut self,
         behavior: kwavers_solver::feature::FallbackBehavior,
@@ -76,12 +82,14 @@ impl<'a, M: Medium> SimulationBuilder<'a, M> {
     }
 
     /// Set solver configuration
+    #[must_use]
     pub fn with_solver_config(mut self, config: SolverConfiguration) -> Self {
         self.solver_config = config;
         self
     }
 
     /// Set solver type
+    #[must_use]
     pub fn with_solver_type(mut self, solver_type: SolverType) -> Self {
         self.solver_config.solver_type = solver_type;
         self

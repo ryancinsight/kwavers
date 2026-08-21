@@ -1080,6 +1080,11 @@
   `cargo nextest run --offline -p kwavers-diagnostics -p kwavers-therapy --lib` pass (541/541 with
   one configured skip). `mdbook test docs/book` passes every chapter and `mdbook build docs/book`
   completes. The exact workspace `unused_self` scan is 0, with the ratchet override deleted.
+- 2026-08-21 `return_self_not_must_use` ratchet slice is complete: simulation builder fluent methods
+  and therapy regulatory builders now carry `#[must_use]`. Simulation gates pass (87/87 Nextest,
+  doctests 4/6 with 2 ignored, warning-denied rustdoc); therapy gates pass (350/350 Nextest with one
+  configured skip, doctests 8/9 with 1 ignored, warning-denied rustdoc). The exact workspace scan is
+  0 sites and the ratchet override is removed from `Cargo.toml`.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a

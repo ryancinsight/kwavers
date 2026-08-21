@@ -7410,6 +7410,12 @@ Nextest suite (541/541 with one configured skip). `mdbook test docs/book` passes
 `mdbook build docs/book` completes. The exact workspace `unused_self` scan is 0, with the ratchet
 override deleted.
 
+The `return_self_not_must_use` ratchet slice is complete: simulation builder fluent methods and
+therapy regulatory builders now carry `#[must_use]`. Simulation gates pass (87/87 Nextest, doctests
+4/6 with 2 ignored, warning-denied rustdoc); therapy gates pass (350/350 Nextest with one configured
+skip, doctests 8/9 with 1 ignored, warning-denied rustdoc). The exact workspace scan is 0 sites and
+the ratchet override is removed from `Cargo.toml`.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.
