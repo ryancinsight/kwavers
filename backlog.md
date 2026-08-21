@@ -1135,6 +1135,11 @@
   `unused_self`, `return_self_not_must_use`, `unnecessary_literal_bound`, `unnecessary_semicolon`,
   `stable_sort_primitive`, `unchecked_time_subtraction`, `self_only_used_in_recursion`, and
   `bool_to_int_with_if`.
+- 2026-08-21 `implicit_hasher` diagnostics slice is complete: the two public analysis workflow
+  functions now generalize `HashMap` over `BuildHasher`, preserving caller-selected hashers without
+  copying the tissue-property map. Warning-denied diagnostics Clippy, 191/191 Nextest, doctests
+  (1 passed, 5 ignored), and warning-denied Rustdoc pass. The refreshed workspace scan reports six
+  remaining production sites, all in `kwavers-driver`.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
