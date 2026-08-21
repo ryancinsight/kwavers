@@ -67,16 +67,14 @@ pub type SpectralVelocityUpdateInputs<'a> = VelocityUpdateParams<'a>;
 
 /// Configuration knobs for [`PstdElasticPlugin`].
 ///
+/// Configuration for [`PstdElasticPlugin`].
+///
 /// The plugin currently has no tunable knobs beyond the shape it inherits
-/// from the host PSTD solver; this struct exists as the dedicated extension
-/// surface so that future flags (e.g. anisotropic stiffness, viscoelastic
-/// memory variables) land here rather than on the host config.
-#[derive(Debug, Clone, Default)]
-pub struct SpectralElasticConfig {
-    /// Reserved — held to make `Default` non-empty if future flags require
-    /// initialization. Behaviour is identical regardless of value today.
-    pub _reserved: (),
-}
+/// from the host PSTD solver. The unit struct keeps that explicit: future
+/// flags (for example, anisotropic stiffness or viscoelastic memory variables)
+/// belong here rather than on the host configuration.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct SpectralElasticConfig;
 
 /// PSTD elastic extension plugin.
 ///

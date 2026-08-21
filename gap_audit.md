@@ -7542,6 +7542,13 @@ or a redacted marker for opaque plans/backends. Warning-denied package Clippy, N
 with 4 configured skips), doctests (5 passed; 8 ignored), warning-denied Rustdoc, and the exact
 production workspace scan pass. The `missing_fields_in_debug` ratchet override is removed.
 
+The `kwavers-solver` `pub_underscore_fields` slice removes the placeholder `_reserved` member from
+`SpectralElasticConfig`, making the no-knob configuration an explicit unit type. Warning-denied
+package Clippy, Nextest (902/902 with 4 configured skips), doctests (5 passed; 8 ignored), and
+warning-denied Rustdoc pass. The exact production workspace count decreases from 16 to 15 sites;
+the remaining 15 sites are public clinical-workflow configuration fields and require a separate
+public-contract migration.
+
 Final exact-revision validation at merged revision `192eb7575` passes workspace Nextest (5,781/5,781
 with 7 configured skips) and workspace doctests with no failures. The previously recorded example
 build and mdBook test/build remain valid because the final changes are lint-only production edits and
