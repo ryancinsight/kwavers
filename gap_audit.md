@@ -7518,6 +7518,12 @@ conversion boundary. Warning-denied package Clippy, Nextest (21/21), and warning
 doctests are not applicable because the package intentionally has no Rust library target. The exact
 production workspace scan reports 0 sites and the ratchet override is removed from `Cargo.toml`.
 
+The `kwavers-therapy` `missing_fields_in_debug` slice accounts for the opaque
+`ComplianceCheck::validation_function` in its manual Debug output with a redacted callable marker,
+while retaining all value fields. Warning-denied package Clippy, Nextest (350/350), doctests
+(8 passed; 1 ignored), and warning-denied Rustdoc pass. The production workspace count decreases
+from 17 to 16 sites, and the ratchet comment is updated.
+
 Final exact-revision validation at merged revision `192eb7575` passes workspace Nextest (5,781/5,781
 with 7 configured skips) and workspace doctests with no failures. The previously recorded example
 build and mdBook test/build remain valid because the final changes are lint-only production edits and

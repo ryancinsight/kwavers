@@ -181,7 +181,7 @@ elidable_lifetime_names = "allow"
 # raised to `warn`, kwavers-solver alone reports 223 and 1. Do not promote
 # either to `deny` on the strength of a zero measured while it is allowed.
 unwrap_used = "allow"                              # 223+ in kwavers-solver alone
-missing_fields_in_debug = "allow"                  # 21
+missing_fields_in_debug = "allow"                  # 16
 pub_underscore_fields = "allow"                    # 18
 struct_excessive_bools = "allow"                   # 14
 needless_for_each = "allow"                        # 12

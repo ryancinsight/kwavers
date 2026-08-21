@@ -1176,6 +1176,11 @@
   boundary. Warning-denied Python Clippy, 21/21 Nextest, and warning-denied Rustdoc pass; doctests
   are not applicable because the package intentionally has no Rust library target. The production
   workspace scan reports zero sites, so the ratchet override is removed from `Cargo.toml`.
+- 2026-08-21 `missing_fields_in_debug` therapy slice is complete: `ComplianceCheck` Debug output
+  now accounts for its opaque validation callable with a redacted callable marker, while retaining
+  all value fields. Warning-denied therapy Clippy, 350/350 Nextest, doctests (8 passed; 1 ignored),
+  and warning-denied Rustdoc pass. The production workspace count decreases from 17 to 16 sites;
+  the ratchet comment is updated.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
