@@ -1112,6 +1112,11 @@
   `mdbook build docs/book` pass. Workspace Nextest passes 5,781/5,781 with 7 configured skips;
   workspace doctests pass with no failures. Exact workspace scans report `unused_self=0`,
   `return_self_not_must_use=0`, and `unnecessary_literal_bound=0`.
+- 2026-08-21 `unnecessary_semicolon` slice is complete: monolithic solver residual matching and
+  Westervelt FWI loop control no longer carry redundant statement terminators. Combined solver and
+  therapy gates pass (1,364/1,364 Nextest with 5 configured skips; doctests and warning-denied
+  rustdoc pass). The exact workspace `unnecessary_semicolon` scan is 0 and its ratchet override is
+  removed from `Cargo.toml`.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a

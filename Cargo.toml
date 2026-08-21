@@ -195,7 +195,6 @@ stable_sort_primitive = "allow"                    # 2
 ref_option = "deny"
 implicit_clone = "deny"
 zero_sized_map_values = "deny"
-unnecessary_semicolon = "allow"                    # 2
 implicit_hasher = "allow"                          # 2
 doc_comment_double_space_linebreaks = "deny"
 print_stderr = "allow"                             # 1+ (see unwrap_used note)
