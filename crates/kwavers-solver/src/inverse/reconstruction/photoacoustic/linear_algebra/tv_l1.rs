@@ -43,7 +43,7 @@ impl PhotoacousticLinearSolver {
         let mut atb = Array1::<f64>::zeros(n);
         leto_ops::matvec(&at, &b, &mut atb.view_mut()).expect("invariant: TV Aᵀb conforms");
 
-        let lipschitz = self.power_method(&ata)?;
+        let lipschitz = Self::power_method(&ata)?;
         let step_size = 1.0 / lipschitz;
 
         for _iter in 0..self.max_iterations {
@@ -59,7 +59,7 @@ impl PhotoacousticLinearSolver {
             for j in 0..n {
                 x_grad[j] = x[j] - step_size * gradient[j];
             }
-            x = self.tv_proximal(&x_grad, lambda * step_size, shape)?;
+            x = Self::tv_proximal(&x_grad, lambda * step_size, shape)?;
 
             // residual = A·x − b
             let mut residual = Array1::<f64>::zeros(m);
@@ -87,7 +87,7 @@ impl PhotoacousticLinearSolver {
     /// # Errors
     /// Always returns `Ok`; signature is `KwaversResult` for consistency with
     /// callers that propagate the error chain.
-    fn power_method(&self, a: &Array2<f64>) -> KwaversResult<f64> {
+    fn power_method(a: &Array2<f64>) -> KwaversResult<f64> {
         let n = a.shape()[0];
         let mut v = Array1::<f64>::ones(n);
         let norm0 = leto_ops::dot(&v.view(), &v.view())
@@ -123,7 +123,6 @@ impl PhotoacousticLinearSolver {
     /// # Errors
     /// Always returns `Ok`; signature matches callers that propagate errors.
     fn tv_proximal(
-        &self,
         x: &Array1<f64>,
         threshold: f64,
         shape: [usize; 3],

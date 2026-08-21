@@ -628,6 +628,16 @@
   `unused_self` scan is clean in the photoacoustic utility/algorithm modules. The increment is
   ready for integration; the workspace debt-block line remains until a refreshed workspace
   measurement confirms the count.
+- 2026-08-21 photoacoustic utility slice merged in PR #495 (`b62d402f8`). The refreshed
+  `unused_self` measurement is 169 sites (solver 48); the next bounded slice is the three
+  receiver-free linear-algebra helpers in `inverse/reconstruction/photoacoustic/linear_algebra/`.
+- 2026-08-21 photoacoustic linear-algebra slice is implemented: truncated-SVD entry, power-method
+  kernels, and the TV proximal operator are associated functions, with all callers migrated.
+  Broad photoacoustic Nextest `241cbbcf-f0f6-463d-b2c6-d6fc87cb3f2e` passes 10/10 (895 solver
+  tests skipped); the package doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and
+  the focused `unused_self` scan is clean in the photoacoustic linear-algebra/algorithm modules.
+  The increment is ready for integration; the workspace debt-block line remains until a
+  refreshed workspace measurement confirms the count.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a

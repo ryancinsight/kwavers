@@ -15,12 +15,11 @@ impl PhotoacousticLinearSolver {
     /// # Errors
     /// Returns `Err` when the power-iteration SVD fails.
     pub fn solve_truncated_svd(
-        &self,
         a: &Array2<f64>,
         b: ArrayView1<f64>,
         truncation: f64,
     ) -> KwaversResult<Array1<f64>> {
-        let (u, s, vt) = self.power_iteration_svd(a)?;
+        let (u, s, vt) = Self::power_iteration_svd(a)?;
 
         let s_max = s.iter().copied().fold(0.0, f64::max);
         let threshold = truncation * s_max;
@@ -52,10 +51,7 @@ impl PhotoacousticLinearSolver {
     ///
     /// # Errors
     /// Always returns `Ok`; the signature matches callers that propagate errors.
-    fn power_iteration_svd(
-        &self,
-        a: &Array2<f64>,
-    ) -> KwaversResult<(Array2<f64>, Vec<f64>, Array2<f64>)> {
+    fn power_iteration_svd(a: &Array2<f64>) -> KwaversResult<(Array2<f64>, Vec<f64>, Array2<f64>)> {
         let [m, n] = a.shape();
         let k = m.min(n);
 
