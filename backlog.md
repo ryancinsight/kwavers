@@ -1171,6 +1171,11 @@
   Clippy, 350/350 Nextest with 1 configured skip, doctests (8 passed; 1 ignored), and warning-
   denied Rustdoc pass. The production workspace count decreases from 2 to 1 site; the ratchet
   comment is updated.
+- 2026-08-21 `from_iter_instead_of_collect` Python slice is complete: the PAM MUSIC binding now
+  collects the complex steering vector directly into `Array1`, preserving the PyO3 conversion-only
+  boundary. Warning-denied Python Clippy, 21/21 Nextest, and warning-denied Rustdoc pass; doctests
+  are not applicable because the package intentionally has no Rust library target. The production
+  workspace scan reports zero sites, so the ratchet override is removed from `Cargo.toml`.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a

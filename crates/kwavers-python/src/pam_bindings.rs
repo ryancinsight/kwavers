@@ -133,11 +133,11 @@ fn music_pseudospectrum(
             "steering real/imag parts must have length N matching the covariance",
         ));
     }
-    let steering = Array1::from_iter(
-        sr.iter()
-            .zip(si.iter())
-            .map(|(&a, &b)| KwComplex::new(a, b)),
-    );
+    let steering: Array1<KwComplex> = sr
+        .iter()
+        .zip(si.iter())
+        .map(|(&a, &b)| KwComplex::new(a, b))
+        .collect();
     MUSIC::new(num_sources)
         .pseudospectrum(&h, &steering)
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))
