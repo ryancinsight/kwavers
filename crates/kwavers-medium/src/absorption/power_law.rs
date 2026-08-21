@@ -118,6 +118,12 @@ impl PowerLawModel {
     }
 
     /// Apply power law absorption in frequency domain
+    ///
+    /// # Panics
+    ///
+    /// Panics if the spectrum's frequency axis length differs from
+    /// `frequencies.len()`. The frequency response is applied plane-by-plane,
+    /// so the two lengths must match.
     pub fn apply_frequency_domain(
         &self,
         spectrum: &mut leto::Array3<eunomia::Complex64>,

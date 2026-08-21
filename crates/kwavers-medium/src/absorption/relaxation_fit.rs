@@ -884,6 +884,10 @@ impl RelaxationFieldFit {
 /// # Errors
 /// Rejects fields of differing shapes, an invalid [`FitBand`], or any voxel
 /// whose target [`fit_power_law`] would reject.
+///
+/// # Panics
+/// Panics if the internal distinct-target bookkeeping fails to assign a fit to
+/// every target, violating the one-fit-per-distinct-voxel invariant.
 pub fn fit_power_law_fields(
     alpha_ref_np_m: &Array3<f64>,
     exponent: &Array3<f64>,

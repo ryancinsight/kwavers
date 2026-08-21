@@ -139,6 +139,11 @@ impl TemperatureDependentThermal {
     }
 
     /// Water properties.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the built-in water coefficients violate the validated thermal
+    /// property contract.
     #[must_use]
     pub fn water() -> Self {
         Self::new(
@@ -152,6 +157,11 @@ impl TemperatureDependentThermal {
     }
 
     /// Soft-tissue properties.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the built-in soft-tissue coefficients violate the validated
+    /// thermal property contract.
     #[must_use]
     pub fn soft_tissue() -> Self {
         Self::new(

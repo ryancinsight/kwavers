@@ -6854,3 +6854,12 @@ rustdoc passes with `RUSTDOCFLAGS=-D warnings`.
 
 The next workspace measurement remains 26 `missing_panics_doc` sites in
 `kwavers-medium`; that slice is now claimed.
+
+## `missing_panics_doc` medium slice — 2026-08-21
+
+The `kwavers-medium` slice documents all 26 measured panic contracts across
+absorption fitting, anisotropic stiffness, tissue maps, optical properties,
+and thermal presets. Strict offline Clippy with
+`-D clippy::missing_panics_doc -D warnings` passes; Nextest run
+`7a5d184d-b618-432d-8407-f93bf24a5151` passes 215/215; doctests pass 4/4
+(1 ignored); and rustdoc passes with `RUSTDOCFLAGS=-D warnings`.
