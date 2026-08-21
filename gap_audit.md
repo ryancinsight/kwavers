@@ -7039,3 +7039,13 @@ helper to an associated function. Focused Nextest run
 `b1f21fd8-793e-4e7a-98a6-75ed860fed9c` passes 9/9 (896 solver tests filtered);
 the package doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and
 the focused unused_self scan has zero warnings in the interpolation module.
+
+After PR #477, the workspace `unused_self` scan reports 211 sites, including
+90 in `kwavers-solver`. The next bounded slice is the receiver-free helper in
+`forward/hybrid/adaptive_selection/selector.rs`.
+
+The adaptive selector slice converts its measured receiver-free region
+extractor to an associated function. Focused Nextest run
+`3f6e1bc8-8248-4afc-a33d-518a67ad1123` passes 1/1 (904 solver tests filtered);
+the package doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and
+the focused unused_self scan has zero warnings in the selector module.
