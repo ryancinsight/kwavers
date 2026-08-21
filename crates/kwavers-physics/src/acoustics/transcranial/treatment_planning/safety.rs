@@ -13,7 +13,6 @@ impl TreatmentPlanner {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(crate) fn validate_safety(
-        &self,
         temperature: &Array3<f64>,
         acoustic_field: &Array3<f64>,
         frequency_hz: f64,
