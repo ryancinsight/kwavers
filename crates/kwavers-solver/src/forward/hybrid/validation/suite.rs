@@ -54,7 +54,7 @@ impl HybridValidationSuite {
 
         // Run convergence tests
         if self.config.test_convergence {
-            let convergence_result = self.run_convergence_test()?;
+            let convergence_result = Self::run_convergence_test()?;
             summary.total_tests += 1;
             if convergence_result {
                 summary.tests_passed += 1;
@@ -94,13 +94,13 @@ impl HybridValidationSuite {
     /// # Errors
     /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
-    fn run_convergence_test(&self) -> KwaversResult<bool> {
+    fn run_convergence_test() -> KwaversResult<bool> {
         // Test that error decreases with grid refinement
         let mut errors = Vec::new();
         let grid_sizes = vec![32, 64, 128];
 
         for size in grid_sizes {
-            let error = self.compute_error_for_grid_size(size)?;
+            let error = Self::compute_error_for_grid_size(size)?;
             errors.push(error);
         }
 
@@ -121,9 +121,9 @@ impl HybridValidationSuite {
     fn run_accuracy_test(&self) -> KwaversResult<bool> {
         // Test against analytical solution or reference
         let computed = self.compute_solution()?;
-        let reference = self.get_reference_solution()?;
+        let reference = Self::get_reference_solution()?;
 
-        let error = self.compute_relative_error(computed, reference)?;
+        let error = Self::compute_relative_error(computed, reference)?;
         Ok(error < self.config.error_tolerance)
     }
 
@@ -144,7 +144,7 @@ impl HybridValidationSuite {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    fn compute_error_for_grid_size(&self, size: usize) -> KwaversResult<f64> {
+    fn compute_error_for_grid_size(size: usize) -> KwaversResult<f64> {
         let points = size.max(MIN_MANUFACTURED_POINTS);
         let h = grid_spacing(points);
         let mut residual_l2 = 0.0;
@@ -175,7 +175,7 @@ impl HybridValidationSuite {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    fn get_reference_solution(&self) -> KwaversResult<f64> {
+    fn get_reference_solution() -> KwaversResult<f64> {
         Ok(exact_second_derivative(0.25))
     }
 
@@ -183,7 +183,7 @@ impl HybridValidationSuite {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    fn compute_relative_error(&self, computed: f64, reference: f64) -> KwaversResult<f64> {
+    fn compute_relative_error(computed: f64, reference: f64) -> KwaversResult<f64> {
         if reference.abs() > kwavers_core::constants::numerical::EPSILON {
             Ok((computed - reference).abs() / reference.abs())
         } else {
@@ -254,8 +254,9 @@ mod tests {
     fn manufactured_accuracy_matches_closed_form_second_derivative() {
         let suite = suite_with(128);
         let computed = suite.compute_solution().unwrap();
-        let reference = suite.get_reference_solution().unwrap();
-        let relative_error = suite.compute_relative_error(computed, reference).unwrap();
+        let reference = HybridValidationSuite::get_reference_solution().unwrap();
+        let relative_error =
+            HybridValidationSuite::compute_relative_error(computed, reference).unwrap();
 
         assert!(relative_error < 1e-8, "relative_error={relative_error:e}");
         assert!(computed.is_finite());
@@ -264,10 +265,9 @@ mod tests {
 
     #[test]
     fn convergence_error_decreases_under_grid_refinement() {
-        let suite = suite_with(128);
-        let coarse = suite.compute_error_for_grid_size(32).unwrap();
-        let medium = suite.compute_error_for_grid_size(64).unwrap();
-        let fine = suite.compute_error_for_grid_size(128).unwrap();
+        let coarse = HybridValidationSuite::compute_error_for_grid_size(32).unwrap();
+        let medium = HybridValidationSuite::compute_error_for_grid_size(64).unwrap();
+        let fine = HybridValidationSuite::compute_error_for_grid_size(128).unwrap();
 
         assert!(medium < coarse, "coarse={coarse:e}, medium={medium:e}");
         assert!(fine < medium, "medium={medium:e}, fine={fine:e}");
