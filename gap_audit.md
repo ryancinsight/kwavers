@@ -7331,6 +7331,13 @@ ignored), and warning-denied rustdoc pass. The refreshed workspace `unused_self`
 with 2 remaining in other analysis paths. The package-wide all-targets Clippy gate still reports two
 pre-existing test-only lint defects outside this slice.
 
+The `kwavers-analysis` polynomial clutter-filter slice converts the Gauss–Jordan pseudo-inverse
+kernel to an associated function while filter configuration and polynomial-order state remain
+receiver-bound. Package check, targeted `unused_self` Clippy, Nextest (744/744), doctests (1/22; 21
+ignored), and warning-denied rustdoc pass. The refreshed workspace `unused_self` count is 20 sites
+with 1 remaining in other analysis paths. The package-wide all-targets Clippy gate still reports two
+pre-existing test-only lint defects outside this slice.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.

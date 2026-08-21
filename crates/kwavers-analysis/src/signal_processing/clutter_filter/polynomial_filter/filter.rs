@@ -95,7 +95,7 @@ impl PolynomialFilter {
         let mut vtv = Array2::<f64>::zeros((k, k));
         leto_ops::matmul(&vt.view(), &vandermonde.view(), &mut vtv.view_mut())
             .expect("VᵀV matmul shapes conform");
-        let vtv_inv = self.pseudo_inverse(&vtv)?;
+        let vtv_inv = Self::pseudo_inverse(&vtv)?;
         let mut projection = Array2::<f64>::zeros((k, n_frames));
         leto_ops::matmul(&vtv_inv.view(), &vt.view(), &mut projection.view_mut())
             .expect("projection matmul shapes conform");
@@ -137,7 +137,7 @@ impl PolynomialFilter {
     /// # Errors
     /// - Returns `KwaversError::InvalidInput` if the matrix is not square.
     /// - Returns [`KwaversError::Numerical`] if the matrix is singular (pivot < 1e-12).
-    fn pseudo_inverse(&self, matrix: &Array2<f64>) -> KwaversResult<Array2<f64>> {
+    fn pseudo_inverse(matrix: &Array2<f64>) -> KwaversResult<Array2<f64>> {
         let [n, m] = matrix.shape();
 
         if n != m {
