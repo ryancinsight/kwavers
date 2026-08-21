@@ -160,6 +160,11 @@ impl DynamicFocusing {
     }
 
     /// Calculate intensity at a point
+    ///
+    /// # Panics
+    ///
+    /// Panics if the stored element-position array loses its validated
+    /// two-dimensional shape, so an element row cannot be extracted.
     #[must_use]
     pub fn calculate_intensity(&self, x: f64, y: f64, z: f64) -> f64 {
         let wavelength = calculate_wavelength(self.frequency, SOUND_SPEED_WATER);

@@ -45,6 +45,10 @@ pub fn delay_law_steer_2d(
 /// * `elem_x`, `elem_z` – element positions `m`
 /// * `x_f`, `z_f` – focal point `m`
 /// * `c` – sound speed [m/s]
+///
+/// # Panics
+///
+/// Panics if `elem_x` and `elem_z` have different lengths.
 #[must_use]
 pub fn delay_law_focus_2d(elem_x: &[f64], elem_z: &[f64], x_f: f64, z_f: f64, c: f64) -> Vec<f64> {
     assert_eq!(

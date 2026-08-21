@@ -72,6 +72,11 @@ fn validate_positive(parameter: &'static str, value: f64) -> KwaversResult<()> {
 ///
 /// Returns [`KwaversError::InvalidInput`] when a physical scalar is non-finite or non-positive,
 /// or when a pressure sample is non-finite.
+///
+/// # Panics
+///
+/// Panics only if the internally constructed `(N, 1, 1)` array cannot be
+/// reshaped back to the original one-dimensional sample count.
 pub fn pressure_to_membrane_tension_mn_m(
     pressure_pa: &[f64],
     density_kg_m3: f64,
@@ -117,6 +122,11 @@ pub fn pressure_to_membrane_tension_mn_m(
 ///
 /// Returns [`KwaversError::InvalidInput`] when temperature or slope is non-finite or non-positive,
 /// or when a tension sample is non-finite.
+///
+/// # Panics
+///
+/// Panics only if the internally constructed `(N, 1, 1)` array cannot be
+/// reshaped back to the original one-dimensional sample count.
 pub fn boltzmann_open_probability_from_tension_mn_m(
     tension_mn_m: &[f64],
     half_tension_mn_m: f64,

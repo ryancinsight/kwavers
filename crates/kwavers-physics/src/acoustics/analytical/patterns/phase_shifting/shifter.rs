@@ -152,6 +152,11 @@ impl PhaseShifter {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
+    /// # Panics
+    ///
+    /// Panics if the stored element-position array loses its validated
+    /// two-dimensional shape, so an element row cannot be extracted.
+    ///
     pub fn calculate_linear_phases(&mut self, steering_angle: f64) -> KwaversResult<Array1<f64>> {
         let angle_rad = steering_angle.to_radians();
 
@@ -180,6 +185,11 @@ impl PhaseShifter {
     /// Calculate phase shifts for spherical focusing
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the stored element-position array loses its validated
+    /// two-dimensional shape, so an element row cannot be extracted.
     ///
     pub fn calculate_spherical_phases(
         &mut self,

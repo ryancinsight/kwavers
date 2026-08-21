@@ -99,6 +99,11 @@ pub fn track_line_samples(
 /// `reference` and `tracked` are `[nx, ny, nz]` RF volumes with the axial
 /// (fast-time) direction along the last axis. `dz` is the axial sample spacing
 /// in metres (see [`super::ThermalStrainConfig::axial_sample_spacing`]).
+///
+/// # Panics
+///
+/// Panics if either input cannot provide the indexed axial slice implied by
+/// `reference`'s dimensions, or if the two volumes have incompatible shapes.
 #[must_use]
 pub fn track_axial_displacement(
     reference: &Array3<f64>,

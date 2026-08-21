@@ -93,6 +93,11 @@ impl BubbleIMEXIntegrator {
     /// # Errors
     /// - Propagates any `KwaversError` returned by called functions.
     ///
+    /// # Panics
+    ///
+    /// Panics only if the fixed four-component residual vector cannot be
+    /// reshaped as required by the IMEX state invariant.
+    ///
     pub fn step(
         &mut self,
         state: &mut BubbleState,

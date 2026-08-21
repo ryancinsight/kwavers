@@ -218,6 +218,11 @@ pub struct ApodizationWindowResponse {
 /// # Errors
 ///
 /// Returns a descriptive error when the element count or FFT length is zero or incompatible.
+///
+/// # Panics
+///
+/// Panics only if the FFT backend rejects the internally constructed vector
+/// whose length was checked against `nfft`.
 pub fn apodization_window_response(
     n_elements: usize,
     window_type: &str,

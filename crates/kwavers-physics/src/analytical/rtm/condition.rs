@@ -46,6 +46,10 @@ pub fn rtm_imaging_condition(
 ///
 /// # Reference
 /// Marty et al. (2021), *Phys. Rev. Applied* 15, 024061.
+///
+/// # Panics
+///
+/// Panics if any image has a length different from the first image.
 #[must_use]
 pub fn rtm_multi_frequency_fusion(images: &[Vec<f64>]) -> Vec<f64> {
     if images.is_empty() {
@@ -124,6 +128,11 @@ pub fn rtm_source_normalized_condition(
 ///
 /// # Reference
 /// Margrave (2003), *CREWES Research Report* §3.2 (aperture weighting in migration).
+///
+/// # Panics
+///
+/// Panics if the image and weight counts differ or if any image has a length
+/// different from the first image.
 #[must_use]
 pub fn rtm_aperture_weighted_fusion(images: &[Vec<f64>], weights: &[f64]) -> Vec<f64> {
     if images.is_empty() {

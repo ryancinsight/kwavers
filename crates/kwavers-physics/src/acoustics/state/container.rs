@@ -36,6 +36,11 @@ impl PhysicsState {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
+    /// # Panics
+    ///
+    /// Panics only if the container's fixed field axis is corrupted after the
+    /// range check, violating the storage invariant.
+    ///
     pub fn get_field(&self, field_index: usize) -> KwaversResult<ArrayView3<'_, f64>> {
         if field_index >= field_indices::TOTAL_FIELDS {
             return Err(PhysicsError::InvalidFieldIndex(field_index).into());
@@ -48,6 +53,11 @@ impl PhysicsState {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
+    /// # Panics
+    ///
+    /// Panics only if the container's fixed field axis is corrupted after the
+    /// range check, violating the storage invariant.
+    ///
     pub fn get_field_mut(&mut self, field_index: usize) -> KwaversResult<ArrayViewMut3<'_, f64>> {
         if field_index >= field_indices::TOTAL_FIELDS {
             return Err(PhysicsError::InvalidFieldIndex(field_index).into());
@@ -59,6 +69,11 @@ impl PhysicsState {
     /// Apply a closure to a field for reading (zero-copy)
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    /// # Panics
+    ///
+    /// Panics only if the container's fixed field axis is corrupted after the
+    /// range check, violating the storage invariant.
     ///
     pub fn with_field<F, R>(&self, field_index: usize, f: F) -> KwaversResult<R>
     where
@@ -74,6 +89,11 @@ impl PhysicsState {
     /// Apply a closure to a field for mutation (zero-copy)
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    /// # Panics
+    ///
+    /// Panics only if the container's fixed field axis is corrupted after the
+    /// range check, violating the storage invariant.
     ///
     pub fn with_field_mut<F, R>(&mut self, field_index: usize, f: F) -> KwaversResult<R>
     where
@@ -91,6 +111,11 @@ impl PhysicsState {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
+    /// # Panics
+    ///
+    /// Panics only if the container's fixed field axis is corrupted after the
+    /// range check, violating the storage invariant.
+    ///
     pub fn clone_field(&self, field_index: usize) -> KwaversResult<Array3<f64>> {
         self.with_field(field_index, |field| field.to_contiguous())
     }
@@ -98,6 +123,11 @@ impl PhysicsState {
     /// Update a specific field with new data
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    /// # Panics
+    ///
+    /// Panics only if the container's fixed field axis is corrupted after the
+    /// range check, violating the storage invariant.
     ///
     pub fn update_field(&mut self, field_index: usize, data: &Array3<f64>) -> KwaversResult<()> {
         if field_index >= field_indices::TOTAL_FIELDS {

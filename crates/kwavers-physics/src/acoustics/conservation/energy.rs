@@ -5,6 +5,11 @@ use leto::Array3;
 use moirai_parallel::{reduce_index_with, Sequential};
 
 /// Compute total acoustic energy and relative error against `initial_energy`.
+///
+/// # Panics
+///
+/// Panics when any supplied field has a shape different from `pressure`; equal
+/// shapes are required for the pointwise energy reduction.
 #[allow(clippy::too_many_arguments)]
 #[must_use]
 pub fn validate_energy_conservation(

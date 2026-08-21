@@ -48,6 +48,11 @@ impl HifuThermalDose {
     /// Returns an error when dimensions differ, time is non-finite or not
     /// increasing, or Asclepius rejects an absolute temperature. Persistent
     /// history and dose remain unchanged on failure.
+    ///
+    /// # Panics
+    ///
+    /// Panics only if a dose or temperature array violates the dense-storage
+    /// invariant required by the zero-copy accumulation path.
     pub fn add_temperature_measurement(
         &mut self,
         temperature: Array3<f64>,
