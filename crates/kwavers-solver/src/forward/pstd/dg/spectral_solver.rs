@@ -36,8 +36,17 @@ impl std::fmt::Debug for RegionPSTDSolver {
         f.debug_struct("RegionPSTDSolver")
             .field("order", &self.order)
             .field("grid_dim", &(self.grid.nx, self.grid.ny, self.grid.nz))
+            .field("grid", &self.grid)
+            .field("k2", &self.k2.shape())
+            .field("filter", &self.filter.shape())
             .field("wave_speed", &self.wave_speed)
+            .field("prev_field", &self.prev_field.shape())
             .field("has_prev_field", &self.has_prev_field)
+            .field("fft", &"<fft-plan>")
+            .field("field_hat", &self.field_hat.shape())
+            .field("lap_hat", &self.lap_hat.shape())
+            .field("scratch_hat", &self.scratch_hat.shape())
+            .field("laplacian", &self.laplacian.shape())
             .finish()
     }
 }

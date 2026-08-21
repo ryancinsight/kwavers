@@ -320,8 +320,62 @@ impl std::fmt::Debug for PSTDSolver {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("PSTDSolver")
             .field("config", &self.config)
-            .field("grid", &"Grid { ... }")
+            .field("grid", &self.grid)
+            .field("sensor_recorder", &self.sensor_recorder)
+            .field("source_handler", &self.source_handler)
+            .field("dynamic_sources", &self.dynamic_sources.len())
+            .field("source_injection_modes", &self.source_injection_modes)
+            .field(
+                "velocity_source_grad_masks",
+                &self.velocity_source_grad_masks.len(),
+            )
+            .field("time_step_index", &self.time_step_index)
+            .field("fft", &"<fft-plan>")
+            .field("kappa", &self.kappa.shape())
+            .field("source_kappa", &self.source_kappa.shape())
+            .field("filter", &self.filter.as_ref().map(|v| v.shape()))
+            .field("c_ref", &self.c_ref)
+            .field("mass_source_scale", &self.mass_source_scale)
+            .field("source_time_shift_samples", &self.source_time_shift_samples)
+            .field("source_gain", &self.source_gain)
             .field("k_max", &self.k_max)
+            .field("boundary", &"<boundary>")
+            .field("pml_exp", &self.pml_exp.is_some())
+            .field("fields", &self.fields)
+            .field("rhox", &self.rhox.shape())
+            .field("rhoy", &self.rhoy.shape())
+            .field("rhoz", &self.rhoz.shape())
+            .field("p_k", &self.p_k.shape())
+            .field("ux_k", &self.ux_k.shape())
+            .field("grad_k", &self.grad_k.shape())
+            .field("materials", &self.materials)
+            .field("bon", &self.bon.as_ref().map(|v| v.shape()))
+            .field("absorption", &self.absorption.is_some())
+            .field("k_mag_half", &self.k_mag_half.shape())
+            .field(
+                "residual_gas_absorption",
+                &self.residual_gas_absorption.is_some(),
+            )
+            .field("kspace_operators", &self.kspace_operators.is_some())
+            .field("ddx_k_shift_pos", &self.ddx_k_shift_pos.len())
+            .field("ddy_k_shift_pos", &self.ddy_k_shift_pos.len())
+            .field("ddz_k_shift_pos", &self.ddz_k_shift_pos.len())
+            .field("ddx_k_shift_neg", &self.ddx_k_shift_neg.len())
+            .field("ddy_k_shift_neg", &self.ddy_k_shift_neg.len())
+            .field("ddz_k_shift_neg", &self.ddz_k_shift_neg.len())
+            .field("dpx", &self.dpx.shape())
+            .field("dpy", &self.dpy.shape())
+            .field("div_u", &self.div_u.shape())
+            .field("div_ux", &self.div_ux.shape())
+            .field("div_uy", &self.div_uy.shape())
+            .field("div_uz", &self.div_uz.shape())
+            .field("as_ctx", &self.as_ctx.is_some())
+            .field("alpha_np_m", &self.alpha_np_m.as_ref().map(|v| v.shape()))
+            .field("dirichlet_pml_bypass_x", &self.dirichlet_pml_bypass_x)
+            .field(
+                "pml_bypass_plane_scratch",
+                &self.pml_bypass_plane_scratch.shape(),
+            )
             .finish()
     }
 }

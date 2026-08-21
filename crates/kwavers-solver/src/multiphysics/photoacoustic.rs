@@ -31,6 +31,7 @@ pub struct PhotoacousticSolver<T: ElectromagneticWaveEquation> {
 impl<T: ElectromagneticWaveEquation> std::fmt::Debug for PhotoacousticSolver<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("PhotoacousticSolver")
+            .field("em_solver", &"<electromagnetic-solver>")
             .field("gruneisen", &self.gruneisen)
             .field("optical_properties", &self.optical_properties)
             .field("has_initial_pressure", &self.initial_pressure.is_some())

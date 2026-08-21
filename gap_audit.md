@@ -7536,6 +7536,12 @@ callback. Warning-denied package Clippy, Nextest (1,561/1,561 with 1 configured 
 (9 passed; 4 ignored), and warning-denied Rustdoc pass. The production workspace count decreases
 from 15 to 13 sites, and the ratchet comment is updated.
 
+The `kwavers-solver` `missing_fields_in_debug` slice completes the remaining thirteen manual
+Debug implementations. Every field is represented by its value, shape, length, presence flag,
+or a redacted marker for opaque plans/backends. Warning-denied package Clippy, Nextest (902/902
+with 4 configured skips), doctests (5 passed; 8 ignored), warning-denied Rustdoc, and the exact
+production workspace scan pass. The `missing_fields_in_debug` ratchet override is removed.
+
 Final exact-revision validation at merged revision `192eb7575` passes workspace Nextest (5,781/5,781
 with 7 configured skips) and workspace doctests with no failures. The previously recorded example
 build and mdBook test/build remain valid because the final changes are lint-only production edits and

@@ -95,8 +95,11 @@ impl std::fmt::Debug for KZKSolver {
             )
             .field("absorption", &self.absorption)
             .field("nonlinear", &self.nonlinear)
+            .field("pressure_prev", &self.pressure_prev.shape())
+            .field("complex_diffraction", &self.complex_diffraction)
             .field("conservation_tracker", &self.conservation_tracker.is_some())
             .field("current_z_step", &self.current_z_step)
+            .field("current_time", &self.current_time)
             .finish()
     }
 }
