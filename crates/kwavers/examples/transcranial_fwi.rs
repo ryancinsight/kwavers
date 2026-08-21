@@ -10,6 +10,11 @@
 //! (1984) and Virieux & Operto (2009), with HU-to-acoustic properties supplied
 //! by the provider-owned `SkullModel`.
 
+#![expect(
+    clippy::print_stdout,
+    reason = "The example's console report is its user-visible output contract"
+)]
+
 #[path = "seismic_imaging/medium/mod.rs"]
 mod seismic_medium;
 

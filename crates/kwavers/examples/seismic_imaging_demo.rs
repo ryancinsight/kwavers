@@ -86,6 +86,12 @@
 //! - Virieux, J. & Operto, S. (2009). An overview of full-waveform inversion in
 //!   exploration geophysics. *Geophysics*, 74(6), WCC1–WCC26.
 
+#![expect(
+    clippy::print_stdout,
+    clippy::print_stderr,
+    reason = "The example's console report is its user-visible output contract"
+)]
+
 #[path = "seismic_imaging/acquisition.rs"]
 mod seismic_acquisition;
 #[path = "seismic_imaging/brain_inversion.rs"]
