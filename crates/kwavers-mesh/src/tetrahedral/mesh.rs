@@ -83,7 +83,7 @@ impl TetrahedralMesh {
 
         for (face_idx, face) in self.get_element_faces(nodes).iter().enumerate() {
             let mut sorted_face = *face;
-            sorted_face.sort();
+            sorted_face.sort_unstable();
 
             if let Some(existing) = self.face_elements.get(&sorted_face) {
                 if existing.len() >= 2 {
@@ -203,7 +203,7 @@ impl TetrahedralMesh {
         for (face_idx, face) in faces.into_iter().enumerate() {
             // Sort face nodes for consistent hashing
             let mut sorted_face = face;
-            sorted_face.sort();
+            sorted_face.sort_unstable();
 
             // Update face-to-element mapping
             let entry = self.face_elements.entry(sorted_face).or_default();
