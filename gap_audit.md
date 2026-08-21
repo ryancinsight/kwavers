@@ -7277,6 +7277,10 @@ exits 0; and `mdbook build docs/book` exits 0 with HTML written to `target/book`
 The test run regenerated tracked PNG fixtures; those run-generated deltas were
 discarded and no binary fixture changes are included.
 
+The next claimed `unused_self` slice covers the AMR error-estimation criterion
+and interpolation kernels. AMR smoothing, scheme selection, and octree state
+remain receiver-bound.
+
 After PR #477, the workspace `unused_self` scan reports 211 sites, including
 90 in `kwavers-solver`. The next bounded slice is the receiver-free helper in
 `forward/hybrid/adaptive_selection/selector.rs`.

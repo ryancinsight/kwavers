@@ -701,6 +701,11 @@
   exits 0; `mdbook test docs/book` exits 0; and `mdbook build docs/book` exits 0, writing HTML to
   `target/book`. The run regenerated tracked PNG test figures locally; those generated deltas were
   discarded and no binary fixture changes are part of the validation increment.
+- 2026-08-21 the next AMR slice claims the receiver-free error-estimation criterion and
+  interpolation kernels in `utilities/amr/{criteria/methods,interpolation}.rs`. AMR smoothing,
+  scheme selection, and octree state remain receiver-bound. Acceptance is static conversion of
+  the measured helpers plus any exposed stateless family members, all callers migrated, focused
+  AMR tests, package doctests, warning-denied rustdoc, and a refreshed workspace count.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
