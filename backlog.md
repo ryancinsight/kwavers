@@ -1041,6 +1041,13 @@
   rustdoc pass. The refreshed workspace `unused_self` count is 13 sites: 11 in
   `kwavers-diagnostics` and 2 in `kwavers-therapy`. The package-wide all-targets Clippy gate still
   reports two pre-existing test-only lint defects outside this slice.
+- 2026-08-21 `kwavers-diagnostics` neural clinical detection slice is implemented: local-statistics,
+  lesion-type classification, and clinical-significance calculations are associated functions while
+  threshold configuration and connected-component sizing remain receiver-bound. Package check,
+  warning-denied Clippy, Nextest (191/191), doctests (1/6; 5 ignored), and warning-denied rustdoc
+  pass. The refreshed workspace `unused_self` count is 10 sites: 8 in `kwavers-diagnostics` and 2
+  in `kwavers-therapy`. The package-wide all-targets Clippy gate still reports two pre-existing
+  test-only lint defects outside this slice.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a

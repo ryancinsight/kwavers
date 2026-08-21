@@ -52,9 +52,10 @@ impl NeuralClinicalDecisionSupport {
                             center: (x, y, z),
                             size_mm: self.estimate_lesion_size(volume, features, x, y, z),
                             confidence: conf_val,
-                            lesion_type: self.classify_lesion_type(vol_val, features, x, y, z),
-                            clinical_significance: self
-                                .assess_clinical_significance(conf_val, vol_val),
+                            lesion_type: Self::classify_lesion_type(vol_val, features, x, y, z),
+                            clinical_significance: Self::assess_clinical_significance(
+                                conf_val, vol_val,
+                            ),
                         });
                     }
                 }
@@ -81,7 +82,7 @@ impl NeuralClinicalDecisionSupport {
     ) -> f32 {
         let [dim_x, dim_y, dim_z] = volume.shape();
 
-        let local_mean = self.compute_local_statistics(&volume, seed_x, seed_y, seed_z);
+        let local_mean = Self::compute_local_statistics(&volume, seed_x, seed_y, seed_z);
         let threshold = 2.0f32.mul_add(self.config.segmentation_sensitivity, local_mean);
 
         let mut visited = Array3::<bool>::from_elem((dim_x, dim_y, dim_z), false);
@@ -154,7 +155,6 @@ impl NeuralClinicalDecisionSupport {
 
     /// Compute local mean intensity in a 5×5×5 window for adaptive thresholding.
     pub(super) fn compute_local_statistics(
-        &self,
         volume: &ArrayView3<f32>,
         x: usize,
         y: usize,
@@ -202,7 +202,6 @@ impl NeuralClinicalDecisionSupport {
     ///
     /// Reference: Stavros et al. (1995), "Solid breast nodules: use of sonography".
     pub(super) fn classify_lesion_type(
-        &self,
         intensity: f32,
         _features: &FeatureMap,
         _x: usize,
@@ -219,7 +218,7 @@ impl NeuralClinicalDecisionSupport {
     }
 
     /// Compute clinical significance score [0, 1] from detection confidence and intensity.
-    pub(super) fn assess_clinical_significance(&self, confidence: f32, intensity: f32) -> f32 {
+    pub(super) fn assess_clinical_significance(confidence: f32, intensity: f32) -> f32 {
         let confidence_score = confidence;
         let intensity_score = intensity.abs().min(1.0);
         (confidence_score + intensity_score) / 2.0
