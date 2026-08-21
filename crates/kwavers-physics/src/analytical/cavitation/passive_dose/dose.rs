@@ -68,6 +68,10 @@ pub struct PassiveCavitationDoseFixture {
 ///
 /// Returns an error when the time axis is empty, non-monotone, or contains
 /// non-finite values, or when pulse parameters are non-physical.
+///
+/// # Errors
+///
+/// Returns a descriptive error when the time axis or pulse parameters violate those constraints.
 pub fn passive_cavitation_dose_fixture(
     time_s: &[f64],
     prf_hz: f64,

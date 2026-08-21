@@ -156,6 +156,10 @@ pub struct CeusBackscatterDisplay {
 /// Returns an error when inputs are empty, non-finite, negative where the
 /// physical model requires non-negativity, or when the signal peak is not
 /// positive and finite.
+///
+/// # Errors
+///
+/// Returns a descriptive error when any input violates those domain constraints.
 pub fn ceus_backscatter_display(
     c_mb_ul_ml: &[f64],
     sigma_bs_m2: f64,

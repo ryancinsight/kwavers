@@ -176,6 +176,10 @@ pub struct GaussianAbsorberPhotoacousticProfile {
     pub surface_signal_pa_per_m: Vec<f64>,
 }
 
+/// # Errors
+///
+/// Returns a descriptive error when an axis or physical scalar is non-finite or outside the
+/// profile's valid domain.
 pub fn gaussian_absorber_photoacoustic_profile(
     input: GaussianAbsorberPhotoacousticProfileInput<'_>,
 ) -> Result<GaussianAbsorberPhotoacousticProfile, String> {

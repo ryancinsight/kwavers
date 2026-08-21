@@ -67,6 +67,11 @@ fn validate_positive(parameter: &'static str, value: f64) -> KwaversResult<()> {
 /// Convert acoustic pressure samples `Pa` to membrane tension [mN/m].
 ///
 /// Formula: `I = p^2 / (2 rho c)`, then `Delta T = I R / (2 c)`.
+///
+/// # Errors
+///
+/// Returns [`KwaversError::InvalidInput`] when a physical scalar is non-finite or non-positive,
+/// or when a pressure sample is non-finite.
 pub fn pressure_to_membrane_tension_mn_m(
     pressure_pa: &[f64],
     density_kg_m3: f64,
@@ -107,6 +112,11 @@ pub fn pressure_to_membrane_tension_mn_m(
 }
 
 /// Compute Boltzmann open probability from membrane tension [mN/m].
+///
+/// # Errors
+///
+/// Returns [`KwaversError::InvalidInput`] when temperature or slope is non-finite or non-positive,
+/// or when a tension sample is non-finite.
 pub fn boltzmann_open_probability_from_tension_mn_m(
     tension_mn_m: &[f64],
     half_tension_mn_m: f64,
@@ -143,6 +153,11 @@ pub fn boltzmann_open_probability_from_tension_mn_m(
 }
 
 /// Compute normalized coupled mechanochemical channel drive from acoustic pressure.
+///
+/// # Errors
+///
+/// Returns [`KwaversError::InvalidInput`] when channel arrays differ in length, a physical scalar
+/// is invalid, or any input sample is non-finite.
 #[allow(clippy::too_many_arguments)]
 pub fn coupled_channel_drive(
     pressure_pa: &[f64],
@@ -197,6 +212,11 @@ pub fn coupled_channel_drive(
 }
 
 /// Generate an analytical 3-D paraxial Gaussian beam pressure field.
+///
+/// # Errors
+///
+/// Returns [`KwaversError::InvalidInput`] when a spacing, FWHM, or other physical input is
+/// non-finite or non-positive, or when the requested grid cannot be represented.
 #[allow(clippy::too_many_arguments)]
 pub fn gaussian_beam_pressure_field(
     nx: usize,
@@ -252,6 +272,11 @@ pub fn gaussian_beam_pressure_field(
 }
 
 /// Simulate a LIF neuron driven by an ion-current trace.
+///
+/// # Errors
+///
+/// Returns [`KwaversError::InvalidInput`] when the timestep, neuron parameters, or current trace
+/// violates its finite physical domain, or when a neuron step fails.
 pub fn simulate_lif_trace(
     i_ion_a: &[f64],
     dt_s: f64,

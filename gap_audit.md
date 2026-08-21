@@ -57,6 +57,14 @@ DG and optical-diffusion APIs. Strict solver Clippy passes with the lint re-enab
 its 901 native tests and 13 doctests (5 runnable, 8 environmental) pass. The
 workspace debt block remains unchanged until the full counted class reaches zero.
 
+The next `missing_errors_doc` slice covers 20 public APIs in `kwavers-physics`,
+spanning adaptive bubble integration, Keller-Herring dynamics, sonogenetics, and
+analytical fixtures. Strict package Clippy passes with the lint re-enabled and
+under `-D warnings`; its native gate passes 1,561/1,561 tests with one skipped,
+and its doctest gate passes 9 runnable tests with four ignored. Warning-denied
+rustdoc also passes. The workspace debt block remains unchanged while the
+counted class is burned down package by package.
+
 The complete example gate initially exposed an independent runtime defect in
 `focused_ultrasound_water_tank`: its five disjoint solver branches ran
 sequentially, and the comparison test terminated at 60 seconds. The provider
