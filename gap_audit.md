@@ -7080,6 +7080,12 @@ Clippy, Nextest, doctests (1/1), and warning-denied rustdoc pass; the refreshed 
 `unused_self` count is 116 sites with zero in `kwavers-mesh`, `kwavers-grid`, `kwavers-signal`,
 and `kwavers-solver`.
 
+The `kwavers-receiver` sonoluminescence slice converts stateless cluster merging to an associated
+function and migrates its detector caller. Package check, `unused_self` Clippy, Nextest, doctests
+(1/1), and warning-denied rustdoc pass; the refreshed workspace `unused_self` count is 115 sites
+with zero in `kwavers-receiver`, `kwavers-mesh`, `kwavers-grid`, `kwavers-signal`, and
+`kwavers-solver`.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.
