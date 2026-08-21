@@ -99,7 +99,7 @@ impl TranscranialBowlGeometry {
             z: Length::from_unit::<Meter>(source_z),
         };
 
-        let mut best_idx = if source_idx == 0 { 1 } else { 0 };
+        let mut best_idx = usize::from(source_idx == 0);
         let mut best_dist = squared_distance(self.elements[best_idx], target);
         for (idx, element) in self.elements.iter().copied().enumerate() {
             if idx == source_idx {
