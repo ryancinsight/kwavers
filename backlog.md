@@ -480,6 +480,9 @@
 - 2026-08-21 SWE GPU slice merged in PR #474 (`35943e1b9`). The refreshed `unused_self`
   measurement is 222 sites (solver 101); the next bounded slice is the four receiver-free
   helpers in `forward/helmholtz/fem/assembly.rs`, now claimed with focused gates.
+- 2026-08-21 Helmholtz FEM assembly slice is implemented: its four receiver-free helpers are
+  associated functions with all callers migrated. Focused tests, doctests, and warning-denied
+  rustdoc pass; the remaining solver sites stay queued.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a

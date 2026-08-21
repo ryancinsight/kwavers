@@ -67,14 +67,14 @@ impl FemAssembly {
         CompressedSparseRowMatrix<Complex64>,
         Array1<Complex64>,
     )> {
-        let num_nodes = self.find_max_node_index(elements) + 1;
+        let num_nodes = Self::find_max_node_index(elements) + 1;
 
         // Pre-allocate matrices
         let (mut global_stiffness, mut global_mass) =
             self.preallocate_matrices(num_nodes, elements);
         let mut global_rhs = Array1::<Complex64>::from_elem(num_nodes, Complex64::default());
 
-        self.validate_element_array_lengths(
+        Self::validate_element_array_lengths(
             elements,
             element_stiffness,
             element_mass,
@@ -82,7 +82,7 @@ impl FemAssembly {
         )?;
 
         let contributions = map_collect_index_with::<Adaptive, _, _>(elements.len(), |idx| {
-            self.assemble_single_element(
+            Self::assemble_single_element(
                 &elements[idx],
                 &element_stiffness[idx],
                 &element_mass[idx],
@@ -94,7 +94,7 @@ impl FemAssembly {
 
         // Accumulate contributions into global matrices
         for contribution in contributions {
-            self.add_contribution_to_global(
+            Self::add_contribution_to_global(
                 &mut global_stiffness,
                 &mut global_mass,
                 &mut global_rhs,
@@ -106,7 +106,6 @@ impl FemAssembly {
     }
 
     fn validate_element_array_lengths(
-        &self,
         elements: &[Tetrahedron],
         element_stiffness: &[leto::Array2<Complex64>],
         element_mass: &[leto::Array2<Complex64>],
@@ -133,7 +132,6 @@ impl FemAssembly {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     fn assemble_single_element(
-        &self,
         element: &Tetrahedron,
         elem_stiffness: &leto::Array2<Complex64>,
         elem_mass: &leto::Array2<Complex64>,
@@ -152,7 +150,6 @@ impl FemAssembly {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     fn add_contribution_to_global(
-        &self,
         global_stiffness: &mut CompressedSparseRowMatrix<Complex64>,
         global_mass: &mut CompressedSparseRowMatrix<Complex64>,
         global_rhs: &mut Array1<Complex64>,
@@ -263,7 +260,7 @@ impl FemAssembly {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    fn find_max_node_index(&self, elements: &[Tetrahedron]) -> usize {
+    fn find_max_node_index(elements: &[Tetrahedron]) -> usize {
         elements
             .iter()
             .flat_map(|elem| elem.nodes.iter())
