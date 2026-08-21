@@ -7382,6 +7382,13 @@ doctests (1/6; 5 ignored), and warning-denied rustdoc pass. The refreshed worksp
 count is 6 sites: 4 in `kwavers-diagnostics` and 2 in `kwavers-therapy`. The package-wide
 all-targets Clippy gate still reports two pre-existing test-only lint defects outside this slice.
 
+The `kwavers-diagnostics` neural workflow slice converts median computation to an associated
+function while rolling performance history, quality metrics, and workflow lifecycle remain
+receiver-bound. Package check, warning-denied Clippy, Nextest (191/191), doctests (1/6; 5 ignored),
+and warning-denied rustdoc pass. The refreshed workspace `unused_self` count is 5 sites: 3 in
+`kwavers-diagnostics` and 2 in `kwavers-therapy`. The package-wide all-targets Clippy gate still
+reports two pre-existing test-only lint defects outside this slice.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.
