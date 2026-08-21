@@ -7150,6 +7150,17 @@ tests skipped); the package doctests pass 5/5 (8 ignored), warning-denied
 rustdoc passes, and the focused `unused_self` scan is clean in
 `time_scale_separation.rs`.
 
+After PR #490, the workspace `unused_self` scan reports 185 sites, including
+64 in `kwavers-solver`. The next bounded slice is the three receiver-free FWI
+constraint helpers in `inverse/fwi/time_domain/constraints.rs`.
+
+The FWI constraints slice converts model clamping, stable-timestep calculation,
+and pressure second-derivative evaluation to associated functions and migrates
+all production and regression-test callers. Focused Nextest run
+`6971e012-54e7-4718-a9a7-1555a618d020` passes 60/60 (845 solver tests
+skipped); the package doctests pass 5/5 (8 ignored), warning-denied rustdoc
+passes, and the focused `unused_self` scan is clean in the touched FWI modules.
+
 After PR #477, the workspace `unused_self` scan reports 211 sites, including
 90 in `kwavers-solver`. The next bounded slice is the receiver-free helper in
 `forward/hybrid/adaptive_selection/selector.rs`.

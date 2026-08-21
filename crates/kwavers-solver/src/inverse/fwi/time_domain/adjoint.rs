@@ -396,7 +396,7 @@ impl FwiProcessor {
             // unified Solver trait (T19a/T19b/T10).
             solver.step_forward()?;
             let fwd_idx = self.parameters.nt - 1 - t;
-            self.pressure_second_derivative_into(forward_history, fwd_idx, dt, &mut p_tt)?;
+            Self::pressure_second_derivative_into(forward_history, fwd_idx, dt, &mut p_tt)?;
 
             // Exclude Dirichlet-source voxels from the gradient kernel.
             // Reference: Sun & Symes (1991), SEG Expanded Abstracts.

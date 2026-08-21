@@ -254,7 +254,7 @@ impl FwiProcessor {
         }
 
         let mut model = initial_model.clone();
-        self.apply_model_constraints(&mut model);
+        Self::apply_model_constraints(&mut model);
 
         for (iteration, codes) in code_schedule.iter().enumerate() {
             let (geometry, encoded_data) = encode_shots(shots, codes)?;

@@ -112,14 +112,6 @@ fn test_adjoint_source_reorders_and_time_reverses() {
 
 #[test]
 fn test_pressure_second_derivative_exact_for_quadratic_trace() {
-    let processor = FwiProcessor::new(FwiParameters {
-        nt: 5,
-        dt: 1.0,
-        max_iterations: 1,
-        step_size: 1.0,
-        ..FwiParameters::default()
-    });
-
     let mut forward_history = Array4::zeros((5, 1, 1, 1));
     for t in 0..5 {
         forward_history[[t, 0, 0, 0]] = (t as f64).powi(2);
@@ -127,8 +119,7 @@ fn test_pressure_second_derivative_exact_for_quadratic_trace() {
 
     let mut dst = Array3::zeros((1, 1, 1));
     for idx in 0..5 {
-        processor
-            .pressure_second_derivative_into(&forward_history, idx, 1.0, &mut dst)
+        FwiProcessor::pressure_second_derivative_into(&forward_history, idx, 1.0, &mut dst)
             .expect("second derivative computation must succeed");
         assert!((dst[[0, 0, 0]] - 2.0).abs() < f64::EPSILON);
     }

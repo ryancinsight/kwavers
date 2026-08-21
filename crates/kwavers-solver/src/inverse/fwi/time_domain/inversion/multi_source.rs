@@ -45,7 +45,7 @@ impl FwiProcessor {
 
         let (nx, ny, nz) = grid.dimensions();
         let mut current_model = initial_model.clone();
-        self.apply_model_constraints(&mut current_model);
+        Self::apply_model_constraints(&mut current_model);
 
         for iteration in 0..self.parameters.max_iterations {
             let mut total_objective = 0.0_f64;
@@ -93,7 +93,7 @@ impl FwiProcessor {
             }
 
             subtract_scaled_field(&mut current_model, &normalized, step_size);
-            self.apply_model_constraints(&mut current_model);
+            Self::apply_model_constraints(&mut current_model);
 
             let c_max = current_model
                 .iter()
