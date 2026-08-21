@@ -860,6 +860,13 @@
   `unused_self` Clippy (IMEX paths clean), Nextest (1561/1561 with one configured skip),
   doctests (9/13; 4 ignored), and warning-denied rustdoc pass. The refreshed workspace
   `unused_self` count is 70 sites with 23 remaining in other physics domains.
+- 2026-08-21 `kwavers-physics` vapor-pressure slice is implemented: Antoine, Wagner, Buck,
+  IAPWS, and ice-pressure equations are associated functions; model selection and
+  Clausius-Clapeyron remain receiver-bound where calculator state is required. The thermodynamics
+  unit caller is migrated to associated-function syntax. Package check, targeted `unused_self`
+  Clippy (vapor-pressure paths clean), Nextest (1561/1561 with one configured skip), doctests
+  (9/13; 4 ignored), and warning-denied rustdoc pass. The refreshed workspace `unused_self`
+  count is 66 sites with 19 remaining in other physics domains.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
