@@ -617,6 +617,17 @@
   `unused_self` scan is clean in `photoacoustic/iterative/`. The increment is ready for
   integration; the workspace debt-block line remains until a refreshed workspace measurement
   confirms the count.
+- 2026-08-21 photoacoustic iterative slice merged in PR #494 (`c21fe669b`). The refreshed
+  `unused_self` measurement is 171 sites (solver 50); the next bounded slice is the two
+  receiver-free utility helpers in `inverse/reconstruction/photoacoustic/utils.rs`.
+- 2026-08-21 photoacoustic utility slice is implemented: Euclidean distance, back-projection
+  weighting, and forward-model construction are associated functions; all algorithm callers are
+  migrated, and the now-unused `Utils` field/constructor are removed. Broad photoacoustic
+  Nextest `2eb920d5-2ac5-41d4-9ef0-96db12e2f2d6` passes 10/10 (895 solver tests skipped); the
+  package doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and the focused
+  `unused_self` scan is clean in the photoacoustic utility/algorithm modules. The increment is
+  ready for integration; the workspace debt-block line remains until a refreshed workspace
+  measurement confirms the count.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a

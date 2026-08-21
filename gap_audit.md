@@ -7187,6 +7187,19 @@ callers. Broad photoacoustic Nextest run
 the package doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and
 the focused `unused_self` scan is clean in `photoacoustic/iterative/`.
 
+After PR #494, the workspace `unused_self` scan reports 171 sites, including
+50 in `kwavers-solver`. The next bounded slice is the two receiver-free utility
+helpers in `inverse/reconstruction/photoacoustic/utils.rs`.
+
+The photoacoustic utility slice converts Euclidean distance, back-projection
+weighting, and forward-model construction to associated functions, migrates all
+algorithm callers, and removes the now-unused `Utils` field and constructor.
+Broad photoacoustic Nextest run
+`2eb920d5-2ac5-41d4-9ef0-96db12e2f2d6` passes 10/10 (895 solver tests skipped);
+the package doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and
+the focused `unused_self` scan is clean in the photoacoustic utility/algorithm
+modules.
+
 After PR #477, the workspace `unused_self` scan reports 211 sites, including
 90 in `kwavers-solver`. The next bounded slice is the receiver-free helper in
 `forward/hybrid/adaptive_selection/selector.rs`.
