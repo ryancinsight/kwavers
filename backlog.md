@@ -81,7 +81,12 @@
   `r = 0.999647`, matching its fourth-order dispersion error of `(k dx)^4 / 30`
   at the seed's `k dx ~ 1` spectral edge. A power-law absorbing case
   (`ivp_absorbing_2d`) matches at `8.10e-3` / `r = 0.999999924` and exposed
-  `KW-ABSORPTION-CONFIG-PRECEDENCE`. Five tests pass under nextest in 1.97 s; `cargo fmt` and `cargo clippy -D warnings` are clean on the touched
+  `KW-ABSORPTION-CONFIG-PRECEDENCE`. A layered-medium case (`ivp_layered_2d`,
+  non-square by design) matches at `7.97e-3` / `r = 0.999963` and separates from
+  a uniform run by `0.27`; it exposed two orientation conventions the square
+  cases could not — k-Wave returns the field axis-reversed, and `np.savez`
+  stores a transposed array in Fortran order — both now asserted at their
+  source. Six tests pass under nextest in 1.61 s; `cargo fmt` and `cargo clippy -D warnings` are clean on the touched
   target.
 - **Finding recorded during the work:** `kgrid.Nt` is k-Wave's count of time
   *points*, so the returned field has advanced `Nt - 1` intervals. Driving the

@@ -80,6 +80,9 @@ SIGMA_CELLS = 3.0
 # is a pure scale factor.
 P0_PEAK_PA = 1.0
 
+# Width in cells of the hyperbolic-tangent transition in a layered medium.
+LAYER_TRANSITION_CELLS = 2.0
+
 
 @dataclass(frozen=True)
 class Case:
@@ -98,6 +101,12 @@ class Case:
     # medium; both codes take the coefficient in these units unconverted.
     alpha_coeff_db: float | None = None
     alpha_power: float | None = None
+    # A layered medium: sound speed and density step from their water values to
+    # these across a smoothed interface. `None` is a uniform medium.
+    layer_sound_speed_m_s: float | None = None
+    layer_density_kg_m3: float | None = None
+    # Interface position, in cells along the first axis.
+    layer_interface_cell: int | None = None
 
 
 # k-wave-python exposes `kspaceFirstOrder2D`, `kspaceFirstOrder3D`, and the
@@ -125,7 +134,49 @@ CASES: tuple[Case, ...] = (
     # the lossless field. Both codes receive the identical coefficient, so the
     # value's realism is irrelevant to what the comparison establishes.
     Case("ivp_absorbing_2d", (64, 64), 1.0e-6, 24, alpha_coeff_db=40.0, alpha_power=1.5),
+    # The lossless two-dimensional case with a layered medium, so this pair
+    # isolates spatially varying sound speed and density exactly as the
+    # absorbing pair isolates absorption.
+    #
+    # The interface sits 8 cells right of the seed. The wavefront reaches it at
+    # about step 53 of 100, so the recorded field contains the transmitted wave,
+    # the reflection travelling back through the seed, and the refraction of the
+    # curved front -- all of which depend on both varying fields, and none of
+    # which a solver that ignored either could produce.
+    #
+    # The step is smoothed over two cells rather than left sharp. Both codes are
+    # pseudospectral and a discontinuity rings in both; smoothing keeps the
+    # medium as band-limited as the seed, so the comparison measures the
+    # heterogeneous propagation rather than two Gibbs phenomena.
+    # The grid is deliberately non-square. Every other case is square, which
+    # makes an axis transpose a no-op on the shape and therefore silent; k-Wave
+    # returns the recorded field with its axes reversed, so a square case cannot
+    # tell a correct orientation from a transposed one. Here it is a shape
+    # error, checked at generation.
+    Case(
+        "ivp_layered_2d",
+        (80, 64),
+        1.0e-6,
+        24,
+        layer_sound_speed_m_s=1800.0,
+        layer_density_kg_m3=1200.0,
+        layer_interface_cell=48,
+    ),
 )
+
+
+def layered_profile(case: Case, base: float, layer: float) -> np.ndarray:
+    """Return the case's medium profile, stepping from `base` to `layer`.
+
+    The transition is a hyperbolic tangent two cells wide, centred on the
+    interface cell, so the profile carries no content above the seed's own band
+    limit and neither code is asked to resolve a discontinuity.
+    """
+    axes = [np.arange(n, dtype=np.float64) for n in case.shape]
+    grids = np.meshgrid(*axes, indexing="ij")
+    interface = float(case.layer_interface_cell)
+    blend = 0.5 * (1.0 + np.tanh((grids[0] - interface) / LAYER_TRANSITION_CELLS))
+    return base + (layer - base) * blend
 
 
 def gaussian_seed(shape: tuple[int, ...]) -> np.ndarray:
@@ -159,12 +210,21 @@ def run_case(case: Case) -> dict[str, object]:
         raise ValueError(f"unsupported dimensionality {dims}")
 
     kgrid = kWaveGrid(list(case.shape), [DX_M] * dims)
+    if case.layer_interface_cell is None:
+        sound_speed: float | np.ndarray = SOUND_SPEED_M_S
+        density: float | np.ndarray = DENSITY_KG_M3
+    else:
+        sound_speed = layered_profile(case, SOUND_SPEED_M_S, case.layer_sound_speed_m_s)
+        density = layered_profile(case, DENSITY_KG_M3, case.layer_density_kg_m3)
+
     medium = kWaveMedium(
-        sound_speed=SOUND_SPEED_M_S,
-        density=DENSITY_KG_M3,
+        sound_speed=sound_speed,
+        density=density,
         alpha_coeff=case.alpha_coeff_db,
         alpha_power=case.alpha_power,
     )
+    # `makeTime` sizes the step from the fastest speed present, which is what
+    # bounds stability; passing the array directly lets k-Wave take its maximum.
     kgrid.makeTime(medium.sound_speed, cfl=CFL, t_end=case.t_end_s)
 
     p0 = gaussian_seed(case.shape)
@@ -192,7 +252,21 @@ def run_case(case: Case) -> dict[str, object]:
         execution_options=execution_options,
     )
 
-    p_final = np.asarray(output["p_final"], dtype=np.float64).reshape(case.shape)
+    # k-Wave returns the recorded field with its axes reversed relative to the
+    # grid it was given: a (Nx=64, Ny=48) problem comes back shaped (48, 64).
+    # Reversing the axes restores the input order. A square case would hide the
+    # difference behind a no-op reshape and store a transposed field, which is
+    # invisible while the seed and medium are symmetric under transpose and
+    # silently wrong the moment either is not -- so the orientation is asserted
+    # rather than assumed.
+    p_final = np.asarray(output["p_final"], dtype=np.float64)
+    if p_final.shape == tuple(reversed(case.shape)):
+        p_final = p_final.transpose()
+    if p_final.shape != case.shape:
+        raise ValueError(
+            f"{case.name}: k-Wave returned {p_final.shape}, which is neither the "
+            f"grid shape {case.shape} nor its reverse"
+        )
     # `kgrid.Nt` is k-Wave's count of time *points*, spanning
     # `t_array = (0 : Nt - 1) * dt`, so the returned final field has been
     # advanced `Nt - 1` propagation intervals from the initial condition. The
@@ -271,10 +345,14 @@ def main() -> int:
         print(f"[kwave-reference] running {case.name} {case.shape}", flush=True)
         result = run_case(case)
         archive = args.out / f"{case.name}.npz"
+        # `np.savez` records an array's memory order in the NPY header, and a
+        # transposed array is Fortran-contiguous. Forcing C order keeps the
+        # stored buffer row-major over the case's shape, which is the layout the
+        # Rust reader states and checks.
         np.savez_compressed(
             archive,
-            p0=np.asarray(result["p0"], dtype=np.float64),
-            p_final=np.asarray(result["p_final"], dtype=np.float64),
+            p0=np.ascontiguousarray(result["p0"], dtype=np.float64),
+            p_final=np.ascontiguousarray(result["p_final"], dtype=np.float64),
         )
         cases[case.name] = {
             "archive": archive.name,
@@ -289,6 +367,12 @@ def main() -> int:
             "compare_radius_cells": case.compare_radius_cells,
             "alpha_coeff_db": case.alpha_coeff_db,
             "alpha_power": case.alpha_power,
+            "layer_sound_speed_m_s": case.layer_sound_speed_m_s,
+            "layer_density_kg_m3": case.layer_density_kg_m3,
+            "layer_interface_cell": case.layer_interface_cell,
+            "layer_transition_cells": (
+                LAYER_TRANSITION_CELLS if case.layer_interface_cell is not None else None
+            ),
         }
         print(
             f"[kwave-reference] {case.name}: steps={result['steps']} "
