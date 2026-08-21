@@ -1217,6 +1217,12 @@
   with 4 configured skips, doctests (5 passed; 8 ignored), warning-denied Rustdoc, workspace
   warning-denied Clippy, and the exact production scan pass. The production workspace count
   decreases from 5 to 3 sites; the root ratchet comment is updated.
+- 2026-08-21 `needless_for_each` closure slice is complete: analysis IIR coefficient normalization
+  and diagnostic breast-phantom sound-speed scaling now use direct loops. Warning-denied analysis
+  and diagnostics Clippy, combined Nextest (935/935), doctests (1 passed in each package; 21 and
+  5 ignored), warning-denied Rustdoc for both packages, and the exact production workspace scan
+  pass. The production workspace count decreases from 3 to 0 sites; the ratchet override is
+  removed from `Cargo.toml`.
 
 ## KW-LINT-REC-01 — Type recorder channel selection [major] — done
 
