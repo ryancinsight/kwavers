@@ -210,7 +210,7 @@ impl SonoluminescenceDetector {
             }
 
             if cluster.len() > 1 {
-                let merged = self.merge_cluster(cluster);
+                let merged = Self::merge_cluster(cluster);
                 clustered.push(merged);
             } else {
                 clustered.push(events[i].clone());
@@ -220,7 +220,7 @@ impl SonoluminescenceDetector {
         *events = clustered;
     }
 
-    fn merge_cluster(&self, cluster: Vec<SonoluminescenceEvent>) -> SonoluminescenceEvent {
+    fn merge_cluster(cluster: Vec<SonoluminescenceEvent>) -> SonoluminescenceEvent {
         let n = cluster.len() as f64;
 
         let total_photons = cluster.iter().map(|e| e.photon_count).sum();

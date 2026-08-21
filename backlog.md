@@ -764,6 +764,11 @@
   check, `unused_self` Clippy, Nextest, doctests (1/1), and warning-denied rustdoc pass; the
   refreshed workspace `unused_self` count is 116 sites with zero in `kwavers-mesh`,
   `kwavers-grid`, `kwavers-signal`, and `kwavers-solver`.
+- 2026-08-21 `kwavers-receiver` sonoluminescence slice is implemented: stateless cluster merging
+  is an associated function and its detector caller is migrated. Package check, `unused_self`
+  Clippy, Nextest, doctests (1/1), and warning-denied rustdoc pass; the refreshed workspace
+  `unused_self` count is 115 sites with zero in `kwavers-receiver`, `kwavers-mesh`,
+  `kwavers-grid`, `kwavers-signal`, and `kwavers-solver`.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
