@@ -6973,3 +6973,7 @@ Strict offline Clippy with `-D clippy::missing_panics_doc -D warnings` passes;
 Nextest run `f6c285c7-5c8f-4443-96ac-c4a847dc3eaf` passes 350/350 with one
 intentional skip (five tests exceeded the 30-second slow threshold); doctests
 pass 8/8 (1 ignored); and rustdoc passes with `RUSTDOCFLAGS=-D warnings`.
+
+The refreshed workspace measurement after this merge found three
+`missing_panics_doc` sites in the `kwavers` facade; that package is the current
+ratchet slice.
