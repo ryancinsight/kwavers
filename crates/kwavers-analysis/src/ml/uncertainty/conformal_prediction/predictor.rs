@@ -71,7 +71,7 @@ impl MlConformalPredictor {
 
         let mut calibration_scores = Vec::with_capacity(predictions.len());
         for (pred, target) in predictions.iter().zip(targets.iter()) {
-            calibration_scores.push(self.compute_conformity_score(pred, target)?);
+            calibration_scores.push(Self::compute_conformity_score(pred, target)?);
         }
         self.calibrator
             .calibrate_in_place(&mut calibration_scores)
@@ -309,7 +309,6 @@ impl MlConformalPredictor {
     }
 
     fn compute_conformity_score(
-        &self,
         prediction: &Array2<f32>,
         target: &Array2<f32>,
     ) -> KwaversResult<f64> {
