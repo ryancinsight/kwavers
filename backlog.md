@@ -810,6 +810,12 @@
   rustdoc pass. The refreshed workspace `unused_self` count is 93 sites with 10 remaining in
   transducer array/k-Wave rasterizer helpers and zero in the completed calibration and boundary
   slices.
+- 2026-08-21 `kwavers-transducer` flexible-array slice is implemented: normal computation and
+  stress calculation are associated functions with callers migrated; strain calculation remains
+  configuration-dependent. Package check, targeted `unused_self` Clippy, Nextest (245/245 with
+  one configured skip), doctests (2/2; 6 ignored), and warning-denied rustdoc pass. The refreshed
+  workspace `unused_self` count is 91 sites with eight remaining in transducer k-Wave rasterizer
+  helpers and zero in the completed flexible calibration, flexible-array, and boundary slices.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
