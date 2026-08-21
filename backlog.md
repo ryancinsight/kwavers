@@ -315,7 +315,7 @@
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | in progress | Codex | `crates/kwavers-solver/src/forward/pstd/derivatives/operator.rs` (`unused_self` slice; parent remains open) |
+| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | in progress | Codex | `crates/kwavers-solver/src/forward/pstd/dg/shock_capturing/limiter/weno7.rs` (`unused_self` slice; parent remains open) |
 
 - Context: the clippy floor landed in #423. 21 of 24 crates already declared
   `[lints] workspace = true`, but no `[workspace.lints.clippy]` table existed for them to
@@ -565,6 +565,12 @@
   PSTD derivative operator helper in `forward/pstd/derivatives/operator.rs`.
 - 2026-08-21 PSTD derivative slice is implemented: output validation is an associated function
   with all three derivative callers migrated. PSTD derivative tests, doctests, and warning-denied
+  rustdoc pass; the remaining solver sites stay queued.
+- 2026-08-21 PSTD derivative slice merged in PR #488 (`e9e919f87`). The refreshed `unused_self`
+  measurement is 187 sites (solver 66); the next bounded slice is the receiver-free WENO7 limiter
+  helper in `forward/pstd/dg/shock_capturing/limiter/weno7.rs`.
+- 2026-08-21 WENO7 limiter slice is implemented: smoothness-indicator evaluation is an associated
+  function with all four stencil callers migrated. WENO7 tests, doctests, and warning-denied
   rustdoc pass; the remaining solver sites stay queued.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:

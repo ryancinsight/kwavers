@@ -7128,6 +7128,17 @@ callers. Focused Nextest run `73daa174-f319-4544-9f17-95351dcb561f` passes 6/6
 warning-denied rustdoc passes, and the focused unused_self scan has zero
 warnings in the derivative operator.
 
+After PR #488, the workspace `unused_self` scan reports 187 sites, including
+66 in `kwavers-solver`. The next bounded slice is the receiver-free WENO7
+limiter helper in `forward/pstd/dg/shock_capturing/limiter/weno7.rs`.
+
+The WENO7 limiter slice converts its measured receiver-free smoothness
+indicator to an associated function and migrates the four stencil callers.
+Focused Nextest run `fa5b3124-0361-4cec-bb28-6b2c5659d84c` passes 1/1 (904
+solver tests filtered); the package doctests pass 5/5 (8 ignored),
+warning-denied rustdoc passes, and the focused unused_self scan has zero
+warnings in `weno7.rs`.
+
 After PR #477, the workspace `unused_self` scan reports 211 sites, including
 90 in `kwavers-solver`. The next bounded slice is the receiver-free helper in
 `forward/hybrid/adaptive_selection/selector.rs`.
