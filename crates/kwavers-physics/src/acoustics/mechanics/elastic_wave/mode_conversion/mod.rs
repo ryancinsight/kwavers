@@ -218,7 +218,7 @@ impl ElasticModeStiffnessTensor {
         }
 
         // Check positive definiteness via Sylvester's criterion
-        if !self.is_positive_definite(&self.c) {
+        if !Self::is_positive_definite(&self.c) {
             return Err(PhysicsError::InvalidParameter {
                 parameter: "stiffness_matrix".to_owned(),
                 value: 0.0,
@@ -232,7 +232,7 @@ impl ElasticModeStiffnessTensor {
     }
 
     /// Check if a 6x6 symmetric matrix is positive definite via Sylvester's criterion.
-    fn is_positive_definite(&self, matrix: &Array2<f64>) -> bool {
+    fn is_positive_definite(matrix: &Array2<f64>) -> bool {
         if matrix.shape() != [6, 6] {
             return false;
         }
