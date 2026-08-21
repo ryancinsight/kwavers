@@ -50,7 +50,7 @@ impl Reconstructor for PlaneRecon {
             .reconstruct(sensor_data, sensor_positions, grid, config)
     }
 
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "Planar Array Reconstruction (planeRecon)"
     }
 }

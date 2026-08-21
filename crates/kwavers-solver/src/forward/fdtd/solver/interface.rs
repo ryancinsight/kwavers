@@ -18,7 +18,7 @@ use kwavers_receiver::GridSensorSet;
 use kwavers_source::Source;
 
 impl Solver for GenericFdtdSolver<NdArray3<f64>> {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "FDTD"
     }
 

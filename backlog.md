@@ -1097,6 +1097,11 @@
   Galerkin adapter names now return `&'static str`. Package check, warning-denied Clippy, Nextest
   (87/87), doctests (4/6; 2 ignored), and warning-denied rustdoc pass. The refreshed workspace
   `unnecessary_literal_bound` count is 9 sites, all outside `kwavers-simulation`.
+- 2026-08-21 solver `unnecessary_literal_bound` slice is complete: six FDTD, hybrid, PSTD, and
+  inverse-reconstruction solver names now return `&'static str`. Package check, warning-denied
+  Clippy, Nextest (902/902 with 4 configured skips), doctests (5/13; 8 ignored), and warning-denied
+  rustdoc pass. The refreshed workspace `unnecessary_literal_bound` count is 3 sites, all outside
+  `kwavers-solver`.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
