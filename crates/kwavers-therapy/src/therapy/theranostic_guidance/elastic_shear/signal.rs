@@ -20,16 +20,18 @@ pub(super) fn velocity_source(
     }
     let duration_s = TONE_BURST_CYCLES / frequency_hz;
     let amplitude = LINEAR_STRAIN_SOURCE_AMPLITUDE * shear_speed_m_s;
-    let signal = Array1::from_iter((0..time_steps).map(|step| {
-        let t = step as f64 * dt_s;
-        if t > duration_s {
-            0.0
-        } else {
-            let phase = std::f64::consts::TAU * frequency_hz * t;
-            let window = 0.5 * (1.0 - (std::f64::consts::TAU * t / duration_s).cos());
-            amplitude * window * phase.sin()
-        }
-    }));
+    let signal: Array1<f64> = (0..time_steps)
+        .map(|step| {
+            let t = step as f64 * dt_s;
+            if t > duration_s {
+                0.0
+            } else {
+                let phase = std::f64::consts::TAU * frequency_hz * t;
+                let window = 0.5 * (1.0 - (std::f64::consts::TAU * t / duration_s).cos());
+                amplitude * window * phase.sin()
+            }
+        })
+        .collect();
     ElasticPstdVelocitySource {
         mask,
         ux: None,

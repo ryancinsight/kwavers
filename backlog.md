@@ -1166,6 +1166,11 @@
   ignored), and warning-denied Rustdoc pass. The production workspace count decreases from 9 to 2
   sites; the ratchet comment is updated. Nextest compilation also reports two pre-existing
   test-only unused-variable warnings in unrelated RTM tests.
+- 2026-08-21 `from_iter_instead_of_collect` therapy slice is complete: the elastic-shear velocity
+  source waveform now collects its sampled signal directly into `Array1`. Warning-denied therapy
+  Clippy, 350/350 Nextest with 1 configured skip, doctests (8 passed; 1 ignored), and warning-
+  denied Rustdoc pass. The production workspace count decreases from 2 to 1 site; the ratchet
+  comment is updated.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
