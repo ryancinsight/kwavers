@@ -315,7 +315,7 @@
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | in progress | Codex | `crates/kwavers-physics/src` (next slice; parent remains open) |
+| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | in progress | Codex | `crates/kwavers-driver/src` (next slice; parent remains open) |
 
 - Context: the clippy floor landed in #423. 21 of 24 crates already declared
   `[lints] workspace = true`, but no `[workspace.lints.clippy]` table existed for them to
@@ -345,6 +345,10 @@
 - 2026-08-21 solver slice merged in PR #447 (`c3f480612`); the next measured slice is the
   20 `missing_errors_doc` sites in `kwavers-physics` production source. Its acceptance is
   strict package Clippy with the lint re-enabled, the package nextest gate, doctests, and
+  warning-denied rustdoc; the workspace debt block remains unchanged.
+- 2026-08-21 physics slice merged in PR #448 (`a6f3b08c0`); the next workspace measurement
+  found 15 `missing_errors_doc` sites in `kwavers-driver` production source. Its acceptance
+  is strict package Clippy with the lint re-enabled, the package nextest gate, doctests, and
   warning-denied rustdoc; the workspace debt block remains unchanged.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
