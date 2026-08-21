@@ -1107,6 +1107,11 @@
   Package check, warning-denied Clippy, Nextest (61/61), doctests (4/4), and warning-denied rustdoc
   pass. The exact workspace scan reports 0 sites and the ratchet override is removed from
   `Cargo.toml`.
+- 2026-08-21 final integrated-head verification at merged revision `06ab560eb`: `cargo fmt --all --
+  --check`, `cargo build --offline -p kwavers --examples`, `mdbook test docs/book`, and
+  `mdbook build docs/book` pass. Workspace Nextest passes 5,781/5,781 with 7 configured skips;
+  workspace doctests pass with no failures. Exact workspace scans report `unused_self=0`,
+  `return_self_not_must_use=0`, and `unnecessary_literal_bound=0`.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a

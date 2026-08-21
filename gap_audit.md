@@ -7443,6 +7443,12 @@ Package check, warning-denied Clippy, Nextest (61/61), doctests (4/4), and warni
 pass. The exact workspace scan reports 0 sites and the ratchet override is removed from
 `Cargo.toml`.
 
+Final integrated-head verification at merged revision `06ab560eb` passes `cargo fmt --all -- --check`,
+`cargo build --offline -p kwavers --examples`, `mdbook test docs/book`, and `mdbook build docs/book`.
+Workspace Nextest passes 5,781/5,781 with 7 configured skips; workspace doctests pass with no
+failures. Exact workspace scans report `unused_self=0`, `return_self_not_must_use=0`, and
+`unnecessary_literal_bound=0`.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.
