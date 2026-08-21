@@ -7277,6 +7277,16 @@ exits 0; and `mdbook build docs/book` exits 0 with HTML written to `target/book`
 The test run regenerated tracked PNG fixtures; those run-generated deltas were
 discarded and no binary fixture changes are included.
 
+The next claimed `unused_self` slice covers the AMR error-estimation criterion
+and interpolation kernels. AMR smoothing, scheme selection, and octree state
+remain receiver-bound.
+
+The AMR criteria/interpolation slice is implemented: curvature estimation and the
+receiver-free prolongation/restriction helper family are associated functions
+with all callers migrated. Focused Nextest passes 11/11 (894 filtered), package
+doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and the refreshed
+workspace `unused_self` count is 134 sites (13 in `kwavers-solver`).
+
 After PR #477, the workspace `unused_self` scan reports 211 sites, including
 90 in `kwavers-solver`. The next bounded slice is the receiver-free helper in
 `forward/hybrid/adaptive_selection/selector.rs`.

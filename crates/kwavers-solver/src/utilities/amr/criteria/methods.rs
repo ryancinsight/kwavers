@@ -43,7 +43,7 @@ impl ErrorEstimator {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub(super) fn curvature_error(&self, field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
+    pub(super) fn curvature_error(field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
         let [nx, ny, nz] = field.shape();
         let mut error = Array3::zeros(field.shape());
 
@@ -173,7 +173,7 @@ impl ErrorEstimator {
         let mut error = Array3::zeros(field.shape());
 
         let grad = self.gradient_error(field)?;
-        let curv = self.curvature_error(field)?;
+        let curv = Self::curvature_error(field)?;
 
         for i in 1..nx - 1 {
             for j in 1..ny - 1 {

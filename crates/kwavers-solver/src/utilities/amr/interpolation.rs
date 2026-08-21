@@ -163,10 +163,10 @@ impl AmrConservativeInterpolator {
         let mut fine = Array3::zeros((nx * 2, ny * 2, nz * 2));
 
         match self.scheme {
-            AmrInterpolationScheme::Linear => self.linear_prolongation(coarse, &mut fine),
-            AmrInterpolationScheme::Cubic => self.cubic_prolongation(coarse, &mut fine),
+            AmrInterpolationScheme::Linear => Self::linear_prolongation(coarse, &mut fine),
+            AmrInterpolationScheme::Cubic => Self::cubic_prolongation(coarse, &mut fine),
             AmrInterpolationScheme::Conservative => {
-                self.conservative_prolongation(coarse, &mut fine)
+                Self::conservative_prolongation(coarse, &mut fine)
             }
         }
 
@@ -180,10 +180,10 @@ impl AmrConservativeInterpolator {
         let mut coarse = Array3::zeros((nx / 2, ny / 2, nz / 2));
 
         match self.scheme {
-            AmrInterpolationScheme::Linear => self.linear_restriction(fine, &mut coarse),
-            AmrInterpolationScheme::Cubic => self.cubic_restriction(fine, &mut coarse),
+            AmrInterpolationScheme::Linear => Self::linear_restriction(fine, &mut coarse),
+            AmrInterpolationScheme::Cubic => Self::cubic_restriction(fine, &mut coarse),
             AmrInterpolationScheme::Conservative => {
-                self.conservative_restriction(fine, &mut coarse)
+                Self::conservative_restriction(fine, &mut coarse)
             }
         }
 
@@ -191,7 +191,7 @@ impl AmrConservativeInterpolator {
     }
 
     /// Linear prolongation (injection with linear interpolation)
-    fn linear_prolongation(&self, coarse: &Array3<f64>, fine: &mut Array3<f64>) {
+    fn linear_prolongation(coarse: &Array3<f64>, fine: &mut Array3<f64>) {
         let [nx, ny, nz] = coarse.shape();
 
         for i in 0..nx {
@@ -231,7 +231,7 @@ impl AmrConservativeInterpolator {
     }
 
     /// Conservative prolongation (preserves integral)
-    fn conservative_prolongation(&self, coarse: &Array3<f64>, fine: &mut Array3<f64>) {
+    fn conservative_prolongation(coarse: &Array3<f64>, fine: &mut Array3<f64>) {
         let [nx, ny, nz] = coarse.shape();
 
         // Each coarse cell is divided into 8 fine cells
@@ -271,13 +271,13 @@ impl AmrConservativeInterpolator {
     /// applications where the refinement factor is typically 2:1.
     ///
     /// Full cubic implementation deferred to Sprint 122+ pending performance requirements.
-    fn cubic_prolongation(&self, coarse: &Array3<f64>, fine: &mut Array3<f64>) {
+    fn cubic_prolongation(coarse: &Array3<f64>, fine: &mut Array3<f64>) {
         // Use linear prolongation - sufficient for 2:1 refinement ratios
-        self.linear_prolongation(coarse, fine);
+        Self::linear_prolongation(coarse, fine);
     }
 
     /// Linear restriction (averaging)
-    fn linear_restriction(&self, fine: &Array3<f64>, coarse: &mut Array3<f64>) {
+    fn linear_restriction(fine: &Array3<f64>, coarse: &mut Array3<f64>) {
         let [nx, ny, nz] = coarse.shape();
 
         for i in 0..nx {
@@ -314,10 +314,10 @@ impl AmrConservativeInterpolator {
     }
 
     /// Conservative restriction (volume-weighted averaging)
-    fn conservative_restriction(&self, fine: &Array3<f64>, coarse: &mut Array3<f64>) {
+    fn conservative_restriction(fine: &Array3<f64>, coarse: &mut Array3<f64>) {
         // Same as linear for uniform grids
         // Would differ for non-uniform grids
-        self.linear_restriction(fine, coarse);
+        Self::linear_restriction(fine, coarse);
     }
 
     /// Cubic restriction
@@ -325,8 +325,8 @@ impl AmrConservativeInterpolator {
     /// Currently uses linear restriction for computational efficiency.
     /// Cubic restriction would require weighted averaging with cubic kernel support
     /// which is rarely needed in practice as simple averaging is conservative.
-    fn cubic_restriction(&self, fine: &Array3<f64>, coarse: &mut Array3<f64>) {
+    fn cubic_restriction(fine: &Array3<f64>, coarse: &mut Array3<f64>) {
         // Linear restriction is sufficient for most AMR applications
-        self.linear_restriction(fine, coarse);
+        Self::linear_restriction(fine, coarse);
     }
 }
