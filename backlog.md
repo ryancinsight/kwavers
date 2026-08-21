@@ -1181,6 +1181,11 @@
   all value fields. Warning-denied therapy Clippy, 350/350 Nextest, doctests (8 passed; 1 ignored),
   and warning-denied Rustdoc pass. The production workspace count decreases from 17 to 16 sites;
   the ratchet comment is updated.
+- 2026-08-21 `missing_fields_in_debug` analysis slice is complete: `PipelineCoordinator` Debug
+  output now includes stage handles and synchronization/metric storage fields alongside its stage
+  count. Warning-denied analysis Clippy, 744/744 Nextest, doctests (1 passed; 21 ignored), and
+  warning-denied Rustdoc pass. The production workspace count decreases from 16 to 15 sites; the
+  ratchet comment is updated.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a

@@ -22,6 +22,10 @@ impl std::fmt::Debug for PipelineCoordinator {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("PipelineCoordinator")
             .field("num_stages", &self.stages.len())
+            .field("stages", &self.stages)
+            .field("_stage_ready", &self._stage_ready)
+            .field("_total_throughput", &self._total_throughput)
+            .field("_latencies", &self._latencies)
             .finish()
     }
 }
