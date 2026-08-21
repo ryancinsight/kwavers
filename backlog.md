@@ -315,7 +315,7 @@
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | todo | unclaimed | `Cargo.toml`, `crates/**` |
+| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | in progress | Codex | `crates/kwavers-signal/src` (first slice; parent remains open) |
 
 - Context: the clippy floor landed in #423. 21 of 24 crates already declared
   `[lints] workspace = true`, but no `[workspace.lints.clippy]` table existed for them to
@@ -336,6 +336,10 @@
   treatment (`?`, `ok_or_else`, or `expect("invariant: …")`), not a mass rewrite.
   `unused_self` (257) is the one to read before acting: it often marks a method that should
   be an associated function, but sometimes marks a seam deliberately taking `&self`.
+- 2026-08-21 first vertical slice claimed: remove the `missing_errors_doc` debt from
+  `kwavers-signal` production source only. Acceptance is a strict package Clippy run with
+  that lint re-enabled for the slice, value-semantic tests unchanged and passing, and no
+  workspace debt-block edit until the measured count reaches zero.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
