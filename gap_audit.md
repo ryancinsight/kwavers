@@ -7243,6 +7243,12 @@ check, targeted `unused_self` Clippy (conservation path clean), Nextest (744/744
 21 ignored), and warning-denied rustdoc pass. The refreshed workspace `unused_self` count is 45
 sites with zero remaining in `kwavers-physics`, `kwavers-simulation`, and conservation checkers.
 
+The `kwavers-analysis` beamforming-training slice converts null-model batch data loss to an
+associated function; trainer configuration and physics-loss state remain receiver-bound. Package
+check, targeted `unused_self` Clippy (beamforming-training path clean), Nextest (744/744), doctests
+(1/22; 21 ignored), and warning-denied rustdoc pass. The refreshed workspace `unused_self` count is
+44 sites with 25 remaining in other analysis paths.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.

@@ -23,7 +23,7 @@ impl BeamformingTrainer {
         while offset < dataset.len() {
             let batch = dataset.batch(offset, self.config.batch_size)?;
 
-            let data_loss = self.compute_batch_data_loss(&batch)?;
+            let data_loss = Self::compute_batch_data_loss(&batch)?;
             let physics_loss = self.compute_batch_physics_loss(&batch)?;
 
             let batch_loss = self
@@ -55,7 +55,7 @@ impl BeamformingTrainer {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    fn compute_batch_data_loss(&self, batch: &TrainingDataset) -> KwaversResult<f64> {
+    fn compute_batch_data_loss(batch: &TrainingDataset) -> KwaversResult<f64> {
         let n = batch.targets.len();
         if n == 0 {
             return Ok(0.0);
