@@ -293,7 +293,15 @@ def test_simulation_cpu_surface_runs_end_to_end():
     assert np.all(np.isfinite(result.time))
 
 
-def test_simulation_runs_concurrently_and_preserves_input_sensitive_values():
+def test_simulation_calls_submitted_to_thread_pool_preserve_input_sensitive_values():
+    """Check thread-pool submission and input-sensitive value semantics.
+
+    The executor submits both calls through its worker pool. This test does
+    not establish overlap during ``Simulation.run`` or prove GIL release; the
+    latter is static implementation evidence from the binding's ``py.detach``
+    call around ``SimulationRunner::run``.
+    """
+
     def run(amplitude):
         grid = kw.Grid(nx=16, ny=16, nz=16, dx=0.1e-3, dy=0.1e-3, dz=0.1e-3)
         medium = kw.Medium.homogeneous(sound_speed=1500.0, density=1000.0)
