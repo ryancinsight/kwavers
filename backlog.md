@@ -1,18 +1,23 @@
 # Backlog / Strategy
 
-## KW-BOOK-116 — Make the book gate execute a Rust oracle [patch] — in progress
+## KW-BOOK-116 — Make the book gate execute a Rust oracle [patch] — implementation complete; hosted verification pending
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-BOOK-116 | The published Kwavers book executes one package-backed Rust sample and the shared workflow builds the exact package before `mdbook test`. | [patch] | in progress | Codex | `.github/workflows/book-pages.yml`, `docs/book/examples/basic_simulation.md`, this item |
+| KW-BOOK-116 | The published Kwavers book executes one deterministic Rust oracle and the shared workflow builds the exact package before `mdbook test`. | [patch] | implementation complete; hosted verification pending | Codex | `.github/workflows/book-pages.yml`, `docs/book/examples/basic_simulation.md`, this item |
 
 - Non-goals: no changes to the concurrently modified transducer files and no
   expansion of the Python binding or ensemble-model contract.
-- Acceptance: `mdbook test docs/book` executes the `kwavers` sample against the
-  locked package; `mdbook build docs/book` and the book link checker pass; the
-  workflow pins the package and library target explicitly.
+- Acceptance: `mdbook test docs/book` executes the analytical CFL oracle;
+  `mdbook build docs/book` passes; and the workflow pins the package and library
+  target explicitly.
 - Claim committed on branch `fix/kwavers-python-book-boundary`; the unrelated
   dirty transducer files remain outside this scope.
+- Local evidence at `49e4f459c`: locked `kwavers` package build, `cargo fmt
+  --check`, `mdbook test docs/book`, `mdbook build docs/book`, and staged diff
+  checks pass. The standalone link checker still reports pre-existing source
+  links outside the book root and incomplete mathematical-link parsing; those
+  remain separate documentation cleanup work.
 
 ## KW-LINT-111 — Put every member on workspace lint inheritance [patch] — done 2026-08-20
 
