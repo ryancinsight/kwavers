@@ -7100,6 +7100,13 @@ false-color remain receiver-bound for configured blend weights. Package check, t
 workspace `unused_self` count is 107 sites with zero in `kwavers-imaging`, `kwavers-boundary` BEM,
 `kwavers-receiver`, `kwavers-mesh`, `kwavers-grid`, `kwavers-signal`, and `kwavers-solver`.
 
+The `kwavers-boundary` FEM applicator slice converts Dirichlet, Neumann, Robin, and radiation
+applicators to associated functions and migrates all `apply_all` callers. Package check, targeted
+`unused_self` Clippy, Nextest, doctests (4/4; 1 ignored), and warning-denied rustdoc pass; package
+Clippy still reports seven pre-existing boundary sites in CPML and smoothing. The refreshed
+workspace `unused_self` count is 103 sites with zero in the FEM/BEM managers, `kwavers-imaging`,
+`kwavers-receiver`, `kwavers-mesh`, `kwavers-grid`, `kwavers-signal`, and `kwavers-solver`.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.

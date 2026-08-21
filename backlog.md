@@ -783,6 +783,13 @@
   the refreshed workspace `unused_self` count is 107 sites with zero in `kwavers-imaging`,
   `kwavers-boundary` BEM, `kwavers-receiver`, `kwavers-mesh`, `kwavers-grid`, `kwavers-signal`,
   and `kwavers-solver`.
+- 2026-08-21 `kwavers-boundary` FEM applicator slice is implemented: Dirichlet, Neumann, Robin,
+  and radiation applicators are associated functions and `apply_all` migrates all callers.
+  Package check, targeted `unused_self` Clippy, Nextest, doctests (4/4; 1 ignored), and
+  warning-denied rustdoc pass; package Clippy still reports seven pre-existing boundary sites
+  in CPML and smoothing. The refreshed workspace `unused_self` count is 103 sites with zero in
+  the FEM/BEM managers, `kwavers-imaging`, `kwavers-receiver`, `kwavers-mesh`, `kwavers-grid`,
+  `kwavers-signal`, and `kwavers-solver`.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
