@@ -15,7 +15,7 @@ use leto::Array3;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
 
 /// Operator splitting solver for nonlinear acoustics
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct OperatorSplittingSolver {
     /// Grid dimensions
     nx: usize,
@@ -273,14 +273,5 @@ impl OperatorSplittingSolver {
                 }
             }
         }
-    }
-}
-
-// Implement Copy and Clone for the solver
-impl Copy for OperatorSplittingSolver {}
-
-impl Clone for OperatorSplittingSolver {
-    fn clone(&self) -> Self {
-        *self
     }
 }

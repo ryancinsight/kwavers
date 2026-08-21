@@ -21,7 +21,7 @@ impl VolumeRenderer {
     pub fn new(config: &VisualizationConfig) -> KwaversResult<Self> {
         Ok(Self {
             config: config.clone(),
-            transfer_function: TransferFunction::new(&config.color_scheme),
+            transfer_function: TransferFunction::new(config.color_scheme),
         })
     }
 
@@ -126,7 +126,7 @@ struct TransferFunction {
 
 impl TransferFunction {
     /// Create a new transfer function
-    fn new(scheme: &ColorScheme) -> Self {
+    fn new(scheme: ColorScheme) -> Self {
         let color_map = match scheme {
             ColorScheme::Viridis => Self::viridis_colormap(),
             ColorScheme::Plasma => Self::plasma_colormap(),

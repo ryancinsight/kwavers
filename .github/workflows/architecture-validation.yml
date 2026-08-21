@@ -70,6 +70,17 @@ jobs:
         cargo clippy --locked -p kwavers-core --all-targets --all-features -- -D warnings
         cargo clippy --locked -p kwavers --all-targets --no-default-features --features full --no-deps -- -D warnings
 
+    # The strict step above passes --no-deps, so it lints only the kwavers
+    # facade; every member crate where the debt lives is excluded. This step
+    # lints them. It deliberately omits -D warnings: the workspace floor is
+    # `warn`, and only classes burned down to zero are raised to `deny`, so
+    # this fails on a regression in a cleared class and stays quiet on the
+    # ~880 warnings still owed. See docs/adr/116-workspace-clippy-floor.md.
+    - name: Run clippy ratchet (member crates)
+      run: |
+        cargo clippy --locked --workspace --all-targets
+        cargo clippy --locked -p kwavers --all-targets --features full,pinn
+
     - name: Check for security vulnerabilities
       run: |
         cargo install cargo-audit

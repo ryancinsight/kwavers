@@ -55,9 +55,9 @@ pub(super) fn inject_velocity_source(
     step: usize,
 ) {
     let active = masked_indices(src);
-    inject_into(&mut velocity.vx, &src.ux, &active, src.mode, step);
-    inject_into(&mut velocity.vy, &src.uy, &active, src.mode, step);
-    inject_into(&mut velocity.vz, &src.uz, &active, src.mode, step);
+    inject_into(&mut velocity.vx, src.ux.as_ref(), &active, src.mode, step);
+    inject_into(&mut velocity.vy, src.uy.as_ref(), &active, src.mode, step);
+    inject_into(&mut velocity.vz, src.uz.as_ref(), &active, src.mode, step);
 }
 
 /// Inject the velocity source into the x-directional velocity sub-fields
@@ -85,9 +85,9 @@ pub(super) fn inject_velocity_source_subfields(
     step: usize,
 ) {
     let active = masked_indices(src);
-    inject_into(&mut state.vxx, &src.ux, &active, src.mode, step);
-    inject_into(&mut state.vyx, &src.uy, &active, src.mode, step);
-    inject_into(&mut state.vzx, &src.uz, &active, src.mode, step);
+    inject_into(&mut state.vxx, src.ux.as_ref(), &active, src.mode, step);
+    inject_into(&mut state.vyx, src.uy.as_ref(), &active, src.mode, step);
+    inject_into(&mut state.vzx, src.uz.as_ref(), &active, src.mode, step);
 }
 
 // ─── Sensor recording ────────────────────────────────────────────────────────
@@ -142,7 +142,7 @@ fn masked_indices(src: &ElasticPstdVelocitySource) -> Vec<(usize, usize, usize)>
 #[inline]
 fn inject_into(
     field: &mut Array3<f64>,
-    sig: &Option<Array1<f64>>,
+    sig: Option<&Array1<f64>>,
     active: &[(usize, usize, usize)],
     mode: ElasticPstdSourceMode,
     step: usize,

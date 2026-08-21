@@ -184,7 +184,7 @@ where
     /// Delegates to [`super::metrics::calculate_cpu_memory_usage`].
     #[cfg(feature = "gpu")]
     pub(super) fn calculate_cpu_memory_usage(&self) -> f64 {
-        super::metrics::calculate_cpu_memory_usage(&self.streaming_buffer)
+        super::metrics::calculate_cpu_memory_usage(self.streaming_buffer.as_ref())
     }
 }
 
@@ -219,6 +219,6 @@ impl BeamformingProcessor3D {
     /// Delegates to [`super::metrics::calculate_cpu_memory_usage`].
     /// Returns `0.0`: no streaming buffer exists in CPU-only builds.
     pub(super) fn calculate_cpu_memory_usage(&self) -> f64 {
-        super::metrics::calculate_cpu_memory_usage(&None::<()>)
+        super::metrics::calculate_cpu_memory_usage(None::<&()>)
     }
 }

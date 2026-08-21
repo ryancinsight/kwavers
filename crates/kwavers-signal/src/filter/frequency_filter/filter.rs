@@ -119,7 +119,7 @@ impl FrequencyFilter {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    fn apply_filter<F>(&self, signal: &[f64], dt: f64, resp: F) -> KwaversResult<Vec<f64>>
+    fn apply_filter<F>(self, signal: &[f64], dt: f64, resp: F) -> KwaversResult<Vec<f64>>
     where
         F: Fn(f64) -> bool,
     {
