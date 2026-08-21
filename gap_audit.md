@@ -6986,3 +6986,7 @@ lesion reconstruction. Strict offline Clippy with
 `-D clippy::missing_panics_doc -D warnings` passes; Nextest run
 `023eb09b-d99c-4f94-9bfe-f44d4f587355` passes 39/39; doctests pass 1/1; and
 rustdoc passes with `RUSTDOCFLAGS=-D warnings`.
+
+The post-merge workspace measurement with `-D clippy::missing_panics_doc`
+exits 0, so the `missing_panics_doc` debt-block line is removed from the root
+lint table. The next measured debt class is `unused_self` (274 sites).

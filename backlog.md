@@ -461,6 +461,9 @@
   Nextest 39/39, doctests, and warning-denied rustdoc. The increment is ready for integration;
   the workspace debt-block line remains until a refreshed workspace measurement confirms the
   lint count reaches zero.
+- 2026-08-21 facade panic-contract slice merged in PR #472 (`36120168a`). The strict workspace
+  `missing_panics_doc` measurement is now zero, so its debt-block line is removed. The next
+  ratchet slice is `unused_self`, measured at 274 sites in the current workspace baseline.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a

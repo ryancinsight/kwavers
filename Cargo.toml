@@ -182,7 +182,6 @@ unused_self = "allow"                              # 274
 # raised to `warn`, kwavers-solver alone reports 223 and 1. Do not promote
 # either to `deny` on the strength of a zero measured while it is allowed.
 unwrap_used = "allow"                              # 223+ in kwavers-solver alone
-missing_panics_doc = "allow"                       # 15
 return_self_not_must_use = "allow"                 # 28
 unnecessary_literal_bound = "allow"                # 20
 missing_fields_in_debug = "allow"                  # 21
