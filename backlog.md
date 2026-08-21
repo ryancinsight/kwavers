@@ -1085,6 +1085,10 @@
   doctests 4/6 with 2 ignored, warning-denied rustdoc); therapy gates pass (350/350 Nextest with one
   configured skip, doctests 8/9 with 1 ignored, warning-denied rustdoc). The exact workspace scan is
   0 sites and the ratchet override is removed from `Cargo.toml`.
+- 2026-08-21 boundary `unnecessary_literal_bound` slice is complete: six boundary-condition trait
+  implementations now return `&'static str` for their literal names. Package check, warning-denied
+  Clippy, Nextest (97/97), doctests (4/5; 1 ignored), and warning-denied rustdoc pass. The refreshed
+  workspace `unnecessary_literal_bound` count is 13 sites, all outside `kwavers-boundary`.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a

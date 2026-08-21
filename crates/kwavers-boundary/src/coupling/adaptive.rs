@@ -156,7 +156,7 @@ impl AdaptiveBoundary {
 }
 
 impl BoundaryCondition for AdaptiveBoundary {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "AdaptiveBoundary"
     }
 

@@ -6,7 +6,7 @@ use kwavers_grid::GridTopology;
 use leto::ArrayViewMut3;
 
 impl BoundaryCondition for MaterialInterface {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "MaterialInterface"
     }
 

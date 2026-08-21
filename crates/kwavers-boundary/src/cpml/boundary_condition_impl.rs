@@ -8,7 +8,7 @@ use leto::{Array3, ArrayViewMut3};
 
 // Implement new BoundaryCondition trait system
 impl BoundaryCondition for CPMLBoundary {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "CPML (Convolutional PML)"
     }
 
