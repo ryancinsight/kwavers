@@ -7049,3 +7049,13 @@ extractor to an associated function. Focused Nextest run
 `3f6e1bc8-8248-4afc-a33d-518a67ad1123` passes 1/1 (904 solver tests filtered);
 the package doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and
 the focused unused_self scan has zero warnings in the selector module.
+
+After PR #478, the workspace `unused_self` scan reports 210 sites, including
+89 in `kwavers-solver`. The next bounded slice is the receiver-free helper in
+`forward/hybrid/bem_fem_enhanced/solver.rs`.
+
+The BEM/FEM enhanced solver slice converts its measured receiver-free frequency
+validator to an associated function. Focused Nextest run
+`a7da2e9c-8e28-4504-b596-903b732c2bf0` passes 11/11 (894 solver tests filtered);
+the package doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and
+the focused unused_self scan has zero warnings in the solver module.
