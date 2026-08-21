@@ -315,7 +315,7 @@
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | in progress | Codex | `crates/kwavers-diagnostics/src` (`missing_panics_doc` slice; parent remains open) |
+| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | in progress | Codex | `crates/kwavers-therapy/src` (`missing_panics_doc` slice; parent remains open) |
 
 - Context: the clippy floor landed in #423. 21 of 24 crates already declared
   `[lints] workspace = true`, but no `[workspace.lints.clippy]` table existed for them to
@@ -445,6 +445,10 @@
   Nextest 191/191, doctests, and warning-denied rustdoc. The increment is ready for integration;
   the workspace debt-block line remains until a refreshed workspace measurement confirms the
   lint count reaches zero.
+- 2026-08-21 diagnostics panic-contract slice merged in PR #470 (`254f79d02`). The refreshed
+  workspace measurement leaves 11 `missing_panics_doc` sites in `kwavers-therapy`; that package
+  is now claimed with the same strict package Clippy, nextest, doctest, and warning-denied rustdoc
+  acceptance gates.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a

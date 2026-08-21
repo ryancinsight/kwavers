@@ -6958,3 +6958,7 @@ FK migration, and plane-wave compounding. Strict offline Clippy with
 `-D clippy::missing_panics_doc -D warnings` passes; Nextest run
 `9e632a75-7ff0-47a8-8d7a-c926e25dddb9` passes 191/191; doctests pass 1/1 (5
 ignored); and rustdoc passes with `RUSTDOCFLAGS=-D warnings`.
+
+The refreshed workspace measurement after this merge leaves 11
+`missing_panics_doc` sites in `kwavers-therapy`; that package is the current
+ratchet slice.
