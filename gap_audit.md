@@ -6889,6 +6889,10 @@ and phased-array field filling. Strict offline Clippy with
 doctests pass 2/2 (6 ignored); and rustdoc passes with
 `RUSTDOCFLAGS=-D warnings`.
 
+The refreshed workspace measurement then found seven additional
+`missing_panics_doc` sites in `kwavers-simulation` and 38 in
+`kwavers-analysis`; the simulation package is the current ratchet item.
+
 The refreshed workspace measurement then found 31 additional
 `missing_panics_doc` sites in `kwavers-physics`; that package is the current
 ratchet item.
