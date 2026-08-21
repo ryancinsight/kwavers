@@ -15,7 +15,19 @@
   a cross-scheme check and separates by `2.53e-2` at `r = 0.999647`, which is
   its own fourth-order dispersion error. A power-law absorbing case matches at
   `8.10e-3` / `r = 0.999999924` and asserts separation from the lossless field,
-  so the absorption model cannot pass by being absent. `scripts/generate_kwave_reference.py` regenerates the reference set by
+  so the absorption model cannot pass by being absent. A layered-medium case
+  matches at `7.97e-3` / `r = 0.999963` and separates from a uniform run by
+  `0.27`. Its grid is deliberately non-square: a square case cannot distinguish
+  a correct axis orientation from a transposed one, and two conventions — that
+  k-Wave returns the field with its axes reversed, and that `np.savez` stores a
+  transposed array in Fortran order — were live in the harness until it exposed
+  them. Both are now asserted rather than assumed; the lossless and absorbing
+  results are unchanged, because the symmetry that hid the defect also made it
+  harmless there. A driven case injects a tone burst from a single cell and
+  matches at `2.58e-3` / `r = 0.999997`; it is the only case reaching the source
+  injection path, and it established that the propagation-interval count differs
+  by source type — an initial-value case runs `Nt - 1` intervals, a driven one
+  `Nt`. `scripts/generate_kwave_reference.py` regenerates the reference set by
   driving `k-wave-python`. See
   [ADR 119](docs/adr/119-kwave-reference-oracle.md).
 
