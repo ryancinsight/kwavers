@@ -7449,6 +7449,11 @@ Workspace Nextest passes 5,781/5,781 with 7 configured skips; workspace doctests
 failures. Exact workspace scans report `unused_self=0`, `return_self_not_must_use=0`, and
 `unnecessary_literal_bound=0`.
 
+The `unnecessary_semicolon` slice removes redundant terminators from the monolithic solver residual
+match and the Westervelt FWI loop. Combined solver and therapy gates pass (1,364/1,364 Nextest with
+5 configured skips; doctests and warning-denied rustdoc pass). The exact workspace
+`unnecessary_semicolon` scan is 0 and its ratchet override is removed from `Cargo.toml`.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.

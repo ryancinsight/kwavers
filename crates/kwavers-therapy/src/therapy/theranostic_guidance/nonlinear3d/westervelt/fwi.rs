@@ -248,7 +248,7 @@ pub fn run_fwi(
                 accepted_block: "none",
             });
             break;
-        };
+        }
     }
     objective_history.push(objective_for_model(
         &current,
