@@ -932,6 +932,11 @@
   (744/744), doctests (1/22; 21 ignored), and warning-denied rustdoc pass. The refreshed workspace
   `unused_self` count is 45 sites with zero remaining in `kwavers-physics`, `kwavers-simulation`,
   and conservation checkers.
+- 2026-08-21 `kwavers-analysis` beamforming-training slice is implemented: null-model batch data
+  loss is an associated function; trainer configuration and physics-loss state remain
+  receiver-bound. Package check, targeted `unused_self` Clippy (beamforming-training path clean),
+  Nextest (744/744), doctests (1/22; 21 ignored), and warning-denied rustdoc pass. The refreshed
+  workspace `unused_self` count is 44 sites with 25 remaining in other analysis paths.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
