@@ -7458,6 +7458,11 @@ The small Clippy ratchet slice replaces primitive test ordering with `sort_unsta
 all-targets scans confirm `stable_sort_primitive=0`, `unchecked_time_subtraction=0`, and
 `self_only_used_in_recursion=0`; the three suppression lines are removed from `Cargo.toml`.
 
+The `bool_to_int_with_if` slice replaces pulser switch fanout and transcranial UST source selection
+with typed `usize::from` conversions. Diagnostics and driver gates pass (685/685 Nextest; doctests
+and warning-denied rustdoc pass). The exact workspace scan is 0 and its ratchet override is removed
+from `Cargo.toml`.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.

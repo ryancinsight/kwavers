@@ -199,7 +199,6 @@ doc_comment_double_space_linebreaks = "deny"
 print_stderr = "allow"                             # 1+ (see unwrap_used note)
 large_types_passed_by_value = "allow"              # 1
 expl_impl_clone_on_copy = "deny"
-bool_to_int_with_if = "allow"                      # 3
 
 [workspace.lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
