@@ -7389,6 +7389,13 @@ and warning-denied rustdoc pass. The refreshed workspace `unused_self` count is 
 `kwavers-diagnostics` and 2 in `kwavers-therapy`. The package-wide all-targets Clippy gate still
 reports two pre-existing test-only lint defects outside this slice.
 
+The `kwavers-diagnostics` orchestrator slice converts photoacoustic acquisition, elastography
+acquisition, and quality assessment to associated functions while workflow state, fusion, and
+real-time configuration remain receiver-bound. Package check, warning-denied Clippy, Nextest
+(191/191), doctests (1/6; 5 ignored), and warning-denied rustdoc pass. The refreshed workspace
+`unused_self` count is 2 sites, both in `kwavers-therapy`; diagnostics is clean. The package-wide
+all-targets Clippy gate still reports two pre-existing test-only lint defects outside these slices.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.
