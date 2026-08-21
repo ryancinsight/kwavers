@@ -58,12 +58,12 @@ impl MisfitFunction {
     ///
     pub fn compute(&self, observed: &Array2<f64>, synthetic: &Array2<f64>) -> KwaversResult<f64> {
         match self.misfit_type {
-            MisfitType::L2Norm => self.l2_misfit(observed, synthetic),
-            MisfitType::L1Norm => self.l1_misfit(observed, synthetic),
-            MisfitType::Envelope => self.envelope_misfit(observed, synthetic),
-            MisfitType::Phase => self.phase_misfit(observed, synthetic),
-            MisfitType::Correlation => self.correlation_misfit(observed, synthetic),
-            MisfitType::Wasserstein => self.wasserstein_misfit(observed, synthetic),
+            MisfitType::L2Norm => Self::l2_misfit(observed, synthetic),
+            MisfitType::L1Norm => Self::l1_misfit(observed, synthetic),
+            MisfitType::Envelope => Self::envelope_misfit(observed, synthetic),
+            MisfitType::Phase => Self::phase_misfit(observed, synthetic),
+            MisfitType::Correlation => Self::correlation_misfit(observed, synthetic),
+            MisfitType::Wasserstein => Self::wasserstein_misfit(observed, synthetic),
         }
     }
 
@@ -78,11 +78,11 @@ impl MisfitFunction {
     ) -> KwaversResult<Array2<f64>> {
         match self.misfit_type {
             MisfitType::L2Norm => Ok(synthetic - observed),
-            MisfitType::L1Norm => self.l1_adjoint_source(observed, synthetic),
-            MisfitType::Envelope => self.envelope_adjoint_source(observed, synthetic),
-            MisfitType::Phase => self.phase_adjoint_source(observed, synthetic),
-            MisfitType::Correlation => self.correlation_adjoint_source(observed, synthetic),
-            MisfitType::Wasserstein => self.wasserstein_adjoint_source(observed, synthetic),
+            MisfitType::L1Norm => Self::l1_adjoint_source(observed, synthetic),
+            MisfitType::Envelope => Self::envelope_adjoint_source(observed, synthetic),
+            MisfitType::Phase => Self::phase_adjoint_source(observed, synthetic),
+            MisfitType::Correlation => Self::correlation_adjoint_source(observed, synthetic),
+            MisfitType::Wasserstein => Self::wasserstein_adjoint_source(observed, synthetic),
         }
     }
 }

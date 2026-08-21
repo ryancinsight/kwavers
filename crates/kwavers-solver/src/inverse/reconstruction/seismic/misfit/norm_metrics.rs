@@ -9,11 +9,7 @@ impl MisfitFunction {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub(super) fn l2_misfit(
-        &self,
-        observed: &Array2<f64>,
-        synthetic: &Array2<f64>,
-    ) -> KwaversResult<f64> {
+    pub(super) fn l2_misfit(observed: &Array2<f64>, synthetic: &Array2<f64>) -> KwaversResult<f64> {
         let sum_sq: f64 = synthetic
             .iter()
             .zip(observed.iter())
@@ -29,11 +25,7 @@ impl MisfitFunction {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub(super) fn l1_misfit(
-        &self,
-        observed: &Array2<f64>,
-        synthetic: &Array2<f64>,
-    ) -> KwaversResult<f64> {
+    pub(super) fn l1_misfit(observed: &Array2<f64>, synthetic: &Array2<f64>) -> KwaversResult<f64> {
         let sum_abs: f64 = synthetic
             .iter()
             .zip(observed.iter())
@@ -47,7 +39,6 @@ impl MisfitFunction {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(super) fn l1_adjoint_source(
-        &self,
         observed: &Array2<f64>,
         synthetic: &Array2<f64>,
     ) -> KwaversResult<Array2<f64>> {
@@ -66,7 +57,6 @@ impl MisfitFunction {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(super) fn correlation_misfit(
-        &self,
         observed: &Array2<f64>,
         synthetic: &Array2<f64>,
     ) -> KwaversResult<f64> {
@@ -111,7 +101,6 @@ impl MisfitFunction {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(super) fn correlation_adjoint_source(
-        &self,
         observed: &Array2<f64>,
         synthetic: &Array2<f64>,
     ) -> KwaversResult<Array2<f64>> {
