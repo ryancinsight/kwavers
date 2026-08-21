@@ -990,6 +990,12 @@
   state remain receiver-bound. Package check, targeted `unused_self` Clippy, Nextest (744/744),
   doctests (1/22; 21 ignored), and warning-denied rustdoc pass. The refreshed workspace `unused_self`
   count is 29 sites with 10 remaining in other analysis paths.
+- 2026-08-21 `kwavers-analysis` color-flow slice is implemented: spatial box averaging is an
+  associated function and its value-semantic helper test uses the type-level call. Imaging, filter,
+  and estimator state remain receiver-bound. Package check, targeted `unused_self` Clippy, Nextest
+  (744/744), doctests (1/22; 21 ignored), and warning-denied rustdoc pass. The refreshed workspace
+  `unused_self` count is 28 sites with 9 remaining in other analysis paths. The package-wide
+  all-targets Clippy gate still reports two pre-existing test-only lint defects outside this slice.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
