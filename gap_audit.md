@@ -65,6 +65,15 @@ and its doctest gate passes 9 runnable tests with four ignored. Warning-denied
 rustdoc also passes. The workspace debt block remains unchanged while the
 counted class is burned down package by package.
 
+The next `missing_errors_doc` measurement found 15 undocumented `Result` APIs in
+`kwavers-driver`. The driver slice adds their error contracts and removes the
+package's nine unrelated pedantic warnings (redundant control flow, an unbounded
+manifest-key scan, raw-string hashes, wildcard enum imports, and a character
+pattern) so the strict package gate is meaningful. Strict driver Clippy passes
+with `missing_errors_doc` re-enabled and `-D warnings`; its nextest gate passes
+494/494 tests, doctests report zero tests, and warning-denied rustdoc passes. The
+workspace debt block remains unchanged.
+
 The complete example gate initially exposed an independent runtime defect in
 `focused_ultrasound_water_tank`: its five disjoint solver branches ran
 sequentially, and the comparison test terminated at 60 seconds. The provider

@@ -332,6 +332,11 @@ fn emit_zones(
 
 /// Emit to a file, after running [`crate::io::duplicate_pcb_uuids`] so the board cannot ship with
 /// duplicate UUIDs.
+///
+/// # Errors
+///
+/// Returns an I/O error when the serialized board cannot be written, or when duplicate UUIDs make
+/// the board invalid for fabrication.
 pub fn save_kicad_pcb(
     path: &std::path::Path,
     board: &Board,
@@ -355,6 +360,11 @@ pub fn save_kicad_pcb(
 /// production) while still being renderable and DRC-checkable. This is the deliberate, labelled
 /// alternative to silently refusing to write — a failing board you cannot see is a failing board you
 /// cannot fix. The banner sits just above the board origin on `F.SilkS`.
+///
+/// # Errors
+///
+/// Returns an I/O error when the flagged board cannot be written, or when duplicate UUIDs make
+/// the serialized board invalid.
 pub fn save_kicad_pcb_flagged(
     path: &std::path::Path,
     board: &Board,

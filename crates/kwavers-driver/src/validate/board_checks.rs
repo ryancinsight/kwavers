@@ -133,14 +133,13 @@ pub struct ViaCensus {
 /// optimizer's reporting surfaces.
 #[must_use]
 pub fn via_census(board: &Board) -> ViaCensus {
-    use crate::board::ViaKind::*;
     let mut c = ViaCensus::default();
     for v in &board.vias {
         match v.kind {
-            Through => c.through += 1,
-            Blind => c.blind += 1,
-            Buried => c.buried += 1,
-            Micro => c.micro += 1,
+            crate::board::ViaKind::Through => c.through += 1,
+            crate::board::ViaKind::Blind => c.blind += 1,
+            crate::board::ViaKind::Buried => c.buried += 1,
+            crate::board::ViaKind::Micro => c.micro += 1,
         }
         if v.filled {
             c.vippo += 1;

@@ -71,6 +71,11 @@ pub struct KwaversBeamStep {
 ///   a legacy single-stim block), or
 /// * the manifest's `tx_nets.len()` does not match `budget.lanes` (defence
 ///   against a stale budget crossed against a newer manifest).
+///
+/// # Errors
+///
+/// Returns `Err(String)` when the manifest is not full-stack v2 or its lane count differs from the
+/// energy-budget report.
 #[must_use = "this function returns a Result; the Err case must be handled"]
 pub fn manifest_to_kwavers_beam_step(
     manifest: &DriverManifest,
@@ -295,6 +300,11 @@ fn propagate_beam_step(
 ///
 /// Returns `Err` if the manifest is not full-stack v2 or the geometry is
 /// non-physical (zero/NaN/inf aperture/frequency/sound-speed).
+///
+/// # Errors
+///
+/// Returns `Err(String)` when the manifest, energy budget, or derived beam geometry violates the
+/// full-stack v2 contract.
 #[must_use = "this function returns a Result; the Err case must be handled"]
 pub fn validate_against_budget(
     manifest: &DriverManifest,

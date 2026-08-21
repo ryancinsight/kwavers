@@ -189,10 +189,8 @@ fn pad_copper_layers(pad_node: &Sexpr, layer_map: &BTreeMap<String, LayerId>) ->
             // All copper layers
             ids.extend(layer_map.values().copied());
             break;
-        } else {
-            if let Some(&id) = layer_map.get(name) {
-                ids.push(id);
-            }
+        } else if let Some(&id) = layer_map.get(name) {
+            ids.push(id);
         }
     }
     ids.sort_by_key(|l| l.0);

@@ -157,6 +157,11 @@ impl ShieldStackAssembly {
 
 /// Build the complete stack-level manifest from the controller shield, one driver-shield template,
 /// and the board-backed HV manifest.
+///
+/// # Errors
+///
+/// Returns `Err(String)` when the plan is infeasible, the board pair is incompatible, or channel,
+/// pitch, thickness, and manifest invariants do not agree.
 pub fn assemble_shield_stack(
     controller: &StackBoardManifest,
     driver: &StackBoardManifest,

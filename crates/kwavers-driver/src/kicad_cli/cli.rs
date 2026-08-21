@@ -122,6 +122,11 @@ impl KiCadCli {
     /// `DrcOptions { refill_zones: true, save_board: true }` for candidate boards whose vias,
     /// tracks, or drilled pads changed; KiCad requires `--save-board` to be paired with
     /// `--refill-zones`.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err(String)` when either path is non-UTF-8, argument construction fails, the
+    /// `kicad-cli` subprocess fails, or the JSON report cannot be read or parsed.
     pub fn drc_to_with_options(
         &self,
         pcb: &Path,
@@ -165,6 +170,11 @@ impl KiCadCli {
 
     /// Export the **fabrication bundle** in one call: Gerbers, drill files, position CSV, and BOM
     /// (schematic side) — each into its own subdirectory so a fab house can pick them straight up.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err(String)` when output directories cannot be created, an input path is
+    /// non-UTF-8, or any `kicad-cli` export subprocess fails.
     pub fn export_fab(
         &self,
         pcb: &Path,
