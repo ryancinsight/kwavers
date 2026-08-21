@@ -85,6 +85,11 @@ pub struct BreastUstPstdDataset {
 
 impl BreastUstPstdDataset {
     /// Convert the stacked dataset into solver observations.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the stored frequency, acquisition, and field dimensions are
+    /// inconsistent with the stacked dataset representation.
     #[must_use]
     pub fn observations(&self) -> Vec<FrequencyObservation> {
         self.frequencies_hz
@@ -119,6 +124,11 @@ impl BreastUstPstdDataset {
 /// # Errors
 /// Returns an error when geometry, medium, sampling, or PSTD stability
 /// constraints are violated.
+///
+/// # Panics
+///
+/// Panics if an internal dataset array operation encounters a shape that
+/// violates the validated frequency-domain layout.
 pub fn generate_breast_ust_pstd_frequency_dataset(
     sound_speed_m_s: &Array3<f64>,
     array: &MultiRowRingArray,

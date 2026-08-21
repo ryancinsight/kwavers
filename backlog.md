@@ -441,6 +441,10 @@
   workspace measurement found 11 `missing_panics_doc` sites in `kwavers-diagnostics` and 11
   in `kwavers-therapy`; the diagnostics slice is now claimed with the same strict package
   Clippy, nextest, doctest, and warning-denied rustdoc acceptance gates.
+- 2026-08-21 diagnostics panic-contract slice is implemented and passes strict package Clippy,
+  Nextest 191/191, doctests, and warning-denied rustdoc. The increment is ready for integration;
+  the workspace debt-block line remains until a refreshed workspace measurement confirms the
+  lint count reaches zero.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
