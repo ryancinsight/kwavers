@@ -70,7 +70,7 @@ pub fn calculate_gpu_memory_usage(config: &BeamformingConfig3D) -> f64 {
 /// # Returns
 /// CPU memory usage in MB
 #[cfg(feature = "gpu")]
-pub fn calculate_cpu_memory_usage(streaming_buffer: &Option<StreamingBuffer>) -> f64 {
+pub fn calculate_cpu_memory_usage(streaming_buffer: Option<&StreamingBuffer>) -> f64 {
     // Memory usage calculation for streaming buffers
     let rf_data_size = if let Some(buffer) = streaming_buffer {
         buffer.rf_buffer_size_bytes()
@@ -86,15 +86,8 @@ pub fn calculate_cpu_memory_usage(streaming_buffer: &Option<StreamingBuffer>) ->
 /// Returns `0.0`: no streaming buffer exists in CPU-only builds.
 #[cfg(not(feature = "gpu"))]
 // The parameter mirrors the `gpu` variant's signature so shared call sites
-// compile unchanged across the feature. `Option<&()>` and a by-value `Option<()>`
-// would both satisfy the lints while making the two signatures diverge, which is
-// the one property this parameter exists to preserve.
-#[expect(
-    clippy::ref_option,
-    clippy::trivially_copy_pass_by_ref,
-    reason = "signature mirrors the gpu variant"
-)]
-pub fn calculate_cpu_memory_usage(_streaming_buffer: &Option<()>) -> f64 {
+// compile unchanged across the feature.
+pub fn calculate_cpu_memory_usage(_streaming_buffer: Option<&()>) -> f64 {
     // No GPU buffers in CPU-only mode
     0.0
 }
@@ -140,7 +133,7 @@ mod cpu_tests {
 
     #[test]
     fn test_cpu_memory_calculation_no_buffer() {
-        let memory_mb = calculate_cpu_memory_usage(&None);
+        let memory_mb = calculate_cpu_memory_usage(None);
         assert_eq!(memory_mb, 0.0);
     }
 }
