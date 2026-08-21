@@ -7240,6 +7240,16 @@ Nextest passes 8/8 (897 filtered), package doctests pass 5/5 (8 ignored),
 warning-denied rustdoc passes, and the refreshed workspace `unused_self` count is
 151 sites (30 in `kwavers-solver`).
 
+The next claimed `unused_self` slice covers unified-SIRT norm and coordinate
+conversion helpers. Reconstruction configuration and iteration state remain
+receiver-bound.
+
+The unified-SIRT slice is implemented: norm, reshape, and linear-index helpers
+are associated functions with all callers migrated. Focused Nextest passes 8/8
+(897 filtered), package doctests pass 5/5 (8 ignored), warning-denied rustdoc
+passes, and the refreshed workspace `unused_self` count is 147 sites (26 in
+`kwavers-solver`).
+
 After PR #477, the workspace `unused_self` scan reports 211 sites, including
 90 in `kwavers-solver`. The next bounded slice is the receiver-free helper in
 `forward/hybrid/adaptive_selection/selector.rs`.
