@@ -58,12 +58,20 @@
 
 ### Changed
 
+- **Lint configuration:** all 24 workspace members now inherit `[workspace.lints]`.
+  `kwavers`, `kwavers-driver`, and `kwavers-python` carried no `[lints]` section and
+  inherited nothing; `kwavers` additionally re-declared `unexpected_cfgs` byte-identically
+  to the workspace table, so that duplicate is deleted in favour of inheritance. Clippy
+  reports zero warnings for all three afterwards and both CI clippy gates pass.
+
 - **Documentation:** the README single-sourcing check now exempts `publish = false`
   crates by rule instead of an allowlist. The rule follows the requirement's rationale —
   keeping a crates.io page and a docs.rs front page from drifting — which does not apply
   to a crate that publishes neither. `kwavers-python` is the only such crate: its README
   is the PyPI landing page for a Python reader and its `//!` docs address the Rust
   maintainer of the binding layer, so they are deliberately two documents.
+
+### Changed
 
 - **Elastic FWI runtime and structure:** Singleton-z in-plane point-force
   propagation now selects a zero-sized plane-strain mode once, avoiding the
