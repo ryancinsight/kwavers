@@ -34,14 +34,7 @@ fn test_processor_creation() {
 
 #[test]
 fn test_memory_estimation() {
-    let config = AIBeamformingConfig {
-        enable_realtime_pinn: false,
-        ..Default::default()
-    };
-    let sensor_positions = vec![[0.0, 0.0, 0.0]; 64];
-    let processor = AIEnhancedBeamformingProcessor::new(config, sensor_positions, None).unwrap();
-
-    let memory_mb = processor.estimate_memory_usage();
+    let memory_mb = AIEnhancedBeamformingProcessor::estimate_memory_usage();
     assert!(memory_mb > 0.0);
     assert!(memory_mb < 1000.0);
 }
@@ -61,19 +54,11 @@ fn test_config_access() {
 
 #[test]
 fn test_beamforming() {
-    let config = AIBeamformingConfig {
-        enable_realtime_pinn: false,
-        ..Default::default()
-    };
-    let sensor_positions = vec![[0.0, 0.0, 0.0]; 64];
-    let processor = AIEnhancedBeamformingProcessor::new(config, sensor_positions, None).unwrap();
-
     let rf_data = Array4::<f32>::from_elem((100, 10, 20, 1), 1.0);
     let angles = vec![0.0; 20];
 
-    let volume = processor
-        .perform_beamforming(rf_data.view(), &angles)
-        .unwrap();
+    let volume =
+        AIEnhancedBeamformingProcessor::perform_beamforming(rf_data.view(), &angles).unwrap();
     assert_eq!(volume.shape(), [64, 64, 20]);
 }
 
