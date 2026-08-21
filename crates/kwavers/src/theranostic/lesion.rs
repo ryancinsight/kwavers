@@ -88,6 +88,11 @@ pub enum LesionState<'a> {
 /// `base_c`, `temperature_c` must share the same shape (same simulation grid).
 /// Celsius storage values are converted to Kelvin at this boundary before the
 /// Aequitas temperature-dependent sound-speed law is evaluated.
+///
+/// # Panics
+///
+/// Panics if `base_c` and `temperature_c` do not describe the same simulation
+/// grid.
 #[must_use]
 pub fn thermal_perturbed_sound_speed(
     base_c: &Array3<f64>,
@@ -120,6 +125,11 @@ pub fn thermal_perturbed_sound_speed(
 /// mixture law, using the per-voxel base speed as the liquid sound speed.
 ///
 /// `base_c`, `void_fraction` must share the same shape.
+///
+/// # Panics
+///
+/// Panics if `base_c` and `void_fraction` do not describe the same simulation
+/// grid.
 #[must_use]
 pub fn cavitation_perturbed_sound_speed(
     base_c: &Array3<f64>,

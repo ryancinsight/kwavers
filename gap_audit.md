@@ -6977,3 +6977,12 @@ pass 8/8 (1 ignored); and rustdoc passes with `RUSTDOCFLAGS=-D warnings`.
 The refreshed workspace measurement after this merge found three
 `missing_panics_doc` sites in the `kwavers` facade; that package is the current
 ratchet slice.
+
+## `missing_panics_doc` facade slice — 2026-08-21
+
+The `kwavers` facade slice documents the three measured panic contracts in
+thermal and cavitation lesion sound-speed perturbation and finite-difference
+lesion reconstruction. Strict offline Clippy with
+`-D clippy::missing_panics_doc -D warnings` passes; Nextest run
+`023eb09b-d99c-4f94-9bfe-f44d4f587355` passes 39/39; doctests pass 1/1; and
+rustdoc passes with `RUSTDOCFLAGS=-D warnings`.
