@@ -344,6 +344,11 @@ impl Simulation {
         track_thermal_dose = true,
         dt_thermal = None,
     ))]
+    ///
+    /// # Errors
+    ///
+    /// Raises a Python value error when thermal parameters or the coupling
+    /// cadence are invalid.
     #[allow(clippy::too_many_arguments)]
     pub fn set_thermal(
         &mut self,

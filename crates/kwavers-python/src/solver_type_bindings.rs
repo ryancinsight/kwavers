@@ -82,6 +82,10 @@ pub enum SolverType {
 #[pymethods]
 impl SolverType {
     /// String representation.
+    #[expect(
+        clippy::trivially_copy_pass_by_ref,
+        reason = "PyO3 magic methods require borrowed Python class receivers"
+    )]
     fn __repr__(&self) -> String {
         match self {
             SolverType::FDTD => "SolverType.FDTD".to_string(),
@@ -100,6 +104,10 @@ impl SolverType {
     }
 
     /// Human-readable string.
+    #[expect(
+        clippy::trivially_copy_pass_by_ref,
+        reason = "PyO3 magic methods require borrowed Python class receivers"
+    )]
     fn __str__(&self) -> String {
         match self {
             SolverType::FDTD => "FDTD".to_string(),
@@ -118,6 +126,10 @@ impl SolverType {
     }
 
     /// Equality comparison.
+    #[expect(
+        clippy::trivially_copy_pass_by_ref,
+        reason = "PyO3 equality method requires borrowed Python class operands"
+    )]
     fn __eq__(&self, other: &Self) -> bool {
         self == other
     }

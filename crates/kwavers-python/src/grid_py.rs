@@ -52,6 +52,10 @@ impl Grid {
     /// >>> grid = Grid(128, 128, 128, 0.1e-3, 0.1e-3, 0.1e-3)
     /// >>> print(grid.total_points())
     /// 2097152
+    ///
+    /// # Errors
+    ///
+    /// Raises a Python runtime error when dimensions or spacing are invalid.
     #[new]
     #[pyo3(signature = (nx, ny, nz, dx, dy, dz))]
     pub fn new(nx: usize, ny: usize, nz: usize, dx: f64, dy: f64, dz: f64) -> PyResult<Self> {
