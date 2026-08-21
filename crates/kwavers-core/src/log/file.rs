@@ -5,6 +5,18 @@ use std::fs::OpenOptions;
 use std::io::{self, BufWriter, Write};
 use std::sync::Mutex;
 
+/// A [`Log`] sink that writes every record to a file and, optionally, mirrors
+/// it to the console.
+///
+/// # Console stream
+///
+/// The console mirror writes to **stderr**, not stdout. Diagnostics on stdout
+/// interleave with a program's actual output, so a caller that pipes a kwavers
+/// binary cannot separate the two; stderr is the conventional stream for log
+/// sinks for exactly that reason. It also agrees with the workspace's other
+/// logging entry point: the `kwavers` facade's `init_logging` installs
+/// `env_logger`, which writes to stderr by default. Before this, the two
+/// disagreed about where diagnostics belong.
 #[derive(Debug)]
 pub struct CombinedLogger {
     console: bool,
@@ -36,14 +48,8 @@ impl Log for CombinedLogger {
                 }
             }
             if self.console {
-                // This type is the console sink itself -- writing the record to
-                // stdout is its contract, not incidental output from library
-                // code. Ratchet: whether a log sink belongs on stdout rather
-                // than stderr is tracked separately as KW-CORE-LOG-1.
-                #[expect(clippy::print_stdout, reason = "console log sink")]
-                {
-                    println!("{message}");
-                }
+                // Stderr, not stdout: see the type's `# Console stream` note.
+                eprintln!("{message}");
             }
         }
     }
