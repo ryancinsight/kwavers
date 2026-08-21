@@ -662,6 +662,11 @@
   filtered), package doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and the
   refreshed workspace `unused_self` count is 151 sites (solver 30). The increment is ready for
   integration.
+- 2026-08-21 the next `unused_self` slice claims the unified-SIRT receiver-free norm and
+  coordinate-conversion helpers in `inverse/reconstruction/unified_sirt/reconstructor.rs`.
+  Reconstruction configuration and iteration state remain receiver-bound. Acceptance is static
+  conversion with all callers migrated, focused unified-SIRT tests, package doctests,
+  warning-denied rustdoc, and a refreshed workspace count.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
