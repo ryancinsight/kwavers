@@ -7568,6 +7568,12 @@ allocation-free `slice.fill(0.0)` operations. Warning-denied package Clippy, Nex
 denied Clippy, and the exact production scan pass. The exact production workspace count decreases
 from 5 to 3 sites; the root ratchet comment is updated.
 
+The final `needless_for_each` slice replaces analysis IIR coefficient normalization and diagnostic
+breast-phantom sound-speed scaling closures with direct loops. Warning-denied Clippy for both
+packages, combined Nextest (935/935), package doctests (1 passed in each package), warning-denied
+Rustdoc for both packages, and the exact production workspace scan pass with zero remaining sites.
+The ratchet override is removed from `Cargo.toml`.
+
 Final exact-revision validation at merged revision `192eb7575` passes workspace Nextest (5,781/5,781
 with 7 configured skips) and workspace doctests with no failures. The previously recorded example
 build and mdBook test/build remain valid because the final changes are lint-only production edits and

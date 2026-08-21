@@ -197,8 +197,12 @@ impl IirFilter {
         // Normalize so a[0] = 1
         if !a.is_empty() && a[0] != 1.0 {
             let a0 = a[0];
-            b.iter_mut().for_each(|x| *x /= a0);
-            a.iter_mut().for_each(|x| *x /= a0);
+            for x in &mut b {
+                *x /= a0;
+            }
+            for x in &mut a {
+                *x /= a0;
+            }
         }
 
         Ok((b, a))
