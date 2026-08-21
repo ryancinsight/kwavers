@@ -29,6 +29,12 @@ pub struct BreastUstSourceExcitationDiagnostics {
     pub per_frequency: Vec<BreastUstSourceExcitationFrequencyDiagnostics>,
 }
 
+/// Measure source-excitation normalization and phase stability across frequencies.
+///
+/// # Errors
+///
+/// Returns an error when observation shapes, frequency metadata, source
+/// amplitude, time step, or spectral normalization are invalid.
 pub fn source_excitation_diagnostics(
     predicted: &Array3<Complex64>,
     observed: &Array3<Complex64>,
@@ -151,6 +157,12 @@ pub(crate) fn source_excitation_diagnostics_with_receiver_policy(
     })
 }
 
+/// Compute the complex Fourier coefficient of a sampled sine wave.
+///
+/// # Errors
+///
+/// Returns an error when the frequency, time step, sample interval, or
+/// resulting coefficient energy is invalid.
 pub fn sine_frequency_bin_coefficient(
     frequency_hz: f64,
     time_step_s: f64,

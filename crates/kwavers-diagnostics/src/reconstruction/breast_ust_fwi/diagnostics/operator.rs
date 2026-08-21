@@ -34,6 +34,12 @@ pub struct BreastUstForwardOperatorEquivalenceDiagnostics {
     pub per_model: Vec<BreastUstForwardOperatorModelDiagnostics>,
 }
 
+/// Compare forward-operator predictions against one observed data cube.
+///
+/// # Errors
+///
+/// Returns an error when no predictions are supplied or any prediction,
+/// observation, excitation, or residual metric is invalid.
 pub fn forward_operator_equivalence_diagnostics(
     predictions_by_model: &[BreastUstForwardOperatorPrediction<'_>],
     observed: &Array3<Complex64>,
@@ -56,6 +62,12 @@ pub fn forward_operator_equivalence_diagnostics(
 }
 
 #[allow(clippy::too_many_arguments)]
+/// Compare forward operators using an explicit receiver-channel policy.
+///
+/// # Errors
+///
+/// Returns an error when model names are empty or duplicated, shapes differ,
+/// or residual and excitation diagnostics cannot be computed.
 pub fn forward_operator_equivalence_diagnostics_with_receiver_policy(
     predictions_by_model: &[BreastUstForwardOperatorPrediction<'_>],
     observed: &Array3<Complex64>,

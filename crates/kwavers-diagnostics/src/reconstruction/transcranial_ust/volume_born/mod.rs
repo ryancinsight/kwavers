@@ -56,6 +56,11 @@ pub struct TranscranialUstBornInversionVolumeResult {
 }
 
 /// Reconstruct brain sound-speed contrast as one coupled 3-D volume.
+///
+/// # Errors
+///
+/// Returns an error when the inversion configuration, volume, transducer
+/// geometry, or coupled Born solve is invalid.
 pub fn reconstruct_brain_volume(
     medium: &AcousticVolume,
     config: &TranscranialUstBornInversionConfig,
