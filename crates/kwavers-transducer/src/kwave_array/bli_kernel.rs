@@ -37,7 +37,6 @@ impl KWaveArray {
     /// cells are skipped.
     #[allow(clippy::too_many_arguments)]
     pub(super) fn map_surface_sample<F>(
-        &self,
         grid: &kwavers_grid::Grid,
         x_vec: &leto::Array1<f64>,
         y_vec: &leto::Array1<f64>,
@@ -169,7 +168,7 @@ impl KWaveArray {
 
     /// Total sample count for a disc rasterized with `num_radial` rings
     /// (including the center point and all azimuthal samples).
-    pub(super) fn disc_sample_count(&self, num_radial: usize) -> usize {
+    pub(super) fn disc_sample_count(num_radial: usize) -> usize {
         if num_radial == 1 {
             return 1;
         }
@@ -189,7 +188,6 @@ impl KWaveArray {
     /// - Panics if assertion fails: `focus position must differ from disc position`.
     ///
     pub(super) fn disc_basis(
-        &self,
         center: (f64, f64, f64),
         focus_position: Option<(f64, f64, f64)>,
     ) -> ([f64; 3], [f64; 3], [f64; 3]) {
