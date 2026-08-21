@@ -125,7 +125,7 @@ impl BeamformingProcessor3D {
         let processing_time = start_time.elapsed().as_secs_f64() * 1000.0;
         self.metrics.processing_time_ms = processing_time;
         self.metrics.reconstruction_rate = 1000.0 / processing_time.max(f64::EPSILON);
-        self.metrics.cpu_memory_mb = self.calculate_cpu_memory_usage();
+        self.metrics.cpu_memory_mb = Self::calculate_cpu_memory_usage();
 
         Ok(volume)
     }

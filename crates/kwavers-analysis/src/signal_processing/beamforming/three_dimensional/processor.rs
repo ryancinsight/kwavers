@@ -218,7 +218,7 @@ impl BeamformingProcessor3D {
     ///
     /// Delegates to [`super::metrics::calculate_cpu_memory_usage`].
     /// Returns `0.0`: no streaming buffer exists in CPU-only builds.
-    pub(super) fn calculate_cpu_memory_usage(&self) -> f64 {
+    pub(super) fn calculate_cpu_memory_usage() -> f64 {
         super::metrics::calculate_cpu_memory_usage(None::<&()>)
     }
 }
