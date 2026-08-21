@@ -537,6 +537,10 @@
 - 2026-08-21 PSTD/SEM coupling slice merged in PR #483 (`c1cc14a67`). The refreshed `unused_self`
   measurement is 195 sites (solver 74); the next bounded slice is the three receiver-free helpers
   in `forward/hybrid/validation/suite.rs`.
+- 2026-08-21 hybrid validation slice is implemented: the three measured numerical helpers and the
+  now receiver-free convergence path are associated functions, with configuration-dependent
+  accuracy and stability methods retaining the suite receiver. Validation tests, doctests, and
+  warning-denied rustdoc pass; the remaining solver sites stay queued.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
