@@ -6888,3 +6888,18 @@ and phased-array field filling. Strict offline Clippy with
 `0320d46c-897c-499b-8c3b-013ff75b892d` passes 245/245 with one intentional skip;
 doctests pass 2/2 (6 ignored); and rustdoc passes with
 `RUSTDOCFLAGS=-D warnings`.
+
+The refreshed workspace measurement then found 31 additional
+`missing_panics_doc` sites in `kwavers-physics`; that package is the current
+ratchet item.
+
+## `missing_panics_doc` physics slice — 2026-08-21
+
+The `kwavers-physics` slice documents the 31 measured panic contracts across
+phase-shifting arrays, bubble integration, conservation checks, imaging and
+thermal-dose paths, zero-copy state containers, sonogenetics, analytical RTM
+and transducer helpers, nonlinear FFT inputs, chemistry, electromagnetics, and
+ablation. Strict offline Clippy with `-D clippy::missing_panics_doc -D warnings`
+passes; Nextest run `d08bec08-3f94-4730-8710-118e8ce0db5a` passes 1561/1561
+with one intentional skip; doctests pass 9/9 (4 ignored); and rustdoc passes
+with `RUSTDOCFLAGS=-D warnings`.
