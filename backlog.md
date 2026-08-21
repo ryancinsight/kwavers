@@ -684,6 +684,12 @@
   `kwavers-solver` time-reversal filter passes 9/9 (896 filtered), package doctests pass 5/5 (8
   ignored), warning-denied rustdoc passes, and the refreshed workspace `unused_self` count is 143
   sites (solver 22). The increment is ready for integration.
+- 2026-08-21 the next `unused_self` slice claims five receiver-free field-coupling operations in
+  `multiphysics/field_coupling/coupling_ops.rs`: optical/thermal and acoustic/thermal coupling,
+  relaxation, gradient calculation, and strength selection. Coupling strategy, tolerance, and
+  iteration state remain receiver-bound. Acceptance is static conversion with all callers
+  migrated, focused field-coupling tests, package doctests, warning-denied rustdoc, and a refreshed
+  workspace count.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a

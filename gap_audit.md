@@ -7260,6 +7260,11 @@ functions with all callers migrated. Focused Nextest passes 9/9 (896 filtered),
 package doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and the
 refreshed workspace `unused_self` count is 143 sites (22 in `kwavers-solver`).
 
+The next claimed `unused_self` slice covers five receiver-free field-coupling
+operations: optical/thermal and acoustic/thermal coupling, relaxation, gradient
+calculation, and strength selection. Coupling strategy, tolerance, and iteration
+state remain receiver-bound.
+
 After PR #477, the workspace `unused_self` scan reports 211 sites, including
 90 in `kwavers-solver`. The next bounded slice is the receiver-free helper in
 `forward/hybrid/adaptive_selection/selector.rs`.
