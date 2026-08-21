@@ -66,6 +66,7 @@ isotropic Gaussian initial pressure at `sigma = 3 dx`, on a `0.1 mm` grid at
 | `ivp_homogeneous_2d` | 64 x 64 | 100 | 10 ns | 24 cells | lossless | 23 KB |
 | `ivp_homogeneous_3d` | 32 x 32 x 32 | 50 | 10 ns | 12 cells | lossless | 128 KB |
 | `ivp_absorbing_2d` | 64 x 64 | 100 | 10 ns | 24 cells | `40 dB/(MHz^1.5 cm)`, `y = 1.5` | 22 KB |
+| `ivp_layered_2d` | 80 x 64 | 120 | 8.33 ns | 24 cells | lossless, layered medium | 34 KB |
 
 Four choices make the comparison an oracle rather than a coincidence.
 
@@ -99,6 +100,7 @@ Full-field agreement over the comparison window, at the committed revision:
 | `ivp_homogeneous_2d` | 5.50e-7 | 1.05e-6 | 1.000000000 |
 | `ivp_homogeneous_3d` | 1.06e-4 | 2.20e-4 | 0.999999994 |
 | `ivp_absorbing_2d` | 8.10e-3 | 4.99e-3 | 0.999999924 |
+| `ivp_layered_2d` | 7.97e-3 | 1.54e-2 | 0.999963422 |
 
 Both cases exceed the `r >= 0.9999` figure the README published, by four to five
 orders of magnitude in the L2 norm.
@@ -121,7 +123,7 @@ relative L2 and `0.99` on correlation — a dispersion error shifts phase, it do
 not decorrelate, so falling below the correlation floor would mean the scheme is
 wrong rather than merely dispersive.
 
-The four tests execute in 2.35 s, inside the standard nextest budget.
+The six tests execute in 1.61 s, inside the standard nextest budget.
 
 ## The absorbing case
 
@@ -165,6 +167,49 @@ puts absorption on the medium -- but it is silent and undocumented, and it makes
 a public configuration field inert for the most common medium type. Filed as
 `KW-ABSORPTION-CONFIG-PRECEDENCE`; the reference test documents the working route
 at its medium constructor rather than working around it silently.
+
+## The layered case, and the axis conventions it exposed
+
+`ivp_layered_2d` steps sound speed from 1500 to 1800 m/s and density from 1000
+to 1200 kg/m^3 across a two-cell hyperbolic-tangent interface eight cells right
+of the seed. The wavefront reaches it around step 53 of 120, so the recorded
+field carries a transmitted wave, a reflection back through the seed, and a
+refracted front. The test asserts agreement with the reference and separation
+from a uniform-medium run at the same discretization, which measures `0.27`.
+
+The step is smoothed rather than sharp because both codes are pseudospectral and
+a discontinuity rings in both; smoothing keeps the medium as band-limited as the
+seed, so the comparison measures heterogeneous propagation rather than two Gibbs
+phenomena.
+
+**Its grid is deliberately non-square, and that is load-bearing.** Two
+orientation defects were live in this harness and invisible to every square,
+symmetric case:
+
+1. k-Wave returns the recorded field with its axes reversed relative to the grid
+   it was given -- a `(Nx=64, Ny=48)` problem comes back shaped `(48, 64)`. On a
+   square case `.reshape(shape)` is a no-op and stores a transposed field.
+2. `np.savez` records an array's memory order in the NPY header, and a
+   transposed array is Fortran-contiguous, so the stored buffer was column-major
+   while the Rust reader indexed it row-major.
+
+Both are now closed at their source: the generator reverses the axes explicitly
+and asserts the result matches the case shape, then writes with
+`np.ascontiguousarray`; the reader asserts the stored array is not Fortran-ordered
+and places elements by index rather than copying into a backing slice whose order
+is its own business. The non-square case makes each of these a shape error or an
+assertion failure rather than a silent transpose.
+
+The lossless and absorbing results are unchanged by the corrections, because an
+isotropic seed in a uniform medium is symmetric under transpose to within the
+`1.8e-7` that separates the two orientations -- which is exactly why a square
+case could not detect the defect. Their stored archives were regenerated so the
+committed data is correctly oriented regardless.
+
+The lesson is recorded rather than merely fixed: **a differential oracle whose
+cases are all symmetric cannot detect a transposition**, and every convention a
+reference solver carries -- axis order, memory order, time-point counting --
+needs at least one case that breaks the symmetry hiding it.
 
 ## Tolerance derivation
 
@@ -213,11 +258,11 @@ at the assignment site.
   gates the Python cached-parity suite, which depends on the external solver.
   That suite's reproducibility is a separate item; this ADR closes the Rust-side
   gap only.
-- The reference set covers linear propagation in two and three dimensions,
-  lossless and with power-law absorption. Nonlinearity, heterogeneous media,
-  elastic propagation, and source-driven (as opposed to initial-value) problems
-  have no committed reference yet, and each is a follow-up case rather than a
-  claim this ADR supports.
+- The reference set covers linear propagation in two and three dimensions:
+  lossless, with power-law absorption, and through a layered medium.
+  Nonlinearity, elastic propagation, and source-driven (as opposed to
+  initial-value) problems have no committed reference yet, and each is a
+  follow-up case rather than a claim this ADR supports.
 
 ## Alternatives rejected
 

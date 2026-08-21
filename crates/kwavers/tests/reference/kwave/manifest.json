@@ -4,12 +4,16 @@
       "alpha_coeff_db": 40.0,
       "alpha_power": 1.5,
       "archive": "ivp_absorbing_2d.npz",
-      "bytes": 21933,
+      "bytes": 21942,
       "cfl": 0.15,
       "compare_radius_cells": 24,
       "dt_s": 1e-08,
       "dx_m": 0.0001,
-      "sha256": "5d6ab3b85324748e7d2bb4c1ab0e9f245ae4f93dbe8b4011dd9546783db60f8f",
+      "layer_density_kg_m3": null,
+      "layer_interface_cell": null,
+      "layer_sound_speed_m_s": null,
+      "layer_transition_cells": null,
+      "sha256": "86f955244ab329f9580e15d04e59444214487d528ce7546fc6136944f83a267a",
       "shape": [
         64,
         64
@@ -18,13 +22,19 @@
       "t_end_s": 1e-06
     },
     "ivp_homogeneous_2d": {
+      "alpha_coeff_db": null,
+      "alpha_power": null,
       "archive": "ivp_homogeneous_2d.npz",
-      "bytes": 23388,
+      "bytes": 23413,
       "cfl": 0.15,
       "compare_radius_cells": 24,
       "dt_s": 1e-08,
       "dx_m": 0.0001,
-      "sha256": "46b3df87e83946a9c5439efb1b8340df6a87d9fc40f434f8c93390ed4a03a8b0",
+      "layer_density_kg_m3": null,
+      "layer_interface_cell": null,
+      "layer_sound_speed_m_s": null,
+      "layer_transition_cells": null,
+      "sha256": "8a696abe906b2a96f3d5b1ccbb37acba44e7a3df735d57ca251eb74b0ddb4929",
       "shape": [
         64,
         64
@@ -33,13 +43,19 @@
       "t_end_s": 1e-06
     },
     "ivp_homogeneous_3d": {
+      "alpha_coeff_db": null,
+      "alpha_power": null,
       "archive": "ivp_homogeneous_3d.npz",
-      "bytes": 127848,
+      "bytes": 127720,
       "cfl": 0.15,
       "compare_radius_cells": 12,
       "dt_s": 1e-08,
       "dx_m": 0.0001,
-      "sha256": "a04eaf029764319d0a896f4dc2626d53182a7080ec1c709dbd04393cd48c0289",
+      "layer_density_kg_m3": null,
+      "layer_interface_cell": null,
+      "layer_sound_speed_m_s": null,
+      "layer_transition_cells": null,
+      "sha256": "d7676d8289eab454d607b9bfdf584364330b6d86f1d8a4b153dd4f5b2a785384",
       "shape": [
         32,
         32,
@@ -47,6 +63,27 @@
       ],
       "steps": 50,
       "t_end_s": 5e-07
+    },
+    "ivp_layered_2d": {
+      "alpha_coeff_db": null,
+      "alpha_power": null,
+      "archive": "ivp_layered_2d.npz",
+      "bytes": 33387,
+      "cfl": 0.15,
+      "compare_radius_cells": 24,
+      "dt_s": 8.333333333333381e-09,
+      "dx_m": 0.0001,
+      "layer_density_kg_m3": 1200.0,
+      "layer_interface_cell": 48,
+      "layer_sound_speed_m_s": 1800.0,
+      "layer_transition_cells": 2.0,
+      "sha256": "896d25aa0be6643549c9a590cb8026c9ddf4e008be80be13a82b2f94af04179d",
+      "shape": [
+        80,
+        64
+      ],
+      "steps": 120,
+      "t_end_s": 1.0000000000000057e-06
     }
   },
   "medium": {

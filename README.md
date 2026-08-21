@@ -388,6 +388,7 @@ neither code's boundary treatment has reached.
 | `ivp_homogeneous_2d` | 64 × 64 | 100 | 5.50e-7 | 1.05e-6 | 1.000000000 |
 | `ivp_homogeneous_3d` | 32 × 32 × 32 | 50 | 1.06e-4 | 2.20e-4 | 0.999999994 |
 | `ivp_absorbing_2d` | 64 × 64 | 100 | 8.10e-3 | 4.99e-3 | 0.999999924 |
+| `ivp_layered_2d` | 80 × 64 | 120 | 7.97e-3 | 1.54e-2 | 0.999963422 |
 
 The finite-difference solver is measured against the same reference as a
 cross-scheme check, since the pseudospectral solver shares its k-space machinery
@@ -401,10 +402,18 @@ the absorption model; the test asserts both that kwavers matches the absorbing
 reference and that the absorbing field separates from the lossless one, since
 agreement alone would not prove the model ran.
 
+`ivp_layered_2d` steps sound speed and density across a smoothed interface eight
+cells from the seed, so the recorded field carries a transmitted wave, a
+reflection, and a refracted front; it is measured against a uniform-medium run at
+the same discretization, which it separates from by `0.27`. Its grid is
+deliberately non-square — a square case cannot distinguish a correct axis
+orientation from a transposed one, and two such conventions were live in the
+harness until this case exposed them.
+
 `k-wave-python` ships no 1-D solver, so there is no 1-D row; the axisymmetric
-case is a separate geometry and is not yet covered. Nonlinearity, heterogeneous
-media, elastic propagation, and source-driven problems have no committed
-reference field yet and are not covered by this result.
+case is a separate geometry and is not yet covered. Nonlinearity, elastic
+propagation, and source-driven problems have no committed reference field yet
+and are not covered by this result.
 [ADR 119](docs/adr/119-kwave-reference-oracle.md) records the reference
 provenance, the tolerance derivation, and what the comparison does not establish.
 
