@@ -7212,6 +7212,17 @@ the package doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and
 the focused `unused_self` scan is clean in the photoacoustic linear-algebra and
 algorithm modules.
 
+Post-PR-496 user-facing validation on the exact working revision: `cargo build
+--offline -p kwavers --examples` exits 0 (warm rerun finished in 0.96 s; Cargo
+reports only unused local overlay patches), `mdbook test docs/book` exits 0
+(all listed chapters exercised), and `mdbook build docs/book` exits 0 with the
+HTML book written to `target/book`.
+
+The next `unused_self` slice is claimed against the refreshed 166-site workspace
+measurement (45 in `kwavers-solver`). It covers the ten receiver-free seismic
+misfit kernels in `inverse/reconstruction/seismic/misfit/`; the stateful
+dispatcher remains unchanged.
+
 After PR #477, the workspace `unused_self` scan reports 211 sites, including
 90 in `kwavers-solver`. The next bounded slice is the receiver-free helper in
 `forward/hybrid/adaptive_selection/selector.rs`.

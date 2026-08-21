@@ -638,6 +638,12 @@
   the focused `unused_self` scan is clean in the photoacoustic linear-algebra/algorithm modules.
   The increment is ready for integration; the workspace debt-block line remains until a
   refreshed workspace measurement confirms the count.
+- 2026-08-21 the workspace `unused_self` measurement is 166 sites, including 45 in
+  `kwavers-solver`. The next bounded slice claims the ten receiver-free seismic misfit kernels in
+  `inverse/reconstruction/seismic/misfit/{envelope_phase,norm_metrics,wasserstein}.rs`; the
+  dispatcher remains stateful and is out of scope. Acceptance is static conversion with all
+  callers migrated, focused solver Nextest, package doctests, warning-denied rustdoc, and a
+  refreshed workspace count.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
