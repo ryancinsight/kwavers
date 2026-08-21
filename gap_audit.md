@@ -7067,6 +7067,12 @@ After PR #482, the workspace `unused_self` scan reports 196 sites, including
 75 in `kwavers-solver`. The next bounded slice is the receiver-free helper in
 `forward/hybrid/pstd_sem_coupling/coupler.rs`.
 
+The PSTD/SEM coupling slice converts its measured receiver-free continuity
+residual helper to an associated function. Focused Nextest run
+`bcedd908-a1e7-4fcb-b5b3-7f3a5590068a` passes 38/38 (867 solver tests
+filtered); the package doctests pass 5/5 (8 ignored), warning-denied rustdoc
+passes, and the focused unused_self scan has zero warnings in `coupler.rs`.
+
 After PR #477, the workspace `unused_self` scan reports 211 sites, including
 90 in `kwavers-solver`. The next bounded slice is the receiver-free helper in
 `forward/hybrid/adaptive_selection/selector.rs`.

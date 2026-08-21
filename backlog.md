@@ -531,6 +531,9 @@
 - 2026-08-21 domain decomposition slice merged in PR #482 (`e77e575d2`). The refreshed
   `unused_self` measurement is 196 sites (solver 75); the next bounded slice is the receiver-free
   helper in `forward/hybrid/pstd_sem_coupling/coupler.rs`.
+- 2026-08-21 PSTD/SEM coupling slice is implemented: the receiver-free continuity residual helper
+  is an associated function with its caller migrated. Hybrid tests, doctests, and warning-denied
+  rustdoc pass; the remaining solver sites stay queued.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
