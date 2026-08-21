@@ -7474,6 +7474,12 @@ reconstruction. Warning-denied package Clippy, Nextest (191/191), doctests (1 pa
 and warning-denied Rustdoc pass. The exact workspace scan reports six remaining production sites,
 all in `kwavers-driver`.
 
+The `kwavers-driver` `implicit_hasher` slice generalizes routing `HashSet` inputs and verification
+symbol-map `HashMap` inputs over `BuildHasher`, preserving caller-selected hashers. Warning-denied
+package Clippy, Nextest (494/494), doctests, and warning-denied Rustdoc pass. The exact workspace
+production scan (`--lib`) reports 0 sites and the ratchet override is removed from `Cargo.toml`;
+all-targets still reports test-only sites outside this production slice.
+
 Final exact-revision validation at merged revision `192eb7575` passes workspace Nextest (5,781/5,781
 with 7 configured skips) and workspace doctests with no failures. The previously recorded example
 build and mdBook test/build remain valid because the final changes are lint-only production edits and

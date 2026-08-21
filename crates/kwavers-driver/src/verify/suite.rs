@@ -5,6 +5,7 @@ use crate::place::footprint::FootprintDef;
 use crate::place::symbol_import::PinMap;
 use crate::rules::DesignRules;
 use std::collections::HashMap;
+use std::hash::BuildHasher;
 
 use super::ac_coupling::parasitic_ac_coupling_check;
 use super::assembly::assembly;
@@ -73,7 +74,7 @@ pub fn verify_all(
     lib: &[FootprintDef],
     rules: &DesignRules,
     physics: crate::validate::PhysicsReport,
-    symbol_pin_maps: &HashMap<String, PinMap>,
+    symbol_pin_maps: &HashMap<String, PinMap, impl BuildHasher>,
 ) -> Verification {
     let erc = erc(board, comps, lib, symbol_pin_maps);
     let lvs = lvs(board);

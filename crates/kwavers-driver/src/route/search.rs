@@ -50,6 +50,7 @@
 
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashSet};
+use std::hash::BuildHasher;
 
 use super::search_guards::{
     diagonal_crosses_foreign_edge, diagonal_passes_foreign_track_corner,
@@ -197,10 +198,10 @@ pub fn grow_tree(
     cost: &impl RoutingCost,
     class: NetClassKind,
     net_id: i32,
-    sources: &HashSet<NodeId>,
-    targets: &HashSet<NodeId>,
-    forbidden: &HashSet<NodeId>,
-    via_forbidden: &HashSet<NodeId>,
+    sources: &HashSet<NodeId, impl BuildHasher>,
+    targets: &HashSet<NodeId, impl BuildHasher>,
+    forbidden: &HashSet<NodeId, impl BuildHasher>,
+    via_forbidden: &HashSet<NodeId, impl BuildHasher>,
     present_factor: f64,
     scratch: &mut Scratch,
 ) -> Option<Vec<NodeId>> {
