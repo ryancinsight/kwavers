@@ -6853,4 +6853,4 @@ for immutable and mutable unified-field views. Strict offline Clippy with
 rustdoc passes with `RUSTDOCFLAGS=-D warnings`.
 
 The next workspace measurement remains 26 `missing_panics_doc` sites in
-`kwavers-medium`.
+`kwavers-medium`; that slice is now claimed.
