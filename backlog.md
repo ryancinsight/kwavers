@@ -315,7 +315,7 @@
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | in progress | Codex | `crates/kwavers-solver/src/forward/hybrid/validation/suite.rs` (`unused_self` slice; parent remains open) |
+| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | in progress | Codex | `crates/kwavers-solver/src/forward/nonlinear/kzk/harmonic_tracking/tracker.rs` (`unused_self` slice; parent remains open) |
 
 - Context: the clippy floor landed in #423. 21 of 24 crates already declared
   `[lints] workspace = true`, but no `[workspace.lints.clippy]` table existed for them to
@@ -541,6 +541,9 @@
   now receiver-free convergence path are associated functions, with configuration-dependent
   accuracy and stability methods retaining the suite receiver. Validation tests, doctests, and
   warning-denied rustdoc pass; the remaining solver sites stay queued.
+- 2026-08-21 hybrid validation slice merged in PR #484 (`b2aa69e6b`). The refreshed `unused_self`
+  measurement is 192 sites (solver 71); the next bounded slice is the two receiver-free helpers
+  in `forward/nonlinear/kzk/harmonic_tracking/tracker.rs`.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
