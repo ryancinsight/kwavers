@@ -108,6 +108,7 @@ impl std::fmt::Debug for MieTheory {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("MieTheory")
             .field("radius", &self.radius)
+            .field("particle_dielectric", &"<callable>")
             .field("medium_dielectric", &self.medium_dielectric)
             .finish()
     }
