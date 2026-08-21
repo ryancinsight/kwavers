@@ -177,7 +177,7 @@ impl FwiProcessor {
     ) -> KwaversResult<(f64, Array3<f64>)> {
         let (objective, gradient) =
             self.forward_misfit_raw_gradient(current_model, observed_data, geometry, grid)?;
-        let smoothed_gradient = self.smooth_gradient(&gradient);
+        let smoothed_gradient = Self::smooth_gradient(&gradient);
         let regularized_gradient =
             self.apply_regularization(&smoothed_gradient, current_model, dtv_scale)?;
         Ok((objective, regularized_gradient))

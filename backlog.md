@@ -595,6 +595,13 @@
 - 2026-08-21 FWI constraints slice merged in PR #491 (`90a305ba4`). The refreshed `unused_self`
   measurement is 182 sites (solver 61); the next bounded slice is the three receiver-free FWI
   helpers in `inverse/fwi/time_domain/forward.rs` and `gradient.rs`.
+- 2026-08-21 FWI static-helper slice is implemented: self-adjoint geometry extraction, gradient
+  smoothing, and total-variation gradient calculation are associated functions, with all callers
+  migrated. Focused Nextest `0907780b-c689-43a4-9338-44589dba8f18` passes 60/60 (845 solver tests
+  skipped); the package doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and the
+  focused `unused_self` scan is clean in the touched FWI modules. The increment is ready for
+  integration; the workspace debt-block line remains until a refreshed workspace measurement
+  confirms the count.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
