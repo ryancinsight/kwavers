@@ -79,10 +79,10 @@ impl GhostCellMethod {
                         if geom < 0.5 {
                             // Extrapolate from interior cells
                             let interior_values =
-                                self.collect_interior_neighbors(property, geometry, i, j, k);
+                                Self::collect_interior_neighbors(property, geometry, i, j, k);
 
                             if interior_values.len() > order {
-                                let extrapolated = self.extrapolate_value(&interior_values, order);
+                                let extrapolated = Self::extrapolate_value(&interior_values, order);
                                 smoothed[[i, j, k]] = extrapolated;
                             }
                         }
@@ -96,7 +96,6 @@ impl GhostCellMethod {
 
     /// Collect neighboring interior cell values for extrapolation
     fn collect_interior_neighbors(
-        &self,
         property: &Array3<f64>,
         geometry: &Array3<f64>,
         i: usize,
@@ -129,7 +128,7 @@ impl GhostCellMethod {
     }
 
     /// Extrapolate value using polynomial fitting
-    fn extrapolate_value(&self, values: &[f64], order: usize) -> f64 {
+    fn extrapolate_value(values: &[f64], order: usize) -> f64 {
         if values.is_empty() {
             return 0.0;
         }

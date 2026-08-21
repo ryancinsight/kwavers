@@ -7114,6 +7114,13 @@ Clippy now reports three pre-existing boundary sites in smoothing. The refreshed
 `unused_self` count is 99 sites with zero in CPML, the FEM/BEM managers, `kwavers-imaging`,
 `kwavers-receiver`, `kwavers-mesh`, `kwavers-grid`, `kwavers-signal`, and `kwavers-solver`.
 
+The `kwavers-boundary` smoothing slice converts ghost-cell neighbor collection, ghost-cell
+extrapolation, and immersed-interface correction to associated functions and migrates all callers.
+Package check, targeted `unused_self` Clippy, Nextest (97/97), doctests (4/4; 1 ignored), and
+warning-denied rustdoc pass. The refreshed workspace `unused_self` count is 96 sites with zero in
+`kwavers-boundary`, CPML, the FEM/BEM managers, `kwavers-imaging`, `kwavers-receiver`,
+`kwavers-mesh`, `kwavers-grid`, `kwavers-signal`, and `kwavers-solver`.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.

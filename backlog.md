@@ -797,6 +797,12 @@
   smoothing. The refreshed workspace `unused_self` count is 99 sites with zero in CPML, FEM/BEM
   managers, `kwavers-imaging`, `kwavers-receiver`, `kwavers-mesh`, `kwavers-grid`,
   `kwavers-signal`, and `kwavers-solver`.
+- 2026-08-21 `kwavers-boundary` smoothing slice is implemented: ghost-cell neighbor collection,
+  ghost-cell extrapolation, and immersed-interface correction are associated functions with all
+  callers migrated. Package check, targeted `unused_self` Clippy, Nextest (97/97), doctests
+  (4/4; 1 ignored), and warning-denied rustdoc pass; the refreshed workspace `unused_self` count
+  is 96 sites with zero in `kwavers-boundary`, CPML, FEM/BEM managers, `kwavers-imaging`,
+  `kwavers-receiver`, `kwavers-mesh`, `kwavers-grid`, `kwavers-signal`, and `kwavers-solver`.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
