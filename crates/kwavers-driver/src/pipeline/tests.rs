@@ -1,4 +1,4 @@
-//! Tests for the `pipeline` slice (Phase 4m carve-out), verbatim from the flat `mod tests`.
+//! Tests for the `pipeline` slice.
 
 use super::config::role_dissipation_w;
 use super::cooptimize::grid_occupancy_shorts;

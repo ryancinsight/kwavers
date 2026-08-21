@@ -1,4 +1,4 @@
-//! Consolidated tests for the `manifest` slice (Phase 4f carve-out): the stimulation-protocol
+//! Consolidated tests for the `manifest` slice: the stimulation-protocol
 //! schema, the `DriverManifest` text round-trip (v1/v2, single-stim + per-tile forms, schema
 //! guards), the v2 energy-budget validator, and the board extractor. Moved verbatim from the flat
 //! `src/manifest.rs` `mod tests` block; `super::*` resolves the slice facade and the SSOT

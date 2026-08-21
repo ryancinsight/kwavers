@@ -1,14 +1,11 @@
-//! Steady-state thermal field of the board, by 2D heat conduction — Phase 3b slice.
+//! Steady-state thermal field of the board, by 2-D heat conduction.
 //!
-//! # Phase 1a migration roadmap
+//! # Units
 //!
-//! Public functions accept `f64` watts / kelvin / m·K / celsius. The signatures stay flat-`f64`
-//! for Phase 1a — replacing them with `Watt` / `Kelvin` / `Celsius` (from `crate::units`) requires
-//! touching every caller (especially `crate::driver`, which threads power figures through
-//! `pulser_dissipation`). Phase 2 will migrate the function parameters and return values at the
-//! time the `physics/thermal` vertical slice gets its full lift; Phase 1a only ships the
-//! underlying newtypes so future imports can opt into compile-time unit safety on a per-call-site
-//! basis.
+//! Public functions take and return plain `f64` in their documented SI units — watts,
+//! kelvin, W/(m·K), celsius. Adopting the `Watt` / `Kelvin` / `Celsius` newtypes here
+//! reaches every caller that threads power figures through `crate::driver`, so it is
+//! tracked as its own step in `docs/MIGRATION.md`.
 //!
 //! The HV power stage is the measured hot spot in the source paper, with passive heatsinks on the
 //! board. This solves the steady-state heat equation in the board plane,

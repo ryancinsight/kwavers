@@ -1,4 +1,4 @@
-//! Commutation-loop inductance / EMI — `physics::emi` vertical slice (Phase 3d).
+//! Commutation-loop inductance and EMI.
 //!
 //! # SSOT for the slice
 //!
@@ -23,7 +23,7 @@
 //!
 //! [`scene::commutation_loops`] reads [`Component`](crate::place::component::Component) + [`FootprintDef`](crate::place::footprint::FootprintDef) from
 //! [`crate::place`] for the scene walk; that Tier-2 dependency has been in place since
-//! `place` closed at Phase 2c and is preserved verbatim. The `pad_on_net` helper relies
+//! `place` is preserved verbatim. The `pad_on_net` helper relies
 //! on [`crate::place::component::Component::placed_pads`] which assumes the slice-internal
 //! `Role::Decoupling` filter on the cap's footprint.
 

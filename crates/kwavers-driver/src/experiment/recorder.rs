@@ -1,4 +1,4 @@
-//! Deterministic experiment artifact — immutable output bundle for one `run_experiment` call (Phase 5).
+//! Deterministic experiment artifact — the immutable output bundle for one `run_experiment` call.
 //!
 //! [`ExperimentRecord`] is a pure-data struct: it carries the pre-step, the aggregated metrics,
 //! and the beam `PhysicsReport` produced by a single `run_experiment` invocation. File emission

@@ -21,7 +21,7 @@
 //!
 //! # Slice layout
 //!
-//! Carved by **role** (Phase 4i). Plain backticks name the slice-private submodules; the public
+//! Carved by **role**. Plain backticks name the slice-private submodules; the public
 //! items each hosts stay clickable.
 //! * `pulser_ic` — the [`PulserIc`] datasheet record, the [`StockStatus`] enum, and the derived
 //!   per-IC property accessors.

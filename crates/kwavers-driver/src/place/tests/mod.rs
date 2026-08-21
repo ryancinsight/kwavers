@@ -1,11 +1,10 @@
 //! Slice-wide tests for the `place` slice.
 //!
-//! Phase 2c consolidated the previously-inline `mod tests { ... }` blocks of
+//! Consolidated from the previously-inline `mod tests { ... }` blocks of
 //! `src/place/{mod, footprint, footprint_import, component, symbol_import}.rs`
-//! into a single `crate::place::tests` module. The pattern matches the Phase 2a
-//! `cost::tests` / Phase 2b `route::tests` migration: one slice-wide test file
-//! collects the topology tests + parser pinning tests + integration tests so an
-//! external reviewer can grep `tests.rs` once and see the entire place-slice
+//! into a single `crate::place::tests` module, matching the convention every slice
+//! follows: one test file per slice, collecting the topology, parser-pinning, and
+//! integration tests so a reviewer can read `tests.rs` once and see the entire place-slice
 //! behaviour contract.
 //!
 //! The S-expression kernel (`Sexpr`, `parse_sexpr`, `child`, `num`, `xyz_child`) now lives at

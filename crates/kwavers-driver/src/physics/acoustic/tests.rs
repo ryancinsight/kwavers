@@ -1,12 +1,9 @@
-//! Slice-wide tests for the [`crate::physics::acoustic`] vertical slice (Phase 3g).
+//! Slice-wide tests for the [`crate::physics::acoustic`] slice.
 //!
-//! Phase 3g consolidated the previously-inline `mod tests { ... }` block of the flat
-//! `src/acoustic.rs` into this single `crate::physics::acoustic::tests` module, mirroring
-//! the Phase 2c `place::tests` / Phase 3f `si::tests` consolidation pattern: one slice-wide
-//! test file collects the existing 13-test surface + the 3 NEW slice APIs
-//! (`bvd_anti_resonance_hz`, `isppa_w_per_m2`, `round_trip_attenuation_db`) so an
-//! external reviewer can grep `tests.rs` once and see the entire acoustic-slice behavioural
-//! contract.
+//! Consolidated from the previously-inline `mod tests { ... }` block of the flat
+//! `src/acoustic.rs` into this single `crate::physics::acoustic::tests` module, matching
+//! the convention every slice follows: one test file per slice, so a reviewer can read
+//! `tests.rs` once and see the entire acoustic-slice behavioural contract.
 
 use crate::physics::acoustic::{
     acoustic_intensity_w_per_m2, array_factor, bvd_anti_resonance_hz, bvd_series_resonance_hz,
@@ -183,7 +180,7 @@ fn shock_parameter_scales_with_pressure_and_distance() {
     assert!(nonlinear_shock_parameter(0.0, 2.0e6, 10.0e-3, 1050.0, 1540.0, 6.0).is_infinite());
 }
 
-// ───────── Phase 3g NEW APIs: bvd_anti_resonance_hz + isppa_w_per_m2 + round_trip_attenuation_db ─────────
+// ───────── bvd_anti_resonance_hz + isppa_w_per_m2 + round_trip_attenuation_db ─────────
 
 #[test]
 fn bvd_anti_resonance_sits_above_series_branch_with_coupled_c0() {

@@ -83,6 +83,128 @@ consus-npy = { version = "0.1.0", git = "https://github.com/ryancinsight/consus.
 rand = "0.9"
 criterion = "0.5"
 
+[workspace.lints.clippy]
+# Canonical Atlas floor (template SSOT: repos/apollo/Cargo.toml L88-L107).
+# `all` + `pedantic` at warn, priority = -1 so they evaluate before
+# crate-level allows. The `allow` set below mirrors apollo's template
+# verbatim so atlas-wide existing-debt stays non-regressive.
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+# Canonical Atlas library hygiene. The template denies these four; Kwavers
+# adopts them at `warn` because the workspace carries ~4,000 `unwrap()` calls
+# (244 outside `#[cfg(test)]`), and a workspace-level `deny` would make
+# `cargo clippy -p kwavers-solver` unusable long before the debt is burned
+# down. `warn` keeps the signal and the count; `allow` would erase both.
+# Ratchet to `deny` per crate as each reaches zero -- the two crates CI gates
+# with `-D warnings` are already there.
+print_stdout = "warn"
+dbg_macro = "warn"
+module_name_repetitions = "allow"
+must_use_candidate = "allow"
+similar_names = "allow"
+too_many_lines = "allow"
+default_constructed_unit_structs = "allow"
+doc_lazy_continuation = "allow"
+needless_range_loop = "allow"
+too_many_arguments = "allow"
+manual_is_multiple_of = "allow"
+manual_div_ceil = "allow"
+manual_slice_size_calculation = "allow"
+len_zero = "allow"
+cast_possible_truncation = "allow"
+cast_precision_loss = "allow"
+cast_sign_loss = "allow"
+cast_possible_wrap = "allow"
+items_after_statements = "allow"
+range_minus_one = "allow"
+default_trait_access = "allow"
+useless_conversion = "allow"
+# Pedantic lints that fire in test/bench/example targets with existing
+# patterns. Addressed per-ratchet; the workspace floor stays non-regressive.
+float_cmp = "allow"
+uninlined_format_args = "allow"
+map_unwrap_or = "allow"
+manual_let_else = "allow"
+manual_midpoint = "allow"
+match_wildcard_for_single_variants = "allow"
+no_effect_underscore_binding = "allow"
+semicolon_if_nothing_returned = "allow"
+unnecessary_wraps = "allow"
+unreadable_literal = "allow"
+doc_markdown = "allow"
+cloned_instead_of_copied = "allow"
+match_same_arms = "allow"
+redundant_closure_for_method_calls = "allow"
+cast_lossless = "allow"
+duration_suboptimal_units = "allow"
+many_single_char_names = "allow"
+format_push_string = "allow"
+unnecessary_trailing_comma = "allow"
+struct_field_names = "allow"
+if_not_else = "allow"
+explicit_iter_loop = "allow"
+cast_abs_to_unsigned = "allow"
+comparison_chain = "allow"
+field_reassign_with_default = "allow"
+module_inception = "allow"
+used_underscore_binding = "allow"
+
+# Residual pedantic lints that the arena allocator trips today. Existing debt,
+# allowed to keep the floor non-regressive rather than suppressed on the merits:
+# `cast_ptr_alignment` is inherent to an arena handing out typed views of a byte
+# block, and the alignment invariant belongs in a per-site `# SAFETY` note
+# rather than a blanket allow. Ratchet: kwavers-core/src/arena.
+cast_ptr_alignment = "allow"
+ptr_as_ptr = "allow"
+needless_pass_by_value = "allow"
+needless_continue = "allow"
+single_match_else = "allow"
+elidable_lifetime_names = "allow"
+
+
+# ---------------------------------------------------------------------------
+# Brownfield debt baseline (KW-LINT-1).
+#
+# These lints fire on pre-existing code across the workspace. They are held at
+# `allow` so the floor above lands non-regressive, and each carries the count
+# measured at adoption against
+# `cargo clippy -p kwavers --features pinn --lib` (which lints every path
+# member, i.e. the whole workspace). The numbers are the ratchet: burn a lint
+# to zero, then delete its line here so the floor re-enables it. They are debt,
+# not policy -- nothing below is endorsed.
+#
+# The two crates CI gates directly (kwavers-core, the kwavers facade) trip none
+# of these today; they are clean on the merits, not by this block.
+unused_self = "allow"                              # 257
+unwrap_used = "allow"                              # 255 -- production sites; test modules carry scoped `#[expect]`
+missing_panics_doc = "allow"                       # 225
+missing_errors_doc = "allow"                       # 119
+return_self_not_must_use = "allow"                 # 21
+unnecessary_literal_bound = "allow"                # 19
+missing_fields_in_debug = "allow"                  # 18
+pub_underscore_fields = "allow"                    # 17
+from_iter_instead_of_collect = "allow"             # 15
+struct_excessive_bools = "allow"                   # 14
+needless_for_each = "allow"                        # 12
+assigning_clones = "allow"                         # 11
+inline_always = "allow"                            # 10
+case_sensitive_file_extension_comparisons = "allow" # 8
+wildcard_imports = "allow"                         # 6
+trivially_copy_pass_by_ref = "allow"               # 5
+stable_sort_primitive = "allow"                    # 3
+ref_option = "allow"                               # 3
+implicit_clone = "allow"                           # 3
+zero_sized_map_values = "allow"                    # 2
+unnecessary_semicolon = "allow"                    # 2
+implicit_hasher = "allow"                          # 2
+doc_comment_double_space_linebreaks = "allow"      # 2
+print_stderr = "allow"                             # 1
+unchecked_time_subtraction = "allow"               # 1
+self_only_used_in_recursion = "allow"              # 1
+large_types_passed_by_value = "allow"              # 1
+expl_impl_clone_on_copy = "allow"                  # 1
+bool_to_int_with_if = "allow"                      # 1
+
 [workspace.lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
 

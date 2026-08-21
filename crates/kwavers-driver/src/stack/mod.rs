@@ -21,7 +21,7 @@
 //! plain backticks dodge it while keeping the public types each submodule hosts clickable as
 //! `[`Type`]`. Matches the established codebase precedent at
 //! `cost/{adapter.rs, geometry_modulated.rs, mod.rs, physics.rs}` + `route/tree.rs`.)
-//! The slice is carved by **role** (Phase 4e output-slice migration), not by file-size symmetry:
+//! The slice is carved by **role**, not by file-size symmetry:
 //! * `plan` — single-board thermal/height/capacity optimiser ([`StackConstraints`], [`StackPlan`],
 //!   [`board_rise_k`], [`optimize_stack`]).
 //! * `role` — the [`StackBoardRole`] controller/driver enum + manifest spelling.

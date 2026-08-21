@@ -94,7 +94,7 @@ pub enum Manifest {
 // place where the `?`-propagating `Result<T, std::io::Error>` / `Result<T, E>`
 // conversions converge into one literal that downstream callers can read at a
 // glance. Keeping them public is the cross-module dedup configuration called out
-// in `docs/MIGRATION.md` § Phase 1b follow-ups.
+// in `docs/MIGRATION.md`.
 // ────────────────────────────────────────────────────────────────────────────
 
 /// Lift a `std::io::Error` into a `crate::Error` whose `Io` variant carries the
@@ -143,11 +143,11 @@ pub fn parse_err(offset: usize, message: impl Into<String>) -> crate::Error {
     .into()
 }
 
-// Phase 1c polish: `parse_err` is the byte-positioned form (threaded by `parse_sexpr`'s
+// `parse_err` is the byte-positioned form (threaded by `parse_sexpr`'s
 // `char_indices()` loop); `parse_msg` is the no-offset flavor for post-parse validation.
 // `parse_sexpr` also surfaces a previously-silent unclosed-string-literal diagnostic via
 // `parse_err(src.len(), "unclosed string literal")`. Full write-up at
-// `docs/MIGRATION.md` § Phase 1c polish.
+// `docs/MIGRATION.md`.
 
 /// Convenience flavor of [`parse_err`] for callers without a byte tracker — structural
 /// validation that runs on a successfully parsed result (e.g. `import_kicad_mod`'s

@@ -1,7 +1,7 @@
 //! Placement rotation primitives: the 90°-step orientation enum + the footprint's
 //! rotation-freedom policy.
 //!
-//! Phase 2c carved this out of `src/place/footprint.rs` per the spec's
+//! Held here rather than in `src/place/footprint.rs` per the spec's
 //! `place/{mod, anneal, energy, footprint, import, rotation, tests}.rs` layout.
 //! The `Rot` enum is a 4-variant ZST marker (zero bytes; the four 90° orientation
 //! steps for KiCad footprint-angle emit). The `RotationPolicy` enum is a 3-variant

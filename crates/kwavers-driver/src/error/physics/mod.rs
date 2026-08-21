@@ -10,9 +10,10 @@
 //! * [`si::Si`] — signal integrity (microstrip/stripline impedance, crosstalk, skew).
 //! * [`acoustic::Acoustic`] — acoustic domain (pulser profile, focal mismatch).
 //!
-//! Each sub-enum exposes the forward-looking variants the corresponding slice will
-//! migrate into as Phase 2 / Phase 3 unfold. Today they are placeholders with
-//! `#[non_exhaustive]`, so the slice can grow without breaking the aggregator.
+//! Each sub-enum declares the variants its slice will return once that slice's kernels
+//! stop absorbing budget breaches and start returning `Result`. Until then they carry no
+//! constructed variants; `#[non_exhaustive]` lets each grow without breaking the
+//! aggregator. The adoption order is tracked in `docs/MIGRATION.md`.
 
 pub mod acoustic;
 pub mod emi;

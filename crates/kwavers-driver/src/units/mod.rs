@@ -31,7 +31,7 @@
 //!
 //! # Slice layout
 //!
-//! Carved by **role** (Phase 4k). Plain backticks name the slice-private submodules; the public
+//! Carved by **role**. Plain backticks name the slice-private submodules; the public
 //! items each hosts stay clickable.
 //! * `length` — the [`Nm`] integer board-space length newtype (independent of the soft-unit system).
 //! * `quantity` — the [`Unit`] trait, the `#[repr(transparent)]` [`Float<U>`] wrapper, and

@@ -19,7 +19,7 @@
 //!
 //! # Module layout
 //!
-//! The cost seam is split across several files (Phase 2a carve-out from the previously-flat
+//! The cost seam is split across several files (carved from the previously-flat
 //! `src/cost.rs`). All references below are plain markdown backticks rather than `[`X`](path)`
 //! intra-doc links — the kernels + penalty constants are `pub(super)` (crate-internal), so
 //! rustdoc's `private_intra_doc_links` lint rejects clickable links to them from the public

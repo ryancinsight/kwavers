@@ -1,4 +1,4 @@
-//! Tests for the `dfm` slice (Phase 4l carve-out). Moved verbatim from the flat `src/dfm.rs`
+//! Tests for the `dfm` slice. Moved verbatim from the flat `src/dfm.rs`
 //! `mod tests` block; `super::*` resolves the slice facade.
 
 use super::*;

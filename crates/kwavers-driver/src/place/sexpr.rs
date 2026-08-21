@@ -4,7 +4,7 @@
 //!
 //! Second-occurrence consolidation trigger: `io::pcb_parse` is the second consumer of the
 //! S-expression type system, so the parser migrated here from `footprint_import.rs`
-//! (where it lived as `pub(super)` from Phase 2c).
+//! (where it was `pub(super)`).
 //!
 //! # Evidence tier
 //!

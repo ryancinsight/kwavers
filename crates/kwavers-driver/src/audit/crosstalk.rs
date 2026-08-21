@@ -1,3 +1,23 @@
+//! Pre-routing coupling signals: HV-to-LV pad proximity, flight-line crossings, and the
+//! shared point-copper model.
+//!
+//! These audits run on *placement*, not on routed copper, so they can steer the placer
+//! before any track exists:
+//!
+//! * [`emi_hotspots`] — pad pairs closer than a coupling distance where exactly one side is
+//!   high-voltage. Restricting it to the HV-to-non-HV relationship is what makes it a
+//!   placement signal: it pushes the switching node away from sensitive control, whereas
+//!   low-voltage-to-low-voltage adjacency is already covered by
+//!   `crate::audit::shorts::near_shorts`. Pair midpoints come back as hotspot feedback.
+//! * `net_flight_lines` — a net's pads joined by a Prim minimum spanning tree, the
+//!   pre-routing estimate of where its copper will run.
+//! * `flight_crossings` — proper crossings between different nets' flight lines. A crossing
+//!   predicts a layer change or a detour before the router commits to one.
+//! * `point_features` — the shared copper model for via and pad centres, each a disc of
+//!   some radius existing only on an inclusive layer span. Clearance checks consume it so
+//!   their results do not depend on how finely the router segmented a run, and so a
+//!   0-to-1 microvia is correctly treated as absent from layers 2 and 3.
+
 use crate::audit::fault_report::is_hv;
 use crate::board::{Board, NetId};
 use crate::geom::{segments_cross, Nm, Point};

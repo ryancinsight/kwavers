@@ -113,7 +113,7 @@ pub fn write_kicad_pcb(
     let mut uuid = Uuid(0);
     let mut s = String::with_capacity(64 * 1024);
 
-    // Header. KICAD_PCB_FORMAT_VERSION + KICAD_GENERATOR_NAME come from crate::ssot (Phase 1c).
+    // Header. KICAD_PCB_FORMAT_VERSION + KICAD_GENERATOR_NAME come from crate::ssot.
     s.push_str(&format!(
         "(kicad_pcb (version {KICAD_PCB_FORMAT_VERSION}) (generator \"{KICAD_GENERATOR_NAME}\")\n"
     ));

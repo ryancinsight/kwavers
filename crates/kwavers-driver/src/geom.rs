@@ -7,11 +7,11 @@
 //!
 //! # SSOT for [`Nm`]
 //!
-//! Phase 1a relocated the authoritative [`Nm`] (length newtype over integer nanometres) to
-//! [`crate::units`]. `geom` re-exports it transparently so every existing `crate::geom::Nm`
-//! reference — including the field types on [`Point`] / [`GridSpec`] / the board model — keeps
-//! type-identical (no migration cost at the call-site). The authoritative path forward is
-//! [`crate::units::Nm`]; `crate::geom::Nm` is kept as a convenience alias.
+//! The authoritative [`Nm`] — the length newtype over integer nanometres — is defined in
+//! [`crate::units`]. `geom` re-exports it transparently, so `crate::geom::Nm` and
+//! [`crate::units::Nm`] name the same type and every existing reference, including the
+//! field types on [`Point`] / [`GridSpec`] / the board model, stays type-identical. Prefer
+//! [`crate::units::Nm`] in new code.
 
 pub use crate::units::Nm;
 

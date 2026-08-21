@@ -1,3 +1,8 @@
+#![expect(
+    clippy::unwrap_used,
+    reason = "test assertions: a failed unwrap is the test failure"
+)]
+
 use super::*;
 
 #[test]

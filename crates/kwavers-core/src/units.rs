@@ -55,6 +55,11 @@ pub fn alpha_db_per_mhz_cm_to_np_per_m(
 
 #[cfg(test)]
 mod tests {
+    #![expect(
+        clippy::unwrap_used,
+        reason = "test assertions: a failed unwrap is the test failure"
+    )]
+
     use super::*;
 
     #[test]

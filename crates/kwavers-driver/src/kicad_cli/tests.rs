@@ -1,4 +1,4 @@
-//! Consolidated tests for the `kicad_cli` slice (Phase 4a carve-out): the DRC pass gate, the
+//! Consolidated tests for the `kicad_cli` slice: the DRC pass gate, the
 //! `pcb drc` argument assembly, the version-tolerant JSON parser, the fab-bundle summary, and the
 //! `PATH` probe. Moved verbatim from the flat `src/kicad_cli.rs` `mod tests` block; the slice-private
 //! helpers (`drc_args`, `parse_drc_json`, `locate_on_path`) are reached through their `pub(super)`
