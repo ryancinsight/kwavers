@@ -7055,6 +7055,9 @@ and migrates both contiguous gradient/divergence callers. Package Nextest passes
 doctests pass 3/3 (7 ignored), warning-denied rustdoc passes, and the refreshed workspace
 `unused_self` count is 120 sites.
 
+Latest integrated head after PR #508 (`576f70ccb`) re-smokes the package examples build and both
+mdBook test/build commands; all exit 0 and the HTML book is written to `target/book`.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.
