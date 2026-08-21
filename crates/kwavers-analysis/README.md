@@ -26,7 +26,9 @@ validation plot can always be regenerated from the run that produced it.
 
 ## Features
 
-- `gpu-visualization` — enables the `visualization` module's GPU-rendered field views.
+- `gpu-visualization` — enables provider-neutral visualization transfer. The
+  application selects Leto host storage or the Hephaestus GPU provider; the
+  analysis crate does not acquire devices or depend on WGPU.
 
 ## Documentation
 

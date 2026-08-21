@@ -7,7 +7,9 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_field::UnifiedFieldType;
 use kwavers_grid::Grid;
 use leto::{Array3, Array4};
-use log::{debug, info, warn};
+#[cfg(not(feature = "gpu-visualization"))]
+use log::warn;
+use log::{debug, info};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
@@ -38,6 +40,9 @@ pub struct VisualizationEngine {
     /// Data pipeline for GPU transfers
     #[cfg(feature = "gpu-visualization")]
     data_pipeline: Option<data_pipeline::DataPipeline>,
+    /// Provider-neutral transfer provider awaiting pipeline construction
+    #[cfg(feature = "gpu-visualization")]
+    transfer_provider: Option<Box<dyn super::transfer_contract::VisualizationTransferProvider>>,
     /// Interactive controls
     #[cfg(feature = "gpu-visualization")]
     controls: Option<controls::InteractiveControls>,
@@ -70,6 +75,8 @@ impl VisualizationEngine {
             #[cfg(feature = "gpu-visualization")]
             data_pipeline: None,
             #[cfg(feature = "gpu-visualization")]
+            transfer_provider: None,
+            #[cfg(feature = "gpu-visualization")]
             controls: None,
         })
     }
@@ -78,16 +85,50 @@ impl VisualizationEngine {
     /// # Errors
     /// - Propagates any `KwaversError` returned by called functions.
     ///
+    /// Inject a provider-neutral transfer provider.
+    ///
+    /// The engine cannot construct device-backed providers itself: concrete
+    /// acquisition lives behind the provider boundary (for example
+    /// `kwavers-gpu`'s Hephaestus-backed WGPU implementation), keeping the
+    /// dependency direction acyclic. Callers able to construct a provider must
+    /// inject it before [`Self::initialize_gpu`].
+    #[cfg(feature = "gpu-visualization")]
+    pub fn set_transfer_provider(
+        &mut self,
+        provider: Box<dyn super::transfer_contract::VisualizationTransferProvider>,
+    ) {
+        self.transfer_provider = Some(provider);
+    }
+
+    /// Initialize GPU resources
+    ///
+    /// # Errors
+    ///
+    /// Returns [`KwaversError::System`] with `FeatureNotAvailable` when no
+    /// transfer provider has been injected via [`Self::set_transfer_provider`];
+    /// the engine never silently degrades a requested GPU path to CPU
+    /// execution.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub async fn initialize_gpu(&mut self) -> KwaversResult<()> {
         info!("Initializing GPU resources for visualization");
 
         #[cfg(feature = "gpu-visualization")]
         {
-            // Initialize renderer with GPU context
+            let provider = self.transfer_provider.take().ok_or_else(|| {
+                KwaversError::System(kwavers_core::error::SystemError::FeatureNotAvailable {
+                    feature: "gpu-visualization".to_string(),
+                    reason: "no transfer provider injected; call set_transfer_provider with a \
+                             provider from the GPU boundary first"
+                        .to_string(),
+                })
+            })?;
+
+            // Initialize renderer (CPU rasterization path)
             self.renderer = Some(renderer::Renderer3D::create(self.config.clone())?);
 
-            // Initialize data pipeline for efficient GPU transfers
-            self.data_pipeline = Some(data_pipeline::DataPipeline::new().await?);
+            // Wrap the injected provider in the provider-generic pipeline
+            self.data_pipeline = Some(data_pipeline::DataPipeline::new(provider));
 
             // Initialize interactive controls
             self.controls = Some(controls::InteractiveControls::create(&self.config)?);
@@ -133,9 +174,12 @@ impl VisualizationEngine {
                     field_type, render_time, transfer_time
                 );
             } else {
-                warn!("GPU visualization not initialized. Call initialize_gpu() first.");
-                // Use fallback renderer
-                super::fallback::render_field(field, field_type, grid)?;
+                return Err(KwaversError::System(
+                    kwavers_core::error::SystemError::FeatureNotAvailable {
+                        feature: "gpu-visualization".to_string(),
+                        reason: "GPU renderer and data pipeline are not initialized; call initialize_gpu() first".to_string(),
+                    },
+                ));
             }
         }
 

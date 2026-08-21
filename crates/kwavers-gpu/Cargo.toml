@@ -24,6 +24,7 @@ kwavers-medium = { path = "../kwavers-medium", version = "4.0.0" }
 kwavers-signal = { path = "../kwavers-signal", version = "3.0.0" }
 kwavers-physics = { path = "../kwavers-physics", version = "3.0.0" }
 kwavers-solver = { path = "../kwavers-solver", version = "3.0.0" }
+kwavers-field = { path = "../kwavers-field", version = "3.0.0" }
 kwavers-analysis = { path = "../kwavers-analysis", features = ["gpu"], optional = true, version = "3.0.0" }
 
 leto = { workspace = true }
@@ -46,6 +47,12 @@ flume = { version = "0.11", optional = true }
 
 [features]
 default = []
+# Visualization transfer provider: concrete WGPU ownership behind the
+# provider-neutral seam in kwavers-analysis::visualization::transfer_contract.
+visualization = [
+    "gpu",
+    "kwavers-analysis/gpu-visualization",
+]
 # Provider-generic GPU backend feature. Enables the current WGPU/WGSL provider
 # and the ComputeBackend/FdtdGpuAccelerator implementations.
 gpu = [

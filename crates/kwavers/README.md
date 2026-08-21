@@ -3,9 +3,10 @@
 Top-level application and integration crate for the
 [kwavers](https://github.com/ryancinsight/kwavers) ultrasound–light simulation workspace.
 
-**This crate is not a facade.** It re-exports nothing. It carries the `kwavers` binary, the
-cross-cutting integration tests, examples, and benchmarks, and a small set of application
-utilities. Library consumers depend on the layer crates directly.
+This crate carries the `kwavers` binary, cross-cutting integration tests, examples, and
+benchmarks, plus a small set of application utilities. Library consumers generally depend
+on the layer crates directly; the `gpu-visualization` feature also re-exports the explicit
+visualization backend selector for application-bound setup.
 
 ## Which crate do I depend on?
 
@@ -27,6 +28,7 @@ utilities. Library consumers depend on the layer crates directly.
 | Governing equations | [`kwavers-physics`](https://docs.rs/kwavers-physics) |
 | Forward and inverse solvers | [`kwavers-solver`](https://docs.rs/kwavers-solver) |
 | GPU compute backends | [`kwavers-gpu`](https://docs.rs/kwavers-gpu) |
+| Selectable visualization transfer | `kwavers::visualization::VisualizationBackend` with `gpu-visualization` |
 | Run orchestration and result I/O | [`kwavers-simulation`](https://docs.rs/kwavers-simulation) |
 | Post-run analysis and validation | [`kwavers-analysis`](https://docs.rs/kwavers-analysis) |
 | Diagnostic imaging workflows | [`kwavers-diagnostics`](https://docs.rs/kwavers-diagnostics) |

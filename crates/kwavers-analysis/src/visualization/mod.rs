@@ -3,12 +3,12 @@
 //! Core visualization and rendering infrastructure for the acoustic simulation library.
 //!
 //! ## Features
-//! - **Real-time Rendering**: GPU-accelerated visualization of acoustic fields
-//! - **Multiple Backends**: Support for OpenGL, Vulkan, and WebGPU
+//! - **Real-time Rendering**: provider-backed field transfer and CPU rasterization
+//! - **Selectable Backends**: Leto host storage or Hephaestus device transfer
 //! - **Adaptive Quality**: Dynamic quality adjustment based on performance
 //! - **Interactive Controls**: Real-time parameter adjustment and view manipulation
 //! - **Data Export**: High-quality image and video export capabilities
-//! - **Fallback Support**: CPU-based rendering when GPU is unavailable
+//! - **Explicit CPU Mode**: CPU fallback is selected when GPU visualization is disabled
 //!
 //! ## Architecture
 //! ```text
@@ -16,7 +16,8 @@
 //! ├── Config (configuration management)
 //! ├── Metrics (performance tracking)
 //! ├── Engine (core rendering pipeline)
-//! └── Fallback (CPU-based rendering)
+//! ├── Transfer contract (provider-neutral field upload)
+//! └── Fallback (CPU-based rendering when the feature is disabled)
 //! ```
 //!
 //! ## Design Principles
@@ -40,11 +41,17 @@ pub mod data_pipeline;
 pub mod renderer;
 #[cfg(feature = "gpu-visualization")]
 pub mod stream;
+// Provider-neutral transfer seam; the domain crate owns the contract, the
+// Hephaestus-backed WGPU implementation lives in kwavers-gpu.
+#[cfg(feature = "gpu-visualization")]
+pub mod transfer_contract;
 
 // Re-exports for convenience
 pub use config::{ColorScheme, RenderQuality, VisualizationConfig};
 pub use engine::VisualizationEngine;
 pub use metrics::{MetricsTracker, VisualizationMetrics};
+#[cfg(feature = "gpu-visualization")]
+pub use transfer_contract::VisualizationTransferProvider;
 
 // Re-export field types
 pub use kwavers_field::mapping::UnifiedFieldType;
