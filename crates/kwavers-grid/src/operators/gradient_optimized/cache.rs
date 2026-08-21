@@ -61,7 +61,7 @@ where
             cache.resize(order as usize + 1, Vec::new());
         }
 
-        cache[order as usize] = coeffs.clone();
+        cache[order as usize].clone_from(&coeffs);
         coeffs
     }
 

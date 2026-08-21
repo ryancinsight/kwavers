@@ -1223,6 +1223,11 @@
   5 ignored), warning-denied Rustdoc for both packages, and the exact production workspace scan
   pass. The production workspace count decreases from 3 to 0 sites; the ratchet override is
   removed from `Cargo.toml`.
+- 2026-08-21 `assigning_clones` grid slice is complete: gradient coefficient cache refresh now
+  uses `clone_from` to reuse the existing vector allocation. Warning-denied grid Clippy, 46/46
+  Nextest, doctests (1 passed; 1 ignored), warning-denied Rustdoc, and the exact production scan
+  pass. The production workspace count decreases from 11 to 10 sites; the root ratchet comment is
+  updated.
 
 ## KW-LINT-REC-01 — Type recorder channel selection [major] — done
 

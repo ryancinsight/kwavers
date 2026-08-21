@@ -7574,6 +7574,12 @@ packages, combined Nextest (935/935), package doctests (1 passed in each package
 Rustdoc for both packages, and the exact production workspace scan pass with zero remaining sites.
 The ratchet override is removed from `Cargo.toml`.
 
+The `kwavers-grid` `assigning_clones` slice changes gradient coefficient cache refresh to
+`clone_from`, reusing the existing vector allocation while preserving the returned coefficient
+values. Warning-denied package Clippy, Nextest (46/46), doctests (1 passed; 1 ignored), warning-
+denied Rustdoc, and the exact production workspace scan pass. The exact production workspace count
+decreases from 11 to 10 sites; the root ratchet comment is updated.
+
 Final exact-revision validation at merged revision `192eb7575` passes workspace Nextest (5,781/5,781
 with 7 configured skips) and workspace doctests with no failures. The previously recorded example
 build and mdBook test/build remain valid because the final changes are lint-only production edits and
