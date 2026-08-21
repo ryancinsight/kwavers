@@ -1197,6 +1197,11 @@
   redacted markers for opaque plans/backends. Warning-denied solver Clippy, 902/902 Nextest with
   4 configured skips, doctests (5 passed; 8 ignored), warning-denied Rustdoc, and the exact
   production workspace scan pass. The `missing_fields_in_debug` ratchet override is removed.
+- 2026-08-21 `pub_underscore_fields` solver slice is complete: the placeholder `_reserved` field
+  is removed from `SpectralElasticConfig`, which is now an explicit unit configuration type.
+  Warning-denied solver Clippy, 902/902 Nextest with 4 configured skips, doctests (5 passed; 8
+  ignored), and warning-denied Rustdoc pass. The exact production workspace count decreases from
+  16 to 15 sites; the root ratchet comment is updated.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
