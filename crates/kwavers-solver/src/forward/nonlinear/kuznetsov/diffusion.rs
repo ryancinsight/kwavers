@@ -68,6 +68,11 @@ use moirai_parallel::{enumerate_mut_with, Adaptive};
 /// * `acoustic_diffusivity` - Diffusivity δ [m²/s]
 /// * `diffusive_term_out` - Pre-allocated output for `+(δ/c₀²)∂³p/∂t³`
 #[allow(clippy::too_many_arguments)]
+///
+/// # Panics
+///
+/// Panics if a caller-supplied shape or an internal solver state violates
+/// the precondition required by this operation.
 pub fn compute_diffusive_term_workspace(
     pressure: &Array3<f64>,
     pressure_prev: &Array3<f64>,

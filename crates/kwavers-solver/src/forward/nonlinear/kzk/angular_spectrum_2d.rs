@@ -80,6 +80,11 @@ impl AngularSpectrum2D {
     /// the real input, its spectrum, and the inverse-transformed result without
     /// changing the mathematical operator. This removes one real-to-complex
     /// allocation plus one allocating forward and inverse FFT per propagation.
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn propagate(&mut self, field: &mut ArrayViewMut2<f64>, distance: f64) {
         let k0 = TWO_PI * self.config.frequency / self.config.c0;
 

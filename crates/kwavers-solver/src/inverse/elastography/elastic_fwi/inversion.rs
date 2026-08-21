@@ -119,6 +119,11 @@ impl ElasticFwi {
     ///
     /// # Errors
     /// Propagates solver errors.
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn run_lbfgs(&mut self, memory: usize) -> KwaversResult<Array3<f64>> {
         let dim = self.solver.mu().shape();
         let mut model = self.solver.mu().clone();

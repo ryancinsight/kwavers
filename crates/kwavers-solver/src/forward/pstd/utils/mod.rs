@@ -97,6 +97,11 @@ fn scale_complex_view_in_place(mut values: ArrayViewMut2<'_, Complex64>, scale: 
 
 /// Compute wavenumber arrays for spectral operations
 /// Returns (kx, ky, kz) arrays with proper Nyquist handling
+///
+/// # Panics
+///
+/// Panics if a caller-supplied shape or an internal solver state violates
+/// the precondition required by this operation.
 pub fn compute_wavenumbers(grid: &Grid) -> (Array3<f64>, Array3<f64>, Array3<f64>) {
     let kx_vec = KSpaceCalculator::generate_k_vector(grid.nx, grid.dx);
     let ky_vec = KSpaceCalculator::generate_k_vector(grid.ny, grid.dy);

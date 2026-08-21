@@ -41,6 +41,11 @@ use std::f64::consts::PI;
 
 /// Compute Laplacian using spectral methods
 #[must_use]
+///
+/// # Panics
+///
+/// Panics if a caller-supplied shape or an internal solver state violates
+/// the precondition required by this operation.
 pub fn compute_laplacian(field: &Array3<f64>, grid: &Grid) -> Array3<f64> {
     let fft = get_fft_for_grid(grid.nx, grid.ny, grid.nz);
     let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
@@ -84,6 +89,11 @@ pub fn compute_laplacian(field: &Array3<f64>, grid: &Grid) -> Array3<f64> {
 }
 
 /// Compute gradient using spectral methods
+///
+/// # Panics
+///
+/// Panics if a caller-supplied shape or an internal solver state violates
+/// the precondition required by this operation.
 pub fn compute_gradient(
     field: &Array3<f64>,
     grid: &Grid,

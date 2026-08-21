@@ -57,6 +57,11 @@ impl<T: ElectromagneticWaveEquation> PhotoacousticSolver<T> {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn compute_initial_pressure(
         &mut self,
         fluence: &ArrayD<f64, VecStorage<f64>>,

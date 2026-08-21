@@ -47,6 +47,11 @@ impl TimeReversalReconstructor {
     /// # Errors
     /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn reconstruct(
         &mut self,
         pressure_data: &Array2<f64>,

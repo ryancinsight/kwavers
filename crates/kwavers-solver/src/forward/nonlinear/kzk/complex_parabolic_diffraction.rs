@@ -127,6 +127,11 @@ impl ParabolicDiffractionOperator {
     /// propagator and reverse phase curvature.
     ///
     /// References: Lee & Hamilton (1995) eq. (4); Aanonsen et al. (1984) §3.
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn apply_complex(&mut self, field: &mut ArrayViewMut2<Complex64>, step_size: f64) {
         let k0 = TWO_PI * self.config.frequency / self.config.c0;
 

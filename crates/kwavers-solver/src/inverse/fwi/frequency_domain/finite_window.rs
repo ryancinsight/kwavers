@@ -295,6 +295,11 @@ fn simulate_transmit(
 /// Returns an error when the grid, acquisition parameters, ring geometry, or
 /// sound-speed values violate the finite-window PSTD contract.
 #[allow(clippy::too_many_arguments)]
+///
+/// # Panics
+///
+/// Panics if a caller-supplied shape or an internal solver state violates
+/// the precondition required by this operation.
 pub fn finite_window_pstd_born_gradient(
     sound_speed_m_s: &Array3<f64>,
     acquisition: &dyn TransmissionAcquisition,

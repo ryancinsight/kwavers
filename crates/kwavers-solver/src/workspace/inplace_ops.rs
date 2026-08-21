@@ -5,6 +5,11 @@ use moirai_parallel::{enumerate_mut_with, for_each_mut_with, Adaptive};
 
 /// Add two arrays in-place: `a += b`.
 #[inline]
+///
+/// # Panics
+///
+/// Panics if a caller-supplied shape or an internal solver state violates
+/// the precondition required by this operation.
 pub fn add_inplace(a: &mut Array3<f64>, b: &Array3<f64>) {
     assert_eq!(
         a.shape(),
@@ -23,6 +28,11 @@ pub fn add_inplace(a: &mut Array3<f64>, b: &Array3<f64>) {
 
 /// Subtract two arrays in-place: `a -= b`.
 #[inline]
+///
+/// # Panics
+///
+/// Panics if a caller-supplied shape or an internal solver state violates
+/// the precondition required by this operation.
 pub fn sub_inplace(a: &mut Array3<f64>, b: &Array3<f64>) {
     assert_eq!(
         a.shape(),
@@ -53,6 +63,11 @@ pub fn scale_inplace(a: &mut Array3<f64>, scalar: f64) {
 
 /// Compute `a = a * b + c` in-place (fused multiply-add).
 #[inline]
+///
+/// # Panics
+///
+/// Panics if a caller-supplied shape or an internal solver state violates
+/// the precondition required by this operation.
 pub fn fma_inplace(a: &mut Array3<f64>, b: &Array3<f64>, c: &Array3<f64>) {
     assert_eq!(
         a.shape(),

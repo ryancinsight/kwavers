@@ -32,6 +32,11 @@ impl MonolithicCoupler {
     /// - Returns validation errors for invalid `dt`, Newton settings, empty
     ///   fields, or field/grid shape mismatches.
     /// - Propagates residual, line-search, or Jacobian-vector errors.
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn solve_coupled_step(
         &mut self,
         fields: &mut HashMap<UnifiedFieldType, Array3<f64>>,

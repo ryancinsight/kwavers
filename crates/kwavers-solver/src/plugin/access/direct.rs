@@ -47,6 +47,11 @@ impl<'a> DirectPluginFieldAccess<'a> {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn get_field(&self, field: UnifiedFieldType) -> KwaversResult<ArrayView3<'_, f64>> {
         let index = field.index();
         if !self.readable_indices.contains(&index) {
@@ -67,6 +72,11 @@ impl<'a> DirectPluginFieldAccess<'a> {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn get_field_mut(
         &mut self,
         field: UnifiedFieldType,

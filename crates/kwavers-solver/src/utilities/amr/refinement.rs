@@ -82,6 +82,11 @@ impl RefinementManager {
     /// # Errors
     /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn mark_cells(&self, error: &Array3<f64>, threshold: f64) -> KwaversResult<Array3<i8>> {
         let mut markers = Array3::zeros(error.shape());
 

@@ -39,6 +39,11 @@ impl AdaptiveMethodSelector {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn select_methods(
         &mut self,
         fields: &Array4<f64>,

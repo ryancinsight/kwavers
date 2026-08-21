@@ -557,6 +557,11 @@ impl ViscoacousticMemorySolver {
     /// Acoustic energy `Σ [p²/(2M_∞) + ρ|v|²/2] ΔV` \`J`. Conserved (to leapfrog
     /// round-off) for the lossless medium; decays monotonically with relaxation.
     #[must_use]
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn energy(&self) -> f64 {
         // PE = Σ p²/(2 M_∞(x));  KE = Σ ρ(x)|v|²/2 = Σ |v|²/(2/ρ) = Σ |v|²·inv_rho⁻¹/2.
         let pe = leto_ops::zip_fold(
@@ -644,6 +649,11 @@ impl ViscoacousticMemorySolver {
     }
 
     /// Advance the state by one time step `Δt`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn step(&mut self) {
         // 1. Velocity half-step: v += -(Δt/ρ(x)) ∇p (per component, per voxel).
         let dt = self.dt;

@@ -53,6 +53,11 @@ impl FwiProcessor {
     ///   `nt < 3`.
     /// - Propagates any [`crate::KwaversError`] from the forward/adjoint solve, the
     ///   misfit evaluation, or regularization.
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn invert_lbfgs(
         &self,
         observed_data: &leto::Array2<f64>,

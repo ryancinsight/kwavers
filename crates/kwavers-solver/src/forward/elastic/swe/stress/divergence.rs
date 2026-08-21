@@ -53,6 +53,11 @@ const STRESS_CHUNK: usize = 256;
 ///
 /// - `scratch`: pre-allocated workspace; all fields are overwritten before
 ///   use (no reads of stale data).
+///
+/// # Panics
+///
+/// Panics if a caller-supplied shape or an internal solver state violates
+/// the precondition required by this operation.
 pub fn stress_divergence_into(
     grid: &Grid,
     lambda: &Array3<f64>,
