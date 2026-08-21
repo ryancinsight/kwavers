@@ -82,3 +82,4 @@
 | [116](116-workspace-clippy-floor.md) | 116. One workspace clippy floor, and which of the two candidates it is | Accepted |
 | [117](117-typed-seismic-example-workflows.md) | Type and partition the seismic example workflows | Accepted |
 | [118](118-typed-recorder-channel-selection.md) | Typed recorder channel selection | Accepted |
+| [119](119-kwave-reference-oracle.md) | 119. In-repository k-Wave differential oracle | Accepted |

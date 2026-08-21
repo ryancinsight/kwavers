@@ -145,6 +145,8 @@ coeus-tensor = { workspace = true }
 ritk-image = { workspace = true }
 ritk-spatial = { workspace = true }
 tempfile = { workspace = true }
+# Reads the committed k-Wave reference archives in kwave_reference_parity.rs.
+consus-npy = { workspace = true }
 hephaestus-wgpu = { workspace = true }
 
 # Concurrency testing (Sprint 138 - Persona Requirements)
