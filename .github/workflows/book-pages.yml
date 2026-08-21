@@ -42,3 +42,6 @@ jobs:
       # the version this book already pinned.
       output-path: target/book
       mdbook-test: true
+      rust-toolchain: "1.97.0"
+      cargo-package: kwavers
+      cargo-crate: kwavers

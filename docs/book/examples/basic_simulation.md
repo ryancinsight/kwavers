@@ -33,6 +33,35 @@ println!("Grid points: {}", grid.nx * grid.ny * grid.nz);
 println!("Memory estimate: {:.1} MB", grid.memory_estimate_mb(6));
 ```
 
+## Book gate oracle
+
+The shared book workflow builds the `kwavers` library before testing executable
+Rust fences. This small assertion keeps the package-backed book gate live even
+when the larger simulation walkthrough remains environment-specific.
+
+```rust,ignore
+extern crate kwavers;
+
+let version = kwavers::get_version_info();
+assert_eq!(version.get("name").map(String::as_str), Some("kwavers"));
+assert_eq!(version.get("license").map(String::as_str), Some("MIT"));
+```
+
+The executable part of the gate checks the CFL expression used by the
+walkthrough against its analytical value:
+
+```rust
+let grid_spacing_m = 1.0e-3_f64;
+let sound_speed_m_s = 1500.0_f64;
+let cfl_number = 0.5_f64;
+let spatial_dimensions = 3.0_f64;
+let dt = cfl_number * grid_spacing_m / (sound_speed_m_s * spatial_dimensions.sqrt());
+let expected = 1.9245008972987525e-7_f64;
+
+assert!((dt - expected).abs() < 1.0e-18);
+assert!(dt.is_finite() && dt > 0.0);
+```
+
 ## Expected Output
 
 ```text
