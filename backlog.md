@@ -315,7 +315,7 @@
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | in progress | Codex | `crates/kwavers-solver/src/forward/bem/burton_miller/assembler.rs` (`unused_self` slice; parent remains open) |
+| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | in progress | Codex | `crates/kwavers-solver/src/forward/pstd/derivatives/operator.rs` (`unused_self` slice; parent remains open) |
 
 - Context: the clippy floor landed in #423. 21 of 24 crates already declared
   `[lints] workspace = true`, but no `[workspace.lints.clippy]` table existed for them to
@@ -560,6 +560,9 @@
 - 2026-08-21 Burton–Miller assembler slice is implemented: vertex-normal accumulation is an
   associated function with both matrix assembly callers migrated. Burton–Miller tests, doctests,
   and warning-denied rustdoc pass; the remaining solver sites stay queued.
+- 2026-08-21 Burton–Miller assembler slice merged in PR #487 (`e2ad3411c`). The refreshed
+  `unused_self` measurement is 188 sites (solver 67); the next bounded slice is the receiver-free
+  PSTD derivative operator helper in `forward/pstd/derivatives/operator.rs`.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
