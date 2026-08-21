@@ -68,6 +68,7 @@ impl DeviceDescription {
     }
 
     /// Set intended use statement
+    #[must_use]
     pub fn with_intended_use(mut self, use_statement: impl Into<String>) -> Self {
         self.intended_use = use_statement.into();
         self

@@ -32,12 +32,14 @@ impl RiskRecord {
     }
 
     /// Set severity level
+    #[must_use]
     pub fn with_severity(mut self, severity: impl Into<String>) -> Self {
         self.severity = severity.into();
         self
     }
 
     /// Set probability level
+    #[must_use]
     pub fn with_probability(mut self, probability: impl Into<String>) -> Self {
         self.probability = probability.into();
         self
