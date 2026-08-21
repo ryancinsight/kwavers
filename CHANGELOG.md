@@ -71,6 +71,15 @@
   is the PyPI landing page for a Python reader and its `//!` docs address the Rust
   maintainer of the binding layer, so they are deliberately two documents.
 
+- **Logging:** `kwavers-core`'s `CombinedLogger` now mirrors console records to **stderr**
+  instead of stdout. Diagnostics on stdout interleave with a program's actual output, so a
+  caller piping a kwavers binary could not separate the two. Stderr is also what the
+  workspace's other logging entry point already used -- the `kwavers` facade's
+  `init_logging` installs `env_logger`, which is stderr by default -- so the two no longer
+  disagree about where diagnostics go. Observable for any caller that constructs
+  `CombinedLogger::new(true, _)` and reads the process's stdout; no in-tree caller enables
+  the console sink, and the type's Rustdoc now records the reason for the stream.
+
 ### Changed
 
 - **Elastic FWI runtime and structure:** Singleton-z in-plane point-force

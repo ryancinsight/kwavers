@@ -384,21 +384,57 @@
 - Already clean, and not by suppression: `kwavers-core` and the `kwavers` facade — the two
   crates CI gates with `-D warnings` — trip none of the debt lints.
 
-## KW-CORE-LOG-1 — Decide whether the console log sink belongs on stdout [patch] — todo
+## KW-CORE-LOG-1 — Decide whether the console log sink belongs on stdout [patch] — done 2026-08-20
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-CORE-LOG-1 | `CombinedLogger`'s console stream is a decision with a stated reason, not an unexamined default. | [patch] | todo | unclaimed | `crates/kwavers-core/src/log/file.rs` |
+| KW-CORE-LOG-1 | `CombinedLogger`'s console stream is a decision with a stated reason, not an unexamined default. | [patch] | done | Claude | `crates/kwavers-core/src/log/file.rs` |
 
-- `CombinedLogger::log` writes each record to stdout via `println!` when `console` is set.
-  That is what `clippy::print_stdout` exists to catch, and the site carries a per-site
-  `#[expect]` because the type is the sink itself rather than incidental library output.
-- The open question is the stream, not the lint: diagnostics on stdout interleave with a
-  program's actual output, which is why `eprintln!` is the convention for log sinks. Changing
-  it is an observable behaviour change for anything piping kwavers output, so it was left
-  alone in a lint-adoption commit.
-- Acceptance: either move the console sink to stderr and note it in the CHANGELOG, or record
-  in the type's Rustdoc why stdout is correct here.
+- Decision: **stderr**. The acceptance allowed either moving the sink or documenting why
+  stdout is correct; nothing was found that argues for stdout. Diagnostics on stdout
+  interleave with a program's real output, and the workspace's *other* logging entry point
+  already used stderr — the `kwavers` facade's `init_logging` installs `env_logger`, which
+  is stderr by default. The two entry points disagreed; they now agree.
+- Blast radius, measured rather than assumed: the console path had **no in-tree caller
+  that enables it**. `kwavers_core::log::init_logging` is the only constructor passing
+  `console: true`, and nothing in the workspace calls it — the sole example that calls
+  `init_logging` resolves to the `kwavers` facade's `env_logger` version, and the one
+  other use, `crates/kwavers/benches/logging_benchmark.rs`, constructs
+  `CombinedLogger::new(false, _)`. The change is observable only for an external caller
+  constructing `CombinedLogger::new(true, _)` and reading stdout. Recorded in the CHANGELOG
+  under `### Changed`.
+- The `#[expect(clippy::print_stdout)]` at the site is deleted, not moved: `eprintln!` does
+  not trip `print_stdout`, so leaving the attribute would itself warn under
+  `unfulfilled_lint_expectations`. No replacement expectation is needed — `print_stderr` is
+  a `restriction` lint sitting at `allow` in the workspace table, so it emits nothing. The
+  ratchet count comment on that line is deliberately **not** bumped: PR #442 is rewriting
+  that table and documents that the number is not measurable while the lint is allowed.
+- The type also gained the Rustdoc it never had, carrying a `# Console stream` section so
+  the stream is a recorded decision rather than something a later reader "fixes" back.
+- Evidence: `cargo clippy -p kwavers-core --all-targets -- -D warnings` clean;
+  `cargo nextest run -p kwavers-core` 69/69; `cargo doc -p kwavers-core --no-deps` attributes
+  no warning to `log/file.rs`.
+
+## KW-DOC-111 — `kwavers-core` fails the `-D warnings` rustdoc gate [patch] — todo
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-DOC-111 | `RUSTDOCFLAGS="-D warnings" cargo doc -p kwavers-core --no-deps` succeeds. | [patch] | todo | unclaimed | `crates/kwavers-core/src/arena/numa/allocator.rs` |
+
+- Found while closing KW-CORE-LOG-1, and pre-existing on `main` — confirmed by stashing the
+  KW-CORE-LOG-1 change and re-running the gate against a pristine tree, which fails
+  identically.
+- The defect: `crates/kwavers-core/src/arena/numa/allocator.rs:9` documents the public
+  `NumaAllocator` with an intra-doc link to `[`super::memory`]`, which is private. Rustdoc
+  raises `rustdoc::private_intra_doc_links`, an error under `-D warnings`. It is the only
+  rustdoc warning in the crate.
+- Why it matters beyond tidiness: rustdoc aborts the whole crate on it, so the gate cannot
+  validate any *other* doc change to `kwavers-core` until it is fixed. That is how it was
+  found — a new docstring elsewhere in the crate could not be checked against the gate.
+- Acceptance: either make the target public or demote the link to a code span, whichever is
+  right for the item's intended visibility; then the gate passes for the crate.
+- Note that CI is green today, so whatever the Documentation Build job runs, it is not this
+  command for this crate. Worth confirming the job's coverage as part of the fix.
 
 ## KW-DOC-110 — Document the audit slice submodules [patch] — done 2026-08-20
 
