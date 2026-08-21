@@ -7121,6 +7121,13 @@ After PR #487, the workspace `unused_self` scan reports 188 sites, including
 67 in `kwavers-solver`. The next bounded slice is the receiver-free PSTD
 derivative operator helper in `forward/pstd/derivatives/operator.rs`.
 
+The PSTD derivative slice converts its measured receiver-free output
+validation helper to an associated function and migrates the x/y/z derivative
+callers. Focused Nextest run `73daa174-f319-4544-9f17-95351dcb561f` passes 6/6
+(899 solver tests filtered); the package doctests pass 5/5 (8 ignored),
+warning-denied rustdoc passes, and the focused unused_self scan has zero
+warnings in the derivative operator.
+
 After PR #477, the workspace `unused_self` scan reports 211 sites, including
 90 in `kwavers-solver`. The next bounded slice is the receiver-free helper in
 `forward/hybrid/adaptive_selection/selector.rs`.

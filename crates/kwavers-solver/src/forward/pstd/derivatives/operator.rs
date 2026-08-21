@@ -172,7 +172,7 @@ impl SpectralDerivativeOperator {
         self.validate_field(field)?;
         let mut derivative = Array3::zeros([self.nx, self.ny, self.nz]);
         self.derivative_along_x_impl(field, &mut derivative)?;
-        self.validate_output(&derivative)?;
+        Self::validate_output(&derivative)?;
         Ok(derivative)
     }
 
@@ -184,7 +184,7 @@ impl SpectralDerivativeOperator {
         self.validate_field(field)?;
         let mut derivative = Array3::zeros([self.nx, self.ny, self.nz]);
         self.derivative_along_y_impl(field, &mut derivative)?;
-        self.validate_output(&derivative)?;
+        Self::validate_output(&derivative)?;
         Ok(derivative)
     }
 
@@ -196,7 +196,7 @@ impl SpectralDerivativeOperator {
         self.validate_field(field)?;
         let mut derivative = Array3::zeros([self.nx, self.ny, self.nz]);
         self.derivative_along_z_impl(field, &mut derivative)?;
-        self.validate_output(&derivative)?;
+        Self::validate_output(&derivative)?;
         Ok(derivative)
     }
 
@@ -270,7 +270,7 @@ impl SpectralDerivativeOperator {
     }
 
     #[inline]
-    fn validate_output(&self, derivative: &Array3<f64>) -> KwaversResult<()> {
+    fn validate_output(derivative: &Array3<f64>) -> KwaversResult<()> {
         if !derivative.iter().all(|&x| x.is_finite()) {
             return Err(KwaversError::InvalidInput(
                 "Output field contains NaN or Inf values (numerical instability)".into(),

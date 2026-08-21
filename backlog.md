@@ -563,6 +563,9 @@
 - 2026-08-21 Burton–Miller assembler slice merged in PR #487 (`e2ad3411c`). The refreshed
   `unused_self` measurement is 188 sites (solver 67); the next bounded slice is the receiver-free
   PSTD derivative operator helper in `forward/pstd/derivatives/operator.rs`.
+- 2026-08-21 PSTD derivative slice is implemented: output validation is an associated function
+  with all three derivative callers migrated. PSTD derivative tests, doctests, and warning-denied
+  rustdoc pass; the remaining solver sites stay queued.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
