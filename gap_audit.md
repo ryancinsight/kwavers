@@ -86,6 +86,13 @@ transducer Clippy passes with the lint re-enabled and `-D warnings`; its nextest
 gate passes 245/245 tests with one skipped, doctests pass 2/8 with six ignored,
 and warning-denied rustdoc passes. The workspace debt block remains unchanged.
 
+The next `missing_errors_doc` measurement found one remaining physics site in
+the fixed Ali (2025) ring-array geometry constructor. Its contract now records
+the geometry-construction failure path. Strict physics Clippy passes with the
+lint re-enabled and `-D warnings`; the package nextest gate passes 1,561/1,561
+tests with one skipped, doctests pass 9/13 with four ignored, and warning-denied
+rustdoc passes. The workspace debt block remains unchanged.
+
 The complete example gate initially exposed an independent runtime defect in
 `focused_ultrasound_water_tank`: its five disjoint solver branches ran
 sequentially, and the comparison test terminated at 60 seconds. The provider
