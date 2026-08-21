@@ -143,6 +143,11 @@ impl ContinuousWaveDoppler {
     /// the anti-alias filter (first spectral null at `f_s/D = f_bb`) and also
     /// suppresses the `2f₀` image, leaving the signed Doppler baseband.
     #[must_use]
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal analysis state violates
+    /// the precondition required by this operation.
     pub fn demodulate(&self, rf: &[f64]) -> Array1<Complex64> {
         let fs = self.config.sampling_rate;
         let f0 = self.config.center_frequency;
@@ -172,6 +177,11 @@ impl ContinuousWaveDoppler {
     ///
     /// # Errors
     /// Returns `KwaversError::InvalidInput` when `rf` is empty.
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal analysis state violates
+    /// the precondition required by this operation.
     pub fn spectrum(&self, rf: &[f64]) -> KwaversResult<CwSpectrum> {
         if rf.is_empty() {
             return Err(KwaversError::InvalidInput(

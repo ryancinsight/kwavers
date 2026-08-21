@@ -14,6 +14,11 @@ use std::f64::consts::PI;
 impl TheoremValidator {
     /// Run comprehensive theorem validation suite
     #[must_use]
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal analysis state violates
+    /// the precondition required by this operation.
     pub fn run_comprehensive_validation(&self) -> Vec<TheoremValidation> {
         let mut results = Vec::new();
 

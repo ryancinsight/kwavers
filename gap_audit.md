@@ -6893,6 +6893,9 @@ The refreshed workspace measurement then found seven additional
 `missing_panics_doc` sites in `kwavers-simulation` and 38 in
 `kwavers-analysis`; the simulation package is the current ratchet item.
 
+The simulation slice has since integrated; `kwavers-analysis` is now the
+current ratchet item with 38 measured sites.
+
 ## `missing_panics_doc` simulation slice — 2026-08-21
 
 The `kwavers-simulation` slice documents the seven measured panic contracts in
@@ -6931,3 +6934,13 @@ and safety layout adapters. Strict offline Clippy with
 skips (15 tests exceeded the 30-second slow threshold, with the suite completing
 in 52.252 seconds); doctests pass 5/5 (8 ignored); and rustdoc passes with
 `RUSTDOCFLAGS=-D warnings`.
+
+## `missing_panics_doc` analysis slice — 2026-08-21
+
+The `kwavers-analysis` slice documents the 38 measured panic contracts across
+machine-learning inference and training, adaptive and delay-and-sum
+beamforming, Doppler and spectroscopy solvers, clutter filtering, ULM
+microbubble processing, and theorem validation. Strict offline Clippy with
+`-D clippy::missing_panics_doc -D warnings` passes; Nextest run
+`8b9787a2-242f-429f-ab29-1c0cc6301ccb` passes 744/744; doctests pass 1/1 (21
+ignored); and rustdoc passes with `RUSTDOCFLAGS=-D warnings`.

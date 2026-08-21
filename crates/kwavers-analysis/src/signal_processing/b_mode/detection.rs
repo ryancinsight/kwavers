@@ -19,6 +19,11 @@ use leto::Array1;
 /// Reuses the Apollo-backed analytic-signal SSOT in `kwavers-signal`, so the
 /// carrier is removed exactly once, consistently with beamforming snapshot code.
 #[must_use]
+///
+/// # Panics
+///
+/// Panics if a caller-supplied shape or an internal analysis state violates
+/// the precondition required by this operation.
 pub fn envelope(rf: &Array1<f64>) -> Array1<f64> {
     let analytic = hilbert_transform(
         &leto::Array1::from_vec([rf.len()], rf.iter().copied().collect())

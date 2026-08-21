@@ -33,6 +33,11 @@ use super::local_ops::{
 /// let features = extract_all_features(&image);
 /// assert_eq!(features.len(), 6);
 /// ```
+///
+/// # Panics
+///
+/// Panics if a caller-supplied shape or an internal analysis state violates
+/// the precondition required by this operation.
 pub fn extract_all_features(image: &Array3<f32>) -> leto::Array1<f32> {
     use leto::Array1;
 

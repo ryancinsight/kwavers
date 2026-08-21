@@ -78,6 +78,11 @@ impl SpectralUnmixer {
     /// # Errors
     /// - Propagates any `KwaversError` returned by called functions.
     ///
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal analysis state violates
+    /// the precondition required by this operation.
     pub fn unmix_single(&self, absorption_spectrum: &Array1<f64>) -> Result<UnmixingResult> {
         let n_wavelengths = self.extinction_matrix.shape()[0];
 

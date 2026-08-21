@@ -21,6 +21,11 @@ use leto::{Array1, Array2};
 /// - Returns [`Err`] if an internal constraint is violated.
 ///
 #[allow(non_snake_case)] // E is standard notation for extinction coefficient matrix
+///
+/// # Panics
+///
+/// Panics if a caller-supplied shape or an internal analysis state violates
+/// the precondition required by this operation.
 pub fn tikhonov_solve(e: &Array2<f64>, mu: &Array1<f64>, lambda: f64) -> Result<Array1<f64>> {
     let n_chromophores = e.shape()[1];
 
@@ -121,6 +126,11 @@ fn cholesky_solve(A: &Array2<f64>, b: &Array1<f64>) -> Result<Array1<f64>> {
 /// - Returns [`Err`] if an internal constraint is violated.
 ///
 #[allow(non_snake_case)]
+///
+/// # Panics
+///
+/// Panics if a caller-supplied shape or an internal analysis state violates
+/// the precondition required by this operation.
 pub fn estimate_condition_number(A: &Array2<f64>) -> Result<f64> {
     let n = A.shape()[1];
     let at = A

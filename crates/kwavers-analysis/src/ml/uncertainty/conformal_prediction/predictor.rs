@@ -259,6 +259,11 @@ impl MlConformalPredictor {
 
     /// Get calibration summary
     #[must_use]
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal analysis state violates
+    /// the precondition required by this operation.
     pub fn calibration_summary(&self) -> CalibrationSummary {
         if !self.is_calibrated {
             return CalibrationSummary {
