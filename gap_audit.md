@@ -7299,6 +7299,13 @@ warning-denied rustdoc passes, and the refreshed workspace `unused_self` count i
 131 sites (10 in `kwavers-solver`). Wavelet transforms remain separate for
 behavioral completion.
 
+The wavelet slice is implemented: CDF and Daubechies transforms are associated
+functions; Haar performs separable 3-D forward/inverse transforms across levels,
+preserves odd-length tails, and has a value-semantic round-trip test. Focused
+Nextest passes 12/12 (894 filtered), package doctests pass 5/5 (8 ignored),
+warning-denied rustdoc passes, and the refreshed workspace `unused_self` count is
+125 sites (4 in `kwavers-solver`).
+
 After PR #477, the workspace `unused_self` scan reports 211 sites, including
 90 in `kwavers-solver`. The next bounded slice is the receiver-free helper in
 `forward/hybrid/adaptive_selection/selector.rs`.

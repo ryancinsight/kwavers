@@ -16,12 +16,7 @@ impl WaveletTransform {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub(super) fn cdf_forward(
-        &self,
-        data: &mut Array3<f64>,
-        p: usize,
-        q: usize,
-    ) -> KwaversResult<()> {
+    pub(super) fn cdf_forward(data: &mut Array3<f64>, p: usize, q: usize) -> KwaversResult<()> {
         // Get CDF filter coefficients
         let (h_analysis, g_analysis) = Self::cdf_coefficients(p, q);
 
@@ -65,12 +60,7 @@ impl WaveletTransform {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub(super) fn cdf_inverse(
-        &self,
-        coeffs: &mut Array3<f64>,
-        p: usize,
-        q: usize,
-    ) -> KwaversResult<()> {
+    pub(super) fn cdf_inverse(coeffs: &mut Array3<f64>, p: usize, q: usize) -> KwaversResult<()> {
         // Get CDF synthesis filters
         let (h_synthesis, g_synthesis) = Self::cdf_synthesis_coefficients(p, q);
 

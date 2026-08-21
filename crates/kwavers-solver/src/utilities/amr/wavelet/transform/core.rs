@@ -32,8 +32,8 @@ impl WaveletTransform {
 
         match self.basis {
             WaveletBasis::Haar => self.haar_forward(&mut result)?,
-            WaveletBasis::Daubechies(n) => self.daubechies_forward(&mut result, n)?,
-            WaveletBasis::CDF(p, q) => self.cdf_forward(&mut result, p, q)?,
+            WaveletBasis::Daubechies(n) => Self::daubechies_forward(&mut result, n)?,
+            WaveletBasis::CDF(p, q) => Self::cdf_forward(&mut result, p, q)?,
         }
 
         Ok(result)
@@ -48,8 +48,8 @@ impl WaveletTransform {
 
         match self.basis {
             WaveletBasis::Haar => self.haar_inverse(&mut result)?,
-            WaveletBasis::Daubechies(n) => self.daubechies_inverse(&mut result, n)?,
-            WaveletBasis::CDF(p, q) => self.cdf_inverse(&mut result, p, q)?,
+            WaveletBasis::Daubechies(n) => Self::daubechies_inverse(&mut result, n)?,
+            WaveletBasis::CDF(p, q) => Self::cdf_inverse(&mut result, p, q)?,
         }
 
         Ok(result)
@@ -86,5 +86,23 @@ mod tests {
         assert_eq!(coeffs[[0, 1, 0]], 0.0);
         assert_eq!(coeffs[[1, 0, 0]], 0.0);
         assert_eq!(coeffs[[1, 1, 0]], 0.3);
+    }
+
+    #[test]
+    fn haar_forward_inverse_round_trip_preserves_field() {
+        let wavelet = WaveletTransform::new(WaveletBasis::Haar, 2);
+        let input = Array3::from_shape_fn([4, 4, 2], |[i, j, k]| {
+            (i as f64).mul_add(0.5, (j * 3 + k) as f64)
+        });
+
+        let coefficients = wavelet.forward(&input).expect("Haar forward transform");
+        let reconstructed = wavelet
+            .inverse(&coefficients)
+            .expect("Haar inverse transform");
+
+        assert!(input
+            .iter()
+            .zip(reconstructed.iter())
+            .all(|(&expected, &actual)| (expected - actual).abs() < 1e-12));
     }
 }
