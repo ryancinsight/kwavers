@@ -632,7 +632,8 @@
 - 2026-08-20 merged-head verification: branch head `d0856b8b1` incorporates the
   current `origin/main`; strict all-target Clippy exposed and the follow-up
   commit `d6a7aab52` removed one redundant `ArrayView` clone in the transducer
-  calibration manager. On the resulting exact code head, `cargo check --offline
+  calibration manager; review fixes are committed at `e045b1974`. On the
+  resulting exact code head, `cargo check --offline
   -p kwavers --examples --all-targets`, strict Clippy, and rustfmt pass;
   Nextest run `f3773ca9-eb1c-406e-9501-032da8860673` passes 116/116 in 36.685
   seconds; `cargo test --doc --offline -p kwavers` passes 1/1; and both

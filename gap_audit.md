@@ -15,10 +15,10 @@ passes Nextest run `2bbe3774-be78-4a3e-86c6-e4499b1359a3` (116/116 in 42.798
 seconds), strict all-target Clippy, package checks, the Kwavers doctest (1/1),
 and both mdBook gates.
 
-The local exact-head gates are complete on `d6a7aab52`, after merging current
+The local exact-head gates are complete on `e045b1974`, after merging current
 `origin/main` as `d0856b8b1` and removing a redundant `ArrayView` clone exposed
-by strict Clippy. The residual is hosted PR verification and merge of the exact
-pushed head.
+by strict Clippy, then applying the verified review-fix slice. The residual is
+hosted PR verification and merge of the exact pushed head.
 
 The complete example gate initially exposed an independent runtime defect in
 `focused_ultrasound_water_tank`: its five disjoint solver branches ran
