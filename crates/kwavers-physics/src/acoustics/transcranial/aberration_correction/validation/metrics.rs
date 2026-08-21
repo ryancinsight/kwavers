@@ -47,11 +47,7 @@ impl TranscranialAberrationCorrection {
     ///
     /// ## References
     /// - Zhu & Steinberg (1993). IEEE Trans. UFFC 40(6):726–737.
-    pub(super) fn calculate_sidelobe_level(
-        &self,
-        field: &Array3<f64>,
-        _target_point: &[f64; 3],
-    ) -> f64 {
+    pub(super) fn calculate_sidelobe_level(field: &Array3<f64>, _target_point: &[f64; 3]) -> f64 {
         let [nx, ny, nz] = field.shape();
 
         let i_peak = field.iter().copied().fold(0.0_f64, f64::max);

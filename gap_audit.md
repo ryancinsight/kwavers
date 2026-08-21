@@ -7204,6 +7204,13 @@ receiver-bound. Package check, targeted `unused_self` Clippy (neuromodulation pa
 (1561/1561 with one configured skip), doctests (9/13; 4 ignored), and warning-denied rustdoc pass.
 The refreshed workspace `unused_self` count is 56 sites with 9 remaining in other physics domains.
 
+The `kwavers-physics` transcranial validation slice converts sidelobe-level calculation to an
+associated function; grid/reference-speed-dependent focal metrics remain receiver-bound.
+Validation tests use associated-function syntax. Package check, targeted `unused_self` Clippy
+(validation path clean), Nextest (1561/1561 with one configured skip), doctests (9/13; 4 ignored),
+and warning-denied rustdoc pass. The refreshed workspace `unused_self` count is 55 sites with 8
+remaining in other physics domains.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.
