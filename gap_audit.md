@@ -6866,3 +6866,14 @@ and thermal presets. Strict offline Clippy with
 The next workspace measurement found one `missing_panics_doc` site in
 `kwavers-boundary` and six in `kwavers-transducer`; the boundary slice is the
 current ratchet item.
+
+## `missing_panics_doc` boundary slice — 2026-08-21
+
+The `kwavers-boundary` slice documents the one measured subgrid smoothing
+panic contract for mismatched property and geometry shapes. Strict offline
+Clippy with `-D clippy::missing_panics_doc -D warnings` passes; Nextest run
+`cb1a1025-57bc-4741-90e6-e7516033a7b9` passes 97/97; doctests pass 4/4 (1 ignored); and
+rustdoc passes with `RUSTDOCFLAGS=-D warnings`.
+
+The next workspace measurement remains six `missing_panics_doc` sites in
+`kwavers-transducer`.
