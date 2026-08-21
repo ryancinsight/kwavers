@@ -9,6 +9,10 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 ///
 /// # Returns
 /// `(M, 3)` array of voxel indices `[ix, iy, iz]`.
+///
+/// # Errors
+///
+/// Returns an error when spacing, pitch, or tumor support is invalid.
 pub fn gbm_subspot_raster(
     tumor_mask: &Array3<bool>,
     spacing_m: [f64; 3],

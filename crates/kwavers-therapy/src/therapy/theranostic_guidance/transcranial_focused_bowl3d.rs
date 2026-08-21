@@ -83,6 +83,11 @@ pub struct TranscranialFocusedBowlPlacement3D {
 ///
 /// Placement geometry centred at the calvarium centroid. All coordinates are in
 /// metres and expressed relative to the calvarium centroid (origin = focus point).
+///
+/// # Errors
+///
+/// Returns an error when CT spacing, masks, element geometry, target fraction,
+/// or bowl limits are invalid.
 #[allow(clippy::too_many_arguments)]
 pub fn plan_transcranial_focused_bowl_placement(
     ct_hu: &Array3<f64>,

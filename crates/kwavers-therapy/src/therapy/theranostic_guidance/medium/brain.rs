@@ -35,6 +35,12 @@ pub enum BrainTargetSelection {
     ResampledIndex([f64; 2]),
 }
 
+/// Prepare a brain CT slice and acoustic fields for theranostic inversion.
+///
+/// # Errors
+///
+/// Returns an error when the CT slice, spacing, source index, or target
+/// selection cannot produce a valid prepared slice.
 pub fn prepare_brain_slice(
     ct_hu: Array2<f64>,
     spacing_m: f64,

@@ -27,6 +27,12 @@ pub enum TransmitScheduleStrategy {
 }
 
 impl TransmitScheduleStrategy {
+    /// Parse a transmit schedule strategy from its stable configuration name.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when `name` is not a supported full, uniform, or
+    /// patient-adaptive strategy.
     pub fn from_name(name: &str) -> KwaversResult<Self> {
         match name.to_ascii_lowercase().replace('-', "_").as_str() {
             "full" => Ok(Self::Full),
@@ -63,6 +69,12 @@ impl TransmitScheduleConfig {
         }
     }
 
+    /// Validate a schedule against the available therapy elements.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the element count is zero or the optional budget
+    /// is outside the available element range.
     pub fn validate(&self, element_count: usize) -> KwaversResult<()> {
         if element_count == 0 {
             return Err(KwaversError::InvalidInput(
@@ -105,6 +117,12 @@ impl TransmitScheduleResult {
     }
 }
 
+/// Select active therapy elements according to a validated schedule strategy.
+///
+/// # Errors
+///
+/// Returns an error when the layout, prepared slice, or schedule configuration
+/// is incompatible.
 pub fn select_transmit_schedule(
     layout: &DeviceLayout,
     prepared: &PreparedTheranosticSlice,

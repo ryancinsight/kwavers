@@ -47,6 +47,11 @@ use westervelt::run_fwi;
 /// CT data alive across the memory-intensive Westervelt FWI loop.
 /// Both arrays are dropped immediately after `prepare_volume` produces
 /// the resampled grid-size³ volume.
+///
+/// # Errors
+///
+/// Returns an error when nonlinear configuration validation, volume
+/// preparation, placement, or the coupled inversion fails.
 pub fn run_theranostic_nonlinear_3d(
     anatomy: AnatomyKind,
     ct_hu: Array3<f64>,

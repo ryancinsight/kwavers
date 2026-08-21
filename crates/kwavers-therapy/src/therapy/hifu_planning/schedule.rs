@@ -37,6 +37,11 @@ impl SonicationSchedule {
     ///
     /// The schedule therefore gives deterministic target-box coverage under the
     /// FWHM ellipsoid model rather than relying on a one-focus adequacy heuristic.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when target dimensions, focal-spot parameters, therapy
+    /// settings, frequency, or thermal-dose inputs are invalid.
     pub fn plan(
         target: &AblationTarget,
         focal_spot: &FocalSpot,
