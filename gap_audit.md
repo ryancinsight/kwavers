@@ -6841,8 +6841,7 @@ Nextest run `ef65468e-f4de-41e7-9fd1-8494c28a76cb` passes 63/63; doctests pass
 4/4; and rustdoc passes with `RUSTDOCFLAGS=-D warnings`.
 
 The next workspace measurement found two `missing_panics_doc` sites in
-`kwavers-field` and 26 in `kwavers-medium`; the field slice is the current
-ratchet item.
+`kwavers-field` and 26 in `kwavers-medium`; both slices have since integrated.
 
 ## `missing_panics_doc` field slice — 2026-08-21
 
@@ -6853,7 +6852,7 @@ for immutable and mutable unified-field views. Strict offline Clippy with
 rustdoc passes with `RUSTDOCFLAGS=-D warnings`.
 
 The next workspace measurement remains 26 `missing_panics_doc` sites in
-`kwavers-medium`; that slice is now claimed.
+`kwavers-medium`; that slice has since integrated.
 
 ## `missing_panics_doc` medium slice — 2026-08-21
 
@@ -6863,3 +6862,18 @@ and thermal presets. Strict offline Clippy with
 `-D clippy::missing_panics_doc -D warnings` passes; Nextest run
 `7a5d184d-b618-432d-8407-f93bf24a5151` passes 215/215; doctests pass 4/4
 (1 ignored); and rustdoc passes with `RUSTDOCFLAGS=-D warnings`.
+
+The next workspace measurement found one `missing_panics_doc` site in
+`kwavers-boundary` and six in `kwavers-transducer`; the boundary slice is the
+current ratchet item.
+
+## `missing_panics_doc` boundary slice — 2026-08-21
+
+The `kwavers-boundary` slice documents the one measured subgrid smoothing
+panic contract for mismatched property and geometry shapes. Strict offline
+Clippy with `-D clippy::missing_panics_doc -D warnings` passes; Nextest run
+`cb1a1025-57bc-4741-90e6-e7516033a7b9` passes 97/97; doctests pass 4/4 (1 ignored); and
+rustdoc passes with `RUSTDOCFLAGS=-D warnings`.
+
+The next workspace measurement remains six `missing_panics_doc` sites in
+`kwavers-transducer`.
