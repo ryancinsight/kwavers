@@ -985,6 +985,11 @@
   accounting remains provider-bound. CPU and GPU feature checks, package Clippy, Nextest (744/744),
   doctests (1/22; 21 ignored), and warning-denied rustdoc pass. The refreshed workspace `unused_self`
   count is 31 sites with 12 remaining in other analysis paths.
+- 2026-08-21 `kwavers-analysis` SAFT slice is implemented: round-trip time-of-flight and Hamming
+  apodization kernels are associated functions while configuration validation and reconstruction
+  state remain receiver-bound. Package check, targeted `unused_self` Clippy, Nextest (744/744),
+  doctests (1/22; 21 ignored), and warning-denied rustdoc pass. The refreshed workspace `unused_self`
+  count is 29 sites with 10 remaining in other analysis paths.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a

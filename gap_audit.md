@@ -7304,6 +7304,12 @@ CPU and GPU feature checks, package Clippy, Nextest (744/744), doctests (1/22; 2
 warning-denied rustdoc pass. The refreshed workspace `unused_self` count is 31 sites with 12
 remaining in other analysis paths.
 
+The `kwavers-analysis` SAFT slice converts round-trip time-of-flight and Hamming apodization kernels
+to associated functions while retaining receiver-bound configuration validation and reconstruction
+state. Package check, targeted `unused_self` Clippy, Nextest (744/744), doctests (1/22; 21 ignored),
+and warning-denied rustdoc pass. The refreshed workspace `unused_self` count is 29 sites with 10
+remaining in other analysis paths.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.
