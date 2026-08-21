@@ -19,7 +19,7 @@ impl BurtonMillerAssembler {
     }
 
     /// Compute area-weighted vertex normals for a triangular mesh (Gouraud shading).
-    fn compute_vertex_normals(&self, nodes: &[[f64; 3]], elements: &[[usize; 3]]) -> Vec<[f64; 3]> {
+    fn compute_vertex_normals(nodes: &[[f64; 3]], elements: &[[usize; 3]]) -> Vec<[f64; 3]> {
         let mut normals: Vec<[f64; 3]> = vec![[0.0, 0.0, 0.0]; nodes.len()];
 
         for &elem in elements {
@@ -60,7 +60,7 @@ impl BurtonMillerAssembler {
         let n = num_collocation_points;
         let mut h_matrix = Array2::zeros((n, n));
         let alpha = self.config.coupling_alpha;
-        let vertex_normals = self.compute_vertex_normals(boundary_nodes, elements);
+        let vertex_normals = Self::compute_vertex_normals(boundary_nodes, elements);
 
         for i in 0..n {
             let collocation_point = boundary_nodes[i];
@@ -104,7 +104,7 @@ impl BurtonMillerAssembler {
         let n = num_collocation_points;
         let mut g_matrix = Array2::zeros((n, n));
         let alpha = self.config.coupling_alpha;
-        let vertex_normals = self.compute_vertex_normals(boundary_nodes, elements);
+        let vertex_normals = Self::compute_vertex_normals(boundary_nodes, elements);
 
         for i in 0..n {
             let collocation_point = boundary_nodes[i];
