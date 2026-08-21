@@ -205,7 +205,7 @@ impl SpectralDetector {
     }
 
     /// Classify cavitation state based on spectral features
-    fn classify_state(&self, metrics: &CavitationMetrics) -> CavitationDetectionState {
+    fn classify_state(metrics: &CavitationMetrics) -> CavitationDetectionState {
         if metrics.confidence < 0.1 {
             CavitationDetectionState::None
         } else if metrics.subharmonic_level > 0.3 || metrics.broadband_level > 0.5 {
@@ -257,7 +257,7 @@ impl CavitationDetector for SpectralDetector {
         };
 
         // Classify state
-        metrics.state = self.classify_state(&metrics);
+        metrics.state = Self::classify_state(&metrics);
 
         // Update history for temporal analysis
         self.history.push(metrics.clone());

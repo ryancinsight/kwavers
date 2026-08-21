@@ -34,7 +34,7 @@ impl SubharmonicDetector {
     }
 
     /// Compute FFT and return magnitude spectrum
-    fn compute_spectrum(&mut self, signal: &ArrayView1<f64>) -> Array1<f64> {
+    fn compute_spectrum(signal: &ArrayView1<f64>) -> Array1<f64> {
         let n = signal.size();
         let fft_input = leto::Array1::from_shape_vec([n], signal.iter().copied().collect())
             .expect("subharmonic signal length must match Leto FFT shape");
@@ -54,7 +54,7 @@ impl SubharmonicDetector {
 
     /// Detect subharmonic components
     fn detect_subharmonic_components(&mut self, signal: &ArrayView1<f64>) -> (f64, f64) {
-        let spectrum = self.compute_spectrum(signal);
+        let spectrum = Self::compute_spectrum(signal);
         let freq_resolution = self.sample_rate / signal.size() as f64;
 
         // Find fundamental frequency bin
