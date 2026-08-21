@@ -311,6 +311,71 @@ def test_simulation_cpu_surface_runs_end_to_end():
     assert np.all(np.isfinite(result.time))
 
 
+def _make_point_simulation(amplitude, nx=48, time_steps=None):
+    grid = kw.Grid(nx=nx, ny=nx, nz=nx, dx=0.1e-3, dy=0.1e-3, dz=0.1e-3)
+    medium = kw.Medium.homogeneous(sound_speed=1500.0, density=1000.0)
+    source = kw.Source.point(
+        position=(2.4e-3, 2.4e-3, 2.4e-3),
+        frequency=1.0e6,
+        amplitude=amplitude,
+    )
+    sensor = kw.Sensor.point(position=(3.2e-3, 2.4e-3, 2.4e-3))
+    simulation = kw.Simulation(
+        grid, medium, source, sensor, solver=kw.SolverType.FDTD, pml_size=4,
+    )
+    return simulation
+
+
+def test_simulation_run_releases_gil_with_returned_value_correctness():
+    """Runtime overlap oracle for the detached ``Simulation::run`` slice.
+
+    Complements the static ``py.detach`` evidence at the binding's run path:
+    while one thread executes ``Simulation.run``, the main thread performs
+    pure-Python GIL-bound work and must make substantial progress — only
+    possible if the binding released the GIL around the solver. Returned-
+    value correctness is proven on the same slice: identical inputs produce
+    bit-identical sensor data, and the linear-acoustics amplitude ratio is
+    preserved to floating-point tolerance.
+    """
+    import threading
+    import time
+
+    progress = [0]
+    stop = threading.Event()
+
+    def spin():
+        # Pure-Python counting loop: every increment requires the GIL.
+        while not stop.is_set():
+            for _ in range(1000):
+                progress[0] += 1
+
+    spinner = threading.Thread(target=spin, daemon=True)
+    spinner.start()
+    t0 = time.perf_counter()
+    result = _make_point_simulation(1.0e5).run(time_steps=150, dt=1.0e-8)
+    wall = time.perf_counter() - t0
+    stop.set()
+    spinner.join()
+
+    # The window must be long enough for the oracle to be meaningful.
+    assert wall > 0.5, f"solver window too short ({wall:.3f}s) for overlap proof"
+    assert result.sensor_data.shape == (150,)
+    assert np.all(np.isfinite(result.sensor_data))
+    # If the GIL had been held for the whole solve, the main thread could not
+    # have executed millions of pure-Python increments during the window.
+    assert progress[0] > 1_000_000, (
+        f"main-thread progress {progress[0]} during {wall:.2f}s solve "
+        "indicates the GIL was not released"
+    )
+
+    # Returned-value correctness: determinism and amplitude linearity.
+    baseline = _make_point_simulation(1.0e5).run(time_steps=150, dt=1.0e-8).sensor_data
+    doubled = _make_point_simulation(2.0e5).run(time_steps=150, dt=1.0e-8).sensor_data
+    assert np.array_equal(result.sensor_data, baseline)
+    ratio = float(np.max(np.abs(doubled)) / np.max(np.abs(baseline)))
+    assert abs(ratio - 2.0) < 1.0e-9, f"amplitude scaling ratio {ratio} != 2"
+
+
 def test_simulation_calls_submitted_to_thread_pool_preserve_input_sensitive_values():
     """Check thread-pool submission and input-sensitive value semantics.
 
