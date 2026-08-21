@@ -315,7 +315,7 @@
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | in progress | Codex | `crates/kwavers-solver/src/forward/hybrid/adaptive_selection/selector.rs` (`unused_self` slice; parent remains open) |
+| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | in progress | Codex | `crates/kwavers-solver/src/forward/hybrid/bem_fem_enhanced/solver.rs` (`unused_self` slice; parent remains open) |
 
 - Context: the clippy floor landed in #423. 21 of 24 crates already declared
   `[lints] workspace = true`, but no `[workspace.lints.clippy]` table existed for them to
@@ -501,6 +501,12 @@
 - 2026-08-21 adaptive selector slice is implemented: its receiver-free region extractor is an
   associated function with its caller migrated. Focused tests, doctests, and warning-denied
   rustdoc pass; the remaining solver sites stay queued.
+- 2026-08-21 adaptive selector slice merged in PR #478 (`997851405`). The refreshed `unused_self`
+  measurement is 210 sites (solver 89); the next bounded slice is the receiver-free helper in
+  `forward/hybrid/bem_fem_enhanced/solver.rs`.
+- 2026-08-21 BEM/FEM enhanced solver slice is implemented: its receiver-free frequency validator
+  is an associated function with all four callers migrated. Focused tests, doctests, and
+  warning-denied rustdoc pass; the remaining solver sites stay queued.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a

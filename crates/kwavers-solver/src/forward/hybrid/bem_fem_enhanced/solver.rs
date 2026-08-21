@@ -70,7 +70,7 @@ impl EnhancedBemFemSolver {
     ///
     pub fn validate(&mut self, frequency: f64) -> KwaversResult<BemFemValidationResult> {
         let start_time = std::time::Instant::now();
-        self.validate_frequency(frequency)?;
+        Self::validate_frequency(frequency)?;
 
         let spurious_detected = if self.config.burton_miller_config.is_some() {
             false
@@ -118,14 +118,14 @@ impl EnhancedBemFemSolver {
     /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn check_spurious_resonance(&self, frequency: f64) -> KwaversResult<bool> {
-        self.validate_frequency(frequency)?;
+        Self::validate_frequency(frequency)?;
 
         let Some(frequencies) = &self.config.validation_frequencies else {
             return Ok(false);
         };
 
         frequencies.iter().try_fold(false, |detected, candidate| {
-            self.validate_frequency(*candidate)?;
+            Self::validate_frequency(*candidate)?;
             let scale = frequency.abs().max(candidate.abs()).max(1.0);
             Ok(detected || (frequency - candidate).abs() / scale <= RESONANCE_RELATIVE_BAND)
         })
@@ -140,7 +140,7 @@ impl EnhancedBemFemSolver {
         frequency: f64,
         level: usize,
     ) -> KwaversResult<f64> {
-        self.validate_frequency(frequency)?;
+        Self::validate_frequency(frequency)?;
         self.validate_mesh_bounds()?;
 
         let wavelength = self.sound_speed() / frequency;
@@ -194,7 +194,7 @@ impl EnhancedBemFemSolver {
         &self.refinement_history
     }
 
-    fn validate_frequency(&self, frequency: f64) -> KwaversResult<()> {
+    fn validate_frequency(frequency: f64) -> KwaversResult<()> {
         if !frequency.is_finite() || frequency <= 0.0 {
             return Err(KwaversError::InvalidInput(format!(
                 "BEM-FEM validation frequency must be finite and positive; got {frequency}"
