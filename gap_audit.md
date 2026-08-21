@@ -7338,6 +7338,13 @@ ignored), and warning-denied rustdoc pass. The refreshed workspace `unused_self`
 with 1 remaining in other analysis paths. The package-wide all-targets Clippy gate still reports two
 pre-existing test-only lint defects outside this slice.
 
+The `kwavers-analysis` clinical-scoring slice converts overall acceptability scoring to an associated
+function while validator requirements and regulatory policy remain receiver-bound. Package check,
+targeted `unused_self` Clippy, Nextest (744/744), doctests (1/22; 21 ignored), and warning-denied
+rustdoc pass. The refreshed workspace `unused_self` count is 19 sites, all remaining in
+`kwavers-diagnostics` and `kwavers-therapy`; `kwavers-analysis` is clean. The package-wide all-targets
+Clippy gate still reports two pre-existing test-only lint defects outside these slices.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.
