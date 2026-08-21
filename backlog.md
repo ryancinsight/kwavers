@@ -6,49 +6,39 @@
 |----|---------|-------|--------|-------|-------|
 | KW-LINT-111 | All 24 workspace members inherit `[workspace.lints]`, and no member re-declares a rule the workspace already owns. | [patch] | done | Claude | `crates/{kwavers,kwavers-driver,kwavers-python}/Cargo.toml` |
 
-- Premise correction. This item was filed as "three crates miss the Atlas clippy floor
-  (`clippy::all` + `pedantic`), ~1,155 warnings to burn down". Verified against `main`, that
-  is wrong on both halves. `main`'s root `Cargo.toml` has **no
-  `[workspace.lints.clippy]` table at all** — only `[workspace.lints.rust]` with
-  `unexpected_cfgs` — and `git log -S workspace.lints.clippy -- Cargo.toml` shows it has
-  never had one. The table I read exists on exactly one unmerged branch,
-  `origin/codex/kwavers-floatelement-roots`; I measured it while the shared tree happened to
-  sit on a branch carrying that work, and attributed it to `main`. The ~1,155 figure came
-  from passing `-W clippy::pedantic` on the command line, which measures a floor the
-  repository does not currently have.
+- Premise correction at item opening. This item was filed as "three crates miss the Atlas
+  clippy floor (`clippy::all` + `pedantic`), ~1,155 warnings to burn down". The opening
+  measurement was made before the floor landed and must not be read as the current tree:
+  `b8af37165` subsequently added the canonical `[workspace.lints.clippy]` table and counted
+  debt block. The ~1,155 figure came from passing `-W clippy::pedantic` on the command line;
+  it was not evidence that `main` had already enforced that floor.
 - What was actually true, and is now fixed: three of twenty-four members carried no
   `[lints]` section, so they inherited nothing — not even `unexpected_cfgs`. All 24 now
   inherit. The top-level `kwavers` crate additionally re-declared
   `[lints.rust] unexpected_cfgs = …` byte-identically to the workspace table; that
   duplicate is deleted in favour of inheritance, so the rule has one owner.
-- Measured, not assumed: with inheritance in place, `cargo clippy --all-targets` reports
-  **zero** warnings for `kwavers-driver`, `kwavers-python`, and `kwavers` (excluding the
-  stack overlay's unused-`[patch]` notices, which are unrelated to lints). Both CI clippy
-  gates pass with `-D warnings`: `-p kwavers --all-targets --no-default-features --features
-  full --no-deps` and `-p kwavers --features pinn --lib`. There is no burn-down, because
-  there is no clippy floor to burn down against.
-- Not done here, deliberately: adopting an Atlas clippy floor is a real and separate
-  decision that already has an owner — KW-LINT-1 tracks the burn-down, and PR #423
-  (`fix/xtask-metrics-paths`, open at the time of writing) carries the candidate
-  `[workspace.lints.clippy]` table. Writing a second table here would fork that decision.
-  Note that KW-LINT-1's context line says the floor "landed in #423"; #423 is not merged,
-  so `main` has no clippy table and the item's premise is ahead of the code.
+- The historical clean result was measured before `b8af37165` and did not exercise the
+  adopted floor. Current ratchet ownership is KW-LINT-1; its counted debt block is the
+  normative exception set, and strict `-D warnings` checks must either burn the debt or carry
+  a scoped, justified `#[expect]` at genuinely inapplicable sites.
+- Not done here, deliberately: this item only repaired workspace lint inheritance. The
+  floor adoption and its debt burn-down remain owned by KW-LINT-1; this section records the
+  chronology so it does not fork that decision.
 - Consequence for earlier claims: every "clippy clean" recorded for `kwavers-driver` in
   KW-DOC-106, KW-DOC-107, KW-CLEAN-108, and KW-DOC-110 was `cargo clippy` at the default
   lint set. That was accurate as stated and is what CI would have run; the correction filed
-  under KW-DOC-110 said those runs were weaker than the *workspace floor* — but no such
-  floor exists on `main`, so the runs were the strongest gate available.
+  under KW-DOC-110 said those runs were weaker than the *workspace floor*; that floor later
+  landed in `b8af37165`, so the older evidence remains a historical default-lint result and
+  is not a current strict-floor claim.
 - Note: `crates/kwavers-driver/src/ssot.rs` carries `#![allow(clippy::doc_markdown)]` with
-  no justification. It is dead today (pedantic is not enabled anywhere) and becomes live
-  only if KW-LINT-112 lands. Left in place.
+  no justification. It is now live under the adopted floor and remains tracked for the
+  KW-LINT-1 ratchet; it is not changed by this inheritance item.
 
 ## KW-LINT-112 — withdrawn, duplicate of KW-LINT-1
 
 - Filed as "decide the workspace clippy floor", then found to duplicate the existing
-  KW-LINT-1 ("Burn down the clippy debt baseline"), which already owns that work. The floor
-  itself is in PR #423, still open at the time of writing — so `main` has no
-  `[workspace.lints.clippy]` table yet, and KW-LINT-1's context line ("the clippy floor
-  landed in #423") is ahead of the code. Nothing to do here; KW-LINT-1 is the item.
+  KW-LINT-1 ("Burn down the clippy debt baseline"), which owns the adopted floor and its
+  remaining debt. Nothing to do here; KW-LINT-1 is the item.
 
 
 ## KW-GIT-113 — Drain the kwavers stash backlog [patch] — todo

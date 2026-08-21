@@ -44,6 +44,13 @@ merging current `origin/main` and removing a redundant `ArrayView` clone exposed
 by strict Clippy, then applying the verified review-fix slice. The integration
 closure above records the resulting merge and the hosted queue residual.
 
+Post-merge package verification also exposed the current lint-floor boundary:
+strict targeted Clippy passes for the three seismic entry points after each carries
+a scoped `#[expect]` for its intentional console report; the broad Kwavers
+`--all-targets` command still reports pre-existing test/example debt such as
+`manual_assert`, `print_stdout`, and `ignore_without_reason`, which remains owned by
+`KW-LINT-1` and is not represented as a clean gate.
+
 The complete example gate initially exposed an independent runtime defect in
 `focused_ultrasound_water_tank`: its five disjoint solver branches ran
 sequentially, and the comparison test terminated at 60 seconds. The provider
