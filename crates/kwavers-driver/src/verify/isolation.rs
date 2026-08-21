@@ -80,7 +80,7 @@ pub fn schematic_isolation_bfs(
     for c in comps {
         let refdes = &c.refdes;
         let name_upper = refdes.to_uppercase();
-        if name_upper.starts_with("ISO") || name_upper.starts_with("J") {
+        if name_upper.starts_with("ISO") || name_upper.starts_with('J') {
             continue;
         }
 

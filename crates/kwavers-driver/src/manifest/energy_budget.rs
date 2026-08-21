@@ -96,6 +96,11 @@ impl DriverManifest {
     /// frame_duty)` against the routed-board ampacity headroom supplied by [`EnergyBudgetInputs`].
     /// Returns the aggregated budget on success, `Err` describing the offending channel count
     /// or current overload.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err(String)` when the v2 lane count, tile profile count, electrical inputs, or
+    /// calculated current/ampacity margins violate the manifest contract.
     pub fn validate_v2_energy_budget(
         &self,
         inputs: EnergyBudgetInputs,

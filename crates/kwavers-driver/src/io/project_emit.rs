@@ -28,6 +28,11 @@ use super::pro_emit::write_kicad_pro;
 ///
 /// The stem is derived from `pcb_path`'s filename (e.g. `output/foo.kicad_pcb` → stem `foo`);
 /// the three output files all share that stem in the same directory.
+///
+/// # Errors
+///
+/// Returns an I/O error when the PCB, design-rule, or project file cannot be written, or when the
+/// PCB path has no valid UTF-8 filename stem.
 pub fn save_kicad_project(
     pcb_path: &Path,
     board: &Board,
@@ -63,6 +68,11 @@ pub fn save_kicad_project(
 /// `.kicad_dru` and `.kicad_pro` sidecars are still written so the flagged board DRC-checks
 /// against the engine's own rule set. This is the labelled, inspectable alternative to refusing
 /// to write — a failing board you can render and DRC is a failing board you can drive a fix from.
+///
+/// # Errors
+///
+/// Returns an I/O error when the flagged PCB, design-rule, or project file cannot be written, or
+/// when the PCB path has no valid UTF-8 filename stem.
 #[allow(clippy::too_many_arguments)]
 pub fn save_kicad_project_flagged(
     pcb_path: &Path,

@@ -112,10 +112,10 @@ pub fn render_board_svg(board: &Board, comps: &[Component], lib: &[FootprintDef]
     let mut s = String::with_capacity(512 * 1024);
 
     // ── Header ───────────────────────────────────────────────────────────────────────────────────
-    wln!(s, r##"<?xml version="1.0" encoding="UTF-8"?>"##);
+    wln!(s, r#"<?xml version="1.0" encoding="UTF-8"?>"#);
     wln!(
         s,
-        r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="{vx:.3} {vy:.3} {vw:.3} {vh:.3}" width="{dw:.0}mm" height="{dh:.0}mm">"##,
+        r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="{vx:.3} {vy:.3} {vw:.3} {vh:.3}" width="{dw:.0}mm" height="{dh:.0}mm">"#,
         vx = vx0,
         vy = vy0,
         vw = vw,
@@ -353,6 +353,10 @@ pub fn render_board_svg(board: &Board, comps: &[Component], lib: &[FootprintDef]
 /// Write [`render_board_svg`] output to `path`.
 ///
 /// Creates parent directories if needed. Returns an error string on I/O failure.
+///
+/// # Errors
+///
+/// Returns `Err(String)` when a parent directory cannot be created or the SVG cannot be written.
 pub fn save_board_svg(
     path: &std::path::Path,
     board: &Board,

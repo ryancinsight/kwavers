@@ -112,6 +112,11 @@ impl StackBoardManifest {
 }
 
 /// Build a stack-board manifest from a generated board and its placed connector.
+///
+/// # Errors
+///
+/// Returns `Err(String)` when the connector is missing, its net and pad counts differ, or the
+/// board path and connector data cannot satisfy the stack-manifest contract.
 pub fn stack_board_manifest_from_board(
     board_path: &Path,
     role: StackBoardRole,
