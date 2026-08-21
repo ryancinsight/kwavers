@@ -1,5 +1,96 @@
 # Backlog / Strategy
 
+## KW-LINT-111 — Put every member on workspace lint inheritance [patch] — done 2026-08-20
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-LINT-111 | All 24 workspace members inherit `[workspace.lints]`, and no member re-declares a rule the workspace already owns. | [patch] | done | Claude | `crates/{kwavers,kwavers-driver,kwavers-python}/Cargo.toml` |
+
+- Premise correction. This item was filed as "three crates miss the Atlas clippy floor
+  (`clippy::all` + `pedantic`), ~1,155 warnings to burn down". Verified against `main`, that
+  is wrong on both halves. `main`'s root `Cargo.toml` has **no
+  `[workspace.lints.clippy]` table at all** — only `[workspace.lints.rust]` with
+  `unexpected_cfgs` — and `git log -S workspace.lints.clippy -- Cargo.toml` shows it has
+  never had one. The table I read exists on exactly one unmerged branch,
+  `origin/codex/kwavers-floatelement-roots`; I measured it while the shared tree happened to
+  sit on a branch carrying that work, and attributed it to `main`. The ~1,155 figure came
+  from passing `-W clippy::pedantic` on the command line, which measures a floor the
+  repository does not currently have.
+- What was actually true, and is now fixed: three of twenty-four members carried no
+  `[lints]` section, so they inherited nothing — not even `unexpected_cfgs`. All 24 now
+  inherit. The top-level `kwavers` crate additionally re-declared
+  `[lints.rust] unexpected_cfgs = …` byte-identically to the workspace table; that
+  duplicate is deleted in favour of inheritance, so the rule has one owner.
+- Measured, not assumed: with inheritance in place, `cargo clippy --all-targets` reports
+  **zero** warnings for `kwavers-driver`, `kwavers-python`, and `kwavers` (excluding the
+  stack overlay's unused-`[patch]` notices, which are unrelated to lints). Both CI clippy
+  gates pass with `-D warnings`: `-p kwavers --all-targets --no-default-features --features
+  full --no-deps` and `-p kwavers --features pinn --lib`. There is no burn-down, because
+  there is no clippy floor to burn down against.
+- Not done here, deliberately: adopting an Atlas clippy floor is a real and separate
+  decision that already has an owner — KW-LINT-1 tracks the burn-down, and PR #423
+  (`fix/xtask-metrics-paths`, open at the time of writing) carries the candidate
+  `[workspace.lints.clippy]` table. Writing a second table here would fork that decision.
+  Note that KW-LINT-1's context line says the floor "landed in #423"; #423 is not merged,
+  so `main` has no clippy table and the item's premise is ahead of the code.
+- Consequence for earlier claims: every "clippy clean" recorded for `kwavers-driver` in
+  KW-DOC-106, KW-DOC-107, KW-CLEAN-108, and KW-DOC-110 was `cargo clippy` at the default
+  lint set. That was accurate as stated and is what CI would have run; the correction filed
+  under KW-DOC-110 said those runs were weaker than the *workspace floor* — but no such
+  floor exists on `main`, so the runs were the strongest gate available.
+- Note: `crates/kwavers-driver/src/ssot.rs` carries `#![allow(clippy::doc_markdown)]` with
+  no justification. It is dead today (pedantic is not enabled anywhere) and becomes live
+  only if KW-LINT-112 lands. Left in place.
+
+## KW-LINT-112 — withdrawn, duplicate of KW-LINT-1
+
+- Filed as "decide the workspace clippy floor", then found to duplicate the existing
+  KW-LINT-1 ("Burn down the clippy debt baseline"), which already owns that work. The floor
+  itself is in PR #423, still open at the time of writing — so `main` has no
+  `[workspace.lints.clippy]` table yet, and KW-LINT-1's context line ("the clippy floor
+  landed in #423") is ahead of the code. Nothing to do here; KW-LINT-1 is the item.
+
+
+## KW-GIT-113 — Drain the kwavers stash backlog [patch] — todo
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-GIT-113 | The repository's stash list is empty; anything of value in it is committed on a branch. | [patch] | todo | unclaimed | `git stash` entries in the kwavers gitdir |
+
+- `git stash list` holds **11 entries** dating from 2026-07-07 to 2026-08-18 — over a month
+  of work hidden from the board, from peers, and from every diff review. Several were taken
+  on branches that no longer exist or in detached-HEAD states, and two name themselves
+  `kwavers-stranded-2` and `pre-gitlink-advance-dirt`.
+- Stashes are shared per gitdir, so every worktree lane sees the same list; this is one
+  backlog, not five.
+- Acceptance: each entry is inspected, its unique delta either committed onto an
+  appropriate branch or discarded as superseded by landed work, and the entry dropped. A
+  discard is recorded with the evidence that the content is already on `origin`.
+- Triage completed 2026-08-20 (read-only; nothing dropped):
+
+  | Entry | Date | Content | Assessment |
+  |---|---|---|---|
+  | `stash@{0}` | 08-18 | 4 files: README fix + LendingIterator example migration | Inspect — may be superseded by the README work in PR #433 |
+  | `stash@{1}` | 08-09 | 40 files, -1252 lines, "kwavers-stranded-2" | Inspect — largest deletion-heavy snapshot |
+  | `stash@{2}` | 08-08 | 7 files, "pre-gitlink-advance-dirt" | Inspect |
+  | `stash@{3}` | 08-08 | `Cargo.lock` only | Discard — overlay lock churn, superseded |
+  | `stash@{4}` | 08-07 | `Cargo.lock` only | Discard — overlay lock churn, superseded |
+  | `stash@{5}` | 08-07 | `Cargo.lock` only | Discard — overlay lock churn, superseded |
+  | `stash@{6}` | 08-05 | `Cargo.lock` only | Discard — overlay lock churn, superseded |
+  | `stash@{7}` | 07-15 | `crates/kwavers/deny.toml`, 1 line | Check against `main`, then discard or apply |
+  | `stash@{8}` | 07-15 | Untracked scratch markers (`.slice-N-sha`, workflow file) | Discard — scratch |
+  | `stash@{9}` | 07-07 | 27 files, -1652 lines, "pre-existing-atlas-migration-context" | Inspect — pre-migration snapshot |
+  | `stash@{10}` | 07-07 | 144 files, -4209 lines, same series | Inspect — pre-migration snapshot |
+
+- Recommendation: the four `Cargo.lock`-only entries and the scratch-marker entry (five of
+  eleven) are unambiguously superseded — a lockfile snapshot from July against a lock that
+  has moved hundreds of commits since carries no recoverable information. The remaining six
+  need a diff read before any decision, and the three large "pre-migration context"
+  snapshots most likely record state *before* a migration that has since landed, meaning
+  applying them would revert landed work.
+- Blocked on: dropping a stash destroys parked work that is not otherwise on `origin`, so
+  the discards need explicit authorization even where the assessment is unambiguous. Re-open
+  trigger: owner confirms which entries may be dropped.
 ## KW-CI-115 — Enforce the merge gate on main [minor] — todo
 
 | ID | Outcome | Class | Status | Owner | Scope |
@@ -313,35 +404,6 @@
   clean. `cargo nextest run -p kwavers-driver` 494/494.
 - Merge note: filed and closed on `fix/xtask-metrics-paths`; KW-DOC-107 and KW-CLEAN-108
   carry the same note about the branch split.
-
-## KW-LINT-111 — Put kwavers-driver, -python, and kwavers on the workspace lint floor [minor] — todo
-
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-LINT-111 | Every workspace member inherits `[workspace.lints]`, so the Atlas clippy floor actually reaches all of them. | [minor] | todo | unclaimed | `crates/{kwavers-driver,kwavers-python,kwavers}/Cargo.toml` and the warnings that surface |
-
-- The defect, found while closing KW-DOC-110: three of the twenty-four members carry no
-  `[lints] workspace = true`, so `clippy::all` + `clippy::pedantic`, `print_stdout`, and
-  `dbg_macro` from the root `[workspace.lints.clippy]` table never apply to them. The
-  crates are `kwavers-driver`, `kwavers-python`, and the top-level `kwavers`. Every other
-  member inherits.
-- Correction it forces: any "clippy clean" claim previously recorded for `kwavers-driver`
-  — including in KW-DOC-106, KW-DOC-107, and KW-CLEAN-108 — was `cargo clippy` against the
-  *default* lint set, not the workspace floor. Those runs were real and passed; they were
-  simply a weaker gate than the phrase suggests.
-- Measured size: `cargo clippy -p kwavers-driver --all-targets -- -W clippy::all -W
-  clippy::pedantic` emits ~1,155 warnings, dominated by `cast_possible_truncation` (110).
-  The real count under the floor is lower, because the workspace table already allows
-  `module_name_repetitions`, `must_use_candidate`, `similar_names`, and `too_many_lines`;
-  measure again after adding inheritance before sizing the burn-down.
-- Acceptance: the three manifests inherit `[lints] workspace = true`; the resulting warning
-  count is either driven to zero or recorded as a ratchet baseline per the workspace
-  convention in the root `Cargo.toml` comment (`warn` now, `deny` per crate as each reaches
-  zero); no new blanket `allow` is introduced to absorb the count.
-- Related: `crates/kwavers-driver/src/ssot.rs:39` carries an unexplained
-  `#![allow(clippy::doc_markdown)]`. It is currently dead — pedantic is not enabled for the
-  crate, so the lint cannot fire — and becomes live the moment this item lands. Keep or
-  justify it then, rather than deleting it now.
 
 ## KW-CI-104 — Centralize reliable Ubuntu dependency installation [patch] — in progress 2026-08-19
 

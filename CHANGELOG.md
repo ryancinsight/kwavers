@@ -212,6 +212,11 @@
   length, and optional shear velocity. `HeterogeneousSkull::from_ct_hill`
   consumes that canonical skull configuration, and the seismic examples route
   synthetic and explicit CT volumes through the provider-owned model.
+- **Lint configuration:** all 24 workspace members now inherit `[workspace.lints]`.
+  `kwavers`, `kwavers-driver`, and `kwavers-python` carried no `[lints]` section and
+  inherited nothing; `kwavers` additionally re-declared `unexpected_cfgs` byte-identically
+  to the workspace table, so that duplicate is deleted in favour of inheritance. Clippy
+  reports zero warnings for all three afterwards and both CI clippy gates pass.
 
 - **Documentation:** the README single-sourcing check now exempts `publish = false`
   crates by rule instead of an allowlist. The rule follows the requirement's rationale —
