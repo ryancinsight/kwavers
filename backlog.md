@@ -733,6 +733,11 @@
   migrated, including value-semantic boundary error tests. Focused Nextest numerical-accuracy
   filter passes 17/17 (889 filtered), package doctests pass 5/5 (8 ignored), warning-denied
   rustdoc passes, and the refreshed workspace `unused_self` count is 121 sites (solver 0).
+- 2026-08-21 exact integrated-head validation after PR #506 (`855117c00`): full Kwavers
+  Nextest passes 530/530 with eight configured skips; `cargo build --offline -p kwavers --examples`
+  exits 0; `mdbook test docs/book` exits 0 across all listed chapters; and `mdbook build docs/book`
+  exits 0 with HTML written to `target/book`. The test run regenerated tracked PNG outputs locally;
+  those derived deltas were restored and no binary fixture changes are included.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
