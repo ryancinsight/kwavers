@@ -205,6 +205,10 @@ pub fn fft_3d_array(field: &Array3<f64>) -> Array3<Complex64> {
 /// Forward 3-D FFT of a real Leto array into caller-owned storage.
 /// Routes to Apollo's zero-alloc `fft_3d_array_into`, avoiding intermediate
 /// allocation and element-wise conversion.
+///
+/// # Panics
+///
+/// Panics if `out` does not have the same three-dimensional shape as `field`.
 pub fn fft_3d_array_into(field: &Array3<f64>, out: &mut Array3<Complex64>) {
     assert_eq!(
         field.shape(),
@@ -228,6 +232,11 @@ pub fn ifft_3d_array(field_hat: &Array3<Complex64>) -> Array3<f64> {
 /// plain `ifft_3d_array_into` name now belongs to the three-argument variant
 /// taking explicit scratch, matching its 1-D and 2-D siblings, which the
 /// two-argument form had been inverted against.
+///
+/// # Panics
+///
+/// Panics if `out` does not have the same three-dimensional shape as
+/// `field_hat`.
 pub fn ifft_3d_array_into(field_hat: &mut Array3<Complex64>, out: &mut Array3<f64>) {
     assert_eq!(
         field_hat.shape(),
@@ -246,6 +255,10 @@ pub fn fft_3d_complex(field: &Array3<Complex64>) -> Array3<Complex64> {
 }
 
 /// Forward 3-D complex FFT into caller-owned storage.
+///
+/// # Panics
+///
+/// Panics if `out` does not have the same three-dimensional shape as `field`.
 pub fn fft_3d_complex_into(field: &Array3<Complex64>, out: &mut Array3<Complex64>) {
     assert_eq!(
         field.shape(),

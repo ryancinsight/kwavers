@@ -6806,3 +6806,16 @@ synchronized active-task wait test and queue/item `u64::MAX` boundary tests;
 strict offline Clippy, doctest, rustfmt, and rustdoc pass. The locked local
 gate is blocked before compilation by the Atlas development overlay's required
 Cargo.lock rewrite; the lockfile was restored after overlay verification.
+
+## `missing_panics_doc` math slice — 2026-08-21
+
+The `kwavers-math` slice documents the panic contracts for all 11 measured
+public APIs: k-space vector construction, spectral helpers, caller-owned 3-D
+FFT output paths, matrix-free LSQR shape validation, and Hermes-backed SIMD
+operations. The package gate passes strict offline Clippy with
+`-D clippy::missing_panics_doc -D warnings`, Nextest run
+`f5618d54-01d3-4c42-b3b0-6aab73b7d5f2` passes 196/196, doctests pass 3/3
+(7 ignored), and rustdoc passes with `RUSTDOCFLAGS=-D warnings`.
+
+The remaining workspace debt is four `missing_panics_doc` sites in
+`kwavers-driver`; that slice is next after this math increment integrates.

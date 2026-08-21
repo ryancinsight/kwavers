@@ -315,7 +315,7 @@
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | in progress | Codex | `crates/kwavers-python/src` (next slice; parent remains open) |
+| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | in progress | Codex | `crates/kwavers-math/src` (`missing_panics_doc` slice; parent remains open) |
 
 - Context: the clippy floor landed in #423. 21 of 24 crates already declared
   `[lints] workspace = true`, but no `[workspace.lints.clippy]` table existed for them to
@@ -385,6 +385,12 @@
   `doc_markdown` warnings needed to make its strict package gate warning-clean. Its acceptance
   is strict package Clippy with the lint re-enabled and `-D warnings`, the package nextest
   gate, doctests, and warning-denied rustdoc; the workspace debt block remains unchanged.
+- 2026-08-21 Python binding slice merged in PR #458 (`63fdcd37b`); the workspace
+  `missing_errors_doc` measurement is now zero, so its debt-block line was removed. The next
+  `missing_panics_doc` measurement found 15 sites: 11 in `kwavers-math` and four in
+  `kwavers-driver`. Its acceptance is strict package Clippy with the lint re-enabled, the
+  package nextest gate, doctests, and warning-denied rustdoc; the debt comment is ratcheted to
+  the measured 15 until both packages are complete.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
