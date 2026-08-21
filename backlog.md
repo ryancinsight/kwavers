@@ -644,6 +644,12 @@
   dispatcher remains stateful and is out of scope. Acceptance is static conversion with all
   callers migrated, focused solver Nextest, package doctests, warning-denied rustdoc, and a
   refreshed workspace count.
+- 2026-08-21 seismic misfit slice is implemented: the ten measured kernels are associated
+  functions, and converting them exposed four receiver-free envelope/phase dispatch methods that
+  were converted in the same cohesive module. All callers are migrated; focused Nextest
+  `kwavers-solver` seismic-misfit filter passes 11/11 (894 filtered), package doctests pass 5/5
+  (8 ignored), warning-denied rustdoc passes, and the refreshed workspace `unused_self` count is
+  156 sites (solver 35). The increment is ready for integration.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a

@@ -19,7 +19,6 @@ impl MisfitFunction {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(super) fn wasserstein_misfit(
-        &self,
         observed: &Array2<f64>,
         synthetic: &Array2<f64>,
     ) -> KwaversResult<f64> {
@@ -67,7 +66,6 @@ impl MisfitFunction {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(super) fn wasserstein_adjoint_source(
-        &self,
         observed: &Array2<f64>,
         synthetic: &Array2<f64>,
     ) -> KwaversResult<Array2<f64>> {
