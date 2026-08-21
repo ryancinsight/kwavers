@@ -582,6 +582,9 @@
   scan is clean in `time_scale_separation.rs`. The increment is ready for integration; the
   workspace debt-block line remains until a refreshed workspace measurement confirms the
   count.
+- 2026-08-21 time-scale separation slice merged in PR #490 (`5e45e9061`). The refreshed
+  `unused_self` measurement is 185 sites (solver 64); the next bounded slice is the three
+  receiver-free FWI constraint helpers in `inverse/fwi/time_domain/constraints.rs`.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
