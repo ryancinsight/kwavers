@@ -53,17 +53,17 @@ impl TreatmentPlanner {
         let acoustic_field = self.simulate_acoustic_field(&transducer_setup)?;
 
         // Step 4: Calculate thermal response
-        let temperature_field = self.calculate_thermal_response(&acoustic_field)?;
+        let temperature_field = Self::calculate_thermal_response(&acoustic_field)?;
 
         // Step 5: Validate safety constraints
-        self.validate_safety(
+        Self::validate_safety(
             &temperature_field,
             &acoustic_field,
             transducer_spec.frequency,
         )?;
 
         // Step 6: Estimate treatment time
-        let treatment_time = self.estimate_treatment_time(targets, &acoustic_field);
+        let treatment_time = Self::estimate_treatment_time(targets, &acoustic_field);
 
         Ok(TranscranialTreatmentPlan {
             patient_id: patient_id.to_owned(),

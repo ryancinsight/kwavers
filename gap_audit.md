@@ -7218,6 +7218,13 @@ Nextest (1561/1561 with one configured skip), doctests (9/13; 4 ignored), and wa
 rustdoc pass. The refreshed workspace `unused_self` count is 51 sites with 4 remaining in other
 physics domains.
 
+The `kwavers-physics` treatment-planning slice converts safety validation, thermal response, and
+treatment-time estimation to associated functions; transducer setup/acoustic-field simulation
+retains planner/grid state. Planner callers use associated-function syntax. Package check, targeted
+`unused_self` Clippy (treatment-planning paths clean), Nextest (1561/1561 with one configured skip),
+doctests (9/13; 4 ignored), and warning-denied rustdoc pass. The refreshed workspace `unused_self`
+count is 48 sites with 1 remaining in other physics domains.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.

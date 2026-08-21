@@ -111,7 +111,6 @@ impl TreatmentPlanner {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(crate) fn calculate_thermal_response(
-        &self,
         acoustic_field: &Array3<f64>,
     ) -> KwaversResult<Array3<f64>> {
         let [nx, ny, nz] = acoustic_field.shape();
@@ -137,7 +136,6 @@ impl TreatmentPlanner {
 
     /// Estimate treatment time
     pub(crate) fn estimate_treatment_time(
-        &self,
         _targets: &[TranscranialTargetVolume],
         acoustic_field: &Array3<f64>,
     ) -> f64 {
