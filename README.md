@@ -388,6 +388,12 @@ neither code's boundary treatment has reached.
 | `ivp_homogeneous_2d` | 64 × 64 | 100 | 5.50e-7 | 1.05e-6 | 1.000000000 |
 | `ivp_homogeneous_3d` | 32 × 32 × 32 | 50 | 1.06e-4 | 2.20e-4 | 0.999999994 |
 
+The finite-difference solver is measured against the same reference as a
+cross-scheme check, since the pseudospectral solver shares its k-space machinery
+and cannot be an independent oracle for it. It separates by `2.53e-2` relative
+L2 at `r = 0.999647`, which is its own fourth-order dispersion error and is
+gated as such rather than at the pseudospectral bound.
+
 `k-wave-python` ships no 1-D solver, so there is no 1-D row; the axisymmetric
 case is a separate geometry and is not yet covered. Absorption, nonlinearity,
 heterogeneous media, and source-driven problems have no committed reference

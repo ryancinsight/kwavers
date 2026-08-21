@@ -11,7 +11,9 @@
   initial-value benchmark, and runs in the default test gate with no external
   solver present. Measured agreement is relative L2 `5.50e-7` at Pearson
   `r = 1.000000000` in two dimensions and `1.06e-4` at `r = 0.999999994` in
-  three. `scripts/generate_kwave_reference.py` regenerates the reference set by
+  three. The finite-difference solver is measured against the same reference as
+  a cross-scheme check and separates by `2.53e-2` at `r = 0.999647`, which is
+  its own fourth-order dispersion error. `scripts/generate_kwave_reference.py` regenerates the reference set by
   driving `k-wave-python`. See
   [ADR 119](docs/adr/119-kwave-reference-oracle.md).
 

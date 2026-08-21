@@ -84,8 +84,27 @@ Full-field agreement over the comparison window, at the committed revision:
 | `ivp_homogeneous_3d` | 1.06e-4 | 2.20e-4 | 0.999999994 |
 
 Both cases exceed the `r >= 0.9999` figure the README published, by four to five
-orders of magnitude in the L2 norm. The test executes in 1.8 s, inside the
-standard nextest budget.
+orders of magnitude in the L2 norm.
+
+The finite-difference solver is measured against the same reference as a
+cross-scheme check, since the pseudospectral solver shares its k-space machinery
+and cannot act as an independent oracle for it:
+
+| Case | Relative L2 | Relative L-infinity | Pearson `r` |
+| --- | --- | --- | --- |
+| `ivp_homogeneous_2d`, finite difference | 2.53e-2 | 3.12e-2 | 0.999647 |
+
+That separation is the scheme's own dispersion error, not a defect. A
+fourth-order staggered scheme's relative phase error is `(k dx)^4 / 30` per
+wavelength travelled; being quartic in the wavenumber it is set by the highest
+resolved content, and a `sigma = 3 dx` Gaussian has a spectral width of `1/3`
+rad per cell, putting its three-sigma edge near `k dx ~ 1` and the predicted
+error at `1/30 ~ 3e-2`. The measurement is `2.5e-2`. Its gate is `5e-2` on
+relative L2 and `0.99` on correlation — a dispersion error shifts phase, it does
+not decorrelate, so falling below the correlation floor would mean the scheme is
+wrong rather than merely dispersive.
+
+The four tests execute in 2.35 s, inside the standard nextest budget.
 
 ## Tolerance derivation
 
