@@ -84,10 +84,9 @@ fn test_generate_synthetic_data_matches_canonical_forward_model() {
 
 #[test]
 fn test_model_constraints() {
-    let processor = FwiProcessor::default();
     let mut model = Array3::from_elem([5, 5, 5], 10000.0);
 
-    processor.apply_model_constraints(&mut model);
+    FwiProcessor::apply_model_constraints(&mut model);
 
     assert!(model[[2, 2, 2]] <= 6000.0);
     assert!(model[[2, 2, 2]] >= 750.0);

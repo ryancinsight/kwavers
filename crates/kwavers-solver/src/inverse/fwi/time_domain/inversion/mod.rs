@@ -45,7 +45,7 @@ impl FwiProcessor {
         }
 
         let mut current_model = initial_model.clone();
-        self.apply_model_constraints(&mut current_model);
+        Self::apply_model_constraints(&mut current_model);
         let mut prev_objective: Option<f64> = None;
         let max_iterations = self.parameters.max_iterations;
 
@@ -151,7 +151,7 @@ impl FwiProcessor {
         }
 
         let mut updated_model = current_model - &(&normalized_gradient * step_size);
-        self.apply_model_constraints(&mut updated_model);
+        Self::apply_model_constraints(&mut updated_model);
         Ok((objective, updated_model, step_size))
     }
 
