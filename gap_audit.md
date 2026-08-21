@@ -6903,3 +6903,7 @@ ablation. Strict offline Clippy with `-D clippy::missing_panics_doc -D warnings`
 passes; Nextest run `d08bec08-3f94-4730-8710-118e8ce0db5a` passes 1561/1561
 with one intentional skip; doctests pass 9/9 (4 ignored); and rustdoc passes
 with `RUSTDOCFLAGS=-D warnings`.
+
+The refreshed workspace measurement then found 69 additional
+`missing_panics_doc` sites in `kwavers-solver`; that package is the current
+ratchet item.

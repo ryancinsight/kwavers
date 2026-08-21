@@ -315,7 +315,7 @@
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | in progress | Codex | `crates/kwavers-physics/src` (`missing_panics_doc` slice; parent remains open) |
+| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | in progress | Codex | `crates/kwavers-solver/src` (`missing_panics_doc` slice; parent remains open) |
 
 - Context: the clippy floor landed in #423. 21 of 24 crates already declared
   `[lints] workspace = true`, but no `[workspace.lints.clippy]` table existed for them to
@@ -421,6 +421,11 @@
   source that were absent from the prior package inventory. This physics slice is now claimed
   with the same strict package Clippy, nextest, doctest, and warning-denied rustdoc acceptance
   gates; the debt block remains unchanged until this slice completes.
+- 2026-08-21 physics panic-contract slice merged in PR #466 (`b7df7597e`); the refreshed
+  workspace measurement found 69 `missing_panics_doc` sites in `kwavers-solver` production
+  source. This solver slice is now claimed with the same strict package Clippy, nextest, doctest,
+  and warning-denied rustdoc acceptance gates; the debt block remains unchanged until this
+  slice completes.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
