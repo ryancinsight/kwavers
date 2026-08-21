@@ -24,7 +24,7 @@ impl MlBayesianPINN {
             predictions.push(predictor.predict_inputs(inputs)?);
         }
 
-        self.compute_prediction_statistics(&predictions)
+        Self::compute_prediction_statistics(&predictions)
     }
 
     /// Compute prediction statistics from Monte Carlo samples.
@@ -35,7 +35,6 @@ impl MlBayesianPINN {
     /// - Returns `KwaversError::InvalidInput` if `predictions` is empty.
     ///
     pub(super) fn compute_prediction_statistics(
-        &self,
         predictions: &[Array2<f32>],
     ) -> KwaversResult<MlPredictionWithUncertainty> {
         if predictions.is_empty() {

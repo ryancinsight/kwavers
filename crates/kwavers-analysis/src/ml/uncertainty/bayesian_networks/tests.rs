@@ -27,18 +27,11 @@ fn test_prediction_statistics() {
     // Mean = (0+1+2+3+4)/5 = 2.0
     // Variance (Bessel) = ((4+1+0+1+4)/4) = 2.5; std dev ≈ 1.5811
     use leto::Array2;
-    let config = BayesianConfig {
-        dropout_rate: 0.1,
-        num_samples: 5,
-    };
-    let bayesian = MlBayesianPINN::new(config).unwrap();
     let predictions: Vec<Array2<f32>> = (0..5)
         .map(|i| Array2::from_elem((10, 20), i as f32))
         .collect();
 
-    let result = bayesian
-        .compute_prediction_statistics(&predictions)
-        .unwrap();
+    let result = MlBayesianPINN::compute_prediction_statistics(&predictions).unwrap();
 
     assert_eq!(result.mean_prediction.shape(), [10, 20]);
     assert_eq!(result.uncertainty.shape(), [10, 20]);
@@ -84,8 +77,7 @@ fn test_prediction_statistics() {
 
 #[test]
 fn test_prediction_statistics_empty_rejects() {
-    let bayesian = MlBayesianPINN::new(BayesianConfig::default()).unwrap();
-    let err = bayesian.compute_prediction_statistics(&[]).unwrap_err();
+    let err = MlBayesianPINN::compute_prediction_statistics(&[]).unwrap_err();
     let msg = format!("{err:?}");
     assert!(
         msg.contains("No predictions"),

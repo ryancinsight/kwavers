@@ -937,6 +937,12 @@
   receiver-bound. Package check, targeted `unused_self` Clippy (beamforming-training path clean),
   Nextest (744/744), doctests (1/22; 21 ignored), and warning-denied rustdoc pass. The refreshed
   workspace `unused_self` count is 44 sites with 25 remaining in other analysis paths.
+- 2026-08-21 `kwavers-analysis` Bayesian uncertainty slice is implemented: Monte Carlo prediction
+  statistics are an associated function; model configuration and predictor state remain
+  receiver-bound. Calibration, decomposition, and tests use associated-function syntax. Package
+  check, targeted `unused_self` Clippy (Bayesian path clean), Nextest (744/744), doctests (1/22;
+  21 ignored), and warning-denied rustdoc pass. The refreshed workspace `unused_self` count is 43
+  sites with 24 remaining in other analysis paths.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
