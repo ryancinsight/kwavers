@@ -6876,4 +6876,4 @@ Clippy with `-D clippy::missing_panics_doc -D warnings` passes; Nextest run
 rustdoc passes with `RUSTDOCFLAGS=-D warnings`.
 
 The next workspace measurement remains six `missing_panics_doc` sites in
-`kwavers-transducer`.
+`kwavers-transducer`; that package is the current ratchet item.
