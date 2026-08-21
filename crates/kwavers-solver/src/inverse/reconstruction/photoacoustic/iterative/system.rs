@@ -32,19 +32,19 @@ impl IterativeMethods {
 
         for (sensor_idx, sensor_pos) in sensor_positions.iter().enumerate() {
             for voxel_idx in 0..n_voxels {
-                let (i, j, k) = self.linear_to_3d_index(voxel_idx, grid_size);
+                let (i, j, k) = Self::linear_to_3d_index(voxel_idx, grid_size);
                 let voxel_pos = [
                     (i as f64 + 0.5) * dx,
                     (j as f64 + 0.5) * dy,
                     (k as f64 + 0.5) * dz,
                 ];
 
-                let distance = self.euclidean_distance(&voxel_pos, sensor_pos);
+                let distance = Self::euclidean_distance(&voxel_pos, sensor_pos);
 
                 if distance > 0.0 {
                     let green_function = 1.0 / (FOUR_PI * distance);
                     let solid_angle_factor =
-                        self.compute_solid_angle_factor(&voxel_pos, sensor_pos, dx);
+                        Self::compute_solid_angle_factor(&voxel_pos, sensor_pos, dx);
                     matrix[[sensor_idx, voxel_idx]] =
                         green_function * voxel_volume * solid_angle_factor;
                 } else {
@@ -61,7 +61,6 @@ impl IterativeMethods {
     ///
     /// Returns Ω/4π clamped to [0, 1], where Ω ≈ voxel_size² / r².
     pub(super) fn compute_solid_angle_factor(
-        &self,
         voxel_pos: &[f64; 3],
         sensor_pos: &[f64; 3],
         voxel_size: f64,
@@ -82,11 +81,7 @@ impl IterativeMethods {
     /// Convert linear voxel index to (i, j, k) 3-D index.
     ///
     /// Row-major order: k varies fastest, i slowest.
-    pub(super) fn linear_to_3d_index(
-        &self,
-        idx: usize,
-        grid_size: [usize; 3],
-    ) -> (usize, usize, usize) {
+    pub(super) fn linear_to_3d_index(idx: usize, grid_size: [usize; 3]) -> (usize, usize, usize) {
         let k = idx % grid_size[2];
         let j = (idx / grid_size[2]) % grid_size[1];
         let i = idx / (grid_size[1] * grid_size[2]);
@@ -94,7 +89,7 @@ impl IterativeMethods {
     }
 
     /// Euclidean distance between two 3-D points.
-    pub(super) fn euclidean_distance(&self, p1: &[f64; 3], p2: &[f64; 3]) -> f64 {
+    pub(super) fn euclidean_distance(p1: &[f64; 3], p2: &[f64; 3]) -> f64 {
         (p1[2] - p2[2])
             .mul_add(
                 p1[2] - p2[2],

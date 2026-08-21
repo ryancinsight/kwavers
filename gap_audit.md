@@ -7179,6 +7179,14 @@ associated functions and migrates all filter-core callers. Focused Nextest run
 the package doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and
 the focused `unused_self` scan is clean in `photoacoustic/filters/core.rs`.
 
+The photoacoustic iterative slice converts OSEM iteration and the three
+receiver-free geometric helpers (linear index conversion, Euclidean distance,
+and solid-angle factor) to associated functions and migrates all iterative
+callers. Broad photoacoustic Nextest run
+`b1d351de-be98-4c80-9920-7f28f705ecd9` passes 10/10 (895 solver tests skipped);
+the package doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and
+the focused `unused_self` scan is clean in `photoacoustic/iterative/`.
+
 After PR #477, the workspace `unused_self` scan reports 211 sites, including
 90 in `kwavers-solver`. The next bounded slice is the receiver-free helper in
 `forward/hybrid/adaptive_selection/selector.rs`.

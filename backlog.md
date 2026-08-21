@@ -609,6 +609,14 @@
   doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and the focused `unused_self`
   scan is clean in `photoacoustic/filters/core.rs`. The increment is ready for integration; the
   workspace debt-block line remains until a refreshed workspace measurement confirms the count.
+- 2026-08-21 photoacoustic iterative slice is implemented: OSEM iteration and the three
+  receiver-free geometric helpers (linear index conversion, Euclidean distance, and solid-angle
+  factor) are associated functions, with all iterative callers migrated. The broad photoacoustic
+  Nextest `b1d351de-be98-4c80-9920-7f28f705ecd9` passes 10/10 (895 solver tests skipped); the
+  package doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and the focused
+  `unused_self` scan is clean in `photoacoustic/iterative/`. The increment is ready for
+  integration; the workspace debt-block line remains until a refreshed workspace measurement
+  confirms the count.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a

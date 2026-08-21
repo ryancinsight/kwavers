@@ -87,7 +87,6 @@ impl IterativeMethods {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(super) fn osem_iteration(
-        &self,
         a: &Array2<f64>,
         x: &mut Array1<f64>,
         y: &Array1<f64>,
@@ -169,7 +168,7 @@ impl IterativeMethods {
         let mut grad_reg = Array1::<f64>::zeros(n);
 
         for idx in 0..n {
-            let (i, j, k) = self.linear_to_3d_index(idx, [grid_size_est; 3]);
+            let (i, j, k) = Self::linear_to_3d_index(idx, [grid_size_est; 3]);
             let mut laplacian = -6.0 * x[idx];
             let mut count = 0;
 
