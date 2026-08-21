@@ -95,7 +95,7 @@ impl IterativeMethods {
                     self.art_iteration(&system_matrix, &mut x, &y)?;
                 }
                 IterativeAlgorithm::OSEM { subsets } => {
-                    self.osem_iteration(&system_matrix, &mut x, &y, *subsets)?;
+                    Self::osem_iteration(&system_matrix, &mut x, &y, *subsets)?;
                 }
             }
 
@@ -105,7 +105,7 @@ impl IterativeMethods {
         }
 
         for (idx, val) in x.iter().enumerate() {
-            let (i, j, k) = self.linear_to_3d_index(idx, grid_size);
+            let (i, j, k) = Self::linear_to_3d_index(idx, grid_size);
             reconstruction[[i, j, k]] = *val;
         }
 
