@@ -7171,6 +7171,13 @@ clean), Nextest (1561/1561 with one configured skip), doctests (9/13; 4 ignored)
 warning-denied rustdoc pass. The refreshed workspace `unused_self` count is 66 sites with 19
 remaining in other physics domains.
 
+The `kwavers-physics` CEUS slice converts nonlinear beamforming, contrast enhancement, and
+single-frequency DFT extraction to associated functions; harmonic filter state remains
+receiver-bound. Package check, targeted `unused_self` Clippy (CEUS paths clean), Nextest
+(1561/1561 with one configured skip), doctests (9/13; 4 ignored), and warning-denied rustdoc pass.
+The refreshed workspace `unused_self` count is 63 sites with 16 remaining in other physics
+domains.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.

@@ -68,13 +68,13 @@ impl CEUSReconstruction {
     ///
     pub fn process_frame(&self, scattered_signals: &Array3<f64>) -> KwaversResult<ContrastImage> {
         // Apply nonlinear beamforming
-        let beamformed = self.nonlinear_beamforming(scattered_signals)?;
+        let beamformed = Self::nonlinear_beamforming(scattered_signals)?;
 
         // Extract harmonic components
         let harmonic_image = self.extract_harmonics(&beamformed)?;
 
         // Apply contrast-specific processing
-        let contrast_image = self.contrast_enhancement(&harmonic_image)?;
+        let contrast_image = Self::contrast_enhancement(&harmonic_image)?;
 
         Ok(ContrastImage {
             intensity: contrast_image,
@@ -104,7 +104,7 @@ impl CEUSReconstruction {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    fn nonlinear_beamforming(&self, signals: &Array3<f64>) -> KwaversResult<Array3<f64>> {
+    fn nonlinear_beamforming(signals: &Array3<f64>) -> KwaversResult<Array3<f64>> {
         let mut beamformed = signals.clone();
 
         // Dynamic maximum for normalisation (avoids hardcoded reference pressure)
@@ -157,7 +157,7 @@ impl CEUSReconstruction {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    fn contrast_enhancement(&self, harmonic_image: &Array3<f64>) -> KwaversResult<Array3<f64>> {
+    fn contrast_enhancement(harmonic_image: &Array3<f64>) -> KwaversResult<Array3<f64>> {
         let mut enhanced = harmonic_image.clone();
 
         // Apply log compression

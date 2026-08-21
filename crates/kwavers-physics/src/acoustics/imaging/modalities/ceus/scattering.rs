@@ -130,12 +130,12 @@ impl HarmonicImaging {
     pub fn extract_harmonics(&self, signal: &[f64], sample_rate: f64) -> Vec<f64> {
         self.harmonic_frequencies
             .iter()
-            .map(|&freq| self.extract_single_frequency(signal, freq, sample_rate))
+            .map(|&freq| Self::extract_single_frequency(signal, freq, sample_rate))
             .collect()
     }
 
     /// Extract single frequency component using DFT
-    fn extract_single_frequency(&self, signal: &[f64], frequency: f64, sample_rate: f64) -> f64 {
+    fn extract_single_frequency(signal: &[f64], frequency: f64, sample_rate: f64) -> f64 {
         let n = signal.len();
         if n == 0 {
             return 0.0;
