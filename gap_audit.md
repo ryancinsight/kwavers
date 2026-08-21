@@ -7287,6 +7287,18 @@ with all callers migrated. Focused Nextest passes 11/11 (894 filtered), package
 doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and the refreshed
 workspace `unused_self` count is 134 sites (13 in `kwavers-solver`).
 
+The next AMR claim covers the receiver-free octree node/leaf counting wrappers
+and refinement nesting helper. Wavelet transforms are kept as a separate follow-up
+because their inverse path requires behavioral completion in addition to receiver
+removal.
+
+The AMR tree slice is implemented: node/leaf counting wrappers and refinement
+nesting enforcement are associated functions with all callers migrated. Focused
+Nextest passes 11/11 (894 filtered), package doctests pass 5/5 (8 ignored),
+warning-denied rustdoc passes, and the refreshed workspace `unused_self` count is
+131 sites (10 in `kwavers-solver`). Wavelet transforms remain separate for
+behavioral completion.
+
 After PR #477, the workspace `unused_self` scan reports 211 sites, including
 90 in `kwavers-solver`. The next bounded slice is the receiver-free helper in
 `forward/hybrid/adaptive_selection/selector.rs`.
