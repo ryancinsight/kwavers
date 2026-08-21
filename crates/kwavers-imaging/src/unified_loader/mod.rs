@@ -116,7 +116,7 @@ impl UnifiedMedicalImageLoader {
                 path
             )));
         }
-        self.file_path = path.to_owned();
+        path.clone_into(&mut self.file_path);
         self.strategy.load(path)
     }
 
