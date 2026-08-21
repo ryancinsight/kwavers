@@ -197,7 +197,6 @@ zero_sized_map_values = "deny"
 implicit_hasher = "allow"                          # 2
 doc_comment_double_space_linebreaks = "deny"
 print_stderr = "allow"                             # 1+ (see unwrap_used note)
-large_types_passed_by_value = "allow"              # 1
 expl_impl_clone_on_copy = "deny"
 
 [workspace.lints.rust]
