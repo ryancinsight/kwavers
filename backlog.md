@@ -1075,6 +1075,11 @@
   The exact workspace `unused_self` scan reports 0 sites; the ratchet line is removed from
   `Cargo.toml`, re-enabling the lint floor. The package-wide all-targets Clippy gate still reports
   two pre-existing test-only lint defects outside this slice.
+- 2026-08-21 final Kwavers integration verification at merged revision `02fea4631`: `cargo fmt
+  --all -- --check`, `cargo build --offline -p kwavers --examples`, and the focused
+  `cargo nextest run --offline -p kwavers-diagnostics -p kwavers-therapy --lib` pass (541/541 with
+  one configured skip). `mdbook test docs/book` passes every chapter and `mdbook build docs/book`
+  completes. The exact workspace `unused_self` scan is 0, with the ratchet override deleted.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
