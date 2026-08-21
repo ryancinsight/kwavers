@@ -7437,6 +7437,12 @@ Clippy, Nextest (902/902 with 4 configured skips), doctests (5/13; 8 ignored), a
 rustdoc pass. The refreshed workspace `unnecessary_literal_bound` count is 3 sites, all outside
 `kwavers-solver`.
 
+The `kwavers-imaging` `unnecessary_literal_bound` slice is complete: CT loader name/modality and
+DICOM loader name now return `&'static str`; receiver-dependent DICOM modality remains borrowed.
+Package check, warning-denied Clippy, Nextest (61/61), doctests (4/4), and warning-denied rustdoc
+pass. The exact workspace scan reports 0 sites and the ratchet override is removed from
+`Cargo.toml`.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.

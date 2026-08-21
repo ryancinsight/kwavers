@@ -139,11 +139,11 @@ impl MedicalImageLoader for CTImageLoader {
         }
     }
 
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "CT (NIFTI)"
     }
 
-    fn modality(&self) -> &str {
+    fn modality(&self) -> &'static str {
         "CT"
     }
 }

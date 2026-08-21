@@ -1102,6 +1102,11 @@
   Clippy, Nextest (902/902 with 4 configured skips), doctests (5/13; 8 ignored), and warning-denied
   rustdoc pass. The refreshed workspace `unnecessary_literal_bound` count is 3 sites, all outside
   `kwavers-solver`.
+- 2026-08-21 imaging `unnecessary_literal_bound` slice is complete: CT loader name/modality and
+  DICOM loader name now return `&'static str`; receiver-dependent DICOM modality remains borrowed.
+  Package check, warning-denied Clippy, Nextest (61/61), doctests (4/4), and warning-denied rustdoc
+  pass. The exact workspace scan reports 0 sites and the ratchet override is removed from
+  `Cargo.toml`.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
