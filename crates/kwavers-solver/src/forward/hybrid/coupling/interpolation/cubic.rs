@@ -12,7 +12,6 @@ impl InterpolationManager {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(super) fn cubic_spline_interpolation(
-        &self,
         source_field: &Array3<f64>,
         source_coords: &[(f64, f64, f64)],
         target_coords: &[(f64, f64, f64)],
@@ -120,7 +119,6 @@ impl InterpolationManager {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(super) fn spectral_interpolation(
-        &self,
         source_field: &Array3<f64>,
         source_coords: &[(f64, f64, f64)],
         target_coords: &[(f64, f64, f64)],
@@ -131,7 +129,7 @@ impl InterpolationManager {
         if (source_coords.len()) != shape[0] * shape[1] * shape[2]
             || (target_coords.len()) != shape[0] * shape[1] * shape[2]
         {
-            return self.cubic_spline_interpolation(source_field, source_coords, target_coords);
+            return Self::cubic_spline_interpolation(source_field, source_coords, target_coords);
         }
 
         // For production use, would implement full 3D FFT with proper zero-padding
@@ -139,7 +137,7 @@ impl InterpolationManager {
         // Currently using cubic interpolation as spectral method is computationally expensive
         // and requires careful handling of grid mismatches
 
-        self.cubic_spline_interpolation(source_field, source_coords, target_coords)
+        Self::cubic_spline_interpolation(source_field, source_coords, target_coords)
     }
 
     /// Adaptive interpolation — selects method based on local conditions.
@@ -151,11 +149,10 @@ impl InterpolationManager {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(super) fn adaptive_interpolation(
-        &self,
         source_field: &Array3<f64>,
         source_coords: &[(f64, f64, f64)],
         target_coords: &[(f64, f64, f64)],
     ) -> KwaversResult<Array3<f64>> {
-        self.cubic_spline_interpolation(source_field, source_coords, target_coords)
+        Self::cubic_spline_interpolation(source_field, source_coords, target_coords)
     }
 }
