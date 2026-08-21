@@ -27,7 +27,9 @@ pub fn bubble_power_spectrum(r_arr: &[f64], dt_s: f64, n_fft: usize) -> (Vec<f64
         padded[i] = v;
     }
     let mean: f64 = padded.iter().sum::<f64>() / n_f;
-    padded.iter_mut().for_each(|x| *x -= mean);
+    for x in &mut padded {
+        *x -= mean;
+    }
 
     let n_pos = n / 2 + 1;
     let mut f_arr = vec![0.0_f64; n_pos];

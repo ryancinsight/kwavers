@@ -34,7 +34,9 @@ pub fn rtm_imaging_condition(
         }
     }
     if max_val > 0.0 {
-        img.iter_mut().for_each(|v| *v /= max_val);
+        for v in &mut img {
+            *v /= max_val;
+        }
     }
     img
 }
@@ -64,7 +66,9 @@ pub fn rtm_multi_frequency_fusion(images: &[Vec<f64>]) -> Vec<f64> {
             *o += v;
         }
     }
-    out.iter_mut().for_each(|v| *v /= m);
+    for v in &mut out {
+        *v /= m;
+    }
     out
 }
 
@@ -113,7 +117,9 @@ pub fn rtm_source_normalized_condition(
     }
     let max_val = img.iter().cloned().fold(0.0_f64, f64::max);
     if max_val > 0.0 {
-        img.iter_mut().for_each(|v| *v /= max_val);
+        for v in &mut img {
+            *v /= max_val;
+        }
     }
     img
 }
@@ -155,6 +161,8 @@ pub fn rtm_aperture_weighted_fusion(images: &[Vec<f64>], weights: &[f64]) -> Vec
             *o += w_eff * v;
         }
     }
-    out.iter_mut().for_each(|v| *v /= w_total);
+    for v in &mut out {
+        *v /= w_total;
+    }
     out
 }

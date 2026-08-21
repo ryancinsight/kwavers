@@ -7556,6 +7556,12 @@ boolean-blind toggles. Warning-denied package Clippy, Nextest (48/48), doctests 
 warning-denied Rustdoc pass. The exact production workspace count decreases from 14 to 12 sites;
 the root ratchet comment is updated.
 
+The `kwavers-physics` `needless_for_each` slice replaces seven mutating `for_each` calls with direct
+loops in cavitation power spectra, inverse singular values, RTM conditioning/fusion, and transducer
+interpolation. Warning-denied package Clippy, Nextest (1,561/1,561 with 1 configured skip), doctests
+(9 passed; 4 ignored), warning-denied Rustdoc, and workspace warning-denied Clippy pass. The exact
+production workspace count decreases from 12 to 5 sites; the root ratchet comment is updated.
+
 Final exact-revision validation at merged revision `192eb7575` passes workspace Nextest (5,781/5,781
 with 7 configured skips) and workspace doctests with no failures. The previously recorded example
 build and mdBook test/build remain valid because the final changes are lint-only production edits and
