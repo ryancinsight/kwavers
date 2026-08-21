@@ -7040,6 +7040,17 @@ helper to an associated function. Focused Nextest run
 the package doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and
 the focused unused_self scan has zero warnings in the interpolation module.
 
+After PR #480, the workspace `unused_self` scan reports 206 sites, including
+85 in `kwavers-solver`. The next bounded slice is the five receiver-free
+helpers in `forward/hybrid/coupling/quality.rs`.
+
+The coupling quality slice converts the five measured receiver-free metric
+helpers to associated functions and makes their aggregation path static while
+retaining stateful history and thresholds on `QualityMonitor`. Focused Nextest
+run `aba72bce-5be5-427f-826b-9d98da3eb543` passes 6/6 (899 solver tests
+filtered); the package doctests pass 5/5 (8 ignored), warning-denied rustdoc
+passes, and the focused unused_self scan has zero warnings in `quality.rs`.
+
 After PR #477, the workspace `unused_self` scan reports 211 sites, including
 90 in `kwavers-solver`. The next bounded slice is the receiver-free helper in
 `forward/hybrid/adaptive_selection/selector.rs`.
