@@ -107,6 +107,12 @@ class Case:
     layer_density_kg_m3: float | None = None
     # Interface position, in cells along the first axis.
     layer_interface_cell: int | None = None
+    # A time-varying point pressure source at this cell, driving a
+    # Gaussian-windowed tone burst instead of an initial pressure.
+    source_cell: tuple[int, ...] | None = None
+    source_frequency_hz: float | None = None
+    source_centre_s: float | None = None
+    source_width_s: float | None = None
 
 
 # k-wave-python exposes `kspaceFirstOrder2D`, `kspaceFirstOrder3D`, and the
@@ -162,7 +168,41 @@ CASES: tuple[Case, ...] = (
         layer_density_kg_m3=1200.0,
         layer_interface_cell=48,
     ),
+    # A time-varying point source instead of an initial pressure. Every other
+    # case seeds `p0` and lets the field evolve, which never touches the source
+    # injection path -- the mask indexing, the per-step signal lookup, and
+    # k-Wave's source scaling and k-space source correction are all untested by
+    # them, and they are the path a real driven simulation runs on.
+    #
+    # The source sits off-centre on both axes so the field is asymmetric in
+    # every direction: a non-square grid catches a transposition, but only an
+    # off-centre source catches a flip.
+    Case(
+        "src_tone_burst_2d",
+        (96, 80),
+        1.5e-6,
+        30,
+        source_cell=(40, 32),
+        source_frequency_hz=3.0e6,
+        source_centre_s=3.0e-7,
+        source_width_s=1.0e-7,
+    ),
 )
+
+
+def tone_burst(case: Case, dt_s: float, steps: int) -> np.ndarray:
+    """Return the Gaussian-windowed sine the point source emits, one row.
+
+    The envelope keeps the burst band-limited for the same reason the initial
+    pressure is a Gaussian rather than a delta: at `sigma = 100 ns` the spectrum
+    spans roughly 1.4 to 4.6 MHz, whose shortest wavelength is a little over
+    three cells and so is resolved rather than aliased.
+    """
+    t = np.arange(steps, dtype=np.float64) * dt_s
+    offset = t - case.source_centre_s
+    envelope = np.exp(-((offset / case.source_width_s) ** 2))
+    carrier = np.sin(2.0 * np.pi * case.source_frequency_hz * offset)
+    return (P0_PEAK_PA * envelope * carrier).reshape(1, steps)
 
 
 def layered_profile(case: Case, base: float, layer: float) -> np.ndarray:
@@ -227,9 +267,24 @@ def run_case(case: Case) -> dict[str, object]:
     # bounds stability; passing the array directly lets k-Wave take its maximum.
     kgrid.makeTime(medium.sound_speed, cfl=CFL, t_end=case.t_end_s)
 
-    p0 = gaussian_seed(case.shape)
     source = kSource()
-    source.p0 = p0
+    if case.source_cell is None:
+        p0 = gaussian_seed(case.shape)
+        source.p0 = p0
+        signal = None
+    else:
+        # A driven case has no initial pressure; `p0` is stored as the source
+        # mask so the manifest still records exactly what the run was given.
+        p0 = np.zeros(case.shape, dtype=np.float64)
+        p0[case.source_cell] = 1.0
+        source.p_mask = p0
+        # k-Wave indexes `source.p` by time step, so it needs one column per
+        # step it will take, which is `Nt` -- one more than the propagation
+        # intervals the manifest records.
+        signal = tone_burst(case, float(np.asarray(kgrid.dt).item()),
+                            int(np.asarray(kgrid.Nt).item()))
+        source.p = signal
+        source.p_mode = "additive"
 
     # Record the whole final field: a full-field oracle discriminates far more
     # than a sensor trace, and at these grid sizes it is still a small artifact.
@@ -267,18 +322,34 @@ def run_case(case: Case) -> dict[str, object]:
             f"{case.name}: k-Wave returned {p_final.shape}, which is neither the "
             f"grid shape {case.shape} nor its reverse"
         )
+    # How many propagation intervals separate the returned field from the start
+    # depends on which kind of source drove it, and the two differ by one.
+    #
     # `kgrid.Nt` is k-Wave's count of time *points*, spanning
-    # `t_array = (0 : Nt - 1) * dt`, so the returned final field has been
-    # advanced `Nt - 1` propagation intervals from the initial condition. The
-    # manifest records that interval count, because that is what a solver
-    # driven step-by-step has to execute to reach the same instant. Recording
-    # `Nt` instead over-propagates by one step, which for these cases costs
-    # five orders of magnitude of agreement.
+    # `t_array = (0 : Nt - 1) * dt`. An initial-value case has a meaningful
+    # state at `t = 0` -- the seed itself -- so the first of those points is the
+    # initial condition and the returned field is `Nt - 1` intervals later.
+    # Recording `Nt` instead over-propagates by one step, which costs five
+    # orders of magnitude of agreement.
+    #
+    # A driven case starts from a zero field, which is not a state worth
+    # counting: k-Wave performs an update for every one of its `Nt` points and
+    # the returned field is `Nt` intervals later. Recording `Nt - 1` here
+    # under-propagates by one step and costs two orders of agreement.
+    #
+    # Both were measured, not assumed. The manifest therefore records the
+    # interval count for the case at hand rather than one rule for both, and
+    # the differential test's step-count guard fails if either is wrong.
     return {
         "p0": p0,
+        "p_signal": signal,
         "p_final": p_final,
         "dt_s": float(np.asarray(kgrid.dt).item()),
-        "steps": int(np.asarray(kgrid.Nt).item()) - 1,
+        "steps": (
+            int(np.asarray(kgrid.Nt).item())
+            if case.source_cell is not None
+            else int(np.asarray(kgrid.Nt).item()) - 1
+        ),
     }
 
 
@@ -349,11 +420,15 @@ def main() -> int:
         # transposed array is Fortran-contiguous. Forcing C order keeps the
         # stored buffer row-major over the case's shape, which is the layout the
         # Rust reader states and checks.
-        np.savez_compressed(
-            archive,
-            p0=np.ascontiguousarray(result["p0"], dtype=np.float64),
-            p_final=np.ascontiguousarray(result["p_final"], dtype=np.float64),
-        )
+        arrays = {
+            "p0": np.ascontiguousarray(result["p0"], dtype=np.float64),
+            "p_final": np.ascontiguousarray(result["p_final"], dtype=np.float64),
+        }
+        if result["p_signal"] is not None:
+            arrays["p_signal"] = np.ascontiguousarray(
+                result["p_signal"], dtype=np.float64
+            )
+        np.savez_compressed(archive, **arrays)
         cases[case.name] = {
             "archive": archive.name,
             "sha256": sha256_of(archive),
@@ -373,6 +448,8 @@ def main() -> int:
             "layer_transition_cells": (
                 LAYER_TRANSITION_CELLS if case.layer_interface_cell is not None else None
             ),
+            "source_cell": list(case.source_cell) if case.source_cell else None,
+            "source_mode": "additive" if case.source_cell else None,
         }
         print(
             f"[kwave-reference] {case.name}: steps={result['steps']} "

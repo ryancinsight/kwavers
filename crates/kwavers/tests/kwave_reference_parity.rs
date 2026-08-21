@@ -43,8 +43,9 @@ use kwavers_physics::acoustics::mechanics::absorption::AbsorptionMode;
 use kwavers_solver::fdtd::{FdtdConfig, FdtdPlugin};
 use kwavers_solver::plugin::PluginManager;
 use kwavers_solver::pstd::numerics::spectral_correction::SpectralCorrectionMethod;
-use kwavers_solver::pstd::{PSTDConfig, PSTDPlugin};
-use leto::{Array3, Array4};
+use kwavers_solver::pstd::{PSTDConfig, PSTDPlugin, PSTDSolver};
+use kwavers_source::{GridSource, SourceMode};
+use leto::{Array2, Array3, Array4};
 use serde::Deserialize;
 
 /// Water at 20 degrees Celsius, matching `generate_kwave_reference.py`.
@@ -94,6 +95,12 @@ struct CaseRecord {
     layer_interface_cell: Option<usize>,
     #[serde(default)]
     layer_transition_cells: Option<f64>,
+    /// A driven case injects a time-varying pressure at this cell instead of
+    /// seeding an initial pressure. Absent for an initial-value case.
+    #[serde(default)]
+    source_cell: Option<Vec<usize>>,
+    #[serde(default)]
+    source_mode: Option<String>,
 }
 
 impl CaseRecord {
@@ -177,6 +184,22 @@ fn load_reference_field(case: &CaseRecord, member: &str) -> Array3<f64> {
     field
 }
 
+/// Load the stored source signal as a `[1, steps]` row.
+///
+/// The archive carries one column per time step k-Wave took, which is one more
+/// than the propagation intervals the manifest records; the extra column is
+/// passed through rather than trimmed, so the two codes index the same array
+/// and any disagreement about which column a step consumes shows up as a
+/// measurable shift rather than as a silently different signal.
+fn load_reference_signal(case: &CaseRecord) -> Array2<f64> {
+    let flat = load_reference_array(&case.archive, "p_signal");
+    let mut signal = Array2::zeros((1, flat.len()));
+    for (column, &value) in flat.iter().enumerate() {
+        signal[[0, column]] = value;
+    }
+    signal
+}
+
 // ─── Case geometry ───────────────────────────────────────────────────────────
 
 /// A case's grid shape padded to the three axes kwavers always carries. A
@@ -254,6 +277,37 @@ impl Boundary for TransparentBoundary {
 
 // ─── kwavers run ─────────────────────────────────────────────────────────────
 
+/// The solver configuration every reference comparison runs at.
+///
+/// One definition rather than one per runner: a comparison whose two entry
+/// points had drifted apart in anti-aliasing or spectral correction would be
+/// measuring the drift.
+fn reference_pstd_config(dt: f64) -> PSTDConfig {
+    let mut config = PSTDConfig::default();
+
+    // Treeby & Cox (2010) kappa = sinc(c dt |k| / 2) is the k-space temporal
+    // dispersion correction the reference solver applies; selecting it is what
+    // makes the two schemes the same scheme rather than two neighbours.
+    config.spectral_correction.enabled = true;
+    config.spectral_correction.method = SpectralCorrectionMethod::Treeby2010;
+
+    // The reference applies no anti-aliasing filter. Every case's excitation is
+    // band-limited by construction, so filtering here would remove content the
+    // reference retained and turn a scheme comparison into a filter comparison.
+    config.anti_aliasing.enabled = false;
+
+    config.absorption_mode = AbsorptionMode::Lossless;
+
+    // The solver's internal PML is disabled for the same reason the external
+    // boundary is transparent: the comparison window never sees the edge.
+    config.boundary = kwavers_solver::pstd::config::BoundaryConfig::None;
+
+    // The solver advances by `config.dt`, not by the argument passed to
+    // `execute`, so the reference time step has to be installed here as well.
+    config.dt = dt;
+    config
+}
+
 /// Build the medium the reference was run against.
 ///
 /// `HomogeneousMedium::new` seeds `absorption_alpha` with water's coefficient,
@@ -329,28 +383,8 @@ fn run_pstd(
     steps: usize,
     absorption: AbsorptionMode,
 ) -> KwaversResult<Array3<f64>> {
-    let mut config = PSTDConfig::default();
-
-    // Treeby & Cox (2010) kappa = sinc(c dt |k| / 2) is the k-space temporal
-    // dispersion correction the reference solver applies; selecting it is what
-    // makes the two schemes the same scheme rather than two neighbours.
-    config.spectral_correction.enabled = true;
-    config.spectral_correction.method = SpectralCorrectionMethod::Treeby2010;
-
-    // The reference applies no anti-aliasing filter. The seed is band-limited by
-    // construction (sigma = 3 dx), so filtering here would remove content the
-    // reference retained and turn a scheme comparison into a filter comparison.
-    config.anti_aliasing.enabled = false;
-
+    let mut config = reference_pstd_config(dt);
     config.absorption_mode = absorption.clone();
-
-    // The solver's internal PML is disabled for the same reason the external
-    // boundary is transparent: the comparison window never sees the edge.
-    config.boundary = kwavers_solver::pstd::config::BoundaryConfig::None;
-
-    // The solver advances by `config.dt`, not by the argument passed to
-    // `execute`, so the reference time step has to be installed here as well.
-    config.dt = dt;
 
     let mut plugin_manager = PluginManager::new();
     plugin_manager.add_plugin(Box::new(PSTDPlugin::new(config, grid)?))?;
@@ -439,6 +473,51 @@ fn run_fdtd(grid: &Grid, seed: &Array3<f64>, dt: f64, steps: usize) -> KwaversRe
         .index_axis::<3>(0, 0)
         .expect("pressure field slot")
         .to_contiguous())
+}
+
+/// Propagate the case's driven point source and return the final pressure.
+///
+/// This takes the solver directly rather than going through `PluginManager`,
+/// because the plugin path constructs its solver with an empty `GridSource` and
+/// never forwards the sources handed to `execute`. A driven comparison has to
+/// reach the solver's own source handling, which is where the mask indexing,
+/// the per-step signal lookup, and k-Wave's source scaling and k-space source
+/// correction actually live.
+fn run_pstd_driven(
+    grid: &Grid,
+    case: &CaseRecord,
+    dt: f64,
+    steps: usize,
+) -> KwaversResult<Array3<f64>> {
+    let cell = case
+        .source_cell
+        .as_ref()
+        .expect("a driven case records its source cell");
+    let (nx, ny, nz) = padded_shape(&case.shape);
+
+    let mut mask = Array3::zeros((nx, ny, nz));
+    let axis = |index: usize| cell.get(index).copied().unwrap_or(0);
+    mask[[axis(0), axis(1), axis(2)]] = 1.0;
+
+    match case.source_mode.as_deref() {
+        Some("additive") => {}
+        other => panic!("unsupported reference source mode {other:?}"),
+    }
+
+    let source = GridSource {
+        p_mask: Some(mask),
+        p_signal: Some(load_reference_signal(case)),
+        p_mode: SourceMode::Additive,
+        ..GridSource::new_empty()
+    };
+
+    let mut config = reference_pstd_config(dt);
+    config.nt = steps;
+
+    let medium = reference_medium(grid, case, config.absorption_mode.clone())?;
+    let mut solver = PSTDSolver::new(config, grid.clone(), medium.as_ref(), source)?;
+    solver.run_orchestrated(steps)?;
+    Ok(solver.fields.p.to_contiguous())
 }
 
 // ─── Metrics ─────────────────────────────────────────────────────────────────
@@ -698,7 +777,11 @@ const TIME_DISCRIMINATION_FACTOR: f64 = 100.0;
 
 #[test]
 fn parity_degrades_when_the_step_count_is_wrong() {
-    for name in ["ivp_homogeneous_2d", "ivp_homogeneous_3d"] {
+    for name in [
+        "ivp_homogeneous_2d",
+        "ivp_homogeneous_3d",
+        "src_tone_burst_2d",
+    ] {
         let manifest = load_manifest();
         let case = manifest
             .cases
@@ -712,8 +795,12 @@ fn parity_degrades_when_the_step_count_is_wrong() {
         let reference_window = window(&reference, &case.shape, case.compare_radius_cells);
 
         let measure = |steps: usize| {
-            let field = run_pstd(&grid, case, &seed, case.dt_s, steps, case.absorption())
-                .expect("kwavers run");
+            let field = if case.source_cell.is_some() {
+                run_pstd_driven(&grid, case, case.dt_s, steps).expect("kwavers driven run")
+            } else {
+                run_pstd(&grid, case, &seed, case.dt_s, steps, case.absorption())
+                    .expect("kwavers run")
+            };
             agreement(
                 &window(&field, &case.shape, case.compare_radius_cells),
                 &reference_window,
@@ -920,4 +1007,81 @@ fn pstd_matches_kwave_on_a_layered_medium() {
         "a uniform-medium run differs from the layered reference by only          {:.6e} relative L2; the layered case cannot discriminate a solver that          ignores the medium arrays from one that reads them",
         separation.relative_l2
     );
+}
+
+/// The driven case's bound.
+///
+/// A driven run exercises machinery no initial-value case touches -- the source
+/// mask's cell lookup, the per-step signal indexing, k-Wave's scaling of the
+/// source term, and the k-space source correction applied to it -- so its
+/// residual carries every difference in those conventions on top of the
+/// propagation difference the other cases measure. It lands at `2.58e-3`;
+/// `1e-2` clears that with margin and remains two orders below the `0.26`
+/// separation a single wrong step produces.
+const DRIVEN_RELATIVE_L2_MAX: f64 = 1.0e-2;
+
+/// A time-varying point source must reproduce k-Wave's driven field.
+///
+/// Every other case seeds an initial pressure and lets it evolve, which never
+/// reaches the source injection path. That path is the one a real driven
+/// simulation runs on, and it carries four conventions the initial-value cases
+/// cannot check: where the mask's cell sits, which signal column a step
+/// consumes, how the source term is scaled, and whether the k-space source
+/// correction is applied. All four have to be right at once for this to pass.
+#[test]
+fn pstd_matches_kwave_on_a_driven_point_source() {
+    let manifest = load_manifest();
+    let case = manifest
+        .cases
+        .get("src_tone_burst_2d")
+        .expect("manifest has the driven case");
+    assert!(
+        case.source_cell.is_some(),
+        "the driven case's manifest record carries no source cell, so this test          would silently run an undriven simulation"
+    );
+
+    let (nx, ny, nz) = padded_shape(&case.shape);
+    let grid = Grid::new(nx, ny, nz, case.dx_m, case.dx_m, case.dx_m).expect("reference grid");
+    let field = run_pstd_driven(&grid, case, case.dt_s, case.steps).expect("driven run");
+    let reference = load_reference_field(case, "p_final");
+
+    let radius = case.compare_radius_cells;
+    let measured = agreement(
+        &window(&field, &case.shape, radius),
+        &window(&reference, &case.shape, radius),
+    );
+    report("src_tone_burst_2d", case.steps, case.dt_s, &measured);
+    assert_parity("src_tone_burst_2d", &measured, DRIVEN_RELATIVE_L2_MAX);
+
+    // The burst has ended by the final step, so the field is an outgoing ring
+    // rather than a source still ringing. Requiring the peak to sit away from
+    // the source cell is what distinguishes a propagating solution from one
+    // that merely deposited energy where the mask is.
+    let (peak_value, peak_radius) = window_peak_radius(&field, case);
+    assert!(
+        peak_radius >= 8.0,
+        "the driven field peaks {peak_radius:.1} cells from the source at          {peak_value:.6}; a propagating burst should have left the source cell"
+    );
+}
+
+/// Return the magnitude and source-relative radius of the field's largest cell.
+fn window_peak_radius(field: &Array3<f64>, case: &CaseRecord) -> (f64, f64) {
+    let (nx, ny, nz) = padded_shape(&case.shape);
+    let cell = case.source_cell.as_ref().expect("driven case");
+    let axis = |index: usize| cell.get(index).copied().unwrap_or(0) as f64;
+    let (sx, sy) = (axis(0), axis(1));
+    let mut best = (0.0_f64, 0.0_f64);
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                let value = field[[i, j, k]].abs();
+                if value > best.0 {
+                    let dx = i as f64 - sx;
+                    let dy = j as f64 - sy;
+                    best = (value, dx.hypot(dy));
+                }
+            }
+        }
+    }
+    best
 }

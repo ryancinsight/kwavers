@@ -23,7 +23,11 @@
   transposed array in Fortran order — were live in the harness until it exposed
   them. Both are now asserted rather than assumed; the lossless and absorbing
   results are unchanged, because the symmetry that hid the defect also made it
-  harmless there. `scripts/generate_kwave_reference.py` regenerates the reference set by
+  harmless there. A driven case injects a tone burst from a single cell and
+  matches at `2.58e-3` / `r = 0.999997`; it is the only case reaching the source
+  injection path, and it established that the propagation-interval count differs
+  by source type — an initial-value case runs `Nt - 1` intervals, a driven one
+  `Nt`. `scripts/generate_kwave_reference.py` regenerates the reference set by
   driving `k-wave-python`. See
   [ADR 119](docs/adr/119-kwave-reference-oracle.md).
 
