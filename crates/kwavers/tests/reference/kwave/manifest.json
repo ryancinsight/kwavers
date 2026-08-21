@@ -1,0 +1,53 @@
+{
+  "cases": {
+    "ivp_homogeneous_2d": {
+      "archive": "ivp_homogeneous_2d.npz",
+      "bytes": 23388,
+      "cfl": 0.15,
+      "compare_radius_cells": 24,
+      "dt_s": 1e-08,
+      "dx_m": 0.0001,
+      "sha256": "46b3df87e83946a9c5439efb1b8340df6a87d9fc40f434f8c93390ed4a03a8b0",
+      "shape": [
+        64,
+        64
+      ],
+      "steps": 100,
+      "t_end_s": 1e-06
+    },
+    "ivp_homogeneous_3d": {
+      "archive": "ivp_homogeneous_3d.npz",
+      "bytes": 127848,
+      "cfl": 0.15,
+      "compare_radius_cells": 12,
+      "dt_s": 1e-08,
+      "dx_m": 0.0001,
+      "sha256": "a04eaf029764319d0a896f4dc2626d53182a7080ec1c709dbd04393cd48c0289",
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "steps": 50,
+      "t_end_s": 5e-07
+    }
+  },
+  "medium": {
+    "absorption": "lossless",
+    "density_kg_m3": 1000.0,
+    "sound_speed_m_s": 1500.0
+  },
+  "reference": {
+    "binary": "kspaceFirstOrder-OMP",
+    "package": "k-wave-python",
+    "platform": "Windows-11-10.0.26340-SP0",
+    "python": "3.13.12",
+    "version": "0.6.1"
+  },
+  "seed": {
+    "peak_pa": 1.0,
+    "profile": "isotropic_gaussian",
+    "sigma_cells": 3.0,
+    "smooth_p0": false
+  }
+}

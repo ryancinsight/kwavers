@@ -3139,6 +3139,7 @@ dependencies = [
  "consus-core",
  "consus-hdf5",
  "consus-io",
+ "consus-npy",
  "criterion",
  "egui",
  "env_logger",

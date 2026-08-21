@@ -1,5 +1,40 @@
 # Backlog / Strategy
 
+## KW-GAP-2026-08-20-KWAVEPARITY — Make the k-Wave parity claim reproducible [major] [arch] — implementation complete; hosted verification pending
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-GAP-2026-08-20-KWAVEPARITY | Bring the k-Wave differential oracle inside the repository so the README's headline parity result is reproducible from a clean clone and enforced in the default gate. | [major] [arch] | implementation complete | current session, lane `test/kwavers-kwave-parity-oracle` | `scripts/generate_kwave_reference.py`, `crates/kwavers/tests/reference/kwave/`, `crates/kwavers/tests/kwave_reference_parity.rs`, `docs/adr/119-kwave-reference-oracle.md`, `README.md`, `.gitignore` |
+
+- **Evidence of the gap:** the README located the harness at
+  `external/k-wave-julia/benchmarks/kwavers`, which `.gitignore:10`/`:96`
+  excludes and which zero tracked files occupy. No `.npz` reference artifact was
+  tracked anywhere in the repository, no Rust test compared against a stored
+  k-Wave field, and the Rust-to-pytest bridge hard-sets `KWAVERS_SKIP_KWAVE=1`
+  (`crates/kwavers/tests/validation/python/mod.rs:155`), so `cargo test` never
+  exercised parity.
+- **Delivered:** a committed generator driving `k-wave-python` over the reference
+  `kspaceFirstOrder-OMP` binary, 156 KB of committed reference fields with a
+  provenance manifest, and a Rust differential test in the default gate.
+- **Measured result:** `ivp_homogeneous_2d` rel-L2 `5.50e-7`, rel-Linf `1.05e-6`,
+  `r = 1.000000000`; `ivp_homogeneous_3d` rel-L2 `1.06e-4`, rel-Linf `2.20e-4`,
+  `r = 0.999999994`. Three tests pass under nextest in 1.755 s; `cargo fmt` and
+  `cargo clippy -D warnings` are clean on the touched target.
+- **Finding recorded during the work:** `kgrid.Nt` is k-Wave's count of time
+  *points*, so the returned field has advanced `Nt - 1` intervals. Driving the
+  Rust solver for `Nt` steps degrades agreement from `5e-7` to `5e-2` and
+  presents as a solver divergence. `parity_degrades_when_the_step_count_is_wrong`
+  pins the convention and proves the oracle is time-discriminating.
+- **Not covered, and not claimed:** absorption, nonlinearity, heterogeneous
+  media, elastic propagation, source-driven problems, and the axisymmetric
+  geometry have no committed reference field. `k-wave-python` ships no 1-D
+  solver, so the README's former 1-D row has no reference here and was removed
+  rather than restated.
+- **Follow-up:** `KW-GAP-2026-08-20-TOLPROFILE` depended on this landing and is
+  now unblocked. The Python cached-parity suite's own reproducibility, and the
+  `KWAVERS_SKIP_KWAVE=1` bridge flag it sits behind, are unchanged by this item.
+- **Decision record:** `docs/adr/119-kwave-reference-oracle.md`.
+
 ## KW-BOOK-116 — Make the book gate execute a Rust oracle [patch] — implementation complete; hosted verification pending
 
 | ID | Outcome | Class | Status | Owner | Scope |
