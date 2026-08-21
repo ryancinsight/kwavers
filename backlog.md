@@ -1,5 +1,44 @@
 # Backlog / Strategy
 
+## KW-ABSORPTION-CONFIG-PRECEDENCE — the PSTD absorption coefficient in config is inert [major] — todo
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-ABSORPTION-CONFIG-PRECEDENCE | Make `PSTDConfig::absorption_mode`'s `alpha_coeff` either authoritative, or documented and typed as the fallback it actually is. | [major] | todo | unowned | `crates/kwavers-solver/src/forward/pstd/physics/absorption/init.rs`, `crates/kwavers-solver/src/forward/pstd/config.rs`, `crates/kwavers-medium/src/homogeneous/` |
+
+- **Evidence:** `initialize_absorption_operators` reads
+  `medium.alpha_coefficient(..)` and uses the config's `alpha_coeff` only when
+  the medium reports exactly zero. `HomogeneousMedium::new` seeds
+  `absorption_alpha` with `WATER_ABSORPTION_ALPHA_0`, which is never zero, so
+  through that medium the config coefficient is unreachable. A solver configured
+  with `AbsorptionMode::PowerLaw { alpha_coeff: 40.0, alpha_power: 1.5 }` runs at
+  water's absorption instead, and the result is bit-identical to a lossless run
+  at the grid and duration of the k-Wave reference cases. Substituting `4000.0`
+  changes the output by nothing to six digits.
+- **How it surfaced:** the k-Wave absorbing differential case
+  (`ivp_absorbing_2d`, added with `KW-GAP-2026-08-20-KWAVEPARITY`) measured
+  `r = 0.836` against the reference. Routing the coefficient through
+  `HomogeneousMedium::set_acoustic_properties` instead gives `r = 0.999999924`
+  at relative L2 `8.10e-3`, so the absorption physics is correct and only its
+  configuration route is not.
+- **Why the unit tests did not catch it:** the absorption tests under
+  `pstd/physics/absorption/tests/` construct a solver and call
+  `apply_absorption_to_pressure` on a config-derived kernel directly. They never
+  exercise the precedence between config and medium, and no test compared an
+  absorbing run to a lossless one.
+- **Acceptance:** either (a) the config coefficient takes precedence when set,
+  with the medium as the fallback, or (b) the field is removed from
+  `AbsorptionMode::PowerLaw` and absorption is set on the medium only — in which
+  case `alpha_power`'s separate role in the spectral operators is documented at
+  the type. Whichever is chosen, a test asserts the precedence, and a caller
+  cannot silently get water's coefficient after asking for another. The
+  Rustdoc claim that `alpha_coeff` is "the raw k-Wave coefficient" is corrected
+  or made true.
+- **Class rationale:** [major] rather than [patch] because it changes the meaning
+  of a public configuration field, and because any published absorption result
+  configured through `PSTDConfig` alone was produced at water's coefficient.
+- **Decision record:** required; the precedence is a design choice, not a typo.
+
 ## KW-GAP-2026-08-20-KWAVEPARITY — Make the k-Wave parity claim reproducible [major] [arch] — implementation complete; hosted verification pending
 
 | ID | Outcome | Class | Status | Owner | Scope |
@@ -21,8 +60,9 @@
   `r = 0.999999994`. The finite-difference solver is measured against the same
   reference as an independent cross-scheme check and separates by `2.53e-2` at
   `r = 0.999647`, matching its fourth-order dispersion error of `(k dx)^4 / 30`
-  at the seed's `k dx ~ 1` spectral edge. Four tests pass under nextest in
-  2.35 s; `cargo fmt` and `cargo clippy -D warnings` are clean on the touched
+  at the seed's `k dx ~ 1` spectral edge. A power-law absorbing case
+  (`ivp_absorbing_2d`) matches at `8.10e-3` / `r = 0.999999924` and exposed
+  `KW-ABSORPTION-CONFIG-PRECEDENCE`. Five tests pass under nextest in 1.97 s; `cargo fmt` and `cargo clippy -D warnings` are clean on the touched
   target.
 - **Finding recorded during the work:** `kgrid.Nt` is k-Wave's count of time
   *points*, so the returned field has advanced `Nt - 1` intervals. Driving the

@@ -78,6 +78,29 @@ struct CaseRecord {
     dt_s: f64,
     steps: usize,
     compare_radius_cells: usize,
+    /// Power-law absorption coefficient in k-Wave's own units,
+    /// `dB/(MHz^alpha_power cm)`. Absent for a lossless case.
+    #[serde(default)]
+    alpha_coeff_db: Option<f64>,
+    #[serde(default)]
+    alpha_power: Option<f64>,
+}
+
+impl CaseRecord {
+    /// The absorption model this case's reference was produced with.
+    ///
+    /// `AbsorptionMode::PowerLaw` takes the coefficient in k-Wave's units
+    /// unconverted, so the manifest value passes through unchanged and the two
+    /// codes cannot disagree about units.
+    fn absorption(&self) -> AbsorptionMode {
+        match (self.alpha_coeff_db, self.alpha_power) {
+            (Some(alpha_coeff), Some(alpha_power)) => AbsorptionMode::PowerLaw {
+                alpha_coeff,
+                alpha_power,
+            },
+            _ => AbsorptionMode::Lossless,
+        }
+    }
 }
 
 fn reference_dir() -> PathBuf {
@@ -183,9 +206,43 @@ impl Boundary for TransparentBoundary {
 
 // ─── kwavers run ─────────────────────────────────────────────────────────────
 
+/// Build the medium the reference was run against.
+///
+/// `HomogeneousMedium::new` seeds `absorption_alpha` with water's coefficient,
+/// and `initialize_absorption_operators` prefers the medium's coefficient over
+/// the one in `PSTDConfig::absorption_mode` whenever the medium reports a
+/// non-zero value — which this constructor guarantees it always does. The
+/// config coefficient is therefore unreachable through this medium, and
+/// absorption has to be set here for the solver to see it at all. See the
+/// `PSTD-ABSORPTION-CONFIG-DEAD` board item.
+///
+/// Nonlinearity is set to zero because `PSTDConfig::nonlinearity` is false on
+/// this path, so the medium's B/A never enters the pressure update.
+fn reference_medium(grid: &Grid, absorption: AbsorptionMode) -> KwaversResult<HomogeneousMedium> {
+    let mut medium = HomogeneousMedium::new(DENSITY_KG_M3, SOUND_SPEED_M_S, 0.0, 0.0, grid);
+    let (alpha, power) = match absorption {
+        AbsorptionMode::PowerLaw {
+            alpha_coeff,
+            alpha_power,
+        } => (alpha_coeff, alpha_power),
+        // A lossless run must be lossless: leaving the constructor's water
+        // coefficient in place would make the "lossless" reference comparison
+        // quietly absorbing.
+        _ => (0.0, 1.5),
+    };
+    medium.set_acoustic_properties(alpha, power, 0.0)?;
+    Ok(medium)
+}
+
 /// Propagate `seed` for `steps` steps of `dt` through the kwavers k-space
 /// pseudospectral solver and return the final pressure field.
-fn run_pstd(grid: &Grid, seed: &Array3<f64>, dt: f64, steps: usize) -> KwaversResult<Array3<f64>> {
+fn run_pstd(
+    grid: &Grid,
+    seed: &Array3<f64>,
+    dt: f64,
+    steps: usize,
+    absorption: AbsorptionMode,
+) -> KwaversResult<Array3<f64>> {
     let mut config = PSTDConfig::default();
 
     // Treeby & Cox (2010) kappa = sinc(c dt |k| / 2) is the k-space temporal
@@ -199,7 +256,7 @@ fn run_pstd(grid: &Grid, seed: &Array3<f64>, dt: f64, steps: usize) -> KwaversRe
     // reference retained and turn a scheme comparison into a filter comparison.
     config.anti_aliasing.enabled = false;
 
-    config.absorption_mode = AbsorptionMode::Lossless;
+    config.absorption_mode = absorption.clone();
 
     // The solver's internal PML is disabled for the same reason the external
     // boundary is transparent: the comparison window never sees the edge.
@@ -212,7 +269,7 @@ fn run_pstd(grid: &Grid, seed: &Array3<f64>, dt: f64, steps: usize) -> KwaversRe
     let mut plugin_manager = PluginManager::new();
     plugin_manager.add_plugin(Box::new(PSTDPlugin::new(config, grid)?))?;
 
-    let medium = HomogeneousMedium::new(DENSITY_KG_M3, SOUND_SPEED_M_S, 0.0, 0.0, grid);
+    let medium = reference_medium(grid, absorption)?;
 
     // Pressure occupies axis-0 index 0 of the unified field array.
     let mut fields = Array4::zeros((17, grid.nx, grid.ny, grid.nz));
@@ -425,8 +482,8 @@ fn compare_case(name: &str) -> Agreement {
         "{name}: recomputed seed deviates from the stored reference seed by          {seed_deviation:e}, above the {SEED_AGREEMENT_ABS:e} storage round-trip bound"
     );
 
-    let final_pressure =
-        run_pstd(&grid, &seed, case.dt_s, case.steps).expect("kwavers pseudospectral run");
+    let final_pressure = run_pstd(&grid, &seed, case.dt_s, case.steps, case.absorption())
+        .expect("kwavers pseudospectral run");
     let reference_flat = load_reference_array(&case.archive, "p_final");
     let mut reference = Array3::zeros((nx, ny, nz));
     reference
@@ -448,13 +505,13 @@ fn compare_case(name: &str) -> Agreement {
 #[test]
 fn pstd_matches_kwave_on_the_two_dimensional_homogeneous_ivp() {
     let measured = compare_case("ivp_homogeneous_2d");
-    assert_parity("ivp_homogeneous_2d", &measured);
+    assert_parity("ivp_homogeneous_2d", &measured, PARITY_RELATIVE_L2_MAX);
 }
 
 #[test]
 fn pstd_matches_kwave_on_the_three_dimensional_homogeneous_ivp() {
     let measured = compare_case("ivp_homogeneous_3d");
-    assert_parity("ivp_homogeneous_3d", &measured);
+    assert_parity("ivp_homogeneous_3d", &measured, PARITY_RELATIVE_L2_MAX);
 }
 
 /// Acceptance bounds shared by every case, with the residual they admit.
@@ -480,34 +537,47 @@ fn pstd_matches_kwave_on_the_three_dimensional_homogeneous_ivp() {
 /// measurements rather than derived from the sources above.
 const PARITY_RELATIVE_L2_MAX: f64 = 1.0e-3;
 
-/// The same argument at the pointwise norm. L-infinity concentrates the same
-/// residual into the single worst cell rather than averaging it, so it is
-/// allowed the same order of margin over its own measured value.
-const PARITY_RELATIVE_LINF_MAX: f64 = 5.0e-3;
+/// L-infinity concentrates the same residual into the single worst cell rather
+/// than averaging it. Across every case measured here the pointwise error runs
+/// about twice the L2 error, so each case's L-infinity bound is derived from its
+/// own L2 bound at five times that ratio rather than being stated independently.
+const PARITY_LINF_TO_L2_RATIO: f64 = 5.0;
+
+/// The absorbing case's bound.
+///
+/// Its residual is not the lossless case's storage-precision floor: the two
+/// codes implement the fractional-Laplacian absorption operator and its
+/// Kramers-Kronig dispersion partner `eta tan(pi y / 2)` with different
+/// discretizations, and that difference does not shrink with resolution. The
+/// measurement is `8.1e-3`; `2e-2` clears it with margin while staying far below
+/// the `0.32` attenuation the case is testing, so the bound cannot be met by a
+/// solver that has mismodelled the absorption it is meant to reproduce.
+const ABSORBING_RELATIVE_L2_MAX: f64 = 2.0e-2;
 
 /// The correlation floor is the published k-Wave parity standard the README
 /// cites. It is the shape oracle: invariant to a pure scale error, so it
 /// isolates a genuine difference in the propagated waveform.
 const PARITY_CORRELATION_MIN: f64 = 0.9999;
 
-fn assert_parity(name: &str, measured: &Agreement) {
+fn assert_parity(name: &str, measured: &Agreement, relative_l2_max: f64) {
     assert!(
         measured.correlation >= PARITY_CORRELATION_MIN,
-        "{name}: correlation {:.9} below the {PARITY_CORRELATION_MIN} k-Wave parity          standard (rel_l2 {:.6e}, rel_linf {:.6e})",
+        "{name}: correlation {:.9} below the {PARITY_CORRELATION_MIN} k-Wave parity standard (rel_l2 {:.6e}, rel_linf {:.6e})",
         measured.correlation,
         measured.relative_l2,
         measured.relative_linf
     );
     assert!(
-        measured.relative_l2 <= PARITY_RELATIVE_L2_MAX,
-        "{name}: relative L2 {:.6e} above the {PARITY_RELATIVE_L2_MAX:e} bound          (r {:.9})",
+        measured.relative_l2 <= relative_l2_max,
+        "{name}: relative L2 {:.6e} above the {relative_l2_max:e} bound          (r {:.9})",
         measured.relative_l2,
         measured.correlation
     );
     assert!(
-        measured.relative_linf <= PARITY_RELATIVE_LINF_MAX,
-        "{name}: relative L-infinity {:.6e} above the {PARITY_RELATIVE_LINF_MAX:e}          bound (r {:.9})",
+        measured.relative_linf <= relative_l2_max * PARITY_LINF_TO_L2_RATIO,
+        "{name}: relative L-infinity {:.6e} above the {:e} bound (r {:.9})",
         measured.relative_linf,
+        relative_l2_max * PARITY_LINF_TO_L2_RATIO,
         measured.correlation
     );
 }
@@ -547,7 +617,8 @@ fn parity_degrades_when_the_step_count_is_wrong() {
         let reference_window = window(&reference, &case.shape, case.compare_radius_cells);
 
         let measure = |steps: usize| {
-            let field = run_pstd(&grid, &seed, case.dt_s, steps).expect("kwavers run");
+            let field =
+                run_pstd(&grid, &seed, case.dt_s, steps, case.absorption()).expect("kwavers run");
             agreement(
                 &window(&field, &case.shape, case.compare_radius_cells),
                 &reference_window,
@@ -624,5 +695,69 @@ fn fdtd_separates_from_kwave_by_its_dispersion_error() {
         "{name}: finite-difference correlation {:.9} is too low to be dispersion          alone (rel_l2 {:.6e})",
         measured.correlation,
         measured.relative_l2
+    );
+}
+
+/// The absorbing case must match k-Wave, and must differ from the lossless one.
+///
+/// Matching alone would not establish that the absorption model runs: a solver
+/// that silently ignored `PowerLaw` would produce the lossless field, and if the
+/// coefficient were small enough that field would still sit inside the parity
+/// bound. The reference pair is therefore generated with identical grid, seed,
+/// time step, and step count, one variable changed, and this test asserts both
+/// halves — agreement with the absorbing reference, and separation from the
+/// lossless one.
+#[test]
+fn pstd_matches_kwave_with_power_law_absorption() {
+    let measured = compare_case("ivp_absorbing_2d");
+    assert_parity("ivp_absorbing_2d", &measured, ABSORBING_RELATIVE_L2_MAX);
+
+    let manifest = load_manifest();
+    let absorbing = manifest
+        .cases
+        .get("ivp_absorbing_2d")
+        .expect("manifest has the absorbing case");
+    assert!(
+        matches!(absorbing.absorption(), AbsorptionMode::PowerLaw { .. }),
+        "the absorbing case's manifest record carries no power-law coefficient,          so this test would silently reduce to the lossless one"
+    );
+
+    // The two references share every parameter but absorption, so comparing the
+    // stored fields measures the model's effect in the reference solver and
+    // needs no kwavers run of its own.
+    let lossless = manifest
+        .cases
+        .get("ivp_homogeneous_2d")
+        .expect("manifest has the lossless case");
+    assert_eq!(
+        (absorbing.shape.clone(), absorbing.steps, absorbing.dt_s),
+        (lossless.shape.clone(), lossless.steps, lossless.dt_s),
+        "the absorbing and lossless cases must differ only in absorption"
+    );
+
+    let (nx, ny, nz) = padded_shape(&absorbing.shape);
+    let read = |case: &CaseRecord| {
+        let flat = load_reference_array(&case.archive, "p_final");
+        let mut field = Array3::zeros((nx, ny, nz));
+        field
+            .as_slice_mut()
+            .expect("contiguous reference")
+            .copy_from_slice(&flat);
+        window(&field, &case.shape, case.compare_radius_cells)
+    };
+    let separation = agreement(&read(absorbing), &read(lossless));
+
+    // At 40 dB/(MHz^1.5 cm) over the 1.5 mm this wave travels, with the seed's
+    // dominant content near 0.8 MHz, the expected attenuation is
+    // 40 * 0.8^1.5 * 0.15 cm ~ 4 dB, an amplitude factor near 0.6. The measured
+    // separation is 0.53 relative L2. Requiring 0.2 keeps the guard far above
+    // the parity bound it is protecting (1e-3) while staying well clear of the
+    // measurement, so it fails on absorption being absent rather than on
+    // absorption being slightly mismodelled — which the parity assertion above
+    // already covers.
+    assert!(
+        separation.relative_l2 >= 0.2,
+        "the absorbing and lossless reference fields differ by only {:.6e}          relative L2; the absorbing case cannot discriminate an absent          absorption model from a correct one",
+        separation.relative_l2
     );
 }
