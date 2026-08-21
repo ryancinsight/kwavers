@@ -87,7 +87,7 @@ impl NeuralBeamformer {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub(super) fn assess_signal_quality(&self, rf_data: &Array4<f32>) -> KwaversResult<f64> {
+    pub(super) fn assess_signal_quality(rf_data: &Array4<f32>) -> KwaversResult<f64> {
         let [frames, channels, samples, _] = rf_data.shape();
 
         if channels == 0 || samples == 0 {
