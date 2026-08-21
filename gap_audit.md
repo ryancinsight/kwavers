@@ -7431,6 +7431,12 @@ Galerkin adapter names now return `&'static str`. Package check, warning-denied 
 (87/87), doctests (4/6; 2 ignored), and warning-denied rustdoc pass. The refreshed workspace
 `unnecessary_literal_bound` count is 9 sites, all outside `kwavers-simulation`.
 
+The `kwavers-solver` `unnecessary_literal_bound` slice is complete: six FDTD, hybrid, PSTD, and
+inverse-reconstruction solver names now return `&'static str`. Package check, warning-denied
+Clippy, Nextest (902/902 with 4 configured skips), doctests (5/13; 8 ignored), and warning-denied
+rustdoc pass. The refreshed workspace `unnecessary_literal_bound` count is 3 sites, all outside
+`kwavers-solver`.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.

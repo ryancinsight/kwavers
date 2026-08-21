@@ -72,7 +72,7 @@ impl Reconstructor for PhotoacousticReconstructor {
         }
     }
 
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "PhotoacousticReconstructor"
     }
 }
