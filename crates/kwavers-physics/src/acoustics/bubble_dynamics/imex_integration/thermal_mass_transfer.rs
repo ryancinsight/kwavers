@@ -60,7 +60,7 @@ impl BubbleIMEXIntegrator {
         };
 
         let dn_vapor_dt = if params.use_mass_transfer {
-            let p_vapor_eq = self.calculate_equilibrium_vapor_pressure(temperature);
+            let p_vapor_eq = Self::calculate_equilibrium_vapor_pressure(temperature);
             let p_vapor_actual = n_vapor * R_GAS * temperature / state.volume();
 
             let d_vapor = VAPOR_DIFFUSION_COEFFICIENT;
@@ -97,7 +97,7 @@ impl BubbleIMEXIntegrator {
     /// Calculate equilibrium vapor pressure at given temperature (Antoine equation).
     ///
     /// log₁₀(P_mmHg) = A − B / (C + T_celsius); coefficients from Stull (1947).
-    pub(crate) fn calculate_equilibrium_vapor_pressure(&self, temperature: f64) -> f64 {
+    pub(crate) fn calculate_equilibrium_vapor_pressure(temperature: f64) -> f64 {
         let t_celsius = kwavers_core::constants::thermodynamic::kelvin_to_celsius(temperature);
         let log10_p = WATER_ANTOINE_A - WATER_ANTOINE_B / (WATER_ANTOINE_C + t_celsius);
         10.0_f64.powf(log10_p) * MMHG_TO_PA
