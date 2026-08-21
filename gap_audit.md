@@ -7404,6 +7404,12 @@ scan reports 0 sites; the ratchet line is removed from `Cargo.toml`, re-enabling
 package-wide all-targets Clippy gate still reports two pre-existing test-only lint defects outside
 this slice.
 
+Final Kwavers integration verification at merged revision `02fea4631` passes `cargo fmt --all --
+--check`, `cargo build --offline -p kwavers --examples`, and the focused diagnostics+therapy
+Nextest suite (541/541 with one configured skip). `mdbook test docs/book` passes every chapter and
+`mdbook build docs/book` completes. The exact workspace `unused_self` scan is 0, with the ratchet
+override deleted.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.
