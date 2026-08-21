@@ -12,7 +12,6 @@ impl InterpolationManager {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(super) fn conservative_interpolation(
-        &self,
         source_field: &Array3<f64>,
         source_coords: &[(f64, f64, f64)],
         target_coords: &[(f64, f64, f64)],

@@ -510,6 +510,10 @@
 - 2026-08-21 BEM/FEM enhanced solver slice merged in PR #479 (`935c56c06`). The refreshed
   `unused_self` measurement is 209 sites (solver 88); the next bounded slice is the three
   receiver-free interpolation helpers under `forward/hybrid/coupling/interpolation/`.
+- 2026-08-21 coupling interpolation slice is implemented: the three measured receiver-free
+  kernels are associated functions, and their spectral/adaptive static callers are migrated
+  with the dispatch surface. Coupling tests, doctests, and warning-denied rustdoc pass; the
+  remaining solver sites stay queued.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a

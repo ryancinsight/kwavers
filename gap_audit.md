@@ -7063,3 +7063,10 @@ the focused unused_self scan has zero warnings in the solver module.
 After PR #479, the workspace `unused_self` scan reports 209 sites, including
 88 in `kwavers-solver`. The next bounded slice is the three receiver-free
 interpolation helpers under `forward/hybrid/coupling/interpolation/`.
+
+The coupling interpolation slice converts the measured receiver-free linear,
+cubic, and conservative kernels to associated functions and migrates the
+spectral/adaptive static callers and scheme dispatch. Focused Nextest run
+`849ba79f-66f3-4f24-838b-a3bb68ee9e6b` passes 6/6 (899 solver tests filtered);
+the package doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and
+the focused unused_self scan has zero warnings in the interpolation module.
