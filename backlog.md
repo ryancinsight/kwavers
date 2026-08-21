@@ -776,6 +776,13 @@
   in CPML/FEM/smoothing. The refreshed workspace `unused_self` count is 111 sites with zero in
   the BEM manager, `kwavers-receiver`, `kwavers-mesh`, `kwavers-grid`, `kwavers-signal`, and
   `kwavers-solver`.
+- 2026-08-21 `kwavers-imaging` multimodality fusion slice is implemented: transform,
+  checkerboard, difference, and multi-channel helpers are associated functions with all callers
+  migrated; overlay and false-color remain receiver-bound for configured blend weights. Package
+  check, targeted `unused_self` Clippy, Nextest, doctests (4/4), and warning-denied rustdoc pass;
+  the refreshed workspace `unused_self` count is 107 sites with zero in `kwavers-imaging`,
+  `kwavers-boundary` BEM, `kwavers-receiver`, `kwavers-mesh`, `kwavers-grid`, `kwavers-signal`,
+  and `kwavers-solver`.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
