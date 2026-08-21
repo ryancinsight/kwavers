@@ -742,6 +742,9 @@
   associated helper with both contiguous gradient/divergence callers migrated. Package Nextest
   passes 196/196, package doctests pass 3/3 (7 ignored), warning-denied rustdoc passes, and the
   refreshed workspace `unused_self` count is 120 sites.
+- 2026-08-21 latest integrated head after PR #508 (`576f70ccb`) re-smokes `cargo build --offline
+  -p kwavers --examples`, `mdbook test docs/book`, and `mdbook build docs/book`; all exit 0 and
+  the HTML book is written to `target/book`.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
