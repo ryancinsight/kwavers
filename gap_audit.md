@@ -51,6 +51,12 @@ a scoped `#[expect]` for its intentional console report; the broad Kwavers
 `manual_assert`, `print_stdout`, and `ignore_without_reason`, which remains owned by
 `KW-LINT-1` and is not represented as a clean gate.
 
+The first KW-LINT-1 burn-down slice measured `kwavers-signal` clean for
+`missing_errors_doc`, then added the three missing error contracts in the solver
+DG and optical-diffusion APIs. Strict solver Clippy passes with the lint re-enabled;
+its 901 native tests and 13 doctests (5 runnable, 8 environmental) pass. The
+workspace debt block remains unchanged until the full counted class reaches zero.
+
 The complete example gate initially exposed an independent runtime defect in
 `focused_ultrasound_water_tank`: its five disjoint solver branches ran
 sequentially, and the comparison test terminated at 60 seconds. The provider
