@@ -315,7 +315,7 @@
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | in progress | Codex | Workspace `unused_self` burn-down; `kwavers-solver` and `kwavers-signal` are clean, current count 119 |
+| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | in progress | Codex | Workspace `unused_self` burn-down; `kwavers-solver`, `kwavers-signal`, and `kwavers-grid` are clean, current count 117 |
 
 - Context: the clippy floor landed in #423. 21 of 24 crates already declared
   `[lints] workspace = true`, but no `[workspace.lints.clippy]` table existed for them to
@@ -749,6 +749,11 @@
   response helper is an associated function and all filter callers are migrated. Package Nextest
   passes 63/63, package doctests pass 4/4, warning-denied rustdoc passes, and the refreshed
   workspace `unused_self` count is 119 sites with zero in `kwavers-signal` and `kwavers-solver`.
+- 2026-08-21 `kwavers-grid` geometry slice is implemented: the duplicated measure validator is
+  consolidated into the vertical `geometry/validation.rs` leaf and both rectangular/spherical
+  constructors use the shared receiver-free helper. Package Nextest passes 45/45, doctests pass
+  1/1 (1 ignored), warning-denied rustdoc passes, and the refreshed workspace `unused_self` count
+  is 117 sites with zero in `kwavers-grid`, `kwavers-signal`, and `kwavers-solver`.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
