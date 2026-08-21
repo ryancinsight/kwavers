@@ -696,6 +696,11 @@
   Focused Nextest `kwavers-solver` field-coupling filter passes 7/7 (898 filtered), package
   doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and the refreshed workspace
   `unused_self` count is 138 sites (solver 17). The increment is ready for integration.
+- 2026-08-21 exact integrated-head validation passes: Kwavers package Nextest runs the 530-test
+  suite with zero failures and eight configured skips; `cargo build --offline -p kwavers --examples`
+  exits 0; `mdbook test docs/book` exits 0; and `mdbook build docs/book` exits 0, writing HTML to
+  `target/book`. The run regenerated tracked PNG test figures locally; those generated deltas were
+  discarded and no binary fixture changes are part of the validation increment.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a

@@ -7270,6 +7270,13 @@ functions with all callers migrated. Focused Nextest passes 7/7 (898 filtered),
 package doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and the
 refreshed workspace `unused_self` count is 138 sites (17 in `kwavers-solver`).
 
+Exact integrated-head validation on `main` after PR #501: the Kwavers package
+Nextest run covers 530 tests with zero failures and eight configured skips;
+`cargo build --offline -p kwavers --examples` exits 0; `mdbook test docs/book`
+exits 0; and `mdbook build docs/book` exits 0 with HTML written to `target/book`.
+The test run regenerated tracked PNG fixtures; those run-generated deltas were
+discarded and no binary fixture changes are included.
+
 After PR #477, the workspace `unused_self` scan reports 211 sites, including
 90 in `kwavers-solver`. The next bounded slice is the receiver-free helper in
 `forward/hybrid/adaptive_selection/selector.rs`.
