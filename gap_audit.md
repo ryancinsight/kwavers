@@ -7298,6 +7298,12 @@ while adaptive configuration remains receiver-bound. Package check, targeted `un
 (SLSC path clean), Nextest (744/744), doctests (1/22; 21 ignored), and warning-denied rustdoc pass.
 The refreshed workspace `unused_self` count is 32 sites with 13 remaining in other analysis paths.
 
+The `kwavers-analysis` CPU-only 3D processor slice converts the no-GPU CPU-memory metric to an
+associated function and migrates the CPU dispatcher; GPU memory accounting remains provider-bound.
+CPU and GPU feature checks, package Clippy, Nextest (744/744), doctests (1/22; 21 ignored), and
+warning-denied rustdoc pass. The refreshed workspace `unused_self` count is 31 sites with 12
+remaining in other analysis paths.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.
