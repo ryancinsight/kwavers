@@ -8,7 +8,7 @@ fn test_vapor_pressure_models() {
 
     // Test at 100°C (373.15 K) - should be ~1 atm
     let t = 373.15;
-    let p_wagner = calc.wagner_equation(t);
+    let p_wagner = ThermodynamicsCalculator::wagner_equation(t);
     assert!((p_wagner - ATMOSPHERIC_PRESSURE).abs() / ATMOSPHERIC_PRESSURE < 0.01); // Within 1%
 
     // Test Antoine equation
