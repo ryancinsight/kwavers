@@ -6819,3 +6819,12 @@ operations. The package gate passes strict offline Clippy with
 
 The remaining workspace debt is four `missing_panics_doc` sites in
 `kwavers-driver`; that slice is next after this math increment integrates.
+
+## `missing_panics_doc` driver slice — 2026-08-21
+
+The `kwavers-driver` slice documents the four measured public panic contracts
+in DFM track merging, placement/routing co-optimization, KiCad footprint
+import, and stack-plan selection. Strict offline Clippy with
+`-D clippy::missing_panics_doc -D warnings` passes; Nextest run
+`38560f9c-4836-4c03-9a6c-a05129770ab5` passes 494/494; doctests complete with
+0 tests; and rustdoc passes with `RUSTDOCFLAGS=-D warnings`.

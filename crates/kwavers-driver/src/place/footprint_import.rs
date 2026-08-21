@@ -36,6 +36,13 @@ use crate::place::footprint::{FootprintDef, Model3D, PadDef, Role};
 ///
 /// Returns a parsing or I/O error when the footprint file cannot be read, is malformed, or does
 /// not contain the pad and geometry data required to construct a valid footprint.
+///
+/// # Panics
+///
+/// Panics if the parsed S-expression reports a list head while not exposing
+/// list storage, or if a KiCad `start`/`end` node reports a non-list value.
+/// These are parser representation invariants; malformed source data is
+/// otherwise returned as a typed parsing error.
 pub fn import_kicad_mod(
     path: impl AsRef<std::path::Path>,
     role: Role,

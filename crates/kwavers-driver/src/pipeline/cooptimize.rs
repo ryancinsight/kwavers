@@ -201,6 +201,13 @@ pub fn cooptimize_min_area(
 /// previous round's congestion + critic weakness), routes, and is attacked by the critic; the best
 /// round (complete, then legal, then lowest risk) is kept. Stops early when the best stops
 /// improving (`patience`). This is the reusable core both design tiles drive.
+///
+/// # Panics
+///
+/// Panics if `cfg.rounds` is zero, because no candidate exists to return, or if
+/// internally generated congestion, weakness, thermal, EMI, and density fields
+/// have inconsistent lengths. Those conditions violate the board-grid
+/// invariants required by the co-optimization loop.
 pub fn cooptimize(
     nets_template: &crate::board::Board,
     mut comps: Vec<Component>,
