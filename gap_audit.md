@@ -7198,6 +7198,12 @@ check, targeted `unused_self` Clippy (mode-conversion path clean), Nextest (1561
 configured skip), doctests (9/13; 4 ignored), and warning-denied rustdoc pass. The refreshed
 workspace `unused_self` count is 57 sites with 10 remaining in other physics domains.
 
+The `kwavers-physics` cortical neuromodulation slice converts the M-current steady-state gate
+function to an associated function; voltage-dependent kinetics and neuron parameters remain
+receiver-bound. Package check, targeted `unused_self` Clippy (neuromodulation path clean), Nextest
+(1561/1561 with one configured skip), doctests (9/13; 4 ignored), and warning-denied rustdoc pass.
+The refreshed workspace `unused_self` count is 56 sites with 9 remaining in other physics domains.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.

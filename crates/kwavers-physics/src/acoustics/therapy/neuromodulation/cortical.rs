@@ -156,7 +156,7 @@ impl CorticalNeuron {
         0.5 * (-((v - self.v_t_mv) - 10.0) / 40.0).exp()
     }
     #[inline]
-    fn p_inf(&self, v: f64) -> f64 {
+    fn p_inf(v: f64) -> f64 {
         1.0 / (1.0 + (-(v + 35.0) / 10.0).exp())
     }
     #[inline]
@@ -173,7 +173,7 @@ impl Membrane for CorticalNeuron {
             x_inf(self.alpha_m(v), self.beta_m(v)),
             x_inf(self.alpha_h(v), self.beta_h(v)),
             x_inf(self.alpha_n(v), self.beta_n(v)),
-            self.p_inf(v),
+            Self::p_inf(v),
         ]
     }
 
@@ -192,7 +192,7 @@ impl Membrane for CorticalNeuron {
             self.alpha_m(v_mv) * (1.0 - g[0]) - self.beta_m(v_mv) * g[0],
             self.alpha_h(v_mv) * (1.0 - g[1]) - self.beta_h(v_mv) * g[1],
             self.alpha_n(v_mv) * (1.0 - g[2]) - self.beta_n(v_mv) * g[2],
-            (self.p_inf(v_mv) - g[3]) / self.tau_p_ms(v_mv),
+            (Self::p_inf(v_mv) - g[3]) / self.tau_p_ms(v_mv),
         ]
     }
 
