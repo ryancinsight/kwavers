@@ -12,6 +12,11 @@ use std::io::{self, Write};
 /// # Errors
 /// - Propagates errors returned by called functions.
 ///
+///
+/// # Panics
+///
+/// Panics if a recorded pressure field violates the storage invariant required
+/// by serialization.
 pub fn save_pressure_data(recorder: &Recorder, time: &Time, filename: &str) -> io::Result<()> {
     info!("Saving pressure data to {}", filename);
     let mut file = File::create(filename)?;
@@ -46,6 +51,11 @@ pub fn save_pressure_data(recorder: &Recorder, time: &Time, filename: &str) -> i
 /// # Errors
 /// - Propagates errors returned by called functions.
 ///
+///
+/// # Panics
+///
+/// Panics if a recorded light field violates the storage invariant required by
+/// serialization.
 pub fn save_light_data(recorder: &Recorder, time: &Time, filename: &str) -> io::Result<()> {
     info!("Saving light data to {}", filename);
     let mut file = File::create(filename)?;
@@ -80,6 +90,11 @@ pub fn save_light_data(recorder: &Recorder, time: &Time, filename: &str) -> io::
 /// # Errors
 /// - Propagates errors returned by called functions.
 ///
+///
+/// # Panics
+///
+/// Panics if recorded summary data violates the storage invariant required by
+/// serialization.
 pub fn generate_summary(recorder: &Recorder, filename: &str) -> io::Result<()> {
     info!("Generating summary to {}", filename);
     let mut file = File::create(filename)?;

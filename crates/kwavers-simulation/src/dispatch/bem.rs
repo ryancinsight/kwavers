@@ -18,6 +18,11 @@ use kwavers_solver::forward::bem::{BemConfig, BemSolution, BemSolver};
 /// Returns an error when the request cannot be converted into a tetrahedral
 /// boundary mesh, the BEM solver cannot be initialized, or the solve and
 /// recorder extraction fail.
+///
+/// # Panics
+///
+/// Panics if the requested simulation violates an internal solver or field
+/// shape invariant during dispatch.
 pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult> {
     let c_max = req.medium.max_sound_speed();
     let (wavenumber, frequency) = if let Some(freq) = req.helmholtz.and_then(|h| h.frequency) {

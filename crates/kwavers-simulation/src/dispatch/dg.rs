@@ -16,6 +16,11 @@ use kwavers_solver::forward::pstd::dg::{HybridSpectralDGConfig, HybridSpectralDG
 ///
 /// Returns an error when a DG time step or result extraction fails for the
 /// supplied grid and medium.
+///
+/// # Panics
+///
+/// Panics if the requested simulation violates an internal solver or field
+/// shape invariant during dispatch.
 pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult> {
     let sensor_mask = req
         .sensor_mask

@@ -19,6 +19,11 @@ use kwavers_transducer::transducers::rectangular::RectangularTransducer;
 /// Returns an error when no transducer is configured, the near-field solver
 /// cannot be configured, or angular-spectrum evaluation and result extraction
 /// fail.
+///
+/// # Panics
+///
+/// Panics if the requested simulation violates an internal solver or field
+/// shape invariant during dispatch.
 pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult> {
     let transducer = req.transducers_for_rs.first().ok_or_else(|| {
         kwavers_core::error::KwaversError::InvalidInput(
