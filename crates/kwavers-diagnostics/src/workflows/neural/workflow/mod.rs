@@ -172,7 +172,7 @@ impl RealTimeWorkflow {
                 "max_time".to_owned(),
                 times.iter().copied().fold(f64::NEG_INFINITY, f64::max),
             );
-            stats.insert("median_time".to_owned(), self.compute_median(times));
+            stats.insert("median_time".to_owned(), Self::compute_median(times));
         }
 
         stats
@@ -189,7 +189,7 @@ impl RealTimeWorkflow {
     /// # Returns
     ///
     /// Median value, or middle of two central values for even-length series
-    fn compute_median(&self, values: &[f64]) -> f64 {
+    fn compute_median(values: &[f64]) -> f64 {
         let mut sorted = values.to_vec();
         sorted.sort_by(|a, b| a.total_cmp(b));
 

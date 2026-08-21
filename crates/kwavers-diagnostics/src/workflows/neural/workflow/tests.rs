@@ -12,15 +12,13 @@ fn test_workflow_creation() {
 
 #[test]
 fn test_median_computation() {
-    let workflow = RealTimeWorkflow::new();
-
     // Odd number of elements
     let values_odd = vec![5.0, 3.0, 7.0, 1.0, 9.0];
-    assert_eq!(workflow.compute_median(&values_odd), 5.0);
+    assert_eq!(RealTimeWorkflow::compute_median(&values_odd), 5.0);
 
     // Even number of elements
     let values_even = vec![2.0, 4.0, 6.0, 8.0];
-    assert_eq!(workflow.compute_median(&values_even), 5.0); // (4.0 + 6.0) / 2.0
+    assert_eq!(RealTimeWorkflow::compute_median(&values_even), 5.0); // (4.0 + 6.0) / 2.0
 }
 
 #[test]
