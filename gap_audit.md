@@ -7192,6 +7192,12 @@ Nextest (1561/1561 with one configured skip), doctests (9/13; 4 ignored), and wa
 rustdoc pass. The refreshed workspace `unused_self` count is 58 sites with 11 remaining in other
 physics domains.
 
+The `kwavers-physics` elastic mode-conversion slice converts positive-definiteness checking to an
+associated function, while stiffness-tensor fields remain receiver-bound for validation. Package
+check, targeted `unused_self` Clippy (mode-conversion path clean), Nextest (1561/1561 with one
+configured skip), doctests (9/13; 4 ignored), and warning-denied rustdoc pass. The refreshed
+workspace `unused_self` count is 57 sites with 10 remaining in other physics domains.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.

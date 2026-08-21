@@ -886,6 +886,12 @@
   clean), Nextest (1561/1561 with one configured skip), doctests (9/13; 4 ignored), and
   warning-denied rustdoc pass. The refreshed workspace `unused_self` count is 58 sites with 11
   remaining in other physics domains.
+- 2026-08-21 `kwavers-physics` elastic mode-conversion slice is implemented: positive-definiteness
+  checking is an associated function, while stiffness-tensor fields remain receiver-bound for
+  validation. Package check, targeted `unused_self` Clippy (mode-conversion path clean), Nextest
+  (1561/1561 with one configured skip), doctests (9/13; 4 ignored), and warning-denied rustdoc
+  pass. The refreshed workspace `unused_self` count is 57 sites with 10 remaining in other
+  physics domains.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
