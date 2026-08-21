@@ -7059,3 +7059,7 @@ validator to an associated function. Focused Nextest run
 `a7da2e9c-8e28-4504-b596-903b732c2bf0` passes 11/11 (894 solver tests filtered);
 the package doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and
 the focused unused_self scan has zero warnings in the solver module.
+
+After PR #479, the workspace `unused_self` scan reports 209 sites, including
+88 in `kwavers-solver`. The next bounded slice is the three receiver-free
+interpolation helpers under `forward/hybrid/coupling/interpolation/`.
