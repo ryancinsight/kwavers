@@ -13,7 +13,7 @@ impl NumericalValidator {
 
         let _monitor = ConservationMonitor::new(&self.grid);
 
-        let energy_error = self.compute_energy_conservation_error("FDTD", &self.grid);
+        let energy_error = Self::compute_energy_conservation_error("FDTD", &self.grid);
         let momentum_error = 1e-13;
         let mass_error = 1e-14;
 
@@ -27,7 +27,7 @@ impl NumericalValidator {
         })
     }
 
-    pub(super) fn compute_energy_conservation_error(&self, solver: &str, _grid: &Grid) -> f64 {
+    pub(super) fn compute_energy_conservation_error(solver: &str, _grid: &Grid) -> f64 {
         match solver {
             "FDTD" => 1e-12,
             "PSTD" => 1e-14,

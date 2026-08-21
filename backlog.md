@@ -728,6 +728,11 @@
   `kwavers-solver` AMR filter passes 12/12 (894 filtered), package doctests pass 5/5 (8 ignored),
   warning-denied rustdoc passes, and the refreshed workspace `unused_self` count is 125 sites
   (solver 4). The remaining solver sites are numerical-validation helpers.
+- 2026-08-21 numerical-validation slice is implemented: boundary reflection, absorption,
+  spurious-reflection, and conservation-error helpers are associated functions with all callers
+  migrated, including value-semantic boundary error tests. Focused Nextest numerical-accuracy
+  filter passes 17/17 (889 filtered), package doctests pass 5/5 (8 ignored), warning-denied
+  rustdoc passes, and the refreshed workspace `unused_self` count is 121 sites (solver 0).
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a

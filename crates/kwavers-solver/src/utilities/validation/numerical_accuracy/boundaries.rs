@@ -9,17 +9,17 @@ impl NumericalValidator {
     pub(super) fn validate_boundaries(
         &self,
     ) -> Result<BoundaryResults, Box<dyn std::error::Error>> {
-        let pml_reflection = self.test_boundary_reflection("PML")?;
-        let cpml_reflection = self.test_boundary_reflection("CPML")?;
-        let _abc_reflection = self.test_boundary_reflection("ABC")?;
+        let pml_reflection = Self::test_boundary_reflection("PML")?;
+        let cpml_reflection = Self::test_boundary_reflection("CPML")?;
+        let _abc_reflection = Self::test_boundary_reflection("ABC")?;
 
         let pml_stable = pml_reflection < 0.01;
         let cpml_stable = cpml_reflection < 0.001;
 
         Ok(BoundaryResults {
             reflection_coefficient: pml_reflection,
-            absorption_coefficient: self.calculate_absorption_coefficient("FDTD", &self.grid),
-            spurious_reflections: self.calculate_spurious_reflections("FDTD", &self.grid),
+            absorption_coefficient: Self::calculate_absorption_coefficient("FDTD", &self.grid),
+            spurious_reflections: Self::calculate_spurious_reflections("FDTD", &self.grid),
             boundary_stability: pml_stable && cpml_stable,
         })
     }
@@ -34,7 +34,6 @@ impl NumericalValidator {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(super) fn test_boundary_reflection(
-        &self,
         boundary_type: &str,
     ) -> Result<f64, Box<dyn std::error::Error>> {
         let r = match boundary_type {
@@ -53,7 +52,7 @@ impl NumericalValidator {
         Ok(r)
     }
 
-    pub(super) fn calculate_absorption_coefficient(&self, solver: &str, _grid: &Grid) -> f64 {
+    pub(super) fn calculate_absorption_coefficient(solver: &str, _grid: &Grid) -> f64 {
         let distance = 0.1_f64;
         let alpha = match solver {
             "FDTD" => 0.5_f64,
@@ -64,7 +63,7 @@ impl NumericalValidator {
         1.0_f64 - (1.0_f64 - expected_ratio).abs()
     }
 
-    pub(super) fn calculate_spurious_reflections(&self, solver: &str, grid: &Grid) -> f64 {
+    pub(super) fn calculate_spurious_reflections(solver: &str, grid: &Grid) -> f64 {
         let ppw = grid.dx.min(grid.dy).min(grid.dz) * 10.0;
         match solver {
             "FDTD" if ppw > 10.0 => 0.001,
