@@ -7562,6 +7562,12 @@ interpolation. Warning-denied package Clippy, Nextest (1,561/1,561 with 1 config
 (9 passed; 4 ignored), warning-denied Rustdoc, and workspace warning-denied Clippy pass. The exact
 production workspace count decreases from 12 to 5 sites; the root ratchet comment is updated.
 
+The `kwavers-solver` `needless_for_each` slice replaces the two CPML scratch resets with
+allocation-free `slice.fill(0.0)` operations. Warning-denied package Clippy, Nextest (902/902 with
+4 configured skips), doctests (5 passed; 8 ignored), warning-denied Rustdoc, workspace warning-
+denied Clippy, and the exact production scan pass. The exact production workspace count decreases
+from 5 to 3 sites; the root ratchet comment is updated.
+
 Final exact-revision validation at merged revision `192eb7575` passes workspace Nextest (5,781/5,781
 with 7 configured skips) and workspace doctests with no failures. The previously recorded example
 build and mdBook test/build remain valid because the final changes are lint-only production edits and

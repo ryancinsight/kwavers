@@ -155,8 +155,8 @@ impl DGSolver {
 
         for elem in 0..topology.n_elements {
             // 1) Volume per-axis raw derivatives.
-            axis_du.iter_mut().for_each(|v| *v = 0.0);
-            axis_dp.iter_mut().for_each(|v| *v = 0.0);
+            axis_du.fill(0.0);
+            axis_dp.fill(0.0);
             for node in 0..nodes_per_element {
                 let node_coords = topology.node_coords(node);
                 for axis in 0..3 {

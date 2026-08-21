@@ -1212,6 +1212,11 @@
   Warning-denied physics Clippy, 1,561/1,561 Nextest with 1 configured skip, doctests (9 passed;
   4 ignored), warning-denied Rustdoc, and workspace warning-denied Clippy pass. The exact
   production workspace count decreases from 12 to 5 sites; the root ratchet comment is updated.
+- 2026-08-21 `needless_for_each` solver slice is complete: the two CPML scratch resets now use
+  allocation-free `slice.fill(0.0)` operations. Warning-denied solver Clippy, 902/902 Nextest
+  with 4 configured skips, doctests (5 passed; 8 ignored), warning-denied Rustdoc, workspace
+  warning-denied Clippy, and the exact production scan pass. The production workspace count
+  decreases from 5 to 3 sites; the root ratchet comment is updated.
 
 ## KW-LINT-REC-01 — Type recorder channel selection [major] — done
 
