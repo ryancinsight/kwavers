@@ -7463,6 +7463,14 @@ with typed `usize::from` conversions. Diagnostics and driver gates pass (685/685
 and warning-denied rustdoc pass). The exact workspace scan is 0 and its ratchet override is removed
 from `Cargo.toml`.
 
+Final exact-revision validation at merged revision `192eb7575` passes workspace Nextest (5,781/5,781
+with 7 configured skips) and workspace doctests with no failures. The previously recorded example
+build and mdBook test/build remain valid because the final changes are lint-only production edits and
+test-ordering cleanups. Exact workspace scans remain zero for `unused_self`,
+`return_self_not_must_use`, `unnecessary_literal_bound`, `unnecessary_semicolon`,
+`stable_sort_primitive`, `unchecked_time_subtraction`, `self_only_used_in_recursion`, and
+`bool_to_int_with_if`.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.
