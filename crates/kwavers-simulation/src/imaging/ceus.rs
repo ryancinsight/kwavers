@@ -320,7 +320,7 @@ impl kwavers_imaging::CEUSOrchestrator for ContrastEnhancedUltrasound {
         Ok(leto::Array3::from_elem([nx, ny, nz], concentration))
     }
 
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "SimulationCEUSOrchestrator"
     }
 }
