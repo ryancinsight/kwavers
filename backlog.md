@@ -1140,6 +1140,11 @@
   copying the tissue-property map. Warning-denied diagnostics Clippy, 191/191 Nextest, doctests
   (1 passed, 5 ignored), and warning-denied Rustdoc pass. The refreshed workspace scan reports six
   remaining production sites, all in `kwavers-driver`.
+- 2026-08-21 `implicit_hasher` driver slice is complete: routing `HashSet` inputs and verification
+  symbol-map `HashMap` inputs now accept caller-selected `BuildHasher` implementations. Warning-
+  denied driver Clippy, 494/494 Nextest, doctests, and warning-denied Rustdoc pass. The exact
+  production workspace scan (`--lib`) reports zero sites, so the ratchet override is removed from
+  `Cargo.toml`; all-targets still reports test-only sites outside this production slice.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
