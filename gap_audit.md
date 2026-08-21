@@ -7086,6 +7086,13 @@ function and migrates its detector caller. Package check, `unused_self` Clippy, 
 with zero in `kwavers-receiver`, `kwavers-mesh`, `kwavers-grid`, `kwavers-signal`, and
 `kwavers-solver`.
 
+The `kwavers-boundary` BEM applicator slice converts Dirichlet, Neumann, Robin, and radiation
+applicators to associated functions and migrates all `apply_all` callers. Package check, targeted
+`unused_self` Clippy, Nextest, doctests (4/4; 1 ignored), and warning-denied rustdoc pass; package
+Clippy still reports the 11 pre-existing boundary sites in CPML/FEM/smoothing. The refreshed
+workspace `unused_self` count is 111 sites with zero in the BEM manager, `kwavers-receiver`,
+`kwavers-mesh`, `kwavers-grid`, `kwavers-signal`, and `kwavers-solver`.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.

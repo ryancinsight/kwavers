@@ -9,7 +9,6 @@ use leto::Array1;
 impl BemBoundaryManager {
     /// Apply Dirichlet BCs (p = g): zero the row in H/G and store g in RHS.
     pub(super) fn apply_dirichlet(
-        &self,
         h_matrix: &mut CompressedSparseRowMatrix<Complex64>,
         g_matrix: &mut CompressedSparseRowMatrix<Complex64>,
         boundary_values: &mut Array1<Complex64>,
@@ -25,7 +24,6 @@ impl BemBoundaryManager {
 
     /// Apply Neumann BCs (∂p/∂n = g): store the derivative value in RHS.
     pub(super) fn apply_neumann(
-        &self,
         _h_matrix: &mut CompressedSparseRowMatrix<Complex64>,
         _g_matrix: &mut CompressedSparseRowMatrix<Complex64>,
         boundary_values: &mut Array1<Complex64>,
@@ -39,7 +37,6 @@ impl BemBoundaryManager {
 
     /// Apply Robin BCs (∂p/∂n + αp = g): modify H diagonal, store g in RHS.
     pub(super) fn apply_robin(
-        &self,
         h_matrix: &mut CompressedSparseRowMatrix<Complex64>,
         _g_matrix: &mut CompressedSparseRowMatrix<Complex64>,
         boundary_values: &mut Array1<Complex64>,
@@ -54,7 +51,6 @@ impl BemBoundaryManager {
 
     /// Apply radiation BCs (Sommerfeld ∂p/∂n − ikp ≈ 0): add −ik to H diagonal.
     pub(super) fn apply_radiation(
-        &self,
         h_matrix: &mut CompressedSparseRowMatrix<Complex64>,
         _g_matrix: &mut CompressedSparseRowMatrix<Complex64>,
         wavenumber: f64,
