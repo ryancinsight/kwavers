@@ -315,7 +315,7 @@
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | in progress | Codex | Workspace `unused_self` burn-down; `kwavers-solver` is at zero, current slice `kwavers-math/src/numerics/operators/differential/staggered_leapfrog.rs` |
+| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | in progress | Codex | Workspace `unused_self` burn-down; `kwavers-solver` and `kwavers-signal` are clean, current count 119 |
 
 - Context: the clippy floor landed in #423. 21 of 24 crates already declared
   `[lints] workspace = true`, but no `[workspace.lints.clippy]` table existed for them to
@@ -745,6 +745,10 @@
 - 2026-08-21 latest integrated head after PR #508 (`576f70ccb`) re-smokes `cargo build --offline
   -p kwavers --examples`, `mdbook test docs/book`, and `mdbook build docs/book`; all exit 0 and
   the HTML book is written to `target/book`.
+- 2026-08-21 `kwavers-signal` frequency-filter slice is implemented: the receiver-free FFT
+  response helper is an associated function and all filter callers are migrated. Package Nextest
+  passes 63/63, package doctests pass 4/4, warning-denied rustdoc passes, and the refreshed
+  workspace `unused_self` count is 119 sites with zero in `kwavers-signal` and `kwavers-solver`.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a

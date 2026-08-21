@@ -54,7 +54,7 @@ impl FrequencyFilter {
         low_freq: f64,
         high_freq: f64,
     ) -> KwaversResult<Vec<f64>> {
-        self.apply_filter(signal, dt, |f| f >= low_freq && f <= high_freq)
+        Self::apply_filter(signal, dt, |f| f >= low_freq && f <= high_freq)
     }
 
     /// Lowpass filter: pass `f ≤ cutoff`.
@@ -67,7 +67,7 @@ impl FrequencyFilter {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn lowpass(&self, signal: &[f64], dt: f64, cutoff: f64) -> KwaversResult<Vec<f64>> {
-        self.apply_filter(signal, dt, |f| f <= cutoff)
+        Self::apply_filter(signal, dt, |f| f <= cutoff)
     }
 
     /// Highpass filter: pass `f ≥ cutoff`.
@@ -80,7 +80,7 @@ impl FrequencyFilter {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn highpass(&self, signal: &[f64], dt: f64, cutoff: f64) -> KwaversResult<Vec<f64>> {
-        self.apply_filter(signal, dt, |f| f >= cutoff)
+        Self::apply_filter(signal, dt, |f| f >= cutoff)
     }
 
     /// Time-domain windowing: zero out samples outside `[t_min, t_max]`.
@@ -119,7 +119,7 @@ impl FrequencyFilter {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    fn apply_filter<F>(self, signal: &[f64], dt: f64, resp: F) -> KwaversResult<Vec<f64>>
+    fn apply_filter<F>(signal: &[f64], dt: f64, resp: F) -> KwaversResult<Vec<f64>>
     where
         F: Fn(f64) -> bool,
     {
