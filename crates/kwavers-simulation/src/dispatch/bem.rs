@@ -12,6 +12,12 @@ use kwavers_receiver::recorder::pressure_statistics::SampledStatistics;
 use kwavers_solver::forward::bem::{BemConfig, BemSolution, BemSolver};
 
 /// Run a boundary-element method simulation for the given request.
+///
+/// # Errors
+///
+/// Returns an error when the request cannot be converted into a tetrahedral
+/// boundary mesh, the BEM solver cannot be initialized, or the solve and
+/// recorder extraction fail.
 pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult> {
     let c_max = req.medium.max_sound_speed();
     let (wavenumber, frequency) = if let Some(freq) = req.helmholtz.and_then(|h| h.frequency) {

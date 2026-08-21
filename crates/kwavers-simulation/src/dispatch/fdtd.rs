@@ -13,6 +13,11 @@ use kwavers_solver::interface::solver::Solver as SolverTrait;
 use kwavers_source::Source as KwaversSource;
 
 /// Run an FDTD simulation for the given request.
+///
+/// # Errors
+///
+/// Returns an error when recorder configuration, CPML setup, source
+/// registration, or the orchestrated FDTD run fails.
 pub fn run(
     req: &SimulationRunRequest<'_>,
     sources: Vec<Box<dyn KwaversSource>>,

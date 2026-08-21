@@ -5,6 +5,11 @@ use kwavers_core::error::KwaversResult;
 use kwavers_solver::forward::pstd::extensions::{ElasticPstdMedium, ElasticPstdOrchestrator};
 
 /// Run an elastic pseudo-spectral time-domain simulation.
+///
+/// # Errors
+///
+/// Returns an error when the PSTD orchestrator cannot be initialized or the
+/// requested propagation, PML configuration, or recording operation fails.
 pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult> {
     let lame_lambda = req.medium.lame_lambda_array();
     let lame_mu = req.medium.lame_mu_array();
