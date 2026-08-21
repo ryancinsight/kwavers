@@ -40,6 +40,21 @@ consume them from a Rust differential test that runs in the default gate.
 Vendoring the k-Wave source tree and executing MATLAB in CI both remain
 non-goals. The reference solver stays external; only its output is committed.
 
+## Reproducibility of the reference set
+
+Regenerating a case produces a byte-identical archive: re-running the generator
+for `ivp_homogeneous_2d` and `ivp_absorbing_2d` yields the same SHA-256 as the
+committed manifest records and bitwise-equal arrays. The reference solver is
+deterministic for these inputs, so the manifest's hashes are a working
+verification mechanism rather than decoration -- a regenerate-and-diff check can
+tell a stale artifact from a current one, and a hash mismatch means the inputs
+or the reference solver changed, not that the run drifted.
+
+This was measured on the generating platform, which the manifest records. It is
+not a claim about bitwise agreement across platforms or across `k-wave-python`
+versions; a hash mismatch after either changes is expected and is what the
+recorded provenance exists to explain.
+
 ## Case design
 
 Both cases are lossless homogeneous-water initial-value problems with an
