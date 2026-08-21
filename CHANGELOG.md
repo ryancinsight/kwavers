@@ -13,7 +13,9 @@
   `r = 1.000000000` in two dimensions and `1.06e-4` at `r = 0.999999994` in
   three. The finite-difference solver is measured against the same reference as
   a cross-scheme check and separates by `2.53e-2` at `r = 0.999647`, which is
-  its own fourth-order dispersion error. `scripts/generate_kwave_reference.py` regenerates the reference set by
+  its own fourth-order dispersion error. A power-law absorbing case matches at
+  `8.10e-3` / `r = 0.999999924` and asserts separation from the lossless field,
+  so the absorption model cannot pass by being absent. `scripts/generate_kwave_reference.py` regenerates the reference set by
   driving `k-wave-python`. See
   [ADR 119](docs/adr/119-kwave-reference-oracle.md).
 
