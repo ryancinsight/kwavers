@@ -58,10 +58,10 @@ impl RtmProcessor {
         // Apply imaging condition
         match self.settings.imaging_condition {
             ImagingCondition::ZeroLag => {
-                self.apply_zero_lag_correlation(&mut image, source_wavefield, receiver_wavefield);
+                Self::apply_zero_lag_correlation(&mut image, source_wavefield, receiver_wavefield);
             }
             ImagingCondition::Normalized => {
-                self.apply_normalized_correlation(
+                Self::apply_normalized_correlation(
                     &mut image,
                     source_wavefield,
                     receiver_wavefield,
@@ -71,7 +71,7 @@ impl RtmProcessor {
 
         // Apply post-processing filters
         if self.settings.apply_laplacian {
-            self.apply_laplacian_filter(&mut image, grid);
+            Self::apply_laplacian_filter(&mut image, grid);
         }
 
         Ok(image)
@@ -88,7 +88,6 @@ impl RtmProcessor {
     ///
     /// [`migrate`]: RtmProcessor::migrate
     fn apply_zero_lag_correlation(
-        &self,
         image: &mut Array3<f64>,
         source_wavefield: &Array3<f64>,
         receiver_wavefield: &Array3<f64>,
@@ -144,7 +143,6 @@ impl RtmProcessor {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     fn apply_normalized_correlation(
-        &self,
         image: &mut Array3<f64>,
         source_wavefield: &Array3<f64>,
         receiver_wavefield: &Array3<f64>,
@@ -185,14 +183,14 @@ impl RtmProcessor {
 
     /// Apply Laplacian filter for artifact suppression
     /// Removes low-wavenumber artifacts using discrete Laplacian operator
-    fn apply_laplacian_filter(&self, image: &mut Array3<f64>, grid: &Grid) {
+    fn apply_laplacian_filter(image: &mut Array3<f64>, grid: &Grid) {
         let laplacian_weight = 0.1;
         let mut filtered = image.clone();
 
         for k in 1..grid.nz - 1 {
             for j in 1..grid.ny - 1 {
                 for i in 1..grid.nx - 1 {
-                    let laplacian = self.compute_laplacian_3d(image, i, j, k, grid);
+                    let laplacian = Self::compute_laplacian_3d(image, i, j, k, grid);
                     filtered[[i, j, k]] += laplacian_weight * laplacian;
                 }
             }
@@ -203,14 +201,7 @@ impl RtmProcessor {
 
     /// Compute 3D Laplacian at grid point (i,j,k)
     #[must_use]
-    fn compute_laplacian_3d(
-        &self,
-        field: &Array3<f64>,
-        i: usize,
-        j: usize,
-        k: usize,
-        grid: &Grid,
-    ) -> f64 {
+    fn compute_laplacian_3d(field: &Array3<f64>, i: usize, j: usize, k: usize, grid: &Grid) -> f64 {
         let d2_dx2 = 2.0f64.mul_add(
             -field[[i, j, k]],
             field[[i + 1, j, k]] + field[[i - 1, j, k]],
@@ -317,7 +308,7 @@ mod tests {
         field[[2, 2, 1]] = 1.0;
         field[[2, 2, 3]] = 1.0;
 
-        let lap = processor.compute_laplacian_3d(&field, 2, 2, 2, &grid);
+        let lap = RtmProcessor::compute_laplacian_3d(&field, 2, 2, 2, &grid);
         // (1+1−12) + (1+1−12) + (1+1−12) = −10 − 10 − 10 = −30
         assert!((lap + 30.0).abs() < f64::EPSILON);
     }

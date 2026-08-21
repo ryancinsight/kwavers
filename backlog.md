@@ -656,6 +656,12 @@
   points remain in scope only where they consume processor state. Acceptance is complete static
   conversion with all callers migrated, focused RTM tests, package doctests, warning-denied
   rustdoc, and a refreshed workspace count.
+- 2026-08-21 seismic RTM slice is implemented: Laplacian, reconstruction, and stateless imaging
+  kernels are associated functions with all callers migrated; stateful propagation and settings
+  remain receiver-bound. Focused Nextest `kwavers-solver` seismic-RTM filter passes 8/8 (897
+  filtered), package doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and the
+  refreshed workspace `unused_self` count is 151 sites (solver 30). The increment is ready for
+  integration.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a

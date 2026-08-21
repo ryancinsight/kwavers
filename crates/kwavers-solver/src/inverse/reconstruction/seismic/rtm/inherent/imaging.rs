@@ -120,7 +120,7 @@ impl ReverseTimeMigration {
                         .slice_with::<3>(&s![t, .., .., ..])
                         .expect("invariant: RTM slice indices in range");
 
-                    let src_lap = self.compute_laplacian(&src)?;
+                    let src_lap = Self::compute_laplacian(&src)?;
 
                     let src_lap = src_lap.view();
                     for_each_view_mut(self.image.view_mut(), |idx, img| {
