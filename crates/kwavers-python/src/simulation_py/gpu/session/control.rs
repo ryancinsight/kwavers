@@ -11,6 +11,11 @@ use crate::breast_fwi_bindings::complex_compat::{nd_to_leto2, nd_to_leto3};
 #[pymethods]
 impl GpuPstdSession {
     /// Set the source and sensor mask for all scan lines (constant per session).
+    ///
+    /// # Errors
+    ///
+    /// Raises a Python runtime error when the mask or signal shape is invalid
+    /// for this session.
     pub fn set_source_sensor(
         &mut self,
         _py: Python<'_>,
@@ -24,6 +29,11 @@ impl GpuPstdSession {
     }
 
     /// Cache the source/sensor mask when the geometry is invariant across runs.
+    ///
+    /// # Errors
+    ///
+    /// Raises a Python runtime error when the mask shape is incompatible with
+    /// the session geometry.
     pub fn set_source_sensor_mask(
         &mut self,
         _py: Python<'_>,
@@ -34,6 +44,11 @@ impl GpuPstdSession {
     }
 
     /// Update only the x-velocity source signals for a previously cached mask.
+    ///
+    /// # Errors
+    ///
+    /// Raises a Python runtime error when the signal shape does not match the
+    /// cached source layout.
     pub fn set_velocity_signals(
         &mut self,
         _py: Python<'_>,
@@ -44,6 +59,10 @@ impl GpuPstdSession {
     }
 
     /// Disable the k-space source correction (sets source_kappa = 1 everywhere).
+    ///
+    /// # Errors
+    ///
+    /// Raises a Python runtime error when the GPU feature is unavailable.
     pub fn disable_source_correction(&self, _py: Python<'_>) -> PyResult<()> {
         #[cfg(feature = "gpu")]
         {
@@ -59,6 +78,10 @@ impl GpuPstdSession {
     }
 
     /// Return the timing profile from the most recent scan-line execution.
+    ///
+    /// # Errors
+    ///
+    /// Raises a Python runtime error when profile dictionary construction fails.
     #[getter]
     pub fn last_run_profile<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let profile = PyDict::new(py);
@@ -77,6 +100,10 @@ impl GpuPstdSession {
     }
 
     /// Return the most recent scan-line timing profile as a compact tuple.
+    ///
+    /// # Errors
+    ///
+    /// Raises a Python runtime error when tuple construction fails.
     #[getter]
     pub fn last_run_profile_ns<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
         PyTuple::new(

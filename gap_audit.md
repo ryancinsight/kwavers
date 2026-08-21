@@ -121,6 +121,15 @@ re-enabled and `-D warnings`; its nextest gate passes 350/350 tests with one
 skipped, doctests pass 8/9 with one ignored, and warning-denied rustdoc passes.
 The workspace debt block remains unchanged.
 
+The next `missing_errors_doc` slice covers 11 PyO3 binding APIs in
+`kwavers-python`, with four PyO3-required borrowed-receiver exceptions and two
+Python docstring quote sites made explicit for the lint floor. Strict package
+Clippy passes with the lint re-enabled and `-D warnings`; its nextest gate
+passes 21/21 tests, and warning-denied rustdoc passes. `cargo test --doc` is not
+applicable because this package intentionally exposes only a `cdylib` target;
+the command reports `no library targets found`. The workspace debt block remains
+unchanged.
+
 The complete example gate initially exposed an independent runtime defect in
 `focused_ultrasound_water_tank`: its five disjoint solver branches ran
 sequentially, and the comparison test terminated at 60 seconds. The provider

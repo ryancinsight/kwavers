@@ -29,7 +29,7 @@ pub struct Sensor {
     pub(crate) position: Option<[f64; 3]>,
     /// Binary mask for mask-based sensors
     pub(crate) mask: Option<Array3<bool>>,
-    /// k-Wave-style recording mode strings (e.g. ["p", "p_max", "p_rms"])
+    /// k-Wave-style recording mode strings (e.g. `["p", "p_max", "p_rms"]`)
     pub(crate) record_modes: Vec<String>,
     /// k-Wave 1-based start step for recording (default 1 = all steps).
     pub(crate) record_start_index: usize,
@@ -132,12 +132,16 @@ impl Sensor {
     /// Parameters
     /// ----------
     /// modes : list[str]
-    ///     Recording mode strings. Supported: "p", "p_max", "p_min", "p_rms", "p_final", "all"
+    ///     Recording mode strings. Supported: `"p"`, `"p_max"`, `"p_min"`, `"p_rms"`, `"p_final"`, `"all"`
     ///
     /// Examples
     /// --------
     /// >>> sensor = Sensor.from_mask(mask)
     /// >>> sensor.set_record(["p", "p_max", "p_rms"])
+    #[expect(
+        clippy::doc_link_with_quotes,
+        reason = "Python docstring example intentionally shows string literals"
+    )]
     fn set_record(&mut self, modes: Vec<String>) {
         self.record_modes = modes;
     }

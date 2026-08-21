@@ -10,6 +10,11 @@ use super::GpuPstdSession;
 #[pymethods]
 impl GpuPstdSession {
     /// Run one scan line with updated medium (sound_speed, density).
+    ///
+    /// # Errors
+    ///
+    /// Raises a Python runtime error when the GPU feature is unavailable, the
+    /// medium arrays are invalid, or the scan-line solve fails.
     pub fn run_scan_line<'py>(
         &mut self,
         _py: Python<'py>,
@@ -53,6 +58,11 @@ impl GpuPstdSession {
     }
 
     /// Run one scan line using the currently resident medium buffers.
+    ///
+    /// # Errors
+    ///
+    /// Raises a Python runtime error when the GPU feature is unavailable or the
+    /// resident scan-line solve fails.
     pub fn run_scan_line_cached<'py>(
         &mut self,
         _py: Python<'py>,
