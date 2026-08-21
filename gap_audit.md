@@ -7084,6 +7084,17 @@ solver tests filtered); the package doctests pass 5/5 (8 ignored),
 warning-denied rustdoc passes, and the focused unused_self scan has zero
 warnings in `validation/suite.rs`.
 
+After PR #484, the workspace `unused_self` scan reports 192 sites, including
+71 in `kwavers-solver`. The next bounded slice is the two receiver-free
+helpers in `forward/nonlinear/kzk/harmonic_tracking/tracker.rs`.
+
+The KZK harmonic tracker slice converts its two measured receiver-free
+waveform/amplitude helpers to associated functions and migrates their callers.
+Focused Nextest run `9cf34437-d5c5-4731-8d5c-f59058af8c71` passes 52/52 (853
+solver tests filtered); the package doctests pass 5/5 (8 ignored),
+warning-denied rustdoc passes, and the focused unused_self scan has zero
+warnings in `harmonic_tracking/tracker.rs`.
+
 After PR #477, the workspace `unused_self` scan reports 211 sites, including
 90 in `kwavers-solver`. The next bounded slice is the receiver-free helper in
 `forward/hybrid/adaptive_selection/selector.rs`.
