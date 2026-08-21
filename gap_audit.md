@@ -7058,6 +7058,11 @@ doctests pass 3/3 (7 ignored), warning-denied rustdoc passes, and the refreshed 
 Latest integrated head after PR #508 (`576f70ccb`) re-smokes the package examples build and both
 mdBook test/build commands; all exit 0 and the HTML book is written to `target/book`.
 
+The `kwavers-signal` frequency-filter slice converts its receiver-free FFT response helper to an
+associated function and migrates all callers. Package Nextest passes 63/63, doctests pass 4/4,
+warning-denied rustdoc passes, and the refreshed workspace `unused_self` count is 119 sites with
+zero in `kwavers-signal` and `kwavers-solver`.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.
