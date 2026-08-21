@@ -141,7 +141,7 @@ mod tests {
             "co-located → agreement 1"
         );
         // Everywhere else both are zero → agreement zero.
-        assert!(fused.agreement.iter().filter(|&&v| v > 1e-9).count() == 1);
+        assert_eq!(fused.agreement.iter().filter(|&&v| v > 1e-9).count(), 1);
     }
 
     #[test]
