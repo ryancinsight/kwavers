@@ -7287,6 +7287,12 @@ weights remain receiver-bound. Package check, targeted `unused_self` Clippy (net
 Nextest (744/744), doctests (1/22; 21 ignored), and warning-denied rustdoc pass. The refreshed
 workspace `unused_self` count is 34 sites with 15 remaining in other analysis paths.
 
+The `kwavers-analysis` neural uncertainty slice converts local-variance computation to an associated
+function; estimator configuration and public estimation remain receiver-bound. Package check,
+targeted `unused_self` Clippy (uncertainty path clean), Nextest (744/744), doctests (1/22; 21 ignored),
+and warning-denied rustdoc pass. The refreshed workspace `unused_self` count is 33 sites with 14
+remaining in other analysis paths.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.
