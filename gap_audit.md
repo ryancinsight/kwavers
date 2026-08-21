@@ -6830,7 +6830,7 @@ import, and stack-plan selection. Strict offline Clippy with
 0 tests; and rustdoc passes with `RUSTDOCFLAGS=-D warnings`.
 
 The next workspace measurement found three `missing_panics_doc` sites in
-`kwavers-signal`; that slice is the current ratchet item.
+`kwavers-signal`; that slice has since integrated.
 
 ## `missing_panics_doc` signal slice — 2026-08-21
 
@@ -6839,3 +6839,7 @@ signal helpers: row-wise Hilbert transform, envelope, and phase. Strict
 offline Clippy with `-D clippy::missing_panics_doc -D warnings` passes;
 Nextest run `ef65468e-f4de-41e7-9fd1-8494c28a76cb` passes 63/63; doctests pass
 4/4; and rustdoc passes with `RUSTDOCFLAGS=-D warnings`.
+
+The next workspace measurement found two `missing_panics_doc` sites in
+`kwavers-field` and 26 in `kwavers-medium`; the field slice is the current
+ratchet item.
