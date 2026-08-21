@@ -15,6 +15,11 @@ use super::types::{TranscranialFusPlan, TranscranialFusPlanConfig};
 /// Inputs are CT volume, tissue masks, voxel spacing, focus voxel index, and
 /// planning configuration. Returns [`TranscranialFusPlan`] containing all
 /// computed fields and planning outputs.
+///
+/// # Errors
+///
+/// Returns an error when masks, spacing, target index, transducer geometry, or
+/// planning configuration is invalid.
 pub fn run_transcranial_fus_planning(
     ct_hu: &Array3<f64>,
     skull_mask: &Array3<bool>,

@@ -114,6 +114,13 @@ package Clippy passes with the lint re-enabled and `-D warnings`; its nextest
 gate passes 191/191 tests, doctests pass 1/6 with five ignored, and
 warning-denied rustdoc passes. The workspace debt block remains unchanged.
 
+The next `missing_errors_doc` slice covers 20 public APIs in `kwavers-therapy`
+therapy modules, including HIFU scheduling, theranostic guidance, nonlinear 3-D,
+and transcranial FUS planning. Strict package Clippy passes with the lint
+re-enabled and `-D warnings`; its nextest gate passes 350/350 tests with one
+skipped, doctests pass 8/9 with one ignored, and warning-denied rustdoc passes.
+The workspace debt block remains unchanged.
+
 The complete example gate initially exposed an independent runtime defect in
 `focused_ultrasound_water_tank`: its five disjoint solver branches ran
 sequentially, and the comparison test terminated at 60 seconds. The provider

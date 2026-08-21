@@ -21,6 +21,11 @@ struct Bounds2 {
     max: [usize; 2],
 }
 
+/// Validate and return a normalized target location in unit-cube coordinates.
+///
+/// # Errors
+///
+/// Returns an error when any component is non-finite or outside `[0, 1]`.
 pub fn validate_target_fraction_xyz(fraction: [f64; 3]) -> KwaversResult<[f64; 3]> {
     if fraction
         .iter()
@@ -33,6 +38,11 @@ pub fn validate_target_fraction_xyz(fraction: [f64; 3]) -> KwaversResult<[f64; 3
     Ok(fraction)
 }
 
+/// Convert a target fraction into an index inside the mask support bounds.
+///
+/// # Errors
+///
+/// Returns an error when the target fraction or mask has no active support.
 pub fn target_index_from_mask_fraction_3d(
     mask: &Array3<bool>,
     fraction: [f64; 3],

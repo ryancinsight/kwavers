@@ -99,6 +99,12 @@ use std::collections::VecDeque;
 
 use super::{resample, resample_labels_max, validate_masks, AnatomyKind, PreparedTheranosticSlice};
 
+/// Prepare an abdominal CT and segmentation slice on the solver grid.
+///
+/// # Errors
+///
+/// Returns an error when volume shapes, spacing, anatomy, or target grid size
+/// violates the preparation contract.
 pub fn prepare_abdominal_slice(
     anatomy: AnatomyKind,
     ct_volume_hu: &Array3<f64>,

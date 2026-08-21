@@ -13,6 +13,11 @@ pub enum AnatomyKind {
 }
 
 impl AnatomyKind {
+    /// Parse an anatomy kind from its stable configuration name.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when `name` is not `brain`, `liver`, or `kidney`.
     pub fn from_name(name: &str) -> KwaversResult<Self> {
         match name.to_ascii_lowercase().as_str() {
             "brain" => Ok(Self::Brain),
@@ -162,6 +167,12 @@ impl TheranosticInverseConfig {
         }
     }
 
+    /// Validate the inverse-problem configuration before constructing a solver.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when grid, acquisition, material, iteration, or
+    /// regularization parameters violate their domain constraints.
     pub fn validate(&self) -> KwaversResult<()> {
         if self.grid_size < 24 {
             return Err(KwaversError::InvalidInput(

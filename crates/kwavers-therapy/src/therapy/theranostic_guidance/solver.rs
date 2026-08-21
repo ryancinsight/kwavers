@@ -149,6 +149,12 @@ pub struct TheranosticInverseResult {
     pub waveform: WaveformSimulationResult,
 }
 
+/// Run the configured theranostic inverse workflow on prepared tissue fields.
+///
+/// # Errors
+///
+/// Returns an error when configuration validation, device layout, forward
+/// solves, or inversion updates fail.
 pub fn run_theranostic_inverse(
     prepared: PreparedTheranosticSlice,
     config: &TheranosticInverseConfig,
