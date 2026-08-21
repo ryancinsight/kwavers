@@ -78,16 +78,16 @@ impl BemBoundaryManager {
         for condition in &self.conditions {
             match condition {
                 BemBoundaryCondition::Dirichlet(nv) => {
-                    self.apply_dirichlet(h_matrix, g_matrix, boundary_values, nv)?;
+                    Self::apply_dirichlet(h_matrix, g_matrix, boundary_values, nv)?;
                 }
                 BemBoundaryCondition::Neumann(nd) => {
-                    self.apply_neumann(h_matrix, g_matrix, boundary_values, nd)?;
+                    Self::apply_neumann(h_matrix, g_matrix, boundary_values, nd)?;
                 }
                 BemBoundaryCondition::Robin(nc) => {
-                    self.apply_robin(h_matrix, g_matrix, boundary_values, nc)?;
+                    Self::apply_robin(h_matrix, g_matrix, boundary_values, nc)?;
                 }
                 BemBoundaryCondition::Radiation(nodes) => {
-                    self.apply_radiation(h_matrix, g_matrix, wavenumber, nodes)?;
+                    Self::apply_radiation(h_matrix, g_matrix, wavenumber, nodes)?;
                 }
             }
         }
