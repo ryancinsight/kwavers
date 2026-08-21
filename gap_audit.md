@@ -7426,6 +7426,11 @@ processor names now return `&'static str`. Package check, warning-denied Clippy,
 doctests (1/22; 21 ignored), and warning-denied rustdoc pass. The refreshed workspace
 `unnecessary_literal_bound` count is 11 sites, all outside `kwavers-analysis`.
 
+The `kwavers-simulation` `unnecessary_literal_bound` slice is complete: CEUS and discontinuous
+Galerkin adapter names now return `&'static str`. Package check, warning-denied Clippy, Nextest
+(87/87), doctests (4/6; 2 ignored), and warning-denied rustdoc pass. The refreshed workspace
+`unnecessary_literal_bound` count is 9 sites, all outside `kwavers-simulation`.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.

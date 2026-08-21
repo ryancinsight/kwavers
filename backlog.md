@@ -1093,6 +1093,10 @@
   processor names now return `&'static str`. Package check, warning-denied Clippy, Nextest (744/744),
   doctests (1/22; 21 ignored), and warning-denied rustdoc pass. The refreshed workspace
   `unnecessary_literal_bound` count is 11 sites, all outside `kwavers-analysis`.
+- 2026-08-21 simulation `unnecessary_literal_bound` slice is complete: CEUS and discontinuous
+  Galerkin adapter names now return `&'static str`. Package check, warning-denied Clippy, Nextest
+  (87/87), doctests (4/6; 2 ignored), and warning-denied rustdoc pass. The refreshed workspace
+  `unnecessary_literal_bound` count is 9 sites, all outside `kwavers-simulation`.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
