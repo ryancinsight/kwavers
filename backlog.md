@@ -315,7 +315,7 @@
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | in progress | Codex | `crates/kwavers-solver/src/forward/helmholtz/fem/basis.rs` (`unused_self` slice; parent remains open) |
+| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | in progress | Codex | `crates/kwavers-solver/src/forward/helmholtz/fem/solver/core/interpolation.rs` (`unused_self` slice; parent remains open) |
 
 - Context: the clippy floor landed in #423. 21 of 24 crates already declared
   `[lints] workspace = true`, but no `[workspace.lints.clippy]` table existed for them to
@@ -489,6 +489,12 @@
 - 2026-08-21 Helmholtz FEM basis slice is implemented: its six receiver-free basis and quadrature
   helpers are associated functions with all callers migrated. Focused tests, doctests, and
   warning-denied rustdoc pass; the remaining solver sites stay queued.
+- 2026-08-21 Helmholtz basis slice merged in PR #476 (`0c202f9ef`). The refreshed `unused_self`
+  measurement is 212 sites (solver 91); the next bounded slice is the single receiver-free
+  interpolation helper in `forward/helmholtz/fem/solver/core/interpolation.rs`.
+- 2026-08-21 FEM interpolation slice is implemented: the receiver-free shape-function helper is
+  an associated function with its caller migrated. Focused tests, doctests, and warning-denied
+  rustdoc pass; the remaining solver sites stay queued.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a

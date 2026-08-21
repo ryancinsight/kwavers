@@ -7029,3 +7029,13 @@ quadrature helpers to associated functions. Focused Nextest run
 the package doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and
 the focused unused_self scan has zero warnings in
 `forward/helmholtz/fem/basis.rs`.
+
+After PR #476, the workspace `unused_self` scan reports 212 sites, including
+91 in `kwavers-solver`. The next bounded slice is the receiver-free helper in
+`forward/helmholtz/fem/solver/core/interpolation.rs`.
+
+The FEM interpolation slice converts its measured receiver-free shape-function
+helper to an associated function. Focused Nextest run
+`b1f21fd8-793e-4e7a-98a6-75ed860fed9c` passes 9/9 (896 solver tests filtered);
+the package doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and
+the focused unused_self scan has zero warnings in the interpolation module.
