@@ -926,6 +926,12 @@
   receiver-bound. Package check, targeted `unused_self` Clippy (CEUS path clean), Nextest (87/87),
   doctests (4/6; 2 ignored), and warning-denied rustdoc pass. The refreshed workspace `unused_self`
   count is 46 sites with zero remaining in `kwavers-physics` and `kwavers-simulation`.
+- 2026-08-21 `kwavers-analysis` conservation slice is implemented: conservation-law inference is
+  an associated function; grid-integral, baseline, tolerance, and diagnostic state remain
+  receiver-bound. Package check, targeted `unused_self` Clippy (conservation path clean), Nextest
+  (744/744), doctests (1/22; 21 ignored), and warning-denied rustdoc pass. The refreshed workspace
+  `unused_self` count is 45 sites with zero remaining in `kwavers-physics`, `kwavers-simulation`,
+  and conservation checkers.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a

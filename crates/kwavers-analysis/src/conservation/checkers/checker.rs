@@ -116,7 +116,7 @@ impl ConservationChecker {
                 };
 
                 let result = ConservationResult {
-                    law: self.infer_law_from_name(name),
+                    law: Self::infer_law_from_name(name),
                     initial_value: initial.integral,
                     current_value: current_integral,
                     absolute_change,
@@ -165,7 +165,7 @@ impl ConservationChecker {
     }
 
     /// Infer `AnalysisConservationLaw` from a field name by keyword matching.
-    pub(super) fn infer_law_from_name(&self, name: &str) -> AnalysisConservationLaw {
+    pub(super) fn infer_law_from_name(name: &str) -> AnalysisConservationLaw {
         let lower = name.to_lowercase();
         if lower.contains("mass") || lower.contains("rho") || lower.contains("density") {
             AnalysisConservationLaw::Mass
