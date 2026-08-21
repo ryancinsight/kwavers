@@ -64,6 +64,11 @@ impl ShockWaveGenerator {
     }
 
     /// Generate initial shock field.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the grid dimensions or physical extents violate the validated
+    /// field-generation layout.
     pub fn generate_shock_field(&self, grid: &Grid, _frequency: f64) -> Array3<f64> {
         // Bipolar shock: positive core with broader negative phase ring.
         let mut field = Array3::zeros(grid.dimensions());

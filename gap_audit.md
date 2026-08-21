@@ -6962,3 +6962,14 @@ ignored); and rustdoc passes with `RUSTDOCFLAGS=-D warnings`.
 The refreshed workspace measurement after this merge leaves 11
 `missing_panics_doc` sites in `kwavers-therapy`; that package is the current
 ratchet slice.
+
+## `missing_panics_doc` therapy slice — 2026-08-21
+
+The `kwavers-therapy` slice documents the 11 measured panic contracts across
+lithotripsy shock-field generation, SWE elasticity-map slicing, abdominal and
+brain placement contexts, abdominal medium preparation, BBB and subspot
+planning, transcranial thermal dosing, and waveform adjoint reconstruction.
+Strict offline Clippy with `-D clippy::missing_panics_doc -D warnings` passes;
+Nextest run `f6c285c7-5c8f-4443-96ac-c4a847dc3eaf` passes 350/350 with one
+intentional skip (five tests exceeded the 30-second slow threshold); doctests
+pass 8/8 (1 ignored); and rustdoc passes with `RUSTDOCFLAGS=-D warnings`.

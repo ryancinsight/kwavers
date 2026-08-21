@@ -148,6 +148,11 @@ pub struct TranscranialThermalResult {
 /// # Errors
 ///
 /// Returns an error when Asclepius rejects a temperature or time step.
+///
+/// # Panics
+///
+/// Panics if the intensity, skull, and brain fields violate the validated
+/// common-grid shape invariant.
 #[allow(clippy::too_many_arguments)]
 pub fn transcranial_pennes_thermal_dose(
     intensity_w_m2: &Array3<f32>,

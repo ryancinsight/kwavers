@@ -34,6 +34,10 @@ impl ElasticityMap3D {
     }
 
     /// Extract 2D slice at given z-index
+    ///
+    /// # Panics
+    ///
+    /// Panics if `z_index` is outside the map's validated z extent.
     pub fn axial_slice(&self, z_index: usize) -> ElasticityMap2D {
         ElasticityMap2D {
             young_modulus: self
@@ -65,6 +69,10 @@ impl ElasticityMap3D {
     }
 
     /// Extract sagittal slice (YZ plane) at given x-index
+    ///
+    /// # Panics
+    ///
+    /// Panics if `x_index` is outside the map's validated x extent.
     pub fn sagittal_slice(&self, x_index: usize) -> ElasticityMap2D {
         ElasticityMap2D {
             young_modulus: self
@@ -96,6 +104,10 @@ impl ElasticityMap3D {
     }
 
     /// Extract coronal slice (XZ plane) at given y-index
+    ///
+    /// # Panics
+    ///
+    /// Panics if `y_index` is outside the map's validated y extent.
     pub fn coronal_slice(&self, y_index: usize) -> ElasticityMap2D {
         ElasticityMap2D {
             young_modulus: self
