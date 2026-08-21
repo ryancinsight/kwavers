@@ -7040,6 +7040,11 @@ helper to an associated function. Focused Nextest run
 the package doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and
 the focused unused_self scan has zero warnings in the interpolation module.
 
+The numerical-validation slice converts the four remaining receiver-free boundary and
+conservation helpers to associated functions and migrates all callers. Focused Nextest passes
+17/17 (889 filtered), package doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and
+the refreshed workspace `unused_self` count is 121 sites with zero in `kwavers-solver`.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.

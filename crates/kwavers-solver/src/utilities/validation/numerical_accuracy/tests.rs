@@ -105,9 +105,8 @@ fn test_fdtd_phase_error_decreases_with_finer_grid() {
 ///
 #[test]
 fn test_boundary_reflection_within_bounds() {
-    let v = default_validator();
-    let r_cpml = v.test_boundary_reflection("CPML").unwrap();
-    let r_pml = v.test_boundary_reflection("PML").unwrap();
+    let r_cpml = NumericalValidator::test_boundary_reflection("CPML").unwrap();
+    let r_pml = NumericalValidator::test_boundary_reflection("PML").unwrap();
     assert!(r_cpml > 0.0, "CPML reflection must be positive");
     assert!(
         r_cpml <= 0.001,
@@ -126,6 +125,5 @@ fn test_boundary_reflection_within_bounds() {
 ///
 #[test]
 fn test_boundary_reflection_unknown_type_returns_error() {
-    let v = default_validator();
-    assert!(v.test_boundary_reflection("FDTD_BC").is_err());
+    assert!(NumericalValidator::test_boundary_reflection("FDTD_BC").is_err());
 }
