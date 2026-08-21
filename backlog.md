@@ -315,7 +315,7 @@
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | in progress | Codex | `crates/kwavers-solver/src/forward/nonlinear/westervelt_spectral/solver/mod.rs` (`unused_self` slice; parent remains open) |
+| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | in progress | Codex | `crates/kwavers-solver/src/forward/bem/burton_miller/assembler.rs` (`unused_self` slice; parent remains open) |
 
 - Context: the clippy floor landed in #423. 21 of 24 crates already declared
   `[lints] workspace = true`, but no `[workspace.lints.clippy]` table existed for them to
@@ -554,6 +554,9 @@
 - 2026-08-21 Westervelt spectral slice is implemented: the receiver-free stability helper is an
   associated function with its wave-model and regression-test callers migrated. Westervelt tests,
   doctests, and warning-denied rustdoc pass; the remaining solver sites stay queued.
+- 2026-08-21 Westervelt spectral slice merged in PR #486 (`2def919c9`). The refreshed `unused_self`
+  measurement is 189 sites (solver 68); the next bounded slice is the receiver-free Burton–Miller
+  assembler helper in `forward/bem/burton_miller/assembler.rs`.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
