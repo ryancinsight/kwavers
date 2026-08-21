@@ -524,6 +524,10 @@
 - 2026-08-21 coupling quality slice merged in PR #481 (`2cc11ed3e`). The refreshed `unused_self`
   measurement is 201 sites (solver 80); the next bounded slice is the five receiver-free domain
   decomposition helpers in `forward/hybrid/domain_decomposition/`.
+- 2026-08-21 domain decomposition slice is implemented: the three analyzer helpers, buffer blend
+  helper, and partitioner score helper are receiver-free while stateful partition thresholds and
+  overlap weights remain on their owners. Hybrid tests, doctests, and warning-denied rustdoc pass;
+  the remaining solver sites stay queued.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
