@@ -40,6 +40,7 @@ use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_physics::acoustics::mechanics::absorption::AbsorptionMode;
+use kwavers_solver::fdtd::{FdtdConfig, FdtdPlugin};
 use kwavers_solver::plugin::PluginManager;
 use kwavers_solver::pstd::numerics::spectral_correction::SpectralCorrectionMethod;
 use kwavers_solver::pstd::{PSTDConfig, PSTDPlugin};
@@ -236,6 +237,59 @@ fn run_pstd(grid: &Grid, seed: &Array3<f64>, dt: f64, steps: usize) -> KwaversRe
         .to_contiguous())
 }
 
+/// Propagate `seed` through the kwavers finite-difference solver on the
+/// reference's own discretization and return the final pressure field.
+///
+/// This is a cross-scheme comparison rather than a like-for-like one: k-Wave is
+/// exact in space, and this solver is fourth-order in space and second-order in
+/// time, so the two are expected to separate by that scheme's dispersion error
+/// and not to agree to storage precision. It is included because it measures
+/// that separation against a real reference instead of against the
+/// pseudospectral solver, which shares its k-space machinery and cannot act as
+/// an independent oracle for it.
+fn run_fdtd(grid: &Grid, seed: &Array3<f64>, dt: f64, steps: usize) -> KwaversResult<Array3<f64>> {
+    let config = FdtdConfig {
+        spatial_order: 4,
+        staggered_grid: true,
+        // The time step comes from the reference, so the Courant factor here is
+        // only the config's own stability guard and never selects `dt`.
+        cfl_factor: 0.95,
+        subgridding: false,
+        subgrid_factor: 2,
+        enable_gpu_acceleration: false,
+        nt: steps,
+        dt,
+        sensor_mask: None,
+        ..Default::default()
+    };
+
+    let mut plugin_manager = PluginManager::new();
+    plugin_manager.add_plugin(Box::new(FdtdPlugin::new(config, grid)?))?;
+
+    let medium = HomogeneousMedium::new(DENSITY_KG_M3, SOUND_SPEED_M_S, 0.0, 0.0, grid);
+
+    let mut fields = Array4::zeros((17, grid.nx, grid.ny, grid.nz));
+    fields
+        .index_axis_mut::<3>(0, 0)
+        .expect("pressure field slot")
+        .assign(seed);
+
+    plugin_manager.initialize(grid, &medium)?;
+
+    let sources = Vec::new();
+    let mut boundary = TransparentBoundary;
+
+    for step in 0..steps {
+        let t = step as f64 * dt;
+        plugin_manager.execute(&mut fields, grid, &medium, &sources, &mut boundary, dt, t)?;
+    }
+
+    Ok(fields
+        .index_axis::<3>(0, 0)
+        .expect("pressure field slot")
+        .to_contiguous())
+}
+
 // ─── Metrics ─────────────────────────────────────────────────────────────────
 
 /// Agreement of two fields over the comparison window.
@@ -321,16 +375,24 @@ fn agreement(candidate: &[f64], reference: &[f64]) -> Agreement {
 
 // ─── Case driver ─────────────────────────────────────────────────────────────
 
-/// Run one manifest case and return its agreement with the stored k-Wave field.
+/// Report one case's measured agreement.
 ///
-/// The measured metrics are this test's evidence: the numbers ADR 119 and the
-/// README cite come from the line printed here, and a run that reports only
-/// pass or fail cannot show that the agreement sits orders of magnitude inside
-/// its bound. Stdout is where the test harness captures that.
+/// These metrics are the tests' evidence: the numbers ADR 119 and the README
+/// cite come from this line, and a run that reports only pass or fail cannot
+/// show that the agreement sits orders of magnitude inside its bound. Stdout is
+/// where the test harness captures that.
 #[expect(
     clippy::print_stdout,
-    reason = "measured parity metrics are the test's reported evidence"
+    reason = "measured parity metrics are the tests' reported evidence"
 )]
+fn report(name: &str, steps: usize, dt: f64, measured: &Agreement) {
+    println!(
+        "{name}: steps={steps} dt={dt:e}s window={} cells rel_l2={:.6e} rel_linf={:.6e} r={:.9}",
+        measured.cells, measured.relative_l2, measured.relative_linf, measured.correlation
+    );
+}
+
+/// Run one manifest case and return its agreement with the stored k-Wave field.
 fn compare_case(name: &str) -> Agreement {
     let manifest = load_manifest();
     let case = manifest
@@ -360,8 +422,7 @@ fn compare_case(name: &str) -> Agreement {
         .fold(0.0_f64, f64::max);
     assert!(
         seed_deviation <= SEED_AGREEMENT_ABS,
-        "{name}: recomputed seed deviates from the stored reference seed by \
-         {seed_deviation:e}, above the {SEED_AGREEMENT_ABS:e} storage round-trip bound"
+        "{name}: recomputed seed deviates from the stored reference seed by          {seed_deviation:e}, above the {SEED_AGREEMENT_ABS:e} storage round-trip bound"
     );
 
     let final_pressure =
@@ -378,15 +439,7 @@ fn compare_case(name: &str) -> Agreement {
         &window(&final_pressure, &case.shape, radius),
         &window(&reference, &case.shape, radius),
     );
-    println!(
-        "{name}: steps={} dt={:e}s window={} cells rel_l2={:.6e} rel_linf={:.6e} r={:.9}",
-        case.steps,
-        case.dt_s,
-        measured.cells,
-        measured.relative_l2,
-        measured.relative_linf,
-        measured.correlation
-    );
+    report(name, case.steps, case.dt_s, &measured);
     measured
 }
 
@@ -513,4 +566,63 @@ fn parity_degrades_when_the_step_count_is_wrong() {
             );
         }
     }
+}
+
+/// Measure the finite-difference solver against the same k-Wave reference.
+///
+/// Reported, not asserted at the pseudospectral bound: the two schemes differ by
+/// construction, and the point of the measurement is the size of that
+/// difference against an independent reference.
+#[test]
+fn fdtd_separates_from_kwave_by_its_dispersion_error() {
+    let name = "ivp_homogeneous_2d";
+    let manifest = load_manifest();
+    let case = manifest
+        .cases
+        .get(name)
+        .unwrap_or_else(|| panic!("manifest has no case {name}"));
+    let (nx, ny, nz) = padded_shape(&case.shape);
+    let grid = Grid::new(nx, ny, nz, case.dx_m, case.dx_m, case.dx_m).expect("reference grid");
+    let seed = gaussian_seed(&case.shape);
+
+    let reference_flat = load_reference_array(&case.archive, "p_final");
+    let mut reference = Array3::zeros((nx, ny, nz));
+    reference
+        .as_slice_mut()
+        .expect("contiguous reference")
+        .copy_from_slice(&reference_flat);
+
+    let field =
+        run_fdtd(&grid, &seed, case.dt_s, case.steps).expect("kwavers finite-difference run");
+    let measured = agreement(
+        &window(&field, &case.shape, case.compare_radius_cells),
+        &window(&reference, &case.shape, case.compare_radius_cells),
+    );
+
+    report("ivp_homogeneous_2d/fdtd", case.steps, case.dt_s, &measured);
+
+    // A fourth-order-in-space staggered scheme carries a relative phase error of
+    // order `(k dx)^4 / 30` per wavelength travelled. Because that error is
+    // quartic in the wavenumber it is set by the highest resolved content, not
+    // the dominant content: a `sigma = 3 dx` Gaussian has a spectral width of
+    // `1/3` rad per cell, so its three-sigma edge sits near `k dx ~ 1`, giving
+    // `1/30 ~ 3e-2`. The measured `2.5e-2` is that number. `5e-2` bounds it with
+    // margin for the second-order temporal term, and is loose enough that this
+    // test reports a scheme difference rather than policing one.
+    assert!(
+        measured.relative_l2 <= 5.0e-2,
+        "{name}: finite-difference relative L2 {:.6e} exceeds the dispersion-error          band this scheme is expected to occupy (r {:.9})",
+        measured.relative_l2,
+        measured.correlation
+    );
+
+    // The waveform must still be the same waveform: a dispersion error shifts
+    // phase, it does not decorrelate. Falling below this means the scheme is
+    // wrong, not merely dispersive.
+    assert!(
+        measured.correlation >= 0.99,
+        "{name}: finite-difference correlation {:.9} is too low to be dispersion          alone (rel_l2 {:.6e})",
+        measured.correlation,
+        measured.relative_l2
+    );
 }

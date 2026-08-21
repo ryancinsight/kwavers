@@ -18,8 +18,12 @@
   provenance manifest, and a Rust differential test in the default gate.
 - **Measured result:** `ivp_homogeneous_2d` rel-L2 `5.50e-7`, rel-Linf `1.05e-6`,
   `r = 1.000000000`; `ivp_homogeneous_3d` rel-L2 `1.06e-4`, rel-Linf `2.20e-4`,
-  `r = 0.999999994`. Three tests pass under nextest in 1.755 s; `cargo fmt` and
-  `cargo clippy -D warnings` are clean on the touched target.
+  `r = 0.999999994`. The finite-difference solver is measured against the same
+  reference as an independent cross-scheme check and separates by `2.53e-2` at
+  `r = 0.999647`, matching its fourth-order dispersion error of `(k dx)^4 / 30`
+  at the seed's `k dx ~ 1` spectral edge. Four tests pass under nextest in
+  2.35 s; `cargo fmt` and `cargo clippy -D warnings` are clean on the touched
+  target.
 - **Finding recorded during the work:** `kgrid.Nt` is k-Wave's count of time
   *points*, so the returned field has advanced `Nt - 1` intervals. Driving the
   Rust solver for `Nt` steps degrades agreement from `5e-7` to `5e-2` and
