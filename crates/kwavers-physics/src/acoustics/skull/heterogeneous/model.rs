@@ -11,6 +11,6 @@ pub struct HeterogeneousSkull {
     pub sound_speed: Array3<f64>,
     /// Density distribution (kg/m³).
     pub density: Array3<f64>,
-    /// Attenuation coefficient distribution (Np/m/MHz).
+    /// Attenuation coefficient distribution at 1 MHz (Np/m).
     pub attenuation: Array3<f64>,
 }

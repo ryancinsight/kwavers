@@ -3,7 +3,7 @@
 //! Usage:
 //!
 //! ```text
-//! cargo run -p kwavers --features ritk --example skull_ct_phase_correction -- \
+//! cargo run -p kwavers --example skull_ct_phase_correction -- \
 //!   <dicom_dir> <output.ppm> [series_instance_uid]
 //! ```
 //!
@@ -16,7 +16,9 @@
 //!   and cortical/trabecular density metrics.
 //! - `<output>_element_maps.ppm` and `.svg`: 2D transducer element maps.
 
-use aequitas::systems::si::quantities::{Angle, Frequency, Length, Pressure};
+use aequitas::systems::si::quantities::{
+    Angle, Frequency, Length, MassDensity, Pressure, ReciprocalLength, Velocity,
+};
 use aequitas::systems::si::units::{Hertz, Meter, Pascal, Radian};
 use std::env;
 use std::f64::consts::{FRAC_PI_2, PI, TAU};
@@ -27,7 +29,9 @@ use std::path::{Path, PathBuf};
 use anyhow::{bail, Context, Result};
 use coeus_core::MoiraiBackend;
 use kwavers_grid::Grid;
-use kwavers_physics::acoustics::skull::{AberrationCorrection, HeterogeneousSkull};
+use kwavers_physics::acoustics::skull::{
+    AberrationCorrection, AcousticSkullProperties, HeterogeneousSkull,
+};
 use kwavers_physics::skull::heterogeneous::SkullLayer;
 use kwavers_transducer::transducers::focused::{BowlConfig, BowlTransducer};
 use leto::{Array1, Array2, Array3};
@@ -45,6 +49,8 @@ const C_WATER_M_PER_S: f64 = 1482.0;
 const C_CORTICAL_BONE_M_PER_S: f64 = 2800.0;
 const RHO_WATER_KG_PER_M3: f64 = 1000.0;
 const RHO_CORTICAL_BONE_KG_PER_M3: f64 = 1900.0;
+const CORTICAL_BONE_ATTENUATION_NP_PER_M: f64 = 20.0;
+const CORTICAL_BONE_THICKNESS_M: f64 = 0.007;
 const HU_BONE_LOWER: f64 = 300.0;
 const PANEL: usize = 384;
 const MAP_PANEL: usize = 384;
@@ -98,7 +104,7 @@ fn main() -> Result<()> {
     let series_uid = args.get(3).map(String::as_str);
 
     let ct = load_ct_with_ritk(&dicom_dir, series_uid)?;
-    let skull = skull_from_hu(&ct);
+    let skull = skull_from_hu(&ct)?;
     let [nx, ny, nz] = skull.sound_speed.shape();
     let grid = Grid::new(
         nx,
@@ -286,14 +292,15 @@ fn load_ct_with_ritk(path: &Path, selected_uid: Option<&str>) -> Result<CtVolume
     })
 }
 
-fn skull_from_hu(ct: &CtVolume) -> HeterogeneousSkull {
-    HeterogeneousSkull::from_ct_hill(
-        &ct.hu,
-        C_CORTICAL_BONE_M_PER_S,
-        RHO_CORTICAL_BONE_KG_PER_M3,
-        20.0,
-    )
-    .expect("Hill BVF skull model should accept finite RITK CT HU data")
+fn skull_from_hu(ct: &CtVolume) -> Result<HeterogeneousSkull> {
+    let bone = AcousticSkullProperties::new(
+        Velocity::from_base(C_CORTICAL_BONE_M_PER_S),
+        MassDensity::from_base(RHO_CORTICAL_BONE_KG_PER_M3),
+        ReciprocalLength::from_base(CORTICAL_BONE_ATTENUATION_NP_PER_M),
+        Length::from_base(CORTICAL_BONE_THICKNESS_M),
+        None,
+    )?;
+    Ok(HeterogeneousSkull::from_ct_hill(&ct.hu, &bone)?)
 }
 
 fn hemispherical_projected_elements(grid: &Grid) -> Result<(Vec<f64>, Vec<f64>, Vec<f64>)> {
@@ -1380,13 +1387,15 @@ mod tests {
     fn test_ct_with_oblique_bone() -> (CtVolume, HeterogeneousSkull) {
         let mut hu = Array3::<f64>::zeros((11, 11, 11));
         hu[[7, 5, 8]] = 800.0;
-        let skull = HeterogeneousSkull::from_ct_hill(
-            &hu,
-            C_CORTICAL_BONE_M_PER_S,
-            RHO_CORTICAL_BONE_KG_PER_M3,
-            20.0,
+        let bone = AcousticSkullProperties::new(
+            Velocity::from_base(C_CORTICAL_BONE_M_PER_S),
+            MassDensity::from_base(RHO_CORTICAL_BONE_KG_PER_M3),
+            ReciprocalLength::from_base(CORTICAL_BONE_ATTENUATION_NP_PER_M),
+            Length::from_base(CORTICAL_BONE_THICKNESS_M),
+            None,
         )
-        .expect("finite test CT");
+        .expect("finite bone properties");
+        let skull = HeterogeneousSkull::from_ct_hill(&hu, &bone).expect("finite test CT");
         (
             CtVolume {
                 hu,

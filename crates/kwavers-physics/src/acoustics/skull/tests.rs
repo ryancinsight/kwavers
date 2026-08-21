@@ -1,13 +1,21 @@
 use super::properties::AcousticSkullProperties;
 use super::simulation::TranscranialSimulation;
-use kwavers_core::constants::numerical::MHZ_TO_HZ;
+use aequitas::systems::si::quantities::{
+    AcousticImpedance, Frequency, Length, MassDensity, ReciprocalLength, Velocity,
+};
+use aequitas::systems::si::units::Megahertz;
+use kwavers_core::constants::acoustic_parameters::{BONE_DENSITY, SOUND_SPEED_SKULL_CORTICAL};
+use kwavers_core::constants::fundamental::ACOUSTIC_IMPEDANCE_WATER_NOMINAL;
+use kwavers_core::error::KwaversError;
 use kwavers_grid::Grid;
 
 #[test]
 fn test_skull_properties_default() {
     let props = AcousticSkullProperties::default();
-    assert!(props.sound_speed > 2800.0 && props.sound_speed < 3500.0);
-    assert!(props.density > 1800.0 && props.density < 2100.0);
+    assert_eq!(props.sound_speed().into_base(), SOUND_SPEED_SKULL_CORTICAL);
+    assert_eq!(props.density().into_base(), BONE_DENSITY);
+    assert_eq!(props.attenuation_at_one_megahertz().into_base(), 60.0);
+    assert_eq!(props.thickness().into_base(), 0.007);
 }
 
 #[test]
@@ -15,42 +23,77 @@ fn test_bone_types() {
     let cortical = AcousticSkullProperties::from_bone_type("cortical").unwrap();
     let trabecular = AcousticSkullProperties::from_bone_type("trabecular").unwrap();
 
-    assert!(cortical.sound_speed > trabecular.sound_speed);
-    assert!(cortical.density > trabecular.density);
+    assert!(cortical.sound_speed() > trabecular.sound_speed());
+    assert!(cortical.density() > trabecular.density());
+    assert!(cortical.shear_speed().is_some());
+    assert!(AcousticSkullProperties::suture().shear_speed().is_none());
 }
 
 #[test]
 fn test_acoustic_impedance() {
     let props = AcousticSkullProperties::default();
     let z = props.acoustic_impedance();
-
-    // Skull impedance should be much higher than water (1.5 MRayl)
-    assert!(z > 5.0e6);
-    assert!(z < 8.0e6);
+    assert_eq!(z.into_base(), BONE_DENSITY * SOUND_SPEED_SKULL_CORTICAL);
 }
 
 #[test]
 fn test_transmission_coefficient() {
     let props = AcousticSkullProperties::default();
-    let water_z = 1.5e6; // ~1.5 MRayl
-    let t = props.transmission_coefficient(water_z);
-
-    // T_I = 4 Z1 Z2 / (Z1+Z2)^2 for skull (Z2 ≈ 5.9 MRayl) vs water (Z1 ≈ 1.5 MRayl):
-    // T_I ≈ 0.64.  Always 0 < T_I ≤ 1 for lossless interface.
-    assert!(t > 0.0 && t <= 1.0);
-    // For skull the impedance mismatch limits T_I to ~ 50–70 %
-    assert!(t < 0.75);
+    let water_z = 1.5e6;
+    let skull_z = BONE_DENSITY * SOUND_SPEED_SKULL_CORTICAL;
+    let expected = 4.0 * water_z * skull_z / (water_z + skull_z).powi(2);
+    let observed = props
+        .transmission_coefficient(AcousticImpedance::from_base(water_z))
+        .expect("positive impedance")
+        .into_base();
+    let bound = 16.0 * f64::EPSILON * expected;
+    assert!((observed - expected).abs() <= bound);
 }
 
 #[test]
 fn test_frequency_dependent_attenuation() {
     let props = AcousticSkullProperties::default();
 
-    let atten_500k = props.attenuation_at_frequency(500e3);
-    let atten_1m = props.attenuation_at_frequency(MHZ_TO_HZ);
+    let atten_500k = props
+        .attenuation_at_frequency(Frequency::from_unit::<Megahertz>(0.5))
+        .expect("finite frequency");
+    let atten_1m = props
+        .attenuation_at_frequency(Frequency::from_unit::<Megahertz>(1.0))
+        .expect("finite frequency");
 
-    // Attenuation should increase with frequency
-    assert!(atten_1m > atten_500k);
+    assert_eq!(atten_500k.into_base(), 30.0);
+    assert_eq!(atten_1m.into_base(), 60.0);
+}
+
+#[test]
+fn skull_properties_reject_invalid_physical_values() {
+    let invalid = [
+        AcousticSkullProperties::new(
+            Velocity::from_base(0.0),
+            MassDensity::from_base(BONE_DENSITY),
+            ReciprocalLength::from_base(60.0),
+            Length::from_base(0.007),
+            None,
+        ),
+        AcousticSkullProperties::new(
+            Velocity::from_base(SOUND_SPEED_SKULL_CORTICAL),
+            MassDensity::from_base(f64::NAN),
+            ReciprocalLength::from_base(60.0),
+            Length::from_base(0.007),
+            None,
+        ),
+        AcousticSkullProperties::new(
+            Velocity::from_base(SOUND_SPEED_SKULL_CORTICAL),
+            MassDensity::from_base(BONE_DENSITY),
+            ReciprocalLength::from_base(-1.0),
+            Length::from_base(0.007),
+            None,
+        ),
+    ];
+
+    for result in invalid {
+        assert!(matches!(result, Err(KwaversError::InvalidInput(_))));
+    }
 }
 
 #[test]
@@ -70,17 +113,38 @@ fn test_analytical_sphere_geometry() {
     let result = sim.set_analytical_geometry("sphere", &[20.0]);
 
     result.unwrap();
-    assert!(!sim.skull_mask.as_ref().unwrap().is_empty());
+    let mask = sim
+        .skull_mask
+        .as_ref()
+        .expect("successful geometry construction stores the mask");
+    assert_eq!(mask.shape(), [64, 64, 64]);
+    let skull_voxels = mask.iter().filter(|&&value| value > 0.5).count();
+    // The 7-cell-thick lattice shell contains integer offsets with
+    // 13² <= x² + y² + z² <= 20².
+    assert_eq!(skull_voxels, 24_308);
 }
 
 #[test]
 fn test_insertion_loss_estimation() {
     let grid = Grid::new(100, 100, 100, 0.001, 0.001, 0.001).unwrap();
     let props = AcousticSkullProperties::default();
+    let frequency_megahertz = 0.65;
+    let attenuation_np = props.attenuation_at_one_megahertz().into_base()
+        * frequency_megahertz
+        * props.thickness().into_base();
+    let skull_impedance = props.acoustic_impedance().into_base();
+    let impedance_sum = ACOUSTIC_IMPEDANCE_WATER_NOMINAL + skull_impedance;
+    let interface_transmission =
+        4.0 * ACOUSTIC_IMPEDANCE_WATER_NOMINAL * skull_impedance / impedance_sum.powi(2);
+    let expected = (-attenuation_np).exp() * interface_transmission;
 
     let sim = TranscranialSimulation::new(&grid, props).unwrap();
-    let loss = sim.estimate_insertion_loss(650e3).unwrap();
+    let loss = sim
+        .estimate_insertion_loss(Frequency::from_base(650e3))
+        .unwrap();
 
-    // Should have significant insertion loss
-    assert!(loss > 0.1 && loss < 0.5);
+    // The closed form uses fewer than 16 rounded arithmetic operations. The
+    // factor of four covers platform libm rounding in exp and operation order.
+    let roundoff_bound = 64.0 * f64::EPSILON * expected.abs();
+    assert!((loss - expected).abs() <= roundoff_bound);
 }

@@ -104,7 +104,6 @@ Some examples require specific feature flags:
 |---------|----------|-------------|
 | `pinn` | AI/ML examples | Physics-Informed Neural Networks |
 | `gpu` | GPU-accelerated examples | WGPU-based parallel computing |
-| `ritk` | `skull_ct_phase_correction.rs` | RITK DICOM series loading |
 | `full` | All examples | Complete feature set |
 
 ### Example: Complete Interdisciplinary Simulation

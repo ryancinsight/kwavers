@@ -6,14 +6,37 @@
 
 ## What This Example Demonstrates
 
-Transcranial ultrasound full-waveform inversion (FWI) — brain reconstruction from synthetic ultrasound data. Demonstrates the complete pipeline: skull CT phantom → acoustic forward simulation → adjoint-state gradient → iterative model update → brain image.
+Transcranial ultrasound full-waveform inversion (FWI) — brain reconstruction
+from an explicitly selected synthetic or CT input. The complete pipeline is:
+skull model → acoustic forward simulation → adjoint-state gradient → iterative
+model update → brain image.
+
+## Input mode
+
+The default is the deterministic analytical phantom. Select a real CT input
+without changing the workflow with
+`KWAVERS_SEISMIC_INPUT_MODE=ct:<path>`. A failed explicit CT load is an error;
+it never changes the run to a synthetic model. Outputs default below
+`target/seismic_imaging_demo/` (override with the first positional argument).
+A brain acquisition with no successful gathers or an RTM failure is a typed
+run error; the workflow never reports a skipped stage or zero-filled image as
+success.
 
 ## Physics
 
-Skull bone-volume-fraction acoustic model (Aubry 2003) with fractional-Laplacian absorption (Treeby & Cox 2010). The 2D quasi-3D grid (NX=64, NY=2, NZ=64) exercises the full 3D solver on a thin slab.
+The consumer supplies only the CT Hounsfield-unit volume. The shared
+`seismic_imaging::medium::SkullModel` sends it to
+`HeterogeneousSkull::from_ct_hill` with Aequitas-typed canonical cortical-bone
+properties. Density follows Voigt volume averaging, sound speed follows the
+Hill average of the Voigt and Reuss bulk moduli, and attenuation is mixed at
+the 1 MHz reference frequency. The 2D quasi-3D grid (NX=64, NY=2, NZ=64)
+exercises the full 3D solver on a thin slab.
 
 ## Key Concepts
 
-- Skull CT phantom construction with bone-volume-fraction → sound-speed mapping
+- Provider-owned skull CT mapping with the validated `AcousticSkullProperties`
+  configuration SSOT
+- Aequitas-typed frequency, time, and pressure passed to the provider-owned
+  `DomainRickerWavelet` without an intermediate sample allocation
 - Adjoint-state FWI with L2 misfit
 - Multi-shot acquisition and gradient accumulation

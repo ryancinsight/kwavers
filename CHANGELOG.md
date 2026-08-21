@@ -58,6 +58,160 @@
 
 ### Changed
 
+- **Focused water-tank example runtime:** Independent FDTD, PSTD, and DG
+  comparison branches now use the provider-owned Moirai `Parallel` join while
+  retaining each solver's native state and analytical output. The complete
+  example Nextest gate passes 59/59; the previously terminating comparison test
+  completes in 51.861 seconds under the committed 60-second budget.
+
+- **FDTD adapter memory path:** `FdtdBackend` now borrows pressure and velocity
+  fields directly from the solver, removing four full-volume shadow copies from
+  every time step. The isolated plane-wave regression passes in 30.927 seconds,
+  the Kwavers package passes 530/530 tests, and the full workspace passes
+  6,279/6,279 with 15 skipped. The plane-wave test is assigned to the existing
+  serialized full-grid Nextest group; no workload, assertion, or timeout is
+  changed.
+
+- **Transcranial FWI example structure:** The entry point is now a small
+  manifest over typed grid configuration, acquisition, phantom/CT loading,
+  metrics, and workflow modules. The provider-owned skull model and Ricker
+  wavelet remain the only physical sources; focused example tests pass 6/6.
+
+- **Shared seismic metrics:** The 2-D and 3-D seismic examples now call one
+  canonical quality-report implementation and pair-report implementation,
+  with value-semantic regression coverage in both example binaries.
+
+- **Shared seismic CT selection:** DICOM series selection and the
+  one-file-per-series merge rule now live in one module used by both seismic
+  examples, removing the duplicated provider-boundary implementation.
+
+- **Shared seismic CT boundary:** RITK PNG, DICOM, and NIfTI loading, HU
+  normalization, axial skull geometry, and `CtVolume` ownership now live in one
+  provider-facing module. The 2-D and 3-D entries retain only their
+  dimension-specific resampling and interpolation paths.
+
+- **Shared seismic raster boundary:** Pixel writes, velocity coloring, and PNG
+  encoding now have one tested rendering home shared by the 2-D and 3-D
+  seismic artifacts; their panel layouts remain dimension-specific.
+
+- **3-D seismic artifact structure:** Orthogonal volume-slice rendering now
+  lives in a dedicated leaf module, leaving the 3-D workflow entry point focused
+  on acquisition, inversion, and artifact orchestration.
+
+- **2-D seismic artifact structure:** Planar velocity, CT-prior, RTM, brain-tissue,
+  and CSV artifact writers now live in the dedicated
+  `seismic_imaging/planar_artifacts.rs` leaf. The workflow entry point owns only
+  acquisition, inversion, and artifact orchestration. The exact example Nextest
+  gate passes 69/69 (one slow comparison at 44.608 seconds), strict example
+  Clippy passes, and `mdbook test` plus `mdbook build` pass.
+
+- **2-D brain-prior structure:** MNI/uniform prior construction and the frozen
+  skull mask now live in `seismic_imaging/brain_model.rs`; root orchestration
+  calls the bounded parent-qualified API. The exact example Nextest gate passes
+  69/69 (one slow comparison at 44.104 seconds), and strict example Clippy
+  passes. The mdBook content is unchanged from the preceding passing
+  `mdbook test` and `mdbook build` gate.
+
+- **2-D acquisition structure:** Full-ring source/receiver geometry and Ricker
+  source construction now live in `seismic_imaging/acquisition.rs`, including
+  their value-semantic geometry tests. The exact example Nextest gate passes
+  69/69 (one slow comparison at 37.708 seconds), strict example Clippy passes,
+  and the mdBook test/build gates pass.
+
+- **2-D phantom structure:** Synthetic skull construction, explicit CT loading,
+  HU resampling, and brain-support filling now live in
+  `seismic_imaging/phantom.rs`; the brain-support classifier is owned by
+  `brain_model.rs` and planar artifacts consume it through a sibling boundary.
+  The exact example Nextest gate passes 69/69 (one slow comparison at 43.391
+  seconds), strict example Clippy passes, and the mdBook test/build gates pass.
+
+- **2-D initial-model structure:** The separable Gaussian CT-prior blur now
+  lives in `seismic_imaging/initial_model.rs`, with constant-field and impulse
+  response tests at the owned boundary. The exact example Nextest gate passes
+  71/71 (one slow comparison at 41.967 seconds), strict example Clippy passes,
+  and the mdBook test/build gates pass.
+
+- **2-D brain inversion structure:** Stage-two masked brain-tissue FWI now
+  lives in `seismic_imaging/brain_inversion.rs`, returning a typed result after
+  explicit prior, gather, and inversion error handling. The exact example
+  Nextest gate passes 71/71 (one slow comparison at 44.692 seconds), strict
+  example Clippy passes, and the mdBook test/build gates pass.
+
+- **2-D RTM structure:** Receiver-snapshot construction and normalized
+  zero-lag reverse-time migration now live in `seismic_imaging/rtm.rs`, with an
+  explicit empty-shot error. The exact example Nextest gate passes 71/71 (one
+  slow comparison at 42.319 seconds), strict example Clippy passes, and the
+  mdBook test/build gates pass.
+
+- **3-D phantom structure:** Full-volume CT interpolation, skull resampling,
+  synthetic spherical phantom construction, and input-mode selection now live
+  in `seismic_imaging/volume_phantom.rs`; interpolation has value-semantic
+  corner and center tests. The exact example Nextest gate passes 72/72 (one
+  slow comparison at 41.982 seconds), strict example Clippy passes, and the
+  mdBook test/build gates pass.
+
+- **3-D brain-prior structure:** MNI probability-map loading, T1 normalization
+  and tissue mapping, uniform-prior construction, and prior selection now live
+  in `seismic_imaging/volume_brain_model.rs`; the declared T1 velocity bands
+  have boundary tests. The exact example Nextest gate passes 73/73 (one slow
+  comparison at 42.758 seconds), strict example Clippy passes, and the mdBook
+  test/build gates pass.
+
+- **3-D acquisition structure:** Fibonacci-sphere element placement, receiver
+  masks, and Ricker shot construction now live in
+  `seismic_imaging/volume_acquisition.rs`; domain-boundary tests cover clamping
+  and source exclusion. The exact example Nextest gate passes 75/75 (one slow
+  comparison at 42.443 seconds), strict example Clippy passes, and the mdBook
+  test/build gates pass.
+
+- **3-D initial-model structure:** Provider-parallel separable Gaussian blur now
+  lives in `seismic_imaging/volume_initial_model.rs`; constant-volume and
+  impulse-response tests cover the clamped 3-D kernel. The exact example
+  Nextest gate passes 77/77 (one slow comparison at 43.001 seconds), strict
+  example Clippy passes, and the mdBook test/build gates pass.
+
+- **3-D reporting structure:** Output-directory validation and orthogonal skull,
+  T1, and brain-tissue artifact writes now live in
+  `seismic_imaging/volume_reporting.rs`; the entry point delegates the complete
+  output contract through one typed boundary. The exact example Nextest gate
+  passes 77/77 (one slow comparison at 40.959 seconds), strict example Clippy
+  passes, and the mdBook test/build gates pass.
+
+- **3-D skull-inversion structure:** Multi-scale skull FWI, synthetic-gather
+  construction, and inversion diagnostics now live in the typed
+  `seismic_imaging/volume_skull_inversion.rs` workflow leaf. The stage retains
+  native provider-array execution and explicit inversion errors.
+
+- **3-D brain-inversion structure:** Stage-two masked brain FWI, prior-derived
+  initialization, gather construction, and brain-only quality reporting now live
+  in `seismic_imaging/volume_brain_inversion.rs`, returning a typed artifact
+  result. The 3-D entry point is 347 lines; the exact local package-plus-example
+  Nextest gate passes 116/116 in 42.039 seconds, strict example Clippy passes,
+  and the mdBook test/build gates pass.
+
+- **2-D workflow structure:** Multi-scale skull FWI, the frequency schedule, and
+  planar artifact reporting now live in typed
+  `seismic_imaging/{planar_inversion,planar_schedule,planar_reporting,planar_artifacts,planar_auxiliary}.rs`
+  leaves. The 2-D entry point is 465 lines, and every seismic artifact leaf is
+  below the 500-line target (`planar_artifacts.rs` is 488 lines). The merged
+  exact local package-plus-example Nextest gate passes 116/116 in 36.685
+  seconds (run `f3773ca9-eb1c-406e-9501-032da8860673`); workspace rustfmt,
+  strict example Clippy, the Kwavers doctest (1/1), and both mdBook test/build
+  gates pass.
+
+- **Seismic review correctness:** CT/NIfTI loaders now preserve source axis
+  order, selected slices, modality boundaries, and anisotropic voxel spacing;
+  MNI/T1 priors use per-axis atlas spacing; RTM rejects receiver-count
+  mismatches; partial gather reports show successful/attempted counts; and the
+  3-D workflow writes one orthogonal skull artifact instead of overwriting the
+  same image three times. Environment selectors reject invalid Unicode rather
+  than silently choosing a default.
+
+- **Breaking CT skull material boundary:** `AcousticSkullProperties` now stores
+  validated Aequitas velocity, mass-density, reciprocal-length attenuation,
+  length, and optional shear velocity. `HeterogeneousSkull::from_ct_hill`
+  consumes that canonical skull configuration, and the seismic examples route
+  synthetic and explicit CT volumes through the provider-owned model.
 - **Lint configuration:** all 24 workspace members now inherit `[workspace.lints]`.
   `kwavers`, `kwavers-driver`, and `kwavers-python` carried no `[lints]` section and
   inherited nothing; `kwavers` additionally re-declared `unexpected_cfgs` byte-identically
@@ -71,8 +225,6 @@
   is the PyPI landing page for a Python reader and its `//!` docs address the Rust
   maintainer of the binding layer, so they are deliberately two documents.
 
-### Changed
-
 - **Elastic FWI runtime and structure:** Singleton-z in-plane point-force
   propagation now selects a zero-sized plane-strain mode once, avoiding the
   out-of-plane stress, acceleration, integration, damping, and gradient work
@@ -82,6 +234,16 @@
   `fwi_outperforms_linear_inversion` contract drops from a 10.000-second local
   median to 4.952 seconds; exact differential tests pin the optimized 2-D
   operators to the full 3-D formulas.
+
+- **Breaking typed seismic source generation:** `DomainRickerWavelet::new` now accepts
+  Aequitas frequency, time, and pressure quantities and returns a validation
+  result. Its causal constructor and zero-allocation `samples` iterator are the
+  single Ricker implementation used by the seismic solver and examples; the
+  duplicated solver-owned wavelet is removed.
+
+- **Breaking feature cleanup:** The empty `dicom` and `ritk` compatibility
+  features are removed. RITK medical-image I/O remains available
+  unconditionally; commands that passed either feature should remove the flag.
 
 - **Attenuation example structure and documentation:** The heterogeneous
   power-law attenuation replication now separates configuration, propagation,

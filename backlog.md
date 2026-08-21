@@ -206,7 +206,7 @@
   kwavers-driver --no-deps` clean. `cargo test --doc -p kwavers-driver` green.
   `cargo check -p kwavers-python` clean. `cargo fmt --all -- --check` clean for the touched
   files.
-- Residual, filed below: KW-DOC-107, KW-CLEAN-108, KW-DOC-109.
+- Historical closure records follow below for KW-DOC-107, KW-CLEAN-108, and KW-DOC-109.
 
 ## KW-DOC-109 — Review driver publication surface [patch] — done 2026-08-20
 
@@ -427,29 +427,29 @@
   source configuration.
 - Non-goals: no Rust, dependency, benchmark, test, or coverage-policy changes.
 
-## KWAVERS-SONO-113 — Type sonoluminescence emission and close the example/book slice [major] [arch] — merged; exact-head hosted verification queued 2026-08-19
+## KWAVERS-SONO-113 — Type sonoluminescence emission and close the example/book slice [major] [arch] — closed 2026-08-20
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KWAVERS-SONO-113 | Route dimensioned sonoluminescence power through Aequitas, assemble one authoritative field pass, and synchronize tests, examples, and book pages. | [major] [arch] | merged; exact-head hosted verification queued | Codex | `crates/kwavers-physics/src/optics/sonoluminescence/`, sonoluminescence examples, `docs/book/examples/`, ADR 114, this item |
+| KWAVERS-SONO-113 | Route dimensioned sonoluminescence power through Aequitas, assemble one authoritative field pass, and synchronize tests, examples, and book pages. | [major] [arch] | closed | Codex | `crates/kwavers-physics/src/optics/sonoluminescence/`, sonoluminescence examples, `docs/book/examples/`, ADR 114, this item |
 
 - Acceptance: emission components carry Aequitas `VolumetricPowerDensity`; Cherenkov spectral yield is not added to the dimensioned power field; one field traversal computes enabled dimensioned components without temporary field clones; the integrated step refreshes emission from updated state; constructor state uses `BubbleParameters`; placeholder molecular-line and example paths are removed; focused value-semantic tests, example builds/runs, book tests/build, and package gates pass.
 - Non-goals: GPU kernels, Python bindings, and unrelated legacy migration surfaces remain separate items.
 - Evidence target: exact local revision plus hosted architecture, test, example, and book gates; dimensional limits and any external runner blockers are recorded here.
 - Local evidence at `a6a8a44a4`: strict `kwavers-physics` Clippy (`-D warnings`) passed; Nextest run `b8d4c544-fa3d-46ca-8076-86187239f04b` passed 40/40 sonoluminescence tests (1,517 skipped); both examples passed package checks, `single_bubble_sonoluminescence` ran through eight integrated steps, and `multiphysics_sonoluminescence --features pinn` ran through two epochs over three domains; `mdbook test docs/book` and `mdbook build docs/book` passed. The single-bubble run emitted changing Aequitas W/m³ fields and a separate arbitrary-unit spectrum.
 - Pre-merge regression closure: the full-feature facade gate exposed five stale seven-argument emission calls in `ultrasound_physics_validation`; every call now uses the dimensioned temperature/radius/charge-density contract and the unused pressure, velocity, and compression fixtures are deleted. Both strict workflow Clippy commands pass locally, and Nextest run `e6b1b6ae-e36c-4ea7-8aca-ecf2514ced5f` passes all 18 facade physics-validation tests.
-- Hosted state: PR [#414](https://github.com/ryancinsight/kwavers/pull/414)
+- Hosted evidence: PR [#414](https://github.com/ryancinsight/kwavers/pull/414)
   merged as `25bf5deca` from exact head `0bdcb17d9`. Exact-head runs
   `32322520315`, `32322520318`, `32322520322`, `32322520338`, and
-  `32322520613` remain queued and must pass before this item closes. Local
-  commands used the Atlas development overlay, so Cargo lockfile source state
-  was restored after each command and no lockfile change is part of this item.
+  `32322520613` completed successfully. Local commands used the Atlas
+  development overlay, so Cargo lockfile source state was restored after each
+  command and no lockfile change is part of this item.
 
-## KW-EXAMPLES-114 — Complete the heterogeneous attenuation example/book contract [patch] — implementation complete; hosted verification pending 2026-08-19
+## KW-EXAMPLES-114 — Complete the heterogeneous attenuation example/book contract [patch] — closed 2026-08-20
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-EXAMPLES-114 | Split the heterogeneous power-law attenuation experiment by concern, add one source-linked book page, remove stale example links, and retain the measured analytical-oracle evidence. | [patch] | implementation complete; hosted verification pending | Codex | `crates/kwavers/examples/{heterogeneous_power_law_attenuation.rs,heterogeneous_power_law_attenuation/,README.md}`, `docs/book/{SUMMARY.md,media_and_tissue_models.md,examples/}`, this item, `CHANGELOG.md` |
+| KW-EXAMPLES-114 | Split the heterogeneous power-law attenuation experiment by concern, add one source-linked book page, remove stale example links, and retain the measured analytical-oracle evidence. | [patch] | closed | Codex | `crates/kwavers/examples/{heterogeneous_power_law_attenuation.rs,heterogeneous_power_law_attenuation/,README.md}`, `docs/book/{SUMMARY.md,media_and_tissue_models.md,examples/}`, this item, `CHANGELOG.md` |
 
 - Acceptance: the example entry point is a manifest over named configuration,
   propagation, measurement, experiment, and artifact modules; every example
@@ -473,6 +473,257 @@
   resolves 497 relative targets across 107 book/index files and finds no
   missing link; the
   four deleted-example names and stale toolchain-update instruction are absent.
+- Hosted evidence: PR [#422](https://github.com/ryancinsight/kwavers/pull/422)
+  merged as `9cf62aa98` from exact head `fc0e6baa1`. Exact-head runs
+  `32329958628`, `32329958640`, `32329958646`, `32329958660`, and
+  `32329958998` completed successfully, including 10/10 architecture jobs and
+  11/11 CI jobs.
+
+## KW-EXAMPLES-115 — Type and partition the seismic example workflows [major] [arch] — local gates complete; hosted verification pending 2026-08-20
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-EXAMPLES-115 | Replace the three seismic example monoliths with explicit typed workflows that call Atlas providers directly and document value-semantic 2-D/3-D behavior. | [major] [arch] | local gates complete; hosted verification pending | Codex | `crates/kwavers/examples/{seismic_imaging_demo,seismic_imaging_3d_demo,transcranial_fwi}*`, shared seismic modules, `kwavers-signal`/`kwavers-solver` provider call sites, `crates/kwavers/Cargo.toml`, seismic book pages, ADR 117, PM artifacts |
+
+- Acceptance: each example entry point is a manifest over SRP leaf modules no
+  larger than 500 lines; shared acquisition, CT, physical configuration,
+  metrics, and artifact logic has one canonical home; physical configuration
+  uses Aequitas quantities and grid shapes use zero-sized strategy types with
+  associated consts; skull properties and Ricker samples come directly from
+  provider-owned APIs; explicit input and brain-prior enums replace CT/MRI/MNI
+  load fallbacks and skipped FWI/RTM stages; selected inputs fail with typed
+  context instead of changing the workflow; output defaults under `target/`;
+  the no-op `dicom` and `ritk` Cargo features and all in-repo references are
+  deleted; positive, negative, boundary, and provider-differential tests plus
+  focused example and book gates pass.
+- 2026-08-20 provider slice: `DomainRickerWavelet` stores Aequitas frequency,
+  time, and pressure quantities, validates construction without panics, and
+  streams exact-size samples without an intermediate allocation. The 2-D,
+  3-D, and transcranial examples and RTM propagation call that provider
+  directly; three example-local equations and the solver-owned duplicate are
+  deleted. Focused nextest runs pass 4/4 provider reference/validation cases and
+  the medical-ultrasound RTM propagation regression; strict standalone Clippy
+  passes for `kwavers-signal`, `kwavers-solver`, and the three examples.
+  `cargo-semver-checks` passes 223/223 checks for `kwavers-signal` and classifies
+  the solver-owned struct and shift-constant deletions as two expected major
+  breaks; manual API review also classifies the typed, fallible signal
+  constructor replacement as major.
+- 2026-08-20 physical-model slice: the existing `AcousticSkullProperties` SSOT
+  now validates Aequitas velocity, mass density, reciprocal-length attenuation,
+  length, and optional shear velocity; the Hill CT API accepts it and rejects
+  empty or non-finite volumes. One shared
+  `seismic_imaging::medium::SkullModel` now owns the source HU volume and the
+  provider-derived acoustic fields for all three workflows. The local BVF,
+  sound-speed, density, and phantom-structure copies are deleted. Strict
+  standalone Clippy passes for `kwavers-physics` and the four affected
+  examples. Exact MSVC Nextest run
+  `8095f9e5-4550-4994-a3d2-dc5d346a0b57` passes 53/53 skull-provider cases;
+  run `6e0819a4-8452-4966-964c-479c61004def` passes 6/6 example
+  geometry/phase-correction cases. The provider doctest gate passes 9 runnable
+  cases with 4 environmental cases ignored, warning-denied Rustdoc passes, and
+  mdBook test and build pass. `cargo-semver-checks` runs 223 checks: 218 pass,
+  5 expected API-change lints fail, and 30 skip. It classifies private
+  `AcousticSkullProperties` storage, removal of its former public scalar fields,
+  and the `from_ct_hill` arity replacement as four major lint failures; adding
+  `#[must_use]` is one minor lint failure. Hosted evidence remains pending before
+  this slice closes. The consolidation follows
+  [ADR 004](docs/adr/004-domain-material-property-ssot.md).
+- 2026-08-20 transcranial entry-point slice: `transcranial_fwi.rs` is now a
+  31-line manifest over five single-concern modules. `GridSpec` is a zero-sized
+  owner for compile-time grid and phantom constants; acquisition, phantom/CT
+  loading, metrics, and workflow state no longer share one monolith. Focused
+  exact-value Nextest run `d1e3550e-f570-406b-a151-c50832cfe198` passes 6/6,
+  and strict example Clippy passes. The remaining seismic entry points are
+  still above the 500-line target and require the next partition slices.
+- 2026-08-20 shared-metrics slice: whole-model and selected-pair quality
+  calculations now have one canonical `seismic_imaging/metrics.rs` home used
+  by both 2-D and 3-D entries, with one value-semantic regression test per
+  binary. Focused example Nextest run `d93a0d0d-4893-4c99-9dbd-f5ccbdd6bbfa`
+  passes 14/14; strict all-example Clippy and example checks pass.
+- 2026-08-20 DICOM ownership slice: the repeated Medimodel series selection
+  and one-file-per-series merge heuristic now has one canonical
+  `seismic_imaging/dicom.rs` home used by both 2-D and 3-D CT loaders. The
+  focused cross-example Nextest rerun `5a75e7f4-3d2d-4734-a0d8-3603ae25c511`
+  passes 14/14 and strict all-example Clippy remains green.
+- 2026-08-20 CT boundary slice: RITK PNG, DICOM, and NIfTI conversion, HU
+  clamping, `CtVolume` storage, and axial skull geometry now have one canonical
+  `seismic_imaging/ct.rs` home. The 2-D and 3-D entries retain only their
+  dimension-specific resampling and interpolation. The full example Nextest
+  run `33cd7cd5-876c-4d3e-a4a6-89fa41005873` passes 59/59 and strict all-example
+  Clippy is green; the remaining entry-point partition is still open.
+- 2026-08-20 raster boundary slice: pixel writes, velocity color mapping, and
+  PNG encoding now have one tested `seismic_imaging/render.rs` home used by
+  both seismic entries; the dimension-specific panel layouts remain local.
+  Full example Nextest run `20e6d2c9-8a84-4bd9-a2d0-6e9084ea08af` passes 69/69
+  and strict all-example Clippy is green.
+- 2026-08-20 3-D artifact slice: orthogonal axial, coronal, and sagittal volume
+  rendering now lives in `seismic_imaging/volume_artifacts.rs`, reducing the
+  3-D entry point without changing its output contract. Full example Nextest
+  run `8af9dbfd-555e-4696-a4df-357b443bf080` passes 69/69 and strict all-example
+  Clippy is green.
+- 2026-08-20 2-D artifact slice: planar velocity, CT-prior, RTM, brain-tissue,
+  and CSV writers now live in `seismic_imaging/planar_artifacts.rs`; the entry
+  point retains only workflow orchestration and qualifies the leaf's bounded
+  API. Exact example Nextest run
+  `26fc6ce2-eef8-4479-826c-c00584c0fa41` passes 69/69 (one slow comparison at
+  44.608 seconds); strict all-example Clippy, `mdbook test docs/book`, and
+  `mdbook build docs/book` pass. The 2-D entry point is 1,574 lines and the
+  3-D entry point is 1,382 lines, so further partitioning remains before
+  `KW-EXAMPLES-115` can close.
+- 2026-08-20 2-D brain-prior slice: MNI/uniform prior construction and the
+  frozen skull mask now live in `seismic_imaging/brain_model.rs`; the root
+  workflow retains only orchestration and qualifies the leaf API. Exact example
+  Nextest run `24eac9ad-f072-45bf-a8fd-f609652a77b1` passes 69/69 (one slow
+  comparison at 44.104 seconds), and strict all-example Clippy passes. The
+  mdBook content is unchanged from the preceding passing test/build gate. The
+  2-D entry point is 1,396 lines and the 3-D entry point is 1,382 lines, so
+  acquisition, phantom, inversion, and reporting still require partitioning
+  before `KW-EXAMPLES-115` can close.
+- 2026-08-20 2-D acquisition slice: full-ring source/receiver geometry and
+  Ricker source construction now live in `seismic_imaging/acquisition.rs`, with
+  the geometry tests beside the owned boundary. Exact example Nextest run
+  `0e396915-ab6b-42d4-bb15-e8577213310b` passes 69/69 (one slow comparison at
+  37.708 seconds); strict all-example Clippy, `mdbook test docs/book`, and
+  `mdbook build docs/book` pass. The 2-D entry point is 1,234 lines and the 3-D
+  entry point is 1,382 lines, so phantom, inversion, and reporting still
+  require partitioning before `KW-EXAMPLES-115` can close.
+- 2026-08-20 2-D phantom slice: synthetic skull construction, explicit CT
+  loading, HU resampling, and brain-support filling now live in
+  `seismic_imaging/phantom.rs`; the brain-support classifier is owned by
+  `brain_model.rs` and planar artifacts consume it through a sibling boundary.
+  Exact example Nextest run `529c2f34-5d9a-45cb-86f9-fc32473623a6` passes 69/69
+  (one slow comparison at 43.391 seconds); strict all-example Clippy,
+  `mdbook test docs/book`, and `mdbook build docs/book` pass. The 2-D entry
+  point is 1,089 lines and the 3-D entry point is 1,382 lines, so inversion and
+  reporting still require partitioning before `KW-EXAMPLES-115` can close.
+- 2026-08-20 2-D initial-model slice: the separable Gaussian CT-prior blur now
+  lives in `seismic_imaging/initial_model.rs`, with constant-field and impulse
+  response tests beside the owned boundary. Exact example Nextest run
+  `dfbc676e-77cd-4b3c-a081-ae062106bdc6` passes 71/71 (one slow comparison at
+  41.967 seconds); strict all-example Clippy, `mdbook test docs/book`, and
+  `mdbook build docs/book` pass. The 2-D entry point is 1,024 lines and the
+  3-D entry point is 1,382 lines, so inversion and reporting still require
+  partitioning before `KW-EXAMPLES-115` can close.
+- 2026-08-20 2-D brain-inversion slice: stage-two masked brain-tissue FWI now
+  lives in `seismic_imaging/brain_inversion.rs`, returning a typed result after
+  explicit prior, gather, and inversion error handling. Exact example Nextest
+  run `761d76b5-0ae2-4c75-8baf-4b6833a36ef7` passes 71/71 (one slow comparison
+  at 44.692 seconds); strict all-example Clippy, `mdbook test docs/book`, and
+  `mdbook build docs/book` pass. The 2-D entry point is 902 lines and the 3-D
+  entry point is 1,382 lines, so top-level inversion and reporting still
+  require partitioning before `KW-EXAMPLES-115` can close.
+- 2026-08-20 2-D RTM slice: receiver-snapshot construction and normalized
+  zero-lag reverse-time migration now live in `seismic_imaging/rtm.rs`, with an
+  explicit empty-shot error. Exact example Nextest run
+  `004ce523-953d-4a38-830d-0cdf2688903e` passes 71/71 (one slow comparison at
+  42.319 seconds); strict all-example Clippy, `mdbook test docs/book`, and
+  `mdbook build docs/book` pass. The 2-D entry point is 860 lines and the 3-D
+  entry point is 1,382 lines, so top-level inversion and reporting still
+  require partitioning before `KW-EXAMPLES-115` can close.
+- 2026-08-20 3-D phantom slice: full-volume CT interpolation, skull resampling,
+  synthetic spherical phantom construction, and input-mode selection now live
+  in `seismic_imaging/volume_phantom.rs`; interpolation has value-semantic
+  corner and center tests. Exact example Nextest run
+  `de2bef5e-ab00-4b67-8910-3b89ac171fec` passes 72/72 (one slow comparison at
+  41.982 seconds); strict all-example Clippy, `mdbook test docs/book`, and
+  `mdbook build docs/book` pass. The 2-D entry point is 860 lines and the 3-D
+  entry point is 1,212 lines, so 3-D brain-model, acquisition, inversion, and
+  reporting still require partitioning before `KW-EXAMPLES-115` can close.
+- 2026-08-20 3-D brain-prior slice: MNI probability-map loading, T1
+  normalization and tissue mapping, uniform-prior construction, and prior
+  selection now live in `seismic_imaging/volume_brain_model.rs`; the declared
+  T1 velocity bands have boundary tests. Exact example Nextest run
+  `744440bf-a9e0-4ed1-90ae-9b800cb97e3e` passes 73/73 (one slow comparison at
+  42.758 seconds); strict all-example Clippy, `mdbook test docs/book`, and
+  `mdbook build docs/book` pass. The 2-D entry point is 860 lines and the 3-D
+  entry point is 952 lines, so 3-D acquisition, inversion, and reporting still
+  require partitioning before `KW-EXAMPLES-115` can close.
+- 2026-08-20 3-D acquisition slice: Fibonacci-sphere element placement,
+  receiver masks, and Ricker shot construction now live in
+  `seismic_imaging/volume_acquisition.rs`; domain-boundary tests cover clamping
+  and source exclusion. Exact example Nextest run
+  `54856a9f-51aa-42bc-9ab9-4952ccf3160f` passes 75/75 (one slow comparison at
+  42.443 seconds); strict all-example Clippy, `mdbook test docs/book`, and
+  `mdbook build docs/book` pass. The 2-D entry point is 860 lines and the 3-D
+  entry point is 875 lines, so 3-D inversion and reporting still require
+  partitioning before `KW-EXAMPLES-115` can close.
+- 2026-08-20 3-D initial-model slice: provider-parallel separable Gaussian blur
+  now lives in `seismic_imaging/volume_initial_model.rs`; constant-volume and
+  impulse-response tests cover the clamped 3-D kernel. Exact example Nextest
+  run `295655d1-c5e0-4c1b-bbad-f44a5d23d75a` passes 77/77 (one slow comparison
+  at 43.001 seconds); strict all-example Clippy, `mdbook test docs/book`, and
+  `mdbook build docs/book` pass. The 2-D entry point is 860 lines and the 3-D
+  entry point is 799 lines, so 3-D inversion and reporting still require
+  partitioning before `KW-EXAMPLES-115` can close.
+- 2026-08-20 3-D reporting slice: output-directory validation and orthogonal
+  skull, T1, and brain-tissue artifact writes now live in
+  `seismic_imaging/volume_reporting.rs`; the entry point delegates the complete
+  output contract through one typed boundary. Exact example Nextest run
+  `d5b20341-82fa-4e7c-9567-b37021b00e46` passes 77/77 (one slow comparison at
+  40.959 seconds); strict all-example Clippy, `mdbook test docs/book`, and
+  `mdbook build docs/book` pass. The 2-D entry point is 860 lines and the 3-D
+  entry point is 718 lines, so 3-D inversion still requires partitioning before
+  `KW-EXAMPLES-115` can close.
+- 2026-08-20 3-D skull-inversion slice: multi-scale skull FWI, synthetic
+  gathers, and inversion diagnostics now live in the typed
+  `seismic_imaging/volume_skull_inversion.rs` leaf. The stage preserves native
+  provider-array execution and explicit inversion errors.
+- 2026-08-20 3-D brain-inversion slice: stage-two masked brain FWI, prior-derived
+  initialization, gather construction, and brain-only quality reporting now
+  live in `seismic_imaging/volume_brain_inversion.rs`, returning a typed result.
+  Exact local package-plus-example Nextest run
+  `2170b8c5-71b1-4be0-9c2a-44235c0676d5` passes 116/116 in 42.039 seconds;
+  strict all-example Clippy, `mdbook test docs/book`, and `mdbook build docs/book`
+  pass. The 3-D entry point is 347 lines.
+- 2026-08-20 2-D workflow slice: multi-scale skull FWI, frequency continuation,
+  and output-directory/artifact orchestration now live in typed
+  `seismic_imaging/{planar_inversion,planar_schedule,planar_reporting,planar_artifacts,planar_auxiliary}.rs`
+  leaves. The root entry point is 465 lines and every seismic artifact leaf is
+  below the 500-line target (`planar_artifacts.rs` is 488 lines). Exact local
+  package-plus-example Nextest run `37c67cf0-17bf-445d-9d8c-170e3608c568`
+  passes 116/116 in 43.604 seconds; workspace rustfmt, strict all-example
+  Clippy, `cargo test --doc --offline -p kwavers` (1/1), `mdbook test
+  docs/book`, and `mdbook build docs/book` pass. `KW-EXAMPLES-115` is ready
+  for hosted verification and integration.
+- 2026-08-20 example-gate runtime slice: the focused water-tank comparison's
+  independent FDTD, PSTD, DG-2D, DG-3D, and DG-3D-CPML branches now overlap
+  through the provider-owned Moirai `Parallel` join. The complete example
+  Nextest run passes 59/59; the comparison test completes in 51.861 seconds
+  under the committed 60-second budget without changing its workload or
+  assertions.
+- 2026-08-20 merged-head verification: branch head `d0856b8b1` incorporates the
+  current `origin/main`; strict all-target Clippy exposed and the follow-up
+  commit `d6a7aab52` removed one redundant `ArrayView` clone in the transducer
+  calibration manager; review fixes are committed at `e045b1974`. On the
+  resulting exact code head, `cargo check --offline
+  -p kwavers --examples --all-targets`, strict Clippy, and rustfmt pass;
+  Nextest run `f3773ca9-eb1c-406e-9501-032da8860673` passes 116/116 in 36.685
+  seconds; `cargo test --doc --offline -p kwavers` passes 1/1; and both
+  `mdbook test docs/book` and `mdbook build docs/book` pass. Cargo lockfile
+  source state is restored after each overlay command.
+- 2026-08-20 FDTD budget closure: `FdtdBackend` now exposes the solver-owned
+  pressure and velocity fields directly, deleting four full-volume shadow-field
+  copies from every step. The isolated plane-wave regression passes in
+  `3eed71e5-a1cc-4852-be8f-b7ebf756b356` (1/1 in 30.927 seconds), the full
+  Kwavers package passes `dd51875b-2423-44c6-9980-c0b4e72081be` (530/530),
+  and the exact workspace gate passes `a440f991-41b4-4bc4-ad0b-f635c6470490`
+  (6,279/6,279; 15 skipped; 30 slow). The timeout was resolved by the
+  production zero-copy path and by assigning the plane-wave binary to the
+  existing serialized full-grid Nextest group; no workload, assertion, or
+  timeout was changed.
+- 2026-08-20 review-fix slice: strict review findings are closed for stage
+  counters, environment decoding, CT/NIfTI axis and spacing semantics, DICOM
+  modality selection, RTM receiver accounting and signed peaks, successful
+  gather reporting, MNI/T1 per-axis registration, one orthogonal 3-D artifact,
+  and duplicated book/PM text. Exact Nextest run
+  `2bbe3774-be78-4a3e-86c6-e4499b1359a3` passes 116/116 in 42.798 seconds;
+  strict all-target Clippy, package checks, the Kwavers doctest, and mdBook
+  test/build pass.
+- Non-goals: frequency-domain FWI and ADR 115, solver-algorithm replacement,
+  committed clinical datasets, GPU-kernel changes, and compatibility aliases.
+- Verification: strict focused Clippy, example unit tests through Nextest,
+  doctests, bounded synthetic runs with value-semantic artifacts, mdBook tests
+  and build, link/residue audits, and exact-head hosted CI before merge.
 
 ## ATLAS-KWAVERS-HEPHAESTUS-FDTD-107 — Route collocated FDTD through Hephaestus [minor] [arch] — Apollo co-evolution blocker 2026-08-18
 
@@ -1486,7 +1737,7 @@ markers without changing the numerical contract.
 - Versioning: `kwavers-medium` 3.0.0 → 4.0.0; ADR 038 records the public
   removal and value-preservation theorem.
 
-## KW-SOL-058 — Restore elastic-FWI hosted runtime budget [patch] — in-progress
+## KW-SOL-058 — Restore elastic-FWI hosted runtime budget [patch] — ✅ done
 
 - Owner: Codex `/root`; last-update: 2026-08-20; scope:
   elastic SWE point-force/stress/integration modules, elastic-FWI
@@ -1515,8 +1766,11 @@ markers without changing the numerical contract.
   skipped in 143.899 seconds; warning-denied all-target Clippy passes. Solver
   doctests pass 7 with eight environment-specific cases ignored, and mdBook
   test/build pass. Native sampling was attempted but Windows denied both
-  `dtrace` and `blondie` without administrator privileges. Exact-head hosted
-  validation remains the closure gate.
+  `dtrace` and `blondie` without administrator privileges.
+- Hosted closure: PR #429 exact head `9f86c95e5` passes Architecture Validation
+  run `32346688058`, job `96356812801`: the unchanged FWI regression passes in
+  29.031 seconds and the full native suite passes 5,729/5,729. All five hosted
+  workflows are green; merge commit `2a291a064` integrates the fix.
 
 ## KW-CI-057 — Serialize full workspace test processes [patch] — superseded
 

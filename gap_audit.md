@@ -1,3 +1,185 @@
+## KW-EXAMPLES-115 — Seismic example partition closure 2026-08-20
+
+The transcranial FWI entry points are manifests over SRP leaf modules: the 3-D
+workflow is 347 lines and the 2-D workflow is 465 lines. The fixed-grid
+configuration remains a zero-sized owner with associated constants, while
+synthetic phantom, CT reader, acquisition geometry, metrics, inversion, and
+artifact reporting each have one canonical module. Planar artifact writers are
+split between `planar_artifacts.rs` (488 lines) and `planar_auxiliary.rs` (235
+lines), keeping every seismic leaf below the 500-line target. Exact local
+package-plus-example Nextest run `37c67cf0-17bf-445d-9d8c-170e3608c568`
+passes 116/116 in 43.604 seconds; workspace rustfmt, strict example Clippy,
+the Kwavers doctest (1/1), and the mdBook test/build gates pass. No fallback or
+compatibility path is added. Review-fix verification on the current code head
+passes Nextest run `2bbe3774-be78-4a3e-86c6-e4499b1359a3` (116/116 in 42.798
+seconds), strict all-target Clippy, package checks, the Kwavers doctest (1/1),
+and both mdBook gates.
+
+The FDTD backend no longer copies pressure and velocity arrays into adapter
+shadow fields after every step; accessors borrow the solver-owned fields
+directly. The isolated plane-wave regression passes in
+`3eed71e5-a1cc-4852-be8f-b7ebf756b356` (1/1 in 30.927 seconds), the full
+Kwavers package passes `dd51875b-2423-44c6-9980-c0b4e72081be` (530/530), and
+the workspace Nextest gate passes `a440f991-41b4-4bc4-ad0b-f635c6470490`
+(6,279/6,279; 15 skipped; 30 slow). The plane-wave binary is now in the
+serialized full-grid test group so full-workspace CPU contention cannot turn a
+31-second test into a false 60-second timeout; the production workload and
+timeout contract remain unchanged.
+
+The local exact-head gates are complete on `e045b1974`, after merging current
+`origin/main` as `d0856b8b1` and removing a redundant `ArrayView` clone exposed
+by strict Clippy, then applying the verified review-fix slice. The residual is
+hosted PR verification and merge of the exact pushed head.
+
+The complete example gate initially exposed an independent runtime defect in
+`focused_ultrasound_water_tank`: its five disjoint solver branches ran
+sequentially, and the comparison test terminated at 60 seconds. The provider
+owned `moirai_parallel::Parallel` join now overlaps the FDTD, PSTD, DG-2D,
+DG-3D, and DG-3D-CPML computations without sharing mutable solver state. The
+exact local Nextest run passes 59/59; the comparison test completes in 51.861
+seconds. No workload, assertion, or runtime budget changed.
+
+The next consolidation moves RITK PNG, DICOM, and NIfTI conversion, HU clamping,
+`CtVolume` ownership, and axial skull geometry into
+`crates/kwavers/examples/seismic_imaging/ct.rs`. The 2-D and 3-D entries retain
+only dimension-specific resampling and interpolation. Full example Nextest run
+`33cd7cd5-876c-4d3e-a4a6-89fa41005873` passes 59/59 and strict all-example
+Clippy is green. The entry points remain above the 500-line target, so
+`KW-EXAMPLES-115` remains in progress.
+
+The raster boundary is now canonical in
+`crates/kwavers/examples/seismic_imaging/render.rs`: both seismic entries share
+pixel writes, velocity coloring, and PNG encoding, while 2-D/3-D panel layouts
+remain dimension-specific. The exact local Nextest run
+`20e6d2c9-8a84-4bd9-a2d0-6e9084ea08af` passes 69/69 and strict all-example
+Clippy remains green. The entry points remain above the 500-line target.
+
+The 3-D orthogonal axial, coronal, and sagittal artifact renderer now has its
+own `seismic_imaging/volume_artifacts.rs` leaf; output orchestration remains in
+the example workflow. Exact local Nextest run
+`8af9dbfd-555e-4696-a4df-357b443bf080` passes 69/69 and strict all-example
+Clippy is green. The 2-D entry point and remaining 3-D workflow logic still
+require partitioning before `KW-EXAMPLES-115` can close.
+
+The 2-D planar velocity, CT-prior, RTM, brain-tissue, and CSV artifact writers
+now have their own `seismic_imaging/planar_artifacts.rs` leaf. The entry point
+retains only workflow orchestration and qualifies the leaf's bounded artifact
+API. Exact local Nextest run `26fc6ce2-eef8-4479-826c-c00584c0fa41` passes
+69/69 (one slow comparison at 44.608 seconds); strict all-example Clippy,
+`mdbook test docs/book`, and `mdbook build docs/book` pass. The 2-D entry point
+is 1,574 lines and the 3-D entry point is 1,382 lines, so further vertical
+partitioning remains before `KW-EXAMPLES-115` can close.
+
+The next 2-D slice moves MNI/uniform prior construction and the frozen skull mask
+to `seismic_imaging/brain_model.rs`, leaving a parent-qualified orchestration
+boundary. Exact local Nextest run `24eac9ad-f072-45bf-a8fd-f609652a77b1` passes
+69/69 (one slow comparison at 44.104 seconds), and strict all-example Clippy
+passes. The mdBook content is unchanged from the preceding passing test/build
+gate. The 2-D entry point is 1,396 lines and the 3-D entry point is 1,382 lines;
+acquisition, phantom, inversion, and reporting still require partitioning, so
+`KW-EXAMPLES-115` remains in progress.
+
+Full-ring source/receiver geometry and Ricker source construction now have their
+own `seismic_imaging/acquisition.rs` leaf, with geometry tests beside the owned
+boundary. Exact local Nextest run `0e396915-ab6b-42d4-bb15-e8577213310b` passes
+69/69 (one slow comparison at 37.708 seconds); strict all-example Clippy,
+`mdbook test docs/book`, and `mdbook build docs/book` pass. The 2-D entry point
+is 1,234 lines and the 3-D entry point is 1,382 lines; phantom, inversion, and
+reporting still require partitioning, so `KW-EXAMPLES-115` remains in progress.
+
+Full-volume CT interpolation, skull resampling, synthetic spherical phantom
+construction, and input-mode selection now have the
+`seismic_imaging/volume_phantom.rs` leaf; interpolation has value-semantic
+corner and center tests. Exact local Nextest run
+`de2bef5e-ab00-4b67-8910-3b89ac171fec` passes 72/72 (one slow comparison at
+41.982 seconds); strict all-example Clippy, `mdbook test docs/book`, and
+`mdbook build docs/book` pass. The 2-D entry point is 860 lines and the 3-D
+entry point is 1,212 lines; 3-D brain-model, acquisition, inversion, and
+reporting still require partitioning, so `KW-EXAMPLES-115` remains in progress.
+
+MNI probability-map loading, T1 normalization and tissue mapping, uniform-prior
+construction, and prior selection now have the
+`seismic_imaging/volume_brain_model.rs` leaf; the declared T1 velocity bands
+have boundary tests. Exact local Nextest run
+`744440bf-a9e0-4ed1-90ae-9b800cb97e3e` passes 73/73 (one slow comparison at
+42.758 seconds); strict all-example Clippy, `mdbook test docs/book`, and
+`mdbook build docs/book` pass. The 2-D entry point is 860 lines and the 3-D
+entry point is 952 lines; 3-D acquisition, inversion, and reporting still
+require partitioning, so `KW-EXAMPLES-115` remains in progress.
+
+Fibonacci-sphere element placement, receiver masks, and Ricker shot construction
+now have the `seismic_imaging/volume_acquisition.rs` leaf; domain-boundary tests
+cover clamping and source exclusion. Exact local Nextest run
+`54856a9f-51aa-42bc-9ab9-4952ccf3160f` passes 75/75 (one slow comparison at
+42.443 seconds); strict all-example Clippy, `mdbook test docs/book`, and
+`mdbook build docs/book` pass. The 2-D entry point is 860 lines and the 3-D
+entry point is 875 lines; 3-D inversion and reporting still require
+partitioning, so `KW-EXAMPLES-115` remains in progress.
+
+Provider-parallel separable Gaussian blur now has the
+`seismic_imaging/volume_initial_model.rs` leaf; constant-volume and
+impulse-response tests cover the clamped 3-D kernel. Exact local Nextest run
+`295655d1-c5e0-4c1b-bbad-f44a5d23d75a` passes 77/77 (one slow comparison at
+43.001 seconds); strict all-example Clippy, `mdbook test docs/book`, and
+`mdbook build docs/book` pass. The 2-D entry point is 860 lines and the 3-D
+entry point is 799 lines; 3-D inversion and reporting still require
+partitioning, so `KW-EXAMPLES-115` remains in progress.
+
+Output-directory validation and orthogonal skull, T1, and brain-tissue artifact
+writes now have the `seismic_imaging/volume_reporting.rs` leaf; the entry point
+delegates the complete output contract through one typed boundary. Exact local
+Nextest run `d5b20341-82fa-4e7c-9567-b37021b00e46` passes 77/77 (one slow
+comparison at 40.959 seconds); strict all-example Clippy, `mdbook test docs/book`,
+and `mdbook build docs/book` pass. The 2-D entry point is 860 lines and the 3-D
+entry point is 718 lines; 3-D inversion still requires partitioning, so
+`KW-EXAMPLES-115` remains in progress.
+
+Multi-scale skull FWI, synthetic-gather construction, and inversion diagnostics
+now have the typed `seismic_imaging/volume_skull_inversion.rs` leaf. Stage-two
+masked brain FWI, prior-derived initialization, gather construction, and
+brain-only quality reporting now have the typed
+`seismic_imaging/volume_brain_inversion.rs` leaf. Exact local package-plus-example
+Nextest run `2170b8c5-71b1-4be0-9c2a-44235c0676d5` passes 116/116 in 42.039
+seconds; strict all-example Clippy, `mdbook test docs/book`, and `mdbook build
+docs/book` pass. The 3-D entry point is 347 lines; the 2-D entry point remains
+860 lines, so `KW-EXAMPLES-115` remains in progress for the 2-D partition.
+
+Synthetic skull construction, explicit CT loading, HU resampling, and
+brain-support filling now have the `seismic_imaging/phantom.rs` leaf; the
+brain-support classifier is owned by `brain_model.rs` and planar artifacts
+consume it through a sibling boundary. Exact local Nextest run
+`529c2f34-5d9a-45cb-86f9-fc32473623a6` passes 69/69 (one slow comparison at
+43.391 seconds); strict all-example Clippy, `mdbook test docs/book`, and
+`mdbook build docs/book` pass. The 2-D entry point is 1,089 lines and the 3-D
+entry point is 1,382 lines; inversion and reporting still require partitioning,
+so `KW-EXAMPLES-115` remains in progress.
+
+Stage-two masked brain-tissue FWI now has the
+`seismic_imaging/brain_inversion.rs` leaf, returning a typed result after
+explicit prior, gather, and inversion error handling. Exact local Nextest run
+`761d76b5-0ae2-4c75-8baf-4b6833a36ef7` passes 71/71 (one slow comparison at
+44.692 seconds); strict all-example Clippy, `mdbook test docs/book`, and
+`mdbook build docs/book` pass. The 2-D entry point is 902 lines and the 3-D
+entry point is 1,382 lines; top-level inversion and reporting still require
+partitioning, so `KW-EXAMPLES-115` remains in progress.
+
+Receiver-snapshot construction and normalized zero-lag reverse-time migration
+now have the `seismic_imaging/rtm.rs` leaf, with an explicit empty-shot error.
+Exact local Nextest run `004ce523-953d-4a38-830d-0cdf2688903e` passes 71/71
+(one slow comparison at 42.319 seconds); strict all-example Clippy,
+`mdbook test docs/book`, and `mdbook build docs/book` pass. The 2-D entry point
+is 860 lines and the 3-D entry point is 1,382 lines; top-level inversion and
+reporting still require partitioning, so `KW-EXAMPLES-115` remains in progress.
+
+The separable Gaussian CT-prior blur now has the
+`seismic_imaging/initial_model.rs` leaf, with constant-field and impulse
+response tests beside the owned boundary. Exact local Nextest run
+`dfbc676e-77cd-4b3c-a081-ae062106bdc6` passes 71/71 (one slow comparison at
+41.967 seconds); strict all-example Clippy, `mdbook test docs/book`, and
+`mdbook build docs/book` pass. The 2-D entry point is 1,024 lines and the 3-D
+entry point is 1,382 lines; inversion and reporting still require partitioning,
+so `KW-EXAMPLES-115` remains in progress.
+
 ## ATLAS-KWAVERS-HEPHAESTUS-FDTD-107 — Collocated FDTD provider cutover — Apollo co-evolution blocker 2026-08-18
 
 The old consumer-owned collocated FDTD implementation in

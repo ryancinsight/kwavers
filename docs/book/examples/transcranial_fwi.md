@@ -6,12 +6,17 @@
 
 ## What This Example Demonstrates
 
-This example demonstrates adjoint-state full-wave inversion for transcranial ultrasound. By default it uses a self-contained skull phantom, but the same code path can be redirected to real NIfTI-based CT/MRI data for more realistic studies.
+This example demonstrates adjoint-state full-wave inversion for transcranial
+ultrasound. Its input is explicit: `KWAVERS_SEISMIC_INPUT_MODE=synthetic`
+selects the self-contained skull phantom, while `ct:<path>` selects a real CT
+NIfTI volume. A CT read failure is returned as an input error rather than
+silently switching models.
 
 | Component | API | Value |
 |---|---|---|
 | Domain | `DX`, `NX`, `NY`, `NZ` | Defines a 64×2×64 coronal head cross-section at 3 mm spacing |
-| Skull phantom | `HU_SCALP`, `HU_CORTICAL_*`, `HU_DIPLOE`, `HU_BRAIN` | Maps layered CT-style intensities into heterogeneous acoustic properties |
+| Skull phantom | `seismic_imaging::medium::SkullModel` | Routes layered synthetic or explicit CT intensities through the validated provider-owned Hill model |
+| Source | `DomainRickerWavelet` | Streams causal pressure samples from Aequitas-typed frequency, time, and pressure |
 | FWI loop | forward FDTD → residual → adjoint → gradient update | Implements the standard adjoint-state inversion workflow |
 
 ## Key Code Snippet
@@ -31,7 +36,9 @@ const NZ: usize = 64;
 
 ## Expected Output (if applicable)
 
-The run prints phantom and inversion summaries and can be extended to real-image input when the optional NIfTI path is enabled.
+The run prints provider-derived HU and sound-speed ranges plus inversion
+summaries to stdout. No dataset is downloaded and no file is generated
+implicitly.
 
 ## Book Chapter
 

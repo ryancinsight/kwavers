@@ -73,7 +73,7 @@ test-group = 'full-grid-sim'
 # Heavy full-grid FDTD/PSTD acoustic-simulation binaries use the same capped
 # concurrency so their worker pools do not oversubscribe the CPU.
 [[profile.default.overrides]]
-filter = 'package(kwavers) & (binary(fdtd_pstd_comparison) | binary(property_based_tests) | binary(session2_source_injection_test) | binary(test_plane_wave_injection_fixed))'
+filter = 'package(kwavers) & (binary(fdtd_pstd_comparison) | binary(property_based_tests) | binary(session2_source_injection_test) | binary(test_plane_wave_injection) | binary(test_plane_wave_injection_fixed))'
 test-group = 'full-grid-sim'
 
 [[profile.default.overrides]]
