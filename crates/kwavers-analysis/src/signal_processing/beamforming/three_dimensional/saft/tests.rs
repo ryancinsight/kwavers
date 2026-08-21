@@ -47,8 +47,7 @@ fn test_saft_from_algorithm() {
 
 #[test]
 fn test_time_of_flight_computation() {
-    let processor = make_processor(32, 32, 32, 8, 8);
-    let tof = processor.compute_time_of_flight(
+    let tof = SaftProcessor::compute_time_of_flight(
         [0.0, 0.0, 0.0],
         [0.0, 0.0, 0.0],
         [0.001, 0.0, 0.0],
@@ -65,9 +64,8 @@ fn test_distance_computation() {
 
 #[test]
 fn test_apodization_weight() {
-    let processor = make_processor(32, 32, 32, 8, 8);
     // Hamming center: w(0) = 0.54 + 0.46 = 1.0
-    let weight = processor.compute_apodization_weight(50, 50, 100);
+    let weight = SaftProcessor::compute_apodization_weight(50, 50, 100);
     assert!(weight > 0.9 && weight <= 1.0 + 1e-10);
 }
 

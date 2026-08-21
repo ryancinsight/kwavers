@@ -62,7 +62,6 @@ impl SaftProcessor {
 
     /// Compute round-trip time-of-flight from transmit → voxel → receive.
     pub(super) fn compute_time_of_flight(
-        &self,
         tx_position: [f64; 3],
         rx_position: [f64; 3],
         voxel_position: [f64; 3],
@@ -91,7 +90,6 @@ impl SaftProcessor {
 
     /// Hamming apodization weight for sidelobe suppression.
     pub(super) fn compute_apodization_weight(
-        &self,
         tx_idx: usize,
         rx_idx: usize,
         total_elements: usize,
@@ -164,7 +162,7 @@ impl SaftProcessor {
                             let rx_x = rx_idx as f64 * rx_spacing;
                             let rx_position = [rx_x, 0.0, 0.0];
 
-                            let tof = self.compute_time_of_flight(
+                            let tof = Self::compute_time_of_flight(
                                 tx_position,
                                 rx_position,
                                 voxel_position,
@@ -181,7 +179,7 @@ impl SaftProcessor {
                                 Self::extract_rf_sample(&rf_data_f64, element_idx, sample_idx);
 
                             let apod =
-                                self.compute_apodization_weight(tx_idx, rx_idx, num_tx * num_rx);
+                                Self::compute_apodization_weight(tx_idx, rx_idx, num_tx * num_rx);
 
                             let (i_comp, q_comp) = Self::demodulate(sample, center_frequency, tof);
 
