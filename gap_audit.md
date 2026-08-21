@@ -7396,6 +7396,14 @@ real-time configuration remain receiver-bound. Package check, warning-denied Cli
 `unused_self` count is 2 sites, both in `kwavers-therapy`; diagnostics is clean. The package-wide
 all-targets Clippy gate still reports two pre-existing test-only lint defects outside these slices.
 
+The `kwavers-therapy` lithotripsy slice converts affine coupling coefficients and acoustic-intensity
+calculation to associated functions while cloud coupling state and grid, stone, and bioeffects state
+remain receiver-bound. Package check, warning-denied Clippy, Nextest (350/350 with one configured
+skip), doctests (8/9; 1 ignored), and warning-denied rustdoc pass. The exact workspace `unused_self`
+scan reports 0 sites; the ratchet line is removed from `Cargo.toml`, re-enabling the lint floor. The
+package-wide all-targets Clippy gate still reports two pre-existing test-only lint defects outside
+this slice.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.

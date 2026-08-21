@@ -637,7 +637,6 @@ impl CavitationCloudDynamics {
     /// same `dp/dt = rates[a]`) reconstruct it exactly; the `dp/dt` term is folded
     /// into `c_a` and leaves the slope `d_a` unchanged (ADR 031/032).
     fn affine_coeffs(
-        &self,
         solver: &KellerMiksisModel,
         params: &BubbleParameters,
         cells: &[([usize; 3], [f64; 3], f64, f64)],
@@ -671,7 +670,7 @@ impl CavitationCloudDynamics {
     ) -> Vec<f64> {
         let cells = self.active_cells();
         let n = cells.len();
-        let (c, d) = self.affine_coeffs(solver, params, &cells, rates, time);
+        let (c, d) = Self::affine_coeffs(solver, params, &cells, rates, time);
         // M = I − D·G ; e = c + D·p_ext.
         let mut m = Array2::<f64>::eye(n);
         let mut e = Array1::<f64>::zeros(n);
@@ -707,7 +706,7 @@ impl CavitationCloudDynamics {
         rates: &[f64],
     ) -> Vec<f64> {
         let n = cells.len();
-        let (c, d) = self.affine_coeffs(solver, params, cells, rates, time);
+        let (c, d) = Self::affine_coeffs(solver, params, cells, rates, time);
         let e: Vec<f64> = (0..n)
             .map(|a| d[a].mul_add(driving[cells[a].0], c[a]))
             .collect();
