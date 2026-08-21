@@ -1089,6 +1089,10 @@
   implementations now return `&'static str` for their literal names. Package check, warning-denied
   Clippy, Nextest (97/97), doctests (4/5; 1 ignored), and warning-denied rustdoc pass. The refreshed
   workspace `unnecessary_literal_bound` count is 13 sites, all outside `kwavers-boundary`.
+- 2026-08-21 analysis localization `unnecessary_literal_bound` slice is complete: MUSIC and TDOA
+  processor names now return `&'static str`. Package check, warning-denied Clippy, Nextest (744/744),
+  doctests (1/22; 21 ignored), and warning-denied rustdoc pass. The refreshed workspace
+  `unnecessary_literal_bound` count is 11 sites, all outside `kwavers-analysis`.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a

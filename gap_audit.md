@@ -7421,6 +7421,11 @@ implementations now return `&'static str` for their literal names. Package check
 Clippy, Nextest (97/97), doctests (4/5; 1 ignored), and warning-denied rustdoc pass. The refreshed
 workspace `unnecessary_literal_bound` count is 13 sites, all outside `kwavers-boundary`.
 
+The `kwavers-analysis` localization `unnecessary_literal_bound` slice is complete: MUSIC and TDOA
+processor names now return `&'static str`. Package check, warning-denied Clippy, Nextest (744/744),
+doctests (1/22; 21 ignored), and warning-denied rustdoc pass. The refreshed workspace
+`unnecessary_literal_bound` count is 11 sites, all outside `kwavers-analysis`.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.
