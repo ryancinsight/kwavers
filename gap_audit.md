@@ -7018,3 +7018,7 @@ helpers to associated functions. Focused Nextest run
 `42341dd6-7cd4-48ae-b7e0-c2bacb364f2b` passes 9/9 (896 solver tests filtered);
 the package doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and
 the focused unused_self scan has zero warnings in `forward/helmholtz/fem/assembly.rs`.
+
+After PR #475, the workspace `unused_self` scan reports 218 sites, including
+97 in `kwavers-solver`. The next bounded slice is the six receiver-free
+helpers in `forward/helmholtz/fem/basis.rs`.
