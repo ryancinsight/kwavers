@@ -1124,6 +1124,13 @@
   source selection use typed `usize::from` conversions. Diagnostics and driver gates pass (685/685
   Nextest; doctests and warning-denied rustdoc pass). The exact workspace scan is 0 and its ratchet
   override is removed from `Cargo.toml`.
+- 2026-08-21 final exact-revision validation at merged revision `192eb7575`: workspace Nextest
+  passes 5,781/5,781 with 7 configured skips; workspace doctests pass with no failures. The
+  previously recorded example build and mdBook test/build remain valid because the final changes
+  are lint-only production edits and test-ordering cleanups. Exact workspace scans remain zero for
+  `unused_self`, `return_self_not_must_use`, `unnecessary_literal_bound`, `unnecessary_semicolon`,
+  `stable_sort_primitive`, `unchecked_time_subtraction`, `self_only_used_in_recursion`, and
+  `bool_to_int_with_if`.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
