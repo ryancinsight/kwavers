@@ -7530,6 +7530,12 @@ count. Warning-denied package Clippy, Nextest (744/744), doctests (1 passed; 21 
 warning-denied Rustdoc pass. The production workspace count decreases from 16 to 15 sites, and
 the ratchet comment is updated.
 
+The `kwavers-physics` `missing_fields_in_debug` slice completes field coverage for cavitation
+`FeedbackController` and adds a redacted callable marker for the opaque `MieTheory` dielectric
+callback. Warning-denied package Clippy, Nextest (1,561/1,561 with 1 configured skip), doctests
+(9 passed; 4 ignored), and warning-denied Rustdoc pass. The production workspace count decreases
+from 15 to 13 sites, and the ratchet comment is updated.
+
 Final exact-revision validation at merged revision `192eb7575` passes workspace Nextest (5,781/5,781
 with 7 configured skips) and workspace doctests with no failures. The previously recorded example
 build and mdBook test/build remain valid because the final changes are lint-only production edits and

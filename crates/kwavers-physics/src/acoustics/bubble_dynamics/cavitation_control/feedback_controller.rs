@@ -29,6 +29,9 @@ impl std::fmt::Debug for FeedbackController {
             .field("config", &self.config)
             .field("detector", &"<dyn CavitationDetector>")
             .field("pid_controller", &self.pid_controller)
+            .field("state_estimator", &self.state_estimator)
+            .field("safety_monitor", &self.safety_monitor)
+            .field("adaptive_controller", &self.adaptive_controller)
             .finish()
     }
 }
