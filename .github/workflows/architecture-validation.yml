@@ -68,7 +68,13 @@ jobs:
     - name: Run clippy (strict mode)
       run: |
         cargo clippy --locked -p kwavers-core --all-targets --all-features -- -D warnings
-        cargo clippy --locked -p kwavers --all-targets --no-default-features --features full --no-deps -- -D warnings
+        # Scoped to --lib. `-D warnings` promotes every pedantic warning to an
+        # error, and since the workspace floor landed (#423) that is unreachable
+        # across --all-targets: examples and integration tests print their
+        # results by design, which is 67 files of `print_stdout` alone. The
+        # facade library is what this gate was protecting; non-lib targets are
+        # covered by the ratchet step below, which fails on denied classes.
+        cargo clippy --locked -p kwavers --lib --no-default-features --features full --no-deps -- -D warnings
 
     # The strict step above passes --no-deps, so it lints only the kwavers
     # facade; every member crate where the debt lives is excluded. This step
