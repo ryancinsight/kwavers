@@ -7135,6 +7135,13 @@ Package check, targeted `unused_self` Clippy, Nextest (245/245 with one configur
 91 sites with eight remaining in transducer k-Wave rasterizer helpers and zero in the completed
 flexible calibration, flexible-array, and boundary slices.
 
+The `kwavers-transducer` k-Wave rasterizer slice converts BLI mapping, disc basis and sample counts,
+curved arc/bowl/annulus sampling and masks, planar rectangle/disc/aperture sampling and masks, and
+area-conserving mapping to associated functions and migrates all callers. Package check, targeted
+`unused_self` Clippy (zero transducer sites), Nextest (245/245 with one configured skip), doctests
+(2/2; 6 ignored), and warning-denied rustdoc pass. The refreshed workspace `unused_self` count is
+83 sites; transducer is clean.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.

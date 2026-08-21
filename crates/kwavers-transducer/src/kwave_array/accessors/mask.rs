@@ -11,7 +11,7 @@ impl KWaveArray {
         let mut mask = Array3::from_elem([grid.nx, grid.ny, grid.nz], false);
         for element in &self.elements {
             if let KWaveElement::PlanarAperture(geometry) = element {
-                self.rasterize_planar_aperture(&mut mask, grid, *geometry);
+                Self::rasterize_planar_aperture(&mut mask, grid, *geometry);
                 continue;
             }
             let KWaveElement::Shape(element) = element else {
@@ -25,7 +25,7 @@ impl KWaveArray {
                     start_angle,
                     end_angle,
                 } => {
-                    self.rasterize_arc(
+                    Self::rasterize_arc(
                         &mut mask,
                         grid,
                         *position,
@@ -43,7 +43,7 @@ impl KWaveArray {
                     euler_xyz_deg,
                 } => {
                     let (pos_eff, euler_eff) = self.apply_transform_rect(*position, *euler_xyz_deg);
-                    self.rasterize_rect(
+                    Self::rasterize_rect(
                         &mut mask, grid, pos_eff, *width, *height, *length, euler_eff,
                     );
                 }
@@ -52,7 +52,7 @@ impl KWaveArray {
                     diameter,
                     focus_position,
                 } => {
-                    self.rasterize_disc(&mut mask, grid, *position, *diameter, *focus_position);
+                    Self::rasterize_disc(&mut mask, grid, *position, *diameter, *focus_position);
                 }
                 ElementShape::ProfiledDisc {
                     position,
@@ -60,14 +60,14 @@ impl KWaveArray {
                     focus_position,
                     ..
                 } => {
-                    self.rasterize_disc(&mut mask, grid, *position, *diameter, *focus_position);
+                    Self::rasterize_disc(&mut mask, grid, *position, *diameter, *focus_position);
                 }
                 ElementShape::Bowl {
                     position,
                     radius,
                     diameter,
                 } => {
-                    self.rasterize_bowl(&mut mask, grid, *position, *radius, *diameter);
+                    Self::rasterize_bowl(&mut mask, grid, *position, *radius, *diameter);
                 }
                 ElementShape::Annulus {
                     position,
@@ -75,7 +75,7 @@ impl KWaveArray {
                     inner_diameter,
                     outer_diameter,
                 } => {
-                    self.rasterize_annulus(
+                    Self::rasterize_annulus(
                         &mut mask,
                         grid,
                         *position,
@@ -98,7 +98,7 @@ impl KWaveArray {
         let mut mask = Array3::zeros([grid.nx, grid.ny, grid.nz]);
         for element in &self.elements {
             if let KWaveElement::PlanarAperture(geometry) = element {
-                self.rasterize_planar_aperture_weighted(&mut mask, grid, *geometry);
+                Self::rasterize_planar_aperture_weighted(&mut mask, grid, *geometry);
                 continue;
             }
             let KWaveElement::Shape(element) = element else {
@@ -110,14 +110,14 @@ impl KWaveArray {
                     radius,
                     diameter,
                 } => {
-                    self.rasterize_bowl_weighted(&mut mask, grid, *position, *radius, *diameter);
+                    Self::rasterize_bowl_weighted(&mut mask, grid, *position, *radius, *diameter);
                 }
                 ElementShape::Disc {
                     position,
                     diameter,
                     focus_position,
                 } => {
-                    self.rasterize_disc_weighted(
+                    Self::rasterize_disc_weighted(
                         &mut mask,
                         grid,
                         *position,
@@ -131,7 +131,7 @@ impl KWaveArray {
                     focus_position,
                     profile,
                 } => {
-                    self.rasterize_profiled_disc_weighted(
+                    Self::rasterize_profiled_disc_weighted(
                         &mut mask,
                         grid,
                         *position,
@@ -147,7 +147,7 @@ impl KWaveArray {
                     start_angle,
                     end_angle,
                 } => {
-                    self.rasterize_arc_weighted(
+                    Self::rasterize_arc_weighted(
                         &mut mask,
                         grid,
                         *position,
@@ -165,7 +165,7 @@ impl KWaveArray {
                     euler_xyz_deg,
                 } => {
                     let (pos_eff, euler_eff) = self.apply_transform_rect(*position, *euler_xyz_deg);
-                    self.rasterize_rect_weighted(
+                    Self::rasterize_rect_weighted(
                         &mut mask, grid, pos_eff, *width, *height, *length, euler_eff,
                     );
                 }
@@ -175,7 +175,7 @@ impl KWaveArray {
                     inner_diameter,
                     outer_diameter,
                 } => {
-                    self.rasterize_annulus_weighted(
+                    Self::rasterize_annulus_weighted(
                         &mut mask,
                         grid,
                         *position,

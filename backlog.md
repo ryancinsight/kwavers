@@ -1,5 +1,19 @@
 # Backlog / Strategy
 
+## KW-BOOK-116 — Make the book gate execute a Rust oracle [patch] — in progress
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-BOOK-116 | The published Kwavers book executes one package-backed Rust sample and the shared workflow builds the exact package before `mdbook test`. | [patch] | in progress | Codex | `.github/workflows/book-pages.yml`, `docs/book/examples/basic_simulation.md`, this item |
+
+- Non-goals: no changes to the concurrently modified transducer files and no
+  expansion of the Python binding or ensemble-model contract.
+- Acceptance: `mdbook test docs/book` executes the `kwavers` sample against the
+  locked package; `mdbook build docs/book` and the book link checker pass; the
+  workflow pins the package and library target explicitly.
+- Claim committed on branch `fix/kwavers-python-book-boundary`; the unrelated
+  dirty transducer files remain outside this scope.
+
 ## KW-LINT-111 — Put every member on workspace lint inheritance [patch] — done 2026-08-20
 
 | ID | Outcome | Class | Status | Owner | Scope |
@@ -816,6 +830,12 @@
   one configured skip), doctests (2/2; 6 ignored), and warning-denied rustdoc pass. The refreshed
   workspace `unused_self` count is 91 sites with eight remaining in transducer k-Wave rasterizer
   helpers and zero in the completed flexible calibration, flexible-array, and boundary slices.
+- 2026-08-21 `kwavers-transducer` k-Wave rasterizer slice is implemented: BLI mapping, disc basis
+  and sample counts, curved arc/bowl/annulus sampling and masks, planar rectangle/disc/aperture
+  sampling and masks, and area-conserving mapping are associated functions with all callers
+  migrated. Package check, targeted `unused_self` Clippy (zero transducer sites), Nextest
+  (245/245 with one configured skip), doctests (2/2; 6 ignored), and warning-denied rustdoc pass.
+  The refreshed workspace `unused_self` count is 83 sites; transducer is clean.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a

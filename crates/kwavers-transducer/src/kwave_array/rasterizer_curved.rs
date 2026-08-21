@@ -34,7 +34,6 @@ impl KWaveArray {
 
     #[allow(clippy::too_many_arguments)]
     pub(super) fn rasterize_arc(
-        &self,
         mask: &mut Array3<bool>,
         grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
@@ -46,14 +45,14 @@ impl KWaveArray {
         let x_vec = grid.x_coordinates();
         let y_vec = grid.y_coordinates();
         let z_vec = grid.z_coordinates();
-        self.rasterize_arc_points(
+        Self::rasterize_arc_points(
             grid,
             center,
             radius,
             start_angle,
             end_angle,
             |point, scale| {
-                self.map_surface_sample(
+                Self::map_surface_sample(
                     grid,
                     &x_vec,
                     &y_vec,
@@ -71,7 +70,6 @@ impl KWaveArray {
 
     #[allow(clippy::too_many_arguments)]
     pub(super) fn rasterize_arc_weighted(
-        &self,
         mask: &mut Array3<f64>,
         grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
@@ -83,14 +81,14 @@ impl KWaveArray {
         let x_vec = grid.x_coordinates();
         let y_vec = grid.y_coordinates();
         let z_vec = grid.z_coordinates();
-        self.rasterize_arc_points(
+        Self::rasterize_arc_points(
             grid,
             center,
             radius,
             start_angle,
             end_angle,
             |point, scale| {
-                self.map_surface_sample(
+                Self::map_surface_sample(
                     grid,
                     &x_vec,
                     &y_vec,
@@ -108,7 +106,6 @@ impl KWaveArray {
 
     /// Emit arc centerline points at half-step angular offsets.
     pub(super) fn rasterize_arc_points<F>(
-        &self,
         grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
         radius: f64,
@@ -138,7 +135,6 @@ impl KWaveArray {
     // ─── Bowl ──────────────────────────────────────────────────────────────
 
     pub(super) fn rasterize_bowl(
-        &self,
         mask: &mut Array3<bool>,
         grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
@@ -148,8 +144,8 @@ impl KWaveArray {
         let x_vec = grid.x_coordinates();
         let y_vec = grid.y_coordinates();
         let z_vec = grid.z_coordinates();
-        self.rasterize_bowl_points(grid, center, radius, diameter, |point, scale| {
-            self.map_surface_sample(
+        Self::rasterize_bowl_points(grid, center, radius, diameter, |point, scale| {
+            Self::map_surface_sample(
                 grid,
                 &x_vec,
                 &y_vec,
@@ -165,7 +161,6 @@ impl KWaveArray {
     }
 
     pub(super) fn rasterize_bowl_weighted(
-        &self,
         mask: &mut Array3<f64>,
         grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
@@ -175,8 +170,8 @@ impl KWaveArray {
         let x_vec = grid.x_coordinates();
         let y_vec = grid.y_coordinates();
         let z_vec = grid.z_coordinates();
-        self.rasterize_bowl_points(grid, center, radius, diameter, |point, scale| {
-            self.map_surface_sample(
+        Self::rasterize_bowl_points(grid, center, radius, diameter, |point, scale| {
+            Self::map_surface_sample(
                 grid,
                 &x_vec,
                 &y_vec,
@@ -193,7 +188,6 @@ impl KWaveArray {
 
     /// Emit golden-angle spiral surface samples for a bowl element.
     pub(super) fn rasterize_bowl_points<F>(
-        &self,
         grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
         radius: f64,
@@ -238,7 +232,6 @@ impl KWaveArray {
     // ─── Annulus ───────────────────────────────────────────────────────────
 
     pub(super) fn rasterize_annulus(
-        &self,
         mask: &mut Array3<bool>,
         grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
@@ -249,14 +242,14 @@ impl KWaveArray {
         let x_vec = grid.x_coordinates();
         let y_vec = grid.y_coordinates();
         let z_vec = grid.z_coordinates();
-        self.rasterize_annulus_points(
+        Self::rasterize_annulus_points(
             grid,
             center,
             radius,
             inner_diameter,
             outer_diameter,
             |point, scale| {
-                self.map_surface_sample(
+                Self::map_surface_sample(
                     grid,
                     &x_vec,
                     &y_vec,
@@ -273,7 +266,6 @@ impl KWaveArray {
     }
 
     pub(super) fn rasterize_annulus_weighted(
-        &self,
         mask: &mut Array3<f64>,
         grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
@@ -284,14 +276,14 @@ impl KWaveArray {
         let x_vec = grid.x_coordinates();
         let y_vec = grid.y_coordinates();
         let z_vec = grid.z_coordinates();
-        self.rasterize_annulus_points(
+        Self::rasterize_annulus_points(
             grid,
             center,
             radius,
             inner_diameter,
             outer_diameter,
             |point, scale| {
-                self.map_surface_sample(
+                Self::map_surface_sample(
                     grid,
                     &x_vec,
                     &y_vec,
@@ -312,7 +304,6 @@ impl KWaveArray {
     /// `make_cart_spherical_segment` step-size convention so the spiral phase
     /// remains consistent with a co-located bowl element.
     pub(super) fn rasterize_annulus_points<F>(
-        &self,
         grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
         radius: f64,

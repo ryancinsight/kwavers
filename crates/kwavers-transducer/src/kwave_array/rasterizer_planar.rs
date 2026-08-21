@@ -31,7 +31,6 @@ impl KWaveArray {
 
     #[allow(clippy::too_many_arguments)]
     pub(super) fn rasterize_rect(
-        &self,
         mask: &mut Array3<bool>,
         grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
@@ -43,14 +42,14 @@ impl KWaveArray {
         let x_vec = grid.x_coordinates();
         let y_vec = grid.y_coordinates();
         let z_vec = grid.z_coordinates();
-        self.rasterize_rect_points(
+        Self::rasterize_rect_points(
             grid,
             center,
             width,
             height,
             euler_xyz_deg,
             |point, scale| {
-                self.map_surface_sample(
+                Self::map_surface_sample(
                     grid,
                     &x_vec,
                     &y_vec,
@@ -69,7 +68,6 @@ impl KWaveArray {
 
     #[allow(clippy::too_many_arguments)]
     pub(super) fn rasterize_rect_weighted(
-        &self,
         mask: &mut Array3<f64>,
         grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
@@ -81,14 +79,14 @@ impl KWaveArray {
         let x_vec = grid.x_coordinates();
         let y_vec = grid.y_coordinates();
         let z_vec = grid.z_coordinates();
-        self.rasterize_rect_points(
+        Self::rasterize_rect_points(
             grid,
             center,
             width,
             height,
             euler_xyz_deg,
             |point, scale| {
-                self.map_surface_sample(
+                Self::map_surface_sample(
                     grid,
                     &x_vec,
                     &y_vec,
@@ -107,7 +105,6 @@ impl KWaveArray {
 
     /// Emit the canonical rectangle integration lattice used by k-wave-python.
     pub(super) fn rasterize_rect_points<F>(
-        &self,
         grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
         width: f64,
@@ -152,7 +149,6 @@ impl KWaveArray {
     // ─── Disc ──────────────────────────────────────────────────────────────
 
     pub(super) fn rasterize_disc(
-        &self,
         mask: &mut Array3<bool>,
         grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
@@ -162,8 +158,8 @@ impl KWaveArray {
         let x_vec = grid.x_coordinates();
         let y_vec = grid.y_coordinates();
         let z_vec = grid.z_coordinates();
-        self.rasterize_disc_points(grid, center, diameter, focus_position, |point, scale| {
-            self.map_surface_sample(
+        Self::rasterize_disc_points(grid, center, diameter, focus_position, |point, scale| {
+            Self::map_surface_sample(
                 grid,
                 &x_vec,
                 &y_vec,
@@ -179,14 +175,13 @@ impl KWaveArray {
     }
 
     pub(super) fn rasterize_disc_weighted(
-        &self,
         mask: &mut Array3<f64>,
         grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
         diameter: f64,
         focus_position: Option<(f64, f64, f64)>,
     ) {
-        self.rasterize_profiled_disc_weighted(
+        Self::rasterize_profiled_disc_weighted(
             mask,
             grid,
             center,
@@ -197,7 +192,6 @@ impl KWaveArray {
     }
 
     pub(super) fn rasterize_profiled_disc_weighted(
-        &self,
         mask: &mut Array3<f64>,
         grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
@@ -208,14 +202,14 @@ impl KWaveArray {
         let x_vec = grid.x_coordinates();
         let y_vec = grid.y_coordinates();
         let z_vec = grid.z_coordinates();
-        self.rasterize_profiled_disc_points(
+        Self::rasterize_profiled_disc_points(
             grid,
             center,
             diameter,
             focus_position,
             profile,
             |point, scale| {
-                self.map_surface_sample(
+                Self::map_surface_sample(
                     grid,
                     &x_vec,
                     &y_vec,
@@ -233,7 +227,6 @@ impl KWaveArray {
 
     /// Emit oriented Fibonacci disc samples.
     pub(super) fn rasterize_disc_points<F>(
-        &self,
         grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
         diameter: f64,
@@ -242,7 +235,7 @@ impl KWaveArray {
     ) where
         F: FnMut([f64; 3], f64),
     {
-        self.rasterize_profiled_disc_points(
+        Self::rasterize_profiled_disc_points(
             grid,
             center,
             diameter,
@@ -254,7 +247,6 @@ impl KWaveArray {
 
     /// Emit oriented Fibonacci disc samples with a finite-source profile.
     pub(super) fn rasterize_profiled_disc_points<F>(
-        &self,
         grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
         diameter: f64,
@@ -270,9 +262,9 @@ impl KWaveArray {
         let target_points = (m_grid * DISC_SAMPLE_UPSAMPLING_RATE).ceil().max(1.0) as usize;
         let num_radial =
             ((target_points as f64 / std::f64::consts::PI).sqrt().ceil() as usize).max(1);
-        let num_points = self.disc_sample_count(num_radial);
+        let num_points = Self::disc_sample_count(num_radial);
         let scale = m_grid / num_points as f64;
-        let (u, v, _) = self.disc_basis(center, focus_position);
+        let (u, v, _) = Self::disc_basis(center, focus_position);
 
         let mut emit = |x_local: f64, y_local: f64| {
             let point = [
@@ -310,7 +302,6 @@ impl KWaveArray {
     // ─── Validated planar aperture ─────────────────────────────────────────
 
     pub(super) fn rasterize_planar_aperture(
-        &self,
         mask: &mut Array3<bool>,
         grid: &kwavers_grid::Grid,
         geometry: PlanarApertureGeometry,
@@ -318,8 +309,8 @@ impl KWaveArray {
         let x_vec = grid.x_coordinates();
         let y_vec = grid.y_coordinates();
         let z_vec = grid.z_coordinates();
-        self.rasterize_planar_aperture_points(grid, geometry, |point, scale| {
-            self.map_surface_sample(
+        Self::rasterize_planar_aperture_points(grid, geometry, |point, scale| {
+            Self::map_surface_sample(
                 grid,
                 &x_vec,
                 &y_vec,
@@ -333,7 +324,6 @@ impl KWaveArray {
     }
 
     pub(super) fn rasterize_planar_aperture_weighted(
-        &self,
         mask: &mut Array3<f64>,
         grid: &kwavers_grid::Grid,
         geometry: PlanarApertureGeometry,
@@ -341,8 +331,8 @@ impl KWaveArray {
         let x_vec = grid.x_coordinates();
         let y_vec = grid.y_coordinates();
         let z_vec = grid.z_coordinates();
-        self.rasterize_planar_aperture_points(grid, geometry, |point, scale| {
-            self.map_area_conserving_surface_sample(
+        Self::rasterize_planar_aperture_points(grid, geometry, |point, scale| {
+            Self::map_area_conserving_surface_sample(
                 grid,
                 &x_vec,
                 &y_vec,
@@ -356,7 +346,6 @@ impl KWaveArray {
 
     #[allow(clippy::too_many_arguments)]
     fn map_area_conserving_surface_sample<F>(
-        &self,
         grid: &kwavers_grid::Grid,
         x_vec: &leto::Array1<f64>,
         y_vec: &leto::Array1<f64>,
@@ -368,7 +357,7 @@ impl KWaveArray {
         F: FnMut(usize, usize, usize, f64),
     {
         let mut kernel_sum = 0.0;
-        self.map_surface_sample(
+        Self::map_surface_sample(
             grid,
             x_vec,
             y_vec,
@@ -381,7 +370,7 @@ impl KWaveArray {
         if kernel_sum == 0.0 {
             return;
         }
-        self.map_surface_sample(
+        Self::map_surface_sample(
             grid,
             x_vec,
             y_vec,
@@ -395,7 +384,6 @@ impl KWaveArray {
 
     /// Emit equal-area polar samples whose total BLI mass is `area / dx^2`.
     pub(super) fn rasterize_planar_aperture_points<F>(
-        &self,
         grid: &kwavers_grid::Grid,
         geometry: PlanarApertureGeometry,
         mut visit: F,
@@ -465,8 +453,8 @@ impl KWaveArray {
         let y_vec = grid.y_coordinates();
         let z_vec = grid.z_coordinates();
         if let KWaveElement::PlanarAperture(geometry) = element {
-            self.rasterize_planar_aperture_points(grid, *geometry, |point, scale| {
-                self.map_area_conserving_surface_sample(
+            Self::rasterize_planar_aperture_points(grid, *geometry, |point, scale| {
+                Self::map_area_conserving_surface_sample(
                     grid, &x_vec, &y_vec, &z_vec, point, scale, &mut visit,
                 );
             });
@@ -476,7 +464,7 @@ impl KWaveArray {
             unreachable!("invariant: planar apertures return before shape dispatch")
         };
         let mut visit_point = |point, scale| {
-            self.map_surface_sample(
+            Self::map_surface_sample(
                 grid,
                 &x_vec,
                 &y_vec,
@@ -496,14 +484,14 @@ impl KWaveArray {
                 radius,
                 diameter,
             } => {
-                self.rasterize_bowl_points(grid, *position, *radius, *diameter, &mut visit_point);
+                Self::rasterize_bowl_points(grid, *position, *radius, *diameter, &mut visit_point);
             }
             ElementShape::Disc {
                 position,
                 diameter,
                 focus_position,
             } => {
-                self.rasterize_disc_points(
+                Self::rasterize_disc_points(
                     grid,
                     *position,
                     *diameter,
@@ -517,7 +505,7 @@ impl KWaveArray {
                 focus_position,
                 profile,
             } => {
-                self.rasterize_profiled_disc_points(
+                Self::rasterize_profiled_disc_points(
                     grid,
                     *position,
                     *diameter,
@@ -533,7 +521,7 @@ impl KWaveArray {
                 start_angle,
                 end_angle,
             } => {
-                self.rasterize_arc_points(
+                Self::rasterize_arc_points(
                     grid,
                     *position,
                     *radius,
@@ -550,7 +538,7 @@ impl KWaveArray {
                 euler_xyz_deg,
             } => {
                 let (pos_eff, euler_eff) = self.apply_transform_rect(*position, *euler_xyz_deg);
-                self.rasterize_rect_points(
+                Self::rasterize_rect_points(
                     grid,
                     pos_eff,
                     *width,
@@ -565,7 +553,7 @@ impl KWaveArray {
                 inner_diameter,
                 outer_diameter,
             } => {
-                self.rasterize_annulus_points(
+                Self::rasterize_annulus_points(
                     grid,
                     *position,
                     *radius,
