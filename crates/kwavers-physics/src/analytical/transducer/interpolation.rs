@@ -19,6 +19,11 @@ use std::f64::consts::PI;
 ///
 /// # Reference
 /// Schafer & Rabiner (1973), *Proc. IEEE* 61, 692.
+///
+/// # Panics
+///
+/// Panics if `n_stencil` is odd; the interpolation kernel requires an even
+/// number of taps.
 #[must_use]
 pub fn bli_stencil_weights(delta: &[f64], n_stencil: usize) -> Vec<Vec<f64>> {
     assert!(n_stencil.is_multiple_of(2), "n_stencil must be even");

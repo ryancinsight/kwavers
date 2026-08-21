@@ -16,6 +16,11 @@ pub mod hifu;
 pub use kwavers_imaging::ultrasound::{UltrasoundConfig, UltrasoundMode};
 
 /// Compute B-mode image from RF data
+///
+/// # Panics
+///
+/// Panics if an RF line cannot be extracted at a valid line index, indicating
+/// that the input array shape changed during processing.
 #[must_use]
 pub fn compute_bmode_image(rf_data: &Array2<f64>, config: &UltrasoundConfig) -> Array2<f64> {
     let [n_samples, n_lines] = rf_data.shape();

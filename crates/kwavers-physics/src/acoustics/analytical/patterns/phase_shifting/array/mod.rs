@@ -134,6 +134,11 @@ impl PhaseArray {
     }
 
     /// Calculate field at a point
+    ///
+    /// # Panics
+    ///
+    /// Panics if the stored element-position array loses its validated
+    /// two-dimensional shape, so an element row cannot be extracted.
     #[must_use]
     pub fn calculate_field(&self, x: f64, y: f64, z: f64) -> (f64, f64) {
         let wavelength = calculate_wavelength(self.frequency, SOUND_SPEED_WATER);
@@ -172,6 +177,11 @@ impl PhaseArray {
     }
 
     /// Check system performance
+    ///
+    /// # Panics
+    ///
+    /// Panics if the array has no elements or its stored position shape is
+    /// inconsistent with the validated layout.
     #[must_use]
     pub fn check_performance(&self) -> PhaseArrayMetrics {
         let wavelength = calculate_wavelength(self.frequency, SOUND_SPEED_WATER);

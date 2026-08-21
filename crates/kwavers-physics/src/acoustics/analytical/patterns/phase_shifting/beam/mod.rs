@@ -90,6 +90,11 @@ impl BeamSteering {
     }
 
     /// Check for grating lobes
+    ///
+    /// # Panics
+    ///
+    /// Panics for an empty element layout or if a stored position row cannot
+    /// be extracted from the validated two-dimensional array.
     #[must_use]
     pub fn check_grating_lobes(&self) -> bool {
         let wavelength = calculate_wavelength(self.frequency, SOUND_SPEED_WATER);
@@ -125,6 +130,11 @@ impl BeamSteering {
     }
 
     /// Calculate beam pattern at given angles
+    ///
+    /// # Panics
+    ///
+    /// Panics if the stored element-position array loses its validated
+    /// two-dimensional shape, so an element row cannot be extracted.
     #[must_use]
     pub fn calculate_beam_pattern(&self, theta: f64, phi: f64) -> f64 {
         let wavelength = calculate_wavelength(self.frequency, SOUND_SPEED_WATER);

@@ -277,6 +277,11 @@ pub fn pa_axial_resolution(bandwidth_hz: f64, c: f64) -> f64 {
 ///
 /// Returns concentration vector x `n_chrom`.
 ///
+/// # Panics
+///
+/// Panics when the measurement count differs from the number of spectra rows
+/// or when spectra rows have inconsistent chromophore lengths.
+///
 /// # Reference
 /// Beard (2011), *Interface Focus* 1, 602.
 #[must_use]

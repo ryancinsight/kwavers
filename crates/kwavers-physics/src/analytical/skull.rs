@@ -49,6 +49,11 @@ pub fn skull_insertion_loss_two_way_db(f_mhz: &[f64], thickness_cm: f64, alpha0:
 ///
 /// # Reference
 /// Tanter et al. (1998), *J. Acoust. Soc. Am.* 103, 2403.
+///
+/// # Panics
+///
+/// Panics when `sigma_phi_rad` is not finite and strictly positive, because no
+/// valid Gaussian distribution exists for that standard deviation.
 #[must_use]
 pub fn skull_phase_screen(n: usize, sigma_phi_rad: f64, seed: u64) -> Vec<f64> {
     let mut rng = ChaCha8Rng::seed_from_u64(seed);
