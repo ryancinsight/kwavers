@@ -444,11 +444,11 @@
   `32329958998` completed successfully, including 10/10 architecture jobs and
   11/11 CI jobs.
 
-## KW-EXAMPLES-115 — Type and partition the seismic example workflows [major] [arch] — implementation complete; hosted verification pending 2026-08-20
+## KW-EXAMPLES-115 — Type and partition the seismic example workflows [major] [arch] — local gates complete; hosted verification pending 2026-08-20
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-EXAMPLES-115 | Replace the three seismic example monoliths with explicit typed workflows that call Atlas providers directly and document value-semantic 2-D/3-D behavior. | [major] [arch] | implementation complete; hosted verification pending | Codex | `crates/kwavers/examples/{seismic_imaging_demo,seismic_imaging_3d_demo,transcranial_fwi}*`, shared seismic modules, `kwavers-signal`/`kwavers-solver` provider call sites, `crates/kwavers/Cargo.toml`, seismic book pages, ADR 117, PM artifacts |
+| KW-EXAMPLES-115 | Replace the three seismic example monoliths with explicit typed workflows that call Atlas providers directly and document value-semantic 2-D/3-D behavior. | [major] [arch] | local gates complete; hosted verification pending | Codex | `crates/kwavers/examples/{seismic_imaging_demo,seismic_imaging_3d_demo,transcranial_fwi}*`, shared seismic modules, `kwavers-signal`/`kwavers-solver` provider call sites, `crates/kwavers/Cargo.toml`, seismic book pages, ADR 117, PM artifacts |
 
 - Acceptance: each example entry point is a manifest over SRP leaf modules no
   larger than 500 lines; shared acquisition, CT, physical configuration,
@@ -656,6 +656,15 @@
   Nextest run passes 59/59; the comparison test completes in 51.861 seconds
   under the committed 60-second budget without changing its workload or
   assertions.
+- 2026-08-20 merged-head verification: branch head `d0856b8b1` incorporates the
+  current `origin/main`; strict all-target Clippy exposed and the follow-up
+  commit `d6a7aab52` removed one redundant `ArrayView` clone in the transducer
+  calibration manager. On the resulting exact code head, `cargo check --offline
+  -p kwavers --examples --all-targets`, strict Clippy, and rustfmt pass;
+  Nextest run `f3773ca9-eb1c-406e-9501-032da8860673` passes 116/116 in 36.685
+  seconds; `cargo test --doc --offline -p kwavers` passes 1/1; and both
+  `mdbook test docs/book` and `mdbook build docs/book` pass. Cargo lockfile
+  source state is restored after each overlay command.
 - Non-goals: frequency-domain FWI and ADR 115, solver-algorithm replacement,
   committed clinical datasets, GPU-kernel changes, and compatibility aliases.
 - Verification: strict focused Clippy, example unit tests through Nextest,

@@ -12,7 +12,10 @@ passes 116/116 in 43.604 seconds; workspace rustfmt, strict example Clippy,
 the Kwavers doctest (1/1), and the mdBook test/build gates pass. No fallback or
 compatibility path is added.
 
-The residual is hosted PR verification and merge of the exact pushed head.
+The local exact-head gates are complete on `d6a7aab52`, after merging current
+`origin/main` as `d0856b8b1` and removing a redundant `ArrayView` clone exposed
+by strict Clippy. The residual is hosted PR verification and merge of the exact
+pushed head.
 
 The complete example gate initially exposed an independent runtime defect in
 `focused_ultrasound_water_tank`: its five disjoint solver branches ran
