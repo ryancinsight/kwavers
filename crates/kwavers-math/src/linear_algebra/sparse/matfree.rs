@@ -109,6 +109,12 @@ impl<Op: MatFreeOperator> LinearOperator<f64> for MatFreeOperatorAdapter<Op> {
 ///
 /// # Returns
 /// * [`MatFreeResult`] containing the solution and convergence history.
+///
+/// # Panics
+///
+/// Panics if `b.len()` differs from the operator's row count. The right-hand
+/// side is copied into an `m`-element dense array before dispatching LSQR, so a
+/// length mismatch violates the linear-system shape contract.
 pub fn solve_lsqr_matfree(
     op: &impl MatFreeOperator,
     b: &[f64],
