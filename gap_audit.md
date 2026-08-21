@@ -6877,3 +6877,14 @@ rustdoc passes with `RUSTDOCFLAGS=-D warnings`.
 
 The next workspace measurement remains six `missing_panics_doc` sites in
 `kwavers-transducer`; that package is the current ratchet item.
+
+## `missing_panics_doc` transducer slice — 2026-08-21
+
+The `kwavers-transducer` slice documents the six measured panic contracts for
+MVDR steering-vector construction, calibration least-squares dimensions,
+focused-bowl and multi-bowl zero-copy fills, spherical-cap axis construction,
+and phased-array field filling. Strict offline Clippy with
+`-D clippy::missing_panics_doc -D warnings` passes; Nextest run
+`0320d46c-897c-499b-8c3b-013ff75b892d` passes 245/245 with one intentional skip;
+doctests pass 2/2 (6 ignored); and rustdoc passes with
+`RUSTDOCFLAGS=-D warnings`.
