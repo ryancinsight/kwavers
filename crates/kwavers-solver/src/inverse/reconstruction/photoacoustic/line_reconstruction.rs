@@ -77,6 +77,11 @@ pub enum LineReconInterpolation {
 /// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
 /// - Propagates any [`crate::KwaversError`] returned by called functions.
 ///
+///
+/// # Panics
+///
+/// Panics if a caller-supplied shape or an internal solver state violates
+/// the precondition required by this operation.
 pub fn kspace_line_recon(
     sensor_data: ArrayView2<'_, f64>,
     dy: f64,

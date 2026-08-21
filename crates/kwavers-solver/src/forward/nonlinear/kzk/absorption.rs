@@ -216,6 +216,11 @@ impl KzkAbsorptionOperator {
     ///
     /// - Szabo TL (1994). J. Acoust. Soc. Am. 96(1), 491–500. eq. (2),(4).
     /// - Hamilton MF, Blackstock DT (1998). Nonlinear Acoustics §3.5.
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn apply(&mut self, pressure: &mut Array3<Complex64>, step_size: f64) {
         // Select the pre-computed mask for this step_size.
         // Theorem: H[k] depends only on f_k and step_size; both variants are

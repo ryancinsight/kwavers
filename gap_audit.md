@@ -6907,3 +6907,15 @@ with `RUSTDOCFLAGS=-D warnings`.
 The refreshed workspace measurement then found 69 additional
 `missing_panics_doc` sites in `kwavers-solver`; that package is the current
 ratchet item.
+
+## `missing_panics_doc` solver slice — 2026-08-21
+
+The `kwavers-solver` slice documents the 69 measured panic contracts across
+forward solvers, nonlinear and PSTD operators, plugin registries, analytical
+near-field paths, inverse and multiphysics reconstruction, workspace helpers,
+and safety layout adapters. Strict offline Clippy with
+`-D clippy::missing_panics_doc -D warnings` passes; Nextest run
+`300a3e32-83e8-476a-8f9f-ec8c396c05f4` passes 901/901 with four intentional
+skips (15 tests exceeded the 30-second slow threshold, with the suite completing
+in 52.252 seconds); doctests pass 5/5 (8 ignored); and rustdoc passes with
+`RUSTDOCFLAGS=-D warnings`.

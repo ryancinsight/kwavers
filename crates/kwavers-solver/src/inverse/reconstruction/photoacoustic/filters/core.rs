@@ -45,6 +45,11 @@ impl Filters {
     /// # Errors
     /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn apply_bandpass_filter(
         &self,
         data: &Array2<f64>,
@@ -109,6 +114,11 @@ impl Filters {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn apply_envelope_detection(&self, data: &Array2<f64>) -> KwaversResult<Array2<f64>> {
         let [n_samples, n_sensors] = data.shape();
         let mut envelope = Array2::zeros((n_samples, n_sensors));

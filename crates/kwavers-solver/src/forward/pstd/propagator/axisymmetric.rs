@@ -489,6 +489,11 @@ impl AsContext {
     // ---- Domain expansion -- associated functions ------------------------
 
     /// WS (whole-sample symmetric) expansion: a (nx,nr) into out (nx,4*nr).
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn ws_expand(a: &Array2<f64>, out: &mut Array2<f64>, nr: usize) {
         out.fill(0.0);
         out.slice_with_mut(&s![.., 0..nr]).unwrap().assign(a);
@@ -514,6 +519,11 @@ impl AsContext {
     }
 
     /// HAHS expansion (radial velocity): a (nx,nr) into out (nx,4*nr).
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn hahs_expand(a: &Array2<f64>, out: &mut Array2<f64>, nr: usize) {
         out.fill(0.0);
         out.slice_with_mut(&s![.., 0..nr]).unwrap().assign(a);
@@ -537,6 +547,11 @@ impl AsContext {
     }
 
     /// HSHA expansion (ur/r term): a (nx,nr) into out (nx,4*nr).
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn hsha_expand(a: &Array2<f64>, out: &mut Array2<f64>, nr: usize) {
         out.fill(0.0);
         out.slice_with_mut(&s![.., 0..nr]).unwrap().assign(a);

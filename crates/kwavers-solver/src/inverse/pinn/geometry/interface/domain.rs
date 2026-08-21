@@ -123,6 +123,11 @@ impl MultiRegionDomain {
     ///
     /// Returns [`MultiRegionError`] when the candidate or result matrix is not
     /// addressable or reservable, or a region boundary sampler fails.
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn sample_interface_points(
         &self,
         sample_count: usize,

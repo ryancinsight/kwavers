@@ -136,6 +136,11 @@ impl OperatorSplittingSolver {
     /// Step 2: Nonlinear correction
     /// Apply Burgers-like nonlinearity: ∂u/∂t + u∂u/∂x = 0
     /// where u = p/(ρ₀c₀) is the normalized pressure
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn nonlinear_step(
         &self,
         pressure: &mut Array3<f64>,

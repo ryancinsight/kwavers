@@ -139,6 +139,11 @@ impl ConservationMonitor {
     }
 
     /// Compute total energy (kinetic + internal)
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn compute_total_energy(
         &self,
         pressure: &Array3<f64>,
@@ -205,6 +210,11 @@ impl ConservationMonitor {
     ///
     /// If velocity fields are provided, computes total acoustic energy (kinetic + potential).
     /// If velocity fields are None, computes only potential energy from pressure.
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn compute_acoustic_energy_with_velocity(
         &self,
         pressure: &Array3<f64>,

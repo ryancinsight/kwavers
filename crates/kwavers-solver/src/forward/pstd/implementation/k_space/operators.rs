@@ -136,6 +136,11 @@ impl PSTDKSOperators {
     /// Build (or return) the exact second-order propagation coefficient
     /// `2·cos(c_ref·|k|·Δt)` for every spectral bin. Computed once and cached in
     /// `wave_coeff`. Each bin depends only on its own `|k|` → race-free.
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn ensure_wave_coeff(&mut self, c_ref: f64, dt: f64) -> &Array3<f64> {
         if self.wave_coeff.is_none() {
             let cdt = c_ref * dt;

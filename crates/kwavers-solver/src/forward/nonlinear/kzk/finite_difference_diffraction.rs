@@ -84,6 +84,11 @@ impl KzkDiffractionOperator {
 
     /// Apply diffraction for one step
     /// Solves: ∂p/∂z = (ic₀/2ω)∇⊥²p in frequency domain
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn apply(&mut self, slice: &mut ArrayViewMut2<f64>, step_size: f64) {
         let nx = self.config.nx;
         let ny = self.config.ny;

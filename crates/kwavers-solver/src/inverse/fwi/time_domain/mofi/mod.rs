@@ -203,6 +203,11 @@ pub fn default_homotopy(config: MofiConfig) -> [MofiStage; 3] {
 /// from the first stage (at `φ = 0`).
 /// # Errors
 /// - As [`align_from`]; also fails if `stages` is empty.
+///
+/// # Panics
+///
+/// Panics if a caller-supplied shape or an internal solver state violates
+/// the precondition required by this operation.
 pub fn align_homotopy(
     processor: &FwiProcessor,
     template: &Array3<f64>,

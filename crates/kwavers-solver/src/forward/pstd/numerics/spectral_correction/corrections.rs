@@ -363,6 +363,11 @@ pub(super) fn compute_wavenumber_component(index: usize, n: usize, dx: f64) -> f
 ///
 /// Each element of `field_k` is multiplied by the corresponding scalar in
 /// `kappa`; no two Moirai tasks share a memory location.
+///
+/// # Panics
+///
+/// Panics if a caller-supplied shape or an internal solver state violates
+/// the precondition required by this operation.
 pub fn apply_correction(field_k: &mut Array3<eunomia::Complex<f64>>, kappa: &Array3<f64>) {
     assert_eq!(
         field_k.shape(),

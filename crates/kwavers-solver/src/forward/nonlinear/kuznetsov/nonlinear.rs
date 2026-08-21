@@ -86,6 +86,11 @@ use moirai_parallel::{enumerate_mut_with, Adaptive};
 /// * `nonlinearity_coefficient` - B/A parameter
 /// * `nonlinear_term_out` - Pre-allocated output for `+(β/ρ₀c₀²)∂²(p²)/∂t²`
 #[allow(clippy::too_many_arguments)]
+///
+/// # Panics
+///
+/// Panics if a caller-supplied shape or an internal solver state violates
+/// the precondition required by this operation.
 pub fn compute_nonlinear_term_workspace(
     pressure: &Array3<f64>,
     pressure_prev: &Array3<f64>,

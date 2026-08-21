@@ -34,6 +34,11 @@ impl<'a> TimeIntegrator<'a> {
     /// Computes per-axis σ profiles from `pml` at construction; the profiles
     /// do not depend on `dt`, which is determined later from the CFL condition.
     #[must_use]
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn new(
         grid: &'a Grid,
         lambda: &'a leto::Array3<f64>,

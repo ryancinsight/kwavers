@@ -151,6 +151,11 @@ impl ElasticPml {
     /// Apply the PML damping to a real-space velocity / displacement
     /// field, in place.  `damping_field[i, j, k] *= damping_x`i` *
     /// damping_y`J` * damping_z`K``.
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn apply_to_field(&self, field: &mut Array3<f64>) {
         let dx_s = self.damping_x.as_slice().expect("damping_x contiguous");
         let dy_s = self.damping_y.as_slice().expect("damping_y contiguous");

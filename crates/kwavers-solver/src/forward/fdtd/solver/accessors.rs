@@ -65,6 +65,11 @@ impl GenericFdtdSolver<Array3<f64>> {
     }
 
     /// Calculate maximum stable time step based on CFL condition
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn max_stable_dt(&self, max_sound_speed: f64) -> f64 {
         let min_dx = self.grid.dx.min(self.grid.dy).min(self.grid.dz);
         // The staggered and collocated schemes have different Courant limits;

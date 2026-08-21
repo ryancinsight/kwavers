@@ -66,6 +66,11 @@ impl PhotoacousticReconstructor {
     /// # Errors
     /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn universal_back_projection(
         &self,
         sensor_data: ArrayView2<f64>,
@@ -100,6 +105,11 @@ impl PhotoacousticReconstructor {
     ///
     /// # Errors
     /// - Propagates any [`crate::KwaversError`] returned by called functions.
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn universal_back_projection_leto(
         &self,
         sensor_data: ArrayView2<f64>,

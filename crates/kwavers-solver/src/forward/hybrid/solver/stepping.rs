@@ -7,6 +7,11 @@ impl HybridSolver {
     /// # Errors
     /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn step_forward(&mut self) -> KwaversResult<()> {
         self.pstd_solver.fields.p.assign(&self.fields.p);
         self.pstd_solver.fields.ux.assign(&self.fields.ux);

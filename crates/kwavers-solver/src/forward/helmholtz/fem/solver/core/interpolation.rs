@@ -10,6 +10,11 @@ impl FemHelmholtzSolver {
     /// # Errors
     /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn interpolate_solution(
         &self,
         query_points: ArrayView2<f64>,

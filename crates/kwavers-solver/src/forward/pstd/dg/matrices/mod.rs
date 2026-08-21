@@ -108,6 +108,11 @@ pub fn compute_stiffness_matrix(
 /// # Errors
 /// - Propagates any [`crate::KwaversError`] returned by called functions.
 ///
+///
+/// # Panics
+///
+/// Panics if a caller-supplied shape or an internal solver state violates
+/// the precondition required by this operation.
 pub fn compute_diff_matrix(
     vandermonde: &Array2<f64>,
     nodes: &Array1<f64>,

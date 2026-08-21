@@ -78,6 +78,11 @@ use leto::Array3;
 /// bloat is bounded (the previous per-site inline form duplicated formatting
 /// strings at every site). Minor monomorphization cost (`Array3<f64>` ↦
 /// `A = f64`) is paid once per migration site.
+///
+/// # Panics
+///
+/// Panics if a caller-supplied shape or an internal solver state violates
+/// the precondition required by this operation.
 pub fn with_zip_standard_layout<'out, 'imm, A, F, R>(
     _out_name: &'static str,
     out: &'out mut Array3<A>,
