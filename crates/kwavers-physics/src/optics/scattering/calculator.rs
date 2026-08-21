@@ -51,7 +51,7 @@ impl MieCalculator {
         let x = params.size_parameter();
 
         if x < 0.1 {
-            return Ok(self.rayleigh_approximation(params));
+            return Ok(Self::rayleigh_approximation(params));
         }
 
         let m = params.relative_index();
@@ -66,20 +66,20 @@ impl MieCalculator {
         let n_stop = (x + 4.0 * x.cbrt() + 2.0).ceil() as usize;
         let n_max = n_stop.max(3).min(self.max_terms);
 
-        let (an, bn) = self.calculate_coefficients(x, m, n_max);
+        let (an, bn) = Self::calculate_coefficients(x, m, n_max);
 
-        let q_sca = self.scattering_efficiency(&an, &bn, x);
-        let q_ext = self.extinction_efficiency(&an, &bn, x);
+        let q_sca = Self::scattering_efficiency(&an, &bn, x);
+        let q_ext = Self::extinction_efficiency(&an, &bn, x);
         let q_abs = q_ext - q_sca;
-        let q_bsa = self.backscattering_efficiency(&an, &bn, x);
+        let q_bsa = Self::backscattering_efficiency(&an, &bn, x);
 
         let geometric_cs = MieResult::geometric_cross_section(params.radius);
         let sigma_sca = q_sca * geometric_cs;
         let sigma_ext = q_ext * geometric_cs;
         let sigma_abs = q_abs * geometric_cs;
 
-        let g = self.asymmetry_parameter(&an, &bn, q_sca, x);
-        let p_180 = self.phase_function_180(&an, &bn);
+        let g = Self::asymmetry_parameter(&an, &bn, q_sca, x);
+        let p_180 = Self::phase_function_180(&an, &bn);
 
         Ok(MieResult {
             size_parameter: x,
@@ -96,7 +96,7 @@ impl MieCalculator {
     }
 
     /// Rayleigh approximation for small particles (x << 1)
-    fn rayleigh_approximation(&self, params: &MieParameters) -> MieResult {
+    fn rayleigh_approximation(params: &MieParameters) -> MieResult {
         let x = params.size_parameter();
         let m = params.relative_index();
 
@@ -129,7 +129,7 @@ impl MieCalculator {
     ///
     /// Starts at N_start = max(N_max, ⌈|z|⌉) + 15 with D_{N_start}(z) = 0
     /// and applies D_{n-1}(z) = n/z − 1/(D_n(z) + n/z) downward.
-    fn logarithmic_derivative(&self, z: Complex64, n_max: usize) -> Vec<Complex64> {
+    fn logarithmic_derivative(z: Complex64, n_max: usize) -> Vec<Complex64> {
         let n_start = n_max.max(z.norm().ceil() as usize) + 15;
         let mut d = vec![Complex64::new(0.0, 0.0); n_start + 1];
         for n in (1..=n_start).rev() {
@@ -143,13 +143,12 @@ impl MieCalculator {
     /// Calculate Mie coefficients a_n and b_n for n = 1..=n_max (BH Eq. 4.88).
     #[allow(clippy::needless_range_loop)]
     fn calculate_coefficients(
-        &self,
         x: f64,
         m: Complex64,
         n_max: usize,
     ) -> (Vec<Complex64>, Vec<Complex64>) {
         let mx = m * x;
-        let d = self.logarithmic_derivative(mx, n_max);
+        let d = Self::logarithmic_derivative(mx, n_max);
 
         // Riccati–Bessel functions on real argument x by upward recurrence
         // ψ_{n} = (2n−1)/x · ψ_{n-1} − ψ_{n-2},  ψ_{-1} = cos x, ψ_0 = sin x
@@ -200,7 +199,7 @@ impl MieCalculator {
     }
 
     /// Q_sca = (2/x²) Σ (2n+1)(|a_n|² + |b_n|²)   (BH Eq. 4.61)
-    fn scattering_efficiency(&self, an: &[Complex64], bn: &[Complex64], x: f64) -> f64 {
+    fn scattering_efficiency(an: &[Complex64], bn: &[Complex64], x: f64) -> f64 {
         let mut sum = 0.0;
         for n in 0..an.len() {
             let n_f = (n + 1) as f64;
@@ -210,7 +209,7 @@ impl MieCalculator {
     }
 
     /// Q_ext = (2/x²) Σ (2n+1) Re(a_n + b_n)   (BH Eq. 4.62)
-    fn extinction_efficiency(&self, an: &[Complex64], bn: &[Complex64], x: f64) -> f64 {
+    fn extinction_efficiency(an: &[Complex64], bn: &[Complex64], x: f64) -> f64 {
         let mut sum = 0.0;
         for n in 0..an.len() {
             let n_f = (n + 1) as f64;
@@ -220,7 +219,7 @@ impl MieCalculator {
     }
 
     /// Q_back = (1/x²) |Σ (2n+1)(−1)ⁿ (a_n − b_n)|²   (BH Eq. 4.82)
-    fn backscattering_efficiency(&self, an: &[Complex64], bn: &[Complex64], x: f64) -> f64 {
+    fn backscattering_efficiency(an: &[Complex64], bn: &[Complex64], x: f64) -> f64 {
         let mut sum = Complex64::new(0.0, 0.0);
         for n in 0..an.len() {
             let n_idx = (n + 1) as i32;
@@ -234,7 +233,7 @@ impl MieCalculator {
     /// Asymmetry parameter g = ⟨cos θ⟩ (BH Eq. 4.80):
     /// g·Q_sca = (4/x²) Σ [ n(n+2)/(n+1) · Re(a_n a*_{n+1} + b_n b*_{n+1})
     ///                    + (2n+1)/(n(n+1)) · Re(a_n b*_n) ]
-    fn asymmetry_parameter(&self, an: &[Complex64], bn: &[Complex64], q_sca: f64, x: f64) -> f64 {
+    fn asymmetry_parameter(an: &[Complex64], bn: &[Complex64], q_sca: f64, x: f64) -> f64 {
         if q_sca <= 0.0 || an.is_empty() {
             return 0.0;
         }
@@ -253,7 +252,7 @@ impl MieCalculator {
     }
 
     /// Differential scattering at θ = π: |S_1(π)|² with S_1(π) = ½ Σ (2n+1)(−1)ⁿ(a_n − b_n)
-    fn phase_function_180(&self, an: &[Complex64], bn: &[Complex64]) -> f64 {
+    fn phase_function_180(an: &[Complex64], bn: &[Complex64]) -> f64 {
         let mut sum = Complex64::new(0.0, 0.0);
         for n in 0..an.len() {
             let n_idx = (n + 1) as i32;
