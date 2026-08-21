@@ -7200,6 +7200,18 @@ the package doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and
 the focused `unused_self` scan is clean in the photoacoustic utility/algorithm
 modules.
 
+After PR #495, the workspace `unused_self` scan reports 169 sites, including
+48 in `kwavers-solver`. The next bounded slice is the three receiver-free
+linear-algebra helpers in `inverse/reconstruction/photoacoustic/linear_algebra/`.
+
+The photoacoustic linear-algebra slice converts the truncated-SVD entry,
+power-method kernels, and TV proximal operator to associated functions and
+migrates all callers. Broad photoacoustic Nextest run
+`241cbbcf-f0f6-463d-b2c6-d6fc87cb3f2e` passes 10/10 (895 solver tests skipped);
+the package doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and
+the focused `unused_self` scan is clean in the photoacoustic linear-algebra and
+algorithm modules.
+
 After PR #477, the workspace `unused_self` scan reports 211 sites, including
 90 in `kwavers-solver`. The next bounded slice is the receiver-free helper in
 `forward/hybrid/adaptive_selection/selector.rs`.

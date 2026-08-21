@@ -320,7 +320,7 @@ impl PhotoacousticReconstructor {
             )?
         } else {
             // Use truncated SVD for unregularized case
-            self.linear_solver.solve_truncated_svd(
+            PhotoacousticLinearSolver::solve_truncated_svd(
                 &forward_model,
                 b,
                 0.01, // Truncation threshold
