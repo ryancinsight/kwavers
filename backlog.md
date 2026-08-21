@@ -315,7 +315,7 @@
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | in progress | Codex | `crates/kwavers-solver/src/forward/hybrid/coupling/quality.rs` (`unused_self` slice; parent remains open) |
+| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | in progress | Codex | `crates/kwavers-solver/src/forward/hybrid/domain_decomposition/{analyzer,buffer,partitioner}.rs` (`unused_self` slice; parent remains open) |
 
 - Context: the clippy floor landed in #423. 21 of 24 crates already declared
   `[lints] workspace = true`, but no `[workspace.lints.clippy]` table existed for them to
@@ -521,6 +521,9 @@
   now receiver-free aggregation path are associated functions, with the stateful history and
   thresholds retained on `QualityMonitor`. Coupling tests, doctests, and warning-denied rustdoc
   pass; the remaining solver sites stay queued.
+- 2026-08-21 coupling quality slice merged in PR #481 (`2cc11ed3e`). The refreshed `unused_self`
+  measurement is 201 sites (solver 80); the next bounded slice is the five receiver-free domain
+  decomposition helpers in `forward/hybrid/domain_decomposition/`.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
