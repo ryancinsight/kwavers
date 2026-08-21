@@ -315,7 +315,7 @@
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | in progress | Codex | `crates/kwavers-physics/src/acoustics/imaging/modalities/ultrasound` (next slice; parent remains open) |
+| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | in progress | Codex | `crates/kwavers-solver/src/inverse/fwi/frequency_domain` (next slice; parent remains open) |
 
 - Context: the clippy floor landed in #423. 21 of 24 crates already declared
   `[lints] workspace = true`, but no `[workspace.lints.clippy]` table existed for them to
@@ -360,6 +360,10 @@
   doctests, and warning-denied rustdoc; the workspace debt block remains unchanged.
 - 2026-08-21 transducer slice merged in PR #452 (`1ab5d9b5b`); the next workspace measurement
   found one `missing_errors_doc` site in the ultrasound frequency-domain FWI API. Its
+  acceptance is strict package Clippy with the lint re-enabled, the package nextest gate,
+  doctests, and warning-denied rustdoc; the workspace debt block remains unchanged.
+- 2026-08-21 physics FWI slice merged in PR #453 (`bfa06326f`); the next workspace measurement
+  found one `missing_errors_doc` site in the solver frequency-domain FWI operator. Its
   acceptance is strict package Clippy with the lint re-enabled, the package nextest gate,
   doctests, and warning-denied rustdoc; the workspace debt block remains unchanged.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
