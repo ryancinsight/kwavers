@@ -26,8 +26,6 @@ from ._pykwavers import (
     ThermalResult,
     ThermalSimulation,
     TransducerArray2D,
-    __author__,
-    __version__,
     absorption_power_law_db_cm,
     acoustic_dipole_contrast,
     acoustic_heat_source_density,
@@ -43,7 +41,6 @@ from ._pykwavers import (
     adiabatic_temperature_rise_kelvin,
     adjoint_gradient_convergence,
     ali_2025_breast_fwi_frequency_sweep_hz,
-    angular_spectrum_cw,
     apodization_weights,
     apodization_window_response,
     arrhenius_cumulative,
@@ -53,7 +50,6 @@ from ._pykwavers import (
     axial_psf_rect,
     ba_parameter,
     backprop_green_function_2d,
-    backward_angular_spectrum_cw,
     bbb_closure_kinetics,
     bbb_closure_permeability,
     bbb_inertial_damage_probability,
@@ -92,7 +88,6 @@ from ._pykwavers import (
     bubble_power_spectrum,
     bubbly_cloud_attenuation,
     bubbly_cloud_phase_velocity,
-    cart2grid,
     cavitation_controller_pressure,
     cavitation_emission_bands,
     cavitation_inertial_fraction_onset_index,
@@ -155,7 +150,6 @@ from ._pykwavers import (
     ensemble_emission_superposition,
     epstein_plesset_dissolution_time,
     exponential_convergence_curve,
-    extract_amp_phase,
     f_number_from_na,
     fda_isppa_limit_w_cm2,
     fda_ispta_limit_mw_cm2,
@@ -176,13 +170,11 @@ from ._pykwavers import (
     fubini_harmonic_amplitude,
     fubini_harmonic_spectrum,
     fubini_waveform,
-    gaussian,
     gaussian_absorber_photoacoustic_profile,
     gaussian_beam_pressure_field_py,
     gaussian_deconvolution_fixture,
     gaussian_modulated_pulse_1d,
     gaussian_power_deposition_2d,
-    gaussian_source_2d,
     gbm_subspot_raster_py,
     generate_breast_fwi_pstd_dataset,
     geometric_spreading_intensity_envelopes,
@@ -190,7 +182,6 @@ from ._pykwavers import (
     goldberg_shock_parameter_sweep,
     gorkov_radiation_force_1d,
     grating_lobe_angles,
-    grid2cart,
     gruneisen_parameter_soft_tissue,
     gruneisen_parameter_water,
     hann_windowed_harmonic_amplitudes,
@@ -362,7 +353,6 @@ from ._pykwavers import (
     solve_keller_miksis,
     solve_rayleigh_plesset,
     sonication_schedule,
-    spect,
     spectroscopic_unmixing_lstsq,
     spectroscopic_unmixing_so2_sweep,
     spherical_wave_pressure,
@@ -412,7 +402,21 @@ from ._pykwavers import (
     wood_sound_speed,
 )
 
+from .kwave_parity import (
+    angular_spectrum_cw,
+    backward_angular_spectrum_cw,
+    cart2grid,
+    extract_amp_phase,
+    gaussian,
+    gaussian_source_2d,
+    grid2cart,
+    spect,
+)
+
 _pykwavers: ModuleType
+
+__author__ = "Ryan Clanton PhD"
+__version__: str
 
 __all__ = [
     "BreastFwiPstdDatasetConfig",

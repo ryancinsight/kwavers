@@ -25,21 +25,24 @@ INVENTORY = Path(__file__).resolve().parents[1] / "python" / "pykwavers" / "_gen
 #     bare source tree has no extension and the runtime tests are skipped.
 _EXT_SUFFIXES = (".pyd", ".so", ".dylib")
 _PACKAGE_DIR = Path(__file__).resolve().parents[1] / "python" / "pykwavers"
+
+
+def _has_extension(package_dir: Path) -> bool:
+    # Path.glob may return a `map` whose truthiness is the object itself, so
+    # materialize each glob before testing.
+    return any(list(package_dir.glob(f"_pykwavers{ext}")) for ext in _EXT_SUFFIXES)
+
+
 _mode = os.getenv("KWAVERS_PYTHON_PACKAGE", "source")
 if _mode == "installed":
-    _EXT_AVAILABLE = any(
-        (Path(sys.prefix) / "Lib" / "site-packages" / "pykwavers").glob(f"_pykwavers{ext}")
-        for ext in _EXT_SUFFIXES
-    )
+    _EXT_AVAILABLE = _has_extension(Path(sys.prefix) / "Lib" / "site-packages" / "pykwavers")
 else:
-    _EXT_AVAILABLE = any(_PACKAGE_DIR.glob(f"_pykwavers{ext}") for ext in _EXT_SUFFIXES)
+    _EXT_AVAILABLE = _has_extension(_PACKAGE_DIR)
 
 requires_extension = pytest.mark.skipif(
     not _EXT_AVAILABLE,
     reason="pykwavers._pykwavers extension not importable (no wheel built)",
 )
-
-print(f"[debug] mode={_mode!r} ext_available={_EXT_AVAILABLE} pkgdir={_PACKAGE_DIR} globs={[list(_PACKAGE_DIR.glob(f'_pykwavers{ext}')) for ext in _EXT_SUFFIXES]} suffixes={_EXT_SUFFIXES!r}")
 
 
 def _load_inventory() -> dict:

@@ -108,16 +108,23 @@ def typed_usage() -> Tuple[int, Optional[float], str]:
 def test_typed_consumer_passes_strict_mypy():
     if not FIXTURE.exists():
         FIXTURE.write_text(FIXTURE_TEXT, encoding="utf-8")
-    # Run mypy against the package sources + the fixture using the project's
-    # configured [tool.mypy] settings (python_version 3.8, strict).
+    # Run mypy against the generated stubs + the consumer fixture with
+    # --strict. The optional bridge modules (kwave_bridge, kwave_python_bridge)
+    # are deliberately outside the typed contract (they wrap untyped external
+    # packages), so skip following those imports.
     cmd = [
         sys.executable,
         "-m",
         "mypy",
         "--strict",
+        "--follow-imports=skip",
+        # The stub imports numpy.typing; the installed numpy ships 3.12+ stub
+        # syntax, so target a modern python version regardless of the pyproject
+        # [tool.mypy] python_version = "3.8".
         "--python-version",
-        "3.8",
-        str(PYTHON_SOURCE / "pykwavers"),
+        "3.12",
+        str(PYTHON_SOURCE / "pykwavers" / "_pykwavers.pyi"),
+        str(PYTHON_SOURCE / "pykwavers" / "__init__.pyi"),
         str(FIXTURE),
     ]
     proc = subprocess.run(cmd, capture_output=True, text=True, cwd=ROOT)
@@ -129,7 +136,9 @@ def test_stub_has_no_unnamed_object_parameters():
 
     Duck-typed PyAny parameters must resolve through the audited DUCK_TYPES
     table; heterogeneous container values (Dict[str, object] values,
-    Tuple[object, ...]) are honest and remain permitted.
+    Tuple[object, ...]) are honest and remain permitted. The one exception is
+    ``__eq__``'s ``other``, which must be ``object`` for Liskov compliance
+    with ``object.__eq__``.
     """
     import ast
 
@@ -142,5 +151,7 @@ def test_stub_has_no_unnamed_object_parameters():
             arg_nodes += list(node.args.posonlyargs)
             for arg in arg_nodes:
                 if isinstance(arg.annotation, ast.Name) and arg.annotation.id == "object":
+                    if node.name == "__eq__" and arg.arg == "other":
+                        continue
                     offenders.append(f"{node.name}:{arg.arg}")
     assert not offenders, f"bare object parameters remain: {offenders}"

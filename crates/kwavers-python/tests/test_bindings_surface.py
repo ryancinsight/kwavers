@@ -228,12 +228,19 @@ def test_kwave_array_per_element_superposition_reduces_to_shared_signal():
     pykwavers binding plumbing.
     """
     grid = kw.Grid(nx=48, ny=48, nz=48, dx=3.0e-4, dy=3.0e-4, dz=3.0e-4)
-    cx, cy, cz = 24.0 * 3.0e-4, 24.0 * 3.0e-4, 24.0 * 3.0e-4
+    cy, cz = 24.0 * 3.0e-4, 24.0 * 3.0e-4
+    # Bowl/annulus elements are spherical caps whose surface lies one radius
+    # from `position` (the geometric focus), matching k-wave-python. Place the
+    # focus one radius past mid-grid so the cap surface lands on the domain;
+    # a mid-grid focus with R = 10 mm puts the surface ~2.8 mm outside the
+    # 14.4 mm grid and the BLI horizon correctly rejects every sample.
+    radius = 10.0e-3
+    cx = 24.0 * 3.0e-4 + radius
 
     arr = kw.KWaveArray()
-    arr.add_annular_element(position=(cx, cy, cz), radius=10.0e-3,
+    arr.add_annular_element(position=(cx, cy, cz), radius=radius,
                             inner_diameter=0.0, outer_diameter=3.0e-3)
-    arr.add_annular_element(position=(cx, cy, cz), radius=10.0e-3,
+    arr.add_annular_element(position=(cx, cy, cz), radius=radius,
                             inner_diameter=4.0e-3, outer_diameter=6.0e-3)
     assert arr.num_elements == 2
 
@@ -244,7 +251,18 @@ def test_kwave_array_per_element_superposition_reduces_to_shared_signal():
     # Path A: shared signal
     w_sum = np.asarray(arr.get_array_weighted_mask(grid), dtype=np.float64)
     active_cells = np.argwhere(w_sum != 0.0)
-    assert active_cells.size > 0
+    assert active_cells.size > 0, (
+        "weighted mask empty: annulus surface must lie inside the grid "
+        "(focus placed one radius past mid-grid)"
+    )
+    # Both concentric annuli must contribute: the inner cap (0–3 mm aperture)
+    # and the outer ring (4–6 mm) occupy disjoint radial bands.
+    inner = kw.KWaveArray()
+    inner.add_annular_element(position=(cx, cy, cz), radius=radius,
+                              inner_diameter=0.0, outer_diameter=3.0e-3)
+    w_inner = np.asarray(inner.get_array_weighted_mask(grid), dtype=np.float64)
+    outer_ring_cells = np.argwhere((w_sum != 0.0) & (w_inner == 0.0))
+    assert outer_ring_cells.size > 0, "outer annulus contributed no cells"
 
     # Path B: per-element signals reduced to shared case — must construct
     # without error; Source is an opaque handle, but the invariant we test

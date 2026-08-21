@@ -107,6 +107,43 @@ jobs:
       - name: Run xtask metrics
         run: cargo run --locked -p xtask -- metrics
 
+  python-surface:
+    name: Python Typed Surface
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Install test dependencies
+        run: python -m pip install --disable-pip-version-check "pytest>=7.0" "mypy>=1.0" "numpy>=1.20"
+
+      - name: Regenerate-and-diff the typed surface (must be current)
+        # The generator is the source of truth; a stale committed stub fails
+        # the gate. `shell: bash` with the set +e / exit pattern avoids the
+        # `cmd | tee` pipefail trap that could mask the generator's exit code.
+        shell: bash
+        run: |
+          set +e
+          python crates/kwavers-python/tools/generate_surface.py --root crates/kwavers-python --check > "$RUNNER_TEMP/surface-check.log" 2>&1
+          status=$?
+          set -e
+          cat "$RUNNER_TEMP/surface-check.log"
+          exit "$status"
+
+      - name: Run typed-surface staleness and consumer tests
+        run: |
+          python -m pytest crates/kwavers-python/tests/test_generated_surface.py \
+            crates/kwavers-python/tests/test_typed_consumer.py -q
+
   build:
     name: Build & Test
     runs-on: ubuntu-latest
