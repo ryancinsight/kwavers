@@ -75,7 +75,7 @@ impl TimeScaleSeparator {
                 .expect("invariant: component index within Array4 axis-0 bounds");
 
             // Compute characteristic time scales
-            let (grad_max, laplacian_max) = self.compute_spatial_derivatives(field, &self.grid)?;
+            let (grad_max, laplacian_max) = Self::compute_spatial_derivatives(field, &self.grid)?;
 
             // Acoustic time scale: τ_acoustic ~ 1/√(c²∇²)
             if laplacian_max > tolerance {
@@ -118,7 +118,6 @@ impl TimeScaleSeparator {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     fn compute_spatial_derivatives(
-        &self,
         field: ArrayView3<'_, f64>,
         grid: &Grid,
     ) -> KwaversResult<(f64, f64)> {

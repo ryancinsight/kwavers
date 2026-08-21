@@ -7139,6 +7139,17 @@ solver tests filtered); the package doctests pass 5/5 (8 ignored),
 warning-denied rustdoc passes, and the focused unused_self scan has zero
 warnings in `weno7.rs`.
 
+After PR #489, the workspace `unused_self` scan reports 186 sites, including
+65 in `kwavers-solver`. The next bounded slice is the receiver-free helper in
+`integration/time_integration/time_scale_separation.rs`.
+
+The time-scale separation slice converts its receiver-free spatial derivative
+evaluation to an associated function and migrates the analyzer caller. Focused
+Nextest run `82415a86-a9ae-431e-aea4-8216e33591b4` passes 16/16 (889 solver
+tests skipped); the package doctests pass 5/5 (8 ignored), warning-denied
+rustdoc passes, and the focused `unused_self` scan is clean in
+`time_scale_separation.rs`.
+
 After PR #477, the workspace `unused_self` scan reports 211 sites, including
 90 in `kwavers-solver`. The next bounded slice is the receiver-free helper in
 `forward/hybrid/adaptive_selection/selector.rs`.
