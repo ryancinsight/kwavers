@@ -89,7 +89,7 @@ impl Trilateration {
                 break;
             }
 
-            let update = self.solve_least_squares(&jacobian, &residuals)?;
+            let update = Self::solve_least_squares(&jacobian, &residuals)?;
 
             position[0] += update[0];
             position[1] += update[1];
@@ -131,14 +131,14 @@ impl Trilateration {
         time_differences: &[f64],
     ) -> KwaversResult<(Vec<f64>, Vec<[f64; 3]>)> {
         let ref_pos = &self.sensor_positions[0];
-        let ref_dist = self.distance(position, ref_pos);
+        let ref_dist = Self::distance(position, ref_pos);
 
         let mut residuals = Vec::with_capacity(time_differences.len());
         let mut jacobian = Vec::with_capacity(time_differences.len());
 
         for (i, &td) in time_differences.iter().enumerate() {
             let sensor_pos = &self.sensor_positions[i + 1];
-            let dist = self.distance(position, sensor_pos);
+            let dist = Self::distance(position, sensor_pos);
 
             let predicted_tdoa = (dist - ref_dist) / self.config.sound_speed;
             let residual = td - predicted_tdoa;
@@ -166,11 +166,7 @@ impl Trilateration {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    fn solve_least_squares(
-        &self,
-        jacobian: &[[f64; 3]],
-        residuals: &[f64],
-    ) -> KwaversResult<[f64; 3]> {
+    fn solve_least_squares(jacobian: &[[f64; 3]], residuals: &[f64]) -> KwaversResult<[f64; 3]> {
         let mut jtj = [[0.0; 3]; 3];
         for j_row in jacobian {
             for i in 0..3 {
@@ -194,14 +190,14 @@ impl Trilateration {
             }
         }
 
-        self.solve_3x3(&jtj, &neg_jtr)
+        Self::solve_3x3(&jtj, &neg_jtr)
     }
 
     /// Solve 3x3 linear system Ax = b via Gaussian elimination with partial pivoting
     /// # Errors
     /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
-    fn solve_3x3(&self, a: &[[f64; 3]; 3], b: &[f64; 3]) -> KwaversResult<[f64; 3]> {
+    fn solve_3x3(a: &[[f64; 3]; 3], b: &[f64; 3]) -> KwaversResult<[f64; 3]> {
         let mut aug = [[0.0; 4]; 3];
         for i in 0..3 {
             for j in 0..3 {
@@ -250,7 +246,7 @@ impl Trilateration {
     }
 
     /// Compute Euclidean distance between two points
-    fn distance(&self, p1: &[f64; 3], p2: &[f64; 3]) -> f64 {
+    fn distance(p1: &[f64; 3], p2: &[f64; 3]) -> f64 {
         let dx = p1[0] - p2[0];
         let dy = p1[1] - p2[1];
         let dz = p1[2] - p2[2];

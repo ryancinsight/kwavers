@@ -210,7 +210,7 @@ impl Multilateration {
     pub fn calculate_gdop(&self, source_position: &[f64; 3]) -> KwaversResult<f64> {
         let jacobian = self.compute_jacobian(source_position);
         let jtj = self.compute_jtj(&jacobian);
-        let jtj_inv = self.invert_3x3(&jtj)?;
+        let jtj_inv = Self::invert_3x3(&jtj)?;
         let trace = jtj_inv[0][0] + jtj_inv[1][1] + jtj_inv[2][2];
         Ok(trace.sqrt())
     }
