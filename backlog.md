@@ -486,6 +486,9 @@
 - 2026-08-21 Helmholtz assembly slice merged in PR #475 (`82c01058e`). The refreshed `unused_self`
   measurement is 218 sites (solver 97); the next bounded slice is the six receiver-free helpers
   in `forward/helmholtz/fem/basis.rs`, now claimed with focused gates.
+- 2026-08-21 Helmholtz FEM basis slice is implemented: its six receiver-free basis and quadrature
+  helpers are associated functions with all callers migrated. Focused tests, doctests, and
+  warning-denied rustdoc pass; the remaining solver sites stay queued.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a

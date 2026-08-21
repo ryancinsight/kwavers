@@ -7022,3 +7022,10 @@ the focused unused_self scan has zero warnings in `forward/helmholtz/fem/assembl
 After PR #475, the workspace `unused_self` scan reports 218 sites, including
 97 in `kwavers-solver`. The next bounded slice is the six receiver-free
 helpers in `forward/helmholtz/fem/basis.rs`.
+
+The Helmholtz FEM basis slice converts its six measured receiver-free basis and
+quadrature helpers to associated functions. Focused Nextest run
+`ec69b414-5d63-4006-ba16-07e2ff6c342d` passes 9/9 (896 solver tests filtered);
+the package doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and
+the focused unused_self scan has zero warnings in
+`forward/helmholtz/fem/basis.rs`.
