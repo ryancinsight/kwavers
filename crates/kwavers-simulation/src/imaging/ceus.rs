@@ -77,7 +77,7 @@ impl ContrastEnhancedUltrasound {
         let n_frames = (total_time * frame_rate) as usize;
         let dt = 1.0 / frame_rate;
         let mut images = Vec::with_capacity(n_frames);
-        let bolus_profile = self.create_bolus_profile(injection_rate, total_time, n_frames);
+        let bolus_profile = Self::create_bolus_profile(injection_rate, total_time, n_frames);
 
         for (frame, &current_concentration) in bolus_profile.iter().enumerate().take(n_frames) {
             let time = frame as f64 * dt;
@@ -259,12 +259,7 @@ impl ContrastEnhancedUltrasound {
         Ok(scattered_signals)
     }
 
-    fn create_bolus_profile(
-        &self,
-        injection_rate: f64,
-        total_time: f64,
-        n_frames: usize,
-    ) -> Vec<f64> {
+    fn create_bolus_profile(injection_rate: f64, total_time: f64, n_frames: usize) -> Vec<f64> {
         let alpha = 3.0;
         let beta = 1.5;
         let tau = 0.5;

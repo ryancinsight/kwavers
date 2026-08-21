@@ -921,6 +921,11 @@
   Package check, targeted `unused_self` Clippy (plasmonics path clean), Nextest (1561/1561 with one
   configured skip), doctests (9/13; 4 ignored), and warning-denied rustdoc pass. The refreshed
   workspace `unused_self` count is 47 sites with zero remaining in `kwavers-physics`.
+- 2026-08-21 `kwavers-simulation` CEUS slice is implemented: bolus-profile generation is an
+  associated function; grid, perfusion, scattering, reconstruction, and microbubble state remain
+  receiver-bound. Package check, targeted `unused_self` Clippy (CEUS path clean), Nextest (87/87),
+  doctests (4/6; 2 ignored), and warning-denied rustdoc pass. The refreshed workspace `unused_self`
+  count is 46 sites with zero remaining in `kwavers-physics` and `kwavers-simulation`.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a

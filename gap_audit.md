@@ -7231,6 +7231,12 @@ targeted `unused_self` Clippy (plasmonics path clean), Nextest (1561/1561 with o
 doctests (9/13; 4 ignored), and warning-denied rustdoc pass. The refreshed workspace `unused_self`
 count is 47 sites with zero remaining in `kwavers-physics`.
 
+The `kwavers-simulation` CEUS slice converts bolus-profile generation to an associated function;
+grid, perfusion, scattering, reconstruction, and microbubble state remain receiver-bound. Package
+check, targeted `unused_self` Clippy (CEUS path clean), Nextest (87/87), doctests (4/6; 2 ignored),
+and warning-denied rustdoc pass. The refreshed workspace `unused_self` count is 46 sites with zero
+remaining in `kwavers-physics` and `kwavers-simulation`.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.
