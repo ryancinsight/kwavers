@@ -7249,6 +7249,13 @@ check, targeted `unused_self` Clippy (beamforming-training path clean), Nextest 
 (1/22; 21 ignored), and warning-denied rustdoc pass. The refreshed workspace `unused_self` count is
 44 sites with 25 remaining in other analysis paths.
 
+The `kwavers-analysis` Bayesian uncertainty slice converts Monte Carlo prediction statistics to an
+associated function; model configuration and predictor state remain receiver-bound. Calibration,
+decomposition, and tests use associated-function syntax. Package check, targeted `unused_self`
+Clippy (Bayesian path clean), Nextest (744/744), doctests (1/22; 21 ignored), and warning-denied
+rustdoc pass. The refreshed workspace `unused_self` count is 43 sites with 24 remaining in other
+analysis paths.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.

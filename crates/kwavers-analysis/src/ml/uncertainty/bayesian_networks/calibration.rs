@@ -24,7 +24,7 @@ impl MlBayesianPINN {
             ));
         }
 
-        let stats = self.compute_prediction_statistics(predictions)?;
+        let stats = Self::compute_prediction_statistics(predictions)?;
         let total_uncertainty = stats.uncertainty;
         let epistemic = &total_uncertainty * 0.5;
         let aleatoric = &total_uncertainty * 0.5;
@@ -50,7 +50,7 @@ impl MlBayesianPINN {
         validation_predictions: &[Array2<f32>],
         validation_targets: &[Array2<f32>],
     ) -> KwaversResult<()> {
-        let stats = self.compute_prediction_statistics(validation_predictions)?;
+        let stats = Self::compute_prediction_statistics(validation_predictions)?;
 
         let mut mae = 0.0_f32;
         let n_samples = validation_predictions.len();
