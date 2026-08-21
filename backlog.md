@@ -803,6 +803,13 @@
   (4/4; 1 ignored), and warning-denied rustdoc pass; the refreshed workspace `unused_self` count
   is 96 sites with zero in `kwavers-boundary`, CPML, FEM/BEM managers, `kwavers-imaging`,
   `kwavers-receiver`, `kwavers-mesh`, `kwavers-grid`, `kwavers-signal`, and `kwavers-solver`.
+- 2026-08-21 `kwavers-transducer` calibration slice is implemented: peak extraction, reflector
+  matching, and position estimation are associated functions with all calibration callers
+  migrated; quality-metric updates remain stateful. Package check, targeted `unused_self` Clippy,
+  Nextest (245/245 with one configured skip), doctests (2/2; 6 ignored), and warning-denied
+  rustdoc pass. The refreshed workspace `unused_self` count is 93 sites with 10 remaining in
+  transducer array/k-Wave rasterizer helpers and zero in the completed calibration and boundary
+  slices.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a

@@ -62,9 +62,9 @@ impl CalibrationManager {
         let wavelength = sound_speed / frequency;
         let [_nx, _ny, _nz] = pressure_field.shape();
 
-        let peaks = self.extract_peaks(pressure_field, wavelength)?;
-        let correspondences = self.match_reflectors(&peaks, known_reflectors)?;
-        let positions = self.estimate_positions(&correspondences, known_reflectors)?;
+        let peaks = Self::extract_peaks(pressure_field, wavelength)?;
+        let correspondences = Self::match_reflectors(&peaks, known_reflectors)?;
+        let positions = Self::estimate_positions(&correspondences, known_reflectors)?;
 
         self.data.reference_geometry = Some(positions.clone());
         self.update_quality_metrics(&positions, &correspondences);

@@ -10,7 +10,6 @@ impl CalibrationManager {
     /// Detect local pressure-field peaks above 3 × RMS, separated by at least
     /// `wavelength / 2` grid cells.
     pub(super) fn extract_peaks(
-        &self,
         pressure_field: &Array3<f64>,
         wavelength: f64,
     ) -> KwaversResult<Vec<[f64; 3]>> {
@@ -58,7 +57,6 @@ impl CalibrationManager {
 
     /// Match detected peaks to known reflectors by nearest-neighbour Euclidean distance.
     pub(super) fn match_reflectors(
-        &self,
         peaks: &[[f64; 3]],
         reflectors: &[[f64; 3]],
     ) -> KwaversResult<Vec<(usize, usize)>> {
@@ -91,7 +89,6 @@ impl CalibrationManager {
 
     /// Construct element position array from peak–reflector correspondences.
     pub(super) fn estimate_positions(
-        &self,
         correspondences: &[(usize, usize)],
         reflectors: &[[f64; 3]],
     ) -> KwaversResult<Array2<f64>> {

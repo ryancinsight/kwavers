@@ -7121,6 +7121,13 @@ warning-denied rustdoc pass. The refreshed workspace `unused_self` count is 96 s
 `kwavers-boundary`, CPML, the FEM/BEM managers, `kwavers-imaging`, `kwavers-receiver`,
 `kwavers-mesh`, `kwavers-grid`, `kwavers-signal`, and `kwavers-solver`.
 
+The `kwavers-transducer` calibration slice converts peak extraction, reflector matching, and
+position estimation to associated functions and migrates all calibration callers; quality-metric
+updates remain stateful. Package check, targeted `unused_self` Clippy, Nextest (245/245 with one
+configured skip), doctests (2/2; 6 ignored), and warning-denied rustdoc pass. The refreshed
+workspace `unused_self` count is 93 sites with 10 remaining in transducer array/k-Wave rasterizer
+helpers and zero in the completed calibration and boundary slices.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.
