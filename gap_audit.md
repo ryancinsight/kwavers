@@ -7211,6 +7211,13 @@ Validation tests use associated-function syntax. Package check, targeted `unused
 and warning-denied rustdoc pass. The refreshed workspace `unused_self` count is 55 sites with 8
 remaining in other physics domains.
 
+The `kwavers-physics` BBB-opening safety slice converts maximum-safe-time, microbubble-dose,
+safety-check, and warning generation to associated functions; protocol and permeability state
+remain receiver-bound. Package check, targeted `unused_self` Clippy (BBB-opening paths clean),
+Nextest (1561/1561 with one configured skip), doctests (9/13; 4 ignored), and warning-denied
+rustdoc pass. The refreshed workspace `unused_self` count is 51 sites with 4 remaining in other
+physics domains.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.
