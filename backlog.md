@@ -315,7 +315,7 @@
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | in progress | Codex | `crates/kwavers-solver/src/forward/elastic/swe/gpu` (`unused_self` slice; parent remains open) |
+| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | in progress | Codex | `crates/kwavers-solver/src/forward/helmholtz/fem/assembly.rs` (`unused_self` slice; parent remains open) |
 
 - Context: the clippy floor landed in #423. 21 of 24 crates already declared
   `[lints] workspace = true`, but no `[workspace.lints.clippy]` table existed for them to
@@ -477,6 +477,12 @@
 - 2026-08-21 SWE GPU slice is implemented: the two adaptive interpolation/quality helpers and
   the transfer-time helper are associated functions with all callers migrated. Focused tests,
   doctests, and warning-denied rustdoc pass; the remaining solver sites stay queued.
+- 2026-08-21 SWE GPU slice merged in PR #474 (`35943e1b9`). The refreshed `unused_self`
+  measurement is 222 sites (solver 101); the next bounded slice is the four receiver-free
+  helpers in `forward/helmholtz/fem/assembly.rs`, now claimed with focused gates.
+- 2026-08-21 Helmholtz FEM assembly slice is implemented: its four receiver-free helpers are
+  associated functions with all callers migrated. Focused tests, doctests, and warning-denied
+  rustdoc pass; the remaining solver sites stay queued.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
