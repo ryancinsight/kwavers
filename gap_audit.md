@@ -7512,6 +7512,12 @@ burst envelope and sampled values. Warning-denied package Clippy, Nextest (350/3
 skip), doctests (8 passed; 1 ignored), and warning-denied Rustdoc pass. The production workspace
 count decreases from 2 to 1 site, and the ratchet comment is updated.
 
+The `kwavers-python` `from_iter_instead_of_collect` slice replaces the PAM MUSIC complex steering
+vector `Array1::from_iter` construction with direct iterator collection, preserving the thin PyO3
+conversion boundary. Warning-denied package Clippy, Nextest (21/21), and warning-denied Rustdoc pass;
+doctests are not applicable because the package intentionally has no Rust library target. The exact
+production workspace scan reports 0 sites and the ratchet override is removed from `Cargo.toml`.
+
 Final exact-revision validation at merged revision `192eb7575` passes workspace Nextest (5,781/5,781
 with 7 configured skips) and workspace doctests with no failures. The previously recorded example
 build and mdBook test/build remain valid because the final changes are lint-only production edits and
