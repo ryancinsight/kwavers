@@ -1022,6 +1022,12 @@
   sites, all remaining in `kwavers-diagnostics` and `kwavers-therapy`; `kwavers-analysis` is clean.
   The package-wide all-targets Clippy gate still reports two pre-existing test-only lint defects
   outside these slices.
+- 2026-08-21 `kwavers-diagnostics` AI beamforming slice is implemented: traditional delay-and-sum
+  beamforming and memory estimation are associated functions while processor configuration and
+  PINN state remain receiver-bound. Package check, targeted `unused_self` Clippy, Nextest (191/191),
+  doctests (1/6; 5 ignored), and warning-denied rustdoc pass. The refreshed workspace `unused_self`
+  count is 17 sites: 15 in `kwavers-diagnostics` and 2 in `kwavers-therapy`. The package-wide
+  all-targets Clippy gate still reports two pre-existing test-only lint defects outside this slice.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
