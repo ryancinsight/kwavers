@@ -175,7 +175,7 @@ elidable_lifetime_names = "allow"
 #
 # The two crates CI gates directly (kwavers-core, the kwavers facade) trip none
 # of these today; they are clean on the merits, not by this block.
-unused_self = "allow"                              # 23
+unused_self = "allow"                              # 21
 # NOT cleared -- `unwrap_used` and `print_stderr` are `restriction` lints, not
 # members of `all` or `pedantic`, so they emit nothing at this level whatever
 # the site count is. Measuring them here reads the lint level, not the code:

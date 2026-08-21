@@ -50,7 +50,7 @@ impl PAMProcessor {
                 let time_series: Vec<f64> =
                     (0..nt).map(|it| beamformed_data[[ix, iy, it]]).collect();
 
-                let spectrum = self.compute_spectrum(&time_series)?;
+                let spectrum = Self::compute_spectrum(&time_series)?;
 
                 for (band_idx, &(f_min, f_max)) in self.config.frequency_bands.iter().enumerate() {
                     let power = self.integrate_band_power(
@@ -73,7 +73,7 @@ impl PAMProcessor {
         Ok(cavitation_map)
     }
 
-    fn compute_spectrum(&mut self, time_series: &[f64]) -> KwaversResult<Vec<f64>> {
+    fn compute_spectrum(time_series: &[f64]) -> KwaversResult<Vec<f64>> {
         let spectrum = fft_1d_array(
             &leto::Array1::from_vec([time_series.len()], time_series.to_vec())
                 .expect("processor fft array"),
@@ -123,7 +123,7 @@ impl PAMProcessor {
         iy: usize,
         output: &mut Array3<f64>,
     ) -> KwaversResult<()> {
-        let fundamental_idx = self.find_fundamental(spectrum);
+        let fundamental_idx = Self::find_fundamental(spectrum);
 
         for harmonic in 2..5 {
             let harmonic_idx = fundamental_idx * harmonic;
@@ -139,7 +139,7 @@ impl PAMProcessor {
         Ok(())
     }
 
-    fn find_fundamental(&self, spectrum: &[f64]) -> usize {
+    fn find_fundamental(spectrum: &[f64]) -> usize {
         spectrum
             .iter()
             .enumerate()
