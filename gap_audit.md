@@ -7250,6 +7250,11 @@ are associated functions with all callers migrated. Focused Nextest passes 8/8
 passes, and the refreshed workspace `unused_self` count is 147 sites (26 in
 `kwavers-solver`).
 
+The next claimed `unused_self` slice covers the four receiver-free time-reversal
+helpers for phase conjugation, source application, backward propagation, and
+convergence measurement. Reconstruction configuration and post-processing remain
+receiver-bound.
+
 After PR #477, the workspace `unused_self` scan reports 211 sites, including
 90 in `kwavers-solver`. The next bounded slice is the receiver-free helper in
 `forward/hybrid/adaptive_selection/selector.rs`.
