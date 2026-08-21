@@ -6998,3 +6998,7 @@ focused Nextest run `f7e57382-0201-4ccc-8f15-7f4f7bfbc4f0` passes 12/12 (893
 solver tests filtered), the package doctests pass 5/5 (8 ignored), and
 warning-denied rustdoc passes. The `unused_self` package measurement reports no
 remaining warnings in that kernel module; the other solver sites remain queued.
+
+After PR #473, the workspace `unused_self` scan reports 225 sites, including
+104 in `kwavers-solver`. The next bounded slice is the three receiver-free
+helpers in `forward/elastic/swe/gpu`.

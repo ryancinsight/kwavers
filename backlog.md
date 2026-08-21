@@ -315,7 +315,7 @@
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | in progress | Codex | `crates/kwavers-solver/src/forward/bem/burton_miller/kernels.rs` (`unused_self` slice; parent remains open) |
+| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | in progress | Codex | `crates/kwavers-solver/src/forward/elastic/swe/gpu` (`unused_self` slice; parent remains open) |
 
 - Context: the clippy floor landed in #423. 21 of 24 crates already declared
   `[lints] workspace = true`, but no `[workspace.lints.clippy]` table existed for them to
@@ -471,6 +471,9 @@
   `forward/bem/burton_miller/kernels.rs`; they are converted to associated functions and all
   in-repo callers are migrated. The bounded slice passes its focused native tests, doctests,
   and warning-denied rustdoc; the remaining solver sites stay in the parent queue.
+- 2026-08-21 Burton-Miller slice merged in PR #473 (`54659d09d`). The refreshed `unused_self`
+  measurement is 225 sites (solver 104); the next bounded slice is the three receiver-free
+  helpers in `forward/elastic/swe/gpu`, now claimed with the same focused gates.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
