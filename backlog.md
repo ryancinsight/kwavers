@@ -34,10 +34,29 @@
   cannot silently get water's coefficient after asking for another. The
   Rustdoc claim that `alpha_coeff` is "the raw k-Wave coefficient" is corrected
   or made true.
+- **The disagreement is three-sided, and the callers already assume the opposite
+  rule.** `kwavers-python/src/simulation_py/solvers/pstd.rs:145` and
+  `kwavers-simulation/src/dispatch/pstd.rs:256` each compute an
+  `effective_alpha_db` — the user's coefficient when positive, the medium's
+  otherwise — and write it into `PSTDConfig`, which reads as an instruction.
+  `init.rs:185` then resolves again in the opposite direction. So this is not a
+  dead field: a Python caller passing `alpha_coeff_db = 0.75` on a homogeneous
+  medium has it resolved correctly, written to the config, and silently
+  discarded. Any absorption result configured that way ran at water's
+  coefficient.
+- **Why the current rule cannot simply be inverted:** it is load-bearing for
+  heterogeneous media. Both callers flatten the medium to a single sample at the
+  origin before building the config, so a tissue medium's spatial variation
+  reaches the solver only through the per-voxel read that overrides the config.
+  Each rule is correct for one medium class and wrong for the other, and nothing
+  in the types tells them apart.
 - **Class rationale:** [major] rather than [patch] because it changes the meaning
   of a public configuration field, and because any published absorption result
   configured through `PSTDConfig` alone was produced at water's coefficient.
-- **Decision record:** required; the precedence is a design choice, not a typo.
+- **Decision record:** `docs/adr/120-absorption-coefficient-ownership.md`
+  (Proposed). Recommends `alpha_coeff: Option<f64>` — `Some` is an explicit
+  uniform request, `None` hands ownership to the medium per voxel — so the two
+  cases the sentinel `> 0.0` could not distinguish become distinguishable.
 
 ## KW-GAP-2026-08-20-KWAVEPARITY — Make the k-Wave parity claim reproducible [major] [arch] — implementation complete; hosted verification pending
 
