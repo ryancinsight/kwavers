@@ -65,7 +65,7 @@ impl ReverseTimeMigration {
         }
 
         if RTM_STORAGE_DECIMATION > 1 {
-            self.reconstruct_full_wavefield(stored, n_time_steps, grid)
+            Self::reconstruct_full_wavefield(stored, n_time_steps, grid)
         } else {
             Ok(stored)
         }
@@ -113,7 +113,6 @@ impl ReverseTimeMigration {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(super) fn reconstruct_full_wavefield(
-        &self,
         decimated: Array4<f64>,
         n_time_steps: usize,
         grid: &Grid,

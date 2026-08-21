@@ -650,6 +650,18 @@
   `kwavers-solver` seismic-misfit filter passes 11/11 (894 filtered), package doctests pass 5/5
   (8 ignored), warning-denied rustdoc passes, and the refreshed workspace `unused_self` count is
   156 sites (solver 35). The increment is ready for integration.
+- 2026-08-21 the next `unused_self` slice claims the seismic RTM kernels in
+  `inverse/reconstruction/seismic/rtm/inherent/{laplacian,propagation}.rs` and the stateless
+  imaging helpers in `inverse/seismic/rtm.rs`. Stateful configuration and propagation entry
+  points remain in scope only where they consume processor state. Acceptance is complete static
+  conversion with all callers migrated, focused RTM tests, package doctests, warning-denied
+  rustdoc, and a refreshed workspace count.
+- 2026-08-21 seismic RTM slice is implemented: Laplacian, reconstruction, and stateless imaging
+  kernels are associated functions with all callers migrated; stateful propagation and settings
+  remain receiver-bound. Focused Nextest `kwavers-solver` seismic-RTM filter passes 8/8 (897
+  filtered), package doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and the
+  refreshed workspace `unused_self` count is 151 sites (solver 30). The increment is ready for
+  integration.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a

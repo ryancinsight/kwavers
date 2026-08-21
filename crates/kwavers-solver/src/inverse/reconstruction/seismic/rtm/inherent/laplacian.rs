@@ -57,7 +57,6 @@ impl ReverseTimeMigration {
     /// - [`ValidationError::DimensionMismatch`] when the grid lacks a 3-D interior
     ///   (see [`Self::ensure_3d_interior`]).
     pub(super) fn compute_laplacian(
-        &self,
         field: &leto::ArrayView<'_, f64, 3>,
     ) -> KwaversResult<Array3<f64>> {
         let [nx, ny, nz] = field.shape();
