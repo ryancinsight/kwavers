@@ -7093,6 +7093,13 @@ Clippy still reports the 11 pre-existing boundary sites in CPML/FEM/smoothing. T
 workspace `unused_self` count is 111 sites with zero in the BEM manager, `kwavers-receiver`,
 `kwavers-mesh`, `kwavers-grid`, `kwavers-signal`, and `kwavers-solver`.
 
+The `kwavers-imaging` multimodality fusion slice converts transform, checkerboard, difference,
+and multi-channel helpers to associated functions and migrates all callers; overlay and
+false-color remain receiver-bound for configured blend weights. Package check, targeted
+`unused_self` Clippy, Nextest, doctests (4/4), and warning-denied rustdoc pass; the refreshed
+workspace `unused_self` count is 107 sites with zero in `kwavers-imaging`, `kwavers-boundary` BEM,
+`kwavers-receiver`, `kwavers-mesh`, `kwavers-grid`, `kwavers-signal`, and `kwavers-solver`.
+
 After PR #480, the workspace `unused_self` scan reports 206 sites, including
 85 in `kwavers-solver`. The next bounded slice is the five receiver-free
 helpers in `forward/hybrid/coupling/quality.rs`.

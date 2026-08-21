@@ -30,7 +30,7 @@ impl FusionEngine {
         transform: &RegistrationTransform,
     ) -> KwaversResult<Array3<f64>> {
         // Apply transformation to floating image
-        let transformed = self.apply_transform(floating, transform)?;
+        let transformed = Self::apply_transform(floating, transform)?;
 
         // Perform fusion based on method
         let fused = match self.params.method {
@@ -38,16 +38,16 @@ impl FusionEngine {
                 self.fusion_overlay(&reference.data, &transformed)
             }
             MultimodalityFusionMethod::Checkerboard => {
-                self.fusion_checkerboard(&reference.data, &transformed)
+                Self::fusion_checkerboard(&reference.data, &transformed)
             }
             MultimodalityFusionMethod::Difference => {
-                self.fusion_difference(&reference.data, &transformed)
+                Self::fusion_difference(&reference.data, &transformed)
             }
             MultimodalityFusionMethod::FalseColor => {
                 self.fusion_false_color(&reference.data, &transformed)
             }
             MultimodalityFusionMethod::MultiChannel => {
-                self.fusion_multi_channel(&reference.data, &transformed)
+                Self::fusion_multi_channel(&reference.data, &transformed)
             }
         };
 
@@ -59,7 +59,6 @@ impl FusionEngine {
     /// - Propagates any `KwaversError` returned by called functions.
     ///
     fn apply_transform(
-        &self,
         floating: &ImageData,
         transform: &RegistrationTransform,
     ) -> KwaversResult<Array3<f64>> {
@@ -106,7 +105,7 @@ impl FusionEngine {
     }
 
     /// Checkerboard fusion: alternating tiles
-    fn fusion_checkerboard(&self, reference: &Array3<f64>, floating: &Array3<f64>) -> Array3<f64> {
+    fn fusion_checkerboard(reference: &Array3<f64>, floating: &Array3<f64>) -> Array3<f64> {
         let [nx, ny, nz] = reference.shape();
         let tile_size = 32; // 32×32 voxel tiles
 
@@ -132,7 +131,7 @@ impl FusionEngine {
     }
 
     /// Difference fusion: subtraction (change detection)
-    fn fusion_difference(&self, reference: &Array3<f64>, floating: &Array3<f64>) -> Array3<f64> {
+    fn fusion_difference(reference: &Array3<f64>, floating: &Array3<f64>) -> Array3<f64> {
         floating.zip_map(reference, |floating_value, reference_value| {
             (floating_value - reference_value).abs()
         })
@@ -166,7 +165,7 @@ impl FusionEngine {
     ///
     /// True multi-channel output requires a 4D array [nx, ny, nz, 3].
     /// This returns a 3D weighted combination as an approximation.
-    fn fusion_multi_channel(&self, reference: &Array3<f64>, floating: &Array3<f64>) -> Array3<f64> {
+    fn fusion_multi_channel(reference: &Array3<f64>, floating: &Array3<f64>) -> Array3<f64> {
         // Weighted combination (true RGB requires 4D output format)
         reference.zip_map(floating, |reference_value, floating_value| {
             reference_value * 0.4
