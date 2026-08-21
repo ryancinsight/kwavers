@@ -6989,4 +6989,5 @@ rustdoc passes with `RUSTDOCFLAGS=-D warnings`.
 
 The post-merge workspace measurement with `-D clippy::missing_panics_doc`
 exits 0, so the `missing_panics_doc` debt-block line is removed from the root
-lint table. The next measured debt class is `unused_self` (274 sites).
+lint table. The next measured debt class is `unused_self` (228 sites), with
+107 sites in `kwavers-solver` as the current package slice.
