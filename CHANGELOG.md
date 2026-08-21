@@ -56,7 +56,36 @@
   `SimulationResult` surfaces are completed; the stale roadmap and the sprint/date process
   trailer are removed.
 
+### Fixed
+
+- **Documentation:** `kwavers-driver`'s audit slice no longer hides behind a blanket
+  `#![allow(missing_docs)]`. The allow covered the whole facade, so the crate's
+  `#![deny(missing_docs)]` never reached it and three modules — `antenna`, `crosstalk`,
+  `shorts` — shipped with no module documentation. All three are now documented from their
+  code and the allow is deleted.
+
+- **Repository hygiene:** deleted the tracked
+  `crates/kwavers-driver/src/physics/mod.rs.bak-final` backup file and fixed the ignore
+  rule that should have stopped it: the "Backup files" block matched `*.bak`, which does
+  not match a suffixed `.bak-final`. The pattern is now `*.bak*`, with `*.orig` and `*.rej`
+  added for merge leftovers.
+
+- **Documentation:** `kwavers-driver` module docs no longer carry the phased-refactor
+  narrative that produced them. `physics/mod.rs` opened as a "Phase 0 placeholder"
+  promising to migrate flat modules that no longer exist and closed 79 lines later with
+  "Phase 3 is COMPLETE"; `geometry/mod.rs` declared itself a placeholder for a migration
+  that has not started. Twelve rustdoc `# Phase N` headings rendered process narrative into
+  the published API docs. Engineering content is kept — per-module unit notes became
+  `# Units` sections, carve-out notes became cross-file impl-block notes — and phase
+  history stays in `docs/MIGRATION.md`. 83 files, comments only, net -176 lines.
+
 ### Changed
+
+- **Lint configuration:** all 24 workspace members now inherit `[workspace.lints]`.
+  `kwavers`, `kwavers-driver`, and `kwavers-python` carried no `[lints]` section and
+  inherited nothing; `kwavers` additionally re-declared `unexpected_cfgs` byte-identically
+  to the workspace table, so that duplicate is deleted in favour of inheritance. Clippy
+  reports zero warnings for all three afterwards and both CI clippy gates pass.
 
 - **Documentation:** the README single-sourcing check now exempts `publish = false`
   crates by rule instead of an allowlist. The rule follows the requirement's rationale —
@@ -64,6 +93,8 @@
   to a crate that publishes neither. `kwavers-python` is the only such crate: its README
   is the PyPI landing page for a Python reader and its `//!` docs address the Rust
   maintainer of the binding layer, so they are deliberately two documents.
+
+### Changed
 
 - **Elastic FWI runtime and structure:** Singleton-z in-plane point-force
   propagation now selects a zero-sized plane-strain mode once, avoiding the

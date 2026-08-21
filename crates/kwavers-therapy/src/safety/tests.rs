@@ -101,3 +101,47 @@ fn test_compliance_validator() {
     assert!(report.overall_compliant);
     assert_eq!(report.standard_version, "IEC 60601-2-37:2007+A1:2010");
 }
+
+/// The monitor must evaluate on its first call and rate-limit afterwards.
+///
+/// Both halves are asserted together because they are one contract, and the
+/// obvious implementation of the first half is what introduced a panic: the
+/// constructor used to backdate `last_check` to `Instant::now() -
+/// check_interval` so the interval gate would already be satisfied. Subtracting
+/// a `Duration` from an `Instant` panics on underflow, so constructing a
+/// clinical safety monitor within one check interval of the monotonic clock's
+/// origin aborted the process. `Option<Instant>` states "not yet evaluated"
+/// directly and cannot underflow.
+#[test]
+fn first_safety_check_evaluates_and_the_next_is_rate_limited() {
+    let mut monitor = ClinicalSafetyMonitor::new(ClinicalSafetyLimits::default());
+
+    let critical = ClinicalTherapyParameters {
+        frequency: 1.5 * MHZ_TO_HZ,
+        pressure: 3.0 * MPA_TO_PA,
+        duration: 600.0,
+        peak_negative_pressure: 3.0 * MPA_TO_PA,
+        treatment_duration: 600.0,
+        mechanical_index: 2.5,
+        duty_cycle: 0.5,
+        prf: 100.0,
+    };
+    let safe = ClinicalTherapyParameters {
+        pressure: MPA_TO_PA,
+        peak_negative_pressure: MPA_TO_PA,
+        mechanical_index: 1.2,
+        ..critical
+    };
+
+    // First call: evaluated, not gated. A gated first call would report the
+    // initial Normal state and silently miss a critical violation.
+    assert_eq!(
+        monitor.check_safety(&critical),
+        ClinicalSafetyLevel::Critical
+    );
+
+    // Immediately after: inside the check interval, so the stored state is
+    // returned without re-evaluating. Safe parameters must not clear the
+    // critical state yet -- that is what the rate limit means.
+    assert_eq!(monitor.check_safety(&safe), ClinicalSafetyLevel::Critical);
+}

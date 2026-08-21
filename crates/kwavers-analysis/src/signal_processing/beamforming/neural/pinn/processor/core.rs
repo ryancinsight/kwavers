@@ -3,14 +3,11 @@
 use aequitas::systems::si::units::{Hertz, MeterPerSecond};
 use kwavers_core::error::KwaversResult;
 use leto::{Array3, Array4, ArrayView3, ArrayView4};
-use std::collections::HashMap;
 
 #[cfg(feature = "pinn")]
 use kwavers_solver::interface::pinn_beamforming::{
     PinnBeamformingProvider, PinnBeamformingUncertaintyConfig,
 };
-
-use crate::signal_processing::beamforming::utils::steering::SteeringVector;
 
 use super::super::super::types::{
     NeuralBeamformingMetrics, NeuralPinnBeamformingResult, PINNBeamformingConfig,
@@ -29,8 +26,6 @@ pub struct NeuralBeamformingProcessor {
     /// PINN provider for beamforming (trait object, solver-agnostic)
     #[cfg(feature = "pinn")]
     pub(super) pinn_provider: Option<Box<dyn PinnBeamformingProvider>>,
-    /// Steering vectors cache for performance
-    pub(super) steering_cache: HashMap<(usize, usize, usize), SteeringVector>,
     /// Performance metrics
     pub(super) metrics: NeuralBeamformingMetrics,
 }
@@ -39,7 +34,6 @@ impl std::fmt::Debug for NeuralBeamformingProcessor {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("NeuralBeamformingProcessor")
             .field("config", &self.config)
-            .field("steering_cache_size", &self.steering_cache.len())
             .field("metrics", &self.metrics)
             .finish()
     }
@@ -55,7 +49,6 @@ impl NeuralBeamformingProcessor {
             config,
             #[cfg(feature = "pinn")]
             pinn_provider: None,
-            steering_cache: HashMap::new(),
             metrics: NeuralBeamformingMetrics::default(),
         })
     }
@@ -67,14 +60,6 @@ impl NeuralBeamformingProcessor {
     #[cfg(feature = "pinn")]
     pub fn set_provider(&mut self, provider: Box<dyn PinnBeamformingProvider>) {
         self.pinn_provider = Some(provider);
-    }
-
-    /// Return the number of cached steering vectors.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
-    pub fn steering_cache_len(&self) -> usize {
-        self.steering_cache.len()
     }
 
     /// Process 4D RF data volume with PINN-enhanced beamforming.

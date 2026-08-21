@@ -90,7 +90,7 @@ fn set_current_thread_affinity(affinity: &ThreadAffinity) -> KwaversResult<()> {
             }
         }
 
-        let result = sched_setaffinity(0, std::mem::size_of::<cpu_set_t>(), &set);
+        let result = sched_setaffinity(0, std::mem::size_of::<cpu_set_t>(), &raw const set);
         if result != 0 {
             return Err(KwaversError::System(
                 crate::error::SystemError::ResourceUnavailable {
