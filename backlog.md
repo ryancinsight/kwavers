@@ -975,6 +975,11 @@
   Package check, targeted `unused_self` Clippy (uncertainty path clean), Nextest (744/744), doctests
   (1/22; 21 ignored), and warning-denied rustdoc pass. The refreshed workspace `unused_self` count
   is 33 sites with 14 remaining in other analysis paths.
+- 2026-08-21 `kwavers-analysis` adaptive SLSC slice is implemented: optimal-lag estimation is an
+  associated function while adaptive configuration remains receiver-bound. Package check, targeted
+  `unused_self` Clippy (SLSC path clean), Nextest (744/744), doctests (1/22; 21 ignored), and
+  warning-denied rustdoc pass. The refreshed workspace `unused_self` count is 32 sites with 13
+  remaining in other analysis paths.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
