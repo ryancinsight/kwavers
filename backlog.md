@@ -544,6 +544,10 @@
 - 2026-08-21 hybrid validation slice merged in PR #484 (`b2aa69e6b`). The refreshed `unused_self`
   measurement is 192 sites (solver 71); the next bounded slice is the two receiver-free helpers
   in `forward/nonlinear/kzk/harmonic_tracking/tracker.rs`.
+- 2026-08-21 KZK harmonic tracker slice is implemented: waveform analysis and harmonic amplitude
+  extraction are associated functions, with configuration-dependent spectrum and shock-distance
+  logic retaining the tracker receiver. KZK tests, doctests, and warning-denied rustdoc pass; the
+  remaining solver sites stay queued.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
