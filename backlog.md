@@ -575,6 +575,13 @@
 - 2026-08-21 WENO7 limiter slice merged in PR #489 (`6738c0a69`). The refreshed `unused_self`
   measurement is 186 sites (solver 65); the next bounded slice is the receiver-free helper in
   `integration/time_integration/time_scale_separation.rs`.
+- 2026-08-21 time-scale separation slice is implemented: spatial derivative evaluation is an
+  associated function, with the analyzer caller migrated. Focused time-integration Nextest
+  `82415a86-a9ae-431e-aea4-8216e33591b4` passes 16/16 (889 solver tests skipped); the package
+  doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and the focused `unused_self`
+  scan is clean in `time_scale_separation.rs`. The increment is ready for integration; the
+  workspace debt-block line remains until a refreshed workspace measurement confirms the
+  count.
 - Two divergences from the template are recorded in `Cargo.toml` and are **not** part of this
   burn-down; changing them is a separate decision:
   - `print_stdout`/`dbg_macro` are at `warn` rather than the template's `deny`, because a
