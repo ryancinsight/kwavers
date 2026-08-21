@@ -7468,6 +7468,12 @@ its 264-byte input while the public trace API remains value-semantic. Physics ga
 (1,561/1,561 Nextest with 1 configured skip; doctests 9/13; warning-denied rustdoc). The exact
 workspace scan is 0 and its ratchet override is removed from `Cargo.toml`.
 
+The `kwavers-diagnostics` `implicit_hasher` slice generalizes the two analysis workflow
+`HashMap` parameters over `BuildHasher`, retaining caller-selected hashers and avoiding map
+reconstruction. Warning-denied package Clippy, Nextest (191/191), doctests (1 passed; 5 ignored),
+and warning-denied Rustdoc pass. The exact workspace scan reports six remaining production sites,
+all in `kwavers-driver`.
+
 Final exact-revision validation at merged revision `192eb7575` passes workspace Nextest (5,781/5,781
 with 7 configured skips) and workspace doctests with no failures. The previously recorded example
 build and mdBook test/build remain valid because the final changes are lint-only production edits and
