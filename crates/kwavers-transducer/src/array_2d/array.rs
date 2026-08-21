@@ -150,6 +150,10 @@ impl TransducerArray2D {
     }
 
     /// Set the azimuthal focus distance.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when `distance` is non-finite or not strictly positive.
     pub fn set_focus_distance(&mut self, distance: Length<f64>) -> Result<(), String> {
         let distance_m = distance.in_unit::<Meter>();
         if !distance_m.is_finite() || distance_m <= 0.0 {
@@ -171,6 +175,10 @@ impl TransducerArray2D {
     }
 
     /// Set the elevation focus distance.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when `distance` is non-finite or not strictly positive.
     pub fn set_elevation_focus_distance(&mut self, distance: Length<f64>) -> Result<(), String> {
         let distance_m = distance.in_unit::<Meter>();
         if !distance_m.is_finite() || distance_m <= 0.0 {
@@ -190,6 +198,10 @@ impl TransducerArray2D {
     }
 
     /// Set the steering angle in the coherent SI radian unit.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when `angle` is non-finite.
     pub fn set_steering_angle(&mut self, angle: Angle<f64>) -> Result<(), String> {
         let angle_rad = angle.in_unit::<Radian>();
         if !angle_rad.is_finite() {
@@ -329,6 +341,10 @@ impl TransducerArray2D {
     }
 
     /// Set center position.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when any center-position coordinate is non-finite.
     pub fn set_center_position(&mut self, position: [Length<f64>; 3]) -> Result<(), String> {
         if position
             .iter()
