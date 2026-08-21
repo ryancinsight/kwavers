@@ -6944,3 +6944,7 @@ microbubble processing, and theorem validation. Strict offline Clippy with
 `-D clippy::missing_panics_doc -D warnings` passes; Nextest run
 `8b9787a2-242f-429f-ab29-1c0cc6301ccb` passes 744/744; doctests pass 1/1 (21
 ignored); and rustdoc passes with `RUSTDOCFLAGS=-D warnings`.
+
+The refreshed workspace measurement after this merge found 11
+`missing_panics_doc` sites in `kwavers-diagnostics` and 11 in `kwavers-therapy`;
+the diagnostics package is the current ratchet slice.
