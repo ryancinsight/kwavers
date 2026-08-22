@@ -8,6 +8,7 @@ use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_source::Source;
 use leto::Array4;
+use std::sync::Arc;
 use std::time::Instant;
 
 impl PluginManager {
@@ -44,7 +45,7 @@ impl PluginManager {
         fields: &mut Array4<f64>,
         grid: &Grid,
         medium: &dyn Medium,
-        sources: &[Box<dyn Source>],
+        sources: &[Arc<dyn Source>],
         boundary: &mut dyn Boundary,
         dt: f64,
         t: f64,
@@ -84,7 +85,7 @@ impl PluginManager {
         fields: &mut Array4<f64>,
         grid: &Grid,
         medium: &dyn Medium,
-        sources: &[Box<dyn Source>],
+        sources: &[Arc<dyn Source>],
         boundary: &mut dyn Boundary,
         dt: f64,
         t: f64,

@@ -4,6 +4,23 @@
 
 ### Added
 
+- **[major] Plugins now receive the sources they are given.**
+  `PluginManager::execute` threaded its source list to every plugin through
+  `PluginContext`, and `PSTDPlugin` and `FdtdPlugin` both ignored it — each
+  constructed its solver with an empty `GridSource` and never read the context.
+  A caller who supplied sources and drove either solver through the plugin path
+  got a simulation that ran, returned `Ok`, and was never driven; nothing
+  failed, so nothing said so. The solver machinery was complete
+  (`add_source_arc` through `dynamic_sources`, consumed by the stepper) — only
+  the plugin's call was missing.
+
+  `PluginContext::sources` changes from `&[Box<dyn Source>]` to
+  `&[Arc<dyn Source>]`, because the stepper queries `amplitude(t)` every step
+  and needs ownership outliving the context borrow. The driven k-Wave reference
+  case now validates both routes against one stored field at `2.58e-3` /
+  `r = 0.999996674` — identical digits — and the two agree with each other to
+  `4.0e-13`. See [ADR 121](docs/adr/121-plugin-source-forwarding.md).
+
 - **Validation:** The k-Wave parity claim is now reproducible from a clean clone.
   `crates/kwavers/tests/kwave_reference_parity.rs` compares the k-space
   pseudospectral solver against committed k-Wave reference fields

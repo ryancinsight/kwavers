@@ -17,6 +17,7 @@ pub use execution::{ExecutionStrategy, ParallelStrategy, SequentialStrategy};
 pub use fields::PluginFields;
 pub use manager::PluginManager;
 pub use metadata::PluginMetadata;
+use std::sync::Arc;
 
 use kwavers_boundary::Boundary;
 use kwavers_core::error::KwaversResult;
@@ -67,7 +68,7 @@ pub struct PluginContext<'a> {
     /// Additional fields for plugin communication
     pub extra_fields: &'a PluginFields,
     /// Acoustic sources in the simulation
-    pub sources: &'a [Box<dyn Source>],
+    pub sources: &'a [Arc<dyn Source>],
     /// Boundary conditions
     pub boundary: &'a mut dyn Boundary,
 }
