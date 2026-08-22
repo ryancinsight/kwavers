@@ -4,6 +4,21 @@
 
 ### Added
 
+- **[major] A caller's absorption coefficient now reaches the solver.**
+  `AbsorptionMode::PowerLaw::alpha_coeff` becomes `Option<f64>`: `Some` is an
+  explicit uniform request whose `alpha_power` is authoritative with it, `None`
+  hands both parameters to the medium, read per voxel. Previously both resolved
+  against sentinels in the medium's favour, and `HomogeneousMedium::new` seeds
+  water's coefficient and a `1.05` exponent — neither of which is a sentinel —
+  so a caller asking for `40 dB/(MHz^1.5 cm)` silently got water's `0.0022` at
+  `y = 1.05`, indistinguishable from a lossless run. Any absorption result
+  configured through `PSTDConfig` alone was computed at water's values.
+
+  The two parameters are resolved together because absorption is
+  `alpha_0 f^y`, and taking the coefficient from one owner and the exponent from
+  another evaluates neither party's power law. See
+  [ADR 120](docs/adr/120-absorption-coefficient-ownership.md).
+
 - **[major] Plugins now receive the sources they are given.**
   `PluginManager::execute` threaded its source list to every plugin through
   `PluginContext`, and `PSTDPlugin` and `FdtdPlugin` both ignored it — each
