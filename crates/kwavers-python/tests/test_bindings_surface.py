@@ -414,6 +414,75 @@ def test_simulation_calls_submitted_to_thread_pool_preserve_input_sensitive_valu
     assert np.linalg.norm(high - low) > 0.0
 
 
+def test_thermal_simulation_run_releases_gil_with_returned_value_correctness():
+    """Runtime overlap oracle for the detached ``ThermalSimulation::run`` slice.
+
+    Complements the static ``py.detach`` evidence at the thermal binding's run
+    path: while one thread executes ``ThermalSimulation.run``, the main thread
+    performs pure-Python GIL-bound work and must make substantial progress —
+    only possible if the binding released the GIL around the diffusion time
+    loop. Returned-value correctness is proven on the same slice: identical
+    inputs produce bit-identical temperature fields, and a doubled heat source
+    produces exactly twice the steady-state temperature rise above the initial
+    state (linear diffusion).
+    """
+    import threading
+    import time
+
+    popt = dict(
+        nx=48, ny=48, nz=48,
+        dx=5.0e-4, dy=5.0e-4, dz=5.0e-4,
+        thermal_conductivity=0.5,
+        density=1000.0,
+        specific_heat=3600.0,
+        initial_temperature=37.0,
+        track_thermal_dose=False,
+    )
+
+    def make(heat_source):
+        sim = kw.ThermalSimulation(**popt)
+        return sim.run(time_steps=200, dt=1.0e-3, heat_source=heat_source)
+
+    progress = [0]
+    stop = threading.Event()
+
+    def spin():
+        # Pure-Python counting loop: every increment requires the GIL.
+        while not stop.is_set():
+            for _ in range(1000):
+                progress[0] += 1
+
+    spinner = threading.Thread(target=spin, daemon=True)
+    spinner.start()
+    heat = np.full((48, 48, 48), 1.0e4, dtype=np.float64)  # W/m³
+    t0 = time.perf_counter()
+    result = make(heat)
+    wall = time.perf_counter() - t0
+    stop.set()
+    spinner.join()
+
+    # The window must be long enough for the oracle to be meaningful.
+    assert wall > 0.5, f"thermal solve window too short ({wall:.3f}s)"
+    assert result.temperature.shape == (48, 48, 48)
+    assert np.all(np.isfinite(result.temperature))
+    # If the GIL had been held for the whole solve, the main thread could not
+    # have executed millions of pure-Python increments during the window.
+    assert progress[0] > 1_000_000, (
+        f"main-thread progress {progress[0]} during {wall:.2f}s thermal solve "
+        "indicates the GIL was not released"
+    )
+
+    # Returned-value correctness: determinism and linear response to a doubled
+    # heat source. Delta = final - initial is linear in Q for diffusion.
+    baseline = make(heat)
+    doubled = make(2.0 * heat)
+    assert np.array_equal(result.temperature, baseline.temperature)
+    delta = doubled.temperature - baseline.temperature
+    assert np.all(delta > 0.0), "doubled heat source must raise temperature"
+    ratio = float(np.max(delta) / np.max(baseline.temperature - 37.0))
+    assert abs(ratio - 1.0) < 1.0e-6, f"heat linearity ratio {ratio} != 1"
+
+
 def test_simulation_exposes_kspace_correction_mode():
     grid = kw.Grid(nx=8, ny=8, nz=8, dx=0.1e-3, dy=0.1e-3, dz=0.1e-3)
     medium = kw.Medium.homogeneous(sound_speed=1500.0, density=1000.0)
