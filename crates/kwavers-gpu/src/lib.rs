@@ -29,6 +29,7 @@ pub mod visualization;
 
 // CPU-vs-GPU differential equivalence validation, moved out of solver with the
 // backend it exercises.
+#[cfg(feature = "gpu")]
 pub mod validation;
 
 // GPU-resident PSTD solver, k-space corrected pseudospectral. Solver keeps only

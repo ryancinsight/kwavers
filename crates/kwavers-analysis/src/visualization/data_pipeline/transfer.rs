@@ -29,6 +29,7 @@ pub enum TransferMode {
 /// Transfer options
 #[derive(Debug, Clone)]
 pub struct TransferOptions {
+    /// Scheduling and synchronization mode used by the provider.
     pub mode: TransferMode,
 }
 
@@ -84,10 +85,14 @@ impl DataPipeline {
     /// metadata (dimensions, value range), and hands contiguous f32 samples to
     /// the provider's device buffers.
     ///
+    /// This method is synchronous because the provider contract includes an
+    /// explicit blocking transfer mode. An asynchronous application runtime
+    /// must invoke blocking-mode transfers on its blocking executor.
+    ///
     /// # Errors
     ///
     /// Propagates any [`KwaversError`] returned by the provider.
-    pub async fn transfer_field(
+    pub fn transfer_field(
         &mut self,
         field_type: UnifiedFieldType,
         data: &Array3<f64>,
@@ -139,18 +144,18 @@ impl DataPipeline {
         Ok(())
     }
 
-    /// Upload field data to GPU (alias for transfer_field)
+    /// Upload field data through the provider (alias for [`Self::transfer_field`]).
     ///
     /// # Errors
     ///
     /// Propagates any [`KwaversError`] returned by the provider.
     ///
-    pub async fn upload_field(
+    pub fn upload_field(
         &mut self,
         data: &Array3<f64>,
         field_type: UnifiedFieldType,
     ) -> KwaversResult<()> {
-        self.transfer_field(field_type, data).await
+        self.transfer_field(field_type, data)
     }
 
     /// Set processing operation for a field type
@@ -252,7 +257,8 @@ mod tests {
     fn single_field_transfer_reaches_provider_with_f32_samples() {
         let (provider, log) = RecordingProvider::new();
         let mut pipeline = DataPipeline::new(Box::new(provider));
-        pollster::block_on(pipeline.transfer_field(UnifiedFieldType::Pressure, &sample_field(1.5)))
+        pipeline
+            .transfer_field(UnifiedFieldType::Pressure, &sample_field(1.5))
             .expect("single-field transfer succeeds");
 
         let log = log.lock().expect("upload log");
@@ -267,12 +273,12 @@ mod tests {
     fn multi_field_transfers_preserve_distinct_field_identity() {
         let (provider, log) = RecordingProvider::new();
         let mut pipeline = DataPipeline::new(Box::new(provider));
-        pollster::block_on(pipeline.transfer_field(UnifiedFieldType::Pressure, &sample_field(1.0)))
+        pipeline
+            .transfer_field(UnifiedFieldType::Pressure, &sample_field(1.0))
             .expect("pressure transfer succeeds");
-        pollster::block_on(
-            pipeline.transfer_field(UnifiedFieldType::Temperature, &sample_field(2.0)),
-        )
-        .expect("temperature transfer succeeds");
+        pipeline
+            .transfer_field(UnifiedFieldType::Temperature, &sample_field(2.0))
+            .expect("temperature transfer succeeds");
 
         let log = log.lock().expect("upload log");
         assert_eq!(log.len(), 2);
@@ -284,9 +290,11 @@ mod tests {
     fn distinct_input_values_update_metadata_and_samples() {
         let (provider, log) = RecordingProvider::new();
         let mut pipeline = DataPipeline::new(Box::new(provider));
-        pollster::block_on(pipeline.transfer_field(UnifiedFieldType::Pressure, &sample_field(1.0)))
+        pipeline
+            .transfer_field(UnifiedFieldType::Pressure, &sample_field(1.0))
             .expect("first transfer succeeds");
-        pollster::block_on(pipeline.transfer_field(UnifiedFieldType::Pressure, &sample_field(4.0)))
+        pipeline
+            .transfer_field(UnifiedFieldType::Pressure, &sample_field(4.0))
             .expect("second transfer succeeds");
 
         assert_eq!(
@@ -307,9 +315,7 @@ mod tests {
         provider.fail_with = Some("GPU adapter for visualization");
         let mut pipeline = DataPipeline::new(Box::new(provider));
 
-        let result = pollster::block_on(
-            pipeline.transfer_field(UnifiedFieldType::Pressure, &sample_field(1.0)),
-        );
+        let result = pipeline.transfer_field(UnifiedFieldType::Pressure, &sample_field(1.0));
         assert!(matches!(
             result,
             Err(KwaversError::System(
@@ -322,7 +328,8 @@ mod tests {
     fn statistics_record_bytes_and_calls() {
         let (provider, _) = RecordingProvider::new();
         let mut pipeline = DataPipeline::new(Box::new(provider));
-        pollster::block_on(pipeline.transfer_field(UnifiedFieldType::Pressure, &sample_field(1.0)))
+        pipeline
+            .transfer_field(UnifiedFieldType::Pressure, &sample_field(1.0))
             .expect("transfer succeeds");
 
         let stats = pipeline

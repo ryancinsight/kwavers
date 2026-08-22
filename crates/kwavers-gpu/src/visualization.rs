@@ -214,50 +214,56 @@ impl VisualizationTransferProvider for HephaestusVisualizationProvider {
                 message: "visualization device buffer size overflows usize".to_string(),
             })?;
 
-        let replacement = match self.fields.entry(field_type) {
-            std::collections::hash_map::Entry::Occupied(entry) => {
-                if entry.get().bytes == new_bytes {
-                    None
-                } else {
-                    Some((
-                        entry.get().bytes,
-                        FieldBuffers::allocate(self.device.provider(), samples.len())?,
-                    ))
+        let buffer = {
+            let entry = self.fields.entry(field_type);
+            let buffers = match entry {
+                std::collections::hash_map::Entry::Occupied(mut entry) => {
+                    if entry.get().bytes != new_bytes {
+                        let previous_allocation =
+                            entry.get().bytes.checked_mul(2).ok_or_else(|| {
+                                KwaversError::ResourceLimitExceeded {
+                                    message: "visualization memory accounting overflowed"
+                                        .to_string(),
+                                }
+                            })?;
+                        let new_allocation = new_bytes.checked_mul(2).ok_or_else(|| {
+                            KwaversError::ResourceLimitExceeded {
+                                message: "visualization memory accounting overflowed".to_string(),
+                            }
+                        })?;
+                        let updated_memory = self
+                            .memory_bytes
+                            .checked_sub(previous_allocation)
+                            .and_then(|bytes| bytes.checked_add(new_allocation))
+                            .ok_or_else(|| KwaversError::ResourceLimitExceeded {
+                                message: "visualization memory accounting overflowed".to_string(),
+                            })?;
+                        let replacement =
+                            FieldBuffers::allocate(self.device.provider(), samples.len())?;
+                        entry.insert(replacement);
+                        self.memory_bytes = updated_memory;
+                    }
+                    entry.into_mut()
                 }
-            }
-            std::collections::hash_map::Entry::Vacant(_) => Some((
-                0,
-                FieldBuffers::allocate(self.device.provider(), samples.len())?,
-            )),
-        };
-
-        if let Some((previous_bytes, buffers)) = replacement {
-            self.fields.insert(field_type, buffers);
-            let previous_allocation = previous_bytes.checked_mul(2).ok_or_else(|| {
-                KwaversError::ResourceLimitExceeded {
-                    message: "visualization memory accounting overflowed".to_string(),
-                }
-            })?;
-            let new_allocation =
-                new_bytes
-                    .checked_mul(2)
-                    .ok_or_else(|| KwaversError::ResourceLimitExceeded {
-                        message: "visualization memory accounting overflowed".to_string(),
+                std::collections::hash_map::Entry::Vacant(entry) => {
+                    let new_allocation = new_bytes.checked_mul(2).ok_or_else(|| {
+                        KwaversError::ResourceLimitExceeded {
+                            message: "visualization memory accounting overflowed".to_string(),
+                        }
                     })?;
-            self.memory_bytes = self
-                .memory_bytes
-                .checked_sub(previous_allocation)
-                .and_then(|bytes| bytes.checked_add(new_allocation))
-                .ok_or_else(|| KwaversError::ResourceLimitExceeded {
-                    message: "visualization memory accounting overflowed".to_string(),
-                })?;
-        }
-
-        let buffer = self
-            .fields
-            .get_mut(&field_type)
-            .ok_or_else(|| KwaversError::InvalidInput("visualization buffer missing".to_string()))?
-            .select(mode);
+                    let updated_memory =
+                        self.memory_bytes
+                            .checked_add(new_allocation)
+                            .ok_or_else(|| KwaversError::ResourceLimitExceeded {
+                                message: "visualization memory accounting overflowed".to_string(),
+                            })?;
+                    let buffers = FieldBuffers::allocate(self.device.provider(), samples.len())?;
+                    self.memory_bytes = updated_memory;
+                    entry.insert(buffers)
+                }
+            };
+            buffers.select(mode)
+        };
         self.device
             .provider()
             .write_sub_buffer(buffer, 0, samples)
@@ -354,6 +360,24 @@ mod tests {
                 TransferMode::Streaming,
             )
             .expect("device-backed streaming transfer succeeds");
+        assert_eq!(provider.fields.len(), 2);
+        assert_eq!(
+            provider.fields[&UnifiedFieldType::Pressure].bytes,
+            16 * std::mem::size_of::<f32>()
+        );
+        assert_eq!(
+            provider.fields[&UnifiedFieldType::Temperature].bytes,
+            16 * std::mem::size_of::<f32>()
+        );
+        assert!(!provider.fields[&UnifiedFieldType::Temperature].next_is_first);
+        provider
+            .transfer_field(
+                UnifiedFieldType::Temperature,
+                &[0.25f32; 16],
+                TransferMode::Streaming,
+            )
+            .expect("second device-backed streaming transfer succeeds");
+        assert!(provider.fields[&UnifiedFieldType::Temperature].next_is_first);
         assert!(provider.memory_usage() >= 32 * std::mem::size_of::<f32>());
     }
 }

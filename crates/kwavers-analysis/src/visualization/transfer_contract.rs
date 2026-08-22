@@ -8,7 +8,7 @@
 //!
 //! This seam is intentionally minimal: every role here has a current caller in
 //! the visualization pipeline. Unavailable GPU capability surfaces as the
-//! typed [`KwaversError::System`] resource-unavailable error from the
+//! typed [`kwavers_core::error::KwaversError::System`] resource-unavailable error from the
 //! provider's constructor; a requested GPU operation never degrades to CPU
 //! execution.
 

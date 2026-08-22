@@ -52,6 +52,27 @@ assert_eq!(info["name"], "kwavers");
 assert!(info.contains_key("version"));
 ```
 
+With `gpu-visualization`, application setup selects the provider explicitly and
+injects it into the analysis engine. `Hephaestus` acquires the real GPU device;
+`Leto` keeps the transfer on the host path.
+
+```rust,ignore
+use kwavers::visualization::{create_visualization_provider, VisualizationBackend};
+use kwavers_analysis::visualization::{VisualizationConfig, VisualizationEngine};
+
+async fn configure() -> Result<(), Box<dyn std::error::Error>> {
+    let mut engine = VisualizationEngine::create(VisualizationConfig::default())?;
+    let provider = create_visualization_provider(VisualizationBackend::Hephaestus)?;
+    engine.set_transfer_provider(provider);
+    engine.initialize_gpu().await?;
+    Ok(())
+}
+```
+
+Replace `VisualizationBackend::Hephaestus` with
+`VisualizationBackend::Leto` to select the host provider. A failed Hephaestus
+acquisition is returned to the caller; it never silently selects Leto.
+
 ## Documentation
 
 - API reference: <https://docs.rs/kwavers>

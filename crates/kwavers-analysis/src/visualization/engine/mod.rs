@@ -25,6 +25,14 @@ use super::config::MILLISECONDS_PER_SECOND;
 #[cfg(feature = "gpu-visualization")]
 use super::{controls, data_pipeline, renderer};
 
+#[cfg(feature = "gpu-visualization")]
+fn missing_transfer_provider_error() -> KwaversError {
+    KwaversError::System(kwavers_core::error::SystemError::FeatureNotAvailable {
+        feature: "gpu-visualization".to_string(),
+        reason: "no transfer provider injected; call set_transfer_provider with a provider from the GPU boundary first".to_string(),
+    })
+}
+
 /// Main visualization engine
 #[derive(Debug)]
 pub struct VisualizationEngine {
@@ -81,10 +89,6 @@ impl VisualizationEngine {
         })
     }
 
-    /// Initialize GPU resources
-    /// # Errors
-    /// - Propagates any `KwaversError` returned by called functions.
-    ///
     /// Inject a provider-neutral transfer provider.
     ///
     /// The engine cannot construct device-backed providers itself: concrete
@@ -115,23 +119,22 @@ impl VisualizationEngine {
 
         #[cfg(feature = "gpu-visualization")]
         {
-            let provider = self.transfer_provider.take().ok_or_else(|| {
-                KwaversError::System(kwavers_core::error::SystemError::FeatureNotAvailable {
-                    feature: "gpu-visualization".to_string(),
-                    reason: "no transfer provider injected; call set_transfer_provider with a \
-                             provider from the GPU boundary first"
-                        .to_string(),
-                })
-            })?;
+            if self.transfer_provider.is_none() {
+                return Err(missing_transfer_provider_error());
+            }
 
             // Initialize renderer (CPU rasterization path)
-            self.renderer = Some(renderer::Renderer3D::create(self.config.clone())?);
+            let renderer = renderer::Renderer3D::create(self.config.clone())?;
+            let controls = controls::InteractiveControls::create(&self.config)?;
+            let provider = self
+                .transfer_provider
+                .take()
+                .ok_or_else(missing_transfer_provider_error)?;
 
             // Wrap the injected provider in the provider-generic pipeline
+            self.renderer = Some(renderer);
             self.data_pipeline = Some(data_pipeline::DataPipeline::new(provider));
-
-            // Initialize interactive controls
-            self.controls = Some(controls::InteractiveControls::create(&self.config)?);
+            self.controls = Some(controls);
         }
 
         info!("GPU visualization initialization complete");
@@ -156,7 +159,7 @@ impl VisualizationEngine {
             {
                 // Transfer field data to GPU
                 let transfer_start = Instant::now();
-                pipeline.upload_field(field, field_type).await?;
+                pipeline.upload_field(field, field_type)?;
                 let transfer_time =
                     transfer_start.elapsed().as_secs_f32() * MILLISECONDS_PER_SECOND as f32;
 
@@ -234,7 +237,7 @@ impl VisualizationEngine {
                 let mut contiguous_fields = Vec::with_capacity(field_count);
                 for (i, &field_type) in field_types.iter().enumerate() {
                     let field = fields.index_axis::<3>(3, i)?.to_contiguous();
-                    pipeline.upload_field(&field, field_type).await?;
+                    pipeline.upload_field(&field, field_type)?;
                     contiguous_fields.push(field);
                 }
                 let transfer_time =
