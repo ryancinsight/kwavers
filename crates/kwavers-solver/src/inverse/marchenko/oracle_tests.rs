@@ -120,7 +120,7 @@ fn cosine(a: &[f64], b: &[f64], lo: usize, hi: usize) -> f64 {
 /// # Panics
 /// - Panics on any assertion failure or solve error.
 #[test]
-#[ignore = "redatum convention not yet reference-validated; see ADR 019 (corr≈0.14)"]
+#[ignore = "redatum convention not yet reference-validated; see ADR 019 (corr≈0.14), tracked as a correctness item (KW-GAP-2026-08-22-MARCHENKO). Re-enable trigger: the redatumed trace matches the SA-engine Green's function per ADR 019's work list (window geometry, f1+ convention, time alignment, T_d normalization)"]
 fn redatum_matches_engine_green_function() {
     let nx = 140usize;
     let s0 = SPONGE + 8; // acquisition surface (just inside the transparent edge)

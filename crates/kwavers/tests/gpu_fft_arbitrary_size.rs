@@ -170,31 +170,31 @@ fn cross_validate_1d(n: usize, rel_tol: f64) {
 // Non-power-of-2 roundtrip tests
 
 #[test]
-#[ignore = "requires GPU device"]
+#[ignore = "requires a GPU device; kept out of headless CI and run on the scheduled self-hosted CUDA job (gpu-parity.yml) via `--run-ignored ignored-only`. Re-enable trigger: a GPU runner is wired into CI"]
 fn test_roundtrip_n12() {
     roundtrip_1d_in_3d(12, 1e-5);
 }
 
 #[test]
-#[ignore = "requires GPU device"]
+#[ignore = "requires a GPU device; kept out of headless CI and run on the scheduled self-hosted CUDA job (gpu-parity.yml) via `--run-ignored ignored-only`. Re-enable trigger: a GPU runner is wired into CI"]
 fn test_roundtrip_n30() {
     roundtrip_1d_in_3d(30, 1e-5);
 }
 
 #[test]
-#[ignore = "requires GPU device"]
+#[ignore = "requires a GPU device; kept out of headless CI and run on the scheduled self-hosted CUDA job (gpu-parity.yml) via `--run-ignored ignored-only`. Re-enable trigger: a GPU runner is wired into CI"]
 fn test_roundtrip_n48() {
     roundtrip_1d_in_3d(48, 1e-5);
 }
 
 #[test]
-#[ignore = "requires GPU device"]
+#[ignore = "requires a GPU device; kept out of headless CI and run on the scheduled self-hosted CUDA job (gpu-parity.yml) via `--run-ignored ignored-only`. Re-enable trigger: a GPU runner is wired into CI"]
 fn test_roundtrip_n100() {
     roundtrip_1d_in_3d(100, 1e-5);
 }
 
 #[test]
-#[ignore = "requires GPU device"]
+#[ignore = "requires a GPU device; kept out of headless CI and run on the scheduled self-hosted CUDA job (gpu-parity.yml) via `--run-ignored ignored-only`. Re-enable trigger: a GPU runner is wired into CI"]
 fn test_roundtrip_n200() {
     roundtrip_1d_in_3d(200, 1e-5);
 }
@@ -202,19 +202,19 @@ fn test_roundtrip_n200() {
 // Power-of-2 regression tests (radix-2 path)
 
 #[test]
-#[ignore = "requires GPU device"]
+#[ignore = "requires a GPU device; kept out of headless CI and run on the scheduled self-hosted CUDA job (gpu-parity.yml) via `--run-ignored ignored-only`. Re-enable trigger: a GPU runner is wired into CI"]
 fn test_roundtrip_n16() {
     roundtrip_1d_in_3d(16, 1e-5);
 }
 
 #[test]
-#[ignore = "requires GPU device"]
+#[ignore = "requires a GPU device; kept out of headless CI and run on the scheduled self-hosted CUDA job (gpu-parity.yml) via `--run-ignored ignored-only`. Re-enable trigger: a GPU runner is wired into CI"]
 fn test_roundtrip_n32() {
     roundtrip_1d_in_3d(32, 1e-5);
 }
 
 #[test]
-#[ignore = "requires GPU device"]
+#[ignore = "requires a GPU device; kept out of headless CI and run on the scheduled self-hosted CUDA job (gpu-parity.yml) via `--run-ignored ignored-only`. Re-enable trigger: a GPU runner is wired into CI"]
 fn test_roundtrip_n64() {
     roundtrip_1d_in_3d(64, 1e-5);
 }
@@ -222,31 +222,31 @@ fn test_roundtrip_n64() {
 // CPU cross-validation tests (non-power-of-2)
 
 #[test]
-#[ignore = "requires GPU device"]
+#[ignore = "requires a GPU device; kept out of headless CI and run on the scheduled self-hosted CUDA job (gpu-parity.yml) via `--run-ignored ignored-only`. Re-enable trigger: a GPU runner is wired into CI"]
 fn test_cross_validate_n12() {
     cross_validate_1d(12, 5e-6);
 }
 
 #[test]
-#[ignore = "requires GPU device"]
+#[ignore = "requires a GPU device; kept out of headless CI and run on the scheduled self-hosted CUDA job (gpu-parity.yml) via `--run-ignored ignored-only`. Re-enable trigger: a GPU runner is wired into CI"]
 fn test_cross_validate_n30() {
     cross_validate_1d(30, 5e-6);
 }
 
 #[test]
-#[ignore = "requires GPU device"]
+#[ignore = "requires a GPU device; kept out of headless CI and run on the scheduled self-hosted CUDA job (gpu-parity.yml) via `--run-ignored ignored-only`. Re-enable trigger: a GPU runner is wired into CI"]
 fn test_cross_validate_n48() {
     cross_validate_1d(48, 5e-6);
 }
 
 #[test]
-#[ignore = "requires GPU device"]
+#[ignore = "requires a GPU device; kept out of headless CI and run on the scheduled self-hosted CUDA job (gpu-parity.yml) via `--run-ignored ignored-only`. Re-enable trigger: a GPU runner is wired into CI"]
 fn test_cross_validate_n100() {
     cross_validate_1d(100, 5e-6);
 }
 
 #[test]
-#[ignore = "requires GPU device"]
+#[ignore = "requires a GPU device; kept out of headless CI and run on the scheduled self-hosted CUDA job (gpu-parity.yml) via `--run-ignored ignored-only`. Re-enable trigger: a GPU runner is wired into CI"]
 fn test_cross_validate_n200() {
     cross_validate_1d(200, 5e-6);
 }
@@ -254,14 +254,14 @@ fn test_cross_validate_n200() {
 // CPU cross-validation tests (power-of-2 regression)
 
 #[test]
-#[ignore = "requires GPU device"]
+#[ignore = "requires a GPU device; kept out of headless CI and run on the scheduled self-hosted CUDA job (gpu-parity.yml) via `--run-ignored ignored-only`. Re-enable trigger: a GPU runner is wired into CI"]
 fn test_cross_validate_n64() {
     cross_validate_1d(64, 5e-6);
 }
 
 /// Parseval's theorem: ||FFT(x)||² / N ≈ ||x||² within 1e-5.
 #[test]
-#[ignore = "requires GPU device"]
+#[ignore = "requires a GPU device; kept out of headless CI and run on the scheduled self-hosted CUDA job (gpu-parity.yml) via `--run-ignored ignored-only`. Re-enable trigger: a GPU runner is wired into CI"]
 fn test_parseval_n30() {
     let n = 30;
     let Some(gpu) = try_gpu_fft_plan(n, 1, 1) else {
