@@ -390,7 +390,10 @@ mod end_to_end_tests {
     use super::*;
 
     #[test]
-    #[ignore = "Long-running end-to-end workflow; excluded under nextest per-test 30s timeout policy"]
+    #[ignore = "End-to-end workflow; measured 55 s on 2026-08-22 (opt-level 1), beyond the default \
+                60 s per-test budget. Runs in the heavy-validation CI job via `cargo nextest run \
+                --profile heavy --run-ignored ignored-only` (derived budget 300 s). Re-enable \
+                trigger: remove the ignore when the test fits the default 60 s budget."]
     fn test_nl_swe_workflow() {
         // Create simulation setup
         let grid = Grid::new(16, 16, 16, 0.001, 0.001, 0.001).unwrap();

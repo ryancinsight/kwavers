@@ -124,8 +124,14 @@ fn test_analytical_homogeneous_validation() {
 }
 
 /// Test volumetric phantom with known inclusions
+///
+/// KNOWN DIVERGENCE (measured 2026-08-22, 15 s): background mean
+/// reconstruction error is 1648% against the asserted <30% bound — the
+/// SWE elasticity reconstruction is off by ~16× in background regions.
+/// Tracked as KW-GAP-2026-08-22-SWERECON; re-enable when the
+/// reconstruction error meets the asserted bounds.
 #[test]
-#[ignore = "Long-running volumetric phantom validation; excluded under nextest per-test 30s timeout policy"]
+#[ignore = "Correctness divergence: background reconstruction error 1648% vs <30% asserted (measured 2026-08-22). Tracked as KW-GAP-2026-08-22-SWERECON; re-enable trigger: background mean error < 30% and inclusion mean error < 40%"]
 fn test_volumetric_phantom_validation() {
     println!("Testing volumetric phantom validation...");
 
@@ -183,8 +189,13 @@ fn test_volumetric_phantom_validation() {
 }
 
 /// Test clinical accuracy for liver fibrosis staging
+///
+/// KNOWN DIVERGENCE (measured 2026-08-22, 17 s): reconstructed stiffness
+/// exceeds the fibrosis-stage range ("Stiffness too high"). Tracked as
+/// KW-GAP-2026-08-22-SWERECON; re-enable when the reconstruction falls
+/// within the asserted stage ranges.
 #[test]
-#[ignore = "Long-running clinical-style validation; excluded under nextest per-test 30s timeout policy"]
+#[ignore = "Correctness divergence: reconstructed stiffness too high for the fibrosis phantom (measured 2026-08-22). Tracked as KW-GAP-2026-08-22-SWERECON; re-enable trigger: reconstructed stiffness lands in the asserted fibrosis-stage ranges"]
 fn test_clinical_liver_fibrosis_accuracy() {
     println!("Testing clinical accuracy for liver fibrosis staging...");
 
@@ -293,8 +304,11 @@ fn test_robustness_edge_cases() {
 }
 
 /// Benchmark performance scaling
+///
+/// Measured 2026-08-22: 25.4 s under the heavy profile (serial). Fits the
+/// default 60 s per-test budget; serialized with the other CPU-saturating
+/// swe tests via the `full-grid-sim` nextest group. Re-enabled.
 #[test]
-#[ignore = "Long-running benchmark-style validation; excluded under nextest per-test 30s timeout policy"]
 fn test_performance_scaling() {
     println!("Testing performance scaling...");
 
@@ -349,8 +363,11 @@ fn test_performance_scaling() {
 }
 
 /// Test literature benchmark comparison
+///
+/// Measured 2026-08-22: 17.5 s under the heavy profile (serial). Fits the
+/// default 60 s per-test budget; serialized with the other CPU-saturating
+/// swe tests via the `full-grid-sim` nextest group. Re-enabled.
 #[test]
-#[ignore = "Long-running benchmark-style validation; excluded under nextest per-test 30s timeout policy"]
 fn test_literature_benchmark_comparison() {
     println!("Testing literature benchmark comparison...");
 
