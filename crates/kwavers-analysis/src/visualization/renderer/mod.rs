@@ -2,14 +2,10 @@
 //!
 //! This module implements high-performance 3D rendering for scientific visualization.
 
-pub mod gpu;
 pub mod isosurface;
-pub mod uniforms;
 pub mod volume;
 
-pub use gpu::RendererGpuContext;
 pub use isosurface::IsosurfaceExtractor;
-pub use uniforms::VolumeUniforms;
 pub use volume::VolumeRenderer;
 
 use crate::visualization::{RenderQuality, VisualizationConfig};
@@ -24,7 +20,6 @@ pub struct Renderer3D {
     config: VisualizationConfig,
     volume: VolumeRenderer,
     isosurface: IsosurfaceExtractor,
-    gpu: Option<RendererGpuContext>,
 }
 
 impl Renderer3D {
@@ -36,17 +31,10 @@ impl Renderer3D {
         let volume = VolumeRenderer::new(&config)?;
         let isosurface = IsosurfaceExtractor::new(&config)?;
 
-        let gpu = if config.gpu_enabled {
-            Some(RendererGpuContext::new(&config)?)
-        } else {
-            None
-        };
-
         Ok(Self {
             config,
             volume,
             isosurface,
-            gpu,
         })
     }
 
@@ -87,9 +75,7 @@ impl Renderer3D {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn memory_usage(&self) -> usize {
-        self.volume.memory_usage()
-            + self.isosurface.memory_usage()
-            + self.gpu.as_ref().map_or(0, |g| g.memory_usage())
+        self.volume.memory_usage() + self.isosurface.memory_usage()
     }
 
     /// Create a new renderer (alias for new)
