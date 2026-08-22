@@ -44,7 +44,7 @@ use kwavers_solver::fdtd::{FdtdConfig, FdtdPlugin};
 use kwavers_solver::plugin::PluginManager;
 use kwavers_solver::pstd::numerics::spectral_correction::SpectralCorrectionMethod;
 use kwavers_solver::pstd::{PSTDConfig, PSTDPlugin, PSTDSolver};
-use kwavers_source::{GridSource, SourceMode};
+use kwavers_source::{GridSource, Source, SourceMode};
 use leto::{Array2, Array3, Array4};
 use serde::Deserialize;
 
@@ -518,6 +518,116 @@ fn run_pstd_driven(
     let mut solver = PSTDSolver::new(config, grid.clone(), medium.as_ref(), source)?;
     solver.run_orchestrated(steps)?;
     Ok(solver.fields.p.to_contiguous())
+}
+
+/// The reference tone burst, presented as a `Source` for the plugin path.
+///
+/// The plugin path receives sources as `dyn Source` and asks them for a scalar
+/// amplitude per step, where the solver path takes a `GridSource` carrying the
+/// signal as an array. Wrapping the same stored samples in both shapes is what
+/// makes the two paths comparable against one reference: any difference is in
+/// how the paths inject, not in what they inject.
+#[derive(Debug)]
+struct StoredBurstSource {
+    cell: (usize, usize, usize),
+    samples: Vec<f64>,
+    dt: f64,
+    signal: kwavers_signal::SineWave,
+}
+
+impl StoredBurstSource {
+    fn new(case: &CaseRecord) -> Self {
+        let cell = case
+            .source_cell
+            .as_ref()
+            .expect("a driven case records its source cell");
+        let axis = |index: usize| cell.get(index).copied().unwrap_or(0);
+        let signal = load_reference_signal(case);
+        let samples = (0..signal.shape()[1]).map(|c| signal[[0, c]]).collect();
+        Self {
+            cell: (axis(0), axis(1), axis(2)),
+            samples,
+            dt: case.dt_s,
+            // The stepper asks for `amplitude(t)` directly and never consults
+            // `signal()`, which the trait requires but this source does not use.
+            signal: kwavers_signal::SineWave::new(1.0, 1.0, 0.0),
+        }
+    }
+}
+
+impl Source for StoredBurstSource {
+    fn create_mask(&self, grid: &Grid) -> Array3<f64> {
+        let mut mask = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        mask[[self.cell.0, self.cell.1, self.cell.2]] = 1.0;
+        mask
+    }
+
+    /// Return the stored sample for the step containing `t`.
+    ///
+    /// Nearest-step lookup rather than interpolation: the reference signal is
+    /// defined at step boundaries and the solver only ever asks at them, so
+    /// interpolating would invent values between samples that the reference
+    /// solver never saw.
+    fn amplitude(&self, t: f64) -> f64 {
+        let step = (t / self.dt).round();
+        if step < 0.0 {
+            return 0.0;
+        }
+        self.samples.get(step as usize).copied().unwrap_or(0.0)
+    }
+
+    fn positions(&self) -> Vec<(f64, f64, f64)> {
+        vec![(self.cell.0 as f64, self.cell.1 as f64, self.cell.2 as f64)]
+    }
+
+    fn signal(&self) -> &dyn kwavers_signal::Signal {
+        &self.signal
+    }
+}
+
+/// Propagate the case's driven source through the plugin path.
+///
+/// The solver path (`run_pstd_driven`) hands the solver a `GridSource` at
+/// construction. This one hands the same excitation to `PluginManager::execute`
+/// as a `dyn Source`, which is the route a multi-physics composition takes.
+/// Both are compared against the same stored k-Wave field.
+fn run_pstd_driven_via_plugin(
+    grid: &Grid,
+    case: &CaseRecord,
+    dt: f64,
+    steps: usize,
+) -> KwaversResult<Array3<f64>> {
+    let mut config = reference_pstd_config(dt);
+    config.nt = steps;
+
+    let mut plugin_manager = PluginManager::new();
+    plugin_manager.add_plugin(Box::new(PSTDPlugin::new(config.clone(), grid)?))?;
+
+    let medium = reference_medium(grid, case, config.absorption_mode.clone())?;
+    let sources: Vec<std::sync::Arc<dyn Source>> =
+        vec![std::sync::Arc::new(StoredBurstSource::new(case))];
+
+    let mut fields = Array4::zeros((17, grid.nx, grid.ny, grid.nz));
+    plugin_manager.initialize(grid, medium.as_ref())?;
+    let mut boundary = TransparentBoundary;
+
+    for step in 0..steps {
+        let t = step as f64 * dt;
+        plugin_manager.execute(
+            &mut fields,
+            grid,
+            medium.as_ref(),
+            &sources,
+            &mut boundary,
+            dt,
+            t,
+        )?;
+    }
+
+    Ok(fields
+        .index_axis::<3>(0, 0)
+        .expect("pressure field slot")
+        .to_contiguous())
 }
 
 // ─── Metrics ─────────────────────────────────────────────────────────────────
@@ -1084,4 +1194,72 @@ fn window_peak_radius(field: &Array3<f64>, case: &CaseRecord) -> (f64, f64) {
         }
     }
     best
+}
+
+/// The two injection routes are the same computation, so they agree to
+/// round-off rather than to the parity bound.
+///
+/// The measurement is `4.0e-13` relative L2 over a field of order `0.09`, which
+/// is the accumulated difference of a few reordered floating-point operations
+/// across 151 steps. `1e-10` clears that by two hundred times while staying
+/// seven orders below the `2.58e-3` at which either route differs from k-Wave,
+/// so this cannot be satisfied by two routes that merely both happen to be
+/// close to the reference.
+const INJECTION_ROUTE_AGREEMENT_MAX: f64 = 1.0e-10;
+
+/// The plugin path must drive the simulation, and reach the same answer.
+///
+/// `PSTDPlugin` constructs its solver in `initialize`, which is not given the
+/// sources: they arrive through `PluginContext`, which only `update` receives.
+/// Until they were registered there, the solver kept the empty `GridSource` it
+/// was built with, and a caller who supplied sources through
+/// `PluginManager::execute` got a simulation that ran, reported success, and was
+/// never driven. Nothing failed, so nothing said so.
+///
+/// This asserts three things, because the parity bound alone would not have
+/// caught the defect had the field merely been attenuated rather than absent:
+/// the plugin path matches k-Wave at the driven case's own bound; it agrees with
+/// the solver path to round-off; and its field carries the reference's
+/// amplitude, which is what an undriven run cannot fake.
+#[test]
+fn the_plugin_path_drives_the_solver_it_was_given_sources_for() {
+    let manifest = load_manifest();
+    let case = manifest
+        .cases
+        .get("src_tone_burst_2d")
+        .expect("manifest has the driven case");
+    let (nx, ny, nz) = padded_shape(&case.shape);
+    let grid = Grid::new(nx, ny, nz, case.dx_m, case.dx_m, case.dx_m).expect("reference grid");
+    let radius = case.compare_radius_cells;
+
+    let reference = load_reference_field(case, "p_final");
+    let reference_window = window(&reference, &case.shape, radius);
+
+    let via_plugin = run_pstd_driven_via_plugin(&grid, case, case.dt_s, case.steps)
+        .expect("driven run through the plugin path");
+    let plugin_window = window(&via_plugin, &case.shape, radius);
+    let measured = agreement(&plugin_window, &reference_window);
+    report("src_tone_burst_2d/plugin", case.steps, case.dt_s, &measured);
+    assert_parity(
+        "src_tone_burst_2d/plugin",
+        &measured,
+        DRIVEN_RELATIVE_L2_MAX,
+    );
+
+    let via_solver =
+        run_pstd_driven(&grid, case, case.dt_s, case.steps).expect("driven run, solver path");
+    let cross = agreement(&plugin_window, &window(&via_solver, &case.shape, radius));
+    assert!(
+        cross.relative_l2 <= INJECTION_ROUTE_AGREEMENT_MAX,
+        "the plugin and solver injection routes differ by {:.6e} relative L2,          above the {INJECTION_ROUTE_AGREEMENT_MAX:e} round-off bound; they are          no longer the same computation",
+        cross.relative_l2
+    );
+
+    let peak = |values: &[f64]| values.iter().fold(0.0_f64, |m, v| m.max(v.abs()));
+    let plugin_peak = peak(&plugin_window);
+    let reference_peak = peak(&reference_window);
+    assert!(
+        plugin_peak >= 0.5 * reference_peak,
+        "the plugin path's field peaks at {plugin_peak:.6} against the          reference's {reference_peak:.6}; a run whose sources were discarded          would sit near zero here"
+    );
 }

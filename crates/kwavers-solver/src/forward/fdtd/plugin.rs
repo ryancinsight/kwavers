@@ -36,6 +36,8 @@ pub struct FdtdPlugin {
     state: PluginState,
     config: FdtdConfig,
     solver: Option<FdtdSolver>,
+    /// Whether the caller's sources have been handed to the solver.
+    sources_registered: bool,
 }
 
 impl FdtdPlugin {
@@ -57,6 +59,7 @@ impl FdtdPlugin {
             state: PluginState::Initialized,
             config,
             solver: None,
+            sources_registered: false,
         })
     }
 }
@@ -89,7 +92,10 @@ impl crate::plugin::Plugin for FdtdPlugin {
     }
 
     fn initialize(&mut self, grid: &Grid, medium: &dyn Medium) -> KwaversResult<()> {
-        let source = GridSource::default(); // Default source (no active sources unless configured elsewhere)
+        // The solver is constructed without a source because `initialize` is
+        // not given one: sources arrive through `PluginContext`, which only
+        // `update` receives, and are registered there on the first step.
+        let source = GridSource::default();
 
         let solver = FdtdSolver::new(self.config.clone(), grid, medium, source)?;
 
@@ -125,6 +131,17 @@ impl crate::plugin::Plugin for FdtdPlugin {
                 },
             )
         })?;
+
+        // Hand the caller's sources to the solver, once. Without this the
+        // solver keeps the empty `GridSource` it was constructed with and a
+        // caller who supplied sources gets a simulation that runs, reports
+        // success, and was never driven.
+        if !self.sources_registered {
+            self.sources_registered = true;
+            for source in context.sources {
+                solver.add_source_arc(std::sync::Arc::clone(source))?;
+            }
+        }
 
         let max_sound_speed = solver
             .materials
