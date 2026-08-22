@@ -262,8 +262,7 @@ mod tests {
         // RF supplies 5 channels; config expects 1.
         let rf = Array4::<f32>::zeros((1, 5, 4, 1));
         let result = delay_and_sum_cpu(&rf, &config, &Beamforming3dApodizationWindow::Rectangular);
-        assert!(result.is_err(), "DAS must reject channel count mismatch");
-        match result.unwrap_err() {
+        match result.expect_err("DAS must reject channel count mismatch") {
             KwaversError::InvalidInput(msg) => {
                 assert!(
                     msg.contains("channel") || msg.contains("element"),

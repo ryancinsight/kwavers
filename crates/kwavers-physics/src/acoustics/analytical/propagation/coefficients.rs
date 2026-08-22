@@ -176,6 +176,6 @@ mod tests {
         assert_relative_eq!(coeffs.reflectance(), 1.0, epsilon = 1e-10);
         assert_relative_eq!(coeffs.transmittance(), 0.0, epsilon = 1e-10);
         assert!(coeffs.total_internal_reflection);
-        assert!(coeffs.transmitted_angle.is_none());
+        assert_eq!(coeffs.transmitted_angle, None);
     }
 }

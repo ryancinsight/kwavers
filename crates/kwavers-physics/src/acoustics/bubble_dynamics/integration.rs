@@ -161,11 +161,11 @@ mod tests {
         let params = BubbleParameters::default();
         let state = BubbleState::new(&params);
 
-        let result = integrate_bubble_dynamics_stable(state, &params, (0.0, 1.0), -0.1);
-        assert!(result.is_err(), "negative dt must error");
+        integrate_bubble_dynamics_stable(state, &params, (0.0, 1.0), -0.1)
+            .expect_err("negative dt must error");
 
-        let result = integrate_bubble_dynamics_stable(state, &params, (1.0, 0.0), 0.1);
-        assert!(result.is_err(), "reversed time span must error");
+        integrate_bubble_dynamics_stable(state, &params, (1.0, 0.0), 0.1)
+            .expect_err("reversed time span must error");
     }
 
     #[test]

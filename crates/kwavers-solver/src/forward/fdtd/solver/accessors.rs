@@ -233,10 +233,16 @@ mod tests {
         solver
             .enable_cpml(cpml_config, 1e-7, SOUND_SPEED_WATER_SIM)
             .expect("enable_cpml must succeed when kspace_correction = None");
-        // Verify the boundary is now installed (cpml_boundary is Some).
-        assert!(
-            solver.cpml_boundary.is_some(),
-            "cpml_boundary must be Some after successful enable_cpml"
+        // Verify the boundary is now installed and carries the requested
+        // thickness (value check, not just presence).
+        let cpml = solver
+            .cpml_boundary
+            .as_ref()
+            .expect("cpml_boundary must be Some after successful enable_cpml");
+        assert_eq!(
+            cpml.thickness(),
+            4,
+            "installed CPML must carry the requested thickness"
         );
     }
 }

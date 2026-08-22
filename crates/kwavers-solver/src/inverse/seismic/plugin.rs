@@ -185,7 +185,8 @@ mod tests {
         let grid = Grid::new(10, 10, 10, 1e-3, 1e-3, 1e-3).unwrap();
         let field = Array3::ones((10, 10, 10));
 
-        let result = plugin.reverse_time_migration(&field, &field, &grid);
-        assert!(result.is_err());
+        plugin
+            .reverse_time_migration(&field, &field, &grid)
+            .expect_err("RTM before FWI configuration must be rejected");
     }
 }

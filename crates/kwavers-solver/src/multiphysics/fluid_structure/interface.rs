@@ -213,7 +213,7 @@ mod tests {
     ///
     #[test]
     fn test_invalid_wave_speeds() {
-        let interface = FsiInterface::new(FsiInterfaceSpec {
+        FsiInterface::new(FsiInterfaceSpec {
             fluid_density: DENSITY_WATER_NOMINAL,
             fluid_sound_speed: kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM,
             solid_density: 7850.0,
@@ -221,7 +221,7 @@ mod tests {
             solid_c_t: 3240.0,
             normal: [1.0, 0.0, 0.0],
             grid_shape: (64, 64, 64),
-        });
-        assert!(interface.is_err());
+        })
+        .expect_err("c_l < c_t must be rejected");
     }
 }
