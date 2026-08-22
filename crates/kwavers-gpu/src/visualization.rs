@@ -13,6 +13,7 @@ use kwavers_analysis::visualization::data_pipeline::TransferMode;
 use kwavers_analysis::visualization::transfer_contract::VisualizationTransferProvider;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_field::UnifiedFieldType;
+use leto::Array1;
 use std::collections::HashMap;
 
 /// Select the concrete visualization transfer backend.
@@ -47,7 +48,7 @@ pub fn create_visualization_provider(
 /// Host-backed visualization transfer provider for the Leto execution path.
 #[derive(Debug, Default)]
 pub struct LetoVisualizationProvider {
-    fields: HashMap<UnifiedFieldType, Vec<f32>>,
+    fields: HashMap<UnifiedFieldType, Array1<f32>>,
     memory_bytes: usize,
 }
 
@@ -80,18 +81,26 @@ impl VisualizationTransferProvider for LetoVisualizationProvider {
             ));
         }
 
-        let replacement = samples.to_vec();
-        let replacement_bytes = replacement
+        let replacement_bytes = samples
             .len()
             .checked_mul(std::mem::size_of::<f32>())
             .ok_or_else(|| KwaversError::ResourceLimitExceeded {
                 message: "visualization host buffer size overflows usize".to_string(),
             })?;
+        let replacement =
+            Array1::from_shape_vec([samples.len()], samples.to_vec()).map_err(|error| {
+                KwaversError::InvalidInput(format!("invalid Leto visualization buffer: {error}"))
+            })?;
 
-        let previous_bytes = self
-            .fields
-            .get(&field_type)
-            .map_or(0, |field| field.len() * std::mem::size_of::<f32>());
+        let previous_bytes = match self.fields.get(&field_type) {
+            Some(field) => field
+                .len()
+                .checked_mul(std::mem::size_of::<f32>())
+                .ok_or_else(|| KwaversError::ResourceLimitExceeded {
+                    message: "visualization host buffer size overflows usize".to_string(),
+                })?,
+            None => 0,
+        };
         self.fields.insert(field_type, replacement);
         self.memory_bytes = self
             .memory_bytes
@@ -319,12 +328,12 @@ mod tests {
 
         assert_eq!(provider.memory_usage(), 48); // 16 + 16 + 32 - 16 replaced
         assert_eq!(
-            provider.fields[&UnifiedFieldType::Pressure],
-            vec![3.0f32; 8]
+            provider.fields[&UnifiedFieldType::Pressure].as_slice(),
+            Some(&[3.0f32; 8][..])
         );
         assert_eq!(
-            provider.fields[&UnifiedFieldType::Temperature],
-            vec![2.0f32; 4]
+            provider.fields[&UnifiedFieldType::Temperature].as_slice(),
+            Some(&[2.0f32; 4][..])
         );
     }
 
