@@ -17,11 +17,20 @@ pub enum AbsorptionMode {
     Stokes,
     /// Power law absorption: α(f) = α₀ · (f / 1 MHz)^y
     PowerLaw {
-        /// Absorption coefficient at 1 MHz [dB/(MHz^y·cm)].
+        /// Absorption coefficient at 1 MHz [dB/(MHz^y·cm)], when the caller is
+        /// requesting one explicitly.
+        ///
+        /// `Some` is a uniform request and applies at every voxel. `None` hands
+        /// ownership to the medium, which the solver then reads per voxel —
+        /// the only route by which a heterogeneous medium's spatial variation
+        /// survives. The two cases are distinguishable precisely because they
+        /// are not both an `f64`: a sentinel zero could not tell "unset" from
+        /// "deliberately lossless", and conflating them made a caller's
+        /// coefficient silently unreachable (ADR 120).
         ///
         /// The spectral solvers convert this raw k-Wave coefficient to the
         /// SI coefficient `Np/((rad/s)^y·m)` at the solver boundary.
-        alpha_coeff: f64,
+        alpha_coeff: Option<f64>,
         /// Power law exponent
         alpha_power: f64,
     },

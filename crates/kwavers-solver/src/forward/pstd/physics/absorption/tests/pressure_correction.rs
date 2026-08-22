@@ -80,7 +80,7 @@ fn test_pressure_correction_formula_dc_bin_nullification() {
 
     let config = PSTDConfig {
         absorption_mode: AbsorptionMode::PowerLaw {
-            alpha_coeff: 0.5,
+            alpha_coeff: Some(0.5),
             alpha_power: 1.5,
         },
         dt: 1e-7,
@@ -146,7 +146,7 @@ fn test_pressure_correction_dispersion_term_matches_analytical() {
     medium.set_acoustic_properties(ALPHA, Y, 0.0).unwrap();
     let config = PSTDConfig {
         absorption_mode: AbsorptionMode::PowerLaw {
-            alpha_coeff: ALPHA,
+            alpha_coeff: Some(ALPHA),
             alpha_power: Y,
         },
         dt: 1e-7,
@@ -220,7 +220,7 @@ fn test_fft_absorption_energy_dissipation() {
     );
     let config = PSTDConfig {
         absorption_mode: AbsorptionMode::PowerLaw {
-            alpha_coeff: 0.5,
+            alpha_coeff: Some(0.5),
             alpha_power: 1.5,
         },
         dt: 1e-7,
@@ -479,7 +479,10 @@ fn stratified_exponent_matches_per_tissue_uniform_operator() {
         med.set_acoustic_properties(alpha0, y, 0.0).unwrap();
         let cfg = PSTDConfig {
             absorption_mode: AbsorptionMode::PowerLaw {
-                alpha_coeff: alpha0,
+                // `None`: this test is about medium-owned absorption. An
+                // explicit request would apply uniformly and the per-voxel
+                // exponent below would never be read, so no strata would form.
+                alpha_coeff: None,
                 alpha_power: y,
             },
             dt: 1e-7,
@@ -506,7 +509,7 @@ fn stratified_exponent_matches_per_tissue_uniform_operator() {
     }
     let cfg = PSTDConfig {
         absorption_mode: AbsorptionMode::PowerLaw {
-            alpha_coeff: alpha0,
+            alpha_coeff: None,
             alpha_power: ya,
         },
         dt: 1e-7,

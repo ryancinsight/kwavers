@@ -1,9 +1,9 @@
 # ADR 120 — Who owns the power-law absorption coefficient
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Board item:** `KW-ABSORPTION-CONFIG-PRECEDENCE`
 - **Class:** [major]
-- **Date:** 2026-08-21
+- **Date:** 2026-08-21 (accepted and implemented 2026-08-22)
 
 ## Context
 
@@ -57,6 +57,22 @@ solver exclusively through the path that overrides the config.
 The two rules are therefore each correct for one medium class and wrong for the
 other, and nothing in the types distinguishes the classes.
 
+### The exponent has the same defect, and that changes the fix
+
+Implementation surfaced a second half the filing missed. `alpha_power` was
+resolved by the identical pattern, against its own sentinel: the medium's value
+won unless it was `0.0` or `1.0`. `HomogeneousMedium::new` seeds `1.05`, which
+is neither, so a caller asking for `y = 1.5` got `1.05`.
+
+That is not merely the same bug twice. Absorption is `alpha(f) = alpha_0 f^y`,
+and the old code took `alpha_0` from one owner and `y` from another whenever
+they disagreed — evaluating neither party's power law. Fixing only the
+coefficient left the absorbing reference case at `r = 0.838`, indistinguishable
+from the original defect, because the exponent was still the medium's.
+
+The two parameters are therefore resolved **together, from one owner**. A caller
+requesting absorption specifies the whole power law, not half of it.
+
 ## Decision
 
 Make the distinction the code is missing explicit: separate *"the caller
@@ -66,8 +82,9 @@ coefficient"*, which today are the same `f64`.
 **Recommended option — an explicit override, per-voxel medium otherwise.**
 
 - `AbsorptionMode::PowerLaw` carries `alpha_coeff: Option<f64>`. `Some` is an
-  explicit request and applies uniformly; `None` means the medium owns the
-  coefficient and `init` reads it per voxel, preserving heterogeneity.
+  explicit request and applies uniformly, and its `alpha_power` is authoritative
+  with it; `None` means the medium owns both parameters and `init` reads them
+  per voxel, preserving heterogeneity.
 - Both callers stop pre-resolving. They pass `Some(user_value)` when the user
   supplied one and `None` otherwise, deleting the duplicated resolution at each
   site. Resolution then happens once, in `init`, which is the only place that can
@@ -95,6 +112,30 @@ callers migrate in the same change; there is no compatibility shim.
 - **Sentinel zero means "unset".** What the code does today. Rejected: it cannot
   express "deliberately lossless" distinctly from "unset", which is exactly the
   ambiguity that produced this defect.
+
+## Verification
+
+The absorbing k-Wave reference case (ADR 119) is the regression test. It now
+carries the coefficient **only** in `PSTDConfig::absorption_mode` and leaves the
+medium at the water value `HomogeneousMedium::new` seeds, so the case fails if
+the precedence regresses rather than quietly measuring the wrong medium. Before
+this change the test had to set the coefficient on the medium to work around the
+defect.
+
+Agreement is `8.095065e-3` relative L2 at `r = 0.999999924` — the same numbers
+the workaround produced, now reached through the documented API. That equality is
+the point: the physics was always right, only its configuration route was not.
+
+`cargo nextest run -p kwavers-solver -p kwavers -p kwavers-physics
+-p kwavers-simulation` is `3356 passed`.
+
+One existing test moved from an explicit request to `None` rather than being
+migrated mechanically: `stratified_exponent_matches_per_tissue_uniform_operator`
+builds a medium with a spatially varying exponent and asserts the stratified
+operator engages. Under the new rule an explicit request applies uniformly, so
+the per-voxel exponent would never be read and no strata would form. Its intent
+was always medium-owned absorption, and it now says so. The suite caught this;
+a mechanical `f64` to `Some(f64)` migration would have silently inverted it.
 
 ## Consequences
 

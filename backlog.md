@@ -47,7 +47,7 @@
   parity bound. Its guarantee is the shared registration path, not a
   measurement.
 
-## KW-ABSORPTION-CONFIG-PRECEDENCE — the PSTD absorption coefficient in config is inert [major] — todo
+## KW-ABSORPTION-CONFIG-PRECEDENCE — the PSTD absorption coefficient in config is inert [major] — IMPLEMENTED 2026-08-22
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
@@ -100,10 +100,33 @@
 - **Class rationale:** [major] rather than [patch] because it changes the meaning
   of a public configuration field, and because any published absorption result
   configured through `PSTDConfig` alone was produced at water's coefficient.
+- **The exponent had the identical defect, which changed the fix.**
+  `alpha_power` resolved against its own sentinel (medium wins unless `0.0` or
+  `1.0`), and `HomogeneousMedium::new` seeds `1.05`, which is neither. Fixing
+  only the coefficient left the absorbing reference case at `r = 0.838` —
+  indistinguishable from the original defect — because the exponent was still
+  the medium's. Absorption is `alpha_0 f^y`, and taking `alpha_0` from one owner
+  and `y` from another evaluates neither party's power law, so the two are now
+  resolved together from one owner.
+- **Delivered:** `alpha_coeff: Option<f64>`. `Some` is an explicit uniform
+  request whose `alpha_power` is authoritative with it; `None` hands both
+  parameters to the medium, read per voxel, which is what preserves
+  heterogeneity. Both production construction sites stop pre-resolving.
+- **Evidence:** the absorbing k-Wave case now carries the coefficient *only* in
+  config and leaves the medium at its water default, so it fails if the
+  precedence regresses. It measures `8.095065e-3` / `r = 0.999999924` — the same
+  numbers the previous workaround produced, now through the documented API.
+  `cargo nextest run -p kwavers-solver -p kwavers -p kwavers-physics
+  -p kwavers-simulation` is `3356 passed`.
+- **One test changed meaning deliberately:**
+  `stratified_exponent_matches_per_tissue_uniform_operator` moves to
+  `alpha_coeff: None`. It builds a spatially varying exponent and asserts the
+  stratified operator engages; under the new rule an explicit request applies
+  uniformly, so the per-voxel exponent would never be read. Its intent was
+  always medium-owned absorption. The suite caught this — a mechanical
+  `f64` to `Some(f64)` migration would have silently inverted it.
 - **Decision record:** `docs/adr/120-absorption-coefficient-ownership.md`
-  (Proposed). Recommends `alpha_coeff: Option<f64>` — `Some` is an explicit
-  uniform request, `None` hands ownership to the medium per voxel — so the two
-  cases the sentinel `> 0.0` could not distinguish become distinguishable.
+  (Accepted).
 
 ## KW-GAP-2026-08-20-KWAVEPARITY — Make the k-Wave parity claim reproducible [major] [arch] — implementation complete; hosted verification pending
 

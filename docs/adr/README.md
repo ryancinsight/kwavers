@@ -83,5 +83,5 @@
 | [117](117-typed-seismic-example-workflows.md) | Type and partition the seismic example workflows | Accepted |
 | [118](118-typed-recorder-channel-selection.md) | Typed recorder channel selection | Accepted |
 | [119](119-kwave-reference-oracle.md) | 119. In-repository k-Wave differential oracle | Accepted |
-| [120](120-absorption-coefficient-ownership.md) | 120. Who owns the power-law absorption coefficient | Proposed |
+| [120](120-absorption-coefficient-ownership.md) | 120. Who owns the power-law absorption coefficient | Accepted |
 | [121](121-plugin-source-forwarding.md) | 121. Plugins receive the sources they are given | Accepted |
