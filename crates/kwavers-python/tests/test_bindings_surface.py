@@ -483,6 +483,72 @@ def test_thermal_simulation_run_releases_gil_with_returned_value_correctness():
     assert abs(ratio - 1.0) < 1.0e-6, f"heat linearity ratio {ratio} != 1"
 
 
+def test_bubble_ode_releases_gil_with_returned_value_correctness():
+    """Runtime overlap oracle for the detached bubble ODE binding family.
+
+    The Keller–Miksis / Gilmore / Rayleigh–Plesset / Hodgkin-Huxley RK4
+    integrations are pure f64 computes now run inside ``py.detach``. While one
+    thread runs a high-step-count ``solve_keller_miksis``, the main thread
+    performs pure-Python GIL-bound work and must make substantial progress —
+    only possible if the binding released the GIL around the ODE loop.
+    Returned-value correctness on the same slice: identical inputs produce
+    bit-identical output arrays, and doubling the driving amplitude produces a
+    strictly larger collapse excursion (higher max / lower min radius).
+    """
+    import threading
+    import time
+
+    def solve(amplitude, n_steps):
+        return kw.solve_keller_miksis(
+            r0_m=1.0e-6, rdot0_m_s=0.0,
+            p_inf_pa=101_325.0, p_ac_pa=amplitude,
+            frequency_hz=1.0e6, t_end_s=2.0e-5,
+            n_steps=n_steps, rho=998.0, sigma=0.0725, gamma=1.4,
+            mu=1.0e-3, pv_pa=2_330.0, c_l=1_481.0,
+        )
+
+    progress = [0]
+    stop = threading.Event()
+
+    def spin():
+        # Pure-Python counting loop: every increment requires the GIL.
+        while not stop.is_set():
+            for _ in range(1000):
+                progress[0] += 1
+
+    spinner = threading.Thread(target=spin, daemon=True)
+    spinner.start()
+    t0 = time.perf_counter()
+    # A 10M-step solve holds a window ~1s so the overlap oracle is meaningful.
+    time_s, radius_m, rdot_m_s = solve(1.0e5, 10_000_000)
+    wall = time.perf_counter() - t0
+    stop.set()
+    spinner.join()
+
+    # The window must be long enough for the oracle to be meaningful.
+    assert wall > 0.5, f"bubble ODE window too short ({wall:.3f}s)"
+    assert time_s.shape == (10_000_001,)
+    assert radius_m.shape == (10_000_001,)
+    assert np.all(np.isfinite(radius_m))
+    # If the GIL had been held for the whole solve, the main thread could not
+    # have executed millions of pure-Python increments during the window.
+    assert progress[0] > 1_000_000, (
+        f"main-thread progress {progress[0]} during {wall:.2f}s bubble ODE "
+        "indicates the GIL was not released"
+    )
+
+    # Returned-value correctness (small solves are fast): determinism (same
+    # inputs → bit-identical outputs), and a higher driving amplitude swings
+    # the wall farther (higher max / lower min radius).
+    t2, r2, v2 = solve(1.0e5, 150_000)
+    t2b, r2b, v2b = solve(1.0e5, 150_000)
+    assert np.array_equal(t2, t2b)
+    assert np.array_equal(r2, r2b)
+    high_amp = solve(2.0e5, 150_000)
+    assert np.max(high_amp[1]) > np.max(r2), "higher drive must swing further"
+    assert np.min(high_amp[1]) < np.min(r2), "higher drive must collapse deeper"
+
+
 def test_simulation_exposes_kspace_correction_mode():
     grid = kw.Grid(nx=8, ny=8, nz=8, dx=0.1e-3, dy=0.1e-3, dz=0.1e-3)
     medium = kw.Medium.homogeneous(sound_speed=1500.0, density=1000.0)
