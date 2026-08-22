@@ -367,13 +367,13 @@ mod tests {
     #[test]
     fn steering_rejects_non_unit_direction() {
         let sensors: &[[f64; 3]] = &[[0.0, 0.0, 0.0]];
-        let result = SteeringVector::compute(
+        SteeringVector::compute(
             &SteeringVectorMethod::PlaneWave,
             [1.0, 1.0, 0.0], // norm = √2, not unit
             1000.0,
             sensors,
             SOUND_SPEED_WATER_SIM,
-        );
-        assert!(result.is_err(), "non-unit direction must be rejected");
+        )
+        .expect_err("non-unit direction must be rejected");
     }
 }

@@ -182,7 +182,7 @@ mod tests {
             "prf mismatch: expected {prf}, got {}",
             result.prf
         );
-        assert!(result.power.is_none(), "power should be None");
+        assert_eq!(result.power, None, "power should be None");
     }
 
     // ─── process: output shape ────────────────────────────────────────────────

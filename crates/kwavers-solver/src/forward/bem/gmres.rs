@@ -328,7 +328,7 @@ mod tests {
         let n = 3usize;
         let a = Array2::<f64>::zeros((n, n));
         let rhs = Array1::from_elem(n, 1.0);
-        let result = solve_gmres(&a, &rhs, 1e-14, 2, 3);
-        assert!(result.is_err(), "GMRES should fail on singular system");
+        solve_gmres(&a, &rhs, 1e-14, 2, 3)
+            .expect_err("GMRES should fail on singular system");
     }
 }
