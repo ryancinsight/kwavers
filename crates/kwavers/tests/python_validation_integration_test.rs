@@ -507,7 +507,7 @@ fn test_full_validation_suite() {
 
 /// Python interop validation (requires k-wave-python)
 #[test]
-#[ignore = "Requires Python environment with k-wave-python installed"]
+#[ignore = "Requires a Python environment with k-wave-python installed (KWAVERS_RUN_PYTHON=1); blocked on the reproducible k-Wave harness tracked by KW-GAP-2026-08-20-KWAVEPARITY. Re-enable trigger: the k-Wave interop harness is committed and runnable from a clean clone"]
 fn test_python_interop_validation() {
     if !should_run_python_validation() {
         println!("Skipping Python interop validation (set KWAVERS_RUN_PYTHON=1 to enable)");

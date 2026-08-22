@@ -12,14 +12,12 @@ mod tests {
     /// Should maintain Gaussian profile with known spreading
     ///
     /// This test propagates to full Rayleigh distance with default grid.
-    /// Execution time: >60s, classified as Tier 3 comprehensive validation.
+    /// Measured 2026-08-22: 6.5 s — the previous ">60s" estimate was stale;
+    /// fits the default suite. Re-enabled.
     /// # Panics
     /// - Panics if an internal invariant assumed to hold at this call site is violated.
     ///
     #[test]
-    #[ignore = "Tier 3 comprehensive validation: full-Rayleigh-distance KZK diffraction \
-                exceeds the 60 s default per-test budget even in isolation (debug profile). \
-                Run via `cargo nextest run --profile heavy` or `cargo test -- --ignored`."]
     fn test_gaussian_beam_diffraction() {
         let config = KZKConfig {
             nx: DEFAULT_GRID_SIZE,

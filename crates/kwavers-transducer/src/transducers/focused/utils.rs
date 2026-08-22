@@ -414,12 +414,12 @@ mod tests {
     /// Test multi-bowl array with phase shifts (COMPREHENSIVE - Tier 3)
     ///
     /// This test generates sources on a 32³ grid with phase shifts.
-    /// Execution time: >60s, classified as Tier 3 comprehensive validation.
+    /// Measured 2026-08-22: 0.6 s — the previous ">60s" estimate was stale;
+    /// fits the default suite. Re-enabled.
     /// # Panics
     /// - Panics if an internal invariant assumed to hold at this call site is violated.
     ///
     #[test]
-    #[ignore = "Tier 3: Comprehensive validation (>60s execution time)"]
     fn test_multi_bowl_phases() {
         // Create two bowls with different phases
         let config1 = BowlConfig {

@@ -638,8 +638,9 @@ fn base_shell(drive_amp_pa: f64, r0_m: f64) -> ShellDriveConfig {
     }
 }
 
+// Measured 2026-08-22: 3.7 s — fits the default suite; the previous bare
+// ignore predates the nextest budget. Re-enabled.
 #[test]
-#[ignore]
 fn probe_coated_subharmonic() {
     let f0 = 1.0e6;
     let frac = |emit: &[f64], dt: f64| -> (f64, f64, f64) {
