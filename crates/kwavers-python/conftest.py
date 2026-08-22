@@ -31,7 +31,19 @@ if sys.platform == "win32" and hasattr(os, "add_dll_directory"):
     if _msys2_ucrt64_bin.exists():
         os.add_dll_directory(str(_msys2_ucrt64_bin))
 
-import pykwavers as kw
+try:
+    import pykwavers as kw
+    _HAS_EXTENSION = True
+except ImportError:
+    # The compiled _pykwavers extension is not importable (bare source tree
+    # without a built wheel). Tests that need the extension are skipped via
+    # requires_extension; pure-Python surface/staleness tests still run.
+    kw = None
+    _HAS_EXTENSION = False
+
+requires_extension = pytest.mark.skipif(
+    not _HAS_EXTENSION, reason="pykwavers._pykwavers extension not importable"
+)
 
 # ---------------------------------------------------------------------------
 # k-wave-python availability

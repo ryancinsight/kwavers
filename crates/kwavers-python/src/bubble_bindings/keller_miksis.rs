@@ -91,21 +91,24 @@ pub fn solve_keller_miksis(
     // Single source of truth: the bare bubble (xi_s = 0) and the coated
     // microbubble (xi_s > 0) are the SAME canonical Keller–Miksis integrator;
     // the shell term −4 ξ_s Ṙ / R² vanishes identically at xi_s = 0.
-    let (radius, rdot) = kwavers_physics::analytical::cavitation::keller_miksis_shelled_rk4(
-        r0_m,
-        rdot0_m_s,
-        p_ac_pa,
-        frequency_hz,
-        &time,
-        p_inf_pa,
-        rho,
-        sigma,
-        mu,
-        gamma,
-        pv_pa,
-        xi_s,
-        c_l,
-    );
+    // The RK4 integration is a pure f64 compute; run it outside the GIL.
+    let (radius, rdot) = py.detach(|| {
+        kwavers_physics::analytical::cavitation::keller_miksis_shelled_rk4(
+            r0_m,
+            rdot0_m_s,
+            p_ac_pa,
+            frequency_hz,
+            &time,
+            p_inf_pa,
+            rho,
+            sigma,
+            mu,
+            gamma,
+            pv_pa,
+            xi_s,
+            c_l,
+        )
+    });
     Ok((
         vec_to_pyarray1(py, time),
         vec_to_pyarray1(py, radius),

@@ -191,6 +191,7 @@ if _extension_override:
     _module = importlib.util.module_from_spec(_spec)
     sys.modules[f"{__name__}._pykwavers"] = _module
     _loader.exec_module(_module)
+    _pykwavers = _module
 elif os.name == "nt":
     # The override path was not taken (pyd is current), but libpython3.dll lives
     # next to the pyd.  Add the package directory so Windows DLL search finds it.
@@ -208,6 +209,10 @@ from ._pykwavers import (
     SimulationResult,
     SolverType,
     Source,
+    PmlConfig,
+    HelmholtzConfig,
+    NonlinearConfig,
+    ThermalConfig,
     KWaveArray,
     TransducerArray2D,
     MultiRowRingArray,
@@ -629,14 +634,6 @@ from ._pykwavers import (
     pmut_fractional_bandwidth,
     pmut_max_output_pressure,
     ivus_figure_of_merit,
-)
-
-# Config builders: focused simulation configuration (PyO3)
-from ._pykwavers import (
-    PmlConfig,
-    HelmholtzConfig,
-    NonlinearConfig,
-    ThermalConfig,
 )
 
 # Pure-Python k-Wave parity utilities

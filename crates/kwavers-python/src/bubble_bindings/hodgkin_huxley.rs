@@ -81,15 +81,19 @@ pub fn solve_hodgkin_huxley_like(
         Some(arr) => arr.as_array().iter().copied().collect(),
         None => Vec::new(), // empty → physics treats as isothermal at the reference temp
     };
-    let (time, voltage, response) = yoo_thermal_neural_response(
-        t_end_s,
-        dt_s,
-        membrane_potential_mv_0,
-        calcium_conc_um_0,
-        &thermal,
-        dt_thermal_s,
-        &ThermalNeuralParams::default(),
-    );
+    // The ODE solve is a pure f64 compute over the extracted thermal series;
+    // run it outside the GIL.
+    let (time, voltage, response) = py.detach(|| {
+        yoo_thermal_neural_response(
+            t_end_s,
+            dt_s,
+            membrane_potential_mv_0,
+            calcium_conc_um_0,
+            &thermal,
+            dt_thermal_s,
+            &ThermalNeuralParams::default(),
+        )
+    });
     Ok((
         Array1::from(time).to_pyarray(py).into(),
         Array1::from(voltage).to_pyarray(py).into(),
