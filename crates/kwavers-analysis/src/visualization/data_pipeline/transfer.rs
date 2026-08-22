@@ -16,7 +16,7 @@ use std::sync::Mutex;
 use std::time::Instant;
 
 /// Transfer mode for data pipeline
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TransferMode {
     /// Synchronous blocking transfer
     Blocking,
@@ -68,6 +68,15 @@ impl DataPipeline {
     /// failure surfaces there as a typed resource-unavailable error instead of
     /// silently degrading to CPU execution.
     pub fn new(provider: Box<dyn VisualizationTransferProvider>) -> Self {
+        Self::with_transfer_mode(provider, TransferMode::Async)
+    }
+
+    /// Create a data pipeline with an explicit provider transfer mode.
+    #[must_use]
+    pub fn with_transfer_mode(
+        provider: Box<dyn VisualizationTransferProvider>,
+        mode: TransferMode,
+    ) -> Self {
         Self {
             provider,
             transfer_stats: Mutex::new(TransferStatistics::default()),
@@ -75,8 +84,13 @@ impl DataPipeline {
             field_dimensions: HashMap::new(),
             field_ranges: HashMap::new(),
             processing_operations: HashMap::new(),
-            transfer_options: TransferOptions::default(),
+            transfer_options: TransferOptions { mode },
         }
+    }
+
+    /// Select how subsequent provider transfers are submitted and synchronized.
+    pub fn set_transfer_mode(&mut self, mode: TransferMode) {
+        self.transfer_options.mode = mode;
     }
 
     /// Transfer field data through the provider.
@@ -340,5 +354,20 @@ mod tests {
             8 * std::mem::size_of::<f32>()
         );
         assert_eq!(stats.num_transfers, 1);
+    }
+
+    #[test]
+    fn explicit_transfer_modes_reach_provider() {
+        for mode in [TransferMode::Blocking, TransferMode::Streaming] {
+            let (provider, log) = RecordingProvider::new();
+            let mut pipeline = DataPipeline::new(Box::new(provider));
+            pipeline.set_transfer_mode(mode);
+            pipeline
+                .transfer_field(UnifiedFieldType::Pressure, &sample_field(1.0))
+                .expect("configured transfer succeeds");
+
+            let log = log.lock().expect("upload log");
+            assert_eq!(log[0].2, mode);
+        }
     }
 }

@@ -51,6 +51,9 @@ pub struct VisualizationEngine {
     /// Provider-neutral transfer provider awaiting pipeline construction
     #[cfg(feature = "gpu-visualization")]
     transfer_provider: Option<Box<dyn super::transfer_contract::VisualizationTransferProvider>>,
+    /// Transfer submission and synchronization mode for the provider pipeline
+    #[cfg(feature = "gpu-visualization")]
+    transfer_mode: data_pipeline::TransferMode,
     /// Interactive controls
     #[cfg(feature = "gpu-visualization")]
     controls: Option<controls::InteractiveControls>,
@@ -85,6 +88,8 @@ impl VisualizationEngine {
             #[cfg(feature = "gpu-visualization")]
             transfer_provider: None,
             #[cfg(feature = "gpu-visualization")]
+            transfer_mode: data_pipeline::TransferMode::Async,
+            #[cfg(feature = "gpu-visualization")]
             controls: None,
         })
     }
@@ -102,6 +107,19 @@ impl VisualizationEngine {
         provider: Box<dyn super::transfer_contract::VisualizationTransferProvider>,
     ) {
         self.transfer_provider = Some(provider);
+    }
+
+    /// Select the transfer submission and synchronization mode.
+    ///
+    /// The default is [`data_pipeline::TransferMode::Async`]. The selection is
+    /// retained when made before initialization and applied immediately when a
+    /// data pipeline already exists.
+    #[cfg(feature = "gpu-visualization")]
+    pub fn set_transfer_mode(&mut self, mode: data_pipeline::TransferMode) {
+        self.transfer_mode = mode;
+        if let Some(pipeline) = &mut self.data_pipeline {
+            pipeline.set_transfer_mode(mode);
+        }
     }
 
     /// Initialize GPU resources
@@ -133,7 +151,10 @@ impl VisualizationEngine {
 
             // Wrap the injected provider in the provider-generic pipeline
             self.renderer = Some(renderer);
-            self.data_pipeline = Some(data_pipeline::DataPipeline::new(provider));
+            self.data_pipeline = Some(data_pipeline::DataPipeline::with_transfer_mode(
+                provider,
+                self.transfer_mode,
+            ));
             self.controls = Some(controls);
         }
 

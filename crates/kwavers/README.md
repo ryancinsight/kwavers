@@ -58,12 +58,13 @@ injects it into the analysis engine. `Hephaestus` acquires the real GPU device;
 
 ```rust,ignore
 use kwavers::visualization::{create_visualization_provider, VisualizationBackend};
-use kwavers_analysis::visualization::{VisualizationConfig, VisualizationEngine};
+use kwavers_analysis::visualization::{TransferMode, VisualizationConfig, VisualizationEngine};
 
 async fn configure() -> Result<(), Box<dyn std::error::Error>> {
     let mut engine = VisualizationEngine::create(VisualizationConfig::default())?;
     let provider = create_visualization_provider(VisualizationBackend::Hephaestus)?;
     engine.set_transfer_provider(provider);
+    engine.set_transfer_mode(TransferMode::Streaming);
     engine.initialize_gpu().await?;
     Ok(())
 }

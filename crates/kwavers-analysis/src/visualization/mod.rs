@@ -60,7 +60,7 @@ pub use kwavers_field::mapping::UnifiedFieldType;
 #[cfg(feature = "gpu-visualization")]
 pub use controls::InteractiveControls;
 #[cfg(feature = "gpu-visualization")]
-pub use data_pipeline::DataPipeline;
+pub use data_pipeline::{DataPipeline, TransferMode, TransferOptions};
 #[cfg(feature = "gpu-visualization")]
 pub use renderer::Renderer3D;
 #[cfg(feature = "gpu-visualization")]
