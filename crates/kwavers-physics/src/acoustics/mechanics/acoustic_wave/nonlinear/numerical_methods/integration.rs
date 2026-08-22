@@ -118,8 +118,8 @@ mod tests {
         let pressure = Array3::<f64>::zeros((3, 3, 3));
         let source = Array3::<f64>::zeros((4, 4, 4));
 
-        let result = w.update_wave_inner(&pressure, &source, &medium, &grid, 0);
-        assert!(result.is_err(), "shape mismatch must return Err");
+        w.update_wave_inner(&pressure, &source, &medium, &grid, 0)
+            .expect_err("shape mismatch must return Err");
     }
 
     /// `update_wave_inner` increments `call_count` on each invocation.

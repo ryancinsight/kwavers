@@ -238,7 +238,7 @@ mod tests {
         assert_eq!(w.call_count, 0);
         assert_eq!(w.nonlinear_time, 0.0);
         assert_eq!(w.nonlinearity_scaling, 1.0);
-        assert!(w.k_squared.is_none());
+        assert_eq!(w.k_squared, None);
     }
 
     /// DC bin of precomputed k² must be exactly zero; all values must be ≥ 0.

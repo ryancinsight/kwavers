@@ -258,12 +258,12 @@ mod tests {
     #[test]
     fn test_network_invalid_architecture() {
         // Single layer (no hidden layer)
-        let result = NeuralBeamformingNetwork::new(&[64]);
-        assert!(result.is_err());
+        NeuralBeamformingNetwork::new(&[64])
+            .expect_err("single-layer architecture must be rejected");
 
         // Zero-sized layer
-        let result = NeuralBeamformingNetwork::new(&[64, 0, 32]);
-        assert!(result.is_err());
+        NeuralBeamformingNetwork::new(&[64, 0, 32])
+            .expect_err("zero-sized layer must be rejected");
     }
 
     #[test]
