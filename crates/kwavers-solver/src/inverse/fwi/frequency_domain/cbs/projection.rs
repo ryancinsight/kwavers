@@ -1,12 +1,11 @@
 //! BLI projection helpers for CBS source injection and receiver sampling.
 
 use super::green::GreenOperatorKind;
-use super::grid::{bli_weights, BliConfig, GridSpec, GridWeight};
+use super::grid::{nonempty_bli_weights, GridSpec};
 use super::temporal::{
     pstd_leapfrog_symbol, pstd_modal_frequency_bin_response, pstd_modal_theta_squared,
     pstd_source_kappa_symbol, PstdTemporalBinConfig,
 };
-use aequitas::systems::si::units::Meter;
 use eunomia::Complex64;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::{fft_3d_complex_into, ifft_3d_complex_inplace};
@@ -38,9 +37,8 @@ pub fn source_density_from_bli(
 
 /// Project sources according to the selected Green-operator discretization.
 ///
-/// Continuous Helmholtz operators use bandlimited interpolation. The PSTD
-/// spectral operator uses the same on-grid source mask and k-space source
-/// correction as the time-domain PSTD acquisition generator.
+/// Every operator discretizes sources through the same BLI stencil; the PSTD
+/// spectral operator applies its k-space source correction on top.
 ///
 /// # Errors
 /// Returns an error when source support or operator parameters are invalid.
@@ -86,9 +84,14 @@ fn source_density_from_pstd_grid_kappa(
     )?;
     let (nx, ny, nz) = grid.dimensions;
     let mut mask = Array3::<Complex64>::from_elem([nx, ny, nz], Complex64::default());
+    let mask_data = mask
+        .as_slice_mut()
+        .expect("Array3 over VecStorage is contiguous");
     for &source in sources {
-        let index = exact_grid_index(grid, source, "source")?;
-        mask[[index.0, index.1, index.2]] += Complex64::new(1.0 / grid.cell_volume_m3(), 0.0);
+        for contribution in nonempty_bli_weights(grid, source, "source")? {
+            mask_data[contribution.linear_index] +=
+                Complex64::new(contribution.weight / grid.cell_volume_m3(), 0.0);
+        }
     }
 
     let mut spectrum = Array3::<Complex64>::from_elem([nx, ny, nz], Complex64::default());
@@ -162,41 +165,17 @@ pub fn sample_array_with_bli(
 
 /// Sample receivers according to the selected Green-operator discretization.
 ///
-/// Continuous Helmholtz operators use BLI. The PSTD spectral operator samples
-/// the same exact grid points recorded by the PSTD acquisition sensor mask.
+/// Every operator samples receivers through the same BLI stencil.
 ///
 /// # Errors
-/// Returns an error when field length, receiver support, or PSTD grid
-/// alignment is invalid.
+/// Returns an error when field length or receiver support is invalid.
 pub fn sample_array_for_operator(
     grid: GridSpec,
     field: &[Complex64],
     receivers: &[ElementPosition],
-    operator: GreenOperatorKind,
+    _operator: GreenOperatorKind,
 ) -> KwaversResult<Vec<Complex64>> {
-    match operator {
-        GreenOperatorKind::DenseFreeSpace | GreenOperatorKind::SpectralPeriodic { .. } => {
-            sample_array_with_bli(grid, field, receivers)
-        }
-        GreenOperatorKind::SpectralPstdPeriodic { .. } => {
-            sample_array_on_grid(grid, field, receivers)
-        }
-    }
-}
-
-fn sample_array_on_grid(
-    grid: GridSpec,
-    field: &[Complex64],
-    receivers: &[ElementPosition],
-) -> KwaversResult<Vec<Complex64>> {
-    validate_field_len(grid, field)?;
-    receivers
-        .iter()
-        .map(|&receiver| {
-            let (ix, iy, iz) = exact_grid_index(grid, receiver, "receiver")?;
-            Ok(field[grid.linear_index(ix, iy, iz)])
-        })
-        .collect()
+    sample_array_with_bli(grid, field, receivers)
 }
 
 /// Apply the Euclidean adjoint of BLI receiver sampling.
@@ -232,63 +211,18 @@ pub fn receiver_adjoint_from_bli(
 
 /// Apply the Euclidean receiver adjoint for the selected operator.
 ///
-/// Continuous Helmholtz operators use the BLI adjoint. The PSTD spectral
-/// operator injects residuals into the exact grid cells recorded by the PSTD
-/// sensor mask.
+/// Every operator uses the BLI receiver adjoint, the exact transpose of
+/// [`sample_array_with_bli`] because gather and scatter share one stencil.
 ///
 /// # Errors
-/// Returns an error when residual cardinality or PSTD receiver alignment is
-/// invalid.
+/// Returns an error when residual cardinality or receiver support is invalid.
 pub fn receiver_adjoint_for_operator(
     grid: GridSpec,
     receivers: &[ElementPosition],
     residual: &[Complex64],
-    operator: GreenOperatorKind,
+    _operator: GreenOperatorKind,
 ) -> KwaversResult<Vec<Complex64>> {
-    match operator {
-        GreenOperatorKind::DenseFreeSpace | GreenOperatorKind::SpectralPeriodic { .. } => {
-            receiver_adjoint_from_bli(grid, receivers, residual)
-        }
-        GreenOperatorKind::SpectralPstdPeriodic { .. } => {
-            receiver_adjoint_on_grid(grid, receivers, residual)
-        }
-    }
-}
-
-fn receiver_adjoint_on_grid(
-    grid: GridSpec,
-    receivers: &[ElementPosition],
-    residual: &[Complex64],
-) -> KwaversResult<Vec<Complex64>> {
-    if residual.len() != receivers.len() {
-        return Err(KwaversError::DimensionMismatch(format!(
-            "CBS receiver residual mismatch: residual {}, geometry {}",
-            residual.len(),
-            receivers.len()
-        )));
-    }
-
-    let mut adjoint = vec![Complex64::new(0.0, 0.0); grid.len()];
-    for (&receiver, &value) in receivers.iter().zip(residual.iter()) {
-        let (ix, iy, iz) = exact_grid_index(grid, receiver, "receiver")?;
-        adjoint[grid.linear_index(ix, iy, iz)] += value;
-    }
-    Ok(adjoint)
-}
-
-fn nonempty_bli_weights(
-    grid: GridSpec,
-    point: ElementPosition,
-    role: &str,
-) -> KwaversResult<Vec<GridWeight>> {
-    let weights = bli_weights(grid, point, BliConfig::default())?;
-    if weights.is_empty() {
-        return Err(KwaversError::InvalidInput(format!(
-            "CBS {role} point {:?} lies outside the inversion grid {:?} with spacing {}",
-            point, grid.dimensions, grid.spacing_m
-        )));
-    }
-    Ok(weights)
+    receiver_adjoint_from_bli(grid, receivers, residual)
 }
 
 fn validate_field_len(grid: GridSpec, field: &[Complex64]) -> KwaversResult<()> {
@@ -327,46 +261,6 @@ fn validate_pstd_source_parameters(
         transfer.validate()?;
     }
     Ok(())
-}
-
-fn exact_grid_index(
-    grid: GridSpec,
-    point: ElementPosition,
-    role: &str,
-) -> KwaversResult<(usize, usize, usize)> {
-    let nearest = [
-        exact_axis_index(
-            grid.dimensions.0,
-            grid.spacing_m,
-            point.x.in_unit::<Meter>(),
-            role,
-        )?,
-        exact_axis_index(
-            grid.dimensions.1,
-            grid.spacing_m,
-            point.y.in_unit::<Meter>(),
-            role,
-        )?,
-        exact_axis_index(
-            grid.dimensions.2,
-            grid.spacing_m,
-            point.z.in_unit::<Meter>(),
-            role,
-        )?,
-    ];
-    Ok((nearest[0], nearest[1], nearest[2]))
-}
-
-fn exact_axis_index(n: usize, spacing_m: f64, value_m: f64, role: &str) -> KwaversResult<usize> {
-    let raw = value_m / spacing_m + 0.5 * (n - 1) as f64;
-    let rounded = raw.round();
-    let tolerance = 1.0e-9;
-    if (raw - rounded).abs() > tolerance || rounded < 0.0 || rounded > (n - 1) as f64 {
-        return Err(KwaversError::InvalidInput(format!(
-            "PSTD spectral {role} point coordinate {value_m} is not on the centered grid axis"
-        )));
-    }
-    Ok(rounded as usize)
 }
 
 fn angular_mode(index: usize, count: usize, spacing_m: f64) -> f64 {
