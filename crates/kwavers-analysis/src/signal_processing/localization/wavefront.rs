@@ -222,8 +222,7 @@ mod tests {
 
     #[test]
     fn test_wavefront_analyzer_invalid_spacing() {
-        WavefrontAnalyzer::new(-0.001)
-            .expect_err("negative spacing must be rejected");
+        WavefrontAnalyzer::new(-0.001).expect_err("negative spacing must be rejected");
     }
 
     #[test]

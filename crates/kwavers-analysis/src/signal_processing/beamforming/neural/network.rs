@@ -262,8 +262,7 @@ mod tests {
             .expect_err("single-layer architecture must be rejected");
 
         // Zero-sized layer
-        NeuralBeamformingNetwork::new(&[64, 0, 32])
-            .expect_err("zero-sized layer must be rejected");
+        NeuralBeamformingNetwork::new(&[64, 0, 32]).expect_err("zero-sized layer must be rejected");
     }
 
     #[test]
