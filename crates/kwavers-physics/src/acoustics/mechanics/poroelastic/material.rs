@@ -411,7 +411,7 @@ mod tests {
             VISCOSITY_WATER,
             0.8,
         );
-        assert!(r.is_err(), "tortuosity=0.8 < 1.0 must be rejected");
+        r.expect_err("tortuosity=0.8 < 1.0 must be rejected");
     }
 
     /// `from_tissue_type` accepts all four defined tissue strings.
@@ -419,8 +419,7 @@ mod tests {
     fn from_tissue_type_accepts_all_known_tissues() {
         for tissue in &["trabecular_bone", "cortical_bone", "liver", "lung"] {
             let r = PoroelasticMaterial::from_tissue_type(tissue);
-            assert!(r.is_ok(), "{tissue} must be a known tissue type");
-            let m = r.unwrap();
+            let m = r.unwrap_or_else(|e| panic!("{tissue} must be a known tissue type: {e}"));
             assert!(
                 m.bulk_density() > 0.0,
                 "{tissue} bulk_density must be positive"
@@ -431,6 +430,7 @@ mod tests {
     /// `from_tissue_type` rejects an unknown tissue name.
     #[test]
     fn from_tissue_type_rejects_unknown_tissue() {
-        assert!(PoroelasticMaterial::from_tissue_type("cartilage").is_err());
+        PoroelasticMaterial::from_tissue_type("cartilage")
+            .expect_err("unknown tissue type must be rejected");
     }
 }

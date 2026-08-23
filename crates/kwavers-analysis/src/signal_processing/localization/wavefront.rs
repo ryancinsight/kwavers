@@ -222,8 +222,7 @@ mod tests {
 
     #[test]
     fn test_wavefront_analyzer_invalid_spacing() {
-        let result = WavefrontAnalyzer::new(-0.001);
-        assert!(result.is_err());
+        WavefrontAnalyzer::new(-0.001).expect_err("negative spacing must be rejected");
     }
 
     #[test]
@@ -231,8 +230,9 @@ mod tests {
         let analyzer = WavefrontAnalyzer::new(0.001).unwrap();
         let field = Array3::zeros((2, 2, 2));
 
-        let result = analyzer.detect_wavefront(&field);
-        assert!(result.is_err());
+        analyzer
+            .detect_wavefront(&field)
+            .expect_err("wavefront detection on a flat zero field must be rejected");
     }
 
     #[test]

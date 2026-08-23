@@ -288,11 +288,8 @@ mod tests {
         let absorption = Array3::zeros([2, 2, 2]);
         let sound_speed = Array3::from_elem([2, 2, 2], SOUND_SPEED_WATER_SIM);
         let density = Array3::from_elem([2, 2, 2], DENSITY_WATER_NOMINAL);
-        let result = arf.finalize(&absorption, &sound_speed, &density);
-        assert!(
-            result.is_err(),
-            "finalize before accumulate must return Err"
-        );
+        arf.finalize(&absorption, &sound_speed, &density)
+            .expect_err("finalize before accumulate must return Err");
     }
 
     /// Reset clears the accumulator but preserves the last finalized fields.

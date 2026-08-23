@@ -29,7 +29,7 @@ mod tests {
 
         assert_eq!(item.task_id, 1);
         assert_eq!(item.priority, TaskPriority::Normal);
-        assert!(item.deadline.is_none());
+        assert_eq!(item.deadline, None);
     }
 
     #[test]
@@ -187,8 +187,16 @@ mod tests {
 
     #[test]
     fn test_pipeline_coordinator_invalid_stages() {
-        let result = PipelineCoordinator::new(0);
-        assert!(result.is_err());
+        // PipelineCoordinator does not implement Debug, so match instead of
+        // expect_err.
+        let err = match PipelineCoordinator::new(0) {
+            Err(e) => e,
+            Ok(_) => panic!("zero stages must be rejected"),
+        };
+        assert!(
+            err.to_string().contains("at least 1 stage"),
+            "unexpected error: {err}"
+        );
     }
 
     #[test]
@@ -201,8 +209,9 @@ mod tests {
             .unwrap();
         assert_eq!(task_id, 0);
 
-        let result = coordinator.submit_to_stage(5, TaskPriority::Normal, Arc::new(|| Ok(())));
-        assert!(result.is_err());
+        coordinator
+            .submit_to_stage(5, TaskPriority::Normal, Arc::new(|| Ok(())))
+            .expect_err("out-of-range stage must be rejected");
     }
 
     #[test]
@@ -217,7 +226,8 @@ mod tests {
         let metrics = coordinator.stage_metrics(0).unwrap();
         assert!(metrics.active_threads <= coordinator.stages[0].config.num_threads); // Work may be executing
 
-        let result = coordinator.stage_metrics(5);
-        assert!(result.is_err());
+        coordinator
+            .stage_metrics(5)
+            .expect_err("out-of-range stage must be rejected");
     }
 }
