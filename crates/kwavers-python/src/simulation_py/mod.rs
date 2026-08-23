@@ -638,9 +638,14 @@ impl Simulation {
     /// Returns
     /// -------
     /// SimulationResult
+    ///
+    /// The numerical runner executes without the Python GIL. Python object
+    /// construction remains attached to the interpreter after the Rust result
+    /// is complete.
     #[pyo3(signature = (time_steps, dt=None, record_start_index=1, record_modes=None))]
     fn run(
         &mut self,
+        py: Python<'_>,
         time_steps: usize,
         dt: Option<f64>,
         record_start_index: usize,
@@ -782,7 +787,9 @@ impl Simulation {
         };
 
         // ── Run ─────────────────────────────────────────────────────────────
-        let result = SimulationRunner::run(&req, dynamic_sources).map_err(kwavers_error_to_py)?;
+        let result = py
+            .detach(|| SimulationRunner::run(&req, dynamic_sources))
+            .map_err(kwavers_error_to_py)?;
 
         // ── Build Python result ─────────────────────────────────────────────
         Python::attach(|py| build_simulation_result(py, &result, &self.grid.inner, time_steps, dt))

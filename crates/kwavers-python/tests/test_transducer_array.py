@@ -174,10 +174,18 @@ class TestTransducerArray2D:
             frequency=1e6
         )
         
-        # Valid apodizations
-        for apod in ["Rectangular", "Hanning", "Hamming", "Blackman"]:
+        # Valid apodizations. "Rectangular" is a documented alias of the
+        # canonical "Uniform" (parse_apodization_type in
+        # src/source_py/helpers.rs), so the getter returns the canonical name.
+        canonical = {
+            "Rectangular": "Uniform",
+            "Hanning": "Hanning",
+            "Hamming": "Hamming",
+            "Blackman": "Blackman",
+        }
+        for apod, expected in canonical.items():
             array.set_transmit_apodization(apod)
-            assert array.transmit_apodization == apod
+            assert array.transmit_apodization == expected
         
         # Invalid apodization
         with pytest.raises(ValueError):
