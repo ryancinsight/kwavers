@@ -23,7 +23,10 @@ permissions:
 
 concurrency:
   group: book-pages-${{ github.ref }}
-  cancel-in-progress: true
+  # A superseded pull-request build may be cancelled; a deploy from the
+  # default branch may not, because a half-finished Pages publish is worse
+  # than a superseded one.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   book:

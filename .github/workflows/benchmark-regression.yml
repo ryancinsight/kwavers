@@ -51,13 +51,20 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@1.97.1
 
-      - name: Cache cargo dependencies
-        uses: actions/cache@v6
+      # `Swatinem/rust-cache` rather than a hand-rolled `actions/cache`:
+      # it carries restore-keys, so a lockfile change degrades to a partial
+      # restore instead of a total miss, and it prunes `target/` so the
+      # repository stays inside the 10 GB cache budget instead of evicting
+      # its own entries. `shared-key` puts every job on one cache rather
+      # than one per job, which is what made the dependency graph compile
+      # once per job.
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-          key: ${{ runner.os }}-kwavers-bench-${{ hashFiles('kwavers-candidate/Cargo.lock') }}
+          shared-key: kwavers
+          # Write the cache from the default branch only. A pull request
+          # restores it but does not save, so concurrent branches cannot
+          # evict each other's entries.
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Verify the candidate lockfile
         shell: bash
@@ -249,13 +256,14 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@1.97.1
 
-      - name: Cache cargo dependencies
-        uses: actions/cache@v6
+      # Shared cache; rationale at the first use in this file.
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-          key: ${{ runner.os }}-kwavers-bench-${{ hashFiles('kwavers-candidate/Cargo.lock') }}
+          shared-key: kwavers
+          # Write the cache from the default branch only. A pull request
+          # restores it but does not save, so concurrent branches cannot
+          # evict each other's entries.
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Verify the candidate lockfile
         shell: bash
