@@ -35,21 +35,25 @@ fn pstd_receiver_projection_uses_exact_grid_cells_and_adjoint() {
 }
 
 #[test]
-fn pstd_receiver_projection_rejects_off_grid_receivers() {
+fn pstd_receiver_projection_interpolates_off_grid_receivers() {
+    // Domain widening (ATLAS-FWI-PSTD-BLI-106): the PSTD projections accept
+    // off-node elements through the same BLI stencil as the continuous
+    // operators. On-node behavior is covered by
+    // `pstd_receiver_projection_uses_exact_grid_cells_and_adjoint`; this test
+    // pins the value semantics at an off-node point against the direct BLI
+    // definition.
     let grid = GridSpec::new((2, 1, 1), 1.0e-3).unwrap();
+    let off_node = ElementPosition {
+        x: Length::from_unit::<Meter>(0.25e-3),
+        y: Length::from_unit::<Meter>(0.0),
+        z: Length::from_unit::<Meter>(0.0),
+    };
     let array = MultiRowRingArray::from_ordered_elements(
         2,
         1,
         Length::from_unit::<Meter>(1.0e-3),
         Length::from_unit::<Meter>(0.0),
-        vec![
-            ElementPosition {
-                x: Length::from_unit::<Meter>(-0.25e-3),
-                y: Length::from_unit::<Meter>(0.0),
-                z: Length::from_unit::<Meter>(0.0),
-            },
-            grid.center_at(1, 0, 0),
-        ],
+        vec![off_node, grid.center_at(1, 0, 0)],
     )
     .unwrap();
     let operator = GreenOperatorKind::SpectralPstdPeriodic {
@@ -60,8 +64,35 @@ fn pstd_receiver_projection_rejects_off_grid_receivers() {
     };
     let field = [Complex64::new(1.0, 0.0), Complex64::new(2.0, 0.0)];
 
-    let err = sample_array_for_operator(grid, &field, array.elements(), operator)
-        .expect_err("off-grid PSTD receiver must reject");
+    let sampled = sample_array_for_operator(grid, &field, array.elements(), operator).unwrap();
 
-    assert!(err.to_string().contains("receiver point coordinate"));
+    // Analytical oracles. Off-node: the BLI definition itself, evaluated by
+    // hand against the centered-grid node centers (x = -h/2 and +h/2):
+    // u(x) = sum_j sinc(pi (x - c_j) / h) u_j. On-node: exact cell value.
+    fn sinc(t: f64) -> f64 {
+        if t == 0.0 {
+            1.0
+        } else {
+            t.sin() / t
+        }
+    }
+    let h = 1.0e-3;
+    let x = 0.25e-3;
+    let w0 = sinc(std::f64::consts::PI * (x - (-0.5 * h)) / h);
+    let w1 = sinc(std::f64::consts::PI * (x - 0.5 * h) / h);
+    let expected_off_node = field[0] * w0 + field[1] * w1;
+    assert!((sampled[0] - expected_off_node).norm() <= 1.0e-14);
+    assert_eq!(sampled[1], field[1]);
+
+    // The adjoint remains the transpose: <R u, r> == <u, R^H r>.
+    let residual = [Complex64::new(0.5, -0.25), Complex64::new(-1.0, 2.0)];
+    let adjoint =
+        receiver_adjoint_for_operator(grid, array.elements(), &residual, operator).unwrap();
+    let lhs: Complex64 = sampled
+        .iter()
+        .zip(residual.iter())
+        .map(|(&u, &r)| u.conj() * r)
+        .sum();
+    let rhs: Complex64 = field.iter().zip(adjoint.iter()).map(|(&u, &w)| u * w).sum();
+    assert!((lhs - rhs).norm() <= 1.0e-14);
 }

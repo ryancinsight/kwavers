@@ -132,6 +132,28 @@ pub struct GridWeight {
     pub weight: f64,
 }
 
+/// Compute BLI weights for a point, rejecting empty support with a typed error.
+///
+/// Shared by every projection site so gather and scatter use one stencil
+/// definition and the adjoint is the transpose by construction.
+///
+/// # Errors
+/// Returns an error when the point has no BLI support on the grid.
+pub fn nonempty_bli_weights(
+    grid: GridSpec,
+    point: ElementPosition,
+    role: &str,
+) -> KwaversResult<Vec<GridWeight>> {
+    let weights = bli_weights(grid, point, BliConfig::default())?;
+    if weights.is_empty() {
+        return Err(KwaversError::InvalidInput(format!(
+            "CBS {role} point {:?} lies outside the inversion grid {:?} with spacing {}",
+            point, grid.dimensions, grid.spacing_m
+        )));
+    }
+    Ok(weights)
+}
+
 /// Compute BLI weights for a continuous point on a centered grid.
 ///
 /// # Errors
