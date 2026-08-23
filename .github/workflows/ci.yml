@@ -18,6 +18,13 @@ on:
       - 'gap_audit.md'
       - 'docs/**'
 
+# A superseded run is cancelled rather than left queued. Without this a
+# branch that is pushed to repeatedly accumulates one full matrix per
+# push, and with several open pull requests that is what fills the queue.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
@@ -26,6 +33,7 @@ jobs:
   pinn-validation:
     name: PINN Feature Validation
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
         with:
@@ -37,24 +45,31 @@ jobs:
           packages: libfontconfig1-dev
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
         with:
+          toolchain: 1.97.0
           components: clippy, rustfmt
 
-      - name: Cache cargo dependencies
-        uses: actions/cache@v6
+      # `Swatinem/rust-cache` rather than a hand-rolled `actions/cache`:
+      # it carries restore-keys, so a lockfile change degrades to a partial
+      # restore instead of a total miss, and it prunes `target/` so the
+      # repository stays inside the 10 GB cache budget instead of evicting
+      # its own entries. `shared-key` puts every job on one cache rather
+      # than one per job, which is what made the dependency graph compile
+      # once per job.
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target/
-          key: ${{ runner.os }}-pinn-cargo-${{ hashFiles('**/Cargo.lock', 'Cargo.toml', '.cargo/config.toml') }}
+          shared-key: kwavers
+          # Write the cache from the default branch only. A pull request
+          # restores it but does not save, so concurrent branches cannot
+          # evict each other's entries.
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Check PINN feature compilation
         run: cargo check --locked -p kwavers --features pinn --lib
 
       - name: Install nextest
-        uses: taiki-e/install-action@v2
+        uses: taiki-e/install-action@ea4c0b50b0d394ee91c5bb68a6a295b0556feb8e
         with:
           tool: nextest
 
@@ -74,6 +89,7 @@ jobs:
   quality:
     name: Code Quality
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
         with:
@@ -85,18 +101,19 @@ jobs:
           packages: libfontconfig1-dev
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
         with:
+          toolchain: 1.97.0
           components: clippy, rustfmt
 
-      - name: Cache cargo dependencies
-        uses: actions/cache@v6
+      # Shared cache; rationale at the first use in this file.
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock', 'Cargo.toml', '.cargo/config.toml') }}
+          shared-key: kwavers
+          # Write the cache from the default branch only. A pull request
+          # restores it but does not save, so concurrent branches cannot
+          # evict each other's entries.
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Check formatting
         run: cargo fmt -- --check
@@ -150,6 +167,7 @@ jobs:
   build:
     name: Build & Test
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
       matrix:
         rust: [stable, beta, nightly]
@@ -168,20 +186,20 @@ jobs:
         with:
           toolchain: ${{ matrix.rust }}
 
-      - name: Cache cargo dependencies
-        uses: actions/cache@v6
+      # Shared cache; rationale at the first use in this file.
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target/
-          key: ${{ runner.os }}-${{ matrix.rust }}-cargo-${{ hashFiles('**/Cargo.lock', 'Cargo.toml', '.cargo/config.toml') }}
+          shared-key: kwavers
+          # Write the cache from the default branch only. A pull request
+          # restores it but does not save, so concurrent branches cannot
+          # evict each other's entries.
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Build
         run: cargo build --locked -p kwavers --release --verbose --features="plotting"
 
       - name: Install nextest
-        uses: taiki-e/install-action@v2
+        uses: taiki-e/install-action@ea4c0b50b0d394ee91c5bb68a6a295b0556feb8e
         with:
           tool: nextest
 
@@ -194,6 +212,7 @@ jobs:
   security:
     name: Security Audit
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
         with:
@@ -208,6 +227,7 @@ jobs:
   memory-safety:
     name: Memory Safety (Miri)
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
         with:
@@ -246,16 +266,18 @@ jobs:
           packages: libfontconfig1-dev
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache cargo dependencies
-        uses: actions/cache@v6
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target/
-          key: ${{ runner.os }}-bench-cargo-${{ hashFiles('**/Cargo.lock', 'Cargo.toml', '.cargo/config.toml') }}
+          toolchain: 1.97.0
+
+      # Shared cache; rationale at the first use in this file.
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
+        with:
+          shared-key: kwavers
+          # Write the cache from the default branch only. A pull request
+          # restores it but does not save, so concurrent branches cannot
+          # evict each other's entries.
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Execute every plotting-eligible Criterion target once
         run: cargo bench --locked -p kwavers --features plotting --benches -- --test
@@ -276,7 +298,9 @@ jobs:
           packages: libfontconfig1-dev
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        with:
+          toolchain: 1.97.0
 
       - name: Install cargo-tarpaulin
         run: cargo install cargo-tarpaulin --version 0.37.0 --locked
@@ -334,6 +358,7 @@ jobs:
   pinn-convergence:
     name: PINN Convergence Analysis
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
         with:
@@ -345,21 +370,23 @@ jobs:
           packages: libfontconfig1-dev
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        with:
+          toolchain: 1.97.0
 
       - name: Install nextest
-        uses: taiki-e/install-action@v2
+        uses: taiki-e/install-action@ea4c0b50b0d394ee91c5bb68a6a295b0556feb8e
         with:
           tool: nextest
 
-      - name: Cache cargo dependencies
-        uses: actions/cache@v6
+      # Shared cache; rationale at the first use in this file.
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target/
-          key: ${{ runner.os }}-pinn-conv-cargo-${{ hashFiles('**/Cargo.lock', 'Cargo.toml', '.cargo/config.toml') }}
+          shared-key: kwavers
+          # Write the cache from the default branch only. A pull request
+          # restores it but does not save, so concurrent branches cannot
+          # evict each other's entries.
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Run convergence studies
         run: cargo nextest run --locked -p kwavers --test pinn_convergence_studies --features pinn
@@ -370,6 +397,7 @@ jobs:
   validation:
     name: Solver Validation Suite
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
         with:
@@ -381,23 +409,24 @@ jobs:
           packages: libfontconfig1-dev
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
         with:
+          toolchain: 1.97.0
           components: clippy
 
       - name: Install nextest
-        uses: taiki-e/install-action@v2
+        uses: taiki-e/install-action@ea4c0b50b0d394ee91c5bb68a6a295b0556feb8e
         with:
           tool: nextest
 
-      - name: Cache cargo dependencies
-        uses: actions/cache@v6
+      # Shared cache; rationale at the first use in this file.
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target/
-          key: ${{ runner.os }}-validation-cargo-${{ hashFiles('**/Cargo.lock', 'Cargo.toml', '.cargo/config.toml') }}
+          shared-key: kwavers
+          # Write the cache from the default branch only. A pull request
+          # restores it but does not save, so concurrent branches cannot
+          # evict each other's entries.
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: k-Wave analytical comparison tests
         run: cargo nextest run --locked -p kwavers-solver --lib validation::kwave_comparison

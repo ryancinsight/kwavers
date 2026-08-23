@@ -1,5 +1,47 @@
 # Backlog / Strategy
 
+## KW-CI-CACHE-01 — the CI cache never hits [patch] — IMPLEMENTED 2026-08-22
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-CI-CACHE-01 | Make the dependency cache actually restore, and stop superseded runs holding queue slots. | [patch] | implemented | current session, lane `ci/kwavers-cache-and-triggers` | `.github/workflows/` |
+
+- **Evidence:** every cache entry was keyed on an exact
+  `hashFiles('**/Cargo.lock', 'Cargo.toml', '.cargo/config.toml')` with **no
+  `restore-keys` anywhere in the repository**. Any change to any of those three
+  — which is every dependency change, including the pin sweep landed the same
+  day — is a total miss with no partial restore, so every job cold-builds the
+  whole graph. Five distinct key prefixes (`-cargo-`, `-pinn-cargo-`,
+  `-bench-cargo-`, `-pinn-conv-cargo-`, `-validation-cargo-`) meant each job
+  also built its own copy of the shared dependency graph and stored its own
+  `target/`, against a 10 GB per-repository cache budget — so the entries
+  evicted each other and the next run missed again.
+- **`ci.yml` had no `concurrency` group.** A branch pushed to repeatedly
+  accumulated one full ten-job run per push. With several open pull requests
+  that is what fills the queue; 36 runs were queued at the time of writing.
+- **Delivered:** `Swatinem/rust-cache` in place of all thirteen hand-rolled
+  cache blocks, which is what every other member of the stack (apollo, consus,
+  eunomia, gaia, hermes) already uses — restore-keys, `target/` pruning, and one
+  `shared-key` across jobs. `save-if` restricts writes to the default branch so
+  concurrent branches cannot evict each other. Cancelling concurrency groups on
+  the three verification workflows that lacked one.
+- **Also corrected while there:** `dtolnay/rust-toolchain@stable` installed
+  whatever stable happened to be and resolved its `components` against that,
+  not against the `1.97.0` that `rust-toolchain.toml` pins; the three mutable
+  action tags (`@stable`, `@v6`, `@v2`) are now commit SHAs matching the peers;
+  twelve jobs gained the `timeout-minutes` bound they lacked; and
+  `book-pages.yml` no longer cancels a Pages deploy from the default branch,
+  only a superseded pull-request build.
+- **Expected effect, stated honestly:** no pull request gets faster until one
+  default-branch run populates the shared cache, because `save-if` deliberately
+  forbids pull requests from writing it. The first main-branch run after this
+  merges pays full cost; runs after it restore.
+- **Not verified by execution.** Hosted Actions has been stalled since
+  2026-08-21 20:33 UTC, so this is validated by YAML parse, a job-level audit
+  (every job bounded, every workflow grouped), and review against the peer
+  workflows it now matches — not by a green run. `actionlint` is not installed
+  locally; adding it to the gate is a follow-up.
+
 ## KW-BOOK-116 — Make the book gate execute a Rust oracle [patch] — implementation complete; hosted verification pending
 
 | ID | Outcome | Class | Status | Owner | Scope |
