@@ -14,6 +14,7 @@ pub struct FieldAccessor<'a> {
 }
 
 impl<'a> FieldAccessor<'a> {
+    /// Create a read-only accessor over a unified field array.
     #[must_use]
     pub fn new(fields: &'a Array4<f64>) -> Self {
         Self { fields }
@@ -59,6 +60,7 @@ pub struct FieldAccessorMut<'a> {
 }
 
 impl<'a> FieldAccessorMut<'a> {
+    /// Create a mutable accessor over a unified field array.
     #[must_use]
     pub fn new(fields: &'a mut Array4<f64>) -> Self {
         Self { fields }

@@ -57,12 +57,17 @@ pub const SOUND_SPEED_IDX: usize = 16;
 /// Total number of field components in simulations
 pub const TOTAL_FIELDS: usize = 17;
 
-// Aliases for stress components (for compatibility)
+/// Alias for [`STRESS_XX_IDX`] (compatibility)
 pub const SXX_IDX: usize = STRESS_XX_IDX;
+/// Alias for [`STRESS_YY_IDX`] (compatibility)
 pub const SYY_IDX: usize = STRESS_YY_IDX;
+/// Alias for [`STRESS_ZZ_IDX`] (compatibility)
 pub const SZZ_IDX: usize = STRESS_ZZ_IDX;
+/// Alias for [`STRESS_XY_IDX`] (compatibility)
 pub const SXY_IDX: usize = STRESS_XY_IDX;
+/// Alias for [`STRESS_XZ_IDX`] (compatibility)
 pub const SXZ_IDX: usize = STRESS_XZ_IDX;
+/// Alias for [`STRESS_YZ_IDX`] (compatibility)
 pub const SYZ_IDX: usize = STRESS_YZ_IDX;
 
 /// Get field name from index
