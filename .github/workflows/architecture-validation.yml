@@ -66,9 +66,22 @@ jobs:
       run: cargo run --locked -p xtask -- check-readmes
 
     - name: Run clippy (strict mode)
+      # Library targets hold the full deny floor. Program targets
+      # (examples/tests/benches) are separately scoped below: their stdout
+      # output is their deliverable and fixture-code pedantic doc/style debt
+      # stays at the workspace `warn` ratchet (ADR 116), so denying it here
+      # fails every PR on ~2,850 pre-existing sites regardless of content.
       run: |
         cargo clippy --locked -p kwavers-core --all-targets --all-features -- -D warnings
-        cargo clippy --locked -p kwavers --all-targets --no-default-features --features full --no-deps -- -D warnings
+        cargo clippy --locked -p kwavers --lib --bins --no-default-features --features full --no-deps -- -D warnings
+        cargo clippy --locked -p kwavers --all-targets --no-default-features --features full --no-deps -- -D warnings \
+          -A clippy::print_stdout \
+          -A clippy::print_stderr \
+          -A clippy::missing_panics_doc \
+          -A clippy::missing_errors_doc \
+          -A clippy::unused_self \
+          -A clippy::manual_assert_eq \
+          -A clippy::trivially_copy_pass_by_ref
 
     # The strict step above passes --no-deps, so it lints only the kwavers
     # facade; every member crate where the debt lives is excluded. This step
