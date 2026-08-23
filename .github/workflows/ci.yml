@@ -124,7 +124,10 @@ jobs:
           python-version: "3.12"
 
       - name: Install test dependencies
-        run: python -m pip install --disable-pip-version-check "pytest>=7.0" "mypy>=1.0" "numpy>=1.20"
+        # pytest-timeout and pytest-benchmark are the crate's declared test
+        # dependencies; crates/kwavers-python/pyproject.toml [tool.pytest.ini_options]
+        # addopts passes --timeout/--benchmark-disable to every invocation.
+        run: python -m pip install --disable-pip-version-check "pytest>=7.0" "mypy>=1.0" "numpy>=1.20" "pytest-timeout>=2.2" "pytest-benchmark>=4.0"
 
       - name: Regenerate-and-diff the typed surface (must be current)
         # The generator is the source of truth; a stale committed stub fails
