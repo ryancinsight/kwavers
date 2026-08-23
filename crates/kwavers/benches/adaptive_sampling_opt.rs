@@ -28,7 +28,7 @@ fn benchmark_split_coordinates(c: &mut Criterion) {
 
         group.bench_with_input(BenchmarkId::new("slow_cpu", size), &size, |b, _| {
             b.iter(|| {
-                let (x, y, t) = split_coordinates_slow(black_box(&points), &backend);
+                let (x, y, t) = split_coordinates_slow(black_box(&points), backend);
                 black_box((x, y, t));
             });
         });
@@ -47,7 +47,7 @@ fn benchmark_split_coordinates(c: &mut Criterion) {
 #[cfg(feature = "pinn")]
 fn split_coordinates_slow(
     points: &Tensor<f32, Backend>,
-    backend: &Backend,
+    backend: Backend,
 ) -> (
     Tensor<f32, Backend>,
     Tensor<f32, Backend>,
@@ -68,9 +68,9 @@ fn split_coordinates_slow(
         }
     }
 
-    let x = Tensor::from_slice_on(vec![total_points], &x_coords, backend);
-    let y = Tensor::from_slice_on(vec![total_points], &y_coords, backend);
-    let t = Tensor::from_slice_on(vec![total_points], &t_coords, backend);
+    let x = Tensor::from_slice_on(vec![total_points], &x_coords, &backend);
+    let y = Tensor::from_slice_on(vec![total_points], &y_coords, &backend);
+    let t = Tensor::from_slice_on(vec![total_points], &t_coords, &backend);
 
     (x, y, t)
 }
