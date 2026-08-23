@@ -1,4 +1,5 @@
 #![doc = include_str!("../README.md")]
+#![deny(missing_docs)]
 
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::cell::Cell;

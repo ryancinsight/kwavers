@@ -12,22 +12,39 @@ use std::fmt;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(usize)]
 pub enum UnifiedFieldType {
+    /// Acoustic pressure field
     Pressure = 0,
+    /// Temperature field
     Temperature = 1,
+    /// Bubble radius field
     BubbleRadius = 2,
+    /// Bubble wall velocity field
     BubbleVelocity = 3,
+    /// Mass density field
     Density = 4,
+    /// Sound speed field
     SoundSpeed = 5,
+    /// Particle velocity x-component
     VelocityX = 6,
+    /// Particle velocity y-component
     VelocityY = 7,
+    /// Particle velocity z-component
     VelocityZ = 8,
+    /// Stress tensor XX component
     StressXX = 9,
+    /// Stress tensor YY component
     StressYY = 10,
+    /// Stress tensor ZZ component
     StressZZ = 11,
+    /// Stress tensor XY component
     StressXY = 12,
+    /// Stress tensor XZ component
     StressXZ = 13,
+    /// Stress tensor YZ component
     StressYZ = 14,
+    /// Light fluence field
     LightFluence = 15,
+    /// Chemical concentration field
     ChemicalConcentration = 16,
 }
 
