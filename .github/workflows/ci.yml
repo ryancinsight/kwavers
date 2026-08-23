@@ -417,7 +417,12 @@ jobs:
   heavy-validation:
     name: Heavy Validation (reviewed profile)
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    # Measured 2026-08-23 under a cold cache (branch-scoped PR caches are
+    # always cold): the three serial heavy groups total ~31 min of compile +
+    # test time (kuznetsov 8 min, absorption_decay 7 min, nl_swe_workflow
+    # killed at 25 min with ~5 min left). The 25 min cap cancelled the job
+    # twice at exactly 25:00. 45 min fits the cold-cache budget with margin.
+    timeout-minutes: 45
     permissions:
       contents: read
     steps:
