@@ -293,7 +293,7 @@ impl AnalyticalSolution for SineWave1D {
         1
     }
 
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "1D Sine Wave"
     }
 
@@ -381,7 +381,7 @@ impl AnalyticalSolution for PolynomialTest2D {
         2
     }
 
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "2D Polynomial Test (x², xy)"
     }
 
@@ -461,7 +461,7 @@ impl AnalyticalSolution for QuadraticTest2D {
         2
     }
 
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "2D Quadratic Test (x²+y², xy)"
     }
 

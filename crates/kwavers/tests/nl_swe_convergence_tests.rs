@@ -398,7 +398,7 @@ mod convergence_tests {
     }
 
     #[test]
-    #[ignore]
+    #[ignore = "full convergence sweep exceeds the standard test budget"]
     fn test_displacement_convergence_study_runs() {
         let tester = ConvergenceTester::new();
         let results = tester.run_displacement_convergence_study();
