@@ -42,17 +42,25 @@ pub enum MeshBoundaryType {
 /// Axis-aligned bounding box
 #[derive(Debug, Clone, Copy)]
 pub struct BoundingBox {
+    /// Minimum corner coordinates (x, y, z)
     pub min: [f64; 3],
+    /// Maximum corner coordinates (x, y, z)
     pub max: [f64; 3],
 }
 
 /// Mesh statistics for quality assessment
 #[derive(Debug, Clone)]
 pub struct MeshStatistics {
+    /// Number of nodes (vertices) in the mesh
     pub num_nodes: usize,
+    /// Number of tetrahedral elements in the mesh
     pub num_elements: usize,
+    /// Number of boundary faces in the mesh
     pub num_boundary_faces: usize,
+    /// Total volume of the mesh
     pub total_volume: f64,
+    /// Mean element quality across all elements (0-1, higher is better)
     pub average_quality: f64,
+    /// Minimum element quality over all elements (0-1, higher is better)
     pub minimum_quality: f64,
 }
