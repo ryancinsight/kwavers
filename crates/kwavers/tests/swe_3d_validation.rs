@@ -155,6 +155,12 @@ fn test_volumetric_phantom_validation() {
             min_corr: 1e-20,
         },
         tracking_decimation: [1, 1, 1],
+        // SWERECON: the default 10 ms window is shorter than the shear transit
+        // across the phantom (max voxel-to-push distance ≈ 3 cm at c_s ≈ 1.3-1.8
+        // m/s ≈ 17-23 ms), so most voxels never saw a shear wavefront and the
+        // detector locked onto compressional events and noise. 40 ms covers the
+        // transit plus the last push delay (250 µs) with ~1.7× margin.
+        duration_s: 40e-3,
         ..Default::default()
     });
 
@@ -207,6 +213,10 @@ fn test_clinical_liver_fibrosis_accuracy() {
             template: vec![0.0, 0.25, 0.5, 1.0, 0.5, 0.25, 0.0],
             min_corr: 1e-20,
         },
+        // SWERECON: 60 ms covers the shear transit across the 6 cm liver
+        // phantom (c_s ≈ 1.4-2.3 m/s ≈ 26-43 ms) with ~1.4× margin; see the
+        // phantom test for the rationale.
+        duration_s: 60e-3,
         tracking_decimation: [1, 1, 1],
         ..Default::default()
     });
@@ -706,8 +716,20 @@ fn create_validation_phantom(grid: &Grid) -> HeterogeneousMedium {
     medium.density = density_map;
     medium.sound_speed = sound_speed_map;
 
-    // Convert Young's modulus to Lamé parameters with ν ≈ 0.49
-    let nu = 0.49_f64;
+    // Convert Young's modulus to Lamé parameters with ν ≈ 0.49908.
+    //
+    // SWERECON: the previous ν = 0.49 gave c_p/c_s ≈ 7 (c_p ≈ 13 m/s), so the
+    // compressional wavefront stayed inside the shear TOF observation band and
+    // contaminated the arrival detector (its matched-filter correlation reached
+    // ~80% of the shear event's, so a first-arrival or max-correlation detector
+    // locked onto it). Real SWE relies on near-incompressibility (c_p ≫ c_s):
+    // this ν gives c_p ≈ 30 m/s, which suppresses the compressional displacement
+    // by (30/13)² ≈ 5.3× — below the 0.5·best first-arrival threshold — while
+    // keeping the explicit integrator's CFL step at ≈ 9.6 µs. The shear physics
+    // and the ground-truth Young's modulus (lame_to_young(λ, μ) ≈ E, <0.1%
+    // drift) are unchanged; the reconstruction's E = 3ρc² formula is the
+    // ν → 0.5 limit.
+    let nu = 0.49908_f64;
     for k in 0..grid.nz {
         for j in 0..grid.ny {
             for i in 0..grid.nx {
@@ -776,8 +798,20 @@ fn create_liver_fibrosis_phantom(grid: &Grid) -> HeterogeneousMedium {
     medium.density = density_map;
     medium.sound_speed = sound_speed_map;
 
-    // Convert Young's modulus to Lamé parameters with ν ≈ 0.49
-    let nu = 0.49_f64;
+    // Convert Young's modulus to Lamé parameters with ν ≈ 0.49908.
+    //
+    // SWERECON: the previous ν = 0.49 gave c_p/c_s ≈ 7 (c_p ≈ 13 m/s), so the
+    // compressional wavefront stayed inside the shear TOF observation band and
+    // contaminated the arrival detector (its matched-filter correlation reached
+    // ~80% of the shear event's, so a first-arrival or max-correlation detector
+    // locked onto it). Real SWE relies on near-incompressibility (c_p ≫ c_s):
+    // this ν gives c_p ≈ 30 m/s, which suppresses the compressional displacement
+    // by (30/13)² ≈ 5.3× — below the 0.5·best first-arrival threshold — while
+    // keeping the explicit integrator's CFL step at ≈ 9.6 µs. The shear physics
+    // and the ground-truth Young's modulus (lame_to_young(λ, μ) ≈ E, <0.1%
+    // drift) are unchanged; the reconstruction's E = 3ρc² formula is the
+    // ν → 0.5 limit.
+    let nu = 0.49908_f64;
     for k in 0..grid.nz {
         for j in 0..grid.ny {
             for i in 0..grid.nx {
@@ -805,18 +839,32 @@ fn perform_phantom_elasticity_reconstruction(
                 let arrival_time = tracker.arrival_times[[i, j, k]];
 
                 if !arrival_time.is_infinite() && tracker.amplitudes[[i, j, k]] > 0.0 {
-                    // Find closest push source
+                    // Find closest push source. The arrival time is measured from
+                    // simulation start (t = 0), so the travel time is the arrival
+                    // minus that push's time delay.
                     let mut min_distance = f64::INFINITY;
-                    for push in &push_pattern.pushes {
+                    let mut min_delay = 0.0_f64;
+                    for (push, &delay) in push_pattern
+                        .pushes
+                        .iter()
+                        .zip(push_pattern.time_delays.iter())
+                    {
                         let dx = i as f64 * grid.dx - push.location[0];
                         let dy = j as f64 * grid.dy - push.location[1];
                         let dz = k as f64 * grid.dz - push.location[2];
                         let distance = (dx * dx + dy * dy + dz * dz).sqrt();
-                        min_distance = min_distance.min(distance);
+                        if distance < min_distance {
+                            min_distance = distance;
+                            min_delay = delay;
+                        }
                     }
 
-                    if min_distance > 0.0 && arrival_time > 0.0 {
-                        let estimated_speed = min_distance / arrival_time;
+                    // Exclude the ARF near field (mirrors the clinical
+                    // reconstruction's 5 mm threshold): inside it the recorded
+                    // displacement is the push's own static near-field, not a
+                    // propagating shear wavefront, so TOF there is meaningless.
+                    if min_distance > 0.005 && arrival_time > min_delay {
+                        let estimated_speed = min_distance / (arrival_time - min_delay);
                         let density = 1000.0;
                         let young_modulus = 3.0 * density * estimated_speed * estimated_speed;
 
@@ -854,18 +902,24 @@ fn perform_clinical_elasticity_reconstruction(
                 let arrival_time = tracker.arrival_times[[i, j, k]];
 
                 if !arrival_time.is_infinite() && tracker.amplitudes[[i, j, k]] > 0.0 {
-                    // Multi-directional speed estimation
+                    // Multi-directional speed estimation. Travel time is the
+                    // arrival (measured from simulation start) minus each push's
+                    // time delay.
                     let mut speed_estimates = Vec::new();
 
-                    for push in &push_pattern.pushes {
+                    for (push, &delay) in push_pattern
+                        .pushes
+                        .iter()
+                        .zip(push_pattern.time_delays.iter())
+                    {
                         let dx = i as f64 * grid.dx - push.location[0];
                         let dy = j as f64 * grid.dy - push.location[1];
                         let dz = k as f64 * grid.dz - push.location[2];
                         let distance = (dx * dx + dy * dy + dz * dz).sqrt();
 
-                        if distance > 0.005 {
+                        if distance > 0.005 && arrival_time > delay {
                             // Minimum distance threshold
-                            let local_speed = distance / arrival_time;
+                            let local_speed = distance / (arrival_time - delay);
                             if local_speed > 0.5 && local_speed < 10.0 {
                                 // Reasonable speed range
                                 speed_estimates.push(local_speed);
@@ -992,4 +1046,189 @@ fn lame_to_young(lambda: f64, mu: f64) -> f64 {
     } else {
         mu * (3.0 * lambda + 2.0 * mu) / (lambda + mu)
     }
+}
+
+/// TEMPORARY diagnostic 2 — SWERECON. Removed before commit.
+#[test]
+fn diag_swe_recon_2() {
+    let grid = Grid::new(50, 50, 50, 0.001, 0.001, 0.001).unwrap();
+    let phantom = create_validation_phantom(&grid);
+    let arf = AcousticRadiationForce::new(&grid, &phantom).unwrap();
+    let push_pattern = MultiDirectionalPush::orthogonal_pattern([0.025, 0.025, 0.025], 0.01);
+    let mut volumetric_solver =
+        ElasticWaveSolver::new(&grid, &phantom, Default::default()).unwrap();
+    volumetric_solver.set_volumetric_config(VolumetricWaveConfig {
+        arrival_detection: ArrivalDetection::MatchedFilter {
+            template: vec![0.0, 0.25, 0.5, 1.0, 0.5, 0.25, 0.0],
+            min_corr: 1e-20,
+        },
+        duration_s: 40e-3,
+        tracking_decimation: [1, 1, 1],
+        ..Default::default()
+    });
+    let body_forces = arf.multi_directional_body_forces(&push_pattern).unwrap();
+    let push_times: Vec<f64> = push_pattern.time_delays.clone();
+    let sources: Vec<kwavers_solver::forward::elastic::VolumetricSource> = push_pattern
+        .pushes.iter().zip(push_pattern.time_delays.iter())
+        .map(|(push, &t)| kwavers_solver::forward::elastic::VolumetricSource {
+            location_m: push.location, time_offset_s: t })
+        .collect();
+    let (history, tracker) = volumetric_solver
+        .propagate_volumetric_waves_with_body_forces(&body_forces, &push_times, &sources)
+        .unwrap();
+    println!("snapshots={} tend={:.3}", history.len(), history.last().unwrap().time);
+    let dt_snap = history.last().unwrap().time / (history.len() - 1) as f64;
+    println!("snapshot dt = {:.2e} s", dt_snap);
+
+
+    // WAVEFORM dump (downsampled)
+    for (i, j, k) in [(45,25,25), (30,25,25), (20,25,25), (40,20,30)] {
+        let series: Vec<f64> = history.iter().map(|f| {
+            let ux = f.ux[[i, j, k]]; let uy = f.uy[[i, j, k]]; let uz = f.uz[[i, j, k]];
+            (ux*ux + uy*uy + uz*uz).sqrt()
+        }).collect();
+        println!("WAVE2 [{i},{j},{k}] n={}", series.len());
+        let mut out: Vec<String> = Vec::new();
+        for (idx, &v) in series.iter().enumerate() {
+            if idx % 12 == 0 { out.push(format!("{:.5}:{:.1e}", history[idx].time, v)); }
+        }
+        println!("  {}", out.join(" "));
+    }
+
+
+    // Series at a PML-edge voxel.
+    {
+        let (i, j, k) = (28usize, 15usize, 10usize);
+        let series: Vec<f64> = history.iter().map(|f| {
+            let ux = f.ux[[i, j, k]]; let uy = f.uy[[i, j, k]]; let uz = f.uz[[i, j, k]];
+            (ux*ux + uy*uy + uz*uz).sqrt()
+        }).collect();
+        // replicate the tracker HPF (window = n/8)
+        let window = (series.len() / 8).max(3);
+        let mut smoothed = vec![0.0_f64; series.len()];
+        let mut acc = 0.0_f64;
+        for (i, &v) in series.iter().enumerate() {
+            acc += v;
+            if i >= window { acc -= series[i - window]; }
+            smoothed[i] = acc / (i + 1).min(window) as f64;
+        }
+        let mut hpf: Vec<f64> = series.iter().zip(smoothed.iter()).map(|(v, &m)| v - m).collect();
+        let mut out: Vec<String> = Vec::new();
+        for (idx, &v) in hpf.iter().enumerate() {
+            if idx % 6 == 0 { out.push(format!("{:.4}:{:.1e}", history[idx].time, v)); }
+        }
+        println!("PMLEDGE-HPF [28,15,10] {}", out.join(" "));
+    }
+    // Near-field profile along +X from the +X push.
+    for i in 36..50 {
+        let j = 25usize; let k = 25usize;
+        let series: Vec<f64> = history.iter().map(|f| {
+            let ux = f.ux[[i, j, k]]; let uy = f.uy[[i, j, k]]; let uz = f.uz[[i, j, k]];
+            (ux*ux + uy*uy + uz*uz).sqrt()
+        }).collect();
+        let d = (i as f64 * grid.dx - 0.035).abs();
+        let static_max = series.iter().zip(history.iter())
+            .filter(|(_, f)| f.time < 4e-3)
+            .map(|(v, _)| *v).fold(0.0f64, f64::max);
+        let late_max = series.iter().zip(history.iter())
+            .filter(|(_, f)| f.time >= 4e-3 && f.time < 15e-3)
+            .map(|(v, _)| *v).fold(0.0f64, f64::max);
+        let t = tracker.arrival_times[[i, j, k]];
+        let speed = if t.is_finite() && t > 0.0 { d / t } else { f64::NAN };
+        println!("NF i={i} d={d:.3} static4ms={static_max:.1e} late={late_max:.1e} t={t:.5} speed={speed:.2}");
+    }
+
+    // Speed distribution over the whole background.
+    let mut near_cs = 0usize; let mut near_cp = 0usize; let mut mid = 0usize; let mut none = 0usize;
+    let mut nearfield = 0usize; let mut fast = 0usize;
+    let mut cs_ratios: Vec<f64> = Vec::new();
+    let mut fast_samples: Vec<(usize, usize, usize, f64, f64, f64, f64, f64)> = Vec::new();
+    let mut mid_ratios: Vec<f64> = Vec::new();
+    let mut fast_ratios: Vec<f64> = Vec::new();
+    let mut errs: Vec<f64> = Vec::new();
+    let mut errs_in: Vec<f64> = Vec::new();
+    let mut in_cs = 0usize; let mut in_mid = 0usize; let mut in_fast = 0usize; let mut in_slow = 0usize;
+    let mut slow = 0usize;
+    for k in 10..grid.nz - 10 { for j in 10..grid.ny - 10 { for i in 10..grid.nx - 10 {
+        let t = tracker.arrival_times[[i, j, k]];
+        if !t.is_finite() || t <= 0.0 { none += 1; continue; }
+        let mut min_d = f64::INFINITY; let mut min_delay = 0.0;
+        for (p_, &d_) in push_pattern.pushes.iter().zip(push_pattern.time_delays.iter()) {
+            let dx = i as f64 * grid.dx - p_.location[0];
+            let dy = j as f64 * grid.dy - p_.location[1];
+            let dz = k as f64 * grid.dz - p_.location[2];
+            let dist = (dx*dx + dy*dy + dz*dz).sqrt();
+            if dist < min_d { min_d = dist; min_delay = d_; }
+        }
+        if t <= min_delay { none += 1; continue; }
+        if min_d <= 0.005 { nearfield += 1; continue; }
+        let speed = min_d / (t - min_delay);
+        let mu = phantom.lame_mu[[i, j, k]]; let la = phantom.lame_lambda[[i, j, k]];
+        let rho = phantom.density[[i, j, k]];
+        let cs = (mu / rho).sqrt(); let cp = ((la + 2.0*mu) / rho).sqrt();
+        if (speed - cs).abs() < 0.2 * cs { near_cs += 1; }
+        else if (speed - cp).abs() < 0.2 * cp { near_cp += 1; }
+        else if speed < 0.5 * cs { slow += 1; }
+        else if speed < 2.0 * cs { mid += 1; }
+        else { fast += 1; }
+        let e_true = lame_to_young(la, mu);
+        let e_rec = 3.0 * 1000.0 * speed * speed;
+        if e_true < 6000.0 { errs.push(((e_rec - e_true) / e_true).abs()); }
+        else { errs_in.push(((e_rec - e_true) / e_true).abs());
+            if (speed - cs).abs() < 0.2 * cs { in_cs += 1; }
+            else if speed < 2.0 * cs && speed >= 0.5 * cs { in_mid += 1; }
+            else if speed >= 2.0 * cs { in_fast += 1; }
+            else { in_slow += 1; }
+        }
+        // arrival-time ratio t*c_s/d: 1.0 = exactly shear TOF
+        let ratio = (t - min_delay) * cs / min_d;
+        if speed >= 2.0 * cs && fast_samples.len() < 25 {
+            fast_samples.push((i, j, k, min_d, t, speed, cs, cp));
+        }
+        if (speed - cs).abs() < 0.2 * cs { cs_ratios.push(ratio); }
+        else if speed < 2.0 * cs && speed >= 0.5 * cs { mid_ratios.push(ratio); }
+        else if speed >= 2.0 * cs { fast_ratios.push(ratio); }
+    }}}
+    let mean_err = errs.iter().sum::<f64>() / errs.len() as f64;
+    // Eikonal inversion prototype: c = 1/|grad t| via central differences.
+    let mut eik_errs: Vec<f64> = Vec::new();
+    let mut eik_in_errs: Vec<f64> = Vec::new();
+    let mut eik_points = 0usize;
+    let mut eik_bad = 0usize;
+    for k in 10..grid.nz - 10 { for j in 10..grid.ny - 10 { for i in 10..grid.nx - 10 {
+        let t0 = tracker.arrival_times[[i, j, k]];
+        if !t0.is_finite() || t0 <= 0.0 { continue; }
+        let tx = tracker.arrival_times[[i + 2, j, k]];
+        let txm = tracker.arrival_times[[i - 2, j, k]];
+        let ty = tracker.arrival_times[[i, j + 2, k]];
+        let tym = tracker.arrival_times[[i, j - 2, k]];
+        let tz = tracker.arrival_times[[i, j, k + 2]];
+        let tzm = tracker.arrival_times[[i, j, k - 2]];
+        if !(tx.is_finite() && txm.is_finite() && ty.is_finite() && tym.is_finite()
+            && tz.is_finite() && tzm.is_finite()) { continue; }
+        let dtx = (tx - txm) / (4.0 * grid.dx);
+        let dty = (ty - tym) / (4.0 * grid.dy);
+        let dtz = (tz - tzm) / (4.0 * grid.dz);
+        let g = (dtx * dtx + dty * dty + dtz * dtz).sqrt();
+        if !(g > 1e-9) { continue; }
+        let c = 1.0 / g;
+        let e = 3.0 * 1000.0 * c * c;
+        let mu = phantom.lame_mu[[i, j, k]];
+        let la = phantom.lame_lambda[[i, j, k]];
+        let e_true = lame_to_young(la, mu);
+        let rel = ((e - e_true) / e_true).abs();
+        if e_true < 6000.0 { eik_errs.push(rel); } else { eik_in_errs.push(rel); }
+        eik_points += 1;
+    }}}
+    let me = eik_errs.iter().sum::<f64>() / eik_errs.len().max(1) as f64;
+    let mei = eik_in_errs.iter().sum::<f64>() / eik_in_errs.len().max(1) as f64;
+    println!("EIKONAL bg={} mean={:.1}%  incl={} mean={:.1}%", eik_errs.len(), me * 100.0, eik_in_errs.len(), mei * 100.0);
+    let mean_err_in = errs_in.iter().sum::<f64>() / errs_in.len() as f64;
+    let avg = |v: &Vec<f64>| v.iter().sum::<f64>() / v.len().max(1) as f64;
+    for (i, j, k, d, t, sp, c_s, c_p) in &fast_samples {
+        println!("FAST [{i},{j},{k}] d={d:.3} t={t:.5} speed={sp:.2} cs={c_s:.2} cp={c_p:.1}");
+    }
+    println!("ratios: cs={:.3} mid={:.3} fast={:.3}", avg(&cs_ratios), avg(&mid_ratios), avg(&fast_ratios));
+    println!("incl: cs={in_cs} mid={in_mid} fast={in_fast} slow={in_slow} mean_err={:.1}%", mean_err_in * 100.0);
+    println!("bg points: near_cs={} near_cp={} slow={} mid={} fast={} nearfield={} none={} mean_err={:.1}%", near_cs, near_cp, slow, mid, fast, nearfield, none, mean_err * 100.0);
 }
