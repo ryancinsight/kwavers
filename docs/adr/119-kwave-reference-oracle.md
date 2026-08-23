@@ -68,6 +68,7 @@ isotropic Gaussian initial pressure at `sigma = 3 dx`, on a `0.1 mm` grid at
 | `ivp_absorbing_2d` | 64 x 64 | 100 | 10 ns | 24 cells | `40 dB/(MHz^1.5 cm)`, `y = 1.5` | 22 KB |
 | `ivp_layered_2d` | 80 x 64 | 120 | 8.33 ns | 24 cells | lossless, layered medium | 34 KB |
 | `src_tone_burst_2d` | 96 x 80 | 151 | 10 ns | 30 cells | lossless, driven point source | 36 KB |
+| `src_nonlinear_2d` | 96 x 80 | 151 | 10 ns | 30 cells | driven, `B/A = 20` at 5 MPa | 36 KB |
 
 Four choices make the comparison an oracle rather than a coincidence.
 
@@ -103,6 +104,7 @@ Full-field agreement over the comparison window, at the committed revision:
 | `ivp_absorbing_2d` | 8.10e-3 | 4.99e-3 | 0.999999924 |
 | `ivp_layered_2d` | 7.97e-3 | 1.54e-2 | 0.999963422 |
 | `src_tone_burst_2d` | 2.58e-3 | 2.20e-3 | 0.999996674 |
+| `src_nonlinear_2d` | 3.30e-3 | 2.80e-3 | 0.999994550 |
 
 Both cases exceed the `r >= 0.9999` figure the README published, by four to five
 orders of magnitude in the L2 norm.
@@ -125,7 +127,7 @@ relative L2 and `0.99` on correlation — a dispersion error shifts phase, it do
 not decorrelate, so falling below the correlation floor would mean the scheme is
 wrong rather than merely dispersive.
 
-The seven tests execute in 3.03 s, inside the standard nextest budget.
+The nine tests execute in 3.10 s, inside the standard nextest budget.
 
 ## The absorbing case
 
@@ -251,6 +253,34 @@ after time-point counting and axis order. The pattern is stable enough to state
 plainly: **a reference solver's conventions are discovered by a case that breaks
 the symmetry hiding them, never by reading them off the interface.**
 
+## The nonlinear case, and the trade that sizes it
+
+`src_nonlinear_2d` is the driven case with finite-amplitude propagation switched
+on and nothing else changed. It matches at `3.30e-3`, barely above the driven
+case's `2.58e-3`, which says the nonlinear equation of state is where the two
+codes agree most closely rather than least.
+
+Two parameters trade against each other, and the trade is the design.
+Accumulated distortion scales with the propagation distance as a fraction of the
+plane-wave shock distance `rho c^3 / (beta omega p0)`, so raising either `beta`
+or `p0` increases it. But crossing the shock distance asks both codes to resolve
+a discontinuity neither has shock capturing for, which would compare two Gibbs
+phenomena rather than two nonlinear propagations.
+
+At water's `B/A = 5` and 5 MPa the case measured a `1.5e-2` separation from a
+linear run — only five times the parity bound, too close to distinguish a
+correct nonlinear term from an absent one. `B/A = 20` at the same amplitude puts
+the shock distance at about 3.3 mm against the 2.25 mm travelled, roughly
+seventy percent of the way, and the separation at `4.58e-2`: fourteen times the
+measured residual. That is as far into the nonlinear regime as the smooth-wave
+assumption reaches.
+
+Nonlinearity is the one physics dimension with no configuration route:
+`PSTDConfig` carries only the boolean that switches the term on, so `B/A` travels
+on the medium, which is also where k-Wave puts it. That is a coherent split —
+unlike the absorption coefficient's, which ADR 120 had to correct — because there
+is no second owner to disagree with.
+
 ## Tolerance derivation
 
 The two codes integrate the same system with the same scheme over the same grid,
@@ -299,11 +329,12 @@ at the assignment site.
   That suite's reproducibility is a separate item; this ADR closes the Rust-side
   gap only.
 - The reference set covers linear propagation in two and three dimensions:
-  lossless, with power-law absorption, through a layered medium, and driven by a
-  time-varying point source. Nonlinearity and elastic propagation have no
+  lossless, with power-law absorption, through a layered medium, driven by a
+  time-varying point source, and at finite amplitude. Elastic propagation has no
   committed reference yet, nor does a distributed (as opposed to single-cell)
-  source, whose mask ordering is a convention this set does not exercise. Each is
-  a follow-up case rather than a claim this ADR supports.
+  source, whose mask ordering is a convention this set does not exercise, nor
+  does the axisymmetric geometry. Each is a follow-up case rather than a claim
+  this ADR supports.
 
 ## Alternatives rejected
 

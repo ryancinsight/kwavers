@@ -101,6 +101,12 @@ struct CaseRecord {
     source_cell: Option<Vec<usize>>,
     #[serde(default)]
     source_mode: Option<String>,
+    /// Peak source pressure in pascals; absent means the unit default.
+    #[serde(default)]
+    source_amplitude_pa: Option<f64>,
+    /// Nonlinearity parameter B/A. Absent leaves the medium linear.
+    #[serde(default)]
+    bona: Option<f64>,
 }
 
 impl CaseRecord {
@@ -193,6 +199,24 @@ fn load_reference_field(case: &CaseRecord, member: &str) -> Array3<f64> {
 /// measurable shift rather than as a silently different signal.
 fn load_reference_signal(case: &CaseRecord) -> Array2<f64> {
     let flat = load_reference_array(&case.archive, "p_signal");
+
+    // Cross-check the stored samples against the amplitude the manifest claims
+    // for them. The manifest is provenance and the archive is data; nothing
+    // else makes them disagree loudly, and a case regenerated at one amplitude
+    // against a manifest describing another would otherwise pass every metric
+    // while documenting the wrong experiment. The burst's Gaussian envelope
+    // peaks slightly below its nominal amplitude because the samples land
+    // either side of the envelope's centre, so the check is one-sided with a
+    // margin for that discretization.
+    if let Some(nominal) = case.source_amplitude_pa {
+        let peak = flat.iter().fold(0.0_f64, |m, v| m.max(v.abs()));
+        assert!(
+            peak <= nominal && peak >= 0.5 * nominal,
+            "{}: stored signal peaks at {peak:e} against a recorded amplitude of              {nominal:e}; the manifest and the archive describe different runs",
+            case.archive
+        );
+    }
+
     let mut signal = Array2::zeros((1, flat.len()));
     for (column, &value) in flat.iter().enumerate() {
         signal[[0, column]] = value;
@@ -327,7 +351,15 @@ fn reference_medium(
     case: &CaseRecord,
     _absorption: AbsorptionMode,
 ) -> KwaversResult<Box<dyn kwavers_medium::Medium>> {
-    let base = HomogeneousMedium::new(DENSITY_KG_M3, SOUND_SPEED_M_S, 0.0, 0.0, grid);
+    let mut base = HomogeneousMedium::new(DENSITY_KG_M3, SOUND_SPEED_M_S, 0.0, 0.0, grid);
+    if let Some(bona) = case.bona {
+        // Nonlinearity has no config equivalent to carry it -- `PSTDConfig`
+        // holds only the boolean that switches the term on -- so B/A travels on
+        // the medium, which is also where k-Wave puts it. Absorption is left at
+        // the constructor's value; a nonlinear case is otherwise lossless, and
+        // `AbsorptionMode::Lossless` short-circuits before it is read.
+        base.set_acoustic_properties(0.0, 1.5, bona)?;
+    }
 
     let Some(interface) = case.layer_interface_cell else {
         return Ok(Box::new(base));
@@ -504,6 +536,7 @@ fn run_pstd_driven(
 
     let mut config = reference_pstd_config(dt);
     config.nt = steps;
+    config.nonlinearity = case.bona.is_some();
 
     let medium = reference_medium(grid, case, config.absorption_mode.clone())?;
     let mut solver = PSTDSolver::new(config, grid.clone(), medium.as_ref(), source)?;
@@ -1252,5 +1285,73 @@ fn the_plugin_path_drives_the_solver_it_was_given_sources_for() {
     assert!(
         plugin_peak >= 0.5 * reference_peak,
         "the plugin path's field peaks at {plugin_peak:.6} against the          reference's {reference_peak:.6}; a run whose sources were discarded          would sit near zero here"
+    );
+}
+
+/// The nonlinear case's bound.
+///
+/// Its residual carries everything the driven case's does, plus the two codes'
+/// differing evaluation of the nonlinear equation of state at each step. It
+/// measures `3.30e-3`, barely above the driven case's `2.58e-3`, which says the
+/// nonlinear term itself is where the two agree most closely. `1e-2` clears it
+/// with margin while staying a factor of four below the `4.6e-2` separation
+/// from a linear run that the case is testing, so it cannot be met by a solver
+/// that has dropped the nonlinear term.
+const NONLINEAR_RELATIVE_L2_MAX: f64 = 1.0e-2;
+
+/// Finite-amplitude propagation must match k-Wave, and must differ from linear.
+///
+/// The reference pair shares grid, seed, source, and discretization; only B/A
+/// changes. Agreement alone would not establish that the nonlinear term ran,
+/// because a solver that ignored it would produce the linear field, and at a
+/// realistic B/A that field sits `1.5e-2` away — close enough to the parity
+/// bound to be ambiguous. The case therefore runs at `B/A = 20`, where the
+/// separation is `4.58e-2`, and asserts it.
+#[test]
+fn pstd_matches_kwave_with_finite_amplitude_propagation() {
+    let manifest = load_manifest();
+    let case = manifest
+        .cases
+        .get("src_nonlinear_2d")
+        .expect("manifest has the nonlinear case");
+    assert!(
+        case.bona.is_some(),
+        "the nonlinear case's manifest record carries no B/A, so this test would \
+         silently reduce to the linear one"
+    );
+
+    let (nx, ny, nz) = padded_shape(&case.shape);
+    let grid = Grid::new(nx, ny, nz, case.dx_m, case.dx_m, case.dx_m).expect("reference grid");
+    let radius = case.compare_radius_cells;
+
+    let reference = load_reference_field(case, "p_final");
+    let reference_window = window(&reference, &case.shape, radius);
+
+    let field = run_pstd_driven(&grid, case, case.dt_s, case.steps).expect("nonlinear run");
+    let measured = agreement(&window(&field, &case.shape, radius), &reference_window);
+    report("src_nonlinear_2d", case.steps, case.dt_s, &measured);
+    assert_parity("src_nonlinear_2d", &measured, NONLINEAR_RELATIVE_L2_MAX);
+
+    // The same case with the nonlinear term switched off. Every other input is
+    // identical, so the separation measures the term and nothing else.
+    let linear_record = CaseRecord {
+        bona: None,
+        ..case.clone()
+    };
+    let linear = run_pstd_driven(&grid, &linear_record, case.dt_s, case.steps)
+        .expect("linear run at the nonlinear case's amplitude");
+    let separation = agreement(&window(&linear, &case.shape, radius), &reference_window);
+    report(
+        "src_nonlinear_2d/linear-vs-nonlinear-reference",
+        case.steps,
+        case.dt_s,
+        &separation,
+    );
+    assert!(
+        separation.relative_l2 >= 2.0e-2,
+        "a linear run differs from the nonlinear reference by only {:.6e} \
+         relative L2; the case cannot discriminate a solver that drops the \
+         nonlinear term from one that evaluates it",
+        separation.relative_l2
     );
 }

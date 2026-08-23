@@ -113,6 +113,12 @@ class Case:
     source_frequency_hz: float | None = None
     source_centre_s: float | None = None
     source_width_s: float | None = None
+    # Peak source pressure in pascals, overriding the unit default. Nonlinear
+    # cases need a real amplitude: the distortion they exist to measure scales
+    # with it.
+    source_amplitude_pa: float | None = None
+    # Nonlinearity parameter B/A. `None` leaves the medium linear.
+    bona: float | None = None
 
 
 # k-wave-python exposes `kspaceFirstOrder2D`, `kspaceFirstOrder3D`, and the
@@ -187,6 +193,43 @@ CASES: tuple[Case, ...] = (
         source_centre_s=3.0e-7,
         source_width_s=1.0e-7,
     ),
+    # The driven case with finite-amplitude propagation switched on, so the
+    # pair isolates the nonlinear term exactly as the absorbing and layered
+    # pairs isolate theirs.
+    #
+    # Two parameters trade against each other here, and the trade is the design.
+    #
+    # Accumulated distortion scales with the propagation distance as a fraction
+    # of the plane-wave shock distance `rho c^3 / (beta omega p0)`, so it is
+    # raised by increasing either `beta` or `p0`. But crossing the shock
+    # distance asks both codes to resolve a discontinuity neither has shock
+    # capturing for, which would compare two Gibbs phenomena rather than two
+    # nonlinear propagations.
+    #
+    # At `B/A = 20` and 5 MPa the shock distance is
+    # `1000 * 3.375e9 / (11 * 1.885e7 * 5e6)`, about 3.3 mm, against the 2.25 mm
+    # this wave travels -- roughly seventy percent of the way, which is as far
+    # into the nonlinear regime as the smooth-wave assumption reaches.
+    #
+    # `B/A = 20` is above water's 5, for the same reason the absorbing case
+    # uses a coefficient above tissue: at water's value the two-dimensional
+    # spreading of a point source drops the amplitude fast enough that the
+    # accumulated distortion is 1.5 percent, too close to the parity bound to
+    # distinguish a correct nonlinear term from an absent one. Both codes
+    # receive the identical value, so its realism does not bear on what the
+    # comparison establishes.
+    Case(
+        "src_nonlinear_2d",
+        (96, 80),
+        1.5e-6,
+        30,
+        source_cell=(40, 32),
+        source_frequency_hz=3.0e6,
+        source_centre_s=3.0e-7,
+        source_width_s=1.0e-7,
+        source_amplitude_pa=5.0e6,
+        bona=20.0,
+    ),
 )
 
 
@@ -202,7 +245,8 @@ def tone_burst(case: Case, dt_s: float, steps: int) -> np.ndarray:
     offset = t - case.source_centre_s
     envelope = np.exp(-((offset / case.source_width_s) ** 2))
     carrier = np.sin(2.0 * np.pi * case.source_frequency_hz * offset)
-    return (P0_PEAK_PA * envelope * carrier).reshape(1, steps)
+    amplitude = case.source_amplitude_pa or P0_PEAK_PA
+    return (amplitude * envelope * carrier).reshape(1, steps)
 
 
 def layered_profile(case: Case, base: float, layer: float) -> np.ndarray:
@@ -262,6 +306,7 @@ def run_case(case: Case) -> dict[str, object]:
         density=density,
         alpha_coeff=case.alpha_coeff_db,
         alpha_power=case.alpha_power,
+        BonA=case.bona,
     )
     # `makeTime` sizes the step from the fastest speed present, which is what
     # bounds stability; passing the array directly lets k-Wave take its maximum.
@@ -450,6 +495,8 @@ def main() -> int:
             ),
             "source_cell": list(case.source_cell) if case.source_cell else None,
             "source_mode": "additive" if case.source_cell else None,
+            "source_amplitude_pa": case.source_amplitude_pa,
+            "bona": case.bona,
         }
         print(
             f"[kwave-reference] {case.name}: steps={result['steps']} "
