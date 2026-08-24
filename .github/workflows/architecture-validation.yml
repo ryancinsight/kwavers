@@ -223,13 +223,16 @@ jobs:
         cargo nextest run --locked --workspace --exclude kwavers-python --exclude kwavers-gpu --lib --test-threads=1
         cargo nextest run --locked -p kwavers --lib --no-default-features --features pinn
 
-    - name: Run bounded full-grid simulations
-      run: >-
-        cargo nextest run --locked -p kwavers
-        --test fdtd_pstd_comparison
-        --test property_based_tests
-        --test session2_source_injection_test
-        --test test_plane_wave_injection_fixed
+    # This replaces a four-name list of integration tests. The strict clippy
+    # step compiles all 92 of them via --all-targets, but only those four ever
+    # ran, so 686 integration tests were compiled and never executed and 17 of
+    # them had been failing unnoticed -- including two whose timestep exceeded
+    # the solver's own CFL limit. The script runs every one and enforces a
+    # committed baseline of the known failures: a failure outside the list is a
+    # regression, an entry that passes is stale and must be removed. The list
+    # may shrink, never grow. See docs/adr/124-integration-test-baseline.md.
+    - name: Run integration tests against the failure baseline
+      run: python scripts/integration_tests.py
 
     - name: Run doc tests
       run: |

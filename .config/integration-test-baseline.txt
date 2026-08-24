@@ -1,0 +1,24 @@
+# Integration tests known to fail, one per line, as
+# `<binary> <test path>`. Enforced by scripts/integration_tests.py:
+# a failure absent from this list is a regression, and an entry that
+# passes is stale and must be removed. The list may shrink, never grow.
+#
+# Every entry is a defect owed a fix, not an accepted behaviour. See
+# backlog.md KW-INTEGRATION-TESTS-UNRUN for the inventory.
+kwavers::dispersion_validation_test test_group_velocity
+kwavers::dispersion_validation_test test_numerical_dispersion_fourth_order
+kwavers::literature_validation test_rayleigh_collapse_time
+kwavers::physics_validation finite_difference_tests::test_fourth_order_laplacian
+kwavers::physics_validation finite_difference_tests::test_second_order_laplacian
+kwavers::physics_validation nonlinear_acoustics_tests::test_goldberg_number
+kwavers::physics_validation wave_equation_tests::test_dalembert_solution_1d
+kwavers::pinn_bc_validation bc_loss_tests::test_bc_loss_decreases_with_training
+kwavers::pinn_bc_validation bc_loss_tests::test_dirichlet_bc_zero_boundary
+kwavers::pinn_elastic_validation test_validation_result_construction
+kwavers::pinn_ic_validation ic_loss_tests::test_ic_combined_loss_decreases
+kwavers::pinn_ic_validation ic_loss_tests::test_ic_loss_zero_field
+kwavers::pstd_finite_window_born finite_window_born_rejects_off_grid_ring_geometry
+kwavers::rigorous_physics_validation test_attenuation_exact_exponential
+kwavers::rigorous_physics_validation test_cfl_stability_exact_bounds
+kwavers::rigorous_physics_validation test_edge_cases_comprehensive
+kwavers::rigorous_physics_validation test_spatial_sampling_nyquist_exact

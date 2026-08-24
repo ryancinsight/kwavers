@@ -87,3 +87,4 @@
 | [121](121-plugin-source-forwarding.md) | Plugins receive the sources they are given | Accepted |
 | [122](122-fwi-rotating-acquisition-geometry.md) | Per-view element-position rotation for the rotating opposed-linear-array acquisition | Accepted |
 | [123](123-visualization-config-single-source.md) | Keep visualization backend and quality selection single-source | Accepted |
+| [124](124-integration-test-baseline.md) | 124. Run the integration tests CI already compiles, against a failure baseline | Accepted |

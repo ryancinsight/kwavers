@@ -92,6 +92,10 @@ data/cfb_gbm_sample/*.nii.gz
 
 # All txt files except requirements
 *.txt
+# The blanket *.txt above would swallow this, and a missing baseline does not
+# fail quietly: the checker would see an empty set and report all 17 known
+# failures as regressions.
+!.config/integration-test-baseline.txt
 !requirements.txt
 
 # k-Wave example replication output directories
