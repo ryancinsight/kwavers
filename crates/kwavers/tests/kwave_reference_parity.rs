@@ -951,10 +951,15 @@ fn pstd_matches_kwave_on_a_layered_medium() {
         .cases
         .get("ivp_layered_2d")
         .expect("manifest has the layered case");
-    assert!(
-        layered.layer_interface_cell.is_some(),
-        "the layered case's manifest record carries no interface, so this test          would silently reduce to a uniform one"
-    );
+    // The medium builder treats a missing interface as uniform, so a record
+    // without one would silently shrink this test to the uniform case; unwrap
+    // the value here instead of asserting its existence.
+    let Some(_interface_cell) = layered.layer_interface_cell else {
+        panic!(
+            "the layered case's manifest record carries no interface, so this test \
+             would silently reduce to a uniform one"
+        );
+    };
 
     // The uniform case runs a different time step, so the two stored fields are
     // not directly comparable. Comparing the layered reference against a kwavers
@@ -1035,10 +1040,15 @@ fn pstd_matches_kwave_on_a_driven_point_source() {
         .cases
         .get("src_tone_burst_2d")
         .expect("manifest has the driven case");
-    assert!(
-        case.source_cell.is_some(),
-        "the driven case's manifest record carries no source cell, so this test          would silently run an undriven simulation"
-    );
+    // run_pstd_driven and window_peak_radius each unwrap the source cell at the
+    // point of use; extract it here too so a missing cell fails before the run
+    // rather than being asserted away.
+    let Some(_source_cell) = case.source_cell.as_ref() else {
+        panic!(
+            "the driven case's manifest record carries no source cell, so this test \
+             would silently run an undriven simulation"
+        );
+    };
 
     let (nx, ny, nz) = padded_shape(&case.shape);
     let grid = Grid::new(nx, ny, nz, case.dx_m, case.dx_m, case.dx_m).expect("reference grid");
