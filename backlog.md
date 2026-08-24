@@ -128,6 +128,42 @@
 - **Decision record:** `docs/adr/120-absorption-coefficient-ownership.md`
   (Accepted).
 
+## KW-LOCK-GUARD-01 — the lockfile guard existed but nothing ran it [major] — implemented 2026-08-24
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-LOCK-GUARD-01 | Run `scripts/lockfile.py --check` where it can actually stop a corrupt lock: before the push, and in the main CI workflow. | [major] | implemented | current session | `.githooks/pre-push`, `.github/workflows/ci.yml`, `README.md` |
+
+- **Evidence:** `scripts/lockfile.py` has existed and has described this trap
+  precisely, citing `KW-CI-087`. It was invoked from `benchmark-regression.yml`
+  and from nowhere else — not the main CI workflow, and no local hook. A
+  seven-branch series was pushed with every `source = "git+..."` line stripped
+  from `Cargo.lock`, failing all 24 jobs on each branch, while a working guard
+  sat in the repository unrun.
+- **Why local verification could never have caught it:** the overlay that
+  produces the corruption is also the environment every local command runs in,
+  and under it the stripped lock resolves fine. The lockfile is the one artifact
+  whose correctness cannot be established from inside the environment that
+  produces it, which is why the check has to run cargo from outside the overlay
+  and why a habit — reverting the file by eye — is not a substitute. The habit
+  failed precisely because `git checkout -- Cargo.lock` restores to `HEAD`, and
+  `HEAD` was already corrupt.
+- **Delivered:** a committed `.githooks/pre-push` running the existing checker,
+  with a documented `SKIP_LOCKFILE_CHECK=1` escape hatch and graceful degradation
+  when the tool or a Python interpreter is absent — reported rather than passed
+  silently, so a missing guard stays visible. A `Lockfile integrity` job in
+  `ci.yml` that needs no toolchain, cache or build and is bounded at five
+  minutes, so it fails in seconds rather than after a full matrix. Install
+  documented in the README's Getting Started, since git does not apply tracked
+  hooks on its own.
+- **Verified by exercising it, not by inspection:** the hook exits `1` on a lock
+  with its git sources stripped, `0` on a valid lock, and `0` under the bypass.
+- **Not covered here:** fifteen other stack members carry first-party git
+  sources and have no such tool — CFDrs (64 sources), helios (59), asclepius
+  (41), coeus (41), apollo (36), athena (35), hephaestus (33), consus (24),
+  gaia (22), hermes (11), and five more. Promotion is a file copy plus a hook,
+  and is tracked at the meta level as `ATLAS-OVERLAY-LOCK-GUARD`.
+
 ## KW-GAP-2026-08-20-KWAVEPARITY — Make the k-Wave parity claim reproducible [major] [arch] — implementation complete; hosted verification pending
 
 | ID | Outcome | Class | Status | Owner | Scope |

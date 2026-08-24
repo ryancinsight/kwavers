@@ -30,6 +30,25 @@ env:
   RUST_BACKTRACE: 1
 
 jobs:
+  # Runs first and alone: it needs no toolchain, no cache and no build, and it
+  # guards the one artifact whose correctness cannot be checked from inside the
+  # environment that produces it. Working on this repository inside the Atlas
+  # stack puts a `[patch]` overlay on the path, under which cargo resolves every
+  # first-party dependency to a local directory and writes a lock with all its
+  # `source = "git+..."` lines stripped. That lock resolves fine locally and
+  # fails every `--locked` job here, so the failure is invisible until CI --
+  # which is exactly how a seven-branch series went out corrupt while this very
+  # check sat in the repository, wired into one benchmark workflow and nothing
+  # else.
+  lockfile:
+    name: Lockfile integrity
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Verify Cargo.lock resolves under --locked
+        run: python3 scripts/lockfile.py --check
+
   pinn-validation:
     name: PINN Feature Validation
     runs-on: ubuntu-latest
