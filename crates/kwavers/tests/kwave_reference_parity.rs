@@ -112,7 +112,7 @@ impl CaseRecord {
     fn absorption(&self) -> AbsorptionMode {
         match (self.alpha_coeff_db, self.alpha_power) {
             (Some(alpha_coeff), Some(alpha_power)) => AbsorptionMode::PowerLaw {
-                alpha_coeff,
+                alpha_coeff: Some(alpha_coeff),
                 alpha_power,
             },
             _ => AbsorptionMode::Lossless,
@@ -310,33 +310,24 @@ fn reference_pstd_config(dt: f64) -> PSTDConfig {
 
 /// Build the medium the reference was run against.
 ///
-/// `HomogeneousMedium::new` seeds `absorption_alpha` with water's coefficient,
-/// and `initialize_absorption_operators` prefers the medium's coefficient over
-/// the one in `PSTDConfig::absorption_mode` whenever the medium reports a
-/// non-zero value — which this constructor guarantees it always does. The
-/// config coefficient is therefore unreachable through this medium, and
-/// absorption has to be set here for the solver to see it at all. See the
-/// `PSTD-ABSORPTION-CONFIG-DEAD` board item.
+/// Absorption is deliberately *not* set here. The coefficient travels in
+/// `PSTDConfig::absorption_mode` alone, and the medium keeps the water value
+/// `HomogeneousMedium::new` seeds, so the absorbing case doubles as the
+/// regression test for ADR 120: before that change the medium's defaulted
+/// coefficient silently outranked the config's, the solver ran at water's
+/// `0.0022` instead of the requested `40`, and the result was
+/// indistinguishable from a lossless run. If the precedence regresses, the
+/// absorbing case fails rather than quietly measuring the wrong medium.
 ///
-/// Nonlinearity is set to zero because `PSTDConfig::nonlinearity` is false on
-/// this path, so the medium's B/A never enters the pressure update.
+/// Nonlinearity is left at the constructor's value because
+/// `PSTDConfig::nonlinearity` is false on this path, so the medium's B/A never
+/// enters the pressure update.
 fn reference_medium(
     grid: &Grid,
     case: &CaseRecord,
-    absorption: AbsorptionMode,
+    _absorption: AbsorptionMode,
 ) -> KwaversResult<Box<dyn kwavers_medium::Medium>> {
-    let mut base = HomogeneousMedium::new(DENSITY_KG_M3, SOUND_SPEED_M_S, 0.0, 0.0, grid);
-    let (alpha, power) = match absorption {
-        AbsorptionMode::PowerLaw {
-            alpha_coeff,
-            alpha_power,
-        } => (alpha_coeff, alpha_power),
-        // A lossless run must be lossless: leaving the constructor's water
-        // coefficient in place would make the "lossless" reference comparison
-        // quietly absorbing.
-        _ => (0.0, 1.5),
-    };
-    base.set_acoustic_properties(alpha, power, 0.0)?;
+    let base = HomogeneousMedium::new(DENSITY_KG_M3, SOUND_SPEED_M_S, 0.0, 0.0, grid);
 
     let Some(interface) = case.layer_interface_cell else {
         return Ok(Box::new(base));

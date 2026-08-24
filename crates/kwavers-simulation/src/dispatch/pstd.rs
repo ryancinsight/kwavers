@@ -269,7 +269,11 @@ pub(crate) fn prepare_solver(
 
     let absorption_mode = if effective_alpha_db > 0.0 {
         AbsorptionMode::PowerLaw {
-            alpha_coeff: effective_alpha_db,
+            // Only a coefficient the caller actually supplied is passed on. The
+            // medium's own value is left to the solver, which reads it per
+            // voxel; forwarding a single origin sample here would flatten a
+            // heterogeneous medium to one number (ADR 120).
+            alpha_coeff: (nl.alpha_coeff > 0.0).then_some(nl.alpha_coeff),
             alpha_power: effective_alpha_power,
         }
     } else {
