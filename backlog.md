@@ -1,5 +1,46 @@
 # Backlog / Strategy
 
+## KW-INTEGRATION-TESTS-UNRUN — 686 integration tests compiled, 6 run [patch] — IMPLEMENTED 2026-08-24
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-INTEGRATION-TESTS-UNRUN | Run the integration tests CI compiles but never executes, and burn down the 17 failures that were hiding there. | [patch] | review | agent/session-d49f3b0a | `scripts/integration_tests.py`, `.config/integration-test-baseline.txt`, `.github/workflows/architecture-validation.yml`, `crates/kwavers/tests/solver_test.rs` |
+
+- **Evidence:** `crates/kwavers/tests/` holds 92 files. The strict clippy step
+  compiles all of them (`--all-targets`); the test-coverage job runs `--lib`
+  plus four named integration binaries. Locally the suite is **686 tests, 669
+  passing, 17 failing** -- failing with nobody informed.
+- **How it surfaced:** a `Box`-to-`Arc` migration broke `solver_test`'s
+  *compilation*, which CI does check. Its two tests turned out to have been
+  failing on `main` besides, driving the FDTD plugin at 1.71x its CFL limit.
+- **Fixed here:** the `solver_test` timestep now derives from
+  `StaggeredLeapfrogOperator::cfl_limit(3)` -- the same operator the solver
+  asks -- instead of restating the bound without its dimensional factor. Both
+  tests pass and are not in the baseline.
+- **Mechanism:** ADR 121. A committed set-valued baseline, not a count: a
+  failure outside it is a named regression, an entry that passes is stale and
+  must be removed. Shrinks, never grows. Proven live in both directions before
+  landing.
+
+### The 17 owed fixes
+
+Each is a defect, not an accepted behaviour. Grouped by binary; every one needs
+its own diagnosis before a fix, and several are physics-correctness claims
+rather than harness problems.
+
+| Binary | Tests | First read |
+|---|---|---|
+| `rigorous_physics_validation` | `test_attenuation_exact_exponential`, `test_cfl_stability_exact_bounds`, `test_edge_cases_comprehensive`, `test_spatial_sampling_nyquist_exact` | 4 exactness claims -- attenuation, CFL, Nyquist. Highest priority: these assert the properties the solver is sold on. |
+| `physics_validation` | `finite_difference_tests::test_second_order_laplacian`, `::test_fourth_order_laplacian`, `nonlinear_acoustics_tests::test_goldberg_number`, `wave_equation_tests::test_dalembert_solution_1d` | Operator accuracy and an analytical solution. A failing d'Alembert case is either a wrong test or a wrong wave equation. |
+| `pinn_bc_validation`, `pinn_ic_validation`, `pinn_elastic_validation` | 5 tests | Loss-decrease and zero-field assertions. Possibly unconverged training rather than a defect -- but an assertion that cannot be satisfied is not a test. |
+| `dispersion_validation_test` | `test_group_velocity`, `test_numerical_dispersion_fourth_order` | Group velocity measured 1481.5 against c = 1500, a 1.2% error against whatever bound the test asserts. Needs the derivation checked before the code. |
+| `literature_validation` | `test_rayleigh_collapse_time` | Against a published value. |
+| `pstd_finite_window_born` | `finite_window_born_rejects_off_grid_ring_geometry` | A rejection case that does not reject. |
+
+- **Sequencing:** the baseline lands first so the 669 passing tests are guarded
+  now; the 17 burn down as separate items rather than gating that protection on
+  a fix of unknown length.
+
 ## KW-PSTD-PLUGIN-SOURCES-DROPPED — the plugin path discards its sources [major] — IMPLEMENTED 2026-08-22
 
 | ID | Outcome | Class | Status | Owner | Scope |

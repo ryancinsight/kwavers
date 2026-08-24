@@ -2,6 +2,7 @@
 
 use kwavers_boundary::{DomainPMLBoundary, DomainPmlConfig};
 use kwavers_grid::Grid;
+use kwavers_math::numerics::operators::differential::staggered_leapfrog::StaggeredLeapfrogOperator;
 use kwavers_medium::homogeneous::HomogeneousMedium;
 use kwavers_solver::fdtd::{FdtdConfig, FdtdPlugin};
 use kwavers_solver::plugin::PluginManager;
@@ -10,6 +11,32 @@ use kwavers_solver::pstd::{PSTDConfig, PSTDPlugin};
 use kwavers_source::Source;
 use leto::Array4;
 use std::sync::Arc;
+
+/// The largest timestep the FDTD plugin will accept for this test's grid.
+///
+/// `FdtdPlugin::update` rejects a step above
+/// `cfl_factor * operator.cfl_limit(3) * min_dx / c` and returns
+/// `NumericalInstability` rather than integrating an unstable one. Deriving the
+/// step from the same operator is what keeps the two in agreement: the earlier
+/// `cfl_factor * dx / c` restated the bound without the dimensional stability
+/// factor, which put `dt` 1.71x over the limit and made both FDTD cases fail.
+/// They failed unnoticed because CI compiles this file but runs no test in it.
+///
+/// `STABILITY_MARGIN` keeps the step clear of the boundary rather than exactly
+/// on it, so the case exercises stable integration instead of floating-point
+/// equality against the rejection threshold.
+fn fdtd_stable_dt(spatial_order: usize) -> f64 {
+    const STABILITY_MARGIN: f64 = 0.9;
+    let operator = StaggeredLeapfrogOperator::new(
+        spatial_order,
+        TEST_GRID_SPACING,
+        TEST_GRID_SPACING,
+        TEST_GRID_SPACING,
+    )
+    .expect("the test's spatial order is one the operator supports");
+    STABILITY_MARGIN * FDTD_CFL_FACTOR * operator.cfl_limit(3) * TEST_GRID_SPACING
+        / TEST_SOUND_SPEED
+}
 
 // Named constants for test configuration
 const TEST_GRID_SIZE: usize = 32;
@@ -53,8 +80,7 @@ fn test_fdtd_solver() {
     let center = TEST_GRID_SIZE / 2;
     fields[[0, center, center, center]] = TEST_PRESSURE_AMPLITUDE; // Point source in pressure field
 
-    let c = TEST_SOUND_SPEED;
-    let dt = FDTD_CFL_FACTOR * TEST_GRID_SPACING / c;
+    let dt = fdtd_stable_dt(2);
 
     let config = FdtdConfig {
         spatial_order: 2,
@@ -273,8 +299,7 @@ fn test_wave_propagation() {
     // Test FDTD
     {
         let mut fields_fdtd = initial_fields.clone();
-        let c = TEST_SOUND_SPEED;
-        let dt = FDTD_CFL_FACTOR * TEST_GRID_SPACING / c;
+        let dt = fdtd_stable_dt(2);
         let config = FdtdConfig {
             spatial_order: 2,
             staggered_grid: true,

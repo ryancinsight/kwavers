@@ -85,3 +85,4 @@
 | [119](119-kwave-reference-oracle.md) | In-repository k-Wave differential oracle | Accepted |
 | [120](120-absorption-coefficient-ownership.md) | 120. Who owns the power-law absorption coefficient | Proposed |
 | [121](121-plugin-source-forwarding.md) | 121. Plugins receive the sources they are given | Accepted |
+| [122](122-integration-test-baseline.md) | 122. Run the integration tests CI already compiles, against a failure baseline | Accepted |
