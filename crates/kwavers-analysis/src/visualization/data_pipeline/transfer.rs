@@ -7,7 +7,7 @@
 
 use super::super::transfer_contract::VisualizationTransferProvider;
 use super::{ProcessingOperation, ProcessingStage, TransferStatistics};
-use kwavers_core::error::KwaversResult;
+use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_field::UnifiedFieldType;
 use leto::Array3;
 use log::debug;
@@ -135,17 +135,17 @@ impl DataPipeline {
         let [nx, ny, nz] = view.shape();
         let dimensions = (
             u32::try_from(nx).map_err(|_| {
-                kwavers_core::error::KwaversError::InvalidInput(
+                KwaversError::InvalidInput(
                     "visualization field x dimension exceeds u32".to_string(),
                 )
             })?,
             u32::try_from(ny).map_err(|_| {
-                kwavers_core::error::KwaversError::InvalidInput(
+                KwaversError::InvalidInput(
                     "visualization field y dimension exceeds u32".to_string(),
                 )
             })?,
             u32::try_from(nz).map_err(|_| {
-                kwavers_core::error::KwaversError::InvalidInput(
+                KwaversError::InvalidInput(
                     "visualization field z dimension exceeds u32".to_string(),
                 )
             })?,
