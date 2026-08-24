@@ -188,6 +188,42 @@ rather than harness problems.
   now; the 17 burn down as separate items rather than gating that protection on
   a fix of unknown length.
 
+### Burn-down: `rigorous_physics_validation` deleted, 17 -> 13
+
+The file asserted nothing about kwavers. Its only imports were `Grid` and a
+constant, and `Grid` was used solely to read back the spacings the test had
+just passed to `Grid::new`. Every assertion compared a value to a re-derivation
+of itself or to a literal:
+
+- `test_greens_function_point_source_exact` -- `assert_relative_eq!(expected_amplitude, analytical)` where both sides are the identical expression `1.0 / (4.0 * PI * r)`.
+- `test_wave_equation_exact_solution` -- computes `k = 2*PI / wavelength`, then asserts `k * c == omega`. An algebraic round-trip on literals.
+- `test_cfl_stability_exact_bounds` -- asserts `c == safe_dt * c / (safe_cfl * min_dx)` where `safe_cfl` is *defined* as `safe_dt * c / min_dx`. That reduces to `c == 1.0`; it observed `343.0` against `1.0` and could never have passed for any sound speed but unity.
+- `test_edge_cases_comprehensive` -- four claims about `f64` arithmetic on constants, one of them false: `1500.0 / f64::MIN_POSITIVE` is about `6.7e310`, which overflows, so `assert!(wavelength_huge.is_finite())` cannot hold.
+- `test_spatial_sampling_nyquist_exact` -- pure arithmetic whose own data table contains an undersampled case (`dx = 0.5 mm` against a `0.3 mm` wavelength at 5 MHz) that the test then panics on by construction.
+
+Two of the six were *passing*, for the same reason the others failed: `x == x`
+holds until the algebra is written down wrong. Deleting passing tests is the
+evidence this is not a green-CI convenience -- there was no coverage to lose.
+Genuine differential validation lives in `kwave_reference_parity.rs`.
+
+### Remaining 13, with first diagnosis
+
+- **`physics_validation` (4)** -- implements its finite-difference stencils
+  inline rather than calling the library's, so it validates the test's own
+  arithmetic. Both Laplacian cases assert `error < dx*dx*100.0`, comparing a
+  *dimensionless* relative error against a bound carrying units of m^2: the
+  truncation error for `u = sin(kx)` is `k^2 dx^2 / 12` relative, so the
+  threshold is missing the `k^2/12` factor entirely. An underived tolerance.
+  `test_dalembert_solution_1d` observes `-4.82` against `-4.800000000000001`,
+  a 0.4% gap -- too large for precision, so the derivation is wrong on one
+  side. Fixing these properly means pointing them at the library's operator,
+  not repairing the threshold in place.
+- **`pinn_*` (5)**, **`dispersion_validation_test` (2)**,
+  **`literature_validation` (1)**, **`pstd_finite_window_born` (1)** -- not yet
+  diagnosed. The group velocity case measures 1481.5 against c = 1500 (1.2%),
+  which is the right magnitude for fourth-order numerical dispersion, so the
+  test's bound is the first thing to check, not the solver.
+
 ## KW-PSTD-PLUGIN-SOURCES-DROPPED — the plugin path discards its sources [major] — IMPLEMENTED 2026-08-22
 
 | ID | Outcome | Class | Status | Owner | Scope |
