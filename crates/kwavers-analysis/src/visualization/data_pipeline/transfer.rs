@@ -95,9 +95,9 @@ impl DataPipeline {
 
     /// Transfer field data through the provider.
     ///
-    /// Applies the configured CPU preprocessing, records backend-neutral
-    /// metadata (dimensions, value range), and hands contiguous f32 samples to
-    /// the provider's device buffers.
+    /// Applies the configured CPU preprocessing, hands contiguous f32 samples
+    /// to the provider's device buffers, and commits backend-neutral metadata
+    /// (dimensions, value range) after the provider accepts the transfer.
     ///
     /// This method is synchronous because the provider contract includes an
     /// explicit blocking transfer mode. An asynchronous application runtime
@@ -133,17 +133,35 @@ impl DataPipeline {
         };
 
         let [nx, ny, nz] = view.shape();
-        self.field_dimensions
-            .insert(field_type, (nx as u32, ny as u32, nz as u32));
+        let dimensions = (
+            u32::try_from(nx).map_err(|_| {
+                kwavers_core::error::KwaversError::InvalidInput(
+                    "visualization field x dimension exceeds u32".to_string(),
+                )
+            })?,
+            u32::try_from(ny).map_err(|_| {
+                kwavers_core::error::KwaversError::InvalidInput(
+                    "visualization field y dimension exceeds u32".to_string(),
+                )
+            })?,
+            u32::try_from(nz).map_err(|_| {
+                kwavers_core::error::KwaversError::InvalidInput(
+                    "visualization field z dimension exceeds u32".to_string(),
+                )
+            })?,
+        );
 
         let min_val = view.iter().fold(f64::INFINITY, |a, &b| a.min(b)) as f32;
         let max_val = view.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b)) as f32;
-        self.field_ranges.insert(field_type, (min_val, max_val));
+        let range = (min_val, max_val);
 
         let data_f32: Vec<f32> = view.iter().map(|&v| v as f32).collect();
 
         self.provider
             .transfer_field(field_type, &data_f32, self.transfer_options.mode)?;
+
+        self.field_dimensions.insert(field_type, dimensions);
+        self.field_ranges.insert(field_type, range);
 
         let elapsed = start.elapsed();
         debug!("Field transfer completed in {:?}", elapsed);
@@ -336,6 +354,11 @@ mod tests {
                 kwavers_core::error::SystemError::ResourceUnavailable { .. }
             ))
         ));
+        assert_eq!(
+            pipeline.get_field_dimensions(UnifiedFieldType::Pressure),
+            None
+        );
+        assert_eq!(pipeline.get_field_range(UnifiedFieldType::Pressure), None);
     }
 
     #[test]

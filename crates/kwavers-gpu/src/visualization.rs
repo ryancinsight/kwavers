@@ -147,18 +147,22 @@ impl FieldBuffers {
         })
     }
 
-    fn select(&mut self, mode: TransferMode) -> &WgpuBuffer<f32> {
+    fn select(&self, mode: TransferMode) -> &WgpuBuffer<f32> {
         match mode {
             TransferMode::Blocking | TransferMode::Async => &self.first,
             TransferMode::Streaming => {
-                let selected = self.next_is_first;
-                self.next_is_first = !self.next_is_first;
-                if selected {
+                if self.next_is_first {
                     &self.first
                 } else {
                     &self.second
                 }
             }
+        }
+    }
+
+    fn commit(&mut self, mode: TransferMode) {
+        if matches!(mode, TransferMode::Streaming) {
+            self.next_is_first = !self.next_is_first;
         }
     }
 }
@@ -223,70 +227,65 @@ impl VisualizationTransferProvider for HephaestusVisualizationProvider {
                 message: "visualization device buffer size overflows usize".to_string(),
             })?;
 
-        let buffer = {
-            let entry = self.fields.entry(field_type);
-            let buffers = match entry {
-                std::collections::hash_map::Entry::Occupied(mut entry) => {
-                    if entry.get().bytes != new_bytes {
-                        let previous_allocation =
-                            entry.get().bytes.checked_mul(2).ok_or_else(|| {
-                                KwaversError::ResourceLimitExceeded {
-                                    message: "visualization memory accounting overflowed"
-                                        .to_string(),
-                                }
-                            })?;
-                        let new_allocation = new_bytes.checked_mul(2).ok_or_else(|| {
-                            KwaversError::ResourceLimitExceeded {
-                                message: "visualization memory accounting overflowed".to_string(),
-                            }
-                        })?;
-                        let updated_memory = self
-                            .memory_bytes
-                            .checked_sub(previous_allocation)
-                            .and_then(|bytes| bytes.checked_add(new_allocation))
-                            .ok_or_else(|| KwaversError::ResourceLimitExceeded {
-                                message: "visualization memory accounting overflowed".to_string(),
-                            })?;
-                        let replacement =
-                            FieldBuffers::allocate(self.device.provider(), samples.len())?;
-                        entry.insert(replacement);
-                        self.memory_bytes = updated_memory;
-                    }
-                    entry.into_mut()
-                }
-                std::collections::hash_map::Entry::Vacant(entry) => {
-                    let new_allocation = new_bytes.checked_mul(2).ok_or_else(|| {
-                        KwaversError::ResourceLimitExceeded {
-                            message: "visualization memory accounting overflowed".to_string(),
-                        }
-                    })?;
-                    let updated_memory =
-                        self.memory_bytes
-                            .checked_add(new_allocation)
-                            .ok_or_else(|| KwaversError::ResourceLimitExceeded {
-                                message: "visualization memory accounting overflowed".to_string(),
-                            })?;
-                    let buffers = FieldBuffers::allocate(self.device.provider(), samples.len())?;
-                    self.memory_bytes = updated_memory;
-                    entry.insert(buffers)
-                }
-            };
-            buffers.select(mode)
-        };
-        self.device
-            .provider()
-            .write_sub_buffer(buffer, 0, samples)
-            .map_err(|error| map_device_error("upload visualization field", error))?;
-
-        if matches!(mode, TransferMode::Blocking) {
-            self.device.synchronize()?;
+        if let Some(buffers) = self.fields.get_mut(&field_type) {
+            if buffers.bytes == new_bytes {
+                upload_to_buffers(&self.device, buffers, samples, mode)?;
+                return Ok(());
+            }
         }
+
+        let previous_allocation = self.fields.get(&field_type).map_or(Ok(0), |buffers| {
+            buffers
+                .bytes
+                .checked_mul(2)
+                .ok_or_else(|| KwaversError::ResourceLimitExceeded {
+                    message: "visualization memory accounting overflowed".to_string(),
+                })
+        })?;
+        let new_allocation =
+            new_bytes
+                .checked_mul(2)
+                .ok_or_else(|| KwaversError::ResourceLimitExceeded {
+                    message: "visualization memory accounting overflowed".to_string(),
+                })?;
+        let updated_memory = self
+            .memory_bytes
+            .checked_sub(previous_allocation)
+            .and_then(|bytes| bytes.checked_add(new_allocation))
+            .ok_or_else(|| KwaversError::ResourceLimitExceeded {
+                message: "visualization memory accounting overflowed".to_string(),
+            })?;
+
+        let mut replacement = FieldBuffers::allocate(self.device.provider(), samples.len())?;
+        upload_to_buffers(&self.device, &mut replacement, samples, mode)?;
+
+        self.memory_bytes = updated_memory;
+        self.fields.insert(field_type, replacement);
         Ok(())
     }
 
     fn memory_usage(&self) -> usize {
         self.memory_bytes
     }
+}
+
+fn upload_to_buffers(
+    device: &crate::gpu::GpuDevice<WgpuDevice>,
+    buffers: &mut FieldBuffers,
+    samples: &[f32],
+    mode: TransferMode,
+) -> KwaversResult<()> {
+    let buffer = buffers.select(mode);
+    device
+        .provider()
+        .write_sub_buffer(buffer, 0, samples)
+        .map_err(|error| map_device_error("upload visualization field", error))?;
+
+    if matches!(mode, TransferMode::Blocking) {
+        device.synchronize()?;
+    }
+    buffers.commit(mode);
+    Ok(())
 }
 
 fn map_device_error(operation: &str, error: impl std::fmt::Display) -> KwaversError {
