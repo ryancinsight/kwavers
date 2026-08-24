@@ -1324,11 +1324,15 @@ fn pstd_matches_kwave_with_finite_amplitude_propagation() {
         .cases
         .get("src_nonlinear_2d")
         .expect("manifest has the nonlinear case");
-    assert!(
-        case.bona.is_some(),
-        "the nonlinear case's manifest record carries no B/A, so this test would \
-         silently reduce to the linear one"
-    );
+    // The driver maps a missing B/A to linear propagation, so a record without
+    // one would silently shrink this test to the linear case; unwrap the value
+    // here instead of asserting its existence.
+    let Some(_bona) = case.bona else {
+        panic!(
+            "the nonlinear case's manifest record carries no B/A, so this test would \
+             silently reduce to the linear one"
+        );
+    };
 
     let (nx, ny, nz) = padded_shape(&case.shape);
     let grid = Grid::new(nx, ny, nz, case.dx_m, case.dx_m, case.dx_m).expect("reference grid");
