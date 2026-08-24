@@ -968,166 +968,290 @@ fn diag_swe_recon_2() {
     let body_forces = arf.multi_directional_body_forces(&push_pattern).unwrap();
     let push_times: Vec<f64> = push_pattern.time_delays.clone();
     let sources: Vec<kwavers_solver::forward::elastic::VolumetricSource> = push_pattern
-        .pushes.iter().zip(push_pattern.time_delays.iter())
-        .map(|(push, &t)| kwavers_solver::forward::elastic::VolumetricSource {
-            location_m: push.location, time_offset_s: t })
+        .pushes
+        .iter()
+        .zip(push_pattern.time_delays.iter())
+        .map(
+            |(push, &t)| kwavers_solver::forward::elastic::VolumetricSource {
+                location_m: push.location,
+                time_offset_s: t,
+            },
+        )
         .collect();
     let (history, tracker) = volumetric_solver
         .propagate_volumetric_waves_with_body_forces(&body_forces, &push_times, &sources)
         .unwrap();
-    println!("snapshots={} tend={:.3}", history.len(), history.last().unwrap().time);
+    println!(
+        "snapshots={} tend={:.3}",
+        history.len(),
+        history.last().unwrap().time
+    );
     let dt_snap = history.last().unwrap().time / (history.len() - 1) as f64;
     println!("snapshot dt = {:.2e} s", dt_snap);
 
-
     // WAVEFORM dump (downsampled)
-    for (i, j, k) in [(45,25,25), (30,25,25), (20,25,25), (40,20,30)] {
-        let series: Vec<f64> = history.iter().map(|f| {
-            let ux = f.ux[[i, j, k]]; let uy = f.uy[[i, j, k]]; let uz = f.uz[[i, j, k]];
-            (ux*ux + uy*uy + uz*uz).sqrt()
-        }).collect();
+    for (i, j, k) in [(45, 25, 25), (30, 25, 25), (20, 25, 25), (40, 20, 30)] {
+        let series: Vec<f64> = history
+            .iter()
+            .map(|f| {
+                let ux = f.ux[[i, j, k]];
+                let uy = f.uy[[i, j, k]];
+                let uz = f.uz[[i, j, k]];
+                (ux * ux + uy * uy + uz * uz).sqrt()
+            })
+            .collect();
         println!("WAVE2 [{i},{j},{k}] n={}", series.len());
         let mut out: Vec<String> = Vec::new();
         for (idx, &v) in series.iter().enumerate() {
-            if idx % 12 == 0 { out.push(format!("{:.5}:{:.1e}", history[idx].time, v)); }
+            if idx % 12 == 0 {
+                out.push(format!("{:.5}:{:.1e}", history[idx].time, v));
+            }
         }
         println!("  {}", out.join(" "));
     }
 
-
     // Series at a PML-edge voxel.
     {
         let (i, j, k) = (28usize, 15usize, 10usize);
-        let series: Vec<f64> = history.iter().map(|f| {
-            let ux = f.ux[[i, j, k]]; let uy = f.uy[[i, j, k]]; let uz = f.uz[[i, j, k]];
-            (ux*ux + uy*uy + uz*uz).sqrt()
-        }).collect();
+        let series: Vec<f64> = history
+            .iter()
+            .map(|f| {
+                let ux = f.ux[[i, j, k]];
+                let uy = f.uy[[i, j, k]];
+                let uz = f.uz[[i, j, k]];
+                (ux * ux + uy * uy + uz * uz).sqrt()
+            })
+            .collect();
         // replicate the tracker HPF (window = n/8)
         let window = (series.len() / 8).max(3);
         let mut smoothed = vec![0.0_f64; series.len()];
         let mut acc = 0.0_f64;
         for (i, &v) in series.iter().enumerate() {
             acc += v;
-            if i >= window { acc -= series[i - window]; }
+            if i >= window {
+                acc -= series[i - window];
+            }
             smoothed[i] = acc / (i + 1).min(window) as f64;
         }
-        let mut hpf: Vec<f64> = series.iter().zip(smoothed.iter()).map(|(v, &m)| v - m).collect();
+        let mut hpf: Vec<f64> = series
+            .iter()
+            .zip(smoothed.iter())
+            .map(|(v, &m)| v - m)
+            .collect();
         let mut out: Vec<String> = Vec::new();
         for (idx, &v) in hpf.iter().enumerate() {
-            if idx % 6 == 0 { out.push(format!("{:.4}:{:.1e}", history[idx].time, v)); }
+            if idx % 6 == 0 {
+                out.push(format!("{:.4}:{:.1e}", history[idx].time, v));
+            }
         }
         println!("PMLEDGE-HPF [28,15,10] {}", out.join(" "));
     }
     // Near-field profile along +X from the +X push.
     for i in 36..50 {
-        let j = 25usize; let k = 25usize;
-        let series: Vec<f64> = history.iter().map(|f| {
-            let ux = f.ux[[i, j, k]]; let uy = f.uy[[i, j, k]]; let uz = f.uz[[i, j, k]];
-            (ux*ux + uy*uy + uz*uz).sqrt()
-        }).collect();
+        let j = 25usize;
+        let k = 25usize;
+        let series: Vec<f64> = history
+            .iter()
+            .map(|f| {
+                let ux = f.ux[[i, j, k]];
+                let uy = f.uy[[i, j, k]];
+                let uz = f.uz[[i, j, k]];
+                (ux * ux + uy * uy + uz * uz).sqrt()
+            })
+            .collect();
         let d = (i as f64 * grid.dx - 0.035).abs();
-        let static_max = series.iter().zip(history.iter())
+        let static_max = series
+            .iter()
+            .zip(history.iter())
             .filter(|(_, f)| f.time < 4e-3)
-            .map(|(v, _)| *v).fold(0.0f64, f64::max);
-        let late_max = series.iter().zip(history.iter())
+            .map(|(v, _)| *v)
+            .fold(0.0f64, f64::max);
+        let late_max = series
+            .iter()
+            .zip(history.iter())
             .filter(|(_, f)| f.time >= 4e-3 && f.time < 15e-3)
-            .map(|(v, _)| *v).fold(0.0f64, f64::max);
+            .map(|(v, _)| *v)
+            .fold(0.0f64, f64::max);
         let t = tracker.arrival_times[[i, j, k]];
-        let speed = if t.is_finite() && t > 0.0 { d / t } else { f64::NAN };
+        let speed = if t.is_finite() && t > 0.0 {
+            d / t
+        } else {
+            f64::NAN
+        };
         println!("NF i={i} d={d:.3} static4ms={static_max:.1e} late={late_max:.1e} t={t:.5} speed={speed:.2}");
     }
 
     // Speed distribution over the whole background.
-    let mut near_cs = 0usize; let mut near_cp = 0usize; let mut mid = 0usize; let mut none = 0usize;
-    let mut nearfield = 0usize; let mut fast = 0usize;
+    let mut near_cs = 0usize;
+    let mut near_cp = 0usize;
+    let mut mid = 0usize;
+    let mut none = 0usize;
+    let mut nearfield = 0usize;
+    let mut fast = 0usize;
     let mut cs_ratios: Vec<f64> = Vec::new();
     let mut fast_samples: Vec<(usize, usize, usize, f64, f64, f64, f64, f64)> = Vec::new();
     let mut mid_ratios: Vec<f64> = Vec::new();
     let mut fast_ratios: Vec<f64> = Vec::new();
     let mut errs: Vec<f64> = Vec::new();
     let mut errs_in: Vec<f64> = Vec::new();
-    let mut in_cs = 0usize; let mut in_mid = 0usize; let mut in_fast = 0usize; let mut in_slow = 0usize;
+    let mut in_cs = 0usize;
+    let mut in_mid = 0usize;
+    let mut in_fast = 0usize;
+    let mut in_slow = 0usize;
     let mut slow = 0usize;
-    for k in 10..grid.nz - 10 { for j in 10..grid.ny - 10 { for i in 10..grid.nx - 10 {
-        let t = tracker.arrival_times[[i, j, k]];
-        if !t.is_finite() || t <= 0.0 { none += 1; continue; }
-        let mut min_d = f64::INFINITY; let mut min_delay = 0.0;
-        for (p_, &d_) in push_pattern.pushes.iter().zip(push_pattern.time_delays.iter()) {
-            let dx = i as f64 * grid.dx - p_.location[0];
-            let dy = j as f64 * grid.dy - p_.location[1];
-            let dz = k as f64 * grid.dz - p_.location[2];
-            let dist = (dx*dx + dy*dy + dz*dz).sqrt();
-            if dist < min_d { min_d = dist; min_delay = d_; }
+    for k in 10..grid.nz - 10 {
+        for j in 10..grid.ny - 10 {
+            for i in 10..grid.nx - 10 {
+                let t = tracker.arrival_times[[i, j, k]];
+                if !t.is_finite() || t <= 0.0 {
+                    none += 1;
+                    continue;
+                }
+                let mut min_d = f64::INFINITY;
+                let mut min_delay = 0.0;
+                for (p_, &d_) in push_pattern
+                    .pushes
+                    .iter()
+                    .zip(push_pattern.time_delays.iter())
+                {
+                    let dx = i as f64 * grid.dx - p_.location[0];
+                    let dy = j as f64 * grid.dy - p_.location[1];
+                    let dz = k as f64 * grid.dz - p_.location[2];
+                    let dist = (dx * dx + dy * dy + dz * dz).sqrt();
+                    if dist < min_d {
+                        min_d = dist;
+                        min_delay = d_;
+                    }
+                }
+                if t <= min_delay {
+                    none += 1;
+                    continue;
+                }
+                if min_d <= 0.005 {
+                    nearfield += 1;
+                    continue;
+                }
+                let speed = min_d / (t - min_delay);
+                let mu = phantom.lame_mu[[i, j, k]];
+                let la = phantom.lame_lambda[[i, j, k]];
+                let rho = phantom.density[[i, j, k]];
+                let cs = (mu / rho).sqrt();
+                let cp = ((la + 2.0 * mu) / rho).sqrt();
+                if (speed - cs).abs() < 0.2 * cs {
+                    near_cs += 1;
+                } else if (speed - cp).abs() < 0.2 * cp {
+                    near_cp += 1;
+                } else if speed < 0.5 * cs {
+                    slow += 1;
+                } else if speed < 2.0 * cs {
+                    mid += 1;
+                } else {
+                    fast += 1;
+                }
+                let e_true = lame_to_young(la, mu);
+                let e_rec = 3.0 * 1000.0 * speed * speed;
+                if e_true < 6000.0 {
+                    errs.push(((e_rec - e_true) / e_true).abs());
+                } else {
+                    errs_in.push(((e_rec - e_true) / e_true).abs());
+                    if (speed - cs).abs() < 0.2 * cs {
+                        in_cs += 1;
+                    } else if speed < 2.0 * cs && speed >= 0.5 * cs {
+                        in_mid += 1;
+                    } else if speed >= 2.0 * cs {
+                        in_fast += 1;
+                    } else {
+                        in_slow += 1;
+                    }
+                }
+                // arrival-time ratio t*c_s/d: 1.0 = exactly shear TOF
+                let ratio = (t - min_delay) * cs / min_d;
+                if speed >= 2.0 * cs && fast_samples.len() < 25 {
+                    fast_samples.push((i, j, k, min_d, t, speed, cs, cp));
+                }
+                if (speed - cs).abs() < 0.2 * cs {
+                    cs_ratios.push(ratio);
+                } else if speed < 2.0 * cs && speed >= 0.5 * cs {
+                    mid_ratios.push(ratio);
+                } else if speed >= 2.0 * cs {
+                    fast_ratios.push(ratio);
+                }
+            }
         }
-        if t <= min_delay { none += 1; continue; }
-        if min_d <= 0.005 { nearfield += 1; continue; }
-        let speed = min_d / (t - min_delay);
-        let mu = phantom.lame_mu[[i, j, k]]; let la = phantom.lame_lambda[[i, j, k]];
-        let rho = phantom.density[[i, j, k]];
-        let cs = (mu / rho).sqrt(); let cp = ((la + 2.0*mu) / rho).sqrt();
-        if (speed - cs).abs() < 0.2 * cs { near_cs += 1; }
-        else if (speed - cp).abs() < 0.2 * cp { near_cp += 1; }
-        else if speed < 0.5 * cs { slow += 1; }
-        else if speed < 2.0 * cs { mid += 1; }
-        else { fast += 1; }
-        let e_true = lame_to_young(la, mu);
-        let e_rec = 3.0 * 1000.0 * speed * speed;
-        if e_true < 6000.0 { errs.push(((e_rec - e_true) / e_true).abs()); }
-        else { errs_in.push(((e_rec - e_true) / e_true).abs());
-            if (speed - cs).abs() < 0.2 * cs { in_cs += 1; }
-            else if speed < 2.0 * cs && speed >= 0.5 * cs { in_mid += 1; }
-            else if speed >= 2.0 * cs { in_fast += 1; }
-            else { in_slow += 1; }
-        }
-        // arrival-time ratio t*c_s/d: 1.0 = exactly shear TOF
-        let ratio = (t - min_delay) * cs / min_d;
-        if speed >= 2.0 * cs && fast_samples.len() < 25 {
-            fast_samples.push((i, j, k, min_d, t, speed, cs, cp));
-        }
-        if (speed - cs).abs() < 0.2 * cs { cs_ratios.push(ratio); }
-        else if speed < 2.0 * cs && speed >= 0.5 * cs { mid_ratios.push(ratio); }
-        else if speed >= 2.0 * cs { fast_ratios.push(ratio); }
-    }}}
+    }
     let mean_err = errs.iter().sum::<f64>() / errs.len() as f64;
     // Eikonal inversion prototype: c = 1/|grad t| via central differences.
     let mut eik_errs: Vec<f64> = Vec::new();
     let mut eik_in_errs: Vec<f64> = Vec::new();
     let mut eik_points = 0usize;
     let mut eik_bad = 0usize;
-    for k in 10..grid.nz - 10 { for j in 10..grid.ny - 10 { for i in 10..grid.nx - 10 {
-        let t0 = tracker.arrival_times[[i, j, k]];
-        if !t0.is_finite() || t0 <= 0.0 { continue; }
-        let tx = tracker.arrival_times[[i + 2, j, k]];
-        let txm = tracker.arrival_times[[i - 2, j, k]];
-        let ty = tracker.arrival_times[[i, j + 2, k]];
-        let tym = tracker.arrival_times[[i, j - 2, k]];
-        let tz = tracker.arrival_times[[i, j, k + 2]];
-        let tzm = tracker.arrival_times[[i, j, k - 2]];
-        if !(tx.is_finite() && txm.is_finite() && ty.is_finite() && tym.is_finite()
-            && tz.is_finite() && tzm.is_finite()) { continue; }
-        let dtx = (tx - txm) / (4.0 * grid.dx);
-        let dty = (ty - tym) / (4.0 * grid.dy);
-        let dtz = (tz - tzm) / (4.0 * grid.dz);
-        let g = (dtx * dtx + dty * dty + dtz * dtz).sqrt();
-        if !(g > 1e-9) { continue; }
-        let c = 1.0 / g;
-        let e = 3.0 * 1000.0 * c * c;
-        let mu = phantom.lame_mu[[i, j, k]];
-        let la = phantom.lame_lambda[[i, j, k]];
-        let e_true = lame_to_young(la, mu);
-        let rel = ((e - e_true) / e_true).abs();
-        if e_true < 6000.0 { eik_errs.push(rel); } else { eik_in_errs.push(rel); }
-        eik_points += 1;
-    }}}
+    for k in 10..grid.nz - 10 {
+        for j in 10..grid.ny - 10 {
+            for i in 10..grid.nx - 10 {
+                let t0 = tracker.arrival_times[[i, j, k]];
+                if !t0.is_finite() || t0 <= 0.0 {
+                    continue;
+                }
+                let tx = tracker.arrival_times[[i + 2, j, k]];
+                let txm = tracker.arrival_times[[i - 2, j, k]];
+                let ty = tracker.arrival_times[[i, j + 2, k]];
+                let tym = tracker.arrival_times[[i, j - 2, k]];
+                let tz = tracker.arrival_times[[i, j, k + 2]];
+                let tzm = tracker.arrival_times[[i, j, k - 2]];
+                if !(tx.is_finite()
+                    && txm.is_finite()
+                    && ty.is_finite()
+                    && tym.is_finite()
+                    && tz.is_finite()
+                    && tzm.is_finite())
+                {
+                    continue;
+                }
+                let dtx = (tx - txm) / (4.0 * grid.dx);
+                let dty = (ty - tym) / (4.0 * grid.dy);
+                let dtz = (tz - tzm) / (4.0 * grid.dz);
+                let g = (dtx * dtx + dty * dty + dtz * dtz).sqrt();
+                if !(g > 1e-9) {
+                    continue;
+                }
+                let c = 1.0 / g;
+                let e = 3.0 * 1000.0 * c * c;
+                let mu = phantom.lame_mu[[i, j, k]];
+                let la = phantom.lame_lambda[[i, j, k]];
+                let e_true = lame_to_young(la, mu);
+                let rel = ((e - e_true) / e_true).abs();
+                if e_true < 6000.0 {
+                    eik_errs.push(rel);
+                } else {
+                    eik_in_errs.push(rel);
+                }
+                eik_points += 1;
+            }
+        }
+    }
     let me = eik_errs.iter().sum::<f64>() / eik_errs.len().max(1) as f64;
     let mei = eik_in_errs.iter().sum::<f64>() / eik_in_errs.len().max(1) as f64;
-    println!("EIKONAL bg={} mean={:.1}%  incl={} mean={:.1}%", eik_errs.len(), me * 100.0, eik_in_errs.len(), mei * 100.0);
+    println!(
+        "EIKONAL bg={} mean={:.1}%  incl={} mean={:.1}%",
+        eik_errs.len(),
+        me * 100.0,
+        eik_in_errs.len(),
+        mei * 100.0
+    );
     let mean_err_in = errs_in.iter().sum::<f64>() / errs_in.len() as f64;
     let avg = |v: &Vec<f64>| v.iter().sum::<f64>() / v.len().max(1) as f64;
     for (i, j, k, d, t, sp, c_s, c_p) in &fast_samples {
         println!("FAST [{i},{j},{k}] d={d:.3} t={t:.5} speed={sp:.2} cs={c_s:.2} cp={c_p:.1}");
     }
-    println!("ratios: cs={:.3} mid={:.3} fast={:.3}", avg(&cs_ratios), avg(&mid_ratios), avg(&fast_ratios));
-    println!("incl: cs={in_cs} mid={in_mid} fast={in_fast} slow={in_slow} mean_err={:.1}%", mean_err_in * 100.0);
+    println!(
+        "ratios: cs={:.3} mid={:.3} fast={:.3}",
+        avg(&cs_ratios),
+        avg(&mid_ratios),
+        avg(&fast_ratios)
+    );
+    println!(
+        "incl: cs={in_cs} mid={in_mid} fast={in_fast} slow={in_slow} mean_err={:.1}%",
+        mean_err_in * 100.0
+    );
     println!("bg points: near_cs={} near_cp={} slow={} mid={} fast={} nearfield={} none={} mean_err={:.1}%", near_cs, near_cp, slow, mid, fast, nearfield, none, mean_err * 100.0);
 }

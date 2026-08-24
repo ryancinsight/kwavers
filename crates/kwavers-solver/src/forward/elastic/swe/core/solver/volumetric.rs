@@ -295,13 +295,7 @@ impl ElasticWaveSolver {
                     let diff_series: Vec<f64> = series
                         .iter()
                         .enumerate()
-                        .map(|(idx, &v)| {
-                            if idx == 0 {
-                                0.0
-                            } else {
-                                v - series[idx - 1]
-                            }
-                        })
+                        .map(|(idx, &v)| if idx == 0 { 0.0 } else { v - series[idx - 1] })
                         .collect();
                     match &self.volumetric_config.arrival_detection {
                         ArrivalDetection::EnergyThreshold { threshold } => {
@@ -401,10 +395,8 @@ impl ElasticWaveSolver {
                             {
                                 Some((start, &w)) => (start, w),
                                 None => {
-                                    let start = windows
-                                        .iter()
-                                        .position(|w| *w == best)
-                                        .unwrap_or(0);
+                                    let start =
+                                        windows.iter().position(|w| *w == best).unwrap_or(0);
                                     (start, best)
                                 }
                             };
