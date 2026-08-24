@@ -96,9 +96,14 @@ impl FieldOperations {
 /// Statistics for a field array
 #[derive(Debug, Clone)]
 pub struct FieldStatistics {
+    /// Minimum field value
     pub min: f64,
+    /// Maximum field value
     pub max: f64,
+    /// Arithmetic mean of field values
     pub mean: f64,
+    /// Population standard deviation of field values
     pub std_dev: f64,
+    /// Sum of squared field values (L2 energy)
     pub total_energy: f64,
 }

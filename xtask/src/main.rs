@@ -438,7 +438,7 @@ fn check_stubs() -> Result<()> {
                 for pattern in &stub_patterns {
                     // Word-prefixed patterns ("stub", "placeholder") match whole
                     // words only; the macro and marker patterns keep the plain
-                    // substring test because `todo!` and `FIXME` cannot appear
+                    // substring test because `todo!` and the marker keywords cannot appear
                     // inside a longer identifier.
                     let hit = if *pattern == "stub" || *pattern == "placeholder" {
                         contains_word(line, pattern)

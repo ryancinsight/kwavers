@@ -81,9 +81,11 @@ remains solver-owned. See
 Layer crates are at `3.0.0`; the completed split targets `4.0.0` (see
 [RELEASE_v4.0.0 notes in CHANGELOG](CHANGELOG.md)). `kwavers-python` is `0.1.0`.
 
-Validation status: `pykwavers` reaches 1-to-1 PSTD parity with k-Wave /
-k-wave-python / KWave.jl on the homogeneous-water IVP benchmark (Pearson
-r ≥ 0.9999 across 1-D/2-D/3-D; see [Reference Benchmark Coverage](#reference-benchmark-coverage)).
+Validation status: the k-space pseudospectral solver matches the k-Wave
+reference solver on the homogeneous-water IVP benchmark at Pearson
+r = 1.000000000 (2-D) and r = 0.999999994 (3-D). The comparison is a Rust test in
+the default gate against reference fields committed to this repository — see
+[Reference Benchmark Coverage](#reference-benchmark-coverage).
 
 ### Python Releases
 
@@ -370,18 +372,64 @@ Kwavers is licensed under the **MIT License**. See [LICENSE](LICENSE) for detail
 
 ### Reference Benchmark Coverage
 
-The MATLAB-free benchmark harness in `external/k-wave-julia/benchmarks/kwavers`
-compares the same homogeneous-water IVP Gaussian source case across KWave.jl,
-k-wave-python, and pykwavers for 1-D, 2-D, and 3-D. Native MATLAB k-Wave source
-is present in `external/k-wave`, but it is not executed unless MATLAB or Octave
-is available.
+`crates/kwavers/tests/kwave_reference_parity.rs` compares the k-space
+pseudospectral solver against k-Wave on the homogeneous-water IVP Gaussian case.
+The reference fields live in `crates/kwavers/tests/reference/kwave/` (156 KB), so
+the test runs from a clean clone in the default gate with no external solver
+present. `scripts/generate_kwave_reference.py` regenerates them by driving
+`k-wave-python` over the reference `kspaceFirstOrder-OMP` binary.
 
-| Dimension | KWave.jl | k-wave-python | pykwavers | Current result |
-|-----------|----------|---------------|-----------|----------------|
-| 1-D | Native `KWaveGrid(nx, dx)` | Native Python backend | `(nx, 1, 1)` active grid | PASS: k-wave-python r=0.999977, pykwavers r=0.999976 |
-| 2-D | Native `KWaveGrid(nx, dx, nx, dx)` | Native Python backend | `(nx, nx, 1)` active grid | PASS: k-wave-python r=0.999948, pykwavers r=0.999948 |
-| 3-D | Native `KWaveGrid(nx, dx, nx, dx, nx, dx)` | Native Python backend | `(nx, nx, nx)` active grid | PASS: k-wave-python r=0.999909, pykwavers r=0.999909 |
-| MATLAB k-Wave | Source available | Not applicable | Not applicable | Not run without MATLAB/Octave |
+Both codes run the same grid, time step, step count, and Treeby-Cox k-space
+correction, and are compared over a centred window the wavefront has entered but
+neither code's boundary treatment has reached.
+
+| Case | Grid | Steps | Relative L2 | Relative L-inf | Pearson r |
+|------|------|-------|-------------|----------------|-----------|
+| `ivp_homogeneous_2d` | 64 × 64 | 100 | 5.50e-7 | 1.05e-6 | 1.000000000 |
+| `ivp_homogeneous_3d` | 32 × 32 × 32 | 50 | 1.06e-4 | 2.20e-4 | 0.999999994 |
+| `ivp_absorbing_2d` | 64 × 64 | 100 | 8.10e-3 | 4.99e-3 | 0.999999924 |
+| `ivp_layered_2d` | 80 × 64 | 120 | 7.97e-3 | 1.54e-2 | 0.999963422 |
+| `src_tone_burst_2d` | 96 × 80 | 151 | 2.58e-3 | 2.20e-3 | 0.999996674 |
+| `src_nonlinear_2d` | 96 × 80 | 151 | 3.30e-3 | 2.80e-3 | 0.999994550 |
+
+The finite-difference solver is measured against the same reference as a
+cross-scheme check, since the pseudospectral solver shares its k-space machinery
+and cannot be an independent oracle for it. It separates by `2.53e-2` relative
+L2 at `r = 0.999647`, which is its own fourth-order dispersion error and is
+gated as such rather than at the pseudospectral bound.
+
+`ivp_absorbing_2d` is the lossless 2-D case with power-law absorption
+(`40 dB/(MHz^1.5 cm)`, `y = 1.5`) and nothing else changed, so the pair isolates
+the absorption model; the test asserts both that kwavers matches the absorbing
+reference and that the absorbing field separates from the lossless one, since
+agreement alone would not prove the model ran.
+
+`ivp_layered_2d` steps sound speed and density across a smoothed interface eight
+cells from the seed, so the recorded field carries a transmitted wave, a
+reflection, and a refracted front; it is measured against a uniform-medium run at
+the same discretization, which it separates from by `0.27`. Its grid is
+deliberately non-square — a square case cannot distinguish a correct axis
+orientation from a transposed one, and two such conventions were live in the
+harness until this case exposed them.
+
+`src_tone_burst_2d` drives a Gaussian-windowed 3 MHz burst from a single
+off-centre cell, starting from a zero field. It is the only case that reaches
+the source injection path, and it checks four conventions at once: the mask's
+cell lookup, the per-step signal indexing, k-Wave's source-term scaling, and the
+k-space source correction.
+
+`src_nonlinear_2d` is that case with finite-amplitude propagation switched on
+(`B/A = 20` at 5 MPa), sized to reach roughly seventy percent of the plane-wave
+shock distance — as far into the nonlinear regime as the smooth-wave assumption
+reaches, since neither code has shock capturing. It separates from a linear run
+by `4.58e-2`, fourteen times its own residual.
+
+`k-wave-python` ships no 1-D solver, so there is no 1-D row; the axisymmetric
+case is a separate geometry and is not yet covered. Elastic propagation and
+distributed (multi-cell) sources have no committed reference field yet and are
+not covered by this result.
+[ADR 119](docs/adr/119-kwave-reference-oracle.md) records the reference
+provenance, the tolerance derivation, and what the comparison does not establish.
 
 ### Key Publications
 1. Treeby & Cox (2010) - "k-Wave: MATLAB toolbox for photoacoustic simulation" - J. Biomed. Opt. 15(2), 021314

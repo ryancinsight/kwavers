@@ -333,35 +333,54 @@ impl ThermalSimulation {
             None => Vec::new(),
         };
         let n_sensors = sensor_positions.len();
-        let mut sensor_data: Array2<f64> = Array2::zeros((n_sensors.max(1), time_steps));
 
-        // ── Time loop ─────────────────────────────────────────────────────────
-        for step in 0..time_steps {
-            // Record sensor temperatures before this step (k-Wave convention).
-            // Convert K → °C at the boundary.
-            if n_sensors > 0 {
-                let temp = solver.temperature();
-                for (s, &(si, sj, sk)) in sensor_positions.iter().enumerate() {
-                    sensor_data[[s, step]] = temp[[si, sj, sk]] - KELVIN_OFFSET_C;
+        // ── Run the solve outside the GIL ─────────────────────────────────────
+        // The time loop owns only Rust data (solver, medium, grid, source, and
+        // sensor positions); NumPy extraction and PyArray assembly stay inside
+        // the GIL. This mirrors the Simulation::run detachment contract.
+        let owned_medium = medium;
+        let owned_kgrid = kgrid;
+        let mut owned_solver = solver;
+        let owned_q_ks = q_ks;
+        // Copy scalars for the closure; the originals remain for reassembly.
+        let (time_steps_c, dt_c, n_sensors_c, sensor_positions_c) =
+            (time_steps, dt, n_sensors, sensor_positions);
+        let compute = py.detach(
+            move || -> PyResult<(Array2<f64>, Array3<f64>, Option<Array3<f64>>, Vec<f64>)> {
+                let mut sensor_data: Array2<f64> =
+                    Array2::zeros((n_sensors_c.max(1), time_steps_c));
+                for step in 0..time_steps_c {
+                    // Record sensor temperatures before this step (k-Wave
+                    // convention). Convert K → °C at the boundary.
+                    if n_sensors_c > 0 {
+                        let temp = owned_solver.temperature();
+                        for (s, &(si, sj, sk)) in sensor_positions_c.iter().enumerate() {
+                            sensor_data[[s, step]] = temp[[si, sj, sk]] - KELVIN_OFFSET_C;
+                        }
+                    }
+
+                    owned_solver
+                        .update(
+                            &owned_medium,
+                            &owned_kgrid,
+                            Time::from_base(dt_c),
+                            owned_q_ks.as_ref().map(|a| a.view()),
+                        )
+                        .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
                 }
-            }
 
-            solver
-                .update(
-                    &medium,
-                    &kgrid,
-                    Time::from_base(dt),
-                    q_ks.as_ref().map(|a| a.view()),
-                )
-                .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-        }
+                // Convert final temperature field K → °C.
+                let temp_celsius: Array3<f64> =
+                    owned_solver.temperature().mapv(|t| t - KELVIN_OFFSET_C);
+                let time_vec: Vec<f64> = (1..=time_steps_c).map(|i| i as f64 * dt_c).collect();
+                let dose = owned_solver.thermal_dose().map(|d| d.to_owned());
+                Ok((sensor_data, temp_celsius, dose, time_vec))
+            },
+        )?;
 
-        // ── Build outputs ─────────────────────────────────────────────────────
-        // Convert final temperature field K → °C.
-        let temp_celsius: Array3<f64> = solver.temperature().mapv(|t| t - KELVIN_OFFSET_C);
+        let (sensor_data, temp_celsius, thermal_dose, time_vec) = compute;
 
-        let time_vec: Vec<f64> = (1..=time_steps).map(|i| i as f64 * dt).collect();
-
+        // ── Build outputs (back in the GIL) ───────────────────────────────────
         let temperature_at_sensors: Option<Py<PyArray2<f64>>> = if n_sensors > 0 {
             let selected = sensor_data
                 .slice(&[(0, n_sensors, 1), (0, time_steps, 1)])
@@ -372,10 +391,8 @@ impl ThermalSimulation {
             None
         };
 
-        let thermal_dose_out: Option<Py<PyArray3<f64>>> = solver
-            .thermal_dose()
-            .map(|d| leto3_to_pyarray3(py, d.to_owned()))
-            .transpose()?;
+        let thermal_dose_out: Option<Py<PyArray3<f64>>> =
+            thermal_dose.map(|d| leto3_to_pyarray3(py, d)).transpose()?;
 
         Ok(ThermalResult {
             temperature: leto3_to_pyarray3(py, temp_celsius)?,

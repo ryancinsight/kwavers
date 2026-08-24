@@ -79,14 +79,17 @@ fn p_wave_arrival_time_matches_analytical() {
     let f0 = 1.0e6_f64;
     let n_in = (3.0 / f0 / dt) as usize;
     let amp = 1.0e-6_f64;
-    let signal: Array1<f64> = Array1::from_iter((0..nt).map(|n| {
-        if n < n_in {
-            let env = 0.5 * (1.0 - (2.0 * std::f64::consts::PI * (n as f64) / (n_in as f64)).cos());
-            amp * env * (2.0 * std::f64::consts::PI * f0 * (n as f64) * dt).sin()
-        } else {
-            0.0
-        }
-    }));
+    let signal: Array1<f64> = (0..nt)
+        .map(|n| {
+            if n < n_in {
+                let env =
+                    0.5 * (1.0 - (2.0 * std::f64::consts::PI * (n as f64) / (n_in as f64)).cos());
+                amp * env * (2.0 * std::f64::consts::PI * f0 * (n as f64) * dt).sin()
+            } else {
+                0.0
+            }
+        })
+        .collect();
 
     let src_x = 8usize;
     let mut src_mask = Array3::<bool>::from_elem((nx, ny, nz), false);
@@ -201,9 +204,9 @@ fn acoustic_fluid_limit_zero_shear_stress_after_propagation() {
     // ux source at one cell.
     let amp = 1.0e-6_f64;
     let f0 = 1.0e6_f64;
-    let signal: Array1<f64> = Array1::from_iter(
-        (0..nt).map(|n| amp * (2.0 * std::f64::consts::PI * f0 * (n as f64) * dt).sin()),
-    );
+    let signal: Array1<f64> = (0..nt)
+        .map(|n| amp * (2.0 * std::f64::consts::PI * f0 * (n as f64) * dt).sin())
+        .collect();
     let mut src_mask = Array3::<bool>::from_elem((nx, ny, nz), false);
     src_mask[[8, ny / 2, nz / 2]] = true;
     let source = ElasticPstdVelocitySource {
@@ -285,14 +288,17 @@ fn pml_attenuates_field_in_absorbing_layer_vs_without_pml() {
     let f0 = 1.0e6_f64;
     let n_in = (3.0 / f0 / dt) as usize;
     let amp = 1.0e-6_f64;
-    let signal: Array1<f64> = Array1::from_iter((0..nt).map(|n| {
-        if n < n_in {
-            let env = 0.5 * (1.0 - (2.0 * std::f64::consts::PI * (n as f64) / (n_in as f64)).cos());
-            amp * env * (2.0 * std::f64::consts::PI * f0 * (n as f64) * dt).sin()
-        } else {
-            0.0
-        }
-    }));
+    let signal: Array1<f64> = (0..nt)
+        .map(|n| {
+            if n < n_in {
+                let env =
+                    0.5 * (1.0 - (2.0 * std::f64::consts::PI * (n as f64) / (n_in as f64)).cos());
+                amp * env * (2.0 * std::f64::consts::PI * f0 * (n as f64) * dt).sin()
+            } else {
+                0.0
+            }
+        })
+        .collect();
 
     let src_x = 12usize;
     let mut src_mask = Array3::<bool>::from_elem((nx, ny, nz), false);

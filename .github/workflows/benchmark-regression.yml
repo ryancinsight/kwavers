@@ -30,14 +30,14 @@ jobs:
       PR_BENCH_TARGETS: performance_baseline critical_path_benchmarks simd_field_ops
     steps:
       - name: Checkout baseline
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.event.pull_request.base.sha }}
           path: kwavers-baseline
           persist-credentials: false
 
       - name: Checkout candidate
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           path: kwavers-candidate
@@ -49,15 +49,22 @@ jobs:
           packages: libfontconfig1-dev
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@1.97.1
+        uses: dtolnay/rust-toolchain@032958afbdc797a9164d3bc0b56325c1308924a5 # 1.97.1
 
-      - name: Cache cargo dependencies
-        uses: actions/cache@v6
+      # `Swatinem/rust-cache` rather than a hand-rolled `actions/cache`:
+      # it carries restore-keys, so a lockfile change degrades to a partial
+      # restore instead of a total miss, and it prunes `target/` so the
+      # repository stays inside the 10 GB cache budget instead of evicting
+      # its own entries. `shared-key` puts every job on one cache rather
+      # than one per job, which is what made the dependency graph compile
+      # once per job.
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-          key: ${{ runner.os }}-kwavers-bench-${{ hashFiles('kwavers-candidate/Cargo.lock') }}
+          shared-key: kwavers
+          # Write the cache from the default branch only. A pull request
+          # restores it but does not save, so concurrent branches cannot
+          # evict each other's entries.
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Verify the candidate lockfile
         shell: bash
@@ -220,21 +227,21 @@ jobs:
       SECOND_REVISION: ${{ matrix.second_revision }}
     steps:
       - name: Checkout baseline
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.event.pull_request.base.sha }}
           path: kwavers-baseline
           persist-credentials: false
 
       - name: Checkout candidate
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           path: kwavers-candidate
           persist-credentials: false
 
       - name: Checkout Atlas benchmark gate
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: ryancinsight/atlas
           ref: 1393fd8838f3bcd548959a83daa8d9375e3b03d9
@@ -247,15 +254,16 @@ jobs:
           packages: libfontconfig1-dev
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@1.97.1
+        uses: dtolnay/rust-toolchain@032958afbdc797a9164d3bc0b56325c1308924a5 # 1.97.1
 
-      - name: Cache cargo dependencies
-        uses: actions/cache@v6
+      # Shared cache; rationale at the first use in this file.
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-          key: ${{ runner.os }}-kwavers-bench-${{ hashFiles('kwavers-candidate/Cargo.lock') }}
+          shared-key: kwavers
+          # Write the cache from the default branch only. A pull request
+          # restores it but does not save, so concurrent branches cannot
+          # evict each other's entries.
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Verify the candidate lockfile
         shell: bash
@@ -441,7 +449,7 @@ jobs:
 
       - name: Checkout Atlas benchmark gate
         if: env.MEASUREMENTS_REQUIRED == 'true'
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: ryancinsight/atlas
           ref: 1393fd8838f3bcd548959a83daa8d9375e3b03d9
@@ -450,7 +458,7 @@ jobs:
 
       - name: Install Rust toolchain
         if: env.MEASUREMENTS_REQUIRED == 'true'
-        uses: dtolnay/rust-toolchain@1.97.1
+        uses: dtolnay/rust-toolchain@032958afbdc797a9164d3bc0b56325c1308924a5 # 1.97.1
 
       - name: Download replicated comparisons
         if: env.MEASUREMENTS_REQUIRED == 'true'

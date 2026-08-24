@@ -230,8 +230,8 @@ mod tests {
         let medium = HomogeneousMedium::water(&grid);
         let w = NonlinearWave::new(&grid, 1e-3); // CFL >> 0.45
 
-        let result = w.validate_parameters(&medium, &grid);
-        assert!(result.is_err(), "CFL violation must return Err");
+        w.validate_parameters(&medium, &grid)
+            .expect_err("CFL violation must return Err");
     }
 
     /// `validate_parameters` rejects a grid spacing too coarse for the source
@@ -250,8 +250,8 @@ mod tests {
         w.dt = dt_safe;
         w.source_frequency = 5e6; // λ=0.3mm, need dx < 50µm; dx=1mm violates
 
-        let result = w.validate_parameters(&medium, &grid);
-        assert!(result.is_err(), "coarse grid must return Err");
+        w.validate_parameters(&medium, &grid)
+            .expect_err("coarse grid must return Err");
     }
 
     /// `validate_parameters` rejects nonlinearity_scaling outside [0, 10].

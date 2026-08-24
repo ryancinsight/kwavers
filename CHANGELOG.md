@@ -4,6 +4,67 @@
 
 ### Added
 
+- **[major] A caller's absorption coefficient now reaches the solver.**
+  `AbsorptionMode::PowerLaw::alpha_coeff` becomes `Option<f64>`: `Some` is an
+  explicit uniform request whose `alpha_power` is authoritative with it, `None`
+  hands both parameters to the medium, read per voxel. Previously both resolved
+  against sentinels in the medium's favour, and `HomogeneousMedium::new` seeds
+  water's coefficient and a `1.05` exponent — neither of which is a sentinel —
+  so a caller asking for `40 dB/(MHz^1.5 cm)` silently got water's `0.0022` at
+  `y = 1.05`, indistinguishable from a lossless run. Any absorption result
+  configured through `PSTDConfig` alone was computed at water's values.
+
+  The two parameters are resolved together because absorption is
+  `alpha_0 f^y`, and taking the coefficient from one owner and the exponent from
+  another evaluates neither party's power law. See
+  [ADR 120](docs/adr/120-absorption-coefficient-ownership.md).
+
+- **[major] Plugins now receive the sources they are given.**
+  `PluginManager::execute` threaded its source list to every plugin through
+  `PluginContext`, and `PSTDPlugin` and `FdtdPlugin` both ignored it — each
+  constructed its solver with an empty `GridSource` and never read the context.
+  A caller who supplied sources and drove either solver through the plugin path
+  got a simulation that ran, returned `Ok`, and was never driven; nothing
+  failed, so nothing said so. The solver machinery was complete
+  (`add_source_arc` through `dynamic_sources`, consumed by the stepper) — only
+  the plugin's call was missing.
+
+  `PluginContext::sources` changes from `&[Box<dyn Source>]` to
+  `&[Arc<dyn Source>]`, because the stepper queries `amplitude(t)` every step
+  and needs ownership outliving the context borrow. The driven k-Wave reference
+  case now validates both routes against one stored field at `2.58e-3` /
+  `r = 0.999996674` — identical digits — and the two agree with each other to
+  `4.0e-13`. See [ADR 121](docs/adr/121-plugin-source-forwarding.md).
+
+- **Validation:** The k-Wave parity claim is now reproducible from a clean clone.
+  `crates/kwavers/tests/kwave_reference_parity.rs` compares the k-space
+  pseudospectral solver against committed k-Wave reference fields
+  (`crates/kwavers/tests/reference/kwave/`, 156 KB) on the homogeneous-water
+  initial-value benchmark, and runs in the default test gate with no external
+  solver present. Measured agreement is relative L2 `5.50e-7` at Pearson
+  `r = 1.000000000` in two dimensions and `1.06e-4` at `r = 0.999999994` in
+  three. The finite-difference solver is measured against the same reference as
+  a cross-scheme check and separates by `2.53e-2` at `r = 0.999647`, which is
+  its own fourth-order dispersion error. A power-law absorbing case matches at
+  `8.10e-3` / `r = 0.999999924` and asserts separation from the lossless field,
+  so the absorption model cannot pass by being absent. A layered-medium case
+  matches at `7.97e-3` / `r = 0.999963` and separates from a uniform run by
+  `0.27`. Its grid is deliberately non-square: a square case cannot distinguish
+  a correct axis orientation from a transposed one, and two conventions — that
+  k-Wave returns the field with its axes reversed, and that `np.savez` stores a
+  transposed array in Fortran order — were live in the harness until it exposed
+  them. Both are now asserted rather than assumed; the lossless and absorbing
+  results are unchanged, because the symmetry that hid the defect also made it
+  harmless there. A driven case injects a tone burst from a single cell and
+  matches at `2.58e-3` / `r = 0.999997`; it is the only case reaching the source
+  injection path, and it established that the propagation-interval count differs
+  by source type — an initial-value case runs `Nt - 1` intervals, a driven one
+  `Nt`. A nonlinear case (`B/A = 20` at 5 MPa) matches at `3.30e-3` /
+  `r = 0.999995` and separates from a linear run by `4.58e-2`, so the
+  finite-amplitude term cannot pass by being absent. `scripts/generate_kwave_reference.py` regenerates the reference set by
+  driving `k-wave-python`. See
+  [ADR 119](docs/adr/119-kwave-reference-oracle.md).
+
 - **Documentation:** Every workspace crate now carries its own `README.md` — the
   crates.io/docs.rs landing page — closing the gap where 22 of 24 crates published
   blank. Each README states what the crate owns, where it sits in the layer stack, and

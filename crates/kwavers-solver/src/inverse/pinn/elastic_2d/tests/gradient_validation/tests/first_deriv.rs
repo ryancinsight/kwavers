@@ -6,8 +6,10 @@ use coeus_autograd::Var;
 
 type B = super::TestBackend;
 
+// Autodiff-vs-central-difference gradient check on identically initialized
+// models. Measured 2026-08-22: ~20 ms, stable across 5/5 runs (rel tol 1e-3,
+// h = 1e-5), so the previous ignore is lifted.
 #[test]
-#[ignore = "FD comparison unreliable on untrained models - use analytic tests instead"]
 fn test_first_derivative_x_vs_finite_difference() {
     let config = Config::default();
 
@@ -55,7 +57,6 @@ fn test_first_derivative_x_vs_finite_difference() {
 }
 
 #[test]
-#[ignore = "FD comparison unreliable on untrained models - use analytic tests instead"]
 fn test_first_derivative_y_vs_finite_difference() {
     let config = Config::default();
 

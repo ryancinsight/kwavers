@@ -1,3 +1,5 @@
+//! Generic acoustic wave-field containers.
+
 use leto::Array3;
 
 /// Container for the primary acoustic wave fields
@@ -13,6 +15,7 @@ pub struct GenericWaveFields<T> {
     pub uz: T,
 }
 
+/// Concrete wave-field container using 3-D `f64` arrays.
 pub type WaveFields = GenericWaveFields<Array3<f64>>;
 
 impl WaveFields {

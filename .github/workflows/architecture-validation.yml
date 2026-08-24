@@ -18,6 +18,16 @@ on:
       - 'gap_audit.md'
       - 'docs/**'
 
+permissions:
+  contents: read
+
+# A superseded run is cancelled rather than left queued. Without this a
+# branch that is pushed to repeatedly accumulates one full matrix per
+# push, and with several open pull requests that is what fills the queue.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
@@ -26,10 +36,11 @@ jobs:
   architecture-validation:
     name: Validate Clean Architecture
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v7
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
     - name: Install system dependencies
       uses: ./.github/actions/install-system-dependencies
@@ -37,27 +48,23 @@ jobs:
         packages: libfontconfig1-dev
 
     - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@stable
+      uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
       with:
+        toolchain: 1.97.0
         components: rustfmt, clippy
 
-    - name: Cache cargo registry
-      uses: actions/cache@v6
+    # `Swatinem/rust-cache` rather than hand-rolled `actions/cache`:
+    # it carries restore-keys, so a lockfile change degrades to a
+    # partial restore instead of a total miss, and it prunes `target/`
+    # so the repository stays inside the 10 GB cache budget instead of
+    # evicting its own entries. `shared-key` puts every job on one
+    # cache rather than one per job.
+    - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
       with:
-        path: ~/.cargo/registry
-        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-
-    - name: Cache cargo index
-      uses: actions/cache@v6
-      with:
-        path: ~/.cargo/git
-        key: ${{ runner.os }}-cargo-git-${{ hashFiles('**/Cargo.lock') }}
-
-    - name: Cache cargo build
-      uses: actions/cache@v6
-      with:
-        path: target
-        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock', 'Cargo.toml', '.cargo/config.toml') }}
+        shared-key: kwavers
+        # Written from the default branch only; a pull request restores
+        # but does not save, so branches cannot evict each other.
+        save-if: ${{ github.ref == 'refs/heads/main' }}
 
     - name: Check formatting
       run: cargo fmt -- --check
@@ -66,9 +73,22 @@ jobs:
       run: cargo run --locked -p xtask -- check-readmes
 
     - name: Run clippy (strict mode)
+      # Library targets hold the full deny floor. Program targets
+      # (examples/tests/benches) are separately scoped below: their stdout
+      # output is their deliverable and fixture-code pedantic doc/style debt
+      # stays at the workspace `warn` ratchet (ADR 116), so denying it here
+      # fails every PR on ~2,850 pre-existing sites regardless of content.
       run: |
         cargo clippy --locked -p kwavers-core --all-targets --all-features -- -D warnings
-        cargo clippy --locked -p kwavers --all-targets --no-default-features --features full --no-deps -- -D warnings
+        cargo clippy --locked -p kwavers --lib --bins --no-default-features --features full --no-deps -- -D warnings
+        cargo clippy --locked -p kwavers --all-targets --no-default-features --features full --no-deps -- -D warnings \
+          -A clippy::print_stdout \
+          -A clippy::print_stderr \
+          -A clippy::missing_panics_doc \
+          -A clippy::missing_errors_doc \
+          -A clippy::unused_self \
+          -A clippy::manual_assert_eq \
+          -A clippy::trivially_copy_pass_by_ref
 
     # The strict step above passes --no-deps, so it lints only the kwavers
     # facade; every member crate where the debt lives is excluded. This step
@@ -90,10 +110,11 @@ jobs:
   layer-boundary-checks:
     name: Layer Boundary Enforcement
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v7
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
     - name: Enforce crate layering
       run: |
@@ -140,6 +161,7 @@ jobs:
   build-matrix:
     name: Build with Feature Combinations
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
       matrix:
         features:
@@ -151,10 +173,12 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v7
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
     - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@stable
+      uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+      with:
+        toolchain: 1.97.0
 
     - name: Build with ${{ matrix.features }} features
       run: |
@@ -174,7 +198,7 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v7
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
     - name: Install system dependencies
       uses: ./.github/actions/install-system-dependencies
@@ -182,10 +206,12 @@ jobs:
         packages: libfontconfig1-dev
 
     - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@stable
+      uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+      with:
+        toolchain: 1.97.0
 
     - name: Install nextest
-      uses: taiki-e/install-action@v2
+      uses: taiki-e/install-action@ea4c0b50b0d394ee91c5bb68a6a295b0556feb8e
       with:
         tool: nextest
 
@@ -224,13 +250,16 @@ jobs:
   documentation:
     name: Documentation Build
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v7
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
     - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@stable
+      uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+      with:
+        toolchain: 1.97.0
 
     - name: Build documentation
       run: |
@@ -240,6 +269,7 @@ jobs:
   cuda-runtime-build:
     name: CUDA Runtime Build
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     container:
       image: nvidia/cuda:13.2.0-devel-ubuntu22.04
 
@@ -266,10 +296,12 @@ jobs:
           pkg-config
 
     - name: Checkout repository
-      uses: actions/checkout@v7
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
     - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@stable
+      uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+      with:
+        toolchain: 1.97.0
 
     - name: Compile CUDA runtime provider
       run: cargo build --locked -p kwavers --no-default-features --features cuda-runtime

@@ -37,6 +37,14 @@ pub struct PSTDPlugin {
     /// Whether the zero-velocity IVP has been seeded from the externally-injected
     /// initial pressure (done once, on the first `update`).
     ivp_seeded: bool,
+    /// Whether the caller's sources have been handed to the solver.
+    ///
+    /// Registration happens on the first `update` rather than in `initialize`,
+    /// because `initialize` is not given the sources: they arrive through
+    /// `PluginContext`, which only `update` receives. Registering once and
+    /// recording it here keeps the solver's source list from growing by one
+    /// copy per time step.
+    sources_registered: bool,
 }
 
 impl PSTDPlugin {
@@ -58,6 +66,7 @@ impl PSTDPlugin {
             solver: None,
             config,
             ivp_seeded: false,
+            sources_registered: false,
         })
     }
 }
@@ -111,13 +120,24 @@ impl crate::plugin::Plugin for PSTDPlugin {
         _medium: &dyn Medium,
         _dt: f64,
         _t: f64,
-        _context: &mut PluginContext<'_>,
+        context: &mut PluginContext<'_>,
     ) -> KwaversResult<()> {
         let solver = self.solver.as_mut().ok_or_else(|| {
             kwavers_core::error::KwaversError::InternalError(
                 "PSTD solver not initialized".to_owned(),
             )
         })?;
+
+        // Hand the caller's sources to the solver, once. Without this the
+        // solver keeps the empty `GridSource` it was constructed with and a
+        // caller who supplied sources gets a simulation that runs, reports
+        // success, and was never driven.
+        if !self.sources_registered {
+            self.sources_registered = true;
+            for source in context.sources {
+                solver.add_source_arc(std::sync::Arc::clone(source))?;
+            }
+        }
 
         // Sync from global fields to internal solver state
         let pressure_idx = UnifiedFieldType::Pressure.index();

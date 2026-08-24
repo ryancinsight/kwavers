@@ -103,10 +103,6 @@ mod tests {
         let mut state = equilibrium_state();
         // Radius so small the bubble volume is essentially zero
         state.radius = 1e-15;
-        let result = calculate_vdw_pressure(&state);
-        assert!(
-            result.is_err(),
-            "must return Err when volume <= excluded volume"
-        );
+        calculate_vdw_pressure(&state).expect_err("must return Err when volume <= excluded volume");
     }
 }

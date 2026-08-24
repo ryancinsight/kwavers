@@ -5,8 +5,10 @@ use crate::inverse::pinn::elastic_2d::model::ElasticPINN2D;
 
 type B = super::TestBackend;
 
+// Autodiff-vs-second-difference check on identically initialized models.
+// Measured 2026-08-22: ~20 ms, stable across 5/5 runs (rel tol 1e-2,
+// h = 1e-4), so the previous ignore is lifted.
 #[test]
-#[ignore = "Requires trained model for reliable FD comparison - use analytic tests instead"]
 fn test_second_derivative_xx_vs_finite_difference() {
     let config = Config::default();
 
@@ -47,7 +49,7 @@ fn test_second_derivative_xx_vs_finite_difference() {
 }
 
 #[test]
-#[ignore = "Both paths are now finite-difference-based on this untrained model (coeus_autograd has no double-backward — see autodiff_utils::second_order's weight-gradient contract), so this duplicates test_second_derivative_xx_vs_finite_difference; retained for its is_finite() smoke coverage"]
+#[ignore = "Both paths are now finite-difference-based on this untrained model (coeus_autograd has no double-backward — see autodiff_utils::second_order's weight-gradient contract), so this duplicates test_second_derivative_xx_vs_finite_difference; retained for its is_finite() smoke coverage. Re-enable trigger: remove the ignore when coeus_autograd gains double-backward and the analytic polynomial path is exercised for real."]
 fn test_analytic_polynomial_second_derivative() {
     // Polynomial: u(x) = x² → ∂u/∂x = 2x → ∂²u/∂x² = 2
     // This tests the finite-difference second-derivative path on a known

@@ -9,6 +9,7 @@ use kwavers_solver::pstd::config::BoundaryConfig;
 use kwavers_solver::pstd::{PSTDConfig, PSTDPlugin};
 use kwavers_source::Source;
 use leto::Array4;
+use std::sync::Arc;
 
 // Named constants for test configuration
 const TEST_GRID_SIZE: usize = 32;
@@ -78,7 +79,7 @@ fn test_fdtd_solver() {
         .initialize(&grid, &medium)
         .expect("Failed to initialize plugins");
 
-    let sources: Vec<Box<dyn Source>> = Vec::new();
+    let sources: Vec<Arc<dyn Source>> = Vec::new();
     let mut boundary = DomainPMLBoundary::new(DomainPmlConfig {
         thickness: DEFAULT_PML_STENCIL_SIZE,
         ..Default::default()
@@ -175,7 +176,7 @@ fn test_pstd_solver() {
         .initialize(&grid, &medium)
         .expect("Failed to initialize plugins");
 
-    let sources: Vec<Box<dyn Source>> = Vec::new();
+    let sources: Vec<Arc<dyn Source>> = Vec::new();
     let mut boundary = DomainPMLBoundary::new(DomainPmlConfig {
         thickness: DEFAULT_PML_STENCIL_SIZE,
         ..Default::default()
@@ -296,7 +297,7 @@ fn test_wave_propagation() {
             .initialize(&grid, &medium)
             .expect("Failed to initialize plugins");
 
-        let sources: Vec<Box<dyn Source>> = Vec::new();
+        let sources: Vec<Arc<dyn Source>> = Vec::new();
         let mut boundary = DomainPMLBoundary::new(DomainPmlConfig {
             thickness: DEFAULT_PML_STENCIL_SIZE,
             ..Default::default()
@@ -355,7 +356,7 @@ fn test_wave_propagation() {
             .initialize(&grid, &medium)
             .expect("Failed to initialize plugins");
 
-        let sources: Vec<Box<dyn Source>> = Vec::new();
+        let sources: Vec<Arc<dyn Source>> = Vec::new();
         let mut boundary = DomainPMLBoundary::new(DomainPmlConfig {
             thickness: DEFAULT_PML_STENCIL_SIZE,
             ..Default::default()

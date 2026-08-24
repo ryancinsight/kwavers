@@ -120,7 +120,6 @@
 // Submodules (alphabetical order)
 pub mod boundary;
 pub mod core;
-pub mod gpu;
 pub mod integration;
 pub mod scratch;
 pub mod stress;
@@ -135,7 +134,6 @@ pub use types::{
 
 pub use boundary::{ElasticSwePMLBoundary, SwePmlConfig};
 pub use core::{ElasticPointForce, ElasticWaveSolver};
-pub use gpu::{AdaptiveResolution, GPUDevice, GPUElasticWaveSolver3D};
 pub use integration::TimeIntegrator;
 pub use scratch::ElasticStepScratch;
 
@@ -152,5 +150,5 @@ pub use scratch::ElasticStepScratch;
 // ✅ integration.rs - Time integration schemes
 // ✅ boundary.rs - PML boundary conditions
 // ✅ core.rs - Main solver orchestration
-// ✅ gpu.rs - GPU acceleration support
+// 🗑 gpu/ - simulated GPU surface deleted (KW-GAP-2026-08-20-GPUMOCK)
 // 🔄 tracking.rs - Wave-front tracking (planned)

@@ -36,6 +36,7 @@ jobs:
     name: Publish wheels to PyPI
     needs: wheels
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     environment:
       name: pypi
       url: https://pypi.org/p/kwavers-python

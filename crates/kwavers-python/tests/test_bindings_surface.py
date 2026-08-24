@@ -6,6 +6,8 @@ verify that the public Python API still exposes the expected constructors and
 execution path on the CPU-only default feature set.
 """
 
+from concurrent.futures import ThreadPoolExecutor
+
 import numpy as np
 import pytest
 
@@ -41,6 +43,26 @@ def test_public_symbols_are_exposed():
     assert hasattr(kw, "plan_transcranial_focused_bowl_placement_from_ritk_ct")
     assert hasattr(kw, "run_transcranial_fus_planning_from_ritk_ct")
     assert hasattr(kw, "run_transcranial_skull_adaptive_benchmark_from_ritk_ct")
+
+
+def test_core_facade_exports_match_registered_extension_classes():
+    core_names = {
+        "Grid",
+        "Medium",
+        "Source",
+        "Sensor",
+        "Simulation",
+        "SimulationResult",
+        "SolverType",
+        "PmlConfig",
+        "HelmholtzConfig",
+        "NonlinearConfig",
+        "ThermalConfig",
+    }
+
+    assert core_names.issubset(set(kw.__all__))
+    assert all(hasattr(kw, name) for name in core_names)
+    assert all(hasattr(kw._pykwavers, name) for name in core_names)
 
 
 def test_breast_fwi_frequency_domain_binding_surface_runs_forward():
@@ -206,12 +228,19 @@ def test_kwave_array_per_element_superposition_reduces_to_shared_signal():
     pykwavers binding plumbing.
     """
     grid = kw.Grid(nx=48, ny=48, nz=48, dx=3.0e-4, dy=3.0e-4, dz=3.0e-4)
-    cx, cy, cz = 24.0 * 3.0e-4, 24.0 * 3.0e-4, 24.0 * 3.0e-4
+    cy, cz = 24.0 * 3.0e-4, 24.0 * 3.0e-4
+    # Bowl/annulus elements are spherical caps whose surface lies one radius
+    # from `position` (the geometric focus), matching k-wave-python. Place the
+    # focus one radius past mid-grid so the cap surface lands on the domain;
+    # a mid-grid focus with R = 10 mm puts the surface ~2.8 mm outside the
+    # 14.4 mm grid and the BLI horizon correctly rejects every sample.
+    radius = 10.0e-3
+    cx = 24.0 * 3.0e-4 + radius
 
     arr = kw.KWaveArray()
-    arr.add_annular_element(position=(cx, cy, cz), radius=10.0e-3,
+    arr.add_annular_element(position=(cx, cy, cz), radius=radius,
                             inner_diameter=0.0, outer_diameter=3.0e-3)
-    arr.add_annular_element(position=(cx, cy, cz), radius=10.0e-3,
+    arr.add_annular_element(position=(cx, cy, cz), radius=radius,
                             inner_diameter=4.0e-3, outer_diameter=6.0e-3)
     assert arr.num_elements == 2
 
@@ -222,7 +251,18 @@ def test_kwave_array_per_element_superposition_reduces_to_shared_signal():
     # Path A: shared signal
     w_sum = np.asarray(arr.get_array_weighted_mask(grid), dtype=np.float64)
     active_cells = np.argwhere(w_sum != 0.0)
-    assert active_cells.size > 0
+    assert active_cells.size > 0, (
+        "weighted mask empty: annulus surface must lie inside the grid "
+        "(focus placed one radius past mid-grid)"
+    )
+    # Both concentric annuli must contribute: the inner cap (0–3 mm aperture)
+    # and the outer ring (4–6 mm) occupy disjoint radial bands.
+    inner = kw.KWaveArray()
+    inner.add_annular_element(position=(cx, cy, cz), radius=radius,
+                              inner_diameter=0.0, outer_diameter=3.0e-3)
+    w_inner = np.asarray(inner.get_array_weighted_mask(grid), dtype=np.float64)
+    outer_ring_cells = np.argwhere((w_sum != 0.0) & (w_inner == 0.0))
+    assert outer_ring_cells.size > 0, "outer annulus contributed no cells"
 
     # Path B: per-element signals reduced to shared case — must construct
     # without error; Source is an opaque handle, but the invariant we test
@@ -269,6 +309,244 @@ def test_simulation_cpu_surface_runs_end_to_end():
     assert result.p_rms is not None
     assert np.all(np.isfinite(result.sensor_data))
     assert np.all(np.isfinite(result.time))
+
+
+def _make_point_simulation(amplitude, nx=48, time_steps=None):
+    grid = kw.Grid(nx=nx, ny=nx, nz=nx, dx=0.1e-3, dy=0.1e-3, dz=0.1e-3)
+    medium = kw.Medium.homogeneous(sound_speed=1500.0, density=1000.0)
+    source = kw.Source.point(
+        position=(2.4e-3, 2.4e-3, 2.4e-3),
+        frequency=1.0e6,
+        amplitude=amplitude,
+    )
+    sensor = kw.Sensor.point(position=(3.2e-3, 2.4e-3, 2.4e-3))
+    simulation = kw.Simulation(
+        grid, medium, source, sensor, solver=kw.SolverType.FDTD, pml_size=4,
+    )
+    return simulation
+
+
+def test_simulation_run_releases_gil_with_returned_value_correctness():
+    """Runtime overlap oracle for the detached ``Simulation::run`` slice.
+
+    Complements the static ``py.detach`` evidence at the binding's run path:
+    while one thread executes ``Simulation.run``, the main thread performs
+    pure-Python GIL-bound work and must make substantial progress — only
+    possible if the binding released the GIL around the solver. Returned-
+    value correctness is proven on the same slice: identical inputs produce
+    bit-identical sensor data, and the linear-acoustics amplitude ratio is
+    preserved to floating-point tolerance.
+    """
+    import threading
+    import time
+
+    progress = [0]
+    stop = threading.Event()
+
+    def spin():
+        # Pure-Python counting loop: every increment requires the GIL.
+        while not stop.is_set():
+            for _ in range(1000):
+                progress[0] += 1
+
+    spinner = threading.Thread(target=spin, daemon=True)
+    spinner.start()
+    t0 = time.perf_counter()
+    result = _make_point_simulation(1.0e5).run(time_steps=150, dt=1.0e-8)
+    wall = time.perf_counter() - t0
+    stop.set()
+    spinner.join()
+
+    # The window must be long enough for the oracle to be meaningful.
+    assert wall > 0.5, f"solver window too short ({wall:.3f}s) for overlap proof"
+    assert result.sensor_data.shape == (150,)
+    assert np.all(np.isfinite(result.sensor_data))
+    # If the GIL had been held for the whole solve, the main thread could not
+    # have executed millions of pure-Python increments during the window.
+    assert progress[0] > 1_000_000, (
+        f"main-thread progress {progress[0]} during {wall:.2f}s solve "
+        "indicates the GIL was not released"
+    )
+
+    # Returned-value correctness: determinism and amplitude linearity.
+    baseline = _make_point_simulation(1.0e5).run(time_steps=150, dt=1.0e-8).sensor_data
+    doubled = _make_point_simulation(2.0e5).run(time_steps=150, dt=1.0e-8).sensor_data
+    assert np.array_equal(result.sensor_data, baseline)
+    ratio = float(np.max(np.abs(doubled)) / np.max(np.abs(baseline)))
+    assert abs(ratio - 2.0) < 1.0e-9, f"amplitude scaling ratio {ratio} != 2"
+
+
+def test_simulation_calls_submitted_to_thread_pool_preserve_input_sensitive_values():
+    """Check thread-pool submission and input-sensitive value semantics.
+
+    The executor submits both calls through its worker pool. This test does
+    not establish overlap during ``Simulation.run`` or prove GIL release; the
+    latter is static implementation evidence from the binding's ``py.detach``
+    call around ``SimulationRunner::run``.
+    """
+
+    def run(amplitude):
+        grid = kw.Grid(nx=16, ny=16, nz=16, dx=0.1e-3, dy=0.1e-3, dz=0.1e-3)
+        medium = kw.Medium.homogeneous(sound_speed=1500.0, density=1000.0)
+        source = kw.Source.point(
+            position=(0.2e-3, 0.8e-3, 0.8e-3),
+            frequency=1.0e6,
+            amplitude=amplitude,
+        )
+        sensor = kw.Sensor.point(position=(0.8e-3, 0.8e-3, 0.8e-3))
+        simulation = kw.Simulation(
+            grid,
+            medium,
+            source,
+            sensor,
+            solver=kw.SolverType.FDTD,
+            pml_size=4,
+        )
+        return simulation.run(time_steps=12, dt=1.0e-8).sensor_data
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        low, high = executor.map(run, (5.0e4, 1.0e5))
+
+    assert low.shape == (12,)
+    assert high.shape == (12,)
+    assert np.all(np.isfinite(low))
+    assert np.all(np.isfinite(high))
+    assert np.linalg.norm(high - low) > 0.0
+
+
+def test_thermal_simulation_run_releases_gil_with_returned_value_correctness():
+    """Runtime overlap oracle for the detached ``ThermalSimulation::run`` slice.
+
+    Complements the static ``py.detach`` evidence at the thermal binding's run
+    path: while one thread executes ``ThermalSimulation.run``, the main thread
+    performs pure-Python GIL-bound work and must make substantial progress —
+    only possible if the binding released the GIL around the diffusion time
+    loop. Returned-value correctness is proven on the same slice: identical
+    inputs produce bit-identical temperature fields, and a doubled heat source
+    produces exactly twice the steady-state temperature rise above the initial
+    state (linear diffusion).
+    """
+    import threading
+    import time
+
+    popt = dict(
+        nx=48, ny=48, nz=48,
+        dx=5.0e-4, dy=5.0e-4, dz=5.0e-4,
+        thermal_conductivity=0.5,
+        density=1000.0,
+        specific_heat=3600.0,
+        initial_temperature=37.0,
+        track_thermal_dose=False,
+    )
+
+    def make(heat_source):
+        sim = kw.ThermalSimulation(**popt)
+        return sim.run(time_steps=200, dt=1.0e-3, heat_source=heat_source)
+
+    progress = [0]
+    stop = threading.Event()
+
+    def spin():
+        # Pure-Python counting loop: every increment requires the GIL.
+        while not stop.is_set():
+            for _ in range(1000):
+                progress[0] += 1
+
+    spinner = threading.Thread(target=spin, daemon=True)
+    spinner.start()
+    heat = np.full((48, 48, 48), 1.0e4, dtype=np.float64)  # W/m³
+    t0 = time.perf_counter()
+    result = make(heat)
+    wall = time.perf_counter() - t0
+    stop.set()
+    spinner.join()
+
+    # The window must be long enough for the oracle to be meaningful.
+    assert wall > 0.5, f"thermal solve window too short ({wall:.3f}s)"
+    assert result.temperature.shape == (48, 48, 48)
+    assert np.all(np.isfinite(result.temperature))
+    # If the GIL had been held for the whole solve, the main thread could not
+    # have executed millions of pure-Python increments during the window.
+    assert progress[0] > 1_000_000, (
+        f"main-thread progress {progress[0]} during {wall:.2f}s thermal solve "
+        "indicates the GIL was not released"
+    )
+
+    # Returned-value correctness: determinism and linear response to a doubled
+    # heat source. Delta = final - initial is linear in Q for diffusion.
+    baseline = make(heat)
+    doubled = make(2.0 * heat)
+    assert np.array_equal(result.temperature, baseline.temperature)
+    delta = doubled.temperature - baseline.temperature
+    assert np.all(delta > 0.0), "doubled heat source must raise temperature"
+    ratio = float(np.max(delta) / np.max(baseline.temperature - 37.0))
+    assert abs(ratio - 1.0) < 1.0e-6, f"heat linearity ratio {ratio} != 1"
+
+
+def test_bubble_ode_releases_gil_with_returned_value_correctness():
+    """Runtime overlap oracle for the detached bubble ODE binding family.
+
+    The Keller–Miksis / Gilmore / Rayleigh–Plesset / Hodgkin-Huxley RK4
+    integrations are pure f64 computes now run inside ``py.detach``. While one
+    thread runs a high-step-count ``solve_keller_miksis``, the main thread
+    performs pure-Python GIL-bound work and must make substantial progress —
+    only possible if the binding released the GIL around the ODE loop.
+    Returned-value correctness on the same slice: identical inputs produce
+    bit-identical output arrays, and doubling the driving amplitude produces a
+    strictly larger collapse excursion (higher max / lower min radius).
+    """
+    import threading
+    import time
+
+    def solve(amplitude, n_steps):
+        return kw.solve_keller_miksis(
+            r0_m=1.0e-6, rdot0_m_s=0.0,
+            p_inf_pa=101_325.0, p_ac_pa=amplitude,
+            frequency_hz=1.0e6, t_end_s=2.0e-5,
+            n_steps=n_steps, rho=998.0, sigma=0.0725, gamma=1.4,
+            mu=1.0e-3, pv_pa=2_330.0, c_l=1_481.0,
+        )
+
+    progress = [0]
+    stop = threading.Event()
+
+    def spin():
+        # Pure-Python counting loop: every increment requires the GIL.
+        while not stop.is_set():
+            for _ in range(1000):
+                progress[0] += 1
+
+    spinner = threading.Thread(target=spin, daemon=True)
+    spinner.start()
+    t0 = time.perf_counter()
+    # A 10M-step solve holds a window ~1s so the overlap oracle is meaningful.
+    time_s, radius_m, rdot_m_s = solve(1.0e5, 10_000_000)
+    wall = time.perf_counter() - t0
+    stop.set()
+    spinner.join()
+
+    # The window must be long enough for the oracle to be meaningful.
+    assert wall > 0.5, f"bubble ODE window too short ({wall:.3f}s)"
+    assert time_s.shape == (10_000_001,)
+    assert radius_m.shape == (10_000_001,)
+    assert np.all(np.isfinite(radius_m))
+    # If the GIL had been held for the whole solve, the main thread could not
+    # have executed millions of pure-Python increments during the window.
+    assert progress[0] > 1_000_000, (
+        f"main-thread progress {progress[0]} during {wall:.2f}s bubble ODE "
+        "indicates the GIL was not released"
+    )
+
+    # Returned-value correctness (small solves are fast): determinism (same
+    # inputs → bit-identical outputs), and a higher driving amplitude swings
+    # the wall farther (higher max / lower min radius).
+    t2, r2, v2 = solve(1.0e5, 150_000)
+    t2b, r2b, v2b = solve(1.0e5, 150_000)
+    assert np.array_equal(t2, t2b)
+    assert np.array_equal(r2, r2b)
+    high_amp = solve(2.0e5, 150_000)
+    assert np.max(high_amp[1]) > np.max(r2), "higher drive must swing further"
+    assert np.min(high_amp[1]) < np.min(r2), "higher drive must collapse deeper"
 
 
 def test_simulation_exposes_kspace_correction_mode():

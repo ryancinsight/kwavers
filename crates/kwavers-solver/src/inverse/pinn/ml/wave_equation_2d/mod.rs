@@ -99,8 +99,8 @@ mod tests {
             hidden_layers: vec![],
             ..Default::default()
         };
-        let result = PinnWave2D::<TestBackend>::new(config);
-        assert!(result.is_err());
+        PinnWave2D::<TestBackend>::new(config)
+            .expect_err("empty hidden-layer architecture must be rejected");
     }
 
     #[test]

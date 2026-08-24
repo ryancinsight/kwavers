@@ -287,11 +287,11 @@ mod tests {
 
         #[cfg(not(feature = "pinn"))]
         {
-            let result = super::PINN1DWave::new(
+            super::PINN1DWave::new(
                 kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM,
                 (),
-            );
-            assert!(result.is_err());
+            )
+            .expect_err("empty training set must be rejected");
         }
     }
 }

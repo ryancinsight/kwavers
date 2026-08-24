@@ -77,8 +77,11 @@
 | [111](111-retire-kzk-solver-plugin-surface.md) | 111. Retire the `KzkSolverPlugin` surface onto the complex-field KZK adapter | Accepted |
 | [112](112-convex-array-rasterizer-seam.md) | 112. Wiring the convex array: orientation seam and angle units | Accepted |
 | [113](113-finite-aperture-sir-seam.md) | 113. Finite-aperture diffraction in RF synthesis: an injected SIR seam | Accepted |
-| [114](114-typed-sonoluminescence-emission.md) | Type sonoluminescence emission components at the Aequitas boundary | Accepted |
+| [114](114-typed-sonoluminescence-emission.md) | 114. Type sonoluminescence emission components at the Aequitas boundary | Accepted |
 | [115](115-fwi-transmission-acquisition-seam.md) | 115. A transmission-acquisition seam for frequency-domain FWI | Accepted |
 | [116](116-workspace-clippy-floor.md) | 116. One workspace clippy floor, and which of the two candidates it is | Accepted |
-| [117](117-typed-seismic-example-workflows.md) | Type and partition the seismic example workflows | Accepted |
-| [118](118-typed-recorder-channel-selection.md) | Typed recorder channel selection | Accepted |
+| [117](117-typed-seismic-example-workflows.md) | 117. Type and partition the seismic example workflows | Accepted |
+| [118](118-typed-recorder-channel-selection.md) | 118. Typed recorder channel selection | Accepted |
+| [119](119-kwave-reference-oracle.md) | In-repository k-Wave differential oracle | Accepted |
+| [120](120-absorption-coefficient-ownership.md) | 120. Who owns the power-law absorption coefficient | Proposed |
+| [121](121-plugin-source-forwarding.md) | 121. Plugins receive the sources they are given | Accepted |

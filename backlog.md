@@ -1,5 +1,229 @@
 # Backlog / Strategy
 
+## KW-PSTD-PLUGIN-SOURCES-DROPPED — the plugin path discards its sources [major] — IMPLEMENTED 2026-08-22
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-PSTD-PLUGIN-SOURCES-DROPPED | Make `PSTDPlugin` apply the sources it is given, or make the parameter's inapplicability a compile-time fact rather than a silent no-op. | [major] | todo | unowned | `crates/kwavers-solver/src/forward/pstd/plugin.rs`, `crates/kwavers-solver/src/plugin/` |
+
+- **Evidence:** `PSTDPlugin::initialize` constructs its `PSTDSolver` with
+  `GridSource::default()` — an empty source — and `PSTDPlugin::update` syncs the
+  pressure and velocity fields, calls `solver.step_forward()`, and syncs back.
+  It never reads the `sources` argument that `PluginManager::execute` threads
+  through to it. A caller who builds a `GridSource` with a `p_mask` and
+  `p_signal` and drives the pseudospectral solver through the plugin path gets a
+  simulation that runs, reports success, and was never driven.
+- **How it surfaced:** the k-Wave driven-source differential case
+  (`src_tone_burst_2d`) could not be expressed through the plugin path at all
+  and had to go through `PSTDSolver` directly, which does apply the source and
+  matches k-Wave at `2.58e-3` / `r = 0.999997`. So the source machinery is
+  correct; only the plugin's route to it is missing.
+- **Severity:** [major] because the failure is silent and produces a
+  physically empty result from an API that accepts a complete source
+  specification. It is the same shape as an input-insensitive implementation:
+  the output does not depend on an input the signature accepts.
+- **Wider than filed:** `FdtdPlugin` carries the identical defect, constructing
+  its solver with `GridSource::default()` under the comment "no active sources
+  unless configured elsewhere". Only `HybridPlugin` consumed `context.sources`.
+- **Nothing was missing but the call.** `PSTDSolver::add_source_arc` builds the
+  mask, determines the injection mode, computes velocity spectral gradient
+  masks, and pushes onto `dynamic_sources`, which the stepper consumes every
+  step. The plugin simply never invoked it.
+- **Delivered (option a):** both plugins register `context.sources` on their
+  first `update` — registration cannot happen in `initialize`, which is not
+  given the sources. `PluginContext::sources` moves from `&[Box<dyn Source>]` to
+  `&[Arc<dyn Source>]`, because the stepper queries `amplitude(t)` every step
+  and so needs ownership outliving the context borrow; `PSTDSolver::add_source`
+  already converted `Box` to `Arc` internally, so this makes the boundary agree
+  with the internal form.
+- **Evidence:** the driven k-Wave reference case validates both routes against
+  one stored field at `2.58e-3` / `r = 0.999996674` — identical digits — and the
+  two routes agree with *each other* to `4.0e-13`, which is reordered
+  floating-point over 151 steps. Eight parity tests pass in 3.18 s;
+  `cargo nextest run -p kwavers-solver -p kwavers` is `1552 passed`.
+- **Decision record:** `docs/adr/121-plugin-source-forwarding.md`.
+- **Not covered:** the FDTD plugin's route is fixed but not measured against
+  k-Wave, since that scheme sits at its own dispersion error rather than at the
+  parity bound. Its guarantee is the shared registration path, not a
+  measurement.
+
+## KW-ABSORPTION-CONFIG-PRECEDENCE — the PSTD absorption coefficient in config is inert [major] — IMPLEMENTED 2026-08-22
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-ABSORPTION-CONFIG-PRECEDENCE | Make `PSTDConfig::absorption_mode`'s `alpha_coeff` either authoritative, or documented and typed as the fallback it actually is. | [major] | todo | unowned | `crates/kwavers-solver/src/forward/pstd/physics/absorption/init.rs`, `crates/kwavers-solver/src/forward/pstd/config.rs`, `crates/kwavers-medium/src/homogeneous/` |
+
+- **Evidence:** `initialize_absorption_operators` reads
+  `medium.alpha_coefficient(..)` and uses the config's `alpha_coeff` only when
+  the medium reports exactly zero. `HomogeneousMedium::new` seeds
+  `absorption_alpha` with `WATER_ABSORPTION_ALPHA_0`, which is never zero, so
+  through that medium the config coefficient is unreachable. A solver configured
+  with `AbsorptionMode::PowerLaw { alpha_coeff: 40.0, alpha_power: 1.5 }` runs at
+  water's absorption instead, and the result is bit-identical to a lossless run
+  at the grid and duration of the k-Wave reference cases. Substituting `4000.0`
+  changes the output by nothing to six digits.
+- **How it surfaced:** the k-Wave absorbing differential case
+  (`ivp_absorbing_2d`, added with `KW-GAP-2026-08-20-KWAVEPARITY`) measured
+  `r = 0.836` against the reference. Routing the coefficient through
+  `HomogeneousMedium::set_acoustic_properties` instead gives `r = 0.999999924`
+  at relative L2 `8.10e-3`, so the absorption physics is correct and only its
+  configuration route is not.
+- **Why the unit tests did not catch it:** the absorption tests under
+  `pstd/physics/absorption/tests/` construct a solver and call
+  `apply_absorption_to_pressure` on a config-derived kernel directly. They never
+  exercise the precedence between config and medium, and no test compared an
+  absorbing run to a lossless one.
+- **Acceptance:** either (a) the config coefficient takes precedence when set,
+  with the medium as the fallback, or (b) the field is removed from
+  `AbsorptionMode::PowerLaw` and absorption is set on the medium only — in which
+  case `alpha_power`'s separate role in the spectral operators is documented at
+  the type. Whichever is chosen, a test asserts the precedence, and a caller
+  cannot silently get water's coefficient after asking for another. The
+  Rustdoc claim that `alpha_coeff` is "the raw k-Wave coefficient" is corrected
+  or made true.
+- **The disagreement is three-sided, and the callers already assume the opposite
+  rule.** `kwavers-python/src/simulation_py/solvers/pstd.rs:145` and
+  `kwavers-simulation/src/dispatch/pstd.rs:256` each compute an
+  `effective_alpha_db` — the user's coefficient when positive, the medium's
+  otherwise — and write it into `PSTDConfig`, which reads as an instruction.
+  `init.rs:185` then resolves again in the opposite direction. So this is not a
+  dead field: a Python caller passing `alpha_coeff_db = 0.75` on a homogeneous
+  medium has it resolved correctly, written to the config, and silently
+  discarded. Any absorption result configured that way ran at water's
+  coefficient.
+- **Why the current rule cannot simply be inverted:** it is load-bearing for
+  heterogeneous media. Both callers flatten the medium to a single sample at the
+  origin before building the config, so a tissue medium's spatial variation
+  reaches the solver only through the per-voxel read that overrides the config.
+  Each rule is correct for one medium class and wrong for the other, and nothing
+  in the types tells them apart.
+- **Class rationale:** [major] rather than [patch] because it changes the meaning
+  of a public configuration field, and because any published absorption result
+  configured through `PSTDConfig` alone was produced at water's coefficient.
+- **The exponent had the identical defect, which changed the fix.**
+  `alpha_power` resolved against its own sentinel (medium wins unless `0.0` or
+  `1.0`), and `HomogeneousMedium::new` seeds `1.05`, which is neither. Fixing
+  only the coefficient left the absorbing reference case at `r = 0.838` —
+  indistinguishable from the original defect — because the exponent was still
+  the medium's. Absorption is `alpha_0 f^y`, and taking `alpha_0` from one owner
+  and `y` from another evaluates neither party's power law, so the two are now
+  resolved together from one owner.
+- **Delivered:** `alpha_coeff: Option<f64>`. `Some` is an explicit uniform
+  request whose `alpha_power` is authoritative with it; `None` hands both
+  parameters to the medium, read per voxel, which is what preserves
+  heterogeneity. Both production construction sites stop pre-resolving.
+- **Evidence:** the absorbing k-Wave case now carries the coefficient *only* in
+  config and leaves the medium at its water default, so it fails if the
+  precedence regresses. It measures `8.095065e-3` / `r = 0.999999924` — the same
+  numbers the previous workaround produced, now through the documented API.
+  `cargo nextest run -p kwavers-solver -p kwavers -p kwavers-physics
+  -p kwavers-simulation` is `3356 passed`.
+- **One test changed meaning deliberately:**
+  `stratified_exponent_matches_per_tissue_uniform_operator` moves to
+  `alpha_coeff: None`. It builds a spatially varying exponent and asserts the
+  stratified operator engages; under the new rule an explicit request applies
+  uniformly, so the per-voxel exponent would never be read. Its intent was
+  always medium-owned absorption. The suite caught this — a mechanical
+  `f64` to `Some(f64)` migration would have silently inverted it.
+- **Decision record:** `docs/adr/120-absorption-coefficient-ownership.md`
+  (Accepted).
+
+## KW-GAP-2026-08-20-KWAVEPARITY — Make the k-Wave parity claim reproducible [major] [arch] — implementation complete; hosted verification pending
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-GAP-2026-08-20-KWAVEPARITY | Bring the k-Wave differential oracle inside the repository so the README's headline parity result is reproducible from a clean clone and enforced in the default gate. | [major] [arch] | implementation complete | current session, lane `test/kwavers-kwave-parity-oracle` | `scripts/generate_kwave_reference.py`, `crates/kwavers/tests/reference/kwave/`, `crates/kwavers/tests/kwave_reference_parity.rs`, `docs/adr/119-kwave-reference-oracle.md`, `README.md`, `.gitignore` |
+
+- **Evidence of the gap:** the README located the harness at
+  `external/k-wave-julia/benchmarks/kwavers`, which `.gitignore:10`/`:96`
+  excludes and which zero tracked files occupy. No `.npz` reference artifact was
+  tracked anywhere in the repository, no Rust test compared against a stored
+  k-Wave field, and the Rust-to-pytest bridge hard-sets `KWAVERS_SKIP_KWAVE=1`
+  (`crates/kwavers/tests/validation/python/mod.rs:155`), so `cargo test` never
+  exercised parity.
+- **Delivered:** a committed generator driving `k-wave-python` over the reference
+  `kspaceFirstOrder-OMP` binary, 156 KB of committed reference fields with a
+  provenance manifest, and a Rust differential test in the default gate.
+- **Measured result:** `ivp_homogeneous_2d` rel-L2 `5.50e-7`, rel-Linf `1.05e-6`,
+  `r = 1.000000000`; `ivp_homogeneous_3d` rel-L2 `1.06e-4`, rel-Linf `2.20e-4`,
+  `r = 0.999999994`. The finite-difference solver is measured against the same
+  reference as an independent cross-scheme check and separates by `2.53e-2` at
+  `r = 0.999647`, matching its fourth-order dispersion error of `(k dx)^4 / 30`
+  at the seed's `k dx ~ 1` spectral edge. A power-law absorbing case
+  (`ivp_absorbing_2d`) matches at `8.10e-3` / `r = 0.999999924` and exposed
+  `KW-ABSORPTION-CONFIG-PRECEDENCE`. A layered-medium case (`ivp_layered_2d`,
+  non-square by design) matches at `7.97e-3` / `r = 0.999963` and separates from
+  a uniform run by `0.27`; it exposed two orientation conventions the square
+  cases could not — k-Wave returns the field axis-reversed, and `np.savez`
+  stores a transposed array in Fortran order — both now asserted at their
+  source. A driven point-source case (`src_tone_burst_2d`) matches at `2.58e-3`
+  / `r = 0.999997`, exercising the source path no initial-value case reaches,
+  and established that the propagation-interval count is `Nt` for a driven
+  source against `Nt - 1` for an initial-value one. It also surfaced that
+  `PSTDPlugin` never forwards the sources given to `PluginManager::execute`, so
+  a caller driving the pseudospectral solver through the plugin path gets a
+  silently undriven simulation. A nonlinear case (`src_nonlinear_2d`,
+  `B/A = 20` at 5 MPa) matches at `3.30e-3` / `r = 0.999995`, barely above
+  the driven case's residual, and separates from a linear run by `4.58e-2`.
+  Nine tests pass under nextest in 2.97 s; `cargo fmt` and `cargo clippy -D warnings` are clean on the touched
+  target.
+- **Finding recorded during the work:** `kgrid.Nt` is k-Wave's count of time
+  *points*, so the returned field has advanced `Nt - 1` intervals. Driving the
+  Rust solver for `Nt` steps degrades agreement from `5e-7` to `5e-2` and
+  presents as a solver divergence. `parity_degrades_when_the_step_count_is_wrong`
+  pins the convention and proves the oracle is time-discriminating.
+- **Not covered, and not claimed:** absorption, nonlinearity, heterogeneous
+  media, elastic propagation, source-driven problems, and the axisymmetric
+  geometry have no committed reference field. `k-wave-python` ships no 1-D
+  solver, so the README's former 1-D row has no reference here and was removed
+  rather than restated.
+- **Follow-up:** `KW-GAP-2026-08-20-TOLPROFILE` depended on this landing and is
+  now unblocked. The Python cached-parity suite's own reproducibility, and the
+  `KWAVERS_SKIP_KWAVE=1` bridge flag it sits behind, are unchanged by this item.
+- **Decision record:** `docs/adr/119-kwave-reference-oracle.md`.
+
+## KW-CI-CACHE-01 — the CI cache never hits [patch] — IMPLEMENTED 2026-08-22
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-CI-CACHE-01 | Make the dependency cache actually restore, and stop superseded runs holding queue slots. | [patch] | implemented | current session, lane `ci/kwavers-cache-and-triggers` | `.github/workflows/` |
+
+- **Evidence:** every cache entry was keyed on an exact
+  `hashFiles('**/Cargo.lock', 'Cargo.toml', '.cargo/config.toml')` with **no
+  `restore-keys` anywhere in the repository**. Any change to any of those three
+  — which is every dependency change, including the pin sweep landed the same
+  day — is a total miss with no partial restore, so every job cold-builds the
+  whole graph. Five distinct key prefixes (`-cargo-`, `-pinn-cargo-`,
+  `-bench-cargo-`, `-pinn-conv-cargo-`, `-validation-cargo-`) meant each job
+  also built its own copy of the shared dependency graph and stored its own
+  `target/`, against a 10 GB per-repository cache budget — so the entries
+  evicted each other and the next run missed again.
+- **`ci.yml` had no `concurrency` group.** A branch pushed to repeatedly
+  accumulated one full ten-job run per push. With several open pull requests
+  that is what fills the queue; 36 runs were queued at the time of writing.
+- **Delivered:** `Swatinem/rust-cache` in place of all thirteen hand-rolled
+  cache blocks, which is what every other member of the stack (apollo, consus,
+  eunomia, gaia, hermes) already uses — restore-keys, `target/` pruning, and one
+  `shared-key` across jobs. `save-if` restricts writes to the default branch so
+  concurrent branches cannot evict each other. Cancelling concurrency groups on
+  the three verification workflows that lacked one.
+- **Also corrected while there:** `dtolnay/rust-toolchain@stable` installed
+  whatever stable happened to be and resolved its `components` against that,
+  not against the `1.97.0` that `rust-toolchain.toml` pins; the three mutable
+  action tags (`@stable`, `@v6`, `@v2`) are now commit SHAs matching the peers;
+  twelve jobs gained the `timeout-minutes` bound they lacked; and
+  `book-pages.yml` no longer cancels a Pages deploy from the default branch,
+  only a superseded pull-request build.
+- **Expected effect, stated honestly:** no pull request gets faster until one
+  default-branch run populates the shared cache, because `save-if` deliberately
+  forbids pull requests from writing it. The first main-branch run after this
+  merges pays full cost; runs after it restore.
+- **Not verified by execution.** Hosted Actions has been stalled since
+  2026-08-21 20:33 UTC, so this is validated by YAML parse, a job-level audit
+  (every job bounded, every workflow grouped), and review against the peer
+  workflows it now matches — not by a green run. `actionlint` is not installed
+  locally; adding it to the gate is a follow-up.
+
 ## KW-BOOK-116 — Make the book gate execute a Rust oracle [patch] — implementation complete; hosted verification pending
 
 | ID | Outcome | Class | Status | Owner | Scope |
