@@ -85,6 +85,49 @@
       "steps": 120,
       "t_end_s": 1.0000000000000057e-06
     },
+    "src_distributed_2d": {
+      "alpha_coeff_db": null,
+      "alpha_power": null,
+      "archive": "src_distributed_2d.npz",
+      "bona": null,
+      "bytes": 39987,
+      "cfl": 0.15,
+      "compare_radius_cells": 30,
+      "dt_s": 1e-08,
+      "dx_m": 0.0001,
+      "layer_density_kg_m3": null,
+      "layer_interface_cell": null,
+      "layer_sound_speed_m_s": null,
+      "layer_transition_cells": null,
+      "sha256": "375b5cf1eab06d10a284dca8cdc7beb9eb8b417fa8eebeecbcf5edfd6ba09fda",
+      "shape": [
+        96,
+        80
+      ],
+      "source_amplitude_pa": 1000000.0,
+      "source_cell": null,
+      "source_cells": [
+        [
+          38,
+          30
+        ],
+        [
+          42,
+          30
+        ],
+        [
+          36,
+          34
+        ],
+        [
+          40,
+          34
+        ]
+      ],
+      "source_mode": "additive",
+      "steps": 151,
+      "t_end_s": 1.51e-06
+    },
     "src_nonlinear_2d": {
       "alpha_coeff_db": null,
       "alpha_power": null,

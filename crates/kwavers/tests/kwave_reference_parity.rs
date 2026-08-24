@@ -107,6 +107,23 @@ struct CaseRecord {
     /// Nonlinearity parameter B/A. Absent leaves the medium linear.
     #[serde(default)]
     bona: Option<f64>,
+    /// A distributed source's cells, recorded in the order k-Wave consumes
+    /// them: by column-major linear index, first axis varying fastest. The
+    /// order is the point of the record, not incidental to it — the signal's
+    /// rows are written to match, so a reader that sorts them differently
+    /// drives the wrong cells.
+    #[serde(default)]
+    source_cells: Option<Vec<Vec<usize>>>,
+}
+
+impl CaseRecord {
+    /// The cells this case drives, single or distributed.
+    fn driven_cells(&self) -> Vec<Vec<usize>> {
+        if let Some(cells) = &self.source_cells {
+            return cells.clone();
+        }
+        self.source_cell.iter().cloned().collect()
+    }
 }
 
 impl CaseRecord {
@@ -217,9 +234,23 @@ fn load_reference_signal(case: &CaseRecord) -> Array2<f64> {
         );
     }
 
-    let mut signal = Array2::zeros((1, flat.len()));
-    for (column, &value) in flat.iter().enumerate() {
-        signal[[0, column]] = value;
+    // The archive stores `[rows, steps]` row-major, and the row count is the
+    // number of cells the case drives. Deriving it from the manifest rather
+    // than assuming one row is what lets a distributed source through.
+    let rows = case.driven_cells().len().max(1);
+    assert_eq!(
+        flat.len() % rows,
+        0,
+        "{}: stored signal has {} values, not divisible by {rows} rows",
+        case.archive,
+        flat.len()
+    );
+    let steps = flat.len() / rows;
+    let mut signal = Array2::zeros((rows, steps));
+    for row in 0..rows {
+        for column in 0..steps {
+            signal[[row, column]] = flat[row * steps + column];
+        }
     }
     signal
 }
@@ -512,15 +543,18 @@ fn run_pstd_driven(
     dt: f64,
     steps: usize,
 ) -> KwaversResult<Array3<f64>> {
-    let cell = case
-        .source_cell
-        .as_ref()
-        .expect("a driven case records its source cell");
+    let cells = case.driven_cells();
+    assert!(
+        !cells.is_empty(),
+        "a driven case records at least one source cell"
+    );
     let (nx, ny, nz) = padded_shape(&case.shape);
 
     let mut mask = Array3::zeros((nx, ny, nz));
-    let axis = |index: usize| cell.get(index).copied().unwrap_or(0);
-    mask[[axis(0), axis(1), axis(2)]] = 1.0;
+    for cell in &cells {
+        let axis = |index: usize| cell.get(index).copied().unwrap_or(0);
+        mask[[axis(0), axis(1), axis(2)]] = 1.0;
+    }
 
     match case.source_mode.as_deref() {
         Some("additive") => {}
@@ -1368,4 +1402,129 @@ fn pstd_matches_kwave_with_finite_amplitude_propagation() {
          nonlinear term from one that evaluates it",
         separation.relative_l2
     );
+}
+
+/// The distributed case's bound.
+///
+/// Its residual is the driven case's, four sources over. Nothing new enters
+/// except superposition, which both codes perform in the same linear medium, so
+/// it lands beside the single-cell case rather than above it.
+const DISTRIBUTED_RELATIVE_L2_MAX: f64 = 1.0e-2;
+
+/// How far a permuted mask-to-signal mapping must move the field.
+///
+/// Reversing the signal rows sends each cell its neighbour's amplitude. The
+/// four scales are distinct, so a solver that honours the ordering produces a
+/// materially different field and one that ignores it produces the same field
+/// twice. `0.1` is two orders above the parity residual and an order below the
+/// measured separation, so it distinguishes those two cases and not much else.
+const ORDERING_SENSITIVITY_MIN: f64 = 0.1;
+
+/// A distributed source must match k-Wave, cell for cell.
+///
+/// Every other driven case uses one masked cell, where there is exactly one
+/// signal row and the mapping between mask and signal is unobservable. k-Wave
+/// orders a mask's points by column-major linear index; kwavers claims to match
+/// that in `collect_pressure_indices_fortran`, and until this case nothing
+/// tested the claim.
+///
+/// The four cells are placed so column-major and row-major orderings differ,
+/// and each drives the same burst at a distinct amplitude, which makes any
+/// permutation of the mapping a different field rather than the same field
+/// relabelled. The reference's own ordering was verified independently before
+/// this comparison existed: a probe driving only the last cell in column-major
+/// order produced a field symmetric about `(40, 34)` to `6e-5`, against `1.41`
+/// for every other candidate (ADR 119).
+#[test]
+fn pstd_matches_kwave_on_a_distributed_source() {
+    let manifest = load_manifest();
+    let case = manifest
+        .cases
+        .get("src_distributed_2d")
+        .expect("manifest has the distributed case");
+    let cells = case.driven_cells();
+    assert!(
+        cells.len() > 1,
+        "the distributed case records {} cell(s); with one cell the mask-to-signal \
+         mapping is unobservable and this test reduces to the single-cell one",
+        cells.len()
+    );
+
+    let (nx, ny, nz) = padded_shape(&case.shape);
+    let grid = Grid::new(nx, ny, nz, case.dx_m, case.dx_m, case.dx_m).expect("reference grid");
+    let radius = case.compare_radius_cells;
+
+    let reference = load_reference_field(case, "p_final");
+    let reference_window = window(&reference, &case.shape, radius);
+
+    let field = run_pstd_driven(&grid, case, case.dt_s, case.steps).expect("distributed run");
+    let measured = agreement(&window(&field, &case.shape, radius), &reference_window);
+    report("src_distributed_2d", case.steps, case.dt_s, &measured);
+    assert_parity("src_distributed_2d", &measured, DISTRIBUTED_RELATIVE_L2_MAX);
+
+    // Reverse the mapping and require the field to move. Without this the case
+    // would pass for a solver that drove the right cells with the wrong
+    // signals, or ignored the ordering entirely — which is the only thing the
+    // single-cell cases cannot rule out.
+    let permuted = run_pstd_driven_with_reversed_signal(&grid, case, case.dt_s, case.steps)
+        .expect("distributed run with reversed signal rows");
+    let separation = agreement(&window(&permuted, &case.shape, radius), &reference_window);
+    report(
+        "src_distributed_2d/reversed-mapping",
+        case.steps,
+        case.dt_s,
+        &separation,
+    );
+    assert!(
+        separation.relative_l2 >= ORDERING_SENSITIVITY_MIN,
+        "reversing the mask-to-signal mapping moved the field by only {:.6e} \
+         relative L2; the case cannot tell a solver that honours k-Wave's \
+         column-major cell ordering from one that does not",
+        separation.relative_l2
+    );
+}
+
+/// Drive the case with its signal rows reversed, leaving everything else alone.
+///
+/// This exists only to prove the mapping is load-bearing. It is a deliberate
+/// mis-assignment, not an alternative convention.
+fn run_pstd_driven_with_reversed_signal(
+    grid: &Grid,
+    case: &CaseRecord,
+    dt: f64,
+    steps: usize,
+) -> KwaversResult<Array3<f64>> {
+    let cells = case.driven_cells();
+    let (nx, ny, nz) = padded_shape(&case.shape);
+
+    let mut mask = Array3::zeros((nx, ny, nz));
+    for cell in &cells {
+        let axis = |index: usize| cell.get(index).copied().unwrap_or(0);
+        mask[[axis(0), axis(1), axis(2)]] = 1.0;
+    }
+
+    let ordered = load_reference_signal(case);
+    let (rows, columns) = (ordered.shape()[0], ordered.shape()[1]);
+    let mut reversed = Array2::zeros((rows, columns));
+    for row in 0..rows {
+        for column in 0..columns {
+            reversed[[row, column]] = ordered[[rows - 1 - row, column]];
+        }
+    }
+
+    let source = GridSource {
+        p_mask: Some(mask),
+        p_signal: Some(reversed),
+        p_mode: SourceMode::Additive,
+        ..GridSource::new_empty()
+    };
+
+    let mut config = reference_pstd_config(dt);
+    config.nt = steps;
+    config.nonlinearity = case.bona.is_some();
+
+    let medium = reference_medium(grid, case, config.absorption_mode.clone())?;
+    let mut solver = PSTDSolver::new(config, grid.clone(), medium.as_ref(), source)?;
+    solver.run_orchestrated(steps)?;
+    Ok(solver.fields.p.to_contiguous())
 }

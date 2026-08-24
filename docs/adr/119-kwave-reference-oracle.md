@@ -330,11 +330,24 @@ at the assignment site.
   gap only.
 - The reference set covers linear propagation in two and three dimensions:
   lossless, with power-law absorption, through a layered medium, driven by a
-  time-varying point source, and at finite amplitude. Elastic propagation has no
-  committed reference yet, nor does a distributed (as opposed to single-cell)
-  source, whose mask ordering is a convention this set does not exercise, nor
+  time-varying point source, at finite amplitude, and from a distributed
+  multi-cell source. Elastic propagation has no committed reference yet, nor
   does the axisymmetric geometry. Each is a follow-up case rather than a claim
   this ADR supports.
+- The distributed case pins k-Wave's mask-cell ordering, which the single-cell
+  cases cannot observe: with one masked cell there is exactly one signal row and
+  any mapping between mask and signal produces the same field. k-Wave consumes a
+  mask's cells by column-major linear index, first axis varying fastest. That was
+  measured rather than assumed -- driving a four-cell mask one row at a time put
+  each resulting field's `|p|` centroid within 0.13 cells of the cell that
+  ordering predicts, against a 2-to-4 cell separation between the candidates, so
+  the reference's own convention was established before any kwavers field was
+  compared to it. The case then holds kwavers to it two ways: parity at
+  `3.36e-3` relative L2, and a guard that reverses the signal rows and requires
+  the field to move, which it does by `1.05` -- 313 times the parity residual,
+  with correlation falling from `0.999994` to `0.446`. Without that guard the
+  case would pass for a solver that drove the right cells with the wrong
+  signals.
 
 ## Alternatives rejected
 

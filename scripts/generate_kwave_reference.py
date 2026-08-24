@@ -119,6 +119,11 @@ class Case:
     source_amplitude_pa: float | None = None
     # Nonlinearity parameter B/A. `None` leaves the medium linear.
     bona: float | None = None
+    # A distributed source: several cells, each driving the same burst scaled by
+    # its own factor. The scales are distinct so the mapping from mask cell to
+    # signal row is observable in the field -- which is the point of the case.
+    source_cells: tuple[tuple[int, ...], ...] | None = None
+    source_cell_scales: tuple[float, ...] | None = None
 
 
 # k-wave-python exposes `kspaceFirstOrder2D`, `kspaceFirstOrder3D`, and the
@@ -230,7 +235,41 @@ CASES: tuple[Case, ...] = (
         source_amplitude_pa=5.0e6,
         bona=20.0,
     ),
+    # A distributed source, which is the one convention the single-cell driven
+    # case cannot reach: with one masked cell there is exactly one signal row and
+    # the mapping between them is unobservable. k-Wave orders a mask's points by
+    # their column-major linear index, and kwavers claims to match that in
+    # `collect_pressure_indices_fortran` -- a claim nothing tested.
+    #
+    # The four cells are placed so column-major and row-major orderings differ.
+    # Sorted by (y, x) they are (38,30), (42,30), (36,34), (40,34); sorted by
+    # (x, y) they are (36,34), (38,30), (40,34), (42,30). Giving each cell a
+    # distinct amplitude then makes any permutation of the mapping a different
+    # field rather than the same field relabelled.
+    Case(
+        "src_distributed_2d",
+        (96, 80),
+        1.5e-6,
+        30,
+        source_frequency_hz=3.0e6,
+        source_centre_s=3.0e-7,
+        source_width_s=1.0e-7,
+        source_amplitude_pa=1.0e6,
+        source_cells=((38, 30), (42, 30), (36, 34), (40, 34)),
+        source_cell_scales=(1.0, 0.55, 0.30, 0.15),
+    ),
 )
+
+
+def fortran_ordered_cells(case: Case) -> list[tuple[int, ...]]:
+    """Return the case's source cells in the order k-Wave consumes them.
+
+    k-Wave indexes a source mask by its column-major linear index, so the first
+    axis varies fastest and the last varies slowest. Sorting the cells by their
+    reversed coordinate tuple reproduces that for any dimensionality, and is the
+    ordering the signal rows are written in.
+    """
+    return sorted(case.source_cells, key=lambda cell: tuple(reversed(cell)))
 
 
 def tone_burst(case: Case, dt_s: float, steps: int) -> np.ndarray:
@@ -246,7 +285,16 @@ def tone_burst(case: Case, dt_s: float, steps: int) -> np.ndarray:
     envelope = np.exp(-((offset / case.source_width_s) ** 2))
     carrier = np.sin(2.0 * np.pi * case.source_frequency_hz * offset)
     amplitude = case.source_amplitude_pa or P0_PEAK_PA
-    return (amplitude * envelope * carrier).reshape(1, steps)
+    burst = amplitude * envelope * carrier
+    if case.source_cells is None:
+        return burst.reshape(1, steps)
+
+    # One row per masked cell, in the order k-Wave will consume them, each
+    # carrying its own scale. Building the rows from the sorted cell list rather
+    # than from the declaration order is what ties the signal to the mask.
+    ordered = fortran_ordered_cells(case)
+    scales = dict(zip(case.source_cells, case.source_cell_scales))
+    return np.stack([scales[cell] * burst for cell in ordered])
 
 
 def layered_profile(case: Case, base: float, layer: float) -> np.ndarray:
@@ -313,7 +361,7 @@ def run_case(case: Case) -> dict[str, object]:
     kgrid.makeTime(medium.sound_speed, cfl=CFL, t_end=case.t_end_s)
 
     source = kSource()
-    if case.source_cell is None:
+    if case.source_cell is None and case.source_cells is None:
         p0 = gaussian_seed(case.shape)
         source.p0 = p0
         signal = None
@@ -321,7 +369,11 @@ def run_case(case: Case) -> dict[str, object]:
         # A driven case has no initial pressure; `p0` is stored as the source
         # mask so the manifest still records exactly what the run was given.
         p0 = np.zeros(case.shape, dtype=np.float64)
-        p0[case.source_cell] = 1.0
+        if case.source_cells is None:
+            p0[case.source_cell] = 1.0
+        else:
+            for cell in case.source_cells:
+                p0[cell] = 1.0
         source.p_mask = p0
         # k-Wave indexes `source.p` by time step, so it needs one column per
         # step it will take, which is `Nt` -- one more than the propagation
@@ -392,7 +444,7 @@ def run_case(case: Case) -> dict[str, object]:
         "dt_s": float(np.asarray(kgrid.dt).item()),
         "steps": (
             int(np.asarray(kgrid.Nt).item())
-            if case.source_cell is not None
+            if (case.source_cell is not None or case.source_cells is not None)
             else int(np.asarray(kgrid.Nt).item()) - 1
         ),
     }
@@ -494,7 +546,14 @@ def main() -> int:
                 LAYER_TRANSITION_CELLS if case.layer_interface_cell is not None else None
             ),
             "source_cell": list(case.source_cell) if case.source_cell else None,
-            "source_mode": "additive" if case.source_cell else None,
+            "source_cells": (
+                [list(cell) for cell in fortran_ordered_cells(case)]
+                if case.source_cells
+                else None
+            ),
+            "source_mode": (
+                "additive" if (case.source_cell or case.source_cells) else None
+            ),
             "source_amplitude_pa": case.source_amplitude_pa,
             "bona": case.bona,
         }
