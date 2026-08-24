@@ -48,8 +48,8 @@ impl Default for TransferOptions {
 /// transfer options, and timing statistics. Device buffers are owned by the
 /// injected [`VisualizationTransferProvider`].
 #[derive(Debug)]
-pub struct DataPipeline {
-    provider: Box<dyn VisualizationTransferProvider>,
+pub struct DataPipeline<P> {
+    provider: P,
     transfer_stats: Mutex<TransferStatistics>,
     processing_stage: ProcessingStage,
 
@@ -60,23 +60,23 @@ pub struct DataPipeline {
     transfer_options: TransferOptions,
 }
 
-impl DataPipeline {
+impl<P> DataPipeline<P>
+where
+    P: VisualizationTransferProvider,
+{
     /// Create a new data pipeline over an acquired provider.
     ///
     /// Providers are constructed fallibly at the boundary that owns GPU
     /// capability (for example `kwavers-gpu`'s WGPU provider); construction
     /// failure surfaces there as a typed resource-unavailable error instead of
     /// silently degrading to CPU execution.
-    pub fn new(provider: Box<dyn VisualizationTransferProvider>) -> Self {
+    pub fn new(provider: P) -> Self {
         Self::with_transfer_mode(provider, TransferMode::Async)
     }
 
     /// Create a data pipeline with an explicit provider transfer mode.
     #[must_use]
-    pub fn with_transfer_mode(
-        provider: Box<dyn VisualizationTransferProvider>,
-        mode: TransferMode,
-    ) -> Self {
+    pub fn with_transfer_mode(provider: P, mode: TransferMode) -> Self {
         Self {
             provider,
             transfer_stats: Mutex::new(TransferStatistics::default()),
@@ -288,7 +288,7 @@ mod tests {
     #[test]
     fn single_field_transfer_reaches_provider_with_f32_samples() {
         let (provider, log) = RecordingProvider::new();
-        let mut pipeline = DataPipeline::new(Box::new(provider));
+        let mut pipeline = DataPipeline::new(provider);
         pipeline
             .transfer_field(UnifiedFieldType::Pressure, &sample_field(1.5))
             .expect("single-field transfer succeeds");
@@ -304,7 +304,7 @@ mod tests {
     #[test]
     fn multi_field_transfers_preserve_distinct_field_identity() {
         let (provider, log) = RecordingProvider::new();
-        let mut pipeline = DataPipeline::new(Box::new(provider));
+        let mut pipeline = DataPipeline::new(provider);
         pipeline
             .transfer_field(UnifiedFieldType::Pressure, &sample_field(1.0))
             .expect("pressure transfer succeeds");
@@ -321,7 +321,7 @@ mod tests {
     #[test]
     fn distinct_input_values_update_metadata_and_samples() {
         let (provider, log) = RecordingProvider::new();
-        let mut pipeline = DataPipeline::new(Box::new(provider));
+        let mut pipeline = DataPipeline::new(provider);
         pipeline
             .transfer_field(UnifiedFieldType::Pressure, &sample_field(1.0))
             .expect("first transfer succeeds");
@@ -345,7 +345,7 @@ mod tests {
     fn provider_failure_propagates_without_silent_cpu_degradation() {
         let (mut provider, _) = RecordingProvider::new();
         provider.fail_with = Some("GPU adapter for visualization");
-        let mut pipeline = DataPipeline::new(Box::new(provider));
+        let mut pipeline = DataPipeline::new(provider);
 
         let result = pipeline.transfer_field(UnifiedFieldType::Pressure, &sample_field(1.0));
         assert!(matches!(
@@ -364,7 +364,7 @@ mod tests {
     #[test]
     fn statistics_record_bytes_and_calls() {
         let (provider, _) = RecordingProvider::new();
-        let mut pipeline = DataPipeline::new(Box::new(provider));
+        let mut pipeline = DataPipeline::new(provider);
         pipeline
             .transfer_field(UnifiedFieldType::Pressure, &sample_field(1.0))
             .expect("transfer succeeds");
@@ -383,7 +383,7 @@ mod tests {
     fn explicit_transfer_modes_reach_provider() {
         for mode in [TransferMode::Blocking, TransferMode::Streaming] {
             let (provider, log) = RecordingProvider::new();
-            let mut pipeline = DataPipeline::new(Box::new(provider));
+            let mut pipeline = DataPipeline::new(provider);
             pipeline.set_transfer_mode(mode);
             pipeline
                 .transfer_field(UnifiedFieldType::Pressure, &sample_field(1.0))
