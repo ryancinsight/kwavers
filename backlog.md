@@ -162,7 +162,10 @@
   source against `Nt - 1` for an initial-value one. It also surfaced that
   `PSTDPlugin` never forwards the sources given to `PluginManager::execute`, so
   a caller driving the pseudospectral solver through the plugin path gets a
-  silently undriven simulation. Seven tests pass under nextest in 3.03 s; `cargo fmt` and `cargo clippy -D warnings` are clean on the touched
+  silently undriven simulation. A nonlinear case (`src_nonlinear_2d`,
+  `B/A = 20` at 5 MPa) matches at `3.30e-3` / `r = 0.999995`, barely above
+  the driven case's residual, and separates from a linear run by `4.58e-2`.
+  Nine tests pass under nextest in 2.97 s; `cargo fmt` and `cargo clippy -D warnings` are clean on the touched
   target.
 - **Finding recorded during the work:** `kgrid.Nt` is k-Wave's count of time
   *points*, so the returned field has advanced `Nt - 1` intervals. Driving the

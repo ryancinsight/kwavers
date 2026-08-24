@@ -390,6 +390,7 @@ neither code's boundary treatment has reached.
 | `ivp_absorbing_2d` | 64 × 64 | 100 | 8.10e-3 | 4.99e-3 | 0.999999924 |
 | `ivp_layered_2d` | 80 × 64 | 120 | 7.97e-3 | 1.54e-2 | 0.999963422 |
 | `src_tone_burst_2d` | 96 × 80 | 151 | 2.58e-3 | 2.20e-3 | 0.999996674 |
+| `src_nonlinear_2d` | 96 × 80 | 151 | 3.30e-3 | 2.80e-3 | 0.999994550 |
 
 The finite-difference solver is measured against the same reference as a
 cross-scheme check, since the pseudospectral solver shares its k-space machinery
@@ -417,10 +418,16 @@ the source injection path, and it checks four conventions at once: the mask's
 cell lookup, the per-step signal indexing, k-Wave's source-term scaling, and the
 k-space source correction.
 
+`src_nonlinear_2d` is that case with finite-amplitude propagation switched on
+(`B/A = 20` at 5 MPa), sized to reach roughly seventy percent of the plane-wave
+shock distance — as far into the nonlinear regime as the smooth-wave assumption
+reaches, since neither code has shock capturing. It separates from a linear run
+by `4.58e-2`, fourteen times its own residual.
+
 `k-wave-python` ships no 1-D solver, so there is no 1-D row; the axisymmetric
-case is a separate geometry and is not yet covered. Nonlinearity, elastic
-propagation, and distributed (multi-cell) sources have no committed reference
-field yet and are not covered by this result.
+case is a separate geometry and is not yet covered. Elastic propagation and
+distributed (multi-cell) sources have no committed reference field yet and are
+not covered by this result.
 [ADR 119](docs/adr/119-kwave-reference-oracle.md) records the reference
 provenance, the tolerance derivation, and what the comparison does not establish.
 

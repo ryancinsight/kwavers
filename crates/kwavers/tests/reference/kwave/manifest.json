@@ -85,6 +85,34 @@
       "steps": 120,
       "t_end_s": 1.0000000000000057e-06
     },
+    "src_nonlinear_2d": {
+      "alpha_coeff_db": null,
+      "alpha_power": null,
+      "archive": "src_nonlinear_2d.npz",
+      "bona": 20.0,
+      "bytes": 35881,
+      "cfl": 0.15,
+      "compare_radius_cells": 30,
+      "dt_s": 1e-08,
+      "dx_m": 0.0001,
+      "layer_density_kg_m3": null,
+      "layer_interface_cell": null,
+      "layer_sound_speed_m_s": null,
+      "layer_transition_cells": null,
+      "sha256": "55015d31d4ba8e55f02d0ef7e3e50ed11633490d309b1daa5bd18edc5737a818",
+      "shape": [
+        96,
+        80
+      ],
+      "source_amplitude_pa": 5000000.0,
+      "source_cell": [
+        40,
+        32
+      ],
+      "source_mode": "additive",
+      "steps": 151,
+      "t_end_s": 1.51e-06
+    },
     "src_tone_burst_2d": {
       "alpha_coeff_db": null,
       "alpha_power": null,

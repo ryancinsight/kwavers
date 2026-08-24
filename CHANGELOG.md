@@ -59,7 +59,9 @@
   matches at `2.58e-3` / `r = 0.999997`; it is the only case reaching the source
   injection path, and it established that the propagation-interval count differs
   by source type — an initial-value case runs `Nt - 1` intervals, a driven one
-  `Nt`. `scripts/generate_kwave_reference.py` regenerates the reference set by
+  `Nt`. A nonlinear case (`B/A = 20` at 5 MPa) matches at `3.30e-3` /
+  `r = 0.999995` and separates from a linear run by `4.58e-2`, so the
+  finite-amplitude term cannot pass by being absent. `scripts/generate_kwave_reference.py` regenerates the reference set by
   driving `k-wave-python`. See
   [ADR 119](docs/adr/119-kwave-reference-oracle.md).
 
