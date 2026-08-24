@@ -280,16 +280,33 @@ Genuine differential validation lives in `kwave_reference_parity.rs`.
 
 ### Remaining 13, with first diagnosis
 
-- **`physics_validation` (4)** -- implements its finite-difference stencils
-  inline rather than calling the library's, so it validates the test's own
-  arithmetic. Both Laplacian cases assert `error < dx*dx*100.0`, comparing a
-  *dimensionless* relative error against a bound carrying units of m^2: the
-  truncation error for `u = sin(kx)` is `k^2 dx^2 / 12` relative, so the
-  threshold is missing the `k^2/12` factor entirely. An underived tolerance.
-  `test_dalembert_solution_1d` observes `-4.82` against `-4.800000000000001`,
-  a 0.4% gap -- too large for precision, so the derivation is wrong on one
-  side. Fixing these properly means pointing them at the library's operator,
-  not repairing the threshold in place.
+### Burn-down: `physics_validation` rewritten against the library, 13 -> 9
+
+All four failures were the test reimplementing physics inline, each
+reimplementation wrong.
+
+- **Both Laplacian cases** hand-wrote 3- and 5-point stencils and compared them
+  to `-k^2 u`, exercising no library code. Both were broken twice over: the
+  sample spacing was `dx * n / (n - 1)` while the stencil divided by `dx`, a 2%
+  disagreement; and `error < dx * dx * 100.0` compared a dimensionless relative
+  error to a bound carrying units of m^2, missing the `k^2 / 12` factor the
+  truncation error actually carries. Replaced by one test of the Laplacian the
+  solver runs -- kwavers is pseudospectral, so a finite-difference stencil
+  validates nothing it executes. On a resolved mode the spectral operator is
+  exact: measured `7.97e-15` relative against a derived round-off prediction of
+  a few times `1e-15`, bounded at `1e-11`, which is nine orders below the ~5%
+  a second-order stencil would show at this resolution. Confirmed to fail when
+  the bound was dropped below the measured value.
+- **`test_dalembert_solution_1d`** asserted `10 - c * 0.01 == 10 - 14.8`, that
+  is, that `SOUND_SPEED_WATER` is 1480. It is 1482; 1480 is the HU-model
+  intercept, a different constant whose own documentation warns against exactly
+  this substitution. The test contained no wave equation. Deleted.
+- **`test_goldberg_number`** computed `beta * p0 * x / (rho * c^3)` with no
+  omega -- an expression carrying units of seconds, not a dimensionless ratio.
+  It evaluated to `1.08e-8` against a lower bound of `0.01` and could not have
+  passed at any pressure. Now calls `shock_formation_distance`, where kwavers
+  owns the relation, and asserts the operating point rather than restating the
+  formula: sigma = 0.068 at 100 kPa, 1 MHz, 10 cm.
 - **`pinn_*` (5)**, **`dispersion_validation_test` (2)**,
   **`literature_validation` (1)**, **`pstd_finite_window_born` (1)** -- not yet
   diagnosed. The group velocity case measures 1481.5 against c = 1500 (1.2%),
