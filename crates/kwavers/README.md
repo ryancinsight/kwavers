@@ -61,12 +61,12 @@ the host path.
 use kwavers::visualization::{create_visualization_provider, VisualizationBackend};
 use kwavers_analysis::visualization::{TransferMode, VisualizationConfig, VisualizationEngine};
 
-async fn configure() -> Result<(), Box<dyn std::error::Error>> {
-    let mut engine = VisualizationEngine::create(VisualizationConfig::default())?;
+fn configure() -> Result<(), Box<dyn std::error::Error>> {
     let provider = create_visualization_provider(VisualizationBackend::Hephaestus)?;
-    engine.set_transfer_provider(provider);
+    let mut engine = VisualizationEngine::create(VisualizationConfig::default())?
+        .set_transfer_provider(provider);
     engine.set_transfer_mode(TransferMode::Streaming);
-    engine.initialize_gpu().await?;
+    engine.initialize_gpu()?;
     Ok(())
 }
 ```

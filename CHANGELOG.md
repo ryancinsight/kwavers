@@ -14,7 +14,13 @@
   Kwavers API or construct a concrete provider explicitly. The scheduled GPU
   workflow now requires a successful Kwavers-to-Hephaestus device acquisition
   and blocking field transfer instead of allowing the adapter path to return
-  early on a headless runner.
+  early on a headless runner. The selected provider is a closed enum carried
+  generically through `VisualizationEngine` and `DataPipeline`, removing
+  vtable dispatch from field transfers. The large Hephaestus state is boxed
+  once at construction so Leto does not inherit its stack footprint. Provider
+  injection now consumes the unconfigured engine and returns its configured
+  typestate; callers retain the returned engine. GPU resource initialization is
+  synchronous because it contains no asynchronous work.
 
 - **[major] A caller's absorption coefficient now reaches the solver.**
   `AbsorptionMode::PowerLaw::alpha_coeff` becomes `Option<f64>`: `Some` is an
