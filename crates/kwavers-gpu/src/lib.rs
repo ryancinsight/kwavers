@@ -22,8 +22,14 @@ pub mod backend;
 #[cfg(feature = "gpu")]
 pub mod beamforming;
 
+// Provider-owned visualization transfer: concrete WGPU device/buffer/queue
+// ownership implementing kwavers-analysis' provider-neutral seam.
+#[cfg(feature = "visualization")]
+pub mod visualization;
+
 // CPU-vs-GPU differential equivalence validation, moved out of solver with the
 // backend it exercises.
+#[cfg(feature = "gpu")]
 pub mod validation;
 
 // GPU-resident PSTD solver, k-space corrected pseudospectral. Solver keeps only

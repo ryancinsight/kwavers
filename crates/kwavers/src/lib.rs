@@ -26,6 +26,10 @@ use std::collections::HashMap;
 mod parallel;
 pub mod theranostic;
 
+/// Selectable visualization transfer providers.
+#[cfg(feature = "gpu-visualization")]
+pub use kwavers_gpu::visualization;
+
 /// Initialize logging for the kwavers application.
 /// # Errors
 /// - Returns [`Err`] if an internal constraint is violated.

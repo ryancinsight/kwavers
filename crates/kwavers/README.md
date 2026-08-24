@@ -3,9 +3,10 @@
 Top-level application and integration crate for the
 [kwavers](https://github.com/ryancinsight/kwavers) ultrasound–light simulation workspace.
 
-**This crate is not a facade.** It re-exports nothing. It carries the `kwavers` binary, the
-cross-cutting integration tests, examples, and benchmarks, and a small set of application
-utilities. Library consumers depend on the layer crates directly.
+This crate carries the `kwavers` binary, cross-cutting integration tests, examples, and
+benchmarks, plus a small set of application utilities. Library consumers generally depend
+on the layer crates directly; the `gpu-visualization` feature also re-exports the explicit
+visualization backend selector for application-bound setup.
 
 ## Which crate do I depend on?
 
@@ -27,6 +28,7 @@ utilities. Library consumers depend on the layer crates directly.
 | Governing equations | [`kwavers-physics`](https://docs.rs/kwavers-physics) |
 | Forward and inverse solvers | [`kwavers-solver`](https://docs.rs/kwavers-solver) |
 | GPU compute backends | [`kwavers-gpu`](https://docs.rs/kwavers-gpu) |
+| Selectable visualization transfer | `kwavers::visualization::VisualizationBackend` with `gpu-visualization` |
 | Run orchestration and result I/O | [`kwavers-simulation`](https://docs.rs/kwavers-simulation) |
 | Post-run analysis and validation | [`kwavers-analysis`](https://docs.rs/kwavers-analysis) |
 | Diagnostic imaging workflows | [`kwavers-diagnostics`](https://docs.rs/kwavers-diagnostics) |
@@ -49,6 +51,28 @@ let info = kwavers::get_version_info();
 assert_eq!(info["name"], "kwavers");
 assert!(info.contains_key("version"));
 ```
+
+With `gpu-visualization`, application setup selects the provider explicitly and
+injects it into the analysis engine. `Hephaestus` acquires the real GPU device;
+`Leto` keeps the transfer on the host path.
+
+```rust,ignore
+use kwavers::visualization::{create_visualization_provider, VisualizationBackend};
+use kwavers_analysis::visualization::{TransferMode, VisualizationConfig, VisualizationEngine};
+
+async fn configure() -> Result<(), Box<dyn std::error::Error>> {
+    let mut engine = VisualizationEngine::create(VisualizationConfig::default())?;
+    let provider = create_visualization_provider(VisualizationBackend::Hephaestus)?;
+    engine.set_transfer_provider(provider);
+    engine.set_transfer_mode(TransferMode::Streaming);
+    engine.initialize_gpu().await?;
+    Ok(())
+}
+```
+
+Replace `VisualizationBackend::Hephaestus` with
+`VisualizationBackend::Leto` to select the host provider. A failed Hephaestus
+acquisition is returned to the caller; it never silently selects Leto.
 
 ## Documentation
 

@@ -170,7 +170,12 @@ web-visualization = ["plotting"]      # Web-based visualization
 # kwavers-analysis/gpu-visualization but egui is now opt-in via
 # kwavers-analysis's "egui" feature (which kwavers root does not enable by
 # default).
-gpu-visualization = ["gpu", "plotting", "kwavers-analysis/gpu-visualization"] # GPU-accelerated visualization
+gpu-visualization = [
+    "gpu",
+    "plotting",
+    "kwavers-analysis/gpu-visualization",
+    "kwavers-gpu/visualization",
+] # Selectable Leto or Hephaestus visualization transfer
 vr-support = []        # VR headset support (future)
 # Sprint 138 - Persona Requirements
 async-runtime = ["kwavers-solver/async-runtime"]        # Retained feature gate; runtime ownership is below top-level kwavers.

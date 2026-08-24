@@ -1,20 +1,22 @@
-//! Core data transfer pipeline implementation
+//! Core data pipeline orchestration (provider-generic).
+//!
+//! Owns CPU preprocessing, backend-neutral field metadata, transfer options,
+//! and statistics. Concrete device ownership lives behind
+//! [`VisualizationTransferProvider`]; the Hephaestus-backed implementation is
+//! `kwavers_gpu::visualization::HephaestusVisualizationProvider`.
 
+use super::super::transfer_contract::VisualizationTransferProvider;
 use super::{ProcessingOperation, ProcessingStage, TransferStatistics};
-use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_core::error::KwaversResult;
 use kwavers_field::UnifiedFieldType;
 use leto::Array3;
-use log::{debug, info};
-use std::collections::hash_map::Entry;
+use log::debug;
 use std::collections::HashMap;
-use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Instant;
 
-use wgpu::*;
-
 /// Transfer mode for data pipeline
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TransferMode {
     /// Synchronous blocking transfer
     Blocking,
@@ -27,6 +29,7 @@ pub enum TransferMode {
 /// Transfer options
 #[derive(Debug, Clone)]
 pub struct TransferOptions {
+    /// Scheduling and synchronization mode used by the provider.
     pub mode: TransferMode,
 }
 
@@ -38,12 +41,15 @@ impl Default for TransferOptions {
     }
 }
 
-/// GPU data pipeline for visualization
+/// Provider-generic visualization data pipeline.
+///
+/// The pipeline owns everything that is not device-specific: preprocessing
+/// operations per field type, field dimension and value-range metadata,
+/// transfer options, and timing statistics. Device buffers are owned by the
+/// injected [`VisualizationTransferProvider`].
 #[derive(Debug)]
 pub struct DataPipeline {
-    device: Arc<Device>,
-    queue: Arc<Queue>,
-    field_buffers: HashMap<UnifiedFieldType, FieldBuffers>,
+    provider: Box<dyn VisualizationTransferProvider>,
     transfer_stats: Mutex<TransferStatistics>,
     processing_stage: ProcessingStage,
 
@@ -54,115 +60,53 @@ pub struct DataPipeline {
     transfer_options: TransferOptions,
 }
 
-#[derive(Debug)]
-struct FieldBuffers {
-    a: Buffer,
-    b: Buffer,
-    next_is_a: bool,
-    bytes: usize,
-}
-
-impl FieldBuffers {
-    fn new(device: &Device, bytes: usize, label: &str) -> Self {
-        let usage = BufferUsages::COPY_DST | BufferUsages::STORAGE;
-        let a = device.create_buffer(&BufferDescriptor {
-            label: Some(&format!("{label}::a")),
-            size: bytes as u64,
-            usage,
-            mapped_at_creation: false,
-        });
-        let b = device.create_buffer(&BufferDescriptor {
-            label: Some(&format!("{label}::b")),
-            size: bytes as u64,
-            usage,
-            mapped_at_creation: false,
-        });
-        Self {
-            a,
-            b,
-            next_is_a: true,
-            bytes,
-        }
-    }
-
-    fn ensure_capacity(&mut self, device: &Device, bytes: usize, label: &str) {
-        if self.bytes == bytes {
-            return;
-        }
-        *self = Self::new(device, bytes, label);
-    }
-
-    fn select_buffer(&mut self, mode: TransferMode) -> &Buffer {
-        match mode {
-            TransferMode::Blocking | TransferMode::Async => &self.a,
-            TransferMode::Streaming => {
-                let buffer = if self.next_is_a { &self.a } else { &self.b };
-                self.next_is_a = !self.next_is_a;
-                buffer
-            }
-        }
-    }
-}
-
 impl DataPipeline {
-    /// Create a new data pipeline
-    /// # Errors
-    /// - Propagates any `KwaversError` returned by called functions.
+    /// Create a new data pipeline over an acquired provider.
     ///
-    pub async fn new() -> KwaversResult<Self> {
-        info!("Initializing GPU data pipeline for visualization");
+    /// Providers are constructed fallibly at the boundary that owns GPU
+    /// capability (for example `kwavers-gpu`'s WGPU provider); construction
+    /// failure surfaces there as a typed resource-unavailable error instead of
+    /// silently degrading to CPU execution.
+    pub fn new(provider: Box<dyn VisualizationTransferProvider>) -> Self {
+        Self::with_transfer_mode(provider, TransferMode::Async)
+    }
 
-        let instance = Instance::new(&InstanceDescriptor {
-            backends: Backends::all(),
-            ..Default::default()
-        });
-
-        let adapter = instance
-            .request_adapter(&RequestAdapterOptions {
-                power_preference: PowerPreference::HighPerformance,
-                compatible_surface: None,
-                force_fallback_adapter: false,
-            })
-            .await
-            .map_err(|_| {
-                KwaversError::System(kwavers_core::error::SystemError::ResourceUnavailable {
-                    resource: "GPU adapter for visualization".to_string(),
-                })
-            })?;
-
-        let (device, queue) = adapter
-            .request_device(&DeviceDescriptor {
-                label: Some("Kwavers Visualization Device"),
-                required_features: Features::empty(),
-                required_limits: Limits::default(),
-                memory_hints: MemoryHints::default(),
-                trace: Trace::Off,
-            })
-            .await
-            .map_err(|e| {
-                KwaversError::System(kwavers_core::error::SystemError::ResourceUnavailable {
-                    resource: format!("GPU device for visualization: {e}"),
-                })
-            })?;
-
-        Ok(Self {
-            device: Arc::new(device),
-            queue: Arc::new(queue),
-            field_buffers: HashMap::new(),
+    /// Create a data pipeline with an explicit provider transfer mode.
+    #[must_use]
+    pub fn with_transfer_mode(
+        provider: Box<dyn VisualizationTransferProvider>,
+        mode: TransferMode,
+    ) -> Self {
+        Self {
+            provider,
             transfer_stats: Mutex::new(TransferStatistics::default()),
             processing_stage: ProcessingStage::new(Default::default()),
             field_dimensions: HashMap::new(),
             field_ranges: HashMap::new(),
             processing_operations: HashMap::new(),
-            transfer_options: TransferOptions::default(),
-        })
+            transfer_options: TransferOptions { mode },
+        }
     }
 
-    /// Transfer field data to GPU
-    /// # Errors
-    /// - Propagates any `KwaversError` returned by called functions.
+    /// Select how subsequent provider transfers are submitted and synchronized.
+    pub fn set_transfer_mode(&mut self, mode: TransferMode) {
+        self.transfer_options.mode = mode;
+    }
+
+    /// Transfer field data through the provider.
     ///
-    pub async fn transfer_field(
+    /// Applies the configured CPU preprocessing, records backend-neutral
+    /// metadata (dimensions, value range), and hands contiguous f32 samples to
+    /// the provider's device buffers.
+    ///
+    /// This method is synchronous because the provider contract includes an
+    /// explicit blocking transfer mode. An asynchronous application runtime
+    /// must invoke blocking-mode transfers on its blocking executor.
+    ///
+    /// # Errors
+    ///
+    /// Propagates any [`KwaversError`] returned by the provider.
+    pub fn transfer_field(
         &mut self,
         field_type: UnifiedFieldType,
         data: &Array3<f64>,
@@ -197,58 +141,35 @@ impl DataPipeline {
         self.field_ranges.insert(field_type, (min_val, max_val));
 
         let data_f32: Vec<f32> = view.iter().map(|&v| v as f32).collect();
-        let bytes = data_f32.len() * std::mem::size_of::<f32>();
 
-        match self.field_buffers.entry(field_type) {
-            Entry::Occupied(mut entry) => {
-                entry.get_mut().ensure_capacity(
-                    &self.device,
-                    bytes,
-                    &format!("field::{field_type:?}"),
-                );
-            }
-            Entry::Vacant(entry) => {
-                entry.insert(FieldBuffers::new(
-                    &self.device,
-                    bytes,
-                    &format!("field::{field_type:?}"),
-                ));
-            }
-        }
-
-        let buffer = self
-            .field_buffers
-            .get_mut(&field_type)
-            .ok_or_else(|| KwaversError::InvalidInput("field buffer missing".to_string()))?
-            .select_buffer(self.transfer_options.mode);
-
-        self.queue
-            .write_buffer(buffer, 0, bytemuck::cast_slice(&data_f32));
-
-        if self.transfer_options.mode == TransferMode::Blocking {
-            let _ = self.device.poll(PollType::wait());
-        }
+        self.provider
+            .transfer_field(field_type, &data_f32, self.transfer_options.mode)?;
 
         let elapsed = start.elapsed();
         debug!("Field transfer completed in {:?}", elapsed);
 
         if let Ok(mut stats) = self.transfer_stats.lock() {
-            stats.record_transfer(bytes, elapsed.as_secs_f32() * 1000.0);
+            stats.record_transfer(
+                data_f32.len() * std::mem::size_of::<f32>(),
+                elapsed.as_secs_f32() * 1000.0,
+            );
         }
 
         Ok(())
     }
 
-    /// Upload field data to GPU (alias for transfer_field)
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
+    /// Upload field data through the provider (alias for [`Self::transfer_field`]).
     ///
-    pub async fn upload_field(
+    /// # Errors
+    ///
+    /// Propagates any [`KwaversError`] returned by the provider.
+    ///
+    pub fn upload_field(
         &mut self,
         data: &Array3<f64>,
         field_type: UnifiedFieldType,
     ) -> KwaversResult<()> {
-        self.transfer_field(field_type, data).await
+        self.transfer_field(field_type, data)
     }
 
     /// Set processing operation for a field type
@@ -268,5 +189,185 @@ impl DataPipeline {
 
     pub fn get_transfer_statistics(&self) -> Option<TransferStatistics> {
         self.transfer_stats.lock().ok().map(|s| s.clone())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use kwavers_core::error::KwaversError;
+
+    /// Diagnostic provider recording per-field uploads without device
+    /// resources; proves the pipeline's CPU-side semantics are preserved
+    /// regardless of backend.
+    type Upload = (UnifiedFieldType, Vec<f32>, TransferMode);
+
+    #[derive(Debug)]
+    struct RecordingProvider {
+        uploads: std::sync::Arc<std::sync::Mutex<Vec<Upload>>>,
+        available: bool,
+        fail_with: Option<&'static str>,
+    }
+
+    impl RecordingProvider {
+        fn new() -> (Self, std::sync::Arc<std::sync::Mutex<Vec<Upload>>>) {
+            let uploads = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+            (
+                Self {
+                    uploads: std::sync::Arc::clone(&uploads),
+                    available: true,
+                    fail_with: None,
+                },
+                uploads,
+            )
+        }
+    }
+
+    impl super::super::super::transfer_contract::VisualizationTransferProvider for RecordingProvider {
+        fn device_name(&self) -> &str {
+            "recording-stub"
+        }
+
+        fn is_available(&self) -> bool {
+            self.available
+        }
+
+        fn transfer_field(
+            &mut self,
+            field_type: UnifiedFieldType,
+            samples: &[f32],
+            mode: TransferMode,
+        ) -> KwaversResult<()> {
+            if let Some(message) = self.fail_with {
+                return Err(KwaversError::System(
+                    kwavers_core::error::SystemError::ResourceUnavailable {
+                        resource: message.to_string(),
+                    },
+                ));
+            }
+            if let Ok(mut log) = self.uploads.lock() {
+                log.push((field_type, samples.to_vec(), mode));
+            }
+            Ok(())
+        }
+
+        fn memory_usage(&self) -> usize {
+            self.uploads
+                .lock()
+                .map(|log| {
+                    log.iter()
+                        .map(|(_, s, _)| s.len() * std::mem::size_of::<f32>())
+                        .sum()
+                })
+                .unwrap_or(0)
+        }
+    }
+
+    fn sample_field(value: f64) -> Array3<f64> {
+        Array3::from_elem((2, 2, 2), value)
+    }
+
+    #[test]
+    fn single_field_transfer_reaches_provider_with_f32_samples() {
+        let (provider, log) = RecordingProvider::new();
+        let mut pipeline = DataPipeline::new(Box::new(provider));
+        pipeline
+            .transfer_field(UnifiedFieldType::Pressure, &sample_field(1.5))
+            .expect("single-field transfer succeeds");
+
+        let log = log.lock().expect("upload log");
+        assert_eq!(log.len(), 1);
+        let (field_type, samples, mode) = &log[0];
+        assert_eq!(*field_type, UnifiedFieldType::Pressure);
+        assert_eq!(samples, &[1.5f32; 8]);
+        assert_eq!(*mode, TransferMode::Async);
+    }
+
+    #[test]
+    fn multi_field_transfers_preserve_distinct_field_identity() {
+        let (provider, log) = RecordingProvider::new();
+        let mut pipeline = DataPipeline::new(Box::new(provider));
+        pipeline
+            .transfer_field(UnifiedFieldType::Pressure, &sample_field(1.0))
+            .expect("pressure transfer succeeds");
+        pipeline
+            .transfer_field(UnifiedFieldType::Temperature, &sample_field(2.0))
+            .expect("temperature transfer succeeds");
+
+        let log = log.lock().expect("upload log");
+        assert_eq!(log.len(), 2);
+        assert_ne!(log[0].0, log[1].0);
+        assert_eq!(log[1].1, &[2.0f32; 8]);
+    }
+
+    #[test]
+    fn distinct_input_values_update_metadata_and_samples() {
+        let (provider, log) = RecordingProvider::new();
+        let mut pipeline = DataPipeline::new(Box::new(provider));
+        pipeline
+            .transfer_field(UnifiedFieldType::Pressure, &sample_field(1.0))
+            .expect("first transfer succeeds");
+        pipeline
+            .transfer_field(UnifiedFieldType::Pressure, &sample_field(4.0))
+            .expect("second transfer succeeds");
+
+        assert_eq!(
+            pipeline.get_field_range(UnifiedFieldType::Pressure),
+            Some((4.0, 4.0))
+        );
+        assert_eq!(
+            pipeline.get_field_dimensions(UnifiedFieldType::Pressure),
+            Some((2, 2, 2))
+        );
+        let log = log.lock().expect("upload log");
+        assert_eq!(log[1].1, &[4.0f32; 8]);
+    }
+
+    #[test]
+    fn provider_failure_propagates_without_silent_cpu_degradation() {
+        let (mut provider, _) = RecordingProvider::new();
+        provider.fail_with = Some("GPU adapter for visualization");
+        let mut pipeline = DataPipeline::new(Box::new(provider));
+
+        let result = pipeline.transfer_field(UnifiedFieldType::Pressure, &sample_field(1.0));
+        assert!(matches!(
+            result,
+            Err(KwaversError::System(
+                kwavers_core::error::SystemError::ResourceUnavailable { .. }
+            ))
+        ));
+    }
+
+    #[test]
+    fn statistics_record_bytes_and_calls() {
+        let (provider, _) = RecordingProvider::new();
+        let mut pipeline = DataPipeline::new(Box::new(provider));
+        pipeline
+            .transfer_field(UnifiedFieldType::Pressure, &sample_field(1.0))
+            .expect("transfer succeeds");
+
+        let stats = pipeline
+            .get_transfer_statistics()
+            .expect("statistics recorded");
+        assert_eq!(
+            stats.total_bytes_transferred,
+            8 * std::mem::size_of::<f32>()
+        );
+        assert_eq!(stats.num_transfers, 1);
+    }
+
+    #[test]
+    fn explicit_transfer_modes_reach_provider() {
+        for mode in [TransferMode::Blocking, TransferMode::Streaming] {
+            let (provider, log) = RecordingProvider::new();
+            let mut pipeline = DataPipeline::new(Box::new(provider));
+            pipeline.set_transfer_mode(mode);
+            pipeline
+                .transfer_field(UnifiedFieldType::Pressure, &sample_field(1.0))
+                .expect("configured transfer succeeds");
+
+            let log = log.lock().expect("upload log");
+            assert_eq!(log[0].2, mode);
+        }
     }
 }
