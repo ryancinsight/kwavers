@@ -14,7 +14,6 @@
 kwavers::literature_validation test_rayleigh_collapse_time
 kwavers::pinn_bc_validation bc_loss_tests::test_bc_loss_decreases_with_training
 kwavers::pinn_bc_validation bc_loss_tests::test_dirichlet_bc_zero_boundary
-kwavers::pinn_elastic_validation test_validation_result_construction
 kwavers::pinn_ic_validation ic_loss_tests::test_ic_combined_loss_decreases
 kwavers::pinn_ic_validation ic_loss_tests::test_ic_loss_zero_field
 kwavers::pstd_finite_window_born finite_window_born_rejects_off_grid_ring_geometry

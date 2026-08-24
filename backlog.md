@@ -1,5 +1,49 @@
 # Backlog / Strategy
 
+## KW-PINN-3D-NO-CONVERGENCE — the 3-D wave PINN does not reach a solution it can represent exactly [major] — todo
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-PINN-3D-NO-CONVERGENCE | Determine why training plateaus far from the global optimum on an all-zero target, and fix the optimizer or loss wiring. | [major] | todo | unowned | `crates/kwavers-solver/src/inverse/pinn/ml/wave_equation_3d/`, `crates/kwavers/tests/pinn_bc_validation.rs`, `crates/kwavers/tests/pinn_ic_validation.rs` |
+
+- **Setup:** `pinn_bc_validation::test_bc_loss_decreases_with_training` trains
+  with every target -- interior data and boundary -- set to `u = 0`. The global
+  optimum is the zero function, which the network represents exactly by driving
+  its output weights to zero. Loss should fall to approximately zero.
+- **Measured:**
+
+  | epochs | initial BC loss | final BC loss | reduction | rate |
+  |---|---|---|---|---|
+  | 50 (as committed) | 399.85 | 356.03 | 11% | 0.88 / epoch |
+  | 2000 (probe) | 399.91 | 224.79 | 44% | 0.087 / epoch |
+
+- **Why this is not a training-budget question.** Forty times the epochs buys
+  1.8x the reduction, and the per-epoch rate *falls by a factor of ten*. The
+  trajectory is decelerating toward a plateau near 225, not converging slowly
+  toward zero. The learning rate is `1e-3`, which is not small enough to
+  explain it.
+- **Why this is not a test-threshold question either.** The assertions are
+  badly calibrated -- `< 1.0` after 50 epochs from an initial 400 is a 400x
+  reduction, and the test's own comment concedes "small network and few
+  epochs" -- but recalibrating them would paper over a network that cannot
+  reach a target inside its own hypothesis class. Both need fixing, and the
+  convergence one comes first, because the correct threshold is not knowable
+  until training works.
+- **Covers 4 of the 5 PINN baseline entries** (`bc_loss_decreases_with_training`,
+  `dirichlet_bc_zero_boundary`, `ic_combined_loss_decreases`, `ic_loss_zero_field`),
+  all of which assert convergence and all of which observe losses in the
+  hundreds. `ic_combined_loss_decreases` reports 391.79 against a
+  "stay bounded (no divergence)" assertion.
+- **Next step:** confirm gradients reach the output layer at all -- a finite
+  difference on one weight against the reported gradient -- before looking at
+  the optimizer. That distinguishes a broken backward path from a broken
+  update rule, and nothing further is worth doing until it is known which.
+- **Fixed here:** the fifth entry, `pinn_elastic_validation::test_validation_result_construction`,
+  was unrelated -- an arithmetic slip. It passed `linf = 1e-7` against
+  `tolerance = 1e-6` and asserted the result was *not* passed, under the comment
+  "L∞ exceeds tolerance"; `1e-7` is an order below `1e-6`, so the constructor
+  was right and the test was wrong. Now exercises both branches.
+
 ## KW-SWE-VOLUMETRIC-COVERAGE — the volumetric coverage metric measures the whole grid [patch] — todo
 
 | ID | Outcome | Class | Status | Owner | Scope |
