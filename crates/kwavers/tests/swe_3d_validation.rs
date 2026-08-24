@@ -36,6 +36,10 @@
 //!   algorithms in ultrasound shear wave elasticity imaging." *IEEE TUFFC*, 61(6), 1076-1088.
 //! - Palmeri, M. L., et al. (2011). "Quantifying hepatic shear modulus in vivo using
 //!   acoustic radiation force." *Ultrasound in Medicine & Biology*, 37(4), 546-558.
+#![expect(
+    clippy::print_stdout,
+    reason = "validation harness reports step progress"
+)]
 
 use kwavers_grid::Grid;
 use kwavers_medium::heterogeneous::HeterogeneousMedium;
