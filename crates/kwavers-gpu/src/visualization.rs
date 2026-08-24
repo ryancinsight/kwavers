@@ -4,8 +4,8 @@
 //! typed buffer allocation, queue writes, and synchronization to Hephaestus.
 //! The [`LetoVisualizationProvider`] retains a value-preserving host copy for
 //! CPU visualization. Both implement the provider-neutral role owned by
-//! `kwavers-analysis`; backend selection is explicit through
-//! [`VisualizationBackend`].
+//! `kwavers-analysis`. The top-level `kwavers` composition boundary selects
+//! between these concrete providers.
 
 use hephaestus_core::{ComputeDevice, DevicePreference};
 use hephaestus_wgpu::{WgpuBuffer, WgpuDevice};
@@ -15,35 +15,6 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_field::UnifiedFieldType;
 use leto::Array1;
 use std::collections::HashMap;
-
-/// Select the concrete visualization transfer backend.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum VisualizationBackend {
-    /// Keep transferred fields in Leto-compatible host storage.
-    Leto,
-    /// Acquire and use a Hephaestus GPU device.
-    Hephaestus,
-}
-
-/// Create a visualization transfer provider for an explicit backend.
-///
-/// The Hephaestus branch performs real device acquisition and returns its
-/// failure. It never substitutes the Leto provider when no GPU is available.
-/// The returned trait object is constructed once at the visualization control
-/// boundary; field transfers remain behind the provider contract.
-///
-/// # Errors
-///
-/// Returns the typed acquisition or allocation error from the selected
-/// provider.
-pub fn create_visualization_provider(
-    backend: VisualizationBackend,
-) -> KwaversResult<Box<dyn VisualizationTransferProvider>> {
-    match backend {
-        VisualizationBackend::Leto => Ok(Box::new(LetoVisualizationProvider::new())),
-        VisualizationBackend::Hephaestus => Ok(Box::new(HephaestusVisualizationProvider::new()?)),
-    }
-}
 
 /// Host-backed visualization transfer provider for the Leto execution path.
 #[derive(Debug, Default)]
@@ -101,14 +72,15 @@ impl VisualizationTransferProvider for LetoVisualizationProvider {
                 })?,
             None => 0,
         };
-        self.fields.insert(field_type, replacement);
-        self.memory_bytes = self
+        let updated_memory = self
             .memory_bytes
             .checked_sub(previous_bytes)
             .and_then(|bytes| bytes.checked_add(replacement_bytes))
             .ok_or_else(|| KwaversError::ResourceLimitExceeded {
                 message: "visualization host memory accounting overflowed".to_string(),
             })?;
+        self.fields.insert(field_type, replacement);
+        self.memory_bytes = updated_memory;
         Ok(())
     }
 

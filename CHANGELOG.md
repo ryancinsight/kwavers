@@ -4,6 +4,18 @@
 
 ### Added
 
+- **[major] Kwavers now owns visualization backend selection.**
+  `kwavers::visualization::VisualizationBackend` and
+  `kwavers::visualization::create_visualization_provider` form a real
+  composition API rather than a re-export of `kwavers-gpu`. The leaf GPU crate
+  now owns only the concrete Leto and Hephaestus providers; Hephaestus
+  continues to own every WGPU resource. Direct `kwavers-gpu` callers migrate
+  selection to the top-level
+  Kwavers API or construct a concrete provider explicitly. The scheduled GPU
+  workflow now requires a successful Kwavers-to-Hephaestus device acquisition
+  and blocking field transfer instead of allowing the adapter path to return
+  early on a headless runner.
+
 - **[major] A caller's absorption coefficient now reaches the solver.**
   `AbsorptionMode::PowerLaw::alpha_coeff` becomes `Option<f64>`: `Some` is an
   explicit uniform request whose `alpha_power` is authoritative with it, `None`
