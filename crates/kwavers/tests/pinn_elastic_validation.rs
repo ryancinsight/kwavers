@@ -458,11 +458,24 @@ fn test_validation_result_construction() {
     assert_eq!(failure.error_linf, 1e-2);
     assert_eq!(failure.tolerance, 1e-6);
 
-    let metrics = ValidationResult::with_metrics("test", 1e-8, 1e-7, 1e-6);
-    assert!(!metrics.passed); // L∞ exceeds tolerance
+    // `with_metrics` sets `passed` from `l2 <= tolerance && linf <= tolerance`,
+    // so exercising the failing branch needs a metric that actually exceeds the
+    // tolerance. This previously passed `1e-7` against a tolerance of `1e-6`
+    // and asserted `!passed` under the comment "L∞ exceeds tolerance" -- but
+    // `1e-7` is an order *below* `1e-6`, so both metrics were inside tolerance
+    // and the constructor correctly reported success.
+    let metrics = ValidationResult::with_metrics("test", 1e-8, 1e-5, 1e-6);
+    assert!(
+        !metrics.passed,
+        "L-infinity of 1e-5 exceeds the 1e-6 tolerance"
+    );
     assert_eq!(metrics.error_l2, 1e-8);
-    assert_eq!(metrics.error_linf, 1e-7);
+    assert_eq!(metrics.error_linf, 1e-5);
     assert_eq!(metrics.tolerance, 1e-6);
+
+    // The passing branch, which nothing covered: both metrics inside tolerance.
+    let inside = ValidationResult::with_metrics("test", 1e-8, 1e-7, 1e-6);
+    assert!(inside.passed, "both metrics are inside the 1e-6 tolerance");
 }
 
 #[test]
