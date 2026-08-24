@@ -1,178 +1,195 @@
-//! Numerical dispersion validation test
+//! Numerical dispersion validated against the library's own relations.
 //!
-//! Validates that the numerical methods correctly handle wave dispersion.
-//! Reference: Trefethen, "Finite Difference and Spectral Methods", 1996
+//! This file previously implemented `fdtd_dispersion_relation` locally and
+//! tested that, exercising no library code. The local version carried two
+//! errors. Its second-order branch wrote `asin(sin(x))`, which cancels to `x`
+//! and drops the temporal discretization entirely -- that is why the group
+//! velocity came out as exactly `c cos(kh/2)`, an error of 1.23% where the
+//! scheme's is 0.93%. Its fourth-order branch used `sin(kh/2)` where the
+//! stencil calls for `sin(kh)`, so its modified wavenumber tended to `k/3`
+//! rather than `k` and reported a 59.7% dispersion error.
+//!
+//! `test_anisotropic_dispersion` was worse than wrong: it computed
+//! `sqrt(kx^2 + ky^2)` from `kx = 2 pi cos(theta) / lambda` and
+//! `ky = 2 pi sin(theta) / lambda`, which is `2 pi / lambda` at every angle. It
+//! measured the same number three times and passed. Its own comment said the
+//! analysis was "Simplified here for demonstration". The library exposes no
+//! 2-D dispersion relation, so there is nothing here to point a rewritten test
+//! at; it is dropped rather than reproduced, and 2-D anisotropy is recorded as
+//! uncovered.
+//!
+//! What follows tests `kwavers_physics::analytical::wave`, where these
+//! relations live.
+//!
+//! Reference: Taflove & Hagness (2005) *Computational Electrodynamics*, 4.5.
 
+use kwavers_physics::analytical::wave::{centered_fd_modified_wavenumber, fdtd_phase_error_1d};
 use std::f64::consts::PI;
 
-/// Calculate numerical dispersion relation for FDTD
-///
-/// For a plane wave e^{i(kx - ωt)}, the numerical dispersion relation is:
-/// sin²(ωΔt/2) = (cΔt/Δx)² sin²(kΔx/2)
-///
-/// Reference: Taflove & Hagness, "Computational Electrodynamics", 2005, Eq. 4.92
-fn fdtd_dispersion_relation(
-    k: f64,       // Wave number
-    dx: f64,      // Spatial step
-    dt: f64,      // Time step
-    c: f64,       // Wave speed
-    order: usize, // Spatial order (2 or 4)
-) -> f64 {
-    let courant = c * dt / dx;
-
-    match order {
-        2 => {
-            // Second-order central difference
-            let k_numerical = 2.0 * (k * dx / 2.0).sin() / dx;
-            2.0 * ((courant * k_numerical * dx / 2.0).sin()).asin() / dt
-        }
-        4 => {
-            // Fourth-order central difference
-            // sin(kΔx/2) term modified by fourth-order stencil
-            let sin_k = (k * dx / 2.0).sin();
-            let k_numerical = (8.0 * sin_k - (2.0 * k * dx).sin()) / (6.0 * dx);
-            2.0 * ((courant * k_numerical * dx / 2.0).sin()).asin() / dt
-        }
-        _ => panic!("Only 2nd and 4th order supported"),
-    }
+/// Points per wavelength converted to `kh = k dx`.
+fn kh_for(points_per_wavelength: f64) -> f64 {
+    2.0 * PI / points_per_wavelength
 }
 
+/// Wavenumbers from the resolved end out to Nyquist.
+fn kh_to_nyquist() -> Vec<f64> {
+    (1..=20).map(|i| PI * f64::from(i) / 20.0).collect()
+}
+
+/// A centered stencil's modified wavenumber must converge at its stated order.
+///
+/// This is the property worth testing, and it is stronger than any single
+/// magic threshold: for a centered difference of order `p`, the relative error
+/// `(k*h - kh) / kh` scales as `(kh)^p`, so halving `kh` divides the error by
+/// `2^p`. Measuring that exponent falsifies a wrong stencil regardless of its
+/// magnitude -- the fourth-order coefficients this file used to carry were
+/// wrong by a factor of three at leading order, which a threshold might absorb
+/// but an order measurement cannot.
+///
+/// The observed order is taken between successive halvings and required within
+/// 2% of nominal. The residual is the next term in the expansion, `O((kh)^2)`
+/// relative to the leading one, which at these `kh` is well inside 2%.
 #[test]
-fn test_numerical_dispersion_second_order() {
-    let c = 1500.0; // Sound speed in water (m/s)
-    let frequency = 1e6; // 1 MHz
-    let wavelength = c / frequency;
-    let k = 2.0 * PI / wavelength;
+fn centered_stencils_converge_at_their_stated_order() {
+    const ORDER_TOLERANCE: f64 = 0.02;
+    // Small enough that the leading term dominates, so the measured exponent is
+    // the stencil's order rather than a blend of it and the next term.
+    let kh_samples = [0.2_f64, 0.1, 0.05];
 
-    // Test with different resolutions
-    let resolutions = [10.0, 20.0, 40.0]; // Points per wavelength
+    for order in [2_u32, 4, 6] {
+        let modified = centered_fd_modified_wavenumber(&kh_samples, order)
+            .expect("2, 4 and 6 are the orders this stencil family defines");
 
-    for ppw in resolutions {
-        let dx = wavelength / ppw;
-        let dt = 0.5 * dx / c; // CFL = 0.5
+        let errors: Vec<f64> = kh_samples
+            .iter()
+            .zip(&modified)
+            .map(|(&kh, &star)| ((star - kh) / kh).abs())
+            .collect();
 
-        let omega_exact = 2.0 * PI * frequency;
-        let omega_numerical = fdtd_dispersion_relation(k, dx, dt, c, 2);
-
-        let phase_error = (omega_numerical - omega_exact).abs() / omega_exact;
-
-        // Dispersion error should decrease with resolution
-        // For 2nd order: error ~ O((kΔx)²)
-        let expected_error = (k * dx).powi(2);
-
-        assert!(
-            phase_error < expected_error,
-            "Phase error {} exceeds expected {} for {} PPW",
-            phase_error,
-            expected_error,
-            ppw
-        );
-
-        // Verify error decreases with increased resolution
-        if ppw > 10.0 {
+        for pair in errors.windows(2) {
+            let observed = (pair[0] / pair[1]).log2();
+            let nominal = f64::from(order);
             assert!(
-                phase_error < 0.01, // < 1% error for PPW >= 20
-                "Excessive dispersion error: {} for {} PPW",
-                phase_error,
-                ppw
+                (observed - nominal).abs() / nominal < ORDER_TOLERANCE,
+                "order-{order} stencil converges at observed order {observed:.4}, \
+                 not {nominal}; the coefficients do not match the order claimed"
             );
         }
     }
 }
 
+/// Higher order must resolve better at the same sampling.
+///
+/// A separate claim from the convergence one: a stencil can carry the right
+/// exponent with the wrong constant. At a fixed `kh` the errors must be
+/// strictly ordered, which pins the constants relative to each other.
 #[test]
-fn test_numerical_dispersion_fourth_order() {
-    let c = 1500.0;
-    let frequency = 1e6;
-    let wavelength = c / frequency;
-    let k = 2.0 * PI / wavelength;
+fn higher_order_stencils_resolve_better_at_equal_sampling() {
+    let kh = [kh_for(10.0)]; // 10 points per wavelength: coarse enough to separate
 
-    // Fourth-order should have much lower dispersion
-    let dx = wavelength / 10.0; // Only 10 PPW
-    let dt = 0.5 * dx / c;
+    let error_at = |order: u32| {
+        let modified = centered_fd_modified_wavenumber(&kh, order).expect("supported order");
+        ((modified[0] - kh[0]) / kh[0]).abs()
+    };
 
-    let omega_exact = 2.0 * PI * frequency;
-    let omega_numerical = fdtd_dispersion_relation(k, dx, dt, c, 4);
-
-    let phase_error = (omega_numerical - omega_exact).abs() / omega_exact;
-
-    // Fourth-order error ~ O((kΔx)⁴)
+    let (second, fourth, sixth) = (error_at(2), error_at(4), error_at(6));
     assert!(
-        phase_error < 1e-4,
-        "Fourth-order dispersion error too large: {}",
-        phase_error
+        second > fourth && fourth > sixth,
+        "stencil errors at 10 PPW are not ordered by order: \
+         2nd = {second:.3e}, 4th = {fourth:.3e}, 6th = {sixth:.3e}"
     );
 }
 
+/// The 1-D magic time step: FDTD is dispersion-free at `CFL = 1`.
+///
+/// `k'h = 2 arcsin(CFL sin(kh/2)) / CFL` collapses to `kh` exactly when
+/// `CFL = 1`, for every `kh` including the poorly resolved ones. It is a sharp
+/// property -- the error is not small there, it is zero -- so it falsifies any
+/// relation that has drifted from the scheme's, which is how the spurious
+/// `asin(sin(x))` in the old local helper would have been caught.
+///
+/// The bound is round-off through one `sin` and one `arcsin`, a few `eps`;
+/// `1e-14` is two orders above that and far below any structural error.
 #[test]
-fn test_group_velocity() {
-    // Group velocity determines energy propagation
-    // Must verify vg = dω/dk is accurate
+fn fdtd_is_dispersion_free_at_the_magic_time_step() {
+    const ROUND_OFF: f64 = 1.0e-14;
+    // Out to Nyquist, so the claim covers the range where dispersion is
+    // otherwise severe, not just the resolved end.
+    let kh = kh_to_nyquist();
 
-    let c = 1500.0;
-    let frequency = 1e6;
-    let wavelength = c / frequency;
-    let k = 2.0 * PI / wavelength;
-    let dk = k * 0.001; // Small perturbation
-
-    let dx = wavelength / 20.0;
-    let dt = 0.5 * dx / c;
-
-    // Calculate group velocity numerically
-    let omega1 = fdtd_dispersion_relation(k - dk, dx, dt, c, 2);
-    let omega2 = fdtd_dispersion_relation(k + dk, dx, dt, c, 2);
-    let vg_numerical = (omega2 - omega1) / (2.0 * dk);
-
-    // Group velocity should equal phase velocity for non-dispersive medium
-    let error = (vg_numerical - c).abs() / c;
-
-    assert!(
-        error < 0.01, // < 1% error
-        "Group velocity error: {} (vg = {}, c = {})",
-        error,
-        vg_numerical,
-        c
-    );
-}
-
-#[test]
-fn test_anisotropic_dispersion() {
-    // Numerical dispersion is anisotropic (direction-dependent)
-    // Worst case is along diagonal
-
-    let c = 1500.0;
-    let frequency = 1e6;
-    let wavelength = c / frequency;
-
-    let dx = wavelength / 20.0;
-    let dt = 0.5 * dx / c;
-
-    // Test different propagation angles
-    let angles = [0.0, PI / 4.0, PI / 2.0]; // Axial, diagonal, axial
-
-    let mut max_anisotropy: f64 = 0.0;
-
-    for theta in angles {
-        let kx = 2.0 * PI * theta.cos() / wavelength;
-        let ky = 2.0 * PI * theta.sin() / wavelength;
-
-        // Calculate effective dispersion for 2D propagation
-        // This would require 2D dispersion analysis
-        // Simplified here for demonstration
-
-        let k_effective = (kx * kx + ky * ky).sqrt();
-        let omega = fdtd_dispersion_relation(k_effective, dx, dt, c, 2);
-
-        let phase_velocity = omega / k_effective;
-        let anisotropy = (phase_velocity - c).abs() / c;
-
-        max_anisotropy = max_anisotropy.max(anisotropy);
+    for (sample, error) in kh.iter().zip(fdtd_phase_error_1d(&kh, 1.0)) {
+        assert!(
+            error.abs() < ROUND_OFF,
+            "phase error {error:.3e} at kh = {sample:.4} with CFL = 1; the magic \
+             time step must be dispersion-free at every wavenumber"
+        );
     }
+}
 
-    // Anisotropy should be small for adequate resolution
+/// Below the magic step, phase error grows monotonically toward Nyquist.
+#[test]
+fn fdtd_phase_error_grows_toward_nyquist() {
+    let kh = kh_to_nyquist();
+    let errors = fdtd_phase_error_1d(&kh, 0.5);
+
+    for (index, pair) in errors.windows(2).enumerate() {
+        assert!(
+            pair[1].abs() > pair[0].abs(),
+            "phase error falls from {:.3e} to {:.3e} between kh = {:.4} and \
+             {:.4}; FDTD dispersion is monotone in kh below CFL = 1",
+            pair[0],
+            pair[1],
+            kh[index],
+            kh[index + 1]
+        );
+    }
+}
+
+/// Group velocity error is three times the phase velocity error.
+///
+/// Energy travels at `v_g = d omega / dk`, not at the phase velocity, and the
+/// two carry different errors. With `c~(k) = c (1 + e(kh))` and `e ~ A (kh)^2`
+/// in the resolved limit,
+///
+/// ```text
+/// v_g / c = (1 + e) + kh de/d(kh) = 1 + 3e + O((kh)^4)
+/// ```
+///
+/// so the group velocity error is asymptotically `3e`. That ratio is a derived
+/// property of the scheme rather than a threshold, so it cannot be satisfied
+/// by a relation that merely happens to be small -- but a ratio alone can hold
+/// between two wrong numbers, so the magnitude is anchored as well.
+///
+/// `e` comes from `fdtd_phase_error_1d`; the derivative is a centered
+/// difference in `kh`, whose truncation error is `O(h^2)` relative and
+/// negligible beside the tolerances here.
+#[test]
+fn group_velocity_error_is_three_times_the_phase_error() {
+    const RATIO_TOLERANCE: f64 = 0.03;
+    // At 20 PPW with CFL 0.5 the scheme's group velocity error is 0.928%,
+    // from v_g / c = cos(kh/2) / sqrt(1 - CFL^2 sin^2(kh/2)).
+    const EXPECTED_GROUP_ERROR: f64 = 0.00928;
+    let cfl = 0.5;
+    let kh = kh_for(20.0);
+    let step = kh * 1.0e-4;
+
+    let samples = [kh - step, kh, kh + step];
+    let errors = fdtd_phase_error_1d(&samples, cfl);
+    let (below, at, above) = (errors[0], errors[1], errors[2]);
+
+    let derivative = (above - below) / (2.0 * step);
+    let group_error = at + kh * derivative;
+    let ratio = group_error / at;
+
     assert!(
-        max_anisotropy < 0.02, // < 2% variation
-        "Excessive anisotropic dispersion: {}",
-        max_anisotropy
+        (ratio - 3.0).abs() < RATIO_TOLERANCE,
+        "group velocity error is {ratio:.4}x the phase error, not 3x \
+         (phase {at:.3e}, group {group_error:.3e} at 20 PPW, CFL = {cfl})"
+    );
+    assert!(
+        (group_error.abs() - EXPECTED_GROUP_ERROR).abs() < 1.0e-4,
+        "group velocity error {:.5} does not match the {EXPECTED_GROUP_ERROR} \
+         the scheme gives at 20 PPW and CFL 0.5",
+        group_error.abs()
     );
 }

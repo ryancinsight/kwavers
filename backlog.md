@@ -312,11 +312,40 @@ reimplementation wrong.
   passed at any pressure. Now calls `shock_formation_distance`, where kwavers
   owns the relation, and asserts the operating point rather than restating the
   formula: sigma = 0.068 at 100 kPa, 1 MHz, 10 cm.
-- **`pinn_*` (5)**, **`dispersion_validation_test` (2)**,
-  **`literature_validation` (1)**, **`pstd_finite_window_born` (1)** -- not yet
-  diagnosed. The group velocity case measures 1481.5 against c = 1500 (1.2%),
-  which is the right magnitude for fourth-order numerical dispersion, so the
-  test's bound is the first thing to check, not the solver.
+### Burn-down: `dispersion_validation_test` rewritten, 9 -> 7
+
+Both failures came from the file's own `fdtd_dispersion_relation` helper, which
+carried two errors and which no library code went near.
+
+- The second-order branch wrote `asin(sin(x))`. That cancels to `x` and drops
+  the temporal discretization entirely, which is why the group velocity came
+  out as exactly `c cos(kh/2)` -- 1.23% error where the scheme's is 0.93%.
+- The fourth-order branch used `sin(kh/2)` where the stencil calls for
+  `sin(kh)`. Its modified wavenumber therefore tended to `k/3` rather than `k`,
+  a 67% leading-order error; it reported 59.7%.
+
+`test_anisotropic_dispersion`, which had been passing, computed
+`sqrt(kx^2 + ky^2)` from `kx = 2 pi cos(theta) / lambda` and `ky = 2 pi
+sin(theta) / lambda`. That is `2 pi / lambda` at every angle: it measured the
+same number three times and asserted it varied by less than 2%. Its own comment
+said the analysis was "Simplified here for demonstration". The library has no
+2-D dispersion relation to point a rewrite at, so it is dropped and **2-D
+dispersion anisotropy is now uncovered** -- a gap to fill when that relation
+exists, not a test to reproduce.
+
+Replaced with five tests of `kwavers_physics::analytical::wave`: observed
+convergence order of the 2nd/4th/6th centered stencils (measures the exponent
+rather than asserting a threshold -- the old 4th-order coefficients were wrong
+by a factor of three, which a threshold can absorb and an order measurement
+cannot), error ordering by stencil order at fixed sampling, dispersion-freedom
+at the 1-D magic time step `CFL = 1`, monotone growth toward Nyquist, and the
+`v_g = 3e` relation with its magnitude anchored. The order assertion was
+confirmed to reject a nominal one higher (measured 1.9978 for order 2).
+
+### Remaining 7, undiagnosed
+
+**`pinn_*` (5)**, **`literature_validation` (1)**,
+**`pstd_finite_window_born` (1)**.
 
 ## KW-PSTD-PLUGIN-SOURCES-DROPPED — the plugin path discards its sources [major] — IMPLEMENTED 2026-08-22
 
