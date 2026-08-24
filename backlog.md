@@ -1,5 +1,39 @@
 # Backlog / Strategy
 
+## KW-SWE-VOLUMETRIC-COVERAGE — the volumetric coverage metric measures the whole grid [patch] — todo
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-SWE-VOLUMETRIC-COVERAGE | Decide what `VolumetricQualityMetrics::coverage` is a fraction *of*, and set the clinical threshold against that. | [patch] | todo | unowned (surfaced from another agent's merged work) | `crates/kwavers-solver/src/forward/elastic/swe/core/solver/volumetric.rs`, `crates/kwavers/tests/swe_3d_validation.rs` |
+
+- **Surfaced by:** the integration-test baseline
+  (`KW-INTEGRATION-TESTS-UNRUN`) on its first real use, as a regression outside
+  the frozen set. CI never saw it: it does not run these tests.
+- **Measured:** `test_literature_benchmark_comparison` asserts
+  `coverage > 0.7` and observes **22.2%**. Not marginal.
+- **Where the number comes from:** `calculate_volumetric_quality` computes
+  `valid / total` with `total = tracker.arrival_times.len()`. The test's grid is
+  `Grid::new(60, 60, 40, ...)` = **144,000 cells**, and 32,000 arrivals are
+  valid: `32_000 / 144_000 = 22.2%` exactly. So `coverage` is the fraction of
+  the entire 6x6x6 cm volume carrying a valid shear-wave arrival time.
+- **Reading:** 22% is plausible physics for a single 200 us focal push over a
+  bounded propagation window; 70% of a whole liver volume from one push is not.
+  The likely history is that the denominator widened to the full grid with the
+  volumetric integration while the 0.7 threshold, set against a narrower
+  tracking region, was not revisited. `average_quality` is 0.74, so the
+  tracking itself looks healthy -- this is a definition question, not a
+  tracking defect.
+- **The decision is the deliverable:** either `coverage` is scoped to the
+  region a push can plausibly reach (and 0.7 stands), or it stays whole-volume
+  (and the threshold is derived from the push geometry and duration). Left to
+  whoever owns the volumetric metric rather than guessed at from outside it;
+  the entry is in the baseline meanwhile, marked as a regression rather than
+  accepted debt.
+- **Fixed alongside:** `diag_swe_recon_2` in the same file, whose own doc
+  comment read "TEMPORARY diagnostic 2 -- SWERECON. Removed before commit." It
+  was not removed. It ran a 50^3 grid for 40 ms of simulated time and **timed
+  out at the 60 s nextest termination bound** on every run. 308 lines deleted.
+
 ## KW-INTEGRATION-TESTS-UNRUN — 686 integration tests compiled, 6 run [patch] — IMPLEMENTED 2026-08-24
 
 | ID | Outcome | Class | Status | Owner | Scope |
