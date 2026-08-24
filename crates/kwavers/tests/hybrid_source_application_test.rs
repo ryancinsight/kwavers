@@ -68,8 +68,7 @@ fn test_hybrid_source_application() {
         ..Default::default()
     };
     let mut boundary = kwavers_boundary::DomainPMLBoundary::new(pml_config).unwrap();
-    let sources: Vec<std::sync::Arc<dyn kwavers_source::Source>> =
-        vec![std::sync::Arc::new(source)];
+    let sources: Vec<Arc<dyn Source>> = vec![Arc::new(source)];
     let extra_fields = PluginFields::new(Array3::zeros((1, 1, 1)));
 
     let mut context = PluginContext {
