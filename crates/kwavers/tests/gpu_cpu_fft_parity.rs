@@ -25,7 +25,7 @@
 //! | np   | 48×64×32    | Chirp-Z × Radix-2 × Radix-2 |
 //!
 //! All tests are gated behind `#[cfg(feature = "gpu")]` and marked
-//! `#[ignore = "requires GPU device"]` so they never run on headless CI.
+//! `#[ignore = "requires a GPU device; kept out of headless CI and run on the scheduled self-hosted CUDA job (gpu-parity.yml) via `--run-ignored ignored-only`. Re-enable trigger: a GPU runner is wired into CI"]` so they never run on headless CI.
 //! To execute: `cargo nextest run --features gpu --run-ignored all -E 'test(gpu_cpu_fft)'`
 //!
 //! ## References
@@ -237,7 +237,7 @@ fn parseval_test(nx: usize, ny: usize, nz: usize, parseval_tol: f64) {
 /// - CPU cross-validation (relative): 6e-7
 /// - Parseval (relative): 1e-5
 #[test]
-#[ignore = "requires GPU device"]
+#[ignore = "requires a GPU device; kept out of headless CI and run on the scheduled self-hosted CUDA job (gpu-parity.yml) via `--run-ignored ignored-only`. Re-enable trigger: a GPU runner is wired into CI"]
 fn test_gpu_cpu_fft_parity_64_cubic() {
     parity_test(64, 64, 64, 1e-4, 6e-7, 1e-5);
 }
@@ -247,7 +247,7 @@ fn test_gpu_cpu_fft_parity_64_cubic() {
 /// Accumulated f32 error budget: log₂(128)=7 stages × 3 axes × ε_f32 ≈ 2.5e-6.
 /// Tolerances: roundtrip 1e-4, cross-val 6e-7, Parseval 1e-5.
 #[test]
-#[ignore = "requires GPU device"]
+#[ignore = "requires a GPU device; kept out of headless CI and run on the scheduled self-hosted CUDA job (gpu-parity.yml) via `--run-ignored ignored-only`. Re-enable trigger: a GPU runner is wired into CI"]
 fn test_gpu_cpu_fft_parity_128_cubic() {
     parity_test(128, 128, 128, 1e-4, 6e-7, 1e-5);
 }
@@ -257,7 +257,7 @@ fn test_gpu_cpu_fft_parity_128_cubic() {
 /// Accumulated f32 error budget: log₂(256)=8 stages × 3 axes × ε_f32 ≈ 3e-6.
 /// Tolerances: roundtrip 1e-4, cross-val 6e-7, Parseval 1e-5.
 #[test]
-#[ignore = "requires GPU device"]
+#[ignore = "requires a GPU device; kept out of headless CI and run on the scheduled self-hosted CUDA job (gpu-parity.yml) via `--run-ignored ignored-only`. Re-enable trigger: a GPU runner is wired into CI"]
 fn test_gpu_cpu_fft_parity_256_cubic() {
     parity_test(256, 256, 256, 1e-4, 6e-7, 1e-5);
 }
@@ -269,7 +269,7 @@ fn test_gpu_cpu_fft_parity_256_cubic() {
 /// Tests the hybrid radix-2 / Chirp-Z dispatch path for mixed-strategy grids.
 /// Tolerances: roundtrip 1e-4, cross-val 6e-7, Parseval 1e-5.
 #[test]
-#[ignore = "requires GPU device"]
+#[ignore = "requires a GPU device; kept out of headless CI and run on the scheduled self-hosted CUDA job (gpu-parity.yml) via `--run-ignored ignored-only`. Re-enable trigger: a GPU runner is wired into CI"]
 fn test_gpu_cpu_fft_parity_48x64x32() {
     parity_test(48, 64, 32, 1e-4, 6e-7, 1e-5);
 }
@@ -281,21 +281,21 @@ fn test_gpu_cpu_fft_parity_48x64x32() {
 /// Separate test so Parseval can be checked without waiting for the cross-val
 /// CPU reference path (CPU 3D FFT at 64³ is fast but at 256³ can be slow).
 #[test]
-#[ignore = "requires GPU device"]
+#[ignore = "requires a GPU device; kept out of headless CI and run on the scheduled self-hosted CUDA job (gpu-parity.yml) via `--run-ignored ignored-only`. Re-enable trigger: a GPU runner is wired into CI"]
 fn test_parseval_64_cubic() {
     parseval_test(64, 64, 64, 1e-5);
 }
 
 /// Parseval's theorem for 128³ grid.
 #[test]
-#[ignore = "requires GPU device"]
+#[ignore = "requires a GPU device; kept out of headless CI and run on the scheduled self-hosted CUDA job (gpu-parity.yml) via `--run-ignored ignored-only`. Re-enable trigger: a GPU runner is wired into CI"]
 fn test_parseval_128_cubic() {
     parseval_test(128, 128, 128, 1e-5);
 }
 
 /// Parseval's theorem for 48×64×32 non-power-of-2 grid.
 #[test]
-#[ignore = "requires GPU device"]
+#[ignore = "requires a GPU device; kept out of headless CI and run on the scheduled self-hosted CUDA job (gpu-parity.yml) via `--run-ignored ignored-only`. Re-enable trigger: a GPU runner is wired into CI"]
 fn test_parseval_48x64x32() {
     parseval_test(48, 64, 32, 1e-5);
 }

@@ -56,6 +56,11 @@ Add `inverse::marchenko` with:
 
 ## Validation plan (staged milestones)
 
+> **Status (2026-08-22):** milestone 1 remains open and is tracked as
+> correctness item `KW-GAP-2026-08-22-MARCHENKO` in backlog.md. The oracle
+> test stays compiled and `#[ignore]`d with a re-enable trigger; un-ignoring
+> is the acceptance gate for the milestone below.
+
 1. **Quantitative 1-D `redatum` validation** `[major]` — the SA-engine oracle is
    **built** (`marchenko::oracle_tests::redatum_matches_engine_green_function`,
    `#[ignore]`d as the acceptance target): a 1-D layered medium with a transparent

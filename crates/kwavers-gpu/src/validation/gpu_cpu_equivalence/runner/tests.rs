@@ -133,7 +133,7 @@ fn test_matrix_128_heterogeneous_point_source() {
 /// - Panics if `Validation should complete`.
 ///
 #[test]
-#[ignore = "Large RAM requirement (512MB+). Run with: cargo test -- --ignored"]
+#[ignore = "Large RAM requirement (512MB+); requires a GPU device. Kept out of headless CI and run on the scheduled self-hosted CUDA job (gpu-parity.yml) via `--run-ignored ignored-only`. Re-enable trigger: a GPU runner is wired into CI"]
 fn test_matrix_256_absorbing_custom_source() {
     let (grid, medium) = create_test_256();
 
