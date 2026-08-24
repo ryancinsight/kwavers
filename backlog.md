@@ -337,10 +337,50 @@ at the 1-D magic time step `CFL = 1`, monotone growth toward Nyquist, and the
 `v_g = 3e` relation with its magnitude anchored. The order assertion was
 confirmed to reject a nominal one higher (measured 1.9978 for order 2).
 
-### Remaining 7, undiagnosed
+### Diagnosed, not yet fixed: both need a decision, not a mechanical repair
 
-**`pinn_*` (5)**, **`literature_validation` (1)**,
-**`pstd_finite_window_born` (1)**.
+**`pstd_finite_window_born::finite_window_born_rejects_off_grid_ring_geometry`
+-- a validation that cannot fire.** The test expects the message "not on the
+centered grid axis", which exists nowhere in the tree; the surviving check is
+`nonempty_bli_weights`, which errors only when BLI produces *no* weights. It
+produced some, so nothing failed.
+
+Why it cannot fail here: `BliConfig::half_width` is
+`ceil(1 / (PI * tolerance))`, and `DEFAULT_BLI_TOLERANCE = 0.05` gives **7
+cells**. On this test's 3-cell grid at 5 mm spacing the grid centres span
+`+/-5 mm` while `axis_within_support` accepts `+/-40 mm`. The support region is
+seven times wider than the grid. A 12 mm ring is inside it, so weights are
+non-empty and the point is accepted -- there is no wrapping; out-of-range
+indices are simply skipped in the stencil loop.
+
+The consequence is the finding: **an element outside the modelled domain still
+records a sinc-weighted sample from grid points up to 7 cells away**, and the
+"lies outside the inversion grid" error is unreachable on any grid smaller than
+the stencil. Whether that is acceptable is a design question -- BLI deliberately
+supports off-axis points, but supporting points beyond the domain is a different
+claim -- so this is filed rather than fixed. The test's intent is defensible;
+the message it asserts is from an implementation that no longer exists.
+
+**`literature_validation::test_rayleigh_collapse_time` -- wrong oracle, 686%
+error.** This one does exercise library code (`KellerMiksisModel`), so the
+failure is not the tautology pattern. The Rayleigh time
+`tau = 0.915 R0 sqrt(rho / dp)` describes an *empty* cavity collapsing under a
+constant pressure difference. The test runs a Keller-Miksis bubble with default
+parameters -- gas content, surface tension, viscosity all present -- which
+oscillates rather than collapsing, and then records the time of the first
+radius minimum. tau is 9.57 us; the recorded time is about 75 us, near the
+100 us loop cap. The two quantities are not the same thing.
+
+Fixing it means choosing an oracle the model actually satisfies. The natural
+candidate is the Minnaert resonance frequency for small-amplitude oscillation,
+which validates the model's restoring force against a closed-form result. That
+is a new test, not a threshold change, and the explicit-Euler integration at
+dt = 1 ns would need review alongside it.
+
+### Remaining 5, undiagnosed
+
+**`pinn_*` (5)** -- loss-decrease and zero-field assertions across
+`pinn_bc_validation`, `pinn_ic_validation`, `pinn_elastic_validation`.
 
 ## KW-PSTD-PLUGIN-SOURCES-DROPPED — the plugin path discards its sources [major] — IMPLEMENTED 2026-08-22
 
