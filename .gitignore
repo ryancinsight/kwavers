@@ -133,6 +133,10 @@ __pycache__/
 *.npy
 *.npz
 
+# The committed k-Wave differential-oracle reference fields are inputs to the
+# default test gate, not run outputs; see ADR 119.
+!crates/kwavers/tests/reference/kwave/*.npz
+
 # Errors
 *.err
 
