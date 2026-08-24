@@ -55,6 +55,9 @@ use std::default::Default;
 use std::println;
 use std::vec::Vec;
 
+/// (index i, index j, index k, distance, arrival time, speed, cs, cp).
+type FastSample = (usize, usize, usize, f64, f64, f64, f64, f64);
+
 /// Test analytical validation for homogeneous medium
 #[test]
 fn test_analytical_homogeneous_validation() {
@@ -1033,7 +1036,7 @@ fn diag_swe_recon_2() {
             }
             smoothed[i] = acc / (i + 1).min(window) as f64;
         }
-        let mut hpf: Vec<f64> = series
+        let hpf: Vec<f64> = series
             .iter()
             .zip(smoothed.iter())
             .map(|(v, &m)| v - m)
@@ -1089,7 +1092,7 @@ fn diag_swe_recon_2() {
     let mut nearfield = 0usize;
     let mut fast = 0usize;
     let mut cs_ratios: Vec<f64> = Vec::new();
-    let mut fast_samples: Vec<(usize, usize, usize, f64, f64, f64, f64, f64)> = Vec::new();
+    let mut fast_samples: Vec<FastSample> = Vec::new();
     let mut mid_ratios: Vec<f64> = Vec::new();
     let mut fast_ratios: Vec<f64> = Vec::new();
     let mut errs: Vec<f64> = Vec::new();
@@ -1183,8 +1186,6 @@ fn diag_swe_recon_2() {
     // Eikonal inversion prototype: c = 1/|grad t| via central differences.
     let mut eik_errs: Vec<f64> = Vec::new();
     let mut eik_in_errs: Vec<f64> = Vec::new();
-    let mut eik_points = 0usize;
-    let mut eik_bad = 0usize;
     for k in 10..grid.nz - 10 {
         for j in 10..grid.ny - 10 {
             for i in 10..grid.nx - 10 {
@@ -1211,7 +1212,7 @@ fn diag_swe_recon_2() {
                 let dty = (ty - tym) / (4.0 * grid.dy);
                 let dtz = (tz - tzm) / (4.0 * grid.dz);
                 let g = (dtx * dtx + dty * dty + dtz * dtz).sqrt();
-                if !(g > 1e-9) {
+                if g <= 1e-9 {
                     continue;
                 }
                 let c = 1.0 / g;
@@ -1225,7 +1226,6 @@ fn diag_swe_recon_2() {
                 } else {
                     eik_in_errs.push(rel);
                 }
-                eik_points += 1;
             }
         }
     }
