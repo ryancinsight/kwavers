@@ -36,6 +36,10 @@
 //!   algorithms in ultrasound shear wave elasticity imaging." *IEEE TUFFC*, 61(6), 1076-1088.
 //! - Palmeri, M. L., et al. (2011). "Quantifying hepatic shear modulus in vivo using
 //!   acoustic radiation force." *Ultrasound in Medicine & Biology*, 37(4), 546-558.
+#![expect(
+    clippy::print_stdout,
+    reason = "validation harness reports step progress"
+)]
 
 use kwavers_grid::Grid;
 use kwavers_medium::heterogeneous::HeterogeneousMedium;
@@ -1033,7 +1037,7 @@ fn diag_swe_recon_2() {
             }
             smoothed[i] = acc / (i + 1).min(window) as f64;
         }
-        let mut hpf: Vec<f64> = series
+        let hpf: Vec<f64> = series
             .iter()
             .zip(smoothed.iter())
             .map(|(v, &m)| v - m)
@@ -1089,7 +1093,9 @@ fn diag_swe_recon_2() {
     let mut nearfield = 0usize;
     let mut fast = 0usize;
     let mut cs_ratios: Vec<f64> = Vec::new();
-    let mut fast_samples: Vec<(usize, usize, usize, f64, f64, f64, f64, f64)> = Vec::new();
+    /// One fast-region sample: voxel index + six measured quantities.
+    type FastSample = (usize, usize, usize, f64, f64, f64, f64, f64);
+    let mut fast_samples: Vec<FastSample> = Vec::new();
     let mut mid_ratios: Vec<f64> = Vec::new();
     let mut fast_ratios: Vec<f64> = Vec::new();
     let mut errs: Vec<f64> = Vec::new();
@@ -1183,8 +1189,7 @@ fn diag_swe_recon_2() {
     // Eikonal inversion prototype: c = 1/|grad t| via central differences.
     let mut eik_errs: Vec<f64> = Vec::new();
     let mut eik_in_errs: Vec<f64> = Vec::new();
-    let mut eik_points = 0usize;
-    let mut eik_bad = 0usize;
+
     for k in 10..grid.nz - 10 {
         for j in 10..grid.ny - 10 {
             for i in 10..grid.nx - 10 {
@@ -1211,7 +1216,7 @@ fn diag_swe_recon_2() {
                 let dty = (ty - tym) / (4.0 * grid.dy);
                 let dtz = (tz - tzm) / (4.0 * grid.dz);
                 let g = (dtx * dtx + dty * dty + dtz * dtz).sqrt();
-                if !(g > 1e-9) {
+                if g <= 1e-9 {
                     continue;
                 }
                 let c = 1.0 / g;
@@ -1225,7 +1230,6 @@ fn diag_swe_recon_2() {
                 } else {
                     eik_in_errs.push(rel);
                 }
-                eik_points += 1;
             }
         }
     }
