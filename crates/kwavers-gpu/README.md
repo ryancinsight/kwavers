@@ -27,7 +27,7 @@ provider is WGPU, because the production kernels are WGSL.
 | `backend` | The concrete `ComputeBackend` implementation (feature `gpu`) |
 | `pstd_gpu` | GPU PSTD FFT lattice (feature `gpu`) |
 | `beamforming` | Provider implementations of the beamforming operations declared in `kwavers-analysis` (feature `gpu`) |
-| `visualization` | Selectable Leto host or Hephaestus GPU field-transfer providers (feature `visualization`) |
+| `visualization` | Leto host and Hephaestus GPU field-transfer provider implementations (feature `visualization`) |
 | `validation` | GPU/CPU differential equivalence checks (feature `gpu`) |
 
 ## Features
@@ -35,9 +35,11 @@ provider is WGPU, because the production kernels are WGSL.
 - `gpu` — enables the device-backed modules above. Everything behind it is a complete
   implementation; the feature exists for dependency and build-size management, not as a
   stub toggle.
-- `visualization` — enables explicit `VisualizationBackend::Leto` or
-  `VisualizationBackend::Hephaestus` selection. Hephaestus acquisition and transfer
-  failures remain typed errors; this feature never silently falls back to Leto.
+- `visualization` — enables the Leto and Hephaestus provider implementations.
+  The top-level `kwavers::visualization::VisualizationBackend` selects between
+  them at the application composition boundary. Hephaestus acquisition and
+  transfer failures remain typed errors; this feature never silently falls
+  back to Leto.
 
 Device selection itself is a runtime decision: the simulation layer probes for a usable
 device and reports which backend it took and why. A device that is present but fails is

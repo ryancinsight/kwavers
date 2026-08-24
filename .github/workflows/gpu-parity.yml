@@ -1,8 +1,9 @@
 name: GPU Parity (scheduled)
 
 # Runs the GPU-gated parity oracles that can never execute on headless
-# runners: CPU/GPU FFT parity, arbitrary-size Chirp-Z roundtrips, and the
-# CPU/GPU PSTD source/leapfrog contracts. Each test carries `#[ignore]` as
+# runners: CPU/GPU FFT parity, arbitrary-size Chirp-Z roundtrips, the CPU/GPU
+# PSTD source/leapfrog contracts, and Kwavers-to-Hephaestus visualization
+# transfer. Each test carries `#[ignore]` as
 # the headless-suite gate; this job selects exactly them with
 # `--run-ignored ignored-only` (see KW-GAP-2026-08-20-IGNOREDORACLE).
 #
@@ -51,3 +52,6 @@ jobs:
 
       - name: PSTD CPU/GPU source and leapfrog contracts
         run: cargo nextest run --locked -p kwavers-gpu --profile heavy --run-ignored ignored-only -E 'binary(pstd_parity) | test(matrix_256_absorbing_custom_source)'
+
+      - name: Kwavers Hephaestus visualization transfer
+        run: cargo nextest run --locked -p kwavers --features gpu-visualization --lib --profile heavy --run-ignored ignored-only -E 'test(hephaestus_selection_requires_real_transfer)'

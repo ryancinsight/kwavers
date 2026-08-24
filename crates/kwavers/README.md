@@ -52,9 +52,10 @@ assert_eq!(info["name"], "kwavers");
 assert!(info.contains_key("version"));
 ```
 
-With `gpu-visualization`, application setup selects the provider explicitly and
-injects it into the analysis engine. `Hephaestus` acquires the real GPU device;
-`Leto` keeps the transfer on the host path.
+With `gpu-visualization`, the top-level Kwavers composition boundary selects
+the provider explicitly and application setup injects it into the analysis
+engine. `Hephaestus` acquires the real GPU device; `Leto` keeps the transfer on
+the host path.
 
 ```rust,ignore
 use kwavers::visualization::{create_visualization_provider, VisualizationBackend};
