@@ -1,5 +1,36 @@
 # Backlog / Strategy
 
+## KW-PSTD-PLUGIN-SOURCES-DROPPED — the plugin path discards its sources [major] — todo
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-PSTD-PLUGIN-SOURCES-DROPPED | Make `PSTDPlugin` apply the sources it is given, or make the parameter's inapplicability a compile-time fact rather than a silent no-op. | [major] | todo | unowned | `crates/kwavers-solver/src/forward/pstd/plugin.rs`, `crates/kwavers-solver/src/plugin/` |
+
+- **Evidence:** `PSTDPlugin::initialize` constructs its `PSTDSolver` with
+  `GridSource::default()` — an empty source — and `PSTDPlugin::update` syncs the
+  pressure and velocity fields, calls `solver.step_forward()`, and syncs back.
+  It never reads the `sources` argument that `PluginManager::execute` threads
+  through to it. A caller who builds a `GridSource` with a `p_mask` and
+  `p_signal` and drives the pseudospectral solver through the plugin path gets a
+  simulation that runs, reports success, and was never driven.
+- **How it surfaced:** the k-Wave driven-source differential case
+  (`src_tone_burst_2d`) could not be expressed through the plugin path at all
+  and had to go through `PSTDSolver` directly, which does apply the source and
+  matches k-Wave at `2.58e-3` / `r = 0.999997`. So the source machinery is
+  correct; only the plugin's route to it is missing.
+- **Severity:** [major] because the failure is silent and produces a
+  physically empty result from an API that accepts a complete source
+  specification. It is the same shape as an input-insensitive implementation:
+  the output does not depend on an input the signature accepts.
+- **Acceptance:** either (a) `PSTDPlugin::update` applies the sources it is
+  given, with a differential test driving the plugin path against the same
+  k-Wave reference the solver path already matches; or (b) the plugin surface
+  stops accepting sources it cannot honour, so the mistake is a compile error.
+  A third option — documenting the limitation — is rejected: a caller cannot
+  discover from a green run that their source was discarded.
+- **Dependencies:** none. The reference case that would verify (a) is already
+  committed.
+
 ## KW-ABSORPTION-CONFIG-PRECEDENCE — the PSTD absorption coefficient in config is inert [major] — todo
 
 | ID | Outcome | Class | Status | Owner | Scope |
@@ -81,7 +112,18 @@
   `r = 0.999647`, matching its fourth-order dispersion error of `(k dx)^4 / 30`
   at the seed's `k dx ~ 1` spectral edge. A power-law absorbing case
   (`ivp_absorbing_2d`) matches at `8.10e-3` / `r = 0.999999924` and exposed
-  `KW-ABSORPTION-CONFIG-PRECEDENCE`. Five tests pass under nextest in 1.97 s; `cargo fmt` and `cargo clippy -D warnings` are clean on the touched
+  `KW-ABSORPTION-CONFIG-PRECEDENCE`. A layered-medium case (`ivp_layered_2d`,
+  non-square by design) matches at `7.97e-3` / `r = 0.999963` and separates from
+  a uniform run by `0.27`; it exposed two orientation conventions the square
+  cases could not — k-Wave returns the field axis-reversed, and `np.savez`
+  stores a transposed array in Fortran order — both now asserted at their
+  source. A driven point-source case (`src_tone_burst_2d`) matches at `2.58e-3`
+  / `r = 0.999997`, exercising the source path no initial-value case reaches,
+  and established that the propagation-interval count is `Nt` for a driven
+  source against `Nt - 1` for an initial-value one. It also surfaced that
+  `PSTDPlugin` never forwards the sources given to `PluginManager::execute`, so
+  a caller driving the pseudospectral solver through the plugin path gets a
+  silently undriven simulation. Seven tests pass under nextest in 3.03 s; `cargo fmt` and `cargo clippy -D warnings` are clean on the touched
   target.
 - **Finding recorded during the work:** `kgrid.Nt` is k-Wave's count of time
   *points*, so the returned field has advanced `Nt - 1` intervals. Driving the
