@@ -1,6 +1,6 @@
 # Backlog / Strategy
 
-## KW-PSTD-PLUGIN-SOURCES-DROPPED — the plugin path discards its sources [major] — todo
+## KW-PSTD-PLUGIN-SOURCES-DROPPED — the plugin path discards its sources [major] — IMPLEMENTED 2026-08-22
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
@@ -22,14 +22,30 @@
   physically empty result from an API that accepts a complete source
   specification. It is the same shape as an input-insensitive implementation:
   the output does not depend on an input the signature accepts.
-- **Acceptance:** either (a) `PSTDPlugin::update` applies the sources it is
-  given, with a differential test driving the plugin path against the same
-  k-Wave reference the solver path already matches; or (b) the plugin surface
-  stops accepting sources it cannot honour, so the mistake is a compile error.
-  A third option — documenting the limitation — is rejected: a caller cannot
-  discover from a green run that their source was discarded.
-- **Dependencies:** none. The reference case that would verify (a) is already
-  committed.
+- **Wider than filed:** `FdtdPlugin` carries the identical defect, constructing
+  its solver with `GridSource::default()` under the comment "no active sources
+  unless configured elsewhere". Only `HybridPlugin` consumed `context.sources`.
+- **Nothing was missing but the call.** `PSTDSolver::add_source_arc` builds the
+  mask, determines the injection mode, computes velocity spectral gradient
+  masks, and pushes onto `dynamic_sources`, which the stepper consumes every
+  step. The plugin simply never invoked it.
+- **Delivered (option a):** both plugins register `context.sources` on their
+  first `update` — registration cannot happen in `initialize`, which is not
+  given the sources. `PluginContext::sources` moves from `&[Box<dyn Source>]` to
+  `&[Arc<dyn Source>]`, because the stepper queries `amplitude(t)` every step
+  and so needs ownership outliving the context borrow; `PSTDSolver::add_source`
+  already converted `Box` to `Arc` internally, so this makes the boundary agree
+  with the internal form.
+- **Evidence:** the driven k-Wave reference case validates both routes against
+  one stored field at `2.58e-3` / `r = 0.999996674` — identical digits — and the
+  two routes agree with *each other* to `4.0e-13`, which is reordered
+  floating-point over 151 steps. Eight parity tests pass in 3.18 s;
+  `cargo nextest run -p kwavers-solver -p kwavers` is `1552 passed`.
+- **Decision record:** `docs/adr/121-plugin-source-forwarding.md`.
+- **Not covered:** the FDTD plugin's route is fixed but not measured against
+  k-Wave, since that scheme sits at its own dispersion error rather than at the
+  parity bound. Its guarantee is the shared registration path, not a
+  measurement.
 
 ## KW-ABSORPTION-CONFIG-PRECEDENCE — the PSTD absorption coefficient in config is inert [major] — todo
 

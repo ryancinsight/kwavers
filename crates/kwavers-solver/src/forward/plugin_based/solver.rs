@@ -41,7 +41,7 @@ pub struct PluginBasedSolver {
     /// Boundary conditions
     boundary: Box<dyn Boundary>,
     /// Acoustic sources
-    sources: Vec<Box<dyn Source>>,
+    sources: Vec<Arc<dyn Source>>,
     source_masks: Vec<Array3<f64>>,
     /// Field registry for data management
     field_registry: FieldRegistry,
@@ -83,7 +83,7 @@ impl PluginBasedSolver {
         source: Box<dyn Source>,
     ) -> Self {
         let source_mask = clone_mask(&source.create_mask(&grid));
-        let sources = vec![source];
+        let sources: Vec<Arc<dyn Source>> = vec![Arc::from(source)];
         let source_masks = vec![source_mask];
 
         let field_registry = FieldRegistry::new(&grid);
@@ -121,6 +121,7 @@ impl PluginBasedSolver {
     /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn add_source(&mut self, source: Box<dyn Source>) -> KwaversResult<()> {
+        let source: Arc<dyn Source> = Arc::from(source);
         let required_field = match source.source_type() {
             SourceField::Pressure => UnifiedFieldType::Pressure,
             SourceField::VelocityX => UnifiedFieldType::VelocityX,
