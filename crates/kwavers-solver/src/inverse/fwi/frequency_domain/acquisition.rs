@@ -24,7 +24,9 @@
 
 use kwavers_transducer::transducers::ElementPosition;
 
-use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
+use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::{
+    MultiRowRingArray, RotatingOpposedLinearArray,
+};
 
 /// The acquisition geometry a frequency-domain inversion reads.
 ///
@@ -112,5 +114,40 @@ impl TransmissionAcquisition for RingAcquisition<'_> {
     fn receivers(&self, _transmit: usize) -> &[ElementPosition] {
         // Rotationally symmetric: every transmit sees the same receiver set.
         self.array.elements()
+    }
+}
+
+/// A [`RotatingOpposedLinearArray`] viewed as an acquisition.
+///
+/// Owns the rotating array by reference and delegates to its pre-computed
+/// position data (ADR 116).
+#[derive(Debug)]
+pub struct RotatingAcquisition<'a> {
+    array: &'a RotatingOpposedLinearArray,
+}
+
+impl<'a> RotatingAcquisition<'a> {
+    /// View `array` as an acquisition.
+    #[must_use]
+    pub fn new(array: &'a RotatingOpposedLinearArray) -> Self {
+        Self { array }
+    }
+}
+
+impl TransmissionAcquisition for RotatingAcquisition<'_> {
+    fn transmission_count(&self) -> usize {
+        self.array.transmission_count()
+    }
+
+    fn receiver_count(&self) -> usize {
+        self.array.receiver_count()
+    }
+
+    fn sources(&self, transmit: usize) -> &[ElementPosition] {
+        self.array.transmit_sources(transmit)
+    }
+
+    fn receivers(&self, transmit: usize) -> &[ElementPosition] {
+        self.array.transmit_receivers(transmit)
     }
 }
