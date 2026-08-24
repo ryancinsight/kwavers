@@ -120,8 +120,9 @@ pub fn create_visualization_provider(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kwavers_analysis::visualization::{VisualizationConfig, VisualizationEngine};
+    use kwavers_analysis::visualization::{DataPipeline, VisualizationConfig, VisualizationEngine};
     use kwavers_core::error::KwaversError;
+    use leto::Array3;
 
     #[test]
     fn leto_selection_reaches_host_provider_contract() {
@@ -166,7 +167,7 @@ mod tests {
 
     #[test]
     #[ignore = "requires a real WGPU adapter on the scheduled GPU runner"]
-    fn hephaestus_selection_requires_real_transfer() {
+    fn hephaestus_selection_requires_real_pipeline_transfer() {
         let mut provider = create_visualization_provider(VisualizationBackend::Hephaestus)
             .expect("scheduled GPU runner must acquire a Hephaestus device");
 
@@ -182,5 +183,31 @@ mod tests {
             )
             .expect("scheduled GPU runner must complete a blocking transfer");
         assert_eq!(provider.memory_usage(), 2 * 4 * std::mem::size_of::<f32>());
+
+        let mut pipeline = DataPipeline::with_transfer_mode(provider, TransferMode::Blocking);
+        let mut field = Array3::<f64>::zeros([2, 2, 1]);
+        field[[0, 0, 0]] = -2.0;
+        field[[0, 1, 0]] = 1.0;
+        field[[1, 0, 0]] = 3.0;
+        field[[1, 1, 0]] = 7.0;
+        pipeline
+            .upload_field(&field, UnifiedFieldType::Pressure)
+            .expect("Kwavers pipeline must complete a real Hephaestus transfer");
+
+        assert_eq!(
+            pipeline.get_field_dimensions(UnifiedFieldType::Pressure),
+            Some((2, 2, 1))
+        );
+        assert_eq!(
+            pipeline.get_field_range(UnifiedFieldType::Pressure),
+            Some((-2.0, 7.0))
+        );
+        let statistics = pipeline
+            .get_transfer_statistics()
+            .expect("transfer statistics lock remains available");
+        assert_eq!(
+            statistics.total_bytes_transferred,
+            4 * std::mem::size_of::<f32>()
+        );
     }
 }

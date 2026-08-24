@@ -54,4 +54,4 @@ jobs:
         run: cargo nextest run --locked -p kwavers-gpu --profile heavy --run-ignored ignored-only -E 'binary(pstd_parity) | test(matrix_256_absorbing_custom_source)'
 
       - name: Kwavers Hephaestus visualization transfer
-        run: cargo nextest run --locked -p kwavers --features gpu-visualization --lib --profile heavy --run-ignored ignored-only -E 'test(hephaestus_selection_requires_real_transfer)'
+        run: cargo nextest run --locked -p kwavers --features gpu-visualization --lib --profile heavy --run-ignored ignored-only -E 'test(hephaestus_selection_requires_real_pipeline_transfer)'
