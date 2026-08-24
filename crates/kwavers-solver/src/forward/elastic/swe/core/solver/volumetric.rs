@@ -240,7 +240,69 @@ impl ElasticWaveSolver {
                     if i % dx != 0 {
                         continue;
                     }
-                    let series: Vec<f64> = history.iter().map(|f| f.uz[[i, j, k]]).collect();
+                    // Skip PML voxels: the absorbing layer is artificial, so an
+                    // arrival there is attenuation of an already-absorbed wave,
+                    // not a measurable shear wavefront. Without this, the
+                    // detector locks onto numerical noise in the PML ring and
+                    // the TOF reconstruction reports garbage speeds there.
+                    if self.pml.is_in_pml(i, j, k) {
+                        continue;
+                    }
+                    // Track the displacement magnitude, not a single
+                    // component: a wavefront tracker for 3-D SWE must be
+                    // direction-agnostic. Reading only `uz` blinds the tracker
+                    // to pushes whose shear displacement is transverse to z
+                    // (in the phantom suite, the ±X/±Y pushes are invisible in
+                    // `uz` along their own axis, so the arrival detector locks
+                    // onto unrelated events and the TOF estimate is garbage).
+                    let mut series: Vec<f64> = history
+                        .iter()
+                        .map(|f| {
+                            let ux = f.ux[[i, j, k]];
+                            let uy = f.uy[[i, j, k]];
+                            let uz = f.uz[[i, j, k]];
+                            (ux * ux + uy * uy + uz * uz).sqrt()
+                        })
+                        .collect();
+                    // High-pass the series: subtract a centered moving average
+                    // whose span covers the push duration. The ARF push leaves a
+                    // quasi-static displacement that appears at every voxel in
+                    // the push window regardless of distance (its 1/d² tail
+                    // exceeds the 1/d shear wavefront out to several push radii),
+                    // so without removal the detector locks onto the static
+                    // rise and reports a distance-independent early arrival.
+                    if series.len() > 8 {
+                        let window = (series.len() / 8).max(3);
+                        let mut smoothed = vec![0.0_f64; series.len()];
+                        let mut acc = 0.0_f64;
+                        for (i, &v) in series.iter().enumerate() {
+                            acc += v;
+                            if i >= window {
+                                acc -= series[i - window];
+                            }
+                            smoothed[i] = acc / (i + 1).min(window) as f64;
+                        }
+                        for (v, &m) in series.iter_mut().zip(smoothed.iter()) {
+                            *v -= m;
+                        }
+                    }
+                    // Detect on the time derivative of the (high-passed)
+                    // magnitude. A shear wavefront is a sharp step — its
+                    // derivative is a strong spike — while the slow equilibrium
+                    // drift and the ring-down are comparatively flat or
+                    // oscillatory, so the derivative sharpens the wavefront
+                    // contrast that the matched filter needs.
+                    let diff_series: Vec<f64> = series
+                        .iter()
+                        .enumerate()
+                        .map(|(idx, &v)| {
+                            if idx == 0 {
+                                0.0
+                            } else {
+                                v - series[idx - 1]
+                            }
+                        })
+                        .collect();
                     match &self.volumetric_config.arrival_detection {
                         ArrivalDetection::EnergyThreshold { threshold } => {
                             let thr = *threshold;
@@ -287,27 +349,28 @@ impl ElasticWaveSolver {
                         }
                         ArrivalDetection::MatchedFilter { template, min_corr } => {
                             let l = template.len();
-                            if l == 0 || l > series.len() {
+                            if l == 0 || l > diff_series.len() {
                                 continue;
                             }
                             let template_norm = template.iter().map(|x| x * x).sum::<f64>().sqrt();
                             if template_norm <= 0.0 {
                                 continue;
                             }
-                            let mut best_idx = None;
-                            let mut best_corr = 0.0_f64;
-                            let mut best_quality = 0.0_f64;
-                            let mut best_amp = 0.0_f64;
-                            for start in 0..=(series.len() - l) {
+                            // Evaluate every window position in time order.
+                            // Correlation uses the derivative series; the
+                            // recorded amplitude stays the displacement
+                            // magnitude at that window.
+                            let mut windows: Vec<(f64, f64, f64)> = Vec::new();
+                            for start in 0..=(diff_series.len() - l) {
                                 let mut dot = 0.0_f64;
                                 let mut sig_energy = 0.0_f64;
                                 let mut amp = 0.0_f64;
                                 for n in 0..l {
-                                    let s = series[start + n];
+                                    let s = diff_series[start + n];
                                     let t = template[n];
                                     dot += t * s;
                                     sig_energy += s * s;
-                                    amp = amp.max(s.abs());
+                                    amp = amp.max(series[start + n].abs());
                                 }
                                 let corr = dot.abs();
                                 if corr < *min_corr {
@@ -315,20 +378,42 @@ impl ElasticWaveSolver {
                                 }
                                 let denom = template_norm.mul_add(sig_energy.sqrt(), 1e-30);
                                 let quality = (corr / denom).min(1.0);
-                                if best_idx.is_none() || corr > best_corr {
-                                    best_idx = Some(start);
-                                    best_corr = corr;
-                                    best_quality = quality;
-                                    best_amp = amp;
+                                windows.push((corr, quality, amp));
+                            }
+                            if windows.is_empty() {
+                                continue;
+                            }
+                            let best = windows
+                                .iter()
+                                .max_by(|a, b| a.0.total_cmp(&b.0))
+                                .copied()
+                                .unwrap();
+                            // First-arrival policy: take the earliest window
+                            // whose correlation is at least half the strongest.
+                            // A plain global maximum can lock onto reflected or
+                            // scattered waves arriving after the direct shear
+                            // wavefront, biasing the TOF estimate low; the
+                            // direct arrival is what SWE measures.
+                            let chosen = match windows
+                                .iter()
+                                .enumerate()
+                                .find(|(_, w)| w.0 >= 0.5 * best.0)
+                            {
+                                Some((start, &w)) => (start, w),
+                                None => {
+                                    let start = windows
+                                        .iter()
+                                        .position(|w| *w == best)
+                                        .unwrap_or(0);
+                                    (start, best)
                                 }
-                            }
-                            if let Some(start) = best_idx {
-                                let center = start + (l / 2);
-                                let idx = center.min(history.len() - 1);
-                                arrival_times[[i, j, k]] = history[idx].time;
-                                amplitudes[[i, j, k]] = best_amp;
-                                tracking_quality[[i, j, k]] = best_quality;
-                            }
+                            };
+                            let (start, chosen) = chosen;
+                            let center = start + (l / 2);
+                            let idx = center.min(history.len() - 1);
+                            arrival_times[[i, j, k]] = history[idx].time;
+                            amplitudes[[i, j, k]] = chosen.2;
+                            tracking_quality[[i, j, k]] = chosen.1;
                         }
                     }
                 }
