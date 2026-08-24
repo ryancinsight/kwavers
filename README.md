@@ -387,6 +387,7 @@ neither code's boundary treatment has reached.
 |------|------|-------|-------------|----------------|-----------|
 | `ivp_homogeneous_2d` | 64 × 64 | 100 | 5.50e-7 | 1.05e-6 | 1.000000000 |
 | `ivp_homogeneous_3d` | 32 × 32 × 32 | 50 | 1.06e-4 | 2.20e-4 | 0.999999994 |
+| `ivp_absorbing_2d` | 64 × 64 | 100 | 8.10e-3 | 4.99e-3 | 0.999999924 |
 
 The finite-difference solver is measured against the same reference as a
 cross-scheme check, since the pseudospectral solver shares its k-space machinery
@@ -394,10 +395,16 @@ and cannot be an independent oracle for it. It separates by `2.53e-2` relative
 L2 at `r = 0.999647`, which is its own fourth-order dispersion error and is
 gated as such rather than at the pseudospectral bound.
 
+`ivp_absorbing_2d` is the lossless 2-D case with power-law absorption
+(`40 dB/(MHz^1.5 cm)`, `y = 1.5`) and nothing else changed, so the pair isolates
+the absorption model; the test asserts both that kwavers matches the absorbing
+reference and that the absorbing field separates from the lossless one, since
+agreement alone would not prove the model ran.
+
 `k-wave-python` ships no 1-D solver, so there is no 1-D row; the axisymmetric
-case is a separate geometry and is not yet covered. Absorption, nonlinearity,
-heterogeneous media, and source-driven problems have no committed reference
-field yet and are not covered by this result.
+case is a separate geometry and is not yet covered. Nonlinearity, heterogeneous
+media, elastic propagation, and source-driven problems have no committed
+reference field yet and are not covered by this result.
 [ADR 119](docs/adr/119-kwave-reference-oracle.md) records the reference
 provenance, the tolerance derivation, and what the comparison does not establish.
 

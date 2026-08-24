@@ -93,6 +93,11 @@ class Case:
     # differential test compares the two fields. Chosen so that the absorbing
     # layer of neither code overlaps the window at the final time.
     compare_radius_cells: int
+    # Power-law absorption `alpha(f) = alpha_coeff * f**alpha_power`, in
+    # k-Wave's own units of dB/(MHz**alpha_power cm). `None` is a lossless
+    # medium; both codes take the coefficient in these units unconverted.
+    alpha_coeff_db: float | None = None
+    alpha_power: float | None = None
 
 
 # k-wave-python exposes `kspaceFirstOrder2D`, `kspaceFirstOrder3D`, and the
@@ -107,6 +112,19 @@ CASES: tuple[Case, ...] = (
     # Three dimensions: 32 cubed spans 3.2 mm. In 0.5 us the wavefront reaches
     # radius 7.5 cells; the 12-cell window clears the 4-cell edge margin.
     Case("ivp_homogeneous_3d", (32, 32, 32), 0.5e-6, 12),
+    # The lossless two-dimensional case with power-law absorption switched on,
+    # so the pair isolates the absorption model: identical grid, seed, time
+    # step, and step count, one variable changed.
+    #
+    # `alpha_coeff` is deliberately far above tissue (which runs 0.5 to 1.5).
+    # The seed's dominant content sits near 0.8 MHz and the wave travels only
+    # 1.5 mm, so a tissue coefficient would attenuate by under one percent --
+    # inside the noise of the comparison and unable to distinguish a correct
+    # absorption model from none at all. At 40 the same path attenuates by
+    # roughly a third, which the differential test asserts explicitly against
+    # the lossless field. Both codes receive the identical coefficient, so the
+    # value's realism is irrelevant to what the comparison establishes.
+    Case("ivp_absorbing_2d", (64, 64), 1.0e-6, 24, alpha_coeff_db=40.0, alpha_power=1.5),
 )
 
 
@@ -141,7 +159,12 @@ def run_case(case: Case) -> dict[str, object]:
         raise ValueError(f"unsupported dimensionality {dims}")
 
     kgrid = kWaveGrid(list(case.shape), [DX_M] * dims)
-    medium = kWaveMedium(sound_speed=SOUND_SPEED_M_S, density=DENSITY_KG_M3)
+    medium = kWaveMedium(
+        sound_speed=SOUND_SPEED_M_S,
+        density=DENSITY_KG_M3,
+        alpha_coeff=case.alpha_coeff_db,
+        alpha_power=case.alpha_power,
+    )
     kgrid.makeTime(medium.sound_speed, cfl=CFL, t_end=case.t_end_s)
 
     p0 = gaussian_seed(case.shape)
@@ -231,7 +254,8 @@ def main() -> int:
     manifest["medium"] = {
         "sound_speed_m_s": SOUND_SPEED_M_S,
         "density_kg_m3": DENSITY_KG_M3,
-        "absorption": "lossless",
+        "absorption": "per case; see alpha_coeff_db and alpha_power",
+        "alpha_coeff_units": "dB/(MHz**alpha_power cm)",
     }
     manifest["seed"] = {
         "profile": "isotropic_gaussian",
@@ -263,6 +287,8 @@ def main() -> int:
             "steps": result["steps"],
             "t_end_s": float(result["dt_s"]) * int(result["steps"]),
             "compare_radius_cells": case.compare_radius_cells,
+            "alpha_coeff_db": case.alpha_coeff_db,
+            "alpha_power": case.alpha_power,
         }
         print(
             f"[kwave-reference] {case.name}: steps={result['steps']} "

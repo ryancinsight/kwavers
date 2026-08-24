@@ -1,5 +1,22 @@
 {
   "cases": {
+    "ivp_absorbing_2d": {
+      "alpha_coeff_db": 40.0,
+      "alpha_power": 1.5,
+      "archive": "ivp_absorbing_2d.npz",
+      "bytes": 21933,
+      "cfl": 0.15,
+      "compare_radius_cells": 24,
+      "dt_s": 1e-08,
+      "dx_m": 0.0001,
+      "sha256": "5d6ab3b85324748e7d2bb4c1ab0e9f245ae4f93dbe8b4011dd9546783db60f8f",
+      "shape": [
+        64,
+        64
+      ],
+      "steps": 100,
+      "t_end_s": 1e-06
+    },
     "ivp_homogeneous_2d": {
       "archive": "ivp_homogeneous_2d.npz",
       "bytes": 23388,
@@ -33,7 +50,8 @@
     }
   },
   "medium": {
-    "absorption": "lossless",
+    "absorption": "per case; see alpha_coeff_db and alpha_power",
+    "alpha_coeff_units": "dB/(MHz**alpha_power cm)",
     "density_kg_m3": 1000.0,
     "sound_speed_m_s": 1500.0
   },

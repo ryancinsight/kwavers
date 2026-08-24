@@ -61,10 +61,11 @@ Both cases are lossless homogeneous-water initial-value problems with an
 isotropic Gaussian initial pressure at `sigma = 3 dx`, on a `0.1 mm` grid at
 `c0 = 1500 m/s`, `rho0 = 1000 kg/m^3`, Courant number `0.15`.
 
-| Case | Grid | Steps | `dt` | Window radius | Archive |
-| --- | --- | --- | --- | --- | --- |
-| `ivp_homogeneous_2d` | 64 x 64 | 100 | 10 ns | 24 cells | 23 KB |
-| `ivp_homogeneous_3d` | 32 x 32 x 32 | 50 | 10 ns | 12 cells | 128 KB |
+| Case | Grid | Steps | `dt` | Window radius | Absorption | Archive |
+| --- | --- | --- | --- | --- | --- | --- |
+| `ivp_homogeneous_2d` | 64 x 64 | 100 | 10 ns | 24 cells | lossless | 23 KB |
+| `ivp_homogeneous_3d` | 32 x 32 x 32 | 50 | 10 ns | 12 cells | lossless | 128 KB |
+| `ivp_absorbing_2d` | 64 x 64 | 100 | 10 ns | 24 cells | `40 dB/(MHz^1.5 cm)`, `y = 1.5` | 22 KB |
 
 Four choices make the comparison an oracle rather than a coincidence.
 
@@ -97,6 +98,7 @@ Full-field agreement over the comparison window, at the committed revision:
 | --- | --- | --- | --- |
 | `ivp_homogeneous_2d` | 5.50e-7 | 1.05e-6 | 1.000000000 |
 | `ivp_homogeneous_3d` | 1.06e-4 | 2.20e-4 | 0.999999994 |
+| `ivp_absorbing_2d` | 8.10e-3 | 4.99e-3 | 0.999999924 |
 
 Both cases exceed the `r >= 0.9999` figure the README published, by four to five
 orders of magnitude in the L2 norm.
@@ -120,6 +122,49 @@ not decorrelate, so falling below the correlation floor would mean the scheme is
 wrong rather than merely dispersive.
 
 The four tests execute in 2.35 s, inside the standard nextest budget.
+
+## The absorbing case
+
+`ivp_absorbing_2d` is the lossless two-dimensional case with power-law
+absorption switched on and nothing else changed, so the pair isolates the
+absorption model.
+
+`alpha_coeff` is set to `40 dB/(MHz^1.5 cm)`, far above tissue's 0.5 to 1.5. The
+seed's dominant content sits near 0.8 MHz and the wave travels 1.5 mm, so a
+tissue coefficient attenuates by under one percent -- inside the comparison's
+noise, and unable to distinguish a correct absorption model from none at all. At
+40 the same path attenuates by roughly a third. Both codes receive the identical
+coefficient, so the value's realism has no bearing on what the comparison
+establishes. The test asserts that separation explicitly against the lossless
+reference, because agreement alone would not prove the model ran.
+
+Its bound is `2e-2` rather than the lossless `1e-3`: the residual is not the
+storage-precision floor but the two codes' differing discretizations of the
+fractional-Laplacian operator and its Kramers-Kronig dispersion partner
+`eta tan(pi y / 2)`, which does not shrink with resolution. `2e-2` clears the
+measured `8.1e-3` while staying far below the `0.32` attenuation under test, so a
+mismodelled absorption cannot meet it.
+
+### A defect this case exposed
+
+The first attempt measured `r = 0.836` and, on inspection, produced a field
+bit-identical to the lossless run and completely insensitive to `alpha_coeff` --
+`4000` and `40` gave the same output to six digits.
+
+`initialize_absorption_operators` prefers the *medium's* absorption coefficient
+over the one in `PSTDConfig::absorption_mode`, falling back to the config only
+when the medium reports exactly zero. `HomogeneousMedium::new` seeds
+`absorption_alpha` with water's coefficient, which is never zero, so the config
+coefficient is unreachable through that medium and the solver silently ran at
+water's absorption instead of the requested value. Setting the coefficient
+through `HomogeneousMedium::set_acoustic_properties` produces the agreement
+tabulated above.
+
+The precedence is real behaviour and may be the intended design -- k-Wave also
+puts absorption on the medium -- but it is silent and undocumented, and it makes
+a public configuration field inert for the most common medium type. Filed as
+`KW-ABSORPTION-CONFIG-PRECEDENCE`; the reference test documents the working route
+at its medium constructor rather than working around it silently.
 
 ## Tolerance derivation
 
@@ -168,11 +213,11 @@ at the assignment site.
   gates the Python cached-parity suite, which depends on the external solver.
   That suite's reproducibility is a separate item; this ADR closes the Rust-side
   gap only.
-- The reference set covers linear lossless propagation in two and three
-  dimensions. Absorption, nonlinearity, heterogeneous media, elastic propagation,
-  and source-driven (as opposed to initial-value) problems have no committed
-  reference yet, and each is a follow-up case rather than a claim this ADR
-  supports.
+- The reference set covers linear propagation in two and three dimensions,
+  lossless and with power-law absorption. Nonlinearity, heterogeneous media,
+  elastic propagation, and source-driven (as opposed to initial-value) problems
+  have no committed reference yet, and each is a follow-up case rather than a
+  claim this ADR supports.
 
 ## Alternatives rejected
 
