@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+# Refuse a push whose Cargo.lock cannot resolve under `--locked`.
+#
+# This repository is normally worked on inside the Atlas stack, whose
+# `.cargo/config.toml` carries a `[patch]` overlay redirecting every first-party
+# dependency to a local working tree. Cargo finds that config by walking up from
+# the current directory, so *any* cargo command run from inside the stack — a
+# test run, a check, a build — rewrites `Cargo.lock` with every
+# `source = "git+..."` line stripped.
+#
+# That lock resolves perfectly under the same overlay, which is why local
+# verification never sees the problem, and fails every `--locked` job in CI,
+# which has no overlay. The gap between those two facts is the whole reason this
+# hook exists: the lockfile is the one artifact whose correctness cannot be
+# established from inside the environment that produces it.
+#
+# `scripts/lockfile.py --check` runs cargo from outside the overlay and is the
+# same check CI runs, so a push that would fail there never reaches a runner.
+#
+# Install (git does not apply tracked hooks on its own):
+#
+#     git config core.hooksPath .githooks
+#
+# Bypass deliberately, for a push that does not touch dependency resolution:
+#
+#     SKIP_LOCKFILE_CHECK=1 git push
+set -euo pipefail
+
+if [ "${SKIP_LOCKFILE_CHECK:-0}" = "1" ]; then
+  echo "pre-push: lockfile check skipped by SKIP_LOCKFILE_CHECK" >&2
+  exit 0
+fi
+
+repo_root="$(git rev-parse --show-toplevel)"
+checker="$repo_root/scripts/lockfile.py"
+
+if [ ! -f "$checker" ]; then
+  # Nothing to enforce on a checkout that predates the tool; say so rather than
+  # passing silently, so a missing guard is visible instead of assumed.
+  echo "pre-push: scripts/lockfile.py not present; lockfile not verified" >&2
+  exit 0
+fi
+
+python_bin="${PYTHON:-}"
+if [ -z "$python_bin" ]; then
+  for candidate in python3 python; do
+    if command -v "$candidate" >/dev/null 2>&1; then
+      python_bin="$candidate"
+      break
+    fi
+  done
+fi
+
+if [ -z "$python_bin" ]; then
+  echo "pre-push: no python interpreter found; lockfile not verified" >&2
+  exit 0
+fi
+
+if ! "$python_bin" "$checker" --check; then
+  cat >&2 <<'MESSAGE'
+
+pre-push: Cargo.lock does not resolve under --locked, so every CI job that
+passes --locked would fail on this push.
+
+The usual cause is a cargo command run from inside the Atlas stack, which
+strips the lock's git sources. Repair it with:
+
+    python3 scripts/lockfile.py --regenerate
+
+then stage the result. To push anyway: SKIP_LOCKFILE_CHECK=1 git push
+MESSAGE
+  exit 1
+fi
