@@ -80,6 +80,6 @@
 | [114](114-typed-sonoluminescence-emission.md) | 114. Type sonoluminescence emission components at the Aequitas boundary | Accepted |
 | [115](115-fwi-transmission-acquisition-seam.md) | 115. A transmission-acquisition seam for frequency-domain FWI | Accepted |
 | [116](116-workspace-clippy-floor.md) | 116. One workspace clippy floor, and which of the two candidates it is | Accepted |
-| [117](117-typed-seismic-example-workflows.md) | Type and partition the seismic example workflows | Accepted |
-| [118](118-typed-recorder-channel-selection.md) | Typed recorder channel selection | Accepted |
-| [119](119-kwave-reference-oracle.md) | 119. In-repository k-Wave differential oracle | Accepted |
+| [117](117-typed-seismic-example-workflows.md) | 117. Type and partition the seismic example workflows | Accepted |
+| [118](118-typed-recorder-channel-selection.md) | 118. Typed recorder channel selection | Accepted |
+| [119](119-kwave-reference-oracle.md) | In-repository k-Wave differential oracle | Accepted |
