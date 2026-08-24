@@ -11,8 +11,6 @@
 # its first real use and filed as KW-SWE-VOLUMETRIC-COVERAGE. It is listed so
 # the checker keeps guarding the other 670 tests; it is owed a fix, not
 # accepted.
-kwavers::dispersion_validation_test test_group_velocity
-kwavers::dispersion_validation_test test_numerical_dispersion_fourth_order
 kwavers::literature_validation test_rayleigh_collapse_time
 kwavers::pinn_bc_validation bc_loss_tests::test_bc_loss_decreases_with_training
 kwavers::pinn_bc_validation bc_loss_tests::test_dirichlet_bc_zero_boundary
