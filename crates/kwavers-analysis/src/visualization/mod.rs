@@ -3,12 +3,12 @@
 //! Core visualization and rendering infrastructure for the acoustic simulation library.
 //!
 //! ## Features
-//! - **Real-time Rendering**: GPU-accelerated visualization of acoustic fields
-//! - **Multiple Backends**: Support for OpenGL, Vulkan, and WebGPU
+//! - **Real-time Rendering**: provider-backed field transfer and CPU rasterization
+//! - **Selectable Backends**: Leto host storage or Hephaestus device transfer
 //! - **Adaptive Quality**: Dynamic quality adjustment based on performance
 //! - **Interactive Controls**: Real-time parameter adjustment and view manipulation
 //! - **Data Export**: High-quality image and video export capabilities
-//! - **Fallback Support**: CPU-based rendering when GPU is unavailable
+//! - **Explicit CPU Mode**: CPU fallback is selected when GPU visualization is disabled
 //!
 //! ## Architecture
 //! ```text
@@ -16,7 +16,8 @@
 //! ├── Config (configuration management)
 //! ├── Metrics (performance tracking)
 //! ├── Engine (core rendering pipeline)
-//! └── Fallback (CPU-based rendering)
+//! ├── Transfer contract (provider-neutral field upload)
+//! └── Fallback (CPU-based rendering when the feature is disabled)
 //! ```
 //!
 //! ## Design Principles
@@ -31,7 +32,7 @@ pub mod engine;
 pub mod fallback;
 pub mod metrics;
 
-// GPU-specific modules
+// Feature-gated visualization modules
 #[cfg(feature = "gpu-visualization")]
 pub mod controls;
 #[cfg(feature = "gpu-visualization")]
@@ -40,11 +41,17 @@ pub mod data_pipeline;
 pub mod renderer;
 #[cfg(feature = "gpu-visualization")]
 pub mod stream;
+// Provider-neutral transfer seam; the domain crate owns the contract, the
+// Hephaestus-backed WGPU implementation lives in kwavers-gpu.
+#[cfg(feature = "gpu-visualization")]
+pub mod transfer_contract;
 
 // Re-exports for convenience
 pub use config::{ColorScheme, RenderQuality, VisualizationConfig};
-pub use engine::VisualizationEngine;
+pub use engine::{UnconfiguredVisualizationProvider, VisualizationEngine};
 pub use metrics::{MetricsTracker, VisualizationMetrics};
+#[cfg(feature = "gpu-visualization")]
+pub use transfer_contract::VisualizationTransferProvider;
 
 // Re-export field types
 pub use kwavers_field::mapping::UnifiedFieldType;
@@ -53,7 +60,7 @@ pub use kwavers_field::mapping::UnifiedFieldType;
 #[cfg(feature = "gpu-visualization")]
 pub use controls::InteractiveControls;
 #[cfg(feature = "gpu-visualization")]
-pub use data_pipeline::DataPipeline;
+pub use data_pipeline::{DataPipeline, TransferMode, TransferOptions};
 #[cfg(feature = "gpu-visualization")]
 pub use renderer::Renderer3D;
 #[cfg(feature = "gpu-visualization")]
@@ -64,6 +71,48 @@ mod tests {
     use super::*;
     use kwavers_grid::Grid;
     use leto::{Array3, Array4};
+
+    #[cfg(feature = "gpu-visualization")]
+    #[derive(Debug, Default)]
+    struct RecordingProvider {
+        last_transfer: Option<(UnifiedFieldType, Vec<f32>, TransferMode)>,
+    }
+
+    #[cfg(feature = "gpu-visualization")]
+    impl VisualizationTransferProvider for RecordingProvider {
+        fn device_name(&self) -> &str {
+            "recording-provider"
+        }
+
+        fn is_available(&self) -> bool {
+            true
+        }
+
+        fn transfer_field(
+            &mut self,
+            field_type: UnifiedFieldType,
+            samples: &[f32],
+            mode: TransferMode,
+        ) -> kwavers_core::error::KwaversResult<()> {
+            self.last_transfer = Some((field_type, samples.to_vec(), mode));
+            Ok(())
+        }
+
+        fn memory_usage(&self) -> usize {
+            self.last_transfer.as_ref().map_or(0, |(_, samples, _)| {
+                samples.len() * std::mem::size_of::<f32>()
+            })
+        }
+    }
+
+    #[cfg(feature = "gpu-visualization")]
+    fn create_configured_test_engine(
+        config: VisualizationConfig,
+    ) -> VisualizationEngine<RecordingProvider> {
+        VisualizationEngine::create(config)
+            .expect("valid visualization configuration")
+            .set_transfer_provider(RecordingProvider::default())
+    }
 
     fn create_test_grid() -> Grid {
         Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).expect("Failed to create test grid")
@@ -183,9 +232,28 @@ mod tests {
 
     #[cfg(feature = "gpu-visualization")]
     #[test]
+    fn test_render_field_requires_gpu_initialization() {
+        let config = VisualizationConfig::default();
+        let mut engine = create_configured_test_engine(config);
+        let grid = create_test_grid();
+        let field = create_test_field();
+
+        let result =
+            pollster::block_on(engine.render_field(&field, UnifiedFieldType::Pressure, &grid));
+
+        assert!(matches!(
+            result,
+            Err(kwavers_core::error::KwaversError::System(
+                kwavers_core::error::SystemError::FeatureNotAvailable { feature, .. }
+            )) if feature == "gpu-visualization"
+        ));
+    }
+
+    #[cfg(feature = "gpu-visualization")]
+    #[test]
     fn test_render_multi_field_requires_gpu_initialization() {
         let config = VisualizationConfig::default();
-        let mut engine = VisualizationEngine::create(config).unwrap();
+        let mut engine = create_configured_test_engine(config);
         let grid = create_test_grid();
         let fields = Array4::zeros((32, 32, 32, 2));
         let field_types = vec![UnifiedFieldType::Pressure, UnifiedFieldType::Temperature];
@@ -203,6 +271,9 @@ mod tests {
     #[test]
     fn test_render_multi_field_rejects_field_type_mismatch() {
         let config = VisualizationConfig::default();
+        #[cfg(feature = "gpu-visualization")]
+        let mut engine = create_configured_test_engine(config);
+        #[cfg(not(feature = "gpu-visualization"))]
         let mut engine = VisualizationEngine::create(config).unwrap();
         let grid = create_test_grid();
         let fields = Array4::zeros((32, 32, 32, 2));

@@ -15,6 +15,12 @@ pub struct KSpaceCalculator;
 
 impl KSpaceCalculator {
     /// Generate k-space wavenumbers for one dimension
+    ///
+    /// # Panics
+    ///
+    /// Panics if the frequency vector returned by Apollo cannot be represented
+    /// with the requested one-dimensional shape. Apollo returns one value per
+    /// requested sample, so this indicates a violated upstream shape contract.
     #[must_use]
     pub fn generate_k_vector(n: usize, dx: f64) -> Array1<f64> {
         let _freqs = apollo::fftfreq(n, dx);
@@ -25,10 +31,12 @@ impl KSpaceCalculator {
     }
 
     /// Generate 3D k-squared array for Laplacian operations
+    ///
     /// # Panics
-    /// - Panics if `kx contiguous`.
-    /// - Panics if `ky contiguous`.
-    /// - Panics if `kz contiguous`.
+    ///
+    /// Panics if one of the generated vectors or the newly allocated output
+    /// cannot be viewed as contiguous storage. These arrays are created as
+    /// dense owned buffers, so this indicates a violated storage invariant.
     ///
     #[must_use]
     pub fn generate_k_squared(

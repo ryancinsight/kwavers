@@ -89,6 +89,12 @@ impl Nonlinear3dConfig {
         }
     }
 
+    /// Validate nonlinear 3-D inversion and cavitation parameters.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when grid, iteration, transducer, material, or
+    /// regularization parameters violate their domain constraints.
     pub fn validate(&self) -> KwaversResult<()> {
         if self.grid_size < 12 {
             return Err(KwaversError::InvalidInput(

@@ -1,25 +1,4 @@
-//! `kwavers-gpu` - provider-generic GPU compute backend for Kwavers.
-//!
-//! This crate is the single home for GPU concretions: Hephaestus-backed device
-//! acquisition, provider-specific buffers and kernels, and the concrete
-//! implementations of the [`kwavers_solver::backend::traits::ComputeBackend`]
-//! trait surface.
-//!
-//! ## Why a separate leaf crate
-//!
-//! The compute-backend and FDTD-accelerator traits live in `kwavers-solver`.
-//! Per the dependency-inversion rule, the algorithm crates depend only on those
-//! abstractions; concrete WGPU/WGSL code lives here, downstream of solver, and
-//! is injected at the application boundary. Adding CUDA means adding another
-//! Hephaestus provider implementation in this crate, not changing algorithm
-//! layers.
-//!
-//! Migration status: this crate is consolidating the three previously scattered
-//! GPU code paths (the old `kwavers::gpu` facade monolith,
-//! `kwavers-solver::backend::gpu`, and the `forward::{fdtd,pstd}` GPU kernels)
-//! into one Hephaestus-backed provider boundary. The currently implemented
-//! provider is WGPU because the production kernels are WGSL.
-
+#![doc = include_str!("../README.md")]
 #![allow(clippy::module_inception)]
 
 // GPU allocation profiling/tracking. Pure bookkeeping over the ungated
@@ -43,8 +22,14 @@ pub mod backend;
 #[cfg(feature = "gpu")]
 pub mod beamforming;
 
+// Provider-owned visualization transfer: concrete WGPU device/buffer/queue
+// ownership implementing kwavers-analysis' provider-neutral seam.
+#[cfg(feature = "visualization")]
+pub mod visualization;
+
 // CPU-vs-GPU differential equivalence validation, moved out of solver with the
 // backend it exercises.
+#[cfg(feature = "gpu")]
 pub mod validation;
 
 // GPU-resident PSTD solver, k-space corrected pseudospectral. Solver keeps only

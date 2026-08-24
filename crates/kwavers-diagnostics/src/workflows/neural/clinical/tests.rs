@@ -11,44 +11,39 @@ fn test_clinical_decision_support_creation() {
 
 #[test]
 fn test_lesion_type_classification() {
-    let support = NeuralClinicalDecisionSupport::new(ClinicalThresholds::default());
     let features = FeatureMap::new();
 
-    let hyperechoic = support.classify_lesion_type(3.5, &features, 5, 5, 5);
+    let hyperechoic = NeuralClinicalDecisionSupport::classify_lesion_type(3.5, &features, 5, 5, 5);
     assert_eq!(hyperechoic, "Hyperechoic Lesion");
 
-    let hypoechoic = support.classify_lesion_type(0.3, &features, 5, 5, 5);
+    let hypoechoic = NeuralClinicalDecisionSupport::classify_lesion_type(0.3, &features, 5, 5, 5);
     assert_eq!(hypoechoic, "Hypoechoic Lesion");
 
-    let isoechoic = support.classify_lesion_type(1.0, &features, 5, 5, 5);
+    let isoechoic = NeuralClinicalDecisionSupport::classify_lesion_type(1.0, &features, 5, 5, 5);
     assert_eq!(isoechoic, "Isoechoic Lesion");
 }
 
 #[test]
 fn test_clinical_significance_assessment() {
-    let support = NeuralClinicalDecisionSupport::new(ClinicalThresholds::default());
-
-    let high_sig = support.assess_clinical_significance(0.9, 0.8);
+    let high_sig = NeuralClinicalDecisionSupport::assess_clinical_significance(0.9, 0.8);
     assert!(high_sig > 0.8);
 
-    let low_sig = support.assess_clinical_significance(0.3, 0.2);
+    let low_sig = NeuralClinicalDecisionSupport::assess_clinical_significance(0.3, 0.2);
     assert!(low_sig < 0.3);
 }
 
 #[test]
 fn test_recommendations_no_lesions() {
-    let support = NeuralClinicalDecisionSupport::new(ClinicalThresholds::default());
     let lesions = Vec::new();
     let classification = TissueClassification::empty();
 
-    let recs = support.generate_recommendations(&lesions, &classification);
+    let recs = NeuralClinicalDecisionSupport::generate_recommendations(&lesions, &classification);
     assert!(!recs.is_empty());
     assert!(recs[0].contains("No significant lesions"));
 }
 
 #[test]
 fn test_recommendations_with_lesions() {
-    let support = NeuralClinicalDecisionSupport::new(ClinicalThresholds::default());
     let lesions = vec![
         LesionDetection {
             center: (10, 10, 10),
@@ -67,24 +62,23 @@ fn test_recommendations_with_lesions() {
     ];
     let classification = TissueClassification::empty();
 
-    let recs = support.generate_recommendations(&lesions, &classification);
+    let recs = NeuralClinicalDecisionSupport::generate_recommendations(&lesions, &classification);
     assert!(recs[0].contains("2 potential lesion"));
     assert!(recs.iter().any(|r| r.contains("high-confidence")));
 }
 
 #[test]
 fn test_diagnostic_confidence_no_lesions() {
-    let support = NeuralClinicalDecisionSupport::new(ClinicalThresholds::default());
     let lesions = Vec::new();
     let confidence = Array3::from_elem((10, 10, 10), 0.8);
 
-    let diag_conf = support.compute_diagnostic_confidence(&lesions, confidence.view());
+    let diag_conf =
+        NeuralClinicalDecisionSupport::compute_diagnostic_confidence(&lesions, confidence.view());
     assert!(diag_conf > 0.8);
 }
 
 #[test]
 fn test_diagnostic_confidence_with_lesions() {
-    let support = NeuralClinicalDecisionSupport::new(ClinicalThresholds::default());
     let lesions = vec![LesionDetection {
         center: (5, 5, 5),
         size_mm: 4.0,
@@ -94,16 +88,16 @@ fn test_diagnostic_confidence_with_lesions() {
     }];
     let confidence = Array3::from_elem((10, 10, 10), 0.85);
 
-    let diag_conf = support.compute_diagnostic_confidence(&lesions, confidence.view());
+    let diag_conf =
+        NeuralClinicalDecisionSupport::compute_diagnostic_confidence(&lesions, confidence.view());
     assert!(diag_conf > 0.85);
 }
 
 #[test]
 fn test_local_statistics_computation() {
-    let support = NeuralClinicalDecisionSupport::new(ClinicalThresholds::default());
     let volume = Array3::from_elem((20, 20, 20), 1.0);
 
-    let stats = support.compute_local_statistics(&volume.view(), 10, 10, 10);
+    let stats = NeuralClinicalDecisionSupport::compute_local_statistics(&volume.view(), 10, 10, 10);
     assert!((stats - 1.0).abs() < 1e-6);
 }
 

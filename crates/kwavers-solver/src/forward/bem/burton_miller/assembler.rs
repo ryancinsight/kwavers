@@ -19,13 +19,13 @@ impl BurtonMillerAssembler {
     }
 
     /// Compute area-weighted vertex normals for a triangular mesh (Gouraud shading).
-    fn compute_vertex_normals(&self, nodes: &[[f64; 3]], elements: &[[usize; 3]]) -> Vec<[f64; 3]> {
+    fn compute_vertex_normals(nodes: &[[f64; 3]], elements: &[[usize; 3]]) -> Vec<[f64; 3]> {
         let mut normals: Vec<[f64; 3]> = vec![[0.0, 0.0, 0.0]; nodes.len()];
 
         for &elem in elements {
             let (n1, n2, n3) = (elem[0], elem[1], elem[2]);
-            let tri_normal = self.triangle_normal(nodes[n1], nodes[n2], nodes[n3]);
-            let area = self.triangle_area(nodes[n1], nodes[n2], nodes[n3]);
+            let tri_normal = Self::triangle_normal(nodes[n1], nodes[n2], nodes[n3]);
+            let area = Self::triangle_area(nodes[n1], nodes[n2], nodes[n3]);
             for &v in &[n1, n2, n3] {
                 normals[v][0] += area * tri_normal[0];
                 normals[v][1] += area * tri_normal[1];
@@ -60,7 +60,7 @@ impl BurtonMillerAssembler {
         let n = num_collocation_points;
         let mut h_matrix = Array2::zeros((n, n));
         let alpha = self.config.coupling_alpha;
-        let vertex_normals = self.compute_vertex_normals(boundary_nodes, elements);
+        let vertex_normals = Self::compute_vertex_normals(boundary_nodes, elements);
 
         for i in 0..n {
             let collocation_point = boundary_nodes[i];
@@ -104,7 +104,7 @@ impl BurtonMillerAssembler {
         let n = num_collocation_points;
         let mut g_matrix = Array2::zeros((n, n));
         let alpha = self.config.coupling_alpha;
-        let vertex_normals = self.compute_vertex_normals(boundary_nodes, elements);
+        let vertex_normals = Self::compute_vertex_normals(boundary_nodes, elements);
 
         for i in 0..n {
             let collocation_point = boundary_nodes[i];
@@ -151,7 +151,7 @@ impl BurtonMillerAssembler {
         let gauss_points: [(f64, f64); 3] = [(1.0 / 3.0, 1.0 / 3.0), (0.6, 0.2), (0.2, 0.6)];
         let gauss_weights = [1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0];
 
-        let normal_y = self.triangle_normal(node1, node2, node3);
+        let normal_y = Self::triangle_normal(node1, node2, node3);
 
         for (gp_idx, &(xi, eta)) in gauss_points.iter().enumerate() {
             let zeta = 1.0 - xi - eta;
@@ -161,12 +161,12 @@ impl BurtonMillerAssembler {
                 eta.mul_add(node3[2], zeta * node1[2] + xi * node2[2]),
             ];
 
-            let r = self.distance(collocation, &point_on_element);
+            let r = Self::distance(collocation, &point_on_element);
             if r < self.config.singular_regularization {
                 continue;
             }
 
-            let dg_dn = self.greens_function_normal_derivative_full(
+            let dg_dn = Self::greens_function_normal_derivative_full(
                 k,
                 r,
                 collocation,
@@ -175,7 +175,7 @@ impl BurtonMillerAssembler {
             );
             h_cbie += gauss_weights[gp_idx] * dg_dn;
 
-            let d2g_dndn = self.greens_function_double_normal_derivative(
+            let d2g_dndn = Self::greens_function_double_normal_derivative(
                 k,
                 r,
                 collocation,
@@ -186,7 +186,7 @@ impl BurtonMillerAssembler {
             h_hbie += gauss_weights[gp_idx] * d2g_dndn;
         }
 
-        let element_area = self.triangle_area(node1, node2, node3);
+        let element_area = Self::triangle_area(node1, node2, node3);
         h_cbie *= element_area;
         h_hbie *= element_area;
 
@@ -226,16 +226,16 @@ impl BurtonMillerAssembler {
                 eta.mul_add(node3[2], zeta * node1[2] + xi * node2[2]),
             ];
 
-            let r = self.distance(collocation, &point_on_element);
+            let r = Self::distance(collocation, &point_on_element);
             if r < self.config.singular_regularization {
                 continue;
             }
 
-            let g = self.greens_function_helmholtz(k, r);
+            let g = Self::greens_function_helmholtz(k, r);
             g_cbie += gauss_weights[gp_idx] * g;
 
             // ∂G/∂n_x: swap src/obs so rhat = (collocation − point)/R
-            let dg_dnx = self.greens_function_normal_derivative_full(
+            let dg_dnx = Self::greens_function_normal_derivative_full(
                 k,
                 r,
                 &point_on_element,
@@ -245,7 +245,7 @@ impl BurtonMillerAssembler {
             g_hbie += gauss_weights[gp_idx] * dg_dnx;
         }
 
-        let element_area = self.triangle_area(node1, node2, node3);
+        let element_area = Self::triangle_area(node1, node2, node3);
         g_cbie *= element_area;
         g_hbie *= element_area;
 

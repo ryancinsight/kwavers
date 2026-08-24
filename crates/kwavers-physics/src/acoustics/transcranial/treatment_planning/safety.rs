@@ -13,7 +13,6 @@ impl TreatmentPlanner {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(crate) fn validate_safety(
-        &self,
         temperature: &Array3<f64>,
         acoustic_field: &Array3<f64>,
         frequency_hz: f64,
@@ -157,8 +156,8 @@ mod tests {
             &default_constraints(),
         );
 
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("nonfinite"));
+        let err = result.expect_err("nonfinite temperature must be rejected");
+        assert!(err.to_string().contains("nonfinite"));
     }
 
     #[test]
@@ -173,8 +172,8 @@ mod tests {
             &default_constraints(),
         );
 
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Mechanical index"));
+        let err = result.expect_err("invalid frequency must be rejected");
+        assert!(err.to_string().contains("Mechanical index"));
     }
 
     #[test]
@@ -189,7 +188,7 @@ mod tests {
             &default_constraints(),
         );
 
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Mechanical index"));
+        let err = result.expect_err("negative intensity must be rejected");
+        assert!(err.to_string().contains("Mechanical index"));
     }
 }

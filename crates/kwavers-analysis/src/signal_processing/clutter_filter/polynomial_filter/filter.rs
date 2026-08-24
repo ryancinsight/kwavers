@@ -54,6 +54,11 @@ impl PolynomialFilter {
     ///
     /// - Time complexity: O(n_pixels × n_frames × order²)
     /// - Space complexity: O(n_frames × order)
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal analysis state violates
+    /// the precondition required by this operation.
     pub fn filter(&self, slow_time_data: &Array2<f64>) -> KwaversResult<Array2<f64>> {
         let [n_pixels, n_frames] = slow_time_data.shape();
 
@@ -64,7 +69,7 @@ impl PolynomialFilter {
             )));
         }
 
-        let mut time: Array1<f64> = Array1::from_iter((0..n_frames).map(|t| t as f64));
+        let mut time: Array1<f64> = (0..n_frames).map(|t| t as f64).collect();
 
         if self.config.normalize_time {
             let max_time = (n_frames - 1) as f64;
@@ -90,7 +95,7 @@ impl PolynomialFilter {
         let mut vtv = Array2::<f64>::zeros((k, k));
         leto_ops::matmul(&vt.view(), &vandermonde.view(), &mut vtv.view_mut())
             .expect("VᵀV matmul shapes conform");
-        let vtv_inv = self.pseudo_inverse(&vtv)?;
+        let vtv_inv = Self::pseudo_inverse(&vtv)?;
         let mut projection = Array2::<f64>::zeros((k, n_frames));
         leto_ops::matmul(&vtv_inv.view(), &vt.view(), &mut projection.view_mut())
             .expect("projection matmul shapes conform");
@@ -132,7 +137,7 @@ impl PolynomialFilter {
     /// # Errors
     /// - Returns `KwaversError::InvalidInput` if the matrix is not square.
     /// - Returns [`KwaversError::Numerical`] if the matrix is singular (pivot < 1e-12).
-    fn pseudo_inverse(&self, matrix: &Array2<f64>) -> KwaversResult<Array2<f64>> {
+    fn pseudo_inverse(matrix: &Array2<f64>) -> KwaversResult<Array2<f64>> {
         let [n, m] = matrix.shape();
 
         if n != m {

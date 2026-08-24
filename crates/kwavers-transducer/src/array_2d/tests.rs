@@ -186,7 +186,7 @@ fn add_mask_into_accumulates_cached_mask() {
     )
     .unwrap();
     let grid = Grid::new(4, 3, 2, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
-    let grid_id = (&grid as *const Grid) as u64;
+    let grid_id = std::ptr::from_ref::<Grid>(&grid) as u64;
 
     array.cached_grid_id = Some(grid_id);
     array.cached_mask = Some(Array3::from_elem([grid.nx, grid.ny, grid.nz], 2.0));

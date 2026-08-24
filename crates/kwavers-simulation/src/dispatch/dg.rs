@@ -11,6 +11,16 @@ use kwavers_receiver::recorder::pressure_statistics::SampledStatistics;
 use kwavers_solver::forward::pstd::dg::{HybridSpectralDGConfig, HybridSpectralDGSolver};
 
 /// Run a discontinuous Galerkin (hybrid spectral) simulation.
+///
+/// # Errors
+///
+/// Returns an error when a DG time step or result extraction fails for the
+/// supplied grid and medium.
+///
+/// # Panics
+///
+/// Panics if the requested simulation violates an internal solver or field
+/// shape invariant during dispatch.
 pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult> {
     let sensor_mask = req
         .sensor_mask
@@ -54,33 +64,29 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
     let stats = if !sensor_indices.is_empty() {
         let n_cols = sensor_data.shape()[1];
         Some(SampledStatistics {
-            p_max: leto::Array1::from_iter(
-                sensor_data
-                    .rows()
-                    .expect("invariant: rank-2 rows")
-                    .map(|row| row.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b))),
-            ),
-            p_min: leto::Array1::from_iter(
-                sensor_data
-                    .rows()
-                    .expect("invariant: rank-2 rows")
-                    .map(|row| row.iter().fold(f64::INFINITY, |a, &b| a.min(b))),
-            ),
-            p_rms: leto::Array1::from_iter(
-                sensor_data
-                    .rows()
-                    .expect("invariant: rank-2 rows")
-                    .map(|row| {
-                        let sq: f64 = row.iter().map(|v| v * v).sum();
-                        (sq / n_cols as f64).sqrt()
-                    }),
-            ),
-            p_final: leto::Array1::from_iter(
-                sensor_data
-                    .rows()
-                    .expect("invariant: rank-2 rows")
-                    .map(|row| row[n_cols.saturating_sub(1)]),
-            ),
+            p_max: sensor_data
+                .rows()
+                .expect("invariant: rank-2 rows")
+                .map(|row| row.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b)))
+                .collect(),
+            p_min: sensor_data
+                .rows()
+                .expect("invariant: rank-2 rows")
+                .map(|row| row.iter().fold(f64::INFINITY, |a, &b| a.min(b)))
+                .collect(),
+            p_rms: sensor_data
+                .rows()
+                .expect("invariant: rank-2 rows")
+                .map(|row| {
+                    let sq: f64 = row.iter().map(|v| v * v).sum();
+                    (sq / n_cols as f64).sqrt()
+                })
+                .collect(),
+            p_final: sensor_data
+                .rows()
+                .expect("invariant: rank-2 rows")
+                .map(|row| row[n_cols.saturating_sub(1)])
+                .collect(),
         })
     } else {
         None

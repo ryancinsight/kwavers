@@ -49,7 +49,7 @@ impl AcousticWaveModel for WesterveltWave {
             self.initialize_buffers(initial_pressure);
         }
 
-        if !self.check_stability(dt, grid, medium) {
+        if !Self::check_stability(dt, grid, medium) {
             log::debug!("WesterveltWave: Potential instability at t={}", t);
         }
 

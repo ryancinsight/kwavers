@@ -15,7 +15,7 @@ use leto::Array3;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
 
 /// Operator splitting solver for nonlinear acoustics
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct OperatorSplittingSolver {
     /// Grid dimensions
     nx: usize,
@@ -136,6 +136,11 @@ impl OperatorSplittingSolver {
     /// Step 2: Nonlinear correction
     /// Apply Burgers-like nonlinearity: ∂u/∂t + u∂u/∂x = 0
     /// where u = p/(ρ₀c₀) is the normalized pressure
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn nonlinear_step(
         &self,
         pressure: &mut Array3<f64>,
@@ -273,14 +278,5 @@ impl OperatorSplittingSolver {
                 }
             }
         }
-    }
-}
-
-// Implement Copy and Clone for the solver
-impl Copy for OperatorSplittingSolver {}
-
-impl Clone for OperatorSplittingSolver {
-    fn clone(&self) -> Self {
-        *self
     }
 }

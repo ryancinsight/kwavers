@@ -570,7 +570,7 @@ pub fn cavitation_monitor_trace(
 pub fn simulated_population_monitor_trace(
     input: SimulatedPopulationMonitorInput,
 ) -> Option<SimulatedPopulationMonitorTrace> {
-    validate_simulated_population_monitor_input(input)?;
+    validate_simulated_population_monitor_input(&input)?;
     let dt_s = 1.0 / input.prf_hz;
     let mut rng = ChaCha8Rng::seed_from_u64(input.seed);
     let mut pressure_pa = input.p_start_pa.clamp(input.p_min_pa, input.p_max_pa);
@@ -880,7 +880,7 @@ fn validate_per_spot_input(input: PerSpotCavitationDoseInput<'_>) -> Option<()> 
 }
 
 fn validate_simulated_population_monitor_input(
-    input: SimulatedPopulationMonitorInput,
+    input: &SimulatedPopulationMonitorInput,
 ) -> Option<()> {
     if input.n_bubbles == 0
         || input.n_bubbles > MAX_EXACT_F64_INTEGER

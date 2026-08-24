@@ -23,6 +23,11 @@ const FLUID_BULK_MODULUS_WATER: f64 = 2.25e9;
 /// the `Medium` trait plus
 /// SSOT constants.  Returns the CFL-stable `dt` as a single-value
 /// sensor data column for downstream frequency analysis.
+///
+/// # Errors
+///
+/// Returns an error when the poroelastic solver cannot be constructed or its
+/// stability analysis fails.
 pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult> {
     let (nx, ny, nz) = req.grid.dimensions();
     let cx = nx / 2;

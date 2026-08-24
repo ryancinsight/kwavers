@@ -61,6 +61,11 @@ impl EigenspaceMV {
     /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
     /// - Propagates any `KwaversError` returned by called functions.
     ///
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal analysis state violates
+    /// the precondition required by this operation.
     pub fn compute_weights(
         &self,
         covariance: &Array2<Complex64>,
@@ -174,6 +179,11 @@ impl EigenspaceMV {
     ///   a steering-length mismatch, or `num_sources >= N`.
     /// - Returns [`KwaversError::Numerical`] for non-finite steering input or output.
     /// - Propagates eigendecomposition failures.
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal analysis state violates
+    /// the precondition required by this operation.
     pub fn signal_subspace_response(
         &self,
         covariance: &Array2<Complex64>,

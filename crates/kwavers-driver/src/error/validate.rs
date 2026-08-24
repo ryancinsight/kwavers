@@ -7,10 +7,9 @@
 //! invariant* that was breached; the metric and the threshold are both carried so
 //! the example log line format is human-readable *and* machine-parseable.
 //!
-//! The corresponding Phase-0 implementation constructed its errors through
-//! `Err(format!("…"))`; this module is the typed-envelope target for that
-//! migration at Phase 2 (the validate.rs slice is left in place for now and only
-//! the most diagnostic-rich variants are exposed so the migration path is set).
+//! [`crate::validate`] still constructs some of its failures as `Err(format!("…"))`;
+//! this module is the typed envelope those are converted to, and currently exposes the
+//! diagnostic-rich variants. The conversion order is tracked in `docs/MIGRATION.md`.
 
 /// End-to-end validation failure.
 ///

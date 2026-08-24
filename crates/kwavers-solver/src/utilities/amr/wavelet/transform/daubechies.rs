@@ -18,11 +18,7 @@ impl WaveletTransform {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub(super) fn daubechies_forward(
-        &self,
-        data: &mut Array3<f64>,
-        order: usize,
-    ) -> KwaversResult<()> {
+    pub(super) fn daubechies_forward(data: &mut Array3<f64>, order: usize) -> KwaversResult<()> {
         // Get Daubechies filter coefficients
         let h = Self::daubechies_coefficients(order);
         let g = Self::wavelet_highpass_from_lowpass(&h);
@@ -70,11 +66,7 @@ impl WaveletTransform {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub(super) fn daubechies_inverse(
-        &self,
-        coeffs: &mut Array3<f64>,
-        order: usize,
-    ) -> KwaversResult<()> {
+    pub(super) fn daubechies_inverse(coeffs: &mut Array3<f64>, order: usize) -> KwaversResult<()> {
         // Get reconstruction filters (time-reversed analysis filters)
         let h = Self::daubechies_coefficients(order);
         let g = Self::wavelet_highpass_from_lowpass(&h);

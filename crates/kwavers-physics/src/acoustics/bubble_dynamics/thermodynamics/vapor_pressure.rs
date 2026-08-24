@@ -72,18 +72,18 @@ impl ThermodynamicsCalculator {
     pub fn vapor_pressure(&self, temperature: f64) -> f64 {
         // Bounds checking
         if temperature < T_TRIPLE_WATER {
-            return self.vapor_pressure_ice(temperature);
+            return Self::vapor_pressure_ice(temperature);
         }
         if temperature > T_CRITICAL_WATER {
             return P_CRITICAL_WATER;
         }
 
         match self.model {
-            VaporPressureModel::Antoine => self.antoine_equation(temperature),
+            VaporPressureModel::Antoine => Self::antoine_equation(temperature),
             VaporPressureModel::ClausiusClapeyron => self.clausius_clapeyron(temperature),
-            VaporPressureModel::Wagner => self.wagner_equation(temperature),
-            VaporPressureModel::Buck => self.buck_equation(temperature),
-            VaporPressureModel::IAPWS => self.iapws_if97(temperature),
+            VaporPressureModel::Wagner => Self::wagner_equation(temperature),
+            VaporPressureModel::Buck => Self::buck_equation(temperature),
+            VaporPressureModel::IAPWS => Self::iapws_if97(temperature),
         }
     }
 
@@ -91,14 +91,14 @@ impl ThermodynamicsCalculator {
     ///
     /// log10(P) = A - B/(C + T)
     /// where P is in mmHg and T is in °C
-    fn antoine_equation(&self, temperature: f64) -> f64 {
+    fn antoine_equation(temperature: f64) -> f64 {
         // Antoine equation: log₁₀(P_mmHg) = A − B/(C+T_°C); valid 1–100 °C.
         // Coefficients: Stull (1947) Ind. Eng. Chem. 39(4):517–540.
         let t_celsius = kwavers_core::constants::thermodynamic::kelvin_to_celsius(temperature);
 
         if !(1.0..=100.0).contains(&t_celsius) {
             // Fall back to Wagner equation outside valid range
-            return self.wagner_equation(temperature);
+            return Self::wagner_equation(temperature);
         }
 
         let log10_p_mmhg = WATER_ANTOINE_A - WATER_ANTOINE_B / (WATER_ANTOINE_C + t_celsius);
@@ -122,7 +122,7 @@ impl ThermodynamicsCalculator {
     ///
     /// High-accuracy equation specifically for water
     /// Valid from triple point to critical point
-    pub(crate) fn wagner_equation(&self, temperature: f64) -> f64 {
+    pub(crate) fn wagner_equation(temperature: f64) -> f64 {
         // Wagner coefficients for water
         const A1: f64 = -7.85951783;
         const A2: f64 = 1.84408259;
@@ -154,7 +154,7 @@ impl ThermodynamicsCalculator {
     /// Buck equation (meteorological standard)
     ///
     /// Magnus formula for vapor pressure calculation
-    fn buck_equation(&self, temperature: f64) -> f64 {
+    fn buck_equation(temperature: f64) -> f64 {
         let t_celsius = kwavers_core::constants::thermodynamic::kelvin_to_celsius(temperature);
 
         // Buck (1981) coefficients
@@ -171,7 +171,7 @@ impl ThermodynamicsCalculator {
     /// IAPWS-IF97 formulation (international standard)
     ///
     /// Implementation of IAPWS-IF97 for saturation line
-    fn iapws_if97(&self, temperature: f64) -> f64 {
+    fn iapws_if97(temperature: f64) -> f64 {
         // Coefficients for Region 4 (saturation line)
         const N: [f64; 10] = [
             0.11670521452767e4,
@@ -196,7 +196,7 @@ impl ThermodynamicsCalculator {
     }
 
     /// Calculate vapor pressure over ice (below triple point)
-    fn vapor_pressure_ice(&self, temperature: f64) -> f64 {
+    fn vapor_pressure_ice(temperature: f64) -> f64 {
         // Goff-Gratch equation for ice
         const A: f64 = -9.09718;
         const B: f64 = -3.56654;

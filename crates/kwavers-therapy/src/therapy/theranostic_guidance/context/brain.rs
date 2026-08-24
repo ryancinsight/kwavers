@@ -21,6 +21,17 @@ use super::{distance_3d, validate_spacing, volume_bbox, volume_center, Placement
 
 const FOCUSED_BOWL_POLAR_SPAN_RAD: f64 = 0.58 * PI;
 
+/// Build treatment-placement geometry from a brain CT volume and target slice.
+///
+/// # Errors
+///
+/// Returns an error when spacing, slice selection, masks, anatomy, or target
+/// configuration is invalid.
+///
+/// # Panics
+///
+/// Panics if a validated brain mask is indexed with dimensions inconsistent
+/// with the CT volume layout.
 pub fn build_brain_placement_context(
     ct_volume_hu: &Array3<f64>,
     spacing_mm: [f64; 3],

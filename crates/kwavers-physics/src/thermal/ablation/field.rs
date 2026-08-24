@@ -41,6 +41,11 @@ impl AblationField {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
+    /// # Panics
+    ///
+    /// Panics only if a proposed damage value that passed validation cannot be
+    /// reconstructed as a [`DamageIntegral`] during commit.
+    ///
     pub fn update(&mut self, temperature: &Array3<f64>, dt: f64) -> KwaversResult<()> {
         if temperature.shape() != self.damage.shape() {
             return Err(KwaversError::DimensionMismatch(format!(

@@ -60,7 +60,7 @@ impl FwiProcessor {
     ) -> Array3<f64> {
         let mut gradient = Array3::zeros(forward_field.shape());
         write_negative_product(&mut gradient, forward_field, adjoint_field);
-        self.smooth_gradient(&gradient)
+        Self::smooth_gradient(&gradient)
     }
 
     /// Apply smoothing to gradient to reduce high-frequency artifacts.
@@ -78,7 +78,7 @@ impl FwiProcessor {
     /// Allocates one `Array3::zeros` instead of `gradient.clone()`. Only the
     /// boundary faces (O(N²) elements) are copied from the input.
     #[must_use]
-    pub(super) fn smooth_gradient(&self, gradient: &Array3<f64>) -> Array3<f64> {
+    pub(super) fn smooth_gradient(gradient: &Array3<f64>) -> Array3<f64> {
         let [nx, ny, nz] = gradient.shape();
         let mut smoothed = Array3::<f64>::zeros((nx, ny, nz));
 
@@ -193,7 +193,7 @@ impl FwiProcessor {
         }
 
         if reg_params.tv_weight > 0.0 {
-            let tv_term = self.compute_total_variation_gradient(model);
+            let tv_term = Self::compute_total_variation_gradient(model);
             let w = reg_params.tv_weight;
             add_scaled_field(&mut regularized, &tv_term, w);
         }
@@ -223,7 +223,7 @@ impl FwiProcessor {
     ///
     /// Rudin, Osher & Fatemi (1992). Physica D 60, 259–268, Eq. (11).
     #[must_use]
-    pub(super) fn compute_total_variation_gradient(&self, model: &Array3<f64>) -> Array3<f64> {
+    pub(super) fn compute_total_variation_gradient(model: &Array3<f64>) -> Array3<f64> {
         directional_tv_gradient(model, &AXIS_TV_DIRECTIONS)
     }
 }

@@ -182,18 +182,33 @@ pub(crate) fn initialize_absorption_operators(
                     for i in 0..grid.nx {
                         let (x, y_coord, z) = grid.indices_to_coordinates(i, j, k);
 
-                        let alpha_db_cm_medium = medium.alpha_coefficient(x, y_coord, z, grid);
-                        let alpha_db_cm = if alpha_db_cm_medium.abs() > 0.0 {
-                            alpha_db_cm_medium
-                        } else {
-                            *alpha_coeff
-                        };
-
-                        let y_medium = medium.alpha_power(x, y_coord, z, grid);
-                        let y = if y_medium.abs() > 1e-12 && (y_medium - 1.0).abs() > 1e-12 {
-                            y_medium
-                        } else {
-                            y_config
+                        // The power law's two parameters are resolved
+                        // together, from one owner. An explicit request applies
+                        // uniformly and outranks whatever the medium reports;
+                        // absent one the medium owns both, read here per voxel,
+                        // which is what preserves a heterogeneous medium's
+                        // spatial variation.
+                        //
+                        // Splitting them is what the old rule did, and it does
+                        // not survive contact with `alpha(f) = alpha_0 f^y`:
+                        // taking the coefficient from the caller and the
+                        // exponent from the medium evaluates neither party's
+                        // power law. Both resolutions also keyed on a sentinel
+                        // (`!= 0.0`, `!= 1.0`), so a homogeneous medium's
+                        // defaulted water values silently outranked a caller's
+                        // request on both (ADR 120).
+                        let (alpha_db_cm, y) = match alpha_coeff {
+                            Some(requested) => (*requested, y_config),
+                            None => {
+                                let y_medium = medium.alpha_power(x, y_coord, z, grid);
+                                let y = if y_medium.abs() > 1e-12 && (y_medium - 1.0).abs() > 1e-12
+                                {
+                                    y_medium
+                                } else {
+                                    y_config
+                                };
+                                (medium.alpha_coefficient(x, y_coord, z, grid), y)
+                            }
                         };
 
                         let c0_val = medium.sound_speed(i, j, k);

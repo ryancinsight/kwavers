@@ -84,7 +84,7 @@ impl UncertaintyEstimator {
         for i in 0..image.shape()[0] {
             for j in 0..image.shape()[1] {
                 for k in 0..image.shape()[2] {
-                    let local_var = self.compute_local_variance(image, i, j, k);
+                    let local_var = Self::compute_local_variance(image, i, j, k);
                     uncertainty[[i, j, k]] = local_var.sqrt(); // Standard deviation
                 }
             }
@@ -109,7 +109,7 @@ impl UncertaintyEstimator {
     /// - Neighborhood size: 5×5 spatial window (±2 pixels in i,j)
     /// - Boundary handling: Clamp to valid image indices
     /// - Edge case: Returns 0.0 for empty neighborhoods (should not occur)
-    fn compute_local_variance(&self, image: &Array3<f32>, i: usize, j: usize, k: usize) -> f32 {
+    fn compute_local_variance(image: &Array3<f32>, i: usize, j: usize, k: usize) -> f32 {
         let mut values = Vec::new();
         let range = 2i32; // ±2 neighborhood
 
@@ -192,22 +192,20 @@ mod tests {
 
     #[test]
     fn test_local_variance_computation() {
-        let estimator = UncertaintyEstimator::new(0.1);
         let image = Array3::from_shape_fn((5, 5, 5), |[i, j, k]| (i + j + k) as f32);
 
         // Test center pixel
-        let variance = estimator.compute_local_variance(&image, 2, 2, 2);
+        let variance = UncertaintyEstimator::compute_local_variance(&image, 2, 2, 2);
         assert!(variance >= 0.0);
         assert!(variance.is_finite());
     }
 
     #[test]
     fn test_local_variance_boundary() {
-        let estimator = UncertaintyEstimator::new(0.1);
         let image = Array3::ones((5, 5, 5));
 
         // Test corner pixel (boundary clamping)
-        let variance = estimator.compute_local_variance(&image, 0, 0, 0);
+        let variance = UncertaintyEstimator::compute_local_variance(&image, 0, 0, 0);
         assert_eq!(variance, 0.0); // Uniform image
     }
 }

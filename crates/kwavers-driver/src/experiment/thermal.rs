@@ -1,4 +1,4 @@
-//! Electro-thermal propagation from the energy budget (Phase 5).
+//! Electro-thermal propagation from the energy budget.
 //!
 //! Maps per-tile device dissipation (W) through the package thermal-resistance network to a
 //! per-tile junction temperature rise (K). Feeds the orchestrator's thermal headroom check and

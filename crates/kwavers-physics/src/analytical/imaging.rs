@@ -669,6 +669,10 @@ pub struct IvusMicrobubbleDeliveryInput<'a> {
     pub radial_width_m: f64,
 }
 
+/// # Errors
+///
+/// Returns a descriptive error when input arrays have different lengths or a physical parameter
+/// is non-finite or outside its valid domain.
 pub fn ivus_microbubble_delivery_fraction(
     input: IvusMicrobubbleDeliveryInput<'_>,
 ) -> Result<Vec<f64>, String> {
@@ -1100,6 +1104,11 @@ pub fn ivus_polar_bmode_rf(
 ///
 /// Returns an error when axes are too short, array lengths are inconsistent,
 /// axes are not finite/increasing, or any sample is non-finite.
+///
+/// # Panics
+///
+/// Panics only if the checked radial axis is empty when extracting its final
+/// sample, which would violate the preceding length validation.
 pub fn ivus_scan_convert(
     polar: &[f64],
     r_axis_m: &[f64],

@@ -236,8 +236,8 @@ impl UncertaintyQuantifier {
             confidence_score: confidence,
             reliability_metrics: ReliabilityMetrics {
                 signal_to_noise_ratio: signal_quality,
-                contrast_to_noise_ratio: self.compute_cnr(beamformed_image),
-                spatial_resolution: self.estimate_resolution(beamformed_image),
+                contrast_to_noise_ratio: Self::compute_cnr(beamformed_image),
+                spatial_resolution: Self::estimate_resolution(beamformed_image),
             },
         })
     }
@@ -266,7 +266,7 @@ impl UncertaintyQuantifier {
         uncertainty.confidence_score() >= threshold
     }
 
-    fn compute_cnr(&self, image: &LetoArray3<f32>) -> f64 {
+    fn compute_cnr(image: &LetoArray3<f32>) -> f64 {
         let mean_signal = image.iter().sum::<f32>() / image.size() as f32;
         let variance = image
             .iter()
@@ -281,7 +281,7 @@ impl UncertaintyQuantifier {
         }
     }
 
-    fn estimate_resolution(&self, image: &LetoArray3<f32>) -> f64 {
+    fn estimate_resolution(image: &LetoArray3<f32>) -> f64 {
         let mut total_gradient = 0.0;
         let mut count = 0;
         let [nx, ny, nz] = image.shape();
@@ -337,9 +337,9 @@ impl UncertaintyQuantifier {
         }
         summary.mean_confidence = total_confidence / results.len() as f64;
         summary.confidence_range = (min_conf, max_conf);
-        summary.reliability_score = self.compute_reliability_score(&summary);
+        summary.reliability_score = Self::compute_reliability_score(&summary);
 
-        let recommendations = self.generate_recommendations(&summary);
+        let recommendations = Self::generate_recommendations(&summary);
 
         UncertaintyReport {
             summary,
@@ -348,13 +348,13 @@ impl UncertaintyQuantifier {
         }
     }
 
-    fn compute_reliability_score(&self, summary: &UncertaintySummary) -> f64 {
+    fn compute_reliability_score(summary: &UncertaintySummary) -> f64 {
         let confidence_factor = summary.mean_confidence;
         let range_factor = 1.0 - (summary.confidence_range.1 - summary.confidence_range.0);
         (confidence_factor + range_factor) / 2.0
     }
 
-    fn generate_recommendations(&self, summary: &UncertaintySummary) -> Vec<String> {
+    fn generate_recommendations(summary: &UncertaintySummary) -> Vec<String> {
         let mut recommendations = Vec::new();
 
         if summary.mean_confidence < 0.7 {

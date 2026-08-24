@@ -94,6 +94,12 @@ pub fn ifft_shift_2d(spectrum: &mut Array2<Complex64>) {
 /// circular convolution in the discrete domain.  The caller supplies the
 /// desired frequency response, so this helper is a thin implementation of the
 /// theorem rather than a heuristic approximation.
+///
+/// # Panics
+///
+/// Panics if the internally allocated spectrum is not contiguous when it is
+/// handed to Apollo's slice-based FFT routines. The array is allocated locally
+/// with one dense storage span, so this indicates a violated storage invariant.
 #[must_use]
 pub fn apply_spectral_response_1d<F>(
     signal: &Array1<f64>,
@@ -137,6 +143,12 @@ where
 /// reconstructs the complex analytic signal.  DC and Nyquist bins remain
 /// unchanged to preserve the real-valued symmetry constraints for even-length
 /// sequences.
+///
+/// # Panics
+///
+/// Panics if the internally allocated spectrum is not contiguous when it is
+/// handed to Apollo's slice-based FFT routines. The array is allocated locally
+/// with one dense storage span, so this indicates a violated storage invariant.
 #[must_use]
 pub fn analytic_signal_1d(signal: &Array1<f64>) -> Array1<Complex64> {
     let n = signal.len();

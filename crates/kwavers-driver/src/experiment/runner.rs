@@ -1,5 +1,5 @@
 //! Experiment orchestrator — the public entry point for a full driver→transducer simulation run
-//! (Phase 5).
+
 //!
 //! [`run_experiment`] wires the slice together:
 //!

@@ -10,7 +10,7 @@
 //!
 //! # Slice layout
 //!
-//! Carved by **role** (Phase 4a output-slice migration). Plain backticks name the slice-private
+//! Carved by **role**. Plain backticks name the slice-private
 //! submodules (keeps `rustdoc`'s `private_intra_doc_links` lint quiet); the public types each hosts
 //! stay clickable.
 //! * `cli` — the [`KiCadCli`] process wrapper + [`DrcOptions`]: locate/spawn the external binary and

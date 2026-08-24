@@ -1,6 +1,6 @@
 //! Per-vertical-slice error hierarchy.
 //!
-//! Replaces the legacy monolithic 4-variant `Error` (Phase 0) with a per-slice sub-enum tree:
+//! One sub-enum per vertical slice, aggregated by a single top-level enum:
 //!
 //! * [`geometry::Geometry`] — grid / board-model invariant failures (migrates the 4 legacy
 //!   variants `PadOutOfBounds`, `UnreachableTerminal`, `EmptyGrid`, `GridPitchTooCoarse`).
@@ -11,8 +11,9 @@
 //! * [`experiment::Experiment`] — transient/simulation failures (acoustic non-finite, pulser
 //!   profile reference, DIP-seam escapes).
 //! * `physics::{thermal, emi, pdn, si, acoustic}` — physics-side invariant breaches; each
-//!   module exposes one sub-enum with forward-looking variants that the corresponding
-//!   vertical slice migrates into as Phase 2–3 unfolds.
+//!   module exposes one sub-enum whose variants the corresponding slice adopts as its
+//!   kernels stop returning breached values and start returning `Result` (see
+//!   `docs/MIGRATION.md`).
 //!
 //! The top-level [`enum@Error`] is the *aggregating* enum: every variant is
 //! `#[error(transparent)]` over its sub-enum, so cross-slice propagation is a single `?`.
@@ -67,7 +68,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 ///    — surprising for diagnostic tests.
 ///
 /// The Phase-0 `Error` derived `Clone + PartialEq + Eq`; this is an API regression
-/// documented at `docs/MIGRATION.md` § Phase 1b. The macro-derived `From<Geometry>` /
+/// documented in `docs/MIGRATION.md`. The macro-derived `From<Geometry>` /
 /// `From<Manifest>` / `From<Validate>` / `From<Experiment>` / `From<Thermal>` / `From<Emi>`
 /// / `From<Pdn>` / `From<Si>` / `From<Acoustic>` impls (via `#[from]`) keep `?`-propagation
 /// working across the slice tree.
@@ -203,7 +204,7 @@ mod tests {
                 Error::PhysicsPdn(_) => "pdn",
                 Error::PhysicsSi(_) => "si",
                 Error::PhysicsAcoustic(_) => "acoustic",
-                _ => "future-slice", // a sibling added in Phase 2+ — non-exhaustive catch-all
+                _ => "future-slice", // catch-all for a later sibling variant
             }
         }
         assert_eq!(match_all(&Error::Geometry(Geometry::EmptyGrid)), "geometry");

@@ -31,6 +31,7 @@ pub struct PhotoacousticSolver<T: ElectromagneticWaveEquation> {
 impl<T: ElectromagneticWaveEquation> std::fmt::Debug for PhotoacousticSolver<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("PhotoacousticSolver")
+            .field("em_solver", &"<electromagnetic-solver>")
             .field("gruneisen", &self.gruneisen)
             .field("optical_properties", &self.optical_properties)
             .field("has_initial_pressure", &self.initial_pressure.is_some())
@@ -57,6 +58,11 @@ impl<T: ElectromagneticWaveEquation> PhotoacousticSolver<T> {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn compute_initial_pressure(
         &mut self,
         fluence: &ArrayD<f64, VecStorage<f64>>,

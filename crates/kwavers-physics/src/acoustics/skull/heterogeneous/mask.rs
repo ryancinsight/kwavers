@@ -29,22 +29,25 @@ impl HeterogeneousSkull {
         let mut sound_speed = Array3::from_elem(mask.shape(), water_c);
         let mut density = Array3::from_elem(mask.shape(), water_rho);
         let mut attenuation = Array3::from_elem(mask.shape(), ALPHA_WATER);
+        let skull_sound_speed = props.sound_speed().into_base();
+        let skull_density = props.density().into_base();
+        let skull_attenuation = props.attenuation_at_one_megahertz().into_base();
 
         zip_mut_ref(sound_speed.view_mut(), mask.view(), |c, &m| {
             if m > 0.5 {
-                *c = props.sound_speed;
+                *c = skull_sound_speed;
             }
         });
 
         zip_mut_ref(density.view_mut(), mask.view(), |rho, &m| {
             if m > 0.5 {
-                *rho = props.density;
+                *rho = skull_density;
             }
         });
 
         zip_mut_ref(attenuation.view_mut(), mask.view(), |atten, &m| {
             if m > 0.5 {
-                *atten = props.attenuation_coeff;
+                *atten = skull_attenuation;
             }
         });
 

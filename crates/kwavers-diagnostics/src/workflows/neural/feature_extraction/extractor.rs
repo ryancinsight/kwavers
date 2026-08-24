@@ -102,15 +102,15 @@ impl FeatureExtractor {
         if self.config.morphological_features {
             morphological.insert(
                 "gradient_magnitude".to_owned(),
-                self.compute_gradient_magnitude(volume),
+                Self::compute_gradient_magnitude(volume),
             );
-            morphological.insert("laplacian".to_owned(), self.compute_laplacian(volume));
+            morphological.insert("laplacian".to_owned(), Self::compute_laplacian(volume));
         }
 
         if self.config.spectral_features {
             spectral.insert(
                 "local_frequency".to_owned(),
-                self.compute_local_frequency(volume),
+                Self::compute_local_frequency(volume),
             );
         }
 
@@ -119,7 +119,7 @@ impl FeatureExtractor {
                 "speckle_variance".to_owned(),
                 self.compute_speckle_variance(volume),
             );
-            texture.insert("homogeneity".to_owned(), self.compute_homogeneity(volume));
+            texture.insert("homogeneity".to_owned(), Self::compute_homogeneity(volume));
         }
 
         Ok(FeatureMap {
@@ -142,7 +142,7 @@ impl FeatureExtractor {
     /// # Literature Reference
     ///
     /// - Canny (1986): "A computational approach to edge detection"
-    pub(super) fn compute_gradient_magnitude(&self, volume: ArrayView3<f32>) -> Array3<f32> {
+    pub(super) fn compute_gradient_magnitude(volume: ArrayView3<f32>) -> Array3<f32> {
         let [nx, ny, nz] = volume.shape();
         let mut result = Array3::<f32>::zeros((nx, ny, nz));
 
@@ -179,7 +179,7 @@ impl FeatureExtractor {
     /// # Literature Reference
     ///
     /// - Lindeberg (1998): "Feature detection with automatic scale selection"
-    pub(super) fn compute_laplacian(&self, volume: ArrayView3<f32>) -> Array3<f32> {
+    pub(super) fn compute_laplacian(volume: ArrayView3<f32>) -> Array3<f32> {
         let [nx, ny, nz] = volume.shape();
         let mut result = Array3::<f32>::zeros((nx, ny, nz));
 
@@ -222,7 +222,7 @@ impl FeatureExtractor {
     /// # Literature Reference
     ///
     /// - Mallat (1989): "A theory for multiresolution signal decomposition"
-    pub(super) fn compute_local_frequency(&self, volume: ArrayView3<f32>) -> Array3<f32> {
+    pub(super) fn compute_local_frequency(volume: ArrayView3<f32>) -> Array3<f32> {
         let [nx, ny, nz] = volume.shape();
         let mut result = Array3::<f32>::zeros((nx, ny, nz));
 
@@ -327,7 +327,7 @@ impl FeatureExtractor {
     /// # Literature Reference
     ///
     /// - Haralick et al. (1973): "Textural Features for Image Classification"
-    pub(super) fn compute_homogeneity(&self, volume: ArrayView3<f32>) -> Array3<f32> {
+    pub(super) fn compute_homogeneity(volume: ArrayView3<f32>) -> Array3<f32> {
         let [nx, ny, nz] = volume.shape();
         let mut result = Array3::<f32>::zeros((nx, ny, nz));
 

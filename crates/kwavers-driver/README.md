@@ -1,132 +1,152 @@
 # kwavers-driver
 
-Physics-guided, manufacturing-aware driver electronics design for the **kwavers** ecosystem
-— a Rust crate that builds the holohv high-voltage ultrasound-driver boards (negotiated-
-congestion PathFinder autorouter, simulated-annealing physics-guided placer, per-domain
-physics models, the `experiment` simulation framework that orchestrates end-to-end driver
-+: transducer experiments, and the deterministic artifact emit that ties the generated
-boards to `kwavers-transducer`'s beam-propagation pipeline).
+Physics-guided, manufacturing-aware driver-electronics design for
+[kwavers](https://github.com/ryancinsight/kwavers).
 
-> **Migration in progress.** This crate was renamed from `kicad-routing` ∑ `kicad_routing` to
-> `kwavers-driver` ∑ `kwavers_driver` at Phase 0 (see **docs/MIGRATION.md**). The next
-> phases refactor the flat-module hierarchy into a deeply-nested vertical-slice tree per
-> the SSOT/DIP/SRP principles in **docs/ARCHITECTURE.md**.
+The crate designs the high-voltage ultrasound driver boards that feed a kwavers transducer
+model: it places components under a physics and DFM objective, routes them with a
+negotiated-congestion router, verifies the result against fabrication and electrical rules,
+and emits a deterministic artifact set that ties the generated board back to
+[`kwavers-transducer`](https://docs.rs/kwavers-transducer)'s beam-propagation pipeline.
 
-## Why this exists
+## Why not a sequential A\* router
 
-The KiCadRoutingTools A\* maze router is sequential and order-dependent: it commits each net
-greedily, so on the 16/24-channel tiles the dense SPI/HIN control bus and the HV creepage
-constraints drive it into an unresolvable state (the converge loop gets *stuck* — the geometry,
-not the effort, is the wall). This crate replaces that core with the algorithm class that solves
-congested, order-sensitive routing.
+A maze router commits each net greedily, so early nets wall off later ones. In a congested
+region — a shared SPI daisy-chain, a BGA escape, a high-voltage fan-in — no mechanism lets
+one net step aside for a more constrained one, and the solution becomes order-dependent:
+on the dense multi-channel tiles it does not converge. The geometry is the wall, not the
+effort.
 
-## Algorithm
+## The algorithm
 
-**Negotiated-congestion routing (PathFinder — McMurchie & Ebeling, FPGA '95).** All nets route
-every iteration allowing temporary overlap; a node's cost is
+`route` implements **negotiated-congestion routing** (PathFinder — McMurchie & Ebeling,
+*FPGA '95*). Every net routes every iteration, temporary overlap allowed; a node's cost is
 
 ```text
-cost(n) = (base(n) + history(n)) · (1 + overuse(n) · present_factor)
+cost(n) = (base(n) + history(n)) * (1 + overuse(n) * present_factor)
 ```
 
-`present_factor` escalates each iteration and `history(n)` accumulates on persistently overused
-nodes, so nets *negotiate* shared resources until the routing is **legal** (no node over
-capacity). This is order-independent — the property A\* lacks.
+`present_factor` escalates each iteration and `history(n)` accumulates on persistently
+overused nodes, so nets *negotiate* shared resources until the routing is **legal** — no
+node over capacity. This is order-independent, the property A\* lacks.
 
-Multi-terminal nets grow as a Prim-style tree (a rectilinear-Steiner approximation), so the
-shared SPI bus and power stars route as trees, not pairwise.
+Multi-terminal nets grow as trees, not as pairwise connections, and the growth strategy is
+chosen by net class: power and ground expand Prim-style from any terminal, while signal and
+high-voltage nets use chain-tip growth — the search source moves to each reached terminal —
+so a multi-terminal high-speed net forms a daisy chain (degree ≤ 2) instead of branching
+stubs.
 
 ## Physics guidance
 
-`base(n)` is supplied by the `RoutingCost` trait — the extension seam. `PhysicsCost` folds the
-design intent directly into the search:
+`cost::RoutingCost` is the extension seam: `base(n)` folds the physics and manufacturing
+constraints into the search instead of checking them after the fact. `cost::PhysicsCost`
+implements
 
-- **HV creepage** as a spatial hazard gradient: HV nets pay a rising cost as they approach
-  low-voltage features (and vice versa), so the 0.5 mm `HV_creepage` rule *shapes* the route
-  instead of failing DRC after the fact.
-- **Layer affinity**: HV → outer copper (creepage is a surface phenomenon), control → inner
-  copper (shielded between planes).
+- **high-voltage creepage** as a spatial hazard gradient — an HV net pays a rising cost as
+  it approaches low-voltage features, and vice versa, so the clearance rule *shapes* the
+  route instead of failing DRC afterwards; and
+- **layer affinity** — HV to outer copper, since creepage is a surface phenomenon; control
+  to inner copper, shielded between planes.
 
-A future thermal- or impedance-aware cost is a new `impl RoutingCost`, not a router change.
+A thermal- or impedance-aware cost is a new `impl RoutingCost`, not a router change.
 
-## Module map
+## Public surface
+
+`use kwavers_driver::prelude::*;` brings the unit newtypes, geometry, board model, and
+physics facade into scope.
 
 | Module | Responsibility |
 |---|---|
-| `geom` | Exact nm geometry (`Nm`, `Point`) and the `GridSpec` lattice |
-| `board` | Pure domain model: nets, pads, tracks, vias, `NetClassKind` |
-| `rules` | `DesignRules` (fab floors) + `CreepageRule` (HV) |
-| `cost` | `RoutingCost` trait + `PhysicsCost` |
-| `route::grid` | Resource model: occupancy, history, via-column ownership, adjacency |
-| `route::search` | Multi-source Dijkstra tree-growth under the negotiated cost |
-| `route::pathfinder` | The PathFinder negotiation loop + copper emission |
-| `place` | Physics/DFM simulated-annealing placer (rotation, congestion+weakness feedback) |
-| `pipeline` | Place→route bridge: terminals + pad-clearance halos |
-| `io` | `.kicad_pcb` + `.kicad_dru` emission |
-| `audit` | Adversarial DFM/SI critic: flight-line crossings, hard clearance, near-short risk, crosstalk, via-adjacency, antenna |
-| `stack` | Stack-board manifest, shield connector compatibility, thermal/height stack planning |
+| `units` | Unit newtypes (`Nm`, `Hz`, `Ohm`, `Volt`, `Amp`, `Watt`, `Kelvin`, …) — type-level unit safety at zero runtime cost |
+| `geom` | Exact nanometre geometry (`Nm`, `Point`) and the `GridSpec` lattice |
+| `board` | Pure domain model: nets, pads, tracks, vias, `NetClassKind`, split domains |
+| `rules` | `DesignRules` (fabrication floors) and the high-voltage creepage rule |
+| `cost` | `RoutingCost` seam and `PhysicsCost` |
+| `route` | Grid resource model, multi-source search, the PathFinder loop, copper emission |
+| `place` | Physics/DFM simulated-annealing placer (rotation, congestion and weakness feedback) |
+| `pipeline` | Place→route bridge and the place↔route co-optimization loop |
+| `dfm` | Post-routing manufacturability: teardrops, mitring, via dedup, ampacity widening, ground pour |
+| `optim` | Joint driver–thermal–acoustic co-optimization |
+| `verify` | ERC, DRC, LVS, assembly, keep-in, BOM, isolation BFS, AC coupling — `verify_all` |
+| `audit` | Adversarial DFM/SI critic: crossings, clearance, near-short risk, crosstalk, via adjacency, antenna |
+| `fabrication` | Fabrication-readiness verification |
+| `component_db` / `component_accuracy` | Sourced part database and CAD/footprint accuracy manifest |
+| `driver` | Driver power loss, efficiency, and matching-network physics |
+| `five_level` / `pulse_skip` / `tr_switch` | Pulser topology, adaptive pulse skipping, T/R switch models |
+| `stack` | Multi-tile stack planning: board count, channels per board, connector and thermal compatibility |
+| `manifest` | Driver-to-simulation manifest — the handoff to the acoustic pipeline |
+| `validate` | Whole-design physics validation across the per-domain models |
+| `experiment` | End-to-end driver + transducer experiment orchestration (`run_experiment`, `build_beam_report`) |
+| `render` | Native SVG renderer for the routed board |
+| `io` / `kicad_cli` | KiCad file emission and the external `kicad-cli` wrapper (feature `io`) |
+| `error` | Per-slice error hierarchy |
+| `ssot` | Cross-cutting constants and string literals |
 
-## Physics & analysis suite
+## Physics and analysis suite
 
-Each axis is a real standard or first-principles model with a validation test (analytical oracle,
-reference point, or independent cross-check), and feeds the adversarial place↔route loop where it
-informs the layout.
+Each axis under `physics` is a standard or first-principles model with a value-semantic
+test — an analytical oracle, a published reference point, or an independent cross-check —
+and feeds the adversarial place↔route loop where it informs the layout.
 
-| Module | Physics |
+| Slice | Physics |
 |---|---|
-| `thermal` | 2-D heat conduction (MMS-validated) · electro-thermal Joule coupling · thermal vias · transient τ |
-| `ampacity` | IPC-2221 width & resistance · skin depth/AC resistance · current density · electromigration (Black) · PTH aspect ratio |
-| `emi` | Commutation-loop inductance · trace inductance · capacitive drive current · L·dI/dt overshoot · switching/gate/recovery loss |
-| `pdn` | IR-drop (Gauss–Seidel resistor network) · target impedance · hold-up C · decoupling SRF |
-| `dielectric` | Paschen air-breakdown · IPC-2221 voltage spacing · CAF time-to-failure |
-| `si` | Microstrip impedance · propagation delay · skew budget |
-| `acoustic` | Wavelength · grating-lobe steering · BVD resonance · near-field/f-number · element directivity · tissue attenuation |
+| `physics::thermal` | 2-D heat conduction (validated against a manufactured solution) · electro-thermal Joule coupling · thermal vias · transient τ |
+| `physics::ampacity` | IPC-2221 width and resistance · skin depth / AC resistance · current density · electromigration (Black) · plated-through-hole aspect ratio |
+| `physics::emi` | Commutation-loop inductance · trace inductance · capacitive drive current · L·dI/dt overshoot · switching, gate, and recovery loss |
+| `physics::pdn` | IR drop (Gauss–Seidel resistor network) · target impedance · hold-up capacitance · decoupling SRF |
+| `physics::dielectric` | Paschen air breakdown · IPC-2221 voltage spacing · CAF time-to-failure |
+| `physics::si` | Microstrip impedance · propagation delay · skew budget |
+| `physics::acoustic` | Wavelength · grating-lobe steering · BVD resonance · near-field / f-number · element directivity · tissue attenuation |
 
-Cross-checks that fall out of the model: the BVD series resonance comes to **2.08 MHz** (the drive
-frequency), and charging the 50 pF load at 150 V in 5 ns gives **1.5 A** (the HV7355's peak rating).
+Cross-checks fall out of the models rather than being asserted into them: the BVD series
+resonance of the modeled element lands on the drive frequency
+(`bvd_resonance_matches_2mhz_drive`), and the commutation-loop model reproduces the
+pulser's rated peak drive current from its loop inductance and node capacitance.
+
+## Evidence tier
+
+Negotiated-congestion convergence (legality on a congested instance with no single-layer
+solution) and the creepage-gradient effect are covered by value-semantic unit tests in
+their modules — property and empirical tier, not a machine-checked proof. The thermal
+solver is verified against a manufactured solution at its stated order of accuracy.
 
 ## Status
 
-**113 tests, fmt and nextest clean.** The 16-channel HV7355 tile (`examples/hv7355_tile.rs`)
-and FPGA controller tile (`examples/fpga_tile.rs`) run the full co-optimised place→route loop and
-emit internally verified KiCad boards. They are separate examples because the article architecture is
-a stack: the FPGA controller board mates to the HV driver board through the shared `J_STACK` pinout.
-Running both creates the full driver artifact set. The current FPGA component is the `XC7A-QFP`
-example abstraction using a 100-pin QFP body so the stack bus, JTAG, configuration flash, routing,
-and DRC checks are executable today; it is not yet the article-referenced `XC7A200T` 484-ball FBGA
-footprint.
+`cargo nextest run -p kwavers-driver` runs **494 tests, all passing**, with `cargo fmt`
+and Clippy clean.
 
-The HV board is one 16-channel tile: it instantiates two `HV7355K6-G` devices, routes `TX_0..TX_15`,
-and daisy-chains the two HV7355 serial shift registers as one 16-bit load path. Generated boards also
-emit `component_accuracy_hv.kv` and `component_accuracy_fpga.kv`; those manifests currently report
-`exact_complete=false` because exact downloaded `.kicad_mod` import is still open. See
-`docs/component_cad_inventory.md`.
+The crate is the product of a phased refactor from `kicad-routing` (see
+`docs/MIGRATION.md` and `docs/ARCHITECTURE.md`). Phases 0–5 have landed: the unit
+newtypes, prelude, per-slice error hierarchy, geometry, cost, route, place, physics, and
+output slices are migrated, and the `experiment` subtree orchestrates end-to-end driver +
+transducer runs. **Phase 6 remains** — public-API examples and a docs backfill.
 
-The examples use a 0.5 mm routing lattice with explicit pad/via keepouts so KiCad's continuous
-clearance rules, not only grid-cell occupancy, are satisfied. Component courtyards and explicit 3D
-model envelopes carry a 2.0 mm assembly-clearance gate, and `verify_all` reports assembly failures
-alongside ERC/DRC/LVS/BOM. The HV tile emits `output/full_driver/driver_manifest.kv` with the
-transducer connector and 16 routed `TX_*` nets; the FPGA tile updates that manifest with JTAG,
-configuration-flash, and stack-bus programming evidence. `examples/beamforming_results.rs` requires
-that generated manifest and renders deterministic pulsed focal-envelope pictures for -45°, 0°, and
-+45° using the article's 16-element, 4.3 mm aperture-axis assumption, 10 mm focus, and 5 ns
-quantised delay profile. The simulation geometry matches the `kwavers-transducer` center-spanned
-linear-array convention; the planned extraction name is `kwavers-drivers` because this crate owns
-driver electronics, PCB generation, and hardware validation while `kwavers-transducer` owns acoustic
-transducer models. The current renderer is an empirical near-field diagnostic; full wave propagation
-validation should move to `kwavers-transducer`/kwavers before treating the images as article-grade
-acoustic evidence.
-`examples/stack_model.rs` consumes the clean board manifests in `output/full_driver/` and emits the
-stack model artifacts for one top FPGA board plus four 24-channel HV shields.
-
-**Roadmap** (see `backlog.md`): exact-pinout footprint import, exact FPGA selection/import, direct
-kwavers workspace integration, and external KiCad CLI verification in CI.
+There is no `examples/` directory in this repository: the original per-tile and stack
+example programs carry proprietary board geometry and are excluded from version control
+(see the repository `.gitignore`). Phase 6 adds public-surface examples that exercise the
+library without that geometry. Until then the library API and its tests are the executable
+documentation.
 
 ## Build
 
 ```sh
-cargo nextest run     # tests
-cargo clippy --all-targets -- -D warnings
-cargo run --release --example stack_model -- output/full_driver
-cargo run --release --example beamforming_results -- output/beamforming output/full_driver/driver_manifest.kv
+cargo nextest run -p kwavers-driver
+cargo clippy -p kwavers-driver --all-targets -- -D warnings
+cargo doc -p kwavers-driver --no-deps
 ```
+
+## Features
+
+- `io` (default) — KiCad `.kicad_pcb` / `.kicad_dru` emission and the `kicad-cli` wrapper.
+- `kwavers` — enables `experiment::KwaversSim`, the real acoustic simulator backed by
+  `kwavers-transducer`. Without it, `experiment` uses the in-crate fallback simulator.
+
+## Documentation
+
+- API reference: <https://docs.rs/kwavers-driver>
+- Architecture and refactor plan: `docs/ARCHITECTURE.md`, `docs/MIGRATION.md`
+- Workspace overview and crate map: [kwavers README](https://github.com/ryancinsight/kwavers#readme)
+
+## License
+
+MIT

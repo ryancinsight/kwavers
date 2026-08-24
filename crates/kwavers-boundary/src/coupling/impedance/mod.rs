@@ -192,7 +192,7 @@ impl ImpedanceBoundary {
 }
 
 impl BoundaryCondition for ImpedanceBoundary {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "ImpedanceBoundary"
     }
 

@@ -9,6 +9,10 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 ///
 /// # Returns
 /// `(M, 3)` array of voxel indices `[ix, iy, iz]`.
+///
+/// # Errors
+///
+/// Returns an error when spacing, pitch, or tumor support is invalid.
 pub fn gbm_subspot_raster(
     tumor_mask: &Array3<bool>,
     spacing_m: [f64; 3],
@@ -92,6 +96,10 @@ pub fn gbm_subspot_raster(
 ///
 /// Uses radius `0.5 * pitch_m`, matching the book Chapter 25 planning
 /// convention for visual GBM subspot coverage.
+///
+/// # Panics
+///
+/// Panics if a subspot coordinate is outside the validated tumor-mask shape.
 #[must_use]
 pub fn gbm_subspot_covered_fraction(
     tumor_mask: &Array3<bool>,

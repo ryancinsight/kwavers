@@ -3,16 +3,15 @@
 //! # SSOT role
 //!
 //! Every kwavers-safety bound, format string, sidecar key, and engineering-contract literal
-//! in the crate MUST live in this module. Anywhere a magic literal appears in `src/board.rs`,
-//! `src/manifest.rs`, `src/validate.rs`, `src/io.rs`, etc., Phase 1c migrates it here, naming the
-//! value once. Tests in `self::tests::ssot_values_pin_and_ratchet` lock every constant at its
-//! current value so a silent future edit loud-rejects contract drift.
+//! in the crate lives in this module: a literal that would otherwise appear in
+//! `src/board.rs`, `src/manifest.rs`, `src/validate.rs`, or `src/io.rs` is named once here
+//! instead. Tests in `self::tests::ssot_values_pin_and_ratchet` pin every constant at its
+//! current value, so a silent future edit fails loudly rather than drifting the contract.
 //!
-//! # Naming convention (Phase 1c decision)
+//! # Naming convention
 //!
-//! **Flat with domain prefixes** rather than nested submodules. The codebase already uses this
-//! pattern (see `TX_LANES_V2`, `CHANNELS_PER_TILE_V2`, `KWVERS_*` in older versions, `ARTICLE_*` in
-//! acoustic). Prefixes enforce grouping at the call site:
+//! **Flat with domain prefixes** rather than nested submodules, so the prefix groups the
+//! constants at the call site:
 //!
 //! * `KWVERS_*` — kwavers-side physics / safety bounds for the beam-propagation pre-step.
 //! * `CHECK_*` — kwavers-side Check names (extracted from inline string literals at every call site).
@@ -32,7 +31,7 @@
 //!   42. Today that doesn't apply.
 //! * **Test-only floats** (`1e-9`, `f64::INFINITY`) are algorithm-internal — they stay inline.
 //!
-//! See `docs/MIGRATION.md` § "Phase 1c — ssot" for the full rationale.
+//! `docs/MIGRATION.md` carries the full rationale for this layout.
 
 // ============================================================================
 // Kwavers-side physics / safety bounds (formerly `const` block in src/validate.rs)

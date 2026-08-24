@@ -36,6 +36,11 @@ pub trait AdaptiveBubbleModel {
     fn params(&self) -> &BubbleParameters;
 
     /// Bubble-wall acceleration R̈ at the current state.
+    ///
+    /// # Errors
+    ///
+    /// Returns a model-specific error when the state or acoustic inputs violate the equation's
+    /// domain.
     fn calculate_acceleration(
         &self,
         state: &mut BubbleState,
@@ -46,10 +51,18 @@ pub trait AdaptiveBubbleModel {
 
     /// Optional temperature update hook. A no-op implementation is valid when
     /// thermal effects are disabled for the selected model.
+    ///
+    /// # Errors
+    ///
+    /// Propagates a model-specific thermodynamic update failure.
     fn update_temperature(&self, state: &mut BubbleState, dt: f64) -> KwaversResult<()>;
 
     /// Optional vapor transfer update hook. A no-op implementation is valid when
     /// mass transfer is disabled for the selected model.
+    ///
+    /// # Errors
+    ///
+    /// Propagates a model-specific mass-transfer update failure.
     fn update_mass_transfer(&self, state: &mut BubbleState, dt: f64) -> KwaversResult<()>;
 }
 

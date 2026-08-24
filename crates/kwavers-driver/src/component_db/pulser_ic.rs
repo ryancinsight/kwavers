@@ -104,7 +104,7 @@ pub fn decoupling_per_ch_uf(part: &PulserIc) -> f64 {
 #[must_use]
 pub fn signal_pins_per_ch(part: &PulserIc) -> usize {
     let base = if part.beamforming_mem.is_some() { 4 } else { 3 };
-    base + if part.tr_switch { 1 } else { 0 } + part.supplies.len()
+    base + usize::from(part.tr_switch) + part.supplies.len()
 }
 
 /// Area (mm²) of one instance in the given package.

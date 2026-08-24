@@ -58,8 +58,8 @@ impl BasisFunction {
     ///
     pub fn evaluate(&self, xi: [f64; 3]) -> KwaversResult<Vec<f64>> {
         match self.degree {
-            1 => self.evaluate_linear(xi),
-            2 => self.evaluate_quadratic(xi),
+            1 => Self::evaluate_linear(xi),
+            2 => Self::evaluate_quadratic(xi),
             _ => Err(KwaversError::InvalidInput(format!(
                 "Unsupported polynomial degree: {}",
                 self.degree
@@ -73,8 +73,8 @@ impl BasisFunction {
     ///
     pub fn evaluate_derivatives(&self, xi: [f64; 3]) -> KwaversResult<Array2<f64>> {
         match self.degree {
-            1 => self.evaluate_linear_derivatives(xi),
-            2 => self.evaluate_quadratic_derivatives(xi),
+            1 => Self::evaluate_linear_derivatives(xi),
+            2 => Self::evaluate_quadratic_derivatives(xi),
             _ => Err(KwaversError::InvalidInput(format!(
                 "Unsupported polynomial degree: {}",
                 self.degree
@@ -90,7 +90,7 @@ impl BasisFunction {
     /// # Errors
     /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
-    fn evaluate_linear(&self, xi: [f64; 3]) -> KwaversResult<Vec<f64>> {
+    fn evaluate_linear(xi: [f64; 3]) -> KwaversResult<Vec<f64>> {
         let [xi_xi, eta, zeta] = xi;
 
         // Validate coordinates are in valid range
@@ -116,7 +116,7 @@ impl BasisFunction {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    fn evaluate_linear_derivatives(&self, _xi: [f64; 3]) -> KwaversResult<Array2<f64>> {
+    fn evaluate_linear_derivatives(_xi: [f64; 3]) -> KwaversResult<Array2<f64>> {
         // Derivatives are constant for linear elements
         let mut derivatives = Array2::<f64>::zeros((4, 3));
 
@@ -146,7 +146,7 @@ impl BasisFunction {
     /// # Errors
     /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
-    fn evaluate_quadratic(&self, xi: [f64; 3]) -> KwaversResult<Vec<f64>> {
+    fn evaluate_quadratic(xi: [f64; 3]) -> KwaversResult<Vec<f64>> {
         let [xi_xi, eta, zeta] = xi;
 
         // Validate coordinates
@@ -185,7 +185,7 @@ impl BasisFunction {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    fn evaluate_quadratic_derivatives(&self, xi: [f64; 3]) -> KwaversResult<Array2<f64>> {
+    fn evaluate_quadratic_derivatives(xi: [f64; 3]) -> KwaversResult<Array2<f64>> {
         let [xi_xi, eta, zeta] = xi;
         let lambda1 = 1.0 - xi_xi - eta - zeta;
         let lambda2 = xi_xi;
@@ -249,14 +249,14 @@ impl GaussQuadrature {
     #[must_use]
     pub fn get_gauss_points(&self, polynomial_degree: usize) -> Vec<GaussPoint> {
         match polynomial_degree {
-            1 => self.gauss_points_linear(),
-            2 => self.gauss_points_quadratic(),
-            _ => self.gauss_points_linear(), // Default to linear
+            1 => Self::gauss_points_linear(),
+            2 => Self::gauss_points_quadratic(),
+            _ => Self::gauss_points_linear(), // Default to linear
         }
     }
 
     /// 1-point Gauss quadrature for linear elements
-    fn gauss_points_linear(&self) -> Vec<GaussPoint> {
+    fn gauss_points_linear() -> Vec<GaussPoint> {
         vec![GaussPoint {
             local_coords: [0.25, 0.25, 0.25], // Centroid
             weight: 1.0 / 6.0,                // Volume of reference tetrahedron is 1/6
@@ -264,7 +264,7 @@ impl GaussQuadrature {
     }
 
     /// 4-point Gauss quadrature for quadratic elements
-    fn gauss_points_quadratic(&self) -> Vec<GaussPoint> {
+    fn gauss_points_quadratic() -> Vec<GaussPoint> {
         let a = (5.0 - 3.0_f64.sqrt()) / 20.0;
         let b = (5.0 + 3.0_f64.sqrt()) / 20.0;
         let w_a = (1.0 / 6.0) * (5.0 / 12.0);

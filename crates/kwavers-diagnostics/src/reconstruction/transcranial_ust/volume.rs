@@ -36,6 +36,11 @@ pub struct AcousticVolume {
 
 impl AcousticVolume {
     /// Convert resampled CT HU values to 3-D acoustic fields and masks.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the volume spacing or dimensions are invalid, or
+    /// when the CT values cannot produce finite acoustic fields.
     pub fn from_ct_hu(volume: CtResampledVolume) -> KwaversResult<Self> {
         if !volume.spacing_m.is_finite() || volume.spacing_m <= 0.0 {
             return Err(KwaversError::InvalidInput(
@@ -115,6 +120,11 @@ impl AcousticVolume {
 }
 
 /// Crop non-air head support and resample the CT onto an isotropic cube.
+///
+/// # Errors
+///
+/// Returns an error when the CT spacing, source slice, or target grid size is
+/// invalid, or when the selected volume has no head support.
 pub fn resample_head_volume(
     volume_hu: &Array3<f64>,
     spacing_mm: [f64; 3],

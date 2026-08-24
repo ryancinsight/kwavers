@@ -156,7 +156,7 @@ impl DgSimulationSolver {
 }
 
 impl Solver for DgSimulationSolver {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "DiscontinuousGalerkin"
     }
 

@@ -243,7 +243,7 @@ fn run_pstd(alpha0_db: f64, gamma: f64, dt: f64) -> Traces {
         kspace_method: KSpaceMethod::StandardPSTD,
         absorption_mode: if alpha0_db > 0.0 {
             AbsorptionMode::PowerLaw {
-                alpha_coeff: alpha0_db,
+                alpha_coeff: Some(alpha0_db),
                 alpha_power: gamma,
             }
         } else {

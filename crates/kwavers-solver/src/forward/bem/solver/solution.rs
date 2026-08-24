@@ -187,6 +187,11 @@ impl BemSolver {
     /// # Errors
     /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn compute_scattered_field(
         &self,
         evaluation_points: &Array1<[f64; 3]>,

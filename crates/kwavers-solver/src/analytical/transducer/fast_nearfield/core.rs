@@ -175,6 +175,11 @@ impl FastNearfieldSolver {
     /// # Errors
     /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn compute_field(
         &self,
         velocity: &Array2<Complex64>,
@@ -265,6 +270,11 @@ impl FastNearfieldSolver {
     /// # Errors
     /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn compute_field_stack(
         &self,
         velocity: &Array2<Complex64>,

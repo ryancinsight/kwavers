@@ -6,7 +6,9 @@ use leto::{Array1, Array2};
 use tyche_core::{Counter, Seed, SplitMix64, UserDomain};
 
 use super::sampling::{collect_points, sample_counter};
-use super::{GeometricDomain, GeometryDimension, GeometryError, PointLocation};
+use super::{
+    validation::validate_measure, GeometricDomain, GeometryDimension, GeometryError, PointLocation,
+};
 
 const INTERIOR_TAG: u64 = u64::from_le_bytes(*b"sphrintp");
 const BOUNDARY_TAG: u64 = u64::from_le_bytes(*b"sphrbndp");
@@ -86,17 +88,9 @@ impl SphericalDomain {
             radius,
             dimension,
         };
-        domain.validate_measure("interior", domain.interior_measure())?;
-        domain.validate_measure("boundary", domain.boundary_measure())?;
+        validate_measure("interior", domain.interior_measure())?;
+        validate_measure("boundary", domain.boundary_measure())?;
         Ok(domain)
-    }
-
-    fn validate_measure(&self, kind: &'static str, value: f64) -> Result<(), GeometryError> {
-        if value.is_finite() && value > 0.0 {
-            Ok(())
-        } else {
-            Err(GeometryError::InvalidMeasure { kind, value })
-        }
     }
 
     fn squared_distance(&self, point: &[f64]) -> f64 {

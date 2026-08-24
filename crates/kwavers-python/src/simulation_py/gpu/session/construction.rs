@@ -18,6 +18,11 @@ impl GpuPstdSession {
         absorption=None, nonlinearity=None,
         pml_size_xyz=None, alpha_power=1.5
     ))]
+    ///
+    /// # Errors
+    ///
+    /// Raises a Python runtime error when array shapes, medium parameters, or
+    /// GPU session initialization are invalid or unavailable.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         _py: Python<'_>,

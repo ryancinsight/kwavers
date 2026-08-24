@@ -58,6 +58,11 @@ pub use backscatter::{backscatter_parameters, AnalysisBand, BackscatterParameter
 /// # Errors
 /// Returns `InvalidInput` when the gate is empty or outside `rf`, when `rf` has
 /// no beams, or when `sample_rate` is not positive.
+///
+/// # Panics
+///
+/// Panics if a caller-supplied shape or an internal analysis state violates
+/// the precondition required by this operation.
 pub fn gated_spectrum(
     rf: ArrayView2<f64>,
     sample_range: std::ops::Range<usize>,

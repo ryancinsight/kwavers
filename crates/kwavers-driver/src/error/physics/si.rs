@@ -1,8 +1,7 @@
 //! Signal-integrity (SI) failures.
 //!
-//! Forward-looking variants for the [`crate::physics::si`] slice. Today the slice
-//! returns impedance / delay values directly; Phase 2 wraps breaches into
-//! `Result<_, Si>`.
+//! Declared variants for the [`crate::physics::si`] slice, which returns impedance and
+//! delay values directly today. They are adopted when breaches become `Result<_, Si>`.
 
 /// Signal-integrity failure.
 ///

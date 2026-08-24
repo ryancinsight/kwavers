@@ -23,14 +23,17 @@ permissions:
 
 concurrency:
   group: book-pages-${{ github.ref }}
-  cancel-in-progress: true
+  # A superseded pull-request build may be cancelled; a deploy from the
+  # default branch may not, because a half-finished Pages publish is worse
+  # than a superseded one.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   book:
     # Body owned once by Atlas (ADR 0035), pinned by SHA like any action. The
     # shared workflow keeps the pull-request build and skips deployment there,
     # so PRs still prove the book builds without publishing it.
-    uses: ryancinsight/atlas/.github/workflows/book-pages.yml@2f17abc735160f03edef7ccfbc83ef9b1886714c
+    uses: ryancinsight/atlas/.github/workflows/book-pages.yml@ddee9af1b79c60d3115c1f0d93d3c8d6e381d8d7
     permissions:
       contents: read
       # The shared deploy job publishes to Pages over OIDC.
@@ -42,3 +45,5 @@ jobs:
       # the version this book already pinned.
       output-path: target/book
       mdbook-test: true
+      rust-toolchain: "1.97.0"
+      cargo-package: kwavers

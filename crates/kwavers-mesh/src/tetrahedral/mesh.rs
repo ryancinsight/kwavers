@@ -81,9 +81,9 @@ impl TetrahedralMesh {
             }
         }
 
-        for (face_idx, face) in self.get_element_faces(nodes).iter().enumerate() {
+        for (face_idx, face) in Self::get_element_faces(nodes).iter().enumerate() {
             let mut sorted_face = *face;
-            sorted_face.sort();
+            sorted_face.sort_unstable();
 
             if let Some(existing) = self.face_elements.get(&sorted_face) {
                 if existing.len() >= 2 {
@@ -194,7 +194,7 @@ impl TetrahedralMesh {
     ///
     fn update_connectivity(&mut self, element_idx: usize) -> KwaversResult<()> {
         let nodes = self.elements[element_idx].nodes;
-        let faces = self.get_element_faces(nodes);
+        let faces = Self::get_element_faces(nodes);
 
         while self.adjacency.len() <= element_idx {
             self.adjacency.push(Vec::new());
@@ -203,7 +203,7 @@ impl TetrahedralMesh {
         for (face_idx, face) in faces.into_iter().enumerate() {
             // Sort face nodes for consistent hashing
             let mut sorted_face = face;
-            sorted_face.sort();
+            sorted_face.sort_unstable();
 
             // Update face-to-element mapping
             let entry = self.face_elements.entry(sorted_face).or_default();
@@ -245,7 +245,7 @@ impl TetrahedralMesh {
     }
 
     /// Get the 4 triangular faces of a tetrahedron
-    fn get_element_faces(&self, nodes: [usize; 4]) -> [[usize; 3]; 4] {
+    fn get_element_faces(nodes: [usize; 4]) -> [[usize; 3]; 4] {
         [
             [nodes[0], nodes[1], nodes[2]], // Face 0: opposite node 3
             [nodes[0], nodes[1], nodes[3]], // Face 1: opposite node 2

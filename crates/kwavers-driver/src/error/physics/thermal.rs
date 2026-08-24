@@ -1,9 +1,8 @@
 //! Thermal physics failures.
 //!
-//! Forward-looking variants for the [`crate::physics::thermal`] slice. Currently the
-//! slice returns `f64` ΔT values, not errors; the variants below are the typed
-//! migration surface for Phase 2 once the slice stops absorbing budget
-//! breaches into ad-hoc numerical heuristics.
+//! Declared variants for the [`crate::physics::thermal`] slice, which returns `f64` ΔT
+//! values rather than errors today. They are adopted when the slice stops absorbing budget
+//! breaches into numerical heuristics and surfaces them instead.
 
 /// Thermal physics failure.
 ///

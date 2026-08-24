@@ -12,13 +12,8 @@ use leto::Array2;
 pub struct Utils;
 
 impl Utils {
-    /// Create new utils instance
-    pub fn new() -> Self {
-        Self
-    }
-
     /// Calculate Euclidean distance between two 3D points
-    pub fn euclidean_distance(&self, p1: &[f64; 3], p2: &[f64; 3]) -> f64 {
+    pub fn euclidean_distance(p1: &[f64; 3], p2: &[f64; 3]) -> f64 {
         (p1[2] - p2[2])
             .mul_add(
                 p1[2] - p2[2],
@@ -28,12 +23,7 @@ impl Utils {
     }
 
     /// Calculate back-projection weight for spherical spreading compensation
-    pub fn calculate_back_projection_weight(
-        &self,
-        distance: f64,
-        sound_speed: f64,
-        dt: f64,
-    ) -> f64 {
+    pub fn calculate_back_projection_weight(distance: f64, sound_speed: f64, dt: f64) -> f64 {
         // Weight includes:
         // - 1/r for spherical spreading
         // - Solid angle factor
@@ -51,7 +41,6 @@ impl Utils {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn build_forward_model(
-        &self,
         sensor_positions: &[[f64; 3]],
         grid_size: [usize; 3],
         sound_speed: f64,
@@ -77,7 +66,7 @@ impl Utils {
                 let i = voxel_idx / (grid_size[1] * grid_size[2]);
 
                 let voxel_pos = [i as f64 * dx, j as f64 * dy, k as f64 * dz];
-                let distance = self.euclidean_distance(&voxel_pos, sensor_pos);
+                let distance = Self::euclidean_distance(&voxel_pos, sensor_pos);
 
                 // Time of arrival
                 let time_idx = (distance / sound_speed / dt) as usize;

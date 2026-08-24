@@ -51,6 +51,11 @@ impl TissuePropertyCache {
     }
 
     /// Populate array with cached values
+    ///
+    /// # Panics
+    ///
+    /// Panics if `output` and `tissue_map` have different shapes. The density
+    /// values are written element-wise and therefore require matching grids.
     pub fn populate_density_array(
         &mut self,
         tissue_map: &Array3<AbsorptionTissueType>,
@@ -76,6 +81,12 @@ impl TissuePropertyCache {
     }
 
     /// Populate array with cached sound speed values
+    ///
+    /// # Panics
+    ///
+    /// Panics if `output` and `tissue_map` have different shapes. The sound
+    /// speed values are written element-wise and therefore require matching
+    /// grids.
     pub fn populate_sound_speed_array(
         &mut self,
         tissue_map: &Array3<AbsorptionTissueType>,

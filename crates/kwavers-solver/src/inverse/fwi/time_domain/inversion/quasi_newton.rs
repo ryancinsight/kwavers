@@ -53,6 +53,11 @@ impl FwiProcessor {
     ///   `nt < 3`.
     /// - Propagates any [`crate::KwaversError`] from the forward/adjoint solve, the
     ///   misfit evaluation, or regularization.
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn invert_lbfgs(
         &self,
         observed_data: &leto::Array2<f64>,
@@ -73,7 +78,7 @@ impl FwiProcessor {
 
         let dim = initial_model.shape();
         let mut model = initial_model.clone();
-        self.apply_model_constraints(&mut model);
+        Self::apply_model_constraints(&mut model);
 
         let mut mem = LbfgsMemory::new(memory);
 
@@ -139,7 +144,7 @@ impl FwiProcessor {
                         .collect(),
                 )
                 .expect("trial model shares the model shape");
-                self.apply_model_constraints(&mut trial);
+                Self::apply_model_constraints(&mut trial);
                 // A trial the forward solver cannot integrate is a *bad step*,
                 // not a failed inversion. `apply_model_constraints` clamps to a
                 // broad physical range (750–6000 m/s), which is far wider than

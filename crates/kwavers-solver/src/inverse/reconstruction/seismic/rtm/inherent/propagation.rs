@@ -15,12 +15,13 @@
 //!
 //! Reference: Claerbout (1985), *Imaging the Earth's Interior*, Ch. 3.
 
+use aequitas::systems::si::quantities::{Frequency, Pressure, Time};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
+use kwavers_signal::DomainRickerWavelet;
 use leto::{Array3, Array4};
 
 use super::super::super::constants::RTM_STORAGE_DECIMATION;
-use super::super::super::wavelet::SeismicRickerWavelet;
 use super::super::types::ReverseTimeMigration;
 use super::parallel::for_each_view_mut;
 
@@ -43,10 +44,13 @@ impl ReverseTimeMigration {
         let mut pressure = Array3::zeros((grid.nx, grid.ny, grid.nz));
         let mut pressure_prev = Array3::zeros((grid.nx, grid.ny, grid.nz));
 
-        let wavelet = SeismicRickerWavelet::new(self.config.source_frequency_hz);
-        let src_signal = wavelet.generate_time_series(self.config.dt, n_time_steps);
+        let wavelet = DomainRickerWavelet::causal(
+            Frequency::from_base(self.config.source_frequency_hz),
+            Pressure::from_base(1.0),
+        )?;
+        let src_signal = wavelet.samples(Time::from_base(self.config.dt), n_time_steps)?;
 
-        for (t, &src_val) in src_signal.iter().enumerate() {
+        for (t, src_val) in src_signal.enumerate() {
             pressure[[source_position.0, source_position.1, source_position.2]] += src_val;
             self.update_wavefield(&mut pressure, &pressure_prev, grid)?;
 
@@ -61,7 +65,7 @@ impl ReverseTimeMigration {
         }
 
         if RTM_STORAGE_DECIMATION > 1 {
-            self.reconstruct_full_wavefield(stored, n_time_steps, grid)
+            Self::reconstruct_full_wavefield(stored, n_time_steps, grid)
         } else {
             Ok(stored)
         }
@@ -109,7 +113,6 @@ impl ReverseTimeMigration {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(super) fn reconstruct_full_wavefield(
-        &self,
         decimated: Array4<f64>,
         n_time_steps: usize,
         grid: &Grid,

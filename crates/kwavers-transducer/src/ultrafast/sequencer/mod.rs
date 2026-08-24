@@ -177,6 +177,10 @@ impl TransmissionSequencer {
     /// ```text
     ///   f_frame = PRF / N_ang
     /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns [`KwaversError::InvalidInput`] when `n_angles` is zero.
     pub fn frame_rate(&self, n_angles: usize) -> KwaversResult<Frequency<f64>> {
         if n_angles == 0 {
             return Err(KwaversError::InvalidInput(
@@ -194,6 +198,10 @@ impl TransmissionSequencer {
     ///
     /// # Arguments
     /// * `tilt_angles` - Slice of tilt angles.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`KwaversError::InvalidInput`] when `tilt_angles` is empty.
     pub fn sequential_schedule(
         &self,
         tilt_angles: &[Angle<f64>],
@@ -240,6 +248,10 @@ impl TransmissionSequencer {
     ///
     /// # Arguments
     /// * `tilt_angles` - Slice of tilt angles (will be reordered).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`KwaversError::InvalidInput`] when `tilt_angles` is empty.
     pub fn interleaved_schedule(
         &self,
         tilt_angles: &[Angle<f64>],
@@ -324,6 +336,11 @@ impl TransmissionSequencer {
     }
 
     /// Flash sequence: single unfocused plane wave (θ=0°), maximum frame rate.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`KwaversError::InvalidInput`] if the sequencer cannot construct the one-angle
+    /// schedule.
     pub fn flash_schedule(&self) -> KwaversResult<TransmissionSchedule> {
         self.sequential_schedule(&[Angle::from_unit::<Radian>(0.0)])
     }

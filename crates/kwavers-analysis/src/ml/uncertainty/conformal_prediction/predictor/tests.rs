@@ -82,13 +82,10 @@ fn test_conformal_calibration() {
 
 #[test]
 fn test_conformity_score_computation() {
-    let predictor = MlConformalPredictor::new(ConformalConfig::default()).unwrap();
     let prediction = Array2::from_elem((3, 3), 1.0_f32);
     let target = Array2::from_elem((3, 3), 1.2_f32);
 
-    let score = predictor
-        .compute_conformity_score(&prediction, &target)
-        .unwrap();
+    let score = MlConformalPredictor::compute_conformity_score(&prediction, &target).unwrap();
     let err = (score - 0.2).abs();
     assert!(
         err < 1e-5,
@@ -102,15 +99,12 @@ fn test_conformity_score_computation() {
 
 #[test]
 fn even_conformity_median_preserves_prediction_precision() {
-    let predictor = MlConformalPredictor::new(ConformalConfig::default()).unwrap();
     let lower = 1.0_f32;
     let upper = f32::from_bits(lower.to_bits() + 1);
     let prediction = Array2::from_elem((1, 2), 0.0_f32);
     let target = Array2::from_shape_vec((1, 2), vec![lower, upper]).unwrap();
 
-    let score = predictor
-        .compute_conformity_score(&prediction, &target)
-        .unwrap();
+    let score = MlConformalPredictor::compute_conformity_score(&prediction, &target).unwrap();
     let expected = (lower + upper) / 2.0_f32;
 
     assert_eq!(

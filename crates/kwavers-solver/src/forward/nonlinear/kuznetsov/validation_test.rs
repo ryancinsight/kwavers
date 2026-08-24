@@ -97,15 +97,14 @@ mod tests {
     /// Test energy conservation in linear regime (COMPREHENSIVE - Tier 3)
     ///
     /// This test runs 200 iterations on a 64³ grid for thorough validation.
-    /// Execution time: >30s, classified as Tier 3 comprehensive validation.
-    /// Use `cargo test -- --ignored` for full validation suite.
+    /// Measured 2026-08-22: 11.8 s under the heavy profile (serial); fits the
+    /// default 60 s per-test budget with 5× margin, so it now runs in the
+    /// default suite. Serialized with other CPU-saturating solver tests via
+    /// the `full-grid-sim` nextest group.
     /// # Panics
     /// - Panics if an internal invariant assumed to hold at this call site is violated.
     ///
     #[test]
-    #[ignore = "Tier 3 comprehensive validation: 200 steps on a 64³ grid exceeds the \
-                60 s default per-test budget even in isolation (debug profile). Run via \
-                `cargo nextest run --profile heavy` or `cargo test -- --ignored`."]
     fn test_energy_conservation_linear() {
         let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3).unwrap();
         let dt = 5e-8; // Small timestep for stability
@@ -271,7 +270,11 @@ mod tests {
     /// - Panics if an internal invariant assumed to hold at this call site is violated.
     ///
     #[test]
-    #[ignore = "Tier 3: Comprehensive validation (>60s execution time)"]
+    #[ignore = "Tier 3: comprehensive validation; measured 162 s on 2026-08-22 (opt-level 1), \
+                beyond the default 60 s budget. Runs in the heavy-validation CI job via \
+                `cargo nextest run --profile heavy --run-ignored ignored-only` (derived \
+                budget 300 s). Re-enable trigger: remove the ignore when the test fits the \
+                default 60 s budget after solver optimization."]
     fn test_nonlinear_harmonic_generation() {
         let grid = Grid::new(128, 64, 64, 1e-4, 1e-3, 1e-3).unwrap();
         let dt = 1e-8;

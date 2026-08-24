@@ -131,7 +131,7 @@ impl NeuralBeamformingNetwork {
         steering_angles: &[Angle<f64>],
     ) -> KwaversResult<Array3<f32>> {
         // Concatenate features with steering angle into 3D input
-        let input = self.concatenate_features(features, steering_angles)?;
+        let input = Self::concatenate_features(features, steering_angles)?;
         let mut output = input;
 
         // Forward through layers
@@ -218,7 +218,6 @@ impl NeuralBeamformingNetwork {
     /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     fn concatenate_features(
-        &self,
         features: &leto::Array1<f32>,
         steering_angles: &[Angle<f64>],
     ) -> KwaversResult<Array3<f32>> {
@@ -259,24 +258,22 @@ mod tests {
     #[test]
     fn test_network_invalid_architecture() {
         // Single layer (no hidden layer)
-        let result = NeuralBeamformingNetwork::new(&[64]);
-        assert!(result.is_err());
+        NeuralBeamformingNetwork::new(&[64])
+            .expect_err("single-layer architecture must be rejected");
 
         // Zero-sized layer
-        let result = NeuralBeamformingNetwork::new(&[64, 0, 32]);
-        assert!(result.is_err());
+        NeuralBeamformingNetwork::new(&[64, 0, 32]).expect_err("zero-sized layer must be rejected");
     }
 
     #[test]
     fn test_feature_concatenation() {
-        let net = NeuralBeamformingNetwork::new(&[7, 5]).unwrap();
-
         // 6 feature statistics + 1 angle = 7 input features
         use leto::Array1;
         let features = Array1::from_vec(6, vec![0.5, 0.1, 0.2, 0.05, 0.3, 0.8]).unwrap();
         let angles = vec![Angle::from_unit::<Radian>(15.0_f64.to_radians())];
 
-        let concatenated = net.concatenate_features(&features, &angles).unwrap();
+        let concatenated =
+            NeuralBeamformingNetwork::concatenate_features(&features, &angles).unwrap();
 
         // Should be (1, 1, 7): 6 features + 1 angle
         assert_eq!(concatenated.shape(), [1, 1, 7]);

@@ -162,6 +162,9 @@ impl std::fmt::Debug for ComplianceCheck {
             .field("id", &self.id)
             .field("name", &self.name)
             .field("requirement", &self.requirement)
+            // The callable is intentionally opaque; its presence is represented without exposing
+            // a non-debuggable closure object or its captured state.
+            .field("validation_function", &"<callable>")
             .finish()
     }
 }

@@ -39,6 +39,11 @@ impl KZKSolver {
     /// disjoint slice `self.pressure[[i,j,0..nt]]`.  No two Moirai workers
     /// share mutable output memory.
     #[must_use]
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn get_intensity(&self) -> Array2<f64> {
         let factor = 1.0 / (self.config.rho0 * self.config.c0 * self.config.nt as f64);
         let ny = self.config.ny;
@@ -74,6 +79,11 @@ impl KZKSolver {
     /// `self.pressure[[i,j,0..nt]]`.  No two Moirai workers share mutable
     /// output memory.
     #[must_use]
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn get_peak_pressure(&self) -> Array2<f64> {
         let ny = self.config.ny;
         let nt = self.config.nt;

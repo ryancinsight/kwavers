@@ -158,6 +158,11 @@ impl KzkNonlinearOperator {
     /// - Strang G (1968). SIAM J. Numer. Anal. 5(3), 506–517. DOI:10.1137/0705041
     /// - Aanonsen SI et al. (1984). J. Acoust. Soc. Am. 75(3), 749–768, §3 eq. (10).
     /// - Hamilton MF, Blackstock DT (1998). Nonlinear Acoustics §4.2.1 eq. (4.2.3).
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn apply(
         &mut self,
         pressure: &mut Array3<Complex64>,

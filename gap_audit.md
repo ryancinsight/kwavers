@@ -1,3 +1,284 @@
+## KW-EXAMPLES-115 — Seismic example partition closure 2026-08-21
+
+### Integration closure
+
+PR #426 merged the exact validated head
+`5cdc7d34e5db0f791e862ed55cb61319bf648d94` as
+`051a322165411826ffdbd5654b68b092814b3d77`; `origin/main` contains the merge
+commit. Local evidence is the full workspace Nextest gate (6,279/6,279, 15
+skipped), the Kwavers package gate (530/530), the isolated plane-wave regression
+(1/1 in 30.927 seconds), strict all-target Clippy, the Kwavers doctest (1/1),
+and both mdBook test/build gates. The six pull-request workflows remained queued
+(`32439952601`, `32439952614`, `32439952635`, `32439952620`, `32439952636`,
+`32439952863`); the repository has no required branch-protection checks, so
+hosted execution is advisory residual risk and is not represented as passing.
+
+The transcranial FWI entry points are manifests over SRP leaf modules: the 3-D
+workflow is 347 lines and the 2-D workflow is 465 lines. The fixed-grid
+configuration remains a zero-sized owner with associated constants, while
+synthetic phantom, CT reader, acquisition geometry, metrics, inversion, and
+artifact reporting each have one canonical module. Planar artifact writers are
+split between `planar_artifacts.rs` (488 lines) and `planar_auxiliary.rs` (235
+lines), keeping every seismic leaf below the 500-line target. Exact local
+package-plus-example Nextest run `37c67cf0-17bf-445d-9d8c-170e3608c568`
+passes 116/116 in 43.604 seconds; workspace rustfmt, strict example Clippy,
+the Kwavers doctest (1/1), and the mdBook test/build gates pass. No fallback or
+compatibility path is added. Review-fix verification on the current code head
+passes Nextest run `2bbe3774-be78-4a3e-86c6-e4499b1359a3` (116/116 in 42.798
+seconds), strict all-target Clippy, package checks, the Kwavers doctest (1/1),
+and both mdBook gates.
+
+The FDTD backend no longer copies pressure and velocity arrays into adapter
+shadow fields after every step; accessors borrow the solver-owned fields
+directly. The isolated plane-wave regression passes in
+`3eed71e5-a1cc-4852-be8f-b7ebf756b356` (1/1 in 30.927 seconds), the full
+Kwavers package passes `dd51875b-2423-44c6-9980-c0b4e72081be` (530/530), and
+the workspace Nextest gate passes `a440f991-41b4-4bc4-ad0b-f635c6470490`
+(6,279/6,279; 15 skipped; 30 slow). The plane-wave binary is now in the
+serialized full-grid test group so full-workspace CPU contention cannot turn a
+31-second test into a false 60-second timeout; the production workload and
+timeout contract remain unchanged.
+
+The local exact-head gates were completed before PR #426 integration, after
+merging current `origin/main` and removing a redundant `ArrayView` clone exposed
+by strict Clippy, then applying the verified review-fix slice. The integration
+closure above records the resulting merge and the hosted queue residual.
+
+Post-merge package verification also exposed the current lint-floor boundary:
+strict targeted Clippy passes for the three seismic entry points after each carries
+a scoped `#[expect]` for its intentional console report; the broad Kwavers
+`--all-targets` command still reports pre-existing test/example debt such as
+`manual_assert`, `print_stdout`, and `ignore_without_reason`, which remains owned by
+`KW-LINT-1` and is not represented as a clean gate.
+
+The first KW-LINT-1 burn-down slice measured `kwavers-signal` clean for
+`missing_errors_doc`, then added the three missing error contracts in the solver
+DG and optical-diffusion APIs. Strict solver Clippy passes with the lint re-enabled;
+its 901 native tests and 13 doctests (5 runnable, 8 environmental) pass. The
+workspace debt block remains unchanged until the full counted class reaches zero.
+
+The next `missing_errors_doc` slice covers 20 public APIs in `kwavers-physics`,
+spanning adaptive bubble integration, Keller-Herring dynamics, sonogenetics, and
+analytical fixtures. Strict package Clippy passes with the lint re-enabled and
+under `-D warnings`; its native gate passes 1,561/1,561 tests with one skipped,
+and its doctest gate passes 9 runnable tests with four ignored. Warning-denied
+rustdoc also passes. The workspace debt block remains unchanged while the
+counted class is burned down package by package.
+
+The next `missing_errors_doc` measurement found 15 undocumented `Result` APIs in
+`kwavers-driver`. The driver slice adds their error contracts and removes the
+package's nine unrelated pedantic warnings (redundant control flow, an unbounded
+manifest-key scan, raw-string hashes, wildcard enum imports, and a character
+pattern) so the strict package gate is meaningful. Strict driver Clippy passes
+with `missing_errors_doc` re-enabled and `-D warnings`; its nextest gate passes
+494/494 tests, doctests report zero tests, and warning-denied rustdoc passes. The
+workspace debt block remains unchanged.
+
+The next `missing_errors_doc` slice covers three `kwavers-math` APIs: generic
+array addition, scalar scaling, and CSR conversion. Strict math Clippy passes
+with the lint re-enabled and `-D warnings`; its nextest gate passes 196/196
+tests, doctests pass 3/10 with seven ignored, and warning-denied rustdoc passes.
+The workspace debt block remains unchanged.
+
+The next `missing_errors_doc` slice covers nine `kwavers-transducer` APIs in
+2-D array focusing, multi-bowl steering, and ultrafast scheduling. Strict
+transducer Clippy passes with the lint re-enabled and `-D warnings`; its nextest
+gate passes 245/245 tests with one skipped, doctests pass 2/8 with six ignored,
+and warning-denied rustdoc passes. The workspace debt block remains unchanged.
+
+The next `missing_errors_doc` measurement found one remaining physics site in
+the fixed Ali (2025) ring-array geometry constructor. Its contract now records
+the geometry-construction failure path. Strict physics Clippy passes with the
+lint re-enabled and `-D warnings`; the package nextest gate passes 1,561/1,561
+tests with one skipped, doctests pass 9/13 with four ignored, and warning-denied
+rustdoc passes. The workspace debt block remains unchanged.
+
+The next `missing_errors_doc` measurement found one solver site in the
+frequency-domain FWI CBS descriptor default. Its error contract now documents
+invalid operator/configuration combinations. Strict solver Clippy passes with
+the lint re-enabled and `-D warnings`; its nextest gate passes 901/901 tests
+with four skipped, doctests pass 5/13 with eight ignored, and warning-denied
+rustdoc passes. The workspace debt block remains unchanged.
+
+The next `missing_errors_doc` slice covers 11 public APIs in
+`kwavers-simulation` dispatch modules, including BEM, DG, elastic, FDTD,
+Helmholtz, nonlinear, poroelastic, PSTD, and Rayleigh-Sommerfeld routes. Strict
+package Clippy passes with the lint re-enabled and `-D warnings`; its nextest
+gate passes 87/87 tests, doctests pass 4/6 with two ignored, and warning-denied
+rustdoc passes. The workspace debt block remains unchanged.
+
+The next `missing_errors_doc` slice covers 25 public APIs in
+`kwavers-diagnostics` reconstruction modules, including breast-FWI diagnostics,
+phantom reduction, and transcranial slice, volume, and Born paths. Strict
+package Clippy passes with the lint re-enabled and `-D warnings`; its nextest
+gate passes 191/191 tests, doctests pass 1/6 with five ignored, and
+warning-denied rustdoc passes. The workspace debt block remains unchanged.
+
+The next `missing_errors_doc` slice covers 20 public APIs in `kwavers-therapy`
+therapy modules, including HIFU scheduling, theranostic guidance, nonlinear 3-D,
+and transcranial FUS planning. Strict package Clippy passes with the lint
+re-enabled and `-D warnings`; its nextest gate passes 350/350 tests with one
+skipped, doctests pass 8/9 with one ignored, and warning-denied rustdoc passes.
+The workspace debt block remains unchanged.
+
+The next `missing_errors_doc` slice covers 11 PyO3 binding APIs in
+`kwavers-python`, with four PyO3-required borrowed-receiver exceptions and two
+Python docstring quote sites made explicit for the lint floor. Strict package
+Clippy passes with the lint re-enabled and `-D warnings`; its nextest gate
+passes 21/21 tests, and warning-denied rustdoc passes. `cargo test --doc` is not
+applicable because this package intentionally exposes only a `cdylib` target;
+the command reports `no library targets found`. The workspace debt block remains
+unchanged.
+
+The complete example gate initially exposed an independent runtime defect in
+`focused_ultrasound_water_tank`: its five disjoint solver branches ran
+sequentially, and the comparison test terminated at 60 seconds. The provider
+owned `moirai_parallel::Parallel` join now overlaps the FDTD, PSTD, DG-2D,
+DG-3D, and DG-3D-CPML computations without sharing mutable solver state. The
+exact local Nextest run passes 59/59; the comparison test completes in 51.861
+seconds. No workload, assertion, or runtime budget changed.
+
+The next consolidation moves RITK PNG, DICOM, and NIfTI conversion, HU clamping,
+`CtVolume` ownership, and axial skull geometry into
+`crates/kwavers/examples/seismic_imaging/ct.rs`. The 2-D and 3-D entries retain
+only dimension-specific resampling and interpolation. Full example Nextest run
+`33cd7cd5-876c-4d3e-a4a6-89fa41005873` passes 59/59 and strict all-example
+Clippy is green. The entry points remain above the 500-line target, so
+`KW-EXAMPLES-115` remains in progress.
+
+The raster boundary is now canonical in
+`crates/kwavers/examples/seismic_imaging/render.rs`: both seismic entries share
+pixel writes, velocity coloring, and PNG encoding, while 2-D/3-D panel layouts
+remain dimension-specific. The exact local Nextest run
+`20e6d2c9-8a84-4bd9-a2d0-6e9084ea08af` passes 69/69 and strict all-example
+Clippy remains green. The entry points remain above the 500-line target.
+
+The 3-D orthogonal axial, coronal, and sagittal artifact renderer now has its
+own `seismic_imaging/volume_artifacts.rs` leaf; output orchestration remains in
+the example workflow. Exact local Nextest run
+`8af9dbfd-555e-4696-a4df-357b443bf080` passes 69/69 and strict all-example
+Clippy is green. The 2-D entry point and remaining 3-D workflow logic still
+require partitioning before `KW-EXAMPLES-115` can close.
+
+The 2-D planar velocity, CT-prior, RTM, brain-tissue, and CSV artifact writers
+now have their own `seismic_imaging/planar_artifacts.rs` leaf. The entry point
+retains only workflow orchestration and qualifies the leaf's bounded artifact
+API. Exact local Nextest run `26fc6ce2-eef8-4479-826c-c00584c0fa41` passes
+69/69 (one slow comparison at 44.608 seconds); strict all-example Clippy,
+`mdbook test docs/book`, and `mdbook build docs/book` pass. The 2-D entry point
+is 1,574 lines and the 3-D entry point is 1,382 lines, so further vertical
+partitioning remains before `KW-EXAMPLES-115` can close.
+
+The next 2-D slice moves MNI/uniform prior construction and the frozen skull mask
+to `seismic_imaging/brain_model.rs`, leaving a parent-qualified orchestration
+boundary. Exact local Nextest run `24eac9ad-f072-45bf-a8fd-f609652a77b1` passes
+69/69 (one slow comparison at 44.104 seconds), and strict all-example Clippy
+passes. The mdBook content is unchanged from the preceding passing test/build
+gate. The 2-D entry point is 1,396 lines and the 3-D entry point is 1,382 lines;
+acquisition, phantom, inversion, and reporting still require partitioning, so
+`KW-EXAMPLES-115` remains in progress.
+
+Full-ring source/receiver geometry and Ricker source construction now have their
+own `seismic_imaging/acquisition.rs` leaf, with geometry tests beside the owned
+boundary. Exact local Nextest run `0e396915-ab6b-42d4-bb15-e8577213310b` passes
+69/69 (one slow comparison at 37.708 seconds); strict all-example Clippy,
+`mdbook test docs/book`, and `mdbook build docs/book` pass. The 2-D entry point
+is 1,234 lines and the 3-D entry point is 1,382 lines; phantom, inversion, and
+reporting still require partitioning, so `KW-EXAMPLES-115` remains in progress.
+
+Full-volume CT interpolation, skull resampling, synthetic spherical phantom
+construction, and input-mode selection now have the
+`seismic_imaging/volume_phantom.rs` leaf; interpolation has value-semantic
+corner and center tests. Exact local Nextest run
+`de2bef5e-ab00-4b67-8910-3b89ac171fec` passes 72/72 (one slow comparison at
+41.982 seconds); strict all-example Clippy, `mdbook test docs/book`, and
+`mdbook build docs/book` pass. The 2-D entry point is 860 lines and the 3-D
+entry point is 1,212 lines; 3-D brain-model, acquisition, inversion, and
+reporting still require partitioning, so `KW-EXAMPLES-115` remains in progress.
+
+MNI probability-map loading, T1 normalization and tissue mapping, uniform-prior
+construction, and prior selection now have the
+`seismic_imaging/volume_brain_model.rs` leaf; the declared T1 velocity bands
+have boundary tests. Exact local Nextest run
+`744440bf-a9e0-4ed1-90ae-9b800cb97e3e` passes 73/73 (one slow comparison at
+42.758 seconds); strict all-example Clippy, `mdbook test docs/book`, and
+`mdbook build docs/book` pass. The 2-D entry point is 860 lines and the 3-D
+entry point is 952 lines; 3-D acquisition, inversion, and reporting still
+require partitioning, so `KW-EXAMPLES-115` remains in progress.
+
+Fibonacci-sphere element placement, receiver masks, and Ricker shot construction
+now have the `seismic_imaging/volume_acquisition.rs` leaf; domain-boundary tests
+cover clamping and source exclusion. Exact local Nextest run
+`54856a9f-51aa-42bc-9ab9-4952ccf3160f` passes 75/75 (one slow comparison at
+42.443 seconds); strict all-example Clippy, `mdbook test docs/book`, and
+`mdbook build docs/book` pass. The 2-D entry point is 860 lines and the 3-D
+entry point is 875 lines; 3-D inversion and reporting still require
+partitioning, so `KW-EXAMPLES-115` remains in progress.
+
+Provider-parallel separable Gaussian blur now has the
+`seismic_imaging/volume_initial_model.rs` leaf; constant-volume and
+impulse-response tests cover the clamped 3-D kernel. Exact local Nextest run
+`295655d1-c5e0-4c1b-bbad-f44a5d23d75a` passes 77/77 (one slow comparison at
+43.001 seconds); strict all-example Clippy, `mdbook test docs/book`, and
+`mdbook build docs/book` pass. The 2-D entry point is 860 lines and the 3-D
+entry point is 799 lines; 3-D inversion and reporting still require
+partitioning, so `KW-EXAMPLES-115` remains in progress.
+
+Output-directory validation and orthogonal skull, T1, and brain-tissue artifact
+writes now have the `seismic_imaging/volume_reporting.rs` leaf; the entry point
+delegates the complete output contract through one typed boundary. Exact local
+Nextest run `d5b20341-82fa-4e7c-9567-b37021b00e46` passes 77/77 (one slow
+comparison at 40.959 seconds); strict all-example Clippy, `mdbook test docs/book`,
+and `mdbook build docs/book` pass. The 2-D entry point is 860 lines and the 3-D
+entry point is 718 lines; 3-D inversion still requires partitioning, so
+`KW-EXAMPLES-115` remains in progress.
+
+Multi-scale skull FWI, synthetic-gather construction, and inversion diagnostics
+now have the typed `seismic_imaging/volume_skull_inversion.rs` leaf. Stage-two
+masked brain FWI, prior-derived initialization, gather construction, and
+brain-only quality reporting now have the typed
+`seismic_imaging/volume_brain_inversion.rs` leaf. Exact local package-plus-example
+Nextest run `2170b8c5-71b1-4be0-9c2a-44235c0676d5` passes 116/116 in 42.039
+seconds; strict all-example Clippy, `mdbook test docs/book`, and `mdbook build
+docs/book` pass. The 3-D entry point is 347 lines; the 2-D entry point remains
+860 lines, so `KW-EXAMPLES-115` remains in progress for the 2-D partition.
+
+Synthetic skull construction, explicit CT loading, HU resampling, and
+brain-support filling now have the `seismic_imaging/phantom.rs` leaf; the
+brain-support classifier is owned by `brain_model.rs` and planar artifacts
+consume it through a sibling boundary. Exact local Nextest run
+`529c2f34-5d9a-45cb-86f9-fc32473623a6` passes 69/69 (one slow comparison at
+43.391 seconds); strict all-example Clippy, `mdbook test docs/book`, and
+`mdbook build docs/book` pass. The 2-D entry point is 1,089 lines and the 3-D
+entry point is 1,382 lines; inversion and reporting still require partitioning,
+so `KW-EXAMPLES-115` remains in progress.
+
+Stage-two masked brain-tissue FWI now has the
+`seismic_imaging/brain_inversion.rs` leaf, returning a typed result after
+explicit prior, gather, and inversion error handling. Exact local Nextest run
+`761d76b5-0ae2-4c75-8baf-4b6833a36ef7` passes 71/71 (one slow comparison at
+44.692 seconds); strict all-example Clippy, `mdbook test docs/book`, and
+`mdbook build docs/book` pass. The 2-D entry point is 902 lines and the 3-D
+entry point is 1,382 lines; top-level inversion and reporting still require
+partitioning, so `KW-EXAMPLES-115` remains in progress.
+
+Receiver-snapshot construction and normalized zero-lag reverse-time migration
+now have the `seismic_imaging/rtm.rs` leaf, with an explicit empty-shot error.
+Exact local Nextest run `004ce523-953d-4a38-830d-0cdf2688903e` passes 71/71
+(one slow comparison at 42.319 seconds); strict all-example Clippy,
+`mdbook test docs/book`, and `mdbook build docs/book` pass. The 2-D entry point
+is 860 lines and the 3-D entry point is 1,382 lines; top-level inversion and
+reporting still require partitioning, so `KW-EXAMPLES-115` remains in progress.
+
+The separable Gaussian CT-prior blur now has the
+`seismic_imaging/initial_model.rs` leaf, with constant-field and impulse
+response tests beside the owned boundary. Exact local Nextest run
+`dfbc676e-77cd-4b3c-a081-ae062106bdc6` passes 71/71 (one slow comparison at
+41.967 seconds); strict all-example Clippy, `mdbook test docs/book`, and
+`mdbook build docs/book` pass. The 2-D entry point is 1,024 lines and the 3-D
+entry point is 1,382 lines; inversion and reporting still require partitioning,
+so `KW-EXAMPLES-115` remains in progress.
+
 ## ATLAS-KWAVERS-HEPHAESTUS-FDTD-107 — Collocated FDTD provider cutover — Apollo co-evolution blocker 2026-08-18
 
 The old consumer-owned collocated FDTD implementation in
@@ -6507,3 +6788,1104 @@ frequency-dependent values can be implemented without hidden global state.
 The 2026-08-17 cleanup removes the misleading TODO/placeholder wording and
 records this boundary explicitly; no coefficient or field-update semantics
 change in that cleanup.
+## Distributed queue completion and deadline closure — 2026-08-20
+
+The distributed scheduler previously removed a task from its pending vector
+before execution, so `WorkQueue::wait_all` could return while the last task was
+still running. Idle workers also polled with a fixed sleep, and deadline
+construction used unchecked timestamp addition. The scheduler now owns one
+condition-variable predicate containing pending work and task-ID claims;
+workers block on that predicate, completion guards release claims on success,
+error, or unwind, and `wait_all` observes both pending and active state.
+`WorkItem::with_deadline` uses checked addition and returns the existing typed
+invalid-input error on overflow.
+
+Evidence: the focused distributed Nextest run
+`7bdc39ee-be1b-47ae-b486-423362162176` passes 17/17, including a channel-
+synchronized active-task wait test and queue/item `u64::MAX` boundary tests;
+strict offline Clippy, doctest, rustfmt, and rustdoc pass. The locked local
+gate is blocked before compilation by the Atlas development overlay's required
+Cargo.lock rewrite; the lockfile was restored after overlay verification.
+
+## `missing_panics_doc` math slice — 2026-08-21
+
+The `kwavers-math` slice documents the panic contracts for all 11 measured
+public APIs: k-space vector construction, spectral helpers, caller-owned 3-D
+FFT output paths, matrix-free LSQR shape validation, and Hermes-backed SIMD
+operations. The package gate passes strict offline Clippy with
+`-D clippy::missing_panics_doc -D warnings`, Nextest run
+`f5618d54-01d3-4c42-b3b0-6aab73b7d5f2` passes 196/196, doctests pass 3/3
+(7 ignored), and rustdoc passes with `RUSTDOCFLAGS=-D warnings`.
+
+The next workspace measurement after this math increment found four
+`missing_panics_doc` sites in `kwavers-driver`; that slice has since integrated.
+
+## `missing_panics_doc` driver slice — 2026-08-21
+
+The `kwavers-driver` slice documents the four measured public panic contracts
+in DFM track merging, placement/routing co-optimization, KiCad footprint
+import, and stack-plan selection. Strict offline Clippy with
+`-D clippy::missing_panics_doc -D warnings` passes; Nextest run
+`38560f9c-4836-4c03-9a6c-a05129770ab5` passes 494/494; doctests complete with
+0 tests; and rustdoc passes with `RUSTDOCFLAGS=-D warnings`.
+
+The next workspace measurement found three `missing_panics_doc` sites in
+`kwavers-signal`; that slice has since integrated.
+
+## `missing_panics_doc` signal slice — 2026-08-21
+
+The `kwavers-signal` slice documents the three measured public 2-D analytic
+signal helpers: row-wise Hilbert transform, envelope, and phase. Strict
+offline Clippy with `-D clippy::missing_panics_doc -D warnings` passes;
+Nextest run `ef65468e-f4de-41e7-9fd1-8494c28a76cb` passes 63/63; doctests pass
+4/4; and rustdoc passes with `RUSTDOCFLAGS=-D warnings`.
+
+The next workspace measurement found two `missing_panics_doc` sites in
+`kwavers-field` and 26 in `kwavers-medium`; both slices have since integrated.
+
+## `missing_panics_doc` field slice — 2026-08-21
+
+The `kwavers-field` slice documents the two measured field accessor contracts
+for immutable and mutable unified-field views. Strict offline Clippy with
+`-D clippy::missing_panics_doc -D warnings` passes; Nextest run
+`82ac58ea-9f8b-437e-bc14-758a54bc8ba2` passes 7/7; doctests pass 1/1; and
+rustdoc passes with `RUSTDOCFLAGS=-D warnings`.
+
+The next workspace measurement remains 26 `missing_panics_doc` sites in
+`kwavers-medium`; that slice has since integrated.
+
+## `missing_panics_doc` medium slice — 2026-08-21
+
+The `kwavers-medium` slice documents all 26 measured panic contracts across
+absorption fitting, anisotropic stiffness, tissue maps, optical properties,
+and thermal presets. Strict offline Clippy with
+`-D clippy::missing_panics_doc -D warnings` passes; Nextest run
+`7a5d184d-b618-432d-8407-f93bf24a5151` passes 215/215; doctests pass 4/4
+(1 ignored); and rustdoc passes with `RUSTDOCFLAGS=-D warnings`.
+
+The next workspace measurement found one `missing_panics_doc` site in
+`kwavers-boundary` and six in `kwavers-transducer`; the boundary slice is the
+current ratchet item.
+
+## `missing_panics_doc` boundary slice — 2026-08-21
+
+The `kwavers-boundary` slice documents the one measured subgrid smoothing
+panic contract for mismatched property and geometry shapes. Strict offline
+Clippy with `-D clippy::missing_panics_doc -D warnings` passes; Nextest run
+`cb1a1025-57bc-4741-90e6-e7516033a7b9` passes 97/97; doctests pass 4/4 (1 ignored); and
+rustdoc passes with `RUSTDOCFLAGS=-D warnings`.
+
+The next workspace measurement remains six `missing_panics_doc` sites in
+`kwavers-transducer`; that package is the current ratchet item.
+
+## `missing_panics_doc` transducer slice — 2026-08-21
+
+The `kwavers-transducer` slice documents the six measured panic contracts for
+MVDR steering-vector construction, calibration least-squares dimensions,
+focused-bowl and multi-bowl zero-copy fills, spherical-cap axis construction,
+and phased-array field filling. Strict offline Clippy with
+`-D clippy::missing_panics_doc -D warnings` passes; Nextest run
+`0320d46c-897c-499b-8c3b-013ff75b892d` passes 245/245 with one intentional skip;
+doctests pass 2/2 (6 ignored); and rustdoc passes with
+`RUSTDOCFLAGS=-D warnings`.
+
+The refreshed workspace measurement then found seven additional
+`missing_panics_doc` sites in `kwavers-simulation` and 38 in
+`kwavers-analysis`; the simulation package is the current ratchet item.
+
+The simulation slice has since integrated; `kwavers-analysis` is now the
+current ratchet item with 38 measured sites.
+
+## `missing_panics_doc` simulation slice — 2026-08-21
+
+The `kwavers-simulation` slice documents the seven measured panic contracts in
+solver dispatch and output serialization. Strict offline Clippy with
+`-D clippy::missing_panics_doc -D warnings` passes; Nextest run
+`b11d43b8-a07a-4342-b665-4a60a502914e` passes 87/87; doctests pass 4/4 (2
+ignored); and rustdoc passes with `RUSTDOCFLAGS=-D warnings`.
+
+The refreshed workspace measurement then found 31 additional
+`missing_panics_doc` sites in `kwavers-physics`; that package is the current
+ratchet item.
+
+## `missing_panics_doc` physics slice — 2026-08-21
+
+The `kwavers-physics` slice documents the 31 measured panic contracts across
+phase-shifting arrays, bubble integration, conservation checks, imaging and
+thermal-dose paths, zero-copy state containers, sonogenetics, analytical RTM
+and transducer helpers, nonlinear FFT inputs, chemistry, electromagnetics, and
+ablation. Strict offline Clippy with `-D clippy::missing_panics_doc -D warnings`
+passes; Nextest run `d08bec08-3f94-4730-8710-118e8ce0db5a` passes 1561/1561
+with one intentional skip; doctests pass 9/9 (4 ignored); and rustdoc passes
+with `RUSTDOCFLAGS=-D warnings`.
+
+The refreshed workspace measurement then found 69 additional
+`missing_panics_doc` sites in `kwavers-solver`; that package is the current
+ratchet item.
+
+## `missing_panics_doc` solver slice — 2026-08-21
+
+The `kwavers-solver` slice documents the 69 measured panic contracts across
+forward solvers, nonlinear and PSTD operators, plugin registries, analytical
+near-field paths, inverse and multiphysics reconstruction, workspace helpers,
+and safety layout adapters. Strict offline Clippy with
+`-D clippy::missing_panics_doc -D warnings` passes; Nextest run
+`300a3e32-83e8-476a-8f9f-ec8c396c05f4` passes 901/901 with four intentional
+skips (15 tests exceeded the 30-second slow threshold, with the suite completing
+in 52.252 seconds); doctests pass 5/5 (8 ignored); and rustdoc passes with
+`RUSTDOCFLAGS=-D warnings`.
+
+## `missing_panics_doc` analysis slice — 2026-08-21
+
+The `kwavers-analysis` slice documents the 38 measured panic contracts across
+machine-learning inference and training, adaptive and delay-and-sum
+beamforming, Doppler and spectroscopy solvers, clutter filtering, ULM
+microbubble processing, and theorem validation. Strict offline Clippy with
+`-D clippy::missing_panics_doc -D warnings` passes; Nextest run
+`8b9787a2-242f-429f-ab29-1c0cc6301ccb` passes 744/744; doctests pass 1/1 (21
+ignored); and rustdoc passes with `RUSTDOCFLAGS=-D warnings`.
+
+The refreshed workspace measurement after this merge found 11
+`missing_panics_doc` sites in `kwavers-diagnostics` and 11 in `kwavers-therapy`;
+the diagnostics package is the current ratchet slice.
+
+## `missing_panics_doc` diagnostics slice — 2026-08-21
+
+The `kwavers-diagnostics` slice documents the 11 measured panic contracts in
+bent-ray tomography, breast ultrasound FWI dataset and diagnostic assembly,
+Radon and filtered-backprojection reconstruction, transcranial CT resampling,
+FK migration, and plane-wave compounding. Strict offline Clippy with
+`-D clippy::missing_panics_doc -D warnings` passes; Nextest run
+`9e632a75-7ff0-47a8-8d7a-c926e25dddb9` passes 191/191; doctests pass 1/1 (5
+ignored); and rustdoc passes with `RUSTDOCFLAGS=-D warnings`.
+
+The refreshed workspace measurement after this merge leaves 11
+`missing_panics_doc` sites in `kwavers-therapy`; that package is the current
+ratchet slice.
+
+## `missing_panics_doc` therapy slice — 2026-08-21
+
+The `kwavers-therapy` slice documents the 11 measured panic contracts across
+lithotripsy shock-field generation, SWE elasticity-map slicing, abdominal and
+brain placement contexts, abdominal medium preparation, BBB and subspot
+planning, transcranial thermal dosing, and waveform adjoint reconstruction.
+Strict offline Clippy with `-D clippy::missing_panics_doc -D warnings` passes;
+Nextest run `f6c285c7-5c8f-4443-96ac-c4a847dc3eaf` passes 350/350 with one
+intentional skip (five tests exceeded the 30-second slow threshold); doctests
+pass 8/8 (1 ignored); and rustdoc passes with `RUSTDOCFLAGS=-D warnings`.
+
+The refreshed workspace measurement after this merge found three
+`missing_panics_doc` sites in the `kwavers` facade; that package is the current
+ratchet slice.
+
+## `missing_panics_doc` facade slice — 2026-08-21
+
+The `kwavers` facade slice documents the three measured panic contracts in
+thermal and cavitation lesion sound-speed perturbation and finite-difference
+lesion reconstruction. Strict offline Clippy with
+`-D clippy::missing_panics_doc -D warnings` passes; Nextest run
+`023eb09b-d99c-4f94-9bfe-f44d4f587355` passes 39/39; doctests pass 1/1; and
+rustdoc passes with `RUSTDOCFLAGS=-D warnings`.
+
+The post-merge workspace measurement with `-D clippy::missing_panics_doc`
+exits 0, so the `missing_panics_doc` debt-block line is removed from the root
+lint table. The next measured debt class is `unused_self` (228 sites), with
+107 sites in `kwavers-solver` as the current package slice.
+
+The first bounded solver increment targets the four `unused_self` kernel methods
+in `forward/bem/burton_miller/kernels.rs`. They are now associated functions;
+focused Nextest run `f7e57382-0201-4ccc-8f15-7f4f7bfbc4f0` passes 12/12 (893
+solver tests filtered), the package doctests pass 5/5 (8 ignored), and
+warning-denied rustdoc passes. The `unused_self` package measurement reports no
+remaining warnings in that kernel module; the other solver sites remain queued.
+
+After PR #473, the workspace `unused_self` scan reports 225 sites, including
+104 in `kwavers-solver`. The next bounded slice is the three receiver-free
+helpers in `forward/elastic/swe/gpu`.
+
+The SWE GPU slice converts its three measured receiver-free helpers to
+associated functions. Focused Nextest run `be884b6c-b178-4063-b2e1-70244b94b056`
+passes 5/5 (900 solver tests filtered); the package doctests pass 5/5 (8
+ignored), warning-denied rustdoc passes, and the focused unused_self scan has
+zero warnings in the SWE GPU module.
+
+After PR #474, the workspace `unused_self` scan reports 222 sites, including
+101 in `kwavers-solver`. The next bounded slice is the four receiver-free
+helpers in `forward/helmholtz/fem/assembly.rs`.
+
+The Helmholtz FEM assembly slice converts its four measured receiver-free
+helpers to associated functions. Focused Nextest run
+`42341dd6-7cd4-48ae-b7e0-c2bacb364f2b` passes 9/9 (896 solver tests filtered);
+the package doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and
+the focused unused_self scan has zero warnings in `forward/helmholtz/fem/assembly.rs`.
+
+After PR #475, the workspace `unused_self` scan reports 218 sites, including
+97 in `kwavers-solver`. The next bounded slice is the six receiver-free
+helpers in `forward/helmholtz/fem/basis.rs`.
+
+The Helmholtz FEM basis slice converts its six measured receiver-free basis and
+quadrature helpers to associated functions. Focused Nextest run
+`ec69b414-5d63-4006-ba16-07e2ff6c342d` passes 9/9 (896 solver tests filtered);
+the package doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and
+the focused unused_self scan has zero warnings in
+`forward/helmholtz/fem/basis.rs`.
+
+After PR #476, the workspace `unused_self` scan reports 212 sites, including
+91 in `kwavers-solver`. The next bounded slice is the receiver-free helper in
+`forward/helmholtz/fem/solver/core/interpolation.rs`.
+
+The FEM interpolation slice converts its measured receiver-free shape-function
+helper to an associated function. Focused Nextest run
+`b1f21fd8-793e-4e7a-98a6-75ed860fed9c` passes 9/9 (896 solver tests filtered);
+the package doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and
+the focused unused_self scan has zero warnings in the interpolation module.
+
+The numerical-validation slice converts the four remaining receiver-free boundary and
+conservation helpers to associated functions and migrates all callers. Focused Nextest passes
+17/17 (889 filtered), package doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and
+the refreshed workspace `unused_self` count is 121 sites with zero in `kwavers-solver`.
+
+Exact integrated-head validation after PR #506 (`855117c00`) passes the full Kwavers package
+Nextest suite (530/530, eight configured skips), builds all package examples, and passes both
+`mdbook test docs/book` and `mdbook build docs/book` with HTML in `target/book`. Test-generated
+PNG outputs were restored after the run; no binary fixture deltas are part of the integrated head.
+
+The `kwavers-math` stateless geometry slice converts `linear_geometry` to an associated helper
+and migrates both contiguous gradient/divergence callers. Package Nextest passes 196/196, package
+doctests pass 3/3 (7 ignored), warning-denied rustdoc passes, and the refreshed workspace
+`unused_self` count is 120 sites.
+
+Latest integrated head after PR #508 (`576f70ccb`) re-smokes the package examples build and both
+mdBook test/build commands; all exit 0 and the HTML book is written to `target/book`.
+
+The `kwavers-signal` frequency-filter slice converts its receiver-free FFT response helper to an
+associated function and migrates all callers. Package Nextest passes 63/63, doctests pass 4/4,
+warning-denied rustdoc passes, and the refreshed workspace `unused_self` count is 119 sites with
+zero in `kwavers-signal` and `kwavers-solver`.
+
+The `kwavers-grid` geometry slice consolidates the duplicated measure validator into the
+vertical `geometry/validation.rs` leaf and migrates both domain constructors. Package Nextest
+passes 45/45, doctests pass 1/1 (1 ignored), warning-denied rustdoc passes, and the refreshed
+workspace `unused_self` count is 117 sites with zero in `kwavers-grid`, `kwavers-signal`, and
+`kwavers-solver`.
+
+Exact integrated-head validation after PR #511 (`2b157eac8`) passes full Kwavers Nextest
+(530/530, eight configured skips, 13 slow tests reported), the package examples build, and both
+mdBook test/build commands; HTML is written to `target/book`. Test-generated PNG outputs were
+restored after the run, with no binary fixture deltas included.
+
+The `kwavers-mesh` tetrahedral face-enumeration slice converts its receiver-free helper to an
+associated function and migrates both mesh connectivity callers. Package check, `unused_self`
+Clippy, Nextest, doctests (1/1), and warning-denied rustdoc pass; the refreshed workspace
+`unused_self` count is 116 sites with zero in `kwavers-mesh`, `kwavers-grid`, `kwavers-signal`,
+and `kwavers-solver`.
+
+The `kwavers-receiver` sonoluminescence slice converts stateless cluster merging to an associated
+function and migrates its detector caller. Package check, `unused_self` Clippy, Nextest, doctests
+(1/1), and warning-denied rustdoc pass; the refreshed workspace `unused_self` count is 115 sites
+with zero in `kwavers-receiver`, `kwavers-mesh`, `kwavers-grid`, `kwavers-signal`, and
+`kwavers-solver`.
+
+The `kwavers-boundary` BEM applicator slice converts Dirichlet, Neumann, Robin, and radiation
+applicators to associated functions and migrates all `apply_all` callers. Package check, targeted
+`unused_self` Clippy, Nextest, doctests (4/4; 1 ignored), and warning-denied rustdoc pass; package
+Clippy still reports the 11 pre-existing boundary sites in CPML/FEM/smoothing. The refreshed
+workspace `unused_self` count is 111 sites with zero in the BEM manager, `kwavers-receiver`,
+`kwavers-mesh`, `kwavers-grid`, `kwavers-signal`, and `kwavers-solver`.
+
+The `kwavers-imaging` multimodality fusion slice converts transform, checkerboard, difference,
+and multi-channel helpers to associated functions and migrates all callers; overlay and
+false-color remain receiver-bound for configured blend weights. Package check, targeted
+`unused_self` Clippy, Nextest, doctests (4/4), and warning-denied rustdoc pass; the refreshed
+workspace `unused_self` count is 107 sites with zero in `kwavers-imaging`, `kwavers-boundary` BEM,
+`kwavers-receiver`, `kwavers-mesh`, `kwavers-grid`, `kwavers-signal`, and `kwavers-solver`.
+
+The `kwavers-boundary` FEM applicator slice converts Dirichlet, Neumann, Robin, and radiation
+applicators to associated functions and migrates all `apply_all` callers. Package check, targeted
+`unused_self` Clippy, Nextest, doctests (4/4; 1 ignored), and warning-denied rustdoc pass; package
+Clippy still reports seven pre-existing boundary sites in CPML and smoothing. The refreshed
+workspace `unused_self` count is 103 sites with zero in the FEM/BEM managers, `kwavers-imaging`,
+`kwavers-receiver`, `kwavers-mesh`, `kwavers-grid`, `kwavers-signal`, and `kwavers-solver`.
+
+The `kwavers-boundary` CPML axis-update slice converts four receiver-free memory/correction
+helpers to associated functions and migrates their public wrapper callers. Package check, targeted
+`unused_self` Clippy, Nextest, doctests (4/4; 1 ignored), and warning-denied rustdoc pass; package
+Clippy now reports three pre-existing boundary sites in smoothing. The refreshed workspace
+`unused_self` count is 99 sites with zero in CPML, the FEM/BEM managers, `kwavers-imaging`,
+`kwavers-receiver`, `kwavers-mesh`, `kwavers-grid`, `kwavers-signal`, and `kwavers-solver`.
+
+The `kwavers-boundary` smoothing slice converts ghost-cell neighbor collection, ghost-cell
+extrapolation, and immersed-interface correction to associated functions and migrates all callers.
+Package check, targeted `unused_self` Clippy, Nextest (97/97), doctests (4/4; 1 ignored), and
+warning-denied rustdoc pass. The refreshed workspace `unused_self` count is 96 sites with zero in
+`kwavers-boundary`, CPML, the FEM/BEM managers, `kwavers-imaging`, `kwavers-receiver`,
+`kwavers-mesh`, `kwavers-grid`, `kwavers-signal`, and `kwavers-solver`.
+
+The `kwavers-transducer` calibration slice converts peak extraction, reflector matching, and
+position estimation to associated functions and migrates all calibration callers; quality-metric
+updates remain stateful. Package check, targeted `unused_self` Clippy, Nextest (245/245 with one
+configured skip), doctests (2/2; 6 ignored), and warning-denied rustdoc pass. The refreshed
+workspace `unused_self` count is 93 sites with 10 remaining in transducer array/k-Wave rasterizer
+helpers and zero in the completed calibration and boundary slices.
+
+The `kwavers-transducer` flexible-array slice converts normal computation and stress calculation to
+associated functions and migrates their callers; strain calculation remains configuration-dependent.
+Package check, targeted `unused_self` Clippy, Nextest (245/245 with one configured skip), doctests
+(2/2; 6 ignored), and warning-denied rustdoc pass. The refreshed workspace `unused_self` count is
+91 sites with eight remaining in transducer k-Wave rasterizer helpers and zero in the completed
+flexible calibration, flexible-array, and boundary slices.
+
+The `kwavers-transducer` k-Wave rasterizer slice converts BLI mapping, disc basis and sample counts,
+curved arc/bowl/annulus sampling and masks, planar rectangle/disc/aperture sampling and masks, and
+area-conserving mapping to associated functions and migrates all callers. Package check, targeted
+`unused_self` Clippy (zero transducer sites), Nextest (245/245 with one configured skip), doctests
+(2/2; 6 ignored), and warning-denied rustdoc pass. The refreshed workspace `unused_self` count is
+83 sites; transducer is clean.
+
+The `kwavers-physics` Mie-scattering slice converts the Rayleigh approximation, logarithmic
+derivative, coefficient construction, efficiency reductions, asymmetry, and phase helpers to
+associated functions; `MieCalculator::max_terms` remains stateful at the public calculation
+boundary. Package check, targeted `unused_self` Clippy (optics scattering clean), Nextest
+(1561/1561 with one configured skip), doctests (9/13; 4 ignored), and warning-denied rustdoc pass.
+The refreshed workspace `unused_self` count is 76 sites with 29 remaining in other physics domains.
+
+The `kwavers-physics` cavitation-detection slice converts broadband energy, subharmonic FFT
+spectrum, and spectral state classification to associated functions; baseline/history/stateful
+detector fields remain receiver-bound. Package check, targeted `unused_self` Clippy (detection
+paths clean), Nextest (1561/1561 with one configured skip), doctests (9/13; 4 ignored), and
+warning-denied rustdoc pass. The refreshed workspace `unused_self` count is 73 sites with 26
+remaining in other physics domains.
+
+The `kwavers-physics` IMEX integration slice converts state/vector conversion and equilibrium
+vapor-pressure helpers to associated functions; Jacobian and thermal-rate helpers retain the
+solver/config receivers they require. Package check, targeted `unused_self` Clippy (IMEX paths
+clean), Nextest (1561/1561 with one configured skip), doctests (9/13; 4 ignored), and
+warning-denied rustdoc pass. The refreshed workspace `unused_self` count is 70 sites with 23
+remaining in other physics domains.
+
+The `kwavers-physics` vapor-pressure slice converts Antoine, Wagner, Buck, IAPWS, and ice-pressure
+equations to associated functions; model selection and Clausius-Clapeyron remain receiver-bound
+where calculator state is required. The thermodynamics unit caller is migrated to
+associated-function syntax. Package check, targeted `unused_self` Clippy (vapor-pressure paths
+clean), Nextest (1561/1561 with one configured skip), doctests (9/13; 4 ignored), and
+warning-denied rustdoc pass. The refreshed workspace `unused_self` count is 66 sites with 19
+remaining in other physics domains.
+
+The `kwavers-physics` CEUS slice converts nonlinear beamforming, contrast enhancement, and
+single-frequency DFT extraction to associated functions; harmonic filter state remains
+receiver-bound. Package check, targeted `unused_self` Clippy (CEUS paths clean), Nextest
+(1561/1561 with one configured skip), doctests (9/13; 4 ignored), and warning-denied rustdoc pass.
+The refreshed workspace `unused_self` count is 63 sites with 16 remaining in other physics
+domains.
+
+The `kwavers-physics` elastography harmonic-detection slice converts Hann windowing, FFT
+normalization, and SNR estimation to associated functions; detector config remains receiver-bound
+for harmonic selection. Unit callers use associated-function syntax. Package check, targeted
+`unused_self` Clippy (harmonic-detection paths clean), Nextest (1561/1561 with one configured
+skip), doctests (9/13; 4 ignored), and warning-denied rustdoc pass. The refreshed workspace
+`unused_self` count is 60 sites with 13 remaining in other physics domains.
+
+The `kwavers-physics` coded-excitation slice converts Barker and Golay code generation to
+associated functions; chirp generation remains receiver-bound for sampling-frequency
+configuration. Package check, targeted `unused_self` Clippy (coded-excitation paths clean),
+Nextest (1561/1561 with one configured skip), doctests (9/13; 4 ignored), and warning-denied
+rustdoc pass. The refreshed workspace `unused_self` count is 58 sites with 11 remaining in other
+physics domains.
+
+The `kwavers-physics` elastic mode-conversion slice converts positive-definiteness checking to an
+associated function, while stiffness-tensor fields remain receiver-bound for validation. Package
+check, targeted `unused_self` Clippy (mode-conversion path clean), Nextest (1561/1561 with one
+configured skip), doctests (9/13; 4 ignored), and warning-denied rustdoc pass. The refreshed
+workspace `unused_self` count is 57 sites with 10 remaining in other physics domains.
+
+The `kwavers-physics` cortical neuromodulation slice converts the M-current steady-state gate
+function to an associated function; voltage-dependent kinetics and neuron parameters remain
+receiver-bound. Package check, targeted `unused_self` Clippy (neuromodulation path clean), Nextest
+(1561/1561 with one configured skip), doctests (9/13; 4 ignored), and warning-denied rustdoc pass.
+The refreshed workspace `unused_self` count is 56 sites with 9 remaining in other physics domains.
+
+The `kwavers-physics` transcranial validation slice converts sidelobe-level calculation to an
+associated function; grid/reference-speed-dependent focal metrics remain receiver-bound.
+Validation tests use associated-function syntax. Package check, targeted `unused_self` Clippy
+(validation path clean), Nextest (1561/1561 with one configured skip), doctests (9/13; 4 ignored),
+and warning-denied rustdoc pass. The refreshed workspace `unused_self` count is 55 sites with 8
+remaining in other physics domains.
+
+The `kwavers-physics` BBB-opening safety slice converts maximum-safe-time, microbubble-dose,
+safety-check, and warning generation to associated functions; protocol and permeability state
+remain receiver-bound. Package check, targeted `unused_self` Clippy (BBB-opening paths clean),
+Nextest (1561/1561 with one configured skip), doctests (9/13; 4 ignored), and warning-denied
+rustdoc pass. The refreshed workspace `unused_self` count is 51 sites with 4 remaining in other
+physics domains.
+
+The `kwavers-physics` treatment-planning slice converts safety validation, thermal response, and
+treatment-time estimation to associated functions; transducer setup/acoustic-field simulation
+retains planner/grid state. Planner callers use associated-function syntax. Package check, targeted
+`unused_self` Clippy (treatment-planning paths clean), Nextest (1561/1561 with one configured skip),
+doctests (9/13; 4 ignored), and warning-denied rustdoc pass. The refreshed workspace `unused_self`
+count is 48 sites with 1 remaining in other physics domains.
+
+The `kwavers-physics` plasmonics slice converts the host-medium wavenumber helper to an associated
+function; particle-array geometry and interaction state remain receiver-bound. Package check,
+targeted `unused_self` Clippy (plasmonics path clean), Nextest (1561/1561 with one configured skip),
+doctests (9/13; 4 ignored), and warning-denied rustdoc pass. The refreshed workspace `unused_self`
+count is 47 sites with zero remaining in `kwavers-physics`.
+
+The `kwavers-simulation` CEUS slice converts bolus-profile generation to an associated function;
+grid, perfusion, scattering, reconstruction, and microbubble state remain receiver-bound. Package
+check, targeted `unused_self` Clippy (CEUS path clean), Nextest (87/87), doctests (4/6; 2 ignored),
+and warning-denied rustdoc pass. The refreshed workspace `unused_self` count is 46 sites with zero
+remaining in `kwavers-physics` and `kwavers-simulation`.
+
+The `kwavers-analysis` conservation slice converts conservation-law inference to an associated
+function; grid-integral, baseline, tolerance, and diagnostic state remain receiver-bound. Package
+check, targeted `unused_self` Clippy (conservation path clean), Nextest (744/744), doctests (1/22;
+21 ignored), and warning-denied rustdoc pass. The refreshed workspace `unused_self` count is 45
+sites with zero remaining in `kwavers-physics`, `kwavers-simulation`, and conservation checkers.
+
+The `kwavers-analysis` beamforming-training slice converts null-model batch data loss to an
+associated function; trainer configuration and physics-loss state remain receiver-bound. Package
+check, targeted `unused_self` Clippy (beamforming-training path clean), Nextest (744/744), doctests
+(1/22; 21 ignored), and warning-denied rustdoc pass. The refreshed workspace `unused_self` count is
+44 sites with 25 remaining in other analysis paths.
+
+The `kwavers-analysis` Bayesian uncertainty slice converts Monte Carlo prediction statistics to an
+associated function; model configuration and predictor state remain receiver-bound. Calibration,
+decomposition, and tests use associated-function syntax. Package check, targeted `unused_self`
+Clippy (Bayesian path clean), Nextest (744/744), doctests (1/22; 21 ignored), and warning-denied
+rustdoc pass. The refreshed workspace `unused_self` count is 43 sites with 24 remaining in other
+analysis paths.
+
+The `kwavers-analysis` conformal prediction slice converts the receiver-free conformity-score
+kernel to an associated function; calibration and direct tests use associated-function syntax while
+calibrated predictor state remains receiver-bound. Package check, targeted `unused_self` Clippy
+(conformal path clean), Nextest (744/744), doctests (1/22; 21 ignored), and warning-denied rustdoc
+pass. The refreshed workspace `unused_self` count is 42 sites with 23 remaining in other analysis
+paths.
+
+The `kwavers-analysis` ensemble uncertainty slice converts bootstrap sampling, weighted ensemble
+statistics, and diversity kernels to associated functions; model training and mutable weights remain
+receiver-bound. Package check, targeted `unused_self` Clippy (ensemble path clean), Nextest (744/744),
+doctests (1/22; 21 ignored), and warning-denied rustdoc pass. The refreshed workspace `unused_self`
+count is 40 sites with 21 remaining in other analysis paths.
+
+The `kwavers-analysis` uncertainty quantifier slice converts beamforming CNR and resolution helpers,
+report reliability scoring, and recommendation generation to associated functions; configured
+quantifier state remains receiver-bound. Package check, targeted `unused_self` Clippy (quantifier path
+clean), Nextest (744/744), doctests (1/22; 21 ignored), and warning-denied rustdoc pass. The refreshed
+workspace `unused_self` count is 36 sites with 17 remaining in other analysis paths.
+
+The `kwavers-analysis` neural DAS slice converts receiver-free signal-quality assessment to an
+associated function; the adaptive pipeline and direct test use associated-function syntax. Package
+check, targeted `unused_self` Clippy (DAS path clean), Nextest (744/744), doctests (1/22; 21 ignored),
+and warning-denied rustdoc pass. The refreshed workspace `unused_self` count is 35 sites with 16
+remaining in other analysis paths.
+
+The `kwavers-analysis` neural network slice converts receiver-free feature concatenation to an
+associated function; forward processing and direct tests use associated-function syntax while layer
+weights remain receiver-bound. Package check, targeted `unused_self` Clippy (network path clean),
+Nextest (744/744), doctests (1/22; 21 ignored), and warning-denied rustdoc pass. The refreshed
+workspace `unused_self` count is 34 sites with 15 remaining in other analysis paths.
+
+The `kwavers-analysis` neural uncertainty slice converts local-variance computation to an associated
+function; estimator configuration and public estimation remain receiver-bound. Package check,
+targeted `unused_self` Clippy (uncertainty path clean), Nextest (744/744), doctests (1/22; 21 ignored),
+and warning-denied rustdoc pass. The refreshed workspace `unused_self` count is 33 sites with 14
+remaining in other analysis paths.
+
+The `kwavers-analysis` adaptive SLSC slice converts optimal-lag estimation to an associated function
+while adaptive configuration remains receiver-bound. Package check, targeted `unused_self` Clippy
+(SLSC path clean), Nextest (744/744), doctests (1/22; 21 ignored), and warning-denied rustdoc pass.
+The refreshed workspace `unused_self` count is 32 sites with 13 remaining in other analysis paths.
+
+The `kwavers-analysis` CPU-only 3D processor slice converts the no-GPU CPU-memory metric to an
+associated function and migrates the CPU dispatcher; GPU memory accounting remains provider-bound.
+CPU and GPU feature checks, package Clippy, Nextest (744/744), doctests (1/22; 21 ignored), and
+warning-denied rustdoc pass. The refreshed workspace `unused_self` count is 31 sites with 12
+remaining in other analysis paths.
+
+The `kwavers-analysis` SAFT slice converts round-trip time-of-flight and Hamming apodization kernels
+to associated functions while retaining receiver-bound configuration validation and reconstruction
+state. Package check, targeted `unused_self` Clippy, Nextest (744/744), doctests (1/22; 21 ignored),
+and warning-denied rustdoc pass. The refreshed workspace `unused_self` count is 29 sites with 10
+remaining in other analysis paths.
+
+The `kwavers-analysis` color-flow slice converts spatial box averaging to an associated function and
+migrates its value-semantic helper test to the type-level call; imaging, filter, and estimator state
+remain receiver-bound. Package check, targeted `unused_self` Clippy, Nextest (744/744), doctests
+(1/22; 21 ignored), and warning-denied rustdoc pass. The refreshed workspace `unused_self` count is
+28 sites with 9 remaining in other analysis paths. The package-wide all-targets Clippy gate still
+reports two pre-existing test-only lint defects outside this slice.
+
+The `kwavers-analysis` localization slice converts multilateration geometry and 3×3 linear-algebra
+kernels plus trilateration geometry/least-squares kernels to associated functions; sensor, sound-speed,
+and weighted-solver state remain receiver-bound. Package check, targeted `unused_self` Clippy, Nextest
+(744/744), doctests (1/22; 21 ignored), and warning-denied rustdoc pass. The refreshed workspace
+`unused_self` count is 23 sites with 4 remaining in other analysis paths. The package-wide all-targets
+Clippy gate still reports two pre-existing test-only lint defects outside this slice.
+
+The `kwavers-analysis` PAM slice converts spectrum extraction and fundamental-peak selection to
+associated functions while PAM configuration, thresholds, and harmonic output state remain
+receiver-bound. Package check, targeted `unused_self` Clippy, Nextest (744/744), doctests (1/22; 21
+ignored), and warning-denied rustdoc pass. The refreshed workspace `unused_self` count is 21 sites
+with 2 remaining in other analysis paths. The package-wide all-targets Clippy gate still reports two
+pre-existing test-only lint defects outside this slice.
+
+The `kwavers-analysis` polynomial clutter-filter slice converts the Gauss–Jordan pseudo-inverse
+kernel to an associated function while filter configuration and polynomial-order state remain
+receiver-bound. Package check, targeted `unused_self` Clippy, Nextest (744/744), doctests (1/22; 21
+ignored), and warning-denied rustdoc pass. The refreshed workspace `unused_self` count is 20 sites
+with 1 remaining in other analysis paths. The package-wide all-targets Clippy gate still reports two
+pre-existing test-only lint defects outside this slice.
+
+The `kwavers-analysis` clinical-scoring slice converts overall acceptability scoring to an associated
+function while validator requirements and regulatory policy remain receiver-bound. Package check,
+targeted `unused_self` Clippy, Nextest (744/744), doctests (1/22; 21 ignored), and warning-denied
+rustdoc pass. The refreshed workspace `unused_self` count is 19 sites, all remaining in
+`kwavers-diagnostics` and `kwavers-therapy`; `kwavers-analysis` is clean. The package-wide all-targets
+Clippy gate still reports two pre-existing test-only lint defects outside these slices.
+
+The `kwavers-diagnostics` AI beamforming slice converts traditional delay-and-sum beamforming and
+memory estimation to associated functions while processor configuration and PINN state remain
+receiver-bound. Package check, targeted `unused_self` Clippy, Nextest (191/191), doctests (1/6; 5
+ignored), and warning-denied rustdoc pass. The refreshed workspace `unused_self` count is 17 sites:
+15 in `kwavers-diagnostics` and 2 in `kwavers-therapy`. The package-wide all-targets Clippy gate
+still reports two pre-existing test-only lint defects outside this slice.
+
+The `kwavers-diagnostics` clinical monitoring slice converts quality-score computation to an
+associated function while frame history, safety logs, and monitoring metrics remain receiver-bound.
+Package check, warning-denied Clippy, Nextest (191/191), doctests (1/6; 5 ignored), and warning-denied
+rustdoc pass. The refreshed workspace `unused_self` count is 16 sites: 14 in
+`kwavers-diagnostics` and 2 in `kwavers-therapy`. The package-wide all-targets Clippy gate still
+reports two pre-existing test-only lint defects outside this slice.
+
+The `kwavers-diagnostics` neural clinical analysis slice converts tissue classification,
+recommendation generation, and diagnostic-confidence aggregation to associated functions while
+clinical thresholds and lesion-detection state remain receiver-bound. Package check, warning-denied
+Clippy, Nextest (191/191), doctests (1/6; 5 ignored), and warning-denied rustdoc pass. The refreshed
+workspace `unused_self` count is 13 sites: 11 in `kwavers-diagnostics` and 2 in `kwavers-therapy`.
+The package-wide all-targets Clippy gate still reports two pre-existing test-only lint defects
+outside this slice.
+
+The `kwavers-diagnostics` neural clinical detection slice converts local-statistics, lesion-type
+classification, and clinical-significance calculations to associated functions while threshold
+configuration and connected-component sizing remain receiver-bound. Package check, warning-denied
+Clippy, Nextest (191/191), doctests (1/6; 5 ignored), and warning-denied rustdoc pass. The refreshed
+workspace `unused_self` count is 10 sites: 8 in `kwavers-diagnostics` and 2 in `kwavers-therapy`.
+The package-wide all-targets Clippy gate still reports two pre-existing test-only lint defects
+outside this slice.
+
+The `kwavers-diagnostics` feature-extraction slice converts gradient magnitude, Laplacian, local
+frequency, and homogeneity kernels to associated functions while window-size configuration remains
+receiver-bound for speckle variance. Package check, warning-denied Clippy, Nextest (191/191),
+doctests (1/6; 5 ignored), and warning-denied rustdoc pass. The refreshed workspace `unused_self`
+count is 6 sites: 4 in `kwavers-diagnostics` and 2 in `kwavers-therapy`. The package-wide
+all-targets Clippy gate still reports two pre-existing test-only lint defects outside this slice.
+
+The `kwavers-diagnostics` neural workflow slice converts median computation to an associated
+function while rolling performance history, quality metrics, and workflow lifecycle remain
+receiver-bound. Package check, warning-denied Clippy, Nextest (191/191), doctests (1/6; 5 ignored),
+and warning-denied rustdoc pass. The refreshed workspace `unused_self` count is 5 sites: 3 in
+`kwavers-diagnostics` and 2 in `kwavers-therapy`. The package-wide all-targets Clippy gate still
+reports two pre-existing test-only lint defects outside this slice.
+
+The `kwavers-diagnostics` orchestrator slice converts photoacoustic acquisition, elastography
+acquisition, and quality assessment to associated functions while workflow state, fusion, and
+real-time configuration remain receiver-bound. Package check, warning-denied Clippy, Nextest
+(191/191), doctests (1/6; 5 ignored), and warning-denied rustdoc pass. The refreshed workspace
+`unused_self` count is 2 sites, both in `kwavers-therapy`; diagnostics is clean. The package-wide
+all-targets Clippy gate still reports two pre-existing test-only lint defects outside these slices.
+
+The `kwavers-therapy` lithotripsy slice converts affine coupling coefficients and acoustic-intensity
+calculation to associated functions while cloud coupling state and grid, stone, and bioeffects state
+remain receiver-bound. Package check, warning-denied Clippy, Nextest (350/350 with one configured
+skip), doctests (8/9; 1 ignored), and warning-denied rustdoc pass. The exact workspace `unused_self`
+scan reports 0 sites; the ratchet line is removed from `Cargo.toml`, re-enabling the lint floor. The
+package-wide all-targets Clippy gate still reports two pre-existing test-only lint defects outside
+this slice.
+
+Final Kwavers integration verification at merged revision `02fea4631` passes `cargo fmt --all --
+--check`, `cargo build --offline -p kwavers --examples`, and the focused diagnostics+therapy
+Nextest suite (541/541 with one configured skip). `mdbook test docs/book` passes every chapter and
+`mdbook build docs/book` completes. The exact workspace `unused_self` scan is 0, with the ratchet
+override deleted.
+
+The `return_self_not_must_use` ratchet slice is complete: simulation builder fluent methods and
+therapy regulatory builders now carry `#[must_use]`. Simulation gates pass (87/87 Nextest, doctests
+4/6 with 2 ignored, warning-denied rustdoc); therapy gates pass (350/350 Nextest with one configured
+skip, doctests 8/9 with 1 ignored, warning-denied rustdoc). The exact workspace scan is 0 sites and
+the ratchet override is removed from `Cargo.toml`.
+
+The `kwavers-boundary` `unnecessary_literal_bound` slice is complete: six boundary-condition trait
+implementations now return `&'static str` for their literal names. Package check, warning-denied
+Clippy, Nextest (97/97), doctests (4/5; 1 ignored), and warning-denied rustdoc pass. The refreshed
+workspace `unnecessary_literal_bound` count is 13 sites, all outside `kwavers-boundary`.
+
+The `kwavers-analysis` localization `unnecessary_literal_bound` slice is complete: MUSIC and TDOA
+processor names now return `&'static str`. Package check, warning-denied Clippy, Nextest (744/744),
+doctests (1/22; 21 ignored), and warning-denied rustdoc pass. The refreshed workspace
+`unnecessary_literal_bound` count is 11 sites, all outside `kwavers-analysis`.
+
+The `kwavers-simulation` `unnecessary_literal_bound` slice is complete: CEUS and discontinuous
+Galerkin adapter names now return `&'static str`. Package check, warning-denied Clippy, Nextest
+(87/87), doctests (4/6; 2 ignored), and warning-denied rustdoc pass. The refreshed workspace
+`unnecessary_literal_bound` count is 9 sites, all outside `kwavers-simulation`.
+
+The `kwavers-solver` `unnecessary_literal_bound` slice is complete: six FDTD, hybrid, PSTD, and
+inverse-reconstruction solver names now return `&'static str`. Package check, warning-denied
+Clippy, Nextest (902/902 with 4 configured skips), doctests (5/13; 8 ignored), and warning-denied
+rustdoc pass. The refreshed workspace `unnecessary_literal_bound` count is 3 sites, all outside
+`kwavers-solver`.
+
+The `kwavers-imaging` `unnecessary_literal_bound` slice is complete: CT loader name/modality and
+DICOM loader name now return `&'static str`; receiver-dependent DICOM modality remains borrowed.
+Package check, warning-denied Clippy, Nextest (61/61), doctests (4/4), and warning-denied rustdoc
+pass. The exact workspace scan reports 0 sites and the ratchet override is removed from
+`Cargo.toml`.
+
+Final integrated-head verification at merged revision `06ab560eb` passes `cargo fmt --all -- --check`,
+`cargo build --offline -p kwavers --examples`, `mdbook test docs/book`, and `mdbook build docs/book`.
+Workspace Nextest passes 5,781/5,781 with 7 configured skips; workspace doctests pass with no
+failures. Exact workspace scans report `unused_self=0`, `return_self_not_must_use=0`, and
+`unnecessary_literal_bound=0`.
+
+The `unnecessary_semicolon` slice removes redundant terminators from the monolithic solver residual
+match and the Westervelt FWI loop. Combined solver and therapy gates pass (1,364/1,364 Nextest with
+5 configured skips; doctests and warning-denied rustdoc pass). The exact workspace
+`unnecessary_semicolon` scan is 0 and its ratchet override is removed from `Cargo.toml`.
+
+The small Clippy ratchet slice replaces primitive test ordering with `sort_unstable`. Exact
+all-targets scans confirm `stable_sort_primitive=0`, `unchecked_time_subtraction=0`, and
+`self_only_used_in_recursion=0`; the three suppression lines are removed from `Cargo.toml`.
+
+The `bool_to_int_with_if` slice replaces pulser switch fanout and transcranial UST source selection
+with typed `usize::from` conversions. Diagnostics and driver gates pass (685/685 Nextest; doctests
+and warning-denied rustdoc pass). The exact workspace scan is 0 and its ratchet override is removed
+from `Cargo.toml`.
+
+The `large_types_passed_by_value` slice makes simulated-population monitor input validation borrow
+its 264-byte input while the public trace API remains value-semantic. Physics gates pass
+(1,561/1,561 Nextest with 1 configured skip; doctests 9/13; warning-denied rustdoc). The exact
+workspace scan is 0 and its ratchet override is removed from `Cargo.toml`.
+
+The `kwavers-diagnostics` `implicit_hasher` slice generalizes the two analysis workflow
+`HashMap` parameters over `BuildHasher`, retaining caller-selected hashers and avoiding map
+reconstruction. Warning-denied package Clippy, Nextest (191/191), doctests (1 passed; 5 ignored),
+and warning-denied Rustdoc pass. The exact workspace scan reports six remaining production sites,
+all in `kwavers-driver`.
+
+The `kwavers-driver` `implicit_hasher` slice generalizes routing `HashSet` inputs and verification
+symbol-map `HashMap` inputs over `BuildHasher`, preserving caller-selected hashers. Warning-denied
+package Clippy, Nextest (494/494), doctests, and warning-denied Rustdoc pass. The exact workspace
+production scan (`--lib`) reports 0 sites and the ratchet override is removed from `Cargo.toml`;
+all-targets still reports test-only sites outside this production slice.
+
+The `kwavers-physics` `from_iter_instead_of_collect` slice replaces two sonogenetics
+`Array1::from_iter` constructions with direct iterator collection, preserving the existing reshape
+and validation behavior. Warning-denied package Clippy, Nextest (1,561/1,561 with 1 configured
+skip), doctests (9 passed; 4 ignored), and warning-denied Rustdoc pass. The production workspace
+count decreases from 16 to 14 sites, and the ratchet comment is updated.
+
+The `kwavers-simulation` `from_iter_instead_of_collect` slice replaces four DG recorder
+`Array1::from_iter` constructions with direct iterator collection for maximum, minimum, RMS, and
+final pressure statistics. Warning-denied package Clippy, Nextest (87/87), doctests (4 passed;
+2 ignored), and warning-denied Rustdoc pass. The production workspace count decreases from 14 to
+10 sites, and the ratchet comment is updated.
+
+The `kwavers-analysis` `from_iter_instead_of_collect` slice replaces the polynomial clutter-filter
+time-coordinate `Array1::from_iter` construction with direct iterator collection, preserving the
+optional normalization and Vandermonde path. Warning-denied package Clippy, Nextest (744/744),
+doctests (1 passed; 21 ignored), and warning-denied Rustdoc pass. The production workspace count
+decreases from 10 to 9 sites, and the ratchet comment is updated.
+
+The `kwavers-solver` `from_iter_instead_of_collect` slice replaces seven spectral, quadrature, and
+axisymmetric propagator `Array1::from_iter` constructions with direct iterator collection,
+preserving the wavenumber formulas and grid shapes. Warning-denied package Clippy, Nextest
+(902/902 with 4 configured skips), doctests (5 passed; 8 ignored), and warning-denied Rustdoc pass.
+The production workspace count decreases from 9 to 2 sites, and the ratchet comment is updated.
+Nextest compilation reports two pre-existing test-only unused-variable warnings in unrelated RTM
+tests; they are outside this slice.
+
+The `kwavers-therapy` `from_iter_instead_of_collect` slice replaces the elastic-shear velocity
+source `Array1::from_iter` waveform construction with direct iterator collection, preserving the
+burst envelope and sampled values. Warning-denied package Clippy, Nextest (350/350 with 1 configured
+skip), doctests (8 passed; 1 ignored), and warning-denied Rustdoc pass. The production workspace
+count decreases from 2 to 1 site, and the ratchet comment is updated.
+
+The `kwavers-python` `from_iter_instead_of_collect` slice replaces the PAM MUSIC complex steering
+vector `Array1::from_iter` construction with direct iterator collection, preserving the thin PyO3
+conversion boundary. Warning-denied package Clippy, Nextest (21/21), and warning-denied Rustdoc pass;
+doctests are not applicable because the package intentionally has no Rust library target. The exact
+production workspace scan reports 0 sites and the ratchet override is removed from `Cargo.toml`.
+
+The `kwavers-therapy` `missing_fields_in_debug` slice accounts for the opaque
+`ComplianceCheck::validation_function` in its manual Debug output with a redacted callable marker,
+while retaining all value fields. Warning-denied package Clippy, Nextest (350/350), doctests
+(8 passed; 1 ignored), and warning-denied Rustdoc pass. The production workspace count decreases
+from 17 to 16 sites, and the ratchet comment is updated.
+
+The `kwavers-analysis` `missing_fields_in_debug` slice adds all `PipelineCoordinator` stage,
+synchronization, metric, and latency fields to its manual Debug output in addition to the stage
+count. Warning-denied package Clippy, Nextest (744/744), doctests (1 passed; 21 ignored), and
+warning-denied Rustdoc pass. The production workspace count decreases from 16 to 15 sites, and
+the ratchet comment is updated.
+
+The `kwavers-physics` `missing_fields_in_debug` slice completes field coverage for cavitation
+`FeedbackController` and adds a redacted callable marker for the opaque `MieTheory` dielectric
+callback. Warning-denied package Clippy, Nextest (1,561/1,561 with 1 configured skip), doctests
+(9 passed; 4 ignored), and warning-denied Rustdoc pass. The production workspace count decreases
+from 15 to 13 sites, and the ratchet comment is updated.
+
+The `kwavers-solver` `missing_fields_in_debug` slice completes the remaining thirteen manual
+Debug implementations. Every field is represented by its value, shape, length, presence flag,
+or a redacted marker for opaque plans/backends. Warning-denied package Clippy, Nextest (902/902
+with 4 configured skips), doctests (5 passed; 8 ignored), warning-denied Rustdoc, and the exact
+production workspace scan pass. The `missing_fields_in_debug` ratchet override is removed.
+
+The `kwavers-solver` `pub_underscore_fields` slice removes the placeholder `_reserved` member from
+`SpectralElasticConfig`, making the no-knob configuration an explicit unit type. Warning-denied
+package Clippy, Nextest (902/902 with 4 configured skips), doctests (5 passed; 8 ignored), and
+warning-denied Rustdoc pass. The exact production workspace count decreases from 16 to 15 sites;
+the remaining 15 sites are public clinical-workflow configuration fields and require a separate
+public-contract migration.
+
+The `kwavers-receiver` `struct_excessive_bools` slice replaces the five independent recorder
+channel booleans in both configuration and runtime state with a compact `RecordingChannels` bitset
+and descriptive channel/state enums. Builder methods now accept `RecordingState`, eliminating
+boolean-blind toggles. Warning-denied package Clippy, Nextest (48/48), doctests (1 passed), and
+warning-denied Rustdoc pass. The exact production workspace count decreases from 14 to 12 sites;
+the root ratchet comment is updated.
+
+The `kwavers-physics` `needless_for_each` slice replaces seven mutating `for_each` calls with direct
+loops in cavitation power spectra, inverse singular values, RTM conditioning/fusion, and transducer
+interpolation. Warning-denied package Clippy, Nextest (1,561/1,561 with 1 configured skip), doctests
+(9 passed; 4 ignored), warning-denied Rustdoc, and workspace warning-denied Clippy pass. The exact
+production workspace count decreases from 12 to 5 sites; the root ratchet comment is updated.
+
+The `kwavers-solver` `needless_for_each` slice replaces the two CPML scratch resets with
+allocation-free `slice.fill(0.0)` operations. Warning-denied package Clippy, Nextest (902/902 with
+4 configured skips), doctests (5 passed; 8 ignored), warning-denied Rustdoc, workspace warning-
+denied Clippy, and the exact production scan pass. The exact production workspace count decreases
+from 5 to 3 sites; the root ratchet comment is updated.
+
+The final `needless_for_each` slice replaces analysis IIR coefficient normalization and diagnostic
+breast-phantom sound-speed scaling closures with direct loops. Warning-denied Clippy for both
+packages, combined Nextest (935/935), package doctests (1 passed in each package), warning-denied
+Rustdoc for both packages, and the exact production workspace scan pass with zero remaining sites.
+The ratchet override is removed from `Cargo.toml`.
+
+The `kwavers-grid` `assigning_clones` slice changes gradient coefficient cache refresh to
+`clone_from`, reusing the existing vector allocation while preserving the returned coefficient
+values. Warning-denied package Clippy, Nextest (46/46), doctests (1 passed; 1 ignored), warning-
+denied Rustdoc, and the exact production workspace scan pass. The exact production workspace count
+decreases from 11 to 10 sites; the root ratchet comment is updated.
+
+The `kwavers-imaging` `assigning_clones` slice changes unified-loader path updates to `clone_into`,
+reusing the configured path allocation. Warning-denied package Clippy, Nextest (61/61), doctests
+(4/4), warning-denied Rustdoc, and the exact production workspace scan pass. The exact production
+workspace count decreases from 10 to 9 sites; the root ratchet comment is updated.
+
+Final exact-revision validation at merged revision `192eb7575` passes workspace Nextest (5,781/5,781
+with 7 configured skips) and workspace doctests with no failures. The previously recorded example
+build and mdBook test/build remain valid because the final changes are lint-only production edits and
+test-ordering cleanups. Exact workspace scans remain zero for `unused_self`,
+`return_self_not_must_use`, `unnecessary_literal_bound`, `unnecessary_semicolon`,
+`stable_sort_primitive`, `unchecked_time_subtraction`, `self_only_used_in_recursion`, and
+`bool_to_int_with_if`.
+
+After PR #480, the workspace `unused_self` scan reports 206 sites, including
+85 in `kwavers-solver`. The next bounded slice is the five receiver-free
+helpers in `forward/hybrid/coupling/quality.rs`.
+
+The coupling quality slice converts the five measured receiver-free metric
+helpers to associated functions and makes their aggregation path static while
+retaining stateful history and thresholds on `QualityMonitor`. Focused Nextest
+run `aba72bce-5be5-427f-826b-9d98da3eb543` passes 6/6 (899 solver tests
+filtered); the package doctests pass 5/5 (8 ignored), warning-denied rustdoc
+passes, and the focused unused_self scan has zero warnings in `quality.rs`.
+
+After PR #481, the workspace `unused_self` scan reports 201 sites, including
+80 in `kwavers-solver`. The next bounded slice is the five receiver-free
+domain decomposition helpers in `forward/hybrid/domain_decomposition/`.
+
+The domain decomposition slice converts the three stateless analyzer helpers,
+the buffer blend helper, and the partitioner score helper to receiver-free
+functions. Focused Nextest run `1693b120-db5b-4947-af12-68f3cd53e3bb` passes
+38/38 (867 solver tests filtered); the direct domain-decomposition filter has
+no tests registered, the package doctests pass 5/5 (8 ignored), warning-denied
+rustdoc passes, and the focused unused_self scan has zero warnings in the
+domain-decomposition modules.
+
+After PR #482, the workspace `unused_self` scan reports 196 sites, including
+75 in `kwavers-solver`. The next bounded slice is the receiver-free helper in
+`forward/hybrid/pstd_sem_coupling/coupler.rs`.
+
+The PSTD/SEM coupling slice converts its measured receiver-free continuity
+residual helper to an associated function. Focused Nextest run
+`bcedd908-a1e7-4fcb-b5b3-7f3a5590068a` passes 38/38 (867 solver tests
+filtered); the package doctests pass 5/5 (8 ignored), warning-denied rustdoc
+passes, and the focused unused_self scan has zero warnings in `coupler.rs`.
+
+After PR #483, the workspace `unused_self` scan reports 195 sites, including
+74 in `kwavers-solver`. The next bounded slice is the three receiver-free
+helpers in `forward/hybrid/validation/suite.rs`.
+
+The hybrid validation slice converts the three measured stateless numerical
+helpers to associated functions and migrates the convergence path and tests.
+Focused Nextest run `f8396719-d226-4b92-a687-0c07028b8799` passes 4/4 (901
+solver tests filtered); the package doctests pass 5/5 (8 ignored),
+warning-denied rustdoc passes, and the focused unused_self scan has zero
+warnings in `validation/suite.rs`.
+
+After PR #484, the workspace `unused_self` scan reports 192 sites, including
+71 in `kwavers-solver`. The next bounded slice is the two receiver-free
+helpers in `forward/nonlinear/kzk/harmonic_tracking/tracker.rs`.
+
+The KZK harmonic tracker slice converts its two measured receiver-free
+waveform/amplitude helpers to associated functions and migrates their callers.
+Focused Nextest run `9cf34437-d5c5-4731-8d5c-f59058af8c71` passes 52/52 (853
+solver tests filtered); the package doctests pass 5/5 (8 ignored),
+warning-denied rustdoc passes, and the focused unused_self scan has zero
+warnings in `harmonic_tracking/tracker.rs`.
+
+After PR #485, the workspace `unused_self` scan reports 190 sites, including
+69 in `kwavers-solver`. The next bounded slice is the receiver-free helper in
+`forward/nonlinear/westervelt_spectral/solver/mod.rs`.
+
+The Westervelt spectral slice converts its measured receiver-free stability
+helper to an associated function and migrates the wave-model and regression
+test callers. Focused Nextest run `e7af4df6-97ba-4be5-9f31-5b44a1a96d48`
+passes 16/16 (889 solver tests filtered); the package doctests pass 5/5 (8
+ignored), warning-denied rustdoc passes, and the focused unused_self scan has
+zero warnings in the Westervelt solver module.
+
+After PR #486, the workspace `unused_self` scan reports 189 sites, including
+68 in `kwavers-solver`. The next bounded slice is the receiver-free Burton–
+Miller assembler helper in `forward/bem/burton_miller/assembler.rs`.
+
+The Burton–Miller assembler slice converts its measured receiver-free
+vertex-normal helper to an associated function and migrates both H/G matrix
+assembly callers. Focused Nextest run
+`57456b35-2fcd-480f-badd-4f52cfadf218` passes 11/11 (894 solver tests
+filtered); the package doctests pass 5/5 (8 ignored), warning-denied rustdoc
+passes, and the focused unused_self scan has zero warnings in the assembler.
+
+After PR #487, the workspace `unused_self` scan reports 188 sites, including
+67 in `kwavers-solver`. The next bounded slice is the receiver-free PSTD
+derivative operator helper in `forward/pstd/derivatives/operator.rs`.
+
+The PSTD derivative slice converts its measured receiver-free output
+validation helper to an associated function and migrates the x/y/z derivative
+callers. Focused Nextest run `73daa174-f319-4544-9f17-95351dcb561f` passes 6/6
+(899 solver tests filtered); the package doctests pass 5/5 (8 ignored),
+warning-denied rustdoc passes, and the focused unused_self scan has zero
+warnings in the derivative operator.
+
+After PR #488, the workspace `unused_self` scan reports 187 sites, including
+66 in `kwavers-solver`. The next bounded slice is the receiver-free WENO7
+limiter helper in `forward/pstd/dg/shock_capturing/limiter/weno7.rs`.
+
+The WENO7 limiter slice converts its measured receiver-free smoothness
+indicator to an associated function and migrates the four stencil callers.
+Focused Nextest run `fa5b3124-0361-4cec-bb28-6b2c5659d84c` passes 1/1 (904
+solver tests filtered); the package doctests pass 5/5 (8 ignored),
+warning-denied rustdoc passes, and the focused unused_self scan has zero
+warnings in `weno7.rs`.
+
+After PR #489, the workspace `unused_self` scan reports 186 sites, including
+65 in `kwavers-solver`. The next bounded slice is the receiver-free helper in
+`integration/time_integration/time_scale_separation.rs`.
+
+The time-scale separation slice converts its receiver-free spatial derivative
+evaluation to an associated function and migrates the analyzer caller. Focused
+Nextest run `82415a86-a9ae-431e-aea4-8216e33591b4` passes 16/16 (889 solver
+tests skipped); the package doctests pass 5/5 (8 ignored), warning-denied
+rustdoc passes, and the focused `unused_self` scan is clean in
+`time_scale_separation.rs`.
+
+After PR #490, the workspace `unused_self` scan reports 185 sites, including
+64 in `kwavers-solver`. The next bounded slice is the three receiver-free FWI
+constraint helpers in `inverse/fwi/time_domain/constraints.rs`.
+
+The FWI constraints slice converts model clamping, stable-timestep calculation,
+and pressure second-derivative evaluation to associated functions and migrates
+all production and regression-test callers. Focused Nextest run
+`6971e012-54e7-4718-a9a7-1555a618d020` passes 60/60 (845 solver tests
+skipped); the package doctests pass 5/5 (8 ignored), warning-denied rustdoc
+passes, and the focused `unused_self` scan is clean in the touched FWI modules.
+
+After PR #491, the workspace `unused_self` scan reports 182 sites, including
+61 in `kwavers-solver`. The next bounded slice is the three receiver-free FWI
+helpers in `inverse/fwi/time_domain/forward.rs` and `gradient.rs`.
+
+The FWI static-helper slice converts self-adjoint geometry extraction, gradient
+smoothing, and total-variation gradient calculation to associated functions and
+migrates all callers. Focused Nextest run
+`0907780b-c689-43a4-9338-44589dba8f18` passes 60/60 (845 solver tests skipped);
+the package doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and
+the focused `unused_self` scan is clean in the touched FWI modules.
+
+The photoacoustic filter slice converts the private bandpass/FBP application
+helpers, three frequency-response constructors, and FFT application kernel to
+associated functions and migrates all filter-core callers. Focused Nextest run
+`d2c98cf4-fd72-41a5-89d2-c1d715b311e2` passes 10/10 (895 solver tests skipped);
+the package doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and
+the focused `unused_self` scan is clean in `photoacoustic/filters/core.rs`.
+
+The photoacoustic iterative slice converts OSEM iteration and the three
+receiver-free geometric helpers (linear index conversion, Euclidean distance,
+and solid-angle factor) to associated functions and migrates all iterative
+callers. Broad photoacoustic Nextest run
+`b1d351de-be98-4c80-9920-7f28f705ecd9` passes 10/10 (895 solver tests skipped);
+the package doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and
+the focused `unused_self` scan is clean in `photoacoustic/iterative/`.
+
+After PR #494, the workspace `unused_self` scan reports 171 sites, including
+50 in `kwavers-solver`. The next bounded slice is the two receiver-free utility
+helpers in `inverse/reconstruction/photoacoustic/utils.rs`.
+
+The photoacoustic utility slice converts Euclidean distance, back-projection
+weighting, and forward-model construction to associated functions, migrates all
+algorithm callers, and removes the now-unused `Utils` field and constructor.
+Broad photoacoustic Nextest run
+`2eb920d5-2ac5-41d4-9ef0-96db12e2f2d6` passes 10/10 (895 solver tests skipped);
+the package doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and
+the focused `unused_self` scan is clean in the photoacoustic utility/algorithm
+modules.
+
+After PR #495, the workspace `unused_self` scan reports 169 sites, including
+48 in `kwavers-solver`. The next bounded slice is the three receiver-free
+linear-algebra helpers in `inverse/reconstruction/photoacoustic/linear_algebra/`.
+
+The photoacoustic linear-algebra slice converts the truncated-SVD entry,
+power-method kernels, and TV proximal operator to associated functions and
+migrates all callers. Broad photoacoustic Nextest run
+`241cbbcf-f0f6-463d-b2c6-d6fc87cb3f2e` passes 10/10 (895 solver tests skipped);
+the package doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and
+the focused `unused_self` scan is clean in the photoacoustic linear-algebra and
+algorithm modules.
+
+Post-PR-496 user-facing validation on the exact working revision: `cargo build
+--offline -p kwavers --examples` exits 0 (warm rerun finished in 0.96 s; Cargo
+reports only unused local overlay patches), `mdbook test docs/book` exits 0
+(all listed chapters exercised), and `mdbook build docs/book` exits 0 with the
+HTML book written to `target/book`.
+
+The next `unused_self` slice is claimed against the refreshed 166-site workspace
+measurement (45 in `kwavers-solver`). It covers the ten receiver-free seismic
+misfit kernels in `inverse/reconstruction/seismic/misfit/`; the stateful
+dispatcher remains unchanged.
+
+The seismic misfit slice is implemented: the ten measured kernels are associated
+functions, and four receiver-free envelope/phase dispatch methods exposed by that
+conversion were made static in the same cohesive module. Focused Nextest passes
+11/11 (894 filtered), package doctests pass 5/5 (8 ignored), warning-denied
+rustdoc passes, and the refreshed workspace `unused_self` count is 156 sites
+(35 in `kwavers-solver`).
+
+The next claimed `unused_self` slice covers the seismic RTM Laplacian,
+reconstruction, and stateless imaging kernels. Stateful configuration and
+propagation entry points remain receiver-bound where they consume processor state.
+
+The seismic RTM slice is implemented: Laplacian, reconstruction, and stateless
+imaging kernels are associated functions with all callers migrated. Focused
+Nextest passes 8/8 (897 filtered), package doctests pass 5/5 (8 ignored),
+warning-denied rustdoc passes, and the refreshed workspace `unused_self` count is
+151 sites (30 in `kwavers-solver`).
+
+The next claimed `unused_self` slice covers unified-SIRT norm and coordinate
+conversion helpers. Reconstruction configuration and iteration state remain
+receiver-bound.
+
+The unified-SIRT slice is implemented: norm, reshape, and linear-index helpers
+are associated functions with all callers migrated. Focused Nextest passes 8/8
+(897 filtered), package doctests pass 5/5 (8 ignored), warning-denied rustdoc
+passes, and the refreshed workspace `unused_self` count is 147 sites (26 in
+`kwavers-solver`).
+
+The next claimed `unused_self` slice covers the four receiver-free time-reversal
+helpers for phase conjugation, source application, backward propagation, and
+convergence measurement. Reconstruction configuration and post-processing remain
+receiver-bound.
+
+The time-reversal slice is implemented: those four helpers are associated
+functions with all callers migrated. Focused Nextest passes 9/9 (896 filtered),
+package doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and the
+refreshed workspace `unused_self` count is 143 sites (22 in `kwavers-solver`).
+
+The next claimed `unused_self` slice covers five receiver-free field-coupling
+operations: optical/thermal and acoustic/thermal coupling, relaxation, gradient
+calculation, and strength selection. Coupling strategy, tolerance, and iteration
+state remain receiver-bound.
+
+The field-coupling slice is implemented: those five operations are associated
+functions with all callers migrated. Focused Nextest passes 7/7 (898 filtered),
+package doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and the
+refreshed workspace `unused_self` count is 138 sites (17 in `kwavers-solver`).
+
+Exact integrated-head validation on `main` after PR #501: the Kwavers package
+Nextest run covers 530 tests with zero failures and eight configured skips;
+`cargo build --offline -p kwavers --examples` exits 0; `mdbook test docs/book`
+exits 0; and `mdbook build docs/book` exits 0 with HTML written to `target/book`.
+The test run regenerated tracked PNG fixtures; those run-generated deltas were
+discarded and no binary fixture changes are included.
+
+The next claimed `unused_self` slice covers the AMR error-estimation criterion
+and interpolation kernels. AMR smoothing, scheme selection, and octree state
+remain receiver-bound.
+
+The AMR criteria/interpolation slice is implemented: curvature estimation and the
+receiver-free prolongation/restriction helper family are associated functions
+with all callers migrated. Focused Nextest passes 11/11 (894 filtered), package
+doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and the refreshed
+workspace `unused_self` count is 134 sites (13 in `kwavers-solver`).
+
+The next AMR claim covers the receiver-free octree node/leaf counting wrappers
+and refinement nesting helper. Wavelet transforms are kept as a separate follow-up
+because their inverse path requires behavioral completion in addition to receiver
+removal.
+
+The AMR tree slice is implemented: node/leaf counting wrappers and refinement
+nesting enforcement are associated functions with all callers migrated. Focused
+Nextest passes 11/11 (894 filtered), package doctests pass 5/5 (8 ignored),
+warning-denied rustdoc passes, and the refreshed workspace `unused_self` count is
+131 sites (10 in `kwavers-solver`). Wavelet transforms remain separate for
+behavioral completion.
+
+The wavelet slice is implemented: CDF and Daubechies transforms are associated
+functions; Haar performs separable 3-D forward/inverse transforms across levels,
+preserves odd-length tails, and has a value-semantic round-trip test. Focused
+Nextest passes 12/12 (894 filtered), package doctests pass 5/5 (8 ignored),
+warning-denied rustdoc passes, and the refreshed workspace `unused_self` count is
+125 sites (4 in `kwavers-solver`).
+
+After PR #477, the workspace `unused_self` scan reports 211 sites, including
+90 in `kwavers-solver`. The next bounded slice is the receiver-free helper in
+`forward/hybrid/adaptive_selection/selector.rs`.
+
+The adaptive selector slice converts its measured receiver-free region
+extractor to an associated function. Focused Nextest run
+`3f6e1bc8-8248-4afc-a33d-518a67ad1123` passes 1/1 (904 solver tests filtered);
+the package doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and
+the focused unused_self scan has zero warnings in the selector module.
+
+After PR #478, the workspace `unused_self` scan reports 210 sites, including
+89 in `kwavers-solver`. The next bounded slice is the receiver-free helper in
+`forward/hybrid/bem_fem_enhanced/solver.rs`.
+
+The BEM/FEM enhanced solver slice converts its measured receiver-free frequency
+validator to an associated function. Focused Nextest run
+`a7da2e9c-8e28-4504-b596-903b732c2bf0` passes 11/11 (894 solver tests filtered);
+the package doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and
+the focused unused_self scan has zero warnings in the solver module.
+
+After PR #479, the workspace `unused_self` scan reports 209 sites, including
+88 in `kwavers-solver`. The next bounded slice is the three receiver-free
+interpolation helpers under `forward/hybrid/coupling/interpolation/`.
+
+The coupling interpolation slice converts the measured receiver-free linear,
+cubic, and conservative kernels to associated functions and migrates the
+spectral/adaptive static callers and scheme dispatch. Focused Nextest run
+`849ba79f-66f3-4f24-838b-a3bb68ee9e6b` passes 6/6 (899 solver tests filtered);
+the package doctests pass 5/5 (8 ignored), warning-denied rustdoc passes, and
+the focused unused_self scan has zero warnings in the interpolation module.

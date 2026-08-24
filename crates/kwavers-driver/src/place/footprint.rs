@@ -5,7 +5,7 @@
 //! `RotationPolicy` (see [`super::rotation`]) so mechanical mating, pin-1 escape, and assembly
 //! orientation constraints are not lost during annealing.
 //!
-//! Phase 2c: the 4-variant `Rot` ZST marker + the `RotationPolicy` placement-freedom enum
+//! The 4-variant `Rot` ZST marker and the `RotationPolicy` placement-freedom enum
 //! (and their impls) were carved out into [`super::rotation`] per the spec's
 //! `place/{mod, anneal, energy, footprint, import, rotation, tests}.rs` layout. This file
 //! keeps the footprint-shape and placement-class concerns: `Role`, `IsolationDomain`,

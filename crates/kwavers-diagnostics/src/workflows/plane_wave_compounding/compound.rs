@@ -104,6 +104,10 @@ impl PlaneWaveCompound {
     /// # Errors
     /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
+    /// # Panics
+    ///
+    /// Panics if a validated angle index is used with a configuration whose
+    /// angle table has inconsistent dimensions.
     pub fn generate_plane_wave(&self, angle_idx: usize) -> KwaversResult<Array2<Complex<f64>>> {
         if angle_idx >= self.config.num_angles {
             return Err(KwaversError::InvalidInput(format!(

@@ -73,7 +73,7 @@ impl QualityMonitor {
 
     /// Update quality metrics
     pub fn update(&mut self, interpolated: &Array3<f64>, target: &Array3<f64>, time: f64) {
-        let metrics = self.calculate_metrics(interpolated, target, time);
+        let metrics = Self::calculate_metrics(interpolated, target, time);
 
         // Add to history
         if (self.history.len()) >= MAX_HISTORY_SIZE {
@@ -84,23 +84,22 @@ impl QualityMonitor {
 
     /// Calculate quality metrics
     fn calculate_metrics(
-        &self,
         interpolated: &Array3<f64>,
         target: &Array3<f64>,
         time: f64,
     ) -> InterfaceQualityMetrics {
         // Calculate interpolation error
-        let interpolation_error = self.calculate_interpolation_error(interpolated, target);
+        let interpolation_error = Self::calculate_interpolation_error(interpolated, target);
 
         // Calculate conservation error
-        let conservation_error = self.calculate_conservation_error(interpolated, target);
+        let conservation_error = Self::calculate_conservation_error(interpolated, target);
 
         // Calculate reflection and transmission coefficients
-        let (reflection, transmission) = self.calculate_coefficients(interpolated, target);
+        let (reflection, transmission) = Self::calculate_coefficients(interpolated, target);
 
         // Calculate phase and amplitude errors
-        let phase_error = self.calculate_phase_error(interpolated, target);
-        let amplitude_error = self.calculate_amplitude_error(interpolated, target);
+        let phase_error = Self::calculate_phase_error(interpolated, target);
+        let amplitude_error = Self::calculate_amplitude_error(interpolated, target);
 
         InterfaceQualityMetrics {
             interpolation_error,
@@ -113,30 +112,18 @@ impl QualityMonitor {
         }
     }
 
-    fn calculate_interpolation_error(
-        &self,
-        interpolated: &Array3<f64>,
-        target: &Array3<f64>,
-    ) -> f64 {
+    fn calculate_interpolation_error(interpolated: &Array3<f64>, target: &Array3<f64>) -> f64 {
         let diff = interpolated - target;
         (diff.iter().map(|x| x * x).sum::<f64>() / (diff.len()) as f64).sqrt()
     }
 
-    fn calculate_conservation_error(
-        &self,
-        interpolated: &Array3<f64>,
-        target: &Array3<f64>,
-    ) -> f64 {
+    fn calculate_conservation_error(interpolated: &Array3<f64>, target: &Array3<f64>) -> f64 {
         let source_sum: f64 = interpolated.iter().sum();
         let target_sum: f64 = target.iter().sum();
         (source_sum - target_sum).abs()
     }
 
-    fn calculate_coefficients(
-        &self,
-        interpolated: &Array3<f64>,
-        target: &Array3<f64>,
-    ) -> (f64, f64) {
+    fn calculate_coefficients(interpolated: &Array3<f64>, target: &Array3<f64>) -> (f64, f64) {
         let source_energy: f64 = interpolated.iter().map(|x| x * x).sum();
         let target_energy: f64 = target.iter().map(|x| x * x).sum();
 
@@ -149,7 +136,7 @@ impl QualityMonitor {
         }
     }
 
-    fn calculate_phase_error(&self, interpolated: &Array3<f64>, target: &Array3<f64>) -> f64 {
+    fn calculate_phase_error(interpolated: &Array3<f64>, target: &Array3<f64>) -> f64 {
         // Phase error calculation using cross-correlation peak shift
         // This measures the phase difference between the interpolated and target fields
 
@@ -175,7 +162,7 @@ impl QualityMonitor {
         }
     }
 
-    fn calculate_amplitude_error(&self, interpolated: &Array3<f64>, target: &Array3<f64>) -> f64 {
+    fn calculate_amplitude_error(interpolated: &Array3<f64>, target: &Array3<f64>) -> f64 {
         let source_max = interpolated.iter().fold(0.0_f64, |a, &b| a.max(b.abs()));
         let target_max = target.iter().fold(0.0_f64, |a, &b| a.max(b.abs()));
 

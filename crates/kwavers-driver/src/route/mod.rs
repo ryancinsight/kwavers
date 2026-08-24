@@ -2,10 +2,7 @@
 //!
 //! # Module layout
 //!
-//! The route slice is split across several sibling files per the spec's
-//! `route/{mod.rs, grid.rs, search.rs, pathfinder.rs, tree.rs, emission.rs, tests.rs}` layout
-//! — fully migrated at Phase 2b (round-1 carved `tests.rs`, round-2 carved `tree.rs` +
-//! `emission.rs`):
+//! The route slice is split across sibling files, one concern each:
 //!
 //! * `grid` — the 3D grid resource model (per-node capacity, occupancy, history).
 //! * `search` — the A*-style per-net grow-loop (state machine + cost-driven expansion).
@@ -21,16 +18,7 @@
 //! * `tree` — the Prim-style (power/ground) + chain-tip (signal/HV) `route_one` method carrier.
 //! * `emission` — the `apply_to_board` track/via emission + the `via_nodes` / `via_shadow_nodes`
 //!   helpers used by `pathfinder` for rip-up + claim accounting during the negotiation loop.
-//! * `tests` (gated `#[cfg(test)]`) — the 9 PathFinder property/empirical tests, moved out of
-//!   the previously-inline `mod.rs::tests` block at Phase 2b round-1.
-//!
-//! # Phase 2b done (no further forward-tracking items)
-//!
-//! All sub-`route/*` carve-outs per spec have landed in Phase 2b (round-1 carved `tests.rs`;
-//! round-2 carved `tree.rs` + `emission.rs`). Forward-looking cosmetic items that surface
-//! from these carves would queue in the `## Phase 2b follow-ups — route sub-slice migration
-//! follow-ups` placeholder section of `docs/MIGRATION.md` (mirrors the Phase 1d-follow-ups
-//! + Phase 1e pattern).
+//! * `tests` (gated `#[cfg(test)]`) — the PathFinder property and empirical tests.
 
 pub mod emission;
 pub mod grid;

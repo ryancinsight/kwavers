@@ -93,6 +93,11 @@ impl<T: leto_ops::Scalar + Clone> CompressedSparseRowMatrix<T> {
     }
 
     /// Convert to a leto-ops CsrMatrix for use with sparse kernels.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the stored values, column indices, row pointers, or dimensions do
+    /// not satisfy the leto-ops CSR representation contract.
     pub fn to_csr(&self) -> Result<leto_ops::application::sparse::CsrMatrix<T>, String> {
         leto_ops::application::sparse::CsrMatrix::from_parts(
             self.values.clone(),

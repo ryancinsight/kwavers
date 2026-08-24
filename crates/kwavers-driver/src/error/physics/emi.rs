@@ -1,9 +1,8 @@
 //! EMI / commutation-loop inductance failures.
 //!
-//! Forward-looking variants for the [`crate::physics::emi`] slice. The slice currently
-//! returns inductance / loss values directly; the variants below are the typed
-//! migration surface for Phase 2 once `loop_inductance_nh(...) > budget` and
-//! similar breaches stop being returned as `Option<f64>` and become
+//! Declared variants for the [`crate::physics::emi`] slice, which returns inductance and
+//! loss values directly today. They are adopted when breaches such as
+//! `loop_inductance_nh(...) > budget` stop being returned as `Option<f64>` and become
 //! `Result<_, Emi>`.
 
 /// EMI physics failure.

@@ -9,7 +9,6 @@ This directory contains comprehensive examples demonstrating the interdisciplina
 |---------|-------------|----------|
 | [`basic_simulation.rs`](basic_simulation.rs) | Simple acoustic wave propagation | FDTD solver, basic setup |
 | [`minimal_demo.rs`](minimal_demo.rs) | Minimal working example | Core concepts, validation |
-| [`wave_simulation.rs`](wave_simulation.rs) | Wave equation fundamentals | Linear/nonlinear propagation |
 
 ### 🩺 **Ultrasound Imaging**
 | Example | Description | Features |
@@ -18,10 +17,10 @@ This directory contains comprehensive examples demonstrating the interdisciplina
 | [`phased_array_beamforming.rs`](phased_array_beamforming.rs) | Phased array beamforming | Delay-and-sum, apodization |
 | [`real_time_3d_beamforming.rs`](real_time_3d_beamforming.rs) | Real-time 3D beamforming | GPU acceleration, clinical workflows |
 
-### 💥 **Cavitation & Nonlinear Physics**
+### 💥 **Therapeutic Ultrasound & Nonlinear Physics**
 | Example | Description | Features |
 |---------|-------------|----------|
-| [`hifu_tumor_ablation.rs`](hifu_tumor_ablation.rs) | HIFU therapy simulation | Thermal ablation, bioheat transfer |
+| [`focused_ultrasound_water_tank.rs`](focused_ultrasound_water_tank.rs) | Focused-ultrasound solver comparison | Through-plane phased aperture, FDTD, PSTD, and DG diagnostics |
 | [`multiphysics_sonoluminescence.rs`](multiphysics_sonoluminescence.rs) | Bounded multi-domain PINN training | Cavitation, sonoluminescence, electromagnetic domains (`pinn`) |
 | [`single_bubble_sonoluminescence.rs`](single_bubble_sonoluminescence.rs) | Sonoluminescence modeling | Bubble dynamics, typed dimensioned emission |
 
@@ -42,7 +41,7 @@ This directory contains comprehensive examples demonstrating the interdisciplina
 ### 🧬 **Medical & Biological**
 | Example | Description | Features |
 |---------|-------------|----------|
-| [`tissue_model_example.rs`](tissue_model_example.rs) | Realistic tissue modeling | Heterogeneous media, attenuation |
+| [`heterogeneous_power_law_attenuation.rs`](heterogeneous_power_law_attenuation.rs) | Heterogeneous tissue attenuation | Spatially varying coefficient and exponent, analytical recovery oracles |
 | [`skull_ct_phase_correction.rs`](skull_ct_phase_correction.rs) | Skull CT phase correction | RITK DICOM loading, 1024-element hemispherical array, three-plane phase image |
 | [`swe_liver_fibrosis.rs`](swe_liver_fibrosis.rs) | Liver fibrosis assessment | SWE imaging, fibrosis staging |
 | [`electromagnetic_simulation.rs`](electromagnetic_simulation.rs) | EM wave propagation | Maxwell equations, coupling |
@@ -53,7 +52,6 @@ This directory contains comprehensive examples demonstrating the interdisciplina
 | [`physics_validation.rs`](physics_validation.rs) | Physics validation suite | Literature validation, error analysis |
 | [`literature_validation_safe.rs`](literature_validation_safe.rs) | Analytical validation | Green's functions, diffraction |
 | [`pstd_fdtd_comparison.rs`](pstd_fdtd_comparison.rs) | Solver discrepancy diagnostics | FDTD, k-space FDTD, PSTD field metrics |
-| [`focused_ultrasound_water_tank.rs`](focused_ultrasound_water_tank.rs) | Focused ultrasound water-tank plots | Through-plane phased line aperture, FDTD+CPML, PSTD+CPML, DG-2D/DG-3D with uniform-grid GLL projection, RK-stage weak source forcing, axis-aware DG boundaries, DG-1D axial, and analytical focused-array gated peak-pressure maps/profiles with metrics |
 | [`dg_advection_diagnostics.rs`](dg_advection_diagnostics.rs) | DG scalar/acoustic readiness diagnostics | Periodic advection, one-way and bidirectional acoustic characteristics, mass, phase, amplitude metrics |
 | [`dg_acoustic_1d_diagnostics.rs`](dg_acoustic_1d_diagnostics.rs) | Native DG acoustic diagnostics | Coupled pressure/velocity DG, analytical standing wave, characteristic cross-check, embedded FDTD/PSTD/DG Gaussian matrix |
 | [`dg_acoustic_comparison_plot.rs`](dg_acoustic_comparison_plot.rs) | Acoustic solver comparison plots | PNG and CSV plots for native-grid, common-grid, and uniform-grid exact, DG, FDTD, k-space FDTD, and PSTD Gaussian pressure/error traces |
@@ -65,7 +63,6 @@ This directory contains comprehensive examples demonstrating the interdisciplina
 ### ⚡ **Performance & Benchmarks**
 | Example | Description | Features |
 |---------|-------------|----------|
-| [`kwave_benchmarks.rs`](kwave_benchmarks.rs) | Reference compatibility | Performance comparison, migration |
 | [`performance_validation.rs`](performance_validation.rs) | Performance analysis | Timing, scaling, optimization |
 | [`safe_vectorization_benchmarks.rs`](safe_vectorization_benchmarks.rs) | Vectorization benchmarks | SIMD performance, safety |
 
@@ -80,8 +77,8 @@ This directory contains comprehensive examples demonstrating the interdisciplina
 
 ### Prerequisites
 ```bash
-# Ensure Rust toolchain is up to date
-rustup update stable
+# Confirm the repository-pinned toolchain selected by rustup
+rustup show active-toolchain
 
 # Build with all features for maximum compatibility
 cargo build --release --all-features
@@ -107,7 +104,6 @@ Some examples require specific feature flags:
 |---------|----------|-------------|
 | `pinn` | AI/ML examples | Physics-Informed Neural Networks |
 | `gpu` | GPU-accelerated examples | WGPU-based parallel computing |
-| `ritk` | `skull_ct_phase_correction.rs` | RITK DICOM series loading |
 | `full` | All examples | Complete feature set |
 
 ### Example: Complete Interdisciplinary Simulation
@@ -144,11 +140,11 @@ Each example includes:
 
 ## 🎯 Learning Path
 
-**Beginners**: Start with `basic_simulation.rs` → `minimal_demo.rs` → `wave_simulation.rs`
+**Beginners**: Start with `minimal_demo.rs` → `basic_simulation.rs`
 
 **Ultrasound Imaging**: `phased_array_beamforming.rs` → `advanced_ultrasound_imaging.rs` → `real_time_3d_beamforming.rs`
 
-**Multi-Physics**: `hifu_tumor_ablation.rs` → `multiphysics_sonoluminescence.rs` → AI examples
+**Multi-Physics**: `focused_ultrasound_water_tank.rs` → `multiphysics_sonoluminescence.rs` → AI examples
 
 **Research**: `physics_validation.rs` → `literature_validation_safe.rs` → `theorem_validation_demo.rs`
 

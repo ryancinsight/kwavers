@@ -47,6 +47,11 @@ impl TimeReversalReconstructor {
     /// # Errors
     /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn reconstruct(
         &mut self,
         pressure_data: &Array2<f64>,
@@ -85,11 +90,11 @@ impl TimeReversalReconstructor {
             );
 
             // Apply time-reversed signals as sources
-            self.apply_reversed_sources(&reversed_signals, solver, sensor_indices, grid)?;
+            Self::apply_reversed_sources(&reversed_signals, solver, sensor_indices, grid)?;
 
             // Propagate backwards in time
             let iteration_result =
-                self.propagate_backwards(grid, solver, recorder, frequency, &reversed_signals)?;
+                Self::propagate_backwards(grid, solver, recorder, frequency, &reversed_signals)?;
 
             // Accumulate reconstruction
             leto_ops::zip_mut_with(
@@ -101,7 +106,7 @@ impl TimeReversalReconstructor {
 
             // Check convergence for iterative methods
             if self.config.iterations > 1 {
-                let convergence = self.check_convergence(&reconstruction, &iteration_result)?;
+                let convergence = Self::check_convergence(&reconstruction, &iteration_result)?;
                 if convergence < self.config.tolerance {
                     info!("Converged after {} iterations", iteration + 1);
                     break;
@@ -142,7 +147,7 @@ impl TimeReversalReconstructor {
 
             // Apply phase conjugation if enabled
             if self.config.phase_conjugation {
-                signal = self.apply_phase_conjugation(signal)?;
+                signal = Self::apply_phase_conjugation(signal)?;
             }
 
             // Apply frequency filter if configured
@@ -192,7 +197,7 @@ impl TimeReversalReconstructor {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    fn apply_phase_conjugation(&self, signal: Vec<f64>) -> KwaversResult<Vec<f64>> {
+    fn apply_phase_conjugation(signal: Vec<f64>) -> KwaversResult<Vec<f64>> {
         // For real signals, phase conjugation in time domain is just time reversal
         // which is already done. For complex processing, we would conjugate here.
         Ok(signal)
@@ -203,7 +208,6 @@ impl TimeReversalReconstructor {
     /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn apply_reversed_sources(
-        &self,
         reversed_signals: &HashMap<usize, Vec<f64>>,
         solver: &mut PluginBasedSolver,
         sensor_indices: &[(usize, usize, usize)],
@@ -245,7 +249,6 @@ impl TimeReversalReconstructor {
     /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn propagate_backwards(
-        &self,
         _grid: &Grid,
         solver: &mut PluginBasedSolver,
         _recorder: &mut Recorder,
@@ -292,11 +295,7 @@ impl TimeReversalReconstructor {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    fn check_convergence(
-        &self,
-        current: &Array3<f64>,
-        previous: &Array3<f64>,
-    ) -> KwaversResult<f64> {
+    fn check_convergence(current: &Array3<f64>, previous: &Array3<f64>) -> KwaversResult<f64> {
         let diff = current - previous;
         let norm_diff = diff.iter().map(|&x| x * x).sum::<f64>().sqrt();
         let norm_current = current.iter().map(|&x| x * x).sum::<f64>().sqrt();

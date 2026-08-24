@@ -1,13 +1,4 @@
-//! Clinical therapy and care-delivery layer for kwavers.
-//!
-//! Application-level therapeutic workflows (HIFU/LIFU/histotripsy/lithotripsy
-//! planning, theranostic image-guided guidance, dose and safety monitoring) plus
-//! the clinical-care modules they depend on (IEC 60601-2-37 safety, FDA 510(k)
-//! regulatory, patient management). Orchestrates the lower layers
-//! (`physics`/`solver`/`simulation`/`analysis`); contains no numerical kernels.
-//!
-//! Extracted from the former `clinical` module (ADR 011); the sibling diagnostic
-//! imaging workflows live in the `kwavers-diagnostics` crate.
+#![doc = include_str!("../README.md")]
 
 mod parallel;
 pub mod patient_management; // Electronic health record and clinical workflow management

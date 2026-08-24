@@ -66,6 +66,10 @@ impl SubgridAveraging {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
+    /// # Panics
+    ///
+    /// Panics if `property` and `geometry` have different shapes. The indexed
+    /// smoothing kernel requires one volume fraction for every property cell.
     pub fn apply(
         &self,
         property: &Array3<f64>,

@@ -12,6 +12,12 @@ use crate::rules::DesignRules;
 ///
 /// Non-axis-aligned or zero-length segments are passed through untouched (the router is Manhattan, so
 /// this is just a safety net). Output order is deterministic (sorted group key, then interval).
+///
+/// # Panics
+///
+/// Panics if an internal group loses its interval data before the merge sweep
+/// or if a grouped key cannot be removed from the map. Both cases violate the
+/// grouping invariant established while draining `board.tracks`.
 pub fn merge_collinear(board: &mut Board) -> usize {
     use std::collections::HashMap;
     // Group key: (net, layer, width, orientation [0 = horizontal, 1 = vertical], fixed coordinate).

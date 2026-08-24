@@ -197,8 +197,12 @@ impl IirFilter {
         // Normalize so a[0] = 1
         if !a.is_empty() && a[0] != 1.0 {
             let a0 = a[0];
-            b.iter_mut().for_each(|x| *x /= a0);
-            a.iter_mut().for_each(|x| *x /= a0);
+            for x in &mut b {
+                *x /= a0;
+            }
+            for x in &mut a {
+                *x /= a0;
+            }
         }
 
         Ok((b, a))
@@ -237,6 +241,11 @@ impl IirFilter {
     /// # Errors
     /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal analysis state violates
+    /// the precondition required by this operation.
     pub fn filter(&self, slow_time_data: &Array2<f64>) -> KwaversResult<Array2<f64>> {
         let [n_pixels, n_frames] = slow_time_data.shape();
 

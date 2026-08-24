@@ -88,8 +88,9 @@ impl ImmersedInterfaceMethod {
                     // Identify interface cells (volume fraction between 0 and 1)
                     if geom > 0.01 && geom < 0.99 {
                         // Compute interface correction
-                        let correction = self
-                            .compute_interface_correction(property, geometry, i, j, k, thickness);
+                        let correction = Self::compute_interface_correction(
+                            property, geometry, i, j, k, thickness,
+                        );
 
                         // Apply correction based on jump type
                         smoothed[[i, j, k]] = match self.config.jump_type {
@@ -118,7 +119,6 @@ impl ImmersedInterfaceMethod {
     ///
     /// Uses neighboring values to estimate the jump condition correction
     fn compute_interface_correction(
-        &self,
         property: &Array3<f64>,
         geometry: &Array3<f64>,
         i: usize,

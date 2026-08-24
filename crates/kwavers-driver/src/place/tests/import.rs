@@ -56,7 +56,7 @@ fn parses_nested_sexpr_with_quotes() {
     assert_eq!(pad.as_list().unwrap()[1].as_atom(), Some("1"));
 }
 
-// -------- Phase 1c polish: `Manifest::Parse { offset }` byte-tracking pinning tests --------
+// -------- `Manifest::Parse { offset }` byte-tracking pinning tests --------
 //
 // These pin the parse_sexpr byte-position contract. The `parse_sexpr` loop iterates
 // `char_indices().peekable()` (NOT `chars().enumerate()`); every `Manifest::Parse` carries

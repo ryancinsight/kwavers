@@ -55,8 +55,8 @@ impl SirtReconstructor {
         let mut x = Array1::zeros(n);
         let mut residual_history = Vec::new();
 
-        let row_norms = self.compute_row_norms(system_matrix);
-        let col_norms = self.compute_col_norms(system_matrix);
+        let row_norms = Self::compute_row_norms(system_matrix);
+        let col_norms = Self::compute_col_norms(system_matrix);
         let regularizer = ModelRegularizer3D::new(self.config.regularization);
 
         for iteration in 0..self.config.max_iterations {
@@ -85,10 +85,10 @@ impl SirtReconstructor {
             }
 
             if self.config.regularization.is_active() {
-                let mut image_3d = self.reshape_to_3d(&x, grid_size);
+                let mut image_3d = Self::reshape_to_3d(&x, grid_size);
                 let model_3d = Array3::zeros(grid_size);
                 regularizer.apply_to_gradient(&mut image_3d, &model_3d);
-                x = self.reshape_to_1d(&image_3d);
+                x = Self::reshape_to_1d(&image_3d);
             }
 
             let mut ax = Array1::<f64>::zeros(m);
@@ -118,7 +118,7 @@ impl SirtReconstructor {
                         debug!("Converged after {} iterations", iteration + 1);
                     }
                     return Ok(SirtResult {
-                        image: self.reshape_to_3d(&x, grid_size),
+                        image: Self::reshape_to_3d(&x, grid_size),
                         iterations: iteration + 1,
                         final_residual: residual_norm,
                         residual_history,
@@ -131,7 +131,7 @@ impl SirtReconstructor {
 
         let final_residual = residual_history.last().copied().unwrap_or(0.0);
         Ok(SirtResult {
-            image: self.reshape_to_3d(&x, grid_size),
+            image: Self::reshape_to_3d(&x, grid_size),
             iterations: self.config.max_iterations,
             final_residual,
             residual_history,
@@ -246,7 +246,7 @@ impl SirtReconstructor {
 
     // ==================== Helper Functions ====================
 
-    fn compute_row_norms(&self, a: &Array2<f64>) -> Array1<f64> {
+    fn compute_row_norms(a: &Array2<f64>) -> Array1<f64> {
         let [m, _n] = a.shape();
         let mut norms = Array1::zeros(m);
         for i in 0..m {
@@ -261,7 +261,7 @@ impl SirtReconstructor {
         norms
     }
 
-    fn compute_col_norms(&self, a: &Array2<f64>) -> Array1<f64> {
+    fn compute_col_norms(a: &Array2<f64>) -> Array1<f64> {
         let [_m, n] = a.shape();
         let mut norms = Array1::zeros(n);
         for j in 0..n {
@@ -276,22 +276,22 @@ impl SirtReconstructor {
         norms
     }
 
-    fn reshape_to_3d(&self, x: &Array1<f64>, grid_size: (usize, usize, usize)) -> Array3<f64> {
+    fn reshape_to_3d(x: &Array1<f64>, grid_size: (usize, usize, usize)) -> Array3<f64> {
         let mut img = Array3::zeros(grid_size);
         for (idx, &val) in x.iter().enumerate() {
-            let (i, j, k) = self.linear_to_3d(idx, grid_size);
+            let (i, j, k) = Self::linear_to_3d(idx, grid_size);
             img[[i, j, k]] = val;
         }
         img
     }
 
-    fn reshape_to_1d(&self, img: &Array3<f64>) -> Array1<f64> {
+    fn reshape_to_1d(img: &Array3<f64>) -> Array1<f64> {
         let [nx, ny, nz] = img.shape();
         let mut x = Array1::zeros(nx * ny * nz);
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
-                    let idx = self.to_linear_index(i, j, k, (nx, ny, nz));
+                    let idx = Self::to_linear_index(i, j, k, (nx, ny, nz));
                     x[idx] = img[[i, j, k]];
                 }
             }
@@ -299,7 +299,7 @@ impl SirtReconstructor {
         x
     }
 
-    fn linear_to_3d(&self, idx: usize, grid_size: (usize, usize, usize)) -> (usize, usize, usize) {
+    fn linear_to_3d(idx: usize, grid_size: (usize, usize, usize)) -> (usize, usize, usize) {
         let (_nx, ny, nz) = grid_size;
         let i = idx / (ny * nz);
         let j = (idx % (ny * nz)) / nz;
@@ -307,13 +307,7 @@ impl SirtReconstructor {
         (i, j, k)
     }
 
-    fn to_linear_index(
-        &self,
-        i: usize,
-        j: usize,
-        k: usize,
-        grid_size: (usize, usize, usize),
-    ) -> usize {
+    fn to_linear_index(i: usize, j: usize, k: usize, grid_size: (usize, usize, usize)) -> usize {
         i * grid_size.1 * grid_size.2 + j * grid_size.2 + k
     }
 }

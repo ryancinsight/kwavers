@@ -55,7 +55,7 @@ impl FwiProcessor {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub(super) fn apply_model_constraints(&self, model: &mut Array3<f64>) {
+    pub(super) fn apply_model_constraints(model: &mut Array3<f64>) {
         use kwavers_core::constants::SOUND_SPEED_WATER;
         let min_velocity = SOUND_SPEED_WATER * 0.5; // 750 m/s
         let max_velocity = SOUND_SPEED_WATER * 4.0; // 6000 m/s
@@ -121,7 +121,7 @@ impl FwiProcessor {
             ));
         }
 
-        let stable_dt = self.calculate_stable_timestep(model, grid)?;
+        let stable_dt = Self::calculate_stable_timestep(model, grid)?;
         if self.parameters.dt > stable_dt {
             return Err(KwaversError::Validation(
                 ValidationError::ConstraintViolation {
@@ -145,7 +145,6 @@ impl FwiProcessor {
     /// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
     ///
     pub(super) fn calculate_stable_timestep(
-        &self,
         model: &Array3<f64>,
         grid: &Grid,
     ) -> KwaversResult<f64> {
@@ -178,7 +177,6 @@ impl FwiProcessor {
     /// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
     ///
     pub(super) fn pressure_second_derivative_into(
-        &self,
         forward_history: &Array4<f64>,
         idx: usize,
         dt: f64,

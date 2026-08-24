@@ -165,7 +165,7 @@ fn max_abs_field(field: &[f32]) -> f32 {
 /// update.  This verifies the full three-axis complex FFT and cosine source
 /// correction rather than only the source-cell value.
 #[test]
-#[ignore = "requires GPU device"]
+#[ignore = "requires a GPU device; kept out of headless CI and run on the scheduled self-hosted CUDA job (gpu-parity.yml) via `--run-ignored ignored-only`. Re-enable trigger: a GPU runner is wired into CI"]
 fn pstd_cpu_gpu_additive_source_filter_contract() {
     let n = 64usize;
     let dx = 1e-3_f64;
@@ -220,7 +220,7 @@ fn pstd_cpu_gpu_additive_source_filter_contract() {
 /// `gamma_1000 < 6e-5` therefore leaves the `1e-4` relative bound for the
 /// independent f64 CPU reference.
 #[test]
-#[ignore = "requires GPU device"]
+#[ignore = "requires a GPU device; kept out of headless CI and run on the scheduled self-hosted CUDA job (gpu-parity.yml) via `--run-ignored ignored-only`. Re-enable trigger: a GPU runner is wired into CI"]
 fn pstd_cpu_gpu_source_and_early_leapfrog_contract() {
     let n = 64usize;
     let dx = 1e-3_f64;
@@ -294,7 +294,7 @@ fn pstd_cpu_gpu_source_and_early_leapfrog_contract() {
 /// leaves the `2e-3` assertion margin for the independently scheduled provider
 /// reductions without masking a real drift.
 #[test]
-#[ignore = "requires GPU device"]
+#[ignore = "requires a GPU device; kept out of headless CI and run on the scheduled self-hosted CUDA job (gpu-parity.yml) via `--run-ignored ignored-only`. Re-enable trigger: a GPU runner is wired into CI"]
 fn pstd_cpu_gpu_parity_homogeneous() {
     let n = 64usize;
     let dx = 1e-3_f64;
@@ -323,7 +323,7 @@ fn pstd_cpu_gpu_parity_homogeneous() {
 /// The same finite burst crosses a two-region 128³ medium. Both providers use
 /// the same per-voxel density and sound-speed fields and sample one trace.
 #[test]
-#[ignore = "requires GPU device"]
+#[ignore = "requires a GPU device; kept out of headless CI and run on the scheduled self-hosted CUDA job (gpu-parity.yml) via `--run-ignored ignored-only`. Re-enable trigger: a GPU runner is wired into CI"]
 fn pstd_cpu_gpu_parity_heterogeneous() {
     let n = 128usize;
     let dx = 5e-4_f64;

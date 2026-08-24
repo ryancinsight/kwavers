@@ -146,3 +146,15 @@ jobs:
           source wheel-smoke/bin/activate
           python -m pytest --import-mode=importlib --disable-warnings --maxfail=1 -q \
             source/crates/kwavers-python/tests/test_kwave_comparison.py
+
+      - name: Run runtime export-inventory oracle against the installed wheel
+        # The generated _generated_surface.json ships in the wheel; this proves
+        # every declared public name resolves at runtime with no extras.
+        shell: bash
+        env:
+          KWAVERS_PYTHON_PACKAGE: installed
+        run: |
+          set -euo pipefail
+          source wheel-smoke/bin/activate
+          python -m pytest --import-mode=importlib --disable-warnings --maxfail=1 -q \
+            source/crates/kwavers-python/tests/test_runtime_export_inventory.py

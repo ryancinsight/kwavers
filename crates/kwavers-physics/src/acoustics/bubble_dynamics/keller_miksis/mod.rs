@@ -340,10 +340,20 @@ impl KellerHerringModel {
         self.inner.is_shape_unstable(r)
     }
 
+    /// Update bubble temperature through the delegated Keller-Miksis model.
+    ///
+    /// # Errors
+    ///
+    /// Propagates the thermodynamic update failure from the inner model.
     pub fn update_temperature(&self, state: &mut BubbleState, dt: f64) -> KwaversResult<()> {
         self.inner.update_temperature(state, dt)
     }
 
+    /// Update vapor content through the delegated Keller-Miksis model.
+    ///
+    /// # Errors
+    ///
+    /// Propagates the mass-transfer update failure from the inner model.
     pub fn update_mass_transfer(&self, state: &mut BubbleState, dt: f64) -> KwaversResult<()> {
         self.inner.update_mass_transfer(state, dt)
     }
@@ -352,10 +362,20 @@ impl KellerHerringModel {
         self.inner.molar_heat_capacity_cv(state)
     }
 
+    /// Calculate delegated Van der Waals pressure.
+    ///
+    /// # Errors
+    ///
+    /// Propagates the thermodynamic pressure failure from the inner model.
     pub fn calculate_vdw_pressure(&self, state: &BubbleState) -> KwaversResult<f64> {
         self.inner.calculate_vdw_pressure(state)
     }
 
+    /// Calculate delegated Keller-Miksis wall acceleration.
+    ///
+    /// # Errors
+    ///
+    /// Propagates the equation failure from the inner model.
     pub fn calculate_acceleration(
         &self,
         state: &mut BubbleState,

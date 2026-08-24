@@ -66,11 +66,16 @@ data/cfb_gbm_sample/*.nii.gz
 *.core
 
 # Backup files
-*.bak
+# `*.bak*` rather than `*.bak`: the suffixed form (`mod.rs.bak-final`) is what actually
+# slipped into the tree, and a bare `*.bak` glob does not match it.
+*.bak*
 *.backup
 *~
 *.swp
 *.swo
+# Merge/patch leftovers
+*.orig
+*.rej
 
 # RustRover
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
@@ -127,6 +132,10 @@ __pycache__/
 # NumPy/binary data outputs
 *.npy
 *.npz
+
+# The committed k-Wave differential-oracle reference fields are inputs to the
+# default test gate, not run outputs; see ADR 119.
+!crates/kwavers/tests/reference/kwave/*.npz
 
 # Errors
 *.err

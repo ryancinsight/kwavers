@@ -14,7 +14,7 @@ use kwavers_core::error::KwaversResult;
 use kwavers_grid::GridTopology;
 
 impl BoundaryCondition for SchwarzBoundary {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "SchwarzBoundary"
     }
 

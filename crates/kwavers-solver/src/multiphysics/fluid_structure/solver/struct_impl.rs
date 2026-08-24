@@ -90,6 +90,11 @@ impl FluidStructureSolver {
     /// - Returns [`crate::KwaversError::InternalError`] if the precondition for a InternalError-class constraint is violated.
     /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn apply_interface_conditions(
         &mut self,
         fluid_pressure: &mut Array3<f64>,

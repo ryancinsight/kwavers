@@ -177,7 +177,7 @@ impl WesterveltWave {
             .is_none_or(|tracker| tracker.is_solution_valid())
     }
 
-    pub(super) fn check_stability(&self, dt: f64, grid: &Grid, medium: &dyn Medium) -> bool {
+    pub(super) fn check_stability(dt: f64, grid: &Grid, medium: &dyn Medium) -> bool {
         let max_c = medium
             .sound_speed_array()
             .iter()

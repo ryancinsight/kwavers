@@ -44,6 +44,11 @@ impl HybridSolver {
     /// # Errors
     /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn update(
         &mut self,
         fields: &mut Array4<f64>,

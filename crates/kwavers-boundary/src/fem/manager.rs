@@ -95,16 +95,16 @@ impl FemBoundaryManager {
         for condition in &self.conditions {
             match condition {
                 FemBoundaryCondition::Dirichlet(node_values) => {
-                    self.apply_dirichlet(stiffness, mass, rhs, node_values)?;
+                    Self::apply_dirichlet(stiffness, mass, rhs, node_values)?;
                 }
                 FemBoundaryCondition::Neumann(node_fluxes) => {
-                    self.apply_neumann(rhs, node_fluxes)?;
+                    Self::apply_neumann(rhs, node_fluxes)?;
                 }
                 FemBoundaryCondition::Robin(node_conditions) => {
-                    self.apply_robin(stiffness, rhs, node_conditions)?;
+                    Self::apply_robin(stiffness, rhs, node_conditions)?;
                 }
                 FemBoundaryCondition::Radiation(nodes) => {
-                    self.apply_radiation(stiffness, wavenumber, nodes)?;
+                    Self::apply_radiation(stiffness, wavenumber, nodes)?;
                 }
             }
         }
@@ -189,7 +189,6 @@ impl FemBoundaryManager {
     /// - Propagates any `KwaversError` returned by called functions.
     ///
     fn apply_dirichlet(
-        &self,
         stiffness: &mut CompressedSparseRowMatrix<Complex64>,
         mass: &mut CompressedSparseRowMatrix<Complex64>,
         rhs: &mut Array1<Complex64>,
@@ -217,7 +216,6 @@ impl FemBoundaryManager {
     /// - Propagates any `KwaversError` returned by called functions.
     ///
     fn apply_neumann(
-        &self,
         rhs: &mut Array1<Complex64>,
         node_fluxes: &[(usize, Complex64)],
     ) -> KwaversResult<()> {
@@ -238,7 +236,6 @@ impl FemBoundaryManager {
     /// - Propagates any `KwaversError` returned by called functions.
     ///
     fn apply_robin(
-        &self,
         stiffness: &mut CompressedSparseRowMatrix<Complex64>,
         rhs: &mut Array1<Complex64>,
         node_conditions: &[(usize, f64, Complex64)],
@@ -266,7 +263,6 @@ impl FemBoundaryManager {
     /// - Propagates any `KwaversError` returned by called functions.
     ///
     fn apply_radiation(
-        &self,
         stiffness: &mut CompressedSparseRowMatrix<Complex64>,
         wavenumber: f64,
         nodes: &[usize],

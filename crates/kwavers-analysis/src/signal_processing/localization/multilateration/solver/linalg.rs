@@ -31,7 +31,7 @@ impl Multilateration {
             }
         }
 
-        self.solve_3x3(&jtj, &jtr)
+        Self::solve_3x3(&jtj, &jtr)
     }
 
     pub(super) fn compute_jtj(&self, jacobian: &[[f64; 3]]) -> [[f64; 3]; 3] {
@@ -54,12 +54,12 @@ impl Multilateration {
     pub(super) fn estimate_uncertainty(&self, position: &[f64; 3]) -> KwaversResult<f64> {
         let jacobian = self.compute_jacobian(position);
         let jtj = self.compute_jtj(&jacobian);
-        let cov = self.invert_3x3(&jtj)?;
+        let cov = Self::invert_3x3(&jtj)?;
         let trace = cov[0][0] + cov[1][1] + cov[2][2];
         Ok(trace.sqrt())
     }
 
-    pub(super) fn solve_3x3(&self, a: &[[f64; 3]; 3], b: &[f64; 3]) -> KwaversResult<[f64; 3]> {
+    pub(super) fn solve_3x3(a: &[[f64; 3]; 3], b: &[f64; 3]) -> KwaversResult<[f64; 3]> {
         const REGULARIZATION: f64 = 1e-12;
 
         let mut aug = [[0.0; 4]; 3];
@@ -107,7 +107,7 @@ impl Multilateration {
         Ok(x)
     }
 
-    pub(super) fn invert_3x3(&self, a: &[[f64; 3]; 3]) -> KwaversResult<[[f64; 3]; 3]> {
+    pub(super) fn invert_3x3(a: &[[f64; 3]; 3]) -> KwaversResult<[[f64; 3]; 3]> {
         let det = a[0][2].mul_add(
             a[1][0].mul_add(a[2][1], -(a[1][1] * a[2][0])),
             a[0][0].mul_add(

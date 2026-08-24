@@ -5,7 +5,7 @@
 //!
 //! # Slice layout
 //!
-//! Carved by **schema role** (Phase 4f output-slice migration). Plain backticks name the
+//! Carved by **schema role**. Plain backticks name the
 //! slice-private submodules; the public types each hosts stay clickable.
 //! * `stimulation` — the acoustic protocol schema: [`StimulationProgram`] (article-class single
 //!   preset) and [`TileStimulationProfile`] (per-tile PRF/SHIFT/PHASE/RAMP for the 96-channel stack).

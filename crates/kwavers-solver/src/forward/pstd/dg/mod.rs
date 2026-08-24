@@ -211,6 +211,11 @@ impl HybridSpectralDGSolver {
     /// Allocating wrapper for one hybrid Spectral-DG step.
     ///
     /// Prefer [`Self::solve_step_into`] inside time loops.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the field shape differs from the configured grid or when the
+    /// spectral, DG, or coupling stages reject the step inputs.
     pub fn solve_step(
         &mut self,
         field: &Array3<f64>,

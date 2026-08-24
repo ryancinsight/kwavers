@@ -35,10 +35,11 @@
 //! the adjoint field with the reference-field acceleration at each step.
 
 use super::acquisition::TransmissionAcquisition;
+use super::cbs::grid::nonempty_bli_weights;
 use super::cbs::{
-    pstd_modal_theta_squared, pstd_source_kappa_symbol, GridSpec, PstdTemporalTransferConfig,
+    pstd_modal_theta_squared, pstd_source_kappa_symbol, GridSpec, GridWeight,
+    PstdTemporalTransferConfig,
 };
-use aequitas::systems::si::units::Meter;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::Complex64;
 use kwavers_math::fft::{fft_3d_complex_into, ifft_3d_complex_inplace};
@@ -98,7 +99,7 @@ pub fn simulate_pstd_finite_window_born_observation(
     let mut output = Array2::<Complex64>::zeros([transmissions, acquisition.receiver_count()]);
 
     for transmit in 0..transmissions {
-        let receiver_indices = receiver_indices_on_grid(grid, acquisition, transmit)?;
+        let receiver_stencils = receiver_weights_on_grid(grid, acquisition, transmit)?;
         let source_hat =
             source_spectrum_on_grid(grid, acquisition.sources(transmit), &symbols.source_kappa)?;
         let row = simulate_transmit(
@@ -106,7 +107,7 @@ pub fn simulate_pstd_finite_window_born_observation(
             &source_hat,
             &contrast,
             &symbols.theta_squared,
-            &receiver_indices,
+            &receiver_stencils,
             bin_config,
         );
         for (receiver_index, pressure) in row.into_iter().enumerate() {
@@ -166,7 +167,7 @@ fn simulate_transmit(
     source_hat: &Array3<Complex64>,
     contrast: &Array3<f64>,
     theta_squared: &Array3<f64>,
-    receiver_indices: &[(usize, usize, usize)],
+    receiver_stencils: &[Vec<GridWeight>],
     bin_config: super::cbs::PstdTemporalBinConfig,
 ) -> Vec<Complex64> {
     let mut direct_prev_hat = Array3::<Complex64>::from_elem(
@@ -217,7 +218,7 @@ fn simulate_transmit(
         [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
         Complex64::default(),
     );
-    let mut receivers = vec![Complex64::new(0.0, 0.0); receiver_indices.len()];
+    let mut receivers = vec![Complex64::new(0.0, 0.0); receiver_stencils.len()];
     let angular_step = TAU * bin_config.frequency_hz * bin_config.time_step_s;
     let mut previous_signal = 0.0;
 
@@ -259,8 +260,18 @@ fn simulate_transmit(
         if step >= bin_config.bin_start_step {
             let phase = -angular_step * step as f64;
             let demodulation = Complex64::new(phase.cos(), phase.sin());
-            for (dst, &(ix, iy, iz)) in receivers.iter_mut().zip(receiver_indices.iter()) {
-                *dst += (direct_next[[ix, iy, iz]] + scatter_next[[ix, iy, iz]]) * demodulation;
+            let direct_data = direct_next
+                .as_slice()
+                .expect("Array3 over VecStorage is contiguous");
+            let scatter_data = scatter_next
+                .as_slice()
+                .expect("Array3 over VecStorage is contiguous");
+            for (dst, stencil) in receivers.iter_mut().zip(receiver_stencils.iter()) {
+                for weight in stencil {
+                    *dst += (direct_data[weight.linear_index] + scatter_data[weight.linear_index])
+                        * weight.weight
+                        * demodulation;
+                }
             }
         }
 
@@ -295,6 +306,11 @@ fn simulate_transmit(
 /// Returns an error when the grid, acquisition parameters, ring geometry, or
 /// sound-speed values violate the finite-window PSTD contract.
 #[allow(clippy::too_many_arguments)]
+///
+/// # Panics
+///
+/// Panics if a caller-supplied shape or an internal solver state violates
+/// the precondition required by this operation.
 pub fn finite_window_pstd_born_gradient(
     sound_speed_m_s: &Array3<f64>,
     acquisition: &dyn TransmissionAcquisition,
@@ -338,7 +354,7 @@ pub fn finite_window_pstd_born_gradient(
     let reference_slowness_sq = reference_slowness * reference_slowness;
 
     for transmit in 0..transmissions {
-        let receiver_indices = receiver_indices_on_grid(grid, acquisition, transmit)?;
+        let receiver_stencils = receiver_weights_on_grid(grid, acquisition, transmit)?;
         let source_hat =
             source_spectrum_on_grid(grid, acquisition.sources(transmit), &symbols.source_kappa)?;
         let (d_model, accel_history) = simulate_transmit_with_accel(
@@ -346,7 +362,7 @@ pub fn finite_window_pstd_born_gradient(
             &source_hat,
             &contrast,
             &symbols.theta_squared,
-            &receiver_indices,
+            &receiver_stencils,
             bin_config,
         );
         let observed: Vec<Complex64> = observed_rows
@@ -376,7 +392,7 @@ pub fn finite_window_pstd_born_gradient(
             grid,
             &receiver_residual,
             &accel_history,
-            &receiver_indices,
+            &receiver_stencils,
             &symbols.theta_squared,
             bin_config,
         );
@@ -400,14 +416,14 @@ pub fn finite_window_pstd_born_gradient(
 /// every time step, needed by the adjoint backward pass.
 ///
 /// Returns `(d_model, accel_history)` where `d_model` is the complex receiver
-/// vector (length = `(receiver_indices.len())`) and `accel_history` is a
+/// vector (length = `receiver_stencils.len()`) and `accel_history` is a
 /// `Vec<Array3<Complex64>>` of length `bin_config.total_steps`.
 fn simulate_transmit_with_accel(
     grid: GridSpec,
     source_hat: &Array3<Complex64>,
     contrast: &Array3<f64>,
     theta_squared: &Array3<f64>,
-    receiver_indices: &[(usize, usize, usize)],
+    receiver_stencils: &[Vec<GridWeight>],
     bin_config: super::cbs::PstdTemporalBinConfig,
 ) -> (Vec<Complex64>, Vec<Array3<Complex64>>) {
     let mut direct_prev_hat = Array3::<Complex64>::from_elem(
@@ -458,7 +474,7 @@ fn simulate_transmit_with_accel(
         [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
         Complex64::default(),
     );
-    let mut receivers = vec![Complex64::new(0.0, 0.0); receiver_indices.len()];
+    let mut receivers = vec![Complex64::new(0.0, 0.0); receiver_stencils.len()];
     let mut accel_history: Vec<Array3<Complex64>> = Vec::with_capacity(bin_config.total_steps);
     let angular_step = TAU * bin_config.frequency_hz * bin_config.time_step_s;
     let mut previous_signal = 0.0;
@@ -515,8 +531,18 @@ fn simulate_transmit_with_accel(
         if step >= bin_config.bin_start_step {
             let phase = -angular_step * step as f64;
             let demodulation = Complex64::new(phase.cos(), phase.sin());
-            for (dst, &(ix, iy, iz)) in receivers.iter_mut().zip(receiver_indices.iter()) {
-                *dst += (direct_next[[ix, iy, iz]] + scatter_next[[ix, iy, iz]]) * demodulation;
+            let direct_data = direct_next
+                .as_slice()
+                .expect("Array3 over VecStorage is contiguous");
+            let scatter_data = scatter_next
+                .as_slice()
+                .expect("Array3 over VecStorage is contiguous");
+            for (dst, stencil) in receivers.iter_mut().zip(receiver_stencils.iter()) {
+                for weight in stencil {
+                    *dst += (direct_data[weight.linear_index] + scatter_data[weight.linear_index])
+                        * weight.weight
+                        * demodulation;
+                }
             }
         }
 
@@ -550,7 +576,7 @@ fn adjoint_backward_pass(
     grid: GridSpec,
     receiver_residual: &[Complex64],
     accel_history: &[Array3<Complex64>],
-    receiver_indices: &[(usize, usize, usize)],
+    receiver_stencils: &[Vec<GridWeight>],
     theta_squared: &Array3<f64>,
     bin_config: super::cbs::PstdTemporalBinConfig,
 ) -> Vec<f64> {
@@ -618,8 +644,14 @@ fn adjoint_backward_pass(
         if step >= bin_config.bin_start_step {
             let phase = angular_step * step as f64;
             let demod = Complex64::new(phase.cos(), phase.sin());
-            for (recv_idx, &(ix, iy, iz)) in receiver_indices.iter().enumerate() {
-                pa_source_spatial[[ix, iy, iz]] += adj_scale * receiver_residual[recv_idx] * demod;
+            let adjoint_data = pa_source_spatial
+                .as_slice_mut()
+                .expect("Array3 over VecStorage is contiguous");
+            for (recv_idx, stencil) in receiver_stencils.iter().enumerate() {
+                let injection = adj_scale * receiver_residual[recv_idx] * demod;
+                for weight in stencil {
+                    adjoint_data[weight.linear_index] += injection * weight.weight;
+                }
             }
         }
         fft_3d_complex_into(&pa_source_spatial, &mut pa_source_hat);
@@ -693,7 +725,7 @@ pub fn simulate_pstd_finite_window_born_second_order_observation(
     let mut output = Array2::<Complex64>::zeros([transmissions, acquisition.receiver_count()]);
 
     for transmit in 0..transmissions {
-        let receiver_indices = receiver_indices_on_grid(grid, acquisition, transmit)?;
+        let receiver_stencils = receiver_weights_on_grid(grid, acquisition, transmit)?;
         let source_hat =
             source_spectrum_on_grid(grid, acquisition.sources(transmit), &symbols.source_kappa)?;
         let row = simulate_transmit_second_order(
@@ -701,7 +733,7 @@ pub fn simulate_pstd_finite_window_born_second_order_observation(
             &source_hat,
             &contrast,
             &symbols.theta_squared,
-            &receiver_indices,
+            &receiver_stencils,
             bin_config,
         );
         for (receiver_index, pressure) in row.into_iter().enumerate() {
@@ -727,7 +759,7 @@ fn simulate_transmit_second_order(
     source_hat: &Array3<Complex64>,
     contrast: &Array3<f64>,
     theta_squared: &Array3<f64>,
-    receiver_indices: &[(usize, usize, usize)],
+    receiver_stencils: &[Vec<GridWeight>],
     bin_config: super::cbs::PstdTemporalBinConfig,
 ) -> Vec<Complex64> {
     // --- direct (p0) fields in spectral and spatial domain ---
@@ -819,7 +851,7 @@ fn simulate_transmit_second_order(
         Complex64::default(),
     );
 
-    let mut receivers = vec![Complex64::new(0.0, 0.0); receiver_indices.len()];
+    let mut receivers = vec![Complex64::new(0.0, 0.0); receiver_stencils.len()];
     let angular_step = TAU * bin_config.frequency_hz * bin_config.time_step_s;
     let mut previous_signal = 0.0;
 
@@ -889,10 +921,22 @@ fn simulate_transmit_second_order(
         if step >= bin_config.bin_start_step {
             let phase = -angular_step * step as f64;
             let demodulation = Complex64::new(phase.cos(), phase.sin());
-            for (dst, &(ix, iy, iz)) in receivers.iter_mut().zip(receiver_indices.iter()) {
-                let total =
-                    direct_next[[ix, iy, iz]] + scat1_next[[ix, iy, iz]] + scat2_next[[ix, iy, iz]];
-                *dst += total * demodulation;
+            let direct_data = direct_next
+                .as_slice()
+                .expect("Array3 over VecStorage is contiguous");
+            let scat1_data = scat1_next
+                .as_slice()
+                .expect("Array3 over VecStorage is contiguous");
+            let scat2_data = scat2_next
+                .as_slice()
+                .expect("Array3 over VecStorage is contiguous");
+            for (dst, stencil) in receivers.iter_mut().zip(receiver_stencils.iter()) {
+                for weight in stencil {
+                    let j = weight.linear_index;
+                    *dst += (direct_data[j] + scat1_data[j] + scat2_data[j])
+                        * weight.weight
+                        * demodulation;
+                }
             }
         }
 
@@ -950,9 +994,13 @@ fn source_spectrum_on_grid(
         [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
         Complex64::default(),
     );
+    let mask_data = mask
+        .as_slice_mut()
+        .expect("Array3 over VecStorage is contiguous");
     for &source in sources {
-        let index = exact_grid_index(grid, source, "source")?;
-        mask[[index.0, index.1, index.2]] += Complex64::new(1.0, 0.0);
+        for contribution in nonempty_bli_weights(grid, source, "source")? {
+            mask_data[contribution.linear_index] += Complex64::new(contribution.weight, 0.0);
+        }
     }
     let mut spectrum = Array3::<Complex64>::from_elem(
         [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
@@ -972,15 +1020,22 @@ fn source_spectrum_on_grid(
 /// silently wrong for every view but the first. For a rotationally symmetric
 /// acquisition the result is identical each time, and the cost — a grid-index
 /// lookup per receiver — is negligible against the transmit's own solve.
-fn receiver_indices_on_grid(
+/// BLI stencils of the receivers recording `transmit`.
+///
+/// Indexed by transmit rather than hoisted: an acquisition on a rotation stage
+/// moves its receivers between views, so a single hoisted stencil set would be
+/// silently wrong for every view but the first. For a rotationally symmetric
+/// acquisition the result is identical each time, and the cost — one BLI
+/// stencil per receiver — is negligible against the transmit's own solve.
+fn receiver_weights_on_grid(
     grid: GridSpec,
     acquisition: &dyn TransmissionAcquisition,
     transmit: usize,
-) -> KwaversResult<Vec<(usize, usize, usize)>> {
+) -> KwaversResult<Vec<Vec<GridWeight>>> {
     acquisition
         .receivers(transmit)
         .iter()
-        .map(|&receiver| exact_grid_index(grid, receiver, "receiver"))
+        .map(|&receiver| nonempty_bli_weights(grid, receiver, "receiver"))
         .collect()
 }
 
@@ -1017,44 +1072,6 @@ fn validate_inputs(
         )));
     }
     config.temporal_transfer().validate()
-}
-
-fn exact_grid_index(
-    grid: GridSpec,
-    point: ElementPosition,
-    role: &str,
-) -> KwaversResult<(usize, usize, usize)> {
-    Ok((
-        exact_axis_index(
-            grid.dimensions.0,
-            grid.spacing_m,
-            point.x.in_unit::<Meter>(),
-            role,
-        )?,
-        exact_axis_index(
-            grid.dimensions.1,
-            grid.spacing_m,
-            point.y.in_unit::<Meter>(),
-            role,
-        )?,
-        exact_axis_index(
-            grid.dimensions.2,
-            grid.spacing_m,
-            point.z.in_unit::<Meter>(),
-            role,
-        )?,
-    ))
-}
-
-fn exact_axis_index(n: usize, spacing_m: f64, value_m: f64, role: &str) -> KwaversResult<usize> {
-    let raw = value_m / spacing_m + 0.5 * (n - 1) as f64;
-    let rounded = raw.round();
-    if (raw - rounded).abs() > 1.0e-9 || rounded < 0.0 || rounded > (n - 1) as f64 {
-        return Err(KwaversError::InvalidInput(format!(
-            "finite-window PSTD {role} coordinate {value_m} is not on the centered grid axis"
-        )));
-    }
-    Ok(rounded as usize)
 }
 
 fn modal_wavenumber(grid: GridSpec, ix: usize, iy: usize, iz: usize) -> f64 {

@@ -69,6 +69,11 @@ impl TrainingDataset {
     /// # Errors
     /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal analysis state violates
+    /// the precondition required by this operation.
     pub fn split(&self, validation_fraction: f64) -> KwaversResult<(Self, Self)> {
         if validation_fraction <= 0.0 || validation_fraction >= 1.0 {
             return Err(KwaversError::InvalidInput(
@@ -133,6 +138,11 @@ impl TrainingDataset {
     /// # Errors
     /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal analysis state violates
+    /// the precondition required by this operation.
     pub fn batch(&self, offset: usize, batch_size: usize) -> KwaversResult<Self> {
         let n = self.len();
         if offset >= n {

@@ -51,6 +51,11 @@ impl ArtificialViscosity {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn compute_viscosity(
         &self,
         velocity: &Array4<f64>,
@@ -116,6 +121,11 @@ impl ArtificialViscosity {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn apply_viscous_flux(
         &self,
         momentum: &mut Array4<f64>,

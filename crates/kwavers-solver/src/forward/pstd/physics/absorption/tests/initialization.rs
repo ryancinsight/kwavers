@@ -23,7 +23,7 @@ fn test_power_law_initialization() {
     let config = PSTDConfig {
         dt: 1e-7,
         absorption_mode: AbsorptionMode::PowerLaw {
-            alpha_coeff: 0.0,
+            alpha_coeff: None,
             alpha_power: 1.5,
         },
         ..PSTDConfig::default()
@@ -72,7 +72,7 @@ fn test_nabla_operators_correct_power() {
     let y = 1.5_f64;
     let config = PSTDConfig {
         absorption_mode: AbsorptionMode::PowerLaw {
-            alpha_coeff: 0.5,
+            alpha_coeff: Some(0.5),
             alpha_power: y,
         },
         ..PSTDConfig::default()
@@ -134,7 +134,7 @@ fn test_absorption_model_physics_validation() {
     let alpha_power = 1.5_f64;
     let config = PSTDConfig {
         absorption_mode: AbsorptionMode::PowerLaw {
-            alpha_coeff,
+            alpha_coeff: Some(alpha_coeff),
             alpha_power,
         },
         ..Default::default()

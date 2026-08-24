@@ -1,10 +1,8 @@
 //! Acoustic / pulser-domain failures.
 //!
-//! Forward-looking variants for the acoustic slice (lives in
-//! [`crate::physics::acoustic`] today; will be joined by the eventual
-//! `kwavers-transducer` simulator integration at Phase 6). Today the slice
-//! returns numeric values; Phase 2 wraps physically-implausible inputs and
-//! pole-zero overflows into `Result<_, Acoustic>`.
+//! Declared variants for the [`crate::physics::acoustic`] slice, which returns numeric
+//! values today. They are adopted when the slice starts returning
+//! `Result<_, Acoustic>` for physically implausible inputs and pole-zero overflows.
 
 /// Acoustic / pulser-domain failure.
 ///

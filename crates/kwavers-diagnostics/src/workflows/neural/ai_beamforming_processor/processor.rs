@@ -94,7 +94,7 @@ impl AIEnhancedBeamformingProcessor {
         let start_time = Instant::now();
 
         let beamforming_start = Instant::now();
-        let volume = self.perform_beamforming(rf_data, angles)?;
+        let volume = Self::perform_beamforming(rf_data, angles)?;
         let beamforming_time = beamforming_start.elapsed().as_secs_f64() * 1000.0;
 
         let feature_start = Instant::now();
@@ -136,7 +136,7 @@ impl AIEnhancedBeamformingProcessor {
                 feature_extraction_time_ms: feature_time,
                 pinn_inference_time_ms: pinn_time,
                 clinical_analysis_time_ms: clinical_time,
-                memory_usage_mb: self.estimate_memory_usage(),
+                memory_usage_mb: Self::estimate_memory_usage(),
                 gpu_utilization_percent: f64::NAN,
             },
         })
@@ -147,7 +147,6 @@ impl AIEnhancedBeamformingProcessor {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(super) fn perform_beamforming(
-        &self,
         rf_data: ArrayView4<f32>,
         angles: &[f32],
     ) -> KwaversResult<Array3<f32>> {
@@ -247,7 +246,7 @@ impl AIEnhancedBeamformingProcessor {
     }
 
     /// Estimate memory usage in megabytes.
-    pub(super) fn estimate_memory_usage(&self) -> f64 {
+    pub(super) fn estimate_memory_usage() -> f64 {
         let volume_size = 64 * 64 * 100 * 4;
         let feature_size = volume_size * 3;
         let buffer_size = volume_size * 2;

@@ -117,6 +117,11 @@ impl FieldRegistry {
     /// # Errors
     /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn get_field(
         &self,
         field_type: UnifiedFieldType,
@@ -138,6 +143,11 @@ impl FieldRegistry {
     /// # Errors
     /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn get_field_mut(
         &mut self,
         field_type: UnifiedFieldType,

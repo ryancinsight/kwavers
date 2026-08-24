@@ -1,6 +1,6 @@
 //! Consolidated test surface for the [`crate::io`] slice.
 //!
-//! Phase 4a carve: the 5 unit tests in `src/io.rs::mod tests` migrated verbatim into this single
+//! The unit tests for the io slice, consolidated into this single
 //! slice-wide test module. `pub use` re-exports at the slice root bring every public symbol into
 //! `use super::*` scope identically to how the prior flat-module tests did.
 

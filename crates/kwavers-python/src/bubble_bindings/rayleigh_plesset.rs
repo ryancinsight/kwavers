@@ -71,19 +71,23 @@ pub fn solve_rayleigh_plesset(
 
     let dt = t_end_s / n_steps as f64;
     let time: Vec<f64> = (0..=n_steps).map(|i| i as f64 * dt).collect();
-    let (radius, rdot) = kwavers_physics::analytical::cavitation::rayleigh_plesset_rk4(
-        r0_m,
-        rdot0_m_s,
-        p_ac_pa,
-        frequency_hz,
-        &time,
-        p_inf_pa,
-        rho,
-        sigma,
-        mu,
-        gamma,
-        pv_pa,
-    );
+    // The RK4 integration is a pure f64 compute; run it outside the GIL so a
+    // long/converged solve does not block other Python threads.
+    let (radius, rdot) = py.detach(|| {
+        kwavers_physics::analytical::cavitation::rayleigh_plesset_rk4(
+            r0_m,
+            rdot0_m_s,
+            p_ac_pa,
+            frequency_hz,
+            &time,
+            p_inf_pa,
+            rho,
+            sigma,
+            mu,
+            gamma,
+            pv_pa,
+        )
+    });
     Ok((
         vec_to_pyarray1(py, time),
         vec_to_pyarray1(py, radius),

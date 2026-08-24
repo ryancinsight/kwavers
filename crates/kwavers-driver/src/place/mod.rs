@@ -9,7 +9,7 @@
 //! # Module layout
 //!
 //! The place slice is split across several sibling files per the spec's
-//! `place/{mod, anneal, energy, footprint, import, rotation, tests}.rs` layout (Phase 2c
+//! `place/{mod, anneal, energy, footprint, import, rotation, tests}.rs` layout (
 //! completed the carve-out; the `footprint_import.rs` + `symbol_import.rs` split supersedes the
 //! spec's single `import.rs` because the two import paths parse distinct grammars — the
 //! `.kicad_mod` pad/footprint geometry vs the `.kicad_sym` name↔number pin map — and keeping
@@ -27,13 +27,13 @@
 //! * `footprint_import` — the `.kicad_mod` real-manufacturer-footprint importer (parser +
 //!   pin-name wiring + model-recentring).
 //! * `rotation` — 4-variant ZST `Rot` marker + 3-variant `RotationPolicy` (placement rotation
-//!   freedom) and its `for_role` helper. Carved out of `footprint.rs` at Phase 2c.
+//!   freedom) and its `for_role` helper.
 //! * `sexpr` — KiCad S-expression kernel (`Sexpr`, `parse_sexpr`, `child`, `num`, `xyz_child`)
 //!   shared by `footprint_import` and `io::pcb_parse`; `pub(crate)` SSOT for both parsers.
 //! * `symbol_import` — the `.kicad_sym` pin-name↔number-map importer.
 //! * `tests` (gated `#[cfg(test)]`) — the 55 place-slice tests collected from the previously
 //!   inline `mod tests { … }` blocks of `mod.rs`, `footprint.rs`, `footprint_import.rs`,
-//!   `component.rs`, and `symbol_import.rs`. Carved out at Phase 2c.
+//!   `component.rs`, and `symbol_import.rs`.
 
 pub mod anneal;
 pub mod component;

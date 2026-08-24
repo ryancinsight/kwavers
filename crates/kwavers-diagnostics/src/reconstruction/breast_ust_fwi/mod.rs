@@ -165,6 +165,11 @@ pub struct BreastUstFwiImage {
 /// # Errors
 /// Returns an error when observations, geometry, initial model, or config values
 /// violate the solver contract.
+///
+/// # Panics
+///
+/// Panics if a solver or reconstruction array violates the validated volume
+/// shape invariant during assembly.
 pub fn reconstruct_breast_ust_sound_speed_volume(
     observations: &[FrequencyObservation],
     array: &MultiRowRingArray,

@@ -57,6 +57,10 @@ where
     }
 
     /// Generic element-wise addition for arrays.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the input and output slices do not have identical lengths.
     fn add_arrays(a: &[T], b: &[T], out: &mut [T]) -> Result<(), &'static str> {
         if a.len() != b.len() || b.len() != out.len() {
             return Err("Array length mismatch");
@@ -68,6 +72,10 @@ where
     }
 
     /// Generic scalar multiplication.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the input and output slices have different lengths.
     fn scale_array(input: &[T], scalar: T, out: &mut [T]) -> Result<(), &'static str> {
         if input.len() != out.len() {
             return Err("Array length mismatch");

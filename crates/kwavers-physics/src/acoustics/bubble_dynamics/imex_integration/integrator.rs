@@ -93,6 +93,11 @@ impl BubbleIMEXIntegrator {
     /// # Errors
     /// - Propagates any `KwaversError` returned by called functions.
     ///
+    /// # Panics
+    ///
+    /// Panics only if the fixed four-component residual vector cannot be
+    /// reshaped as required by the IMEX state invariant.
+    ///
     pub fn step(
         &mut self,
         state: &mut BubbleState,
@@ -101,12 +106,12 @@ impl BubbleIMEXIntegrator {
         dt: f64,
         t: f64,
     ) -> KwaversResult<f64> {
-        let y0 = self.state_to_vector(state);
+        let y0 = Self::state_to_vector(state);
 
         // Step 1: Explicit update for mechanical terms
         let mut y_explicit = y0.clone();
         {
-            let mut temp_state = self.vector_to_state(&y0, state)?;
+            let mut temp_state = Self::vector_to_state(&y0, state)?;
 
             let accel =
                 self.solver
@@ -122,7 +127,7 @@ impl BubbleIMEXIntegrator {
         let mut y_final = y_explicit.clone();
         {
             for iter in 0..self.config.max_iter {
-                let state_current = self.vector_to_state(&y_final, state)?;
+                let state_current = Self::vector_to_state(&y_final, state)?;
 
                 let (dt_dt, dn_vapor_dt) =
                     self.calculate_thermal_mass_transfer_rates(&state_current)?;
@@ -157,7 +162,7 @@ impl BubbleIMEXIntegrator {
             }
         }
 
-        *state = self.vector_to_state(&y_final, state)?;
+        *state = Self::vector_to_state(&y_final, state)?;
 
         state.update_compression(self.solver.params().r0);
         state.update_collapse_state();
@@ -207,7 +212,7 @@ impl BubbleIMEXIntegrator {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub(crate) fn state_to_vector(&self, state: &BubbleState) -> Array1<f64> {
+    pub(crate) fn state_to_vector(state: &BubbleState) -> Array1<f64> {
         let mut y = Array1::zeros([4usize]);
         y[0] = state.radius;
         y[1] = state.wall_velocity;
@@ -221,7 +226,6 @@ impl BubbleIMEXIntegrator {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(crate) fn vector_to_state(
-        &self,
         y: &Array1<f64>,
         template: &BubbleState,
     ) -> KwaversResult<BubbleState> {

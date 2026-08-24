@@ -242,7 +242,7 @@ impl LithotripsySimulator {
         self.apply_shock_to_stone(&propagated_pressure)?;
         self.simulate_cavitation_effects(&propagated_pressure)?;
 
-        let intensity_field = self.calculate_acoustic_intensity(&propagated_pressure);
+        let intensity_field = Self::calculate_acoustic_intensity(&propagated_pressure);
         self.bioeffects_model.update_assessment(
             &propagated_pressure,
             &intensity_field,
@@ -297,7 +297,7 @@ impl LithotripsySimulator {
         Ok(())
     }
 
-    fn calculate_acoustic_intensity(&self, pressure_field: &Array3<f64>) -> Array3<f64> {
+    fn calculate_acoustic_intensity(pressure_field: &Array3<f64>) -> Array3<f64> {
         let rho = DENSITY_WATER_NOMINAL;
         let c = SOUND_SPEED_WATER_SIM;
         pressure_field.mapv(|p| p * p / (2.0 * rho * c))

@@ -48,7 +48,7 @@ impl PstdSemCoupler {
         let sem_interface = self.extract_sem_interface(sem_field.as_slice())?;
 
         let transformed_field = self.apply_modal_transform(&pstd_interface)?;
-        let residual = self.enforce_continuity(&transformed_field, &sem_interface)?;
+        let residual = Self::enforce_continuity(&transformed_field, &sem_interface)?;
 
         self.apply_conservative_projection(
             pstd_field,
@@ -104,7 +104,7 @@ impl PstdSemCoupler {
         Ok(transformed)
     }
 
-    fn enforce_continuity(&self, transformed: &[f64], sem_interface: &[f64]) -> KwaversResult<f64> {
+    fn enforce_continuity(transformed: &[f64], sem_interface: &[f64]) -> KwaversResult<f64> {
         let mut max_residual = 0.0;
         for (&trans, &sem) in transformed.iter().zip(sem_interface.iter()) {
             let residual = (trans - sem).abs();

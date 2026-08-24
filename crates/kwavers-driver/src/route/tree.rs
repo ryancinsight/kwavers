@@ -1,7 +1,7 @@
 //! Prim-style (power / ground) + chain-tip (signal / HV) tree-growth helpers for the
 //! PathFinder routing loop.
 //!
-//! Phase 2b round-2 carved the single-net grow-loop body out of
+//! The single-net grow-loop body lives here rather than in
 //! [`crate::route::pathfinder::Router::route_with_obstacles`] into this module's
 //! `impl Router { fn route_one }` block. The tree-growth dispatcher picks Prim-style vs
 //! chain-tip by net class:
@@ -17,7 +17,7 @@
 //!   topology (`max degree ≤ 2` enforced by the test).
 //!
 //! (Plain backticks throughout for crate-internal references — the convention adopted
-//! at Phase 2a to avoid rustdoc's `private_intra_doc_links` / `redundant_explicit_links`
+//! to avoid rustdoc's `private_intra_doc_links` / `redundant_explicit_links`
 //! lints. The router struct itself lives at
 //! [`crate::route::pathfinder::Router`], declared in `pathfinder.rs`.)
 

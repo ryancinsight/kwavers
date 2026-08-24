@@ -126,6 +126,11 @@ fn interp(proj: &[f64], t: f64) -> f64 {
 ///
 /// `sinogram` has shape `(n_angles, n_det)`; returns the reconstructed image of
 /// shape `(output_size, output_size)`.
+///
+/// # Panics
+///
+/// Panics if a projection is indexed with dimensions inconsistent with the
+/// sinogram shape.
 #[must_use]
 pub fn filtered_backprojection(sinogram: &Array2<f64>, output_size: usize) -> Array2<f64> {
     let [n_angles, n_det] = sinogram.shape();

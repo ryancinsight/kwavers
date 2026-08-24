@@ -151,6 +151,11 @@ impl MultiRowRingArray {
 
     /// Ali et al. (2025) proof-of-concept geometry: 256 x 32, 22 cm diameter,
     /// 2.4 mm row spacing.
+    ///
+    /// # Errors
+    ///
+    /// Returns the geometry-construction error when the fixed published dimensions violate the
+    /// ring-array invariants.
     pub fn ali_2025() -> KwaversResult<Self> {
         Self::new(
             256,

@@ -4,7 +4,7 @@ use super::assembler::BurtonMillerAssembler;
 use kwavers_core::constants::numerical::FOUR_PI;
 
 impl BurtonMillerAssembler {
-    pub(super) fn distance(&self, p1: &[f64; 3], p2: &[f64; 3]) -> f64 {
+    pub(super) fn distance(p1: &[f64; 3], p2: &[f64; 3]) -> f64 {
         (p1[2] - p2[2])
             .mul_add(
                 p1[2] - p2[2],
@@ -13,14 +13,13 @@ impl BurtonMillerAssembler {
             .sqrt()
     }
 
-    pub(super) fn greens_function_helmholtz(&self, k: f64, r: f64) -> Complex64 {
+    pub(super) fn greens_function_helmholtz(k: f64, r: f64) -> Complex64 {
         let phase = Complex64::new(0.0, k * r);
         phase.exp() / (FOUR_PI * r)
     }
 
     /// ∂G/∂n_y — full 3D dot product (Colton & Kress 2013, §3.1, Eq. 3.41).
     pub(super) fn greens_function_normal_derivative_full(
-        &self,
         k: f64,
         r: f64,
         collocation: &[f64; 3],
@@ -39,14 +38,13 @@ impl BurtonMillerAssembler {
             normal_y[2],
             rhat[0].mul_add(normal_y[0], rhat[1] * normal_y[1]),
         );
-        let g = self.greens_function_helmholtz(k, r);
+        let g = Self::greens_function_helmholtz(k, r);
         let alpha = Complex64::new(0.0, k) - Complex64::new(1.0 / r, 0.0);
         g * alpha * cos_ny
     }
 
     /// ∂²G/(∂n_x ∂n_y) — hypersingular kernel (Colton & Kress 2013, §3.3, Theorem 3.3).
     pub(super) fn greens_function_double_normal_derivative(
-        &self,
         k: f64,
         r: f64,
         collocation: &[f64; 3],
@@ -74,13 +72,13 @@ impl BurtonMillerAssembler {
             normal_y[2],
             normal_x[0].mul_add(normal_y[0], normal_x[1] * normal_y[1]),
         );
-        let g = self.greens_function_helmholtz(k, r);
+        let g = Self::greens_function_helmholtz(k, r);
         let coeff_cos = Complex64::new(k.mul_add(k, -(3.0 / (r * r))), 3.0 * k / r);
         let coeff_nx = Complex64::new(1.0 / (r * r), -k / r);
         g * (coeff_cos * (cos_nx * cos_ny) + coeff_nx * nxny)
     }
 
-    pub(super) fn triangle_normal(&self, p1: [f64; 3], p2: [f64; 3], p3: [f64; 3]) -> [f64; 3] {
+    pub(super) fn triangle_normal(p1: [f64; 3], p2: [f64; 3], p3: [f64; 3]) -> [f64; 3] {
         let e1 = [p2[0] - p1[0], p2[1] - p1[1], p2[2] - p1[2]];
         let e2 = [p3[0] - p1[0], p3[1] - p1[1], p3[2] - p1[2]];
         let normal = [
@@ -98,7 +96,7 @@ impl BurtonMillerAssembler {
         }
     }
 
-    pub(super) fn triangle_area(&self, p1: [f64; 3], p2: [f64; 3], p3: [f64; 3]) -> f64 {
+    pub(super) fn triangle_area(p1: [f64; 3], p2: [f64; 3], p3: [f64; 3]) -> f64 {
         let e1 = [p2[0] - p1[0], p2[1] - p1[1], p2[2] - p1[2]];
         let e2 = [p3[0] - p1[0], p3[1] - p1[1], p3[2] - p1[2]];
         let cross = [

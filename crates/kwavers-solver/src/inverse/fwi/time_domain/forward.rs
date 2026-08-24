@@ -343,7 +343,7 @@ impl FwiProcessor {
     /// (`collect_fortran_indices`), so the self-adjoint synthetic rows align
     /// with the `Box<dyn Solver>` recorder convention and the residual produced
     /// by [`FwiProcessor::compute_adjoint_source`] maps row-for-row.
-    fn sa_geometry_parts(&self, geometry: &FwiGeometry) -> KwaversResult<SelfAdjointGeometryParts> {
+    fn sa_geometry_parts(geometry: &FwiGeometry) -> KwaversResult<SelfAdjointGeometryParts> {
         let source_mask = geometry.source.p_mask.as_ref().ok_or_else(|| {
             KwaversError::Validation(ValidationError::ConstraintViolation {
                 message: "self-adjoint FWI requires a pressure source mask".to_owned(),
@@ -380,7 +380,7 @@ impl FwiProcessor {
     ) -> KwaversResult<(Array2<f64>, Array4<f64>)> {
         geometry.validate(grid, self.parameters.nt)?;
         let density = self.resolved_density(grid)?;
-        let (src_voxels, signal, recv_voxels) = self.sa_geometry_parts(geometry)?;
+        let (src_voxels, signal, recv_voxels) = Self::sa_geometry_parts(geometry)?;
         let acq = self_adjoint::Acquisition {
             source_voxels: &src_voxels,
             source_signal: signal.view(),
@@ -407,7 +407,7 @@ impl FwiProcessor {
     ) -> KwaversResult<Array2<f64>> {
         geometry.validate(grid, self.parameters.nt)?;
         let density = self.resolved_density(grid)?;
-        let (src_voxels, signal, recv_voxels) = self.sa_geometry_parts(geometry)?;
+        let (src_voxels, signal, recv_voxels) = Self::sa_geometry_parts(geometry)?;
         let acq = self_adjoint::Acquisition {
             source_voxels: &src_voxels,
             source_signal: signal.view(),
@@ -441,7 +441,7 @@ impl FwiProcessor {
         source_mask: Option<&Array3<f64>>,
     ) -> KwaversResult<Array3<f64>> {
         let density = self.resolved_density(grid)?;
-        let (src_voxels, signal, recv_voxels) = self.sa_geometry_parts(geometry)?;
+        let (src_voxels, signal, recv_voxels) = Self::sa_geometry_parts(geometry)?;
         let acq = self_adjoint::Acquisition {
             source_voxels: &src_voxels,
             source_signal: signal.view(),
@@ -474,7 +474,7 @@ impl FwiProcessor {
     ) -> KwaversResult<(Array2<f64>, Array3<f64>, Array3<f64>)> {
         geometry.validate(grid, self.parameters.nt)?;
         let density = self.resolved_density(grid)?;
-        let (src_voxels, signal, recv_voxels) = self.sa_geometry_parts(geometry)?;
+        let (src_voxels, signal, recv_voxels) = Self::sa_geometry_parts(geometry)?;
         let acq = self_adjoint::Acquisition {
             source_voxels: &src_voxels,
             source_signal: signal.view(),
@@ -499,7 +499,7 @@ impl FwiProcessor {
         source_mask: Option<&Array3<f64>>,
     ) -> KwaversResult<Array3<f64>> {
         let density = self.resolved_density(grid)?;
-        let (src_voxels, signal, recv_voxels) = self.sa_geometry_parts(geometry)?;
+        let (src_voxels, signal, recv_voxels) = Self::sa_geometry_parts(geometry)?;
         let acq = self_adjoint::Acquisition {
             source_voxels: &src_voxels,
             source_signal: signal.view(),

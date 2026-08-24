@@ -2,7 +2,342 @@
 
 ## Unreleased
 
+### Added
+
+- **[major] Kwavers now owns visualization backend selection.**
+  `kwavers::visualization::VisualizationBackend` and
+  `kwavers::visualization::create_visualization_provider` form a real
+  composition API rather than a re-export of `kwavers-gpu`. The leaf GPU crate
+  now owns only the concrete Leto and Hephaestus providers; Hephaestus
+  continues to own every WGPU resource. Direct `kwavers-gpu` callers migrate
+  selection to the top-level
+  Kwavers API or construct a concrete provider explicitly. The scheduled GPU
+  workflow now requires a successful Kwavers-to-Hephaestus device acquisition
+  and blocking field transfer instead of allowing the adapter path to return
+  early on a headless runner. The selected provider is a closed enum carried
+  generically through `VisualizationEngine` and `DataPipeline`, removing
+  vtable dispatch from field transfers. The large Hephaestus state is boxed
+  once at construction so Leto does not inherit its stack footprint. Provider
+  injection now consumes the unconfigured engine and returns its configured
+  typestate; callers retain the returned engine. GPU resource initialization is
+  synchronous because it contains no asynchronous work.
+
+- **[major] A caller's absorption coefficient now reaches the solver.**
+  `AbsorptionMode::PowerLaw::alpha_coeff` becomes `Option<f64>`: `Some` is an
+  explicit uniform request whose `alpha_power` is authoritative with it, `None`
+  hands both parameters to the medium, read per voxel. Previously both resolved
+  against sentinels in the medium's favour, and `HomogeneousMedium::new` seeds
+  water's coefficient and a `1.05` exponent — neither of which is a sentinel —
+  so a caller asking for `40 dB/(MHz^1.5 cm)` silently got water's `0.0022` at
+  `y = 1.05`, indistinguishable from a lossless run. Any absorption result
+  configured through `PSTDConfig` alone was computed at water's values.
+
+  The two parameters are resolved together because absorption is
+  `alpha_0 f^y`, and taking the coefficient from one owner and the exponent from
+  another evaluates neither party's power law. See
+  [ADR 120](docs/adr/120-absorption-coefficient-ownership.md).
+
+- **[major] Plugins now receive the sources they are given.**
+  `PluginManager::execute` threaded its source list to every plugin through
+  `PluginContext`, and `PSTDPlugin` and `FdtdPlugin` both ignored it — each
+  constructed its solver with an empty `GridSource` and never read the context.
+  A caller who supplied sources and drove either solver through the plugin path
+  got a simulation that ran, returned `Ok`, and was never driven; nothing
+  failed, so nothing said so. The solver machinery was complete
+  (`add_source_arc` through `dynamic_sources`, consumed by the stepper) — only
+  the plugin's call was missing.
+
+  `PluginContext::sources` changes from `&[Box<dyn Source>]` to
+  `&[Arc<dyn Source>]`, because the stepper queries `amplitude(t)` every step
+  and needs ownership outliving the context borrow. The driven k-Wave reference
+  case now validates both routes against one stored field at `2.58e-3` /
+  `r = 0.999996674` — identical digits — and the two agree with each other to
+  `4.0e-13`. See [ADR 121](docs/adr/121-plugin-source-forwarding.md).
+
+- **Validation:** The k-Wave parity claim is now reproducible from a clean clone.
+  `crates/kwavers/tests/kwave_reference_parity.rs` compares the k-space
+  pseudospectral solver against committed k-Wave reference fields
+  (`crates/kwavers/tests/reference/kwave/`, 156 KB) on the homogeneous-water
+  initial-value benchmark, and runs in the default test gate with no external
+  solver present. Measured agreement is relative L2 `5.50e-7` at Pearson
+  `r = 1.000000000` in two dimensions and `1.06e-4` at `r = 0.999999994` in
+  three. The finite-difference solver is measured against the same reference as
+  a cross-scheme check and separates by `2.53e-2` at `r = 0.999647`, which is
+  its own fourth-order dispersion error. A power-law absorbing case matches at
+  `8.10e-3` / `r = 0.999999924` and asserts separation from the lossless field,
+  so the absorption model cannot pass by being absent. A layered-medium case
+  matches at `7.97e-3` / `r = 0.999963` and separates from a uniform run by
+  `0.27`. Its grid is deliberately non-square: a square case cannot distinguish
+  a correct axis orientation from a transposed one, and two conventions — that
+  k-Wave returns the field with its axes reversed, and that `np.savez` stores a
+  transposed array in Fortran order — were live in the harness until it exposed
+  them. Both are now asserted rather than assumed; the lossless and absorbing
+  results are unchanged, because the symmetry that hid the defect also made it
+  harmless there. A driven case injects a tone burst from a single cell and
+  matches at `2.58e-3` / `r = 0.999997`; it is the only case reaching the source
+  injection path, and it established that the propagation-interval count differs
+  by source type — an initial-value case runs `Nt - 1` intervals, a driven one
+  `Nt`. A nonlinear case (`B/A = 20` at 5 MPa) matches at `3.30e-3` /
+  `r = 0.999995` and separates from a linear run by `4.58e-2`, so the
+  finite-amplitude term cannot pass by being absent. `scripts/generate_kwave_reference.py` regenerates the reference set by
+  driving `k-wave-python`. See
+  [ADR 119](docs/adr/119-kwave-reference-oracle.md).
+
+- **Documentation:** Every workspace crate now carries its own `README.md` — the
+  crates.io/docs.rs landing page — closing the gap where 22 of 24 crates published
+  blank. Each README states what the crate owns, where it sits in the layer stack, and
+  its API surface, and most carry a runnable example. The README is single-sourced as
+  the crate documentation via `#![doc = include_str!("../README.md")]`, so the registry
+  page and the docs.rs front page cannot drift and README examples run as doctests.
+  `cargo run -p xtask -- check-readmes` enforces README presence, manifest
+  `description`, and the single-sourcing directive; it runs in Architecture Validation.
+  `kwavers-python` keeps separate `//!` docs by rule — see below.
+
+### Fixed
+
+- **Documentation:** `kwavers-driver`'s README, now its crate documentation, had every
+  claim re-verified against the tree: the test count was `113` and is 494; the refactor
+  status read "Phase 0 scaffolding" while Phases 0-5 have landed; four `examples/*.rs`
+  programs it told readers to run are not in the repository (the example set is
+  proprietary and gitignored); the tree-growth description claimed Prim-style growth for
+  all nets when signal and high-voltage nets use chain-tip growth; the module map covered
+  12 of the crate's modules. Mojibake and a stale "planned extraction name" sentence are
+  gone.
+
+- **Documentation:** `kwavers-python`'s README dropped an unsupported performance table
+  (three runtimes with no stored baseline, grid size, or machine class), three dead links,
+  and `-p pykwavers` cargo commands that name the lib rather than the package
+  (`-p kwavers-python`). Parity thresholds are re-attributed to `pykwavers.comparison` and
+  `tests/test_solver_parity.py`, which actually enforce them; the `SolverType`, `run`, and
+  `SimulationResult` surfaces are completed; the stale roadmap and the sprint/date process
+  trailer are removed.
+
+### Fixed
+
+- **Documentation:** `kwavers-driver`'s audit slice no longer hides behind a blanket
+  `#![allow(missing_docs)]`. The allow covered the whole facade, so the crate's
+  `#![deny(missing_docs)]` never reached it and three modules — `antenna`, `crosstalk`,
+  `shorts` — shipped with no module documentation. All three are now documented from their
+  code and the allow is deleted.
+
+- **Repository hygiene:** deleted the tracked
+  `crates/kwavers-driver/src/physics/mod.rs.bak-final` backup file and fixed the ignore
+  rule that should have stopped it: the "Backup files" block matched `*.bak`, which does
+  not match a suffixed `.bak-final`. The pattern is now `*.bak*`, with `*.orig` and `*.rej`
+  added for merge leftovers.
+
+- **Documentation:** `kwavers-driver` module docs no longer carry the phased-refactor
+  narrative that produced them. `physics/mod.rs` opened as a "Phase 0 placeholder"
+  promising to migrate flat modules that no longer exist and closed 79 lines later with
+  "Phase 3 is COMPLETE"; `geometry/mod.rs` declared itself a placeholder for a migration
+  that has not started. Twelve rustdoc `# Phase N` headings rendered process narrative into
+  the published API docs. Engineering content is kept — per-module unit notes became
+  `# Units` sections, carve-out notes became cross-file impl-block notes — and phase
+  history stays in `docs/MIGRATION.md`. 83 files, comments only, net -176 lines.
+
 ### Changed
+
+- **Focused water-tank example runtime:** Independent FDTD, PSTD, and DG
+  comparison branches now use the provider-owned Moirai `Parallel` join while
+  retaining each solver's native state and analytical output. The complete
+  example Nextest gate passes 59/59; the previously terminating comparison test
+  completes in 51.861 seconds under the committed 60-second budget.
+
+- **FDTD adapter memory path:** `FdtdBackend` now borrows pressure and velocity
+  fields directly from the solver, removing four full-volume shadow copies from
+  every time step. The isolated plane-wave regression passes in 30.927 seconds,
+  the Kwavers package passes 530/530 tests, and the full workspace passes
+  6,279/6,279 with 15 skipped. The plane-wave test is assigned to the existing
+  serialized full-grid Nextest group; no workload, assertion, or timeout is
+  changed.
+
+- **Transcranial FWI example structure:** The entry point is now a small
+  manifest over typed grid configuration, acquisition, phantom/CT loading,
+  metrics, and workflow modules. The provider-owned skull model and Ricker
+  wavelet remain the only physical sources; focused example tests pass 6/6.
+
+- **Shared seismic metrics:** The 2-D and 3-D seismic examples now call one
+  canonical quality-report implementation and pair-report implementation,
+  with value-semantic regression coverage in both example binaries.
+
+- **Shared seismic CT selection:** DICOM series selection and the
+  one-file-per-series merge rule now live in one module used by both seismic
+  examples, removing the duplicated provider-boundary implementation.
+
+- **Shared seismic CT boundary:** RITK PNG, DICOM, and NIfTI loading, HU
+  normalization, axial skull geometry, and `CtVolume` ownership now live in one
+  provider-facing module. The 2-D and 3-D entries retain only their
+  dimension-specific resampling and interpolation paths.
+
+- **Shared seismic raster boundary:** Pixel writes, velocity coloring, and PNG
+  encoding now have one tested rendering home shared by the 2-D and 3-D
+  seismic artifacts; their panel layouts remain dimension-specific.
+
+- **3-D seismic artifact structure:** Orthogonal volume-slice rendering now
+  lives in a dedicated leaf module, leaving the 3-D workflow entry point focused
+  on acquisition, inversion, and artifact orchestration.
+
+- **2-D seismic artifact structure:** Planar velocity, CT-prior, RTM, brain-tissue,
+  and CSV artifact writers now live in the dedicated
+  `seismic_imaging/planar_artifacts.rs` leaf. The workflow entry point owns only
+  acquisition, inversion, and artifact orchestration. The exact example Nextest
+  gate passes 69/69 (one slow comparison at 44.608 seconds), strict example
+  Clippy passes, and `mdbook test` plus `mdbook build` pass.
+
+- **2-D brain-prior structure:** MNI/uniform prior construction and the frozen
+  skull mask now live in `seismic_imaging/brain_model.rs`; root orchestration
+  calls the bounded parent-qualified API. The exact example Nextest gate passes
+  69/69 (one slow comparison at 44.104 seconds), and strict example Clippy
+  passes. The mdBook content is unchanged from the preceding passing
+  `mdbook test` and `mdbook build` gate.
+
+- **2-D acquisition structure:** Full-ring source/receiver geometry and Ricker
+  source construction now live in `seismic_imaging/acquisition.rs`, including
+  their value-semantic geometry tests. The exact example Nextest gate passes
+  69/69 (one slow comparison at 37.708 seconds), strict example Clippy passes,
+  and the mdBook test/build gates pass.
+
+- **2-D phantom structure:** Synthetic skull construction, explicit CT loading,
+  HU resampling, and brain-support filling now live in
+  `seismic_imaging/phantom.rs`; the brain-support classifier is owned by
+  `brain_model.rs` and planar artifacts consume it through a sibling boundary.
+  The exact example Nextest gate passes 69/69 (one slow comparison at 43.391
+  seconds), strict example Clippy passes, and the mdBook test/build gates pass.
+
+- **2-D initial-model structure:** The separable Gaussian CT-prior blur now
+  lives in `seismic_imaging/initial_model.rs`, with constant-field and impulse
+  response tests at the owned boundary. The exact example Nextest gate passes
+  71/71 (one slow comparison at 41.967 seconds), strict example Clippy passes,
+  and the mdBook test/build gates pass.
+
+- **2-D brain inversion structure:** Stage-two masked brain-tissue FWI now
+  lives in `seismic_imaging/brain_inversion.rs`, returning a typed result after
+  explicit prior, gather, and inversion error handling. The exact example
+  Nextest gate passes 71/71 (one slow comparison at 44.692 seconds), strict
+  example Clippy passes, and the mdBook test/build gates pass.
+
+- **2-D RTM structure:** Receiver-snapshot construction and normalized
+  zero-lag reverse-time migration now live in `seismic_imaging/rtm.rs`, with an
+  explicit empty-shot error. The exact example Nextest gate passes 71/71 (one
+  slow comparison at 42.319 seconds), strict example Clippy passes, and the
+  mdBook test/build gates pass.
+
+- **3-D phantom structure:** Full-volume CT interpolation, skull resampling,
+  synthetic spherical phantom construction, and input-mode selection now live
+  in `seismic_imaging/volume_phantom.rs`; interpolation has value-semantic
+  corner and center tests. The exact example Nextest gate passes 72/72 (one
+  slow comparison at 41.982 seconds), strict example Clippy passes, and the
+  mdBook test/build gates pass.
+
+- **3-D brain-prior structure:** MNI probability-map loading, T1 normalization
+  and tissue mapping, uniform-prior construction, and prior selection now live
+  in `seismic_imaging/volume_brain_model.rs`; the declared T1 velocity bands
+  have boundary tests. The exact example Nextest gate passes 73/73 (one slow
+  comparison at 42.758 seconds), strict example Clippy passes, and the mdBook
+  test/build gates pass.
+
+- **3-D acquisition structure:** Fibonacci-sphere element placement, receiver
+  masks, and Ricker shot construction now live in
+  `seismic_imaging/volume_acquisition.rs`; domain-boundary tests cover clamping
+  and source exclusion. The exact example Nextest gate passes 75/75 (one slow
+  comparison at 42.443 seconds), strict example Clippy passes, and the mdBook
+  test/build gates pass.
+
+- **3-D initial-model structure:** Provider-parallel separable Gaussian blur now
+  lives in `seismic_imaging/volume_initial_model.rs`; constant-volume and
+  impulse-response tests cover the clamped 3-D kernel. The exact example
+  Nextest gate passes 77/77 (one slow comparison at 43.001 seconds), strict
+  example Clippy passes, and the mdBook test/build gates pass.
+
+- **3-D reporting structure:** Output-directory validation and orthogonal skull,
+  T1, and brain-tissue artifact writes now live in
+  `seismic_imaging/volume_reporting.rs`; the entry point delegates the complete
+  output contract through one typed boundary. The exact example Nextest gate
+  passes 77/77 (one slow comparison at 40.959 seconds), strict example Clippy
+  passes, and the mdBook test/build gates pass.
+
+- **3-D skull-inversion structure:** Multi-scale skull FWI, synthetic-gather
+  construction, and inversion diagnostics now live in the typed
+  `seismic_imaging/volume_skull_inversion.rs` workflow leaf. The stage retains
+  native provider-array execution and explicit inversion errors.
+
+- **3-D brain-inversion structure:** Stage-two masked brain FWI, prior-derived
+  initialization, gather construction, and brain-only quality reporting now live
+  in `seismic_imaging/volume_brain_inversion.rs`, returning a typed artifact
+  result. The 3-D entry point is 347 lines; the exact local package-plus-example
+  Nextest gate passes 116/116 in 42.039 seconds, strict example Clippy passes,
+  and the mdBook test/build gates pass.
+
+- **2-D workflow structure:** Multi-scale skull FWI, the frequency schedule, and
+  planar artifact reporting now live in typed
+  `seismic_imaging/{planar_inversion,planar_schedule,planar_reporting,planar_artifacts,planar_auxiliary}.rs`
+  leaves. The 2-D entry point is 465 lines, and every seismic artifact leaf is
+  below the 500-line target (`planar_artifacts.rs` is 488 lines). The merged
+  exact local package-plus-example Nextest gate passes 116/116 in 36.685
+  seconds (run `f3773ca9-eb1c-406e-9501-032da8860673`); workspace rustfmt,
+  strict example Clippy, the Kwavers doctest (1/1), and both mdBook test/build
+  gates pass.
+
+- **Seismic review correctness:** CT/NIfTI loaders now preserve source axis
+  order, selected slices, modality boundaries, and anisotropic voxel spacing;
+  MNI/T1 priors use per-axis atlas spacing; RTM rejects receiver-count
+  mismatches; partial gather reports show successful/attempted counts; and the
+  3-D workflow writes one orthogonal skull artifact instead of overwriting the
+  same image three times. Environment selectors reject invalid Unicode rather
+  than silently choosing a default.
+
+- **Breaking CT skull material boundary:** `AcousticSkullProperties` now stores
+  validated Aequitas velocity, mass-density, reciprocal-length attenuation,
+  length, and optional shear velocity. `HeterogeneousSkull::from_ct_hill`
+  consumes that canonical skull configuration, and the seismic examples route
+  synthetic and explicit CT volumes through the provider-owned model.
+- **Lint configuration:** all 24 workspace members now inherit `[workspace.lints]`.
+  `kwavers`, `kwavers-driver`, and `kwavers-python` carried no `[lints]` section and
+  inherited nothing; `kwavers` additionally re-declared `unexpected_cfgs` byte-identically
+  to the workspace table, so that duplicate is deleted in favour of inheritance. Clippy
+  reports zero warnings for all three afterwards and both CI clippy gates pass.
+
+- **Documentation:** the README single-sourcing check now exempts `publish = false`
+  crates by rule instead of an allowlist. The rule follows the requirement's rationale —
+  keeping a crates.io page and a docs.rs front page from drifting — which does not apply
+  to a crate that publishes neither. `kwavers-python` is the only such crate: its README
+  is the PyPI landing page for a Python reader and its `//!` docs address the Rust
+  maintainer of the binding layer, so they are deliberately two documents.
+
+- **Elastic FWI runtime and structure:** Singleton-z in-plane point-force
+  propagation now selects a zero-sized plane-strain mode once, avoiding the
+  out-of-plane stress, acceleration, integration, damping, and gradient work
+  that is analytically zero. The adjoint retains displacement-only forward
+  checkpoints, and steepest-descent iterations reuse the accepted line-search
+  history instead of propagating that model twice. The unchanged
+  `fwi_outperforms_linear_inversion` contract drops from a 10.000-second local
+  median to 4.952 seconds; exact differential tests pin the optimized 2-D
+  operators to the full 3-D formulas.
+
+- **Breaking typed seismic source generation:** `DomainRickerWavelet::new` now accepts
+  Aequitas frequency, time, and pressure quantities and returns a validation
+  result. Its causal constructor and zero-allocation `samples` iterator are the
+  single Ricker implementation used by the seismic solver and examples; the
+  duplicated solver-owned wavelet is removed.
+
+- **Breaking feature cleanup:** The empty `dicom` and `ritk` compatibility
+  features are removed. RITK medical-image I/O remains available
+  unconditionally; commands that passed either feature should remove the flag.
+
+- **Attenuation example structure and documentation:** The heterogeneous
+  power-law attenuation replication now separates configuration, propagation,
+  measurement, experiments, and artifacts into named modules and has a
+  dedicated book page linked from the media chapter and example index. The
+  example catalog no longer links to four deleted programs or instructs readers
+  to replace the repository-pinned Rust toolchain.
+
+- **Distributed scheduling:** `WorkQueue::wait_all` now waits for both queued
+  and executing tasks. Workers block on scheduler state notification instead of
+  polling, and task completion claims are released on success, error, or
+  unwind. Deadline construction rejects timestamp overflow with the existing
+  typed invalid-input error. Focused distributed Nextest passes 17/17; the
+  locked local gate remains blocked by the Atlas development overlay's derived
+  lock rewrite pending hosted verification.
 
 - **Breaking sonoluminescence surface:** Dimensioned emission now exposes
   typed Aequitas blackbody and bremsstrahlung components and excludes the

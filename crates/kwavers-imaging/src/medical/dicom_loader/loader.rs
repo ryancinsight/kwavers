@@ -246,7 +246,7 @@ impl MedicalImageLoader for DicomImageLoader {
         }
     }
 
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "DICOM"
     }
 

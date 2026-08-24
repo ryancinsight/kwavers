@@ -62,9 +62,9 @@ impl CalibrationManager {
         let wavelength = sound_speed / frequency;
         let [_nx, _ny, _nz] = pressure_field.shape();
 
-        let peaks = self.extract_peaks(pressure_field, wavelength)?;
-        let correspondences = self.match_reflectors(&peaks, known_reflectors)?;
-        let positions = self.estimate_positions(&correspondences, known_reflectors)?;
+        let peaks = Self::extract_peaks(pressure_field, wavelength)?;
+        let correspondences = Self::match_reflectors(&peaks, known_reflectors)?;
+        let positions = Self::estimate_positions(&correspondences, known_reflectors)?;
 
         self.data.reference_geometry = Some(positions.clone());
         self.update_quality_metrics(&positions, &correspondences);
@@ -76,6 +76,11 @@ impl CalibrationManager {
     /// # Errors
     /// - Returns [`kwavers_core::error::KwaversError::InvalidInput`] if fewer than 4 reflectors.
     /// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
+    ///
+    /// # Panics
+    ///
+    /// Panics only if the array backend rejects the dimensionally valid
+    /// transpose or matrix product constructed from the validated inputs.
     ///
     pub fn triangulate_position(
         &self,
@@ -112,7 +117,7 @@ impl CalibrationManager {
             );
         }
 
-        let a_t = a_matrix.transpose([1, 0]).unwrap().to_owned();
+        let a_t = a_matrix.transpose([1, 0]).unwrap();
         let at_a = a_t.matmul(&a_matrix).unwrap();
         let at_b = {
             let m = a_t.shape()[0];

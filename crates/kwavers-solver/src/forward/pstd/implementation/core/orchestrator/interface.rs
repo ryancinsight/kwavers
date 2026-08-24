@@ -6,7 +6,7 @@ use leto::Array3;
 use std::sync::Arc;
 
 impl crate::interface::Solver for PSTDSolver {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "PSTD"
     }
 

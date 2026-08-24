@@ -42,6 +42,13 @@ on:
       - 'docs/**'
   workflow_dispatch:
 
+# A superseded run is cancelled rather than left queued. Without this a
+# branch that is pushed to repeatedly accumulates one full matrix per
+# push, and with several open pull requests that is what fills the queue.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   CARGO_TERM_COLOR: always
 
@@ -55,20 +62,25 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Install stable toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache Cargo registry, index, git, and build artifacts
-        uses: actions/cache@v6
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
         with:
-          path: |
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: cargo-ubuntu-latest-stable-${{ hashFiles('Cargo.lock', 'Cargo.toml', '.cargo/config.toml') }}
+          toolchain: 1.97.0
+
+      # `Swatinem/rust-cache` rather than hand-rolled `actions/cache`:
+      # it carries restore-keys, so a lockfile change degrades to a
+      # partial restore instead of a total miss, and it prunes `target/`
+      # so the repository stays inside the 10 GB cache budget instead of
+      # evicting its own entries. `shared-key` puts every job on one
+      # cache rather than one per job.
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
+        with:
+          shared-key: kwavers
+          # Written from the default branch only; a pull request restores
+          # but does not save, so branches cannot evict each other.
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Run xtask legacy-migration-audit
         id: audit
@@ -79,7 +91,7 @@ jobs:
 
       - name: Upload audit log on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: kwavers-legacy-migration-audit-log
           path: audit_log.txt
@@ -91,20 +103,19 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Install stable toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache Cargo registry, index, git, and build artifacts
-        uses: actions/cache@v6
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
         with:
-          path: |
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: cargo-ubuntu-latest-stable-${{ hashFiles('Cargo.lock', 'Cargo.toml', '.cargo/config.toml') }}
+          toolchain: 1.97.0
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
+        with:
+          shared-key: kwavers
+          # Written from the default branch only; a pull request restores
+          # but does not save, so branches cannot evict each other.
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Run xtask burn-migration-audit
         id: audit
@@ -115,7 +126,7 @@ jobs:
 
       - name: Upload audit log on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: kwavers-burn-migration-audit-log
           path: audit_log.txt

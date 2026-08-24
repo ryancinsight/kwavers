@@ -59,6 +59,11 @@ impl WesterveltFdtd {
     ///
     /// # Errors
     /// Propagates any [`crate::KwaversError`] from the Laplacian stencil.
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn update(
         &mut self,
         medium: &dyn Medium,

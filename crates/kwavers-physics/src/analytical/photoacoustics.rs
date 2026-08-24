@@ -176,6 +176,10 @@ pub struct GaussianAbsorberPhotoacousticProfile {
     pub surface_signal_pa_per_m: Vec<f64>,
 }
 
+/// # Errors
+///
+/// Returns a descriptive error when an axis or physical scalar is non-finite or outside the
+/// profile's valid domain.
 pub fn gaussian_absorber_photoacoustic_profile(
     input: GaussianAbsorberPhotoacousticProfileInput<'_>,
 ) -> Result<GaussianAbsorberPhotoacousticProfile, String> {
@@ -272,6 +276,11 @@ pub fn pa_axial_resolution(bandwidth_hz: f64, c: f64) -> f64 {
 /// * `measurements` – absorption measurements b `n_wav`
 ///
 /// Returns concentration vector x `n_chrom`.
+///
+/// # Panics
+///
+/// Panics when the measurement count differs from the number of spectra rows
+/// or when spectra rows have inconsistent chromophore lengths.
 ///
 /// # Reference
 /// Beard (2011), *Interface Focus* 1, 602.

@@ -46,18 +46,18 @@ use kwavers_solver::inverse::pinn::elastic_2d::{
 type Backend = MoiraiBackend;
 
 #[cfg(feature = "pinn")]
-fn uniform_var(backend: &Backend, n: usize, lo: f32, hi: f32) -> Var<f32, Backend> {
+fn uniform_var(backend: Backend, n: usize, lo: f32, hi: f32) -> Var<f32, Backend> {
     let data: Vec<f32> = (0..n)
         .map(|_| lo + rand::random::<f32>() * (hi - lo))
         .collect();
     Var::new(
-        coeus_tensor::Tensor::from_slice_on(vec![n, 1], &data, backend),
+        coeus_tensor::Tensor::from_slice_on(vec![n, 1], &data, &backend),
         false,
     )
 }
 
 #[cfg(feature = "pinn")]
-fn normal_var(backend: &Backend, n: usize, mean: f32, std: f32) -> Var<f32, Backend> {
+fn normal_var(backend: Backend, n: usize, mean: f32, std: f32) -> Var<f32, Backend> {
     // Box-Muller transform for approximate standard normal samples.
     let data: Vec<f32> = (0..n)
         .map(|_| {
@@ -67,15 +67,15 @@ fn normal_var(backend: &Backend, n: usize, mean: f32, std: f32) -> Var<f32, Back
         })
         .collect();
     Var::new(
-        coeus_tensor::Tensor::from_slice_on(vec![n, 1], &data, backend),
+        coeus_tensor::Tensor::from_slice_on(vec![n, 1], &data, &backend),
         false,
     )
 }
 
 #[cfg(feature = "pinn")]
-fn zeros_var(backend: &Backend, n: usize, cols: usize) -> Var<f32, Backend> {
+fn zeros_var(backend: Backend, n: usize, cols: usize) -> Var<f32, Backend> {
     Var::new(
-        coeus_tensor::Tensor::zeros_on(vec![n, cols], backend),
+        coeus_tensor::Tensor::zeros_on(vec![n, cols], &backend),
         false,
     )
 }
@@ -106,9 +106,9 @@ fn bench_forward_pass(c: &mut Criterion) {
             &batch_size,
             |b, &batch_size| {
                 let n = batch_size as usize;
-                let x = uniform_var(&backend, n, -1.0, 1.0);
-                let y = uniform_var(&backend, n, -1.0, 1.0);
-                let t = uniform_var(&backend, n, 0.0, 1.0);
+                let x = uniform_var(backend, n, -1.0, 1.0);
+                let y = uniform_var(backend, n, -1.0, 1.0);
+                let t = uniform_var(backend, n, 0.0, 1.0);
 
                 b.iter(|| {
                     let output = model
@@ -146,8 +146,8 @@ fn bench_loss_computation(c: &mut Criterion) {
 
     // PDE loss
     group.bench_function("pde_residual", |b| {
-        let residual_x = normal_var(&backend, n, 0.0, 1.0);
-        let residual_y = normal_var(&backend, n, 0.0, 1.0);
+        let residual_x = normal_var(backend, n, 0.0, 1.0);
+        let residual_y = normal_var(backend, n, 0.0, 1.0);
 
         b.iter(|| {
             let loss = loss_computer.pde_loss(black_box(&residual_x), black_box(&residual_y));
@@ -157,8 +157,8 @@ fn bench_loss_computation(c: &mut Criterion) {
 
     // Boundary loss
     group.bench_function("boundary_condition", |b| {
-        let predicted = uniform_var(&backend, n, -1.0, 1.0);
-        let target = zeros_var(&backend, n, 2);
+        let predicted = uniform_var(backend, n, -1.0, 1.0);
+        let target = zeros_var(backend, n, 2);
 
         b.iter(|| {
             let loss = loss_computer.boundary_loss(black_box(&predicted), black_box(&target));
@@ -168,10 +168,10 @@ fn bench_loss_computation(c: &mut Criterion) {
 
     // Initial condition loss
     group.bench_function("initial_condition", |b| {
-        let u_pred = uniform_var(&backend, n, -1.0, 1.0);
-        let v_pred = uniform_var(&backend, n, -1.0, 1.0);
-        let u_target = zeros_var(&backend, n, 2);
-        let v_target = zeros_var(&backend, n, 2);
+        let u_pred = uniform_var(backend, n, -1.0, 1.0);
+        let v_pred = uniform_var(backend, n, -1.0, 1.0);
+        let u_target = zeros_var(backend, n, 2);
+        let v_target = zeros_var(backend, n, 2);
 
         b.iter(|| {
             let loss = loss_computer.initial_loss(
@@ -208,9 +208,9 @@ fn bench_backward_pass(c: &mut Criterion) {
     group.throughput(Throughput::Elements(batch_size));
 
     group.bench_function("gradient_computation", |b| {
-        let x = uniform_var(&backend, n, -1.0, 1.0);
-        let y = uniform_var(&backend, n, -1.0, 1.0);
-        let t = uniform_var(&backend, n, 0.0, 1.0);
+        let x = uniform_var(backend, n, -1.0, 1.0);
+        let y = uniform_var(backend, n, -1.0, 1.0);
+        let t = uniform_var(backend, n, 0.0, 1.0);
 
         b.iter(|| {
             for p in model.parameters() {
@@ -219,7 +219,7 @@ fn bench_backward_pass(c: &mut Criterion) {
             let output = model
                 .forward(&x, &y, &t)
                 .expect("invariant: benchmark inputs have validated PINN shapes");
-            let target = zeros_var(&backend, n, 2);
+            let target = zeros_var(backend, n, 2);
             let diff = coeus_autograd::sub(&output, &target);
             let loss = coeus_autograd::mean(&coeus_autograd::mul(&diff, &diff));
             loss.backward()
@@ -259,24 +259,24 @@ fn bench_training_epoch(c: &mut Criterion) {
 
             let training_data = TrainingData {
                 collocation: CollocationData {
-                    x: uniform_var(&backend, n_colloc, -1.0, 1.0),
-                    y: uniform_var(&backend, n_colloc, -1.0, 1.0),
-                    t: uniform_var(&backend, n_colloc, 0.0, 1.0),
+                    x: uniform_var(backend, n_colloc, -1.0, 1.0),
+                    y: uniform_var(backend, n_colloc, -1.0, 1.0),
+                    t: uniform_var(backend, n_colloc, 0.0, 1.0),
                     source_x: None,
                     source_y: None,
                 },
                 boundary: BoundaryData {
-                    x: uniform_var(&backend, n_boundary, -1.0, 1.0),
-                    y: uniform_var(&backend, n_boundary, -1.0, 1.0),
-                    t: uniform_var(&backend, n_boundary, 0.0, 1.0),
+                    x: uniform_var(backend, n_boundary, -1.0, 1.0),
+                    y: uniform_var(backend, n_boundary, -1.0, 1.0),
+                    t: uniform_var(backend, n_boundary, 0.0, 1.0),
                     boundary_type: vec![ElasticBoundaryCondition::Dirichlet; n_boundary],
-                    values: zeros_var(&backend, n_boundary, 2),
+                    values: zeros_var(backend, n_boundary, 2),
                 },
                 initial: InitialData {
-                    x: uniform_var(&backend, n_initial, -1.0, 1.0),
-                    y: uniform_var(&backend, n_initial, -1.0, 1.0),
-                    displacement: zeros_var(&backend, n_initial, 2),
-                    velocity: zeros_var(&backend, n_initial, 2),
+                    x: uniform_var(backend, n_initial, -1.0, 1.0),
+                    y: uniform_var(backend, n_initial, -1.0, 1.0),
+                    displacement: zeros_var(backend, n_initial, 2),
+                    velocity: zeros_var(backend, n_initial, 2),
                 },
                 observations: None,
             };
@@ -336,9 +336,9 @@ fn bench_network_scaling(c: &mut Criterion) {
 
             let model = ElasticPINN2D::<Backend>::new(&config).expect("Failed to create model");
 
-            let x = uniform_var(&backend, n, -1.0, 1.0);
-            let y = uniform_var(&backend, n, -1.0, 1.0);
-            let t = uniform_var(&backend, n, 0.0, 1.0);
+            let x = uniform_var(backend, n, -1.0, 1.0);
+            let y = uniform_var(backend, n, -1.0, 1.0);
+            let t = uniform_var(backend, n, 0.0, 1.0);
 
             b.iter(|| {
                 let output = model
@@ -378,9 +378,9 @@ fn bench_batch_scaling(c: &mut Criterion) {
             &batch_size,
             |b, &batch_size| {
                 let n = batch_size as usize;
-                let x = uniform_var(&backend, n, -1.0, 1.0);
-                let y = uniform_var(&backend, n, -1.0, 1.0);
-                let t = uniform_var(&backend, n, 0.0, 1.0);
+                let x = uniform_var(backend, n, -1.0, 1.0);
+                let y = uniform_var(backend, n, -1.0, 1.0);
+                let t = uniform_var(backend, n, 0.0, 1.0);
 
                 b.iter(|| {
                     for p in model.parameters() {
@@ -389,7 +389,7 @@ fn bench_batch_scaling(c: &mut Criterion) {
                     let output = model
                         .forward(&x, &y, &t)
                         .expect("invariant: benchmark inputs have validated PINN shapes");
-                    let target = zeros_var(&backend, n, 2);
+                    let target = zeros_var(backend, n, 2);
                     let diff = coeus_autograd::sub(&output, &target);
                     let loss = coeus_autograd::mean(&coeus_autograd::mul(&diff, &diff));
                     loss.backward()

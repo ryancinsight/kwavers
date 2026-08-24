@@ -45,6 +45,11 @@ impl Filters {
     /// # Errors
     /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn apply_bandpass_filter(
         &self,
         data: &Array2<f64>,
@@ -58,7 +63,7 @@ impl Filters {
             let sensor_signal = data
                 .index_axis::<1>(1, sensor_idx)
                 .expect("invariant: sensor column index in range");
-            let filtered_signal = self.bandpass_filter_1d(
+            let filtered_signal = Self::bandpass_filter_1d(
                 sensor_signal.to_contiguous(),
                 bandpass[0],
                 bandpass[1],
@@ -78,7 +83,6 @@ impl Filters {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     fn bandpass_filter_1d(
-        &self,
         signal: Array1<f64>,
         low_freq: f64,
         high_freq: f64,
@@ -102,13 +106,18 @@ impl Filters {
             }
         }
 
-        self.apply_filter_1d(signal, &filter)
+        Self::apply_filter_1d(signal, &filter)
     }
 
     /// Apply envelope detection using Hilbert transform
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn apply_envelope_detection(&self, data: &Array2<f64>) -> KwaversResult<Array2<f64>> {
         let [n_samples, n_sensors] = data.shape();
         let mut envelope = Array2::zeros((n_samples, n_sensors));
@@ -138,9 +147,9 @@ impl Filters {
         let mut filtered = data.clone();
 
         match self.filter_type {
-            ReconstructionFilterType::RamLak => self.apply_ram_lak_filter(&mut filtered)?,
-            ReconstructionFilterType::SheppLogan => self.apply_shepp_logan_filter(&mut filtered)?,
-            ReconstructionFilterType::Cosine => self.apply_cosine_filter(&mut filtered)?,
+            ReconstructionFilterType::RamLak => Self::apply_ram_lak_filter(&mut filtered)?,
+            ReconstructionFilterType::SheppLogan => Self::apply_shepp_logan_filter(&mut filtered)?,
+            ReconstructionFilterType::Cosine => Self::apply_cosine_filter(&mut filtered)?,
             ReconstructionFilterType::Hamming => self.apply_hamming_filter(&mut filtered)?,
             ReconstructionFilterType::Hann => self.apply_hann_filter(&mut filtered)?,
             ReconstructionFilterType::None => {} // No filtering applied
@@ -153,15 +162,15 @@ impl Filters {
     /// # Errors
     /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
-    fn apply_ram_lak_filter(&self, data: &mut Array2<f64>) -> KwaversResult<()> {
+    fn apply_ram_lak_filter(data: &mut Array2<f64>) -> KwaversResult<()> {
         let [n_samples, _] = data.shape();
-        let filter = self.create_ram_lak_filter(n_samples);
+        let filter = Self::create_ram_lak_filter(n_samples);
 
         for mut col in data
             .columns_mut()
             .expect("invariant: column iteration over 2-D array")
         {
-            let filtered = self.apply_filter_1d(col.to_contiguous(), &filter)?;
+            let filtered = Self::apply_filter_1d(col.to_contiguous(), &filter)?;
             col.assign(&filtered);
         }
 
@@ -172,15 +181,15 @@ impl Filters {
     /// # Errors
     /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
-    fn apply_shepp_logan_filter(&self, data: &mut Array2<f64>) -> KwaversResult<()> {
+    fn apply_shepp_logan_filter(data: &mut Array2<f64>) -> KwaversResult<()> {
         let [n_samples, _] = data.shape();
-        let filter = self.create_shepp_logan_filter(n_samples);
+        let filter = Self::create_shepp_logan_filter(n_samples);
 
         for mut col in data
             .columns_mut()
             .expect("invariant: column iteration over 2-D array")
         {
-            let filtered = self.apply_filter_1d(col.to_contiguous(), &filter)?;
+            let filtered = Self::apply_filter_1d(col.to_contiguous(), &filter)?;
             col.assign(&filtered);
         }
 
@@ -191,15 +200,15 @@ impl Filters {
     /// # Errors
     /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
-    fn apply_cosine_filter(&self, data: &mut Array2<f64>) -> KwaversResult<()> {
+    fn apply_cosine_filter(data: &mut Array2<f64>) -> KwaversResult<()> {
         let [n_samples, _] = data.shape();
-        let filter = self.create_cosine_filter(n_samples);
+        let filter = Self::create_cosine_filter(n_samples);
 
         for mut col in data
             .columns_mut()
             .expect("invariant: column iteration over 2-D array")
         {
-            let filtered = self.apply_filter_1d(col.to_contiguous(), &filter)?;
+            let filtered = Self::apply_filter_1d(col.to_contiguous(), &filter)?;
             col.assign(&filtered);
         }
 
@@ -207,7 +216,7 @@ impl Filters {
     }
 
     /// Create Ram-Lak filter
-    fn create_ram_lak_filter(&self, n: usize) -> Array1<f64> {
+    fn create_ram_lak_filter(n: usize) -> Array1<f64> {
         let mut filter = Array1::zeros(n);
         for i in 0..n {
             let freq = i as f64 / n as f64;
@@ -222,7 +231,7 @@ impl Filters {
     /// where ram_lak = |f|/f_Nyquist ∈ [0,1] is the absolute normalised frequency.
     /// Uses `ram_lak` (not raw `freq`) so negative-frequency DFT bins (i > n/2)
     /// receive the same gain as the symmetric positive-frequency bins.
-    fn create_shepp_logan_filter(&self, n: usize) -> Array1<f64> {
+    fn create_shepp_logan_filter(n: usize) -> Array1<f64> {
         let mut filter = Array1::zeros(n);
         for i in 0..n {
             let freq = i as f64 / n as f64;
@@ -242,7 +251,7 @@ impl Filters {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    fn create_cosine_filter(&self, n: usize) -> Array1<f64> {
+    fn create_cosine_filter(n: usize) -> Array1<f64> {
         let mut filter = Array1::zeros(n);
         for i in 0..n {
             let freq = i as f64 / n as f64;
@@ -267,7 +276,7 @@ impl Filters {
             .columns_mut()
             .expect("invariant: column iteration over 2-D array")
         {
-            let filtered = self.apply_filter_1d(col.to_contiguous(), &filter)?;
+            let filtered = Self::apply_filter_1d(col.to_contiguous(), &filter)?;
             col.assign(&filtered);
         }
 
@@ -289,7 +298,7 @@ impl Filters {
             .columns_mut()
             .expect("invariant: column iteration over 2-D array")
         {
-            let filtered = self.apply_filter_1d(col.to_contiguous(), &filter)?;
+            let filtered = Self::apply_filter_1d(col.to_contiguous(), &filter)?;
             col.assign(&filtered);
         }
 
@@ -348,11 +357,7 @@ impl Filters {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    fn apply_filter_1d(
-        &self,
-        signal: Array1<f64>,
-        filter: &Array1<f64>,
-    ) -> KwaversResult<Array1<f64>> {
+    fn apply_filter_1d(signal: Array1<f64>, filter: &Array1<f64>) -> KwaversResult<Array1<f64>> {
         let n = signal.len();
         let leto_signal =
             LetoArray1::from_shape_vec([n], signal.iter().cloned().collect::<Vec<_>>())

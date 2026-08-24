@@ -2,7 +2,6 @@ use anyhow::Result;
 use regex::Regex;
 use std::collections::HashSet;
 use std::fs;
-use walkdir::WalkDir;
 
 pub fn apply_fixes() -> Result<()> {
     println!("🔧 Applying automated fixes...");
@@ -16,7 +15,6 @@ pub fn apply_fixes() -> Result<()> {
 
 fn add_missing_debug_derives() -> Result<()> {
     println!("  - Adding missing Debug derives...");
-    let src_root = crate::src_root();
 
     // Regex to match struct or enum definitions
     let struct_re =
@@ -28,7 +26,7 @@ fn add_missing_debug_derives() -> Result<()> {
 
     let mut modified_count = 0;
 
-    for entry in WalkDir::new(src_root).into_iter().filter_map(|e| e.ok()) {
+    for entry in crate::walk_sources() {
         if entry.path().extension().is_some_and(|ext| ext == "rs") {
             let path = entry.path();
             let content = match fs::read_to_string(path) {

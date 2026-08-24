@@ -36,7 +36,7 @@ impl BroadbandDetector {
     }
 
     /// Calculate signal energy
-    fn calculate_energy(&self, signal: &ArrayView1<f64>) -> Option<f64> {
+    fn calculate_energy(signal: &ArrayView1<f64>) -> Option<f64> {
         if signal.size() == 0 || !signal.iter().all(|value| value.is_finite()) {
             return None;
         }
@@ -47,7 +47,7 @@ impl BroadbandDetector {
 
     /// Detect broadband emissions
     fn detect_broadband_emissions(&mut self, signal: &ArrayView1<f64>) -> f64 {
-        let Some(current_energy) = self.calculate_energy(signal) else {
+        let Some(current_energy) = Self::calculate_energy(signal) else {
             return 0.0;
         };
 
@@ -80,7 +80,7 @@ impl BroadbandDetector {
 
     /// Update baseline for adaptive detection
     pub fn update_baseline(&mut self, signal: &ArrayView1<f64>) {
-        self.baseline_energy = self.calculate_energy(signal);
+        self.baseline_energy = Self::calculate_energy(signal);
     }
 
     /// Apply temporal smoothing
@@ -159,17 +159,17 @@ mod tests {
         assert_eq!(empty_metrics.state, CavitationDetectionState::None);
         assert_eq!(empty_metrics.broadband_level, 0.0);
         assert_eq!(empty_metrics.confidence, 0.0);
-        assert!(detector.baseline_energy.is_none());
+        assert_eq!(detector.baseline_energy, None);
 
         let nonfinite = vec_to_array1(vec![0.0, f64::NAN, 1.0]);
         detector.update_baseline(&nonfinite.view());
-        assert!(detector.baseline_energy.is_none());
+        assert_eq!(detector.baseline_energy, None);
 
         let nonfinite_metrics = detector.detect(&nonfinite.view());
         assert_eq!(nonfinite_metrics.state, CavitationDetectionState::None);
         assert_eq!(nonfinite_metrics.broadband_level, 0.0);
         assert_eq!(nonfinite_metrics.confidence, 0.0);
-        assert!(detector.baseline_energy.is_none());
+        assert_eq!(detector.baseline_energy, None);
     }
 
     #[test]
@@ -177,7 +177,7 @@ mod tests {
         let mut detector = BroadbandDetector::new(MHZ_TO_HZ);
         let invalid = vec_to_array1(vec![f64::INFINITY]);
         assert_eq!(detector.detect(&invalid.view()).confidence, 0.0);
-        assert!(detector.baseline_energy.is_none());
+        assert_eq!(detector.baseline_energy, None);
 
         let baseline = vec_to_array1(vec![1.0, -1.0, 1.0, -1.0]);
         let first_valid = detector.detect(&baseline.view());

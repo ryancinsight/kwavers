@@ -110,8 +110,33 @@ impl std::fmt::Debug for ViscoacousticMemorySolver {
             .field("ny", &self.ny)
             .field("nz", &self.nz)
             .field("dt", &self.dt)
+            .field("cell_volume", &self.cell_volume)
+            .field("inv_rho", &self.inv_rho.shape())
+            .field("m_u", &self.m_u.shape())
+            .field("m_inf", &self.m_inf.shape())
             .field("max_unrelaxed_speed", &self.max_unrelaxed_speed)
             .field("arms", &(self.arms.len()))
+            .field("fft", &"<fft-plan>")
+            .field("kx", &self.kx.len())
+            .field("ky", &self.ky.len())
+            .field("kz", &self.kz.len())
+            .field("cbuf", &self.cbuf.shape())
+            .field("p", &self.p.shape())
+            .field("vx", &self.vx.shape())
+            .field("vy", &self.vy.shape())
+            .field("vz", &self.vz.shape())
+            .field("sigma", &self.sigma.len())
+            .field("gx", &self.gx.shape())
+            .field("gy", &self.gy.shape())
+            .field("gz", &self.gz.shape())
+            .field(
+                "damping_decay",
+                &self.damping_decay.as_ref().map(|v| v.shape()),
+            )
+            .field("step_count", &self.step_count)
+            .field("pressure_sources", &self.pressure_sources.len())
+            .field("pressure_sensors", &self.pressure_sensors)
+            .field("sensor_record", &self.sensor_record.len())
             .finish()
     }
 }
@@ -557,6 +582,11 @@ impl ViscoacousticMemorySolver {
     /// Acoustic energy `Σ [p²/(2M_∞) + ρ|v|²/2] ΔV` \`J`. Conserved (to leapfrog
     /// round-off) for the lossless medium; decays monotonically with relaxation.
     #[must_use]
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn energy(&self) -> f64 {
         // PE = Σ p²/(2 M_∞(x));  KE = Σ ρ(x)|v|²/2 = Σ |v|²/(2/ρ) = Σ |v|²·inv_rho⁻¹/2.
         let pe = leto_ops::zip_fold(
@@ -644,6 +674,11 @@ impl ViscoacousticMemorySolver {
     }
 
     /// Advance the state by one time step `Δt`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn step(&mut self) {
         // 1. Velocity half-step: v += -(Δt/ρ(x)) ∇p (per component, per voxel).
         let dt = self.dt;

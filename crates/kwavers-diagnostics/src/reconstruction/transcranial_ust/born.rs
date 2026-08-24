@@ -70,6 +70,11 @@ pub(super) struct ActiveVoxel {
 }
 
 /// Reconstruct brain sound-speed contrast from encoded 1024-element data.
+///
+/// # Errors
+///
+/// Returns an error when the inversion configuration, medium, transducer
+/// geometry, or Born solve is invalid.
 pub fn reconstruct_brain_slice(
     medium: &AcousticSlice,
     config: &TranscranialUstBornInversionConfig,

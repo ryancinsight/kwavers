@@ -16,6 +16,13 @@ Extend to the full elastic wave equation to recover both P-wave `c_P` and S-wave
 - Brain anomaly reconstruction (Guasch 2020)
 - Stiff-lesion shear-wave imaging
 
+The transcranial examples own acquisition policy, not material equations.
+Their shared CT boundary retains the HU volume and delegates acoustic fields to
+`kwavers_physics::acoustics::skull::HeterogeneousSkull`; canonical bone inputs
+are validated Aequitas velocity, mass-density, and reciprocal-length
+quantities. This keeps the consumer code aligned with the material provider and
+prevents 2-D, 3-D, and phase-correction formulas from diverging.
+
 ## Examples
 
 - [Seismic Imaging Demo](examples/seismic_imaging_demo.md) — 2D quasi-3D brain FWI

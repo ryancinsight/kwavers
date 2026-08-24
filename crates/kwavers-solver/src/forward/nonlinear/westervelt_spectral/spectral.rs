@@ -86,6 +86,11 @@ pub fn initialize_kspace_grids(
 /// Allocates two `Array3<Complex64>` per call. For hot-path use, prefer
 /// [`compute_laplacian_spectral_into`] which reuses caller-supplied scratch.
 #[must_use]
+///
+/// # Panics
+///
+/// Panics if a caller-supplied shape or an internal solver state violates
+/// the precondition required by this operation.
 pub fn compute_laplacian_spectral(field: &Array3<f64>, k_squared: &Array3<f64>) -> Array3<f64> {
     let [nx, ny, nz] = field.shape();
     let field_leto = LetoArray3::from_shape_vec([nx, ny, nz], field.iter().copied().collect())

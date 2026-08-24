@@ -7,7 +7,9 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_field::UnifiedFieldType;
 use kwavers_grid::Grid;
 use leto::{Array3, Array4};
-use log::{debug, info, warn};
+#[cfg(not(feature = "gpu-visualization"))]
+use log::warn;
+use log::{debug, info};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
@@ -23,9 +25,17 @@ use super::config::MILLISECONDS_PER_SECOND;
 #[cfg(feature = "gpu-visualization")]
 use super::{controls, data_pipeline, renderer};
 
+/// Typestate for an engine that has no visualization transfer provider.
+///
+/// GPU initialization and rendering methods are available only after
+/// [`VisualizationEngine::set_transfer_provider`] replaces this state with a
+/// concrete provider type.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct UnconfiguredVisualizationProvider;
+
 /// Main visualization engine
 #[derive(Debug)]
-pub struct VisualizationEngine {
+pub struct VisualizationEngine<P = UnconfiguredVisualizationProvider> {
     /// Configuration settings
     config: VisualizationConfig,
     /// Performance metrics tracker
@@ -37,13 +47,19 @@ pub struct VisualizationEngine {
     renderer: Option<renderer::Renderer3D>,
     /// Data pipeline for GPU transfers
     #[cfg(feature = "gpu-visualization")]
-    data_pipeline: Option<data_pipeline::DataPipeline>,
+    data_pipeline: Option<data_pipeline::DataPipeline<P>>,
+    /// Provider-neutral transfer provider awaiting pipeline construction
+    #[cfg(feature = "gpu-visualization")]
+    transfer_provider: Option<P>,
+    /// Transfer submission and synchronization mode for the provider pipeline
+    #[cfg(feature = "gpu-visualization")]
+    transfer_mode: data_pipeline::TransferMode,
     /// Interactive controls
     #[cfg(feature = "gpu-visualization")]
     controls: Option<controls::InteractiveControls>,
 }
 
-impl VisualizationEngine {
+impl VisualizationEngine<UnconfiguredVisualizationProvider> {
     /// Create a new visualization engine
     /// # Errors
     /// - Propagates any `KwaversError` returned by called functions.
@@ -70,82 +86,185 @@ impl VisualizationEngine {
             #[cfg(feature = "gpu-visualization")]
             data_pipeline: None,
             #[cfg(feature = "gpu-visualization")]
+            transfer_provider: None,
+            #[cfg(feature = "gpu-visualization")]
+            transfer_mode: data_pipeline::TransferMode::Async,
+            #[cfg(feature = "gpu-visualization")]
             controls: None,
         })
     }
 
-    /// Initialize GPU resources
-    /// # Errors
-    /// - Propagates any `KwaversError` returned by called functions.
+    /// Inject a provider-neutral transfer provider.
     ///
-    pub async fn initialize_gpu(&mut self) -> KwaversResult<()> {
+    /// The engine cannot construct device-backed providers itself: concrete
+    /// acquisition lives behind the provider boundary (for example
+    /// `kwavers-gpu`'s Hephaestus-backed WGPU implementation), keeping the
+    /// dependency direction acyclic. Callers able to construct a provider must
+    /// inject it before initialization. Consuming `self` changes the engine's
+    /// typestate, so an unconfigured engine cannot call GPU methods.
+    #[cfg(feature = "gpu-visualization")]
+    #[must_use]
+    pub fn set_transfer_provider<P>(self, provider: P) -> VisualizationEngine<P>
+    where
+        P: super::transfer_contract::VisualizationTransferProvider,
+    {
+        let Self {
+            config,
+            metrics,
+            parameters,
+            renderer,
+            data_pipeline: _,
+            transfer_provider: _,
+            transfer_mode,
+            controls,
+        } = self;
+        VisualizationEngine {
+            config,
+            metrics,
+            parameters,
+            renderer,
+            data_pipeline: None,
+            transfer_provider: Some(provider),
+            transfer_mode,
+            controls,
+        }
+    }
+}
+
+impl<P> VisualizationEngine<P> {
+    /// Select the transfer submission and synchronization mode.
+    ///
+    /// The default is [`data_pipeline::TransferMode::Async`]. The selection is
+    /// retained when made before initialization and applied immediately when a
+    /// data pipeline already exists.
+    #[cfg(feature = "gpu-visualization")]
+    pub fn set_transfer_mode(&mut self, mode: data_pipeline::TransferMode)
+    where
+        P: super::transfer_contract::VisualizationTransferProvider,
+    {
+        self.transfer_mode = mode;
+        if let Some(pipeline) = &mut self.data_pipeline {
+            pipeline.set_transfer_mode(mode);
+        }
+    }
+
+    /// Initialize GPU resources
+    ///
+    /// # Errors
+    ///
+    /// Propagates any [`KwaversError`] returned by renderer, controls, or
+    /// provider initialization.
+    #[cfg(feature = "gpu-visualization")]
+    pub fn initialize_gpu(&mut self) -> KwaversResult<()>
+    where
+        P: super::transfer_contract::VisualizationTransferProvider,
+    {
         info!("Initializing GPU resources for visualization");
 
-        #[cfg(feature = "gpu-visualization")]
-        {
-            // Initialize renderer with GPU context
-            self.renderer = Some(renderer::Renderer3D::create(self.config.clone())?);
-
-            // Initialize data pipeline for efficient GPU transfers
-            self.data_pipeline = Some(data_pipeline::DataPipeline::new().await?);
-
-            // Initialize interactive controls
-            self.controls = Some(controls::InteractiveControls::create(&self.config)?);
+        if self.data_pipeline.is_some() {
+            return Ok(());
         }
+
+        // Initialize renderer (CPU rasterization path)
+        let renderer = renderer::Renderer3D::create(self.config.clone())?;
+        let controls = controls::InteractiveControls::create(&self.config)?;
+        let provider = self.transfer_provider.take().ok_or_else(|| {
+            KwaversError::System(kwavers_core::error::SystemError::FeatureNotAvailable {
+                feature: "gpu-visualization".to_string(),
+                reason: "configured visualization provider is unavailable".to_string(),
+            })
+        })?;
+
+        self.renderer = Some(renderer);
+        self.data_pipeline = Some(data_pipeline::DataPipeline::with_transfer_mode(
+            provider,
+            self.transfer_mode,
+        ));
+        self.controls = Some(controls);
 
         info!("GPU visualization initialization complete");
         Ok(())
+    }
+
+    /// Initialize the CPU visualization path when GPU visualization is disabled.
+    ///
+    /// # Errors
+    ///
+    /// This operation currently has no fallible CPU initialization step.
+    #[cfg(not(feature = "gpu-visualization"))]
+    pub fn initialize_gpu(&mut self) -> KwaversResult<()> {
+        info!("GPU visualization disabled; CPU visualization is ready");
+        Ok(())
+    }
+
+    /// Return whether every GPU visualization component is initialized.
+    #[cfg(feature = "gpu-visualization")]
+    #[must_use]
+    pub fn is_gpu_initialized(&self) -> bool {
+        self.renderer.is_some() && self.data_pipeline.is_some() && self.controls.is_some()
     }
 
     /// Render a single field with 3D visualization
     /// # Errors
     /// - Propagates any `KwaversError` returned by called functions.
     ///
+    #[cfg(feature = "gpu-visualization")]
+    pub async fn render_field(
+        &mut self,
+        field: &Array3<f64>,
+        field_type: UnifiedFieldType,
+        grid: &Grid,
+    ) -> KwaversResult<()>
+    where
+        P: super::transfer_contract::VisualizationTransferProvider,
+    {
+        let _start_time = Instant::now();
+
+        if let (Some(renderer), Some(pipeline)) = (&mut self.renderer, &mut self.data_pipeline) {
+            // Transfer field data to GPU
+            let transfer_start = Instant::now();
+            pipeline.upload_field(field, field_type)?;
+            let transfer_time =
+                transfer_start.elapsed().as_secs_f32() * MILLISECONDS_PER_SECOND as f32;
+
+            // Render the field
+            let render_start = Instant::now();
+            renderer.render_volume(field, field_type, grid).await?;
+            let render_time = render_start.elapsed().as_secs_f32() * MILLISECONDS_PER_SECOND as f32;
+
+            // Update metrics
+            self.metrics.update(render_time, transfer_time);
+
+            debug!(
+                "Rendered {:?} field: {:.2}ms render, {:.2}ms transfer",
+                field_type, render_time, transfer_time
+            );
+        } else {
+            return Err(KwaversError::System(
+                kwavers_core::error::SystemError::FeatureNotAvailable {
+                    feature: "gpu-visualization".to_string(),
+                    reason: "GPU renderer and data pipeline are not initialized; call initialize_gpu() first".to_string(),
+                },
+            ));
+        }
+
+        Ok(())
+    }
+
+    /// Render a single field with the CPU fallback.
+    ///
+    /// # Errors
+    ///
+    /// Propagates fallback-renderer errors.
+    #[cfg(not(feature = "gpu-visualization"))]
     pub async fn render_field(
         &mut self,
         field: &Array3<f64>,
         field_type: UnifiedFieldType,
         grid: &Grid,
     ) -> KwaversResult<()> {
-        let _start_time = Instant::now();
-
-        #[cfg(feature = "gpu-visualization")]
-        {
-            if let (Some(renderer), Some(pipeline)) = (&mut self.renderer, &mut self.data_pipeline)
-            {
-                // Transfer field data to GPU
-                let transfer_start = Instant::now();
-                pipeline.upload_field(field, field_type).await?;
-                let transfer_time =
-                    transfer_start.elapsed().as_secs_f32() * MILLISECONDS_PER_SECOND as f32;
-
-                // Render the field
-                let render_start = Instant::now();
-                renderer.render_volume(field, field_type, grid).await?;
-                let render_time =
-                    render_start.elapsed().as_secs_f32() * MILLISECONDS_PER_SECOND as f32;
-
-                // Update metrics
-                self.metrics.update(render_time, transfer_time);
-
-                debug!(
-                    "Rendered {:?} field: {:.2}ms render, {:.2}ms transfer",
-                    field_type, render_time, transfer_time
-                );
-            } else {
-                warn!("GPU visualization not initialized. Call initialize_gpu() first.");
-                // Use fallback renderer
-                super::fallback::render_field(field, field_type, grid)?;
-            }
-        }
-
-        #[cfg(not(feature = "gpu-visualization"))]
-        {
-            warn!("GPU visualization not enabled. Using fallback renderer.");
-            super::fallback::render_field(field, field_type, grid)?;
-        }
-
-        Ok(())
+        warn!("GPU visualization not enabled. Using fallback renderer.");
+        super::fallback::render_field(field, field_type, grid)
     }
 
     /// Render multiple fields simultaneously.
@@ -162,6 +281,79 @@ impl VisualizationEngine {
     ///   pipeline.
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
+    #[cfg(feature = "gpu-visualization")]
+    pub async fn render_multi_field(
+        &mut self,
+        fields: &Array4<f64>,
+        field_types: &[UnifiedFieldType],
+        grid: &Grid,
+    ) -> KwaversResult<()>
+    where
+        P: super::transfer_contract::VisualizationTransferProvider,
+    {
+        let field_count = fields.shape()[3];
+        if field_count == 0 {
+            return Err(KwaversError::InvalidInput(
+                "multi-field rendering requires at least one field".to_string(),
+            ));
+        }
+        if field_types.len() != field_count {
+            return Err(KwaversError::InvalidInput(format!(
+                "multi-field rendering received {field_count} fields but {} field types",
+                field_types.len()
+            )));
+        }
+
+        if let (Some(renderer), Some(pipeline)) = (&mut self.renderer, &mut self.data_pipeline) {
+            // Upload all fields to GPU
+            let transfer_start = Instant::now();
+            let mut contiguous_fields = Vec::with_capacity(field_count);
+            for (i, &field_type) in field_types.iter().enumerate() {
+                let field = fields.index_axis::<3>(3, i)?.to_contiguous();
+                pipeline.upload_field(&field, field_type)?;
+                contiguous_fields.push(field);
+            }
+            let transfer_time =
+                transfer_start.elapsed().as_secs_f32() * MILLISECONDS_PER_SECOND as f32;
+
+            // Render all fields with transparency blending
+            let render_start = Instant::now();
+            let render_fields = field_types
+                .iter()
+                .copied()
+                .zip(contiguous_fields.iter())
+                .collect();
+            renderer.render_multi_volume(render_fields, grid).await?;
+            let render_time = render_start.elapsed().as_secs_f32() * MILLISECONDS_PER_SECOND as f32;
+
+            // Update metrics
+            self.metrics.update(render_time, transfer_time);
+
+            info!(
+                "Rendered {} fields: {:.2}ms render, {:.2}ms transfer",
+                field_types.len(),
+                render_time,
+                transfer_time
+            );
+        } else {
+            return Err(KwaversError::System(
+                kwavers_core::error::SystemError::FeatureNotAvailable {
+                    feature: "gpu-visualization".to_string(),
+                    reason: "GPU renderer and data pipeline are not initialized; call initialize_gpu() first".to_string(),
+                },
+            ));
+        }
+
+        Ok(())
+    }
+
+    /// Render multiple fields with the CPU fallback.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`KwaversError::InvalidInput`] for an empty field set or a
+    /// mismatched field-type count and propagates fallback-renderer errors.
+    #[cfg(not(feature = "gpu-visualization"))]
     pub async fn render_multi_field(
         &mut self,
         fields: &Array4<f64>,
@@ -181,60 +373,11 @@ impl VisualizationEngine {
             )));
         }
 
-        #[cfg(feature = "gpu-visualization")]
-        {
-            if let (Some(renderer), Some(pipeline)) = (&mut self.renderer, &mut self.data_pipeline)
-            {
-                // Upload all fields to GPU
-                let transfer_start = Instant::now();
-                let mut contiguous_fields = Vec::with_capacity(field_count);
-                for (i, &field_type) in field_types.iter().enumerate() {
-                    let field = fields.index_axis::<3>(3, i)?.to_contiguous();
-                    pipeline.upload_field(&field, field_type).await?;
-                    contiguous_fields.push(field);
-                }
-                let transfer_time =
-                    transfer_start.elapsed().as_secs_f32() * MILLISECONDS_PER_SECOND as f32;
-
-                // Render all fields with transparency blending
-                let render_start = Instant::now();
-                let render_fields = field_types
-                    .iter()
-                    .copied()
-                    .zip(contiguous_fields.iter())
-                    .collect();
-                renderer.render_multi_volume(render_fields, grid).await?;
-                let render_time =
-                    render_start.elapsed().as_secs_f32() * MILLISECONDS_PER_SECOND as f32;
-
-                // Update metrics
-                self.metrics.update(render_time, transfer_time);
-
-                info!(
-                    "Rendered {} fields: {:.2}ms render, {:.2}ms transfer",
-                    field_types.len(),
-                    render_time,
-                    transfer_time
-                );
-            } else {
-                return Err(KwaversError::System(
-                    kwavers_core::error::SystemError::FeatureNotAvailable {
-                        feature: "gpu-visualization".to_string(),
-                        reason: "GPU renderer and data pipeline are not initialized; call initialize_gpu() first".to_string(),
-                    },
-                ));
-            }
+        warn!("GPU visualization not enabled. Using fallback renderer for all fields.");
+        for (i, &field_type) in field_types.iter().enumerate() {
+            let field = fields.index_axis::<3>(3, i)?.to_contiguous();
+            super::fallback::render_field(&field, field_type, grid)?;
         }
-
-        #[cfg(not(feature = "gpu-visualization"))]
-        {
-            warn!("GPU visualization not enabled. Using fallback renderer for all fields.");
-            for (i, &field_type) in field_types.iter().enumerate() {
-                let field = fields.index_axis::<3>(3, i)?.to_contiguous();
-                super::fallback::render_field(&field, field_type, grid)?;
-            }
-        }
-
         Ok(())
     }
 

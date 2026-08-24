@@ -58,7 +58,9 @@ pub(super) fn decode_sound_speed_values(
     let mut values = decode_to_f64(raw, datatype).map_err(|err| {
         KwaversError::InvalidInput(format!("sound-speed HDF5 decode failed: {err}"))
     })?;
-    values.iter_mut().for_each(|value| *value *= scale);
+    for value in &mut values {
+        *value *= scale;
+    }
     Ok(values)
 }
 

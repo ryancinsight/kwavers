@@ -191,7 +191,7 @@ impl LocalizationProcessor for TDOAProcessor {
         })
     }
 
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "TDOA"
     }
 }

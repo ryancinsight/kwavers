@@ -249,10 +249,7 @@ mod tests {
         let inversion = NonlinearInversion::new(config);
         let result = inversion.reconstruct(&harmonic_field, &grid);
 
-        assert!(
-            result.is_ok(),
-            "Nonlinear inversion pipeline should succeed"
-        );
+        result.expect("Nonlinear inversion pipeline should succeed");
     }
 
     #[test]
@@ -271,11 +268,9 @@ mod tests {
             let inversion = ShearWaveInversion::new(config);
             let result = inversion.reconstruct(&displacement, &grid);
 
-            assert!(
-                result.is_ok(),
-                "Linear method {:?} should succeed in integration test",
-                method
-            );
+            result.unwrap_or_else(|e| {
+                panic!("Linear method {method:?} should succeed in integration test: {e}")
+            });
         }
     }
 

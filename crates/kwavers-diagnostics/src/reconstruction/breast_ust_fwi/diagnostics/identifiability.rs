@@ -7,6 +7,11 @@ pub enum BreastUstSourceScalingPolicy {
 }
 
 impl BreastUstSourceScalingPolicy {
+    /// Parse a source-scaling policy from its stable configuration name.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when `value` is not `fixed` or `estimated`.
     pub fn parse(value: &str) -> KwaversResult<Self> {
         match value {
             "fixed" => Ok(Self::Fixed),
@@ -38,6 +43,12 @@ pub struct BreastUstAcquisitionIdentifiability {
     pub underdetermined_by_rank_upper_bound: bool,
 }
 
+/// Compute the real observation degrees of freedom for an acquisition plan.
+///
+/// # Errors
+///
+/// Returns an error when the volume shape, frequencies, transmission count,
+/// or receiver count violates the acquisition contract.
 pub fn acquisition_identifiability(
     shape: (usize, usize, usize),
     frequencies_hz: &[f64],

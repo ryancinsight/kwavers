@@ -5,6 +5,12 @@ use kwavers_solver::forward::pstd::config::{CompatibilityMode, PSTDConfig};
 use kwavers_solver::forward::pstd::PSTDSolver;
 use kwavers_source::GridSource;
 
+// The compatibility smoke binary reports its result on stdout; that line is
+// the program's deliverable, not debug residue.
+#[expect(
+    clippy::print_stdout,
+    reason = "smoke binary reports its pass/fail result on stdout"
+)]
 fn main() {
     let config = PSTDConfig {
         compatibility_mode: CompatibilityMode::Reference,

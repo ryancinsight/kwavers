@@ -187,6 +187,11 @@ pub fn redatum(reflection: &[f64], cfg: &MarchenkoConfig) -> MarchenkoResult {
 ///
 /// # Errors
 /// - Propagates any [`crate::KwaversError`] from the Wasserstein evaluation.
+///
+/// # Panics
+///
+/// Panics if a caller-supplied shape or an internal solver state violates
+/// the precondition required by this operation.
 pub fn marchenko_wasserstein_misfit(
     reflection_obs: &[f64],
     reflection_mod: &[f64],

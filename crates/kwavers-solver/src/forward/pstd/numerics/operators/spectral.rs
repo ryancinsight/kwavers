@@ -40,6 +40,11 @@ use crate::pstd::utils::{compute_anti_aliasing_filter, compute_wavenumbers};
 /// # Errors
 /// - Returns [`Err`] if an internal constraint is violated.
 ///
+///
+/// # Panics
+///
+/// Panics if a caller-supplied shape or an internal solver state violates
+/// the precondition required by this operation.
 pub fn initialize_spectral_operators(
     config: &PSTDConfig,
     grid: &Grid,

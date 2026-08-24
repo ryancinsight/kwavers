@@ -78,7 +78,7 @@ impl ReverseTimeMigration {
         });
 
         if self.config.base_config.filter != crate::reconstruction::ReconstructionFilterType::None {
-            let filtered = self.apply_laplacian_filter_inplace(&self.image.clone())?;
+            let filtered = Self::apply_laplacian_filter_inplace(&self.image.clone())?;
             self.image.assign(&filtered);
         }
 
@@ -90,10 +90,9 @@ impl ReverseTimeMigration {
     /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn apply_laplacian_filter_inplace(
-        &self,
         image: &Array3<f64>,
     ) -> KwaversResult<Array3<f64>> {
-        let laplacian = self.compute_laplacian(&image.view())?;
+        let laplacian = Self::compute_laplacian(&image.view())?;
         // result = image − 0.1·∇²image, single native pass (leto has no array operators)
         let mut result = Array3::<f64>::zeros(image.shape());
         leto_ops::zip_mut_with(

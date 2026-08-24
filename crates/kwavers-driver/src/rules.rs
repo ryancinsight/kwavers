@@ -306,11 +306,12 @@ impl DesignRules {
     /// Default track width for a net class.
     #[must_use]
     pub fn track_for(&self, class: crate::board::NetClassKind) -> Nm {
-        use crate::board::NetClassKind::*;
         match class {
-            Hv => self.hv_track,
-            Power | Ground => self.power_track,
-            Signal => self.signal_track,
+            crate::board::NetClassKind::Hv => self.hv_track,
+            crate::board::NetClassKind::Power | crate::board::NetClassKind::Ground => {
+                self.power_track
+            }
+            crate::board::NetClassKind::Signal => self.signal_track,
         }
     }
 

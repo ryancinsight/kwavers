@@ -1,10 +1,8 @@
 //! Canonical prelude — the `use kwavers_driver::prelude::*;` surface.
 //!
-//! Phase 1a promotes this from a Phase-0 doc-only file (kept at
-//! `docs/PHASE_1_prelude_plan.md`) into a real entry point at `src/prelude.rs`.
-//! The goal is one lump-import that brings the canonical unit newtypes, the
-//! geometry types, the board model, and the physics facade into scope for
-//! downstream examples, integration tests, and the kwavers-backed `experiment` tree.
+//! One import that brings the canonical unit newtypes, the geometry types, and the board
+//! model into scope for downstream examples, integration tests, and the kwavers-backed
+//! `experiment` tree.
 //!
 //! # What lands in scope
 //!
@@ -27,15 +25,14 @@
 //!   `pulser_dissipation`, `microstrip_impedance`, `ir_drop`, …). Those are
 //!   still reached through the crate-root [`crate`] — today's contract is
 //!   "drop into any module's namespace" rather than "glob the whole crate".
-//! * The crate-side `error::Error` / `error::Result` — those land in the
-//!   prelude in Phase 1b alongside the per-vertical-slice error hierarchy.
-//! * The `experiment` tree top-level — that lands at Phase 5.
+//! * The crate-side `error::Error` / `error::Result`, reached through [`crate::error`].
+//! * The `experiment` tree top level, reached through [`crate::experiment`].
 //!
 //! # SSOT marker
 //!
-//! If a downstream consumer only knows *one* kwavers-driver import path,
-//! this is it: `use kwavers_driver::prelude::*;` lands every public type and
-//! surface that Phase 1a commits to.
+//! If a downstream consumer knows only *one* kwavers-driver import path, this is it:
+//! `use kwavers_driver::prelude::*;` lands the unit, geometry, and board types listed
+//! above.
 
 // ── Unit newtypes (the compile-time-units surface) ────────────────────────
 pub use crate::units::{Amp, Celsius, Coulomb, Farad, Henry, Hz, Kelvin, Nm, Ohm, Volt, Watt};

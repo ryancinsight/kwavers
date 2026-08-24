@@ -335,17 +335,19 @@ impl AsContext {
         let dk_z = TWO_PI / (nr_exp as f64 * dr);
         let dk_x = TWO_PI / (nx as f64 * dx);
 
-        let r_sg = Array1::from_iter((0..nr).map(|m| (m as f64 + 0.5) * dr));
+        let r_sg: Array1<f64> = (0..nr).map(|m| (m as f64 + 0.5) * dr).collect();
 
-        let kz: Array1<f64> = Array1::from_iter((0..nr_exp).map(|k| {
-            let ki = k as i64;
-            let n = nr_exp as i64;
-            if ki <= n / 2 {
-                ki as f64 * dk_z
-            } else {
-                (ki - n) as f64 * dk_z
-            }
-        }));
+        let kz: Array1<f64> = (0..nr_exp)
+            .map(|k| {
+                let ki = k as i64;
+                let n = nr_exp as i64;
+                if ki <= n / 2 {
+                    ki as f64 * dk_z
+                } else {
+                    (ki - n) as f64 * dk_z
+                }
+            })
+            .collect();
 
         let ddy_k_shift_pos = kz
             .iter()
@@ -357,15 +359,17 @@ impl AsContext {
             .map(|&v| Complex64::from_polar(1.0, -v * dr / 2.0))
             .collect();
 
-        let kx: Array1<f64> = Array1::from_iter((0..nx).map(|i| {
-            let ii = i as i64;
-            let n = nx as i64;
-            if ii <= n / 2 {
-                ii as f64 * dk_x
-            } else {
-                (ii - n) as f64 * dk_x
-            }
-        }));
+        let kx: Array1<f64> = (0..nx)
+            .map(|i| {
+                let ii = i as i64;
+                let n = nx as i64;
+                if ii <= n / 2 {
+                    ii as f64 * dk_x
+                } else {
+                    (ii - n) as f64 * dk_x
+                }
+            })
+            .collect();
 
         let kappa_2d = Array2::from_shape_fn((nx, nr_exp), |[i, k]| {
             let k2d = kx[i].hypot(kz[k]);
@@ -489,6 +493,11 @@ impl AsContext {
     // ---- Domain expansion -- associated functions ------------------------
 
     /// WS (whole-sample symmetric) expansion: a (nx,nr) into out (nx,4*nr).
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn ws_expand(a: &Array2<f64>, out: &mut Array2<f64>, nr: usize) {
         out.fill(0.0);
         out.slice_with_mut(&s![.., 0..nr]).unwrap().assign(a);
@@ -514,6 +523,11 @@ impl AsContext {
     }
 
     /// HAHS expansion (radial velocity): a (nx,nr) into out (nx,4*nr).
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn hahs_expand(a: &Array2<f64>, out: &mut Array2<f64>, nr: usize) {
         out.fill(0.0);
         out.slice_with_mut(&s![.., 0..nr]).unwrap().assign(a);
@@ -537,6 +551,11 @@ impl AsContext {
     }
 
     /// HSHA expansion (ur/r term): a (nx,nr) into out (nx,4*nr).
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn hsha_expand(a: &Array2<f64>, out: &mut Array2<f64>, nr: usize) {
         out.fill(0.0);
         out.slice_with_mut(&s![.., 0..nr]).unwrap().assign(a);

@@ -132,6 +132,10 @@ pub fn write_kicad_sch(board: &Board, comps: &[Component], lib: &[FootprintDef])
 }
 
 /// Emit the schematic to a file.
+///
+/// # Errors
+///
+/// Returns an I/O error when the serialized schematic cannot be written to `path`.
 pub fn save_kicad_sch(
     path: &std::path::Path,
     board: &Board,

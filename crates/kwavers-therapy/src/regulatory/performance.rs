@@ -38,18 +38,21 @@ impl PerformanceTest {
     }
 
     /// Set test objective
+    #[must_use]
     pub fn with_objective(mut self, objective: impl Into<String>) -> Self {
         self.objective = objective.into();
         self
     }
 
     /// Set test method
+    #[must_use]
     pub fn with_method(mut self, method: impl Into<String>) -> Self {
         self.method = method.into();
         self
     }
 
     /// Set acceptance criteria
+    #[must_use]
     pub fn with_criteria(mut self, criteria: impl Into<String>) -> Self {
         self.acceptance_criteria = criteria.into();
         self

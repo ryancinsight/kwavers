@@ -97,6 +97,12 @@ pub fn load_ali_2025_breast_phantom_from_mat5<P: AsRef<Path>>(
 /// MRI intensity is cubic-interpolated, tissue is thresholded with per-slice
 /// hole filling, and tissue intensities are affinely mapped into the paper's
 /// side-specific sound-speed interval while exterior voxels become water.
+///
+/// # Errors
+///
+/// Returns an error when the MATLAB-5 volume cannot be read or validated, the
+/// requested variable is not a compatible numeric 3-D array, or the mapping
+/// configuration is invalid.
 pub fn load_ali_2025_breast_phantom_from_mat5_with_config<P: AsRef<Path>>(
     path: P,
     config: BreastUstAliPhantomMat5Config,

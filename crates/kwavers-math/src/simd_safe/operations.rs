@@ -32,6 +32,12 @@ pub struct SimdOps;
 
 impl SimdOps {
     /// Add two fields element-wise.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the contiguous inputs have different element counts. Equal
+    /// shapes are required by the element-wise operation; the Hermes kernel
+    /// reports a mismatch and this invariant failure is propagated as a panic.
     #[inline]
     #[must_use]
     pub fn add_fields(a: &Array3<f64>, b: &Array3<f64>) -> Array3<f64> {
@@ -68,6 +74,12 @@ impl SimdOps {
     }
 
     /// Compute the L2 (Euclidean) norm of a field.
+    ///
+    /// # Panics
+    ///
+    /// Panics if Hermes rejects the dot product because its two operands have
+    /// different lengths. Both operands are the same contiguous slice, so this
+    /// indicates a violated internal invariant.
     #[inline]
     #[must_use]
     pub fn norm(field: &Array3<f64>) -> f64 {
@@ -81,6 +93,12 @@ impl SimdOps {
     }
 
     /// Multiply two fields element-wise.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the contiguous inputs have different element counts. Equal
+    /// shapes are required by the element-wise operation; the Hermes kernel
+    /// reports a mismatch and this invariant failure is propagated as a panic.
     #[inline]
     #[must_use]
     pub fn multiply_fields(a: &Array3<f64>, b: &Array3<f64>) -> Array3<f64> {
@@ -102,6 +120,12 @@ impl SimdOps {
     }
 
     /// Subtract `b` from `a` element-wise.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the contiguous inputs have different element counts. Equal
+    /// shapes are required by the element-wise operation; the Hermes kernel
+    /// reports a mismatch and this invariant failure is propagated as a panic.
     #[inline]
     #[must_use]
     pub fn subtract_fields(a: &Array3<f64>, b: &Array3<f64>) -> Array3<f64> {

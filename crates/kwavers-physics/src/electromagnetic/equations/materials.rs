@@ -20,6 +20,11 @@ impl EMMaterialUtils {
     ///
     /// - `shape`: Grid dimensions (e.g., `[nx, ny, nz]` for 3D)
     /// - `props`: Canonical electromagnetic property data
+    ///
+    /// # Panics
+    ///
+    /// Panics if the array backend rejects `shape` while constructing one of
+    /// the uniform material fields.
     #[must_use]
     pub fn create_uniform_distribution(
         shape: &[usize],

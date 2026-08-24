@@ -1,3 +1,26 @@
+//! Copper-geometry audits: dangling ends, layer copper balance, via adjacency, and
+//! antenna-net impedance.
+//!
+//! Despite the module name, only `detect_antenna_impedance_mismatch` concerns antenna
+//! nets. The rest are whole-board copper-geometry checks that share the same polygon and
+//! endpoint machinery:
+//!
+//! * `dangling_ends` — track endpoints anchored to nothing. Track-to-track junctions must
+//!   coincide exactly at grid-cell centres; a track end meets a pad or via within a
+//!   tolerance, because the router snaps terminals to the nearest cell centre. This mirrors
+//!   KiCad's stricter `track_dangling` rule so unsplit T-junctions surface before export.
+//! * [`copper_area_per_layer`] and [`copper_imbalance`] — reflow-warpage inputs. Warpage is
+//!   driven by copper asymmetry about the stack's neutral plane, so the imbalance metric
+//!   compares *symmetric layer pairs* rather than raw per-layer totals: a plane-to-plane,
+//!   signal-to-signal stack reads near 0 even though the planes carry far more copper.
+//! * `via_adjacency` — different-net vias whose annular rings would overlap.
+//! * `crosstalk` — parallel-adjacent different-net track pairs on one layer. This is the
+//!   geometric count; the coupling physics lives in [`crate::physics::si`].
+//! * `detect_antenna_impedance_mismatch` — nets whose name starts with `ANT` must be
+//!   controlled-impedance 50 Ω lines, evaluated with the Hammerstad microstrip formula
+//!   against the stackup in [`crate::rules::DesignRules`]. A mismatch produces standing
+//!   waves, reduced range, and radiated EMI.
+
 use std::collections::HashMap;
 
 use crate::board::Board;

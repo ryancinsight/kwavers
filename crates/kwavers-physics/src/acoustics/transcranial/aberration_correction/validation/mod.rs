@@ -69,7 +69,7 @@ impl TranscranialAberrationCorrection {
         )?;
 
         let focal_intensity = self.calculate_focal_intensity(&corrected_field, target_point);
-        let sidelobe_ratio = self.calculate_sidelobe_level(&corrected_field, target_point);
+        let sidelobe_ratio = Self::calculate_sidelobe_level(&corrected_field, target_point);
         let sidelobe_level_db = if sidelobe_ratio > 0.0 {
             10.0 * sidelobe_ratio.log10()
         } else {

@@ -38,5 +38,6 @@ mod fd_stencils;
 #[cfg(test)]
 mod tests;
 
+pub(crate) use divergence::stress_divergence_plane_strain_into;
 pub use divergence::{stress_divergence, stress_divergence_into};
 pub use fd_stencils::{fd1_x, fd1_y, fd1_z};

@@ -4,6 +4,7 @@ use crate::place::component::Component;
 use crate::place::footprint::{FootprintDef, Role};
 use crate::place::symbol_import::PinMap;
 use std::collections::HashMap;
+use std::hash::BuildHasher;
 
 /// Electrical-rule-check findings over the schematic/netlist (before/independent of routing).
 #[derive(Debug, Clone, Default)]
@@ -26,7 +27,7 @@ pub fn erc(
     board: &Board,
     comps: &[Component],
     lib: &[FootprintDef],
-    symbol_pin_maps: &HashMap<String, PinMap>,
+    symbol_pin_maps: &HashMap<String, PinMap, impl BuildHasher>,
 ) -> ErcReport {
     let mut r = ErcReport::default();
     // Terminal count per net (from the placed component pads).

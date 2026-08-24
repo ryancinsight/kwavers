@@ -191,11 +191,22 @@ impl<T: std::fmt::Debug> std::fmt::Debug for GenericFdtdSolver<T> {
                 &self.gpu_accelerator.as_ref().map(|_| "GpuAccelerator"),
             )
             .field("source_handler", &self.source_handler)
-            .field("dynamic_sources_count", &(self.dynamic_sources.len()))
+            .field("dynamic_sources", &(self.dynamic_sources.len()))
+            .field("source_injection_modes", &self.source_injection_modes)
             .field("sensor_recorder", &self.sensor_recorder)
             .field("time_step_index", &self.time_step_index)
             .field("fields", &self.fields)
             .field("materials", &self.materials)
+            .field("rho_c_squared", &self.rho_c_squared)
+            .field("absorption", &self.absorption)
+            .field("p_prev", &self.p_prev)
+            .field("p_prev2", &self.p_prev2)
+            .field("nl_scratch", &self.nl_scratch)
+            .field("nl_coeff", &self.nl_coeff)
+            .field("kspace_ops", &self.kspace_ops)
+            .field("dvx_scratch", &self.dvx_scratch)
+            .field("dvy_scratch", &self.dvy_scratch)
+            .field("divergence_scratch", &self.divergence_scratch)
             .finish()
     }
 }

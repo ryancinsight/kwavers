@@ -31,6 +31,33 @@ runs:
           fi
         done
 
+    - name: Disable third-party package sources
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        # The runner image ships third-party apt repositories -- Google Chrome,
+        # Microsoft, and others -- that this build never installs from. But
+        # `apt-get update` fails as a whole when any single configured
+        # repository is unavailable, so an unrelated vendor's CDN being
+        # mid-mirror-sync fails the job:
+        #
+        #   E: Failed to fetch https://dl.google.com/linux/chrome-stable/...
+        #      File has unexpected size (1420 != 1418). Mirror sync in progress?
+        #
+        # That is an entire class of failure with no relationship to the code
+        # under test, and retrying until it passes would be treating a
+        # deterministic fix as a flake. Keeping only Ubuntu's own archives
+        # removes the dependency instead of tolerating it.
+        shopt -s nullglob
+        for source in /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources; do
+          if grep -qE 'ubuntu\.com|canonical\.com' "$source"; then
+            continue
+          fi
+          sudo mv "$source" "$source.disabled"
+          echo "disabled $(basename "$source")"
+        done
+
     - name: Refresh Ubuntu package index
       shell: bash
       run: |

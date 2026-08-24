@@ -97,21 +97,26 @@ pub fn solve_gilmore(
     state.wall_velocity = rdot0_m_s;
     let solver = GilmoreSolver::new(params);
 
-    let dt = t_end_s / n_steps as f64;
-    let mut time = Vec::with_capacity(n_steps + 1);
-    let mut radius = Vec::with_capacity(n_steps + 1);
-    let mut rdot = Vec::with_capacity(n_steps + 1);
-    time.push(0.0);
-    radius.push(state.radius);
-    rdot.push(state.wall_velocity);
-
-    for i in 0..n_steps {
-        let t = i as f64 * dt;
-        state = solver.step_rk4(&state, p_ac_pa, t, dt);
-        time.push((i + 1) as f64 * dt);
+    // The fixed-step RK4 loop is a pure f64 compute; the solver and state own
+    // every value, so run the whole loop outside the GIL.
+    let (time, radius, rdot) = py.detach(|| {
+        let dt = t_end_s / n_steps as f64;
+        let mut time = Vec::with_capacity(n_steps + 1);
+        let mut radius = Vec::with_capacity(n_steps + 1);
+        let mut rdot = Vec::with_capacity(n_steps + 1);
+        time.push(0.0);
         radius.push(state.radius);
         rdot.push(state.wall_velocity);
-    }
+
+        for i in 0..n_steps {
+            let t = i as f64 * dt;
+            state = solver.step_rk4(&state, p_ac_pa, t, dt);
+            time.push((i + 1) as f64 * dt);
+            radius.push(state.radius);
+            rdot.push(state.wall_velocity);
+        }
+        (time, radius, rdot)
+    });
 
     Ok((
         vec_to_pyarray1(py, time),

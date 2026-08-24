@@ -3,12 +3,13 @@ use kwavers_core::error::KwaversResult;
 use kwavers_imaging::fusion::FusedImageResult;
 use leto::Array3;
 use std::collections::HashMap;
+use std::hash::BuildHasher;
 /// Generate diagnostic recommendations.
 /// # Errors
 /// - Returns [`Err`] if an internal constraint is violated.
 ///
-pub fn generate_diagnostic_recommendations(
-    tissue_properties: &HashMap<String, Array3<f64>>,
+pub fn generate_diagnostic_recommendations<S: BuildHasher>(
+    tissue_properties: &HashMap<String, Array3<f64>, S>,
 ) -> KwaversResult<Vec<DiagnosticRecommendation>> {
     let mut recommendations = Vec::new();
 
@@ -166,9 +167,9 @@ pub fn generate_diagnostic_recommendations(
 }
 
 #[must_use]
-pub fn calculate_confidence_score(
+pub fn calculate_confidence_score<S: BuildHasher>(
     fused_result: &FusedImageResult,
-    tissue_properties: &HashMap<String, Array3<f64>>,
+    tissue_properties: &HashMap<String, Array3<f64>, S>,
 ) -> f64 {
     // Calculate overall confidence based on multiple factors
     let mut confidence = 80.0; // Base confidence

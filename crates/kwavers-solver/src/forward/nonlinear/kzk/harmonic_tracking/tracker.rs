@@ -41,7 +41,7 @@ impl HarmonicTracker {
         let mut analysis = HarmonicAnalysis::default();
 
         if self.config.enable_waveform {
-            analysis = self.analyze_waveform(pressure, analysis)?;
+            analysis = Self::analyze_waveform(pressure, analysis)?;
         }
 
         if self.config.enable_spectral {
@@ -109,7 +109,6 @@ impl HarmonicTracker {
     // --- Private helpers ---
 
     fn analyze_waveform(
-        &self,
         pressure: &Array1<f64>,
         mut analysis: HarmonicAnalysis,
     ) -> KwaversResult<HarmonicAnalysis> {
@@ -155,7 +154,7 @@ impl HarmonicTracker {
             let freq = self.config.frequency * harmonic as f64;
             frequencies.push(freq);
 
-            let amplitude = self.extract_harmonic_amplitude(pressure, freq, dt)?;
+            let amplitude = Self::extract_harmonic_amplitude(pressure, freq, dt)?;
             amplitudes.push(amplitude);
             power.push(amplitude * amplitude);
         }
@@ -180,7 +179,6 @@ impl HarmonicTracker {
     }
 
     fn extract_harmonic_amplitude(
-        &self,
         pressure: &Array1<f64>,
         frequency: f64,
         dt: f64,

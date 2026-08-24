@@ -96,23 +96,20 @@ fn test_conservation_violation_detection() -> KwaversResult<()> {
 
 #[test]
 fn test_infer_law_from_name() -> KwaversResult<()> {
-    let grid = Grid::new(8, 8, 8, 0.1, 0.1, 0.1)?;
-    let checker = ConservationChecker::new(grid, 1e-6);
-
     assert_eq!(
-        checker.infer_law_from_name("pressure"),
+        ConservationChecker::infer_law_from_name("pressure"),
         AnalysisConservationLaw::Charge
     );
     assert_eq!(
-        checker.infer_law_from_name("density"),
+        ConservationChecker::infer_law_from_name("density"),
         AnalysisConservationLaw::Mass
     );
     assert_eq!(
-        checker.infer_law_from_name("velocity_x"),
+        ConservationChecker::infer_law_from_name("velocity_x"),
         AnalysisConservationLaw::Momentum
     );
     assert_eq!(
-        checker.infer_law_from_name("thermal_energy"),
+        ConservationChecker::infer_law_from_name("thermal_energy"),
         AnalysisConservationLaw::Energy
     );
 

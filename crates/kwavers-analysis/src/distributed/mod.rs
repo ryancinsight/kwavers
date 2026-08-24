@@ -11,7 +11,7 @@ pub use task::{TaskMetrics, TaskPriority, WorkItem};
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kwavers_core::error::KwaversResult;
+    use kwavers_core::error::{KwaversError, KwaversResult};
     use std::sync::atomic::{AtomicU64, Ordering};
     use std::sync::Arc;
 
@@ -29,13 +29,15 @@ mod tests {
 
         assert_eq!(item.task_id, 1);
         assert_eq!(item.priority, TaskPriority::Normal);
-        assert!(item.deadline.is_none());
+        assert_eq!(item.deadline, None);
     }
 
     #[test]
     fn test_work_item_deadline() {
         let work: Arc<dyn Fn() -> KwaversResult<()> + Send + Sync> = Arc::new(|| Ok(()));
-        let item = WorkItem::new(1, TaskPriority::High, work, 1000).with_deadline(100, 1000); // Created at 1000, deadline is 1100
+        let item = WorkItem::new(1, TaskPriority::High, work, 1000)
+            .with_deadline(100, 1000)
+            .expect("deadline is representable"); // Created at 1000, deadline is 1100
 
         let deadline = item
             .deadline
@@ -46,6 +48,19 @@ mod tests {
         );
         assert!(!item.is_overdue(1050));
         assert!(item.is_overdue(1150));
+    }
+
+    #[test]
+    fn test_work_item_rejects_deadline_overflow() {
+        let work: Arc<dyn Fn() -> KwaversResult<()> + Send + Sync> = Arc::new(|| Ok(()));
+        let result =
+            WorkItem::new(1, TaskPriority::High, work, u64::MAX).with_deadline(1, u64::MAX);
+
+        assert!(matches!(
+            result,
+            Err(KwaversError::InvalidInput(message))
+                if message.contains("overflows timestamp")
+        ));
     }
 
     #[test]
@@ -146,6 +161,25 @@ mod tests {
     }
 
     #[test]
+    fn test_work_queue_rejects_deadline_overflow() {
+        let config = ThreadPoolConfig {
+            num_threads: 1,
+            ..Default::default()
+        };
+        let mut queue = WorkQueue::new(config);
+        let work: Arc<dyn Fn() -> KwaversResult<()> + Send + Sync> = Arc::new(|| Ok(()));
+
+        let result = queue.submit_with_deadline(TaskPriority::Normal, u64::MAX, work);
+
+        assert!(matches!(
+            result,
+            Err(KwaversError::InvalidInput(message))
+                if message.contains("overflows timestamp")
+        ));
+        queue.shutdown().expect("empty queue shuts down");
+    }
+
+    #[test]
     fn test_pipeline_coordinator_creation() {
         let coordinator = PipelineCoordinator::new(3).unwrap();
         assert_eq!(coordinator.num_stages(), 3);
@@ -153,8 +187,16 @@ mod tests {
 
     #[test]
     fn test_pipeline_coordinator_invalid_stages() {
-        let result = PipelineCoordinator::new(0);
-        assert!(result.is_err());
+        // PipelineCoordinator does not implement Debug, so match instead of
+        // expect_err.
+        let err = match PipelineCoordinator::new(0) {
+            Err(e) => e,
+            Ok(_) => panic!("zero stages must be rejected"),
+        };
+        assert!(
+            err.to_string().contains("at least 1 stage"),
+            "unexpected error: {err}"
+        );
     }
 
     #[test]
@@ -167,8 +209,9 @@ mod tests {
             .unwrap();
         assert_eq!(task_id, 0);
 
-        let result = coordinator.submit_to_stage(5, TaskPriority::Normal, Arc::new(|| Ok(())));
-        assert!(result.is_err());
+        coordinator
+            .submit_to_stage(5, TaskPriority::Normal, Arc::new(|| Ok(())))
+            .expect_err("out-of-range stage must be rejected");
     }
 
     #[test]
@@ -183,7 +226,8 @@ mod tests {
         let metrics = coordinator.stage_metrics(0).unwrap();
         assert!(metrics.active_threads <= coordinator.stages[0].config.num_threads); // Work may be executing
 
-        let result = coordinator.stage_metrics(5);
-        assert!(result.is_err());
+        coordinator
+            .stage_metrics(5)
+            .expect_err("out-of-range stage must be rejected");
     }
 }

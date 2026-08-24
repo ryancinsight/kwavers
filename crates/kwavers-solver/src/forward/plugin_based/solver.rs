@@ -41,7 +41,7 @@ pub struct PluginBasedSolver {
     /// Boundary conditions
     boundary: Box<dyn Boundary>,
     /// Acoustic sources
-    sources: Vec<Box<dyn Source>>,
+    sources: Vec<Arc<dyn Source>>,
     source_masks: Vec<Array3<f64>>,
     /// Field registry for data management
     field_registry: FieldRegistry,
@@ -60,7 +60,10 @@ impl std::fmt::Debug for PluginBasedSolver {
         f.debug_struct("PluginBasedSolver")
             .field("grid", &self.grid)
             .field("time", &self.time)
-            .field("sources_count", &(self.sources.len()))
+            .field("medium", &"<medium>")
+            .field("boundary", &"<boundary>")
+            .field("sources", &(self.sources.len()))
+            .field("source_masks", &(self.source_masks.len()))
             .field("field_registry", &self.field_registry)
             .field("plugin_manager", &self.plugin_manager)
             .field("performance", &self.performance)
@@ -80,7 +83,7 @@ impl PluginBasedSolver {
         source: Box<dyn Source>,
     ) -> Self {
         let source_mask = clone_mask(&source.create_mask(&grid));
-        let sources = vec![source];
+        let sources: Vec<Arc<dyn Source>> = vec![Arc::from(source)];
         let source_masks = vec![source_mask];
 
         let field_registry = FieldRegistry::new(&grid);
@@ -118,6 +121,7 @@ impl PluginBasedSolver {
     /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn add_source(&mut self, source: Box<dyn Source>) -> KwaversResult<()> {
+        let source: Arc<dyn Source> = Arc::from(source);
         let required_field = match source.source_type() {
             SourceField::Pressure => UnifiedFieldType::Pressure,
             SourceField::VelocityX => UnifiedFieldType::VelocityX,
@@ -144,6 +148,11 @@ impl PluginBasedSolver {
     /// # Errors
     /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn initialize(&mut self) -> KwaversResult<()> {
         info!("Initializing plugin-based solver");
 
@@ -238,6 +247,11 @@ impl PluginBasedSolver {
     /// # Errors
     /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn step(&mut self) -> KwaversResult<()> {
         let t = self.current_step as f64 * self.time.dt;
 
@@ -334,6 +348,11 @@ impl PluginBasedSolver {
     }
 
     /// Get field by type
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn get_field(&self, field_type: UnifiedFieldType) -> Option<leto::Array3<f64>> {
         self.field_registry.get_field(field_type).ok().map(|view| {
             leto::Array3::from_shape_vec(view.shape(), view.iter().copied().collect())

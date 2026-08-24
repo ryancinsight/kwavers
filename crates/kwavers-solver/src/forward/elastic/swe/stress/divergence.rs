@@ -25,7 +25,9 @@ use super::super::types::ElasticWaveField;
 use super::fd_stencils::{fd1_x, fd1_y, fd1_z};
 use kwavers_grid::Grid;
 use leto::Array3;
-use moirai_parallel::{for_each_chunk_triple_mut_enumerated_with, Adaptive};
+use moirai_parallel::{
+    for_each_chunk_pair_mut_enumerated_with, for_each_chunk_triple_mut_enumerated_with, Adaptive,
+};
 
 // Three output chunks plus the captured displacement/material inputs remain
 // within a 32 KiB L1 working set at 256 f64 elements per chunk.
@@ -51,6 +53,11 @@ const STRESS_CHUNK: usize = 256;
 ///
 /// - `scratch`: pre-allocated workspace; all fields are overwritten before
 ///   use (no reads of stale data).
+///
+/// # Panics
+///
+/// Panics if a caller-supplied shape or an internal solver state violates
+/// the precondition required by this operation.
 pub fn stress_divergence_into(
     grid: &Grid,
     lambda: &Array3<f64>,
@@ -204,6 +211,101 @@ pub fn stress_divergence_into(
             },
         );
     }
+}
+
+/// Fill the in-plane stress divergence for a plane-strain field.
+///
+/// This specialization requires a singleton z axis with `u_z = 0`. Under
+/// those invariants every z derivative and the `xz`, `yz`, and `zz`
+/// contributions to the divergence vanish exactly. The kernel therefore
+/// computes only `{sxx, syy, sxy}` and `{div_x, div_y}`. The point-force
+/// driver's fresh scratch storage keeps `div_z = 0`. Selection happens once at
+/// the propagation boundary through a zero-sized stress mode; no dimensionality
+/// branch enters the voxel loops.
+///
+/// # Panics
+///
+/// Panics in debug builds if the field is not a singleton-z plane-strain
+/// field. The point-force driver establishes these invariants before choosing
+/// this kernel.
+pub(crate) fn stress_divergence_plane_strain_into(
+    grid: &Grid,
+    lambda: &Array3<f64>,
+    mu: &Array3<f64>,
+    field: &ElasticWaveField,
+    scratch: &mut ElasticStepScratch,
+) {
+    let [nx, ny, nz] = field.ux.shape();
+    debug_assert_eq!(nz, 1);
+    let dx = grid.dx;
+    let dy = grid.dy;
+    let ux = field.ux.view();
+    let uy = field.uy.view();
+
+    {
+        let sxx_slice = scratch
+            .sxx
+            .as_slice_mut()
+            .expect("invariant: sxx uses standard layout");
+        let syy_slice = scratch
+            .syy
+            .as_slice_mut()
+            .expect("invariant: syy uses standard layout");
+        let sxy_slice = scratch
+            .sxy
+            .as_slice_mut()
+            .expect("invariant: sxy uses standard layout");
+        for_each_chunk_triple_mut_enumerated_with::<Adaptive, _, _, _, _>(
+            sxx_slice,
+            syy_slice,
+            sxy_slice,
+            STRESS_CHUNK,
+            |chunk_idx, sxx_chunk, syy_chunk, sxy_chunk| {
+                let start = chunk_idx * STRESS_CHUNK;
+                for offset in 0..sxx_chunk.len() {
+                    let idx = start + offset;
+                    let i = idx / ny;
+                    let j = idx % ny;
+                    let exx = fd1_x(ux, i, j, 0, nx, dx);
+                    let eyy = fd1_y(uy, i, j, 0, ny, dy);
+                    let la = lambda[[i, j, 0]];
+                    let mv = mu[[i, j, 0]];
+                    let la2mu = 2.0f64.mul_add(mv, la);
+                    sxx_chunk[offset] = la2mu.mul_add(exx, la * eyy);
+                    syy_chunk[offset] = la2mu.mul_add(eyy, la * exx);
+                    sxy_chunk[offset] =
+                        mv * (fd1_y(ux, i, j, 0, ny, dy) + fd1_x(uy, i, j, 0, nx, dx));
+                }
+            },
+        );
+    }
+
+    let sxx = scratch.sxx.view();
+    let syy = scratch.syy.view();
+    let sxy = scratch.sxy.view();
+    let div_x = scratch
+        .div_x
+        .as_slice_mut()
+        .expect("invariant: div_x uses standard layout");
+    let div_y = scratch
+        .div_y
+        .as_slice_mut()
+        .expect("invariant: div_y uses standard layout");
+    for_each_chunk_pair_mut_enumerated_with::<Adaptive, _, _, _>(
+        div_x,
+        div_y,
+        STRESS_CHUNK,
+        |chunk_idx, div_x_chunk, div_y_chunk| {
+            let start = chunk_idx * STRESS_CHUNK;
+            for offset in 0..div_x_chunk.len() {
+                let idx = start + offset;
+                let i = idx / ny;
+                let j = idx % ny;
+                div_x_chunk[offset] = fd1_x(sxx, i, j, 0, nx, dx) + fd1_y(sxy, i, j, 0, ny, dy);
+                div_y_chunk[offset] = fd1_x(sxy, i, j, 0, nx, dx) + fd1_y(syy, i, j, 0, ny, dy);
+            }
+        },
+    );
 }
 
 /// Compute the elastic stress tensor divergence ∇·σ, returning owned arrays.

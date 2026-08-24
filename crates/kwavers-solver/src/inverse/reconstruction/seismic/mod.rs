@@ -42,4 +42,3 @@ pub use misfit::{
     MisfitType,
 };
 pub use rtm::ReverseTimeMigration;
-pub use wavelet::SeismicRickerWavelet;

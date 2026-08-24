@@ -440,7 +440,8 @@ K_V = \phi K_b + (1-\phi)K_w, \;\;
 K_R = \left(\tfrac{\phi}{K_b} + \tfrac{1-\phi}{K_w}\right)^{-1},
 $$
 
-with $c_{\text{eff}} = \sqrt{K_{\text{H}}/\rho_{\text{eff}}}$ and linearly mixed attenuation
+with $c_{\text{eff}} = \sqrt{K_{\text{H}}/\rho_{\text{eff}}}$ and linearly mixed attenuation at
+the 1 MHz reference frequency,
 $\alpha_{\text{eff}} = \phi\,\alpha_{\text{bone}} + (1-\phi)\,\alpha_{\text{water}}$. Because the
 Hill modulus is bounded above by the Voigt modulus, $c_{\text{eff}}$ never exceeds the
 Voigt-modulus speed (a property the test suite asserts across $\phi$). The pure-water limit
@@ -448,10 +449,11 @@ Voigt-modulus speed (a property the test suite asserts across $\phi$). The pure-
 $c_{\text{bone}}$ exactly.
 
 ```rust,ignore
-use kwavers_physics::acoustics::skull::HeterogeneousSkull;
+use kwavers_physics::acoustics::skull::{AcousticSkullProperties, HeterogeneousSkull};
 
 // ct: Array3<f64> of standard-HU voxels → density/sound_speed/attenuation grids
-let skull = HeterogeneousSkull::from_ct_hill(&ct, 3100.0, 2100.0, 20.0)?;
+let bone = AcousticSkullProperties::cortical();
+let skull = HeterogeneousSkull::from_ct_hill(&ct, &bone)?;
 // skull.density, skull.sound_speed, skull.attenuation feed the heterogeneous medium (§4.6.4)
 ```
 
@@ -1029,8 +1031,9 @@ prescribed law. Because the two are different mathematics for the same physics �
 versus local ODE system — that agreement is independent-oracle evidence rather than the weaker
 differential kind two backends of one algorithm would give.
 
-`heterogeneous_power_law_attenuation` example measures the realized $\alpha(f)$ from a propagating
-broadband pulse by a reference-normalized two-sensor spectral ratio, recovering the prescribed law
+[The heterogeneous power-law attenuation example](examples/heterogeneous_power_law_attenuation.md)
+measures the realized $\alpha(f)$ from a propagating broadband pulse by a reference-normalized
+two-sensor spectral ratio, recovering the prescribed law
 to 3.4 % worst case (0.5 % across the band interior) over the whole envelope, and matching the
 exact path-weighted prediction for a fat/muscle stack whose exponent varies along the path to 1.0 %
 — on three relaxation arms, where the residual is measurement-limited rather than fit-limited

@@ -52,19 +52,19 @@ impl InterpolationManager {
     ) -> KwaversResult<Array3<f64>> {
         match self.scheme {
             HybridInterpolationScheme::Linear => {
-                self.linear_interpolation(source_field, source_coords, target_coords)
+                Self::linear_interpolation(source_field, source_coords, target_coords)
             }
             HybridInterpolationScheme::CubicSpline => {
-                self.cubic_spline_interpolation(source_field, source_coords, target_coords)
+                Self::cubic_spline_interpolation(source_field, source_coords, target_coords)
             }
             HybridInterpolationScheme::Spectral => {
-                self.spectral_interpolation(source_field, source_coords, target_coords)
+                Self::spectral_interpolation(source_field, source_coords, target_coords)
             }
             HybridInterpolationScheme::Conservative => {
-                self.conservative_interpolation(source_field, source_coords, target_coords)
+                Self::conservative_interpolation(source_field, source_coords, target_coords)
             }
             HybridInterpolationScheme::Adaptive => {
-                self.adaptive_interpolation(source_field, source_coords, target_coords)
+                Self::adaptive_interpolation(source_field, source_coords, target_coords)
             }
         }
     }

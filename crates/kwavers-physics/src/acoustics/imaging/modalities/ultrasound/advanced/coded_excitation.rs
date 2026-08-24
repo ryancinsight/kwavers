@@ -72,8 +72,8 @@ impl CodedExcitationProcessor {
                 end_freq,
                 length,
             } => self.generate_chirp(*start_freq, *end_freq, *length),
-            ExcitationCode::Barker { length } => self.generate_barker(*length),
-            ExcitationCode::Golay { length } => self.generate_golay(*length),
+            ExcitationCode::Barker { length } => Self::generate_barker(*length),
+            ExcitationCode::Golay { length } => Self::generate_golay(*length),
         }
     }
 
@@ -119,7 +119,7 @@ impl CodedExcitationProcessor {
     }
 
     /// Generate Barker code
-    fn generate_barker(&self, length: usize) -> Array1<Complex64> {
+    fn generate_barker(length: usize) -> Array1<Complex64> {
         let sequence = match length {
             2 => vec![1, -1],
             3 => vec![1, 1, -1],
@@ -138,7 +138,7 @@ impl CodedExcitationProcessor {
     }
 
     /// Generate Golay complementary pair
-    fn generate_golay(&self, length: usize) -> Array1<Complex64> {
+    fn generate_golay(length: usize) -> Array1<Complex64> {
         let mut golay = Array1::<Complex64>::zeros([length]);
 
         for i in 0..length {

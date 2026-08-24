@@ -70,6 +70,11 @@ pub fn l2_objective(
 /// - Returns [`Err`] if an internal constraint is violated.
 ///
 #[must_use]
+///
+/// # Panics
+///
+/// Panics if a caller-supplied shape or an internal solver state violates
+/// the precondition required by this operation.
 pub fn reverse_time_axis(data: &Array2<f64>) -> Array2<f64> {
     data.slice_with(&s![.., ..;-1]).unwrap().to_contiguous()
 }
@@ -84,6 +89,11 @@ pub fn reverse_time_axis(data: &Array2<f64>) -> Array2<f64> {
 /// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
 /// - Propagates any [`crate::KwaversError`] returned by called functions.
 ///
+///
+/// # Panics
+///
+/// Panics if a caller-supplied shape or an internal solver state violates
+/// the precondition required by this operation.
 pub fn accumulate_signed_correlation(
     gradient: &mut Array3<f64>,
     forward: ArrayView3<'_, f64>,

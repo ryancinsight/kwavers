@@ -79,6 +79,12 @@ pub fn board_rise_k(
 /// constraints. Channels are balanced (`ceil(total/boards)` on the busiest tile). Scans board count
 /// upward from the capacity floor and returns the first thermally-and-dimensionally feasible plan;
 /// if none fits, returns the best attempt with `feasible = false` and the binding `limiter`.
+///
+/// # Panics
+///
+/// Panics if the non-empty board-count scan produces no candidate despite
+/// nonzero `total_channels` and `channel_cap`. The input guard and inclusive
+/// scan range make that an internal invariant violation.
 #[must_use]
 pub fn optimize_stack(
     total_channels: usize,

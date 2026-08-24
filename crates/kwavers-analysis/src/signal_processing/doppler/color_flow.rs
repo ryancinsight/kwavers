@@ -68,7 +68,7 @@ impl ColorFlowImaging {
 
         // Apply spatial averaging if configured
         if let Some((axial_size, lateral_size)) = self.config.spatial_averaging {
-            velocity = self.spatial_average(&velocity, axial_size, lateral_size);
+            velocity = Self::spatial_average(&velocity, axial_size, lateral_size);
         }
 
         Ok(DopplerResult {
@@ -80,18 +80,17 @@ impl ColorFlowImaging {
         })
     }
 
-    /// Exposed for testing — the method is otherwise private.
+    /// Exposed for testing; the helper is otherwise private.
     #[cfg(test)]
     pub(crate) fn spatial_average_pub(
-        &self,
         data: &Array2<f64>,
         axial: usize,
         lateral: usize,
     ) -> Array2<f64> {
-        self.spatial_average(data, axial, lateral)
+        Self::spatial_average(data, axial, lateral)
     }
 
-    fn spatial_average(&self, data: &Array2<f64>, axial: usize, lateral: usize) -> Array2<f64> {
+    fn spatial_average(data: &Array2<f64>, axial: usize, lateral: usize) -> Array2<f64> {
         let [n_depths, n_beams] = data.shape();
         let mut averaged = data.clone();
 
@@ -183,7 +182,7 @@ mod tests {
             "prf mismatch: expected {prf}, got {}",
             result.prf
         );
-        assert!(result.power.is_none(), "power should be None");
+        assert_eq!(result.power, None, "power should be None");
     }
 
     // ─── process: output shape ────────────────────────────────────────────────
@@ -235,18 +234,9 @@ mod tests {
     /// because the impl clones the input before averaging.
     #[test]
     fn color_flow_spatial_average_box_filter_on_constant_map() {
-        let cfg = ColorFlowConfig {
-            autocorrelation: AutocorrelationConfig::default(),
-            wall_filter: WallFilterConfig {
-                filter_type: WallFilterType::HighPass,
-                prf: 4e3,
-            },
-            spatial_averaging: Some((3, 3)),
-        };
-        let cfi = ColorFlowImaging::new(cfg);
         let c = 7.5_f64;
         let data = Array2::from_elem((5, 5), c);
-        let averaged = cfi.spatial_average_pub(&data, 3, 3);
+        let averaged = ColorFlowImaging::spatial_average_pub(&data, 3, 3);
         // All interior cells (i∈1..4, j∈1..4) must equal c.
         for i in 1..4 {
             for j in 1..4 {

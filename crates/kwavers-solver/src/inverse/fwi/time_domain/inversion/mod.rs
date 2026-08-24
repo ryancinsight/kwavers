@@ -45,7 +45,7 @@ impl FwiProcessor {
         }
 
         let mut current_model = initial_model.clone();
-        self.apply_model_constraints(&mut current_model);
+        Self::apply_model_constraints(&mut current_model);
         let mut prev_objective: Option<f64> = None;
         let max_iterations = self.parameters.max_iterations;
 
@@ -151,7 +151,7 @@ impl FwiProcessor {
         }
 
         let mut updated_model = current_model - &(&normalized_gradient * step_size);
-        self.apply_model_constraints(&mut updated_model);
+        Self::apply_model_constraints(&mut updated_model);
         Ok((objective, updated_model, step_size))
     }
 
@@ -177,7 +177,7 @@ impl FwiProcessor {
     ) -> KwaversResult<(f64, Array3<f64>)> {
         let (objective, gradient) =
             self.forward_misfit_raw_gradient(current_model, observed_data, geometry, grid)?;
-        let smoothed_gradient = self.smooth_gradient(&gradient);
+        let smoothed_gradient = Self::smooth_gradient(&gradient);
         let regularized_gradient =
             self.apply_regularization(&smoothed_gradient, current_model, dtv_scale)?;
         Ok((objective, regularized_gradient))

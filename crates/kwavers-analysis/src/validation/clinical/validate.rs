@@ -109,7 +109,7 @@ impl ClinicalValidator {
             }
         }
 
-        let clinical_score = self.calculate_clinical_score(&metrics, reqs);
+        let clinical_score = Self::calculate_clinical_score(&metrics, reqs);
 
         Ok(ClinicalValidationResult {
             passed,
@@ -294,7 +294,6 @@ impl ClinicalValidator {
 
     /// Calculate overall clinical acceptability score.
     pub(super) fn calculate_clinical_score(
-        &self,
         metrics: &HashMap<String, f64>,
         reqs: &ClinicalRequirements,
     ) -> f64 {

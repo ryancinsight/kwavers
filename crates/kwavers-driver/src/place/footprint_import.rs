@@ -31,6 +31,18 @@ use crate::place::footprint::{FootprintDef, Model3D, PadDef, Role};
 /// or pad numbers) that are power/ground (the geometry file does not carry that intent). The courtyard
 /// is taken from the `F.CrtYd` extents (falling back to the pad bounding box plus 0.25 mm). SMD pads
 /// are reachable on the top layer; thru-hole/NPTH pads on all layers.
+///
+/// # Errors
+///
+/// Returns a parsing or I/O error when the footprint file cannot be read, is malformed, or does
+/// not contain the pad and geometry data required to construct a valid footprint.
+///
+/// # Panics
+///
+/// Panics if the parsed S-expression reports a list head while not exposing
+/// list storage, or if a KiCad `start`/`end` node reports a non-list value.
+/// These are parser representation invariants; malformed source data is
+/// otherwise returned as a typed parsing error.
 pub fn import_kicad_mod(
     path: impl AsRef<std::path::Path>,
     role: Role,
@@ -118,7 +130,7 @@ pub fn import_kicad_mod(
                 pad_names.push(pad_name);
             }
             // Accumulate courtyard extents from F.CrtYd graphics only.
-            Some("fp_line") | Some("fp_poly") | Some("fp_rect")
+            Some("fp_line" | "fp_poly" | "fp_rect")
                 if child(item, "layer")
                     .and_then(|l| l.as_list()?.get(1)?.as_atom())
                     .map(|s| s.contains("CrtYd"))

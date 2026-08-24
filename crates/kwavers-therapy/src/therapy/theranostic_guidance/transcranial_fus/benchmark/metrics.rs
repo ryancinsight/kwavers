@@ -4,6 +4,12 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 
 use super::types::PressureFieldMetrics;
 
+/// Evaluate spatial error and energy metrics for a candidate pressure field.
+///
+/// # Errors
+///
+/// Returns an error when pressure fields have different shapes, spacing is
+/// invalid, or the reference field has no finite energy.
 pub fn evaluate_pressure_field(
     reference_pressure_pa: &Array3<f32>,
     candidate_pressure_pa: &Array3<f32>,

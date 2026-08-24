@@ -11,6 +11,12 @@ use super::metrics::evaluate_pressure_field;
 use super::placement::select_skull_aware_placement;
 use super::types::{SkullAdaptiveBenchmarkConfig, SkullAdaptiveBenchmarkResult};
 
+/// Run the skull-adaptive transcranial benchmark pipeline.
+///
+/// # Errors
+///
+/// Returns an error when volume shapes, masks, spacing, target index, or
+/// benchmark configuration are inconsistent.
 pub fn run_skull_adaptive_transcranial_benchmark(
     ct_hu: &Array3<f64>,
     skull_mask: &Array3<bool>,

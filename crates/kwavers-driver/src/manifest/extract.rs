@@ -13,6 +13,11 @@ use super::driver_manifest::DriverManifest;
 use super::stimulation::StimulationProgram;
 
 /// Build the HV board portion of the manifest from the placed/routed design.
+///
+/// # Errors
+///
+/// Returns `Err(String)` when the transducer connector is missing, its TX nets or footprint pads
+/// are inconsistent, or the board geometry cannot satisfy the manifest contract.
 pub fn hv_manifest_from_board(
     board_path: &Path,
     board: &Board,

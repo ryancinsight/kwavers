@@ -104,7 +104,7 @@ impl MonolithicCoupler {
                     }
                 }
                 _ => continue,
-            };
+            }
 
             let mut res_block = residual
                 .slice_with_mut::<3>(&s![row_start..row_start + nx, .., ..])

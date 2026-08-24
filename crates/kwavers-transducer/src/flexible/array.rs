@@ -106,7 +106,7 @@ impl FlexibleTransducerArray {
         };
 
         // Update geometry state
-        let normals = self.calculate_normals(&new_positions);
+        let normals = Self::calculate_normals(&new_positions);
         self.geometry_state.update_positions(new_positions, normals);
         self.geometry_state.timestamp = timestamp;
 
@@ -119,7 +119,7 @@ impl FlexibleTransducerArray {
     }
 
     /// Calculate element normals from positions
-    fn calculate_normals(&self, positions: &leto::Array2<f64>) -> leto::Array2<f64> {
+    fn calculate_normals(positions: &leto::Array2<f64>) -> leto::Array2<f64> {
         let n = positions.shape()[0];
         let mut normals = leto::Array2::zeros([n, 3]);
 
@@ -192,7 +192,7 @@ impl FlexibleTransducerArray {
                 // Scalar extraction at formula boundary.
                 let strain =
                     self.calculate_strain(curvature_per_meter, thickness.in_unit::<Meter>());
-                let stress = self.calculate_stress(&strain, young_modulus.in_unit::<Pascal>());
+                let stress = Self::calculate_stress(&strain, young_modulus.in_unit::<Pascal>());
 
                 let mut deformation = DeformationState {
                     curvature_radius: if curvature_per_meter > 0.0 {
@@ -253,11 +253,7 @@ impl FlexibleTransducerArray {
     }
 
     /// Calculate stress from strain
-    fn calculate_stress(
-        &self,
-        strain: &[Dimensionless<f64>],
-        young_modulus: f64,
-    ) -> Vec<Pressure<f64>> {
+    fn calculate_stress(strain: &[Dimensionless<f64>], young_modulus: f64) -> Vec<Pressure<f64>> {
         strain
             .iter()
             .map(|s| Pressure::from_unit::<Pascal>(s.into_base() * young_modulus))

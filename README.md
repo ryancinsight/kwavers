@@ -34,7 +34,7 @@
 **Recently completed:** the workspace crate split (ADR-011) — the ~460k-LOC
 `kwavers` monolith is decomposed into per-layer crates to cut incremental build
 times. There is **no facade**: consumers (including the Python bindings) depend on
-the layer crates directly (`kwavers_core`, `kwavers_domain`, `kwavers_solver`, …).
+the layer crates directly (`kwavers_core`, `kwavers_grid`, `kwavers_solver`, …).
 The `kwavers` crate is now only a thin top-level **app/integration** crate — it
 hosts the binary and the cross-cutting tests/examples/benches, and re-exports
 nothing.
@@ -43,18 +43,30 @@ nothing.
 
 | Crate | Layer / responsibility |
 |-------|------------------------|
-| `kwavers-core` | Constants, error types, arena allocation, time/logging utilities |
-| `kwavers-math` | FFT, linear algebra, numerics, geometry, statistics, SIMD |
-| `kwavers-domain` | Grid, medium, source, sensor, boundary, field, signal, imaging, therapy models |
-| `kwavers-physics` | Nonlinear acoustics, bubble dynamics, thermal, optics, chemistry, elastic waves |
-| `kwavers-solver` | FDTD / PSTD / k-space / Helmholtz, BEM, FWI / RTM / CBS, PINN |
-| `kwavers-analysis` | Signal processing, beamforming, validation, ML/uncertainty, plotting |
-| `kwavers-simulation` | Builders, runners, multi-physics coupling, modality pipelines, backends |
-| `kwavers-diagnostics` | Reconstruction, multi-modal fusion, Doppler, spectroscopy, decision support |
-| `kwavers-therapy` | HIFU / histotripsy / lithotripsy planning, theranostic guidance, dose & safety |
-| `kwavers-gpu` | wgpu/WGSL compute backend (leaf above solver); concrete `ComputeBackend` impls |
-| `kwavers` | Thin top-level app/integration crate: binary + cross-cutting tests/examples/benches (no re-exports) |
-| `kwavers-python` | PyO3 bindings (`pykwavers`); depends on the layer crates directly; no domain logic |
+| [`kwavers-core`](crates/kwavers-core) | Constants, error types, arena allocation, time/logging utilities |
+| [`kwavers-math`](crates/kwavers-math) | FFT, linear algebra, numerics, geometry, statistics, SIMD |
+| [`kwavers-grid`](crates/kwavers-grid) | Cartesian/cylindrical grids, coordinates, topology, operators, geometric domains |
+| [`kwavers-field`](crates/kwavers-field) | Field component indices (SSOT), field-type mapping, operations, statistics |
+| [`kwavers-signal`](crates/kwavers-signal) | Waveforms, pulses, sweeps, modulation, windowing, filters |
+| [`kwavers-medium`](crates/kwavers-medium) | Homogeneous/heterogeneous media, acoustic/elastic/optical/thermal properties |
+| [`kwavers-phantom`](crates/kwavers-phantom) | Clinical tissue-phantom builders and Shepp-Logan references |
+| [`kwavers-mesh`](crates/kwavers-mesh) | Tetrahedral FEM meshes, quality metrics, gaia bridge |
+| [`kwavers-boundary`](crates/kwavers-boundary) | CPML/PML absorbing layers, FEM/BEM boundaries, coupling, periodic |
+| [`kwavers-source`](crates/kwavers-source) | `Source` trait, grid/mask sources, wavefronts, apodization |
+| [`kwavers-receiver`](crates/kwavers-receiver) | Sensor-array geometry (SSOT), recorders, point sensors, grid sampling |
+| [`kwavers-transducer`](crates/kwavers-transducer) | Bowls, phased/linear/matrix/hemispherical arrays, beamforming, PAM, ultrafast |
+| [`kwavers-imaging`](crates/kwavers-imaging) | DICOM/CT/NIfTI loaders, ultrasound/photoacoustic models, CEUS, fusion |
+| [`kwavers-physics`](crates/kwavers-physics) | Nonlinear acoustics, bubble dynamics, thermal, optics, chemistry, elastic waves |
+| [`kwavers-solver`](crates/kwavers-solver) | FDTD / PSTD / k-space / Helmholtz, BEM, FWI / RTM / CBS, PINN |
+| [`kwavers-gpu`](crates/kwavers-gpu) | Hephaestus-backed provider-generic GPU backend; concrete `ComputeBackend` impls |
+| [`kwavers-simulation`](crates/kwavers-simulation) | Builders, runners, multi-physics coupling, modality pipelines, backends |
+| [`kwavers-analysis`](crates/kwavers-analysis) | Signal processing, conservation, validation, ML/uncertainty, plotting |
+| [`kwavers-diagnostics`](crates/kwavers-diagnostics) | Reconstruction, multi-modal fusion, Doppler, spectroscopy, decision support |
+| [`kwavers-therapy`](crates/kwavers-therapy) | HIFU / histotripsy / lithotripsy planning, theranostic guidance, dose & safety |
+| [`kwavers-driver`](crates/kwavers-driver) | Physics-guided, manufacturing-aware driver-electronics (PCB) design |
+| [`kwavers-alloc-probe`](crates/kwavers-alloc-probe) | Thread-scoped allocation counting for allocation-contract tests |
+| [`kwavers`](crates/kwavers) | Thin top-level app/integration crate: binary + cross-cutting tests/examples/benches (no re-exports) |
+| [`kwavers-python`](crates/kwavers-python) | PyO3 bindings (`pykwavers`); depends on the layer crates directly; no domain logic |
 
 Tyche owns reproducible counter streams, Latin-hypercube and Sobol designs,
 online moments, correlation screening, and finite-sample conformal
@@ -69,9 +81,11 @@ remains solver-owned. See
 Layer crates are at `3.0.0`; the completed split targets `4.0.0` (see
 [RELEASE_v4.0.0 notes in CHANGELOG](CHANGELOG.md)). `kwavers-python` is `0.1.0`.
 
-Validation status: `pykwavers` reaches 1-to-1 PSTD parity with k-Wave /
-k-wave-python / KWave.jl on the homogeneous-water IVP benchmark (Pearson
-r ≥ 0.9999 across 1-D/2-D/3-D; see [Reference Benchmark Coverage](#reference-benchmark-coverage)).
+Validation status: the k-space pseudospectral solver matches the k-Wave
+reference solver on the homogeneous-water IVP benchmark at Pearson
+r = 1.000000000 (2-D) and r = 0.999999994 (3-D). The comparison is a Rust test in
+the default gate against reference fields committed to this repository — see
+[Reference Benchmark Coverage](#reference-benchmark-coverage).
 
 ### Python Releases
 
@@ -296,6 +310,16 @@ This is an active research project under development. Contributions are welcome!
 4. **Run Tests**: `cargo nextest run -p <crate>`; use `cargo test -p <crate> --doc`
    for doctests
 5. **Read Docs**: [`docs/book/`](docs/book/) for narratives, [`docs/ADR/`](docs/ADR/) for design decisions
+6. **Install the hooks**: `git config core.hooksPath .githooks`
+
+   Git never applies tracked hooks on its own, so this is a one-time step per
+   clone. The `pre-push` hook runs `scripts/lockfile.py --check`, which is the
+   same check CI runs. It matters most when working inside the Atlas stack: the
+   stack's `[patch]` overlay makes cargo resolve first-party dependencies to
+   local paths and write a `Cargo.lock` with every `source = "git+..."` line
+   stripped. That lock resolves fine under the overlay and fails every
+   `--locked` job in CI, so without the hook the corruption is invisible until a
+   runner reports it. Repair with `python3 scripts/lockfile.py --regenerate`.
 
 ### 📊 Development Approach
 
@@ -358,18 +382,64 @@ Kwavers is licensed under the **MIT License**. See [LICENSE](LICENSE) for detail
 
 ### Reference Benchmark Coverage
 
-The MATLAB-free benchmark harness in `external/k-wave-julia/benchmarks/kwavers`
-compares the same homogeneous-water IVP Gaussian source case across KWave.jl,
-k-wave-python, and pykwavers for 1-D, 2-D, and 3-D. Native MATLAB k-Wave source
-is present in `external/k-wave`, but it is not executed unless MATLAB or Octave
-is available.
+`crates/kwavers/tests/kwave_reference_parity.rs` compares the k-space
+pseudospectral solver against k-Wave on the homogeneous-water IVP Gaussian case.
+The reference fields live in `crates/kwavers/tests/reference/kwave/` (156 KB), so
+the test runs from a clean clone in the default gate with no external solver
+present. `scripts/generate_kwave_reference.py` regenerates them by driving
+`k-wave-python` over the reference `kspaceFirstOrder-OMP` binary.
 
-| Dimension | KWave.jl | k-wave-python | pykwavers | Current result |
-|-----------|----------|---------------|-----------|----------------|
-| 1-D | Native `KWaveGrid(nx, dx)` | Native Python backend | `(nx, 1, 1)` active grid | PASS: k-wave-python r=0.999977, pykwavers r=0.999976 |
-| 2-D | Native `KWaveGrid(nx, dx, nx, dx)` | Native Python backend | `(nx, nx, 1)` active grid | PASS: k-wave-python r=0.999948, pykwavers r=0.999948 |
-| 3-D | Native `KWaveGrid(nx, dx, nx, dx, nx, dx)` | Native Python backend | `(nx, nx, nx)` active grid | PASS: k-wave-python r=0.999909, pykwavers r=0.999909 |
-| MATLAB k-Wave | Source available | Not applicable | Not applicable | Not run without MATLAB/Octave |
+Both codes run the same grid, time step, step count, and Treeby-Cox k-space
+correction, and are compared over a centred window the wavefront has entered but
+neither code's boundary treatment has reached.
+
+| Case | Grid | Steps | Relative L2 | Relative L-inf | Pearson r |
+|------|------|-------|-------------|----------------|-----------|
+| `ivp_homogeneous_2d` | 64 × 64 | 100 | 5.50e-7 | 1.05e-6 | 1.000000000 |
+| `ivp_homogeneous_3d` | 32 × 32 × 32 | 50 | 1.06e-4 | 2.20e-4 | 0.999999994 |
+| `ivp_absorbing_2d` | 64 × 64 | 100 | 8.10e-3 | 4.99e-3 | 0.999999924 |
+| `ivp_layered_2d` | 80 × 64 | 120 | 7.97e-3 | 1.54e-2 | 0.999963422 |
+| `src_tone_burst_2d` | 96 × 80 | 151 | 2.58e-3 | 2.20e-3 | 0.999996674 |
+| `src_nonlinear_2d` | 96 × 80 | 151 | 3.30e-3 | 2.80e-3 | 0.999994550 |
+
+The finite-difference solver is measured against the same reference as a
+cross-scheme check, since the pseudospectral solver shares its k-space machinery
+and cannot be an independent oracle for it. It separates by `2.53e-2` relative
+L2 at `r = 0.999647`, which is its own fourth-order dispersion error and is
+gated as such rather than at the pseudospectral bound.
+
+`ivp_absorbing_2d` is the lossless 2-D case with power-law absorption
+(`40 dB/(MHz^1.5 cm)`, `y = 1.5`) and nothing else changed, so the pair isolates
+the absorption model; the test asserts both that kwavers matches the absorbing
+reference and that the absorbing field separates from the lossless one, since
+agreement alone would not prove the model ran.
+
+`ivp_layered_2d` steps sound speed and density across a smoothed interface eight
+cells from the seed, so the recorded field carries a transmitted wave, a
+reflection, and a refracted front; it is measured against a uniform-medium run at
+the same discretization, which it separates from by `0.27`. Its grid is
+deliberately non-square — a square case cannot distinguish a correct axis
+orientation from a transposed one, and two such conventions were live in the
+harness until this case exposed them.
+
+`src_tone_burst_2d` drives a Gaussian-windowed 3 MHz burst from a single
+off-centre cell, starting from a zero field. It is the only case that reaches
+the source injection path, and it checks four conventions at once: the mask's
+cell lookup, the per-step signal indexing, k-Wave's source-term scaling, and the
+k-space source correction.
+
+`src_nonlinear_2d` is that case with finite-amplitude propagation switched on
+(`B/A = 20` at 5 MPa), sized to reach roughly seventy percent of the plane-wave
+shock distance — as far into the nonlinear regime as the smooth-wave assumption
+reaches, since neither code has shock capturing. It separates from a linear run
+by `4.58e-2`, fourteen times its own residual.
+
+`k-wave-python` ships no 1-D solver, so there is no 1-D row; the axisymmetric
+case is a separate geometry and is not yet covered. Elastic propagation and
+distributed (multi-cell) sources have no committed reference field yet and are
+not covered by this result.
+[ADR 119](docs/adr/119-kwave-reference-oracle.md) records the reference
+provenance, the tolerance derivation, and what the comparison does not establish.
 
 ### Key Publications
 1. Treeby & Cox (2010) - "k-Wave: MATLAB toolbox for photoacoustic simulation" - J. Biomed. Opt. 15(2), 021314

@@ -610,7 +610,7 @@ fn test_adaptive_buffer_policy() {
         thread::sleep(Duration::from_millis(5));
 
         match stream.send_frame_blocking(frame) {
-            Ok(_) => sent += 1,
+            Ok(()) => sent += 1,
             Err(_) => break,
         }
     }

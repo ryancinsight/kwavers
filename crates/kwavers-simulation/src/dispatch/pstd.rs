@@ -34,6 +34,11 @@ fn embed_leto3(
 // ── PSTD (acoustic-only) ──────────────────────────────────────────────────────
 
 /// Run a PSTD (acoustic-only) simulation.
+///
+/// # Errors
+///
+/// Returns an error when PSTD setup, source registration, propagation, or
+/// result extraction fails.
 pub fn run(
     req: &SimulationRunRequest<'_>,
     sources: Vec<Box<dyn KwaversSource>>,
@@ -46,6 +51,11 @@ pub fn run(
 // ── PSTD + Thermal ────────────────────────────────────────────────────────────
 
 /// Run a PSTD simulation with thermal coupling.
+///
+/// # Errors
+///
+/// Returns an error when PSTD or thermal setup fails, or when propagation and
+/// coupled result extraction cannot complete.
 pub fn run_with_thermal(
     req: &SimulationRunRequest<'_>,
     sources: Vec<Box<dyn KwaversSource>>,
@@ -259,7 +269,11 @@ pub(crate) fn prepare_solver(
 
     let absorption_mode = if effective_alpha_db > 0.0 {
         AbsorptionMode::PowerLaw {
-            alpha_coeff: effective_alpha_db,
+            // Only a coefficient the caller actually supplied is passed on. The
+            // medium's own value is left to the solver, which reads it per
+            // voxel; forwarding a single origin sample here would flatten a
+            // heterogeneous medium to one number (ADR 120).
+            alpha_coeff: (nl.alpha_coeff > 0.0).then_some(nl.alpha_coeff),
             alpha_power: effective_alpha_power,
         }
     } else {

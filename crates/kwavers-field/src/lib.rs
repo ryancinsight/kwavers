@@ -1,3 +1,6 @@
+#![deny(missing_docs)]
+#![doc = include_str!("../README.md")]
+
 pub mod bubble;
 pub mod electromagnetic;
 pub mod r#type;
@@ -12,4 +15,6 @@ pub mod mapping;
 pub mod wave;
 
 // Re-export leto array types used by field modules.
+/// Array types from [`leto`] used by the field modules, re-exported for
+/// caller convenience.
 pub use leto::{Array3, Array4, ArrayD, ArrayView3, ArrayViewMut3, VecStorage};

@@ -301,10 +301,10 @@ impl Octree {
     /// Count total nodes
     #[must_use]
     pub fn node_count(&self) -> usize {
-        self.count_nodes(&self.root)
+        Self::count_nodes(&self.root)
     }
 
-    fn count_nodes(&self, node: &OctreeNode) -> usize {
+    fn count_nodes(node: &OctreeNode) -> usize {
         Self::count_nodes_recursive(node)
     }
 
@@ -321,10 +321,10 @@ impl Octree {
     /// Count leaf nodes
     #[must_use]
     pub fn leaf_count(&self) -> usize {
-        self.count_leaves(&self.root)
+        Self::count_leaves(&self.root)
     }
 
-    fn count_leaves(&self, node: &OctreeNode) -> usize {
+    fn count_leaves(node: &OctreeNode) -> usize {
         Self::count_leaves_recursive(node)
     }
 

@@ -10,22 +10,25 @@ use std::sync::Arc;
 impl AcousticSolverBackend for FdtdBackend {
     fn step(&mut self) -> KwaversResult<()> {
         self.solver.step_forward()?;
-        self.sync_shadow_fields();
         self.current_time += self.solver.config.dt;
         Ok(())
     }
 
     fn get_pressure_field(&self) -> &Array3<f64> {
-        &self.pressure
+        &self.solver.fields.p
     }
 
     fn get_velocity_fields(&self) -> (&Array3<f64>, &Array3<f64>, &Array3<f64>) {
-        (&self.ux, &self.uy, &self.uz)
+        (
+            &self.solver.fields.ux,
+            &self.solver.fields.uy,
+            &self.solver.fields.uz,
+        )
     }
 
     fn get_intensity_field(&self) -> KwaversResult<Array3<f64>> {
         // Plane-wave approximation: I = p² / (ρc) = p² / Z
-        let p = &self.pressure;
+        let p = &self.solver.fields.p;
         let rho = &self.solver.materials.rho0;
         let c = &self.solver.materials.c0;
         let mut result = Array3::<f64>::zeros(p.shape());

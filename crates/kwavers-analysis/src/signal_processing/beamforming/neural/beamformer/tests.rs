@@ -79,11 +79,8 @@ fn test_process_adaptive() {
 
 #[test]
 fn test_signal_quality_assessment() {
-    let config = NeuralBeamformingConfig::default();
-    let beamformer = NeuralBeamformer::new(config).unwrap();
-
     let rf_data = create_test_rf_data();
-    let quality = beamformer.assess_signal_quality(&rf_data).unwrap();
+    let quality = NeuralBeamformer::assess_signal_quality(&rf_data).unwrap();
     assert!((0.0..=1.0).contains(&quality));
 }
 

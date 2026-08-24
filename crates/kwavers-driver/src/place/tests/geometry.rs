@@ -128,7 +128,7 @@ fn component_clearance_detects_inflated_courtyard_overlap() {
 // ────────────────────────────────────────────────────────────────────────────
 // Section E — Tests lifted from src/place/symbol_import.rs::tests.
 // The `PinMap` round-trip covers the function-name ↔ pad-number identity the
-// schematic gives us; the two byte-tracking pinning tests lock the Phase 1d
+// schematic gives us; the two byte-tracking pinning tests lock the
 // polish contract for unclosed quoted tokens (name + number). Together they
 // exhaustively test the module's parse + lookup surface without touching the
 // real vendor .kicad_sym fixtures (whose exact pinmap shape is datasheet-
@@ -197,7 +197,7 @@ fn pinmap_empty_map_reports_empty_state() {
 fn unclosed_quoted_name_token_reports_byte_offset_of_open_quote() {
     // The trailing `)` would close the `(pin …)` form with a `Vec<(usize, bool,
     // String)>` that contains zero events, so the caller falls through to the
-    // `no_pins` early-return — which would mask the real bug. The Phase 1d polish
+    // `no_pins` early-return — which would mask the real bug. The
     // surfaces `Manifest::Parse` from inside `quoted_events` instead. The byte
     // offset carried in the envelope is `qstart - 1`, which lands on the opening
     // `"` of the unclosed name token (the byte just before `qstart = from + idx +

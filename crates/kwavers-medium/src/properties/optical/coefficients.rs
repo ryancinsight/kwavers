@@ -17,6 +17,12 @@ impl OpticalPropertyData {
     }
 
     /// Return the reduced scattering coefficient in inverse metres.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the validated optical coefficients no longer satisfy the
+    /// reduced-scattering contract. Construction validates this invariant, so
+    /// a panic indicates invalid internal state.
     #[must_use]
     pub fn reduced_scattering_coefficient(&self) -> f64 {
         reduced_scattering(*self.coefficients.scattering(), self.anisotropy)

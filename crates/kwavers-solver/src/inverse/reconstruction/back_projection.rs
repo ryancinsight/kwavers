@@ -107,7 +107,7 @@ impl Reconstructor for UniversalBackProjection {
         Ok(reconstructed)
     }
 
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "Universal Back-Projection"
     }
 }

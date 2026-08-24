@@ -19,6 +19,11 @@ fn ndarray_from_leto2(arr: leto::Array2<f64>) -> leto::Array2<f64> {
 }
 
 /// Run an elastic-wave simulation.
+///
+/// # Errors
+///
+/// Returns an error when the initial displacement shape is invalid, the
+/// elastic solver cannot be constructed, or propagation and recording fail.
 pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult> {
     let (nx, ny, nz) = req.grid.dimensions();
     let u0_opt = match &req.grid_source.p0 {

@@ -68,7 +68,7 @@ fn test_plane_wave_mask_boundary_only() {
     println!("  Max value: {:.6}", max_val);
     println!("  Z indices with sources: {:?}", {
         let mut v: Vec<_> = z_indices_with_nonzero.iter().copied().collect();
-        v.sort();
+        v.sort_unstable();
         v
     });
 

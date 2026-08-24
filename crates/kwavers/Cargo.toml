@@ -145,6 +145,8 @@ coeus-tensor = { workspace = true }
 ritk-image = { workspace = true }
 ritk-spatial = { workspace = true }
 tempfile = { workspace = true }
+# Reads the committed k-Wave reference archives in kwave_reference_parity.rs.
+consus-npy = { workspace = true }
 hephaestus-wgpu = { workspace = true }
 
 # Concurrency testing (Sprint 138 - Persona Requirements)
@@ -157,8 +159,6 @@ gpu = ["kwavers-gpu/gpu", "kwavers-math/gpu", "kwavers-solver/gpu", "kwavers-ana
 cuda-provider = ["gpu", "kwavers-gpu/cuda-provider"]
 cuda-runtime = ["cuda-provider", "kwavers-gpu/cuda-runtime"]
 plotting = ["dep:plotly", "kwavers-analysis/plotting"]
-# Additional features referenced in code
-dicom = []             # No-op alias retained for back-compat; DICOM I/O is unconditional via ritk-io.
 
 nightly = []           # Nightly Rust features
 simd = []              # SIMD acceleration support
@@ -170,7 +170,12 @@ web-visualization = ["plotting"]      # Web-based visualization
 # kwavers-analysis/gpu-visualization but egui is now opt-in via
 # kwavers-analysis's "egui" feature (which kwavers root does not enable by
 # default).
-gpu-visualization = ["gpu", "plotting", "kwavers-analysis/gpu-visualization"] # GPU-accelerated visualization
+gpu-visualization = [
+    "gpu",
+    "plotting",
+    "kwavers-analysis/gpu-visualization",
+    "kwavers-gpu/visualization",
+] # Selectable Leto or Hephaestus visualization transfer
 vr-support = []        # VR headset support (future)
 # Sprint 138 - Persona Requirements
 async-runtime = ["kwavers-solver/async-runtime"]        # Retained feature gate; runtime ownership is below top-level kwavers.
@@ -183,11 +188,7 @@ opast = []                           # OPAST benchmarks (Criterion)
 # Sprint 159 - Enterprise API for production deployment
 # Feature flags for conditional compilation (used in tests/examples)
 em_pinn_module_exists = []          # Conditional feature for electromagnetic PINN tests
-# NOTE: ritk-core and ritk-io are now mandatory dependencies (see [dependencies]),
-# so the former `ritk` feature is a no-op alias retained only for callers that
-# still pass `--features ritk` on the CLI. New code should not gate on it.
-ritk = []
-full = ["gpu", "plotting", "dicom", "advanced-visualization", "gpu-visualization", "async-runtime", "structured-logging", "zero-copy", "pinn"]
+full = ["gpu", "plotting", "advanced-visualization", "gpu-visualization", "async-runtime", "structured-logging", "zero-copy", "pinn"]
 
 # SRS NFR-002 Compliant Test Configuration Strategy
 # ================================================
@@ -356,8 +357,8 @@ name = "hilbert_benchmark"
 harness = false
 required-features = ["gpu"]
 
-[lints.rust]
-unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
+[lints]
+workspace = true
 
 
 [[bench]]

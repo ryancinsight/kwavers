@@ -397,8 +397,9 @@ mod convergence_tests {
         }
     }
 
+    // Measured 2026-08-22: 0.8 s — fits the default suite; the previous
+    // bare ignore predates the nextest budget. Re-enabled.
     #[test]
-    #[ignore]
     fn test_displacement_convergence_study_runs() {
         let tester = ConvergenceTester::new();
         let results = tester.run_displacement_convergence_study();

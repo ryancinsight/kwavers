@@ -233,6 +233,11 @@ impl SonochemistryModel {
     }
 
     /// Update pH based on chemical reactions
+    ///
+    /// # Panics
+    ///
+    /// Panics only if the pH field loses its fixed dense shape, so indexed
+    /// iteration cannot be formed for the chemical state grid.
     pub fn update_ph(&mut self, dt: f64) {
         if let (Some(h2o2), Some(oh)) = (
             self.ros_concentrations.get(ROSSpecies::HydrogenPeroxide),

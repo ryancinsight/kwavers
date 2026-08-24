@@ -1,7 +1,4 @@
-//! Clinical Phantom Builders
-//!
-//! Provides realistic tissue phantom constructors for photoacoustic and optical imaging
-//! validation, protocol development, and algorithm testing.
+#![doc = include_str!("../README.md")]
 
 pub mod builder;
 mod error;

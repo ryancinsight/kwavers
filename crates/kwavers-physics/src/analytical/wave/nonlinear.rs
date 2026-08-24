@@ -50,6 +50,11 @@ pub fn fubini_harmonic_spectrum(n_max: u32, sigma: f64) -> Vec<f64> {
 /// Returns an error when dimensions are inconsistent, scalar parameters are not
 /// positive finite values, the trace is too short for a symmetric Hann window,
 /// or any input sample is non-finite.
+///
+/// # Panics
+///
+/// Panics only if the FFT backend rejects a windowed trace whose length was
+/// validated against `n_samples`.
 pub fn hann_windowed_harmonic_amplitudes(
     traces: &[f64],
     n_traces: usize,

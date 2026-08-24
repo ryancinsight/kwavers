@@ -49,6 +49,14 @@ fail-fast = false
 global-timeout = "30m"
 slow-timeout = { period = "60s", terminate-after = 5, grace-period = "10s" }
 
+# nl_swe_workflow is a full nonlinear inversion on a 16^3 grid whose solver is
+# rayon-parallelized. Measured 57.6 s on a 24-core dev box (2026-08-23); the
+# 4-core GitHub runner is ~6x slower, so the 300 s cap (5 x 60 s) kills it mid-
+# run. 600 s (10 x 60 s) fits the 4-core cold-cache budget with margin.
+[[profile.heavy.overrides]]
+filter = 'test(nl_swe_workflow)'
+slow-timeout = { period = "60s", terminate-after = 10, grace-period = "10s" }
+
 [test-groups]
 integration = { max-threads = 2 }
 # Full-grid FWI, theranostic, viscoacoustic, FDTD, and PSTD tests internally
@@ -72,12 +80,14 @@ test-group = 'full-grid-sim'
 
 # Heavy full-grid FDTD/PSTD acoustic-simulation binaries use the same capped
 # concurrency so their worker pools do not oversubscribe the CPU.
+# `swe_3d_validation` joined on 2026-08-22 when its benchmark and literature
+# tests were re-enabled (measured 17-25 s serial).
 [[profile.default.overrides]]
-filter = 'package(kwavers) & (binary(fdtd_pstd_comparison) | binary(property_based_tests) | binary(session2_source_injection_test) | binary(test_plane_wave_injection_fixed))'
+filter = 'package(kwavers) & (binary(fdtd_pstd_comparison) | binary(property_based_tests) | binary(session2_source_injection_test) | binary(test_plane_wave_injection) | binary(test_plane_wave_injection_fixed) | binary(swe_3d_validation))'
 test-group = 'full-grid-sim'
 
 [[profile.default.overrides]]
-filter = 'package(kwavers-solver) & test(/forward::viscoacoustic::tests::/)'
+filter = 'package(kwavers-solver) & (test(/forward::viscoacoustic::tests::/) | test(/kuznetsov/))'
 test-group = 'full-grid-sim'
 
 [[profile.default.overrides]]
@@ -94,6 +104,14 @@ test-group = 'gpu'
 
 [[profile.ci.overrides]]
 filter = 'test(abdominal_preprocessing_selects_one_connected_treatment_component) | test(abdominal_theranostic_inverse_recovers_lesion_support) | test(abdominal_preprocessing_keeps_external_skin_between_target_and_aperture) | test(brain_focused_bowl_layout_uses_requested_element_count) | test(recovers_stiff_inclusion) | test(fwi_outperforms_linear_inversion) | test(lbfgs_reconstructs_stiff_inclusion) | test(k_mu_gradient_3d_is_valid_descent_direction)'
+test-group = 'full-grid-sim'
+
+[[profile.ci.overrides]]
+filter = 'package(kwavers) & binary(swe_3d_validation)'
+test-group = 'full-grid-sim'
+
+[[profile.ci.overrides]]
+filter = 'package(kwavers-solver) & test(/kuznetsov/)'
 test-group = 'full-grid-sim'
 
 [[profile.local.overrides]]

@@ -347,13 +347,10 @@ mod tests {
     #[test]
     fn memory_pool_sequential_alloc_returns_non_null() {
         let mut pool = PerfMemoryPool::new(128, 16);
-        let p1 = pool.allocate(8);
-        let p2 = pool.allocate(8);
-        assert!(p1.is_some(), "first allocation must succeed");
-        assert!(p2.is_some(), "second allocation must succeed");
+        let p1 = pool.allocate(8).expect("first allocation must succeed");
+        let p2 = pool.allocate(8).expect("second allocation must succeed");
         assert_ne!(
-            p1.unwrap(),
-            p2.unwrap(),
+            p1, p2,
             "consecutive allocations must return distinct pointers"
         );
     }
@@ -364,10 +361,14 @@ mod tests {
     #[test]
     fn memory_pool_exhaustion_returns_none() {
         let mut pool = PerfMemoryPool::new(16, 8);
-        let p1 = pool.allocate(16);
-        assert!(p1.is_some(), "first allocation of 16 bytes must succeed");
+        let p1 = pool
+            .allocate(16)
+            .expect("first allocation of 16 bytes must succeed");
         let p2 = pool.allocate(1);
-        assert!(p2.is_none(), "allocation past capacity must return None");
+        assert_eq!(
+            p2, None,
+            "allocation past capacity (after {p1:?}) must return None"
+        );
     }
 
     /// `reset()` allows the same pool to be reused from the start.

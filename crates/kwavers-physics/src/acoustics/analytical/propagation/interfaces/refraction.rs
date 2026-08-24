@@ -33,7 +33,7 @@ mod tests {
         };
         assert!((a.incident - PI / 6.0).abs() < 1e-15);
         assert!((a.refracted - PI / 4.0).abs() < 1e-15);
-        assert!(a.critical.is_none());
+        assert_eq!(a.critical, None);
     }
 
     /// RefractionAngles stores Some critical angle.

@@ -45,12 +45,9 @@ fn test_selective_feature_extraction() {
 
 #[test]
 fn test_gradient_magnitude_constant_volume() {
-    let config = FeatureConfig::default();
-    let extractor = FeatureExtractor::new(config);
-
     // Constant volume should have zero gradient everywhere (except boundaries)
     let volume = Array3::<f32>::from_elem((10, 10, 10), 5.0);
-    let gradient = extractor.compute_gradient_magnitude(volume.view());
+    let gradient = FeatureExtractor::compute_gradient_magnitude(volume.view());
 
     // Check interior points (boundaries may have artifacts)
     for z in 2..8 {
@@ -64,9 +61,6 @@ fn test_gradient_magnitude_constant_volume() {
 
 #[test]
 fn test_gradient_magnitude_step_edge() {
-    let config = FeatureConfig::default();
-    let extractor = FeatureExtractor::new(config);
-
     // Create volume with step edge in x-direction
     let mut volume = Array3::<f32>::zeros((10, 10, 10));
     for z in 0..10 {
@@ -77,7 +71,7 @@ fn test_gradient_magnitude_step_edge() {
         }
     }
 
-    let gradient = extractor.compute_gradient_magnitude(volume.view());
+    let gradient = FeatureExtractor::compute_gradient_magnitude(volume.view());
 
     // Gradient should be strong at x=5 (edge location)
     // Central difference at x=5: (1.0 - 0.0) / 2.0 = 0.5
@@ -87,12 +81,9 @@ fn test_gradient_magnitude_step_edge() {
 
 #[test]
 fn test_laplacian_constant_volume() {
-    let config = FeatureConfig::default();
-    let extractor = FeatureExtractor::new(config);
-
     // Laplacian of constant function is zero
     let volume = Array3::<f32>::from_elem((10, 10, 10), 3.0);
-    let laplacian = extractor.compute_laplacian(volume.view());
+    let laplacian = FeatureExtractor::compute_laplacian(volume.view());
 
     for z in 2..8 {
         for y in 2..8 {
@@ -105,9 +96,6 @@ fn test_laplacian_constant_volume() {
 
 #[test]
 fn test_laplacian_spherical_blob() {
-    let config = FeatureConfig::default();
-    let extractor = FeatureExtractor::new(config);
-
     // Create spherical blob
     let mut volume = Array3::<f32>::zeros((20, 20, 20));
     let center = (10.0, 10.0, 10.0);
@@ -127,7 +115,7 @@ fn test_laplacian_spherical_blob() {
         }
     }
 
-    let laplacian = extractor.compute_laplacian(volume.view());
+    let laplacian = FeatureExtractor::compute_laplacian(volume.view());
 
     assert_relative_eq!(laplacian[[10, 10, 10]], 0.0, epsilon = 1e-6);
     assert!(laplacian[[14, 10, 10]] < 0.0);
@@ -150,12 +138,9 @@ fn test_speckle_variance_uniform_region() {
 
 #[test]
 fn test_homogeneity_uniform_region() {
-    let config = FeatureConfig::default();
-    let extractor = FeatureExtractor::new(config);
-
     // Uniform region should have maximum homogeneity (1.0)
     let volume = Array3::<f32>::from_elem((10, 10, 10), 2.0);
-    let homogeneity = extractor.compute_homogeneity(volume.view());
+    let homogeneity = FeatureExtractor::compute_homogeneity(volume.view());
 
     // Homogeneity = 1 / (1 + 0) = 1.0 for uniform region
     assert_relative_eq!(homogeneity[[5, 5, 5]], 1.0, epsilon = 1e-6);
@@ -163,12 +148,9 @@ fn test_homogeneity_uniform_region() {
 
 #[test]
 fn test_local_frequency_constant_region() {
-    let config = FeatureConfig::default();
-    let extractor = FeatureExtractor::new(config);
-
     // Constant region has zero variance (low frequency)
     let volume = Array3::<f32>::from_elem((10, 10, 10), 1.0);
-    let frequency = extractor.compute_local_frequency(volume.view());
+    let frequency = FeatureExtractor::compute_local_frequency(volume.view());
 
     assert_relative_eq!(frequency[[5, 5, 5]], 0.0, epsilon = 1e-6);
 }

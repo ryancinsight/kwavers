@@ -85,6 +85,11 @@ pub fn simulate_peak_pressure_exposure(
 ///
 /// Memory: checkpointing (Griewank 1992) reduces forward storage from
 /// O(T·N²) to O(√T·N²) at the cost of ≈1.5 forward passes.
+///
+/// # Panics
+///
+/// Panics if the prepared state, device layout, or waveform configuration has
+/// inconsistent dimensions for the adjoint time-stepping layout.
 #[must_use]
 pub fn simulate_waveform_adjoint_rtm(
     prepared: &PreparedTheranosticSlice,

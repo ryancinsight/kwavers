@@ -1,26 +1,4 @@
-//! # Kwavers — top-level application / integration crate
-//!
-//! `kwavers` is the thin top crate of the workspace. It does **not** re-export the
-//! layer crates — the former facade was removed (ADR 011 amendment). Depend on the
-//! layer crates directly:
-//!
-//! - `kwavers_core` — error types, logging, time, arena allocator
-//! - `kwavers_math` — FFT, geometry, linear algebra, SIMD, numerics, tensor
-//! - `kwavers_grid` / `kwavers_field` / `kwavers_signal` — discretization, field indices, signals
-//! - `kwavers_medium` / `kwavers_phantom` — materials and phantoms; optical
-//!   coefficients and their reference spectra live in `hyperion`
-//! - `kwavers_source` / `kwavers_receiver` / `kwavers_transducer` — excitation, recording, devices
-//! - `kwavers_boundary` / `kwavers_mesh` / `kwavers_imaging` — boundaries, meshes, medical imaging
-//! - `kwavers_physics` — acoustics, optics, thermal, chemistry, electromagnetic, therapy
-//! - `kwavers_solver` — forward (FDTD/PSTD/elastic), inverse (FWI/PINN), analytical
-//! - `kwavers_simulation` — orchestration, backends, modalities, result I/O (`io`)
-//! - `kwavers_analysis` — signal processing, beamforming, validation, ML, performance
-//! - `kwavers_diagnostics` / `kwavers_therapy` — clinical diagnostic imaging / therapy
-//! - `kwavers_gpu` (feature `"gpu"`) - Hephaestus-backed provider-generic GPU backend
-//!
-//! This crate carries only the binary (`main.rs`), the cross-cutting integration
-//! tests / examples / benches, and the small application utilities below.
-
+#![doc = include_str!("../README.md")]
 // Strict warning configuration for code quality
 #![warn(
     unused_imports,
@@ -47,6 +25,10 @@ use std::collections::HashMap;
 
 mod parallel;
 pub mod theranostic;
+
+/// Selectable visualization transfer composition.
+#[cfg(feature = "gpu-visualization")]
+pub mod visualization;
 
 /// Initialize logging for the kwavers application.
 /// # Errors

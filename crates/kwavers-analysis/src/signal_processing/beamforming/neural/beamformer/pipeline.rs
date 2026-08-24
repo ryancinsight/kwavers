@@ -109,7 +109,7 @@ impl NeuralBeamformer {
         rf_data: &Array4<f32>,
         steering_angles: &[Angle<f64>],
     ) -> KwaversResult<HybridBeamformingResult> {
-        let signal_quality = self.assess_signal_quality(rf_data)?;
+        let signal_quality = Self::assess_signal_quality(rf_data)?;
         let quality_threshold = self.config.adaptation_parameters.quality_threshold;
 
         if signal_quality > quality_threshold {

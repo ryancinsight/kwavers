@@ -21,13 +21,12 @@ impl MisfitFunction {
     /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn envelope_misfit(
-        &self,
         observed: &Array2<f64>,
         synthetic: &Array2<f64>,
     ) -> KwaversResult<f64> {
-        let env_obs = self.compute_envelope(observed)?;
-        let env_syn = self.compute_envelope(synthetic)?;
-        self.l2_misfit_arrays(&env_obs, &env_syn)
+        let env_obs = Self::compute_envelope(observed)?;
+        let env_syn = Self::compute_envelope(synthetic)?;
+        Self::l2_misfit_arrays(&env_obs, &env_syn)
     }
 
     /// Instantaneous phase misfit.
@@ -35,13 +34,12 @@ impl MisfitFunction {
     /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn phase_misfit(
-        &self,
         observed: &Array2<f64>,
         synthetic: &Array2<f64>,
     ) -> KwaversResult<f64> {
-        let phase_obs = self.compute_instantaneous_phase(observed)?;
-        let phase_syn = self.compute_instantaneous_phase(synthetic)?;
-        self.l2_misfit_arrays(&phase_obs, &phase_syn)
+        let phase_obs = Self::compute_instantaneous_phase(observed)?;
+        let phase_syn = Self::compute_instantaneous_phase(synthetic)?;
+        Self::l2_misfit_arrays(&phase_obs, &phase_syn)
     }
 
     /// Envelope adjoint source per Bozdağ et al. (2011), Eq. 11–13.
@@ -54,15 +52,14 @@ impl MisfitFunction {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(super) fn envelope_adjoint_source(
-        &self,
         observed: &Array2<f64>,
         synthetic: &Array2<f64>,
     ) -> KwaversResult<Array2<f64>> {
         let [ntraces, nsamples] = synthetic.shape();
         let mut adjoint = Array2::zeros((ntraces, nsamples));
 
-        let env_obs = self.compute_envelope(observed)?;
-        let env_syn = self.compute_envelope(synthetic)?;
+        let env_obs = Self::compute_envelope(observed)?;
+        let env_syn = Self::compute_envelope(synthetic)?;
 
         for i in 0..ntraces {
             let syn_trace = synthetic.index_axis::<1>(0, i).unwrap().to_contiguous();
@@ -95,15 +92,14 @@ impl MisfitFunction {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(super) fn phase_adjoint_source(
-        &self,
         observed: &Array2<f64>,
         synthetic: &Array2<f64>,
     ) -> KwaversResult<Array2<f64>> {
         let [ntraces, nsamples] = synthetic.shape();
         let mut adjoint = Array2::zeros((ntraces, nsamples));
 
-        let phase_obs = self.compute_instantaneous_phase(observed)?;
-        let phase_syn = self.compute_instantaneous_phase(synthetic)?;
+        let phase_obs = Self::compute_instantaneous_phase(observed)?;
+        let phase_syn = Self::compute_instantaneous_phase(synthetic)?;
 
         for i in 0..ntraces {
             let syn_trace = synthetic.index_axis::<1>(0, i).unwrap().to_contiguous();
@@ -143,7 +139,7 @@ impl MisfitFunction {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub(super) fn compute_envelope(&self, signal: &Array2<f64>) -> KwaversResult<Array2<f64>> {
+    pub(super) fn compute_envelope(signal: &Array2<f64>) -> KwaversResult<Array2<f64>> {
         let [ntraces, nsamples] = signal.shape();
         let mut envelope = Array2::zeros((ntraces, nsamples));
 
@@ -182,10 +178,7 @@ impl MisfitFunction {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub(super) fn compute_instantaneous_phase(
-        &self,
-        signal: &Array2<f64>,
-    ) -> KwaversResult<Array2<f64>> {
+    pub(super) fn compute_instantaneous_phase(signal: &Array2<f64>) -> KwaversResult<Array2<f64>> {
         let [ntraces, nsamples] = signal.shape();
         let mut phase = Array2::zeros((ntraces, nsamples));
 
@@ -223,7 +216,7 @@ impl MisfitFunction {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    fn l2_misfit_arrays(&self, a: &Array2<f64>, b: &Array2<f64>) -> KwaversResult<f64> {
+    fn l2_misfit_arrays(a: &Array2<f64>, b: &Array2<f64>) -> KwaversResult<f64> {
         let diff = b - a;
         Ok(0.5 * diff.mapv(|x| x * x).iter().sum::<f64>())
     }

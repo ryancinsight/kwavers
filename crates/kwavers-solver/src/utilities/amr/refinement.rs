@@ -82,6 +82,11 @@ impl RefinementManager {
     /// # Errors
     /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
+    ///
+    /// # Panics
+    ///
+    /// Panics if a caller-supplied shape or an internal solver state violates
+    /// the precondition required by this operation.
     pub fn mark_cells(&self, error: &Array3<f64>, threshold: f64) -> KwaversResult<Array3<i8>> {
         let mut markers = Array3::zeros(error.shape());
 
@@ -101,7 +106,7 @@ impl RefinementManager {
         self.add_buffer_zones(&mut markers)?;
 
         // Ensure proper nesting (2:1 balance)
-        self.enforce_nesting(&mut markers)?;
+        Self::enforce_nesting(&mut markers)?;
 
         Ok(markers)
     }
@@ -166,7 +171,7 @@ impl RefinementManager {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    fn enforce_nesting(&self, markers: &mut Array3<i8>) -> KwaversResult<()> {
+    fn enforce_nesting(markers: &mut Array3<i8>) -> KwaversResult<()> {
         let [nx, ny, nz] = markers.shape();
 
         // Optimized single-pass implementation:
