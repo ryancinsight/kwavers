@@ -3439,6 +3439,8 @@ dependencies = [
  "aequitas",
  "anyhow",
  "apollo-fft",
+ "athena-core",
+ "athena-leto",
  "bitflags 2.13.1",
  "coeus-autograd",
  "coeus-core",
@@ -7532,18 +7534,6 @@ name = "horae"
 version = "0.1.0"
 
 [[patch.unused]]
-name = "apollo-nufft"
-version = "0.7.0"
-
-[[patch.unused]]
-name = "apollo-sht"
-version = "0.7.0"
-
-[[patch.unused]]
-name = "asclepius-coeus"
-version = "0.1.0"
-
-[[patch.unused]]
 name = "hephaestus-metal"
 version = "0.19.0"
 
@@ -7556,5 +7546,17 @@ name = "consus-zarr"
 version = "0.1.0"
 
 [[patch.unused]]
+name = "asclepius-coeus"
+version = "0.1.0"
+
+[[patch.unused]]
 name = "harmonia"
 version = "0.1.0"
+
+[[patch.unused]]
+name = "apollo-nufft"
+version = "0.7.0"
+
+[[patch.unused]]
+name = "apollo-sht"
+version = "0.7.0"
