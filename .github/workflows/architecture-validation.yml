@@ -227,7 +227,7 @@ jobs:
       run: >-
         timeout --foreground --kill-after=30s 8m
         cargo bench --locked -p kwavers --no-default-features
-        --features plotting --benches
+        --features plotting --benches --no-fail-fast
         --profile dev -- --test
 
   test-coverage:
