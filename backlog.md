@@ -1,5 +1,52 @@
 # Backlog / Strategy
 
+## KW-KWAVE-DISTRIBUTED-SOURCE — pin k-Wave's mask-cell ordering [minor] — IMPLEMENTED 2026-08-24
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-KWAVE-DISTRIBUTED-SOURCE | Extend the k-Wave reference set with a distributed multi-cell source, so the mask-to-signal mapping kwavers claims in `collect_pressure_indices_fortran` is held to the reference rather than assumed. | [minor] | review | agent/session-d49f3b0a | `scripts/generate_kwave_reference.py`, `crates/kwavers/tests/kwave_reference_parity.rs`, `docs/adr/119-kwave-reference-oracle.md` |
+
+- **Gap it closes:** every driven case in the set used one masked cell, where
+  there is exactly one signal row and any mapping between mask and signal
+  produces the same field. ADR 119 named this as uncovered.
+- **Reference convention established first.** Driving a four-cell mask one row
+  at a time put each field's `|p|` centroid within 0.13 cells of the cell that
+  column-major ordering predicts, against 2-to-4 cells between candidates. The
+  reference's own behaviour was measured before any kwavers field was compared
+  to it.
+- **Result:** parity at `3.36e-3` relative L2, `r = 0.999994`. kwavers already
+  matched k-Wave; the ordering claim was correct and is now tested.
+- **The guard is what makes the case worth having.** Reversing the signal rows
+  moves the field by `1.05` relative L2 -- 313x the parity residual, correlation
+  falling to `0.446`. Without it the case would pass for a solver that drove the
+  right cells with the wrong signals.
+
+## KW-SOLVER-TEST-UNRUN — CI compiles `solver_test` but never runs it [patch] — todo
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-SOLVER-TEST-UNRUN | Run the integration tests CI currently only compiles, and fix the CFL derivation the omission has been hiding. | [patch] | todo | unowned | `crates/kwavers/tests/solver_test.rs`, `crates/kwavers-solver/src/forward/fdtd/`, `.github/workflows/architecture-validation.yml` |
+
+- **Evidence:** `test_fdtd_solver` and `test_wave_propagation` fail on `main`
+  with `NumericalInstability { timestep: 3.33e-7, cfl_limit: 1.95e-7 }`. They
+  have been failing unnoticed because the test-coverage job runs `--lib` plus a
+  named list of integration tests, and `solver_test` is in neither; the strict
+  clippy step compiles it, which is the only thing keeping it syntactically
+  alive.
+- **Root cause:** the test derives `dt = cfl_factor * dx / c`, omitting the
+  operator's dimensional stability factor that `FdtdSolver::max_stable_dt`
+  applies, so `dt` exceeds the limit by 1.71x.
+- **The fix is not a smaller constant.** `max_stable_dt` is public on the solver
+  but the test drives a `PluginManager`, which exposes no equivalent, so the
+  test has no way to ask. Either the plugin surfaces its stability limit or the
+  test's derivation is made to match the operator's -- a design decision, not a
+  tuning one.
+- **Discovered by:** the Box-to-Arc caller migration under
+  `KW-PSTD-PLUGIN-SOURCES-DROPPED`, which made these tests compile again and so
+  made them runnable for the first time in a while.
+- **Systemic half:** enumerate every `tests/*.rs` the workflow compiles but does
+  not run; each is a test whose failure is invisible.
+
 ## KW-PSTD-PLUGIN-SOURCES-DROPPED — the plugin path discards its sources [major] — IMPLEMENTED 2026-08-22
 
 | ID | Outcome | Class | Status | Owner | Scope |
