@@ -218,16 +218,29 @@ jobs:
           # evict each other's entries.
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
+      # Stable is the full gate: release nextest suite + doctests. Beta and
+      # nightly exist to catch toolchain breakage ahead of the 6-week roll;
+      # compiling the entire target surface is the oracle for that, and
+      # repeating the full release suite on each leg adds no signal while
+      # roughly halving the matrix's wall-clock cost (measured beta 23m,
+      # nightly 28m for identical source).
       - name: Install nextest
+        if: matrix.rust == 'stable'
         uses: taiki-e/install-action@ea4c0b50b0d394ee91c5bb68a6a295b0556feb8e
         with:
           tool: nextest
 
       - name: Run tests
+        if: matrix.rust == 'stable'
         run: cargo nextest run --locked -p kwavers --profile ci --lib --release --verbose --features="plotting"
 
       - name: Run doc tests
+        if: matrix.rust == 'stable'
         run: cargo test --locked --doc -p kwavers --verbose
+
+      - name: Toolchain-compat check
+        if: matrix.rust != 'stable'
+        run: cargo check --locked -p kwavers --release --features "plotting" --all-targets
 
   security:
     name: Security Audit
@@ -239,7 +252,9 @@ jobs:
           fetch-depth: 0
 
       - name: Install cargo-deny
-        run: cargo install cargo-deny
+        uses: taiki-e/install-action@ea4c0b50b0d394ee91c5bb68a6a295b0556feb8e
+        with:
+          tool: cargo-deny
 
       - name: Run security audit
         run: cargo deny --config deny.toml --manifest-path crates/kwavers/Cargo.toml check
@@ -338,7 +353,9 @@ jobs:
           restore-keys: ${{ runner.os }}-coverage-cargo-tarpaulin-0.37.0-
 
       - name: Install cargo-tarpaulin
-        run: command -v cargo-tarpaulin >/dev/null || cargo install cargo-tarpaulin --version 0.37.0 --locked
+        uses: taiki-e/install-action@ea4c0b50b0d394ee91c5bb68a6a295b0556feb8e
+        with:
+          tool: cargo-tarpaulin@0.37.0
 
       - name: Generate coverage reports
         # Ptrace rewriting invalidates dependency compile-time layout checks;

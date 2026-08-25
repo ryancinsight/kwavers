@@ -101,10 +101,14 @@ jobs:
         cargo clippy --locked --workspace --all-targets
         cargo clippy --locked -p kwavers --all-targets --features full,pinn
 
+    - name: Install cargo-audit
+      uses: taiki-e/install-action@ea4c0b50b0d394ee91c5bb68a6a295b0556feb8e
+      with:
+        tool: cargo-audit
+      continue-on-error: true
+
     - name: Check for security vulnerabilities
-      run: |
-        cargo install cargo-audit
-        cargo audit
+      run: cargo audit
       continue-on-error: true
 
   layer-boundary-checks:
