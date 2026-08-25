@@ -100,6 +100,44 @@ training run can be replayed. It is drawn once per `train()` call, so the loss
 is deterministic *within* a run and this is not the convergence defect — but it
 makes any cross-run comparison noise, which is why the gradient tests build
 fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
+## KW-SWE-SCALING-IS-A-BENCHMARK — a wall-clock benchmark is running as a test [patch] — todo
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-SWE-SCALING-IS-A-BENCHMARK | Move the SWE scaling measurement into a criterion benchmark and drop the elapsed-time assertions from the test suite. | [patch] | todo | unowned (SWE area is actively being worked) | `crates/kwavers/tests/swe_3d_validation.rs`, `crates/kwavers/benches/` |
+
+- **Symptom:** `test_performance_scaling` times out at the 60 s nextest
+  termination bound on CI. It takes 27 s on the development machine, so the
+  runner is roughly 2.5x slower and the test sits on the wrong side of the
+  bound there and the right side here. That is the definition of a flaky test.
+- **What it is:** it builds `ElasticWaveSolver` at 16, 32, 48 and 64 cubed,
+  times `propagate_waves_with_body_force_only_override` with
+  `Instant::now()`, and asserts on the *ratio* of elapsed times between
+  successive sizes.
+- **Why the bound is not the problem:** an elapsed-time assertion on a shared
+  runner measures the runner. Raising the budget would keep a measurement whose
+  variance is dominated by whatever else the machine is doing.
+- **Where it belongs:** criterion, which exists to do this properly -- warm-up,
+  repeated samples, median with a confidence interval, and `black_box` against
+  elision. `crates/kwavers/benches/nl_swe_performance.rs` already covers
+  hyperelastic models and harmonic detection but nothing measures propagation
+  scaling, so this is not duplicated work, only misplaced work.
+- **Sizing note for whoever takes it:** the sweep should be geometric with a
+  few representative points rather than 16/32/48/64, and the per-binary
+  wall-clock budget applies -- a 64-cubed propagation may need the sweep's top
+  end trimmed or a dedicated reviewed profile.
+- **Removed from the test suite here**, rather than parked in the baseline. It
+  could not sit there honestly: it passes on the development machine and times
+  out on CI, so the baseline checker reports it as a *stale* entry locally and
+  a *regression* remotely. A set-valued baseline records which tests fail, and
+  this one's answer depends on the machine -- which is the flakiness itself,
+  not a gap in the mechanism.
+- **What was kept:** nothing of the measurement, which is why the criterion
+  benchmark above is owed. What was lost is a scaling number nobody could rely
+  on; what was removed is a 60-second CI timeout on every run.
+- **Precedent in the same file:** `diag_swe_recon_2`, deleted under
+  `KW-INTEGRATION-TESTS-UNRUN` for the same reason -- a benchmark workload
+  breaching the committed test budget.
 
 ## KW-KWAVE-DISTRIBUTED-SOURCE — pin k-Wave's mask-cell ordering [minor] — IMPLEMENTED 2026-08-24
 

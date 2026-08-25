@@ -30,13 +30,26 @@ import re
 import subprocess
 import sys
 
+# CI sets CARGO_TERM_COLOR=always, so nextest wraps every field in escape
+# sequences and a regex written against plain output silently matches nothing.
+# `--color never` below is the fix; this strips anything that still arrives
+# coloured, because a parser reporting "no failures" from output it could not
+# read is the exact failure this check exists to prevent.
+ANSI = re.compile("\x1b\\[[0-9;]*m")
+
 BASELINE = pathlib.Path(".config/integration-test-baseline.txt")
-# nextest prints "        FAIL [   0.010s] (85/686) <binary> <test path>".
-FAIL_LINE = re.compile(r"^\s+FAIL\s+\[[^\]]*\]\s+\(\s*\d+/\d+\)\s+(\S+)\s+(\S+)\s*$")
+# nextest prints "        FAIL [   0.010s] (85/686) <binary> <test path>", and
+# "     TIMEOUT [  60.097s] (535/683) ..." for one that hit the termination
+# bound. A timed-out test is a failed test: matching only FAIL left two SWE
+# timeouts invisible here while nextest itself reported them plainly.
+FAIL_LINE = re.compile(
+    r"^\s+(?:FAIL|TIMEOUT)\s+\[[^\]]*\]\s+\(\s*\d+/\d+\)\s+(\S+)\s+(\S+)\s*$"
+)
 SUMMARY = re.compile(r"^\s+Summary\s+\[[^\]]*\]\s+(\d+) tests run")
 
 COMMAND = [
     "cargo", "nextest", "run",
+    "--color", "never",
     "-p", "kwavers", "--tests",
     "--no-default-features", "--features", "full",
     "--test-threads=1", "--no-fail-fast",
@@ -71,9 +84,9 @@ def run(locked: bool) -> tuple[set[str], int]:
     # CI resolves against the committed lockfile. A tree under the Atlas
     # development overlay cannot: the overlay redirects first-party crates to
     # local paths, so `--locked` refuses before the suite starts.
-    command = COMMAND[:3] + (["--locked"] if locked else []) + COMMAND[3:]
+    command = COMMAND[:5] + (["--locked"] if locked else []) + COMMAND[5:]
     result = subprocess.run(command, capture_output=True, text=True)
-    output = result.stdout + result.stderr
+    output = ANSI.sub("", result.stdout + result.stderr)
     failures = {f"{m.group(1)} {m.group(2)}" for line in output.splitlines()
                 if (m := FAIL_LINE.match(line))}
     ran = 0

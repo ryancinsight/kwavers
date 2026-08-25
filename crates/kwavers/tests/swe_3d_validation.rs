@@ -325,59 +325,6 @@ fn test_robustness_edge_cases() {
 /// Measured 2026-08-22: 25.4 s under the heavy profile (serial). Fits the
 /// default 60 s per-test budget; serialized with the other CPU-saturating
 /// swe tests via the `full-grid-sim` nextest group. Re-enabled.
-#[test]
-fn test_performance_scaling() {
-    println!("Testing performance scaling...");
-
-    let sizes = vec![16, 32, 48, 64];
-    let mut results = Vec::new();
-
-    for &size in &sizes {
-        let grid = Grid::new(size, size, size, 0.001, 0.001, 0.001).unwrap();
-        let medium = HomogeneousMedium::soft_tissue(10_000.0, 0.49, &grid);
-
-        let solver = ElasticWaveSolver::new(&grid, &medium, Default::default()).unwrap();
-        let arf = AcousticRadiationForce::new(&grid, &medium).unwrap();
-
-        let body_force = arf
-            .push_pulse_body_force([size as f64 * 0.0005; 3])
-            .unwrap();
-
-        let start = std::time::Instant::now();
-        let history = solver
-            .propagate_waves_with_body_force_only_override(Some(&body_force))
-            .unwrap();
-        let elapsed = start.elapsed().as_secs_f64();
-
-        let cells = size * size * size;
-        let throughput = cells as f64 * history.len() as f64 / elapsed;
-
-        results.push((cells, elapsed, throughput));
-        println!(
-            "  Size {}x{}x{}: {:.3}s, {:.0} cells/s",
-            size, size, size, elapsed, throughput
-        );
-    }
-
-    // Check scaling (should be roughly O(n³) for volume, but better with optimizations)
-    for i in 1..results.len() {
-        let ratio = results[i].0 as f64 / results[i - 1].0 as f64;
-        let time_ratio = results[i].1 / results[i - 1].1;
-        let scaling_efficiency = ratio / time_ratio;
-
-        println!(
-            "  Scaling efficiency {}-{}: {:.2}x",
-            sizes[i - 1],
-            sizes[i],
-            scaling_efficiency
-        );
-        assert!(
-            scaling_efficiency > 0.1,
-            "Scaling too poor: {:.2}x",
-            scaling_efficiency
-        );
-    }
-}
 
 /// Test literature benchmark comparison
 ///
