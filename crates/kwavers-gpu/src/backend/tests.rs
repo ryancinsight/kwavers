@@ -150,10 +150,10 @@ fn test_gpu_backend_creation() {
             assert_eq!(backend.backend_type(), BackendType::GPU(GpuProvider::Wgpu));
             assert_eq!(backend.gpu_provider(), Some(GpuProvider::Wgpu));
             assert!(backend.is_available());
-            println!("GPU backend initialized: {}", backend.device_name());
+            eprintln!("GPU backend initialized: {}", backend.device_name());
         }
         Err(e) => {
-            println!("GPU backend unavailable (expected on some systems): {}", e);
+            eprintln!("GPU backend unavailable (expected on some systems): {}", e);
         }
     }
 }

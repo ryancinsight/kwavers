@@ -3,7 +3,7 @@ use eunomia::assert_relative_eq;
 use hephaestus_core::DevicePreference;
 
 fn create_test_gpu_device() -> Option<GpuDevice> {
-    pollster::block_on(GpuDevice::create(DevicePreference::HighPerformance)).ok()
+    GpuDevice::create(DevicePreference::HighPerformance).ok()
 }
 
 fn expected_activation(input: &[f32], activation_type: u32) -> Vec<f32> {
@@ -27,7 +27,7 @@ fn test_gpu_activation_matches_contract() {
         return;
     };
 
-    let shader = pollster::block_on(NeuralNetworkShader::new(&device)).unwrap();
+    let shader = NeuralNetworkShader::new(&device).unwrap();
     let input = vec![-2.0_f32, -0.5, 0.0, 0.5, 2.0];
 
     for activation_type in 0..=3 {
@@ -47,7 +47,7 @@ fn test_gpu_activation_rejects_unknown_type() {
         return;
     };
 
-    let shader = pollster::block_on(NeuralNetworkShader::new(&device)).unwrap();
+    let shader = NeuralNetworkShader::new(&device).unwrap();
     let err = shader.activate(&[1.0_f32, 2.0, 3.0], 99).unwrap_err();
     assert!(format!("{err:?}").contains("Unknown activation type"));
 }

@@ -46,8 +46,8 @@ impl NeuralNetworkShader {
             )));
         }
 
-        if !self.has_gpu_acceleration() {
-            return self.matmul_cpu_quantized(
+        if !Self::has_gpu_acceleration() {
+            return Self::matmul_cpu_quantized(
                 input,
                 weights,
                 biases,
@@ -190,7 +190,6 @@ impl NeuralNetworkShader {
     // Args are independent data slices and scalar quantization/shape parameters with no cohesive grouping.
     #[allow(clippy::too_many_arguments)]
     pub(super) fn matmul_cpu_quantized(
-        &self,
         input: &[f32],
         weights: &[i8],
         biases: &[i8],
@@ -224,7 +223,7 @@ impl NeuralNetworkShader {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub(super) fn has_gpu_acceleration(&self) -> bool {
+    pub(super) fn has_gpu_acceleration() -> bool {
         true
     }
     /// Validate activation type.

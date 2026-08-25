@@ -11,8 +11,8 @@ impl NeuralNetworkShader {
     pub fn activate(&self, input: &[f32], activation_type: u32) -> KwaversResult<Vec<f32>> {
         Self::validate_activation_type(activation_type)?;
 
-        if !self.has_gpu_acceleration() {
-            return self.activate_cpu(input, activation_type);
+        if !Self::has_gpu_acceleration() {
+            return Self::activate_cpu(input, activation_type);
         }
 
         let device = self.device.wgpu_device();
@@ -131,11 +131,7 @@ impl NeuralNetworkShader {
     /// # Errors
     /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
-    pub(super) fn activate_cpu(
-        &self,
-        input: &[f32],
-        activation_type: u32,
-    ) -> KwaversResult<Vec<f32>> {
+    pub(super) fn activate_cpu(input: &[f32], activation_type: u32) -> KwaversResult<Vec<f32>> {
         let mut output = Vec::with_capacity(input.len());
 
         match ActivationKind::from_u32(activation_type) {

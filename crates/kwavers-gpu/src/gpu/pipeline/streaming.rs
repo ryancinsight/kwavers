@@ -52,7 +52,7 @@ impl StreamingDataSource {
 
                 let elapsed = start_time.elapsed();
                 if elapsed < frame_interval {
-                    std::thread::sleep(frame_interval - elapsed);
+                    std::thread::sleep(frame_interval.saturating_sub(elapsed));
                 }
             }
         });

@@ -368,6 +368,11 @@ where
     /// Create a new GPU PSTD solver.
     ///
     /// See `mod.rs` for argument documentation and bind-group layout.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err` if any input array shape is inconsistent with `grid` or
+    /// if the provider cannot build its execution state.
     pub fn new(
         context: P::Context,
         grid: &Grid,

@@ -45,7 +45,7 @@
 //! SRP: this file changes when shader physics, workgroup size, or binding layout changes.
 
 pub(super) fn thermal_acoustic_wgsl() -> String {
-    r#"
+    "
 struct Config {
     nx: u32,
     ny: u32,
@@ -191,6 +191,6 @@ fn update_thermal(@builtin(global_invocation_id) gid: vec3<u32>) {
     let dT_dt = cfg.alpha_thermal * laplacian_T + perfusion_term + cfg.Q_met + Q_ac[idx];
     T_curr[idx] = T + cfg.dt * dT_dt;
 }
-"#
+"
     .to_string()
 }

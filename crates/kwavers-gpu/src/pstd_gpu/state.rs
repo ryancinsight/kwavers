@@ -22,6 +22,11 @@ pub trait PstdStateBuilder: PstdStateProvider {
     type Context;
 
     /// Build provider-owned PSTD state.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err` if the provider cannot build its execution state for
+    /// the given grid, medium, and solver parameters.
     fn build_state(
         context: Self::Context,
         grid: &Grid,
@@ -35,6 +40,11 @@ pub trait PstdStateBuilder: PstdStateProvider {
 /// Provider contract for automatic PSTD GPU device acquisition.
 pub trait PstdAutoDeviceProvider: PstdStateBuilder {
     /// Acquire a provider-owned execution context for PSTD execution.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err` if no matching adapter is found or device acquisition
+    /// fails.
     fn acquire_auto_context(absorbing: bool) -> Result<Self::Context, String>;
 }
 

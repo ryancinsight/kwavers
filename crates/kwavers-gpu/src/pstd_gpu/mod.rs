@@ -192,7 +192,7 @@ impl<P: PstdStateProvider> std::fmt::Debug for GpuPstdSolver<P> {
             .field("dt", &self.dt)
             .field("nonlinear", &self.nonlinear)
             .field("absorbing", &self.absorbing)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 

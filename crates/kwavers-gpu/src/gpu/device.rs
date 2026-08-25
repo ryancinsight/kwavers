@@ -180,7 +180,7 @@ where
     ///
     /// Returns an error if the concrete provider cannot acquire a matching
     /// device or satisfy the requested baseline limits.
-    pub async fn create(device_preference: DevicePreference) -> KwaversResult<Self> {
+    pub fn create(device_preference: DevicePreference) -> KwaversResult<Self> {
         Self::try_create(device_preference)
     }
 
@@ -200,7 +200,7 @@ where
     ///
     /// Returns an error if the concrete provider cannot acquire a matching
     /// device, enable a requested optional feature, or satisfy `required_limits`.
-    pub async fn create_with_features_and_limits(
+    pub fn create_with_features_and_limits(
         device_preference: DevicePreference,
         optional_features: &[DeviceFeature],
         required_limits: DeviceLimits,

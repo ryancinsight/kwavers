@@ -91,7 +91,7 @@ impl WgpuComputeProvider {
         )
     }
 
-    fn provider_peak_flops(&self) -> f64 {
+    fn provider_peak_flops() -> f64 {
         // WGPU exposes adapter class and limits, but not clock rate, memory
         // bandwidth, or compute-unit count in a portable form. Returning zero
         // preserves the "unknown, not fabricated" contract.
@@ -115,7 +115,7 @@ impl GpuKernelProvider for WgpuComputeProvider {
     }
 
     fn estimate_peak_performance(&self) -> f64 {
-        self.provider_peak_flops()
+        Self::provider_peak_flops()
     }
 }
 

@@ -63,7 +63,7 @@ impl NeuralNetworkShader {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub async fn new(device: &GpuDevice) -> KwaversResult<Self> {
+    pub fn new(device: &GpuDevice) -> KwaversResult<Self> {
         let shader_module =
             device
                 .wgpu_device()
@@ -174,7 +174,7 @@ impl NeuralNetworkShader {
 }
 
 /// WGSL shader source for neural network operations
-pub const NEURAL_NETWORK_SHADER: &str = r#"
+pub const NEURAL_NETWORK_SHADER: &str = "
 // Neural Network Inference Shader
 // Performs quantized matrix multiplication and activation functions
 
@@ -257,4 +257,4 @@ fn activation_kernel(@builtin(global_invocation_id) global_id: vec3<u32>) {
 
     output[idx] = result;
 }
-"#;
+";
