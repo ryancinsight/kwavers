@@ -481,15 +481,11 @@ jobs:
         with:
           tool: nextest
 
-      # Shared-key rust-cache instead of a private actions/cache: PR caches are
-      # branch-scoped and always cold for this job, which is exactly the
-      # "cold-cache budget" the 45-minute timeout was sized against (measured
-      # 41.6 m on 2026-08-25, dominated by recompiling the workspace from an
-      # empty target/). The shared entry is written from main and restored on
-      # every branch, so heavy validation compiles only its own delta.
+      # Shared cache; rationale at the first use in this file. Restore-only on
+      # pull requests prevents parallel heavy legs from racing to upload the
+      # same target tree after their tests finish.
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
         with:
-          workspaces: .
           shared-key: kwavers
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
@@ -524,14 +520,11 @@ jobs:
         with:
           tool: nextest
 
-      - name: Cache cargo dependencies
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+      # Shared restore-only pull-request cache; rationale above.
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target/
-          key: ${{ runner.os }}-heavy-cargo-${{ hashFiles('**/Cargo.lock', 'Cargo.toml', '.cargo/config.toml') }}
+          shared-key: kwavers
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       # Treeby-Cox plane-wave absorption decay (nonlinear3d); same `heavy`
       # profile and `#[ignore]` gate.
@@ -542,7 +535,10 @@ jobs:
     name: Heavy Validation (NL-SWE workflow)
     needs: lockfile
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    # Exact-head observation: 22m55s including 2m37s of redundant cache
+    # post-processing. A 35-minute cap retains more than 20% over the prior
+    # cold-cache 28-minute observation while making renewed drift fail sooner.
+    timeout-minutes: 35
     permissions:
       contents: read
     steps:
@@ -563,14 +559,11 @@ jobs:
         with:
           tool: nextest
 
-      - name: Cache cargo dependencies
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+      # Shared restore-only pull-request cache; rationale above.
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target/
-          key: ${{ runner.os }}-heavy-cargo-${{ hashFiles('**/Cargo.lock', 'Cargo.toml', '.cargo/config.toml') }}
+          shared-key: kwavers
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       # Full nonlinear inversion on a 16^3 grid; the slowest leg by far. The
       # `heavy` profile's 600 s override for nl_swe_workflow fits its cold
