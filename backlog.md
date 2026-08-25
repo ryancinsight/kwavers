@@ -468,11 +468,37 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   remaining debt. Nothing to do here; KW-LINT-1 is the item.
 
 
-## KW-GIT-113 — Drain the kwavers stash backlog [patch] — todo
+## KW-GIT-113 — Drain the kwavers stash backlog [patch] — DONE 2026-08-24
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-GIT-113 | The repository's stash list is empty; anything of value in it is committed on a branch. | [patch] | todo | unclaimed | `git stash` entries in the kwavers gitdir |
+| KW-GIT-113 | The repository's stash list is empty; anything of value in it is committed on a branch. | [patch] | done | current session | `git stash` entries in the kwavers gitdir |
+
+- **Executed 2026-08-24 on the peer triage above.** `git stash list` is empty.
+  Nothing was discarded that had not first been either preserved on `origin` or
+  shown to be worthless, because a stash is the one place unique work can be
+  destroyed silently.
+- **Four entries discarded with direct evidence, not on the triage's word.**
+  `stash@{3}`, `{4}`, `{5}` each *remove* 87 or 88 `source = "git+..."` lines
+  and add none: they are pure overlay-stripped lock churn, the same corruption
+  `scripts/lockfile.py` exists to catch. `stash@{6}` reorders one
+  `[[patch.unused]]` block and changes nothing else. All four are not merely
+  superseded but actively harmful if applied.
+- **One entry was *not* superseded and was applied instead of dropped.**
+  `stash@{7}` adds the missing trailing newline to `crates/kwavers/deny.toml`;
+  `main` still ends that file at `= []` with no `0a`, so the triage's
+  "check, then discard or apply" resolved to apply. It lands in this change.
+- **Six entries preserved on `origin` before being dropped**, as
+  `archive/stash/<n>-<description>` tags matching their stash commits exactly:
+  `{0}` e47fea32e, `{1}` fc40e8a4b, `{2}` 80380b3cc, `{8}` 2737b5bd0,
+  `{9}` 7a3587908, `{10}` 9ee1d9a26. These are month-old deletion-heavy
+  pre-migration snapshots of 27 to 144 files; proving supersession file by file
+  would have cost more than preserving them, and a wrong call would have been
+  unrecoverable. Recover any of them with
+  `git switch -c <branch> archive/stash/<tag>`.
+- **Prune trigger:** the archive tags may be deleted once someone confirms each
+  snapshot's content is on `origin` by another route. They are cheap and
+  recoverable; the stash list was neither.
 
 - `git stash list` holds **11 entries** dating from 2026-07-07 to 2026-08-18 — over a month
   of work hidden from the board, from peers, and from every diff review. Several were taken
