@@ -10,9 +10,7 @@ mod parallel;
 pub mod simd_safe;
 
 // Matrix-free linear operators and LSQR solver (Athena-backed via `linear_algebra::sparse`)
-pub use linear_algebra::sparse::{
-    solve_lsqr_matfree, LsqrConfig, MatFreeOperator, MatFreeResult,
-};
+pub use linear_algebra::sparse::{solve_lsqr_matfree, LsqrConfig, MatFreeOperator, MatFreeResult};
 
 // ============================================================================
 // RE-EXPORTS FROM leto-ops (SSOT)

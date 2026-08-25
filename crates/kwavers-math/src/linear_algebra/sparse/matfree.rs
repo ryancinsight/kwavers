@@ -126,8 +126,12 @@ impl<Op: MatFreeOperator> RectangularOperator<LetoBackend<f64>> for MatFreeOpera
         input: <LetoBackend<f64> as athena_core::KrylovBackend>::View<'_>,
         mut output: <LetoBackend<f64> as athena_core::KrylovBackend>::ViewMut<'_>,
     ) -> Result<(), <LetoBackend<f64> as athena_core::KrylovBackend>::Error> {
-        let input_slice = input.as_slice().ok_or(athena_leto::LetoBackendError::NonContiguousVector)?;
-        let output_slice = output.as_mut_slice().ok_or(athena_leto::LetoBackendError::NonContiguousVector)?;
+        let input_slice = input
+            .as_slice()
+            .ok_or(athena_leto::LetoBackendError::NonContiguousVector)?;
+        let output_slice = output
+            .as_mut_slice()
+            .ok_or(athena_leto::LetoBackendError::NonContiguousVector)?;
         // SAFETY: input and output are contiguous slices of the correct lengths
         // per the RectangularOperator contract (columns/rows).
         self.op.matvec(input_slice, output_slice);
@@ -140,8 +144,12 @@ impl<Op: MatFreeOperator> RectangularOperator<LetoBackend<f64>> for MatFreeOpera
         input: <LetoBackend<f64> as athena_core::KrylovBackend>::View<'_>,
         mut output: <LetoBackend<f64> as athena_core::KrylovBackend>::ViewMut<'_>,
     ) -> Result<(), <LetoBackend<f64> as athena_core::KrylovBackend>::Error> {
-        let input_slice = input.as_slice().ok_or(athena_leto::LetoBackendError::NonContiguousVector)?;
-        let output_slice = output.as_mut_slice().ok_or(athena_leto::LetoBackendError::NonContiguousVector)?;
+        let input_slice = input
+            .as_slice()
+            .ok_or(athena_leto::LetoBackendError::NonContiguousVector)?;
+        let output_slice = output
+            .as_mut_slice()
+            .ok_or(athena_leto::LetoBackendError::NonContiguousVector)?;
         self.op.t_matvec(input_slice, output_slice);
         Ok(())
     }
@@ -183,7 +191,12 @@ pub fn solve_lsqr_matfree(
     // scaled by ||b|| in the caller (sound_speed_shift), the dominant term is
     // `max(atol, btol, tolerance*||b||)`. We take the max of the two
     // relative terms so the 1e-6 default is not lost when btol is 1e-8*||b||.
-    let b_norm = b.iter().map(|x| x * x).sum::<f64>().sqrt().max(f64::EPSILON);
+    let b_norm = b
+        .iter()
+        .map(|x| x * x)
+        .sum::<f64>()
+        .sqrt()
+        .max(f64::EPSILON);
     let effective_btol = config.btol.max(config.tolerance * b_norm);
     let policy = ConvergencePolicy::new(config.atol, effective_btol, config.max_iterations)
         .unwrap_or_else(|_| {
@@ -195,8 +208,7 @@ pub fn solve_lsqr_matfree(
     let mut b_arr = Array1::zeros([m]);
     b_arr.as_slice_mut().unwrap().copy_from_slice(b);
     let mut solution = Array1::zeros([n]);
-    let mut workspace =
-        LsqrWorkspace::new(&backend, m, n).expect("workspace allocation succeeds");
+    let mut workspace = LsqrWorkspace::new(&backend, m, n).expect("workspace allocation succeeds");
     let adapter = MatFreeOperatorAdapter::new(op.clone());
 
     // Athena's LSQR reports via SolveReport; we map to MatFreeResult.

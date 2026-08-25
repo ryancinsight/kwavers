@@ -32,10 +32,6 @@ pub use leto_ops::application::linalg::{
     norm_l2,
     norm_max,
     symmetric_eigen_jacobi,
-    // Iterative solvers
-    LsqrConfig,
-    LsqrResult,
-    LsqrSolver,
 };
 
 #[cfg(test)]
