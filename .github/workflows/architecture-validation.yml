@@ -215,17 +215,27 @@ jobs:
       with:
         tool: nextest
 
+    # Same shared cache the other jobs in this workflow use; without it this
+    # job cold-compiles the whole workspace every run. `coverage` profile
+    # artifacts live under target/coverage inside the same target dir.
+    - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
+      with:
+        shared-key: kwavers
+        save-if: ${{ github.ref == 'refs/heads/main' }}
+
     - name: Run tests
       run: |
         # Full-wave solver tests share compute-heavy kernels. Serializing the
         # test processes prevents runner oversubscription without changing
-        # assertions or the committed per-test timeout contract.
-        cargo nextest run --locked --workspace --exclude kwavers-python --exclude kwavers-gpu --lib --test-threads=1
-        cargo nextest run --locked -p kwavers --lib --no-default-features --features pinn
+        # assertions or the committed per-test timeout contract. The coverage
+        # profile (O3) is used because these are the compute-bound physics
+        # suites; at dev's O1 they dominated the job wall clock.
+        cargo nextest run --locked --cargo-profile coverage --workspace --exclude kwavers-python --exclude kwavers-gpu --lib --test-threads=1
+        cargo nextest run --locked --cargo-profile coverage -p kwavers --lib --no-default-features --features pinn
 
     - name: Run bounded full-grid simulations
       run: >-
-        cargo nextest run --locked -p kwavers
+        cargo nextest run --locked --cargo-profile coverage -p kwavers
         --test fdtd_pstd_comparison
         --test property_based_tests
         --test session2_source_injection_test
@@ -233,8 +243,8 @@ jobs:
 
     - name: Run doc tests
       run: |
-        cargo test --locked -p kwavers --doc
-        cargo test --locked -p kwavers --doc --no-default-features --features full
+        cargo test --locked --profile coverage -p kwavers --doc
+        cargo test --locked --profile coverage -p kwavers --doc --no-default-features --features full
 
     - name: Record debug artifact footprint
       run: |

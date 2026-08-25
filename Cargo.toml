@@ -211,12 +211,17 @@ unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
 opt-level = 1
 
 [profile.coverage]
+# The heavy-suite profile (tarpaulin coverage runs, the Architecture
+# Validation full-workspace test job). Own crates compile at O3 alongside
+# dependencies: the physics kernels these suites execute are compute-bound,
+# and O1 leaves 2-4x runtime on the table against O3 for FFT/solver loops.
 inherits = "dev"
+opt-level = 3
 
 [profile.coverage.package."*"]
-# Ptrace instrumentation multiplies the FFT-heavy full-grid runtime. Keep that
-# purpose-specific suite within its existing finite timeout without changing
-# the ordinary development profile, test workload, or timeout contract.
+# Kept at O3 for dependencies as before; with tarpaulin on the llvm engine
+# there is no ptrace instrumentation multiplier, so this is now simply the
+# same optimization level as the workspace's own crates above.
 opt-level = 3
 
 [profile.release]
