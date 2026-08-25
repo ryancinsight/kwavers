@@ -46,6 +46,16 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      # `scripts/lockfile.py --check` intentionally asks Cargo to resolve all
+      # features. Restore the same first-party Git source cache as the build
+      # jobs so this five-minute integrity check validates the lock instead of
+      # spending its entire budget cloning 91 already-pinned sources.
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
+        with:
+          shared-key: kwavers
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
       - name: Verify Cargo.lock resolves under --locked
         run: python3 scripts/lockfile.py --check
 
@@ -55,8 +65,6 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          fetch-depth: 0
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-dependencies
@@ -98,8 +106,11 @@ jobs:
       - name: Run PINN validation framework tests
         run: cargo nextest run --locked -p kwavers --test validation_integration_test
 
-      - name: Run PINN convergence studies
+      - name: Run default-feature convergence studies
         run: cargo nextest run --locked -p kwavers --test pinn_convergence_studies
+
+      - name: Run PINN-feature convergence studies
+        run: cargo nextest run --locked -p kwavers --test pinn_convergence_studies --features pinn
 
       - name: Run clippy on PINN code
         run: cargo clippy --locked -p kwavers --features pinn --lib -- -D warnings
@@ -186,11 +197,11 @@ jobs:
   build:
     name: Build & Test
     runs-on: ubuntu-latest
-    # Exact-head observation: nightly cold-build + full release suite ~28m;
-    # under hosted queue load it has exceeded 30m. Retain ~20% variance per
-    # the coverage-job convention, so the matrix keeps its headroom instead
-    # of cancelling on slow runners.
-    timeout-minutes: 60
+    # Keep the existing finite bound. Stable owns the full release gate;
+    # beta/nightly compile the target surface only, and stable doctests reuse
+    # that release/plotting graph instead of triggering a second test-profile
+    # build. A slow leg remains a performance defect, not timeout headroom.
+    timeout-minutes: 30
     strategy:
       matrix:
         rust: [stable, beta, nightly]
@@ -236,7 +247,7 @@ jobs:
 
       - name: Run doc tests
         if: matrix.rust == 'stable'
-        run: cargo test --locked --doc -p kwavers --verbose
+        run: cargo test --locked --doc -p kwavers --release --features plotting --verbose
 
       - name: Toolchain-compat check
         if: matrix.rust != 'stable'
@@ -248,8 +259,6 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          fetch-depth: 0
 
       - name: Install cargo-deny
         uses: taiki-e/install-action@ea4c0b50b0d394ee91c5bb68a6a295b0556feb8e
@@ -292,8 +301,6 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          fetch-depth: 0
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-dependencies
@@ -314,8 +321,21 @@ jobs:
           # evict each other's entries.
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
+      # Runtime smoke verifies that every selected Criterion binary starts and
+      # executes one pass; it does not measure optimized throughput. The dev
+      # profile avoids release LTO/codegen-units=1, which consumed the entire
+      # 30-minute job before any of the 19 eligible binaries executed.
+      - name: Build every plotting-eligible Criterion target once
+        run: >-
+          timeout --foreground --kill-after=30s 20m
+          cargo bench --locked -p kwavers --features plotting --benches
+          --profile dev --no-run
+
       - name: Execute every plotting-eligible Criterion target once
-        run: cargo bench --locked -p kwavers --features plotting --benches -- --test
+        run: >-
+          timeout --foreground --kill-after=30s 8m
+          cargo bench --locked -p kwavers --features plotting --benches
+          --profile dev -- --test
 
   coverage:
     name: Code Coverage
@@ -406,45 +426,6 @@ jobs:
           # ingestion is an external service and may rate-limit tokenless uploads;
           # preserve the report without turning transport failure into a source failure.
           fail_ci_if_error: false
-
-  pinn-convergence:
-    name: PINN Convergence Analysis
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          fetch-depth: 0
-
-      - name: Install system dependencies
-        uses: ./.github/actions/install-system-dependencies
-        with:
-          packages: libfontconfig1-dev
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
-        with:
-          toolchain: 1.97.0
-
-      - name: Install nextest
-        uses: taiki-e/install-action@ea4c0b50b0d394ee91c5bb68a6a295b0556feb8e
-        with:
-          tool: nextest
-
-      # Shared cache; rationale at the first use in this file.
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
-        with:
-          shared-key: kwavers
-          # Write the cache from the default branch only. A pull request
-          # restores it but does not save, so concurrent branches cannot
-          # evict each other's entries.
-          save-if: ${{ github.ref == 'refs/heads/main' }}
-
-      - name: Run convergence studies
-        run: cargo nextest run --locked -p kwavers --test pinn_convergence_studies --features pinn
-
-      - name: Run validation integration tests
-        run: cargo nextest run --locked -p kwavers --test validation_integration_test
 
   validation:
     name: Solver Validation Suite
