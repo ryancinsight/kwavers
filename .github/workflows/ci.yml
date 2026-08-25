@@ -465,11 +465,14 @@ jobs:
   heavy-validation:
     name: Heavy Validation (reviewed profile)
     runs-on: ubuntu-latest
-    # Measured 2026-08-23 under a cold cache (branch-scoped PR caches are
-    # always cold): the three serial heavy groups total ~31 min of compile +
-    # test time (kuznetsov 8 min, absorption_decay 7 min, nl_swe_workflow
-    # killed at 25 min with ~5 min left). The 25 min cap cancelled the job
-    # twice at exactly 25:00. 45 min fits the cold-cache budget with margin.
+    # Measured 2026-08-23 under a cold cache: the three serial heavy groups
+    # total ~31 min of compile + test time (kuznetsov 8 min, absorption_decay
+    # 7 min, nl_swe_workflow ~25 min). Measured again 2026-08-25 at 41.6 m —
+    # but that run compiled from an empty target/ because this job used a
+    # private branch-scoped actions/cache that is always cold on PRs. With the
+    # shared rust-cache entry restored, the budget should drop toward the
+    # ~31 min compile+test figure; tighten only after a warm-cache hosted
+    # measurement confirms it.
     timeout-minutes: 45
     permissions:
       contents: read
@@ -491,14 +494,17 @@ jobs:
         with:
           tool: nextest
 
-      - name: Cache cargo dependencies
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+      # Shared-key rust-cache instead of a private actions/cache: PR caches are
+      # branch-scoped and always cold for this job, which is exactly the
+      # "cold-cache budget" the 45-minute timeout was sized against (measured
+      # 41.6 m on 2026-08-25, dominated by recompiling the workspace from an
+      # empty target/). The shared entry is written from main and restored on
+      # every branch, so heavy validation compiles only its own delta.
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target/
-          key: ${{ runner.os }}-heavy-cargo-${{ hashFiles('**/Cargo.lock', 'Cargo.toml', '.cargo/config.toml') }}
+          workspaces: .
+          shared-key: kwavers
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       # Tier-3 tests whose measured runtime (2026-08-22: 42-162 s) exceeds the
       # default 60 s per-test budget run under the reviewed `heavy` profile
