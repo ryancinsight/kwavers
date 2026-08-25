@@ -153,18 +153,21 @@ impl ParameterDefinition {
     }
 
     /// Set the description
+    #[must_use]
     pub fn with_description(mut self, desc: impl Into<String>) -> Self {
         self.description = desc.into();
         self
     }
 
     /// Set the group
+    #[must_use]
     pub fn with_group(mut self, group: impl Into<String>) -> Self {
         self.group = group.into();
         self
     }
 
     /// Set whether the parameter updates in realtime
+    #[must_use]
     pub fn with_realtime(mut self, realtime: bool) -> Self {
         self.is_realtime = realtime;
         self

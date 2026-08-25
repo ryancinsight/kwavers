@@ -105,11 +105,12 @@ pub struct InteractiveControls {
 
 impl std::fmt::Debug for InteractiveControls {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // `update_callbacks` holds boxed closures and is deliberately excluded.
         f.debug_struct("InteractiveControls")
             .field("states", &self.states)
             .field("history", &self.history)
             .field("max_history_size", &self.max_history_size)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 

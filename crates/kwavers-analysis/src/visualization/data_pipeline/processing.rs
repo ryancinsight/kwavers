@@ -42,8 +42,8 @@ impl ProcessingStage {
             ProcessingOperation::None => {}
             ProcessingOperation::Normalize => self.normalize(data),
             ProcessingOperation::LogScale => self.log_scale(data),
-            ProcessingOperation::GradientMagnitude => self.gradient_magnitude(data),
-            ProcessingOperation::GaussianSmooth => self.gaussian_smooth(data),
+            ProcessingOperation::GradientMagnitude => Self::gradient_magnitude(data),
+            ProcessingOperation::GaussianSmooth => Self::gaussian_smooth(data),
         }
     }
 
@@ -72,7 +72,7 @@ impl ProcessingStage {
     }
 
     /// Compute gradient magnitude
-    fn gradient_magnitude(&self, data: &mut Array3<f64>) {
+    fn gradient_magnitude(data: &mut Array3<f64>) {
         let [nx, ny, nz] = data.shape();
         let shape = [nx, ny, nz];
         let mut gradient = Array3::zeros(shape);
@@ -93,7 +93,7 @@ impl ProcessingStage {
     }
 
     /// Apply Gaussian smoothing
-    fn gaussian_smooth(&self, data: &mut Array3<f64>) {
+    fn gaussian_smooth(data: &mut Array3<f64>) {
         // Box filter approximation to Gaussian smoothing (Gonzalez & Woods 2008, §3.6)
         //
         // Not yet implemented: advanced volume rendering. Absent: ray marching with

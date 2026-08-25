@@ -64,12 +64,14 @@ impl TestCovarianceBuilder {
     }
 
     /// Set the exponential decay parameter (correlation strength).
+    #[must_use]
     pub fn with_decay(mut self, decay: f64) -> Self {
         self.decay = decay;
         self
     }
 
     /// Set the diagonal loading (regularization parameter).
+    #[must_use]
     pub fn with_diagonal_loading(mut self, diagonal_loading: f64) -> Self {
         self.diagonal_loading = diagonal_loading;
         self

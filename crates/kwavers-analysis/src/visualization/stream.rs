@@ -285,6 +285,10 @@ pub struct VizStream {
 
 impl VizStream {
     /// Construct a stream with a bounded channel selected by `policy`.
+    ///
+    /// # Errors
+    /// Infallible in the current implementation; the `Result` shape is
+    /// retained for channel-policy validation.
     pub fn new(policy: BufferPolicy) -> Result<Self, String> {
         let (tx, rx) = flume::bounded(policy.capacity());
         Ok(Self {
@@ -300,6 +304,10 @@ impl VizStream {
     }
 
     /// Construct a stream with a reusable frame pool.
+    ///
+    /// # Errors
+    /// Infallible in the current implementation; the `Result` shape is
+    /// retained for pool-construction validation.
     pub fn with_pool(
         policy: BufferPolicy,
         dimensions: (usize, usize, usize),
@@ -344,26 +352,46 @@ impl VizStream {
     }
 
     /// Send a frame through the stream.
+    ///
+    /// # Errors
+    /// Returns `Err` with a message when the stream is closed or its receiver
+    /// has been dropped.
     pub async fn send_frame(&self, frame: VizFrame) -> Result<(), String> {
         self.inner.send_frame(frame).await
     }
 
     /// Send a frame through the stream without requiring an async runtime.
+    ///
+    /// # Errors
+    /// Returns `Err` with a message when the stream is closed or its receiver
+    /// has been dropped.
     pub fn send_frame_blocking(&self, frame: VizFrame) -> Result<(), String> {
         self.inner.send_frame_blocking(frame)
     }
 
     /// Receive the next frame.
+    ///
+    /// # Errors
+    /// Returns `Err` with a message when the channel is disconnected and no
+    /// frame is available.
     pub async fn recv_frame(&self) -> Result<VizFrame, String> {
         self.inner.recv_frame().await
     }
 
     /// Receive the next frame without requiring an async runtime.
+    ///
+    /// # Errors
+    /// Returns `Err` with a message when the channel is disconnected and no
+    /// frame is available.
     pub fn recv_frame_blocking(&self) -> Result<VizFrame, String> {
         self.inner.recv_frame_blocking()
     }
 
     /// Try to receive a frame without blocking.
+    ///
+    /// # Errors
+    /// Returns `Err` with a message when the channel is disconnected.
+    /// An empty channel yields `Ok(None)`.
     pub fn try_recv_frame(&self) -> Result<Option<VizFrame>, String> {
         self.inner.try_recv_frame()
     }
@@ -410,11 +438,17 @@ pub struct StreamSender {
 
 impl StreamSender {
     /// Send a frame asynchronously.
+    ///
+    /// # Errors
+    /// Returns `Err` with a message when the channel is disconnected.
     pub async fn send_async(&self, frame: VizFrame) -> Result<(), String> {
         self.inner.send_frame(frame).await
     }
 
     /// Send a frame without requiring an async runtime.
+    ///
+    /// # Errors
+    /// Returns `Err` with a message when the channel is disconnected.
     pub fn send_blocking(&self, frame: VizFrame) -> Result<(), String> {
         self.inner.send_frame_blocking(frame)
     }
@@ -428,11 +462,19 @@ pub struct StreamReceiver {
 
 impl StreamReceiver {
     /// Receive a frame asynchronously.
+    ///
+    /// # Errors
+    /// Returns `Err` with a message when the channel is disconnected and
+    /// drained.
     pub async fn recv_async(&self) -> Result<VizFrame, String> {
         self.inner.recv_frame().await
     }
 
     /// Receive a frame without requiring an async runtime.
+    ///
+    /// # Errors
+    /// Returns `Err` with a message when the channel is disconnected and
+    /// drained.
     pub fn recv_blocking(&self) -> Result<VizFrame, String> {
         self.inner.recv_frame_blocking()
     }
@@ -461,6 +503,9 @@ impl FramePool {
     }
 
     /// Acquire a frame buffer.
+    ///
+    /// # Panics
+    /// Panics when the frame-pool lock is poisoned.
     pub fn acquire(&self) -> LetoArray3<f32> {
         self.buffers
             .lock()
@@ -470,6 +515,9 @@ impl FramePool {
     }
 
     /// Return a frame buffer to the pool.
+    ///
+    /// # Panics
+    /// Panics when the frame-pool lock is poisoned.
     pub fn release(&self, buffer: LetoArray3<f32>) {
         let mut buffers = self.buffers.lock().expect("invariant: frame pool lock");
         if buffers.len() < self.capacity && buffer.shape() == self.dimensions {
@@ -558,6 +606,9 @@ impl SyncCoordinator {
     }
 
     /// Return the current quality factor.
+    ///
+    /// # Panics
+    /// Panics when the synchronization-state lock is poisoned.
     pub fn quality_factor(&self) -> f64 {
         self.state
             .lock()
@@ -567,6 +618,9 @@ impl SyncCoordinator {
     }
 
     /// Set quality level manually.
+    ///
+    /// # Panics
+    /// Panics when the synchronization-state lock is poisoned.
     pub fn set_quality(&self, quality: QualityLevel) {
         let mut state = self.state.lock().expect("invariant: sync state lock");
         state.quality = quality;
@@ -574,6 +628,9 @@ impl SyncCoordinator {
     }
 
     /// Record one completed frame.
+    ///
+    /// # Panics
+    /// Panics when the synchronization-state lock is poisoned.
     pub fn complete_frame(&self, latency: Duration, _simulation_time: f64) {
         let mut state = self.state.lock().expect("invariant: sync state lock");
         state.stats.frames_rendered += 1;
@@ -590,6 +647,9 @@ impl SyncCoordinator {
     }
 
     /// Record a dropped frame.
+    ///
+    /// # Panics
+    /// Panics when the synchronization-state lock is poisoned.
     pub fn report_drop(&self, _reason: &str) {
         let mut state = self.state.lock().expect("invariant: sync state lock");
         state.stats.frames_dropped += 1;
@@ -597,6 +657,9 @@ impl SyncCoordinator {
     }
 
     /// Return current synchronization statistics.
+    ///
+    /// # Panics
+    /// Panics when the synchronization-state lock is poisoned.
     pub fn statistics(&self) -> SyncStatistics {
         self.state
             .lock()
@@ -669,6 +732,7 @@ pub mod sync {
 
     impl QualityLevel {
         /// Return one lower quality level, clamped at `Minimal`.
+        #[must_use]
         pub fn downgrade(self) -> Self {
             match self {
                 Self::Maximum => Self::High,
@@ -679,6 +743,7 @@ pub mod sync {
         }
 
         /// Return one higher quality level, clamped at `Maximum`.
+        #[must_use]
         pub fn upgrade(self) -> Self {
             match self {
                 Self::Minimal => Self::Low,
@@ -744,12 +809,22 @@ pub struct StagePipeline {
 
 impl StagePipeline {
     /// Construct the stage pipeline and its input sender.
-    pub async fn new(config: PipelineConfig) -> Result<(Self, PipelineInputSender), String> {
+    ///
+    /// # Errors
+    /// See [`StagePipeline::new_blocking`].
+    pub fn new(config: PipelineConfig) -> Result<(Self, PipelineInputSender), String> {
         Self::new_blocking(config)
     }
 
     /// Construct the stage pipeline and its input sender without requiring an
     /// async runtime.
+    ///
+    /// # Errors
+    /// Infallible in the current implementation; the `Result` shape is
+    /// retained for channel-configuration validation.
+    ///
+    /// # Panics
+    /// Panics when the pipeline metrics lock is poisoned by the worker thread.
     pub fn new_blocking(config: PipelineConfig) -> Result<(Self, PipelineInputSender), String> {
         let (tx, rx) = flume::bounded::<VizFrame>(config.channel_capacity.max(1));
         let metrics = Arc::new(Mutex::new(PipelineMetrics {
@@ -794,6 +869,9 @@ impl StagePipeline {
     }
 
     /// Return pipeline metrics.
+    ///
+    /// # Panics
+    /// Panics when the pipeline metrics lock is poisoned.
     pub fn metrics(&self) -> PipelineMetrics {
         self.metrics
             .lock()
@@ -810,6 +888,9 @@ pub struct PipelineInputSender {
 
 impl PipelineInputSender {
     /// Send a frame to the pipeline.
+    ///
+    /// # Errors
+    /// Returns `Err` with a message when the channel is disconnected.
     pub async fn send(&self, frame: VizFrame) -> Result<(), String> {
         self.tx
             .send_async(frame)
@@ -818,6 +899,9 @@ impl PipelineInputSender {
     }
 
     /// Send a frame to the pipeline without requiring an async runtime.
+    ///
+    /// # Errors
+    /// Returns `Err` with a message when the channel is disconnected.
     pub fn send_blocking(&self, frame: VizFrame) -> Result<(), String> {
         self.tx
             .send(frame)

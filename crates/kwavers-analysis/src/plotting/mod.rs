@@ -40,6 +40,10 @@ mod plotting_impl {
         info!("Plot saved to {}", filename);
     }
 
+    /// Plot a 2D pressure-field slice to an interactive HTML file.
+    ///
+    /// # Panics
+    /// Panics when `z_slice` is out of bounds for `pressure`'s third axis.
     pub fn plot_pressure_field_2d(
         pressure: &Array3<f64>,
         grid: &Grid,
@@ -142,6 +146,10 @@ mod plotting_impl {
         info!("Plot saved to {}", filename);
     }
 
+    /// Plot two pressure fields as side-by-side slices into an HTML file.
+    ///
+    /// # Panics
+    /// Panics when `z_slice` is out of bounds for either field's third axis.
     pub fn plot_field_comparison(
         field1: &Array3<f64>,
         field2: &Array3<f64>,
