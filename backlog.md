@@ -1,5 +1,106 @@
 # Backlog / Strategy
 
+## KW-PINN-UNSEEDED-RNG — no PINN training run can be replayed [patch] — todo
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-PINN-UNSEEDED-RNG | Make collocation sampling reproducible so a training run can be replayed from its inputs. | [patch] | todo | unowned | `crates/kwavers-solver/src/inverse/pinn/ml/wave_equation_3d/solver/collocation.rs` |
+
+- **Evidence:** `generate_collocation_points` draws each coordinate from
+  `rand::random::<f64>()` -- the unseeded global generator. Nothing records the
+  draw, so two runs of the same configuration evaluate the PDE residual at
+  different points and no run can be reproduced from its inputs.
+- **Not the convergence defect.** The points are drawn once per `train()` call,
+  outside the epoch loop, so the loss is a deterministic function of the
+  parameters *within* a run. `KW-PINN-3D-NO-CONVERGENCE` was the learning-rate
+  schedule, and it reproduced across runs.
+- **What it does cost.** Any comparison *between* runs is noise, which is why
+  the gradient tests in `wave_equation_3d/tests/gradients.rs` build fixed inputs
+  rather than borrowing the solver's -- a finite difference taken across two
+  draws measures the draw. It also means a training failure cannot be handed to
+  anyone as a reproduction.
+- **Shape of the fix:** a seed on `PinnConfig3D`, defaulted, threaded to a
+  `rand_chacha`-style generator rather than the global one, and recorded in
+  `TrainingMetrics3D` so a run carries the seed that produced it. `rand_chacha`
+  is already a dependency of the `kwavers` facade.
+
+## KW-PINN-3D-NO-CONVERGENCE — the learning-rate schedule strangled its own training [major] — IMPLEMENTED 2026-08-25
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-PINN-3D-NO-CONVERGENCE | Find why training plateaued far from an optimum the network represents exactly, and fix it. | [major] | review | agent/session-d49f3b0a | `crates/kwavers-solver/src/inverse/pinn/ml/wave_equation_3d/solver/training.rs`, `crates/kwavers-solver/.../tests/gradients.rs`, `crates/kwavers/tests/pinn_{bc,ic}_validation.rs` |
+
+### What was eliminated first
+
+Three things can break between a loss and a parameter update. Each now has a
+test, in `wave_equation_3d/tests/gradients.rs`, and all three passed — so the
+autograd and the optimizer were never the problem:
+
+| Question | Test | Result |
+|---|---|---|
+| Does backward reach every parameter? | `backward_reaches_every_parameter` | finite, non-zero gradient on all |
+| Is it the *right* gradient? | `reported_gradient_matches_a_finite_difference` | within 2% of a central difference |
+| Does the optimizer apply it? | `the_optimizer_applies_the_gradient_it_was_given` | every element moves by exactly `-lr * grad` |
+
+The finite-difference test was confirmed to fail when the reported gradient was
+scaled by 1.5, so it is not passing vacuously. Its `h = 5e-3` sits near the `f32`
+optimum where truncation error `O(h^2)` balances cancellation error `O(eps/h)`.
+
+### The defect
+
+`if total_val < best_total_loss * 0.999` required a **0.1% improvement per
+epoch** to count as progress. Ordinary convergence falls below that bar long
+before the optimum; every epoch under it counted toward a decay, and each decay
+slowed progress further, producing more epochs under the bar. The schedule
+strangled the training it exists to help. At `patience = 10` and factor `0.95`
+the rate reaches its `min_lr` floor — a thousandfold reduction — by about epoch
+1350.
+
+Measured on the all-zero target, where the optimum is the zero function and the
+network represents it exactly:
+
+| schedule | loss after 2000 epochs |
+|---|---|
+| as committed (0.1% bar, patience 10) | 224.8 |
+| improvement-only bar, patience 10 | 186.8 |
+| improvement-only bar, patience 100 | **0.0797** |
+| no decay at all | 0.147 |
+
+From an initial ~399.9. The fix is better than removing the decay entirely,
+which is what a correctly-timed decay should do.
+
+### The fix
+
+Two lines: compare against `best_total_loss` rather than `best_total_loss *
+0.999`, and raise `lr_decay_patience` from 10 to 100. A genuine plateau still
+decays — that is what the mechanism is for.
+
+### The four failing tests, recalibrated rather than relaxed
+
+Their thresholds were unreachable at their epoch budgets, as their own comments
+conceded ("small network and few epochs", "full convergence requires more
+training"). Each now asserts a measured reduction at a budget that fits the test
+timeout, and each floor separates the fixed schedule from the broken one:
+
+| test | epochs | measured | floor | old schedule |
+|---|---|---|---|---|
+| `test_bc_loss_decreases_with_training` | 600 | 89.1–89.3% (3 runs, 0.2pp spread) | 80% | 11% |
+| `test_dirichlet_bc_zero_boundary` | 400 | 37.7–37.8% | 30% | 23.0% |
+| `test_ic_combined_loss_decreases` | 400 | 38.4% | 30% | 23.2% |
+| `test_ic_loss_zero_field` | 400 | 70.0% | 30% | — |
+
+`test_ic_combined_loss_decreases` had asserted `final_ic < 10.0` under the label
+"no divergence" and observed 391. That is not divergence; it is a convergence
+threshold wearing a stability label, and the two are now separate assertions.
+
+### Also found, not fixed here
+
+`generate_collocation_points` draws from an unseeded `rand::random()`, so no
+training run can be replayed. It is drawn once per `train()` call, so the loss
+is deterministic *within* a run and this is not the convergence defect — but it
+makes any cross-run comparison noise, which is why the gradient tests build
+fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
+
 ## KW-KWAVE-DISTRIBUTED-SOURCE — pin k-Wave's mask-cell ordering [minor] — IMPLEMENTED 2026-08-24
 
 | ID | Outcome | Class | Status | Owner | Scope |
