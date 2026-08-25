@@ -219,11 +219,11 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   was not removed. It ran a 50^3 grid for 40 ms of simulated time and **timed
   out at the 60 s nextest termination bound** on every run. 308 lines deleted.
 
-## KW-INTEGRATION-TESTS-UNRUN — 686 integration tests compiled, 6 run [patch] — IMPLEMENTED 2026-08-24
+## KW-INTEGRATION-TESTS-UNRUN — 686 integration tests compiled, 6 run [patch] — in progress
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-INTEGRATION-TESTS-UNRUN | Run the integration tests CI compiles but never executes, and burn down the 17 failures that were hiding there. | [patch] | review | agent/session-d49f3b0a | `scripts/integration_tests.py`, `.config/integration-test-baseline.txt`, `.github/workflows/architecture-validation.yml`, `crates/kwavers/tests/solver_test.rs` |
+| KW-INTEGRATION-TESTS-UNRUN | Run the integration tests CI compiles but never executes, and burn down the 17 failures that were hiding there. | [patch] | in progress | current session (stale-claim takeover 2026-08-25) | `scripts/integration_tests.py`, `.config/integration-test-baseline.txt`, `.github/workflows/architecture-validation.yml`, integration-test failures named below |
 
 - **Evidence:** `crates/kwavers/tests/` holds 92 files. The strict clippy step
   compiles all of them (`--all-targets`); the test-coverage job runs `--lib`
@@ -236,10 +236,15 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   `StaggeredLeapfrogOperator::cfl_limit(3)` -- the same operator the solver
   asks -- instead of restating the bound without its dimensional factor. Both
   tests pass and are not in the baseline.
-- **Mechanism:** ADR 121. A committed set-valued baseline, not a count: a
+- **Mechanism:** ADR 124. A committed set-valued baseline, not a count: a
   failure outside it is a named regression, an entry that passes is stale and
   must be removed. Shrinks, never grows. Proven live in both directions before
   landing.
+- **Takeover review 2026-08-25:** the prior owner has no commit or board update
+  for more than eight hours and the lane is clean. The runner still reports ten
+  named failures as success, launches an unbounded subprocess, and decodes with
+  the platform locale. Completion requires removing those failure entries by
+  fixing their causes, plus a finite process bound and UTF-8 diagnostics.
 
 ### The 17 owed fixes
 
