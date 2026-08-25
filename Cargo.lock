@@ -36,7 +36,6 @@ checksum = "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa"
 [[package]]
 name = "aequitas"
 version = "0.2.0"
-source = "git+https://github.com/ryancinsight/aequitas#dc4bdefbbd679a732017886657bef2d54af9d9bb"
 dependencies = [
  "eunomia",
  "serde",
@@ -159,7 +158,6 @@ checksum = "330a5ed07fa54e4702c9d6c4174f74427fc0ef6e214bbd677ae50a5099946470"
 [[package]]
 name = "apollo-fft"
 version = "0.27.0"
-source = "git+https://github.com/ryancinsight/apollo.git#fd9ecd0206c2b4ee3993a42eec65a1703d592ac2"
 dependencies = [
  "apollo-fft-macros",
  "apollo-leto-interop",
@@ -183,7 +181,6 @@ dependencies = [
 [[package]]
 name = "apollo-fft-macros"
 version = "0.2.0"
-source = "git+https://github.com/ryancinsight/apollo.git#fd9ecd0206c2b4ee3993a42eec65a1703d592ac2"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -193,7 +190,6 @@ dependencies = [
 [[package]]
 name = "apollo-leto-interop"
 version = "0.18.0"
-source = "git+https://github.com/ryancinsight/apollo.git#fd9ecd0206c2b4ee3993a42eec65a1703d592ac2"
 dependencies = [
  "leto",
 ]
@@ -216,7 +212,6 @@ checksum = "d3fb67a6e08acf24fdeccbac2cb6ac4305825bd1f117462e0e6f2f193345ad56"
 [[package]]
 name = "asclepius"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/asclepius#43fc5b934b2b9dc3744b6293d8326a2a80c955d8"
 dependencies = [
  "aequitas",
  "eunomia",
@@ -275,6 +270,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "acb1161c6b64d1c3d83108213c2a2533a342ac225aabd0bda218278c2ddb00c0"
 dependencies = [
  "nom",
+]
+
+[[package]]
+name = "athena-core"
+version = "0.1.1"
+dependencies = [
+ "eunomia",
+]
+
+[[package]]
+name = "athena-leto"
+version = "0.1.1"
+dependencies = [
+ "athena-core",
+ "eunomia",
+ "leto",
+ "leto-ops",
 ]
 
 [[package]]
@@ -716,7 +728,6 @@ dependencies = [
 [[package]]
 name = "coeus-autograd"
 version = "0.10.0"
-source = "git+https://github.com/ryancinsight/Coeus.git#c2f938c09b822fb85956ccdbeff9d44d4379a710"
 dependencies = [
  "apollo-fft",
  "coeus-core",
@@ -731,7 +742,6 @@ dependencies = [
 [[package]]
 name = "coeus-core"
 version = "0.10.0"
-source = "git+https://github.com/ryancinsight/Coeus.git#c2f938c09b822fb85956ccdbeff9d44d4379a710"
 dependencies = [
  "bytemuck",
  "eunomia",
@@ -746,7 +756,6 @@ dependencies = [
 [[package]]
 name = "coeus-leto"
 version = "0.10.0"
-source = "git+https://github.com/ryancinsight/Coeus.git#c2f938c09b822fb85956ccdbeff9d44d4379a710"
 dependencies = [
  "coeus-core",
  "leto",
@@ -756,7 +765,6 @@ dependencies = [
 [[package]]
 name = "coeus-nn"
 version = "0.10.0"
-source = "git+https://github.com/ryancinsight/Coeus.git#c2f938c09b822fb85956ccdbeff9d44d4379a710"
 dependencies = [
  "coeus-autograd",
  "coeus-core",
@@ -770,7 +778,6 @@ dependencies = [
 [[package]]
 name = "coeus-ops"
 version = "0.10.0"
-source = "git+https://github.com/ryancinsight/Coeus.git#c2f938c09b822fb85956ccdbeff9d44d4379a710"
 dependencies = [
  "bytemuck",
  "coeus-core",
@@ -788,7 +795,6 @@ dependencies = [
 [[package]]
 name = "coeus-optim"
 version = "0.10.0"
-source = "git+https://github.com/ryancinsight/Coeus.git#c2f938c09b822fb85956ccdbeff9d44d4379a710"
 dependencies = [
  "coeus-autograd",
  "coeus-core",
@@ -802,7 +808,6 @@ dependencies = [
 [[package]]
 name = "coeus-sparse"
 version = "0.10.0"
-source = "git+https://github.com/ryancinsight/Coeus.git#c2f938c09b822fb85956ccdbeff9d44d4379a710"
 dependencies = [
  "coeus-core",
  "coeus-tensor",
@@ -813,7 +818,6 @@ dependencies = [
 [[package]]
 name = "coeus-tensor"
 version = "0.10.0"
-source = "git+https://github.com/ryancinsight/Coeus.git#c2f938c09b822fb85956ccdbeff9d44d4379a710"
 dependencies = [
  "bytemuck",
  "coeus-core",
@@ -848,7 +852,6 @@ dependencies = [
 [[package]]
 name = "consus-compression"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/consus.git#5fc1443ecee71d90e5f80dd7df419636f1dda1c8"
 dependencies = [
  "byteorder",
  "consus-core",
@@ -857,7 +860,6 @@ dependencies = [
 [[package]]
 name = "consus-core"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/consus.git#5fc1443ecee71d90e5f80dd7df419636f1dda1c8"
 dependencies = [
  "byteorder",
  "smallvec",
@@ -867,7 +869,6 @@ dependencies = [
 [[package]]
 name = "consus-hdf5"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/consus.git#5fc1443ecee71d90e5f80dd7df419636f1dda1c8"
 dependencies = [
  "byteorder",
  "consus-compression",
@@ -878,7 +879,6 @@ dependencies = [
 [[package]]
 name = "consus-io"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/consus.git#5fc1443ecee71d90e5f80dd7df419636f1dda1c8"
 dependencies = [
  "consus-core",
 ]
@@ -886,7 +886,6 @@ dependencies = [
 [[package]]
 name = "consus-npy"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/consus.git#5fc1443ecee71d90e5f80dd7df419636f1dda1c8"
 dependencies = [
  "byteorder",
  "consus-io",
@@ -897,7 +896,6 @@ dependencies = [
 [[package]]
 name = "consus-onnx"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/consus.git#5fc1443ecee71d90e5f80dd7df419636f1dda1c8"
 
 [[package]]
 name = "convert_case"
@@ -1750,7 +1748,6 @@ dependencies = [
 [[package]]
 name = "eunomia"
 version = "0.8.0"
-source = "git+https://github.com/ryancinsight/eunomia#35158d17d20160214519811b19167ce385215f3e"
 dependencies = [
  "bytemuck",
  "libm",
@@ -2013,7 +2010,6 @@ dependencies = [
 [[package]]
 name = "gaia-mesh"
 version = "0.4.0"
-source = "git+https://github.com/ryancinsight/gaia.git#2ce0984a33d5fec2e1d010fb5340341fb6e91b1e"
 dependencies = [
  "aequitas",
  "anyhow",
@@ -2190,7 +2186,6 @@ checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
 [[package]]
 name = "hephaestus-core"
 version = "0.19.0"
-source = "git+https://github.com/ryancinsight/hephaestus.git#03cadd76c58c3f2298e103b0e5445a4ce87539b8"
 dependencies = [
  "aequitas",
  "bytemuck",
@@ -2203,7 +2198,6 @@ dependencies = [
 [[package]]
 name = "hephaestus-cuda"
 version = "0.19.0"
-source = "git+https://github.com/ryancinsight/hephaestus.git#03cadd76c58c3f2298e103b0e5445a4ce87539b8"
 dependencies = [
  "bytemuck",
  "cuda-oxide",
@@ -2222,7 +2216,6 @@ dependencies = [
 [[package]]
 name = "hephaestus-wgpu"
 version = "0.19.0"
-source = "git+https://github.com/ryancinsight/hephaestus.git#03cadd76c58c3f2298e103b0e5445a4ce87539b8"
 dependencies = [
  "bytemuck",
  "eunomia",
@@ -2242,7 +2235,6 @@ dependencies = [
 [[package]]
 name = "hermes-simd"
 version = "0.7.0"
-source = "git+https://github.com/ryancinsight/hermes.git#e8515b3405b8cd78a1944c6d0ac8baf4aa74eefd"
 dependencies = [
  "eunomia",
  "hermes-simd-core",
@@ -2256,7 +2248,6 @@ dependencies = [
 [[package]]
 name = "hermes-simd-core"
 version = "0.7.0"
-source = "git+https://github.com/ryancinsight/hermes.git#e8515b3405b8cd78a1944c6d0ac8baf4aa74eefd"
 dependencies = [
  "bytemuck",
  "eunomia",
@@ -2268,7 +2259,6 @@ dependencies = [
 [[package]]
 name = "hermes-simd-intrinsics"
 version = "0.7.0"
-source = "git+https://github.com/ryancinsight/hermes.git#e8515b3405b8cd78a1944c6d0ac8baf4aa74eefd"
 dependencies = [
  "eunomia",
  "hermes-simd-core",
@@ -2277,7 +2267,6 @@ dependencies = [
 [[package]]
 name = "hermes-simd-macros"
 version = "0.7.0"
-source = "git+https://github.com/ryancinsight/hermes.git#e8515b3405b8cd78a1944c6d0ac8baf4aa74eefd"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2287,7 +2276,6 @@ dependencies = [
 [[package]]
 name = "hermes-simd-types"
 version = "0.7.0"
-source = "git+https://github.com/ryancinsight/hermes.git#e8515b3405b8cd78a1944c6d0ac8baf4aa74eefd"
 dependencies = [
  "hermes-simd-core",
  "hermes-simd-intrinsics",
@@ -2432,7 +2420,6 @@ dependencies = [
 [[package]]
 name = "hyperion"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/hyperion#1e251cb0d1aecf4b30a4946c2319aecc0d2bc085"
 dependencies = [
  "aequitas",
  "eunomia",
@@ -2630,7 +2617,6 @@ checksum = "6a756c3fac73139e83f14c2d742155dd2b78d3ee56597b419a0579b7bdd6dd78"
 [[package]]
 name = "iris-viz"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/iris#2f11a513b5158c5b82e11c6be7c803a92889204a"
 
 [[package]]
 name = "is-terminal"
@@ -3253,6 +3239,8 @@ name = "kwavers-math"
 version = "3.0.0"
 dependencies = [
  "apollo-fft",
+ "athena-core",
+ "athena-leto",
  "eunomia",
  "hephaestus-core",
  "hephaestus-wgpu",
@@ -3566,7 +3554,6 @@ checksum = "7a79a3332a6609480d7d0c9eab957bca6b455b91bb84e66d19f5ff66294b85b8"
 [[package]]
 name = "leto"
 version = "0.42.0"
-source = "git+https://github.com/ryancinsight/leto.git#fc0648ee90d211ce8bb065ff023404483f49041b"
 dependencies = [
  "aequitas",
  "eunomia",
@@ -3578,7 +3565,6 @@ dependencies = [
 [[package]]
 name = "leto-ops"
 version = "0.42.0"
-source = "git+https://github.com/ryancinsight/leto.git#fc0648ee90d211ce8bb065ff023404483f49041b"
 dependencies = [
  "eunomia",
  "hermes-simd",
@@ -3700,7 +3686,6 @@ dependencies = [
 [[package]]
 name = "melinoe"
 version = "0.9.0"
-source = "git+https://github.com/ryancinsight/melinoe.git#922bd3bef2a6ed8db1f8074daa12c875e76d54c8"
 
 [[package]]
 name = "memchr"
@@ -3763,7 +3748,6 @@ dependencies = [
 [[package]]
 name = "mnemosyne-arena"
 version = "0.4.0"
-source = "git+https://github.com/ryancinsight/Mnemosyne#9da9f92e33842d46c6c85b235b6346fe780a1f6d"
 dependencies = [
  "eunomia",
  "loom",
@@ -3775,7 +3759,6 @@ dependencies = [
 [[package]]
 name = "mnemosyne-backend"
 version = "0.5.0"
-source = "git+https://github.com/ryancinsight/Mnemosyne#9da9f92e33842d46c6c85b235b6346fe780a1f6d"
 dependencies = [
  "mnemosyne-memory-core",
 ]
@@ -3783,12 +3766,10 @@ dependencies = [
 [[package]]
 name = "mnemosyne-build-util"
 version = "0.2.0"
-source = "git+https://github.com/ryancinsight/Mnemosyne#9da9f92e33842d46c6c85b235b6346fe780a1f6d"
 
 [[package]]
 name = "mnemosyne-decay"
 version = "0.3.0"
-source = "git+https://github.com/ryancinsight/Mnemosyne#9da9f92e33842d46c6c85b235b6346fe780a1f6d"
 dependencies = [
  "mnemosyne-arena",
  "mnemosyne-backend",
@@ -3798,7 +3779,6 @@ dependencies = [
 [[package]]
 name = "mnemosyne-heap"
 version = "0.4.0"
-source = "git+https://github.com/ryancinsight/Mnemosyne#9da9f92e33842d46c6c85b235b6346fe780a1f6d"
 dependencies = [
  "libc",
  "melinoe",
@@ -3813,7 +3793,6 @@ dependencies = [
 [[package]]
 name = "mnemosyne-local"
 version = "0.4.0"
-source = "git+https://github.com/ryancinsight/Mnemosyne#9da9f92e33842d46c6c85b235b6346fe780a1f6d"
 dependencies = [
  "melinoe",
  "mnemosyne-arena",
@@ -3828,7 +3807,6 @@ dependencies = [
 [[package]]
 name = "mnemosyne-memory"
 version = "0.7.0"
-source = "git+https://github.com/ryancinsight/Mnemosyne#9da9f92e33842d46c6c85b235b6346fe780a1f6d"
 dependencies = [
  "eunomia",
  "mnemosyne-arena",
@@ -3843,7 +3821,6 @@ dependencies = [
 [[package]]
 name = "mnemosyne-memory-core"
 version = "0.2.0"
-source = "git+https://github.com/ryancinsight/Mnemosyne#9da9f92e33842d46c6c85b235b6346fe780a1f6d"
 dependencies = [
  "loom",
 ]
@@ -3851,7 +3828,6 @@ dependencies = [
 [[package]]
 name = "mnemosyne-prof"
 version = "0.2.0"
-source = "git+https://github.com/ryancinsight/Mnemosyne#9da9f92e33842d46c6c85b235b6346fe780a1f6d"
 dependencies = [
  "backtrace",
  "mnemosyne-build-util",
@@ -3861,7 +3837,6 @@ dependencies = [
 [[package]]
 name = "moirai-async"
 version = "0.5.0"
-source = "git+https://github.com/ryancinsight/Moirai.git#843dab6897723150ca69f395fc705d74d1463223"
 dependencies = [
  "futures",
  "libc",
@@ -3877,7 +3852,6 @@ dependencies = [
 [[package]]
 name = "moirai-async-macros"
 version = "0.5.0"
-source = "git+https://github.com/ryancinsight/Moirai.git#843dab6897723150ca69f395fc705d74d1463223"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3887,7 +3861,6 @@ dependencies = [
 [[package]]
 name = "moirai-core"
 version = "0.5.0"
-source = "git+https://github.com/ryancinsight/Moirai.git#843dab6897723150ca69f395fc705d74d1463223"
 dependencies = [
  "bytemuck",
  "libc",
@@ -3899,7 +3872,6 @@ dependencies = [
 [[package]]
 name = "moirai-executor"
 version = "0.5.0"
-source = "git+https://github.com/ryancinsight/Moirai.git#843dab6897723150ca69f395fc705d74d1463223"
 dependencies = [
  "melinoe",
  "mnemosyne-memory",
@@ -3913,7 +3885,6 @@ dependencies = [
 [[package]]
 name = "moirai-gpu"
 version = "0.5.0"
-source = "git+https://github.com/ryancinsight/Moirai.git#843dab6897723150ca69f395fc705d74d1463223"
 dependencies = [
  "mnemosyne-memory-core",
  "moirai-core",
@@ -3924,7 +3895,6 @@ dependencies = [
 [[package]]
 name = "moirai-iter"
 version = "0.5.0"
-source = "git+https://github.com/ryancinsight/Moirai.git#843dab6897723150ca69f395fc705d74d1463223"
 dependencies = [
  "futures",
  "libc",
@@ -3940,7 +3910,6 @@ dependencies = [
 [[package]]
 name = "moirai-pal"
 version = "0.5.0"
-source = "git+https://github.com/ryancinsight/Moirai.git#843dab6897723150ca69f395fc705d74d1463223"
 dependencies = [
  "js-sys",
  "libc",
@@ -3955,7 +3924,6 @@ dependencies = [
 [[package]]
 name = "moirai-parallel"
 version = "0.5.0"
-source = "git+https://github.com/ryancinsight/Moirai.git#843dab6897723150ca69f395fc705d74d1463223"
 dependencies = [
  "melinoe",
  "moirai-core",
@@ -3966,7 +3934,6 @@ dependencies = [
 [[package]]
 name = "moirai-runtime"
 version = "0.5.0"
-source = "git+https://github.com/ryancinsight/Moirai.git#843dab6897723150ca69f395fc705d74d1463223"
 dependencies = [
  "melinoe",
  "mnemosyne-memory",
@@ -3984,7 +3951,6 @@ dependencies = [
 [[package]]
 name = "moirai-scheduler"
 version = "0.5.0"
-source = "git+https://github.com/ryancinsight/Moirai.git#843dab6897723150ca69f395fc705d74d1463223"
 dependencies = [
  "mnemosyne-memory",
  "moirai-core",
@@ -3996,7 +3962,6 @@ dependencies = [
 [[package]]
 name = "moirai-sync"
 version = "0.5.0"
-source = "git+https://github.com/ryancinsight/Moirai.git#843dab6897723150ca69f395fc705d74d1463223"
 dependencies = [
  "libc",
  "moirai-core",
@@ -4006,7 +3971,6 @@ dependencies = [
 [[package]]
 name = "moirai-transport"
 version = "0.5.0"
-source = "git+https://github.com/ryancinsight/Moirai.git#843dab6897723150ca69f395fc705d74d1463223"
 dependencies = [
  "bytemuck",
  "moirai-core",
@@ -4017,7 +3981,6 @@ dependencies = [
 [[package]]
 name = "moirai-utils"
 version = "0.5.0"
-source = "git+https://github.com/ryancinsight/Moirai.git#843dab6897723150ca69f395fc705d74d1463223"
 
 [[package]]
 name = "munge"
@@ -4382,9 +4345,9 @@ checksum = "04744f49eae99ab78e0d5c0b603ab218f515ea8cfe5a456d7629ad883a3b6e7d"
 
 [[package]]
 name = "ordered-float"
-version = "5.5.0"
+version = "5.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8c7c9e0d9b23589f26070720bac724174bfec1083e82f7854cdd0267518343c0"
+checksum = "e2c1f9f56e534ac6a9b8a4600bdf0f530fb393b5f393e7b4d03489c3cf0c3f01"
 dependencies = [
  "num-traits",
 ]
@@ -4667,7 +4630,6 @@ dependencies = [
 [[package]]
 name = "proteus"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/proteus#39426d6bf1fe7ff86ff381a011b846e65c844ef1"
 dependencies = [
  "aequitas",
  "eunomia",
@@ -5223,7 +5185,6 @@ dependencies = [
 [[package]]
 name = "ritk-analyze"
 version = "0.2.0"
-source = "git+https://github.com/ryancinsight/ritk.git#a974573ebb791bf126d1bc4403a50cd4efd19c43"
 dependencies = [
  "anyhow",
  "coeus-core",
@@ -5236,7 +5197,6 @@ dependencies = [
 [[package]]
 name = "ritk-annotation"
 version = "0.2.0"
-source = "git+https://github.com/ryancinsight/ritk.git#a974573ebb791bf126d1bc4403a50cd4efd19c43"
 dependencies = [
  "ritk-spatial",
  "serde",
@@ -5247,7 +5207,6 @@ dependencies = [
 [[package]]
 name = "ritk-block-matching"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/ritk.git#a974573ebb791bf126d1bc4403a50cd4efd19c43"
 dependencies = [
  "anyhow",
 ]
@@ -5255,7 +5214,6 @@ dependencies = [
 [[package]]
 name = "ritk-codecs"
 version = "0.6.0"
-source = "git+https://github.com/ryancinsight/ritk.git#a974573ebb791bf126d1bc4403a50cd4efd19c43"
 dependencies = [
  "anyhow",
  "jpeg-decoder",
@@ -5264,7 +5222,6 @@ dependencies = [
 [[package]]
 name = "ritk-core"
 version = "0.10.0"
-source = "git+https://github.com/ryancinsight/ritk.git#a974573ebb791bf126d1bc4403a50cd4efd19c43"
 dependencies = [
  "coeus-core",
  "coeus-tensor",
@@ -5279,7 +5236,6 @@ dependencies = [
 [[package]]
 name = "ritk-dicom"
 version = "0.2.0"
-source = "git+https://github.com/ryancinsight/ritk.git#a974573ebb791bf126d1bc4403a50cd4efd19c43"
 dependencies = [
  "anyhow",
  "arrayvec",
@@ -5293,7 +5249,6 @@ dependencies = [
 [[package]]
 name = "ritk-diffusion-scheme"
 version = "0.2.0"
-source = "git+https://github.com/ryancinsight/ritk.git#a974573ebb791bf126d1bc4403a50cd4efd19c43"
 dependencies = [
  "aequitas",
  "ritk-spatial",
@@ -5303,7 +5258,6 @@ dependencies = [
 [[package]]
 name = "ritk-filter"
 version = "0.3.0"
-source = "git+https://github.com/ryancinsight/ritk.git#a974573ebb791bf126d1bc4403a50cd4efd19c43"
 dependencies = [
  "anyhow",
  "apollo-fft",
@@ -5330,7 +5284,6 @@ dependencies = [
 [[package]]
 name = "ritk-image"
 version = "0.4.0"
-source = "git+https://github.com/ryancinsight/ritk.git#a974573ebb791bf126d1bc4403a50cd4efd19c43"
 dependencies = [
  "anyhow",
  "coeus-autograd",
@@ -5347,7 +5300,6 @@ dependencies = [
 [[package]]
 name = "ritk-interpolation"
 version = "0.5.0"
-source = "git+https://github.com/ryancinsight/ritk.git#a974573ebb791bf126d1bc4403a50cd4efd19c43"
 dependencies = [
  "anyhow",
  "coeus-core",
@@ -5365,7 +5317,6 @@ dependencies = [
 [[package]]
 name = "ritk-io"
 version = "0.3.0"
-source = "git+https://github.com/ryancinsight/ritk.git#a974573ebb791bf126d1bc4403a50cd4efd19c43"
 dependencies = [
  "anyhow",
  "arrayvec",
@@ -5411,7 +5362,6 @@ dependencies = [
 [[package]]
 name = "ritk-jpeg"
 version = "0.2.0"
-source = "git+https://github.com/ryancinsight/ritk.git#a974573ebb791bf126d1bc4403a50cd4efd19c43"
 dependencies = [
  "anyhow",
  "coeus-core",
@@ -5424,7 +5374,6 @@ dependencies = [
 [[package]]
 name = "ritk-metaimage"
 version = "0.2.0"
-source = "git+https://github.com/ryancinsight/ritk.git#a974573ebb791bf126d1bc4403a50cd4efd19c43"
 dependencies = [
  "anyhow",
  "bytemuck",
@@ -5438,7 +5387,6 @@ dependencies = [
 [[package]]
 name = "ritk-mgh"
 version = "0.3.0"
-source = "git+https://github.com/ryancinsight/ritk.git#a974573ebb791bf126d1bc4403a50cd4efd19c43"
 dependencies = [
  "anyhow",
  "coeus-core",
@@ -5451,7 +5399,6 @@ dependencies = [
 [[package]]
 name = "ritk-minc"
 version = "0.2.0"
-source = "git+https://github.com/ryancinsight/ritk.git#a974573ebb791bf126d1bc4403a50cd4efd19c43"
 dependencies = [
  "anyhow",
  "coeus-core",
@@ -5466,7 +5413,6 @@ dependencies = [
 [[package]]
 name = "ritk-model"
 version = "0.2.0"
-source = "git+https://github.com/ryancinsight/ritk.git#a974573ebb791bf126d1bc4403a50cd4efd19c43"
 dependencies = [
  "bytemuck",
  "coeus-autograd",
@@ -5490,12 +5436,10 @@ dependencies = [
 [[package]]
 name = "ritk-morphology"
 version = "0.2.0"
-source = "git+https://github.com/ryancinsight/ritk.git#a974573ebb791bf126d1bc4403a50cd4efd19c43"
 
 [[package]]
 name = "ritk-nifti"
 version = "0.2.0"
-source = "git+https://github.com/ryancinsight/ritk.git#a974573ebb791bf126d1bc4403a50cd4efd19c43"
 dependencies = [
  "anyhow",
  "coeus-core",
@@ -5508,7 +5452,6 @@ dependencies = [
 [[package]]
 name = "ritk-nrrd"
 version = "0.2.0"
-source = "git+https://github.com/ryancinsight/ritk.git#a974573ebb791bf126d1bc4403a50cd4efd19c43"
 dependencies = [
  "anyhow",
  "bytemuck",
@@ -5523,7 +5466,6 @@ dependencies = [
 [[package]]
 name = "ritk-parcellation"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/ritk.git#a974573ebb791bf126d1bc4403a50cd4efd19c43"
 dependencies = [
  "ritk-spatial",
  "serde",
@@ -5533,7 +5475,6 @@ dependencies = [
 [[package]]
 name = "ritk-png"
 version = "0.2.0"
-source = "git+https://github.com/ryancinsight/ritk.git#a974573ebb791bf126d1bc4403a50cd4efd19c43"
 dependencies = [
  "anyhow",
  "coeus-core",
@@ -5545,7 +5486,6 @@ dependencies = [
 [[package]]
 name = "ritk-registration"
 version = "0.54.0"
-source = "git+https://github.com/ryancinsight/ritk.git#a974573ebb791bf126d1bc4403a50cd4efd19c43"
 dependencies = [
  "anyhow",
  "bytemuck",
@@ -5579,7 +5519,6 @@ dependencies = [
 [[package]]
 name = "ritk-segmentation"
 version = "0.3.0"
-source = "git+https://github.com/ryancinsight/ritk.git#a974573ebb791bf126d1bc4403a50cd4efd19c43"
 dependencies = [
  "anyhow",
  "coeus-core",
@@ -5597,7 +5536,6 @@ dependencies = [
 [[package]]
 name = "ritk-spatial"
 version = "0.2.0"
-source = "git+https://github.com/ryancinsight/ritk.git#a974573ebb791bf126d1bc4403a50cd4efd19c43"
 dependencies = [
  "leto",
  "serde",
@@ -5607,7 +5545,6 @@ dependencies = [
 [[package]]
 name = "ritk-statistics"
 version = "0.4.0"
-source = "git+https://github.com/ryancinsight/ritk.git#a974573ebb791bf126d1bc4403a50cd4efd19c43"
 dependencies = [
  "anyhow",
  "coeus-core",
@@ -5622,7 +5559,6 @@ dependencies = [
 [[package]]
 name = "ritk-tensor-ops"
 version = "0.2.0"
-source = "git+https://github.com/ryancinsight/ritk.git#a974573ebb791bf126d1bc4403a50cd4efd19c43"
 dependencies = [
  "anyhow",
  "coeus-core",
@@ -5637,7 +5573,6 @@ dependencies = [
 [[package]]
 name = "ritk-tiff"
 version = "0.2.0"
-source = "git+https://github.com/ryancinsight/ritk.git#a974573ebb791bf126d1bc4403a50cd4efd19c43"
 dependencies = [
  "anyhow",
  "coeus-core",
@@ -5649,7 +5584,6 @@ dependencies = [
 [[package]]
 name = "ritk-transform"
 version = "0.2.0"
-source = "git+https://github.com/ryancinsight/ritk.git#a974573ebb791bf126d1bc4403a50cd4efd19c43"
 dependencies = [
  "coeus-autograd",
  "coeus-core",
@@ -5670,7 +5604,6 @@ dependencies = [
 [[package]]
 name = "ritk-vtk"
 version = "0.2.0"
-source = "git+https://github.com/ryancinsight/ritk.git#a974573ebb791bf126d1bc4403a50cd4efd19c43"
 dependencies = [
  "anyhow",
  "coeus-core",
@@ -5686,7 +5619,6 @@ dependencies = [
 [[package]]
 name = "ritk-wgpu-compat"
 version = "0.2.0"
-source = "git+https://github.com/ryancinsight/ritk.git#a974573ebb791bf126d1bc4403a50cd4efd19c43"
 
 [[package]]
 name = "rkyv"
@@ -6330,7 +6262,6 @@ checksum = "c13547615a44dc9c452a8a534638acdf07120d4b6847c8178705da06306a3057"
 [[package]]
 name = "themis-topology"
 version = "0.10.1"
-source = "git+https://github.com/ryancinsight/themis#2c0749873c4860257ba912ff8494937021a79aa1"
 dependencies = [
  "melinoe",
 ]
@@ -6676,7 +6607,6 @@ checksum = "d2df906b07856748fa3f6e0ad0cbaa047052d4a7dd609e231c4f72cee8c36f31"
 [[package]]
 name = "tyche-core"
 version = "0.2.0"
-source = "git+https://github.com/ryancinsight/tyche#e5c6a3922d816ee8d1ea18fa8f538ff979c692ea"
 dependencies = [
  "eunomia",
 ]
@@ -7596,3 +7526,35 @@ checksum = "cba11ecd07cc23351500e840ae03841b7e4997923ec8e4832ee3ae199ea0b6b4"
 dependencies = [
  "zune-core",
 ]
+
+[[patch.unused]]
+name = "apollo-nufft"
+version = "0.7.0"
+
+[[patch.unused]]
+name = "apollo-sht"
+version = "0.7.0"
+
+[[patch.unused]]
+name = "horae"
+version = "0.1.0"
+
+[[patch.unused]]
+name = "hephaestus-metal"
+version = "0.19.0"
+
+[[patch.unused]]
+name = "hephaestus-rocm"
+version = "0.19.0"
+
+[[patch.unused]]
+name = "asclepius-coeus"
+version = "0.1.0"
+
+[[patch.unused]]
+name = "harmonia"
+version = "0.1.0"
+
+[[patch.unused]]
+name = "consus-zarr"
+version = "0.1.0"
