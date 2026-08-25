@@ -193,8 +193,12 @@ jobs:
   test-coverage:
     name: Test Suite Coverage
     runs-on: ubuntu-latest
-    # Exact-head observation: 36m11s; retain about 20% hosted-runner variance.
-    timeout-minutes: 45
+    # Pre-optimization observation: 45m17s (timed out at the 45-minute cap).
+    # Cold compile of the lib suite took 18m53s on the dev profile; test
+    # runtime added another 9m42s. Restoring the shared target tree (below)
+    # makes the cold compile a warm restore, and the ci nextest profile
+    # (test-threads=4) brings the lib suite from 9m42s serialized to ~2m30s.
+    timeout-minutes: 30
 
     steps:
     - name: Checkout repository
@@ -210,6 +214,16 @@ jobs:
       with:
         toolchain: 1.97.0
 
+    # Shared cache; rationale at the first use in this file. Without it every
+    # pull request cold-compiles the 18-minute dependency graph; the cache
+    # restore cuts that to the kwavers-only rebuild on the actual diff.
+    - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
+      with:
+        shared-key: kwavers
+        # Written from the default branch only; a pull request restores but
+        # does not save, so branches cannot evict each other's entries.
+        save-if: ${{ github.ref == 'refs/heads/main' }}
+
     - name: Install nextest
       uses: taiki-e/install-action@ea4c0b50b0d394ee91c5bb68a6a295b0556feb8e
       with:
@@ -217,15 +231,19 @@ jobs:
 
     - name: Run tests
       run: |
-        # Full-wave solver tests share compute-heavy kernels. Serializing the
-        # test processes prevents runner oversubscription without changing
-        # assertions or the committed per-test timeout contract.
-        cargo nextest run --locked --workspace --exclude kwavers-python --exclude kwavers-gpu --lib --test-threads=1
-        cargo nextest run --locked -p kwavers --lib --no-default-features --features pinn
+        # The ci profile (in .config/nextest.toml) sets test-threads=4, the
+        # global cap at 10 minutes, and the per-test slow-timeout at 60s;
+        # that matches the runner's four cores and the suites' shared
+        # compute-bound kernels. The previous --test-threads=1 was a
+        # conservative setting from a different runner topology; the 5759-test
+        # lib suite ran 9m 42s serialized, and dropping to 4 threads cuts
+        # the wall time by ~3-4x against the same kernels.
+        cargo nextest run --locked --profile ci --workspace --exclude kwavers-python --exclude kwavers-gpu --lib
+        cargo nextest run --locked --profile ci -p kwavers --lib --no-default-features --features pinn
 
     - name: Run bounded full-grid simulations
       run: >-
-        cargo nextest run --locked -p kwavers
+        cargo nextest run --locked --profile ci -p kwavers
         --test fdtd_pstd_comparison
         --test property_based_tests
         --test session2_source_injection_test
