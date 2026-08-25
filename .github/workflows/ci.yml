@@ -298,10 +298,14 @@ jobs:
     runs-on: ubuntu-latest
     # Exact-head observation: 57 minutes; retain about 20% hosted-runner variance.
     timeout-minutes: 70
+    env:
+      # Two tarpaulin processes run concurrently below. Bound each Cargo build
+      # and Rayon pool to two workers so their aggregate matches the hosted
+      # runner's four cores instead of multiplying compiler and kernel memory.
+      CARGO_BUILD_JOBS: "2"
+      RAYON_NUM_THREADS: "2"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          fetch-depth: 0
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-dependencies
@@ -318,6 +322,11 @@ jobs:
         with:
           tool: cargo-tarpaulin@0.37.0
 
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
+        with:
+          shared-key: kwavers
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
       - name: Generate coverage reports
         # Ptrace rewriting invalidates dependency compile-time layout checks;
         # LLVM source instrumentation preserves those const-evaluation invariants.
@@ -327,6 +336,15 @@ jobs:
         # integration targets so one workload cannot consume the entire finite
         # job budget. Targets requiring another feature are covered by their
         # dedicated feature-matrix jobs, as in the original Cargo selection.
+        #
+        # Each tarpaulin stream gets its own CARGO_TARGET_DIR: two cargo
+        # processes sharing one target/ would serialize on the build-dir lock
+        # and could silently reuse each other's instrumented artifacts (the
+        # original `cargo clean` existed to prevent that). Separate dirs let
+        # the two instrumented builds proceed concurrently — the four Cargo /
+        # Rayon workers bounded in the job env match the hosted runner's four
+        # cores — and the dependency graph compiles twice in parallel instead
+        # of once serialized.
         run: |
           set -euo pipefail
           mkdir -p coverage/core coverage/source-injection
@@ -343,17 +361,17 @@ jobs:
               | grep --fixed-strings --invert-match --line-regexp session2_source_injection_test
           )
 
-          cargo clean
-
-          cargo tarpaulin --locked -p kwavers --profile coverage \
-            --engine llvm --skip-clean --lib --test "${integration_targets[@]}" \
-            --out xml --output-dir coverage/core --features="plotting" --timeout 300 &
+          CARGO_TARGET_DIR=target/tarpaulin-core cargo tarpaulin --locked -p kwavers \
+            --profile coverage --engine llvm --skip-clean --lib \
+            --test "${integration_targets[@]}" --out xml \
+            --output-dir coverage/core --features="plotting" --timeout 300 &
           core_pid=$!
 
-          cargo tarpaulin --locked -p kwavers --profile coverage \
-            --engine llvm --skip-clean --test session2_source_injection_test \
-            --out xml --output-dir coverage/source-injection \
-            --features="plotting" --timeout 300 &
+          CARGO_TARGET_DIR=target/tarpaulin-src cargo tarpaulin --locked -p kwavers \
+            --profile coverage --engine llvm --skip-clean \
+            --test session2_source_injection_test --out xml \
+            --output-dir coverage/source-injection --features="plotting" \
+            --timeout 300 &
           source_injection_pid=$!
 
           wait "$core_pid"
