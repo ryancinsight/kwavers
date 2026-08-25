@@ -14,20 +14,28 @@
 //!   *J. Comput. Phys.*, 148(2), 433–466.
 
 use super::mode::ConservationMode;
+
+/// One CSR transfer-matrix entry: `(source_cell_linear_index, weight)`.
+type TransferEntry = (usize, f64);
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 use leto::Array3;
 
 /// Conservative interpolator preserving integral quantities during grid transfer.
 ///
-/// The sparse transfer matrix T is stored in CSR-like form:
-/// `transfer_matrix[i]` = list of `(source_index, weight)` pairs for target cell `i`.
+/// The sparse transfer matrix T is stored in CSR form:
+/// contiguous `entries` buffer plus a per-target-row `offsets` table
+/// (`row i` = `entries[offsets[i]..offsets[i+1]]`), one flat allocation
+/// instead of one heap row per target cell — the traversal in [`Self::transfer`]
+/// walks a single prefetch-friendly slice.
 #[derive(Debug, Clone)]
 pub struct UtilConservativeInterpolator {
     source_grid: Grid,
     target_grid: Grid,
-    /// Sparse transfer matrix: row i = [(src_idx, weight), …]
-    transfer_matrix: Vec<Vec<(usize, f64)>>,
+    /// CSR row offsets into `entries`; length = n_target + 1.
+    row_offsets: Vec<usize>,
+    /// Flat `(source_index, weight)` entries, grouped by target row.
+    entries: Vec<TransferEntry>,
     conservation_mode: ConservationMode,
     source_volumes: Vec<f64>,
     target_volumes: Vec<f64>,
@@ -43,12 +51,13 @@ impl UtilConservativeInterpolator {
 
         let source_volumes = Self::compute_cell_volumes(source);
         let target_volumes = Self::compute_cell_volumes(target);
-        let transfer_matrix = Self::build_transfer_matrix(source, target, &source_volumes)?;
+        let (row_offsets, entries) = Self::build_transfer_matrix(source, target, &source_volumes)?;
 
         Ok(Self {
             source_grid: source.clone(),
             target_grid: target.clone(),
-            transfer_matrix,
+            row_offsets,
+            entries,
             conservation_mode: mode,
             source_volumes,
             target_volumes,
@@ -56,6 +65,11 @@ impl UtilConservativeInterpolator {
     }
 
     /// Apply u_target = T · u_source in-place.
+    ///
+    /// # Panics
+    /// Panics if the source field's storage is not contiguous; the shape
+    /// validation above guarantees it for any `Array3` constructed through
+    /// the standard layout.
     ///
     /// # Errors
     /// Returns error if field shapes do not match the corresponding grids.
@@ -104,12 +118,14 @@ impl UtilConservativeInterpolator {
                 for ix in 0..nx_t {
                     let target_idx = Self::index_3d(ix, iy, iz, nx_t, ny_t);
                     let mut sum = 0.0;
-                    for &(source_idx, weight) in &self.transfer_matrix[target_idx] {
-                        let (sx, sy, sz) = Self::unravel_index(
-                            source_idx,
-                            self.source_grid.nx,
-                            self.source_grid.ny,
-                        );
+                    // NOTE: leto::Array3's [[ix, iy, iz]] indexing is x-major,
+                    // so the row-major linear entry index cannot index the
+                    // backing slice directly — unravel per entry.
+                    for &(source_idx, weight) in
+                        &self.entries[self.row_offsets[target_idx]..self.row_offsets[target_idx + 1]]
+                    {
+                        let (sx, sy, sz) =
+                            Self::unravel_index(source_idx, self.source_grid.nx, self.source_grid.ny);
                         sum += weight * source_field[[sx, sy, sz]];
                     }
                     target_field[[ix, iy, iz]] = sum;
@@ -177,7 +193,7 @@ impl UtilConservativeInterpolator {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn nnz(&self) -> usize {
-        self.transfer_matrix.iter().map(|row| row.len()).sum()
+        self.entries.len()
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────
@@ -209,12 +225,14 @@ impl UtilConservativeInterpolator {
         source: &Grid,
         target: &Grid,
         source_volumes: &[f64],
-    ) -> KwaversResult<Vec<Vec<(usize, f64)>>> {
+    ) -> KwaversResult<(Vec<usize>, Vec<TransferEntry>)> {
         let nx_t = target.nx;
         let ny_t = target.ny;
         let nz_t = target.nz;
         let n_target = nx_t * ny_t * nz_t;
-        let mut transfer_matrix = vec![Vec::new(); n_target];
+        // Two-pass CSR build: collect per-row weights into a temporary jagged
+        // buffer, then flatten once into the contiguous entry buffer.
+        let mut rows: Vec<Vec<(usize, f64)>> = vec![Vec::new(); n_target];
 
         for iz_t in 0..nz_t {
             for iy_t in 0..ny_t {
@@ -239,12 +257,19 @@ impl UtilConservativeInterpolator {
                         }
                     }
 
-                    transfer_matrix[target_idx] = weights;
+                    rows[target_idx] = weights;
                 }
             }
         }
 
-        Ok(transfer_matrix)
+        let mut row_offsets = Vec::with_capacity(n_target + 1);
+        let mut entries: Vec<TransferEntry> = Vec::new();
+        for row in &rows {
+            row_offsets.push(entries.len());
+            entries.extend_from_slice(row);
+        }
+        row_offsets.push(entries.len());
+        Ok((row_offsets, entries))
     }
 
     fn cell_bounds(grid: &Grid, ix: usize, iy: usize, iz: usize) -> (f64, f64, f64, f64, f64, f64) {
