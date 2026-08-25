@@ -225,7 +225,7 @@ impl fmt::Debug for KrylovWorkspace {
             .debug_struct("KrylovWorkspace")
             .field("dimension", &self.dimension)
             .field("restart", &self.width())
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 

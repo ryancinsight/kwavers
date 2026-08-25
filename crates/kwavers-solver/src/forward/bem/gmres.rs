@@ -42,6 +42,13 @@ use leto_ops::CsrMatrix;
 /// Returns [`NumericalError::ConvergenceFailed`] when the solve does not reach
 /// `tol` within `max_iter * restart` operator applications, and
 /// [`NumericalError::MatrixDimension`] when `a` is not `rhs.len()` square.
+/// Returns a backend failure when the iteration budget overflows or the
+/// restart width is zero.
+///
+/// # Panics
+///
+/// Panics if the budget or policy construction receives a zero restart width;
+/// both are validated first and surfaced as typed errors instead.
 pub fn solve_gmres(
     a: &Array2<f64>,
     rhs: &Array1<f64>,
