@@ -236,7 +236,10 @@ jobs:
     name: Test Suite Coverage
     needs: architecture-validation
     runs-on: ubuntu-latest
-    # Exact-head observation: 36m11s; retain about 20% hosted-runner variance.
+    # The latest cold run completed the 5,759-test suite, PINN suite, and
+    # bounded full-grid suite in 38m40s. Keep the existing finite cap while
+    # moving its duplicated full-feature doctest build to the documentation
+    # job; do not convert compile waste into more timeout headroom.
     timeout-minutes: 45
 
     steps:
@@ -258,13 +261,27 @@ jobs:
       with:
         tool: nextest
 
+    # Same shared cache and dev-profile graph the feature-matrix jobs use;
+    # without it this job cold-compiles the whole workspace every run.
+    - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
+      with:
+        shared-key: kwavers
+        save-if: ${{ github.ref == 'refs/heads/main' }}
+
     - name: Run tests
+      env:
+        # Two test processes keep the four-core hosted runner occupied while
+        # bounding Rayon-backed kernels to four worker threads in aggregate.
+        # The prior single-process run left independent solver tests serialized
+        # and spent 9m43s executing an already-built suite.
+        RAYON_NUM_THREADS: 2
       run: |
-        # Full-wave solver tests share compute-heavy kernels. Serializing the
-        # test processes prevents runner oversubscription without changing
-        # assertions or the committed per-test timeout contract.
-        cargo nextest run --locked --workspace --exclude kwavers-python --exclude kwavers-gpu --lib --test-threads=1
-        cargo nextest run --locked -p kwavers --lib --no-default-features --features pinn
+        # Full-wave solver tests share compute-heavy kernels. Two concurrent
+        # test binaries with two Rayon workers each fill the hosted runner
+        # without oversubscription or unbounded concurrent simulation state.
+        # Keep the dev profile so the shared cache can reuse the feature matrix.
+        cargo nextest run --locked --workspace --exclude kwavers-python --exclude kwavers-gpu --lib --test-threads=2
+        cargo nextest run --locked -p kwavers --lib --no-default-features --features pinn --test-threads=2
 
     # This replaces a four-name list of integration tests. The strict clippy
     # step compiles all of them via --all-targets, but only those four ever ran.
@@ -275,11 +292,6 @@ jobs:
     # must be removed. The list may shrink, never grow. See ADR 124.
     - name: Run integration tests against the failure baseline
       run: python scripts/integration_tests.py
-
-    - name: Run doc tests
-      run: |
-        cargo test --locked -p kwavers --doc
-        cargo test --locked -p kwavers --doc --no-default-features --features full
 
     - name: Record debug artifact footprint
       run: |
@@ -302,15 +314,32 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
+    - name: Install system dependencies
+      uses: ./.github/actions/install-system-dependencies
+      with:
+        packages: libfontconfig1-dev
+
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
       with:
         toolchain: 1.97.0
 
+    - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
+      with:
+        shared-key: kwavers
+        save-if: ${{ github.ref == 'refs/heads/main' }}
+
     - name: Build documentation
       run: |
         cargo doc --locked --workspace --exclude kwavers-python --no-deps
         RUSTDOCFLAGS="-D warnings" cargo doc --locked -p kwavers --no-default-features --features full --no-deps
+
+    # Default-feature doctests already run in CI's stable Build & Test job.
+    # Keeping the full-feature variant beside the full-feature rustdoc build
+    # avoids rebuilding that disjoint feature graph after the 5,759-test
+    # coverage suite while preserving both doctest configurations.
+    - name: Run full-feature doc tests
+      run: cargo test --locked -p kwavers --doc --no-default-features --features full
 
   cuda-runtime-build:
     name: CUDA Runtime Build
