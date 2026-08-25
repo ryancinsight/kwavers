@@ -6,7 +6,7 @@ resolver = "2"
 aequitas = { version = "0.2.0", git = "https://github.com/ryancinsight/aequitas", default-features = false, features = ["std", "serde"] }
 asclepius = { version = "0.1.0", git = "https://github.com/ryancinsight/asclepius", default-features = false, features = ["std"] }
 hyperion = { version = "0.1.0", git = "https://github.com/ryancinsight/hyperion" }
-proteus = { version = "0.1.0", git = "https://github.com/ryancinsight/proteus" }
+proteus = { package = "proteus-mat", version = "0.1.0", git = "https://github.com/ryancinsight/proteus" }
 tyche-core = { version = "0.2.0", git = "https://github.com/ryancinsight/tyche" }
 horae = { version = "0.1.0", git = "https://github.com/ryancinsight/horae" }
 # External git submodules replaced by remote git dependencies (always-latest on the
