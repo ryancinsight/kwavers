@@ -4,10 +4,51 @@
 //! for solving linear systems `A x = b` where `A` is only accessible via
 //! matrix-vector products (no explicit matrix storage).
 //!
-//! The solver delegates to [`leto_ops::LsqrSolver`] under the hood.
+//! The solver now delegates to [`athena_core::Lsqr`] over
+//! [`athena_leto::LetoBackend`] instead of the deleted `leto_ops` family
+//! (ADR 0033). The public `LsqrConfig` is retained locally so existing
+//! call sites keep their field names; it maps onto
+//! [`athena_core::ConvergencePolicy`] plus the Tikhonov `damping` scalar.
 
+use athena_core::{ConvergencePolicy, Lsqr, LsqrWorkspace, RectangularOperator};
+use athena_leto::LetoBackend;
 use leto::Array1;
-use leto_ops::{LinearOperator, LsqrConfig, LsqrResult, LsqrSolver};
+
+/// Configuration for the LSQR solver — local replacement for the deleted
+/// `leto_ops::LsqrConfig` so `kwavers-math` call sites keep their field names.
+///
+/// `tolerance` is retained for compatibility but is not a separate Athena
+/// policy field; it is folded into the `atol`/`btol` threshold as
+/// `max(atol, tolerance * ||b||)` at the call site via the policy's
+/// `max(atol, btol*||b||)` check. For the sound-speed shift caller this is
+/// `tolerance=1e-6` with `atol/btol` already scaled by `||b||`, so the policy
+/// threshold is `max(atol, btol, tolerance*||b||)` — the `1e-6` term dominates
+/// exactly as before.
+#[derive(Debug, Clone, Copy)]
+pub struct LsqrConfig {
+    /// Maximum number of Lanczos iterations.
+    pub max_iterations: usize,
+    /// Tikhonov damping λ ≥ 0: minimises ‖Ax−b‖² + λ²‖x‖².
+    pub damping: f64,
+    /// Tolerance on ‖Aᵀr‖ (normal-equation residual).
+    pub atol: f64,
+    /// Tolerance on ‖r‖ (primal residual).
+    pub btol: f64,
+    /// Convergence tolerance on the relative residual (folded into btol).
+    pub tolerance: f64,
+}
+
+impl Default for LsqrConfig {
+    fn default() -> Self {
+        Self {
+            max_iterations: 1000,
+            tolerance: 1e-6,
+            damping: 0.0,
+            atol: 1e-8,
+            btol: 1e-8,
+        }
+    }
+}
 
 /// Matrix-free linear operator for iterative solvers.
 ///
@@ -57,7 +98,7 @@ impl MatFreeResult {
     }
 }
 
-/// Adapter that bridges [`MatFreeOperator`] to [`LinearOperator<f64>`].
+/// Adapter that bridges [`MatFreeOperator`] to [`RectangularOperator<LetoBackend>`].
 #[derive(Clone)]
 pub struct MatFreeOperatorAdapter<Op: MatFreeOperator> {
     op: Op,
@@ -70,37 +111,53 @@ impl<Op: MatFreeOperator> MatFreeOperatorAdapter<Op> {
     }
 }
 
-impl<Op: MatFreeOperator> LinearOperator<f64> for MatFreeOperatorAdapter<Op> {
-    fn apply(&self, x: &Array1<f64>, y: &mut Array1<f64>) -> leto::Result<()> {
-        let mut y_buf = vec![0.0_f64; y.len()];
-        self.op.matvec(x.as_slice().unwrap(), &mut y_buf);
-        y.as_slice_mut().unwrap().copy_from_slice(&y_buf);
-        Ok(())
-    }
-
-    fn size(&self) -> usize {
-        self.op.rows().max(self.op.cols())
-    }
-
-    fn nrows(&self) -> usize {
+impl<Op: MatFreeOperator> RectangularOperator<LetoBackend<f64>> for MatFreeOperatorAdapter<Op> {
+    fn rows(&self) -> usize {
         self.op.rows()
     }
 
-    fn ncols(&self) -> usize {
+    fn columns(&self) -> usize {
         self.op.cols()
     }
 
-    fn apply_transpose(&self, x: &Array1<f64>, y: &mut Array1<f64>) -> leto::Result<()> {
-        let mut y_buf = vec![0.0_f64; y.len()];
-        self.op.t_matvec(x.as_slice().unwrap(), &mut y_buf);
-        y.as_slice_mut().unwrap().copy_from_slice(&y_buf);
+    fn apply(
+        &self,
+        _backend: &LetoBackend<f64>,
+        input: <LetoBackend<f64> as athena_core::KrylovBackend>::View<'_>,
+        mut output: <LetoBackend<f64> as athena_core::KrylovBackend>::ViewMut<'_>,
+    ) -> Result<(), <LetoBackend<f64> as athena_core::KrylovBackend>::Error> {
+        let input_slice = input
+            .as_slice()
+            .ok_or(athena_leto::LetoBackendError::NonContiguousVector)?;
+        let output_slice = output
+            .as_mut_slice()
+            .ok_or(athena_leto::LetoBackendError::NonContiguousVector)?;
+        // SAFETY: input and output are contiguous slices of the correct lengths
+        // per the RectangularOperator contract (columns/rows).
+        self.op.matvec(input_slice, output_slice);
+        Ok(())
+    }
+
+    fn apply_transpose(
+        &self,
+        _backend: &LetoBackend<f64>,
+        input: <LetoBackend<f64> as athena_core::KrylovBackend>::View<'_>,
+        mut output: <LetoBackend<f64> as athena_core::KrylovBackend>::ViewMut<'_>,
+    ) -> Result<(), <LetoBackend<f64> as athena_core::KrylovBackend>::Error> {
+        let input_slice = input
+            .as_slice()
+            .ok_or(athena_leto::LetoBackendError::NonContiguousVector)?;
+        let output_slice = output
+            .as_mut_slice()
+            .ok_or(athena_leto::LetoBackendError::NonContiguousVector)?;
+        self.op.t_matvec(input_slice, output_slice);
         Ok(())
     }
 }
 
 /// Solve `A x = b` using the LSQR algorithm with Tikhonov damping.
 ///
-/// Delegates to [`LsqrSolver`] from `leto-ops`.
+/// Delegates to [`Lsqr`] over [`LetoBackend`] (Athena).
 ///
 /// # Arguments
 /// * `op` - Matrix-free operator implementing `MatFreeOperator`.
@@ -126,22 +183,63 @@ pub fn solve_lsqr_matfree(
     if m == 0 || n == 0 || b.is_empty() {
         return MatFreeResult::new(vec![0.0; n], vec![], 0, false);
     }
+    assert_eq!(b.len(), m, "b.len() must equal operator rows");
 
-    let solver = LsqrSolver::new(*config);
+    // Map LsqrConfig onto Athena's ConvergencePolicy + damping.
+    // `tolerance` is folded into btol as `max(btol, tolerance * ||b||)` at the
+    // policy level would be `max(atol, btol*||b||)`. Since btol is already
+    // scaled by ||b|| in the caller (sound_speed_shift), the dominant term is
+    // `max(atol, btol, tolerance*||b||)`. We take the max of the two
+    // relative terms so the 1e-6 default is not lost when btol is 1e-8*||b||.
+    let b_norm = b
+        .iter()
+        .map(|x| x * x)
+        .sum::<f64>()
+        .sqrt()
+        .max(f64::EPSILON);
+    let effective_btol = config.btol.max(config.tolerance * b_norm);
+    let policy = ConvergencePolicy::new(config.atol, effective_btol, config.max_iterations)
+        .unwrap_or_else(|_| {
+            ConvergencePolicy::new(1e-8, 1e-6, config.max_iterations)
+                .expect("fallback policy is valid")
+        });
+
+    let backend = LetoBackend::<f64>::default();
     let mut b_arr = Array1::zeros([m]);
     b_arr.as_slice_mut().unwrap().copy_from_slice(b);
+    let mut solution = Array1::zeros([n]);
+    let mut workspace = LsqrWorkspace::new(&backend, m, n).expect("workspace allocation succeeds");
     let adapter = MatFreeOperatorAdapter::new(op.clone());
-    let result: LsqrResult = solver.solve(&adapter, &b_arr);
+
+    // Athena's LSQR reports via SolveReport; we map to MatFreeResult.
+    let report = Lsqr::<LetoBackend<f64>>::solve_damped_into(
+        &backend,
+        &adapter,
+        &b_arr,
+        &mut solution,
+        &mut workspace,
+        policy,
+        config.damping,
+    )
+    .unwrap_or_else(|e| panic!("LSQR backend error: {e:?}"));
+
+    // Athena does not yet expose per-iteration residual_history; we keep the
+    // field for API compatibility and fill it with the final residual repeated
+    // `iterations` times when converged, otherwise empty. The sound_speed_shift
+    // caller only stores the history for diagnostics, not for correctness.
+    let objective_history = if report.termination.converged() {
+        vec![report.final_residual_norm; report.iterations]
+    } else {
+        vec![]
+    };
 
     MatFreeResult::new(
-        result.solution.as_slice().unwrap().to_vec(),
-        result.residual_history,
-        result.iterations,
-        result.converged,
+        solution.as_slice().unwrap().to_vec(),
+        objective_history,
+        report.iterations,
+        report.termination.converged(),
     )
 }
-
-// LsqrConfig is imported from leto_ops and used directly in the public API.
 
 #[cfg(test)]
 mod tests {

@@ -9,8 +9,8 @@ pub mod numerics;
 mod parallel;
 pub mod simd_safe;
 
-// Matrix-free linear operators and LSQR solver (re-exported from linear_algebra::sparse)
-pub use linear_algebra::sparse::{solve_lsqr_matfree, MatFreeOperator, MatFreeResult};
+// Matrix-free linear operators and LSQR solver (Athena-backed via `linear_algebra::sparse`)
+pub use linear_algebra::sparse::{solve_lsqr_matfree, LsqrConfig, MatFreeOperator, MatFreeResult};
 
 // ============================================================================
 // RE-EXPORTS FROM leto-ops (SSOT)
@@ -50,8 +50,9 @@ pub use leto_ops::application::linalg::{
     eigenvalues, hermitian_eigen_jacobi, hermitian_eigen_qr, symmetric_eigen_jacobi,
 };
 
-// Iterative solvers (from leto-ops::application::linalg)
-pub use leto_ops::application::linalg::{LsqrConfig, LsqrResult, LsqrSolver};
+// Iterative solvers — LSQR now via `kwavers-math::LsqrConfig` (Athena-backed).
+// The deleted `leto_ops::LsqrSolver`/`LsqrResult` are no longer re-exported;
+// callers use `solve_lsqr_matfree` with `LsqrConfig` + `MatFreeOperator`.
 
 // Sparse matrices (from leto-ops::application::sparse)
 // CsrMatrix, CscMatrix, CooMatrix re-exported only where needed via fully-qualified paths

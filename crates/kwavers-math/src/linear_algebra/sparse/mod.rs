@@ -17,7 +17,7 @@ pub use leto_ops::application::sparse::{
 
 // Re-export domain-specific types
 pub use csr::CompressedSparseRowMatrix;
-pub use matfree::{solve_lsqr_matfree, MatFreeOperator, MatFreeResult};
+pub use matfree::{solve_lsqr_matfree, LsqrConfig, MatFreeOperator, MatFreeResult};
 
 // Re-export Complex64 for convenience
 pub use eunomia::Complex64;
