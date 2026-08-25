@@ -113,6 +113,7 @@ jobs:
 
   layer-boundary-checks:
     name: Layer Boundary Enforcement
+    needs: architecture-validation
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -164,6 +165,7 @@ jobs:
 
   build-matrix:
     name: Build with Feature Combinations
+    needs: architecture-validation
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -232,6 +234,7 @@ jobs:
 
   test-coverage:
     name: Test Suite Coverage
+    needs: architecture-validation
     runs-on: ubuntu-latest
     # Exact-head observation: 36m11s; retain about 20% hosted-runner variance.
     timeout-minutes: 45
@@ -291,6 +294,7 @@ jobs:
 
   documentation:
     name: Documentation Build
+    needs: architecture-validation
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -310,6 +314,7 @@ jobs:
 
   cuda-runtime-build:
     name: CUDA Runtime Build
+    needs: architecture-validation
     runs-on: ubuntu-latest
     timeout-minutes: 30
     container:
