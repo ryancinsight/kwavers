@@ -101,14 +101,19 @@ jobs:
         cargo clippy --locked --workspace --all-targets
         cargo clippy --locked -p kwavers --all-targets --features full,pinn
 
+    - name: Install cargo-audit
+      uses: taiki-e/install-action@ea4c0b50b0d394ee91c5bb68a6a295b0556feb8e
+      with:
+        tool: cargo-audit
+      continue-on-error: true
+
     - name: Check for security vulnerabilities
-      run: |
-        cargo install cargo-audit
-        cargo audit
+      run: cargo audit
       continue-on-error: true
 
   layer-boundary-checks:
     name: Layer Boundary Enforcement
+    needs: architecture-validation
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -160,6 +165,7 @@ jobs:
 
   build-matrix:
     name: Build with Feature Combinations
+    needs: architecture-validation
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -175,10 +181,27 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
+    - name: Install plotting benchmark dependencies
+      if: matrix.features == 'plotting'
+      uses: ./.github/actions/install-system-dependencies
+      with:
+        packages: libfontconfig1-dev
+
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
       with:
         toolchain: 1.97.0
+
+    # Shared cache; rationale at the first use in this file. Without it every
+    # feature-combination leg cold-compiles the full dependency tree on each
+    # pull request; restoring the shared target/ makes the legs build only the
+    # kwavers crates their feature set actually changes.
+    - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
+      with:
+        shared-key: kwavers
+        # Written from the default branch only; a pull request restores
+        # but does not save, so branches cannot evict each other.
+        save-if: ${{ github.ref == 'refs/heads/main' }}
 
     - name: Build with ${{ matrix.features }} features
       run: |
@@ -190,8 +213,28 @@ jobs:
           cargo build --locked -p kwavers --no-default-features --features ${{ matrix.features }}
         fi
 
+    # The plotting leg already owns the required checkout, toolchain, shared
+    # dependency cache, and dev-profile kwavers graph. Reusing that state keeps
+    # benchmark smoke from spending a second job on setup and compilation.
+    - name: Build every plotting-eligible Criterion target once
+      if: matrix.features == 'plotting'
+      run: >-
+        timeout --foreground --kill-after=30s 12m
+        cargo bench --locked -p kwavers --no-default-features
+        --features plotting --benches
+        --profile dev --no-run
+
+    - name: Execute every plotting-eligible Criterion target once
+      if: matrix.features == 'plotting'
+      run: >-
+        timeout --foreground --kill-after=30s 8m
+        cargo bench --locked -p kwavers --no-default-features
+        --features plotting --benches --no-fail-fast
+        --profile dev -- --test
+
   test-coverage:
     name: Test Suite Coverage
+    needs: architecture-validation
     runs-on: ubuntu-latest
     # The latest cold run completed the 5,759-test suite, PINN suite, and
     # bounded full-grid suite in 38m40s. Keep the existing finite cap while
@@ -260,6 +303,7 @@ jobs:
 
   documentation:
     name: Documentation Build
+    needs: architecture-validation
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -296,6 +340,7 @@ jobs:
 
   cuda-runtime-build:
     name: CUDA Runtime Build
+    needs: architecture-validation
     runs-on: ubuntu-latest
     timeout-minutes: 30
     container:
