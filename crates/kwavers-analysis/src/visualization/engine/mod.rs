@@ -19,6 +19,9 @@ use super::{
     metrics::{MetricsTracker, VisualizationMetrics},
 };
 
+#[cfg(test)]
+mod tests;
+
 #[cfg(feature = "gpu-visualization")]
 use super::config::MILLISECONDS_PER_SECOND;
 
@@ -416,28 +419,18 @@ impl<P> VisualizationEngine<P> {
         let current_fps = self.metrics.current().fps;
         let target_fps = self.config.target_fps;
 
-        if current_fps < target_fps * 0.8 {
-            // Downgrade quality if performance is poor
-            self.config.quality = match self.config.quality {
-                RenderQuality::Publication => RenderQuality::Production,
-                RenderQuality::Production => RenderQuality::High,
-                RenderQuality::High => RenderQuality::Medium,
-                RenderQuality::Medium => RenderQuality::Low,
-                RenderQuality::Low => RenderQuality::Low,
-                RenderQuality::Draft => RenderQuality::Draft,
-            };
-            debug!("Downgraded render quality to {:?}", self.config.quality);
-        } else if current_fps > target_fps * 1.2 {
-            // Upgrade quality if performance is good
-            self.config.quality = match self.config.quality {
-                RenderQuality::Draft => RenderQuality::Low,
-                RenderQuality::Low => RenderQuality::Medium,
-                RenderQuality::Medium => RenderQuality::High,
-                RenderQuality::High => RenderQuality::Production,
-                RenderQuality::Production => RenderQuality::Publication,
-                RenderQuality::Publication => RenderQuality::Publication,
-            };
-            debug!("Upgraded render quality to {:?}", self.config.quality);
+        let current_quality = self.config.quality;
+        let adjusted_quality = adjusted_quality(current_quality, current_fps, target_fps);
+        if adjusted_quality != current_quality {
+            self.config.quality = adjusted_quality;
+            #[cfg(feature = "gpu-visualization")]
+            if let Some(renderer) = &mut self.renderer {
+                renderer.set_quality(adjusted_quality);
+            }
+            debug!(
+                "Adjusted render quality from {:?} to {:?}",
+                current_quality, adjusted_quality
+            );
         }
     }
 
@@ -475,5 +468,29 @@ impl<P> VisualizationEngine<P> {
             self.controls = None;
         }
         info!("Cleaned up visualization resources");
+    }
+}
+
+fn adjusted_quality(current: RenderQuality, current_fps: f64, target_fps: f64) -> RenderQuality {
+    if current_fps < target_fps * 0.8 {
+        match current {
+            RenderQuality::Publication => RenderQuality::Production,
+            RenderQuality::Production => RenderQuality::High,
+            RenderQuality::High => RenderQuality::Medium,
+            RenderQuality::Medium => RenderQuality::Low,
+            RenderQuality::Low => RenderQuality::Low,
+            RenderQuality::Draft => RenderQuality::Draft,
+        }
+    } else if current_fps > target_fps * 1.2 {
+        match current {
+            RenderQuality::Draft => RenderQuality::Low,
+            RenderQuality::Low => RenderQuality::Medium,
+            RenderQuality::Medium => RenderQuality::High,
+            RenderQuality::High => RenderQuality::Production,
+            RenderQuality::Production => RenderQuality::Publication,
+            RenderQuality::Publication => RenderQuality::Publication,
+        }
+    } else {
+        current
     }
 }

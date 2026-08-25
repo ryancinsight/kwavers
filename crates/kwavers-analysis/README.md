@@ -28,7 +28,9 @@ validation plot can always be regenerated from the run that produced it.
 
 - `gpu-visualization` — enables provider-neutral visualization transfer. The
   application selects Leto host storage or the Hephaestus GPU provider; the
-  analysis crate does not acquire devices or depend on WGPU.
+  analysis crate does not acquire devices or depend on WGPU. Backend selection
+  is intentionally absent from `VisualizationConfig`; callers select once at
+  the top-level Kwavers composition boundary and inject the returned provider.
 
 ## Documentation
 

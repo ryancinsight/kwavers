@@ -2451,11 +2451,11 @@ dependencies = [
 [[package]]
 name = "hyperion"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/hyperion#1e251cb0d1aecf4b30a4946c2319aecc0d2bc085"
+source = "git+https://github.com/ryancinsight/hyperion#017a66937deb67508586ab4d47a065051076085f"
 dependencies = [
  "aequitas",
  "eunomia",
- "proteus",
+ "proteus-mat",
 ]
 
 [[package]]
@@ -3302,7 +3302,7 @@ dependencies = [
  "log",
  "moirai-parallel",
  "proptest",
- "proteus",
+ "proteus-mat",
  "serde",
 ]
 
@@ -3353,7 +3353,7 @@ dependencies = [
  "leto",
  "log",
  "moirai-parallel",
- "proteus",
+ "proteus-mat",
  "rand 0.8.7",
  "rand_chacha 0.3.1",
  "rand_distr 0.4.3",
@@ -4686,9 +4686,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "proteus"
+name = "proteus-mat"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/proteus#150b2074a10be8b64a93c96d08a981b48c3bf60f"
+source = "git+https://github.com/ryancinsight/proteus#cd93e67a82bb14f407c0bd07418cf7aa171f50ef"
 dependencies = [
  "aequitas",
  "eunomia",

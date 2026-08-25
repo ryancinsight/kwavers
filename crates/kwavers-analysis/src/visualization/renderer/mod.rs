@@ -48,7 +48,7 @@ impl Renderer3D {
         field_type: UnifiedFieldType,
         grid: &Grid,
     ) -> KwaversResult<Vec<u8>> {
-        match self.config.render_quality {
+        match self.config.quality {
             RenderQuality::Draft => self.volume.render_draft(field, field_type, grid),
             RenderQuality::Low => self.volume.render_draft(field, field_type, grid),
             RenderQuality::Medium => self.volume.render_production(field, field_type, grid),
@@ -56,6 +56,11 @@ impl Renderer3D {
             RenderQuality::Production => self.volume.render_production(field, field_type, grid),
             RenderQuality::Publication => self.volume.render_publication(field, field_type, grid),
         }
+    }
+
+    /// Apply a quality change to subsequent frames.
+    pub(crate) fn set_quality(&mut self, quality: RenderQuality) {
+        self.config.quality = quality;
     }
 
     /// Extract isosurface
@@ -166,16 +171,15 @@ fn alpha_over_in_place(dst: &mut [u8], src: &[u8]) -> KwaversResult<()> {
 #[cfg(test)]
 mod tests {
     use super::Renderer3D;
-    use crate::visualization::VisualizationConfig;
+    use crate::visualization::{RenderQuality, VisualizationConfig};
     use kwavers_field::UnifiedFieldType;
     use kwavers_grid::Grid;
     use leto::Array3;
 
     #[test]
     fn multi_volume_composites_each_field() {
-        let mut config = VisualizationConfig::quality();
-        config.gpu_enabled = false;
-        let mut renderer = Renderer3D::new(config).expect("test renderer has no GPU requirement");
+        let mut renderer = Renderer3D::new(VisualizationConfig::quality())
+            .expect("test renderer has no GPU requirement");
         let grid = Grid::new(2, 2, 2, 1.0, 1.0, 1.0).expect("test grid is valid");
         let mut first = Array3::zeros((2, 2, 2));
         let mut second = Array3::zeros((2, 2, 2));
@@ -200,6 +204,29 @@ mod tests {
         .expect("multi-field compositing succeeds");
 
         assert_ne!(composite_image, first_image);
+    }
+
+    #[test]
+    fn quality_change_updates_subsequent_sampling_density() {
+        let mut config = VisualizationConfig::quality();
+        config.quality = RenderQuality::Publication;
+        let mut renderer = Renderer3D::new(config).expect("test renderer has no GPU requirement");
+        let grid = Grid::new(1, 1, 256, 1.0, 1.0, 1.0).expect("test grid is valid");
+        let mut field = Array3::zeros((1, 1, 256));
+        *field
+            .get_mut([0, 0, 1])
+            .expect("impulse index is in bounds") = 1.0;
+
+        let publication = renderer
+            .render_field(&field, UnifiedFieldType::Pressure, &grid)
+            .expect("publication rendering succeeds");
+        renderer.set_quality(RenderQuality::Production);
+        let production = renderer
+            .render_field(&field, UnifiedFieldType::Pressure, &grid)
+            .expect("production rendering succeeds");
+
+        assert_eq!(publication.get(3).copied(), Some(u8::MAX));
+        assert_eq!(production.get(3).copied(), Some(0));
     }
 
     #[test]

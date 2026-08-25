@@ -329,29 +329,4 @@ mod tests {
         assert!(summary.contains("Transfer"));
         assert!(summary.contains("GPU Memory"));
     }
-
-    // **ARCHITECTURAL NOTE**: Test disabled - metrics field encapsulation prevents external updates
-    // Rationale: PerformanceTracker's metrics field is intentionally private to maintain
-    // internal consistency. Quality adjustment is validated through integration tests
-    // that exercise actual rendering pipeline.
-    // See: tests/infrastructure_test.rs for complete performance tracking validation
-    /*
-    #[test]
-    fn test_auto_quality_adjustment() {
-        let mut config = VisualizationConfig::default();
-        config.enable_profiling = true;
-        config.quality = RenderQuality::High;
-
-        let mut engine = VisualizationEngine::create(config).unwrap();
-
-        // Simulate poor performance
-        for _ in 0..10 {
-            engine.metrics.update(50.0, 10.0); // 60ms = ~16 FPS
-        }
-
-        engine.auto_adjust_quality();
-        // Quality should be downgraded due to poor performance
-        // (would need to expose config to test this properly)
-    }
-    */
 }
