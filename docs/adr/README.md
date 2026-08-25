@@ -86,3 +86,4 @@
 | [120](120-absorption-coefficient-ownership.md) | 120. Who owns the power-law absorption coefficient | Proposed |
 | [121](121-plugin-source-forwarding.md) | 121. Plugins receive the sources they are given | Accepted |
 | [122](122-fwi-rotating-acquisition-geometry.md) | Per-view element-position rotation for the rotating opposed-linear-array acquisition | Accepted |
+| [123](123-visualization-config-single-source.md) | Keep visualization backend and quality selection single-source | Accepted |

@@ -4,6 +4,15 @@
 
 ### Added
 
+- **[major] Visualization configuration now has one source for each choice.**
+  Remove the ignored `VisualizationConfig::gpu_enabled` field: callers select
+  Leto or Hephaestus through top-level Kwavers and inject that provider. Remove
+  the duplicate `render_quality` field in favour of `quality`; adaptive quality
+  changes now reach the initialized renderer instead of updating inert state.
+  Callers using struct literals delete `gpu_enabled` and replace
+  `render_quality` with `quality`. See
+  [ADR 123](docs/adr/123-visualization-config-single-source.md).
+
 - **[major] Kwavers now owns visualization backend selection.**
   `kwavers::visualization::VisualizationBackend` and
   `kwavers::visualization::create_visualization_provider` form a real

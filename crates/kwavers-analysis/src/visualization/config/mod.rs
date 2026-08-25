@@ -47,15 +47,16 @@ pub enum RenderQuality {
     Publication,
 }
 
-/// Visualization configuration
+/// Rendering and presentation configuration.
+///
+/// Backend selection is a composition concern: top-level Kwavers constructs a
+/// Leto or Hephaestus provider and injects it into the visualization engine.
 #[derive(Debug, Clone)]
 pub struct VisualizationConfig {
     /// Target frames per second
     pub target_fps: f64,
     /// Render quality setting
     pub quality: RenderQuality,
-    /// Render quality setting (alias for backwards compatibility)
-    pub render_quality: RenderQuality,
     /// Color mapping scheme
     pub color_scheme: ColorScheme,
     /// Enable transparency for multi-field rendering
@@ -66,8 +67,6 @@ pub struct VisualizationConfig {
     pub enable_profiling: bool,
     /// Ray marching samples for volume rendering
     pub ray_samples: usize,
-    /// Enable GPU acceleration
-    pub gpu_enabled: bool,
 }
 
 impl Default for VisualizationConfig {
@@ -75,13 +74,11 @@ impl Default for VisualizationConfig {
         Self {
             target_fps: DEFAULT_TARGET_FPS,
             quality: RenderQuality::Medium,
-            render_quality: RenderQuality::Medium,
             color_scheme: ColorScheme::Viridis,
             enable_transparency: true,
             max_texture_size: DEFAULT_MAX_TEXTURE_SIZE,
             enable_profiling: false,
             ray_samples: 128,
-            gpu_enabled: true,
         }
     }
 }
@@ -92,13 +89,11 @@ impl VisualizationConfig {
         Self {
             target_fps: DEFAULT_TARGET_FPS,
             quality: RenderQuality::Low,
-            render_quality: RenderQuality::Low,
             color_scheme: ColorScheme::Grayscale,
             enable_transparency: false,
             max_texture_size: 256,
             enable_profiling: false,
             ray_samples: 64,
-            gpu_enabled: true,
         }
     }
 
@@ -107,31 +102,24 @@ impl VisualizationConfig {
         Self {
             target_fps: LOW_TARGET_FPS,
             quality: RenderQuality::High,
-            render_quality: RenderQuality::High,
             color_scheme: ColorScheme::Viridis,
             enable_transparency: true,
             max_texture_size: 1024,
             enable_profiling: false,
             ray_samples: 256,
-            gpu_enabled: true,
         }
     }
 
-    /// Create a configuration for debugging
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
+    /// Create a configuration for debugging.
     pub fn debug() -> Self {
         Self {
             target_fps: LOW_TARGET_FPS,
             quality: RenderQuality::Low,
-            render_quality: RenderQuality::Low,
             color_scheme: ColorScheme::Turbo,
             enable_transparency: false,
             max_texture_size: DEFAULT_MAX_TEXTURE_SIZE,
             enable_profiling: true,
             ray_samples: 64,
-            gpu_enabled: false,
         }
     }
 
