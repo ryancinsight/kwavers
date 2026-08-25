@@ -7530,8 +7530,20 @@ dependencies = [
 ]
 
 [[patch.unused]]
-name = "horae"
+name = "harmonia"
 version = "0.1.0"
+
+[[patch.unused]]
+name = "consus-zarr"
+version = "0.1.0"
+
+[[patch.unused]]
+name = "apollo-nufft"
+version = "0.7.0"
+
+[[patch.unused]]
+name = "apollo-sht"
+version = "0.7.0"
 
 [[patch.unused]]
 name = "hephaestus-metal"
@@ -7542,21 +7554,9 @@ name = "hephaestus-rocm"
 version = "0.19.0"
 
 [[patch.unused]]
-name = "consus-zarr"
-version = "0.1.0"
-
-[[patch.unused]]
 name = "asclepius-coeus"
 version = "0.1.0"
 
 [[patch.unused]]
-name = "harmonia"
+name = "horae"
 version = "0.1.0"
-
-[[patch.unused]]
-name = "apollo-nufft"
-version = "0.7.0"
-
-[[patch.unused]]
-name = "apollo-sht"
-version = "0.7.0"
