@@ -38,6 +38,10 @@ import sys
 ANSI = re.compile("\x1b\\[[0-9;]*m")
 
 BASELINE = pathlib.Path(".config/integration-test-baseline.txt")
+# The complete command took 17m28s on the 4-core hosted runner. Twenty-five
+# minutes retains 43% headroom while ensuring a compile or harness hang cannot
+# consume the enclosing 45-minute job without a specific diagnostic.
+INTEGRATION_RUN_TIMEOUT_SECONDS = 25 * 60
 # nextest prints "        FAIL [   0.010s] (85/686) <binary> <test path>", and
 # "     TIMEOUT [  60.097s] (535/683) ..." for one that hit the termination
 # bound. A timed-out test is a failed test: matching only FAIL left two SWE
@@ -50,6 +54,7 @@ SUMMARY = re.compile(r"^\s+Summary\s+\[[^\]]*\]\s+(\d+) tests run")
 COMMAND = [
     "cargo", "nextest", "run",
     "--color", "never",
+    "--locked",
     "-p", "kwavers", "--tests",
     "--no-default-features", "--features", "full",
     "--test-threads=1", "--no-fail-fast",
@@ -80,12 +85,24 @@ def write_baseline(failures: set[str]) -> None:
     BASELINE.write_text(header + "".join(f"{f}\n" for f in sorted(failures)), encoding="utf-8")
 
 
-def run(locked: bool) -> tuple[set[str], int]:
-    # CI resolves against the committed lockfile. A tree under the Atlas
-    # development overlay cannot: the overlay redirects first-party crates to
-    # local paths, so `--locked` refuses before the suite starts.
-    command = COMMAND[:5] + (["--locked"] if locked else []) + COMMAND[5:]
-    result = subprocess.run(command, capture_output=True, text=True)
+def run() -> tuple[set[str], int]:
+    try:
+        result = subprocess.run(
+            COMMAND,
+            capture_output=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=INTEGRATION_RUN_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired as error:
+        for label, stream in (("stdout", error.stdout), ("stderr", error.stderr)):
+            if isinstance(stream, bytes):
+                stream = stream.decode("utf-8", errors="replace")
+            if stream:
+                print(f"{label} tail:\n{stream[-4000:]}", file=sys.stderr)
+        raise SystemExit(
+            f"integration suite exceeded {INTEGRATION_RUN_TIMEOUT_SECONDS} seconds"
+        ) from error
     output = ANSI.sub("", result.stdout + result.stderr)
     failures = {f"{m.group(1)} {m.group(2)}" for line in output.splitlines()
                 if (m := FAIL_LINE.match(line))}
@@ -106,11 +123,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--update", action="store_true",
                         help="rewrite the baseline from this run")
-    parser.add_argument("--unlocked", action="store_true",
-                        help="drop --locked, for a tree under the Atlas overlay")
     args = parser.parse_args()
 
-    failures, ran = run(locked=not args.unlocked)
+    failures, ran = run()
     print(f"integration suite: {ran} tests run, {len(failures)} failed")
 
     if args.update:
