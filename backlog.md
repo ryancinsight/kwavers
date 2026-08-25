@@ -1,5 +1,29 @@
 # Backlog / Strategy
 
+## KW-PINN-UNSEEDED-RNG — no PINN training run can be replayed [patch] — todo
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-PINN-UNSEEDED-RNG | Make collocation sampling reproducible so a training run can be replayed from its inputs. | [patch] | todo | unowned | `crates/kwavers-solver/src/inverse/pinn/ml/wave_equation_3d/solver/collocation.rs` |
+
+- **Evidence:** `generate_collocation_points` draws each coordinate from
+  `rand::random::<f64>()` -- the unseeded global generator. Nothing records the
+  draw, so two runs of the same configuration evaluate the PDE residual at
+  different points and no run can be reproduced from its inputs.
+- **Not the convergence defect.** The points are drawn once per `train()` call,
+  outside the epoch loop, so the loss is a deterministic function of the
+  parameters *within* a run. `KW-PINN-3D-NO-CONVERGENCE` was the learning-rate
+  schedule, and it reproduced across runs.
+- **What it does cost.** Any comparison *between* runs is noise, which is why
+  the gradient tests in `wave_equation_3d/tests/gradients.rs` build fixed inputs
+  rather than borrowing the solver's -- a finite difference taken across two
+  draws measures the draw. It also means a training failure cannot be handed to
+  anyone as a reproduction.
+- **Shape of the fix:** a seed on `PinnConfig3D`, defaulted, threaded to a
+  `rand_chacha`-style generator rather than the global one, and recorded in
+  `TrainingMetrics3D` so a run carries the seed that produced it. `rand_chacha`
+  is already a dependency of the `kwavers` facade.
+
 ## KW-PINN-3D-NO-CONVERGENCE — the learning-rate schedule strangled its own training [major] — IMPLEMENTED 2026-08-25
 
 | ID | Outcome | Class | Status | Owner | Scope |
