@@ -68,7 +68,14 @@ def run_outside_the_overlay(arguments: list[str]) -> subprocess.CompletedProcess
             ["cargo", *arguments, "--manifest-path", str(MANIFEST)],
             cwd=neutral_directory,
             capture_output=True,
-            text=True,
+            # `text=True` alone decodes with the locale codepage. Cargo emits
+            # UTF-8, so on a Windows console (cp1252) subprocess's reader thread
+            # dies on the first byte it cannot map and the captured stream is
+            # lost. The verdict survives -- it comes from `returncode` -- but the
+            # message explaining a failure does not, which is the one moment it
+            # is needed.
+            encoding="utf-8",
+            errors="replace",
             check=False,
         )
 
