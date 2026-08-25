@@ -59,9 +59,6 @@ use std::default::Default;
 use std::println;
 use std::vec::Vec;
 
-/// (index i, index j, index k, distance, arrival time, speed, cs, cp).
-type FastSample = (usize, usize, usize, f64, f64, f64, f64, f64);
-
 /// Test analytical validation for homogeneous medium
 #[test]
 fn test_analytical_homogeneous_validation() {
@@ -319,12 +316,6 @@ fn test_robustness_edge_cases() {
         "Should handle boundary conditions"
     );
 }
-
-/// Benchmark performance scaling
-///
-/// Measured 2026-08-22: 25.4 s under the heavy profile (serial). Fits the
-/// default 60 s per-test budget; serialized with the other CPU-saturating
-/// swe tests via the `full-grid-sim` nextest group. Re-enabled.
 
 /// Test literature benchmark comparison
 ///
