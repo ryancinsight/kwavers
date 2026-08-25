@@ -66,7 +66,10 @@
 //    arguments one-to-one; bundling them into a Rust struct would break the
 //    Python call surface.
 // Domain crates do not carry these allowances; they remain `-D warnings` clean.
-#![expect(clippy::type_complexity, reason = "binding signatures mirror Python keyword arguments one-to-one")]
+#![expect(
+    clippy::type_complexity,
+    reason = "binding signatures mirror Python keyword arguments one-to-one"
+)]
 #![allow(clippy::too_many_arguments)]
 
 use pyo3::prelude::*;
