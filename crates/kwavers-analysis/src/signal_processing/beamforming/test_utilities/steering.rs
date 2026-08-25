@@ -18,6 +18,10 @@ use leto::Array1;
 ///
 /// - `n`: Number of array elements
 /// - `angle_rad`: Steering angle from broadside (radians)
+///
+/// # Panics
+/// Panics only on an internal invariant violation (generated vector length
+/// differing from `n`); unreachable with the current construction.
 pub fn create_steering_vector(n: usize, angle_rad: f64) -> Array1<Complex64> {
     let k = TWO_PI; // Normalized wavenumber (λ = 1, d = 0.5λ)
     let data: Vec<Complex64> = (0..n)

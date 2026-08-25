@@ -88,6 +88,7 @@ where
     /// # Errors
     /// - Returns `KwaversError::System` always (GPU MVDR not yet implemented).
     ///
+    #[allow(clippy::unused_self)] // Signature mirrors the CPU-path method; stub does not use state yet.
     pub(super) fn process_mvdr_3d(
         &mut self,
         rf_data: &Array4<f32>,

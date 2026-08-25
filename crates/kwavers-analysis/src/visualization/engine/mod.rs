@@ -212,7 +212,7 @@ impl<P> VisualizationEngine<P> {
     /// - Propagates any `KwaversError` returned by called functions.
     ///
     #[cfg(feature = "gpu-visualization")]
-    pub async fn render_field(
+    pub fn render_field(
         &mut self,
         field: &Array3<f64>,
         field_type: UnifiedFieldType,
@@ -232,7 +232,7 @@ impl<P> VisualizationEngine<P> {
 
             // Render the field
             let render_start = Instant::now();
-            renderer.render_volume(field, field_type, grid).await?;
+            renderer.render_volume(field, field_type, grid)?;
             let render_time = render_start.elapsed().as_secs_f32() * MILLISECONDS_PER_SECOND as f32;
 
             // Update metrics
@@ -285,7 +285,7 @@ impl<P> VisualizationEngine<P> {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     #[cfg(feature = "gpu-visualization")]
-    pub async fn render_multi_field(
+    pub fn render_multi_field(
         &mut self,
         fields: &Array4<f64>,
         field_types: &[UnifiedFieldType],
@@ -326,7 +326,7 @@ impl<P> VisualizationEngine<P> {
                 .copied()
                 .zip(contiguous_fields.iter())
                 .collect();
-            renderer.render_multi_volume(render_fields, grid).await?;
+            renderer.render_multi_volume(render_fields, grid)?;
             let render_time = render_start.elapsed().as_secs_f32() * MILLISECONDS_PER_SECOND as f32;
 
             // Update metrics
@@ -438,7 +438,7 @@ impl<P> VisualizationEngine<P> {
     /// # Errors
     /// - Propagates any `KwaversError` returned by called functions.
     ///
-    pub async fn export(
+    pub fn export(
         &self,
         field: &Array3<f64>,
         field_type: UnifiedFieldType,

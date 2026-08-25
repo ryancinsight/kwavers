@@ -199,11 +199,13 @@ fn rejects_invalid_bands_gates_and_rates() {
 #[test]
 fn zero_attenuation_from_identical_spectra() {
     let n = 64_usize;
-    let spectrum: Array1<f64> = Array1::from_iter((0..n).map(|i| {
-        let f_mhz = i as f64 * (SAMPLE_RATE_HZ / (2.0 * n as f64)) * 1e-6;
-        // Decreasing backscatter spectrum typical of tissue
-        -0.5 * f_mhz // dB, not zero so the fit is non-trivial
-    }));
+    let spectrum: Array1<f64> = (0..n)
+        .map(|i| {
+            let f_mhz = i as f64 * (SAMPLE_RATE_HZ / (2.0 * n as f64)) * 1e-6;
+            // Decreasing backscatter spectrum typical of tissue
+            -0.5 * f_mhz // dB, not zero so the fit is non-trivial
+        })
+        .collect();
 
     let band = AnalysisBand::try_new(2.0e6, 8.0e6).expect("band");
     let result = attenuation_from_spectra(
@@ -245,11 +247,13 @@ fn recovers_known_attenuation_from_synthesized_spectra() {
     let shallow: Array1<f64> = Array1::zeros(n);
 
     // Deep: attenuated by 2·Δd·α(f).
-    let deep: Array1<f64> = Array1::from_iter((0..n).map(|i| {
-        let f_mhz = i as f64 * freq_step * 1e-6;
-        let alpha_f = alpha_0 + beta * f_mhz; // dB/cm
-        -2.0 * delta_d_cm * alpha_f // dB, negative = signal lost
-    }));
+    let deep: Array1<f64> = (0..n)
+        .map(|i| {
+            let f_mhz = i as f64 * freq_step * 1e-6;
+            let alpha_f = alpha_0 + beta * f_mhz; // dB/cm
+            -2.0 * delta_d_cm * alpha_f // dB, negative = signal lost
+        })
+        .collect();
 
     let band = AnalysisBand::try_new(2.0e6, 10.0e6).expect("band");
     let result = attenuation_from_spectra(
@@ -294,10 +298,12 @@ fn drops_non_finite_bins_from_fit() {
     let beta = 0.4_f64; // dB/(MHz·cm)
 
     let shallow: Array1<f64> = Array1::zeros(n);
-    let mut deep: Array1<f64> = Array1::from_iter((0..n).map(|i| {
-        let f_mhz = i as f64 * freq_step * 1e-6;
-        -2.0 * delta_d_cm * beta * f_mhz
-    }));
+    let mut deep: Array1<f64> = (0..n)
+        .map(|i| {
+            let f_mhz = i as f64 * freq_step * 1e-6;
+            -2.0 * delta_d_cm * beta * f_mhz
+        })
+        .collect();
     // Corrupt two in-band bins with NaN — they should be dropped.
     deep[10] = f64::NAN;
     deep[20] = f64::INFINITY;

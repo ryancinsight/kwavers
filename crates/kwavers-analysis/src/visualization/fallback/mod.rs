@@ -55,17 +55,18 @@ impl FallbackRenderer {
 
         // Generate ASCII visualization for small grids
         if grid.nx <= 40 && grid.ny <= 40 {
-            self.render_ascii_slice(field, grid.nz / 2)?;
+            Self::render_ascii_slice(field, grid.nz / 2)?;
         }
 
         Ok(())
     }
 
-    /// Render a 2D slice as ASCII art
+    /// Render a 2D slice as ASCII art to stdout (the fallback render target).
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    fn render_ascii_slice(&self, field: &Array3<f64>, z_slice: usize) -> KwaversResult<()> {
+    #[allow(clippy::print_stdout)] // stdout is the ASCII fallback's output medium, not diagnostics.
+    fn render_ascii_slice(field: &Array3<f64>, z_slice: usize) -> KwaversResult<()> {
         let [nx, ny, nz] = field.shape();
 
         if z_slice >= nz {

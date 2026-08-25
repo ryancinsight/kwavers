@@ -210,7 +210,9 @@ mod tests {
         let grid = create_test_grid();
         let field = create_test_field();
 
-        pollster::block_on(engine.render_field(&field, UnifiedFieldType::Pressure, &grid)).unwrap();
+        engine
+            .render_field(&field, UnifiedFieldType::Pressure, &grid)
+            .unwrap();
     }
 
     #[cfg(not(feature = "gpu-visualization"))]
@@ -227,7 +229,9 @@ mod tests {
             UnifiedFieldType::LightFluence,
         ];
 
-        pollster::block_on(engine.render_multi_field(&fields, &field_types, &grid)).unwrap();
+        engine
+            .render_multi_field(&fields, &field_types, &grid)
+            .unwrap();
     }
 
     #[cfg(feature = "gpu-visualization")]
@@ -238,8 +242,7 @@ mod tests {
         let grid = create_test_grid();
         let field = create_test_field();
 
-        let result =
-            pollster::block_on(engine.render_field(&field, UnifiedFieldType::Pressure, &grid));
+        let result = engine.render_field(&field, UnifiedFieldType::Pressure, &grid);
 
         assert!(matches!(
             result,
@@ -258,7 +261,7 @@ mod tests {
         let fields = Array4::zeros((32, 32, 32, 2));
         let field_types = vec![UnifiedFieldType::Pressure, UnifiedFieldType::Temperature];
 
-        let result = pollster::block_on(engine.render_multi_field(&fields, &field_types, &grid));
+        let result = engine.render_multi_field(&fields, &field_types, &grid);
 
         assert!(matches!(
             result,
@@ -279,7 +282,7 @@ mod tests {
         let fields = Array4::zeros((32, 32, 32, 2));
         let field_types = vec![UnifiedFieldType::Pressure];
 
-        let result = pollster::block_on(engine.render_multi_field(&fields, &field_types, &grid));
+        let result = engine.render_multi_field(&fields, &field_types, &grid);
 
         assert!(matches!(
             result,

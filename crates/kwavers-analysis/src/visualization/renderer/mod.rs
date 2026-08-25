@@ -94,7 +94,7 @@ impl Renderer3D {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub async fn render_volume(
+    pub fn render_volume(
         &mut self,
         field: &Array3<f64>,
         field_type: UnifiedFieldType,
@@ -111,7 +111,7 @@ impl Renderer3D {
     ///   multiple fields are supplied while transparency is disabled.
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
-    pub async fn render_multi_volume(
+    pub fn render_multi_volume(
         &mut self,
         fields: Vec<(UnifiedFieldType, &Array3<f64>)>,
         grid: &Grid,
@@ -190,18 +190,18 @@ mod tests {
             .get_mut([1, 1, 1])
             .expect("second field index is in bounds") = 1.0;
 
-        let first_image = pollster::block_on(
-            renderer.render_multi_volume(vec![(UnifiedFieldType::Pressure, &first)], &grid),
-        )
-        .expect("single-field rendering succeeds");
-        let composite_image = pollster::block_on(renderer.render_multi_volume(
-            vec![
-                (UnifiedFieldType::Pressure, &first),
-                (UnifiedFieldType::Temperature, &second),
-            ],
-            &grid,
-        ))
-        .expect("multi-field compositing succeeds");
+        let first_image = renderer
+            .render_multi_volume(vec![(UnifiedFieldType::Pressure, &first)], &grid)
+            .expect("single-field rendering succeeds");
+        let composite_image = renderer
+            .render_multi_volume(
+                vec![
+                    (UnifiedFieldType::Pressure, &first),
+                    (UnifiedFieldType::Temperature, &second),
+                ],
+                &grid,
+            )
+            .expect("multi-field compositing succeeds");
 
         assert_ne!(composite_image, first_image);
     }
@@ -237,13 +237,13 @@ mod tests {
         let first = Array3::zeros((2, 2, 2));
         let second = Array3::zeros((2, 2, 2));
 
-        let result = pollster::block_on(renderer.render_multi_volume(
+        let result = renderer.render_multi_volume(
             vec![
                 (UnifiedFieldType::Pressure, &first),
                 (UnifiedFieldType::Temperature, &second),
             ],
             &grid,
-        ));
+        );
 
         assert!(matches!(
             result,

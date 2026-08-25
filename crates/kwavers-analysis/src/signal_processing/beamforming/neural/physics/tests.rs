@@ -74,7 +74,7 @@ fn test_combined_constraints() {
 
     // Should be well-formed
     assert!(result.iter().all(|&x| x.is_finite()));
-    assert!(result.shape() == image.shape());
+    assert_eq!(result.shape(), image.shape());
 }
 
 #[test]
