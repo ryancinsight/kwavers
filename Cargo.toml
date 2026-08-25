@@ -35,8 +35,8 @@ themis = { package = "themis-topology", version = "0.10.1", git = "https://githu
 moirai-parallel = { version = "0.5.0", git = "https://github.com/ryancinsight/Moirai.git", default-features = false, features = ["parallel"] }
 leto = { version = "0.42.0", git = "https://github.com/ryancinsight/leto.git", default-features = false, features = ["std"] }
 leto-ops = { version = "0.42.0", git = "https://github.com/ryancinsight/leto.git", default-features = false, features = ["std"] }
-athena-core = { version = "0.1.1", git = "https://github.com/ryancinsight/athena.git", branch = "feat/athena-lsqr-damping", package = "athena-core" }
-athena-leto = { version = "0.1.1", git = "https://github.com/ryancinsight/athena.git", branch = "feat/athena-lsqr-damping", package = "athena-leto" }
+athena-core = { version = "0.1.1", git = "https://github.com/ryancinsight/athena.git", package = "athena-core" }
+athena-leto = { version = "0.1.1", git = "https://github.com/ryancinsight/athena.git", package = "athena-leto" }
 # Mnemosyne: Allocation / arenas / staging memory (Atlas first-party).
 # `kwavers-core` consumes the arena, backend, and memory-core seam directly
 # (`crates/kwavers-core/src/arena/**`) â€” see ADR 0006 Â§Failure modes for the
