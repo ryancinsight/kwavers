@@ -217,9 +217,8 @@ jobs:
       with:
         tool: nextest
 
-    # Same shared cache the other jobs in this workflow use; without it this
-    # job cold-compiles the whole workspace every run. `coverage` profile
-    # artifacts live under target/coverage inside the same target dir.
+    # Same shared cache and dev-profile graph the feature-matrix jobs use;
+    # without it this job cold-compiles the whole workspace every run.
     - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
       with:
         shared-key: kwavers
@@ -235,28 +234,28 @@ jobs:
       run: |
         # Full-wave solver tests share compute-heavy kernels. Two nextest
         # processes with two Rayon workers each fill the hosted runner without
-        # oversubscription or unbounded concurrent simulation state. The
-        # coverage profile (O3) is used because these are compute-bound suites.
-        cargo nextest run --locked --cargo-profile coverage --workspace --exclude kwavers-python --exclude kwavers-gpu --lib --test-threads=2
-        cargo nextest run --locked --cargo-profile coverage -p kwavers --lib --no-default-features --features pinn
+        # oversubscription or unbounded concurrent simulation state. Keep the
+        # dev profile so the shared cache can reuse the feature-matrix graph.
+        cargo nextest run --locked --workspace --exclude kwavers-python --exclude kwavers-gpu --lib --test-threads=2
+        cargo nextest run --locked -p kwavers --lib --no-default-features --features pinn --test-threads=2
 
     - name: Run bounded full-grid simulations
       run: >-
-        cargo nextest run --locked --cargo-profile coverage -p kwavers
+        cargo nextest run --locked -p kwavers
         --test fdtd_pstd_comparison
         --test property_based_tests
         --test session2_source_injection_test
         --test test_plane_wave_injection_fixed
 
-    - name: Record coverage artifact footprint
+    - name: Record debug artifact footprint
       run: |
-        coverage_bytes=$(du --bytes --summarize target/coverage | cut -f1)
-        coverage_files=$(find target/coverage -type f | wc -l)
+        debug_bytes=$(du --bytes --summarize target/debug | cut -f1)
+        debug_files=$(find target/debug -type f | wc -l)
         {
-          echo "### Coverage artifact footprint"
+          echo "### Debug artifact footprint"
           echo ""
-          echo "- Bytes: ${coverage_bytes}"
-          echo "- Files: ${coverage_files}"
+          echo "- Bytes: ${debug_bytes}"
+          echo "- Files: ${debug_files}"
         } | tee -a "$GITHUB_STEP_SUMMARY"
 
   documentation:
@@ -293,7 +292,7 @@ jobs:
     # avoids rebuilding that disjoint feature graph after the 5,759-test
     # coverage suite while preserving both doctest configurations.
     - name: Run full-feature doc tests
-      run: cargo test --locked --profile coverage -p kwavers --doc --no-default-features --features full
+      run: cargo test --locked -p kwavers --doc --no-default-features --features full
 
   cuda-runtime-build:
     name: CUDA Runtime Build
