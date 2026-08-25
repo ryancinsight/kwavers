@@ -3,5 +3,6 @@
 mod config;
 mod domain;
 mod geometry;
+mod gradients;
 mod medium;
 mod training;
