@@ -69,21 +69,21 @@
 | [103](103-thermal-diffusion-quantities.md) | Thermal-diffusion physical quantities | Accepted |
 | [104](104-thermal-acoustic-coupling-quantities.md) | Thermal-acoustic coupling quantities | Accepted |
 | [105](105-b-mode-scan-conversion-quantities.md) | B-mode scan-conversion geometry quantities | Accepted |
-| [106](106-rigid-walls-by-even-reflection.md) | 106. Rigid walls by even reflection, with the divergence defined as −Gᵀ | Accepted |
-| [107](107-collocated-summation-by-parts.md) | 107. Summation by parts for the collocated rigid wall | Accepted |
+| [106](106-rigid-walls-by-even-reflection.md) | Rigid walls by even reflection, with the divergence defined as −Gᵀ | Accepted |
+| [107](107-collocated-summation-by-parts.md) | Summation by parts for the collocated rigid wall | Accepted |
 | [108](108-retire-stale-apollo-gpu-probe.md) | Retire the stale Apollo GPU availability probe | Accepted |
 | [109](109-aequitas-quantity-provider.md) | Adopt Aequitas for bubble-energy quantities | Accepted |
-| [110](110-drop-dead-boundary-parameters.md) | 110. Delete the inert BoundaryParameters surface | Accepted |
-| [111](111-retire-kzk-solver-plugin-surface.md) | 111. Retire the `KzkSolverPlugin` surface onto the complex-field KZK adapter | Accepted |
-| [112](112-convex-array-rasterizer-seam.md) | 112. Wiring the convex array: orientation seam and angle units | Accepted |
-| [113](113-finite-aperture-sir-seam.md) | 113. Finite-aperture diffraction in RF synthesis: an injected SIR seam | Accepted |
-| [114](114-typed-sonoluminescence-emission.md) | 114. Type sonoluminescence emission components at the Aequitas boundary | Accepted |
-| [115](115-fwi-transmission-acquisition-seam.md) | 115. A transmission-acquisition seam for frequency-domain FWI | Accepted |
-| [116](116-workspace-clippy-floor.md) | 116. One workspace clippy floor, and which of the two candidates it is | Accepted |
-| [117](117-typed-seismic-example-workflows.md) | 117. Type and partition the seismic example workflows | Accepted |
-| [118](118-typed-recorder-channel-selection.md) | 118. Typed recorder channel selection | Accepted |
+| [110](110-drop-dead-boundary-parameters.md) | Delete the inert BoundaryParameters surface | Accepted |
+| [111](111-retire-kzk-solver-plugin-surface.md) | Retire the `KzkSolverPlugin` surface onto the complex-field KZK adapter | Accepted |
+| [112](112-convex-array-rasterizer-seam.md) | Wiring the convex array: orientation seam and angle units | Accepted |
+| [113](113-finite-aperture-sir-seam.md) | Finite-aperture diffraction in RF synthesis: an injected SIR seam | Accepted |
+| [114](114-typed-sonoluminescence-emission.md) | Type sonoluminescence emission components at the Aequitas boundary | Accepted |
+| [115](115-fwi-transmission-acquisition-seam.md) | A transmission-acquisition seam for frequency-domain FWI | Accepted |
+| [116](116-workspace-clippy-floor.md) | One workspace clippy floor, and which of the two candidates it is | Accepted |
+| [117](117-typed-seismic-example-workflows.md) | Type and partition the seismic example workflows | Accepted |
+| [118](118-typed-recorder-channel-selection.md) | Typed recorder channel selection | Accepted |
 | [119](119-kwave-reference-oracle.md) | In-repository k-Wave differential oracle | Accepted |
 | [120](120-absorption-coefficient-ownership.md) | Who owns the power-law absorption coefficient | Accepted |
 | [121](121-plugin-source-forwarding.md) | Plugins receive the sources they are given | Accepted |
-| [122](122-fwi-rotating-acquisition-geometry.md) | 122. Per-view element-position rotation for the rotating opposed-linear-array acquisition | Accepted |
+| [122](122-fwi-rotating-acquisition-geometry.md) | Per-view element-position rotation for the rotating opposed-linear-array acquisition | Accepted |
 | [123](123-visualization-config-single-source.md) | Keep visualization backend and quality selection single-source | Accepted |

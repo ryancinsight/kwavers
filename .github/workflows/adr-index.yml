@@ -1,0 +1,47 @@
+name: ADR index
+
+# The other two workflows carry `paths-ignore: docs/**`, so a change that only
+# adds an architecture decision record runs no check at all. That is where both
+# of the failures this guards against live, so the check needs its own trigger.
+#
+# It needs no toolchain, no cache and no build: it reads `docs/adr/*.md` and
+# compares them to the committed index, so it costs a checkout and a second.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/adr/**'
+      - 'scripts/adr-index.py'
+      - '.github/workflows/adr-index.yml'
+  pull_request:
+    paths:
+      - 'docs/adr/**'
+      - 'scripts/adr-index.py'
+      - '.github/workflows/adr-index.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: adr-index-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  index:
+    name: ADR index is current
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Two failures, one command:
+      #
+      # - two records claiming the same number. Nothing detected this before,
+      #   so a collision surfaced only as a merge conflict during a rebase, one
+      #   number at a time, after the work was already written.
+      # - an index that no longer matches the files. It is generated, and the
+      #   resolution for a conflict on it is to regenerate rather than to merge
+      #   two appended rows by hand.
+      - name: Check the ADR index
+        run: python3 scripts/adr-index.py check
