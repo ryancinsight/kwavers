@@ -280,7 +280,7 @@ dependencies = [
 [[package]]
 name = "athena-core"
 version = "0.1.1"
-source = "git+https://github.com/ryancinsight/athena.git#21318aebed746c9eea42ccc9d24f4e56d9fecae3"
+source = "git+https://github.com/ryancinsight/athena#21318aebed746c9eea42ccc9d24f4e56d9fecae3"
 dependencies = [
  "eunomia",
 ]
@@ -288,7 +288,7 @@ dependencies = [
 [[package]]
 name = "athena-leto"
 version = "0.1.1"
-source = "git+https://github.com/ryancinsight/athena.git#21318aebed746c9eea42ccc9d24f4e56d9fecae3"
+source = "git+https://github.com/ryancinsight/athena#21318aebed746c9eea42ccc9d24f4e56d9fecae3"
 dependencies = [
  "athena-core",
  "eunomia",
@@ -3472,6 +3472,8 @@ dependencies = [
  "aequitas",
  "anyhow",
  "apollo-fft",
+ "athena-core",
+ "athena-leto",
  "bitflags 2.13.1",
  "coeus-autograd",
  "coeus-core",

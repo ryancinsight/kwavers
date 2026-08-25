@@ -305,6 +305,30 @@
   inherited nothing; `kwavers` additionally re-declared `unexpected_cfgs` byte-identically
   to the workspace table, so that duplicate is deleted in favour of inheritance. Clippy
   reports zero warnings for all three afterwards and both CI clippy gates pass.
+- **Krylov solvers are Athena's** [major]: kwavers no longer carries a Krylov
+  recurrence. Atlas ADR 0033 makes Athena the stack's owner of Krylov methods,
+  the linear-operator and preconditioner seams, and convergence policy; its
+  stage C retires kwavers' two hand-written GMRES implementations — the dense
+  boundary-element solver and the matrix-free Newton-Krylov solver, each with
+  its own Modified Gram-Schmidt Arnoldi and Givens rotations. `forward::bem`
+  now borrows its assembled coefficients as an `athena_leto`
+  `BorrowedDenseOperator` with a Jacobi preconditioner built from the matrix
+  diagonal, and the monolithic Newton system applies its Jacobian through an
+  `athena_core::LinearOperator` over the finite-difference Jacobian-vector
+  product. The new `kwavers_solver::krylov` module holds the whole adapter:
+  kwavers' own restart/tolerance vocabulary, the convergence summary, and the
+  ladder that resolves a runtime restart width onto Athena's compile-time
+  `Gmres<B, RESTART>`.
+
+  Breaking: `kwavers_solver::integration::nonlinear` is removed along with
+  `GMRESSolver` and its `residual_history`/`iteration_count` accessors.
+  `GMRESConfig` and `GmresConvergenceInfo` move to `kwavers_solver::krylov`.
+  `GMRESConfig::use_preconditioner` is removed — it selected nothing.
+  `GmresConvergenceInfo::relative_residual` now reports the reduction against
+  the initial residual, which equals the previous value for the zero initial
+  guess every call site uses. Callers construct `GMRESConfig` without
+  `use_preconditioner` and import from the new path; no compatibility
+  re-export is provided.
 
 - **Documentation:** the README single-sourcing check now exempts `publish = false`
   crates by rule instead of an allowlist. The rule follows the requirement's rationale —

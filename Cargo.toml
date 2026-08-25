@@ -27,6 +27,11 @@ coeus-nn = { version = "0.10.0", git = "https://github.com/ryancinsight/Coeus.gi
 coeus-optim = { version = "0.10.0", git = "https://github.com/ryancinsight/Coeus.git" }
 coeus-ops = { version = "0.10.0", git = "https://github.com/ryancinsight/Coeus.git" }
 apollo = { package = "apollo-fft", version = "0.27.0", git = "https://github.com/ryancinsight/apollo.git" }
+# athena: Atlas SSOT for Krylov recurrences, the linear-operator and
+# preconditioner seams, and convergence policy (Atlas ADR 0033).
+# athena-core = backend-neutral contracts, athena-leto = Leto CPU backend.
+athena-core = { version = "0.1.1", git = "https://github.com/ryancinsight/athena" }
+athena-leto = { version = "0.1.1", git = "https://github.com/ryancinsight/athena" }
 hephaestus-core = { version = "0.19.0", git = "https://github.com/ryancinsight/hephaestus.git", default-features = false }
 hephaestus-wgpu = { version = "0.19.0", git = "https://github.com/ryancinsight/hephaestus.git", default-features = false, features = ["decomposition"] }
 hephaestus-cuda = { version = "0.19.0", git = "https://github.com/ryancinsight/hephaestus.git", default-features = false }
@@ -35,8 +40,6 @@ themis = { package = "themis-topology", version = "0.10.1", git = "https://githu
 moirai-parallel = { version = "0.5.0", git = "https://github.com/ryancinsight/Moirai.git", default-features = false, features = ["parallel"] }
 leto = { version = "0.42.0", git = "https://github.com/ryancinsight/leto.git", default-features = false, features = ["std"] }
 leto-ops = { version = "0.42.0", git = "https://github.com/ryancinsight/leto.git", default-features = false, features = ["std"] }
-athena-core = { version = "0.1.1", git = "https://github.com/ryancinsight/athena.git", package = "athena-core" }
-athena-leto = { version = "0.1.1", git = "https://github.com/ryancinsight/athena.git", package = "athena-leto" }
 # Mnemosyne: Allocation / arenas / staging memory (Atlas first-party).
 # `kwavers-core` consumes the arena, backend, and memory-core seam directly
 # (`crates/kwavers-core/src/arena/**`) â€” see ADR 0006 Â§Failure modes for the
