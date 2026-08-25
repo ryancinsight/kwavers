@@ -179,6 +179,12 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
+    - name: Install plotting benchmark dependencies
+      if: matrix.features == 'plotting'
+      uses: ./.github/actions/install-system-dependencies
+      with:
+        packages: libfontconfig1-dev
+
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
       with:
@@ -204,6 +210,25 @@ jobs:
         else
           cargo build --locked -p kwavers --no-default-features --features ${{ matrix.features }}
         fi
+
+    # The plotting leg already owns the required checkout, toolchain, shared
+    # dependency cache, and dev-profile kwavers graph. Reusing that state keeps
+    # benchmark smoke from spending a second job on setup and compilation.
+    - name: Build every plotting-eligible Criterion target once
+      if: matrix.features == 'plotting'
+      run: >-
+        timeout --foreground --kill-after=30s 12m
+        cargo bench --locked -p kwavers --no-default-features
+        --features plotting --benches
+        --profile dev --no-run
+
+    - name: Execute every plotting-eligible Criterion target once
+      if: matrix.features == 'plotting'
+      run: >-
+        timeout --foreground --kill-after=30s 8m
+        cargo bench --locked -p kwavers --no-default-features
+        --features plotting --benches
+        --profile dev -- --test
 
   test-coverage:
     name: Test Suite Coverage

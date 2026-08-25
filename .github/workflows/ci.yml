@@ -293,50 +293,6 @@ jobs:
         run: cargo +nightly miri test --locked -p kwavers --lib --exclude configuration::builder::tests
         continue-on-error: true
 
-  benchmarks:
-    name: Benchmark Runtime Smoke
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
-      - name: Install system dependencies
-        uses: ./.github/actions/install-system-dependencies
-        with:
-          packages: libfontconfig1-dev
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
-        with:
-          toolchain: 1.97.0
-
-      # Shared cache; rationale at the first use in this file.
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
-        with:
-          shared-key: kwavers
-          # Write the cache from the default branch only. A pull request
-          # restores it but does not save, so concurrent branches cannot
-          # evict each other's entries.
-          save-if: ${{ github.ref == 'refs/heads/main' }}
-
-      # Runtime smoke verifies that every selected Criterion binary starts and
-      # executes one pass; it does not measure optimized throughput. The dev
-      # profile avoids release LTO/codegen-units=1, which consumed the entire
-      # 30-minute job before any of the 19 eligible binaries executed.
-      - name: Build every plotting-eligible Criterion target once
-        run: >-
-          timeout --foreground --kill-after=30s 20m
-          cargo bench --locked -p kwavers --features plotting --benches
-          --profile dev --no-run
-
-      - name: Execute every plotting-eligible Criterion target once
-        run: >-
-          timeout --foreground --kill-after=30s 8m
-          cargo bench --locked -p kwavers --features plotting --benches
-          --profile dev -- --test
-
   coverage:
     name: Code Coverage
     runs-on: ubuntu-latest
