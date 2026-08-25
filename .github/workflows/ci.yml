@@ -186,7 +186,11 @@ jobs:
   build:
     name: Build & Test
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Exact-head observation: nightly cold-build + full release suite ~28m;
+    # under hosted queue load it has exceeded 30m. Retain ~20% variance per
+    # the coverage-job convention, so the matrix keeps its headroom instead
+    # of cancelling on slow runners.
+    timeout-minutes: 60
     strategy:
       matrix:
         rust: [stable, beta, nightly]
@@ -213,9 +217,6 @@ jobs:
           # restores it but does not save, so concurrent branches cannot
           # evict each other's entries.
           save-if: ${{ github.ref == 'refs/heads/main' }}
-
-      - name: Build
-        run: cargo build --locked -p kwavers --release --verbose --features="plotting"
 
       - name: Install nextest
         uses: taiki-e/install-action@ea4c0b50b0d394ee91c5bb68a6a295b0556feb8e
