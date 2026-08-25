@@ -198,13 +198,6 @@ jobs:
     # moving its duplicated full-feature doctest build to the documentation
     # job; do not convert compile waste into more timeout headroom.
     timeout-minutes: 45
-    env:
-      # Two test processes keep the four-core hosted runner occupied while
-      # bounding Rayon-backed kernels to four worker threads in aggregate.
-      # The prior single-process run left independent solver tests serialized
-      # and spent 9m43s executing an already-built suite.
-      RAYON_NUM_THREADS: 2
-
     steps:
     - name: Checkout repository
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -233,6 +226,12 @@ jobs:
         save-if: ${{ github.ref == 'refs/heads/main' }}
 
     - name: Run tests
+      env:
+        # Two test processes keep the four-core hosted runner occupied while
+        # bounding Rayon-backed kernels to four worker threads in aggregate.
+        # The prior single-process run left independent solver tests serialized
+        # and spent 9m43s executing an already-built suite.
+        RAYON_NUM_THREADS: 2
       run: |
         # Full-wave solver tests share compute-heavy kernels. Two nextest
         # processes with two Rayon workers each fill the hosted runner without
