@@ -184,6 +184,17 @@ jobs:
       with:
         toolchain: 1.97.0
 
+    # Shared cache; rationale at the first use in this file. Without it every
+    # feature-combination leg cold-compiles the full dependency tree on each
+    # pull request; restoring the shared target/ makes the legs build only the
+    # kwavers crates their feature set actually changes.
+    - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
+      with:
+        shared-key: kwavers
+        # Written from the default branch only; a pull request restores
+        # but does not save, so branches cannot evict each other.
+        save-if: ${{ github.ref == 'refs/heads/main' }}
+
     - name: Build with ${{ matrix.features }} features
       run: |
         if [ "${{ matrix.features }}" == "minimal" ]; then
