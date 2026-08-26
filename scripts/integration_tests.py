@@ -88,6 +88,7 @@ class ExecutionResult:
     tests_run: int
     stdout_tail: str
     stderr_tail: str
+    failure_status_tail: str
 
 
 def read_baseline() -> set[str]:
@@ -242,19 +243,23 @@ def _terminate_process_tree(
     return error
 
 
-def _scan_stream(stream: BinaryIO) -> tuple[set[str], int, str]:
+def _scan_stream(stream: BinaryIO) -> tuple[set[str], int, str, str]:
     failures: set[str] = set()
     ran = 0
     tail = ""
+    failure_status_tail = ""
     stream.seek(0)
     for raw_line in stream:
         line = ANSI.sub("", raw_line.decode("utf-8", errors="replace"))
         tail = (tail + line)[-DIAGNOSTIC_TAIL_CHARACTERS:]
         if match := FAIL_LINE.match(line):
             failures.add(f"{match.group(1)} {match.group(2)}")
+            failure_status_tail = (failure_status_tail + line)[
+                -DIAGNOSTIC_TAIL_CHARACTERS:
+            ]
         if match := SUMMARY.match(line):
             ran = max(ran, int(match.group(1)))
-    return failures, ran, tail
+    return failures, ran, tail, failure_status_tail
 
 
 def _execute(command: list[str], timeout_seconds: float) -> ExecutionResult:
@@ -307,8 +312,12 @@ def _execute(command: list[str], timeout_seconds: float) -> ExecutionResult:
             if close_error is not None:
                 termination_error = termination_error or close_error
 
-        stdout_failures, stdout_ran, stdout_tail = _scan_stream(stdout)
-        stderr_failures, stderr_ran, stderr_tail = _scan_stream(stderr)
+        stdout_failures, stdout_ran, stdout_tail, stdout_failure_status = _scan_stream(
+            stdout
+        )
+        stderr_failures, stderr_ran, stderr_tail, stderr_failure_status = _scan_stream(
+            stderr
+        )
         return ExecutionResult(
             returncode=process.returncode if process.returncode is not None else -1,
             timed_out=timed_out,
@@ -317,6 +326,9 @@ def _execute(command: list[str], timeout_seconds: float) -> ExecutionResult:
             tests_run=max(stdout_ran, stderr_ran),
             stdout_tail=stdout_tail,
             stderr_tail=stderr_tail,
+            failure_status_tail=(stdout_failure_status + stderr_failure_status)[
+                -DIAGNOSTIC_TAIL_CHARACTERS:
+            ],
         )
 
 
@@ -327,6 +339,14 @@ def _print_diagnostic_tails(result: ExecutionResult) -> None:
     ):
         if tail:
             print(f"{label} tail:\n{tail}", file=sys.stderr)
+
+
+def _print_failure_statuses(result: ExecutionResult) -> None:
+    if result.failure_status_tail:
+        print(
+            f"failure status lines:\n{result.failure_status_tail}",
+            file=sys.stderr,
+        )
 
 
 def run() -> tuple[set[str], int]:
@@ -344,6 +364,8 @@ def run() -> tuple[set[str], int]:
         )
 
     failures = set(result.failures)
+    if failures:
+        _print_failure_statuses(result)
     ran = result.tests_run
     if ran == 0:
         # No summary means the suite did not run -- a compile error or a

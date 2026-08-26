@@ -22,7 +22,8 @@ class IntegrationTestRunnerTests(unittest.TestCase):
         output = (
             "x" * 5000
             + "\n        FAIL [   0.010s] (1/2) kwavers::sample test_case\n"
-            + "     Summary [   0.020s] 2 tests run: 1 passed, 1 failed\n"
+            + "     TIMEOUT [  60.000s] (2/2) kwavers::sample timed_out_case\n"
+            + "     Summary [  60.010s] 2 tests run: 0 passed, 2 failed\n"
         )
 
         result = integration_tests._execute(
@@ -31,10 +32,25 @@ class IntegrationTestRunnerTests(unittest.TestCase):
 
         self.assertFalse(result.timed_out)
         self.assertIsNone(result.termination_error)
-        self.assertEqual(result.failures, frozenset({"kwavers::sample test_case"}))
+        self.assertEqual(
+            result.failures,
+            frozenset(
+                {
+                    "kwavers::sample test_case",
+                    "kwavers::sample timed_out_case",
+                }
+            ),
+        )
         self.assertEqual(result.tests_run, 2)
+        self.assertIn("FAIL", result.failure_status_tail)
+        self.assertIn("TIMEOUT", result.failure_status_tail)
+        self.assertIn("kwavers::sample test_case", result.failure_status_tail)
         self.assertLessEqual(
             len(result.stdout_tail), integration_tests.DIAGNOSTIC_TAIL_CHARACTERS
+        )
+        self.assertLessEqual(
+            len(result.failure_status_tail),
+            integration_tests.DIAGNOSTIC_TAIL_CHARACTERS,
         )
 
     @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
