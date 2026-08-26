@@ -24,19 +24,22 @@ type TestBackend = coeus_core::MoiraiBackend;
 
 /// A column vector `Var` that does not track gradients: it is data, not a
 /// parameter.
-fn column(backend: &TestBackend, values: &[f32]) -> Var<f32, TestBackend> {
+fn column(backend: TestBackend, values: &[f32]) -> Var<f32, TestBackend> {
     Var::new(
-        coeus_tensor::Tensor::from_slice_on(vec![values.len(), 1], values, backend),
+        coeus_tensor::Tensor::from_slice_on(vec![values.len(), 1], values, &backend),
         false,
     )
 }
 
-/// A small network and a fixed batch, sized so a finite difference is cheap.
-fn fixture() -> KwaversResult<(
+/// A network, the batch it is evaluated on, and that batch's target.
+type Fixture = (
     PINN3DNetwork<TestBackend>,
     Vec<Var<f32, TestBackend>>,
     Var<f32, TestBackend>,
-)> {
+);
+
+/// A small network and a fixed batch, sized so a finite difference is cheap.
+fn fixture() -> KwaversResult<Fixture> {
     let backend = TestBackend::default();
     let config = PinnConfig3D {
         hidden_layers: vec![4],
@@ -44,12 +47,12 @@ fn fixture() -> KwaversResult<(
     };
     let network = PINN3DNetwork::<TestBackend>::new(&config)?;
     let inputs = vec![
-        column(&backend, &[0.25, 0.75]),
-        column(&backend, &[0.5, 0.5]),
-        column(&backend, &[0.5, 0.5]),
-        column(&backend, &[0.1, 0.2]),
+        column(backend, &[0.25, 0.75]),
+        column(backend, &[0.5, 0.5]),
+        column(backend, &[0.5, 0.5]),
+        column(backend, &[0.1, 0.2]),
     ];
-    let target = column(&backend, &[0.0, 0.0]);
+    let target = column(backend, &[0.0, 0.0]);
     Ok((network, inputs, target))
 }
 
@@ -162,7 +165,7 @@ fn reported_gradient_matches_a_finite_difference() -> KwaversResult<()> {
         })
         .expect("at least one parameter carries a resolvable gradient");
 
-    let mut shifted = |delta: f32| -> KwaversResult<f32> {
+    let shifted = |delta: f32| -> KwaversResult<f32> {
         let mut params = network.parameters();
         let mut values = params[index].tensor.as_slice().to_vec();
         values[element] += delta;

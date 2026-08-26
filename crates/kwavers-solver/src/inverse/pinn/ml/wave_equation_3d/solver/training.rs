@@ -31,7 +31,10 @@ where
         epochs: usize,
     ) -> KwaversResult<TrainingMetrics3D> {
         let start_time = Instant::now();
-        let mut metrics = TrainingMetrics3D::default();
+        let mut metrics = TrainingMetrics3D {
+            collocation_seed: self.config.collocation_seed,
+            ..Default::default()
+        };
 
         let n_data = x_data.len();
         if n_data == 0 {

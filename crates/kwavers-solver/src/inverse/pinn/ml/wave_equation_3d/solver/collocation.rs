@@ -1,6 +1,8 @@
 use super::core::PinnWave3D;
 use crate::inverse::pinn::ml::wave_equation_3d::config::PinnConfig3D;
 use coeus_autograd::Var;
+use rand::{Rng, SeedableRng};
+use rand_chacha::ChaCha8Rng;
 
 /// Collocation coordinate tensors `(x, y, z, t)`, each leaf `Var<f32,B>` `[n_points, 1]`.
 #[allow(clippy::type_complexity)] // 4 independent coordinate tensors, no cohesive grouping
@@ -26,11 +28,18 @@ where
         let (x_min, x_max, y_min, y_max, z_min, z_max) = self.geometry.bounding_box();
         let t_max = 1.0; // Normalized time
 
+        // Seeded rather than drawn from the global generator, so a run is
+        // reproducible from its configuration. ChaCha rather than `StdRng` because
+        // `StdRng`'s algorithm is documented as free to change between
+        // `rand` releases, which would silently invalidate every seed ever
+        // recorded; the workspace's other seeded samplers use `ChaCha8Rng`.
+        let mut rng = ChaCha8Rng::seed_from_u64(config.collocation_seed);
+
         for _ in 0..n_points {
-            let x = x_min + (x_max - x_min) * rand::random::<f64>();
-            let y = y_min + (y_max - y_min) * rand::random::<f64>();
-            let z = z_min + (z_max - z_min) * rand::random::<f64>();
-            let t = t_max * rand::random::<f64>();
+            let x = x_min + (x_max - x_min) * rng.gen::<f64>();
+            let y = y_min + (y_max - y_min) * rng.gen::<f64>();
+            let z = z_min + (z_max - z_min) * rng.gen::<f64>();
+            let t = t_max * rng.gen::<f64>();
 
             if self.geometry.contains(x, y, z) {
                 x_points.push(x as f32);

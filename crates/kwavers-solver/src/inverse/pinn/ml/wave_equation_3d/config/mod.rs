@@ -95,6 +95,22 @@ pub struct PinnConfig3D {
     ///
     /// **Default**: 1.0
     pub max_grad_norm: f64,
+
+    /// Seed for the collocation-point sampler.
+    ///
+    /// The PDE residual is evaluated at points drawn from the domain, so the
+    /// loss is a function of the draw as well as of the parameters. Seeding it
+    /// makes a training run reproducible from its inputs: the same seed draws
+    /// the same points, and a failure can be handed to someone else as a
+    /// reproduction rather than as a description.
+    ///
+    /// This is not a nicety. The draw is rejection-sampled against the
+    /// geometry, so even the *number* of points varies between runs, and
+    /// comparing two runs of the same configuration otherwise measures the
+    /// draw rather than the change under test.
+    ///
+    /// **Default**: 0
+    pub collocation_seed: u64,
 }
 
 impl Default for PinnConfig3D {
@@ -106,6 +122,11 @@ impl Default for PinnConfig3D {
             learning_rate: 1e-4,
             batch_size: 1000,
             max_grad_norm: 1.0,
+            // A fixed default rather than an entropy-seeded one: a default that
+            // varied per process would leave every run irreproducible unless
+            // the caller remembered to pin it, which is the state this field
+            // exists to end.
+            collocation_seed: 0,
         }
     }
 }
@@ -317,6 +338,14 @@ pub struct TrainingMetrics3D {
 
     /// Total training time in seconds
     pub training_time_secs: f64,
+
+    /// Seed the collocation points were drawn from.
+    ///
+    /// Carried on the result so a run is self-describing: the losses above are
+    /// a function of this draw as well as of the parameters, and reproducing
+    /// them needs the seed, not just the configuration a caller remembers
+    /// passing.
+    pub collocation_seed: u64,
 }
 
 impl Default for TrainingMetrics3D {
@@ -329,6 +358,7 @@ impl Default for TrainingMetrics3D {
             bc_loss: Vec::new(),
             ic_loss: Vec::new(),
             training_time_secs: 0.0,
+            collocation_seed: 0,
         }
     }
 }
