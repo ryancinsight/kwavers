@@ -5,9 +5,9 @@ use coeus_autograd::Var;
 use super::super::dynamic_tanh::DynamicTanh;
 use super::B;
 
-fn var_col(backend: &B, values: &[f32], cols: usize) -> Var<f32, B> {
+fn var_col(backend: B, values: &[f32], cols: usize) -> Var<f32, B> {
     Var::new(
-        coeus_tensor::Tensor::from_slice_on(vec![(values.len()) / cols, cols], values, backend),
+        coeus_tensor::Tensor::from_slice_on(vec![(values.len()) / cols, cols], values, &backend),
         false,
     )
 }
@@ -19,7 +19,7 @@ fn test_default_init_recovers_vanilla_tanh() {
     let backend = B::default();
     let dyt = DynamicTanh::<B>::new();
     let xs: [f32; 5] = [-2.0, -0.5, 0.0, 0.5, 2.0];
-    let input = var_col(&backend, &xs, 1);
+    let input = var_col(backend, &xs, 1);
     let out = dyt.forward(&input);
     let out_vec = out.tensor.as_slice();
     for (i, &x) in xs.iter().enumerate() {
@@ -48,7 +48,7 @@ fn test_forward_applies_affine_then_tanh_then_affine() {
     // output is exactly β = -1 (since tanh(0) = 0).
     let backend = B::default();
     let dyt = DynamicTanh::<B>::with_init(2.0, 3.0, -1.0);
-    let input = var_col(&backend, &[0.0_f32, 1.0_f32], 1);
+    let input = var_col(backend, &[0.0_f32, 1.0_f32], 1);
     let out_vec = dyt.forward(&input).tensor.as_slice().to_vec();
     // x=0 → tanh(0)=0 → γ·0 + β = β = -1
     assert!(
@@ -72,7 +72,7 @@ fn test_forward_shape_preserved() {
     let n = 17;
     let f = 11;
     let data: Vec<f32> = (0..n * f).map(|i| (i as f32) * 0.01 - 0.5).collect();
-    let input = var_col(&backend, &data, f);
+    let input = var_col(backend, &data, f);
     let out = dyt.forward(&input);
     assert_eq!(out.tensor.shape(), &[n, f]);
 }

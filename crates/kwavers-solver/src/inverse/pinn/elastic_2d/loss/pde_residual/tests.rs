@@ -6,9 +6,9 @@ use kwavers_core::error::KwaversResult;
 
 type B = coeus_core::MoiraiBackend;
 
-fn var_col(backend: &B, values: &[f32]) -> Var<f32, B> {
+fn var_col(backend: B, values: &[f32]) -> Var<f32, B> {
     Var::new(
-        coeus_tensor::Tensor::from_slice_on(vec![(values.len()), 1], values, backend),
+        coeus_tensor::Tensor::from_slice_on(vec![(values.len()), 1], values, &backend),
         false,
     )
 }
@@ -22,9 +22,9 @@ fn test_residual_is_finite() -> KwaversResult<()> {
     };
     let model = ElasticPINN2D::<B>::new(&config)?;
 
-    let x = var_col(&backend, &[0.1, 0.3]);
-    let y = var_col(&backend, &[0.2, 0.4]);
-    let t = var_col(&backend, &[0.05, 0.1]);
+    let x = var_col(backend, &[0.1, 0.3]);
+    let y = var_col(backend, &[0.2, 0.4]);
+    let t = var_col(backend, &[0.05, 0.1]);
 
     let (residual_x, residual_y) =
         compute_elastic_wave_pde_residual(&model, &x, &y, &t, 1000.0, 2.25e9, 0.0)?;
@@ -55,9 +55,9 @@ fn test_residual_gradient_reaches_network_weights() -> KwaversResult<()> {
         p.zero_grad();
     }
 
-    let x = var_col(&backend, &[0.1, 0.3]);
-    let y = var_col(&backend, &[0.2, 0.4]);
-    let t = var_col(&backend, &[0.05, 0.1]);
+    let x = var_col(backend, &[0.1, 0.3]);
+    let y = var_col(backend, &[0.2, 0.4]);
+    let t = var_col(backend, &[0.05, 0.1]);
 
     let (residual_x, residual_y) =
         compute_elastic_wave_pde_residual(&model, &x, &y, &t, 1000.0, 2.25e9, 5.0e8)?;

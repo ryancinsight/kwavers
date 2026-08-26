@@ -1,6 +1,8 @@
 //! Trainer step, convergence, and Helmholtz-path tests (Phase C-2).
 
 use coeus_autograd::Var;
+use rand::{Rng, SeedableRng};
+use rand_chacha::ChaCha8Rng;
 
 use super::super::config::ParamFieldPINNConfig;
 use super::super::network::ParamFieldPINNNetwork;
@@ -16,12 +18,16 @@ use super::B;
 ///
 /// Targets are normalised to `[0, 1]` so they live within the network's
 /// `tanh`-friendly range.
-fn make_synthetic_batch(backend: &B, rng_seed: u64, n: usize) -> TrainingBatch<B> {
-    let _ = rng_seed; // kept for future deterministic seeding
-                      // Inputs: uniform in [-1, 1]^5
-    let host_data: Vec<f32> = (0..n * 5)
-        .map(|_| rand::random::<f32>() * 2.0 - 1.0)
-        .collect();
+fn make_synthetic_batch(backend: B, rng_seed: u64, n: usize) -> TrainingBatch<B> {
+    // `rng_seed` used to be discarded (`let _ = rng_seed`) while the inputs
+    // came from `rand::random()`, so a parameter named for determinism bought
+    // none of it and no failure here could be replayed. Same defect as
+    // KW-PINN-UNSEEDED-RNG, same resolution: ChaCha, whose algorithm is fixed
+    // across `rand` releases, unlike `StdRng`'s.
+    let mut rng = ChaCha8Rng::seed_from_u64(rng_seed);
+
+    // Inputs: uniform in [-1, 1]^5
+    let host_data: Vec<f32> = (0..n * 5).map(|_| rng.gen::<f32>() * 2.0 - 1.0).collect();
     let mut targets = vec![0.0_f32; n * 3];
     let mut f0_vec = vec![0.0_f32; n];
     for i in 0..n {
@@ -39,15 +45,15 @@ fn make_synthetic_batch(backend: &B, rng_seed: u64, n: usize) -> TrainingBatch<B
         f0_vec[i] = 0.75e6 + 0.25e6 * f0_norm;
     }
     let inputs = Var::new(
-        coeus_tensor::Tensor::from_slice_on(vec![n, 5], &host_data, backend),
+        coeus_tensor::Tensor::from_slice_on(vec![n, 5], &host_data, &backend),
         false,
     );
     let targets = Var::new(
-        coeus_tensor::Tensor::from_slice_on(vec![n, 3], &targets, backend),
+        coeus_tensor::Tensor::from_slice_on(vec![n, 3], &targets, &backend),
         false,
     );
     let f0_phys = Var::new(
-        coeus_tensor::Tensor::from_slice_on(vec![n], &f0_vec, backend),
+        coeus_tensor::Tensor::from_slice_on(vec![n], &f0_vec, &backend),
         false,
     );
     // Synthetic batch is treated as drawn from a single virtual
@@ -55,7 +61,7 @@ fn make_synthetic_batch(backend: &B, rng_seed: u64, n: usize) -> TrainingBatch<B
     // same batch-wide aggregation Phase C-9 exercised, keeping the
     // training-loss-decreases test sensitive to gradient flow.
     let group_ids = Var::new(
-        coeus_tensor::Tensor::from_slice_on(vec![n], &vec![0.0_f32; n], backend),
+        coeus_tensor::Tensor::from_slice_on(vec![n], &vec![0.0_f32; n], &backend),
         false,
     );
     TrainingBatch {
@@ -86,7 +92,7 @@ fn test_trainer_step_returns_finite_metrics() {
         ..FieldSurrogateTrainingConfig::default()
     };
     let mut trainer = ParamFieldPINNTrainer::<B>::new(net, train_cfg).unwrap();
-    let batch = make_synthetic_batch(&backend, 0, 64);
+    let batch = make_synthetic_batch(backend, 0, 64);
     let m = trainer.step(batch).expect("field surrogate training step");
     assert!(
         m.data.is_finite() && m.data >= 0.0,
@@ -117,7 +123,7 @@ fn test_trainer_data_loss_decreases_over_50_steps() {
     let n_steps = 100usize;
     let mut history = Vec::with_capacity(n_steps);
     for step in 0..n_steps {
-        let batch = make_synthetic_batch(&backend, step as u64, 128);
+        let batch = make_synthetic_batch(backend, step as u64, 128);
         history.push(
             trainer
                 .step(batch)
@@ -161,7 +167,7 @@ fn test_trainer_with_peak_prominence_weight_runs_finite_and_propagates_gradient(
     let mut first_prom = 0.0_f32;
     let mut last_prom = 0.0_f32;
     for step in 0..30 {
-        let batch = make_synthetic_batch(&backend, step as u64, 128);
+        let batch = make_synthetic_batch(backend, step as u64, 128);
         let m = trainer.step(batch).expect("field surrogate training step");
         assert!(m.data.is_finite(), "data loss not finite at step {step}");
         assert!(
@@ -204,7 +210,7 @@ fn test_trainer_with_helmholtz_weight_runs_finite() {
     };
     let mut trainer = ParamFieldPINNTrainer::<B>::new(net, train_cfg).unwrap();
     for step in 0..5 {
-        let batch = make_synthetic_batch(&backend, step as u64, 32);
+        let batch = make_synthetic_batch(backend, step as u64, 32);
         let m = trainer.step(batch).expect("field surrogate training step");
         assert!(m.data.is_finite(), "data loss not finite at step {step}");
         assert!(

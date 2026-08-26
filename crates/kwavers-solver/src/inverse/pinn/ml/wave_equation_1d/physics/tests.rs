@@ -5,10 +5,10 @@ use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
 type TestBackend = MoiraiBackend;
 
-fn var2(vals: &[f32], backend: &TestBackend) -> Var<f32, TestBackend> {
+fn var2(vals: &[f32], backend: TestBackend) -> Var<f32, TestBackend> {
     let n = vals.len();
     Var::new(
-        coeus_tensor::Tensor::from_slice_on(vec![n, 1], vals, backend),
+        coeus_tensor::Tensor::from_slice_on(vec![n, 1], vals, &backend),
         false,
     )
 }
@@ -22,8 +22,8 @@ fn test_pde_residual_computation() {
     };
     let pinn = PinnWave1D::<TestBackend>::new(config).unwrap();
 
-    let x = var2(&[0.5], &backend);
-    let t = var2(&[0.1], &backend);
+    let x = var2(&[0.5], backend);
+    let t = var2(&[0.1], backend);
 
     let residual = pinn
         .compute_pde_residual(&x, &t, 343.0)
@@ -42,8 +42,8 @@ fn test_pde_residual_batch() {
     };
     let pinn = PinnWave1D::<TestBackend>::new(config).unwrap();
 
-    let x = var2(&[0.0, 0.5, 1.0], &backend);
-    let t = var2(&[0.0, 0.1, 0.2], &backend);
+    let x = var2(&[0.0, 0.5, 1.0], backend);
+    let t = var2(&[0.0, 0.1, 0.2], backend);
 
     let residual = pinn
         .compute_pde_residual(&x, &t, 343.0)
@@ -64,16 +64,16 @@ fn test_physics_loss_computation() {
     };
     let pinn = PinnWave1D::<TestBackend>::new(config).unwrap();
 
-    let x_data = var2(&[0.5, 0.6], &backend);
-    let t_data = var2(&[0.1, 0.2], &backend);
-    let u_data = var2(&[0.3, 0.4], &backend);
+    let x_data = var2(&[0.5, 0.6], backend);
+    let t_data = var2(&[0.1, 0.2], backend);
+    let u_data = var2(&[0.3, 0.4], backend);
 
-    let x_colloc = var2(&[0.0, 0.5, 1.0], &backend);
-    let t_colloc = var2(&[0.0, 0.1, 0.2], &backend);
+    let x_colloc = var2(&[0.0, 0.5, 1.0], backend);
+    let t_colloc = var2(&[0.0, 0.1, 0.2], backend);
 
-    let x_bc = var2(&[-1.0, 1.0], &backend);
-    let t_bc = var2(&[0.0, 0.0], &backend);
-    let u_bc = var2(&[0.0, 0.0], &backend);
+    let x_bc = var2(&[-1.0, 1.0], backend);
+    let t_bc = var2(&[0.0, 0.0], backend);
+    let u_bc = var2(&[0.0, 0.0], backend);
 
     let (total, data, pde, bc) = pinn
         .compute_physics_loss(
@@ -117,16 +117,16 @@ fn test_physics_loss_weighting() {
     };
     let pinn = PinnWave1D::<TestBackend>::new(config).unwrap();
 
-    let x_data = var2(&[0.5], &backend);
-    let t_data = var2(&[0.1], &backend);
-    let u_data = var2(&[0.3], &backend);
+    let x_data = var2(&[0.5], backend);
+    let t_data = var2(&[0.1], backend);
+    let u_data = var2(&[0.3], backend);
 
-    let x_colloc = var2(&[0.5], &backend);
-    let t_colloc = var2(&[0.1], &backend);
+    let x_colloc = var2(&[0.5], backend);
+    let t_colloc = var2(&[0.1], backend);
 
-    let x_bc = var2(&[-1.0], &backend);
-    let t_bc = var2(&[0.0], &backend);
-    let u_bc = var2(&[0.0], &backend);
+    let x_bc = var2(&[-1.0], backend);
+    let t_bc = var2(&[0.0], backend);
+    let u_bc = var2(&[0.0], backend);
 
     let weights_balanced = LossWeights {
         data: 1.0,
@@ -185,8 +185,8 @@ fn test_pde_residual_different_wave_speeds() {
     };
     let pinn = PinnWave1D::<TestBackend>::new(config).unwrap();
 
-    let x = var2(&[0.5], &backend);
-    let t = var2(&[0.1], &backend);
+    let x = var2(&[0.5], backend);
+    let t = var2(&[0.1], backend);
 
     let residual_343 = pinn
         .compute_pde_residual(&x, &t, 343.0)
@@ -208,16 +208,16 @@ fn test_loss_components_non_negative() {
     };
     let pinn = PinnWave1D::<TestBackend>::new(config).unwrap();
 
-    let x_data = var2(&[0.5], &backend);
-    let t_data = var2(&[0.1], &backend);
-    let u_data = var2(&[0.0], &backend);
+    let x_data = var2(&[0.5], backend);
+    let t_data = var2(&[0.1], backend);
+    let u_data = var2(&[0.0], backend);
 
-    let x_colloc = var2(&[0.5], &backend);
-    let t_colloc = var2(&[0.1], &backend);
+    let x_colloc = var2(&[0.5], backend);
+    let t_colloc = var2(&[0.1], backend);
 
-    let x_bc = var2(&[0.0], &backend);
-    let t_bc = var2(&[0.0], &backend);
-    let u_bc = var2(&[0.0], &backend);
+    let x_bc = var2(&[0.0], backend);
+    let t_bc = var2(&[0.0], backend);
+    let u_bc = var2(&[0.0], backend);
 
     let (total, data, pde, bc) = pinn
         .compute_physics_loss(
@@ -249,16 +249,16 @@ fn test_backward_compatibility_with_autodiff() {
     };
     let pinn = PinnWave1D::<TestBackend>::new(config).unwrap();
 
-    let x_data = var2(&[0.5], &backend);
-    let t_data = var2(&[0.1], &backend);
-    let u_data = var2(&[0.0], &backend);
+    let x_data = var2(&[0.5], backend);
+    let t_data = var2(&[0.1], backend);
+    let u_data = var2(&[0.0], backend);
 
-    let x_colloc = var2(&[0.5], &backend);
-    let t_colloc = var2(&[0.1], &backend);
+    let x_colloc = var2(&[0.5], backend);
+    let t_colloc = var2(&[0.1], backend);
 
-    let x_bc = var2(&[0.0], &backend);
-    let t_bc = var2(&[0.0], &backend);
-    let u_bc = var2(&[0.0], &backend);
+    let x_bc = var2(&[0.0], backend);
+    let t_bc = var2(&[0.0], backend);
+    let u_bc = var2(&[0.0], backend);
 
     let (total, _, _, _) = pinn
         .compute_physics_loss(
@@ -291,8 +291,8 @@ fn test_large_batch_stability() {
     let x_vals: Vec<f32> = (0..n).map(|i| (i as f32) / (n as f32)).collect();
     let t_vals: Vec<f32> = (0..n).map(|i| (i as f32) / (n as f32) * 0.5).collect();
 
-    let x = var2(&x_vals, &backend);
-    let t = var2(&t_vals, &backend);
+    let x = var2(&x_vals, backend);
+    let t = var2(&t_vals, backend);
 
     let residual = pinn
         .compute_pde_residual(&x, &t, 343.0)
@@ -313,9 +313,9 @@ fn test_zero_boundary_conditions() {
     };
     let pinn = PinnWave1D::<TestBackend>::new(config).unwrap();
 
-    let x_bc = var2(&[-1.0, 1.0], &backend);
-    let t_bc = var2(&[0.0, 0.0], &backend);
-    let u_bc = var2(&[0.0, 0.0], &backend);
+    let x_bc = var2(&[-1.0, 1.0], backend);
+    let t_bc = var2(&[0.0, 0.0], backend);
+    let u_bc = var2(&[0.0, 0.0], backend);
 
     let u_pred = pinn.forward(&x_bc, &t_bc).expect("1D boundary forward");
     let diff = coeus_autograd::sub(&u_pred, &u_bc);

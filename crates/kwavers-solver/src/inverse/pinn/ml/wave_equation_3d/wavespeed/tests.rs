@@ -6,10 +6,10 @@ type TestBackend = coeus_core::MoiraiBackend;
 fn grid_of(
     dims: [usize; 3],
     value: f32,
-    backend: &TestBackend,
+    backend: TestBackend,
 ) -> coeus_tensor::Tensor<f32, TestBackend> {
     let n = dims[0] * dims[1] * dims[2];
-    coeus_tensor::Tensor::from_slice_on(dims.to_vec(), &vec![value; n], backend)
+    coeus_tensor::Tensor::from_slice_on(dims.to_vec(), &vec![value; n], &backend)
 }
 
 #[test]
@@ -25,7 +25,7 @@ fn test_wavespeed_creation_closure() -> KwaversResult<()> {
 #[test]
 fn test_wavespeed_creation_grid() -> KwaversResult<()> {
     let backend = TestBackend::default();
-    let grid = grid_of([10, 10, 10], 3000.0, &backend);
+    let grid = grid_of([10, 10, 10], 3000.0, backend);
 
     let wave_speed =
         WaveSpeedFn3D::<TestBackend>::from_grid_with_bbox(grid, [0.0, 1.0, 0.0, 1.0, 0.0, 1.0])?;
@@ -93,7 +93,7 @@ fn test_wavespeed_debug_format() -> KwaversResult<()> {
 #[test]
 fn test_wavespeed_grid_shape() -> KwaversResult<()> {
     let backend = TestBackend::default();
-    let grid = grid_of([32, 64, 128], SOUND_SPEED_WATER_SIM as f32, &backend);
+    let grid = grid_of([32, 64, 128], SOUND_SPEED_WATER_SIM as f32, backend);
     let wave_speed =
         WaveSpeedFn3D::<TestBackend>::from_grid_with_bbox(grid, [0.0, 1.0, 0.0, 1.0, 0.0, 1.0])?;
     assert_eq!(wave_speed.grid_dims(), Some([32, 64, 128]));
@@ -119,7 +119,7 @@ fn test_wavespeed_grid_trilinear_interpolation() -> KwaversResult<()> {
 fn test_wavespeed_grid_invalid_bbox_rejected() -> KwaversResult<()> {
     use kwavers_core::error::{KwaversError, SystemError};
     let backend = TestBackend::default();
-    let grid = grid_of([2, 2, 2], SOUND_SPEED_WATER_SIM as f32, &backend);
+    let grid = grid_of([2, 2, 2], SOUND_SPEED_WATER_SIM as f32, backend);
 
     let result =
         WaveSpeedFn3D::<TestBackend>::from_grid_with_bbox(grid, [1.0, 0.0, 0.0, 1.0, 0.0, 1.0]);

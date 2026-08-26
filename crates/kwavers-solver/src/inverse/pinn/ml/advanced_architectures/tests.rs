@@ -8,9 +8,9 @@ use super::resnet::{ResNetPINN1D, ResNetPINN2D, ResNetPINNConfig};
 
 type TestBackend = coeus_core::MoiraiBackend;
 
-fn var_row(backend: &TestBackend, values: &[f32]) -> Var<f32, TestBackend> {
+fn var_row(backend: TestBackend, values: &[f32]) -> Var<f32, TestBackend> {
     Var::new(
-        coeus_tensor::Tensor::from_slice_on(vec![1, (values.len())], values, backend),
+        coeus_tensor::Tensor::from_slice_on(vec![1, (values.len())], values, &backend),
         false,
     )
 }
@@ -20,7 +20,7 @@ fn test_fourier_features() {
     let backend = TestBackend::default();
     let fourier = FourierFeatures::<TestBackend>::new(2, 10, 1.0);
 
-    let input = var_row(&backend, &[0.5, 0.3]);
+    let input = var_row(backend, &[0.5, 0.3]);
     let output = fourier.forward(&input);
 
     // Should have 20 features (10 cos + 10 sin).
@@ -32,7 +32,7 @@ fn test_residual_block() {
     let backend = TestBackend::default();
     let block = ResidualBlock::<TestBackend>::new(10, 20);
 
-    let input = var_row(&backend, &[0.1f32; 10]);
+    let input = var_row(backend, &[0.1f32; 10]);
     let output = block.forward(&input).expect("residual block forward");
 
     // Should maintain input dimension.
@@ -52,8 +52,8 @@ fn test_resnet_pinn_1d() {
 
     let pinn = ResNetPINN1D::<TestBackend>::new(&config);
 
-    let x = var_row(&backend, &[0.5]);
-    let t = var_row(&backend, &[0.1]);
+    let x = var_row(backend, &[0.5]);
+    let t = var_row(backend, &[0.1]);
     let output = pinn.forward(&x, &t).expect("1D ResNet forward");
 
     assert_eq!(output.tensor.shape(), &[1, 1]);
@@ -72,9 +72,9 @@ fn test_resnet_pinn_2d() {
 
     let pinn = ResNetPINN2D::<TestBackend>::new(&config);
 
-    let x = var_row(&backend, &[0.5]);
-    let y = var_row(&backend, &[0.3]);
-    let t = var_row(&backend, &[0.1]);
+    let x = var_row(backend, &[0.5]);
+    let y = var_row(backend, &[0.3]);
+    let t = var_row(backend, &[0.1]);
     let output = pinn.forward(&x, &y, &t).expect("2D ResNet forward");
 
     assert_eq!(output.tensor.shape(), &[1, 1]);

@@ -75,9 +75,9 @@ mod tests {
 
     type TestBackend = coeus_core::MoiraiBackend;
 
-    fn var_col(backend: &TestBackend, values: &[f32]) -> Var<f32, TestBackend> {
+    fn var_col(backend: TestBackend, values: &[f32]) -> Var<f32, TestBackend> {
         Var::new(
-            coeus_tensor::Tensor::from_slice_on(vec![(values.len()), 1], values, backend),
+            coeus_tensor::Tensor::from_slice_on(vec![(values.len()), 1], values, &backend),
             false,
         )
     }
@@ -98,11 +98,11 @@ mod tests {
 
         let network = PINN3DNetwork::<TestBackend>::new(&config)?;
 
-        let x = var_col(&backend, &[1.0, 1.0]);
-        let y = var_col(&backend, &[1.0, 1.0]);
-        let z = var_col(&backend, &[1.0, 1.0]);
-        let t = var_col(&backend, &[1.0, 1.0]);
-        let target = var_col(&backend, &[0.0, 0.0]);
+        let x = var_col(backend, &[1.0, 1.0]);
+        let y = var_col(backend, &[1.0, 1.0]);
+        let z = var_col(backend, &[1.0, 1.0]);
+        let t = var_col(backend, &[1.0, 1.0]);
+        let target = var_col(backend, &[0.0, 0.0]);
 
         for p in network.parameters() {
             p.zero_grad();
@@ -137,11 +137,11 @@ mod tests {
         let mut network = PINN3DNetwork::<TestBackend>::new(&config)?;
         let optimizer = SimpleOptimizer3D::new(0.01);
 
-        let x = var_col(&backend, &[0.0, 0.5, 1.0]);
-        let y = var_col(&backend, &[0.0, 0.5, 1.0]);
-        let z = var_col(&backend, &[0.0, 0.5, 1.0]);
-        let t = var_col(&backend, &[0.1, 0.2, 0.3]);
-        let target = var_col(&backend, &[0.0, 0.0, 0.0]);
+        let x = var_col(backend, &[0.0, 0.5, 1.0]);
+        let y = var_col(backend, &[0.0, 0.5, 1.0]);
+        let z = var_col(backend, &[0.0, 0.5, 1.0]);
+        let t = var_col(backend, &[0.1, 0.2, 0.3]);
+        let target = var_col(backend, &[0.0, 0.0, 0.0]);
 
         let output_initial = network.forward(&x, &y, &z, &t)?;
         let diff_initial = coeus_autograd::sub(&output_initial, &target);
@@ -182,11 +182,11 @@ mod tests {
         let network1 = PINN3DNetwork::<TestBackend>::new(&config)?;
         let network2 = network1.clone();
 
-        let x = var_col(&backend, &[1.0, 1.0]);
-        let y = var_col(&backend, &[1.0, 1.0]);
-        let z = var_col(&backend, &[1.0, 1.0]);
-        let t = var_col(&backend, &[1.0, 1.0]);
-        let target = var_col(&backend, &[0.0, 0.0]);
+        let x = var_col(backend, &[1.0, 1.0]);
+        let y = var_col(backend, &[1.0, 1.0]);
+        let z = var_col(backend, &[1.0, 1.0]);
+        let t = var_col(backend, &[1.0, 1.0]);
+        let target = var_col(backend, &[0.0, 0.0]);
 
         for p in network1.parameters() {
             p.zero_grad();

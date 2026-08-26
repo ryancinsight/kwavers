@@ -114,9 +114,28 @@ jobs:
       - name: Run PINN-feature convergence studies
         run: cargo nextest run --locked -p kwavers --test pinn_convergence_studies --features pinn
 
+      # This step used to lint `-p kwavers --lib` only, and carried
+      # `continue-on-error: true`. Three separate holes: clippy lints only the
+      # selected package's own targets, so kwavers-solver -- where the PINN
+      # code actually lives -- was compiled but never linted; `--lib` excluded
+      # test targets on top of that; and nothing it did find could fail the
+      # job. Ten `trivially_copy_pass_by_ref` errors and an `unused_mut`
+      # accumulated behind it. See backlog KW-PINN-TESTS-UNLINTED.
+      #
+      # `--no-deps` on the first command matches the strict commands in
+      # architecture-validation.yml. Without it, clippy lints path
+      # dependencies too, so 69 missing-docs diagnostics belonging to
+      # kwavers-solver's ratchet failed a gate meant for kwavers' own lib --
+      # which is what made `continue-on-error` look necessary.
+      #
+      # kwavers-solver is denied on `unused` rather than all warnings: those
+      # ~190 doc and print-macro diagnostics belong to the workspace ratchet,
+      # while `unused` is the class that got through. The crate's own denied
+      # lints still error regardless of this flag.
       - name: Run clippy on PINN code
-        run: cargo clippy --locked -p kwavers --features pinn --lib -- -D warnings
-        continue-on-error: true
+        run: |
+          cargo clippy --locked -p kwavers --features pinn --lib --no-deps -- -D warnings
+          cargo clippy --locked -p kwavers-solver --features pinn --all-targets -- -D unused
 
   quality:
     name: Code Quality
