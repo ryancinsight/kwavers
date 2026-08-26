@@ -455,3 +455,7 @@ path = "examples/tiled_kspace_processing.rs"
 [[example]]
 name = "simd_wave_kernel"
 path = "examples/simd_wave_kernel.rs"
+
+[[bench]]
+name = "conservative_interpolation_comparison"
+harness = false
