@@ -124,9 +124,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
+      # Shallow, here and in every other checkout in this file: nothing in
+      # this repository's CI reads git history -- no `git log`, `describe`,
+      # `blame`, `merge-base` or `rev-list` in any workflow or in the scripts
+      # they call -- so `fetch-depth: 0` was fetching every commit and every
+      # branch for nothing. It is not free: on one run it took 13m20s of
+      # Heavy Validation (kuznetsov)'s 15-minute budget, leaving 100 seconds
+      # for the compile and tests that job exists to run, and the job was
+      # killed mid-compile. See backlog KW-CI-FULL-HISTORY-CHECKOUT.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          fetch-depth: 0
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-dependencies
@@ -165,8 +171,6 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -211,8 +215,6 @@ jobs:
         rust: [stable, beta, nightly]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          fetch-depth: 0
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-dependencies
@@ -279,8 +281,6 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          fetch-depth: 0
 
       - name: Install Rust nightly with miri
         uses: dtolnay/rust-toolchain@7c8d7d138f5c09cef361f8214cf96882cd029cdb # nightly
@@ -403,8 +403,6 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          fetch-depth: 0
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-dependencies
@@ -463,8 +461,6 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          fetch-depth: 0
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-dependencies
@@ -502,8 +498,6 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          fetch-depth: 0
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-dependencies
@@ -541,8 +535,6 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          fetch-depth: 0
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-dependencies
