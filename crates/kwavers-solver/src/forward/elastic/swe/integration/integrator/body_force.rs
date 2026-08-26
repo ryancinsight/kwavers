@@ -140,13 +140,11 @@ fn prepare_axis_factors<const AXIS: usize>(
         .try_reserve_exact(factor_count)
         .map_err(|_| body_force_allocation_error())?;
     for coordinate_index in 0..length {
-        let coordinate = coordinate_index as f64 * spacing;
         factors.extend(body_forces.iter().map(|body_force| {
             let ElasticBodyForceConfig::GaussianImpulse {
                 center_m, sigma_m, ..
             } = body_force;
-            let scaled = (coordinate - center_m[AXIS]) / sigma_m[AXIS];
-            (-0.5 * scaled * scaled).exp()
+            axis_factor(coordinate_index, spacing, center_m[AXIS], sigma_m[AXIS])
         }));
     }
     debug_assert_eq!(factors.len(), factor_count);
@@ -244,13 +242,15 @@ fn spatial_factor(
     let ElasticBodyForceConfig::GaussianImpulse {
         center_m, sigma_m, ..
     } = body_force;
-    let dx = i as f64 * grid.dx - center_m[0];
-    let dy = j as f64 * grid.dy - center_m[1];
-    let dz = k as f64 * grid.dz - center_m[2];
-    let scaled_x = dx / sigma_m[0];
-    let scaled_y = dy / sigma_m[1];
-    let scaled_z = dz / sigma_m[2];
-    (-0.5 * scaled_z.mul_add(scaled_z, scaled_x.mul_add(scaled_x, scaled_y * scaled_y))).exp()
+    let x_factor = axis_factor(i, grid.dx, center_m[0], sigma_m[0]);
+    let y_factor = axis_factor(j, grid.dy, center_m[1], sigma_m[1]);
+    let z_factor = axis_factor(k, grid.dz, center_m[2], sigma_m[2]);
+    (x_factor * y_factor) * z_factor
+}
+
+fn axis_factor(index: usize, spacing: f64, center: f64, sigma: f64) -> f64 {
+    let scaled = (index as f64 * spacing - center) / sigma;
+    (-0.5 * scaled * scaled).exp()
 }
 
 fn temporal_factor(time: f64, center: f64, sigma: f64) -> f64 {
@@ -295,11 +295,6 @@ mod tests {
 
     #[test]
     fn prepared_forces_match_direct_evaluation() {
-        // The prepared path factors exp(-0.5(x²+y²+z²)) into three exponentials
-        // and two products. Twenty-four roundings bound the three coordinate
-        // transforms, exponentials, products, and common force scaling versus
-        // the direct expression; γₙ ≈ n·ε because n·ε ≪ 1 here.
-        const ROUNDING_OPERATIONS: f64 = 24.0;
         let grid = Grid::new(3, 2, 2, 0.25, 0.5, 0.75).expect("valid test grid");
         let mut second = valid_force();
         let ElasticBodyForceConfig::GaussianImpulse {
@@ -332,20 +327,10 @@ mod tests {
                 }
 
                 let actual = prepared.force_at(index);
-                for component in 0..3 {
-                    let scale = expected[component]
-                        .abs()
-                        .max(actual[component].abs())
-                        .max(f64::MIN_POSITIVE);
-                    let bound = ROUNDING_OPERATIONS * f64::EPSILON * scale;
-                    assert!(
-                        (actual[component] - expected[component]).abs() <= bound,
-                        "component {component} at [{i}, {j}, {k}], t={time}: \
-                         expected {}, got {}, bound {bound}",
-                        expected[component],
-                        actual[component]
-                    );
-                }
+                assert_eq!(
+                    actual, expected,
+                    "prepared force at [{i}, {j}, {k}], t={time}"
+                );
             }
         }
     }

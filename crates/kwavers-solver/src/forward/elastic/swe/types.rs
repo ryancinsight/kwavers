@@ -238,8 +238,8 @@ pub struct VolumetricWaveConfig {
     pub duration_s: f64,
     /// Maximum retained states, including the initial and final states.
     ///
-    /// Values below two retain both boundary states when at least one time step
-    /// is propagated.
+    /// Values below two are rejected because a propagation with at least one
+    /// time step retains both boundary states.
     pub max_snapshots: usize,
 }
 

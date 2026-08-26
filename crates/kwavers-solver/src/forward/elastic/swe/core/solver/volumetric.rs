@@ -24,8 +24,13 @@ struct SnapshotSchedule {
     capacity: usize,
 }
 
-fn snapshot_schedule(steps: usize, max_snapshots: usize) -> SnapshotSchedule {
-    let max_snapshots = max_snapshots.max(2);
+fn snapshot_schedule(steps: usize, max_snapshots: usize) -> KwaversResult<SnapshotSchedule> {
+    if max_snapshots < 2 {
+        return Err(NumericalError::InvalidOperation(
+            "Volumetric max_snapshots must be at least two".to_owned(),
+        )
+        .into());
+    }
     let intervals = max_snapshots - 1;
     // A retained initial state leaves `max_snapshots - 1` intervals. Ceiling
     // division is required: floor division retained every state when `steps`
@@ -33,7 +38,7 @@ fn snapshot_schedule(steps: usize, max_snapshots: usize) -> SnapshotSchedule {
     let stride = steps.div_ceil(intervals).max(1);
     let capacity = steps.div_ceil(stride) + 1;
     debug_assert!(capacity <= max_snapshots);
-    SnapshotSchedule { stride, capacity }
+    Ok(SnapshotSchedule { stride, capacity })
 }
 
 impl ElasticWaveSolver {
@@ -83,7 +88,7 @@ impl ElasticWaveSolver {
             .into());
         }
         let steps = (duration_s / dt).ceil() as usize;
-        let schedule = snapshot_schedule(steps, self.volumetric_config.max_snapshots);
+        let schedule = snapshot_schedule(steps, self.volumetric_config.max_snapshots)?;
         let mut scratch = ElasticStepScratch::new(nx, ny, nz);
         let mut prepared_forces = PreparedBodyForces::new(&self.grid, &shifted_forces)?;
         let mut history = Vec::with_capacity(schedule.capacity);
@@ -154,7 +159,7 @@ impl ElasticWaveSolver {
             .into());
         }
         let steps = (duration_s / dt).ceil() as usize;
-        let schedule = snapshot_schedule(steps, self.volumetric_config.max_snapshots);
+        let schedule = snapshot_schedule(steps, self.volumetric_config.max_snapshots)?;
         let mut scratch = ElasticStepScratch::new(nx, ny, nz);
         let mut current_field = initial_field;
         let mut history = Vec::with_capacity(schedule.capacity);
