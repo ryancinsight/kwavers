@@ -66,7 +66,7 @@ directly -- so the seed was not the cause. See
 `KW-PINN-NONDETERMINISTIC-REDUCTION`. The test now asserts on the points, which
 is what the seed governs.
 
-## KW-PINN-NONDETERMINISTIC-REDUCTION — one seed, one input, two answers [patch] — todo
+## KW-PINN-NONDETERMINISTIC-REDUCTION — one seed, one input, two answers [patch] — todo (leading hypothesis refuted 2026-08-26)
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
@@ -79,12 +79,25 @@ is what the seed governs.
 - **Ruled out:** the draw (compared elementwise, equal) and weight
   initialisation (`coeus-nn`'s `Linear::new` sets weights to `Tensor::ones_on`
   and bias to `Tensor::zeros_on`, both deterministic).
-- **Remaining hypothesis, not yet confirmed:** floating-point addition is not
-  associative, so a parallel reduction whose order varies between runs gives
-  different sums. This is consistent with the magnitude and with the growth
-  across epochs, but it has not been demonstrated -- the next step is to
-  reduce a fixed tensor repeatedly on `MoiraiBackend` and check for variation,
-  which either confirms it in isolation or sends the search elsewhere.
+- **The reduction hypothesis is refuted.** Floating-point addition is not
+  associative, so a parallel reduction whose order varied between runs would
+  explain the magnitude and the growth across epochs. It was measured rather
+  than assumed, and it does not happen. Summing a 2^20-element `f32` tensor
+  with a deliberately wide dynamic range -- terms spanning seven decades, so
+  order is maximally observable -- gave **one distinct bit pattern across 200
+  runs**. A `[256,512] x [512,128]` matmul gave **one distinct result across
+  100 runs**. Both on `MoiraiBackend` with the `parallel` feature active,
+  in-process, warm and cold.
+- **So the search moves.** Neither the draw, nor the initialisation, nor the
+  two ops the training loop spends its time in, varies run to run. Remaining
+  candidates, none yet tested: an op the loop uses that these probes did not
+  cover (`sum_axis` over a non-flattened axis, the tanh/activation path, the
+  optimiser's own accumulation); iteration order over a pointer-keyed
+  collection somewhere in the autograd graph walk; or a difference between the
+  two solvers that is not in the parameters at all. The next step is a
+  bisection through one `train()` call comparing intermediates between two
+  solvers, not another whole-run comparison -- the whole-run signal is already
+  known and does not localise anything.
 - **Why it matters beyond tidiness:** a seed that reproduces the inputs but not
   the outputs cannot bisect a training regression, and any comparison between
   two runs carries this as a noise floor -- currently ~1e-4 relative, which is
