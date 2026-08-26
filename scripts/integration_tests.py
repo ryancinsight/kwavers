@@ -352,12 +352,14 @@ def _print_failure_statuses(result: ExecutionResult) -> None:
 def run() -> tuple[set[str], int]:
     result = _execute(COMMAND, INTEGRATION_RUN_TIMEOUT_SECONDS)
     if result.termination_error is not None:
+        _print_failure_statuses(result)
         _print_diagnostic_tails(result)
         raise SystemExit(
             "integration suite process-tree cleanup failed: "
             f"{result.termination_error}"
         )
     if result.timed_out:
+        _print_failure_statuses(result)
         _print_diagnostic_tails(result)
         raise SystemExit(
             f"integration suite exceeded {INTEGRATION_RUN_TIMEOUT_SECONDS} seconds"

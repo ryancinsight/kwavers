@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from contextlib import redirect_stderr
+import io
 import os
 from pathlib import Path
 import signal
@@ -10,6 +12,7 @@ import sys
 import tempfile
 import textwrap
 import unittest
+from unittest.mock import patch
 
 from scripts import integration_tests
 
@@ -52,6 +55,37 @@ class IntegrationTestRunnerTests(unittest.TestCase):
             len(result.failure_status_tail),
             integration_tests.DIAGNOSTIC_TAIL_CHARACTERS,
         )
+
+    def test_suite_level_failures_report_retained_statuses(self) -> None:
+        for timed_out, termination_error, expected_exit in (
+            (True, None, "integration suite exceeded"),
+            (False, "cleanup failed", "process-tree cleanup failed"),
+        ):
+            with self.subTest(
+                timed_out=timed_out, termination_error=termination_error
+            ):
+                result = integration_tests.ExecutionResult(
+                    returncode=-1,
+                    timed_out=timed_out,
+                    termination_error=termination_error,
+                    failures=frozenset({"kwavers::sample timed_out_case"}),
+                    tests_run=1,
+                    stdout_tail="ordinary tail",
+                    stderr_tail="",
+                    failure_status_tail=(
+                        "TIMEOUT [  60.000s] (1/1) "
+                        "kwavers::sample timed_out_case\n"
+                    ),
+                )
+                diagnostics = io.StringIO()
+
+                with patch.object(integration_tests, "_execute", return_value=result):
+                    with redirect_stderr(diagnostics):
+                        with self.assertRaisesRegex(SystemExit, expected_exit):
+                            integration_tests.run()
+
+                self.assertIn("failure status lines", diagnostics.getvalue())
+                self.assertIn("kwavers::sample timed_out_case", diagnostics.getvalue())
 
     @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
     def test_timeout_kills_descendant_holding_inherited_pipe(self) -> None:
