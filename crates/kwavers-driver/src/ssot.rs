@@ -36,7 +36,6 @@
 // ============================================================================
 // Kwavers-side physics / safety bounds (formerly `const` block in src/validate.rs)
 // ============================================================================
-#![allow(clippy::doc_markdown)]
 
 /// Article-class per-element acoustic sensitivity (Pa/A). Anchors the v2 focal-pressure estimate
 /// to the paper's measured 6 MPa / 10 mm focus with 16 channels × 0.04 A per-element drive: each

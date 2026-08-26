@@ -1,6 +1,4 @@
 #![doc = include_str!("../README.md")]
-#![allow(clippy::module_inception)]
-
 // GPU allocation profiling/tracking. Pure bookkeeping over the ungated
 // kwavers_core GpuError; no wgpu dependency, so it is available unconditionally.
 pub mod profiling;
