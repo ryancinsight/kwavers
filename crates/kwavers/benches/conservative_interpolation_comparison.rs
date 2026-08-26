@@ -32,7 +32,8 @@ mod jagged {
 
     impl JaggedInterpolator {
         pub fn new(source: &Grid, target: &Grid) -> KwaversResult<Self> {
-            let source_volumes = vec![source.dx * source.dy * source.dz; source.nx * source.ny * source.nz];
+            let source_volumes =
+                vec![source.dx * source.dy * source.dz; source.nx * source.ny * source.nz];
             let mut transfer_matrix = vec![Vec::new(); target.nx * target.ny * target.nz];
             for iz_t in 0..target.nz {
                 for iy_t in 0..target.ny {
@@ -46,11 +47,14 @@ mod jagged {
                             iz_t as f64 * target.dz,
                             (iz_t + 1) as f64 * target.dz,
                         );
-                        let ix0 = ((xt0 / source.dx).floor() as usize).min(source.nx.saturating_sub(1));
+                        let ix0 =
+                            ((xt0 / source.dx).floor() as usize).min(source.nx.saturating_sub(1));
                         let ix1 = ((xt1 / source.dx).ceil() as usize).min(source.nx);
-                        let iy0 = ((yt0 / source.dy).floor() as usize).min(source.ny.saturating_sub(1));
+                        let iy0 =
+                            ((yt0 / source.dy).floor() as usize).min(source.ny.saturating_sub(1));
                         let iy1 = ((yt1 / source.dy).ceil() as usize).min(source.ny);
-                        let iz0 = ((zt0 / source.dz).floor() as usize).min(source.nz.saturating_sub(1));
+                        let iz0 =
+                            ((zt0 / source.dz).floor() as usize).min(source.nz.saturating_sub(1));
                         let iz1 = ((zt1 / source.dz).ceil() as usize).min(source.nz);
                         let mut weights = Vec::new();
                         for iz_s in iz0..iz1 {
@@ -66,7 +70,10 @@ mod jagged {
                                             - zt0.max(iz_s as f64 * source.dz))
                                         .max(0.0);
                                     if vol > 1e-15 {
-                                        weights.push((index_3d(ix_s, iy_s, iz_s, source.nx, source.ny), vol));
+                                        weights.push((
+                                            index_3d(ix_s, iy_s, iz_s, source.nx, source.ny),
+                                            vol,
+                                        ));
                                     }
                                 }
                             }
@@ -81,7 +88,12 @@ mod jagged {
                     }
                 }
             }
-            Ok(Self { source_grid: source.clone(), target_grid: target.clone(), transfer_matrix, source_volumes })
+            Ok(Self {
+                source_grid: source.clone(),
+                target_grid: target.clone(),
+                transfer_matrix,
+                source_volumes,
+            })
         }
 
         /// Traversal identical to the pre-conversion hot loop (per-entry
@@ -95,7 +107,8 @@ mod jagged {
                         for &(s_idx, w) in &self.transfer_matrix[t_idx] {
                             let sz = s_idx / (self.source_grid.nx * self.source_grid.ny);
                             let rem = s_idx % (self.source_grid.nx * self.source_grid.ny);
-                            sum += w * source_field[[rem % self.source_grid.nx, rem / self.source_grid.nx, sz]];
+                            sum += w * source_field
+                                [[rem % self.source_grid.nx, rem / self.source_grid.nx, sz]];
                         }
                         target_field[[ix, iy, iz]] = sum;
                     }
@@ -122,8 +135,7 @@ fn make_grids(f: usize) -> (Grid, Grid) {
     // keeps cell counts tractable while giving every target row ~f³ entries.
     let target = Grid::new(16usize, 16, 16, 1e-3, 1e-3, 1e-3).unwrap();
     let n = 16usize * f;
-    let source =
-        Grid::new(n, n, n, 1e-3 / f as f64, 1e-3 / f as f64, 1e-3 / f as f64).unwrap();
+    let source = Grid::new(n, n, n, 1e-3 / f as f64, 1e-3 / f as f64, 1e-3 / f as f64).unwrap();
     (source, target)
 }
 
@@ -140,7 +152,8 @@ fn bench_transfer(c: &mut Criterion) {
     for refine in [2usize, 4usize] {
         let (source, target) = make_grids(refine);
         let src_field = filled(&source, 0.037);
-        let csr = UtilConservativeInterpolator::new(&source, &target, ConservationMode::Mass).unwrap();
+        let csr =
+            UtilConservativeInterpolator::new(&source, &target, ConservationMode::Mass).unwrap();
         let jagged = jagged::JaggedInterpolator::new(&source, &target).unwrap();
 
         // Parity gate: both layouts must produce identical fields before timing.

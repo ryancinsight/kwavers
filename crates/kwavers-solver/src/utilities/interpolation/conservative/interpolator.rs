@@ -121,11 +121,14 @@ impl UtilConservativeInterpolator {
                     // NOTE: leto::Array3's [[ix, iy, iz]] indexing is x-major,
                     // so the row-major linear entry index cannot index the
                     // backing slice directly — unravel per entry.
-                    for &(source_idx, weight) in
-                        &self.entries[self.row_offsets[target_idx]..self.row_offsets[target_idx + 1]]
+                    for &(source_idx, weight) in &self.entries
+                        [self.row_offsets[target_idx]..self.row_offsets[target_idx + 1]]
                     {
-                        let (sx, sy, sz) =
-                            Self::unravel_index(source_idx, self.source_grid.nx, self.source_grid.ny);
+                        let (sx, sy, sz) = Self::unravel_index(
+                            source_idx,
+                            self.source_grid.nx,
+                            self.source_grid.ny,
+                        );
                         sum += weight * source_field[[sx, sy, sz]];
                     }
                     target_field[[ix, iy, iz]] = sum;
