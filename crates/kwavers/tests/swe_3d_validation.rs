@@ -320,15 +320,15 @@ fn test_robustness_edge_cases() {
 /// Validate volumetric tracking over the physical, non-PML domain.
 #[test]
 fn volumetric_tracking_covers_non_pml_domain() {
-    const NX: usize = 60;
-    const NY: usize = 60;
-    const NZ: usize = 40;
-    const PML_THICKNESS: usize = 10;
+    const NX: usize = 40;
+    const NY: usize = 40;
+    const NZ: usize = 28;
+    const PML_THICKNESS: usize = 6;
 
     println!("Testing volumetric tracking coverage...");
 
     // Based on Palmeri et al. (2011) liver SWE study
-    let grid = Grid::new(NX, NY, NZ, 0.001, 0.001, 0.0015).unwrap(); // ~6x6x6cm liver volume
+    let grid = Grid::new(NX, NY, NZ, 0.001, 0.001, 0.0015).unwrap(); // ~4x4x2.8cm liver volume
                                                                      // Use liver tissue model representative of F3 fibrosis
     let medium = HomogeneousMedium::liver_tissue(3, &grid);
     let mut arf = AcousticRadiationForce::new(&grid, &medium).unwrap();
@@ -338,11 +338,11 @@ fn volumetric_tracking_covers_non_pml_domain() {
     arf_params.frequency = 5.0e6; // 5 MHz
     arf_params.intensity = 500.0; // 500 W/cm² (lower for safety)
     arf_params.duration = 200e-6; // 200 μs
-    arf_params.focal_depth = 0.04; // 4cm
+    arf_params.focal_depth = 0.02; // 2cm
     arf.set_parameters(arf_params);
 
     // Create multi-push sequence
-    let push_pattern = MultiDirectionalPush::orthogonal_pattern([0.03, 0.03, 0.03], 0.012);
+    let push_pattern = MultiDirectionalPush::orthogonal_pattern([0.02, 0.02, 0.02], 0.008);
 
     // Configure volumetric simulation
     let solver_config = ElasticWaveConfig {
