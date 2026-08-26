@@ -188,8 +188,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
+      # PRs gate on stable only; beta and nightly are compiler-forward
+      # early-warning legs that add ~38 job-minutes per PR for information
+      # the merge gate does not consume. They run on main pushes, where a
+      # regression is actionable, instead of on every pull request.
       matrix:
-        rust: [stable, beta, nightly]
+        rust: ${{ github.event_name == 'pull_request' && fromJSON('["stable"]') || fromJSON('["stable", "beta", "nightly"]') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
