@@ -1,10 +1,10 @@
 # Backlog / Strategy
 
-## KW-PINN-UNSEEDED-RNG — no PINN training run can be replayed [patch] — todo
+## KW-PINN-UNSEEDED-RNG — no PINN training run can be replayed [patch] — IMPLEMENTED 2026-08-26
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-PINN-UNSEEDED-RNG | Make collocation sampling reproducible so a training run can be replayed from its inputs. | [patch] | todo | unowned | `crates/kwavers-solver/src/inverse/pinn/ml/wave_equation_3d/solver/collocation.rs` |
+| KW-PINN-UNSEEDED-RNG | Make collocation sampling reproducible so a training run can be replayed from its inputs. | [patch] | IMPLEMENTED | unowned | `crates/kwavers-solver/src/inverse/pinn/ml/wave_equation_3d/solver/collocation.rs` |
 
 - **Evidence:** `generate_collocation_points` draws each coordinate from
   `rand::random::<f64>()` -- the unseeded global generator. Nothing records the
@@ -23,6 +23,77 @@
   `rand_chacha`-style generator rather than the global one, and recorded in
   `TrainingMetrics3D` so a run carries the seed that produced it. `rand_chacha`
   is already a dependency of the `kwavers` facade.
+
+### Implemented
+
+`collocation_seed: u64` on `PinnConfig3D` (default 0, a fixed value rather
+than an entropy-seeded one so no run is irreproducible by omission), threaded
+to `ChaCha8Rng::seed_from_u64` in `generate_collocation_points`, and carried on
+`TrainingMetrics3D` so a result names the draw that produced it. ChaCha rather
+than `StdRng`: `StdRng`'s algorithm may change between `rand` releases, which
+would invalidate every recorded seed. Covered by
+`wave_equation_3d/tests/reproducibility.rs`, which asserts a seed reproduces
+its points and that two seeds differ -- the second test being what stops the
+first passing against a sampler that ignored the seed entirely.
+
+### Found while verifying it, filed separately
+
+The first version of the test compared per-epoch losses bitwise and failed at
+one seed: 35.74074 against 35.74508. The draw was identical -- verified
+directly -- so the seed was not the cause. See
+`KW-PINN-NONDETERMINISTIC-REDUCTION`. The test now asserts on the points, which
+is what the seed governs.
+
+## KW-PINN-NONDETERMINISTIC-REDUCTION — one seed, one input, two answers [patch] — todo
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-PINN-NONDETERMINISTIC-REDUCTION | Give PINN training a deterministic reduction path so a seeded run reproduces bitwise. | [patch] | todo | unowned | `crates/kwavers-solver/src/inverse/pinn/ml/wave_equation_3d/`, `MoiraiBackend` reductions |
+
+- **Evidence:** with `KW-PINN-UNSEEDED-RNG` fixed and the collocation draw
+  verified identical across two runs, three epochs at one seed gave total
+  losses `[35.74074, 19.65622, 13.76005]` and `[35.74508, 19.65417, 13.74949]`.
+  Divergence appears in the 4th significant figure and grows across epochs.
+- **Ruled out:** the draw (compared elementwise, equal) and weight
+  initialisation (`coeus-nn`'s `Linear::new` sets weights to `Tensor::ones_on`
+  and bias to `Tensor::zeros_on`, both deterministic).
+- **Remaining hypothesis, not yet confirmed:** floating-point addition is not
+  associative, so a parallel reduction whose order varies between runs gives
+  different sums. This is consistent with the magnitude and with the growth
+  across epochs, but it has not been demonstrated -- the next step is to
+  reduce a fixed tensor repeatedly on `MoiraiBackend` and check for variation,
+  which either confirms it in isolation or sends the search elsewhere.
+- **Why it matters beyond tidiness:** a seed that reproduces the inputs but not
+  the outputs cannot bisect a training regression, and any comparison between
+  two runs carries this as a noise floor -- currently ~1e-4 relative, which is
+  larger than many changes worth measuring.
+- **Shape of the fix:** a deterministic reduction mode selected through the
+  backend/policy configuration (fixed reduction tree), fast path kept as the
+  default and the two differential-tested against each other.
+
+## KW-PINN-TESTS-UNLINTED — the pinn clippy gate lints one crate's lib only [patch] — todo
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-PINN-TESTS-UNLINTED | Close the gate that let clippy diagnostics accumulate in pinn test code. | [patch] | todo | unowned | `.github/workflows/ci.yml`, `crates/kwavers-solver/src/inverse/pinn/**/tests.rs` |
+
+- **Evidence:** `ci.yml` runs `cargo clippy -p kwavers --features pinn --lib -D
+  warnings`. Clippy lints only the selected package's own targets, so
+  `kwavers-solver` -- where the pinn code lives -- is compiled but never
+  linted, and `--lib` excludes test targets in any case.
+- **What got through:** `cargo clippy -p kwavers-solver --features pinn
+  --all-targets` reports 10 errors across 9 files, every one
+  `trivially_copy_pass_by_ref` on a zero-sized backend handle taken by
+  reference: `elastic_2d/loss/pde_residual`, `ml/advanced_architectures`,
+  `ml/field_surrogate` (twice), `ml/wave_equation_1d` (twice),
+  `ml/wave_equation_3d/network` (twice), `ml/wave_equation_3d/optimizer` and
+  `ml/wave_equation_3d/wavespeed`. An `unused_mut`
+  introduced by `KW-PINN-3D-NO-CONVERGENCE` also merged unnoticed; it and the
+  two diagnostics in `wave_equation_3d/tests/gradients.rs` are fixed under
+  `KW-PINN-UNSEEDED-RNG`, which is how the hole was found.
+- **Shape of the fix:** fix the 10 mechanical sites, then extend the denying
+  command to `-p kwavers-solver --features pinn --all-targets`. Sequence
+  matters: widening the gate first turns main red.
 
 ## KW-PINN-3D-NO-CONVERGENCE — the learning-rate schedule strangled its own training [major] — IMPLEMENTED 2026-08-25
 
