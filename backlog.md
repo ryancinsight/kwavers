@@ -1,5 +1,27 @@
 # Backlog / Strategy
 
+## KW-CI-FULL-HISTORY-CHECKOUT — CI clones all of history to run tests [patch] — IMPLEMENTED 2026-08-26
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-CI-FULL-HISTORY-CHECKOUT | Stop fetching full history in jobs that never read it. | [patch] | IMPLEMENTED | unowned | `.github/workflows/ci.yml`, `.github/workflows/gpu-parity.yml` |
+
+- **Evidence:** `Heavy Validation (kuznetsov)` was killed at its 15-minute
+  bound on PR #655. The log accounts for the time exactly: "Fetching the
+  repository" ran 19:40:31 to 19:53:51 -- 13m20s -- and the first `Compiling`
+  line appears at 19:55:13, 31 seconds before the kill. The job never reached
+  its tests. On main the same job finishes in 8-9 minutes, so the bound is not
+  the problem; the fetch is, and it varies enough to make three heavy jobs
+  marginal.
+- **Why it was fetching:** nine checkouts carried `fetch-depth: 0`, which
+  fetches every commit and every branch. Nothing uses it. No workflow runs
+  `git log`, `describe`, `blame`, `merge-base` or `rev-list`, and neither does
+  anything under `scripts/` or `xtask/` that CI calls.
+- **Implemented:** all nine dropped to the default shallow fetch. The rationale
+  sits at the first checkout in each file rather than nine times over.
+- **Not a bound change.** The 15-minute budgets are unchanged and still measure
+  what they were meant to measure.
+
 ## KW-PINN-UNSEEDED-RNG — no PINN training run can be replayed [patch] — IMPLEMENTED 2026-08-26
 
 | ID | Outcome | Class | Status | Owner | Scope |
