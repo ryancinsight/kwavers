@@ -1,5 +1,29 @@
 # Backlog / Strategy
 
+## KW-FFT-HEPHAESTUS-BACKEND-SELECTOR — Select Leto or Hephaestus FFT execution [major] [arch] — in progress
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-FFT-HEPHAESTUS-BACKEND-SELECTOR | Provide one explicit 1-D, 2-D, and 3-D FFT backend selector whose closed variants are Leto and Hephaestus. | [major] [arch] | in progress | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `crates/kwavers-math/src/fft/`, `crates/kwavers-gpu/src/pstd_gpu/`, affected simulation configuration, provider pins, ADR 125, and synchronized docs/tests |
+
+- **Ownership:** the `Leto` variant uses Apollo's CPU FFT arithmetic over Leto
+  storage; the `Hephaestus` variant uses Hephaestus's prepared GPU FFT provider.
+  Leto does not acquire duplicate FFT arithmetic, Apollo does not retain a GPU
+  backend, and Kwavers owns no FFT kernel.
+- **Lease:** the scope in the table through the next verified commit. PM and
+  generated ADR-index entries remain shared integration surfaces.
+- **Acceptance:** one explicit selection at the operation or solver boundary;
+  no capability probe or backend branch inside a transform loop; no silent
+  Hephaestus-to-Leto fallback; forward, inverse, normalization, shape, and
+  1-D/2-D/3-D differential contracts pass; prepared execution reuses GPU
+  resources and caller-owned host storage; the consumer-owned GPU PSTD FFT
+  shader and dispatch code are deleted after cutover.
+- **Dependency:** Hephaestus provider PR #222, source head `0d0be95`, must merge
+  before the Kwavers provider pin and exact-graph verification. Apollo remains
+  the Leto-side CPU engine at its merged provider revision.
+- **Non-goals:** changing transform conventions, introducing runtime fallback,
+  or moving array/layout ownership out of Leto.
+
 ## KW-CI-FULL-HISTORY-CHECKOUT — CI clones all of history to run tests [patch] — IMPLEMENTED 2026-08-26
 
 | ID | Outcome | Class | Status | Owner | Scope |
