@@ -41,9 +41,11 @@
 
 use plotters::prelude::*;
 use std::f64::consts::PI;
+use std::path::Path;
 
-/// Output directory for comparison figures.
-const FIGURE_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/test-figures");
+#[path = "support/figures.rs"]
+mod figures;
+use figures::render_and_compare;
 
 /// Tolerances from Sprint 222 specification
 const PAI_TOLERANCE: f64 = 0.05; // 5% for photoacoustic
@@ -294,9 +296,8 @@ mod photoacoustic_tests {
         }
 
         // Generate absorption ranges figure (ranges in cm⁻¹).
-        if let Err(e) = save_absorption_ranges_figure(&ranges) {
-            eprintln!("  [warn] absorption figure generation failed: {}", e);
-        }
+        save_absorption_ranges_figure(&ranges)
+            .expect("absorption-ranges figure must match the committed golden");
     }
 }
 
@@ -423,9 +424,8 @@ mod arfi_tests {
         }
 
         // Generate shear wave speed comparison figure.
-        if let Err(e) = save_shear_wave_figure(&figure_data) {
-            eprintln!("  [warn] shear wave figure generation failed: {}", e);
-        }
+        save_shear_wave_figure(&figure_data)
+            .expect("shear-wave figure must match the committed golden");
     }
 
     /// Test 8: ARFI push duration
@@ -832,10 +832,18 @@ fn save_pa_reconstruction_figure(
     p0_norm: &[f64],
     snr_db: f64,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    std::fs::create_dir_all(FIGURE_DIR)?;
-    let path = format!("{}/pa_reconstruction.png", FIGURE_DIR);
+    render_and_compare("pa_reconstruction.png", |path| {
+        render_pa_reconstruction_figure(path, r_mm, p0_norm, snr_db)
+    })
+}
 
-    let root = BitMapBackend::new(&path, (900, 500)).into_drawing_area();
+fn render_pa_reconstruction_figure(
+    path: &Path,
+    r_mm: &[f64],
+    p0_norm: &[f64],
+    snr_db: f64,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let root = BitMapBackend::new(path, (900, 500)).into_drawing_area();
     root.fill(&WHITE)?;
 
     let r_min = r_mm.first().copied().unwrap_or(-5.0);
@@ -892,7 +900,6 @@ fn save_pa_reconstruction_figure(
         .draw()?;
 
     root.present()?;
-    println!("  Figure saved: {}", path);
     Ok(())
 }
 
@@ -909,10 +916,17 @@ fn save_ctr_vs_mi_figure(
     mi_test: &[f64],
     ctr_test: &[f64],
 ) -> Result<(), Box<dyn std::error::Error>> {
-    std::fs::create_dir_all(FIGURE_DIR)?;
-    let path = format!("{}/ceus_ctr_vs_mi.png", FIGURE_DIR);
+    render_and_compare("ceus_ctr_vs_mi.png", |path| {
+        render_ctr_vs_mi_figure(path, mi_test, ctr_test)
+    })
+}
 
-    let root = BitMapBackend::new(&path, (900, 500)).into_drawing_area();
+fn render_ctr_vs_mi_figure(
+    path: &Path,
+    mi_test: &[f64],
+    ctr_test: &[f64],
+) -> Result<(), Box<dyn std::error::Error>> {
+    let root = BitMapBackend::new(path, (900, 500)).into_drawing_area();
     root.fill(&WHITE)?;
 
     let mi_lo = 0.02f64;
@@ -923,8 +937,12 @@ fn save_ctr_vs_mi_figure(
     let tissue_h2 = |mi: f64| 40.0 * mi.log10() - 20.0;
     let ctr_fn = |mi: f64| bubble_h2(mi) - tissue_h2(mi);
 
-    let y_lo = -60.0f64;
-    let y_hi = 30.0f64;
+    const AXIS_PADDING_FRACTION: f64 = 0.05;
+    let data_min = tissue_h2(mi_lo);
+    let data_max = ctr_fn(mi_lo);
+    let axis_padding = (data_max - data_min) * AXIS_PADDING_FRACTION;
+    let y_lo = data_min - axis_padding;
+    let y_hi = data_max + axis_padding;
 
     let mut chart = ChartBuilder::on(&root)
         .caption(
@@ -1001,7 +1019,6 @@ fn save_ctr_vs_mi_figure(
         .draw()?;
 
     root.present()?;
-    println!("  Figure saved: {}", path);
     Ok(())
 }
 
@@ -1013,11 +1030,17 @@ fn save_ctr_vs_mi_figure(
 fn save_shear_wave_figure(
     tissues: &[(&str, f64, f64)], // (name, computed m/s, expected m/s)
 ) -> Result<(), Box<dyn std::error::Error>> {
-    std::fs::create_dir_all(FIGURE_DIR)?;
-    let path = format!("{}/elastography_shear_speed.png", FIGURE_DIR);
+    render_and_compare("elastography_shear_speed.png", |path| {
+        render_shear_wave_figure(path, tissues)
+    })
+}
 
+fn render_shear_wave_figure(
+    path: &Path,
+    tissues: &[(&str, f64, f64)],
+) -> Result<(), Box<dyn std::error::Error>> {
     let n = tissues.len();
-    let root = BitMapBackend::new(&path, (900, 500)).into_drawing_area();
+    let root = BitMapBackend::new(path, (900, 500)).into_drawing_area();
     root.fill(&WHITE)?;
 
     let c_max = tissues
@@ -1082,7 +1105,6 @@ fn save_shear_wave_figure(
         .draw()?;
 
     root.present()?;
-    println!("  Figure saved: {}", path);
     Ok(())
 }
 
@@ -1093,9 +1115,15 @@ fn save_shear_wave_figure(
 fn save_absorption_ranges_figure(
     tissues: &[(&str, f64, f64)], // (name, min_cm, max_cm)
 ) -> Result<(), Box<dyn std::error::Error>> {
-    std::fs::create_dir_all(FIGURE_DIR)?;
-    let path = format!("{}/tissue_absorption_ranges.png", FIGURE_DIR);
+    render_and_compare("tissue_absorption_ranges.png", |path| {
+        render_absorption_ranges_figure(path, tissues)
+    })
+}
 
+fn render_absorption_ranges_figure(
+    path: &Path,
+    tissues: &[(&str, f64, f64)],
+) -> Result<(), Box<dyn std::error::Error>> {
     let n = tissues.len();
     let x_max = tissues
         .iter()
@@ -1103,7 +1131,7 @@ fn save_absorption_ranges_figure(
         .fold(0.0f64, f64::max)
         * 1.1;
 
-    let root = BitMapBackend::new(&path, (900, 400)).into_drawing_area();
+    let root = BitMapBackend::new(path, (900, 400)).into_drawing_area();
     root.fill(&WHITE)?;
 
     let mut chart = ChartBuilder::on(&root)
@@ -1136,10 +1164,15 @@ fn save_absorption_ranges_figure(
         let y = i as f64;
         let mid = (min_cm + max_cm) / 2.0;
         // Range line.
-        chart.draw_series(std::iter::once(PathElement::new(
+        let range_annotation = chart.draw_series(std::iter::once(PathElement::new(
             vec![(*min_cm, y), (*max_cm, y)],
             ShapeStyle::from(&BLUE).stroke_width(4),
         )))?;
+        if i == 0 {
+            range_annotation
+                .label("Literature range [min, max]")
+                .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], BLUE.stroke_width(3)));
+        }
         // End caps.
         chart.draw_series(
             [*min_cm, *max_cm]
@@ -1147,22 +1180,14 @@ fn save_absorption_ranges_figure(
                 .map(|&x| Circle::new((x, y), 4, BLUE.filled())),
         )?;
         // Midpoint marker.
-        chart.draw_series(std::iter::once(Circle::new((mid, y), 6, RED.filled())))?;
+        let midpoint_annotation =
+            chart.draw_series(std::iter::once(Circle::new((mid, y), 6, RED.filled())))?;
+        if i == 0 {
+            midpoint_annotation
+                .label("Midpoint test value")
+                .legend(|(x, y)| Circle::new((x + 10, y), 5, RED.filled()));
+        }
     }
-
-    // Legend manually.
-    chart
-        .draw_series(std::iter::once(PathElement::new(
-            vec![(0.0, -0.4), (0.3, -0.4)],
-            ShapeStyle::from(&BLUE).stroke_width(4),
-        )))?
-        .label("Literature range [min, max]")
-        .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], BLUE.stroke_width(3)));
-
-    chart
-        .draw_series(std::iter::once(Circle::new((0.0, -0.4), 1, WHITE.filled())))?
-        .label("Midpoint test value")
-        .legend(|(x, y)| Circle::new((x + 10, y), 5, RED.filled()));
 
     chart
         .configure_series_labels()
@@ -1171,7 +1196,6 @@ fn save_absorption_ranges_figure(
         .draw()?;
 
     root.present()?;
-    println!("  Figure saved: {}", path);
     Ok(())
 }
 
@@ -1232,9 +1256,8 @@ mod pa_backprojection_tests {
             .map(|&v| v / peak_value.max(1e-30))
             .collect();
         let r_mm: Vec<f64> = r_test.iter().map(|&r| r * 1e3).collect();
-        if let Err(e) = save_pa_reconstruction_figure(&r_mm, &p0_norm, snr_db) {
-            eprintln!("  [warn] PA figure generation failed: {}", e);
-        }
+        save_pa_reconstruction_figure(&r_mm, &p0_norm, snr_db)
+            .expect("photoacoustic reconstruction figure must match the committed golden");
 
         assert!(
             snr_db > 20.0,
@@ -1416,9 +1439,8 @@ mod ceus_ctr_tests {
         }
 
         // Generate CTR vs MI comparison figure.
-        if let Err(e) = save_ctr_vs_mi_figure(&mi_values, &ctrs) {
-            eprintln!("  [warn] CTR figure generation failed: {}", e);
-        }
+        save_ctr_vs_mi_figure(&mi_values, &ctrs)
+            .expect("contrast-to-tissue figure must match the committed golden");
     }
 }
 
