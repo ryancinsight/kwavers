@@ -18,7 +18,7 @@
   1-D/2-D/3-D differential contracts pass; prepared execution reuses GPU
   resources and caller-owned host storage; the consumer-owned GPU PSTD FFT
   shader and dispatch code are deleted after cutover.
-- **Dependency:** Hephaestus provider PR #222, source head `0d0be95`, must merge
+- **Dependency:** Hephaestus provider PR #222, source head `3ad39a3`, must merge
   before the Kwavers provider pin and exact-graph verification. Apollo remains
   the Leto-side CPU engine at its merged provider revision.
 - **Non-goals:** changing transform conventions, introducing runtime fallback,

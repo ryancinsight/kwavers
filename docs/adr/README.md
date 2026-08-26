@@ -88,3 +88,4 @@
 | [122](122-fwi-rotating-acquisition-geometry.md) | Per-view element-position rotation for the rotating opposed-linear-array acquisition | Accepted |
 | [123](123-visualization-config-single-source.md) | Keep visualization backend and quality selection single-source | Accepted |
 | [124](124-integration-test-baseline.md) | Run the integration tests CI already compiles, against a failure baseline | Accepted |
+| [125](125-fft-backend-selection.md) | Select FFT execution at the solver boundary | Accepted |
