@@ -236,6 +236,10 @@ pub struct VolumetricWaveConfig {
     pub arrival_detection: ArrivalDetection,
     pub tracking_decimation: [usize; 3],
     pub duration_s: f64,
+    /// Maximum retained states, including the initial and final states.
+    ///
+    /// Values below two retain both boundary states when at least one time step
+    /// is propagated.
     pub max_snapshots: usize,
 }
 

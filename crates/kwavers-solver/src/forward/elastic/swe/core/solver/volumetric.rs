@@ -1,5 +1,6 @@
 //! Volumetric propagation and wavefront tracking for `ElasticWaveSolver`.
 
+use super::super::super::integration::integrator::PreparedBodyForces;
 use super::super::super::integration::TimeIntegrator;
 use super::super::super::scratch::ElasticStepScratch;
 use super::super::super::types::{
@@ -15,6 +16,24 @@ struct WindowMetric {
     correlation: f64,
     quality: f64,
     amplitude: f64,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct SnapshotSchedule {
+    stride: usize,
+    capacity: usize,
+}
+
+fn snapshot_schedule(steps: usize, max_snapshots: usize) -> SnapshotSchedule {
+    let max_snapshots = max_snapshots.max(2);
+    let intervals = max_snapshots - 1;
+    // A retained initial state leaves `max_snapshots - 1` intervals. Ceiling
+    // division is required: floor division retained every state when `steps`
+    // was only slightly larger than the configured bound.
+    let stride = steps.div_ceil(intervals).max(1);
+    let capacity = steps.div_ceil(stride) + 1;
+    debug_assert!(capacity <= max_snapshots);
+    SnapshotSchedule { stride, capacity }
 }
 
 impl ElasticWaveSolver {
@@ -64,24 +83,20 @@ impl ElasticWaveSolver {
             .into());
         }
         let steps = (duration_s / dt).ceil() as usize;
-        let mut stride = (steps / self.volumetric_config.max_snapshots.max(2)).max(1);
-        let min_snapshots = 10usize;
-        if steps / stride + 1 < min_snapshots {
-            stride = (steps / (min_snapshots - 1)).max(1);
-        }
-        let snapshot_cap = steps / stride + 2;
+        let schedule = snapshot_schedule(steps, self.volumetric_config.max_snapshots);
         let mut scratch = ElasticStepScratch::new(nx, ny, nz);
-        let mut history = Vec::with_capacity(snapshot_cap);
+        let mut prepared_forces = PreparedBodyForces::new(&self.grid, &shifted_forces)?;
+        let mut history = Vec::with_capacity(schedule.capacity);
         history.push(current_field.clone());
         for step_idx in 0..steps {
-            integrator.step_with_body_forces(
+            integrator.step_with_prepared_body_forces(
                 &mut current_field,
                 dt,
-                &shifted_forces,
+                &mut prepared_forces,
                 &mut scratch,
             )?;
             current_field.time += dt;
-            if (step_idx + 1) % stride == 0 {
+            if (step_idx + 1) % schedule.stride == 0 {
                 history.push(current_field.clone());
             }
         }
@@ -139,20 +154,15 @@ impl ElasticWaveSolver {
             .into());
         }
         let steps = (duration_s / dt).ceil() as usize;
-        let mut stride = (steps / self.volumetric_config.max_snapshots.max(2)).max(1);
-        let min_snapshots = 10usize;
-        if steps / stride + 1 < min_snapshots {
-            stride = (steps / (min_snapshots - 1)).max(1);
-        }
-        let snapshot_cap = steps / stride + 2;
+        let schedule = snapshot_schedule(steps, self.volumetric_config.max_snapshots);
         let mut scratch = ElasticStepScratch::new(nx, ny, nz);
         let mut current_field = initial_field;
-        let mut history = Vec::with_capacity(snapshot_cap);
+        let mut history = Vec::with_capacity(schedule.capacity);
         history.push(current_field.clone());
         for step_idx in 0..steps {
             integrator.step(&mut current_field, dt, None, &mut scratch)?;
             current_field.time += dt;
-            if (step_idx + 1) % stride == 0 {
+            if (step_idx + 1) % schedule.stride == 0 {
                 history.push(current_field.clone());
             }
         }
@@ -247,9 +257,9 @@ impl ElasticWaveSolver {
         let mut diff_series = vec![0.0_f64; sample_count];
         let mut window_metrics = vec![WindowMetric::default(); sample_count];
 
-        for k in 0..nz {
+        for i in 0..nx {
             for j in 0..ny {
-                for i in 0..nx {
+                for k in 0..nz {
                     if !self.is_tracking_voxel(i, j, k) {
                         continue;
                     }
@@ -456,21 +466,4 @@ fn meets_correlation_floor(correlation: f64, minimum: f64) -> bool {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{matched_filter_window, WindowMetric};
-
-    #[test]
-    fn matched_filter_preserves_the_original_window_index() {
-        let series = [0.0, 0.0, 2.0, 3.0];
-        let derivative = [0.0, 0.0, 2.0, 1.0];
-        let mut metrics = [WindowMetric::default(); 4];
-
-        let (start, metric) =
-            matched_filter_window(&series, &derivative, &[1.0], 0.5, &mut metrics)
-                .expect("two windows exceed the correlation floor");
-
-        assert_eq!(start, 2);
-        assert_eq!(metric.amplitude, 2.0);
-        assert_eq!(metric.quality, 1.0);
-    }
-}
+mod tests;

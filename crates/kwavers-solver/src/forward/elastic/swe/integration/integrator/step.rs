@@ -3,7 +3,7 @@
 use super::super::super::scratch::ElasticStepScratch;
 use super::super::super::types::{ElasticBodyForceConfig, ElasticWaveField};
 use super::acceleration::{PlaneStrainStress, SpatialStress, StressOperator};
-use super::{body_force, TimeIntegrator};
+use super::{body_force, PreparedBodyForces, TimeIntegrator};
 use kwavers_core::error::KwaversResult;
 use moirai_parallel::{for_each_chunk_triple_mut_enumerated_with, Adaptive};
 
@@ -67,8 +67,38 @@ impl TimeIntegrator<'_> {
         for body_force in body_forces {
             body_force::validate(body_force)?;
         }
+        let grid = self.grid;
         self.integrate::<SpatialStress, _>(field, dt, scratch, |field, scratch, time| {
-            self.compute_acceleration_with_body_forces(field, scratch, body_forces, time)
+            self.compute_acceleration_with_body_forces(field, scratch, |index| {
+                let i = index / (grid.ny * grid.nz);
+                let j = (index / grid.nz) % grid.ny;
+                let k = index % grid.nz;
+                let mut force = [0.0; 3];
+                for body_force in body_forces {
+                    let value = body_force::evaluate(grid, body_force, i, j, k, time);
+                    force[0] += value[0];
+                    force[1] += value[1];
+                    force[2] += value[2];
+                }
+                force
+            })
+        })
+    }
+
+    /// Perform one step with spatially prepared distributed body forces.
+    pub(crate) fn step_with_prepared_body_forces(
+        &self,
+        field: &mut ElasticWaveField,
+        dt: f64,
+        body_forces: &mut PreparedBodyForces,
+        scratch: &mut ElasticStepScratch,
+    ) -> KwaversResult<()> {
+        body_forces.validate_grid(self.grid)?;
+        self.integrate::<SpatialStress, _>(field, dt, scratch, |field, scratch, time| {
+            body_forces.update_time(time);
+            self.compute_acceleration_with_body_forces(field, scratch, |index| {
+                body_forces.force_at(index)
+            })
         })
     }
 
