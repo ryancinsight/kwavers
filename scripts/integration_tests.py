@@ -61,7 +61,6 @@ SUMMARY = re.compile(r"^\s+Summary\s+\[[^\]]*\]\s+(\d+) tests run")
 COMMAND = [
     "cargo", "nextest", "run",
     "--color", "never",
-    "--locked",
     "-p", "kwavers", "--tests",
     "--no-default-features", "--features", "full",
     "--test-threads=1", "--no-fail-fast",
@@ -349,8 +348,13 @@ def _print_failure_statuses(result: ExecutionResult) -> None:
         )
 
 
-def run() -> tuple[set[str], int]:
-    result = _execute(COMMAND, INTEGRATION_RUN_TIMEOUT_SECONDS)
+def run(locked: bool = True) -> tuple[set[str], int]:
+    # CI resolves against the committed lockfile. A tree under the Atlas
+    # development overlay cannot: the overlay redirects first-party crates to
+    # local paths, so `--locked` refuses before the suite starts and the gate
+    # is unrunnable on the machine where it would catch a failure earliest.
+    command = COMMAND[:5] + (["--locked"] if locked else []) + COMMAND[5:]
+    result = _execute(command, INTEGRATION_RUN_TIMEOUT_SECONDS)
     if result.termination_error is not None:
         _print_failure_statuses(result)
         _print_diagnostic_tails(result)
@@ -380,11 +384,13 @@ def run() -> tuple[set[str], int]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--unlocked", action="store_true",
+                        help="drop --locked, for a tree under the Atlas overlay")
     parser.add_argument("--update", action="store_true",
                         help="rewrite the baseline from this run")
     args = parser.parse_args()
 
-    failures, ran = run()
+    failures, ran = run(locked=not args.unlocked)
     print(f"integration suite: {ran} tests run, {len(failures)} failed")
 
     if args.update:
