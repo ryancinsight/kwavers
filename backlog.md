@@ -541,11 +541,11 @@ correlation floor. The focused workload moved from 17.397 s to 15.273 s
 The committed failure baseline is empty. The complete locked integration run
 passes 681/681 tests in 285.361 s with 27 configured skips.
 
-## KW-TEST-FIGURE-ISOLATION — integration tests overwrite tracked figures [patch] — todo
+## KW-TEST-FIGURE-ISOLATION — integration tests overwrite tracked figures [patch] — in progress
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-TEST-FIGURE-ISOLATION | Make plotting integration tests isolated and deterministic without rewriting committed goldens during ordinary test runs. | [patch] | todo | unowned | `crates/kwavers/tests/*plot*`, `crates/kwavers/tests/imaging_literature_validation.rs`, `crates/kwavers/test-figures/` |
+| KW-TEST-FIGURE-ISOLATION | Make plotting integration tests isolated and deterministic without rewriting committed goldens during ordinary test runs. | [patch] | in progress | current session | `crates/kwavers/tests/*plot*`, `crates/kwavers/tests/imaging_literature_validation.rs`, `crates/kwavers/test-figures/` |
 
 - **Evidence:** the complete integration run rewrites tracked PNGs under
   `crates/kwavers/test-figures/` even when the plotting implementation is not
