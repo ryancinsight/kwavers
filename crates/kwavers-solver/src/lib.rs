@@ -11,6 +11,19 @@ pub mod __private {
 /// Accepts native Rust range expressions (`start..end`, `..end`, `start..`, `..`)
 /// and integer indices, separated by commas. Steps use semicolons: `start..end;step`.
 /// Returns `[leto::SliceArg; N]`.
+// Rule 3 -- a step on an element that is not the last -- exists so the grammar
+// is symmetric: a caller who may write `s![a..b; 2]` may also write
+// `s![a..b; 2, c..d]`. No call site in this crate needs it yet, so the lib
+// build sees it as unused. `slice_macro_tests` does use it, which is why the
+// expectation is scoped to builds where those tests are absent; unscoped, it
+// would report itself unfulfilled against the test target.
+#[cfg_attr(
+    not(test),
+    expect(
+        unused_macro_rules,
+        reason = "grammar completeness, covered by slice_macro_tests"
+    )
+)]
 macro_rules! s {
     // Internal: convert expression to SliceArg via From trait.
     (@as_slicearg $r:expr) => {
@@ -38,6 +51,72 @@ macro_rules! s {
     ($($t:tt)*) => {
         s!(@parse [] $($t)*)
     };
+}
+
+#[cfg(test)]
+mod slice_macro_tests {
+    use crate::__private::SliceArg;
+
+    /// `start..end` with no step.
+    const fn range(start: isize, end: isize, step: isize) -> SliceArg {
+        SliceArg::Range {
+            start: Some(start),
+            end: Some(end),
+            step,
+        }
+    }
+
+    #[test]
+    fn a_single_range_carries_a_unit_step() {
+        assert_eq!(s![0..10], [range(0, 10, 1)]);
+    }
+
+    #[test]
+    fn several_elements_keep_their_order() {
+        assert_eq!(
+            s![0..10, .., 3],
+            [range(0, 10, 1), SliceArg::All, SliceArg::Index(3)]
+        );
+    }
+
+    #[test]
+    fn a_step_applies_to_the_last_element() {
+        assert_eq!(s![0..10; 2], [range(0, 10, 2)]);
+    }
+
+    /// The stepped-and-followed arm, which no call site in this crate uses.
+    ///
+    /// Without this test the rule is unreachable, `-D unused` reports it, and
+    /// the obvious response -- deleting it -- would leave the macro's grammar
+    /// asymmetric: a step would be accepted in the last position and rejected
+    /// in every other, for no reason a caller could infer from the error.
+    #[test]
+    fn a_step_applies_to_an_element_that_is_not_the_last() {
+        assert_eq!(s![0..10; 2, 1..5], [range(0, 10, 2), range(1, 5, 1)]);
+        assert_eq!(
+            s![0..10; 2, 1..8; 3, 4],
+            [range(0, 10, 2), range(1, 8, 3), SliceArg::Index(4)]
+        );
+    }
+
+    #[test]
+    fn open_ended_ranges_leave_the_open_side_unset() {
+        assert_eq!(
+            s![..5, 2..],
+            [
+                SliceArg::Range {
+                    start: None,
+                    end: Some(5),
+                    step: 1
+                },
+                SliceArg::Range {
+                    start: Some(2),
+                    end: None,
+                    step: 1
+                },
+            ]
+        );
+    }
 }
 
 // src/solver/mod.rs

@@ -8,9 +8,9 @@ use coeus_core::MoiraiBackend;
 
 type TestBackend = MoiraiBackend;
 
-fn var2(vals: &[f32], backend: &TestBackend) -> Var<f32, TestBackend> {
+fn var2(vals: &[f32], backend: TestBackend) -> Var<f32, TestBackend> {
     Var::new(
-        coeus_tensor::Tensor::from_slice_on(vec![(vals.len()), 1], vals, backend),
+        coeus_tensor::Tensor::from_slice_on(vec![(vals.len()), 1], vals, &backend),
         false,
     )
 }
@@ -44,8 +44,8 @@ fn test_optimizer_step_compiles() {
 
     let optimizer = SimpleOptimizer::new(0.001);
 
-    let x = var2(&[0.5], &backend);
-    let t = var2(&[0.1], &backend);
+    let x = var2(&[0.5], backend);
+    let t = var2(&[0.1], backend);
     let u = pinn.forward(&x, &t).expect("1D optimizer forward");
     let loss = coeus_autograd::mean(&coeus_autograd::mul(&u, &u));
 
@@ -63,14 +63,14 @@ fn test_optimizer_step_updates_parameters() {
     };
     let pinn = PinnWave1D::<TestBackend>::new(config).unwrap();
 
-    let x = var2(&[0.5], &backend);
-    let t = var2(&[0.1], &backend);
+    let x = var2(&[0.5], backend);
+    let t = var2(&[0.1], backend);
     let u_before = pinn.forward(&x, &t).expect("1D optimizer forward");
     let u_before_val = u_before.tensor.as_slice()[0];
 
     let optimizer = SimpleOptimizer::new(0.1);
 
-    let target = var2(&[1.0], &backend);
+    let target = var2(&[1.0], backend);
     let diff = coeus_autograd::sub(&u_before, &target);
     let loss = coeus_autograd::mean(&coeus_autograd::mul(&diff, &diff));
 
@@ -97,9 +97,9 @@ fn test_optimizer_multiple_steps() {
 
     let optimizer = SimpleOptimizer::new(0.01);
 
-    let x = var2(&[0.5], &backend);
-    let t = var2(&[0.1], &backend);
-    let target = var2(&[0.0], &backend);
+    let x = var2(&[0.5], backend);
+    let t = var2(&[0.1], backend);
+    let target = var2(&[0.0], backend);
 
     let mut losses = Vec::new();
 
@@ -141,8 +141,8 @@ fn test_optimizer_with_different_learning_rates() {
     assert_eq!(optimizer_large.learning_rate(), 0.1);
 
     let pinn = PinnWave1D::<TestBackend>::new(config).unwrap();
-    let x = var2(&[0.5], &backend);
-    let t = var2(&[0.1], &backend);
+    let x = var2(&[0.5], backend);
+    let t = var2(&[0.1], backend);
 
     let u = pinn.forward(&x, &t).expect("1D optimizer forward");
     let loss = coeus_autograd::mean(&coeus_autograd::mul(&u, &u));
@@ -178,8 +178,8 @@ fn test_gradient_mapper_preserves_structure() {
 
     let optimizer = SimpleOptimizer::new(0.001);
 
-    let x = var2(&[0.5], &backend);
-    let t = var2(&[0.1], &backend);
+    let x = var2(&[0.5], backend);
+    let t = var2(&[0.1], backend);
     let u = pinn.forward(&x, &t).expect("1D optimizer forward");
     let loss = coeus_autograd::mean(&coeus_autograd::mul(&u, &u));
     zero_grad(&pinn);

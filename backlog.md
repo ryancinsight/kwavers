@@ -93,16 +93,23 @@ is what the seed governs.
   backend/policy configuration (fixed reduction tree), fast path kept as the
   default and the two differential-tested against each other.
 
-## KW-PINN-TESTS-UNLINTED — the pinn clippy gate lints one crate's lib only [patch] — todo
+## KW-PINN-TESTS-UNLINTED — the pinn clippy gate could not fail [patch] — IMPLEMENTED 2026-08-26
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-PINN-TESTS-UNLINTED | Close the gate that let clippy diagnostics accumulate in pinn test code. | [patch] | todo | unowned | `.github/workflows/ci.yml`, `crates/kwavers-solver/src/inverse/pinn/**/tests.rs` |
+| KW-PINN-TESTS-UNLINTED | Close the gate that let clippy diagnostics accumulate in pinn test code. | [patch] | IMPLEMENTED | unowned | `.github/workflows/ci.yml`, `crates/kwavers-solver/src/inverse/pinn/**/tests.rs` |
 
-- **Evidence:** `ci.yml` runs `cargo clippy -p kwavers --features pinn --lib -D
-  warnings`. Clippy lints only the selected package's own targets, so
-  `kwavers-solver` -- where the pinn code lives -- is compiled but never
-  linted, and `--lib` excludes test targets in any case.
+- **Evidence:** `ci.yml` ran `cargo clippy -p kwavers --features pinn --lib --
+  -D warnings` with `continue-on-error: true`. Three holes, not one. Clippy
+  lints only the selected package's own targets, so `kwavers-solver` -- where
+  the pinn code lives -- was compiled but never linted; `--lib` excluded test
+  targets on top of that; and `continue-on-error` meant nothing it did find
+  could fail the job.
+- **Why the step was written that way:** it also lacked `--no-deps`, so clippy
+  linted path dependencies and 69 `missing_errors_doc`/`missing_panics_doc`
+  diagnostics belonging to kwavers-solver's ratchet failed a gate meant for
+  kwavers' own lib. Suppressing the step was the path of least resistance;
+  scoping it correctly is the fix.
 - **What got through:** `cargo clippy -p kwavers-solver --features pinn
   --all-targets` reports 10 errors across 9 files, every one
   `trivially_copy_pass_by_ref` on a zero-sized backend handle taken by
@@ -116,6 +123,26 @@ is what the seed governs.
 - **Shape of the fix:** fix the 10 mechanical sites, then extend the denying
   command to `-p kwavers-solver --features pinn --all-targets`. Sequence
   matters: widening the gate first turns main red.
+
+### Implemented
+
+All 10 sites take the zero-sized backend by value. `--no-deps` added to the
+kwavers command so it gates kwavers' own lib and exits 0; `continue-on-error`
+removed; a second command gates `-p kwavers-solver --features pinn
+--all-targets -- -D unused`, `unused` being the class that escaped rather than
+all warnings, since ~190 doc and print-macro diagnostics there belong to the
+workspace ratchet. The crate's own denied lints error regardless of the flag,
+which is what the 10 were.
+
+`-D unused` also surfaced rule 3 of the `s!` macro as never used -- a step on
+an element that is not the last. Deleting it would have left the grammar
+asymmetric, accepting a step in the final position and rejecting it everywhere
+else for no reason a caller could infer, so `slice_macro_tests` now covers
+every arm including that one. The expectation silencing it in the lib build is
+`cfg_attr(not(test), ...)`-scoped: unscoped it reports itself unfulfilled
+against the test target, where the rule is used.
+
+Gates: 1331 kwavers-solver tests pass; both new clippy commands exit 0.
 
 ## KW-PINN-3D-NO-CONVERGENCE — the learning-rate schedule strangled its own training [major] — IMPLEMENTED 2026-08-25
 
