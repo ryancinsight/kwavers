@@ -60,7 +60,7 @@ fn test_budget_enforcement() -> KwaversResult<()> {
     let result = orchestrator.step(&mut fields, 1e-6, 0.0, &grid)?;
 
     assert_eq!(result.kernels_executed, 0);
-    assert!(result.time == 0.0);
+    assert_eq!(result.time, 0.0);
     assert_eq!(orchestrator.step_count(), 1);
 
     Ok(())

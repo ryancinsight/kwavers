@@ -157,7 +157,7 @@ impl CoreGpuContext<WgpuDevice> {
     /// # Errors
     /// - Propagates any `KwaversError` returned by called functions.
     ///
-    pub async fn new() -> KwaversResult<Self> {
+    pub fn new() -> KwaversResult<Self> {
         Self::try_new()
     }
 

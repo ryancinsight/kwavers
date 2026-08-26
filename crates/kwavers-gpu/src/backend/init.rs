@@ -114,10 +114,10 @@ mod tests {
         match GpuProviderContext::<WgpuDevice>::new() {
             Ok(context) => {
                 assert!(!context.device_name().is_empty());
-                println!("GPU provider context created: {}", context.device_name());
+                eprintln!("GPU provider context created: {}", context.device_name());
             }
             Err(e) => {
-                println!(
+                eprintln!(
                     "GPU provider context creation failed (expected on some systems): {}",
                     e
                 );

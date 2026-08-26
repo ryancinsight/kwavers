@@ -127,7 +127,7 @@ impl RealtimeImagingPipeline {
         };
 
         if let Some(data) = rf_data {
-            let processed_frame = self.process_frame(&data)?;
+            let processed_frame = Self::process_frame(&data)?;
 
             {
                 let mut output = self.output_buffer.lock().unwrap_or_else(|e| e.into_inner());
@@ -171,13 +171,13 @@ impl RealtimeImagingPipeline {
     /// This previously ended with a `scan_conversion` call that returned its
     /// input unchanged, so the pipeline reported a scan-converted frame it had
     /// never converted.
-    fn process_frame(&mut self, rf_data: &LetoArray4<f32>) -> KwaversResult<LetoArray3<f32>> {
-        let beamformed = self.beamform(rf_data)?;
-        let envelope = self.envelope_detection(&beamformed)?;
-        self.log_compression(&envelope)
+    fn process_frame(rf_data: &LetoArray4<f32>) -> KwaversResult<LetoArray3<f32>> {
+        let beamformed = Self::beamform(rf_data)?;
+        let envelope = Self::envelope_detection(&beamformed)?;
+        Self::log_compression(&envelope)
     }
 
-    fn beamform(&self, rf_data: &LetoArray4<f32>) -> KwaversResult<LetoArray3<f32>> {
+    fn beamform(rf_data: &LetoArray4<f32>) -> KwaversResult<LetoArray3<f32>> {
         let [tx_count, rx_count, samples, frames] = rf_data.shape();
         let mut beamformed = LetoArray3::zeros([rx_count, samples, frames]);
 
@@ -194,10 +194,7 @@ impl RealtimeImagingPipeline {
         Ok(beamformed)
     }
 
-    fn envelope_detection(
-        &mut self,
-        beamformed: &LetoArray3<f32>,
-    ) -> KwaversResult<LetoArray3<f32>> {
+    fn envelope_detection(beamformed: &LetoArray3<f32>) -> KwaversResult<LetoArray3<f32>> {
         let [rx_count, samples, frames] = beamformed.shape();
         let mut envelope = LetoArray3::zeros([rx_count, samples, frames]);
         let rx_plane_len = samples * frames;
@@ -232,7 +229,7 @@ impl RealtimeImagingPipeline {
         Ok(envelope)
     }
 
-    fn log_compression(&self, envelope: &LetoArray3<f32>) -> KwaversResult<LetoArray3<f32>> {
+    fn log_compression(envelope: &LetoArray3<f32>) -> KwaversResult<LetoArray3<f32>> {
         let mut compressed = LetoArray3::zeros(envelope.shape());
         let dynamic_range_db = 60.0_f64;
         let compression_factor: f32 = (dynamic_range_db / 20.0) as f32;

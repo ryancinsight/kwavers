@@ -130,7 +130,7 @@ impl<'a> DelaySumGPU<'a> {
             _padding5: 0.0,
             num_frames: frames as u32,
             num_samples: samples as u32,
-            dynamic_focusing: if dynamic_focusing { 1 } else { 0 },
+            dynamic_focusing: u32::from(dynamic_focusing),
             apodization_window: apodization_window_u32,
         };
 

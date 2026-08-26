@@ -33,17 +33,8 @@ where
     /// Returns an error when the selected provider cannot be acquired with its
     /// declared Kwavers requirements.
     ///
-    pub async fn new() -> KwaversResult<Self> {
-        let provider = GpuDevice::<P>::create_with_features_and_limits(
-            P::acquisition_preference(),
-            P::optional_features(),
-            P::required_limits(),
-        )
-        .await?;
-
-        Ok(Self {
-            provider: Some(provider),
-        })
+    pub fn new() -> KwaversResult<Self> {
+        Self::new_blocking()
     }
 
     /// Create a CPU-only compute manager without acquiring a GPU provider.
@@ -112,7 +103,7 @@ where
             )));
         }
 
-        self.fdtd_cpu(
+        Self::fdtd_cpu(
             pressure, velocity_x, velocity_y, velocity_z, dx, dy, dz, dt, c0, rho0,
         )
     }
@@ -124,7 +115,6 @@ where
     // Args are independent field arrays and scalar grid/medium/step parameters with no cohesive grouping.
     #[allow(clippy::too_many_arguments)]
     fn fdtd_cpu(
-        &self,
         pressure: &mut LetoArray3<f64>,
         velocity_x: &LetoArray3<f64>,
         velocity_y: &LetoArray3<f64>,
@@ -170,7 +160,7 @@ where
         absorption: &LetoArray3<f64>,
         dt: f64,
     ) -> KwaversResult<()> {
-        self.absorption_cpu(pressure, absorption, dt)
+        Self::absorption_cpu(pressure, absorption, dt)
     }
 
     /// CPU implementation of absorption
@@ -178,7 +168,6 @@ where
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     fn absorption_cpu(
-        &self,
         pressure: &mut LetoArray3<f64>,
         absorption: &LetoArray3<f64>,
         dt: f64,
@@ -282,15 +271,13 @@ mod tests {
 
     #[test]
     fn test_absorption_cpu_decay_is_applied() {
-        let manager = ComputeManager::<WgpuDevice>::cpu_only();
         let dt: f64 = 1e-3;
 
         let mut pressure = LetoArray3::from_elem([2, 2, 2], 1.0);
         let absorption = LetoArray3::from_elem([2, 2, 2], 2.0);
         let expected = (-2.0_f64 * dt).exp();
 
-        manager
-            .absorption_cpu(&mut pressure, &absorption, dt)
+        ComputeManager::<WgpuDevice>::absorption_cpu(&mut pressure, &absorption, dt)
             .expect("absorption_cpu should succeed");
 
         for &p in pressure.iter() {
@@ -300,12 +287,10 @@ mod tests {
 
     #[test]
     fn absorption_cpu_rejects_shape_mismatch() {
-        let manager = ComputeManager::<WgpuDevice>::cpu_only();
         let mut pressure = LetoArray3::from_elem([2, 2, 2], 1.0);
         let absorption = LetoArray3::from_elem([2, 2, 1], 2.0);
 
-        let error = manager
-            .absorption_cpu(&mut pressure, &absorption, 1e-3)
+        let error = ComputeManager::<WgpuDevice>::absorption_cpu(&mut pressure, &absorption, 1e-3)
             .expect_err("shape mismatch must be rejected");
 
         match error {

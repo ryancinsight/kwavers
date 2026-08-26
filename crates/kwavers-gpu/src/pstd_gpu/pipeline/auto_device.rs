@@ -36,6 +36,11 @@ where
     /// This constructor delegates device acquisition to Hephaestus, so PSTD
     /// joins the Atlas GPU provider seam while the existing kernels continue
     /// to consume the raw WGPU handles exposed by the provider.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err` if no matching adapter is found or device acquisition
+    /// fails.
     pub fn with_auto_device(
         grid: &Grid,
         medium: MediumArrays<'_>,

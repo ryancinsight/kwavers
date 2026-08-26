@@ -158,12 +158,12 @@ impl GpuPerformanceMonitor {
 
     /// Get current performance metrics
     pub fn get_metrics(&self) -> GpuStepMetrics {
-        let avg_step = self.calculate_average(&self.step_times);
-        let p95_step = self.calculate_percentile(&self.step_times, 0.95);
-        let p99_step = self.calculate_percentile(&self.step_times, 0.99);
+        let avg_step = Self::calculate_average(&self.step_times);
+        let p95_step = Self::calculate_percentile(&self.step_times, 0.95);
+        let p99_step = Self::calculate_percentile(&self.step_times, 0.99);
 
-        let avg_transfer = self.calculate_average(&self.transfer_times);
-        let avg_io = self.calculate_average(&self.io_times);
+        let avg_transfer = Self::calculate_average(&self.transfer_times);
+        let avg_io = Self::calculate_average(&self.io_times);
         let _total_overhead = avg_transfer + avg_io;
 
         let transfer_overhead_percent = if avg_step > 0.0 {
@@ -270,20 +270,20 @@ impl GpuPerformanceMonitor {
     /// Get estimated remaining budget for next step
     #[must_use]
     pub fn estimated_remaining_budget(&self) -> f64 {
-        let avg_time = self.calculate_average(&self.step_times);
+        let avg_time = Self::calculate_average(&self.step_times);
         (self.budget_ms - avg_time).max(0.0)
     }
 
     // ========== Private Methods ==========
 
-    fn calculate_average(&self, values: &VecDeque<f64>) -> f64 {
+    fn calculate_average(values: &VecDeque<f64>) -> f64 {
         if values.is_empty() {
             return 0.0;
         }
         values.iter().sum::<f64>() / values.len() as f64
     }
 
-    fn calculate_percentile(&self, values: &VecDeque<f64>, percentile: f64) -> f64 {
+    fn calculate_percentile(values: &VecDeque<f64>, percentile: f64) -> f64 {
         if values.is_empty() {
             return 0.0;
         }
