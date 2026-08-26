@@ -57,13 +57,14 @@ jobs:
     # it carries restore-keys, so a lockfile change degrades to a
     # partial restore instead of a total miss, and it prunes `target/`
     # so the repository stays inside the 10 GB cache budget instead of
-    # evicting its own entries. `shared-key` puts every job on one
-    # cache rather than one per job.
+    # evicting its own entries. This broad dev-profile clippy job is the sole
+    # writer for downstream dev-profile jobs; immutable cache hits must not be
+    # seeded by a metadata-only preflight or raced by narrower consumers.
     - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
       with:
-        shared-key: kwavers
-        # Written from the default branch only; a pull request restores
-        # but does not save, so branches cannot evict each other.
+        shared-key: kwavers-dev
+        # The broad architecture job is the sole dev-profile writer.
+        # Pull requests restore only, so branches cannot evict each other.
         save-if: ${{ github.ref == 'refs/heads/main' }}
 
     - name: Check formatting
@@ -198,10 +199,10 @@ jobs:
     # kwavers crates their feature set actually changes.
     - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
       with:
-        shared-key: kwavers
-        # Written from the default branch only; a pull request restores
-        # but does not save, so branches cannot evict each other.
-        save-if: ${{ github.ref == 'refs/heads/main' }}
+        shared-key: kwavers-dev
+        # The architecture preflight is the sole dev-profile writer.
+        # Matrix consumers restore only.
+        save-if: false
 
     - name: Build with ${{ matrix.features }} features
       run: |
@@ -265,8 +266,8 @@ jobs:
     # without it this job cold-compiles the whole workspace every run.
     - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
       with:
-        shared-key: kwavers
-        save-if: ${{ github.ref == 'refs/heads/main' }}
+        shared-key: kwavers-dev
+        save-if: false
 
     - name: Run tests
       env:
@@ -290,6 +291,9 @@ jobs:
     # test and enforces a committed baseline of known failures: a failure
     # outside the list is a regression, and an entry that passes is stale and
     # must be removed. The list may shrink, never grow. See ADR 124.
+    - name: Verify integration runner process bounds
+      run: python -m unittest discover -s scripts/tests -p 'test_integration_tests.py'
+
     - name: Run integration tests against the failure baseline
       run: python scripts/integration_tests.py
 
@@ -326,8 +330,8 @@ jobs:
 
     - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
       with:
-        shared-key: kwavers
-        save-if: ${{ github.ref == 'refs/heads/main' }}
+        shared-key: kwavers-dev
+        save-if: false
 
     - name: Build documentation
       run: |

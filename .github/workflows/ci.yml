@@ -53,7 +53,8 @@ jobs:
       # spending its entire budget cloning 91 already-pinned sources.
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
         with:
-          shared-key: kwavers
+          shared-key: kwavers-lockfile
+          cache-targets: false
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Verify Cargo.lock resolves under --locked
@@ -87,11 +88,11 @@ jobs:
       # once per job.
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
         with:
-          shared-key: kwavers
-          # Write the cache from the default branch only. A pull request
-          # restores it but does not save, so concurrent branches cannot
-          # evict each other's entries.
-          save-if: ${{ github.ref == 'refs/heads/main' }}
+          shared-key: kwavers-dev
+          # The architecture preflight is the sole dev-profile writer.
+          # Consumers restore only, so an immutable partial hit cannot block
+          # the broader writer from publishing useful dependency artifacts.
+          save-if: false
 
       - name: Check PINN feature compilation
         run: cargo check --locked -p kwavers --features pinn --lib
@@ -141,11 +142,10 @@ jobs:
       # Shared cache; rationale at the first use in this file.
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
         with:
-          shared-key: kwavers
-          # Write the cache from the default branch only. A pull request
-          # restores it but does not save, so concurrent branches cannot
-          # evict each other's entries.
-          save-if: ${{ github.ref == 'refs/heads/main' }}
+          shared-key: kwavers-dev
+          # Release artifacts use a distinct profile cache; each toolchain's
+          # rustc fingerprint keeps matrix entries separate.
+          save-if: false
 
       - name: Check formatting
         run: cargo fmt -- --check
@@ -227,10 +227,9 @@ jobs:
       # Shared cache; rationale at the first use in this file.
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
         with:
-          shared-key: kwavers
-          # Write the cache from the default branch only. A pull request
-          # restores it but does not save, so concurrent branches cannot
-          # evict each other's entries.
+          shared-key: kwavers-release
+          # The architecture preflight is the sole dev-profile writer.
+          # This narrower consumer restores only.
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
       # Stable is the full gate: release nextest suite + doctests. Beta and
@@ -346,7 +345,7 @@ jobs:
 
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
         with:
-          shared-key: kwavers
+          shared-key: kwavers-coverage
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Generate coverage reports
@@ -426,11 +425,10 @@ jobs:
       # Shared cache; rationale at the first use in this file.
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
         with:
-          shared-key: kwavers
-          # Write the cache from the default branch only. A pull request
-          # restores it but does not save, so concurrent branches cannot
-          # evict each other's entries.
-          save-if: ${{ github.ref == 'refs/heads/main' }}
+          shared-key: kwavers-dev
+          # The architecture preflight is the sole dev-profile writer.
+          # This narrower consumer restores only.
+          save-if: false
 
       - name: k-Wave analytical comparison tests
         run: cargo nextest run --locked -p kwavers-solver --lib validation::kwave_comparison
@@ -486,8 +484,8 @@ jobs:
       # same target tree after their tests finish.
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
         with:
-          shared-key: kwavers
-          save-if: ${{ github.ref == 'refs/heads/main' }}
+          shared-key: kwavers-heavy
+          save-if: false
 
       # Kuznetsov harmonic generation: measured 42-162 s per test, so it runs
       # under the `heavy` profile (300 s cap, serial) with `#[ignore]` as the
@@ -523,8 +521,8 @@ jobs:
       # Shared restore-only pull-request cache; rationale above.
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
         with:
-          shared-key: kwavers
-          save-if: ${{ github.ref == 'refs/heads/main' }}
+          shared-key: kwavers-heavy
+          save-if: false
 
       # Treeby-Cox plane-wave absorption decay (nonlinear3d); same `heavy`
       # profile and `#[ignore]` gate.
@@ -562,7 +560,7 @@ jobs:
       # Shared restore-only pull-request cache; rationale above.
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
         with:
-          shared-key: kwavers
+          shared-key: kwavers-heavy
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
       # Full nonlinear inversion on a 16^3 grid; the slowest leg by far. The
