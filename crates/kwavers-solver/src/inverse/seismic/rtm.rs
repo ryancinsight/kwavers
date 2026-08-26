@@ -296,7 +296,6 @@ mod tests {
     /// Total: −30.
     #[test]
     fn laplacian_3d_stencil_matches_analytical_value() {
-        let processor = RtmProcessor::default();
         let grid = Grid::new(5, 5, 5, 1.0, 1.0, 1.0).unwrap();
 
         let mut field = Array3::zeros((5, 5, 5));

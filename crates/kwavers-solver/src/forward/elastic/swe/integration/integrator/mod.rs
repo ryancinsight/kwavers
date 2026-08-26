@@ -5,6 +5,8 @@ mod body_force;
 mod damping;
 mod step;
 
+pub(crate) use body_force::PreparedBodyForces;
+
 use super::super::boundary::ElasticSwePMLBoundary;
 use kwavers_grid::Grid;
 use leto::Array1;

@@ -189,15 +189,16 @@ impl TimeIntegrator<'_> {
         Ok(())
     }
 
-    pub(super) fn compute_acceleration_with_body_forces(
+    pub(super) fn compute_acceleration_with_body_forces<F>(
         &self,
         field: &ElasticWaveField,
         scratch: &mut ElasticStepScratch,
-        body_forces: &[ElasticBodyForceConfig],
-        time: f64,
-    ) -> KwaversResult<()> {
+        force_at: F,
+    ) -> KwaversResult<()>
+    where
+        F: Fn(usize) -> [f64; 3] + Sync,
+    {
         SpatialStress::evaluate(self.grid, self.lambda, self.mu, field, scratch);
-        let grid = self.grid;
         let ax = scratch
             .ax
             .as_slice_mut()
@@ -226,8 +227,6 @@ impl TimeIntegrator<'_> {
             .density
             .as_slice()
             .expect("invariant: density uses standard layout");
-        let (_, ny, nz) = (grid.nx, grid.ny, grid.nz);
-
         for_each_chunk_triple_mut_enumerated_with::<Adaptive, _, _, _, _>(
             ax,
             ay,
@@ -237,16 +236,7 @@ impl TimeIntegrator<'_> {
                 let start = chunk_idx * ACCELERATION_CHUNK;
                 for offset in 0..ax_chunk.len() {
                     let idx = start + offset;
-                    let i = idx / (ny * nz);
-                    let j = (idx / nz) % ny;
-                    let k = idx % nz;
-                    let mut force = [0.0_f64; 3];
-                    for body_force in body_forces {
-                        let value = body_force::evaluate(grid, body_force, i, j, k, time);
-                        force[0] += value[0];
-                        force[1] += value[1];
-                        force[2] += value[2];
-                    }
+                    let force = force_at(idx);
                     ax_chunk[offset] = (div_x[idx] + force[0]) / density[idx];
                     ay_chunk[offset] = (div_y[idx] + force[1]) / density[idx];
                     az_chunk[offset] = (div_z[idx] + force[2]) / density[idx];

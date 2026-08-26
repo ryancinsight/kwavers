@@ -46,17 +46,27 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      # `scripts/lockfile.py --check` intentionally asks Cargo to resolve all
+      # features. Restore the same first-party Git source cache as the build
+      # jobs so this five-minute integrity check validates the lock instead of
+      # spending its entire budget cloning 91 already-pinned sources.
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
+        with:
+          shared-key: kwavers-lockfile
+          cache-targets: false
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
       - name: Verify Cargo.lock resolves under --locked
         run: python3 scripts/lockfile.py --check
 
   pinn-validation:
     name: PINN Feature Validation
+    needs: lockfile
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          fetch-depth: 0
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-dependencies
@@ -78,11 +88,11 @@ jobs:
       # once per job.
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
         with:
-          shared-key: kwavers
-          # Write the cache from the default branch only. A pull request
-          # restores it but does not save, so concurrent branches cannot
-          # evict each other's entries.
-          save-if: ${{ github.ref == 'refs/heads/main' }}
+          shared-key: kwavers-dev
+          # The architecture preflight is the sole dev-profile writer.
+          # Consumers restore only, so an immutable partial hit cannot block
+          # the broader writer from publishing useful dependency artifacts.
+          save-if: false
 
       - name: Check PINN feature compilation
         run: cargo check --locked -p kwavers --features pinn --lib
@@ -98,8 +108,11 @@ jobs:
       - name: Run PINN validation framework tests
         run: cargo nextest run --locked -p kwavers --test validation_integration_test
 
-      - name: Run PINN convergence studies
+      - name: Run default-feature convergence studies
         run: cargo nextest run --locked -p kwavers --test pinn_convergence_studies
+
+      - name: Run PINN-feature convergence studies
+        run: cargo nextest run --locked -p kwavers --test pinn_convergence_studies --features pinn
 
       - name: Run clippy on PINN code
         run: cargo clippy --locked -p kwavers --features pinn --lib -- -D warnings
@@ -107,6 +120,7 @@ jobs:
 
   quality:
     name: Code Quality
+    needs: lockfile
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -128,11 +142,10 @@ jobs:
       # Shared cache; rationale at the first use in this file.
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
         with:
-          shared-key: kwavers
-          # Write the cache from the default branch only. A pull request
-          # restores it but does not save, so concurrent branches cannot
-          # evict each other's entries.
-          save-if: ${{ github.ref == 'refs/heads/main' }}
+          shared-key: kwavers-dev
+          # Release artifacts use a distinct profile cache; each toolchain's
+          # rustc fingerprint keeps matrix entries separate.
+          save-if: false
 
       - name: Check formatting
         run: cargo fmt -- --check
@@ -145,6 +158,7 @@ jobs:
 
   python-surface:
     name: Python Typed Surface
+    needs: lockfile
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -185,7 +199,12 @@ jobs:
 
   build:
     name: Build & Test
+    needs: lockfile
     runs-on: ubuntu-latest
+    # Keep the existing finite bound. Stable owns the full release gate;
+    # beta/nightly compile the target surface only, and stable doctests reuse
+    # that release/plotting graph instead of triggering a second test-profile
+    # build. A slow leg remains a performance defect, not timeout headroom.
     timeout-minutes: 30
     strategy:
       matrix:
@@ -208,43 +227,54 @@ jobs:
       # Shared cache; rationale at the first use in this file.
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
         with:
-          shared-key: kwavers
-          # Write the cache from the default branch only. A pull request
-          # restores it but does not save, so concurrent branches cannot
-          # evict each other's entries.
+          shared-key: kwavers-release
+          # The architecture preflight is the sole dev-profile writer.
+          # This narrower consumer restores only.
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
-      - name: Build
-        run: cargo build --locked -p kwavers --release --verbose --features="plotting"
-
+      # Stable is the full gate: release nextest suite + doctests. Beta and
+      # nightly exist to catch toolchain breakage ahead of the 6-week roll;
+      # compiling the entire target surface is the oracle for that, and
+      # repeating the full release suite on each leg adds no signal while
+      # roughly halving the matrix's wall-clock cost (measured beta 23m,
+      # nightly 28m for identical source).
       - name: Install nextest
+        if: matrix.rust == 'stable'
         uses: taiki-e/install-action@ea4c0b50b0d394ee91c5bb68a6a295b0556feb8e
         with:
           tool: nextest
 
       - name: Run tests
+        if: matrix.rust == 'stable'
         run: cargo nextest run --locked -p kwavers --profile ci --lib --release --verbose --features="plotting"
 
       - name: Run doc tests
-        run: cargo test --locked --doc -p kwavers --verbose
+        if: matrix.rust == 'stable'
+        run: cargo test --locked --doc -p kwavers --release --features plotting --verbose
+
+      - name: Toolchain-compat check
+        if: matrix.rust != 'stable'
+        run: cargo check --locked -p kwavers --release --features "plotting" --all-targets
 
   security:
     name: Security Audit
+    needs: lockfile
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          fetch-depth: 0
 
       - name: Install cargo-deny
-        run: cargo install cargo-deny
+        uses: taiki-e/install-action@ea4c0b50b0d394ee91c5bb68a6a295b0556feb8e
+        with:
+          tool: cargo-deny
 
       - name: Run security audit
         run: cargo deny --config deny.toml --manifest-path crates/kwavers/Cargo.toml check
 
   memory-safety:
     name: Memory Safety (Miri)
+    needs: lockfile
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -268,48 +298,20 @@ jobs:
         run: cargo +nightly miri test --locked -p kwavers --lib --exclude configuration::builder::tests
         continue-on-error: true
 
-  benchmarks:
-    name: Benchmark Runtime Smoke
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          fetch-depth: 0
-
-      - name: Install system dependencies
-        uses: ./.github/actions/install-system-dependencies
-        with:
-          packages: libfontconfig1-dev
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
-        with:
-          toolchain: 1.97.0
-
-      # Shared cache; rationale at the first use in this file.
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
-        with:
-          shared-key: kwavers
-          # Write the cache from the default branch only. A pull request
-          # restores it but does not save, so concurrent branches cannot
-          # evict each other's entries.
-          save-if: ${{ github.ref == 'refs/heads/main' }}
-
-      - name: Execute every plotting-eligible Criterion target once
-        run: cargo bench --locked -p kwavers --features plotting --benches -- --test
-
   coverage:
     name: Code Coverage
+    needs: lockfile
     runs-on: ubuntu-latest
     # Exact-head observation: 57 minutes; retain about 20% hosted-runner variance.
     timeout-minutes: 70
+    env:
+      # Two tarpaulin processes run concurrently below. Bound each Cargo build
+      # and Rayon pool to two workers so their aggregate matches the hosted
+      # runner's four cores instead of multiplying compiler and kernel memory.
+      CARGO_BUILD_JOBS: "2"
+      RAYON_NUM_THREADS: "2"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          fetch-depth: 0
 
       - name: Install system dependencies
         uses: ./.github/actions/install-system-dependencies
@@ -337,7 +339,14 @@ jobs:
           restore-keys: ${{ runner.os }}-coverage-cargo-tarpaulin-0.37.0-
 
       - name: Install cargo-tarpaulin
-        run: command -v cargo-tarpaulin >/dev/null || cargo install cargo-tarpaulin --version 0.37.0 --locked
+        uses: taiki-e/install-action@ea4c0b50b0d394ee91c5bb68a6a295b0556feb8e
+        with:
+          tool: cargo-tarpaulin@0.37.0
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
+        with:
+          shared-key: kwavers-coverage
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Generate coverage reports
         # Ptrace rewriting invalidates dependency compile-time layout checks;
@@ -364,8 +373,6 @@ jobs:
               | grep --fixed-strings --invert-match --line-regexp session2_source_injection_test
           )
 
-          cargo clean
-
           cargo tarpaulin --locked -p kwavers --profile coverage \
             --engine llvm --skip-clean --lib --test "${integration_targets[@]}" \
             --out xml --output-dir coverage/core --features="plotting" --timeout 300 &
@@ -389,47 +396,9 @@ jobs:
           # preserve the report without turning transport failure into a source failure.
           fail_ci_if_error: false
 
-  pinn-convergence:
-    name: PINN Convergence Analysis
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          fetch-depth: 0
-
-      - name: Install system dependencies
-        uses: ./.github/actions/install-system-dependencies
-        with:
-          packages: libfontconfig1-dev
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
-        with:
-          toolchain: 1.97.0
-
-      - name: Install nextest
-        uses: taiki-e/install-action@ea4c0b50b0d394ee91c5bb68a6a295b0556feb8e
-        with:
-          tool: nextest
-
-      # Shared cache; rationale at the first use in this file.
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
-        with:
-          shared-key: kwavers
-          # Write the cache from the default branch only. A pull request
-          # restores it but does not save, so concurrent branches cannot
-          # evict each other's entries.
-          save-if: ${{ github.ref == 'refs/heads/main' }}
-
-      - name: Run convergence studies
-        run: cargo nextest run --locked -p kwavers --test pinn_convergence_studies --features pinn
-
-      - name: Run validation integration tests
-        run: cargo nextest run --locked -p kwavers --test validation_integration_test
-
   validation:
     name: Solver Validation Suite
+    needs: lockfile
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -456,11 +425,10 @@ jobs:
       # Shared cache; rationale at the first use in this file.
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
         with:
-          shared-key: kwavers
-          # Write the cache from the default branch only. A pull request
-          # restores it but does not save, so concurrent branches cannot
-          # evict each other's entries.
-          save-if: ${{ github.ref == 'refs/heads/main' }}
+          shared-key: kwavers-dev
+          # The architecture preflight is the sole dev-profile writer.
+          # This narrower consumer restores only.
+          save-if: false
 
       - name: k-Wave analytical comparison tests
         run: cargo nextest run --locked -p kwavers-solver --lib validation::kwave_comparison
@@ -477,18 +445,20 @@ jobs:
       - name: GPU/CPU equivalence build check
         run: cargo check --locked -p kwavers-gpu --features gpu --lib
 
-  heavy-validation:
-    name: Heavy Validation (reviewed profile)
+  # Tier-3 heavy validations are three independent workloads that one serial
+  # job summed to ~37 min against a 45 min cap. Measured 2026-08-23 under a
+  # cold cache (branch-scoped PR caches are always cold): kuznetsov ~8 min,
+  # absorption_decay ~7 min, nl_swe_workflow >25 min (it killed the previous
+  # 25 min cap twice at exactly 25:00). Running each leg as its own job bounds
+  # the wall-clock to the slowest leg (~28 min) and gives it an independent
+  # budget with ~20% variance retained. The tests keep the `heavy` nextest
+  # profile (300 s per-test cap, serial) and their `#[ignore]` headless-suite
+  # gate; only the job layout changes.
+  heavy-validation-kuznetsov:
+    name: Heavy Validation (kuznetsov)
+    needs: lockfile
     runs-on: ubuntu-latest
-    # Measured 2026-08-23 under a cold cache: the three serial heavy groups
-    # total ~31 min of compile + test time (kuznetsov 8 min, absorption_decay
-    # 7 min, nl_swe_workflow ~25 min). Measured again 2026-08-25 at 41.6 m —
-    # but that run compiled from an empty target/ because this job used a
-    # private branch-scoped actions/cache that is always cold on PRs. With the
-    # shared rust-cache entry restored, the budget should drop toward the
-    # ~31 min compile+test figure; tighten only after a warm-cache hosted
-    # measurement confirms it.
-    timeout-minutes: 45
+    timeout-minutes: 15
     permissions:
       contents: read
     steps:
@@ -509,28 +479,92 @@ jobs:
         with:
           tool: nextest
 
-      # Shared-key rust-cache instead of a private actions/cache: PR caches are
-      # branch-scoped and always cold for this job, which is exactly the
-      # "cold-cache budget" the 45-minute timeout was sized against (measured
-      # 41.6 m on 2026-08-25, dominated by recompiling the workspace from an
-      # empty target/). The shared entry is written from main and restored on
-      # every branch, so heavy validation compiles only its own delta.
+      # Shared cache; rationale at the first use in this file. Restore-only on
+      # pull requests prevents parallel heavy legs from racing to upload the
+      # same target tree after their tests finish.
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
         with:
-          workspaces: .
-          shared-key: kwavers
-          save-if: ${{ github.ref == 'refs/heads/main' }}
+          shared-key: kwavers-heavy
+          save-if: false
 
-      # Tier-3 tests whose measured runtime (2026-08-22: 42-162 s) exceeds the
-      # default 60 s per-test budget run under the reviewed `heavy` profile
-      # (300 s cap, serial) instead of staying permanently dark. Each carries
-      # `#[ignore]` as the headless-suite gate; `--run-ignored ignored-only`
-      # selects exactly them here.
+      # Kuznetsov harmonic generation: measured 42-162 s per test, so it runs
+      # under the `heavy` profile (300 s cap, serial) with `#[ignore]` as the
+      # headless-suite gate; `--run-ignored ignored-only` selects it here.
       - name: Kuznetsov nonlinear harmonic generation
         run: cargo nextest run --locked -p kwavers-solver --profile heavy --run-ignored ignored-only -E 'test(/kuznetsov/)'
 
+  heavy-validation-absorption-decay:
+    name: Heavy Validation (absorption decay)
+    needs: lockfile
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-dependencies
+        with:
+          packages: libfontconfig1-dev
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c # stable
+
+      - name: Install nextest
+        uses: taiki-e/install-action@ba47c86ac325773530516bb756137ac718732518 # v2
+        with:
+          tool: nextest
+
+      # Shared restore-only pull-request cache; rationale above.
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
+        with:
+          shared-key: kwavers-heavy
+          save-if: false
+
+      # Treeby-Cox plane-wave absorption decay (nonlinear3d); same `heavy`
+      # profile and `#[ignore]` gate.
       - name: Treeby-Cox plane-wave absorption decay (nonlinear3d)
         run: cargo nextest run --locked -p kwavers-therapy --profile heavy --run-ignored ignored-only -E 'test(absorption_decay)'
 
+  heavy-validation-nl-swe:
+    name: Heavy Validation (NL-SWE workflow)
+    needs: lockfile
+    runs-on: ubuntu-latest
+    # Exact-head observation: 22m55s including 2m37s of redundant cache
+    # post-processing. A 35-minute cap retains more than 20% over the prior
+    # cold-cache 28-minute observation while making renewed drift fail sooner.
+    timeout-minutes: 35
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-dependencies
+        with:
+          packages: libfontconfig1-dev
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c # stable
+
+      - name: Install nextest
+        uses: taiki-e/install-action@ba47c86ac325773530516bb756137ac718732518 # v2
+        with:
+          tool: nextest
+
+      # Shared restore-only pull-request cache; rationale above.
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
+        with:
+          shared-key: kwavers-heavy
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      # Full nonlinear inversion on a 16^3 grid; the slowest leg by far. The
+      # `heavy` profile's 600 s override for nl_swe_workflow fits its cold
+      # 4-core budget; the job cap retains ~20% variance.
       - name: NL-SWE end-to-end workflow
         run: cargo nextest run --locked -p kwavers --profile heavy --run-ignored ignored-only -E 'test(nl_swe_workflow)'

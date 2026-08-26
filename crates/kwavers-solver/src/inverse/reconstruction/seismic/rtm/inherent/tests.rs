@@ -27,7 +27,6 @@ mod cases {
     /// via an `nz - 2` slice underflow (library code must not panic on input).
     #[test]
     fn laplacian_errors_on_2d_grid_instead_of_panicking() {
-        let rtm = rtm_with_condition(RtmImagingCondition::Laplacian);
         assert!(
             ReverseTimeMigration::compute_laplacian(&Array3::<f64>::zeros((8, 8, 1)).view())
                 .is_err(),

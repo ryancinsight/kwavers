@@ -33,6 +33,19 @@ env:
   RUST_BACKTRACE: 1
 
 jobs:
+  integration-runner-windows:
+    name: Integration runner process bounds (Windows)
+    runs-on: windows-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+    - name: Verify Windows process-tree termination
+      run: python -m unittest discover -s scripts/tests -p test_integration_tests.py
+
   architecture-validation:
     name: Validate Clean Architecture
     runs-on: ubuntu-latest
@@ -57,13 +70,14 @@ jobs:
     # it carries restore-keys, so a lockfile change degrades to a
     # partial restore instead of a total miss, and it prunes `target/`
     # so the repository stays inside the 10 GB cache budget instead of
-    # evicting its own entries. `shared-key` puts every job on one
-    # cache rather than one per job.
+    # evicting its own entries. This broad dev-profile clippy job is the sole
+    # writer for downstream dev-profile jobs; immutable cache hits must not be
+    # seeded by a metadata-only preflight or raced by narrower consumers.
     - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
       with:
-        shared-key: kwavers
-        # Written from the default branch only; a pull request restores
-        # but does not save, so branches cannot evict each other.
+        shared-key: kwavers-dev
+        # The broad architecture job is the sole dev-profile writer.
+        # Pull requests restore only, so branches cannot evict each other.
         save-if: ${{ github.ref == 'refs/heads/main' }}
 
     - name: Check formatting
@@ -101,14 +115,19 @@ jobs:
         cargo clippy --locked --workspace --all-targets
         cargo clippy --locked -p kwavers --all-targets --features full,pinn
 
+    - name: Install cargo-audit
+      uses: taiki-e/install-action@ea4c0b50b0d394ee91c5bb68a6a295b0556feb8e
+      with:
+        tool: cargo-audit
+      continue-on-error: true
+
     - name: Check for security vulnerabilities
-      run: |
-        cargo install cargo-audit
-        cargo audit
+      run: cargo audit
       continue-on-error: true
 
   layer-boundary-checks:
     name: Layer Boundary Enforcement
+    needs: architecture-validation
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -160,6 +179,7 @@ jobs:
 
   build-matrix:
     name: Build with Feature Combinations
+    needs: architecture-validation
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -175,10 +195,27 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
+    - name: Install plotting benchmark dependencies
+      if: matrix.features == 'plotting'
+      uses: ./.github/actions/install-system-dependencies
+      with:
+        packages: libfontconfig1-dev
+
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
       with:
         toolchain: 1.97.0
+
+    # Shared cache; rationale at the first use in this file. Without it every
+    # feature-combination leg cold-compiles the full dependency tree on each
+    # pull request; restoring the shared target/ makes the legs build only the
+    # kwavers crates their feature set actually changes.
+    - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
+      with:
+        shared-key: kwavers-dev
+        # The architecture preflight is the sole dev-profile writer.
+        # Matrix consumers restore only.
+        save-if: false
 
     - name: Build with ${{ matrix.features }} features
       run: |
@@ -190,10 +227,33 @@ jobs:
           cargo build --locked -p kwavers --no-default-features --features ${{ matrix.features }}
         fi
 
+    # The plotting leg already owns the required checkout, toolchain, shared
+    # dependency cache, and dev-profile kwavers graph. Reusing that state keeps
+    # benchmark smoke from spending a second job on setup and compilation.
+    - name: Build every plotting-eligible Criterion target once
+      if: matrix.features == 'plotting'
+      run: >-
+        timeout --foreground --kill-after=30s 12m
+        cargo bench --locked -p kwavers --no-default-features
+        --features plotting --benches
+        --profile dev --no-run
+
+    - name: Execute every plotting-eligible Criterion target once
+      if: matrix.features == 'plotting'
+      run: >-
+        timeout --foreground --kill-after=30s 8m
+        cargo bench --locked -p kwavers --no-default-features
+        --features plotting --benches --no-fail-fast
+        --profile dev -- --test
+
   test-coverage:
     name: Test Suite Coverage
+    needs: architecture-validation
     runs-on: ubuntu-latest
-    # Exact-head observation: 36m11s; retain about 20% hosted-runner variance.
+    # The latest cold run completed the 5,759-test suite, PINN suite, and
+    # bounded full-grid suite in 38m40s. Keep the existing finite cap while
+    # moving its duplicated full-feature doctest build to the documentation
+    # job; do not convert compile waste into more timeout headroom.
     timeout-minutes: 45
 
     steps:
@@ -215,13 +275,27 @@ jobs:
       with:
         tool: nextest
 
+    # Same shared cache and dev-profile graph the feature-matrix jobs use;
+    # without it this job cold-compiles the whole workspace every run.
+    - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
+      with:
+        shared-key: kwavers-dev
+        save-if: false
+
     - name: Run tests
+      env:
+        # Two test processes keep the four-core hosted runner occupied while
+        # bounding Rayon-backed kernels to four worker threads in aggregate.
+        # The prior single-process run left independent solver tests serialized
+        # and spent 9m43s executing an already-built suite.
+        RAYON_NUM_THREADS: 2
       run: |
-        # Full-wave solver tests share compute-heavy kernels. Serializing the
-        # test processes prevents runner oversubscription without changing
-        # assertions or the committed per-test timeout contract.
-        cargo nextest run --locked --workspace --exclude kwavers-python --exclude kwavers-gpu --lib --test-threads=1
-        cargo nextest run --locked -p kwavers --lib --no-default-features --features pinn
+        # Full-wave solver tests share compute-heavy kernels. Two concurrent
+        # test binaries with two Rayon workers each fill the hosted runner
+        # without oversubscription or unbounded concurrent simulation state.
+        # Keep the dev profile so the shared cache can reuse the feature matrix.
+        cargo nextest run --locked --workspace --exclude kwavers-python --exclude kwavers-gpu --lib --test-threads=2
+        cargo nextest run --locked -p kwavers --lib --no-default-features --features pinn --test-threads=2
 
     # This replaces a four-name list of integration tests. The strict clippy
     # step compiles all of them via --all-targets, but only those four ever ran.
@@ -230,13 +304,11 @@ jobs:
     # test and enforces a committed baseline of known failures: a failure
     # outside the list is a regression, and an entry that passes is stale and
     # must be removed. The list may shrink, never grow. See ADR 124.
+    - name: Verify integration runner process bounds
+      run: python -m unittest discover -s scripts/tests -p 'test_integration_tests.py'
+
     - name: Run integration tests against the failure baseline
       run: python scripts/integration_tests.py
-
-    - name: Run doc tests
-      run: |
-        cargo test --locked -p kwavers --doc
-        cargo test --locked -p kwavers --doc --no-default-features --features full
 
     - name: Record debug artifact footprint
       run: |
@@ -251,6 +323,7 @@ jobs:
 
   documentation:
     name: Documentation Build
+    needs: architecture-validation
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -258,18 +331,36 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
+    - name: Install system dependencies
+      uses: ./.github/actions/install-system-dependencies
+      with:
+        packages: libfontconfig1-dev
+
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
       with:
         toolchain: 1.97.0
+
+    - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
+      with:
+        shared-key: kwavers-dev
+        save-if: false
 
     - name: Build documentation
       run: |
         cargo doc --locked --workspace --exclude kwavers-python --no-deps
         RUSTDOCFLAGS="-D warnings" cargo doc --locked -p kwavers --no-default-features --features full --no-deps
 
+    # Default-feature doctests already run in CI's stable Build & Test job.
+    # Keeping the full-feature variant beside the full-feature rustdoc build
+    # avoids rebuilding that disjoint feature graph after the 5,759-test
+    # coverage suite while preserving both doctest configurations.
+    - name: Run full-feature doc tests
+      run: cargo test --locked -p kwavers --doc --no-default-features --features full
+
   cuda-runtime-build:
     name: CUDA Runtime Build
+    needs: architecture-validation
     runs-on: ubuntu-latest
     timeout-minutes: 30
     container:

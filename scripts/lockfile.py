@@ -34,7 +34,7 @@ discovery.
 
 # Usage
 
-    scripts/lockfile.py --check        # verify the committed lock, offline
+    scripts/lockfile.py --check        # verify the lock with Cargo's locked resolver
     scripts/lockfile.py --regenerate   # rewrite it correctly (needs network)
 """
 

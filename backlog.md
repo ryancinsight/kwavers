@@ -224,6 +224,42 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   comment read "TEMPORARY diagnostic 2 -- SWERECON. Removed before commit." It
   was not removed. It ran a 50^3 grid for 40 ms of simulated time and **timed
   out at the 60 s nextest termination bound** on every run. 308 lines deleted.
+- **Runtime closure:** the first complete hosted integration run reached this
+  regression as `TIMEOUT [60 s]`; the runner now preserves bounded FAIL/TIMEOUT
+  status lines instead of collapsing both into a nonzero exit. Preparing each
+  separable Gaussian force once per propagation and traversing tracker voxels
+  in storage order reduce the unchanged 60x60x40 regression from 21.551 s to
+  9.702 s locally. Three exact post-correction Nextest runs complete in 10.241,
+  9.990, and 9.702 s. The direct/prepared force differential suite and the
+  end-to-end coverage oracle both pass.
+- **Retention correction:** the former floor-divided snapshot stride retained
+  465 states despite `max_snapshots = 256`. The ceiling-divided schedule now
+  retains 233 states, including the initial and final states, without changing
+  the simulation grid, time steps, detector, or assertions. Peak private bytes
+  fell from 2,291,154,944 to 1,870,888,960 (18.3%); peak resident bytes fell
+  from 2,078,449,664 to 1,658,085,376 (20.2%).
+
+## KW-SWE-TRACKER-MEMORY — bound tracker-only retention [minor] — todo
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-SWE-TRACKER-MEMORY | Track volumetric arrivals without retaining velocity fields that the caller does not consume. | [minor] | todo | unclaimed | `crates/kwavers-solver/src/forward/elastic/swe/core/solver/volumetric.rs`, tracker-only Kwavers callers and tests |
+
+- **Dependency:** merge the volumetric runtime correction above so its
+  prepared-force and storage-order baselines are stable.
+- **Acceptance oracle:** the tracker-only path runs the same grid, time steps,
+  snapshot cadence, and arrival detector; its tracker is value-equivalent to
+  the full-history path under the existing derived floating-point bounds. It
+  retains `O(eligible voxels × snapshots)` scalar displacement magnitudes,
+  bounded below 80 MiB for the 60x60x40 coverage regression, rather than six
+  full fields per snapshot. Focused process measurement records the peak-memory
+  delta; no test workload, assertion, or timeout changes.
+- **Evidence:** correcting the configured snapshot cap reduced the exact
+  regression from 2,291,154,944 to 1,870,888,960 peak private bytes and from
+  2,078,449,664 to 1,658,085,376 peak resident bytes. The remaining 1.87 GiB
+  private peak is still dominated by retained `ElasticWaveField` snapshots:
+  each deep-clones six 144,000-element `f64` arrays although wavefront tracking
+  reads only displacement magnitude and its caller discards `_history`.
 
 ## KW-INTEGRATION-TESTS-UNRUN — integration tests compiled but not run [patch] — review
 
