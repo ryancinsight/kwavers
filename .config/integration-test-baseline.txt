@@ -5,21 +5,3 @@
 #
 # Every entry is a defect owed a fix, not an accepted behaviour. See
 # backlog.md KW-INTEGRATION-TESTS-UNRUN for the inventory.
-#
-# The swe_3d_validation entry below is NOT legacy debt: it is a regression that
-# landed on main after this baseline was first taken, caught by this checker on
-# its first real use and filed as KW-SWE-VOLUMETRIC-COVERAGE. It is listed so
-# the checker keeps guarding the other 670 tests; it is owed a fix, not
-# accepted.
-kwavers::literature_validation test_rayleigh_collapse_time
-kwavers::physics_validation finite_difference_tests::test_fourth_order_laplacian
-kwavers::physics_validation finite_difference_tests::test_second_order_laplacian
-kwavers::physics_validation nonlinear_acoustics_tests::test_goldberg_number
-kwavers::physics_validation wave_equation_tests::test_dalembert_solution_1d
-kwavers::pinn_elastic_validation test_validation_result_construction
-kwavers::pstd_finite_window_born finite_window_born_rejects_off_grid_ring_geometry
-#
-# runner is about 2.5x slower than the development machine: 27 s locally
-# against the 60 s nextest termination bound. It is listed so this checker
-# guards the rest; it is a defect, filed as KW-SWE-SCALING-IS-A-BENCHMARK.
-kwavers::swe_3d_validation test_literature_benchmark_comparison

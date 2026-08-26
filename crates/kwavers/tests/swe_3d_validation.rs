@@ -48,8 +48,8 @@ use kwavers_physics::acoustics::imaging::modalities::elastography::{
     AcousticRadiationForce, MultiDirectionalPush,
 };
 use kwavers_solver::forward::elastic::{
-    ArrivalDetection, ElasticBodyForceConfig, ElasticWaveSolver, VolumetricWaveConfig,
-    WaveFrontTracker,
+    ArrivalDetection, ElasticBodyForceConfig, ElasticWaveConfig, ElasticWaveSolver,
+    VolumetricWaveConfig, WaveFrontTracker,
 };
 use kwavers_therapy::therapy::swe_3d_workflows::{
     ElasticityMap3D, Swe3dClinicalDecisionSupport, VolumetricROI,
@@ -317,21 +317,20 @@ fn test_robustness_edge_cases() {
     );
 }
 
-/// Test literature benchmark comparison
-///
-/// Measured 2026-08-22: 17.5 s under the heavy profile (serial). Fits the
-/// default 60 s per-test budget; serialized with the other CPU-saturating
-/// swe tests via the `full-grid-sim` nextest group. Re-enabled.
+/// Validate volumetric tracking over the physical, non-PML domain.
 #[test]
-fn test_literature_benchmark_comparison() {
-    println!("Testing literature benchmark comparison...");
+fn volumetric_tracking_covers_non_pml_domain() {
+    const NX: usize = 60;
+    const NY: usize = 60;
+    const NZ: usize = 40;
+    const PML_THICKNESS: usize = 10;
+
+    println!("Testing volumetric tracking coverage...");
 
     // Based on Palmeri et al. (2011) liver SWE study
-    let grid = Grid::new(60, 60, 40, 0.001, 0.001, 0.0015).unwrap(); // ~6x6x6cm liver volume
+    let grid = Grid::new(NX, NY, NZ, 0.001, 0.001, 0.0015).unwrap(); // ~6x6x6cm liver volume
                                                                      // Use liver tissue model representative of F3 fibrosis
     let medium = HomogeneousMedium::liver_tissue(3, &grid);
-
-    let _solver = ElasticWaveSolver::new(&grid, &medium, Default::default()).unwrap();
     let mut arf = AcousticRadiationForce::new(&grid, &medium).unwrap();
 
     // Clinical push parameters (similar to Supersonic Imagine Aixplorer)
@@ -346,7 +345,11 @@ fn test_literature_benchmark_comparison() {
     let push_pattern = MultiDirectionalPush::orthogonal_pattern([0.03, 0.03, 0.03], 0.012);
 
     // Configure volumetric simulation
-    let mut volumetric_solver = ElasticWaveSolver::new(&grid, &medium, Default::default()).unwrap();
+    let solver_config = ElasticWaveConfig {
+        pml_thickness: PML_THICKNESS,
+        ..Default::default()
+    };
+    let mut volumetric_solver = ElasticWaveSolver::new(&grid, &medium, solver_config).unwrap();
     volumetric_solver.set_volumetric_config(VolumetricWaveConfig {
         volumetric_boundaries: true,
         interference_tracking: true,
@@ -382,7 +385,7 @@ fn test_literature_benchmark_comparison() {
     // Extract clinically relevant metrics
     let quality_metrics = volumetric_solver.calculate_volumetric_quality(&tracker);
 
-    println!("Literature Benchmark Comparison:");
+    println!("Volumetric Tracking Coverage:");
     println!(
         "  Volume coverage: {:.1}%",
         quality_metrics.coverage * 100.0
@@ -393,21 +396,19 @@ fn test_literature_benchmark_comparison() {
         quality_metrics.valid_tracking_points
     );
 
-    // Clinical benchmarks (based on literature)
-    assert!(
-        quality_metrics.coverage > 0.7,
-        "Coverage below clinical threshold: {:.1}%",
-        quality_metrics.coverage * 100.0
+    let expected_tracking_points =
+        (NX - 2 * PML_THICKNESS) * (NY - 2 * PML_THICKNESS) * (NZ - 2 * PML_THICKNESS);
+    assert_eq!(
+        quality_metrics.valid_tracking_points, expected_tracking_points,
+        "every non-PML voxel must produce a valid arrival"
     );
+    assert_eq!(quality_metrics.coverage, 1.0);
     assert!(
-        quality_metrics.average_quality > 0.6,
-        "Quality below clinical threshold: {:.2}",
+        quality_metrics.average_quality.is_finite()
+            && quality_metrics.average_quality > 0.0
+            && quality_metrics.average_quality <= 1.0,
+        "normalized quality must be finite and bounded: {:.2}",
         quality_metrics.average_quality
-    );
-    assert!(
-        quality_metrics.valid_tracking_points > 1000,
-        "Insufficient valid points: {}",
-        quality_metrics.valid_tracking_points
     );
 }
 

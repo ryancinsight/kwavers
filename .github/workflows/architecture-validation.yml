@@ -224,13 +224,12 @@ jobs:
         cargo nextest run --locked -p kwavers --lib --no-default-features --features pinn
 
     # This replaces a four-name list of integration tests. The strict clippy
-    # step compiles all 92 of them via --all-targets, but only those four ever
-    # ran, so 686 integration tests were compiled and never executed and 17 of
-    # them had been failing unnoticed -- including two whose timestep exceeded
-    # the solver's own CFL limit. The script runs every one and enforces a
-    # committed baseline of the known failures: a failure outside the list is a
-    # regression, an entry that passes is stale and must be removed. The list
-    # may shrink, never grow. See docs/adr/124-integration-test-baseline.md.
+    # step compiles all of them via --all-targets, but only those four ever ran.
+    # Multiple failures therefore went unnoticed, including two whose timestep
+    # exceeded the solver's own CFL limit. The script runs every integration
+    # test and enforces a committed baseline of known failures: a failure
+    # outside the list is a regression, and an entry that passes is stale and
+    # must be removed. The list may shrink, never grow. See ADR 124.
     - name: Run integration tests against the failure baseline
       run: python scripts/integration_tests.py
 

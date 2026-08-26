@@ -185,11 +185,11 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   made them runnable for the first time in a while.
 - **Systemic half:** enumerate every `tests/*.rs` the workflow compiles but does
   not run; each is a test whose failure is invisible.
-## KW-SWE-VOLUMETRIC-COVERAGE — the volumetric coverage metric measures the whole grid [patch] — todo
+## KW-SWE-VOLUMETRIC-COVERAGE — the volumetric coverage metric measures the whole grid [patch] — review
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-SWE-VOLUMETRIC-COVERAGE | Decide what `VolumetricQualityMetrics::coverage` is a fraction *of*, and set the clinical threshold against that. | [patch] | todo | unowned (surfaced from another agent's merged work) | `crates/kwavers-solver/src/forward/elastic/swe/core/solver/volumetric.rs`, `crates/kwavers/tests/swe_3d_validation.rs` |
+| KW-SWE-VOLUMETRIC-COVERAGE | Make `VolumetricQualityMetrics::coverage` measure the same eligible domain as wavefront tracking. | [patch] | review | current session | `crates/kwavers-solver/src/forward/elastic/swe/core/solver/volumetric.rs`, `crates/kwavers/tests/swe_3d_validation.rs` |
 
 - **Surfaced by:** the integration-test baseline
   (`KW-INTEGRATION-TESTS-UNRUN`) on its first real use, as a regression outside
@@ -214,16 +214,22 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   whoever owns the volumetric metric rather than guessed at from outside it;
   the entry is in the baseline meanwhile, marked as a regression rather than
   accepted debt.
+- **Resolved:** coverage is the fraction of cells on which the tracker attempts
+  detection: decimation-selected, non-PML voxels. The old denominator included
+  PML cells that tracking deliberately skipped. The 32,000 valid cells are
+  exactly the 40x40x20 physical interior, so the corrected value is 100%.
+  Tracker and metric now share one eligibility predicate; the regression test
+  derives the expected count from the unchanged grid and PML geometry.
 - **Fixed alongside:** `diag_swe_recon_2` in the same file, whose own doc
   comment read "TEMPORARY diagnostic 2 -- SWERECON. Removed before commit." It
   was not removed. It ran a 50^3 grid for 40 ms of simulated time and **timed
   out at the 60 s nextest termination bound** on every run. 308 lines deleted.
 
-## KW-INTEGRATION-TESTS-UNRUN — 686 integration tests compiled, 6 run [patch] — in progress
+## KW-INTEGRATION-TESTS-UNRUN — integration tests compiled but not run [patch] — review
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-INTEGRATION-TESTS-UNRUN | Run the integration tests CI compiles but never executes, and burn down the 17 failures that were hiding there. | [patch] | in progress | current session (stale-claim takeover 2026-08-25) | `scripts/integration_tests.py`, `.config/integration-test-baseline.txt`, `.github/workflows/architecture-validation.yml`, integration-test failures named below |
+| KW-INTEGRATION-TESTS-UNRUN | Run the integration tests CI compiles but never executes, and burn down the 17 failures that were hiding there. | [patch] | review | current session (stale-claim takeover 2026-08-25) | `scripts/integration_tests.py`, `.config/integration-test-baseline.txt`, `.github/workflows/architecture-validation.yml`, integration-test failures named below |
 
 - **Evidence:** `crates/kwavers/tests/` holds 92 files. The strict clippy step
   compiles all of them (`--all-targets`); the test-coverage job runs `--lib`
@@ -283,8 +289,6 @@ holds until the algebra is written down wrong. Deleting passing tests is the
 evidence this is not a green-CI convenience -- there was no coverage to lose.
 Genuine differential validation lives in `kwave_reference_parity.rs`.
 
-### Remaining 13, with first diagnosis
-
 ### Burn-down: `physics_validation` rewritten against the library, 13 -> 9
 
 All four failures were the test reimplementing physics inline, each
@@ -342,50 +346,61 @@ at the 1-D magic time step `CFL = 1`, monotone growth toward Nyquist, and the
 `v_g = 3e` relation with its magnitude anchored. The order assertion was
 confirmed to reject a nominal one higher (measured 1.9978 for order 2).
 
-### Diagnosed, not yet fixed: both need a decision, not a mechanical repair
+### Burn-down: stale contracts and repaired assertions, 7 -> 1
 
-**`pstd_finite_window_born::finite_window_born_rejects_off_grid_ring_geometry`
--- a validation that cannot fire.** The test expects the message "not on the
-centered grid axis", which exists nowhere in the tree; the surviving check is
-`nonempty_bli_weights`, which errors only when BLI produces *no* weights. It
-produced some, so nothing failed.
+- The four `physics_validation` failures now call the spectral and nonlinear
+  library operations they claim to validate; all eight tests pass.
+- The two dispersion failures now exercise the library's centered-stencil
+  relation and convergence order; all five tests pass.
+- `pinn_elastic_validation::test_validation_result_construction` claimed
+  `1e-7` exceeded a `1e-6` tolerance. The corrected failing case uses `1e-5`
+  and the previously uncovered passing branch retains `1e-7`; all 16 tests
+  pass.
+- The finite-window Born rejection asserted the exact-grid restriction that
+  `f6cc385d8` deliberately replaced with BLI stencils. The solver already
+  covers off-node interpolation, transpose identity, and truly empty support;
+  the stale duplicate is deleted. The remaining five Born tests pass.
+- The Rayleigh case compared an empty-cavity collapse law with a gas-filled
+  Keller--Miksis oscillator under acoustic forcing. Its 686% discrepancy is a
+  model mismatch, not discretization error. It is deleted; direct
+  Keller--Miksis dynamics and Minnaert-period tests remain in
+  `kwavers-physics`.
 
-Why it cannot fail here: `BliConfig::half_width` is
-`ceil(1 / (PI * tolerance))`, and `DEFAULT_BLI_TOLERANCE = 0.05` gives **7
-cells**. On this test's 3-cell grid at 5 mm spacing the grid centres span
-`+/-5 mm` while `axis_within_support` accepts `+/-40 mm`. The support region is
-seven times wider than the grid. A 12 mm ring is inside it, so weights are
-non-empty and the point is accepted -- there is no wrapping; out-of-range
-indices are simply skipped in the stencil loop.
+### Burn-down: SWE tracking contract and allocation path, 1 -> 0
 
-The consequence is the finding: **an element outside the modelled domain still
-records a sinc-weighted sample from grid points up to 7 cells away**, and the
-"lies outside the inversion grid" error is unreachable on any grid smaller than
-the stencil. Whether that is acceptable is a design question -- BLI deliberately
-supports off-axis points, but supporting points beyond the domain is a different
-claim -- so this is filed rather than fixed. The test's intent is defensible;
-the message it asserts is from an implementation that no longer exists.
+`calculate_volumetric_quality` counted every grid cell while
+`compute_wavefront_tracker` intentionally excludes PML and decimation-skipped
+cells. On the 60x60x40 case, the 32,000 valid cells are exactly the 40x40x20
+non-PML interior, so the reported 22.2% was denominator drift. Both operations
+now share one eligibility predicate and report 100% coverage for that complete
+interior.
 
-**`literature_validation::test_rayleigh_collapse_time` -- wrong oracle, 686%
-error.** This one does exercise library code (`KellerMiksisModel`), so the
-failure is not the tautology pattern. The Rayleigh time
-`tau = 0.915 R0 sqrt(rho / dp)` describes an *empty* cavity collapsing under a
-constant pressure difference. The test runs a Keller-Miksis bubble with default
-parameters -- gas content, surface tension, viscosity all present -- which
-oscillates rather than collapsing, and then records the time of the first
-radius minimum. tau is 9.57 us; the recorded time is about 75 us, near the
-100 us loop cap. The two quantities are not the same thing.
+The tracker also allocated `series`, `smoothed`, `diff_series`, and a window
+vector for every eligible voxel. Four reusable buffers remove about 576,000
+transient allocations in this case. Matched-filter windows now retain their
+original time index instead of indexing the compressed set above the
+correlation floor. The focused workload moved from 17.397 s to 15.273 s
+(12.2%) without changing its 60x60x40 simulation.
 
-Fixing it means choosing an oracle the model actually satisfies. The natural
-candidate is the Minnaert resonance frequency for small-amplitude oscillation,
-which validates the model's restoring force against a closed-form result. That
-is a new test, not a threshold change, and the explicit-Euler integration at
-dt = 1 ns would need review alongside it.
+The committed failure baseline is empty. The complete locked integration run
+passes 681/681 tests in 285.361 s with 27 configured skips.
 
-### Remaining 5, undiagnosed
+## KW-TEST-FIGURE-ISOLATION — integration tests overwrite tracked figures [patch] — todo
 
-**`pinn_*` (5)** -- loss-decrease and zero-field assertions across
-`pinn_bc_validation`, `pinn_ic_validation`, `pinn_elastic_validation`.
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-TEST-FIGURE-ISOLATION | Make plotting integration tests isolated and deterministic without rewriting committed goldens during ordinary test runs. | [patch] | todo | unowned | `crates/kwavers/tests/*plot*`, `crates/kwavers/tests/imaging_literature_validation.rs`, `crates/kwavers/test-figures/` |
+
+- **Evidence:** the complete integration run rewrites tracked PNGs under
+  `crates/kwavers/test-figures/` even when the plotting implementation is not
+  under test. This dirties every developer checkout and makes concurrently run
+  test binaries contend on shared paths.
+- **Acceptance oracle:** each test writes to its own temporary directory and
+  compares the result with the committed golden using the repository's derived
+  image tolerance. A separate explicit regeneration command owns golden
+  updates. Two concurrent runs leave `git status` clean.
+- **Non-goal:** changing render semantics or accepting regenerated goldens in
+  the isolation change.
 
 ## KW-PSTD-PLUGIN-SOURCES-DROPPED — the plugin path discards its sources [major] — IMPLEMENTED 2026-08-22
 

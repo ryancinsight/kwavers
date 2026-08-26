@@ -2,16 +2,16 @@
 
 CI compiles every `crates/kwavers/tests/*.rs` -- the strict clippy step passes
 `--all-targets` -- but runs almost none of them: the test-coverage job is `--lib`
-plus four named integration binaries. 686 integration tests were therefore
-compiled and never executed, and 17 of them had been failing unnoticed.
+plus four named integration binaries. Most integration tests were therefore
+compiled and never executed, and multiple failures went unnoticed.
 
-Fixing all 17 before running any of them would leave the other 669 unprotected
-for however long that takes. So this enforces the shape the repository already
-uses for the clippy floor (ADR 116): a committed baseline that may shrink and
-may not grow.
+Fixing every known failure before running any of them would leave the passing
+majority unprotected for however long that takes. So this enforces the shape
+the repository already uses for the clippy floor (ADR 116): a committed
+baseline that may shrink and may not grow.
 
-The baseline is a *set*, not a count. A count says "17 failures" and cannot tell
-a fixed test from a newly broken one; the set names both. Two ways to fail:
+The baseline is a *set*, not a count. A count cannot distinguish a fixed test
+from a newly broken one; the set names both. Two ways to fail:
 
   - a test fails that is not in the baseline -- a regression, named;
   - a test in the baseline passes -- the entry is stale and must be deleted, so
@@ -42,7 +42,7 @@ BASELINE = pathlib.Path(".config/integration-test-baseline.txt")
 # minutes retains 43% headroom while ensuring a compile or harness hang cannot
 # consume the enclosing 45-minute job without a specific diagnostic.
 INTEGRATION_RUN_TIMEOUT_SECONDS = 25 * 60
-# nextest prints "        FAIL [   0.010s] (85/686) <binary> <test path>", and
+# nextest prints a timed status, ordinal/total pair, binary, and test path, and
 # "     TIMEOUT [  60.097s] (535/683) ..." for one that hit the termination
 # bound. A timed-out test is a failed test: matching only FAIL left two SWE
 # timeouts invisible here while nextest itself reported them plainly.

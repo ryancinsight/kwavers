@@ -11,9 +11,6 @@ use kwavers_physics::analytical::wave::shock_formation_distance;
 mod wave_equation_tests {
     use super::*;
 
-    /// Validate d'Alembert solution for 1D wave equation
-    /// Reference: Strauss, W. (2007). Partial Differential Equations: An Introduction
-
     /// Validate dispersion relation for acoustic waves
     /// Reference: Pierce, A. D. (1989). Acoustics: An Introduction
     #[test]
