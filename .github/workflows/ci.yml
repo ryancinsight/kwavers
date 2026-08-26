@@ -321,8 +321,23 @@ jobs:
         with:
           toolchain: 1.97.0
 
+      # Coverage-dedicated cache key: the instrumented profile must not share
+      # entries with the uninstrumented shared `kwavers` key, but restoring
+      # registry/git caches and the tarpaulin binary still removes most of the
+      # job's non-test wall time (measured 33.4 m own on 2026-08-25, second
+      # slowest in the pipeline).
+      - name: Cache cargo binaries and registries
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin/cargo-tarpaulin
+          key: ${{ runner.os }}-coverage-cargo-tarpaulin-0.37.0-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-coverage-cargo-tarpaulin-0.37.0-
+
       - name: Install cargo-tarpaulin
-        run: cargo install cargo-tarpaulin --version 0.37.0 --locked
+        run: command -v cargo-tarpaulin >/dev/null || cargo install cargo-tarpaulin --version 0.37.0 --locked
 
       - name: Generate coverage reports
         # Ptrace rewriting invalidates dependency compile-time layout checks;
