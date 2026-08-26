@@ -100,6 +100,44 @@ training run can be replayed. It is drawn once per `train()` call, so the loss
 is deterministic *within* a run and this is not the convergence defect — but it
 makes any cross-run comparison noise, which is why the gradient tests build
 fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
+## KW-SWE-SCALING-IS-A-BENCHMARK — a wall-clock benchmark is running as a test [patch] — todo
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-SWE-SCALING-IS-A-BENCHMARK | Move the SWE scaling measurement into a criterion benchmark and drop the elapsed-time assertions from the test suite. | [patch] | todo | unowned (SWE area is actively being worked) | `crates/kwavers/tests/swe_3d_validation.rs`, `crates/kwavers/benches/` |
+
+- **Symptom:** `test_performance_scaling` times out at the 60 s nextest
+  termination bound on CI. It takes 27 s on the development machine, so the
+  runner is roughly 2.5x slower and the test sits on the wrong side of the
+  bound there and the right side here. That is the definition of a flaky test.
+- **What it is:** it builds `ElasticWaveSolver` at 16, 32, 48 and 64 cubed,
+  times `propagate_waves_with_body_force_only_override` with
+  `Instant::now()`, and asserts on the *ratio* of elapsed times between
+  successive sizes.
+- **Why the bound is not the problem:** an elapsed-time assertion on a shared
+  runner measures the runner. Raising the budget would keep a measurement whose
+  variance is dominated by whatever else the machine is doing.
+- **Where it belongs:** criterion, which exists to do this properly -- warm-up,
+  repeated samples, median with a confidence interval, and `black_box` against
+  elision. `crates/kwavers/benches/nl_swe_performance.rs` already covers
+  hyperelastic models and harmonic detection but nothing measures propagation
+  scaling, so this is not duplicated work, only misplaced work.
+- **Sizing note for whoever takes it:** the sweep should be geometric with a
+  few representative points rather than 16/32/48/64, and the per-binary
+  wall-clock budget applies -- a 64-cubed propagation may need the sweep's top
+  end trimmed or a dedicated reviewed profile.
+- **Removed from the test suite here**, rather than parked in the baseline. It
+  could not sit there honestly: it passes on the development machine and times
+  out on CI, so the baseline checker reports it as a *stale* entry locally and
+  a *regression* remotely. A set-valued baseline records which tests fail, and
+  this one's answer depends on the machine -- which is the flakiness itself,
+  not a gap in the mechanism.
+- **What was kept:** nothing of the measurement, which is why the criterion
+  benchmark above is owed. What was lost is a scaling number nobody could rely
+  on; what was removed is a 60-second CI timeout on every run.
+- **Precedent in the same file:** `diag_swe_recon_2`, deleted under
+  `KW-INTEGRATION-TESTS-UNRUN` for the same reason -- a benchmark workload
+  breaching the committed test budget.
 
 ## KW-KWAVE-DISTRIBUTED-SOURCE — pin k-Wave's mask-cell ordering [minor] — IMPLEMENTED 2026-08-24
 
@@ -147,6 +185,222 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   made them runnable for the first time in a while.
 - **Systemic half:** enumerate every `tests/*.rs` the workflow compiles but does
   not run; each is a test whose failure is invisible.
+## KW-SWE-VOLUMETRIC-COVERAGE — the volumetric coverage metric measures the whole grid [patch] — review
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-SWE-VOLUMETRIC-COVERAGE | Make `VolumetricQualityMetrics::coverage` measure the same eligible domain as wavefront tracking. | [patch] | review | current session | `crates/kwavers-solver/src/forward/elastic/swe/core/solver/volumetric.rs`, `crates/kwavers/tests/swe_3d_validation.rs` |
+
+- **Surfaced by:** the integration-test baseline
+  (`KW-INTEGRATION-TESTS-UNRUN`) on its first real use, as a regression outside
+  the frozen set. CI never saw it: it does not run these tests.
+- **Measured:** `test_literature_benchmark_comparison` asserts
+  `coverage > 0.7` and observes **22.2%**. Not marginal.
+- **Where the number comes from:** `calculate_volumetric_quality` computes
+  `valid / total` with `total = tracker.arrival_times.len()`. The test's grid is
+  `Grid::new(60, 60, 40, ...)` = **144,000 cells**, and 32,000 arrivals are
+  valid: `32_000 / 144_000 = 22.2%` exactly. So `coverage` is the fraction of
+  the entire 6x6x6 cm volume carrying a valid shear-wave arrival time.
+- **Reading:** 22% is plausible physics for a single 200 us focal push over a
+  bounded propagation window; 70% of a whole liver volume from one push is not.
+  The likely history is that the denominator widened to the full grid with the
+  volumetric integration while the 0.7 threshold, set against a narrower
+  tracking region, was not revisited. `average_quality` is 0.74, so the
+  tracking itself looks healthy -- this is a definition question, not a
+  tracking defect.
+- **The decision is the deliverable:** either `coverage` is scoped to the
+  region a push can plausibly reach (and 0.7 stands), or it stays whole-volume
+  (and the threshold is derived from the push geometry and duration). Left to
+  whoever owns the volumetric metric rather than guessed at from outside it;
+  the entry is in the baseline meanwhile, marked as a regression rather than
+  accepted debt.
+- **Resolved:** coverage is the fraction of cells on which the tracker attempts
+  detection: decimation-selected, non-PML voxels. The old denominator included
+  PML cells that tracking deliberately skipped. The 32,000 valid cells are
+  exactly the 40x40x20 physical interior, so the corrected value is 100%.
+  Tracker and metric now share one eligibility predicate; the regression test
+  derives the expected count from the unchanged grid and PML geometry.
+- **Fixed alongside:** `diag_swe_recon_2` in the same file, whose own doc
+  comment read "TEMPORARY diagnostic 2 -- SWERECON. Removed before commit." It
+  was not removed. It ran a 50^3 grid for 40 ms of simulated time and **timed
+  out at the 60 s nextest termination bound** on every run. 308 lines deleted.
+
+## KW-INTEGRATION-TESTS-UNRUN — integration tests compiled but not run [patch] — review
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-INTEGRATION-TESTS-UNRUN | Run the integration tests CI compiles but never executes, and burn down the 17 failures that were hiding there. | [patch] | review | current session (stale-claim takeover 2026-08-25) | `scripts/integration_tests.py`, `.config/integration-test-baseline.txt`, `.github/workflows/architecture-validation.yml`, integration-test failures named below |
+
+- **Evidence:** `crates/kwavers/tests/` holds 92 files. The strict clippy step
+  compiles all of them (`--all-targets`); the test-coverage job runs `--lib`
+  plus four named integration binaries. Locally the suite is **686 tests, 669
+  passing, 17 failing** -- failing with nobody informed.
+- **How it surfaced:** a `Box`-to-`Arc` migration broke `solver_test`'s
+  *compilation*, which CI does check. Its two tests turned out to have been
+  failing on `main` besides, driving the FDTD plugin at 1.71x its CFL limit.
+- **Fixed here:** the `solver_test` timestep now derives from
+  `StaggeredLeapfrogOperator::cfl_limit(3)` -- the same operator the solver
+  asks -- instead of restating the bound without its dimensional factor. Both
+  tests pass and are not in the baseline.
+- **Mechanism:** ADR 124. A committed set-valued baseline, not a count: a
+  failure outside it is a named regression, an entry that passes is stale and
+  must be removed. Shrinks, never grows. Proven live in both directions before
+  landing.
+- **Takeover review 2026-08-25:** the prior owner has no commit or board update
+  for more than eight hours and the lane is clean. The runner still reports ten
+  named failures as success, launches an unbounded subprocess, and decodes with
+  the platform locale. Completion requires removing those failure entries by
+  fixing their causes, plus a finite process bound and UTF-8 diagnostics.
+
+### The 17 owed fixes
+
+Each is a defect, not an accepted behaviour. Grouped by binary; every one needs
+its own diagnosis before a fix, and several are physics-correctness claims
+rather than harness problems.
+
+| Binary | Tests | First read |
+|---|---|---|
+| `rigorous_physics_validation` | `test_attenuation_exact_exponential`, `test_cfl_stability_exact_bounds`, `test_edge_cases_comprehensive`, `test_spatial_sampling_nyquist_exact` | 4 exactness claims -- attenuation, CFL, Nyquist. Highest priority: these assert the properties the solver is sold on. |
+| `physics_validation` | `finite_difference_tests::test_second_order_laplacian`, `::test_fourth_order_laplacian`, `nonlinear_acoustics_tests::test_goldberg_number`, `wave_equation_tests::test_dalembert_solution_1d` | Operator accuracy and an analytical solution. A failing d'Alembert case is either a wrong test or a wrong wave equation. |
+| `pinn_bc_validation`, `pinn_ic_validation`, `pinn_elastic_validation` | 5 tests | Loss-decrease and zero-field assertions. Possibly unconverged training rather than a defect -- but an assertion that cannot be satisfied is not a test. |
+| `dispersion_validation_test` | `test_group_velocity`, `test_numerical_dispersion_fourth_order` | Group velocity measured 1481.5 against c = 1500, a 1.2% error against whatever bound the test asserts. Needs the derivation checked before the code. |
+| `literature_validation` | `test_rayleigh_collapse_time` | Against a published value. |
+| `pstd_finite_window_born` | `finite_window_born_rejects_off_grid_ring_geometry` | A rejection case that does not reject. |
+
+- **Sequencing:** the baseline lands first so the 669 passing tests are guarded
+  now; the 17 burn down as separate items rather than gating that protection on
+  a fix of unknown length.
+
+### Burn-down: `rigorous_physics_validation` deleted, 17 -> 13
+
+The file asserted nothing about kwavers. Its only imports were `Grid` and a
+constant, and `Grid` was used solely to read back the spacings the test had
+just passed to `Grid::new`. Every assertion compared a value to a re-derivation
+of itself or to a literal:
+
+- `test_greens_function_point_source_exact` -- `assert_relative_eq!(expected_amplitude, analytical)` where both sides are the identical expression `1.0 / (4.0 * PI * r)`.
+- `test_wave_equation_exact_solution` -- computes `k = 2*PI / wavelength`, then asserts `k * c == omega`. An algebraic round-trip on literals.
+- `test_cfl_stability_exact_bounds` -- asserts `c == safe_dt * c / (safe_cfl * min_dx)` where `safe_cfl` is *defined* as `safe_dt * c / min_dx`. That reduces to `c == 1.0`; it observed `343.0` against `1.0` and could never have passed for any sound speed but unity.
+- `test_edge_cases_comprehensive` -- four claims about `f64` arithmetic on constants, one of them false: `1500.0 / f64::MIN_POSITIVE` is about `6.7e310`, which overflows, so `assert!(wavelength_huge.is_finite())` cannot hold.
+- `test_spatial_sampling_nyquist_exact` -- pure arithmetic whose own data table contains an undersampled case (`dx = 0.5 mm` against a `0.3 mm` wavelength at 5 MHz) that the test then panics on by construction.
+
+Two of the six were *passing*, for the same reason the others failed: `x == x`
+holds until the algebra is written down wrong. Deleting passing tests is the
+evidence this is not a green-CI convenience -- there was no coverage to lose.
+Genuine differential validation lives in `kwave_reference_parity.rs`.
+
+### Burn-down: `physics_validation` rewritten against the library, 13 -> 9
+
+All four failures were the test reimplementing physics inline, each
+reimplementation wrong.
+
+- **Both Laplacian cases** hand-wrote 3- and 5-point stencils and compared them
+  to `-k^2 u`, exercising no library code. Both were broken twice over: the
+  sample spacing was `dx * n / (n - 1)` while the stencil divided by `dx`, a 2%
+  disagreement; and `error < dx * dx * 100.0` compared a dimensionless relative
+  error to a bound carrying units of m^2, missing the `k^2 / 12` factor the
+  truncation error actually carries. Replaced by one test of the Laplacian the
+  solver runs -- kwavers is pseudospectral, so a finite-difference stencil
+  validates nothing it executes. On a resolved mode the spectral operator is
+  exact: measured `7.97e-15` relative against a derived round-off prediction of
+  a few times `1e-15`, bounded at `1e-11`, which is nine orders below the ~5%
+  a second-order stencil would show at this resolution. Confirmed to fail when
+  the bound was dropped below the measured value.
+- **`test_dalembert_solution_1d`** asserted `10 - c * 0.01 == 10 - 14.8`, that
+  is, that `SOUND_SPEED_WATER` is 1480. It is 1482; 1480 is the HU-model
+  intercept, a different constant whose own documentation warns against exactly
+  this substitution. The test contained no wave equation. Deleted.
+- **`test_goldberg_number`** computed `beta * p0 * x / (rho * c^3)` with no
+  omega -- an expression carrying units of seconds, not a dimensionless ratio.
+  It evaluated to `1.08e-8` against a lower bound of `0.01` and could not have
+  passed at any pressure. Now calls `shock_formation_distance`, where kwavers
+  owns the relation, and asserts the operating point rather than restating the
+  formula: sigma = 0.068 at 100 kPa, 1 MHz, 10 cm.
+### Burn-down: `dispersion_validation_test` rewritten, 9 -> 7
+
+Both failures came from the file's own `fdtd_dispersion_relation` helper, which
+carried two errors and which no library code went near.
+
+- The second-order branch wrote `asin(sin(x))`. That cancels to `x` and drops
+  the temporal discretization entirely, which is why the group velocity came
+  out as exactly `c cos(kh/2)` -- 1.23% error where the scheme's is 0.93%.
+- The fourth-order branch used `sin(kh/2)` where the stencil calls for
+  `sin(kh)`. Its modified wavenumber therefore tended to `k/3` rather than `k`,
+  a 67% leading-order error; it reported 59.7%.
+
+`test_anisotropic_dispersion`, which had been passing, computed
+`sqrt(kx^2 + ky^2)` from `kx = 2 pi cos(theta) / lambda` and `ky = 2 pi
+sin(theta) / lambda`. That is `2 pi / lambda` at every angle: it measured the
+same number three times and asserted it varied by less than 2%. Its own comment
+said the analysis was "Simplified here for demonstration". The library has no
+2-D dispersion relation to point a rewrite at, so it is dropped and **2-D
+dispersion anisotropy is now uncovered** -- a gap to fill when that relation
+exists, not a test to reproduce.
+
+Replaced with five tests of `kwavers_physics::analytical::wave`: observed
+convergence order of the 2nd/4th/6th centered stencils (measures the exponent
+rather than asserting a threshold -- the old 4th-order coefficients were wrong
+by a factor of three, which a threshold can absorb and an order measurement
+cannot), error ordering by stencil order at fixed sampling, dispersion-freedom
+at the 1-D magic time step `CFL = 1`, monotone growth toward Nyquist, and the
+`v_g = 3e` relation with its magnitude anchored. The order assertion was
+confirmed to reject a nominal one higher (measured 1.9978 for order 2).
+
+### Burn-down: stale contracts and repaired assertions, 7 -> 1
+
+- The four `physics_validation` failures now call the spectral and nonlinear
+  library operations they claim to validate; all eight tests pass.
+- The two dispersion failures now exercise the library's centered-stencil
+  relation and convergence order; all five tests pass.
+- `pinn_elastic_validation::test_validation_result_construction` claimed
+  `1e-7` exceeded a `1e-6` tolerance. The corrected failing case uses `1e-5`
+  and the previously uncovered passing branch retains `1e-7`; all 16 tests
+  pass.
+- The finite-window Born rejection asserted the exact-grid restriction that
+  `f6cc385d8` deliberately replaced with BLI stencils. The solver already
+  covers off-node interpolation, transpose identity, and truly empty support;
+  the stale duplicate is deleted. The remaining five Born tests pass.
+- The Rayleigh case compared an empty-cavity collapse law with a gas-filled
+  Keller--Miksis oscillator under acoustic forcing. Its 686% discrepancy is a
+  model mismatch, not discretization error. It is deleted; direct
+  Keller--Miksis dynamics and Minnaert-period tests remain in
+  `kwavers-physics`.
+
+### Burn-down: SWE tracking contract and allocation path, 1 -> 0
+
+`calculate_volumetric_quality` counted every grid cell while
+`compute_wavefront_tracker` intentionally excludes PML and decimation-skipped
+cells. On the 60x60x40 case, the 32,000 valid cells are exactly the 40x40x20
+non-PML interior, so the reported 22.2% was denominator drift. Both operations
+now share one eligibility predicate and report 100% coverage for that complete
+interior.
+
+The tracker also allocated `series`, `smoothed`, `diff_series`, and a window
+vector for every eligible voxel. Four reusable buffers remove about 576,000
+transient allocations in this case. Matched-filter windows now retain their
+original time index instead of indexing the compressed set above the
+correlation floor. The focused workload moved from 17.397 s to 15.273 s
+(12.2%) without changing its 60x60x40 simulation.
+
+The committed failure baseline is empty. The complete locked integration run
+passes 681/681 tests in 285.361 s with 27 configured skips.
+
+## KW-TEST-FIGURE-ISOLATION — integration tests overwrite tracked figures [patch] — todo
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-TEST-FIGURE-ISOLATION | Make plotting integration tests isolated and deterministic without rewriting committed goldens during ordinary test runs. | [patch] | todo | unowned | `crates/kwavers/tests/*plot*`, `crates/kwavers/tests/imaging_literature_validation.rs`, `crates/kwavers/test-figures/` |
+
+- **Evidence:** the complete integration run rewrites tracked PNGs under
+  `crates/kwavers/test-figures/` even when the plotting implementation is not
+  under test. This dirties every developer checkout and makes concurrently run
+  test binaries contend on shared paths.
+- **Acceptance oracle:** each test writes to its own temporary directory and
+  compares the result with the committed golden using the repository's derived
+  image tolerance. A separate explicit regeneration command owns golden
+  updates. Two concurrent runs leave `git status` clean.
+- **Non-goal:** changing render semantics or accepting regenerated goldens in
+  the isolation change.
 
 ## KW-PSTD-PLUGIN-SOURCES-DROPPED — the plugin path discards its sources [major] — IMPLEMENTED 2026-08-22
 

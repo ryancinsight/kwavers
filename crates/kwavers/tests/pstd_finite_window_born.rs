@@ -74,32 +74,6 @@ fn finite_window_born_is_linear_in_slowness_squared_contrast() {
     );
 }
 
-#[test]
-fn finite_window_born_rejects_off_grid_ring_geometry() {
-    let array = MultiRowRingArray::new(
-        4,
-        1,
-        Length::from_unit::<Meter>(0.012),
-        Length::from_unit::<Meter>(0.0),
-    )
-    .expect("ring array");
-    let model = Array3::from_elem((3, 3, 1), SOUND_SPEED_WATER_SIM);
-
-    let error = simulate_pstd_finite_window_born_observation(
-        &model.clone(),
-        &RingAcquisition::new(&array),
-        200_000.0,
-        test_config(),
-        4,
-    )
-    .expect_err("off-grid geometry must fail");
-
-    assert!(
-        error.to_string().contains("not on the centered grid axis"),
-        "{error}"
-    );
-}
-
 /// The isolated second-order Born correction `ps2 = (p0+ps1+ps2) − (p0+ps1)`
 /// is quadratic in the slowness-squared contrast chi.  Doubling chi must
 /// quadruple the second-order-only contribution to receiver pressure.

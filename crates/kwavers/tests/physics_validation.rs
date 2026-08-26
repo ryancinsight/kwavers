@@ -5,32 +5,11 @@
 
 use eunomia::assert_relative_eq;
 use kwavers_core::constants::{DENSITY_WATER, SOUND_SPEED_WATER, WATER_NONLINEARITY_B_A};
+use kwavers_physics::analytical::wave::shock_formation_distance;
 
 #[cfg(test)]
 mod wave_equation_tests {
     use super::*;
-
-    /// Validate d'Alembert solution for 1D wave equation
-    /// Reference: Strauss, W. (2007). Partial Differential Equations: An Introduction
-    #[test]
-    fn test_dalembert_solution_1d() {
-        // For wave equation: ∂²u/∂t² = c²∂²u/∂x²
-        // Solution: u(x,t) = f(x-ct) + g(x+ct)
-
-        let c = SOUND_SPEED_WATER; // 1480 m/s
-        let x = 10.0; // position
-        let t = 0.01; // time
-
-        // Forward traveling wave: f(x-ct)
-        let forward_phase = x - c * t;
-
-        // Backward traveling wave: g(x+ct)
-        let backward_phase = x + c * t;
-
-        // Verify phase velocities
-        assert_relative_eq!(forward_phase, x - 14.8, epsilon = 1e-10);
-        assert_relative_eq!(backward_phase, x + 14.8, epsilon = 1e-10);
-    }
 
     /// Validate dispersion relation for acoustic waves
     /// Reference: Pierce, A. D. (1989). Acoustics: An Introduction
@@ -84,21 +63,34 @@ mod nonlinear_acoustics_tests {
     /// Reference: Szabo, T. L. (2014). Diagnostic Ultrasound Imaging
     #[test]
     fn test_goldberg_number() {
-        // Goldberg number: Γ = βp₀x/(ρ₀c₀³)
-        // Γ < 1: linear propagation
-        // Γ > 1: nonlinear effects significant
-
+        // sigma = z / z_shock, where the shock-formation distance is
+        // z_shock = rho c^3 / (beta omega p0). The frequency is the point: the
+        // earlier version wrote `beta * p0 * x / (rho * c^3)` with no omega, an
+        // expression carrying units of seconds rather than a dimensionless
+        // ratio. It evaluated to 1.08e-8 against a lower bound of 0.01 and
+        // could not have passed at any pressure.
+        //
+        // The distance now comes from `shock_formation_distance`, which is
+        // where kwavers owns this relation (Blackstock 1966); the test asserts
+        // the operating point rather than restating the formula.
         let beta = 1.0 + WATER_NONLINEARITY_B_A / 2.0;
         let p0 = 1e5; // 100 kPa
-        let x = 0.1; // 10 cm propagation
-        let rho0 = DENSITY_WATER;
-        let c0 = SOUND_SPEED_WATER;
+        let f0 = 1e6; // 1 MHz
+        let z = 0.1; // 10 cm propagation
 
-        let goldberg = beta * p0 * x / (rho0 * c0.powi(3));
+        let z_shock = shock_formation_distance(p0, f0, SOUND_SPEED_WATER, DENSITY_WATER, beta);
+        let sigma = z / z_shock;
 
-        // At 100 kPa, 10 cm: should be weakly nonlinear
-        assert!(goldberg < 1.0);
-        assert!(goldberg > 0.01); // But not negligible
+        // At 100 kPa and 1 MHz over 10 cm, water is weakly nonlinear: the wave
+        // has developed measurable harmonic content but is far from shocked.
+        assert!(
+            sigma < 1.0,
+            "sigma = {sigma:.4} is at or past shock formation; the case is meant              to sit in the pre-shock regime"
+        );
+        assert!(
+            sigma > 0.01,
+            "sigma = {sigma:.4} makes nonlinearity negligible; the case is meant              to exercise a regime where it is not"
+        );
     }
 }
 
@@ -159,80 +151,77 @@ mod absorption_tests {
 }
 
 #[cfg(test)]
-mod finite_difference_tests {
+mod spectral_laplacian_tests {
+    use kwavers_grid::Grid;
+    use kwavers_solver::forward::nonlinear::kuznetsov::numerical::compute_laplacian;
+    use leto::Array3;
+    use std::f64::consts::PI;
 
-    use leto::Array1;
-
-    /// Validate 2nd order finite difference accuracy
-    /// Reference: LeVeque, R. J. (2007). Finite Difference Methods
+    /// The solver's Laplacian is spectral, so it is exact on a resolved mode.
+    ///
+    /// This replaces two tests that hand-wrote 3- and 5-point stencils in the
+    /// test file and compared them to `-k^2 u`. They exercised no library code,
+    /// and both were broken besides: the sample spacing was `dx * n / (n - 1)`
+    /// while the stencil divided by `dx`, a 2% disagreement, and the tolerance
+    /// `error < dx * dx * 100.0` compared a dimensionless relative error to a
+    /// bound carrying units of m^2 -- the truncation error for `u = sin(kx)` is
+    /// `k^2 dx^2 / 12` relative, so the `k^2 / 12` factor was missing entirely.
+    ///
+    /// kwavers is pseudospectral: `compute_laplacian` transforms, multiplies by
+    /// `-|k|^2`, and transforms back. For a sinusoid at an exact grid frequency
+    /// on a periodic domain that is not an approximation -- the mode is an
+    /// eigenfunction of the discrete operator, so the only error is FFT
+    /// round-off.
+    ///
+    /// The bound follows from that. Round-off through a radix-2 transform pair
+    /// of length `N` accumulates as O(sqrt(log2 N)) * eps; at `N = 32` and
+    /// `eps = 2.2e-16` that predicts a few times `1e-15` relative, and the
+    /// measured worst case is `7.97e-15`. `1e-11` therefore sits about 1250x
+    /// above round-off.
+    ///
+    /// It sits far below a wrong operator. At this resolution `k0 * dx = 0.785`,
+    /// so a second-order stencil's `(k0 dx)^2 / 12` truncation error would be
+    /// about 5% -- nine orders above the bound. The test separates a spectral
+    /// operator from a finite-difference one, which is the distinction it
+    /// exists to make, and it was confirmed to fail when the bound was dropped
+    /// below the measured round-off rather than assumed to be live.
     #[test]
-    fn test_second_order_laplacian() {
-        // For u(x) = sin(kx), ∇²u = -k²u
-        let n = 100;
-        let dx = 0.01;
-        let k = 2.0 * std::f64::consts::PI; // wavenumber
+    fn spectral_laplacian_matches_the_analytical_eigenvalue() {
+        const RELATIVE_TOLERANCE: f64 = 1.0e-11;
+        let (nx, ny, nz) = (32, 8, 8);
+        let dx = 1.0e-4;
+        let grid = Grid::new(nx, ny, nz, dx, dx, dx).expect("reference grid");
 
-        let x: Array1<f64> =
-            Array1::from_shape_fn(n, |[index]| dx * n as f64 * index as f64 / (n - 1) as f64);
-        let u: Array1<f64> = x.mapv(|xi| (k * xi).sin());
+        // Four full periods across the x extent: an exact grid frequency, so
+        // the mode is periodic and representable without spectral leakage. A
+        // frequency between grid modes would leak and the exactness claim would
+        // not hold -- that is a property of the sampling, not of the operator.
+        let modes = 4.0;
+        let k0 = 2.0 * PI * modes / (nx as f64 * dx);
 
-        // Compute Laplacian using 2nd order FD
-        let mut laplacian = Array1::zeros(n);
-        for i in 1..n - 1 {
-            laplacian[i] = (u[i + 1] - 2.0 * u[i] + u[i - 1]) / (dx * dx);
-        }
+        let field = Array3::from_shape_fn([nx, ny, nz], |[i, _, _]| (k0 * i as f64 * dx).sin());
+        let laplacian = compute_laplacian(&field, &grid);
 
-        // Compare with analytical
-        for i in 1..n - 1 {
-            let analytical = -k * k * u[i];
-            let error = (laplacian[i] - analytical).abs() / analytical.abs().max(1e-10);
-
-            // 2nd order accuracy: error ~ O(dx²)
-            if i == n / 2 {
-                // Check middle point
-                println!("Error at i={}: {}, dx²={}", i, error, dx * dx);
+        let scale = k0 * k0;
+        let mut worst = 0.0_f64;
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    let analytical = -scale * field[[i, j, k]];
+                    // Normalised by the field's amplitude rather than by the
+                    // local value: near a zero crossing the pointwise relative
+                    // error is unbounded for any operator, so dividing by it
+                    // measures the grid, not the Laplacian.
+                    let error = (laplacian[[i, j, k]] - analytical).abs() / scale;
+                    worst = worst.max(error);
+                }
             }
-            assert!(
-                error < dx * dx * 100.0,
-                "Error {} exceeds threshold at i={}",
-                error,
-                i
-            );
-        }
-    }
-
-    /// Validate 4th order finite difference accuracy
-    #[test]
-    fn test_fourth_order_laplacian() {
-        // 4th order stencil: [-1/12, 4/3, -5/2, 4/3, -1/12] / dx²
-
-        let n = 100;
-        let dx = 0.01;
-        let k = 2.0 * std::f64::consts::PI;
-
-        let x: Array1<f64> =
-            Array1::from_shape_fn(n, |[index]| dx * n as f64 * index as f64 / (n - 1) as f64);
-        let u: Array1<f64> = x.mapv(|xi| (k * xi).sin());
-
-        // 4th order coefficients
-        let c0 = -1.0 / 12.0;
-        let c1 = 4.0 / 3.0;
-        let c2 = -5.0 / 2.0;
-
-        let mut laplacian = Array1::zeros(n);
-        for i in 2..n - 2 {
-            laplacian[i] =
-                (c0 * (u[i + 2] + u[i - 2]) + c1 * (u[i + 1] + u[i - 1]) + c2 * u[i]) / (dx * dx);
         }
 
-        // Compare with analytical
-        for i in 2..n - 2 {
-            let analytical = -k * k * u[i];
-            let error = (laplacian[i] - analytical).abs() / analytical.abs().max(1e-10);
-
-            // 4th order accuracy: error ~ O(dx⁴)
-            assert!(error < dx.powi(4) * 100.0);
-        }
+        assert!(
+            worst < RELATIVE_TOLERANCE,
+            "spectral Laplacian departs from -k^2 u by {worst:.3e} relative,              above the {RELATIVE_TOLERANCE:.0e} round-off bound; a departure this              large means the operator is not spectral on a resolved mode"
+        );
     }
 }
 

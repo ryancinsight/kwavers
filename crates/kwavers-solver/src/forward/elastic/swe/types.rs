@@ -263,7 +263,10 @@ pub struct WaveFrontTracker {
 
 #[derive(Debug, Clone)]
 pub struct VolumetricQualityMetrics {
+    /// Fraction of non-PML, decimation-selected voxels with valid arrivals.
     pub coverage: f64,
+    /// Mean tracking quality over voxels with valid arrivals.
     pub average_quality: f64,
+    /// Number of decimation-selected, non-PML voxels with valid arrivals.
     pub valid_tracking_points: usize,
 }

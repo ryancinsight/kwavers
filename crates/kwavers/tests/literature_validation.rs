@@ -10,61 +10,6 @@ use kwavers_physics::bubble_dynamics::{BubbleParameters, BubbleState, KellerMiks
 use leto::Array3;
 use std::f64::consts::PI;
 
-/// Test Rayleigh collapse time for bubble dynamics
-/// Reference: Rayleigh, Lord (1917). "On the pressure developed in a liquid during
-/// the collapse of a spherical cavity." The London, Edinburgh, and Dublin
-/// Philosophical Magazine and Journal of Science 34.200: 94-98.
-#[test]
-fn test_rayleigh_collapse_time() -> Result<(), kwavers_core::error::KwaversError> {
-    // Rayleigh collapse time: τ = 0.915 * R₀ * sqrt(ρ/Δp)
-    let params = BubbleParameters {
-        r0: 100e-6,
-        use_thermal_effects: false,
-        use_compressibility: false,
-        ..Default::default()
-    };
-
-    let model = KellerMiksisModel::new(params.clone());
-    let mut state = BubbleState::new(&params);
-
-    // Apply pressure to collapse bubble
-    let p_acoustic = -params.p0 * 0.9; // Strong negative pressure
-    let dt = 1e-9; // 1 ns timestep
-    let mut t = 0.0;
-
-    // Track minimum radius
-    let mut min_radius = params.r0;
-    let mut collapse_time = 0.0;
-
-    // Simulate collapse
-    while t < 100e-6 && state.radius > params.r0 * 0.01 {
-        let accel = model.calculate_acceleration(&mut state, p_acoustic, 0.0, t)?;
-        state.wall_velocity += accel * dt;
-        state.radius += state.wall_velocity * dt;
-
-        if state.radius < min_radius {
-            min_radius = state.radius;
-            collapse_time = t;
-        }
-
-        t += dt;
-    }
-
-    // Calculate theoretical Rayleigh collapse time
-    let delta_p = p_acoustic.abs();
-    let rayleigh_time = 0.915 * params.r0 * (params.rho_liquid / delta_p).sqrt();
-
-    // Should match within 10% (accounting for numerical discretization)
-    let error = (collapse_time - rayleigh_time).abs() / rayleigh_time;
-    assert!(
-        error < 0.1,
-        "Rayleigh collapse time error: {:.2}%",
-        error * 100.0
-    );
-
-    Ok(())
-}
-
 /// Test dispersion relation for acoustic waves
 /// Reference: Pierce, A. D. (1989). Acoustics: An Introduction to Its Physical
 /// Principles and Applications. Acoustical Society of America.

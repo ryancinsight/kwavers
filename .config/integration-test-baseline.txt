@@ -1,0 +1,7 @@
+# Integration tests known to fail, one per line, as
+# `<binary> <test path>`. Enforced by scripts/integration_tests.py:
+# a failure absent from this list is a regression, and an entry that
+# passes is stale and must be removed. The list may shrink, never grow.
+#
+# Every entry is a defect owed a fix, not an accepted behaviour. See
+# backlog.md KW-INTEGRATION-TESTS-UNRUN for the inventory.

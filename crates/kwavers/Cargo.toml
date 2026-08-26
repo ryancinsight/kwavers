@@ -253,11 +253,6 @@ harness = true
 required-features = ["full"]
 
 [[test]]
-name = "rigorous_physics_validation"
-harness = true
-required-features = ["full"]
-
-[[test]]
 name = "solver_test"
 harness = true
 required-features = ["full"]
