@@ -181,26 +181,21 @@ mod tests {
         // wavelength = 1000/1e6 = 0.001 m = 1 mm
         // For Nyquist criterion (2 points per wavelength):
         // max_spacing = wavelength/2 = 0.0005 m = 0.5 mm
-        let result = ConfigurationBuilder::new()
+        let config = ConfigurationBuilder::new()
             .grid_spacing([0.0005, 0.0005, 0.0005]) // 0.5 mm spacing
             .grid_dimensions(100, 100, 100) // Add required grid dimensions
             .frequency(MHZ_TO_HZ) // 1 MHz
             .sound_speed_range(1000.0, 1600.0) // 1000-1600 m/s
             .cfl(0.5)
             .time_step(1e-7)
-            .build();
+            .build()
+            .expect("physically valid builder inputs must pass validation");
 
-        // Debug validation errors if any
-        match &result {
-            Ok(_) => println!("Configuration validation passed"),
-            Err(e) => println!("Configuration validation failed: {}", e),
-        }
-
-        assert!(
-            result.is_ok(),
-            "Configuration validation failed: {:?}",
-            result.err()
-        );
+        assert_eq!(config.grid.spacing, [0.0005, 0.0005, 0.0005]);
+        assert_eq!(config.grid.dimensions, [100, 100, 100]);
+        assert_eq!(config.medium.sound_speed_min, Some(1000.0));
+        assert_eq!(config.medium.sound_speed_max, Some(1600.0));
+        assert_eq!(config.simulation.dt, Some(1e-7));
     }
 
     #[test]

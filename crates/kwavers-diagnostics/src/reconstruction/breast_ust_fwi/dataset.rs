@@ -10,7 +10,9 @@ use kwavers_grid::Grid;
 use kwavers_math::fft::Complex64;
 use kwavers_medium::heterogeneous::HeterogeneousFactory;
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
+#[cfg(not(feature = "gpu"))]
 use kwavers_receiver::recorder::simple::SensorRecorder;
+#[cfg(not(feature = "gpu"))]
 use kwavers_solver::forward::pstd::{PSTDConfig, PSTDSolver};
 use kwavers_solver::inverse::fwi::frequency_domain::FrequencyObservation;
 use kwavers_source::{GridSource, SourceMode};
@@ -20,9 +22,11 @@ use leto::{Array2, Array3, SliceArg};
 
 mod signal;
 mod validation;
+#[cfg(not(feature = "gpu"))]
+use signal::pstd_boundary;
 use signal::{
     frequency_bin, frequency_bin_start_step, grid_index_to_ring_point, map_ring_point_to_grid,
-    map_ring_points_to_grid, pstd_boundary, time_steps_for_frequency, tone_signal,
+    map_ring_points_to_grid, time_steps_for_frequency, tone_signal,
 };
 use validation::{validate_cfl, validate_config, validate_frequencies, validate_sound_speed};
 
@@ -261,45 +265,29 @@ fn run_pstd_transmit(
         ..GridSource::new_empty()
     };
 
-    // GPU PSTD path (compile-time `gpu` feature): a compatible grid uses the
-    // Hephaestus-owned provider and surfaces provider failure to the caller.
-    // An incompatible grid selects the CPU PSTD implementation explicitly.
+    // GPU PSTD path (compile-time `gpu` feature): Hephaestus validates the
+    // requested positive shape and surfaces provider failure to the caller.
     #[cfg(feature = "gpu")]
     {
-        match kwavers_gpu::pstd_gpu::validate_gpu_pstd_dimensions(nx, ny, nz) {
-            Ok(()) => {
-                return run_gpu_pstd_transmit(
-                    &grid,
-                    &medium,
-                    &source,
-                    receiver_indices,
-                    steps,
-                    config,
-                );
-            }
-            Err(error) => {
-                tracing::debug!(
-                    grid = %format_args!("{nx}×{ny}×{nz}"),
-                    %error,
-                    "GPU PSTD shape is unsupported; selecting CPU PSTD"
-                );
-            }
-        }
+        run_gpu_pstd_transmit(&grid, &medium, &source, receiver_indices, steps, config)
     }
 
-    let pstd_config = PSTDConfig {
-        nt: steps,
-        dt: config.time_step_s,
-        boundary: pstd_boundary(config.cpml_thickness_cells),
-        smooth_sources: false,
-        ..Default::default()
-    };
-    let mut solver = PSTDSolver::new(pstd_config, grid, &medium, source)?;
-    solver.sensor_recorder =
-        SensorRecorder::from_ordered_indices(receiver_indices.to_vec(), steps)?;
-    solver.run_orchestrated(steps)?.ok_or_else(|| {
-        KwaversError::InvalidInput("PSTD acquisition produced no receiver data".into())
-    })
+    #[cfg(not(feature = "gpu"))]
+    {
+        let pstd_config = PSTDConfig {
+            nt: steps,
+            dt: config.time_step_s,
+            boundary: pstd_boundary(config.cpml_thickness_cells),
+            smooth_sources: false,
+            ..Default::default()
+        };
+        let mut solver = PSTDSolver::new(pstd_config, grid, &medium, source)?;
+        solver.sensor_recorder =
+            SensorRecorder::from_ordered_indices(receiver_indices.to_vec(), steps)?;
+        solver.run_orchestrated(steps)?.ok_or_else(|| {
+            KwaversError::InvalidInput("PSTD acquisition produced no receiver data".into())
+        })
+    }
 }
 
 #[cfg(feature = "gpu")]
@@ -311,28 +299,31 @@ fn run_gpu_pstd_transmit(
     steps: usize,
     config: BreastUstPstdDatasetConfig,
 ) -> KwaversResult<Array2<f64>> {
-    use kwavers_gpu::pstd_gpu::{run_gpu_pstd, GpuPstdRunConfig};
+    use kwavers_boundary::cpml::CPMLConfig;
+    use kwavers_gpu::pstd_gpu::{cpml_thickness_limits, run_gpu_pstd, GpuPstdRunConfig};
     let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
     let mut sensor_mask = LetoArray3::<bool>::from_elem([nx, ny, nz], false);
     for &(i, j, k) in receiver_indices {
         sensor_mask[[i, j, k]] = true;
     }
+    let (_, max_pml_thickness) = cpml_thickness_limits(nx, ny, nz);
     // GPU PSTD uses its own polynomial-PML inside the wgsl pipeline; clinical
     // dataset gen sets `pml_inside = true` when the CPU CPML thickness is
     // nonzero so the GPU path matches the CPU absorbing boundary semantics.
     let gpu_config = GpuPstdRunConfig {
         time_steps: steps,
         dt: config.time_step_s,
+        nonlinear: false,
         alpha_coeff_db: 0.0,
         alpha_power: 1.0,
-        pml_size: if config.cpml_thickness_cells == 0 {
+        cpml: if config.cpml_thickness_cells == 0 {
             None
         } else {
-            Some(config.cpml_thickness_cells)
+            Some(CPMLConfig::with_thickness(
+                config.cpml_thickness_cells.min(max_pml_thickness),
+            ))
         },
-        pml_size_xyz: None,
         pml_inside: config.cpml_thickness_cells > 0,
-        pml_alpha_xyz: None,
     };
     let traces = run_gpu_pstd(grid, medium, source, &sensor_mask, gpu_config)?;
     let [rows, cols] = traces.shape();

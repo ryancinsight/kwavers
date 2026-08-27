@@ -11,14 +11,14 @@
 //!
 //! | Method | Behaviour |
 //! |---|---|
-//! | `run(nt)` | Builds GPU arrays, calls `GpuPstdSolver::with_auto_device` + `run()`; stores sensor traces |
+//! | `run(nt)` | Executes the provider-owned prepared-medium runner; stores sensor traces |
 //! | `step_forward()` | Returns `Err(FeatureNotAvailable)` — batch-only arch |
 //! | `pressure_field()` | Returns the final host-read pressure field after `run()` |
 //! | `run_peak_pressure(nt)` | Downloads the provider-computed `max_t |p|` field only |
 //! | `peak_pressure_field()` | Returns the latest explicit peak-pressure readback |
 //! | `velocity_fields()` | Returns final host-read staggered velocity fields after `run()` |
 //! | `recorded_sensor_pressure()` | Returns sensor traces after `run()` completes |
-//! | `add_source(Box<dyn Source>)` | Returns an explicit waveform-contract error |
+//! | `add_source(Box<dyn Source>)` | Returns an explicit waveform-contract error; high-level dispatch samples pressure sources before construction |
 //! | `add_sensor(&GridSensorSet)` | Converts `GridPoint` list to boolean sensor mask |
 //!
 //! ## Source signal
@@ -30,36 +30,25 @@
 //! running the batch. The factory still constructs an empty source for
 //! source-free initial-condition propagation.
 //!
-//! ## Grid constraints
-//!
-//! GPU PSTD requires power-of-two dimensions with each axis ≤ 1,024.
-//! Construction fails with `KwaversError::InvalidInput` if these are
-//! violated.  `SimulationSolverFactory::create_solver(SolverType::PstdGpu,
-//! ...)` propagates that error to the caller.
+//! `SimulationSolverFactory` constructs this adapter for `SolverType::PSTD`
+//! with `FftBackend::Hephaestus` when the `gpu` feature is enabled. Provider
+//! acquisition or execution failures are surfaced and never select the Leto
+//! path implicitly.
 
-use kwavers_core::constants::numerical::TWO_PI;
-mod medium;
-
-use medium::GpuMediumSnapshot;
-
-use kwavers_boundary::cpml::{CPMLConfig, CPMLProfiles};
+use kwavers_boundary::cpml::CPMLConfig;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_gpu::pstd_gpu::{
-    prepare_pstd_pressure_source, validate_gpu_pstd_dimensions, AbsorptionArrays, GpuPstdSolver,
-    MediumArrays, PmlArrays, PstdFinalFields, PstdOutputRequest, PstdRunInputs, PstdRunResult,
-    SolverParams, WgpuPstdStateProvider,
+    run_gpu_pstd_with_snapshot_outputs, GpuPstdRunConfig, PstdFinalFields, PstdMediumSnapshot,
+    PstdOutputRequest, PstdRunResult,
 };
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use kwavers_physics::acoustics::mechanics::absorption::power_law_db_cm_to_np_omega_m;
 use kwavers_receiver::GridSensorSet;
 use kwavers_solver::config::SolverConfiguration;
 use kwavers_solver::feature::SolverFeature;
 use kwavers_solver::interface::{Solver, SolverStatistics};
 use kwavers_source::{GridSource, Source};
-use leto::Array1 as LetoArray1;
 use leto::{Array2, Array3};
-use std::f64::consts::PI;
 use std::time::{Duration, Instant};
 
 /// GPU-resident PSTD adapter implementing the simulation `Solver` trait.
@@ -69,11 +58,8 @@ use std::time::{Duration, Instant};
 #[derive(Debug)]
 pub struct GpuPstdSimulationAdapter {
     pub(self) grid: Grid,
-    pub(self) medium: GpuMediumSnapshot,
+    pub(self) medium: PstdMediumSnapshot,
     pub(self) dt: f64,
-    /// Absorption power-law exponent `y` for the fractional-Laplacian model.
-    /// Defaults to `1.0` (standard tissue attenuation).
-    pub(self) alpha_power: f64,
     pub(self) cpml_config: CPMLConfig,
     pub(self) pml_inside: bool,
     pub(self) source: GridSource,
@@ -93,13 +79,12 @@ pub struct GpuPstdSimulationAdapter {
 impl GpuPstdSimulationAdapter {
     /// Construct a GPU PSTD adapter.
     ///
-    /// Validates GPU PSTD grid constraints and extracts medium data.  The GPU
+    /// Validates scalar solver parameters and extracts medium data. The GPU
     /// device is **not** acquired here; it is acquired on the first `run()` call.
     ///
     /// # Errors
     ///
-    /// Returns `KwaversError::InvalidInput` when grid dimensions are not
-    /// power-of-two or exceed 1,024 per axis.
+    /// Returns `KwaversError::InvalidInput` when the time step is invalid.
     pub fn new<M: Medium>(
         config: &SolverConfiguration,
         grid: &Grid,
@@ -107,7 +92,6 @@ impl GpuPstdSimulationAdapter {
     ) -> KwaversResult<Self> {
         let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
 
-        validate_gpu_pstd_dimensions(nx, ny, nz)?;
         if !config.dt.is_finite() || config.dt <= 0.0 {
             return Err(KwaversError::InvalidInput(format!(
                 "GPU PSTD requires finite positive dt; got {}",
@@ -122,14 +106,13 @@ impl GpuPstdSimulationAdapter {
             .unwrap_or_else(|| CPMLConfig::with_thickness(20));
         let pml_inside = true; // canonical default; matches run_gpu_pstd
 
-        let medium_snap = GpuMediumSnapshot::from_medium(grid, medium);
+        let medium_snap = PstdMediumSnapshot::from_medium(grid, medium, 0.0, 1.5)?;
         let shape = (nx, ny, nz);
 
         Ok(Self {
             grid: grid.clone(),
             medium: medium_snap,
             dt: config.dt,
-            alpha_power: 1.0,
             cpml_config,
             pml_inside,
             source: GridSource::new_empty(),
@@ -290,188 +273,39 @@ impl GpuPstdSimulationAdapter {
         nt: usize,
         output_request: PstdOutputRequest,
     ) -> KwaversResult<PstdRunResult> {
-        if nt == 0 || !self.dt.is_finite() || self.dt <= 0.0 {
-            return Err(KwaversError::InvalidInput(format!(
-                "GPU PSTD requires time_steps > 0 and finite positive dt; got steps={nt} dt={}",
-                self.dt
-            )));
-        }
         if self.source.u_mask.is_some() || self.source.u_signal.is_some() {
             return Err(KwaversError::FeatureNotAvailable(
                 "GpuPstdSimulationAdapter does not expose velocity-source assembly; use run_gpu_pstd_with_outputs for velocity sources"
                     .to_owned(),
             ));
         }
-
-        let nx = self.grid.nx;
-        let ny = self.grid.ny;
-        let nz = self.grid.nz;
-        let total = nx * ny * nz;
-        let dt = self.dt;
-        let alpha_power = self.alpha_power;
-
-        // ── PML profiles ──────────────────────────────────────────────────────
-        let profiles = CPMLProfiles::new(&self.cpml_config, &self.grid, self.medium.c_ref, dt)?;
-
-        let mut pml_sgx = vec![1.0f32; total];
-        let mut pml_sgy = vec![1.0f32; total];
-        let mut pml_sgz = vec![1.0f32; total];
-        let mut pml_x = vec![1.0f32; total];
-        let mut pml_y = vec![1.0f32; total];
-        let mut pml_z = vec![1.0f32; total];
-
-        if self.pml_inside {
-            let exp_half = |sigma: &LetoArray1<f64>| -> Vec<f32> {
-                sigma
-                    .iter()
-                    .map(|&s| (-s * dt * 0.5).exp() as f32)
-                    .collect()
-            };
-            let sgx = exp_half(&profiles.sigma_x_sgx);
-            let sgy = exp_half(&profiles.sigma_y_sgy);
-            let sgz = exp_half(&profiles.sigma_z_sgz);
-            let px = exp_half(&profiles.sigma_x);
-            let py = exp_half(&profiles.sigma_y);
-            let pz = exp_half(&profiles.sigma_z);
-
-            for ix in 0..nx {
-                for iy in 0..ny {
-                    for iz in 0..nz {
-                        let flat = ix * ny * nz + iy * nz + iz;
-                        pml_sgx[flat] = sgx[ix];
-                        pml_sgy[flat] = sgy[iy];
-                        pml_sgz[flat] = sgz[iz];
-                        pml_x[flat] = px[ix];
-                        pml_y[flat] = py[iy];
-                        pml_z[flat] = pz[iz];
-                    }
-                }
-            }
-        }
-
-        // ── Absorption operator arrays ────────────────────────────────────────
-        let (nabla1, nabla2, tau_v, eta_v) = if self.medium.has_absorption {
-            let dk_x = TWO_PI / (nx as f64 * self.grid.dx);
-            let dk_y = TWO_PI / (ny as f64 * self.grid.dy);
-            let dk_z = TWO_PI / (nz as f64 * self.grid.dz);
-            const SINGULARITY: f64 = 1e-8;
-            let y = alpha_power;
-
-            let mut n1 = vec![0.0f32; total];
-            let mut n2 = vec![0.0f32; total];
-            let mut tau = vec![0.0f32; total];
-            let mut eta = vec![0.0f32; total];
-
-            for flat in 0..total {
-                let ix = flat / (ny * nz);
-                let iy = (flat % (ny * nz)) / nz;
-                let iz = flat % nz;
-
-                let kix = if ix <= nx / 2 {
-                    ix as f64
-                } else {
-                    (nx - ix) as f64
-                } * dk_x;
-                let kiy = if iy <= ny / 2 {
-                    iy as f64
-                } else {
-                    (ny - iy) as f64
-                } * dk_y;
-                let kiz = if iz <= nz / 2 {
-                    iz as f64
-                } else {
-                    (nz - iz) as f64
-                } * dk_z;
-                let k_mag = (kix * kix + kiy * kiy + kiz * kiz).sqrt();
-
-                if k_mag > SINGULARITY {
-                    n1[flat] = k_mag.powf(y - 2.0) as f32;
-                    n2[flat] = k_mag.powf(y - 1.0) as f32;
-                }
-
-                let alpha_db_cm = self.medium.absorption_flat[flat] as f64;
-                let alpha_0_si = power_law_db_cm_to_np_omega_m(alpha_db_cm, alpha_power);
-                let c0 = self.medium.c0_flat[flat] as f64;
-                tau[flat] = (-2.0 * alpha_0_si * c0.powf(y - 1.0)) as f32;
-                eta[flat] = (2.0 * alpha_0_si * c0.powf(y) * (PI * y / 2.0).tan()) as f32;
-            }
-            (n1, n2, tau, eta)
-        } else {
-            (
-                vec![0.0f32; total],
-                vec![0.0f32; total],
-                vec![0.0f32; total],
-                vec![0.0f32; total],
-            )
-        };
-
-        // ── Construct GPU solver ──────────────────────────────────────────────
-        let mut gpu_solver = GpuPstdSolver::<WgpuPstdStateProvider>::with_auto_device(
+        let sensor_count = self.sensor_mask.iter().filter(|&&enabled| enabled).count();
+        let started = Instant::now();
+        let result = run_gpu_pstd_with_snapshot_outputs(
             &self.grid,
-            MediumArrays {
-                c0_flat: &self.medium.c0_flat,
-                rho0_flat: &self.medium.rho0_flat,
+            &self.medium,
+            &self.source,
+            &self.sensor_mask,
+            GpuPstdRunConfig {
+                time_steps: nt,
+                dt: self.dt,
+                nonlinear: true,
+                alpha_coeff_db: 0.0,
+                alpha_power: 1.5,
+                cpml: Some(self.cpml_config.clone()),
+                pml_inside: self.pml_inside,
             },
-            SolverParams {
-                dt,
-                nt,
-                c_ref: self.medium.c_ref,
-                nonlinear: self.medium.has_nonlinear,
-                absorbing: self.medium.has_absorption,
-            },
-            PmlArrays {
-                x: &pml_x,
-                y: &pml_y,
-                z: &pml_z,
-                sgx: &pml_sgx,
-                sgy: &pml_sgy,
-                sgz: &pml_sgz,
-            },
-            AbsorptionArrays {
-                bon_a_flat: &self.medium.bon_a_flat,
-                nabla1: &nabla1,
-                nabla2: &nabla2,
-                tau: &tau_v,
-                eta: &eta_v,
-            },
-        )
-        .map_err(|e| KwaversError::InvalidInput(format!("GPU device init failed: {e}")))?;
-
-        // ── Sensor indices ────────────────────────────────────────────────────
-        let sensor_flat = self.sensor_mask.as_slice().ok_or_else(|| {
-            KwaversError::InvalidInput("sensor_mask must be C-contiguous".to_owned())
-        })?;
-        let sensor_indices: Vec<u32> = sensor_flat
-            .iter()
-            .enumerate()
-            .filter_map(|(i, &v)| if v { Some(i as u32) } else { None })
-            .collect();
-
-        // ── Source indices and signals ────────────────────────────────────────
-        let pressure_source =
-            prepare_pstd_pressure_source(&self.grid, &self.source, &self.medium.c0_flat, dt, nt)?;
-
-        // ── Run GPU time loop ─────────────────────────────────────────────────
-        let t0 = Instant::now();
-        let result = gpu_solver.run(PstdRunInputs {
-            sensor_indices: &sensor_indices,
-            source_indices: &pressure_source.indices,
-            source_signals: &pressure_source.signals,
-            pressure_source_correction: pressure_source.uses_kspace_correction,
-            vel_x_indices: &[],
-            vel_x_signals: &[],
-            velocity_source_correction: false,
             output_request,
-        });
-        self.store_sensor_data(&result.sensor_data, sensor_indices.len(), nt)?;
-        self.computation_time += t0.elapsed();
+        )?;
+        self.store_sensor_data(&result.sensor_data, sensor_count, nt)?;
+        self.computation_time += started.elapsed();
         self.current_step += nt;
         Ok(result)
     }
 }
 
 impl Solver for GpuPstdSimulationAdapter {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "GpuPstd"
     }
 
@@ -556,7 +390,7 @@ impl Solver for GpuPstdSimulationAdapter {
             total_steps: self.current_step,
             current_step: self.current_step,
             computation_time: self.computation_time,
-            memory_usage: self.medium.c0_flat.len() * std::mem::size_of::<f32>() * 6,
+            memory_usage: self.medium.resident_bytes(),
             max_pressure: reported_pressure
                 .iter()
                 .fold(0.0_f64, |max_pressure, &pressure| {

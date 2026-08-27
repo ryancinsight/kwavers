@@ -4,6 +4,37 @@
 
 ### Added
 
+- **[major] PSTD selects its FFT execution provider independently of the
+  numerical method.** `FftBackend::{Leto, Hephaestus}` is carried by
+  `SolverConfiguration`, simulation requests, and Python `Simulation`.
+  `SolverType::PstdGpu` is removed: callers now select `SolverType::PSTD` and
+  pass `FftBackend::Hephaestus`; omission keeps the Apollo CPU path over Leto
+  storage. A requested Hephaestus failure is returned and never falls back to
+  Leto. See [ADR 125](docs/adr/125-fft-backend-selection.md).
+
+- **[major] Kwavers no longer carries an Apollo GPU FFT facade or private PSTD
+  FFT kernel.** GPU PSTD prepares Hephaestus rank-3 forward and inverse plans
+  over typed device buffers, with singleton axes covering 1-D and 2-D grids.
+  The private WGSL radix-2 kernel, twiddle allocation, axis dispatch, power-of-two
+  restriction, 1,024-axis limit, `kwavers_math::fft::gpu_fft` module, and its
+  forwarding Cargo feature are removed. Dynamic pressure sources are sampled
+  once into source-major storage with PSTD normalization and overlap
+  superposition preserved; unsupported GPU request contracts return explicit
+  errors. Run-cache reuse keys on the actual sensor and source index sequences,
+  preventing equal-count geometry changes from retaining stale GPU indices.
+  `GpuPstdRunConfig` adds an explicit `nonlinear` selection instead of inferring
+  it from medium coefficients and replaces the parallel `pml_size`,
+  `pml_size_xyz`, and `pml_alpha_xyz` fields with `cpml: Option<CPMLConfig>`;
+  callers place their complete CPML profile there or use `None` for the
+  grid-limited default. Direct and factory-selected execution now share one
+  provider-owned `PstdMediumSnapshot`, preserving the explicit-pair/medium-pair
+  absorption ownership contract from ADR 120 without repeated medium queries or
+  duplicate transient coefficient/exponent storage. Heterogeneous active
+  exponents fail during snapshot preparation, before CPML or device work.
+  `KSpace`, `Hybrid`, and `ElasticPSTD` reject Hephaestus selection rather than
+  silently executing their CPU paths. See
+  [ADR 125](docs/adr/125-fft-backend-selection.md).
+
 - **[major] Visualization configuration now has one source for each choice.**
   Remove the ignored `VisualizationConfig::gpu_enabled` field: callers select
   Leto or Hephaestus through top-level Kwavers and inject that provider. Remove

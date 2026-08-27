@@ -148,7 +148,6 @@ ritk-spatial = { workspace = true }
 tempfile = { workspace = true }
 # Reads the committed k-Wave reference archives in kwave_reference_parity.rs.
 consus-npy = { workspace = true }
-hephaestus-wgpu = { workspace = true }
 
 # Concurrency testing (Sprint 138 - Persona Requirements)
 loom = "0.7"
@@ -156,7 +155,7 @@ loom = "0.7"
 [features]
 default = ["minimal"]  # PRODUCTION DEFAULT
 minimal = []           # Core functionality only
-gpu = ["kwavers-gpu/gpu", "kwavers-math/gpu", "kwavers-solver/gpu", "kwavers-analysis/gpu", "kwavers-simulation/gpu", "kwavers-diagnostics/gpu"]
+gpu = ["kwavers-gpu/gpu", "kwavers-solver/gpu", "kwavers-analysis/gpu", "kwavers-simulation/gpu", "kwavers-diagnostics/gpu"]
 cuda-provider = ["gpu", "kwavers-gpu/cuda-provider"]
 cuda-runtime = ["cuda-provider", "kwavers-gpu/cuda-runtime"]
 plotting = ["dep:plotly", "kwavers-analysis/plotting"]

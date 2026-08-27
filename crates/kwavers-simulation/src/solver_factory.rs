@@ -8,7 +8,7 @@ use crate::solver_adapters::DgSimulationSolver;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 use kwavers_medium::{density_at, sound_speed_at, AcousticProperties, CoreMedium, Medium};
-use kwavers_solver::config::{SolverConfiguration, SolverType};
+use kwavers_solver::config::{FftBackend, SolverConfiguration, SolverType};
 use kwavers_solver::factory::SolverFactoryRegistry;
 use kwavers_solver::forward::fdtd::FdtdConfig;
 use kwavers_solver::forward::hybrid::config::HybridConfig;
@@ -127,13 +127,34 @@ impl SimulationSolverFactory {
                 Ok(Box::new(solver))
             }
             SolverType::PSTD => {
-                let solver = PSTDSolver::new(
-                    pstd_config_from(&config, KSpaceMethod::StandardPSTD),
-                    grid.clone(),
-                    medium,
-                    GridSource::default(),
-                )?;
-                Ok(Box::new(solver))
+                match config.fft_backend {
+                    FftBackend::Leto => {
+                        let solver = PSTDSolver::new(
+                            pstd_config_from(&config, KSpaceMethod::StandardPSTD),
+                            grid.clone(),
+                            medium,
+                            GridSource::default(),
+                        )?;
+                        Ok(Box::new(solver))
+                    }
+                    #[cfg(feature = "gpu")]
+                    FftBackend::Hephaestus => {
+                        use crate::solver_adapters::GpuPstdSimulationAdapter;
+                        Ok(Box::new(GpuPstdSimulationAdapter::new(
+                            &config, grid, medium,
+                        )?))
+                    }
+                    #[cfg(not(feature = "gpu"))]
+                    FftBackend::Hephaestus => Err(KwaversError::FeatureNotAvailable(
+                        "FftBackend::Hephaestus requires the `gpu` Cargo feature".to_owned(),
+                    )),
+                }
+            }
+            SolverType::KSpace if config.fft_backend == FftBackend::Hephaestus => {
+                Err(KwaversError::FeatureNotAvailable(
+                    "KSpace does not yet support FftBackend::Hephaestus; select SolverType::PSTD and configure k-space correction"
+                        .to_owned(),
+                ))
             }
             SolverType::KSpace => {
                 let solver = PSTDSolver::new(
@@ -143,6 +164,11 @@ impl SimulationSolverFactory {
                     GridSource::default(),
                 )?;
                 Ok(Box::new(solver))
+            }
+            SolverType::Hybrid if config.fft_backend == FftBackend::Hephaestus => {
+                Err(KwaversError::FeatureNotAvailable(
+                    "Hybrid does not yet support FftBackend::Hephaestus".to_owned(),
+                ))
             }
             SolverType::Hybrid => {
                 let solver = HybridSolver::new(hybrid_config_from(&config), grid, medium)?;
@@ -154,15 +180,6 @@ impl SimulationSolverFactory {
             }
             SolverType::FEM => Err(KwaversError::FeatureNotAvailable(
                 "Simulation factory cannot assemble FEM from Grid until a real Grid-to-TetrahedralMesh generator and frequency-domain source/boundary contract are available".to_owned(),
-            )),
-            #[cfg(feature = "gpu")]
-            SolverType::PstdGpu => {
-                use crate::solver_adapters::GpuPstdSimulationAdapter;
-                Ok(Box::new(GpuPstdSimulationAdapter::new(&config, grid, medium)?))
-            }
-            #[cfg(not(feature = "gpu"))]
-            SolverType::PstdGpu => Err(KwaversError::FeatureNotAvailable(
-                "SolverType::PstdGpu requires the `gpu` Cargo feature".to_owned(),
             )),
             _ => Err(KwaversError::FeatureNotAvailable(format!(
                 "SolverType::{selected_type:?} not supported by SimulationSolverFactory"
@@ -262,6 +279,48 @@ mod tests {
         assert_eq!(solver.name(), "PSTD");
         solver.run(0).unwrap();
         assert_eq!(solver.pressure_field().shape(), [4, 4, 4]);
+    }
+
+    #[test]
+    fn rejects_hephaestus_for_factory_kspace_before_cpu_assembly() {
+        let grid = Grid::new(4, 4, 4, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
+        let medium =
+            HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
+        let config = SolverConfiguration {
+            solver_type: SolverType::KSpace,
+            fft_backend: FftBackend::Hephaestus,
+            ..SolverConfiguration::default()
+        };
+
+        let error =
+            SimulationSolverFactory::create_solver(SolverType::KSpace, config, &grid, &medium)
+                .unwrap_err();
+
+        assert_eq!(
+            error.to_string(),
+            "Feature not available: KSpace does not yet support FftBackend::Hephaestus; select SolverType::PSTD and configure k-space correction"
+        );
+    }
+
+    #[test]
+    fn rejects_hephaestus_for_factory_hybrid_before_cpu_assembly() {
+        let grid = Grid::new(4, 4, 4, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
+        let medium =
+            HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
+        let config = SolverConfiguration {
+            solver_type: SolverType::Hybrid,
+            fft_backend: FftBackend::Hephaestus,
+            ..SolverConfiguration::default()
+        };
+
+        let error =
+            SimulationSolverFactory::create_solver(SolverType::Hybrid, config, &grid, &medium)
+                .unwrap_err();
+
+        assert_eq!(
+            error.to_string(),
+            "Feature not available: Hybrid does not yet support FftBackend::Hephaestus"
+        );
     }
 
     #[test]

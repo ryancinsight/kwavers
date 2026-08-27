@@ -161,7 +161,7 @@ pub use kwavers_field::indices::{
 };
 
 // Re-export commonly used types from hierarchical modules
-pub use config::{SolverConfiguration, SolverType};
+pub use config::{FftBackend, SolverConfiguration, SolverType};
 pub use forward::fdtd::FdtdSolver;
 pub use forward::hybrid::HybridSolver;
 pub use forward::plugin_based::PluginBasedSolver;

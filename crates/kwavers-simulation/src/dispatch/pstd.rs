@@ -125,7 +125,10 @@ pub fn run_with_thermal(
     Ok(result)
 }
 
-// ── GPU PSTD ──────────────────────────────────────────────────────────────────
+#[cfg(feature = "gpu")]
+mod gpu;
+#[cfg(feature = "gpu")]
+pub use gpu::run_gpu;
 
 // ── Solver preparation ────────────────────────────────────────────────────────
 

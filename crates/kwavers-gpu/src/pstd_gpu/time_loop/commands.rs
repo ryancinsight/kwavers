@@ -1,17 +1,9 @@
 //! PSTD command and queue provider contracts.
 
-use std::ops::Range;
-
 /// Provider contract for run-loop command and queue operations.
 pub(in crate::pstd_gpu) trait PstdCommandProvider {
     /// Provider-owned buffer type.
     type Buffer;
-
-    /// Provider-owned command encoder type.
-    type Encoder;
-
-    /// Provider-owned compute pass type.
-    type ComputePass<'pass>;
 
     /// Clear a device buffer range and submit the command.
     fn clear_buffer(&self, buffer: &Self::Buffer, size_bytes: u64, label: &'static str);
@@ -37,32 +29,6 @@ pub(in crate::pstd_gpu) trait PstdCommandProvider {
     where
         T: bytemuck::Pod;
 
-    /// Create a command encoder, let the caller encode provider-native work,
-    /// then submit the completed command buffer.
-    fn submit_encoder<F>(&self, label: &'static str, encode: F)
-    where
-        F: FnOnce(&mut Self::Encoder);
-
-    /// Submit one provider-native compute pass in a command buffer.
-    fn submit_compute_pass<F>(
-        &self,
-        encoder_label: &'static str,
-        pass_label: &'static str,
-        encode: F,
-    ) where
-        F: for<'pass> FnOnce(&mut Self::ComputePass<'pass>);
-
-    /// Submit one command buffer containing one provider-native compute pass
-    /// for each item in `items`.
-    fn submit_compute_passes<F>(
-        &self,
-        encoder_label: &'static str,
-        pass_label: &'static str,
-        items: Range<usize>,
-        encode: F,
-    ) where
-        F: for<'pass> FnMut(usize, &mut Self::ComputePass<'pass>);
-
     /// Wait for provider work to complete.
     fn poll_wait(&self);
 }
@@ -83,8 +49,6 @@ impl<'a> WgpuPstdCommandProvider<'a> {
 
 impl PstdCommandProvider for WgpuPstdCommandProvider<'_> {
     type Buffer = wgpu::Buffer;
-    type Encoder = wgpu::CommandEncoder;
-    type ComputePass<'pass> = wgpu::ComputePass<'pass>;
 
     fn clear_buffer(&self, buffer: &Self::Buffer, size_bytes: u64, label: &'static str) {
         let mut encoder = self
@@ -146,54 +110,6 @@ impl PstdCommandProvider for WgpuPstdCommandProvider<'_> {
             .write_buffer(buffer, offset_bytes, bytemuck::cast_slice(data));
     }
 
-    fn submit_encoder<F>(&self, label: &'static str, encode: F)
-    where
-        F: FnOnce(&mut Self::Encoder),
-    {
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some(label) });
-        encode(&mut encoder);
-        self.queue.submit(std::iter::once(encoder.finish()));
-    }
-
-    fn submit_compute_pass<F>(
-        &self,
-        encoder_label: &'static str,
-        pass_label: &'static str,
-        encode: F,
-    ) where
-        F: for<'pass> FnOnce(&mut Self::ComputePass<'pass>),
-    {
-        self.submit_encoder(encoder_label, |encoder| {
-            let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some(pass_label),
-                timestamp_writes: None,
-            });
-            encode(&mut cpass);
-        });
-    }
-
-    fn submit_compute_passes<F>(
-        &self,
-        encoder_label: &'static str,
-        pass_label: &'static str,
-        items: Range<usize>,
-        mut encode: F,
-    ) where
-        F: for<'pass> FnMut(usize, &mut Self::ComputePass<'pass>),
-    {
-        self.submit_encoder(encoder_label, |encoder| {
-            for item in items {
-                let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                    label: Some(pass_label),
-                    timestamp_writes: None,
-                });
-                encode(item, &mut cpass);
-            }
-        });
-    }
-
     fn poll_wait(&self) {
         let _ = self.device.poll(wgpu::PollType::wait_indefinitely());
     }
@@ -210,8 +126,6 @@ mod tests {
             P: PstdCommandProvider + 'static,
         {
             let _ = core::mem::size_of::<P::Buffer>();
-            let _ = core::mem::size_of::<P::Encoder>();
-            let _ = core::mem::size_of::<P::ComputePass<'static>>();
         }
 
         assert_provider::<WgpuPstdCommandProvider<'static>>();

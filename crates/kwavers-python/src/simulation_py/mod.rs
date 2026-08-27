@@ -47,7 +47,7 @@ use crate::config_builders::{
 use crate::grid_py::Grid;
 use crate::medium_py::Medium;
 use crate::sensor_py::Sensor;
-use crate::solver_type_bindings::SolverType;
+use crate::solver_type_bindings::{FftBackend, SolverType};
 use crate::source_py::Source;
 use crate::transducer_array_py::TransducerArray2D;
 
@@ -72,6 +72,7 @@ pub struct Simulation {
     pub(crate) sensor: Option<Sensor>,
     pub(crate) transducer_sensor: Option<TransducerArray2D>,
     pub(crate) solver_type: SolverType,
+    pub(crate) fft_backend: FftBackend,
     pub(crate) kspace_correction: KSpaceCorrectionMode,
     pub(crate) compatibility_mode: CompatibilityMode,
     pub(crate) pml_size: Option<usize>,
@@ -137,13 +138,14 @@ impl Simulation {
     /// --------
     /// >>> sim = Simulation(grid, medium, source, sensor, solver=SolverType.PSTD)
     #[new]
-    #[pyo3(signature = (grid, medium, source, sensor, solver=None, pml_size=None))]
+    #[pyo3(signature = (grid, medium, source, sensor, solver=None, fft_backend=None, pml_size=None))]
     fn new(
         grid: Grid,
         medium: Medium,
         source: &Bound<'_, PyAny>,
         sensor: &Bound<'_, PyAny>,
         solver: Option<SolverType>,
+        fft_backend: Option<FftBackend>,
         pml_size: Option<usize>,
     ) -> PyResult<Self> {
         let mut sources = Vec::new();
@@ -208,6 +210,7 @@ impl Simulation {
             sensor: sensor_opt,
             transducer_sensor,
             solver_type: solver.unwrap_or(SolverType::FDTD),
+            fft_backend: fft_backend.unwrap_or_default(),
             kspace_correction: KSpaceCorrectionMode::None,
             compatibility_mode: CompatibilityMode::Optimal,
             pml_size,
@@ -688,7 +691,6 @@ impl Simulation {
                 kwavers_solver::config::SolverType::RayleighSommerfeld
             }
             SolverType::Poroelastic => kwavers_solver::config::SolverType::Poroelastic,
-            SolverType::PstdGpu => kwavers_solver::config::SolverType::PstdGpu,
             other => {
                 return Err(PyValueError::new_err(format!(
                     "Unsupported solver type: {:?}",
@@ -758,6 +760,10 @@ impl Simulation {
             time_steps,
             dt,
             solver_type,
+            fft_backend: match self.fft_backend {
+                FftBackend::Leto => kwavers_solver::config::FftBackend::Leto,
+                FftBackend::Hephaestus => kwavers_solver::config::FftBackend::Hephaestus,
+            },
             pml: self.pml_config.as_ref(),
             helmholtz: self
                 .helmholtz_config

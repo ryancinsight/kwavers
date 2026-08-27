@@ -44,7 +44,7 @@ egui = { version = "0.25", optional = true }
 flume = { version = "0.11", optional = true }
 
 [features]
-gpu = ["kwavers-math/gpu", "kwavers-solver/gpu"]
+gpu = ["kwavers-solver/gpu"]
 plotting = ["dep:plotly"]
 # NOTE: egui is intentionally NOT part of gpu-visualization's default feature
 # set.  On headless Linux (e.g. WSL without Wayland), the egui/winit/wgpu

@@ -376,13 +376,14 @@ def run_pykwavers_scanline(sound_speed_slice, density_slice, mask, ux_signals, k
     # Sensor: same mask (record pressure at all element positions)
     sensor = pkw.Sensor.from_mask(mask.astype(bool))
 
-    # Solver selection: GPU PSTD if requested, else CPU PSTD
-    solver_type = pkw.SolverType.PstdGpu if _USE_GPU else pkw.SolverType.PSTD
+    # PSTD keeps one solver identity; the FFT provider is selected explicitly.
+    fft_backend = pkw.FftBackend.Hephaestus if _USE_GPU else pkw.FftBackend.Leto
 
     # Simulation (PML embedded inside full 256×128×128 grid — pml_inside=True default)
     sim = pkw.Simulation(
         grid, medium, source, sensor,
-        solver=solver_type,
+        solver=pkw.SolverType.PSTD,
+        fft_backend=fft_backend,
     )
     sim.set_pml_size_xyz(int(PML_SIZE.x), int(PML_SIZE.y), int(PML_SIZE.z))
     # Enable nonlinear + absorption for CPU path only; GPU path uses GpuPstdSession

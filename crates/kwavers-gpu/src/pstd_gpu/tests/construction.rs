@@ -6,8 +6,7 @@ use super::super::pipeline::{
     WgpuPstdPipelineFactory,
 };
 use super::super::{
-    validate_gpu_pstd_dimensions, AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays,
-    SolverParams, WgpuPstdStateProvider, GPU_PSTD_FFT_WORKGROUP_STORAGE_BYTES,
+    AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays, SolverParams, WgpuPstdStateProvider,
 };
 use super::fixtures::pstd_test_provider;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
@@ -58,23 +57,6 @@ fn pstd_bind_group_factory_is_generic_over_provider_trait() {
     }
 
     assert_provider::<WgpuPstdBindGroupFactory<'static>>();
-}
-
-#[test]
-fn pstd_dimension_contract_accepts_the_1024_point_fft_axis() {
-    validate_gpu_pstd_dimensions(1_024, 8, 8).expect("1,024-point FFT axis is supported");
-    assert_eq!(GPU_PSTD_FFT_WORKGROUP_STORAGE_BYTES, 12 * 1_024);
-}
-
-#[test]
-fn pstd_dimension_contract_rejects_an_axis_beyond_the_shared_fft() {
-    let error = validate_gpu_pstd_dimensions(2_048, 8, 8)
-        .expect_err("2,048-point FFT axis exceeds the shared-memory contract");
-
-    assert_eq!(
-        error.to_string(),
-        "Invalid input: GPU PSTD supports per-axis N ≤ 1024; got 2048×8×8"
-    );
 }
 
 /// Verify GpuPstdSolver can be constructed and runs without error.
@@ -130,10 +112,58 @@ fn test_gpu_pstd_solver_new() {
         },
     );
 
-    assert!(
-        solver.is_ok(),
-        "GpuPstdSolver::new failed: {:?}",
-        solver.err()
-    );
-    eprintln!("GpuPstdSolver constructed successfully");
+    let solver = solver.expect("GpuPstdSolver::new");
+    assert_eq!((solver.nx, solver.ny, solver.nz, solver.nt), (n, n, n, nt));
+}
+
+#[test]
+fn pstd_provider_prepares_bluestein_and_singleton_axes() {
+    let Some(provider) = pstd_test_provider("pstd_bluestein_singleton") else {
+        eprintln!("No GPU adapter - skipping arbitrary-shape PSTD construction test");
+        return;
+    };
+    let (nx, ny, nz) = (7, 4, 1);
+    let total = nx * ny * nz;
+    let c0 = SOUND_SPEED_WATER_SIM;
+    let rho0 = DENSITY_WATER_NOMINAL;
+    let grid = kwavers_grid::Grid::new(nx, ny, nz, 1e-3, 1e-3, 1e-3)
+        .expect("valid arbitrary-shape PSTD grid");
+    let sound_speed = vec![c0 as f32; total];
+    let density = vec![rho0 as f32; total];
+    let ones = vec![1.0_f32; total];
+    let zeros = vec![0.0_f32; total];
+
+    let solver = GpuPstdSolver::<WgpuPstdStateProvider>::new(
+        provider,
+        &grid,
+        MediumArrays {
+            c0_flat: &sound_speed,
+            rho0_flat: &density,
+        },
+        SolverParams {
+            dt: 0.3e-3 / c0,
+            nt: 1,
+            c_ref: c0,
+            nonlinear: false,
+            absorbing: false,
+        },
+        PmlArrays {
+            x: &ones,
+            y: &ones,
+            z: &ones,
+            sgx: &ones,
+            sgy: &ones,
+            sgz: &ones,
+        },
+        AbsorptionArrays {
+            bon_a_flat: &zeros,
+            nabla1: &zeros,
+            nabla2: &zeros,
+            tau: &zeros,
+            eta: &zeros,
+        },
+    )
+    .expect("Hephaestus prepares Bluestein and singleton axes");
+
+    assert_eq!((solver.nx, solver.ny, solver.nz), (nx, ny, nz));
 }

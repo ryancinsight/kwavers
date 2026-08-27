@@ -1,5 +1,67 @@
 # Backlog / Strategy
 
+## KW-FFT-HEPHAESTUS-BACKEND-SELECTOR — Select Leto or Hephaestus FFT execution [major] [arch] — delivery
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-FFT-HEPHAESTUS-BACKEND-SELECTOR | Provide one explicit 1-D, 2-D, and 3-D FFT backend selector whose closed variants are Leto and Hephaestus. | [major] [arch] | delivery | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `crates/kwavers-math/src/fft/`, `crates/kwavers-gpu/src/pstd_gpu/`, affected simulation configuration, provider pins, ADR 125, and synchronized docs/tests |
+
+- **Ownership:** the `Leto` variant uses Apollo's CPU FFT arithmetic over Leto
+  storage; the `Hephaestus` variant uses Hephaestus's prepared GPU FFT provider.
+  Leto does not acquire duplicate FFT arithmetic, Apollo does not retain a GPU
+  backend, and Kwavers owns no FFT kernel.
+- **Lease:** correction lease is discharged by the verified correction commit.
+- **Acceptance:** one explicit selection at the operation or solver boundary;
+  no capability probe or backend branch inside a transform loop; no silent
+  Hephaestus-to-Leto fallback; forward, inverse, normalization, shape, and
+  1-D/2-D/3-D differential contracts pass; prepared execution reuses GPU
+  resources and caller-owned host storage; the consumer-owned GPU PSTD FFT
+  shader and dispatch code are deleted after cutover; cache identity preserves
+  changing sensor/source geometry; unsupported solver/backend and heterogeneous
+  absorption-exponent combinations fail before device acquisition.
+- **Dependency:** Hephaestus provider PR #222 merged at `cfadc373`; the matched
+  fused-radix correction merged through PR #223 at `44362a16`. Kwavers now pins
+  and verifies that exact provider before deleting its private FFT. Apollo
+  remains the Leto-side CPU engine at its merged provider revision.
+- **Non-goals:** changing transform conventions, introducing runtime fallback,
+  or moving array/layout ownership out of Leto.
+- **Local evidence:** warning-denied all-target Clippy passes for
+  `kwavers-simulation` and `kwavers-python`; generated Python surface tests pass
+  6/6; the GPU-enabled simulation package passes 100/100 under Nextest in 0.617
+  seconds after a 2m37s cold compile. The GPU-enabled Python package passes
+  21/21 in 1.661 seconds after a 2m15s cold compile. Those compile/test ratios
+  are tracked separately rather than absorbed by larger timeouts.
+- **Closure evidence:** the combined GPU/simulation Nextest suite passes 279/279
+  in 18.375 seconds with 7 hardware tests skipped after the shared graph build.
+  Warning-denied Clippy, doctests, and rustdoc pass for both affected packages.
+  Pure tests cover
+  equal-count cache-index changes, shared snapshot absorption ownership and
+  exponent rejection, sensor-shape validation, and unsupported solver/backend
+  selection. Independent exact-revision review passed with no blocking findings;
+  delivery is PR #663.
+- **Provider evidence:** Hephaestus PRs #222 (`cfadc373`) and #223
+  (`44362a16`) supply arbitrary-rank prepared FFT and fused multidimensional
+  scheduling. On 256 x 128 x 128, six transforms improved from 13.810 ms to
+  7.9974 ms, dispatches fell from 324 to 36, and transient workspace fell from
+  64 MiB to two reusable 4 KiB root tables. Kwavers Bluestein parity on
+  7 x 4 x 3 passes in 0.900 s; the selector-level Hephaestus run passes in
+  0.711 s.
+
+## KW-SIM-TEST-COMPILE-GRAPH — Reduce simulation test build latency [patch] [perf] — todo
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-SIM-TEST-COMPILE-GRAPH | Reduce the cold compile/link cost of the GPU-enabled simulation and Python test harnesses while retaining all value-semantic tests. | [patch] [perf] | todo | unowned | `kwavers-simulation` and `kwavers-python` dependency/feature graphs, test-only imports, and build-timing instrumentation |
+
+- **Evidence:** `cargo nextest run --offline -p kwavers-simulation --features
+  gpu` spent 2m37s compiling the transitive graph, then executed all 100 tests
+  in 0.617s. The matching GPU-enabled Python run spent 2m15s compiling, then
+  executed all 21 tests in 1.661s. Test runtime is not the bottleneck.
+- **Acceptance:** compiler timing attributes the dominant crates and link work;
+  the same 100 simulation and 21 Python tests and assertions remain; no private
+  target cache, feature bypass, workload reduction, or timeout increase; cold
+  controlled reruns are materially below the 2m37s and 2m15s baselines.
+
 ## KW-CI-FULL-HISTORY-CHECKOUT — CI clones all of history to run tests [patch] — IMPLEMENTED 2026-08-26
 
 | ID | Outcome | Class | Status | Owner | Scope |

@@ -18,7 +18,11 @@ use leto::{Array2, Array3};
 
 /// Construct the shared finite pressure burst used by both PSTD providers.
 fn point_pressure_burst(n: usize, nt: usize, source: [usize; 3]) -> GridSource {
-    let mut p_mask = Array3::<f64>::zeros((n, n, n));
+    point_pressure_burst_shape([n, n, n], nt, source)
+}
+
+fn point_pressure_burst_shape(shape: [usize; 3], nt: usize, source: [usize; 3]) -> GridSource {
+    let mut p_mask = Array3::<f64>::zeros(shape);
     p_mask[[source[0], source[1], source[2]]] = 1.0;
     let mut p_signal = Array2::<f64>::zeros((1, nt));
     p_signal[[0, 1]] = 1.0;
@@ -28,6 +32,67 @@ fn point_pressure_burst(n: usize, nt: usize, source: [usize; 3]) -> GridSource {
         p_mode: SourceMode::Additive,
         ..GridSource::new_empty()
     }
+}
+
+/// A non-power-of-two Cartesian grid exercises Hephaestus Bluestein plans
+/// through the complete PSTD time step and agrees with the independent f64
+/// Apollo/Leto CPU path.
+///
+/// The largest Bluestein convolution here has length 16. Bounding each
+/// forward/inverse axis pair by 2,000 single-precision roundings gives
+/// `gamma_2000 < 1.2e-4`; the `1e-3` relative threshold leaves margin for
+/// single-precision local field updates without absorbing a structural error.
+#[test]
+#[ignore = "requires a GPU device; run on the scheduled self-hosted GPU parity job"]
+fn pstd_cpu_gpu_parity_bluestein_shape() {
+    let shape = [7, 4, 3];
+    let nt = 3;
+    let dx = 1.0e-3;
+    let c0 = 1_500.0;
+    let rho0 = 1_000.0;
+    let dt = 0.3 * dx / c0;
+    let grid = Grid::new(shape[0], shape[1], shape[2], dx, dx, dx).expect("valid grid");
+    let medium = HomogeneousMedium::new(rho0, c0, 0.0, 0.0, &grid);
+    let source = [3, 2, 1];
+    let grid_source = point_pressure_burst_shape(shape, nt, source);
+    let mut sensor_mask = Array3::from_elem(shape, false);
+    sensor_mask[[source[0], source[1], source[2]]] = true;
+
+    let gpu = run_gpu_pstd_with_outputs(
+        &grid,
+        &medium,
+        &grid_source,
+        &sensor_mask,
+        GpuPstdRunConfig {
+            time_steps: nt,
+            dt,
+            nonlinear: false,
+            alpha_coeff_db: 0.0,
+            alpha_power: 1.0,
+            cpml: None,
+            pml_inside: false,
+        },
+        PstdOutputRequest::with_final_fields(),
+    )
+    .expect("Hephaestus executes a non-power-of-two PSTD grid");
+    let gpu_fields = gpu
+        .final_fields
+        .expect("field comparison requests final GPU state");
+    let cpu = run_cpu_pstd(&grid, &medium, &grid_source, source, nt, dt);
+
+    let pressure_error = max_field_rel_err(&cpu.pressure, &gpu_fields.pressure);
+    let trace_error = max_rel_err(
+        &cpu.trace,
+        &gpu.sensor_data
+            .iter()
+            .copied()
+            .map(f64::from)
+            .collect::<Vec<_>>(),
+    );
+    assert!(
+        pressure_error < 1e-3 && trace_error < 1e-3,
+        "Bluestein-shape GPU/CPU mismatch: field={pressure_error:.2e}, trace={trace_error:.2e}"
+    );
 }
 
 /// CPU-side outputs used as the independent double-precision reference.
@@ -118,12 +183,11 @@ fn run_gpu_pstd_trace<M: Medium>(
         GpuPstdRunConfig {
             time_steps: nt,
             dt,
+            nonlinear: false,
             alpha_coeff_db: 0.0,
             alpha_power: 1.0,
-            pml_size: None,
-            pml_size_xyz: None,
+            cpml: None,
             pml_inside: false,
-            pml_alpha_xyz: None,
         },
     )
     .expect("GPU PSTD trace");
@@ -187,12 +251,11 @@ fn pstd_cpu_gpu_additive_source_filter_contract() {
         GpuPstdRunConfig {
             time_steps: nt,
             dt,
+            nonlinear: false,
             alpha_coeff_db: 0.0,
             alpha_power: 1.0,
-            pml_size: None,
-            pml_size_xyz: None,
+            cpml: None,
             pml_inside: false,
-            pml_alpha_xyz: None,
         },
         PstdOutputRequest::with_final_fields(),
     )
@@ -243,12 +306,11 @@ fn pstd_cpu_gpu_source_and_early_leapfrog_contract() {
         GpuPstdRunConfig {
             time_steps: nt,
             dt,
+            nonlinear: false,
             alpha_coeff_db: 0.0,
             alpha_power: 1.0,
-            pml_size: None,
-            pml_size_xyz: None,
+            cpml: None,
             pml_inside: false,
-            pml_alpha_xyz: None,
         },
         PstdOutputRequest::with_final_fields(),
     )

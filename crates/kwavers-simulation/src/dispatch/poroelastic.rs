@@ -126,6 +126,7 @@ mod tests {
             time_steps: 10,
             dt: 1e-8,
             solver_type: SolverType::Poroelastic,
+            fft_backend: kwavers_solver::config::FftBackend::Leto,
             pml: None,
             helmholtz: None,
             nonlinear: None,
@@ -153,8 +154,8 @@ mod tests {
 
         let result = run(&req).expect("default dispatch should succeed");
 
-        assert!(result.sensor_data.shape()[0] == 1);
-        assert!(result.sensor_data.shape()[1] == 1);
+        assert_eq!(result.sensor_data.shape()[0], 1);
+        assert_eq!(result.sensor_data.shape()[1], 1);
         let dt = result.sensor_data[[0, 0]];
         assert!(dt > 0.0, "stable dt must be positive, got {dt}");
         assert!(dt.is_finite(), "stable dt must be finite");
@@ -174,7 +175,7 @@ mod tests {
 
         let result = run(&req).expect("config dispatch should succeed");
 
-        assert!(result.sensor_data.shape()[0] == 1);
+        assert_eq!(result.sensor_data.shape()[0], 1);
         let dt = result.sensor_data[[0, 0]];
         assert!(dt > 0.0, "stable dt with config must be positive");
         assert!(dt.is_finite());

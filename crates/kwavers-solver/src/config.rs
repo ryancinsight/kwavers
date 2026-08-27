@@ -40,6 +40,8 @@ pub struct AbsorbingBoundaryConfig {
 pub struct SolverConfiguration {
     /// Solver type
     pub solver_type: SolverType,
+    /// FFT execution backend selected once when a pseudo-spectral solver is assembled.
+    pub fft_backend: FftBackend,
     /// Time integration scheme
     pub time_scheme: TimeScheme,
     /// Spatial discretization order
@@ -86,16 +88,6 @@ pub enum SolverType {
     FDTD,
     /// Pseudo-spectral Time Domain
     PSTD,
-    /// GPU-resident PSTD (requires `gpu` Cargo feature and a Hephaestus-backed provider).
-    ///
-    /// Grid dimensions must be powers of two with each axis ≤ 1,024. Lossless
-    /// PSTD requires 24 storage buffers per compute-shader stage; the
-    /// fractional-Laplacian absorption path requires 32. The
-    /// `kwavers_simulation::SimulationRunner` rejects this selection unless
-    /// its request-to-adapter contract is implemented; it never substitutes a
-    /// CPU PSTD run. Use `GpuPstdSimulationAdapter` directly for the current
-    /// GPU batch interface.
-    PstdGpu,
     /// Hybrid solver combining PSTD and FDTD
     Hybrid,
     /// k-space pseudo-spectral
@@ -124,6 +116,19 @@ pub enum SolverType {
     RayleighSommerfeld,
 }
 
+/// FFT execution provider for pseudo-spectral solvers.
+///
+/// Selection occurs at solver construction. A requested provider failure is
+/// returned to the caller and never selects the other variant implicitly.
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, Eq, PartialEq)]
+pub enum FftBackend {
+    /// Apollo CPU FFT arithmetic over Leto host storage.
+    #[default]
+    Leto,
+    /// Prepared Hephaestus GPU FFT execution.
+    Hephaestus,
+}
+
 /// Time integration schemes
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub enum TimeScheme {
@@ -141,6 +146,7 @@ impl Default for SolverConfiguration {
     fn default() -> Self {
         Self {
             solver_type: SolverType::FDTD,
+            fft_backend: FftBackend::Leto,
             time_scheme: TimeScheme::Leapfrog,
             spatial_order: 4,
             max_steps: 1000,

@@ -11,7 +11,7 @@ use kwavers_grid::Grid;
 use kwavers_medium::traits::Medium as MediumTrait;
 use kwavers_receiver::recorder::pressure_statistics::SampledStatistics;
 use kwavers_receiver::recorder::simple::SensorRecorder;
-use kwavers_solver::config::SolverType;
+use kwavers_solver::config::{FftBackend, SolverType};
 use kwavers_solver::forward::fdtd::config::KSpaceCorrectionMode;
 use kwavers_solver::forward::pstd::config::CompatibilityMode;
 use kwavers_solver::forward::pstd::extensions::ElasticPstdVelocitySource;
@@ -94,6 +94,7 @@ pub struct SimulationRunRequest<'a> {
     pub time_steps: usize,
     pub dt: f64,
     pub solver_type: SolverType,
+    pub fft_backend: FftBackend,
     pub pml: Option<&'a PmlConfig>,
     pub helmholtz: Option<&'a HelmholtzConfig>,
     pub nonlinear: Option<&'a NonlinearConfig>,

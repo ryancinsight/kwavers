@@ -6,9 +6,9 @@ This note records the storage-buffer contract for
 ## Bind Groups
 
 - `group(0)`: acoustic fields: `p`, `ux`, `uy`, `uz`, `rhox`, `rhoy`, `rhoz`, and `precomp_source_kappa`.
-- `group(1)`: k-space and medium data: `kspace_re`, `kspace_im`, `kappa`, `rho0_inv`, `c0_sq`, `rho0`, `bon_a`, and `alpha_decay`.
+- `group(1)`: k-space and medium data: `kspace_re`, `kspace_im`, `kappa`, `rho0_inv`, `c0_sq`, `rho0`, and `bon_a`.
 - `group(2)`: PML, shifts, sensors, and sources: `pml_sgx`, `pml_sgy`, `pml_sgz`, packed `pml_xyz`, packed `shifts_all`, sensor indices, sensor output, and packed source data.
-- `group(3)`: fractional-Laplacian absorption buffers, used only by absorption pipelines.
+- `group(3)`: fractional-Laplacian absorption constants and scratch buffers, used only by absorption pipelines.
 
 ## Shift Packing
 
@@ -29,17 +29,14 @@ This note records the storage-buffer contract for
 | `4*(nx + ny) + 2*nz` | `z_neg_re[nz]` |
 | `4*(nx + ny) + 3*nz` | `z_neg_im[nz]` |
 
-## Twiddle Packing
+## FFT buffers
 
-`precomp_twiddle_fft` stores one 1,024-point root table. Every supported
-power-of-two transform uses the table with `root_stride = 1024 / n`:
-
-| Offset | Slice |
-|---:|---|
-| `0..512` | `cos(-2*pi*k/1024)` |
-| `512..1024` | `sin(-2*pi*k/1024)` |
-
-Inverse FFT dispatches use the same table with the imaginary component negated.
+`kspace_re` and `kspace_im` are typed Hephaestus device buffers. Kwavers
+prepares one forward and one inverse rank-3 transform over their Leto C-order
+layout and encodes those plans into the same grouped command sequence as the
+PSTD kernels. One- and two-dimensional grids use singleton axes. Root tables,
+Bluestein workspace, and axis dispatch are provider-owned resources and are not
+part of the Kwavers shader ABI.
 
 ## Source Packing
 
@@ -60,5 +57,5 @@ final pressure frame as the envelope.
 - The WGSL `PstdParams` push-constant layout must match the Rust `PstdParams` struct.
 - `pml_xyz` stores `[pml_x | pml_y | pml_z]`, each of length `nx * ny * nz`.
 - `field_p` may be used as temporary storage only between sensor recording and `pressure_from_density`, which overwrites pressure before the next sensor read.
-- `PstdParams` contains 16 scalar fields (64 bytes) in identical Rust and WGSL
+- `PstdParams` contains 12 scalar fields (48 bytes) in identical Rust and WGSL
   order, including `peak_offset` and `record_peak_pressure`.

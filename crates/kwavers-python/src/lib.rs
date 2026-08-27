@@ -145,7 +145,7 @@ mod physics_unit_tests {
 // ============================================================================
 
 mod solver_type_bindings;
-pub use solver_type_bindings::SolverType;
+pub use solver_type_bindings::{FftBackend, SolverType};
 
 // ============================================================================
 // Grid: Computational Domain
@@ -228,6 +228,7 @@ fn _pykwavers(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<Simulation>()?;
     m.add_class::<SimulationResult>()?;
     m.add_class::<SolverType>()?;
+    m.add_class::<FftBackend>()?;
     m.add_class::<GpuPstdSession>()?;
     m.add_class::<PmlConfig>()?;
     m.add_class::<HelmholtzConfig>()?;

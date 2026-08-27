@@ -94,8 +94,10 @@ is preserved.
   shared across modules via `crate::<layer>::…` must be promoted to `pub` once the
   module boundary becomes a crate boundary.
 - The `gpu` feature forwards into the layer crates that expose feature-gated GPU
-  paths (`kwavers-core/gpu`, `kwavers-math/gpu`, `kwavers-solver/gpu`, …) alongside
-  the concrete `kwavers-gpu/gpu` backend.
+  paths (`kwavers-solver/gpu`, `kwavers-analysis/gpu`,
+  `kwavers-simulation/gpu`, and `kwavers-diagnostics/gpu`) alongside the
+  concrete `kwavers-gpu/gpu` backend. Core and math have no GPU feature because
+  device execution belongs to the backend and integration layers.
 
 ## Amendment (2026-06-03) — re-export facade removed
 

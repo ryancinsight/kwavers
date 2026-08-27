@@ -35,7 +35,7 @@ toml = "0.8"
 log = "0.4"
 
 [features]
-gpu = ["dep:kwavers-gpu", "kwavers-gpu/gpu", "kwavers-math/gpu", "kwavers-solver/gpu"]
+gpu = ["dep:kwavers-gpu", "kwavers-gpu/gpu", "kwavers-solver/gpu"]
 
 
 [dev-dependencies]

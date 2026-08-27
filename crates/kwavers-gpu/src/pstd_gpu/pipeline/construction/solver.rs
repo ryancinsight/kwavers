@@ -1,7 +1,4 @@
-use super::super::super::{
-    validate_gpu_pstd_dimensions, GpuPstdSolver, PstdParams, GPU_PSTD_FFT_WORKGROUP_STORAGE_BYTES,
-    MAX_GPU_PSTD_FFT_AXIS,
-};
+use super::super::super::{GpuPstdSolver, PstdParams};
 use super::super::bind_groups::{
     build_bg_absorb, build_bg_fields, build_bg_kspace, AbsorbBuffers, FieldBuffers, KspaceBuffers,
 };
@@ -13,14 +10,15 @@ use super::super::{
 use super::kspace::{precompute_kspace_shifts, KSpaceGridParams};
 use crate::backend::init::GpuProviderContext;
 use crate::pstd_gpu::state::{
-    PstdStateBuilder, WgpuPstdAbsorptionBuffers, WgpuPstdFieldBuffers, WgpuPstdKspaceBuffers,
-    WgpuPstdLayouts, WgpuPstdMediumBuffers, WgpuPstdPermanentBindGroups, WgpuPstdPipelines,
-    WgpuPstdPmlShiftBuffers, WgpuPstdRunCache, WgpuPstdState, WgpuPstdStateProvider,
-    ABSORPTION_PIPELINE_BUFFERS_PER_SHADER_STAGE,
+    PstdStateBuilder, WgpuPstdAbsorptionBuffers, WgpuPstdFftPlans, WgpuPstdFieldBuffers,
+    WgpuPstdKspaceBuffers, WgpuPstdLayouts, WgpuPstdMediumBuffers, WgpuPstdPermanentBindGroups,
+    WgpuPstdPipelines, WgpuPstdPmlShiftBuffers, WgpuPstdRunCache, WgpuPstdState,
+    WgpuPstdStateProvider, ABSORPTION_PIPELINE_BUFFERS_PER_SHADER_STAGE,
 };
-use hephaestus_wgpu::WgpuDevice;
-use kwavers_core::constants::numerical::TWO_PI;
+use hephaestus_core::{ComputeDevice, FftDirection, FftOperands, FftOps, StridedView};
+use hephaestus_wgpu::{WgpuDevice, WgpuFftOps};
 use kwavers_grid::Grid;
+use leto::Layout;
 
 impl PstdStateBuilder for WgpuPstdStateProvider {
     type Context = GpuProviderContext<WgpuDevice>;
@@ -59,17 +57,7 @@ impl PstdStateBuilder for WgpuPstdStateProvider {
         let ny = grid.ny;
         let nz = grid.nz;
 
-        validate_gpu_pstd_dimensions(nx, ny, nz).map_err(|error| error.to_string())?;
         let total = nx * ny * nz;
-        if context.device().limits().max_compute_workgroup_storage_size
-            < GPU_PSTD_FFT_WORKGROUP_STORAGE_BYTES
-        {
-            return Err(format!(
-                "GpuPstdSolver requires {} bytes of workgroup storage, device provides {}",
-                GPU_PSTD_FFT_WORKGROUP_STORAGE_BYTES,
-                context.device().limits().max_compute_workgroup_storage_size
-            ));
-        }
         if absorbing
             && context
                 .device()
@@ -134,11 +122,31 @@ impl PstdStateBuilder for WgpuPstdStateProvider {
         };
         let buf_source_kappa = mk_ro(&source_kappa_f32, "source_kappa");
 
-        let buf_kspace_re = mk_rw(total, "kspace_re");
-        let buf_kspace_im = mk_rw(total, "kspace_im");
+        let hephaestus_device = context.hephaestus_device();
+        let buf_kspace_re = hephaestus_device
+            .alloc_uninitialized(total)
+            .map_err(|error| format!("PSTD k-space real allocation failed: {error}"))?;
+        let buf_kspace_im = hephaestus_device
+            .alloc_uninitialized(total)
+            .map_err(|error| format!("PSTD k-space imaginary allocation failed: {error}"))?;
         let kspace_buffers = WgpuPstdKspaceBuffers {
             re: buf_kspace_re,
             im: buf_kspace_im,
+        };
+        let fft_layout = Layout::c_contiguous([nx, ny, nz])
+            .map_err(|error| format!("PSTD FFT layout is invalid: {error}"))?;
+        let fft_operands = || FftOperands {
+            real: StridedView::new(&kspace_buffers.re, &fft_layout),
+            imaginary: StridedView::new(&kspace_buffers.im, &fft_layout),
+        };
+        let fft_ops = WgpuFftOps;
+        let fft_plans = WgpuPstdFftPlans {
+            forward: fft_ops
+                .prepare_fft(hephaestus_device, fft_operands(), FftDirection::Forward)
+                .map_err(|error| format!("PSTD forward FFT preparation failed: {error}"))?,
+            inverse: fft_ops
+                .prepare_fft(hephaestus_device, fft_operands(), FftDirection::Inverse)
+                .map_err(|error| format!("PSTD inverse FFT preparation failed: {error}"))?,
         };
         let buf_kappa = mk_ro(&kappa_f32, "kappa");
         let buf_rho0_inv = mk_ro(&rho0_inv, "rho0_inv");
@@ -146,23 +154,12 @@ impl PstdStateBuilder for WgpuPstdStateProvider {
         let buf_rho0 = mk_ro(rho0_flat, "rho0");
         let buf_bon_a = mk_ro(bon_a_flat, "bon_a");
 
-        // A single 1,024-point root table serves every smaller power-of-two
-        // transform by striding its roots. Its first and second halves hold the
-        // real and imaginary components respectively.
-        let mut twiddle_data = vec![0.0f32; total.max(MAX_GPU_PSTD_FFT_AXIS)];
-        for k in 0usize..(MAX_GPU_PSTD_FFT_AXIS / 2) {
-            let a = -TWO_PI * k as f64 / MAX_GPU_PSTD_FFT_AXIS as f64;
-            twiddle_data[k] = a.cos() as f32;
-            twiddle_data[MAX_GPU_PSTD_FFT_AXIS / 2 + k] = a.sin() as f32;
-        }
-        let buf_twiddle_fft = mk_ro(&twiddle_data, "twiddle_fft");
         let medium_buffers = WgpuPstdMediumBuffers {
             kappa: buf_kappa,
             rho0_inv: buf_rho0_inv,
             c0_sq: buf_c0_sq,
             rho0: buf_rho0,
             bon_a: buf_bon_a,
-            twiddle_fft: buf_twiddle_fft,
             source_kappa: buf_source_kappa,
         };
 
@@ -226,7 +223,6 @@ impl PstdStateBuilder for WgpuPstdStateProvider {
 
         let pipeline_zero_fields = mk_pl("zero_acoustic_fields");
         let pipeline_zero_kspace = mk_pl("zero_kspace");
-        let pipeline_fft = mk_pl("fft_1d_smem");
         let pipeline_kspace_shift = mk_pl("kspace_shift_apply");
         let pipeline_vel_update = mk_pl("velocity_update");
         let pipeline_dens_update = mk_pl("density_update");
@@ -269,7 +265,6 @@ impl PstdStateBuilder for WgpuPstdStateProvider {
         let pstd_pipelines = WgpuPstdPipelines {
             zero_fields: pipeline_zero_fields,
             zero_kspace: pipeline_zero_kspace,
-            fft: pipeline_fft,
             kspace_shift: pipeline_kspace_shift,
             vel_update: pipeline_vel_update,
             dens_update: pipeline_dens_update,
@@ -306,14 +301,13 @@ impl PstdStateBuilder for WgpuPstdStateProvider {
             &bind_groups,
             &bgl_kspace,
             &KspaceBuffers {
-                kspace_re: &kspace_buffers.re,
-                kspace_im: &kspace_buffers.im,
+                kspace_re: kspace_buffers.re.raw(),
+                kspace_im: kspace_buffers.im.raw(),
                 kappa: &medium_buffers.kappa,
                 rho0_inv: &medium_buffers.rho0_inv,
                 c0_sq: &medium_buffers.c0_sq,
                 rho0: &medium_buffers.rho0,
                 bon_a: &medium_buffers.bon_a,
-                twiddle_fft: &medium_buffers.twiddle_fft,
             },
         );
         let bg_absorb = bgl_absorb.as_ref().map(|bgl_absorb| {
@@ -342,6 +336,7 @@ impl PstdStateBuilder for WgpuPstdStateProvider {
             context,
             field_buffers,
             kspace_buffers,
+            fft_plans,
             medium_buffers,
             absorption_buffers,
             pml_shift_buffers,
@@ -381,6 +376,10 @@ where
         pml: PmlArrays<'_>,
         absorption: AbsorptionArrays<'_>,
     ) -> Result<Self, String> {
+        let total = super::super::super::validate_pstd_grid_shape(grid)?;
+        validate_solver_params(solver)?;
+        validate_input_lengths(total, &medium, &pml, &absorption)?;
+
         let nx = grid.nx;
         let ny = grid.ny;
         let nz = grid.nz;
@@ -405,4 +404,76 @@ where
             absorbing,
         })
     }
+}
+
+fn validate_solver_params(solver: SolverParams) -> Result<(), String> {
+    if !(solver.dt.is_finite() && solver.dt > 0.0 && (solver.dt as f32) > 0.0) {
+        return Err(format!(
+            "GPU PSTD time step must be finite, positive, and representable as nonzero f32; got {}",
+            solver.dt
+        ));
+    }
+    if solver.nt == 0 {
+        return Err("GPU PSTD time-step count must be positive".to_owned());
+    }
+    u32::try_from(solver.nt).map_err(|_| {
+        format!(
+            "GPU PSTD time-step count {} exceeds u32 shader addressing",
+            solver.nt
+        )
+    })?;
+    if !(solver.c_ref.is_finite() && solver.c_ref > 0.0) {
+        return Err(format!(
+            "GPU PSTD reference sound speed must be finite and positive; got {}",
+            solver.c_ref
+        ));
+    }
+    Ok(())
+}
+
+fn validate_input_lengths(
+    total: usize,
+    medium: &MediumArrays<'_>,
+    pml: &PmlArrays<'_>,
+    absorption: &AbsorptionArrays<'_>,
+) -> Result<(), String> {
+    for (name, values) in [
+        ("sound speed", medium.c0_flat),
+        ("density", medium.rho0_flat),
+        ("PML x", pml.x),
+        ("PML y", pml.y),
+        ("PML z", pml.z),
+        ("staggered PML x", pml.sgx),
+        ("staggered PML y", pml.sgy),
+        ("staggered PML z", pml.sgz),
+        ("nonlinearity", absorption.bon_a_flat),
+        ("absorption nabla1", absorption.nabla1),
+        ("absorption nabla2", absorption.nabla2),
+        ("absorption tau", absorption.tau),
+        ("absorption eta", absorption.eta),
+    ] {
+        if values.len() != total {
+            return Err(format!(
+                "GPU PSTD {name} field has {} values; expected {total}",
+                values.len()
+            ));
+        }
+    }
+
+    for (name, values) in [
+        ("sound speed", medium.c0_flat),
+        ("density", medium.rho0_flat),
+    ] {
+        if let Some((index, value)) = values
+            .iter()
+            .copied()
+            .enumerate()
+            .find(|(_, value)| !value.is_finite() || *value <= 0.0)
+        {
+            return Err(format!(
+                "GPU PSTD {name} must be finite and positive at flat index {index}; got {value}"
+            ));
+        }
+    }
+    Ok(())
 }

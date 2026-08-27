@@ -12,6 +12,7 @@
       "__version__"
     ],
     "registered_missing_from___all__": [
+      "FftBackend",
       "FocalKernel",
       "KWaveArray",
       "KernelCube",
@@ -33,6 +34,7 @@
       "thermal_index_cranial"
     ],
     "registered_missing_from_facade_imports": [
+      "FftBackend",
       "PyBreastFwiPstdDatasetConfig",
       "PyBubbleField",
       "PyFrequencyDomainFwiConfig",
@@ -867,6 +869,7 @@
   "failures": [],
   "registered": {
     "classes": [
+      "FftBackend",
       "FocalKernel",
       "GpuPstdSession",
       "Grid",
@@ -1281,6 +1284,7 @@
   },
   "registered_py_names": {
     "classes": {
+      "FftBackend": "FftBackend",
       "FocalKernel": "FocalKernel",
       "GpuPstdSession": "GpuPstdSession",
       "Grid": "Grid",

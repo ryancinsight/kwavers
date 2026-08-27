@@ -250,9 +250,10 @@ Linear acoustic wave equation in heterogeneous media:
 `kw.SolverType` selects the scheme:
 
 - **FDTD**: Finite-Difference Time-Domain (2nd/4th/6th order spatial accuracy)
-- **PSTD**: Pseudospectral Time-Domain (spectral spatial accuracy)
+- **PSTD**: Pseudospectral Time-Domain (spectral spatial accuracy), with
+  `FftBackend.Leto` for Apollo CPU transforms over Leto storage or
+  `FftBackend.Hephaestus` for prepared GPU transforms
 - **Hybrid**: adaptive switching between FDTD and PSTD
-- **PstdGpu**: GPU-resident PSTD; falls back to CPU PSTD when no adapter is present
 - **Elastic**, **ElasticPSTD**: compressional + shear wave propagation
 - **Helmholtz**, **BEM**: frequency-domain and boundary-element formulations
 - **DG**: hybrid spectral / discontinuous-Galerkin for shock capturing

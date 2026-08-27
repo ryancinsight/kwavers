@@ -79,8 +79,6 @@ impl WgpuPstdState {
 
     pub(super) fn build_run_cache(&mut self, scalars: PstdRunScalars, inputs: &PstdRunInputs<'_>) {
         let n_sensors = inputs.sensor_indices.len();
-        let n_src = inputs.source_indices.len();
-        let n_vel_x = inputs.vel_x_indices.len();
         let records_peak_pressure = inputs.output_request.includes_peak_pressure();
         rewrite_packed_source_buffer(
             &mut self.scratch_source_data,
@@ -151,9 +149,18 @@ impl WgpuPstdState {
             ],
         ));
 
-        self.run_cache.n_sensors = n_sensors;
-        self.run_cache.n_src = n_src;
-        self.run_cache.n_vel_x = n_vel_x;
+        self.run_cache.sensor_indices.clear();
+        self.run_cache
+            .sensor_indices
+            .extend_from_slice(inputs.sensor_indices);
+        self.run_cache.source_indices.clear();
+        self.run_cache
+            .source_indices
+            .extend_from_slice(inputs.source_indices);
+        self.run_cache.vel_x_indices.clear();
+        self.run_cache
+            .vel_x_indices
+            .extend_from_slice(inputs.vel_x_indices);
         self.run_cache.output_storage_len = output_storage_len;
         self.run_cache.peak_offset = sensor_len;
         self.run_cache.records_peak_pressure = records_peak_pressure;

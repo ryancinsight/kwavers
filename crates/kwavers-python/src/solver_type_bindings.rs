@@ -1,4 +1,4 @@
-//! `SolverType` pyclass — solver backend selection enum.
+//! Solver-method and FFT-backend Python selection enums.
 
 use pyo3::prelude::*;
 
@@ -30,9 +30,6 @@ pub enum SolverType {
     PSTD,
     /// Hybrid FDTD/PSTD solver
     Hybrid,
-    /// GPU-resident Pseudospectral Time Domain solver (requires `gpu` feature).
-    /// Falls back to CPU PSTD if no GPU adapter is available.
-    PstdGpu,
     /// Elastic-wave solver (4th-order FD with velocity-Verlet integration,
     /// PML boundary, supports compressional + shear waves). The Python-level
     /// equivalent of k-Wave's `pstdElastic2D` / `pstdElastic3D`.
@@ -91,7 +88,6 @@ impl SolverType {
             SolverType::FDTD => "SolverType.FDTD".to_string(),
             SolverType::PSTD => "SolverType.PSTD".to_string(),
             SolverType::Hybrid => "SolverType.Hybrid".to_string(),
-            SolverType::PstdGpu => "SolverType.PstdGpu".to_string(),
             SolverType::Elastic => "SolverType.Elastic".to_string(),
             SolverType::ElasticPSTD => "SolverType.ElasticPSTD".to_string(),
             SolverType::Helmholtz => "SolverType.Helmholtz".to_string(),
@@ -113,7 +109,6 @@ impl SolverType {
             SolverType::FDTD => "FDTD".to_string(),
             SolverType::PSTD => "PSTD".to_string(),
             SolverType::Hybrid => "Hybrid".to_string(),
-            SolverType::PstdGpu => "PstdGpu".to_string(),
             SolverType::Elastic => "Elastic".to_string(),
             SolverType::ElasticPSTD => "ElasticPSTD".to_string(),
             SolverType::Helmholtz => "Helmholtz".to_string(),
@@ -122,6 +117,53 @@ impl SolverType {
             SolverType::Nonlinear => "Nonlinear".to_string(),
             SolverType::Poroelastic => "Poroelastic".to_string(),
             SolverType::RayleighSommerfeld => "RayleighSommerfeld".to_string(),
+        }
+    }
+
+    /// Equality comparison.
+    #[expect(
+        clippy::trivially_copy_pass_by_ref,
+        reason = "PyO3 equality method requires borrowed Python class operands"
+    )]
+    fn __eq__(&self, other: &Self) -> bool {
+        self == other
+    }
+}
+
+/// FFT execution provider for pseudo-spectral solvers.
+#[pyclass(from_py_object)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum FftBackend {
+    /// Apollo CPU FFT arithmetic over Leto host storage.
+    #[default]
+    Leto,
+    /// Prepared Hephaestus GPU FFT execution.
+    Hephaestus,
+}
+
+#[pymethods]
+impl FftBackend {
+    /// String representation.
+    #[expect(
+        clippy::trivially_copy_pass_by_ref,
+        reason = "PyO3 magic methods require borrowed Python class receivers"
+    )]
+    fn __repr__(&self) -> String {
+        match self {
+            Self::Leto => "FftBackend.Leto".to_owned(),
+            Self::Hephaestus => "FftBackend.Hephaestus".to_owned(),
+        }
+    }
+
+    /// Human-readable string.
+    #[expect(
+        clippy::trivially_copy_pass_by_ref,
+        reason = "PyO3 magic methods require borrowed Python class receivers"
+    )]
+    fn __str__(&self) -> String {
+        match self {
+            Self::Leto => "Leto".to_owned(),
+            Self::Hephaestus => "Hephaestus".to_owned(),
         }
     }
 

@@ -9,6 +9,11 @@ Accepted
   rather than zero arrays, final-field readback is opt-in, and
   `SolverType::PstdGpu` returns `FeatureNotAvailable` instead of substituting
   CPU PSTD. ADR 040 makes no runner or substitution decision.
+- Revision (2026-08-26): ADR 125 replaced `SolverType::PstdGpu` with
+  `SolverType::PSTD` plus `FftBackend::Hephaestus`, and Hephaestus replaced the
+  private bounded radix-2 FFT. The output and no-substitution decisions remain
+  unchanged; the current selector and provider limits below reflect that
+  migration.
 
 ## Context
 
@@ -20,11 +25,10 @@ synthetic zero field to downstream focusing, statistics, or safety logic.
 
 The WGPU PSTD state already owns the final pressure and staggered velocity
 buffers, and its provider command contract supports staging-buffer readback.
-The current GPU algorithm accepts power-of-two axes through 1,024 cells and
-does not yet produce a time-maximum pressure envelope. Its three
-lossless bind groups require 24 storage buffers per compute-shader stage;
-fractional-Laplacian absorption adds a fourth eight-buffer group and requires
-32.
+Hephaestus prepares the rank-3 FFT over arbitrary positive dimensions, using
+singleton axes for 1-D and 2-D grids. Its three lossless bind groups require 23
+storage buffers per compute-shader stage; fractional-Laplacian absorption adds
+a fourth eight-buffer group and requires 31.
 
 ## Decision
 
@@ -36,9 +40,14 @@ grid order.
 
 The generic GPU adapter requests final fields and exposes those actual values
 through `Solver::{pressure_field,velocity_fields,statistics}`. The simulation
-runner returns `FeatureNotAvailable` for `SolverType::PstdGpu` until it can
-map every request input and result field to the GPU adapter. It never selects
-CPU PSTD as an implicit substitute.
+runner maps `SolverType::PSTD` with `FftBackend::Hephaestus` to the GPU path.
+Unsupported request contracts and device failures are explicit errors. It
+never selects Leto CPU execution as an implicit substitute.
+
+The adapter and direct runner share one provider-owned medium snapshot and one
+execution path. Medium absorption ownership is resolved while the snapshot is
+prepared, before CPML construction or device acquisition; the adapter retains
+that snapshot across batches instead of duplicating preparation logic.
 
 ## Consequences
 
@@ -50,8 +59,8 @@ CPU PSTD as an implicit substitute.
 - At this decision point a peak-over-time consumer remained unsupported; ADR
   040 now provides the provider-side envelope. CT-scale planning still needs a
   per-plan allocation-capacity check rather than a final-field substitution.
-- Lossless PSTD remains available on a 24-buffer device. Absorption is an
-  explicit 32-buffer capability requirement, not a reason to use CPU PSTD.
+- Lossless PSTD remains available on a 23-buffer device. Absorption is an
+  explicit 31-buffer capability requirement, not a reason to use Leto.
 
 ## Rejected alternatives
 
@@ -66,8 +75,9 @@ CPU PSTD as an implicit substitute.
 The GPU regression requests full output from a real WGPU batch and verifies
 field cardinality and finite pressure. The adapter regression proves exact
 row-major transfer into the generic solver fields and exact peak statistics.
-Feature-configured runner regressions assert `FeatureNotAvailable` instead of
-CPU execution. Package compilation and Nextest provide compiler and
+Feature-configured runner regressions execute a non-power-of-two Hephaestus
+case and reject unsupported contracts instead of selecting Leto. Package
+compilation and Nextest provide compiler and
 value-semantic evidence; a real GPU device is required for the WGPU run path.
 
 ### Theorem: output requests cannot fabricate fields
@@ -78,12 +88,8 @@ produced by a sequential copy from the provider-owned pressure or
 staggered-velocity buffer into the row-major staging buffer; the exact C-order
 adapter regression checks every element and the real WGPU regression checks the
 live execution path. ADR 040 extends this proof to the peak-pressure envelope.
-Finally, the generic runner maps `SolverType::PstdGpu` to a typed
-`FeatureNotAvailable` error, so no branch can substitute CPU PSTD for a GPU
-request. The theorem is supported by type-level result selection and
+Finally, the generic runner maps `FftBackend::Hephaestus` directly to the GPU
+operation and returns typed errors for unsupported inputs or acquisition
+failure, so no branch can substitute Leto for a GPU request. The theorem is
+supported by type-level result selection and
 value-semantic tests, not by a mock or a zero-filled fallback.
-
-The current evidence is 144/144 GPU-feature tests (one skipped), 1036/1036
-default scoped tests (four skipped), warning-denied Clippy, warning-clean
-all-feature Rustdoc, and the 2/2 Hephaestus provider-limit regression merged
-as `cf4df20`.

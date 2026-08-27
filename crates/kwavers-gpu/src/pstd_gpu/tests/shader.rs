@@ -80,21 +80,30 @@ fn test_pstd_shader_push_constant_abi_matches_rust() {
         src.contains("precomp_source_kappa"),
         "validated phased-array GPU path requires precomp_source_kappa in the shader ABI"
     );
-    assert_eq!(struct_block.matches(':').count(), 16);
+    assert_eq!(struct_block.matches(':').count(), 12);
     assert!(struct_block.contains("peak_offset: u32"));
     assert!(struct_block.contains("record_peak_pressure: u32"));
 }
 
-/// The host root table and shader workgroup arrays must describe the same
-/// 1,024-point FFT contract.
+/// Hephaestus owns FFT execution, so the PSTD shader must not retain a second
+/// local FFT implementation or its fixed-size workgroup storage.
 #[test]
-fn pstd_shader_declares_the_1024_point_shared_fft_contract() {
+fn pstd_shader_delegates_fft_execution_to_hephaestus() {
     let src = include_str!("../shaders/pstd.wgsl");
 
-    assert!(src.contains("const MAX_FFT_LENGTH: u32 = 1024u;"));
-    assert!(src.contains("var<workgroup> sm_re: array<f32, 1024>;"));
-    assert!(src.contains("var<workgroup> sm_tw_re: array<f32, 512>;"));
-    assert!(src.contains("let root_stride = MAX_FFT_LENGTH / n;"));
+    for retired_symbol in [
+        "MAX_FFT_LENGTH",
+        "fft_1d_smem",
+        "sm_re",
+        "sm_im",
+        "sm_tw_re",
+        "sm_tw_im",
+    ] {
+        assert!(
+            !src.contains(retired_symbol),
+            "PSTD shader still contains retired local FFT symbol {retired_symbol}"
+        );
+    }
 }
 
 #[test]
