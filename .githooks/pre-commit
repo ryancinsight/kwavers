@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+# Refuse a commit that would stage a flattened Cargo.lock.
+#
+# The `pre-push` hook beside this one catches the same defect, and catching it
+# there is too late. By push time the lock is already committed, often several
+# commits back and mixed in with real work; the push is refused, and in practice
+# the branch is then abandoned rather than repaired. Four apollo branches
+# existed only on one developer's disk for exactly this reason, each carrying a
+# lockfile that made it unpushable
+# (`ATLAS-LOCKFILE-POISONING-GENERATOR-2026-08-26`).
+#
+# So this hook exists to stop the poisoned lock entering a commit at all. It is
+# the same rule, applied one step earlier, where the fix is still a one-line
+# regenerate rather than a history edit.
+#
+# It checks the *staged blob*, not the working file: a repaired working copy
+# with the poisoned version still in the index is precisely the case that would
+# otherwise slip through, and the index is what becomes the commit.
+#
+# Install (git does not apply tracked hooks on its own):
+#
+#     git config core.hooksPath .githooks
+#
+# Bypass deliberately:
+#
+#     SKIP_LOCKFILE_CHECK=1 git commit
+set -euo pipefail
+
+if [ "${SKIP_LOCKFILE_CHECK:-0}" = "1" ]; then
+  echo "pre-commit: lockfile check skipped by SKIP_LOCKFILE_CHECK" >&2
+  exit 0
+fi
+
+repo_root="$(git rev-parse --show-toplevel)"
+checker="$repo_root/scripts/lockfile.py"
+
+if [ ! -f "$checker" ]; then
+  # Say so rather than passing silently, so a missing guard is visible instead
+  # of assumed.
+  echo "pre-commit: scripts/lockfile.py not present; lockfile not verified" >&2
+  exit 0
+fi
+
+python_bin="${PYTHON:-}"
+if [ -z "$python_bin" ]; then
+  for candidate in python3 python; do
+    if command -v "$candidate" >/dev/null 2>&1; then
+      python_bin="$candidate"
+      break
+    fi
+  done
+fi
+
+if [ -z "$python_bin" ]; then
+  echo "pre-commit: no python interpreter found; lockfile not verified" >&2
+  exit 0
+fi
+
+# --check-staged is index-only and runs no cargo, so an ordinary commit that
+# does not touch Cargo.lock pays nothing for this.
+exec "$python_bin" "$checker" --check-staged
