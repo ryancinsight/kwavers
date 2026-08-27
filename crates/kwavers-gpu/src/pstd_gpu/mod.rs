@@ -47,6 +47,7 @@
 //! - Treeby & Cox (2010). J. Biomed. Opt. 15(2), 021314.
 //! - Liu (1998). Microwave Opt. Technol. Lett. 15(3), 158-165.
 
+mod medium;
 mod medium_update;
 mod pipeline;
 mod runner;
@@ -58,10 +59,11 @@ use std::marker::PhantomData;
 
 use kwavers_grid::Grid;
 
+pub use medium::PstdMediumSnapshot;
 pub use pipeline::{AbsorptionArrays, MediumArrays, PmlArrays, SolverParams};
 pub use runner::{
     cpml_thickness_limits, run_gpu_pstd, run_gpu_pstd_with_outputs, run_gpu_pstd_with_provider,
-    run_gpu_pstd_with_provider_outputs, GpuPstdRunConfig,
+    run_gpu_pstd_with_provider_outputs, run_gpu_pstd_with_snapshot_outputs, GpuPstdRunConfig,
 };
 pub use source::{prepare_pstd_pressure_source, PstdPressureSourceSchedule};
 pub use state::{

@@ -44,6 +44,11 @@ runner maps `SolverType::PSTD` with `FftBackend::Hephaestus` to the GPU path.
 Unsupported request contracts and device failures are explicit errors. It
 never selects Leto CPU execution as an implicit substitute.
 
+The adapter and direct runner share one provider-owned medium snapshot and one
+execution path. Medium absorption ownership is resolved while the snapshot is
+prepared, before CPML construction or device acquisition; the adapter retains
+that snapshot across batches instead of duplicating preparation logic.
+
 ## Consequences
 
 - This was a [major] `kwavers-gpu` API change: callers add an explicit output

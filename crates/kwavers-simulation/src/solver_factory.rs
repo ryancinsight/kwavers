@@ -150,6 +150,12 @@ impl SimulationSolverFactory {
                     )),
                 }
             }
+            SolverType::KSpace if config.fft_backend == FftBackend::Hephaestus => {
+                Err(KwaversError::FeatureNotAvailable(
+                    "KSpace does not yet support FftBackend::Hephaestus; select SolverType::PSTD and configure k-space correction"
+                        .to_owned(),
+                ))
+            }
             SolverType::KSpace => {
                 let solver = PSTDSolver::new(
                     pstd_config_from(&config, KSpaceMethod::FullKSpace),
@@ -158,6 +164,11 @@ impl SimulationSolverFactory {
                     GridSource::default(),
                 )?;
                 Ok(Box::new(solver))
+            }
+            SolverType::Hybrid if config.fft_backend == FftBackend::Hephaestus => {
+                Err(KwaversError::FeatureNotAvailable(
+                    "Hybrid does not yet support FftBackend::Hephaestus".to_owned(),
+                ))
             }
             SolverType::Hybrid => {
                 let solver = HybridSolver::new(hybrid_config_from(&config), grid, medium)?;
@@ -268,6 +279,48 @@ mod tests {
         assert_eq!(solver.name(), "PSTD");
         solver.run(0).unwrap();
         assert_eq!(solver.pressure_field().shape(), [4, 4, 4]);
+    }
+
+    #[test]
+    fn rejects_hephaestus_for_factory_kspace_before_cpu_assembly() {
+        let grid = Grid::new(4, 4, 4, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
+        let medium =
+            HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
+        let config = SolverConfiguration {
+            solver_type: SolverType::KSpace,
+            fft_backend: FftBackend::Hephaestus,
+            ..SolverConfiguration::default()
+        };
+
+        let error =
+            SimulationSolverFactory::create_solver(SolverType::KSpace, config, &grid, &medium)
+                .unwrap_err();
+
+        assert_eq!(
+            error.to_string(),
+            "Feature not available: KSpace does not yet support FftBackend::Hephaestus; select SolverType::PSTD and configure k-space correction"
+        );
+    }
+
+    #[test]
+    fn rejects_hephaestus_for_factory_hybrid_before_cpu_assembly() {
+        let grid = Grid::new(4, 4, 4, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
+        let medium =
+            HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
+        let config = SolverConfiguration {
+            solver_type: SolverType::Hybrid,
+            fft_backend: FftBackend::Hephaestus,
+            ..SolverConfiguration::default()
+        };
+
+        let error =
+            SimulationSolverFactory::create_solver(SolverType::Hybrid, config, &grid, &medium)
+                .unwrap_err();
+
+        assert_eq!(
+            error.to_string(),
+            "Feature not available: Hybrid does not yet support FftBackend::Hephaestus"
+        );
     }
 
     #[test]

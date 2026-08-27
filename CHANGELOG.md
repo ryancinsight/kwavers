@@ -23,11 +23,16 @@
   errors. Run-cache reuse keys on the actual sensor and source index sequences,
   preventing equal-count geometry changes from retaining stale GPU indices.
   `GpuPstdRunConfig` adds an explicit `nonlinear` selection instead of inferring
-  it from medium coefficients, preserves the explicit-pair/medium-pair
-  absorption ownership contract from ADR 120, and rejects heterogeneous active
-  exponents until the GPU provider represents stratified spectral symbols.
-  `Hybrid` and `ElasticPSTD` reject Hephaestus selection rather than silently
-  executing their CPU paths. See
+  it from medium coefficients and replaces the parallel `pml_size`,
+  `pml_size_xyz`, and `pml_alpha_xyz` fields with `cpml: Option<CPMLConfig>`;
+  callers place their complete CPML profile there or use `None` for the
+  grid-limited default. Direct and factory-selected execution now share one
+  provider-owned `PstdMediumSnapshot`, preserving the explicit-pair/medium-pair
+  absorption ownership contract from ADR 120 without repeated medium queries or
+  duplicate transient coefficient/exponent storage. Heterogeneous active
+  exponents fail during snapshot preparation, before CPML or device work.
+  `KSpace`, `Hybrid`, and `ElasticPSTD` reject Hephaestus selection rather than
+  silently executing their CPU paths. See
   [ADR 125](docs/adr/125-fft-backend-selection.md).
 
 - **[major] Visualization configuration now has one source for each choice.**

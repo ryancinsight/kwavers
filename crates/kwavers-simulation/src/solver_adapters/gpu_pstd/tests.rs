@@ -3,7 +3,7 @@ use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WA
 use kwavers_core::error::KwaversError;
 use kwavers_gpu::pstd_gpu::PstdFinalFields;
 use kwavers_grid::Grid;
-use kwavers_medium::homogeneous::HomogeneousMedium;
+use kwavers_medium::{heterogeneous::HeterogeneousMedium, homogeneous::HomogeneousMedium};
 use kwavers_solver::config::{FftBackend, SolverConfiguration, SolverType};
 use kwavers_solver::Solver;
 use kwavers_source::NullSource;
@@ -23,6 +23,34 @@ fn accepts_non_power_of_two_grid() {
         .expect("Hephaestus supports Bluestein transforms for non-power-of-two axes");
 
     assert_eq!(adapter.pressure_field().shape(), [5, 8, 8]);
+}
+
+#[test]
+fn rejects_heterogeneous_absorption_exponents_during_factory_preparation() {
+    let grid = Grid::new(2, 2, 2, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
+    let mut medium = HeterogeneousMedium::new(2, 2, 2, false);
+    medium
+        .sound_speed
+        .iter_mut()
+        .for_each(|value| *value = 1_500.0);
+    medium.density.iter_mut().for_each(|value| *value = 1_000.0);
+    medium.absorption.iter_mut().for_each(|value| *value = 0.2);
+    medium.alpha_power.iter_mut().for_each(|value| *value = 1.3);
+    medium.alpha_power[[0, 0, 1]] = 1.7;
+    let config = SolverConfiguration {
+        solver_type: SolverType::PSTD,
+        fft_backend: FftBackend::Hephaestus,
+        dt: 1.0e-7,
+        ..SolverConfiguration::default()
+    };
+
+    let error = GpuPstdSimulationAdapter::new(&config, &grid, &medium)
+        .expect_err("one GPU spectral symbol cannot represent multiple exponents");
+
+    assert_eq!(
+        error.to_string(),
+        "Feature not available: Hephaestus PSTD requires one active absorption exponent; medium flat index 1 uses 1.7"
+    );
 }
 
 #[test]

@@ -16,11 +16,10 @@
 
 use crate::pstd_gpu::{
     AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays, PstdAutoDeviceProvider,
-    PstdOutputRequest, PstdRunInputs, PstdRunResult, PstdRunState, SolverParams,
-    WgpuPstdStateProvider,
+    PstdMediumSnapshot, PstdOutputRequest, PstdRunInputs, PstdRunResult, PstdRunState,
+    SolverParams, WgpuPstdStateProvider,
 };
 use kwavers_boundary::cpml::{CPMLConfig, CPMLProfiles};
-use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
@@ -30,16 +29,8 @@ use kwavers_source::GridSource;
 use leto::{Array2 as LetoArray2, Array3 as LetoArray3};
 use std::f64::consts::PI;
 
-const POWER_LAW_SENTINEL_TOLERANCE: f64 = 1e-12;
-
-#[derive(Clone, Copy, Debug, PartialEq)]
-struct PowerLawAbsorption {
-    exponent: f64,
-    explicit_coefficient: Option<f64>,
-}
-
 /// GPU PSTD acquisition settings.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub struct GpuPstdRunConfig {
     /// Number of time steps to integrate.
     pub time_steps: usize,
@@ -56,15 +47,12 @@ pub struct GpuPstdRunConfig {
     /// use the singular value `1.0`. When coefficient ownership is delegated,
     /// this value is the fallback for medium exponent sentinels `0.0` and `1.0`.
     pub alpha_power: f64,
-    /// CPML thickness in cells; `None` selects the automatic limit.
-    pub pml_size: Option<usize>,
-    /// Per-axis CPML thickness override; `None` uses `pml_size`.
-    pub pml_size_xyz: Option<(usize, usize, usize)>,
+    /// Exact CPML profile configuration. `None` selects an automatically
+    /// grid-limited default configuration.
+    pub cpml: Option<CPMLConfig>,
     /// `true` places CPML inside the grid; `false` zeroes the per-cell PML
     /// damping (treat as a free interior with no absorbing layer).
     pub pml_inside: bool,
-    /// Optional per-axis CPML α override.
-    pub pml_alpha_xyz: Option<(f64, f64, f64)>,
 }
 
 impl Default for GpuPstdRunConfig {
@@ -75,10 +63,8 @@ impl Default for GpuPstdRunConfig {
             nonlinear: false,
             alpha_coeff_db: 0.0,
             alpha_power: 1.5,
-            pml_size: None,
-            pml_size_xyz: None,
+            cpml: None,
             pml_inside: true,
-            pml_alpha_xyz: None,
         }
     }
 }
@@ -124,6 +110,35 @@ pub fn run_gpu_pstd_with_outputs(
     output_request: PstdOutputRequest,
 ) -> KwaversResult<PstdRunResult> {
     run_gpu_pstd_with_provider_outputs::<WgpuPstdStateProvider>(
+        grid,
+        medium,
+        source,
+        sensor_mask,
+        config,
+        output_request,
+    )
+}
+
+/// Drive a GPU-resident PSTD simulation from a retained medium snapshot.
+///
+/// This is the batch-adapter boundary for callers that cannot retain a
+/// borrowed [`Medium`]. The snapshot's absorption pair must match `config`;
+/// construct it with [`PstdMediumSnapshot::from_medium`].
+///
+/// # Errors
+///
+/// Returns `KwaversError::InvalidInput` for an invalid grid, source, sensor
+/// mask, configuration, or snapshot/config mismatch, and propagates provider
+/// acquisition and execution failures.
+pub fn run_gpu_pstd_with_snapshot_outputs(
+    grid: &Grid,
+    medium: &PstdMediumSnapshot,
+    source: &GridSource,
+    sensor_mask: &LetoArray3<bool>,
+    config: GpuPstdRunConfig,
+    output_request: PstdOutputRequest,
+) -> KwaversResult<PstdRunResult> {
+    run_gpu_pstd_with_snapshot_provider_outputs::<WgpuPstdStateProvider>(
         grid,
         medium,
         source,
@@ -189,6 +204,30 @@ where
     P: PstdAutoDeviceProvider,
     P::State: PstdRunState,
 {
+    let medium =
+        PstdMediumSnapshot::from_medium(grid, medium, config.alpha_coeff_db, config.alpha_power)?;
+    run_gpu_pstd_with_snapshot_provider_outputs::<P>(
+        grid,
+        &medium,
+        source,
+        sensor_mask,
+        config,
+        output_request,
+    )
+}
+
+fn run_gpu_pstd_with_snapshot_provider_outputs<P>(
+    grid: &Grid,
+    medium: &PstdMediumSnapshot,
+    source: &GridSource,
+    sensor_mask: &LetoArray3<bool>,
+    config: GpuPstdRunConfig,
+    output_request: PstdOutputRequest,
+) -> KwaversResult<PstdRunResult>
+where
+    P: PstdAutoDeviceProvider,
+    P::State: PstdRunState,
+{
     let nx = grid.nx;
     let ny = grid.ny;
     let nz = grid.nz;
@@ -198,10 +237,8 @@ where
         nonlinear,
         alpha_coeff_db,
         alpha_power,
-        pml_size,
-        pml_size_xyz,
+        cpml,
         pml_inside,
-        pml_alpha_xyz,
     } = config;
 
     let total = super::validate_pstd_grid_shape(grid).map_err(KwaversError::InvalidInput)?;
@@ -212,40 +249,11 @@ where
     }
     validate_sensor_mask_shape(grid, sensor_mask)?;
     let sensor_indices = collect_sensor_indices(sensor_mask)?;
-    let absorption = resolve_power_law_absorption(
-        alpha_coeff_db,
-        alpha_power,
-        (0..total).map(|flat| {
-            let ix = flat / (ny * nz);
-            let iy = (flat % (ny * nz)) / nz;
-            let iz = flat % nz;
-            let (x, y, z) = grid.indices_to_coordinates(ix, iy, iz);
-            (
-                medium.alpha_coefficient(x, y, z, grid),
-                medium.alpha_power(x, y, z, grid),
-            )
-        }),
-    )?;
-
-    let (default_thickness, max_allowed) = cpml_thickness_limits(nx, ny, nz);
-    let thickness = pml_size.unwrap_or(default_thickness).min(max_allowed);
-
-    let cpml_config = if let Some((px, py, pz)) = pml_size_xyz {
-        let mut cfg = CPMLConfig::with_per_dimension_thickness(px, py, pz);
-        if let Some((ax, ay, az)) = pml_alpha_xyz {
-            cfg = cfg.with_alpha_xyz(ax, ay, az);
-        }
-        cfg
-    } else {
-        let mut cfg = CPMLConfig::with_thickness(thickness);
-        if let Some((ax, ay, az)) = pml_alpha_xyz {
-            cfg = cfg.with_alpha_xyz(ax, ay, az);
-        }
-        cfg
-    };
-
-    let c_ref = medium.max_sound_speed();
-    let profiles = CPMLProfiles::new(&cpml_config, grid, c_ref, dt)?;
+    medium.validate_absorption_config(alpha_coeff_db, alpha_power)?;
+    let cpml_config = cpml.unwrap_or_else(|| {
+        let (default_thickness, _) = cpml_thickness_limits(nx, ny, nz);
+        CPMLConfig::with_thickness(default_thickness)
+    });
 
     let mut pml_sgx_3d = vec![1.0f32; total];
     let mut pml_sgy_3d = vec![1.0f32; total];
@@ -255,6 +263,7 @@ where
     let mut pml_z_3d = vec![1.0f32; total];
 
     if pml_inside {
+        let profiles = CPMLProfiles::new(&cpml_config, grid, medium.c_ref, dt)?;
         let exp_half = |sigma: &leto::Array1<f64>| -> Vec<f32> {
             sigma
                 .iter()
@@ -283,20 +292,8 @@ where
         }
     }
 
-    let mut c0_flat = vec![c_ref as f32; total];
-    let mut rho0_flat = vec![DENSITY_WATER_NOMINAL as f32; total];
-    for ix in 0..nx {
-        for iy in 0..ny {
-            for iz in 0..nz {
-                let flat = ix * ny * nz + iy * nz + iz;
-                c0_flat[flat] = medium.sound_speed(ix, iy, iz) as f32;
-                rho0_flat[flat] = medium.density(ix, iy, iz) as f32;
-            }
-        }
-    }
-
     let pressure_source =
-        super::prepare_pstd_pressure_source(grid, source, &c0_flat, dt, time_steps)?;
+        super::prepare_pstd_pressure_source(grid, source, &medium.c0_flat, dt, time_steps)?;
 
     let mut vel_x_indices: Vec<u32> = Vec::new();
     let mut vel_x_signals: Vec<f32> = Vec::new();
@@ -336,20 +333,11 @@ where
         }
     }
 
-    let has_absorption = absorption.is_some();
-
-    let bon_a_flat: Vec<f32> = (0..total)
-        .map(|flat| {
-            let ix = flat / (ny * nz);
-            let iy = (flat % (ny * nz)) / nz;
-            let iz = flat % nz;
-            (medium.nonlinearity(ix, iy, iz) / 2.0) as f32
-        })
-        .collect();
-    let has_nonlinear = nonlinear && has_nonlinear_coefficient(&bon_a_flat);
+    let has_absorption = medium.absorption.is_some();
+    let has_nonlinear = nonlinear && has_nonlinear_coefficient(&medium.bon_a_flat);
 
     let (absorb_nabla1_flat, absorb_nabla2_flat, absorb_tau_flat, absorb_eta_flat) =
-        if let Some(absorption) = absorption {
+        if let Some(absorption) = &medium.absorption {
             let dk_x = TWO_PI / (nx as f64 * grid.dx);
             let dk_y = TWO_PI / (ny as f64 * grid.dy);
             let dk_z = TWO_PI / (nz as f64 * grid.dz);
@@ -388,12 +376,9 @@ where
                     n2[flat] = k_mag.powf(y - 1.0) as f32;
                 }
 
-                let alpha_db_cm = absorption.explicit_coefficient.unwrap_or_else(|| {
-                    let (x, y_coord, z) = grid.indices_to_coordinates(ix, iy, iz);
-                    medium.alpha_coefficient(x, y_coord, z, grid)
-                });
+                let alpha_db_cm = absorption.coefficients.at(flat);
                 let alpha_0_si = power_law_db_cm_to_np_omega_m(alpha_db_cm, y);
-                let c0_local = medium.sound_speed(ix, iy, iz);
+                let c0_local = f64::from(medium.c0_flat[flat]);
                 tau_v[flat] = (-2.0 * alpha_0_si * c0_local.powf(y - 1.0)) as f32;
                 eta_v[flat] = (2.0 * alpha_0_si * c0_local.powf(y) * (PI * y / 2.0).tan()) as f32;
             }
@@ -410,13 +395,13 @@ where
     let mut solver = GpuPstdSolver::<P>::with_auto_device(
         grid,
         MediumArrays {
-            c0_flat: &c0_flat,
-            rho0_flat: &rho0_flat,
+            c0_flat: &medium.c0_flat,
+            rho0_flat: &medium.rho0_flat,
         },
         SolverParams {
             dt,
             nt: time_steps,
-            c_ref,
+            c_ref: medium.c_ref,
             nonlinear: has_nonlinear,
             absorbing: has_absorption,
         },
@@ -429,7 +414,7 @@ where
             sgz: &pml_sgz_3d,
         },
         AbsorptionArrays {
-            bon_a_flat: &bon_a_flat,
+            bon_a_flat: &medium.bon_a_flat,
             nabla1: &absorb_nabla1_flat,
             nabla2: &absorb_nabla2_flat,
             tau: &absorb_tau_flat,
@@ -457,65 +442,6 @@ fn has_nonlinear_coefficient(coefficients: &[f32]) -> bool {
     coefficients.iter().any(|&coefficient| coefficient != 0.0)
 }
 
-fn validate_active_power_law_exponent(alpha_power: f64) -> KwaversResult<()> {
-    if !alpha_power.is_finite() || (alpha_power - 1.0).abs() < POWER_LAW_SENTINEL_TOLERANCE {
-        return Err(KwaversError::InvalidInput(format!(
-            "GPU PSTD alpha_power must be finite and must not equal 1.0 for enabled fractional absorption; got {alpha_power}"
-        )));
-    }
-    Ok(())
-}
-
-fn resolve_power_law_absorption(
-    alpha_coeff_db: f64,
-    alpha_power: f64,
-    medium_pairs: impl IntoIterator<Item = (f64, f64)>,
-) -> KwaversResult<Option<PowerLawAbsorption>> {
-    if !alpha_coeff_db.is_finite() || alpha_coeff_db < 0.0 {
-        return Err(KwaversError::InvalidInput(format!(
-            "GPU PSTD alpha_coeff_db must be finite and non-negative; got {alpha_coeff_db}"
-        )));
-    }
-    if alpha_coeff_db > 0.0 {
-        validate_active_power_law_exponent(alpha_power)?;
-        return Ok(Some(PowerLawAbsorption {
-            exponent: alpha_power,
-            explicit_coefficient: Some(alpha_coeff_db),
-        }));
-    }
-
-    let mut exponent = None;
-    for (index, (coefficient, medium_power)) in medium_pairs.into_iter().enumerate() {
-        if !coefficient.is_finite() || coefficient < 0.0 {
-            return Err(KwaversError::InvalidInput(format!(
-                "GPU PSTD medium alpha coefficient must be finite and non-negative at flat index {index}; got {coefficient}"
-            )));
-        }
-        if coefficient == 0.0 {
-            continue;
-        }
-        let effective_power = if medium_power.abs() > POWER_LAW_SENTINEL_TOLERANCE
-            && (medium_power - 1.0).abs() > POWER_LAW_SENTINEL_TOLERANCE
-        {
-            medium_power
-        } else {
-            alpha_power
-        };
-        validate_active_power_law_exponent(effective_power)?;
-        if exponent.is_some_and(|resolved| resolved != effective_power) {
-            return Err(KwaversError::FeatureNotAvailable(format!(
-                "Hephaestus PSTD requires one active absorption exponent; medium flat index {index} uses {effective_power}"
-            )));
-        }
-        exponent = Some(effective_power);
-    }
-
-    Ok(exponent.map(|exponent| PowerLawAbsorption {
-        exponent,
-        explicit_coefficient: None,
-    }))
-}
-
 fn validate_sensor_mask_shape(grid: &Grid, sensor_mask: &LetoArray3<bool>) -> KwaversResult<()> {
     let expected = [grid.nx, grid.ny, grid.nz];
     if sensor_mask.shape() != expected {
@@ -541,7 +467,8 @@ fn collect_sensor_indices(sensor_mask: &LetoArray3<bool>) -> KwaversResult<Vec<u
 /// Minimum active axis length → admissible CPML thickness.
 ///
 /// Returns `(default_thickness, max_allowed)` where `default_thickness` is the
-/// conventional 20-cell choice clipped to `max_allowed` (and floored at 2).
+/// conventional 20-cell choice clipped to `max_allowed`. Grids too small for a
+/// complete PML face return zero rather than constructing an invalid layer.
 #[must_use]
 pub fn cpml_thickness_limits(nx: usize, ny: usize, nz: usize) -> (usize, usize) {
     let mut min_dim = usize::MAX;
@@ -552,113 +479,9 @@ pub fn cpml_thickness_limits(nx: usize, ny: usize, nz: usize) -> (usize, usize) 
     }
     let min_dim = if min_dim == usize::MAX { 1 } else { min_dim };
     let max_allowed = (min_dim.saturating_sub(2)) / 2;
-    let default_thickness = 20_usize.min(max_allowed).max(2);
+    let default_thickness = 20_usize.min(max_allowed);
     (default_thickness, max_allowed)
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{
-        collect_sensor_indices, has_nonlinear_coefficient, resolve_power_law_absorption,
-        validate_sensor_mask_shape, LetoArray3, PowerLawAbsorption,
-    };
-    use kwavers_grid::Grid;
-
-    #[test]
-    fn collect_sensor_indices_preserves_row_major_positions() {
-        let mask = LetoArray3::from_shape_vec(
-            [2, 2, 2],
-            vec![false, true, false, false, true, false, false, true],
-        )
-        .expect("test mask shape matches storage");
-
-        let indices = collect_sensor_indices(&mask).expect("dense Leto mask is valid");
-
-        assert_eq!(indices, vec![1, 4, 7]);
-    }
-
-    #[test]
-    fn zero_explicit_and_medium_absorption_is_lossless() {
-        assert_eq!(
-            resolve_power_law_absorption(0.0, 1.0, [(0.0, 1.0)])
-                .expect("inactive medium coefficients do not enable absorption"),
-            None
-        );
-    }
-
-    #[test]
-    fn explicit_absorption_pair_overrides_medium_pair() {
-        assert_eq!(
-            resolve_power_law_absorption(0.75, 1.5, [(0.4, 1.2)])
-                .expect("valid explicit absorption pair"),
-            Some(PowerLawAbsorption {
-                exponent: 1.5,
-                explicit_coefficient: Some(0.75),
-            })
-        );
-    }
-
-    #[test]
-    fn medium_absorption_resolves_one_uniform_active_exponent() {
-        assert_eq!(
-            resolve_power_law_absorption(0.0, 1.5, [(0.2, 1.3), (0.0, 1.7), (0.4, 1.3)])
-                .expect("uniform active medium exponent"),
-            Some(PowerLawAbsorption {
-                exponent: 1.3,
-                explicit_coefficient: None,
-            })
-        );
-    }
-
-    #[test]
-    fn medium_absorption_sentinel_uses_configuration_fallback() {
-        assert_eq!(
-            resolve_power_law_absorption(0.0, 1.5, [(0.2, 1.0)])
-                .expect("sentinel exponent delegates to configuration"),
-            Some(PowerLawAbsorption {
-                exponent: 1.5,
-                explicit_coefficient: None,
-            })
-        );
-    }
-
-    #[test]
-    fn heterogeneous_medium_absorption_exponents_are_rejected() {
-        let error = resolve_power_law_absorption(0.0, 1.5, [(0.2, 1.3), (0.4, 1.7)])
-            .expect_err("one GPU spectral symbol cannot represent multiple exponents");
-        assert_eq!(
-            error.to_string(),
-            "Feature not available: Hephaestus PSTD requires one active absorption exponent; medium flat index 1 uses 1.7"
-        );
-    }
-
-    #[test]
-    fn enabled_absorption_rejects_singular_power_law_exponent() {
-        let error = resolve_power_law_absorption(0.0022, 1.0, [])
-            .expect_err("enabled fractional absorption cannot use y=1");
-        assert_eq!(
-            error.to_string(),
-            "Invalid input: GPU PSTD alpha_power must be finite and must not equal 1.0 for enabled fractional absorption; got 1"
-        );
-    }
-
-    #[test]
-    fn nonlinear_selection_scans_every_packed_medium_cell() {
-        assert!(!has_nonlinear_coefficient(&[0.0, 0.0, 0.0]));
-        assert!(has_nonlinear_coefficient(&[0.0, 0.0, 2.6]));
-    }
-
-    #[test]
-    fn sensor_mask_shape_must_match_the_grid() {
-        let grid = Grid::new(4, 3, 2, 1.0e-3, 1.0e-3, 1.0e-3).expect("valid test grid");
-        let mask = LetoArray3::from_elem([4, 2, 2], false);
-
-        let error = validate_sensor_mask_shape(&grid, &mask)
-            .expect_err("mismatched sensor geometry must fail before GPU acquisition");
-
-        assert_eq!(
-            error.to_string(),
-            "Dimension mismatch: sensor_mask shape [4, 2, 2]; expected [4, 3, 2]"
-        );
-    }
-}
+mod tests;

@@ -51,6 +51,14 @@ sequence. Backend selection and capability validation therefore remain outside
 the transform loops without adding command-buffer boundaries between PSTD
 operations.
 
+Direct simulation requests and the generic solver factory both prepare the same
+provider-owned `PstdMediumSnapshot` and enter one GPU runner. Snapshot
+construction traverses medium properties once, stores only the packed upload
+fields plus the effective absorption coefficients, and resolves ADR 120's
+coefficient/exponent ownership before CPML construction or device acquisition.
+The factory adapter retains that snapshot across batches rather than rebuilding
+medium and absorption arrays in a second implementation.
+
 Delete Kwavers's FFT shader entry point, twiddle buffer, FFT pipeline, axis
 dispatch functions, FFT-only push constants, and the Apollo GPU re-export
 facade after the Hephaestus cutover. The Hephaestus provider accepts arbitrary
@@ -72,9 +80,9 @@ dispatch contracts rather than from the deleted kernel.
   coefficient applies uniformly with its configured exponent; zero delegates
   both values to the medium per voxel. Hephaestus PSTD rejects heterogeneous
   active exponents while its fractional-Laplacian kernel owns one global symbol.
-- `Hybrid` and `ElasticPSTD` reject Hephaestus selection until those numerical
-  methods implement the same backend contract; they never run a CPU solver after
-  a GPU backend was requested.
+- `KSpace`, `Hybrid`, and `ElasticPSTD` reject Hephaestus selection until those
+  numerical methods implement the same backend contract; they never run a CPU
+  solver after a GPU backend was requested.
 - A prepared FFT cannot encode into a command sequence from another device;
   Hephaestus validates that provenance before emitting WGPU commands.
 
@@ -91,6 +99,8 @@ dispatch contracts rather than from the deleted kernel.
   remain.
 - Prepared-plan tests establish caller-buffer reuse and same-pass composition;
   allocation evidence is reported separately from timing evidence.
+- Factory and adapter regressions reject unsupported Hephaestus solver methods
+  and heterogeneous active medium exponents before provider acquisition.
 - Performance measurements use bounded benchmark binaries and report medians
   with confidence intervals. A slow gate is profiled or structurally
   consolidated; its timeout or workload is not weakened.

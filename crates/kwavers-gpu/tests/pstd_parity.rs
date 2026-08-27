@@ -69,10 +69,8 @@ fn pstd_cpu_gpu_parity_bluestein_shape() {
             nonlinear: false,
             alpha_coeff_db: 0.0,
             alpha_power: 1.0,
-            pml_size: None,
-            pml_size_xyz: None,
+            cpml: None,
             pml_inside: false,
-            pml_alpha_xyz: None,
         },
         PstdOutputRequest::with_final_fields(),
     )
@@ -188,10 +186,8 @@ fn run_gpu_pstd_trace<M: Medium>(
             nonlinear: false,
             alpha_coeff_db: 0.0,
             alpha_power: 1.0,
-            pml_size: None,
-            pml_size_xyz: None,
+            cpml: None,
             pml_inside: false,
-            pml_alpha_xyz: None,
         },
     )
     .expect("GPU PSTD trace");
@@ -258,10 +254,8 @@ fn pstd_cpu_gpu_additive_source_filter_contract() {
             nonlinear: false,
             alpha_coeff_db: 0.0,
             alpha_power: 1.0,
-            pml_size: None,
-            pml_size_xyz: None,
+            cpml: None,
             pml_inside: false,
-            pml_alpha_xyz: None,
         },
         PstdOutputRequest::with_final_fields(),
     )
@@ -315,10 +309,8 @@ fn pstd_cpu_gpu_source_and_early_leapfrog_contract() {
             nonlinear: false,
             alpha_coeff_db: 0.0,
             alpha_power: 1.0,
-            pml_size: None,
-            pml_size_xyz: None,
+            cpml: None,
             pml_inside: false,
-            pml_alpha_xyz: None,
         },
         PstdOutputRequest::with_final_fields(),
     )

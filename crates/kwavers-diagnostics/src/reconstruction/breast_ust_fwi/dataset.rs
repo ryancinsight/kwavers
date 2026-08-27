@@ -299,12 +299,14 @@ fn run_gpu_pstd_transmit(
     steps: usize,
     config: BreastUstPstdDatasetConfig,
 ) -> KwaversResult<Array2<f64>> {
-    use kwavers_gpu::pstd_gpu::{run_gpu_pstd, GpuPstdRunConfig};
+    use kwavers_boundary::cpml::CPMLConfig;
+    use kwavers_gpu::pstd_gpu::{cpml_thickness_limits, run_gpu_pstd, GpuPstdRunConfig};
     let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
     let mut sensor_mask = LetoArray3::<bool>::from_elem([nx, ny, nz], false);
     for &(i, j, k) in receiver_indices {
         sensor_mask[[i, j, k]] = true;
     }
+    let (_, max_pml_thickness) = cpml_thickness_limits(nx, ny, nz);
     // GPU PSTD uses its own polynomial-PML inside the wgsl pipeline; clinical
     // dataset gen sets `pml_inside = true` when the CPU CPML thickness is
     // nonzero so the GPU path matches the CPU absorbing boundary semantics.
@@ -314,14 +316,14 @@ fn run_gpu_pstd_transmit(
         nonlinear: false,
         alpha_coeff_db: 0.0,
         alpha_power: 1.0,
-        pml_size: if config.cpml_thickness_cells == 0 {
+        cpml: if config.cpml_thickness_cells == 0 {
             None
         } else {
-            Some(config.cpml_thickness_cells)
+            Some(CPMLConfig::with_thickness(
+                config.cpml_thickness_cells.min(max_pml_thickness),
+            ))
         },
-        pml_size_xyz: None,
         pml_inside: config.cpml_thickness_cells > 0,
-        pml_alpha_xyz: None,
     };
     let traces = run_gpu_pstd(grid, medium, source, &sensor_mask, gpu_config)?;
     let [rows, cols] = traces.shape();

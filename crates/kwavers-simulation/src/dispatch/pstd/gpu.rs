@@ -2,8 +2,9 @@
 
 use crate::dispatch::shared::trim_initial_recorder_sample;
 use crate::types::{SimulationRunRequest, SimulationRunResult};
+use kwavers_boundary::cpml::CPMLConfig;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_gpu::pstd_gpu::{run_gpu_pstd, GpuPstdRunConfig};
+use kwavers_gpu::pstd_gpu::{cpml_thickness_limits, run_gpu_pstd, GpuPstdRunConfig};
 use kwavers_solver::forward::pstd::implementation::core::source_injection;
 use kwavers_source::{GridSource, Source as KwaversSource, SourceField, SourceInjectionMode};
 use leto::Array3;
@@ -32,6 +33,16 @@ pub fn run_gpu(
         .unwrap_or_else(|| Array3::from_elem((req.grid.nx, req.grid.ny, req.grid.nz), false));
     let pml = req.pml.cloned().unwrap_or_default();
     let nonlinear = req.nonlinear.cloned().unwrap_or_default();
+    let (default_thickness, max_allowed) =
+        cpml_thickness_limits(req.grid.nx, req.grid.ny, req.grid.nz);
+    let mut cpml = if let Some((px, py, pz)) = pml.size_xyz {
+        CPMLConfig::with_per_dimension_thickness(px, py, pz)
+    } else {
+        CPMLConfig::with_thickness(pml.size.unwrap_or(default_thickness).min(max_allowed))
+    };
+    if let Some((ax, ay, az)) = pml.alpha_xyz {
+        cpml = cpml.with_alpha_xyz(ax, ay, az);
+    }
 
     let sensor_data = run_gpu_pstd(
         req.grid,
@@ -44,10 +55,8 @@ pub fn run_gpu(
             nonlinear: nonlinear.enabled,
             alpha_coeff_db: nonlinear.alpha_coeff,
             alpha_power: nonlinear.alpha_power,
-            pml_size: pml.size,
-            pml_size_xyz: pml.size_xyz,
+            cpml: Some(cpml),
             pml_inside: pml.inside,
-            pml_alpha_xyz: pml.alpha_xyz,
         },
     )?;
     let sensor_data =
