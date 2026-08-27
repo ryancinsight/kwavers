@@ -30,12 +30,10 @@
 //! running the batch. The factory still constructs an empty source for
 //! source-free initial-condition propagation.
 //!
-//! ## Grid constraints
-//!
-//! GPU PSTD requires power-of-two dimensions with each axis ≤ 1,024.
-//! Construction fails with `KwaversError::InvalidInput` if these are
-//! violated.  `SimulationSolverFactory::create_solver(SolverType::PstdGpu,
-//! ...)` propagates that error to the caller.
+//! `SimulationSolverFactory` constructs this adapter for `SolverType::PSTD`
+//! with `FftBackend::Hephaestus` when the `gpu` feature is enabled. Provider
+//! acquisition or execution failures are surfaced and never select the Leto
+//! path implicitly.
 
 use kwavers_core::constants::numerical::TWO_PI;
 mod medium;

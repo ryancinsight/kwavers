@@ -18,11 +18,31 @@
   1-D/2-D/3-D differential contracts pass; prepared execution reuses GPU
   resources and caller-owned host storage; the consumer-owned GPU PSTD FFT
   shader and dispatch code are deleted after cutover.
-- **Dependency:** Hephaestus provider PR #222, source head `3ad39a3`, must merge
-  before the Kwavers provider pin and exact-graph verification. Apollo remains
-  the Leto-side CPU engine at its merged provider revision.
+- **Dependency:** Hephaestus provider PR #222 merged at `cfadc373`; the matched
+  fused-radix correction merged through PR #223 at `44362a16`. Kwavers now pins
+  and verifies that exact provider before deleting its private FFT. Apollo
+  remains the Leto-side CPU engine at its merged provider revision.
 - **Non-goals:** changing transform conventions, introducing runtime fallback,
   or moving array/layout ownership out of Leto.
+- **Local evidence:** warning-denied all-target Clippy passes for
+  `kwavers-simulation` and `kwavers-python`; generated Python surface tests pass
+  6/6; the simulation package passes 87/87 under Nextest in 0.511 seconds after
+  a 2m37s cold compile. That compile/test ratio is tracked separately rather
+  than absorbed by a larger timeout.
+
+## KW-SIM-TEST-COMPILE-GRAPH — Reduce simulation test build latency [patch] [perf] — todo
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-SIM-TEST-COMPILE-GRAPH | Reduce the cold compile/link cost of the single `kwavers-simulation` test harness while retaining all 87 value-semantic tests. | [patch] [perf] | todo | unowned | `kwavers-simulation` dependency/feature graph, test-only imports, and build-timing instrumentation |
+
+- **Evidence:** `cargo nextest run --offline -p kwavers-simulation` spent 2m37s
+  compiling the transitive graph, then executed all 87 tests in 0.511s. The
+  test runtime is not the bottleneck.
+- **Acceptance:** compiler timing attributes the dominant crates and link work;
+  the same 87 tests and assertions remain; no private target cache, feature
+  bypass, workload reduction, or timeout increase; a cold controlled rerun is
+  materially below the 2m37s baseline.
 
 ## KW-CI-FULL-HISTORY-CHECKOUT — CI clones all of history to run tests [patch] — IMPLEMENTED 2026-08-26
 

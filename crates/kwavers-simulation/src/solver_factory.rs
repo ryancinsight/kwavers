@@ -8,7 +8,7 @@ use crate::solver_adapters::DgSimulationSolver;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 use kwavers_medium::{density_at, sound_speed_at, AcousticProperties, CoreMedium, Medium};
-use kwavers_solver::config::{SolverConfiguration, SolverType};
+use kwavers_solver::config::{FftBackend, SolverConfiguration, SolverType};
 use kwavers_solver::factory::SolverFactoryRegistry;
 use kwavers_solver::forward::fdtd::FdtdConfig;
 use kwavers_solver::forward::hybrid::config::HybridConfig;
@@ -127,13 +127,28 @@ impl SimulationSolverFactory {
                 Ok(Box::new(solver))
             }
             SolverType::PSTD => {
-                let solver = PSTDSolver::new(
-                    pstd_config_from(&config, KSpaceMethod::StandardPSTD),
-                    grid.clone(),
-                    medium,
-                    GridSource::default(),
-                )?;
-                Ok(Box::new(solver))
+                match config.fft_backend {
+                    FftBackend::Leto => {
+                        let solver = PSTDSolver::new(
+                            pstd_config_from(&config, KSpaceMethod::StandardPSTD),
+                            grid.clone(),
+                            medium,
+                            GridSource::default(),
+                        )?;
+                        Ok(Box::new(solver))
+                    }
+                    #[cfg(feature = "gpu")]
+                    FftBackend::Hephaestus => {
+                        use crate::solver_adapters::GpuPstdSimulationAdapter;
+                        Ok(Box::new(GpuPstdSimulationAdapter::new(
+                            &config, grid, medium,
+                        )?))
+                    }
+                    #[cfg(not(feature = "gpu"))]
+                    FftBackend::Hephaestus => Err(KwaversError::FeatureNotAvailable(
+                        "FftBackend::Hephaestus requires the `gpu` Cargo feature".to_owned(),
+                    )),
+                }
             }
             SolverType::KSpace => {
                 let solver = PSTDSolver::new(
@@ -154,15 +169,6 @@ impl SimulationSolverFactory {
             }
             SolverType::FEM => Err(KwaversError::FeatureNotAvailable(
                 "Simulation factory cannot assemble FEM from Grid until a real Grid-to-TetrahedralMesh generator and frequency-domain source/boundary contract are available".to_owned(),
-            )),
-            #[cfg(feature = "gpu")]
-            SolverType::PstdGpu => {
-                use crate::solver_adapters::GpuPstdSimulationAdapter;
-                Ok(Box::new(GpuPstdSimulationAdapter::new(&config, grid, medium)?))
-            }
-            #[cfg(not(feature = "gpu"))]
-            SolverType::PstdGpu => Err(KwaversError::FeatureNotAvailable(
-                "SolverType::PstdGpu requires the `gpu` Cargo feature".to_owned(),
             )),
             _ => Err(KwaversError::FeatureNotAvailable(format!(
                 "SolverType::{selected_type:?} not supported by SimulationSolverFactory"

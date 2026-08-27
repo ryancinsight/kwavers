@@ -6,7 +6,7 @@
 
 use crate::dispatch;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_solver::config::SolverType;
+use kwavers_solver::config::{FftBackend, SolverType};
 use kwavers_source::Source as KwaversSource;
 
 use crate::types::{SimulationRunRequest, SimulationRunResult};
@@ -28,7 +28,14 @@ impl SimulationRunner {
         match req.solver_type {
             // ── Time-domain acoustic ──────────────────────────────────────────
             SolverType::FDTD => dispatch::fdtd::run(req, sources),
-            SolverType::PSTD | SolverType::Hybrid => {
+            SolverType::PSTD if req.fft_backend == FftBackend::Leto => {
+                if let Some(thermal) = req.thermal {
+                    dispatch::pstd::run_with_thermal(req, sources, thermal)
+                } else {
+                    dispatch::pstd::run(req, sources)
+                }
+            }
+            SolverType::Hybrid => {
                 if let Some(thermal) = req.thermal {
                     dispatch::pstd::run_with_thermal(req, sources, thermal)
                 } else {
@@ -36,12 +43,12 @@ impl SimulationRunner {
                 }
             }
             #[cfg(feature = "gpu")]
-            SolverType::PstdGpu => Err(KwaversError::FeatureNotAvailable(
+            SolverType::PSTD => Err(KwaversError::FeatureNotAvailable(
                 "SimulationRunner does not yet map its full request contract onto GpuPstdSimulationAdapter; construct the GPU adapter directly instead of silently running CPU PSTD".to_owned(),
             )),
             #[cfg(not(feature = "gpu"))]
-            SolverType::PstdGpu => Err(KwaversError::FeatureNotAvailable(
-                "SolverType::PstdGpu requires the `gpu` Cargo feature".to_owned(),
+            SolverType::PSTD => Err(KwaversError::FeatureNotAvailable(
+                "FftBackend::Hephaestus requires the `gpu` Cargo feature".to_owned(),
             )),
 
             // ── Frequency-domain ─────────────────────────────────────────────
@@ -84,7 +91,7 @@ mod tests {
     use crate::types::SimulationRunRequest;
     use kwavers_grid::Grid;
     use kwavers_medium::HomogeneousMedium;
-    use kwavers_solver::config::SolverType;
+    use kwavers_solver::config::{FftBackend, SolverType};
     use kwavers_solver::forward::fdtd::config::KSpaceCorrectionMode;
     use kwavers_solver::forward::pstd::config::CompatibilityMode;
     use kwavers_source::GridSource;
@@ -95,7 +102,8 @@ mod tests {
             medium,
             time_steps: 8,
             dt: 1.0e-7,
-            solver_type: SolverType::PstdGpu,
+            solver_type: SolverType::PSTD,
+            fft_backend: FftBackend::Hephaestus,
             pml: None,
             helmholtz: None,
             nonlinear: None,
@@ -127,7 +135,7 @@ mod tests {
 
         assert_eq!(
             error.to_string(),
-            "Feature not available: SolverType::PstdGpu requires the `gpu` Cargo feature"
+            "Feature not available: FftBackend::Hephaestus requires the `gpu` Cargo feature"
         );
     }
 

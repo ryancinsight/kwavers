@@ -4,7 +4,7 @@ use kwavers_core::error::KwaversError;
 use kwavers_gpu::pstd_gpu::PstdFinalFields;
 use kwavers_grid::Grid;
 use kwavers_medium::homogeneous::HomogeneousMedium;
-use kwavers_solver::config::{SolverConfiguration, SolverType};
+use kwavers_solver::config::{FftBackend, SolverConfiguration, SolverType};
 use kwavers_solver::Solver;
 use kwavers_source::NullSource;
 
@@ -13,7 +13,8 @@ fn rejects_non_power_of_two_grid() {
     let grid = Grid::new(5, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
     let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
     let config = SolverConfiguration {
-        solver_type: SolverType::PstdGpu,
+        solver_type: SolverType::PSTD,
+        fft_backend: FftBackend::Hephaestus,
         dt: 1.0e-7,
         ..SolverConfiguration::default()
     };
@@ -28,7 +29,8 @@ fn accepts_the_1024_point_fft_axis() {
     let grid = Grid::new(1024, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
     let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
     let config = SolverConfiguration {
-        solver_type: SolverType::PstdGpu,
+        solver_type: SolverType::PSTD,
+        fft_backend: FftBackend::Hephaestus,
         dt: 1.0e-7,
         ..SolverConfiguration::default()
     };
@@ -44,7 +46,8 @@ fn rejects_axis_exceeding_1024() {
     let grid = Grid::new(2048, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
     let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
     let config = SolverConfiguration {
-        solver_type: SolverType::PstdGpu,
+        solver_type: SolverType::PSTD,
+        fft_backend: FftBackend::Hephaestus,
         dt: 1.0e-7,
         ..SolverConfiguration::default()
     };
@@ -62,7 +65,8 @@ fn constructs_for_valid_power_of_two_grid() {
     let grid = Grid::new(8, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
     let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
     let config = SolverConfiguration {
-        solver_type: SolverType::PstdGpu,
+        solver_type: SolverType::PSTD,
+        fft_backend: FftBackend::Hephaestus,
         dt: 1.0e-7,
         ..SolverConfiguration::default()
     };
@@ -79,7 +83,8 @@ fn final_field_readback_populates_solver_field_contract() {
     let grid = Grid::new(8, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
     let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
     let config = SolverConfiguration {
-        solver_type: SolverType::PstdGpu,
+        solver_type: SolverType::PSTD,
+        fft_backend: FftBackend::Hephaestus,
         dt: 1.0e-7,
         ..SolverConfiguration::default()
     };
@@ -111,7 +116,8 @@ fn peak_field_readback_preserves_the_provider_envelope_contract() {
     let grid = Grid::new(8, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
     let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
     let config = SolverConfiguration {
-        solver_type: SolverType::PstdGpu,
+        solver_type: SolverType::PSTD,
+        fft_backend: FftBackend::Hephaestus,
         dt: 1.0e-7,
         ..SolverConfiguration::default()
     };
@@ -136,7 +142,8 @@ fn peak_field_readback_rejects_negative_provider_values() {
     let grid = Grid::new(8, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
     let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
     let config = SolverConfiguration {
-        solver_type: SolverType::PstdGpu,
+        solver_type: SolverType::PSTD,
+        fft_backend: FftBackend::Hephaestus,
         dt: 1.0e-7,
         ..SolverConfiguration::default()
     };
@@ -158,7 +165,8 @@ fn step_forward_returns_feature_not_available() {
     let grid = Grid::new(8, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
     let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
     let config = SolverConfiguration {
-        solver_type: SolverType::PstdGpu,
+        solver_type: SolverType::PSTD,
+        fft_backend: FftBackend::Hephaestus,
         dt: 1.0e-7,
         ..SolverConfiguration::default()
     };
@@ -174,7 +182,8 @@ fn add_source_rejects_an_unsampled_waveform() {
     let grid = Grid::new(8, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
     let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
     let config = SolverConfiguration {
-        solver_type: SolverType::PstdGpu,
+        solver_type: SolverType::PSTD,
+        fft_backend: FftBackend::Hephaestus,
         dt: 1.0e-7,
         ..SolverConfiguration::default()
     };
@@ -195,7 +204,8 @@ fn peak_run_rejects_zero_steps_before_device_acquisition() {
     let grid = Grid::new(8, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
     let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
     let config = SolverConfiguration {
-        solver_type: SolverType::PstdGpu,
+        solver_type: SolverType::PSTD,
+        fft_backend: FftBackend::Hephaestus,
         dt: 1.0e-7,
         ..SolverConfiguration::default()
     };
@@ -218,7 +228,8 @@ fn add_sensor_rejects_out_of_bounds_point() {
     let grid = Grid::new(8, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
     let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
     let config = SolverConfiguration {
-        solver_type: SolverType::PstdGpu,
+        solver_type: SolverType::PSTD,
+        fft_backend: FftBackend::Hephaestus,
         dt: 1.0e-7,
         ..SolverConfiguration::default()
     };
@@ -237,7 +248,8 @@ fn add_sensor_valid_points_sets_mask() {
     let grid = Grid::new(8, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
     let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
     let config = SolverConfiguration {
-        solver_type: SolverType::PstdGpu,
+        solver_type: SolverType::PSTD,
+        fft_backend: FftBackend::Hephaestus,
         dt: 1.0e-7,
         ..SolverConfiguration::default()
     };

@@ -4,6 +4,14 @@
 
 ### Added
 
+- **[major] PSTD selects its FFT execution provider independently of the
+  numerical method.** `FftBackend::{Leto, Hephaestus}` is carried by
+  `SolverConfiguration`, simulation requests, and Python `Simulation`.
+  `SolverType::PstdGpu` is removed: callers now select `SolverType::PSTD` and
+  pass `FftBackend::Hephaestus`; omission keeps the Apollo CPU path over Leto
+  storage. A requested Hephaestus failure is returned and never falls back to
+  Leto. See [ADR 125](docs/adr/125-fft-backend-selection.md).
+
 - **[major] Visualization configuration now has one source for each choice.**
   Remove the ignored `VisualizationConfig::gpu_enabled` field: callers select
   Leto or Hephaestus through top-level Kwavers and inject that provider. Remove
