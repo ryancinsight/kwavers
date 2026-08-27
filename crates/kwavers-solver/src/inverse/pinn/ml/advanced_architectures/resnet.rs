@@ -55,7 +55,16 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::
 
 impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> ResNetPINN1D<B> {
     /// Create a new ResNet-based PINN for 1D problems.
-    pub fn new(config: &ResNetPINNConfig) -> Self {
+    ///
+    /// # Errors
+    ///
+    /// Returns [`kwavers_core::error::KwaversError::InvalidInput`] when a layer
+    /// dimension is zero or the backend's weight draw fails.
+    pub fn new(config: &ResNetPINNConfig) -> kwavers_core::error::KwaversResult<Self>
+    where
+        B: coeus_ops::RandomInitOps<f32>,
+        B::DeviceBuffer<f32>: coeus_core::CpuAddressableStorageMut<f32>,
+    {
         let fourier_features = if config.use_fourier_features {
             Some(FourierFeatures::new(
                 config.input_dim,
@@ -72,24 +81,26 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> ResNetPINN
             config.input_dim
         };
 
-        let input_proj = Linear::new(input_dim, config.hidden_layers[0], true);
+        let input_proj = Linear::new(input_dim, config.hidden_layers[0], true)
+            .map_err(|error| crate::inverse::pinn::layer_construction_failed("hidden", error))?;
 
         let mut residual_blocks = Vec::new();
         for _ in 0..config.num_blocks {
             residual_blocks.push(ResidualBlock::new(
                 config.hidden_layers[0],
                 config.hidden_layers[1],
-            ));
+            )?);
         }
 
-        let output_proj = Linear::new(config.hidden_layers[0], 1, true);
+        let output_proj = Linear::new(config.hidden_layers[0], 1, true)
+            .map_err(|error| crate::inverse::pinn::layer_construction_failed("hidden", error))?;
 
-        Self {
+        Ok(Self {
             fourier_features,
             input_proj,
             residual_blocks,
             output_proj,
-        }
+        })
     }
 
     /// Flatten all parameters in forward order.
@@ -178,7 +189,16 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::
 
 impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> ResNetPINN2D<B> {
     /// Create a new ResNet-based PINN for 2D problems.
-    pub fn new(config: &ResNetPINNConfig) -> Self {
+    ///
+    /// # Errors
+    ///
+    /// Returns [`kwavers_core::error::KwaversError::InvalidInput`] when a layer
+    /// dimension is zero or the backend's weight draw fails.
+    pub fn new(config: &ResNetPINNConfig) -> kwavers_core::error::KwaversResult<Self>
+    where
+        B: coeus_ops::RandomInitOps<f32>,
+        B::DeviceBuffer<f32>: coeus_core::CpuAddressableStorageMut<f32>,
+    {
         let fourier_features = if config.use_fourier_features {
             Some(FourierFeatures::new(
                 config.input_dim,
@@ -195,24 +215,26 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> ResNetPINN
             config.input_dim
         };
 
-        let input_proj = Linear::new(input_dim, config.hidden_layers[0], true);
+        let input_proj = Linear::new(input_dim, config.hidden_layers[0], true)
+            .map_err(|error| crate::inverse::pinn::layer_construction_failed("hidden", error))?;
 
         let mut residual_blocks = Vec::new();
         for _ in 0..config.num_blocks {
             residual_blocks.push(ResidualBlock::new(
                 config.hidden_layers[0],
                 config.hidden_layers[1],
-            ));
+            )?);
         }
 
-        let output_proj = Linear::new(config.hidden_layers[0], 1, true);
+        let output_proj = Linear::new(config.hidden_layers[0], 1, true)
+            .map_err(|error| crate::inverse::pinn::layer_construction_failed("hidden", error))?;
 
-        Self {
+        Ok(Self {
             fourier_features,
             input_proj,
             residual_blocks,
             output_proj,
-        }
+        })
     }
 
     /// Flatten all parameters in forward order.

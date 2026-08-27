@@ -47,6 +47,26 @@ impl<B: coeus_ops::BackendOps<f32> + Default> ForwardOutput<B> for KwaversResult
     }
 }
 
+/// Step size for the second-order central stencils in this module, derived
+/// from the precision they evaluate in.
+///
+/// A second central difference carries two errors that move in opposite
+/// directions with `h`: truncation, of order `h^2 * f4 / 12` where `f4` is
+/// the fourth derivative, and round-off, of order `4 * eps * |f| / h^2`,
+/// the latter because the stencil subtracts nearly equal values. Their sum
+/// is minimised at `h = (48 * eps)^(1/4)`, which for `f32`'s
+/// `eps = 1.19e-7` is `1.9e-2`, leaving a residual of order
+/// `sqrt(eps) = 3.5e-4`.
+///
+/// These stencils used `1e-4`, which is the corresponding optimum for
+/// `f64` -- `(48 * 2.2e-16)^(1/4)` is `1.1e-4`. Against `f32` it puts the
+/// round-off floor at `4 * eps / h^2 = 47.7`, so the stencils returned that
+/// number rather than a derivative, for any input at any point. It went
+/// unnoticed because the only network exercising them had every weight set
+/// to 1.0 by `coeus_nn::Linear::new` (coeus ADR 0067), which made the
+/// differences vanish identically and took the noise with them.
+pub(crate) const SECOND_ORDER_STEP: f32 = 1.9e-2;
+
 mod elastic;
 mod second_order;
 mod spatial;
