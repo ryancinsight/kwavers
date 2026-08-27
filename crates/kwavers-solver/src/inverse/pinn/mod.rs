@@ -159,7 +159,6 @@
 //!   neural networks." SIAM Journal on Scientific Computing, 43(5), A3055-A3081.
 //!   DOI: 10.1137/20M1318043
 
-#[cfg(feature = "pinn")]
 /// Convert a layer-construction failure into this crate's error type.
 ///
 /// `coeus_nn::Linear::new` became fallible when it started drawing its weights
@@ -177,6 +176,7 @@ pub(crate) fn layer_construction_failed(
     ))
 }
 
+#[cfg(feature = "pinn")]
 pub mod elastic_2d;
 pub mod geometry;
 pub mod ml;
