@@ -43,10 +43,6 @@ struct PstdParams {
     ny:        u32,
     nz:        u32,
     axis:      u32,  // 0-2 = x/y/z-positive; 3-5 = x/y/z-negative; also field select
-    n_fft:     u32,
-    n_batches: u32,
-    log2n:     u32,
-    inverse:   u32,
     step:      u32,
     dt:        f32,
     n_sensors: u32,
@@ -84,10 +80,6 @@ var<storage, read> precomp_rho0: array<f32>;
 @group(1) @binding(6)
 var<storage, read> precomp_bon_a: array<f32>;
 
-// binding(7): packed real/imaginary roots for the shared-memory FFT.
-@group(1) @binding(7)
-var<storage, read> precomp_twiddle_fft: array<f32>;
-
 // ─── Bind Group 2: PML + shift operators + sensor/source (8 storage) ─────────
 
 // pml_sgx/sgy/sgz: staggered PML for velocity (3 separate 3D arrays)
@@ -120,19 +112,6 @@ var<storage, read_write> sensor_data: array<f32>;
 // Source dispatches pass n_src through params.axis.
 @group(2) @binding(7)
 var<storage, read> source_data: array<f32>;
-
-// ─── Shared memory for FFT ───────────────────────────────────────────────────
-
-const MAX_FFT_LENGTH: u32 = 1024u;
-const MAX_FFT_HALF_LENGTH: u32 = MAX_FFT_LENGTH >> 1u;
-
-var<workgroup> sm_re: array<f32, 1024>;
-var<workgroup> sm_im: array<f32, 1024>;
-// A single 1,024-point root table serves every smaller power-of-two transform
-// by striding its entries. IFFT uses conjugates by negating the loaded
-// imaginary component.
-var<workgroup> sm_tw_re: array<f32, 512>;
-var<workgroup> sm_tw_im: array<f32, 512>;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -172,141 +151,6 @@ fn shift_im(ax_code: u32, idx: u32, nx: u32, ny: u32) -> f32 {
         base = 4u * (nx + ny) + 3u * params.nz;
     }
     return shifts_all[base + idx];
-}
-
-// ─── Entry point: fft_1d_smem ─────────────────────────────────────────────────
-//
-// Shared-memory batched 1D Cooley-Tukey FFT with precomputed twiddles.
-// axis=0/1/2 selects x/y/z; one workgroup owns one transform lane.
-@compute @workgroup_size(64, 1, 1)
-fn fft_1d_smem(
-    @builtin(local_invocation_id) lid: vec3<u32>,
-    @builtin(workgroup_id)        wid: vec3<u32>,
-) {
-    let batch_id  = wid.x + wid.y * 65535u;
-    let local_tid = lid.x;
-    let n         = params.n_fft;
-    let log2n     = params.log2n;
-    let nx        = params.nx;
-    let ny        = params.ny;
-    let nz        = params.nz;
-    let ax        = params.axis;
-    let inv       = params.inverse;
-
-    if batch_id >= params.n_batches { return; }
-
-    // ── Load twiddle factors into shared memory ───────────────────────────────
-    let n_half = n >> 1u;
-    let root_stride = MAX_FFT_LENGTH / n;
-    var tw_tid = local_tid;
-    loop {
-        if tw_tid >= n_half { break; }
-        let root_index = tw_tid * root_stride;
-        sm_tw_re[tw_tid] = precomp_twiddle_fft[root_index];
-        sm_tw_im[tw_tid] = precomp_twiddle_fft[MAX_FFT_HALF_LENGTH + root_index];
-        tw_tid += 64u;
-    }
-
-    // ── Compute stride and batch base ─────────────────────────────────────────
-    var stride: u32;
-    var batch_base: u32;
-
-    if ax == 0u {
-        let iy = batch_id / nz;
-        let iz = batch_id % nz;
-        stride = ny * nz;
-        batch_base = iy * nz + iz;
-    } else if ax == 1u {
-        let ix = batch_id / nz;
-        let iz = batch_id % nz;
-        stride = nz;
-        batch_base = ix * ny * nz + iz;
-    } else {
-        let ix = batch_id / ny;
-        let iy = batch_id % ny;
-        stride = 1u;
-        batch_base = ix * ny * nz + iy * nz;
-    }
-
-    // ── Load data into shared memory with bit-reversal permutation ────────────
-    var load_idx = local_tid;
-    loop {
-        if load_idx >= n { break; }
-        let rev_idx = reverseBits(load_idx) >> (32u - log2n);
-        let flat = batch_base + rev_idx * stride;
-        sm_re[load_idx] = kspace_re[flat];
-        sm_im[load_idx] = kspace_im[flat];
-        load_idx += 64u;
-    }
-
-    // Single barrier synchronizes both twiddle and data loads before butterflies.
-    workgroupBarrier();
-
-    // ── Iterative Cooley-Tukey butterfly stages ───────────────────────────────
-    // Twiddle for stage s at butterfly position local_pos:
-    //   tw_idx = local_pos * (n >> (s+1))   [stride within n-point twiddle table]
-    //   w = (sm_tw_re[tw_idx], ±sm_tw_im[tw_idx])  (+im for IFFT, −im for forward)
-    var s = 0u;
-    loop {
-        if s >= log2n { break; }
-        let h = 1u << s;
-        let group_sz = h << 1u;
-        let tw_stride = n >> (s + 1u);  // = n / group_sz
-
-        var tid = local_tid;
-        loop {
-            if tid >= n_half { break; }
-            let group_idx = tid / h;
-            let local_pos = tid % h;
-            let even = group_idx * group_sz + local_pos;
-            let odd  = even + h;
-
-            let tw_idx = local_pos * tw_stride;
-            let w_re = sm_tw_re[tw_idx];
-            var w_im = sm_tw_im[tw_idx];
-            if inv != 0u { w_im = -w_im; }   // IFFT: conjugate twiddle
-
-            let e_re = sm_re[even];
-            let e_im = sm_im[even];
-            let o_re = sm_re[odd];
-            let o_im = sm_im[odd];
-
-            let wo_re = w_re * o_re - w_im * o_im;
-            let wo_im = w_re * o_im + w_im * o_re;
-
-            sm_re[even] = e_re + wo_re;
-            sm_im[even] = e_im + wo_im;
-            sm_re[odd]  = e_re - wo_re;
-            sm_im[odd]  = e_im - wo_im;
-
-            tid += 64u;
-        }
-        s += 1u;
-        workgroupBarrier();
-    }
-
-    // ── IFFT normalization ────────────────────────────────────────────────────
-    if inv != 0u {
-        let inv_n = 1.0 / f32(n);
-        var tid2 = local_tid;
-        loop {
-            if tid2 >= n { break; }
-            sm_re[tid2] *= inv_n;
-            sm_im[tid2] *= inv_n;
-            tid2 += 64u;
-        }
-        workgroupBarrier();
-    }
-
-    // ── Write back ────────────────────────────────────────────────────────────
-    var write_idx = local_tid;
-    loop {
-        if write_idx >= n { break; }
-        let flat = batch_base + write_idx * stride;
-        kspace_re[flat] = sm_re[write_idx];
-        kspace_im[flat] = sm_im[write_idx];
-        write_idx += 64u;
-    }
 }
 
 // ─── Entry point: kspace_shift_apply ─────────────────────────────────────────

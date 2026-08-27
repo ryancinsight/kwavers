@@ -2,13 +2,13 @@
 
 use super::pipeline::{AbsorptionArrays, MediumArrays, PmlArrays, SolverParams};
 use crate::backend::init::GpuProviderContext;
-use hephaestus_wgpu::WgpuDevice;
+use hephaestus_wgpu::{WgpuBuffer, WgpuDevice, WgpuPreparedFft};
 use kwavers_grid::Grid;
 
 /// Storage-buffer bindings used by the three lossless PSTD bind groups.
-pub(super) const LOSSLESS_PIPELINE_BUFFERS_PER_SHADER_STAGE: u32 = 24;
+pub(super) const LOSSLESS_PIPELINE_BUFFERS_PER_SHADER_STAGE: u32 = 23;
 /// Storage-buffer bindings used when fractional-Laplacian absorption is enabled.
-pub(super) const ABSORPTION_PIPELINE_BUFFERS_PER_SHADER_STAGE: u32 = 32;
+pub(super) const ABSORPTION_PIPELINE_BUFFERS_PER_SHADER_STAGE: u32 = 31;
 
 /// Provider contract for PSTD solver state ownership.
 pub trait PstdStateProvider {
@@ -158,7 +158,15 @@ pub struct PstdRunResult {
 /// Provider-state contract for executing a PSTD run.
 pub trait PstdRunState {
     /// Execute a PSTD run with provider-owned state.
-    fn run_pstd(&mut self, scalars: PstdRunScalars, inputs: PstdRunInputs<'_>) -> PstdRunResult;
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when provider command encoding or submission fails.
+    fn run_pstd(
+        &mut self,
+        scalars: PstdRunScalars,
+        inputs: PstdRunInputs<'_>,
+    ) -> Result<PstdRunResult, String>;
 }
 
 /// Provider-state contract for updating PSTD medium-dependent buffers.
@@ -205,15 +213,19 @@ pub(super) struct WgpuPstdMediumBuffers {
     pub(super) rho0: wgpu::Buffer,
     /// B/(2A) per voxel; 0.0 for linear simulations.
     pub(super) bon_a: wgpu::Buffer,
-    /// FFT twiddle table for the current PSTD shader.
-    pub(super) twiddle_fft: wgpu::Buffer,
     pub(super) source_kappa: wgpu::Buffer,
 }
 
-/// WGPU-owned PSTD k-space work buffers.
+/// Hephaestus-owned PSTD k-space work buffers.
 pub(super) struct WgpuPstdKspaceBuffers {
-    pub(super) re: wgpu::Buffer,
-    pub(super) im: wgpu::Buffer,
+    pub(super) re: WgpuBuffer<f32>,
+    pub(super) im: WgpuBuffer<f32>,
+}
+
+/// Prepared Hephaestus transforms bound to the PSTD k-space buffers.
+pub(super) struct WgpuPstdFftPlans {
+    pub(super) forward: WgpuPreparedFft<3>,
+    pub(super) inverse: WgpuPreparedFft<3>,
 }
 
 /// WGPU-owned PSTD fractional-Laplacian absorption buffers.
@@ -257,9 +269,9 @@ pub(super) struct WgpuPstdRunCache {
     pub(super) output_storage_len: usize,
     pub(super) peak_offset: usize,
     pub(super) records_peak_pressure: bool,
-    pub(super) n_sensors: usize,
-    pub(super) n_src: usize,
-    pub(super) n_vel_x: usize,
+    pub(super) sensor_indices: Vec<u32>,
+    pub(super) source_indices: Vec<u32>,
+    pub(super) vel_x_indices: Vec<u32>,
 }
 
 /// WGPU-owned PSTD permanent bind groups reused across runs.
@@ -291,7 +303,6 @@ pub(super) struct WgpuPstdAbsorptionPipelines {
 pub(super) struct WgpuPstdPipelines {
     pub(super) zero_fields: wgpu::ComputePipeline,
     pub(super) zero_kspace: wgpu::ComputePipeline,
-    pub(super) fft: wgpu::ComputePipeline,
     pub(super) kspace_shift: wgpu::ComputePipeline,
     pub(super) vel_update: wgpu::ComputePipeline,
     pub(super) dens_update: wgpu::ComputePipeline,
@@ -318,6 +329,7 @@ pub struct WgpuPstdState {
     pub(super) context: GpuProviderContext<WgpuDevice>,
     pub(super) field_buffers: WgpuPstdFieldBuffers,
     pub(super) kspace_buffers: WgpuPstdKspaceBuffers,
+    pub(super) fft_plans: WgpuPstdFftPlans,
     pub(super) medium_buffers: WgpuPstdMediumBuffers,
     pub(super) absorption_buffers: WgpuPstdAbsorptionBuffers,
     pub(super) pml_shift_buffers: WgpuPstdPmlShiftBuffers,

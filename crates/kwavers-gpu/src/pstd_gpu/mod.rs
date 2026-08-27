@@ -6,25 +6,25 @@
 //! throughout the simulation. The caller selects sensor-only output or an
 //! explicit final-state readback at the end of the run.
 //!
-//! # Bind group layout (â‰¤8 storage buffers per group)
+//! # Bind group layout (up to eight storage buffers per group)
 //!
-//! - group(0) 8 storage: p, ux, uy, uz, rhox, rhoy, rhoz, scratch
-//! - group(1) 1 uniform: PstdParams
-//! - group(2) 8 storage: kspace_re, kspace_im, kspace2_re, kspace2_im,
-//!   kappa, rho0_inv, c0_sq, rho0
-//! - group(3) 8 storage: pml_sgx, pml_sgy, pml_sgz, pml_xyz (packed),
+//! - group(0) 8 storage: p, ux, uy, uz, rhox, rhoy, rhoz, source_kappa
+//! - immediate data: `PstdParams`
+//! - group(1) 7 storage: kspace_re, kspace_im, kappa, rho0_inv, c0_sq,
+//!   rho0, bon_a
+//! - group(2) 8 storage: pml_sgx, pml_sgy, pml_sgz, pml_xyz (packed),
 //!   shifts_all (packed), sensor_flat_indices, sensor_data,
 //!   source_data (packed)
 //!
-//! Lossless PSTD compiles only these three storage bind groups, requiring 24
+//! Lossless PSTD compiles only these three storage bind groups, requiring 23
 //! storage buffers per compute-shader stage. Fractional-Laplacian absorption
 //! compiles its additional eight-buffer group only when enabled and therefore
-//! requires a device exposing 32 storage buffers per compute-shader stage.
+//! requires a device exposing 31 storage buffers per compute-shader stage.
 //!
 //! # Packed buffer formats
 //!
 //! **pml_xyz**: three concatenated f32 arrays `[pml_x | pml_y | pml_z]`,
-//! each of size `nxÃ—nyÃ—nz`. Index via `ax * total + flat_idx`.
+//! each of size `nx * ny * nz`. Index via `ax * total + flat_idx`.
 //!
 //! **shifts_all**: twelve 1D arrays packed in order:
 //! `x_pos_re, x_pos_im, x_neg_re, x_neg_im` (each size nx),
@@ -39,13 +39,13 @@
 //!
 //! | Submodule        | Responsibility                                              |
 //! |------------------|-------------------------------------------------------------|
-//! | `pipeline`       | `new()` constructor â€” buffer alloc, BGL, pipeline compile  |
+//! | `pipeline`       | `new()` constructor, buffer allocation, BGL, pipeline compile |
 //! | `time_loop`      | `run()` time-marching loop + internal dispatch helpers      |
 //! | `medium_update`  | `update_medium_variable()` for scan lines, `update_medium()` for full refresh |
 //!
 //! # References
 //! - Treeby & Cox (2010). J. Biomed. Opt. 15(2), 021314.
-//! - Liu (1998). Microwave Opt. Technol. Lett. 15(3), 158â€“165.
+//! - Liu (1998). Microwave Opt. Technol. Lett. 15(3), 158-165.
 
 mod medium_update;
 mod pipeline;
@@ -56,7 +56,7 @@ mod time_loop;
 
 use std::marker::PhantomData;
 
-use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_grid::Grid;
 
 pub use pipeline::{AbsorptionArrays, MediumArrays, PmlArrays, SolverParams};
 pub use runner::{
@@ -69,36 +69,6 @@ pub use state::{
     PstdRunInputs, PstdRunResult, PstdRunScalars, PstdRunState, PstdStateBuilder,
     PstdStateProvider, WgpuPstdStateProvider,
 };
-
-/// Largest power-of-two axis supported by the shared-memory GPU PSTD FFT.
-pub const MAX_GPU_PSTD_FFT_AXIS: usize = 1_024;
-
-/// Workgroup storage reserved by the 1,024-point complex FFT and its roots.
-pub const GPU_PSTD_FFT_WORKGROUP_STORAGE_BYTES: u32 = 12 * 1_024;
-
-/// Validate the GPU PSTD FFT dimensions before allocating device resources.
-///
-/// The radix-2 kernel uses 1,024 complex samples (8 KiB) and 512 complex
-/// roots (4 KiB), so every power-of-two axis through 1,024 fits in its 12 KiB
-/// workgroup allocation.
-///
-/// # Errors
-///
-/// Returns `KwaversError::InvalidInput` when an axis is not a power of two or
-/// exceeds [`MAX_GPU_PSTD_FFT_AXIS`].
-pub fn validate_gpu_pstd_dimensions(nx: usize, ny: usize, nz: usize) -> KwaversResult<()> {
-    if !nx.is_power_of_two() || !ny.is_power_of_two() || !nz.is_power_of_two() {
-        return Err(KwaversError::InvalidInput(format!(
-            "GPU PSTD requires power-of-2 grid dimensions; got {nx}×{ny}×{nz}"
-        )));
-    }
-    if nx > MAX_GPU_PSTD_FFT_AXIS || ny > MAX_GPU_PSTD_FFT_AXIS || nz > MAX_GPU_PSTD_FFT_AXIS {
-        return Err(KwaversError::InvalidInput(format!(
-            "GPU PSTD supports per-axis N ≤ {MAX_GPU_PSTD_FFT_AXIS}; got {nx}×{ny}×{nz}"
-        )));
-    }
-    Ok(())
-}
 
 /// Per-run timing profile for GPU PSTD execution.
 ///
@@ -122,7 +92,7 @@ pub struct GpuPstdRunProfile {
 }
 
 // Immediate-data struct; must match `PstdParams` in `pstd.wgsl` exactly.
-// 16 x u32/f32 = 64 bytes. `max_immediate_size` must be at least 64 bytes.
+// 12 x u32/f32 = 48 bytes. `max_immediate_size` must be at least 48 bytes.
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
 pub(super) struct PstdParams {
@@ -130,10 +100,6 @@ pub(super) struct PstdParams {
     pub(super) ny: u32,
     pub(super) nz: u32,
     pub(super) axis: u32,
-    pub(super) n_fft: u32,
-    pub(super) n_batches: u32,
-    pub(super) log2n: u32,
-    pub(super) inverse: u32,
     pub(super) step: u32,
     pub(super) dt: f32,
     pub(super) n_sensors: u32,
@@ -144,7 +110,37 @@ pub(super) struct PstdParams {
     pub(super) record_peak_pressure: u32,
 }
 
-const _: () = assert!(std::mem::size_of::<PstdParams>() == 64);
+const _: () = assert!(std::mem::size_of::<PstdParams>() == 48);
+
+fn validate_pstd_grid_shape(grid: &Grid) -> Result<usize, String> {
+    let shape = [grid.nx, grid.ny, grid.nz];
+    for (axis, &length) in ["x", "y", "z"].iter().zip(&shape) {
+        if length == 0 {
+            return Err(format!("GPU PSTD {axis}-axis length must be positive"));
+        }
+        u32::try_from(length).map_err(|_| {
+            format!("GPU PSTD {axis}-axis length {length} exceeds u32 shader addressing")
+        })?;
+    }
+
+    let total = grid
+        .nx
+        .checked_mul(grid.ny)
+        .and_then(|xy| xy.checked_mul(grid.nz))
+        .ok_or_else(|| {
+            format!(
+                "GPU PSTD grid shape overflows usize: {}x{}x{}",
+                grid.nx, grid.ny, grid.nz
+            )
+        })?;
+    u32::try_from(total).map_err(|_| {
+        format!(
+            "GPU PSTD grid has {total} points; u32 shader addressing supports at most {}",
+            u32::MAX
+        )
+    })?;
+    Ok(total)
+}
 
 /// GPU-resident PSTD acoustic solver.
 ///
@@ -169,8 +165,8 @@ pub struct GpuPstdSolver<P: PstdStateProvider = WgpuPstdStateProvider> {
     // Physics flags (drive shader branches via push-constant nonlinear/absorbing)
     pub(super) nonlinear: bool,
     pub(super) absorbing: bool,
-    // â”€â”€ CPU-side medium scratch buffers (preallocated to avoid per-scan-line malloc) â”€â”€
-    // update_medium_variable() computes c0Â² and 1/Ïâ‚€ here before write_buffer upload.
+    // CPU-side medium scratch buffers are preallocated to avoid per-scan-line allocation.
+    // update_medium_variable() computes squared sound speed and inverse density here.
     // Sized to nx*ny*nz at construction; never reallocated.
     // Persistent unity staging buffer for disable_source_correction(); avoids a
     // per-call allocation when the caller needs raw additive injection.

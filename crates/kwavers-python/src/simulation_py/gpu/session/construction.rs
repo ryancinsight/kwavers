@@ -1,7 +1,5 @@
 use numpy::PyReadonlyArray3;
 use pyo3::exceptions::PyRuntimeError;
-#[cfg(feature = "gpu")]
-use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
 use super::GpuPstdSession;
@@ -66,20 +64,14 @@ impl GpuPstdSession {
             let nx = kgrid.nx;
             let ny = kgrid.ny;
             let nz = kgrid.nz;
-            let total = nx * ny * nz;
-
-            if !nx.is_power_of_two() || !ny.is_power_of_two() || !nz.is_power_of_two() {
-                return Err(PyValueError::new_err(format!(
-                    "GpuPstdSession requires power-of-2 grid; got {}x{}x{}",
-                    nx, ny, nz
-                )));
-            }
-            if nx > 256 || ny > 256 || nz > 256 {
-                return Err(PyValueError::new_err(format!(
-                    "GpuPstdSession: grid axis max 256 pts; got {}x{}x{}",
-                    nx, ny, nz
-                )));
-            }
+            let total = nx
+                .checked_mul(ny)
+                .and_then(|xy| xy.checked_mul(nz))
+                .ok_or_else(|| {
+                    PyRuntimeError::new_err(format!(
+                        "GPU PSTD grid shape overflows host addressing: {nx}x{ny}x{nz}"
+                    ))
+                })?;
 
             let ss_arr = sound_speed.as_array();
             let rho_arr = density.as_array();

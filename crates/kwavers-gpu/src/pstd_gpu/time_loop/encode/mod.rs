@@ -1,6 +1,6 @@
 //! Per-step compute-pass encoding: velocity, source, density, pressure, record.
 //!
-//! Each `encode_*` method appends GPU dispatches to an already-open `ComputePass`.
+//! Each `encode_*` method appends GPU dispatches to an active grouped sequence.
 //! The caller creates one pass per time step and drops it after all phases complete,
 //! keeping all dispatches inside one uninterrupted compute pass (no UAV barriers).
 
@@ -36,17 +36,13 @@ pub(in crate::pstd_gpu) struct StepCtx {
 }
 
 impl StepCtx {
-    /// Build a `PstdParams` with `n_fft/n_batches/log2n = 0` (physics dispatch).
+    /// Build the immediate data for one physics dispatch.
     pub(super) fn params(&self, step: u32, axis: u32) -> PstdParams {
         PstdParams {
             nx: self.nx,
             ny: self.ny,
             nz: self.nz,
             axis,
-            n_fft: 0,
-            n_batches: 0,
-            log2n: 0,
-            inverse: 0,
             step,
             dt: self.dt,
             n_sensors: self.n_sensors,

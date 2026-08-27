@@ -9,7 +9,7 @@ use kwavers_solver::Solver;
 use kwavers_source::NullSource;
 
 #[test]
-fn rejects_non_power_of_two_grid() {
+fn accepts_non_power_of_two_grid() {
     let grid = Grid::new(5, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
     let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
     let config = SolverConfiguration {
@@ -19,13 +19,14 @@ fn rejects_non_power_of_two_grid() {
         ..SolverConfiguration::default()
     };
 
-    let err = GpuPstdSimulationAdapter::new(&config, &grid, &medium).unwrap_err();
+    let adapter = GpuPstdSimulationAdapter::new(&config, &grid, &medium)
+        .expect("Hephaestus supports Bluestein transforms for non-power-of-two axes");
 
-    assert!(matches!(err, KwaversError::InvalidInput(_)));
+    assert_eq!(adapter.pressure_field().shape(), [5, 8, 8]);
 }
 
 #[test]
-fn accepts_the_1024_point_fft_axis() {
+fn accepts_large_fft_axis_without_local_shader_limit() {
     let grid = Grid::new(1024, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
     let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
     let config = SolverConfiguration {
@@ -36,13 +37,13 @@ fn accepts_the_1024_point_fft_axis() {
     };
 
     let adapter = GpuPstdSimulationAdapter::new(&config, &grid, &medium)
-        .expect("1024-point FFT axis is within the GPU PSTD contract");
+        .expect("FFT axis length is delegated to Hephaestus");
 
     assert_eq!(adapter.pressure_field().shape(), [1024, 8, 8]);
 }
 
 #[test]
-fn rejects_axis_exceeding_1024() {
+fn accepts_axis_exceeding_retired_local_fft_limit() {
     let grid = Grid::new(2048, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
     let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
     let config = SolverConfiguration {
@@ -52,12 +53,10 @@ fn rejects_axis_exceeding_1024() {
         ..SolverConfiguration::default()
     };
 
-    let err = GpuPstdSimulationAdapter::new(&config, &grid, &medium).unwrap_err();
+    let adapter = GpuPstdSimulationAdapter::new(&config, &grid, &medium)
+        .expect("the retired local shader limit must not constrain construction");
 
-    assert_eq!(
-        err.to_string(),
-        "Invalid input: GPU PSTD supports per-axis N ≤ 1024; got 2048×8×8"
-    );
+    assert_eq!(adapter.pressure_field().shape(), [2048, 8, 8]);
 }
 
 #[test]

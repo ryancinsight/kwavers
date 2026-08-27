@@ -1,7 +1,5 @@
 use numpy::PyArray2;
 use numpy::PyReadonlyArray3;
-// Only referenced by the `#[cfg(not(feature = "gpu"))]` "feature not enabled" branches.
-#[cfg(not(feature = "gpu"))]
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -84,23 +82,33 @@ impl GpuPstdSession {
             let time_steps = self.time_steps;
 
             let solver_t0 = std::time::Instant::now();
-            let result = self.solver.run(PstdRunInputs {
-                sensor_indices: &self.sensor_indices,
-                source_indices: &[],
-                source_signals: &[],
-                pressure_source_correction: false,
-                vel_x_indices: &self.vel_x_indices,
-                vel_x_signals: &self.vel_x_signals,
-                velocity_source_correction: false,
-                output_request: PstdOutputRequest::sensor_traces(),
-            });
+            let result = self
+                .solver
+                .run(PstdRunInputs {
+                    sensor_indices: &self.sensor_indices,
+                    source_indices: &[],
+                    source_signals: &[],
+                    pressure_source_correction: false,
+                    vel_x_indices: &self.vel_x_indices,
+                    vel_x_signals: &self.vel_x_signals,
+                    velocity_source_correction: false,
+                    output_request: PstdOutputRequest::sensor_traces(),
+                })
+                .map_err(|error| {
+                    PyRuntimeError::new_err(format!("GPU PSTD execution failed: {error}"))
+                })?;
             self.last_solver_run_ns = solver_t0.elapsed().as_nanos() as u64;
 
             let materialize_t0 = std::time::Instant::now();
             let n_sensors = self.sensor_indices.len();
             let out_flat: Vec<f64> = result.sensor_data.iter().map(|&v| v as f64).collect();
-            let out = leto::Array2::from_shape_vec((n_sensors, time_steps), out_flat)
-                .expect("sensor_data shape mismatch");
+            let out = leto::Array2::from_shape_vec((n_sensors, time_steps), out_flat).map_err(
+                |error| {
+                    PyRuntimeError::new_err(format!(
+                        "GPU PSTD sensor result shape is invalid: {error}"
+                    ))
+                },
+            )?;
             self.last_materialize_ns = materialize_t0.elapsed().as_nanos() as u64;
             if self.last_medium_upload_ns == 0 {
                 self.last_total_ns = total_t0.elapsed().as_nanos() as u64;

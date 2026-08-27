@@ -66,9 +66,9 @@ pub struct ComputeDevice {
 pub struct BackendCapabilities {
     /// Supports FFT operations exposed through this backend trait.
     ///
-    /// GPU FFT is owned by Apollo through `kwavers_math::fft::gpu_fft`, so a
-    /// `ComputeBackend` implementation reports `false` here unless it exposes
-    /// FFT methods through this trait.
+    /// Prepared GPU FFT execution is owned by Hephaestus and selected at the
+    /// PSTD operation boundary, so a `ComputeBackend` implementation reports
+    /// `false` here unless it exposes FFT methods through this trait.
     pub supports_fft: bool,
 
     /// Supports 64-bit floating point
@@ -138,9 +138,9 @@ pub trait ComputeBackend {
     ///
     fn select_device(&mut self, device_id: usize) -> KwaversResult<()>;
 
-    // NOTE: 3D FFT is intentionally NOT part of this trait. GPU FFT is owned by
-    // Apollo (`kwavers_math::fft::gpu_fft`, via Apollo's `FftBackend` trait) —
-    // the single source of truth — so the backend does not reimplement it.
+    // NOTE: 3-D FFT is intentionally not part of this trait. Hephaestus owns
+    // prepared GPU transforms, selected once at the PSTD operation boundary,
+    // so this general compute backend does not duplicate that contract.
 
     /// Element-wise multiplication
     /// # Errors

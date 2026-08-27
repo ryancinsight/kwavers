@@ -2,6 +2,8 @@
 
 use super::super::super::state::WgpuPstdState;
 use super::StepCtx;
+use hephaestus_core::Result;
+use hephaestus_wgpu::WgpuGroupedSequence;
 
 impl WgpuPstdState {
     /// Encode the velocity-update phase.
@@ -39,35 +41,35 @@ impl WgpuPstdState {
     /// Net over naive (no shared FFT(p)): −2 full 3-D forward FFTs per step.
     pub(in crate::pstd_gpu) fn encode_velocity_update(
         &self,
-        cpass: &mut wgpu::ComputePass<'_>,
+        sequence: &mut WgpuGroupedSequence<'_>,
         ctx: &StepCtx,
         bg: &wgpu::BindGroup,
         step: u32,
-    ) {
+    ) -> Result<()> {
         let ew = ctx.elem_wg;
 
         if ctx.absorbing == 0 {
             for ax in 0u32..3u32 {
                 self.dispatch(
-                    cpass,
+                    sequence,
                     &ctx.params(step, 0),
                     &self.pipelines.copy_field_to_k,
                     bg,
                     ew,
                     "cp_p",
                 );
-                self.fft_3d(cpass, bg, ctx, step);
+                self.encode_forward_fft(sequence)?;
                 self.dispatch(
-                    cpass,
+                    sequence,
                     &ctx.params(step, ax),
                     &self.pipelines.kspace_shift,
                     bg,
                     ew,
                     "kshift_v",
                 );
-                self.ifft_3d(cpass, bg, ctx, step);
+                self.encode_inverse_fft(sequence)?;
                 self.dispatch(
-                    cpass,
+                    sequence,
                     &ctx.params(step, ax),
                     &self.pipelines.vel_update,
                     bg,
@@ -75,25 +77,25 @@ impl WgpuPstdState {
                     "vel_upd",
                 );
             }
-            return;
+            return Ok(());
         }
 
         let absorption = self.absorption_pipelines();
 
         // Step 1: copy field_p → kspace, compute one shared forward FFT(p).
         self.dispatch(
-            cpass,
+            sequence,
             &ctx.params(step, 0),
             &self.pipelines.copy_field_to_k,
             bg,
             ew,
             "cp_p",
         );
-        self.fft_3d(cpass, bg, ctx, step);
+        self.encode_forward_fft(sequence)?;
 
         // Step 2: cache FFT(p) into absorb_scratch so axes 1 and 2 can read it.
         self.dispatch_absorb(
-            cpass,
+            sequence,
             &ctx.params(step, 0),
             &absorption.save_kspace,
             bg,
@@ -107,7 +109,7 @@ impl WgpuPstdState {
                 // kspace already holds FFT(p) from the shared FFT above;
                 // apply shift in-place (standard 3-group pipeline, no absorb group).
                 self.dispatch(
-                    cpass,
+                    sequence,
                     &ctx.params(step, ax),
                     &self.pipelines.kspace_shift,
                     bg,
@@ -119,7 +121,7 @@ impl WgpuPstdState {
                 // applies kappa × shift operator, writes to kspace_re/im.
                 // Saves 1 dispatch + 4N f32 vs. separate restore + shift.
                 self.dispatch_absorb(
-                    cpass,
+                    sequence,
                     &ctx.params(step, ax),
                     &absorption.restore_and_shift,
                     bg,
@@ -127,9 +129,9 @@ impl WgpuPstdState {
                     "restore_shift",
                 );
             }
-            self.ifft_3d(cpass, bg, ctx, step);
+            self.encode_inverse_fft(sequence)?;
             self.dispatch(
-                cpass,
+                sequence,
                 &ctx.params(step, ax),
                 &self.pipelines.vel_update,
                 bg,
@@ -137,5 +139,6 @@ impl WgpuPstdState {
                 "vel_upd",
             );
         }
+        Ok(())
     }
 }

@@ -5,7 +5,6 @@
 //! `apollo`; this module only reexports the Apollo API under the legacy
 //! `kwavers::math::fft` path and keeps the spectral k-space utilities local.
 
-pub mod gpu_fft;
 pub mod kspace;
 pub mod shift_operators;
 pub mod spectral;

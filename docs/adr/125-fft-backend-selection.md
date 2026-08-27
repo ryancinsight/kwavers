@@ -3,7 +3,7 @@
 - Status: Accepted
 - Date: 2026-08-26
 - Item: `backlog.md#kw-fft-hephaestus-backend-selector`
-- Depends on: ADR 039 and Hephaestus provider PR 222
+- Depends on: ADR 039 and Hephaestus provider PRs 222 and 223
 - Change class: [major] [arch]
 
 ## Context
@@ -65,6 +65,16 @@ dispatch contracts rather than from the deleted kernel.
   errors from the operation boundary; none select another backend.
 - Zero dimensions and shapes whose element count cannot be represented safely
   are rejected before allocation.
+- Sensor geometry must match the grid before source preparation or device
+  acquisition. Run-cache reuse requires the complete sensor and source index
+  sequences to match, not only their counts.
+- The absorption coefficient/exponent pair follows ADR 120: a positive explicit
+  coefficient applies uniformly with its configured exponent; zero delegates
+  both values to the medium per voxel. Hephaestus PSTD rejects heterogeneous
+  active exponents while its fractional-Laplacian kernel owns one global symbol.
+- `Hybrid` and `ElasticPSTD` reject Hephaestus selection until those numerical
+  methods implement the same backend contract; they never run a CPU solver after
+  a GPU backend was requested.
 - A prepared FFT cannot encode into a command sequence from another device;
   Hephaestus validates that provenance before emitting WGPU commands.
 
@@ -84,6 +94,13 @@ dispatch contracts rather than from the deleted kernel.
 - Performance measurements use bounded benchmark binaries and report medians
   with confidence intervals. A slow gate is profiled or structurally
   consolidated; its timeout or workload is not weakened.
+
+Provider acceptance on a 256 x 128 x 128 transform reduced six-transform
+execution from 13.810 ms to 7.9974 ms by fusing axis scheduling: 324 dispatches
+became 36, and the 64 MiB transient workspace became two reusable 4 KiB root
+tables. Kwavers-level Bluestein parity on 7 x 4 x 3 and the selector-level GPU
+run complete in 0.900 s and 0.711 s respectively; these measurements establish
+provider integration and runtime behavior, not CPU/GPU speed equivalence.
 
 ## Alternatives rejected
 

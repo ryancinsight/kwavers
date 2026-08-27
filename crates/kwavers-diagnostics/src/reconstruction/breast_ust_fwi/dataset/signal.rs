@@ -4,14 +4,17 @@
 use super::BreastUstPstdDatasetConfig;
 use aequitas::systems::si::quantities::Length;
 use aequitas::systems::si::units::Meter;
+#[cfg(not(feature = "gpu"))]
 use kwavers_boundary::CPMLConfig;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::Complex64;
+#[cfg(not(feature = "gpu"))]
 use kwavers_solver::forward::pstd::config::BoundaryConfig;
 use kwavers_transducer::transducers::ElementPosition;
 use leto::{Array2, ArrayView1, SliceArg};
 
+#[cfg(not(feature = "gpu"))]
 pub(super) fn pstd_boundary(cpml_thickness_cells: usize) -> BoundaryConfig {
     if cpml_thickness_cells == 0 {
         BoundaryConfig::None

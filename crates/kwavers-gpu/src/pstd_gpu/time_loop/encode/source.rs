@@ -2,6 +2,8 @@
 
 use super::super::super::{state::WgpuPstdState, PstdParams};
 use super::StepCtx;
+use hephaestus_core::Result;
+use hephaestus_wgpu::WgpuGroupedSequence;
 
 struct SourceInjection<'a> {
     bind_group: &'a wgpu::BindGroup,
@@ -15,15 +17,15 @@ impl WgpuPstdState {
     /// Encode a k-space-filtered additive source into its destination field.
     fn encode_source_injection(
         &self,
-        cpass: &mut wgpu::ComputePass<'_>,
+        sequence: &mut WgpuGroupedSequence<'_>,
         ctx: &StepCtx,
         bg: &wgpu::BindGroup,
         step: u32,
         injection: SourceInjection<'_>,
-    ) {
+    ) -> Result<()> {
         let ew = ctx.elem_wg;
         self.dispatch(
-            cpass,
+            sequence,
             &ctx.params(step, 0),
             &self.pipelines.zero_kspace,
             bg,
@@ -35,7 +37,7 @@ impl WgpuPstdState {
             ..ctx.params(step, 0)
         };
         self.dispatch(
-            cpass,
+            sequence,
             &source_params,
             injection.inject_pipeline,
             injection.bind_group,
@@ -43,40 +45,41 @@ impl WgpuPstdState {
             "inject_source",
         );
         if injection.apply_correction {
-            self.fft_3d(cpass, bg, ctx, step);
+            self.encode_forward_fft(sequence)?;
             self.dispatch(
-                cpass,
+                sequence,
                 &ctx.params(step, 0),
                 &self.pipelines.apply_source_kappa,
                 bg,
                 ew,
                 "src_kappa",
             );
-            self.ifft_3d(cpass, bg, ctx, step);
+            self.encode_inverse_fft(sequence)?;
         }
         self.dispatch(
-            cpass,
+            sequence,
             &ctx.params(step, 0),
             injection.add_pipeline,
             bg,
             ew,
             "add_source",
         );
+        Ok(())
     }
 
     /// Encode the velocity source after the velocity update.
     pub(in crate::pstd_gpu) fn encode_velocity_source_injection(
         &self,
-        cpass: &mut wgpu::ComputePass<'_>,
+        sequence: &mut WgpuGroupedSequence<'_>,
         ctx: &StepCtx,
         bg: &wgpu::BindGroup,
         bg_vel: &wgpu::BindGroup,
         step: u32,
         source_active: bool,
-    ) {
+    ) -> Result<()> {
         if ctx.n_vel_x > 0 && source_active {
             self.encode_source_injection(
-                cpass,
+                sequence,
                 ctx,
                 bg,
                 step,
@@ -87,22 +90,23 @@ impl WgpuPstdState {
                     inject_pipeline: &self.pipelines.inject_vel_x,
                     add_pipeline: &self.pipelines.add_kspace_to_field_ux,
                 },
-            );
+            )?;
         }
+        Ok(())
     }
 
     /// Encode the pressure source after the density update.
     pub(in crate::pstd_gpu) fn encode_pressure_source_injection(
         &self,
-        cpass: &mut wgpu::ComputePass<'_>,
+        sequence: &mut WgpuGroupedSequence<'_>,
         ctx: &StepCtx,
         bg: &wgpu::BindGroup,
         step: u32,
         source_active: bool,
-    ) {
+    ) -> Result<()> {
         if ctx.n_src > 0 && source_active {
             self.encode_source_injection(
-                cpass,
+                sequence,
                 ctx,
                 bg,
                 step,
@@ -113,7 +117,8 @@ impl WgpuPstdState {
                     inject_pipeline: &self.pipelines.inject_src,
                     add_pipeline: &self.pipelines.add_kspace_to_density,
                 },
-            );
+            )?;
         }
+        Ok(())
     }
 }

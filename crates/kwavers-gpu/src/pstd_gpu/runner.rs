@@ -7,8 +7,6 @@
 //! dataset) drive the GPU path directly when the `gpu` feature is enabled.
 //!
 //! # Constraints inherited from [`GpuPstdSolver`]
-//! - Grid dimensions must be powers of two.
-//! - Per-axis dimension ≤ 1,024.
 //! - Single precision throughout the GPU pipeline; sensor data widened to
 //!   `f64` on return.
 //!
@@ -17,9 +15,9 @@
 //! pressure recorded at each sensor index per step.
 
 use crate::pstd_gpu::{
-    validate_gpu_pstd_dimensions, AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays,
-    PstdAutoDeviceProvider, PstdOutputRequest, PstdRunInputs, PstdRunResult, PstdRunState,
-    SolverParams, WgpuPstdStateProvider,
+    AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays, PstdAutoDeviceProvider,
+    PstdOutputRequest, PstdRunInputs, PstdRunResult, PstdRunState, SolverParams,
+    WgpuPstdStateProvider,
 };
 use kwavers_boundary::cpml::{CPMLConfig, CPMLProfiles};
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
@@ -32,6 +30,14 @@ use kwavers_source::GridSource;
 use leto::{Array2 as LetoArray2, Array3 as LetoArray3};
 use std::f64::consts::PI;
 
+const POWER_LAW_SENTINEL_TOLERANCE: f64 = 1e-12;
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct PowerLawAbsorption {
+    exponent: f64,
+    explicit_coefficient: Option<f64>,
+}
+
 /// GPU PSTD acquisition settings.
 #[derive(Clone, Copy, Debug)]
 pub struct GpuPstdRunConfig {
@@ -39,13 +45,16 @@ pub struct GpuPstdRunConfig {
     pub time_steps: usize,
     /// Time step in seconds.
     pub dt: f64,
-    /// Power-law absorption coefficient [dB/(MHz·cm)]; `0.0` disables
-    /// fractional absorption even when the medium stores a material coefficient.
-    /// When enabled, nonzero per-voxel medium coefficients take precedence and
-    /// this value fills voxels without a material coefficient.
+    /// Enable the nonlinear equation of state when the medium supplies a
+    /// nonzero B/A coefficient.
+    pub nonlinear: bool,
+    /// Power-law absorption coefficient [dB/(MHz·cm)]. A positive value and
+    /// [`Self::alpha_power`] form one uniform pair that overrides the medium.
+    /// Zero delegates both parameters to the medium at each voxel.
     pub alpha_coeff_db: f64,
     /// Power-law absorption exponent `y`; an enabled fractional model cannot
-    /// use the singular value `1.0`.
+    /// use the singular value `1.0`. When coefficient ownership is delegated,
+    /// this value is the fallback for medium exponent sentinels `0.0` and `1.0`.
     pub alpha_power: f64,
     /// CPML thickness in cells; `None` selects the automatic limit.
     pub pml_size: Option<usize>,
@@ -63,8 +72,9 @@ impl Default for GpuPstdRunConfig {
         Self {
             time_steps: 0,
             dt: 0.0,
+            nonlinear: false,
             alpha_coeff_db: 0.0,
-            alpha_power: 1.0,
+            alpha_power: 1.5,
             pml_size: None,
             pml_size_xyz: None,
             pml_inside: true,
@@ -77,12 +87,12 @@ impl Default for GpuPstdRunConfig {
 /// traces.
 ///
 /// A nonzero medium `B/A` coefficient enables the nonlinear equation of state.
-/// Fractional power-law absorption is controlled only by
-/// [`GpuPstdRunConfig::alpha_coeff_db`]; zero is lossless even when the medium
-/// stores a material absorption coefficient.
+/// A positive [`GpuPstdRunConfig::alpha_coeff_db`] overrides the medium with a
+/// uniform coefficient/exponent pair. Zero delegates both values to the medium;
+/// the current GPU kernel rejects heterogeneous active exponents because it
+/// owns one global fractional-Laplacian symbol.
 ///
 /// # Errors
-/// - GPU PSTD requires power-of-2 grid dimensions with each axis ≤ 1,024.
 /// - GPU device acquisition failures bubble up via the selected provider.
 /// - Invalid medium, source, or sensor inputs return `KwaversError::InvalidInput`.
 pub fn run_gpu_pstd(
@@ -127,7 +137,6 @@ pub fn run_gpu_pstd_with_outputs(
 /// provider.
 ///
 /// # Errors
-/// - GPU PSTD requires power-of-2 grid dimensions with each axis ≤ 1,024.
 /// - GPU device acquisition failures bubble up via the selected provider.
 /// - Invalid medium, source, or sensor inputs return `KwaversError::InvalidInput`.
 pub fn run_gpu_pstd_with_provider<P>(
@@ -186,6 +195,7 @@ where
     let GpuPstdRunConfig {
         time_steps,
         dt,
+        nonlinear,
         alpha_coeff_db,
         alpha_power,
         pml_size,
@@ -194,13 +204,28 @@ where
         pml_alpha_xyz,
     } = config;
 
-    validate_gpu_pstd_dimensions(nx, ny, nz)?;
-    let total = nx * ny * nz;
+    let total = super::validate_pstd_grid_shape(grid).map_err(KwaversError::InvalidInput)?;
     if time_steps == 0 || !dt.is_finite() || dt <= 0.0 {
         return Err(KwaversError::InvalidInput(format!(
             "GPU PSTD requires time_steps > 0 and finite positive dt; got steps={time_steps} dt={dt}"
         )));
     }
+    validate_sensor_mask_shape(grid, sensor_mask)?;
+    let sensor_indices = collect_sensor_indices(sensor_mask)?;
+    let absorption = resolve_power_law_absorption(
+        alpha_coeff_db,
+        alpha_power,
+        (0..total).map(|flat| {
+            let ix = flat / (ny * nz);
+            let iy = (flat % (ny * nz)) / nz;
+            let iz = flat % nz;
+            let (x, y, z) = grid.indices_to_coordinates(ix, iy, iz);
+            (
+                medium.alpha_coefficient(x, y, z, grid),
+                medium.alpha_power(x, y, z, grid),
+            )
+        }),
+    )?;
 
     let (default_thickness, max_allowed) = cpml_thickness_limits(nx, ny, nz);
     let thickness = pml_size.unwrap_or(default_thickness).min(max_allowed);
@@ -270,8 +295,6 @@ where
         }
     }
 
-    let sensor_indices = collect_sensor_indices(sensor_mask)?;
-
     let pressure_source =
         super::prepare_pstd_pressure_source(grid, source, &c0_flat, dt, time_steps)?;
 
@@ -313,7 +336,7 @@ where
         }
     }
 
-    let has_absorption = power_law_absorption_enabled(alpha_coeff_db, alpha_power)?;
+    let has_absorption = absorption.is_some();
 
     let bon_a_flat: Vec<f32> = (0..total)
         .map(|flat| {
@@ -323,15 +346,15 @@ where
             (medium.nonlinearity(ix, iy, iz) / 2.0) as f32
         })
         .collect();
-    let has_nonlinear = has_nonlinear_coefficient(&bon_a_flat);
+    let has_nonlinear = nonlinear && has_nonlinear_coefficient(&bon_a_flat);
 
     let (absorb_nabla1_flat, absorb_nabla2_flat, absorb_tau_flat, absorb_eta_flat) =
-        if has_absorption {
+        if let Some(absorption) = absorption {
             let dk_x = TWO_PI / (nx as f64 * grid.dx);
             let dk_y = TWO_PI / (ny as f64 * grid.dy);
             let dk_z = TWO_PI / (nz as f64 * grid.dz);
             let singularity_thresh: f64 = 1e-8;
-            let y = alpha_power;
+            let y = absorption.exponent;
 
             let mut n1 = vec![0.0f32; total];
             let mut n2 = vec![0.0f32; total];
@@ -365,17 +388,11 @@ where
                     n2[flat] = k_mag.powf(y - 1.0) as f32;
                 }
 
-                // Match the CPU PowerLaw contract: an enabled run uses the
-                // medium's spatial coefficient when present, otherwise the
-                // explicit configuration coefficient.  A zero config never
-                // enters this branch, so it remains an unambiguous lossless run.
-                let medium_alpha_db_cm = medium.absorption(ix, iy, iz);
-                let alpha_db_cm = if medium_alpha_db_cm.abs() > 0.0 {
-                    medium_alpha_db_cm
-                } else {
-                    alpha_coeff_db
-                };
-                let alpha_0_si = power_law_db_cm_to_np_omega_m(alpha_db_cm, alpha_power);
+                let alpha_db_cm = absorption.explicit_coefficient.unwrap_or_else(|| {
+                    let (x, y_coord, z) = grid.indices_to_coordinates(ix, iy, iz);
+                    medium.alpha_coefficient(x, y_coord, z, grid)
+                });
+                let alpha_0_si = power_law_db_cm_to_np_omega_m(alpha_db_cm, y);
                 let c0_local = medium.sound_speed(ix, iy, iz);
                 tau_v[flat] = (-2.0 * alpha_0_si * c0_local.powf(y - 1.0)) as f32;
                 eta_v[flat] = (2.0 * alpha_0_si * c0_local.powf(y) * (PI * y / 2.0).tan()) as f32;
@@ -421,16 +438,18 @@ where
     )
     .map_err(|e| KwaversError::InvalidInput(format!("GPU device init failed: {e}")))?;
 
-    Ok(solver.run(PstdRunInputs {
-        sensor_indices: &sensor_indices,
-        source_indices: &pressure_source.indices,
-        source_signals: &pressure_source.signals,
-        pressure_source_correction: pressure_source.uses_kspace_correction,
-        vel_x_indices: &vel_x_indices,
-        vel_x_signals: &vel_x_signals,
-        velocity_source_correction,
-        output_request,
-    }))
+    solver
+        .run(PstdRunInputs {
+            sensor_indices: &sensor_indices,
+            source_indices: &pressure_source.indices,
+            source_signals: &pressure_source.signals,
+            pressure_source_correction: pressure_source.uses_kspace_correction,
+            vel_x_indices: &vel_x_indices,
+            vel_x_signals: &vel_x_signals,
+            velocity_source_correction,
+            output_request,
+        })
+        .map_err(|error| KwaversError::GpuError(format!("GPU PSTD execution failed: {error}")))
 }
 
 /// Whether any packed `B/A / 2` coefficient enables the nonlinear equation.
@@ -438,26 +457,74 @@ fn has_nonlinear_coefficient(coefficients: &[f32]) -> bool {
     coefficients.iter().any(|&coefficient| coefficient != 0.0)
 }
 
-/// Validate whether the explicit GPU configuration enables fractional absorption.
-///
-/// The `y = 1` power law has a singular dispersion coefficient
-/// `tan(πy/2)`, so it is invalid only when the caller actually enables the
-/// fractional-Laplacian model.  This mirrors the CPU PSTD PowerLaw validation.
-fn power_law_absorption_enabled(alpha_coeff_db: f64, alpha_power: f64) -> KwaversResult<bool> {
+fn validate_active_power_law_exponent(alpha_power: f64) -> KwaversResult<()> {
+    if !alpha_power.is_finite() || (alpha_power - 1.0).abs() < POWER_LAW_SENTINEL_TOLERANCE {
+        return Err(KwaversError::InvalidInput(format!(
+            "GPU PSTD alpha_power must be finite and must not equal 1.0 for enabled fractional absorption; got {alpha_power}"
+        )));
+    }
+    Ok(())
+}
+
+fn resolve_power_law_absorption(
+    alpha_coeff_db: f64,
+    alpha_power: f64,
+    medium_pairs: impl IntoIterator<Item = (f64, f64)>,
+) -> KwaversResult<Option<PowerLawAbsorption>> {
     if !alpha_coeff_db.is_finite() || alpha_coeff_db < 0.0 {
         return Err(KwaversError::InvalidInput(format!(
             "GPU PSTD alpha_coeff_db must be finite and non-negative; got {alpha_coeff_db}"
         )));
     }
-    if alpha_coeff_db == 0.0 {
-        return Ok(false);
+    if alpha_coeff_db > 0.0 {
+        validate_active_power_law_exponent(alpha_power)?;
+        return Ok(Some(PowerLawAbsorption {
+            exponent: alpha_power,
+            explicit_coefficient: Some(alpha_coeff_db),
+        }));
     }
-    if !alpha_power.is_finite() || (alpha_power - 1.0).abs() < 1e-12 {
-        return Err(KwaversError::InvalidInput(format!(
-            "GPU PSTD alpha_power must be finite and must not equal 1.0 for enabled fractional absorption; got {alpha_power}"
+
+    let mut exponent = None;
+    for (index, (coefficient, medium_power)) in medium_pairs.into_iter().enumerate() {
+        if !coefficient.is_finite() || coefficient < 0.0 {
+            return Err(KwaversError::InvalidInput(format!(
+                "GPU PSTD medium alpha coefficient must be finite and non-negative at flat index {index}; got {coefficient}"
+            )));
+        }
+        if coefficient == 0.0 {
+            continue;
+        }
+        let effective_power = if medium_power.abs() > POWER_LAW_SENTINEL_TOLERANCE
+            && (medium_power - 1.0).abs() > POWER_LAW_SENTINEL_TOLERANCE
+        {
+            medium_power
+        } else {
+            alpha_power
+        };
+        validate_active_power_law_exponent(effective_power)?;
+        if exponent.is_some_and(|resolved| resolved != effective_power) {
+            return Err(KwaversError::FeatureNotAvailable(format!(
+                "Hephaestus PSTD requires one active absorption exponent; medium flat index {index} uses {effective_power}"
+            )));
+        }
+        exponent = Some(effective_power);
+    }
+
+    Ok(exponent.map(|exponent| PowerLawAbsorption {
+        exponent,
+        explicit_coefficient: None,
+    }))
+}
+
+fn validate_sensor_mask_shape(grid: &Grid, sensor_mask: &LetoArray3<bool>) -> KwaversResult<()> {
+    let expected = [grid.nx, grid.ny, grid.nz];
+    if sensor_mask.shape() != expected {
+        return Err(KwaversError::DimensionMismatch(format!(
+            "sensor_mask shape {:?}; expected {expected:?}",
+            sensor_mask.shape()
         )));
     }
-    Ok(true)
+    Ok(())
 }
 
 fn collect_sensor_indices(sensor_mask: &LetoArray3<bool>) -> KwaversResult<Vec<u32>> {
@@ -492,8 +559,10 @@ pub fn cpml_thickness_limits(nx: usize, ny: usize, nz: usize) -> (usize, usize) 
 #[cfg(test)]
 mod tests {
     use super::{
-        collect_sensor_indices, has_nonlinear_coefficient, power_law_absorption_enabled, LetoArray3,
+        collect_sensor_indices, has_nonlinear_coefficient, resolve_power_law_absorption,
+        validate_sensor_mask_shape, LetoArray3, PowerLawAbsorption,
     };
+    use kwavers_grid::Grid;
 
     #[test]
     fn collect_sensor_indices_preserves_row_major_positions() {
@@ -509,14 +578,63 @@ mod tests {
     }
 
     #[test]
-    fn zero_explicit_absorption_is_lossless_at_singular_default_exponent() {
-        assert!(!power_law_absorption_enabled(0.0, 1.0)
-            .expect("zero coefficient disables fractional absorption"));
+    fn zero_explicit_and_medium_absorption_is_lossless() {
+        assert_eq!(
+            resolve_power_law_absorption(0.0, 1.0, [(0.0, 1.0)])
+                .expect("inactive medium coefficients do not enable absorption"),
+            None
+        );
+    }
+
+    #[test]
+    fn explicit_absorption_pair_overrides_medium_pair() {
+        assert_eq!(
+            resolve_power_law_absorption(0.75, 1.5, [(0.4, 1.2)])
+                .expect("valid explicit absorption pair"),
+            Some(PowerLawAbsorption {
+                exponent: 1.5,
+                explicit_coefficient: Some(0.75),
+            })
+        );
+    }
+
+    #[test]
+    fn medium_absorption_resolves_one_uniform_active_exponent() {
+        assert_eq!(
+            resolve_power_law_absorption(0.0, 1.5, [(0.2, 1.3), (0.0, 1.7), (0.4, 1.3)])
+                .expect("uniform active medium exponent"),
+            Some(PowerLawAbsorption {
+                exponent: 1.3,
+                explicit_coefficient: None,
+            })
+        );
+    }
+
+    #[test]
+    fn medium_absorption_sentinel_uses_configuration_fallback() {
+        assert_eq!(
+            resolve_power_law_absorption(0.0, 1.5, [(0.2, 1.0)])
+                .expect("sentinel exponent delegates to configuration"),
+            Some(PowerLawAbsorption {
+                exponent: 1.5,
+                explicit_coefficient: None,
+            })
+        );
+    }
+
+    #[test]
+    fn heterogeneous_medium_absorption_exponents_are_rejected() {
+        let error = resolve_power_law_absorption(0.0, 1.5, [(0.2, 1.3), (0.4, 1.7)])
+            .expect_err("one GPU spectral symbol cannot represent multiple exponents");
+        assert_eq!(
+            error.to_string(),
+            "Feature not available: Hephaestus PSTD requires one active absorption exponent; medium flat index 1 uses 1.7"
+        );
     }
 
     #[test]
     fn enabled_absorption_rejects_singular_power_law_exponent() {
-        let error = power_law_absorption_enabled(0.0022, 1.0)
+        let error = resolve_power_law_absorption(0.0022, 1.0, [])
             .expect_err("enabled fractional absorption cannot use y=1");
         assert_eq!(
             error.to_string(),
@@ -528,5 +646,19 @@ mod tests {
     fn nonlinear_selection_scans_every_packed_medium_cell() {
         assert!(!has_nonlinear_coefficient(&[0.0, 0.0, 0.0]));
         assert!(has_nonlinear_coefficient(&[0.0, 0.0, 2.6]));
+    }
+
+    #[test]
+    fn sensor_mask_shape_must_match_the_grid() {
+        let grid = Grid::new(4, 3, 2, 1.0e-3, 1.0e-3, 1.0e-3).expect("valid test grid");
+        let mask = LetoArray3::from_elem([4, 2, 2], false);
+
+        let error = validate_sensor_mask_shape(&grid, &mask)
+            .expect_err("mismatched sensor geometry must fail before GPU acquisition");
+
+        assert_eq!(
+            error.to_string(),
+            "Dimension mismatch: sensor_mask shape [4, 2, 2]; expected [4, 3, 2]"
+        );
     }
 }

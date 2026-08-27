@@ -12,6 +12,24 @@
   storage. A requested Hephaestus failure is returned and never falls back to
   Leto. See [ADR 125](docs/adr/125-fft-backend-selection.md).
 
+- **[major] Kwavers no longer carries an Apollo GPU FFT facade or private PSTD
+  FFT kernel.** GPU PSTD prepares Hephaestus rank-3 forward and inverse plans
+  over typed device buffers, with singleton axes covering 1-D and 2-D grids.
+  The private WGSL radix-2 kernel, twiddle allocation, axis dispatch, power-of-two
+  restriction, 1,024-axis limit, `kwavers_math::fft::gpu_fft` module, and its
+  forwarding Cargo feature are removed. Dynamic pressure sources are sampled
+  once into source-major storage with PSTD normalization and overlap
+  superposition preserved; unsupported GPU request contracts return explicit
+  errors. Run-cache reuse keys on the actual sensor and source index sequences,
+  preventing equal-count geometry changes from retaining stale GPU indices.
+  `GpuPstdRunConfig` adds an explicit `nonlinear` selection instead of inferring
+  it from medium coefficients, preserves the explicit-pair/medium-pair
+  absorption ownership contract from ADR 120, and rejects heterogeneous active
+  exponents until the GPU provider represents stratified spectral symbols.
+  `Hybrid` and `ElasticPSTD` reject Hephaestus selection rather than silently
+  executing their CPU paths. See
+  [ADR 125](docs/adr/125-fft-backend-selection.md).
+
 - **[major] Visualization configuration now has one source for each choice.**
   Remove the ignored `VisualizationConfig::gpu_enabled` field: callers select
   Leto or Hephaestus through top-level Kwavers and inject that provider. Remove

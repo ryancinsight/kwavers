@@ -42,7 +42,7 @@ flate2 = { workspace = true }
 ritk-registration = { workspace = true }
 
 [features]
-gpu = ["dep:kwavers-gpu", "kwavers-gpu/gpu", "kwavers-math/gpu", "kwavers-solver/gpu", "kwavers-analysis/gpu"]
+gpu = ["dep:kwavers-gpu", "kwavers-gpu/gpu", "kwavers-solver/gpu", "kwavers-analysis/gpu"]
 pinn = ["kwavers-solver/pinn", "kwavers-analysis/pinn"]
 
 [dev-dependencies]

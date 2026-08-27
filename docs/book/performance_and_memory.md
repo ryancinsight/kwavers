@@ -262,23 +262,13 @@ queue.submit([encoder.finish()]);
 
 ### 20.8.2 Shader Dispatch
 
-The WGSL compute shader for the pressure update kernel is invoked via a bind group that maps Rust buffer handles to WGSL binding slots. The shader performs the spectral pressure update in frequency domain after the FFT is applied on the CPU side (planned: full GPU FFT via `wgpu-fft`):
-
-```wgsl
-// crates/kwavers-gpu/src/pstd_gpu/ (WGSL shaders; excerpt — structural illustration)
-@group(0) @binding(0) var<storage, read>       p_in:  array<f32>;
-@group(0) @binding(1) var<storage, read_write>  p_out: array<f32>;
-@group(0) @binding(2) var<storage, read>        kx:    array<f32>;
-@group(0) @binding(3) var<uniform>              params: PstdParams;
-
-@compute @workgroup_size(64, 1, 1)
-fn main(@builtin(global_invocation_id) id: vec3<u32>) {
-    let idx = id.x + params.nx * (id.y + params.ny * id.z);
-    if idx >= params.total { return; }
-    // Apply wavenumber correction and absorption in k-space
-    p_out[idx] = p_in[idx] * params.dt_factor * kx[idx];
-}
-```
+The pressure, velocity, and density kernels are WGSL operations over
+device-resident fields. Spatial-to-spectral copies, prepared Hephaestus
+forward/inverse FFT plans, k-space operators, and field updates encode into one
+grouped command sequence. No field returns to the CPU between those stages.
+Hephaestus owns FFT roots, Bluestein workspace, axis scheduling, and device
+provenance; Kwavers owns the PSTD operation order and its bind groups. Rank-3
+plans cover 1-D and 2-D grids through singleton axes.
 
 ### 20.8.3 TDR Avoidance via device.poll
 

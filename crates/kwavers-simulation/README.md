@@ -25,10 +25,11 @@ couples the physics domains that interact, and writes the results out.
 
 ## Backend selection
 
-Compute backends are selected by probing the machine at run time — a GPU path is taken
-when a device is actually present, otherwise the CPU path runs. The selection and its
-reason are reported; a backend that is present but fails surfaces as an error rather than
-a silent downgrade.
+PSTD callers select `FftBackend::Leto` or `FftBackend::Hephaestus` independently
+of `SolverType::PSTD`. Leto runs Apollo's CPU transform over Leto storage;
+Hephaestus prepares device-resident transforms and keeps the PSTD fields on the
+GPU. A requested Hephaestus acquisition or execution failure is returned and
+never silently falls back to Leto.
 
 ## Related crates
 

@@ -1,8 +1,9 @@
 //! PSTD pass-body provider contracts.
 
 use super::super::{state::WgpuPstdState, PstdParams};
-use super::commands::{PstdCommandProvider, WgpuPstdCommandProvider};
 use super::encode::StepCtx;
+use hephaestus_core::Result;
+use hephaestus_wgpu::WgpuGroupedSequence;
 
 /// Bind groups required by one monomorphic PSTD time-step pass.
 pub(super) struct StepBindGroups<'a, B> {
@@ -18,16 +19,13 @@ pub(super) struct SourceActivity {
 
 /// Provider contract for PSTD compute-pass body encoding.
 pub(super) trait PstdPassProvider {
-    /// Command provider whose compute-pass type this pass provider encodes into.
-    type CommandProvider: PstdCommandProvider;
-
     /// Provider-owned bind group type.
     type BindGroup;
 
     /// Encode the zero-field pass body.
     fn encode_zero_fields<'pass>(
         &self,
-        cpass: &mut <Self::CommandProvider as PstdCommandProvider>::ComputePass<'pass>,
+        sequence: &mut WgpuGroupedSequence<'pass>,
         params: &PstdParams,
         sensor_bind_group: &Self::BindGroup,
         elem_workgroups: u32,
@@ -36,12 +34,12 @@ pub(super) trait PstdPassProvider {
     /// Encode one PSTD time-step pass body.
     fn encode_time_step<'pass>(
         &self,
-        cpass: &mut <Self::CommandProvider as PstdCommandProvider>::ComputePass<'pass>,
+        sequence: &mut WgpuGroupedSequence<'pass>,
         ctx: &StepCtx,
         bind_groups: StepBindGroups<'_, Self::BindGroup>,
         step: u32,
         source_activity: SourceActivity,
-    );
+    ) -> Result<()>;
 }
 
 /// WGPU PSTD pass-body provider.
@@ -58,18 +56,17 @@ impl<'solver> WgpuPstdPassProvider<'solver> {
 }
 
 impl<'solver> PstdPassProvider for WgpuPstdPassProvider<'solver> {
-    type CommandProvider = WgpuPstdCommandProvider<'solver>;
     type BindGroup = wgpu::BindGroup;
 
     fn encode_zero_fields<'pass>(
         &self,
-        cpass: &mut <Self::CommandProvider as PstdCommandProvider>::ComputePass<'pass>,
+        sequence: &mut WgpuGroupedSequence<'pass>,
         params: &PstdParams,
         sensor_bind_group: &Self::BindGroup,
         elem_workgroups: u32,
     ) {
         self.state.dispatch(
-            cpass,
+            sequence,
             params,
             &self.state.pipelines.zero_fields,
             sensor_bind_group,
@@ -80,35 +77,36 @@ impl<'solver> PstdPassProvider for WgpuPstdPassProvider<'solver> {
 
     fn encode_time_step<'pass>(
         &self,
-        cpass: &mut <Self::CommandProvider as PstdCommandProvider>::ComputePass<'pass>,
+        sequence: &mut WgpuGroupedSequence<'pass>,
         ctx: &StepCtx,
         bind_groups: StepBindGroups<'_, Self::BindGroup>,
         step: u32,
         source_activity: SourceActivity,
-    ) {
+    ) -> Result<()> {
         self.state
-            .encode_velocity_update(cpass, ctx, bind_groups.sensor, step);
+            .encode_velocity_update(sequence, ctx, bind_groups.sensor, step)?;
         self.state.encode_velocity_source_injection(
-            cpass,
+            sequence,
             ctx,
             bind_groups.sensor,
             bind_groups.velocity_sensor,
             step,
             source_activity.velocity,
-        );
+        )?;
         self.state
-            .encode_nonlinear_snapshot(cpass, ctx, bind_groups.sensor, step);
+            .encode_nonlinear_snapshot(sequence, ctx, bind_groups.sensor, step);
         self.state
-            .encode_density_update(cpass, ctx, bind_groups.sensor, step);
+            .encode_density_update(sequence, ctx, bind_groups.sensor, step)?;
         self.state.encode_pressure_source_injection(
-            cpass,
+            sequence,
             ctx,
             bind_groups.sensor,
             step,
             source_activity.pressure,
-        );
+        )?;
         self.state
-            .encode_pressure_record(cpass, ctx, bind_groups.sensor, step);
+            .encode_pressure_record(sequence, ctx, bind_groups.sensor, step);
+        Ok(())
     }
 }
 
@@ -121,12 +119,8 @@ mod tests {
         fn assert_provider<P>()
         where
             P: PstdPassProvider + 'static,
-            P::CommandProvider: 'static,
         {
             let _ = core::mem::size_of::<P::BindGroup>();
-            let _ = core::mem::size_of::<
-                <P::CommandProvider as super::PstdCommandProvider>::ComputePass<'static>,
-            >();
         }
 
         assert_provider::<WgpuPstdPassProvider<'static>>();

@@ -5,13 +5,14 @@
 use super::super::{
     state::{
         PstdFinalFields, PstdRunInputs, PstdRunResult, PstdRunScalars, PstdRunState,
-        PstdStateProvider, WgpuPstdState,
+        PstdStateProvider, WgpuPstdRunCache, WgpuPstdState,
     },
     GpuPstdSolver, PstdParams,
 };
 use super::commands::{PstdCommandProvider, WgpuPstdCommandProvider};
 use super::encode::StepCtx;
 use super::passes::{PstdPassProvider, SourceActivity, StepBindGroups, WgpuPstdPassProvider};
+use hephaestus_core::{GroupedCommandStream, KernelDevice};
 
 impl PstdRunScalars {
     #[inline]
@@ -45,10 +46,6 @@ impl PstdRunScalars {
             ny: self.ny as u32,
             nz: self.nz as u32,
             axis: 0,
-            n_fft: 0,
-            n_batches: 0,
-            log2n: 0,
-            inverse: 0,
             step: 0,
             dt: self.dt as f32,
             n_sensors: 0,
@@ -76,8 +73,102 @@ fn active_source_steps(signals: &[f32], source_count: usize, time_steps: usize) 
     active
 }
 
+fn validate_indices(name: &str, indices: &[u32], total_points: usize) -> Result<(), String> {
+    u32::try_from(indices.len()).map_err(|_| {
+        format!(
+            "GPU PSTD {name} count {} exceeds u32 shader addressing",
+            indices.len()
+        )
+    })?;
+    if let Some((position, index)) = indices
+        .iter()
+        .copied()
+        .enumerate()
+        .find(|(_, index)| *index as usize >= total_points)
+    {
+        return Err(format!(
+            "GPU PSTD {name} index {index} at position {position} exceeds field length {total_points}"
+        ));
+    }
+    Ok(())
+}
+
+fn validate_signal_matrix(
+    name: &str,
+    signals: &[f32],
+    source_count: usize,
+    time_steps: usize,
+) -> Result<(), String> {
+    let expected = source_count.checked_mul(time_steps).ok_or_else(|| {
+        format!("GPU PSTD {name} shape {source_count} x {time_steps} overflows usize")
+    })?;
+    if signals.len() != expected {
+        return Err(format!(
+            "GPU PSTD {name} has {} values; expected {expected} for {source_count} sources and {time_steps} time steps",
+            signals.len()
+        ));
+    }
+    if let Some((index, value)) = signals
+        .iter()
+        .copied()
+        .enumerate()
+        .find(|(_, value)| !value.is_finite())
+    {
+        return Err(format!(
+            "GPU PSTD {name} must be finite at flat index {index}; got {value}"
+        ));
+    }
+    Ok(())
+}
+
+fn run_cache_matches(cache: &WgpuPstdRunCache, inputs: &PstdRunInputs<'_>) -> bool {
+    cache.sensor_indices == inputs.sensor_indices
+        && cache.source_indices == inputs.source_indices
+        && cache.vel_x_indices == inputs.vel_x_indices
+        && cache.records_peak_pressure == inputs.output_request.includes_peak_pressure()
+}
+
+fn validate_run_inputs(
+    total_points: usize,
+    time_steps: usize,
+    inputs: &PstdRunInputs<'_>,
+) -> Result<(), String> {
+    validate_indices("sensor", inputs.sensor_indices, total_points)?;
+    validate_indices("pressure-source", inputs.source_indices, total_points)?;
+    validate_indices("x-velocity-source", inputs.vel_x_indices, total_points)?;
+    validate_signal_matrix(
+        "pressure-source signals",
+        inputs.source_signals,
+        inputs.source_indices.len(),
+        time_steps,
+    )?;
+    validate_signal_matrix(
+        "x-velocity-source signals",
+        inputs.vel_x_signals,
+        inputs.vel_x_indices.len(),
+        time_steps,
+    )?;
+
+    let sensor_values = inputs
+        .sensor_indices
+        .len()
+        .max(1)
+        .checked_mul(time_steps)
+        .ok_or_else(|| "GPU PSTD sensor output length overflows usize".to_owned())?;
+    if inputs.output_request.includes_peak_pressure() {
+        sensor_values
+            .checked_add(total_points)
+            .ok_or_else(|| "GPU PSTD combined output length overflows usize".to_owned())?;
+    }
+    Ok(())
+}
+
 impl PstdRunState for WgpuPstdState {
-    fn run_pstd(&mut self, scalars: PstdRunScalars, inputs: PstdRunInputs<'_>) -> PstdRunResult {
+    fn run_pstd(
+        &mut self,
+        scalars: PstdRunScalars,
+        inputs: PstdRunInputs<'_>,
+    ) -> Result<PstdRunResult, String> {
         let n_sensors = inputs.sensor_indices.len();
         let n_src = inputs.source_indices.len();
         let n_vel_x = inputs.vel_x_indices.len();
@@ -87,10 +178,7 @@ impl PstdRunState for WgpuPstdState {
 
         // Sensor indices/staging buffers are invariant across B-mode scan lines.
         // Source/vel buffers are reused; cache hits refresh only the signal tail.
-        let cache_valid = self.run_cache.n_sensors == n_sensors
-            && self.run_cache.n_src == n_src
-            && self.run_cache.n_vel_x == n_vel_x
-            && self.run_cache.records_peak_pressure == records_peak_pressure
+        let cache_valid = run_cache_matches(&self.run_cache, &inputs)
             && self.run_cache.sensor_indices_buf.is_some();
 
         if !cache_valid {
@@ -131,9 +219,19 @@ impl PstdRunState for WgpuPstdState {
 
         let elem_wg = StepCtx::ceil_div(scalars.total_points(), 256);
         let zero_params = scalars.zero_params();
-        commands.submit_compute_pass("zero_fields", "zero_fields", |cpass| {
-            passes.encode_zero_fields(cpass, &zero_params, bg_sensor, elem_wg);
-        });
+        let hephaestus_device = self.context.hephaestus_device();
+        let mut zero_stream = hephaestus_device
+            .stream()
+            .map_err(|error| format!("PSTD zero-field stream creation failed: {error}"))?;
+        zero_stream
+            .encode_grouped_sequence("zero_fields", |sequence| {
+                passes.encode_zero_fields(sequence, &zero_params, bg_sensor, elem_wg);
+                Ok(())
+            })
+            .map_err(|error| format!("PSTD zero-field encoding failed: {error}"))?;
+        zero_stream
+            .submit_grouped()
+            .map_err(|error| format!("PSTD zero-field submission failed: {error}"))?;
 
         let ctx = scalars.step_context(&inputs, self.run_cache.peak_offset);
         let pressure_source_steps = active_source_steps(inputs.source_signals, n_src, scalars.nt);
@@ -145,26 +243,31 @@ impl PstdRunState for WgpuPstdState {
         let mut batch_start = 0usize;
         while batch_start < scalars.nt {
             let batch_end = (batch_start + STEP_BATCH).min(scalars.nt);
-            commands.submit_compute_passes(
-                "pstd_batch",
-                "pstd_step",
-                batch_start..batch_end,
-                |step, cpass| {
-                    passes.encode_time_step(
-                        cpass,
-                        &ctx,
-                        StepBindGroups {
-                            sensor: bg_sensor,
-                            velocity_sensor: bg_sensor_vel,
-                        },
-                        step as u32,
-                        SourceActivity {
-                            pressure: pressure_source_steps[step],
-                            velocity: velocity_source_steps[step],
-                        },
-                    );
-                },
-            );
+            let mut stream = hephaestus_device
+                .stream()
+                .map_err(|error| format!("PSTD batch stream creation failed: {error}"))?;
+            for step in batch_start..batch_end {
+                stream
+                    .encode_grouped_sequence("pstd_step", |sequence| {
+                        passes.encode_time_step(
+                            sequence,
+                            &ctx,
+                            StepBindGroups {
+                                sensor: bg_sensor,
+                                velocity_sensor: bg_sensor_vel,
+                            },
+                            step as u32,
+                            SourceActivity {
+                                pressure: pressure_source_steps[step],
+                                velocity: velocity_source_steps[step],
+                            },
+                        )
+                    })
+                    .map_err(|error| format!("PSTD time-step {step} encoding failed: {error}"))?;
+            }
+            stream
+                .submit_grouped()
+                .map_err(|error| format!("PSTD batch submission failed: {error}"))?;
             batch_start = batch_end;
 
             // Bound queued GPU work so the D3D12 driver does not collapse long
@@ -238,11 +341,11 @@ impl PstdRunState for WgpuPstdState {
             None
         };
 
-        PstdRunResult {
+        Ok(PstdRunResult {
             sensor_data,
             final_fields,
             peak_pressure,
-        }
+        })
     }
 }
 
@@ -257,9 +360,15 @@ where
     ///
     /// Borrowed inputs preserve the source, sensor, correction, and output
     /// request contract as one operation-level value.
+    /// # Errors
+    ///
+    /// Returns an error when run inputs violate their source-major shape or
+    /// field-index contract, or when provider command encoding or submission
+    /// fails.
+    ///
     /// # Panics
     /// Panics if the provider run cache is not populated after cache rebuild.
-    pub fn run(&mut self, inputs: PstdRunInputs<'_>) -> PstdRunResult {
+    pub fn run(&mut self, inputs: PstdRunInputs<'_>) -> Result<PstdRunResult, String> {
         let scalars = PstdRunScalars {
             nx: self.nx,
             ny: self.ny,
@@ -270,13 +379,58 @@ where
             absorbing: self.absorbing,
         };
 
+        validate_run_inputs(scalars.total_points(), scalars.nt, &inputs)?;
+
         self.state.run_pstd(scalars, inputs)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::active_source_steps;
+    use super::{active_source_steps, run_cache_matches, validate_run_inputs};
+    use crate::pstd_gpu::{state::WgpuPstdRunCache, PstdOutputRequest, PstdRunInputs};
+
+    fn cache_inputs<'a>(
+        sensor_indices: &'a [u32],
+        source_indices: &'a [u32],
+        vel_x_indices: &'a [u32],
+    ) -> PstdRunInputs<'a> {
+        PstdRunInputs {
+            sensor_indices,
+            source_indices,
+            source_signals: &[],
+            pressure_source_correction: false,
+            vel_x_indices,
+            vel_x_signals: &[],
+            velocity_source_correction: false,
+            output_request: PstdOutputRequest::sensor_traces(),
+        }
+    }
+
+    #[test]
+    fn run_cache_identity_includes_index_values() {
+        let mut cache = WgpuPstdRunCache::default();
+        cache.sensor_indices.extend_from_slice(&[1, 4]);
+        cache.source_indices.extend_from_slice(&[2, 7]);
+        cache.vel_x_indices.extend_from_slice(&[3]);
+
+        assert!(run_cache_matches(
+            &cache,
+            &cache_inputs(&[1, 4], &[2, 7], &[3])
+        ));
+        assert!(!run_cache_matches(
+            &cache,
+            &cache_inputs(&[1, 5], &[2, 7], &[3])
+        ));
+        assert!(!run_cache_matches(
+            &cache,
+            &cache_inputs(&[1, 4], &[2, 6], &[3])
+        ));
+        assert!(!run_cache_matches(
+            &cache,
+            &cache_inputs(&[1, 4], &[2, 7], &[5])
+        ));
+    }
 
     #[test]
     fn active_source_steps_preserves_each_source_row_and_time_index() {
@@ -284,5 +438,79 @@ mod tests {
             active_source_steps(&[0.0, 1.0, 0.0, 0.0, 0.0, -2.0], 2, 3),
             vec![false, true, true]
         );
+    }
+
+    #[test]
+    fn run_input_validation_accepts_source_major_signals() {
+        let inputs = PstdRunInputs {
+            sensor_indices: &[7],
+            source_indices: &[0, 7],
+            source_signals: &[1.0, 0.0, -0.5, 0.25],
+            pressure_source_correction: true,
+            vel_x_indices: &[3],
+            vel_x_signals: &[0.0, 1.0],
+            velocity_source_correction: false,
+            output_request: PstdOutputRequest::with_peak_pressure(),
+        };
+
+        assert_eq!(validate_run_inputs(8, 2, &inputs), Ok(()));
+    }
+
+    #[test]
+    fn run_input_validation_rejects_signal_shape_mismatch() {
+        let inputs = PstdRunInputs {
+            sensor_indices: &[],
+            source_indices: &[2, 3],
+            source_signals: &[1.0, 2.0, 3.0],
+            pressure_source_correction: false,
+            vel_x_indices: &[],
+            vel_x_signals: &[],
+            velocity_source_correction: false,
+            output_request: PstdOutputRequest::sensor_traces(),
+        };
+
+        assert_eq!(
+            validate_run_inputs(8, 2, &inputs),
+            Err("GPU PSTD pressure-source signals has 3 values; expected 4 for 2 sources and 2 time steps".to_owned())
+        );
+    }
+
+    #[test]
+    fn run_input_validation_rejects_out_of_range_indices() {
+        let inputs = PstdRunInputs {
+            sensor_indices: &[8],
+            source_indices: &[],
+            source_signals: &[],
+            pressure_source_correction: false,
+            vel_x_indices: &[],
+            vel_x_signals: &[],
+            velocity_source_correction: false,
+            output_request: PstdOutputRequest::sensor_traces(),
+        };
+
+        assert_eq!(
+            validate_run_inputs(8, 2, &inputs),
+            Err("GPU PSTD sensor index 8 at position 0 exceeds field length 8".to_owned())
+        );
+    }
+
+    #[test]
+    fn run_input_validation_rejects_non_finite_amplitudes() {
+        let inputs = PstdRunInputs {
+            sensor_indices: &[],
+            source_indices: &[1],
+            source_signals: &[0.0, f32::NAN],
+            pressure_source_correction: false,
+            vel_x_indices: &[],
+            vel_x_signals: &[],
+            velocity_source_correction: false,
+            output_request: PstdOutputRequest::sensor_traces(),
+        };
+
+        let error = validate_run_inputs(8, 2, &inputs)
+            .expect_err("non-finite source amplitudes must be rejected");
+        assert!(error.starts_with(
+            "GPU PSTD pressure-source signals must be finite at flat index 1; got NaN"
+        ));
     }
 }

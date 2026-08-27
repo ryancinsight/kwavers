@@ -2,6 +2,8 @@
 
 use super::super::super::state::WgpuPstdState;
 use super::StepCtx;
+use hephaestus_core::Result;
+use hephaestus_wgpu::WgpuGroupedSequence;
 
 impl WgpuPstdState {
     /// Encode the nonlinear mass-conservation density snapshot (no-op when linear).
@@ -15,14 +17,14 @@ impl WgpuPstdState {
     /// after the density loop.
     pub(in crate::pstd_gpu) fn encode_nonlinear_snapshot(
         &self,
-        cpass: &mut wgpu::ComputePass<'_>,
+        sequence: &mut WgpuGroupedSequence<'_>,
         ctx: &StepCtx,
         bg: &wgpu::BindGroup,
         step: u32,
     ) {
         if ctx.nonlinear != 0 {
             self.dispatch(
-                cpass,
+                sequence,
                 &ctx.params(step, 0),
                 &self.pipelines.snapshot_rho0_plus_rho,
                 bg,
@@ -54,33 +56,33 @@ impl WgpuPstdState {
     /// ```
     pub(in crate::pstd_gpu) fn encode_density_update(
         &self,
-        cpass: &mut wgpu::ComputePass<'_>,
+        sequence: &mut WgpuGroupedSequence<'_>,
         ctx: &StepCtx,
         bg: &wgpu::BindGroup,
         step: u32,
-    ) {
+    ) -> Result<()> {
         let ew = ctx.elem_wg;
         for ax in 0u32..3u32 {
             self.dispatch(
-                cpass,
+                sequence,
                 &ctx.params(step, ax + 1),
                 &self.pipelines.copy_field_to_k,
                 bg,
                 ew,
                 "cp_u",
             );
-            self.fft_3d(cpass, bg, ctx, step);
+            self.encode_forward_fft(sequence)?;
             self.dispatch(
-                cpass,
+                sequence,
                 &ctx.params(step, ax + 3),
                 &self.pipelines.kspace_shift,
                 bg,
                 ew,
                 "kshift_d",
             );
-            self.ifft_3d(cpass, bg, ctx, step);
+            self.encode_inverse_fft(sequence)?;
             self.dispatch(
-                cpass,
+                sequence,
                 &ctx.params(step, ax),
                 &self.pipelines.dens_update,
                 bg,
@@ -89,7 +91,7 @@ impl WgpuPstdState {
             );
             if ctx.absorbing != 0 {
                 self.dispatch_absorb(
-                    cpass,
+                    sequence,
                     &ctx.params(step, ax),
                     &self.absorption_pipelines().accum_div_u,
                     bg,
@@ -102,25 +104,25 @@ impl WgpuPstdState {
         if ctx.absorbing != 0 {
             // L1: IFFT(nabla1 · FFT(ρ₀ · div_u_total))
             self.dispatch_absorb(
-                cpass,
+                sequence,
                 &ctx.params(step, 0),
                 &self.absorption_pipelines().prep_l1_kspace,
                 bg,
                 ew,
                 "abs_prep_l1",
             );
-            self.fft_3d(cpass, bg, ctx, step);
+            self.encode_forward_fft(sequence)?;
             self.dispatch_absorb(
-                cpass,
+                sequence,
                 &ctx.params(step, 0),
                 &self.absorption_pipelines().mul_nabla,
                 bg,
                 ew,
                 "abs_n1",
             );
-            self.ifft_3d(cpass, bg, ctx, step);
+            self.encode_inverse_fft(sequence)?;
             self.dispatch_absorb(
-                cpass,
+                sequence,
                 &ctx.params(step, 0),
                 &self.absorption_pipelines().copy_to_scratch,
                 bg,
@@ -130,25 +132,25 @@ impl WgpuPstdState {
 
             // L2: IFFT(nabla2 · FFT(ρ_total))
             self.dispatch_absorb(
-                cpass,
+                sequence,
                 &ctx.params(step, 1),
                 &self.absorption_pipelines().prep_l2_kspace,
                 bg,
                 ew,
                 "abs_prep_l2",
             );
-            self.fft_3d(cpass, bg, ctx, step);
+            self.encode_forward_fft(sequence)?;
             self.dispatch_absorb(
-                cpass,
+                sequence,
                 &ctx.params(step, 1),
                 &self.absorption_pipelines().mul_nabla,
                 bg,
                 ew,
                 "abs_n2",
             );
-            self.ifft_3d(cpass, bg, ctx, step);
+            self.encode_inverse_fft(sequence)?;
             self.dispatch_absorb(
-                cpass,
+                sequence,
                 &ctx.params(step, 1),
                 &self.absorption_pipelines().copy_to_scratch,
                 bg,
@@ -156,5 +158,6 @@ impl WgpuPstdState {
                 "abs_cp_l2",
             );
         }
+        Ok(())
     }
 }

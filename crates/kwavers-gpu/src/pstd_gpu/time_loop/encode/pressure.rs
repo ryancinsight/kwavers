@@ -2,6 +2,7 @@
 
 use super::super::super::state::WgpuPstdState;
 use super::StepCtx;
+use hephaestus_wgpu::WgpuGroupedSequence;
 
 impl WgpuPstdState {
     /// Encode pressure-from-density, absorption correction, and sensor recording.
@@ -11,14 +12,14 @@ impl WgpuPstdState {
     /// `record` scatters `field_p[sensor_indices]` into the sensor_data buffer.
     pub(in crate::pstd_gpu) fn encode_pressure_record(
         &self,
-        cpass: &mut wgpu::ComputePass<'_>,
+        sequence: &mut WgpuGroupedSequence<'_>,
         ctx: &StepCtx,
         bg: &wgpu::BindGroup,
         step: u32,
     ) {
         let ew = ctx.elem_wg;
         self.dispatch(
-            cpass,
+            sequence,
             &ctx.params(step, 0),
             &self.pipelines.pres_density,
             bg,
@@ -27,7 +28,7 @@ impl WgpuPstdState {
         );
         if ctx.absorbing != 0 {
             self.dispatch_absorb(
-                cpass,
+                sequence,
                 &ctx.params(step, 0),
                 &self.absorption_pipelines().pressure_correction,
                 bg,
@@ -37,7 +38,7 @@ impl WgpuPstdState {
         }
         if ctx.n_sensors > 0 {
             self.dispatch(
-                cpass,
+                sequence,
                 &ctx.params(step, 0),
                 &self.pipelines.record,
                 bg,
@@ -47,7 +48,7 @@ impl WgpuPstdState {
         }
         if ctx.record_peak_pressure != 0 {
             self.dispatch(
-                cpass,
+                sequence,
                 &ctx.params(step, 0),
                 &self.pipelines.peak_pressure,
                 bg,

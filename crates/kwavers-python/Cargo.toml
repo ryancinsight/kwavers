@@ -65,7 +65,6 @@ default = ["minimal"]
 minimal = []
 gpu = [
     "kwavers-gpu/gpu",
-    "kwavers-math/gpu",
     "kwavers-solver/gpu",
     "kwavers-analysis/gpu",
     "kwavers-simulation/gpu",

@@ -60,7 +60,7 @@ thiserror = { workspace = true }
 # Exposes `plugin::test_support` (NullBoundary + context helpers) for downstream
 # crates' tests.
 test-util = []
-gpu = ["kwavers-math/gpu"]
+gpu = []
 pinn = [
     "dep:coeus-core",
     "dep:coeus-tensor",

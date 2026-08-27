@@ -25,7 +25,7 @@ provider is WGPU, because the production kernels are WGSL.
 | `profiling` | GPU allocation bookkeeping — available unconditionally, no device dependency |
 | `gpu` | Devices, buffers, and kernels (feature `gpu`) |
 | `backend` | The concrete `ComputeBackend` implementation (feature `gpu`) |
-| `pstd_gpu` | GPU PSTD FFT lattice (feature `gpu`) |
+| `pstd_gpu` | GPU PSTD orchestration over prepared Hephaestus FFT plans (feature `gpu`) |
 | `beamforming` | Provider implementations of the beamforming operations declared in `kwavers-analysis` (feature `gpu`) |
 | `visualization` | Leto host and Hephaestus GPU field-transfer provider implementations (feature `visualization`) |
 | `validation` | GPU/CPU differential equivalence checks (feature `gpu`) |
@@ -41,9 +41,10 @@ provider is WGPU, because the production kernels are WGSL.
   transfer failures remain typed errors; this feature never silently falls
   back to Leto.
 
-Device selection itself is a runtime decision: the simulation layer probes for a usable
-device and reports which backend it took and why. A device that is present but fails is
-surfaced as an error, never a silent downgrade to CPU.
+FFT execution is selected explicitly at the simulation boundary. The Leto selection runs
+Apollo's CPU FFT over Leto storage; the Hephaestus selection acquires a device and prepares
+rank-3 transforms, with singleton axes representing 1-D and 2-D grids. Acquisition or
+execution failure is surfaced as an error and never silently downgrades to CPU.
 
 ## Verification
 

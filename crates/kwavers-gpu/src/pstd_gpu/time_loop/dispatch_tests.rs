@@ -1,10 +1,29 @@
-use super::super::commands::{PstdCommandProvider, WgpuPstdCommandProvider};
-use super::*;
+use super::super::encode::StepCtx;
 use crate::pstd_gpu::{
-    AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays, PstdOutputRequest, PstdParams,
-    PstdRunInputs, PstdRunScalars, SolverParams, WgpuPstdStateProvider,
+    state::WgpuPstdState, AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays,
+    PstdOutputRequest, PstdParams, PstdRunInputs, PstdRunScalars, SolverParams,
+    WgpuPstdStateProvider,
 };
+use hephaestus_core::{GroupedCommandStream, KernelDevice};
+use hephaestus_wgpu::WgpuGroupedSequence;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+
+fn submit_sequence<F>(state: &WgpuPstdState, label: &str, encode: F)
+where
+    F: for<'sequence> FnOnce(&mut WgpuGroupedSequence<'sequence>) -> hephaestus_core::Result<()>,
+{
+    let mut stream = state
+        .context
+        .hephaestus_device()
+        .stream()
+        .expect("PSTD test command stream");
+    stream
+        .encode_grouped_sequence(label, encode)
+        .expect("PSTD test grouped sequence");
+    stream
+        .submit_grouped()
+        .expect("PSTD test command submission");
+}
 
 fn read_buffer<T: bytemuck::Pod>(
     device: &wgpu::Device,
@@ -147,10 +166,6 @@ fn pstd_copy_fft_inverse_roundtrip_preserves_pressure_field() {
         ny: n as u32,
         nz: n as u32,
         axis: 0,
-        n_fft: 0,
-        n_batches: 0,
-        log2n: 0,
-        inverse: 0,
         step: 0,
         dt: ctx.dt,
         n_sensors: 0,
@@ -166,24 +181,22 @@ fn pstd_copy_fft_inverse_roundtrip_preserves_pressure_field() {
         .bg_sensor
         .as_ref()
         .expect("FFT roundtrip run cache creates sensor bind group");
-    let commands = WgpuPstdCommandProvider::new(state.device(), state.queue());
-    commands.submit_compute_pass("pstd_fft_roundtrip", "pstd_fft_roundtrip", |cpass| {
+    submit_sequence(state, "pstd_fft_roundtrip", |sequence| {
         state.dispatch(
-            cpass,
+            sequence,
             &params,
             &state.pipelines.copy_field_to_k,
             bind_group,
             ctx.elem_wg,
             "copy_pressure",
         );
-        state.fft_3d(cpass, bind_group, &ctx, 0);
-        state.ifft_3d(cpass, bind_group, &ctx, 0);
+        state.encode_forward_fft(sequence)?;
+        state.encode_inverse_fft(sequence)
     });
-    commands.poll_wait();
     let reconstructed = read_buffer::<f32>(
         state.device(),
         state.queue(),
-        &state.kspace_buffers.re,
+        state.kspace_buffers.re.raw(),
         total,
     );
 
@@ -207,31 +220,30 @@ fn pstd_copy_fft_inverse_roundtrip_preserves_pressure_field() {
         peak * TRANSFORM_RELATIVE_ERROR_BOUND
     );
 
-    commands.submit_compute_pass("pstd_x_gradient", "pstd_x_gradient", |cpass| {
+    submit_sequence(state, "pstd_x_gradient", |sequence| {
         state.dispatch(
-            cpass,
+            sequence,
             &params,
             &state.pipelines.copy_field_to_k,
             bind_group,
             ctx.elem_wg,
             "copy_pressure",
         );
-        state.fft_3d(cpass, bind_group, &ctx, 0);
+        state.encode_forward_fft(sequence)?;
         state.dispatch(
-            cpass,
+            sequence,
             &PstdParams { axis: 0, ..params },
             &state.pipelines.kspace_shift,
             bind_group,
             ctx.elem_wg,
             "x_shift",
         );
-        state.ifft_3d(cpass, bind_group, &ctx, 0);
+        state.encode_inverse_fft(sequence)
     });
-    commands.poll_wait();
     let gradient = read_buffer::<f32>(
         state.device(),
         state.queue(),
-        &state.kspace_buffers.re,
+        state.kspace_buffers.re.raw(),
         total,
     );
     let wavenumber = core::f32::consts::TAU / (n as f32 * 1e-3);
@@ -260,17 +272,17 @@ fn pstd_copy_fft_inverse_roundtrip_preserves_pressure_field() {
         0,
         bytemuck::cast_slice(&zero_velocity),
     );
-    commands.submit_compute_pass("pstd_x_velocity", "pstd_x_velocity", |cpass| {
+    submit_sequence(state, "pstd_x_velocity", |sequence| {
         state.dispatch(
-            cpass,
+            sequence,
             &PstdParams { axis: 0, ..params },
             &state.pipelines.vel_update,
             bind_group,
             ctx.elem_wg,
             "x_velocity",
         );
+        Ok(())
     });
-    commands.poll_wait();
     let velocity = read_buffer::<f32>(
         state.device(),
         state.queue(),
@@ -298,31 +310,30 @@ fn pstd_copy_fft_inverse_roundtrip_preserves_pressure_field() {
         velocity_peak * TRANSFORM_RELATIVE_ERROR_BOUND
     );
 
-    commands.submit_compute_pass("pstd_x_divergence", "pstd_x_divergence", |cpass| {
+    submit_sequence(state, "pstd_x_divergence", |sequence| {
         state.dispatch(
-            cpass,
+            sequence,
             &PstdParams { axis: 1, ..params },
             &state.pipelines.copy_field_to_k,
             bind_group,
             ctx.elem_wg,
             "copy_velocity_x",
         );
-        state.fft_3d(cpass, bind_group, &ctx, 0);
+        state.encode_forward_fft(sequence)?;
         state.dispatch(
-            cpass,
+            sequence,
             &PstdParams { axis: 3, ..params },
             &state.pipelines.kspace_shift,
             bind_group,
             ctx.elem_wg,
             "x_negative_shift",
         );
-        state.ifft_3d(cpass, bind_group, &ctx, 0);
+        state.encode_inverse_fft(sequence)
     });
-    commands.poll_wait();
     let divergence = read_buffer::<f32>(
         state.device(),
         state.queue(),
-        &state.kspace_buffers.re,
+        state.kspace_buffers.re.raw(),
         total,
     );
     let divergence_peak = dt * kappa * wavenumber * wavenumber / rho0;
@@ -346,17 +357,17 @@ fn pstd_copy_fft_inverse_roundtrip_preserves_pressure_field() {
         0,
         bytemuck::cast_slice(&zero_velocity),
     );
-    commands.submit_compute_pass("pstd_x_density", "pstd_x_density", |cpass| {
+    submit_sequence(state, "pstd_x_density", |sequence| {
         state.dispatch(
-            cpass,
+            sequence,
             &PstdParams { axis: 0, ..params },
             &state.pipelines.dens_update,
             bind_group,
             ctx.elem_wg,
             "x_density",
         );
+        Ok(())
     });
-    commands.poll_wait();
     let density = read_buffer::<f32>(
         state.device(),
         state.queue(),
@@ -400,45 +411,41 @@ fn pstd_copy_fft_inverse_roundtrip_preserves_pressure_field() {
         state
             .queue()
             .write_buffer(density_field, 0, bytemuck::cast_slice(&zero_velocity));
-        commands.submit_compute_pass(
-            "pstd_component_density",
-            "pstd_component_density",
-            |cpass| {
-                state.dispatch(
-                    cpass,
-                    &PstdParams {
-                        axis: axis + 1,
-                        ..params
-                    },
-                    &state.pipelines.copy_field_to_k,
-                    bind_group,
-                    ctx.elem_wg,
-                    "copy_component_velocity",
-                );
-                state.fft_3d(cpass, bind_group, &ctx, 0);
-                state.dispatch(
-                    cpass,
-                    &PstdParams {
-                        axis: axis + 3,
-                        ..params
-                    },
-                    &state.pipelines.kspace_shift,
-                    bind_group,
-                    ctx.elem_wg,
-                    "component_negative_shift",
-                );
-                state.ifft_3d(cpass, bind_group, &ctx, 0);
-                state.dispatch(
-                    cpass,
-                    &PstdParams { axis, ..params },
-                    &state.pipelines.dens_update,
-                    bind_group,
-                    ctx.elem_wg,
-                    "component_density",
-                );
-            },
-        );
-        commands.poll_wait();
+        submit_sequence(state, "pstd_component_density", |sequence| {
+            state.dispatch(
+                sequence,
+                &PstdParams {
+                    axis: axis + 1,
+                    ..params
+                },
+                &state.pipelines.copy_field_to_k,
+                bind_group,
+                ctx.elem_wg,
+                "copy_component_velocity",
+            );
+            state.encode_forward_fft(sequence)?;
+            state.dispatch(
+                sequence,
+                &PstdParams {
+                    axis: axis + 3,
+                    ..params
+                },
+                &state.pipelines.kspace_shift,
+                bind_group,
+                ctx.elem_wg,
+                "component_negative_shift",
+            );
+            state.encode_inverse_fft(sequence)?;
+            state.dispatch(
+                sequence,
+                &PstdParams { axis, ..params },
+                &state.pipelines.dens_update,
+                bind_group,
+                ctx.elem_wg,
+                "component_density",
+            );
+            Ok(())
+        });
         let component_density =
             read_buffer::<f32>(state.device(), state.queue(), density_field, total);
         let component_density_error = component_density

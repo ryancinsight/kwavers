@@ -11,7 +11,7 @@ pub trait PstdBindGroupLayoutProvider {
     /// Create group(0): 7 read/write field buffers + 1 read-only source-kappa.
     fn fields_layout(&self) -> Self::BindGroupLayout;
 
-    /// Create group(1): 2 read/write k-space buffers + 6 read-only medium buffers.
+    /// Create group(1): 2 read/write k-space buffers + 5 read-only medium buffers.
     fn kspace_layout(&self) -> Self::BindGroupLayout;
 
     /// Create group(2): sensor/source data.
@@ -76,7 +76,7 @@ impl PstdBindGroupLayoutProvider for WgpuPstdBindGroupLayoutFactory<'_> {
         let ro = |binding| Self::storage_entry(binding, true);
         self.layout(
             "bgl_kspace",
-            &[rw(0), rw(1), ro(2), ro(3), ro(4), ro(5), ro(6), ro(7)],
+            &[rw(0), rw(1), ro(2), ro(3), ro(4), ro(5), ro(6)],
         )
     }
 

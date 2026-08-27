@@ -18,7 +18,7 @@
 //! | `peak_pressure_field()` | Returns the latest explicit peak-pressure readback |
 //! | `velocity_fields()` | Returns final host-read staggered velocity fields after `run()` |
 //! | `recorded_sensor_pressure()` | Returns sensor traces after `run()` completes |
-//! | `add_source(Box<dyn Source>)` | Returns an explicit waveform-contract error |
+//! | `add_source(Box<dyn Source>)` | Returns an explicit waveform-contract error; high-level dispatch samples pressure sources before construction |
 //! | `add_sensor(&GridSensorSet)` | Converts `GridPoint` list to boolean sensor mask |
 //!
 //! ## Source signal
@@ -43,9 +43,9 @@ use medium::GpuMediumSnapshot;
 use kwavers_boundary::cpml::{CPMLConfig, CPMLProfiles};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_gpu::pstd_gpu::{
-    prepare_pstd_pressure_source, validate_gpu_pstd_dimensions, AbsorptionArrays, GpuPstdSolver,
-    MediumArrays, PmlArrays, PstdFinalFields, PstdOutputRequest, PstdRunInputs, PstdRunResult,
-    SolverParams, WgpuPstdStateProvider,
+    prepare_pstd_pressure_source, AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays,
+    PstdFinalFields, PstdOutputRequest, PstdRunInputs, PstdRunResult, SolverParams,
+    WgpuPstdStateProvider,
 };
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
@@ -91,13 +91,12 @@ pub struct GpuPstdSimulationAdapter {
 impl GpuPstdSimulationAdapter {
     /// Construct a GPU PSTD adapter.
     ///
-    /// Validates GPU PSTD grid constraints and extracts medium data.  The GPU
+    /// Validates scalar solver parameters and extracts medium data. The GPU
     /// device is **not** acquired here; it is acquired on the first `run()` call.
     ///
     /// # Errors
     ///
-    /// Returns `KwaversError::InvalidInput` when grid dimensions are not
-    /// power-of-two or exceed 1,024 per axis.
+    /// Returns `KwaversError::InvalidInput` when the time step is invalid.
     pub fn new<M: Medium>(
         config: &SolverConfiguration,
         grid: &Grid,
@@ -105,7 +104,6 @@ impl GpuPstdSimulationAdapter {
     ) -> KwaversResult<Self> {
         let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
 
-        validate_gpu_pstd_dimensions(nx, ny, nz)?;
         if !config.dt.is_finite() || config.dt <= 0.0 {
             return Err(KwaversError::InvalidInput(format!(
                 "GPU PSTD requires finite positive dt; got {}",
@@ -451,16 +449,20 @@ impl GpuPstdSimulationAdapter {
 
         // ── Run GPU time loop ─────────────────────────────────────────────────
         let t0 = Instant::now();
-        let result = gpu_solver.run(PstdRunInputs {
-            sensor_indices: &sensor_indices,
-            source_indices: &pressure_source.indices,
-            source_signals: &pressure_source.signals,
-            pressure_source_correction: pressure_source.uses_kspace_correction,
-            vel_x_indices: &[],
-            vel_x_signals: &[],
-            velocity_source_correction: false,
-            output_request,
-        });
+        let result = gpu_solver
+            .run(PstdRunInputs {
+                sensor_indices: &sensor_indices,
+                source_indices: &pressure_source.indices,
+                source_signals: &pressure_source.signals,
+                pressure_source_correction: pressure_source.uses_kspace_correction,
+                vel_x_indices: &[],
+                vel_x_signals: &[],
+                velocity_source_correction: false,
+                output_request,
+            })
+            .map_err(|error| {
+                KwaversError::GpuError(format!("GPU PSTD execution failed: {error}"))
+            })?;
         self.store_sensor_data(&result.sensor_data, sensor_indices.len(), nt)?;
         self.computation_time += t0.elapsed();
         self.current_step += nt;
@@ -469,7 +471,7 @@ impl GpuPstdSimulationAdapter {
 }
 
 impl Solver for GpuPstdSimulationAdapter {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "GpuPstd"
     }
 

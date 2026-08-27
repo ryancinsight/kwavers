@@ -67,16 +67,18 @@ fn test_gpu_pstd_run_produces_output() {
     let mut source_signals = vec![0.0f32; 20];
     source_signals[..5].copy_from_slice(&[0.0, 0.5, 1.0, 0.5, 0.0]);
 
-    let result = solver.run(PstdRunInputs {
-        sensor_indices: &[sns_flat as u32],
-        source_indices: &[src_flat as u32],
-        source_signals: &source_signals,
-        pressure_source_correction: true,
-        vel_x_indices: &[],
-        vel_x_signals: &[],
-        velocity_source_correction: false,
-        output_request: PstdOutputRequest::with_final_fields_and_peak_pressure(),
-    });
+    let result = solver
+        .run(PstdRunInputs {
+            sensor_indices: &[sns_flat as u32],
+            source_indices: &[src_flat as u32],
+            source_signals: &source_signals,
+            pressure_source_correction: true,
+            vel_x_indices: &[],
+            vel_x_signals: &[],
+            velocity_source_correction: false,
+            output_request: PstdOutputRequest::with_final_fields_and_peak_pressure(),
+        })
+        .expect("GPU PSTD run");
     let data = result.sensor_data;
     let final_fields = result
         .final_fields
@@ -119,13 +121,14 @@ fn test_gpu_pstd_run_produces_output() {
     );
 }
 
-/// Exercise the largest supported FFT axis rather than only the small-grid
-/// smoke path. The 1,024×8×8 fixture uses 1,024-point X transforms while
-/// keeping the empirical GPU workload bounded.
+/// Exercise a large FFT axis rather than only the small-grid smoke path.
+///
+/// The 1,024 x 8 x 8 fixture is a bounded regression case, not a provider
+/// limit; Hephaestus derives resource requirements from the requested shape.
 #[test]
-fn test_gpu_pstd_1024_axis_produces_final_pressure() {
+fn large_axis_gpu_pstd_produces_final_pressure() {
     let Some(mut solver) = make_solver([1_024, 8, 8], 8) else {
-        eprintln!("No GPU adapter — skipping 1,024-point FFT run test");
+        eprintln!("No GPU adapter — skipping large-axis FFT run test");
         return;
     };
 
@@ -133,25 +136,27 @@ fn test_gpu_pstd_1024_axis_produces_final_pressure() {
     let source_flat = (nx / 2) * ny * nz + (ny / 2) * nz + nz / 2;
     let source_signals = vec![1.0f32; 8];
 
-    let result = solver.run(PstdRunInputs {
-        sensor_indices: &[source_flat as u32],
-        source_indices: &[source_flat as u32],
-        source_signals: &source_signals,
-        pressure_source_correction: true,
-        vel_x_indices: &[],
-        vel_x_signals: &[],
-        velocity_source_correction: false,
-        output_request: PstdOutputRequest::with_final_fields(),
-    });
+    let result = solver
+        .run(PstdRunInputs {
+            sensor_indices: &[source_flat as u32],
+            source_indices: &[source_flat as u32],
+            source_signals: &source_signals,
+            pressure_source_correction: true,
+            vel_x_indices: &[],
+            vel_x_signals: &[],
+            velocity_source_correction: false,
+            output_request: PstdOutputRequest::with_final_fields(),
+        })
+        .expect("large-axis GPU PSTD run");
     let final_fields = result
         .final_fields
-        .expect("full-field request must return the largest-axis pressure field");
+        .expect("full-field request must return the large-axis pressure field");
 
     assert_eq!(final_fields.pressure.len(), nx * ny * nz);
     assert!(final_fields.pressure.iter().all(|value| value.is_finite()));
     assert!(
         final_fields.pressure.iter().any(|&value| value != 0.0),
-        "the largest supported FFT axis must not collapse a driven field to zero"
+        "a large FFT axis must not collapse a driven field to zero"
     );
 }
 
@@ -183,6 +188,7 @@ fn test_gpu_pstd_velocity_source_produces_output() {
             velocity_source_correction: true,
             output_request: PstdOutputRequest::sensor_traces(),
         })
+        .expect("velocity-source GPU PSTD run")
         .sensor_data;
 
     assert_eq!(data.len(), 20, "sensor data length");
@@ -276,6 +282,7 @@ fn test_gpu_pstd_multi_velocity_source_plane_produces_output() {
             velocity_source_correction: true,
             output_request: PstdOutputRequest::sensor_traces(),
         })
+        .expect("multi-source GPU PSTD run")
         .sensor_data;
     let max_abs = data.iter().copied().map(f32::abs).fold(0.0f32, f32::max);
     eprintln!("GPU PSTD multi velocity-source sensor peak: {max_abs:.6}");
@@ -355,6 +362,7 @@ fn bench_gpu_pstd_bmode_grid() {
             velocity_source_correction: false,
             output_request: PstdOutputRequest::sensor_traces(),
         })
+        .expect("B-mode grid GPU PSTD run")
         .sensor_data;
     let elapsed = t0.elapsed();
 
