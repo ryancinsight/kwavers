@@ -72,7 +72,8 @@ where
         config.validate()?;
 
         let first_hidden = config.hidden_layers[0];
-        let input_layer = Linear::new(INPUT_DIM, first_hidden, true);
+        let input_layer = Linear::new(INPUT_DIM, first_hidden, true)
+            .map_err(|error| crate::inverse::pinn::layer_construction_failed("input", error))?;
         let input_act = DynamicTanh::new();
 
         let mut hidden_layers = Vec::with_capacity((config.hidden_layers.len()).saturating_sub(1));
@@ -81,7 +82,11 @@ where
             let &[in_features, out_features] = window else {
                 continue;
             };
-            hidden_layers.push(Linear::new(in_features, out_features, true));
+            hidden_layers.push(
+                Linear::new(in_features, out_features, true).map_err(|error| {
+                    crate::inverse::pinn::layer_construction_failed("hidden", error)
+                })?,
+            );
             hidden_acts.push(DynamicTanh::new());
         }
 
@@ -89,7 +94,8 @@ where
             .hidden_layers
             .last()
             .expect("validate() guarantees non-empty hidden_layers");
-        let output_layer = Linear::new(last_hidden, OUTPUT_DIM, true);
+        let output_layer = Linear::new(last_hidden, OUTPUT_DIM, true)
+            .map_err(|error| crate::inverse::pinn::layer_construction_failed("output", error))?;
 
         Ok(Self {
             input_layer,

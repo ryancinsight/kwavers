@@ -74,17 +74,21 @@ where
 
         let input_size = 2;
         let first_hidden_size = config.hidden_layers[0];
-        let input_layer = Linear::new(input_size, first_hidden_size, true);
+        let input_layer = Linear::new(input_size, first_hidden_size, true)
+            .map_err(|error| crate::inverse::pinn::layer_construction_failed("input", error))?;
 
         let mut hidden_layers = Vec::new();
         for i in 0..(config.hidden_layers.len()) - 1 {
             let in_size = config.hidden_layers[i];
             let out_size = config.hidden_layers[i + 1];
-            hidden_layers.push(Linear::new(in_size, out_size, true));
+            hidden_layers.push(Linear::new(in_size, out_size, true).map_err(|error| {
+                crate::inverse::pinn::layer_construction_failed("hidden", error)
+            })?);
         }
 
         let last_hidden_size = *config.hidden_layers.last().unwrap();
-        let output_layer = Linear::new(last_hidden_size, 1, true);
+        let output_layer = Linear::new(last_hidden_size, 1, true)
+            .map_err(|error| crate::inverse::pinn::layer_construction_failed("output", error))?;
 
         Ok(Self {
             input_layer,

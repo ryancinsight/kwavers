@@ -83,19 +83,21 @@ where
         config.validate().map_err(KwaversError::InvalidInput)?;
 
         let first_hidden = config.hidden_layers[0];
-        let input_layer = Linear::new(3, first_hidden, true);
+        let input_layer = Linear::new(3, first_hidden, true)
+            .map_err(|error| crate::inverse::pinn::layer_construction_failed("input", error))?;
 
         let mut hidden_layers = Vec::with_capacity((config.hidden_layers.len()).saturating_sub(1));
         for i in 0..(config.hidden_layers.len()).saturating_sub(1) {
-            hidden_layers.push(Linear::new(
-                config.hidden_layers[i],
-                config.hidden_layers[i + 1],
-                true,
-            ));
+            hidden_layers.push(
+                Linear::new(config.hidden_layers[i], config.hidden_layers[i + 1], true).map_err(
+                    |error| crate::inverse::pinn::layer_construction_failed("hidden", error),
+                )?,
+            );
         }
 
         let last_hidden = *config.hidden_layers.last().unwrap();
-        let output_layer = Linear::new(last_hidden, 2, true);
+        let output_layer = Linear::new(last_hidden, 2, true)
+            .map_err(|error| crate::inverse::pinn::layer_construction_failed("output", error))?;
 
         let backend = B::default();
         let leaf_scalar = |v: f32| {

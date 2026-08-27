@@ -167,7 +167,11 @@ fn test_trainer_with_peak_prominence_weight_runs_finite_and_propagates_gradient(
     let mut first_prom = 0.0_f32;
     let mut last_prom = 0.0_f32;
     for step in 0..30 {
-        let batch = make_synthetic_batch(backend, step as u64, 128);
+        // One batch for every step. The question is whether the gradient
+        // reaches the argmax voxel's parameters, and a loss compared across
+        // two different batches answers a different question -- it moves with
+        // the draw as much as with the learning.
+        let batch = make_synthetic_batch(backend, 0, 128);
         let m = trainer.step(batch).expect("field surrogate training step");
         assert!(m.data.is_finite(), "data loss not finite at step {step}");
         assert!(
@@ -181,8 +185,10 @@ fn test_trainer_with_peak_prominence_weight_runs_finite_and_propagates_gradient(
         }
         last_prom = m.peak_prominence;
     }
-    // Prominence loss must decrease — autodiff has to be reaching the
-    // argmax voxel's parameters. Allow noise but require a clear drop.
+    // Repeatedly stepping one batch must drive its prominence loss down:
+    // that is what shows the gradient reaching the argmax voxel's parameters,
+    // and it cannot be explained by the draw. The threshold leaves room for
+    // the optimiser's path without admitting a flat curve.
     assert!(
         last_prom < first_prom * 0.7,
         "peak prominence did not decrease: first={first_prom}, last={last_prom}"

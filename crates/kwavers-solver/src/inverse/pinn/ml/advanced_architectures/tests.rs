@@ -30,7 +30,8 @@ fn test_fourier_features() {
 #[test]
 fn test_residual_block() {
     let backend = TestBackend::default();
-    let block = ResidualBlock::<TestBackend>::new(10, 20);
+    let block = ResidualBlock::<TestBackend>::new(10, 20)
+        .expect("invariant: the fixture's layer dimensions are non-zero");
 
     let input = var_row(backend, &[0.1f32; 10]);
     let output = block.forward(&input).expect("residual block forward");
@@ -50,7 +51,8 @@ fn test_resnet_pinn_1d() {
         fourier_scale: 5.0,
     };
 
-    let pinn = ResNetPINN1D::<TestBackend>::new(&config);
+    let pinn = ResNetPINN1D::<TestBackend>::new(&config)
+        .expect("invariant: the fixture's layer dimensions are non-zero");
 
     let x = var_row(backend, &[0.5]);
     let t = var_row(backend, &[0.1]);
@@ -70,7 +72,8 @@ fn test_resnet_pinn_2d() {
         fourier_scale: 5.0,
     };
 
-    let pinn = ResNetPINN2D::<TestBackend>::new(&config);
+    let pinn = ResNetPINN2D::<TestBackend>::new(&config)
+        .expect("invariant: the fixture's layer dimensions are non-zero");
 
     let x = var_row(backend, &[0.5]);
     let y = var_row(backend, &[0.3]);
