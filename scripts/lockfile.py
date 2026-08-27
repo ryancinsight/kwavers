@@ -34,8 +34,9 @@ discovery.
 
 # Usage
 
-    scripts/lockfile.py --check        # verify the lock with Cargo's locked resolver
-    scripts/lockfile.py --regenerate   # rewrite it correctly (needs network)
+    scripts/lockfile.py --check         # verify the committed lock, offline
+    scripts/lockfile.py --check-staged  # fast index-only check, for pre-commit
+    scripts/lockfile.py --regenerate    # rewrite it correctly (needs network)
 """
 
 from __future__ import annotations
@@ -123,6 +124,57 @@ def check() -> int:
     return 0
 
 
+def check_staged() -> int:
+    """Structural check of the *staged* `Cargo.lock`, for use from `pre-commit`.
+
+    Deliberately does not run cargo. A pre-commit hook has to be fast enough that
+    nobody reaches for `--no-verify`, and the flattened lock has an unmistakable
+    signature -- zero first-party git sources -- that a text scan settles
+    instantly. Staleness, the other failure `--check` detects, needs real
+    resolution and stays a pre-push concern.
+
+    Checking the *staged blob* rather than the working file is the point: the
+    working copy may already have been repaired while the poisoned version sits
+    in the index, and it is the index that becomes the commit.
+    """
+    staged = subprocess.run(
+        ["git", "diff", "--cached", "--name-only", "--", "Cargo.lock"],
+        capture_output=True,
+        encoding="utf-8",
+        errors="replace",
+        check=False,
+    )
+    if staged.returncode != 0 or not staged.stdout.strip():
+        return 0
+
+    blob = subprocess.run(
+        ["git", "show", ":Cargo.lock"],
+        capture_output=True,
+        encoding="utf-8",
+        errors="replace",
+        check=False,
+    )
+    if blob.returncode != 0:
+        return 0
+
+    if len(FIRST_PARTY_SOURCE.findall(blob.stdout)) > 0:
+        return 0
+
+    print(
+        "error: the staged Cargo.lock contains no first-party git sources.\n"
+        "\n"
+        "A cargo command run against a tree under the Atlas stack root rewrote\n"
+        "it with the overlay active, which resolves those dependencies to local\n"
+        "paths and drops their git sources. Committing it now is what turns a\n"
+        "working branch into one that can never be pushed.\n"
+        "\n"
+        "Fix: scripts/lockfile.py --regenerate, then stage the result.\n"
+        "To commit anyway: SKIP_LOCKFILE_CHECK=1 git commit",
+        file=sys.stderr,
+    )
+    return 1
+
+
 def regenerate() -> int:
     completed = run_outside_the_overlay(["generate-lockfile"])
     if completed.returncode != 0:
@@ -137,8 +189,17 @@ def main() -> int:
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--check", action="store_true", help="verify the committed lock")
     mode.add_argument("--regenerate", action="store_true", help="rewrite the lock correctly")
+    mode.add_argument(
+        "--check-staged",
+        action="store_true",
+        help="fast structural check of the staged lock, for pre-commit",
+    )
     arguments = parser.parse_args()
-    return regenerate() if arguments.regenerate else check()
+    if arguments.regenerate:
+        return regenerate()
+    if arguments.check_staged:
+        return check_staged()
+    return check()
 
 
 if __name__ == "__main__":
