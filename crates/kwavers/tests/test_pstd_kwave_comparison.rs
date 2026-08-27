@@ -18,9 +18,8 @@
 //!
 //! ## Figures
 //!
-//! Each test emits a PNG comparison figure to `test-figures/` in the crate
-//! root. Figure generation failures are non-fatal: the test still passes or
-//! fails on physics criteria alone.
+//! Each test renders a PNG in an isolated temporary directory and compares it
+//! with the corresponding committed image under `test-figures/`.
 //!
 //! - `pstd_dalembert_comparison.png` — 2×3 pressure snapshots, PSTD vs analytical
 //! - `pstd_kspace_operator.png`      — k-space correction factor κ(k) vs k/k_max
@@ -50,8 +49,10 @@ use leto::Array3;
 use plotters::prelude::*;
 use std::sync::Arc;
 
-/// Directory for emitted comparison figures.
-const FIGURE_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/test-figures");
+#[path = "support/figures.rs"]
+mod figures;
+
+use figures::render_and_compare;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Figure helpers
@@ -80,11 +81,19 @@ fn save_dalembert_figure(
     nx: usize,
     dx: f64,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    std::fs::create_dir_all(FIGURE_DIR)?;
-    let path = format!("{}/pstd_dalembert_comparison.png", FIGURE_DIR);
+    render_and_compare("pstd_dalembert_comparison.png", |path| {
+        render_dalembert_figure(path, snapshots, nx, dx)
+    })
+}
 
+fn render_dalembert_figure(
+    path: &std::path::Path,
+    snapshots: &[Snapshot],
+    nx: usize,
+    dx: f64,
+) -> Result<(), Box<dyn std::error::Error>> {
     // 1 800 × 900 pixels: 3 columns × 2 rows at 560 × 400 each, plus margins.
-    let root = BitMapBackend::new(&path, (1800, 900)).into_drawing_area();
+    let root = BitMapBackend::new(path, (1800, 900)).into_drawing_area();
     root.fill(&WHITE)?;
 
     // Title band at the top.
@@ -150,7 +159,6 @@ fn save_dalembert_figure(
     }
 
     root.present()?;
-    println!("  Figure saved: {}", path);
     Ok(())
 }
 
@@ -159,10 +167,18 @@ fn save_dalembert_figure(
 /// Shows κ(k) = sinc(c|k|Δt/2) across the full Nyquist band
 /// (0 to k_Nyquist). Vertical markers indicate 80 % and 100 % of Nyquist.
 fn save_kspace_figure(c0: f64, dt: f64, dx: f64) -> Result<(), Box<dyn std::error::Error>> {
-    std::fs::create_dir_all(FIGURE_DIR)?;
-    let path = format!("{}/pstd_kspace_operator.png", FIGURE_DIR);
+    render_and_compare("pstd_kspace_operator.png", |path| {
+        render_kspace_figure(path, c0, dt, dx)
+    })
+}
 
-    let root = BitMapBackend::new(&path, (900, 500)).into_drawing_area();
+fn render_kspace_figure(
+    path: &std::path::Path,
+    c0: f64,
+    dt: f64,
+    dx: f64,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let root = BitMapBackend::new(path, (900, 500)).into_drawing_area();
     root.fill(&WHITE)?;
 
     let mut chart = ChartBuilder::on(&root)
@@ -238,7 +254,6 @@ fn save_kspace_figure(c0: f64, dt: f64, dx: f64) -> Result<(), Box<dyn std::erro
         .draw()?;
 
     root.present()?;
-    println!("  Figure saved: {}", path);
     Ok(())
 }
 
@@ -251,10 +266,17 @@ fn save_energy_figure(
     e0: f64,
     energy_records: &[(usize, f64)], // (step, energy)
 ) -> Result<(), Box<dyn std::error::Error>> {
-    std::fs::create_dir_all(FIGURE_DIR)?;
-    let path = format!("{}/pstd_energy_conservation.png", FIGURE_DIR);
+    render_and_compare("pstd_energy_conservation.png", |path| {
+        render_energy_figure(path, e0, energy_records)
+    })
+}
 
-    let root = BitMapBackend::new(&path, (900, 500)).into_drawing_area();
+fn render_energy_figure(
+    path: &std::path::Path,
+    e0: f64,
+    energy_records: &[(usize, f64)],
+) -> Result<(), Box<dyn std::error::Error>> {
+    let root = BitMapBackend::new(path, (900, 500)).into_drawing_area();
     root.fill(&WHITE)?;
 
     let step_max = energy_records.last().map(|(s, _)| *s).unwrap_or(1);
@@ -308,7 +330,6 @@ fn save_energy_figure(
         .draw()?;
 
     root.present()?;
-    println!("  Figure saved: {}", path);
     Ok(())
 }
 
@@ -516,10 +537,8 @@ fn test_pstd_vs_dalembert_1d_homogeneous() -> KwaversResult<()> {
     println!("  Peak ratio:       {:.3}", peak_ratio);
     println!("  Comparison points: {}", n_points);
 
-    // Generate comparison figure (non-fatal if figure writing fails).
-    if let Err(e) = save_dalembert_figure(&snapshots, nx, dx) {
-        eprintln!("  [warn] d'Alembert figure generation failed: {}", e);
-    }
+    save_dalembert_figure(&snapshots, nx, dx)
+        .expect("d'Alembert figure must match the committed golden");
 
     // Physics validation criteria.
     assert!(
@@ -604,10 +623,7 @@ fn test_pstd_k_space_operator_accuracy() -> KwaversResult<()> {
         correction_80
     );
 
-    // Generate k-space operator figure (non-fatal).
-    if let Err(e) = save_kspace_figure(c0, dt, dx) {
-        eprintln!("  [warn] k-space figure generation failed: {}", e);
-    }
+    save_kspace_figure(c0, dt, dx).expect("k-space figure must match the committed golden");
 
     println!("PASSED: k-space operator within valid range");
     Ok(())
@@ -720,10 +736,7 @@ fn test_pstd_energy_conservation_homogeneous() -> KwaversResult<()> {
     println!("Final energy: {:.6e} J/m²", e_final);
     println!("Energy drift: {:.3}%", energy_drift * 100.0);
 
-    // Generate energy conservation figure (non-fatal).
-    if let Err(e) = save_energy_figure(e0, &energy_records) {
-        eprintln!("  [warn] energy figure generation failed: {}", e);
-    }
+    save_energy_figure(e0, &energy_records).expect("energy figure must match the committed golden");
 
     // Physics validation: energy should be conserved within 1 % over 80 steps.
     assert!(

@@ -159,6 +159,23 @@
 //!   neural networks." SIAM Journal on Scientific Computing, 43(5), A3055-A3081.
 //!   DOI: 10.1137/20M1318043
 
+/// Convert a layer-construction failure into this crate's error type.
+///
+/// `coeus_nn::Linear::new` became fallible when it started drawing its weights
+/// rather than setting them all to 1.0 (coeus ADR 0067). Every way it fails is
+/// a rejected input -- a zero layer width, a non-finite distribution parameter
+/// -- so these surface as `InvalidInput` rather than an internal fault, and
+/// `layer` names which layer of the network could not be built.
+#[cfg(feature = "pinn")]
+pub(crate) fn layer_construction_failed(
+    layer: &str,
+    error: impl core::fmt::Display,
+) -> kwavers_core::error::KwaversError {
+    kwavers_core::error::KwaversError::InvalidInput(format!(
+        "PINN {layer} layer could not be built: {error}"
+    ))
+}
+
 #[cfg(feature = "pinn")]
 pub mod elastic_2d;
 pub mod geometry;

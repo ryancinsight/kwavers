@@ -26,19 +26,21 @@
 //! - **Harmonic detection**: < 100 μs for 1024 samples
 //! - **Memory efficiency**: < 8 bytes per grid point for storage
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use kwavers_grid::Grid;
 use kwavers_imaging::ultrasound::elastography::{InversionMethod, NonlinearInversionMethod};
 use kwavers_medium::HomogeneousMedium;
 use kwavers_physics::acoustics::imaging::modalities::elastography::{
-    HarmonicDetectionConfig, HarmonicDetector, HarmonicDisplacementField,
+    AcousticRadiationForce, HarmonicDetectionConfig, HarmonicDetector, HarmonicDisplacementField,
 };
 use kwavers_simulation::imaging::elastography::ShearWaveElastography;
 use kwavers_solver::forward::elastic::{
-    ElasticWaveConfig, HyperelasticModel, NonlinearElasticWaveSolver, NonlinearSWEConfig,
+    ElasticWaveConfig, ElasticWaveSolver, HyperelasticModel, NonlinearElasticWaveSolver,
+    NonlinearSWEConfig,
 };
 use kwavers_solver::inverse::elastography::{NonlinearInversion, NonlinearInversionConfig};
 use leto::Array3;
+use std::time::Duration;
 
 /// Benchmark hyperelastic constitutive model evaluation
 pub fn bench_hyperelastic_models(c: &mut Criterion) {
@@ -230,6 +232,48 @@ pub fn bench_end_to_end_workflow(c: &mut Criterion) {
     });
 }
 
+/// Measure propagation scaling without making wall-clock assertions part of CI.
+///
+/// The former integration test timed 16³, 32³, 48³, and 64³ cases once and
+/// asserted a ratio against the host's elapsed time. Criterion owns that
+/// measurement instead: setup is outside the timed closure, each case reports
+/// cell throughput, and the bounded sampling window keeps the benchmark from
+/// consuming an entire validation job when a large case is slow.
+pub fn bench_wave_propagation_scaling(c: &mut Criterion) {
+    let sizes = [16usize, 32, 64];
+    let mut group = c.benchmark_group("wave_propagation_scaling");
+    group.sample_size(10);
+    group.warm_up_time(Duration::from_secs(1));
+    group.measurement_time(Duration::from_secs(5));
+
+    for &size in &sizes {
+        let grid = Grid::new(size, size, size, 0.001, 0.001, 0.001).unwrap();
+        let medium = HomogeneousMedium::soft_tissue(10_000.0, 0.49, &grid);
+        let solver = ElasticWaveSolver::new(&grid, &medium, Default::default()).unwrap();
+        let arf = AcousticRadiationForce::new(&grid, &medium).unwrap();
+        let body_force = arf
+            .push_pulse_body_force([size as f64 * 0.0005; 3])
+            .unwrap();
+
+        group.throughput(Throughput::Elements((size * size * size) as u64));
+        group.bench_with_input(
+            BenchmarkId::from_parameter(size),
+            &body_force,
+            |b, force| {
+                b.iter(|| {
+                    black_box(
+                        solver
+                            .propagate_waves_with_body_force_only_override(Some(force))
+                            .unwrap(),
+                    )
+                })
+            },
+        );
+    }
+
+    group.finish();
+}
+
 /// Benchmark memory usage scaling
 pub fn bench_memory_scaling(c: &mut Criterion) {
     let sizes = [8, 12, 16];
@@ -364,6 +408,7 @@ criterion_group!(
     bench_nonlinear_inversion,
     bench_wave_propagation_comparison,
     bench_end_to_end_workflow,
+    bench_wave_propagation_scaling,
     bench_memory_scaling,
     bench_convergence_analysis,
     bench_literature_performance_validation,

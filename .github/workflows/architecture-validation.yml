@@ -250,11 +250,10 @@ jobs:
     name: Test Suite Coverage
     needs: architecture-validation
     runs-on: ubuntu-latest
-    # The latest cold run completed the 5,759-test suite, PINN suite, and
-    # bounded full-grid suite in 38m40s. Keep the existing finite cap while
-    # moving its duplicated full-feature doctest build to the documentation
-    # job; do not convert compile waste into more timeout headroom.
-    timeout-minutes: 45
+    # The lib suite and the integration baseline run as two parallel jobs so
+    # their ~20min executions overlap; the prior single job ran them serially
+    # and took 38m40s. Each keeps a finite cap tied to its own step.
+    timeout-minutes: 30
 
     steps:
     - name: Checkout repository
@@ -297,6 +296,52 @@ jobs:
         cargo nextest run --locked --workspace --exclude kwavers-python --exclude kwavers-gpu --lib --test-threads=2
         cargo nextest run --locked -p kwavers --lib --no-default-features --features pinn --test-threads=2
 
+    - name: Record debug artifact footprint
+      run: |
+        debug_bytes=$(du --bytes --summarize target/debug | cut -f1)
+        debug_files=$(find target/debug -type f | wc -l)
+        {
+          echo "### Debug artifact footprint"
+          echo ""
+          echo "- Bytes: ${debug_bytes}"
+          echo "- Files: ${debug_files}"
+        } | tee -a "$GITHUB_STEP_SUMMARY"
+
+  integration-suite:
+    name: Integration Suite
+    needs: architecture-validation
+    runs-on: ubuntu-latest
+    # The integration baseline is the other ~20min half of the former
+    # test-coverage job; it runs in parallel with the lib suite above.
+    timeout-minutes: 30
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+    - name: Install system dependencies
+      uses: ./.github/actions/install-system-dependencies
+      with:
+        packages: libfontconfig1-dev
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+      with:
+        toolchain: 1.97.0
+
+    - name: Install nextest
+      uses: taiki-e/install-action@ea4c0b50b0d394ee91c5bb68a6a295b0556feb8e
+      with:
+        tool: nextest
+
+    # Same shared cache: the integration binaries were compiled by the strict
+    # clippy step's --all-targets, so this job restores them rather than
+    # rebuilding the feature graph.
+    - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
+      with:
+        shared-key: kwavers-dev
+        save-if: false
+
     # This replaces a four-name list of integration tests. The strict clippy
     # step compiles all of them via --all-targets, but only those four ever ran.
     # Multiple failures therefore went unnoticed, including two whose timestep
@@ -309,17 +354,6 @@ jobs:
 
     - name: Run integration tests against the failure baseline
       run: python scripts/integration_tests.py
-
-    - name: Record debug artifact footprint
-      run: |
-        debug_bytes=$(du --bytes --summarize target/debug | cut -f1)
-        debug_files=$(find target/debug -type f | wc -l)
-        {
-          echo "### Debug artifact footprint"
-          echo ""
-          echo "- Bytes: ${debug_bytes}"
-          echo "- Files: ${debug_files}"
-        } | tee -a "$GITHUB_STEP_SUMMARY"
 
   documentation:
     name: Documentation Build

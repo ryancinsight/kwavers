@@ -97,7 +97,7 @@ where
     F: Fn(&Var<f32, B>) -> O,
     O: ForwardOutput<B>,
 {
-    let eps = 1e-4_f32;
+    let eps = super::SECOND_ORDER_STEP;
     let batch = input.shape()[0];
     let backend = B::default();
 

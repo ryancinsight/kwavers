@@ -78,21 +78,25 @@ where
             .hidden_layers
             .first()
             .ok_or_else(|| KwaversError::InvalidInput("Hidden layers must be non-empty".into()))?;
-        let input_layer = Linear::new(input_size, first_hidden, true);
+        let input_layer = Linear::new(input_size, first_hidden, true)
+            .map_err(|error| crate::inverse::pinn::layer_construction_failed("input", error))?;
 
         let mut hidden_layers = Vec::new();
         for window in config.hidden_layers.windows(2) {
             let [in_features, out_features] = window else {
                 continue;
             };
-            hidden_layers.push(Linear::new(*in_features, *out_features, true));
+            hidden_layers.push(Linear::new(*in_features, *out_features, true).map_err(
+                |error| crate::inverse::pinn::layer_construction_failed("hidden", error),
+            )?);
         }
 
         let last_hidden = *config
             .hidden_layers
             .last()
             .ok_or_else(|| KwaversError::InvalidInput("Hidden layers must be non-empty".into()))?;
-        let output_layer = Linear::new(last_hidden, output_size, true);
+        let output_layer = Linear::new(last_hidden, output_size, true)
+            .map_err(|error| crate::inverse::pinn::layer_construction_failed("output", error))?;
 
         Ok(Self {
             input_layer,

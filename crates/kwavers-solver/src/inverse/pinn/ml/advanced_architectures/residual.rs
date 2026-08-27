@@ -35,18 +35,31 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::
 
 impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> ResidualBlock<B> {
     /// Create a new residual block.
-    pub fn new(input_dim: usize, hidden_dim: usize) -> Self {
-        let linear1 = Linear::new(input_dim, hidden_dim, true);
-        let linear2 = Linear::new(hidden_dim, input_dim, true);
+    ///
+    /// # Errors
+    ///
+    /// Returns [`kwavers_core::error::KwaversError::InvalidInput`] when a layer
+    /// dimension is zero or the backend's weight draw fails.
+    pub fn new(input_dim: usize, hidden_dim: usize) -> kwavers_core::error::KwaversResult<Self>
+    where
+        B: coeus_ops::RandomInitOps<f32>,
+        B::DeviceBuffer<f32>: coeus_core::CpuAddressableStorageMut<f32>,
+    {
+        let linear1 = Linear::new(input_dim, hidden_dim, true).map_err(|error| {
+            crate::inverse::pinn::layer_construction_failed("first residual", error)
+        })?;
+        let linear2 = Linear::new(hidden_dim, input_dim, true).map_err(|error| {
+            crate::inverse::pinn::layer_construction_failed("second residual", error)
+        })?;
         let norm1 = LayerNorm::new(hidden_dim, 1e-5);
         let norm2 = LayerNorm::new(input_dim, 1e-5);
 
-        Self {
+        Ok(Self {
             linear1,
             linear2,
             norm1,
             norm2,
-        }
+        })
     }
 
     /// Flatten all layer + norm parameters in forward order.
