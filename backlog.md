@@ -554,11 +554,11 @@ correlation floor. The focused workload moved from 17.397 s to 15.273 s
 The committed failure baseline is empty. The complete locked integration run
 passes 681/681 tests in 285.361 s with 27 configured skips.
 
-## KW-TEST-FIGURE-ISOLATION — integration tests overwrite tracked figures [patch] — todo
+## KW-TEST-FIGURE-ISOLATION — integration tests overwrite tracked figures [patch] — review
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-TEST-FIGURE-ISOLATION | Make plotting integration tests isolated and deterministic without rewriting committed goldens during ordinary test runs. | [patch] | todo | unowned | `crates/kwavers/tests/*plot*`, `crates/kwavers/tests/imaging_literature_validation.rs`, `crates/kwavers/test-figures/` |
+| KW-TEST-FIGURE-ISOLATION | Make plotting integration tests isolated and deterministic without rewriting committed goldens during ordinary test runs. | [patch] | review | current session | `crates/kwavers/tests/*plot*`, `crates/kwavers/tests/imaging_literature_validation.rs`, `crates/kwavers/test-figures/` |
 
 - **Evidence:** the complete integration run rewrites tracked PNGs under
   `crates/kwavers/test-figures/` even when the plotting implementation is not
@@ -568,8 +568,16 @@ passes 681/681 tests in 285.361 s with 27 configured skips.
   compares the result with the committed golden using the repository's derived
   image tolerance. A separate explicit regeneration command owns golden
   updates. Two concurrent runs leave `git status` clean.
-- **Non-goal:** changing render semantics or accepting regenerated goldens in
-  the isolation change.
+- **Result:** all eleven writers render into per-test temporary directories and
+  compare dimensions, representation, bit depth, and each 8-bit channel within
+  one quantization code. Two concurrent 38-test nextest runs passed in 12.677 s
+  and 12.643 s; every committed PNG hash remained unchanged.
+- **Correctness discrepancy:** the original references came from Plotters'
+  host-selected `ttf` font and differed materially from a fresh render. The
+  renderer now uses the embedded Ubuntu font through pure-Rust `ab_glyph`.
+  Regenerated references were inspected; that inspection also exposed and fixed
+  clipped absorption/CEUS bounds and a fake tissue-range legend series.
+- **Non-goal:** changing simulation values or their analytical assertions.
 
 ## KW-PSTD-PLUGIN-SOURCES-DROPPED — the plugin path discards its sources [major] — IMPLEMENTED 2026-08-22
 

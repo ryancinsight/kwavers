@@ -8,12 +8,14 @@
 
 use kwavers_core::constants::SOUND_SPEED_WATER;
 use plotters::prelude::*;
-use std::fs;
+
+#[path = "support/figures.rs"]
+mod figures;
+
+use figures::render_and_compare;
 
 // Define tissue sound speed constant locally since it's not exported
 const TISSUE_SOUND_SPEED: f64 = 1540.0;
-
-const FIGURE_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/test-figures");
 
 /// Power law absorption coefficient
 ///
@@ -36,9 +38,11 @@ fn power_law_absorption(alpha_0: f64, frequency: f64, reference_frequency: f64, 
 ///   Panel 2 (top-right): Soft tissue α(f) in dB/(MHz·cm) — power law y=1.1
 ///   Panel 3 (bottom):    Phase velocity c(f) showing Kramers-Kronig dispersion
 fn save_absorption_figure() -> Result<(), Box<dyn std::error::Error>> {
-    fs::create_dir_all(FIGURE_DIR)?;
-    let path = format!("{}/absorption_power_law.png", FIGURE_DIR);
-    let root = BitMapBackend::new(&path, (1200, 900)).into_drawing_area();
+    render_and_compare("absorption_power_law.png", render_absorption_figure)
+}
+
+fn render_absorption_figure(path: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
+    let root = BitMapBackend::new(path, (1200, 900)).into_drawing_area();
     root.fill(&WHITE)?;
 
     let (top, bottom) = root.split_vertically(450);
@@ -100,7 +104,7 @@ fn save_absorption_figure() -> Result<(), Box<dyn std::error::Error>> {
         let alpha_lo: Vec<(f64, f64)> = freq_mhz.iter().map(|&f| (f, 0.5 * f.powf(y))).collect();
         let alpha_hi: Vec<(f64, f64)> = freq_mhz.iter().map(|&f| (f, 1.0 * f.powf(y))).collect();
 
-        let alpha_max = alpha_tissue.iter().map(|&(_, a)| a).fold(0.0_f64, f64::max);
+        let alpha_max = alpha_hi.iter().map(|&(_, a)| a).fold(0.0_f64, f64::max);
 
         let mut chart = ChartBuilder::on(&panel_tissue)
             .caption("Soft Tissue Absorption (y=1.1)", ("sans-serif", 18))
@@ -208,7 +212,6 @@ fn save_absorption_figure() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     root.present()?;
-    println!("Figure saved: {}", path);
     Ok(())
 }
 
@@ -255,10 +258,7 @@ fn test_water_absorption() {
         );
     }
 
-    // Generate figure after the last test in this module runs (only once)
-    if let Err(e) = save_absorption_figure() {
-        eprintln!("Warning: absorption figure save failed: {e}");
-    }
+    save_absorption_figure().expect("absorption figure must match the committed golden");
 }
 
 #[test]

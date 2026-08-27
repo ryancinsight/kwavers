@@ -22,9 +22,11 @@ use kwavers_solver::pstd::PSTDPlugin;
 use kwavers_source::NullSource;
 use leto::{Array3, Array4};
 use plotters::prelude::*;
-use std::fs;
 
-const FIGURE_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/test-figures");
+#[path = "support/figures.rs"]
+mod figures;
+
+use figures::render_and_compare;
 
 /// Transparent (no-op) boundary: leaves the field untouched so the spectral
 /// solvers run on a lossless **periodic** domain. The PML-specific trait methods
@@ -84,9 +86,21 @@ fn save_solver_comparison_figure(
     curves: &[(&str, Vec<f64>)],
     reference: Option<&[f64]>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    fs::create_dir_all(FIGURE_DIR)?;
-    let filename = format!("{}/fdtd_pstd_{}.png", FIGURE_DIR, label);
-    let root = BitMapBackend::new(&filename, (1200, 900)).into_drawing_area();
+    let filename = format!("fdtd_pstd_{label}.png");
+    render_and_compare(&filename, |path| {
+        render_solver_comparison_figure(path, label, x_mm, initial, curves, reference)
+    })
+}
+
+fn render_solver_comparison_figure(
+    path: &std::path::Path,
+    label: &str,
+    x_mm: &[f64],
+    initial: &[f64],
+    curves: &[(&str, Vec<f64>)],
+    reference: Option<&[f64]>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let root = BitMapBackend::new(path, (1200, 900)).into_drawing_area();
     root.fill(&WHITE)?;
 
     let (top, bot) = root.split_vertically(450);
@@ -307,7 +321,6 @@ fn save_solver_comparison_figure(
     }
 
     root.present()?;
-    println!("Figure saved: {}", filename);
     Ok(())
 }
 
@@ -320,9 +333,18 @@ fn save_dispersion_comparison_figure(
     dt_s: f64,
     c: f64,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    fs::create_dir_all(FIGURE_DIR)?;
-    let path = format!("{}/fdtd_pstd_dispersion.png", FIGURE_DIR);
-    let root = BitMapBackend::new(&path, (900, 500)).into_drawing_area();
+    render_and_compare("fdtd_pstd_dispersion.png", |path| {
+        render_dispersion_comparison_figure(path, dx_m, dt_s, c)
+    })
+}
+
+fn render_dispersion_comparison_figure(
+    path: &std::path::Path,
+    dx_m: f64,
+    dt_s: f64,
+    c: f64,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let root = BitMapBackend::new(path, (900, 500)).into_drawing_area();
     root.fill(&WHITE)?;
 
     let k_nyquist = std::f64::consts::PI / dx_m;
@@ -412,7 +434,6 @@ fn save_dispersion_comparison_figure(
         .draw()?;
 
     root.present()?;
-    println!("Figure saved: {}", path);
     Ok(())
 }
 
@@ -857,15 +878,14 @@ fn test_plane_wave_propagation() -> KwaversResult<()> {
         ("Westervelt-L", wes_line),
     ];
 
-    if let Err(e) = save_solver_comparison_figure(
+    save_solver_comparison_figure(
         "point_source",
         &x_mm,
         &initial_line,
         curves,
         Some(&analytical_line),
-    ) {
-        eprintln!("Warning: figure save failed: {e}");
-    }
+    )
+    .expect("point-source figure must match the committed golden");
 
     Ok(())
 }
@@ -949,15 +969,14 @@ fn test_standing_wave_analytical() -> KwaversResult<()> {
         ("Kuznetsov-L", kuz_line),
         ("PSTD", pstd_line),
     ];
-    if let Err(e) = save_solver_comparison_figure(
+    save_solver_comparison_figure(
         "standing_wave",
         &x_mm,
         &initial_line,
         curves,
         Some(&analytical_line),
-    ) {
-        eprintln!("Warning: figure save failed: {e}");
-    }
+    )
+    .expect("standing-wave figure must match the committed golden");
     Ok(())
 }
 
@@ -1315,9 +1334,8 @@ fn test_dispersion_characteristics() -> KwaversResult<()> {
     let dx = grid.dx;
     let dt = fdtd_dt(&grid, c);
 
-    if let Err(e) = save_dispersion_comparison_figure(dx, dt, c) {
-        eprintln!("Warning: dispersion figure save failed: {e}");
-    }
+    save_dispersion_comparison_figure(dx, dt, c)
+        .expect("dispersion figure must match the committed golden");
 
     Ok(())
 }
