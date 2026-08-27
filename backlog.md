@@ -1,10 +1,10 @@
 # Backlog / Strategy
 
-## KW-FFT-HEPHAESTUS-BACKEND-SELECTOR — Select Leto or Hephaestus FFT execution [major] [arch] — review
+## KW-FFT-HEPHAESTUS-BACKEND-SELECTOR — Select Leto or Hephaestus FFT execution [major] [arch] — delivery
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-FFT-HEPHAESTUS-BACKEND-SELECTOR | Provide one explicit 1-D, 2-D, and 3-D FFT backend selector whose closed variants are Leto and Hephaestus. | [major] [arch] | review | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `crates/kwavers-math/src/fft/`, `crates/kwavers-gpu/src/pstd_gpu/`, affected simulation configuration, provider pins, ADR 125, and synchronized docs/tests |
+| KW-FFT-HEPHAESTUS-BACKEND-SELECTOR | Provide one explicit 1-D, 2-D, and 3-D FFT backend selector whose closed variants are Leto and Hephaestus. | [major] [arch] | delivery | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `crates/kwavers-math/src/fft/`, `crates/kwavers-gpu/src/pstd_gpu/`, affected simulation configuration, provider pins, ADR 125, and synchronized docs/tests |
 
 - **Ownership:** the `Leto` variant uses Apollo's CPU FFT arithmetic over Leto
   storage; the `Hephaestus` variant uses Hephaestus's prepared GPU FFT provider.
@@ -37,7 +37,8 @@
   Pure tests cover
   equal-count cache-index changes, shared snapshot absorption ownership and
   exponent rejection, sensor-shape validation, and unsupported solver/backend
-  selection; independent review remains the closure gate.
+  selection. Independent exact-revision review passed with no blocking findings;
+  delivery is PR #663.
 - **Provider evidence:** Hephaestus PRs #222 (`cfadc373`) and #223
   (`44362a16`) supply arbitrary-rank prepared FFT and fused multidimensional
   scheduling. On 256 x 128 x 128, six transforms improved from 13.810 ms to
