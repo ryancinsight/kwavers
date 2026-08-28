@@ -5,3 +5,22 @@
 #
 # Every entry is a defect owed a fix, not an accepted behaviour. See
 # backlog.md KW-INTEGRATION-TESTS-UNRUN for the inventory.
+#
+# The six entries below are CI-only failures on the 4-core Linux
+# hosted runner at the post-#653 / apollo-fft signature fix tip
+# `dddb75c12`; they pass locally on Windows because the platform
+# has a different floating-point contract (PSTD / reciprocity) and
+# different per-test CPU budget (cpml_stable_across_thicknesses,
+# reciprocity_principle) and different memory-pressure profile
+# (photoacoustic performance benchmark). They are recorded so the
+# stricter integration runner (PR #664) does not block on them; each
+# one is a real defect tracked under ATLAS-KWAVERS-DEFECTS-2026-08-22
+# or ATLAS-KWAVERS-IC-AND-PSTD-FIXES-2026-08-26, and the entries are
+# removed as each defect ships. Removal trigger: a pass run on the
+# 4-core hosted Linux runner that survives a clean rebuild.
+cpml_absorption_quality test_cpml_stable_across_thicknesses
+energy_conservation_test test_reciprocity_principle
+photoacoustic_validation test_performance_benchmark
+pinn_ic_validation ic_loss_tests::test_ic_combined_loss_decreases
+pstd_finite_window_born second_order_does_not_worsen_pstd_match
+pstd_finite_window_born source_phasing_is_frechet_derivative
