@@ -348,7 +348,12 @@ fn source_phasing_is_frechet_derivative() {
         cycles_per_frequency: acquisition.cycles_per_frequency,
         frequency_bin_cycles: acquisition.frequency_bin_cycles,
     };
-    let full_delta = 1.0e-4;
+    // The residual is quadratic in chi down to a ~5e-4 absolute floor set by
+    // f64 roundoff in the PSTD scattered-field path (~1e-7 of the ~1.8e3
+    // signal). Deltas must sit above that floor or the ordering assertion
+    // compares two noise samples: at 1e-4 the second-order term is ~2e-5
+    // (measured), 25x below the floor.
+    let full_delta = 1.0e-2;
     let half_delta = 0.5 * full_delta;
 
     let full = finite_window_first_variation_residual(
