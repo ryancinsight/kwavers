@@ -33,6 +33,7 @@ where
         let start_time = Instant::now();
         let mut metrics = TrainingMetrics3D {
             collocation_seed: self.config.collocation_seed,
+            boundary_seed: self.config.boundary_seed,
             ..Default::default()
         };
 
@@ -118,6 +119,7 @@ where
                 v_ic_opt.as_ref(),
                 &self.config.loss_weights,
                 &mut loss_scales,
+                epoch,
             )?;
 
             let total_val = Self::extract_scalar(&total_loss)? as f64;

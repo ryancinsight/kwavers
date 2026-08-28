@@ -88,7 +88,7 @@
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-PINN-UNSEEDED-RNG | Make collocation sampling reproducible so a training run can be replayed from its inputs. | [patch] | IMPLEMENTED | unowned | `crates/kwavers-solver/src/inverse/pinn/ml/wave_equation_3d/solver/collocation.rs` |
+| KW-PINN-UNSEEDED-RNG | Make PINN training sampling reproducible (collocation and boundary) so a training run can be replayed from its inputs. | [patch] | IMPLEMENTED | unowned | `crates/kwavers-solver/src/inverse/pinn/ml/wave_equation_3d/solver/` |
 
 - **Evidence:** `generate_collocation_points` draws each coordinate from
   `rand::random::<f64>()` -- the unseeded global generator. Nothing records the
@@ -119,6 +119,18 @@ would invalidate every recorded seed. Covered by
 `wave_equation_3d/tests/reproducibility.rs`, which asserts a seed reproduces
 its points and that two seeds differ -- the second test being what stops the
 first passing against a sampler that ignored the seed entirely.
+
+`boundary_seed: u64` closed the other half on 2026-08-27. The boundary sampler
+still drew from `rand::random()` (6 faces × 100 points × 5 time samples,
+unrecorded), which made the discriminator floors in the schedule item below
+artifacts of a single draw. Boundary points are now drawn per epoch from
+`ChaCha8Rng::seed_from_u64(per_epoch_boundary_seed(boundary_seed, epoch))`,
+where a fixed seed reproduces its stream per epoch, distinct epochs at a fixed
+seed diverge, and distinct seeds at a fixed epoch diverge (a bare XOR would
+collide `(0, 1)` with `(1, 0)`), and the epoch term preserves the per-epoch
+refresh so the network cannot overfit a fixed boundary sample. Covered by
+determinism tests in `solver/losses.rs`: the same `(seed, epoch)` draws the
+same points, differing epochs or seeds diverge, and the metrics carry the seed.
 
 ### Found while verifying it, filed separately
 
@@ -275,14 +287,22 @@ decays — that is what the mechanism is for.
 Their thresholds were unreachable at their epoch budgets, as their own comments
 conceded ("small network and few epochs", "full convergence requires more
 training"). Each now asserts a measured reduction at a budget that fits the test
-timeout, and each floor separates the fixed schedule from the broken one:
+timeout. The floors were re-derived after the boundary sampler was seeded beside
+the collocation sampler (KW-PINN-UNSEEDED-RNG), so the leads are the exact
+numbers of the reproducible seed-0 draw; the earlier "three run" spreads and the
+old-schedule figures in the first derivation were artifacts of unseeded draws:
 
-| test | epochs | measured | floor | old schedule |
+| test | epochs | measured (seed 0) | floor | old schedule (seed 0) |
 |---|---|---|---|---|
-| `test_bc_loss_decreases_with_training` | 600 | 89.1–89.3% (3 runs, 0.2pp spread) | 80% | 11% |
-| `test_dirichlet_bc_zero_boundary` | 400 | 37.7–37.8% | 30% | 23.0% |
-| `test_ic_combined_loss_decreases` | 400 | 38.4% | 30% | 23.2% |
-| `test_ic_loss_zero_field` | 400 | 70.0% | 30% | — |
+| `test_bc_loss_decreases_with_training` | 600 | 98.8% | 80% | 99.9% |
+| `test_dirichlet_bc_zero_boundary` | 400 | 96.6% | 30% | 99.7% |
+| `test_ic_combined_loss_decreases` | 400 | 25.6% | 23% | 19.9% |
+| `test_ic_loss_zero_field` | 400 | 98.9% | 30% | — |
+
+Only the combined-IC case separates the fixed schedule from the old one on the
+seed-0 draw; for the zero-function targets the old schedule lands *better*
+(99.9% and 99.7%), so their floors are training-penetration gates, not schedule
+discriminators, and that is what their comments now state.
 
 `test_ic_combined_loss_decreases` had asserted `final_ic < 10.0` under the label
 "no divergence" and observed 391. That is not divergence; it is a convergence

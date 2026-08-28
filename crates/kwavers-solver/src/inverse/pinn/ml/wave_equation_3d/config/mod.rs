@@ -111,6 +111,23 @@ pub struct PinnConfig3D {
     ///
     /// **Default**: 0
     pub collocation_seed: u64,
+
+    /// Seed for the boundary-condition sampler.
+    ///
+    /// The boundary loss is evaluated at points drawn on the six domain faces,
+    /// so it is a function of the draw as well as of the parameters. Until this
+    /// field existed the draw came from `rand::random()`, the unseeded global
+    /// generator, so the boundary stream varied between runs even with
+    /// [`PinnConfig3D::collocation_seed`] fixed -- and the combined trajectory
+    /// of a training run remained unreproducible. Seeding it makes the whole
+    /// run a function of its inputs, not just the collocation half
+    /// (KW-PINN-UNSEEDED-RNG seeded collocation; this closes the boundary half).
+    ///
+    /// The sampler draws one fresh face set per epoch, seeded from
+    /// `(boundary_seed, epoch)` so consecutive epochs see distinct draws.
+    ///
+    /// **Default**: 0
+    pub boundary_seed: u64,
 }
 
 impl Default for PinnConfig3D {
@@ -127,6 +144,7 @@ impl Default for PinnConfig3D {
             // the caller remembered to pin it, which is the state this field
             // exists to end.
             collocation_seed: 0,
+            boundary_seed: 0,
         }
     }
 }
@@ -346,6 +364,12 @@ pub struct TrainingMetrics3D {
     /// them needs the seed, not just the configuration a caller remembers
     /// passing.
     pub collocation_seed: u64,
+
+    /// Seed the boundary samples were drawn from.
+    ///
+    /// Carried alongside `collocation_seed` for the same reason: the boundary
+    /// loss is a function of this draw, and replaying a run needs it.
+    pub boundary_seed: u64,
 }
 
 impl Default for TrainingMetrics3D {
@@ -359,6 +383,7 @@ impl Default for TrainingMetrics3D {
             ic_loss: Vec::new(),
             training_time_secs: 0.0,
             collocation_seed: 0,
+            boundary_seed: 0,
         }
     }
 }
