@@ -63,7 +63,14 @@ COMMAND = [
     "--color", "never",
     "-p", "kwavers", "--tests",
     "--no-default-features", "--features", "full",
-    "--test-threads=1", "--no-fail-fast",
+    # Use the committed `ci` profile: 4 test threads, 10m global bound, the
+    # `integration` group cap of max-threads=2, and the `full-grid-sim` and
+    # `gpu` groups' max-threads=1 to keep CPU-saturating and WGPU-DX12 tests
+    # from oversubscribing the same cores. Plain `--test-threads=1` is the
+    # shape we used before the profile existed; the 4-core hosted runner's
+    # 681-test sweep took 17m28s with this shape, and 4m26s of the local
+    # 8m12s run was `--test-threads=1` serialization alone.
+    "--profile", "ci", "--no-fail-fast",
 ]
 
 WINDOWS_PROCESS_BOOTSTRAP = """
