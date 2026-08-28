@@ -142,14 +142,19 @@ mod bc_loss_tests {
         // weights to zero. The question is how far 600 epochs of plain SGD at
         // 1e-3 gets toward it.
         //
-        // Measured over three runs: 44.62, 42.87 and 43.50 from an initial
-        // ~399.8 -- an 89.1% to 89.3% reduction, a spread of 0.2 percentage
-        // points. The bound is set at 80% to clear that spread by two orders of
-        // its own magnitude while still failing on any real regression: before
-        // the learning-rate schedule was fixed, the same run reduced the loss by
-        // 11%, and the previous `< 1.0` threshold needed about 2000 epochs --
-        // 23.6 s locally, which on a CI runner sits against the 60 s
-        // termination bound.
+        // With the sampler seeded (collocation_seed and boundary_seed at their
+        // default 0) the run is deterministic: this configuration reaches a
+        // 98.8% reduction, from an initial 0.783732 to a final 0.009299. The
+        // bound is 80%, a training-penetration gate the current configuration
+        // clears by a wide margin while still failing on a genuinely stalled
+        // optimizer. It is deliberately not a schedule discriminator: on the
+        // seed-0 draw the superseded schedule (0.1% per-epoch bar, patience
+        // 10) reaches 99.9%, better than the fixed one, so that axis does not
+        // separate here.
+        //
+        // The previous `< 1.0` threshold needed about 2000 epochs -- 23.6 s
+        // locally, which on a CI runner sits against the 60 s termination
+        // bound; the reduction form also keeps the assertion scale-free.
         const REQUIRED_REDUCTION: f64 = 0.8;
         let reduction = 1.0 - final_bc_loss / initial_bc_loss;
         assert!(
@@ -203,18 +208,20 @@ mod bc_loss_tests {
             100.0 * (1.0 - final_bc / initial_bc)
         );
 
-        // 400 epochs of plain SGD at 1e-3 on this configuration reduce the
-        // boundary loss by 37.7% to 37.8% across three runs -- a spread of 0.1
-        // percentage points. The floor is 30%, which clears that spread by
-        // nearly eight points and still separates a working schedule from a
-        // broken one: with the learning-rate decay as it was (a 0.1%
-        // per-epoch improvement bar, patience 10) the same 400 epochs reach
-        // only 23.0%.
+        // With the sampler seeded (collocation_seed and boundary_seed at their
+        // default 0) the run is deterministic: 400 epochs reduce the boundary
+        // loss by 96.6%, from an initial 0.199683 to a final 0.006778. The
+        // floor is 30%, a training-penetration gate this configuration clears
+        // by a wide margin while still failing on a genuinely stalled
+        // optimizer. It is deliberately not a schedule discriminator: on the
+        // seed-0 draw the superseded schedule (0.1% per-epoch bar, patience
+        // 10) reaches 99.7%, better than the fixed one, so that axis does not
+        // separate here.
         //
         // The stronger claim -- that training reaches the optimum, which this
         // network represents exactly -- is made by
-        // `test_bc_loss_decreases_with_training`, at 89%. Repeating it here
-        // would cost a second multi-second run to assert the same thing.
+        // `test_bc_loss_decreases_with_training`; repeating it here would cost
+        // a second multi-second run to assert the same thing.
         const REQUIRED_IMPROVEMENT: f64 = 0.30;
         let improvement = 1.0 - final_bc / initial_bc;
         assert!(
