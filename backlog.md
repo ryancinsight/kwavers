@@ -513,8 +513,18 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   reallocations and capacity at least the derived bound after the correction.
   Focused/package Nextest, warning-denied library Clippy/Rustdoc, doctests,
   unchanged Criterion smoke, and SemVer classification remain required.
-- **Status:** baseline measurement in progress; provider/review/merge closure
-  remains pending behind PR #670.
+- **Status:** local candidate verified; independent review and merge remain
+  pending behind PR #670. The entry census measured three history-vector
+  reallocations for 17 steps and 18 snapshots; the candidate reserves all 18
+  headers before other history work and measures zero reallocations. Checked
+  schedule/layout, public value, and allocation tests pass 11/11 in debug and
+  release; package Nextest passes 931/931 with two skipped. Warning-denied
+  library and allocation-target Clippy, Rustdoc, and doctests pass. The
+  consolidated PINN-enabled allocation target passes 2/2; its broader Clippy
+  gate remains red on 68 pre-existing PINN-library diagnostics outside this
+  item. The unchanged NL-SWE Criterion smoke passes all 27 cases. SemVer tooling
+  remains unavailable because its internal baseline clone cannot fit the
+  repository pack entry in memory; this item changes no public API.
 
 ## KW-PR-BENCH-DUPLICATION-2026-08-29 — Remove duplicate PR smoke [patch] [ci] — todo
 

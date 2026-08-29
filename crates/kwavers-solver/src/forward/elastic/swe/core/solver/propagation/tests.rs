@@ -357,3 +357,43 @@ fn propagate_waves_reports_structural_displacement_mismatch() {
         other => panic!("expected displacement dimension mismatch, got {other}"),
     }
 }
+
+#[test]
+fn history_schedule_preserves_initial_final_and_saved_times() {
+    const DT: f64 = 9.536_743_164_062_5e-7;
+    for (steps, save_every, saved_steps, nonzero) in [
+        (4, 2, &[0, 2, 4][..], false),
+        (5, 2, &[0, 2, 4, 5][..], true),
+        (3, 4, &[0, 3][..], true),
+    ] {
+        let mut config = base_config();
+        config.time_step = DT;
+        config.simulation_time = steps as f64 * DT;
+        config.save_every = save_every;
+        let displacement = if nonzero {
+            Array3::from_shape_fn(GRID_SHAPE, |[i, j, k]| {
+                (i * 12 + j * 4 + k + 1) as f64 * 1.0e-12
+            })
+        } else {
+            Array3::zeros(GRID_SHAPE)
+        };
+
+        let history_solver = solver_with_config(config.clone());
+        let history = history_solver
+            .propagate_waves(&displacement)
+            .expect("valid history propagation");
+        assert_eq!(history.len(), saved_steps.len());
+        for (field, &saved_step) in history.iter().zip(saved_steps) {
+            assert_eq!(field.time, saved_step as f64 * DT);
+        }
+
+        let mut initial = ElasticWaveField::new(2, 3, 4);
+        initial.uz.assign(&displacement);
+        assert_field_unchanged(history.first().expect("initial snapshot"), &initial);
+        let mut direct_solver = solver_with_config(config);
+        let final_field = direct_solver
+            .propagate(&initial, steps as f64 * DT, None)
+            .expect("valid direct propagation");
+        assert_field_unchanged(history.last().expect("final snapshot"), &final_field);
+    }
+}

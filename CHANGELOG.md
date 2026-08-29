@@ -200,7 +200,10 @@
   before mutation.
   Propagation entry points now validate all six public field shapes and the
   complete finite time domain before body-force preparation, simulation
-  allocation, recorder replacement, or scheduler work. The unchanged 16³
+  allocation, recorder replacement, or scheduler work. History-producing paths
+  derive the complete snapshot schedule and reserve its header vector once
+  before body-force or simulation workspace allocation, eliminating container
+  growth while preserving every snapshot payload and time. The unchanged 16³
   NL-SWE value test completes in 18.071 seconds after the flat-coordinate
   correction, versus 42.379 and 43.004 seconds after force preparation and
   53.767 seconds at entry, under the same 60-second Nextest contract. These are
