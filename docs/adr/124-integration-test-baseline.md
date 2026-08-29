@@ -59,6 +59,12 @@ It may shrink, never grow. Each entry is a defect owed a fix, tracked under
 - Local runs need `--unlocked`: a tree under the Atlas development overlay
   resolves first-party crates to local paths, which `--locked` rejects before
   the suite starts.
+- Full-grid simulation binaries run through nextest's one-at-a-time
+  `full-grid-sim` group. Run `33227622956` demonstrated why this is part of the
+  baseline contract: four ungrouped simulations competed on a four-core host,
+  two reached the unchanged 60-second termination bound, and a third exceeded
+  its internal smoke budget. They are scheduled, not added to the accepted
+  failure set.
 
 ## Alternatives rejected
 

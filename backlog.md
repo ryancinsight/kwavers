@@ -497,6 +497,14 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   failure outside it is a named regression, an entry that passes is stale and
   must be removed. Shrinks, never grows. Proven live in both directions before
   landing.
+- **Hosted correction:** exact head `1c86b5999` run `33227622956` executed all
+  681 cases but exposed process-level oversubscription: CPML thickness and PSTD
+  reciprocity reached the unchanged 60-second termination bound while the
+  concurrent photoacoustic simulation exceeded its smoke budget. The three
+  binaries now join the existing one-at-a-time `full-grid-sim` group in both
+  default and CI profiles; the failure baseline does not grow. The focused CI
+  profile run passes 3/3 in 25.091 seconds (16.879, 6.779, and 1.429 seconds),
+  retaining all value assertions and the 60-second bound.
 - **Takeover review 2026-08-25:** the prior owner has no commit or board update
   for more than eight hours and the lane is clean. The runner still reports ten
   named failures as success, launches an unbounded subprocess, and decodes with

@@ -177,6 +177,11 @@
 
 ### Changed
 
+- **Integration-test scheduling:** CPML thickness, PSTD reciprocity, and
+  photoacoustic full-grid simulations now share the existing one-at-a-time
+  nextest group. This prevents four-process CPU oversubscription on hosted
+  runners without changing test inputs, assertions, or timeout contracts.
+
 - **Focused water-tank example runtime:** Independent FDTD, PSTD, and DG
   comparison branches now use the provider-owned Moirai `Parallel` join while
   retaining each solver's native state and analytical output. The complete

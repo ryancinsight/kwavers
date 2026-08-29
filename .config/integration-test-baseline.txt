@@ -12,10 +12,11 @@
 # has a different floating-point contract (PSTD). The first six entries recorded the
 # `energy_conservation_test test_reciprocity_principle`,
 # `photoacoustic_validation test_performance_benchmark`, and
-# `pinn_ic_validation test_ic_combined_loss_decreases` defects. Those
-# three and `cpml_absorption_quality test_cpml_stable_across_thicknesses`
-# are now passing on the 4-core hosted runner and have been
-# removed from this list. Each entry shrinks as its defect ships.
+# `pinn_ic_validation test_ic_combined_loss_decreases` defects. The three
+# full-grid simulations now share the one-at-a-time nextest group instead of
+# competing across four processes on the 4-core runner; they remain outside
+# this list because scheduling contention is not an accepted failure. Each
+# entry shrinks as its defect ships.
 # Removal trigger: a pass run on the 4-core hosted Linux runner that
 # survives a clean rebuild.
 kwavers::pstd_finite_window_born second_order_does_not_worsen_pstd_match
