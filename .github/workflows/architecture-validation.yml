@@ -225,11 +225,11 @@ jobs:
           cargo build --locked -p kwavers --no-default-features --features ${{ matrix.features }}
         fi
 
-    # The plotting leg already owns the required checkout, toolchain, shared
-    # dependency cache, and dev-profile kwavers graph. Reusing that state keeps
-    # benchmark smoke from spending a second job on setup and compilation.
+    # Mainline keeps the dev-profile smoke as a selection-drift backstop.
+    # Pull requests execute the complete optimized smoke once in the dedicated
+    # benchmark-regression workflow instead of compiling both profiles.
     - name: Build every plotting-eligible Criterion target once
-      if: matrix.features == 'plotting'
+      if: matrix.features == 'plotting' && github.event_name == 'push'
       run: >-
         timeout --foreground --kill-after=30s 12m
         cargo bench --locked -p kwavers --no-default-features
@@ -237,7 +237,7 @@ jobs:
         --profile dev --no-run
 
     - name: Execute every plotting-eligible Criterion target once
-      if: matrix.features == 'plotting'
+      if: matrix.features == 'plotting' && github.event_name == 'push'
       run: >-
         timeout --foreground --kill-after=30s 8m
         cargo bench --locked -p kwavers --no-default-features

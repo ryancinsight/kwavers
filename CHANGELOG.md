@@ -206,6 +206,12 @@
   before every retained Hephaestus time loop without changing source semantics,
   command batching, FFT backend selection, or numerical work.
 
+- **Pull-request benchmark latency:** pull requests now execute the complete
+  plotting-enabled Criterion smoke only in the benchmark-regression workflow.
+  Mainline architecture runs retain the existing dev-profile smoke as a
+  selection-drift backstop; benchmark targets, features, commands, workloads,
+  assertions, cache policy, and timeout bounds remain unchanged.
+
 - **Integration-test scheduling:** CPML thickness, PSTD reciprocity, and
   photoacoustic full-grid simulations now share the existing one-at-a-time
   nextest group. This prevents four-process CPU oversubscription on hosted
