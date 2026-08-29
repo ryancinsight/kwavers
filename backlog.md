@@ -515,10 +515,11 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   unchanged Criterion smoke, and SemVer classification remain required.
 - **Status:** independent review rejected `291b7fd8e` because both public
   wrappers constructed six field arrays before reserving history headers. The
-  corrected candidate reserves immediately after plan derivation and passes the
-  retained vector into shared execution. Its overflow census proves both public
-  wrappers allocate only the error diagnostic before rejecting an unaddressable
-  history. The entry census measured three history-vector reallocations for 17
+  corrected candidate `b06cafa09` reserves immediately after plan derivation
+  and passes the retained vector into shared execution. Its overflow census
+  proves both public wrappers reject an unaddressable history after only one
+  diagnostic allocation. The entry census measured three history-vector
+  reallocations for 17
   steps and 18 snapshots; the candidate measures zero. Package Nextest passes
   932/932 with two skipped; corrected focused release tests pass 5/5. The
   consolidated PINN allocation target passes 3/3. Warning-denied library and
