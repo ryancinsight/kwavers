@@ -85,6 +85,30 @@
   target cache, feature bypass, workload reduction, or timeout increase; cold
   controlled reruns are materially below the 2m37s and 2m15s baselines.
 
+## KW-CI-ARCH-DAG — Remove ineffective PR serialization [patch] [perf] — review
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-CI-ARCH-DAG | Remove the architecture workflow's idle pull-request critical-path edge without changing verification coverage. | [patch] [perf] | review | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `.github/workflows/architecture-validation.yml`, release notes, exact hosted timing |
+
+- **Evidence:** run `33227622956` held every build, test, documentation, CUDA,
+  and layer job behind `Validate Clean Architecture` for 7m49s. Pull requests
+  cannot seed that job's cache because `save-if` is false and it exports no
+  artifact consumed by downstream jobs.
+- **Fresh confirmation:** run `33229687715` repeated the edge for 7m03s. Exact
+  FDTD candidate run `33232399431` likewise starts validation while the
+  integration job remains absent from the runnable check set.
+- **Acceptance:** remove all six ineffective `needs` edges; preserve commands,
+  matrices, workloads, cache keys, feature selections, assertions, and
+  timeouts; independent jobs start with the workflow and reduce the critical
+  path without introducing another cache writer.
+- **Implementation:** the workflow parses as eight jobs with no residual
+  dependency edge. The architecture job remains the sole mainline cache
+  writer; pull-request consumers remain restore-only.
+- **Independent review:** GREEN at exact source commit `570a763ac`; parsed job
+  definitions are byte-equivalent after removing only the six dependency
+  keys. Hosted exact-candidate collection remains after PR #667 lands.
+
 ## KW-CI-FULL-HISTORY-CHECKOUT — CI clones all of history to run tests [patch] — IMPLEMENTED 2026-08-26
 
 | ID | Outcome | Class | Status | Owner | Scope |
