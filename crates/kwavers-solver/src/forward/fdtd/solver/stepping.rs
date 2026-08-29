@@ -10,13 +10,16 @@ use leto::Array3;
 use super::GenericFdtdSolver;
 use crate::forward::fdtd::config::TemporalScheme;
 use kwavers_core::error::KwaversResult;
+#[cfg(debug_assertions)]
+use kwavers_source::SourceField;
 
 impl GenericFdtdSolver<Array3<f64>> {
     /// Perform a single time step.
     ///
-    /// In debug builds, full-field NaN scans are performed after each sub-step
-    /// to catch numerical instabilities early. In release builds, these scans
-    /// are elided for performance (O(N) per scan × 4 scans per step).
+    /// In debug builds, full-field NaN scans are performed after each completed
+    /// velocity and pressure phase. When sources can mutate a phase, an
+    /// additional pre-source scan preserves propagation-versus-source failure
+    /// attribution. Release builds elide every scan.
     /// # Errors
     /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
@@ -31,20 +34,45 @@ impl GenericFdtdSolver<Array3<f64>> {
         // Hamiltonian flow being composed.
         if self.config.temporal_scheme == TemporalScheme::Yoshida4 {
             self.advance_yoshida4(dt)?;
-            #[cfg(debug_assertions)]
-            self.check_nan_velocity(time_index, "yoshida4")?;
-            #[cfg(debug_assertions)]
-            self.check_nan_pressure(time_index, "yoshida4")?;
-            return self.finish_step(time_index, dt);
+            self.finish_velocity_phase(time_index, dt, "yoshida4")?;
+            return self.finish_step(time_index, dt, "yoshida4");
         }
 
         // 1. Update Velocity (from current pressure field)
         self.update_velocity(dt)?;
-        #[cfg(debug_assertions)]
-        self.check_nan_velocity(time_index, "update_velocity")?;
+        self.finish_velocity_phase(time_index, dt, "update_velocity")?;
 
-        // 2. Inject Force Sources
-        if self.source_handler.has_velocity_source() {
+        // 3. Update Pressure
+        self.update_pressure(dt)?;
+
+        self.finish_step(time_index, dt, "update_pressure")
+    }
+
+    /// Inject velocity sources once after the selected propagation phase.
+    fn finish_velocity_phase(
+        &mut self,
+        time_index: usize,
+        dt: f64,
+        propagation_phase: &str,
+    ) -> KwaversResult<()> {
+        #[cfg(not(debug_assertions))]
+        let _ = propagation_phase;
+        let has_grid_source = self.source_handler.has_velocity_source();
+        #[cfg(debug_assertions)]
+        let sources_may_mutate = has_grid_source
+            || self.dynamic_sources.iter().any(|(source, _)| {
+                matches!(
+                    source.source_type(),
+                    SourceField::VelocityX | SourceField::VelocityY | SourceField::VelocityZ
+                )
+            });
+
+        #[cfg(debug_assertions)]
+        if sources_may_mutate {
+            self.check_nan_velocity(time_index, propagation_phase)?;
+        }
+
+        if has_grid_source {
             self.source_handler.inject_force_source(
                 time_index,
                 &mut self.fields.ux,
@@ -52,23 +80,45 @@ impl GenericFdtdSolver<Array3<f64>> {
                 &mut self.fields.uz,
             );
         }
-
         self.apply_dynamic_velocity_sources(dt);
-        #[cfg(debug_assertions)]
-        self.check_nan_velocity(time_index, "dynamic_velocity_sources")?;
 
-        // 3. Update Pressure
-        self.update_pressure(dt)?;
         #[cfg(debug_assertions)]
-        self.check_nan_pressure(time_index, "update_pressure")?;
+        self.check_nan_velocity(
+            time_index,
+            if sources_may_mutate {
+                "velocity_sources"
+            } else {
+                propagation_phase
+            },
+        )?;
 
-        self.finish_step(time_index, dt)
+        Ok(())
     }
 
     /// Pressure sources, sensor recording and the step counter — the part of a
     /// step that is not propagation, shared by both time-integration schemes.
-    fn finish_step(&mut self, time_index: usize, dt: f64) -> KwaversResult<()> {
-        if self.source_handler.has_pressure_source() {
+    fn finish_step(
+        &mut self,
+        time_index: usize,
+        dt: f64,
+        propagation_phase: &str,
+    ) -> KwaversResult<()> {
+        #[cfg(not(debug_assertions))]
+        let _ = propagation_phase;
+        let has_grid_source = self.source_handler.has_pressure_source();
+        #[cfg(debug_assertions)]
+        let sources_may_mutate = has_grid_source
+            || self
+                .dynamic_sources
+                .iter()
+                .any(|(source, _)| source.source_type() == SourceField::Pressure);
+
+        #[cfg(debug_assertions)]
+        if sources_may_mutate {
+            self.check_nan_pressure(time_index, propagation_phase)?;
+        }
+
+        if has_grid_source {
             self.source_handler
                 .inject_pressure_source(time_index, &mut self.fields.p);
         }
@@ -78,7 +128,14 @@ impl GenericFdtdSolver<Array3<f64>> {
         self.apply_dynamic_pressure_dirichlet(dt);
 
         #[cfg(debug_assertions)]
-        self.check_nan_pressure(time_index, "pressure_sources")?;
+        self.check_nan_pressure(
+            time_index,
+            if sources_may_mutate {
+                "pressure_sources"
+            } else {
+                propagation_phase
+            },
+        )?;
 
         // CPML is applied within the updates via `self.cpml_boundary`.
         self.sensor_recorder.record_step(&self.fields.p)?;

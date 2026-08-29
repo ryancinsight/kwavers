@@ -71,7 +71,7 @@
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-FDTD-DEBUG-SCAN | Keep the unchanged CPML integration workload below its committed bound by scanning each completed FDTD field phase once when no source can mutate it, while preserving source-phase diagnostics and source semantics for both temporal schemes. | [patch] [perf] | in progress | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `crates/kwavers-solver/src/forward/fdtd/solver/{stepping.rs,tests.rs}`, CPML focused evidence, release notes |
+| KW-FDTD-DEBUG-SCAN | Keep the unchanged CPML integration workload below its committed bound by scanning each completed FDTD field phase once when no source can mutate it, while preserving source-phase diagnostics and source semantics for both temporal schemes. | [patch] [perf] | in progress | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `crates/kwavers-solver/src/forward/fdtd/solver/{stepping.rs,tests.rs}`, `.config/nextest.toml`, CPML focused evidence, release notes |
 
 - **Entry evidence:** hosted run `33229687715` timed out
   `test_cpml_stable_across_thicknesses` at the unchanged 60-second bound. The
@@ -84,7 +84,17 @@
   only one post-phase scan when no corresponding source can mutate the field;
   a value-semantic Yoshida velocity-source regression and the unchanged CPML
   thickness sweep pass under the committed Nextest budget; warning-denied
-  Clippy, formatting, and documentation synchronization pass.
+  Clippy, formatting, and documentation synchronization pass. Full-grid tests
+  reserve every configured Nextest slot, preventing unrelated test processes
+  from competing with their internal worker pools.
+- **Candidate evidence (2026-08-29):** the combined debug run passed the
+  unchanged CPML thickness sweep at 16.269 s and the two-scheme analytical
+  velocity-source regression at 0.018 s (2/2, 16.301 s total). The exact
+  release regression passed at 0.016 s after a warning-clean rebuild. Solver
+  library Clippy with warnings denied and workspace formatting pass; the
+  all-target solver Clippy remains red on 94 pre-existing diagnostics outside
+  the touched files. `show-config` assigns all four CPML tests to
+  `full-grid-sim`; hosted 4-core confirmation and independent review remain.
 - **Lease:** Codex owns the listed solver source/tests, this item, and its
   Unreleased note through the next verified commit.
 

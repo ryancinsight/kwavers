@@ -135,6 +135,14 @@
 
 ### Fixed
 
+- **FDTD time-step orchestration now applies velocity sources under both
+  temporal schemes.** Yoshida's fourth-order composition previously returned
+  before the once-per-step velocity-source phase. Debug builds also avoid a
+  second full-field NaN scan when no source can mutate the completed velocity
+  or pressure phase, while source-bearing steps retain separate propagation
+  and source diagnostics. Full-grid tests now reserve the entire configured
+  Nextest thread pool instead of competing with unrelated test processes.
+
 - **Documentation:** `kwavers-driver`'s README, now its crate documentation, had every
   claim re-verified against the tree: the test count was `113` and is 494; the refactor
   status read "Phase 0 scaffolding" while Phases 0-5 have landed; four `examples/*.rs`

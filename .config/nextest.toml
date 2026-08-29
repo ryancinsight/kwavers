@@ -60,11 +60,10 @@ slow-timeout = { period = "60s", terminate-after = 10, grace-period = "10s" }
 [test-groups]
 integration = { max-threads = 2 }
 # Full-grid FWI, theranostic, viscoacoustic, FDTD, and PSTD tests internally
-# parallelize through the Moirai or Rayon worker pool. Under default num-cpus
-# test concurrency, multiple CPU-saturating processes oversubscribe the same
-# cores. Serializing these processes leaves the active solver the whole machine,
-# so each stays inside the 30 s performance budget. The timeout and assertions
-# are unchanged.
+# parallelize through the Moirai or Rayon worker pool. The group serializes
+# these tests with each other; their profile overrides also reserve every
+# Nextest slot so unrelated processes cannot oversubscribe the active solver.
+# The timeout and assertions are unchanged.
 full-grid-sim = { max-threads = 1 }
 # WGPU device creation and queue polling are serialized on Windows because
 # concurrent DX12 adapter contexts can trigger a driver access violation even
@@ -77,6 +76,7 @@ gpu = { max-threads = 1 }
 [[profile.default.overrides]]
 filter = 'test(abdominal_preprocessing_selects_one_connected_treatment_component) | test(abdominal_theranostic_inverse_recovers_lesion_support) | test(abdominal_preprocessing_keeps_external_skin_between_target_and_aperture) | test(brain_focused_bowl_layout_uses_requested_element_count) | test(recovers_stiff_inclusion) | test(fwi_outperforms_linear_inversion) | test(lbfgs_reconstructs_stiff_inclusion) | test(k_mu_gradient_3d_is_valid_descent_direction)'
 test-group = 'full-grid-sim'
+threads-required = "num-test-threads"
 
 # Heavy full-grid FDTD/PSTD acoustic-simulation binaries use the same capped
 # concurrency so their worker pools do not oversubscribe the CPU.
@@ -85,10 +85,12 @@ test-group = 'full-grid-sim'
 [[profile.default.overrides]]
 filter = 'package(kwavers) & (binary(cpml_absorption_quality) | binary(energy_conservation_test) | binary(fdtd_pstd_comparison) | binary(photoacoustic_validation) | binary(property_based_tests) | binary(session2_source_injection_test) | binary(test_plane_wave_injection) | binary(test_plane_wave_injection_fixed) | binary(swe_3d_validation))'
 test-group = 'full-grid-sim'
+threads-required = "num-test-threads"
 
 [[profile.default.overrides]]
 filter = 'package(kwavers-solver) & (test(/forward::viscoacoustic::tests::/) | test(/kuznetsov/))'
 test-group = 'full-grid-sim'
+threads-required = "num-test-threads"
 
 [[profile.default.overrides]]
 filter = 'package(kwavers-gpu)'
@@ -105,14 +107,17 @@ test-group = 'gpu'
 [[profile.ci.overrides]]
 filter = 'test(abdominal_preprocessing_selects_one_connected_treatment_component) | test(abdominal_theranostic_inverse_recovers_lesion_support) | test(abdominal_preprocessing_keeps_external_skin_between_target_and_aperture) | test(brain_focused_bowl_layout_uses_requested_element_count) | test(recovers_stiff_inclusion) | test(fwi_outperforms_linear_inversion) | test(lbfgs_reconstructs_stiff_inclusion) | test(k_mu_gradient_3d_is_valid_descent_direction)'
 test-group = 'full-grid-sim'
+threads-required = "num-test-threads"
 
 [[profile.ci.overrides]]
 filter = 'package(kwavers) & (binary(cpml_absorption_quality) | binary(energy_conservation_test) | binary(photoacoustic_validation) | binary(swe_3d_validation))'
 test-group = 'full-grid-sim'
+threads-required = "num-test-threads"
 
 [[profile.ci.overrides]]
 filter = 'package(kwavers-solver) & test(/kuznetsov/)'
 test-group = 'full-grid-sim'
+threads-required = "num-test-threads"
 
 [[profile.local.overrides]]
 filter = 'test(/integration/)'
