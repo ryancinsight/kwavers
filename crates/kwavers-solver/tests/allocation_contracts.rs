@@ -1,9 +1,12 @@
 use kwavers_alloc_probe::{ThreadScopedAllocator, Window};
+use kwavers_core::error::{KwaversError, NumericalError};
 #[cfg(feature = "pinn")]
 use kwavers_grid::geometry::RectangularDomain;
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
-use kwavers_solver::forward::elastic::swe::{ElasticWaveConfig, ElasticWaveSolver};
+use kwavers_solver::forward::elastic::swe::{
+    ElasticWaveConfig, ElasticWaveField, ElasticWaveSolver,
+};
 #[cfg(feature = "pinn")]
 use kwavers_solver::inverse::pinn::{CollocationSampler, CollocationSamplingStrategy};
 use leto::Array3;
@@ -59,4 +62,60 @@ fn swe_history_reserves_snapshot_headers_once() {
     assert!(history.capacity() >= EXPECTED_SNAPSHOTS);
     assert_eq!(change.reallocations, 0);
     std::hint::black_box(history);
+}
+
+#[test]
+fn swe_history_rejects_unaddressable_headers_before_field_allocation() {
+    let grid = Grid::new(2, 2, 2, 1.0e-3, 1.0e-3, 1.0e-3).expect("valid grid");
+    let medium = HomogeneousMedium::new(1_000.0, 1_500.0, 0.5, 1.0, &grid);
+    let first_unaddressable_capacity = (isize::MAX as usize / size_of::<ElasticWaveField>()) + 1;
+    let config = ElasticWaveConfig {
+        time_step: 1.0,
+        simulation_time: (first_unaddressable_capacity as f64) * 2.0,
+        save_every: 1,
+        pml_thickness: 1,
+        ..ElasticWaveConfig::default()
+    };
+    let solver = ElasticWaveSolver::new(&grid, &medium, config).expect("valid solver");
+    let displacement = Array3::zeros((2, 2, 2));
+
+    let window = Window::open();
+    let displacement_error = solver
+        .propagate_waves(&displacement)
+        .expect_err("history layout must be addressable");
+    let displacement_change = window.change();
+    assert_unaddressable_layout_precedes_field_allocation(
+        displacement_error,
+        displacement_change.allocations,
+        displacement_change.reallocations,
+    );
+
+    let window = Window::open();
+    let body_force_error = solver
+        .propagate_waves_with_body_force_only_override(None)
+        .expect_err("history layout must be addressable");
+    let body_force_change = window.change();
+    assert_unaddressable_layout_precedes_field_allocation(
+        body_force_error,
+        body_force_change.allocations,
+        body_force_change.reallocations,
+    );
+}
+
+fn assert_unaddressable_layout_precedes_field_allocation(
+    error: KwaversError,
+    allocations: u64,
+    reallocations: u64,
+) {
+    match error {
+        KwaversError::Numerical(NumericalError::InvalidOperation(message)) => {
+            assert_eq!(
+                message,
+                "Elastic wave history header layout exceeds addressable memory"
+            );
+        }
+        other => panic!("expected unaddressable history layout, got {other}"),
+    }
+    assert_eq!(allocations, 1, "only the error diagnostic may allocate");
+    assert_eq!(reallocations, 0);
 }

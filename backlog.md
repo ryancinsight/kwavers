@@ -513,19 +513,21 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   reallocations and capacity at least the derived bound after the correction.
   Focused/package Nextest, warning-denied library Clippy/Rustdoc, doctests,
   unchanged Criterion smoke, and SemVer classification remain required.
-- **Status:** local candidate `291b7fd8e` verified; independent review and
-  merge remain pending behind PR #670. The entry census measured three
-  history-vector reallocations for 17 steps and 18 snapshots; the candidate
-  reserves all 18
-  headers before other history work and measures zero reallocations. Checked
-  schedule/layout, public value, and allocation tests pass 11/11 in debug and
-  release; package Nextest passes 931/931 with two skipped. Warning-denied
-  library and allocation-target Clippy, Rustdoc, and doctests pass. The
-  consolidated PINN-enabled allocation target passes 2/2; its broader Clippy
-  gate remains red on 68 pre-existing PINN-library diagnostics outside this
-  item. The unchanged NL-SWE Criterion smoke passes all 27 cases. SemVer tooling
-  remains unavailable because its internal baseline clone cannot fit the
-  repository pack entry in memory; this item changes no public API.
+- **Status:** independent review rejected `291b7fd8e` because both public
+  wrappers constructed six field arrays before reserving history headers. The
+  corrected candidate reserves immediately after plan derivation and passes the
+  retained vector into shared execution. Its overflow census proves both public
+  wrappers allocate only the error diagnostic before rejecting an unaddressable
+  history. The entry census measured three history-vector reallocations for 17
+  steps and 18 snapshots; the candidate measures zero. Package Nextest passes
+  932/932 with two skipped; corrected focused release tests pass 5/5. The
+  consolidated PINN allocation target passes 3/3. Warning-denied library and
+  allocation-target Clippy, Rustdoc, doctests, and all 27 unchanged NL-SWE
+  Criterion smoke cases pass. The broader PINN Clippy gate remains red on 68
+  pre-existing diagnostics outside this item. SemVer tooling remains unavailable
+  because its internal baseline clone cannot fit the repository pack entry in
+  memory; this item changes no public API. Final review and merge remain pending
+  behind PR #670.
 
 ## KW-PR-BENCH-DUPLICATION-2026-08-29 — Remove duplicate PR smoke [patch] [ci] — todo
 

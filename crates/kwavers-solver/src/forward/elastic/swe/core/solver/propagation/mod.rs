@@ -216,9 +216,10 @@ impl ElasticWaveSolver {
             0.0,
             self.config.simulation_time,
         )?;
+        let history = reserve_history_headers(plan)?;
         let mut initial_field = ElasticWaveField::new(nx, ny, nz);
         initial_field.uz.assign(initial_displacement);
-        self.propagate_history_with_plan(&initial_field, plan, None)
+        self.propagate_history_with_plan(&initial_field, plan, history, None)
     }
 
     /// Propagate waves with body force only override.
@@ -242,31 +243,23 @@ impl ElasticWaveSolver {
             0.0,
             self.config.simulation_time,
         )?;
+        let history = reserve_history_headers(plan)?;
         let (nx, ny, nz) = self.grid.dimensions();
         let initial_field = ElasticWaveField::new(nx, ny, nz);
-        self.propagate_history_with_plan(&initial_field, plan, body_force)
+        self.propagate_history_with_plan(&initial_field, plan, history, body_force)
     }
 
-    /// Execute a validated plan while retaining scheduled snapshots.
+    /// Execute a validated plan with caller-reserved snapshot headers.
     ///
     /// # Errors
-    /// Returns a typed allocation error if the complete history header vector
-    /// cannot be reserved before any body-force or simulation workspace work.
     /// Propagates preparation and numerical errors from the integration path.
     fn propagate_history_with_plan(
         &self,
         initial_field: &ElasticWaveField,
         plan: PropagationPlan,
+        mut history: Vec<ElasticWaveField>,
         body_force: Option<&ElasticBodyForceConfig>,
     ) -> KwaversResult<Vec<ElasticWaveField>> {
-        let (history_capacity, history_layout) = plan.history_layout()?;
-        let mut history = Vec::new();
-        history
-            .try_reserve_exact(history_capacity)
-            .map_err(|error| SystemError::MemoryAllocation {
-                requested_bytes: history_layout.size(),
-                reason: format!("elastic wave history header reservation failed: {error}"),
-            })?;
         let mut prepared_body_force = prepare_body_force(&self.grid, body_force)?;
         let mut current_field = initial_field.clone();
         let integrator =
@@ -296,6 +289,18 @@ impl ElasticWaveSolver {
         }
         Ok(history)
     }
+}
+
+fn reserve_history_headers(plan: PropagationPlan) -> KwaversResult<Vec<ElasticWaveField>> {
+    let (history_capacity, history_layout) = plan.history_layout()?;
+    let mut history = Vec::new();
+    history
+        .try_reserve_exact(history_capacity)
+        .map_err(|error| SystemError::MemoryAllocation {
+            requested_bytes: history_layout.size(),
+            reason: format!("elastic wave history header reservation failed: {error}"),
+        })?;
+    Ok(history)
 }
 
 fn prepare_body_force(
