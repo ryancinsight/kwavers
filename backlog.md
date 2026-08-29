@@ -117,6 +117,9 @@
   and layer job behind `Validate Clean Architecture` for 7m49s. On pull
   requests that job has `save-if: false`, exports no artifact, and therefore
   cannot seed the downstream runners it delays.
+- **Fresh confirmation:** exact PR #667 run `33229687715` completed validation
+  in 7m03s; every layer, build-matrix, coverage, integration, documentation,
+  and CUDA job remained queued until that step completed at 02:51:57 UTC.
 - **Acceptance:** all six ineffective `needs` edges are removed; job commands,
   matrices, workloads, cache keys, assertions, and timeout bounds are
   unchanged; the candidate run starts independent jobs without runner
