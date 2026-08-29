@@ -57,6 +57,8 @@ use kwavers_medium::HomogeneousMedium;
 use kwavers_physics::acoustics::mechanics::acoustic_wave::AcousticSpatialOrder;
 use kwavers_source::GridSource;
 
+mod stepping;
+
 /// Helper: create a minimal FdtdSolver for unit tests.
 fn make_solver(
     n: usize,
