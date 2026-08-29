@@ -5,7 +5,7 @@ use super::super::super::integration::TimeIntegrator;
 use super::super::super::scratch::ElasticStepScratch;
 use super::super::super::types::{ElasticBodyForceConfig, ElasticWaveField};
 use super::definition::ElasticWaveSolver;
-use kwavers_core::error::{KwaversResult, NumericalError};
+use kwavers_core::error::{KwaversResult, ValidationError};
 use kwavers_receiver::recorder::fields::{SensorRecordField, SensorRecordSpec};
 use kwavers_receiver::recorder::simple::SensorRecorder;
 
@@ -196,10 +196,13 @@ impl ElasticWaveSolver {
         initial_displacement: &leto::Array3<f64>,
     ) -> KwaversResult<Vec<ElasticWaveField>> {
         let (nx, ny, nz) = self.grid.dimensions();
-        if initial_displacement.shape() != [nx, ny, nz] {
-            return Err(NumericalError::InvalidOperation(
-                "Initial displacement shape does not match grid".to_owned(),
-            )
+        let expected_shape = [nx, ny, nz];
+        let actual_shape = initial_displacement.shape();
+        if actual_shape != expected_shape {
+            return Err(ValidationError::DimensionMismatch {
+                expected: format!("initial_displacement shape {expected_shape:?}"),
+                actual: format!("{actual_shape:?}"),
+            }
             .into());
         }
         let plan = PropagationPlan::for_initial_time(

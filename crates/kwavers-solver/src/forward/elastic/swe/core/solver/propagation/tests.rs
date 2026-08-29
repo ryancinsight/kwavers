@@ -324,14 +324,36 @@ fn initial_and_derived_time_domains_are_validated() {
 
 #[test]
 fn duration_shorter_than_step_still_executes_once() {
-    let mut config = base_config();
-    config.time_step = 1.0e-3;
-    let mut solver = solver_with_config(config);
-    let field = ElasticWaveField::new(2, 3, 4);
+    for (duration, time_step) in [(1.0e-6, 1.0e-3), (f64::MIN_POSITIVE, f64::MAX)] {
+        let mut config = base_config();
+        config.time_step = time_step;
+        let mut solver = solver_with_config(config);
+        let field = ElasticWaveField::new(2, 3, 4);
 
-    let result = solver
-        .propagate(&field, 1.0e-6, None)
-        .expect("positive sub-step duration must execute one step");
+        let result = solver
+            .propagate(&field, duration, None)
+            .expect("positive sub-step duration must execute one step");
 
-    assert_eq!(result.time, 1.0e-3);
+        assert_eq!(result.time, time_step);
+    }
+}
+
+#[test]
+fn propagate_waves_reports_structural_displacement_mismatch() {
+    let solver = solver_with_config(base_config());
+    let actual_shape = [4, 3, 2];
+    let error = solver
+        .propagate_waves(&Array3::zeros(actual_shape))
+        .expect_err("mismatched displacement shape must be rejected");
+
+    match error {
+        KwaversError::Validation(ValidationError::DimensionMismatch { expected, actual }) => {
+            assert_eq!(
+                expected,
+                format!("initial_displacement shape {GRID_SHAPE:?}")
+            );
+            assert_eq!(actual, format!("{actual_shape:?}"));
+        }
+        other => panic!("expected displacement dimension mismatch, got {other}"),
+    }
 }

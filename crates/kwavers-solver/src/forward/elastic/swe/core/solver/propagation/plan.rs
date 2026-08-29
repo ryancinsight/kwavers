@@ -69,7 +69,11 @@ impl PropagationPlan {
             "must be finite and greater than zero",
         )?;
 
-        let steps_f64 = (duration_s / dt).ceil();
+        let steps_f64 = if duration_s <= dt {
+            1.0
+        } else {
+            (duration_s / dt).ceil()
+        };
         if !steps_f64.is_finite() || steps_f64 < 1.0 || steps_f64 >= usize::MAX as f64 {
             return Err(ValidationError::InvalidValue {
                 parameter: "simulation_step_count".to_owned(),

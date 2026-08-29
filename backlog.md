@@ -439,8 +439,9 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   timeout bound.
 - **Current evidence:** a sequential, distinct-field 3-D differential plus the
   analytical, flat-coordinate, and nonstandard-layout focused suite passes
-  17/17. A same-length
-  shape-permutation
+  18/18. The differential compares all six stress and three divergence fields
+  on both a single-chunk case and a 504-element multi-chunk case with a ragged
+  tail. A same-length shape-permutation
   regression proves the public in-place operation rejects an invalid scratch
   shape before changing any of its nine stress/divergence arrays. The unchanged
   16³ workflow passes at 18.071 s after flat-coordinate traversal, versus
@@ -450,7 +451,7 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   suite passes 926/926 in 70.991 s; the complete `nl_swe_performance --test` smoke passes,
   including 16/32/64 propagation. Warning-denied library Clippy passes;
   all-target Clippy remains red on 94 pre-existing test/example diagnostics
-  outside this item. Focused release tests pass 17/17, doctests pass 5/5 with
+  outside this item. Focused release tests pass 18/18, doctests pass 5/5 with
   eight environmental examples ignored, and warning-denied Rustdoc passes.
   Hosted recollection of the corrected candidate remains pending.
 - **Hosted integration correction:** exact source `652dd5c54` exposed that the
@@ -479,11 +480,14 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   and end time reject with structural `ValidationError` values before mutation.
   Signed zero selects automatic CFL, finite negative initial time remains valid,
   and a positive duration below one step still executes once.
-- **Current evidence:** 18 malformed-shape cases and the duration/time-domain
-  matrix pass 6/6 through the public entries; invalid body-force preparation
+- **Current evidence:** 18 malformed-field cases, a structural public
+  displacement-shape regression, and the duration/time-domain matrix pass 7/7
+  propagation tests; invalid body-force preparation
   loses to preflight, input fields and recorder contents remain unchanged, and
-  the complete solver library suite passes 926/926. Warning-denied library
-  Clippy passes. Focused release tests pass 17/17, doctests pass 5/5 with eight
+  finite `MIN_POSITIVE` duration with a `MAX` step executes exactly once rather
+  than underflowing the derived count. The prior complete solver library suite
+  passes 926/926. Warning-denied library Clippy passes. The cumulative focused
+  release suite passes 18/18, doctests pass 5/5 with eight
   environmental examples ignored, and warning-denied Rustdoc passes.
   `cargo semver-checks` did not reach API analysis because its internal baseline
   clone failed on the repository pack with "Entry too large to fit in memory";
