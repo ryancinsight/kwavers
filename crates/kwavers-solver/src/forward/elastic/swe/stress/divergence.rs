@@ -26,7 +26,8 @@ use super::fd_stencils::{fd1_x, fd1_y, fd1_z};
 use kwavers_grid::Grid;
 use leto::Array3;
 use moirai_parallel::{
-    for_each_chunk_pair_mut_enumerated_with, for_each_chunk_triple_mut_enumerated_with, Adaptive,
+    for_each_chunk_buffers_mut_enumerated_with, for_each_chunk_pair_mut_enumerated_with,
+    for_each_chunk_triple_mut_enumerated_with, Adaptive,
 };
 
 // Three output chunks plus the captured displacement/material inputs remain
@@ -38,9 +39,8 @@ const STRESS_CHUNK: usize = 256;
 ///
 /// ## Theorem (operator isolation)
 ///
-/// `stress_divergence_into` is split into three independent chunk passes:
-/// - Pass 1a writes `{sxx,syy,szz}` from displacement views (read-only).
-/// - Pass 1b writes `{sxy,sxz,syz}` from displacement views (read-only).
+/// `stress_divergence_into` is split into two independent chunk passes:
+/// - Pass 1 writes `{sxx,syy,szz,sxy,sxz,syz}` from displacement views.
 /// - Pass 2 reads the six stress fields (immutable views taken after Pass 1
 ///   releases all mutable borrows) and writes `{div_x,div_y,div_z}`.
 ///
@@ -74,7 +74,7 @@ pub fn stress_divergence_into(
     let uy = field.uy.view();
     let uz = field.uz.view();
 
-    // --- Pass 1a: diagonal stress components {σxx, σyy, σzz} ---
+    // --- Pass 1: all six stress components ---
     //
     // Theorem (race-freedom): each output element σ[i,j,k] is written exactly
     // once; ux/uy/uz/λ/μ are read-only views captured by the closure.
@@ -92,35 +92,6 @@ pub fn stress_divergence_into(
             .szz
             .as_slice_mut()
             .expect("szz: standard-layout asserted just above; layout matched");
-        for_each_chunk_triple_mut_enumerated_with::<Adaptive, _, _, _, _>(
-            sxx_slice,
-            syy_slice,
-            szz_slice,
-            STRESS_CHUNK,
-            |chunk_idx, sxx_chunk, syy_chunk, szz_chunk| {
-                let start = chunk_idx * STRESS_CHUNK;
-                for offset in 0..sxx_chunk.len() {
-                    let idx = start + offset;
-                    let i = idx / (ny * nz);
-                    let j = (idx / nz) % ny;
-                    let k = idx % nz;
-                    let exx = fd1_x(ux, i, j, k, nx, dx);
-                    let eyy = fd1_y(uy, i, j, k, ny, dy);
-                    let ezz = fd1_z(uz, i, j, k, nz, dz);
-                    let la = lambda[[i, j, k]];
-                    let mv = mu[[i, j, k]];
-                    let la2mu = 2.0f64.mul_add(mv, la);
-                    sxx_chunk[offset] = la2mu.mul_add(exx, la * (eyy + ezz));
-                    syy_chunk[offset] = la2mu.mul_add(eyy, la * (exx + ezz));
-                    szz_chunk[offset] = la2mu.mul_add(ezz, la * (exx + eyy));
-                }
-            },
-        );
-    }
-
-    // --- Pass 1b: off-diagonal stress components {σxy, σxz, σyz} ---
-    //
-    {
         let sxy_slice = scratch
             .sxy
             .as_slice_mut()
@@ -133,28 +104,37 @@ pub fn stress_divergence_into(
             .syz
             .as_slice_mut()
             .expect("syz: standard-layout asserted just above; layout matched");
-        for_each_chunk_triple_mut_enumerated_with::<Adaptive, _, _, _, _>(
-            sxy_slice,
-            sxz_slice,
-            syz_slice,
+        for_each_chunk_buffers_mut_enumerated_with::<Adaptive, _, _, 6>(
+            [
+                sxx_slice, sxy_slice, sxz_slice, syy_slice, syz_slice, szz_slice,
+            ],
             STRESS_CHUNK,
-            |chunk_idx, sxy_chunk, sxz_chunk, syz_chunk| {
+            |chunk_idx, [sxx_chunk, sxy_chunk, sxz_chunk, syy_chunk, syz_chunk, szz_chunk]| {
                 let start = chunk_idx * STRESS_CHUNK;
-                for offset in 0..sxy_chunk.len() {
+                for offset in 0..sxx_chunk.len() {
                     let idx = start + offset;
                     let i = idx / (ny * nz);
                     let j = (idx / nz) % ny;
                     let k = idx % nz;
+                    let exx = fd1_x(ux, i, j, k, nx, dx);
+                    let eyy = fd1_y(uy, i, j, k, ny, dy);
+                    let ezz = fd1_z(uz, i, j, k, nz, dz);
                     let exy_2 = fd1_y(ux, i, j, k, ny, dy) + fd1_x(uy, i, j, k, nx, dx);
                     let exz_2 = fd1_z(ux, i, j, k, nz, dz) + fd1_x(uz, i, j, k, nx, dx);
                     let eyz_2 = fd1_z(uy, i, j, k, nz, dz) + fd1_y(uz, i, j, k, ny, dy);
+                    let la = lambda[[i, j, k]];
                     let mv = mu[[i, j, k]];
+                    let la2mu = 2.0f64.mul_add(mv, la);
+                    sxx_chunk[offset] = la2mu.mul_add(exx, la * (eyy + ezz));
+                    syy_chunk[offset] = la2mu.mul_add(eyy, la * (exx + ezz));
+                    szz_chunk[offset] = la2mu.mul_add(ezz, la * (exx + eyy));
                     sxy_chunk[offset] = mv * exy_2;
                     sxz_chunk[offset] = mv * exz_2;
                     syz_chunk[offset] = mv * eyz_2;
                 }
             },
-        );
+        )
+        .expect("invariant: elastic stress scratch fields have equal lengths");
     }
 
     // --- Pass 2: ∇·σ (parallelised over i-j-k) ---

@@ -409,13 +409,13 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   axis factors and is value-checked against direct evaluation, but only the
   volumetric propagation path uses it. The two ordinary propagation loops kept
   calling the direct per-voxel evaluator.
-- **Second-phase hypothesis:** source preparation closes the transcendental gap,
-  but the unchanged 16³ workflow still takes 53.767 s locally. Its 4,096-cell
-  step currently crosses the Moirai scheduler at least eleven times per step;
-  the existing `AdaptiveWithThreshold` seam can keep this small working set on
-  the caller lane while retaining parallel execution for larger volumes. Accept
-  a threshold change only if the unchanged workflow improves and the 64³ smoke
-  remains under the same 60-second contract.
+- **Second-phase result:** `AdaptiveWithThreshold<8192>` was rejected and
+  removed after the exact workflow reached the unchanged 60-second termination
+  bound at 60.077 s. The selected correction instead merges the diagonal and
+  off-diagonal stress computations into one six-buffer traversal, removing one
+  scheduler dispatch and one full-grid pass per stress evaluation. Moirai PR
+  #200 / merge `2b9c806` provides the const-generic homogeneous-buffer seam;
+  its warmed six-buffer allocation census records zero provider allocations.
 - **Acceptance:** both ordinary propagation loops prepare an optional Gaussian
   force once before stepping and share one prepared-step helper; no-force output
   remains unchanged and direct/prepared nonzero fields compare under a derived
@@ -428,6 +428,32 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
 - **Non-goals:** changing simulation duration, grid sizes, save cadence,
   history representation, numerical conventions, benchmark sampling, or any
   timeout bound.
+- **Current evidence:** a sequential, distinct-field 3-D differential plus the
+  analytical stress suite pass 9/9. The unchanged 16³ workflow passes twice at
+  42.379 s and 43.004 s versus the 53.767 s entry run, a 20.0–21.2% point
+  reduction with identical workload and the standard 60-second bound. The
+  complete `nl_swe_performance --test` smoke passes, including 16/32/64
+  propagation. Warning-denied library Clippy passes; all-target Clippy remains
+  red on 94 pre-existing test/example diagnostics outside this item.
+
+## KW-SWE-BENCH-GRAPH-2026-08-29 — Narrow solver benchmark compilation [patch] [perf] — todo
+
+- **Outcome:** make solver-only SWE benchmark rows compile through their owning
+  crate instead of selecting the umbrella integration graph on solver changes.
+- **Scope / non-goals:** split the existing `nl_swe_performance` target by
+  bounded context and update the affected-target mapper; preserve every
+  benchmark group name, input, timed closure, assertion, sampling setting, and
+  timeout. The cross-crate end-to-end rows remain in `kwavers`.
+- **Entry evidence:** `cargo bench -p kwavers --bench nl_swe_performance --
+  --test` spent 3m04s compiling the bench profile and selected unrelated GPU,
+  therapy, diagnostics, imaging-codec, and registration closures before the
+  solver-only 16/32/64 smoke could run.
+- **Acceptance:** before/after `cargo bench --no-run --timings` on equivalent
+  clean four-core runners identifies the compile critical path and unit count;
+  the split target's `--test` case-ID union equals the current target, the
+  complete smoke remains green, and exact solver-row codegen is unchanged.
+  Retain the split only if the affected solver target removes the unrelated
+  closure and materially reduces paired cold compile wall time.
 
 ## KW-KWAVE-DISTRIBUTED-SOURCE — pin k-Wave's mask-cell ordering [minor] — IMPLEMENTED 2026-08-24
 
