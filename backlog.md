@@ -97,6 +97,12 @@
   unchanged; the candidate run starts independent jobs without runner
   starvation and reduces the architecture workflow's critical path against
   the 30m03s exact-head baseline.
+- **Implementation:** the six jobs now enter the workflow independently. The
+  architecture job remains the sole writer for future mainline cache restores;
+  pull-request consumers remain restore-only. The workflow parses as eight
+  jobs with no residual dependency edge, and `git diff --check` passes.
+- **Lease:** none after the implementation commit; exact hosted timing and
+  independent review remain before merge.
 - **Non-goals:** adding cache writers, changing feature coverage, weakening
   checks, raising bounds, or tuning production benchmarks through CI.
 

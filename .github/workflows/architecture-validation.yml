@@ -71,13 +71,13 @@ jobs:
     # partial restore instead of a total miss, and it prunes `target/`
     # so the repository stays inside the 10 GB cache budget instead of
     # evicting its own entries. This broad dev-profile clippy job is the sole
-    # writer for downstream dev-profile jobs; immutable cache hits must not be
-    # seeded by a metadata-only preflight or raced by narrower consumers.
+    # writer for future dev-profile runs; pull-request jobs independently
+    # restore the latest completed mainline cache.
     - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
       with:
         shared-key: kwavers-dev
-        # The broad architecture job is the sole dev-profile writer.
-        # Pull requests restore only, so branches cannot evict each other.
+        # Pull requests restore only, so branches cannot evict each other or
+        # race to publish an immutable key.
         save-if: ${{ github.ref == 'refs/heads/main' }}
 
     - name: Check formatting
@@ -127,7 +127,6 @@ jobs:
 
   layer-boundary-checks:
     name: Layer Boundary Enforcement
-    needs: architecture-validation
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -179,7 +178,6 @@ jobs:
 
   build-matrix:
     name: Build with Feature Combinations
-    needs: architecture-validation
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -213,8 +211,8 @@ jobs:
     - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
       with:
         shared-key: kwavers-dev
-        # The architecture preflight is the sole dev-profile writer.
-        # Matrix consumers restore only.
+        # The completed mainline architecture job is the sole dev-profile
+        # writer. Matrix consumers restore only.
         save-if: false
 
     - name: Build with ${{ matrix.features }} features
@@ -248,7 +246,6 @@ jobs:
 
   test-coverage:
     name: Test Suite Coverage
-    needs: architecture-validation
     runs-on: ubuntu-latest
     # The lib suite and the integration baseline run as two parallel jobs so
     # their ~20min executions overlap; the prior single job ran them serially
@@ -309,7 +306,6 @@ jobs:
 
   integration-suite:
     name: Integration Suite
-    needs: architecture-validation
     runs-on: ubuntu-latest
     # The integration baseline is the other ~20min half of the former
     # test-coverage job; it runs in parallel with the lib suite above.
@@ -334,9 +330,9 @@ jobs:
       with:
         tool: nextest
 
-    # Same shared cache: the integration binaries were compiled by the strict
-    # clippy step's --all-targets, so this job restores them rather than
-    # rebuilding the feature graph.
+    # Same shared cache: completed mainline architecture runs include these
+    # all-target integration binaries, so this job restores them when the
+    # source and feature graph match.
     - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
       with:
         shared-key: kwavers-dev
@@ -357,7 +353,6 @@ jobs:
 
   documentation:
     name: Documentation Build
-    needs: architecture-validation
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -394,7 +389,6 @@ jobs:
 
   cuda-runtime-build:
     name: CUDA Runtime Build
-    needs: architecture-validation
     runs-on: ubuntu-latest
     timeout-minutes: 30
     container:

@@ -177,6 +177,11 @@
 
 ### Changed
 
+- **Architecture-workflow latency:** build, test, documentation, CUDA, and
+  layer checks no longer wait for a pull-request cache writer that is disabled
+  by policy and exports no artifact. Every job, command, matrix, workload, and
+  timeout remains unchanged; independent checks can start with the workflow.
+
 - **Integration-test scheduling:** CPML thickness, PSTD reciprocity, and
   photoacoustic full-grid simulations now share the existing one-at-a-time
   nextest group. This prevents four-process CPU oversubscription on hosted
