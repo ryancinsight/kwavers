@@ -161,7 +161,8 @@ pub trait PstdRunState {
     ///
     /// # Errors
     ///
-    /// Returns an error when provider command encoding or submission fails.
+    /// Returns an error when run metadata disagrees with provider-owned state,
+    /// or when provider command encoding or submission fails.
     fn run_pstd(
         &mut self,
         scalars: PstdRunScalars,

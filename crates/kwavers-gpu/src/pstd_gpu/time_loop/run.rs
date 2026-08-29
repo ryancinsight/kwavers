@@ -74,6 +74,20 @@ fn mark_active_source_steps(active: &mut [bool], signals: &[f32], source_count: 
     }
 }
 
+fn validate_activity_time_extent(
+    requested_time_steps: usize,
+    pressure_time_steps: usize,
+    velocity_time_steps: usize,
+) -> Result<(), String> {
+    if requested_time_steps == pressure_time_steps && requested_time_steps == velocity_time_steps {
+        return Ok(());
+    }
+
+    Err(format!(
+        "GPU PSTD run time-step count {requested_time_steps} does not match retained source-activity extents: pressure {pressure_time_steps}, velocity {velocity_time_steps}"
+    ))
+}
+
 fn validate_indices(name: &str, indices: &[u32], total_points: usize) -> Result<(), String> {
     u32::try_from(indices.len()).map_err(|_| {
         format!(
@@ -170,6 +184,13 @@ impl PstdRunState for WgpuPstdState {
         scalars: PstdRunScalars,
         inputs: PstdRunInputs<'_>,
     ) -> Result<PstdRunResult, String> {
+        // Retained activity geometry must agree before cache mutation or device work.
+        validate_activity_time_extent(
+            scalars.nt,
+            self.pressure_source_activity.len(),
+            self.velocity_source_activity.len(),
+        )?;
+
         let n_sensors = inputs.sensor_indices.len();
         let n_src = inputs.source_indices.len();
         let n_vel_x = inputs.vel_x_indices.len();
@@ -397,7 +418,10 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::{mark_active_source_steps, run_cache_matches, validate_run_inputs};
+    use super::{
+        mark_active_source_steps, run_cache_matches, validate_activity_time_extent,
+        validate_run_inputs,
+    };
     use crate::pstd_gpu::{state::WgpuPstdRunCache, PstdOutputRequest, PstdRunInputs};
 
     fn cache_inputs<'a>(
@@ -454,6 +478,25 @@ mod tests {
 
         mark_active_source_steps(&mut active, &[], 0);
         assert_eq!(active, [false; 3]);
+    }
+
+    #[test]
+    fn activity_time_extent_rejects_smaller_and_larger_runs() {
+        assert_eq!(validate_activity_time_extent(2, 2, 2), Ok(()));
+
+        for requested_time_steps in [1, 3] {
+            assert_eq!(
+                validate_activity_time_extent(requested_time_steps, 2, 2),
+                Err(format!(
+                    "GPU PSTD run time-step count {requested_time_steps} does not match retained source-activity extents: pressure 2, velocity 2"
+                ))
+            );
+        }
+
+        assert_eq!(
+            validate_activity_time_extent(2, 2, 3),
+            Err("GPU PSTD run time-step count 2 does not match retained source-activity extents: pressure 2, velocity 3".to_owned())
+        );
     }
 
     #[test]
