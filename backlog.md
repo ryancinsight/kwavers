@@ -47,18 +47,18 @@
   7 x 4 x 3 passes in 0.900 s; the selector-level Hephaestus run passes in
   0.711 s.
 
-## KW-PSTD-SOURCE-ACTIVITY-CACHE — Retain warm source-step maps [patch] [perf] — in progress
+## KW-PSTD-SOURCE-ACTIVITY-CACHE — Retain warm source-step maps [patch] [perf] — review
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-PSTD-SOURCE-ACTIVITY-CACHE | Remove the two host allocations used to classify pressure and velocity source activity on every reusable GPU PSTD run. | [patch] [perf] | in progress | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `crates/kwavers-gpu/src/pstd_gpu/state.rs`, `pipeline/construction/solver.rs`, `time_loop/run.rs`, focused tests and release notes |
+| KW-PSTD-SOURCE-ACTIVITY-CACHE | Remove the two host allocations used to classify pressure and velocity source activity on every reusable GPU PSTD run. | [patch] [perf] | review | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `crates/kwavers-gpu/src/pstd_gpu/state.rs`, `pipeline/construction/solver.rs`, `time_loop/run.rs`, focused tests and release notes |
 
-- **Lease:** Codex owns the listed source/test/documentation regions through
-  the next verified commit on `codex/kwavers-pstd-source-activity-cache`.
-- **Evidence:** `run_pstd` calls `active_source_steps` twice; each call creates
-  a `Vec<bool>` of `nt` entries before encoding the retained Hephaestus time
-  loop. The source matrices and solver time-step count are already validated,
-  and `WgpuPstdState` already retains fixed-length host scratch.
+- **Lease:** none; provider candidate `dc7c21f6d` is committed on
+  `codex/kwavers-pstd-source-activity-cache`.
+- **Evidence:** fixed `Box<[bool]>` maps are allocated once with solver state;
+  repeated refill/stale-clear regression 1/1, run-module regressions 6/6,
+  GPU-feature package Nextest 173/173 with 6 skipped in 19.175 s, warning-denied
+  all-target Clippy, rustfmt, and diff checks pass against `dc7c21f6d`.
 - **Acceptance:** construction retains two fixed-length `nt` activity maps;
   each run clears and refills them through an allocation-incapable slice API;
   repeated distinct pressure/velocity matrices preserve source-major values
@@ -66,6 +66,8 @@
   backend branch, transform kernel, workload, assertion, or timeout changes.
 - **Non-goals:** changing Leto/Hephaestus selection, source semantics, GPU
   command batching, readback ownership, or unrelated PSTD allocations.
+- **Remaining:** independent exact-commit review, then rebase/merge after the
+  prerequisite CI-baseline PR #667 lands.
 
 ## KW-SIM-TEST-COMPILE-GRAPH — Reduce simulation test build latency [patch] [perf] — todo
 
