@@ -383,44 +383,44 @@ training run can be replayed. It is drawn once per `train()` call, so the loss
 is deterministic *within* a run and this is not the convergence defect — but it
 makes any cross-run comparison noise, which is why the gradient tests build
 fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
-## KW-SWE-SCALING-IS-A-BENCHMARK — a wall-clock benchmark is running as a test [patch] — todo
+## KW-SWE-SCALING-IS-A-BENCHMARK — Measure scaling outside tests [patch] — IMPLEMENTED 2026-08-25
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-SWE-SCALING-IS-A-BENCHMARK | Move the SWE scaling measurement into a criterion benchmark and drop the elapsed-time assertions from the test suite. | [patch] | todo | unowned (SWE area is actively being worked) | `crates/kwavers/tests/swe_3d_validation.rs`, `crates/kwavers/benches/` |
+| KW-SWE-SCALING-IS-A-BENCHMARK | Measure SWE propagation scaling through Criterion without wall-clock assertions in native tests. | [patch] | IMPLEMENTED | unowned | `crates/kwavers/tests/swe_3d_validation.rs`, `crates/kwavers/benches/nl_swe_performance.rs` |
 
-- **Symptom:** `test_performance_scaling` times out at the 60 s nextest
-  termination bound on CI. It takes 27 s on the development machine, so the
-  runner is roughly 2.5x slower and the test sits on the wrong side of the
-  bound there and the right side here. That is the definition of a flaky test.
-- **What it is:** it builds `ElasticWaveSolver` at 16, 32, 48 and 64 cubed,
-  times `propagate_waves_with_body_force_only_override` with
-  `Instant::now()`, and asserts on the *ratio* of elapsed times between
-  successive sizes.
-- **Why the bound is not the problem:** an elapsed-time assertion on a shared
-  runner measures the runner. Raising the budget would keep a measurement whose
-  variance is dominated by whatever else the machine is doing.
-- **Where it belongs:** criterion, which exists to do this properly -- warm-up,
-  repeated samples, median with a confidence interval, and `black_box` against
-  elision. `crates/kwavers/benches/nl_swe_performance.rs` already covers
-  hyperelastic models and harmonic detection but nothing measures propagation
-  scaling, so this is not duplicated work, only misplaced work.
-- **Sizing note for whoever takes it:** the sweep should be geometric with a
-  few representative points rather than 16/32/48/64, and the per-binary
-  wall-clock budget applies -- a 64-cubed propagation may need the sweep's top
-  end trimmed or a dedicated reviewed profile.
-- **Removed from the test suite here**, rather than parked in the baseline. It
-  could not sit there honestly: it passes on the development machine and times
-  out on CI, so the baseline checker reports it as a *stale* entry locally and
-  a *regression* remotely. A set-valued baseline records which tests fail, and
-  this one's answer depends on the machine -- which is the flakiness itself,
-  not a gap in the mechanism.
-- **What was kept:** nothing of the measurement, which is why the criterion
-  benchmark above is owed. What was lost is a scaling number nobody could rely
-  on; what was removed is a 60-second CI timeout on every run.
-- **Precedent in the same file:** `diag_swe_recon_2`, deleted under
-  `KW-INTEGRATION-TESTS-UNRUN` for the same reason -- a benchmark workload
-  breaching the committed test budget.
+- The elapsed-time test was removed in `d0cf2f0cb`; `7a6859802` added the
+  geometric 16/32/64 Criterion sweep with unchanged solver computation.
+
+## KW-SWE-FORCE-PREPARATION — Prepare Gaussian body forces once [patch] [perf] — in progress
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-SWE-FORCE-PREPARATION | Remove repeated spatial and normalization transcendental evaluation from ordinary elastic propagation while preserving the exact field history and workloads. | [patch] [perf] | in progress | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | elastic propagation/integration tests, NL-SWE scheduling, release notes, exact benchmark and hosted evidence |
+
+- **Lease:** Codex owns `crates/kwavers-solver/src/forward/elastic/swe/core/solver/propagation/`, focused integration tests, `.config/nextest.toml`, `.github/workflows/ci.yml`, `crates/kwavers/tests/nl_swe_validation.rs`, and this item's release/PM records through the next verified commit.
+- **Entry evidence:** PR #668 run `33268934966` spent 217.790 s on the unchanged
+  `wave_propagation_scaling/64` single iteration. Run `33268934962` spent 19m25s
+  in the dedicated 16-cubed NL-SWE job. On the 64-cubed case the direct path
+  performs 232,259,584 force evaluations: each repeats three spatial
+  exponentials, one temporal exponential, and a direction norm although all
+  but the temporal factor are invariant across steps.
+- **Root cause:** `PreparedBodyForces` already stores separable `O(nx+ny+nz)`
+  axis factors and is value-checked against direct evaluation, but only the
+  volumetric propagation path uses it. The two ordinary propagation loops kept
+  calling the direct per-voxel evaluator.
+- **Acceptance:** both ordinary propagation loops prepare an optional Gaussian
+  force once before stepping and share one prepared-step helper; no-force output
+  remains unchanged and direct/prepared nonzero fields compare under a derived
+  floating-point bound. The exact 16/32/64 benchmark inputs, timed closure, and
+  assertions remain unchanged; the 64-cubed smoke iteration and unchanged
+  16-cubed NL-SWE value test each fit the ordinary 60-second contract. The test
+  then joins the existing full-grid scheduling group, its ignore/600-second
+  override and dedicated PR job are deleted, and focused warning-denied Clippy,
+  Nextest, benchmark smoke, formatting, and docs pass.
+- **Non-goals:** changing simulation duration, grid sizes, save cadence,
+  history representation, numerical conventions, benchmark sampling, or any
+  timeout bound.
 
 ## KW-KWAVE-DISTRIBUTED-SOURCE — pin k-Wave's mask-cell ordering [minor] — IMPLEMENTED 2026-08-24
 
