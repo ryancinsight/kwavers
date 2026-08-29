@@ -6,18 +6,17 @@
 # Every entry is a defect owed a fix, not an accepted behaviour. See
 # backlog.md KW-INTEGRATION-TESTS-UNRUN for the inventory.
 #
-# The three entries below are CI failures on the 4-core Linux
+# The two entries below are CI failures on the 4-core Linux
 # hosted runner at the post-#653 / apollo-fft signature fix tip
 # `dddb75c12`; they pass locally on Windows because the platform
-# has a different floating-point contract (PSTD) and different
-# per-test CPU budget (CPML). The first six entries recorded the
+# has a different floating-point contract (PSTD). The first six entries recorded the
 # `energy_conservation_test test_reciprocity_principle`,
 # `photoacoustic_validation test_performance_benchmark`, and
-# `pinn_ic_validation test_ic_combined_loss_decreases` defects; all
-# three are now passing on the 4-core hosted runner and have been
+# `pinn_ic_validation test_ic_combined_loss_decreases` defects. Those
+# three and `cpml_absorption_quality test_cpml_stable_across_thicknesses`
+# are now passing on the 4-core hosted runner and have been
 # removed from this list. Each entry shrinks as its defect ships.
 # Removal trigger: a pass run on the 4-core hosted Linux runner that
 # survives a clean rebuild.
-kwavers::cpml_absorption_quality test_cpml_stable_across_thicknesses
 kwavers::pstd_finite_window_born second_order_does_not_worsen_pstd_match
 kwavers::pstd_finite_window_born source_phasing_is_frechet_derivative
