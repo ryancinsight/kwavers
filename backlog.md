@@ -67,11 +67,11 @@
 - **Non-goals:** changing Leto/Hephaestus selection, source semantics, GPU
   command batching, readback ownership, or unrelated PSTD allocations.
 
-## KW-FDTD-DEBUG-SCAN — Remove duplicate debug scans [patch] [perf] — in progress
+## KW-FDTD-DEBUG-SCAN — Remove duplicate debug scans [patch] [perf] — review
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-FDTD-DEBUG-SCAN | Keep the unchanged CPML integration workload below its committed bound by scanning each completed FDTD field phase once when no source can mutate it, while preserving source-phase diagnostics and source semantics for both temporal schemes. | [patch] [perf] | in progress | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `crates/kwavers-solver/src/forward/fdtd/solver/{stepping.rs,tests.rs}`, `.config/nextest.toml`, CPML focused evidence, release notes |
+| KW-FDTD-DEBUG-SCAN | Keep the unchanged CPML integration workload below its committed bound by scanning each completed FDTD field phase once when no source can mutate it, while preserving source-phase diagnostics and source semantics for both temporal schemes. | [patch] [perf] | review | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `crates/kwavers-solver/src/forward/fdtd/solver/{stepping.rs,tests.rs}`, `.config/nextest.toml`, CPML focused evidence, release notes |
 
 - **Entry evidence:** hosted run `33229687715` timed out
   `test_cpml_stable_across_thicknesses` at the unchanged 60-second bound. The
@@ -94,9 +94,13 @@
   library Clippy with warnings denied and workspace formatting pass; the
   all-target solver Clippy remains red on 94 pre-existing diagnostics outside
   the touched files. `show-config` assigns all four CPML tests to
-  `full-grid-sim`; hosted 4-core confirmation and independent review remain.
-- **Lease:** Codex owns the listed solver source/tests, this item, and its
-  Unreleased note through the next verified commit.
+  `full-grid-sim`; hosted 4-core confirmation remains.
+- **Independent review:** GREEN at exact source commit `41576260e`; source,
+  diagnostics, test-oracle, Nextest configuration, and scope contracts match.
+  The byte-identical source/config/test blobs are rebased onto PR #667 at exact
+  candidate `8876091c6`; hosted run `33232399431` is the remaining closure.
+- **Lease:** none; the source increment is committed, pushed, reviewed, and
+  submitted to the hosted exact-candidate gate.
 
 ## KW-SIM-TEST-COMPILE-GRAPH — Reduce simulation test build latency [patch] [perf] — blocked
 
