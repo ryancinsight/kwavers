@@ -513,9 +513,10 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   reallocations and capacity at least the derived bound after the correction.
   Focused/package Nextest, warning-denied library Clippy/Rustdoc, doctests,
   unchanged Criterion smoke, and SemVer classification remain required.
-- **Status:** local candidate verified; independent review and merge remain
-  pending behind PR #670. The entry census measured three history-vector
-  reallocations for 17 steps and 18 snapshots; the candidate reserves all 18
+- **Status:** local candidate `291b7fd8e` verified; independent review and
+  merge remain pending behind PR #670. The entry census measured three
+  history-vector reallocations for 17 steps and 18 snapshots; the candidate
+  reserves all 18
   headers before other history work and measures zero reallocations. Checked
   schedule/layout, public value, and allocation tests pass 11/11 in debug and
   release; package Nextest passes 931/931 with two skipped. Warning-denied
