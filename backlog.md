@@ -77,6 +77,16 @@
   gpu` spent 2m37s compiling the transitive graph, then executed all 100 tests
   in 0.617s. The matching GPU-enabled Python run spent 2m15s compiling, then
   executed all 21 tests in 1.661s. Test runtime is not the bottleneck.
+- **Graph attribution:** the committed offline graph contains 431 normal/dev
+  packages for GPU simulation and 444 for GPU Python; all 431 simulation
+  packages are shared, with only 13 Python-only packages. Each crate already
+  produces one Rust test binary, so integration-target count is not the cause.
+- **Bounded experiment:** one feature-unified Nextest invocation compiled in
+  1m41s and passed the current 127/127 tests across both binaries in 2.021s,
+  with one expected skip. This validates the command/test surface, not a speedup:
+  the shared cache was partially warm. A controlled cold run must beat the
+  prior 4m52s aggregate without changing the 127-test workload; no reduction
+  or a test-count mismatch falsifies the consolidation hypothesis.
 - **Acceptance:** compiler timing attributes the dominant crates and link work;
   the same 100 simulation and 21 Python tests and assertions remain; no private
   target cache, feature bypass, workload reduction, or timeout increase; cold
