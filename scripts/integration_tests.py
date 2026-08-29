@@ -61,6 +61,9 @@ SUMMARY = re.compile(r"^\s+Summary\s+\[[^\]]*\]\s+(\d+) tests run")
 COMMAND = [
     "cargo", "nextest", "run",
     "--color", "never",
+    # Preserve assertion values for diagnosis without streaming every test's
+    # output. The runner prints only its bounded tails when a failure exists.
+    "--failure-output", "final",
     "-p", "kwavers", "--tests",
     "--no-default-features", "--features", "full",
     # Use the committed `ci` profile: 4 test threads, 10m global bound, the
@@ -379,6 +382,7 @@ def run(locked: bool = True) -> tuple[set[str], int]:
     failures = set(result.failures)
     if failures:
         _print_failure_statuses(result)
+        _print_diagnostic_tails(result)
     ran = result.tests_run
     if ran == 0:
         # No summary means the suite did not run -- a compile error or a

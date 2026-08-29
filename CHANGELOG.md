@@ -185,6 +185,10 @@
 
 ### Changed
 
+- **Integration failure diagnostics:** the bounded integration runner now asks
+  Nextest for final failed-test output and emits its retained stdout and stderr
+  tails when a test fails, preserving assertion values without unbounded logs.
+
 - **Architecture-workflow latency:** build, test, documentation, CUDA, and
   layer checks no longer wait for a pull-request cache writer that is disabled
   by policy and exports no artifact. Every job, command, matrix, workload, and

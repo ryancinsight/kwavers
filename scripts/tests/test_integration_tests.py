@@ -21,6 +21,11 @@ if os.name != "nt":
 
 
 class IntegrationTestRunnerTests(unittest.TestCase):
+    def test_command_requests_final_failed_test_output(self) -> None:
+        option_index = integration_tests.COMMAND.index("--failure-output")
+
+        self.assertEqual(integration_tests.COMMAND[option_index + 1], "final")
+
     def test_output_parsing_retains_only_bounded_tails(self) -> None:
         output = (
             "x" * 5000
@@ -86,6 +91,30 @@ class IntegrationTestRunnerTests(unittest.TestCase):
 
                 self.assertIn("failure status lines", diagnostics.getvalue())
                 self.assertIn("kwavers::sample timed_out_case", diagnostics.getvalue())
+
+    def test_failed_tests_report_assertion_diagnostics(self) -> None:
+        result = integration_tests.ExecutionResult(
+            returncode=100,
+            timed_out=False,
+            termination_error=None,
+            failures=frozenset({"kwavers::sample failing_case"}),
+            tests_run=1,
+            stdout_tail="assertion failed: observed 3.0, expected 2.0\n",
+            stderr_tail="",
+            failure_status_tail=(
+                "FAIL [  0.010s] (1/1) kwavers::sample failing_case\n"
+            ),
+        )
+        diagnostics = io.StringIO()
+
+        with patch.object(integration_tests, "_execute", return_value=result):
+            with redirect_stderr(diagnostics):
+                failures, ran = integration_tests.run()
+
+        self.assertEqual(failures, {"kwavers::sample failing_case"})
+        self.assertEqual(ran, 1)
+        self.assertIn("failure status lines", diagnostics.getvalue())
+        self.assertIn("observed 3.0, expected 2.0", diagnostics.getvalue())
 
     @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
     def test_timeout_kills_descendant_holding_inherited_pipe(self) -> None:

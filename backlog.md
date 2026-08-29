@@ -85,6 +85,27 @@
   target cache, feature bypass, workload reduction, or timeout increase; cold
   controlled reruns are materially below the 2m37s and 2m15s baselines.
 
+## KW-INTEGRATION-FAILURE-DIAGNOSTICS — Preserve failed-test output [patch] — review
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-INTEGRATION-FAILURE-DIAGNOSTICS | Preserve bounded assertion diagnostics for integration failures so numerical defects can be diagnosed from the originating run. | [patch] | review | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `scripts/integration_tests.py`, focused tests, release notes |
+
+- **Evidence:** hosted integration failures exposed only Nextest status lines.
+  The runner retained bounded stdout/stderr tails but emitted them only for
+  suite timeout, cleanup failure, or a missing summary.
+- **Acceptance:** request final failed-test output; emit only the existing
+  4,000-character-capped tails for ordinary failures; preserve commands,
+  workloads, profiles, assertions, and timeout bounds; prove concrete failure
+  identity and assertion values through the runner contract.
+- **Implementation evidence:** the isolated script suite passes 6/6 applicable
+  tests on Windows with one platform-expected skip; Python compilation and
+  `git diff --check` pass.
+- **Independent review:** GREEN at exact source commit `e47b44a08`; the command
+  uses supported Nextest `--failure-output final`, retained outputs stay
+  bounded, and tests assert the concrete failure and values. Hosted
+  end-to-end formatting/output collection remains.
+
 ## KW-CI-ARCH-DAG — Remove ineffective PR serialization [patch] [perf] — review
 
 | ID | Outcome | Class | Status | Owner | Scope |
