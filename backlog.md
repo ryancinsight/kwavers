@@ -101,8 +101,11 @@
   suite-level diagnostics. The full script suite passes 6/6 on Windows, with
   the expected POSIX-only process-group case skipped; Python compilation and
   `git diff --check` pass.
+- **Independent review:** GREEN at exact implementation `e47b44a08`; static
+  command, bound, value-test, PM, and release-note contracts match. A real
+  hosted Rust assertion remains the end-to-end formatting/output oracle.
 - **Lease:** none after the implementation commit; exact-revision independent
-  review and hosted output collection remain before merge.
+  review is complete and hosted output collection remains before merge.
 
 ## KW-CI-ARCH-DAG — Remove ineffective PR serialization [patch] [perf] — in progress
 
