@@ -1,5 +1,6 @@
 //! Basic propagation methods for `ElasticWaveSolver`.
 
+use super::super::super::integration::integrator::PreparedBodyForces;
 use super::super::super::integration::TimeIntegrator;
 use super::super::super::scratch::ElasticStepScratch;
 use super::super::super::types::{ElasticBodyForceConfig, ElasticWaveField};
@@ -21,6 +22,7 @@ impl ElasticWaveSolver {
         duration: f64,
         body_force: Option<&ElasticBodyForceConfig>,
     ) -> KwaversResult<ElasticWaveField> {
+        let mut prepared_body_force = prepare_body_force(&self.grid, body_force)?;
         let mut current_field = initial_field.clone();
         let integrator =
             TimeIntegrator::new(&self.grid, &self.lambda, &self.mu, &self.density, &self.pml);
@@ -147,7 +149,13 @@ impl ElasticWaveSolver {
                 }
             }
 
-            integrator.step(&mut current_field, dt, body_force, &mut scratch)?;
+            step_with_optional_prepared_force(
+                &integrator,
+                &mut current_field,
+                dt,
+                prepared_body_force.as_mut(),
+                &mut scratch,
+            )?;
             current_field.time += dt;
 
             if step % save_every == 0 {
@@ -217,6 +225,7 @@ impl ElasticWaveSolver {
         duration_s: f64,
         body_force: Option<&ElasticBodyForceConfig>,
     ) -> KwaversResult<Vec<ElasticWaveField>> {
+        let mut prepared_body_force = prepare_body_force(&self.grid, body_force)?;
         let mut current_field = initial_field.clone();
         let integrator =
             TimeIntegrator::new(&self.grid, &self.lambda, &self.mu, &self.density, &self.pml);
@@ -244,7 +253,13 @@ impl ElasticWaveSolver {
         let mut history = Vec::new();
         history.push(current_field.clone());
         for step_idx in 0..steps {
-            integrator.step(&mut current_field, dt, body_force, &mut scratch)?;
+            step_with_optional_prepared_force(
+                &integrator,
+                &mut current_field,
+                dt,
+                prepared_body_force.as_mut(),
+                &mut scratch,
+            )?;
             current_field.time += dt;
             if (step_idx + 1) % save_every == 0 {
                 history.push(current_field.clone());
@@ -258,6 +273,29 @@ impl ElasticWaveSolver {
             history.push(current_field.clone());
         }
         Ok(history)
+    }
+}
+
+fn prepare_body_force(
+    grid: &kwavers_grid::Grid,
+    body_force: Option<&ElasticBodyForceConfig>,
+) -> KwaversResult<Option<PreparedBodyForces>> {
+    body_force
+        .map(|force| PreparedBodyForces::new(grid, core::slice::from_ref(force)))
+        .transpose()
+}
+
+fn step_with_optional_prepared_force(
+    integrator: &TimeIntegrator<'_>,
+    field: &mut ElasticWaveField,
+    dt: f64,
+    body_force: Option<&mut PreparedBodyForces>,
+    scratch: &mut ElasticStepScratch,
+) -> KwaversResult<()> {
+    if let Some(body_force) = body_force {
+        integrator.step_with_prepared_body_forces(field, dt, body_force, scratch)
+    } else {
+        integrator.step(field, dt, None, scratch)
     }
 }
 

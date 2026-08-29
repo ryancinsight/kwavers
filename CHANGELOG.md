@@ -185,6 +185,15 @@
 
 ### Changed
 
+- **Elastic SWE body-force runtime:** Ordinary final-state and history
+  propagation now prepare separable Gaussian spatial profiles once per run and
+  evaluate only the temporal factor during each acceleration pass. The
+  unchanged 16³ NL-SWE workflow completes in 53.767 seconds under the standard
+  60-second Nextest contract, and the complete unchanged benchmark smoke,
+  including the 64³ propagation case, completes within that contract. The test
+  therefore rejoins the main suite; its ignore, 600-second override, and
+  dedicated 35-minute pull-request job are removed.
+
 - **Integration failure diagnostics:** the bounded integration runner now asks
   Nextest for final failed-test output and emits its retained stdout and stderr
   tails when a test fails, preserving assertion values without unbounded logs.

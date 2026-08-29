@@ -1,9 +1,9 @@
 //! Tests for velocity-Verlet time integration.
 
-use super::integrator::TimeIntegrator;
+use super::integrator::{PreparedBodyForces, TimeIntegrator};
 use crate::forward::elastic::swe::boundary::{ElasticSwePMLBoundary, SwePmlConfig};
 use crate::forward::elastic::swe::scratch::ElasticStepScratch;
-use crate::forward::elastic::swe::types::ElasticWaveField;
+use crate::forward::elastic::swe::types::{ElasticBodyForceConfig, ElasticWaveField};
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use kwavers_grid::Grid;
 use leto::Array3;
@@ -56,6 +56,52 @@ fn test_velocity_verlet_zero_field_fixed_point() {
     // Zero field, no body force → acceleration = 0 → field stays zero.
     assert_eq!(field.ux[[5, 5, 5]], 0.0, "ux must stay zero");
     assert_eq!(field.vx[[5, 5, 5]], 0.0, "vx must stay zero");
+}
+
+/// Prepared force profiles preserve the complete velocity-Verlet field.
+#[test]
+fn prepared_body_force_step_matches_direct_evaluation() {
+    let grid = Grid::new(5, 4, 3, 0.4e-3, 0.5e-3, 0.6e-3).unwrap();
+    let (lambda, mu, density, pml) = make_integrator(&grid, 2.0e6, 8.0e5);
+    let integrator = TimeIntegrator::new(&grid, &lambda, &mu, &density, &pml);
+    let force = ElasticBodyForceConfig::GaussianImpulse {
+        center_m: [0.8e-3, 0.75e-3, 0.6e-3],
+        sigma_m: [0.5e-3, 0.7e-3, 0.9e-3],
+        direction: [1.0, -2.0, 0.5],
+        t0_s: 0.75e-6,
+        sigma_t_s: 0.4e-6,
+        impulse_n_per_m3_s: 2.5,
+    };
+    let mut direct = ElasticWaveField::new(grid.nx, grid.ny, grid.nz);
+    let mut prepared = direct.clone();
+    let mut direct_scratch = ElasticStepScratch::new(grid.nx, grid.ny, grid.nz);
+    let mut prepared_scratch = ElasticStepScratch::new(grid.nx, grid.ny, grid.nz);
+    let mut prepared_force = PreparedBodyForces::new(&grid, core::slice::from_ref(&force)).unwrap();
+    let dt = integrator.calculate_stable_timestep(0.25);
+
+    for _ in 0..2 {
+        integrator
+            .step(&mut direct, dt, Some(&force), &mut direct_scratch)
+            .unwrap();
+        integrator
+            .step_with_prepared_body_forces(
+                &mut prepared,
+                dt,
+                &mut prepared_force,
+                &mut prepared_scratch,
+            )
+            .unwrap();
+        direct.time += dt;
+        prepared.time += dt;
+    }
+
+    assert_eq!(prepared.ux, direct.ux);
+    assert_eq!(prepared.uy, direct.uy);
+    assert_eq!(prepared.uz, direct.uz);
+    assert_eq!(prepared.vx, direct.vx);
+    assert_eq!(prepared.vy, direct.vy);
+    assert_eq!(prepared.vz, direct.vz);
+    assert_eq!(prepared.time, direct.time);
 }
 
 /// PML damping attenuates velocity in the absorbing layer and leaves the
