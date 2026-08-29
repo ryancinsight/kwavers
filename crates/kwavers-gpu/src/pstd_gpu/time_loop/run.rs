@@ -63,14 +63,15 @@ impl PstdRunScalars {
 /// An all-zero source step is an identity operation. Omitting its clear,
 /// injection, optional spectral correction, and addition preserves the PSTD
 /// state while avoiding unnecessary full-volume transforms for finite bursts.
-fn active_source_steps(signals: &[f32], source_count: usize, time_steps: usize) -> Vec<bool> {
-    let mut active = vec![false; time_steps];
+fn mark_active_source_steps(active: &mut [bool], signals: &[f32], source_count: usize) {
+    debug_assert!(!active.is_empty());
+    active.fill(false);
+    let time_steps = active.len();
     for source_signal in signals.chunks_exact(time_steps).take(source_count) {
-        for (step, &amplitude) in source_signal.iter().enumerate() {
-            active[step] |= amplitude != 0.0;
+        for (is_active, &amplitude) in active.iter_mut().zip(source_signal) {
+            *is_active |= amplitude != 0.0;
         }
     }
-    active
 }
 
 fn validate_indices(name: &str, indices: &[u32], total_points: usize) -> Result<(), String> {
@@ -196,6 +197,17 @@ impl PstdRunState for WgpuPstdState {
             self.ensure_field_staging_buffer(scalars.total_points());
         }
 
+        mark_active_source_steps(
+            &mut self.pressure_source_activity,
+            inputs.source_signals,
+            n_src,
+        );
+        mark_active_source_steps(
+            &mut self.velocity_source_activity,
+            inputs.vel_x_signals,
+            n_vel_x,
+        );
+
         let buf_sensor_data = self
             .run_cache
             .sensor_data_buf
@@ -234,8 +246,6 @@ impl PstdRunState for WgpuPstdState {
             .map_err(|error| format!("PSTD zero-field submission failed: {error}"))?;
 
         let ctx = scalars.step_context(&inputs, self.run_cache.peak_offset);
-        let pressure_source_steps = active_source_steps(inputs.source_signals, n_src, scalars.nt);
-        let velocity_source_steps = active_source_steps(inputs.vel_x_signals, n_vel_x, scalars.nt);
 
         // Batching reduces wgpu API overhead from O(nt) submits to O(nt/STEP_BATCH).
         // Kept at 32 to avoid Windows TDR on long runs.
@@ -258,8 +268,8 @@ impl PstdRunState for WgpuPstdState {
                             },
                             step as u32,
                             SourceActivity {
-                                pressure: pressure_source_steps[step],
-                                velocity: velocity_source_steps[step],
+                                pressure: self.pressure_source_activity[step],
+                                velocity: self.velocity_source_activity[step],
                             },
                         )
                     })
@@ -387,7 +397,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::{active_source_steps, run_cache_matches, validate_run_inputs};
+    use super::{mark_active_source_steps, run_cache_matches, validate_run_inputs};
     use crate::pstd_gpu::{state::WgpuPstdRunCache, PstdOutputRequest, PstdRunInputs};
 
     fn cache_inputs<'a>(
@@ -433,11 +443,17 @@ mod tests {
     }
 
     #[test]
-    fn active_source_steps_preserves_each_source_row_and_time_index() {
-        assert_eq!(
-            active_source_steps(&[0.0, 1.0, 0.0, 0.0, 0.0, -2.0], 2, 3),
-            vec![false, true, true]
-        );
+    fn active_source_steps_preserve_rows_and_clear_stale_flags() {
+        let mut active = [true; 3];
+
+        mark_active_source_steps(&mut active, &[0.0, 1.0, 0.0, 0.0, 0.0, -2.0], 2);
+        assert_eq!(active, [false, true, true]);
+
+        mark_active_source_steps(&mut active, &[3.0, 0.0, 0.0], 1);
+        assert_eq!(active, [true, false, false]);
+
+        mark_active_source_steps(&mut active, &[], 0);
+        assert_eq!(active, [false; 3]);
     }
 
     #[test]

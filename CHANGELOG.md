@@ -177,6 +177,12 @@
 
 ### Changed
 
+- **GPU PSTD warm source classification:** Reusable solver state now retains
+  fixed-length pressure and velocity activity maps and clears/refills them for
+  each run. This removes the two `nt`-sized host allocations previously made
+  before every retained Hephaestus time loop without changing source semantics,
+  command batching, FFT backend selection, or numerical work.
+
 - **Focused water-tank example runtime:** Independent FDTD, PSTD, and DG
   comparison branches now use the provider-owned Moirai `Parallel` join while
   retaining each solver's native state and analytical output. The complete
