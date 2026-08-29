@@ -189,13 +189,22 @@
   propagation now prepare separable Gaussian spatial profiles once per run and
   evaluate only the temporal factor during each acceleration pass. Elastic
   stress now computes all six tensor components in one homogeneous-buffer
-  traversal, removing one scheduler dispatch and full-grid pass per evaluation.
+  traversal, removing one scheduler dispatch and full-grid pass per evaluation,
+  and advances standard-layout coordinates once per 256-element chunk instead
+  of dividing the flat index at every voxel in both stress passes. Valid
+  nonstandard layouts use the same point formulas through a zero-allocation
+  logical-coordinate fallback.
   The public in-place stress operation validates every material, displacement,
   stress, and divergence shape against the grid before taking mutable scratch
   slices, so an equal-length but differently shaped workspace is rejected
   before mutation.
-  Two unchanged 16³ NL-SWE runs complete in 42.379 and 43.004 seconds versus
-  the 53.767-second entry run under the same 60-second Nextest contract, and the
+  Propagation entry points now validate all six public field shapes and the
+  complete finite time domain before body-force preparation, simulation
+  allocation, recorder replacement, or scheduler work. The unchanged 16³
+  NL-SWE value test completes in 18.071 seconds after the flat-coordinate
+  correction, versus 42.379 and 43.004 seconds after force preparation and
+  53.767 seconds at entry, under the same 60-second Nextest contract. These are
+  operational test timings rather than Criterion throughput estimates. The
   complete unchanged benchmark smoke, including the 64³ propagation case,
   passes. The test therefore rejoins the main suite; its ignore, 600-second
   override, and dedicated 35-minute pull-request job are removed.

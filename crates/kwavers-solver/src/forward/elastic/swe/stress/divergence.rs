@@ -22,7 +22,10 @@
 
 use super::super::scratch::ElasticStepScratch;
 use super::super::types::ElasticWaveField;
-use super::fd_stencils::{fd1_x, fd1_y, fd1_z};
+use super::fd_stencils::{fd1_x, fd1_y};
+use super::kernel::{
+    divergence_components, stress_components, FlatField, StencilPoint, StridedField,
+};
 use kwavers_grid::Grid;
 use leto::Array3;
 use moirai_parallel::{
@@ -33,6 +36,46 @@ use moirai_parallel::{
 // Three output chunks plus the captured displacement/material inputs remain
 // within a 32 KiB L1 working set at 256 f64 elements per chunk.
 const STRESS_CHUNK: usize = 256;
+
+/// Standard-layout coordinates advanced without per-voxel division.
+struct GridPosition {
+    i: usize,
+    j: usize,
+    k: usize,
+    ny: usize,
+    nz: usize,
+}
+
+impl GridPosition {
+    fn from_flat(index: usize, ny: usize, nz: usize) -> Self {
+        let yz_len = ny * nz;
+        let i = index / yz_len;
+        let remainder = index % yz_len;
+        Self {
+            i,
+            j: remainder / nz,
+            k: remainder % nz,
+            ny,
+            nz,
+        }
+    }
+
+    fn advance(&mut self) {
+        self.k += 1;
+        if self.k == self.nz {
+            self.k = 0;
+            self.j += 1;
+            if self.j == self.ny {
+                self.j = 0;
+                self.i += 1;
+            }
+        }
+    }
+
+    fn coordinates(&self) -> [usize; 3] {
+        [self.i, self.j, self.k]
+    }
+}
 
 fn validate_stress_divergence_shapes(
     grid: &Grid,
@@ -62,6 +105,210 @@ fn validate_stress_divergence_shapes(
             actual == expected,
             "invariant: {name} shape {actual:?} must match grid shape {expected:?}"
         );
+    }
+}
+
+fn try_stress_standard_layout(
+    lambda: &Array3<f64>,
+    mu: &Array3<f64>,
+    field: &ElasticWaveField,
+    scratch: &mut ElasticStepScratch,
+    shape: [usize; 3],
+    spacing: [f64; 3],
+) -> bool {
+    let (Some(ux), Some(uy), Some(uz), Some(lambda), Some(mu)) = (
+        field.ux.as_slice(),
+        field.uy.as_slice(),
+        field.uz.as_slice(),
+        lambda.as_slice(),
+        mu.as_slice(),
+    ) else {
+        return false;
+    };
+    let (Some(sxx), Some(sxy), Some(sxz), Some(syy), Some(syz), Some(szz)) = (
+        scratch.sxx.as_slice_mut(),
+        scratch.sxy.as_slice_mut(),
+        scratch.sxz.as_slice_mut(),
+        scratch.syy.as_slice_mut(),
+        scratch.syz.as_slice_mut(),
+        scratch.szz.as_slice_mut(),
+    ) else {
+        return false;
+    };
+    let fields = [
+        FlatField(ux),
+        FlatField(uy),
+        FlatField(uz),
+        FlatField(lambda),
+        FlatField(mu),
+    ];
+    let [_, ny, nz] = shape;
+    for_each_chunk_buffers_mut_enumerated_with::<Adaptive, _, _, 6>(
+        [sxx, sxy, sxz, syy, syz, szz],
+        STRESS_CHUNK,
+        |chunk_idx, [sxx, sxy, sxz, syy, syz, szz]| {
+            let start = chunk_idx * STRESS_CHUNK;
+            let mut position = GridPosition::from_flat(start, ny, nz);
+            for offset in 0..sxx.len() {
+                let [xx, xy, xz, yy, yz, zz] = stress_components(
+                    fields,
+                    StencilPoint {
+                        index: start + offset,
+                        position: position.coordinates(),
+                        shape,
+                        spacing,
+                    },
+                );
+                sxx[offset] = xx;
+                sxy[offset] = xy;
+                sxz[offset] = xz;
+                syy[offset] = yy;
+                syz[offset] = yz;
+                szz[offset] = zz;
+                position.advance();
+            }
+        },
+    )
+    .expect("invariant: validated stress fields have equal lengths");
+    true
+}
+
+fn stress_strided_layout(
+    lambda: &Array3<f64>,
+    mu: &Array3<f64>,
+    field: &ElasticWaveField,
+    scratch: &mut ElasticStepScratch,
+    shape: [usize; 3],
+    spacing: [f64; 3],
+) {
+    let fields = [
+        StridedField(field.ux.view()),
+        StridedField(field.uy.view()),
+        StridedField(field.uz.view()),
+        StridedField(lambda.view()),
+        StridedField(mu.view()),
+    ];
+    let mut sxx = scratch.sxx.view_mut();
+    let mut sxy = scratch.sxy.view_mut();
+    let mut sxz = scratch.sxz.view_mut();
+    let mut syy = scratch.syy.view_mut();
+    let mut syz = scratch.syz.view_mut();
+    let mut szz = scratch.szz.view_mut();
+    let mut index = 0;
+    for i in 0..shape[0] {
+        for j in 0..shape[1] {
+            for k in 0..shape[2] {
+                let point = StencilPoint {
+                    index,
+                    position: [i, j, k],
+                    shape,
+                    spacing,
+                };
+                let [xx, xy, xz, yy, yz, zz] = stress_components(fields, point);
+                sxx[[i, j, k]] = xx;
+                sxy[[i, j, k]] = xy;
+                sxz[[i, j, k]] = xz;
+                syy[[i, j, k]] = yy;
+                syz[[i, j, k]] = yz;
+                szz[[i, j, k]] = zz;
+                index += 1;
+            }
+        }
+    }
+}
+
+fn try_divergence_standard_layout(
+    scratch: &mut ElasticStepScratch,
+    shape: [usize; 3],
+    spacing: [f64; 3],
+) -> bool {
+    let (Some(sxx), Some(sxy), Some(sxz), Some(syy), Some(syz), Some(szz)) = (
+        scratch.sxx.as_slice(),
+        scratch.sxy.as_slice(),
+        scratch.sxz.as_slice(),
+        scratch.syy.as_slice(),
+        scratch.syz.as_slice(),
+        scratch.szz.as_slice(),
+    ) else {
+        return false;
+    };
+    let (Some(div_x), Some(div_y), Some(div_z)) = (
+        scratch.div_x.as_slice_mut(),
+        scratch.div_y.as_slice_mut(),
+        scratch.div_z.as_slice_mut(),
+    ) else {
+        return false;
+    };
+    let fields = [
+        FlatField(sxx),
+        FlatField(sxy),
+        FlatField(sxz),
+        FlatField(syy),
+        FlatField(syz),
+        FlatField(szz),
+    ];
+    let [_, ny, nz] = shape;
+    for_each_chunk_triple_mut_enumerated_with::<Adaptive, _, _, _, _>(
+        div_x,
+        div_y,
+        div_z,
+        STRESS_CHUNK,
+        |chunk_idx, div_x, div_y, div_z| {
+            let start = chunk_idx * STRESS_CHUNK;
+            let mut position = GridPosition::from_flat(start, ny, nz);
+            for offset in 0..div_x.len() {
+                let [x, y, z] = divergence_components(
+                    fields,
+                    StencilPoint {
+                        index: start + offset,
+                        position: position.coordinates(),
+                        shape,
+                        spacing,
+                    },
+                );
+                div_x[offset] = x;
+                div_y[offset] = y;
+                div_z[offset] = z;
+                position.advance();
+            }
+        },
+    );
+    true
+}
+
+fn divergence_strided_layout(
+    scratch: &mut ElasticStepScratch,
+    shape: [usize; 3],
+    spacing: [f64; 3],
+) {
+    let fields = [
+        StridedField(scratch.sxx.view()),
+        StridedField(scratch.sxy.view()),
+        StridedField(scratch.sxz.view()),
+        StridedField(scratch.syy.view()),
+        StridedField(scratch.syz.view()),
+        StridedField(scratch.szz.view()),
+    ];
+    let mut div_x = scratch.div_x.view_mut();
+    let mut div_y = scratch.div_y.view_mut();
+    let mut div_z = scratch.div_z.view_mut();
+    let mut index = 0;
+    for i in 0..shape[0] {
+        for j in 0..shape[1] {
+            for k in 0..shape[2] {
+                let point = StencilPoint {
+                    index,
+                    position: [i, j, k],
+                    shape,
+                    spacing,
+                };
+                let [x, y, z] = divergence_components(fields, point);
+                div_x[[i, j, k]] = x;
+                div_y[[i, j, k]] = y;
+                div_z[[i, j, k]] = z;
+                index += 1;
+            }
+        }
     }
 }
 
@@ -99,131 +346,13 @@ pub fn stress_divergence_into(
 ) {
     validate_stress_divergence_shapes(grid, lambda, mu, field, scratch);
 
-    let [nx, ny, nz] = field.ux.shape();
-    let dx = grid.dx;
-    let dy = grid.dy;
-    let dz = grid.dz;
-
-    let ux = field.ux.view();
-    let uy = field.uy.view();
-    let uz = field.uz.view();
-
-    // --- Pass 1: all six stress components ---
-    //
-    // Theorem (race-freedom): each output element σ[i,j,k] is written exactly
-    // once; ux/uy/uz/λ/μ are read-only views captured by the closure.
-    //
-    {
-        let sxx_slice = scratch
-            .sxx
-            .as_slice_mut()
-            .expect("sxx: standard-layout asserted just above; layout matched");
-        let syy_slice = scratch
-            .syy
-            .as_slice_mut()
-            .expect("syy: standard-layout asserted just above; layout matched");
-        let szz_slice = scratch
-            .szz
-            .as_slice_mut()
-            .expect("szz: standard-layout asserted just above; layout matched");
-        let sxy_slice = scratch
-            .sxy
-            .as_slice_mut()
-            .expect("sxy: standard-layout asserted just above; layout matched");
-        let sxz_slice = scratch
-            .sxz
-            .as_slice_mut()
-            .expect("sxz: standard-layout asserted just above; layout matched");
-        let syz_slice = scratch
-            .syz
-            .as_slice_mut()
-            .expect("syz: standard-layout asserted just above; layout matched");
-        for_each_chunk_buffers_mut_enumerated_with::<Adaptive, _, _, 6>(
-            [
-                sxx_slice, sxy_slice, sxz_slice, syy_slice, syz_slice, szz_slice,
-            ],
-            STRESS_CHUNK,
-            |chunk_idx, [sxx_chunk, sxy_chunk, sxz_chunk, syy_chunk, syz_chunk, szz_chunk]| {
-                let start = chunk_idx * STRESS_CHUNK;
-                for offset in 0..sxx_chunk.len() {
-                    let idx = start + offset;
-                    let i = idx / (ny * nz);
-                    let j = (idx / nz) % ny;
-                    let k = idx % nz;
-                    let exx = fd1_x(ux, i, j, k, nx, dx);
-                    let eyy = fd1_y(uy, i, j, k, ny, dy);
-                    let ezz = fd1_z(uz, i, j, k, nz, dz);
-                    let exy_2 = fd1_y(ux, i, j, k, ny, dy) + fd1_x(uy, i, j, k, nx, dx);
-                    let exz_2 = fd1_z(ux, i, j, k, nz, dz) + fd1_x(uz, i, j, k, nx, dx);
-                    let eyz_2 = fd1_z(uy, i, j, k, nz, dz) + fd1_y(uz, i, j, k, ny, dy);
-                    let la = lambda[[i, j, k]];
-                    let mv = mu[[i, j, k]];
-                    let la2mu = 2.0f64.mul_add(mv, la);
-                    sxx_chunk[offset] = la2mu.mul_add(exx, la * (eyy + ezz));
-                    syy_chunk[offset] = la2mu.mul_add(eyy, la * (exx + ezz));
-                    szz_chunk[offset] = la2mu.mul_add(ezz, la * (exx + eyy));
-                    sxy_chunk[offset] = mv * exy_2;
-                    sxz_chunk[offset] = mv * exz_2;
-                    syz_chunk[offset] = mv * eyz_2;
-                }
-            },
-        )
-        .expect("invariant: elastic stress scratch fields have equal lengths");
+    let shape = field.ux.shape();
+    let spacing = [grid.dx, grid.dy, grid.dz];
+    if !try_stress_standard_layout(lambda, mu, field, scratch, shape, spacing) {
+        stress_strided_layout(lambda, mu, field, scratch, shape, spacing);
     }
-
-    // --- Pass 2: ∇·σ (parallelised over i-j-k) ---
-    //
-    // σ arrays are fully computed above (mutable borrows released); taking
-    // read-only views here is safe.  div_{x,y,z} elements are written exactly
-    // once and are independent across iterations → race-free.
-    //
-    // NLL field-split borrow: sxx_v … syz_v borrow distinct fields of
-    // `scratch` immutably; div_{x,y,z}.view_mut() borrow three other distinct
-    // fields mutably.  These coexist without conflict.
-    let sxx_v = scratch.sxx.view();
-    let syy_v = scratch.syy.view();
-    let szz_v = scratch.szz.view();
-    let sxy_v = scratch.sxy.view();
-    let sxz_v = scratch.sxz.view();
-    let syz_v = scratch.syz.view();
-
-    {
-        let div_x_slice = scratch
-            .div_x
-            .as_slice_mut()
-            .expect("div_x: standard-layout asserted just above; layout matched");
-        let div_y_slice = scratch
-            .div_y
-            .as_slice_mut()
-            .expect("div_y: standard-layout asserted just above; layout matched");
-        let div_z_slice = scratch
-            .div_z
-            .as_slice_mut()
-            .expect("div_z: standard-layout asserted just above; layout matched");
-        for_each_chunk_triple_mut_enumerated_with::<Adaptive, _, _, _, _>(
-            div_x_slice,
-            div_y_slice,
-            div_z_slice,
-            STRESS_CHUNK,
-            |chunk_idx, div_x_chunk, div_y_chunk, div_z_chunk| {
-                let start = chunk_idx * STRESS_CHUNK;
-                for offset in 0..div_x_chunk.len() {
-                    let idx = start + offset;
-                    let i = idx / (ny * nz);
-                    let j = (idx / nz) % ny;
-                    let k = idx % nz;
-                    div_x_chunk[offset] = fd1_x(sxx_v, i, j, k, nx, dx)
-                        + fd1_y(sxy_v, i, j, k, ny, dy)
-                        + fd1_z(sxz_v, i, j, k, nz, dz);
-                    div_y_chunk[offset] = fd1_x(sxy_v, i, j, k, nx, dx)
-                        + fd1_y(syy_v, i, j, k, ny, dy)
-                        + fd1_z(syz_v, i, j, k, nz, dz);
-                    div_z_chunk[offset] = fd1_x(sxz_v, i, j, k, nx, dx)
-                        + fd1_y(syz_v, i, j, k, ny, dy)
-                        + fd1_z(szz_v, i, j, k, nz, dz);
-                }
-            },
-        );
+    if !try_divergence_standard_layout(scratch, shape, spacing) {
+        divergence_strided_layout(scratch, shape, spacing);
     }
 }
 

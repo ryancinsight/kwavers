@@ -416,6 +416,15 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   scheduler dispatch and one full-grid pass per stress evaluation. Moirai PR
   #200 / merge `2b9c806` provides the const-generic homogeneous-buffer seam;
   its warmed six-buffer allocation census records zero provider allocations.
+- **Third-phase result:** PR #670's unchanged 16³ workflow still terminated at
+  60.018 s on hosted Linux despite the 42.379/43.004 s local results. Each
+  velocity-Verlet step evaluates stress twice, and each evaluation decoded
+  every flat voxel index with quotient/remainder operations in both stress
+  passes. The selected standard-layout path decodes once per 256-element chunk,
+  advances coordinates with carry increments, and preserves the public
+  coordinate-stencil implementation as the bitwise differential oracle. A
+  one-time layout dispatch retains those formulas as a zero-allocation fallback
+  for valid nonstandard inputs or outputs.
 - **Acceptance:** both ordinary propagation loops prepare an optional Gaussian
   force once before stepping and share one prepared-step helper; no-force output
   remains unchanged and direct/prepared nonzero fields compare under a derived
@@ -429,15 +438,21 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   history representation, numerical conventions, benchmark sampling, or any
   timeout bound.
 - **Current evidence:** a sequential, distinct-field 3-D differential plus the
-  analytical stress suite pass 10/10. A same-length shape-permutation
+  analytical, flat-coordinate, and nonstandard-layout focused suite passes
+  17/17. A same-length
+  shape-permutation
   regression proves the public in-place operation rejects an invalid scratch
   shape before changing any of its nine stress/divergence arrays. The unchanged
-  16³ workflow passes twice at 42.379 s and 43.004 s versus the 53.767 s entry
-  run, a 20.0–21.2% point reduction with identical workload and the standard
-  60-second bound. The complete `nl_swe_performance --test` smoke passes,
+  16³ workflow passes at 18.071 s after flat-coordinate traversal, versus
+  42.379/43.004 s after force preparation and 53.767 s at entry, with identical
+  workload and the standard 60-second bound. This is operational Nextest
+  evidence, not a Criterion throughput estimate. The complete solver library
+  suite passes 926/926 in 70.991 s; the complete `nl_swe_performance --test` smoke passes,
   including 16/32/64 propagation. Warning-denied library Clippy passes;
   all-target Clippy remains red on 94 pre-existing test/example diagnostics
-  outside this item.
+  outside this item. Focused release tests pass 17/17, doctests pass 5/5 with
+  eight environmental examples ignored, and warning-denied Rustdoc passes.
+  Hosted recollection of the corrected candidate remains pending.
 - **Hosted integration correction:** exact source `652dd5c54` exposed that the
   committed standalone lock still selected Moirai `f2afe2d4`, so hosted jobs
   could not import the merged six-buffer provider API even though the local
@@ -446,6 +461,33 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   all-target checking and the 10/10 stress suite pass against the Git source,
   and the lockfile guard confirms 91 first-party Git sources. Hosted
   recollection remains pending.
+
+## KW-SWE-PROPAGATION-PREFLIGHT-2026-08-29 — Validate propagation before mutation [patch] — review
+
+- **Outcome:** every `ElasticWaveSolver` propagation entry rejects malformed
+  public field shapes and invalid temporal domains before body-force
+  preparation, simulation allocation, recorder replacement, source-index
+  collection, or scheduler work; valid numerical behavior and public
+  signatures remain unchanged.
+- **Scope / non-goals:** one private allocation-free-on-success propagation
+  plan, the shared nonallocating CFL scan, six-component shape validation,
+  focused boundary tests, Rustdoc, and release records. Velocity-source signal
+  length semantics and direct public `TimeIntegrator::step` hardening remain
+  outside this patch.
+- **Acceptance:** component shapes reject in deterministic `ux,uy,uz,vx,vy,vz`
+  order; duration, configured/effective step, initial time, derived step count,
+  and end time reject with structural `ValidationError` values before mutation.
+  Signed zero selects automatic CFL, finite negative initial time remains valid,
+  and a positive duration below one step still executes once.
+- **Current evidence:** 18 malformed-shape cases and the duration/time-domain
+  matrix pass 6/6 through the public entries; invalid body-force preparation
+  loses to preflight, input fields and recorder contents remain unchanged, and
+  the complete solver library suite passes 926/926. Warning-denied library
+  Clippy passes. Focused release tests pass 17/17, doctests pass 5/5 with eight
+  environmental examples ignored, and warning-denied Rustdoc passes.
+  `cargo semver-checks` did not reach API analysis because its internal baseline
+  clone failed on the repository pack with "Entry too large to fit in memory";
+  hosted collection remains pending.
 
 ## KW-PR-BENCH-DUPLICATION-2026-08-29 — Remove duplicate PR smoke [patch] [ci] — todo
 

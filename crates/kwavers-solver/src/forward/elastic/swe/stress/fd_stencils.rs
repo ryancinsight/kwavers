@@ -64,6 +64,74 @@ pub fn fd1_z(f: ArrayView3<f64>, i: usize, j: usize, k: usize, nz: usize, dz: f6
     fd1_axis(f, [i, j, k], 2, nz, dz)
 }
 
+/// Read a standard-layout field at a signed axis offset from `index`.
+#[inline]
+fn shifted_flat(f: &[f64], index: usize, stride: usize, offset: isize) -> f64 {
+    let delta = offset.unsigned_abs() * stride;
+    let shifted_index = if offset.is_negative() {
+        index - delta
+    } else {
+        index + delta
+    };
+    f[shifted_index]
+}
+
+/// Standard-layout form of [`fd1_axis`] for the propagation hot path.
+#[inline]
+fn fd1_flat_axis(
+    f: &[f64],
+    index: usize,
+    coordinate: usize,
+    axis_len: usize,
+    stride: usize,
+    spacing: f64,
+) -> f64 {
+    if axis_len <= 1 {
+        return 0.0;
+    }
+    if coordinate < 2 || coordinate >= axis_len - 2 {
+        if coordinate == 0 {
+            (shifted_flat(f, index, stride, 1) - f[index]) / spacing
+        } else if coordinate == axis_len - 1 {
+            (f[index] - shifted_flat(f, index, stride, -1)) / spacing
+        } else {
+            (shifted_flat(f, index, stride, 1) - shifted_flat(f, index, stride, -1))
+                / (2.0 * spacing)
+        }
+    } else {
+        (8.0f64.mul_add(
+            -shifted_flat(f, index, stride, -1),
+            8.0f64.mul_add(
+                shifted_flat(f, index, stride, 1),
+                -shifted_flat(f, index, stride, 2),
+            ),
+        ) + shifted_flat(f, index, stride, -2))
+            / (12.0 * spacing)
+    }
+}
+
+#[inline]
+pub(super) fn fd1_flat_x(
+    f: &[f64],
+    index: usize,
+    i: usize,
+    nx: usize,
+    yz_len: usize,
+    dx: f64,
+) -> f64 {
+    fd1_flat_axis(f, index, i, nx, yz_len, dx)
+}
+
+#[inline]
+pub(super) fn fd1_flat_y(f: &[f64], index: usize, j: usize, ny: usize, nz: usize, dy: f64) -> f64 {
+    fd1_flat_axis(f, index, j, ny, nz, dy)
+}
+
+#[inline]
+pub(super) fn fd1_flat_z(f: &[f64], index: usize, k: usize, nz: usize, dz: f64) -> f64 {
+    fd1_flat_axis(f, index, k, nz, 1, dz)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -172,6 +240,36 @@ mod tests {
         for i in 2..n - 2 {
             let x = i as f64 * dx;
             assert!((fd1_x(v, i, 0, 0, n, dx) - 3.0 * x * x).abs() < 1e-9);
+        }
+    }
+
+    #[test]
+    fn flat_stencils_match_public_coordinate_stencils_bitwise() {
+        let shape = [7, 6, 5];
+        let field = Array3::from_shape_fn(shape, |[i, j, k]| (i * 31 + j * 7 + k) as f64 * 0.125);
+        let values = field
+            .as_slice()
+            .expect("invariant: test field uses standard layout");
+        let view = field.view();
+        let yz_len = shape[1] * shape[2];
+        for i in 0..shape[0] {
+            for j in 0..shape[1] {
+                for k in 0..shape[2] {
+                    let index = i * yz_len + j * shape[2] + k;
+                    assert_eq!(
+                        fd1_flat_x(values, index, i, shape[0], yz_len, 0.25),
+                        fd1_x(view, i, j, k, shape[0], 0.25)
+                    );
+                    assert_eq!(
+                        fd1_flat_y(values, index, j, shape[1], shape[2], 0.5),
+                        fd1_y(view, i, j, k, shape[1], 0.5)
+                    );
+                    assert_eq!(
+                        fd1_flat_z(values, index, k, shape[2], 0.75),
+                        fd1_z(view, i, j, k, shape[2], 0.75)
+                    );
+                }
+            }
         }
     }
 }

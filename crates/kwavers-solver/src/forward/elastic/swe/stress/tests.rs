@@ -3,6 +3,23 @@ use super::*;
 use kwavers_grid::Grid;
 use leto::Array3;
 
+fn from_shape_fn_fortran<F>(shape: [usize; 3], mut f: F) -> Array3<f64>
+where
+    F: FnMut([usize; 3]) -> f64,
+{
+    let layout = leto::Layout::f_contiguous(shape).expect("f-contiguous layout");
+    let [d0, d1, d2] = shape;
+    let mut data = vec![0.0; d0 * d1 * d2];
+    for i in 0..d0 {
+        for j in 0..d1 {
+            for k in 0..d2 {
+                data[i + j * d0 + k * d0 * d1] = f([i, j, k]);
+            }
+        }
+    }
+    leto::Array::new(layout, leto::VecStorage::new(data)).expect("valid f-contiguous array")
+}
+
 /// fd1_x on a linear field f = A*x gives the constant A at all interior points.
 /// # Panics
 /// - Panics if an internal precondition is violated.
@@ -315,6 +332,68 @@ fn fused_stress_traversal_matches_sequential_reference_exactly() {
     assert_eq!(fused.div_x, expected.0);
     assert_eq!(fused.div_y, expected.1);
     assert_eq!(fused.div_z, expected.2);
+}
+
+#[test]
+fn strided_stress_inputs_and_outputs_match_standard_layout_exactly() {
+    let shape = [7, 6, 5];
+    let [nx, ny, nz] = shape;
+    let grid = Grid::new(nx, ny, nz, 0.7e-3, 1.1e-3, 1.3e-3).expect("grid");
+    let lambda_value = |[i, j, k]: [usize; 3]| 2.0e6 + (i * 37 + j * 11 + k * 5) as f64;
+    let mu_value = |[i, j, k]: [usize; 3]| 0.8e6 + (i * 17 + j * 29 + k * 13) as f64;
+    let ux_value = |[i, j, k]: [usize; 3]| ((i * 13 + j * 7 + k * 3) as f64 * 0.037).sin();
+    let uy_value = |[i, j, k]: [usize; 3]| ((i * 5 + j * 19 + k * 11) as f64 * 0.041).cos();
+    let uz_value = |[i, j, k]: [usize; 3]| ((i * 23 + j * 2 + k * 17) as f64 * 0.029).sin();
+
+    let lambda = Array3::from_shape_fn(shape, lambda_value);
+    let mu = Array3::from_shape_fn(shape, mu_value);
+    let mut field = ElasticWaveField::new(nx, ny, nz);
+    field.ux = Array3::from_shape_fn(shape, ux_value);
+    field.uy = Array3::from_shape_fn(shape, uy_value);
+    field.uz = Array3::from_shape_fn(shape, uz_value);
+    let mut expected = ElasticStepScratch::new(nx, ny, nz);
+    stress_divergence_into(&grid, &lambda, &mu, &field, &mut expected);
+
+    let strided_lambda = from_shape_fn_fortran(shape, lambda_value);
+    let strided_mu = from_shape_fn_fortran(shape, mu_value);
+    let mut strided_field = ElasticWaveField::new(nx, ny, nz);
+    strided_field.ux = from_shape_fn_fortran(shape, ux_value);
+    strided_field.uy = from_shape_fn_fortran(shape, uy_value);
+    strided_field.uz = from_shape_fn_fortran(shape, uz_value);
+    let mut actual = ElasticStepScratch::new(nx, ny, nz);
+    actual.sxx = from_shape_fn_fortran(shape, |_| f64::NAN);
+    actual.sxy = from_shape_fn_fortran(shape, |_| f64::NAN);
+    actual.sxz = from_shape_fn_fortran(shape, |_| f64::NAN);
+    actual.syy = from_shape_fn_fortran(shape, |_| f64::NAN);
+    actual.syz = from_shape_fn_fortran(shape, |_| f64::NAN);
+    actual.szz = from_shape_fn_fortran(shape, |_| f64::NAN);
+    actual.div_x = from_shape_fn_fortran(shape, |_| f64::NAN);
+    actual.div_y = from_shape_fn_fortran(shape, |_| f64::NAN);
+    actual.div_z = from_shape_fn_fortran(shape, |_| f64::NAN);
+    assert!(strided_field.ux.as_slice().is_none());
+    assert!(actual.sxx.as_slice().is_none());
+
+    stress_divergence_into(
+        &grid,
+        &strided_lambda,
+        &strided_mu,
+        &strided_field,
+        &mut actual,
+    );
+
+    for (actual, expected) in [
+        (&actual.sxx, &expected.sxx),
+        (&actual.sxy, &expected.sxy),
+        (&actual.sxz, &expected.sxz),
+        (&actual.syy, &expected.syy),
+        (&actual.syz, &expected.syz),
+        (&actual.szz, &expected.szz),
+        (&actual.div_x, &expected.div_x),
+        (&actual.div_y, &expected.div_y),
+        (&actual.div_z, &expected.div_z),
+    ] {
+        assert_eq!(actual, expected);
+    }
 }
 
 #[test]
