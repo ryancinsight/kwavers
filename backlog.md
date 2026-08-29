@@ -67,30 +67,41 @@
 - **Non-goals:** changing Leto/Hephaestus selection, source semantics, GPU
   command batching, readback ownership, or unrelated PSTD allocations.
 
-## KW-SIM-TEST-COMPILE-GRAPH — Reduce simulation test build latency [patch] [perf] — todo
+## KW-SIM-TEST-COMPILE-GRAPH — Reduce simulation test build latency [patch] [perf] — in progress
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-SIM-TEST-COMPILE-GRAPH | Reduce the cold compile/link cost of the GPU-enabled simulation and Python test harnesses while retaining all value-semantic tests. | [patch] [perf] | todo | unowned | `kwavers-simulation` and `kwavers-python` dependency/feature graphs, test-only imports, and build-timing instrumentation |
+| KW-SIM-TEST-COMPILE-GRAPH | Reduce the cold compile/link cost of the GPU-enabled simulation and Python test harnesses while retaining all value-semantic tests. | [patch] [perf] | in progress | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `kwavers-simulation` and `kwavers-python` dependency/feature graphs, test-only imports, and build-timing instrumentation |
 
-- **Evidence:** `cargo nextest run --offline -p kwavers-simulation --features
-  gpu` spent 2m37s compiling the transitive graph, then executed all 100 tests
-  in 0.617s. The matching GPU-enabled Python run spent 2m15s compiling, then
-  executed all 21 tests in 1.661s. Test runtime is not the bottleneck.
+- **Entry baseline:** `cargo nextest run --offline -p kwavers-simulation
+  --features gpu` spent 2m37s compiling the transitive graph, then executed 100
+  tests in 0.617s. The matching GPU-enabled Python run spent 2m15s compiling,
+  then executed 21 tests in 1.661s. The simulation count was not bound to an
+  exact test-ID list and is superseded as the workload oracle below; test
+  runtime is not the bottleneck.
 - **Graph attribution:** the committed offline graph contains 431 normal/dev
   packages for GPU simulation and 444 for GPU Python; all 431 simulation
   packages are shared, with only 13 Python-only packages. Each crate already
   produces one Rust test binary, so integration-target count is not the cause.
+- **Workload oracle:** exact `cargo nextest list` comparison on the current tree
+  reports 106 runnable simulation tests plus one ignored real-device test and
+  21 runnable Python tests. The feature-unified list is exactly the 127-test
+  runnable union (`Compare-Object` delta zero). The earlier six-test discrepancy
+  came from comparing the current list with the unpinned 100-test timing record,
+  not from feature unification adding or dropping tests.
 - **Bounded experiment:** one feature-unified Nextest invocation compiled in
-  1m41s and passed the current 127/127 tests across both binaries in 2.021s,
-  with one expected skip. This validates the command/test surface, not a speedup:
-  the shared cache was partially warm. A controlled cold run must beat the
-  prior 4m52s aggregate without changing the 127-test workload; no reduction
-  or a test-count mismatch falsifies the consolidation hypothesis.
-- **Acceptance:** compiler timing attributes the dominant crates and link work;
-  the same 100 simulation and 21 Python tests and assertions remain; no private
-  target cache, feature bypass, workload reduction, or timeout increase; cold
-  controlled reruns are materially below the 2m37s and 2m15s baselines.
+  1m41s and passed the current 127/127 runnable tests across both binaries in
+  2.021s, with the real-device test still ignored. This validates the command
+  and test surface, not a speedup: the shared cache was partially warm. Two
+  controlled cold 4-core Linux runs must each compile in at most 181 seconds
+  (the slower 157-second isolated baseline plus 15% for the second root/link),
+  versus the prior 292-second aggregate. A test-ID delta or slower confirmation
+  falsifies consolidation; timing then selects one dominant crate or link unit.
+- **Acceptance:** compiler timing attributes the critical path, rustc unit count,
+  and both link units; the exact isolated test-ID union equals the combined set
+  with unchanged outcomes and skips; no private target cache, feature bypass,
+  workload reduction, or timeout increase; two fresh controlled cold runs meet
+  the 181-second compile ceiling.
 
 ## KW-INTEGRATION-FAILURE-DIAGNOSTICS — Preserve failed-test output [patch] — review
 
