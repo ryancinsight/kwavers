@@ -47,6 +47,29 @@
   7 x 4 x 3 passes in 0.900 s; the selector-level Hephaestus run passes in
   0.711 s.
 
+## KW-FDTD-DEBUG-SCAN — Remove duplicate debug scans [patch] [perf] — in progress
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-FDTD-DEBUG-SCAN | Keep the unchanged CPML workload below its bound by scanning each completed FDTD field phase once when no source can mutate it, while preserving source diagnostics and semantics for both temporal schemes. | [patch] [perf] | in progress | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | FDTD stepping/tests, `.config/nextest.toml`, focused evidence, release notes |
+
+- **Entry evidence:** run `33229687715` timed out
+  `test_cpml_stable_across_thicknesses` at the unchanged 60-second bound. The
+  source-free path performed duplicate full-field scans per phase, while
+  Yoshida returned before the once-per-step velocity-source phase.
+- **Acceptance:** both temporal schemes inject velocity sources exactly once;
+  source-free debug phases scan once while source-bearing phases preserve
+  before/after attribution; the unchanged CPML sweep and analytical source
+  regression pass; full-grid tests reserve every Nextest slot without changing
+  filters, workloads, assertions, or timeouts.
+- **Candidate evidence:** source commit `41576260e` passes the combined debug
+  run 2/2 in 16.301 s (CPML 16.269 s; source regression 0.018 s), the exact
+  release regression at 0.016 s, solver-library warning-denied Clippy, and
+  formatting. Installed Nextest assigns all four CPML cases to
+  `full-grid-sim`; hosted 4-core confirmation remains.
+- **Independent review:** GREEN at exact source commit `41576260e`; the static
+  source, diagnostics, test oracle, config, and scope contracts match.
+
 ## KW-SIM-TEST-COMPILE-GRAPH — Reduce simulation test build latency [patch] [perf] — todo
 
 | ID | Outcome | Class | Status | Owner | Scope |
