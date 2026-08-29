@@ -1,10 +1,10 @@
 # Backlog / Strategy
 
-## KW-FFT-HEPHAESTUS-BACKEND-SELECTOR — Select Leto or Hephaestus FFT execution [major] [arch] — IMPLEMENTED 2026-08-27
+## KW-FFT-HEPHAESTUS-BACKEND-SELECTOR — Select Leto or Hephaestus FFT execution [major] [arch] — delivery
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-FFT-HEPHAESTUS-BACKEND-SELECTOR | Provide one explicit 1-D, 2-D, and 3-D FFT backend selector whose closed variants are Leto and Hephaestus. | [major] [arch] | IMPLEMENTED | unowned | `crates/kwavers-math/src/fft/`, `crates/kwavers-gpu/src/pstd_gpu/`, affected simulation configuration, provider pins, ADR 125, and synchronized docs/tests |
+| KW-FFT-HEPHAESTUS-BACKEND-SELECTOR | Provide one explicit 1-D, 2-D, and 3-D FFT backend selector whose closed variants are Leto and Hephaestus. | [major] [arch] | delivery | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `crates/kwavers-math/src/fft/`, `crates/kwavers-gpu/src/pstd_gpu/`, affected simulation configuration, provider pins, ADR 125, and synchronized docs/tests |
 
 - **Ownership:** the `Leto` variant uses Apollo's CPU FFT arithmetic over Leto
   storage; the `Hephaestus` variant uses Hephaestus's prepared GPU FFT provider.
@@ -38,7 +38,7 @@
   equal-count cache-index changes, shared snapshot absorption ownership and
   exponent rejection, sensor-shape validation, and unsupported solver/backend
   selection. Independent exact-revision review passed with no blocking findings;
-  PR #663 merged at `dddb75c12806457828dd53744db1f50b9f0c3217`.
+  delivery is PR #663.
 - **Provider evidence:** Hephaestus PRs #222 (`cfadc373`) and #223
   (`44362a16`) supply arbitrary-rank prepared FFT and fused multidimensional
   scheduling. On 256 x 128 x 128, six transforms improved from 13.810 ms to
@@ -47,151 +47,88 @@
   7 x 4 x 3 passes in 0.900 s; the selector-level Hephaestus run passes in
   0.711 s.
 
-## KW-PSTD-SOURCE-ACTIVITY-CACHE — Retain warm source-step maps [patch] [perf] — in progress
+## KW-FDTD-DEBUG-SCAN — Remove duplicate debug scans [patch] [perf] — in progress
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-PSTD-SOURCE-ACTIVITY-CACHE | Remove the two host allocations used to classify pressure and velocity source activity on every reusable GPU PSTD run. | [patch] [perf] | in progress | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `crates/kwavers-gpu/src/pstd_gpu/state.rs`, `pipeline/construction/solver.rs`, `time_loop/run.rs`, focused tests and release notes |
+| KW-FDTD-DEBUG-SCAN | Keep the unchanged CPML workload below its bound by scanning each completed FDTD field phase once when no source can mutate it, while preserving source diagnostics and semantics for both temporal schemes. | [patch] [perf] | in progress | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | FDTD stepping/tests, `.config/nextest.toml`, focused evidence, release notes |
 
-- **Lease:** Codex owns the listed source/test/documentation regions through
-  the next verified commit on `codex/kwavers-pstd-source-activity-cache`.
-- **Evidence:** `run_pstd` calls `active_source_steps` twice; each call creates
-  a `Vec<bool>` of `nt` entries before encoding the retained Hephaestus time
-  loop. The source matrices and solver time-step count are already validated,
-  and `WgpuPstdState` already retains fixed-length host scratch.
-- **Acceptance:** construction retains two fixed-length `nt` activity maps;
-  each run clears and refills them through an allocation-incapable slice API;
-  repeated distinct pressure/velocity matrices preserve source-major values
-  without stale flags; focused warning-denied Clippy and Nextest pass; no FFT
-  backend branch, transform kernel, workload, assertion, or timeout changes.
-- **Non-goals:** changing Leto/Hephaestus selection, source semantics, GPU
-  command batching, readback ownership, or unrelated PSTD allocations.
-
-## KW-FDTD-DEBUG-SCAN — Remove duplicate debug scans [patch] [perf] — review
-
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-FDTD-DEBUG-SCAN | Keep the unchanged CPML integration workload below its committed bound by scanning each completed FDTD field phase once when no source can mutate it, while preserving source-phase diagnostics and source semantics for both temporal schemes. | [patch] [perf] | review | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `crates/kwavers-solver/src/forward/fdtd/solver/{stepping.rs,tests.rs}`, `.config/nextest.toml`, CPML focused evidence, release notes |
-
-- **Entry evidence:** hosted run `33229687715` timed out
+- **Entry evidence:** run `33229687715` timed out
   `test_cpml_stable_across_thicknesses` at the unchanged 60-second bound. The
-  source-free scenario performs two full scans of each velocity component and
-  two full pressure scans per step even though no source mutates either field
-  between each pair. The Yoshida branch also returns before the velocity-source
-  injection that its own contract says occurs once per completed step.
-- **Acceptance:** both temporal schemes inject velocity sources exactly once
-  after propagation; debug builds retain phase-local NaN detection but perform
-  only one post-phase scan when no corresponding source can mutate the field;
-  a value-semantic Yoshida velocity-source regression and the unchanged CPML
-  thickness sweep pass under the committed Nextest budget; warning-denied
-  Clippy, formatting, and documentation synchronization pass. Full-grid tests
-  reserve every configured Nextest slot, preventing unrelated test processes
-  from competing with their internal worker pools.
-- **Candidate evidence (2026-08-29):** the combined debug run passed the
-  unchanged CPML thickness sweep at 16.269 s and the two-scheme analytical
-  velocity-source regression at 0.018 s (2/2, 16.301 s total). The exact
-  release regression passed at 0.016 s after a warning-clean rebuild. Solver
-  library Clippy with warnings denied and workspace formatting pass; the
-  all-target solver Clippy remains red on 94 pre-existing diagnostics outside
-  the touched files. `show-config` assigns all four CPML tests to
+  source-free path performed duplicate full-field scans per phase, while
+  Yoshida returned before the once-per-step velocity-source phase.
+- **Acceptance:** both temporal schemes inject velocity sources exactly once;
+  source-free debug phases scan once while source-bearing phases preserve
+  before/after attribution; the unchanged CPML sweep and analytical source
+  regression pass; full-grid tests reserve every Nextest slot without changing
+  filters, workloads, assertions, or timeouts.
+- **Candidate evidence:** source commit `41576260e` passes the combined debug
+  run 2/2 in 16.301 s (CPML 16.269 s; source regression 0.018 s), the exact
+  release regression at 0.016 s, solver-library warning-denied Clippy, and
+  formatting. Installed Nextest assigns all four CPML cases to
   `full-grid-sim`; hosted 4-core confirmation remains.
-- **Independent review:** GREEN at exact source commit `41576260e`; source,
-  diagnostics, test-oracle, Nextest configuration, and scope contracts match.
-  The byte-identical source/config/test blobs are rebased onto PR #667 at exact
-  candidate `8876091c6`; hosted run `33232399431` is the remaining closure.
-- **Lease:** none; the source increment is committed, pushed, reviewed, and
-  submitted to the hosted exact-candidate gate.
+- **Independent review:** GREEN at exact source commit `41576260e`; the static
+  source, diagnostics, test oracle, config, and scope contracts match.
 
-## KW-SIM-TEST-COMPILE-GRAPH — Reduce simulation test build latency [patch] [perf] — blocked
+## KW-SIM-TEST-COMPILE-GRAPH — Reduce simulation test build latency [patch] [perf] — todo
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-SIM-TEST-COMPILE-GRAPH | Reduce the cold compile/link cost of the GPU-enabled simulation and Python test harnesses while retaining all value-semantic tests. | [patch] [perf] | blocked | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `kwavers-simulation` and `kwavers-python` dependency/feature graphs, test-only imports, and build-timing instrumentation |
+| KW-SIM-TEST-COMPILE-GRAPH | Reduce the cold compile/link cost of the GPU-enabled simulation and Python test harnesses while retaining all value-semantic tests. | [patch] [perf] | todo | unowned | `kwavers-simulation` and `kwavers-python` dependency/feature graphs, test-only imports, and build-timing instrumentation |
 
-- **Entry baseline:** `cargo nextest run --offline -p kwavers-simulation
-  --features gpu` spent 2m37s compiling the transitive graph, then executed 100
-  tests in 0.617s. The matching GPU-enabled Python run spent 2m15s compiling,
-  then executed 21 tests in 1.661s. The simulation count was not bound to an
-  exact test-ID list and is superseded as the workload oracle below; test
-  runtime is not the bottleneck.
-- **Graph attribution:** the committed offline graph contains 431 normal/dev
-  packages for GPU simulation and 444 for GPU Python; all 431 simulation
-  packages are shared, with only 13 Python-only packages. Each crate already
-  produces one Rust test binary, so integration-target count is not the cause.
-- **Workload oracle:** exact `cargo nextest list` comparison on the current tree
-  reports 106 runnable simulation tests plus one ignored real-device test and
-  21 runnable Python tests. The feature-unified list is exactly the 127-test
-  runnable union (`Compare-Object` delta zero). The earlier six-test discrepancy
-  came from comparing the current list with the unpinned 100-test timing record,
-  not from feature unification adding or dropping tests.
-- **Bounded experiment:** one feature-unified Nextest invocation compiled in
-  1m41s and passed the current 127/127 runnable tests across both binaries in
-  2.021s, with the real-device test still ignored. This validates the command
-  and test surface, not a speedup: the shared cache was partially warm. Two
-  controlled cold 4-core Linux runs must each compile in at most 181 seconds
-  (the slower 157-second isolated baseline plus 15% for the second root/link),
-  versus the prior 292-second aggregate. A test-ID delta or slower confirmation
-  falsifies consolidation; timing then selects one dominant crate or link unit.
-- **Acceptance:** compiler timing attributes the critical path, rustc unit count,
-  and both link units; the exact isolated test-ID union equals the combined set
-  with unchanged outcomes and skips; no private target cache, feature bypass,
-  workload reduction, or timeout increase; two fresh controlled cold runs meet
-  the 181-second compile ceiling.
-- **Blocker:** the two fresh equivalent 4-core Linux timing runs are not yet
-  available. Re-open when a clean hosted runner can execute the recorded
-  command without changing the canonical target-cache policy.
+- **Evidence:** `cargo nextest run --offline -p kwavers-simulation --features
+  gpu` spent 2m37s compiling the transitive graph, then executed all 100 tests
+  in 0.617s. The matching GPU-enabled Python run spent 2m15s compiling, then
+  executed all 21 tests in 1.661s. Test runtime is not the bottleneck.
+- **Acceptance:** compiler timing attributes the dominant crates and link work;
+  the same 100 simulation and 21 Python tests and assertions remain; no private
+  target cache, feature bypass, workload reduction, or timeout increase; cold
+  controlled reruns are materially below the 2m37s and 2m15s baselines.
 
 ## KW-INTEGRATION-FAILURE-DIAGNOSTICS — Preserve failed-test output [patch] — review
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-INTEGRATION-FAILURE-DIAGNOSTICS | Preserve bounded assertion diagnostics for integration failures so numerical defects can be diagnosed from the originating run. | [patch] | review | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `scripts/integration_tests.py`, `scripts/tests/test_integration_tests.py`, release notes |
+| KW-INTEGRATION-FAILURE-DIAGNOSTICS | Preserve bounded assertion diagnostics for integration failures so numerical defects can be diagnosed from the originating run. | [patch] | review | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `scripts/integration_tests.py`, focused tests, release notes |
 
-- **Evidence:** hosted integration failures report only Nextest status lines.
-  The runner retains bounded stdout and stderr tails but prints them only for
-  suite-level timeout, cleanup, or missing-summary failures; ordinary failed
-  tests discard the assertion values needed for root-cause analysis.
-- **Acceptance:** request final failed-test output from Nextest; print only the
-  existing bounded tails when an ordinary failure occurs; preserve commands,
-  workloads, profiles, assertions, and timeout bounds; unit tests prove the
-  command contract and both failure-status and assertion diagnostics.
-- **Implementation evidence:** the command selects final failure output and the
-  ordinary-failure path emits the same 4,000-character-capped tails used by
-  suite-level diagnostics. The full script suite passes 6/6 on Windows, with
-  the expected POSIX-only process-group case skipped; Python compilation and
+- **Evidence:** hosted integration failures exposed only Nextest status lines.
+  The runner retained bounded stdout/stderr tails but emitted them only for
+  suite timeout, cleanup failure, or a missing summary.
+- **Acceptance:** request final failed-test output; emit only the existing
+  4,000-character-capped tails for ordinary failures; preserve commands,
+  workloads, profiles, assertions, and timeout bounds; prove concrete failure
+  identity and assertion values through the runner contract.
+- **Implementation evidence:** the isolated script suite passes 6/6 applicable
+  tests on Windows with one platform-expected skip; Python compilation and
   `git diff --check` pass.
-- **Independent review:** GREEN at exact implementation `e47b44a08`; static
-  command, bound, value-test, PM, and release-note contracts match. A real
-  hosted Rust assertion remains the end-to-end formatting/output oracle.
-- **Lease:** none after the implementation commit; exact-revision independent
-  review is complete and hosted output collection remains before merge.
+- **Independent review:** GREEN at exact source commit `e47b44a08`; the command
+  uses supported Nextest `--failure-output final`, retained outputs stay
+  bounded, and tests assert the concrete failure and values. Hosted
+  end-to-end formatting/output collection remains.
 
-## KW-CI-ARCH-DAG — Remove ineffective PR serialization [patch] [perf] — in progress
+## KW-CI-ARCH-DAG — Remove ineffective PR serialization [patch] [perf] — review
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-CI-ARCH-DAG | Remove the architecture workflow's idle PR critical-path edge without changing verification coverage. | [patch] [perf] | in progress | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `.github/workflows/architecture-validation.yml`, release notes, and exact hosted timing evidence |
+| KW-CI-ARCH-DAG | Remove the architecture workflow's idle pull-request critical-path edge without changing verification coverage. | [patch] [perf] | review | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `.github/workflows/architecture-validation.yml`, release notes, exact hosted timing |
 
 - **Evidence:** run `33227622956` held every build, test, documentation, CUDA,
-  and layer job behind `Validate Clean Architecture` for 7m49s. On pull
-  requests that job has `save-if: false`, exports no artifact, and therefore
-  cannot seed the downstream runners it delays.
-- **Fresh confirmation:** exact PR #667 run `33229687715` completed validation
-  in 7m03s; every layer, build-matrix, coverage, integration, documentation,
-  and CUDA job remained queued until that step completed at 02:51:57 UTC.
-- **Acceptance:** all six ineffective `needs` edges are removed; job commands,
-  matrices, workloads, cache keys, assertions, and timeout bounds are
-  unchanged; the candidate run starts independent jobs without runner
-  starvation and reduces the architecture workflow's critical path against
-  the 30m03s exact-head baseline.
-- **Implementation:** the six jobs now enter the workflow independently. The
-  architecture job remains the sole writer for future mainline cache restores;
-  pull-request consumers remain restore-only. The workflow parses as eight
-  jobs with no residual dependency edge, and `git diff --check` passes.
-- **Lease:** none after the implementation commit; exact hosted timing and
-  independent review remain before merge.
-- **Non-goals:** adding cache writers, changing feature coverage, weakening
-  checks, raising bounds, or tuning production benchmarks through CI.
+  and layer job behind `Validate Clean Architecture` for 7m49s. Pull requests
+  cannot seed that job's cache because `save-if` is false and it exports no
+  artifact consumed by downstream jobs.
+- **Fresh confirmation:** run `33229687715` repeated the edge for 7m03s. Exact
+  FDTD candidate run `33232399431` likewise starts validation while the
+  integration job remains absent from the runnable check set.
+- **Acceptance:** remove all six ineffective `needs` edges; preserve commands,
+  matrices, workloads, cache keys, feature selections, assertions, and
+  timeouts; independent jobs start with the workflow and reduce the critical
+  path without introducing another cache writer.
+- **Implementation:** the workflow parses as eight jobs with no residual
+  dependency edge. The architecture job remains the sole mainline cache
+  writer; pull-request consumers remain restore-only.
+- **Independent review:** GREEN at exact source commit `570a763ac`; parsed job
+  definitions are byte-equivalent after removing only the six dependency
+  keys. Hosted exact-candidate collection remains after PR #667 lands.
 
 ## KW-CI-FULL-HISTORY-CHECKOUT — CI clones all of history to run tests [patch] — IMPLEMENTED 2026-08-26
 
