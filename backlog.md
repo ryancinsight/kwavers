@@ -489,6 +489,29 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   clone failed on the repository pack with "Entry too large to fit in memory";
   hosted collection remains pending.
 
+## KW-SWE-HISTORY-VECTOR-CAPACITY-2026-08-29 — Reserve snapshot headers [patch] [perf] — in progress
+
+- **Outcome:** derive the complete SWE snapshot schedule before propagation and
+  reserve its header vector once, eliminating history-container growth and late
+  header-allocation failure without changing snapshot payloads, values, times,
+  or public APIs.
+- **Integrator / lease:** Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` owns the
+  private propagation schedule/capacity helper, focused history and allocation
+  tests, Rustdoc, CHANGELOG, and this item through the next verified commit.
+- **Scope / non-goals:** use checked `1 + steps.div_ceil(max(save_every, 1))`
+  capacity derivation plus `try_reserve_exact` and the existing typed allocation
+  error. Snapshot array cloning remains unchanged and outside the allocation
+  claim; non-finite config hardening is owned by propagation preflight.
+- **Acceptance:** table-driven zero/divisible/nondivisible/sparse-save/overflow
+  schedule cases and public value tests preserve exact history length, times,
+  initial state, and final state. A thread-scoped allocator census first records
+  the current growth baseline at more than eight snapshots, then requires zero
+  reallocations and capacity at least the derived bound after the correction.
+  Focused/package Nextest, warning-denied library Clippy/Rustdoc, doctests,
+  unchanged Criterion smoke, and SemVer classification remain required.
+- **Status:** baseline measurement in progress; provider/review/merge closure
+  remains pending behind PR #670.
+
 ## KW-PR-BENCH-DUPLICATION-2026-08-29 — Remove duplicate PR smoke [patch] [ci] — todo
 
 - **Outcome:** execute the complete Criterion smoke once per pull request
