@@ -58,7 +58,8 @@
 - **Evidence:** fixed `Box<[bool]>` maps are allocated once with solver state;
   repeated refill/stale-clear and extent regressions pass; run-module
   regressions 7/7, GPU-feature package Nextest 174/174 with 6 skipped in
-  16.119 s, warning-denied all-target Clippy, rustfmt, and diff checks pass.
+  16.119 s, warning-denied all-target Clippy, rustfmt, and diff checks pass;
+  independent exact-range re-review through `db2bf60c4` is GREEN.
 - **Acceptance:** construction retains two fixed-length `nt` activity maps;
   each run clears and refills them through an allocation-incapable slice API;
   repeated distinct pressure/velocity matrices preserve source-major values
@@ -69,8 +70,8 @@
 - **Resolved review finding:** `db2bf60c4` rejects public-seam run metadata
   whose `nt` differs from either retained map before cache mutation or GPU
   submission and covers smaller, larger, and divergent-map extents.
-- **Remaining:** independent exact-commit re-review, then rebase/merge after the
-  prerequisite CI-baseline PR #667 lands.
+- **Remaining:** open and merge the candidate after prerequisite CI-baseline PR
+  #667 lands.
 
 ## KW-SIM-TEST-COMPILE-GRAPH — Reduce simulation test build latency [patch] [perf] — todo
 
