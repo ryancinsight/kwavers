@@ -447,12 +447,10 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   and the lockfile guard confirms 91 first-party Git sources. Hosted
   recollection remains pending.
 
-## KW-PR-BENCH-DUPLICATION-2026-08-29 — Remove duplicate PR smoke [patch] [ci] — in progress
+## KW-PR-BENCH-DUPLICATION-2026-08-29 — Remove duplicate PR smoke [patch] [ci] — review
 
 - **Owner / lease:** Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d`
-  owns the two plotting benchmark conditions in
-  `.github/workflows/architecture-validation.yml` and this item's release/PM
-  records through the next verified commit.
+  integrates; lease none after source candidate `1589cd006`.
 - **Outcome:** execute the complete Criterion smoke once per pull request
   instead of compiling and running it independently in two workflows.
 - **Scope / non-goals:** keep `benchmark-regression.yml` as the pull-request
@@ -464,13 +462,20 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   architecture plotting leg. The former runs all `kwavers` benches with
   `plotting`; the latter runs the same targets with `--no-default-features
   --features plotting`, which is the same feature graph because the default
-  `minimal` feature is empty. A local single-target bench-profile build spent
-  3m04s compiling before its smoke began.
+  `minimal` feature is empty. In PR #669, the canonical smoke occupied 16m04s
+  and the independent plotting leg occupied 18m57s; their different Cargo
+  profiles prevent compiled benchmark reuse. A local single-target
+  bench-profile build spent 3m04s compiling before its smoke began.
 - **Acceptance:** parsed workflow comparison proves only the two architecture
   step conditions change; pull requests execute the retained optimized smoke
   exactly once, mainline pushes retain the architecture dev-profile smoke, and
   the next hosted pull-request collection records unchanged target success with
   the duplicate job work absent.
+- **Candidate evidence:** exact source `1589cd006` parses successfully. After
+  restoring the two prior condition values in memory, the complete parsed
+  workflow equals its parent; no job, command, matrix, workload, cache key,
+  assertion, or timeout changes. Remaining: rebase after PR #670 lands,
+  independent review, and hosted pull-request collection.
 
 ## KW-KWAVE-DISTRIBUTED-SOURCE — pin k-Wave's mask-cell ordering [minor] — IMPLEMENTED 2026-08-24
 
