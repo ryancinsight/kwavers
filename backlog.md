@@ -82,6 +82,24 @@
   target cache, feature bypass, workload reduction, or timeout increase; cold
   controlled reruns are materially below the 2m37s and 2m15s baselines.
 
+## KW-CI-ARCH-DAG — Remove ineffective PR serialization [patch] [perf] — in progress
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-CI-ARCH-DAG | Remove the architecture workflow's idle PR critical-path edge without changing verification coverage. | [patch] [perf] | in progress | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `.github/workflows/architecture-validation.yml`, release notes, and exact hosted timing evidence |
+
+- **Evidence:** run `33227622956` held every build, test, documentation, CUDA,
+  and layer job behind `Validate Clean Architecture` for 7m49s. On pull
+  requests that job has `save-if: false`, exports no artifact, and therefore
+  cannot seed the downstream runners it delays.
+- **Acceptance:** all six ineffective `needs` edges are removed; job commands,
+  matrices, workloads, cache keys, assertions, and timeout bounds are
+  unchanged; the candidate run starts independent jobs without runner
+  starvation and reduces the architecture workflow's critical path against
+  the 30m03s exact-head baseline.
+- **Non-goals:** adding cache writers, changing feature coverage, weakening
+  checks, raising bounds, or tuning production benchmarks through CI.
+
 ## KW-CI-FULL-HISTORY-CHECKOUT — CI clones all of history to run tests [patch] — IMPLEMENTED 2026-08-26
 
 | ID | Outcome | Class | Status | Owner | Scope |
