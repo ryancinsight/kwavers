@@ -316,3 +316,46 @@ fn fused_stress_traversal_matches_sequential_reference_exactly() {
     assert_eq!(fused.div_y, expected.1);
     assert_eq!(fused.div_z, expected.2);
 }
+
+#[test]
+fn mismatched_equal_length_stress_shape_rejects_before_mutation() {
+    let (nx, ny, nz) = (2, 3, 4);
+    let grid = Grid::new(nx, ny, nz, 0.7e-3, 1.1e-3, 1.3e-3).expect("grid");
+    let lambda = Array3::from_elem((nx, ny, nz), 2.0e6);
+    let mu = Array3::from_elem((nx, ny, nz), 0.8e6);
+    let field = ElasticWaveField::new(nx, ny, nz);
+    let mut scratch = ElasticStepScratch::new(nx, ny, nz);
+    scratch.sxx.fill(1.0);
+    scratch.syy.fill(2.0);
+    scratch.szz.fill(3.0);
+    scratch.sxy = Array3::from_elem((4, 3, 2), 4.0);
+    scratch.sxz.fill(5.0);
+    scratch.syz.fill(6.0);
+    scratch.div_x.fill(7.0);
+    scratch.div_y.fill(8.0);
+    scratch.div_z.fill(9.0);
+
+    let panic = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        stress_divergence_into(&grid, &lambda, &mu, &field, &mut scratch);
+    }))
+    .expect_err("an equal-length scratch shape mismatch must be rejected");
+    let message = panic
+        .downcast_ref::<String>()
+        .map(String::as_str)
+        .or_else(|| panic.downcast_ref::<&'static str>().copied())
+        .expect("shape rejection must use a string panic payload");
+    assert_eq!(
+        message,
+        "invariant: scratch.sxy shape [4, 3, 2] must match grid shape [2, 3, 4]"
+    );
+
+    assert_eq!(scratch.sxx, Array3::from_elem((nx, ny, nz), 1.0));
+    assert_eq!(scratch.syy, Array3::from_elem((nx, ny, nz), 2.0));
+    assert_eq!(scratch.szz, Array3::from_elem((nx, ny, nz), 3.0));
+    assert_eq!(scratch.sxy, Array3::from_elem((4, 3, 2), 4.0));
+    assert_eq!(scratch.sxz, Array3::from_elem((nx, ny, nz), 5.0));
+    assert_eq!(scratch.syz, Array3::from_elem((nx, ny, nz), 6.0));
+    assert_eq!(scratch.div_x, Array3::from_elem((nx, ny, nz), 7.0));
+    assert_eq!(scratch.div_y, Array3::from_elem((nx, ny, nz), 8.0));
+    assert_eq!(scratch.div_z, Array3::from_elem((nx, ny, nz), 9.0));
+}

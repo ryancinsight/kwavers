@@ -34,6 +34,37 @@ use moirai_parallel::{
 // within a 32 KiB L1 working set at 256 f64 elements per chunk.
 const STRESS_CHUNK: usize = 256;
 
+fn validate_stress_divergence_shapes(
+    grid: &Grid,
+    lambda: &Array3<f64>,
+    mu: &Array3<f64>,
+    field: &ElasticWaveField,
+    scratch: &ElasticStepScratch,
+) {
+    let expected = [grid.nx, grid.ny, grid.nz];
+    for (name, actual) in [
+        ("lambda", lambda.shape()),
+        ("mu", mu.shape()),
+        ("field.ux", field.ux.shape()),
+        ("field.uy", field.uy.shape()),
+        ("field.uz", field.uz.shape()),
+        ("scratch.sxx", scratch.sxx.shape()),
+        ("scratch.syy", scratch.syy.shape()),
+        ("scratch.szz", scratch.szz.shape()),
+        ("scratch.sxy", scratch.sxy.shape()),
+        ("scratch.sxz", scratch.sxz.shape()),
+        ("scratch.syz", scratch.syz.shape()),
+        ("scratch.div_x", scratch.div_x.shape()),
+        ("scratch.div_y", scratch.div_y.shape()),
+        ("scratch.div_z", scratch.div_z.shape()),
+    ] {
+        assert!(
+            actual == expected,
+            "invariant: {name} shape {actual:?} must match grid shape {expected:?}"
+        );
+    }
+}
+
 /// Fill `scratch.{sxx,…,syz,div_x,div_y,div_z}` with the elastic stress
 /// tensor divergence ∇·σ, reusing the caller's pre-allocated workspace.
 ///
@@ -51,8 +82,9 @@ const STRESS_CHUNK: usize = 256;
 ///
 /// ## Parameters
 ///
-/// - `scratch`: pre-allocated workspace; all fields are overwritten before
-///   use (no reads of stale data).
+/// - `scratch`: pre-allocated workspace whose stress and divergence fields
+///   match the grid shape; all fields are overwritten before use (no reads of
+///   stale data).
 ///
 /// # Panics
 ///
@@ -65,6 +97,8 @@ pub fn stress_divergence_into(
     field: &ElasticWaveField,
     scratch: &mut ElasticStepScratch,
 ) {
+    validate_stress_divergence_shapes(grid, lambda, mu, field, scratch);
+
     let [nx, ny, nz] = field.ux.shape();
     let dx = grid.dx;
     let dy = grid.dy;

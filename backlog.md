@@ -429,31 +429,36 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   history representation, numerical conventions, benchmark sampling, or any
   timeout bound.
 - **Current evidence:** a sequential, distinct-field 3-D differential plus the
-  analytical stress suite pass 9/9. The unchanged 16³ workflow passes twice at
-  42.379 s and 43.004 s versus the 53.767 s entry run, a 20.0–21.2% point
-  reduction with identical workload and the standard 60-second bound. The
-  complete `nl_swe_performance --test` smoke passes, including 16/32/64
-  propagation. Warning-denied library Clippy passes; all-target Clippy remains
-  red on 94 pre-existing test/example diagnostics outside this item.
+  analytical stress suite pass 10/10. A same-length shape-permutation
+  regression proves the public in-place operation rejects an invalid scratch
+  shape before changing any of its nine stress/divergence arrays. The unchanged
+  16³ workflow passes twice at 42.379 s and 43.004 s versus the 53.767 s entry
+  run, a 20.0–21.2% point reduction with identical workload and the standard
+  60-second bound. The complete `nl_swe_performance --test` smoke passes,
+  including 16/32/64 propagation. Warning-denied library Clippy passes;
+  all-target Clippy remains red on 94 pre-existing test/example diagnostics
+  outside this item.
 
-## KW-SWE-BENCH-GRAPH-2026-08-29 — Narrow solver benchmark compilation [patch] [perf] — todo
+## KW-PR-BENCH-DUPLICATION-2026-08-29 — Remove duplicate PR smoke [patch] [ci] — todo
 
-- **Outcome:** make solver-only SWE benchmark rows compile through their owning
-  crate instead of selecting the umbrella integration graph on solver changes.
-- **Scope / non-goals:** split the existing `nl_swe_performance` target by
-  bounded context and update the affected-target mapper; preserve every
-  benchmark group name, input, timed closure, assertion, sampling setting, and
-  timeout. The cross-crate end-to-end rows remain in `kwavers`.
-- **Entry evidence:** `cargo bench -p kwavers --bench nl_swe_performance --
-  --test` spent 3m04s compiling the bench profile and selected unrelated GPU,
-  therapy, diagnostics, imaging-codec, and registration closures before the
-  solver-only 16/32/64 smoke could run.
-- **Acceptance:** before/after `cargo bench --no-run --timings` on equivalent
-  clean four-core runners identifies the compile critical path and unit count;
-  the split target's `--test` case-ID union equals the current target, the
-  complete smoke remains green, and exact solver-row codegen is unchanged.
-  Retain the split only if the affected solver target removes the unrelated
-  closure and materially reduces paired cold compile wall time.
+- **Outcome:** execute the complete Criterion smoke once per pull request
+  instead of compiling and running it independently in two workflows.
+- **Scope / non-goals:** keep `benchmark-regression.yml` as the pull-request
+  owner and restrict the architecture plotting leg's existing dev-profile
+  smoke to mainline pushes. Preserve every benchmark target, feature, command,
+  workload, assertion, profile, cache key, and timeout in the event where it
+  remains active; do not change benchmark code or measurement policy.
+- **Entry evidence:** PR #670 starts both `complete benchmark smoke` and the
+  architecture plotting leg. The former runs all `kwavers` benches with
+  `plotting`; the latter runs the same targets with `--no-default-features
+  --features plotting`, which is the same feature graph because the default
+  `minimal` feature is empty. A local single-target bench-profile build spent
+  3m04s compiling before its smoke began.
+- **Acceptance:** parsed workflow comparison proves only the two architecture
+  step conditions change; pull requests execute the retained optimized smoke
+  exactly once, mainline pushes retain the architecture dev-profile smoke, and
+  the next hosted pull-request collection records unchanged target success with
+  the duplicate job work absent.
 
 ## KW-KWAVE-DISTRIBUTED-SOURCE — pin k-Wave's mask-cell ordering [minor] — IMPLEMENTED 2026-08-24
 
