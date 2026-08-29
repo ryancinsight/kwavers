@@ -67,11 +67,32 @@
 - **Non-goals:** changing Leto/Hephaestus selection, source semantics, GPU
   command batching, readback ownership, or unrelated PSTD allocations.
 
-## KW-SIM-TEST-COMPILE-GRAPH — Reduce simulation test build latency [patch] [perf] — in progress
+## KW-FDTD-DEBUG-SCAN — Remove duplicate debug scans [patch] [perf] — in progress
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-SIM-TEST-COMPILE-GRAPH | Reduce the cold compile/link cost of the GPU-enabled simulation and Python test harnesses while retaining all value-semantic tests. | [patch] [perf] | in progress | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `kwavers-simulation` and `kwavers-python` dependency/feature graphs, test-only imports, and build-timing instrumentation |
+| KW-FDTD-DEBUG-SCAN | Keep the unchanged CPML integration workload below its committed bound by scanning each completed FDTD field phase once when no source can mutate it, while preserving source-phase diagnostics and source semantics for both temporal schemes. | [patch] [perf] | in progress | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `crates/kwavers-solver/src/forward/fdtd/solver/{stepping.rs,tests.rs}`, CPML focused evidence, release notes |
+
+- **Entry evidence:** hosted run `33229687715` timed out
+  `test_cpml_stable_across_thicknesses` at the unchanged 60-second bound. The
+  source-free scenario performs two full scans of each velocity component and
+  two full pressure scans per step even though no source mutates either field
+  between each pair. The Yoshida branch also returns before the velocity-source
+  injection that its own contract says occurs once per completed step.
+- **Acceptance:** both temporal schemes inject velocity sources exactly once
+  after propagation; debug builds retain phase-local NaN detection but perform
+  only one post-phase scan when no corresponding source can mutate the field;
+  a value-semantic Yoshida velocity-source regression and the unchanged CPML
+  thickness sweep pass under the committed Nextest budget; warning-denied
+  Clippy, formatting, and documentation synchronization pass.
+- **Lease:** Codex owns the listed solver source/tests, this item, and its
+  Unreleased note through the next verified commit.
+
+## KW-SIM-TEST-COMPILE-GRAPH — Reduce simulation test build latency [patch] [perf] — blocked
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-SIM-TEST-COMPILE-GRAPH | Reduce the cold compile/link cost of the GPU-enabled simulation and Python test harnesses while retaining all value-semantic tests. | [patch] [perf] | blocked | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `kwavers-simulation` and `kwavers-python` dependency/feature graphs, test-only imports, and build-timing instrumentation |
 
 - **Entry baseline:** `cargo nextest run --offline -p kwavers-simulation
   --features gpu` spent 2m37s compiling the transitive graph, then executed 100
@@ -102,6 +123,9 @@
   with unchanged outcomes and skips; no private target cache, feature bypass,
   workload reduction, or timeout increase; two fresh controlled cold runs meet
   the 181-second compile ceiling.
+- **Blocker:** the two fresh equivalent 4-core Linux timing runs are not yet
+  available. Re-open when a clean hosted runner can execute the recorded
+  command without changing the canonical target-cache policy.
 
 ## KW-INTEGRATION-FAILURE-DIAGNOSTICS — Preserve failed-test output [patch] — review
 
