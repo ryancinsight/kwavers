@@ -447,8 +447,12 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   and the lockfile guard confirms 91 first-party Git sources. Hosted
   recollection remains pending.
 
-## KW-PR-BENCH-DUPLICATION-2026-08-29 — Remove duplicate PR smoke [patch] [ci] — todo
+## KW-PR-BENCH-DUPLICATION-2026-08-29 — Remove duplicate PR smoke [patch] [ci] — in progress
 
+- **Owner / lease:** Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d`
+  owns the two plotting benchmark conditions in
+  `.github/workflows/architecture-validation.yml` and this item's release/PM
+  records through the next verified commit.
 - **Outcome:** execute the complete Criterion smoke once per pull request
   instead of compiling and running it independently in two workflows.
 - **Scope / non-goals:** keep `benchmark-regression.yml` as the pull-request
