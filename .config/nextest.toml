@@ -83,7 +83,7 @@ test-group = 'full-grid-sim'
 # `swe_3d_validation` joined on 2026-08-22 when its benchmark and literature
 # tests were re-enabled (measured 17-25 s serial).
 [[profile.default.overrides]]
-filter = 'package(kwavers) & (binary(fdtd_pstd_comparison) | binary(property_based_tests) | binary(session2_source_injection_test) | binary(test_plane_wave_injection) | binary(test_plane_wave_injection_fixed) | binary(swe_3d_validation))'
+filter = 'package(kwavers) & (binary(cpml_absorption_quality) | binary(energy_conservation_test) | binary(fdtd_pstd_comparison) | binary(photoacoustic_validation) | binary(property_based_tests) | binary(session2_source_injection_test) | binary(test_plane_wave_injection) | binary(test_plane_wave_injection_fixed) | binary(swe_3d_validation))'
 test-group = 'full-grid-sim'
 
 [[profile.default.overrides]]
@@ -107,7 +107,7 @@ filter = 'test(abdominal_preprocessing_selects_one_connected_treatment_component
 test-group = 'full-grid-sim'
 
 [[profile.ci.overrides]]
-filter = 'package(kwavers) & binary(swe_3d_validation)'
+filter = 'package(kwavers) & (binary(cpml_absorption_quality) | binary(energy_conservation_test) | binary(photoacoustic_validation) | binary(swe_3d_validation))'
 test-group = 'full-grid-sim'
 
 [[profile.ci.overrides]]
