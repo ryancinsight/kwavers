@@ -438,6 +438,14 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   including 16/32/64 propagation. Warning-denied library Clippy passes;
   all-target Clippy remains red on 94 pre-existing test/example diagnostics
   outside this item.
+- **Hosted integration correction:** exact source `652dd5c54` exposed that the
+  committed standalone lock still selected Moirai `f2afe2d4`, so hosted jobs
+  could not import the merged six-buffer provider API even though the local
+  stack overlay passed. Lock commit `ffcea11aa` advances the complete Moirai
+  source set to provider merge `2b9c806e`; standalone `--locked --offline`
+  all-target checking and the 10/10 stress suite pass against the Git source,
+  and the lockfile guard confirms 91 first-party Git sources. Hosted
+  recollection remains pending.
 
 ## KW-PR-BENCH-DUPLICATION-2026-08-29 — Remove duplicate PR smoke [patch] [ci] — todo
 
