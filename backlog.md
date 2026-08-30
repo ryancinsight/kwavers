@@ -515,12 +515,11 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   and the lockfile guard confirms 91 first-party Git sources. Hosted
   recollection remains pending.
 
-## KW-HARMONIC-CONFIG-CONTRACT-2026-08-30 — Specify spectral segmentation [major] — in progress
+## KW-HARMONIC-CONFIG-CONTRACT-2026-08-30 — Specify spectral segmentation [major] — review
 
-- **Integrator / lease:** Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d`
-  owns the harmonic-detection configuration, detector, result types, focused
-  tests/benchmarks, the next ADR and index entry, migration/release docs, and
-  this item record through the next verified commit.
+- **Integrator / lease:** Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d`;
+  lease none after source commit `25d0c64c9`. Draft PR #674 carries the
+  dependent major change on top of exact PR #670 correction `e7be552c9`.
 
 - **Outcome:** [ADR 126](docs/adr/126-whole-record-harmonic-analysis.md) selects
   the implementation's existing whole-record contract and removes the four
@@ -548,8 +547,9 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   221/223 checks and reports only the intended two major classes: four removed
   public fields and the one-parameter method-arity change. All-target Clippy's
   touched diagnostics are resolved; 28 pre-existing test-only diagnostics
-  outside this item remain. Source commit, independent review, PR readiness,
-  and merge closure remain pending.
+  outside this item remain. Source commit `25d0c64c9` contains the
+  implementation, ADR, migration, tests, and release note. Independent review,
+  PR readiness, and merge closure remain pending.
 
 ## KW-SWE-PROPAGATION-PREFLIGHT-2026-08-29 — Validate propagation before mutation [patch] — review
 
