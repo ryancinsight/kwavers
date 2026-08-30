@@ -174,13 +174,14 @@
   comparison finds no other semantic change.
 - **Non-goals:** consolidating the full feature matrix, changing test selection,
   assertions, workloads, cache policy, profiles, or timeout bounds.
-- **Candidate:** the architecture job runs the unchanged workspace library
-  command on every event and the unchanged PINN library command only when
-  `github.event_name == 'push'`. CI's dedicated PINN job remains byte-identical.
-  PyYAML parsing and normalized job comparison against base `7e709604b` pass:
-  after recombining the split steps, the complete architecture workflow is
-  equal to the base. Pull requests schedule one PINN library selection and
-  mainline pushes retain two. Independent review and hosted collection remain.
+- **Candidate:** draft PR #672 source `a09995126` runs the unchanged workspace
+  library command on every event and the unchanged PINN library command only
+  when `github.event_name == 'push'`. CI's dedicated PINN job remains
+  byte-identical. PyYAML parsing and normalized job comparison against base
+  `7e709604b` pass: after recombining the split steps, the complete architecture
+  workflow is equal to the base. Pull requests schedule one PINN library
+  selection and mainline pushes retain two. Independent review and hosted
+  collection remain.
 
 ## KW-CI-FULL-HISTORY-CHECKOUT — CI clones all of history to run tests [patch] — IMPLEMENTED 2026-08-26
 
