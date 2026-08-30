@@ -152,11 +152,11 @@
   definitions are byte-equivalent after removing only the six dependency
   keys. Hosted exact-candidate collection remains after PR #667 lands.
 
-## KW-PR-PINN-LIB-DUPLICATION-2026-08-29 — Remove duplicate PR PINN library run [patch] [ci] [perf] — review
+## KW-PR-PINN-LIB-DUPLICATION-2026-08-29 — Remove duplicate PR PINN library run [patch] [ci] [perf] — delivery
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-PR-PINN-LIB-DUPLICATION-2026-08-29 | Keep CI's canonical PINN library validation as the sole pull-request owner while retaining Architecture Validation's identical mainline backstop. | [patch] [ci] [perf] | review | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `.github/workflows/architecture-validation.yml`, release notes, workflow-structure evidence |
+| KW-PR-PINN-LIB-DUPLICATION-2026-08-29 | Keep CI's canonical PINN library validation as the sole pull-request owner while retaining Architecture Validation's identical mainline backstop. | [patch] [ci] [perf] | delivery | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `.github/workflows/architecture-validation.yml`, release notes, workflow-structure evidence |
 
 - **Lease:** none; the implementation increment discharges the workflow and
   documentation lease.
@@ -180,8 +180,12 @@
   byte-identical. PyYAML parsing and normalized job comparison against base
   `7e709604b` pass: after recombining the split steps, the complete architecture
   workflow is equal to the base. Pull requests schedule one PINN library
-  selection and mainline pushes retain two. Independent review and hosted
-  collection remain.
+  selection and mainline pushes retain two. Hosted collection remains.
+- **Independent review:** GREEN through exact cumulative candidate `98c35e2eb`.
+  The review confirms only the second command moved behind the push condition,
+  CI remains byte-identical, both commands preserve their environment and
+  selected graphs, and all other workflow jobs remain unchanged. Hosted
+  pull-request collection remains before merge.
 
 ## KW-CI-FULL-HISTORY-CHECKOUT — CI clones all of history to run tests [patch] — IMPLEMENTED 2026-08-26
 
