@@ -20,6 +20,7 @@
 //! [`stress_divergence`] is a convenience wrapper that allocates its own
 //! scratch internally; use it only in test code or non-hot paths.
 
+use super::super::coordinates::GridPosition;
 use super::super::scratch::ElasticStepScratch;
 use super::super::types::ElasticWaveField;
 use super::fd_stencils::{fd1_x, fd1_y};
@@ -37,46 +38,6 @@ use moirai_parallel::{
 // hosted four-core runner while amortizing scheduler bookkeeping. Larger grids
 // retain broad task fanout; paired operational runs rejected 512 elements.
 const STRESS_CHUNK: usize = 1024;
-
-/// Standard-layout coordinates advanced without per-voxel division.
-struct GridPosition {
-    i: usize,
-    j: usize,
-    k: usize,
-    ny: usize,
-    nz: usize,
-}
-
-impl GridPosition {
-    fn from_flat(index: usize, ny: usize, nz: usize) -> Self {
-        let yz_len = ny * nz;
-        let i = index / yz_len;
-        let remainder = index % yz_len;
-        Self {
-            i,
-            j: remainder / nz,
-            k: remainder % nz,
-            ny,
-            nz,
-        }
-    }
-
-    fn advance(&mut self) {
-        self.k += 1;
-        if self.k == self.nz {
-            self.k = 0;
-            self.j += 1;
-            if self.j == self.ny {
-                self.j = 0;
-                self.i += 1;
-            }
-        }
-    }
-
-    fn coordinates(&self) -> [usize; 3] {
-        [self.i, self.j, self.k]
-    }
-}
 
 fn validate_stress_divergence_shapes(
     grid: &Grid,
@@ -166,7 +127,7 @@ fn try_stress_standard_layout(
                 syy[offset] = yy;
                 syz[offset] = yz;
                 szz[offset] = zz;
-                position.advance();
+                position.advance(ny, nz);
             }
         },
     )
@@ -270,7 +231,7 @@ fn try_divergence_standard_layout(
                 div_x[offset] = x;
                 div_y[offset] = y;
                 div_z[offset] = z;
-                position.advance();
+                position.advance(ny, nz);
             }
         },
     );

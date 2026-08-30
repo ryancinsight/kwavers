@@ -166,3 +166,54 @@ fn test_pml_damping() {
          got {doubled_dt_factor:e}, expected {expected:e}"
     );
 }
+
+#[test]
+fn fused_pml_damping_matches_separable_oracle_across_chunk_tail() {
+    let grid = Grid::new(13, 10, 9, 1e-3, 1.1e-3, 1.2e-3).unwrap();
+    let pml = ElasticSwePMLBoundary::new(
+        &grid,
+        SwePmlConfig {
+            thickness: 2,
+            sigma_max: 80.0,
+            profile_order: 2,
+            reflection_target: 1e-4,
+        },
+    );
+    let (sigma_x, sigma_y, sigma_z) = pml.axis_sigma_profiles(&grid);
+    let lambda = Array3::<f64>::from_elem(grid.dimensions(), 1e9);
+    let mu = Array3::<f64>::from_elem(grid.dimensions(), 1e9);
+    let density = Array3::<f64>::from_elem(grid.dimensions(), DENSITY_WATER_NOMINAL);
+    let integrator = TimeIntegrator::new(&grid, &lambda, &mu, &density, &pml);
+    let mut field = ElasticWaveField::new(grid.nx, grid.ny, grid.nz);
+    field.vx.fill(2.0);
+    field.vy.fill(3.0);
+    field.vz.fill(5.0);
+    field.ux.fill(7.0);
+    field.uy.fill(11.0);
+    field.uz.fill(13.0);
+    let mut scratch = ElasticStepScratch::new(grid.nx, grid.ny, grid.nz);
+    let dt = 0.125;
+
+    integrator.apply_pml_damping(&mut field, dt, &mut scratch);
+
+    for i in 0..grid.nx {
+        let factor_x = (-sigma_x[i] * dt).exp();
+        for j in 0..grid.ny {
+            let factor_y = (-sigma_y[j] * dt).exp();
+            for k in 0..grid.nz {
+                let factor_z = (-sigma_z[k] * dt).exp();
+                let factor = (factor_x * factor_y) * factor_z;
+                let actual = [
+                    field.vx[[i, j, k]],
+                    field.vy[[i, j, k]],
+                    field.vz[[i, j, k]],
+                    field.ux[[i, j, k]],
+                    field.uy[[i, j, k]],
+                    field.uz[[i, j, k]],
+                ];
+                let expected = [2.0, 3.0, 5.0, 7.0, 11.0, 13.0].map(|value| value * factor);
+                assert_eq!(actual, expected, "damping at [{i}, {j}, {k}]");
+            }
+        }
+    }
+}

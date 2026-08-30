@@ -67,15 +67,11 @@ impl TimeIntegrator<'_> {
         for body_force in body_forces {
             body_force::validate(body_force)?;
         }
-        let grid = self.grid;
         self.integrate::<SpatialStress, _>(field, dt, scratch, |field, scratch, time| {
-            self.compute_acceleration_with_body_forces(field, scratch, |index| {
-                let i = index / (grid.ny * grid.nz);
-                let j = (index / grid.nz) % grid.ny;
-                let k = index % grid.nz;
+            self.compute_acceleration_with_body_forces(field, scratch, |i, j, k| {
                 let mut force = [0.0; 3];
                 for body_force in body_forces {
-                    let value = body_force::evaluate(grid, body_force, i, j, k, time);
+                    let value = body_force::evaluate(self.grid, body_force, i, j, k, time);
                     force[0] += value[0];
                     force[1] += value[1];
                     force[2] += value[2];
@@ -96,8 +92,8 @@ impl TimeIntegrator<'_> {
         body_forces.validate_grid(self.grid)?;
         self.integrate::<SpatialStress, _>(field, dt, scratch, |field, scratch, time| {
             body_forces.update_time(time);
-            self.compute_acceleration_with_body_forces(field, scratch, |index| {
-                body_forces.force_at(index)
+            self.compute_acceleration_with_body_forces(field, scratch, |i, j, k| {
+                body_forces.force_at(i, j, k)
             })
         })
     }

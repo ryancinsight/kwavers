@@ -191,7 +191,10 @@
   stress now computes all six tensor components in one homogeneous-buffer
   traversal, removing one scheduler dispatch and full-grid pass per evaluation,
   and advances standard-layout coordinates once per 1,024-element chunk instead
-  of dividing the flat index at every voxel in both stress passes. Valid
+  of dividing the flat index at every voxel. The same cursor supplies
+  body-force coordinates, and PML damping updates all six field components in
+  one 1,024-element homogeneous-buffer traversal instead of two sequential
+  three-component traversals. Valid
   nonstandard layouts use the same point formulas through a zero-allocation
   logical-coordinate fallback.
   The public in-place stress operation validates every material, displacement,
@@ -209,7 +212,10 @@
   the larger scheduling granularity; paired local operational runs observed
   18.121/18.335 seconds at 1,024 elements versus 20.167 seconds after restoring
   256 elements, while the rejected 512-element midpoint took 20.746/21.423
-  seconds. The
+  seconds. After hosted integration exposed a 60.066-second outlier, removing
+  the remaining force/PML coordinate divisions and fusing damping produced
+  16.033/14.652-second local runs versus a 17.770-second coordinate-only run.
+  The
   complete unchanged benchmark smoke, including the 64³ propagation case,
   passes. The test therefore rejoins the main suite; its ignore, 600-second
   override, and dedicated 35-minute pull-request job are removed.

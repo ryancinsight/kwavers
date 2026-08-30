@@ -432,6 +432,17 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   elements versus 20.167 s after restoring 256; the rejected 512 midpoint took
   20.746/21.423 s. Formulas, evaluation order, allocation behavior, workloads,
   assertions, and timeout policy are unchanged.
+- **Fifth-phase result:** exact PR #670 candidate `65804a982` passed every hosted
+  gate except Integration Suite run `33282848949`, where the unchanged NL-SWE
+  workflow reached 60.066 s. Source review found each step still decoded every
+  flat coordinate in the direct/prepared force path, while PML damping used two
+  sequential 4,096-element traversals and repeated the same divisions. One
+  private C-order cursor now serves stress, force, and damping. PML damping
+  fuses all six field components into one 1,024-element traversal, removing one
+  dispatch and exposing four tasks at 16³ without changing factors, field
+  arithmetic, storage, or allocations. Local operational runs measured
+  16.033/14.652 s after fusion versus 17.770 s with only the force cursor; these
+  are bounded test-body observations, not Criterion evidence.
 - **Acceptance:** both ordinary propagation loops prepare an optional Gaussian
   force once before stepping and share one prepared-step helper; no-force output
   remains unchanged and direct/prepared nonzero fields compare under a derived
@@ -456,7 +467,11 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   workload and the standard 60-second bound. With the 1,024-element scheduling
   grain, the exact full-feature case also passes in 22.220 s after a 2m23s
   overlay-driven stack rebuild; compile latency is separate from the test-body
-  result. This is operational Nextest
+  result. The fifth-phase cursor/fused-PML candidate passes twice at
+  16.033/14.652 s; seven focused coordinate, prepared-force, PML, and complete
+  six-field/ragged-tail tests pass. Warning-denied library Clippy remains green;
+  test-target Clippy reaches the same 94 pre-existing diagnostics outside SWE.
+  This is operational Nextest
   evidence, not a Criterion throughput estimate. The complete solver library
   suite passes 926/926 in 70.991 s; the complete `nl_swe_performance --test` smoke passes,
   including 16/32/64 propagation. Warning-denied library Clippy passes;
