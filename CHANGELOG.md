@@ -185,6 +185,54 @@
 
 ### Changed
 
+- **Elastography harmonic-analysis workspace:** Harmonic detection now builds
+  one Hann table and one Apollo input/output workspace per analysis and reuses
+  them across all spatial points, instead of allocating a time series, window,
+  FFT result, and three harmonic vectors at every point. The unchanged
+  `harmonic_analysis_8x8x8` Criterion workload moved from
+  1.2663–1.2735 ms to 233.88–238.41 µs (95% intervals; 81.4% median-estimate
+  reduction). A warmed 130-sample allocation census records the same 17
+  caller-thread allocations for one and 64 points, with zero reallocations.
+  Frequency metadata now derives from the FFT's actual sample count, invalid
+  finite-domain inputs return typed validation errors before output/workspace
+  allocation, and dense C-order traversal retains a strided logical-order
+  fallback.
+
+- **Elastic SWE body-force runtime:** Ordinary final-state and history
+  propagation now prepare separable Gaussian spatial profiles once per run and
+  evaluate only the temporal factor during each acceleration pass. Elastic
+  stress now computes all six tensor components in one homogeneous-buffer
+  traversal, removing one scheduler dispatch and full-grid pass per evaluation,
+  and advances standard-layout coordinates once per 1,024-element chunk instead
+  of dividing the flat index at every voxel. The same cursor supplies
+  body-force coordinates, and PML damping updates all six field components in
+  one 1,024-element homogeneous-buffer traversal instead of two sequential
+  three-component traversals. Valid
+  nonstandard layouts use the same point formulas through a zero-allocation
+  logical-coordinate fallback.
+  The public in-place stress operation validates every material, displacement,
+  stress, and divergence shape against the grid before taking mutable scratch
+  slices, so an equal-length but differently shaped workspace is rejected
+  before mutation.
+  Propagation entry points now validate all six public field shapes and the
+  complete finite time domain before body-force preparation, simulation
+  allocation, recorder replacement, or scheduler work. The unchanged 16³
+  NL-SWE value test completes in 18.071 seconds after the flat-coordinate
+  correction, versus 42.379 and 43.004 seconds after force preparation and
+  53.767 seconds at entry, under the same 60-second Nextest contract. These are
+  operational test timings rather than Criterion throughput estimates. The
+  exact full-feature NL-SWE case also passes in 22.220 seconds after selecting
+  the larger scheduling granularity; paired local operational runs observed
+  18.121/18.335 seconds at 1,024 elements versus 20.167 seconds after restoring
+  256 elements, while the rejected 512-element midpoint took 20.746/21.423
+  seconds. After hosted integration exposed a 60.066-second outlier, removing
+  the remaining force/PML coordinate divisions and fusing damping produced
+  16.033/14.652-second local runs versus a 17.770-second coordinate-only run.
+  The
+  complete unchanged benchmark smoke, including the 64³ propagation case,
+  passes. The test therefore rejoins the main suite; its ignore, 600-second
+  override, and dedicated 35-minute pull-request job are removed.
+
 - **Integration failure diagnostics:** the bounded integration runner now asks
   Nextest for final failed-test output and emits its retained stdout and stderr
   tails when a test fails, preserving assertion values without unbounded logs.

@@ -99,13 +99,12 @@ impl PreparedBodyForces {
     }
 
     #[inline]
-    pub(crate) fn force_at(&self, index: usize) -> [f64; 3] {
+    pub(crate) fn force_at(&self, i: usize, j: usize, k: usize) -> [f64; 3] {
         let [nx, ny, nz] = self.grid_signature.dimensions;
-        debug_assert!(index < nx * ny * nz);
+        debug_assert!(i < nx);
+        debug_assert!(j < ny);
+        debug_assert!(k < nz);
         let force_count = self.parameters.len();
-        let i = index / (ny * nz);
-        let j = (index / nz) % ny;
-        let k = index % nz;
         let x = &self.x_factors[i * force_count..(i + 1) * force_count];
         let y = &self.y_factors[j * force_count..(j + 1) * force_count];
         let z = &self.z_factors[k * force_count..(k + 1) * force_count];
@@ -326,7 +325,7 @@ mod tests {
                     }
                 }
 
-                let actual = prepared.force_at(index);
+                let actual = prepared.force_at(i, j, k);
                 assert_eq!(
                     actual, expected,
                     "prepared force at [{i}, {j}, {k}], t={time}"

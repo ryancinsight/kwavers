@@ -1,6 +1,24 @@
+use super::super::{scratch::ElasticStepScratch, types::ElasticWaveField};
 use super::*;
 use kwavers_grid::Grid;
 use leto::Array3;
+
+fn from_shape_fn_fortran<F>(shape: [usize; 3], mut f: F) -> Array3<f64>
+where
+    F: FnMut([usize; 3]) -> f64,
+{
+    let layout = leto::Layout::f_contiguous(shape).expect("f-contiguous layout");
+    let [d0, d1, d2] = shape;
+    let mut data = vec![0.0; d0 * d1 * d2];
+    for i in 0..d0 {
+        for j in 0..d1 {
+            for k in 0..d2 {
+                data[i + j * d0 + k * d0 * d1] = f([i, j, k]);
+            }
+        }
+    }
+    leto::Array::new(layout, leto::VecStorage::new(data)).expect("valid f-contiguous array")
+}
 
 /// fd1_x on a linear field f = A*x gives the constant A at all interior points.
 /// # Panics
@@ -103,7 +121,6 @@ fn test_stress_divergence_uniform_displacement() {
     let grid = Grid::new(n, n, n, dx, dx, dx).unwrap();
     let lambda = Array3::from_elem([n, n, n], 1e9_f64);
     let mu = Array3::from_elem([n, n, n], 5e8_f64);
-    use super::super::types::ElasticWaveField;
     let mut field = ElasticWaveField::new(n, n, n);
     // Use exact binary fractions: 0.5=2⁻¹, 0.25=2⁻², 0.125=2⁻³.
     // Non-binary values produce stencil-dependent ULP rounding that makes
@@ -152,7 +169,6 @@ fn test_stress_divergence_linear_ux_fluid() {
     let la_val = 2.25e9_f64; // water-like λ
     let lambda = Array3::from_elem([n, 1, 1], la_val);
     let mu = Array3::zeros((n, 1, 1)); // fluid: μ=0
-    use super::super::types::ElasticWaveField;
     let mut field = ElasticWaveField::new(n, 1, 1);
     // Linear displacement ux = A·x → constant strain → constant σxx → zero divergence
     let a = 0.01_f64;
@@ -186,7 +202,6 @@ fn test_stress_divergence_quadratic_ux_fluid() {
     let la_val = 2.25e9_f64;
     let lambda = Array3::from_elem([n, 1, 1], la_val);
     let mu = Array3::zeros((n, 1, 1));
-    use super::super::types::ElasticWaveField;
     let mut field = ElasticWaveField::new(n, 1, 1);
     let a = 10.0_f64;
     for i in 0..n {
@@ -207,8 +222,6 @@ fn test_stress_divergence_quadratic_ux_fluid() {
 
 #[test]
 fn plane_strain_divergence_matches_spatial_operator_exactly() {
-    use super::super::{scratch::ElasticStepScratch, types::ElasticWaveField};
-
     let (nx, ny) = (11, 9);
     let grid = Grid::new(nx, ny, 1, 0.7e-3, 1.3e-3, 2.0e-3).expect("grid");
     let lambda = Array3::from_shape_fn((nx, ny, 1), |[i, j, _]| 2.0e6 + (i * 37 + j * 11) as f64);
@@ -229,4 +242,195 @@ fn plane_strain_divergence_matches_spatial_operator_exactly() {
     assert_eq!(plane.div_x, spatial.div_x);
     assert_eq!(plane.div_y, spatial.div_y);
     assert_eq!(plane.div_z, spatial.div_z);
+}
+
+fn sequential_stress_divergence(
+    grid: &Grid,
+    lambda: &Array3<f64>,
+    mu: &Array3<f64>,
+    field: &ElasticWaveField,
+) -> ElasticStepScratch {
+    let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
+    let mut scratch = ElasticStepScratch::new(nx, ny, nz);
+
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                let exx = fd1_x(field.ux.view(), i, j, k, nx, grid.dx);
+                let eyy = fd1_y(field.uy.view(), i, j, k, ny, grid.dy);
+                let ezz = fd1_z(field.uz.view(), i, j, k, nz, grid.dz);
+                let exy_2 = fd1_y(field.ux.view(), i, j, k, ny, grid.dy)
+                    + fd1_x(field.uy.view(), i, j, k, nx, grid.dx);
+                let exz_2 = fd1_z(field.ux.view(), i, j, k, nz, grid.dz)
+                    + fd1_x(field.uz.view(), i, j, k, nx, grid.dx);
+                let eyz_2 = fd1_z(field.uy.view(), i, j, k, nz, grid.dz)
+                    + fd1_y(field.uz.view(), i, j, k, ny, grid.dy);
+                let la = lambda[[i, j, k]];
+                let mv = mu[[i, j, k]];
+                let la2mu = 2.0f64.mul_add(mv, la);
+                scratch.sxx[[i, j, k]] = la2mu.mul_add(exx, la * (eyy + ezz));
+                scratch.syy[[i, j, k]] = la2mu.mul_add(eyy, la * (exx + ezz));
+                scratch.szz[[i, j, k]] = la2mu.mul_add(ezz, la * (exx + eyy));
+                scratch.sxy[[i, j, k]] = mv * exy_2;
+                scratch.sxz[[i, j, k]] = mv * exz_2;
+                scratch.syz[[i, j, k]] = mv * eyz_2;
+            }
+        }
+    }
+
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                scratch.div_x[[i, j, k]] = fd1_x(scratch.sxx.view(), i, j, k, nx, grid.dx)
+                    + fd1_y(scratch.sxy.view(), i, j, k, ny, grid.dy)
+                    + fd1_z(scratch.sxz.view(), i, j, k, nz, grid.dz);
+                scratch.div_y[[i, j, k]] = fd1_x(scratch.sxy.view(), i, j, k, nx, grid.dx)
+                    + fd1_y(scratch.syy.view(), i, j, k, ny, grid.dy)
+                    + fd1_z(scratch.syz.view(), i, j, k, nz, grid.dz);
+                scratch.div_z[[i, j, k]] = fd1_x(scratch.sxz.view(), i, j, k, nx, grid.dx)
+                    + fd1_y(scratch.syz.view(), i, j, k, ny, grid.dy)
+                    + fd1_z(scratch.szz.view(), i, j, k, nz, grid.dz);
+            }
+        }
+    }
+    scratch
+}
+
+fn assert_stress_scratch_eq(actual: &ElasticStepScratch, expected: &ElasticStepScratch) {
+    for (actual, expected) in [
+        (&actual.sxx, &expected.sxx),
+        (&actual.sxy, &expected.sxy),
+        (&actual.sxz, &expected.sxz),
+        (&actual.syy, &expected.syy),
+        (&actual.syz, &expected.syz),
+        (&actual.szz, &expected.szz),
+        (&actual.div_x, &expected.div_x),
+        (&actual.div_y, &expected.div_y),
+        (&actual.div_z, &expected.div_z),
+    ] {
+        assert_eq!(actual, expected);
+    }
+}
+
+#[test]
+fn fused_stress_traversal_matches_reference_across_chunks_and_tail() {
+    // 13×10×9 crosses the 1,024-element boundary at [11, 3, 7] and leaves
+    // a 146-element tail, exercising both nonzero chunk decoding and epilogue.
+    for (nx, ny, nz) in [(7, 6, 5), (13, 10, 9)] {
+        let grid = Grid::new(nx, ny, nz, 0.7e-3, 1.1e-3, 1.3e-3).expect("grid");
+        let lambda = Array3::from_shape_fn((nx, ny, nz), |[i, j, k]| {
+            2.0e6 + (i * 37 + j * 11 + k * 5) as f64
+        });
+        let mu = Array3::from_shape_fn((nx, ny, nz), |[i, j, k]| {
+            0.8e6 + (i * 17 + j * 29 + k * 13) as f64
+        });
+        let mut field = ElasticWaveField::new(nx, ny, nz);
+        field.ux = Array3::from_shape_fn((nx, ny, nz), |[i, j, k]| {
+            ((i * 13 + j * 7 + k * 3) as f64 * 0.037).sin()
+        });
+        field.uy = Array3::from_shape_fn((nx, ny, nz), |[i, j, k]| {
+            ((i * 5 + j * 19 + k * 11) as f64 * 0.041).cos()
+        });
+        field.uz = Array3::from_shape_fn((nx, ny, nz), |[i, j, k]| {
+            ((i * 23 + j * 2 + k * 17) as f64 * 0.029).sin()
+        });
+
+        let expected = sequential_stress_divergence(&grid, &lambda, &mu, &field);
+        let mut fused = ElasticStepScratch::new(nx, ny, nz);
+        stress_divergence_into(&grid, &lambda, &mu, &field, &mut fused);
+        assert_stress_scratch_eq(&fused, &expected);
+    }
+}
+
+#[test]
+fn strided_stress_inputs_and_outputs_match_standard_layout_exactly() {
+    let shape = [7, 6, 5];
+    let [nx, ny, nz] = shape;
+    let grid = Grid::new(nx, ny, nz, 0.7e-3, 1.1e-3, 1.3e-3).expect("grid");
+    let lambda_value = |[i, j, k]: [usize; 3]| 2.0e6 + (i * 37 + j * 11 + k * 5) as f64;
+    let mu_value = |[i, j, k]: [usize; 3]| 0.8e6 + (i * 17 + j * 29 + k * 13) as f64;
+    let ux_value = |[i, j, k]: [usize; 3]| ((i * 13 + j * 7 + k * 3) as f64 * 0.037).sin();
+    let uy_value = |[i, j, k]: [usize; 3]| ((i * 5 + j * 19 + k * 11) as f64 * 0.041).cos();
+    let uz_value = |[i, j, k]: [usize; 3]| ((i * 23 + j * 2 + k * 17) as f64 * 0.029).sin();
+
+    let lambda = Array3::from_shape_fn(shape, lambda_value);
+    let mu = Array3::from_shape_fn(shape, mu_value);
+    let mut field = ElasticWaveField::new(nx, ny, nz);
+    field.ux = Array3::from_shape_fn(shape, ux_value);
+    field.uy = Array3::from_shape_fn(shape, uy_value);
+    field.uz = Array3::from_shape_fn(shape, uz_value);
+    let mut expected = ElasticStepScratch::new(nx, ny, nz);
+    stress_divergence_into(&grid, &lambda, &mu, &field, &mut expected);
+
+    let strided_lambda = from_shape_fn_fortran(shape, lambda_value);
+    let strided_mu = from_shape_fn_fortran(shape, mu_value);
+    let mut strided_field = ElasticWaveField::new(nx, ny, nz);
+    strided_field.ux = from_shape_fn_fortran(shape, ux_value);
+    strided_field.uy = from_shape_fn_fortran(shape, uy_value);
+    strided_field.uz = from_shape_fn_fortran(shape, uz_value);
+    let mut actual = ElasticStepScratch::new(nx, ny, nz);
+    actual.sxx = from_shape_fn_fortran(shape, |_| f64::NAN);
+    actual.sxy = from_shape_fn_fortran(shape, |_| f64::NAN);
+    actual.sxz = from_shape_fn_fortran(shape, |_| f64::NAN);
+    actual.syy = from_shape_fn_fortran(shape, |_| f64::NAN);
+    actual.syz = from_shape_fn_fortran(shape, |_| f64::NAN);
+    actual.szz = from_shape_fn_fortran(shape, |_| f64::NAN);
+    actual.div_x = from_shape_fn_fortran(shape, |_| f64::NAN);
+    actual.div_y = from_shape_fn_fortran(shape, |_| f64::NAN);
+    actual.div_z = from_shape_fn_fortran(shape, |_| f64::NAN);
+    assert!(strided_field.ux.as_slice().is_none());
+    assert!(actual.sxx.as_slice().is_none());
+
+    stress_divergence_into(
+        &grid,
+        &strided_lambda,
+        &strided_mu,
+        &strided_field,
+        &mut actual,
+    );
+
+    assert_stress_scratch_eq(&actual, &expected);
+}
+
+#[test]
+fn mismatched_equal_length_stress_shape_rejects_before_mutation() {
+    let (nx, ny, nz) = (2, 3, 4);
+    let grid = Grid::new(nx, ny, nz, 0.7e-3, 1.1e-3, 1.3e-3).expect("grid");
+    let lambda = Array3::from_elem((nx, ny, nz), 2.0e6);
+    let mu = Array3::from_elem((nx, ny, nz), 0.8e6);
+    let field = ElasticWaveField::new(nx, ny, nz);
+    let mut scratch = ElasticStepScratch::new(nx, ny, nz);
+    scratch.sxx.fill(1.0);
+    scratch.syy.fill(2.0);
+    scratch.szz.fill(3.0);
+    scratch.sxy = Array3::from_elem((4, 3, 2), 4.0);
+    scratch.sxz.fill(5.0);
+    scratch.syz.fill(6.0);
+    scratch.div_x.fill(7.0);
+    scratch.div_y.fill(8.0);
+    scratch.div_z.fill(9.0);
+
+    let panic = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        stress_divergence_into(&grid, &lambda, &mu, &field, &mut scratch);
+    }))
+    .expect_err("an equal-length scratch shape mismatch must be rejected");
+    let message = panic
+        .downcast_ref::<String>()
+        .map(String::as_str)
+        .or_else(|| panic.downcast_ref::<&'static str>().copied())
+        .expect("shape rejection must use a string panic payload");
+    assert_eq!(
+        message,
+        "invariant: scratch.sxy shape [4, 3, 2] must match grid shape [2, 3, 4]"
+    );
+
+    assert_eq!(scratch.sxx, Array3::from_elem((nx, ny, nz), 1.0));
+    assert_eq!(scratch.syy, Array3::from_elem((nx, ny, nz), 2.0));
+    assert_eq!(scratch.szz, Array3::from_elem((nx, ny, nz), 3.0));
+    assert_eq!(scratch.sxy, Array3::from_elem((4, 3, 2), 4.0));
+    assert_eq!(scratch.sxz, Array3::from_elem((nx, ny, nz), 5.0));
+    assert_eq!(scratch.syz, Array3::from_elem((nx, ny, nz), 6.0));
+    assert_eq!(scratch.div_x, Array3::from_elem((nx, ny, nz), 7.0));
+    assert_eq!(scratch.div_y, Array3::from_elem((nx, ny, nz), 8.0));
+    assert_eq!(scratch.div_z, Array3::from_elem((nx, ny, nz), 9.0));
 }

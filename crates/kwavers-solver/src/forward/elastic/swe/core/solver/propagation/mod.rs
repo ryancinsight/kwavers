@@ -1,19 +1,27 @@
 //! Basic propagation methods for `ElasticWaveSolver`.
 
+use super::super::super::integration::integrator::PreparedBodyForces;
 use super::super::super::integration::TimeIntegrator;
 use super::super::super::scratch::ElasticStepScratch;
 use super::super::super::types::{ElasticBodyForceConfig, ElasticWaveField};
 use super::definition::ElasticWaveSolver;
-use kwavers_core::error::{KwaversResult, NumericalError};
+use kwavers_core::error::{KwaversResult, ValidationError};
 use kwavers_receiver::recorder::fields::{SensorRecordField, SensorRecordSpec};
 use kwavers_receiver::recorder::simple::SensorRecorder;
 
+mod plan;
 mod sensors;
+#[cfg(test)]
+mod tests;
+
+use plan::PropagationPlan;
 
 impl ElasticWaveSolver {
     /// Propagate.
     /// # Errors
-    /// - Propagates any [`crate::KwaversError`] returned by called functions.
+    /// - Returns a validation error when a field component shape or temporal
+    ///   propagation parameter is invalid.
+    /// - Propagates body-force, allocation, recording, and numerical errors.
     ///
     pub fn propagate(
         &mut self,
@@ -21,23 +29,20 @@ impl ElasticWaveSolver {
         duration: f64,
         body_force: Option<&ElasticBodyForceConfig>,
     ) -> KwaversResult<ElasticWaveField> {
+        let plan = PropagationPlan::for_field(
+            &self.grid,
+            &self.lambda,
+            &self.mu,
+            &self.density,
+            &self.config,
+            initial_field,
+            duration,
+        )?;
+        let mut prepared_body_force = prepare_body_force(&self.grid, body_force)?;
         let mut current_field = initial_field.clone();
         let integrator =
             TimeIntegrator::new(&self.grid, &self.lambda, &self.mu, &self.density, &self.pml);
-        let dt = if self.config.time_step > 0.0 {
-            self.config.time_step
-        } else {
-            integrator.calculate_stable_timestep(self.config.cfl_factor)
-        };
-        if dt <= 0.0 {
-            return Err(NumericalError::InvalidOperation(
-                "Calculated time step is non-positive".to_owned(),
-            )
-            .into());
-        }
-        let steps = (duration / dt).ceil() as usize;
-        let save_every = self.config.save_every.max(1);
-        let recorded_steps = steps.div_ceil(save_every);
+        let recorded_steps = plan.steps.div_ceil(plan.save_every);
         let (nx, ny, nz) = self.grid.dimensions();
         let mut scratch = ElasticStepScratch::new(nx, ny, nz);
 
@@ -72,7 +77,7 @@ impl ElasticWaveSolver {
                     .collect()
             });
 
-        for step in 0..steps {
+        for step in 0..plan.steps {
             // ── Velocity-source injection (pre-integrator hook) ─────────────
             // Per the 2×2 mode-isolation study in
             // external/elastic_julia_parity/, Additive injection MUST happen
@@ -147,10 +152,16 @@ impl ElasticWaveSolver {
                 }
             }
 
-            integrator.step(&mut current_field, dt, body_force, &mut scratch)?;
-            current_field.time += dt;
+            step_with_optional_prepared_force(
+                &integrator,
+                &mut current_field,
+                plan.dt,
+                prepared_body_force.as_mut(),
+                &mut scratch,
+            )?;
+            current_field.time += plan.dt;
 
-            if step % save_every == 0 {
+            if step % plan.save_every == 0 {
                 // Pressure-buffer entry: vz (legacy back-compat — many
                 // existing callers consume `extract_recorded_data` which
                 // returns the pressure buffer; this preserves their
@@ -176,77 +187,86 @@ impl ElasticWaveSolver {
 
     /// Propagate waves.
     /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
+    /// - Returns a validation error when the displacement shape or configured
+    ///   temporal propagation domain is invalid.
+    /// - Propagates body-force, allocation, and numerical errors.
     ///
     pub fn propagate_waves(
         &self,
         initial_displacement: &leto::Array3<f64>,
     ) -> KwaversResult<Vec<ElasticWaveField>> {
         let (nx, ny, nz) = self.grid.dimensions();
-        if initial_displacement.shape() != [nx, ny, nz] {
-            return Err(NumericalError::InvalidOperation(
-                "Initial displacement shape does not match grid".to_owned(),
-            )
+        let expected_shape = [nx, ny, nz];
+        let actual_shape = initial_displacement.shape();
+        if actual_shape != expected_shape {
+            return Err(ValidationError::DimensionMismatch {
+                expected: format!("initial_displacement shape {expected_shape:?}"),
+                actual: format!("{actual_shape:?}"),
+            }
             .into());
         }
+        let plan = PropagationPlan::for_initial_time(
+            &self.grid,
+            &self.lambda,
+            &self.mu,
+            &self.density,
+            &self.config,
+            0.0,
+            self.config.simulation_time,
+        )?;
         let mut initial_field = ElasticWaveField::new(nx, ny, nz);
         initial_field.uz.assign(initial_displacement);
-        self.propagate_history(&initial_field, self.config.simulation_time, None)
+        self.propagate_history_with_plan(&initial_field, plan, None)
     }
 
     /// Propagate waves with body force only override.
     /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
+    /// - Returns a validation error when the configured temporal propagation
+    ///   domain is invalid.
+    /// - Propagates body-force, allocation, and numerical errors.
     ///
     pub fn propagate_waves_with_body_force_only_override(
         &self,
         body_force: Option<&ElasticBodyForceConfig>,
     ) -> KwaversResult<Vec<ElasticWaveField>> {
+        let plan = PropagationPlan::for_initial_time(
+            &self.grid,
+            &self.lambda,
+            &self.mu,
+            &self.density,
+            &self.config,
+            0.0,
+            self.config.simulation_time,
+        )?;
         let (nx, ny, nz) = self.grid.dimensions();
         let initial_field = ElasticWaveField::new(nx, ny, nz);
-        self.propagate_history(&initial_field, self.config.simulation_time, body_force)
+        self.propagate_history_with_plan(&initial_field, plan, body_force)
     }
 
-    /// Propagate history.
-    /// # Errors
-    /// - Propagates any [`crate::KwaversError`] returned by called functions.
-    ///
-    pub(super) fn propagate_history(
+    fn propagate_history_with_plan(
         &self,
         initial_field: &ElasticWaveField,
-        duration_s: f64,
+        plan: PropagationPlan,
         body_force: Option<&ElasticBodyForceConfig>,
     ) -> KwaversResult<Vec<ElasticWaveField>> {
+        let mut prepared_body_force = prepare_body_force(&self.grid, body_force)?;
         let mut current_field = initial_field.clone();
         let integrator =
             TimeIntegrator::new(&self.grid, &self.lambda, &self.mu, &self.density, &self.pml);
-        let dt = if self.config.time_step > 0.0 {
-            self.config.time_step
-        } else {
-            integrator.calculate_stable_timestep(self.config.cfl_factor)
-        };
-        if dt <= 0.0 {
-            return Err(NumericalError::InvalidOperation(
-                "Calculated time step is non-positive".to_owned(),
-            )
-            .into());
-        }
-        if !duration_s.is_finite() || duration_s <= 0.0 {
-            return Err(NumericalError::InvalidOperation(
-                "Simulation duration must be positive".to_owned(),
-            )
-            .into());
-        }
-        let save_every = self.config.save_every.max(1);
-        let steps = (duration_s / dt).ceil() as usize;
         let (nx, ny, nz) = self.grid.dimensions();
         let mut scratch = ElasticStepScratch::new(nx, ny, nz);
         let mut history = Vec::new();
         history.push(current_field.clone());
-        for step_idx in 0..steps {
-            integrator.step(&mut current_field, dt, body_force, &mut scratch)?;
-            current_field.time += dt;
-            if (step_idx + 1) % save_every == 0 {
+        for step_idx in 0..plan.steps {
+            step_with_optional_prepared_force(
+                &integrator,
+                &mut current_field,
+                plan.dt,
+                prepared_body_force.as_mut(),
+                &mut scratch,
+            )?;
+            current_field.time += plan.dt;
+            if (step_idx + 1) % plan.save_every == 0 {
                 history.push(current_field.clone());
             }
         }
@@ -258,6 +278,29 @@ impl ElasticWaveSolver {
             history.push(current_field.clone());
         }
         Ok(history)
+    }
+}
+
+fn prepare_body_force(
+    grid: &kwavers_grid::Grid,
+    body_force: Option<&ElasticBodyForceConfig>,
+) -> KwaversResult<Option<PreparedBodyForces>> {
+    body_force
+        .map(|force| PreparedBodyForces::new(grid, core::slice::from_ref(force)))
+        .transpose()
+}
+
+fn step_with_optional_prepared_force(
+    integrator: &TimeIntegrator<'_>,
+    field: &mut ElasticWaveField,
+    dt: f64,
+    body_force: Option<&mut PreparedBodyForces>,
+    scratch: &mut ElasticStepScratch,
+) -> KwaversResult<()> {
+    if let Some(body_force) = body_force {
+        integrator.step_with_prepared_body_forces(field, dt, body_force, scratch)
+    } else {
+        integrator.step(field, dt, None, scratch)
     }
 }
 

@@ -200,8 +200,8 @@ impl ElasticWaveSolver {
     /// Summarize wavefront arrivals over voxels eligible for tracking.
     ///
     /// Coverage excludes PML cells and cells skipped by tracking decimation,
-    /// matching the domain on which [`Self::compute_wavefront_tracker`]
-    /// attempts arrival detection.
+    /// matching the domain on which internal wavefront tracking attempts
+    /// arrival detection.
     #[must_use]
     pub fn calculate_volumetric_quality(
         &self,

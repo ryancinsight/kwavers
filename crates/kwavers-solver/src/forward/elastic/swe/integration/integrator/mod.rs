@@ -75,29 +75,35 @@ impl<'a> TimeIntegrator<'a> {
     /// `c_s = √(μ/ρ)` and `c_p = √((λ+2μ)/ρ)`.
     #[must_use]
     pub fn calculate_stable_timestep(&self, cfl_factor: f64) -> f64 {
-        let [nx, ny, nz] = self.lambda.shape();
-        let mut max_c = 0.0_f64;
-
-        for k in 0..nz {
-            for j in 0..ny {
-                for i in 0..nx {
-                    let mu = self.mu[[i, j, k]];
-                    let lambda = self.lambda[[i, j, k]];
-                    let density = self.density[[i, j, k]];
-                    if density > 0.0 {
-                        let shear_speed = (mu / density).sqrt();
-                        let pressure_speed = (2.0f64.mul_add(mu, lambda) / density).sqrt();
-                        max_c = max_c.max(shear_speed.max(pressure_speed));
-                    }
-                }
-            }
-        }
-
-        if max_c <= 0.0 {
-            return 0.0;
-        }
-        let min_spacing = self.grid.dx.min(self.grid.dy).min(self.grid.dz);
-        let cfl_dt = min_spacing / (3.0_f64.sqrt() * max_c);
-        cfl_dt * cfl_factor
+        calculate_stable_timestep(self.grid, self.lambda, self.mu, self.density, cfl_factor)
     }
+}
+
+/// Calculate the CFL-limited time step without constructing PML profiles.
+///
+/// Propagation preflight uses this scan before any simulation allocation. The
+/// [`TimeIntegrator`] method delegates here so the CFL formula has one owner.
+#[must_use]
+pub(crate) fn calculate_stable_timestep(
+    grid: &Grid,
+    lambda: &leto::Array3<f64>,
+    mu: &leto::Array3<f64>,
+    density: &leto::Array3<f64>,
+    cfl_factor: f64,
+) -> f64 {
+    let mut max_c = 0.0_f64;
+    for ((&mu, &lambda), &density) in mu.iter().zip(lambda.iter()).zip(density.iter()) {
+        if density > 0.0 {
+            let shear_speed = (mu / density).sqrt();
+            let pressure_speed = (2.0f64.mul_add(mu, lambda) / density).sqrt();
+            max_c = max_c.max(shear_speed.max(pressure_speed));
+        }
+    }
+
+    if max_c <= 0.0 {
+        return 0.0;
+    }
+    let min_spacing = grid.dx.min(grid.dy).min(grid.dz);
+    let cfl_dt = min_spacing / (3.0_f64.sqrt() * max_c);
+    cfl_dt * cfl_factor
 }

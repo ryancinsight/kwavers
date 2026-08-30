@@ -1,5 +1,6 @@
 //! Stress-divergence evaluation and acceleration assembly.
 
+use super::super::super::coordinates::GridPosition;
 use super::super::super::scratch::ElasticStepScratch;
 use super::super::super::stress::{stress_divergence_into, stress_divergence_plane_strain_into};
 use super::super::super::types::{ElasticBodyForceConfig, ElasticWaveField};
@@ -137,15 +138,15 @@ impl TimeIntegrator<'_> {
                 ACCELERATION_CHUNK,
                 |chunk_idx, ax_chunk, ay_chunk, az_chunk| {
                     let start = chunk_idx * ACCELERATION_CHUNK;
+                    let mut position = GridPosition::from_flat(start, ny, nz);
                     for offset in 0..ax_chunk.len() {
                         let idx = start + offset;
-                        let i = idx / (ny * nz);
-                        let j = (idx / nz) % ny;
-                        let k = idx % nz;
+                        let [i, j, k] = position.coordinates();
                         let force = body_force::evaluate(grid, body_force, i, j, k, time);
                         ax_chunk[offset] = (div_x[idx] + force[0]) / density[idx];
                         ay_chunk[offset] = (div_y[idx] + force[1]) / density[idx];
                         az_chunk[offset] = (div_z[idx] + force[2]) / density[idx];
+                        position.advance(ny, nz);
                     }
                 },
             );
@@ -196,7 +197,7 @@ impl TimeIntegrator<'_> {
         force_at: F,
     ) -> KwaversResult<()>
     where
-        F: Fn(usize) -> [f64; 3] + Sync,
+        F: Fn(usize, usize, usize) -> [f64; 3] + Sync,
     {
         SpatialStress::evaluate(self.grid, self.lambda, self.mu, field, scratch);
         let ax = scratch
@@ -227,6 +228,8 @@ impl TimeIntegrator<'_> {
             .density
             .as_slice()
             .expect("invariant: density uses standard layout");
+        let ny = self.grid.ny;
+        let nz = self.grid.nz;
         for_each_chunk_triple_mut_enumerated_with::<Adaptive, _, _, _, _>(
             ax,
             ay,
@@ -234,12 +237,15 @@ impl TimeIntegrator<'_> {
             ACCELERATION_CHUNK,
             |chunk_idx, ax_chunk, ay_chunk, az_chunk| {
                 let start = chunk_idx * ACCELERATION_CHUNK;
+                let mut position = GridPosition::from_flat(start, ny, nz);
                 for offset in 0..ax_chunk.len() {
                     let idx = start + offset;
-                    let force = force_at(idx);
+                    let [i, j, k] = position.coordinates();
+                    let force = force_at(i, j, k);
                     ax_chunk[offset] = (div_x[idx] + force[0]) / density[idx];
                     ay_chunk[offset] = (div_y[idx] + force[1]) / density[idx];
                     az_chunk[offset] = (div_z[idx] + force[2]) / density[idx];
+                    position.advance(ny, nz);
                 }
             },
         );

@@ -440,44 +440,247 @@ training run can be replayed. It is drawn once per `train()` call, so the loss
 is deterministic *within* a run and this is not the convergence defect — but it
 makes any cross-run comparison noise, which is why the gradient tests build
 fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
-## KW-SWE-SCALING-IS-A-BENCHMARK — a wall-clock benchmark is running as a test [patch] — todo
+## KW-SWE-SCALING-IS-A-BENCHMARK — Measure scaling outside tests [patch] — IMPLEMENTED 2026-08-25
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-SWE-SCALING-IS-A-BENCHMARK | Move the SWE scaling measurement into a criterion benchmark and drop the elapsed-time assertions from the test suite. | [patch] | todo | unowned (SWE area is actively being worked) | `crates/kwavers/tests/swe_3d_validation.rs`, `crates/kwavers/benches/` |
+| KW-SWE-SCALING-IS-A-BENCHMARK | Measure SWE propagation scaling through Criterion without wall-clock assertions in native tests. | [patch] | IMPLEMENTED | unowned | `crates/kwavers/tests/swe_3d_validation.rs`, `crates/kwavers/benches/nl_swe_performance.rs` |
 
-- **Symptom:** `test_performance_scaling` times out at the 60 s nextest
-  termination bound on CI. It takes 27 s on the development machine, so the
-  runner is roughly 2.5x slower and the test sits on the wrong side of the
-  bound there and the right side here. That is the definition of a flaky test.
-- **What it is:** it builds `ElasticWaveSolver` at 16, 32, 48 and 64 cubed,
-  times `propagate_waves_with_body_force_only_override` with
-  `Instant::now()`, and asserts on the *ratio* of elapsed times between
-  successive sizes.
-- **Why the bound is not the problem:** an elapsed-time assertion on a shared
-  runner measures the runner. Raising the budget would keep a measurement whose
-  variance is dominated by whatever else the machine is doing.
-- **Where it belongs:** criterion, which exists to do this properly -- warm-up,
-  repeated samples, median with a confidence interval, and `black_box` against
-  elision. `crates/kwavers/benches/nl_swe_performance.rs` already covers
-  hyperelastic models and harmonic detection but nothing measures propagation
-  scaling, so this is not duplicated work, only misplaced work.
-- **Sizing note for whoever takes it:** the sweep should be geometric with a
-  few representative points rather than 16/32/48/64, and the per-binary
-  wall-clock budget applies -- a 64-cubed propagation may need the sweep's top
-  end trimmed or a dedicated reviewed profile.
-- **Removed from the test suite here**, rather than parked in the baseline. It
-  could not sit there honestly: it passes on the development machine and times
-  out on CI, so the baseline checker reports it as a *stale* entry locally and
-  a *regression* remotely. A set-valued baseline records which tests fail, and
-  this one's answer depends on the machine -- which is the flakiness itself,
-  not a gap in the mechanism.
-- **What was kept:** nothing of the measurement, which is why the criterion
-  benchmark above is owed. What was lost is a scaling number nobody could rely
-  on; what was removed is a 60-second CI timeout on every run.
-- **Precedent in the same file:** `diag_swe_recon_2`, deleted under
-  `KW-INTEGRATION-TESTS-UNRUN` for the same reason -- a benchmark workload
-  breaching the committed test budget.
+- The elapsed-time test was removed in `d0cf2f0cb`; `7a6859802` added the
+  geometric 16/32/64 Criterion sweep with unchanged solver computation.
+
+## KW-SWE-FORCE-PREPARATION — Prepare Gaussian body forces once [patch] [perf] — review
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-SWE-FORCE-PREPARATION | Remove repeated spatial and normalization transcendental evaluation from ordinary elastic propagation while preserving the exact field history and workloads. | [patch] [perf] | review | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | elastic propagation/integration hot kernels and tests, NL-SWE scheduling, release notes, exact benchmark and hosted evidence |
+
+- **Lease:** none; exact PR #670 candidate `734f4abe3` is under independent
+  re-review and hosted review.
+- **Entry evidence:** PR #668 run `33268934966` spent 217.790 s on the unchanged
+  `wave_propagation_scaling/64` single iteration. Run `33268934962` spent 19m25s
+  in the dedicated 16-cubed NL-SWE job. On the 64-cubed case the direct path
+  performs 232,259,584 force evaluations: each repeats three spatial
+  exponentials, one temporal exponential, and a direction norm although all
+  but the temporal factor are invariant across steps.
+- **Root cause:** `PreparedBodyForces` already stores separable `O(nx+ny+nz)`
+  axis factors and is value-checked against direct evaluation, but only the
+  volumetric propagation path uses it. The two ordinary propagation loops kept
+  calling the direct per-voxel evaluator.
+- **Second-phase result:** `AdaptiveWithThreshold<8192>` was rejected and
+  removed after the exact workflow reached the unchanged 60-second termination
+  bound at 60.077 s. The selected correction instead merges the diagonal and
+  off-diagonal stress computations into one six-buffer traversal, removing one
+  scheduler dispatch and one full-grid pass per stress evaluation. Moirai PR
+  #200 / merge `2b9c806` provides the const-generic homogeneous-buffer seam;
+  its warmed six-buffer allocation census records zero provider allocations.
+- **Third-phase result:** PR #670's unchanged 16³ workflow still terminated at
+  60.018 s on hosted Linux despite the 42.379/43.004 s local results. Each
+  velocity-Verlet step evaluates stress twice, and each evaluation decoded
+  every flat voxel index with quotient/remainder operations in both stress
+  passes. The selected standard-layout path decodes once per 256-element chunk,
+  advances coordinates with carry increments, and preserves the public
+  coordinate-stencil implementation as the bitwise differential oracle. A
+  one-time layout dispatch retains those formulas as a zero-allocation fallback
+  for valid nonstandard inputs or outputs.
+- **Fourth-phase result:** the 256-element scheduling grain left 16 tasks per
+  stress pass on the hosted four-core runner. The selected 1,024-element grain
+  produces four tasks for the 16³ regression while retaining broad fanout on
+  larger grids. Paired local operational runs observed 18.121/18.335 s at 1,024
+  elements versus 20.167 s after restoring 256; the rejected 512 midpoint took
+  20.746/21.423 s. Formulas, evaluation order, allocation behavior, workloads,
+  assertions, and timeout policy are unchanged.
+- **Fifth-phase result:** exact PR #670 candidate `65804a982` passed every hosted
+  gate except Integration Suite run `33282848949`, where the unchanged NL-SWE
+  workflow reached 60.066 s. Source review found each step still decoded every
+  flat coordinate in the direct/prepared force path, while PML damping used two
+  sequential 4,096-element traversals and repeated the same divisions. One
+  private C-order cursor now serves stress, force, and damping. PML damping
+  fuses all six field components into one 1,024-element traversal, removing one
+  dispatch and exposing four tasks at 16³ without changing factors, field
+  arithmetic, storage, or allocations. Local operational runs measured
+  16.033/14.652 s after fusion versus 17.770 s with only the force cursor; these
+  are bounded test-body observations, not Criterion evidence.
+- **Sixth-phase result:** harmonic detection's point loop allocated and copied
+  a time series, Hann window, Apollo FFT output, and three harmonic vectors for
+  every spatial point while recomputing every cosine coefficient. The selected
+  caller-owned workspace reuses one Hann table and Apollo input/output pair,
+  writes result planes in place, and traverses dense C-order points as exact
+  time chunks. On the unchanged 8³×128 Criterion workload the 95% interval moved
+  from 1.2663–1.2735 ms to 233.88–238.41 µs; median estimates moved from
+  1.2710 ms to 236.52 µs (81.4%). A warmed composite-length census records
+  exactly 17 allocations and zero reallocations for both one and 64 points.
+  Direct-DFT oracles cover two distinct points; a multi-axis `2×2×2×64`
+  differential compares every public result plane and metadata value between
+  dense C and Fortran-strided inputs. SNR retains the established normalized
+  full-spectrum neighborhood, including the conjugate-side bins within ten
+  bins of Nyquist. Typed preflight rejects invalid
+  sample/frequency/harmonic domains. The complete clinical-imaging physics
+  suite passes 1,727/1,727 in 15.366 s, and the unchanged NL-SWE workflow
+  passes in 19.202 s. Production-library and allocation-target warning-denied
+  Clippy, Rustdoc, and 9/9 runnable doctests pass; all-target Clippy remains red
+  on pre-existing diagnostics outside this item.
+- **Sixth-phase delivery:** source commit `828cbd3ea` and standalone-lock commit
+  `a8bd3e99f` are published in PR #670. Independent review found the candidate
+  had narrowed SNR input to one spectral side and had not compared the complete
+  public dense/strided result. Fix-forward commit `734f4abe3` restores the full
+  spectrum and adds both regressions. The canonical lock generator confirms 91
+  first-party Git sources and successful standalone `--locked` resolution.
+  Independent re-review and hosted exact-head collection remain pending.
+- **Acceptance:** both ordinary propagation loops prepare an optional Gaussian
+  force once before stepping and share one prepared-step helper; no-force output
+  remains unchanged and direct/prepared nonzero fields compare under a derived
+  floating-point bound. The exact 16/32/64 benchmark inputs, timed closure, and
+  assertions remain unchanged; the 64-cubed smoke iteration and unchanged
+  16-cubed NL-SWE value test each fit the ordinary 60-second contract. The test
+  then joins the existing full-grid scheduling group, its ignore/600-second
+  override and dedicated PR job are deleted, and focused warning-denied Clippy,
+  Nextest, benchmark smoke, formatting, and docs pass.
+- **Non-goals:** changing simulation duration, grid sizes, save cadence,
+  history representation, numerical conventions, benchmark sampling, or any
+  timeout bound.
+- **Current evidence:** a sequential, distinct-field 3-D differential plus the
+  analytical, flat-coordinate, and nonstandard-layout focused suite passes
+  24/24. The differential compares all six stress and three divergence fields
+  on both a single-chunk case and a 1,170-element multi-chunk case with a
+  146-element ragged tail. A same-length shape-permutation
+  regression proves the public in-place operation rejects an invalid scratch
+  shape before changing any of its nine stress/divergence arrays. The unchanged
+  16³ workflow passes at 18.071 s after flat-coordinate traversal, versus
+  42.379/43.004 s after force preparation and 53.767 s at entry, with identical
+  workload and the standard 60-second bound. With the 1,024-element scheduling
+  grain, the exact full-feature case also passes in 22.220 s after a 2m23s
+  overlay-driven stack rebuild; compile latency is separate from the test-body
+  result. The fifth-phase cursor/fused-PML candidate passes twice at
+  16.033/14.652 s; seven focused coordinate, prepared-force, PML, and complete
+  six-field/ragged-tail tests pass. Warning-denied library Clippy remains green;
+  test-target Clippy reaches the same 94 pre-existing diagnostics outside SWE.
+  This is operational Nextest
+  evidence, not a Criterion throughput estimate. The complete solver library
+  suite passes 926/926 in 70.991 s; the complete `nl_swe_performance --test` smoke passes,
+  including 16/32/64 propagation. Warning-denied library Clippy passes;
+  all-target Clippy remains red on 94 pre-existing test/example diagnostics
+  outside this item. Focused release tests pass 18/18, doctests pass 5/5 with
+  eight environmental examples ignored, and warning-denied Rustdoc passes.
+  Hosted recollection of the corrected candidate remains pending.
+- **Hosted integration correction:** exact source `652dd5c54` exposed that the
+  committed standalone lock still selected Moirai `f2afe2d4`, so hosted jobs
+  could not import the merged six-buffer provider API even though the local
+  stack overlay passed. Lock commit `ffcea11aa` advances the complete Moirai
+  source set to provider merge `2b9c806e`; standalone `--locked --offline`
+  all-target checking and the 10/10 stress suite pass against the Git source,
+  and the lockfile guard confirms 91 first-party Git sources. Hosted
+  recollection remains pending.
+
+## KW-HARMONIC-CONFIG-CONTRACT-2026-08-30 — Specify spectral segmentation [major] — todo
+
+- **Outcome:** eliminate the four consumer-visible harmonic configuration
+  fields that currently do not affect computation (`fft_window_size`,
+  `fft_overlap`, `min_snr_db`, and `enable_phase_unwrapping`) by specifying one
+  coherent segmentation, threshold, and phase contract before implementation.
+- **Scope:** harmonic-detection config/detector/types, an indexed ADR and
+  migration guide, direct-DFT/window-overlap oracles, allocation census, and
+  the existing Criterion instrument. **Non-goal:** changing the whole-record
+  FFT behavior before the contract is selected.
+- **Acceptance:** the ADR chooses implement-or-remove for every field; no public
+  field remains observationally inert, segment/frequency dimensions become
+  unambiguous, all invalid domains reject before mutation, and the selected
+  implementation preserves point-scaled allocation independence with stored
+  paired performance evidence.
+
+## KW-SWE-E2E-ELASTIC-MEDIUM-2026-08-30 — Correct bounded SWE workflow [patch] — review
+
+- **Integrator / lease:** Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d`;
+  lease discharged by the candidate commit.
+- **Outcome:** keep the 16³, 10 ms end-to-end workflow and 60-second bound,
+  but replace the fluid `μ=0` fixture with an 8 kPa, ν=0.49 elastic tissue,
+  use a stable explicit step, and derive the detector sampling rate from saved
+  timestamps. Strengthen the workflow oracle from existence checks to finite,
+  nonnegative inversion fields plus a nonzero propagated displacement.
+- **Acceptance:** the exact focused test passes below the committed slow bound;
+  41 uniformly spaced snapshots cover all 400 steps; the full propagation,
+  harmonic analysis, and nonlinear inversion remain exercised without reducing
+  the grid or physical duration. Entry evidence on exact `e7be552c9`: the fluid
+  fixture ran 51,962 CFL steps, retained about 5,198 six-field snapshots, passed
+  locally in 17.021 seconds, and timed out on the hosted runner at 60.093 seconds.
+  Candidate standalone evidence atop `75e2c8f7b`: full-feature Nextest 19/19 in
+  0.382 seconds with the corrected workflow at 0.121 seconds; default-feature
+  warning-denied Clippy passes. Full-feature warning-denied Clippy remains blocked
+  by 69 pre-existing PINN diagnostics outside this test and item.
+
+## KW-SWE-PROPAGATION-PREFLIGHT-2026-08-29 — Validate propagation before mutation [patch] — review
+
+- **Outcome:** every `ElasticWaveSolver` propagation entry rejects malformed
+  public field shapes and invalid temporal domains before body-force
+  preparation, simulation allocation, recorder replacement, source-index
+  collection, or scheduler work; valid numerical behavior and public
+  signatures remain unchanged.
+- **Scope / non-goals:** one private allocation-free-on-success propagation
+  plan, the shared nonallocating CFL scan, six-component shape validation,
+  focused boundary tests, Rustdoc, and release records. Velocity-source signal
+  length semantics and direct public `TimeIntegrator::step` hardening remain
+  outside this patch.
+- **Acceptance:** component shapes reject in deterministic `ux,uy,uz,vx,vy,vz`
+  order; duration, configured/effective step, initial time, derived step count,
+  and end time reject with structural `ValidationError` values before mutation.
+  Signed zero selects automatic CFL, finite negative initial time remains valid,
+  and a positive duration below one step still executes once.
+- **Current evidence:** 18 malformed-field cases, a structural public
+  displacement-shape regression, and the duration/time-domain matrix pass 7/7
+  propagation tests; invalid body-force preparation
+  loses to preflight, input fields and recorder contents remain unchanged, and
+  finite `MIN_POSITIVE` duration with a `MAX` step executes exactly once rather
+  than underflowing the derived count. The prior complete solver library suite
+  passes 926/926. Warning-denied library Clippy passes. The cumulative focused
+  release suite passes 18/18, doctests pass 5/5 with eight
+  environmental examples ignored, and warning-denied Rustdoc passes.
+  `cargo semver-checks` did not reach API analysis because its internal baseline
+  clone failed on the repository pack with "Entry too large to fit in memory";
+  hosted collection remains pending.
+
+## KW-SWE-HISTORY-VECTOR-CAPACITY-2026-08-29 — Reserve snapshot headers [patch] [perf] — in progress
+
+- **Outcome:** derive the complete SWE snapshot schedule before propagation and
+  reserve its header vector once, eliminating history-container growth and late
+  header-allocation failure without changing snapshot payloads, values, times,
+  or public APIs.
+- **Integrator / lease:** Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` owns the
+  private propagation schedule/capacity helper, focused history and allocation
+  tests, Rustdoc, CHANGELOG, and this item through the next verified commit.
+- **Scope / non-goals:** use checked `1 + steps.div_ceil(max(save_every, 1))`
+  capacity derivation plus `try_reserve_exact` and the existing typed allocation
+  error. Snapshot array cloning remains unchanged and outside the allocation
+  claim; non-finite config hardening is owned by propagation preflight.
+- **Acceptance:** table-driven zero/divisible/nondivisible/sparse-save/overflow
+  schedule cases and public value tests preserve exact history length, times,
+  initial state, and final state. A thread-scoped allocator census first records
+  the current growth baseline at more than eight snapshots, then requires zero
+  reallocations and capacity at least the derived bound after the correction.
+  Focused/package Nextest, warning-denied library Clippy/Rustdoc, doctests,
+  unchanged Criterion smoke, and SemVer classification remain required.
+- **Status:** baseline measurement in progress; provider/review/merge closure
+  remains pending behind PR #670.
+
+## KW-PR-BENCH-DUPLICATION-2026-08-29 — Remove duplicate PR smoke [patch] [ci] — todo
+
+- **Outcome:** execute the complete Criterion smoke once per pull request
+  instead of compiling and running it independently in two workflows.
+- **Scope / non-goals:** keep `benchmark-regression.yml` as the pull-request
+  owner and restrict the architecture plotting leg's existing dev-profile
+  smoke to mainline pushes. Preserve every benchmark target, feature, command,
+  workload, assertion, profile, cache key, and timeout in the event where it
+  remains active; do not change benchmark code or measurement policy.
+- **Entry evidence:** PR #670 starts both `complete benchmark smoke` and the
+  architecture plotting leg. The former runs all `kwavers` benches with
+  `plotting`; the latter runs the same targets with `--no-default-features
+  --features plotting`, which is the same feature graph because the default
+  `minimal` feature is empty. A local single-target bench-profile build spent
+  3m04s compiling before its smoke began.
+- **Acceptance:** parsed workflow comparison proves only the two architecture
+  step conditions change; pull requests execute the retained optimized smoke
+  exactly once, mainline pushes retain the architecture dev-profile smoke, and
+  the next hosted pull-request collection records unchanged target success with
+  the duplicate job work absent.
 
 ## KW-PR-BENCH-DUPLICATION-2026-08-29 — Remove duplicate PR smoke [patch] [ci] — in progress
 

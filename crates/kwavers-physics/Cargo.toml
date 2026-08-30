@@ -48,6 +48,7 @@ clinical-imaging = [
 ]
 
 [dev-dependencies]
+kwavers-alloc-probe = { path = "../kwavers-alloc-probe" }
 
 [lints]
 workspace = true

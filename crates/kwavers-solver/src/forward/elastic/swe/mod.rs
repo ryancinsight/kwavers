@@ -119,6 +119,7 @@
 
 // Submodules (alphabetical order)
 pub mod boundary;
+mod coordinates;
 pub mod core;
 pub mod integration;
 pub mod scratch;

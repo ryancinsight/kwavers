@@ -35,6 +35,7 @@
 
 mod divergence;
 mod fd_stencils;
+mod kernel;
 #[cfg(test)]
 mod tests;
 

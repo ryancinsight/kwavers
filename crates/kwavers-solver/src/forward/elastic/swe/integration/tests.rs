@@ -1,9 +1,9 @@
 //! Tests for velocity-Verlet time integration.
 
-use super::integrator::TimeIntegrator;
+use super::integrator::{PreparedBodyForces, TimeIntegrator};
 use crate::forward::elastic::swe::boundary::{ElasticSwePMLBoundary, SwePmlConfig};
 use crate::forward::elastic::swe::scratch::ElasticStepScratch;
-use crate::forward::elastic::swe::types::ElasticWaveField;
+use crate::forward::elastic::swe::types::{ElasticBodyForceConfig, ElasticWaveField};
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use kwavers_grid::Grid;
 use leto::Array3;
@@ -56,6 +56,52 @@ fn test_velocity_verlet_zero_field_fixed_point() {
     // Zero field, no body force → acceleration = 0 → field stays zero.
     assert_eq!(field.ux[[5, 5, 5]], 0.0, "ux must stay zero");
     assert_eq!(field.vx[[5, 5, 5]], 0.0, "vx must stay zero");
+}
+
+/// Prepared force profiles preserve the complete velocity-Verlet field.
+#[test]
+fn prepared_body_force_step_matches_direct_evaluation() {
+    let grid = Grid::new(5, 4, 3, 0.4e-3, 0.5e-3, 0.6e-3).unwrap();
+    let (lambda, mu, density, pml) = make_integrator(&grid, 2.0e6, 8.0e5);
+    let integrator = TimeIntegrator::new(&grid, &lambda, &mu, &density, &pml);
+    let force = ElasticBodyForceConfig::GaussianImpulse {
+        center_m: [0.8e-3, 0.75e-3, 0.6e-3],
+        sigma_m: [0.5e-3, 0.7e-3, 0.9e-3],
+        direction: [1.0, -2.0, 0.5],
+        t0_s: 0.75e-6,
+        sigma_t_s: 0.4e-6,
+        impulse_n_per_m3_s: 2.5,
+    };
+    let mut direct = ElasticWaveField::new(grid.nx, grid.ny, grid.nz);
+    let mut prepared = direct.clone();
+    let mut direct_scratch = ElasticStepScratch::new(grid.nx, grid.ny, grid.nz);
+    let mut prepared_scratch = ElasticStepScratch::new(grid.nx, grid.ny, grid.nz);
+    let mut prepared_force = PreparedBodyForces::new(&grid, core::slice::from_ref(&force)).unwrap();
+    let dt = integrator.calculate_stable_timestep(0.25);
+
+    for _ in 0..2 {
+        integrator
+            .step(&mut direct, dt, Some(&force), &mut direct_scratch)
+            .unwrap();
+        integrator
+            .step_with_prepared_body_forces(
+                &mut prepared,
+                dt,
+                &mut prepared_force,
+                &mut prepared_scratch,
+            )
+            .unwrap();
+        direct.time += dt;
+        prepared.time += dt;
+    }
+
+    assert_eq!(prepared.ux, direct.ux);
+    assert_eq!(prepared.uy, direct.uy);
+    assert_eq!(prepared.uz, direct.uz);
+    assert_eq!(prepared.vx, direct.vx);
+    assert_eq!(prepared.vy, direct.vy);
+    assert_eq!(prepared.vz, direct.vz);
+    assert_eq!(prepared.time, direct.time);
 }
 
 /// PML damping attenuates velocity in the absorbing layer and leaves the
@@ -119,4 +165,55 @@ fn test_pml_damping() {
         "exp(-sigma * 2dt) must equal exp(-sigma * dt)^2 within {rounding_bound:e}: \
          got {doubled_dt_factor:e}, expected {expected:e}"
     );
+}
+
+#[test]
+fn fused_pml_damping_matches_separable_oracle_across_chunk_tail() {
+    let grid = Grid::new(13, 10, 9, 1e-3, 1.1e-3, 1.2e-3).unwrap();
+    let pml = ElasticSwePMLBoundary::new(
+        &grid,
+        SwePmlConfig {
+            thickness: 2,
+            sigma_max: 80.0,
+            profile_order: 2,
+            reflection_target: 1e-4,
+        },
+    );
+    let (sigma_x, sigma_y, sigma_z) = pml.axis_sigma_profiles(&grid);
+    let lambda = Array3::<f64>::from_elem(grid.dimensions(), 1e9);
+    let mu = Array3::<f64>::from_elem(grid.dimensions(), 1e9);
+    let density = Array3::<f64>::from_elem(grid.dimensions(), DENSITY_WATER_NOMINAL);
+    let integrator = TimeIntegrator::new(&grid, &lambda, &mu, &density, &pml);
+    let mut field = ElasticWaveField::new(grid.nx, grid.ny, grid.nz);
+    field.vx.fill(2.0);
+    field.vy.fill(3.0);
+    field.vz.fill(5.0);
+    field.ux.fill(7.0);
+    field.uy.fill(11.0);
+    field.uz.fill(13.0);
+    let mut scratch = ElasticStepScratch::new(grid.nx, grid.ny, grid.nz);
+    let dt = 0.125;
+
+    integrator.apply_pml_damping(&mut field, dt, &mut scratch);
+
+    for i in 0..grid.nx {
+        let factor_x = (-sigma_x[i] * dt).exp();
+        for j in 0..grid.ny {
+            let factor_y = (-sigma_y[j] * dt).exp();
+            for k in 0..grid.nz {
+                let factor_z = (-sigma_z[k] * dt).exp();
+                let factor = (factor_x * factor_y) * factor_z;
+                let actual = [
+                    field.vx[[i, j, k]],
+                    field.vy[[i, j, k]],
+                    field.vz[[i, j, k]],
+                    field.ux[[i, j, k]],
+                    field.uy[[i, j, k]],
+                    field.uz[[i, j, k]],
+                ];
+                let expected = [2.0, 3.0, 5.0, 7.0, 11.0, 13.0].map(|value| value * factor);
+                assert_eq!(actual, expected, "damping at [{i}, {j}, {k}]");
+            }
+        }
+    }
 }
