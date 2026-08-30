@@ -3,9 +3,11 @@
 use super::super::super::integration::integrator::PreparedBodyForces;
 use super::super::super::integration::TimeIntegrator;
 use super::super::super::scratch::ElasticStepScratch;
-use super::super::super::types::{ElasticBodyForceConfig, ElasticWaveField};
+use super::super::super::types::{
+    ElasticBodyForceConfig, ElasticDisplacementSnapshot, ElasticWaveField,
+};
 use super::definition::ElasticWaveSolver;
-use kwavers_core::error::{KwaversResult, ValidationError};
+use kwavers_core::error::{KwaversResult, SystemError, ValidationError};
 use kwavers_receiver::recorder::fields::{SensorRecordField, SensorRecordSpec};
 use kwavers_receiver::recorder::simple::SensorRecorder;
 
@@ -214,9 +216,16 @@ impl ElasticWaveSolver {
             0.0,
             self.config.simulation_time,
         )?;
+        let history = reserve_history_headers::<ElasticWaveField>(plan)?;
         let mut initial_field = ElasticWaveField::new(nx, ny, nz);
         initial_field.uz.assign(initial_displacement);
-        self.propagate_history_with_plan(&initial_field, plan, None)
+        self.propagate_history_with_plan(
+            &initial_field,
+            plan,
+            history,
+            None,
+            ElasticWaveField::clone,
+        )
     }
 
     /// Propagate waves with body force only override.
@@ -238,25 +247,65 @@ impl ElasticWaveSolver {
             0.0,
             self.config.simulation_time,
         )?;
+        let history = reserve_history_headers::<ElasticWaveField>(plan)?;
         let (nx, ny, nz) = self.grid.dimensions();
         let initial_field = ElasticWaveField::new(nx, ny, nz);
-        self.propagate_history_with_plan(&initial_field, plan, body_force)
+        self.propagate_history_with_plan(
+            &initial_field,
+            plan,
+            history,
+            body_force,
+            ElasticWaveField::clone,
+        )
     }
 
-    fn propagate_history_with_plan(
+    /// Propagate a timed displacement-only history with a body-force override.
+    ///
+    /// # Errors
+    /// - Returns a validation error when the configured temporal propagation
+    ///   domain is invalid.
+    /// - Propagates body-force, allocation, and numerical errors.
+    pub fn propagate_displacement_history_with_body_force_only_override(
+        &self,
+        body_force: Option<&ElasticBodyForceConfig>,
+    ) -> KwaversResult<Vec<ElasticDisplacementSnapshot>> {
+        let plan = PropagationPlan::for_initial_time(
+            &self.grid,
+            &self.lambda,
+            &self.mu,
+            &self.density,
+            &self.config,
+            0.0,
+            self.config.simulation_time,
+        )?;
+        let history = reserve_history_headers::<ElasticDisplacementSnapshot>(plan)?;
+        let (nx, ny, nz) = self.grid.dimensions();
+        let initial_field = ElasticWaveField::new(nx, ny, nz);
+        self.propagate_history_with_plan(&initial_field, plan, history, body_force, |field| {
+            ElasticDisplacementSnapshot::from(field)
+        })
+    }
+
+    /// Execute a validated plan with caller-reserved projected-history headers.
+    ///
+    /// # Errors
+    /// Propagates body-force preparation and numerical integration errors.
+    fn propagate_history_with_plan<T>(
         &self,
         initial_field: &ElasticWaveField,
         plan: PropagationPlan,
+        mut history: Vec<T>,
         body_force: Option<&ElasticBodyForceConfig>,
-    ) -> KwaversResult<Vec<ElasticWaveField>> {
+        mut project: impl FnMut(&ElasticWaveField) -> T,
+    ) -> KwaversResult<Vec<T>> {
         let mut prepared_body_force = prepare_body_force(&self.grid, body_force)?;
         let mut current_field = initial_field.clone();
         let integrator =
             TimeIntegrator::new(&self.grid, &self.lambda, &self.mu, &self.density, &self.pml);
         let (nx, ny, nz) = self.grid.dimensions();
         let mut scratch = ElasticStepScratch::new(nx, ny, nz);
-        let mut history = Vec::new();
-        history.push(current_field.clone());
+        history.push(project(&current_field));
+        let mut last_saved_time = current_field.time;
         for step_idx in 0..plan.steps {
             step_with_optional_prepared_force(
                 &integrator,
@@ -267,18 +316,27 @@ impl ElasticWaveSolver {
             )?;
             current_field.time += plan.dt;
             if (step_idx + 1) % plan.save_every == 0 {
-                history.push(current_field.clone());
+                history.push(project(&current_field));
+                last_saved_time = current_field.time;
             }
         }
-        let needs_final = match history.last() {
-            None => true,
-            Some(f) => f.time != current_field.time,
-        };
-        if needs_final {
-            history.push(current_field.clone());
+        if last_saved_time != current_field.time {
+            history.push(project(&current_field));
         }
         Ok(history)
     }
+}
+
+fn reserve_history_headers<T>(plan: PropagationPlan) -> KwaversResult<Vec<T>> {
+    let (history_capacity, history_layout) = plan.history_layout::<T>()?;
+    let mut history = Vec::new();
+    history
+        .try_reserve_exact(history_capacity)
+        .map_err(|error| SystemError::MemoryAllocation {
+            requested_bytes: history_layout.size(),
+            reason: format!("elastic wave history header reservation failed: {error}"),
+        })?;
+    Ok(history)
 }
 
 fn prepare_body_force(

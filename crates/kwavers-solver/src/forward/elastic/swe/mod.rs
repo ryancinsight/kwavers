@@ -128,9 +128,9 @@ pub mod types;
 
 // Re-export public API types for ergonomic imports
 pub use types::{
-    ArrivalDetection, ElasticBodyForceConfig, ElasticVelocitySource, ElasticVelocitySourceMode,
-    ElasticWaveConfig, ElasticWaveField, VolumetricQualityMetrics, VolumetricSource,
-    VolumetricWaveConfig, WaveFrontTracker,
+    ArrivalDetection, ElasticBodyForceConfig, ElasticDisplacementSnapshot, ElasticVelocitySource,
+    ElasticVelocitySourceMode, ElasticWaveConfig, ElasticWaveField, VolumetricQualityMetrics,
+    VolumetricSource, VolumetricWaveConfig, WaveFrontTracker,
 };
 
 pub use boundary::{ElasticSwePMLBoundary, SwePmlConfig};

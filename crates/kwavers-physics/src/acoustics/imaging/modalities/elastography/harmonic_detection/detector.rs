@@ -27,7 +27,7 @@ impl HarmonicDetector {
         Self { config }
     }
 
-    /// Analyze displacement time series for harmonic content
+    /// Analyze one complete displacement record at every spatial point.
     ///
     /// # Arguments
     ///
@@ -37,8 +37,13 @@ impl HarmonicDetector {
     /// # Returns
     ///
     /// Harmonic displacement field with all requested frequency components.
-    /// The Hann coefficients and FFT buffers allocate once per call and are
-    /// reused across every spatial point.
+    /// The time extent is the FFT size: each point receives one symmetric Hann
+    /// window and one transform, with no implicit segmentation or overlap.
+    /// Returned phases use the principal interval [-π, π]. Signal-to-noise
+    /// ratios are reported from the full normalized spectrum's neighboring
+    /// bins and never suppress an output harmonic. The Hann coefficients and
+    /// FFT buffers allocate once per call and are reused across every spatial
+    /// point.
     ///
     /// # Errors
     ///
@@ -104,7 +109,7 @@ impl HarmonicDetector {
         }
 
         // Compute nonlinearity parameter
-        harmonic_field.compute_nonlinearity_parameter(&self.config);
+        harmonic_field.compute_nonlinearity_parameter();
 
         Ok(harmonic_field)
     }

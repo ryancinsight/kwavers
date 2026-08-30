@@ -27,7 +27,7 @@ use kwavers_imaging::ultrasound::elastography::InversionMethod;
 use kwavers_math::fft::Complex64;
 use kwavers_medium::homogeneous::HomogeneousMedium;
 use kwavers_simulation::imaging::elastography::ShearWaveElastography;
-use kwavers_solver::forward::elastic::{ElasticWaveConfig, ElasticWaveField};
+use kwavers_solver::forward::elastic::{ElasticDisplacementSnapshot, ElasticWaveConfig};
 // Simple finite difference derivative for benchmarking
 fn compute_derivative(field: &Array1<f64>, dx: f64, derivative: &mut Array1<f64>) {
     for i in 1..field.len() - 1 {
@@ -94,8 +94,8 @@ fn bench_1d_wave_equation(c: &mut Criterion) {
 }
 
 /// Build a nonzero plane-wave snapshot for reconstruction benchmarks.
-fn manufactured_shear_wave(grid_size: usize, spacing: f64) -> ElasticWaveField {
-    let mut field = ElasticWaveField::new(grid_size, grid_size, grid_size);
+fn manufactured_shear_wave(grid_size: usize, spacing: f64) -> ElasticDisplacementSnapshot {
+    let mut field = ElasticDisplacementSnapshot::new(grid_size, grid_size, grid_size);
     let cells_per_axis =
         u32::try_from(grid_size - 1).expect("benchmark grids fit within u32 dimensions");
     let domain_length = f64::from(cells_per_axis) * spacing;

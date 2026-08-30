@@ -4,6 +4,20 @@
 
 ### Added
 
+- **[major] SWE high-level histories retain displacement only.**
+  `ShearWaveElastography::generate_shear_wave` now returns
+  `Vec<ElasticDisplacementSnapshot>`, and `reconstruct_elasticity` accepts that
+  snapshot type. Each saved snapshot owns `ux`, `uy`, `uz`, and `time`, omitting
+  the three velocity arrays that the high-level reconstruction never reads.
+  Callers requiring velocity history use the lower-level
+  `ElasticWaveSolver::propagate_waves_with_body_force_only_override` full-field
+  route with the same `ElasticBodyForceConfig`. Full and displacement histories
+  share one monomorphized saved-snapshot loop and preserve identical initial,
+  periodic, and final displacement values and times. A warm allocation census
+  over 18 snapshots observes zero history-header reallocations and 54 fewer
+  array allocations for the displacement route. See
+  [ADR 127](docs/adr/127-swe-displacement-history.md).
+
 - **[major] PSTD selects its FFT execution provider independently of the
   numerical method.** `FftBackend::{Leto, Hephaestus}` is carried by
   `SolverConfiguration`, simulation requests, and Python `Simulation`.
@@ -184,6 +198,16 @@
   history stays in `docs/MIGRATION.md`. 83 files, comments only, net -176 lines.
 
 ### Changed
+
+- **[major] Harmonic detection now exposes only controls that affect the
+  analysis.** `HarmonicDetectionConfig` removes the inert `fft_window_size`,
+  `fft_overlap`, `min_snr_db`, and `enable_phase_unwrapping` fields. One call
+  analyzes the complete supplied time record with a symmetric Hann window;
+  callers select the FFT extent through that record, segment overlapping
+  records explicitly, filter the reported `harmonic_snrs`, and unwrap principal
+  phases along their domain-selected axis. The unused configuration argument is
+  also removed from `compute_nonlinearity_parameter`. See
+  [ADR 126](docs/adr/126-whole-record-harmonic-analysis.md) for the migration.
 
 - **Elastography harmonic-analysis workspace:** Harmonic detection now builds
   one Hann table and one Apollo input/output workspace per analysis and reuses

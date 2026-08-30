@@ -7,11 +7,10 @@ use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, ValidationError};
 
 #[test]
-fn test_harmonic_detection_config() {
+fn default_requests_three_harmonics_at_fifty_hertz() {
     let config = HarmonicDetectionConfig::default();
     assert_eq!(config.fundamental_frequency, 50.0);
     assert_eq!(config.n_harmonics, 3);
-    assert_eq!(config.fft_window_size, 1024);
 }
 
 #[test]
@@ -66,19 +65,9 @@ fn test_snr_computation() {
     spectrum[50] = Complex64::new(1.0, 0.0); // Strong signal
 
     let snr = HarmonicDetector::compute_snr(&spectrum, 50);
-    assert!(snr > 0.0); // Should have positive SNR
-}
-
-#[test]
-fn test_harmonic_detector_creation() {
-    let config = HarmonicDetectionConfig {
-        fundamental_frequency: 100.0,
-        n_harmonics: 5,
-        ..Default::default()
-    };
-
-    let _detector = HarmonicDetector::new(config);
-    // Test passes if no panic occurs
+    let expected = 20.0;
+    let bound = 64.0 * f64::EPSILON * expected;
+    assert!((snr - expected).abs() <= bound);
 }
 
 #[test]
@@ -89,8 +78,6 @@ fn detector_matches_direct_dft_for_distinct_points() {
     let config = HarmonicDetectionConfig {
         fundamental_frequency: FUNDAMENTAL_FREQUENCY,
         n_harmonics: 3,
-        fft_window_size: SAMPLE_COUNT,
-        ..Default::default()
     };
     let detector = HarmonicDetector::new(config);
     let mut samples = leto::Array4::zeros((2, 1, 1, SAMPLE_COUNT));
@@ -132,6 +119,9 @@ fn detector_matches_direct_dft_for_distinct_points() {
             reference[third_harmonic_bin],
             &point_samples,
         );
+        assert_principal_phase(field.fundamental_phase[[point, 0, 0]]);
+        assert_principal_phase(field.harmonic_phases[0][[point, 0, 0]]);
+        assert_principal_phase(field.harmonic_phases[1][[point, 0, 0]]);
     }
     assert_eq!(field.frequency[1], 8.0);
     assert_eq!(field.frequency[64], 512.0);
@@ -139,6 +129,35 @@ fn detector_matches_direct_dft_for_distinct_points() {
         field.fundamental_magnitude[[0, 0, 0]],
         field.fundamental_magnitude[[1, 0, 0]]
     );
+}
+
+#[test]
+fn record_extent_defines_time_and_frequency_metadata() {
+    const SAMPLING_FREQUENCY: f64 = 64.0;
+    let detector = HarmonicDetector::new(HarmonicDetectionConfig {
+        fundamental_frequency: 8.0,
+        n_harmonics: 1,
+    });
+
+    for sample_count in [63, 64] {
+        let samples = leto::Array4::zeros((1, 1, 1, sample_count));
+        let field = detector
+            .analyze_harmonics(&samples, SAMPLING_FREQUENCY)
+            .expect("finite whole-record harmonic input");
+        assert_eq!(field.time.len(), sample_count);
+        assert_eq!(field.frequency.len(), sample_count / 2 + 1);
+        assert_eq!(field.time[0], 0.0);
+        assert_eq!(
+            field.time[sample_count - 1],
+            (sample_count - 1) as f64 / SAMPLING_FREQUENCY
+        );
+        for (index, frequency) in field.frequency.iter().copied().enumerate() {
+            assert_eq!(
+                frequency,
+                index as f64 * SAMPLING_FREQUENCY / sample_count as f64
+            );
+        }
+    }
 }
 
 #[test]
@@ -181,7 +200,6 @@ fn detector_preserves_strided_logical_point_order() {
     let detector = HarmonicDetector::new(HarmonicDetectionConfig {
         fundamental_frequency: FUNDAMENTAL_FREQUENCY,
         n_harmonics: 3,
-        ..Default::default()
     });
     let dense_field = detector
         .analyze_harmonics(&dense, SAMPLING_FREQUENCY)
@@ -205,7 +223,6 @@ fn detector_preserves_full_spectrum_snr_near_nyquist() {
     let detector = HarmonicDetector::new(HarmonicDetectionConfig {
         fundamental_frequency: FUNDAMENTAL_FREQUENCY,
         n_harmonics: 3,
-        ..Default::default()
     });
     let field = detector
         .analyze_harmonics(&samples, SAMPLING_FREQUENCY)
@@ -262,7 +279,6 @@ fn detector_rejects_invalid_spectral_domains() {
     let aliased_fundamental = HarmonicDetector::new(HarmonicDetectionConfig {
         fundamental_frequency: 501.0,
         n_harmonics: 1,
-        ..Default::default()
     });
     assert_invalid_parameter(
         aliased_fundamental.analyze_harmonics(&valid_samples, 1_000.0),
@@ -271,7 +287,6 @@ fn detector_rejects_invalid_spectral_domains() {
     let aliased_harmonics = HarmonicDetector::new(HarmonicDetectionConfig {
         fundamental_frequency: 200.0,
         n_harmonics: 3,
-        ..Default::default()
     });
     assert_invalid_parameter(
         aliased_harmonics.analyze_harmonics(&valid_samples, 1_000.0),
@@ -324,6 +339,10 @@ fn assert_polar_close(
 fn wrapped_phase_distance(left: f64, right: f64) -> f64 {
     let distance = (left - right).rem_euclid(TWO_PI);
     distance.min(TWO_PI - distance)
+}
+
+fn assert_principal_phase(phase: f64) {
+    assert!((-std::f64::consts::PI..=std::f64::consts::PI).contains(&phase));
 }
 
 fn assert_complete_results_equal(

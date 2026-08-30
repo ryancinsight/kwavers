@@ -127,6 +127,7 @@ pub struct ElasticWaveField {
 }
 
 impl ElasticWaveField {
+    /// Create a zero-initialized elastic wave field.
     #[must_use]
     pub fn new(nx: usize, ny: usize, nz: usize) -> Self {
         Self {
@@ -140,43 +141,71 @@ impl ElasticWaveField {
         }
     }
 
+    /// Compute the Euclidean displacement magnitude at every grid point.
     #[must_use]
     pub fn displacement_magnitude(&self) -> Array3<f64> {
-        let mut out = self.ux.clone();
-        for (o, y) in out.iter_mut().zip(self.uy.iter()) {
-            *o = (*o).mul_add(*o, y * y);
-        }
-        for (o, z) in out.iter_mut().zip(self.uz.iter()) {
-            *o += z * z;
-        }
-        apply_inplace(&mut out, f64::sqrt);
-        out
+        displacement_magnitude(&self.ux, &self.uy, &self.uz)
     }
 }
 
-/// Displacement-only checkpoint for adjoint correlation.
+/// Timed displacement-only checkpoint from elastic-wave propagation.
 ///
-/// Elastic FWI needs the three displacement components from every forward
-/// step, but not the velocity components. Keeping this distinct internal type
-/// makes that storage contract explicit and halves the retained wave-field
-/// arrays without changing the propagated state.
-#[cfg(feature = "clinical-imaging")]
+/// Retained displacement consumers do not need the three velocity arrays in
+/// [`ElasticWaveField`]. This type preserves the vector displacement and sample
+/// time while halving the retained dense-array payload.
+#[non_exhaustive]
 #[derive(Debug, Clone, PartialEq)]
-pub(crate) struct ElasticDisplacementSnapshot {
-    pub(crate) ux: Array3<f64>,
-    pub(crate) uy: Array3<f64>,
-    pub(crate) uz: Array3<f64>,
+pub struct ElasticDisplacementSnapshot {
+    /// Displacement X component (m).
+    pub ux: Array3<f64>,
+    /// Displacement Y component (m).
+    pub uy: Array3<f64>,
+    /// Displacement Z component (m).
+    pub uz: Array3<f64>,
+    /// Simulation time (s).
+    pub time: f64,
 }
 
-#[cfg(feature = "clinical-imaging")]
+impl ElasticDisplacementSnapshot {
+    /// Create a zero-initialized displacement checkpoint at time zero.
+    #[must_use]
+    pub fn new(nx: usize, ny: usize, nz: usize) -> Self {
+        Self {
+            ux: Array3::zeros((nx, ny, nz)),
+            uy: Array3::zeros((nx, ny, nz)),
+            uz: Array3::zeros((nx, ny, nz)),
+            time: 0.0,
+        }
+    }
+
+    /// Compute the Euclidean displacement magnitude at every grid point.
+    #[must_use]
+    pub fn displacement_magnitude(&self) -> Array3<f64> {
+        displacement_magnitude(&self.ux, &self.uy, &self.uz)
+    }
+}
+
 impl From<&ElasticWaveField> for ElasticDisplacementSnapshot {
     fn from(field: &ElasticWaveField) -> Self {
         Self {
             ux: field.ux.clone(),
             uy: field.uy.clone(),
             uz: field.uz.clone(),
+            time: field.time,
         }
     }
+}
+
+fn displacement_magnitude(ux: &Array3<f64>, uy: &Array3<f64>, uz: &Array3<f64>) -> Array3<f64> {
+    let mut out = ux.clone();
+    for (o, y) in out.iter_mut().zip(uy.iter()) {
+        *o = (*o).mul_add(*o, y * y);
+    }
+    for (o, z) in out.iter_mut().zip(uz.iter()) {
+        *o += z * z;
+    }
+    apply_inplace(&mut out, f64::sqrt);
+    out
 }
 
 #[cfg(test)]
@@ -206,6 +235,26 @@ mod tests {
         let magnitude = field.displacement_magnitude();
 
         assert_eq!(magnitude, Array3::<f64>::zeros((2, 2, 2)));
+    }
+
+    #[test]
+    fn displacement_snapshot_preserves_values_time_and_magnitude() {
+        let mut field = ElasticWaveField::new(2, 1, 1);
+        field.ux[[0, 0, 0]] = 3.0;
+        field.uy[[0, 0, 0]] = 4.0;
+        field.uz[[1, 0, 0]] = 12.0;
+        field.time = 2.5e-6;
+
+        let snapshot = ElasticDisplacementSnapshot::from(&field);
+
+        assert_eq!(snapshot.ux, field.ux);
+        assert_eq!(snapshot.uy, field.uy);
+        assert_eq!(snapshot.uz, field.uz);
+        assert_eq!(snapshot.time, field.time);
+        assert_eq!(
+            snapshot.displacement_magnitude(),
+            field.displacement_magnitude()
+        );
     }
 }
 

@@ -572,21 +572,107 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   and the lockfile guard confirms 91 first-party Git sources. Hosted
   recollection remains pending.
 
-## KW-HARMONIC-CONFIG-CONTRACT-2026-08-30 — Specify spectral segmentation [major] — todo
+## KW-HARMONIC-CONFIG-CONTRACT-2026-08-30 — Specify spectral segmentation [major] — review
 
-- **Outcome:** eliminate the four consumer-visible harmonic configuration
-  fields that currently do not affect computation (`fft_window_size`,
-  `fft_overlap`, `min_snr_db`, and `enable_phase_unwrapping`) by specifying one
-  coherent segmentation, threshold, and phase contract before implementation.
+- **Integrator / lease:** Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d`;
+  lease none after source commit `25d0c64c9`. Draft PR #674 carries the
+  dependent major change on top of exact PR #670 correction `e7be552c9`.
+
+- **Outcome:** [ADR 126](docs/adr/126-whole-record-harmonic-analysis.md) selects
+  the implementation's existing whole-record contract and removes the four
+  consumer-visible fields that never affected computation (`fft_window_size`,
+  `fft_overlap`, `min_snr_db`, and `enable_phase_unwrapping`). The inert
+  nonlinearity-method config argument is removed with its in-repository callers.
 - **Scope:** harmonic-detection config/detector/types, an indexed ADR and
-  migration guide, direct-DFT/window-overlap oracles, allocation census, and
-  the existing Criterion instrument. **Non-goal:** changing the whole-record
-  FFT behavior before the contract is selected.
-- **Acceptance:** the ADR chooses implement-or-remove for every field; no public
-  field remains observationally inert, segment/frequency dimensions become
-  unambiguous, all invalid domains reject before mutation, and the selected
-  implementation preserves point-scaled allocation independence with stored
-  paired performance evidence.
+  migration guide, direct-DFT/record-metadata oracles, allocation census, and
+  the existing Criterion instrument. **Non-goal:** changing the established
+  whole-record FFT arithmetic or its timed benchmark path.
+- **Acceptance:** no public field or argument remains observationally inert;
+  whole-record time/frequency dimensions, principal phases, descriptive SNR,
+  and external segmentation/filtering ownership are explicit. Existing invalid
+  domains still reject before output/workspace allocation, and the selected
+  contract preserves point-scaled allocation independence and the unchanged
+  Criterion instrument.
+- **Current evidence:** against exact baseline `e7be552c9`, focused debug and
+  release harmonic suites pass 10/10, the complete `kwavers-physics` suite
+  passes 1,727/1,727 in 12.132 seconds, and the top-level migrated caller passes
+  1/1. The allocation test retains 17 allocations and zero reallocations for
+  both one and 64 points. Warning-denied production-library Clippy, Rustdoc,
+  9/9 runnable doctests (six environmental examples ignored), ADR/index checks,
+  formatting, diff checks, the unchanged Criterion smoke, and the standalone
+  91-source lockfile check pass. Exact archive-based SemVer analysis passes
+  221/223 checks and reports only the intended two major classes: four removed
+  public fields and the one-parameter method-arity change. All-target Clippy's
+  touched diagnostics are resolved; 28 pre-existing test-only diagnostics
+  outside this item remain. Source commit `25d0c64c9` contains the
+  implementation, ADR, migration, tests, and release note. Independent static
+  review of exact range `e7be552c9..dbbc733a7` is GREEN: the spectral kernel,
+  allocation census, and Criterion instrument are blob-identical to baseline,
+  and the only public changes are the four recorded field removals plus the
+  method-arity migration. Draft PR #674 remains dependent on PR #670; rebase,
+  PR readiness, hosted collection, and merge closure remain pending.
+
+## KW-SWE-E2E-ELASTIC-MEDIUM-2026-08-30 — Correct bounded SWE workflow [patch] — review
+
+- **Integrator / lease:** Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d`;
+  lease discharged by the candidate commit.
+- **Outcome:** keep the 16³, 10 ms end-to-end workflow and 60-second bound,
+  but replace the fluid `μ=0` fixture with an 8 kPa, ν=0.49 elastic tissue,
+  use a stable explicit step, and derive the detector sampling rate from saved
+  timestamps. Strengthen the workflow oracle from existence checks to finite,
+  nonnegative inversion fields plus a nonzero propagated displacement.
+- **Acceptance:** the exact focused test passes below the committed slow bound;
+  41 uniformly spaced snapshots cover all 400 steps; the full propagation,
+  harmonic analysis, and nonlinear inversion remain exercised without reducing
+  the grid or physical duration. Entry evidence on exact `e7be552c9`: the fluid
+  fixture ran 51,962 CFL steps, retained about 5,198 six-field snapshots, passed
+  locally in 17.021 seconds, and timed out on the hosted runner at 60.093 seconds.
+  Candidate standalone evidence atop `75e2c8f7b`: full-feature Nextest 19/19 in
+  0.382 seconds with the corrected workflow at 0.121 seconds; default-feature
+  warning-denied Clippy passes. Full-feature warning-denied Clippy remains blocked
+  by 69 pre-existing PINN diagnostics outside this test and item.
+
+## KW-SWE-DISPLACEMENT-HISTORY-2026-08-30 — Retain only SWE displacement [major] [arch] — review
+
+- **Integrator / lease:** Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d`;
+  lease none after source commit `177f0f235` (ADR commit `ca4e2527e`).
+- **Outcome / scope:** replace the high-level `generate_shear_wave` history with
+  public timed displacement snapshots (`ux`, `uy`, `uz`, `time`) and route body-force
+  propagation through one canonical saved-snapshot loop. Keep the lower-level full
+  `ElasticWaveField` history for consumers that require velocities. Migrate every
+  first-party caller; do not change integration arithmetic, cadence, grid, duration,
+  or force preparation. See [ADR 127](docs/adr/127-swe-displacement-history.md).
+- **Acceptance:** displacement snapshots are exactly equal to the corresponding
+  fields and times from the full-history route for initial, periodic, and final
+  snapshots, including a nondivisible final step. An allocation census proves the
+  high-level retained payload drops from six full arrays per snapshot to three with
+  no history-header reallocation. Existing SWE value tests and benchmark smoke stay
+  within their committed bounds. ADR 127, Rustdoc, migration notes, and SemVer
+  classification agree. Dependency: compose with the independently reviewed
+  history-header reservation series before merge.
+- **Evidence at `177f0f235`:** warning-clean affected library, allocation-test,
+  simulation, and benchmark Clippy targets; solver Nextest 1,052/1,052 in
+  96.101 seconds, including the warm 18-snapshot census with zero header
+  reallocations and exactly 54 omitted array allocations; `nl_swe_validation`
+  19/19 in 0.402 seconds; the combined SWE/PINN allocation harness 2/2;
+  solver/simulation Rustdoc and doctests; and the unchanged 32/64/128 SWE
+  reconstruction benchmark smoke all pass. The
+  all-target solver Clippy command reaches 94 pre-existing diagnostics in
+  untouched examples and tests, so it is not claimed green. `Cargo.lock`
+  remains byte-identical to the parent. `cargo-semver-checks 0.50.0` did not
+  reach API analysis because its exact-`ca4e2527e` packed-object clone failed
+  with `Entry too large to fit in memory`; equivalent exact API evidence
+  remains open. Independent review is green after migration correction
+  `89cf67d9d`. PR #670 merged with history at `fb24b26d4`; closed draft PR #671
+  at `0619c6a8f` is subsumed by the canonical reservation path in this item.
+  Merge reconciliation onto `fb24b26d4` is complete at `ecff46e6d`: the exact
+  merged candidate passes the combined SWE/PINN allocation harness 2/2, public
+  SWE validation 19/19, affected warning-denied Clippy, solver/simulation
+  Rustdoc and doctests, formatting, and the unchanged 32/64/128 benchmark
+  smoke; it retains 91 first-party Git sources and no lockfile delta from
+  `main`. Combined clinical/PINN Clippy still reaches 68 pre-existing PINN
+  documentation diagnostics outside this item. PR #674 retargeting, hosted
+  verification, and merge remain open.
 
 ## KW-SWE-E2E-ELASTIC-MEDIUM-2026-08-30 — Correct bounded SWE workflow [patch] — review
 
