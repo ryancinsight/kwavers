@@ -183,11 +183,11 @@ mod harmonic_detection_tests {
         field.harmonic_magnitudes[0].fill(0.1); // Second harmonic
         field.harmonic_snrs[0].fill(20.0); // Good SNR
 
-        let config = HarmonicDetectionConfig::default();
-        field.compute_nonlinearity_parameter(&config);
+        field.compute_nonlinearity_parameter();
 
-        // Should have computed nonlinearity parameter
-        assert!(field.nonlinearity_parameter.iter().any(|&x| x > 0.0));
+        for value in field.nonlinearity_parameter.iter().copied() {
+            assert!((value - 0.1).abs() <= 8.0 * f64::EPSILON);
+        }
     }
 
     #[test]

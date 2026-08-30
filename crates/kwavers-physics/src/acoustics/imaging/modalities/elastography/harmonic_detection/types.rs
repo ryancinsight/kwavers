@@ -1,6 +1,5 @@
 //! Types and data structures for harmonic detection
 
-use super::config::HarmonicDetectionConfig;
 use leto::Array3;
 
 /// Multi-frequency displacement field with harmonic components
@@ -8,19 +7,21 @@ use leto::Array3;
 pub struct HarmonicDisplacementField {
     /// Fundamental frequency displacement magnitude
     pub fundamental_magnitude: Array3<f64>,
-    /// Fundamental frequency displacement phase
+    /// Principal fundamental phase in radians, in the interval [-π, π].
     pub fundamental_phase: Array3<f64>,
     /// Magnitudes for requested harmonics above the fundamental, starting at A₂
     pub harmonic_magnitudes: Vec<Array3<f64>>,
-    /// Phases for requested harmonics above the fundamental, starting at A₂
+    /// Principal phases in radians for harmonics above the fundamental, starting at A₂.
     pub harmonic_phases: Vec<Array3<f64>>,
-    /// Signal-to-noise ratios for harmonics above the fundamental, starting at A₂ (dB)
+    /// Reported signal-to-noise ratios for harmonics above the fundamental, starting at A₂ (dB).
+    ///
+    /// These values describe the result and do not filter harmonic output.
     pub harmonic_snrs: Vec<Array3<f64>>,
     /// Nonlinearity parameter B/A estimates
     pub nonlinearity_parameter: Array3<f64>,
-    /// Time vector for the analysis
+    /// Sample times for the complete analyzed record.
     pub time: Vec<f64>,
-    /// Frequency vector for spectral analysis
+    /// Non-negative FFT-bin frequencies for the complete analyzed record.
     pub frequency: Vec<f64>,
 }
 
@@ -117,7 +118,7 @@ impl HarmonicDisplacementField {
     ///
     /// Panics when a caller has replaced the public second-harmonic array with
     /// one whose shape differs from the fundamental array.
-    pub fn compute_nonlinearity_parameter(&mut self, _config: &HarmonicDetectionConfig) {
+    pub fn compute_nonlinearity_parameter(&mut self) {
         // Store the dimensionless second-harmonic displacement ratio A₂/A₁.
         // This is a relative nonlinearity proxy; absolute Γ requires G' and A₁.
         if self.nonlinearity_parameter.shape() != self.fundamental_magnitude.shape() {

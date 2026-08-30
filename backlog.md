@@ -522,19 +522,34 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   tests/benchmarks, the next ADR and index entry, migration/release docs, and
   this item record through the next verified commit.
 
-- **Outcome:** eliminate the four consumer-visible harmonic configuration
-  fields that currently do not affect computation (`fft_window_size`,
-  `fft_overlap`, `min_snr_db`, and `enable_phase_unwrapping`) by specifying one
-  coherent segmentation, threshold, and phase contract before implementation.
+- **Outcome:** [ADR 126](docs/adr/126-whole-record-harmonic-analysis.md) selects
+  the implementation's existing whole-record contract and removes the four
+  consumer-visible fields that never affected computation (`fft_window_size`,
+  `fft_overlap`, `min_snr_db`, and `enable_phase_unwrapping`). The inert
+  nonlinearity-method config argument is removed with its in-repository callers.
 - **Scope:** harmonic-detection config/detector/types, an indexed ADR and
-  migration guide, direct-DFT/window-overlap oracles, allocation census, and
-  the existing Criterion instrument. **Non-goal:** changing the whole-record
-  FFT behavior before the contract is selected.
-- **Acceptance:** the ADR chooses implement-or-remove for every field; no public
-  field remains observationally inert, segment/frequency dimensions become
-  unambiguous, all invalid domains reject before mutation, and the selected
-  implementation preserves point-scaled allocation independence with stored
-  paired performance evidence.
+  migration guide, direct-DFT/record-metadata oracles, allocation census, and
+  the existing Criterion instrument. **Non-goal:** changing the established
+  whole-record FFT arithmetic or its timed benchmark path.
+- **Acceptance:** no public field or argument remains observationally inert;
+  whole-record time/frequency dimensions, principal phases, descriptive SNR,
+  and external segmentation/filtering ownership are explicit. Existing invalid
+  domains still reject before output/workspace allocation, and the selected
+  contract preserves point-scaled allocation independence and the unchanged
+  Criterion instrument.
+- **Current evidence:** against exact baseline `e7be552c9`, focused debug and
+  release harmonic suites pass 10/10, the complete `kwavers-physics` suite
+  passes 1,727/1,727 in 12.132 seconds, and the top-level migrated caller passes
+  1/1. The allocation test retains 17 allocations and zero reallocations for
+  both one and 64 points. Warning-denied production-library Clippy, Rustdoc,
+  9/9 runnable doctests (six environmental examples ignored), ADR/index checks,
+  formatting, diff checks, the unchanged Criterion smoke, and the standalone
+  91-source lockfile check pass. Exact archive-based SemVer analysis passes
+  221/223 checks and reports only the intended two major classes: four removed
+  public fields and the one-parameter method-arity change. All-target Clippy's
+  touched diagnostics are resolved; 28 pre-existing test-only diagnostics
+  outside this item remain. Source commit, independent review, PR readiness,
+  and merge closure remain pending.
 
 ## KW-SWE-PROPAGATION-PREFLIGHT-2026-08-29 — Validate propagation before mutation [patch] — review
 

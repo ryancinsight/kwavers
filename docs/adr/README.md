@@ -89,3 +89,4 @@
 | [123](123-visualization-config-single-source.md) | Keep visualization backend and quality selection single-source | Accepted |
 | [124](124-integration-test-baseline.md) | Run the integration tests CI already compiles, against a failure baseline | Accepted |
 | [125](125-fft-backend-selection.md) | Select FFT execution at the solver boundary | Accepted |
+| [126](126-whole-record-harmonic-analysis.md) | Define harmonic detection as whole-record analysis | Accepted |

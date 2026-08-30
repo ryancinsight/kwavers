@@ -185,6 +185,16 @@
 
 ### Changed
 
+- **[major] Harmonic detection now exposes only controls that affect the
+  analysis.** `HarmonicDetectionConfig` removes the inert `fft_window_size`,
+  `fft_overlap`, `min_snr_db`, and `enable_phase_unwrapping` fields. One call
+  analyzes the complete supplied time record with a symmetric Hann window;
+  callers select the FFT extent through that record, segment overlapping
+  records explicitly, filter the reported `harmonic_snrs`, and unwrap principal
+  phases along their domain-selected axis. The unused configuration argument is
+  also removed from `compute_nonlinearity_parameter`. See
+  [ADR 126](docs/adr/126-whole-record-harmonic-analysis.md) for the migration.
+
 - **Elastography harmonic-analysis workspace:** Harmonic detection now builds
   one Hann table and one Apollo input/output workspace per analysis and reuses
   them across all spatial points, instead of allocating a time series, window,
