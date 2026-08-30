@@ -1,145 +1,84 @@
 //! Low-level spectral processing for harmonic detection (FFT, windowing, SNR)
 
 use super::detector::HarmonicDetector;
-use super::types::PointHarmonics;
-use apollo::{fft_1d_leto, Complex64};
+use apollo::{fft_1d_array_into, Complex64};
 use kwavers_core::constants::numerical::TWO_PI;
-use kwavers_core::error::KwaversResult;
+use leto::Array1;
+
+/// Caller-scoped spectral storage reused across every spatial point.
+pub(super) struct SpectralWorkspace {
+    window: Box<[f64]>,
+    windowed: Array1<f64>,
+    spectrum: Array1<Complex64>,
+}
+
+impl SpectralWorkspace {
+    pub(super) fn new(sample_count: usize) -> Self {
+        debug_assert!(sample_count >= 2);
+        Self {
+            window: (0..sample_count)
+                .map(|index| hann_weight(index, sample_count))
+                .collect(),
+            windowed: Array1::from(vec![0.0; sample_count]),
+            spectrum: Array1::from(vec![Complex64::default(); sample_count]),
+        }
+    }
+
+    /// Transform one point without allocating or rebuilding its Hann weights.
+    pub(super) fn transform<I>(&mut self, samples: I) -> &[Complex64]
+    where
+        I: ExactSizeIterator<Item = f64>,
+    {
+        debug_assert_eq!(samples.len(), self.window.len());
+        let windowed = self
+            .windowed
+            .as_slice_mut()
+            .expect("invariant: harmonic FFT input is C-contiguous");
+        for ((output, sample), &weight) in windowed.iter_mut().zip(samples).zip(&self.window) {
+            *output = sample * weight;
+        }
+
+        fft_1d_array_into(&self.windowed, &mut self.spectrum);
+        let normalization = (self.window.len() as f64).sqrt();
+        let independent_bin_count = self.window.len() / 2 + 1;
+        let spectrum = self
+            .spectrum
+            .as_slice_mut()
+            .expect("invariant: harmonic FFT output is C-contiguous");
+        for value in &mut spectrum[..independent_bin_count] {
+            *value /= normalization;
+        }
+        &spectrum[..independent_bin_count]
+    }
+}
 
 impl HarmonicDetector {
-    /// Analyze harmonics at a single spatial point
-    /// # Errors
-    /// - Propagates any `KwaversError` returned by called functions.
-    ///
-    pub(crate) fn analyze_single_point(
-        &self,
-        time_series: &[f64],
-        sampling_frequency: f64,
-    ) -> KwaversResult<PointHarmonics> {
-        // Apply windowing and FFT
-        let windowed = Self::apply_window(time_series);
-        let spectrum = Self::compute_fft(&windowed)?;
-
-        // Find fundamental frequency peak
-        let _fundamental_idx = self.find_fundamental_peak(&spectrum, sampling_frequency)?;
-
-        // Extract harmonic components
-        let mut harmonic_magnitudes = Vec::new();
-        let mut harmonic_phases = Vec::new();
-        let mut harmonic_snrs = Vec::new();
-
-        for harmonic_order in 1..=self.config.n_harmonics {
-            let harmonic_freq = harmonic_order as f64 * self.config.fundamental_frequency;
-            let harmonic_idx =
-                (harmonic_freq / sampling_frequency * spectrum.len() as f64) as usize;
-
-            if harmonic_idx < spectrum.len() {
-                let magnitude = spectrum[harmonic_idx].norm();
-                let phase = spectrum[harmonic_idx].arg();
-
-                // Compute SNR
-                let snr = Self::compute_snr(&spectrum, harmonic_idx);
-
-                harmonic_magnitudes.push(magnitude);
-                harmonic_phases.push(phase);
-                harmonic_snrs.push(snr);
-            } else {
-                harmonic_magnitudes.push(0.0);
-                harmonic_phases.push(0.0);
-                harmonic_snrs.push(0.0);
-            }
-        }
-
-        // Extract fundamental (first harmonic)
-        let fundamental_magnitude = harmonic_magnitudes[0];
-        let fundamental_phase = harmonic_phases[0];
-
-        // Remove fundamental from harmonic list
-        harmonic_magnitudes.remove(0);
-        harmonic_phases.remove(0);
-        harmonic_snrs.remove(0);
-
-        Ok(PointHarmonics {
-            fundamental_magnitude,
-            fundamental_phase,
-            harmonic_magnitudes,
-            harmonic_phases,
-            harmonic_snrs,
-        })
-    }
-
-    /// Apply window function to time series
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
-    pub(crate) fn apply_window(time_series: &[f64]) -> Vec<f64> {
-        let n = time_series.len();
-        let mut windowed = Vec::with_capacity(n);
-
-        // Hann window
-        for (i, &val) in time_series.iter().enumerate().take(n) {
-            let window = 0.5 * (1.0 - (TWO_PI * i as f64 / (n - 1) as f64).cos());
-            windowed.push(val * window);
-        }
-
-        windowed
-    }
-
-    /// Compute FFT of time series
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
-    pub(crate) fn compute_fft(time_series: &[f64]) -> KwaversResult<Vec<Complex64>> {
-        let fft_input = leto::Array1::from_shape_vec([time_series.len()], time_series.to_vec())
-            .expect("harmonic-detection series length must match Leto FFT shape");
-        let mut buffer = fft_1d_leto(fft_input.view());
-
-        // Normalize
-        let norm_factor = (time_series.len() as f64).sqrt();
-        for val in buffer
-            .as_slice_mut()
-            .expect("harmonic-detection FFT output must be dense")
-        {
-            *val /= norm_factor;
-        }
-
-        Ok(buffer.into_vec())
-    }
-
-    /// Find fundamental frequency peak in spectrum
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
-    pub(crate) fn find_fundamental_peak(
-        &self,
+    pub(super) fn harmonic_component(
         spectrum: &[Complex64],
         sampling_frequency: f64,
-    ) -> KwaversResult<usize> {
-        let df = sampling_frequency / spectrum.len() as f64;
-        let expected_idx = (self.config.fundamental_frequency / df) as usize;
-
-        // Search around expected fundamental frequency
-        let search_radius = 5; // ±5 bins
-        let start_idx = expected_idx.saturating_sub(search_radius);
-        let end_idx = (expected_idx + search_radius).min(spectrum.len() - 1);
-
-        let mut max_magnitude = 0.0;
-        let mut peak_idx = expected_idx;
-
-        for (idx, val) in spectrum
-            .iter()
-            .enumerate()
-            .take(end_idx + 1)
-            .skip(start_idx)
-        {
-            let magnitude = val.norm();
-            if magnitude > max_magnitude {
-                max_magnitude = magnitude;
-                peak_idx = idx;
-            }
+        fundamental_frequency: f64,
+        harmonic_order: usize,
+        sample_count: usize,
+    ) -> (f64, f64, f64) {
+        let bin = harmonic_order as f64 * fundamental_frequency / sampling_frequency
+            * sample_count as f64;
+        if !bin.is_finite() || bin < 0.0 || bin >= spectrum.len() as f64 {
+            return (0.0, 0.0, 0.0);
         }
 
-        Ok(peak_idx)
+        // Truncation intentionally selects the FFT bin whose lower edge contains
+        // the requested frequency, preserving the detector's established mapping.
+        #[expect(
+            clippy::cast_possible_truncation,
+            reason = "the finite non-negative bin is range-checked against slice length"
+        )]
+        let index = bin as usize;
+        let value = spectrum[index];
+        (
+            value.norm(),
+            value.arg(),
+            Self::compute_snr(spectrum, index),
+        )
     }
 
     /// Compute signal-to-noise ratio at given frequency bin
@@ -178,4 +117,9 @@ impl HarmonicDetector {
             100.0 // Very high SNR if no noise detected
         }
     }
+}
+
+pub(super) fn hann_weight(index: usize, sample_count: usize) -> f64 {
+    debug_assert!(sample_count >= 2);
+    0.5 * (1.0 - (TWO_PI * index as f64 / (sample_count - 1) as f64).cos())
 }

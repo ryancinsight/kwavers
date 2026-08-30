@@ -3180,6 +3180,7 @@ dependencies = [
  "consus-npy",
  "eunomia",
  "hyperion",
+ "kwavers-alloc-probe",
  "kwavers-core",
  "kwavers-field",
  "kwavers-grid",

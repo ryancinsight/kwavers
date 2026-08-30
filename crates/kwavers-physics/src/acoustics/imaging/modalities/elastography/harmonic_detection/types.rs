@@ -10,11 +10,11 @@ pub struct HarmonicDisplacementField {
     pub fundamental_magnitude: Array3<f64>,
     /// Fundamental frequency displacement phase
     pub fundamental_phase: Array3<f64>,
-    /// Harmonic displacement magnitudes (vector of arrays for each harmonic)
+    /// Magnitudes for requested harmonics above the fundamental, starting at A₂
     pub harmonic_magnitudes: Vec<Array3<f64>>,
-    /// Harmonic displacement phases (vector of arrays for each harmonic)
+    /// Phases for requested harmonics above the fundamental, starting at A₂
     pub harmonic_phases: Vec<Array3<f64>>,
-    /// Signal-to-noise ratios for each harmonic (dB)
+    /// Signal-to-noise ratios for harmonics above the fundamental, starting at A₂ (dB)
     pub harmonic_snrs: Vec<Array3<f64>>,
     /// Nonlinearity parameter B/A estimates
     pub nonlinearity_parameter: Array3<f64>,
@@ -25,14 +25,23 @@ pub struct HarmonicDisplacementField {
 }
 
 impl HarmonicDisplacementField {
-    /// Create new harmonic displacement field
+    /// Create a harmonic displacement field.
+    ///
+    /// `higher_harmonic_count` counts stored harmonics above the separately
+    /// represented fundamental frequency.
     #[must_use]
-    pub fn new(nx: usize, ny: usize, nz: usize, n_harmonics: usize, n_time_points: usize) -> Self {
-        let mut harmonic_magnitudes = Vec::with_capacity(n_harmonics);
-        let mut harmonic_phases = Vec::with_capacity(n_harmonics);
-        let mut harmonic_snrs = Vec::with_capacity(n_harmonics);
+    pub fn new(
+        nx: usize,
+        ny: usize,
+        nz: usize,
+        higher_harmonic_count: usize,
+        n_time_points: usize,
+    ) -> Self {
+        let mut harmonic_magnitudes = Vec::with_capacity(higher_harmonic_count);
+        let mut harmonic_phases = Vec::with_capacity(higher_harmonic_count);
+        let mut harmonic_snrs = Vec::with_capacity(higher_harmonic_count);
 
-        for _ in 0..n_harmonics {
+        for _ in 0..higher_harmonic_count {
             harmonic_magnitudes.push(Array3::zeros([nx, ny, nz]));
             harmonic_phases.push(Array3::zeros([nx, ny, nz]));
             harmonic_snrs.push(Array3::zeros([nx, ny, nz]));
@@ -103,24 +112,29 @@ impl HarmonicDisplacementField {
     ///
     /// Destrade M & Ogden RW (2010). "On the third- and fourth-order constants
     /// of incompressible isotropic elasticity." *J Acoust Soc Am* 128(6):3334–3343.
+    ///
+    /// # Panics
+    ///
+    /// Panics when a caller has replaced the public second-harmonic array with
+    /// one whose shape differs from the fundamental array.
     pub fn compute_nonlinearity_parameter(&mut self, _config: &HarmonicDetectionConfig) {
         // Store the dimensionless second-harmonic displacement ratio A₂/A₁.
         // This is a relative nonlinearity proxy; absolute Γ requires G' and A₁.
-        self.nonlinearity_parameter = self.harmonic_ratio(2);
+        if self.nonlinearity_parameter.shape() != self.fundamental_magnitude.shape() {
+            self.nonlinearity_parameter = Array3::zeros(self.fundamental_magnitude.shape());
+        }
+        let Some(second_harmonic) = self.harmonic_magnitudes.first() else {
+            self.nonlinearity_parameter.fill(0.0);
+            return;
+        };
+        let [nx, ny, nz] = self.fundamental_magnitude.shape();
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    self.nonlinearity_parameter[[i, j, k]] =
+                        second_harmonic[[i, j, k]] / self.fundamental_magnitude[[i, j, k]];
+                }
+            }
+        }
     }
-}
-
-/// Harmonic analysis results for a single spatial point
-#[derive(Debug)]
-pub(crate) struct PointHarmonics {
-    /// Fundamental frequency magnitude
-    pub fundamental_magnitude: f64,
-    /// Fundamental frequency phase
-    pub fundamental_phase: f64,
-    /// Harmonic magnitudes (excluding fundamental)
-    pub harmonic_magnitudes: Vec<f64>,
-    /// Harmonic phases (excluding fundamental)
-    pub harmonic_phases: Vec<f64>,
-    /// Harmonic SNRs in dB
-    pub harmonic_snrs: Vec<f64>,
 }

@@ -443,6 +443,22 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   arithmetic, storage, or allocations. Local operational runs measured
   16.033/14.652 s after fusion versus 17.770 s with only the force cursor; these
   are bounded test-body observations, not Criterion evidence.
+- **Sixth-phase result:** harmonic detection's point loop allocated and copied
+  a time series, Hann window, Apollo FFT output, and three harmonic vectors for
+  every spatial point while recomputing every cosine coefficient. The selected
+  caller-owned workspace reuses one Hann table and Apollo input/output pair,
+  writes result planes in place, and traverses dense C-order points as exact
+  time chunks. On the unchanged 8³×128 Criterion workload the 95% interval moved
+  from 1.2663–1.2735 ms to 233.88–238.41 µs; median estimates moved from
+  1.2710 ms to 236.52 µs (81.4%). A warmed composite-length census records
+  exactly 17 allocations and zero reallocations for both one and 64 points.
+  Direct-DFT oracles cover two distinct points and Fortran-strided logical
+  order; typed preflight rejects invalid sample/frequency/harmonic domains.
+  The complete clinical-imaging physics suite passes 1,726/1,726 in 12.531 s,
+  and the unchanged NL-SWE workflow passes in 19.202 s. Production-library and
+  allocation-target warning-denied Clippy, Rustdoc, and 9/9 runnable doctests
+  pass; all-target Clippy remains red on pre-existing diagnostics outside this
+  item.
 - **Acceptance:** both ordinary propagation loops prepare an optional Gaussian
   force once before stepping and share one prepared-step helper; no-force output
   remains unchanged and direct/prepared nonzero fields compare under a derived
@@ -487,6 +503,22 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   all-target checking and the 10/10 stress suite pass against the Git source,
   and the lockfile guard confirms 91 first-party Git sources. Hosted
   recollection remains pending.
+
+## KW-HARMONIC-CONFIG-CONTRACT-2026-08-30 — Specify spectral segmentation [major] — todo
+
+- **Outcome:** eliminate the four consumer-visible harmonic configuration
+  fields that currently do not affect computation (`fft_window_size`,
+  `fft_overlap`, `min_snr_db`, and `enable_phase_unwrapping`) by specifying one
+  coherent segmentation, threshold, and phase contract before implementation.
+- **Scope:** harmonic-detection config/detector/types, an indexed ADR and
+  migration guide, direct-DFT/window-overlap oracles, allocation census, and
+  the existing Criterion instrument. **Non-goal:** changing the whole-record
+  FFT behavior before the contract is selected.
+- **Acceptance:** the ADR chooses implement-or-remove for every field; no public
+  field remains observationally inert, segment/frequency dimensions become
+  unambiguous, all invalid domains reject before mutation, and the selected
+  implementation preserves point-scaled allocation independence with stored
+  paired performance evidence.
 
 ## KW-SWE-PROPAGATION-PREFLIGHT-2026-08-29 — Validate propagation before mutation [patch] — review
 

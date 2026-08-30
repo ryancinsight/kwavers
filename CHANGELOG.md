@@ -185,6 +185,19 @@
 
 ### Changed
 
+- **Elastography harmonic-analysis workspace:** Harmonic detection now builds
+  one Hann table and one Apollo input/output workspace per analysis and reuses
+  them across all spatial points, instead of allocating a time series, window,
+  FFT result, and three harmonic vectors at every point. The unchanged
+  `harmonic_analysis_8x8x8` Criterion workload moved from
+  1.2663–1.2735 ms to 233.88–238.41 µs (95% intervals; 81.4% median-estimate
+  reduction). A warmed 130-sample allocation census records the same 17
+  caller-thread allocations for one and 64 points, with zero reallocations.
+  Frequency metadata now derives from the FFT's actual sample count, invalid
+  finite-domain inputs return typed validation errors before output/workspace
+  allocation, and dense C-order traversal retains a strided logical-order
+  fallback.
+
 - **Elastic SWE body-force runtime:** Ordinary final-state and history
   propagation now prepare separable Gaussian spatial profiles once per run and
   evaluate only the temporal factor during each acceleration pass. Elastic
