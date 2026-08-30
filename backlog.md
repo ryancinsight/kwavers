@@ -152,6 +152,41 @@
   definitions are byte-equivalent after removing only the six dependency
   keys. Hosted exact-candidate collection remains after PR #667 lands.
 
+## KW-PR-PINN-LIB-DUPLICATION-2026-08-29 — Remove duplicate PR PINN library run [patch] [ci] [perf] — delivery
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-PR-PINN-LIB-DUPLICATION-2026-08-29 | Keep CI's canonical PINN library validation as the sole pull-request owner while retaining Architecture Validation's identical mainline backstop. | [patch] [ci] [perf] | delivery | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `.github/workflows/architecture-validation.yml`, release notes, workflow-structure evidence |
+
+- **Lease:** none; the implementation increment discharges the workflow and
+  documentation lease.
+- **Evidence:** Architecture Validation and CI independently run the same
+  `kwavers` PINN library graph on Linux Rust 1.97.0. The default `minimal`
+  feature is empty, so `--features pinn` and
+  `--no-default-features --features pinn` select the same graph. Both jobs use
+  restore-only `kwavers-dev` caches on pull requests and cannot exchange the
+  candidate artifacts they compile.
+- **Acceptance:** split only Architecture Validation's second test command into
+  a step guarded by `github.event_name == 'push'`; retain its exact command,
+  `RAYON_NUM_THREADS=2`, `--test-threads=2`, toolchain, profile, cache, job bound,
+  and main/develop behavior. Pull requests schedule exactly one PINN library
+  selection through CI's unchanged `PINN Feature Validation` job. Parsed job
+  comparison finds no other semantic change.
+- **Non-goals:** consolidating the full feature matrix, changing test selection,
+  assertions, workloads, cache policy, profiles, or timeout bounds.
+- **Candidate:** draft PR #672 source `a09995126` runs the unchanged workspace
+  library command on every event and the unchanged PINN library command only
+  when `github.event_name == 'push'`. CI's dedicated PINN job remains
+  byte-identical. PyYAML parsing and normalized job comparison against base
+  `7e709604b` pass: after recombining the split steps, the complete architecture
+  workflow is equal to the base. Pull requests schedule one PINN library
+  selection and mainline pushes retain two. Hosted collection remains.
+- **Independent review:** GREEN through exact cumulative candidate `98c35e2eb`.
+  The review confirms only the second command moved behind the push condition,
+  CI remains byte-identical, both commands preserve their environment and
+  selected graphs, and all other workflow jobs remain unchanged. Hosted
+  pull-request collection remains before merge.
+
 ## KW-CI-FULL-HISTORY-CHECKOUT — CI clones all of history to run tests [patch] — IMPLEMENTED 2026-08-26
 
 | ID | Outcome | Class | Status | Owner | Scope |

@@ -278,7 +278,7 @@ jobs:
         shared-key: kwavers-dev
         save-if: false
 
-    - name: Run tests
+    - name: Run workspace library tests
       env:
         # Two test processes keep the four-core hosted runner occupied while
         # bounding Rayon-backed kernels to four worker threads in aggregate.
@@ -291,6 +291,15 @@ jobs:
         # without oversubscription or unbounded concurrent simulation state.
         # Keep the dev profile so the shared cache can reuse the feature matrix.
         cargo nextest run --locked --workspace --exclude kwavers-python --exclude kwavers-gpu --lib --test-threads=2
+
+    # CI's PINN Feature Validation job is the canonical pull-request owner.
+    # Retain this unchanged selection as a main/develop backstop without
+    # recompiling and rerunning the same library graph on every pull request.
+    - name: Run PINN library tests on mainline pushes
+      if: github.event_name == 'push'
+      env:
+        RAYON_NUM_THREADS: 2
+      run: >-
         cargo nextest run --locked -p kwavers --lib --no-default-features --features pinn --test-threads=2
 
     - name: Record debug artifact footprint

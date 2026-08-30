@@ -194,6 +194,12 @@
   by policy and exports no artifact. Every job, command, matrix, workload, and
   timeout remains unchanged; independent checks can start with the workflow.
 
+- **Pull-request PINN validation:** CI's dedicated PINN job is now the sole
+  pull-request owner of the `kwavers` PINN library selection. Architecture
+  Validation retains its unchanged command and environment on main/develop
+  pushes, removing duplicate candidate compilation and execution without
+  changing features, tests, assertions, cache policy, profiles, or timeouts.
+
 - **GPU PSTD warm source classification:** Reusable solver state now retains
   fixed-length pressure and velocity activity maps and clears/refills them for
   each run. This removes the two `nt`-sized host allocations previously made
