@@ -152,6 +152,29 @@
   definitions are byte-equivalent after removing only the six dependency
   keys. Hosted exact-candidate collection remains after PR #667 lands.
 
+## KW-PR-PINN-LIB-DUPLICATION-2026-08-29 — Remove duplicate PR PINN library run [patch] [ci] [perf] — in progress
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-PR-PINN-LIB-DUPLICATION-2026-08-29 | Keep CI's canonical PINN library validation as the sole pull-request owner while retaining Architecture Validation's identical mainline backstop. | [patch] [ci] [perf] | in progress | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `.github/workflows/architecture-validation.yml`, release notes, workflow-structure evidence |
+
+- **Lease:** Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` owns the workflow,
+  this item, and its release-note hunk through the next commit.
+- **Evidence:** Architecture Validation and CI independently run the same
+  `kwavers` PINN library graph on Linux Rust 1.97.0. The default `minimal`
+  feature is empty, so `--features pinn` and
+  `--no-default-features --features pinn` select the same graph. Both jobs use
+  restore-only `kwavers-dev` caches on pull requests and cannot exchange the
+  candidate artifacts they compile.
+- **Acceptance:** split only Architecture Validation's second test command into
+  a step guarded by `github.event_name == 'push'`; retain its exact command,
+  `RAYON_NUM_THREADS=2`, `--test-threads=2`, toolchain, profile, cache, job bound,
+  and main/develop behavior. Pull requests schedule exactly one PINN library
+  selection through CI's unchanged `PINN Feature Validation` job. Parsed job
+  comparison finds no other semantic change.
+- **Non-goals:** consolidating the full feature matrix, changing test selection,
+  assertions, workloads, cache policy, profiles, or timeout bounds.
+
 ## KW-CI-FULL-HISTORY-CHECKOUT — CI clones all of history to run tests [patch] — IMPLEMENTED 2026-08-26
 
 | ID | Outcome | Class | Status | Owner | Scope |
