@@ -665,8 +665,14 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   remains open. Independent review is green after migration correction
   `89cf67d9d`. PR #670 merged with history at `fb24b26d4`; closed draft PR #671
   at `0619c6a8f` is subsumed by the canonical reservation path in this item.
-  Merge reconciliation onto `fb24b26d4`, exact post-merge gates, PR #674
-  retargeting, and merge remain open.
+  Merge reconciliation onto `fb24b26d4` is complete at `ecff46e6d`: the exact
+  merged candidate passes the combined SWE/PINN allocation harness 2/2, public
+  SWE validation 19/19, affected warning-denied Clippy, solver/simulation
+  Rustdoc and doctests, formatting, and the unchanged 32/64/128 benchmark
+  smoke; it retains 91 first-party Git sources and no lockfile delta from
+  `main`. Combined clinical/PINN Clippy still reaches 68 pre-existing PINN
+  documentation diagnostics outside this item. PR #674 retargeting, hosted
+  verification, and merge remain open.
 
 ## KW-SWE-E2E-ELASTIC-MEDIUM-2026-08-30 — Correct bounded SWE workflow [patch] — review
 
