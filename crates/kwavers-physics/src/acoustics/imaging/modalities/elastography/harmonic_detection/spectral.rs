@@ -40,15 +40,14 @@ impl SpectralWorkspace {
 
         fft_1d_array_into(&self.windowed, &mut self.spectrum);
         let normalization = (self.window.len() as f64).sqrt();
-        let independent_bin_count = self.window.len() / 2 + 1;
         let spectrum = self
             .spectrum
             .as_slice_mut()
             .expect("invariant: harmonic FFT output is C-contiguous");
-        for value in &mut spectrum[..independent_bin_count] {
+        for value in &mut *spectrum {
             *value /= normalization;
         }
-        &spectrum[..independent_bin_count]
+        spectrum
     }
 }
 

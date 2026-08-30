@@ -143,42 +143,81 @@ fn detector_matches_direct_dft_for_distinct_points() {
 
 #[test]
 fn detector_preserves_strided_logical_point_order() {
-    const SAMPLE_COUNT: usize = 32;
+    const SAMPLE_COUNT: usize = 64;
     const SAMPLING_FREQUENCY: f64 = 256.0;
-    const FUNDAMENTAL_FREQUENCY: f64 = 32.0;
-    let layout =
-        leto::Layout::f_contiguous([2, 1, 1, SAMPLE_COUNT]).expect("small Fortran layout is valid");
-    let mut samples = leto::Array4::new(layout, leto::VecStorage::new(vec![0.0; 2 * SAMPLE_COUNT]))
-        .expect("storage covers the strided layout");
-    for point in 0..2 {
-        for time_index in 0..SAMPLE_COUNT {
-            let time = time_index as f64 / SAMPLING_FREQUENCY;
-            samples[[point, 0, 0, time_index]] = (point + 1) as f64
-                * (TWO_PI * FUNDAMENTAL_FREQUENCY * time + point as f64 * 0.2).sin();
+    const FUNDAMENTAL_FREQUENCY: f64 = 16.0;
+    const SHAPE: [usize; 4] = [2, 2, 2, SAMPLE_COUNT];
+    let mut dense = leto::Array4::zeros(SHAPE);
+    let layout = leto::Layout::f_contiguous(SHAPE).expect("small Fortran layout is valid");
+    let mut strided = leto::Array4::new(
+        layout,
+        leto::VecStorage::new(vec![0.0; SHAPE.iter().product()]),
+    )
+    .expect("storage covers the strided layout");
+    for i in 0..SHAPE[0] {
+        for j in 0..SHAPE[1] {
+            for k in 0..SHAPE[2] {
+                let point = i * SHAPE[1] * SHAPE[2] + j * SHAPE[2] + k;
+                for time_index in 0..SAMPLE_COUNT {
+                    let time = time_index as f64 / SAMPLING_FREQUENCY;
+                    let fundamental = (point + 1) as f64
+                        * (TWO_PI * FUNDAMENTAL_FREQUENCY * time + point as f64 * 0.07).sin();
+                    let second = (point + 2) as f64
+                        * 0.08
+                        * (2.0 * TWO_PI * FUNDAMENTAL_FREQUENCY * time - point as f64 * 0.03).sin();
+                    let third = (point + 3) as f64
+                        * 0.015
+                        * (3.0 * TWO_PI * FUNDAMENTAL_FREQUENCY * time + point as f64 * 0.11).sin();
+                    let sample = fundamental + second + third;
+                    dense[[i, j, k, time_index]] = sample;
+                    strided[[i, j, k, time_index]] = sample;
+                }
+            }
         }
     }
-    assert!(samples.as_slice().is_none());
+    assert!(dense.as_slice().is_some());
+    assert!(strided.as_slice().is_none());
 
     let detector = HarmonicDetector::new(HarmonicDetectionConfig {
         fundamental_frequency: FUNDAMENTAL_FREQUENCY,
-        n_harmonics: 2,
+        n_harmonics: 3,
+        ..Default::default()
+    });
+    let dense_field = detector
+        .analyze_harmonics(&dense, SAMPLING_FREQUENCY)
+        .expect("finite dense harmonic input");
+    let strided_field = detector
+        .analyze_harmonics(&strided, SAMPLING_FREQUENCY)
+        .expect("finite strided harmonic input");
+    assert_complete_results_equal(&dense_field, &strided_field);
+}
+
+#[test]
+fn detector_preserves_full_spectrum_snr_near_nyquist() {
+    const SAMPLE_COUNT: usize = 32;
+    const SAMPLING_FREQUENCY: f64 = 256.0;
+    const FUNDAMENTAL_FREQUENCY: f64 = 32.0;
+    let mut samples = leto::Array4::zeros((1, 1, 1, SAMPLE_COUNT));
+    for time_index in 0..SAMPLE_COUNT {
+        let time = time_index as f64 / SAMPLING_FREQUENCY;
+        samples[[0, 0, 0, time_index]] = (3.0 * TWO_PI * FUNDAMENTAL_FREQUENCY * time + 0.2).sin();
+    }
+    let detector = HarmonicDetector::new(HarmonicDetectionConfig {
+        fundamental_frequency: FUNDAMENTAL_FREQUENCY,
+        n_harmonics: 3,
         ..Default::default()
     });
     let field = detector
         .analyze_harmonics(&samples, SAMPLING_FREQUENCY)
-        .expect("finite strided harmonic input");
-    for point in 0..2 {
-        let point_samples: Vec<_> = (0..SAMPLE_COUNT)
-            .map(|time| samples[[point, 0, 0, time]])
-            .collect();
-        let reference = direct_dft(&point_samples);
-        assert_polar_close(
-            field.fundamental_magnitude[[point, 0, 0]],
-            field.fundamental_phase[[point, 0, 0]],
-            reference[4],
-            &point_samples,
-        );
-    }
+        .expect("finite near-Nyquist harmonic input");
+    let point_samples: Vec<_> = (0..SAMPLE_COUNT)
+        .map(|time| samples[[0, 0, 0, time]])
+        .collect();
+    let full_spectrum = direct_dft(&point_samples);
+    let expected = HarmonicDetector::compute_snr(&full_spectrum, 12);
+    let actual = field.harmonic_snrs[1][[0, 0, 0]];
+    let bound = 256.0 * SAMPLE_COUNT as f64 * f64::EPSILON * expected.abs().max(1.0);
+    assert!((actual - expected).abs() <= bound);
 }
 
 #[test]
@@ -285,6 +324,45 @@ fn assert_polar_close(
 fn wrapped_phase_distance(left: f64, right: f64) -> f64 {
     let distance = (left - right).rem_euclid(TWO_PI);
     distance.min(TWO_PI - distance)
+}
+
+fn assert_complete_results_equal(
+    left: &HarmonicDisplacementField,
+    right: &HarmonicDisplacementField,
+) {
+    assert_eq!(left.time, right.time);
+    assert_eq!(left.frequency, right.frequency);
+    assert_eq!(
+        left.harmonic_magnitudes.len(),
+        right.harmonic_magnitudes.len()
+    );
+    assert_eq!(left.harmonic_phases.len(), right.harmonic_phases.len());
+    assert_eq!(left.harmonic_snrs.len(), right.harmonic_snrs.len());
+    assert_eq!(
+        left.fundamental_magnitude.as_slice(),
+        right.fundamental_magnitude.as_slice()
+    );
+    assert_eq!(
+        left.fundamental_phase.as_slice(),
+        right.fundamental_phase.as_slice()
+    );
+    assert_eq!(
+        left.nonlinearity_parameter.as_slice(),
+        right.nonlinearity_parameter.as_slice()
+    );
+    for (left, right) in left
+        .harmonic_magnitudes
+        .iter()
+        .zip(&right.harmonic_magnitudes)
+    {
+        assert_eq!(left.as_slice(), right.as_slice());
+    }
+    for (left, right) in left.harmonic_phases.iter().zip(&right.harmonic_phases) {
+        assert_eq!(left.as_slice(), right.as_slice());
+    }
+    for (left, right) in left.harmonic_snrs.iter().zip(&right.harmonic_snrs) {
+        assert_eq!(left.as_slice(), right.as_slice());
+    }
 }
 
 fn assert_invalid_parameter(
