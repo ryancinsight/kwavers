@@ -161,7 +161,8 @@ pub trait PstdRunState {
     ///
     /// # Errors
     ///
-    /// Returns an error when provider command encoding or submission fails.
+    /// Returns an error when run metadata disagrees with provider-owned state,
+    /// or when provider command encoding or submission fails.
     fn run_pstd(
         &mut self,
         scalars: PstdRunScalars,
@@ -349,6 +350,10 @@ pub struct WgpuPstdState {
     pub(super) scratch_source_data: Vec<f32>,
     /// Packed host-side x-velocity source upload buffer.
     pub(super) scratch_vel_x_data: Vec<f32>,
+    /// Per-step pressure-source activity, fixed to the solver time extent.
+    pub(super) pressure_source_activity: Box<[bool]>,
+    /// Per-step x-velocity-source activity, fixed to the solver time extent.
+    pub(super) velocity_source_activity: Box<[bool]>,
 }
 
 impl PstdStateProvider for WgpuPstdStateProvider {

@@ -194,6 +194,12 @@
   by policy and exports no artifact. Every job, command, matrix, workload, and
   timeout remains unchanged; independent checks can start with the workflow.
 
+- **GPU PSTD warm source classification:** Reusable solver state now retains
+  fixed-length pressure and velocity activity maps and clears/refills them for
+  each run. This removes the two `nt`-sized host allocations previously made
+  before every retained Hephaestus time loop without changing source semantics,
+  command batching, FFT backend selection, or numerical work.
+
 - **Integration-test scheduling:** CPML thickness, PSTD reciprocity, and
   photoacoustic full-grid simulations now share the existing one-at-a-time
   nextest group. This prevents four-process CPU oversubscription on hosted
