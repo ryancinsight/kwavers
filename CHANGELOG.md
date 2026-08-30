@@ -190,7 +190,7 @@
   evaluate only the temporal factor during each acceleration pass. Elastic
   stress now computes all six tensor components in one homogeneous-buffer
   traversal, removing one scheduler dispatch and full-grid pass per evaluation,
-  and advances standard-layout coordinates once per 256-element chunk instead
+  and advances standard-layout coordinates once per 1,024-element chunk instead
   of dividing the flat index at every voxel in both stress passes. Valid
   nonstandard layouts use the same point formulas through a zero-allocation
   logical-coordinate fallback.
@@ -205,6 +205,11 @@
   correction, versus 42.379 and 43.004 seconds after force preparation and
   53.767 seconds at entry, under the same 60-second Nextest contract. These are
   operational test timings rather than Criterion throughput estimates. The
+  exact full-feature NL-SWE case also passes in 22.220 seconds after selecting
+  the larger scheduling granularity; paired local operational runs observed
+  18.121/18.335 seconds at 1,024 elements versus 20.167 seconds after restoring
+  256 elements, while the rejected 512-element midpoint took 20.746/21.423
+  seconds. The
   complete unchanged benchmark smoke, including the 64³ propagation case,
   passes. The test therefore rejoins the main suite; its ignore, 600-second
   override, and dedicated 35-minute pull-request job are removed.

@@ -425,6 +425,13 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   coordinate-stencil implementation as the bitwise differential oracle. A
   one-time layout dispatch retains those formulas as a zero-allocation fallback
   for valid nonstandard inputs or outputs.
+- **Fourth-phase result:** the 256-element scheduling grain left 16 tasks per
+  stress pass on the hosted four-core runner. The selected 1,024-element grain
+  produces four tasks for the 16³ regression while retaining broad fanout on
+  larger grids. Paired local operational runs observed 18.121/18.335 s at 1,024
+  elements versus 20.167 s after restoring 256; the rejected 512 midpoint took
+  20.746/21.423 s. Formulas, evaluation order, allocation behavior, workloads,
+  assertions, and timeout policy are unchanged.
 - **Acceptance:** both ordinary propagation loops prepare an optional Gaussian
   force once before stepping and share one prepared-step helper; no-force output
   remains unchanged and direct/prepared nonzero fields compare under a derived
@@ -439,14 +446,17 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   timeout bound.
 - **Current evidence:** a sequential, distinct-field 3-D differential plus the
   analytical, flat-coordinate, and nonstandard-layout focused suite passes
-  18/18. The differential compares all six stress and three divergence fields
-  on both a single-chunk case and a 504-element multi-chunk case with a ragged
-  tail. A same-length shape-permutation
+  24/24. The differential compares all six stress and three divergence fields
+  on both a single-chunk case and a 1,170-element multi-chunk case with a
+  146-element ragged tail. A same-length shape-permutation
   regression proves the public in-place operation rejects an invalid scratch
   shape before changing any of its nine stress/divergence arrays. The unchanged
   16³ workflow passes at 18.071 s after flat-coordinate traversal, versus
   42.379/43.004 s after force preparation and 53.767 s at entry, with identical
-  workload and the standard 60-second bound. This is operational Nextest
+  workload and the standard 60-second bound. With the 1,024-element scheduling
+  grain, the exact full-feature case also passes in 22.220 s after a 2m23s
+  overlay-driven stack rebuild; compile latency is separate from the test-body
+  result. This is operational Nextest
   evidence, not a Criterion throughput estimate. The complete solver library
   suite passes 926/926 in 70.991 s; the complete `nl_swe_performance --test` smoke passes,
   including 16/32/64 propagation. Warning-denied library Clippy passes;

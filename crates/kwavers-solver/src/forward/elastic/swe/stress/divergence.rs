@@ -33,9 +33,10 @@ use moirai_parallel::{
     for_each_chunk_triple_mut_enumerated_with, Adaptive,
 };
 
-// Three output chunks plus the captured displacement/material inputs remain
-// within a 32 KiB L1 working set at 256 f64 elements per chunk.
-const STRESS_CHUNK: usize = 256;
+// At 16³, 1,024-element chunks produce four independent tasks, matching the
+// hosted four-core runner while amortizing scheduler bookkeeping. Larger grids
+// retain broad task fanout; paired operational runs rejected 512 elements.
+const STRESS_CHUNK: usize = 1024;
 
 /// Standard-layout coordinates advanced without per-voxel division.
 struct GridPosition {

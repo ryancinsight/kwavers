@@ -314,7 +314,9 @@ fn assert_stress_scratch_eq(actual: &ElasticStepScratch, expected: &ElasticStepS
 
 #[test]
 fn fused_stress_traversal_matches_reference_across_chunks_and_tail() {
-    for (nx, ny, nz) in [(7, 6, 5), (9, 8, 7)] {
+    // 13×10×9 crosses the 1,024-element boundary at [11, 3, 7] and leaves
+    // a 146-element tail, exercising both nonzero chunk decoding and epilogue.
+    for (nx, ny, nz) in [(7, 6, 5), (13, 10, 9)] {
         let grid = Grid::new(nx, ny, nz, 0.7e-3, 1.1e-3, 1.3e-3).expect("grid");
         let lambda = Array3::from_shape_fn((nx, ny, nz), |[i, j, k]| {
             2.0e6 + (i * 37 + j * 11 + k * 5) as f64
