@@ -398,7 +398,7 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
 |----|---------|-------|--------|-------|-------|
 | KW-SWE-FORCE-PREPARATION | Remove repeated spatial and normalization transcendental evaluation from ordinary elastic propagation while preserving the exact field history and workloads. | [patch] [perf] | in progress | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | elastic propagation/integration hot kernels and tests, NL-SWE scheduling, release notes, exact benchmark and hosted evidence |
 
-- **Lease:** Codex owns `crates/kwavers-solver/src/forward/elastic/swe/core/solver/propagation/`, the SWE stress and integration hot-kernel policy sites and focused tests, `crates/kwavers-physics/src/acoustics/imaging/modalities/elastography/harmonic_detection/`, `.config/nextest.toml`, `.github/workflows/ci.yml`, `crates/kwavers/tests/nl_swe_validation.rs`, and this item's release/PM records through the next verified commit.
+- **Lease:** Codex owns `crates/kwavers-solver/src/forward/elastic/swe/core/solver/propagation/`, the SWE stress and integration hot-kernel policy sites and focused tests, `crates/kwavers-physics/src/acoustics/imaging/modalities/elastography/harmonic_detection/`, `crates/kwavers-physics/{Cargo.toml,tests/harmonic_detection_allocations.rs}`, `.config/nextest.toml`, `.github/workflows/ci.yml`, `crates/kwavers/tests/nl_swe_validation.rs`, and this item's release/PM records through the next verified commit.
 - **Entry evidence:** PR #668 run `33268934966` spent 217.790 s on the unchanged
   `wave_propagation_scaling/64` single iteration. Run `33268934962` spent 19m25s
   in the dedicated 16-cubed NL-SWE job. On the 64-cubed case the direct path
