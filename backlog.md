@@ -92,11 +92,11 @@
 - **Independent review:** GREEN at exact source commit `41576260e`; the static
   source, diagnostics, test oracle, config, and scope contracts match.
 
-## KW-SIM-TEST-COMPILE-GRAPH — Reduce simulation test build latency [patch] [perf] — todo
+## KW-SIM-TEST-COMPILE-GRAPH — Reduce simulation test build latency [patch] [perf] — in progress
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-SIM-TEST-COMPILE-GRAPH | Reduce the cold compile/link cost of the GPU-enabled simulation and Python test harnesses while retaining all value-semantic tests. | [patch] [perf] | todo | unowned | `kwavers-simulation` and `kwavers-python` dependency/feature graphs, test-only imports, and build-timing instrumentation |
+| KW-SIM-TEST-COMPILE-GRAPH | Reduce the cold compile/link cost of the GPU-enabled simulation and Python test harnesses while retaining all value-semantic tests. | [patch] [perf] | in progress | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `kwavers-simulation` and `kwavers-python` dependency/feature graphs, test-ID census, build-timing instrumentation, focused CI/PM evidence |
 
 - **Evidence:** `cargo nextest run --offline -p kwavers-simulation --features
   gpu` spent 2m37s compiling the transitive graph, then executed all 100 tests
@@ -106,6 +106,10 @@
   the same 100 simulation and 21 Python tests and assertions remain; no private
   target cache, feature bypass, workload reduction, or timeout increase; cold
   controlled reruns are materially below the 2m37s and 2m15s baselines.
+- **Lease:** Codex owns the two package manifests, exact test-ID/timing
+  instrumentation, and this item through the next commit. Stop before any graph
+  consolidation unless the combined Nextest ID set equals the exact union of
+  the isolated 100- and 21-test selections.
 
 ## KW-INTEGRATION-FAILURE-DIAGNOSTICS — Preserve failed-test output [patch] — review
 
