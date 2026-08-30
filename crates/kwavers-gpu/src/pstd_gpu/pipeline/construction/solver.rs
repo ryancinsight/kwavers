@@ -34,9 +34,10 @@ impl PstdStateBuilder for WgpuPstdStateProvider {
         let MediumArrays { c0_flat, rho0_flat } = medium;
         let SolverParams {
             dt,
+            nt,
             c_ref,
+            nonlinear: _,
             absorbing,
-            ..
         } = solver;
         let PmlArrays {
             x: pml_x,
@@ -350,6 +351,8 @@ impl PstdStateBuilder for WgpuPstdStateProvider {
             scratch_source_kappa_ones: vec![1.0f32; total],
             scratch_source_data: Vec::new(),
             scratch_vel_x_data: Vec::new(),
+            pressure_source_activity: vec![false; nt].into_boxed_slice(),
+            velocity_source_activity: vec![false; nt].into_boxed_slice(),
         };
 
         Ok(state)

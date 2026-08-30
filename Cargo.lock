@@ -3053,6 +3053,7 @@ dependencies = [
  "hephaestus-core",
  "hephaestus-cuda",
  "hephaestus-wgpu",
+ "kwavers-alloc-probe",
  "kwavers-analysis",
  "kwavers-boundary",
  "kwavers-core",

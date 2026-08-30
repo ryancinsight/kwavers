@@ -47,6 +47,28 @@
   7 x 4 x 3 passes in 0.900 s; the selector-level Hephaestus run passes in
   0.711 s.
 
+## KW-PSTD-SOURCE-ACTIVITY-CACHE — Retain warm source-step maps [patch] [perf] — review
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-PSTD-SOURCE-ACTIVITY-CACHE | Remove the two host allocations used to classify pressure and velocity source activity on every reusable GPU PSTD run. | [patch] [perf] | review | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `kwavers-gpu` PSTD state/construction/time-loop source, focused tests, release notes |
+
+- **Evidence:** fixed `Box<[bool]>` maps allocate once with solver state;
+  repeated refill, stale-clear, and extent regressions pass. GPU-feature
+  Nextest passes 174/174 with 6 skipped in 16.119 s; warning-denied all-target
+  Clippy, rustfmt, and diff checks pass.
+- **Acceptance:** construction retains two fixed-length `nt` maps; every run
+  clears/refills them through an allocation-incapable slice API; distinct
+  pressure/velocity matrices preserve source-major values without stale flags;
+  no backend branch, transform kernel, workload, assertion, or timeout changes.
+- **Resolved review finding:** public-seam run metadata whose `nt` differs from
+  either retained map is rejected before cache mutation, staging, encoding, or
+  GPU submission; smaller, larger, and divergent extents are covered.
+- **Independent review:** GREEN through exact final source `db2bf60c4`; the
+  source and tests are rebased onto merged main without intermediate history.
+- **Non-goals:** changing Leto/Hephaestus selection, source semantics, command
+  batching, readback ownership, or unrelated PSTD allocations.
+
 ## KW-FDTD-DEBUG-SCAN — Remove duplicate debug scans [patch] [perf] — in progress
 
 | ID | Outcome | Class | Status | Owner | Scope |
@@ -129,6 +151,41 @@
 - **Independent review:** GREEN at exact source commit `570a763ac`; parsed job
   definitions are byte-equivalent after removing only the six dependency
   keys. Hosted exact-candidate collection remains after PR #667 lands.
+
+## KW-PR-PINN-LIB-DUPLICATION-2026-08-29 — Remove duplicate PR PINN library run [patch] [ci] [perf] — delivery
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-PR-PINN-LIB-DUPLICATION-2026-08-29 | Keep CI's canonical PINN library validation as the sole pull-request owner while retaining Architecture Validation's identical mainline backstop. | [patch] [ci] [perf] | delivery | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `.github/workflows/architecture-validation.yml`, release notes, workflow-structure evidence |
+
+- **Lease:** none; the implementation increment discharges the workflow and
+  documentation lease.
+- **Evidence:** Architecture Validation and CI independently run the same
+  `kwavers` PINN library graph on Linux Rust 1.97.0. The default `minimal`
+  feature is empty, so `--features pinn` and
+  `--no-default-features --features pinn` select the same graph. Both jobs use
+  restore-only `kwavers-dev` caches on pull requests and cannot exchange the
+  candidate artifacts they compile.
+- **Acceptance:** split only Architecture Validation's second test command into
+  a step guarded by `github.event_name == 'push'`; retain its exact command,
+  `RAYON_NUM_THREADS=2`, `--test-threads=2`, toolchain, profile, cache, job bound,
+  and main/develop behavior. Pull requests schedule exactly one PINN library
+  selection through CI's unchanged `PINN Feature Validation` job. Parsed job
+  comparison finds no other semantic change.
+- **Non-goals:** consolidating the full feature matrix, changing test selection,
+  assertions, workloads, cache policy, profiles, or timeout bounds.
+- **Candidate:** draft PR #672 source `a09995126` runs the unchanged workspace
+  library command on every event and the unchanged PINN library command only
+  when `github.event_name == 'push'`. CI's dedicated PINN job remains
+  byte-identical. PyYAML parsing and normalized job comparison against base
+  `7e709604b` pass: after recombining the split steps, the complete architecture
+  workflow is equal to the base. Pull requests schedule one PINN library
+  selection and mainline pushes retain two. Hosted collection remains.
+- **Independent review:** GREEN through exact cumulative candidate `98c35e2eb`.
+  The review confirms only the second command moved behind the push condition,
+  CI remains byte-identical, both commands preserve their environment and
+  selected graphs, and all other workflow jobs remain unchanged. Hosted
+  pull-request collection remains before merge.
 
 ## KW-CI-FULL-HISTORY-CHECKOUT — CI clones all of history to run tests [patch] — IMPLEMENTED 2026-08-26
 
@@ -611,6 +668,26 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   Merge reconciliation onto `fb24b26d4`, exact post-merge gates, PR #674
   retargeting, and merge remain open.
 
+## KW-SWE-E2E-ELASTIC-MEDIUM-2026-08-30 — Correct bounded SWE workflow [patch] — review
+
+- **Integrator / lease:** Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d`;
+  lease discharged by the candidate commit.
+- **Outcome:** keep the 16³, 10 ms end-to-end workflow and 60-second bound,
+  but replace the fluid `μ=0` fixture with an 8 kPa, ν=0.49 elastic tissue,
+  use a stable explicit step, and derive the detector sampling rate from saved
+  timestamps. Strengthen the workflow oracle from existence checks to finite,
+  nonnegative inversion fields plus a nonzero propagated displacement.
+- **Acceptance:** the exact focused test passes below the committed slow bound;
+  41 uniformly spaced snapshots cover all 400 steps; the full propagation,
+  harmonic analysis, and nonlinear inversion remain exercised without reducing
+  the grid or physical duration. Entry evidence on exact `e7be552c9`: the fluid
+  fixture ran 51,962 CFL steps, retained about 5,198 six-field snapshots, passed
+  locally in 17.021 seconds, and timed out on the hosted runner at 60.093 seconds.
+  Candidate standalone evidence atop `75e2c8f7b`: full-feature Nextest 19/19 in
+  0.382 seconds with the corrected workflow at 0.121 seconds; default-feature
+  warning-denied Clippy passes. Full-feature warning-denied Clippy remains blocked
+  by 69 pre-existing PINN diagnostics outside this test and item.
+
 ## KW-SWE-PROPAGATION-PREFLIGHT-2026-08-29 — Validate propagation before mutation [patch] — review
 
 - **Outcome:** every `ElasticWaveSolver` propagation entry rejects malformed
@@ -684,6 +761,27 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   exactly once, mainline pushes retain the architecture dev-profile smoke, and
   the next hosted pull-request collection records unchanged target success with
   the duplicate job work absent.
+
+## KW-PR-BENCH-DUPLICATION-2026-08-29 — Remove duplicate PR smoke [patch] [ci] — in progress
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-PR-BENCH-DUPLICATION-2026-08-29 | Execute the complete plotting-enabled Criterion smoke once per pull request while retaining the existing mainline selection-drift backstop. | [patch] [ci] | in progress | Codex `01a03eb2-6f0a-7301-9290-55b918675e48` | `.github/workflows/architecture-validation.yml`, release and PM records |
+
+- **Scope / non-goals:** `benchmark-regression.yml` remains the pull-request
+  owner. The architecture plotting leg retains its byte-identical dev-profile
+  build and smoke commands on mainline pushes. Benchmark targets, features,
+  workloads, assertions, profiles, cache policy, and timeout bounds do not
+  change.
+- **Entry evidence:** PR #670 schedules both the complete benchmark smoke and
+  the architecture plotting leg. Both select every plotting-enabled `kwavers`
+  benchmark because the default `minimal` feature is empty. A local
+  single-target benchmark-profile build spent 3m04s compiling before smoke
+  execution.
+- **Acceptance:** workflow parsing shows only the two architecture step event
+  conditions change; pull requests schedule the retained benchmark smoke once;
+  mainline pushes retain the architecture smoke; exact candidate `b8b6b7a91`
+  passes syntax, diff, and workflow-contract checks before delivery.
 
 ## KW-KWAVE-DISTRIBUTED-SOURCE — pin k-Wave's mask-cell ordering [minor] — IMPLEMENTED 2026-08-24
 

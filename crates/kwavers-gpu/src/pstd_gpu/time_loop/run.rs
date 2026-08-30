@@ -63,14 +63,29 @@ impl PstdRunScalars {
 /// An all-zero source step is an identity operation. Omitting its clear,
 /// injection, optional spectral correction, and addition preserves the PSTD
 /// state while avoiding unnecessary full-volume transforms for finite bursts.
-fn active_source_steps(signals: &[f32], source_count: usize, time_steps: usize) -> Vec<bool> {
-    let mut active = vec![false; time_steps];
+fn mark_active_source_steps(active: &mut [bool], signals: &[f32], source_count: usize) {
+    debug_assert!(!active.is_empty());
+    active.fill(false);
+    let time_steps = active.len();
     for source_signal in signals.chunks_exact(time_steps).take(source_count) {
-        for (step, &amplitude) in source_signal.iter().enumerate() {
-            active[step] |= amplitude != 0.0;
+        for (is_active, &amplitude) in active.iter_mut().zip(source_signal) {
+            *is_active |= amplitude != 0.0;
         }
     }
-    active
+}
+
+fn validate_activity_time_extent(
+    requested_time_steps: usize,
+    pressure_time_steps: usize,
+    velocity_time_steps: usize,
+) -> Result<(), String> {
+    if requested_time_steps == pressure_time_steps && requested_time_steps == velocity_time_steps {
+        return Ok(());
+    }
+
+    Err(format!(
+        "GPU PSTD run time-step count {requested_time_steps} does not match retained source-activity extents: pressure {pressure_time_steps}, velocity {velocity_time_steps}"
+    ))
 }
 
 fn validate_indices(name: &str, indices: &[u32], total_points: usize) -> Result<(), String> {
@@ -169,6 +184,13 @@ impl PstdRunState for WgpuPstdState {
         scalars: PstdRunScalars,
         inputs: PstdRunInputs<'_>,
     ) -> Result<PstdRunResult, String> {
+        // Retained activity geometry must agree before cache mutation or device work.
+        validate_activity_time_extent(
+            scalars.nt,
+            self.pressure_source_activity.len(),
+            self.velocity_source_activity.len(),
+        )?;
+
         let n_sensors = inputs.sensor_indices.len();
         let n_src = inputs.source_indices.len();
         let n_vel_x = inputs.vel_x_indices.len();
@@ -195,6 +217,17 @@ impl PstdRunState for WgpuPstdState {
         if inputs.output_request.includes_final_fields() || records_peak_pressure {
             self.ensure_field_staging_buffer(scalars.total_points());
         }
+
+        mark_active_source_steps(
+            &mut self.pressure_source_activity,
+            inputs.source_signals,
+            n_src,
+        );
+        mark_active_source_steps(
+            &mut self.velocity_source_activity,
+            inputs.vel_x_signals,
+            n_vel_x,
+        );
 
         let buf_sensor_data = self
             .run_cache
@@ -234,8 +267,6 @@ impl PstdRunState for WgpuPstdState {
             .map_err(|error| format!("PSTD zero-field submission failed: {error}"))?;
 
         let ctx = scalars.step_context(&inputs, self.run_cache.peak_offset);
-        let pressure_source_steps = active_source_steps(inputs.source_signals, n_src, scalars.nt);
-        let velocity_source_steps = active_source_steps(inputs.vel_x_signals, n_vel_x, scalars.nt);
 
         // Batching reduces wgpu API overhead from O(nt) submits to O(nt/STEP_BATCH).
         // Kept at 32 to avoid Windows TDR on long runs.
@@ -258,8 +289,8 @@ impl PstdRunState for WgpuPstdState {
                             },
                             step as u32,
                             SourceActivity {
-                                pressure: pressure_source_steps[step],
-                                velocity: velocity_source_steps[step],
+                                pressure: self.pressure_source_activity[step],
+                                velocity: self.velocity_source_activity[step],
                             },
                         )
                     })
@@ -387,8 +418,24 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::{active_source_steps, run_cache_matches, validate_run_inputs};
+    use super::{
+        mark_active_source_steps, run_cache_matches, validate_activity_time_extent,
+        validate_run_inputs,
+    };
     use crate::pstd_gpu::{state::WgpuPstdRunCache, PstdOutputRequest, PstdRunInputs};
+    use kwavers_alloc_probe::{ThreadScopedAllocator, Window};
+
+    #[global_allocator]
+    static GLOBAL: ThreadScopedAllocator = ThreadScopedAllocator;
+
+    fn assert_allocation_free(operation: impl FnOnce()) {
+        let window = Window::open();
+        operation();
+        let change = window.change();
+        drop(window);
+        assert_eq!(change.allocations, 0);
+        assert_eq!(change.reallocations, 0);
+    }
 
     fn cache_inputs<'a>(
         sensor_indices: &'a [u32],
@@ -433,10 +480,39 @@ mod tests {
     }
 
     #[test]
-    fn active_source_steps_preserves_each_source_row_and_time_index() {
+    fn active_source_steps_preserve_rows_and_clear_stale_flags() {
+        let mut active = [true; 3];
+
+        assert_allocation_free(|| {
+            mark_active_source_steps(&mut active, &[0.0, 1.0, 0.0, 0.0, 0.0, -2.0], 2);
+        });
+        assert_eq!(active, [false, true, true]);
+
+        assert_allocation_free(|| {
+            mark_active_source_steps(&mut active, &[3.0, 0.0, 0.0], 1);
+        });
+        assert_eq!(active, [true, false, false]);
+
+        assert_allocation_free(|| mark_active_source_steps(&mut active, &[], 0));
+        assert_eq!(active, [false; 3]);
+    }
+
+    #[test]
+    fn activity_time_extent_rejects_smaller_and_larger_runs() {
+        assert_eq!(validate_activity_time_extent(2, 2, 2), Ok(()));
+
+        for requested_time_steps in [1, 3] {
+            assert_eq!(
+                validate_activity_time_extent(requested_time_steps, 2, 2),
+                Err(format!(
+                    "GPU PSTD run time-step count {requested_time_steps} does not match retained source-activity extents: pressure 2, velocity 2"
+                ))
+            );
+        }
+
         assert_eq!(
-            active_source_steps(&[0.0, 1.0, 0.0, 0.0, 0.0, -2.0], 2, 3),
-            vec![false, true, true]
+            validate_activity_time_extent(2, 2, 3),
+            Err("GPU PSTD run time-step count 2 does not match retained source-activity extents: pressure 2, velocity 3".to_owned())
         );
     }
 

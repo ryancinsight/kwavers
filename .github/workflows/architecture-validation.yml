@@ -225,11 +225,11 @@ jobs:
           cargo build --locked -p kwavers --no-default-features --features ${{ matrix.features }}
         fi
 
-    # The plotting leg already owns the required checkout, toolchain, shared
-    # dependency cache, and dev-profile kwavers graph. Reusing that state keeps
-    # benchmark smoke from spending a second job on setup and compilation.
+    # Mainline keeps the dev-profile smoke as a selection-drift backstop.
+    # Pull requests execute the complete optimized smoke once in the dedicated
+    # benchmark-regression workflow instead of compiling both profiles.
     - name: Build every plotting-eligible Criterion target once
-      if: matrix.features == 'plotting'
+      if: matrix.features == 'plotting' && github.event_name == 'push'
       run: >-
         timeout --foreground --kill-after=30s 12m
         cargo bench --locked -p kwavers --no-default-features
@@ -237,7 +237,7 @@ jobs:
         --profile dev --no-run
 
     - name: Execute every plotting-eligible Criterion target once
-      if: matrix.features == 'plotting'
+      if: matrix.features == 'plotting' && github.event_name == 'push'
       run: >-
         timeout --foreground --kill-after=30s 8m
         cargo bench --locked -p kwavers --no-default-features
@@ -278,7 +278,7 @@ jobs:
         shared-key: kwavers-dev
         save-if: false
 
-    - name: Run tests
+    - name: Run workspace library tests
       env:
         # Two test processes keep the four-core hosted runner occupied while
         # bounding Rayon-backed kernels to four worker threads in aggregate.
@@ -291,6 +291,15 @@ jobs:
         # without oversubscription or unbounded concurrent simulation state.
         # Keep the dev profile so the shared cache can reuse the feature matrix.
         cargo nextest run --locked --workspace --exclude kwavers-python --exclude kwavers-gpu --lib --test-threads=2
+
+    # CI's PINN Feature Validation job is the canonical pull-request owner.
+    # Retain this unchanged selection as a main/develop backstop without
+    # recompiling and rerunning the same library graph on every pull request.
+    - name: Run PINN library tests on mainline pushes
+      if: github.event_name == 'push'
+      env:
+        RAYON_NUM_THREADS: 2
+      run: >-
         cargo nextest run --locked -p kwavers --lib --no-default-features --features pinn --test-threads=2
 
     - name: Record debug artifact footprint
