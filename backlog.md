@@ -575,6 +575,27 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   warning-denied Clippy passes. Full-feature warning-denied Clippy remains blocked
   by 69 pre-existing PINN diagnostics outside this test and item.
 
+## KW-SWE-DISPLACEMENT-HISTORY-2026-08-30 — Retain only SWE displacement [major] [arch] — in progress
+
+- **Integrator / lease:** Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d`;
+  lease `forward/elastic/swe/{types,core/solver/propagation,mod}.rs`,
+  `kwavers-simulation/src/imaging/elastography.rs`, affected first-party callers,
+  ADR 127, CHANGELOG, and focused tests through the next commit.
+- **Outcome / scope:** replace the high-level `generate_shear_wave` history with
+  public timed displacement snapshots (`ux`, `uy`, `uz`, `time`) and route body-force
+  propagation through one canonical saved-snapshot loop. Keep the lower-level full
+  `ElasticWaveField` history for consumers that require velocities. Migrate every
+  first-party caller; do not change integration arithmetic, cadence, grid, duration,
+  or force preparation.
+- **Acceptance:** displacement snapshots are exactly equal to the corresponding
+  fields and times from the full-history route for initial, periodic, and final
+  snapshots, including a nondivisible final step. An allocation census proves the
+  high-level retained payload drops from six full arrays per snapshot to three with
+  no history-header reallocation. Existing SWE value tests and benchmark smoke stay
+  within their committed bounds. ADR 127, Rustdoc, migration notes, and SemVer
+  classification agree. Dependency: compose with the independently reviewed
+  history-header reservation series before merge.
+
 ## KW-SWE-PROPAGATION-PREFLIGHT-2026-08-29 — Validate propagation before mutation [patch] — review
 
 - **Outcome:** every `ElasticWaveSolver` propagation entry rejects malformed
