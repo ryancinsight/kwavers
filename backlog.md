@@ -548,8 +548,12 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   public fields and the one-parameter method-arity change. All-target Clippy's
   touched diagnostics are resolved; 28 pre-existing test-only diagnostics
   outside this item remain. Source commit `25d0c64c9` contains the
-  implementation, ADR, migration, tests, and release note. Independent review,
-  PR readiness, and merge closure remain pending.
+  implementation, ADR, migration, tests, and release note. Independent static
+  review of exact range `e7be552c9..dbbc733a7` is GREEN: the spectral kernel,
+  allocation census, and Criterion instrument are blob-identical to baseline,
+  and the only public changes are the four recorded field removals plus the
+  method-arity migration. Draft PR #674 remains dependent on PR #670; rebase,
+  PR readiness, hosted collection, and merge closure remain pending.
 
 ## KW-SWE-PROPAGATION-PREFLIGHT-2026-08-29 — Validate propagation before mutation [patch] — review
 
