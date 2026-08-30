@@ -575,12 +575,10 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   warning-denied Clippy passes. Full-feature warning-denied Clippy remains blocked
   by 69 pre-existing PINN diagnostics outside this test and item.
 
-## KW-SWE-DISPLACEMENT-HISTORY-2026-08-30 — Retain only SWE displacement [major] [arch] — in progress
+## KW-SWE-DISPLACEMENT-HISTORY-2026-08-30 — Retain only SWE displacement [major] [arch] — review
 
 - **Integrator / lease:** Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d`;
-  lease `forward/elastic/swe/{types,core/solver/propagation,mod}.rs`,
-  `kwavers-simulation/src/imaging/elastography.rs`, affected first-party callers,
-  ADR 127, CHANGELOG, and focused tests through the next commit.
+  lease none after source commit `177f0f235` (ADR commit `ca4e2527e`).
 - **Outcome / scope:** replace the high-level `generate_shear_wave` history with
   public timed displacement snapshots (`ux`, `uy`, `uz`, `time`) and route body-force
   propagation through one canonical saved-snapshot loop. Keep the lower-level full
@@ -595,6 +593,23 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   within their committed bounds. ADR 127, Rustdoc, migration notes, and SemVer
   classification agree. Dependency: compose with the independently reviewed
   history-header reservation series before merge.
+- **Evidence at `177f0f235`:** warning-clean affected library, allocation-test,
+  simulation, and benchmark Clippy targets; solver Nextest 1,052/1,052 in
+  96.101 seconds, including the warm 18-snapshot census with zero header
+  reallocations and exactly 54 omitted array allocations; `nl_swe_validation`
+  19/19 in 0.402 seconds; the combined SWE/PINN allocation harness 2/2;
+  solver/simulation Rustdoc and doctests; and the unchanged 32/64/128 SWE
+  reconstruction benchmark smoke all pass. The
+  all-target solver Clippy command reaches 94 pre-existing diagnostics in
+  untouched examples and tests, so it is not claimed green. `Cargo.lock`
+  remains byte-identical to the parent. `cargo-semver-checks 0.50.0` did not
+  reach API analysis because its exact-`ca4e2527e` packed-object clone failed
+  with `Entry too large to fit in memory`; equivalent exact API evidence
+  remains open. Independent review is green after migration correction
+  `89cf67d9d`. PR #670 merged with history at `fb24b26d4`; closed draft PR #671
+  at `0619c6a8f` is subsumed by the canonical reservation path in this item.
+  Merge reconciliation onto `fb24b26d4`, exact post-merge gates, PR #674
+  retargeting, and merge remain open.
 
 ## KW-SWE-PROPAGATION-PREFLIGHT-2026-08-29 — Validate propagation before mutation [patch] — review
 
