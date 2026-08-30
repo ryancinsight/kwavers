@@ -515,7 +515,12 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   and the lockfile guard confirms 91 first-party Git sources. Hosted
   recollection remains pending.
 
-## KW-HARMONIC-CONFIG-CONTRACT-2026-08-30 — Specify spectral segmentation [major] — todo
+## KW-HARMONIC-CONFIG-CONTRACT-2026-08-30 — Specify spectral segmentation [major] — in progress
+
+- **Integrator / lease:** Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d`
+  owns the harmonic-detection configuration, detector, result types, focused
+  tests/benchmarks, the next ADR and index entry, migration/release docs, and
+  this item record through the next verified commit.
 
 - **Outcome:** eliminate the four consumer-visible harmonic configuration
   fields that currently do not affect computation (`fft_window_size`,
