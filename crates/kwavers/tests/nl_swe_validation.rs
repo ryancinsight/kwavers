@@ -391,21 +391,40 @@ mod end_to_end_tests {
 
     #[test]
     fn test_nl_swe_workflow() {
+        const TIME_STEP: f64 = 25e-6;
+        const STEP_COUNT: usize = 400;
+        const SAVE_EVERY: usize = 10;
+        const SIMULATION_TIME: f64 = TIME_STEP * STEP_COUNT as f64;
+
         // Create simulation setup
         let grid = Grid::new(16, 16, 16, 0.001, 0.001, 0.001).unwrap();
-        let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
+        let medium = HomogeneousMedium::soft_tissue(8_000.0, 0.49, &grid);
+        let config = ElasticWaveConfig {
+            // This is below the 25.4 µs 3-D CFL limit for the configured
+            // 1 mm, 8 kPa, ν=0.49 tissue and yields 400 exact steps.
+            time_step: TIME_STEP,
+            simulation_time: SIMULATION_TIME,
+            save_every: SAVE_EVERY,
+            ..ElasticWaveConfig::default()
+        };
 
         // Step 1: Linear SWE (existing functionality)
-        let swe = ShearWaveElastography::new(
-            &grid,
-            &medium,
-            InversionMethod::TimeOfFlight,
-            ElasticWaveConfig::default(),
-        )
-        .unwrap();
+        let swe = ShearWaveElastography::new(&grid, &medium, InversionMethod::TimeOfFlight, config)
+            .unwrap();
 
         let push_location = [0.008, 0.008, 0.008];
         let displacement_history = swe.generate_shear_wave(push_location).unwrap();
+        assert_eq!(displacement_history.len(), STEP_COUNT / SAVE_EVERY + 1);
+        let sample_interval = displacement_history[1].time - displacement_history[0].time;
+        assert!(sample_interval.is_finite() && sample_interval > 0.0);
+        let accumulated_roundoff = STEP_COUNT as f64 * f64::EPSILON;
+        let time_roundoff_bound =
+            2.0 * accumulated_roundoff / (1.0 - accumulated_roundoff) * SIMULATION_TIME;
+        for samples in displacement_history.windows(2) {
+            let interval = samples[1].time - samples[0].time;
+            assert!((interval - sample_interval).abs() <= time_roundoff_bound);
+        }
+        let sampling_frequency = sample_interval.recip();
 
         // Step 2: Harmonic analysis
         let harmonic_detector = HarmonicDetector::new(HarmonicDetectionConfig::default());
@@ -426,7 +445,7 @@ mod end_to_end_tests {
         }
 
         let harmonic_field = harmonic_detector
-            .analyze_harmonics(&time_series, 1000.0)
+            .analyze_harmonics(&time_series, sampling_frequency)
             .unwrap();
 
         // Step 3: Nonlinear inversion
@@ -441,13 +460,12 @@ mod end_to_end_tests {
         assert!(nonlinear_params
             .nonlinearity_parameter
             .iter()
-            .any(|&x| x >= 0.0));
+            .all(|value| value.is_finite() && *value >= 0.0));
         assert!(nonlinear_params
             .estimation_quality
             .iter()
-            .any(|&x| x >= 0.0));
-
-        // Test passes if entire workflow completes successfully
+            .all(|value| value.is_finite() && *value >= 0.0));
+        assert!(time_series.iter().any(|value| value.abs() > 0.0));
     }
 
     #[test]

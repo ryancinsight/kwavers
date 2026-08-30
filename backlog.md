@@ -555,6 +555,26 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   method-arity migration. Draft PR #674 remains dependent on PR #670; rebase,
   PR readiness, hosted collection, and merge closure remain pending.
 
+## KW-SWE-E2E-ELASTIC-MEDIUM-2026-08-30 — Correct bounded SWE workflow [patch] — review
+
+- **Integrator / lease:** Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d`;
+  lease discharged by the candidate commit.
+- **Outcome:** keep the 16³, 10 ms end-to-end workflow and 60-second bound,
+  but replace the fluid `μ=0` fixture with an 8 kPa, ν=0.49 elastic tissue,
+  use a stable explicit step, and derive the detector sampling rate from saved
+  timestamps. Strengthen the workflow oracle from existence checks to finite,
+  nonnegative inversion fields plus a nonzero propagated displacement.
+- **Acceptance:** the exact focused test passes below the committed slow bound;
+  41 uniformly spaced snapshots cover all 400 steps; the full propagation,
+  harmonic analysis, and nonlinear inversion remain exercised without reducing
+  the grid or physical duration. Entry evidence on exact `e7be552c9`: the fluid
+  fixture ran 51,962 CFL steps, retained about 5,198 six-field snapshots, passed
+  locally in 17.021 seconds, and timed out on the hosted runner at 60.093 seconds.
+  Candidate standalone evidence atop `75e2c8f7b`: full-feature Nextest 19/19 in
+  0.382 seconds with the corrected workflow at 0.121 seconds; default-feature
+  warning-denied Clippy passes. Full-feature warning-denied Clippy remains blocked
+  by 69 pre-existing PINN diagnostics outside this test and item.
+
 ## KW-SWE-PROPAGATION-PREFLIGHT-2026-08-29 — Validate propagation before mutation [patch] — review
 
 - **Outcome:** every `ElasticWaveSolver` propagation entry rejects malformed
