@@ -4,6 +4,19 @@
 
 ### Added
 
+- **[major] SWE high-level histories retain displacement only.**
+  `ShearWaveElastography::generate_shear_wave` now returns
+  `Vec<ElasticDisplacementSnapshot>`, and `reconstruct_elasticity` accepts that
+  snapshot type. Each saved snapshot owns `ux`, `uy`, `uz`, and `time`, omitting
+  the three velocity arrays that the high-level reconstruction never reads.
+  Callers requiring velocity history use the lower-level
+  `ElasticWaveSolver::propagate_waves` full-field route. Full and displacement
+  histories share one monomorphized saved-snapshot loop and preserve identical
+  initial, periodic, and final displacement values and times. A warm allocation
+  census over 18 snapshots observes zero history-header reallocations and 54
+  fewer array allocations for the displacement route. See
+  [ADR 127](docs/adr/127-swe-displacement-history.md).
+
 - **[major] PSTD selects its FFT execution provider independently of the
   numerical method.** `FftBackend::{Leto, Hephaestus}` is carried by
   `SolverConfiguration`, simulation requests, and Python `Simulation`.

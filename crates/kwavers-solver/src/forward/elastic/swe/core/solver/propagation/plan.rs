@@ -2,7 +2,8 @@
 
 use super::super::super::super::integration::integrator::calculate_stable_timestep;
 use super::super::super::super::types::{ElasticWaveConfig, ElasticWaveField};
-use kwavers_core::error::{KwaversResult, ValidationError};
+use core::alloc::Layout;
+use kwavers_core::error::{KwaversResult, NumericalError, ValidationError};
 use kwavers_grid::Grid;
 use leto::Array3;
 
@@ -14,6 +15,10 @@ pub(super) struct PropagationPlan {
 }
 
 impl PropagationPlan {
+    pub(super) fn history_layout<T>(self) -> KwaversResult<(usize, Layout)> {
+        derive_history_layout::<T>(self.steps, self.save_every)
+    }
+
     pub(super) fn for_field(
         grid: &Grid,
         lambda: &Array3<f64>,
@@ -100,6 +105,21 @@ impl PropagationPlan {
     }
 }
 
+fn derive_history_layout<T>(steps: usize, save_every: usize) -> KwaversResult<(usize, Layout)> {
+    let save_every = save_every.max(1);
+    let capacity = steps.div_ceil(save_every).checked_add(1).ok_or_else(|| {
+        NumericalError::InvalidOperation(
+            "Elastic wave history snapshot count exceeds usize".to_owned(),
+        )
+    })?;
+    let layout = Layout::array::<T>(capacity).map_err(|_| {
+        NumericalError::InvalidOperation(
+            "Elastic wave history header layout exceeds addressable memory".to_owned(),
+        )
+    })?;
+    Ok((capacity, layout))
+}
+
 fn validate_field_shapes(grid: &Grid, field: &ElasticWaveField) -> KwaversResult<()> {
     let expected = [grid.nx, grid.ny, grid.nz];
     for (component, actual) in [
@@ -131,4 +151,65 @@ fn validate_finite_positive(parameter: &str, value: f64, reason: &str) -> Kwaver
         .into());
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::forward::elastic::swe::types::ElasticDisplacementSnapshot;
+    use kwavers_core::error::KwaversError;
+
+    #[test]
+    fn history_layout_covers_complete_snapshot_schedule() {
+        for (steps, save_every, expected_capacity) in [
+            (0, 1, 1),
+            (1, 1, 2),
+            (4, 2, 3),
+            (5, 2, 4),
+            (3, 4, 2),
+            (3, 0, 4),
+        ] {
+            let (capacity, full_layout) =
+                derive_history_layout::<ElasticWaveField>(steps, save_every)
+                    .expect("addressable full-field schedule");
+            let (_, displacement_layout) =
+                derive_history_layout::<ElasticDisplacementSnapshot>(steps, save_every)
+                    .expect("addressable displacement schedule");
+            assert_eq!(capacity, expected_capacity);
+            assert_eq!(full_layout.size(), capacity * size_of::<ElasticWaveField>());
+            assert_eq!(
+                displacement_layout.size(),
+                capacity * size_of::<ElasticDisplacementSnapshot>()
+            );
+        }
+    }
+
+    #[test]
+    fn history_layout_rejects_count_and_address_space_overflow() {
+        let count_error = derive_history_layout::<ElasticWaveField>(usize::MAX, 1)
+            .expect_err("snapshot count addition must be checked");
+        assert_invalid_operation(
+            count_error,
+            "Elastic wave history snapshot count exceeds usize",
+        );
+
+        let first_unaddressable_capacity =
+            (isize::MAX as usize / size_of::<ElasticWaveField>()) + 1;
+        let layout_error =
+            derive_history_layout::<ElasticWaveField>(first_unaddressable_capacity - 1, 1)
+                .expect_err("header layout must fit the address space");
+        assert_invalid_operation(
+            layout_error,
+            "Elastic wave history header layout exceeds addressable memory",
+        );
+    }
+
+    fn assert_invalid_operation(error: KwaversError, expected: &str) {
+        match error {
+            KwaversError::Numerical(NumericalError::InvalidOperation(actual)) => {
+                assert_eq!(actual, expected);
+            }
+            other => panic!("expected numerical invalid operation, got {other}"),
+        }
+    }
 }

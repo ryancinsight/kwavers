@@ -38,6 +38,17 @@ fn invalid_force() -> ElasticBodyForceConfig {
     }
 }
 
+fn valid_force() -> ElasticBodyForceConfig {
+    ElasticBodyForceConfig::GaussianImpulse {
+        center_m: [0.5e-3, 1.0e-3, 1.5e-3],
+        sigma_m: [0.5e-3, 0.75e-3, 1.0e-3],
+        direction: [1.0, -0.5, 0.25],
+        t0_s: 1.5e-6,
+        sigma_t_s: 0.75e-6,
+        impulse_n_per_m3_s: 2.0,
+    }
+}
+
 fn assert_field_unchanged(actual: &ElasticWaveField, expected: &ElasticWaveField) {
     assert_eq!(actual.ux, expected.ux);
     assert_eq!(actual.uy, expected.uy);
@@ -45,6 +56,13 @@ fn assert_field_unchanged(actual: &ElasticWaveField, expected: &ElasticWaveField
     assert_eq!(actual.vx, expected.vx);
     assert_eq!(actual.vy, expected.vy);
     assert_eq!(actual.vz, expected.vz);
+    assert_same_float(actual.time, expected.time);
+}
+
+fn assert_displacement_matches(actual: &ElasticDisplacementSnapshot, expected: &ElasticWaveField) {
+    assert_eq!(actual.ux, expected.ux);
+    assert_eq!(actual.uy, expected.uy);
+    assert_eq!(actual.uz, expected.uz);
     assert_same_float(actual.time, expected.time);
 }
 
@@ -117,6 +135,9 @@ fn assert_history_entries_invalid(
         solver
             .propagate_waves_with_body_force_only_override(Some(&invalid_force()))
             .expect_err("invalid override input must be rejected"),
+        solver
+            .propagate_displacement_history_with_body_force_only_override(Some(&invalid_force()))
+            .expect_err("invalid displacement-history input must be rejected"),
     ];
     for error in errors {
         let (actual_parameter, actual_value, actual_reason) = invalid_value(error);
@@ -355,5 +376,71 @@ fn propagate_waves_reports_structural_displacement_mismatch() {
             assert_eq!(actual, format!("{actual_shape:?}"));
         }
         other => panic!("expected displacement dimension mismatch, got {other}"),
+    }
+}
+
+#[test]
+fn history_schedule_preserves_initial_final_and_saved_times() {
+    const DT: f64 = 9.536_743_164_062_5e-7;
+    for (steps, save_every, saved_steps, nonzero) in [
+        (4, 2, &[0, 2, 4][..], false),
+        (5, 2, &[0, 2, 4, 5][..], true),
+        (3, 4, &[0, 3][..], true),
+    ] {
+        let mut config = base_config();
+        config.time_step = DT;
+        config.simulation_time = steps as f64 * DT;
+        config.save_every = save_every;
+        let displacement = if nonzero {
+            Array3::from_shape_fn(GRID_SHAPE, |[i, j, k]| {
+                (i * 12 + j * 4 + k + 1) as f64 * 1.0e-12
+            })
+        } else {
+            Array3::zeros(GRID_SHAPE)
+        };
+
+        let history_solver = solver_with_config(config.clone());
+        let history = history_solver
+            .propagate_waves(&displacement)
+            .expect("valid history propagation");
+        assert_eq!(history.len(), saved_steps.len());
+        for (field, &saved_step) in history.iter().zip(saved_steps) {
+            assert_eq!(field.time, saved_step as f64 * DT);
+        }
+
+        let mut initial = ElasticWaveField::new(2, 3, 4);
+        initial.uz.assign(&displacement);
+        assert_field_unchanged(history.first().expect("initial snapshot"), &initial);
+        let mut direct_solver = solver_with_config(config);
+        let final_field = direct_solver
+            .propagate(&initial, steps as f64 * DT, None)
+            .expect("valid direct propagation");
+        assert_field_unchanged(history.last().expect("final snapshot"), &final_field);
+    }
+}
+
+#[test]
+fn displacement_history_matches_full_history_with_body_force() {
+    const DT: f64 = 1.0e-6;
+    let force = valid_force();
+    for (steps, save_every, expected_snapshots) in [(4, 2, 3), (5, 2, 4)] {
+        let mut config = base_config();
+        config.time_step = DT;
+        config.simulation_time = steps as f64 * DT;
+        config.save_every = save_every;
+        let solver = solver_with_config(config);
+
+        let full_history = solver
+            .propagate_waves_with_body_force_only_override(Some(&force))
+            .expect("valid full-field history");
+        let displacement_history = solver
+            .propagate_displacement_history_with_body_force_only_override(Some(&force))
+            .expect("valid displacement history");
+
+        assert_eq!(full_history.len(), expected_snapshots);
+        assert_eq!(displacement_history.len(), expected_snapshots);
+        for (displacement, full) in displacement_history.iter().zip(&full_history) {
+            assert_displacement_matches(displacement, full);
+        }
     }
 }

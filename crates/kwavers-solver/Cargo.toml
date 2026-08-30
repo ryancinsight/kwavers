@@ -85,9 +85,8 @@ required-features = ["clinical-imaging"]
 kwavers-alloc-probe = { path = "../kwavers-alloc-probe" }
 
 [[test]]
-name = "collocation_allocation"
-path = "tests/collocation_allocation.rs"
-required-features = ["pinn"]
+name = "allocation_contracts"
+path = "tests/allocation_contracts.rs"
 
 [lints]
 workspace = true

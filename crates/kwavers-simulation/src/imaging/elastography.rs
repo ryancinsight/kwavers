@@ -12,7 +12,7 @@ use kwavers_medium::Medium;
 use kwavers_physics::acoustics::imaging::modalities::elastography::displacement::DisplacementField;
 use kwavers_physics::acoustics::imaging::modalities::elastography::radiation_force::AcousticRadiationForce;
 use kwavers_solver::forward::elastic::swe::{
-    ElasticBodyForceConfig, ElasticWaveConfig, ElasticWaveField, ElasticWaveSolver,
+    ElasticBodyForceConfig, ElasticDisplacementSnapshot, ElasticWaveConfig, ElasticWaveSolver,
 };
 use kwavers_solver::inverse::elastography::ShearWaveInversion;
 use kwavers_solver::inverse::elastography::ShearWaveInversionConfig;
@@ -67,14 +67,14 @@ impl ShearWaveElastography {
     ///
     /// # Returns
     ///
-    /// Vector of displacement fields at different time points
+    /// Timed displacement checkpoints at the configured save cadence.
     /// # Errors
     /// - Propagates errors returned by called functions.
     ///
     pub fn generate_shear_wave(
         &self,
         push_location: [f64; 3],
-    ) -> KwaversResult<Vec<ElasticWaveField>> {
+    ) -> KwaversResult<Vec<ElasticDisplacementSnapshot>> {
         let arf = AcousticRadiationForce::new(&self.grid, self.medium.as_ref())?;
 
         // Correctness-first (ARFI-as-forcing):
@@ -88,7 +88,7 @@ impl ShearWaveElastography {
         // Use the solver's one-off override API to avoid requiring `Clone` on `dyn Medium`.
         // The override is applied only for this call and does not mutate the solver's configuration.
         self.solver
-            .propagate_waves_with_body_force_only_override(Some(&body_force))
+            .propagate_displacement_history_with_body_force_only_override(Some(&body_force))
     }
 
     /// Reconstruct elasticity from tracked displacement data
@@ -105,7 +105,7 @@ impl ShearWaveElastography {
     ///
     pub fn reconstruct_elasticity(
         &self,
-        displacement_history: &[ElasticWaveField],
+        displacement_history: &[ElasticDisplacementSnapshot],
     ) -> KwaversResult<ElasticityMap> {
         // For simplicity, we use the displacement at the final time point for inversion
         // in this high-level API. More advanced methods would use the full history.
