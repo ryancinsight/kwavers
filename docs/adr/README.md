@@ -90,3 +90,4 @@
 | [124](124-integration-test-baseline.md) | Run the integration tests CI already compiles, against a failure baseline | Accepted |
 | [125](125-fft-backend-selection.md) | Select FFT execution at the solver boundary | Accepted |
 | [126](126-whole-record-harmonic-analysis.md) | Define harmonic detection as whole-record analysis | Accepted |
+| [127](127-swe-displacement-history.md) | Retain displacement-only SWE history | Accepted |

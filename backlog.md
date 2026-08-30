@@ -586,7 +586,7 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   propagation through one canonical saved-snapshot loop. Keep the lower-level full
   `ElasticWaveField` history for consumers that require velocities. Migrate every
   first-party caller; do not change integration arithmetic, cadence, grid, duration,
-  or force preparation.
+  or force preparation. See [ADR 127](docs/adr/127-swe-displacement-history.md).
 - **Acceptance:** displacement snapshots are exactly equal to the corresponding
   fields and times from the full-history route for initial, periodic, and final
   snapshots, including a nondivisible final step. An allocation census proves the
