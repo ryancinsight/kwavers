@@ -479,6 +479,27 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   `KW-INTEGRATION-TESTS-UNRUN` for the same reason -- a benchmark workload
   breaching the committed test budget.
 
+## KW-PR-BENCH-DUPLICATION-2026-08-29 — Remove duplicate PR smoke [patch] [ci] — in progress
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-PR-BENCH-DUPLICATION-2026-08-29 | Execute the complete plotting-enabled Criterion smoke once per pull request while retaining the existing mainline selection-drift backstop. | [patch] [ci] | in progress | Codex `01a03eb2-6f0a-7301-9290-55b918675e48` | `.github/workflows/architecture-validation.yml`, release and PM records |
+
+- **Scope / non-goals:** `benchmark-regression.yml` remains the pull-request
+  owner. The architecture plotting leg retains its byte-identical dev-profile
+  build and smoke commands on mainline pushes. Benchmark targets, features,
+  workloads, assertions, profiles, cache policy, and timeout bounds do not
+  change.
+- **Entry evidence:** PR #670 schedules both the complete benchmark smoke and
+  the architecture plotting leg. Both select every plotting-enabled `kwavers`
+  benchmark because the default `minimal` feature is empty. A local
+  single-target benchmark-profile build spent 3m04s compiling before smoke
+  execution.
+- **Acceptance:** workflow parsing shows only the two architecture step event
+  conditions change; pull requests schedule the retained benchmark smoke once;
+  mainline pushes retain the architecture smoke; exact candidate `b8b6b7a91`
+  passes syntax, diff, and workflow-contract checks before delivery.
+
 ## KW-KWAVE-DISTRIBUTED-SOURCE — pin k-Wave's mask-cell ordering [minor] — IMPLEMENTED 2026-08-24
 
 | ID | Outcome | Class | Status | Owner | Scope |
