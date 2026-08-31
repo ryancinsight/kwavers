@@ -47,6 +47,17 @@
   7 x 4 x 3 passes in 0.900 s; the selector-level Hephaestus run passes in
   0.711 s.
 
+## KW-VISCOACOUSTIC-SENSOR-TRACE-CAPACITY-2026-08-31 — Retain sensor trace capacity [minor] [perf] — in progress
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-VISCOACOUSTIC-SENSOR-TRACE-CAPACITY-2026-08-31 | Move known sensor-history allocation before stepping and eliminate geometric trace growth without changing recorded samples. | [minor] [perf] | in progress | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `kwavers-solver` viscoacoustic sensor storage, allocation contract, attenuation example, Rustdoc, CHANGELOG |
+
+- **Lease:** Codex owns the listed solver/test/example/documentation regions through the next source commit.
+- **Entry evidence:** every sensor trace starts as `Vec::new()` and `step` pushes one sample per trace. The shipped attenuation example has an exact 9,000-step horizon but cannot reserve it, so each trace grows geometrically during propagation.
+- **Acceptance:** a fallible solver-level reservation operation reserves additional samples for every registered sensor before stepping; reservation failure is typed; warm stepping after exact reservation performs no allocator calls; repeated runs reuse retained capacity; recorded values and ordering are unchanged; the existing unreserved API remains valid.
+- **Non-goals:** changing spectral arithmetic, source injection, sensor ordering, trace retention semantics, the example workload, or runtime budgets.
+
 ## KW-PSTD-SOURCE-ACTIVITY-CACHE — Retain warm source-step maps [patch] [perf] — complete
 
 - **Delivered:** PR #669, source `37f539786`, merge `7e709604b`; retained fixed-size pressure/velocity activity maps remove both warm-run host allocations and reject extent drift before mutation or device work.
