@@ -92,11 +92,11 @@
 - **Independent review:** GREEN at exact source commit `41576260e`; the static
   source, diagnostics, test oracle, config, and scope contracts match.
 
-## KW-CI-DRAFT-PR-GATING-2026-08-30 — Skip draft pull-request runners [patch] [ci] — in progress
+## KW-CI-DRAFT-PR-GATING-2026-08-30 — Skip draft pull-request runners [patch] [ci] — review
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-CI-DRAFT-PR-GATING-2026-08-30 | Prevent draft pull requests from consuming hosted runners while preserving every ready-PR and push verification contract. | [patch] [ci] | in progress | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | Pull-request job predicates in the seven PR-triggered workflows; normalized workflow and event-contract tests; PM evidence |
+| KW-CI-DRAFT-PR-GATING-2026-08-30 | Prevent draft pull requests from consuming hosted runners while preserving every ready-PR and push verification contract. | [patch] [ci] | review | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | Pull-request job predicates in the seven PR-triggered workflows; normalized workflow and event-contract tests; PM evidence |
 
 - **Entry evidence:** opening draft PR #675 at exact head `04b42089b`
   launched Architecture Validation `33343792381`, CI `33343792379`, Legacy
@@ -119,11 +119,15 @@
   `HEAD`; all 28 jobs either carry the predicate or depend transitively on a
   guarded root. The event truth table admits ready PRs, pushes, and manual
   dispatches while rejecting draft PRs; `git diff --check` passes.
-- **Remaining evidence:** reopen draft PR #675 at the exact candidate and prove
-  repository workflow jobs complete as skipped without runner allocation, then
-  mark it ready only after the compile-graph timing blocker is resolved.
-- **Lease:** Codex owns the seven workflows, release note, and this item through
-  the source verification commit.
+- **Hosted evidence:** source commit `8b1c6ab5f`; reopening draft PR #675
+  produced skipped runs `33344050803`, `33344051151`, `33344050744`,
+  `33344050760`, `33344050776`, `33344050790`, and `33344050751`. GitHub
+  reports all 28 repository jobs as skipped; no runner command started.
+- **Remaining evidence:** the `ready_for_review` event is statically present in
+  every workflow and the non-draft truth-table branch is green, but its hosted
+  execution remains coupled to compile-graph acceptance before PR #675 may
+  leave draft. Independent review and that ready-event collection remain.
+- **Lease:** none; source is committed and hosted draft behavior is collected.
 
 ## KW-SIM-TEST-COMPILE-GRAPH — Reduce simulation test build latency [patch] [perf] — in progress
 
