@@ -93,7 +93,11 @@
   subscribe to `ready_for_review`, and 17 root/aggregator predicates reject
   drafts. The seven workflow blobs at source `a35a9287f` are byte-identical to
   independently GREEN source `8b1c6ab5f`; `git diff --check` passes. Current
-  dependent-branch review, a ready-PR hosted run, and merge remain.
+  draft PR #682 at exact head `92ae344ff` reports all five applicable jobs
+  skipped, including the benchmark pair and `always()` aggregator; workflows
+  restricted to a `main`/`develop` base do not instantiate on its temporary
+  dependent base. Retarget/reopen on `main`, the full ready-PR hosted run,
+  independent current-branch review, and merge remain.
 
 ## KW-PSTD-SOURCE-ACTIVITY-CACHE — Retain warm source-step maps [patch] [perf] — complete
 
