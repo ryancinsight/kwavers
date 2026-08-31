@@ -126,7 +126,12 @@
 - **Remaining evidence:** the `ready_for_review` event is statically present in
   every workflow and the non-draft truth-table branch is green, but its hosted
   execution remains coupled to compile-graph acceptance before PR #675 may
-  leave draft. Independent review and that ready-event collection remain.
+  leave draft. That ready-event collection remains.
+- **Independent review:** GREEN for exact range `04b42089b..e27c2a372`.
+  Parsed normalization finds only the seven activity lists and 16 direct draft
+  predicates; all remaining jobs inherit a guarded root, and all 28 hosted jobs
+  at source `8b1c6ab5f` are independently confirmed skipped. `actionlint`
+  remains unavailable locally.
 - **Lease:** none; source is committed and hosted draft behavior is collected.
 
 ## KW-SIM-TEST-COMPILE-GRAPH — Reduce simulation test build latency [patch] [perf] — in progress
