@@ -59,6 +59,17 @@
 - **Non-goals:** changing spectral arithmetic, source injection, sensor ordering, trace retention semantics, the example workload, or runtime budgets.
 - **Candidate evidence:** exact source `1a6fa7b11` records zero allocations and zero reallocations in both first and reset/repeated 65-step windows and bitwise-equal traces against the unreserved route; the retained regression also measures two unreserved traces at two allocations and ten reallocations and proves non-empty values and lengths survive rejected overflow. Debug Nextest passes 944/944 in 70.529 s (2 skipped); focused release Nextest passes 3/3 in 0.118 s after a 3m09s optimized build; warning-denied library/allocation-test Clippy, Rustdoc, doctests, example check, format, and diff checks pass. `cargo-semver-checks` passes 196/196 under minor. Independent exact-commit re-review is GREEN. The workspace all-target Clippy attempt remains limited by 95 unrelated pre-existing test-target lint failures; hosted collection remains pending.
 
+## KW-VISCOACOUSTIC-INACTIVE-AXIS-2026-08-31 — Skip zero spectral derivatives [patch] [perf] — in progress
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-VISCOACOUSTIC-INACTIVE-AXIS-2026-08-31 | Remove the input copy, FFT dispatch, multiplier pass, inverse dispatch, and output copy for length-one viscoacoustic derivative axes while preserving exact zero derivatives. | [patch] [perf] | in progress | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | viscoacoustic axis derivative/step path, value tests, existing critical-path Criterion instrument, Rustdoc, CHANGELOG |
+
+- **Lease:** Codex owns the listed solver/test/benchmark/documentation regions through the next source commit.
+- **Entry evidence:** every viscoacoustic step invokes pressure and velocity derivatives on all three axes. For a length-one periodic axis the only wavenumber is zero, so the derivative is identically zero, but the current helper still traverses the full field around the provider calls.
+- **Acceptance:** retain one generic derivative helper; establish paired Criterion baselines before mutation; an inactive axis writes exact zeros without touching complex FFT scratch or dispatching a transform; 1-D and 2-D steps remain bitwise equal to the incumbent path over repeated nontrivial inputs; 3-D arithmetic and provider dispatch remain unchanged; no allocation, workload, benchmark-timed-region, or timeout change.
+- **Stop condition:** reject the production candidate unless controlled paired medians improve materially without regressing the active-axis control or changing values.
+
 ## KW-PSTD-SOURCE-ACTIVITY-CACHE — Retain warm source-step maps [patch] [perf] — complete
 
 - **Delivered:** PR #669, source `37f539786`, merge `7e709604b`; retained fixed-size pressure/velocity activity maps remove both warm-run host allocations and reject extent drift before mutation or device work.
