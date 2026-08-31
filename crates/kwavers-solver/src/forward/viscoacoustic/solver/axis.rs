@@ -9,9 +9,11 @@ use leto::Array3;
 impl ViscoacousticMemorySolver {
     /// Compute `∂field/∂xₐ → out` with a retained per-axis FFT plan and scratch.
     ///
-    /// A singleton axis has only the zero wavenumber, so its derivative is
-    /// exactly zero. That path clears `out` without touching the complex
-    /// scratch or dispatching either transform.
+    /// A singleton axis has no spatial variation, so its derivative is exactly
+    /// positive zero. That path clears `out` without reading `field`, touching
+    /// the complex scratch, or dispatching either transform. For finite fields
+    /// this is bitwise equal to the former FFT route; non-finite samples cannot
+    /// contaminate a derivative along an inactive axis.
     pub(super) fn axis_derivative(
         fft: &Fft3d,
         k: &[f64],
@@ -202,5 +204,45 @@ mod tests {
         check_singleton_axis([8, 1, 1], 1);
         check_singleton_axis([8, 1, 1], 2);
         check_singleton_axis([4, 3, 1], 2);
+    }
+
+    #[test]
+    fn singleton_axis_isolates_non_finite_samples_without_touching_scratch() {
+        let mut solver = ViscoacousticMemorySolver::new(
+            4,
+            1,
+            1,
+            1.0e-4,
+            1.0e-4,
+            1.0e-4,
+            1.0e-8,
+            1_000.0,
+            2.25e9,
+            &[],
+        )
+        .expect("test solver parameters are valid");
+        let field = Array3::from_shape_fn((4, 1, 1), |[x, _, _]| match x {
+            0 => f64::NAN,
+            1 => f64::INFINITY,
+            2 => f64::NEG_INFINITY,
+            _ => -0.0,
+        });
+        solver.cbuf.fill(Complex64::new(7.0, -11.0));
+        let scratch_before = solver.cbuf.clone();
+        let mut derivative = Array3::from_elem((4, 1, 1), f64::NAN);
+
+        ViscoacousticMemorySolver::axis_derivative(
+            &solver.fft,
+            &solver.ky,
+            1,
+            &field,
+            &mut solver.cbuf,
+            &mut derivative,
+        );
+
+        for value in &derivative {
+            assert_eq!(value.to_bits(), 0.0_f64.to_bits());
+        }
+        assert_complex_bits_eq(&solver.cbuf, &scratch_before);
     }
 }

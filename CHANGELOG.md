@@ -224,9 +224,10 @@
 - **Viscoacoustic lower-dimensional stepping:** A singleton derivative axis
   now clears its output directly without staging the real field into complex
   scratch, dispatching forward and inverse FFTs, or traversing the wavenumber
-  product. The retained scratch remains untouched and the result is bitwise
-  identical to the previous full transform route. Two paired 100-sample
-  Criterion runs over equal 4,096-cell grids measured significant 1-D
+  product. The retained scratch remains untouched and finite-field results are
+  bitwise identical to the previous full transform route; non-finite samples
+  no longer contaminate a derivative along an inactive axis. Two paired
+  100-sample Criterion runs over equal 4,096-cell grids measured significant 1-D
   reductions of 49.3–52.3% and 2-D reductions of 9.1–36.6%; the fully active
   3-D control had no significant change in either run.
 
