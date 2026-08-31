@@ -889,15 +889,14 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   fell from 2,291,154,944 to 1,870,888,960 (18.3%); peak resident bytes fell
   from 2,078,449,664 to 1,658,085,376 (20.2%).
 
-## KW-SWE-TRACKER-MEMORY — bound tracker-only retention [minor] — in progress
+## KW-SWE-TRACKER-MEMORY — bound tracker-only retention [minor] — review
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-SWE-TRACKER-MEMORY | Track volumetric arrivals without retaining velocity fields that the caller does not consume. | [minor] | in progress | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `crates/kwavers-solver/src/forward/elastic/swe/core/solver/volumetric.rs`, tracker-only Kwavers callers and tests |
+| KW-SWE-TRACKER-MEMORY | Track volumetric arrivals without retaining velocity fields that the caller does not consume. | [minor] | review | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `crates/kwavers-solver/src/forward/elastic/swe/core/solver/volumetric.rs`, tracker-only Kwavers callers and tests |
 
-- **Lease:** Codex owns the volumetric tracker recorder/detector, focused
-  tests, tracker-only Kwavers call sites, Rustdoc, and release records through
-  the next verified commit.
+- **Lease:** none; source candidate `3d286adcd562d256acd5a1550ce3c8f2b8bcd990`
+  is committed and awaits independent review.
 - **Dependency:** the volumetric runtime correction is merged in `origin/main`;
   its prepared-force and storage-order baselines are stable.
 - **Acceptance oracle:** the tracker-only path runs the same grid, time steps,
@@ -913,7 +912,8 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   private peak is still dominated by retained `ElasticWaveField` snapshots:
   each deep-clones six 144,000-element `f64` arrays although wavefront tracking
   reads only displacement magnitude and its caller discards `_history`.
-- **Candidate evidence:** one generic recorder loop now serves full-field and
+- **Candidate evidence (`3d286adcd562d256acd5a1550ce3c8f2b8bcd990`):**
+  one generic recorder loop now serves full-field and
   tracker-only retention, and one generic detector serves both sample layouts.
   The 60×60×40, PML-10, 256-snapshot bound is 65,538,048 retained sample bytes
   (62.502 MiB). Bitwise differential coverage passes, and the allocation
@@ -926,9 +926,15 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   solver suite passes 939/939 with two configured skips; threshold and matched-
   filter path differentials pass bitwise; focused warning-denied Clippy,
   Rustdoc, doctests, the consumer example check, and the 196-check minor SemVer
-  analysis pass. The broader all-target Clippy baseline remains independently
-  red with 94 unrelated existing diagnostics. Release-focused verification,
-  independent review, and merge closure remain pending.
+  analysis pass. Standalone locked release verification passes all nine
+  volumetric tests; the first-party development overlay was not used because a
+  live Apollo lease held an uncommitted batched-kernel increment. The broader
+  all-target Clippy baseline remains independently red with 94 unrelated
+  existing diagnostics. The source commit's conventional-commit `!` marker is
+  a metadata error: the public change is additive and the minor SemVer analysis
+  passes. Shared history is not rewritten; PR classification, independent
+  review, and merge records carry the verified minor classification. Review
+  and merge closure remain pending.
 
 ## KW-INTEGRATION-TESTS-UNRUN — integration tests compiled but not run [patch] — review
 
