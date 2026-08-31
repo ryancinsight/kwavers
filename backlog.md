@@ -47,11 +47,14 @@
   7 x 4 x 3 passes in 0.900 s; the selector-level Hephaestus run passes in
   0.711 s.
 
-## KW-PSTD-SOURCE-ACTIVITY-CACHE — Retain warm source-step maps [patch] [perf] — review
+## KW-PSTD-SOURCE-ACTIVITY-CACHE — Retain warm source-step maps [patch] [perf] — in progress
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-PSTD-SOURCE-ACTIVITY-CACHE | Remove the two host allocations used to classify pressure and velocity source activity on every reusable GPU PSTD run. | [patch] [perf] | review | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `kwavers-gpu` PSTD state/construction/time-loop source, focused tests, release notes |
+| KW-PSTD-SOURCE-ACTIVITY-CACHE | Remove the two host allocations used to classify pressure and velocity source activity on every reusable GPU PSTD run. | [patch] [perf] | in progress | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `kwavers-gpu` PSTD state/construction/time-loop source, focused tests, release notes |
+
+- **Lease:** Codex reconciles the reviewed `63255e3a7` candidate onto current
+  main and owns the listed source/tests/docs through the next verified commit.
 
 - **Evidence:** fixed `Box<[bool]>` maps allocate once with solver state;
   repeated refill, stale-clear, and extent regressions pass. GPU-feature
