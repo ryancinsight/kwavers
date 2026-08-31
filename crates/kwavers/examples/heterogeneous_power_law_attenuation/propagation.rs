@@ -36,6 +36,7 @@ pub(crate) fn run_pulse(
     solver.add_pressure_source((SOURCE_INDEX, 0, 0), excitation(dt))?;
     let near = solver.add_pressure_sensor((SENSOR_NEAR, 0, 0))?;
     let far = solver.add_pressure_sensor((SENSOR_FAR, 0, 0))?;
+    solver.reserve_sensor_samples(STEPS)?;
 
     for _ in 0..STEPS {
         solver.step();

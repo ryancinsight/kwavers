@@ -1,4 +1,5 @@
 use kwavers_alloc_probe::{Change, ThreadScopedAllocator, Window};
+use kwavers_core::error::{KwaversError, SystemError};
 #[cfg(feature = "pinn")]
 use kwavers_grid::geometry::RectangularDomain;
 use kwavers_grid::Grid;
@@ -7,6 +8,7 @@ use kwavers_solver::forward::elastic::swe::{
     ArrivalDetection, ElasticBodyForceConfig, ElasticDisplacementSnapshot, ElasticWaveConfig,
     ElasticWaveField, ElasticWaveSolver, VolumetricWaveConfig, WaveFrontTracker,
 };
+use kwavers_solver::forward::viscoacoustic::ViscoacousticMemorySolver;
 #[cfg(feature = "pinn")]
 use kwavers_solver::inverse::pinn::{CollocationSampler, CollocationSamplingStrategy};
 use leto::Array3;
@@ -216,4 +218,120 @@ fn volumetric_tracker_omits_full_field_snapshot_allocations() {
     );
     assert_tracker_bits_eq(&compact_tracker, &full_tracker);
     std::hint::black_box((full_tracker, compact_tracker));
+}
+
+fn viscoacoustic_sensor_solver() -> (ViscoacousticMemorySolver, [usize; 2], Array3<f64>) {
+    let initial_pressure =
+        Array3::from_shape_fn((8, 1, 1), |[i, _, _]| if i == 1 { 1.0 } else { 0.0 });
+    let mut solver = ViscoacousticMemorySolver::new_1d(8, 1.0e-4, 1.0e-8, 1_000.0, 2.25e9, &[])
+        .expect("valid viscoacoustic solver");
+    solver.step();
+    solver
+        .set_pressure(&initial_pressure)
+        .expect("matching pressure shape");
+    let near = solver
+        .add_pressure_sensor((2, 0, 0))
+        .expect("valid near sensor index");
+    let far = solver
+        .add_pressure_sensor((5, 0, 0))
+        .expect("valid far sensor index");
+    (solver, [near, far], initial_pressure)
+}
+
+fn step_viscoacoustic(solver: &mut ViscoacousticMemorySolver, samples: usize) {
+    for _ in 0..samples {
+        solver.step();
+    }
+}
+
+fn assert_sensor_bits_eq(
+    actual: &ViscoacousticMemorySolver,
+    actual_sensors: [usize; 2],
+    expected: &ViscoacousticMemorySolver,
+    expected_sensors: [usize; 2],
+) {
+    for (actual_sensor, expected_sensor) in actual_sensors.into_iter().zip(expected_sensors) {
+        let actual_trace = actual.sensor_trace(actual_sensor);
+        let expected_trace = expected.sensor_trace(expected_sensor);
+        assert_eq!(actual_trace.len(), expected_trace.len());
+        assert!(actual_trace
+            .iter()
+            .zip(expected_trace)
+            .all(|(&actual, &expected)| actual.to_bits() == expected.to_bits()));
+    }
+}
+
+#[test]
+fn reserved_viscoacoustic_sensor_traces_do_not_allocate_during_stepping() {
+    const SAMPLES: usize = 65;
+    let (mut reference, reference_sensors, _) = viscoacoustic_sensor_solver();
+    let (mut reserved, reserved_sensors, initial_pressure) = viscoacoustic_sensor_solver();
+    reserved
+        .reserve_sensor_samples(SAMPLES)
+        .expect("addressable sensor history");
+
+    let window = Window::open();
+    step_viscoacoustic(&mut reserved, SAMPLES);
+    let first_change = window.change();
+    drop(window);
+
+    let window = Window::open();
+    step_viscoacoustic(&mut reference, SAMPLES);
+    let unreserved_change = window.change();
+    drop(window);
+
+    assert_eq!(first_change.allocations, 0);
+    assert_eq!(first_change.reallocations, 0);
+    assert_eq!(unreserved_change.allocations, 2);
+    assert_eq!(unreserved_change.reallocations, 10);
+    assert_sensor_bits_eq(&reserved, reserved_sensors, &reference, reference_sensors);
+    let first_traces = reserved_sensors.map(|sensor| reserved.sensor_trace(sensor).to_vec());
+
+    reserved
+        .set_pressure(&initial_pressure)
+        .expect("matching pressure shape");
+    let window = Window::open();
+    step_viscoacoustic(&mut reserved, SAMPLES);
+    let repeated_change = window.change();
+    drop(window);
+
+    assert_eq!(repeated_change.allocations, 0);
+    assert_eq!(repeated_change.reallocations, 0);
+    for (sensor, expected) in reserved_sensors.into_iter().zip(first_traces) {
+        let actual = reserved.sensor_trace(sensor);
+        assert_eq!(actual.len(), expected.len());
+        assert!(actual
+            .iter()
+            .zip(expected)
+            .all(|(&actual, expected)| actual.to_bits() == expected.to_bits()));
+    }
+}
+
+#[test]
+fn viscoacoustic_sensor_reservation_rejects_unrepresentable_history() {
+    let (mut solver, sensors, _) = viscoacoustic_sensor_solver();
+    step_viscoacoustic(&mut solver, 3);
+    let traces_before = sensors.map(|sensor| solver.sensor_trace(sensor).to_vec());
+    let error = solver
+        .reserve_sensor_samples(usize::MAX)
+        .expect_err("unrepresentable sensor history must fail before stepping");
+
+    match error {
+        KwaversError::System(SystemError::MemoryAllocation {
+            requested_bytes,
+            reason,
+        }) => {
+            assert_eq!(requested_bytes, usize::MAX);
+            assert!(reason.starts_with("sensor 0 trace reservation failed:"));
+        }
+        other => panic!("unexpected reservation error: {other:?}"),
+    }
+    for (sensor, expected) in sensors.into_iter().zip(traces_before) {
+        let actual = solver.sensor_trace(sensor);
+        assert_eq!(actual.len(), expected.len());
+        assert!(actual
+            .iter()
+            .zip(expected)
+            .all(|(&actual, expected)| actual.to_bits() == expected.to_bits()));
+    }
 }

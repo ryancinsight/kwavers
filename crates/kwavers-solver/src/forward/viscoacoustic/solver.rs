@@ -16,6 +16,8 @@ use leto::Array3 as LetoArray3;
 use leto::Array3;
 use std::sync::Arc;
 
+mod driven;
+
 /// One relaxation arm with its precomputed per-voxel exponential-integrator
 /// coefficients (uniform fields for a homogeneous medium).
 #[derive(Debug, Clone)]
@@ -536,47 +538,6 @@ impl ViscoacousticMemorySolver {
             trace.clear();
         }
         Ok(())
-    }
-
-    /// Register a **soft (additive) pressure source** at `index` with a per-step
-    /// time `signal`: `p[index] += signal[step]` while `step < (signal.len())`.
-    /// # Errors
-    /// - `index` out of grid bounds.
-    pub fn add_pressure_source(
-        &mut self,
-        index: (usize, usize, usize),
-        signal: Vec<f64>,
-    ) -> KwaversResult<()> {
-        self.check_index(index)?;
-        self.pressure_sources.push((index, signal));
-        Ok(())
-    }
-
-    /// Register a pressure sensor at `index`; [`Self::step`] appends `p[index]`
-    /// to its trace each step. Returns the sensor id (its index in the record).
-    /// # Errors
-    /// - `index` out of grid bounds.
-    pub fn add_pressure_sensor(&mut self, index: (usize, usize, usize)) -> KwaversResult<usize> {
-        self.check_index(index)?;
-        self.pressure_sensors.push(index);
-        self.sensor_record.push(Vec::new());
-        Ok((self.pressure_sensors.len()) - 1)
-    }
-
-    /// Recorded pressure time trace for sensor `id`.
-    #[must_use]
-    pub fn sensor_trace(&self, id: usize) -> &[f64] {
-        &self.sensor_record[id]
-    }
-
-    fn check_index(&self, (i, j, k): (usize, usize, usize)) -> KwaversResult<()> {
-        if i < self.nx && j < self.ny && k < self.nz {
-            Ok(())
-        } else {
-            Err(KwaversError::InvalidInput(
-                "source/sensor index out of grid bounds".to_owned(),
-            ))
-        }
     }
 
     /// Acoustic energy `Σ [p²/(2M_∞) + ρ|v|²/2] ΔV` \`J`. Conserved (to leapfrog

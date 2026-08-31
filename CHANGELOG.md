@@ -4,6 +4,14 @@
 
 ### Added
 
+- **[minor] Viscoacoustic sensor traces support fallible preallocation.**
+  `ViscoacousticMemorySolver::reserve_sensor_samples` reserves the known
+  remaining sample count for every registered pressure sensor before
+  propagation. Repeated runs retain that capacity when pressure reset clears
+  trace lengths, removing geometric trace growth from the stepping window
+  without changing sample values or ordering. The heterogeneous attenuation
+  example reserves its existing 9,000-step horizon before execution.
+
 - **[minor] SWE volumetric tracking can omit full-field history.**
   `ElasticWaveSolver::track_volumetric_waves_with_body_forces` executes the
   same body-force propagation, snapshot schedule, and arrival detector as the
