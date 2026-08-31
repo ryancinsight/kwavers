@@ -254,6 +254,13 @@
   allocation, and dense C-order traversal retains a strided logical-order
   fallback.
 
+- **Draft pull requests no longer consume verification runners.** All seven
+  pull-request workflows skip their root or independent jobs while a pull
+  request is draft and subscribe to `ready_for_review` so the unchanged checks
+  begin when the candidate becomes reviewable. Direct non-draft opens, pushes,
+  manual dispatches, path filters, commands, matrices, and timeout policies are
+  unchanged.
+
 - **Elastic SWE body-force runtime:** Ordinary final-state and history
   propagation now prepare separable Gaussian spatial profiles once per run and
   evaluate only the temporal factor during each acceleration pass. Elastic

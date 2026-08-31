@@ -2,6 +2,7 @@ name: benchmark regression
 
 on:
   pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
     paths:
       - Cargo.lock
       - Cargo.toml
@@ -20,6 +21,7 @@ concurrency:
 
 jobs:
   benchmark-smoke:
+    if: ${{ github.event.pull_request.draft == false }}
     name: complete benchmark smoke
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -417,7 +419,7 @@ jobs:
 
   benchmark-regression:
     name: benchmark regression check
-    if: always()
+    if: ${{ github.event.pull_request.draft == false && always() }}
     needs:
       - benchmark-smoke
       - benchmark-pair

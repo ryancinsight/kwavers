@@ -71,6 +71,28 @@
 - **Stop condition:** reject the production candidate unless controlled paired Criterion time estimates improve materially without regressing the active-axis control or changing values.
 - **Candidate evidence:** the exact singleton-axis differential passes in debug and release and proves finite-field bitwise output identity, positive-zero isolation for NaN/±inf samples, and unchanged retained scratch; all 15 filtered viscoacoustic tests, including the existing warm 65-step allocation ledger, pass with zero allocations/reallocations and bitwise trace parity. Paired candidate estimates were 114.98/281.92/281.57 µs and 127.12/236.63/278.02 µs. Criterion reports significant 1-D reductions of 50.4–52.3% and 49.3–51.8%, significant 2-D reductions of 9.1–13.5% and 33.0–36.6%, and no significant 3-D change (`p=0.40` and `p=0.10`). Production warning-denied Clippy, Rustdoc, doctests, formatting, and diff checks pass; the all-test-target lint gate reaches this module without a diagnostic but remains blocked by 94 pre-existing warnings in unrelated tests. Independent review remains pending.
 
+## KW-CI-DRAFT-PR-GATING-2026-08-31 — Skip draft pull-request runners [patch] [ci] — in progress
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-CI-DRAFT-PR-GATING-2026-08-31 | Prevent draft pull requests from consuming hosted runners while preserving every ready-PR and push verification contract. | [patch] [ci] | in progress | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | Pull-request activity lists and root-job predicates in the seven PR-triggered workflows; normalized workflow evidence; release notes |
+
+- **Dependency / lease:** branch `ci/draft-pr-gating` is based on exact PR #681
+  head `22c011fa2`; lease covers the seven workflows, this item, and its
+  CHANGELOG entry. PR #675 remains the separate draft compile-graph experiment.
+- **Entry evidence:** draft PR #675 launched seven workflows before the prior
+  reviewed candidate proved that all 28 jobs could be skipped at dispatch.
+  Draft creation of PR #681 repeated the full hosted fan-out before it was made
+  ready, confirming the runner-cost defect on current source.
+- **Acceptance:** draft `opened`, `synchronize`, and `reopened` events schedule
+  no runner-backed job; direct non-draft opens and `ready_for_review` retain all
+  existing jobs; push and manual-dispatch behavior is unchanged. Preserve every
+  path filter, command, matrix, cache key, feature, workload, assertion, and
+  timeout. Existing job conditions must compose with the draft predicate.
+- **Evidence:** the workflow-only patch is reconstructed from independently
+  GREEN source `8b1c6ab5f`; current-base parsing, structural normalization,
+  independent review, a ready-PR hosted run, and merge remain.
+
 ## KW-PSTD-SOURCE-ACTIVITY-CACHE — Retain warm source-step maps [patch] [perf] — complete
 
 - **Delivered:** PR #669, source `37f539786`, merge `7e709604b`; retained fixed-size pressure/velocity activity maps remove both warm-run host allocations and reject extent drift before mutation or device work.
