@@ -47,27 +47,10 @@
   7 x 4 x 3 passes in 0.900 s; the selector-level Hephaestus run passes in
   0.711 s.
 
-## KW-PSTD-SOURCE-ACTIVITY-CACHE — Retain warm source-step maps [patch] [perf] — review
+## KW-PSTD-SOURCE-ACTIVITY-CACHE — Retain warm source-step maps [patch] [perf] — complete
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-PSTD-SOURCE-ACTIVITY-CACHE | Remove the two host allocations used to classify pressure and velocity source activity on every reusable GPU PSTD run. | [patch] [perf] | review | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `kwavers-gpu` PSTD state/construction/time-loop source, focused tests, release notes |
-
-- **Evidence:** fixed `Box<[bool]>` maps allocate once with solver state;
-  repeated refill, stale-clear, and extent regressions pass. GPU-feature
-  Nextest passes 174/174 with 6 skipped in 16.119 s; warning-denied all-target
-  Clippy, rustfmt, and diff checks pass.
-- **Acceptance:** construction retains two fixed-length `nt` maps; every run
-  clears/refills them through an allocation-incapable slice API; distinct
-  pressure/velocity matrices preserve source-major values without stale flags;
-  no backend branch, transform kernel, workload, assertion, or timeout changes.
-- **Resolved review finding:** public-seam run metadata whose `nt` differs from
-  either retained map is rejected before cache mutation, staging, encoding, or
-  GPU submission; smaller, larger, and divergent extents are covered.
-- **Independent review:** GREEN through exact final source `db2bf60c4`; the
-  source and tests are rebased onto merged main without intermediate history.
-- **Non-goals:** changing Leto/Hephaestus selection, source semantics, command
-  batching, readback ownership, or unrelated PSTD allocations.
+- **Delivered:** PR #669, source `37f539786`, merge `7e709604b`; retained fixed-size pressure/velocity activity maps remove both warm-run host allocations and reject extent drift before mutation or device work.
+- **Evidence:** GPU-feature Nextest 174/174 (6 skipped), warning-denied all-target Clippy, and independent review GREEN; current-main focused refill/allocation and extent regressions pass 2/2 at `e423ce24d`.
 
 ## KW-FDTD-DEBUG-SCAN — Remove duplicate debug scans [patch] [perf] — in progress
 
