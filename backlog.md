@@ -101,17 +101,19 @@
 - **Entry evidence:** PR #681 exact head `22c011fa2`, workflow run
   `33433562701`, job `99624676614` spent 15m56s in `complete benchmark smoke`
   (20:00:13Z–20:16:09Z). The job invokes `cargo bench --benches -- --test`
-  across 23 separately linked benchmark binaries. This exceeds the committed
-  300-second complete-suite budget before the four paired measurement jobs
-  begin; raising the 30-minute job timeout or selecting fewer benchmarks is out
-  of scope.
+  against a 23-target registry; the plotting feature selection builds 20
+  separately linked binaries because two PINN targets and one GPU-required
+  target are ineligible. This exceeds the committed 300-second complete-suite
+  budget before the four paired measurement jobs begin; raising the 30-minute
+  job timeout or selecting fewer benchmarks is out of scope.
 - **Bounded experiment:** on the retained workflow/toolchain/cache policy,
   separate `cargo bench --no-run --timings` from one unchanged full smoke run;
   record compile wall time, Cargo critical path, rustc unit count, per-binary
   link units, and execution wall time. If duplicate bench-binary codegen/linking
-  dominates, consolidate the 23 source modules into the smallest coherent set
-  of Criterion harnesses while preserving every benchmark ID, input, timed
-  closure, feature requirement, and black-box boundary.
+  dominates, retain the three merge-critical executables unchanged and test
+  consolidating the other 17 plotting-eligible modules into one Criterion
+  harness. Keep the PINN and GPU-required feature boundaries explicit and
+  preserve every benchmark ID, input, timed closure, and black-box boundary.
 - **Acceptance / stop:** two controlled complete smokes finish within 300s and
   produce the exact pre-change benchmark-ID set. Reject consolidation if the
   ID set differs or execution rather than compile/link dominates; in that case
