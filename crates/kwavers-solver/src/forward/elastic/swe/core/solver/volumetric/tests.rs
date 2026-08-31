@@ -90,9 +90,34 @@ fn compact_history_meets_the_coverage_memory_bound() {
 }
 
 #[test]
-fn tracker_only_propagation_matches_full_history_detection() {
-    let tracker = assert_tracker_paths_match(ArrivalDetection::EnergyThreshold { threshold: 0.0 });
-    assert!(tracker.amplitudes.iter().any(|&value| value > 0.0));
+fn tracker_only_propagation_matches_positive_threshold_crossing() {
+    const THRESHOLD: f64 = 1.0e-30;
+    let tracker = assert_tracker_paths_match(ArrivalDetection::EnergyThreshold {
+        threshold: THRESHOLD,
+    });
+    let mut detected = tracker
+        .amplitudes
+        .iter()
+        .zip(&tracker.tracking_quality)
+        .filter(|&(&amplitude, _)| amplitude > 0.0);
+
+    assert!(detected.any(|(&amplitude, &quality)| {
+        amplitude >= THRESHOLD && quality.to_bits() == 1.0_f64.to_bits()
+    }));
+}
+
+#[test]
+fn tracker_only_propagation_matches_threshold_fallback() {
+    let tracker = assert_tracker_paths_match(ArrivalDetection::EnergyThreshold {
+        threshold: f64::MAX,
+    });
+    let mut detected = tracker
+        .amplitudes
+        .iter()
+        .zip(&tracker.tracking_quality)
+        .filter(|&(&amplitude, _)| amplitude > 0.0);
+
+    assert!(detected.any(|(&amplitude, &quality)| amplitude < f64::MAX && quality < 1.0));
 }
 
 #[test]
@@ -107,10 +132,18 @@ fn tracker_only_propagation_matches_full_history_matched_filter() {
 #[test]
 fn tracker_only_propagation_rejects_mismatched_force_times() {
     let solver = tracker_test_solver(ArrivalDetection::EnergyThreshold { threshold: 0.0 });
-    let error = solver
+    let compact_error = solver
         .track_volumetric_waves_with_body_forces(&[], &[0.0])
         .expect_err("force timing must be one-to-one");
+    let full_error = solver
+        .propagate_volumetric_waves_with_body_forces(&[], &[0.0], &[])
+        .expect_err("full-history force timing must be one-to-one");
 
+    assert_force_time_mismatch(compact_error);
+    assert_force_time_mismatch(full_error);
+}
+
+fn assert_force_time_mismatch(error: KwaversError) {
     match error {
         KwaversError::Numerical(NumericalError::InvalidOperation(message)) => {
             assert_eq!(

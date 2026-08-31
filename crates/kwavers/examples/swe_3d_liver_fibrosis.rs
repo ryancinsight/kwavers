@@ -39,8 +39,8 @@ use kwavers_physics::acoustics::imaging::modalities::elastography::{
     AcousticRadiationForce, MultiDirectionalPush,
 };
 use kwavers_solver::forward::elastic::{
-    ArrivalDetection, ElasticBodyForceConfig, ElasticWaveSolver, VolumetricWaveConfig,
-    WaveFrontTracker,
+    ArrivalDetection, ElasticBodyForceConfig, ElasticWaveSolver, VolumetricSource,
+    VolumetricWaveConfig, WaveFrontTracker,
 };
 use kwavers_therapy::therapy::swe_3d_workflows::{
     ElasticityMap3D, MultiPlanarReconstruction, Swe3dClinicalDecisionSupport, VolumetricROI,
@@ -152,7 +152,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Propagate waves with volumetric tracking
     let push_times: Vec<f64> = push_pattern.time_delays.clone();
-    let tracker = solver.track_volumetric_waves_with_body_forces(&body_forces, &push_times)?;
+    let sources: Vec<VolumetricSource> = push_pattern
+        .pushes
+        .iter()
+        .zip(push_pattern.time_delays.iter())
+        .map(|(push, &time_offset_s)| VolumetricSource {
+            location_m: push.location,
+            time_offset_s,
+        })
+        .collect();
+    let (displacement_history, tracker) =
+        solver.propagate_volumetric_waves_with_body_forces(&body_forces, &push_times, &sources)?;
+    println!(
+        "   Simulated {} time steps of wave propagation",
+        displacement_history.len()
+    );
     println!("   Wave front tracking completed\n");
 
     // Step 5: 3D elasticity reconstruction

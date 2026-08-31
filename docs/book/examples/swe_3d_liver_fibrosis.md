@@ -18,11 +18,11 @@ Complete clinical workflow for 3D SWE assessment of liver fibrosis using multi-d
 6. Output volumetric stiffness map and per-ROI statistics
 
 The example uses
-`ElasticWaveSolver::track_volumetric_waves_with_body_forces` because the
-reconstruction consumes only the wavefront tracker. That route retains one
-displacement magnitude per eligible voxel and saved time. Callers that need
-the six displacement and velocity fields at every saved time use
-`propagate_volumetric_waves_with_body_forces` instead.
+`ElasticWaveSolver::propagate_volumetric_waves_with_body_forces` because its
+console report includes the retained history length. Callers that consume only
+the wavefront tracker use `track_volumetric_waves_with_body_forces`, which
+retains one displacement magnitude per eligible voxel and saved time instead
+of all six displacement and velocity fields.
 
 ## Fibrosis Grades
 
