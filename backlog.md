@@ -125,6 +125,34 @@
   profile the single slowest unchanged benchmark and optimize its production
   path or bounded instrument according to the benchmark time model.
 
+## KW-CI-LOCAL-CRITERION-EVIDENCE-2026-08-31 — Keep statistical timing off hosted CI [patch] [arch] [ci] [perf] — todo
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-CI-LOCAL-CRITERION-EVIDENCE-2026-08-31 | Retain controlled local Criterion comparison as performance evidence while limiting pull-request CI to bounded build-and-single-iteration benchmark verification. | [patch] [arch] [ci] [perf] | todo | unowned | benchmark-regression workflow, local benchmark runner/evidence contract, ADR 045, CHANGELOG |
+
+- **Entry evidence:** Accepted ADR 045 and the current pull-request workflow
+  still launch four full phase-reversed Criterion replications whenever one of
+  three benchmark executables differs. PR #681 run `33433562701` launched jobs
+  `99629480267`, `99629480304`, `99629480174`, and `99629480160` after a
+  15m56s complete smoke. Hosted shared-runner timing is not controlled
+  performance evidence and consumes four additional 30-minute lanes on the
+  merge path.
+- **Decision dependency:** rewrite ADR 045 in place. Preserve its same-harness,
+  same-path, benchmark-universe, confidence-interval, and family-wise
+  classification requirements for the controlled local instrument, but remove
+  hosted statistical measurement, artifact upload/download, and the Atlas
+  classifier checkout from pull-request CI. CI retains exact registry checks,
+  warning-clean benchmark compilation, and one execution of every benchmark.
+- **Acceptance:** normalized workflow review proves no benchmark target,
+  feature, input, workload, assertion, timed closure, or smoke coverage is
+  removed; a benchmark-relevant ready PR schedules no statistical timing job;
+  the complete smoke finishes within the separate 300-second budget item; the
+  documented local command reproduces the three merge-critical targets with
+  the existing sample counts and confidence contract. Reject any correction
+  that weakens Criterion instruments or substitutes hosted wall time for local
+  paired evidence.
+
 ## KW-PSTD-SOURCE-ACTIVITY-CACHE — Retain warm source-step maps [patch] [perf] — complete
 
 - **Delivered:** PR #669, source `37f539786`, merge `7e709604b`; retained fixed-size pressure/velocity activity maps remove both warm-run host allocations and reject extent drift before mutation or device work.
