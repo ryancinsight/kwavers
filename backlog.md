@@ -153,6 +153,36 @@
   that weakens Criterion instruments or substitutes hosted wall time for local
   paired evidence.
 
+## KW-VISCOACOUSTIC-DIMENSIONAL-STATE-2026-08-31 — Omit inactive-axis state [patch] [perf] — todo
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-VISCOACOUSTIC-DIMENSIONAL-STATE-2026-08-31 | Retain velocity and derivative storage only for active spatial axes while preserving the canonical 1-D/2-D/3-D solver and exact state values. | [patch] [perf] | todo | unowned | viscoacoustic private state/scratch layout, step/reset/damping/energy paths, allocation and all-axis-mask value regressions, existing Criterion instrument |
+
+- **Entry evidence:** a warmed release global-allocation probe at exact source
+  `22c011fa2` measured every 4,096-cell constructor at 15 allocations and
+  426,000/394,248/393,600 retained bytes for 1-D `[4096,1,1]`, 2-D
+  `[64,64,1]`, and 3-D `[16,16,16]`. The current private state always owns
+  `vx/vy/vz` plus `gx/gy/gz`, although singleton-axis derivatives are exact
+  positive zero. Removing three inactive arrays in 1-D saves 98,304 bytes
+  (23.1% of the measured retained footprint); removing two in 2-D saves 65,536
+  bytes (16.6%). Full 3-D retains all six arrays.
+- **Design constraint:** support every public singleton-axis permutation,
+  including no active axes and the `xz`/`yz` planes. Keep one pressure field,
+  active velocity fields, one divergence buffer, one reusable auxiliary
+  buffer, and a third derivative buffer only when all three axes are active.
+  Combine divergence in the established `dx + (dy + dz)` order with missing
+  derivatives represented by positive zero; branch only at the axis-operation
+  boundary. No public type or method changes.
+- **Acceptance:** all eight active-axis masks compare complete pressure,
+  memory, energy, damping, reset, and repeated-step behavior against a
+  six-array reference; the 3-D control remains bitwise equal. Warm construction
+  measures exactly 12/13/15 allocations for standard 1-D/2-D/3-D and the
+  retained-byte reductions above, while warm stepping remains allocation-free.
+  Existing paired Criterion inputs and timed regions remain unchanged; reject
+  the candidate on any active-axis regression or if added branching offsets
+  the measured lower-dimensional gain.
+
 ## KW-PSTD-SOURCE-ACTIVITY-CACHE — Retain warm source-step maps [patch] [perf] — complete
 
 - **Delivered:** PR #669, source `37f539786`, merge `7e709604b`; retained fixed-size pressure/velocity activity maps remove both warm-run host allocations and reject extent drift before mutation or device work.
