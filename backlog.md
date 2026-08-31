@@ -78,8 +78,8 @@
 | KW-CI-DRAFT-PR-GATING-2026-08-31 | Prevent draft pull requests from consuming hosted runners while preserving every ready-PR and push verification contract. | [patch] [ci] | in progress | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | Pull-request activity lists and root-job predicates in the seven PR-triggered workflows; normalized workflow evidence; release notes |
 
 - **Dependency / lease:** branch `ci/draft-pr-gating` is based on exact PR #681
-  head `22c011fa2`; lease covers the seven workflows, this item, and its
-  CHANGELOG entry. PR #675 remains the separate draft compile-graph experiment.
+  head `22c011fa2`; source `a35a9287f` discharges the workflow, CHANGELOG, and
+  item lease. PR #675 remains the separate draft compile-graph experiment.
 - **Entry evidence:** draft PR #675 launched seven workflows before the prior
   reviewed candidate proved that all 28 jobs could be skipped at dispatch.
   Draft creation of PR #681 repeated the full hosted fan-out before it was made
@@ -89,9 +89,11 @@
   existing jobs; push and manual-dispatch behavior is unchanged. Preserve every
   path filter, command, matrix, cache key, feature, workload, assertion, and
   timeout. Existing job conditions must compose with the draft predicate.
-- **Evidence:** the workflow-only patch is reconstructed from independently
-  GREEN source `8b1c6ab5f`; current-base parsing, structural normalization,
-  independent review, a ready-PR hosted run, and merge remain.
+- **Evidence:** all ten current workflows parse, exactly seven PR workflows
+  subscribe to `ready_for_review`, and 17 root/aggregator predicates reject
+  drafts. The seven workflow blobs at source `a35a9287f` are byte-identical to
+  independently GREEN source `8b1c6ab5f`; `git diff --check` passes. Current
+  dependent-branch review, a ready-PR hosted run, and merge remain.
 
 ## KW-PSTD-SOURCE-ACTIVITY-CACHE — Retain warm source-step maps [patch] [perf] — complete
 
