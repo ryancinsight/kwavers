@@ -307,8 +307,10 @@ This is an active research project under development. Contributions are welcome!
 1. **Check Status**: Review [`CHECKLIST.md`](CHECKLIST.md) for current task status
 2. **Review Plans**: See [`backlog.md`](backlog.md) for planned work and [`gap_audit.md`](gap_audit.md) for known gaps
 3. **Build a crate**: `cargo check -p kwavers-core` (per-crate checks are fast post-split)
-4. **Run Tests**: `cargo nextest run -p <crate>`; use `cargo test -p <crate> --doc`
-   for doctests
+4. **Run Tests**: `cargo nextest run -p <crate>`; use
+   `cargo test-gpu-consumers` when changing the shared GPU simulation/Python
+   dependency graph, so Cargo compiles their common graph once; use
+   `cargo test -p <crate> --doc` for doctests
 5. **Read Docs**: [`docs/book/`](docs/book/) for narratives, [`docs/ADR/`](docs/ADR/) for design decisions
 6. **Install the hooks**: `git config core.hooksPath .githooks`
 

@@ -98,18 +98,30 @@
 |----|---------|-------|--------|-------|-------|
 | KW-SIM-TEST-COMPILE-GRAPH | Reduce the cold compile/link cost of the GPU-enabled simulation and Python test harnesses while retaining all value-semantic tests. | [patch] [perf] | in progress | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `kwavers-simulation` and `kwavers-python` dependency/feature graphs, test-ID census, build-timing instrumentation, focused CI/PM evidence |
 
-- **Evidence:** `cargo nextest run --offline -p kwavers-simulation --features
-  gpu` spent 2m37s compiling the transitive graph, then executed all 100 tests
-  in 0.617s. The matching GPU-enabled Python run spent 2m15s compiling, then
-  executed all 21 tests in 1.661s. Test runtime is not the bottleneck.
-- **Acceptance:** compiler timing attributes the dominant crates and link work;
-  the same 100 simulation and 21 Python tests and assertions remain; no private
-  target cache, feature bypass, workload reduction, or timeout increase; cold
-  controlled reruns are materially below the 2m37s and 2m15s baselines.
-- **Lease:** Codex owns the two package manifests, exact test-ID/timing
-  instrumentation, and this item through the next commit. Stop before any graph
-  consolidation unless the combined Nextest ID set equals the exact union of
-  the isolated 100- and 21-test selections.
+- **Entry evidence:** isolated cold runs spent 2m37s compiling the GPU-enabled
+  simulation graph and 2m15s compiling the GPU-enabled Python graph; their
+  actual test execution took 0.617s and 1.661s. Cargo package attribution found
+  431 of 444 Python normal/dev packages in the simulation graph, so separate
+  invocations rebuild the shared graph instead of paying for distinct tests.
+- **Current exact selection:** isolated `cargo nextest list` reports 107
+  simulation IDs and 21 Python IDs. The combined selection reports exactly
+  their 128-ID set union with no additions or omissions. The canonical alias
+  compiled the selected graph in 1m28s on the shared Windows target, then
+  passed 127/127 runnable tests with one declared skip in 0.977s.
+- **Implementation:** `.cargo/config.toml` now owns
+  `cargo test-gpu-consumers`, one Nextest invocation over both packages
+  and their existing GPU features. Repeated feature forwarding is already
+  unioned by Cargo, so no manifest surgery is justified by this evidence.
+- **Acceptance:** preserve the exact 128-ID union, features, assertions,
+  profile, cache policy, and timeout bounds. On two fresh equivalent four-core
+  Linux runners, the combined cold compile must not exceed 181s; otherwise
+  reject consolidation and use Cargo timings to select one dominant unit.
+- **Remaining evidence:** controlled cold compile timings cannot be collected
+  from the shared warm target without deleting shared derived state or forking
+  the one-cache policy. Fresh-run confirmation and compiler critical-path/link
+  attribution remain open; no timing reduction is claimed from the warm run.
+- **Lease:** Codex owns `.cargo/config.toml`, the contributing command,
+  release note, and this item through the combined-gate verification commit.
 
 ## KW-INTEGRATION-FAILURE-DIAGNOSTICS — Preserve failed-test output [patch] — review
 

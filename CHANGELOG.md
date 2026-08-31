@@ -199,6 +199,13 @@
 
 ### Changed
 
+- **GPU consumer test builds share one Cargo graph.** The canonical
+  `cargo test-gpu-consumers` gate selects the complete GPU-enabled
+  `kwavers-simulation` and `kwavers-python` library-test union in one Nextest
+  invocation. This removes repeated compilation of their common dependency
+  graph when both consumers are in scope without changing features, tests,
+  assertions, profiles, or timeout policy.
+
 - **[major] Harmonic detection now exposes only controls that affect the
   analysis.** `HarmonicDetectionConfig` removes the inert `fft_window_size`,
   `fft_overlap`, `min_snr_db`, and `enable_phase_unwrapping` fields. One call
