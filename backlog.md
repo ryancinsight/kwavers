@@ -183,6 +183,34 @@
   the candidate on any active-axis regression or if added branching offsets
   the measured lower-dimensional gain.
 
+## KW-VISCOACOUSTIC-UNIFORM-COEFFICIENTS-2026-08-31 — Retain scalar homogeneous coefficients [patch] [perf] — todo
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-VISCOACOUSTIC-UNIFORM-COEFFICIENTS-2026-08-31 | Represent spatially uniform medium and relaxation coefficients as scalars while retaining full grids only for heterogeneous constructors. | [patch] [perf] | todo | unowned | viscoacoustic medium/arm representation, homogeneous and heterogeneous step/energy paths, constructor/step allocation ledgers, relaxation Criterion workload |
+
+- **Dependency:** land the dimensional-state item first because both change the
+  private step layout. This item does not alter public constructors or collapse
+  heterogeneous fields into a uniform approximation.
+- **Entry evidence:** on the same warmed release 4,096-cell probe, three
+  homogeneous arms raised construction from 15 allocations and 426,000
+  retained bytes to 34 allocations and 820,176 bytes in 1-D; 2-D/3-D measured
+  788,424/787,776 bytes. Three homogeneous medium fields plus three coefficient
+  fields per arm account for exactly 393,216 retained bytes at this size—48.0%
+  of the three-arm 1-D footprint. The current homogeneous constructor also
+  allocates two temporary full-grid inputs per arm. During stepping, each arm
+  streams decay, gain, and inverse-tau grids whose values are constant.
+- **Acceptance:** one private scalar-or-grid representation specializes once at
+  the operation boundary; no variant branch enters a per-voxel loop. Uniform
+  and heterogeneous paths compare complete state/energy values against the
+  incumbent implementation, with bitwise equality where evaluation order is
+  unchanged and a derived bound otherwise. Warm homogeneous construction
+  removes the 393,216 retained bytes and all coefficient-input temporaries at
+  4,096 cells; heterogeneous allocation and values remain unchanged; repeated
+  stepping allocates zero. Establish a three-arm Criterion baseline before the
+  production edit and reject the candidate on a significant homogeneous or
+  heterogeneous runtime regression.
+
 ## KW-PSTD-SOURCE-ACTIVITY-CACHE — Retain warm source-step maps [patch] [perf] — complete
 
 - **Delivered:** PR #669, source `37f539786`, merge `7e709604b`; retained fixed-size pressure/velocity activity maps remove both warm-run host allocations and reject extent drift before mutation or device work.
