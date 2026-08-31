@@ -95,7 +95,7 @@ full measurement path below; no workload, sample count, confidence level, or
 timeout changes.
 
 The workflow consumes the Atlas-owned regression classifier and provider graph
-pinned at `1393fd8838f3bcd548959a83daa8d9375e3b03d9`. Four isolated runners each
+pinned at `9c33b4af1ac44ba43e4d26eaf9cb215218db248e`. Four isolated runners each
 execute one complete base/head pair. Two use order `A B` and two use `B A`,
 where `A` is the base revision and `B` is the candidate. Each comparison
 therefore remains within one machine, while the phase-reversed matrix balances

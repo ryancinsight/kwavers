@@ -244,7 +244,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: ryancinsight/atlas
-          ref: 1393fd8838f3bcd548959a83daa8d9375e3b03d9
+          ref: 9c33b4af1ac44ba43e4d26eaf9cb215218db248e
           path: atlas-tool
           persist-credentials: false
 
@@ -452,7 +452,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: ryancinsight/atlas
-          ref: 1393fd8838f3bcd548959a83daa8d9375e3b03d9
+          ref: 9c33b4af1ac44ba43e4d26eaf9cb215218db248e
           path: atlas-tool
           persist-credentials: false
 
