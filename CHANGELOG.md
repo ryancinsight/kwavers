@@ -149,6 +149,13 @@
 
 ### Fixed
 
+- **Draft pull requests no longer consume verification runners.** All seven
+  pull-request workflows skip their root or independent jobs while a pull
+  request is draft and subscribe to `ready_for_review` so the unchanged checks
+  begin when the candidate becomes reviewable. Direct non-draft opens, pushes,
+  manual dispatches, path filters, commands, matrices, and timeout policies are
+  unchanged.
+
 - **FDTD time-step orchestration now applies velocity sources under both
   temporal schemes.** Yoshida's fourth-order composition previously returned
   before the once-per-step velocity-source phase. Debug builds also avoid a

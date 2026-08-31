@@ -2,6 +2,7 @@ name: Python wheel smoke
 
 on:
   pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
     branches: [main, develop]
     paths:
       - Cargo.lock
@@ -20,6 +21,7 @@ concurrency:
 
 jobs:
   base-wheel:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
     name: Base wheel (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
@@ -69,6 +71,7 @@ jobs:
           "$smoke_python" source/crates/kwavers-python/tests/optional_submodule_contract.py access
 
   kwave-comparison:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
     name: k-Wave comparison (Ubuntu)
     runs-on: ubuntu-latest
     timeout-minutes: 30

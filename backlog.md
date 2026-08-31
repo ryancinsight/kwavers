@@ -109,8 +109,21 @@
   timeout. Existing job conditions must compose with the draft predicate.
 - **Non-goals:** no workflow consolidation, job deletion, command change, or
   timeout adjustment in this increment.
-- **Lease:** Codex owns the seven PR-triggered workflow files, workflow
-  normalization tests, and this item through the next commit.
+- **Implementation:** all seven workflows retain the default pull-request
+  activities and add `ready_for_review`; independent/root jobs reject draft
+  events. CI dependents inherit the guarded lockfile root, while benchmark
+  regression preserves its existing pair predicate and composes the draft
+  condition with the `always()` aggregator.
+- **Local evidence:** PyYAML parses every candidate workflow. Removing only the
+  new activity lists and draft predicates produces structures identical to
+  `HEAD`; all 28 jobs either carry the predicate or depend transitively on a
+  guarded root. The event truth table admits ready PRs, pushes, and manual
+  dispatches while rejecting draft PRs; `git diff --check` passes.
+- **Remaining evidence:** reopen draft PR #675 at the exact candidate and prove
+  repository workflow jobs complete as skipped without runner allocation, then
+  mark it ready only after the compile-graph timing blocker is resolved.
+- **Lease:** Codex owns the seven workflows, release note, and this item through
+  the source verification commit.
 
 ## KW-SIM-TEST-COMPILE-GRAPH — Reduce simulation test build latency [patch] [perf] — in progress
 

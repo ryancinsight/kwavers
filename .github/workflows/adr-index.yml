@@ -14,6 +14,7 @@ on:
       - 'scripts/adr-index.py'
       - '.github/workflows/adr-index.yml'
   pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
     paths:
       - 'docs/adr/**'
       - 'scripts/adr-index.py'
@@ -28,6 +29,7 @@ concurrency:
 
 jobs:
   index:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
     name: ADR index is current
     runs-on: ubuntu-latest
     timeout-minutes: 5
