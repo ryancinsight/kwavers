@@ -221,6 +221,15 @@
 
 ### Changed
 
+- **Viscoacoustic lower-dimensional stepping:** A singleton derivative axis
+  now clears its output directly without staging the real field into complex
+  scratch, dispatching forward and inverse FFTs, or traversing the wavenumber
+  product. The retained scratch remains untouched and the result is bitwise
+  identical to the previous full transform route. Two paired 100-sample
+  Criterion runs over equal 4,096-cell grids measured significant 1-D
+  reductions of 49.3–52.3% and 2-D reductions of 9.1–36.6%; the fully active
+  3-D control had no significant change in either run.
+
 - **[major] Harmonic detection now exposes only controls that affect the
   analysis.** `HarmonicDetectionConfig` removes the inert `fft_window_size`,
   `fft_overlap`, `min_snr_db`, and `enable_phase_unwrapping` fields. One call
