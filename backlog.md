@@ -112,6 +112,9 @@
   `cargo test-gpu-consumers`, one Nextest invocation over both packages
   and their existing GPU features. Repeated feature forwarding is already
   unioned by Cargo, so no manifest surgery is justified by this evidence.
+- **Candidate:** source and local verification commit `5966800ba`; exact
+  combined-gate output is 127 passed, one skipped after a 1m28s shared-target
+  build. Standalone locked/offline metadata and the 91-source lock guard pass.
 - **Acceptance:** preserve the exact 128-ID union, features, assertions,
   profile, cache policy, and timeout bounds. On two fresh equivalent four-core
   Linux runners, the combined cold compile must not exceed 181s; otherwise
@@ -120,8 +123,8 @@
   from the shared warm target without deleting shared derived state or forking
   the one-cache policy. Fresh-run confirmation and compiler critical-path/link
   attribution remain open; no timing reduction is claimed from the warm run.
-- **Lease:** Codex owns `.cargo/config.toml`, the contributing command,
-  release note, and this item through the combined-gate verification commit.
+- **Lease:** Codex owns fresh-run timing collection and critical-path/link
+  attribution; no source region is leased while that evidence runs.
 
 ## KW-INTEGRATION-FAILURE-DIAGNOSTICS — Preserve failed-test output [patch] — review
 
