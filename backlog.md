@@ -99,6 +99,32 @@
   dependent base. Retarget/reopen on `main`, the full ready-PR hosted run,
   independent current-branch review, and merge remain.
 
+## KW-CI-BENCH-SMOKE-BUDGET-2026-08-31 — Bound complete benchmark smoke [patch] [ci] [perf] — todo
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-CI-BENCH-SMOKE-BUDGET-2026-08-31 | Bring the complete Criterion smoke under the committed 300-second suite budget without removing a benchmark, changing an input/workload, or weakening a smoke assertion. | [patch] [ci] [perf] | todo | unowned | `crates/kwavers/benches`, bench target declarations, benchmark smoke runner, compile/link timing evidence |
+
+- **Entry evidence:** PR #681 exact head `22c011fa2`, workflow run
+  `33433562701`, job `99624676614` spent 15m56s in `complete benchmark smoke`
+  (20:00:13Z–20:16:09Z). The job invokes `cargo bench --benches -- --test`
+  across 23 separately linked benchmark binaries. This exceeds the committed
+  300-second complete-suite budget before the four paired measurement jobs
+  begin; raising the 30-minute job timeout or selecting fewer benchmarks is out
+  of scope.
+- **Bounded experiment:** on the retained workflow/toolchain/cache policy,
+  separate `cargo bench --no-run --timings` from one unchanged full smoke run;
+  record compile wall time, Cargo critical path, rustc unit count, per-binary
+  link units, and execution wall time. If duplicate bench-binary codegen/linking
+  dominates, consolidate the 23 source modules into the smallest coherent set
+  of Criterion harnesses while preserving every benchmark ID, input, timed
+  closure, feature requirement, and black-box boundary.
+- **Acceptance / stop:** two controlled complete smokes finish within 300s and
+  produce the exact pre-change benchmark-ID set. Reject consolidation if the
+  ID set differs or execution rather than compile/link dominates; in that case
+  profile the single slowest unchanged benchmark and optimize its production
+  path or bounded instrument according to the benchmark time model.
+
 ## KW-PSTD-SOURCE-ACTIVITY-CACHE — Retain warm source-step maps [patch] [perf] — complete
 
 - **Delivered:** PR #669, source `37f539786`, merge `7e709604b`; retained fixed-size pressure/velocity activity maps remove both warm-run host allocations and reject extent drift before mutation or device work.
