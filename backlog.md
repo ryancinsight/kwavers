@@ -92,6 +92,26 @@
 - **Independent review:** GREEN at exact source commit `41576260e`; the static
   source, diagnostics, test oracle, config, and scope contracts match.
 
+## KW-CI-DRAFT-PR-GATING-2026-08-30 — Skip draft pull-request runners [patch] [ci] — in progress
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-CI-DRAFT-PR-GATING-2026-08-30 | Prevent draft pull requests from consuming hosted runners while preserving every ready-PR and push verification contract. | [patch] [ci] | in progress | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | Pull-request job predicates in the seven PR-triggered workflows; normalized workflow and event-contract tests; PM evidence |
+
+- **Entry evidence:** opening draft PR #675 at exact head `04b42089b`
+  launched Architecture Validation `33343792381`, CI `33343792379`, Legacy
+  Migration Audit `33343792370`, and benchmark regression `33343792376`.
+  Those runs were cancelled and the draft closed without deleting its branch.
+- **Acceptance:** draft `opened`, `synchronize`, and `reopened` events schedule
+  no runner-backed job; direct non-draft opens and `ready_for_review` retain all
+  existing jobs; push and manual-dispatch behavior is unchanged. Preserve every
+  path filter, command, matrix, cache key, feature, workload, assertion, and
+  timeout. Existing job conditions must compose with the draft predicate.
+- **Non-goals:** no workflow consolidation, job deletion, command change, or
+  timeout adjustment in this increment.
+- **Lease:** Codex owns the seven PR-triggered workflow files, workflow
+  normalization tests, and this item through the next commit.
+
 ## KW-SIM-TEST-COMPILE-GRAPH — Reduce simulation test build latency [patch] [perf] — in progress
 
 | ID | Outcome | Class | Status | Owner | Scope |
