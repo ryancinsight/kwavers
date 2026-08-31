@@ -63,9 +63,9 @@
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-VISCOACOUSTIC-INACTIVE-AXIS-2026-08-31 | Replace length-one viscoacoustic derivative staging, FFT dispatch, and wavenumber traversal with an exact zero fill while preserving retained scratch and values. | [patch] [perf] | in progress | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | viscoacoustic axis derivative/step path, value tests, existing critical-path Criterion instrument, Rustdoc, CHANGELOG |
+| KW-VISCOACOUSTIC-INACTIVE-AXIS-2026-08-31 | Replace length-one viscoacoustic derivative staging, FFT dispatch, and wavenumber traversal with an exact zero fill while preserving retained scratch and values. | [patch] [perf] | review | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | viscoacoustic axis derivative/step path, value tests, existing critical-path Criterion instrument, Rustdoc, CHANGELOG |
 
-- **Lease:** Codex owns the listed solver/test/benchmark/documentation regions through the next source commit.
+- **Lease:** none; source candidate `98000d690` and benchmark instrument `6ca2e8d65` are committed.
 - **Entry evidence:** every viscoacoustic step invoked pressure and velocity derivatives on all three axes. For a length-one periodic axis the only wavenumber is zero, so the derivative is identically zero, but the incumbent helper still traversed the full field around both provider calls. The retained equal-volume Criterion instrument measured 1-D/2-D/3-D entry estimates of 230.93/345.31/276.37 µs and 259.89/363.71/284.99 µs in two 100-sample runs.
 - **Acceptance:** retain one generic derivative helper; establish paired Criterion baselines before mutation; an inactive axis writes exact zeros without touching complex FFT scratch or dispatching a transform; repeated nontrivial 1-D and 2-D inactive derivatives remain bitwise equal to the incumbent FFT route and the existing repeated-step value suites remain green; 3-D arithmetic and provider dispatch remain unchanged; no allocation, workload, benchmark-timed-region, or timeout change.
 - **Stop condition:** reject the production candidate unless controlled paired Criterion time estimates improve materially without regressing the active-axis control or changing values.
