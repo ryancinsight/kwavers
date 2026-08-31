@@ -889,14 +889,17 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   fell from 2,291,154,944 to 1,870,888,960 (18.3%); peak resident bytes fell
   from 2,078,449,664 to 1,658,085,376 (20.2%).
 
-## KW-SWE-TRACKER-MEMORY — bound tracker-only retention [minor] — todo
+## KW-SWE-TRACKER-MEMORY — bound tracker-only retention [minor] — review
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-SWE-TRACKER-MEMORY | Track volumetric arrivals without retaining velocity fields that the caller does not consume. | [minor] | todo | unclaimed | `crates/kwavers-solver/src/forward/elastic/swe/core/solver/volumetric.rs`, tracker-only Kwavers callers and tests |
+| KW-SWE-TRACKER-MEMORY | Track volumetric arrivals without retaining velocity fields that the caller does not consume. | [minor] | review | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `crates/kwavers-solver/src/forward/elastic/swe/core/solver/volumetric.rs`, tracker-only Kwavers callers and tests |
 
-- **Dependency:** merge the volumetric runtime correction above so its
-  prepared-force and storage-order baselines are stable.
+- **Lease:** none; corrected candidate
+  `cceb434960cfa79b6e28d3a6e3cc41a68f0d32f1` is committed in draft PR #676
+  and has passed independent re-review.
+- **Dependency:** the volumetric runtime correction is merged in `origin/main`;
+  its prepared-force and storage-order baselines are stable.
 - **Acceptance oracle:** the tracker-only path runs the same grid, time steps,
   snapshot cadence, and arrival detector; its tracker is value-equivalent to
   the full-history path under the existing derived floating-point bounds. It
@@ -910,6 +913,37 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   private peak is still dominated by retained `ElasticWaveField` snapshots:
   each deep-clones six 144,000-element `f64` arrays although wavefront tracking
   reads only displacement magnitude and its caller discards `_history`.
+- **Candidate evidence (`cceb434960cfa79b6e28d3a6e3cc41a68f0d32f1`):**
+  one generic recorder loop now serves full-field and
+  tracker-only retention, and one generic detector serves both sample layouts.
+  The 60×60×40, PML-10, 256-snapshot bound is 65,538,048 retained sample bytes
+  (62.502 MiB). Bitwise differential coverage passes, and the allocation
+  ledger observes zero reallocations plus exactly 29 fewer allocations for a
+  five-snapshot case. The exact coverage regression passes in 1.055, 1.040,
+  and 0.974 seconds (1.040-second median versus 9.702 seconds, 89.3% lower).
+  One instrumented run observes 245,600,256 peak private and 41,127,936 peak
+  resident bytes, 86.9% and 97.5% below the recorded full-history peaks.
+  These are bounded-test/process observations, not Criterion estimates. The
+  solver suite passes 939/939 with two configured skips; threshold and matched-
+  filter path differentials pass bitwise; positive-threshold crossing and
+  no-crossing fallback are both covered, and mismatched force timing returns
+  the same exact error through both public APIs. The liver-fibrosis example
+  retains its observable full-history length and documents why it uses the
+  full-history API. Focused warning-denied Clippy,
+  Rustdoc, doctests, the consumer example check, and the 196-check minor SemVer
+  analysis pass. Standalone locked release verification passes all ten
+  volumetric tests; the first-party development overlay was not used because a
+  live Apollo lease held an uncommitted batched-kernel increment. The broader
+  all-target Clippy baseline remains independently red with 94 unrelated
+  existing diagnostics. The source commit's conventional-commit `!` marker is
+  a metadata error: the public change is additive and the minor SemVer analysis
+  passes. Shared history is not rewritten; PR classification, independent
+  review, and merge records carry the verified minor classification. The
+  first independent review blocked the missing threshold branches, one-sided
+  mismatch evidence, and the example output regression; `cceb43496` fixes all
+  three forward. Independent static re-review is GREEN on exact committed
+  objects; runtime evidence remains the locally collected gates above. Hosted
+  PR checks and merge closure remain pending.
 
 ## KW-INTEGRATION-TESTS-UNRUN — integration tests compiled but not run [patch] — review
 

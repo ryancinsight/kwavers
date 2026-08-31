@@ -4,6 +4,20 @@
 
 ### Added
 
+- **[minor] SWE volumetric tracking can omit full-field history.**
+  `ElasticWaveSolver::track_volumetric_waves_with_body_forces` executes the
+  same body-force propagation, snapshot schedule, and arrival detector as the
+  full-history API while retaining only saved displacement magnitudes for
+  eligible tracking voxels. The existing full-history operation remains for
+  callers that inspect displacement or velocity snapshots. On the
+  60×60×40 coverage regression, compact retained samples are bounded at
+  65,538,048 bytes (62.502 MiB); the observed test-process peaks fell from
+  1,870,888,960 to 245,600,256 private bytes and from 1,658,085,376 to
+  41,127,936 resident bytes. Three warm bounded-test executions completed in
+  1.055, 1.040, and 0.974 seconds versus the recorded 9.702-second
+  full-history run. These are operational test observations, not Criterion
+  estimates.
+
 - **[major] SWE high-level histories retain displacement only.**
   `ShearWaveElastography::generate_shear_wave` now returns
   `Vec<ElasticDisplacementSnapshot>`, and `reconstruct_elasticity` accepts that

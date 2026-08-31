@@ -156,12 +156,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .pushes
         .iter()
         .zip(push_pattern.time_delays.iter())
-        .map(|(push, &t)| VolumetricSource {
+        .map(|(push, &time_offset_s)| VolumetricSource {
             location_m: push.location,
-            time_offset_s: t,
+            time_offset_s,
         })
         .collect();
-
     let (displacement_history, tracker) =
         solver.propagate_volumetric_waves_with_body_forces(&body_forces, &push_times, &sources)?;
     println!(
