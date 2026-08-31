@@ -730,9 +730,10 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   reserve its header vector once, eliminating history-container growth and late
   header-allocation failure without changing snapshot payloads, values, times,
   or public APIs.
-- **Integrator / lease:** Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` owns the
-  private propagation schedule/capacity helper, focused history and allocation
-  tests, Rustdoc, CHANGELOG, and this item through the next verified commit.
+- **Integrator / lease:** Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d`
+  takes over the stale candidate and owns the private propagation
+  schedule/capacity helper, focused history and allocation tests, Rustdoc,
+  CHANGELOG, and this item through the next verified commit.
 - **Scope / non-goals:** use checked `1 + steps.div_ceil(max(save_every, 1))`
   capacity derivation plus `try_reserve_exact` and the existing typed allocation
   error. Snapshot array cloning remains unchanged and outside the allocation
@@ -744,8 +745,9 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   reallocations and capacity at least the derived bound after the correction.
   Focused/package Nextest, warning-denied library Clippy/Rustdoc, doctests,
   unchanged Criterion smoke, and SemVer classification remain required.
-- **Status:** baseline measurement in progress; provider/review/merge closure
-  remains pending behind PR #670.
+- **Status:** stale-candidate takeover in progress. PR #670 is merged; the four
+  commits through `0619c6a8f` remain unique with no open PR and are being
+  reconciled onto `238cf78a1` with the landed tracker allocation harness.
 
 ## KW-PR-BENCH-DUPLICATION-2026-08-29 — Remove duplicate PR smoke [patch] [ci] — todo
 
