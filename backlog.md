@@ -913,6 +913,22 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   private peak is still dominated by retained `ElasticWaveField` snapshots:
   each deep-clones six 144,000-element `f64` arrays although wavefront tracking
   reads only displacement magnitude and its caller discards `_history`.
+- **Candidate evidence:** one generic recorder loop now serves full-field and
+  tracker-only retention, and one generic detector serves both sample layouts.
+  The 60×60×40, PML-10, 256-snapshot bound is 65,538,048 retained sample bytes
+  (62.502 MiB). Bitwise differential coverage passes, and the allocation
+  ledger observes zero reallocations plus exactly 29 fewer allocations for a
+  five-snapshot case. The exact coverage regression passes in 1.055, 1.040,
+  and 0.974 seconds (1.040-second median versus 9.702 seconds, 89.3% lower).
+  One instrumented run observes 245,600,256 peak private and 41,127,936 peak
+  resident bytes, 86.9% and 97.5% below the recorded full-history peaks.
+  These are bounded-test/process observations, not Criterion estimates. The
+  solver suite passes 939/939 with two configured skips; threshold and matched-
+  filter path differentials pass bitwise; focused warning-denied Clippy,
+  Rustdoc, doctests, the consumer example check, and the 196-check minor SemVer
+  analysis pass. The broader all-target Clippy baseline remains independently
+  red with 94 unrelated existing diagnostics. Release-focused verification,
+  independent review, and merge closure remain pending.
 
 ## KW-INTEGRATION-TESTS-UNRUN — integration tests compiled but not run [patch] — review
 

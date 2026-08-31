@@ -174,20 +174,8 @@ fn test_volumetric_phantom_validation() {
 
     // Propagate with volumetric tracking
     let push_times: Vec<f64> = push_pattern.time_delays.clone();
-    let sources: Vec<kwavers_solver::forward::elastic::VolumetricSource> = push_pattern
-        .pushes
-        .iter()
-        .zip(push_pattern.time_delays.iter())
-        .map(
-            |(push, &t)| kwavers_solver::forward::elastic::VolumetricSource {
-                location_m: push.location,
-                time_offset_s: t,
-            },
-        )
-        .collect();
-
-    let (_history, tracker) = volumetric_solver
-        .propagate_volumetric_waves_with_body_forces(&body_forces, &push_times, &sources)
+    let tracker = volumetric_solver
+        .track_volumetric_waves_with_body_forces(&body_forces, &push_times)
         .unwrap();
 
     // Reconstruct 3D elasticity map
@@ -237,20 +225,8 @@ fn test_clinical_liver_fibrosis_accuracy() {
     // Clinical examination (ARFI-as-forcing)
     let body_forces = arf.multi_directional_body_forces(&push_pattern).unwrap();
     let push_times: Vec<f64> = push_pattern.time_delays.clone();
-    let sources: Vec<kwavers_solver::forward::elastic::VolumetricSource> = push_pattern
-        .pushes
-        .iter()
-        .zip(push_pattern.time_delays.iter())
-        .map(
-            |(push, &t)| kwavers_solver::forward::elastic::VolumetricSource {
-                location_m: push.location,
-                time_offset_s: t,
-            },
-        )
-        .collect();
-
-    let (_history, tracker) = solver
-        .propagate_volumetric_waves_with_body_forces(&body_forces, &push_times, &sources)
+    let tracker = solver
+        .track_volumetric_waves_with_body_forces(&body_forces, &push_times)
         .unwrap();
 
     // Reconstruct elasticity
@@ -366,20 +342,8 @@ fn volumetric_tracking_covers_non_pml_domain() {
     let body_forces = arf.multi_directional_body_forces(&push_pattern).unwrap();
     let push_times: Vec<f64> = push_pattern.time_delays.clone();
 
-    let sources: Vec<kwavers_solver::forward::elastic::VolumetricSource> = push_pattern
-        .pushes
-        .iter()
-        .zip(push_pattern.time_delays.iter())
-        .map(
-            |(push, &t)| kwavers_solver::forward::elastic::VolumetricSource {
-                location_m: push.location,
-                time_offset_s: t,
-            },
-        )
-        .collect();
-
-    let (_history, tracker) = volumetric_solver
-        .propagate_volumetric_waves_with_body_forces(&body_forces, &push_times, &sources)
+    let tracker = volumetric_solver
+        .track_volumetric_waves_with_body_forces(&body_forces, &push_times)
         .unwrap();
 
     // Extract clinically relevant metrics
