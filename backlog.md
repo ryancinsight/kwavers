@@ -889,14 +889,17 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   fell from 2,291,154,944 to 1,870,888,960 (18.3%); peak resident bytes fell
   from 2,078,449,664 to 1,658,085,376 (20.2%).
 
-## KW-SWE-TRACKER-MEMORY — bound tracker-only retention [minor] — todo
+## KW-SWE-TRACKER-MEMORY — bound tracker-only retention [minor] — in progress
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-SWE-TRACKER-MEMORY | Track volumetric arrivals without retaining velocity fields that the caller does not consume. | [minor] | todo | unclaimed | `crates/kwavers-solver/src/forward/elastic/swe/core/solver/volumetric.rs`, tracker-only Kwavers callers and tests |
+| KW-SWE-TRACKER-MEMORY | Track volumetric arrivals without retaining velocity fields that the caller does not consume. | [minor] | in progress | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `crates/kwavers-solver/src/forward/elastic/swe/core/solver/volumetric.rs`, tracker-only Kwavers callers and tests |
 
-- **Dependency:** merge the volumetric runtime correction above so its
-  prepared-force and storage-order baselines are stable.
+- **Lease:** Codex owns the volumetric tracker recorder/detector, focused
+  tests, tracker-only Kwavers call sites, Rustdoc, and release records through
+  the next verified commit.
+- **Dependency:** the volumetric runtime correction is merged in `origin/main`;
+  its prepared-force and storage-order baselines are stable.
 - **Acceptance oracle:** the tracker-only path runs the same grid, time steps,
   snapshot cadence, and arrival detector; its tracker is value-equivalent to
   the full-history path under the existing derived floating-point bounds. It
