@@ -79,9 +79,11 @@
   ready, confirming the runner-cost defect on current source.
 - **Acceptance:** draft `opened`, `synchronize`, and `reopened` events schedule
   no runner-backed job; direct non-draft opens and `ready_for_review` retain all
-  existing jobs; push and manual-dispatch behavior is unchanged. Preserve every
-  path filter, command, matrix, cache key, feature, workload, assertion, and
-  timeout. Existing job conditions must compose with the draft predicate.
+  existing jobs; `converted_to_draft` cancels the active same-ref run without
+  starting runner-backed jobs; push and manual-dispatch behavior is unchanged.
+  Preserve every path filter, command, matrix, cache key, feature, workload,
+  assertion, and timeout. Existing job conditions must compose with the draft
+  predicate.
 - **Evidence:** all ten current workflows parse, exactly seven PR workflows
   subscribe to `ready_for_review`, and 17 root/aggregator predicates reject
   drafts. The seven workflow blobs at source `a35a9287f` are byte-identical to
