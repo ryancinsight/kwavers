@@ -70,9 +70,9 @@
 |----|---------|-------|--------|-------|-------|
 | KW-CI-DRAFT-PR-GATING-2026-08-31 | Prevent draft pull requests from consuming hosted runners while preserving every ready-PR and push verification contract. | [patch] [ci] | in progress | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | Pull-request activity lists and root-job predicates in the seven PR-triggered workflows; normalized workflow evidence; release notes |
 
-- **Dependency / lease:** branch `ci/draft-pr-gating` is based on exact PR #681
-  head `22c011fa2`; source `a35a9287f` discharges the workflow, CHANGELOG, and
-  item lease. PR #675 remains the separate draft compile-graph experiment.
+- **Dependency / lease:** branch `ci/draft-pr-gating` remains stacked on PR #681;
+  source correction `0db7b8a03` discharges the workflow, CHANGELOG, and item
+  lease. PR #675 remains the separate draft compile-graph experiment.
 - **Entry evidence:** draft PR #675 launched seven workflows before the prior
   reviewed candidate proved that all 28 jobs could be skipped at dispatch.
   Draft creation of PR #681 repeated the full hosted fan-out before it was made
@@ -84,15 +84,15 @@
   Preserve every path filter, command, matrix, cache key, feature, workload,
   assertion, and timeout. Existing job conditions must compose with the draft
   predicate.
-- **Evidence:** all ten current workflows parse, exactly seven PR workflows
-  subscribe to `ready_for_review`, and 17 root/aggregator predicates reject
-  drafts. The seven workflow blobs at source `a35a9287f` are byte-identical to
-  independently GREEN source `8b1c6ab5f`; `git diff --check` passes. Current
-  draft PR #682 at exact head `92ae344ff` reports all five applicable jobs
-  skipped, including the benchmark pair and `always()` aggregator; workflows
-  restricted to a `main`/`develop` base do not instantiate on its temporary
-  dependent base. Retarget/reopen on `main`, the full ready-PR hosted run,
-  independent current-branch review, and merge remain.
+- **Evidence:** all ten current workflows parse, exactly seven PR workflows use
+  the event list `opened`, `reopened`, `synchronize`, `ready_for_review`, and
+  `converted_to_draft`, and 17 root/aggregator predicates reject drafts. Static
+  independent review found the omitted conversion event in the prior candidate;
+  `0db7b8a03` closes that cancellation hole without changing commands, matrices,
+  or job predicates. The earlier exact draft run skipped all five applicable
+  jobs, including the benchmark pair and `always()` aggregator. Retargeting to
+  `main`, hosted ready-to-draft cancellation evidence, the full ready-PR run,
+  independent correction review, and merge remain.
 
 ## KW-CI-BENCH-SMOKE-BUDGET-2026-08-31 — Bound complete benchmark smoke [patch] [ci] [perf] — review
 
