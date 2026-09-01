@@ -228,6 +228,12 @@
   timed closure, and black-box boundary is retained. Direct commands for a
   consolidated group use `--bench benchmark_suite -- <group-filter>`.
 
+- **[patch] Pull-request benchmark jobs restore the retained Rust build
+  cache.** Cache metadata now runs against the candidate Cargo workspace, and
+  the benchmark compiler/environment key matches the default-branch writer.
+  Baseline and candidate builds continue to share one root target directory;
+  pull requests remain restore-only and cannot publish or evict cache entries.
+
 - **Viscoacoustic lower-dimensional stepping:** A singleton derivative axis
   now clears its output directly without staging the real field into complex
   scratch, dispatching forward and inverse FFTs, or traversing the wavenumber
