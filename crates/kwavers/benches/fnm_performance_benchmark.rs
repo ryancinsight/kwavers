@@ -6,7 +6,7 @@
 
 use aequitas::systems::si::quantities::{Frequency, Length, MassDensity, Velocity};
 use aequitas::systems::si::units::{Hertz, KilogramPerCubicMeter, Meter, MeterPerSecond, PerMeter};
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{black_box, criterion_group, Criterion};
 use eunomia::Complex64;
 use kwavers_solver::analytical::transducer::{FNMConfig, FastNearfieldSolver};
 use kwavers_transducer::RectangularTransducer;
@@ -226,4 +226,3 @@ criterion_group!(
     benchmark_fnm_precomputation,
     benchmark_fnm_memory_scaling
 );
-criterion_main!(benches);

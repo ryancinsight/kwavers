@@ -26,7 +26,7 @@
 //! - **Harmonic detection**: < 100 μs for 1024 samples
 //! - **Memory efficiency**: < 8 bytes per grid point for storage
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use criterion::{black_box, criterion_group, BenchmarkId, Criterion, Throughput};
 use kwavers_grid::Grid;
 use kwavers_imaging::ultrasound::elastography::{InversionMethod, NonlinearInversionMethod};
 use kwavers_medium::HomogeneousMedium;
@@ -414,4 +414,3 @@ criterion_group!(
     bench_literature_performance_validation,
     bench_memory_usage_patterns
 );
-criterion_main!(benches);

@@ -598,7 +598,7 @@ branches run through `SoundSpeedShiftPlan` on the same samples and frame shift
 vector. The Criterion entry point is:
 
 ```text
-cargo bench -p kwavers --bench clinical_sound_speed_shift_openpros
+cargo bench -p kwavers --bench benchmark_suite -- clinical_sound_speed_shift_openpros
 ```
 
 Implemented in `kwavers_diagnostics::reconstruction::sound_speed_shift`.

@@ -1,4 +1,4 @@
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{criterion_group, Criterion};
 use kwavers_solver::amr::ErrorEstimator;
 use leto::Array3;
 
@@ -29,4 +29,3 @@ fn gradient_error_benchmark(c: &mut Criterion) {
 }
 
 criterion_group!(benches, gradient_error_benchmark);
-criterion_main!(benches);

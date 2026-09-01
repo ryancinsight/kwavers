@@ -1,5 +1,5 @@
 // benches/physics_benchmarks.rs
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{black_box, criterion_group, Criterion};
 use kwavers_grid::Grid;
 use kwavers_medium::homogeneous::HomogeneousMedium;
 
@@ -24,4 +24,3 @@ fn medium_creation_benchmark(c: &mut Criterion) {
 }
 
 criterion_group!(benches, grid_creation_benchmark, medium_creation_benchmark);
-criterion_main!(benches);

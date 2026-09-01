@@ -1,5 +1,5 @@
 // benches/grid_benchmarks.rs
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{black_box, criterion_group, Criterion};
 use kwavers_grid::Grid;
 
 fn grid_dimensions_benchmark(c: &mut Criterion) {
@@ -27,4 +27,3 @@ fn grid_spacing_benchmark(c: &mut Criterion) {
 }
 
 criterion_group!(benches, grid_dimensions_benchmark, grid_spacing_benchmark);
-criterion_main!(benches);

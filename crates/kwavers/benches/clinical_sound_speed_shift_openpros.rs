@@ -1,6 +1,6 @@
 //! Dense-versus-sparse OpenPros-style speed-shift reconstruction benchmark.
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{black_box, criterion_group, Criterion};
 use kwavers_diagnostics::reconstruction::sound_speed_shift::{
     openpros_shift_benchmark_case, OpenProsShiftBenchmarkConfig, SoundSpeedShiftPlan,
     SoundSpeedShiftWorkspace,
@@ -40,4 +40,3 @@ fn clinical_sound_speed_shift_openpros(c: &mut Criterion) {
 }
 
 criterion_group!(benches, clinical_sound_speed_shift_openpros);
-criterion_main!(benches);

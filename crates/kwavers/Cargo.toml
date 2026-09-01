@@ -313,23 +313,7 @@ name = "critical_path_benchmarks"
 harness = false
 
 [[bench]]
-name = "grid_benchmarks"
-harness = false
-
-[[bench]]
-name = "physics_benchmarks"
-harness = false
-
-[[bench]]
-name = "cpml_benchmark"
-harness = false
-
-[[bench]]
-name = "testing_infrastructure"
-harness = false
-
-[[bench]]
-name = "validation_benchmarks"
+name = "benchmark_suite"
 harness = false
 
 [[bench]]
@@ -344,10 +328,6 @@ harness = true
 required-features = ["pinn"]
 
 [[bench]]
-name = "logging_benchmark"
-harness = false
-
-[[bench]]
 name = "hilbert_benchmark"
 harness = false
 required-features = ["gpu"]
@@ -357,52 +337,12 @@ workspace = true
 
 
 [[bench]]
-name = "osem_benchmark"
-harness = false
-
-[[bench]]
-name = "art_benchmark"
-harness = false
-
-[[bench]]
-name = "fnm_performance_benchmark"
-harness = false
-
-[[bench]]
-name = "amr_criteria_benchmark"
-harness = false
-
-[[bench]]
 name = "adaptive_sampling_opt"
 harness = false
 required-features = ["pinn"]
 
 [[bench]]
-name = "clinical_sound_speed_shift_openpros"
-harness = false
-
-[[bench]]
-name = "gpu_beamforming_benchmark"
-harness = false
-
-[[bench]]
-name = "fdtd_propagation_benchmark"
-harness = false
-
-[[bench]]
-name = "narrowband_beamforming"
-harness = false
-
-[[bench]]
-name = "nl_swe_performance"
-harness = false
-
-[[bench]]
 name = "simd_field_ops"
-harness = false
-
-[[bench]]
-name = "ultrasound_benchmarks"
 harness = false
 
 [[example]]
@@ -455,7 +395,3 @@ path = "examples/tiled_kspace_processing.rs"
 [[example]]
 name = "simd_wave_kernel"
 path = "examples/simd_wave_kernel.rs"
-
-[[bench]]
-name = "conservative_interpolation_comparison"
-harness = false

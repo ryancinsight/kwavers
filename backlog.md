@@ -107,8 +107,11 @@
   against a 23-target registry; the plotting feature selection builds 20
   separately linked binaries because two PINN targets and one GPU-required
   target are ineligible. This exceeds the committed 300-second complete-suite
-  budget before the four paired measurement jobs begin; raising the 30-minute
-  job timeout or selecting fewer benchmarks is out of scope.
+  budget before the four paired measurement jobs begin. Filtered exact-run
+  markers attribute 9m55s to compilation/linking and about 76s to execution;
+  the final `kwavers` package starts at 20:06:28Z and consumes the last 6m02s of
+  compilation. Raising the 30-minute job timeout or selecting fewer benchmarks
+  is out of scope.
 - **Bounded experiment:** on the retained workflow/toolchain/cache policy,
   separate `cargo bench --no-run --timings` from one unchanged full smoke run;
   record compile wall time, Cargo critical path, rustc unit count, per-binary
@@ -122,6 +125,38 @@
   ID set differs or execution rather than compile/link dominates; in that case
   profile the single slowest unchanged benchmark and optimize its production
   path or bounded instrument according to the benchmark time model.
+- **Candidate evidence:** the target registry contracts from 23 executables to
+  seven; plotting builds four instead of 20. The three merge-critical binaries
+  and the PINN/GPU-only feature boundaries remain separate. Two complete
+  plotting smokes finished in 220.702s (2m54s build) and 167.667s (2m15s
+  build). Both executed 204 registrations / 200 unique IDs and matched the
+  duplicate-preserving baseline multiset SHA-256
+  `3a3f882c414122d8c21deea571e403681b0a9777f15d882825ebe52430dc12bf`.
+  The all-feature benchmark target is warning-clean under Clippy with
+  dependency linting disabled; the unrestricted command stops on 69 existing
+  PINN dependency lints before reaching the target. `mdbook test`, formatting,
+  and diff checks pass. Independent review, hosted confirmation, and merge
+  remain.
+
+## KW-CI-BENCH-CACHE-RESTORE-2026-08-31 — Restore benchmark build cache [patch] [ci] [perf] — todo
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-CI-BENCH-CACHE-RESTORE-2026-08-31 | Make the benchmark smoke consume the repository's retained Rust cache instead of cold-compiling the dependency graph on every pull request. | [patch] [ci] [perf] | todo | unowned | benchmark-regression cache setup and exact hosted cache/compile evidence |
+
+- **Entry evidence:** exact run `33433562701`, job `99624676614` invokes
+  `Swatinem/rust-cache` from the runner root even though both checkouts are in
+  child directories. Its metadata probe fails because that root has no
+  `Cargo.toml`, then the action reports `No cache found`; the smoke recompiles
+  registry dependencies from `proc-macro2` onward. The target-consolidation
+  item remains independently valid and must land first.
+- **Acceptance / non-goals:** configure the existing action against the actual
+  candidate workspace and shared target directory; retain default-branch-only
+  writes and pull-request restore-only policy. Preserve every benchmark target,
+  feature, workload, assertion, comparison, and timeout. A hosted confirmation
+  must show a successful cache metadata probe and hit, then record dependency,
+  package, and total smoke intervals without claiming timing evidence from a
+  shared runner.
 
 ## KW-CI-LOCAL-CRITERION-EVIDENCE-2026-08-31 — Keep statistical timing off hosted CI [patch] [arch] [ci] [perf] — todo
 

@@ -221,6 +221,13 @@
 
 ### Changed
 
+- **[patch] The complete Criterion smoke links four plotting-enabled harnesses
+  instead of twenty.** Seventeen non-merge-critical benchmark groups now share
+  `benchmark_suite`; the three merge-critical executables and the PINN/GPU-only
+  feature boundaries remain independent. Every existing benchmark ID, input,
+  timed closure, and black-box boundary is retained. Direct commands for a
+  consolidated group use `--bench benchmark_suite -- <group-filter>`.
+
 - **Viscoacoustic lower-dimensional stepping:** A singleton derivative axis
   now clears its output directly without staging the real field into complex
   scratch, dispatching forward and inverse FFTs, or traversing the wavenumber
