@@ -138,12 +138,14 @@
   and diff checks pass. Independent review, hosted confirmation, and merge
   remain.
 
-## KW-CI-BENCH-CACHE-RESTORE-2026-08-31 — Restore benchmark build cache [patch] [ci] [perf] — todo
+## KW-CI-BENCH-CACHE-RESTORE-2026-08-31 — Restore benchmark build cache [patch] [ci] [perf] — in progress
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-CI-BENCH-CACHE-RESTORE-2026-08-31 | Make the benchmark smoke consume the repository's retained Rust cache instead of cold-compiling the dependency graph on every pull request. | [patch] [ci] [perf] | todo | unowned | benchmark-regression cache setup and exact hosted cache/compile evidence |
+| KW-CI-BENCH-CACHE-RESTORE-2026-08-31 | Make the benchmark smoke consume the repository's retained Rust cache instead of cold-compiling the dependency graph on every pull request. | [patch] [ci] [perf] | in progress | Codex `01a0253c` | benchmark-regression cache setup and exact hosted cache/compile evidence |
 
+- **Lease:** Codex `01a0253c` — `.github/workflows/benchmark-regression.yml`,
+  this item, matching Unreleased notes, and focused workflow-contract tests.
 - **Entry evidence:** exact run `33433562701`, job `99624676614` invokes
   `Swatinem/rust-cache` from the runner root even though both checkouts are in
   child directories. Its metadata probe fails because that root has no
