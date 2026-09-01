@@ -92,14 +92,14 @@
   dependent base. Retarget/reopen on `main`, the full ready-PR hosted run,
   independent current-branch review, and merge remain.
 
-## KW-CI-BENCH-SMOKE-BUDGET-2026-08-31 — Bound complete benchmark smoke [patch] [ci] [perf] — in progress
+## KW-CI-BENCH-SMOKE-BUDGET-2026-08-31 — Bound complete benchmark smoke [patch] [ci] [perf] — review
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-CI-BENCH-SMOKE-BUDGET-2026-08-31 | Bring the complete Criterion smoke under the committed 300-second suite budget without removing a benchmark, changing an input/workload, or weakening a smoke assertion. | [patch] [ci] [perf] | in progress | Codex `01a0253c` | `crates/kwavers/benches`, bench target declarations, benchmark smoke runner, compile/link timing evidence |
+| KW-CI-BENCH-SMOKE-BUDGET-2026-08-31 | Bring the complete Criterion smoke under the committed 300-second suite budget without removing a benchmark, changing an input/workload, or weakening a smoke assertion. | [patch] [ci] [perf] | review | Codex `01a0253c` | `crates/kwavers/benches`, bench target declarations, benchmark smoke runner, compile/link timing evidence |
 
-- **Lease:** Codex `01a0253c` — `crates/kwavers/benches`, bench target
-  declarations, and benchmark-smoke timing evidence; claimed 2026-08-31.
+- **Lease:** none. Source/evidence commit `6bcc8087d`; independent review,
+  hosted confirmation, and merge remain.
 
 - **Entry evidence:** PR #681 exact head `22c011fa2`, workflow run
   `33433562701`, job `99624676614` spent 15m56s in `complete benchmark smoke`
