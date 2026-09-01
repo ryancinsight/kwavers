@@ -258,6 +258,33 @@
   production edit and reject the candidate on a significant homogeneous or
   heterogeneous runtime regression.
 
+## KW-VISCOACOUSTIC-FINITE-DOMAIN-2026-08-31 — Reject invalid numeric domains [major] — todo
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-VISCOACOUSTIC-FINITE-DOMAIN-2026-08-31 | Reject non-finite material, spacing, time-step, relaxation, and absorbing-layer parameters before allocation or state mutation. | [major] | todo | unowned | viscoacoustic constructors and absorbing-layer configuration, error contracts, boundary tests, ADR and migration note |
+
+- **Entry evidence:** `ViscoacousticMemorySolver::new` and
+  `new_heterogeneous` validate positive inputs with `<= 0.0`, so `NaN` and
+  positive infinity pass into retained coefficient, wavenumber, and state
+  construction. Relaxation-arm `NaN` values pass for the same reason.
+  `enable_absorbing_layer` also accepts non-finite `gamma_max`; its
+  `2 * thickness` guard can overflow before proving an axis too short, after
+  which `n - thickness` is reachable. These are safe public input paths.
+- **Contract:** constructors reject every non-finite scalar and field element
+  before allocating solver state. Absorbing-layer configuration becomes
+  fallible and rejects non-finite rates before replacing the retained decay
+  field; its extent test uses overflow-free arithmetic and preserves the
+  established no-layer result for axes too short to host a sponge. Existing
+  valid finite numerical behavior and public field values remain unchanged.
+- **Acceptance:** table-driven structural error tests cover `NaN`, both
+  infinities, signed zero where applicable, and finite negative values for
+  every constructor parameter and relaxation field; extreme `usize`
+  thickness never panics; rejected reconfiguration preserves the existing
+  damping state and subsequent pressure values. Update all first-party callers,
+  add the required ADR/migration guide, and use `cargo-semver-checks` to confirm
+  the return-type break. No compatibility wrapper or silent fallback.
+
 ## KW-PSTD-SOURCE-ACTIVITY-CACHE — Retain warm source-step maps [patch] [perf] — complete
 
 - **Delivered:** PR #669, source `37f539786`, merge `7e709604b`; retained fixed-size pressure/velocity activity maps remove both warm-run host allocations and reject extent drift before mutation or device work.
