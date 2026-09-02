@@ -1,4 +1,4 @@
-# 110. Delete the inert BoundaryParameters surface
+# ADR 110: Delete the inert BoundaryParameters surface
 
 - Status: Accepted
 - Date: 2026-08-17

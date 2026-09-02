@@ -1,4 +1,4 @@
-# ADR 098 — Aequitas PAM and neural sensor quantities
+# ADR 098: Aequitas PAM and neural sensor quantities
 
 Status: Accepted — 2026-08-03
 

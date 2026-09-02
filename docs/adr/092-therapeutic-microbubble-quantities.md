@@ -1,4 +1,4 @@
-# ADR 092 — Aequitas therapeutic microbubble quantities
+# ADR 092: Aequitas therapeutic microbubble quantities
 
 Status: Accepted — 2026-08-01
 

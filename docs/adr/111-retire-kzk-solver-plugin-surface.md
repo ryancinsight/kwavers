@@ -1,4 +1,4 @@
-# 111. Retire the `KzkSolverPlugin` surface onto the complex-field KZK adapter
+# ADR 111: Retire the `KzkSolverPlugin` surface onto the complex-field KZK adapter
 
 - Status: Accepted (retroactive)
 - Date: 2026-08-18

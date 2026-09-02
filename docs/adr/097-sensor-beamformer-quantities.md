@@ -1,4 +1,4 @@
-# ADR 097 — Aequitas sensor-beamformer quantities
+# ADR 097: Aequitas sensor-beamformer quantities
 
 Status: Accepted — 2026-08-03
 

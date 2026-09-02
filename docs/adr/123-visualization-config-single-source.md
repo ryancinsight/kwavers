@@ -1,4 +1,4 @@
-# Keep visualization backend and quality selection single-source
+# ADR 123: Keep visualization backend and quality selection single-source
 
 - Status: Accepted
 - Date: 2026-08-25

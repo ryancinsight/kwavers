@@ -42,10 +42,10 @@
 | [034](034-kwavers-grid-native-leto-surface.md) | Kwavers-grid native Leto surface | Accepted |
 | [035](035-planar-aperture-quadrature.md) | Planar aperture quadrature | Accepted |
 | [036](036-clinical-imaging-feature-boundary.md) | Clinical-imaging feature boundary | Accepted |
-| [037](037-gpu-pstd-output-contract.md) | 037-gpu-pstd-output-contract | Accepted |
+| [037](037-gpu-pstd-output-contract.md) | GPU PSTD output contract | Accepted |
 | [038](038-medium-accessor-consolidation.md) | Consolidate continuous medium access | Accepted |
 | [039](039-hephaestus-backend-kernel-ownership.md) | Move backend kernel ownership to Hephaestus | Accepted |
-| [040](040-gpu-pstd-peak-pressure-output.md) | 040-gpu-pstd-peak-pressure-output | Accepted |
+| [040](040-gpu-pstd-peak-pressure-output.md) | GPU PSTD peak-pressure output | Accepted |
 | [041](041-proteus-thermophysical-properties.md) | Proteus thermophysical properties | Accepted |
 | [042](042-proteus-temperature-response.md) | Proteus temperature-response ownership | Accepted |
 | [043](043-tyche-uncertainty-provider.md) | Tyche uncertainty provider | Accepted |

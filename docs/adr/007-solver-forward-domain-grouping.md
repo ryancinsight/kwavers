@@ -1,4 +1,4 @@
-# ADR 007 — `solver::forward` domain grouping
+# ADR 007: `solver::forward` domain grouping
 
 - **Status:** Accepted
 - **Date:** 2026-05-05 · **Audited:** 2026-06-03

@@ -1,4 +1,4 @@
-# ADR 015 — CMUT vs PMUT MEMS Transducer Models (Flexible / IVUS)
+# ADR 015: CMUT vs PMUT MEMS Transducer Models (Flexible / IVUS)
 
 **Status:** Accepted
 **Change class:** [major] (new electromechanical element models in `kwavers-transducer`)

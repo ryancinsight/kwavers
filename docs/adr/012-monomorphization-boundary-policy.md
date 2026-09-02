@@ -1,4 +1,4 @@
-# ADR 012 — Monomorphization & dynamic-dispatch boundary policy
+# ADR 012: Monomorphization & dynamic-dispatch boundary policy
 
 - **Status:** Accepted (investigation complete; no code conversion warranted).
 - **Date:** 2026-06-05

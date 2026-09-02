@@ -1,4 +1,4 @@
-# ADR 011 — Workspace crate split of the `kwavers` monolith
+# ADR 011: Workspace crate split of the `kwavers` monolith
 
 - **Status:** Accepted
 - **Date:** 2026-06-01 · **Audited:** 2026-06-03

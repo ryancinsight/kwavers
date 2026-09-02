@@ -1,4 +1,4 @@
-# ADR 013 — Acoustic Computed Tomography: Radon Transform + Filtered Backprojection
+# ADR 013: Acoustic Computed Tomography: Radon Transform + Filtered Backprojection
 
 **Status:** Accepted
 **Change class:** [major] (new reconstruction kernel)

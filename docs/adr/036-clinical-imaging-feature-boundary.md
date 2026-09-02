@@ -1,4 +1,4 @@
-# ADR-036: Clinical-imaging feature boundary
+# ADR 036: Clinical-imaging feature boundary
 
 ## Status
 

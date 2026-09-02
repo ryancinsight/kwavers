@@ -1,4 +1,4 @@
-# 124. Run the integration tests CI already compiles, against a failure baseline
+# ADR 124: Run the integration tests CI already compiles, against a failure baseline
 
 Status: Accepted
 Date: 2026-08-24

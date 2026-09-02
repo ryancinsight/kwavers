@@ -1,4 +1,4 @@
-# ADR 093 — Aequitas ultrafast scheduler quantities
+# ADR 093: Aequitas ultrafast scheduler quantities
 
 Status: Accepted — 2026-08-02
 

@@ -1,4 +1,4 @@
-# ADR 120 — Who owns the power-law absorption coefficient
+# ADR 120: Who owns the power-law absorption coefficient
 
 - **Status:** Accepted
 - **Board item:** `KW-ABSORPTION-CONFIG-PRECEDENCE`

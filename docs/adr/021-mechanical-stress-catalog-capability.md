@@ -1,4 +1,4 @@
-# ADR 021 — `MechanicalStress` (elastic) capability in the declarative `PhysicsCatalog`
+# ADR 021: `MechanicalStress` (elastic) capability in the declarative `PhysicsCatalog`
 
 **Status:** Accepted (design); implementation staged
 **Change class:** [major] (new public `PhysicsModelType` variant + a genuine plugin adapter; touches the serde-stable capability enum)

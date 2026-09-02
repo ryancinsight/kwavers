@@ -1,4 +1,4 @@
-# ADR 020 — Bent-Ray Traveltime Tomography (Shortest-Path / Fermat)
+# ADR 020: Bent-Ray Traveltime Tomography (Shortest-Path / Fermat)
 
 **Status:** Accepted
 **Change class:** [major] (new reconstruction kernel; follow-on to ADR 013)

@@ -1,4 +1,4 @@
-# ADR 025 — Optoacoustic SOAP / OFUS emitter modeling
+# ADR 025: Optoacoustic SOAP / OFUS emitter modeling
 
 - Status: Accepted
 - Change class: [major] (additive: new public material type + presets in

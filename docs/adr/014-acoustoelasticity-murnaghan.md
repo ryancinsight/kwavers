@@ -1,4 +1,4 @@
-# ADR 014 — Acousto-elasticity: Murnaghan Stress-Dependent Wave Speed + Pre-Stress Inversion
+# ADR 014: Acousto-elasticity: Murnaghan Stress-Dependent Wave Speed + Pre-Stress Inversion
 
 **Status:** Accepted
 **Change class:** [major] (new constitutive relation + inversion); scope split below

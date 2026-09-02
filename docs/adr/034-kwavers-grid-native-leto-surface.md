@@ -1,4 +1,4 @@
-# ADR 034 — Kwavers-grid native Leto surface
+# ADR 034: Kwavers-grid native Leto surface
 
 - **Status:** Accepted
 - **Date:** 2026-07-10

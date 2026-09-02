@@ -1,4 +1,4 @@
-# 122. Per-view element-position rotation for the rotating opposed-linear-array acquisition
+# ADR 122: Per-view element-position rotation for the rotating opposed-linear-array acquisition
 
 - Status: Accepted
 - Date: 2026-08-20

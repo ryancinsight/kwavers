@@ -1,4 +1,4 @@
-# 126. Define harmonic detection as whole-record analysis
+# ADR 126: Define harmonic detection as whole-record analysis
 
 - Status: Accepted
 - Date: 2026-08-30

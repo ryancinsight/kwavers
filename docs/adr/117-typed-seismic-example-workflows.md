@@ -1,4 +1,4 @@
-# 117. Type and partition the seismic example workflows
+# ADR 117: Type and partition the seismic example workflows
 
 - Status: Accepted
 - Date: 2026-08-20

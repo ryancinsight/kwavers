@@ -1,4 +1,4 @@
-# ADR 119 — In-repository k-Wave differential oracle
+# ADR 119: In-repository k-Wave differential oracle
 
 - **Status:** Accepted
 - **Board item:** `KW-GAP-2026-08-20-KWAVEPARITY`

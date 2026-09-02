@@ -1,4 +1,4 @@
-# ADR 024 — Theranostic brain imaging + real-time therapy monitor
+# ADR 024: Theranostic brain imaging + real-time therapy monitor
 
 Status: Accepted (staged delivery in progress)
 Date: 2026-06-12

@@ -1,4 +1,4 @@
-# ADR 005 — PINN training stabilization
+# ADR 005: PINN training stabilization
 
 - **Status:** Accepted
 - **Date:** 2026-02-02 · **Audited:** 2026-06-03

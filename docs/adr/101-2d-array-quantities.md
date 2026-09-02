@@ -1,4 +1,4 @@
-# ADR 101 — Aequitas contracts for 2-D array geometry and beam control
+# ADR 101: Aequitas contracts for 2-D array geometry and beam control
 
 - Status: Accepted
 - Date: 2026-08-03

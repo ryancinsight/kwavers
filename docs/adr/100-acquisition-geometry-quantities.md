@@ -1,4 +1,4 @@
-# ADR 100 — Aequitas shared acquisition-geometry quantities
+# ADR 100: Aequitas shared acquisition-geometry quantities
 
 Status: Accepted — 2026-08-03
 
