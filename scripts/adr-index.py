@@ -141,13 +141,11 @@ def main() -> int:
         # A duplicate is still written out -- the index should show the truth --
         # but it is reported, because two files claiming one number is a defect
         # whichever way the table is sorted.
-        # `newline="
-"`: without it Python translates each `
-` to the platform
-        # line ending, so a Windows regeneration rewrites the whole index as
-        # CRLF and every row reads as changed while the content is identical.
-        INDEX.write_text(rendered, encoding="utf-8", newline="
-")
+        # The explicit newline argument matters: without it Python translates
+        # every line feed to the platform line ending, so a Windows regeneration
+        # rewrites the whole index as CRLF and every row reads as changed while
+        # the content is identical.
+        INDEX.write_text(rendered, encoding="utf-8", newline="\n")
         print(f"wrote {INDEX} with {len(found)} records")
         for number, files in sorted(duplicates.items()):
             print(f"::warning::ADR {number} is claimed by {len(files)}: {', '.join(files)}")
