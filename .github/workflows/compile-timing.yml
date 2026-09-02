@@ -1,0 +1,49 @@
+# Measurement, not a gate: the cold compile time of the shared GPU-consumer
+# test graph on a fresh hosted runner, the evidence KW-SIM-TEST-COMPILE-GRAPH
+# conditions adoption on (two fresh runs each at most 181 s). Dispatch-only —
+# it restores no cache on purpose, so every run is the cold case, and it
+# writes its number to the job summary instead of failing a threshold.
+name: GPU consumer compile timing
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_INCREMENTAL: "0"
+  CARGO_TERM_COLOR: always
+
+jobs:
+  cold-compile:
+    name: Cold compile of the shared GPU-consumer test graph
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-dependencies
+        with:
+          packages: libfontconfig1-dev
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master
+        with:
+          toolchain: stable
+
+      - name: Install nextest
+        uses: taiki-e/install-action@ea4c0b50b0d394ee91c5bb68a6a295b0556feb8e
+        with:
+          tool: cargo-nextest
+
+      - name: Time the cold compile (`cargo test-gpu-consumers`, build only)
+        run: |
+          nproc
+          start="$(date +%s)"
+          cargo nextest run --locked -p kwavers-simulation -p kwavers-python \
+            --features kwavers-simulation/gpu,kwavers-python/gpu --lib --no-run
+          seconds="$(( $(date +%s) - start ))"
+          echo "cold compile of the shared GPU-consumer graph: ${seconds}s on $(nproc) cores" | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "acceptance bound: 181s (KW-SIM-TEST-COMPILE-GRAPH)" >> "$GITHUB_STEP_SUMMARY"

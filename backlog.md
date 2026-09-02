@@ -411,6 +411,15 @@
   attribution remain open; no timing reduction is claimed from the warm run.
 - **Lease:** Codex owns fresh-run timing collection and critical-path/link
   attribution; no source region is leased while that evidence runs.
+- **Takeover (2026-09-02, Claude):** the Codex claim went stale (draft PR #675
+  untouched since 2026-08-31); the branch was merged with `main` (its
+  draft-gating workflow hunks had already landed via #683), the alias re-run
+  locally (127/127, one skip), and #675 merged on a green run. The alias is a
+  local gate only — no CI job invokes it. `compile-timing.yml`
+  (`workflow_dispatch`) now produces the missing evidence: a cache-free build
+  of the shared graph on a fresh hosted runner, its seconds in the job
+  summary against the 181 s bound. Next: dispatch it twice and record both
+  numbers here; adopt the alias in CI only if both fit.
 
 ## ✅ KW-INTEGRATION-FAILURE-DIAGNOSTICS — Preserve failed-test output [patch] — done 2026-09-02
 
