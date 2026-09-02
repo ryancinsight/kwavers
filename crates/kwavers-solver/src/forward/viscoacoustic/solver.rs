@@ -2,19 +2,20 @@
 //!
 //! One canonical implementation covers 1-D, 2-D, and 3-D: a `(n,1,1)` grid is
 //! 1-D, `(nx,ny,1)` is 2-D, and `(nx,ny,nz)` is full 3-D — the spectral
-//! derivative along a singleton axis is identically zero, so the lower-D cases
-//! reduce exactly with no special-casing.
+//! derivative along a singleton axis is identically zero. Lower-dimensional
+//! grids therefore clear those derivative outputs without staging or FFT work.
 
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_math::fft::{
-    fft_3d_axis_complex_inplace, get_fft_for_grid, ifft_3d_axis_complex_inplace, Complex64, Fft3d,
-};
+use kwavers_math::fft::{get_fft_for_grid, Complex64, Fft3d};
 use kwavers_medium::absorption::{fit_power_law_fields, FitBand};
 use kwavers_medium::viscoelastic::GeneralizedMaxwellModel;
 use leto::Array3 as LetoArray3;
 use leto::Array3;
 use std::sync::Arc;
+
+mod axis;
+mod driven;
 
 /// One relaxation arm with its precomputed per-voxel exponential-integrator
 /// coefficients (uniform fields for a homogeneous medium).
@@ -538,47 +539,6 @@ impl ViscoacousticMemorySolver {
         Ok(())
     }
 
-    /// Register a **soft (additive) pressure source** at `index` with a per-step
-    /// time `signal`: `p[index] += signal[step]` while `step < (signal.len())`.
-    /// # Errors
-    /// - `index` out of grid bounds.
-    pub fn add_pressure_source(
-        &mut self,
-        index: (usize, usize, usize),
-        signal: Vec<f64>,
-    ) -> KwaversResult<()> {
-        self.check_index(index)?;
-        self.pressure_sources.push((index, signal));
-        Ok(())
-    }
-
-    /// Register a pressure sensor at `index`; [`Self::step`] appends `p[index]`
-    /// to its trace each step. Returns the sensor id (its index in the record).
-    /// # Errors
-    /// - `index` out of grid bounds.
-    pub fn add_pressure_sensor(&mut self, index: (usize, usize, usize)) -> KwaversResult<usize> {
-        self.check_index(index)?;
-        self.pressure_sensors.push(index);
-        self.sensor_record.push(Vec::new());
-        Ok((self.pressure_sensors.len()) - 1)
-    }
-
-    /// Recorded pressure time trace for sensor `id`.
-    #[must_use]
-    pub fn sensor_trace(&self, id: usize) -> &[f64] {
-        &self.sensor_record[id]
-    }
-
-    fn check_index(&self, (i, j, k): (usize, usize, usize)) -> KwaversResult<()> {
-        if i < self.nx && j < self.ny && k < self.nz {
-            Ok(())
-        } else {
-            Err(KwaversError::InvalidInput(
-                "source/sensor index out of grid bounds".to_owned(),
-            ))
-        }
-    }
-
     /// Acoustic energy `Σ [p²/(2M_∞) + ρ|v|²/2] ΔV` \`J`. Conserved (to leapfrog
     /// round-off) for the lossless medium; decays monotonically with relaxation.
     #[must_use]
@@ -606,71 +566,6 @@ impl ViscoacousticMemorySolver {
                 acc + (vx * vx + vy * vy + vz * vz) / (2.0 * ir)
             });
         (pe + ke) * self.cell_volume
-    }
-
-    /// Spectral derivative `∂field/∂xₐ → out` via apollo's batched tiled per-axis
-    /// 3-D FFT: forward along `axis`, multiply by `i·k`, inverse along `axis`.
-    /// Reuses the owned complex scratch `cbuf` (no allocation).
-    fn axis_derivative(
-        fft: &Fft3d,
-        k: &[f64],
-        axis: usize,
-        field: &Array3<f64>,
-        cbuf: &mut LetoArray3<Complex64>,
-        out: &mut Array3<f64>,
-    ) {
-        let [nx, ny, nz] = cbuf.shape();
-        assert_eq!(
-            field.shape(),
-            [nx, ny, nz],
-            "invariant: viscoacoustic FFT scratch shape matches input field"
-        );
-        assert_eq!(
-            out.shape(),
-            [nx, ny, nz],
-            "invariant: viscoacoustic derivative output shape matches input field"
-        );
-        if let (Some(dst), Some(src)) = (cbuf.as_slice_mut(), field.as_slice()) {
-            for (dst, &src) in dst.iter_mut().zip(src) {
-                *dst = Complex64::new(src, 0.0);
-            }
-        } else {
-            for z in 0..nz {
-                for y in 0..ny {
-                    for x in 0..nx {
-                        cbuf[[x, y, z]] = Complex64::new(field[[x, y, z]], 0.0);
-                    }
-                }
-            }
-        }
-        fft_3d_axis_complex_inplace(fft, cbuf, axis);
-        for z in 0..nz {
-            for y in 0..ny {
-                for x in 0..nx {
-                    let mode = match axis {
-                        0 => x,
-                        1 => y,
-                        2 => z,
-                        _ => unreachable!("invariant: derivative axis is 0, 1, or 2"),
-                    };
-                    cbuf[[x, y, z]] *= Complex64::new(0.0, k[mode]);
-                }
-            }
-        }
-        ifft_3d_axis_complex_inplace(fft, cbuf, axis);
-        if let (Some(dst), Some(src)) = (out.as_slice_mut(), cbuf.as_slice()) {
-            for (dst, src) in dst.iter_mut().zip(src) {
-                *dst = src.re;
-            }
-        } else {
-            for z in 0..nz {
-                for y in 0..ny {
-                    for x in 0..nx {
-                        out[[x, y, z]] = cbuf[[x, y, z]].re;
-                    }
-                }
-            }
-        }
     }
 
     /// Advance the state by one time step `Δt`.

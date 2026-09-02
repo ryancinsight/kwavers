@@ -14,7 +14,7 @@ on:
       - 'scripts/adr-index.py'
       - '.github/workflows/adr-index.yml'
   pull_request:
-    types: [opened, reopened, synchronize, ready_for_review]
+    types: [opened, reopened, synchronize, ready_for_review, converted_to_draft]
     paths:
       - 'docs/adr/**'
       - 'scripts/adr-index.py'

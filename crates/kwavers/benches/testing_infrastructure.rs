@@ -4,7 +4,7 @@
 //! **Target**: Ensure all tests complete within SRS NFR-002 (<30s) requirements
 //! **Methodology**: Criterion-based statistical benchmarking
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{black_box, criterion_group, BenchmarkId, Criterion};
 use kwavers_analysis::testing::acoustic_properties::*;
 use kwavers_analysis::testing::grid_properties::*;
 use kwavers_analysis::testing::medium_properties::*;
@@ -287,5 +287,3 @@ criterion_group!(
     bench_impedance_calculations,
     bench_validation_suite
 );
-
-criterion_main!(benches);

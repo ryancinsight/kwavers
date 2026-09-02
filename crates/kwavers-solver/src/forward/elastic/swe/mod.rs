@@ -16,7 +16,7 @@
 //! - `stress`: Stress tensor derivative computations
 //! - `integration`: Time integration schemes (velocity-Verlet)
 //! - `boundary`: PML boundary conditions
-//! - `core`: Main solver orchestration (to be implemented)
+//! - `core`: Solver orchestration, volumetric propagation, and wavefront tracking
 //!
 //! ## Mathematical Foundation
 //!
@@ -99,7 +99,7 @@
 //! // Configure solver
 //! let config = ElasticWaveConfig::default();
 //!
-//! // Create solver (to be implemented)
+//! // Create solver
 //! // let solver = ElasticWaveSolver::new(&grid, &medium, config)?;
 //!
 //! // Run simulation
@@ -152,4 +152,4 @@ pub use scratch::ElasticStepScratch;
 // ✅ boundary.rs - PML boundary conditions
 // ✅ core.rs - Main solver orchestration
 // 🗑 gpu/ - simulated GPU surface deleted (KW-GAP-2026-08-20-GPUMOCK)
-// 🔄 tracking.rs - Wave-front tracking (planned)
+// ✅ core/solver/volumetric/tracking.rs - Wavefront sample retention and detection

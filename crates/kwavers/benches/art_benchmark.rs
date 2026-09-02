@@ -1,4 +1,4 @@
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{criterion_group, Criterion};
 use kwavers_grid::Grid;
 use kwavers_solver::inverse::reconstruction::photoacoustic::{
     IterativeAlgorithm, PhotoacousticAlgorithm, PhotoacousticReconstructor,
@@ -44,4 +44,3 @@ fn art_reconstruction_benchmark(c: &mut Criterion) {
 }
 
 criterion_group!(benches, art_reconstruction_benchmark);
-criterion_main!(benches);

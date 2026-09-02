@@ -17,7 +17,7 @@
 //! - **Memory**: Peak usage, bandwidth requirements
 //! - **Scalability**: Weak/strong scaling with grid size
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{black_box, criterion_group, Criterion};
 use kwavers_analysis::signal_processing::beamforming::utils::{
     SteeringVector, SteeringVectorMethod,
 };
@@ -343,4 +343,3 @@ criterion_group!(
     bench_physics_validation,
     bench_mvdr_weights
 );
-criterion_main!(benches);

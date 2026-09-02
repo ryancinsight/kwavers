@@ -17,6 +17,13 @@ Complete clinical workflow for 3D SWE assessment of liver fibrosis using multi-d
 5. Classify fibrosis grade using METAVIR-calibrated thresholds
 6. Output volumetric stiffness map and per-ROI statistics
 
+The example uses
+`ElasticWaveSolver::propagate_volumetric_waves_with_body_forces` because its
+console report includes the retained history length. Callers that consume only
+the wavefront tracker use `track_volumetric_waves_with_body_forces`, which
+retains one displacement magnitude per eligible voxel and saved time instead
+of all six displacement and velocity fields.
+
 ## Fibrosis Grades
 
 | Grade | Stiffness | Clinical significance |

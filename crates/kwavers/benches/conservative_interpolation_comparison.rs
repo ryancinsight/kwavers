@@ -6,9 +6,10 @@
 //! code evolves. Byte-parity between the two layouts is asserted before any
 //! timing is recorded.
 //!
-//! Run with `cargo bench -p kwavers --bench conservative_interpolation_comparison`.
+//! Run with
+//! `cargo bench -p kwavers --bench benchmark_suite -- conservative_interpolation/transfer`.
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{black_box, criterion_group, Criterion};
 use kwavers_grid::Grid;
 use kwavers_solver::utilities::interpolation::{ConservationMode, UtilConservativeInterpolator};
 use leto::Array3;
@@ -188,4 +189,3 @@ fn bench_transfer(c: &mut Criterion) {
 }
 
 criterion_group!(benches, bench_transfer);
-criterion_main!(benches);

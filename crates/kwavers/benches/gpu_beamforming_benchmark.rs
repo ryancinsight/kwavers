@@ -45,19 +45,19 @@
 //!
 //! ```bash
 //! # Run all benchmarks (CPU only)
-//! cargo bench --bench gpu_beamforming_benchmark
+//! cargo bench --bench benchmark_suite -- beamforming
 //!
 //! # Run with GPU support
-//! cargo bench --bench gpu_beamforming_benchmark --features pinn
+//! cargo bench --bench benchmark_suite --features pinn -- beamforming
 //!
 //! # Run specific problem size
-//! cargo bench --bench gpu_beamforming_benchmark -- small
+//! cargo bench --bench benchmark_suite -- small
 //!
 //! # Generate detailed report
-//! cargo bench --bench gpu_beamforming_benchmark -- --save-baseline main
+//! cargo bench --bench benchmark_suite -- --save-baseline main
 //! ```
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use criterion::{black_box, criterion_group, BenchmarkId, Criterion, Throughput};
 use leto::{Array1, Array2};
 
 /// Benchmark configuration for a specific problem size
@@ -469,9 +469,3 @@ criterion_group!(
     bench_gpu_beamforming_wgpu,
     bench_gpu_beamforming_ndarray
 );
-
-#[cfg(feature = "pinn")]
-criterion_main!(benches, gpu_benches);
-
-#[cfg(not(feature = "pinn"))]
-criterion_main!(benches);

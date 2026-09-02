@@ -37,7 +37,7 @@
 //! - Yee, K.S. (1966). IEEE TAP 14(3), 302-307. DOI: 10.1109/TAP.1966.1138693
 //! - Taflove & Hagness (2005). Computational Electrodynamics, 3rd ed. Artech House.
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, Throughput};
+use criterion::{black_box, criterion_group, Criterion, Throughput};
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_solver::forward::fdtd::{FdtdConfig, FdtdSolver};
@@ -257,4 +257,3 @@ criterion_group!(
     fdtd_propagation_benchmark,
     energy_conservation_benchmark
 );
-criterion_main!(benches);

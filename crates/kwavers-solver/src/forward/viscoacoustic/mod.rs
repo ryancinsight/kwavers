@@ -32,7 +32,9 @@
 //!   limited only by the CFL of the unrelaxed wave speed `√(M_U/ρ)`, never by
 //!   the smallest `τₗ`. The relaxation contribution to the pressure update is
 //!   trapezoidal in `σₗ` (second order).
-//! - All work buffers are preallocated; a step performs no heap allocation.
+//! - All numerical work buffers are preallocated. Call
+//!   [`ViscoacousticMemorySolver::reserve_sensor_samples`] before a driven run
+//!   with a known horizon to keep sensor recording allocation-free as well.
 //!
 //! ## References
 //! - Carcione, J.M. (2007). *Wave Fields in Real Media*, 2nd ed., Ch. 3.

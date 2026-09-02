@@ -4,6 +4,28 @@
 
 ### Added
 
+- **[minor] Viscoacoustic sensor traces support fallible preallocation.**
+  `ViscoacousticMemorySolver::reserve_sensor_samples` reserves the known
+  remaining sample count for every registered pressure sensor before
+  propagation. Repeated runs retain that capacity when pressure reset clears
+  trace lengths, removing geometric trace growth from the stepping window
+  without changing sample values or ordering. The heterogeneous attenuation
+  example reserves its existing 9,000-step horizon before execution.
+
+- **[minor] SWE volumetric tracking can omit full-field history.**
+  `ElasticWaveSolver::track_volumetric_waves_with_body_forces` executes the
+  same body-force propagation, snapshot schedule, and arrival detector as the
+  full-history API while retaining only saved displacement magnitudes for
+  eligible tracking voxels. The existing full-history operation remains for
+  callers that inspect displacement or velocity snapshots. On the
+  60×60×40 coverage regression, compact retained samples are bounded at
+  65,538,048 bytes (62.502 MiB); the observed test-process peaks fell from
+  1,870,888,960 to 245,600,256 private bytes and from 1,658,085,376 to
+  41,127,936 resident bytes. Three warm bounded-test executions completed in
+  1.055, 1.040, and 0.974 seconds versus the recorded 9.702-second
+  full-history run. These are operational test observations, not Criterion
+  estimates.
+
 - **[major] SWE high-level histories retain displacement only.**
   `ShearWaveElastography::generate_shear_wave` now returns
   `Vec<ElasticDisplacementSnapshot>`, and `reconstruct_elasticity` accepts that
@@ -149,12 +171,11 @@
 
 ### Fixed
 
-- **Draft pull requests no longer consume verification runners.** All seven
-  pull-request workflows skip their root or independent jobs while a pull
-  request is draft and subscribe to `ready_for_review` so the unchanged checks
-  begin when the candidate becomes reviewable. Direct non-draft opens, pushes,
-  manual dispatches, path filters, commands, matrices, and timeout policies are
-  unchanged.
+- **Benchmark regression scope follows executable identity.** The replicated
+  Criterion jobs now measure only merge-critical targets whose base and
+  candidate executables differ. Byte-identical targets no longer contribute
+  unrelated statistical failures, and a one-target production change no
+  longer spends four hosted pairs remeasuring the other two targets.
 
 - **FDTD time-step orchestration now applies velocity sources under both
   temporal schemes.** Yoshida's fourth-order composition previously returned
@@ -213,6 +234,29 @@
   graph when both consumers are in scope without changing features, tests,
   assertions, profiles, or timeout policy.
 
+- **[patch] The complete Criterion smoke links four plotting-enabled harnesses
+  instead of twenty.** Seventeen non-merge-critical benchmark groups now share
+  `benchmark_suite`; the three merge-critical executables and the PINN/GPU-only
+  feature boundaries remain independent. Every existing benchmark ID, input,
+  timed closure, and black-box boundary is retained. Direct commands for a
+  consolidated group use `--bench benchmark_suite -- <group-filter>`.
+
+- **[patch] Pull-request benchmark jobs restore the retained Rust build
+  cache.** Cache metadata now runs against the candidate Cargo workspace, and
+  the benchmark compiler/environment key matches the default-branch writer.
+  Baseline and candidate builds continue to share one root target directory;
+  pull requests remain restore-only and cannot publish or evict cache entries.
+
+- **Viscoacoustic lower-dimensional stepping:** A singleton derivative axis
+  now clears its output directly without staging the real field into complex
+  scratch, dispatching forward and inverse FFTs, or traversing the wavenumber
+  product. The retained scratch remains untouched and finite-field results are
+  bitwise identical to the previous full transform route; non-finite samples
+  no longer contaminate a derivative along an inactive axis. Two paired
+  100-sample Criterion runs over equal 4,096-cell grids measured significant 1-D
+  reductions of 49.3–52.3% and 2-D reductions of 9.1–36.6%; the fully active
+  3-D control had no significant change in either run.
+
 - **[major] Harmonic detection now exposes only controls that affect the
   analysis.** `HarmonicDetectionConfig` removes the inert `fft_window_size`,
   `fft_overlap`, `min_snr_db`, and `enable_phase_unwrapping` fields. One call
@@ -235,6 +279,15 @@
   finite-domain inputs return typed validation errors before output/workspace
   allocation, and dense C-order traversal retains a strided logical-order
   fallback.
+
+- **Draft pull requests no longer consume verification runners.** All seven
+  pull-request workflows skip their root or independent jobs while a pull
+  request is draft, subscribe to `ready_for_review` so the unchanged checks
+  begin when the candidate becomes reviewable, and subscribe to
+  `converted_to_draft` so concurrency cancellation stops an active ready-PR
+  run when the pull request returns to draft. Direct non-draft opens, pushes,
+  manual dispatches, path filters, commands, matrices, and timeout policies are
+  unchanged.
 
 - **Elastic SWE body-force runtime:** Ordinary final-state and history
   propagation now prepare separable Gaussian spatial profiles once per run and

@@ -1,5 +1,29 @@
 # Backlog / Strategy
 
+## KW-STALE-BRANCH-RESCUE-PHASE1-2026-09-02 — Salvage or drop `rescue/phase1-slice-wip` [patch] — todo
+
+- **Owner**: unclaimed. Found by the 2026-09-02 branch-inventory sweep that deleted 33 local kwavers branches whose patches or subjects had landed; this one has no PR and unique commits.
+- **Evidence**: 3 unique commits (2026-08-21..23), none on `main`: two kwavers-python Phase-1 slice refactors (`Extract configuration validation slice`, `Detach dispatch and result assembly slices`) plus a rescue snapshot commit carrying 64 files / 140k insertions — inspect that snapshot for run output or fixtures that must not land.
+- **Outcome**: one verdict per branch — port the still-valid delta onto current `main` as an ordinary item (rebase or cherry-pick, gates green) or record why it is superseded and delete the branch; never a third state.
+- **Acceptance oracle**: the branch no longer exists locally, and either its delta is on `main` under a merged PR or the superseding evidence is recorded here.
+- **Risk/change class**: [patch] for the triage itself; a port reclassifies to the ported work's class.
+
+## KW-STALE-BRANCH-GMRES-DEFECTS-2026-09-02 — Salvage or drop `fix/kwavers-gmres-defects` [patch] — todo
+
+- **Owner**: unclaimed. Found by the 2026-09-02 branch-inventory sweep that deleted 33 local kwavers branches whose patches or subjects had landed; this one has no PR and unique commits.
+- **Evidence**: 22 unique commits dated 2026-07-27, none on `main` by subject (`feat(transducer)!: Type aperture angles`, `feat(thermal)!: Type thermal metrics`, `refactor(kwavers-math): consolidate special functions into leto-ops SSOT`, …); `git diff --shortstat origin/main...` reads 112 files, +2928/−6073, so the branch is far behind the tree.
+- **Outcome**: one verdict per branch — port the still-valid delta onto current `main` as an ordinary item (rebase or cherry-pick, gates green) or record why it is superseded and delete the branch; never a third state.
+- **Acceptance oracle**: the branch no longer exists locally, and either its delta is on `main` under a merged PR or the superseding evidence is recorded here.
+- **Risk/change class**: [patch] for the triage itself; a port reclassifies to the ported work's class.
+
+## KW-STALE-BRANCH-THERAPY-METRIC-2026-09-02 — Salvage or drop `codex/kwavers-therapy-metric-verify` [patch] — todo
+
+- **Owner**: unclaimed. Found by the 2026-09-02 branch-inventory sweep that deleted 33 local kwavers branches whose patches or subjects had landed; this one has no PR and unique commits.
+- **Evidence**: 40 unique commits dated 2026-07-27, none on `main` by subject (`feat(kwavers-therapy): Type therapy metric contracts`, `fix(kwavers-therapy): Complete typed metric call sites`, …); 227 files, +5228/−10991 against `origin/main`.
+- **Outcome**: one verdict per branch — port the still-valid delta onto current `main` as an ordinary item (rebase or cherry-pick, gates green) or record why it is superseded and delete the branch; never a third state.
+- **Acceptance oracle**: the branch no longer exists locally, and either its delta is on `main` under a merged PR or the superseding evidence is recorded here.
+- **Risk/change class**: [patch] for the triage itself; a port reclassifies to the ported work's class.
+
 ## KW-FFT-HEPHAESTUS-BACKEND-SELECTOR — Select Leto or Hephaestus FFT execution [major] [arch] — delivery
 
 | ID | Outcome | Class | Status | Owner | Scope |
@@ -47,50 +71,270 @@
   7 x 4 x 3 passes in 0.900 s; the selector-level Hephaestus run passes in
   0.711 s.
 
-## KW-PSTD-SOURCE-ACTIVITY-CACHE — Retain warm source-step maps [patch] [perf] — review
+## KW-VISCOACOUSTIC-SENSOR-TRACE-CAPACITY-2026-08-31 — Retain sensor trace capacity [minor] [perf] — complete
+
+- **Delivered:** source `1a6fa7b11`, PR #680 head `2465e13e1`, merge `bd7e6fa62`; exact reservation removes warm sensor-trace growth and preserves bitwise values.
+- **Evidence:** zero allocator calls on first and repeated 65-step reserved windows, typed overflow without trace mutation, 944/944 debug tests, focused release tests, Clippy/Rustdoc/doctests/example checks, SemVer 196/196, and independent review GREEN.
+
+## KW-VISCOACOUSTIC-INACTIVE-AXIS-2026-08-31 — Skip zero spectral derivatives [patch] [perf] — in progress
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-PSTD-SOURCE-ACTIVITY-CACHE | Remove the two host allocations used to classify pressure and velocity source activity on every reusable GPU PSTD run. | [patch] [perf] | review | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `kwavers-gpu` PSTD state/construction/time-loop source, focused tests, release notes |
+| KW-VISCOACOUSTIC-INACTIVE-AXIS-2026-08-31 | Replace length-one viscoacoustic derivative staging, FFT dispatch, and wavenumber traversal with an exact zero fill while preserving retained scratch and values. | [patch] [perf] | review | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | viscoacoustic axis derivative/step path, value tests, existing critical-path Criterion instrument, Rustdoc, CHANGELOG |
 
-- **Evidence:** fixed `Box<[bool]>` maps allocate once with solver state;
-  repeated refill, stale-clear, and extent regressions pass. GPU-feature
-  Nextest passes 174/174 with 6 skipped in 16.119 s; warning-denied all-target
-  Clippy, rustfmt, and diff checks pass.
-- **Acceptance:** construction retains two fixed-length `nt` maps; every run
-  clears/refills them through an allocation-incapable slice API; distinct
-  pressure/velocity matrices preserve source-major values without stale flags;
-  no backend branch, transform kernel, workload, assertion, or timeout changes.
-- **Resolved review finding:** public-seam run metadata whose `nt` differs from
-  either retained map is rejected before cache mutation, staging, encoding, or
-  GPU submission; smaller, larger, and divergent extents are covered.
-- **Independent review:** GREEN through exact final source `db2bf60c4`; the
-  source and tests are rebased onto merged main without intermediate history.
-- **Non-goals:** changing Leto/Hephaestus selection, source semantics, command
-  batching, readback ownership, or unrelated PSTD allocations.
+- **Lease:** none; source candidate `98000d690` and benchmark instrument `6ca2e8d65` are committed.
+- **Entry evidence:** every viscoacoustic step invoked pressure and velocity derivatives on all three axes. For a length-one periodic axis the only wavenumber is zero, so the derivative is identically zero, but the incumbent helper still traversed the full field around both provider calls. The retained equal-volume Criterion instrument measured 1-D/2-D/3-D entry estimates of 230.93/345.31/276.37 µs and 259.89/363.71/284.99 µs in two 100-sample runs.
+- **Acceptance:** retain one generic derivative helper; establish paired Criterion baselines before mutation; an inactive axis writes positive zeros without touching complex FFT scratch or dispatching a transform; repeated finite nontrivial 1-D and 2-D inactive derivatives remain bitwise equal to the incumbent FFT route, non-finite samples cannot contaminate an inactive derivative, and the existing repeated-step value suites remain green; 3-D arithmetic and provider dispatch remain unchanged; no allocation, workload, benchmark-timed-region, or timeout change.
+- **Stop condition:** reject the production candidate unless controlled paired Criterion time estimates improve materially without regressing the active-axis control or changing values.
+- **Candidate evidence:** the exact singleton-axis differential passes in debug and release and proves finite-field bitwise output identity, positive-zero isolation for NaN/±inf samples, and unchanged retained scratch; all 15 filtered viscoacoustic tests, including the existing warm 65-step allocation ledger, pass with zero allocations/reallocations and bitwise trace parity. Paired candidate estimates were 114.98/281.92/281.57 µs and 127.12/236.63/278.02 µs. Criterion reports significant 1-D reductions of 50.4–52.3% and 49.3–51.8%, significant 2-D reductions of 9.1–13.5% and 33.0–36.6%, and no significant 3-D change (`p=0.40` and `p=0.10`). Production warning-denied Clippy, Rustdoc, doctests, formatting, and diff checks pass; the all-test-target lint gate reaches this module without a diagnostic but remains blocked by 94 pre-existing warnings in unrelated tests. Independent review remains pending.
+- **Hosted correction:** PR #681 run `33433562701` completed all four
+  45-case benchmark pairs with zero regressions and zero universe mismatches,
+  but the aggregate gate falsely rejected all 180 equal-confidence intervals
+  after approximate JSON float parsing rounded the recorded value down by one
+  unit in the last place. Atlas PR #144 merged the exact-roundtrip correction
+  as `9c33b4af1ac44ba43e4d26eaf9cb215218db248e`; this consumer pin update changes
+  no production code, benchmark input, timed region, confidence rule, or
+  timeout. Exact-head recollection remains pending.
+- **Executable-scope correction:** exact-head run `33439956718` proved
+  `performance_baseline` and `simd_field_ops` byte-identical across base and
+  candidate; only `critical_path_benchmarks` differed. The workflow nevertheless
+  remeasured all three targets and rejected an unrelated byte-identical
+  `simd_field_operations/multiply/10000` result. The candidate now passes only
+  hash-different target names to the unchanged four-pair instrument; hosted
+  recollection remains pending.
 
-## KW-FDTD-DEBUG-SCAN — Remove duplicate debug scans [patch] [perf] — in progress
+## KW-CI-DRAFT-PR-GATING-2026-08-31 — Skip draft pull-request runners [patch] [ci] — in progress
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-FDTD-DEBUG-SCAN | Keep the unchanged CPML workload below its bound by scanning each completed FDTD field phase once when no source can mutate it, while preserving source diagnostics and semantics for both temporal schemes. | [patch] [perf] | in progress | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | FDTD stepping/tests, `.config/nextest.toml`, focused evidence, release notes |
+| KW-CI-DRAFT-PR-GATING-2026-08-31 | Prevent draft pull requests from consuming hosted runners while preserving every ready-PR and push verification contract. | [patch] [ci] | in progress | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | Pull-request activity lists and root-job predicates in the seven PR-triggered workflows; normalized workflow evidence; release notes |
 
-- **Entry evidence:** run `33229687715` timed out
-  `test_cpml_stable_across_thicknesses` at the unchanged 60-second bound. The
-  source-free path performed duplicate full-field scans per phase, while
-  Yoshida returned before the once-per-step velocity-source phase.
-- **Acceptance:** both temporal schemes inject velocity sources exactly once;
-  source-free debug phases scan once while source-bearing phases preserve
-  before/after attribution; the unchanged CPML sweep and analytical source
-  regression pass; full-grid tests reserve every Nextest slot without changing
-  filters, workloads, assertions, or timeouts.
-- **Candidate evidence:** source commit `41576260e` passes the combined debug
-  run 2/2 in 16.301 s (CPML 16.269 s; source regression 0.018 s), the exact
-  release regression at 0.016 s, solver-library warning-denied Clippy, and
-  formatting. Installed Nextest assigns all four CPML cases to
-  `full-grid-sim`; hosted 4-core confirmation remains.
-- **Independent review:** GREEN at exact source commit `41576260e`; the static
-  source, diagnostics, test oracle, config, and scope contracts match.
+- **Dependency / lease:** branch `ci/draft-pr-gating` remains stacked on PR #681;
+  source correction `0db7b8a03` discharges the workflow, CHANGELOG, and item
+  lease. PR #675 remains the separate draft compile-graph experiment.
+- **Entry evidence:** draft PR #675 launched seven workflows before the prior
+  reviewed candidate proved that all 28 jobs could be skipped at dispatch.
+  Draft creation of PR #681 repeated the full hosted fan-out before it was made
+  ready, confirming the runner-cost defect on current source.
+- **Acceptance:** draft `opened`, `synchronize`, and `reopened` events schedule
+  no runner-backed job; direct non-draft opens and `ready_for_review` retain all
+  existing jobs; `converted_to_draft` cancels the active same-ref run without
+  starting runner-backed jobs; push and manual-dispatch behavior is unchanged.
+  Preserve every path filter, command, matrix, cache key, feature, workload,
+  assertion, and timeout. Existing job conditions must compose with the draft
+  predicate.
+- **Evidence:** all ten current workflows parse, exactly seven PR workflows use
+  the event list `opened`, `reopened`, `synchronize`, `ready_for_review`, and
+  `converted_to_draft`, and 17 root/aggregator predicates reject drafts. Static
+  independent review found the omitted conversion event in the prior candidate;
+  `0db7b8a03` closes that cancellation hole without changing commands, matrices,
+  or job predicates. The earlier exact draft run skipped all five applicable
+  jobs, including the benchmark pair and `always()` aggregator. Retargeting to
+  `main`, hosted ready-to-draft cancellation evidence, the full ready-PR run,
+  independent correction review, and merge remain.
+
+## KW-CI-BENCH-SMOKE-BUDGET-2026-08-31 — Bound complete benchmark smoke [patch] [ci] [perf] — review
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-CI-BENCH-SMOKE-BUDGET-2026-08-31 | Bring the complete Criterion smoke under the committed 300-second suite budget without removing a benchmark, changing an input/workload, or weakening a smoke assertion. | [patch] [ci] [perf] | review | Codex `01a0253c` | `crates/kwavers/benches`, bench target declarations, benchmark smoke runner, compile/link timing evidence |
+
+- **Lease:** none. Source/evidence commit `6bcc8087d`; independent review,
+  hosted confirmation, and merge remain.
+
+- **Entry evidence:** PR #681 exact head `22c011fa2`, workflow run
+  `33433562701`, job `99624676614` spent 15m56s in `complete benchmark smoke`
+  (20:00:13Z–20:16:09Z). The job invokes `cargo bench --benches -- --test`
+  against a 23-target registry; the plotting feature selection builds 20
+  separately linked binaries because two PINN targets and one GPU-required
+  target are ineligible. This exceeds the committed 300-second complete-suite
+  budget before the four paired measurement jobs begin. Filtered exact-run
+  markers attribute 9m55s to compilation/linking and about 76s to execution;
+  the final `kwavers` package starts at 20:06:28Z and consumes the last 6m02s of
+  compilation. Raising the 30-minute job timeout or selecting fewer benchmarks
+  is out of scope.
+- **Bounded experiment:** on the retained workflow/toolchain/cache policy,
+  separate `cargo bench --no-run --timings` from one unchanged full smoke run;
+  record compile wall time, Cargo critical path, rustc unit count, per-binary
+  link units, and execution wall time. If duplicate bench-binary codegen/linking
+  dominates, retain the three merge-critical executables unchanged and test
+  consolidating the other 17 plotting-eligible modules into one Criterion
+  harness. Keep the PINN and GPU-required feature boundaries explicit and
+  preserve every benchmark ID, input, timed closure, and black-box boundary.
+- **Acceptance / stop:** two controlled complete smokes finish within 300s and
+  produce the exact pre-change benchmark-ID set. Reject consolidation if the
+  ID set differs or execution rather than compile/link dominates; in that case
+  profile the single slowest unchanged benchmark and optimize its production
+  path or bounded instrument according to the benchmark time model.
+- **Candidate evidence:** the target registry contracts from 23 executables to
+  seven; plotting builds four instead of 20. The three merge-critical binaries
+  and the PINN/GPU-only feature boundaries remain separate. Two complete
+  plotting smokes finished in 220.702s (2m54s build) and 167.667s (2m15s
+  build). Both executed 204 registrations / 200 unique IDs and matched the
+  duplicate-preserving baseline multiset SHA-256
+  `3a3f882c414122d8c21deea571e403681b0a9777f15d882825ebe52430dc12bf`.
+  The all-feature benchmark target is warning-clean under Clippy with
+  dependency linting disabled; the unrestricted command stops on 69 existing
+  PINN dependency lints before reaching the target. `mdbook test`, formatting,
+  and diff checks pass. Independent review, hosted confirmation, and merge
+  remain.
+
+## KW-CI-BENCH-CACHE-RESTORE-2026-08-31 — Restore benchmark build cache [patch] [ci] [perf] — review
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-CI-BENCH-CACHE-RESTORE-2026-08-31 | Make the benchmark smoke consume the repository's retained Rust cache instead of cold-compiling the dependency graph on every pull request. | [patch] [ci] [perf] | review | Codex `01a0253c` | benchmark-regression cache setup and exact hosted cache/compile evidence |
+
+- **Lease:** none. Source commit `36ff1269b`; independent review, hosted cache
+  confirmation, and merge remain.
+- **Entry evidence:** exact run `33433562701`, job `99624676614` invokes
+  `Swatinem/rust-cache` from the runner root even though both checkouts are in
+  child directories. Its metadata probe fails because that root has no
+  `Cargo.toml`, then the action reports `No cache found`; the smoke recompiles
+  registry dependencies from `proc-macro2` onward. The target-consolidation
+  item remains independently valid and must land first.
+- **Acceptance / non-goals:** configure the existing action against the actual
+  candidate workspace and shared target directory; retain default-branch-only
+  writes and pull-request restore-only policy. Preserve every benchmark target,
+  feature, workload, assertion, comparison, and timeout. A hosted confirmation
+  must show a successful cache metadata probe and hit, then record dependency,
+  package, and total smoke intervals without claiming timing evidence from a
+  shared runner.
+- **Candidate evidence:** the pinned cache action hashes the exact Rust compiler
+  and every `CARGO*` variable and runs `cargo metadata` from each configured
+  workspace. The two compiling benchmark jobs now match the repository's
+  Rust 1.97.0 default-branch writers, remove the cache-key-only
+  `CARGO_TARGET_DIR` divergence, point metadata at `kwavers-candidate`, and
+  preserve the same root target through `BENCH_TARGET_DIR` plus explicit Cargo
+  `--target-dir` arguments. Parsed-workflow normalization proves every other
+  job field and command byte-equivalent to the parent; the six existing
+  automation tests, YAML parsing, and diff checks pass. `actionlint` is not
+  installed locally. Hosted hit and compile-interval evidence remain pending.
+
+## KW-CI-LOCAL-CRITERION-EVIDENCE-2026-08-31 — Keep statistical timing off hosted CI [patch] [arch] [ci] [perf] — todo
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-CI-LOCAL-CRITERION-EVIDENCE-2026-08-31 | Retain controlled local Criterion comparison as performance evidence while limiting pull-request CI to bounded build-and-single-iteration benchmark verification. | [patch] [arch] [ci] [perf] | todo | unowned | benchmark-regression workflow, local benchmark runner/evidence contract, ADR 045, CHANGELOG |
+
+- **Entry evidence:** Accepted ADR 045 and the current pull-request workflow
+  still launch four full phase-reversed Criterion replications whenever one of
+  three benchmark executables differs. PR #681 run `33433562701` launched jobs
+  `99629480267`, `99629480304`, `99629480174`, and `99629480160` after a
+  15m56s complete smoke. Hosted shared-runner timing is not controlled
+  performance evidence and consumes four additional 30-minute lanes on the
+  merge path.
+- **Decision dependency:** rewrite ADR 045 in place. Preserve its same-harness,
+  same-path, benchmark-universe, confidence-interval, and family-wise
+  classification requirements for the controlled local instrument, but remove
+  hosted statistical measurement, artifact upload/download, and the Atlas
+  classifier checkout from pull-request CI. CI retains exact registry checks,
+  warning-clean benchmark compilation, and one execution of every benchmark.
+- **Acceptance:** normalized workflow review proves no benchmark target,
+  feature, input, workload, assertion, timed closure, or smoke coverage is
+  removed; a benchmark-relevant ready PR schedules no statistical timing job;
+  the complete smoke finishes within the separate 300-second budget item; the
+  documented local command reproduces the three merge-critical targets with
+  the existing sample counts and confidence contract. Reject any correction
+  that weakens Criterion instruments or substitutes hosted wall time for local
+  paired evidence.
+
+## KW-VISCOACOUSTIC-DIMENSIONAL-STATE-2026-08-31 — Omit inactive-axis state [patch] [perf] — todo
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-VISCOACOUSTIC-DIMENSIONAL-STATE-2026-08-31 | Retain velocity and derivative storage only for active spatial axes while preserving the canonical 1-D/2-D/3-D solver and exact state values. | [patch] [perf] | todo | unowned | viscoacoustic private state/scratch layout, step/reset/damping/energy paths, allocation and all-axis-mask value regressions, existing Criterion instrument |
+
+- **Entry evidence:** a warmed release global-allocation probe at exact source
+  `22c011fa2` measured every 4,096-cell constructor at 15 allocations and
+  426,000/394,248/393,600 retained bytes for 1-D `[4096,1,1]`, 2-D
+  `[64,64,1]`, and 3-D `[16,16,16]`. The current private state always owns
+  `vx/vy/vz` plus `gx/gy/gz`, although singleton-axis derivatives are exact
+  positive zero. It also retains one allocated wavenumber vector for every
+  singleton axis. Removing three inactive arrays and two inactive wavenumber
+  vectors in 1-D saves 98,320 bytes (23.1% of the measured retained footprint);
+  removing two arrays and one vector in 2-D saves 65,544 bytes (16.6%). Full
+  3-D retains its current storage.
+- **Design constraint:** support every public singleton-axis permutation,
+  including no active axes and the `xz`/`yz` planes. Bind each active velocity
+  field to its active-axis wavenumbers. Keep two anonymous scratch grids for
+  divergence and relaxation, plus a third only when all three axes are active.
+  Combine divergence in the established `dx + (dy + dz)` order with missing
+  derivatives represented by positive zero; branch only at the axis-operation
+  boundary. No public type or method changes.
+- **Acceptance:** all eight active-axis masks compare complete pressure,
+  memory, energy, damping, reset, and repeated-step behavior against a
+  six-array reference; the 3-D control remains bitwise equal. Warm construction
+  measures exactly 10/12/15 allocations for standard 1-D/2-D/3-D and the
+  retained-byte reductions above, while warm stepping remains allocation-free.
+  Existing paired Criterion inputs and timed regions remain unchanged; reject
+  the candidate on any active-axis regression or if added branching offsets
+  the measured lower-dimensional gain.
+
+## KW-VISCOACOUSTIC-UNIFORM-COEFFICIENTS-2026-08-31 — Retain scalar homogeneous coefficients [patch] [perf] — todo
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-VISCOACOUSTIC-UNIFORM-COEFFICIENTS-2026-08-31 | Represent spatially uniform medium and relaxation coefficients as scalars while retaining full grids only for heterogeneous constructors. | [patch] [perf] | todo | unowned | viscoacoustic medium/arm representation, homogeneous and heterogeneous step/energy paths, constructor/step allocation ledgers, relaxation Criterion workload |
+
+- **Dependency:** land the dimensional-state item first because both change the
+  private step layout. This item does not alter public constructors or collapse
+  heterogeneous fields into a uniform approximation.
+- **Entry evidence:** on the same warmed release 4,096-cell probe, three
+  homogeneous arms raised construction from 15 allocations and 426,000
+  retained bytes to 34 allocations and 820,176 bytes in 1-D; 2-D/3-D measured
+  788,424/787,776 bytes. Three homogeneous medium fields plus three coefficient
+  fields per arm account for exactly 393,216 retained bytes at this size—48.0%
+  of the three-arm 1-D footprint. The current homogeneous constructor also
+  allocates two temporary full-grid inputs per arm. During stepping, each arm
+  streams decay, gain, and inverse-tau grids whose values are constant.
+- **Acceptance:** one private scalar-or-grid representation specializes once at
+  the operation boundary; no variant branch enters a per-voxel loop. Uniform
+  and heterogeneous paths compare complete state/energy values against the
+  incumbent implementation, with bitwise equality where evaluation order is
+  unchanged and a derived bound otherwise. Warm homogeneous construction
+  removes the 393,216 retained bytes and all coefficient-input temporaries at
+  4,096 cells; heterogeneous allocation and values remain unchanged; repeated
+  stepping allocates zero. Establish a three-arm Criterion baseline before the
+  production edit and reject the candidate on a significant homogeneous or
+  heterogeneous runtime regression.
+
+## KW-VISCOACOUSTIC-FINITE-DOMAIN-2026-08-31 — Reject invalid numeric domains [major] — todo
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-VISCOACOUSTIC-FINITE-DOMAIN-2026-08-31 | Reject non-finite material, spacing, time-step, relaxation, and absorbing-layer parameters before allocation or state mutation. | [major] | todo | unowned | viscoacoustic constructors and absorbing-layer configuration, error contracts, boundary tests, ADR and migration note |
+
+- **Entry evidence:** `ViscoacousticMemorySolver::new` and
+  `new_heterogeneous` validate positive inputs with `<= 0.0`, so `NaN` and
+  positive infinity pass into retained coefficient, wavenumber, and state
+  construction. Relaxation-arm `NaN` values pass for the same reason.
+  `enable_absorbing_layer` also accepts non-finite `gamma_max`; its
+  `2 * thickness` guard can overflow before proving an axis too short, after
+  which `n - thickness` is reachable. These are safe public input paths.
+- **Contract:** constructors reject every non-finite scalar and field element
+  before allocating solver state. Absorbing-layer configuration becomes
+  fallible and rejects non-finite rates before replacing the retained decay
+  field; its extent test uses overflow-free arithmetic and preserves the
+  established no-layer result for axes too short to host a sponge. Existing
+  valid finite numerical behavior and public field values remain unchanged.
+- **Acceptance:** table-driven structural error tests cover `NaN`, both
+  infinities, signed zero where applicable, and finite negative values for
+  every constructor parameter and relaxation field; extreme `usize`
+  thickness never panics; rejected reconfiguration preserves the existing
+  damping state and subsequent pressure values. Update all first-party callers,
+  add the required ADR/migration guide, and use `cargo-semver-checks` to confirm
+  the return-type break. No compatibility wrapper or silent fallback.
+
+## KW-PSTD-SOURCE-ACTIVITY-CACHE — Retain warm source-step maps [patch] [perf] — complete
+
+- **Delivered:** PR #669, source `37f539786`, merge `7e709604b`; retained fixed-size pressure/velocity activity maps remove both warm-run host allocations and reject extent drift before mutation or device work.
+- **Evidence:** GPU-feature Nextest 174/174 (6 skipped), warning-denied all-target Clippy, and independent review GREEN; current-main focused refill/allocation and extent regressions pass 2/2 at `e423ce24d`.
+
+## KW-FDTD-DEBUG-SCAN — Remove duplicate debug scans [patch] [perf] — complete
+
+- **Delivered:** source `41576260e`, PR #670 merge `fb24b26d4`; both temporal schemes inject velocity sources once, and source-free debug phases avoid duplicate full-field scans.
+- **Evidence:** independent review GREEN, release regression and warning-denied solver Clippy passed; current-main analytical source plus unchanged CPML regressions pass 2/2 in 14.649 s at `c4170253f` under the existing Nextest bounds.
 
 ## KW-CI-DRAFT-PR-GATING-2026-08-30 — Skip draft pull-request runners [patch] [ci] — review
 
@@ -168,50 +412,20 @@
 - **Lease:** Codex owns fresh-run timing collection and critical-path/link
   attribution; no source region is leased while that evidence runs.
 
-## KW-INTEGRATION-FAILURE-DIAGNOSTICS — Preserve failed-test output [patch] — review
+## ✅ KW-INTEGRATION-FAILURE-DIAGNOSTICS — Preserve failed-test output [patch] — done 2026-09-02
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-INTEGRATION-FAILURE-DIAGNOSTICS | Preserve bounded assertion diagnostics for integration failures so numerical defects can be diagnosed from the originating run. | [patch] | review | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `scripts/integration_tests.py`, focused tests, release notes |
+- **Delivered:** `scripts/integration_tests.py` passes `--failure-output final` with the existing 4,000-character tails; independent review GREEN at `e47b44a08`.
+- **Hosted collection (2026-09-02):** the flag is live on `main` (`a0eb8c5df`); the merge run of PR #683 (`33587007602`) exercised the runner green. Hosted formatting of an actual failure is observable only on a red run — the runner contract test is the standing evidence.
 
-- **Evidence:** hosted integration failures exposed only Nextest status lines.
-  The runner retained bounded stdout/stderr tails but emitted them only for
-  suite timeout, cleanup failure, or a missing summary.
-- **Acceptance:** request final failed-test output; emit only the existing
-  4,000-character-capped tails for ordinary failures; preserve commands,
-  workloads, profiles, assertions, and timeout bounds; prove concrete failure
-  identity and assertion values through the runner contract.
-- **Implementation evidence:** the isolated script suite passes 6/6 applicable
-  tests on Windows with one platform-expected skip; Python compilation and
-  `git diff --check` pass.
-- **Independent review:** GREEN at exact source commit `e47b44a08`; the command
-  uses supported Nextest `--failure-output final`, retained outputs stay
-  bounded, and tests assert the concrete failure and values. Hosted
-  end-to-end formatting/output collection remains.
+## ✅ KW-CI-ARCH-DAG — Remove ineffective PR serialization [patch] [perf] — done 2026-09-02
 
-## KW-CI-ARCH-DAG — Remove ineffective PR serialization [patch] [perf] — review
+- **Delivered:** six ineffective `needs` edges removed from `architecture-validation.yml`; independent review GREEN at `570a763ac`.
+- **Hosted collection (2026-09-02):** `main` run `33587007602` (`a0eb8c5df`) starts every job within its first minute — feature builds, layer boundary, documentation, integration, coverage and CUDA jobs all begin before or alongside `Validate Clean Architecture` (03:26:01–03:28:06Z), so the critical-path edge is gone.
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-CI-ARCH-DAG | Remove the architecture workflow's idle pull-request critical-path edge without changing verification coverage. | [patch] [perf] | review | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `.github/workflows/architecture-validation.yml`, release notes, exact hosted timing |
+## ✅ KW-PR-PINN-LIB-DUPLICATION-2026-08-29 — Remove duplicate PR PINN library run [patch] [ci] [perf] — done 2026-09-02
 
-- **Evidence:** run `33227622956` held every build, test, documentation, CUDA,
-  and layer job behind `Validate Clean Architecture` for 7m49s. Pull requests
-  cannot seed that job's cache because `save-if` is false and it exports no
-  artifact consumed by downstream jobs.
-- **Fresh confirmation:** run `33229687715` repeated the edge for 7m03s. Exact
-  FDTD candidate run `33232399431` likewise starts validation while the
-  integration job remains absent from the runnable check set.
-- **Acceptance:** remove all six ineffective `needs` edges; preserve commands,
-  matrices, workloads, cache keys, feature selections, assertions, and
-  timeouts; independent jobs start with the workflow and reduce the critical
-  path without introducing another cache writer.
-- **Implementation:** the workflow parses as eight jobs with no residual
-  dependency edge. The architecture job remains the sole mainline cache
-  writer; pull-request consumers remain restore-only.
-- **Independent review:** GREEN at exact source commit `570a763ac`; parsed job
-  definitions are byte-equivalent after removing only the six dependency
-  keys. Hosted exact-candidate collection remains after PR #667 lands.
+- **Delivered:** Architecture Validation runs its second PINN library test command only on `push`; CI's `PINN Feature Validation` is the sole pull-request owner.
+- **Hosted collection (2026-09-02):** PR #683 scheduled exactly one PINN test job (`PINN Feature Validation`, success) beside the `pinn` feature *build*; the mainline backstop ran on the merge run `33587007602`.
 
 ## KW-PR-PINN-LIB-DUPLICATION-2026-08-29 — Remove duplicate PR PINN library run [patch] [ci] [perf] — delivery
 
@@ -785,28 +999,10 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   clone failed on the repository pack with "Entry too large to fit in memory";
   hosted collection remains pending.
 
-## KW-SWE-HISTORY-VECTOR-CAPACITY-2026-08-29 — Reserve snapshot headers [patch] [perf] — in progress
+## KW-SWE-HISTORY-VECTOR-CAPACITY-2026-08-29 — Reserve snapshot headers [patch] [perf] — done 2026-08-31
 
-- **Outcome:** derive the complete SWE snapshot schedule before propagation and
-  reserve its header vector once, eliminating history-container growth and late
-  header-allocation failure without changing snapshot payloads, values, times,
-  or public APIs.
-- **Integrator / lease:** Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` owns the
-  private propagation schedule/capacity helper, focused history and allocation
-  tests, Rustdoc, CHANGELOG, and this item through the next verified commit.
-- **Scope / non-goals:** use checked `1 + steps.div_ceil(max(save_every, 1))`
-  capacity derivation plus `try_reserve_exact` and the existing typed allocation
-  error. Snapshot array cloning remains unchanged and outside the allocation
-  claim; non-finite config hardening is owned by propagation preflight.
-- **Acceptance:** table-driven zero/divisible/nondivisible/sparse-save/overflow
-  schedule cases and public value tests preserve exact history length, times,
-  initial state, and final state. A thread-scoped allocator census first records
-  the current growth baseline at more than eight snapshots, then requires zero
-  reallocations and capacity at least the derived bound after the correction.
-  Focused/package Nextest, warning-denied library Clippy/Rustdoc, doctests,
-  unchanged Criterion smoke, and SemVer classification remain required.
-- **Status:** baseline measurement in progress; provider/review/merge closure
-  remains pending behind PR #670.
+- **Closure:** generic checked reservation, pre-allocation ordering, exact schedule/layout tests, and zero-reallocation census landed in `177f0f235` through PR #674 / merge `75e31f938`; stale `0619c6a8f` was not replayed because it duplicates the newer implementation.
+- **Verification:** exact-main focused Nextest passes 4/4 at `238cf78a1` plus claim-only `402980724`; no public API or snapshot semantics changed.
 
 ## KW-PR-BENCH-DUPLICATION-2026-08-29 — Remove duplicate PR smoke [patch] [ci] — todo
 
@@ -950,14 +1146,17 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   fell from 2,291,154,944 to 1,870,888,960 (18.3%); peak resident bytes fell
   from 2,078,449,664 to 1,658,085,376 (20.2%).
 
-## KW-SWE-TRACKER-MEMORY — bound tracker-only retention [minor] — todo
+## KW-SWE-TRACKER-MEMORY — bound tracker-only retention [minor] — review
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-SWE-TRACKER-MEMORY | Track volumetric arrivals without retaining velocity fields that the caller does not consume. | [minor] | todo | unclaimed | `crates/kwavers-solver/src/forward/elastic/swe/core/solver/volumetric.rs`, tracker-only Kwavers callers and tests |
+| KW-SWE-TRACKER-MEMORY | Track volumetric arrivals without retaining velocity fields that the caller does not consume. | [minor] | review | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `crates/kwavers-solver/src/forward/elastic/swe/core/solver/volumetric.rs`, tracker-only Kwavers callers and tests |
 
-- **Dependency:** merge the volumetric runtime correction above so its
-  prepared-force and storage-order baselines are stable.
+- **Lease:** none; corrected candidate
+  `cceb434960cfa79b6e28d3a6e3cc41a68f0d32f1` is committed in draft PR #676
+  and has passed independent re-review.
+- **Dependency:** the volumetric runtime correction is merged in `origin/main`;
+  its prepared-force and storage-order baselines are stable.
 - **Acceptance oracle:** the tracker-only path runs the same grid, time steps,
   snapshot cadence, and arrival detector; its tracker is value-equivalent to
   the full-history path under the existing derived floating-point bounds. It
@@ -971,6 +1170,37 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   private peak is still dominated by retained `ElasticWaveField` snapshots:
   each deep-clones six 144,000-element `f64` arrays although wavefront tracking
   reads only displacement magnitude and its caller discards `_history`.
+- **Candidate evidence (`cceb434960cfa79b6e28d3a6e3cc41a68f0d32f1`):**
+  one generic recorder loop now serves full-field and
+  tracker-only retention, and one generic detector serves both sample layouts.
+  The 60×60×40, PML-10, 256-snapshot bound is 65,538,048 retained sample bytes
+  (62.502 MiB). Bitwise differential coverage passes, and the allocation
+  ledger observes zero reallocations plus exactly 29 fewer allocations for a
+  five-snapshot case. The exact coverage regression passes in 1.055, 1.040,
+  and 0.974 seconds (1.040-second median versus 9.702 seconds, 89.3% lower).
+  One instrumented run observes 245,600,256 peak private and 41,127,936 peak
+  resident bytes, 86.9% and 97.5% below the recorded full-history peaks.
+  These are bounded-test/process observations, not Criterion estimates. The
+  solver suite passes 939/939 with two configured skips; threshold and matched-
+  filter path differentials pass bitwise; positive-threshold crossing and
+  no-crossing fallback are both covered, and mismatched force timing returns
+  the same exact error through both public APIs. The liver-fibrosis example
+  retains its observable full-history length and documents why it uses the
+  full-history API. Focused warning-denied Clippy,
+  Rustdoc, doctests, the consumer example check, and the 196-check minor SemVer
+  analysis pass. Standalone locked release verification passes all ten
+  volumetric tests; the first-party development overlay was not used because a
+  live Apollo lease held an uncommitted batched-kernel increment. The broader
+  all-target Clippy baseline remains independently red with 94 unrelated
+  existing diagnostics. The source commit's conventional-commit `!` marker is
+  a metadata error: the public change is additive and the minor SemVer analysis
+  passes. Shared history is not rewritten; PR classification, independent
+  review, and merge records carry the verified minor classification. The
+  first independent review blocked the missing threshold branches, one-sided
+  mismatch evidence, and the example output regression; `cceb43496` fixes all
+  three forward. Independent static re-review is GREEN on exact committed
+  objects; runtime evidence remains the locally collected gates above. Hosted
+  PR checks and merge closure remain pending.
 
 ## KW-INTEGRATION-TESTS-UNRUN — integration tests compiled but not run [patch] — review
 

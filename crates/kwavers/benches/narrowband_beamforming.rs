@@ -20,7 +20,7 @@
 //! - Capon spectrum is positive and finite
 //! - No silent failures or error masking
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use criterion::{black_box, criterion_group, BenchmarkId, Criterion, Throughput};
 use kwavers_analysis::signal_processing::beamforming::covariance::{
     CovarianceEstimator, CovariancePostProcess,
 };
@@ -368,4 +368,3 @@ criterion_group!(
     bench_narrowband_localization_grid,
     bench_diagonal_loading_sensitivity,
 );
-criterion_main!(benches);
