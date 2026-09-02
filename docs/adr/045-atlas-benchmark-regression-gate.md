@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-07-20
-- Amended: 2026-07-22
+- Amended: 2026-08-31
 - Change class: patch, architecture
 - Closed: 2026-07-22
 
@@ -88,20 +88,22 @@ before timing.
 The complete smoke job compiles the three merge-critical benchmark executables
 for base and candidate from the same `kwavers-measurement` path after holding
 the candidate harness and provider graph constant. It compares SHA-256 hashes
-by target name. Byte-identical executable sets cannot contain a production-code
-performance difference, so the workflow records that stronger static evidence
-and skips the four statistical pairs. Any differing executable retains the
-full measurement path below; no workload, sample count, confidence level, or
+by target name. A byte-identical target cannot contain a production-code
+performance difference, so the workflow excludes that target from statistical
+measurement. If every target is identical, it records the stronger static
+evidence and skips the four pairs. Every differing target retains the full
+measurement path below; no workload, sample count, confidence level, or
 timeout changes.
 
 The workflow consumes the Atlas-owned regression classifier and provider graph
-pinned at `1393fd8838f3bcd548959a83daa8d9375e3b03d9`. Four isolated runners each
-execute one complete base/head pair. Two use order `A B` and two use `B A`,
-where `A` is the base revision and `B` is the candidate. Each comparison
-therefore remains within one machine, while the phase-reversed matrix balances
-revision order and samples separate hosted-runner variation. A regression
-is reported only when all four confidence intervals agree in direction and
-cover the same benchmark universe.
+pinned at `9c33b4af1ac44ba43e4d26eaf9cb215218db248e`. Four isolated runners each
+execute one complete base/head pair over the hash-different subset of the three
+merge-critical targets. Two use order `A B` and two use `B A`, where `A` is the
+base revision and `B` is the candidate. Each comparison therefore remains
+within one machine, while the phase-reversed matrix balances revision order and
+samples separate hosted-runner variation. A regression is reported only when
+all four confidence intervals agree in direction and cover the same changed
+benchmark universe.
 
 The Atlas tool derives per-comparison confidence as `1 - 0.05 / m` for `m`
 benchmarks. Missing results, benchmark-universe mismatches, malformed
@@ -146,14 +148,15 @@ alter native-test budgets.
 ## Consequences
 
 Benchmark-relevant PRs consume one complete smoke and executable-identity job.
-Differing merge-critical executables additionally consume four bounded pair
-jobs and one short classification job; identical sets terminate with the
-identity proof. Python packaging-only and documentation-only PRs do not run the
-Rust instrument. Atlas remains the single source of truth for statistical
-classification. Report artifacts do not encode source-path provenance, so
-workflow review establishes the same-path precondition that the classifier
-cannot verify. Long-horizon scenarios remain functional benchmark programs,
-but they are not repeated statistically on the merge-critical path.
+Hash-different merge-critical targets additionally consume four bounded pair
+jobs and one short classification job; identical targets terminate with the
+identity proof instead of contributing unrelated timing evidence. Python
+packaging-only and documentation-only PRs do not run the Rust instrument. Atlas
+remains the single source of truth for statistical classification. Report
+artifacts do not encode source-path provenance, so workflow review establishes
+the same-path precondition that the classifier cannot verify. Long-horizon
+scenarios remain functional benchmark programs, but they are not repeated
+statistically on the merge-critical path.
 
 ## Closure evidence
 
@@ -177,3 +180,11 @@ executables are byte-identical, the pair matrix is skipped, and the explicit
 regression check passes. The complete workflow finishes in 12m12s. Exact-head
 CI `29913169738`, architecture validation `29913169852`, and legacy audit
 `29913169756` also pass.
+
+PR #681 run `33439956718` exposed the target-granularity correction. Smoke job
+`99645450380` produced identical `performance_baseline` and `simd_field_ops`
+executables and a differing `critical_path_benchmarks` executable, but the pair
+matrix still measured all three. The aggregate then rejected an unrelated
+`simd_field_ops` comparison even though that target was byte-identical. The
+2026-08-31 amendment passes only hash-different target names to the existing
+four-pair instrument.

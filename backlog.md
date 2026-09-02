@@ -63,6 +63,21 @@
 - **Acceptance:** retain one generic derivative helper; establish paired Criterion baselines before mutation; an inactive axis writes positive zeros without touching complex FFT scratch or dispatching a transform; repeated finite nontrivial 1-D and 2-D inactive derivatives remain bitwise equal to the incumbent FFT route, non-finite samples cannot contaminate an inactive derivative, and the existing repeated-step value suites remain green; 3-D arithmetic and provider dispatch remain unchanged; no allocation, workload, benchmark-timed-region, or timeout change.
 - **Stop condition:** reject the production candidate unless controlled paired Criterion time estimates improve materially without regressing the active-axis control or changing values.
 - **Candidate evidence:** the exact singleton-axis differential passes in debug and release and proves finite-field bitwise output identity, positive-zero isolation for NaN/±inf samples, and unchanged retained scratch; all 15 filtered viscoacoustic tests, including the existing warm 65-step allocation ledger, pass with zero allocations/reallocations and bitwise trace parity. Paired candidate estimates were 114.98/281.92/281.57 µs and 127.12/236.63/278.02 µs. Criterion reports significant 1-D reductions of 50.4–52.3% and 49.3–51.8%, significant 2-D reductions of 9.1–13.5% and 33.0–36.6%, and no significant 3-D change (`p=0.40` and `p=0.10`). Production warning-denied Clippy, Rustdoc, doctests, formatting, and diff checks pass; the all-test-target lint gate reaches this module without a diagnostic but remains blocked by 94 pre-existing warnings in unrelated tests. Independent review remains pending.
+- **Hosted correction:** PR #681 run `33433562701` completed all four
+  45-case benchmark pairs with zero regressions and zero universe mismatches,
+  but the aggregate gate falsely rejected all 180 equal-confidence intervals
+  after approximate JSON float parsing rounded the recorded value down by one
+  unit in the last place. Atlas PR #144 merged the exact-roundtrip correction
+  as `9c33b4af1ac44ba43e4d26eaf9cb215218db248e`; this consumer pin update changes
+  no production code, benchmark input, timed region, confidence rule, or
+  timeout. Exact-head recollection remains pending.
+- **Executable-scope correction:** exact-head run `33439956718` proved
+  `performance_baseline` and `simd_field_ops` byte-identical across base and
+  candidate; only `critical_path_benchmarks` differed. The workflow nevertheless
+  remeasured all three targets and rejected an unrelated byte-identical
+  `simd_field_operations/multiply/10000` result. The candidate now passes only
+  hash-different target names to the unchanged four-pair instrument; hosted
+  recollection remains pending.
 
 ## KW-CI-DRAFT-PR-GATING-2026-08-31 — Skip draft pull-request runners [patch] [ci] — in progress
 
