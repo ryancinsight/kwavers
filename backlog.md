@@ -1,5 +1,29 @@
 # Backlog / Strategy
 
+## KW-STALE-BRANCH-RESCUE-PHASE1-2026-09-02 — Salvage or drop `rescue/phase1-slice-wip` [patch] — todo
+
+- **Owner**: unclaimed. Found by the 2026-09-02 branch-inventory sweep that deleted 33 local kwavers branches whose patches or subjects had landed; this one has no PR and unique commits.
+- **Evidence**: 3 unique commits (2026-08-21..23), none on `main`: two kwavers-python Phase-1 slice refactors (`Extract configuration validation slice`, `Detach dispatch and result assembly slices`) plus a rescue snapshot commit carrying 64 files / 140k insertions — inspect that snapshot for run output or fixtures that must not land.
+- **Outcome**: one verdict per branch — port the still-valid delta onto current `main` as an ordinary item (rebase or cherry-pick, gates green) or record why it is superseded and delete the branch; never a third state.
+- **Acceptance oracle**: the branch no longer exists locally, and either its delta is on `main` under a merged PR or the superseding evidence is recorded here.
+- **Risk/change class**: [patch] for the triage itself; a port reclassifies to the ported work's class.
+
+## KW-STALE-BRANCH-GMRES-DEFECTS-2026-09-02 — Salvage or drop `fix/kwavers-gmres-defects` [patch] — todo
+
+- **Owner**: unclaimed. Found by the 2026-09-02 branch-inventory sweep that deleted 33 local kwavers branches whose patches or subjects had landed; this one has no PR and unique commits.
+- **Evidence**: 22 unique commits dated 2026-07-27, none on `main` by subject (`feat(transducer)!: Type aperture angles`, `feat(thermal)!: Type thermal metrics`, `refactor(kwavers-math): consolidate special functions into leto-ops SSOT`, …); `git diff --shortstat origin/main...` reads 112 files, +2928/−6073, so the branch is far behind the tree.
+- **Outcome**: one verdict per branch — port the still-valid delta onto current `main` as an ordinary item (rebase or cherry-pick, gates green) or record why it is superseded and delete the branch; never a third state.
+- **Acceptance oracle**: the branch no longer exists locally, and either its delta is on `main` under a merged PR or the superseding evidence is recorded here.
+- **Risk/change class**: [patch] for the triage itself; a port reclassifies to the ported work's class.
+
+## KW-STALE-BRANCH-THERAPY-METRIC-2026-09-02 — Salvage or drop `codex/kwavers-therapy-metric-verify` [patch] — todo
+
+- **Owner**: unclaimed. Found by the 2026-09-02 branch-inventory sweep that deleted 33 local kwavers branches whose patches or subjects had landed; this one has no PR and unique commits.
+- **Evidence**: 40 unique commits dated 2026-07-27, none on `main` by subject (`feat(kwavers-therapy): Type therapy metric contracts`, `fix(kwavers-therapy): Complete typed metric call sites`, …); 227 files, +5228/−10991 against `origin/main`.
+- **Outcome**: one verdict per branch — port the still-valid delta onto current `main` as an ordinary item (rebase or cherry-pick, gates green) or record why it is superseded and delete the branch; never a third state.
+- **Acceptance oracle**: the branch no longer exists locally, and either its delta is on `main` under a merged PR or the superseding evidence is recorded here.
+- **Risk/change class**: [patch] for the triage itself; a port reclassifies to the ported work's class.
+
 ## KW-FFT-HEPHAESTUS-BACKEND-SELECTOR — Select Leto or Hephaestus FFT execution [major] [arch] — delivery
 
 | ID | Outcome | Class | Status | Owner | Scope |
