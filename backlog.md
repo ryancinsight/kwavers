@@ -435,8 +435,8 @@
 - **Hosted cold-compile evidence (2026-09-02, `compile-timing.yml` run
   33598013146, PR #688):** the combined `cargo test-gpu-consumers` graph
   cold-compiled in **579 s on a 4-core hosted runner** against the 181 s
-  acceptance bound (3.2x over; a second dispatched run, 33598014974, is in
-  progress and is not expected to differ by a factor). Per the acceptance
+  acceptance bound (3.2x over); the second dispatched run, 33598014974,
+  measured 592s on 4 cores. Per the acceptance
   clause the consolidation is **rejected as a CI gate**: the alias stays as a
   local instrument, and the next increment is `cargo build --timings` over
   the same graph to attribute the 579 s and select one dominant unit to
