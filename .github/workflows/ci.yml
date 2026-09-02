@@ -23,8 +23,11 @@ on:
 # branch that is pushed to repeatedly accumulates one full matrix per
 # push, and with several open pull requests that is what fills the queue.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Pull requests share one group per ref and cancel superseded runs; default-
+  # branch runs get one group per commit, since GitHub supersedes a pending run
+  # in a shared group whatever `cancel-in-progress` says.
+  group: ci-${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   CARGO_TERM_COLOR: always
