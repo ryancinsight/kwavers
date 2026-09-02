@@ -118,3 +118,46 @@ fn snap_multi_row_ring_array_matches_pstd_grid_centers() {
         }
     );
 }
+
+/// The backend selection is tested on injected outcomes: no adapter is
+/// needed, so these run on CPU-only hosts under the `gpu` feature.
+#[cfg(feature = "gpu")]
+mod backend_selection {
+    use super::super::select_pstd_backend;
+    use kwavers_core::error::{KwaversError, SystemError};
+    use leto::Array2;
+
+    #[test]
+    fn adapter_absence_runs_the_cpu_path() {
+        let traces = select_pstd_backend(Err(SystemError::GpuNotAvailable.into()), || {
+            Ok(Array2::from_shape_fn((2, 3), |[row, col]| {
+                (row * 3 + col) as f64
+            }))
+        })
+        .expect("the CPU path answers when no adapter exists");
+        assert_eq!(traces.shape(), [2, 3]);
+        assert_eq!(traces[[1, 2]], 5.0);
+    }
+
+    #[test]
+    fn a_gpu_result_stands_without_running_the_cpu_path() {
+        let gpu = Array2::from_elem((1, 4), 0.25);
+        let traces = select_pstd_backend(Ok(gpu.clone()), || {
+            panic!("the CPU path must not run when the GPU produced traces")
+        })
+        .expect("GPU traces");
+        assert_eq!(traces, gpu);
+    }
+
+    #[test]
+    fn a_present_but_failing_device_propagates_instead_of_degrading() {
+        let error = select_pstd_backend(Err(KwaversError::GpuError("device lost".into())), || {
+            panic!("a device fault must propagate, not fall back to the CPU path")
+        })
+        .expect_err("a present adapter that fails is a fault");
+        assert!(
+            matches!(&error, KwaversError::GpuError(message) if message == "device lost"),
+            "the device fault must reach the caller unchanged, got {error}"
+        );
+    }
+}

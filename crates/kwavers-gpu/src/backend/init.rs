@@ -4,10 +4,11 @@
 //! raw handles are exposed only on the WGPU specialization because the current
 //! Kwavers shader kernels are WGSL.
 
+use crate::backend::provider::map_hephaestus_error;
 use crate::gpu::{GpuDevice, GpuDeviceProvider};
 use hephaestus_core::{DeviceFeature, DeviceLimits, DevicePreference};
 use hephaestus_wgpu::WgpuDevice;
-use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_core::error::KwaversResult;
 use kwavers_solver::backend::traits::GpuProvider;
 
 /// Provider context holding one acquired Hephaestus device.
@@ -31,8 +32,9 @@ where
     /// 2. Integrated GPU
     /// 3. Provider-specific software or compatibility device when available
     /// # Errors
-    /// - Propagates any `KwaversError` returned by called functions.
-    ///
+    /// - `SystemError::GpuNotAvailable` when this host has no compatible
+    ///   accelerator adapter — the typed absence a caller selects a backend on.
+    /// - `KwaversError::GpuError` when a present adapter fails device creation.
     pub fn new() -> KwaversResult<Self> {
         Self::with_features_and_limits(
             P::acquisition_preference(),
@@ -58,7 +60,7 @@ where
             optional_features,
             required_limits,
         )
-        .map_err(|e| KwaversError::GpuError(format!("GPU device: {e}")))?;
+        .map_err(|error| map_hephaestus_error("GPU device", error))?;
 
         Ok(Self {
             device: GpuDevice::from_provider(device),

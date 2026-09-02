@@ -3,6 +3,7 @@
 use super::pipeline::{AbsorptionArrays, MediumArrays, PmlArrays, SolverParams};
 use crate::backend::init::GpuProviderContext;
 use hephaestus_wgpu::{WgpuBuffer, WgpuDevice, WgpuPreparedFft};
+use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 
 /// Storage-buffer bindings used by the three lossless PSTD bind groups.
@@ -43,9 +44,11 @@ pub trait PstdAutoDeviceProvider: PstdStateBuilder {
     ///
     /// # Errors
     ///
-    /// Returns `Err` if no matching adapter is found or device acquisition
-    /// fails.
-    fn acquire_auto_context(absorbing: bool) -> Result<Self::Context, String>;
+    /// `SystemError::GpuNotAvailable` when this host has no compatible
+    /// accelerator adapter; `KwaversError::GpuError` when a present adapter
+    /// fails device creation. The distinction is the contract callers select a
+    /// backend on: absence runs a CPU path, a failing device propagates.
+    fn acquire_auto_context(absorbing: bool) -> KwaversResult<Self::Context>;
 }
 
 /// Scalar run metadata supplied by the public PSTD solver wrapper.

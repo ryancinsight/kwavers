@@ -2,12 +2,13 @@
 
 use super::delay_sum::{DelaySumGPU, DynamicFocusGPU};
 use super::shaders;
+use crate::backend::provider::map_hephaestus_error;
 use hephaestus_core::{ComputeDeviceAcquisition, DeviceLimits, DevicePreference};
 use hephaestus_wgpu::WgpuDevice;
 use kwavers_analysis::signal_processing::beamforming::three_dimensional::{
     Beamforming3dApodizationWindow, BeamformingConfig3D, BeamformingGpuProvider,
 };
-use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_core::error::KwaversResult;
 use kwavers_solver::backend::traits::GpuProvider;
 use leto::{Array3, Array4};
 
@@ -27,8 +28,9 @@ impl WgpuBeamformingProvider {
     ///
     /// # Errors
     ///
-    /// Returns a GPU error when WGPU acquisition fails or the selected device
-    /// cannot satisfy the 512-invocation WGSL workgroup requirement.
+    /// `SystemError::GpuNotAvailable` when this host has no compatible
+    /// accelerator adapter; a GPU error when a present adapter fails device
+    /// creation or cannot satisfy the 512-invocation WGSL workgroup requirement.
     pub fn new() -> KwaversResult<Self> {
         let device = WgpuDevice::try_acquire_device(
             "kwavers-3d-beamforming-wgpu",
@@ -36,11 +38,7 @@ impl WgpuBeamformingProvider {
             &[],
             beamforming_required_limits(),
         )
-        .map_err(|err| {
-            KwaversError::System(kwavers_core::error::SystemError::ResourceUnavailable {
-                resource: format!("Hephaestus WGPU 3-D beamforming device: {err}"),
-            })
-        })?;
+        .map_err(|error| map_hephaestus_error("Hephaestus WGPU 3-D beamforming device", error))?;
 
         Self::from_device(device)
     }

@@ -81,6 +81,9 @@ impl Default for GpuPstdRunConfig {
 /// # Errors
 /// - GPU device acquisition failures bubble up via the selected provider.
 /// - Invalid medium, source, or sensor inputs return `KwaversError::InvalidInput`.
+/// - A host without a compatible accelerator adapter returns
+///   `SystemError::GpuNotAvailable`; a present adapter that fails returns
+///   `KwaversError::GpuError`.
 pub fn run_gpu_pstd(
     grid: &Grid,
     medium: &dyn Medium,
@@ -154,6 +157,9 @@ pub fn run_gpu_pstd_with_snapshot_outputs(
 /// # Errors
 /// - GPU device acquisition failures bubble up via the selected provider.
 /// - Invalid medium, source, or sensor inputs return `KwaversError::InvalidInput`.
+/// - A host without a compatible accelerator adapter returns
+///   `SystemError::GpuNotAvailable`; a present adapter that fails returns
+///   `KwaversError::GpuError`.
 pub fn run_gpu_pstd_with_provider<P>(
     grid: &Grid,
     medium: &dyn Medium,
@@ -420,8 +426,7 @@ where
             tau: &absorb_tau_flat,
             eta: &absorb_eta_flat,
         },
-    )
-    .map_err(|e| KwaversError::InvalidInput(format!("GPU device init failed: {e}")))?;
+    )?;
 
     solver
         .run(PstdRunInputs {

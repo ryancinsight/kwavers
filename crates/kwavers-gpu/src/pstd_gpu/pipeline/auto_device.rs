@@ -13,16 +13,16 @@ use super::{AbsorptionArrays, MediumArrays, PmlArrays, SolverParams};
 use crate::{backend::init::GpuProviderContext, gpu::GpuDeviceProvider};
 use hephaestus_core::DeviceFeature;
 use hephaestus_wgpu::WgpuDevice;
+use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 
 impl PstdAutoDeviceProvider for WgpuPstdStateProvider {
-    fn acquire_auto_context(absorbing: bool) -> Result<Self::Context, String> {
+    fn acquire_auto_context(absorbing: bool) -> KwaversResult<Self::Context> {
         GpuProviderContext::<WgpuDevice>::with_features_and_limits(
             WgpuDevice::acquisition_preference(),
             &[DeviceFeature::ImmediateData],
             pstd_required_limits(absorbing),
         )
-        .map_err(|e| format!("GPU device creation failed: {e}"))
     }
 }
 
@@ -31,7 +31,7 @@ where
     P: PstdAutoDeviceProvider,
 {
     /// Create a `GpuPstdSolver` by automatically selecting the best available
-    /// GPU adapter.  Returns `Err` if no adapter is found or device creation fails.
+    /// GPU adapter.
     ///
     /// This constructor delegates device acquisition to Hephaestus, so PSTD
     /// joins the Atlas GPU provider seam while the existing kernels continue
@@ -39,18 +39,23 @@ where
     ///
     /// # Errors
     ///
-    /// Returns `Err` if no matching adapter is found or device acquisition
-    /// fails.
+    /// - `SystemError::GpuNotAvailable` when this host has no compatible
+    ///   accelerator adapter (typed, so a caller can select a CPU backend);
+    /// - `KwaversError::GpuError` when a present adapter fails device creation;
+    /// - `KwaversError::InvalidInput` when the solver rejects its parameters or
+    ///   fails to build its device state.
     pub fn with_auto_device(
         grid: &Grid,
         medium: MediumArrays<'_>,
         solver: SolverParams,
         pml: PmlArrays<'_>,
         absorption: AbsorptionArrays<'_>,
-    ) -> Result<Self, String> {
+    ) -> KwaversResult<Self> {
         let context = P::acquire_auto_context(solver.absorbing)?;
 
-        Self::new(context, grid, medium, solver, pml, absorption)
+        Self::new(context, grid, medium, solver, pml, absorption).map_err(|error| {
+            KwaversError::InvalidInput(format!("GPU PSTD solver construction failed: {error}"))
+        })
     }
 }
 
