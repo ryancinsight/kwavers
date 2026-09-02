@@ -66,7 +66,8 @@ impl SpectralMetrics {
 
         // 1. Perform FFT
         // Create a new processor (acceptable cost for adaptive selection)
-        let fft = Fft3d::new(Shape3D { nx, ny, nz });
+        let fft =
+            Fft3d::new(Shape3D::new(nx, ny, nz).expect("invariant: field dimensions are non-zero"));
 
         let field_owned = LetoArray3::from_shape_vec([nx, ny, nz], field.iter().copied().collect())
             .expect("adaptive-selection field shape must match its Leto FFT shape");

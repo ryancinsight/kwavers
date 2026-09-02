@@ -233,7 +233,10 @@ impl FourierReconstructor {
         k_space: &LetoArray3<Complex64>,
     ) -> KwaversResult<Array3<f64>> {
         let [nx, ny, nz] = self.grid_size;
-        let fft = FFT_CACHE_3D.get_or_create(Shape3D { nx, ny, nz });
+        let fft = FFT_CACHE_3D.get_or_create(
+            Shape3D::new(nx, ny, nz)
+                .expect("invariant: reconstruction grid dimensions are non-zero"),
+        );
         let mut result_leto = LetoArray3::<f64>::zeros([nx, ny, nz]);
         let mut scratch = LetoArray3::<Complex64>::from_elem([nx, ny, nz], Complex64::default());
         fft.inverse_into(k_space, &mut result_leto, &mut scratch);

@@ -5,6 +5,25 @@
 - **Delivered:** `mod.rs` (803 → 236 lines) is the pyclass, its constructor and the module tree; the `#[pymethods]` groups live where their concern does — `configuration.rs` (config objects, thermal/poroelastic), `pml.rs` (PML geometry and k-space numerics), `physics.rs` (nonlinearity, absorption, Helmholtz) — under the crate's existing `multiple-pymethods` feature; `run/execute.rs` holds `Simulation.run` and `run/prepare.rs` the pure conversions it was inlining (CFL time step with its named Courant number, solver/FFT-backend maps, elastic velocity source, IVP axis). The `kwavers_error_to_py_local` alias "kept for old solver files" is deleted and its six callers use the one name.
 - **Evidence:** Python surface unchanged (methods moved between `#[pymethods]` blocks of the same class); `cargo test-gpu-consumers` 127/127 (one declared skip); clippy `-D warnings` on kwavers-python (all targets, gpu feature). PR #690.
 
+## KW-SOLVER-TEST-LINT-DEBT-2026-09-02 — `kwavers-solver` test modules and examples fail the lint floor under `--all-targets` [patch] — todo
+
+- **Finding (2026-09-02, while landing PR #692):** `cargo clippy -p kwavers-solver
+  --all-targets -- -D warnings` is red on `main`: `println!` in
+  `forward/fdtd/avx512_stencil/tests.rs` and `forward/fdtd/dispatch/tests.rs`
+  (`clippy::print_stdout`), a `panic!`-only `if` in the AVX-512 tests
+  (`clippy::manual_assert`), and `println!` reports in
+  `examples/{mofi_exact_adjoint_demo,transcranial_ust_reconstruction,
+  transcranial_brain_fwi}.rs`. CI lints a narrower target set, so the debt
+  does not gate.
+- **Outcome:** test diagnostics go through `tracing` (standards: Diagnostics &
+  Tracing) and the `manual_assert` collapses to `assert!`; examples that
+  report on stdout by design carry one crate-level
+  `#![expect(clippy::print_stdout, reason = ...)]`. Then CI lints
+  `--all-targets` so the floor holds.
+- **Acceptance oracle:** `cargo clippy -p kwavers-solver --all-targets -- -D
+  warnings` exits 0 locally and in CI.
+- **Risk / change class:** [patch]; test-only and CI-only edits.
+
 ## ✅ KW-STALE-BRANCH-RESCUE-PHASE1-2026-09-02 — Salvage or drop `rescue/phase1-slice-wip` [patch] — done 2026-09-02
 
 - **Verdict: dropped.** The snapshot commit is generated output (three copies of `_generated_surface.json`, two CycloneDX SBOMs, a `.wheel-smoke` tree, a `.pyi`); the two refactor commits (`523863a9c`, `49d80a465`) do not apply to today's `main` — cherry-pick conflicts in `kwavers-gpu/src/gpu/pipeline/mod.rs` and `kzk/validation/diffraction.rs` — and their python-side intent (slicing `simulation_py/mod.rs`) is partly landed (`run/{mod,sources}.rs` exist) and otherwise re-filed as `KW-PY-SIMULATION-MOD-SLICES-2026-09-02`. Branch deleted.
@@ -413,6 +432,16 @@
   of the shared graph on a fresh hosted runner, its seconds in the job
   summary against the 181 s bound. Next: dispatch it twice and record both
   numbers here; adopt the alias in CI only if both fit.
+- **Hosted cold-compile evidence (2026-09-02, `compile-timing.yml` run
+  33598013146, PR #688):** the combined `cargo test-gpu-consumers` graph
+  cold-compiled in **579 s on a 4-core hosted runner** against the 181 s
+  acceptance bound (3.2x over); the second dispatched run, 33598014974,
+  measured 592s on 4 cores. Per the acceptance
+  clause the consolidation is **rejected as a CI gate**: the alias stays as a
+  local instrument, and the next increment is `cargo build --timings` over
+  the same graph to attribute the 579 s and select one dominant unit to
+  shrink (a DoR sub-item once the timings are collected).
+
 
 ## ✅ KW-INTEGRATION-FAILURE-DIAGNOSTICS — Preserve failed-test output [patch] — done 2026-09-02
 
