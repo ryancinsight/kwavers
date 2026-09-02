@@ -31,6 +31,7 @@ on:
       - 'gap_audit.md'
       - 'docs/**'
   pull_request:
+    types: [opened, reopened, synchronize, ready_for_review, converted_to_draft]
     branches:
       - main
       - codex/kwavers-atlas-integration
@@ -57,6 +58,7 @@ permissions:
 
 jobs:
   audit-legacy-migration:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
     name: Audit legacy migration (xtask legacy-migration-audit)
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -98,6 +100,7 @@ jobs:
           if-no-files-found: warn
 
   audit-burn-migration:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
     name: Audit Burn migration (xtask burn-migration-audit)
     runs-on: ubuntu-latest
     timeout-minutes: 20

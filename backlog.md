@@ -47,17 +47,10 @@
   7 x 4 x 3 passes in 0.900 s; the selector-level Hephaestus run passes in
   0.711 s.
 
-## KW-VISCOACOUSTIC-SENSOR-TRACE-CAPACITY-2026-08-31 — Retain sensor trace capacity [minor] [perf] — review
+## KW-VISCOACOUSTIC-SENSOR-TRACE-CAPACITY-2026-08-31 — Retain sensor trace capacity [minor] [perf] — complete
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-VISCOACOUSTIC-SENSOR-TRACE-CAPACITY-2026-08-31 | Move known sensor-history allocation before stepping and eliminate geometric trace growth without changing recorded samples. | [minor] [perf] | review | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `kwavers-solver` viscoacoustic sensor storage, allocation contract, attenuation example, Rustdoc, CHANGELOG |
-
-- **Lease:** none; exact source `1a6fa7b111e9865bd1a59d44def3fb96b538f597` is immutable under independent re-review.
-- **Entry evidence:** every sensor trace starts as `Vec::new()` and `step` pushes one sample per trace. The shipped attenuation example has an exact 9,000-step horizon but could not reserve it. A warmed 65-sample recording window measured one allocation and five reallocations.
-- **Acceptance:** a fallible solver-level reservation operation reserves additional samples for every registered sensor before stepping; reservation failure is typed; warm stepping after exact reservation performs no allocator calls; repeated runs reuse retained capacity; recorded values and ordering are unchanged; the existing unreserved API remains valid.
-- **Non-goals:** changing spectral arithmetic, source injection, sensor ordering, trace retention semantics, the example workload, or runtime budgets.
-- **Candidate evidence:** exact source `1a6fa7b11` records zero allocations and zero reallocations in both first and reset/repeated 65-step windows and bitwise-equal traces against the unreserved route; the retained regression also measures two unreserved traces at two allocations and ten reallocations and proves non-empty values and lengths survive rejected overflow. Debug Nextest passes 944/944 in 70.529 s (2 skipped); focused release Nextest passes 3/3 in 0.118 s after a 3m09s optimized build; warning-denied library/allocation-test Clippy, Rustdoc, doctests, example check, format, and diff checks pass. `cargo-semver-checks` passes 196/196 under minor. Independent exact-commit re-review is GREEN. The workspace all-target Clippy attempt remains limited by 95 unrelated pre-existing test-target lint failures; hosted collection remains pending.
+- **Delivered:** source `1a6fa7b11`, PR #680 head `2465e13e1`, merge `bd7e6fa62`; exact reservation removes warm sensor-trace growth and preserves bitwise values.
+- **Evidence:** zero allocator calls on first and repeated 65-step reserved windows, typed overflow without trace mutation, 944/944 debug tests, focused release tests, Clippy/Rustdoc/doctests/example checks, SemVer 196/196, and independent review GREEN.
 
 ## KW-VISCOACOUSTIC-INACTIVE-AXIS-2026-08-31 — Skip zero spectral derivatives [patch] [perf] — in progress
 
@@ -85,6 +78,229 @@
   `simd_field_operations/multiply/10000` result. The candidate now passes only
   hash-different target names to the unchanged four-pair instrument; hosted
   recollection remains pending.
+
+## KW-CI-DRAFT-PR-GATING-2026-08-31 — Skip draft pull-request runners [patch] [ci] — in progress
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-CI-DRAFT-PR-GATING-2026-08-31 | Prevent draft pull requests from consuming hosted runners while preserving every ready-PR and push verification contract. | [patch] [ci] | in progress | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | Pull-request activity lists and root-job predicates in the seven PR-triggered workflows; normalized workflow evidence; release notes |
+
+- **Dependency / lease:** branch `ci/draft-pr-gating` remains stacked on PR #681;
+  source correction `0db7b8a03` discharges the workflow, CHANGELOG, and item
+  lease. PR #675 remains the separate draft compile-graph experiment.
+- **Entry evidence:** draft PR #675 launched seven workflows before the prior
+  reviewed candidate proved that all 28 jobs could be skipped at dispatch.
+  Draft creation of PR #681 repeated the full hosted fan-out before it was made
+  ready, confirming the runner-cost defect on current source.
+- **Acceptance:** draft `opened`, `synchronize`, and `reopened` events schedule
+  no runner-backed job; direct non-draft opens and `ready_for_review` retain all
+  existing jobs; `converted_to_draft` cancels the active same-ref run without
+  starting runner-backed jobs; push and manual-dispatch behavior is unchanged.
+  Preserve every path filter, command, matrix, cache key, feature, workload,
+  assertion, and timeout. Existing job conditions must compose with the draft
+  predicate.
+- **Evidence:** all ten current workflows parse, exactly seven PR workflows use
+  the event list `opened`, `reopened`, `synchronize`, `ready_for_review`, and
+  `converted_to_draft`, and 17 root/aggregator predicates reject drafts. Static
+  independent review found the omitted conversion event in the prior candidate;
+  `0db7b8a03` closes that cancellation hole without changing commands, matrices,
+  or job predicates. The earlier exact draft run skipped all five applicable
+  jobs, including the benchmark pair and `always()` aggregator. Retargeting to
+  `main`, hosted ready-to-draft cancellation evidence, the full ready-PR run,
+  independent correction review, and merge remain.
+
+## KW-CI-BENCH-SMOKE-BUDGET-2026-08-31 — Bound complete benchmark smoke [patch] [ci] [perf] — review
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-CI-BENCH-SMOKE-BUDGET-2026-08-31 | Bring the complete Criterion smoke under the committed 300-second suite budget without removing a benchmark, changing an input/workload, or weakening a smoke assertion. | [patch] [ci] [perf] | review | Codex `01a0253c` | `crates/kwavers/benches`, bench target declarations, benchmark smoke runner, compile/link timing evidence |
+
+- **Lease:** none. Source/evidence commit `6bcc8087d`; independent review,
+  hosted confirmation, and merge remain.
+
+- **Entry evidence:** PR #681 exact head `22c011fa2`, workflow run
+  `33433562701`, job `99624676614` spent 15m56s in `complete benchmark smoke`
+  (20:00:13Z–20:16:09Z). The job invokes `cargo bench --benches -- --test`
+  against a 23-target registry; the plotting feature selection builds 20
+  separately linked binaries because two PINN targets and one GPU-required
+  target are ineligible. This exceeds the committed 300-second complete-suite
+  budget before the four paired measurement jobs begin. Filtered exact-run
+  markers attribute 9m55s to compilation/linking and about 76s to execution;
+  the final `kwavers` package starts at 20:06:28Z and consumes the last 6m02s of
+  compilation. Raising the 30-minute job timeout or selecting fewer benchmarks
+  is out of scope.
+- **Bounded experiment:** on the retained workflow/toolchain/cache policy,
+  separate `cargo bench --no-run --timings` from one unchanged full smoke run;
+  record compile wall time, Cargo critical path, rustc unit count, per-binary
+  link units, and execution wall time. If duplicate bench-binary codegen/linking
+  dominates, retain the three merge-critical executables unchanged and test
+  consolidating the other 17 plotting-eligible modules into one Criterion
+  harness. Keep the PINN and GPU-required feature boundaries explicit and
+  preserve every benchmark ID, input, timed closure, and black-box boundary.
+- **Acceptance / stop:** two controlled complete smokes finish within 300s and
+  produce the exact pre-change benchmark-ID set. Reject consolidation if the
+  ID set differs or execution rather than compile/link dominates; in that case
+  profile the single slowest unchanged benchmark and optimize its production
+  path or bounded instrument according to the benchmark time model.
+- **Candidate evidence:** the target registry contracts from 23 executables to
+  seven; plotting builds four instead of 20. The three merge-critical binaries
+  and the PINN/GPU-only feature boundaries remain separate. Two complete
+  plotting smokes finished in 220.702s (2m54s build) and 167.667s (2m15s
+  build). Both executed 204 registrations / 200 unique IDs and matched the
+  duplicate-preserving baseline multiset SHA-256
+  `3a3f882c414122d8c21deea571e403681b0a9777f15d882825ebe52430dc12bf`.
+  The all-feature benchmark target is warning-clean under Clippy with
+  dependency linting disabled; the unrestricted command stops on 69 existing
+  PINN dependency lints before reaching the target. `mdbook test`, formatting,
+  and diff checks pass. Independent review, hosted confirmation, and merge
+  remain.
+
+## KW-CI-BENCH-CACHE-RESTORE-2026-08-31 — Restore benchmark build cache [patch] [ci] [perf] — review
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-CI-BENCH-CACHE-RESTORE-2026-08-31 | Make the benchmark smoke consume the repository's retained Rust cache instead of cold-compiling the dependency graph on every pull request. | [patch] [ci] [perf] | review | Codex `01a0253c` | benchmark-regression cache setup and exact hosted cache/compile evidence |
+
+- **Lease:** none. Source commit `36ff1269b`; independent review, hosted cache
+  confirmation, and merge remain.
+- **Entry evidence:** exact run `33433562701`, job `99624676614` invokes
+  `Swatinem/rust-cache` from the runner root even though both checkouts are in
+  child directories. Its metadata probe fails because that root has no
+  `Cargo.toml`, then the action reports `No cache found`; the smoke recompiles
+  registry dependencies from `proc-macro2` onward. The target-consolidation
+  item remains independently valid and must land first.
+- **Acceptance / non-goals:** configure the existing action against the actual
+  candidate workspace and shared target directory; retain default-branch-only
+  writes and pull-request restore-only policy. Preserve every benchmark target,
+  feature, workload, assertion, comparison, and timeout. A hosted confirmation
+  must show a successful cache metadata probe and hit, then record dependency,
+  package, and total smoke intervals without claiming timing evidence from a
+  shared runner.
+- **Candidate evidence:** the pinned cache action hashes the exact Rust compiler
+  and every `CARGO*` variable and runs `cargo metadata` from each configured
+  workspace. The two compiling benchmark jobs now match the repository's
+  Rust 1.97.0 default-branch writers, remove the cache-key-only
+  `CARGO_TARGET_DIR` divergence, point metadata at `kwavers-candidate`, and
+  preserve the same root target through `BENCH_TARGET_DIR` plus explicit Cargo
+  `--target-dir` arguments. Parsed-workflow normalization proves every other
+  job field and command byte-equivalent to the parent; the six existing
+  automation tests, YAML parsing, and diff checks pass. `actionlint` is not
+  installed locally. Hosted hit and compile-interval evidence remain pending.
+
+## KW-CI-LOCAL-CRITERION-EVIDENCE-2026-08-31 — Keep statistical timing off hosted CI [patch] [arch] [ci] [perf] — todo
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-CI-LOCAL-CRITERION-EVIDENCE-2026-08-31 | Retain controlled local Criterion comparison as performance evidence while limiting pull-request CI to bounded build-and-single-iteration benchmark verification. | [patch] [arch] [ci] [perf] | todo | unowned | benchmark-regression workflow, local benchmark runner/evidence contract, ADR 045, CHANGELOG |
+
+- **Entry evidence:** Accepted ADR 045 and the current pull-request workflow
+  still launch four full phase-reversed Criterion replications whenever one of
+  three benchmark executables differs. PR #681 run `33433562701` launched jobs
+  `99629480267`, `99629480304`, `99629480174`, and `99629480160` after a
+  15m56s complete smoke. Hosted shared-runner timing is not controlled
+  performance evidence and consumes four additional 30-minute lanes on the
+  merge path.
+- **Decision dependency:** rewrite ADR 045 in place. Preserve its same-harness,
+  same-path, benchmark-universe, confidence-interval, and family-wise
+  classification requirements for the controlled local instrument, but remove
+  hosted statistical measurement, artifact upload/download, and the Atlas
+  classifier checkout from pull-request CI. CI retains exact registry checks,
+  warning-clean benchmark compilation, and one execution of every benchmark.
+- **Acceptance:** normalized workflow review proves no benchmark target,
+  feature, input, workload, assertion, timed closure, or smoke coverage is
+  removed; a benchmark-relevant ready PR schedules no statistical timing job;
+  the complete smoke finishes within the separate 300-second budget item; the
+  documented local command reproduces the three merge-critical targets with
+  the existing sample counts and confidence contract. Reject any correction
+  that weakens Criterion instruments or substitutes hosted wall time for local
+  paired evidence.
+
+## KW-VISCOACOUSTIC-DIMENSIONAL-STATE-2026-08-31 — Omit inactive-axis state [patch] [perf] — todo
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-VISCOACOUSTIC-DIMENSIONAL-STATE-2026-08-31 | Retain velocity and derivative storage only for active spatial axes while preserving the canonical 1-D/2-D/3-D solver and exact state values. | [patch] [perf] | todo | unowned | viscoacoustic private state/scratch layout, step/reset/damping/energy paths, allocation and all-axis-mask value regressions, existing Criterion instrument |
+
+- **Entry evidence:** a warmed release global-allocation probe at exact source
+  `22c011fa2` measured every 4,096-cell constructor at 15 allocations and
+  426,000/394,248/393,600 retained bytes for 1-D `[4096,1,1]`, 2-D
+  `[64,64,1]`, and 3-D `[16,16,16]`. The current private state always owns
+  `vx/vy/vz` plus `gx/gy/gz`, although singleton-axis derivatives are exact
+  positive zero. It also retains one allocated wavenumber vector for every
+  singleton axis. Removing three inactive arrays and two inactive wavenumber
+  vectors in 1-D saves 98,320 bytes (23.1% of the measured retained footprint);
+  removing two arrays and one vector in 2-D saves 65,544 bytes (16.6%). Full
+  3-D retains its current storage.
+- **Design constraint:** support every public singleton-axis permutation,
+  including no active axes and the `xz`/`yz` planes. Bind each active velocity
+  field to its active-axis wavenumbers. Keep two anonymous scratch grids for
+  divergence and relaxation, plus a third only when all three axes are active.
+  Combine divergence in the established `dx + (dy + dz)` order with missing
+  derivatives represented by positive zero; branch only at the axis-operation
+  boundary. No public type or method changes.
+- **Acceptance:** all eight active-axis masks compare complete pressure,
+  memory, energy, damping, reset, and repeated-step behavior against a
+  six-array reference; the 3-D control remains bitwise equal. Warm construction
+  measures exactly 10/12/15 allocations for standard 1-D/2-D/3-D and the
+  retained-byte reductions above, while warm stepping remains allocation-free.
+  Existing paired Criterion inputs and timed regions remain unchanged; reject
+  the candidate on any active-axis regression or if added branching offsets
+  the measured lower-dimensional gain.
+
+## KW-VISCOACOUSTIC-UNIFORM-COEFFICIENTS-2026-08-31 — Retain scalar homogeneous coefficients [patch] [perf] — todo
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-VISCOACOUSTIC-UNIFORM-COEFFICIENTS-2026-08-31 | Represent spatially uniform medium and relaxation coefficients as scalars while retaining full grids only for heterogeneous constructors. | [patch] [perf] | todo | unowned | viscoacoustic medium/arm representation, homogeneous and heterogeneous step/energy paths, constructor/step allocation ledgers, relaxation Criterion workload |
+
+- **Dependency:** land the dimensional-state item first because both change the
+  private step layout. This item does not alter public constructors or collapse
+  heterogeneous fields into a uniform approximation.
+- **Entry evidence:** on the same warmed release 4,096-cell probe, three
+  homogeneous arms raised construction from 15 allocations and 426,000
+  retained bytes to 34 allocations and 820,176 bytes in 1-D; 2-D/3-D measured
+  788,424/787,776 bytes. Three homogeneous medium fields plus three coefficient
+  fields per arm account for exactly 393,216 retained bytes at this size—48.0%
+  of the three-arm 1-D footprint. The current homogeneous constructor also
+  allocates two temporary full-grid inputs per arm. During stepping, each arm
+  streams decay, gain, and inverse-tau grids whose values are constant.
+- **Acceptance:** one private scalar-or-grid representation specializes once at
+  the operation boundary; no variant branch enters a per-voxel loop. Uniform
+  and heterogeneous paths compare complete state/energy values against the
+  incumbent implementation, with bitwise equality where evaluation order is
+  unchanged and a derived bound otherwise. Warm homogeneous construction
+  removes the 393,216 retained bytes and all coefficient-input temporaries at
+  4,096 cells; heterogeneous allocation and values remain unchanged; repeated
+  stepping allocates zero. Establish a three-arm Criterion baseline before the
+  production edit and reject the candidate on a significant homogeneous or
+  heterogeneous runtime regression.
+
+## KW-VISCOACOUSTIC-FINITE-DOMAIN-2026-08-31 — Reject invalid numeric domains [major] — todo
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-VISCOACOUSTIC-FINITE-DOMAIN-2026-08-31 | Reject non-finite material, spacing, time-step, relaxation, and absorbing-layer parameters before allocation or state mutation. | [major] | todo | unowned | viscoacoustic constructors and absorbing-layer configuration, error contracts, boundary tests, ADR and migration note |
+
+- **Entry evidence:** `ViscoacousticMemorySolver::new` and
+  `new_heterogeneous` validate positive inputs with `<= 0.0`, so `NaN` and
+  positive infinity pass into retained coefficient, wavenumber, and state
+  construction. Relaxation-arm `NaN` values pass for the same reason.
+  `enable_absorbing_layer` also accepts non-finite `gamma_max`; its
+  `2 * thickness` guard can overflow before proving an axis too short, after
+  which `n - thickness` is reachable. These are safe public input paths.
+- **Contract:** constructors reject every non-finite scalar and field element
+  before allocating solver state. Absorbing-layer configuration becomes
+  fallible and rejects non-finite rates before replacing the retained decay
+  field; its extent test uses overflow-free arithmetic and preserves the
+  established no-layer result for axes too short to host a sponge. Existing
+  valid finite numerical behavior and public field values remain unchanged.
+- **Acceptance:** table-driven structural error tests cover `NaN`, both
+  infinities, signed zero where applicable, and finite negative values for
+  every constructor parameter and relaxation field; extreme `usize`
+  thickness never panics; rejected reconfiguration preserves the existing
+  damping state and subsequent pressure values. Update all first-party callers,
+  add the required ADR/migration guide, and use `cargo-semver-checks` to confirm
+  the return-type break. No compatibility wrapper or silent fallback.
 
 ## KW-PSTD-SOURCE-ACTIVITY-CACHE — Retain warm source-step maps [patch] [perf] — complete
 

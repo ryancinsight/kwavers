@@ -227,6 +227,19 @@
 
 ### Changed
 
+- **[patch] The complete Criterion smoke links four plotting-enabled harnesses
+  instead of twenty.** Seventeen non-merge-critical benchmark groups now share
+  `benchmark_suite`; the three merge-critical executables and the PINN/GPU-only
+  feature boundaries remain independent. Every existing benchmark ID, input,
+  timed closure, and black-box boundary is retained. Direct commands for a
+  consolidated group use `--bench benchmark_suite -- <group-filter>`.
+
+- **[patch] Pull-request benchmark jobs restore the retained Rust build
+  cache.** Cache metadata now runs against the candidate Cargo workspace, and
+  the benchmark compiler/environment key matches the default-branch writer.
+  Baseline and candidate builds continue to share one root target directory;
+  pull requests remain restore-only and cannot publish or evict cache entries.
+
 - **Viscoacoustic lower-dimensional stepping:** A singleton derivative axis
   now clears its output directly without staging the real field into complex
   scratch, dispatching forward and inverse FFTs, or traversing the wavenumber
@@ -259,6 +272,15 @@
   finite-domain inputs return typed validation errors before output/workspace
   allocation, and dense C-order traversal retains a strided logical-order
   fallback.
+
+- **Draft pull requests no longer consume verification runners.** All seven
+  pull-request workflows skip their root or independent jobs while a pull
+  request is draft, subscribe to `ready_for_review` so the unchanged checks
+  begin when the candidate becomes reviewable, and subscribe to
+  `converted_to_draft` so concurrency cancellation stops an active ready-PR
+  run when the pull request returns to draft. Direct non-draft opens, pushes,
+  manual dispatches, path filters, commands, matrices, and timeout policies are
+  unchanged.
 
 - **Elastic SWE body-force runtime:** Ordinary final-state and history
   propagation now prepare separable Gaussian spatial profiles once per run and

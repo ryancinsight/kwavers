@@ -2,6 +2,7 @@ name: benchmark regression
 
 on:
   pull_request:
+    types: [opened, reopened, synchronize, ready_for_review, converted_to_draft]
     paths:
       - Cargo.lock
       - Cargo.toml
@@ -20,6 +21,7 @@ concurrency:
 
 jobs:
   benchmark-smoke:
+    if: ${{ github.event.pull_request.draft == false }}
     name: complete benchmark smoke
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -27,7 +29,8 @@ jobs:
       measurements_required: ${{ steps.artifact_identity.outputs.measurements_required }}
       changed_targets: ${{ steps.artifact_identity.outputs.changed_targets }}
     env:
-      CARGO_TARGET_DIR: ${{ github.workspace }}/target
+      BENCH_TARGET_DIR: ${{ github.workspace }}/target
+      CARGO_TERM_COLOR: always
       PR_BENCH_TARGETS: performance_baseline critical_path_benchmarks simd_field_ops
     steps:
       - name: Checkout baseline
@@ -50,7 +53,9 @@ jobs:
           packages: libfontconfig1-dev
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@032958afbdc797a9164d3bc0b56325c1308924a5 # 1.97.1
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        with:
+          toolchain: 1.97.0
 
       # `Swatinem/rust-cache` rather than a hand-rolled `actions/cache`:
       # it carries restore-keys, so a lockfile change degrades to a partial
@@ -62,6 +67,9 @@ jobs:
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
         with:
           shared-key: kwavers
+          # The checkout is a child of the runner workspace, while both
+          # revisions intentionally compile into the retained root target.
+          workspaces: kwavers-candidate -> ../target
           # Write the cache from the default branch only. A pull request
           # restores it but does not save, so concurrent branches cannot
           # evict each other's entries.
@@ -108,6 +116,7 @@ jobs:
           status=0
           cargo bench \
             --manifest-path kwavers-measurement/Cargo.toml \
+            --target-dir "$BENCH_TARGET_DIR" \
             --locked \
             --package kwavers \
             --features plotting \
@@ -142,6 +151,7 @@ jobs:
             local status=0
             cargo bench \
               --manifest-path kwavers-measurement/Cargo.toml \
+              --target-dir "$BENCH_TARGET_DIR" \
               --locked \
               --package kwavers \
               --features plotting \
@@ -233,7 +243,8 @@ jobs:
             first_revision: kwavers-baseline
             second_revision: kwavers-candidate
     env:
-      CARGO_TARGET_DIR: ${{ github.workspace }}/target
+      BENCH_TARGET_DIR: ${{ github.workspace }}/target
+      CARGO_TERM_COLOR: always
       FIRST_REVISION: ${{ matrix.first_revision }}
       PAIR_ID: ${{ matrix.pair_id }}
       PR_BENCH_TARGETS: ${{ needs.benchmark-smoke.outputs.changed_targets }}
@@ -268,12 +279,15 @@ jobs:
           packages: libfontconfig1-dev
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@032958afbdc797a9164d3bc0b56325c1308924a5 # 1.97.1
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        with:
+          toolchain: 1.97.0
 
       # Shared cache; rationale at the first use in this file.
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
         with:
           shared-key: kwavers
+          workspaces: kwavers-candidate -> ../target
           # Write the cache from the default branch only. A pull request
           # restores it but does not save, so concurrent branches cannot
           # evict each other's entries.
@@ -387,6 +401,7 @@ jobs:
             local status=0
             cargo bench \
               --manifest-path kwavers-measurement/Cargo.toml \
+              --target-dir "$BENCH_TARGET_DIR" \
               --locked \
               --package kwavers \
               --features plotting \
@@ -397,7 +412,7 @@ jobs:
             return "$status"
           }
 
-          rm -rf "$CARGO_TARGET_DIR/criterion"
+          rm -rf "$BENCH_TARGET_DIR/criterion"
           run_benches \
             "$FIRST_REVISION" \
             --save-baseline atlas-base
@@ -405,10 +420,11 @@ jobs:
           confidence="$(
             cargo run \
               --manifest-path "$gate_manifest" \
+              --target-dir "$BENCH_TARGET_DIR" \
               --locked \
               -- \
               required-confidence \
-              --criterion-root "$CARGO_TARGET_DIR/criterion" \
+              --criterion-root "$BENCH_TARGET_DIR/criterion" \
               --baseline atlas-base
           )"
 
@@ -418,7 +434,7 @@ jobs:
             --confidence-level "$confidence"
 
           mkdir -p "$(dirname "$REPORT_ROOT")"
-          mv "$CARGO_TARGET_DIR/criterion" "$REPORT_ROOT"
+          mv "$BENCH_TARGET_DIR/criterion" "$REPORT_ROOT"
           tar --create --gzip --file "$PAIR_ID.tar.gz" reports
 
       - name: Upload replicated comparison
@@ -431,7 +447,7 @@ jobs:
 
   benchmark-regression:
     name: benchmark regression check
-    if: always()
+    if: ${{ github.event.pull_request.draft == false && always() }}
     needs:
       - benchmark-smoke
       - benchmark-pair

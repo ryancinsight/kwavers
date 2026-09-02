@@ -10,6 +10,7 @@ on:
       - "Cargo.lock"
       - ".github/workflows/book-pages.yml"
   pull_request:
+    types: [opened, reopened, synchronize, ready_for_review, converted_to_draft]
     paths:
       - "docs/book/**"
       - "crates/**"
@@ -30,6 +31,7 @@ concurrency:
 
 jobs:
   book:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
     # Body owned once by Atlas (ADR 0035), pinned by SHA like any action. The
     # shared workflow keeps the pull-request build and skips deployment there,
     # so PRs still prove the book builds without publishing it.

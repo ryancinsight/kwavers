@@ -8,7 +8,7 @@
 //! - Berenger (1994) "A perfectly matched layer for the absorption of electromagnetic waves"
 //! - Komatitsch & Martin (2007) "An unsplit convolutional PML"
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{black_box, criterion_group, BenchmarkId, Criterion};
 use kwavers_boundary::cpml::{CPMLBoundary, CPMLConfig};
 use kwavers_boundary::pml::{DomainPMLBoundary, DomainPmlConfig};
 use kwavers_boundary::Boundary;
@@ -231,5 +231,3 @@ criterion_group!(
     memory_usage_comparison,
     cpml_reset_benchmark
 );
-
-criterion_main!(benches);

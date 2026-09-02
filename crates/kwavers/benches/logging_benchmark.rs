@@ -1,4 +1,4 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{black_box, criterion_group, Criterion};
 use kwavers_core::log::file::CombinedLogger;
 use log::Log;
 use log::{Level, Record};
@@ -49,4 +49,3 @@ fn logging_benchmark(c: &mut Criterion) {
 }
 
 criterion_group!(benches, logging_benchmark);
-criterion_main!(benches);
