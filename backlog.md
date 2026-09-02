@@ -1,12 +1,9 @@
 # Backlog / Strategy
 
-## KW-PY-SIMULATION-MOD-SLICES-2026-09-02 — Slice `simulation_py/mod.rs` to the file target [patch] — todo
+## ✅ KW-PY-SIMULATION-MOD-SLICES-2026-09-02 — Slice `simulation_py/mod.rs` to the file target [patch] — done 2026-09-02
 
-- **Owner**: unclaimed. Re-filed from the dropped `rescue/phase1-slice-wip` branch, whose Phase-1 extraction (`run/prepare.rs`, `run/dispatch.rs`, `run/result.rs`) no longer applies.
-- **Evidence**: `crates/kwavers-python/src/simulation_py/mod.rs` is 803 lines against the 500-line target; `run/sources.rs` (272) is the only slice extracted so far.
-- **Outcome**: the run path split into leaf modules by concern — configuration validation, dispatch, result assembly — with `mod.rs` a manifest.
-- **Acceptance oracle**: `mod.rs` ≤ 500 lines, no new `pub` surface, the Python binding suite and `python-surface` job unchanged and green.
-- **Risk/change class**: [patch].
+- **Delivered:** `mod.rs` (803 → 236 lines) is the pyclass, its constructor and the module tree; the `#[pymethods]` groups live where their concern does — `configuration.rs` (config objects, thermal/poroelastic), `pml.rs` (PML geometry and k-space numerics), `physics.rs` (nonlinearity, absorption, Helmholtz) — under the crate's existing `multiple-pymethods` feature; `run/execute.rs` holds `Simulation.run` and `run/prepare.rs` the pure conversions it was inlining (CFL time step with its named Courant number, solver/FFT-backend maps, elastic velocity source, IVP axis). The `kwavers_error_to_py_local` alias "kept for old solver files" is deleted and its six callers use the one name.
+- **Evidence:** Python surface unchanged (methods moved between `#[pymethods]` blocks of the same class); `cargo test-gpu-consumers` 127/127 (one declared skip); clippy `-D warnings` on kwavers-python (all targets, gpu feature). PR #690.
 
 ## ✅ KW-STALE-BRANCH-RESCUE-PHASE1-2026-09-02 — Salvage or drop `rescue/phase1-slice-wip` [patch] — done 2026-09-02
 

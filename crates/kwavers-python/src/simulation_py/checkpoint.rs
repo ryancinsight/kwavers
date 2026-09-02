@@ -6,7 +6,7 @@ use kwavers_core::error::KwaversError;
 use crate::simulation_result_py::SimulationResult;
 use crate::solver_type_bindings::SolverType;
 
-use super::{run::kwavers_error_to_py_local, Simulation};
+use super::{run::kwavers_error_to_py, Simulation};
 
 #[pymethods]
 impl Simulation {
@@ -74,7 +74,7 @@ impl Simulation {
                 &path,
             )
         })
-        .map_err(kwavers_error_to_py_local)
+        .map_err(kwavers_error_to_py)
     }
 
     /// Resume a PSTD simulation from a checkpoint and return sensor data.
@@ -122,7 +122,7 @@ impl Simulation {
             .map(|s| s.record_modes.clone())
             .unwrap_or_default();
         let checkpoint = kwavers_solver::forward::pstd::checkpoint::PSTDCheckpoint::load(&path)
-            .map_err(kwavers_error_to_py_local)?;
+            .map_err(kwavers_error_to_py)?;
         checkpoint
             .validate_restore_contract(
                 self.grid.inner.nx,
@@ -131,11 +131,11 @@ impl Simulation {
                 time_steps,
                 dt_actual,
             )
-            .map_err(kwavers_error_to_py_local)?;
+            .map_err(kwavers_error_to_py)?;
         let remaining_steps = time_steps
             .checked_sub(checkpoint.time_step_index)
             .ok_or_else(|| {
-                kwavers_error_to_py_local(KwaversError::InvalidInput(format!(
+                kwavers_error_to_py(KwaversError::InvalidInput(format!(
                     "checkpoint time_step_index {} exceeds solver total_steps {}",
                     checkpoint.time_step_index, time_steps
                 )))
@@ -167,7 +167,7 @@ impl Simulation {
                     &sensor_record_modes,
                 )
             })
-            .map_err(kwavers_error_to_py_local)?;
+            .map_err(kwavers_error_to_py)?;
 
         Simulation::simulation_run_result_to_py(py, run_result, shape, time_steps, dt_actual)
     }
