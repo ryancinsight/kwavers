@@ -1,5 +1,6 @@
 use kwavers_core::error::{ConfigError, KwaversResult};
 use leto::ArrayViewMut3;
+use mnemosyne::AlignedVec;
 use serde::{Deserialize, Serialize};
 
 mod boundary_impl;
@@ -10,12 +11,12 @@ const PML_EXPONENTIAL_SCALING_FACTOR: f64 = 0.1;
 /// Perfectly Matched Layer (PML) boundary condition for absorbing outgoing waves.
 #[derive(Debug, Clone)]
 pub struct DomainPMLBoundary {
-    pub(super) acoustic_damping_x: Vec<f64>,
-    pub(super) acoustic_damping_y: Vec<f64>,
-    pub(super) acoustic_damping_z: Vec<f64>,
-    pub(super) light_damping_x: Vec<f64>,
-    pub(super) light_damping_y: Vec<f64>,
-    pub(super) light_damping_z: Vec<f64>,
+    pub(super) acoustic_damping_x: AlignedVec<f64>,
+    pub(super) acoustic_damping_y: AlignedVec<f64>,
+    pub(super) acoustic_damping_z: AlignedVec<f64>,
+    pub(super) light_damping_x: AlignedVec<f64>,
+    pub(super) light_damping_y: AlignedVec<f64>,
+    pub(super) light_damping_z: AlignedVec<f64>,
     pub(super) thickness: usize,
 }
 
@@ -133,8 +134,8 @@ impl DomainPMLBoundary {
         dx: f64,
         sigma_max: f64,
         order: usize,
-    ) -> Vec<f64> {
-        let mut profile = vec![0.0; thickness];
+    ) -> AlignedVec<f64> {
+        let mut profile = AlignedVec::zeroed(thickness);
 
         let target_reflection: f64 = 1e-6;
         let reference_sigma =

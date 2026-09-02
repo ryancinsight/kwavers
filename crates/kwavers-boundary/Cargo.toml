@@ -15,6 +15,7 @@ kwavers-grid = { path = "../kwavers-grid", version = "3.0.0" }
 kwavers-medium = { path = "../kwavers-medium", version = "4.0.0" }
 leto = { workspace = true }
 leto-ops = { workspace = true }
+mnemosyne = { workspace = true }
 serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
 
