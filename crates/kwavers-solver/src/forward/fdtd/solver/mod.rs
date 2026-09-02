@@ -172,6 +172,13 @@ pub struct GenericFdtdSolver<T> {
     pub(crate) dvx_scratch: T,
     pub(crate) dvy_scratch: T,
     pub(crate) divergence_scratch: T,
+
+    /// Half-cell densities `½(ρ[i] + ρ[i+1])` on the three staggered velocity
+    /// faces (the far face averaged with itself), computed once at
+    /// construction: the staggered velocity update then zips slices instead
+    /// of gathering a neighbour per component per step. Three grid-sized
+    /// arrays, paid once.
+    pub(crate) staggered_density: [T; 3],
 }
 
 pub type FdtdSolver = GenericFdtdSolver<Array3<f64>>;
@@ -207,6 +214,7 @@ impl<T: std::fmt::Debug> std::fmt::Debug for GenericFdtdSolver<T> {
             .field("dvx_scratch", &self.dvx_scratch)
             .field("dvy_scratch", &self.dvy_scratch)
             .field("divergence_scratch", &self.divergence_scratch)
+            .field("staggered_density", &self.staggered_density)
             .finish()
     }
 }

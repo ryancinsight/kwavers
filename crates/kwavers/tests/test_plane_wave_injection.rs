@@ -41,8 +41,9 @@ fn test_plane_wave_boundary_injection_timing() {
         .expect("Failed to create backend");
 
     // Create plane wave source with BoundaryOnly injection mode
+    let frequency_hz = 1e6;
     let signal = Arc::new(SineWave::new(
-        1e6, // 1 MHz
+        frequency_hz,
         1e5, // 100 kPa
         0.0, // phase
     ));
@@ -153,7 +154,14 @@ fn test_plane_wave_boundary_injection_timing() {
     let sensor_k = 32; // Center in z
 
     let mut pressure_history = Vec::new();
-    let monitor_steps = arrival_steps + 500;
+    // The assertion below accepts an arrival within 10 % of the expected time,
+    // and the 10 % detection threshold is crossed within the first period of
+    // the sine after arrival; every arrival the assertion could accept
+    // therefore lies inside this window, and a later one still fails, on the
+    // no-arrival panic. Monitoring 500 further steps measured nothing the
+    // assertion reads and cost 3.7x the run time.
+    let period_steps = (1.0 / (frequency_hz * dt)).ceil() as usize;
+    let monitor_steps = (arrival_steps as f64 * 1.1).ceil() as usize + period_steps;
 
     for step in 0..monitor_steps {
         backend.step().expect("Failed to step");

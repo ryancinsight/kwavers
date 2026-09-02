@@ -378,65 +378,89 @@ proptest! {
     }
 }
 
-proptest! {
-    #[test]
-    fn test_grid_convergence(
-        base_size in 8..16usize,
-        refinement_factor in 2..4usize,
-    ) {
-        // Test that solutions converge as grid is refined
-        let sizes = [
-            base_size,
-            base_size * refinement_factor,
-            base_size * refinement_factor * refinement_factor,
-        ];
+/// Grid-refinement sequences over the whole parameter domain: eight base
+/// sizes by two refinement factors, sixteen sequences, each three grids of
+/// five FDTD steps. The domain is finite and small, so it is enumerated once.
+/// The sampled form (`proptest`, 256 cases) re-ran the same sixteen
+/// sequences sixteen times over on average — 19 s here and past the 60 s
+/// termination bound on the hosted runner — while covering nothing the
+/// enumeration does not.
+#[test]
+fn test_grid_convergence() {
+    for base_size in 8..16usize {
+        for refinement_factor in 2..4usize {
+            grid_refinement_sequence_stays_bounded(base_size, refinement_factor);
+        }
+    }
+}
 
-        let mut energies = Vec::new();
+fn grid_refinement_sequence_stays_bounded(base_size: usize, refinement_factor: usize) {
+    // Test that solutions converge as grid is refined
+    let sizes = [
+        base_size,
+        base_size * refinement_factor,
+        base_size * refinement_factor * refinement_factor,
+    ];
 
-        for &size in &sizes {
-            if size > 64 { // Skip very large grids for performance
-                continue;
-            }
+    let mut energies = Vec::new();
 
-            let grid = Grid::new(size, size, size, 1.0 / size as f64, 1.0 / size as f64, 1.0 / size as f64).unwrap();
-            let medium = HomogeneousMedium::water(&grid);
-            let mut p_mask = Array3::<f64>::zeros((size, size, size));
-            p_mask[[size / 2, size / 2, size / 2]] = 1.0;
-
-            let mut p_signal = Array2::<f64>::zeros((1, 6));
-            p_signal[[0, 0]] = 1.0;
-
-            let source = GridSource {
-                p_mask: Some(p_mask),
-                p_signal: Some(p_signal),
-                p_mode: SourceMode::Additive,
-                ..Default::default()
-            };
-
-            let config = FdtdConfig::default();
-            let mut solver = FdtdSolver::new(config, &grid, &medium, source).unwrap();
-
-            // Run for fixed number of time steps
-            for _ in 0..5 {
-                solver.step_forward().unwrap();
-            }
-
-            let field = solver.pressure_field();
-            let energy = calculate_energy(field);
-            energies.push(energy);
+    for &size in &sizes {
+        if size > 64 {
+            // Skip very large grids for performance
+            continue;
         }
 
-        // Solutions should become more accurate (energies more consistent)
-        // as grid is refined (this is a heuristic test)
-        if energies.len() >= 2 {
-            let energy_variation = energies.iter()
-                .map(|&e| (e - energies[0]).abs())
-                .sum::<f64>() / energies.len() as f64;
+        let grid = Grid::new(
+            size,
+            size,
+            size,
+            1.0 / size as f64,
+            1.0 / size as f64,
+            1.0 / size as f64,
+        )
+        .unwrap();
+        let medium = HomogeneousMedium::water(&grid);
+        let mut p_mask = Array3::<f64>::zeros((size, size, size));
+        p_mask[[size / 2, size / 2, size / 2]] = 1.0;
 
-            // Allow some variation but not wild divergence
-            prop_assert!(energy_variation <= energies[0] * 10.0,
-                        "Solutions diverged too much with grid refinement: {}", energy_variation);
+        let mut p_signal = Array2::<f64>::zeros((1, 6));
+        p_signal[[0, 0]] = 1.0;
+
+        let source = GridSource {
+            p_mask: Some(p_mask),
+            p_signal: Some(p_signal),
+            p_mode: SourceMode::Additive,
+            ..Default::default()
+        };
+
+        let config = FdtdConfig::default();
+        let mut solver = FdtdSolver::new(config, &grid, &medium, source).unwrap();
+
+        // Run for fixed number of time steps
+        for _ in 0..5 {
+            solver.step_forward().unwrap();
         }
+
+        let field = solver.pressure_field();
+        let energy = calculate_energy(field);
+        energies.push(energy);
+    }
+
+    // Solutions should become more accurate (energies more consistent)
+    // as grid is refined (this is a heuristic test)
+    if energies.len() >= 2 {
+        let energy_variation = energies
+            .iter()
+            .map(|&e| (e - energies[0]).abs())
+            .sum::<f64>()
+            / energies.len() as f64;
+
+        // Allow some variation but not wild divergence
+        assert!(
+            energy_variation <= energies[0] * 10.0,
+            "Solutions diverged too much with grid refinement: {}",
+            energy_variation
+        );
     }
 }
 

@@ -305,6 +305,10 @@ bench = false
 # Target: Document performance characteristics per ADR-010
 
 [[bench]]
+name = "fdtd_propagation_benchmark"
+harness = false
+
+[[bench]]
 name = "performance_baseline"
 harness = false
 

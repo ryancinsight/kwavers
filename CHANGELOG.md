@@ -21,6 +21,25 @@
   `no compatible accelerator adapter` on CPU runners leave the known-failure
   baseline.
 
+- **[patch] Staggered FDTD kernels run on slices; the two 60 s integration
+  tests fit their budget.** `StaggeredLeapfrogOperator::{gradient_into,
+  divergence_into}` computed every tap through bounds-checked linear
+  addressing (six passes per step) and the staggered velocity update gathered
+  neighbour densities per component per cell: 32.7 ms per 64³ step in release,
+  the same at the tests' opt-level 1. The kernels now zip slices — sliding
+  windows along the contiguous axis, whole blocks along the other two, with
+  `reflect` kept for the wall cells and the indexed path retained as the
+  differential reference — and the solver precomputes the three half-cell
+  face densities once so the velocity update is the existing parallel slice
+  helper. The gradient and the transpose's wall cells are bit-identical to
+  the reference; the transpose's interior is gathered and agrees to
+  round-off (test `slice_kernels_match_the_indexed_reference`). The FDTD
+  propagation bench is registered and repaired (it had no `criterion_main!`)
+  and gains a 64³ step group; `test_grid_convergence` enumerates its sixteen-
+  point parameter domain once instead of sampling it 256 times, and
+  `test_plane_wave_boundary_injection_timing` monitors the window its
+  assertion reads instead of 500 further steps.
+
 ### Added
 
 - **[minor] Viscoacoustic sensor traces support fallible preallocation.**
