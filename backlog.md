@@ -1,28 +1,24 @@
 # Backlog / Strategy
 
-## KW-STALE-BRANCH-RESCUE-PHASE1-2026-09-02 — Salvage or drop `rescue/phase1-slice-wip` [patch] — todo
+## KW-PY-SIMULATION-MOD-SLICES-2026-09-02 — Slice `simulation_py/mod.rs` to the file target [patch] — todo
 
-- **Owner**: unclaimed. Found by the 2026-09-02 branch-inventory sweep that deleted 33 local kwavers branches whose patches or subjects had landed; this one has no PR and unique commits.
-- **Evidence**: 3 unique commits (2026-08-21..23), none on `main`: two kwavers-python Phase-1 slice refactors (`Extract configuration validation slice`, `Detach dispatch and result assembly slices`) plus a rescue snapshot commit carrying 64 files / 140k insertions — inspect that snapshot for run output or fixtures that must not land.
-- **Outcome**: one verdict per branch — port the still-valid delta onto current `main` as an ordinary item (rebase or cherry-pick, gates green) or record why it is superseded and delete the branch; never a third state.
-- **Acceptance oracle**: the branch no longer exists locally, and either its delta is on `main` under a merged PR or the superseding evidence is recorded here.
-- **Risk/change class**: [patch] for the triage itself; a port reclassifies to the ported work's class.
+- **Owner**: unclaimed. Re-filed from the dropped `rescue/phase1-slice-wip` branch, whose Phase-1 extraction (`run/prepare.rs`, `run/dispatch.rs`, `run/result.rs`) no longer applies.
+- **Evidence**: `crates/kwavers-python/src/simulation_py/mod.rs` is 803 lines against the 500-line target; `run/sources.rs` (272) is the only slice extracted so far.
+- **Outcome**: the run path split into leaf modules by concern — configuration validation, dispatch, result assembly — with `mod.rs` a manifest.
+- **Acceptance oracle**: `mod.rs` ≤ 500 lines, no new `pub` surface, the Python binding suite and `python-surface` job unchanged and green.
+- **Risk/change class**: [patch].
 
-## KW-STALE-BRANCH-GMRES-DEFECTS-2026-09-02 — Salvage or drop `fix/kwavers-gmres-defects` [patch] — todo
+## ✅ KW-STALE-BRANCH-RESCUE-PHASE1-2026-09-02 — Salvage or drop `rescue/phase1-slice-wip` [patch] — done 2026-09-02
 
-- **Owner**: unclaimed. Found by the 2026-09-02 branch-inventory sweep that deleted 33 local kwavers branches whose patches or subjects had landed; this one has no PR and unique commits.
-- **Evidence**: 22 unique commits dated 2026-07-27, none on `main` by subject (`feat(transducer)!: Type aperture angles`, `feat(thermal)!: Type thermal metrics`, `refactor(kwavers-math): consolidate special functions into leto-ops SSOT`, …); `git diff --shortstat origin/main...` reads 112 files, +2928/−6073, so the branch is far behind the tree.
-- **Outcome**: one verdict per branch — port the still-valid delta onto current `main` as an ordinary item (rebase or cherry-pick, gates green) or record why it is superseded and delete the branch; never a third state.
-- **Acceptance oracle**: the branch no longer exists locally, and either its delta is on `main` under a merged PR or the superseding evidence is recorded here.
-- **Risk/change class**: [patch] for the triage itself; a port reclassifies to the ported work's class.
+- **Verdict: dropped.** The snapshot commit is generated output (three copies of `_generated_surface.json`, two CycloneDX SBOMs, a `.wheel-smoke` tree, a `.pyi`); the two refactor commits (`523863a9c`, `49d80a465`) do not apply to today's `main` — cherry-pick conflicts in `kwavers-gpu/src/gpu/pipeline/mod.rs` and `kzk/validation/diffraction.rs` — and their python-side intent (slicing `simulation_py/mod.rs`) is partly landed (`run/{mod,sources}.rs` exist) and otherwise re-filed as `KW-PY-SIMULATION-MOD-SLICES-2026-09-02`. Branch deleted.
 
-## KW-STALE-BRANCH-THERAPY-METRIC-2026-09-02 — Salvage or drop `codex/kwavers-therapy-metric-verify` [patch] — todo
+## ✅ KW-STALE-BRANCH-GMRES-DEFECTS-2026-09-02 — Salvage or drop `fix/kwavers-gmres-defects` [patch] — done 2026-09-02
 
-- **Owner**: unclaimed. Found by the 2026-09-02 branch-inventory sweep that deleted 33 local kwavers branches whose patches or subjects had landed; this one has no PR and unique commits.
-- **Evidence**: 40 unique commits dated 2026-07-27, none on `main` by subject (`feat(kwavers-therapy): Type therapy metric contracts`, `fix(kwavers-therapy): Complete typed metric call sites`, …); 227 files, +5228/−10991 against `origin/main`.
-- **Outcome**: one verdict per branch — port the still-valid delta onto current `main` as an ordinary item (rebase or cherry-pick, gates green) or record why it is superseded and delete the branch; never a third state.
-- **Acceptance oracle**: the branch no longer exists locally, and either its delta is on `main` under a merged PR or the superseding evidence is recorded here.
-- **Risk/change class**: [patch] for the triage itself; a port reclassifies to the ported work's class.
+- **Verdict: superseded.** The branch predates the history the tree now carries: its "unique" commits include the merges of #318/#320 (typed acoustic coupling), which are on `main` under other commit objects, and its GMRES work is superseded by the Athena Krylov adoption (`44af659be`, #440; `kwavers-solver/src/krylov/`). Branch deleted.
+
+## ✅ KW-STALE-BRANCH-THERAPY-METRIC-2026-09-02 — Salvage or drop `codex/kwavers-therapy-metric-verify` [patch] — done 2026-09-02
+
+- **Verdict: superseded.** Same pre-rewrite lineage as the GMRES branch (shares the #318/#320 merges); its typed thermal metrics exist on `main` (`kwavers-physics/src/thermal/diffusion/dose.rs`) and the Aequitas typed-coupling deliveries landed through #318/#320. Branch deleted.
 
 ## KW-FFT-HEPHAESTUS-BACKEND-SELECTOR — Select Leto or Hephaestus FFT execution [major] [arch] — delivery
 
