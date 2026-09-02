@@ -50,6 +50,8 @@ mnemosyne-backend = { version = "0.5.0", git = "https://github.com/ryancinsight/
 mnemosyne-core = { version = "0.2.0", git = "https://github.com/ryancinsight/Mnemosyne", package = "mnemosyne-memory-core" }
 # mnemosyne-heap owns NUMA memory-policy execution (bind / interleave / first-touch).
 mnemosyne-heap = { version = "0.4.0", git = "https://github.com/ryancinsight/Mnemosyne" }
+# mnemosyne-memory is the allocator facade; installs Mnemosyne as the global allocator.
+mnemosyne = { version = "0.7.0", git = "https://github.com/ryancinsight/Mnemosyne", package = "mnemosyne-memory" }
 eunomia = { version = "0.8.0", git = "https://github.com/ryancinsight/eunomia", default-features = false, features = ["std"] }
 numpy = "0.29"
 

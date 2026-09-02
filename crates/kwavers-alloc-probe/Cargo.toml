@@ -7,5 +7,8 @@ description = "Thread-scoped allocation counting for kwavers allocation-contract
 license = "MIT"
 repository = "https://github.com/ryancinsight/kwavers"
 
+[dependencies]
+mnemosyne.workspace = true
+
 [lints]
 workspace = true

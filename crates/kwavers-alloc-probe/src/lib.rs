@@ -1,7 +1,8 @@
 #![doc = include_str!("../README.md")]
 #![deny(missing_docs)]
 
-use std::alloc::{GlobalAlloc, Layout, System};
+use mnemosyne::Mnemosyne;
+use std::alloc::{GlobalAlloc, Layout};
 use std::cell::Cell;
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -44,7 +45,7 @@ static REALLOCATIONS: AtomicU64 = AtomicU64::new(0);
 /// Install as the test binary's `#[global_allocator]`.
 pub struct ThreadScopedAllocator;
 
-// SAFETY: every method forwards verbatim to `System`, which upholds the
+// SAFETY: every method forwards verbatim to `Mnemosyne`, which upholds the
 // `GlobalAlloc` contract; the counting side effect touches only atomics and
 // a const-initialized thread-local, neither of which allocates or panics.
 unsafe impl GlobalAlloc for ThreadScopedAllocator {
@@ -53,12 +54,12 @@ unsafe impl GlobalAlloc for ThreadScopedAllocator {
             ALLOCATIONS.fetch_add(1, Ordering::Relaxed);
         }
         // SAFETY: the caller upholds `alloc`'s contract; forwarded verbatim.
-        unsafe { System.alloc(layout) }
+        unsafe { Mnemosyne.alloc(layout) }
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
         // SAFETY: the caller upholds `dealloc`'s contract; forwarded verbatim.
-        unsafe { System.dealloc(ptr, layout) }
+        unsafe { Mnemosyne.dealloc(ptr, layout) }
     }
 
     unsafe fn alloc_zeroed(&self, layout: Layout) -> *mut u8 {
@@ -67,7 +68,7 @@ unsafe impl GlobalAlloc for ThreadScopedAllocator {
         }
         // SAFETY: the caller upholds `alloc_zeroed`'s contract; forwarded
         // verbatim.
-        unsafe { System.alloc_zeroed(layout) }
+        unsafe { Mnemosyne.alloc_zeroed(layout) }
     }
 
     unsafe fn realloc(&self, ptr: *mut u8, layout: Layout, new_size: usize) -> *mut u8 {
@@ -75,7 +76,7 @@ unsafe impl GlobalAlloc for ThreadScopedAllocator {
             REALLOCATIONS.fetch_add(1, Ordering::Relaxed);
         }
         // SAFETY: the caller upholds `realloc`'s contract; forwarded verbatim.
-        unsafe { System.realloc(ptr, layout, new_size) }
+        unsafe { Mnemosyne.realloc(ptr, layout, new_size) }
     }
 }
 
