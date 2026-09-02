@@ -5,14 +5,15 @@
 //! breast ring-array protocol onto those solver contracts.
 
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
+#[cfg(feature = "gpu")]
+use kwavers_core::error::SystemError;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 use kwavers_math::fft::Complex64;
 use kwavers_medium::heterogeneous::HeterogeneousFactory;
+use kwavers_medium::heterogeneous::HeterogeneousMedium;
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
-#[cfg(not(feature = "gpu"))]
 use kwavers_receiver::recorder::simple::SensorRecorder;
-#[cfg(not(feature = "gpu"))]
 use kwavers_solver::forward::pstd::{PSTDConfig, PSTDSolver};
 use kwavers_solver::inverse::fwi::frequency_domain::FrequencyObservation;
 use kwavers_source::{GridSource, SourceMode};
@@ -22,7 +23,6 @@ use leto::{Array2, Array3, SliceArg};
 
 mod signal;
 mod validation;
-#[cfg(not(feature = "gpu"))]
 use signal::pstd_boundary;
 use signal::{
     frequency_bin, frequency_bin_start_step, grid_index_to_ring_point, map_ring_point_to_grid,
@@ -265,35 +265,75 @@ fn run_pstd_transmit(
         ..GridSource::new_empty()
     };
 
-    // GPU PSTD path (compile-time `gpu` feature): Hephaestus validates the
-    // requested positive shape and surfaces provider failure to the caller.
+    // The `gpu` feature compiles both backends; which one runs is decided by
+    // the host at run time (standards: runtime capability detection). The GPU
+    // borrow of `source` ends before the CPU closure takes ownership of it.
     #[cfg(feature = "gpu")]
     {
-        run_gpu_pstd_transmit(&grid, &medium, &source, receiver_indices, steps, config)
+        select_pstd_backend(
+            run_gpu_pstd_transmit(&grid, &medium, &source, receiver_indices, steps, config),
+            || run_cpu_pstd_transmit(grid, &medium, source, receiver_indices, steps, config),
+        )
     }
 
     #[cfg(not(feature = "gpu"))]
     {
-        let pstd_config = PSTDConfig {
-            nt: steps,
-            dt: config.time_step_s,
-            boundary: pstd_boundary(config.cpml_thickness_cells),
-            smooth_sources: false,
-            ..Default::default()
-        };
-        let mut solver = PSTDSolver::new(pstd_config, grid, &medium, source)?;
-        solver.sensor_recorder =
-            SensorRecorder::from_ordered_indices(receiver_indices.to_vec(), steps)?;
-        solver.run_orchestrated(steps)?.ok_or_else(|| {
-            KwaversError::InvalidInput("PSTD acquisition produced no receiver data".into())
-        })
+        run_cpu_pstd_transmit(grid, &medium, source, receiver_indices, steps, config)
     }
+}
+
+/// Select the PSTD backend by capability.
+///
+/// The GPU result stands — traces or fault — unless this host has no
+/// compatible accelerator adapter, the one typed absence on which the CPU
+/// path runs; the selection is surfaced as a `tracing` event. A present
+/// adapter that fails to initialize or execute propagates: degrading silently
+/// would hide a device fault behind a slower correct answer.
+#[cfg(feature = "gpu")]
+fn select_pstd_backend<Cpu>(gpu: KwaversResult<Array2<f64>>, cpu: Cpu) -> KwaversResult<Array2<f64>>
+where
+    Cpu: FnOnce() -> KwaversResult<Array2<f64>>,
+{
+    match gpu {
+        Err(KwaversError::System(SystemError::GpuNotAvailable)) => {
+            tracing::info!(
+                backend = "cpu",
+                reason = "no compatible accelerator adapter",
+                "PSTD acquisition backend selected"
+            );
+            cpu()
+        }
+        gpu_outcome => gpu_outcome,
+    }
+}
+
+fn run_cpu_pstd_transmit(
+    grid: Grid,
+    medium: &HeterogeneousMedium,
+    source: GridSource,
+    receiver_indices: &[(usize, usize, usize)],
+    steps: usize,
+    config: BreastUstPstdDatasetConfig,
+) -> KwaversResult<Array2<f64>> {
+    let pstd_config = PSTDConfig {
+        nt: steps,
+        dt: config.time_step_s,
+        boundary: pstd_boundary(config.cpml_thickness_cells),
+        smooth_sources: false,
+        ..Default::default()
+    };
+    let mut solver = PSTDSolver::new(pstd_config, grid, medium, source)?;
+    solver.sensor_recorder =
+        SensorRecorder::from_ordered_indices(receiver_indices.to_vec(), steps)?;
+    solver.run_orchestrated(steps)?.ok_or_else(|| {
+        KwaversError::InvalidInput("PSTD acquisition produced no receiver data".into())
+    })
 }
 
 #[cfg(feature = "gpu")]
 fn run_gpu_pstd_transmit(
     grid: &Grid,
-    medium: &kwavers_medium::heterogeneous::HeterogeneousMedium,
+    medium: &HeterogeneousMedium,
     source: &GridSource,
     receiver_indices: &[(usize, usize, usize)],
     steps: usize,

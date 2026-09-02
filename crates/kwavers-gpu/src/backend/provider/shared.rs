@@ -3,7 +3,7 @@
 use crate::backend::init::GpuProviderContext;
 use crate::gpu::GpuDeviceProvider;
 use hephaestus_core::HephaestusError;
-use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_core::error::{KwaversError, KwaversResult, SystemError};
 use kwavers_solver::backend::traits::{
     BackendCapabilities, BackendType, ComputeDevice, GpuProvider,
 };
@@ -203,8 +203,20 @@ pub(super) fn dense_slice_mut<'a, T>(
     })
 }
 
-pub(super) fn map_hephaestus_error(context: &'static str, error: HephaestusError) -> KwaversError {
-    KwaversError::GpuError(format!("{context}: {error}"))
+/// Map a Hephaestus fault to the kwavers error class its caller acts on.
+///
+/// Adapter absence is the one fault a caller selects a backend on: it maps to
+/// [`SystemError::GpuNotAvailable`], which the clinical PSTD dataset generator
+/// matches to run its CPU path. Every other fault — a present adapter that
+/// fails device creation, allocation, dispatch, or transfer — is a
+/// [`KwaversError::GpuError`] carrying `context` and the Hephaestus message,
+/// and propagates: a device that exists but fails is a fault to surface, never
+/// a reason to degrade quietly.
+pub(crate) fn map_hephaestus_error(context: &'static str, error: HephaestusError) -> KwaversError {
+    match error {
+        HephaestusError::AdapterUnavailable { .. } => SystemError::GpuNotAvailable.into(),
+        other => KwaversError::GpuError(format!("{context}: {other}")),
+    }
 }
 
 pub(super) fn limit_bytes_to_usize(bytes: u64) -> usize {
@@ -216,7 +228,42 @@ pub(super) fn limit_bytes_to_usize(bytes: u64) -> usize {
 
 #[cfg(test)]
 mod tests {
-    use super::{dense_slice, limit_bytes_to_usize, validate_elementwise_shapes};
+    use super::{
+        dense_slice, limit_bytes_to_usize, map_hephaestus_error, validate_elementwise_shapes,
+    };
+    use hephaestus_core::HephaestusError;
+    use kwavers_core::error::{KwaversError, SystemError};
+
+    #[test]
+    fn adapter_absence_maps_to_the_typed_system_error() {
+        let error = map_hephaestus_error(
+            "GPU device",
+            HephaestusError::AdapterUnavailable {
+                message: "no adapters enumerated".into(),
+            },
+        );
+        assert!(
+            matches!(error, KwaversError::System(SystemError::GpuNotAvailable)),
+            "adapter absence must be the typed variant a backend selection matches, got {error}"
+        );
+    }
+
+    #[test]
+    fn a_present_adapter_that_fails_keeps_the_gpu_error_class_and_context() {
+        let error = map_hephaestus_error(
+            "GPU device",
+            HephaestusError::DeviceUnavailable {
+                message: "device lost".into(),
+            },
+        );
+        let KwaversError::GpuError(message) = error else {
+            panic!("a present-but-failing device must propagate as GpuError, got {error}");
+        };
+        assert_eq!(
+            message,
+            "GPU device: accelerator device creation failed: device lost"
+        );
+    }
     use leto::Array3 as LetoArray3;
 
     #[test]

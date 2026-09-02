@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+### Changed
+
+- **[major] GPU adapter absence is typed and the clinical PSTD dataset selects
+  its backend at run time.** `kwavers-gpu` maps hephaestus's
+  `AdapterUnavailable` to `SystemError::GpuNotAvailable` at its one
+  `map_hephaestus_error` boundary; every other device fault keeps its
+  `GpuError` class with context. `PstdAutoDeviceProvider::acquire_auto_context`
+  and `GpuPstdSolver::with_auto_device` return `KwaversResult` instead of
+  `Result<_, String>`, so the absence survives to `run_gpu_pstd`'s callers
+  (migration: match `KwaversError` variants where the `String` was inspected).
+  `GpuDevice::acquire_with_requirements` and the 3-D beamforming provider,
+  which filed every acquisition fault as `ResourceUnavailable`, use the same
+  mapping. The breast UST PSTD dataset generator compiles both PSTD paths
+  under `gpu` and runs the CPU solver only on that typed absence, surfaced as a
+  `tracing` event; a present adapter that fails propagates. The two
+  `pstd_finite_window_born` integration tests that panicked with
+  `no compatible accelerator adapter` on CPU runners leave the known-failure
+  baseline.
+
 ### Added
 
 - **[minor] Viscoacoustic sensor traces support fallible preallocation.**

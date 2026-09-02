@@ -44,6 +44,7 @@ pub use thermal_acoustic::{
     WgpuThermalAcousticSolverProvider,
 };
 
+use crate::backend::provider::map_hephaestus_error;
 use hephaestus_core::{DeviceFeature, DeviceLimits, DevicePreference};
 use hephaestus_wgpu::WgpuDevice;
 use kwavers_core::error::{KwaversError, KwaversResult};
@@ -95,8 +96,9 @@ where
     ///
     /// # Errors
     ///
-    /// Returns a system resource error when the provider cannot satisfy the
-    /// requested device preference, optional features, or limits.
+    /// `SystemError::GpuNotAvailable` when this host has no compatible
+    /// accelerator adapter; `KwaversError::GpuError` when a present adapter
+    /// cannot satisfy the requested preference, optional features, or limits.
     pub fn acquire_with_requirements(
         label: &str,
         device_preference: DevicePreference,
@@ -105,11 +107,7 @@ where
     ) -> KwaversResult<Self> {
         let provider =
             P::try_acquire_device(label, device_preference, optional_features, required_limits)
-                .map_err(|e| {
-                    KwaversError::System(kwavers_core::error::SystemError::ResourceUnavailable {
-                        resource: format!("GPU device: {e}"),
-                    })
-                })?;
+                .map_err(|error| map_hephaestus_error("GPU device", error))?;
 
         Ok(Self::from_provider(provider))
     }

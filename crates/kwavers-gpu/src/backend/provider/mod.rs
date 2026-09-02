@@ -6,6 +6,7 @@ mod wgpu;
 #[cfg(feature = "cuda-provider")]
 mod cuda;
 
+pub(crate) use shared::map_hephaestus_error;
 pub use shared::{
     ElementWiseMultiplyProvider, GpuComputeProvider, GpuKernelProvider, GpuProviderBackend,
     SpatialDerivativeProvider,
