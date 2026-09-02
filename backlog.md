@@ -78,6 +78,13 @@
   as `9c33b4af1ac44ba43e4d26eaf9cb215218db248e`; this consumer pin update changes
   no production code, benchmark input, timed region, confidence rule, or
   timeout. Exact-head recollection remains pending.
+- **Executable-scope correction:** exact-head run `33439956718` proved
+  `performance_baseline` and `simd_field_ops` byte-identical across base and
+  candidate; only `critical_path_benchmarks` differed. The workflow nevertheless
+  remeasured all three targets and rejected an unrelated byte-identical
+  `simd_field_operations/multiply/10000` result. The candidate now passes only
+  hash-different target names to the unchanged four-pair instrument; hosted
+  recollection remains pending.
 
 ## KW-PSTD-SOURCE-ACTIVITY-CACHE — Retain warm source-step maps [patch] [perf] — complete
 

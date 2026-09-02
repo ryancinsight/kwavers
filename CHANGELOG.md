@@ -171,6 +171,12 @@
 
 ### Fixed
 
+- **Benchmark regression scope follows executable identity.** The replicated
+  Criterion jobs now measure only merge-critical targets whose base and
+  candidate executables differ. Byte-identical targets no longer contribute
+  unrelated statistical failures, and a one-target production change no
+  longer spends four hosted pairs remeasuring the other two targets.
+
 - **FDTD time-step orchestration now applies velocity sources under both
   temporal schemes.** Yoshida's fourth-order composition previously returned
   before the once-per-step velocity-source phase. Debug builds also avoid a
