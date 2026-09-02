@@ -163,7 +163,6 @@ dependencies = [
  "apollo-leto-interop",
  "bytemuck",
  "eunomia",
- "half",
  "hermes-simd",
  "leto",
  "leto-ops",
@@ -735,6 +734,7 @@ dependencies = [
  "coeus-sparse",
  "coeus-tensor",
  "leto-ops",
+ "mnemosyne-memory",
  "smallvec",
  "thiserror 2.0.20",
 ]
@@ -5077,6 +5077,7 @@ dependencies = [
  "coeus-tensor",
  "eunomia",
  "gaia-mesh",
+ "mnemosyne-memory",
  "moirai-runtime",
  "rand 0.9.5",
  "ritk-annotation",
@@ -5336,6 +5337,7 @@ dependencies = [
  "coeus-tensor",
  "leto",
  "leto-ops",
+ "mnemosyne-memory",
  "moirai-runtime",
  "ritk-core",
  "ritk-filter",
@@ -7313,8 +7315,12 @@ dependencies = [
 ]
 
 [[patch.unused]]
-name = "harmonia"
-version = "0.1.0"
+name = "hephaestus-metal"
+version = "0.19.0"
+
+[[patch.unused]]
+name = "hephaestus-rocm"
+version = "0.19.0"
 
 [[patch.unused]]
 name = "apollo-nufft"
@@ -7325,19 +7331,15 @@ name = "apollo-sht"
 version = "0.7.0"
 
 [[patch.unused]]
-name = "horae"
+name = "asclepius-coeus"
 version = "0.1.0"
 
 [[patch.unused]]
-name = "hephaestus-metal"
-version = "0.19.0"
+name = "harmonia"
+version = "0.1.0"
 
 [[patch.unused]]
-name = "hephaestus-rocm"
-version = "0.19.0"
-
-[[patch.unused]]
-name = "asclepius-coeus"
+name = "horae"
 version = "0.1.0"
 
 [[patch.unused]]
