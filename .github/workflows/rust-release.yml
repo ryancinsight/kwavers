@@ -22,7 +22,26 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # The blocking public-surface verdict belongs to the release: the ci
+  # workflow calls the shared gate informationally on PRs, and a
+  # default-branch push must not compare against the published baseline
+  # (atlas ATLAS-SEMVER-GATE-MAIN-PUSH-RED). `release-gate` declares the
+  # release intent this workflow's own event cannot carry.
+  semver:
+    name: SemVer gate (release)
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      startsWith(github.event.release.tag_name, 'crate-')
+    uses: ryancinsight/atlas/.github/workflows/semver-gate.yml@da9d549bc50dbb9c4e1d18dca8f37d17059098cb
+    with:
+      release-gate: true
+      package: kwavers-alloc-probe,kwavers-analysis,kwavers-boundary,kwavers-core,kwavers-diagnostics,kwavers-driver,kwavers-field,kwavers-gpu,kwavers-grid,kwavers-imaging,kwavers-math,kwavers-medium,kwavers-mesh,kwavers-phantom,kwavers-physics,kwavers-receiver,kwavers-signal,kwavers-simulation,kwavers-solver,kwavers-source,kwavers-therapy,kwavers-transducer,kwavers
+      rust-toolchain: "1.97.1"
+    permissions:
+      contents: read
+
   publish:
+    needs: semver
     # Gate stays here: the shared validate job has no prefix check and fails
     # closed, so a legacy tag would go from a silent skip to a red run.
     if: >-
