@@ -227,6 +227,13 @@
 
 ### Changed
 
+- **GPU consumer test builds share one Cargo graph.** The canonical
+  `cargo test-gpu-consumers` gate selects the complete GPU-enabled
+  `kwavers-simulation` and `kwavers-python` library-test union in one Nextest
+  invocation. This removes repeated compilation of their common dependency
+  graph when both consumers are in scope without changing features, tests,
+  assertions, profiles, or timeout policy.
+
 - **[patch] The complete Criterion smoke links four plotting-enabled harnesses
   instead of twenty.** Seventeen non-merge-critical benchmark groups now share
   `benchmark_suite`; the three merge-critical executables and the PINN/GPU-only

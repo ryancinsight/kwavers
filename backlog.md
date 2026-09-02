@@ -336,20 +336,81 @@
 - **Delivered:** source `41576260e`, PR #670 merge `fb24b26d4`; both temporal schemes inject velocity sources once, and source-free debug phases avoid duplicate full-field scans.
 - **Evidence:** independent review GREEN, release regression and warning-denied solver Clippy passed; current-main analytical source plus unchanged CPML regressions pass 2/2 in 14.649 s at `c4170253f` under the existing Nextest bounds.
 
-## KW-SIM-TEST-COMPILE-GRAPH — Reduce simulation test build latency [patch] [perf] — todo
+## KW-CI-DRAFT-PR-GATING-2026-08-30 — Skip draft pull-request runners [patch] [ci] — review
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-SIM-TEST-COMPILE-GRAPH | Reduce the cold compile/link cost of the GPU-enabled simulation and Python test harnesses while retaining all value-semantic tests. | [patch] [perf] | todo | unowned | `kwavers-simulation` and `kwavers-python` dependency/feature graphs, test-only imports, and build-timing instrumentation |
+| KW-CI-DRAFT-PR-GATING-2026-08-30 | Prevent draft pull requests from consuming hosted runners while preserving every ready-PR and push verification contract. | [patch] [ci] | review | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | Pull-request job predicates in the seven PR-triggered workflows; normalized workflow and event-contract tests; PM evidence |
 
-- **Evidence:** `cargo nextest run --offline -p kwavers-simulation --features
-  gpu` spent 2m37s compiling the transitive graph, then executed all 100 tests
-  in 0.617s. The matching GPU-enabled Python run spent 2m15s compiling, then
-  executed all 21 tests in 1.661s. Test runtime is not the bottleneck.
-- **Acceptance:** compiler timing attributes the dominant crates and link work;
-  the same 100 simulation and 21 Python tests and assertions remain; no private
-  target cache, feature bypass, workload reduction, or timeout increase; cold
-  controlled reruns are materially below the 2m37s and 2m15s baselines.
+- **Entry evidence:** opening draft PR #675 at exact head `04b42089b`
+  launched Architecture Validation `33343792381`, CI `33343792379`, Legacy
+  Migration Audit `33343792370`, and benchmark regression `33343792376`.
+  Those runs were cancelled and the draft closed without deleting its branch.
+- **Acceptance:** draft `opened`, `synchronize`, and `reopened` events schedule
+  no runner-backed job; direct non-draft opens and `ready_for_review` retain all
+  existing jobs; push and manual-dispatch behavior is unchanged. Preserve every
+  path filter, command, matrix, cache key, feature, workload, assertion, and
+  timeout. Existing job conditions must compose with the draft predicate.
+- **Non-goals:** no workflow consolidation, job deletion, command change, or
+  timeout adjustment in this increment.
+- **Implementation:** all seven workflows retain the default pull-request
+  activities and add `ready_for_review`; independent/root jobs reject draft
+  events. CI dependents inherit the guarded lockfile root, while benchmark
+  regression preserves its existing pair predicate and composes the draft
+  condition with the `always()` aggregator.
+- **Local evidence:** PyYAML parses every candidate workflow. Removing only the
+  new activity lists and draft predicates produces structures identical to
+  `HEAD`; all 28 jobs either carry the predicate or depend transitively on a
+  guarded root. The event truth table admits ready PRs, pushes, and manual
+  dispatches while rejecting draft PRs; `git diff --check` passes.
+- **Hosted evidence:** source commit `8b1c6ab5f`; reopening draft PR #675
+  produced skipped runs `33344050803`, `33344051151`, `33344050744`,
+  `33344050760`, `33344050776`, `33344050790`, and `33344050751`. GitHub
+  reports all 28 repository jobs as skipped; no runner command started.
+- **Remaining evidence:** the `ready_for_review` event is statically present in
+  every workflow and the non-draft truth-table branch is green, but its hosted
+  execution remains coupled to compile-graph acceptance before PR #675 may
+  leave draft. That ready-event collection remains.
+- **Independent review:** GREEN for exact range `04b42089b..e27c2a372`.
+  Parsed normalization finds only the seven activity lists and 16 direct draft
+  predicates; all remaining jobs inherit a guarded root, and all 28 hosted jobs
+  at source `8b1c6ab5f` are independently confirmed skipped. `actionlint`
+  remains unavailable locally.
+- **Lease:** none; source is committed and hosted draft behavior is collected.
+
+## KW-SIM-TEST-COMPILE-GRAPH — Reduce simulation test build latency [patch] [perf] — in progress
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-SIM-TEST-COMPILE-GRAPH | Reduce the cold compile/link cost of the GPU-enabled simulation and Python test harnesses while retaining all value-semantic tests. | [patch] [perf] | in progress | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `kwavers-simulation` and `kwavers-python` dependency/feature graphs, test-ID census, build-timing instrumentation, focused CI/PM evidence |
+
+- **Entry evidence:** isolated cold runs spent 2m37s compiling the GPU-enabled
+  simulation graph and 2m15s compiling the GPU-enabled Python graph; their
+  actual test execution took 0.617s and 1.661s. Cargo package attribution found
+  431 of 444 Python normal/dev packages in the simulation graph, so separate
+  invocations rebuild the shared graph instead of paying for distinct tests.
+- **Current exact selection:** isolated `cargo nextest list` reports 107
+  simulation IDs and 21 Python IDs. The combined selection reports exactly
+  their 128-ID set union with no additions or omissions. The canonical alias
+  compiled the selected graph in 1m28s on the shared Windows target, then
+  passed 127/127 runnable tests with one declared skip in 0.977s.
+- **Implementation:** `.cargo/config.toml` now owns
+  `cargo test-gpu-consumers`, one Nextest invocation over both packages
+  and their existing GPU features. Repeated feature forwarding is already
+  unioned by Cargo, so no manifest surgery is justified by this evidence.
+- **Candidate:** source and local verification commit `5966800ba`; exact
+  combined-gate output is 127 passed, one skipped after a 1m28s shared-target
+  build. Standalone locked/offline metadata and the 91-source lock guard pass.
+- **Acceptance:** preserve the exact 128-ID union, features, assertions,
+  profile, cache policy, and timeout bounds. On two fresh equivalent four-core
+  Linux runners, the combined cold compile must not exceed 181s; otherwise
+  reject consolidation and use Cargo timings to select one dominant unit.
+- **Remaining evidence:** controlled cold compile timings cannot be collected
+  from the shared warm target without deleting shared derived state or forking
+  the one-cache policy. Fresh-run confirmation and compiler critical-path/link
+  attribution remain open; no timing reduction is claimed from the warm run.
+- **Lease:** Codex owns fresh-run timing collection and critical-path/link
+  attribution; no source region is leased while that evidence runs.
 
 ## ✅ KW-INTEGRATION-FAILURE-DIAGNOSTICS — Preserve failed-test output [patch] — done 2026-09-02
 
