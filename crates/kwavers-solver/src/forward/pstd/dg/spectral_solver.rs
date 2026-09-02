@@ -161,6 +161,11 @@ impl RegionPSTDSolver {
     }
 
     /// Create a new spectral solver with specified wave speed
+    ///
+    /// # Panics
+    ///
+    /// Panics when a grid dimension is zero: the FFT plan shape validates at
+    /// construction, and a zero extent has no transform.
     pub fn with_wave_speed(order: usize, grid: Arc<Grid>, wave_speed: f64) -> Self {
         let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
         let (kx, ky, kz) = compute_wavenumbers(&grid);
@@ -185,7 +190,9 @@ impl RegionPSTDSolver {
             wave_speed,
             prev_field,
             has_prev_field: false,
-            fft: Fft3d::new(Shape3D { nx, ny, nz }),
+            fft: Fft3d::new(
+                Shape3D::new(nx, ny, nz).expect("invariant: grid dimensions are non-zero"),
+            ),
             field_hat,
             lap_hat,
             scratch_hat,

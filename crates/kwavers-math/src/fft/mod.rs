@@ -30,10 +30,17 @@ pub type Fft3d = FftPlan3D<f64>;
 /// `PlanCacheProvider` trait (which replaced the removed global `get_fft_for_grid`
 /// free function). Resolves to the per-scalar thread-local + global plan cache that
 /// `f64::get_3d_plan` maintains, so repeated calls at one shape reuse the plan.
+///
+/// # Panics
+///
+/// Panics when a grid dimension is zero: the FFT plan shape validates at
+/// construction, and a zero extent has no transform.
 #[inline]
 #[must_use]
 pub fn get_fft_for_grid(nx: usize, ny: usize, nz: usize) -> Arc<Fft3d> {
-    <f64 as PlanCacheProvider>::get_3d_plan(Shape3D { nx, ny, nz })
+    <f64 as PlanCacheProvider>::get_3d_plan(
+        Shape3D::new(nx, ny, nz).expect("invariant: grid dimensions are non-zero"),
+    )
 }
 
 /// Zero-sized facade preserving the `FFT_CACHE_1D.get_or_create(shape)` call surface.
@@ -145,16 +152,22 @@ pub fn ifft_1d_complex_inplace(data: &mut Array1<Complex64>) {
 /// This preserves the Kwavers `eunomia::Complex64` boundary while Apollo
 /// owns Leto/eunomia-native execution internally.
 pub fn fft_1d_complex_slice_inplace(data: &mut [Complex64]) {
-    <f64 as PlanCacheProvider>::get_1d_plan(Shape1D { n: data.len() })
-        .forward_complex_slice_inplace(data);
+    let Ok(shape) = Shape1D::new(data.len()) else {
+        // A zero-length transform has nothing to transform.
+        return;
+    };
+    <f64 as PlanCacheProvider>::get_1d_plan(shape).forward_complex_slice_inplace(data);
 }
 
 /// Inverse 1-D complex FFT over a dense slice.
 ///
 /// This is the slice counterpart of [`ifft_1d_complex_inplace`].
 pub fn ifft_1d_complex_slice_inplace(data: &mut [Complex64]) {
-    <f64 as PlanCacheProvider>::get_1d_plan(Shape1D { n: data.len() })
-        .inverse_complex_slice_inplace(data);
+    let Ok(shape) = Shape1D::new(data.len()) else {
+        // A zero-length transform has nothing to transform.
+        return;
+    };
+    <f64 as PlanCacheProvider>::get_1d_plan(shape).inverse_complex_slice_inplace(data);
 }
 
 /// Forward 2-D FFT of a real Leto array.

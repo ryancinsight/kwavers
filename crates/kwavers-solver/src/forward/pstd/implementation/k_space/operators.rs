@@ -122,12 +122,19 @@ impl PSTDKSOperators {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
+    ///
+    /// # Panics
+    ///
+    /// Panics when a k-space grid dimension is zero: the FFT plan shape validates at
+    /// construction, and a zero extent has no transform.
     #[must_use]
     pub fn new(k_grid: PSTDKSGrid) -> Self {
         let (nx, ny, nz) = k_grid.dimensions();
         Self {
             k_grid,
-            fft_processor: std::sync::Arc::new(Fft3d::new(Shape3D { nx, ny, nz })),
+            fft_processor: std::sync::Arc::new(Fft3d::new(
+                Shape3D::new(nx, ny, nz).expect("invariant: k-space grid dimensions are non-zero"),
+            )),
             p_prev: None,
             wave_coeff: None,
         }
