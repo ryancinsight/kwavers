@@ -1,4 +1,4 @@
-# 127. Retain displacement-only SWE history
+# ADR 127: Retain displacement-only SWE history
 
 - Status: Accepted
 - Date: 2026-08-30

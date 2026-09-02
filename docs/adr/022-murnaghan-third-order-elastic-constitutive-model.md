@@ -1,4 +1,4 @@
-# ADR 022 — Murnaghan Third-Order Elastic Constitutive Model
+# ADR 022: Murnaghan Third-Order Elastic Constitutive Model
 
 **Status:** Accepted (constitutive core); small-on-large tensor and time-domain PDE staged
 **Change class:** [major] (new physics constitutive model; foundational layer for nonlinear

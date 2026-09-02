@@ -1,4 +1,4 @@
-# 114. Type sonoluminescence emission components at the Aequitas boundary
+# ADR 114: Type sonoluminescence emission components at the Aequitas boundary
 
 - Status: Accepted (retroactive)
 - Date: 2026-08-19

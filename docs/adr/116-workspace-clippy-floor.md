@@ -1,4 +1,4 @@
-# 116. One workspace clippy floor, and which of the two candidates it is
+# ADR 116: One workspace clippy floor, and which of the two candidates it is
 
 - Status: Accepted
 - Date: 2026-08-20

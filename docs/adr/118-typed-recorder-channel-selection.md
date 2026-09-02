@@ -1,4 +1,4 @@
-# 118. Typed recorder channel selection
+# ADR 118: Typed recorder channel selection
 
 - Status: Accepted
 - Date: 2026-08-21

@@ -1,4 +1,4 @@
-# ADR 003 — Signal processing migrated to the analysis layer
+# ADR 003: Signal processing migrated to the analysis layer
 
 - **Status:** Accepted
 - **Date:** 2026-01-09 · **Audited:** 2026-06-03

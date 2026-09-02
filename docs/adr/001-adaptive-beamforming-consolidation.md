@@ -1,4 +1,4 @@
-# ADR 001 — Adaptive-beamforming consolidation
+# ADR 001: Adaptive-beamforming consolidation
 
 - **Status:** Accepted
 - **Date:** 2025-11-03 · **Audited:** 2026-06-03

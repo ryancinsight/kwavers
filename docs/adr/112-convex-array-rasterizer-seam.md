@@ -1,4 +1,4 @@
-# 112. Wiring the convex array: orientation seam and angle units
+# ADR 112: Wiring the convex array: orientation seam and angle units
 
 - Status: Accepted
 - Date: 2026-08-19

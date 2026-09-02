@@ -1,4 +1,4 @@
-# Select FFT execution at the solver boundary
+# ADR 125: Select FFT execution at the solver boundary
 
 - Status: Accepted
 - Date: 2026-08-26

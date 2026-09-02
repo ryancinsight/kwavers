@@ -1,4 +1,4 @@
-# ADR 006 — Workspace architecture for PyO3 Python bindings
+# ADR 006: Workspace architecture for PyO3 Python bindings
 
 - **Status:** Accepted
 - **Date:** 2026-02-04 · **Audited:** 2026-06-03

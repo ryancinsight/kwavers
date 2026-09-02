@@ -1,4 +1,4 @@
-# ADR 009 — pykwavers elastic-wave bindings
+# ADR 009: pykwavers elastic-wave bindings
 
 - **Status:** Accepted
 - **Date:** 2026-05-05 · **Audited:** 2026-06-03

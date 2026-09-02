@@ -1,4 +1,4 @@
-# ADR 016 — Exact discrete-adjoint FWI via a self-adjoint second-order acoustic engine
+# ADR 016: Exact discrete-adjoint FWI via a self-adjoint second-order acoustic engine
 
 **Status:** Accepted
 **Change class:** [major] (new forward/adjoint engine for time-domain FWI; additive — existing FDTD/PSTD paths retained)

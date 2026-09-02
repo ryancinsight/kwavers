@@ -1,4 +1,4 @@
-# ADR 095 — Aequitas rectangular-transducer quantities
+# ADR 095: Aequitas rectangular-transducer quantities
 
 Status: Accepted — 2026-08-02
 

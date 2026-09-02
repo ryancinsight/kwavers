@@ -1,4 +1,4 @@
-# 106. Rigid walls by even reflection, with the divergence defined as −Gᵀ
+# ADR 106: Rigid walls by even reflection, with the divergence defined as −Gᵀ
 
 - Status: Accepted
 - Date: 2026-08-13

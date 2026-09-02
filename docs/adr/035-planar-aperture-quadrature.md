@@ -1,4 +1,4 @@
-# ADR-035: Planar aperture quadrature
+# ADR 035: Planar aperture quadrature
 
 ## Status
 

@@ -1,3 +1,5 @@
+# ADR 040: GPU PSTD peak-pressure output
+
 ## Status
 
 Accepted for the next `kwavers-gpu` major release.

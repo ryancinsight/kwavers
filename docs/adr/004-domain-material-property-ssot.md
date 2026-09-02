@@ -1,4 +1,4 @@
-# ADR 004 — Domain material-property SSOT (composition pattern)
+# ADR 004: Domain material-property SSOT (composition pattern)
 
 - **Status:** Accepted
 - **Date:** 2026-01-12 · **Audited:** 2026-06-03

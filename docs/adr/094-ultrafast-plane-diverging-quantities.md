@@ -1,4 +1,4 @@
-# ADR 094 — Aequitas ultrafast plane and diverging-wave quantities
+# ADR 094: Aequitas ultrafast plane and diverging-wave quantities
 
 Status: Accepted — 2026-08-02
 

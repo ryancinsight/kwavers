@@ -1,4 +1,4 @@
-# ADR 002 — Sensor array-processing consolidation
+# ADR 002: Sensor array-processing consolidation
 
 - **Status:** Accepted
 - **Date:** 2025-11-12 · **Audited:** 2026-06-03 · **Revised:** 2026-08-02

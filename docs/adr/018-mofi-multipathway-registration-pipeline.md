@@ -1,4 +1,4 @@
-# ADR 018 — Multi-pathway skull-registration pipeline (beyond rigid MOFI)
+# ADR 018: Multi-pathway skull-registration pipeline (beyond rigid MOFI)
 
 **Status:** Accepted
 **Change class:** [minor] (additive: new drivers + public API; no breaking changes)

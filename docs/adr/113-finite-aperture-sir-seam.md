@@ -1,4 +1,4 @@
-# 113. Finite-aperture diffraction in RF synthesis: an injected SIR seam
+# ADR 113: Finite-aperture diffraction in RF synthesis: an injected SIR seam
 
 - Status: Accepted
 - Date: 2026-08-19

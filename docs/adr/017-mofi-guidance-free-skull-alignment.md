@@ -1,4 +1,4 @@
-# ADR 017 — MOFI: guidance-free rigid skull-template alignment for FWI
+# ADR 017: MOFI: guidance-free rigid skull-template alignment for FWI
 
 **Status:** Accepted
 **Change class:** [minor] (additive: new module + public API; no breaking changes)

@@ -1,4 +1,4 @@
-# ADR 046 — Hyperion optical-transport ownership
+# ADR 046: Hyperion optical-transport ownership
 
 - **Status:** Accepted
 - **Date:** 2026-07-21

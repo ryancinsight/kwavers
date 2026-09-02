@@ -1,4 +1,4 @@
-# ADR 023 — Reference-fidelity transient bilayer-sonophore dynamics
+# ADR 023: Reference-fidelity transient bilayer-sonophore dynamics
 
 **Status:** Proposed — in-session differential audit done (items 1, evidence below) and the
 multi-amplitude validation harness committed (`bls_dynamic_deflection_strength_curve_vs_plaksin_fig1`);

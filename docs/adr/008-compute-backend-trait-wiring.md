@@ -1,4 +1,4 @@
-# ADR 008 — Wire the `ComputeBackend` trait; gate the GPU submodule
+# ADR 008: Wire the `ComputeBackend` trait; gate the GPU submodule
 
 - **Status:** Accepted
 - **Date:** 2026-05-05 · **Audited:** 2026-06-03

@@ -1,4 +1,4 @@
-# ADR 096 — Aequitas beamforming configuration quantities
+# ADR 096: Aequitas beamforming configuration quantities
 
 Status: Accepted — 2026-08-02
 

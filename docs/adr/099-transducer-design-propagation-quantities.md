@@ -1,4 +1,4 @@
-# ADR 099 — Aequitas transducer design and propagation quantities
+# ADR 099: Aequitas transducer design and propagation quantities
 
 Status: Accepted — 2026-08-03
 

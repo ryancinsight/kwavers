@@ -1,4 +1,4 @@
-# 115. A transmission-acquisition seam for frequency-domain FWI
+# ADR 115: A transmission-acquisition seam for frequency-domain FWI
 
 - Status: Accepted
 - Date: 2026-08-19

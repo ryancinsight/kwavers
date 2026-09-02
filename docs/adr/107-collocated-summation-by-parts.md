@@ -1,4 +1,4 @@
-# 107. Summation by parts for the collocated rigid wall
+# ADR 107: Summation by parts for the collocated rigid wall
 
 - Status: Accepted
 - Date: 2026-08-13

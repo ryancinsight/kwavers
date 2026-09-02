@@ -1,4 +1,4 @@
-# ADR 019 — Marchenko redatuming + Wasserstein objective (prior-less FWI)
+# ADR 019: Marchenko redatuming + Wasserstein objective (prior-less FWI)
 
 **Status:** Accepted (kernel + objective delivered; quantitative Marchenko validation = staged milestone)
 **Change class:** [minor] (additive module + objective; experimental redatum gated by docs)

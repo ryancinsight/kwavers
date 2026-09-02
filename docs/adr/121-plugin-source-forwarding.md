@@ -1,4 +1,4 @@
-# ADR 121 — Plugins receive the sources they are given
+# ADR 121: Plugins receive the sources they are given
 
 - **Status:** Accepted
 - **Board item:** `KW-PSTD-PLUGIN-SOURCES-DROPPED`

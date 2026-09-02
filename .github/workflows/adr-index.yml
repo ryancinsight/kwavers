@@ -29,9 +29,9 @@ jobs:
   index:
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
     name: ADR index is current
-    # atlas owns the one generator; this call replaces the copy that lived in
-    # scripts/adr-index.py (ATLAS-ADR-INDEX-GUARD-2026-09-01). Permissive: the
-    # canonical-form checks turn on under ATLAS-ADR-FORM-NORMALIZATION-2026-09-02.
-    uses: ryancinsight/atlas/.github/workflows/adr-index-guard.yml@8585a1ade6045b5851b0cc9dab5b08bb75554519
+    # atlas owns the one generator (ATLAS-ADR-FORM-NORMALIZATION-2026-09-02); strict: the ADRs carry the canonical heading form and numbering.
+    uses: ryancinsight/atlas/.github/workflows/adr-index-guard.yml@9062cfc6d78808cf1b7af60ae97f11825a6c8468
     permissions:
       contents: read
+    with:
+      strict: true

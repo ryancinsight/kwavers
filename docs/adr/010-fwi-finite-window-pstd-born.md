@@ -1,4 +1,4 @@
-# ADR 010 — Finite-window PSTD Born forward boundary
+# ADR 010: Finite-window PSTD Born forward boundary
 
 - **Status:** Accepted
 - **Date:** 2026-05-24 · **Audited:** 2026-06-03
