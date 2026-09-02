@@ -15,7 +15,9 @@ use kwavers_math::numerics::operators::{
     CentralDifference2, CentralDifference4, CentralDifference6, DifferentialOperator,
 };
 use kwavers_medium::{CoreMedium, HomogeneousMedium};
+use kwavers_solver::forward::viscoacoustic::ViscoacousticMemorySolver;
 use leto::Array3;
+use std::f64::consts::TAU;
 
 /// Benchmark FDTD finite difference operations (critical inner loop)
 ///
@@ -228,12 +230,55 @@ fn bench_field_operations(c: &mut Criterion) {
     group.finish();
 }
 
+/// Benchmark one viscoacoustic step across equal-volume dimensional regimes.
+///
+/// The one- and two-dimensional cases expose work performed for singleton
+/// axes, while the fully active three-dimensional case is the regression
+/// control. Solver construction and pressure initialization remain outside the
+/// timed region.
+fn bench_viscoacoustic_step(c: &mut Criterion) {
+    const CELL_COUNT: usize = 4_096;
+    const DX: f64 = 1.0e-4;
+    const DT: f64 = 1.0e-8;
+    const RHO: f64 = 1_000.0;
+    const MODULUS: f64 = 2.25e9;
+
+    let mut group = c.benchmark_group("viscoacoustic_step");
+    for (label, shape) in [
+        ("1d", [CELL_COUNT, 1, 1]),
+        ("2d", [64, 64, 1]),
+        ("3d", [16, 16, 16]),
+    ] {
+        let [nx, ny, nz] = shape;
+        let mut solver =
+            ViscoacousticMemorySolver::new(nx, ny, nz, DX, DX, DX, DT, RHO, MODULUS, &[])
+                .expect("benchmark solver parameters are valid");
+        let pressure = Array3::from_shape_fn((nx, ny, nz), |[x, y, z]| {
+            let phase = x as f64 / nx as f64 + y as f64 / ny as f64 + z as f64 / nz as f64;
+            (TAU * phase).sin()
+        });
+        solver
+            .set_pressure(&pressure)
+            .expect("benchmark pressure shape matches solver grid");
+        solver.step();
+
+        group.bench_function(label, |b| {
+            b.iter(|| {
+                black_box(&mut solver).step();
+                black_box(solver.pressure()[[nx / 3, ny / 3, nz / 3]])
+            })
+        });
+    }
+    group.finish();
+}
+
 criterion_group!(
     benches,
     bench_fdtd_derivatives,
     bench_kspace_operators,
     bench_grid_operations,
     bench_medium_access,
-    bench_field_operations
+    bench_field_operations,
+    bench_viscoacoustic_step
 );
 criterion_main!(benches);

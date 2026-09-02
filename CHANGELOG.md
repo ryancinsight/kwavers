@@ -171,6 +171,12 @@
 
 ### Fixed
 
+- **Benchmark regression scope follows executable identity.** The replicated
+  Criterion jobs now measure only merge-critical targets whose base and
+  candidate executables differ. Byte-identical targets no longer contribute
+  unrelated statistical failures, and a one-target production change no
+  longer spends four hosted pairs remeasuring the other two targets.
+
 - **FDTD time-step orchestration now applies velocity sources under both
   temporal schemes.** Yoshida's fourth-order composition previously returned
   before the once-per-step velocity-source phase. Debug builds also avoid a
@@ -220,6 +226,16 @@
   history stays in `docs/MIGRATION.md`. 83 files, comments only, net -176 lines.
 
 ### Changed
+
+- **Viscoacoustic lower-dimensional stepping:** A singleton derivative axis
+  now clears its output directly without staging the real field into complex
+  scratch, dispatching forward and inverse FFTs, or traversing the wavenumber
+  product. The retained scratch remains untouched and finite-field results are
+  bitwise identical to the previous full transform route; non-finite samples
+  no longer contaminate a derivative along an inactive axis. Two paired
+  100-sample Criterion runs over equal 4,096-cell grids measured significant 1-D
+  reductions of 49.3–52.3% and 2-D reductions of 9.1–36.6%; the fully active
+  3-D control had no significant change in either run.
 
 - **[major] Harmonic detection now exposes only controls that affect the
   analysis.** `HarmonicDetectionConfig` removes the inert `fft_window_size`,

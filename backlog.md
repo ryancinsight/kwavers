@@ -59,6 +59,33 @@
 - **Non-goals:** changing spectral arithmetic, source injection, sensor ordering, trace retention semantics, the example workload, or runtime budgets.
 - **Candidate evidence:** exact source `1a6fa7b11` records zero allocations and zero reallocations in both first and reset/repeated 65-step windows and bitwise-equal traces against the unreserved route; the retained regression also measures two unreserved traces at two allocations and ten reallocations and proves non-empty values and lengths survive rejected overflow. Debug Nextest passes 944/944 in 70.529 s (2 skipped); focused release Nextest passes 3/3 in 0.118 s after a 3m09s optimized build; warning-denied library/allocation-test Clippy, Rustdoc, doctests, example check, format, and diff checks pass. `cargo-semver-checks` passes 196/196 under minor. Independent exact-commit re-review is GREEN. The workspace all-target Clippy attempt remains limited by 95 unrelated pre-existing test-target lint failures; hosted collection remains pending.
 
+## KW-VISCOACOUSTIC-INACTIVE-AXIS-2026-08-31 — Skip zero spectral derivatives [patch] [perf] — in progress
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KW-VISCOACOUSTIC-INACTIVE-AXIS-2026-08-31 | Replace length-one viscoacoustic derivative staging, FFT dispatch, and wavenumber traversal with an exact zero fill while preserving retained scratch and values. | [patch] [perf] | review | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | viscoacoustic axis derivative/step path, value tests, existing critical-path Criterion instrument, Rustdoc, CHANGELOG |
+
+- **Lease:** none; source candidate `98000d690` and benchmark instrument `6ca2e8d65` are committed.
+- **Entry evidence:** every viscoacoustic step invoked pressure and velocity derivatives on all three axes. For a length-one periodic axis the only wavenumber is zero, so the derivative is identically zero, but the incumbent helper still traversed the full field around both provider calls. The retained equal-volume Criterion instrument measured 1-D/2-D/3-D entry estimates of 230.93/345.31/276.37 µs and 259.89/363.71/284.99 µs in two 100-sample runs.
+- **Acceptance:** retain one generic derivative helper; establish paired Criterion baselines before mutation; an inactive axis writes positive zeros without touching complex FFT scratch or dispatching a transform; repeated finite nontrivial 1-D and 2-D inactive derivatives remain bitwise equal to the incumbent FFT route, non-finite samples cannot contaminate an inactive derivative, and the existing repeated-step value suites remain green; 3-D arithmetic and provider dispatch remain unchanged; no allocation, workload, benchmark-timed-region, or timeout change.
+- **Stop condition:** reject the production candidate unless controlled paired Criterion time estimates improve materially without regressing the active-axis control or changing values.
+- **Candidate evidence:** the exact singleton-axis differential passes in debug and release and proves finite-field bitwise output identity, positive-zero isolation for NaN/±inf samples, and unchanged retained scratch; all 15 filtered viscoacoustic tests, including the existing warm 65-step allocation ledger, pass with zero allocations/reallocations and bitwise trace parity. Paired candidate estimates were 114.98/281.92/281.57 µs and 127.12/236.63/278.02 µs. Criterion reports significant 1-D reductions of 50.4–52.3% and 49.3–51.8%, significant 2-D reductions of 9.1–13.5% and 33.0–36.6%, and no significant 3-D change (`p=0.40` and `p=0.10`). Production warning-denied Clippy, Rustdoc, doctests, formatting, and diff checks pass; the all-test-target lint gate reaches this module without a diagnostic but remains blocked by 94 pre-existing warnings in unrelated tests. Independent review remains pending.
+- **Hosted correction:** PR #681 run `33433562701` completed all four
+  45-case benchmark pairs with zero regressions and zero universe mismatches,
+  but the aggregate gate falsely rejected all 180 equal-confidence intervals
+  after approximate JSON float parsing rounded the recorded value down by one
+  unit in the last place. Atlas PR #144 merged the exact-roundtrip correction
+  as `9c33b4af1ac44ba43e4d26eaf9cb215218db248e`; this consumer pin update changes
+  no production code, benchmark input, timed region, confidence rule, or
+  timeout. Exact-head recollection remains pending.
+- **Executable-scope correction:** exact-head run `33439956718` proved
+  `performance_baseline` and `simd_field_ops` byte-identical across base and
+  candidate; only `critical_path_benchmarks` differed. The workflow nevertheless
+  remeasured all three targets and rejected an unrelated byte-identical
+  `simd_field_operations/multiply/10000` result. The candidate now passes only
+  hash-different target names to the unchanged four-pair instrument; hosted
+  recollection remains pending.
+
 ## KW-PSTD-SOURCE-ACTIVITY-CACHE — Retain warm source-step maps [patch] [perf] — complete
 
 - **Delivered:** PR #669, source `37f539786`, merge `7e709604b`; retained fixed-size pressure/velocity activity maps remove both warm-run host allocations and reject extent drift before mutation or device work.

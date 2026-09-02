@@ -25,6 +25,7 @@ jobs:
     timeout-minutes: 30
     outputs:
       measurements_required: ${{ steps.artifact_identity.outputs.measurements_required }}
+      changed_targets: ${{ steps.artifact_identity.outputs.changed_targets }}
     env:
       CARGO_TARGET_DIR: ${{ github.workspace }}/target
       PR_BENCH_TARGETS: performance_baseline critical_path_benchmarks simd_field_ops
@@ -163,7 +164,7 @@ jobs:
                       "$(sha256sum "$executable" | cut -d' ' -f1)" \
                       "$name"
                   done \
-                | LC_ALL=C sort > "$output"
+                | LC_ALL=C sort --key=2,2 > "$output"
             fi
 
             mv kwavers-measurement "$revision"
@@ -182,7 +183,20 @@ jobs:
           capture_hashes kwavers-candidate "$candidate_hashes"
           capture_hashes kwavers-baseline "$baseline_hashes"
 
-          if cmp --silent "$baseline_hashes" "$candidate_hashes"; then
+          changed_targets=()
+          while read -r candidate_hash target; do
+            baseline_hash="$(
+              awk -v target="$target" '$2 == target { print $1 }' \
+                "$baseline_hashes"
+            )"
+            if [[ "$candidate_hash" != "$baseline_hash" ]]; then
+              changed_targets+=("$target")
+            fi
+          done < "$candidate_hashes"
+          printf 'changed_targets=%s\n' "${changed_targets[*]}" \
+            >> "$GITHUB_OUTPUT"
+
+          if [[ "${#changed_targets[@]}" -eq 0 ]]; then
             echo "measurements_required=false" >> "$GITHUB_OUTPUT"
             echo "Merge-critical benchmark executables are byte-identical."
           else
@@ -222,7 +236,7 @@ jobs:
       CARGO_TARGET_DIR: ${{ github.workspace }}/target
       FIRST_REVISION: ${{ matrix.first_revision }}
       PAIR_ID: ${{ matrix.pair_id }}
-      PR_BENCH_TARGETS: performance_baseline critical_path_benchmarks simd_field_ops
+      PR_BENCH_TARGETS: ${{ needs.benchmark-smoke.outputs.changed_targets }}
       REPORT_ROOT: ${{ matrix.report_root }}
       SECOND_REVISION: ${{ matrix.second_revision }}
     steps:
@@ -244,7 +258,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: ryancinsight/atlas
-          ref: 1393fd8838f3bcd548959a83daa8d9375e3b03d9
+          ref: 9c33b4af1ac44ba43e4d26eaf9cb215218db248e
           path: atlas-tool
           persist-credentials: false
 
@@ -452,7 +466,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: ryancinsight/atlas
-          ref: 1393fd8838f3bcd548959a83daa8d9375e3b03d9
+          ref: 9c33b4af1ac44ba43e4d26eaf9cb215218db248e
           path: atlas-tool
           persist-credentials: false
 
