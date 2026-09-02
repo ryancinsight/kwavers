@@ -37,7 +37,7 @@
 //! - Yee, K.S. (1966). IEEE TAP 14(3), 302-307. DOI: 10.1109/TAP.1966.1138693
 //! - Taflove & Hagness (2005). Computational Electrodynamics, 3rd ed. Artech House.
 
-use criterion::{black_box, criterion_group, Criterion, Throughput};
+use criterion::{black_box, criterion_group, criterion_main, Criterion, Throughput};
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_solver::forward::fdtd::{FdtdConfig, FdtdSolver};
@@ -252,8 +252,60 @@ fn energy_conservation_benchmark(c: &mut Criterion) {
     });
 }
 
+/// Step-kernel instrument at the regime the integration tests run.
+///
+/// 64³ water, staggered leapfrog at spatial orders 2 (the plane-wave
+/// injection test) and 4 (`FdtdConfig::default()`, the property tests); the
+/// solver is built once and each iteration advances ten steps, so the number
+/// is the per-step cost of `update_velocity` + `update_pressure` alone. The
+/// throughput unit is cell updates.
+fn step_kernel_benchmark(c: &mut Criterion) {
+    let (nx, ny, nz) = (64, 64, 64);
+    let dx = 1e-4;
+    let dt = dx / (1500.0 * 3.0_f64.sqrt()) * 0.95;
+    let steps_per_iteration = 10u64;
+    let grid = Grid::new(nx, ny, nz, dx, dx, dx).expect("Grid creation failed");
+    let medium = HomogeneousMedium::water(&grid);
+    let mut group = c.benchmark_group("fdtd_step_64_cubed");
+    group.throughput(Throughput::Elements(
+        (nx * ny * nz) as u64 * steps_per_iteration,
+    ));
+    group.sample_size(10);
+    group.measurement_time(Duration::from_secs(10));
+    for spatial_order in [2usize, 4] {
+        let mut p_mask = Array3::<f64>::zeros((nx, ny, nz));
+        p_mask[[nx / 2, ny / 2, nz / 2]] = 1.0;
+        let mut p_signal = Array2::<f64>::zeros((1, 1000));
+        p_signal[[0, 0]] = 1.0;
+        let source = GridSource {
+            p_mask: Some(p_mask),
+            p_signal: Some(p_signal),
+            ..Default::default()
+        };
+        let config = FdtdConfig {
+            nt: 1000,
+            dt,
+            spatial_order,
+            ..Default::default()
+        };
+        let mut solver =
+            FdtdSolver::new(config, &grid, &medium, source).expect("Solver creation failed");
+        group.bench_function(format!("order{spatial_order}"), |b| {
+            b.iter(|| {
+                for _ in 0..steps_per_iteration {
+                    solver.step_forward().expect("Step failed");
+                }
+                black_box(solver.fields.p[[nx / 2, ny / 2, nz / 2]])
+            });
+        });
+    }
+    group.finish();
+}
+
 criterion_group!(
     benches,
     fdtd_propagation_benchmark,
-    energy_conservation_benchmark
+    energy_conservation_benchmark,
+    step_kernel_benchmark
 );
+criterion_main!(benches);

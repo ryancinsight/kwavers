@@ -148,72 +148,119 @@ impl StaggeredLeapfrogOperator {
         1.0 / ((dimensions as f64).sqrt() * sum)
     }
 
-    /// Strides and the per-axis geometry for linear indexing.
-    ///
-    /// The arrays are row-major with the last axis contiguous (verified against
-    /// `as_slice`), so an offset of one step along `axis` is a fixed stride.
-    /// Resolving that once per point instead of recomputing a three-index
-    /// address per *tap* is the whole optimization: the address arithmetic, not
-    /// the arithmetic on the values, dominated these kernels (KW-SOL-089).
-    fn linear_geometry(axis: Axis, shape: [usize; 3]) -> ([usize; 3], usize, [usize; 2]) {
-        let strides = [shape[1] * shape[2], shape[2], 1];
-        let index = match axis {
-            Axis::X => 0,
-            Axis::Y => 1,
-            Axis::Z => 2,
-        };
-        let others = match index {
-            0 => [1, 2],
-            1 => [0, 2],
-            _ => [0, 1],
-        };
-        (strides, index, others)
-    }
-
     /// Gradient along `axis`: cell-centred `field` to face-centred `dst`, with
     /// face `i+½` stored at index `i`. Both are grid-shaped.
     ///
     /// Taps outside the grid are reflected about the wall, giving `∂p/∂n = 0`.
     pub fn gradient_into(&self, axis: Axis, field: ArrayView3<'_, f64>, dst: &mut Array3<f64>) {
         let (index, extent, scale) = self.axis_geometry(axis, field.shape(), dst.shape());
-        let halo = self.coefficients.len() as isize;
         let shape = field.shape();
-        let (strides, _, others) = Self::linear_geometry(axis, shape);
-        let stride = strides[index] as isize;
-
         let (Some(source), Some(target)) = (field.as_slice(), dst.as_slice_mut()) else {
             self.gradient_into_indexed(axis, field, dst);
             return;
         };
-
-        for a in 0..shape[others[0]] {
-            for b in 0..shape[others[1]] {
-                let line = a * strides[others[0]] + b * strides[others[1]];
-                for along in 0..extent as usize {
-                    let here = along as isize;
-                    let linear = line + along * strides[index];
-                    let mut sum = 0.0;
-                    if here >= halo - 1 && here + halo < extent {
-                        // No tap can leave the grid, so the mirror never fires
-                        // and every address is `linear ± n·stride`.
-                        let base = linear as isize;
-                        for (offset, &c) in self.coefficients.iter().enumerate() {
-                            let n = offset as isize + 1;
-                            let hi = (base + n * stride) as usize;
-                            let lo = (base + (1 - n) * stride) as usize;
-                            sum += c * (source[hi] - source[lo]);
-                        }
-                    } else {
-                        for (offset, &c) in self.coefficients.iter().enumerate() {
-                            let n = offset as isize + 1;
-                            let hi = line + reflect(here + n, extent) * strides[index];
-                            let lo = line + reflect(here - n + 1, extent) * strides[index];
-                            sum += c * (source[hi] - source[lo]);
-                        }
-                    }
-                    target[linear] = sum * scale;
+        if source.is_empty() {
+            return;
+        }
+        // Row-major: the array is `shape[0]` planes of `shape[1] * shape[2]`
+        // cells, each plane `shape[1]` rows of `shape[2]`; the chunk sizes
+        // divide the length exactly, so no remainder exists to handle.
+        let extent = extent as usize;
+        let plane = shape[1] * shape[2];
+        match index {
+            0 => self.gradient_blocks(source, target, extent, plane, scale),
+            1 => {
+                for (source, target) in source
+                    .chunks_exact(plane)
+                    .zip(target.chunks_exact_mut(plane))
+                {
+                    self.gradient_blocks(source, target, extent, shape[2], scale);
                 }
             }
+            _ => {
+                for (source, target) in source
+                    .chunks_exact(extent)
+                    .zip(target.chunks_exact_mut(extent))
+                {
+                    self.gradient_line(source, target, scale);
+                }
+            }
+        }
+    }
+
+    /// One window of `2·halo` source cells split at `halo` feeds one output
+    /// cell of either operator: `Σₙ cₙ (hi[n−1] − lo[halo−n])`. The gradient's
+    /// window for face `i+½` starts at `i+1−halo`; the divergence's window for
+    /// cell `j` starts at `j−halo` — the transpose shifts the output by one
+    /// cell and changes nothing else. Taps accumulate in ascending `n`, the
+    /// order the indexed reference uses, so the two agree bit for bit.
+    fn window_sum(&self, window: &[f64]) -> f64 {
+        let (lo, hi) = window.split_at(self.coefficients.len());
+        self.coefficients
+            .iter()
+            .zip(hi)
+            .zip(lo.iter().rev())
+            .fold(0.0, |sum, ((&c, &hi), &lo)| sum + c * (hi - lo))
+    }
+
+    /// Gradient along a non-contiguous axis: every output block of `block`
+    /// contiguous cells reads whole source blocks, so the taps zip across the
+    /// faster axes and reflection selects blocks, never cells.
+    fn gradient_blocks(
+        &self,
+        source: &[f64],
+        target: &mut [f64],
+        extent: usize,
+        block: usize,
+        scale: f64,
+    ) {
+        let reach = extent as isize;
+        for (here, out) in target.chunks_exact_mut(block).enumerate() {
+            out.fill(0.0);
+            for (offset, &c) in self.coefficients.iter().enumerate() {
+                let n = offset as isize + 1;
+                let hi = reflect(here as isize + n, reach) * block;
+                let lo = reflect(here as isize - n + 1, reach) * block;
+                for ((out, &hi), &lo) in out
+                    .iter_mut()
+                    .zip(&source[hi..hi + block])
+                    .zip(&source[lo..lo + block])
+                {
+                    *out += c * (hi - lo);
+                }
+            }
+            for out in out.iter_mut() {
+                *out *= scale;
+            }
+        }
+    }
+
+    /// Gradient along the contiguous axis: interior cells read sliding
+    /// windows, the `halo − 1` leading and `halo` trailing cells reflect.
+    fn gradient_line(&self, source: &[f64], target: &mut [f64], scale: f64) {
+        let halo = self.coefficients.len();
+        let extent = source.len();
+        let interior = if extent >= 2 * halo {
+            (halo - 1)..(extent - halo)
+        } else {
+            0..0
+        };
+        for (out, window) in target[interior.clone()]
+            .iter_mut()
+            .zip(source.windows(2 * halo))
+        {
+            *out = self.window_sum(window) * scale;
+        }
+        let reach = extent as isize;
+        for here in (0..extent).filter(|here| !interior.contains(here)) {
+            let mut sum = 0.0;
+            for (offset, &c) in self.coefficients.iter().enumerate() {
+                let n = offset as isize + 1;
+                let hi = source[reflect(here as isize + n, reach)];
+                let lo = source[reflect(here as isize - n + 1, reach)];
+                sum += c * (hi - lo);
+            }
+            target[here] = sum * scale;
         }
     }
 
@@ -250,39 +297,100 @@ impl StaggeredLeapfrogOperator {
     /// conservation does not depend on getting a boundary case right.
     pub fn divergence_into(&self, axis: Axis, field: ArrayView3<'_, f64>, dst: &mut Array3<f64>) {
         let (index, extent, scale) = self.axis_geometry(axis, field.shape(), dst.shape());
-        let halo = self.coefficients.len() as isize;
         let shape = field.shape();
-        let (strides, _, others) = Self::linear_geometry(axis, shape);
-        let stride = strides[index] as isize;
         dst.fill(0.0);
 
         let (Some(source), Some(target)) = (field.as_slice(), dst.as_slice_mut()) else {
             self.divergence_into_indexed(axis, field, dst);
             return;
         };
+        if source.is_empty() {
+            return;
+        }
+        let extent = extent as usize;
+        let plane = shape[1] * shape[2];
+        match index {
+            0 => self.divergence_blocks(source, target, extent, plane, scale),
+            1 => {
+                for (source, target) in source
+                    .chunks_exact(plane)
+                    .zip(target.chunks_exact_mut(plane))
+                {
+                    self.divergence_blocks(source, target, extent, shape[2], scale);
+                }
+            }
+            _ => {
+                for (source, target) in source
+                    .chunks_exact(extent)
+                    .zip(target.chunks_exact_mut(extent))
+                {
+                    self.divergence_line(source, target, scale);
+                }
+            }
+        }
+    }
 
-        for a in 0..shape[others[0]] {
-            for b in 0..shape[others[1]] {
-                let line = a * strides[others[0]] + b * strides[others[1]];
-                for along in 0..extent as usize {
-                    let here = along as isize;
-                    let linear = line + along * strides[index];
-                    let value = source[linear] * scale;
-                    if here >= halo - 1 && here + halo < extent {
-                        let base = linear as isize;
-                        for (offset, &c) in self.coefficients.iter().enumerate() {
-                            let n = offset as isize + 1;
-                            target[(base + n * stride) as usize] -= c * value;
-                            target[(base + (1 - n) * stride) as usize] += c * value;
-                        }
-                    } else {
-                        for (offset, &c) in self.coefficients.iter().enumerate() {
-                            let n = offset as isize + 1;
-                            target[line + reflect(here + n, extent) * strides[index]] -= c * value;
-                            target[line + reflect(here - n + 1, extent) * strides[index]] +=
-                                c * value;
-                        }
-                    }
+    /// Transpose along a non-contiguous axis: each source block scatters into
+    /// the two reflected target blocks per tap, in the reference's order, so
+    /// every cell accumulates the same terms in the same sequence.
+    fn divergence_blocks(
+        &self,
+        source: &[f64],
+        target: &mut [f64],
+        extent: usize,
+        block: usize,
+        scale: f64,
+    ) {
+        let reach = extent as isize;
+        for (here, value) in source.chunks_exact(block).enumerate() {
+            for (offset, &c) in self.coefficients.iter().enumerate() {
+                let n = offset as isize + 1;
+                let hi = reflect(here as isize + n, reach) * block;
+                for (out, &value) in target[hi..hi + block].iter_mut().zip(value) {
+                    *out -= c * (value * scale);
+                }
+                let lo = reflect(here as isize - n + 1, reach) * block;
+                for (out, &value) in target[lo..lo + block].iter_mut().zip(value) {
+                    *out += c * (value * scale);
+                }
+            }
+        }
+    }
+
+    /// Transpose along the contiguous axis. A cell `halo` or more from either
+    /// wall receives only unreflected taps (a reflected tap `reflect(k+n)` or
+    /// `reflect(k+1−n)` lands within `halo − 1` of the wall it crossed), so
+    /// the interior is the transpose in gather form — the same window sum as
+    /// the gradient, shifted by one cell. Wall cells keep the scatter: only
+    /// sources within `2·halo` of a wall reach them, and the interior guard
+    /// stops those sources from double-counting into gathered cells.
+    fn divergence_line(&self, source: &[f64], target: &mut [f64], scale: f64) {
+        let halo = self.coefficients.len();
+        let extent = source.len();
+        let interior = if extent >= 2 * halo {
+            halo..(extent - halo)
+        } else {
+            0..0
+        };
+        for (out, window) in target[interior.clone()]
+            .iter_mut()
+            .zip(source.windows(2 * halo))
+        {
+            *out = self.window_sum(window) * scale;
+        }
+        let reach = extent as isize;
+        let near_a_wall = |here: &usize| *here < 2 * halo || *here + 2 * halo >= extent;
+        for here in (0..extent).filter(near_a_wall) {
+            let value = source[here] * scale;
+            for (offset, &c) in self.coefficients.iter().enumerate() {
+                let n = offset as isize + 1;
+                let hi = reflect(here as isize + n, reach);
+                if !interior.contains(&hi) {
+                    target[hi] -= c * value;
+                }
+                let lo = reflect(here as isize - n + 1, reach);
+                if !interior.contains(&lo) {
+                    target[lo] += c * value;
                 }
             }
         }

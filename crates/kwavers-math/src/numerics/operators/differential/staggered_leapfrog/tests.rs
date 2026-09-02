@@ -359,3 +359,49 @@ fn the_far_face_is_rigid_without_being_forced() {
         );
     }
 }
+
+/// The slice kernels against the indexed reference, per axis and order, on
+/// odd extents that leave every wall case (`extent < 2·halo` included)
+/// reachable. The gradient accumulates the same terms in the same order, so
+/// it agrees bit for bit; the divergence gathers its interior where the
+/// reference scatters, so it agrees to round-off: `2·halo` terms each bounded
+/// by `|cₙ|·max|u|/Δ`, hence `2·halo·ε·Σ|cₙ|·max|u|/Δ` with a factor-two
+/// margin for the final scaling.
+#[test]
+fn slice_kernels_match_the_indexed_reference() {
+    for (shape, spacing) in [
+        ([9usize, 7, 6], [1.5e-4, 3.0e-4, 7.0e-4]),
+        ([3, 5, 2], [2.0e-4; 3]),
+    ] {
+        for order in [2usize, 4, 6, 8] {
+            let op = StaggeredLeapfrogOperator::new(order, spacing[0], spacing[1], spacing[2])
+                .expect("valid order and spacings");
+            let field = seeded(shape, 1.1);
+            let max_abs = field.iter().fold(0.0_f64, |m, v| m.max(v.abs()));
+            let coefficient_l1: f64 = op.coefficients.iter().map(|c| c.abs()).sum();
+            for (axis, dx) in AXES.into_iter().zip(spacing) {
+                let mut gradient = Array3::<f64>::zeros(shape);
+                let mut reference = Array3::<f64>::zeros(shape);
+                op.gradient_into(axis, field.view(), &mut gradient);
+                op.gradient_into_indexed(axis, field.view(), &mut reference);
+                assert_eq!(
+                    gradient, reference,
+                    "order {order}, axis {axis:?}, shape {shape:?}: gradient slice path drifts"
+                );
+
+                let mut divergence = Array3::<f64>::zeros(shape);
+                let mut reference = Array3::<f64>::zeros(shape);
+                op.divergence_into(axis, field.view(), &mut divergence);
+                op.divergence_into_indexed(axis, field.view(), &mut reference);
+                let bound = 4.0 * order as f64 * f64::EPSILON * coefficient_l1 * max_abs / dx;
+                for ((index, value), expected) in divergence.indexed_iter().zip(reference.iter()) {
+                    assert!(
+                        (value - expected).abs() <= bound,
+                        "order {order}, axis {axis:?}, shape {shape:?}, cell {index:?}: \
+                         divergence {value:.17e} vs reference {expected:.17e} (bound {bound:.3e})"
+                    );
+                }
+            }
+        }
+    }
+}

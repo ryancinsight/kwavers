@@ -223,14 +223,6 @@ impl FdtdSolver {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     fn update_velocity_staggered(&mut self, dt: f64) -> KwaversResult<()> {
-        let shape = self.fields.p.shape();
-        let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
-
-        // Gradient of pressure onto the faces, at the configured order. The
-        // operator is full-shape and reflects taps at the walls, so there is no
-        // half-shape scratch and no far-face zeroing: reflection makes the far
-        // face vanish on its own, and the divergence the pressure update applies
-        // is this operator's negative transpose by construction (ADR 106).
         self.leapfrog_operator
             .gradient_into(Axis::X, self.fields.p.view(), &mut self.dvx_scratch);
         self.leapfrog_operator
@@ -247,36 +239,10 @@ impl FdtdSolver {
             cpml.update_and_apply_p_gradient_correction(&mut self.divergence_scratch, 2);
         }
 
-        // Density at face `i+½` is the average of the two cells it separates.
-        // The last face has no cell beyond it, so the nearest cell's density is
-        // used — density is a material property and is not zero-extended; doing
-        // so would put a vacuum at the wall.
-        for i in 0..nx {
-            for j in 0..ny {
-                for k in 0..nz {
-                    let index = [i, j, k];
-                    let rho = 0.5
-                        * (self.materials.rho0[index]
-                            + self.materials.rho0[[(i + 1).min(nx - 1), j, k]]);
-                    if rho > 1e-9 {
-                        self.fields.ux[index] -= dt / rho * self.dvx_scratch[index];
-                    }
-                    let rho = 0.5
-                        * (self.materials.rho0[index]
-                            + self.materials.rho0[[i, (j + 1).min(ny - 1), k]]);
-                    if rho > 1e-9 {
-                        self.fields.uy[index] -= dt / rho * self.dvy_scratch[index];
-                    }
-                    let rho = 0.5
-                        * (self.materials.rho0[index]
-                            + self.materials.rho0[[i, j, (k + 1).min(nz - 1)]]);
-                    if rho > 1e-9 {
-                        self.fields.uz[index] -= dt / rho * self.divergence_scratch[index];
-                    }
-                }
-            }
-        }
-
+        let [rho_x, rho_y, rho_z] = &self.staggered_density;
+        update_velocity_from_gradient(&mut self.fields.ux, &self.dvx_scratch, rho_x, dt);
+        update_velocity_from_gradient(&mut self.fields.uy, &self.dvy_scratch, rho_y, dt);
+        update_velocity_from_gradient(&mut self.fields.uz, &self.divergence_scratch, rho_z, dt);
         Ok(())
     }
 }
@@ -322,4 +288,23 @@ fn apply_rigid_wall(ux: &mut Array3<f64>, uy: &mut Array3<f64>, uz: &mut Array3<
             uz[[i, j, nz - 1]] = 0.0;
         }
     }
+}
+
+/// Half-cell densities on the three velocity faces: `½(ρ[i] + ρ[i+1])` along
+/// each axis with the far face averaged with itself (`(i+1).min(n−1)`) — the
+/// neighbour gather the staggered update performed per component per step,
+/// now performed once so the update is a slice zip.
+pub(crate) fn staggered_face_densities(density: &Array3<f64>) -> [Array3<f64>; 3] {
+    let [nx, ny, nz] = density.shape();
+    let face = |shift: [usize; 3]| {
+        Array3::from_shape_fn((nx, ny, nz), |[i, j, k]| {
+            let neighbour = [
+                (i + shift[0]).min(nx - 1),
+                (j + shift[1]).min(ny - 1),
+                (k + shift[2]).min(nz - 1),
+            ];
+            0.5 * (density[[i, j, k]] + density[neighbour])
+        })
+    };
+    [face([1, 0, 0]), face([0, 1, 0]), face([0, 0, 1])]
 }

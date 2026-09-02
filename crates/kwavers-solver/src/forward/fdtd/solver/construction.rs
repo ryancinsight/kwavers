@@ -242,6 +242,9 @@ impl GenericFdtdSolver<Array3<f64>> {
             (None, None, None, None)
         };
 
+        let staggered_density =
+            super::super::velocity_updater::staggered_face_densities(&materials.rho0);
+
         Ok(Self {
             config,
             grid: grid.clone(),
@@ -269,6 +272,7 @@ impl GenericFdtdSolver<Array3<f64>> {
             dvx_scratch: Array3::<f64>::zeros(shape),
             dvy_scratch: Array3::<f64>::zeros(shape),
             divergence_scratch: Array3::<f64>::zeros(shape),
+            staggered_density,
         })
     }
 }
