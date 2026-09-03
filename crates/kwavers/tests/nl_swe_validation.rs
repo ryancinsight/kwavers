@@ -99,11 +99,26 @@ mod hyperelastic_tests {
         let material = HyperelasticModel::neo_hookean_soft_tissue();
         let config = NonlinearSWEConfig::default();
 
-        let solver = NonlinearElasticWaveSolver::new(&grid, &medium, material, config);
-        assert!(
-            solver.is_ok(),
-            "Nonlinear wave solver should create successfully"
-        );
+        // The constructor cannot fail in practice, so the value contract is
+        // behavioral: the constructed solver must propagate a point source and
+        // record a non-empty history of finite displacements.
+        let solver = NonlinearElasticWaveSolver::new(&grid, &medium, material, config)
+            .expect("Nonlinear wave solver should create successfully");
+        let mut initial_disp = Array3::zeros((16, 16, 16));
+        initial_disp[[8, 8, 8]] = 1e-6;
+        let history = solver
+            .propagate_waves(&initial_disp)
+            .expect("Constructed solver should propagate a point source");
+        assert!(!history.is_empty(), "Propagation should record a history");
+        for field in &history {
+            assert!(
+                field
+                    .total_displacement_magnitude()
+                    .iter()
+                    .all(|v| v.is_finite()),
+                "Displacements should remain finite"
+            );
+        }
     }
 
     #[test]
@@ -123,10 +138,9 @@ mod hyperelastic_tests {
         let mut initial_disp = Array3::zeros((12, 12, 12));
         initial_disp[[6, 6, 6]] = 1e-6; // Point source
 
-        let result = solver.propagate_waves(&initial_disp);
-        assert!(result.is_ok(), "Wave propagation should succeed");
-
-        let history = result.unwrap();
+        let history = solver
+            .propagate_waves(&initial_disp)
+            .expect("Wave propagation should succeed");
         assert!(!history.is_empty(), "Should have displacement history");
 
         // Check that harmonics are generated
@@ -222,10 +236,9 @@ mod harmonic_detection_tests {
             }
         }
 
-        let result = detector.analyze_harmonics(&time_series, sampling_freq);
-        assert!(result.is_ok(), "Harmonic analysis should succeed");
-
-        let harmonic_field = result.unwrap();
+        let harmonic_field = detector
+            .analyze_harmonics(&time_series, sampling_freq)
+            .expect("Harmonic analysis should succeed");
 
         // Should detect fundamental frequency
         let max_fundamental = harmonic_field
@@ -278,10 +291,9 @@ mod nonlinear_inversion_tests {
 
         let grid = Grid::new(6, 6, 6, 0.001, 0.001, 0.001).unwrap();
 
-        let result = inversion.reconstruct(&harmonic_field, &grid);
-        assert!(result.is_ok(), "Harmonic ratio inversion should succeed");
-
-        let param_map = result.unwrap();
+        let param_map = inversion
+            .reconstruct(&harmonic_field, &grid)
+            .expect("Harmonic ratio inversion should succeed");
 
         // Should have computed nonlinearity parameters
         assert!(param_map.nonlinearity_parameter.iter().any(|&x| x > 0.0));
@@ -311,10 +323,9 @@ mod nonlinear_inversion_tests {
 
         let grid = Grid::new(4, 4, 4, 0.001, 0.001, 0.001).unwrap();
 
-        let result = inversion.reconstruct(&harmonic_field, &grid);
-        assert!(result.is_ok(), "Nonlinear least squares should succeed");
-
-        let param_map = result.unwrap();
+        let param_map = inversion
+            .reconstruct(&harmonic_field, &grid)
+            .expect("Nonlinear least squares should succeed");
         assert!(param_map.nonlinearity_parameter.iter().any(|&x| x > 0.0));
     }
 
@@ -333,10 +344,9 @@ mod nonlinear_inversion_tests {
 
         let grid = Grid::new(4, 4, 4, 0.001, 0.001, 0.001).unwrap();
 
-        let result = inversion.reconstruct(&harmonic_field, &grid);
-        assert!(result.is_ok(), "Bayesian inversion should succeed");
-
-        let param_map = result.unwrap();
+        let param_map = inversion
+            .reconstruct(&harmonic_field, &grid)
+            .expect("Bayesian inversion should succeed");
 
         // Bayesian method should provide uncertainty estimates
         let avg_uncertainty = param_map
@@ -498,8 +508,9 @@ mod end_to_end_tests {
         let mut initial_disp = Array3::zeros((grid.nx, grid.ny, grid.nz));
         initial_disp[[ix, iy, iz]] = 1e-6; // small ARFI-like displacement
 
-        let linear_result = linear_swe.propagate_waves(&initial_disp);
-        assert!(linear_result.is_ok(), "Linear SWE should work");
+        let linear_history = linear_swe
+            .propagate_waves(&initial_disp)
+            .expect("Linear SWE should work");
 
         // Nonlinear SWE
         let material = HyperelasticModel::neo_hookean_soft_tissue();
@@ -512,12 +523,16 @@ mod end_to_end_tests {
         .unwrap();
 
         let initial_disp = Array3::zeros((8, 8, 8));
-        let nonlinear_result = nonlinear_solver.propagate_waves(&initial_disp);
-        assert!(nonlinear_result.is_ok(), "Nonlinear SWE should work");
+        let nonlinear_history = nonlinear_solver
+            .propagate_waves(&initial_disp)
+            .expect("Nonlinear SWE should work");
 
         // Both should produce valid results
-        assert!(!linear_result.unwrap().is_empty());
-        assert!(!nonlinear_result.unwrap().is_empty());
+        assert!(!linear_history.is_empty(), "Linear SWE history is empty");
+        assert!(
+            !nonlinear_history.is_empty(),
+            "Nonlinear SWE history is empty"
+        );
     }
 }
 
@@ -539,18 +554,18 @@ mod convergence_tests {
                 ..Default::default()
             };
 
-            let solver = NonlinearElasticWaveSolver::new(&grid, &medium, material.clone(), config);
-            assert!(
-                solver.is_ok(),
-                "Should create solver for nonlinearity = {}",
-                nonlinearity
-            );
+            let solver = NonlinearElasticWaveSolver::new(&grid, &medium, material.clone(), config)
+                .unwrap_or_else(|e| {
+                    panic!("Should create solver for nonlinearity = {nonlinearity}: {e:?}")
+                });
 
             let initial_disp = Array3::zeros((8, 8, 8));
-            let result = solver.unwrap().propagate_waves(&initial_disp);
+            let history = solver.propagate_waves(&initial_disp).unwrap_or_else(|e| {
+                panic!("Should converge for nonlinearity = {nonlinearity}: {e:?}")
+            });
             assert!(
-                result.is_ok(),
-                "Should converge for nonlinearity = {}",
+                !history.is_empty(),
+                "Should produce displacement history for nonlinearity = {}",
                 nonlinearity
             );
         }
@@ -574,11 +589,12 @@ mod convergence_tests {
                 *value += noise;
             }
 
-            let result = detector.analyze_harmonics(&noisy_series, 1000.0);
+            let field = detector
+                .analyze_harmonics(&noisy_series, 1000.0)
+                .unwrap_or_else(|e| panic!("Should handle noise level = {noise_level}: {e:?}"));
             assert!(
-                result.is_ok(),
-                "Should handle noise level = {}",
-                noise_level
+                field.fundamental_magnitude.iter().all(|v| v.is_finite()),
+                "Noise should not produce non-finite magnitudes at level = {noise_level}"
             );
         }
     }
@@ -600,10 +616,9 @@ mod convergence_tests {
             NonlinearInversionMethod::BayesianInversion,
         ] {
             let inversion = NonlinearInversion::new(NonlinearInversionConfig::new(method));
-            let result = inversion.reconstruct(&harmonic_field, &grid);
-            assert!(result.is_ok(), "Method {:?} should succeed", method);
-
-            let param_map = result.unwrap();
+            let param_map = inversion
+                .reconstruct(&harmonic_field, &grid)
+                .unwrap_or_else(|e| panic!("Method {method:?} should succeed: {e:?}"));
             assert!(
                 param_map.nonlinearity_parameter.iter().all(|&x| x >= 0.0),
                 "Method {:?} should produce non-negative parameters",
