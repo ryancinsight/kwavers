@@ -44,12 +44,12 @@ leto-ops = { version = "0.43.0", git = "https://github.com/ryancinsight/leto.git
 # `kwavers-core` consumes the arena, backend, and memory-core seam directly
 # (`crates/kwavers-core/src/arena/**`) â€” see ADR 0006 Â§Failure modes for the
 # `mnemosyne::scratch::ScratchElement for eunomia::Complex<f64>` coupling point.
-mnemosyne-arena = { version = "0.4.0", git = "https://github.com/ryancinsight/Mnemosyne", rev = "36419bab1f72c1c3a5bc9f5988d244cbbd6bb064" }
-mnemosyne-backend = { version = "0.5.0", git = "https://github.com/ryancinsight/Mnemosyne", rev = "36419bab1f72c1c3a5bc9f5988d244cbbd6bb064" }
+mnemosyne-arena = { version = "0.4.0", git = "https://github.com/ryancinsight/Mnemosyne", rev = "46c279d2f3bcda3333000d2386556fa174658ec6" }
+mnemosyne-backend = { version = "0.5.0", git = "https://github.com/ryancinsight/Mnemosyne", rev = "46c279d2f3bcda3333000d2386556fa174658ec6" }
 # mnemosyne-core is the public crate name; maps to mnemosyne-memory-core package internally.
-mnemosyne-core = { version = "0.2.0", git = "https://github.com/ryancinsight/Mnemosyne", package = "mnemosyne-memory-core", rev = "36419bab1f72c1c3a5bc9f5988d244cbbd6bb064" }
+mnemosyne-core = { version = "0.2.0", git = "https://github.com/ryancinsight/Mnemosyne", package = "mnemosyne-memory-core", rev = "46c279d2f3bcda3333000d2386556fa174658ec6" }
 # mnemosyne-heap owns NUMA memory-policy execution (bind / interleave / first-touch).
-mnemosyne-heap = { version = "0.4.0", git = "https://github.com/ryancinsight/Mnemosyne", rev = "36419bab1f72c1c3a5bc9f5988d244cbbd6bb064" }
+mnemosyne-heap = { version = "0.4.0", git = "https://github.com/ryancinsight/Mnemosyne", rev = "46c279d2f3bcda3333000d2386556fa174658ec6" }
 eunomia = { version = "0.8.0", git = "https://github.com/ryancinsight/eunomia", default-features = false, features = ["std"] }
 numpy = "0.29"
 
