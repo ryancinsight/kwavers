@@ -34,6 +34,18 @@ env:
   RUST_BACKTRACE: 1
 
 jobs:
+  # Public-surface compatibility, informational on pull requests: the
+  # detected change class is visible while the change is still in
+  # review. The blocking comparison runs on release.
+  # Atlas ATLAS-SEMVER-GATE-FLEETWIDE-2026-08-28.
+  semver:
+    name: SemVer gate
+    uses: ryancinsight/atlas/.github/workflows/semver-gate.yml@da9d549bc50dbb9c4e1d18dca8f37d17059098cb
+    with:
+      package: kwavers-alloc-probe,kwavers-analysis,kwavers-boundary,kwavers-core,kwavers-diagnostics,kwavers-driver,kwavers-field,kwavers-gpu,kwavers-grid,kwavers-imaging,kwavers-math,kwavers-medium,kwavers-mesh,kwavers-phantom,kwavers-physics,kwavers-receiver,kwavers-signal,kwavers-simulation,kwavers-solver,kwavers-source,kwavers-therapy,kwavers-transducer,kwavers
+    permissions:
+      contents: read
+
   # Runs first and alone: it needs no toolchain, no cache and no build, and it
   # guards the one artifact whose correctness cannot be checked from inside the
   # environment that produces it. Working on this repository inside the Atlas

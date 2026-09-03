@@ -28,35 +28,30 @@ fn test_new_config_valid() {
 #[test]
 fn test_new_config_invalid_inner_lr() {
     let result = MetaLearningConfig::new(-0.01, 0.001, 5, 8, 1000, false, 0.1, 4, 64, 3, 1, 100);
-    assert!(result.is_err());
     assert!(result.unwrap_err().contains("inner_lr"));
 }
 
 #[test]
 fn test_new_config_invalid_outer_lr() {
     let result = MetaLearningConfig::new(0.01, 0.0, 5, 8, 1000, false, 0.1, 4, 64, 3, 1, 100);
-    assert!(result.is_err());
     assert!(result.unwrap_err().contains("outer_lr"));
 }
 
 #[test]
 fn test_new_config_invalid_adaptation_steps() {
     let result = MetaLearningConfig::new(0.01, 0.001, 0, 8, 1000, false, 0.1, 4, 64, 3, 1, 100);
-    assert!(result.is_err());
     assert!(result.unwrap_err().contains("adaptation_steps"));
 }
 
 #[test]
 fn test_new_config_invalid_meta_batch_size() {
     let result = MetaLearningConfig::new(0.01, 0.001, 5, 0, 1000, false, 0.1, 4, 64, 3, 1, 100);
-    assert!(result.is_err());
     assert!(result.unwrap_err().contains("meta_batch_size"));
 }
 
 #[test]
 fn test_new_config_invalid_physics_regularization() {
     let result = MetaLearningConfig::new(0.01, 0.001, 5, 8, 1000, false, -0.1, 4, 64, 3, 1, 100);
-    assert!(result.is_err());
     assert!(result.unwrap_err().contains("physics_regularization"));
 }
 

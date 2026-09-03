@@ -102,10 +102,9 @@ fn test_apply_hamming_filter() {
     }
 
     // Apply Hamming filter
-    let result = filters.apply_fbp_filter(&data);
-    assert!(result.is_ok(), "Hamming filter should apply successfully");
-
-    let filtered = result.unwrap();
+    let filtered = filters
+        .apply_fbp_filter(&data)
+        .expect("Hamming filter should apply successfully");
     assert_eq!(
         filtered.shape(),
         data.shape(),
@@ -133,10 +132,9 @@ fn test_apply_hann_filter() {
     }
 
     // Apply Hann filter
-    let result = filters.apply_fbp_filter(&data);
-    assert!(result.is_ok(), "Hann filter should apply successfully");
-
-    let filtered = result.unwrap();
+    let filtered = filters
+        .apply_fbp_filter(&data)
+        .expect("Hann filter should apply successfully");
     assert_eq!(
         filtered.shape(),
         data.shape(),
@@ -163,10 +161,9 @@ fn test_none_filter_no_change() {
     }
 
     // Apply None filter - should return unchanged data
-    let result = filters.apply_fbp_filter(&data);
-    assert!(result.is_ok(), "None filter should apply successfully");
-
-    let filtered = result.unwrap();
+    let filtered = filters
+        .apply_fbp_filter(&data)
+        .expect("None filter should apply successfully");
 
     // Verify data is unchanged
     for i in 0..n_samples {
@@ -200,12 +197,9 @@ fn test_filter_type_exhaustive() {
 
     for filter_type in &filter_types {
         filters.set_filter_type(filter_type.clone());
-        let result = filters.apply_fbp_filter(&data);
-        assert!(
-            result.is_ok(),
-            "Filter type {:?} should apply successfully",
-            filter_type
-        );
+        filters.apply_fbp_filter(&data).unwrap_or_else(|e| {
+            panic!("Filter type {filter_type:?} should apply successfully: {e:?}")
+        });
     }
 }
 

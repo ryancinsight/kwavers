@@ -117,9 +117,15 @@ proptest! {
         };
 
         // Validation must reject any CFL factor exceeding the 3D stability bound
-        let result = config.validate();
-        prop_assert!(result.is_err(),
-            "FdtdConfig must reject unstable CFL factor {}", bad_cfl);
+        // and name the violated field in the composite error message.
+        let message = match config.validate() {
+            Ok(()) => panic!("FdtdConfig must reject unstable CFL factor {}", bad_cfl),
+            Err(e) => e.to_string(),
+        };
+        prop_assert!(message.contains("cfl_factor"),
+            "rejection must name the cfl_factor field, got: {}", message);
+        prop_assert!(message.contains(&format!("{}", bad_cfl)),
+            "rejection must echo the offending value {}, got: {}", bad_cfl, message);
     }
 
     #[test]
@@ -131,10 +137,12 @@ proptest! {
             ..FdtdConfig::default()
         };
 
-        let result = config.validate();
-        prop_assert!(result.is_ok(),
-            "FdtdConfig must accept valid CFL factor {} ≤ {}: {:?}",
-            valid_cfl, CFL_3D_MAX, result);
+        config
+            .validate()
+            .unwrap_or_else(|e| panic!(
+                "FdtdConfig must accept valid CFL factor {} ≤ {}: {:?}",
+                valid_cfl, CFL_3D_MAX, e
+            ));
     }
 }
 
@@ -165,9 +173,14 @@ proptest! {
             ..FdtdConfig::default()
         };
 
-        let result = config.validate();
-        prop_assert!(result.is_err(),
-            "FdtdConfig must reject invalid spatial order {}", invalid_order);
+        let message = match config.validate() {
+            Ok(()) => panic!("FdtdConfig must reject invalid spatial order {}", invalid_order),
+            Err(e) => e.to_string(),
+        };
+        prop_assert!(message.contains("spatial_order"),
+            "rejection must name the spatial_order field, got: {}", message);
+        prop_assert!(message.contains(&invalid_order.to_string()),
+            "rejection must echo the offending value {}, got: {}", invalid_order, message);
     }
 
     #[test]
@@ -181,9 +194,12 @@ proptest! {
             ..FdtdConfig::default()
         };
 
-        let result = config.validate();
-        prop_assert!(result.is_ok(),
-            "FdtdConfig must accept valid spatial order {}: {:?}", order, result);
+        config
+            .validate()
+            .unwrap_or_else(|e| panic!(
+                "FdtdConfig must accept valid spatial order {}: {:?}",
+                order, e
+            ));
     }
 }
 
