@@ -11,10 +11,8 @@ use kwavers_medium::{CoreMedium, HomogeneousMedium};
 
 #[test]
 fn test_grid_creation_basic() {
-    let grid = Grid::new(10, 10, 10, 0.001, 0.001, 0.001);
-    assert!(grid.is_ok());
-
-    let grid = grid.unwrap();
+    let grid =
+        Grid::new(10, 10, 10, 0.001, 0.001, 0.001).expect("valid grid parameters must construct");
     assert_eq!(grid.nx, 10);
     assert_eq!(grid.ny, 10);
     assert_eq!(grid.nz, 10);
@@ -23,13 +21,21 @@ fn test_grid_creation_basic() {
 
 #[test]
 fn test_grid_creation_validation() {
-    // Test invalid dimensions
-    let result = Grid::new(0, 10, 10, 0.001, 0.001, 0.001);
-    assert!(result.is_err());
+    // Test invalid dimensions: pin the structured variant, not just Err.
+    match Grid::new(0, 10, 10, 0.001, 0.001, 0.001) {
+        Err(GridError::ZeroDimension {
+            nx: 0,
+            ny: 10,
+            nz: 10,
+        }) => {}
+        other => panic!("expected ZeroDimension {{0,10,10}}, got {other:?}"),
+    }
 
     // Test invalid spacing
-    let result = Grid::new(10, 10, 10, 0.0, 0.001, 0.001);
-    assert!(result.is_err());
+    match Grid::new(10, 10, 10, 0.0, 0.001, 0.001) {
+        Err(GridError::NonPositiveSpacing { dx: 0.0, .. }) => {}
+        other => panic!("expected NonPositiveSpacing {{dx:0,..}}, got {other:?}"),
+    }
 }
 
 #[test]
@@ -70,7 +76,6 @@ fn test_constants_validity() {
 fn test_error_handling_basic() {
     // Test error propagation without heavy computation
     let invalid_grid = Grid::new(0, 0, 0, 0.0, 0.0, 0.0);
-    assert!(invalid_grid.is_err());
 
     match invalid_grid {
         Err(GridError::ZeroDimension { .. }) => {} // Expected
