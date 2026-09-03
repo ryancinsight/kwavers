@@ -3,8 +3,19 @@ use super::music::MUSIC;
 use crate::signal_processing::beamforming::test_utilities;
 use eunomia::assert_relative_eq;
 use eunomia::Complex64;
+use kwavers_core::error::KwaversError;
 use leto::{Array1, Array2};
 use std::f64::consts::PI;
+
+/// Assert the error is the structured input-validation variant and return its
+/// message so each rejection test pins the *reason*, not merely the presence
+/// of an error.
+fn expect_invalid_input(err: KwaversError) -> String {
+    match err {
+        KwaversError::InvalidInput(msg) => msg,
+        other => panic!("expected KwaversError::InvalidInput, got {other:?}"),
+    }
+}
 
 #[test]
 fn test_music_pseudospectrum_positivity() {
@@ -28,12 +39,26 @@ fn test_music_dimension_validation() {
     let steering = test_utilities::create_steering_vector(n, 0.0);
 
     let music = MUSIC::new(4);
-    let result = music.pseudospectrum(&cov, &steering);
-    assert!(result.is_err());
+    let err = expect_invalid_input(
+        music
+            .pseudospectrum(&cov, &steering)
+            .expect_err("num_sources == N must be rejected"),
+    );
+    assert!(
+        err.contains("num_sources"),
+        "rejection must name the num_sources constraint: {err}"
+    );
 
     let music = MUSIC::new(5);
-    let result = music.pseudospectrum(&cov, &steering);
-    assert!(result.is_err());
+    let err = expect_invalid_input(
+        music
+            .pseudospectrum(&cov, &steering)
+            .expect_err("num_sources > N must be rejected"),
+    );
+    assert!(
+        err.contains("num_sources"),
+        "rejection must name the num_sources constraint: {err}"
+    );
 }
 
 #[test]
@@ -43,8 +68,15 @@ fn test_music_steering_dimension_mismatch() {
     let steering = test_utilities::create_steering_vector(2, 0.0);
 
     let music = MUSIC::new(1);
-    let result = music.pseudospectrum(&cov, &steering);
-    assert!(result.is_err());
+    let err = expect_invalid_input(
+        music
+            .pseudospectrum(&cov, &steering)
+            .expect_err("steering/covariance dimension mismatch must be rejected"),
+    );
+    assert!(
+        err.contains("steering vector length"),
+        "rejection must name the steering dimension: {err}"
+    );
 }
 
 #[test]
@@ -110,12 +142,24 @@ fn test_esmv_dimension_validation() {
     let steering = test_utilities::create_steering_vector(n, 0.0);
 
     let esmv = EigenspaceMV::new(4);
-    let result = esmv.compute_weights(&cov, &steering);
-    assert!(result.is_err());
+    let err = expect_invalid_input(
+        esmv.compute_weights(&cov, &steering)
+            .expect_err("num_sources == N must be rejected"),
+    );
+    assert!(
+        err.contains("num_sources"),
+        "rejection must name the num_sources constraint: {err}"
+    );
 
     let esmv = EigenspaceMV::new(5);
-    let result = esmv.compute_weights(&cov, &steering);
-    assert!(result.is_err());
+    let err = expect_invalid_input(
+        esmv.compute_weights(&cov, &steering)
+            .expect_err("num_sources > N must be rejected"),
+    );
+    assert!(
+        err.contains("num_sources"),
+        "rejection must name the num_sources constraint: {err}"
+    );
 }
 
 #[test]
@@ -125,8 +169,14 @@ fn test_esmv_steering_dimension_mismatch() {
     let steering = test_utilities::create_steering_vector(4, 0.0);
 
     let esmv = EigenspaceMV::new(2);
-    let result = esmv.compute_weights(&cov, &steering);
-    assert!(result.is_err());
+    let err = expect_invalid_input(
+        esmv.compute_weights(&cov, &steering)
+            .expect_err("steering/covariance dimension mismatch must be rejected"),
+    );
+    assert!(
+        err.contains("steering vector length"),
+        "rejection must name the steering dimension: {err}"
+    );
 }
 
 #[test]

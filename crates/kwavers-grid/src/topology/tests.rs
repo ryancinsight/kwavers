@@ -1,4 +1,19 @@
 use super::{CartesianTopology, CylindricalTopology, GridTopology, TopologyDimension};
+use kwavers_core::error::{ConfigError, KwaversError};
+
+/// Assert the error is the structured config-validation variant and return its
+/// parameter/constraint fields so rejection tests pin the *reason*, not merely
+/// the presence of an error.
+fn expect_config_invalid_value(err: KwaversError) -> (String, String) {
+    match err {
+        KwaversError::Config(ConfigError::InvalidValue {
+            parameter,
+            constraint,
+            ..
+        }) => (parameter, constraint),
+        other => panic!("expected KwaversError::Config(ConfigError::InvalidValue), got {other:?}"),
+    }
+}
 
 #[test]
 fn test_cartesian_creation() {
@@ -116,21 +131,40 @@ fn test_topology_field_creation() {
 
 #[test]
 fn test_invalid_dimensions() {
-    let result = CartesianTopology::new([0, 10, 10], [1e-3, 1e-3, 1e-3], [0.0, 0.0, 0.0]);
-    assert!(result.is_err());
+    let (parameter, constraint) = expect_config_invalid_value(
+        CartesianTopology::new([0, 10, 10], [1e-3, 1e-3, 1e-3], [0.0, 0.0, 0.0])
+            .expect_err("zero dimension must be rejected"),
+    );
+    assert_eq!(parameter, "grid dimensions");
+    assert_eq!(constraint, "All dimensions must be positive");
 
-    let result = CylindricalTopology::new(0, 10, 1e-3, 1e-3);
-    assert!(result.is_err());
+    let (parameter, constraint) = expect_config_invalid_value(
+        CylindricalTopology::new(0, 10, 1e-3, 1e-3).expect_err("zero nz must be rejected"),
+    );
+    assert_eq!(parameter, "cylindrical grid dimensions");
+    assert_eq!(constraint, "Must be positive");
 }
 
 #[test]
 fn test_invalid_spacing() {
-    let result = CartesianTopology::new([10, 10, 10], [0.0, 1e-3, 1e-3], [0.0, 0.0, 0.0]);
-    assert!(result.is_err());
+    let (parameter, constraint) = expect_config_invalid_value(
+        CartesianTopology::new([10, 10, 10], [0.0, 1e-3, 1e-3], [0.0, 0.0, 0.0])
+            .expect_err("zero spacing must be rejected"),
+    );
+    assert_eq!(parameter, "grid spacing");
+    assert_eq!(constraint, "All spacing values must be positive");
 
-    let result = CartesianTopology::new([10, 10, 10], [-1e-3, 1e-3, 1e-3], [0.0, 0.0, 0.0]);
-    assert!(result.is_err());
+    let (parameter, constraint) = expect_config_invalid_value(
+        CartesianTopology::new([10, 10, 10], [-1e-3, 1e-3, 1e-3], [0.0, 0.0, 0.0])
+            .expect_err("negative spacing must be rejected"),
+    );
+    assert_eq!(parameter, "grid spacing");
+    assert_eq!(constraint, "All spacing values must be positive");
 
-    let result = CylindricalTopology::new(10, 10, f64::INFINITY, 1e-3);
-    assert!(result.is_err());
+    let (parameter, constraint) = expect_config_invalid_value(
+        CylindricalTopology::new(10, 10, f64::INFINITY, 1e-3)
+            .expect_err("non-finite spacing must be rejected"),
+    );
+    assert_eq!(parameter, "cylindrical grid spacing");
+    assert_eq!(constraint, "Must be finite");
 }
