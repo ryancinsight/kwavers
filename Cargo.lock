@@ -7330,6 +7330,7 @@ dependencies = [
  "anyhow",
  "chrono",
  "clap 4.6.6",
+ "mnemosyne-memory 0.7.0 (git+https://github.com/ryancinsight/Mnemosyne)",
  "regex",
  "wait-timeout",
  "walkdir",

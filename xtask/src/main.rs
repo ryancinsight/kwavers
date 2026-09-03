@@ -3,6 +3,11 @@
 //! Provides automated module size checks, naming audits, test generation,
 //! and complexity analysis following the problem statement requirements.
 
+use mnemosyne::Mnemosyne;
+
+#[global_allocator]
+static ALLOC: Mnemosyne = Mnemosyne;
+
 use anyhow::{Context, Result};
 use clap::{ArgAction, Parser, Subcommand};
 use std::fs;
