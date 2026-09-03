@@ -174,8 +174,13 @@ mod convergence_studies {
             study.add_measurement(h_effective, error);
         }
 
-        let rate = study.compute_convergence_rate();
-        assert!(rate.is_some());
+        let rate = study
+            .compute_convergence_rate()
+            .expect("Capacity study should fit a rate");
+        assert!(
+            (rate - 1.0).abs() < 0.05,
+            "Capacity error ∝ h_eff should fit rate ≈ 1.0, got {rate}"
+        );
         assert!(study.is_monotonic());
     }
 
@@ -195,9 +200,16 @@ mod convergence_studies {
             study.add_measurement(h_eff, total_error);
         }
 
-        // Should still converge, but rate will be slower than ideal
-        let rate = study.compute_convergence_rate();
-        assert!(rate.is_some());
+        // With the irreducible error floor the log-log fit flattens at small
+        // h_eff, so the measured rate stays below the 1.0 of the pure capacity
+        // term — assert that real, bounded value instead of mere existence.
+        let rate = study
+            .compute_convergence_rate()
+            .expect("Diminishing-returns study should fit a rate");
+        assert!(
+            (0.0..1.0).contains(&rate),
+            "Error floor should flatten the fit below the pure rate 1.0, got {rate}"
+        );
     }
 
     // ========================================================================
@@ -238,8 +250,13 @@ mod convergence_studies {
             p_study.add_measurement(h_eff, total_error);
         }
 
-        let p_rate = p_study.compute_convergence_rate();
-        assert!(p_rate.is_some());
+        let p_rate = p_study
+            .compute_convergence_rate()
+            .expect("Capacity sweep at fixed resolution should fit a rate");
+        assert!(
+            (0.0..1.0).contains(&p_rate),
+            "Dominant flat capacity error should give a sub-unit rate, got {p_rate}"
+        );
     }
 
     #[test]
@@ -252,19 +269,17 @@ mod convergence_studies {
             study.add_measurement(h, h * h);
         }
 
-        let result = ConvergenceResult::from_study(&study, 2.0, 0.1);
-        assert!(result.is_some());
-
-        let result = result.unwrap();
+        let result =
+            ConvergenceResult::from_study(&study, 2.0, 0.1).expect("Study should validate");
         assert!(result.passed, "Should pass with tolerance 0.1");
         assert!((result.rate - 2.0).abs() < 0.01);
         assert!(result.is_monotonic);
         assert!(result.r_squared > 0.99);
 
         // Test with stricter tolerance - should still pass
-        let strict_result = ConvergenceResult::from_study(&study, 2.0, 0.01);
-        assert!(strict_result.is_some());
-        assert!(strict_result.unwrap().passed);
+        let strict_result = ConvergenceResult::from_study(&study, 2.0, 0.01)
+            .expect("Strictly-toleranced study should validate");
+        assert!(strict_result.passed);
     }
 
     #[test]
@@ -277,10 +292,8 @@ mod convergence_studies {
             study.add_measurement(h, h); // Linear convergence
         }
 
-        let result = ConvergenceResult::from_study(&study, 2.0, 0.1);
-        assert!(result.is_some());
-
-        let result = result.unwrap();
+        let result =
+            ConvergenceResult::from_study(&study, 2.0, 0.1).expect("Study should validate");
         assert!(
             !result.passed,
             "Should fail: rate = {:.2}, expected 2.0",
@@ -530,10 +543,12 @@ mod convergence_studies {
             study.is_monotonic(),
             "Adaptive refinement should be monotonic"
         );
-        let rate = study.compute_convergence_rate();
+        let rate = study
+            .compute_convergence_rate()
+            .expect("Should converge even with adaptive refinement");
         assert!(
-            rate.is_some(),
-            "Should converge even with adaptive refinement"
+            (rate - 2.0).abs() < 0.2,
+            "Adaptive refinement should preserve the h² rate, got {rate}"
         );
     }
 
@@ -584,10 +599,13 @@ mod convergence_studies {
         study.add_measurement(0.25, 0.25);
 
         // Should gracefully handle zero errors
-        let rate = study.compute_convergence_rate();
+        let rate = study
+            .compute_convergence_rate()
+            .expect("Should compute rate by skipping zero errors");
+        // Valid points after filtering: (1,1) and (0.25,0.25) — exact slope 1.0.
         assert!(
-            rate.is_some(),
-            "Should compute rate by skipping zero errors"
+            (rate - 1.0).abs() < 1e-9,
+            "Surviving points (1,1),(0.25,0.25) should fit slope 1.0, got {rate}"
         );
     }
 
@@ -600,9 +618,15 @@ mod convergence_studies {
         study.add_measurement(0.5, -0.1); // Invalid negative error
         study.add_measurement(0.25, 0.25);
 
-        // Should filter out invalid data
-        let rate = study.compute_convergence_rate();
-        assert!(rate.is_some());
+        // Should filter out invalid data; the surviving points (1,1) and
+        // (0.25,0.25) again fit exactly slope 1.0.
+        let rate = study
+            .compute_convergence_rate()
+            .expect("Negative errors should be filtered, not fatal");
+        assert!(
+            (rate - 1.0).abs() < 1e-9,
+            "Surviving points should fit slope 1.0, got {rate}"
+        );
     }
 
     // ========================================================================
