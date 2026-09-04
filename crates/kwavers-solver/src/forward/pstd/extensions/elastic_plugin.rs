@@ -174,10 +174,11 @@ mod tests {
     use super::*;
     use crate::plugin::test_support::{make_context, null_plugin_fields, NullBoundary};
     use kwavers_field::mapping::UnifiedFieldType;
+    use aequitas::systems::si::quantities::{MassDensity, Velocity};
     use kwavers_grid::Grid;
-    use kwavers_medium::elastic::lame_from_speeds;
     use kwavers_medium::HomogeneousMedium;
     use leto::Array4;
+    use proteus::elastic::IsotropicModuli;
 
     fn grid() -> Grid {
         Grid::new(24, 24, 1, 1e-3, 1e-3, 1e-3).expect("grid")
@@ -186,7 +187,14 @@ mod tests {
     /// Solid medium with genuine shear support (c_s > 0): soft-tissue-like
     /// c_p = 1500, c_s = 80 m/s, ρ = 1000, giving μ = ρc_s² > 0.
     fn solid_medium(grid: &Grid) -> HomogeneousMedium {
-        let (lambda, mu) = lame_from_speeds(1500.0, 80.0, 1000.0);
+        let moduli = IsotropicModuli::<f64>::from_wave_speeds(
+            Velocity::from_base(1500.0),
+            Velocity::from_base(80.0),
+            MassDensity::from_base(1000.0),
+        )
+        .expect("soft-tissue-like wave speeds satisfy K > 0");
+        let lambda = *moduli.lame_lambda().as_base();
+        let mu = *moduli.shear_modulus().as_base();
         let mut medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0, 0.0, grid);
         medium
             .set_lame_parameters(lambda, mu)

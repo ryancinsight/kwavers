@@ -91,7 +91,30 @@ impl HeterogeneousFactory {
                         ));
                     }
 
-                    let (lambda_v, mu_v) = crate::elastic::lame_from_speeds(cp, cs, rho);
+                    // The 2·c_s² > c_p² rejection above keeps the
+                    // heterogeneous medium non-auxetic (λ ≥ 0); the
+                    // provider's `from_wave_speeds` would otherwise admit
+                    // auxetic solids (K > 0 with λ < 0). The two checks
+                    // agree on this constructor's admitted domain.
+                    //
+                    // The provider refuses `c_s = 0` (its `from_wave_speeds`
+                    // requires finite-positive shear-wave speed); the kwavers
+                    // fluid limit is preserved by handling it directly.
+                    let (lambda_v, mu_v) = if cs == 0.0 {
+                        (rho * cp * cp, 0.0)
+                    } else {
+                        let moduli = proteus::elastic::IsotropicModuli::<f64>::from_wave_speeds(
+                            aequitas::systems::si::quantities::Velocity::from_base(cp),
+                            aequitas::systems::si::quantities::Velocity::from_base(cs),
+                            aequitas::systems::si::quantities::MassDensity::from_base(rho),
+                        )
+                        .map_err(|e| {
+                            format!(
+                                "voxel ({i},{j},{k}) rejected by provider: {e}"
+                            )
+                        })?;
+                        (*moduli.lame_lambda().as_base(), *moduli.shear_modulus().as_base())
+                    };
                     lame_mu[[i, j, k]] = mu_v;
                     lame_lambda[[i, j, k]] = lambda_v;
                     sound_speed[[i, j, k]] = cp;
