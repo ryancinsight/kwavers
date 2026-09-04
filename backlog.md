@@ -354,37 +354,26 @@
   that weakens Criterion instruments or substitutes hosted wall time for local
   paired evidence.
 
-## KW-VISCOACOUSTIC-DIMENSIONAL-STATE-2026-08-31 — Omit inactive-axis state [patch] [perf] — todo
+## KW-VISCOACOUSTIC-DIMENSIONAL-STATE-2026-08-31 — Omit inactive-axis state [patch] [perf] — complete
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-VISCOACOUSTIC-DIMENSIONAL-STATE-2026-08-31 | Retain velocity and derivative storage only for active spatial axes while preserving the canonical 1-D/2-D/3-D solver and exact state values. | [patch] [perf] | todo | unowned | viscoacoustic private state/scratch layout, step/reset/damping/energy paths, allocation and all-axis-mask value regressions, existing Criterion instrument |
-
-- **Entry evidence:** a warmed release global-allocation probe at exact source
-  `22c011fa2` measured every 4,096-cell constructor at 15 allocations and
-  426,000/394,248/393,600 retained bytes for 1-D `[4096,1,1]`, 2-D
-  `[64,64,1]`, and 3-D `[16,16,16]`. The current private state always owns
-  `vx/vy/vz` plus `gx/gy/gz`, although singleton-axis derivatives are exact
-  positive zero. It also retains one allocated wavenumber vector for every
-  singleton axis. Removing three inactive arrays and two inactive wavenumber
-  vectors in 1-D saves 98,320 bytes (23.1% of the measured retained footprint);
-  removing two arrays and one vector in 2-D saves 65,544 bytes (16.6%). Full
-  3-D retains its current storage.
-- **Design constraint:** support every public singleton-axis permutation,
-  including no active axes and the `xz`/`yz` planes. Bind each active velocity
-  field to its active-axis wavenumbers. Keep two anonymous scratch grids for
-  divergence and relaxation, plus a third only when all three axes are active.
-  Combine divergence in the established `dx + (dy + dz)` order with missing
-  derivatives represented by positive zero; branch only at the axis-operation
-  boundary. No public type or method changes.
-- **Acceptance:** all eight active-axis masks compare complete pressure,
-  memory, energy, damping, reset, and repeated-step behavior against a
-  six-array reference; the 3-D control remains bitwise equal. Warm construction
-  measures exactly 10/12/15 allocations for standard 1-D/2-D/3-D and the
-  retained-byte reductions above, while warm stepping remains allocation-free.
-  Existing paired Criterion inputs and timed regions remain unchanged; reject
-  the candidate on any active-axis regression or if added branching offsets
-  the measured lower-dimensional gain.
+- **Delivered:** source `c6cef1386` (branch `pr/viscoacoustic-dimensional-state`): the
+  solver derives its active-axis mask from the grid and retains velocity,
+  derivative-staging, and wavenumber state only for axes that carry spatial
+  variation, substituting the exact positive-zero identity at the operation
+  boundary. Divergence combines in the established `dx + (dy + dz)` order via
+  canonical slot staging; no public type or method changed.
+- **Evidence:** all eight active-axis masks — including the `xz`/`yz` planes
+  and the no-active-axis point grid — step bitwise-identically to an injected
+  full-storage reference at the same grid across warmup, damping, reset, and
+  repeated stepping; singleton derivatives never touch the complex FFT
+  scratch. Warm construction measures exactly 10/12/15 allocations and
+  327,680/328,704/393,600 retained bytes at the 4,096-cell probe shapes
+  (entry baseline: 15 events, 426,000/394,248/393,600 bytes — the oracle's
+  98,320 B / 23.1% 1-D and 65,544 B / 16.6% 2-D reductions; 3-D control
+  unchanged) and warm stepping stays allocation- and reallocation-free. The
+  existing paired Criterion instrument is untouched and compiles on the
+  unchanged public API; kwavers-solver release lib suite 946/946;
+  Clippy/Rustdoc clean for the touched packages.
 
 ## KW-VISCOACOUSTIC-UNIFORM-COEFFICIENTS-2026-08-31 — Retain scalar homogeneous coefficients [patch] [perf] — todo
 

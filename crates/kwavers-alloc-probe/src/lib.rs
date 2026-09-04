@@ -37,6 +37,10 @@ fn measuring() -> bool {
 static ALLOCATIONS: AtomicU64 = AtomicU64::new(0);
 /// Reallocation events observed on measuring threads.
 static REALLOCATIONS: AtomicU64 = AtomicU64::new(0);
+/// Bytes requested by `alloc`/`alloc_zeroed` on measuring threads.
+static BYTES_ALLOCATED: AtomicU64 = AtomicU64::new(0);
+/// Bytes released by `dealloc` on measuring threads.
+static BYTES_DEALLOCATED: AtomicU64 = AtomicU64::new(0);
 
 /// A [`System`]-forwarding allocator that counts only on threads with an
 /// open [`Window`].
@@ -51,12 +55,16 @@ unsafe impl GlobalAlloc for ThreadScopedAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         if measuring() {
             ALLOCATIONS.fetch_add(1, Ordering::Relaxed);
+            BYTES_ALLOCATED.fetch_add(layout.size() as u64, Ordering::Relaxed);
         }
         // SAFETY: the caller upholds `alloc`'s contract; forwarded verbatim.
         unsafe { System.alloc(layout) }
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+        if measuring() {
+            BYTES_DEALLOCATED.fetch_add(layout.size() as u64, Ordering::Relaxed);
+        }
         // SAFETY: the caller upholds `dealloc`'s contract; forwarded verbatim.
         unsafe { System.dealloc(ptr, layout) }
     }
@@ -64,6 +72,7 @@ unsafe impl GlobalAlloc for ThreadScopedAllocator {
     unsafe fn alloc_zeroed(&self, layout: Layout) -> *mut u8 {
         if measuring() {
             ALLOCATIONS.fetch_add(1, Ordering::Relaxed);
+            BYTES_ALLOCATED.fetch_add(layout.size() as u64, Ordering::Relaxed);
         }
         // SAFETY: the caller upholds `alloc_zeroed`'s contract; forwarded
         // verbatim.
@@ -86,6 +95,21 @@ pub struct Change {
     pub allocations: u64,
     /// `realloc` calls on the measuring thread.
     pub reallocations: u64,
+    /// Bytes requested by `alloc`/`alloc_zeroed` on the measuring thread.
+    pub bytes_allocated: u64,
+    /// Bytes released by `dealloc` on the measuring thread.
+    pub bytes_deallocated: u64,
+}
+
+impl Change {
+    /// `bytes_allocated − bytes_deallocated` over the window: the net heap
+    /// footprint the windowed region retained. Reallocation traffic is not
+    /// counted here — `realloc` bookkeeping is owned by the allocator, and
+    /// counting its full old and new sizes would misstate retention.
+    #[must_use]
+    pub fn bytes_retained(&self) -> u64 {
+        self.bytes_allocated.saturating_sub(self.bytes_deallocated)
+    }
 }
 
 /// An open measurement window on the current thread.
@@ -96,6 +120,8 @@ pub struct Change {
 pub struct Window {
     start_allocations: u64,
     start_reallocations: u64,
+    start_bytes_allocated: u64,
+    start_bytes_deallocated: u64,
 }
 
 impl Window {
@@ -106,6 +132,8 @@ impl Window {
         Self {
             start_allocations: ALLOCATIONS.load(Ordering::Relaxed),
             start_reallocations: REALLOCATIONS.load(Ordering::Relaxed),
+            start_bytes_allocated: BYTES_ALLOCATED.load(Ordering::Relaxed),
+            start_bytes_deallocated: BYTES_DEALLOCATED.load(Ordering::Relaxed),
         }
     }
 
@@ -115,6 +143,9 @@ impl Window {
         Change {
             allocations: ALLOCATIONS.load(Ordering::Relaxed) - self.start_allocations,
             reallocations: REALLOCATIONS.load(Ordering::Relaxed) - self.start_reallocations,
+            bytes_allocated: BYTES_ALLOCATED.load(Ordering::Relaxed) - self.start_bytes_allocated,
+            bytes_deallocated: BYTES_DEALLOCATED.load(Ordering::Relaxed)
+                - self.start_bytes_deallocated,
         }
     }
 }
