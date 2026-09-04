@@ -6,7 +6,7 @@ use leto::{Array3, ArrayView3};
 
 use super::super::solver::{FdtdGpuAccelerator, FdtdSolver};
 
-use kwavers_math::numerics::operators::Axis;
+use leto_ops::Axis;
 
 impl FdtdSolver {
     /// Dispatch pressure update to GPU or CPU; apply nonlinear correction if enabled.

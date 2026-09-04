@@ -23,13 +23,13 @@
 //! ## Usage
 //!
 //! ```rust,ignore
-//! use kwavers::math::numerics::operators::{DifferentialOperator, CentralDifference2};
+//! use leto_ops::{Axis, StaggeredLeapfrog3D};
 //!
-//! // Create second-order central difference operator
-//! let op = CentralDifference2::new(0.001, 0.001, 0.001)?;
+//! // Fourth-order staggered gradient/divergence pair, owned by Leto
+//! let op = StaggeredLeapfrog3D::new(4, 0.001, 0.001, 0.001)?;
 //!
 //! // Apply to field
-//! let gradient_x = op.apply_x(field.view())?;
+//! op.gradient_into(Axis::X, field.view(), &mut gradient_x)?;
 //! ```
 //!
 //! ## Layer Dependencies
@@ -58,7 +58,7 @@ pub mod symplectic;
 // pub mod transforms;
 
 // Re-export commonly used traits for convenience
-pub use operators::{DifferentialOperator, Interpolator, SpectralOperatorTrait};
+pub use operators::{Interpolator, SpectralOperatorTrait};
 pub use symplectic::{stormer_verlet_step, yoshida4_step};
 
 #[cfg(test)]
@@ -68,7 +68,6 @@ mod tests {
     #[test]
     fn test_module_structure() {
         let _ = (
-            std::any::TypeId::of::<dyn DifferentialOperator>(),
             std::any::TypeId::of::<dyn Interpolator>(),
             std::any::TypeId::of::<dyn SpectralOperatorTrait>(),
         );

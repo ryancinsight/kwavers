@@ -43,7 +43,7 @@
 //! | 8th           | O(Δx⁸)   | ~3           |
 //!
 //! Orders 2–8 are available on the staggered path through
-//! `StaggeredLeapfrogOperator`; the collocated path keeps 2–6, the range its
+//! `leto_ops::StaggeredLeapfrog3D`; the collocated path keeps 2–6, the range its
 //! CFL table covers.
 //!
 //! PPW = points per wavelength at the maximum frequency of interest.
@@ -91,9 +91,9 @@ pub(crate) use kwavers_math::numerics::operators::differential::summation_by_par
 
 use kwavers_boundary::cpml::CPMLBoundary;
 use kwavers_grid::Grid;
-use kwavers_math::numerics::operators::StaggeredLeapfrogOperator;
 use kwavers_source::{Source, SourceInjectionMode};
 use leto::Array3;
+use leto_ops::StaggeredLeapfrog3D;
 use std::sync::Arc;
 
 use super::config::FdtdConfig;
@@ -125,7 +125,7 @@ pub struct GenericFdtdSolver<T> {
     /// Staggered gradient/divergence pair, of the configured order. Its two
     /// halves are negative adjoints, which is what makes the leapfrog
     /// conserve energy (KW-SOL-081).
-    pub(crate) leapfrog_operator: StaggeredLeapfrogOperator,
+    pub(crate) leapfrog_operator: StaggeredLeapfrog3D<f64>,
     /// Performance metrics
     pub(crate) metrics: FdtdMetrics,
     /// C-PML boundary (if enabled)

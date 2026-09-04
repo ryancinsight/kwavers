@@ -1,14 +1,21 @@
 //! # Numerical Operators Module
 //!
-//! This module provides trait definitions and implementations for all numerical
-//! operators used in kwavers. All spatial derivatives, spectral operations, and
-//! interpolation should use these unified interfaces.
+//! Spectral operations, interpolation, and the summation-by-parts family used
+//! by the kwavers solvers.
+//!
+//! ## Where the first-derivative stencils are
+//!
+//! Not here. Central differences, the Yee staggered pair, and the
+//! arbitrary-even-order staggered gradient/divergence pair are Leto's
+//! ([`leto_ops::FiniteDifference3D`], [`leto_ops::StaggeredLeapfrog3D`]), so
+//! one implementation serves every consumer in the stack and a new order is a
+//! parameter rather than another cloned kernel. This module keeps only what
+//! Leto does not own.
 //!
 //! ## Architecture
 //!
-//! The operators module defines three core trait families:
+//! The operators module defines two core trait families:
 //!
-//! - **`DifferentialOperator`**: Finite difference and spectral differentiation
 //! - **`SpectralOperatorTrait`**: FFT-based operations in k-space
 //! - **`Interpolator`**: Spatial interpolation for heterogeneous media
 //!
@@ -21,21 +28,22 @@
 //!
 //! ## Modules
 //!
-//! - `differential`: Finite difference stencils (central, upwind, staggered)
+//! - `differential`: summation-by-parts operators with their energy norms
 //! - `spectral`: Pseudospectral operators using FFT
 //! - `interpolation`: Spatial interpolation (linear, cubic, conservative)
 //!
 //! ## Usage Example
 //!
 //! ```rust,ignore
-//! use kwavers::math::numerics::operators::{DifferentialOperator, CentralDifference2};
 //! use leto::Array3;
+//! use leto_ops::{Axis, StaggeredLeapfrog3D};
 //!
 //! let dx = 0.001; // 1 mm grid spacing
-//! let op = CentralDifference2::new(dx, dx, dx)?;
+//! let op = StaggeredLeapfrog3D::new(4, dx, dx, dx)?;
 //!
 //! let field = Array3::zeros([100, 100, 100]);
-//! let gradient_x = op.apply_x(field.view())?;
+//! let mut gradient_x = Array3::zeros([100, 100, 100]);
+//! op.gradient_into(Axis::X, field.view(), &mut gradient_x)?;
 //! ```
 //!
 //! ## References
@@ -51,17 +59,11 @@ pub mod interpolation;
 pub mod spectral;
 
 // Re-export main traits for convenience
-pub use differential::DifferentialOperator;
 pub use interpolation::Interpolator;
 pub use spectral::SpectralOperatorTrait;
 
 // Re-export common implementations
-pub use differential::{
-    central_first_derivative_coefficients, staggered_first_derivative_coefficients,
-    CentralDifference2, CentralDifference4, CentralDifference6, StaggeredGridOperator,
-    MAX_HALF_ORDER,
-};
-pub use differential::{Axis, StaggeredLeapfrogOperator};
+pub use differential::summation_by_parts::SummationByPartsOperator;
 pub use interpolation::{LinearInterpolator, NumericsTrilinearInterpolator};
 pub use spectral::PseudospectralDerivative;
 
@@ -73,7 +75,6 @@ mod tests {
     fn test_traits_are_object_safe() {
         // Verify traits can be used as trait objects if needed
         // Note: This is a compile-time check
-        fn _assert_differential_object_safe(_: &dyn DifferentialOperator) {}
         fn _assert_spectral_object_safe(_: &dyn SpectralOperatorTrait) {}
         fn _assert_interpolator_object_safe(_: &dyn Interpolator) {}
     }

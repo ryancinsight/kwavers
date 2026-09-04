@@ -77,9 +77,8 @@
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::{Array3, ArrayView3};
 
-use super::central_first_derivative_coefficients;
-use super::staggered_leapfrog::Axis;
 use crate::numerics::dense_solve::{residual_norm, solve_least_squares};
+use leto_ops::{central_first_derivative_coefficients, Axis};
 
 /// Ridge used when solving the boundary conditions, and the bound the residual
 /// must meet afterwards.
@@ -245,7 +244,7 @@ impl SummationByPartsOperator {
     /// grid was too short to host the requested block.
     #[must_use]
     pub fn realized_order(&self, axis: Axis) -> usize {
-        2 * self.axes[axis_index(axis)].interior.len()
+        2 * self.axes[axis.index()].interior.len()
     }
 
     /// Diagonal norm weight at `index` along `axis`.
@@ -255,7 +254,7 @@ impl SummationByPartsOperator {
     /// End points carry half weight, which is the trapezoidal rule.
     #[must_use]
     pub fn norm_weight(&self, axis: Axis, index: usize) -> f64 {
-        let index_axis = axis_index(axis);
+        let index_axis = axis.index();
         self.axes[index_axis].weight(index, self.shape[index_axis])
     }
 
@@ -263,7 +262,7 @@ impl SummationByPartsOperator {
     pub fn apply_into(&self, axis: Axis, field: ArrayView3<'_, f64>, dst: &mut Array3<f64>) {
         let shape = field.shape();
         debug_assert_eq!(dst.shape(), shape, "derivative output is grid-shaped");
-        let index_axis = axis_index(axis);
+        let index_axis = axis.index();
         let operator = &self.axes[index_axis];
         let extent = shape[index_axis];
 
@@ -279,14 +278,6 @@ impl SummationByPartsOperator {
                 }
             }
         }
-    }
-}
-
-fn axis_index(axis: Axis) -> usize {
-    match axis {
-        Axis::X => 0,
-        Axis::Y => 1,
-        Axis::Z => 2,
     }
 }
 
@@ -332,7 +323,8 @@ fn boundary_columns(half_order: usize) -> usize {
 /// afterwards is what distinguishes "solved" from "least-squares fitted".
 fn derive_axis(order: usize, inverse_spacing: f64) -> KwaversResult<AxisOperator> {
     let half = order / 2;
-    let interior = central_first_derivative_coefficients(half)?;
+    let interior = central_first_derivative_coefficients::<f64>(half)?;
+    let interior = interior.taps();
     let rows = boundary_rows(half);
     let cols = boundary_columns(half);
 
@@ -432,7 +424,7 @@ fn derive_axis(order: usize, inverse_spacing: f64) -> KwaversResult<AxisOperator
     }
 
     Ok(AxisOperator {
-        interior,
+        interior: interior.to_vec(),
         norm,
         block,
         rows,

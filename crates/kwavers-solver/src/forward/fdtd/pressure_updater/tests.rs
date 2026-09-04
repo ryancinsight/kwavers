@@ -2,10 +2,10 @@ use crate::forward::fdtd::config::FdtdConfig;
 use crate::forward::fdtd::solver::FdtdSolver;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_grid::Grid;
-use kwavers_math::numerics::operators::Axis;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_source::GridSource;
 use leto::Array3;
+use leto_ops::Axis;
 
 fn clone_array3(field: &Array3<f64>) -> Array3<f64> {
     let shape = field.shape();
@@ -198,7 +198,7 @@ fn test_staggered_divergence_uses_scratch_buffer() {
     // velocity update applies -- not a general backward difference. They differ
     // at the low face, and that row is what makes the leapfrog symplectic
     // (KW-SOL-081).
-    use kwavers_math::numerics::operators::Axis;
+    use leto_ops::Axis;
     let shape = solver.fields.ux.shape();
     let mut dvx = leto::Array3::<f64>::zeros(shape);
     let mut dvy = leto::Array3::<f64>::zeros(shape);
