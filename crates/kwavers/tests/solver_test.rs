@@ -2,7 +2,6 @@
 
 use kwavers_boundary::{DomainPMLBoundary, DomainPmlConfig};
 use kwavers_grid::Grid;
-use kwavers_math::numerics::operators::differential::staggered_leapfrog::StaggeredLeapfrogOperator;
 use kwavers_medium::homogeneous::HomogeneousMedium;
 use kwavers_solver::fdtd::{FdtdConfig, FdtdPlugin};
 use kwavers_solver::plugin::PluginManager;
@@ -10,6 +9,7 @@ use kwavers_solver::pstd::config::BoundaryConfig;
 use kwavers_solver::pstd::{PSTDConfig, PSTDPlugin};
 use kwavers_source::Source;
 use leto::Array4;
+use leto_ops::StaggeredLeapfrog3D;
 use std::sync::Arc;
 
 /// The largest timestep the FDTD plugin will accept for this test's grid.
@@ -27,7 +27,7 @@ use std::sync::Arc;
 /// equality against the rejection threshold.
 fn fdtd_stable_dt(spatial_order: usize) -> f64 {
     const STABILITY_MARGIN: f64 = 0.9;
-    let operator = StaggeredLeapfrogOperator::new(
+    let operator = StaggeredLeapfrog3D::<f64>::new(
         spatial_order,
         TEST_GRID_SPACING,
         TEST_GRID_SPACING,

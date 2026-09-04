@@ -9,7 +9,7 @@ use leto::Array3;
 
 use moirai_parallel::{enumerate_mut_with, Adaptive};
 
-use kwavers_math::numerics::operators::Axis;
+use leto_ops::Axis;
 
 use super::solver::FdtdSolver;
 
@@ -223,15 +223,21 @@ impl FdtdSolver {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     fn update_velocity_staggered(&mut self, dt: f64) -> KwaversResult<()> {
-        self.leapfrog_operator
-            .gradient_into(Axis::X, self.fields.p.view(), &mut self.dvx_scratch);
-        self.leapfrog_operator
-            .gradient_into(Axis::Y, self.fields.p.view(), &mut self.dvy_scratch);
+        self.leapfrog_operator.gradient_into(
+            Axis::X,
+            self.fields.p.view(),
+            &mut self.dvx_scratch,
+        )?;
+        self.leapfrog_operator.gradient_into(
+            Axis::Y,
+            self.fields.p.view(),
+            &mut self.dvy_scratch,
+        )?;
         self.leapfrog_operator.gradient_into(
             Axis::Z,
             self.fields.p.view(),
             &mut self.divergence_scratch,
-        );
+        )?;
 
         if let Some(ref mut cpml) = self.cpml_boundary {
             cpml.update_and_apply_p_gradient_correction(&mut self.dvx_scratch, 0);

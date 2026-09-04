@@ -52,10 +52,10 @@ use crate::forward::fdtd::config::{FdtdAbsorption, TemporalScheme};
 use crate::forward::fdtd::solver::FdtdSolver;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_grid::Grid;
-use kwavers_math::numerics::operators::Axis;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_physics::acoustics::mechanics::acoustic_wave::AcousticSpatialOrder;
 use kwavers_source::GridSource;
+use leto_ops::Axis;
 
 mod stepping;
 
@@ -129,7 +129,7 @@ fn max_stable_dt_2nd_order_matches_analytical_formula() {
 /// **Staggered CFL limit, 4th order.**
 ///
 /// The staggered scheme's Courant limit is `1/(√D·Σ|cₙ|)`, derived on
-/// `StaggeredLeapfrogOperator` from the stencil coefficients themselves. At
+/// `leto_ops::StaggeredLeapfrog3D` from the stencil coefficients themselves. At
 /// fourth order `Σ|cₙ| = 9/8 + 1/24`, giving `0.4949` in 3-D.
 ///
 /// This is **not** the collocated `1/√15 = 0.2582` that
@@ -740,7 +740,7 @@ fn lossless_collocated_leapfrog_conserves_energy() {
 /// **Eighth order runs, and every order conserves energy.**
 ///
 /// Orders 4-8 became reachable on the staggered path when it moved onto
-/// `StaggeredLeapfrogOperator` (KW-SOL-074); eighth order is what Fullwave 2.5
+/// `leto_ops::StaggeredLeapfrog3D` (KW-SOL-074); eighth order is what Fullwave 2.5
 /// uses. Conservation must hold at each, since the gradient/divergence pair is
 /// adjoint at every order by construction.
 #[test]

@@ -5,6 +5,18 @@
 - Item: `backlog.md#kw-sol-085`
 - Supersedes the boundary decision recorded under `backlog.md#kw-sol-074`
 
+## Revision 2026-09-04 — the operator moved to Leto
+
+The decision is unchanged: rigid walls by even reflection, with the divergence
+defined as `-Gᵀ` rather than written out as its own stencil. What changed is
+where it is implemented. The operator this record describes was
+`kwavers_math::numerics::operators::differential::staggered_leapfrog::StaggeredLeapfrogOperator`;
+it is now `leto_ops::StaggeredLeapfrog3D`, generic over the scalar type, so the
+same reflection closure and the same adjoint-by-construction divergence serve
+every consumer in the stack instead of one. Kwavers holds no copy. Read every
+`StaggeredLeapfrogOperator` below as that provider type; the coefficient
+derivation named here is `leto_ops::staggered_first_derivative_coefficients`.
+
 ## Context
 
 `StaggeredLeapfrogOperator` closed its stencils by **zero-extension**: a tap

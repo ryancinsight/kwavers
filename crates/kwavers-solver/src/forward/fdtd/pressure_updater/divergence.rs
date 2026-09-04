@@ -2,7 +2,7 @@
 
 use crate::geometry::SolverGeometry;
 use kwavers_core::error::KwaversResult;
-use kwavers_math::numerics::operators::Axis;
+use leto_ops::Axis;
 
 use super::super::solver::FdtdSolver;
 
@@ -27,17 +27,17 @@ impl FdtdSolver {
             Axis::X,
             self.fields.ux.view(),
             &mut self.dvx_scratch,
-        );
+        )?;
         self.leapfrog_operator.divergence_into(
             Axis::Y,
             self.fields.uy.view(),
             &mut self.dvy_scratch,
-        );
+        )?;
         self.leapfrog_operator.divergence_into(
             Axis::Z,
             self.fields.uz.view(),
             &mut self.divergence_scratch,
-        );
+        )?;
 
         if self.config.geometry == SolverGeometry::CylindricalAS {
             let dz = self.grid.dz;

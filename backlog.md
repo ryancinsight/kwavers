@@ -36,6 +36,52 @@
 
 - **Verdict: superseded.** Same pre-rewrite lineage as the GMRES branch (shares the #318/#320 merges); its typed thermal metrics exist on `main` (`kwavers-physics/src/thermal/diffusion/dose.rs`) and the Aequitas typed-coupling deliveries landed through #318/#320. Branch deleted.
 
+## KW-LETO-FD-SSOT — Delete the kwavers first-derivative stencils [major] [arch] — review <a id="kw-leto-fd-ssot"></a>
+
+- **Integrator:** Claude on `feat/kwavers-leto-fd-ssot`; **lease:**
+  `crates/kwavers-math/src/numerics/operators/`,
+  `crates/kwavers-solver/src/forward/fdtd/`,
+  `crates/kwavers/benches/critical_path_benchmarks.rs`,
+  `crates/kwavers/tests/solver_test.rs` — 2026-09-04.
+- **Outcome:** kwavers holds no first-derivative stencil. `CentralDifference2/4/6`,
+  `StaggeredGridOperator`, `StaggeredLeapfrogOperator`, the `DifferentialOperator`
+  trait, the Fornberg coefficient derivation, and their tests are deleted; the
+  FDTD solver, the benches, and the tests bind `leto_ops::FiniteDifference3D`,
+  `leto_ops::StaggeredLeapfrog3D`, and `leto_ops::Axis`. `SummationByPartsOperator`
+  stays and now draws its interior coefficients and `Axis` from the provider.
+  Decision recorded in [ADR 128](docs/adr/128-first-derivative-stencils-belong-to-leto.md);
+  [ADR 106](docs/adr/106-rigid-walls-by-even-reflection.md) carries a revision
+  note because its operator moved without its decision changing.
+- **Dependency:** leto PR #169 (`6548a00`, merged, CI green) added the
+  arbitrary-even-order staggered pair. That gap is why this deletion could not
+  happen earlier: the solver runs `spatial_order` up to 8 and the provider
+  covered only fixed orders, so the one operator in use was the one that could
+  not be deleted, and nothing below it could collapse either.
+- **Net effect:** 40 files, +108 / -4,970 excluding the lockfile.
+- **Contract changes:** `gradient_into` / `divergence_into` return `Result<()>`;
+  the kwavers versions checked destination shape with `debug_assert_eq!`, absent
+  from release builds where a mismatch would silently read and write past the
+  intended cells. The operator is generic over the scalar type.
+- **Evidence (2026-09-04):** local gate at this revision — `cargo fmt --check`
+  clean; `cargo check --workspace --all-targets` clean;
+  `cargo clippy -p kwavers-math --all-targets -- -D warnings` clean;
+  `cargo nextest run --locked --workspace --exclude kwavers-python --exclude
+  kwavers-gpu --lib --test-threads=2` **5742/5742**;
+  `cargo nextest run -p kwavers --test solver_test --features full` 3/3;
+  `cargo test -p kwavers --doc --features full` pass;
+  `RUSTDOCFLAGS="-D warnings" cargo doc -p kwavers --features full --no-deps`
+  clean; `cargo bench -p kwavers -- --test` pass.
+- **Pre-existing gate debt, untouched by this diff (entry baseline):**
+  `-D warnings` clippy still fails on `kwavers-signal/src/analytic.rs`,
+  `kwavers-driver/src/stack/tests.rs`, `kwavers-solver` examples and
+  `avx512_stencil`/`dispatch` test modules, `kwavers/src/theranostic/monitor/fusion.rs`,
+  and `kwavers/tests/solver_forward_bem_analytical_validation.rs`. None appears
+  in this diff; filed here so the next lint-ratchet increment has the list.
+- **Next:** the Coeus `FiniteDifference3DOps` seam and the Hephaestus 3-D device
+  kernels, after which these same call sites reach a GPU backend without
+  changing and `kwavers-gpu`'s FDTD shader copy becomes deletable (ADR 128).
+- **Last-update:** 2026-09-04.
+
 ## KW-FFT-HEPHAESTUS-BACKEND-SELECTOR — Select Leto or Hephaestus FFT execution [major] [arch] — delivery
 
 | ID | Outcome | Class | Status | Owner | Scope |
