@@ -1,5 +1,6 @@
 use crate::pstd::PSTDConfig as PstdConfig;
 use crate::pstd::PSTDSolver;
+use crate::test_support::test_info;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_grid::Grid;
@@ -25,7 +26,7 @@ fn test_gaussian_beam_phase_accuracy() {
     // For two sensor signals p₁(t) at x₁ and p₂(t) at x₂, the time-lag τ*
     // at the cross-correlation peak satisfies c_meas = (x₂−x₁)·dx / (τ*·dt).
     // Reference: Treeby & Cox (2010) J. Biomed. Opt. 15(2):021314, Table 1.
-    println!("\n=== Gaussian Beam Phase Accuracy Test ===");
+    test_info!("\n=== Gaussian Beam Phase Accuracy Test ===");
 
     let n = 64;
     let frequency = MHZ_TO_HZ;
@@ -96,7 +97,7 @@ fn test_gaussian_beam_phase_accuracy() {
     let expected_lag = (sensor_sep / (c0 * config.dt)).round() as usize;
     let steps_to_sensor1 = ((sensor_xi - i_start) as f64 * dx / (c0 * config.dt)).ceil() as usize;
     let total_steps = (steps_to_sensor1 + 3 * expected_lag).min(500);
-    println!("Propagating for {} steps (≈1 Rayleigh range)", total_steps);
+    test_info!("Propagating for {} steps (≈1 Rayleigh range)", total_steps);
 
     for step in 0..total_steps {
         solver.step_forward().unwrap();
@@ -109,7 +110,7 @@ fn test_gaussian_beam_phase_accuracy() {
                 .iter()
                 .map(|&p| p.abs())
                 .fold(0.0_f64, f64::max);
-            println!("Step {}: max pressure = {:.2e}", step, max_p);
+            test_info!("Step {}: max pressure = {:.2e}", step, max_p);
         }
     }
 
@@ -129,9 +130,10 @@ fn test_gaussian_beam_phase_accuracy() {
         .max_by(|a, b| a.1.total_cmp(&b.1))
         .unwrap_or((1, 0.0));
 
-    println!(
+    test_info!(
         "Best lag: {} steps, correlation peak: {:.3e}",
-        best_lag, best_corr
+        best_lag,
+        best_corr
     );
     assert!(
         best_corr > 0.0,
@@ -141,7 +143,7 @@ fn test_gaussian_beam_phase_accuracy() {
     let sensor_sep = ((sensor_xj - sensor_xi) as f64) * dx;
     let c_meas = sensor_sep / (best_lag as f64 * config.dt);
     let rel_err = (c_meas - c0).abs() / c0;
-    println!(
+    test_info!(
         "c_meas = {:.1} m/s,  c₀ = {:.1} m/s,  error = {:.2}%",
         c_meas,
         c0,
@@ -166,7 +168,7 @@ fn test_gaussian_beam_phase_accuracy() {
     let peak_at_sensor2: f64 = (0..n)
         .map(|j| solver.fields.p[[sensor_xj, j, 0]].abs())
         .fold(0.0_f64, f64::max);
-    println!("Peak pressure at sensor2 column: {:.2e}", peak_at_sensor2);
+    test_info!("Peak pressure at sensor2 column: {:.2e}", peak_at_sensor2);
     assert!(
         peak_at_sensor2 > 1e-6,
         "Pulse did not reach sensor2 with measurable amplitude (peak={:.2e})",

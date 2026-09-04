@@ -68,18 +68,18 @@ fn boundary_conditions_reuse_shape_compatible_output_storage() {
     fields.flux_density =
         Some(ArrayD::<f64, VecStorage<f64>>::from_elem(&[4, 4, 4, 3], 2.0).unwrap());
 
-    let electric_ptr = fields.electric.iter().next().map(|x| x as *const f64);
-    let magnetic_ptr = fields.magnetic.iter().next().map(|x| x as *const f64);
+    let electric_ptr = fields.electric.iter().next().map(std::ptr::from_ref::<f64>);
+    let magnetic_ptr = fields.magnetic.iter().next().map(std::ptr::from_ref::<f64>);
 
     solver.apply_em_boundary_conditions(&mut fields);
 
     // Verify no reallocation occurred (pointer to first element is unchanged).
     assert_eq!(
-        fields.electric.iter().next().map(|x| x as *const f64),
+        fields.electric.iter().next().map(std::ptr::from_ref::<f64>),
         electric_ptr
     );
     assert_eq!(
-        fields.magnetic.iter().next().map(|x| x as *const f64),
+        fields.magnetic.iter().next().map(std::ptr::from_ref::<f64>),
         magnetic_ptr
     );
     assert!(fields.displacement.is_none());
