@@ -3,7 +3,10 @@
 //! One canonical implementation covers 1-D, 2-D, and 3-D: a `(n,1,1)` grid is
 //! 1-D, `(nx,ny,1)` is 2-D, and `(nx,ny,nz)` is full 3-D — the spectral
 //! derivative along a singleton axis is identically zero. Lower-dimensional
-//! grids therefore clear those derivative outputs without staging or FFT work.
+//! grids therefore clear those derivative outputs without staging or FFT work,
+//! and the solver owns **no storage for an inactive axis**: it retains
+//! velocity, derivative, and wavenumber state only along axes that can carry
+//! spatial variation (see [`ActiveAxes`]).
 
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
@@ -59,6 +62,8 @@ pub struct ViscoacousticMemorySolver {
     nz: usize,
     cell_volume: f64, // dx·dy·dz
     dt: f64,
+    /// Which axes carry spatial variation and therefore own storage.
+    axes: ActiveAxes,
     /// Per-voxel `1/ρ(x)` \[m³·kg⁻¹] for the velocity update.
     inv_rho: Array3<f64>,
     /// Per-voxel unrelaxed (instantaneous) modulus `M_U(x) = M_∞(x) + Σ ΔMₗ(x)` \\[Pa\].
@@ -84,8 +89,9 @@ pub struct ViscoacousticMemorySolver {
     vz: Array3<f64>,
     sigma: Vec<Array3<f64>>, // one memory field per arm
 
-    // Preallocated derivative buffers (gx is reused as the divergence ∇·v and gy
-    // as the relaxation accumulator after the velocity-divergence pass).
+    // Preallocated derivative/staging buffers, assigned per step in canonical
+    // axis order: `gx` is the divergence output, `gy` the second staging slot
+    // then the relaxation accumulator, `gz` the third slot (all-active only).
     gx: Array3<f64>,
     gy: Array3<f64>,
     gz: Array3<f64>,
@@ -104,6 +110,54 @@ pub struct ViscoacousticMemorySolver {
     sensor_record: Vec<Vec<f64>>,
 }
 
+/// Which grid axes carry spatial variation and therefore own storage.
+///
+/// A singleton axis is periodic with a single sample: its spectral derivative
+/// is identically zero for every field, so its velocity component stays zero
+/// for all time and its derivative staging has no content. The solver omits
+/// the state of an inactive axis entirely and substitutes the exact
+/// `positive zero` identity at the operation boundary, so the canonical
+/// 1-D/2-D/3-D grids `(n,1,1)`, `(nx,ny,1)`, `(nx,ny,nz)` keep their semantics
+/// while the retained footprint drops by the inactive arrays.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct ActiveAxes {
+    x: bool,
+    y: bool,
+    z: bool,
+}
+
+impl ActiveAxes {
+    /// The active-axis set of a grid: an extent-1 axis is inactive.
+    fn of(nx: usize, ny: usize, nz: usize) -> Self {
+        Self {
+            x: nx > 1,
+            y: ny > 1,
+            z: nz > 1,
+        }
+    }
+
+    /// Every axis active — the full 3-D storage layout.
+    fn all_active(nx: usize, ny: usize, nz: usize) -> bool {
+        nx > 1 && ny > 1 && nz > 1
+    }
+
+    /// Number of active axes.
+    fn count(self) -> usize {
+        usize::from(self.x) + usize::from(self.y) + usize::from(self.z)
+    }
+
+    /// All singleton axes are inactive, so at least one axis is always active
+    /// on a valid (non-degenerate but possibly singleton) grid.
+    fn is_active(self, axis: usize) -> bool {
+        match axis {
+            0 => self.x,
+            1 => self.y,
+            2 => self.z,
+            _ => unreachable!("invariant: axis is 0, 1, or 2"),
+        }
+    }
+}
+
 impl std::fmt::Debug for ViscoacousticMemorySolver {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ViscoacousticMemorySolver")
@@ -118,6 +172,7 @@ impl std::fmt::Debug for ViscoacousticMemorySolver {
             .field("max_unrelaxed_speed", &self.max_unrelaxed_speed)
             .field("arms", &(self.arms.len()))
             .field("fft", &"<fft-plan>")
+            .field("axes", &self.axes)
             .field("kx", &self.kx.len())
             .field("ky", &self.ky.len())
             .field("kz", &self.kz.len())
@@ -208,6 +263,7 @@ impl ViscoacousticMemorySolver {
             inv_rho,
             m_inf_field,
             arm_fields,
+            ActiveAxes::of(nx, ny, nz),
         ))
     }
 
@@ -280,12 +336,21 @@ impl ViscoacousticMemorySolver {
             inv_rho,
             m_inf.clone(),
             arm_fields,
+            ActiveAxes::of(nx, ny, nz),
         ))
     }
 
     /// Allocate state/scratch and assemble the solver from prepared per-voxel
     /// `inv_rho`, `m_inf`, and arm coefficient fields. `M_U = M_∞ + Σ ΔMₗ` is
     /// recovered from the arm gains; the CFL speed is the grid max of `√(M_U/ρ)`.
+    ///
+    /// `axes` is the storage mask. Production constructors derive it from the
+    /// grid; the differential tests inject the all-active mask at a singleton
+    /// grid to build the six-array reference the acceptance oracle compares
+    /// against. The step code is identical under both layouts — an inactive
+    /// axis is the exact positive-zero identity — so the two are bitwise
+    /// comparable, and the injected reference is test-local, not a public
+    /// constructor surface.
     #[allow(clippy::too_many_arguments)]
     fn assemble(
         nx: usize,
@@ -298,6 +363,7 @@ impl ViscoacousticMemorySolver {
         inv_rho: Array3<f64>,
         m_inf: Array3<f64>,
         arms: Vec<Arm>,
+        axes: ActiveAxes,
     ) -> Self {
         let shape = (nx, ny, nz);
         // M_U(x) = M_∞(x) + Σ ΔMₗ(x); recover ΔMₗ = −gain / (τ(1−decay)) = −gain·inv_tau/(1−decay).
@@ -318,12 +384,29 @@ impl ViscoacousticMemorySolver {
             })
             .expect("invariant: modulus and inv_rho fields share grid shape");
 
+        // Storage layout: velocity/wavenumber state only for active axes.
+        // `gx` (divergence output) and `gy` (second staging slot, then the
+        // relaxation accumulator) stay grid-shaped; `gz` is the third staging
+        // slot and exists only in the all-active layout — the only step that
+        // needs three simultaneous slots. An inactive axis owns no storage:
+        // its velocity stays exactly zero for all time and its derivative is
+        // the exact positive zero fill.
+        let stage = |active: bool| {
+            if active {
+                Array3::zeros(shape)
+            } else {
+                Array3::zeros((0, 0, 0))
+            }
+        };
+        let all_active = axes.x && axes.y && axes.z;
+
         Self {
             nx,
             ny,
             nz,
             cell_volume: dx * dy * dz,
             dt,
+            axes,
             inv_rho,
             m_u,
             m_inf,
@@ -331,17 +414,29 @@ impl ViscoacousticMemorySolver {
             sigma: vec![Array3::zeros(shape); arms.len()],
             arms,
             fft: get_fft_for_grid(nx, ny, nz),
-            kx: fft_wavenumbers(nx, dx),
-            ky: fft_wavenumbers(ny, dy),
-            kz: fft_wavenumbers(nz, dz),
+            kx: if axes.x {
+                fft_wavenumbers(nx, dx)
+            } else {
+                Vec::new()
+            },
+            ky: if axes.y {
+                fft_wavenumbers(ny, dy)
+            } else {
+                Vec::new()
+            },
+            kz: if axes.z {
+                fft_wavenumbers(nz, dz)
+            } else {
+                Vec::new()
+            },
             cbuf: LetoArray3::from_elem([nx, ny, nz], Complex64::new(0.0, 0.0)),
             p: Array3::zeros(shape),
-            vx: Array3::zeros(shape),
-            vy: Array3::zeros(shape),
-            vz: Array3::zeros(shape),
+            vx: stage(axes.x),
+            vy: stage(axes.y),
+            vz: stage(axes.z),
             gx: Array3::zeros(shape),
             gy: Array3::zeros(shape),
-            gz: Array3::zeros(shape),
+            gz: stage(all_active),
             damping_decay: None,
             step_count: 0,
             pressure_sources: Vec::new(),
@@ -525,9 +620,15 @@ impl ViscoacousticMemorySolver {
             ));
         }
         self.p.assign(p);
-        self.vx.fill(0.0);
-        self.vy.fill(0.0);
-        self.vz.fill(0.0);
+        if self.axes.x {
+            self.vx.fill(0.0);
+        }
+        if self.axes.y {
+            self.vy.fill(0.0);
+        }
+        if self.axes.z {
+            self.vz.fill(0.0);
+        }
         for s in &mut self.sigma {
             s.fill(0.0);
         }
@@ -556,13 +657,16 @@ impl ViscoacousticMemorySolver {
             |acc, &p, &mi| acc + p * p / (2.0 * mi),
         )
         .expect("invariant: pressure and modulus fields share grid shape");
-        let ke = self
-            .vx
-            .iter()
-            .zip(self.vy.iter())
-            .zip(self.vz.iter())
+        // Inactive-axis velocity components are exactly zero for all time, so
+        // their kinetic contribution is the zero term and is not traversed.
+        let vx_iter = self.vx.iter().copied().chain(std::iter::repeat(0.0_f64));
+        let vy_iter = self.vy.iter().copied().chain(std::iter::repeat(0.0_f64));
+        let vz_iter = self.vz.iter().copied().chain(std::iter::repeat(0.0_f64));
+        let ke = vx_iter
+            .zip(vy_iter)
+            .zip(vz_iter)
             .zip(self.inv_rho.iter())
-            .fold(0.0_f64, |acc, (((&vx, &vy), &vz), &ir)| {
+            .fold(0.0_f64, |acc, (((vx, vy), vz), &ir)| {
                 acc + (vx * vx + vy * vy + vz * vz) / (2.0 * ir)
             });
         (pe + ke) * self.cell_volume
@@ -576,82 +680,125 @@ impl ViscoacousticMemorySolver {
     /// the precondition required by this operation.
     pub fn step(&mut self) {
         // 1. Velocity half-step: v += -(Δt/ρ(x)) ∇p (per component, per voxel).
+        // Staging slots are assigned in canonical axis order — first active
+        // axis → `gx`, second → `gy`, third → `gz` — so every layout stages
+        // into grid-shaped buffers only (`gz` exists exactly in the layout
+        // whose step needs a third slot) and each slot is consumed by its
+        // velocity update before the divergence pass restages it. An inactive
+        // axis stages no derivative and updates no velocity: its component is
+        // the exact positive zero for all time (the value the full-storage
+        // layout wrote and then added zero to).
         let dt = self.dt;
-        Self::axis_derivative(
-            &self.fft,
-            &self.kx,
-            0,
-            &self.p,
-            &mut self.cbuf,
-            &mut self.gx,
-        );
-        Self::axis_derivative(
-            &self.fft,
-            &self.ky,
-            1,
-            &self.p,
-            &mut self.cbuf,
-            &mut self.gy,
-        );
-        Self::axis_derivative(
-            &self.fft,
-            &self.kz,
-            2,
-            &self.p,
-            &mut self.cbuf,
-            &mut self.gz,
-        );
-        leto_ops::zip_mut_with(
-            self.vx.view_mut(),
-            (&self.gx.view(), &self.inv_rho.view()),
-            |v, (&g, &ir)| *v += -dt * ir * g,
-        )
-        .expect("invariant: velocity-x update fields share grid shape");
-        leto_ops::zip_mut_with(
-            self.vy.view_mut(),
-            (&self.gy.view(), &self.inv_rho.view()),
-            |v, (&g, &ir)| *v += -dt * ir * g,
-        )
-        .expect("invariant: velocity-y update fields share grid shape");
-        leto_ops::zip_mut_with(
-            self.vz.view_mut(),
-            (&self.gz.view(), &self.inv_rho.view()),
-            |v, (&g, &ir)| *v += -dt * ir * g,
-        )
-        .expect("invariant: velocity-z update fields share grid shape");
+        let axes = self.axes;
+        let slot_x: Option<usize> = axes.x.then_some(0);
+        let slot_y: Option<usize> = axes.y.then_some(usize::from(axes.x));
+        let slot_z: Option<usize> = axes.z.then_some(usize::from(axes.x) + usize::from(axes.y));
+        {
+            let buffers: [&mut Array3<f64>; 3] = [&mut self.gx, &mut self.gy, &mut self.gz];
+            if let Some(s) = slot_x {
+                Self::axis_derivative(
+                    &self.fft,
+                    &self.kx,
+                    0,
+                    &self.p,
+                    &mut self.cbuf,
+                    &mut *buffers[s],
+                );
+                leto_ops::zip_mut_with(
+                    self.vx.view_mut(),
+                    (&buffers[s].view(), &self.inv_rho.view()),
+                    |v, (&g, &ir)| *v += -dt * ir * g,
+                )
+                .expect("invariant: velocity-x update fields share grid shape");
+            }
+            if let Some(s) = slot_y {
+                Self::axis_derivative(
+                    &self.fft,
+                    &self.ky,
+                    1,
+                    &self.p,
+                    &mut self.cbuf,
+                    &mut *buffers[s],
+                );
+                leto_ops::zip_mut_with(
+                    self.vy.view_mut(),
+                    (&buffers[s].view(), &self.inv_rho.view()),
+                    |v, (&g, &ir)| *v += -dt * ir * g,
+                )
+                .expect("invariant: velocity-y update fields share grid shape");
+            }
+            if let Some(s) = slot_z {
+                Self::axis_derivative(
+                    &self.fft,
+                    &self.kz,
+                    2,
+                    &self.p,
+                    &mut self.cbuf,
+                    &mut *buffers[s],
+                );
+                leto_ops::zip_mut_with(
+                    self.vz.view_mut(),
+                    (&buffers[s].view(), &self.inv_rho.view()),
+                    |v, (&g, &ir)| *v += -dt * ir * g,
+                )
+                .expect("invariant: velocity-z update fields share grid shape");
+            }
 
-        // 2. Dilatation rate D = ∇·v (accumulated into gx).
-        Self::axis_derivative(
-            &self.fft,
-            &self.kx,
-            0,
-            &self.vx,
-            &mut self.cbuf,
-            &mut self.gx,
-        );
-        Self::axis_derivative(
-            &self.fft,
-            &self.ky,
-            1,
-            &self.vy,
-            &mut self.cbuf,
-            &mut self.gy,
-        );
-        Self::axis_derivative(
-            &self.fft,
-            &self.kz,
-            2,
-            &self.vz,
-            &mut self.cbuf,
-            &mut self.gz,
-        );
-        // gx = ∂vx/∂x + ∂vy/∂y + ∂vz/∂z
-        leto_ops::zip_mut_with(
-            self.gx.view_mut(),
-            (&self.gy.view(), &self.gz.view()),
-            |d, (&y, &z)| *d += y + z,
-        )
-        .expect("invariant: divergence components share grid shape");
+            // 2. Dilatation rate D = ∇·v, staged into the same slots: the
+            // first active axis's derivative lands in `gx` — the divergence
+            // output — and the rest in `gy`/`gz`. A missing axis contributes
+            // its exact positive-zero derivative (the identity the
+            // full-storage layout derives from the zero velocity and the
+            // singleton wavenumber).
+            if let Some(s) = slot_x {
+                Self::axis_derivative(
+                    &self.fft,
+                    &self.kx,
+                    0,
+                    &self.vx,
+                    &mut self.cbuf,
+                    &mut *buffers[s],
+                );
+            }
+            if let Some(s) = slot_y {
+                Self::axis_derivative(
+                    &self.fft,
+                    &self.ky,
+                    1,
+                    &self.vy,
+                    &mut self.cbuf,
+                    &mut *buffers[s],
+                );
+            }
+            if let Some(s) = slot_z {
+                Self::axis_derivative(
+                    &self.fft,
+                    &self.kz,
+                    2,
+                    &self.vz,
+                    &mut self.cbuf,
+                    &mut *buffers[s],
+                );
+            }
+        }
+
+        // gx = ∂vx/∂x + (∂vy/∂y + ∂vz/∂z): the reference association, in one
+        // flat combine pass per layout. With a single active axis the staged
+        // derivative already is the divergence; with none it is the zero fill.
+        match axes.count() {
+            0 => self.gx.fill(0.0),
+            1 => {}
+            2 => leto_ops::zip_mut_with(self.gx.view_mut(), &self.gy.view(), |d_, &y| {
+                *d_ += y;
+            })
+            .expect("invariant: divergence components share grid shape"),
+            _ => leto_ops::zip_mut_with(
+                self.gx.view_mut(),
+                (&self.gy.view(), &self.gz.view()),
+                |d_, (&y, &z)| *d_ += y + z,
+            )
+            .expect("invariant: divergence components share grid shape"),
+        }
 
         // 3. Advance each σ_l with the exact exponential integrator (per-voxel
         //    coefficients) and accumulate its trapezoidal pressure contribution
@@ -707,16 +854,24 @@ impl ViscoacousticMemorySolver {
             }
         }
 
-        // 6. Absorbing boundary: damp p and v inside the sponge layer.
+        // 6. Absorbing boundary: damp p and v inside the sponge layer. Each
+        // active axis is damped exactly once here (the removed inactive-axis
+        // pass added only a multiply by one over a zero field).
         if let Some(decay) = &self.damping_decay {
             leto_ops::zip_mut_with(self.p.view_mut(), &decay.view(), |p, &d| *p *= d)
                 .expect("invariant: pressure and damping fields share grid shape");
-            leto_ops::zip_mut_with(self.vx.view_mut(), &decay.view(), |v, &d| *v *= d)
-                .expect("invariant: velocity-x and damping fields share grid shape");
-            leto_ops::zip_mut_with(self.vy.view_mut(), &decay.view(), |v, &d| *v *= d)
-                .expect("invariant: velocity-y and damping fields share grid shape");
-            leto_ops::zip_mut_with(self.vz.view_mut(), &decay.view(), |v, &d| *v *= d)
-                .expect("invariant: velocity-z and damping fields share grid shape");
+            if axes.x {
+                leto_ops::zip_mut_with(self.vx.view_mut(), &decay.view(), |v, &d| *v *= d)
+                    .expect("invariant: velocity-x and damping fields share grid shape");
+            }
+            if axes.y {
+                leto_ops::zip_mut_with(self.vy.view_mut(), &decay.view(), |v, &d| *v *= d)
+                    .expect("invariant: velocity-y and damping fields share grid shape");
+            }
+            if axes.z {
+                leto_ops::zip_mut_with(self.vz.view_mut(), &decay.view(), |v, &d| *v *= d)
+                    .expect("invariant: velocity-z and damping fields share grid shape");
+            }
         }
 
         // 7. Record sensor traces, then advance the simulation clock.
