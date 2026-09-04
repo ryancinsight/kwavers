@@ -88,8 +88,21 @@
   stale-lock case. `b3e7549d` regenerated the lock and fixed that, which is
   what exposed the diamond behind it. One red replaced another; nothing new
   was introduced.
-- **Re-open trigger:** the Mnemosyne pin reaches a revision at or after
-  `e8e825f`. Then regenerate the lock and confirm `cargo check -p kwavers
+- **Root cause traced further, 2026-09-04 (the first reading was too shallow).**
+  Advancing kwavers' own Mnemosyne pin to `e8e825f` does **not** close the
+  diamond — measured, not assumed: the pin was bumped in a lane, the lock
+  regenerated, and both Eunomia versions were still present. The
+  `eunomia?rev=fdbf1227` edge arrives through a *different* Mnemosyne revision,
+  `Mnemosyne.git?rev=7f173751`, which is pinned by **moirai** (both its default
+  branch `4db2dc19` and its `rev=83aa411` pin) and by **ritk**. So the pin that
+  has to move is upstream of kwavers by two repositories, and no change to
+  kwavers' manifest can close it.
+- **Re-open trigger:** moirai and ritk advance their `Mnemosyne.git` pins past
+  `7f173751` to a revision that depends on Eunomia's default branch. Then
+  regenerate the kwavers lock and confirm `cargo check -p kwavers
+  --no-default-features --features full` compiles `kwavers-gpu`. The earlier
+  trigger — kwavers' own Mnemosyne pin reaching `e8e825f` — was wrong and is
+  superseded. Then regenerate the lock and confirm `cargo check -p kwavers
   --no-default-features --features full` compiles `kwavers-gpu`.
 - **Last-update:** 2026-09-04.
 
