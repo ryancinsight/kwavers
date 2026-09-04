@@ -20,16 +20,65 @@ use std::sync::Arc;
 mod axis;
 mod driven;
 
-/// One relaxation arm with its precomputed per-voxel exponential-integrator
-/// coefficients (uniform fields for a homogeneous medium).
+/// One relaxation arm with its precomputed exponential-integrator
+/// coefficients (uniform coefficients for a homogeneous medium).
 #[derive(Debug, Clone)]
 struct Arm {
     /// `e^{-Δt/τₗ(x)}` (decay over one step).
-    decay: Array3<f64>,
+    decay: Coeff,
     /// `−ΔMₗ(x)·τₗ(x)·(1 − e^{-Δt/τₗ})` — coefficient of `∇·v` in the σ update.
-    gain: Array3<f64>,
+    gain: Coeff,
     /// `1/τₗ(x)` \[s⁻¹] — for the trapezoidal pressure contribution.
-    inv_tau: Array3<f64>,
+    inv_tau: Coeff,
+}
+
+/// A medium or integrator coefficient: one scalar when it is spatially
+/// uniform, or the full per-voxel grid otherwise.
+///
+/// The representation specializes **once, at the operation boundary**: every
+/// consumer branches on the variant per operation (per step, per arm) and
+/// never inside a per-voxel loop — the scalar path hoists the value out of
+/// the loop, the grid path streams the field. The scalar path performs the
+/// same float operations in the same order as the grid path over a constant
+/// field, so the two are bitwise comparable.
+#[derive(Debug, Clone)]
+enum Coeff {
+    /// Spatially uniform: every voxel holds this value.
+    Uniform(f64),
+    /// Per-voxel field, grid-shaped and contiguous.
+    Field(Array3<f64>),
+}
+
+impl Coeff {
+    /// The scalar of a [`Coeff::Uniform`] coefficient.
+    fn value(&self) -> f64 {
+        match self {
+            Coeff::Uniform(v) => *v,
+            Coeff::Field(_) => unreachable!("invariant: scalar path reads uniform coefficients"),
+        }
+    }
+
+    /// Whether the coefficient is spatially uniform.
+    fn is_uniform(&self) -> bool {
+        matches!(self, Coeff::Uniform(_))
+    }
+
+    /// The per-voxel slice of a [`Coeff::Field`] coefficient.
+    fn slice(&self) -> &[f64] {
+        match self {
+            Coeff::Uniform(_) => unreachable!("invariant: grid path reads field coefficients"),
+            Coeff::Field(a) => a
+                .as_slice()
+                .expect("invariant: viscoacoustic coefficient field is contiguous"),
+        }
+    }
+}
+/// Debug description of a coefficient's representation.
+fn describe_coeff(c: &Coeff) -> String {
+    match c {
+        Coeff::Uniform(v) => format!("uniform({v})"),
+        Coeff::Field(a) => format!("{:?}", a.shape()),
+    }
 }
 
 /// Build an arm's exponential-integrator coefficient fields from per-voxel
@@ -45,9 +94,22 @@ fn build_arm(delta_m: &Array3<f64>, tau: &Array3<f64>, dt: f64) -> Arm {
     )
     .expect("invariant: build_arm operands share grid shape");
     Arm {
-        decay,
-        gain,
-        inv_tau,
+        decay: Coeff::Field(decay),
+        gain: Coeff::Field(gain),
+        inv_tau: Coeff::Field(inv_tau),
+    }
+}
+
+/// Build an arm's exponential-integrator coefficients from scalar relaxation
+/// strength `ΔMₗ` and time `τₗ` — the same formulas [`build_arm`] evaluates
+/// per voxel, so a uniform field and the scalar produce bitwise-equal
+/// coefficients.
+fn build_uniform_arm(delta_m: f64, tau: f64, dt: f64) -> Arm {
+    let decay = (-dt / tau).exp();
+    Arm {
+        decay: Coeff::Uniform(decay),
+        gain: Coeff::Uniform(-delta_m * tau * (1.0 - decay)),
+        inv_tau: Coeff::Uniform(1.0 / tau),
     }
 }
 
@@ -64,12 +126,15 @@ pub struct ViscoacousticMemorySolver {
     dt: f64,
     /// Which axes carry spatial variation and therefore own storage.
     axes: ActiveAxes,
-    /// Per-voxel `1/ρ(x)` \[m³·kg⁻¹] for the velocity update.
-    inv_rho: Array3<f64>,
-    /// Per-voxel unrelaxed (instantaneous) modulus `M_U(x) = M_∞(x) + Σ ΔMₗ(x)` \\[Pa\].
-    m_u: Array3<f64>,
-    /// Per-voxel equilibrium (relaxed) modulus `M_∞(x)` \\[Pa\] — potential-energy norm.
-    m_inf: Array3<f64>,
+    /// `1/ρ(x)` \[m³·kg⁻¹] for the velocity update — scalar when the medium
+    /// is homogeneous.
+    inv_rho: Coeff,
+    /// Unrelaxed (instantaneous) modulus `M_U(x) = M_∞(x) + Σ ΔMₗ(x)` \\[Pa\]
+    /// — scalar when the medium is homogeneous.
+    m_u: Coeff,
+    /// Equilibrium (relaxed) modulus `M_∞(x)` \\[Pa\] — the potential-energy
+    /// norm; scalar when the medium is homogeneous.
+    m_inf: Coeff,
     /// Maximum unrelaxed sound speed over the grid \[m·s⁻¹] — the CFL reference.
     max_unrelaxed_speed: f64,
     arms: Vec<Arm>,
@@ -150,9 +215,9 @@ impl std::fmt::Debug for ViscoacousticMemorySolver {
             .field("nz", &self.nz)
             .field("dt", &self.dt)
             .field("cell_volume", &self.cell_volume)
-            .field("inv_rho", &self.inv_rho.shape())
-            .field("m_u", &self.m_u.shape())
-            .field("m_inf", &self.m_inf.shape())
+            .field("inv_rho", &describe_coeff(&self.inv_rho))
+            .field("m_u", &describe_coeff(&self.m_u))
+            .field("m_inf", &describe_coeff(&self.m_inf))
             .field("max_unrelaxed_speed", &self.max_unrelaxed_speed)
             .field("arms", &(self.arms.len()))
             .field("fft", &"<fft-plan>")
@@ -221,20 +286,16 @@ impl ViscoacousticMemorySolver {
             ));
         }
 
-        // Homogeneous medium: broadcast the scalar parameters to uniform fields
-        // and delegate to the per-voxel assembler.
-        let shape = (nx, ny, nz);
-        let inv_rho = Array3::from_elem(shape, 1.0 / rho);
-        let m_inf_field = Array3::from_elem(shape, m_inf);
+        // Homogeneous medium: every coefficient is a broadcast scalar by
+        // construction (the parameters cannot vary across voxels), so the
+        // solver retains one f64 per coefficient instead of a full grid —
+        // at every grid shape. The scalar coefficients carry the same values
+        // the broadcast fields would, and the step evaluates the same float
+        // operations in the same order, so the uniform layout is bitwise
+        // comparable with the grid layout.
         let arm_fields: Vec<Arm> = arms
             .iter()
-            .map(|&(dm, tau)| {
-                build_arm(
-                    &Array3::from_elem(shape, dm),
-                    &Array3::from_elem(shape, tau),
-                    dt,
-                )
-            })
+            .map(|&(dm, tau)| build_uniform_arm(dm, tau, dt))
             .collect();
         Ok(Self::assemble(
             nx,
@@ -244,8 +305,8 @@ impl ViscoacousticMemorySolver {
             dy,
             dz,
             dt,
-            inv_rho,
-            m_inf_field,
+            Coeff::Uniform(1.0 / rho),
+            Coeff::Uniform(m_inf),
             arm_fields,
             ActiveAxes::of(nx, ny, nz),
         ))
@@ -304,7 +365,9 @@ impl ViscoacousticMemorySolver {
             ));
         }
 
-        let inv_rho = rho.mapv(|r| 1.0 / r);
+        // Heterogeneous media keep per-voxel coefficient fields unconditionally;
+        // even a constant-field call site measures and behaves identically.
+        let inv_rho = Coeff::Field(rho.mapv(|r| 1.0 / r));
         let arm_fields: Vec<Arm> = arms
             .iter()
             .map(|(dm, tau)| build_arm(dm, tau, dt))
@@ -318,7 +381,7 @@ impl ViscoacousticMemorySolver {
             dz,
             dt,
             inv_rho,
-            m_inf.clone(),
+            Coeff::Field(m_inf.clone()),
             arm_fields,
             ActiveAxes::of(nx, ny, nz),
         ))
@@ -344,29 +407,69 @@ impl ViscoacousticMemorySolver {
         dy: f64,
         dz: f64,
         dt: f64,
-        inv_rho: Array3<f64>,
-        m_inf: Array3<f64>,
+        inv_rho: Coeff,
+        m_inf: Coeff,
         arms: Vec<Arm>,
         axes: ActiveAxes,
     ) -> Self {
         let shape = (nx, ny, nz);
         // M_U(x) = M_∞(x) + Σ ΔMₗ(x); recover ΔMₗ = −gain / (τ(1−decay)) = −gain·inv_tau/(1−decay).
-        let mut m_u = m_inf.clone();
-        for arm in &arms {
-            leto_ops::zip_mut_with(
-                m_u.view_mut(),
-                (&arm.gain.view(), &arm.decay.view(), &arm.inv_tau.view()),
-                |mu, (&gain, &decay, &inv_tau)| {
-                    *mu += -gain * inv_tau / (1.0 - decay);
-                },
-            )
-            .expect("invariant: viscoacoustic modulus fields share grid shape");
-        }
-        let max_unrelaxed_speed =
-            leto_ops::zip_fold(&m_u.view(), &inv_rho.view(), 0.0_f64, |acc, &mu, &ir| {
-                acc.max((mu * ir).sqrt())
-            })
-            .expect("invariant: modulus and inv_rho fields share grid shape");
+        // A uniform base with uniform arms stays scalar; anything per-voxel
+        // produces the grid. The scalar sum applies the same per-arm terms in
+        // the same order as the grid pass, so the two agree bitwise.
+        let m_u = if m_inf.is_uniform() && arms.iter().all(|arm| arm.gain.is_uniform()) {
+            let mut u = m_inf.value();
+            for arm in &arms {
+                u += -arm.gain.value() * arm.inv_tau.value() / (1.0 - arm.decay.value());
+            }
+            Coeff::Uniform(u)
+        } else {
+            let mut m_u = match &m_inf {
+                Coeff::Uniform(v) => Array3::from_elem(shape, *v),
+                Coeff::Field(a) => a.clone(),
+            };
+            for arm in &arms {
+                match (&arm.gain, &arm.decay, &arm.inv_tau) {
+                    (Coeff::Uniform(gain), Coeff::Uniform(decay), Coeff::Uniform(inv_tau)) => {
+                        let (gain, decay, inv_tau) = (*gain, *decay, *inv_tau);
+                        for mu in m_u.iter_mut() {
+                            *mu += -gain * inv_tau / (1.0 - decay);
+                        }
+                    }
+                    (Coeff::Field(gain), Coeff::Field(decay), Coeff::Field(inv_tau)) => {
+                        leto_ops::zip_mut_with(
+                            m_u.view_mut(),
+                            (&gain.view(), &decay.view(), &inv_tau.view()),
+                            |mu, (&gain, &decay, &inv_tau)| {
+                                *mu += -gain * inv_tau / (1.0 - decay);
+                            },
+                        )
+                        .expect("invariant: viscoacoustic modulus fields share grid shape");
+                    }
+                    _ => unreachable!("invariant: an arm's coefficients share one representation"),
+                }
+            }
+            Coeff::Field(m_u)
+        };
+        // The CFL reference is the grid max of √(M_U/ρ); a fully uniform pair
+        // collapses to the same single expression.
+        let max_unrelaxed_speed = match (&m_u, &inv_rho) {
+            (Coeff::Uniform(mu), Coeff::Uniform(ir)) => (mu * ir).sqrt(),
+            (Coeff::Field(mu), Coeff::Field(ir)) => {
+                leto_ops::zip_fold(&mu.view(), &ir.view(), 0.0_f64, |acc, &mu, &ir| {
+                    acc.max((mu * ir).sqrt())
+                })
+                .expect("invariant: modulus and inv_rho fields share grid shape")
+            }
+            (Coeff::Uniform(mu), Coeff::Field(ir)) => ir
+                .view()
+                .iter()
+                .fold(0.0_f64, |acc, &ir| acc.max((mu * ir).sqrt())),
+            (Coeff::Field(mu), Coeff::Uniform(ir)) => mu
+                .view()
+                .iter()
+                .fold(0.0_f64, |acc, &mu| acc.max((mu * ir).sqrt())),
+        };
 
         // Storage layout: velocity/wavenumber state only for active axes.
         // `gx` (divergence output) and `gy` (second staging slot, then the
@@ -634,25 +737,45 @@ impl ViscoacousticMemorySolver {
     /// the precondition required by this operation.
     pub fn energy(&self) -> f64 {
         // PE = Σ p²/(2 M_∞(x));  KE = Σ ρ(x)|v|²/2 = Σ |v|²/(2/ρ) = Σ |v|²·inv_rho⁻¹/2.
-        let pe = leto_ops::zip_fold(
-            &self.p.view(),
-            &self.m_inf.view(),
-            0.0_f64,
-            |acc, &p, &mi| acc + p * p / (2.0 * mi),
-        )
-        .expect("invariant: pressure and modulus fields share grid shape");
+        // The uniform specialization evaluates the same terms in the same
+        // order as the grid fold over a constant field, so the two agree
+        // bitwise.
+        let pe = match &self.m_inf {
+            Coeff::Uniform(mi) => self
+                .p
+                .iter()
+                .fold(0.0_f64, |acc, &p| acc + p * p / (2.0 * mi)),
+            Coeff::Field(m_inf) => {
+                leto_ops::zip_fold(&self.p.view(), &m_inf.view(), 0.0_f64, |acc, &p, &mi| {
+                    acc + p * p / (2.0 * mi)
+                })
+                .expect("invariant: pressure and modulus fields share grid shape")
+            }
+        };
         // Inactive-axis velocity components are exactly zero for all time, so
         // their kinetic contribution is the zero term and is not traversed.
         let vx_iter = self.vx.iter().copied().chain(std::iter::repeat(0.0_f64));
         let vy_iter = self.vy.iter().copied().chain(std::iter::repeat(0.0_f64));
         let vz_iter = self.vz.iter().copied().chain(std::iter::repeat(0.0_f64));
-        let ke = vx_iter
-            .zip(vy_iter)
-            .zip(vz_iter)
-            .zip(self.inv_rho.iter())
-            .fold(0.0_f64, |acc, (((vx, vy), vz), &ir)| {
-                acc + (vx * vx + vy * vy + vz * vz) / (2.0 * ir)
-            });
+        let ke = match &self.inv_rho {
+            // The uniform branch is bounded by the grid-shaped pressure field:
+            // exactly the voxel count the grid branch's `inv_rho` iteration
+            // would supply, in the same order.
+            Coeff::Uniform(ir) => vx_iter
+                .zip(vy_iter)
+                .zip(vz_iter)
+                .zip(self.p.iter())
+                .fold(0.0_f64, |acc, (((vx, vy), vz), _)| {
+                    acc + (vx * vx + vy * vy + vz * vz) / (2.0 * ir)
+                }),
+            Coeff::Field(inv_rho) => vx_iter
+                .zip(vy_iter)
+                .zip(vz_iter)
+                .zip(inv_rho.iter())
+                .fold(0.0_f64, |acc, (((vx, vy), vz), &ir)| {
+                    acc + (vx * vx + vy * vy + vz * vz) / (2.0 * ir)
+                }),
+        };
         (pe + ke) * self.cell_volume
     }
 
@@ -679,6 +802,10 @@ impl ViscoacousticMemorySolver {
         let slot_z: Option<usize> = axes.z.then_some(usize::from(axes.x) + usize::from(axes.y));
         {
             let buffers: [&mut Array3<f64>; 3] = [&mut self.gx, &mut self.gy, &mut self.gz];
+            // The velocity update is `v += -(Δt·inv_rho)·∂p/∂α`: the branch
+            // on the coefficient representation happens here, once, with the
+            // scalar hoisted out of the flat pass (identical operations and
+            // order to the grid fold over a constant field).
             if let Some(s) = slot_x {
                 Self::axis_derivative(
                     &self.fft,
@@ -688,12 +815,19 @@ impl ViscoacousticMemorySolver {
                     &mut self.cbuf,
                     &mut *buffers[s],
                 );
-                leto_ops::zip_mut_with(
-                    self.vx.view_mut(),
-                    (&buffers[s].view(), &self.inv_rho.view()),
-                    |v, (&g, &ir)| *v += -dt * ir * g,
-                )
-                .expect("invariant: velocity-x update fields share grid shape");
+                match &self.inv_rho {
+                    Coeff::Uniform(ir) => {
+                        for (v, &g) in self.vx.iter_mut().zip(buffers[s].iter()) {
+                            *v += -dt * ir * g;
+                        }
+                    }
+                    Coeff::Field(inv_rho) => leto_ops::zip_mut_with(
+                        self.vx.view_mut(),
+                        (&buffers[s].view(), &inv_rho.view()),
+                        |v, (&g, &ir)| *v += -dt * ir * g,
+                    )
+                    .expect("invariant: velocity-x update fields share grid shape"),
+                }
             }
             if let Some(s) = slot_y {
                 Self::axis_derivative(
@@ -704,12 +838,19 @@ impl ViscoacousticMemorySolver {
                     &mut self.cbuf,
                     &mut *buffers[s],
                 );
-                leto_ops::zip_mut_with(
-                    self.vy.view_mut(),
-                    (&buffers[s].view(), &self.inv_rho.view()),
-                    |v, (&g, &ir)| *v += -dt * ir * g,
-                )
-                .expect("invariant: velocity-y update fields share grid shape");
+                match &self.inv_rho {
+                    Coeff::Uniform(ir) => {
+                        for (v, &g) in self.vy.iter_mut().zip(buffers[s].iter()) {
+                            *v += -dt * ir * g;
+                        }
+                    }
+                    Coeff::Field(inv_rho) => leto_ops::zip_mut_with(
+                        self.vy.view_mut(),
+                        (&buffers[s].view(), &inv_rho.view()),
+                        |v, (&g, &ir)| *v += -dt * ir * g,
+                    )
+                    .expect("invariant: velocity-y update fields share grid shape"),
+                }
             }
             if let Some(s) = slot_z {
                 Self::axis_derivative(
@@ -720,12 +861,19 @@ impl ViscoacousticMemorySolver {
                     &mut self.cbuf,
                     &mut *buffers[s],
                 );
-                leto_ops::zip_mut_with(
-                    self.vz.view_mut(),
-                    (&buffers[s].view(), &self.inv_rho.view()),
-                    |v, (&g, &ir)| *v += -dt * ir * g,
-                )
-                .expect("invariant: velocity-z update fields share grid shape");
+                match &self.inv_rho {
+                    Coeff::Uniform(ir) => {
+                        for (v, &g) in self.vz.iter_mut().zip(buffers[s].iter()) {
+                            *v += -dt * ir * g;
+                        }
+                    }
+                    Coeff::Field(inv_rho) => leto_ops::zip_mut_with(
+                        self.vz.view_mut(),
+                        (&buffers[s].view(), &inv_rho.view()),
+                        |v, (&g, &ir)| *v += -dt * ir * g,
+                    )
+                    .expect("invariant: velocity-z update fields share grid shape"),
+                }
             }
 
             // 2. Dilatation rate D = ∇·v, staged into the same slots: the
@@ -784,13 +932,13 @@ impl ViscoacousticMemorySolver {
             .expect("invariant: divergence components share grid shape"),
         }
 
-        // 3. Advance each σ_l with the exact exponential integrator (per-voxel
-        //    coefficients) and accumulate its trapezoidal pressure contribution
-        //    into gy (reused as the relax sum): σ_new = decay·σ + gain·D.
+        // 3. Advance each σ_l with the exact exponential integrator and
+        //    accumulate its trapezoidal pressure contribution into gy (reused
+        //    as the relax sum): σ_new = decay·σ + gain·D. The branch on the
+        //    arm's coefficient representation happens once per arm; the
+        //    scalar path hoists all three coefficients and runs the same
+        //    operations in the same order as the grid path.
         self.gy.fill(0.0);
-        // Two mutable outputs (`sigma` arm and `self.gy` relax-sum) updated in
-        // lockstep with 4 read inputs; leto_ops zip is single-lhs only, so this
-        // is a native flat-index loop over the contiguous same-shape grid fields.
         for (arm, sigma) in self.arms.iter().zip(self.sigma.iter_mut()) {
             let s_slice = sigma
                 .as_slice_mut()
@@ -803,18 +951,21 @@ impl ViscoacousticMemorySolver {
                 .gy
                 .as_slice_mut()
                 .expect("invariant: viscoacoustic gy is contiguous");
-            let decay_slice = arm
-                .decay
-                .as_slice()
-                .expect("invariant: viscoacoustic decay is contiguous");
-            let gain_slice = arm
-                .gain
-                .as_slice()
-                .expect("invariant: viscoacoustic gain is contiguous");
-            let inv_tau_slice = arm
-                .inv_tau
-                .as_slice()
-                .expect("invariant: viscoacoustic inv_tau is contiguous");
+            if let (Coeff::Uniform(decay), Coeff::Uniform(gain), Coeff::Uniform(inv_tau)) =
+                (&arm.decay, &arm.gain, &arm.inv_tau)
+            {
+                let (decay, gain, inv_tau) = (*decay, *gain, *inv_tau);
+                for idx in 0..s_slice.len() {
+                    let old = s_slice[idx];
+                    let new = decay.mul_add(old, gain * gx_slice[idx]);
+                    gy_slice[idx] += 0.5 * (old + new) * inv_tau;
+                    s_slice[idx] = new;
+                }
+                continue;
+            }
+            let decay_slice = arm.decay.slice();
+            let gain_slice = arm.gain.slice();
+            let inv_tau_slice = arm.inv_tau.slice();
             for idx in 0..s_slice.len() {
                 let old = s_slice[idx];
                 let new = decay_slice[idx].mul_add(old, gain_slice[idx] * gx_slice[idx]);
@@ -824,12 +975,34 @@ impl ViscoacousticMemorySolver {
         }
 
         // 4. Pressure update: p += -Δt (M_U(x) D + Σ_l ½(σ_l+σ_l^new)/τ_l(x)).
-        leto_ops::zip_mut_with(
-            self.p.view_mut(),
-            (&self.gx.view(), &self.gy.view(), &self.m_u.view()),
-            |p, (&d, &relax, &mu)| *p -= dt * (mu * d + relax),
-        )
-        .expect("invariant: pressure update fields share grid shape");
+        if let Coeff::Uniform(mu) = &self.m_u {
+            let mu = *mu;
+            let p_slice = self
+                .p
+                .as_slice_mut()
+                .expect("invariant: viscoacoustic p is contiguous");
+            let gx_slice = self
+                .gx
+                .as_slice()
+                .expect("invariant: viscoacoustic gx is contiguous");
+            let gy_slice = self
+                .gy
+                .as_slice_mut()
+                .expect("invariant: viscoacoustic gy is contiguous");
+            for idx in 0..p_slice.len() {
+                p_slice[idx] -= dt * (mu * gx_slice[idx] + gy_slice[idx]);
+            }
+        } else {
+            let Coeff::Field(m_u) = &self.m_u else {
+                unreachable!("invariant: grid path reads field coefficients")
+            };
+            leto_ops::zip_mut_with(
+                self.p.view_mut(),
+                (&self.gx.view(), &self.gy.view(), &m_u.view()),
+                |p, (&d, &relax, &mu)| *p -= dt * (mu * d + relax),
+            )
+            .expect("invariant: pressure update fields share grid shape");
+        }
 
         // 5. Soft pressure sources: p[index] += signal[step].
         for (index, signal) in &self.pressure_sources {

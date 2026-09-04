@@ -308,27 +308,24 @@ fn reserved_viscoacoustic_sensor_traces_do_not_allocate_during_stepping() {
 }
 
 /// Warm construction must measure exactly the KW-VISCOACOUSTIC-DIMENSIONAL-STATE
-/// acceptance oracle: 10/12/15 allocations for the standard 1-D/2-D/3-D
-/// constructor and the retained-byte reductions of the inactive-axis storage
-/// layout, with warm stepping allocation-free.
+/// acceptance oracle — as further reduced by the stacked
+/// KW-VISCOACOUSTIC-UNIFORM-COEFFICIENTS item: an armless homogeneous medium
+/// carries `inv_rho`, `M_∞`, and `M_U` as scalars, so each 4,096-cell shape
+/// drops exactly the three modulus-grid events and bytes (−3 events,
+/// −98,304 B) from the dimensional-state figures (10/12/15 events and
+/// 327,680/328,704/393,600 B → 7/9/12 and 229,376/230,400/295,296 B), with
+/// warm stepping allocation-free.
 ///
 /// The byte figures are absolute (the probe counts requested bytes minus
 /// released bytes over the construction window, and a warm window sees no
-/// intermediate releases). They decode exactly: the shape-independent part is
-/// 7 state/scratch arrays + cbuf + 3 modulus fields = 393,216 B at 4,096
-/// cells, plus per-shape wavenumber vectors (1-D: 32,784 B, 2-D: 1,032 B,
-/// 3-D: 384 B) and one cached-FFT event (warm ⇒ none). The old layout
-/// measured 426,000/394,248/393,600 B; the candidate removes the inactive
-/// arrays and wavenumber vectors — 98,320 B (vy+vz+gz+ky+kz) in 1-D and
-/// 65,544 B (vz+gz+kz) in 2-D — leaving exactly 327,680/328,704 B, while the
-/// full 3-D control retains its 15 events and 393,600 B.
+/// intermediate releases and no cached-FFT event).
 #[test]
 fn warm_construction_matches_inactive_axis_storage_oracle() {
     /// (shape, expected warm allocations, expected retained bytes).
     const CASES: [([usize; 3], u64, u64); 3] = [
-        ([4096, 1, 1], 10, 327_680),
-        ([64, 64, 1], 12, 328_704),
-        ([16, 16, 16], 15, 393_600),
+        ([4096, 1, 1], 7, 229_376),
+        ([64, 64, 1], 9, 230_400),
+        ([16, 16, 16], 12, 295_296),
     ];
     const DT: f64 = 1.0e-8;
 
@@ -397,6 +394,129 @@ fn warm_construction_matches_inactive_axis_storage_oracle() {
         );
         std::hint::black_box(solver.pressure());
     }
+}
+
+/// The KW-VISCOACOUSTIC-UNIFORM-COEFFICIENTS acceptance oracle: a three-arm
+/// homogeneous medium retains scalar coefficients, so warm construction drops
+/// from 29 events / 721,856 B (the dimensional-state delivery measured with
+/// the same probe) to 11 events / 328,640 B — removing exactly the 393,216 B
+/// of constant medium and arm grids the entry evidence named (inv_rho, M_∞,
+/// M_U, and three coefficient fields per arm). The 11th event is the σ vector
+/// backing (192 B of `Vec<Array3>` headers): the memory fields are true
+/// per-voxel state — `D(x)` varies across voxels — and legitimately remain.
+///
+/// The heterogeneous control carries the same spectrum in per-voxel fields
+/// and must remain bit-identical to its pre-change ledger (23 events /
+/// 721,856 B): the scalar path exists only for the homogeneous constructors.
+/// Both paths step allocation-free, and at the uniform-field boundary the
+/// two produce bitwise-equal pressure traces.
+#[test]
+fn warm_homogeneous_construction_matches_uniform_coefficient_oracle() {
+    const N: usize = 4_096;
+    const DT: f64 = 1.0e-8;
+    const ARMS: [(f64, f64); 3] = [(1.5e8, 3.2e-7), (8.0e7, 8.0e-8), (2.2e8, 1.3e-6)];
+    const HOMO_EVENTS: u64 = 11;
+    const HOMO_RETAINED: u64 = 328_640;
+    const HETERO_EVENTS: u64 = 23;
+    const HETERO_RETAINED: u64 = 721_856;
+
+    let build_homogeneous = || {
+        ViscoacousticMemorySolver::new_1d(N, 1.0e-4, DT, 1_000.0, 2.25e9, &ARMS)
+            .expect("valid homogeneous solver parameters")
+    };
+
+    // Warm caches, then measure the homogeneous constructor.
+    drop(build_homogeneous());
+    let window = Window::open();
+    let mut homogeneous = build_homogeneous();
+    let homo = window.change();
+    drop(window);
+    assert_eq!(homo.allocations, HOMO_EVENTS, "homogeneous warm events");
+    assert_eq!(homo.reallocations, 0);
+    assert_eq!(
+        homo.bytes_retained(),
+        HOMO_RETAINED,
+        "homogeneous warm bytes"
+    );
+
+    // Heterogeneous control: uniform fields (the boundary case), measured
+    // identically.
+    let shape = (N, 1, 1);
+    let rho = Array3::from_elem(shape, 1_000.0);
+    let m_inf = Array3::from_elem(shape, 2.25e9);
+    let arm_fields: Vec<(Array3<f64>, Array3<f64>)> = ARMS
+        .iter()
+        .map(|&(dm, tau)| (Array3::from_elem(shape, dm), Array3::from_elem(shape, tau)))
+        .collect();
+    let build_heterogeneous = || {
+        ViscoacousticMemorySolver::new_heterogeneous(
+            N,
+            1,
+            1,
+            1.0e-4,
+            1.0,
+            1.0,
+            DT,
+            &rho,
+            &m_inf,
+            &arm_fields,
+        )
+        .expect("valid heterogeneous solver parameters")
+    };
+    drop(build_heterogeneous());
+    let window = Window::open();
+    let mut heterogeneous = build_heterogeneous();
+    let hetero = window.change();
+    drop(window);
+    assert_eq!(
+        hetero.allocations, HETERO_EVENTS,
+        "heterogeneous warm events must remain unchanged"
+    );
+    assert_eq!(hetero.reallocations, 0);
+    assert_eq!(
+        hetero.bytes_retained(),
+        HETERO_RETAINED,
+        "heterogeneous warm bytes must remain unchanged"
+    );
+
+    // Repeated stepping is allocation-free on both paths.
+    let initial = Array3::<f64>::zeros(shape);
+    homogeneous.set_pressure(&initial).expect("matching shape");
+    heterogeneous
+        .set_pressure(&initial)
+        .expect("matching shape");
+    for solver in [&mut homogeneous, &mut heterogeneous] {
+        for _ in 0..4 {
+            solver.step();
+        }
+        let window = Window::open();
+        for _ in 0..32 {
+            solver.step();
+        }
+        let steps = window.change();
+        drop(window);
+        assert_eq!(steps.allocations, 0, "warm stepping events");
+        assert_eq!(steps.reallocations, 0, "warm stepping reallocs");
+    }
+
+    // At the uniform-field boundary the two representations agree bitwise:
+    // identical constructor values, identical float-op order per voxel.
+    let sample_points = [0, 1, N / 3, N / 2, N - 2];
+    for _ in 0..16 {
+        homogeneous.step();
+        heterogeneous.step();
+        for &i in &sample_points {
+            assert_eq!(
+                homogeneous.pressure()[[i, 0, 0]].to_bits(),
+                heterogeneous.pressure()[[i, 0, 0]].to_bits(),
+                "uniform-field boundary must be bitwise equal at voxel {i}"
+            );
+        }
+    }
+    let homo_energy = homogeneous.energy().to_bits();
+    let hetero_energy = heterogeneous.energy().to_bits();
+    assert_eq!(homo_energy, hetero_energy, "uniform-field boundary energy");
+    std::hint::black_box((homogeneous.pressure(), heterogeneous.pressure()));
 }
 
 #[test]
