@@ -280,10 +280,9 @@ fn bench_viscoacoustic_relaxation(c: &mut Criterion) {
         ("3d", [16, 16, 16]),
     ] {
         let [nx, ny, nz] = shape;
-        let homogeneous = ViscoacousticMemorySolver::new(
-            nx, ny, nz, DX, DX, DX, DT, RHO, MODULUS, &ARMS,
-        )
-        .expect("benchmark homogeneous solver parameters are valid");
+        let homogeneous =
+            ViscoacousticMemorySolver::new(nx, ny, nz, DX, DX, DX, DT, RHO, MODULUS, &ARMS)
+                .expect("benchmark homogeneous solver parameters are valid");
         let pressure = Array3::from_shape_fn((nx, ny, nz), |[x, y, z]| {
             let phase = x as f64 / nx as f64 + y as f64 / ny as f64 + z as f64 / nz as f64;
             (TAU * phase).sin()
@@ -326,7 +325,16 @@ fn bench_viscoacoustic_relaxation(c: &mut Criterion) {
             })
             .collect();
         let heterogeneous = ViscoacousticMemorySolver::new_heterogeneous(
-            nx, ny, nz, DX, DX, DX, DT, &inv_rho, &m_inf, &arm_fields,
+            nx,
+            ny,
+            nz,
+            DX,
+            DX,
+            DX,
+            DT,
+            &inv_rho,
+            &m_inf,
+            &arm_fields,
         )
         .expect("benchmark heterogeneous solver parameters are valid");
         group.bench_function(BenchmarkId::new("heterogeneous_3arm", label), |b| {

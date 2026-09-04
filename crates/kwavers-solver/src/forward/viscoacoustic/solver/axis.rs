@@ -45,8 +45,8 @@ pub(super) fn reference_solver(
         dy,
         dz,
         dt,
-        inv_rho,
-        m_inf,
+        super::Coeff::Field(inv_rho),
+        super::Coeff::Field(m_inf),
         arm_fields,
         super::ActiveAxes {
             x: true,
