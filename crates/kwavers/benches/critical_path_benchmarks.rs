@@ -259,6 +259,90 @@ fn bench_viscoacoustic_step(c: &mut Criterion) {
     group.finish();
 }
 
+/// Benchmark one viscoacoustic step under a three-arm relaxation spectrum,
+/// pairing the homogeneous constructor (spatially uniform coefficients) with
+/// a heterogeneous control (per-voxel fields carrying the same spectrum).
+/// The homogeneous path is the KW-VISCOACOUSTIC-UNIFORM-COEFFICIENTS target;
+/// the heterogeneous control guards the general path against regression.
+/// Construction and pressure initialization remain outside the timed region.
+fn bench_viscoacoustic_relaxation(c: &mut Criterion) {
+    const CELL_COUNT: usize = 4_096;
+    const DX: f64 = 1.0e-4;
+    const DT: f64 = 1.0e-8;
+    const RHO: f64 = 1_000.0;
+    const MODULUS: f64 = 2.25e9;
+    const ARMS: [(f64, f64); 3] = [(1.5e8, 3.2e-7), (8.0e7, 8.0e-8), (2.2e8, 1.3e-6)];
+
+    let mut group = c.benchmark_group("viscoacoustic_relaxation");
+    for (label, shape) in [
+        ("1d", [CELL_COUNT, 1, 1]),
+        ("2d", [64, 64, 1]),
+        ("3d", [16, 16, 16]),
+    ] {
+        let [nx, ny, nz] = shape;
+        let homogeneous = ViscoacousticMemorySolver::new(
+            nx, ny, nz, DX, DX, DX, DT, RHO, MODULUS, &ARMS,
+        )
+        .expect("benchmark homogeneous solver parameters are valid");
+        let pressure = Array3::from_shape_fn((nx, ny, nz), |[x, y, z]| {
+            let phase = x as f64 / nx as f64 + y as f64 / ny as f64 + z as f64 / nz as f64;
+            (TAU * phase).sin()
+        });
+        let step_homogeneous = |solver: &mut ViscoacousticMemorySolver| {
+            solver
+                .set_pressure(&pressure)
+                .expect("benchmark pressure shape matches solver grid");
+            solver.step();
+        };
+        group.bench_function(BenchmarkId::new("homogeneous_3arm", label), |b| {
+            b.iter_batched(
+                || homogeneous.clone(),
+                |mut solver| {
+                    step_homogeneous(&mut solver);
+                    black_box(solver.pressure()[[nx / 3, ny / 3, nz / 3]])
+                },
+                criterion::BatchSize::SmallInput,
+            )
+        });
+
+        // Heterogeneous control: the same spectrum carried by per-voxel fields
+        // with a smooth 1% spatial modulation so the fields are not constant.
+        let inv_rho = Array3::from_shape_fn((nx, ny, nz), |[x, _y, _z]| {
+            1.0 / (RHO * (1.0 + 0.01 * (x as f64 / nx as f64).sin()))
+        });
+        let m_inf = Array3::from_shape_fn((nx, ny, nz), |[_x, y, _z]| {
+            MODULUS * (1.0 + 0.01 * (y as f64 / ny as f64).cos())
+        });
+        let arm_fields: Vec<(Array3<f64>, Array3<f64>)> = ARMS
+            .iter()
+            .map(|&(dm, tau)| {
+                let dm = Array3::from_shape_fn((nx, ny, nz), |[_x, _y, z]| {
+                    dm * (1.0 + 0.01 * (z as f64 / nz as f64).sin())
+                });
+                let tau = Array3::from_shape_fn((nx, ny, nz), |[x, _y, _z]| {
+                    tau * (1.0 + 0.01 * (x as f64 / nx as f64).cos())
+                });
+                (dm, tau)
+            })
+            .collect();
+        let heterogeneous = ViscoacousticMemorySolver::new_heterogeneous(
+            nx, ny, nz, DX, DX, DX, DT, &inv_rho, &m_inf, &arm_fields,
+        )
+        .expect("benchmark heterogeneous solver parameters are valid");
+        group.bench_function(BenchmarkId::new("heterogeneous_3arm", label), |b| {
+            b.iter_batched(
+                || heterogeneous.clone(),
+                |mut solver| {
+                    step_homogeneous(&mut solver);
+                    black_box(solver.pressure()[[nx / 3, ny / 3, nz / 3]])
+                },
+                criterion::BatchSize::SmallInput,
+            )
+        });
+    }
+    group.finish();
+}
+
 criterion_group!(
     benches,
     bench_fdtd_derivatives,
@@ -266,6 +350,7 @@ criterion_group!(
     bench_grid_operations,
     bench_medium_access,
     bench_field_operations,
-    bench_viscoacoustic_step
+    bench_viscoacoustic_step,
+    bench_viscoacoustic_relaxation
 );
 criterion_main!(benches);
