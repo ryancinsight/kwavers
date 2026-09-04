@@ -29,7 +29,7 @@
 //! let op = StaggeredLeapfrog3D::new(4, 0.001, 0.001, 0.001)?;
 //!
 //! // Apply to field
-//! op.gradient_into(Axis::X, field.view(), &mut gradient_x)?;
+//! op.gradient_into(Axis::X, field.view(), &mut gradient_x.view_mut())?;
 //! ```
 //!
 //! ## Layer Dependencies

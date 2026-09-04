@@ -26,17 +26,17 @@ impl FdtdSolver {
         self.leapfrog_operator.divergence_into(
             Axis::X,
             self.fields.ux.view(),
-            &mut self.dvx_scratch,
+            &mut self.dvx_scratch.view_mut(),
         )?;
         self.leapfrog_operator.divergence_into(
             Axis::Y,
             self.fields.uy.view(),
-            &mut self.dvy_scratch,
+            &mut self.dvy_scratch.view_mut(),
         )?;
         self.leapfrog_operator.divergence_into(
             Axis::Z,
             self.fields.uz.view(),
-            &mut self.divergence_scratch,
+            &mut self.divergence_scratch.view_mut(),
         )?;
 
         if self.config.geometry == SolverGeometry::CylindricalAS {
