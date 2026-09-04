@@ -83,6 +83,7 @@ required-features = ["clinical-imaging"]
 
 [dev-dependencies]
 kwavers-alloc-probe = { path = "../kwavers-alloc-probe" }
+proteus = { workspace = true }
 
 [[test]]
 name = "allocation_contracts"

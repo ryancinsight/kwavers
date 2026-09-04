@@ -198,7 +198,27 @@ impl HomogeneousMedium {
             return None;
         }
 
-        let (lambda, mu) = crate::elastic::lame_from_speeds(c_compression, c_shear, density);
+        // Speed→modulus identity is owned by `proteus::elastic::IsotropicModuli`;
+        // the provider's `from_wave_speeds` accepts the auxetic regime
+        // (K = λ + 2μ/3 > 0 with λ < 0), but the explicit `c_shear * c_shear
+        // * 2.0 > c_compression * c_compression` rejection above keeps this
+        // constructor non-auxetic — the test `test_elastic_homogeneous_rejects_unstable_speeds`
+        // asserts that boundary.
+        //
+        // The provider refuses `c_s = 0` (its `from_wave_speeds` requires
+        // finite-positive shear-wave speed); the kwavers fluid limit
+        // `c_s = 0 ⇒ μ = 0, λ = ρ·c_p²` is preserved by handling it directly.
+        let (lambda, mu) = if c_shear == 0.0 {
+            (density * c_compression * c_compression, 0.0)
+        } else {
+            let moduli = proteus::elastic::IsotropicModuli::<f64>::from_wave_speeds(
+                aequitas::systems::si::quantities::Velocity::from_base(c_compression),
+                aequitas::systems::si::quantities::Velocity::from_base(c_shear),
+                aequitas::systems::si::quantities::MassDensity::from_base(density),
+            )
+            .ok()?;
+            (*moduli.lame_lambda().as_base(), *moduli.shear_modulus().as_base())
+        };
 
         // Build a baseline acoustic-only homogeneous medium at c_p, then
         // overwrite Lamé parameters with the elastic-derived values.
