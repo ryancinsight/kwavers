@@ -1,5 +1,6 @@
 use crate::pstd::PSTDConfig as PstdConfig;
 use crate::pstd::PSTDSolver;
+use crate::test_support::test_info;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::numerical::TWO_PI;
@@ -11,7 +12,7 @@ use leto::{Array2, Array3};
 fn test_linear_array_phase_accuracy() {
     // Phase error test for linear array source
     // Validates phase consistency across array elements
-    println!("\n=== Linear Array Phase Accuracy Test ===");
+    test_info!("\n=== Linear Array Phase Accuracy Test ===");
 
     let n = 80;
     let frequency = MHZ_TO_HZ;
@@ -68,7 +69,7 @@ fn test_linear_array_phase_accuracy() {
                 .iter()
                 .map(|&p| p.abs())
                 .fold(0.0f64, f64::max);
-            println!("Step {}: max pressure = {:.2e}", step, max_p);
+            test_info!("Step {}: max pressure = {:.2e}", step, max_p);
         }
     }
 
@@ -82,7 +83,7 @@ fn test_linear_array_phase_accuracy() {
     }
 
     let directivity = on_axis_pressure / (off_axis_pressure.max(1e-10));
-    println!("Array directivity (on-axis/off-axis): {:.2}", directivity);
+    test_info!("Array directivity (on-axis/off-axis): {:.2}", directivity);
 
     // Array should show directivity (stronger on-axis than off-axis)
     assert!(

@@ -14,11 +14,11 @@ mod tests {
         for &n in &[16_usize, 32, 64, 128] {
             let dx = l / n as f64;
             // Manufactured solution u(xᵢ) = sin(2π xᵢ / L)
-            let u: Array1<f64> = Array1::from_iter((0..n).map(|i| (k_wave * i as f64 * dx).sin()));
+            let u: Array1<f64> = (0..n).map(|i| (k_wave * i as f64 * dx).sin()).collect();
             // Analytical Laplacian: ∇²u = −k² sin(kx)
-            let lap_exact: Array1<f64> = Array1::from_iter(
-                (0..n).map(|i| -(k_wave * k_wave) * (k_wave * i as f64 * dx).sin()),
-            );
+            let lap_exact: Array1<f64> = (0..n)
+                .map(|i| -(k_wave * k_wave) * (k_wave * i as f64 * dx).sin())
+                .collect();
             let lap_num = compute_laplacian_1d(&u, dx);
 
             // L∞ error on interior nodes (skip boundary ghost cells)

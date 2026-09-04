@@ -3,6 +3,7 @@ use crate::forward::nonlinear::kzk::constants::{
     DEFAULT_BEAM_WAIST, DEFAULT_FREQUENCY, DEFAULT_GRID_SIZE, DEFAULT_WAVELENGTH,
 };
 use crate::forward::nonlinear::kzk::KZKConfig;
+use crate::test_support::test_info;
 use crate::validation::measure_beam_radius;
 use apollo::Complex64;
 use eunomia::assert_relative_eq;
@@ -48,20 +49,20 @@ fn test_kzk_gaussian_beam() {
     let steps = 50;
     let dz = z_r / steps as f64;
 
-    println!(
+    test_info!(
         "Grid: {}x{}, dx={:.3}mm",
         config.nx,
         config.ny,
         config.dx * 1000.0
     );
-    println!("Wavelength: {:.3}mm", wavelength * 1000.0);
-    println!("Rayleigh distance: {:.3}mm", z_r * 1000.0);
-    println!("Step size: {:.3}mm", dz * 1000.0);
-    println!("k0 = {:.3} rad/mm", TWO_PI / wavelength / 1000.0);
+    test_info!("Wavelength: {:.3}mm", wavelength * 1000.0);
+    test_info!("Rayleigh distance: {:.3}mm", z_r * 1000.0);
+    test_info!("Step size: {:.3}mm", dz * 1000.0);
+    test_info!("k0 = {:.3} rad/mm", TWO_PI / wavelength / 1000.0);
 
     // Track beam evolution
     let initial_power: f64 = field.iter().map(|&x| x * x).sum();
-    println!("Initial power: {:.6}", initial_power);
+    test_info!("Initial power: {:.6}", initial_power);
 
     for step in 0..steps {
         let mut field_view = field.view_mut();
@@ -69,7 +70,7 @@ fn test_kzk_gaussian_beam() {
 
         if step % 10 == 0 {
             let power: f64 = field.iter().map(|&x| x * x).sum();
-            println!(
+            test_info!(
                 "Step {}: power = {:.6}, ratio = {:.6}",
                 step,
                 power,
@@ -83,9 +84,9 @@ fn test_kzk_gaussian_beam() {
     let measured = measure_beam_radius(&intensity, config.dx);
     let expected = beam_waist * 2.0_f64.sqrt(); // At Rayleigh distance
 
-    println!("Measured radius: {:.3}mm", measured * 1000.0);
-    println!("Expected radius: {:.3}mm", expected * 1000.0);
-    println!(
+    test_info!("Measured radius: {:.3}mm", measured * 1000.0);
+    test_info!("Expected radius: {:.3}mm", expected * 1000.0);
+    test_info!(
         "Error: {:.1}%",
         (measured - expected).abs() / expected * 100.0
     );
@@ -140,14 +141,14 @@ fn test_kzk_gaussian_beam_high_resolution() {
     let steps = 100; // More steps for accuracy
     let dz = z_r / steps as f64;
 
-    println!("\nHigh resolution test:");
-    println!(
+    test_info!("\nHigh resolution test:");
+    test_info!(
         "Grid: {}x{}, dx={:.3}mm",
         config.nx,
         config.ny,
         config.dx * 1000.0
     );
-    println!("Steps: {}, dz={:.3}mm", steps, dz * 1000.0);
+    test_info!("Steps: {}, dz={:.3}mm", steps, dz * 1000.0);
 
     let initial_power: f64 = field.iter().map(|&x| x * x).sum();
 
@@ -157,7 +158,7 @@ fn test_kzk_gaussian_beam_high_resolution() {
 
         if step == steps - 1 {
             let power: f64 = field.iter().map(|&x| x * x).sum();
-            println!("Final power ratio: {:.6}", power / initial_power);
+            test_info!("Final power ratio: {:.6}", power / initial_power);
         }
     }
 
@@ -166,9 +167,9 @@ fn test_kzk_gaussian_beam_high_resolution() {
     let measured = measure_beam_radius(&intensity, config.dx);
     let expected = beam_waist * 2.0_f64.sqrt();
 
-    println!("Measured radius: {:.3}mm", measured * 1000.0);
-    println!("Expected radius: {:.3}mm", expected * 1000.0);
-    println!(
+    test_info!("Measured radius: {:.3}mm", measured * 1000.0);
+    test_info!("Expected radius: {:.3}mm", expected * 1000.0);
+    test_info!(
         "Error: {:.1}%",
         (measured - expected).abs() / expected * 100.0
     );
@@ -227,15 +228,15 @@ fn test_fft_round_trip() {
         }
     }
 
-    println!("FFT round-trip max error: {:.6e}", max_error);
+    test_info!("FFT round-trip max error: {:.6e}", max_error);
     assert!(max_error < 1e-10, "FFT round trip failed!");
 
     // Check energy conservation
     let original_energy: f64 = original.iter().map(|&x| x * x).sum();
     let recovered_energy: f64 = recovered.iter().map(|c| c.re * c.re).sum();
-    println!("Original energy: {:.6}", original_energy);
-    println!("Recovered energy: {:.6}", recovered_energy);
-    println!("Energy ratio: {:.6}", recovered_energy / original_energy);
+    test_info!("Original energy: {:.6}", original_energy);
+    test_info!("Recovered energy: {:.6}", recovered_energy);
+    test_info!("Energy ratio: {:.6}", recovered_energy / original_energy);
 
     assert!((recovered_energy / original_energy - 1.0).abs() < 1e-10);
 }

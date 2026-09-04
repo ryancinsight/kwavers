@@ -6,6 +6,9 @@ pub mod __private {
     pub use leto::SliceArg;
 }
 
+#[cfg(test)]
+mod test_support;
+
 /// ndarray `s!` macro replacement for leto `SliceArg`.
 ///
 /// Accepts native Rust range expressions (`start..end`, `..end`, `start..`, `..`)

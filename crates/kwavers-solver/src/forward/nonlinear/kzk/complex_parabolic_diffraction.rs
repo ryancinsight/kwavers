@@ -225,6 +225,7 @@ mod tests {
     use crate::forward::nonlinear::kzk::constants::{
         DEFAULT_BEAM_WAIST, DEFAULT_FREQUENCY, DEFAULT_GRID_SIZE, DEFAULT_WAVELENGTH,
     };
+    use crate::test_support::test_info;
     use crate::validation::measure_beam_radius;
     use eunomia::assert_relative_eq;
     use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
@@ -266,10 +267,10 @@ mod tests {
 
         let final_energy: f64 = field.iter().map(|c| c.norm_sqr()).sum();
 
-        println!("Complex field energy conservation:");
-        println!("Initial energy: {:.6}", initial_energy);
-        println!("Final energy: {:.6}", final_energy);
-        println!("Energy ratio: {:.6}", final_energy / initial_energy);
+        test_info!("Complex field energy conservation:");
+        test_info!("Initial energy: {:.6}", initial_energy);
+        test_info!("Final energy: {:.6}", final_energy);
+        test_info!("Energy ratio: {:.6}", final_energy / initial_energy);
 
         // Energy should be conserved
         assert!((final_energy / initial_energy - 1.0).abs() < 0.01);
@@ -318,10 +319,10 @@ mod tests {
         let measured = measure_beam_radius(&intensity, config.dx);
         let expected = beam_waist * 2.0_f64.sqrt();
 
-        println!("Complex field Gaussian beam test:");
-        println!("Measured radius: {:.3}mm", measured * 1000.0);
-        println!("Expected radius: {:.3}mm", expected * 1000.0);
-        println!(
+        test_info!("Complex field Gaussian beam test:");
+        test_info!("Measured radius: {:.3}mm", measured * 1000.0);
+        test_info!("Expected radius: {:.3}mm", expected * 1000.0);
+        test_info!(
             "Error: {:.1}%",
             (measured - expected).abs() / expected * 100.0
         );

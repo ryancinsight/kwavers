@@ -205,13 +205,16 @@ fn test_staggered_divergence_uses_scratch_buffer() {
     let mut dvz = leto::Array3::<f64>::zeros(shape);
     solver
         .leapfrog_operator
-        .divergence_into(Axis::X, solver.fields.ux.view(), &mut dvx.view_mut());
+        .divergence_into(Axis::X, solver.fields.ux.view(), &mut dvx.view_mut())
+        .expect("divergence shapes match the solver grid");
     solver
         .leapfrog_operator
-        .divergence_into(Axis::Y, solver.fields.uy.view(), &mut dvy.view_mut());
+        .divergence_into(Axis::Y, solver.fields.uy.view(), &mut dvy.view_mut())
+        .expect("divergence shapes match the solver grid");
     solver
         .leapfrog_operator
-        .divergence_into(Axis::Z, solver.fields.uz.view(), &mut dvz.view_mut());
+        .divergence_into(Axis::Z, solver.fields.uz.view(), &mut dvz.view_mut())
+        .expect("divergence shapes match the solver grid");
 
     let mut expected = dvz.clone();
     leto_ops::zip_mut_with(
