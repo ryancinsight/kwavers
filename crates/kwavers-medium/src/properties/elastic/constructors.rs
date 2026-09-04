@@ -1,5 +1,5 @@
 use super::ElasticPropertyData;
-use aequitas::systems::si::quantities::{Dimensionless, Pressure};
+use aequitas::systems::si::quantities::{Dimensionless, MassDensity, Pressure, Velocity};
 use kwavers_core::constants::acoustic_parameters::BONE_DENSITY;
 use proteus::elastic::IsotropicModuli;
 
@@ -83,17 +83,20 @@ impl ElasticPropertyData {
             .expect("Invalid wave speed parameters")
     }
 
-    /// Fallible version of `from_wave_speeds`.
-    ///
-    /// Recovers Lamé parameters from measured wave speeds:
-    /// ```text
-    /// μ = ρ c_s²
-    /// λ = ρ c_p² - 2μ
-    /// ```
+    /// Fallible version of `from_wave_speeds`. Delegates the
+    /// `μ = ρ·c_s²` and `λ = ρ·(c_p² − 2·c_s²)` identity to
+    /// `proteus::elastic::IsotropicModuli::from_wave_speeds`, which
+    /// enforces `K = λ + 2μ/3 > 0` (positive-definite) but admits the
+    /// auxetic regime `λ < 0` that the previous kwavers-only check
+    /// rejected. The kwavers-specific `c_s ≥ c_p` sanity bound is
+    /// preserved at the call site; see
+    /// `HomogeneousMedium::elastic_homogeneous` for the constructor that
+    /// rejects auxetic media outright.
     ///
     /// # Errors
     ///
-    /// Returns error if `s_speed >= p_speed` or any speed/density is non-positive.
+    /// Returns error if `density <= 0`, `p_speed <= 0`, `c_s >= c_p`,
+    /// or the provider's positive-definite domain fails.
     pub fn try_from_wave_speeds(density: f64, p_speed: f64, s_speed: f64) -> Result<Self, String> {
         if density <= 0.0 {
             return Err(format!("Density must be positive, got {}", density));
@@ -101,8 +104,8 @@ impl ElasticPropertyData {
         if p_speed <= 0.0 {
             return Err(format!("P-wave speed must be positive, got {}", p_speed));
         }
-        if s_speed <= 0.0 {
-            return Err(format!("S-wave speed must be positive, got {}", s_speed));
+        if s_speed < 0.0 {
+            return Err(format!("S-wave speed must be non-negative, got {}", s_speed));
         }
         if s_speed >= p_speed {
             return Err(format!(
@@ -110,9 +113,19 @@ impl ElasticPropertyData {
                 s_speed, p_speed
             ));
         }
-        let mu = density * s_speed * s_speed;
-        let lambda = (density * p_speed).mul_add(p_speed, -(2.0 * mu));
-        Self::new(density, lambda, mu)
+        let moduli = IsotropicModuli::<f64>::from_wave_speeds(
+            Velocity::from_base(p_speed),
+            Velocity::from_base(s_speed),
+            MassDensity::from_base(density),
+        )
+        .map_err(|e| format!("Invalid wave speeds: {e}"))?;
+        let lambda = *moduli.lame_lambda().as_base();
+        let mu = *moduli.shear_modulus().as_base();
+        Ok(Self {
+            density,
+            lambda,
+            mu,
+        })
     }
 
     /// Steel properties (generic)
