@@ -1,26 +1,27 @@
 use super::ElasticPropertyData;
+use aequitas::systems::si::quantities::{Dimensionless, MassDensity, Pressure, Velocity};
 use kwavers_core::constants::acoustic_parameters::BONE_DENSITY;
+use proteus::elastic::IsotropicModuli;
 
 impl ElasticPropertyData {
     /// Construct from Lamé parameters with validation.
     ///
+    /// The positive-definite domain `mu > 0` and `K = lambda + 2mu/3 > 0` is
+    /// validated by `proteus::elastic::IsotropicModuli::from_lame`. This admits
+    /// auxetic solids (`lambda < 0` while `K > 0`); callers that need the
+    /// stricter `lambda >= 0` must check the returned value themselves —
+    /// `HomogeneousMedium::set_lame_parameters` does.
+    ///
     /// # Errors
     ///
-    /// Returns error if parameters violate physical constraints.
+    /// Returns error if `density <= 0` or the moduli fall outside the
+    /// provider's positive-definite domain.
     pub fn new(density: f64, lambda: f64, mu: f64) -> Result<Self, String> {
         if density <= 0.0 {
             return Err(format!("Density must be positive, got {}", density));
         }
-        if lambda < 0.0 {
-            return Err(format!("Lamé lambda must be non-negative, got {}", lambda));
-        }
-        if mu <= 0.0 {
-            return Err(format!("Shear modulus mu must be positive, got {}", mu));
-        }
-        let nu = lambda / (2.0 * (lambda + mu));
-        if nu <= -1.0 || nu >= 0.5 {
-            return Err(format!("Poisson's ratio {} violates bounds (-1, 0.5)", nu));
-        }
+        IsotropicModuli::<f64>::from_lame(Pressure::from_base(lambda), Pressure::from_base(mu))
+            .map_err(|e| format!("Invalid Lamé moduli: {e}"))?;
         Ok(Self {
             density,
             lambda,
@@ -39,11 +40,16 @@ impl ElasticPropertyData {
             .expect("Invalid engineering parameters")
     }
 
-    /// Fallible version of `from_engineering`.
+    /// Fallible version of `from_engineering`. Delegates the
+    /// `mu = E / (2(1 + nu))` and `lambda = E nu / ((1 + nu)(1 - 2nu))`
+    /// identity to `proteus::elastic::IsotropicModuli::from_young_poisson`,
+    /// which accepts the full `nu in (-1, 1/2)` domain — including the
+    /// auxetic regime `nu < 0` that kwavers's old check rejected.
     ///
     /// # Errors
     ///
-    /// Returns error if parameters violate physical constraints.
+    /// Returns error if `density <= 0`, `youngs_modulus <= 0`, `nu`
+    /// is outside `(-1, 1/2)`, or the resulting moduli are not finite.
     pub fn try_from_engineering(
         density: f64,
         youngs_modulus: f64,
@@ -52,21 +58,13 @@ impl ElasticPropertyData {
         if density <= 0.0 {
             return Err(format!("Density must be positive, got {}", density));
         }
-        if youngs_modulus <= 0.0 {
-            return Err(format!(
-                "Young's modulus must be positive, got {}",
-                youngs_modulus
-            ));
-        }
-        if poisson_ratio <= -1.0 || poisson_ratio >= 0.5 {
-            return Err(format!(
-                "Poisson's ratio must be in (-1, 0.5), got {}",
-                poisson_ratio
-            ));
-        }
-        let lambda = youngs_modulus * poisson_ratio
-            / ((1.0 + poisson_ratio) * 2.0f64.mul_add(-poisson_ratio, 1.0));
-        let mu = youngs_modulus / (2.0 * (1.0 + poisson_ratio));
+        let moduli = IsotropicModuli::<f64>::from_young_poisson(
+            Pressure::from_base(youngs_modulus),
+            Dimensionless::from_base(poisson_ratio),
+        )
+        .map_err(|e| format!("Invalid engineering parameters: {e}"))?;
+        let lambda = *moduli.lame_lambda().as_base();
+        let mu = *moduli.shear_modulus().as_base();
         Ok(Self {
             density,
             lambda,
@@ -85,17 +83,20 @@ impl ElasticPropertyData {
             .expect("Invalid wave speed parameters")
     }
 
-    /// Fallible version of `from_wave_speeds`.
-    ///
-    /// Recovers Lamé parameters from measured wave speeds:
-    /// ```text
-    /// μ = ρ c_s²
-    /// λ = ρ c_p² - 2μ
-    /// ```
+    /// Fallible version of `from_wave_speeds`. Delegates the
+    /// `μ = ρ·c_s²` and `λ = ρ·(c_p² − 2·c_s²)` identity to
+    /// `proteus::elastic::IsotropicModuli::from_wave_speeds`, which
+    /// enforces `K = λ + 2μ/3 > 0` (positive-definite) but admits the
+    /// auxetic regime `λ < 0` that the previous kwavers-only check
+    /// rejected. The kwavers-specific `c_s ≥ c_p` sanity bound is
+    /// preserved at the call site; see
+    /// `HomogeneousMedium::elastic_homogeneous` for the constructor that
+    /// rejects auxetic media outright.
     ///
     /// # Errors
     ///
-    /// Returns error if `s_speed >= p_speed` or any speed/density is non-positive.
+    /// Returns error if `density <= 0`, `p_speed <= 0`, `c_s >= c_p`,
+    /// or the provider's positive-definite domain fails.
     pub fn try_from_wave_speeds(density: f64, p_speed: f64, s_speed: f64) -> Result<Self, String> {
         if density <= 0.0 {
             return Err(format!("Density must be positive, got {}", density));
@@ -103,8 +104,8 @@ impl ElasticPropertyData {
         if p_speed <= 0.0 {
             return Err(format!("P-wave speed must be positive, got {}", p_speed));
         }
-        if s_speed <= 0.0 {
-            return Err(format!("S-wave speed must be positive, got {}", s_speed));
+        if s_speed < 0.0 {
+            return Err(format!("S-wave speed must be non-negative, got {}", s_speed));
         }
         if s_speed >= p_speed {
             return Err(format!(
@@ -112,9 +113,19 @@ impl ElasticPropertyData {
                 s_speed, p_speed
             ));
         }
-        let mu = density * s_speed * s_speed;
-        let lambda = (density * p_speed).mul_add(p_speed, -(2.0 * mu));
-        Self::new(density, lambda, mu)
+        let moduli = IsotropicModuli::<f64>::from_wave_speeds(
+            Velocity::from_base(p_speed),
+            Velocity::from_base(s_speed),
+            MassDensity::from_base(density),
+        )
+        .map_err(|e| format!("Invalid wave speeds: {e}"))?;
+        let lambda = *moduli.lame_lambda().as_base();
+        let mu = *moduli.shear_modulus().as_base();
+        Ok(Self {
+            density,
+            lambda,
+            mu,
+        })
     }
 
     /// Steel properties (generic)
