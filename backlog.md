@@ -36,6 +36,63 @@
 
 - **Verdict: superseded.** Same pre-rewrite lineage as the GMRES branch (shares the #318/#320 merges); its typed thermal metrics exist on `main` (`kwavers-physics/src/thermal/diffusion/dose.rs`) and the Aequitas typed-coupling deliveries landed through #318/#320. Branch deleted.
 
+## KW-FD-VIEW-DST — Follow Leto's mutable-view FD destination [patch] — review <a id="kw-fd-view-dst"></a>
+
+- **Integrator:** Claude on `feat/kwavers-fd-view-dst`; **lease:**
+  `crates/kwavers-solver/src/forward/fdtd/`,
+  `crates/kwavers-math/src/numerics/`, `Cargo.lock` — 2026-09-04.
+- **Outcome:** the FDTD sweeps pass `&mut <scratch>.view_mut()` to
+  `gradient_into` / `divergence_into` / `apply_x_into`, following leto PR #171
+  (`7e924d1`), which changed the destination to `&mut ArrayViewMut3<'_, T>` so
+  a caller whose storage is not a Leto-owned array writes into it without a
+  copy. Mechanical: eight call sites and two doc examples. Behaviour unchanged.
+- **Evidence:** `cargo fmt --check` clean; `cargo check --locked --workspace
+  --all-targets` clean; `cargo clippy -p kwavers-math --all-targets -D warnings`
+  clean; `cargo nextest run --locked --workspace --exclude kwavers-python
+  --exclude kwavers-gpu --lib --test-threads=2` **5742/5742**;
+  `cargo bench -p kwavers -- --test` pass. `Cargo.lock` regenerated through
+  `scripts/lockfile.py` because the pre-push gate refuses a lock that will not
+  resolve under `--locked`.
+- **Blocked gates, not caused by this change:** `--features full` targets
+  (`solver_test`, doctests, `cargo doc`, the CUDA build) fail to compile
+  `kwavers-gpu` on `DerivativeParams: eunomia::layout::marker::Pod`. Root cause
+  is recorded in `KW-EUNOMIA-DIAMOND` below; verified pre-existing by building
+  `origin/main`'s `kwavers-gpu` source against this branch's lock, which fails
+  identically.
+- **Last-update:** 2026-09-04.
+
+## KW-EUNOMIA-DIAMOND — Two Eunomia versions break the kwavers-gpu dispatch bound [major] — blocked <a id="kw-eunomia-diamond"></a>
+
+- **Symptom:** `cargo check -p kwavers --features full` fails with
+  `the trait bound DerivativeParams: eunomia::layout::marker::Pod is not
+  satisfied` at `crates/kwavers-gpu/src/backend/provider/wgpu.rs`, with rustc's
+  note "there are multiple different versions of crate `eunomia` in the
+  dependency graph". Main has been red on this since `b3e7549d`
+  (Architecture Validation: Integration Suite, Documentation Build, CUDA
+  Runtime Build).
+- **Root cause:** the lock resolves Eunomia twice — the default-branch source,
+  and `eunomia?rev=fdbf12275d35aa1545060a4277644c497ddcda37` reached through
+  `mnemosyne-arena` and `mnemosyne-memory`. Kwavers pins Mnemosyne at
+  `03fe32f4`, a revision that still carried that quarantine pin; Mnemosyne's
+  current `origin/main` (`e8e825f`) has dropped it and depends on the default
+  branch. So the diamond closes by advancing the Mnemosyne pin, not by editing
+  kwavers-gpu: deriving the other Eunomia's `Pod` cannot satisfy a bound from a
+  different version of the same crate.
+- **Why this is not fixed here:** the Mnemosyne pin advance is a peer's live
+  multi-phase campaign (`build(deps): Advance mnemosyne rev to … (Phase N)`,
+  most recent commit minutes old). Taking it over mid-campaign would collide
+  with in-flight phases. Recorded rather than seized.
+- **History (measured, not inferred):** main was already red before
+  `b3e7549d`, at `5b934e09` / `814f60a9` / `49dc25c4`, with a *different*
+  failure — `cannot update the lock file … because --locked was passed`, the
+  stale-lock case. `b3e7549d` regenerated the lock and fixed that, which is
+  what exposed the diamond behind it. One red replaced another; nothing new
+  was introduced.
+- **Re-open trigger:** the Mnemosyne pin reaches a revision at or after
+  `e8e825f`. Then regenerate the lock and confirm `cargo check -p kwavers
+  --no-default-features --features full` compiles `kwavers-gpu`.
+- **Last-update:** 2026-09-04.
+
 ## KW-LETO-FD-SSOT — Delete the kwavers first-derivative stencils [major] [arch] — review <a id="kw-leto-fd-ssot"></a>
 
 - **Integrator:** Claude on `feat/kwavers-leto-fd-ssot`; **lease:**

@@ -43,7 +43,7 @@
 //!
 //! let field = Array3::zeros([100, 100, 100]);
 //! let mut gradient_x = Array3::zeros([100, 100, 100]);
-//! op.gradient_into(Axis::X, field.view(), &mut gradient_x)?;
+//! op.gradient_into(Axis::X, field.view(), &mut gradient_x.view_mut())?;
 //! ```
 //!
 //! ## References
