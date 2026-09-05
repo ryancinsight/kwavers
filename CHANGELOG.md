@@ -4,6 +4,25 @@
 
 ### Changed
 
+- **[patch] Pull-request CI keeps statistical timing off hosted runners.**
+  The benchmark-regression workflow now runs exactly one job: the complete
+  benchmark smoke, the exact benchmark-registry validation for both
+  revisions, and the merge-critical executable-identity comparison. The
+  four hosted phase-reversed Criterion pair jobs, their artifact
+  upload/download, and the Atlas classifier checkout are removed from the
+  merge path — hosted shared-runner timing is not controlled performance
+  evidence and consumed four additional 30-minute lanes per measured PR
+  (ADR 045; PR #681 run `33433562701`). No benchmark target, feature, input,
+  workload, assertion, timed closure, or smoke coverage changed: the
+  registry and executable-identity steps moved into the smoke job verbatim,
+  and the complete smoke remains governed by its separate 300-second budget
+  item. When merge-critical executables differ, ADR 045 documents the
+  controlled local counterbalanced instrument (same-harness, same-path,
+  benchmark-universe, confidence-interval, family-wise classification) that
+  reproduces the three merge-critical targets with the existing sample
+  counts and confidence contract; its report is attached to the PR in place
+  of hosted timing.
+
 - **[major] GPU adapter absence is typed and the clinical PSTD dataset selects
   its backend at run time.** `kwavers-gpu` maps hephaestus's
   `AdapterUnavailable` to `SystemError::GpuNotAvailable` at its one
