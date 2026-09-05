@@ -13336,3 +13336,29 @@ Burn → Coeus tensor type mismatches; that debt is outside the Batch #1 scope.
   `cargo test --no-run --workspace --all-features` exits 0 (the exact failing CI
   step); `cargo clippy -p kwavers-gpu --all-features -- -D warnings` exits 0;
   `cargo nextest run -p kwavers-gpu --all-features` 188/188 pass.
+
+## KW-PHYSICS-RITK-MATCH-BLOCK-DRIFT — Track ritk match_block's MovingSamples input [patch] [fix] — done 2026-09-05
+
+- Finding: the SemVer-informational gate fails on main with
+  `error[E0308]: mismatched types` in `kwavers-physics`: ritk's `match_block`
+  (ritk-block-matching at branch head) now validates its input as
+  `MovingSamples<'_, T>` instead of `&Vec<f64>`. The break is invisible to
+  committed-lock builds (the lock pins the ritk fleet at `65807675`) and only
+  surfaces under the gate's floating-dep resolution, so it silently blocks the
+  next kwavers release.
+- Root cause: kwavers consumes ritk through a committed lock while the semver
+  gate builds against branch heads; ritk changed the `match_block` signature
+  without bumping its package version (still `0.1.0`), so no manifest
+  requirement change forced the adaptation. This is a semver violation on
+  ritk's side and is recorded there for follow-up.
+- Fix: adapt the single call site (`thermal_strain` tracking) through
+  `MovingSamples::complete(&tracked)`, which preserves the existing
+  tracked-buffer semantics, paired with a Cargo.lock bump of the whole ritk
+  fleet to `95cf242b`. The pairing is load-bearing: committed-lock builds need
+  the new call shape to exist, floating builds need the call to match.
+- Prior art: `leoneuro-rs` already adapted to the new API; kwavers was the last
+  consumer on the old shape.
+- Verification: workspace check clean under default features; physics suite
+  1562/1562; clippy and fmt clean on the touched crate. Stacked on the gpu
+  E0277 fix (PR #715) so the all-features CI build sees both main-side breaks
+  repaired.
