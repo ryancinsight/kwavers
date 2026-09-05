@@ -339,11 +339,11 @@
   automation tests, YAML parsing, and diff checks pass. `actionlint` is not
   installed locally. Hosted hit and compile-interval evidence remain pending.
 
-## KW-CI-LOCAL-CRITERION-EVIDENCE-2026-08-31 — Keep statistical timing off hosted CI [patch] [arch] [ci] [perf] — todo
+## ✅ KW-CI-LOCAL-CRITERION-EVIDENCE-2026-08-31 — Keep statistical timing off hosted CI [patch] [arch] [ci] [perf] — done 2026-09-04
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-CI-LOCAL-CRITERION-EVIDENCE-2026-08-31 | Retain controlled local Criterion comparison as performance evidence while limiting pull-request CI to bounded build-and-single-iteration benchmark verification. | [patch] [arch] [ci] [perf] | todo | unowned | benchmark-regression workflow, local benchmark runner/evidence contract, ADR 045, CHANGELOG |
+| KW-CI-LOCAL-CRITERION-EVIDENCE-2026-08-31 | Retain controlled local Criterion comparison as performance evidence while limiting pull-request CI to bounded build-and-single-iteration benchmark verification. | [patch] [arch] [ci] [perf] | done | Buffy (Freebuff) | benchmark-regression workflow, local benchmark runner/evidence contract, ADR 045, CHANGELOG |
 
 - **Entry evidence:** Accepted ADR 045 and the current pull-request workflow
   still launch four full phase-reversed Criterion replications whenever one of
@@ -352,6 +352,41 @@
   15m56s complete smoke. Hosted shared-runner timing is not controlled
   performance evidence and consumes four additional 30-minute lanes on the
   merge path.
+- **Delivered:** `.github/workflows/benchmark-regression.yml` is one job — the
+  complete smoke (`cargo bench --benches -- --test` over the plotting-eligible
+  registry), with the exact registry validation (sorted `benches/*.rs` stems
+  vs the Cargo target registry for both revisions, empty-entry-point and
+  missing-merge-critical-target checks) and the merge-critical
+  executable-identity comparison moved in verbatim from the removed jobs. The
+  `benchmark-pair` matrix (four 30-minute hosted Criterion lanes), its
+  artifact upload/download, the Atlas classifier checkouts, and the
+  `benchmark-regression` aggregate job are deleted; a differing hash now emits
+  a `::notice::` pointing at the local instrument instead of scheduling
+  timing. ADR 045 is rewritten in place: the decision keeps same-harness,
+  same-path, benchmark-universe, confidence-interval, and family-wise
+  classification requirements and adds a step-by-step controlled local
+  command (two worktrees from one object database, pinned core, pinned Atlas
+  classifier `9c33b4af`, `required-confidence` → `--confidence-level`, the
+  full counterbalanced AB/BA×2 matrix, `check-replicated-counterbalanced`) so
+  the three merge-critical targets reproduce with the existing sample counts
+  and confidence contract; the retired hosted form is preserved under a
+  details marker. CHANGELOG records the CI change.
+- **Evidence (acceptance, clause by clause):** normalized workflow review —
+  the diff removes jobs and moves steps; every preserved step's script text is
+  byte-identical (`Hold the candidate benchmark instrument constant`,
+  `Execute every benchmark once`, `Compare merge-critical benchmark
+  executables`, `Validate complete benchmark registries`), so no benchmark
+  target, feature, input, workload, assertion, timed closure, or smoke
+  coverage changed (PR_BENCH_TARGETS, `--features plotting`, `--benches --
+  --test` all unchanged); a benchmark-relevant ready PR schedules exactly one
+  job with no `criterion` save-baseline/confidence invocation anywhere in the
+  workflow (grep clean); the complete smoke is untouched and remains governed
+  by the separate 300-second budget item (KW-CI-BENCH-SMOKE-BUDGET, owner
+  Codex); the documented local command carries the existing sample counts
+  (they live in the bench targets, untouched) and the existing confidence
+  contract (pinned classifier, same subcommands and flags). YAML parses clean
+  (python yaml.safe_load). No correction weakened a Criterion instrument and
+  no hosted wall time substituted for paired evidence.
 - **Decision dependency:** rewrite ADR 045 in place. Preserve its same-harness,
   same-path, benchmark-universe, confidence-interval, and family-wise
   classification requirements for the controlled local instrument, but remove
