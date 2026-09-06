@@ -435,12 +435,23 @@
   the touched packages (pre-existing `println!` pedantic hits in unrelated
   fdtd/kuznetsov/kzk tests and examples are unchanged).
 
-## KW-VISCOACOUSTIC-FINITE-DOMAIN-2026-08-31 — Reject invalid numeric domains [major] — in-progress
+## KW-VISCOACOUSTIC-FINITE-DOMAIN-2026-08-31 — Reject invalid numeric domains [major] — done 2026-09-06
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-VISCOACOUSTIC-FINITE-DOMAIN-2026-08-31 | Reject non-finite material, spacing, time-step, relaxation, and absorbing-layer parameters before allocation or state mutation. | [major] | in-progress | Buffy (Codebuff) | viscoacoustic constructors and absorbing-layer configuration, error contracts, boundary tests, ADR and migration note |
+| KW-VISCOACOUSTIC-FINITE-DOMAIN-2026-08-31 | Reject non-finite material, spacing, time-step, relaxation, and absorbing-layer parameters before allocation or state mutation. | [major] | done | Buffy (Codebuff) | viscoacoustic constructors and absorbing-layer configuration, error contracts, boundary tests, ADR and migration note |
 
+- **Delivered:** PR #719, merge `819ab02c`; every viscoacoustic constructor
+  parameter is validated finite-and-positive before any allocation
+  (`is_finite() && v > 0.0`; the lossless-voxel `ΔM` zero kept), and
+  `enable_absorbing_layer` is fallible: a non-finite `gamma_max` is rejected
+  before the retained decay field is replaced, and the per-axis extent test
+  compares `thickness >= n.div_ceil(2)` instead of wrapping `2 * thickness`.
+  Table-driven structural tests cover NaN, both infinities, signed zero, and
+  negatives for every parameter and field element; the allocation harness
+  pins that rejection retains no solver state. SemVer verdict (empirical,
+  `cargo-semver-checks` vs main): 223 pass, no update required — the
+  `()` → `KwaversResult` change is source-compatible.
 - **Entry evidence:** `ViscoacousticMemorySolver::new` and
   `new_heterogeneous` validate positive inputs with `<= 0.0`, so `NaN` and
   positive infinity pass into retained coefficient, wavenumber, and state
