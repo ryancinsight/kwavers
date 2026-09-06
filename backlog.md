@@ -13311,3 +13311,28 @@ Burn → Coeus tensor type mismatches; that debt is outside the Batch #1 scope.
 - Acceptance: hosted run `32237250724` at exact head `56bded6fa` passed all
   Ubuntu, Windows, and macOS wheel jobs; its Ubuntu job installed the wheel
   and passed all three value-semantic k-Wave cases.
+
+## KW-GPU-POD-E0277 — Restore main: DerivativeParams missing eunomia Pod [patch] [fix] — done 2026-09-04
+
+- Finding: main's hosted CI (`Architecture Validation`, run 33910337390) fails
+  on every open PR with `error[E0277]: the trait bound DerivativeParams:
+  eunomia::layout::marker::Pod is not satisfied` in `kwavers-gpu`, introduced by
+  the recent hephaestus dispatch-contract churn (#709/#712 window). The break is
+  main-inherited — it reproduces identically on peer PR #707, which touches none
+  of this code.
+- Root cause: `MultiStorageKernel::dispatch` (hephaestus-core) bounds its params
+  on `eunomia::layout::marker::Pod`. The graph carries two eunomia instances
+  (pinned `fdbf1227` via Mnemosyne/moirai/apollo; branch head `02397fa` matching
+  hephaestus and the kwavers workspace spec). `DerivativeParams` derived only
+  `bytemuck::Pod`, which is a distinct trait; eunomia deliberately ships no
+  blanket impl from bytemuck — each param struct must opt in with its own
+  derive, exactly as hephaestus does for `Fdtd3dParams`/`FdtdMedium`.
+- Change: derive `eunomia::{Pod, Zeroable}` alongside the existing bytemuck
+  derives (both needed: bytemuck for beamforming `cast_slice` plumbing, eunomia
+  for the dispatch contract), and add eunomia as an optional kwavers-gpu
+  dependency tied to the `gpu` feature — the same feature that pulls
+  `hephaestus-core`, so default builds gain nothing.
+- Acceptance: `cargo check -p kwavers-gpu --all-features` exits 0;
+  `cargo test --no-run --workspace --all-features` exits 0 (the exact failing CI
+  step); `cargo clippy -p kwavers-gpu --all-features -- -D warnings` exits 0;
+  `cargo nextest run -p kwavers-gpu --all-features` 188/188 pass.
