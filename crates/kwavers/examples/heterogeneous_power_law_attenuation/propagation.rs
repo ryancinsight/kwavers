@@ -32,7 +32,7 @@ pub(crate) fn run_pulse(
         N_ARMS,
         F_REF,
     )?;
-    solver.enable_absorbing_layer(ABSORBER_CELLS, ABSORBER_GAMMA);
+    solver.enable_absorbing_layer(ABSORBER_CELLS, ABSORBER_GAMMA)?;
     solver.add_pressure_source((SOURCE_INDEX, 0, 0), excitation(dt))?;
     let near = solver.add_pressure_sensor((SENSOR_NEAR, 0, 0))?;
     let far = solver.add_pressure_sensor((SENSOR_FAR, 0, 0))?;
