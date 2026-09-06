@@ -1233,12 +1233,21 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   falling to `0.446`. Without it the case would pass for a solver that drove the
   right cells with the wrong signals.
 
-## KW-SOLVER-TEST-UNRUN — CI compiles `solver_test` but never runs it [patch] — todo
+## KW-SOLVER-TEST-UNRUN — CI compiles `solver_test` but never runs it [patch] — done 2026-09-06
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-SOLVER-TEST-UNRUN | Run the integration tests CI currently only compiles, and fix the CFL derivation the omission has been hiding. | [patch] | todo | unowned | `crates/kwavers/tests/solver_test.rs`, `crates/kwavers-solver/src/forward/fdtd/`, `.github/workflows/architecture-validation.yml` |
+| KW-SOLVER-TEST-UNRUN | Run the integration tests CI currently only compiles, and fix the CFL derivation the omission has been hiding. | [patch] | done | Buffy (Codebuff) | `crates/kwavers/tests/solver_test.rs`, `crates/kwavers-solver/src/forward/fdtd/`, `.github/workflows/architecture-validation.yml` |
 
+- **Delivered:** already on main via commit `476321bef` (ADR 124's
+  integration-baseline change): `test_fdtd_solver` and
+  `test_wave_propagation` derive their timestep from
+  `StaggeredLeapfrogOperator::cfl_limit` at a 0.9 stability margin
+  (`fdtd_stable_dt`) instead of the bare `cfl_factor * dx / c` the item
+  diagnosed, and the whole integration suite runs in CI against the
+  committed failure baseline. Re-verified on main at `86768deb5`:
+  `solver_test` 3/3 pass; the baseline holds zero entries, so the item's
+  outcome is already enforced with no new code change needed.
 - **Evidence:** `test_fdtd_solver` and `test_wave_propagation` fail on `main`
   with `NumericalInstability { timestep: 3.33e-7, cfl_limit: 1.95e-7 }`. They
   have been failing unnoticed because the test-coverage job runs `--lib` plus a
