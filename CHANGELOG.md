@@ -4,6 +4,17 @@
 
 ### Changed
 
+- **[minor] `ElasticPropertyData` derived identities delegate to Proteus.**
+  `youngs_modulus`, `poisson_ratio`, `bulk_modulus`, `shear_modulus`,
+  `p_wave_speed`, and `s_wave_speed` call
+  `proteus::elastic::IsotropicModuli` rather than reimplementing the Lamé
+  conversion algebra. Construction already delegated (`new`,
+  `try_from_engineering`, `try_from_wave_speeds`); this closes the residual
+  copy in `computed.rs`. The positive-definite domain
+  (`mu > 0`, `K = lambda + 2mu/3 > 0`) is the sole validity gate — auxetic
+  `lambda < 0` remains admitted. Callers that mutate the public fields outside
+  that domain panic at the accessor rather than silently diverge from the
+  provider.
 - **[patch] Pull-request CI keeps statistical timing off hosted runners.**
   The benchmark-regression workflow now runs exactly one job: the complete
   benchmark smoke, the exact benchmark-registry validation for both
