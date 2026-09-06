@@ -39,6 +39,10 @@ wgpu = { version = "30.0.0", default-features = false, features = ["wgsl", "vulk
 pollster = { version = "0.4", optional = true }
 hephaestus-core = { workspace = true, optional = true }
 hephaestus-wgpu = { workspace = true, optional = true }
+# eunomia is required when hephaestus-core is active: MultiStorageKernel::dispatch
+# bounds its params on eunomia::layout::marker::Pod, so provider param structs
+# must implement the same marker trait instance (not bytemuck's).
+eunomia = { workspace = true, optional = true }
 hephaestus-cuda = { workspace = true, optional = true }
 moirai-parallel = { workspace = true, optional = true }
 rand = { version = "0.8", optional = true }
@@ -61,6 +65,7 @@ gpu = [
     "dep:pollster",
     "dep:hephaestus-core",
     "dep:hephaestus-wgpu",
+    "dep:eunomia",
     "dep:kwavers-analysis",
     "dep:moirai-parallel",
     "dep:rand",

@@ -21,7 +21,9 @@ use leto::Array3 as LetoArray3;
 const DERIVATIVE_WORKGROUP_WIDTH: usize = 256;
 
 #[repr(C)]
-#[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
+#[derive(
+    Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable, eunomia::Pod, eunomia::Zeroable,
+)]
 struct DerivativeParams {
     nx: u32,
     ny: u32,

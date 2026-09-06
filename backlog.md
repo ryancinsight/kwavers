@@ -36,6 +36,76 @@
 
 - **Verdict: superseded.** Same pre-rewrite lineage as the GMRES branch (shares the #318/#320 merges); its typed thermal metrics exist on `main` (`kwavers-physics/src/thermal/diffusion/dose.rs`) and the Aequitas typed-coupling deliveries landed through #318/#320. Branch deleted.
 
+## KW-FD-VIEW-DST — Follow Leto's mutable-view FD destination [patch] — review <a id="kw-fd-view-dst"></a>
+
+- **Integrator:** Claude on `feat/kwavers-fd-view-dst`; **lease:**
+  `crates/kwavers-solver/src/forward/fdtd/`,
+  `crates/kwavers-math/src/numerics/`, `Cargo.lock` — 2026-09-04.
+- **Outcome:** the FDTD sweeps pass `&mut <scratch>.view_mut()` to
+  `gradient_into` / `divergence_into` / `apply_x_into`, following leto PR #171
+  (`7e924d1`), which changed the destination to `&mut ArrayViewMut3<'_, T>` so
+  a caller whose storage is not a Leto-owned array writes into it without a
+  copy. Mechanical: eight call sites and two doc examples. Behaviour unchanged.
+- **Evidence:** `cargo fmt --check` clean; `cargo check --locked --workspace
+  --all-targets` clean; `cargo clippy -p kwavers-math --all-targets -D warnings`
+  clean; `cargo nextest run --locked --workspace --exclude kwavers-python
+  --exclude kwavers-gpu --lib --test-threads=2` **5742/5742**;
+  `cargo bench -p kwavers -- --test` pass. `Cargo.lock` regenerated through
+  `scripts/lockfile.py` because the pre-push gate refuses a lock that will not
+  resolve under `--locked`.
+- **Blocked gates, not caused by this change:** `--features full` targets
+  (`solver_test`, doctests, `cargo doc`, the CUDA build) fail to compile
+  `kwavers-gpu` on `DerivativeParams: eunomia::layout::marker::Pod`. Root cause
+  is recorded in `KW-EUNOMIA-DIAMOND` below; verified pre-existing by building
+  `origin/main`'s `kwavers-gpu` source against this branch's lock, which fails
+  identically.
+- **Last-update:** 2026-09-04.
+
+## KW-EUNOMIA-DIAMOND — Two Eunomia versions break the kwavers-gpu dispatch bound [major] — blocked <a id="kw-eunomia-diamond"></a>
+
+- **Symptom:** `cargo check -p kwavers --features full` fails with
+  `the trait bound DerivativeParams: eunomia::layout::marker::Pod is not
+  satisfied` at `crates/kwavers-gpu/src/backend/provider/wgpu.rs`, with rustc's
+  note "there are multiple different versions of crate `eunomia` in the
+  dependency graph". Main has been red on this since `b3e7549d`
+  (Architecture Validation: Integration Suite, Documentation Build, CUDA
+  Runtime Build).
+- **Root cause:** the lock resolves Eunomia twice — the default-branch source,
+  and `eunomia?rev=fdbf12275d35aa1545060a4277644c497ddcda37` reached through
+  `mnemosyne-arena` and `mnemosyne-memory`. Kwavers pins Mnemosyne at
+  `03fe32f4`, a revision that still carried that quarantine pin; Mnemosyne's
+  current `origin/main` (`e8e825f`) has dropped it and depends on the default
+  branch. So the diamond closes by advancing the Mnemosyne pin, not by editing
+  kwavers-gpu: deriving the other Eunomia's `Pod` cannot satisfy a bound from a
+  different version of the same crate.
+- **Why this is not fixed here:** the Mnemosyne pin advance is a peer's live
+  multi-phase campaign (`build(deps): Advance mnemosyne rev to … (Phase N)`,
+  most recent commit minutes old). Taking it over mid-campaign would collide
+  with in-flight phases. Recorded rather than seized.
+- **History (measured, not inferred):** main was already red before
+  `b3e7549d`, at `5b934e09` / `814f60a9` / `49dc25c4`, with a *different*
+  failure — `cannot update the lock file … because --locked was passed`, the
+  stale-lock case. `b3e7549d` regenerated the lock and fixed that, which is
+  what exposed the diamond behind it. One red replaced another; nothing new
+  was introduced.
+- **Root cause traced further, 2026-09-04 (the first reading was too shallow).**
+  Advancing kwavers' own Mnemosyne pin to `e8e825f` does **not** close the
+  diamond — measured, not assumed: the pin was bumped in a lane, the lock
+  regenerated, and both Eunomia versions were still present. The
+  `eunomia?rev=fdbf1227` edge arrives through a *different* Mnemosyne revision,
+  `Mnemosyne.git?rev=7f173751`, which is pinned by **moirai** (both its default
+  branch `4db2dc19` and its `rev=83aa411` pin) and by **ritk**. So the pin that
+  has to move is upstream of kwavers by two repositories, and no change to
+  kwavers' manifest can close it.
+- **Re-open trigger:** moirai and ritk advance their `Mnemosyne.git` pins past
+  `7f173751` to a revision that depends on Eunomia's default branch. Then
+  regenerate the kwavers lock and confirm `cargo check -p kwavers
+  --no-default-features --features full` compiles `kwavers-gpu`. The earlier
+  trigger — kwavers' own Mnemosyne pin reaching `e8e825f` — was wrong and is
+  superseded. Then regenerate the lock and confirm `cargo check -p kwavers
+  --no-default-features --features full` compiles `kwavers-gpu`.
+- **Last-update:** 2026-09-04.
+
 ## KW-LETO-FD-SSOT — Delete the kwavers first-derivative stencils [major] [arch] — review <a id="kw-leto-fd-ssot"></a>
 
 - **Integrator:** Claude on `feat/kwavers-leto-fd-ssot`; **lease:**
@@ -13230,3 +13300,54 @@ Burn → Coeus tensor type mismatches; that debt is outside the Batch #1 scope.
 - Acceptance: hosted run `32237250724` at exact head `56bded6fa` passed all
   Ubuntu, Windows, and macOS wheel jobs; its Ubuntu job installed the wheel
   and passed all three value-semantic k-Wave cases.
+
+## KW-GPU-POD-E0277 — Restore main: DerivativeParams missing eunomia Pod [patch] [fix] — done 2026-09-04
+
+- Finding: main's hosted CI (`Architecture Validation`, run 33910337390) fails
+  on every open PR with `error[E0277]: the trait bound DerivativeParams:
+  eunomia::layout::marker::Pod is not satisfied` in `kwavers-gpu`, introduced by
+  the recent hephaestus dispatch-contract churn (#709/#712 window). The break is
+  main-inherited — it reproduces identically on peer PR #707, which touches none
+  of this code.
+- Root cause: `MultiStorageKernel::dispatch` (hephaestus-core) bounds its params
+  on `eunomia::layout::marker::Pod`. The graph carries two eunomia instances
+  (pinned `fdbf1227` via Mnemosyne/moirai/apollo; branch head `02397fa` matching
+  hephaestus and the kwavers workspace spec). `DerivativeParams` derived only
+  `bytemuck::Pod`, which is a distinct trait; eunomia deliberately ships no
+  blanket impl from bytemuck — each param struct must opt in with its own
+  derive, exactly as hephaestus does for `Fdtd3dParams`/`FdtdMedium`.
+- Change: derive `eunomia::{Pod, Zeroable}` alongside the existing bytemuck
+  derives (both needed: bytemuck for beamforming `cast_slice` plumbing, eunomia
+  for the dispatch contract), and add eunomia as an optional kwavers-gpu
+  dependency tied to the `gpu` feature — the same feature that pulls
+  `hephaestus-core`, so default builds gain nothing.
+- Acceptance: `cargo check -p kwavers-gpu --all-features` exits 0;
+  `cargo test --no-run --workspace --all-features` exits 0 (the exact failing CI
+  step); `cargo clippy -p kwavers-gpu --all-features -- -D warnings` exits 0;
+  `cargo nextest run -p kwavers-gpu --all-features` 188/188 pass.
+
+## KW-PHYSICS-RITK-MATCH-BLOCK-DRIFT — Track ritk match_block's MovingSamples input [patch] [fix] — done 2026-09-05
+
+- Finding: the SemVer-informational gate fails on main with
+  `error[E0308]: mismatched types` in `kwavers-physics`: ritk's `match_block`
+  (ritk-block-matching at branch head) now validates its input as
+  `MovingSamples<'_, T>` instead of `&Vec<f64>`. The break is invisible to
+  committed-lock builds (the lock pins the ritk fleet at `65807675`) and only
+  surfaces under the gate's floating-dep resolution, so it silently blocks the
+  next kwavers release.
+- Root cause: kwavers consumes ritk through a committed lock while the semver
+  gate builds against branch heads; ritk changed the `match_block` signature
+  without bumping its package version (still `0.1.0`), so no manifest
+  requirement change forced the adaptation. This is a semver violation on
+  ritk's side and is recorded there for follow-up.
+- Fix: adapt the single call site (`thermal_strain` tracking) through
+  `MovingSamples::complete(&tracked)`, which preserves the existing
+  tracked-buffer semantics, paired with a Cargo.lock bump of the whole ritk
+  fleet to `95cf242b`. The pairing is load-bearing: committed-lock builds need
+  the new call shape to exist, floating builds need the call to match.
+- Prior art: `leoneuro-rs` already adapted to the new API; kwavers was the last
+  consumer on the old shape.
+- Verification: workspace check clean under default features; physics suite
+  1562/1562; clippy and fmt clean on the touched crate. Stacked on the gpu
+  E0277 fix (PR #715) so the all-features CI build sees both main-side breaks
+  repaired.

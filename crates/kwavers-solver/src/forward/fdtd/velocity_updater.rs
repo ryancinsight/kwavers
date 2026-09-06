@@ -226,17 +226,17 @@ impl FdtdSolver {
         self.leapfrog_operator.gradient_into(
             Axis::X,
             self.fields.p.view(),
-            &mut self.dvx_scratch,
+            &mut self.dvx_scratch.view_mut(),
         )?;
         self.leapfrog_operator.gradient_into(
             Axis::Y,
             self.fields.p.view(),
-            &mut self.dvy_scratch,
+            &mut self.dvy_scratch.view_mut(),
         )?;
         self.leapfrog_operator.gradient_into(
             Axis::Z,
             self.fields.p.view(),
-            &mut self.divergence_scratch,
+            &mut self.divergence_scratch.view_mut(),
         )?;
 
         if let Some(ref mut cpml) = self.cpml_boundary {

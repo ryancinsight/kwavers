@@ -51,7 +51,7 @@ fn bench_fdtd_derivatives(c: &mut Criterion) {
                 |b, _| {
                     b.iter(|| {
                         let mut deriv = Array3::<f64>::zeros((size, size, size));
-                        op.apply_x_into(black_box(field.view()), &mut deriv)
+                        op.apply_x_into(black_box(field.view()), &mut deriv.view_mut())
                             .expect("Derivative computation");
                         deriv
                     })
